@@ -1,11 +1,12 @@
 #include "sn3d.h"
 #include <cstring>
 #include "atomic.h"
-#include "grid_init.h"
+#include "grid.h"
 #include "emissivities.h"
 #include "packet_init.h"
 #include "photo_electric.h"
 #include "radfield.h"
+#include "stats.h"
 #include "gamma.h"
 #include "vectors.h"
 
@@ -169,17 +170,13 @@ void zero_estimators(void)
       // kbfabs[n] = 0.;
       // kgammadep[n] = 0.;
 
+      if (TRACK_ION_STATS)
+      {
+        stats::reset_ion_stats(n);
+      }
+
       for (int element = 0; element < get_nelements(); element++)
       {
-        #if (TRACK_ION_STATS)
-        for (int ion = 0; ion < get_nions(element); ion++)
-        {
-          for (int i = 0; i < ION_COUNTER_COUNT; i++)
-          {
-            set_ion_stats(n, element, ion, (enum ionstatscounters)i, 0.);
-          }
-        }
-        #endif
         for (int ion = 0; ion < globals::maxion; ion++)
         {
           #if (!NO_LUT_PHOTOION)

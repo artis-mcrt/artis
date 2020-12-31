@@ -4,8 +4,9 @@
 
 #include "sn3d.h"
 #include "boundary.h"
-#include "grid_init.h"
+#include "grid.h"
 #include "rpkt.h"
+#include "stats.h"
 #include "update_packets.h"
 #include "vectors.h"
 
@@ -386,7 +387,7 @@ void change_cell(PKT *pkt_ptr, int snext, double t_current)
     pkt_ptr->where = snext;
     // const int mgi = globals::cell[snext].modelgridindex;
 
-    globals::cellcrossings++;
+    stats::increment(stats::COUNTER_CELLCROSSINGS);
 
     /// and calculate the continuums opacity in the new cell if the packet is a rpkt
     /// for isothermal homogeneous grids this could be omitted if we neglect the time dependency

@@ -2,13 +2,14 @@
 #include "atomic.h"
 #include "boundary.h"
 #include "grey_emissivities.h"
-#include "grid_init.h"
+#include "grid.h"
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "polarization.h"
 #include "radfield.h"
 #include "rpkt.h"
+#include "stats.h"
 #include "update_grid.h"
 #include "vectors.h"
 #include "vpkt.h"
@@ -344,7 +345,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
       pkt_ptr->interactions += 1;
       pkt_ptr->nscatterings += 1;
       pkt_ptr->last_event = 12;
-      globals::escounter++;
+      stats::increment(stats::COUNTER_ESCOUNTER);
     #endif
 
     /* call the estimator routine - generate a virtual packet */
@@ -371,8 +372,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
     /// ff: transform to k-pkt
     #ifdef DEBUG_ON
       if (globals::debuglevel == 2) printout("[debug] rpkt_event:   free-free transition\n");
-      //if (tid == 0) k_stat_from_ff++;
-      globals::k_stat_from_ff++;
+      stats::increment(stats::COUNTER_K_STAT_FROM_FF);
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 5;
     #endif
@@ -415,86 +415,25 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
           printout("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n", nu_edge, nu);
         }
 #endif
-        #if (TRACK_ION_STATS)
-        const double n_photons_absorbed = pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
-
-        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION, n_photons_absorbed);
-
-        const int et = pkt_ptr->emissiontype;
-        if (et >= 0)  // r-packet is from bound-bound emission
+        if (TRACK_ION_STATS)
         {
-          increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBOUNDBOUND, n_photons_absorbed);
-          const int emissionelement = globals::linelist[et].elementindex;
-          const int emissionion = globals::linelist[et].ionindex;
-
-          increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_BOUNDBOUND_ABSORBED, n_photons_absorbed);
-
-          if (emissionelement == element)
-          {
-            if (emissionion == ion + 1)
-            {
-              increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSONE, n_photons_absorbed);
-            }
-            else if (emissionion == ion + 2)
-            {
-              increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSTWO, n_photons_absorbed);
-            }
-            else if (emissionion == ion + 3)
-            {
-              increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSTHREE, n_photons_absorbed);
-            }
-          }
+          stats::increment_ion_stats_contabsorption(pkt_ptr, modelgridindex, element, ion);
         }
-        else if (et != -9999999) // r-pkt is from bound-free emission (not free-free scattering)
-        {
-          increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBOUNDFREE, n_photons_absorbed);
-
-          const int bfindex = -1*et - 1;
-          assert(bfindex >= 0);
-          assert(bfindex <= globals::nbfcontinua);
-          const int emissionelement = globals::bflist[bfindex].elementindex;
-          const int emissionlowerion = globals::bflist[bfindex].ionindex;
-          const int emissionupperion = emissionlowerion + 1;
-          const int emissionlowerlevel = globals::bflist[bfindex].levelindex;
-
-          increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_RADRECOMB_ABSORBED, n_photons_absorbed);
-
-          if (emissionelement == element)
-          {
-            increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBFSAMEELEMENT, n_photons_absorbed);
-            if (emissionupperion == ion + 1)
-            {
-              increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBFIONPLUSONE, n_photons_absorbed);
-            }
-            else if (emissionupperion == ion + 2)
-            {
-              increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBFIONPLUSTWO, n_photons_absorbed);
-            }
-            else if (emissionupperion == ion + 3)
-            {
-              increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBFIONPLUSTHREE, n_photons_absorbed);
-            }
-          }
-          if (level_isinsuperlevel(emissionelement, emissionlowerion, emissionlowerlevel))
-          {
-            increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBFLOWERSUPERLEVEL, n_photons_absorbed);
-          }
-        }
-        #endif
 
         /// and decide whether we go to ionisation energy
         const double zrand3 = gsl_rng_uniform(rng);
         if (zrand3 < nu_edge / nu)
         {
           #ifdef DEBUG_ON
-            //if (tid == 0) ma_stat_activation_bf++;
-            globals::ma_stat_activation_bf++;
+            stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_BF);
             pkt_ptr->interactions += 1;
             pkt_ptr->last_event = 3;
           #endif
-          #if (TRACK_ION_STATS)
-          increment_ion_stats(modelgridindex, element, ion + 1, ION_COUNTER_MACROATOM_ENERGYIN_PHOTOION, pkt_ptr->e_cmf);
-          #endif
+          if (TRACK_ION_STATS)
+          {
+            stats::increment_ion_stats(modelgridindex, element, ion + 1, stats::ION_MACROATOM_ENERGYIN_PHOTOION, pkt_ptr->e_cmf);
+          }
+
           pkt_ptr->type = TYPE_MA;
           #ifndef FORCE_LTE
             //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
@@ -513,8 +452,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
           /// transform to k-pkt
           #ifdef DEBUG_ON
             if (globals::debuglevel == 2) printout("[debug] rpkt_event:   bound-free: transform to k-pkt\n");
-            //if (tid == 0) k_stat_from_bf++;
-            globals::k_stat_from_bf++;
+            stats::increment(stats::COUNTER_K_STAT_FROM_BF);
             pkt_ptr->interactions += 1;
             pkt_ptr->last_event = 4;
           #endif
@@ -549,7 +487,7 @@ static void rpkt_event_boundbound(PKT *pkt_ptr, const int mgi)
   #ifdef DEBUG_ON
     if (globals::debuglevel == 2) printout("[debug] rpkt_event: bound-bound activation of macroatom\n");
     //if (tid == 0) ma_stat_activation_bb++;
-    globals::ma_stat_activation_bb++;
+    stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_BB);
     pkt_ptr->interactions += 1;
     pkt_ptr->last_event = 1;
   #endif
@@ -564,14 +502,14 @@ static void rpkt_event_boundbound(PKT *pkt_ptr, const int mgi)
   #if (TRACK_ION_STATS)
   const int element = pkt_ptr->mastate.element;
   const int ion = pkt_ptr->mastate.ion;
-  increment_ion_stats(mgi, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_RADEXC, pkt_ptr->e_cmf);
+  stats::increment_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_RADEXC, pkt_ptr->e_cmf);
 
   const int et = pkt_ptr->emissiontype;
   if (et >= 0)
   {
     const int emissionelement = globals::linelist[et].elementindex;
     const int emissionion = globals::linelist[et].ionindex;
-    increment_ion_stats(mgi, emissionelement, emissionion, ION_COUNTER_BOUNDBOUND_ABSORBED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
+    stats::increment_ion_stats(mgi, emissionelement, emissionion, stats::ION_BOUNDBOUND_ABSORBED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
   }
   #endif
 
@@ -601,7 +539,7 @@ static void rpkt_event_thickcell(PKT *pkt_ptr)
     pkt_ptr->interactions += 1;
     pkt_ptr->nscatterings += 1;
     pkt_ptr->last_event = 12;
-    globals::escounter++;
+    stats::increment(stats::COUNTER_ESCOUNTER);
   #endif
 
   emitt_rpkt(pkt_ptr);

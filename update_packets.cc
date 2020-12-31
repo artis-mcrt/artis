@@ -1,12 +1,13 @@
 #include "sn3d.h"
 #include "gamma.h"
-#include "grid_init.h"
+#include "grid.h"
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"
 #include "update_packets.h"
 #include "rpkt.h"
+#include "stats.h"
 #include "vectors.h"
 
 #include <algorithm>
@@ -76,7 +77,7 @@ static void update_pellet(
     //pkt_ptr->type = TYPE_KPKT;
     pkt_ptr->type = TYPE_PRE_KPKT;
     pkt_ptr->absorptiontype = -7;
-    globals::k_stat_from_earlierdecay++;
+    stats::increment(stats::COUNTER_K_STAT_FROM_EARLIERDECAY);
 
     //printout("already decayed packets and propagation by packet_prop\n");
     pkt_ptr->prop_time = globals::tmin;
@@ -227,13 +228,8 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
   const double tw = globals::time_step[nts].width;
 
   printout("start of parallel update_packets loop %ld\n", time(NULL));
-  /// Initialise the OpenMP reduction target to zero
   bool timestepcomplete = false;
   int passnumber = 0;
-  #ifdef _OPENMP
-    #pragma omp parallel
-    //copyin(globals::debuglevel,nuJ,J)
-  #endif
   while (!timestepcomplete)
   {
     timestepcomplete = true;
@@ -249,10 +245,10 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
     }
 
     int count_pktupdates = 0;
-    const int updatecellcounter_beforepass = globals::updatecellcounter;
+    const int updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
 
     #ifdef _OPENMP
-    #pragma omp for schedule(dynamic) reduction(+:globals::escounter, globals::resonancescatterings, globals::cellcrossings, globals::nesc, globals::updatecellcounter, globals::coolingratecalccounter, globals::upscatter, globals::downscatter, globals::ma_stat_activation_collexc, globals::ma_stat_activation_collion, globals::ma_stat_activation_ntcollexc, globals::ma_stat_activation_ntcollion, globals::ma_stat_activation_bb, globals::ma_stat_activation_bf, globals::ma_stat_activation_fb, globals::ma_stat_deactivation_colldeexc, globals::ma_stat_deactivation_collrecomb, globals::ma_stat_deactivation_bb, globals::ma_stat_deactivation_fb, globals::k_stat_to_ma_collexc, globals::k_stat_to_ma_collion, globals::k_stat_to_r_ff, globals::k_stat_to_r_fb, globals::k_stat_from_ff, globals::k_stat_from_bf, globals::nt_stat_from_gamma, globals::k_stat_from_earlierdecay)
+    #pragma omp parallel for schedule(dynamic)
     #endif
     for (int n = 0; n < globals::npkts; n++)
     {
@@ -283,7 +279,7 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
         /// Reset cellhistory if packet starts up in another than the last active cell
         if (mgi != MMODELGRID && globals::cellhistory[tid].cellnumber != mgi)
         {
-          globals::updatecellcounter++;
+          stats::increment(stats::COUNTER_UPDATECELL);
           cellhistory_reset(mgi, false);
         }
 
@@ -305,8 +301,9 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
         }
       }
     }
+    const int cellhistresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
     printout("  update_packets timestep %d pass %3d: updated packets %7d cellhistoryresets %7d at %ld\n",
-             nts, passnumber, count_pktupdates, globals::updatecellcounter - updatecellcounter_beforepass, time(NULL));
+             nts, passnumber, count_pktupdates, cellhistresets, time(NULL));
 
     passnumber++;
   }

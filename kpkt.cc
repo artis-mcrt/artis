@@ -1,12 +1,13 @@
 #include "sn3d.h"
 #include <gsl/gsl_integration.h>
 #include "atomic.h"
-#include "grid_init.h"
+#include "grid.h"
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
+#include "stats.h"
 #include "vectors.h"
 #include "vpkt.h"
 
@@ -467,7 +468,7 @@ double do_kpkt_bb(PKT *pkt_ptr)
   cellindex = pkt_ptr->where;
   pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
   //if (tid == 0) k_stat_to_r_bb++;
-  globals::k_stat_to_r_bb++;
+  stats::increment(stats::COUNTER_K_STAT_TO_R_BB);
   pkt_ptr->interactions++;
   pkt_ptr->last_event = 6;
   pkt_ptr->emissiontype = -9999999;
@@ -646,7 +647,8 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       emitt_rpkt(pkt_ptr);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
       //if (tid == 0) k_stat_to_r_ff++;
-      globals::k_stat_to_r_ff++;
+      stats::increment(stats::COUNTER_K_STAT_TO_R_FF);
+
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 6;
       pkt_ptr->emissiontype = -9999999;
@@ -702,14 +704,13 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       emitt_rpkt(pkt_ptr);
 
       #if (TRACK_ION_STATS)
-      increment_ion_stats(modelgridindex, element, lowerion + 1, ION_COUNTER_RADRECOMB_KPKT, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
+      stats::increment_ion_stats(modelgridindex, element, lowerion + 1, stats::ION_RADRECOMB_KPKT, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
       const double escape_prob = get_rpkt_escape_prob(pkt_ptr, pkt_ptr->prop_time);
-      increment_ion_stats(modelgridindex, element, lowerion + 1, ION_COUNTER_RADRECOMB_ESCAPED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
+      stats::increment_ion_stats(modelgridindex, element, lowerion + 1, stats::ION_RADRECOMB_ESCAPED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
       #endif
 
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
-      //if (tid == 0) k_stat_to_r_fb++;
-      globals::k_stat_to_r_fb++;
+      stats::increment(stats::COUNTER_K_STAT_TO_R_FB);
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 7;
       pkt_ptr->emissiontype = get_continuumindex(element, lowerion, level, upper);
@@ -764,12 +765,13 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       pkt_ptr->mastate.activatingline = -99;
 
       #if (TRACK_ION_STATS)
-      increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_COLLEXC, pkt_ptr->e_cmf);
+      stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLEXC, pkt_ptr->e_cmf);
       #endif
 
       pkt_ptr->type = TYPE_MA;
-      globals::ma_stat_activation_collexc++;
-      globals::k_stat_to_ma_collexc++;
+      stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_COLLEXC);
+      stats::increment(stats::COUNTER_K_STAT_TO_MA_COLLEXC);
+
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 8;
       pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
@@ -788,12 +790,12 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       pkt_ptr->mastate.activatingline = -99;
 
       #if (TRACK_ION_STATS)
-      increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_COLLION, pkt_ptr->e_cmf);
+      stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLION, pkt_ptr->e_cmf);
       #endif
 
       pkt_ptr->type = TYPE_MA;
-      globals::ma_stat_activation_collion++;
-      globals::k_stat_to_ma_collion++;
+      stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_COLLION);
+      stats::increment(stats::COUNTER_K_STAT_TO_MA_COLLION);
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 9;
       pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it

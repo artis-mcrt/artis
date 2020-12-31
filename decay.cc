@@ -1,6 +1,6 @@
 #include "sn3d.h"
 #include "atomic.h"
-#include "grid_init.h"
+#include "grid.h"
 #include "decay.h"
 
 namespace decay

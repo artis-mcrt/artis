@@ -9,7 +9,7 @@
 #include "sn3d.h"
 #include "atomic.h"
 #include "gamma.h"
-#include "grid_init.h"
+#include "grid.h"
 #include "input.h"
 #include "kpkt.h"
 #include "nltepop.h"
@@ -799,7 +799,6 @@ static void read_atomicdata_files(void)
     globals::elements[element].nions = nions;
     globals::elements[element].abundance = abundance;       /// abundances are expected to be given by mass
     globals::elements[element].mass = mass_amu * MH;
-    globals::elements_uppermost_ion[tid][element] = nions - 1;
     globals::includedions += nions;
 
     /// Initialize the elements ionlist

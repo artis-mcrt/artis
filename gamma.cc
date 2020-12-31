@@ -4,9 +4,10 @@
 #include "emissivities.h"
 #include "gamma.h"
 #include "grey_emissivities.h"
-#include "grid_init.h"
+#include "grid.h"
 #include "nonthermal.h"
 #include "photo_electric.h"
+#include "stats.h"
 #include "vectors.h"
 
 // Material for handing gamma rays - creation and propagation.
@@ -519,7 +520,7 @@ static void compton_scatter(PKT *pkt_ptr)
     // It's converted to an e-minus packet.
     pkt_ptr->type = TYPE_NTLEPTON;
     pkt_ptr->absorptiontype = -3;
-    globals::nt_stat_from_gamma++;
+    stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
   }
 }
 
@@ -706,7 +707,7 @@ void do_gamma(PKT *pkt_ptr, double t2)
       //pkt_ptr->type = TYPE_PRE_KPKT;
       //pkt_ptr->type = TYPE_GAMMA_KPKT;
       //if (tid == 0) nt_stat_from_gamma++;
-      globals::nt_stat_from_gamma++;
+      stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
     }
     else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand * kap_tot))
     {

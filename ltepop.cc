@@ -1,6 +1,6 @@
 #include "sn3d.h"
 #include "atomic.h"
-#include "grid_init.h"
+#include "grid.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"
@@ -30,15 +30,7 @@ double nne_solution_f(double x, void *paras)
       double innersum = 0.;
       //printout("debug get_nions (element %d) %d =========================\n",element,get_nions(element));
       //uppermost_ion = globals::elements[element].uppermost_ion;
-      const int uppermost_ion = globals::elements_uppermost_ion[tid][element];
-      /*
-      #ifdef FORCE_LTE
-        uppermost_ion = get_nions(element)-1;
-      #else
-        //uppermost_ion = globals::elements[element].uppermost_ion;
-        uppermost_ion = elements_uppermost_ion[tid][element];
-      #endif
-      */
+      const int uppermost_ion = get_elements_uppermost_ion(modelgridindex, element);
 
       double ionfractions[uppermost_ion + 1];
       get_ionfractions(element, modelgridindex, x, ionfractions, uppermost_ion);
@@ -53,7 +45,9 @@ double nne_solution_f(double x, void *paras)
       outersum += abundance / globals::elements[element].mass * innersum;
       if (!isfinite(outersum))
       {
-        printout("nne_solution_f: element %d ion %d uppermostion %d abundance %g, mass %g\n",element,ion,globals::elements_uppermost_ion[tid][element],abundance,globals::elements[element].mass);
+        printout("nne_solution_f: element %d ion %d uppermostion %d abundance %g, mass %g\n",
+                 element, ion, get_elements_uppermost_ion(modelgridindex, element),
+                 abundance, globals::elements[element].mass);
         printout("outersum %g\n",outersum);
         abort();
       }

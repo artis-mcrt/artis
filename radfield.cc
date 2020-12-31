@@ -4,7 +4,7 @@
 #include <gsl/gsl_sf_debye.h>
 #include <gsl/gsl_roots.h>
 #include "atomic.h"
-#include "grid_init.h"
+#include "grid.h"
 #include "ltepop.h"
 #include "vectors.h"
 #include "radfield.h"

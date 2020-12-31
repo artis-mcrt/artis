@@ -11,7 +11,7 @@
 #include "macroatom.h"
 #include "radfield.h"
 #include "ratecoeff.h"
-#include "grid_init.h"
+#include "grid.h"
 
 // typedef struct gslintegration_ffheatingparas
 // {

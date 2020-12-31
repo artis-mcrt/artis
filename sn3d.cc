@@ -17,7 +17,7 @@
 #include "sn3d.h"
 #include "emissivities.h"
 #include "grey_emissivities.h"
-#include "grid_init.h"
+#include "grid.h"
 #include "input.h"
 #include "light_curve.h"
 #include "ltepop.h"
@@ -27,6 +27,7 @@
 #include "packet_init.h"
 #include "radfield.h"
 #include "ratecoeff.h"
+#include "stats.h"
 #include "update_grid.h"
 #include "update_packets.h"
 #include "version.h"
@@ -58,10 +59,6 @@ static inline omp_int_t omp_get_thread_num(void) { return 0; }
 static inline omp_int_t omp_get_num_threads(void) { return 1; }
 #endif
 
-#if TRACK_ION_STATS
-static double *ionstats = NULL;
-#endif
-
 static void initialise_linestat_file(void)
 {
   linestat_file = fopen_required("linestat.out", "w");
@@ -90,98 +87,6 @@ static void initialise_linestat_file(void)
   //setvbuf(linestat_file, NULL, _IOLBF, 1); // flush after every line makes it slow!
 }
 
-
-static void pkt_action_counters_reset(void)
-{
-  globals::ma_stat_activation_collexc = 0;
-  globals::ma_stat_activation_collion = 0;
-  globals::ma_stat_activation_ntcollexc = 0;
-  globals::ma_stat_activation_ntcollion = 0;
-  globals::ma_stat_activation_bb = 0;
-  globals::ma_stat_activation_bf = 0;
-  globals::ma_stat_activation_fb = 0;
-  globals::ma_stat_deactivation_colldeexc = 0;
-  globals::ma_stat_deactivation_collrecomb = 0;
-  globals::ma_stat_deactivation_bb = 0;
-  globals::ma_stat_deactivation_fb = 0;
-  globals::ma_stat_internaluphigher = 0;
-  globals::ma_stat_internaluphighernt = 0;
-  globals::ma_stat_internaldownlower = 0;
-  globals::k_stat_to_ma_collexc = 0;
-  globals::k_stat_to_ma_collion = 0;
-  globals::k_stat_to_r_ff = 0;
-  globals::k_stat_to_r_fb = 0;
-  globals::k_stat_to_r_bb = 0;
-  globals::k_stat_from_ff = 0;
-  globals::k_stat_from_bf = 0;
-  globals::k_stat_from_earlierdecay = 0;
-
-  nonthermal::nt_reset_stats();
-
-  globals::escounter = 0;
-  globals::cellcrossings = 0;
-  globals::updatecellcounter = 0;
-  globals::coolingratecalccounter = 0;
-  globals::resonancescatterings = 0;
-  globals::upscatter = 0;
-  globals::downscatter = 0;
-  globals::nesc = 0;
-}
-
-
-static void pkt_action_counters_printout(const PKT *const pkt, const int nts)
-{
-  int allpktinteractions = 0;
-  for (int i = 0; i < globals::npkts; i++)
-  {
-    allpktinteractions += pkt[i].interactions;
-  }
-  const double meaninteractions = (double) allpktinteractions / globals::npkts;
-  printout("mean number of interactions per packet = %g\n", meaninteractions);
-
-  const double deltat = globals::time_step[nts].width;
-  double modelvolume = 0.;
-  for (int mgi = 0; mgi < globals::npts_model; mgi++)
-  {
-    modelvolume += vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
-  }
-
-  /// Printout packet statistics
-  printout("ma_stat_activation_collexc = %d\n", globals::ma_stat_activation_collexc);
-  printout("ma_stat_activation_collion = %d\n", globals::ma_stat_activation_collion);
-  printout("ma_stat_activation_ntcollexc = %d\n", globals::ma_stat_activation_ntcollexc);
-  printout("ma_stat_activation_ntcollion = %d\n", globals::ma_stat_activation_ntcollion);
-  printout("ma_stat_activation_bb = %d\n", globals::ma_stat_activation_bb);
-  printout("ma_stat_activation_bf = %d\n", globals::ma_stat_activation_bf);
-  printout("ma_stat_activation_fb = %d\n", globals::ma_stat_activation_fb);
-  printout("ma_stat_deactivation_colldeexc = %d\n", globals::ma_stat_deactivation_colldeexc);
-  printout("ma_stat_deactivation_collrecomb = %d\n", globals::ma_stat_deactivation_collrecomb);
-  printout("ma_stat_deactivation_bb = %d\n", globals::ma_stat_deactivation_bb);
-  printout("ma_stat_deactivation_fb = %d\n", globals::ma_stat_deactivation_fb);
-  printout("ma_stat_internaluphigher = %d\n", globals::ma_stat_internaluphigher);
-  printout("ma_stat_internaluphighernt = %d\n", globals::ma_stat_internaluphighernt);
-  printout("ma_stat_internaldownlower = %d\n", globals::ma_stat_internaldownlower);
-
-  printout("k_stat_to_ma_collexc = %d\n", globals::k_stat_to_ma_collexc);
-  printout("k_stat_to_ma_collion = %d\n", globals::k_stat_to_ma_collion);
-  printout("k_stat_to_r_ff = %d\n", globals::k_stat_to_r_ff);
-  printout("k_stat_to_r_fb = %d\n", globals::k_stat_to_r_fb);
-  printout("k_stat_to_r_bb = %d\n", globals::k_stat_to_r_bb);
-  printout("k_stat_from_ff = %d\n", globals::k_stat_from_ff);
-  printout("k_stat_from_bf = %d\n", globals::k_stat_from_bf);
-  printout("k_stat_from_earlierdecay = %d\n", globals::k_stat_from_earlierdecay);
-
-  nonthermal::nt_print_stats(nts, modelvolume, deltat);
-
-  printout("escounter = %d\n", globals::escounter);
-  printout("cellcrossing  = %d\n", globals::cellcrossings);
-  printout("updatecellcounter  = %d\n", globals::updatecellcounter);
-  printout("coolingratecalccounter = %d\n", globals::coolingratecalccounter);
-  printout("resonancescatterings  = %d\n", globals::resonancescatterings);
-
-  printout("upscatterings  = %d\n", globals::upscatter);
-  printout("downscatterings  = %d\n", globals::downscatter);
-}
 
 #ifdef MPI_ON
 static void mpi_communicate_grid_properties(const int my_rank, const int p, const int nstart, const int ndo, const int nts, const int titer, char *mpi_grid_buffer, const int mpi_grid_buffer_size)
@@ -340,7 +245,7 @@ static void mpi_reduce_estimators(int my_rank, int nts)
   globals::time_step[nts].positron_dep /= globals::nprocs;
 
   #if TRACK_ION_STATS
-  MPI_Allreduce(MPI_IN_PLACE, ionstats, npts_model * includedions * ION_COUNTER_COUNT, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, ionstats, npts_model * includedions * ION_STAT_COUNT, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   #endif
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -389,47 +294,6 @@ static void remove_grid_restart_data(const int timestep)
     printout("Deleted %s\n", prevfilename);
   }
 }
-
-
-#if (TRACK_ION_STATS)
-void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double increment)
-{
-  if (!TRACK_ION_MASTATS && (ion_counter_type >= 18))
-  {
-    return;
-  }
-
-  assert(ion < get_nions(element));
-  assert(ion_counter_type < ION_COUNTER_COUNT);
-
-  const int uniqueionindex = get_uniqueionindex(element, ion);
-  #ifdef _OPENMP
-    #pragma omp atomic
-  #endif
-  ionstats[modelgridindex * globals::includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] += increment;
-}
-
-
-double get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type)
-{
-  assert(ion < get_nions(element));
-  assert(ion_counter_type < ION_COUNTER_COUNT);
-  const int uniqueionindex = get_uniqueionindex(element, ion);
-  return ionstats[modelgridindex * globals::includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type];
-}
-
-
-void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double newvalue)
-{
-  assert(ion < get_nions(element));
-  assert(ion_counter_type < ION_COUNTER_COUNT);
-  const int uniqueionindex = get_uniqueionindex(element, ion);
-  #ifdef _OPENMP
-    #pragma omp atomic
-  #endif
-  ionstats[modelgridindex * globals::includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] = newvalue;
-}
-#endif
 
 
 static bool walltime_sufficient_to_continue(const int nts, const int nts_prev, const int walltimelimitseconds)
@@ -538,7 +402,7 @@ static bool do_timestep(
   }
 
   /// Some counters on pkt-actions need to be reset to do statistics
-  pkt_action_counters_reset();
+  stats::pkt_action_counters_reset();
 
   if (nts == 0)
   {
@@ -634,7 +498,7 @@ static bool do_timestep(
 
     update_packets(my_rank, nts, packets);
 
-    pkt_action_counters_printout(packets, nts);
+    stats::pkt_action_counters_printout(packets, nts);
 
     #ifdef MPI_ON
       MPI_Barrier(MPI_COMM_WORLD); // hold all processes once the packets are updated
@@ -831,6 +695,7 @@ int main(int argc, char** argv)
 #ifdef _OPENMP
   /// Explicitly turn off dynamic threads because we use the threadprivate directive!!!
   omp_set_dynamic(0);
+
   #pragma omp parallel private(filename)
 #endif
   {
@@ -844,11 +709,7 @@ int main(int argc, char** argv)
 
     /// Get the total number of active threads
     globals::nthreads = omp_get_num_threads();
-    if (globals::nthreads > MTHREADS)
-    {
-      printout("[Fatal] too many threads. Set MTHREADS (%d) > nthreads (%d). Abort.\n", MTHREADS, globals::nthreads);
-      abort();
-    }
+
 #   ifdef _OPENMP
     printout("OpenMP parallelisation active with %d threads\n", globals::nthreads);
 #   endif
@@ -982,9 +843,7 @@ int main(int argc, char** argv)
 //    printout("barrier after tabulation of rate coefficients: time before barrier %d, time after barrier %d\n", time_before_barrier, time_after_barrier);
 //  #endif
 
-  #if TRACK_ION_STATS
-  ionstats = (double *) calloc(globals::npts_model * globals::includedions * ION_COUNTER_COUNT, sizeof(double));
-  #endif
+  stats::init();
 
   /// As a precaution, explicitly zero all the estimators here
   zero_estimators();
@@ -1228,9 +1087,10 @@ int main(int argc, char** argv)
   }
 
   free(packets);
-  #if TRACK_ION_STATS
-  free(ionstats);
-  #endif
+  if (TRACK_ION_STATS)
+  {
+    stats::cleanup();
+  }
 
   #ifdef MPI_ON
     MPI_Finalize();

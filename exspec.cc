@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include "exspec.h"
 #include "sn3d.h"
-#include "grid_init.h"
+#include "grid.h"
 #include "input.h"
 #include "light_curve.h"
 #include "packet_init.h"
@@ -255,33 +255,3 @@ int main(int argc, char** argv)
 extern inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno);
 extern inline FILE *fopen_required(const char *filename, const char *mode);
 
-
-// define these functions since sn3d.c is not included when compiling exspec
-void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double increment)
-{
-}
-
-double get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type)
-{
-  return 0.;
-}
-
-void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double newvalue)
-{
-}
-
-/*void *my_malloc(size_t size)
-{
-  char *adr;
-  #ifdef POWER6
-    adr = &heap[heapcounter];
-    heapcounter += size;
-    if (heapcounter >= heapsize) adr = NULL;
-  #else
-//    adr = &heap[heapcounter];
-//    heapcounter += size;
-//    if (heapcounter >= heapsize) adr = NULL;
-    adr = malloc(size);
-  #endif
-  return adr;
-}*/
