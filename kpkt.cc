@@ -198,7 +198,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
   {
     //printout("[debug] do_kpkt: element %d, ion %d, level %d\n",element,ion,level);
     const double epsilon_current = epsilon(element,ion,level);
-    double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+    const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
 
     /// excitation to same ionization stage
     /// -----------------------------------
@@ -296,6 +296,7 @@ static void set_ncoolingterms(void)
     {
       int ionterms = 0;
       globals::elements[element].ions[ion].coolingoffset = globals::ncoolingterms;
+
       /// Ionised ions add one ff-cooling term
       if (get_ionstage(element,ion) > 1)
         ionterms++;
@@ -573,9 +574,9 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
 
     // globals::debuglevel = 2;
     //printout("element %d, ion %d, coolingsum %g\n",element,ion,coolingsum);
-    int ilow = get_coolinglistoffset(element,ion);
+    const int ilow = get_coolinglistoffset(element,ion);
     int low = ilow;
-    int high = low + get_ncoolingterms(element,ion)-1;
+    int high = low + get_ncoolingterms(element,ion) - 1;
     //printout("element %d, ion %d, low %d, high %d\n",element,ion,low,high);
     if (globals::cellhistory[tid].cooling_contrib[low] < 0.)
     {
@@ -587,7 +588,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     while (low <= high)
     {
       i = (low + high) / 2;
-      if (globals::cellhistory[tid].cooling_contrib[i] > rndcool)
+      if (globals::cellhistory[tid].cooling_contrib[i] >= rndcool)
       {
         if ((i == ilow) || ((i > 0 ? globals::cellhistory[tid].cooling_contrib[i-1] : 0.) < rndcool))
           break; /// found (1)
@@ -731,14 +732,15 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       // printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
       const float nne = get_nne(modelgridindex);
 
-      double contrib = i > 0 ? globals::cellhistory[tid].cooling_contrib[i-1] : 0.;
+      const double contrib_low = (i > 0) ? globals::cellhistory[tid].cooling_contrib[i - 1] : 0.;
+      double contrib = contrib_low;
       const int level = coolinglist[i].level;
       const double epsilon_current = epsilon(element,ion,level);
-      double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+      const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
       int upper = -1;
       /// excitation to same ionization stage
       /// -----------------------------------
-      int nuptrans = get_nuptrans(element, ion, level);
+      const int nuptrans = get_nuptrans(element, ion, level);
       for (int ii = 0; ii < nuptrans; ii++)
       {
         const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans_lineindicies[ii];
@@ -747,13 +749,20 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
         const double epsilon_trans = epsilon(element, ion, tmpupper) - epsilon_current;
         const double C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
         contrib += C;
-        if (contrib > rndcool)
+        if (contrib >= rndcool)
         {
           upper = tmpupper;
           break;
         }
       }
+      // assert(contrib == globals::cellhistory[tid].cooling_contrib[i]);
 
+      if (upper < 0)
+      {
+        printout("Could not select an upper level. i %d rndcool %g contrib_low %g contrib %g (should match %g) upper %d\n",
+                 i, rndcool, contrib_low, contrib, globals::cellhistory[tid].cooling_contrib[i], upper);
+        abort();
+      }
       assert(upper >= 0);
 
       const int element = coolinglist[i].element;

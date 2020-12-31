@@ -710,34 +710,32 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
 
   globals::cellhistory[tid].cellnumber = modelgridindex;
   //globals::cellhistory[tid].totalcooling = COOLING_UNDEFINED;
-  int nlevels_with_processrates = 0;
-  int nlevels_with_photoioncoeffs = 0;
+  // int nlevels_with_processrates = 0;
+  // int nlevels_with_photoioncoeffs = 0;
   for (int element = 0; element < get_nelements(); element++)
   {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
-      bool ionhasvalue = false;
       globals::cellhistory[tid].cooling_contrib[get_coolinglistoffset(element,ion)] = COOLING_UNDEFINED;
       const int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
-        bool levelhasvalue = false;
+        // bool levelhasvalue = false;
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
         {
-          if (globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff >= 0)
-          {
-            levelhasvalue = true;
-            ionhasvalue = true;
-          }
+          // if (globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff >= 0)
+          // {
+          //   levelhasvalue = true;
+          // }
           globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = -99.;
 #if (SEPARATE_STIMRECOMB)
           globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].stimrecombcoeff = -99.;
 #endif
         }
         /// This is the only flag needed for all of the following MA stuff!
-        if (globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC] >= 0)
-          nlevels_with_processrates++;
+        // if (globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC] >= 0)
+        //   nlevels_with_processrates++;
 
         globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC] = -99.;
         /*
@@ -761,13 +759,13 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
           globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i] = -99.;
         }
         */
-        if (levelhasvalue)
-          nlevels_with_photoioncoeffs++;
+        // if (levelhasvalue)
+        //   nlevels_with_photoioncoeffs++;
       }
     }
   }
-  printout("nlevels_with_processrates %d\n", nlevels_with_processrates);
-  printout("nlevels_with_photoioncoeffs %d\n", nlevels_with_photoioncoeffs);
+  // printout("nlevels_with_processrates %d\n", nlevels_with_processrates);
+  // printout("nlevels_with_photoioncoeffs %d\n", nlevels_with_photoioncoeffs);
 
   //globals::cellhistory[tid].totalcooling = COOLING_UNDEFINED;
   //globals::cellhistory[tid].phixsflag = PHIXS_UNDEFINED;

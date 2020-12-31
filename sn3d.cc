@@ -753,7 +753,7 @@ int main(int argc, char** argv)
     }
   }
 
-  PKT *const packets = (PKT *) calloc(MPKTS, sizeof(PKT));
+  PKT *const packets = (PKT *) malloc(MPKTS * sizeof(PKT));
   assert(packets != NULL);
 
   #ifndef GIT_BRANCH

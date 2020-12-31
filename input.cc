@@ -1260,6 +1260,14 @@ static void setup_cellhistory(void)
       mem_usage_cellhistory += globals::ncoolingterms * sizeof(sizeof(double));
       globals::cellhistory[tid].cooling_contrib = (double *) calloc(globals::ncoolingterms, sizeof(double));
 
+      for (int element = 0; element < get_nelements(); element++)
+      {
+        for (int ion = 0; ion < get_nions(element); ion++)
+        {
+          globals::cellhistory[tid].cooling_contrib[get_coolinglistoffset(element, ion)] = COOLING_UNDEFINED;
+        }
+      }
+
       printout("mem_usage: coolinglist contribs (part of cellhistory) for thread %d occupies %.1f MB\n",
                tid, globals::ncoolingterms * sizeof(double) / 1024. / 1024.);
 

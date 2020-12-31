@@ -518,7 +518,7 @@ static void calculate_kappagrey(void)
 static void allocate_compositiondata(const int modelgridindex)
 /// Initialise composition dependent cell data for the given cell
 {
-  globals::modelgrid[modelgridindex].elements_uppermost_ion = (short *) malloc(get_nelements() * sizeof(short));
+  globals::modelgrid[modelgridindex].elements_uppermost_ion = (int *) malloc(get_nelements() * sizeof(int));
   assert(globals::modelgrid[modelgridindex].elements_uppermost_ion != NULL);
 
   if ((globals::modelgrid[modelgridindex].composition = (compositionlist_entry *) malloc(get_nelements() * sizeof(compositionlist_entry))) == NULL)
