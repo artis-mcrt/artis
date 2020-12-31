@@ -63,7 +63,7 @@ double get_nntot(int modelgridindex)
   int nntot = 0.;
   for (int element = 0; element < get_nelements(); element++)
   {
-    nntot += get_abundance(modelgridindex, element) / globals::elements[element].mass * rho;
+    nntot += get_elem_abundance(modelgridindex, element) / globals::elements[element].mass * rho;
   }
 
   return nntot;

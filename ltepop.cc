@@ -433,7 +433,7 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
   const double nn = globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
   if (nn < MINPOP)
   {
-    if (get_abundance(modelgridindex,element) > 0)
+    if (get_elem_abundance(modelgridindex,element) > 0)
       return MINPOP;
     else
       return 0.;
@@ -495,7 +495,7 @@ double get_groundmultiplet_pop(int modelgridindex, int element, int ion)
 
   if (nn < MINPOP)
   {
-    if (get_abundance(modelgridindex,element) > 0)
+    if (get_elem_abundance(modelgridindex,element) > 0)
       nn = MINPOP;
     else
       nn = 0.;
@@ -620,7 +620,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 
   if (nn < MINPOP)
   {
-    if (get_abundance(modelgridindex,element) > 0)
+    if (get_elem_abundance(modelgridindex,element) > 0)
       nn = MINPOP;
       // nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
     else

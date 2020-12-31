@@ -669,7 +669,7 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
             /// Cells with zero abundance for a specific element have zero contribution
             /// (set in calculate_kappa_rpkt_cont and therefore do not contribute to
             /// the estimators
-            if (get_abundance(modelgridindex, element) > 0)
+            if (get_elem_abundance(modelgridindex, element) > 0)
             {
               const int ionestimindex = modelgridindex * get_nelements() * maxion + element * maxion + ion;
               #if (!NO_LUT_PHOTOION)
@@ -1267,7 +1267,7 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
     const int level = globals::allcont[i].level;
     /// The bf process happens only if the current cell contains
     /// the involved atomic species
-    if ((get_abundance(modelgridindex,element) > 0) && (DETAILED_BF_ESTIMATORS_ON || (level < 100) || (ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6)))
+    if ((get_elem_abundance(modelgridindex,element) > 0) && (DETAILED_BF_ESTIMATORS_ON || (level < 100) || (ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6)))
     {
       const double nu_edge = globals::allcont[i].nu_edge;
       const int phixstargetindex = globals::allcont[i].phixstargetindex;
@@ -1313,7 +1313,7 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
             printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf_contr %g ... abort\n",kappa_bf_contr);
             printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n",i,element,ion,level);
             printout("[fatal] Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
-            printout("[fatal] globals::cell[%d].composition[%d].abundance = %g\n",modelgridindex,element,get_abundance(modelgridindex,element));
+            printout("[fatal] globals::cell[%d].composition[%d].abundance = %g\n",modelgridindex,element,get_elem_abundance(modelgridindex,element));
             printout("[fatal] nne %g, nnlevel %g, (or %g)\n", get_nne(modelgridindex), nnlevel, calculate_exclevelpop(modelgridindex,element,ion,level));
             printout("[fatal] sigma_bf %g, T_e %g, nu %g, nu_edge %g\n",sigma_bf,get_Te(modelgridindex),nu,nu_edge);
             abort();
