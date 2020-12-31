@@ -265,7 +265,7 @@ typedef struct modelgrid_t
   float grey_depth;                      /// Grey optical depth to surface of the modelgridcell
                                          /// This is only stored to print it outside the OpenMP loop in update_grid to the estimatorsfile
                                          /// so there is no need to communicate it via MPI so far!
-  short *elements_uppermost_ion; /// Highest ionisation stage which has a decent population for a particular element
+  int *elements_uppermost_ion; /// Highest ionisation stage which has a decent population for a particular element
                                                     /// in a given cell.
   compositionlist_entry *composition;    /// Pointer to an array which contains the time dependent abundances
                                         /// of all included elements and all the groundlevel
