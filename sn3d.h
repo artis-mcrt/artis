@@ -75,8 +75,16 @@ extern FILE *output_file;
     #undef assert
   #endif
   #define assert(e) if (!(e)) { printout("%s:%u: failed assertion `%s' in function %s\n", __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); abort(); }
+
+  #if defined TESTMODE && TESTMODE
+    #define assert_testmodeonly(e) if (!(e)) { printout("%s:%u: failed assertion `%s' in function %s\n", __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); abort(); }
+  #else
+    #define	assert_testmodeonly(e)	((void)0)
+  #endif
+
 #else
   #define	assert(e)	((void)0)
+  #define	assert_testmodeonly(e)	((void)0)
 #endif
 
 

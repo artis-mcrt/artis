@@ -2343,8 +2343,8 @@ void input(int rank)
 
   printout("npts_model: %d\n", globals::npts_model);
   globals::rmax = globals::vmax * globals::tmin;
-  printout("globals::vmax %g\n", globals::vmax);
-  printout("globals::tmin %g\n", globals::tmin);
+  printout("vmax %g\n", globals::vmax);
+  printout("tmin %g\n", globals::tmin);
   printout("rmax %g\n", globals::rmax);
 
   globals::coordmax[0] = globals::coordmax[1] = globals::coordmax[2] = globals::rmax;
