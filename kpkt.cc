@@ -597,8 +597,8 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     //printout("element %d, ion %d, low %d, high %d\n",element,ion,low,high);
     if (globals::cellhistory[tid].cooling_contrib[ilow] < 0.)
     {
-      printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d oldcoolingsum %g\n",
-               modelgridindex, element, ion, ilow, high, oldcoolingsum);
+      // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d oldcoolingsum %g\n",
+      //          modelgridindex, element, ion, ilow, high, oldcoolingsum);
       calculate_kpkt_rates_ion(modelgridindex, element, ion, ilow, oldcoolingsum);
     }
 
@@ -751,8 +751,8 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       const double contrib_low = (i > ilow) ? globals::cellhistory[tid].cooling_contrib[i - 1] : get_coolinglistoffset(element, ion);
 
       double contrib = contrib_low;
-      assert(coolinglist[i].element == element);
-      assert(coolinglist[i].ion == ion);
+      assert_testmodeonly(coolinglist[i].element == element);
+      assert_testmodeonly(coolinglist[i].ion == ion);
       const int level = coolinglist[i].level;
       const double epsilon_current = epsilon(element, ion, level);
       const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
