@@ -39,7 +39,7 @@ else ifneq (,$(findstring kelvin,$(HOSTNAME)))
 	#  libs/gsl/1.16/gcc-4.4.7
 
 	CXX = mpicxx
-	CXXFLAGS = -std=c++17 -mcmodel=medium -O3 #-fopenmp=libomp
+	CXXFLAGS += -std=c++17 -mcmodel=medium -O3 #-fopenmp=libomp
 sn3d: CXXFLAGS += -DMPI_ON
 
 else ifneq (, $(shell which mpicxx))
@@ -47,13 +47,13 @@ else ifneq (, $(shell which mpicxx))
 
 	CXX = mpicxx
 	# CXX = c++
-	CXXFLAGS = -std=c++17 -march=native -O3 -g #-fopenmp=libomp
+	CXXFLAGS += -std=c++17 -march=native -O3 -g #-fopenmp=libomp
 
 sn3d sn3dcuda: CXXFLAGS += -DMPI_ON
 else
 	CXX = c++
 	# CXX = icpc
-	CXXFLAGS = -std=c++17 -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
+	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
 endif
 
 # if this doesn't work, fix pkg-config or change to
@@ -66,6 +66,12 @@ CXXFLAGS += $(shell pkg-config --cflags gsl)
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE -DGSL_RANGE_CHECK_OFF
 
 
+ifeq ($(TESTMODE),ON)
+	CXXFLAGS += -DTESTMODE=true
+else
+	CXXFLAGS += -DTESTMODE=false
+endif
+
 exspec: CXXFLAGS += -DDO_EXSPEC
 
 sn3dmpi: CXX = mpicxx
@@ -76,7 +82,6 @@ sn3dopenmp: CXXFLAGS += -Xpreprocessor
 sn3dopenmp: CXXFLAGS += -fopenmp
 sn3dopenmp: LDFLAGS += -lomp
 sn3dopenmp: sn3d
-
 
 ### use pg when you want to use gprof the profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)

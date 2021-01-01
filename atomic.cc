@@ -239,8 +239,8 @@ int get_uniqueionindex(const int element, const int ion)
   }
   index += ion;
 
-  assert(index == globals::elements[element].ions[ion].uniqueionindex);
-  // assert(index < includedions);
+  assert_testmodeonly(index == globals::elements[element].ions[ion].uniqueionindex);
+  assert_testmodeonly(index < globals::includedions);
   return index;
 }
 
@@ -258,7 +258,7 @@ void get_ionfromuniqueionindex(const int allionsindex, int *element, int *ion)
     {
       *element = e;
       *ion = allionsindex - allionsindex_thiselementfirstion;
-      assert(get_uniqueionindex(*element, *ion) == allionsindex);
+      assert_testmodeonly(get_uniqueionindex(*element, *ion) == allionsindex);
       return;
     }
   }
@@ -277,9 +277,7 @@ double epsilon(int element, int ion, int level)
 double stat_weight(int element, int ion, int level)
 /// Returns the statistical weight of (element,ion,level).
 {
-  #ifdef DEBUG_ON
-  assert(level <= globals::elements[element].ions[ion].nlevels);
-  #endif
+  assert_testmodeonly(level <= globals::elements[element].ions[ion].nlevels);
   return globals::elements[element].ions[ion].levels[level].stat_weight;
 }
 

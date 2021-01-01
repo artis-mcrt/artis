@@ -114,7 +114,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
     decay::nucdecayenergy(NUCLIDE_CO57) * globals::totmassradionuclide[NUCLIDE_CO57] / decay::nucmass(NUCLIDE_CO57) +
     (decay::nucdecayenergy(NUCLIDE_V48) + decay::nucdecayenergy(NUCLIDE_CR48)) * globals::totmassradionuclide[NUCLIDE_CR48] / decay::nucmass(NUCLIDE_CR48) +
     (decay::nucdecayenergy(NUCLIDE_FE52) + decay::nucdecayenergy(NUCLIDE_MN52)) * globals::totmassradionuclide[NUCLIDE_FE52] / decay::nucmass(NUCLIDE_FE52));
-  printout("etot %g (t_0 ot t_inf)\n", etot_tinf);
+  printout("etot %g (t_0 to t_inf)\n", etot_tinf);
   printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n",
            decay::nucdecayenergy(NUCLIDE_NI56) / MEV, decay::nucdecayenergy(NUCLIDE_CO56) / MEV,
            decay::nucdecayenergygamma(NUCLIDE_CO56) / MEV);
