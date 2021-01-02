@@ -513,18 +513,12 @@ static void rpkt_event_boundbound(PKT *pkt_ptr, const int mgi)
   }
   #endif
 
-  #ifndef FORCE_LTE
-    //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
-  #endif
   #ifdef RECORD_LINESTAT
     if (tid == 0) globals::acounter[pkt_ptr->next_trans-1] += 1;  /// This way we will only record line statistics from OMP-thread 0
                                                          /// With an atomic pragma or a thread-private structure with subsequent
                                                          /// reduction this could be extended to all threads. However, I'm not
                                                          /// sure if this is worth the additional computational expenses.
   #endif
-  //pkt_ptr->mastate.element = pkt_ptr->nextrans_element;   //store all these nextrans data to MA to save memory!!!!
-  //pkt_ptr->mastate.ion     = pkt_ptr->nextrans_ion;       //MA info becomes important just after activating!
-  //pkt_ptr->mastate.level   = pkt_ptr->nextrans_uppper;
 }
 
 

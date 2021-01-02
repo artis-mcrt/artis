@@ -54,7 +54,6 @@ namespace globals
     extern int *linestat_reduced;
   #endif
 
-
   extern bool file_set;
 
   extern bool do_comp_est;
