@@ -83,11 +83,31 @@ sn3dopenmp: CXXFLAGS += -fopenmp
 sn3dopenmp: LDFLAGS += -lomp
 sn3dopenmp: sn3d
 
+sn3dcuda sn3dcudawhole: LDFLAGS += -lcudart
+
+sn3dcuda sn3dcudawhole: CXXFLAGS += -DCUDA_ENABLED=true
+
+# Gadi
+ifneq (,$(findstring gadi,$(HOSTNAME)))
+	# Tesla V100
+	CUDA_NVCC_FLAGS += -arch=sm_70 -gencode=arch=compute_70,code=sm_70 -gencode=arch=compute_70,code=compute_70
+	CXX = mpic++
+	# CXX = icpc
+	# CXXFLAGS += -qopenmp
+	INCLUDE += -I/home/120/ljs120/cuda_samples/common/inc
+endif
+
+# CXXFLAGS += -std=c++11
+# CXXFLAGS += -fPIC -shared
+# CUDA_NVCC_FLAGS += -Xcompiler -fPIC -shared -rdc=true
+CUDA_NVCC_FLAGS += -ccbin=$(CXX) -std=c++14 -O3 -use_fast_math -Xcompiler "$(CXXFLAGS)" -rdc=true --expt-relaxed-constexpr
+# CUDA_NVCC_FLAGS += -G -g
+
 ### use pg when you want to use gprof the profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)
-sn3d_files = sn3d.cc atomic.cc boundary.cc emissivities.cc gamma.cc globals.cc grey_emissivities.cc grid.cc input.cc kpkt.cc light_curve.cc ltepop.cc macroatom.cc nltepop.cc nonthermal.cc decay.cc packet_init.cc photo_electric.cc polarization.cc radfield.cc ratecoeff.cc rpkt.cc stats.cc thermalbalance.cc update_grid.cc update_packets.cc vectors.cc vpkt.cc md5.cc
+sn3d_files = sn3d.cc atomic.cc boundary.cc emissivities.cc gamma.cc globals.cc grey_emissivities.cc grid.cc gsl_managed.cc input.cc kpkt.cc light_curve.cc ltepop.cc macroatom.cc nltepop.cc nonthermal.cc decay.cc packet_init.cc photo_electric.cc polarization.cc radfield.cc ratecoeff.cc rpkt.cc stats.cc thermalbalance.cc update_grid.cc update_packets.cc vectors.cc vpkt.cc md5.cc
 
-sn3d_objects = sn3d.o atomic.o boundary.o emissivities.o gamma.o globals.o grey_emissivities.o grid.o input.o kpkt.o light_curve.o ltepop.o macroatom.o nltepop.o nonthermal.o decay.o packet_init.o photo_electric.o polarization.o radfield.o ratecoeff.o rpkt.o stats.o thermalbalance.o update_grid.o update_packets.o vectors.o vpkt.o md5.o
+sn3d_objects = sn3d.o atomic.o boundary.o emissivities.o gamma.o globals.o grey_emissivities.o grid.o gsl_managed.o input.o kpkt.o light_curve.o ltepop.o macroatom.o nltepop.o nonthermal.o decay.o packet_init.o photo_electric.o polarization.o radfield.o ratecoeff.o rpkt.o stats.o thermalbalance.o update_grid.o update_packets.o vectors.o vpkt.o md5.o
 
 
 all: sn3d exspec
@@ -97,6 +117,16 @@ sn3d: clean version
 
 sn3ddebug: clean version $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_objects) -o sn3d
+
+sn3dcudawhole: version
+	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_files) -o sn3d
+
+sn3dcuda: version $(sn3d_objects)
+	nvcc --gpu-architecture=sm_70 --device-link $(sn3d_objects) --output-file gpucode.o
+	$(CXX) $(CXXFLAGS) gpucode.o $(INCLUDE) -lcudadevrt $(LDFLAGS) $(sn3d_objects) -o sn3d
+
+%.o: %.cc
+	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c
 
 exspec_files = exspec.cc grid.cc globals.cc input.cc vectors.cc packet_init.cc update_grid.cc update_packets.cc gamma.cc boundary.cc macroatom.cc decay.cc rpkt.cc kpkt.cc photo_electric.cc emissivities.cc grey_emissivities.cc ltepop.cc atomic.cc ratecoeff.cc thermalbalance.cc light_curve.cc spectrum.cc polarization.cc nltepop.cc nonthermal.cc radfield.cc stats.cc vpkt.cc md5.cc
 
