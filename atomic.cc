@@ -25,6 +25,7 @@ int get_phixtargetindex(const int element, const int ion, const int level, const
   }
   printout("Could not find phixstargetindex\n");
   abort();
+  return -1;
 }
 
 
