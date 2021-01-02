@@ -12,7 +12,7 @@
 namespace globals
 {
   #if CUDA_ENABLED
-  extern __managed__ curandState curandstates[MTHREADS];
+  extern __managed__ curandState curandstates[MCUDATHREADS];
   #endif
 
   extern double syn_dir[3]; // vector pointing from origin to observer
