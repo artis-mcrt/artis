@@ -144,4 +144,14 @@ inline double get_arrive_time_cmf(const PKT *pkt_ptr)
 }
 
 
+inline int get_nthreads(void)
+{
+  #ifdef _OPENMP
+  return omp_get_num_threads();
+  #else
+  return 1;
+  #endif
+}
+
+
 #endif // SN3D_H

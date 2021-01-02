@@ -152,7 +152,6 @@ namespace globals
   extern bool homogeneous_abundances;
 
   extern bool simulation_continued_from_saved;
-  extern int nthreads;
   extern double nu_rfcut;
   extern int n_lte_timesteps;
   extern double cell_is_optically_thick;

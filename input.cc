@@ -1241,9 +1241,9 @@ static void setup_cellhistory(void)
   ///======================================================
   /// Stack which holds information about population and other cell specific data
   /// ===> move to update_packets
-  if ((globals::cellhistory = (cellhistory_struct *) malloc(globals::nthreads * sizeof(cellhistory_struct))) == NULL)
+  if ((globals::cellhistory = (cellhistory_struct *) malloc(get_nthreads() * sizeof(cellhistory_struct))) == NULL)
   {
-    printout("[fatal] input: not enough memory to initialize cellhistory of size %d... abort\n", globals::nthreads);
+    printout("[fatal] input: not enough memory to initialize cellhistory of size %d... abort\n", get_nthreads());
     abort();
   }
 
@@ -1401,12 +1401,8 @@ static void setup_phixs_list(void)
   printout("[info] read_atomicdata: number of bfcontinua %d\n", globals::nbfcontinua);
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n", globals::nbfcontinua_ground);
 
-  globals::phixslist = (phixslist_t *) malloc(globals::nthreads * sizeof(phixslist_t));
-  if (globals::phixslist == NULL)
-  {
-    printout("[fatal] read_atomicdata: not enough memory to initialize phixslist... abort\n");
-    abort();
-  }
+  globals::phixslist = (phixslist_t *) malloc(get_nthreads() * sizeof(phixslist_t));
+  assert(globals::phixslist != NULL);
 
   /// MK: 2012-01-19
   /// To fix the OpenMP problem on BlueGene machines this parallel section was removed and replaced by
@@ -1417,7 +1413,7 @@ static void setup_phixs_list(void)
   //  #pragma omp parallel private(i,element,ion,level,nions,nlevels,epsilon_upper,E_threshold,nu_edge)
   //  {
   //#endif
-  for (int itid = 0; itid < globals::nthreads; itid++)
+  for (int itid = 0; itid < get_nthreads(); itid++)
   {
     /// Number of ground level bf-continua equals the total number of included ions minus the number
     /// of included elements, because the uppermost ionisation stages can't ionise.

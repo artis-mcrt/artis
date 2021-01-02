@@ -174,7 +174,6 @@ namespace globals
   bool homogeneous_abundances;
 
   bool simulation_continued_from_saved;
-  int nthreads;
   double nu_rfcut;
   int n_lte_timesteps;
   double cell_is_optically_thick;
