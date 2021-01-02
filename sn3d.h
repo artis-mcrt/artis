@@ -164,13 +164,28 @@ inline double get_arrive_time_cmf(const PKT *pkt_ptr)
 }
 
 
-inline int get_nthreads(void)
+__host__ __device__
+inline int get_num_threads(void)
 {
-  #ifdef _OPENMP
+#ifdef __CUDA_ARCH__
+  return MCUDATHREADS;
+#elif defined _OPENMP
   return omp_get_num_threads();
-  #else
+#else
   return 1;
-  #endif
+#endif
+}
+
+__host__ __device__
+inline int get_thread_num(void)
+{
+#ifdef __CUDA_ARCH__
+  return threadIdx.x + blockDim.x * blockIdx.x;
+#elif defined _OPENMP
+  return omp_get_thread_num();
+#else
+  return 0;
+#endif
 }
 
 
