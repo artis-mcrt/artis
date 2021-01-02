@@ -37,6 +37,7 @@ const bool KEEP_ALL_RESTART_FILES = false; // once a new gridsave and packets*.t
 
 // threadprivate variables
 int tid;
+__managed__ int myGpuId = 0;
 bool use_cellhist;
 bool neutral_flag;
 gsl_rng *rng;
@@ -670,6 +671,30 @@ int main(int argc, char** argv)
     nvpkt_esc1 = 0;
     nvpkt_esc2 = 0;
     nvpkt_esc3 = 0;
+  #endif
+
+  #if CUDA_ENABLED
+  printf("CUDA ENABLED\n");
+  int deviceCount = -1;
+  checkCudaErrors(cudaGetDeviceCount(&deviceCount));
+  printf("deviceCount %d\n", deviceCount);
+  assert(deviceCount > 0);
+  {
+    myGpuId = 0;
+    #ifdef _OPENMP
+    const int omp_tid = get_thread_num();
+    myGpuId = omp_tid % deviceCount;
+    printf("OMP thread id %d\n", omp_tid);
+    #else
+      #if MPI_ON
+      const int local_rank = atoi(getenv("OMPI_COMM_WORLD_LOCAL_RANK"));
+      myGpuId = local_rank % deviceCount;
+      printf("local_rank %d\n", local_rank);
+      #endif
+    #endif
+    printf("myGpuId %d\n", myGpuId);
+  }
+  cudaSetDevice(myGpuId);
   #endif
 
   #ifdef MPI_ON
