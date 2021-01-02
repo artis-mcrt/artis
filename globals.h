@@ -6,8 +6,8 @@
 #endif
 
 #include "types.h"
-#include "sn3d.h"
-#include "globals.h"
+// #include "sn3d.h"
+#include "cuda.h"
 
 namespace globals
 {
