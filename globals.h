@@ -10,7 +10,7 @@ namespace globals
 
   extern double syn_dir[3]; // vector pointing from origin to observer
 
-  extern struct time *time_step;
+  extern __managed__ struct time *time_step;
 
   #define MSYN_TIME 100
   extern int nsyn_time;

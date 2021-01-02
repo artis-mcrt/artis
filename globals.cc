@@ -10,7 +10,7 @@ namespace globals
   //#define NRAYS_SYN 1 // number of rays traced in a syn calculation
 
   //RAY rays[NRAYS_SYN];
-  struct time *time_step;
+  __managed__ struct time *time_step;
 
   int nsyn_time;
   double time_syn[MSYN_TIME];

@@ -1,6 +1,57 @@
 #ifndef SN3D_H
 #define SN3D_H
 
+#ifndef __CUDA_ARCH__
+  // host code
+
+  #define printout(...) fprintf (output_file, __VA_ARGS__)
+
+  #ifdef DEBUG_ON
+    #ifdef assert
+      #undef assert
+    #endif
+    #define assert(e) if (!(e)) { printout("%s:%u: failed assertion `%s' in function %s\n", __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); abort(); }
+
+    #if defined TESTMODE && TESTMODE
+      #define assert_testmodeonly(e) if (!(e)) { printout("%s:%u: failed testmode assertion `%s' in function %s\n", __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); abort(); }
+    #else
+      #define	assert_testmodeonly(e)	((void)0)
+    #endif
+
+  #else
+    #ifdef assert
+      #undef assert
+    #endif
+    #define	assert(e)	((void)0)
+    #define	assert_testmodeonly(e)	((void)0)
+  #endif
+
+  #ifdef _OPENMP
+  #ifndef __CUDACC__
+    #define safeadd(var, val) _Pragma("omp atomic update") \
+    { \
+    var += val \
+    }
+  #else
+    #define safeadd(var, val) var += val
+  #endif
+  #else
+    #define safeadd(var, val) var += val
+  #endif
+
+#else
+  // device code
+
+  #define printout(...) printf (__VA_ARGS__)
+
+  #define safeadd(var, val) atomicAdd(&var, val)
+
+#endif
+
+#define safeincrement(var) safeadd(var, 1)
+
+#include "cuda.h"
+
 #include "globals.h"
 
 #include <stdarg.h>  /// MK: needed for printout()
@@ -54,37 +105,6 @@ extern FILE *output_file;
 
 #ifdef _OPENMP
   #pragma omp threadprivate(tid, use_cellhist, neutral_flag, rng, gslworkspace, output_file)
-#endif
-
-
-#define printout(...) fprintf (output_file, __VA_ARGS__)
-
-// inline int printout(const char *format, ...)
-// {
-//    va_list args;
-//    va_start(args, format);
-//    const int ret_status = vfprintf(output_file, format, args);
-//    // fprintf(output_file, "vfprintf return code %d\n", va_arg(args, char*) == NULL);
-//    va_end(args);
-//
-//    return ret_status;
-// }
-
-#ifdef DEBUG_ON
-  #ifdef assert
-    #undef assert
-  #endif
-  #define assert(e) if (!(e)) { printout("%s:%u: failed assertion `%s' in function %s\n", __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); abort(); }
-
-  #if defined TESTMODE && TESTMODE
-    #define assert_testmodeonly(e) if (!(e)) { printout("%s:%u: failed testmode assertion `%s' in function %s\n", __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); abort(); }
-  #else
-    #define	assert_testmodeonly(e)	((void)0)
-  #endif
-
-#else
-  #define	assert(e)	((void)0)
-  #define	assert_testmodeonly(e)	((void)0)
 #endif
 
 
