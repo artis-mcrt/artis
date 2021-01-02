@@ -53,12 +53,6 @@ int mpi_grid_buffer_size = 0;
 char *mpi_grid_buffer = NULL;
 
 
-#ifndef _OPENMP
-typedef int omp_int_t;
-static inline omp_int_t omp_get_thread_num(void) { return 0; }
-static inline omp_int_t omp_get_num_threads(void) { return 1; }
-#endif
-
 static void initialise_linestat_file(void)
 {
   linestat_file = fopen_required("linestat.out", "w");
@@ -700,7 +694,7 @@ int main(int argc, char** argv)
 #endif
   {
     /// Get the current threads ID, copy it to a threadprivate variable
-    tid = omp_get_thread_num();
+    tid = get_thread_num();
     /// and initialise the threads outputfile
     sprintf(filename,"output_%d-%d.txt", my_rank, tid);
     output_file = fopen_required(filename, "w");
@@ -708,7 +702,7 @@ int main(int argc, char** argv)
     setvbuf(output_file, NULL, _IOLBF, 1);
 
 #   ifdef _OPENMP
-    printout("OpenMP parallelisation active with %d threads\n", get_nthreads());
+    printout("OpenMP parallelisation active with %d threads\n", get_num_threads());
 #   endif
 
     gslworkspace = gsl_integration_workspace_alloc(GSLWSIZE);
@@ -772,7 +766,7 @@ int main(int argc, char** argv)
     printout("MPI disabled\n");
   #endif
 
-  if ((globals::kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(get_nthreads(), sizeof(rpkt_cont_opacity_struct))) == NULL)
+  if ((globals::kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(get_num_threads(), sizeof(rpkt_cont_opacity_struct))) == NULL)
   {
     printout("[fatal] input: error initializing continuum opacity communication variables ... abort\n");
     abort();

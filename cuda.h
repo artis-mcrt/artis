@@ -18,6 +18,7 @@
 
   #define USECUDA_UPDATEPACKETS true
 
+  #define MCUDATHREADS 1024
 
   #include <cuda_runtime.h>
   // #include <curand.h>
@@ -70,10 +71,9 @@
 
     #define abort() assert(false)
 
-    extern __managed__ curandState curandstates[MTHREADS];
+    extern __managed__ curandState curandstates[MCUDATHREADS];
 
-    typedef int omp_int_t;
-    __host__ __device__ extern inline omp_int_t get_thread_num(void);
+    __host__ __device__ extern inline int get_thread_num(void);
 
     __device__ inline static double gsl_rng_uniform(void *ignore)
     {
