@@ -5,6 +5,10 @@
 namespace globals
 {
 
+  #if CUDA_ENABLED
+  __managed__ curandState curandstates[MCUDATHREADS];
+  #endif
+
   double syn_dir[3]; // vector pointing from origin to observer
 
   //#define NRAYS_SYN 1 // number of rays traced in a syn calculation

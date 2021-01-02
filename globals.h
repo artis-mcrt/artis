@@ -1,12 +1,19 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#if CUDA_ENABLED
+#include <curand_kernel.h>
+#endif
+
 #include "types.h"
 #include "sn3d.h"
 #include "globals.h"
 
 namespace globals
 {
+  #if CUDA_ENABLED
+  extern __managed__ curandState curandstates[MTHREADS];
+  #endif
 
   extern double syn_dir[3]; // vector pointing from origin to observer
 
