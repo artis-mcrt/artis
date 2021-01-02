@@ -109,9 +109,10 @@ extern bool neutral_flag;
 extern gsl_rng *rng;  // pointer for random number generator
 extern gsl_integration_workspace *gslworkspace;
 extern FILE *output_file;
+extern __managed__ int myGpuId;
 
 #ifdef _OPENMP
-  #pragma omp threadprivate(tid, use_cellhist, neutral_flag, rng, gslworkspace, output_file)
+  #pragma omp threadprivate(tid, myGpuId, use_cellhist, neutral_flag, rng, gslworkspace, output_file)
 #endif
 
 
