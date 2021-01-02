@@ -44,6 +44,13 @@
 
   #define printout(...) printf (__VA_ARGS__)
 
+  #if defined TESTMODE && TESTMODE
+    #define assert_testmodeonly(e) assert(e)
+  #else
+    #define	assert_testmodeonly(e)	((void)0)
+  #endif
+
+
   #define safeadd(var, val) atomicAdd(&var, val)
 
 #endif
