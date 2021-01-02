@@ -1281,9 +1281,9 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   const double trat = globals::time_step[nts].start / globals::tmin;
   const double tratmid = globals::time_step[nts].mid / globals::tmin;
 
-  double mps[globals::nthreads];  /// Thread private substitution of max_path_step. Its minimum is
+  double mps[get_nthreads()];  /// Thread private substitution of max_path_step. Its minimum is
                          /// assigned to max_path_step after the parallel update_grid finished.
-  for (int i = 0; i < globals::nthreads; i++)
+  for (int i = 0; i < get_nthreads(); i++)
   {
     mps[i] = 1.e35;
   }
@@ -1404,7 +1404,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 
   /// Assign the minimum of thread private mps to the global variable max_path_step
   globals::max_path_step = mps[0];
-  for (int i = 1; i < globals::nthreads; i++)
+  for (int i = 1; i < get_nthreads(); i++)
   {
     if (mps[i] < globals::max_path_step)
     {

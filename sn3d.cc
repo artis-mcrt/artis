@@ -707,11 +707,8 @@ int main(int argc, char** argv)
     /// Makes sure that the output_file is written line-by-line
     setvbuf(output_file, NULL, _IOLBF, 1);
 
-    /// Get the total number of active threads
-    globals::nthreads = omp_get_num_threads();
-
 #   ifdef _OPENMP
-    printout("OpenMP parallelisation active with %d threads\n", globals::nthreads);
+    printout("OpenMP parallelisation active with %d threads\n", get_nthreads());
 #   endif
 
     gslworkspace = gsl_integration_workspace_alloc(GSLWSIZE);
@@ -775,7 +772,7 @@ int main(int argc, char** argv)
     printout("MPI disabled\n");
   #endif
 
-  if ((globals::kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(globals::nthreads, sizeof(rpkt_cont_opacity_struct))) == NULL)
+  if ((globals::kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(get_nthreads(), sizeof(rpkt_cont_opacity_struct))) == NULL)
   {
     printout("[fatal] input: error initializing continuum opacity communication variables ... abort\n");
     abort();
