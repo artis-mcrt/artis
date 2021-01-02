@@ -126,8 +126,8 @@ inline FILE *fopen_required(const char *filename, const char *mode)
     printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename, mode);
     abort();
   }
-  else
-    return file;
+
+  return file;
 }
 
 
