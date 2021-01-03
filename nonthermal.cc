@@ -302,9 +302,9 @@ static void read_auger_data(void)
     if (line != fgets(line, 151, augerfile))
       break;
 
-    int Z;
-    int ionstage;
-    int shellnum;
+    int Z = -1;
+    int ionstage = -1;
+    int shellnum = -1;
 
     char *linepos = line;
     int offset = 0;
@@ -317,9 +317,9 @@ static void read_auger_data(void)
 
     if (element >= 0 && get_ionstage(element, 0) <= ionstage && ionstage < (get_ionstage(element, 0) + get_nions(element)))
     {
-      float ionpot_ev;
-      float en_auger_ev_total_nocorrection;
-      int epsilon_e3;
+      float ionpot_ev = -1;
+      float en_auger_ev_total_nocorrection = -1;
+      int epsilon_e3 = -1;
 
       assert(sscanf(linepos, "%d %g %g %d%n", &shellnum, &ionpot_ev, &en_auger_ev_total_nocorrection, &epsilon_e3, &offset) == 4);
       assert(offset == 20);
@@ -337,7 +337,7 @@ static void read_auger_data(void)
         linepos += offset;
         strprob[5] = '\0';
 
-        int probnaugerelece4;
+        int probnaugerelece4 = -1;
         assert(sscanf(strprob, "%d", &probnaugerelece4) == 1);
 
         const double probnaugerelec = probnaugerelece4 / 10000.;
@@ -1831,7 +1831,7 @@ int nt_ionisation_maxupperion(const int element, const int lowerion)
 
 int nt_random_upperion(const int modelgridindex, const int element, const int lowerion, const bool energyweighted)
 {
-  const int nions = get_nions(element);
+  // const int nions = get_nions(element);
   assert(lowerion < nions - 1);
   if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0)
   {
