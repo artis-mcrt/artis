@@ -71,14 +71,14 @@
 
     #define abort() assert(false)
 
-    extern __managed__ curandState curandstates[MCUDATHREADS];
+    extern __managed__ curandState globals::curandstates[MCUDATHREADS];
 
     __host__ __device__ extern inline int get_thread_num(void);
 
     __device__ inline static double gsl_rng_uniform(void *ignore)
     {
       const int tid = get_thread_num();
-      const double zrand = curand_uniform_double(&curandstates[tid]);
+      const double zrand = curand_uniform_double(&globals::curandstates[tid]);
       // printf("random %g\n", zrand);
       return zrand;
     }
@@ -88,7 +88,7 @@
       const int tid = get_thread_num();
       while (true)
       {
-        const double zrand = curand_uniform_double(&curandstates[tid]);
+        const double zrand = curand_uniform_double(&globals::curandstates[tid]);
         if (zrand > 0.)
           return zrand;
       }

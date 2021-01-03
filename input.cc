@@ -2354,7 +2354,7 @@ __global__ static void kernel_setupcurand(unsigned long int pre_zseed, int rank)
   if (tid < MCUDATHREADS)
   {
     unsigned long int zseed = pre_zseed + (13 * rank);
-    curand_init(zseed, tid, 0, &curandstates[tid]);
+    curand_init(zseed, tid, 0, &globals::curandstates[tid]);
     // const double zrand = curand_uniform_double(&curandstates[tid]);
     // printf("kernel_setupcurand tidx %d %g\n", tid, zrand);
   }
