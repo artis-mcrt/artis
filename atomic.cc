@@ -5,10 +5,11 @@
 #include "ltepop.h"
 #include "update_grid.h"
 
-double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
-int nelements;
+__managed__ double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
+__managed__ int nelements;
 
 
+__host__ __device__
 static int get_continuumindex_phixstargetindex(int element, int ion, int level, int phixstargetindex)
 /// Returns the index of the continuum associated to the given level.
 {
@@ -16,6 +17,7 @@ static int get_continuumindex_phixstargetindex(int element, int ion, int level, 
 }
 
 
+__host__ __device__
 int get_phixtargetindex(const int element, const int ion, const int level, const int upperionlevel)
 {
   for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
@@ -29,6 +31,7 @@ int get_phixtargetindex(const int element, const int ion, const int level, const
 }
 
 
+__host__ __device__
 int get_continuumindex(int element, int ion, int level, int upperionlevel)
 /// Returns the index of the continuum associated to the given level.
 {
@@ -37,6 +40,7 @@ int get_continuumindex(int element, int ion, int level, int upperionlevel)
 }
 
 
+__host__ __device__
 double get_tau_sobolev(int modelgridindex, int lineindex, double t_current)
 {
   const int element = globals::linelist[lineindex].elementindex;
@@ -57,6 +61,7 @@ double get_tau_sobolev(int modelgridindex, int lineindex, double t_current)
 }
 
 
+__host__ __device__
 double get_nntot(int modelgridindex)
 // total ion (nuclei) density
 {
@@ -70,6 +75,8 @@ double get_nntot(int modelgridindex)
   return nntot;
 }
 
+
+__host__ __device__
 bool is_nlte(int element, int ion, int level)
 // Returns true if (element,ion,level) is to be treated in nlte.
 // (note this function returns true for the ground state,
@@ -86,6 +93,7 @@ bool is_nlte(int element, int ion, int level)
 }
 
 
+__host__ __device__
 bool level_isinsuperlevel(int element, int ion, int level)
 // ion has NLTE levels, but this one is not NLTE => is in the superlevel
 {
@@ -93,6 +101,7 @@ bool level_isinsuperlevel(int element, int ion, int level)
 }
 
 
+__host__ __device__
 double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge, double nu)
 /// Calculates the photoionisation cross-section at frequency nu out of the atomic data.
 /// Input: - edge frequency nu_edge of the desired bf-continuum
@@ -148,16 +157,22 @@ double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge
   return sigma_bf;
 }
 
+
+__host__ __device__
 void set_nelements(const int nelements_in)
 {
   nelements = nelements_in;
 }
 
+
+__host__ __device__
 int get_nelements(void)
 {
   return nelements;
 }
 
+
+__host__ __device__
 int get_element(int element)
 /// Returns the atomic number associated with a given elementindex.
 {
@@ -165,6 +180,7 @@ int get_element(int element)
 }
 
 
+__host__ __device__
 int get_elementindex(int Z)
 /// Returns the elementindex associated with a given atomic number.
 /// If there is no element with the given atomic number in the atomic data
@@ -184,6 +200,7 @@ int get_elementindex(int Z)
 }
 
 
+__host__ __device__
 int get_nions(int element)
 /// Returns the number of ions associated with a specific element given by
 /// its elementindex.
@@ -192,6 +209,7 @@ int get_nions(int element)
 }
 
 
+__host__ __device__
 int get_ionstage(int element, int ion)
 /// Returns the ionisation stage of an ion specified by its elementindex and
 /// ionindex.
@@ -200,6 +218,7 @@ int get_ionstage(int element, int ion)
 }
 
 
+__host__ __device__
 int get_nlevels(int element, int ion)
 /// Returns the number of levels associated with with a specific ion given
 /// its elementindex and ionindex.
@@ -208,6 +227,7 @@ int get_nlevels(int element, int ion)
 }
 
 
+__host__ __device__
 int get_nlevels_nlte(int element, int ion)
 // Returns the number of NLTE levels associated with with a specific ion given
 // its elementindex and ionindex. Includes the superlevel if there is one but does not include the ground state
@@ -216,12 +236,14 @@ int get_nlevels_nlte(int element, int ion)
 }
 
 
+__host__ __device__
 int get_nlevels_groundterm(int element, int ion)
 {
   return globals::elements[element].ions[ion].nlevels_groundterm;
 }
 
 
+__host__ __device__
 int get_ionisinglevels(int element, int ion)
 /// Returns the number of levels associated with an ion that
 /// have energies below the ionisation threshold.
@@ -230,6 +252,7 @@ int get_ionisinglevels(int element, int ion)
 }
 
 
+__host__ __device__
 int get_uniqueionindex(const int element, const int ion)
 // Get an index for an ionstage of an element that is unique for every ion of every element
 {
@@ -246,6 +269,7 @@ int get_uniqueionindex(const int element, const int ion)
 }
 
 
+__host__ __device__
 void get_ionfromuniqueionindex(const int allionsindex, int *element, int *ion)
 {
   int allionsindex_thiselementfirstion = 0;
@@ -268,6 +292,7 @@ void get_ionfromuniqueionindex(const int allionsindex, int *element, int *ion)
 }
 
 
+__host__ __device__
 double epsilon(int element, int ion, int level)
 /// Returns the energy of (element,ion,level).
 {
@@ -275,6 +300,7 @@ double epsilon(int element, int ion, int level)
 }
 
 
+__host__ __device__
 double stat_weight(int element, int ion, int level)
 /// Returns the statistical weight of (element,ion,level).
 {
@@ -283,6 +309,7 @@ double stat_weight(int element, int ion, int level)
 }
 
 
+__host__ __device__
 int get_maxrecombininglevel(int element, int ion)
 /// Returns the number of bf-continua associated with ion ion of element element.
 {
@@ -290,12 +317,14 @@ int get_maxrecombininglevel(int element, int ion)
 }
 
 
+__host__ __device__
 bool ion_has_superlevel(const int element, const int ion)
 {
   return (get_nlevels(element, ion) > get_nlevels_nlte(element, ion) + 1);
 }
 
 
+__host__ __device__
 int get_ndowntrans(int element, int ion, int level)
 // the number of downward bound-bound transitions from the specified level
 {
@@ -303,6 +332,7 @@ int get_ndowntrans(int element, int ion, int level)
 }
 
 
+__host__ __device__
 int get_nuptrans(int element, int ion, int level)
 // the number of upward bound-bound transitions from the specified level
 {
@@ -310,6 +340,7 @@ int get_nuptrans(int element, int ion, int level)
 }
 
 
+__host__ __device__
 void set_ndowntrans(const int element, const int ion, const int level, const int ndowntrans)
 // the number of downward bound-bound transitions from the specified level
 {
@@ -317,6 +348,7 @@ void set_ndowntrans(const int element, const int ion, const int level, const int
 }
 
 
+__host__ __device__
 void set_nuptrans(const int element, const int ion, const int level, const int nuptrans)
 // the number of upward bound-bound transitions from the specified level
 {
@@ -324,6 +356,7 @@ void set_nuptrans(const int element, const int ion, const int level, const int n
 }
 
 
+__host__ __device__
 int get_nphixstargets(const int element, const int ion, const int level)
 /// Returns the number of target states for photoionization of (element,ion,level).
 {
@@ -338,6 +371,7 @@ int get_nphixstargets(const int element, const int ion, const int level)
 }
 
 
+__host__ __device__
 int get_phixsupperlevel(const int element, const int ion, const int level, const int phixstargetindex)
 /// Returns the level index of a target state for photoionization of (element,ion,level).
 {
@@ -348,6 +382,7 @@ int get_phixsupperlevel(const int element, const int ion, const int level, const
 }
 
 
+__host__ __device__
 double get_phixs_threshold(int element, int ion, int level, int phixstargetindex)
 /// Returns the energy of (element,ion,level).
 {
@@ -363,6 +398,7 @@ double get_phixs_threshold(int element, int ion, int level, int phixstargetindex
 }
 
 
+__host__ __device__
 double get_phixsprobability(int element, int ion, int level, int phixstargetindex)
 /// Returns the probability of a target state for photoionization of (element,ion,level).
 {
@@ -373,6 +409,7 @@ double get_phixsprobability(int element, int ion, int level, int phixstargetinde
 }
 
 
+__host__ __device__
 double einstein_spontaneous_emission(int lineindex)
 //double einstein_spontaneous_emission(int element, int ion, int upper, int lower)
 /// reads A_ul from levellist which consists of
@@ -386,6 +423,7 @@ double einstein_spontaneous_emission(int lineindex)
 }
 
 
+__host__ __device__
 double osc_strength(int lineindex)
 //double osc_strength(int element, int ion, int upper, int lower)
 /// reads f_lu from levellist which consists of
@@ -395,12 +433,14 @@ double osc_strength(int lineindex)
 }
 
 
+__host__ __device__
 double get_coll_str(int lineindex)
 {
   return globals::linelist[lineindex].coll_str;
 }
 
 
+__host__ __device__
 double statw_upper(int lineindex)
 {
   const int element = globals::linelist[lineindex].elementindex;
@@ -410,6 +450,7 @@ double statw_upper(int lineindex)
 }
 
 
+__host__ __device__
 double statw_lower(int lineindex)
 {
   const int element = globals::linelist[lineindex].elementindex;
@@ -419,6 +460,7 @@ double statw_lower(int lineindex)
 }
 
 
+__host__ __device__
 double photoionization_crosssection(int element, int ion, int level, double nu_edge, double nu)
 {
   return photoionization_crosssection_fromtable(globals::elements[element].ions[ion].levels[level].photoion_xs, nu_edge, nu);

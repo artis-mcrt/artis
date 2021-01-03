@@ -35,10 +35,7 @@ static void update_pellet(
   else if (tdecay > ts)
   {
     // The packet decays in the current timestep.
-    #ifdef _OPENMP
-      #pragma omp atomic
-    #endif
-    globals::time_step[nts].pellet_decays++;
+    safeincrement(globals::time_step[nts].pellet_decays);
 
     pkt_ptr->prop_time = tdecay;
     vec_scale(pkt_ptr->pos, tdecay / ts);
@@ -50,10 +47,7 @@ static void update_pellet(
     }
     else if (decay_to_ntlepton)
     {
-      #ifdef _OPENMP
-        #pragma omp atomic
-      #endif
-      globals::time_step[nts].positron_dep += pkt_ptr->e_cmf;
+      safeadd(globals::time_step[nts].positron_dep, pkt_ptr->e_cmf);
 
       pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -10;
@@ -127,10 +121,7 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
       new packet.*/
       if (pkt_ptr->type != TYPE_GAMMA && pkt_ptr->type != TYPE_ESCAPE)
       {
-        #ifdef _OPENMP
-          #pragma omp atomic
-        #endif
-        globals::time_step[nts].gamma_dep += pkt_ptr->e_cmf;
+        safeadd(globals::time_step[nts].gamma_dep, pkt_ptr->e_cmf);
       }
       break;
 
@@ -139,10 +130,7 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
 
       if (pkt_ptr->type == TYPE_ESCAPE)
       {
-        #ifdef _OPENMP
-          #pragma omp atomic
-        #endif
-        globals::time_step[nts].cmf_lum += pkt_ptr->e_cmf;
+        safeadd(globals::time_step[nts].cmf_lum, pkt_ptr->e_cmf);
       }
       break;
 

@@ -29,9 +29,7 @@
   #ifdef _OPENMP
   #ifndef __CUDACC__
     #define safeadd(var, val) _Pragma("omp atomic update") \
-    { \
-    var += val \
-    }
+    var += val
   #else
     #define safeadd(var, val) var += val
   #endif

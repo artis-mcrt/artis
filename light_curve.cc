@@ -52,7 +52,7 @@ void add_to_lc_res(const PKT *pkt_ptr, int current_abin, double *light_curve_lum
     if (arrive_time > globals::tmin && arrive_time < globals::tmax)
     {
       const int nt = get_timestep(arrive_time);
-      light_curve_lum[nt] += pkt_ptr->e_rf / globals::time_step[nt].width / globals::nprocs;
+      safeadd(light_curve_lum[nt], pkt_ptr->e_rf / globals::time_step[nt].width / globals::nprocs);
     }
 
     /// Now do the cmf light curve.
@@ -61,7 +61,7 @@ void add_to_lc_res(const PKT *pkt_ptr, int current_abin, double *light_curve_lum
     if (arrive_time_cmf > globals::tmin && arrive_time_cmf < globals::tmax)
     {
       const int nt = get_timestep(arrive_time_cmf);
-      light_curve_lumcmf[nt] += pkt_ptr->e_cmf / globals::time_step[nt].width / globals::nprocs / sqrt(1. - (globals::vmax * globals::vmax/CLIGHTSQUARED));
+      safeadd(light_curve_lumcmf[nt], pkt_ptr->e_cmf / globals::time_step[nt].width / globals::nprocs / sqrt(1. - (globals::vmax * globals::vmax/CLIGHTSQUARED)));
     }
 
     return;
@@ -102,7 +102,7 @@ void add_to_lc_res(const PKT *pkt_ptr, int current_abin, double *light_curve_lum
     if (t_arrive > globals::tmin && t_arrive < globals::tmax)
     {
       int nt = get_timestep(t_arrive);
-      light_curve_lum[nt] += pkt_ptr->e_rf / globals::time_step[nt].width * MALCBINS / globals::nprocs;
+      safeadd(light_curve_lum[nt], pkt_ptr->e_rf / globals::time_step[nt].width * MALCBINS / globals::nprocs);
     }
   }
 }

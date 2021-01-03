@@ -336,14 +336,9 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
 
   /* increment the number of escaped virtual packet in the given timestep */
-  #ifdef _OPENMP
-  #pragma omp critical
-  #endif
-  {
-    if (realtype==1) nvpkt_esc1++ ;
-    else if (realtype==2) nvpkt_esc2++ ;
-    else if (realtype==3) nvpkt_esc3++ ;
-  }
+  if (realtype==1) safeincrement(nvpkt_esc1);
+  else if (realtype==2) safeincrement(nvpkt_esc2);
+  else if (realtype==3) safeincrement(nvpkt_esc3);
 
   // -------------- final stokes vector ---------------
 
@@ -434,20 +429,12 @@ void add_to_vspecpol(PKT *pkt_ptr, int bin, int ind, double t_arrive)
     nt = (log(t_arrive) - log(tmin_vspec)) / dlogt_vspec;
     if (pkt_ptr->nu_rf > numin_vspec && pkt_ptr->nu_rf < numax_vspec)
     {
-      #ifdef _OPENMP
-      #pragma omp critical
-      #endif
-      {
-        nnu = (log(pkt_ptr->nu_rf) - log(numin_vspec)) /  dlognu_vspec;
+      nnu = (log(pkt_ptr->nu_rf) - log(numin_vspec)) /  dlognu_vspec;
+      const double pktcontrib = pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC / PARSEC / globals::nprocs * 4 * PI;
 
-        deltai = pkt_ptr->stokes[0]*pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /PARSEC / globals::nprocs * 4 * PI ;
-        deltaq = pkt_ptr->stokes[1]*pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /PARSEC / globals::nprocs * 4 * PI ;
-        deltau = pkt_ptr->stokes[2]*pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /PARSEC / globals::nprocs * 4 * PI ;
-
-        vstokes_i[nt][ind_comb].flux[nnu] += deltai;
-        vstokes_q[nt][ind_comb].flux[nnu] += deltaq;
-        vstokes_u[nt][ind_comb].flux[nnu] += deltau;
-      }
+      safeadd(vstokes_i[nt][ind_comb].flux[nnu], pkt_ptr->stokes[0] * pktcontrib);
+      safeadd(vstokes_q[nt][ind_comb].flux[nnu], pkt_ptr->stokes[1] * pktcontrib);
+      safeadd(vstokes_u[nt][ind_comb].flux[nnu], pkt_ptr->stokes[2] * pktcontrib);
     }
   }
 }
@@ -667,16 +654,11 @@ void add_to_vpkt_grid(PKT *dummy_ptr, double *vel, int bin_range, int bin, doubl
   mt = ( globals::vmax - vref2 ) / zbin;
 
   // Add contribution
-  #ifdef _OPENMP
-  #pragma omp critical
-  #endif
+  if (dummy_ptr->nu_rf > nu_grid_min[bin_range] && dummy_ptr->nu_rf < nu_grid_max[bin_range])
   {
-    if (dummy_ptr->nu_rf > nu_grid_min[bin_range] && dummy_ptr->nu_rf < nu_grid_max[bin_range])
-    {
-      vgrid_i[nt][mt].flux[bin_range][bin] += dummy_ptr->stokes[0] * dummy_ptr->e_rf;
-      vgrid_q[nt][mt].flux[bin_range][bin] += dummy_ptr->stokes[1] * dummy_ptr->e_rf;
-      vgrid_u[nt][mt].flux[bin_range][bin] += dummy_ptr->stokes[2] * dummy_ptr->e_rf;
-    }
+    safeadd(vgrid_i[nt][mt].flux[bin_range][bin], dummy_ptr->stokes[0] * dummy_ptr->e_rf);
+    safeadd(vgrid_q[nt][mt].flux[bin_range][bin], dummy_ptr->stokes[1] * dummy_ptr->e_rf);
+    safeadd(vgrid_u[nt][mt].flux[bin_range][bin], dummy_ptr->stokes[2] * dummy_ptr->e_rf);
   }
 }
 

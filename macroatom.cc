@@ -248,10 +248,11 @@ static void do_macroatom_raddeexcitation(
   }
   assert(linelistindex >= 0);
   #ifdef RECORD_LINESTAT
-    if (tid == 0) globals::ecounter[linelistindex]++;    /// This way we will only record line statistics from OMP-thread 0
-                                                /// With an atomic pragma or a thread-private structure with subsequent
-                                                /// reduction this could be extended to all threads. However, I'm not
-                                                /// sure if this is worth the additional computational expenses.
+    if (tid == 0) safeincrement(globals::ecounter[linelistindex]);
+    /// This way we will only record line statistics from OMP-thread 0
+    /// With an atomic pragma or a thread-private structure with subsequent
+    /// reduction this could be extended to all threads. However, I'm not
+    /// sure if this is worth the additional computational expenses.
   #endif
   const int lower = globals::linelist[linelistindex].lowerlevelindex;
   #ifdef DEBUG_ON
@@ -363,12 +364,6 @@ static void do_macroatom_radrecomb(
     //mabfcount_thermal[pkt_ptr->where] += pkt_ptr->e_cmf*(1-nu_threshold/pkt_ptr->nu_cmf);
     //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
   #endif
-
-/*      if (element == 6)
-  {
-    //printout("%g, %g, %g\n",pkt_ptr->e_cmf,nu_threshold,pkt_ptr->e_cmf/nu_threshold/H);
-    globals::cell[pkt_ptr->where].radrecomb[ion-1] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
-  }*/
 
   #ifdef DEBUG_ON
     if (globals::debuglevel == 2)
@@ -742,11 +737,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
         pkt_ptr->type = TYPE_KPKT;
         end_packet = true;
         #ifndef FORCE_LTE
-          //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
-          #ifdef _OPENMP
-            #pragma omp atomic
-          #endif
-          globals::colheatingestimator[modelgridindex] += pkt_ptr->e_cmf;
+          safeadd(globals::colheatingestimator[modelgridindex], pkt_ptr->e_cmf);
         #endif
         break;
       }
@@ -805,11 +796,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
         pkt_ptr->type = TYPE_KPKT;
         end_packet = true;
         #ifndef FORCE_LTE
-          //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
-          #ifdef _OPENMP
-            #pragma omp atomic
-          #endif
-          globals::colheatingestimator[modelgridindex] += pkt_ptr->e_cmf;
+          safeadd(globals::colheatingestimator[modelgridindex], pkt_ptr->e_cmf);
         #endif
         break;
       }
