@@ -9,13 +9,14 @@
 #include "vectors.h"
 
 
-enum model_types model_type = RHO_1D_READ;
+enum __managed__ model_types model_type = RHO_1D_READ;
 
 static long mem_usage_nltepops = 0;
 
-static int mg_associated_cells[MMODELGRID + 1];
+static __managed__ int mg_associated_cells[MMODELGRID + 1];
 
 
+__host__ __device__
 double wid_init(const int cellindex)
 // for a uniform grid this is the extent along the x,y,z coordinate (x_2 - x_1, etc.)
 // for spherical grid this is the radial extent (r_outer - r_inner)
@@ -36,6 +37,7 @@ double wid_init(const int cellindex)
 }
 
 
+__host__ __device__
 double vol_init_modelcell(const int modelgridindex)
 // return the model cell volume at globals::tmin
 // for a uniform cubic grid this is constant
@@ -54,6 +56,7 @@ double vol_init_modelcell(const int modelgridindex)
 }
 
 
+__host__ __device__
 double vol_init_gridcell(const int cellindex)
 // return the propagation cell volume at globals::tmin
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
@@ -72,6 +75,7 @@ double vol_init_gridcell(const int cellindex)
 }
 
 
+__host__ __device__
 double get_cellcoordmin(const int cellindex, const int axis)
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
@@ -81,6 +85,7 @@ double get_cellcoordmin(const int cellindex, const int axis)
 }
 
 
+__host__ __device__
 int get_coordcellindexincrement(const int axis)
 // how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r direction)
 {
@@ -109,6 +114,7 @@ int get_coordcellindexincrement(const int axis)
 }
 
 
+__host__ __device__
 int get_cellcoordpointnum(const int cellindex, const int axis)
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to globals::ncoordgrid[axis]
 {
@@ -141,38 +147,50 @@ int get_cellcoordpointnum(const int cellindex, const int axis)
 
 
 
+__host__ __device__
 int get_ngriddimensions(void)
 {
   return (globals::grid_type == GRID_SPHERICAL1D) ? 1 : 3;
 }
 
 
+__host__ __device__
 float get_rhoinit(int modelgridindex)
 {
   return globals::modelgrid[modelgridindex].rhoinit;
 }
 
+
+__host__ __device__
 float get_rho(int modelgridindex)
 {
   return globals::modelgrid[modelgridindex].rho;
 }
 
+
+__host__ __device__
 float get_nne(int modelgridindex)
 {
   return globals::modelgrid[modelgridindex].nne;
 }
 
+
+__host__ __device__
 float get_nnetot(int modelgridindex)
 {
   return globals::modelgrid[modelgridindex].nnetot;
 }
 
+
+__host__ __device__
 // the abundances referred to below are initial abundances
 float get_ffegrp(int modelgridindex)
 {
   return globals::modelgrid[modelgridindex].ffegrp;
 }
 
+
+__host__ __device__
 float get_elem_abundance(int modelgridindex, int element)
 // mass fraction of an element (all isotopes combined)
 {
@@ -180,6 +198,7 @@ float get_elem_abundance(int modelgridindex, int element)
 }
 
 
+__host__ __device__
 void set_elem_abundance(int modelgridindex, int element, float newabundance)
 // mass fraction of an element (all isotopes combined)
 {
@@ -187,51 +206,70 @@ void set_elem_abundance(int modelgridindex, int element, float newabundance)
 }
 
 
+__host__ __device__
 float get_kappagrey(int modelgridindex)
 {
   return globals::modelgrid[modelgridindex].kappagrey;
 }
 
+
+__host__ __device__
 float get_Te(int modelgridindex)
 {
   return globals::modelgrid[modelgridindex].Te;
 }
 
+
+__host__ __device__
 float get_TR(int modelgridindex)
 {
   return globals::modelgrid[modelgridindex].TR;
 }
 
+
+__host__ __device__
 float get_TJ(int modelgridindex)
 {
   return globals::modelgrid[modelgridindex].TJ;
 }
 
+
+__host__ __device__
 float get_W(int modelgridindex)
 {
   return globals::modelgrid[modelgridindex].W;
 }
 
+
+__host__ __device__
 void set_rhoinit(int modelgridindex, float x)
 {
   globals::modelgrid[modelgridindex].rhoinit = x;
 }
 
+
+__host__ __device__
 void set_rho(int modelgridindex, float x)
 {
   globals::modelgrid[modelgridindex].rho = x;
 }
 
+
+__host__ __device__
 void set_nne(int modelgridindex, float x)
 {
   globals::modelgrid[modelgridindex].nne = x;
 }
 
+
+__host__ __device__
 void set_nnetot(int modelgridindex, float x)
 {
   globals::modelgrid[modelgridindex].nnetot = x;
 }
 
+
+__host__ __device__
 void set_ffegrp(int modelgridindex, float x)
 {
   assert(x >= 0);
@@ -239,43 +277,57 @@ void set_ffegrp(int modelgridindex, float x)
   globals::modelgrid[modelgridindex].ffegrp = x;
 }
 
+
+__host__ __device__
 void set_kappagrey(int modelgridindex, float kappagrey)
 {
   globals::modelgrid[modelgridindex].kappagrey = kappagrey;
 }
 
+
+__host__ __device__
 void set_Te(int modelgridindex, float Te)
 {
   globals::modelgrid[modelgridindex].Te = Te;
 }
 
+
+__host__ __device__
 void set_TR(int modelgridindex, float TR)
 {
   globals::modelgrid[modelgridindex].TR = TR;
 }
 
+
+__host__ __device__
 void set_TJ(int modelgridindex, float TJ)
 {
   globals::modelgrid[modelgridindex].TJ = TJ;
 }
 
+
+__host__ __device__
 void set_W(int modelgridindex, float W)
 {
   globals::modelgrid[modelgridindex].W = W;
 }
 
 
+__host__ __device__
 enum model_types get_model_type(void)
 {
   return model_type;
 }
 
+
+__host__ __device__
 void set_model_type(enum model_types model_type_value)
 {
   model_type = model_type_value;
 }
 
 
+__host__ __device__
 int get_numassociatedcells(const int modelgridindex)
 // number of propagation cells associated with each modelgrid cell
 {
@@ -283,6 +335,7 @@ int get_numassociatedcells(const int modelgridindex)
 }
 
 
+__host__ __device__
 float get_modelinitradioabund(const int modelgridindex, const enum radionuclides nuclide_type)
 {
   // this function replaces get_f56ni(mgi), get_fco56(mgi), etc.
@@ -293,6 +346,7 @@ float get_modelinitradioabund(const int modelgridindex, const enum radionuclides
 }
 
 
+__host__ __device__
 void set_modelinitradioabund(const int modelgridindex, const enum radionuclides nuclide_type, const float abund)
 {
   assert(abund >= 0.);
@@ -309,6 +363,7 @@ void set_modelinitradioabund(const int modelgridindex, const enum radionuclides 
 }
 
 
+__host__ __device__
 float get_stable_abund(const int mgi, const int anumber)
 {
   switch (anumber)
@@ -341,6 +396,7 @@ float get_stable_abund(const int mgi, const int anumber)
 }
 
 
+__host__ __device__
 static void set_elem_stable_abund_from_total(const int mgi, const int anumber, const float elemabundance)
 {
   // store the stable mass fraction of an element given the total element mass fraction
@@ -381,6 +437,7 @@ static void set_elem_stable_abund_from_total(const int mgi, const int anumber, c
 }
 
 
+__host__ __device__
 double get_cellradialpos(const int cellindex)
 {
   if (globals::grid_type == GRID_SPHERICAL1D)
@@ -398,18 +455,21 @@ double get_cellradialpos(const int cellindex)
 }
 
 
+__host__ __device__
 int get_elements_uppermost_ion(const int modelgridindex, const int element)
 {
   return globals::modelgrid[modelgridindex].elements_uppermost_ion[element];
 }
 
 
+__host__ __device__
 void set_elements_uppermost_ion(const int modelgridindex, const int element, const int newvalue)
 {
   globals::modelgrid[modelgridindex].elements_uppermost_ion[element] = newvalue;
 }
 
 
+__host__ __device__
 static void calculate_kappagrey(void)
 {
   double rho_sum = 0.0;
@@ -515,6 +575,7 @@ static void calculate_kappagrey(void)
 }
 
 
+__host__ __device__
 static void allocate_compositiondata(const int modelgridindex)
 /// Initialise composition dependent cell data for the given cell
 {
@@ -592,6 +653,7 @@ static void allocate_cooling(const int modelgridindex)
 }
 
 
+__host__ __device__
 static void allocate_nonemptycells(void)
 {
   printout("mem_usage: the modelgrid array occupies %.1f MB\n", sizeof(globals::modelgrid) / 1024. / 1024.);
@@ -658,6 +720,7 @@ static void allocate_nonemptycells(void)
 }
 
 
+__host__ __device__
 static void density_1d_read(void)
 /// Routine for doing a density grid read from a 1-D model.
 {
@@ -702,6 +765,7 @@ static void density_1d_read(void)
 }
 
 
+__host__ __device__
 static void density_2d_read(void)
 // Routine for doing a density grid read from a 2-D model.
 {
@@ -757,6 +821,7 @@ static void density_2d_read(void)
 }
 
 
+__host__ __device__
 static void abundances_read(void)
 {
   const bool threedimensional = (get_model_type() == RHO_3D_READ);
@@ -820,6 +885,7 @@ static void abundances_read(void)
 }
 
 
+__host__ __device__
 static void read_grid_restart_data(const int timestep)
 {
   char filename[100];
@@ -893,6 +959,7 @@ static void read_grid_restart_data(const int timestep)
 }
 
 
+__host__ __device__
 static void assign_temperature(void)
 /// Routine for assigning temperatures to the grid cells at the start of the simulation.
 {
@@ -995,6 +1062,7 @@ static void assign_temperature(void)
 }
 
 
+__host__ __device__
 static void uniform_grid_setup(void)
 /// Routine for doing a uniform cuboidal grid.
 {
@@ -1060,6 +1128,7 @@ static void uniform_grid_setup(void)
   */
 }
 
+__host__ __device__
 static void spherical1d_grid_setup(void)
 {
   assert(get_model_type() == RHO_1D_READ);
@@ -1089,6 +1158,7 @@ static void spherical1d_grid_setup(void)
 }
 
 
+__host__ __device__
 void grid_init(int my_rank)
 /// Initialises the propagation grid cells and associates them with modelgrid cells
 {
