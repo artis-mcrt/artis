@@ -25,8 +25,8 @@
 //   int cellnumber;
 // } gslintegration_bfheatingparas;
 
-static double T_step;
-double T_step_log;
+static __managed__ double T_step;
+__managed__ double T_step_log;
 
 typedef struct
 {
@@ -110,7 +110,8 @@ static bool read_ratecoeff_dat(void)
             int ionisinglevels = get_ionisinglevels(element,ion);
             if (get_element(element) != in_element || get_ionstage(element,ion) != in_ionstage || nlevels != in_levels || ionisinglevels != in_ionisinglevels)
             {
-              printout("Levels or ionising levels count mismatch!\n");
+              printout("Levels or ionising levels count mismatch! element %d %d ionstage %d %d nlevels %d %d ionisinglevels %d %d\n",
+              get_element(element), in_element, get_ionstage(element,ion), in_ionstage, nlevels, in_levels, ionisinglevels, in_ionisinglevels);
               fileisamatch = false;
               break;
             }
@@ -703,6 +704,7 @@ static void precalculate_rate_coefficient_integrals(void)
 }
 
 
+__host__ __device__
 static int get_index_from_cumulativesums(double *partialsums, size_t listsize, double targetsum)
 // e.g. given a list of [0.25, 0.75, 1.00],
 // returns 0 for targetsum [0., 0.25], 1 for (0.25, 0.75], 2 for (0.75, 1.00]
@@ -793,6 +795,7 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
 }
 
 
+__host__ __device__
 double get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, float T_e)
 /// Returns the rate coefficient for spontaneous recombination.
 {
