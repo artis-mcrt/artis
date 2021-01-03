@@ -2347,6 +2347,7 @@ static bool get_noncommentline(std::istream &input, std::string &line)
 }
 
 
+#ifndef __CUDA_ARCH__
 void read_parameterfile(int rank)
 /// Subroutine to read in input parameters from input.txt.
 {
@@ -2610,7 +2611,7 @@ void read_parameterfile(int rank)
 
   file.close();
 }
-
+#endif
 
 
 /*
