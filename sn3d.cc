@@ -1153,7 +1153,9 @@ int main(int argc, char** argv)
     #pragma omp parallel
   #endif
   {
+    #ifndef __CUDA_ARCH__
     gsl_integration_workspace_free(gslworkspace);
+    #endif
   }
 
   free(packets);
