@@ -341,14 +341,8 @@ int get_nphixstargets(const int element, const int ion, const int level)
 int get_phixsupperlevel(const int element, const int ion, const int level, const int phixstargetindex)
 /// Returns the level index of a target state for photoionization of (element,ion,level).
 {
-  #ifdef DEBUG_ON
-    if ((phixstargetindex < 0) || (phixstargetindex > get_nphixstargets(element,ion,level)-1))
-    {
-      printout("[fatal]   get_phixsupperlevel called with invalid phixstargetindex\n");
-      printout("arguments: element %d, ion %d, level %d phixstargetindex %d, nphixstargets %d\n",element,ion,level,phixstargetindex,get_nphixstargets(element,ion,level));
-      abort();
-    }
-  #endif
+  assert_testmodeonly(phixstargetindex >= 0);
+  assert_testmodeonly(phixstargetindex < get_nphixstargets(element,ion,level));
 
   return globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].levelindex;
 }
@@ -372,14 +366,8 @@ double get_phixs_threshold(int element, int ion, int level, int phixstargetindex
 double get_phixsprobability(int element, int ion, int level, int phixstargetindex)
 /// Returns the probability of a target state for photoionization of (element,ion,level).
 {
-  #ifdef DEBUG_ON
-    if ((phixstargetindex < 0) || (phixstargetindex >= get_nphixstargets(element,ion,level)))
-    {
-      printout("[fatal]   get_phixsprobability called with invalid phixstargetindex");
-      //printout("arguments: element %d, ion %d, level %d phixstargetindex %g, nphixstargets %g\n",element,ion,level,phixstargetindex,get_nphixstargets(element,ion,level));
-      abort();
-    }
-  #endif
+  assert_testmodeonly(phixstargetindex >= 0);
+  assert_testmodeonly(phixstargetindex < get_nphixstargets(element,ion,level));
 
   return globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].probability;
 }
