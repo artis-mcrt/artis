@@ -40,8 +40,13 @@ int tid;
 __managed__ int myGpuId = 0;
 bool use_cellhist;
 bool neutral_flag;
+#ifndef __CUDA_ARCH__
 gsl_rng *rng;
 gsl_integration_workspace *gslworkspace;
+#else
+__device__ void *rng = NULL;
+__device__ void *gslworkspace = NULL;
+#endif
 FILE *output_file;
 static FILE *linestat_file;
 static time_t real_time_start;
