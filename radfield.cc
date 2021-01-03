@@ -642,6 +642,7 @@ int select_bin(double nu)
     //   }
     //  }
     assert(false);
+    return -3;
   }
 }
 
