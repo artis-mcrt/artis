@@ -71,7 +71,8 @@
 
     #define abort() assert(false)
 
-    namesapce globals {
+    namespace globals
+    {
       extern __managed__ curandState curandstates[MCUDATHREADS];
     }
 
