@@ -8,10 +8,11 @@
 #include "ratecoeff.h"
 #include "update_grid.h"
 
-extern inline double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
-extern inline double ionstagepop(int modelgridindex, int element, int ion);
+extern __host__ __device__ inline double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
+extern __host__ __device__ inline double ionstagepop(int modelgridindex, int element, int ion);
 
 
+__host__ __device__
 double nne_solution_f(double x, void *paras)
 /// For libgsl bracketing type solver
 /// provides the equation which has to be solved to obtain the electron number
@@ -58,6 +59,7 @@ double nne_solution_f(double x, void *paras)
 }
 
 
+__host__ __device__
 void get_ionfractions(int element, int modelgridindex, double nne, double ionfractions[], int uppermost_ion)
 // Calculate the fractions of an element's population in each ionization stage
 // size of ionfractions array must be >= uppermostion + 1
@@ -93,6 +95,7 @@ void get_ionfractions(int element, int modelgridindex, double nne, double ionfra
 }
 
 
+__host__ __device__
 static double interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T)
 {
   assert(T >= MINTEMP);
@@ -113,6 +116,7 @@ static double interpolate_ions_spontrecombcoeff(const int element, const int ion
 }
 
 
+__host__ __device__
 double phi(const int element, const int ion, const int modelgridindex)
 /// Calculates population ratio (a saha factor) of two consecutive ionisation stages
 /// in nebular approximation phi_j,k* = N_j,k*/(N_j+1,k* * nne)
@@ -290,6 +294,7 @@ double calculate_ltepartfunct(int element, int ion, double T)
 */
 
 
+__host__ __device__
 double calculate_partfunct(int element, int ion, int modelgridindex)
 /// Calculates the partition function for ion=ion of element=element in
 /// cell modelgridindex
@@ -422,6 +427,7 @@ double calculate_groundlevelpop(int element, int ion, double T, int cellnumber, 
 */
 
 
+__host__ __device__
 double get_groundlevelpop(int modelgridindex, int element, int ion)
 /// Returns the given ions groundlevel population for modelgridindex which was precalculated
 /// during update_grid and stored to the grid.
@@ -445,6 +451,7 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
 }
 
 
+__host__ __device__
 double get_groundmultiplet_pop(int modelgridindex, int element, int ion)
 {
   const int nlevels_gm = get_nlevels_groundterm(element, ion);
@@ -514,6 +521,7 @@ double get_groundmultiplet_pop(int modelgridindex, int element, int ion)
 }*/
 
 
+__host__ __device__
 double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
 /// Calculates occupation population of a level assuming LTE excitation
 {
@@ -534,6 +542,7 @@ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int leve
 }
 
 
+__host__ __device__
 double calculate_exclevelpop(int modelgridindex, int element, int ion, int level)
 /// Calculates the population of a level from either LTE or NLTE information
 {

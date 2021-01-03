@@ -148,9 +148,10 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
 
   // the following four vectors are in grid coordinates, so either x,y,z or r
   const int ndim = get_ngriddimensions();
-  double initpos[ndim];       // pkt_ptr->pos converted to grid coordinates
-  double cellcoordmax[ndim];
-  double vel[ndim];           // pkt_ptr->dir * globals::CLIGHT_PROP converted to grid coordinates
+  assert_testmodeonly(ndim <= 3);
+  double initpos[3];       // pkt_ptr->pos converted to grid coordinates
+  double cellcoordmax[3];
+  double vel[3];           // pkt_ptr->dir * globals::CLIGHT_PROP converted to grid coordinates
 
   if (globals::grid_type == GRID_UNIFORM)
   {
@@ -259,8 +260,8 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
     }
   #endif
 
-  double t_plus_coordboundary[ndim];  // time to reach the cell's upper boundary on each coordinate
-  double t_minus_coordboundary[ndim];  // likewise, the lower boundaries (smallest x,y,z or radius value in the cell)
+  double t_plus_coordboundary[3];  // time to reach the cell's upper boundary on each coordinate
+  double t_minus_coordboundary[3];  // likewise, the lower boundaries (smallest x,y,z or radius value in the cell)
   if (globals::grid_type == GRID_SPHERICAL1D)
   {
     not_allowed = NONE; // we will handle this separately by setting d_minus and d_plus negative for invalid directions
