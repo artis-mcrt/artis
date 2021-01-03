@@ -2347,6 +2347,36 @@ static bool get_noncommentline(std::istream &input, std::string &line)
 }
 
 
+#if CUDA_ENABLED
+__global__ static void kernel_setupcurand(unsigned long int pre_zseed, int rank)
+{
+  const int tid = threadIdx.x + blockDim.x * blockIdx.x;
+  if (tid < MTHREADS)
+  {
+    unsigned long int zseed = pre_zseed + (13 * rank);
+    curand_init(zseed, tid, 0, &curandstates[tid]);
+    // const double zrand = curand_uniform_double(&curandstates[tid]);
+    // printf("kernel_setupcurand tidx %d %g\n", tid, zrand);
+  }
+}
+
+
+static void init_curand(unsigned long int pre_zseed, int rank)
+{
+  dim3 threadsPerBlock(256, 1, 1);
+  dim3 numBlocks((MTHREADS + threadsPerBlock.x - 1) / threadsPerBlock.x, 1, 1);
+
+  kernel_setupcurand<<<numBlocks, threadsPerBlock>>>(pre_zseed, rank);
+
+  // Check for any errors launching the kernel
+  checkCudaErrors(cudaGetLastError());
+
+  // cudaDeviceSynchronize waits for the kernel to finish, and returns any errors encountered during the launch.
+  checkCudaErrors(cudaDeviceSynchronize());
+}
+#endif
+
+
 #ifndef __CUDA_ARCH__
 void read_parameterfile(int rank)
 /// Subroutine to read in input parameters from input.txt.
