@@ -9,19 +9,19 @@ namespace globals
   __managed__ curandState curandstates[MCUDATHREADS];
   #endif
 
-  double syn_dir[3]; // vector pointing from origin to observer
+  __managed__ double syn_dir[3]; // vector pointing from origin to observer
 
   //#define NRAYS_SYN 1 // number of rays traced in a syn calculation
 
   //RAY rays[NRAYS_SYN];
   __managed__ struct time *time_step;
 
-  int nsyn_time;
-  double time_syn[MSYN_TIME];
+  __managed__ int nsyn_time;
+  __managed__ double time_syn[MSYN_TIME];
 
-  int emiss_offset;   // the index in the line list of the 1st line for which
-                      // an emissivity estimator is recorded
-  int emiss_max;      // actual number of frequency points in emissivity grid
+  __managed__ int emiss_offset;   // the index in the line list of the 1st line for which
+                                  // an emissivity estimator is recorded
+  __managed__ int emiss_max;      // actual number of frequency points in emissivity grid
 
 
   __managed__ modelgrid_t modelgrid[MMODELGRID + 1];
@@ -140,7 +140,6 @@ namespace globals
   __managed__ double mtot;
   __managed__ double vmax;
   __managed__ double rmax;  /// Total mass and outer velocity/radius
-  __managed__ double totmassradionuclide[RADIONUCLIDE_COUNT]; /// total mass of each radionuclide in the ejecta
   __managed__ double mfeg;              /// Total mass of Fe group elements in ejecta
   __managed__ double tmax;              /// End time of current simulation
   __managed__ double tmin;              /// Start time of current simulation

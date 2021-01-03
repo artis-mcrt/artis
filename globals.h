@@ -5,8 +5,8 @@
 #include <curand_kernel.h>
 #endif
 
+#include "grid.h"
 #include "types.h"
-// #include "sn3d.h"
 #include "cuda.h"
 
 namespace globals
@@ -126,7 +126,6 @@ namespace globals
   extern __managed__ double mtot;
   extern __managed__ double vmax;
   extern __managed__ double rmax;
-  extern __managed__ double totmassradionuclide[RADIONUCLIDE_COUNT];
   extern __managed__ double mfeg;
   extern __managed__ double tmax;
   extern __managed__ double tmin;

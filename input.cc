@@ -1643,67 +1643,6 @@ static void read_atomicdata(void)
 }
 
 
-static void show_totmassradionuclides(void)
-{
-  globals::mtot = 0.;
-  globals::mfeg = 0.;
-
-  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
-    globals::totmassradionuclide[iso] = 0.;
-
-  int n1 = 0;
-  for (int mgi = 0; mgi < globals::npts_model; mgi++)
-  {
-    double cellvolume = 0.;
-    if (get_model_type() == RHO_1D_READ)
-    {
-      const double v_inner = (mgi == 0) ? 0. : globals::vout_model[mgi - 1];
-      // mass_in_shell = rho_model[mgi] * (pow(globals::vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(t_model, 3) / 3.;
-      cellvolume = (pow(globals::vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(globals::tmin, 3) / 3.;
-    }
-    else if (get_model_type() == RHO_2D_READ)
-    {
-      cellvolume = pow(globals::tmin / globals::t_model, 3) * ((2 * n1) + 1) * PI * globals::dcoord2 * pow(globals::dcoord1, 2.);
-      n1++;
-      if (n1 == globals::ncoord1_model)
-      {
-        n1 = 0;
-      }
-    }
-    else if (get_model_type() == RHO_3D_READ)
-    {
-      /// Assumes cells are cubes here - all same volume.
-      cellvolume = pow((2 * globals::vmax * globals::tmin), 3.) / (globals::ncoordgrid[0] * globals::ncoordgrid[1] * globals::ncoordgrid[2]);
-    }
-    else
-    {
-      printout("Unknown model type %d in function %s\n", get_model_type(), __func__);
-      abort();
-    }
-
-    const double mass_in_shell = get_rhoinit(mgi) * cellvolume;
-
-    globals::mtot += mass_in_shell;
-
-    for (int isoint = 0; isoint < RADIONUCLIDE_COUNT; isoint++)
-    {
-      const enum radionuclides iso = (enum radionuclides) isoint;
-      globals::totmassradionuclide[iso] += mass_in_shell * get_modelinitradioabund(mgi, iso);
-    }
-
-    globals::mfeg += mass_in_shell * get_ffegrp(mgi);
-  }
-
-
-  printout("Masses / Msun:    Total: %9.3e  56Ni: %9.3e  56Co: %9.3e  52Fe: %9.3e  48Cr: %9.3e\n",
-           globals::mtot / MSUN, globals::totmassradionuclide[NUCLIDE_NI56] / MSUN,
-           globals::totmassradionuclide[NUCLIDE_CO56] / MSUN, globals::totmassradionuclide[NUCLIDE_FE52] / MSUN,
-           globals::totmassradionuclide[NUCLIDE_CR48] / MSUN);
-  printout("Masses / Msun: Fe-group: %9.3e  57Ni: %9.3e  57Co: %9.3e\n",
-           globals::mfeg / MSUN, globals::totmassradionuclide[NUCLIDE_NI57] / MSUN, globals::totmassradionuclide[NUCLIDE_CO57] / MSUN);
-}
-
-
 static void read_2d3d_modelabundanceline(FILE * model_input, const int mgi, const bool keep)
 {
   char line[1024] = "";
@@ -2065,32 +2004,36 @@ static void read_ejecta_model(enum model_types model_type)
     case RHO_UNIFORM:
     {
       assert(false); // needs to be reimplemented using spherical coordinate mode
-      globals::mtot = 1.39 * MSUN;
-      globals::totmassradionuclide[NUCLIDE_NI56] = 0.625 * MSUN;
-      globals::vmax = 1.e9;
-      // rhotot = 3 * mtot / 4 / PI / rmax /rmax /rmax; //MK
       break;
     }
 
     case RHO_1D_READ:
+    {
       printout("Read 1D model!\n");
       read_1d_model();
       break;
+    }
 
     case RHO_2D_READ:
+    {
       printout("Read 2D model!\n");
 
       read_2d_model();
       break;
+    }
 
     case RHO_3D_READ:
+    {
       printout("Read 3D model!\n");
       read_3d_model();
       break;
+    }
 
     default:
+    {
       printout("Unknown model. Abort.\n");
       abort();
+    }
   }
 }
 

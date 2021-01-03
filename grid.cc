@@ -15,6 +15,7 @@ static long mem_usage_nltepops = 0;
 
 static __managed__ int mg_associated_cells[MMODELGRID + 1];
 
+__managed__ double totmassradionuclide[RADIONUCLIDE_COUNT]; /// total mass of each radionuclide in the ejecta
 
 __host__ __device__
 double wid_init(const int cellindex)
@@ -1183,46 +1184,39 @@ void grid_init(int my_rank)
   }
 
   /// Now set up the density in each cell.
-  if (get_model_type() == RHO_UNIFORM)
+
+  // Calculate the critical opacity at which opacity_case 3 switches from a
+  // regime proportional to the density to a regime independent of the density
+  // This is done by solving for tau_sobolev == 1
+  // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(NUCLIDE_NI56) * 3000e-8 * globals::time_step[m].mid;
+  globals::rho_crit = ME * CLIGHT * decay::nucmass(NUCLIDE_NI56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::tmin);
+  printout("grid_init: rho_crit = %g\n", globals::rho_crit);
+
+  if (get_model_type() == RHO_1D_READ)
   {
-    //uniform_density_setup ();
-    //abundances_setup();
+    density_1d_read();
+  }
+  else if (get_model_type() == RHO_2D_READ)
+  {
+    density_2d_read();
+  }
+  else if (get_model_type() == RHO_3D_READ)
+  {
+    for (int n = 0; n < globals::ngrid; n++)
+    {
+      const double radial_pos = get_cellradialpos(n);
+      globals::modelgrid[globals::cell[n].modelgridindex].initial_radial_pos = radial_pos;
+    }
+    // cells with rho > 0 are allocated by the above function
   }
   else
   {
-    // Calculate the critical opacity at which opacity_case 3 switches from a
-    // regime proportional to the density to a regime independent of the density
-    // This is done by solving for tau_sobolev == 1
-    // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(NUCLIDE_NI56) * 3000e-8 * globals::time_step[m].mid;
-    globals::rho_crit = ME * CLIGHT * decay::nucmass(NUCLIDE_NI56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::tmin);
-    printout("grid_init: rho_crit = %g\n", globals::rho_crit);
-
-    if (get_model_type() == RHO_1D_READ)
-    {
-      density_1d_read();
-    }
-    else if (get_model_type() == RHO_2D_READ)
-    {
-      density_2d_read();
-    }
-    else if (get_model_type() == RHO_3D_READ)
-    {
-      for (int n = 0; n < globals::ngrid; n++)
-      {
-        const double radial_pos = get_cellradialpos(n);
-        globals::modelgrid[globals::cell[n].modelgridindex].initial_radial_pos = radial_pos;
-      }
-      // cells with rho > 0 are allocated by the above function
-    }
-    else
-    {
-      printout("[fatal] grid_init: Error: Unknown density type. Abort.");
-      abort();
-    }
-    allocate_nonemptycells();
-    calculate_kappagrey();
-    abundances_read();
+    printout("[fatal] grid_init: Error: Unknown density type. Abort.");
+    abort();
   }
+  allocate_nonemptycells();
+  calculate_kappagrey();
+  abundances_read();
 
   radfield::init(my_rank);
   nonthermal::init(my_rank);
@@ -1243,7 +1237,7 @@ void grid_init(int my_rank)
   // the model cells that are not associated with any propagation cells
   for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
   {
-    if (globals::totmassradionuclide[iso] <= 0)
+    if (totmassradionuclide[iso] <= 0)
       continue;
     double totmassradionuclide_actual = 0.;
     for (int mgi = 0; mgi < globals::npts_model; mgi++)
@@ -1252,7 +1246,7 @@ void grid_init(int my_rank)
     }
     if (totmassradionuclide_actual >= 0.)
     {
-      const double ratio = globals::totmassradionuclide[iso] / totmassradionuclide_actual;
+      const double ratio = totmassradionuclide[iso] / totmassradionuclide_actual;
       // printout("nuclide %d ratio %g\n", iso, ratio);
       for (int mgi = 0; mgi < globals::npts_model; mgi++)
       {
@@ -1265,4 +1259,71 @@ void grid_init(int my_rank)
       }
     }
   }
+}
+
+
+void show_totmassradionuclides(void)
+{
+  globals::mtot = 0.;
+  globals::mfeg = 0.;
+
+  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+    totmassradionuclide[iso] = 0.;
+
+  int n1 = 0;
+  for (int mgi = 0; mgi < globals::npts_model; mgi++)
+  {
+    double cellvolume = 0.;
+    if (get_model_type() == RHO_1D_READ)
+    {
+      const double v_inner = (mgi == 0) ? 0. : globals::vout_model[mgi - 1];
+      // mass_in_shell = rho_model[mgi] * (pow(globals::vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(t_model, 3) / 3.;
+      cellvolume = (pow(globals::vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(globals::tmin, 3) / 3.;
+    }
+    else if (get_model_type() == RHO_2D_READ)
+    {
+      cellvolume = pow(globals::tmin / globals::t_model, 3) * ((2 * n1) + 1) * PI * globals::dcoord2 * pow(globals::dcoord1, 2.);
+      n1++;
+      if (n1 == globals::ncoord1_model)
+      {
+        n1 = 0;
+      }
+    }
+    else if (get_model_type() == RHO_3D_READ)
+    {
+      /// Assumes cells are cubes here - all same volume.
+      cellvolume = pow((2 * globals::vmax * globals::tmin), 3.) / (globals::ncoordgrid[0] * globals::ncoordgrid[1] * globals::ncoordgrid[2]);
+    }
+    else
+    {
+      printout("Unknown model type %d in function %s\n", get_model_type(), __func__);
+      abort();
+    }
+
+    const double mass_in_shell = get_rhoinit(mgi) * cellvolume;
+
+    globals::mtot += mass_in_shell;
+
+    for (int isoint = 0; isoint < RADIONUCLIDE_COUNT; isoint++)
+    {
+      const enum radionuclides iso = (enum radionuclides) isoint;
+      totmassradionuclide[iso] += mass_in_shell * get_modelinitradioabund(mgi, iso);
+    }
+
+    globals::mfeg += mass_in_shell * get_ffegrp(mgi);
+  }
+
+
+  printout("Masses / Msun:    Total: %9.3e  56Ni: %9.3e  56Co: %9.3e  52Fe: %9.3e  48Cr: %9.3e\n",
+           globals::mtot / MSUN, totmassradionuclide[NUCLIDE_NI56] / MSUN,
+           totmassradionuclide[NUCLIDE_CO56] / MSUN, totmassradionuclide[NUCLIDE_FE52] / MSUN,
+           totmassradionuclide[NUCLIDE_CR48] / MSUN);
+  printout("Masses / Msun: Fe-group: %9.3e  57Ni: %9.3e  57Co: %9.3e\n",
+           globals::mfeg / MSUN, totmassradionuclide[NUCLIDE_NI57] / MSUN, totmassradionuclide[NUCLIDE_CO57] / MSUN);
+}
+
+
+double get_totmassradionuclide(enum radionuclides nuc)
+{
+  return totmassradionuclide[nuc];
 }
