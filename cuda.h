@@ -21,11 +21,12 @@
 
   #include <cuda_runtime.h>
   // #include <curand.h>
+  #include <curand_kernel.h>
 
   #ifndef __CUDA_ARCH__
     #include "helper_cuda.h"
   #endif
-  #include "globals.h"
+  // #include "globals.h"
 
   // copied from https://www.micc.unifi.it/bertini/download/gpu-programming-basics/2017/gpu_cuda_5.pdf
   #if defined __CUDA_ARCH__ && __CUDA_ARCH__ < 600
