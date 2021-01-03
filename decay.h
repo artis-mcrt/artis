@@ -2,7 +2,6 @@
 #define DECAY_H
 
 // #include <cstdio>
-#include "cuda.h"
 
 enum radionuclides {
   NUCLIDE_NI57 = 0,
@@ -32,6 +31,7 @@ enum decaypathways {
 };
 
 #include "types.h"
+#include "cuda.h"
 
 namespace decay
 {
