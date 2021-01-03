@@ -1,6 +1,8 @@
 // #include <gsl/gsl_poly.h>
 #include <cassert>
+#ifndef __CUDA_ARCH__
 #include <gsl/gsl_blas.h>
+#endif
 
 #include "sn3d.h"
 #include "boundary.h"
@@ -11,6 +13,7 @@
 #include "vectors.h"
 
 
+__host__ __device__
 static double get_shellcrossdist(
   const double pos[3], const double dir[3], const double shellradius, const bool isinnerboundary, const double tstart)
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell
@@ -45,12 +48,20 @@ static double get_shellcrossdist(
     double d2 = (-b - sqrt(discriminant)) / 2 / a;
 
     double posfinal1[3];
+    double posfinal2[3];
+    #ifndef __CUDA_ARCH__
     cblas_dcopy(3, pos, 1, posfinal1, 1);     // posfinal1 = pos
     cblas_daxpy(3, d1, dir, 1, posfinal1, 1); // posfinal1 += d1 * dir;
 
-    double posfinal2[3];
     cblas_dcopy(3, pos, 1, posfinal2, 1);
     cblas_daxpy(3, d2, dir, 1, posfinal2, 1);
+    #else
+    for (int d = 0; d < 3; d++)
+    {
+      posfinal1[d] = pos[d] + d1 * dir[d];
+      posfinal2[d] = pos[d] + d2 * dir[d];
+    }
+    #endif
 
     const double shellradiusfinal1 = shellradius / tstart * (tstart + d1 / speed);
     const double shellradiusfinal2 = shellradius / tstart * (tstart + d2 / speed);
@@ -113,6 +124,7 @@ static double get_shellcrossdist(
 }
 
 
+__host__ __device__
 double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
 /// Basic routine to compute distance to a cell boundary.
 {
@@ -357,6 +369,7 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
 }
 
 
+__host__ __device__
 void change_cell(PKT *pkt_ptr, int snext, double t_current)
 /// Routine to take a packet across a boundary.
 {
@@ -377,7 +390,7 @@ void change_cell(PKT *pkt_ptr, int snext, double t_current)
     pkt_ptr->escape_type = pkt_ptr->type;
     pkt_ptr->escape_time = pkt_ptr->prop_time;
     pkt_ptr->type = TYPE_ESCAPE;
-    globals::nesc++;
+    safeincrement(globals::nesc);
   }
   else
   {
@@ -388,43 +401,6 @@ void change_cell(PKT *pkt_ptr, int snext, double t_current)
     // const int mgi = globals::cell[snext].modelgridindex;
 
     stats::increment(stats::COUNTER_CELLCROSSINGS);
-
-    /// and calculate the continuums opacity in the new cell if the packet is a rpkt
-    /// for isothermal homogeneous grids this could be omitted if we neglect the time dependency
-    /// as we do it on the rpkts way through a cell
-    //if (globals::debuglevel == 2) printout("[debug] calculate_kappa_rpkt after cell crossing\n");
-
-    /// check for empty cells
-    // if (mgi != MMODELGRID)
-    // {
-    //   if (mgi != old_mgi)
-    //   {
-    //     /// Update the level populations and reset the precalculated rate coefficients
-    //     //printout("change cell: cellnumber %d\n",pkt_ptr->where);
-    //     /// This only needs to be done for non-grey cells
-    //     if (globals::modelgrid[mgi].thick != 1)
-    //     {
-    //       updatecellcounter++;
-    //
-    //       cellhistory_reset(mgi, false);
-    //     }
-    //   }
-
-      //copy_populations_to_phixslist();
-      /// the rpkt's continuum opacity must be updated in any case as it depends on nu
-      /// and nu changed after propagation
-      // if (pkt_ptr->type == TYPE_RPKT)
-      // {
-      //   #ifdef DEBUG_ON
-      //     if (globals::debuglevel == 2) printout("[debug] calculate_kappa_rpkt after cell crossing\n");
-      //   #endif
-      //   /// This only needs to be done for non-grey cells
-      //   if (globals::modelgrid[mgi].thick != 1)
-      //   {
-      //     calculate_kappa_rpkt_cont(pkt_ptr);
-      //   }
-      // }
-    // }
   }
 }
 

@@ -11,17 +11,19 @@
 #include "vectors.h"
 #include "vpkt.h"
 
-static cellhistorycoolinglist_t *coolinglist;
+static __managed__ cellhistorycoolinglist_t *coolinglist;
 
-extern inline int get_coolinglistoffset(int element, int ion);
+extern __host__ __device__ inline int get_coolinglistoffset(int element, int ion);
 
 
+__host__ __device__
 static int get_ncoolingterms(int element, int ion)
 {
   return globals::elements[element].ions[ion].ncoolingterms;
 }
 
 
+__host__ __device__
 static double get_cooling_ion_coll_exc(const int modelgridindex, const int element, const int ion, const double T_e, const double nne)
 {
   double C_exc = 0.;
@@ -49,6 +51,7 @@ static double get_cooling_ion_coll_exc(const int modelgridindex, const int eleme
 }
 
 
+__host__ __device__
 static double get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, float T_e)
 {
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
@@ -68,6 +71,7 @@ static double get_bfcoolingcoeff(int element, int ion, int level, int phixstarge
 }
 
 
+__host__ __device__
 void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates_t *heatingcoolingrates)
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
@@ -153,6 +157,7 @@ void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates_t *he
 }
 
 
+__host__ __device__
 static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int indexionstart, double oldcoolingsum)
 /// Set up the global cooling list and determine the important entries
 /// by applying a cut to the total cooling rate. Then sort the global
@@ -303,6 +308,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
 }
 
 
+__host__ __device__
 static void set_ncoolingterms(void)
 {
   globals::ncoolingterms = 0;
@@ -429,6 +435,7 @@ void setup_coolinglist(void)
 }
 
 
+__host__ __device__
 static double planck(const double nu, const double T)
 /// returns intensity for frequency nu and temperature T according
 /// to the Planck distribution
@@ -437,6 +444,7 @@ static double planck(const double nu, const double T)
 }
 
 
+__host__ __device__
 static double sample_planck(const double T)
 /// returns a randomly chosen frequency according to the Planck
 /// distribution of temperature T
@@ -465,6 +473,7 @@ static double sample_planck(const double T)
 }
 
 
+__host__ __device__
 double do_kpkt_bb(PKT *pkt_ptr)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 {
@@ -498,6 +507,7 @@ double do_kpkt_bb(PKT *pkt_ptr)
 }
 
 
+__host__ __device__
 double do_kpkt(PKT *pkt_ptr, double t2, int nts)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 //{

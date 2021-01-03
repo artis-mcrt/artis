@@ -4,12 +4,14 @@
 #include "stats.h"
 #include "vectors.h"
 
-/* Stuff for photo electric effect scattering. */
+// Stuff for photo electric effect scattering.
 
+
+__host__ __device__
 double sig_photo_electric(const PKT *pkt_ptr)
 {
   double sigma_cmf;
-  /* Start by working out the x-section in the co-moving frame.*/
+  // Start by working out the x-section in the co-moving frame.
 
   const int cellindex = pkt_ptr->where;
   const int mgi = globals::cell[cellindex].modelgridindex;
@@ -23,18 +25,18 @@ double sig_photo_electric(const PKT *pkt_ptr)
 
     double sigma_cmf_fe = 25.7e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.0);
 
-    /* 2.41326e19 = 100keV in frequency. */
+    // 2.41326e19 = 100keV in frequency.
 
-    /* Now need to multiply by the particle number density. */
+    // Now need to multiply by the particle number density.
 
     //sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
-    /* Assumes Z = 7. So mass = 14. */
+    // Assumes Z = 7. So mass = 14.
 
     sigma_cmf_si *= rho / MH / 28;
-    /* Assumes Z = 14. So mass = 28. */
+    // Assumes Z = 14. So mass = 28.
 
     sigma_cmf_fe *= rho / MH / 56;
-    /* Assumes Z = 28. So mass = 56. */
+    // Assumes Z = 28. So mass = 56.
 
     const double f_fe = get_ffegrp(mgi);
 
@@ -45,19 +47,21 @@ double sig_photo_electric(const PKT *pkt_ptr)
     sigma_cmf = globals::gamma_grey * rho;
   }
 
-  /* Now need to convert between frames. */
+  // Now need to convert between frames.
 
   const double sigma_rf = sigma_cmf * doppler_packetpos(pkt_ptr);
   return sigma_rf;
 }
 
-/* Cross section for pair production. */
 
+__host__ __device__
 double sig_pair_prod(const PKT *pkt_ptr)
 {
+  // Cross section for pair production.
+
   double sigma_cmf;
 
-  /* Start by working out the x-section in the co-moving frame.*/
+  // Start by working out the x-section in the co-moving frame.
 
   const int cellindex = pkt_ptr->where;
   const int mgi = globals::cell[cellindex].modelgridindex;
@@ -65,8 +69,8 @@ double sig_pair_prod(const PKT *pkt_ptr)
 
   if (globals::gamma_grey < 0)
   {
-    /* 2.46636e+20 = 1022 keV in frequency */
-    /* 3.61990e+20 = 1500 keV in frequency */
+    // 2.46636e+20 = 1022 keV in frequency
+    // 3.61990e+20 = 1500 keV in frequency
 
     if (pkt_ptr->nu_cmf > 2.46636e+20)
     {
@@ -91,16 +95,16 @@ double sig_pair_prod(const PKT *pkt_ptr)
         sigma_cmf_fe  = 1.0063 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.022) * 784.e-27;
       }
 
-      /* Now need to multiply by the particle number density. */
+      // Now need to multiply by the particle number density.
 
       sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
-      /* Assumes Z = 7. So mass = 14. */
+      // Assumes Z = 7. So mass = 14.
 
       sigma_cmf_si *= rho / MH / 28;
-      /* Assumes Z = 14. So mass = 28. */
+      // Assumes Z = 14. So mass = 28.
 
       //sigma_cmf_fe *= globals::cell[pkt_ptr->where].rho * globals::cell[pkt_ptr->where].f_fe / MH / 56;
-      /* Assumes Z = 28. So mass = 56. */
+      // Assumes Z = 28. So mass = 56.
 
       sigma_cmf_fe *= rho / MH / 56;
       sigma_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
@@ -129,14 +133,16 @@ double sig_pair_prod(const PKT *pkt_ptr)
   return sigma_rf;
 }
 
-/* Routine to deal with pair production. */
+__host__ __device__
 void pair_prod(PKT *pkt_ptr)
 {
-  /* In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
-     gamma ray energy - 1.022 MeV. We assume that the electron deposits any kinetic energy directly to
-     the thermal pool. The positron annihilates with an electron locally making a pair of gamma rays
-     at 0.511 MeV in the local cmf (isotropic). So all the thermal energy goes to the thermal pool
-     immediately and the remainder goes into gamma-rays at 0.511 MeV. */
+  // Routine to deal with pair production.
+
+  //  In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
+  //  gamma ray energy - 1.022 MeV. We assume that the electron deposits any kinetic energy directly to
+  //  the thermal pool. The positron annihilates with an electron locally making a pair of gamma rays
+  //  at 0.511 MeV in the local cmf (isotropic). So all the thermal energy goes to the thermal pool
+  //  immediately and the remainder goes into gamma-rays at 0.511 MeV.
 
   const double prob_gamma = 1.022 * MEV / (H * pkt_ptr->nu_cmf);
 

@@ -15,158 +15,158 @@ namespace globals
   extern __managed__ curandState curandstates[MCUDATHREADS];
   #endif
 
-  extern double syn_dir[3]; // vector pointing from origin to observer
+  extern __managed__ double syn_dir[3]; // vector pointing from origin to observer
 
   extern __managed__ struct time *time_step;
 
   #define MSYN_TIME 100
-  extern int nsyn_time;
-  extern double time_syn[MSYN_TIME];
+  extern __managed__ int nsyn_time;
+  extern __managed__ double time_syn[MSYN_TIME];
 
   #define EMISS_MAX 2
-  extern int emiss_offset;
-  extern int emiss_max;
+  extern __managed__ int emiss_offset;
+  extern __managed__ int emiss_max;
 
 
-  extern modelgrid_t modelgrid[MMODELGRID + 1];
+  extern __managed__ modelgrid_t modelgrid[MMODELGRID + 1];
 
-  extern float compton_emiss[MMODELGRID+1][EMISS_MAX];
-  extern double rpkt_emiss[MMODELGRID+1];
+  extern __managed__ float compton_emiss[MMODELGRID+1][EMISS_MAX];
+  extern __managed__ double rpkt_emiss[MMODELGRID+1];
 
 
   #if (!NO_LUT_PHOTOION)
-    extern double corrphotoionrenorm[MMODELGRID * MELEMENTS * MIONS];
-    extern double gammaestimator[MMODELGRID * MELEMENTS * MIONS];
+    extern __managed__ double corrphotoionrenorm[MMODELGRID * MELEMENTS * MIONS];
+    extern __managed__ double gammaestimator[MMODELGRID * MELEMENTS * MIONS];
   #endif
   #if (!NO_LUT_BFHEATING)
-    extern double bfheatingestimator[MMODELGRID * MELEMENTS * MIONS];
+    extern __managed__ double bfheatingestimator[MMODELGRID * MELEMENTS * MIONS];
   #endif
   #ifdef FORCE_LTE
-    extern double *ffheatingestimator;
+    extern __managed__ double *ffheatingestimator;
   #else
-    extern double ffheatingestimator[MMODELGRID + 1];
-    extern double colheatingestimator[MMODELGRID + 1];
+    extern __managed__ double ffheatingestimator[MMODELGRID + 1];
+    extern __managed__ double colheatingestimator[MMODELGRID + 1];
 
     #ifdef DO_TITER
-      extern double ffheatingestimator_save[MMODELGRID];
-      extern double colheatingestimator_save[MMODELGRID];
-      extern double gammaestimator_save[MMODELGRID * MELEMENTS * MIONS];
-      extern double bfheatingestimator_save[MMODELGRID * MELEMENTS * MIONS];
+      extern __managed__ double ffheatingestimator_save[MMODELGRID];
+      extern __managed__ double colheatingestimator_save[MMODELGRID];
+      extern __managed__ double gammaestimator_save[MMODELGRID * MELEMENTS * MIONS];
+      extern __managed__ double bfheatingestimator_save[MMODELGRID * MELEMENTS * MIONS];
     #endif
   #endif
 
   #ifdef RECORD_LINESTAT
-    extern int *ecounter;
-    extern int *acounter;
-    extern int *linestat_reduced;
+    extern __managed__ int *ecounter;
+    extern __managed__ int *acounter;
+    extern __managed__ int *linestat_reduced;
   #endif
 
-  extern bool file_set;
+  extern __managed__ bool file_set;
 
-  extern bool do_comp_est;
-  extern bool do_r_lc;
-  extern int do_rlc_est;
+  extern __managed__ bool do_comp_est;
+  extern __managed__ bool do_r_lc;
+  extern __managed__ int do_rlc_est;
 
-  extern int n_out_it;
+  extern __managed__ int n_out_it;
 
-  extern int npts_model;
-  extern double vout_model[MMODELGRID];
-  extern double t_model;
-  extern int ncoord1_model;
-  extern int ncoord2_model;
-  extern double dcoord1, dcoord2;
+  extern __managed__ int npts_model;
+  extern __managed__ double vout_model[MMODELGRID];
+  extern __managed__ double t_model;
+  extern __managed__ int ncoord1_model;
+  extern __managed__ int ncoord2_model;
+  extern __managed__ double dcoord1, dcoord2;
 
-  extern double CLIGHT_PROP;
+  extern __managed__ double CLIGHT_PROP;
 
-  extern double gamma_grey;
+  extern __managed__ double gamma_grey;
 
-  extern double min_den;
+  extern __managed__ double min_den;
 
   #define GREY_OP 0.1
 
-  extern double max_path_step;
+  extern __managed__ double max_path_step;
 
-  extern int opacity_case;
+  extern __managed__ int opacity_case;
 
-  extern int maxion;
-  extern int nlines;
-  extern int includedions;
-  extern elementlist_entry *elements;
-  extern linelist_entry *linelist;
-  extern bflist_t *bflist;
+  extern __managed__ int maxion;
+  extern __managed__ int nlines;
+  extern __managed__ int includedions;
+  extern __managed__ elementlist_entry *elements;
+  extern __managed__ linelist_entry *linelist;
+  extern __managed__ bflist_t *bflist;
 
-  extern rpkt_cont_opacity_struct *kappa_rpkt_cont;
+  extern __managed__ rpkt_cont_opacity_struct *kappa_rpkt_cont;
 
-  extern int ncoolingterms;
-  extern int importantcoolingterms;
+  extern __managed__ int ncoolingterms;
+  extern __managed__ int importantcoolingterms;
 
-  extern double *allcont_nu_edge;
-  extern fullphixslist_t *allcont;
-  extern phixslist_t *phixslist;
-  extern int nbfcontinua;
-  extern int nbfcontinua_ground;
-  extern int NPHIXSPOINTS;
-  extern double NPHIXSNUINCREMENT;
+  extern __managed__ double *allcont_nu_edge;
+  extern __managed__ fullphixslist_t *allcont;
+  extern __managed__ phixslist_t *phixslist;
+  extern __managed__ int nbfcontinua;
+  extern __managed__ int nbfcontinua_ground;
+  extern __managed__ int NPHIXSPOINTS;
+  extern __managed__ double NPHIXSNUINCREMENT;
 
-  extern cellhistory_struct *cellhistory;
+  extern __managed__ cellhistory_struct *cellhistory;
 
-  extern int debuglevel;
+  extern __managed__ int debuglevel;
 
-  extern int ncoordgrid[3];
-  extern int ngrid;
-  extern int grid_type;
-  extern char coordlabel[3];
+  extern __managed__ int ncoordgrid[3];
+  extern __managed__ int ngrid;
+  extern __managed__ int grid_type;
+  extern __managed__ char coordlabel[3];
 
-  extern int nprocs;
-  extern int rank_global;
-  extern int npkts;
-  extern int nesc;
+  extern __managed__ int nprocs;
+  extern __managed__ int rank_global;
+  extern __managed__ int npkts;
+  extern __managed__ int nesc;
 
-  extern double coordmax[3];
-  extern double mtot;
-  extern double vmax;
-  extern double rmax;
-  extern double totmassradionuclide[RADIONUCLIDE_COUNT];
-  extern double mfeg;
-  extern double tmax;
-  extern double tmin;
+  extern __managed__ double coordmax[3];
+  extern __managed__ double mtot;
+  extern __managed__ double vmax;
+  extern __managed__ double rmax;
+  extern __managed__ double totmassradionuclide[RADIONUCLIDE_COUNT];
+  extern __managed__ double mfeg;
+  extern __managed__ double tmax;
+  extern __managed__ double tmin;
 
-  extern int ntstep;
-  extern int itstep;
-  extern int ftstep;
-  extern int nts_global;
+  extern __managed__ int ntstep;
+  extern __managed__ int itstep;
+  extern __managed__ int ftstep;
+  extern __managed__ int nts_global;
 
-  extern int nnubins;
-  extern double nu_min_r;
-  extern double nu_max_r;
+  extern __managed__ int nnubins;
+  extern __managed__ double nu_min_r;
+  extern __managed__ double nu_max_r;
 
-  extern double nusyn_min, nusyn_max;
-  extern int nfake_gam;
+  extern __managed__ double nusyn_min, nusyn_max;
+  extern __managed__ int nfake_gam;
 
-  extern double opcase3_normal;
-  extern double rho_crit_para;
-  extern double rho_crit;
+  extern __managed__ double opcase3_normal;
+  extern __managed__ double rho_crit_para;
+  extern __managed__ double rho_crit;
 
-  extern int debug_packet;
-  extern int n_middle_it;
+  extern __managed__ int debug_packet;
+  extern __managed__ int n_middle_it;
 
-  extern int total_nlte_levels;
-  extern int n_super_levels;
+  extern __managed__ int total_nlte_levels;
+  extern __managed__ int n_super_levels;
 
-  extern CELL cell[MGRID+1];
+  extern __managed__ CELL cell[MGRID+1];
 
-  extern bool homogeneous_abundances;
+  extern __managed__ bool homogeneous_abundances;
 
-  extern bool simulation_continued_from_saved;
-  extern double nu_rfcut;
-  extern int n_lte_timesteps;
-  extern double cell_is_optically_thick;
-  extern int n_grey_timesteps;
-  extern int n_titer;
-  extern bool initial_iteration;
-  extern int max_bf_continua;
-  extern int n_kpktdiffusion_timesteps;
-  extern float kpktdiffusion_timescale;
+  extern __managed__ bool simulation_continued_from_saved;
+  extern __managed__ double nu_rfcut;
+  extern __managed__ int n_lte_timesteps;
+  extern __managed__ double cell_is_optically_thick;
+  extern __managed__ int n_grey_timesteps;
+  extern __managed__ int n_titer;
+  extern __managed__ bool initial_iteration;
+  extern __managed__ int max_bf_continua;
+  extern __managed__ int n_kpktdiffusion_timesteps;
+  extern __managed__ float kpktdiffusion_timescale;
 
 } // namespace globals
 
