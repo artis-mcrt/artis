@@ -2351,7 +2351,7 @@ static bool get_noncommentline(std::istream &input, std::string &line)
 __global__ static void kernel_setupcurand(unsigned long int pre_zseed, int rank)
 {
   const int tid = threadIdx.x + blockDim.x * blockIdx.x;
-  if (tid < MTHREADS)
+  if (tid < MCUDATHREADS)
   {
     unsigned long int zseed = pre_zseed + (13 * rank);
     curand_init(zseed, tid, 0, &curandstates[tid]);
@@ -2364,7 +2364,7 @@ __global__ static void kernel_setupcurand(unsigned long int pre_zseed, int rank)
 static void init_curand(unsigned long int pre_zseed, int rank)
 {
   dim3 threadsPerBlock(256, 1, 1);
-  dim3 numBlocks((MTHREADS + threadsPerBlock.x - 1) / threadsPerBlock.x, 1, 1);
+  dim3 numBlocks((MCUDATHREADS + threadsPerBlock.x - 1) / threadsPerBlock.x, 1, 1);
 
   kernel_setupcurand<<<numBlocks, threadsPerBlock>>>(pre_zseed, rank);
 
