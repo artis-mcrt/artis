@@ -10,7 +10,9 @@
 #include <cstdlib>
 #include <cmath>
 #include <time.h>
+#ifndef __CUDA_ARCH__
 #include <gsl/gsl_rng.h>
+#endif
 //#include <gsl/gsl_sf_expint.h>
 
 
