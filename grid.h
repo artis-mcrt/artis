@@ -2,7 +2,54 @@
 #define GRIDINIT_H
 
 #include <cassert>
-#include "sn3d.h"
+#include "decay.h"
+#include "types.h"
+
+enum model_types {
+  RHO_UNIFORM = 1,  // Constant density. NOT IN USE
+  RHO_1D_READ = 2,  // Read model 1D
+  RHO_2D_READ = 4,  // Read model 2D
+  RHO_3D_READ = 3,  // Read model 3D
+};
+
+
+typedef struct modelgrid_t
+{
+  float Te;
+  float TR;
+  float TJ;
+  float W;
+  float nne;
+  float initial_radial_pos;
+  float rhoinit;
+  float rho;
+  //modelgrid nn_tot
+  float nnetot;           // total electron density (free + bound).
+  float initradioabund[RADIONUCLIDE_COUNT];
+  float ffegrp;
+  float fnistable;
+  float fcostable;
+  float ffestable;
+  float fmnstable;
+  float fcrstable;
+  float fvstable;
+  float ftistable;
+  float kappagrey;
+  float grey_depth;                      /// Grey optical depth to surface of the modelgridcell
+                                         /// This is only stored to print it outside the OpenMP loop in update_grid to the estimatorsfile
+                                         /// so there is no need to communicate it via MPI so far!
+  int *elements_uppermost_ion; /// Highest ionisation stage which has a decent population for a particular element
+                                                    /// in a given cell.
+  compositionlist_entry *composition;    /// Pointer to an array which contains the time dependent abundances
+                                        /// of all included elements and all the groundlevel
+                                         /// populations and partition functions for their ions
+  double *nlte_pops;                     /// Pointer to an array that contains the nlte-level
+                                         /// populations for this cell
+
+  double totalcooling;
+  mgicooling_t *cooling;
+  short thick;
+} modelgrid_t;
 
 __host__ __device__ int get_elements_uppermost_ion(const int modelgridindex, const int element);
 __host__ __device__ void set_elements_uppermost_ion(const int modelgridindex, const int element, const int newvalue);
@@ -43,6 +90,7 @@ __host__ __device__ float get_stable_abund(int mgi, int anumber);
 __host__ __device__ int get_numassociatedcells(int modelgridindex);
 __host__ __device__ enum model_types get_model_type(void);
 __host__ __device__ void set_model_type(enum model_types model_type_value);
-
+void show_totmassradionuclides(void);
+double get_totmassradionuclide(enum radionuclides nuc);
 
 #endif //GRIDINIT_H

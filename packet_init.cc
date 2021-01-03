@@ -108,12 +108,12 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
   const double etot_tinf = (
-    (decay::nucdecayenergy(NUCLIDE_NI56) + decay::nucdecayenergy(NUCLIDE_CO56)) * globals::totmassradionuclide[NUCLIDE_NI56] / decay::nucmass(NUCLIDE_NI56) +
-    decay::nucdecayenergy(NUCLIDE_CO56) * globals::totmassradionuclide[NUCLIDE_CO56] / decay::nucmass(NUCLIDE_CO56) +
-    (decay::nucdecayenergy(NUCLIDE_NI57) + decay::nucdecayenergy(NUCLIDE_CO57)) * globals::totmassradionuclide[NUCLIDE_NI57] / decay::nucmass(NUCLIDE_NI57) +
-    decay::nucdecayenergy(NUCLIDE_CO57) * globals::totmassradionuclide[NUCLIDE_CO57] / decay::nucmass(NUCLIDE_CO57) +
-    (decay::nucdecayenergy(NUCLIDE_V48) + decay::nucdecayenergy(NUCLIDE_CR48)) * globals::totmassradionuclide[NUCLIDE_CR48] / decay::nucmass(NUCLIDE_CR48) +
-    (decay::nucdecayenergy(NUCLIDE_FE52) + decay::nucdecayenergy(NUCLIDE_MN52)) * globals::totmassradionuclide[NUCLIDE_FE52] / decay::nucmass(NUCLIDE_FE52));
+    (decay::nucdecayenergy(NUCLIDE_NI56) + decay::nucdecayenergy(NUCLIDE_CO56)) * get_totmassradionuclide(NUCLIDE_NI56) / decay::nucmass(NUCLIDE_NI56) +
+    decay::nucdecayenergy(NUCLIDE_CO56) * get_totmassradionuclide(NUCLIDE_CO56) / decay::nucmass(NUCLIDE_CO56) +
+    (decay::nucdecayenergy(NUCLIDE_NI57) + decay::nucdecayenergy(NUCLIDE_CO57)) * get_totmassradionuclide(NUCLIDE_NI57) / decay::nucmass(NUCLIDE_NI57) +
+    decay::nucdecayenergy(NUCLIDE_CO57) * get_totmassradionuclide(NUCLIDE_CO57) / decay::nucmass(NUCLIDE_CO57) +
+    (decay::nucdecayenergy(NUCLIDE_V48) + decay::nucdecayenergy(NUCLIDE_CR48)) * get_totmassradionuclide(NUCLIDE_CR48) / decay::nucmass(NUCLIDE_CR48) +
+    (decay::nucdecayenergy(NUCLIDE_FE52) + decay::nucdecayenergy(NUCLIDE_MN52)) * get_totmassradionuclide(NUCLIDE_FE52) / decay::nucmass(NUCLIDE_FE52));
   printout("etot %g (t_0 to t_inf)\n", etot_tinf);
   printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n",
            decay::nucdecayenergy(NUCLIDE_NI56) / MEV, decay::nucdecayenergy(NUCLIDE_CO56) / MEV,

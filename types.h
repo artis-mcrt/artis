@@ -27,13 +27,6 @@ struct time
   int pellet_decays; // Number of pellets that decay in this time step.
 };
 
-enum model_types {
-  RHO_UNIFORM = 1,  // Constant density.
-  RHO_1D_READ = 2,  // Read model.
-  RHO_2D_READ = 4,  // Read model.
-  RHO_3D_READ = 3,  // Read model.
-};
-
 
 /// Coolinglist
 ///============================================================================
@@ -240,45 +233,6 @@ typedef struct mgicooling_t
 {
   double *contrib;
 } mgicooling_t;
-
-
-typedef struct modelgrid_t
-{
-  float Te;
-  float TR;
-  float TJ;
-  float W;
-  float nne;
-  float initial_radial_pos;
-  float rhoinit;
-  float rho;
-  //modelgrid nn_tot
-  float nnetot;           // total electron density (free + bound).
-  float initradioabund[RADIONUCLIDE_COUNT];
-  float ffegrp;
-  float fnistable;
-  float fcostable;
-  float ffestable;
-  float fmnstable;
-  float fcrstable;
-  float fvstable;
-  float ftistable;
-  float kappagrey;
-  float grey_depth;                      /// Grey optical depth to surface of the modelgridcell
-                                         /// This is only stored to print it outside the OpenMP loop in update_grid to the estimatorsfile
-                                         /// so there is no need to communicate it via MPI so far!
-  int *elements_uppermost_ion; /// Highest ionisation stage which has a decent population for a particular element
-                                                    /// in a given cell.
-  compositionlist_entry *composition;    /// Pointer to an array which contains the time dependent abundances
-                                        /// of all included elements and all the groundlevel
-                                         /// populations and partition functions for their ions
-  double *nlte_pops;                     /// Pointer to an array that contains the nlte-level
-                                         /// populations for this cell
-
-  double totalcooling;
-  mgicooling_t *cooling;
-  short thick;
-} modelgrid_t;
 
 
 #define NSYN 1 /* number of frequency points in syn calculation */
