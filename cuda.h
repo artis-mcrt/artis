@@ -71,7 +71,9 @@
 
     #define abort() assert(false)
 
-    extern __managed__ curandState globals::curandstates[MCUDATHREADS];
+    namesapce globals {
+      extern __managed__ curandState curandstates[MCUDATHREADS];
+    }
 
     __host__ __device__ extern inline int get_thread_num(void);
 
