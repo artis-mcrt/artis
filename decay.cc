@@ -6,9 +6,10 @@
 namespace decay
 {
 
-double arr_nucdecayenergygamma[RADIONUCLIDE_COUNT] = {0};
+__managed__ double arr_nucdecayenergygamma[RADIONUCLIDE_COUNT] = {0};
 
 
+__host__ __device__
 double nucdecayenergygamma(enum radionuclides nuclide_type)
 // average energy (erg) per decay in the form of gamma rays
 {
@@ -16,12 +17,14 @@ double nucdecayenergygamma(enum radionuclides nuclide_type)
 }
 
 
+__host__ __device__
 void set_nucdecayenergygamma(enum radionuclides nuclide_type, double value)
 {
   arr_nucdecayenergygamma[nuclide_type] = value;
 }
 
 
+__host__ __device__
 double nucdecayenergypositrons(enum radionuclides nuclide_type)
 // average energy (erg) per decay in the form of positrons
 {
@@ -39,12 +42,14 @@ double nucdecayenergypositrons(enum radionuclides nuclide_type)
 }
 
 
+__host__ __device__
 double nucdecayenergy(enum radionuclides nuclide_type)
 {
   return nucdecayenergygamma(nuclide_type) + nucdecayenergypositrons(nuclide_type);
 }
 
 
+__host__ __device__
 double meanlife(enum radionuclides nuclide_type)
 {
   switch (nuclide_type)
@@ -74,6 +79,7 @@ double meanlife(enum radionuclides nuclide_type)
 }
 
 
+__host__ __device__
 double nucmass(enum radionuclides nuclide_type)
 {
   switch (nuclide_type)
@@ -103,6 +109,7 @@ double nucmass(enum radionuclides nuclide_type)
 }
 
 
+__host__ __device__
 enum radionuclides decayparent(enum decaypathways decaypath)
 {
   switch (decaypath)
@@ -145,6 +152,7 @@ enum radionuclides decayparent(enum decaypathways decaypath)
 }
 
 
+__host__ __device__
 enum radionuclides decaydaughter(enum decaypathways decaypath)
 {
   switch (decaypath)
@@ -176,6 +184,7 @@ enum radionuclides decaydaughter(enum decaypathways decaypath)
 }
 
 
+__host__ __device__
 static bool decaypath_is_chain(enum decaypathways decaypath)
 // return true if the second nuclide in the decay path is also radioactive
 {
@@ -203,6 +212,7 @@ static bool decaypath_is_chain(enum decaypathways decaypath)
 }
 
 
+__host__ __device__
 double sample_decaytime(enum decaypathways decaypath, const double tdecaymin, const double tdecaymax)
 {
   double tdecay = -1;
@@ -233,6 +243,7 @@ double sample_decaytime(enum decaypathways decaypath, const double tdecaymin, co
 }
 
 
+__host__ __device__
 enum packet_type get_decay_pellet_type(enum decaypathways decaypath, bool *originated_from_positron)
 {
   *originated_from_positron = false; // will be changed if necessary before returning
@@ -313,6 +324,7 @@ enum packet_type get_decay_pellet_type(enum decaypathways decaypath, bool *origi
 }
 
 
+__host__ __device__
 static enum radionuclides find_nucparent(enum radionuclides nuclide)
 // get the parent nuclide, or if it doesn't have one then the value RADIONUCLIDE_COUNT is used
 {
@@ -332,6 +344,7 @@ static enum radionuclides find_nucparent(enum radionuclides nuclide)
 }
 
 
+__host__ __device__
 static void calculate_double_decay_chain(
   const double initabund1, const double meanlife1,
   const double initabund2, const double meanlife2,
@@ -372,6 +385,7 @@ static void calculate_double_decay_chain(
 }
 
 
+__host__ __device__
 static void calculate_doubledecay_modelabund(
   const int modelgridindex,
   enum radionuclides nuclide1,
@@ -389,6 +403,7 @@ static void calculate_doubledecay_modelabund(
 }
 
 
+__host__ __device__
 static double get_modelinitradioabund_decayed(
   const int modelgridindex, const enum radionuclides nuclide_type, const double time)
 // only allow decays to decrease the nuclide abundance (i.e. don't count increases due to decay of parent)
@@ -399,6 +414,7 @@ static double get_modelinitradioabund_decayed(
 }
 
 
+__host__ __device__
 static double get_modelradioabund_at_time(
   const int modelgridindex, const enum radionuclides nuclide_type, const double time)
 // get the mass fraction of a nuclide accounting for all decays including those of its parent
@@ -432,6 +448,7 @@ static double get_modelradioabund_at_time(
 }
 
 
+__host__ __device__
 static double get_endecay_per_ejectamass_at_time(const int mgi, enum decaypathways decaypath, double time)
 // decay energy that would be released from time tstart to time infinity from each decaypath
 {
@@ -459,6 +476,7 @@ static double get_endecay_per_ejectamass_at_time(const int mgi, enum decaypathwa
 }
 
 
+__host__ __device__
 static double get_endecay_per_ejectamass_between_times(
   const int mgi, enum decaypathways decaypath, double tlow, double thigh)
 // energy per mass released by a decaypath between two times (in seconds)
@@ -471,6 +489,7 @@ static double get_endecay_per_ejectamass_between_times(
 }
 
 
+__host__ __device__
 double get_simtime_endecay_per_ejectamass(const int mgi, enum decaypathways decaypath)
 // get the decay energy released during the simulation time
 {
@@ -483,6 +502,7 @@ double get_simtime_endecay_per_ejectamass(const int mgi, enum decaypathways deca
 }
 
 
+__host__ __device__
 double get_decay_power_per_ejectamass(enum decaypathways decaypath, const int modelgridindex, const double time)
 // total decay energy injection rate in erg / s / kg
 {
@@ -516,6 +536,7 @@ double get_decay_power_per_ejectamass(enum decaypathways decaypath, const int mo
 }
 
 
+__host__ __device__
 double get_positroninjection_rate_density(const int modelgridindex, const double t)
 // energy injection rate from positrons in erg / s / cm^3
 {
@@ -537,6 +558,7 @@ double get_positroninjection_rate_density(const int modelgridindex, const double
 }
 
 
+__host__ __device__
 void update_abundances(const int modelgridindex, const int timestep, const double t_current)
 /// Updates the mass fractions of elements associated with the decay sequence
 /// Parameters: - modelgridindex: the grid cell for which to update the abundances
@@ -619,6 +641,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 }
 
 
+__host__ __device__
 double get_decayedenergy_per_ejectamass(const int modelgridindex, const double tstart)
 {
   double endecaytot = 0.;

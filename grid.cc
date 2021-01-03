@@ -141,6 +141,7 @@ int get_cellcoordpointnum(const int cellindex, const int axis)
         default:
           printout("invalid coordinate index %d", axis);
           abort();
+          return -1;
       }
   }
 }
@@ -392,6 +393,7 @@ float get_stable_abund(const int mgi, const int anumber)
     default:
       printout("ERROR: no stable abundance variable for element Z=%d\n", anumber);
       abort();
+      return -1;
   }
 }
 
@@ -575,7 +577,6 @@ static void calculate_kappagrey(void)
 }
 
 
-__host__ __device__
 static void allocate_compositiondata(const int modelgridindex)
 /// Initialise composition dependent cell data for the given cell
 {
@@ -653,7 +654,6 @@ static void allocate_cooling(const int modelgridindex)
 }
 
 
-__host__ __device__
 static void allocate_nonemptycells(void)
 {
   printout("mem_usage: the modelgrid array occupies %.1f MB\n", sizeof(globals::modelgrid) / 1024. / 1024.);
@@ -720,7 +720,6 @@ static void allocate_nonemptycells(void)
 }
 
 
-__host__ __device__
 static void density_1d_read(void)
 /// Routine for doing a density grid read from a 1-D model.
 {
@@ -765,7 +764,6 @@ static void density_1d_read(void)
 }
 
 
-__host__ __device__
 static void density_2d_read(void)
 // Routine for doing a density grid read from a 2-D model.
 {
@@ -821,7 +819,6 @@ static void density_2d_read(void)
 }
 
 
-__host__ __device__
 static void abundances_read(void)
 {
   const bool threedimensional = (get_model_type() == RHO_3D_READ);
@@ -885,7 +882,6 @@ static void abundances_read(void)
 }
 
 
-__host__ __device__
 static void read_grid_restart_data(const int timestep)
 {
   char filename[100];
@@ -959,7 +955,6 @@ static void read_grid_restart_data(const int timestep)
 }
 
 
-__host__ __device__
 static void assign_temperature(void)
 /// Routine for assigning temperatures to the grid cells at the start of the simulation.
 {
@@ -1062,7 +1057,6 @@ static void assign_temperature(void)
 }
 
 
-__host__ __device__
 static void uniform_grid_setup(void)
 /// Routine for doing a uniform cuboidal grid.
 {
@@ -1128,7 +1122,6 @@ static void uniform_grid_setup(void)
   */
 }
 
-__host__ __device__
 static void spherical1d_grid_setup(void)
 {
   assert(get_model_type() == RHO_1D_READ);
@@ -1158,7 +1151,6 @@ static void spherical1d_grid_setup(void)
 }
 
 
-__host__ __device__
 void grid_init(int my_rank)
 /// Initialises the propagation grid cells and associates them with modelgrid cells
 {
