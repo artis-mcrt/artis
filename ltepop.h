@@ -4,15 +4,17 @@
 #include "atomic.h"
 #include "sn3d.h"
 
-double nne_solution_f(double x, void *paras);
-void get_ionfractions(int element, int modelgridindex, double nne, double ionfractions[], int uppermost_ion);
-double phi(int element, int ion, int modelgridindex);
-double calculate_partfunct(int element, int ion, int modelgridindex);
-double get_groundlevelpop(int modelgridindex, int element, int ion);
-double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level);
-double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
-double get_groundmultiplet_pop(int modelgridindex, int element, int ion);
+__host__ __device__ double nne_solution_f(double x, void *paras);
+__host__ __device__ void get_ionfractions(int element, int modelgridindex, double nne, double ionfractions[], int uppermost_ion);
+__host__ __device__ double phi(int element, int ion, int modelgridindex);
+__host__ __device__ double calculate_partfunct(int element, int ion, int modelgridindex);
+__host__ __device__ double get_groundlevelpop(int modelgridindex, int element, int ion);
+__host__ __device__ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level);
+__host__ __device__ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
+__host__ __device__ double get_groundmultiplet_pop(int modelgridindex, int element, int ion);
 
+
+__host__ __device__
 inline double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold)
 /// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
 {
@@ -30,6 +32,7 @@ inline double calculate_sahafact(int element, int ion, int level, int upperionle
 }
 
 
+__host__ __device__
 inline double ionstagepop(int modelgridindex, int element, int ion)
 /// Calculates the given ionstages total population in nebular approximation for modelgridindex
 /// The precalculated ground level population and partition function are used.
