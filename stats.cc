@@ -35,14 +35,11 @@ namespace stats {
       return;
     }
 
-    assert(ion < get_nions(element));
-    assert(ionstattype < ION_STAT_COUNT);
+    assert_testmodeonly(ion < get_nions(element));
+    assert_testmodeonly(ionstattype < ION_STAT_COUNT);
 
     const int uniqueionindex = get_uniqueionindex(element, ion);
-    #ifdef _OPENMP
-      #pragma omp atomic
-    #endif
-    ionstats[modelgridindex * globals::includedions * ION_STAT_COUNT + uniqueionindex * ION_STAT_COUNT + ionstattype] += increment;
+    safeadd(ionstats[modelgridindex * globals::includedions * ION_STAT_COUNT + uniqueionindex * ION_STAT_COUNT + ionstattype], increment);
   }
 
 
@@ -175,11 +172,9 @@ namespace stats {
 
   void increment(enum eventcounters i)
   {
-    assert(i < COUNTER_COUNT);
-    #ifdef _OPENMP
-      #pragma omp atomic
-    #endif
-    eventstats[i]++;
+    assert_testmodeonly(i >= 0);
+    assert_testmodeonly(i < COUNTER_COUNT);
+    safeincrement(eventstats[i]);
   }
 
   void pkt_action_counters_reset(void)

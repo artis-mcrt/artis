@@ -1052,7 +1052,6 @@ static int get_xs_ionization_vector(gsl_vector *const xs_vec, const int collioni
   const double C = colliondata[collionindex].C;
   const double D = colliondata[collionindex].D;
 
-  #pragma omp simd
   for (int i = startindex; i < SFPTS; i++)
   {
     const double u = gsl_vector_get(envec, i) / ionpot_ev;
@@ -2092,7 +2091,7 @@ static void select_nt_ionization2(int modelgridindex, int *element, int *lowerio
 
 void do_ntlepton(PKT *pkt_ptr)
 {
-  nt_energy_deposited += pkt_ptr->e_cmf;
+  safeadd(nt_energy_deposited, pkt_ptr->e_cmf);
 
   const int modelgridindex = globals::cell[pkt_ptr->where].modelgridindex;
 

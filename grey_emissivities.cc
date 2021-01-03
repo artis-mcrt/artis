@@ -72,10 +72,7 @@ void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist)
     //  3) divided by 4 pi sr
     //  This will all be done later
 
-    #ifdef _OPENMP
-      #pragma omp atomic
-    #endif
-    globals::rpkt_emiss[mgi] += 1.e-20 * heating_cont;
+    safeadd(globals::rpkt_emiss[mgi], 1.e-20 * heating_cont);
   }
 }
 
@@ -122,10 +119,7 @@ void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist)
     */
 
     //printout("%g %g(2)\n",tautau,cont);
-    #ifdef _OPENMP
-      #pragma omp atomic
-    #endif
-    globals::rpkt_emiss[mgi] += 1.e-20 * cont;
+    safeadd(globals::rpkt_emiss[mgi], 1.e-20 * cont);
   }
 }
 

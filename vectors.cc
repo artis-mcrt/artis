@@ -4,16 +4,17 @@
 #include "vectors.h"
 
 
-extern inline double vec_len(const double x[3]);
-extern inline void vec_norm(const double vec_in[3], double vec_out[3]);
-extern inline double dot(const double x[3], const double y[3]);
-extern inline void get_velocity(const double x[3], double y[3], const double t);
-extern inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
-extern inline void vec_scale(double vec[3], const double scalefactor);
-extern inline void vec_copy(double dest[3], const double source[3]);
-extern inline double doppler_packetpos(const PKT *const pkt_ptr, const double t);
+extern __host__ __device__ inline double vec_len(const double x[3]);
+extern __host__ __device__ inline void vec_norm(const double vec_in[3], double vec_out[3]);
+extern __host__ __device__ inline double dot(const double x[3], const double y[3]);
+extern __host__ __device__ inline void get_velocity(const double x[3], double y[3], const double t);
+extern __host__ __device__ inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
+extern __host__ __device__ inline void vec_scale(double vec[3], const double scalefactor);
+extern __host__ __device__ inline void vec_copy(double dest[3], const double source[3]);
+extern __host__ __device__ inline double doppler_packetpos(const PKT *const pkt_ptr, const double t);
 
 
+__host__ __device__
 void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
 // Routine for aberation of angles in SR. Takes one direction and velocity
 // as input and gives back another direction.
@@ -32,6 +33,7 @@ void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
 }
 
 
+__host__ __device__
 double doppler(const double dir1[3], const double vel[3])
 // Routine for Doppler shift in SR. Takes one direction and velocity
 //  as input and gives back double.
@@ -56,6 +58,7 @@ double doppler(const double dir1[3], const double vel[3])
 }
 
 
+__host__ __device__
 void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[3])
 // Routine for scattering a direction through angle theta.
 {
@@ -93,6 +96,7 @@ void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[
 }
 
 
+__host__ __device__
 void get_rand_isotropic_unitvec(double vecout[3])
 // Assume isotropic distribution, get a random direction vector
 {
@@ -115,8 +119,9 @@ void get_rand_isotropic_unitvec(double vecout[3])
 }
 
 
+__host__ __device__
 void move_pkt(PKT *pkt_ptr, const double distance, const double time)
-/// Subroutine to move a packet along a straight line (specified by currect
+/// Subroutine to move a packet along a straight line (specified by current
 /// dir vector). The distance moved is in the rest frame.
 {
   /// First update pos.

@@ -644,10 +644,7 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
     #ifndef FORCE_LTE
       ///ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
       ///quick and dirty solution: store info in element=ion=0, and leave the others untouched (i.e. zero)
-      #ifdef _OPENMP
-        #pragma omp atomic
-      #endif
-      globals::ffheatingestimator[modelgridindex] += distance_e_cmf * globals::kappa_rpkt_cont[tid].ffheating;
+      safeadd(globals::ffheatingestimator[modelgridindex], distance_e_cmf * globals::kappa_rpkt_cont[tid].ffheating);
 
       #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
         #if (!NO_LUT_PHOTOION)
@@ -667,10 +664,7 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
             {
               const int ionestimindex = modelgridindex * get_nelements() * maxion + element * maxion + ion;
               #if (!NO_LUT_PHOTOION)
-                #ifdef _OPENMP
-                  #pragma omp atomic
-                #endif
-                gammaestimator[ionestimindex] += phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf_over_nu;
+                safeadd(gammaestimator[ionestimindex], phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf_over_nu);
 
                 #ifdef DEBUG_ON
                 if (!isfinite(gammaestimator[ionestimindex]))
@@ -681,11 +675,7 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
                 #endif
               #endif
               #if (!NO_LUT_BFHEATING)
-                #ifdef _OPENMP
-                  #pragma omp atomic
-                #endif
-                bfheatingestimator[ionestimindex] += phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf * (1. - nu_edge/nu);
-                //bfheatingestimator[ionestimindex] += phixslist[tid].groundcont[i].bfheating_contr * distance_e_cmf * (1/nu_edge - 1/nu);
+                safeadd(bfheatingestimator[ionestimindex], phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf * (1. - nu_edge/nu));
               #endif
             }
           }

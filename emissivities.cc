@@ -108,10 +108,7 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist)
     else
     {
       const int cellindex = pkt_ptr->where;
-      #ifdef _OPENMP
-        #pragma omp atomic
-      #endif
-      globals::compton_emiss[globals::cell[cellindex].modelgridindex][lindex - globals::emiss_offset] += emiss_cont;
+      safeadd(globals::compton_emiss[globals::cell[cellindex].modelgridindex][lindex - globals::emiss_offset], emiss_cont);
     }
 
   }
@@ -136,10 +133,7 @@ void pp_emiss_cont(const PKT *pkt_ptr, double dist)
   //  This will all be done later
 
   const int cellindex = pkt_ptr->where;
-  #ifdef _OPENMP
-    #pragma omp atomic
-  #endif
-  globals::compton_emiss[globals::cell[cellindex].modelgridindex][globals::emiss_max - 1] += 1.e-20 * emiss_cont;
+  safeadd(globals::compton_emiss[globals::cell[cellindex].modelgridindex][globals::emiss_max - 1], 1.e-20 * emiss_cont);
 
   //  printf("emiss_cont %g\n", emiss_cont);
 

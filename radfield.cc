@@ -818,10 +818,7 @@ static void increment_bfestimators(
 
     if (nu_cmf >= nu_edge && nu_cmf <= nu_max_phixs)
     {
-      #ifdef _OPENMP
-        #pragma omp atomic
-      #endif
-      bfrate_raw[modelgridindex][allcontindex] += globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu;
+      safeadd(bfrate_raw[modelgridindex][allcontindex], globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
 
       #if (DETAILED_BF_ESTIMATORS_BYTYPE)
       const int element = allcont[allcontindex].element;
@@ -874,10 +871,7 @@ static void increment_bfestimators(
 void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *const pkt_ptr, double t_current)
 {
   assert(pkt_ptr->prop_time == t_current);
-  #ifdef _OPENMP
-    #pragma omp atomic
-  #endif
-  J[modelgridindex] += distance_e_cmf;
+  safeadd(J[modelgridindex], distance_e_cmf);
   #ifdef DEBUG_ON
     if (!isfinite(J[modelgridindex]))
     {
@@ -887,10 +881,7 @@ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf,
   #endif
 
 #ifndef FORCE_LTE
-  #ifdef _OPENMP
-    #pragma omp atomic
-  #endif
-  nuJ[modelgridindex] += distance_e_cmf * nu_cmf;
+  safeadd(nuJ[modelgridindex], distance_e_cmf * nu_cmf);
   #ifdef DEBUG_ON
     if (!isfinite(nuJ[modelgridindex]))
     {
@@ -929,18 +920,9 @@ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf,
 
     if (binindex >= 0)
     {
-      #ifdef _OPENMP
-      #pragma omp atomic
-      #endif
-      radfieldbins[modelgridindex][binindex].J_raw += distance_e_cmf;
-      #ifdef _OPENMP
-      #pragma omp atomic
-      #endif
-      radfieldbins[modelgridindex][binindex].nuJ_raw += distance_e_cmf * nu_cmf;
-      #ifdef _OPENMP
-      #pragma omp atomic
-      #endif
-      radfieldbins[modelgridindex][binindex].contribcount += 1;
+      safeadd(radfieldbins[modelgridindex][binindex].J_raw, distance_e_cmf);
+      safeadd(radfieldbins[modelgridindex][binindex].nuJ_raw, distance_e_cmf * nu_cmf);
+      safeincrement(radfieldbins[modelgridindex][binindex].contribcount);
     }
     // else
     // {
