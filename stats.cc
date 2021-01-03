@@ -7,8 +7,9 @@
 
 namespace stats {
 
-  static double *ionstats = NULL;
-  static int *eventstats = NULL;
+  static __managed__ double *ionstats = NULL;
+  static __managed__ int *eventstats = NULL;
+
 
   void init(void)
   {
@@ -19,6 +20,7 @@ namespace stats {
     eventstats = (int *) malloc(COUNTER_COUNT * sizeof(int));
   }
 
+
   void cleanup(void)
   {
     if (TRACK_ION_STATS)
@@ -28,6 +30,8 @@ namespace stats {
     free(eventstats);
   }
 
+
+  __host__ __device__
   void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype, const double increment)
   {
     if (!TRACK_ION_MASTATS && (ionstattype >= 18))
@@ -43,6 +47,7 @@ namespace stats {
   }
 
 
+  __host__ __device__
   void increment_ion_stats_contabsorption(const PKT *const pkt_ptr, const int modelgridindex, const int element, const int ion)
   {
     const double n_photons_absorbed = pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
@@ -170,6 +175,7 @@ namespace stats {
     }
   }
 
+  __host__ __device__
   void increment(enum eventcounters i)
   {
     assert_testmodeonly(i >= 0);

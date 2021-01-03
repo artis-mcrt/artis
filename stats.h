@@ -86,9 +86,9 @@ namespace stats {
 
   void cleanup(void);
 
-  void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype, const double increment);
+  __host__ __device__ void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype, const double increment);
 
-  void increment_ion_stats_contabsorption(const PKT *const pkt_ptr, const int modelgridindex, const int element, const int ion);
+  __host__ __device__ void increment_ion_stats_contabsorption(const PKT *const pkt_ptr, const int modelgridindex, const int element, const int ion);
 
   double get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype);
 
@@ -98,7 +98,7 @@ namespace stats {
 
   void normalise_ion_estimators(const int mgi, const double deltat, const double deltaV);
 
-  void increment(enum eventcounters);
+  __host__ __device__ void increment(enum eventcounters);
 
   void pkt_action_counters_reset(void);
 

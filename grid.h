@@ -35,7 +35,7 @@ __host__ __device__ void set_Te(int modelgridindex, float x);
 __host__ __device__ void set_TR(int modelgridindex, float x);
 __host__ __device__ void set_TJ(int modelgridindex, float x);
 __host__ __device__ void set_W(int modelgridindex, float x);
-__host__ __device__ void grid_init(int my_rank);
+void grid_init(int my_rank);
 __host__ __device__ double get_cellradialpos(int cellindex);
 __host__ __device__ float get_modelinitradioabund(int modelgridindex, enum radionuclides nuclide_type);
 __host__ __device__ void set_modelinitradioabund(int modelgridindex, enum radionuclides nuclide_type, float abund);
