@@ -9,7 +9,7 @@
 #include "vectors.h"
 
 
-enum __managed__ model_types model_type = RHO_1D_READ;
+__managed__ enum model_types model_type = RHO_1D_READ;
 
 static long mem_usage_nltepops = 0;
 
@@ -110,6 +110,7 @@ int get_coordcellindexincrement(const int axis)
         default:
           printout("invalid coordinate index %d", axis);
           abort();
+          return -1;
       }
   }
 }
@@ -472,7 +473,6 @@ void set_elements_uppermost_ion(const int modelgridindex, const int element, con
 }
 
 
-__host__ __device__
 static void calculate_kappagrey(void)
 {
   double rho_sum = 0.0;
