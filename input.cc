@@ -2373,6 +2373,10 @@ void read_parameterfile(int rank)
     printout("[debug] randomly-generated random number seed is %lu\n", pre_zseed);
   }
 
+  #if CUDA_ENABLED
+  init_curand(pre_zseed, rank);
+  #endif
+
   #ifdef _OPENMP
     #pragma omp parallel
     {
