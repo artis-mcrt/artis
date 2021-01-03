@@ -324,6 +324,22 @@ static bool walltime_sufficient_to_continue(const int nts, const int nts_prev, c
 }
 
 
+#if CUDA_ENABLED
+void* makemanaged(void* ptr, size_t curSize)
+{
+  if (ptr == NULL)
+  {
+    return NULL;
+  }
+  void *newptr;
+  cudaMallocManaged(&newptr, curSize);
+  memcpy(newptr, ptr, curSize);
+  free(ptr);
+  return newptr;
+}
+#endif
+
+
 static void save_grid_and_packets(
   const int nts, const int my_rank, PKT* packets)
 {
@@ -769,7 +785,16 @@ int main(int argc, char** argv)
     }
   }
 
+  #if CUDA_ENABLED
+  PKT *packets;
+  cudaMallocManaged(&packets, MPKTS * sizeof(PKT));
+    #if USECUDA_UPDATEPACKETS
+    cudaMemAdvise(packets, MPKTS * sizeof(PKT), cudaMemAdviseSetPreferredLocation, myGpuId);
+    #endif
+  #else
   PKT *const packets = (PKT *) malloc(MPKTS * sizeof(PKT));
+  #endif
+
   assert(packets != NULL);
 
   #ifndef GIT_BRANCH
@@ -789,6 +814,27 @@ int main(int argc, char** argv)
     printout("MPI enabled with %d processes\n", globals::nprocs);
   #else
     printout("MPI disabled\n");
+  #endif
+
+  #ifdef __CUDACC__
+  printout("[CUDA] NVIDIA CUDA is available\n");
+  #else
+  printout("[CUDA] NVIDIA CUDA is not available\n");
+  #endif
+
+  #if CUDA_ENABLED
+  printout("[CUDA] NVIDIA CUDA accelerated routines are enabled\n");
+  printout("[CUDA] Detected %d CUDA capable device(s)\n", deviceCount);
+  printout("[CUDA] This rank will use cudaSetDevice(%d)\n", myGpuId);
+  struct cudaDeviceProp deviceProp;
+  checkCudaErrors(cudaGetDeviceProperties(&deviceProp, myGpuId));
+  printout("[CUDA] totalGlobalMem %7.1f GiB\n", deviceProp.totalGlobalMem / 1024. / 1024. / 1024.);
+  printout("[CUDA] multiProcessorCount %d\n", deviceProp.multiProcessorCount);
+  printout("[CUDA] maxThreadsPerMultiProcessor %d\n", deviceProp.maxThreadsPerMultiProcessor);
+  printout("[CUDA] maxThreadsPerBlock %d\n", deviceProp.maxThreadsPerBlock);
+  printout("[CUDA] warpSize %d\n", deviceProp.warpSize);
+  #else
+  printout("[CUDA] NVIDIA CUDA accelerated routines are disabled\n");
   #endif
 
   if ((globals::kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(get_num_threads(), sizeof(rpkt_cont_opacity_struct))) == NULL)
@@ -1079,6 +1125,9 @@ int main(int argc, char** argv)
   #endif
 
   printout("simulation finished at %ld\n", time(NULL));
+  #if CUDA_ENABLED
+  cudaDeviceReset();
+  #endif
   //fclose(tb_file);
   fclose(estimators_file);
   macroatom_close_file();
