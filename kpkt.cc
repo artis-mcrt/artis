@@ -158,7 +158,7 @@ void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates_t *he
 
 
 __host__ __device__
-static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int indexionstart, double oldcoolingsum)
+static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int indexionstart, double oldcoolingsum, int tid)
 /// Set up the global cooling list and determine the important entries
 /// by applying a cut to the total cooling rate. Then sort the global
 /// cooling list by the strength of the individual process contribution.
@@ -515,6 +515,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
 //  return do_kpkt_bb(pkt_ptr, t1, t2);
 //}
 {
+  const int tid = get_thread_num();
   const double t1 = pkt_ptr->prop_time;
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = globals::cell[cellindex].modelgridindex;
@@ -609,7 +610,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     {
       // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d oldcoolingsum %g\n",
       //          modelgridindex, element, ion, ilow, high, oldcoolingsum);
-      calculate_kpkt_rates_ion(modelgridindex, element, ion, ilow, oldcoolingsum);
+      calculate_kpkt_rates_ion(modelgridindex, element, ion, ilow, oldcoolingsum, tid);
     }
 
     int i = -1;
