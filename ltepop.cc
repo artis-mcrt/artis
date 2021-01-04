@@ -58,7 +58,6 @@ double nne_solution_f(double x, void *paras)
 }
 
 
-__host__ __device__
 void get_ionfractions(int element, int modelgridindex, double nne, double ionfractions[], int uppermost_ion)
 // Calculate the fractions of an element's population in each ionization stage
 // size of ionfractions array must be >= uppermostion + 1
