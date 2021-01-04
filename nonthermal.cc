@@ -100,10 +100,10 @@ __managed__ static gsl_vector *sourcevec;        // samples of the source functi
 __managed__ static double E_init_ev = 0;         // the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV
 
 #if (SF_USE_LOG_E_INCREMENT)
-  static gsl_vector *delta_envec;
-  static double delta_log_e = 0.;
+  __managed__ static gsl_vector *delta_envec;
+  __managed__ static double delta_log_e = 0.;
 #else
-  static const double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
+  __managed__ static const double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 #endif
 
 
