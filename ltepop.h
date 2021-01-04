@@ -5,7 +5,7 @@
 #include "sn3d.h"
 
 double nne_solution_f(double x, void *paras);
-get_ionfractions(int element, int modelgridindex, double nne, double ionfractions[], int uppermost_ion);
+void get_ionfractions(int element, int modelgridindex, double nne, double ionfractions[], int uppermost_ion);
 __host__ __device__ double phi(int element, int ion, int modelgridindex);
 __host__ __device__ double calculate_partfunct(int element, int ion, int modelgridindex);
 __host__ __device__ double get_groundlevelpop(int modelgridindex, int element, int ion);
