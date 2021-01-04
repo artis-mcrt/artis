@@ -1121,6 +1121,7 @@ static double planck_integral_analytic(double T_R, double nu_lower, double nu_up
 }
 
 
+#ifndef __CUDA_ARCH__
 static double delta_nu_bar(double T_R, void *paras)
 // difference between the average nu and the average nu of a planck function
 // at temperature T_R, in the frequency range corresponding to a bin
@@ -1167,8 +1168,10 @@ static double delta_nu_bar(double T_R, void *paras)
 
   return delta_nu_bar;
 }
+#endif
 
 
+#ifndef __CUDA_ARCH__
 static float find_T_R(int modelgridindex, int binindex)
 {
   double T_R = 0.0;
@@ -1241,6 +1244,7 @@ static float find_T_R(int modelgridindex, int binindex)
 
   return T_R;
 }
+#endif
 
 
 static void set_params_fullspec(const int modelgridindex, const int timestep)
