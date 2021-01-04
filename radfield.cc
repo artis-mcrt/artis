@@ -451,6 +451,7 @@ void initialise_prev_titer_photoionestimators(void)
 }
 
 
+__host__ __device__
 int get_Jblueindex(const int lineindex)
 // returns -1 if the line does not have a Jblue estimator
 {
@@ -604,6 +605,7 @@ float get_bin_T_R(int modelgridindex, int binindex)
 }
 
 
+__host__ __device__
 static inline
 int select_bin(double nu)
 {
@@ -796,6 +798,7 @@ void zero_estimators(int modelgridindex)
 
 
 #if (DETAILED_BF_ESTIMATORS_ON)
+__host__ __device__
 static void increment_bfestimators(
   const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
   const PKT *const pkt_ptr, const double t_current)
@@ -869,6 +872,7 @@ static void increment_bfestimators(
 #endif
 
 
+__host__ __device__
 void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *const pkt_ptr, double t_current)
 {
   assert(pkt_ptr->prop_time == t_current);
@@ -953,6 +957,7 @@ void increment_lineestimator(const int modelgridindex, const int lineindex, cons
 }
 
 
+__host__ __device__
 double dbb_mgi(double nu, int modelgridindex)
 {
   const float T_R_fullspec = get_TR(modelgridindex);
@@ -961,6 +966,7 @@ double dbb_mgi(double nu, int modelgridindex)
 }
 
 
+__host__ __device__
 double radfield(double nu, int modelgridindex)
 // returns mean intensity J_nu [ergs/s/sr/cm2/Hz]
 {
@@ -1400,12 +1406,14 @@ void fit_parameters(int modelgridindex, int timestep)
 }
 
 
+__host__ __device__
 void set_J_normfactor(int modelgridindex, double normfactor)
 {
   J_normfactor[modelgridindex] = normfactor;
 }
 
 
+__host__ __device__
 void normalise_J(const int modelgridindex, const double estimator_normfactor_over4pi)
 {
   assert(isfinite(J[modelgridindex]));
@@ -1418,6 +1426,7 @@ void normalise_J(const int modelgridindex, const double estimator_normfactor_ove
 }
 
 
+__host__ __device__
 void normalise_bf_estimators(const int modelgridindex, const double estimator_normfactor_over_H)
 {
   #if (DETAILED_BF_ESTIMATORS_ON)
