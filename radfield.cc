@@ -533,6 +533,7 @@ static double get_bin_J(int modelgridindex, int binindex)
 }
 
 
+__host__ __device__
 static void set_bin_J(int modelgridindex, int binindex, double value)
 // set the normalised J_nu
 {
@@ -550,6 +551,7 @@ static void set_bin_J(int modelgridindex, int binindex, double value)
 }
 
 
+__host__ __device__
 static double get_bin_nuJ(int modelgridindex, int binindex)
 {
   if (J_normfactor[modelgridindex] <= 0.0)
@@ -566,6 +568,7 @@ static double get_bin_nuJ(int modelgridindex, int binindex)
 }
 
 
+__host__ __device__
 static inline
 double get_bin_nu_bar(int modelgridindex, int binindex)
 // importantly, this is average beween the current and previous timestep
@@ -576,6 +579,7 @@ double get_bin_nu_bar(int modelgridindex, int binindex)
 }
 
 
+__host__ __device__
 static inline
 double get_bin_nu_lower(int binindex)
 {
@@ -586,6 +590,7 @@ double get_bin_nu_lower(int binindex)
 }
 
 
+__host__ __device__
 static inline
 int get_bin_contribcount(int modelgridindex, int binindex)
 {
@@ -816,6 +821,7 @@ static void increment_bfestimators(
   // const double deltat = globals::time_step[nts_global].width;
   // const double estimator_normfactor_over_H = 1 / deltaV / deltat / nprocs / H;
 
+  const int tid = get_thread_num();
   const double distance_e_cmf_over_nu = distance_e_cmf / nu_cmf * dopplerfactor;
   for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++)
   {

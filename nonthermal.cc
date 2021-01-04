@@ -714,6 +714,7 @@ double get_deposition_rate_density(const int modelgridindex)
 }
 
 
+__host__ __device__
 static double get_y_sample(const int modelgridindex, const int index)
 {
   if (nt_solution[modelgridindex].yfunc != NULL)
@@ -948,7 +949,6 @@ static double xs_excitation(const int lineindex, const double epsilon_trans, con
 }
 
 
-__host__ __device__
 static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int lineindex, const double statweight_lower, const double epsilon_trans)
 // vector of collisional excitation cross sections in cm^2
 // epsilon_trans is in erg
@@ -1497,7 +1497,6 @@ static double get_oneoverw(const int element, const int ion, const int modelgrid
 }
 
 
-__host__ __device__
 static double calculate_nt_frac_ionization_shell(const int modelgridindex, const int element, const int ion, const int collionindex)
 // the fraction of deposition energy that goes into ionising electrons in this particular shell
 {
