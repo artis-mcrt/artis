@@ -14,9 +14,9 @@
 namespace radfield
 {
 
-static double J_normfactor[MMODELGRID + 1];
+__managed__ static double J_normfactor[MMODELGRID + 1];
 
-static bool initialized = false;
+__managed__ static bool initialized = false;
 
 // typedef enum
 // {
@@ -37,8 +37,8 @@ struct radfieldbin
   // enum_bin_fit_type fit_type;
 };
 
-static double radfieldbin_nu_upper[RADFIELDBINCOUNT]; // array of upper frequency boundaries of bins
-static struct radfieldbin *radfieldbins[MMODELGRID + 1];
+__managed__ static double radfieldbin_nu_upper[RADFIELDBINCOUNT]; // array of upper frequency boundaries of bins
+__managed__ static struct radfieldbin *radfieldbins[MMODELGRID + 1];
 
 // ** Detailed lines - Jblue_lu estimators for selected lines
 
@@ -50,20 +50,20 @@ struct Jb_lu_estimator
 
 // reallocate the detailed line arrays in units of BLOCKSIZEJBLUE
 static const int BLOCKSIZEJBLUE = 128;
-static int detailed_linecount = 0;
+__managed__ static int detailed_linecount = 0;
 
 // array of indicies into the linelist[] array for selected lines
-static int *detailed_lineindicies;
+__managed__ static int *detailed_lineindicies;
 
-static struct Jb_lu_estimator *prev_Jb_lu_normed[MMODELGRID + 1];  // value from the previous timestep
-static struct Jb_lu_estimator *Jb_lu_raw[MMODELGRID + 1];   // unnormalised estimator for the current timestep
+__managed__ static struct Jb_lu_estimator *prev_Jb_lu_normed[MMODELGRID + 1];  // value from the previous timestep
+__managed__ static struct Jb_lu_estimator *Jb_lu_raw[MMODELGRID + 1];   // unnormalised estimator for the current timestep
 
 // ** end detailed lines
 
 #if (DETAILED_BF_ESTIMATORS_ON)
-static bool normed_bfrates_available = false;
-static float *prev_bfrate_normed[MMODELGRID + 1];  // values from the previous timestep
-static double *bfrate_raw[MMODELGRID + 1];   // unnormalised estimators for the current timestep
+__managed__ static bool normed_bfrates_available = false;
+__managed__ static float *prev_bfrate_normed[MMODELGRID + 1];  // values from the previous timestep
+__managed__ static double *bfrate_raw[MMODELGRID + 1];   // unnormalised estimators for the current timestep
 
 // expensive debugging mode to track the contributions to each bound-free rate estimator
 #if (DETAILED_BF_ESTIMATORS_BYTYPE)
@@ -73,8 +73,8 @@ static double *bfrate_raw[MMODELGRID + 1];   // unnormalised estimators for the 
     double ratecontrib;
   };
 
-  static struct bfratecontrib **bfrate_raw_bytype[MMODELGRID + 1];   // unnormalised estimator contributions for stats
-  static int *bfrate_raw_bytype_size[MMODELGRID + 1];
+  __managed__ static struct bfratecontrib **bfrate_raw_bytype[MMODELGRID + 1];   // unnormalised estimator contributions for stats
+  __managed__ static int *bfrate_raw_bytype_size[MMODELGRID + 1];
 
   static int compare_bfrate_raw_bytype(const void *p1, const void *p2)
   {
@@ -91,17 +91,17 @@ static double *bfrate_raw[MMODELGRID + 1];   // unnormalised estimators for the 
   #endif
 #endif
 
-static double J[MMODELGRID + 1]; // after normalisation: [ergs/s/sr/cm2/Hz]
+__managed__ static double J[MMODELGRID + 1]; // after normalisation: [ergs/s/sr/cm2/Hz]
 #ifdef DO_TITER
-  static double J_reduced_save[MMODELGRID + 1];
+  __managed__ static double J_reduced_save[MMODELGRID + 1];
 #endif
 
 // J and nuJ are accumulated and then normalised in-place
 // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
 #ifndef FORCE_LTE
-  static double nuJ[MMODELGRID + 1];
+  __managed__ static double nuJ[MMODELGRID + 1];
   #ifdef DO_TITER
-    static double nuJ_reduced_save[MMODELGRID + 1];
+    __managed__ static double nuJ_reduced_save[MMODELGRID + 1];
   #endif
 #endif
 
@@ -127,7 +127,7 @@ typedef struct
 static FILE *radfieldfile = NULL;
 
 
-extern inline double dbb(double nu, float T, float W);
+__host__ __device__ extern inline double dbb(double nu, float T, float W);
 
 
 static inline

@@ -41,7 +41,7 @@ namespace radfield
     size_t limit, int key, gsl_integration_workspace *workspace, double *result, double *abserr);
 
 
-  inline double dbb(double nu, float T, float W)
+  __host__ __device__ inline double dbb(double nu, float T, float W)
   // returns J_nu for a dilute black body [ergs/s/sr/cm2/Hz]
   {
     return W * TWOHOVERCLIGHTSQUARED * pow(nu, 3) / expm1(HOVERKB * nu / T);
