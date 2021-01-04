@@ -20,6 +20,7 @@
 static FILE *macroatom_file;
 
 
+__host__ __device__
 static inline double get_individ_rad_deexc(
   int modelgridindex, int element, int ion, int level, int i, double t_mid, const double epsilon_current)
 {
@@ -35,6 +36,7 @@ static inline double get_individ_rad_deexc(
 }
 
 
+__host__ __device__
 static inline double get_individ_internal_up_same(
   int modelgridindex, int element, int ion, int level, int i,
   const double epsilon_current, const double t_mid, const float T_e, const float nne)
@@ -52,6 +54,7 @@ static inline double get_individ_internal_up_same(
 }
 
 
+__host__ __device__
 static void calculate_macroatom_transitionrates(
   const int modelgridindex, const int element, const int ion, const int level, const double t_mid,
   chlevels_struct *const chlevel)
@@ -156,6 +159,8 @@ static void calculate_macroatom_transitionrates(
   }
 }
 
+
+__host__ __device__
 static double *get_transitionrates(int modelgridindex, int element, int ion, int level, double t_mid)
 {
   chlevels_struct *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
@@ -171,6 +176,7 @@ static double *get_transitionrates(int modelgridindex, int element, int ion, int
 }
 
 
+__host__ __device__
 static int do_macroatom_internal_down_same(
   int modelgridindex, int element, int ion, int level, double t_mid, double total_internal_down_same)
 {
@@ -226,6 +232,7 @@ static int do_macroatom_internal_down_same(
 }
 
 
+__host__ __device__
 static void do_macroatom_raddeexcitation(
   PKT *pkt_ptr, const int modelgridindex, const int element, const int ion, const int level, const double rad_deexc,
   const double total_transitions, const int activatingline, const double t_mid)
@@ -313,6 +320,7 @@ static void do_macroatom_raddeexcitation(
 }
 
 
+__host__ __device__
 static void do_macroatom_radrecomb(
   PKT *pkt_ptr, const int modelgridindex, const int element, int *ion, int *level,
   const double rad_recomb)
@@ -406,6 +414,7 @@ static void do_macroatom_radrecomb(
 }
 
 
+__host__ __device__
 static void do_macroatom_ionisation(
   const int modelgridindex, const int element, int *ion, int *level,
   const double epsilon_current, const double internal_up_higher)
@@ -441,6 +450,7 @@ static void do_macroatom_ionisation(
 }
 
 
+__host__ __device__
 void do_macroatom(PKT *pkt_ptr, const int timestep)
 /// Material for handling activated macro atoms.
 {
@@ -985,6 +995,7 @@ void macroatom_close_file(void)
 }
 
 
+__host__ __device__
 double rad_deexcitation_ratecoeff(
   const int modelgridindex, const int element, const int ion, const int upper, const int lower,
   const double epsilon_trans, const int lineindex, const double t_current)
@@ -1051,6 +1062,7 @@ double rad_deexcitation_ratecoeff(
 }
 
 
+__host__ __device__
 double rad_excitation_ratecoeff(
   const int modelgridindex, const int element, const int ion, const int lower,
   const int upper, const double epsilon_trans, const int lineindex, const double t_current)
@@ -1164,6 +1176,7 @@ double rad_excitation_ratecoeff(
 }
 
 
+__host__ __device__
 double rad_recombination_ratecoeff(
   const float T_e, const float nne, const int element, const int upperion, const int upper, const int lower, const int modelgridindex)
 ///radiative recombination rate: paperII 3.5.2
@@ -1199,6 +1212,7 @@ double rad_recombination_ratecoeff(
 }
 
 
+__host__ __device__
 double stim_recombination_ratecoeff(
   const float nne, const int element, const int upperion, const int upper, const int lower, const int modelgridindex)
 ///radiative recombination rate: paperII 3.5.2
@@ -1227,9 +1241,8 @@ double stim_recombination_ratecoeff(
 
 
 /// Calculation of collisional rates /////////////////////////////////////////////////////
-///***************************************************************************/
 
-
+__host__ __device__
 double col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans, const int lineindex)
 // multiply by upper level population to get a rate per second
 {
@@ -1294,6 +1307,7 @@ double col_deexcitation_ratecoeff(const float T_e, const float nne, const double
 }
 
 
+__host__ __device__
 double col_excitation_ratecoeff(const float T_e, const float nne, const int lineindex, const double epsilon_trans)
 // multiply by lower level population to get a rate per second
 {
@@ -1366,6 +1380,7 @@ double col_excitation_ratecoeff(const float T_e, const float nne, const int line
 }
 
 
+__host__ __device__
 double col_recombination_ratecoeff(
   const int modelgridindex, const int element, const int upperion, const int upper, const int lower, const double epsilon_trans)
 // multiply by upper level population to get a rate per second
@@ -1410,6 +1425,7 @@ double col_recombination_ratecoeff(
 }
 
 
+__host__ __device__
 double col_ionization_ratecoeff(
   const float T_e, const float nne, const int element, const int ion, const int lower,
   const int phixstargetindex, const double epsilon_trans)

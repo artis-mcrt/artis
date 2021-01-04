@@ -1600,6 +1600,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
 }
 
 
+__host__ __device__
 double superlevel_boltzmann(const int modelgridindex, const int element, const int ion, const int level)
 {
   const int superlevel_index = get_nlevels_nlte(element,ion) + 1;

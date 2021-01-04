@@ -909,6 +909,7 @@ static double electron_loss_rate(const double energy, const double nne)
 }
 
 
+__host__ __device__
 static double xs_excitation(const int lineindex, const double epsilon_trans, const double energy)
 // collisional excitation cross section in cm^2
 // energies are in erg
@@ -943,6 +944,7 @@ static double xs_excitation(const int lineindex, const double epsilon_trans, con
 }
 
 
+__host__ __device__
 static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int lineindex, const double statweight_lower, const double epsilon_trans)
 // vector of collisional excitation cross sections in cm^2
 // epsilon_trans is in erg
@@ -1035,6 +1037,7 @@ static double xs_impactionization(const double energy_ev, const int collionindex
 }
 
 
+__host__ __device__
 static int get_xs_ionization_vector(gsl_vector *const xs_vec, const int collionindex)
 // xs_vec will be set with impact ionization cross sections for E > ionpot_ev (and zeros below this energy)
 {
@@ -1081,6 +1084,7 @@ static double Psecondary(const double e_p, const double epsilon, const double I,
 }
 
 
+__host__ __device__
 static double get_J(const int Z, const int ionstage, const double ionpot_ev)
 {
   // returns an energy in eV
@@ -1198,6 +1202,7 @@ static double N_e(const int modelgridindex, const double energy)
 }
 
 
+__host__ __device__
 static float calculate_frac_heating(const int modelgridindex)
 // Kozma & Fransson equation 3
 {
@@ -1251,6 +1256,7 @@ static float calculate_frac_heating(const int modelgridindex)
 }
 
 
+__host__ __device__
 float get_nt_frac_heating(const int modelgridindex)
 {
   if (!NT_ON)
@@ -1266,6 +1272,7 @@ float get_nt_frac_heating(const int modelgridindex)
 }
 
 
+__host__ __device__
 static float get_nt_frac_ionization(const int modelgridindex)
 {
   if (!NT_ON)
@@ -1286,6 +1293,7 @@ static float get_nt_frac_ionization(const int modelgridindex)
 }
 
 
+__host__ __device__
 static float get_nt_frac_excitation(const int modelgridindex)
 {
   if (!NT_ON || !NT_SOLVE_SPENCERFANO)
@@ -1304,6 +1312,7 @@ static float get_nt_frac_excitation(const int modelgridindex)
 }
 
 
+__host__ __device__
 static double get_mean_binding_energy(const int element, const int ion)
 {
   int q[M_NT_SHELLS];
@@ -1456,6 +1465,7 @@ static double get_mean_binding_energy(const int element, const int ion)
 }
 
 
+__host__ __device__
 static double get_oneoverw(const int element, const int ion, const int modelgridindex)
 {
   // Routine to compute the work per ion pair for doing the NT ionization calculation.
@@ -1481,6 +1491,7 @@ static double get_oneoverw(const int element, const int ion, const int modelgrid
 }
 
 
+__host__ __device__
 static double calculate_nt_frac_ionization_shell(const int modelgridindex, const int element, const int ion, const int collionindex)
 // the fraction of deposition energy that goes into ionising electrons in this particular shell
 {
@@ -1510,6 +1521,7 @@ static double calculate_nt_frac_ionization_shell(const int modelgridindex, const
 }
 
 
+__host__ __device__
 static double nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const int element, const int ion)
 // non-thermal ionization rate coefficient (multiply by population to get rate)
 {
@@ -1521,6 +1533,7 @@ static double nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const i
 }
 
 
+__host__ __device__
 static double calculate_nt_ionization_ratecoeff(
   const int modelgridindex, const int element, const int ion, const bool assumeshellpotentialisvalence)
 // Integrate the ionization cross section over the electron degradation function to get the ionization rate coefficient
@@ -1710,6 +1723,7 @@ static void calculate_eff_ionpot_auger_rates(
 }
 
 
+__host__ __device__
 static float get_eff_ionpot(const int modelgridindex, const int element, int const ion)
 // get the effective ion potential from the stored value
 // a value of 0. should be treated as invalid
@@ -1720,6 +1734,7 @@ static float get_eff_ionpot(const int modelgridindex, const int element, int con
 }
 
 
+__host__ __device__
 static double nt_ionization_ratecoeff_sf(const int modelgridindex, const int element, const int ion)
 // Kozma & Fransson 1992 equation 13
 {
@@ -1741,6 +1756,7 @@ static double nt_ionization_ratecoeff_sf(const int modelgridindex, const int ele
 }
 
 
+__host__ __device__
 double nt_ionization_upperion_probability(
   const int modelgridindex, const int element, const int lowerion, const int upperion, const bool energyweighted)
 {
@@ -1809,6 +1825,7 @@ double nt_ionization_upperion_probability(
 }
 
 
+__host__ __device__
 int nt_ionisation_maxupperion(const int element, const int lowerion)
 {
   const int nions = get_nions(element);
@@ -1829,6 +1846,7 @@ int nt_ionisation_maxupperion(const int element, const int lowerion)
 }
 
 
+__host__ __device__
 int nt_random_upperion(const int modelgridindex, const int element, const int lowerion, const bool energyweighted)
 {
   // const int nions = get_nions(element);
@@ -1862,7 +1880,7 @@ int nt_random_upperion(const int modelgridindex, const int element, const int lo
 }
 
 
-
+__host__ __device__
 double nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion)
 {
   assert(NT_ON);
@@ -1899,6 +1917,7 @@ double nt_ionization_ratecoeff(const int modelgridindex, const int element, cons
 }
 
 
+__host__ __device__
 static double calculate_nt_excitation_ratecoeff_perdeposition(
   const int modelgridindex, const int lineindex, const double statweight_lower, const double epsilon_trans)
 // Kozma & Fransson equation 9 divided by level population and epsilon_trans
@@ -1936,6 +1955,7 @@ static double calculate_nt_excitation_ratecoeff_perdeposition(
 }
 
 
+__host__ __device__
 double nt_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower, const int upper, const double epsilon_trans, const int lineindex)
 {
 #if !NT_EXCITATION_ON
@@ -2028,6 +2048,7 @@ static void select_nt_ionization(int modelgridindex, int *element, int *lowerion
 }
 
 
+__host__ __device__
 static double ion_ntion_energyrate(int modelgridindex, int element, int lowerion)
 {
   const double nnlowerion = ionstagepop(modelgridindex, element, lowerion);
@@ -2050,6 +2071,7 @@ static double ion_ntion_energyrate(int modelgridindex, int element, int lowerion
 }
 
 
+__host__ __device__
 static double get_ntion_energyrate(int modelgridindex)
 {
   double ratetotal = 0.;
@@ -2065,6 +2087,7 @@ static double get_ntion_energyrate(int modelgridindex)
 }
 
 
+__host__ __device__
 static void select_nt_ionization2(int modelgridindex, int *element, int *lowerion)
 {
   const double ratetotal = get_ntion_energyrate(modelgridindex);
@@ -2089,6 +2112,7 @@ static void select_nt_ionization2(int modelgridindex, int *element, int *lowerio
 }
 
 
+__host__ __device__
 void do_ntlepton(PKT *pkt_ptr)
 {
   safeadd(nt_energy_deposited, pkt_ptr->e_cmf);
