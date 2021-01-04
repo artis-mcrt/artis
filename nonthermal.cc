@@ -178,6 +178,7 @@ static int compare_excitation_lineindicies(const void *p1, const void *p2)
 
 
 #ifndef get_tot_nion
+__host__ __device__
 static double get_tot_nion(const int modelgridindex)
 {
   double result = 0.;
@@ -1538,7 +1539,6 @@ static double nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const i
 }
 
 
-__host__ __device__
 static double calculate_nt_ionization_ratecoeff(
   const int modelgridindex, const int element, const int ion, const bool assumeshellpotentialisvalence)
 // Integrate the ionization cross section over the electron degradation function to get the ionization rate coefficient
