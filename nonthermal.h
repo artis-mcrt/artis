@@ -17,7 +17,7 @@ namespace nonthermal
   __host__ __device__ void calculate_deposition_rate_density(int modelgridindex, int timestep);
   __host__ __device__ double get_deposition_rate_density(int modelgridindex);
   __host__ __device__ float get_nt_frac_heating(int modelgridindex);
-  __host__ __device__ double nt_excitation_ratecoeff(int modelgridindex, int element, int ion, int lower, int upper, double epsilon_trans, int lineindex);
+  double nt_excitation_ratecoeff(int modelgridindex, int element, int ion, int lower, int upper, double epsilon_trans, int lineindex);
   __host__ __device__ void do_ntlepton(PKT *pkt_ptr);
   void write_restart_data(FILE *gridsave_file);
   void read_restart_data(FILE *gridsave_file);

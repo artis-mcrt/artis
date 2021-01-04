@@ -876,8 +876,8 @@ static double get_y(const int modelgridindex, const double energy_ev)
     return 0.;
   else
   {
-    const double enbelow = gsl_vector_get(envec, index);
-    const double enabove = gsl_vector_get(envec, index + 1);
+    const double enbelow = gsl_vector_get_managed(envec, index);
+    const double enabove = gsl_vector_get_managed(envec, index + 1);
     const double ybelow = get_y_sample(modelgridindex, index);
     const double yabove = get_y_sample(modelgridindex, index + 1);
     const double x = (energy_ev - enbelow) / (enabove - enbelow);
@@ -969,7 +969,7 @@ static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const i
 
     for (int j = en_startindex; j < SFPTS; j++)
     {
-      const double energy = gsl_vector_get(envec, j) * EV;
+      const double energy = gsl_vector_get_managed(envec, j) * EV;
       gsl_vector_set(xs_excitation_vec, j, constantfactor * pow(energy, -2));
     }
     return en_startindex;
@@ -1000,9 +1000,9 @@ static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const i
 
     for (int j = en_startindex; j < SFPTS; j++)
     {
-      const double logU = gsl_vector_get(logenvec, j) - log(epsilon_trans_ev);
+      const double logU = gsl_vector_get_managed(logenvec, j) - log(epsilon_trans_ev);
       const double g_bar = A * logU + B;
-      gsl_vector_set(xs_excitation_vec, j, constantfactor * g_bar / gsl_vector_get(envec, j));
+      gsl_vector_set(xs_excitation_vec, j, constantfactor * g_bar / gsl_vector_get_managed(envec, j));
     }
 
     return en_startindex;
@@ -1207,7 +1207,7 @@ static double N_e(const int modelgridindex, const double energy)
 }
 
 
-__host__ __device__
+
 static float calculate_frac_heating(const int modelgridindex)
 // Kozma & Fransson equation 3
 {
@@ -1854,8 +1854,7 @@ int nt_ionisation_maxupperion(const int element, const int lowerion)
 __host__ __device__
 int nt_random_upperion(const int modelgridindex, const int element, const int lowerion, const bool energyweighted)
 {
-  // const int nions = get_nions(element);
-  assert(lowerion < nions - 1);
+  assert_testmodeonly(lowerion < get_nions(element) - 1);
   if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0)
   {
     while (true)
@@ -1922,7 +1921,6 @@ double nt_ionization_ratecoeff(const int modelgridindex, const int element, cons
 }
 
 
-__host__ __device__
 static double calculate_nt_excitation_ratecoeff_perdeposition(
   const int modelgridindex, const int lineindex, const double statweight_lower, const double epsilon_trans)
 // Kozma & Fransson equation 9 divided by level population and epsilon_trans
@@ -1960,7 +1958,6 @@ static double calculate_nt_excitation_ratecoeff_perdeposition(
 }
 
 
-__host__ __device__
 double nt_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower, const int upper, const double epsilon_trans, const int lineindex)
 {
 #if !NT_EXCITATION_ON
