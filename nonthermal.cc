@@ -70,7 +70,7 @@ static const double A_naught_squared = 2.800285203e-17;
 // maximum number of elements for which binding energy tables are to be used
 #define MAX_Z_BINDING 30
 
-static double electron_binding[MAX_Z_BINDING][M_NT_SHELLS];
+__managed__ static double electron_binding[MAX_Z_BINDING][M_NT_SHELLS];
 
 struct collionrow {
   int Z;
@@ -88,16 +88,16 @@ struct collionrow {
   float n_auger_elec_avg;
 };
 
-static struct collionrow *colliondata = NULL;
-static int colliondatacount = 0;
+__managed__ static struct collionrow *colliondata = NULL;
+__managed__ static int colliondatacount = 0;
 
 static FILE *nonthermalfile = NULL;
 static bool nonthermal_initialized = false;
 
-static gsl_vector *envec;            // energy grid on which solution is sampled
-static gsl_vector *logenvec;         // log of envec
-static gsl_vector *sourcevec;        // samples of the source function (energy distribution of deposited energy)
-static double E_init_ev = 0;         // the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV
+__managed__ static gsl_vector *envec;            // energy grid on which solution is sampled
+__managed__ static gsl_vector *logenvec;         // log of envec
+__managed__ static gsl_vector *sourcevec;        // samples of the source function (energy distribution of deposited energy)
+__managed__ static double E_init_ev = 0;         // the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV
 
 #if (SF_USE_LOG_E_INCREMENT)
   static gsl_vector *delta_envec;
@@ -108,7 +108,7 @@ static double E_init_ev = 0;         // the energy injection rate density (and m
 
 
 // Monte Carlo result - compare to analytical expectation
-double nt_energy_deposited;
+__managed__ double nt_energy_deposited;
 
 struct nt_excitation_struct
 {
@@ -141,10 +141,10 @@ struct nt_solution_struct {
   float nneperion_when_solved;                    // the nne when the solver was last run
 };
 
-static struct nt_solution_struct *nt_solution;
+__managed__ static struct nt_solution_struct *nt_solution;
 
-static double *deposition_rate_density;
-static int *deposition_rate_density_timestep;
+__managed__ static double *deposition_rate_density;
+__managed__ static int *deposition_rate_density_timestep;
 
 // for descending sort
 static int compare_excitation_fractions(const void *p1, const void *p2)
