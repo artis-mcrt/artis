@@ -161,9 +161,8 @@ static void calculate_macroatom_transitionrates(
 
 
 __host__ __device__
-static double *get_transitionrates(int modelgridindex, int element, int ion, int level, double t_mid)
+static double *get_transitionrates(int modelgridindex, int element, int ion, int level, double t_mid, int tid)
 {
-  const int tid = get_thread_num();
   chlevels_struct *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
 
   /// If there are no precalculated rates available then calculate them
@@ -256,24 +255,19 @@ static void do_macroatom_raddeexcitation(
   }
   assert(linelistindex >= 0);
   #ifdef RECORD_LINESTAT
-    if (tid == 0) safeincrement(globals::ecounter[linelistindex]);
-    /// This way we will only record line statistics from OMP-thread 0
-    /// With an atomic pragma or a thread-private structure with subsequent
-    /// reduction this could be extended to all threads. However, I'm not
-    /// sure if this is worth the additional computational expenses.
+    safeincrement(globals::ecounter[linelistindex]);
   #endif
   const int lower = globals::linelist[linelistindex].lowerlevelindex;
-  #ifdef DEBUG_ON
-    if (globals::debuglevel == 2) printout("[debug] do_ma:   jump to level %d\n", lower);
-  #endif
+
+  // printout("[debug] do_ma:   jump to level %d\n", lower);
+
   const double epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, lower);
 
   double oldnucmf;
   if (pkt_ptr->last_event == 1)
     oldnucmf = pkt_ptr->nu_cmf;
   pkt_ptr->nu_cmf = epsilon_trans / H;
-  //if (tid == 0)
-  //{
+
   if (pkt_ptr->last_event == 1)
   {
     if (oldnucmf < pkt_ptr->nu_cmf)
@@ -281,7 +275,6 @@ static void do_macroatom_raddeexcitation(
     else
       stats::increment(stats::COUNTER_DOWNSCATTER);
   }
-  //}
 
   #ifdef DEBUG_ON
     assert(isfinite(pkt_ptr->nu_cmf));
@@ -298,7 +291,7 @@ static void do_macroatom_raddeexcitation(
     pkt_ptr->last_event = 0;
   #endif
 
-  /// Emit the rpkt in a random direction
+  // Emit the rpkt in a random direction
   emitt_rpkt(pkt_ptr);
 
   if (linelistindex == activatingline)
@@ -306,13 +299,13 @@ static void do_macroatom_raddeexcitation(
     stats::increment(stats::COUNTER_RESONANCESCATTERINGS);
   }
 
-  /// NB: the r-pkt can only interact with lines redder than the current one
+  // NB: the r-pkt can only interact with lines redder than the current one
   pkt_ptr->next_trans = linelistindex + 1;
   pkt_ptr->emissiontype = linelistindex;
   vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
   pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
-  //printout("next possible line encounter %d\n",pkt_ptr->next_trans);
+  // printout("next possible line encounter %d\n",pkt_ptr->next_trans);
 
   #ifdef VPKT_ON
     const int realtype = 3;
@@ -455,6 +448,7 @@ __host__ __device__
 void do_macroatom(PKT *pkt_ptr, const int timestep)
 /// Material for handling activated macro atoms.
 {
+  const int tid = get_thread_num();
   const double t_mid = globals::time_step[timestep].mid;
 
   //printout("[debug] do MA\n");
@@ -540,7 +534,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
     }
     assert(globals::cellhistory[tid].cellnumber == modelgridindex);
 
-    double *processrates = get_transitionrates(modelgridindex, element, ion, level, t_mid);
+    double *processrates = get_transitionrates(modelgridindex, element, ion, level, t_mid, tid);
 
     // for debugging the transition rates:
     // {
