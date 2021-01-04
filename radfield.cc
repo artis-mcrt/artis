@@ -1080,6 +1080,7 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
 #endif
 
 
+#ifndef __CUDA_ARCH__
 static double planck_integral_analytic(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor)
 {
   double integral = 0.;
@@ -1119,6 +1120,7 @@ static double planck_integral_analytic(double T_R, double nu_lower, double nu_up
 
   return integral;
 }
+#endif
 
 
 #ifndef __CUDA_ARCH__
@@ -1247,6 +1249,7 @@ static float find_T_R(int modelgridindex, int binindex)
 #endif
 
 
+#ifndef __CUDA_ARCH__
 static void set_params_fullspec(const int modelgridindex, const int timestep)
 {
   const double nubar = nuJ[modelgridindex] / J[modelgridindex];
@@ -1291,8 +1294,10 @@ static void set_params_fullspec(const int modelgridindex, const int timestep)
              T_J, T_R, W);
   }
 }
+#endif
 
 
+#ifndef __CUDA_ARCH__
 void fit_parameters(int modelgridindex, int timestep)
 // finds the best fitting W and temperature parameters in each spectral bin
 // using J and nuJ
@@ -1418,6 +1423,7 @@ void fit_parameters(int modelgridindex, int timestep)
     write_to_file(modelgridindex, timestep);
   }
 }
+#endif
 
 
 __host__ __device__

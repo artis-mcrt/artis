@@ -1042,7 +1042,6 @@ static double xs_impactionization(const double energy_ev, const int collionindex
 }
 
 
-__host__ __device__
 static int get_xs_ionization_vector(gsl_vector *const xs_vec, const int collionindex)
 // xs_vec will be set with impact ionization cross sections for E > ionpot_ev (and zeros below this energy)
 {
