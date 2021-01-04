@@ -102,15 +102,14 @@
 #define MIN_XS 1e-40
 
 extern int tid;
-extern bool use_cellhist;
-extern bool neutral_flag;
+extern __managed__ bool use_cellhist;
+extern __managed__ bool neutral_flag;
 #ifndef __CUDA_ARCH__
 extern gsl_rng *rng;  // pointer for random number generator
-extern gsl_integration_workspace *gslworkspace;
 #else
 extern __device__ void *rng;
-extern __device__ void *gslworkspace;
 #endif
+extern gsl_integration_workspace *gslworkspace;
 extern FILE *output_file;
 extern __managed__ int myGpuId;
 
