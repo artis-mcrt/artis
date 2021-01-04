@@ -497,6 +497,7 @@ int get_Jblueindex(const int lineindex)
 }
 
 
+__host__ __device__
 double get_Jb_lu(const int modelgridindex, const int jblueindex)
 {
   assert(jblueindex >= 0);
@@ -505,6 +506,7 @@ double get_Jb_lu(const int modelgridindex, const int jblueindex)
 }
 
 
+__host__ __device__
 int get_Jb_lu_contribcount(const int modelgridindex, const int jblueindex)
 {
   assert(jblueindex >= 0);

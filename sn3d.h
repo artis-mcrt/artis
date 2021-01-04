@@ -22,8 +22,8 @@
     #ifdef assert
       #undef assert
     #endif
-    #define	assert(e)	((void)0)
-    #define	assert_testmodeonly(e)	((void)0)
+    #define	assert(e) ((void)0)
+    #define	assert_testmodeonly(e) ((void)0)
   #endif
 
   #ifdef _OPENMP
@@ -45,7 +45,7 @@
   #if defined TESTMODE && TESTMODE
     #define assert_testmodeonly(e) assert(e)
   #else
-    #define	assert_testmodeonly(e)	((void)0)
+    #define	assert_testmodeonly(e) ((void)0)
   #endif
 
 
