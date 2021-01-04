@@ -1049,6 +1049,7 @@ static double gsl_integrand_planck(double nu, void *paras)
 }
 
 
+#ifndef __CUDA_ARCH__
 static double planck_integral(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor)
 {
   double integral = 0.;
@@ -1076,6 +1077,7 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
 
   return integral;
 }
+#endif
 
 
 static double planck_integral_analytic(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor)
