@@ -6,6 +6,7 @@
 #include <gsl/gsl_vector_double.h>
 #include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_linalg.h>
+#include "gsl_managed.h"
 #include "atomic.h"
 #include "decay.h"
 #include "grid.h"
@@ -727,6 +728,7 @@ static double get_y_sample(const int modelgridindex, const int index)
     printout("non-thermal: attempted to get y function sample index %d in cell %d, but the y array pointer is null\n",
              index, modelgridindex);
     abort();
+    return -1;
   }
 }
 
@@ -813,7 +815,7 @@ void close_file(void)
 }
 
 
-inline
+__host__ __device__
 static int get_energyindex_ev_lteq(const double energy_ev)
 // finds the highest energy point <= energy_ev
 {
@@ -832,7 +834,7 @@ static int get_energyindex_ev_lteq(const double energy_ev)
 }
 
 
-inline
+__host__ __device__
 static int get_energyindex_ev_gteq(const double energy_ev)
 // finds the highest energy point <= energy_ev
 {
@@ -851,6 +853,7 @@ static int get_energyindex_ev_gteq(const double energy_ev)
 }
 
 
+__host__ __device__
 static double get_y(const int modelgridindex, const double energy_ev)
 {
   if (energy_ev <= 0)
@@ -1012,6 +1015,7 @@ static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const i
 }
 
 
+__host__ __device__
 static double xs_impactionization(const double energy_ev, const int collionindex)
 // impact ionization cross section in cm^2
 // energy and ionization_potential should be in eV
@@ -1066,6 +1070,7 @@ static int get_xs_ionization_vector(gsl_vector *const xs_vec, const int collioni
 }
 
 
+__host__ __device__
 static double Psecondary(const double e_p, const double epsilon, const double I, const double J)
 // distribution of secondary electron energies for primary electron with energy e_p
 // Opal, Peterson, & Beaty (1971)
