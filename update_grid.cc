@@ -692,6 +692,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 }
 
 
+__host__ __device__
 void cellhistory_reset(const int modelgridindex, const bool new_timestep)
 {
   /// All entries of the cellhistory stack must be flagged as empty at the
@@ -704,6 +705,8 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
   {
     return;
   }
+
+  const int tid = get_thread_num();
 
   // force rpkt opacities to be recalculated next time they are accessed
   globals::kappa_rpkt_cont[tid].recalculate_required = true;

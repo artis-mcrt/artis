@@ -163,6 +163,7 @@ static void calculate_macroatom_transitionrates(
 __host__ __device__
 static double *get_transitionrates(int modelgridindex, int element, int ion, int level, double t_mid)
 {
+  const int tid = get_thread_num();
   chlevels_struct *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
 
   /// If there are no precalculated rates available then calculate them
@@ -714,12 +715,14 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
         stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
         #endif
 
+        #ifndef __CUDA_ARCH__
         if (LOG_MACROATOM)
         {
           fprintf(macroatom_file, "%8d %14d %2d %12d %12d %9d %9d %9d %11.5e %11.5e %11.5e %11.5e %9d\n",
                   timestep, modelgridindex, get_element(element), get_ionstage(element, ion_in), get_ionstage(element, ion),
                   level_in, level, activatingline, nu_cmf_in, pkt_ptr->nu_cmf, nu_rf_in, pkt_ptr->nu_rf, jumps);
         }
+        #endif
 
         end_packet = true;
         break;

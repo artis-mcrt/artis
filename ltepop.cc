@@ -114,7 +114,6 @@ static double interpolate_ions_spontrecombcoeff(const int element, const int ion
 }
 
 
-__host__ __device__
 double phi(const int element, const int ion, const int modelgridindex)
 /// Calculates population ratio (a saha factor) of two consecutive ionisation stages
 /// in nebular approximation phi_j,k* = N_j,k*/(N_j+1,k* * nne)
@@ -292,7 +291,6 @@ double calculate_ltepartfunct(int element, int ion, double T)
 */
 
 
-__host__ __device__
 double calculate_partfunct(int element, int ion, int modelgridindex)
 /// Calculates the partition function for ion=ion of element=element in
 /// cell modelgridindex
