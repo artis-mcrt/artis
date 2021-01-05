@@ -747,7 +747,7 @@ int main(int argc, char** argv)
     setvbuf(output_file, NULL, _IOLBF, 1);
 
 #   ifdef _OPENMP
-    printout("OpenMP parallelisation active with %d threads\n", get_num_threads());
+    printout("OpenMP parallelisation active with %d threads (max %d)\n", get_num_threads(), get_max_threads());
 #   endif
 
     gslworkspace = gsl_integration_workspace_alloc(GSLWSIZE);
@@ -841,7 +841,7 @@ int main(int argc, char** argv)
   printout("[CUDA] NVIDIA CUDA accelerated routines are disabled\n");
   #endif
 
-  if ((globals::kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(get_num_threads(), sizeof(rpkt_cont_opacity_struct))) == NULL)
+  if ((globals::kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(get_max_threads(), sizeof(rpkt_cont_opacity_struct))) == NULL)
   {
     printout("[fatal] input: error initializing continuum opacity communication variables ... abort\n");
     abort();
