@@ -1241,9 +1241,9 @@ static void setup_cellhistory(void)
   ///======================================================
   /// Stack which holds information about population and other cell specific data
   /// ===> move to update_packets
-  if ((globals::cellhistory = (cellhistory_struct *) malloc(get_num_threads() * sizeof(cellhistory_struct))) == NULL)
+  if ((globals::cellhistory = (cellhistory_struct *) malloc(get_max_threads() * sizeof(cellhistory_struct))) == NULL)
   {
-    printout("[fatal] input: not enough memory to initialize cellhistory of size %d... abort\n", get_num_threads());
+    printout("[fatal] input: not enough memory to initialize cellhistory of size %d... abort\n", get_max_threads());
     abort();
   }
 
@@ -1401,7 +1401,7 @@ static void setup_phixs_list(void)
   printout("[info] read_atomicdata: number of bfcontinua %d\n", globals::nbfcontinua);
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n", globals::nbfcontinua_ground);
 
-  globals::phixslist = (phixslist_t *) malloc(get_num_threads() * sizeof(phixslist_t));
+  globals::phixslist = (phixslist_t *) malloc(get_max_threads() * sizeof(phixslist_t));
   assert(globals::phixslist != NULL);
 
   /// MK: 2012-01-19
@@ -1413,7 +1413,7 @@ static void setup_phixs_list(void)
   //  #pragma omp parallel private(i,element,ion,level,nions,nlevels,epsilon_upper,E_threshold,nu_edge)
   //  {
   //#endif
-  for (int itid = 0; itid < get_num_threads(); itid++)
+  for (int itid = 0; itid < get_max_threads(); itid++)
   {
     /// Number of ground level bf-continua equals the total number of included ions minus the number
     /// of included elements, because the uppermost ionisation stages can't ionise.
