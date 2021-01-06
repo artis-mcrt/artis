@@ -60,7 +60,6 @@
 #include "globals.h"
 
 #include <stdarg.h>  /// MK: needed for printout()
-#include <cstdbool>
 #include <gsl/gsl_integration.h>
 
 #define DEBUG_ON

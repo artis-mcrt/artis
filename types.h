@@ -5,7 +5,6 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-#include <cstdbool>
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
