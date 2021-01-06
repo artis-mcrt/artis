@@ -10,7 +10,6 @@
 /* This is a code copied from Lucy 2004 paper on t-dependent supernova
    explosions. */
 
-#include <cstdbool>
 #include <getopt.h>
 #include <unistd.h>
 // #include <filesystem>

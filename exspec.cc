@@ -11,7 +11,6 @@
    explosions. */
 
 #include <cstdio>
-#include <cstdbool>
 // #include <filesystem>
 #include <unistd.h>
 #include "exspec.h"

@@ -1,8 +1,6 @@
 #ifndef EXSPEC_H
 #define EXSPEC_H
 
-#include <cstdbool>
-
 /// Spectrum data structure
 #define MNUBINS   1000
 #define MABINS    100

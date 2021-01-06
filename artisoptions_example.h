@@ -1,7 +1,6 @@
 #ifndef ARTISOPTIONS_H
 #define ARTISOPTIONS_H
 
-#include <cstdbool>
 #include <cstdlib>
 #include "constants.h"
 

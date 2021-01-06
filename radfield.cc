@@ -1,5 +1,4 @@
 #include <cmath>
-#include <cstdbool>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_sf_debye.h>
 #include <gsl/gsl_roots.h>
