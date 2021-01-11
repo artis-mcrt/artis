@@ -483,7 +483,7 @@ double do_kpkt_bb(PKT *pkt_ptr)
   const float T_e = get_Te(modelgridindex);
 
   pkt_ptr->nu_cmf = sample_planck(T_e);
-  if (!isfinite(pkt_ptr->nu_cmf))
+  if (!std::isfinite(pkt_ptr->nu_cmf))
   {
     printout("[fatal] do_kpkt_bb: selected frequency not finite ... abort\n");
     abort();
@@ -668,7 +668,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       zrand = gsl_rng_uniform_pos(rng);   /// delivers zrand in ]0,1[
       pkt_ptr->nu_cmf = -KB * T_e / H * log(zrand);
 
-      if (!isfinite(pkt_ptr->nu_cmf))
+      if (!std::isfinite(pkt_ptr->nu_cmf))
       {
         printout("[fatal] ff cooling: selected frequency not finite ... abort\n");
         abort();

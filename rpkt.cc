@@ -308,7 +308,7 @@ static double get_event(
 
   pkt_ptr->next_trans = dummypkt_ptr->next_trans;
   #ifdef DEBUG_ON
-    if (!isfinite(edist))
+    if (!std::isfinite(edist))
     {
       printout("edist NaN %g... abort\n",edist);
       abort();
@@ -674,7 +674,7 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
                 safeadd(gammaestimator[ionestimindex], phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf_over_nu);
 
                 #ifdef DEBUG_ON
-                if (!isfinite(gammaestimator[ionestimindex]))
+                if (!std::isfinite(gammaestimator[ionestimindex]))
                 {
                   printout("[fatal] update_estimators: gamma estimator becomes non finite: level %d, gamma_contr %g, distance_e_cmf_over_nu %g\n", i, phixslist[tid].groundcont[i].gamma_contr, distance_e_cmf_over_nu);
                   abort();
@@ -1223,17 +1223,17 @@ static double calculate_kappa_ff(const int modelgridindex, const double nu)
         //kappa_ffheating += 3.69255e8 * pow(Z,2) / sqrt(T_e) * pow(nu,-3) * g_ff * nne * nnion * (1 - exp(-HOVERKB*nu/T_e));
         /// heating without level dependence
         //kappa_ffheating += 3.69255e8 * pow(Z,2) * pow(nu,-3) * g_ff * (1-exp(-HOVERKB*nu/T_e));
-        if (!isfinite(kappa_ff))
+        if (!std::isfinite(kappa_ff))
         {
           printout("kappa_ff %g nne %g T_e %g mgi %d element %d ion %d nnion %g\n", kappa_ff, nne, T_e, modelgridindex, element, ion, nnion);
         }
-        assert(isfinite(kappa_ff));
+        assert(std::isfinite(kappa_ff));
       }
     }
   }
   kappa_ff *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB * nu / T_e));
 
-  if (!isfinite(kappa_ff))
+  if (!std::isfinite(kappa_ff))
   {
     printout("ERRORL: kappa_ff is non-infinite mgi %d nne %g nu %g T_e %g\n", modelgridindex, nne, nu, T_e);
     abort();
@@ -1306,7 +1306,7 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
         #endif
 
         #ifdef DEBUG_ON
-          if (!isfinite(kappa_bf_contr))
+          if (!std::isfinite(kappa_bf_contr))
           {
             printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf_contr %g ... abort\n",kappa_bf_contr);
             printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n",i,element,ion,level);
@@ -1453,7 +1453,7 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr)
   //globals::kappa_rpkt_cont[tid].bfheating = kappa_bfheating;
 
   #ifdef DEBUG_ON
-    if (!isfinite(globals::kappa_rpkt_cont[tid].total))
+    if (!std::isfinite(globals::kappa_rpkt_cont[tid].total))
     {
       printout("[fatal] calculate_kappa_rpkt_cont: resulted in non-finite kappa_rpkt_cont.total ... abort\n");
       printout("[fatal] es %g, ff %g, bf %g\n",
@@ -1461,7 +1461,7 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr)
       printout("[fatal] nbfcontinua %d\n",globals::nbfcontinua);
       printout("[fatal] in cell %d with density %g\n",modelgridindex,get_rho(modelgridindex));
       printout("[fatal] pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
-      if (isfinite(globals::kappa_rpkt_cont[tid].es))
+      if (std::isfinite(globals::kappa_rpkt_cont[tid].es))
       {
         globals::kappa_rpkt_cont[tid].ff = 0.;
         globals::kappa_rpkt_cont[tid].bf = 0.;

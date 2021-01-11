@@ -885,7 +885,7 @@ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf,
   assert(pkt_ptr->prop_time == t_current);
   safeadd(J[modelgridindex], distance_e_cmf);
   #ifdef DEBUG_ON
-    if (!isfinite(J[modelgridindex]))
+    if (!std::isfinite(J[modelgridindex]))
     {
       printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,nu_cmf);
       abort();
@@ -895,7 +895,7 @@ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf,
 #ifndef FORCE_LTE
   safeadd(nuJ[modelgridindex], distance_e_cmf * nu_cmf);
   #ifdef DEBUG_ON
-    if (!isfinite(nuJ[modelgridindex]))
+    if (!std::isfinite(nuJ[modelgridindex]))
     {
       printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,nu_cmf);
       abort();
@@ -1145,7 +1145,7 @@ static double delta_nu_bar(double T_R, void *paras)
 
   //printout("nu_bar %g nu_bar_planck(T=%g) %g\n",nu_bar,T_R,nu_bar_planck);
 
-  if (!isfinite(nu_bar_planck))
+  if (!std::isfinite(nu_bar_planck))
   {
     double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, TIMES_NU);
     double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, ONE);
@@ -1157,7 +1157,7 @@ static double delta_nu_bar(double T_R, void *paras)
 
   const double delta_nu_bar = nu_bar_planck_T_R - nu_bar_estimator;
 
-  if (!isfinite(delta_nu_bar))
+  if (!std::isfinite(delta_nu_bar))
   {
     printout("delta_nu_bar is %g. nu_bar_planck_T_R %g nu_times_planck_numerical %g planck_integral_numerical %g nu_bar_estimator %g\n",
              delta_nu_bar, nu_bar_planck_T_R, nu_times_planck_numerical, planck_integral_numerical, nu_bar_estimator);
@@ -1188,7 +1188,7 @@ static float find_T_R(int modelgridindex, int binindex)
   // printout("find_T_R: bin %4d delta_nu_bar(T_R_min) %g, delta_nu_bar(T_R_max) %g\n",
   //          binindex, delta_nu_bar_min,delta_nu_bar_max);
 
-  if (!isfinite(delta_nu_bar_min) || !isfinite(delta_nu_bar_max))
+  if (!std::isfinite(delta_nu_bar_min) || !std::isfinite(delta_nu_bar_max))
     delta_nu_bar_max = delta_nu_bar_min = -1;
 
   if (delta_nu_bar_min * delta_nu_bar_max < 0)
@@ -1252,7 +1252,7 @@ static float find_T_R(int modelgridindex, int binindex)
 static void set_params_fullspec(const int modelgridindex, const int timestep)
 {
   const double nubar = nuJ[modelgridindex] / J[modelgridindex];
-  if (!isfinite(nubar) || nubar == 0.)
+  if (!std::isfinite(nubar) || nubar == 0.)
   {
     printout("[warning] T_R estimator infinite in cell %d, keep T_R, T_J, W of last timestep. J = %g. nuJ = %g\n",
              modelgridindex, J[modelgridindex], nuJ[modelgridindex]);
@@ -1435,7 +1435,7 @@ void set_J_normfactor(int modelgridindex, double normfactor)
 __host__ __device__
 void normalise_J(const int modelgridindex, const double estimator_normfactor_over4pi)
 {
-  assert(isfinite(J[modelgridindex]));
+  assert(std::isfinite(J[modelgridindex]));
   J[modelgridindex] *= estimator_normfactor_over4pi;
   for (int i = 0; i < detailed_linecount; i++)
   {
@@ -1608,7 +1608,7 @@ double get_bfrate_estimator(const int element, const int lowerion, const int low
 
 void normalise_nuJ(const int modelgridindex, const double estimator_normfactor_over4pi)
 {
-  assert(isfinite(nuJ[modelgridindex]));
+  assert(std::isfinite(nuJ[modelgridindex]));
   nuJ[modelgridindex] *= estimator_normfactor_over4pi;
 }
 
@@ -1616,7 +1616,7 @@ void normalise_nuJ(const int modelgridindex, const double estimator_normfactor_o
 double get_T_R_from_J(const int modelgridindex)
 {
   const double T_R = pow(PI / STEBO * J[modelgridindex], 1. / 4.);
-  if (!isfinite(T_R))
+  if (!std::isfinite(T_R))
   {
     /// keep old value of T_R
     printout("[warning] get_T_R_from_J: T_R estimator infinite in cell %d, use value of last timestep\n", modelgridindex);

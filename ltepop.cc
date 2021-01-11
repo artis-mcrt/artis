@@ -41,9 +41,9 @@ double nne_solution_f(double x, void *paras)
         //printout("debug element %d, ion %d, ionfract(element,ion,T,x) %g\n",element,ion,ionfractions[ion]);
         innersum += (get_ionstage(element, ion) - 1) * ionfractions[ion];
       }
-      assert(isfinite(innersum));
+      assert(std::isfinite(innersum));
       outersum += abundance / globals::elements[element].mass * innersum;
-      if (!isfinite(outersum))
+      if (!std::isfinite(outersum))
       {
         printout("nne_solution_f: element %d ion %d uppermostion %d abundance %g, mass %g\n",
                  element, ion, get_elements_uppermost_ion(modelgridindex, element),
@@ -78,7 +78,7 @@ void get_ionfractions(int element, int modelgridindex, double nne, double ionfra
     const double numerator = nnionfactor[ion];
     ionfractions[ion] = numerator / denominator;
 
-    if (!isfinite(ionfractions[ion]))
+    if (!std::isfinite(ionfractions[ion]))
     {
       if (modelgridindex != MGRID)
       {
@@ -199,7 +199,7 @@ double phi(const int element, const int ion, const int modelgridindex)
       Y_nt = nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion);
     }
 
-    // || !isfinite(Gamma))
+    // || !std::isfinite(Gamma))
     //return phi_lte(element,ion,cellnumber);
     //gamma_lte = interpolate_photoioncoeff_below(element,ion,0,T_e) + interpolate_photoioncoeff_above(element,ion,0,T_e);
     //zeta = interpolate_zeta(element,ion,T_e);
@@ -229,7 +229,7 @@ double phi(const int element, const int ion, const int modelgridindex)
             phi, Alpha_sp, Alpha_st, Y_nt, element, ion, Col_rec, modelgridindex, get_nne(modelgridindex), stat_weight(element,ion+1,0)/globals::modelgrid[modelgridindex].composition[element].partfunct[ion+1], stat_weight(element,ion,0)/globals::modelgrid[modelgridindex].composition[element].partfunct[ion],Gamma, T_e);
     }*/
 
-    if (!isfinite(phi) || phi == 0.)
+    if (!std::isfinite(phi) || phi == 0.)
     {
       printout("[fatal] phi: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g ... remove higher or lower ionisation stages\n", phi, element, ion, T_e);
       printout("[fatal] phi: Alpha_sp %g, Alpha_st %g, Gamma %g, partfunct %g, stat_weight %g\n", Alpha_sp, Alpha_st, Gamma, globals::modelgrid[modelgridindex].composition[element].partfunct[ion], stat_weight(element, ion, 0));
@@ -256,7 +256,7 @@ double phi(const int element, const int ion, const int modelgridindex)
   partfunct_ratio = globals::cell[cellnumber].composition[element].partfunct[ion]/globals::cell[cellnumber].composition[element].partfunct[ion+1];
   phi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
 
-  if (!isfinite(phi))
+  if (!std::isfinite(phi))
   {
     printout("phi_lte: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g, ... remove higher or lower ionisation stages\n",phi,element,ion,T_e);
     abort();
@@ -285,7 +285,7 @@ double calculate_ltepartfunct(int element, int ion, double T)
     U += stat_weight(element,ion,level) * exp(-(epsilon(element,ion,level)-epsilon_groundlevel)*oneoverkbt);
   }
 
-  if (!isfinite(U)) abort();
+  if (!std::isfinite(U)) abort();
   return U;
 }
 */
@@ -366,7 +366,7 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
       //	{
 	  //printout("Using an nlte population!\n");
       //	  nn = test * globals::modelgrid[modelgridindex].rho / get_groundlevelpop(modelgridindex,element,ion)*stat_weight(element,ion,0);
-      //	  if (!isfinite(nn))
+      //	  if (!std::isfinite(nn))
       //	    {
       //
       //      printout("[fatal] NLTE population failure.\n");
@@ -384,7 +384,7 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
 
   U *= stat_weight(element,ion,0);
 
-  if (!isfinite(U))
+  if (!std::isfinite(U))
   {
     printout("element %d ion %d\n",element,ion);
     printout("modelgridindex %d\n",modelgridindex);
@@ -505,7 +505,7 @@ double get_groundmultiplet_pop(int modelgridindex, int element, int ion)
   }
 
   #ifdef DEBUG_ON
-    if (!isfinite(nn))
+    if (!std::isfinite(nn))
     {
       printout("[fatal] calculate_exclevelpop: level %d of ion %d of element %d has infinite level population %g\n",level,ion,element,nn);
       printout("[fatal] calculate_exclevelpop: associated ground level has pop %g\n",get_groundlevelpop(modelgridindex,element,ion));
@@ -579,7 +579,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
       {
         //printout("Using an nlte population!\n");
         nn = nltepop_over_rho * get_rho(modelgridindex);
-        if (!isfinite(nn))
+        if (!std::isfinite(nn))
         {
           printout("[fatal] NLTE population failure.\n");
           printout("element %d ion %d level %d\n", element, ion, level);
@@ -606,7 +606,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
       {
         //printout("Using a superlevel population!\n");
         nn = superlevelpop_over_rho * get_rho(modelgridindex) * superlevel_boltzmann(modelgridindex, element, ion, level);
-        if (!isfinite(nn))
+        if (!std::isfinite(nn))
         {
           printout("[fatal] NLTE population failure.\n");
           printout("element %d ion %d level %d\n", element, ion, level);
@@ -633,7 +633,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   }
 
   #ifdef DEBUG_ON
-    if (!isfinite(nn))
+    if (!std::isfinite(nn))
     {
       printout("[fatal] calculate_exclevelpop: level %d of ion %d of element %d has infinite level population %g\n",level,ion,element,nn);
       printout("[fatal] calculate_exclevelpop: associated ground level has pop %g\n", get_groundlevelpop(modelgridindex, element, ion));

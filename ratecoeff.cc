@@ -152,10 +152,10 @@ static bool read_ratecoeff_dat(void)
                 double alpha_sp,bfcooling_coeff,corrphotoioncoeff,bfheating_coeff;
                 fscanf(ratecoeff_file,"%lg %lg %lg %lg\n", &alpha_sp, &bfcooling_coeff, &corrphotoioncoeff, &bfheating_coeff);
 
-                // assert(isfinite(alpha_sp) && alpha_sp >= 0);
+                // assert(std::isfinite(alpha_sp) && alpha_sp >= 0);
                 globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[iter] = alpha_sp;
 
-                // assert(isfinite(bfcooling_coeff) && bfcooling_coeff >= 0);
+                // assert(std::isfinite(bfcooling_coeff) && bfcooling_coeff >= 0);
                 globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[iter] = bfcooling_coeff;
 
                 #if (!NO_LUT_PHOTOION)
@@ -607,7 +607,7 @@ static void precalculate_rate_coefficient_integrals(void)
             }
             alpha_sp *= FOURPI * sfac * phixstargetprobability;
 
-            if (!isfinite(alpha_sp) || alpha_sp < 0)
+            if (!std::isfinite(alpha_sp) || alpha_sp < 0)
             {
               printout("WARNING: alpha_sp was negative or non-finite for level %d. alpha_sp %g sfac %g phixstargetindex %d phixstargetprobability %g\n",
                        level, alpha_sp, sfac, phixstargetindex, phixstargetprobability);
@@ -688,7 +688,7 @@ static void precalculate_rate_coefficient_integrals(void)
               printout("bfcooling_coeff integrator status %d. Integral value %9.3e +/- %9.3e\n",status,bfcooling_coeff,error);
             }
             bfcooling_coeff *= FOURPI * sfac * phixstargetprobability;
-            if (!isfinite(bfcooling_coeff) || bfcooling_coeff < 0)
+            if (!std::isfinite(bfcooling_coeff) || bfcooling_coeff < 0)
             {
               printout("WARNING: bfcooling_coeff was negative or non-finite for level %d. bfcooling_coeff %g sfac %g phixstargetindex %d phixstargetprobability %g\n",
                        level, bfcooling_coeff, sfac, phixstargetindex, phixstargetprobability);
@@ -790,7 +790,7 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
   // printout("emitted bf photon Z=%2d ionstage %d->%d upper %4d lower %4d lambda %7.1f lambda_edge %7.1f ratio %g zrand %g\n",
   //    get_element(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), upperionlevel, lower, 1e8 * CLIGHT / nu_selected, 1e8 * CLIGHT / nu_threshold, nu_selected / nu_threshold, zrand);
 
-  assert(isfinite(nu_selected));
+  assert(std::isfinite(nu_selected));
   return nu_selected;
 }
 
@@ -1375,7 +1375,7 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   const double sf = calculate_sahafact(element, ion, level, upperionlevel, T_e, H * nu_threshold);
   const double nnupperionlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upperionlevel);
   double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.0; // put that to phixslist
-  if (!isfinite(departure_ratio))
+  if (!std::isfinite(departure_ratio))
   {
     departure_ratio = 0.;
   }
@@ -1399,7 +1399,7 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   {
     printout("corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d integral %g error %g\n",
              status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
-    if (!isfinite(gammacorr))
+    if (!std::isfinite(gammacorr))
       gammacorr = 0.;
   }
 

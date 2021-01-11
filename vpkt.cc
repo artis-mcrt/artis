@@ -743,7 +743,7 @@ double rot_angle(double *n1, double *n2, double *ref1, double *ref2)
   if (cos_stokes_rot_1 == 0) i = acos(-1.) / 2.;
   if (cos_stokes_rot_2 == 0) i = 0.0 ;
 
-  if (!isfinite(i))
+  if (!std::isfinite(i))
     printout("Warning NaN: %3.6f \t %3.6f \t %3.6f \n", cos_stokes_rot_1, cos_stokes_rot_2, acos(cos_stokes_rot_1));
 
   return i;

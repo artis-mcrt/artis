@@ -365,7 +365,7 @@ static void read_auger_data(void)
       const int l = xrayl[shellnum - 1];
       const int g = xrayg[shellnum - 1];
 
-      if (!isfinite(en_auger_ev) || en_auger_ev < 0)
+      if (!std::isfinite(en_auger_ev) || en_auger_ev < 0)
       {
         printout("  WARNING: Z=%2d ionstage %2d shellnum %d en_auger_ev is %g. Setting to zero.\n", Z, ionstage, shellnum, en_auger_ev);
         en_auger_ev = 0.;
@@ -718,7 +718,7 @@ static double get_y_sample(const int modelgridindex, const int index)
 {
   if (nt_solution[modelgridindex].yfunc != NULL)
   {
-    if (!isfinite(nt_solution[modelgridindex].yfunc[index]))
+    if (!std::isfinite(nt_solution[modelgridindex].yfunc[index]))
     {
       printout("get_y_sample index %d %g\n", index, nt_solution[modelgridindex].yfunc[index]);
     }
@@ -870,7 +870,7 @@ static double get_y(const int modelgridindex, const double energy_ev)
   if (index < 0)
   {
     // return 0.;
-    assert(isfinite(get_y_sample(modelgridindex, 0)));
+    assert(std::isfinite(get_y_sample(modelgridindex, 0)));
     return get_y_sample(modelgridindex, 0);
   }
   else if (index > SFPTS - 1)
@@ -1083,7 +1083,7 @@ static double Psecondary(const double e_p, const double epsilon, const double I,
   assert(J > 0);
   assert(e_p >= I);
   assert(e_s >= 0);
-  assert(isfinite(atan((e_p - I) / 2 / J)));
+  assert(std::isfinite(atan((e_p - I) / 2 / J)));
   return 1 / (J * atan((e_p - I) / 2 / J) * (1 + pow(e_s / J, 2)));
 }
 
@@ -1201,7 +1201,7 @@ static double N_e(const int modelgridindex, const double energy)
   // source term, should be zero at the low end anyway
   N_e += gsl_vector_get(sourcevec, get_energyindex_ev_lteq(energy_ev));
 
-  assert(isfinite(N_e));
+  assert(std::isfinite(N_e));
   return N_e;
 }
 
@@ -1250,7 +1250,7 @@ static float calculate_frac_heating(const int modelgridindex)
 
   const float frac_heating = frac_heating_Einit / E_init_ev;
 
-  if (!isfinite(frac_heating) || frac_heating < 0 || frac_heating > 1.0)
+  if (!std::isfinite(frac_heating) || frac_heating < 0 || frac_heating > 1.0)
   {
     printout("WARNING: calculate_frac_heating: invalid result of %g. Setting to 1.0 instead\n", frac_heating);
     return 1.0;
@@ -1286,7 +1286,7 @@ static float get_nt_frac_ionization(const int modelgridindex)
 
   const float frac_ionization = nt_solution[modelgridindex].frac_ionization;
 
-  if (frac_ionization < 0 || !isfinite(frac_ionization))
+  if (frac_ionization < 0 || !std::isfinite(frac_ionization))
   {
     printout("ERROR: get_nt_frac_ionization called with no valid solution stored for cell %d. frac_ionization = %g\n",
              modelgridindex, frac_ionization);
@@ -1305,7 +1305,7 @@ static float get_nt_frac_excitation(const int modelgridindex)
 
   const float frac_excitation = nt_solution[modelgridindex].frac_excitation;
 
-  if (frac_excitation < 0 || !isfinite(frac_excitation))
+  if (frac_excitation < 0 || !std::isfinite(frac_excitation))
   {
     printout("ERROR: get_nt_frac_excitation called with no valid solution stored for cell %d. frac_excitation = %g\n",
              modelgridindex, frac_excitation);
@@ -1711,7 +1711,7 @@ static void calculate_eff_ionpot_auger_rates(
   if (matching_nlsubshell_count > 0)
   {
     double eff_ionpot = X_ion / eta_over_ionpot_sum;
-    if (!isfinite(eff_ionpot))
+    if (!std::isfinite(eff_ionpot))
       eff_ionpot = 0.;
     nt_solution[modelgridindex].eff_ionpot[get_uniqueionindex(element, ion)] = eff_ionpot;
   }
@@ -1890,7 +1890,7 @@ double nt_ionization_ratecoeff(const int modelgridindex, const int element, cons
   if (NT_SOLVE_SPENCERFANO)
   {
     double Y_nt = nt_ionization_ratecoeff_sf(modelgridindex, element, ion);
-    if (!isfinite(Y_nt))
+    if (!std::isfinite(Y_nt))
     {
       // probably because eff_ionpot = 0 because the solver hasn't been run yet, or no impact ionization cross sections exist
       const double Y_nt_wfapprox = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);

@@ -51,7 +51,7 @@ double doppler(const double dir1[3], const double vel[3])
     abort();
   }
   assert(dopplerfactor > 0);
-  assert(isfinite(dopplerfactor));
+  assert(std::isfinite(dopplerfactor));
   #endif
 
   return dopplerfactor;

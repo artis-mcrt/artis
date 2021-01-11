@@ -131,7 +131,7 @@ static void calculate_macroatom_transitionrates(
 
     processrates[MA_ACTION_INTERNALUPSAME] += individ_internal_up_same;
   }
-  if (!isfinite(processrates[MA_ACTION_INTERNALUPSAME]))
+  if (!std::isfinite(processrates[MA_ACTION_INTERNALUPSAME]))
     printout("fatal: internal_up_same has nan contribution\n");
 
   /// Transitions to higher ionisation stages
@@ -277,7 +277,7 @@ static void do_macroatom_raddeexcitation(
   }
 
   #ifdef DEBUG_ON
-    assert(isfinite(pkt_ptr->nu_cmf));
+    assert(std::isfinite(pkt_ptr->nu_cmf));
 
     if (linelistindex < 0)
     {
@@ -374,7 +374,7 @@ static void do_macroatom_radrecomb(
                __func__, get_element(element), get_ionstage(element, *ion + 1), get_ionstage(element, *ion), lower);
       printout("[debug] do_ma:   pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
     }
-    if (!isfinite(pkt_ptr->nu_cmf))
+    if (!std::isfinite(pkt_ptr->nu_cmf))
     {
       printout("[fatal] rad recombination of MA: selected frequency not finite ... abort\n");
       abort();
@@ -1047,7 +1047,7 @@ double rad_deexcitation_ratecoeff(
       }
       else if (globals::debuglevel == 777)
         printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n", A_ul, tau_sobolev, n_u);
-      if (!isfinite(R))
+      if (!std::isfinite(R))
       {
         printout("fatal a1: abort\n");
         abort();
@@ -1158,7 +1158,7 @@ double rad_excitation_ratecoeff(
     }
     else if (globals::debuglevel == 777)
       printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n", A_ul, tau_sobolev, n_u, n_l, radfield::radfield(nu_trans, modelgridindex));
-    if (!isfinite(R))
+    if (!std::isfinite(R))
     {
       printout("[fatal] rad_excitation: abort\n");
       printout("[fatal] rad_excitation: R %g, B_lu %g, B_ul %g, n_u %g, n_l %g, radfield %g,tau_sobolev %g, t_current %g\n",
@@ -1202,7 +1202,7 @@ double rad_recombination_ratecoeff(
   }
 
   #ifdef DEBUG_ON
-  assert(isfinite(R));
+  assert(std::isfinite(R));
   #endif
 
   return R;
@@ -1231,7 +1231,7 @@ double stim_recombination_ratecoeff(
     break;
   }
 
-  assert(isfinite(R));
+  assert(std::isfinite(R));
 
   return R;
 }
@@ -1297,7 +1297,7 @@ double col_deexcitation_ratecoeff(const float T_e, const float nne, const double
       printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u,nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
     }*/
     //printout("col_deexc(%d,%d,%d,%d) %g\n",element,ion,upper,lower,C);
-    assert(isfinite(C));
+    assert(std::isfinite(C));
   #endif
 
   return C;
@@ -1362,7 +1362,7 @@ double col_excitation_ratecoeff(const float T_e, const float nne, const int line
       //printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
     // }
 
-    //if (!isfinite(C))
+    //if (!std::isfinite(C))
     //{
     //  printout("fatal a5: abort\n");
       //printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
@@ -1457,7 +1457,7 @@ double col_ionization_ratecoeff(
   #ifdef DEBUG_ON
     if (globals::debuglevel == 777)
       printout("[debug] col_ion: nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n", nne,T_e,g,epsilon_trans,sigma_bf);
-    assert(isfinite(C));
+    assert(std::isfinite(C));
   #endif
 
   return C;

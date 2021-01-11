@@ -924,7 +924,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
 
         corrphotoionrenorm[ionestimindex] = gammaestimator[ionestimindex] / get_corrphotoioncoeff_ana(element,ion,0,0,n);
 
-        if (!isfinite(corrphotoionrenorm[ionestimindex]))
+        if (!std::isfinite(corrphotoionrenorm[ionestimindex]))
         {
           printout("[fatal] about to set corrphotoionrenorm = NaN = gammaestimator / get_corrphotoioncoeff_ana(%d,%d,%d,%d,%d)=%g/%g",
                    element,ion,0,0,n,gammaestimator[ionestimindex],get_corrphotoioncoeff_ana(element,ion,0,0,n));
@@ -972,7 +972,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
           const double bfheatingcoeff_ana = get_bfheatingcoeff_ana(element, ion, 0, 0, get_TR(n), get_W(n));
           bfheatingestimator[ionestimindex] = bfheatingestimator[ionestimindex] / bfheatingcoeff_ana;
 
-          if (!isfinite(bfheatingestimator[ionestimindex]))
+          if (!std::isfinite(bfheatingestimator[ionestimindex]))
           {
             printout("[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",element,ion,0,0,n,bfheatingestimator[ionestimindex],bfheatingcoeff_ana);
             abort();
@@ -1503,7 +1503,7 @@ double calculate_populations(const int modelgridindex)
       {
         factor *= nne_hi * phi(element, ion, modelgridindex);
         //printout("element %d, ion %d, factor %g\n",element,i,factor);
-        if (!isfinite(factor))
+        if (!std::isfinite(factor))
         {
           printout("[info] calculate_populations: uppermost_ion limited by phi factors for element Z=%d, ionstage %d in cell %d\n",
                    get_element(element), get_ionstage(element, ion), modelgridindex);
@@ -1558,7 +1558,7 @@ double calculate_populations(const int modelgridindex)
         globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (
           nnion * stat_weight(element,ion,0) / globals::modelgrid[modelgridindex].composition[element].partfunct[ion]);
 
-        if (!isfinite(globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]))
+        if (!std::isfinite(globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]))
           printout("[warning] calculate_populations: groundlevelpop infinite in connection with MINPOP\n");
       }
     }
@@ -1682,7 +1682,7 @@ double calculate_populations(const int modelgridindex)
     }
   */
 
-        if (!isfinite(globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]))
+        if (!std::isfinite(globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]))
           printout("[warning] calculate_populations: groundlevelpop infinite in connection with MINPOP\n");
       }
     }
