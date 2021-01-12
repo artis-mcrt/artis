@@ -44,8 +44,6 @@ int check_tau(double *tau, double *tau_max);
 #define MSPECTRA 12
 /* Number of observers */
 #define MOBS 5
-/* Total number of spectra */
-#define MTOT (MSPECTRA * MOBS)
 /* Total number of frequency ranges */
 #define MRANGE 1
 
