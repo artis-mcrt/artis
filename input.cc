@@ -2050,6 +2050,7 @@ static void read_parameterfile_vpkt(void)
   fscanf(input_file, "%d", &dum1);
   Nobs = dum1;
 
+  printout("vpkt.txt: Nobs %d\n", Nobs);
   assert(Nobs <= MOBS);
 
   // nz_obs_vpkt. Cos(theta) to the observer. A list in the case of many observers
@@ -2104,10 +2105,12 @@ static void read_parameterfile_vpkt(void)
       assert(exclude[0] == 0); // "The first spectrum should allow for all opacities (exclude[i]=0) and is not \n"
     }
   }
+  printout("vpkt.txt: Nspectra %d per observer\n", Nspectra);
 
   // time window. If dum4=1 it restrict vpkt to time windown (dum5,dum6)
   fscanf(input_file, "%g %g %g \n", &dum4, &dum5, &dum6);
 
+  printout("vpkt: tmin_vspec %.1f d tmax_vspec %1.f d\n", tmin_vspec / DAY, tmax_vspec / DAY);
   if (dum4 == 1)
   {
     tmin_vspec_input = dum5 * DAY;
@@ -2119,7 +2122,7 @@ static void read_parameterfile_vpkt(void)
     tmax_vspec_input = tmax_vspec;
   }
 
-  printout("tmin_vspec_input %g tmax_vspec_input %g\n", tmin_vspec_input, tmax_vspec_input);
+  printout("vpkt.txt: tmin_vspec_input %.1f days, tmax_vspec_input %.1f day\n", tmin_vspec_input / DAY, tmax_vspec_input / DAY);
 
   assert(tmax_vspec_input >= tmin_vspec);
   assert(tmax_vspec_input <= tmax_vspec);
@@ -2166,21 +2169,23 @@ static void read_parameterfile_vpkt(void)
   // Maximum optical depth. If a vpkt reaches dum7 is thrown away
   fscanf(input_file, "%g \n", &dum7);
   tau_max_vpkt = dum7;
+  printout("tau_max_vpkt %g\n", tau_max_vpkt);
 
   // Produce velocity grid map if dum8=1
   fscanf(input_file, "%d \n", &dum8);
   vgrid_flag = dum8;
+  printout("velocity grid map %s\n", (vgrid_flag == 1) ? "ON" : "OFF");
 
   if (dum8 == 1)
   {
     // Specify time range for velocity grid map
-    fscanf(input_file, "%g %g \n", &dum9,&dum10);
+    fscanf(input_file, "%g %g \n", &dum9, &dum10);
     tmin_grid = dum9 * DAY;
     tmax_grid = dum10 * DAY;
 
     // Specify wavelength range: number of intervals (dum9) and limits (dum10,dum11)
     fscanf(input_file, "%g ", &dum9);
-    Nrange_grid = dum9 ;
+    Nrange_grid = dum9;
 
     assert(Nrange_grid <= MRANGE_GRID);
 
@@ -2434,8 +2439,9 @@ void read_parameterfile(int rank)
   std::stringstream(line) >> globals::ntstep; // number of time steps
 
   assert(get_noncommentline(file, line));
-  printout("line %s\n", line.c_str());
+  // printout("line %s\n", line.c_str());
   std::stringstream(line) >> globals::itstep >> globals::ftstep; // number of start and end time step
+  printout("input: itstep %d ftstep %d\n", globals::itstep, globals::ftstep);
 
   float tmin_days = 0.;
   float tmax_days = 0.;

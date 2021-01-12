@@ -344,11 +344,12 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
   for (int ind = 0; ind < Nspectra; ind++)
   {
+    // printout("bin %d spectrum %d tau_vpkt %g\n", bin, ind, tau_vpkt[ind]);
     prob = pn * exp( - tau_vpkt[ind] ) ;
 
-    Itmp = I * prob ;
-    Qtmp = Q * prob ;
-    Utmp = U * prob ;
+    Itmp = I * prob;
+    Qtmp = Q * prob;
+    Utmp = U * prob;
 
     dummy_ptr->stokes[0] = Itmp;
     dummy_ptr->stokes[1] = Qtmp;
@@ -417,19 +418,15 @@ void add_to_vspecpol(PKT *pkt_ptr, int bin, int ind, double t_arrive)
 {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
 
-  double deltai,deltaq,deltau;
-  int nt, nnu;
-  int ind_comb;
-
-  ind_comb = Nspectra * bin + ind;
+  const int ind_comb = Nspectra * bin + ind;
 
   /// Put this into the time grid.
   if (t_arrive > tmin_vspec && t_arrive < tmax_vspec)
   {
-    nt = (log(t_arrive) - log(tmin_vspec)) / dlogt_vspec;
+    int nt = (log(t_arrive) - log(tmin_vspec)) / dlogt_vspec;
     if (pkt_ptr->nu_rf > numin_vspec && pkt_ptr->nu_rf < numax_vspec)
     {
-      nnu = (log(pkt_ptr->nu_rf) - log(numin_vspec)) /  dlognu_vspec;
+      const int nnu = (log(pkt_ptr->nu_rf) - log(numin_vspec)) /  dlognu_vspec;
       const double pktcontrib = pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC / PARSEC / globals::nprocs * 4 * PI;
 
       safeadd(vstokes_i[nt][ind_comb].flux[nnu], pkt_ptr->stokes[0] * pktcontrib);

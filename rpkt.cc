@@ -1482,11 +1482,8 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr)
 __host__ __device__
 int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
 {
-  double t_arrive;
   double obs[3];
-  int vflag;
-
-  vflag = 0;
+  int vflag = 0;
 
   double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
@@ -1517,7 +1514,7 @@ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
     obs[1] = sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * sin(phiobs[bin]);
     obs[2] = nz_obs_vpkt[bin];
 
-    t_arrive = t_current - (dot(pkt_ptr->pos, obs) / globals::CLIGHT_PROP);
+    const double t_arrive = t_current - (dot(pkt_ptr->pos, obs) / globals::CLIGHT_PROP);
 
     if (t_arrive >= tmin_vspec_input  && t_arrive <= tmax_vspec_input)
     {
