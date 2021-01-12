@@ -147,7 +147,6 @@ void write_spectrum(
   char spec_filename[], char emission_filename[], char trueemission_filename[],
   char absorption_filename[], struct spec *spectra)
 {
-  printout("write_spectrum %s %s %s %s\n", spec_filename, emission_filename, trueemission_filename, absorption_filename);
   FILE *spec_file = fopen_required(spec_filename, "w");
 
   FILE *emission_file = NULL;
@@ -164,11 +163,11 @@ void write_spectrum(
     assert(trueemission_file != NULL);
     absorption_file = fopen_required(absorption_filename, "w");
     assert(absorption_file != NULL);
-    printout("Writing %s, %s, %s, and %s\n", spec_filename, emission_filename, trueemission_filename, absorption_filename);
+    printout("write_spectrum %s, %s, %s, and %s\n", spec_filename, emission_filename, trueemission_filename, absorption_filename);
   }
   else
   {
-    printout("Writing %s\n", spec_filename);
+    printout("write_spectrum %s\n", spec_filename);
   }
 
   if (TRACE_EMISSION_ABSORPTION_REGION_ON && do_emission_res)
