@@ -17,9 +17,10 @@ struct vspecpol
   float delta_t;
 };
 
-struct vspecpol vstokes_i[VMTBINS][MTOT];
-struct vspecpol vstokes_q[VMTBINS][MTOT];
-struct vspecpol vstokes_u[VMTBINS][MTOT];
+
+struct vspecpol vstokes_i[VMTBINS][(MSPECTRA * MOBS)];
+struct vspecpol vstokes_q[VMTBINS][(MSPECTRA * MOBS)];
+struct vspecpol vstokes_u[VMTBINS][(MSPECTRA * MOBS)];
 
 float lower_freq_vspec[VMNUBINS];
 float delta_freq_vspec[VMNUBINS];
@@ -439,7 +440,7 @@ void add_to_vspecpol(PKT *pkt_ptr, int bin, int ind, double t_arrive)
 
 void init_vspecpol(void)
 {
-  for (int ind_comb = 0; ind_comb < MTOT; ind_comb++)
+  for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++)
   {
     /** start by setting up the time and frequency bins. */
     /** it is all done interms of a logarithmic spacing in both t and nu - get the
@@ -469,7 +470,7 @@ void init_vspecpol(void)
 
 void write_vspecpol(FILE *specpol_file)
 {
-  for (int ind_comb = 0; ind_comb < MTOT; ind_comb++)
+  for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++)
   {
     fprintf(specpol_file, "%g ", 0.0);
 
@@ -522,7 +523,7 @@ void read_vspecpol(FILE *specpol_file)
 {
   float a,b,c;
 
-  for (int ind_comb = 0; ind_comb < MTOT; ind_comb++)
+  for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++)
   {
     // Initialise times and frequencies
     dlogt_vspec = (log(tmax_vspec) - log(tmin_vspec))/VMTBINS;
