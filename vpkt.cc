@@ -64,15 +64,15 @@ int vgrid_flag;
 double dlogt_vspec;
 double dlognu_vspec;
 
-// --------- FLAGS -----------
-
 int realtype;
-/* number of virtual packets in a given timestep */
+
+// number of virtual packets in a given timestep
 int nvpkt;
-/* number of escaped virtual packet in a given timestep (with tau < tau_max) */
-int nvpkt_esc1; /* electron scattering event */
-int nvpkt_esc2; /* kpkt deactivation */
-int nvpkt_esc3; /* macroatom deactivation */
+
+// number of escaped virtual packet in a given timestep (with tau < tau_max)
+int nvpkt_esc1; // electron scattering event
+int nvpkt_esc2; // kpkt deactivation
+int nvpkt_esc3; // macroatom deactivation
 
 
 void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype)
@@ -452,9 +452,9 @@ void init_vspecpol(void)
 
   for (int ind_comb = 0; ind_comb < indexmax; ind_comb++)
   {
-    /** start by setting up the time and frequency bins. */
-    /** it is all done interms of a logarithmic spacing in both t and nu - get the
-     step sizes first. */
+    // start by setting up the time and frequency bins.
+    // it is all done interms of a logarithmic spacing in both t and nu - get the
+    // step sizes first.
 
     dlogt_vspec = (log(tmax_vspec) - log(tmin_vspec)) / VMTBINS;
     dlognu_vspec = (log(numax_vspec) - log(numin_vspec)) / VMNUBINS;
@@ -936,7 +936,7 @@ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
 
     const double t_arrive = t_current - (dot(pkt_ptr->pos, obs) / globals::CLIGHT_PROP);
 
-    if (t_arrive >= tmin_vspec_input  && t_arrive <= tmax_vspec_input)
+    if (t_arrive >= tmin_vspec_input && t_arrive <= tmax_vspec_input)
     {
       // time selection
 
