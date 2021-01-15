@@ -10,8 +10,4 @@ __host__ __device__ double get_rpkt_escape_prob(PKT *pkt_ptr, const double tstar
 __host__ __device__ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, double *kappa_bf);
 __host__ __device__ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr);
 
-#ifdef VPKT_ON
-__host__ __device__ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype);
-#endif
-
 #endif //RPKT_H

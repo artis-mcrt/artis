@@ -1000,16 +1000,10 @@ int main(int argc, char** argv)
 
     // Initialise virtual packets file and vspecpol
     #ifdef VPKT_ON
-    if (!globals::simulation_continued_from_saved)
-    {
-      // New simulation
-
-      init_vspecpol();
-
-      if (vgrid_flag == 1)
-        init_vpkt_grid();
-    }
-    else
+    init_vspecpol();
+    if (vgrid_flag == 1)
+      init_vpkt_grid();
+    if (globals::simulation_continued_from_saved)
     {
       // Continue simulation: read into temporary files
 
