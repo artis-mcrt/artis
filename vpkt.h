@@ -29,27 +29,27 @@ __host__ __device__ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int
 #define NY_VGRID 50
 #define NZ_VGRID 50
 
-/* FREQUENCY */
-/* dlognu = (log(numax) - log(numin)) / VMNUBINS ~ 3.9e-4 (10'000 over 1e14-5e15 Hz) */
+// FREQUENCY
+// dlognu = (log(numax) - log(numin)) / VMNUBINS ~ 3.9e-4 (10'000 over 1e14-5e15 Hz)
 #define numin_vspec (CLIGHT / 10000 * 1e8)
 #define numax_vspec (CLIGHT / 3500 * 1e8)
 #define VMNUBINS 2500
 
-/* TIME */
-/* dlogt = (log(globals::tmin) - log(globals::tmax)) / VMTBINS ~ 3.69e-2 (111 over 2-120 d) */
+// TIME
+// dlogt = (log(globals::tmin) - log(globals::tmax)) / VMTBINS ~ 3.69e-2 (111 over 2-120 d)
 #define tmin_vspec (10 * DAY)
 #define tmax_vspec (30 * DAY)
 #define VMTBINS 30
 
-/* Total number of frequency ranges */
+// Total number of frequency ranges
 #define MRANGE 1
 
 extern int vgrid_flag;
 
 extern int nvpkt;
-extern int nvpkt_esc1; /* electron scattering event */
-extern int nvpkt_esc2; /* kpkt deactivation */
-extern int nvpkt_esc3; /* macroatom deactivation */
+extern int nvpkt_esc1; // electron scattering event
+extern int nvpkt_esc2; // kpkt deactivation
+extern int nvpkt_esc3; // macroatom deactivation
 
 extern double cell_is_optically_thick_vpkt;
 
