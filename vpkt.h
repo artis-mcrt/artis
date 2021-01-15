@@ -9,7 +9,6 @@ void meridian(double *n, double *ref1, double *ref2);
 void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf);
 void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf);
 
-#ifdef VPKT_ON
 void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype);
 void add_to_vspecpol(PKT *pkt_ptr, int bin, int ind, double t_arrive);
 void init_vspecpol(void);
@@ -53,7 +52,5 @@ extern int nvpkt_esc2; /* kpkt deactivation */
 extern int nvpkt_esc3; /* macroatom deactivation */
 
 extern double cell_is_optically_thick_vpkt;
-
-#endif
 
 #endif //VPKT_H
