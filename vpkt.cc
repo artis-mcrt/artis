@@ -4,6 +4,7 @@
 #include "boundary.h"
 #include "ltepop.h"
 #include "vectors.h"
+#include "update_grid.h"
 #include "atomic.h"
 #include <cstring>
 
@@ -18,19 +19,19 @@ struct vspecpol
 };
 
 
-struct vspecpol vstokes_i[VMTBINS][(MSPECTRA * MOBS)];
-struct vspecpol vstokes_q[VMTBINS][(MSPECTRA * MOBS)];
-struct vspecpol vstokes_u[VMTBINS][(MSPECTRA * MOBS)];
+struct vspecpol **vstokes_i;
+struct vspecpol **vstokes_q;
+struct vspecpol **vstokes_u;
 
 float lower_freq_vspec[VMNUBINS];
 float delta_freq_vspec[VMNUBINS];
 
 // --------- INPUT PARAMETERS -----------
 
-int Nobs;
-int Nspectra;
-double nz_obs_vpkt[MOBS];
-double phiobs[MOBS];
+int Nobs;  // Number of observer directions
+int Nspectra; // Number of virtual packet spectra per observer direction (total + elements switched off)
+double *nz_obs_vpkt;
+double *phiobs;
 double tmin_vspec_input;
 double tmax_vspec_input;
 double Nrange;
@@ -40,16 +41,16 @@ double numin_vspec_input[MRANGE];
 double numax_vspec_input[MRANGE];
 double cell_is_optically_thick_vpkt;
 double tau_max_vpkt;
-double exclude[MSPECTRA];
-double tau_vpkt[MSPECTRA];
+double *exclude;
+double *tau_vpkt;
 
 // --------- VPKT GRID -----------
 
 struct vgrid
 {
-  double flux[MRANGE_GRID][MOBS];
-  double yvel[MRANGE_GRID][MOBS];
-  double zvel[MRANGE_GRID][MOBS];
+  double *flux[MRANGE_GRID];
+  double *yvel[MRANGE_GRID];
+  double *zvel[MRANGE_GRID];
 };
 
 struct vgrid vgrid_i[NY_VGRID][NZ_VGRID];
@@ -440,7 +441,18 @@ void add_to_vspecpol(PKT *pkt_ptr, int bin, int ind, double t_arrive)
 
 void init_vspecpol(void)
 {
-  for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++)
+  vstokes_i = (struct vspecpol **) malloc(VMTBINS * sizeof(struct vspecpol *));
+  vstokes_q = (struct vspecpol **) malloc(VMTBINS * sizeof(struct vspecpol *));
+  vstokes_u = (struct vspecpol **) malloc(VMTBINS * sizeof(struct vspecpol *));
+  const int indexmax = Nspectra * Nobs;
+  for (int p = 0; p < VMTBINS; p++)
+  {
+    vstokes_i[p] = (struct vspecpol *) malloc(indexmax * sizeof(struct vspecpol));
+    vstokes_q[p] = (struct vspecpol *) malloc(indexmax * sizeof(struct vspecpol));
+    vstokes_u[p] = (struct vspecpol *) malloc(indexmax * sizeof(struct vspecpol));
+  }
+
+  for (int ind_comb = 0; ind_comb < indexmax; ind_comb++)
   {
     /** start by setting up the time and frequency bins. */
     /** it is all done interms of a logarithmic spacing in both t and nu - get the
@@ -579,23 +591,36 @@ void read_vspecpol(FILE *specpol_file)
 
 void init_vpkt_grid(void)
 {
-  const double ybin = 2 * globals::vmax / NY_VGRID ;
-  const double zbin = 2 * globals::vmax / NZ_VGRID ;
+  const double ybin = 2 * globals::vmax / NY_VGRID;
+  const double zbin = 2 * globals::vmax / NZ_VGRID;
 
-  for (int bin = 0; bin < MOBS; bin++)
+  for (int n = 0; n < NY_VGRID; n++)
   {
-    for (int bin_range = 0; bin_range < MRANGE_GRID; bin_range++)
+    for (int m = 0; m < NZ_VGRID; m++)
     {
-      for (int n = 0; n < NY_VGRID; n++)
+      for (int bin_range = 0; bin_range < MRANGE_GRID; bin_range++)
       {
-        for (int m = 0; m < NZ_VGRID; m++)
+        vgrid_i[n][m].flux[bin_range] = (double *) malloc(Nobs * sizeof(double));
+        vgrid_i[n][m].yvel[bin_range] = (double *) malloc(Nobs * sizeof(double));
+        vgrid_i[n][m].zvel[bin_range] = (double *) malloc(Nobs * sizeof(double));
+
+        vgrid_q[n][m].flux[bin_range] = (double *) malloc(Nobs * sizeof(double));
+        vgrid_q[n][m].yvel[bin_range] = (double *) malloc(Nobs * sizeof(double));
+        vgrid_q[n][m].zvel[bin_range] = (double *) malloc(Nobs * sizeof(double));
+
+        vgrid_u[n][m].flux[bin_range] = (double *) malloc(Nobs * sizeof(double));
+        vgrid_u[n][m].yvel[bin_range] = (double *) malloc(Nobs * sizeof(double));
+        vgrid_u[n][m].zvel[bin_range] = (double *) malloc(Nobs * sizeof(double));
+
+        vgrid_i[n][m].flux[bin_range] = (double *) malloc(Nobs * sizeof(double));
+        for (int bin = 0; bin < Nobs; bin++)
         {
           vgrid_i[n][m].flux[bin_range][bin] = 0.0;
           vgrid_q[n][m].flux[bin_range][bin] = 0.0;
           vgrid_u[n][m].flux[bin_range][bin] = 0.0;
 
-          vgrid_i[n][m].yvel[bin_range][bin] = globals::vmax - (n+0.5) * ybin ;
-          vgrid_i[n][m].zvel[bin_range][bin] = globals::vmax - (m+0.5) * zbin ;
+          vgrid_i[n][m].yvel[bin_range][bin] = globals::vmax - (n+0.5) * ybin;
+          vgrid_i[n][m].zvel[bin_range][bin] = globals::vmax - (m+0.5) * zbin;
         }
       }
     }
@@ -663,9 +688,9 @@ void add_to_vpkt_grid(PKT *dummy_ptr, double *vel, int bin_range, int bin, doubl
 
 void write_vpkt_grid(FILE *vpkt_grid_file)
 {
-  for (int bin=0;bin<Nobs;bin++)
+  for (int bin = 0; bin < Nobs; bin++)
   {
-    for (int bin_range=0;bin_range<Nrange_grid;bin_range++)
+    for (int bin_range = 0; bin_range < Nrange_grid; bin_range++)
     {
       for (int n = 0; n < NY_VGRID; n++)
       {
@@ -891,4 +916,239 @@ void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf)
 
   vec_norm(e_cmf,e_cmf);
   vec_norm(b_cmf,b_cmf);
+}
+
+
+__host__ __device__
+int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
+{
+  double obs[3];
+  int vflag = 0;
+
+  double vel_vec[3];
+  get_velocity(pkt_ptr->pos, vel_vec, t_current);
+
+  // Cut on vpkts
+  int mgi = globals::cell[pkt_ptr->where].modelgridindex;
+
+  if (globals::modelgrid[mgi].thick != 0)
+  {
+    return 0;
+  }
+
+  /* this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each observer) */
+  if (pkt_ptr->next_trans == 0)
+  {
+    const int lineindex = closest_transition(pkt_ptr->nu_cmf, pkt_ptr->next_trans);  ///returns negative
+    if (lineindex < 0)
+    {
+      pkt_ptr->next_trans = lineindex + 1;
+    }
+  }
+
+  for (int bin = 0; bin < Nobs; bin++)
+  {
+    /* loop over different observers */
+
+    obs[0] = sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * cos(phiobs[bin]);
+    obs[1] = sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * sin(phiobs[bin]);
+    obs[2] = nz_obs_vpkt[bin];
+
+    const double t_arrive = t_current - (dot(pkt_ptr->pos, obs) / globals::CLIGHT_PROP);
+
+    if (t_arrive >= tmin_vspec_input  && t_arrive <= tmax_vspec_input)
+    {
+      // time selection
+
+      for (int i = 0; i < Nrange; i++)
+      {
+        // Loop over frequency ranges
+
+        if (pkt_ptr->nu_cmf / doppler(obs, vel_vec) > numin_vspec_input[i] && pkt_ptr->nu_cmf / doppler(obs, vel_vec) < numax_vspec_input[i])
+        {
+          // frequency selection
+
+          rlc_emiss_vpkt(pkt_ptr, t_current, bin, obs, realtype);
+
+          vflag = 1;
+
+          // Need to update the starting cell for next observer
+          // If previous vpkt reached tau_lim, change_cell (and then update_cell) hasn't been called
+          mgi = globals::cell[pkt_ptr->where].modelgridindex;
+          cellhistory_reset(mgi, false);
+        }
+      }
+    }
+  }
+
+  // we just used the opacity variables for v-packets. We need to reset them for the original r packet
+  calculate_kappa_rpkt_cont(pkt_ptr);
+
+  return vflag;
+}
+
+
+void read_parameterfile_vpkt(void)
+{
+  int dum1,dum8;
+  float dum2,dum3,dum4,dum5,dum6,dum7,dum9,dum10,dum11;
+
+  FILE *input_file = fopen_required("vpkt.txt", "r");
+
+  // Nobs
+  fscanf(input_file, "%d", &dum1);
+  Nobs = dum1;
+
+  printout("vpkt.txt: Nobs %d\n", Nobs);
+
+  // nz_obs_vpkt. Cos(theta) to the observer. A list in the case of many observers
+  nz_obs_vpkt = (double *) malloc(Nobs * sizeof(double));
+  for (int i = 0; i < Nobs; i++)
+  {
+    fscanf(input_file, "%g", &dum2);
+    nz_obs_vpkt[i] = dum2;
+
+    if (fabs(nz_obs_vpkt[i]) > 1)
+    {
+      printout("Wrong observer direction \n");
+      exit(0);
+    }
+    else if (nz_obs_vpkt[i] == 1)
+    {
+      nz_obs_vpkt[i] = 0.9999;
+    }
+    else if (nz_obs_vpkt[i] == -1)
+    {
+      nz_obs_vpkt[i] = -0.9999;
+    }
+  }
+
+  // phi to the observer (degrees). A list in the case of many observers
+  phiobs = (double *) malloc(Nobs * sizeof(double));
+  for (int i = 0; i < Nobs; i++)
+  {
+    fscanf(input_file, "%g \n", &dum3);
+    phiobs[i] = dum3 * PI / 180;
+  }
+
+  // Nspectra opacity choices (i.e. Nspectra spectra for each observer)
+  fscanf(input_file, "%g ", &dum4);
+
+  if (dum4 != 1)
+  {
+    Nspectra = 1;
+    exclude = (double *) malloc(Nspectra * sizeof(double));
+
+    exclude[0] = 0;
+  }
+  else
+  {
+    fscanf(input_file, "%d ", &dum1);
+    Nspectra = dum1;
+    exclude = (double *) malloc(Nspectra * sizeof(double));
+
+    for (int i = 0; i < Nspectra; i++)
+    {
+      fscanf(input_file, "%g ", &dum2);
+      exclude[i] = dum2;
+
+      // The first number should be equal to zero!
+      assert(exclude[0] == 0); // The first spectrum should allow for all opacities (exclude[i]=0)
+    }
+  }
+
+  printout("vpkt.txt: Nspectra %d per observer\n", Nspectra);
+  tau_vpkt = (double *) malloc(Nspectra * sizeof(double));
+
+  // time window. If dum4=1 it restrict vpkt to time windown (dum5,dum6)
+  fscanf(input_file, "%g %g %g \n", &dum4, &dum5, &dum6);
+
+  printout("vpkt: tmin_vspec %.1f d tmax_vspec %1.f d\n", tmin_vspec / DAY, tmax_vspec / DAY);
+  if (dum4 == 1)
+  {
+    tmin_vspec_input = dum5 * DAY;
+    tmax_vspec_input = dum6 * DAY;
+  }
+  else
+  {
+    tmin_vspec_input = tmin_vspec;
+    tmax_vspec_input = tmax_vspec;
+  }
+
+  printout("vpkt.txt: tmin_vspec_input %.1f days, tmax_vspec_input %.1f day\n", tmin_vspec_input / DAY, tmax_vspec_input / DAY);
+
+  assert(tmax_vspec_input >= tmin_vspec);
+  assert(tmax_vspec_input <= tmax_vspec);
+
+  // frequency window. dum4 restrict vpkt to a frequency range, dum5 indicates the number of ranges,
+  // followed by a list of ranges (dum6,dum7)
+  fscanf(input_file, "%g ", &dum4);
+
+  if (dum4 == 1)
+  {
+    fscanf(input_file, "%g ", &dum5);
+
+    Nrange = dum5;
+    assert(Nrange <= MRANGE);
+
+    for (int i = 0; i < Nrange; i++)
+    {
+      fscanf(input_file, "%g %g", &dum6, &dum7);
+
+      lmin_vspec_input[i] = dum6;
+      lmax_vspec_input[i] = dum7;
+
+      numin_vspec_input[i] = CLIGHT / (lmax_vspec_input[i] * 1e-8);
+      numax_vspec_input[i] = CLIGHT / (lmin_vspec_input[i] * 1e-8);
+    }
+  }
+  else
+  {
+    Nrange = 1;
+
+    numin_vspec_input[0] = numin_vspec;
+    numax_vspec_input[0] = numax_vspec;
+  }
+
+  // if dum7=1, vpkt are not created when cell optical depth is larger than cell_is_optically_thick_vpkt
+  fscanf(input_file, "%g %lg \n", &dum7, &cell_is_optically_thick_vpkt);
+
+  if (dum7 != 1)
+  {
+    cell_is_optically_thick_vpkt = globals::cell_is_optically_thick;
+  }
+  printout("cell_is_optically_thick_vpkt %lg\n", cell_is_optically_thick_vpkt);
+
+  // Maximum optical depth. If a vpkt reaches dum7 is thrown away
+  fscanf(input_file, "%g \n", &dum7);
+  tau_max_vpkt = dum7;
+  printout("tau_max_vpkt %g\n", tau_max_vpkt);
+
+  // Produce velocity grid map if dum8=1
+  fscanf(input_file, "%d \n", &dum8);
+  vgrid_flag = dum8;
+  printout("velocity grid map %s\n", (vgrid_flag == 1) ? "ON" : "OFF");
+
+  if (dum8 == 1)
+  {
+    // Specify time range for velocity grid map
+    fscanf(input_file, "%g %g \n", &dum9, &dum10);
+    tmin_grid = dum9 * DAY;
+    tmax_grid = dum10 * DAY;
+
+    // Specify wavelength range: number of intervals (dum9) and limits (dum10,dum11)
+    fscanf(input_file, "%g ", &dum9);
+    Nrange_grid = dum9;
+
+    assert(Nrange_grid <= MRANGE_GRID);
+
+    for (int i = 0; i < Nrange_grid; i++)
+    {
+      fscanf(input_file, "%g %g", &dum10, &dum11);
+
+      nu_grid_max[i] = CLIGHT / (dum10 * 1e-8);
+      nu_grid_min[i] = CLIGHT / (dum11 * 1e-8);
+    }
+  }
+  fclose(input_file);
 }

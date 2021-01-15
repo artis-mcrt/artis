@@ -10,6 +10,7 @@
 #include "rpkt.h"
 #include "stats.h"
 #include "vectors.h"
+#include "vpkt.h"
 
 // constant for van-Regemorter approximation.
 #define C_0 (5.465e-11)
