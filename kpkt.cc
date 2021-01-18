@@ -13,7 +13,12 @@
 
 static __managed__ cellhistorycoolinglist_t *coolinglist;
 
-extern __host__ __device__ inline int get_coolinglistoffset(int element, int ion);
+
+__host__ __device__
+int get_coolinglistoffset(int element, int ion)
+{
+  return globals::elements[element].ions[ion].coolingoffset;
+}
 
 
 __host__ __device__
