@@ -432,7 +432,7 @@ void setup_coolinglist(void)
           }
         }
       }
-      assert(i = get_coolinglistoffset(element, ion) + get_ncoolingterms(element, ion));
+      assert(i == get_coolinglistoffset(element, ion) + get_ncoolingterms(element, ion));
     }
   }
   assert(globals::ncoolingterms == i); // if this doesn't match, we miscalculated the number of cooling terms
