@@ -44,6 +44,16 @@ else ifneq (, $(shell which mpicxx))
 	CXXFLAGS += -std=c++17 -march=native -O3 -g #-fopenmp=libomp
 
 sn3d sn3dcuda: CXXFLAGS += -DMPI_ON
+
+else ifneq ($(SYSNAME),ubuntu)
+	CXX = c++
+      LDFLAGS= -lgsl -lgslcblas -lm -I/home/localadmin_ccollins/gsl/include
+      INCLUDE = /home/localadmin_ccollins/gsl/include
+      LIB = /home/localadmin_ccollins/gsl/lib
+      CXXFLAGS += -O3 -g -I$(INCLUDE)
+      LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
+	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
+
 else
 	CXX = c++
 	# CXX = icpc
