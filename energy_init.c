@@ -22,8 +22,8 @@ void energy_in_cells_1d_read()
 #ifdef USE_ENERGYINPUTFILE
   FILE *cell_energies_file;
   /// energy released in simulation during start time and end time
-  float start_time; //todo: change to model read in time
-  float end_time; //todo: do I need this?
+//  float start_time; //todo: change to model read in time
+//  float end_time; //todo: do I need this?
 
   int number_of_cells; // number of model grid cells
   int cellnumber; // dummy value - this isn't saved
@@ -37,10 +37,10 @@ void energy_in_cells_1d_read()
   }
 
   /// read start and end times in days
-  fscanf(cell_energies_file, "%g", &start_time);
-  fscanf(cell_energies_file, "%g", &end_time);
+//  fscanf(cell_energies_file, "%g", &start_time);
+//  fscanf(cell_energies_file, "%g", &end_time);
 
-  fscanf(cell_energies_file, "%lf", &etot_fromenergyfile);
+//  fscanf(cell_energies_file, "%lf", &etot_fromenergyfile);
 //  todo:remove, just get from summing energies
 
   fscanf(cell_energies_file, "%d", &number_of_cells);
