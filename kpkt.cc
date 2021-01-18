@@ -200,7 +200,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
     contrib += C;
     globals::cellhistory[tid].cooling_contrib[i] = contrib;
 
-    assert_testmodeonly(coolinglist[i].type = COOLINGTYPE_FF);
+    assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_FF);
     assert_testmodeonly(coolinglist[i].element == element);
     assert_testmodeonly(coolinglist[i].ion == ion);
 
@@ -228,7 +228,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
     }
     globals::cellhistory[tid].cooling_contrib[i] = contrib;
 
-    assert_testmodeonly(coolinglist[i].type = COOLINGTYPE_COLLEXC);
+    assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_COLLEXC);
     assert_testmodeonly(coolinglist[i].element == element);
     assert_testmodeonly(coolinglist[i].ion == ion);
 
@@ -257,7 +257,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
         contrib += C;
         globals::cellhistory[tid].cooling_contrib[i] = contrib;
 
-        assert_testmodeonly(coolinglist[i].type = COOLINGTYPE_COLLION);
+        assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_COLLION);
         assert_testmodeonly(coolinglist[i].element == element);
         assert_testmodeonly(coolinglist[i].ion == ion);
         //if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d, coolingtype %d, i %d, low %d\n",contrib,oldcoolingsum,C,element,ion,level,globals::cellhistory[tid].coolinglist[i].type,i,low);
@@ -281,7 +281,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
         contrib += C;
         globals::cellhistory[tid].cooling_contrib[i] = contrib;
 
-        assert_testmodeonly(coolinglist[i].type = COOLINGTYPE_FB);
+        assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_FB);
         assert_testmodeonly(coolinglist[i].element == element);
         assert_testmodeonly(coolinglist[i].ion == ion);
 
