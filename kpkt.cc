@@ -787,8 +787,8 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
 
       if (upper < 0)
       {
-        printout("WARNING: Could not select an upper level. modelgridindex %d i %d element %d ion %d rndcool %g contrib_low %g contrib %g (should match %g) upper %d\n",
-                 modelgridindex, i, element, ion, rndcool, contrib_low, contrib, globals::cellhistory[tid].cooling_contrib[i], upper);
+        printout("WARNING: Could not select an upper level. modelgridindex %d i %d element %d ion %d level %d rndcool %g contrib_low %g contrib %g (should match %g) upper %d\n",
+                 modelgridindex, i, element, ion, level, rndcool, contrib_low, contrib, globals::cellhistory[tid].cooling_contrib[i], upper);
         abort();
       }
       assert(upper >= 0);
