@@ -551,16 +551,6 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     /// Randomly select the occuring cooling process out of the important ones
     double coolingsum = 0.;
     double zrand = gsl_rng_uniform(rng);
-    //if (globals::debuglevel == 2) printout("do_kpkt: totalcooling %g, zrand %g, cut %g\n",globals::cellhistory[tid].totalcooling,zrand,COOLINGCUT);
-    //printout("do_kpkt: totalcooling %g, zrand %g, cut %g\n",globals::cellhistory[tid].totalcooling,zrand,COOLINGCUT);
-    /*for (i = 0; i < importantcoolingterms; i++)
-    {
-      coolingsum += globals::cellhistory[tid].coolinglist[i].contribution;
-      if (globals::debuglevel == 2) printout("do_kpkt: loop i %d, coolingsum %g\n",i,coolingsum);
-      //printout("do_kpkt: loop i %d, coolingsum %g, contr %g\n",i,coolingsum,globals::cellhistory[tid].coolinglist[i].contribution);
-      if (zrand*globals::cellhistory[tid].totalcooling < coolingsum) break;
-    }*/
-
 
     const double rndcool = zrand * globals::modelgrid[modelgridindex].totalcooling;
     // printout("rndcool %g totalcooling %g\n",rndcool, globals::modelgrid[modelgridindex].totalcooling);
@@ -844,7 +834,6 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     {
       printout("[fatal] do_kpkt: coolinglist.type mismatch\n");
       printout("[fatal] do_kpkt: zrand %g, globals::modelgrid[modelgridindex].totalcooling %g, coolingsum %g, i %d\n", zrand, globals::modelgrid[modelgridindex].totalcooling, coolingsum,i);
-      printout("[fatal] do_kpkt: COOLINGCUT %lg, importantcoolingterms %d, tid %d\n",COOLINGCUT,globals::importantcoolingterms,tid);
       printout("[fatal] do_kpkt: coolinglist[i].type %d\n",coolinglist[i].type);
       printout("[fatal] do_kpkt: pkt_ptr->where %d, mgi %d\n",pkt_ptr->where,modelgridindex);
       abort();

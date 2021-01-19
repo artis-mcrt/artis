@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include "constants.h"
 
-// Number of energy packets per process (OpenMP threads share these pacekts)
+// Number of energy packets per process (MPI rank). OpenMP threads share these packets
 #define MPKTS 1000000
 
 // Max number of propagation grid cells
