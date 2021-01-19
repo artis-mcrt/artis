@@ -45,7 +45,7 @@ double boundary_cross (pkt_ptr, tstart, snext)
   cellxmin = cell[pkt_ptr->where].pos_init[0];
   cellymin = cell[pkt_ptr->where].pos_init[1];
   cellzmin = cell[pkt_ptr->where].pos_init[2];
-  //printout("boundary.c: cellxmin %g, cellymin %g, cellzmin %g\n",cellxmin,cellymin,cellzmin);
+//  printout("boundary.c: cellxmin %g, cellymin %g, cellzmin %g pkt number %d \n",cellxmin,cellymin,cellzmin, pkt_ptr->number);
   
   
   cellxmax = cell[pkt_ptr->where].pos_init[0] + wid_init;
@@ -194,12 +194,12 @@ double boundary_cross (pkt_ptr, tstart, snext)
 
   tz_plus = ((z0 - (vz * tstart))/(cellzmax - (vz * tmin)) * tmin) - tstart;
   tz_minus = ((z0 - (vz * tstart))/(cellzmin - (vz * tmin)) * tmin) - tstart;
-  printout("mgi %d\n", cell[pkt_ptr->where].modelgridindex);
+//  printout("mgi %d\n", cell[pkt_ptr->where].modelgridindex);
   /** We now need to identify the shortest +ve time - that's the one we want. */
   choice = 0;         ///just a control variable to
   time = 1.e99;
   //close = 1.e99;
-  //printout("bondary.c check value of not_allowed = %d\n",not_allowed);
+//  printout("boundary.c check value of not_allowed = %d\n",not_allowed);
   if ((tx_plus > 0) && (tx_plus < time) && (not_allowed != NEG_X))
   {
     choice = 1;
@@ -338,7 +338,8 @@ double boundary_cross (pkt_ptr, tstart, snext)
     printout("cellxmax %g cellymax %g cellzmax %g\n", cellxmax, cellymax, cellzmax);
     printout("cellxmin %g cellymin %g cellzmin %g\n", cellxmin, cellymin, cellzmin);
     printout("tstart %g tmin %g\n", tstart, tmin);
-    printout("mgi %d", cell[pkt_ptr->where].modelgridindex);
+    printout("value of not_allowed = %d\n", not_allowed);
+    printout("mgi %d pkt number %d", cell[pkt_ptr->where].modelgridindex, pkt_ptr->number);
       
     exit(0);
   }
@@ -383,7 +384,7 @@ int change_cell(pkt_ptr, snext, end_packet, t_current)
       printout("[debug] snext %d\n",snext);
     }
   #endif
-  
+//    printout("[debug] snext %d pkt cell number %d mgi %d\n",snext, pkt_ptr->where, cell[pkt_ptr->where].modelgridindex);
   if (snext == -99)
   {
       /* Then the packet is exiting the grid. We need to record
@@ -393,6 +394,8 @@ int change_cell(pkt_ptr, snext, end_packet, t_current)
     pkt_ptr->type = TYPE_ESCAPE;
     nesc += 1;
     *end_packet = 1;
+//    printout("[debug] escape type %d escape time %d pkt type %d nesc %d pkt number %d\n",
+//             pkt_ptr->escape_type, pkt_ptr->escape_time, pkt_ptr->type, nesc, pkt_ptr->number);
     return(0);
   }
   else
