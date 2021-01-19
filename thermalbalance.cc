@@ -46,13 +46,13 @@ typedef struct
       const double T_lower =  MINTEMP * exp(lowerindex*T_step_log);
       const double T_upper =  MINTEMP * exp(upperindex*T_step_log);
 
-      const double f_upper = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[upperindex];
-      const double f_lower = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[lowerindex];
+      const double f_upper = globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[upperindex];
+      const double f_lower = globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[lowerindex];
 
       bfheatingcoeff = (f_lower + (f_upper - f_lower)/(T_upper - T_lower) * (T - T_lower));
     }
     else
-      bfheatingcoeff = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[TABLESIZE-1];
+      bfheatingcoeff = globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[TABLESIZE-1];
 
     return W * bfheatingcoeff;
   }
@@ -181,9 +181,9 @@ void calculate_bfheatingcoeffs(int modelgridindex)
           assert(std::isfinite(bfheatingcoeff));
 
           #if !NO_LUT_BFHEATING
-          const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
+          const int index_in_groundlevelcontestimator = globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
           if (index_in_groundlevelcontestimator >= 0)
-            bfheatingcoeff *= bfheatingestimator[modelgridindex*get_nelements()*maxion + index_in_groundlevelcontestimator];
+            bfheatingcoeff *= globals::bfheatingestimator[modelgridindex*get_nelements()*get_max_nions() + index_in_groundlevelcontestimator];
           #endif
         }
         globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].bfheatingcoeff = bfheatingcoeff;
@@ -302,7 +302,7 @@ static void calculate_heating_rates(
 
         /// Bound-free heating (from estimators)
         /// ------------------------------------
-        //if (ion < nions-1) bfheating += bfheatingestimator[cellnumber*get_nelements()*maxion+element*maxion+ion];
+        //if (ion < nions-1) bfheating += globals::bfheatingestimator[cellnumber*get_nelements()*get_max_nions()+element*get_max_nions()+ion];
 
         /// Bound-free heating (renormalised analytical calculation)
         /// --------------------------------------------------------
@@ -588,7 +588,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
         while (status == GSL_CONTINUE && iter2 < maxit);
         if (status == GSL_CONTINUE) printout("[warning] call_T_e_finder: T_e did not converge within %d iterations\n",maxit);
         gsl_root_fsolver_free(T_e_solver);
-        //printout("%d %g %g %g %g %g %g %g %g %g %g %g %g\n",cellnumber,T_e,ffheatingestimator[cellnumber*get_nelements()*maxion+0*maxion+0],bfheatingestimator[cellnumber*get_nelements()*maxion+0*maxion+0],heatingrates[tid].collbb,heatingrates[tid].collbf,heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collbb,coolingrates[tid].collbf,coolingrates[tid].adiabatic,ffheatingestimator[cellnumber*get_nelements()*maxion+0*maxion+0]+bfheatingestimator[cellnumber*get_nelements()*maxion+0*maxion+0]+heatingrates[tid].collbb+heatingrates[tid].collbf+heatingrates[tid].gamma-coolingrates[tid].ff-coolingrates[tid].fb-coolingrates[tid].collbb-coolingrates[tid].collbf-coolingrates[tid].adiabatic);
+        //printout("%d %g %g %g %g %g %g %g %g %g %g %g %g\n",cellnumber,T_e,ffheatingestimator[cellnumber*get_nelements()*get_max_nions()+0*get_max_nions()+0],bfheatingestimator[cellnumber*get_nelements()*get_max_nions()+0*get_max_nions()+0],heatingrates[tid].collbb,heatingrates[tid].collbf,heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collbb,coolingrates[tid].collbf,coolingrates[tid].adiabatic,ffheatingestimator[cellnumber*get_nelements()*get_max_nions()+0*get_max_nions()+0]+bfheatingestimator[cellnumber*get_nelements()*get_max_nions()+0*get_max_nions()+0]+heatingrates[tid].collbb+heatingrates[tid].collbf+heatingrates[tid].gamma-coolingrates[tid].ff-coolingrates[tid].fb-coolingrates[tid].collbb-coolingrates[tid].collbf-coolingrates[tid].adiabatic);
       }
   }
   */
@@ -689,9 +689,9 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 // //         ndowntrans = get_ndowntrans(element, ion, level);
 // //         for (ii = 1; ii <= ndowntrans; ii++)
 // //         {
-// //           lower = elements[element].ions[ion].levels[level].downtrans[ii].targetlevel;
-// //           epsilon_target = elements[element].ions[ion].levels[level].downtrans[ii].epsilon;
-// //           lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[ii];
+// //           lower = globals::elements[element].ions[ion].levels[level].downtrans[ii].targetlevel;
+// //           epsilon_target = globals::elements[element].ions[ion].levels[level].downtrans[ii].epsilon;
+// //           lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[ii];
 // //           epsilon_trans = epsilon_current - epsilon_target;
 // //           C = col_deexcitation(pkt_ptr,lower,epsilon_trans,statweight_target,lineindex)*epsilon_trans;
 // //           C_deexc += C;
@@ -755,7 +755,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 //
 //       /// Bound-free heating (from estimators)
 //       /// ------------------------------------
-//       if (ion < nions-1) bfheating += bfheatingestimator_save[cellnumber*get_nelements()*maxion+element*maxion+ion];
+//       if (ion < nions-1) bfheating += bfheatingestimator_save[cellnumber*get_nelements()*get_max_nions()+element*get_max_nions()+ion];
 //     }
 //   }
 //

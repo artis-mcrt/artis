@@ -940,8 +940,8 @@ static void read_grid_restart_data(const int timestep)
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions; ion++)
           {
-            const int estimindex = mgi * get_nelements() * maxion + element * maxion + ion;
-            fscanf(gridsave_file, " %lg %lg", &corrphotoionrenorm[estimindex], &gammaestimator[estimindex]);
+            const int estimindex = mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
+            fscanf(gridsave_file, " %lg %lg", &globals::corrphotoionrenorm[estimindex], &globals::gammaestimator[estimindex]);
           }
         }
       #endif

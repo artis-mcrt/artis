@@ -128,7 +128,7 @@ double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge
   }
   else if (i < globals::NPHIXSPOINTS - 1)
   {
-    // sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[i];
+    // sigma_bf = globals::elements[element].ions[ion].levels[level].photoion_xs[i];
 
     const double sigma_bf_a = photoion_xs[i];
     const double sigma_bf_b = photoion_xs[i + 1];
@@ -197,6 +197,14 @@ int get_elementindex(int Z)
   //printout("[fatal] get_elementindex: element Z=%d was not found in atomic data ... abort\n");
   //abort();;
   return -100;
+}
+
+
+__host__ __device__
+int get_max_nions(void)
+{
+  // number greater than or equal to nions(element) for all elements
+  return globals::maxion;
 }
 
 

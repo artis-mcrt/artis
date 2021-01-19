@@ -183,16 +183,16 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
 
   #ifndef FORCE_LTE
     #if (!NO_LUT_PHOTOION)
-      if ((!simulation_continued_from_saved) || (nts - itstep != 0) || (titer != 0))
+      if ((!globals::simulation_continued_from_saved) || (nts - globals::itstep != 0) || (titer != 0))
       {
         MPI_Barrier(MPI_COMM_WORLD);
         /// Reduce the corrphotoionrenorm array.
         printout("nts %d, titer %d: bcast corr photoionrenorm\n", nts, titer);
-        MPI_Allreduce(MPI_IN_PLACE, &corrphotoionrenorm, MMODELGRID * get_nelements() * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &corrphotoionrenorm, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         /// Reduce the gammaestimator array. Only needed to write restart data.
         printout("nts %d, titer %d: bcast gammaestimator\n", nts, titer);
-        MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * get_nelements() * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       }
     #endif
   #endif
@@ -209,11 +209,11 @@ static void mpi_reduce_estimators(int my_rank, int nts)
     MPI_Barrier(MPI_COMM_WORLD);
     #if (!NO_LUT_PHOTOION)
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * get_nelements() * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
     #if (!NO_LUT_BFHEATING)
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &bfheatingestimator, MMODELGRID * get_nelements() * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &bfheatingestimator, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
   #endif
 
@@ -442,16 +442,16 @@ static bool do_timestep(
 
   #ifndef FORCE_LTE
     #if (!NO_LUT_PHOTOION)
-      /// Initialise corrphotoionrenorm[i] to zero before update_grid is called
+      /// Initialise globals::corrphotoionrenorm[i] to zero before update_grid is called
       /// This allows reduction after update_grid has finished
       /// unless they have been read from file and must neither be touched
       /// nor broadcasted after update_grid
-      if ((!simulation_continued_from_saved) || (nts - itstep != 0) || (titer != 0))
+      if ((!globals::simulation_continued_from_saved) || (nts - globals::itstep != 0) || (titer != 0))
       {
         printout("nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
-        for (int i = 0; i < MMODELGRID * get_nelements() * maxion; i++)
+        for (int i = 0; i < MMODELGRID * get_nelements() * get_max_nions(); i++)
         {
-          corrphotoionrenorm[i] = 0.;
+          globals::corrphotoionrenorm[i] = 0.;
         }
         printout("after nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
       }
@@ -991,7 +991,7 @@ int main(int argc, char** argv)
     //time_init();
 
     /// Standard approach: for loop over given number of time steps
-    //for (nts = itstep; nts < ftstep; nts++)
+    //for (nts = globals::itstep; nts < ftstep; nts++)
     //{
 
     /// Now use while loop to allow for timed restarts
@@ -1200,7 +1200,7 @@ extern inline FILE *fopen_required(const char *filename, const char *mode);
       nuptrans = get_nuptrans(element, ion, lower);
       int i = 0; i < nuptrans; i++)
       {
-        lineindex = elements[element].ions[ion].levels[lower].uptrans_lineindicies[i];
+        lineindex = globals::elements[element].ions[ion].levels[lower].uptrans_lineindicies[i];
         upper = linelist[lineindex].upperlevelindex;
         nu_trans = (elements[element].ions[ion].levels[lower].uptrans[i].epsilon - epsilon_lower)/H;
 

@@ -18,6 +18,7 @@ __host__ __device__ void set_nelements(const int nelements_in);
 __host__ __device__ int get_nelements(void);
 __host__ __device__ int get_element(int element);
 __host__ __device__ int get_elementindex(int Z);
+__host__ __device__ int get_max_nions(void);
 __host__ __device__ int get_nions(int element);
 __host__ __device__ int get_ionstage(int element, int ion);
 __host__ __device__ int get_nlevels(int element, int ion);
