@@ -174,16 +174,16 @@ void zero_estimators(void)
         for (int ion = 0; ion < globals::maxion; ion++)
         {
           #if (!NO_LUT_PHOTOION)
-            gammaestimator[n*get_nelements()*maxion+element*maxion+ion] = 0.;
+            globals::gammaestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
           #endif
           #if (!NO_LUT_BFHEATING)
-            bfheatingestimator[n*get_nelements()*maxion+element*maxion+ion] = 0.;
+            globals::bfheatingestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
           #endif
 
-          // photoionestimator[n*get_nelements()*maxion+element*maxion+ion] = 0.;
-          // stimrecombestimator[n*get_nelements()*maxion+element*maxion+ion] = 0.;
-          // ionfluxestimator[n*get_nelements()*maxion+element*maxion+ion] = 0.;
-          // twiddle[n*get_nelements()*maxion+element*maxion+ion] = 0.;
+          // photoionestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
+          // stimrecombestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
+          // ionfluxestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
+          // twiddle[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
         }
       }
     #endif

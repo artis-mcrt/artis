@@ -160,15 +160,15 @@ double phi(const int element, const int ion, const int modelgridindex)
 //     }
 // else
   {
-    //Gamma = photoionestimator[cellnumber*get_nelements()*maxion+element*maxion+ion];
+    //Gamma = photoionestimator[cellnumber*get_nelements()*get_max_nions()+element*get_max_nions()+ion];
     #if NO_LUT_PHOTOION
       const double Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
     #else
-      const double Gamma = gammaestimator[modelgridindex * get_nelements() * maxion + element * maxion + ion];
+      const double Gamma = globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() + ion];
     #endif
     // printout("phicompare element %d ion %d T_e = %g gammaestimator %g calculate_iongamma_per_gspop %g\n",
     //          element, ion, T_e,
-    //          gammaestimator[modelgridindex * get_nelements() * maxion + element * maxion + ion],
+    //          globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() + ion],
     //          calculate_iongamma_per_gspop(modelgridindex, element, ion));
 
     // Gamma is the photoionization rate per ground level pop
@@ -180,7 +180,7 @@ double phi(const int element, const int ion, const int modelgridindex)
       abort();
     }
 
-    //Alpha_st = stimrecombestimator[cellnumber*get_nelements()*maxion+element*maxion+ion];
+    //Alpha_st = stimrecombestimator[cellnumber*get_nelements()*get_max_nions()+element*get_max_nions()+ion];
     double Alpha_st = 0.; ///approximate treatment neglects stimulated recombination
 
     double Alpha_sp = 0.;

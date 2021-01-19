@@ -657,32 +657,32 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
         #if (!NO_LUT_PHOTOION)
         const double distance_e_cmf_over_nu = distance_e_cmf / nu;
         #endif
-        for (int i = 0; i < nbfcontinua_ground; i++)
+        for (int i = 0; i < globals::nbfcontinua_ground; i++)
         {
-          const double nu_edge = phixslist[tid].groundcont[i].nu_edge;
+          const double nu_edge = globals::phixslist[tid].groundcont[i].nu_edge;
           if (nu > nu_edge)
           {
-            const int element = phixslist[tid].groundcont[i].element;
-            const int ion = phixslist[tid].groundcont[i].ion;
+            const int element = globals::phixslist[tid].groundcont[i].element;
+            const int ion = globals::phixslist[tid].groundcont[i].ion;
             /// Cells with zero abundance for a specific element have zero contribution
             /// (set in calculate_kappa_rpkt_cont and therefore do not contribute to
             /// the estimators
             if (get_elem_abundance(modelgridindex, element) > 0)
             {
-              const int ionestimindex = modelgridindex * get_nelements() * maxion + element * maxion + ion;
+              const int ionestimindex = modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
               #if (!NO_LUT_PHOTOION)
-                safeadd(gammaestimator[ionestimindex], phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf_over_nu);
+                safeadd(globals::gammaestimator[ionestimindex], globals::phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf_over_nu);
 
                 #ifdef DEBUG_ON
-                if (!std::isfinite(gammaestimator[ionestimindex]))
+                if (!std::isfinite(globals::gammaestimator[ionestimindex]))
                 {
-                  printout("[fatal] update_estimators: gamma estimator becomes non finite: level %d, gamma_contr %g, distance_e_cmf_over_nu %g\n", i, phixslist[tid].groundcont[i].gamma_contr, distance_e_cmf_over_nu);
+                  printout("[fatal] update_estimators: gamma estimator becomes non finite: level %d, gamma_contr %g, distance_e_cmf_over_nu %g\n", i, globals::phixslist[tid].groundcont[i].gamma_contr, distance_e_cmf_over_nu);
                   abort();
                 }
                 #endif
               #endif
               #if (!NO_LUT_BFHEATING)
-                safeadd(bfheatingestimator[ionestimindex], phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf * (1. - nu_edge/nu));
+                safeadd(globals::bfheatingestimator[ionestimindex], globals::phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf * (1. - nu_edge/nu));
               #endif
             }
           }
