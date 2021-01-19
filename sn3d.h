@@ -468,7 +468,7 @@ double gamma_grey; /* set to -ve for proper treatment. If possitive, then
 
 double min_den;
 
-#define GREY_OP 0.1
+#define GREY_OP 0.1 // cm2 / g
 
 //float cont[MGRID+1];
 double max_path_step;
