@@ -91,14 +91,8 @@
 
 #define COOLING_UNDEFINED       -99
 
-#define COOLINGCUT              0.99 //1.01
-//#define TAKE_N_BFCONTINUA       900 //40 //900 //20 //900 //40 //20
-
 #define RPKT_EVENTTYPE_BB 550
 #define RPKT_EVENTTYPE_CONT 551
-
-#define MAX_RSCAT 50000
-#define MIN_XS 1e-40
 
 extern int tid;
 extern __managed__ bool use_cellhist;
