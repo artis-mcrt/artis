@@ -71,7 +71,6 @@ namespace globals
 
   __managed__ int n_out_it; // # of sets of 1,000,000 photons to run.
 
-  __managed__ int npts_model; // number of points in 1-D input model
   __managed__ double vout_model[MMODELGRID];
   __managed__ double t_model; // time at which densities in input model are correct.
   __managed__ int ncoord1_model;

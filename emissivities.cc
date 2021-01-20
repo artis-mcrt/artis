@@ -145,7 +145,7 @@ void pp_emiss_cont(const PKT *pkt_ptr, double dist)
 void zero_estimators(void)
 {
   // for (n=0; n < ngrid; n++)
-  for (int n = 0; n < globals::npts_model; n++)
+  for (int n = 0; n < get_npts_model(); n++)
   {
     radfield::zero_estimators(n);
 
@@ -215,7 +215,7 @@ void normalise_compton_estimators(const int nts, struct time *time_step)
   }
 
   // for (n=0; n < ngrid; n++)
-  for (int n = 0; n < globals::npts_model; n++)
+  for (int n = 0; n < get_npts_model(); n++)
   {
     const double volume = vol_init_modelcell(n);
     for (int m = 0; m < globals::emiss_max; m++)
@@ -260,7 +260,7 @@ void write_compton_estimators(int nts)
     est_file = fopen_required(filename, "rb");
 
       //for (n=0; n < ngrid; n++)
-    for (int n = 0; n < globals::npts_model; n++)
+    for (int n = 0; n < get_npts_model(); n++)
     {
       for (int m = 0; m < globals::emiss_max; m++)
       {
@@ -275,7 +275,7 @@ void write_compton_estimators(int nts)
 
   est_file = fopen_required(filename, "wb+");
 
-  for (int n = 0; n < globals::npts_model; n++)
+  for (int n = 0; n < get_npts_model(); n++)
   {
     for (int m = 0; m < globals::emiss_max; m++)
     {

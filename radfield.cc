@@ -405,7 +405,7 @@ void init(int my_rank)
 void initialise_prev_titer_photoionestimators(void)
 {
   //for (n = 0; n < ngrid; n++)
-  for (int n = 0; n < globals::npts_model; n++)
+  for (int n = 0; n < get_npts_model(); n++)
   {
     //double T_e = get_Te(n);
     #ifdef DO_TITER
@@ -1666,14 +1666,14 @@ void titer_nuJ(const int modelgridindex)
 void reduce_estimators(void)
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 {
-  MPI_Allreduce(MPI_IN_PLACE, J, globals::npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, J, get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   #ifndef FORCE_LTE
-  MPI_Allreduce(MPI_IN_PLACE, nuJ, globals::npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, nuJ, get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   #endif
 
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
-    for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
+    for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
     {
       if (get_numassociatedcells(modelgridindex) > 0)
       {
@@ -1688,7 +1688,7 @@ void reduce_estimators(void)
     const time_t sys_time_start_reduction = time(NULL);
     printout("Reducing binned radiation field estimators");
 
-    for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
+    for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
     {
       // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, get_numassociatedcells(modelgridindex));
       if (get_numassociatedcells(modelgridindex) > 0)
@@ -1713,7 +1713,7 @@ void reduce_estimators(void)
     const time_t sys_time_start_reduction = time(NULL);
     printout("Reducing detailed line estimators");
 
-    for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
+    for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
     {
       // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, get_numassociatedcells(modelgridindex));
       if (get_numassociatedcells(modelgridindex) > 0)
@@ -1786,7 +1786,7 @@ void write_restart_data(FILE *gridsave_file)
   {
     fprintf(gridsave_file, "%d\n", globals::nbfcontinua);
 
-    for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
+    for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
     {
       if (get_numassociatedcells(modelgridindex) > 0)
       {
@@ -1810,7 +1810,7 @@ void write_restart_data(FILE *gridsave_file)
     }
   }
 
-  for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
@@ -1901,7 +1901,7 @@ void read_restart_data(FILE *gridsave_file)
     fscanf(gridsave_file, "%d\n", &gridsave_nbf_in);
     assert(gridsave_nbf_in == globals::nbfcontinua);
 
-    for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
+    for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
     {
       if (get_numassociatedcells(modelgridindex) > 0)
       {
@@ -1944,7 +1944,7 @@ void read_restart_data(FILE *gridsave_file)
     }
   }
 
-  for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {

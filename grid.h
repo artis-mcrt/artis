@@ -90,6 +90,8 @@ __host__ __device__ float get_stable_abund(int mgi, int anumber);
 __host__ __device__ int get_numassociatedcells(int modelgridindex);
 __host__ __device__ enum model_types get_model_type(void);
 __host__ __device__ void set_model_type(enum model_types model_type_value);
+__host__ __device__ int get_npts_model(void);
+__host__ __device__ void set_npts_model(int npts_model);
 void show_totmassradionuclides(void);
 double get_totmassradionuclide(enum radionuclides nuc);
 

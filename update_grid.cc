@@ -1342,7 +1342,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     //for (ncl = nstart; ncl < nstart+nblock; ncl++)
     //for (n = nstart; n < nstart+nblock; n++)
 
-    for (int mgi = 0; mgi < globals::npts_model; mgi++)
+    for (int mgi = 0; mgi < get_npts_model(); mgi++)
     {
       /// Check if this task should work on the current model grid cell.
       /// If yes, update the cell and write out the estimators
@@ -1875,7 +1875,7 @@ void write_grid_restart_data(const int timestep)
 
   fprintf(gridsave_file, "%d ", timestep);
 
-  for (int mgi = 0; mgi < globals::npts_model; mgi++)
+  for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
     const bool nonemptycell = (get_numassociatedcells(mgi) > 0);
 
