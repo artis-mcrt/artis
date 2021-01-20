@@ -1709,7 +1709,7 @@ void nltepop_write_restart_data(FILE *restart_file)
 
   fprintf(restart_file, "%d\n", globals::total_nlte_levels);
 
-  for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
@@ -1758,7 +1758,7 @@ void nltepop_read_restart_data(FILE *restart_file)
     abort();
   }
 
-  for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {

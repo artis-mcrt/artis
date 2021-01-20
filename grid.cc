@@ -10,6 +10,7 @@
 
 
 __managed__ enum model_types model_type = RHO_1D_READ;
+__managed__ int npts_model = 0; // number of points in 1-D input model
 
 static long mem_usage_nltepops = 0;
 
@@ -327,6 +328,25 @@ __host__ __device__
 void set_model_type(enum model_types model_type_value)
 {
   model_type = model_type_value;
+}
+
+
+__host__ __device__
+int get_npts_model(void)
+{
+  return npts_model;
+}
+
+
+__host__ __device__
+void set_npts_model(int new_npts_model)
+{
+  if (new_npts_model >= MMODELGRID)
+  {
+    printout("ERROR: %d = npts_model >= MMODELGRID = %d.\n", new_npts_model, MMODELGRID);
+    abort();
+  }
+  npts_model = new_npts_model;
 }
 
 
@@ -689,7 +709,7 @@ static void allocate_nonemptycells(void)
   }
 
   int numnonemptycells = 0;
-  for (int mgi = 0; mgi < globals::npts_model; mgi++)
+  for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
     if (get_numassociatedcells(mgi) > 0)
     {
@@ -739,7 +759,7 @@ static void density_1d_read(void)
       {
         globals::cell[cellindex].modelgridindex = 0;
 
-        for (int mgi = 0; mgi < (globals::npts_model - 1); mgi++)
+        for (int mgi = 0; mgi < (get_npts_model() - 1); mgi++)
         {
           if (globals::vout_model[mgi] < vcell)
           {
@@ -834,7 +854,7 @@ static void abundances_read(void)
   /// i.e. in total one integer and 30 floats.
 
   // loop over propagation cells for 3D models, or modelgrid cells
-  const int ncount = threedimensional ? globals::ngrid : globals::npts_model;
+  const int ncount = threedimensional ? globals::ngrid : get_npts_model();
   for (int n = 0; n < ncount; n++)
   {
     const int mgi = threedimensional ? globals::cell[n].modelgridindex : n;
@@ -904,7 +924,7 @@ static void read_grid_restart_data(const int timestep)
   fscanf(gridsave_file, "%d ", &timestep_in);
   assert(timestep_in = timestep);
 
-  for (int mgi = 0; mgi < globals::npts_model; mgi++)
+  for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
     int mgi_in;
     float T_R;
@@ -1023,7 +1043,7 @@ static void assign_temperature(void)
   //factor56ni = CLIGHT/4/STEBO * nucdecayenergy(NUCLIDE_NI56)/56/MH;
   /// This works only for the inbuilt Lucy model
   //factor56ni = CLIGHT/4/STEBO * 3*mtot/4/PI * nucdecayenergy(NUCLIDE_NI56)/56/MH  / pow(vmax,3);
-  for (int mgi = 0; mgi < globals::npts_model; mgi++)
+  for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
     // alternative, not correct because it neglects expansion factor
     // const double decayedenergy_per_mass = get_decayedenergy_per_ejectamass(mgi, tstart);
@@ -1130,7 +1150,7 @@ static void spherical1d_grid_setup(void)
   globals::coordlabel[1] = '?';
   globals::coordlabel[2] = '?';
 
-  globals::ncoordgrid[0] = globals::npts_model;
+  globals::ncoordgrid[0] = get_npts_model();
   globals::ncoordgrid[1] = 1;
   globals::ncoordgrid[2] = 1;
   globals::ngrid = globals::ncoordgrid[0] * globals::ncoordgrid[1] * globals::ncoordgrid[2];
@@ -1141,7 +1161,7 @@ static void spherical1d_grid_setup(void)
   assert(globals::ngrid <= MGRID);
 
   // in this mode, cellindex and modelgridindex are the same thing
-  for (int cellindex = 0; cellindex < globals::npts_model; cellindex++)
+  for (int cellindex = 0; cellindex < get_npts_model(); cellindex++)
   {
     const double v_inner = cellindex > 0 ? globals::vout_model[cellindex - 1] : 0.;
     globals::cell[cellindex].modelgridindex = cellindex;
@@ -1240,7 +1260,7 @@ void grid_init(int my_rank)
     if (totmassradionuclide[iso] <= 0)
       continue;
     double totmassradionuclide_actual = 0.;
-    for (int mgi = 0; mgi < globals::npts_model; mgi++)
+    for (int mgi = 0; mgi < get_npts_model(); mgi++)
     {
       totmassradionuclide_actual += get_modelinitradioabund(mgi, (enum radionuclides) iso) * get_rhoinit(mgi) * vol_init_modelcell(mgi);
     }
@@ -1248,7 +1268,7 @@ void grid_init(int my_rank)
     {
       const double ratio = totmassradionuclide[iso] / totmassradionuclide_actual;
       // printout("nuclide %d ratio %g\n", iso, ratio);
-      for (int mgi = 0; mgi < globals::npts_model; mgi++)
+      for (int mgi = 0; mgi < get_npts_model(); mgi++)
       {
         if (get_numassociatedcells(mgi) > 0)
         {
@@ -1271,7 +1291,7 @@ void show_totmassradionuclides(void)
     totmassradionuclide[iso] = 0.;
 
   int n1 = 0;
-  for (int mgi = 0; mgi < globals::npts_model; mgi++)
+  for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
     double cellvolume = 0.;
     if (get_model_type() == RHO_1D_READ)

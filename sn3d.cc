@@ -641,24 +641,24 @@ static void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, i
   #ifndef MPI_ON
     // no MPI, single process updates all cells
     *nstart = 0;
-    *ndo = globals::npts_model;
+    *ndo = get_npts_model();
     return;
   #endif
 
   int n_leftover = 0;
 
-  int nblock = globals::npts_model / nprocesses; // integer division, minimum cells for any process
+  int nblock = get_npts_model() / nprocesses; // integer division, minimum cells for any process
   const int numtot = nblock * nprocesses; // cells counted if all processes do the minimum number of cells
-  if (numtot > globals::npts_model) // LJS: should never be the case?
+  if (numtot > get_npts_model()) // LJS: should never be the case?
   {
     nblock = nblock - 1;
     *maxndo = nblock + 1;
-    n_leftover = globals::npts_model - (nblock * nprocesses);
+    n_leftover = get_npts_model() - (nblock * nprocesses);
   }
-  else if (numtot < globals::npts_model)
+  else if (numtot < get_npts_model())
   {
     *maxndo = nblock + 1;
-    n_leftover = globals::npts_model - (nblock * nprocesses);
+    n_leftover = get_npts_model() - (nblock * nprocesses);
   }
   else
   {

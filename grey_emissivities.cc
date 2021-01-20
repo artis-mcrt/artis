@@ -127,7 +127,7 @@ void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist)
 void normalise_grey(int nts)
 {
   const double dt = globals::time_step[nts].width;
-  for (int mgi = 0; mgi < globals::npts_model; mgi++)
+  for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
     const double dV = vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
 
@@ -176,7 +176,7 @@ void write_grey(int nts)
     }
 
     //for (n=0; n < ngrid; n++)
-    for (int n = 0; n < globals::npts_model; n++)
+    for (int n = 0; n < get_npts_model(); n++)
     {
       float dum;
       fscanf(est_file, "%g", &dum);
@@ -192,7 +192,7 @@ void write_grey(int nts)
   }
 
   //for (n=0; n < ngrid; n++)
-  for (int n = 0; n < globals::npts_model; n++)
+  for (int n = 0; n < get_npts_model(); n++)
   {
     fprintf(est_file, " %g\n ", globals::rpkt_emiss[n]);
   }

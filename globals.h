@@ -69,7 +69,6 @@ namespace globals
 
   extern __managed__ int n_out_it;
 
-  extern __managed__ int npts_model;
   extern __managed__ double vout_model[MMODELGRID];
   extern __managed__ double t_model;
   extern __managed__ int ncoord1_model;

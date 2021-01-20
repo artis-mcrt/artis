@@ -1701,12 +1701,10 @@ static void read_1d_model(void)
   FILE *model_input = fopen_required("model.txt", "r");
 
   // 1st read the number of data points in the table of input model.
-  fscanf(model_input, "%d", &globals::npts_model);
-  if (globals::npts_model > MMODELGRID)
-  {
-    printout("Too many points in input model. Abort.\n");
-    abort();
-  }
+  int npts_model_in = 0;
+  fscanf(model_input, "%d", &npts_model_in);
+  set_npts_model(npts_model_in);
+
   // Now read the time (in days) at which the model is specified.
   double t_model_days;
   fscanf(model_input, "%lg\n", &t_model_days);
@@ -1779,21 +1777,21 @@ static void read_1d_model(void)
     set_ffegrp(mgi, ffegrp_model);
 
     mgi += 1;
-    if (mgi == globals::npts_model)
+    if (mgi == get_npts_model())
     {
       break;
     }
   }
 
-  if (mgi != globals::npts_model)
+  if (mgi != get_npts_model())
   {
-    printout("ERROR in model.txt. Found %d only cells instead of %d expected.\n", mgi - 1, globals::npts_model);
+    printout("ERROR in model.txt. Found %d only cells instead of %d expected.\n", mgi - 1, get_npts_model());
     abort();
   }
 
   fclose(model_input);
 
-  globals::vmax = globals::vout_model[globals::npts_model - 1];
+  globals::vmax = globals::vout_model[get_npts_model() - 1];
 }
 
 
@@ -1805,12 +1803,8 @@ static void read_2d_model(void)
   // 1st read the number of data points in the table of input model.
   fscanf(model_input, "%d %d", &globals::ncoord1_model, &globals::ncoord2_model);  // r and z (cylindrical polar)
 
-  globals::npts_model = globals::ncoord1_model * globals::ncoord2_model;
-  if (globals::npts_model > MMODELGRID)
-  {
-    printout("Too many points in input model. Abort.\n");
-    abort();
-  }
+  set_npts_model(globals::ncoord1_model * globals::ncoord2_model);
+
   // Now read the time (in days) at which the model is specified.
   double t_model_days;
   fscanf(model_input, "%lg", &t_model_days);
@@ -1862,9 +1856,9 @@ static void read_2d_model(void)
     mgi++;
   }
 
-  if (mgi != globals::npts_model)
+  if (mgi != get_npts_model())
   {
-    printout("ERROR in model.txt. Found %d only cells instead of %d expected.\n", mgi - 1, globals::npts_model);
+    printout("ERROR in model.txt. Found %d only cells instead of %d expected.\n", mgi - 1, get_npts_model());
     abort();
   }
 
@@ -1988,10 +1982,8 @@ static void read_3d_model(void)
   printout("Effectively used model grid cells %d\n", mgi);
 
   /// Now, set actual size of the modelgrid to the number of non-empty cells.
-  /// Actually this doesn't reduce the memory consumption since all the related
-  /// arrays are allocated statically at compile time with size MMODELGRID+1.
-  /// However, it ensures that update_grid causes no idle tasks due to empty cells!
-  globals::npts_model = mgi;
+
+  set_npts_model(mgi);
 
   fclose(model_input);
 }
@@ -2121,7 +2113,7 @@ void input(int rank)
 
   read_ejecta_model(get_model_type());
 
-  printout("npts_model: %d\n", globals::npts_model);
+  printout("npts_model: %d\n", get_npts_model());
   globals::rmax = globals::vmax * globals::tmin;
   printout("vmax %g\n", globals::vmax);
   printout("tmin %g\n", globals::tmin);

@@ -126,8 +126,8 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   printout("decayenergy(FE52), decayenergy(MN52): %g %g\n",
            decay::nucdecayenergy(NUCLIDE_FE52) / MEV, decay::nucdecayenergy(NUCLIDE_MN52) / MEV);
 
-  double modelcell_decay_energy_density[globals::npts_model];
-  for (int mgi = 0; mgi < globals::npts_model; mgi++)
+  double modelcell_decay_energy_density[get_npts_model()];
+  for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
     modelcell_decay_energy_density[mgi] = 0.;
     for (int i = 0; i < DECAYPATH_COUNT; i++)

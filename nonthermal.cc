@@ -518,10 +518,10 @@ void init(const int my_rank)
   assert(nonthermal_initialized == false);
   nonthermal_initialized = true;
 
-  deposition_rate_density = (double *) calloc(globals::npts_model, sizeof(double));
-  deposition_rate_density_timestep = (int *) calloc(globals::npts_model, sizeof(int));
+  deposition_rate_density = (double *) calloc(get_npts_model(), sizeof(double));
+  deposition_rate_density_timestep = (int *) calloc(get_npts_model(), sizeof(int));
 
-  for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
   {
     deposition_rate_density[modelgridindex] = -1.;
     deposition_rate_density_timestep[modelgridindex] = -1;
@@ -562,10 +562,10 @@ void init(const int my_rank)
           "timestep","modelgridindex","index","energy_ev","source","y");
   fflush(nonthermalfile);
 
-  nt_solution = (struct nt_solution_struct *) calloc(globals::npts_model, sizeof(struct nt_solution_struct));
+  nt_solution = (struct nt_solution_struct *) calloc(get_npts_model(), sizeof(struct nt_solution_struct));
 
   long mem_usage_yfunc = 0;
-  for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
   {
     // should make these negative?
     nt_solution[modelgridindex].frac_heating = 0.97;
@@ -794,7 +794,7 @@ void close_file(void)
   fclose(nonthermalfile);
   gsl_vector_free(envec);
   gsl_vector_free(sourcevec);
-  for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
@@ -2991,7 +2991,7 @@ void write_restart_data(FILE *gridsave_file)
   fprintf(gridsave_file, "%d\n", 24724518); // special number marking the beginning of NT data
   fprintf(gridsave_file, "%d %lg %lg\n", SFPTS, SF_EMIN, SF_EMAX);
 
-  for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
@@ -3074,7 +3074,7 @@ void read_restart_data(FILE *gridsave_file)
     abort();
   }
 
-  for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
