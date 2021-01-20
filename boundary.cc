@@ -379,7 +379,7 @@ void change_cell(PKT *pkt_ptr, int snext, double t_current)
     if (globals::debuglevel == 2)
     {
       const int cellindex = pkt_ptr->where;
-      printout("[debug] cellnumber %d nne %g\n",cellindex,get_nne(globals::cell[cellindex].modelgridindex));
+      printout("[debug] cellnumber %d nne %g\n",cellindex,get_nne(get_cell_modelgridindex(cellindex)));
       printout("[debug] snext %d\n",snext);
     }
   #endif
@@ -397,9 +397,9 @@ void change_cell(PKT *pkt_ptr, int snext, double t_current)
   {
     // Just need to update "where".
     // const int cellnum = pkt_ptr->where;
-    // const int old_mgi = globals::cell[cellnum].modelgridindex;
+    // const int old_mgi = get_cell_modelgridindex(cellnum);
     pkt_ptr->where = snext;
-    // const int mgi = globals::cell[snext].modelgridindex;
+    // const int mgi = get_cell_modelgridindex(snext);
 
     stats::increment(stats::COUNTER_CELLCROSSINGS);
   }

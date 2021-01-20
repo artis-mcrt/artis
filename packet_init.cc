@@ -37,7 +37,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     }
   }
 
-  const int mgi = globals::cell[cellindex].modelgridindex;
+  const int mgi = get_cell_modelgridindex(cellindex);
 
   double cumulative_decay_energy_per_mass[DECAYPATH_COUNT];
   for (int i = 0; i < DECAYPATH_COUNT; i++)
@@ -144,7 +144,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   for (int m = 0; m < globals::ngrid; m++)
   {
     cont[m] = norm;
-    const int mgi = globals::cell[m].modelgridindex;
+    const int mgi = get_cell_modelgridindex(m);
 
     norm += vol_init_gridcell(m) * modelcell_decay_energy_density[mgi];
   }

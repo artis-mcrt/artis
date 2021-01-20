@@ -323,7 +323,7 @@ static double sig_comp(const PKT *pkt_ptr)
 
   // Now need to multiply by the electron number density.
   const int cellindex = pkt_ptr->where;
-  sigma_cmf *= get_nnetot(globals::cell[cellindex].modelgridindex);
+  sigma_cmf *= get_nnetot(get_cell_modelgridindex(cellindex));
 
   // Now need to convert between frames.
 
@@ -718,7 +718,7 @@ void do_gamma(PKT *pkt_ptr, double t2)
     {
       printout("Failed to identify event. Gamma (1). kap_compton %g kap_photo_electric %g kap_tot %g zrand %g Abort.\n", kap_compton, kap_photo_electric, kap_tot, zrand);
       const int cellindex = pkt_ptr->where;
-      printout(" /*globals::cell[*/pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g pkt_ptr->dir[2] %g pkt_ptr->pos[0] %g pkt_ptr->pos[1] %g pkt_ptr->pos[2] %g \n",get_rho(globals::cell[cellindex].modelgridindex), pkt_ptr->nu_cmf,pkt_ptr->dir[0],pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2],pkt_ptr->pos[1],pkt_ptr->pos[2]);
+      printout(" /*globals::cell[*/pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g pkt_ptr->dir[2] %g pkt_ptr->pos[0] %g pkt_ptr->pos[1] %g pkt_ptr->pos[2] %g \n",get_rho(get_cell_modelgridindex(cellindex)), pkt_ptr->nu_cmf,pkt_ptr->dir[0],pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2],pkt_ptr->pos[1],pkt_ptr->pos[2]);
 
       abort();
     }

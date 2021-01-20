@@ -108,7 +108,7 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist)
     else
     {
       const int cellindex = pkt_ptr->where;
-      safeadd(globals::compton_emiss[globals::cell[cellindex].modelgridindex][lindex - globals::emiss_offset], emiss_cont);
+      safeadd(globals::compton_emiss[get_cell_modelgridindex(cellindex)][lindex - globals::emiss_offset], emiss_cont);
     }
 
   }
@@ -133,7 +133,7 @@ void pp_emiss_cont(const PKT *pkt_ptr, double dist)
   //  This will all be done later
 
   const int cellindex = pkt_ptr->where;
-  safeadd(globals::compton_emiss[globals::cell[cellindex].modelgridindex][globals::emiss_max - 1], 1.e-20 * emiss_cont);
+  safeadd(globals::compton_emiss[get_cell_modelgridindex(cellindex)][globals::emiss_max - 1], 1.e-20 * emiss_cont);
 
   //  printf("emiss_cont %g\n", emiss_cont);
 
@@ -379,12 +379,12 @@ bool estim_switch(int nts, struct time *time_step)
 //
 //     if (tau_cont > 1.e-6)
 //     {
-//       ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[globals::cell[dummy.where].modelgridindex][lindex - emiss_offset] *
+//       ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[get_cell_modelgridindex(dummy.where)][lindex - emiss_offset] *
 //           (1. - exp(-1. * tau_cont)) / kap_tot);
 //     }
 //     else
 //     {
-//       ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[globals::cell[dummy.where].modelgridindex][lindex - emiss_offset] *
+//       ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[get_cell_modelgridindex(dummy.where)][lindex - emiss_offset] *
 //             ldist);
 //     }
 //   }

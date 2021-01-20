@@ -2116,7 +2116,7 @@ void do_ntlepton(PKT *pkt_ptr)
 {
   safeadd(nt_energy_deposited, pkt_ptr->e_cmf);
 
-  const int modelgridindex = globals::cell[pkt_ptr->where].modelgridindex;
+  const int modelgridindex = get_cell_modelgridindex(pkt_ptr->where);
 
   // macroatom should not be activated in thick cells
   if (NT_ON && NT_SOLVE_SPENCERFANO && globals::modelgrid[modelgridindex].thick != 1)

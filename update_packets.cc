@@ -145,7 +145,7 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
       //printout("k-packet propagation\n");
 
       //t_change_type = do_kpkt(pkt_ptr, t_current, t2);
-      if (pkt_type == TYPE_PRE_KPKT || globals::modelgrid[globals::cell[pkt_ptr->where].modelgridindex].thick == 1)
+      if (pkt_type == TYPE_PRE_KPKT || globals::modelgrid[get_cell_modelgridindex(pkt_ptr->where)].thick == 1)
       {
         do_kpkt_bb(pkt_ptr);
       }
@@ -191,8 +191,8 @@ static bool std_compare_packets_bymodelgriddensity(const PKT &p1, const PKT &p2)
   const int a1_where = p1.where;
   const int a2_where = p2.where;
 
-  const int mgi1 = globals::cell[a1_where].modelgridindex;
-  const int mgi2 = globals::cell[a2_where].modelgridindex;
+  const int mgi1 = get_cell_modelgridindex(a1_where);
+  const int mgi2 = get_cell_modelgridindex(a2_where);
   if (get_rho(mgi1) > get_rho(mgi2))
     return true;
 
@@ -262,7 +262,7 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
       if (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < (ts + tw))
       {
         const int cellindex = pkt_ptr->where;
-        const int mgi = globals::cell[cellindex].modelgridindex;
+        const int mgi = get_cell_modelgridindex(cellindex);
         /// for non empty cells update the global available level populations and cooling terms
         /// Reset cellhistory if packet starts up in another than the last active cell
         if (mgi != MMODELGRID && globals::cellhistory[tid].cellnumber != mgi)
@@ -279,7 +279,7 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
           workedonpacket = true;
           do_packet(pkt_ptr, ts + tw, nts);
           const int newcellnum = pkt_ptr->where;
-          newmgi = globals::cell[newcellnum].modelgridindex;
+          newmgi = get_cell_modelgridindex(newcellnum);
         }
         count_pktupdates += workedonpacket ? 1 : 0;
 
@@ -322,7 +322,7 @@ static int compare_packets_bymodelgridposition(const void *p1, const void *p2)
   const PKT *a1 = (PKT *)(p1);
   const PKT *a2 = (PKT *)(p2);
 
-  int mgi_diff = globals::cell[a1->where].modelgridindex - globals::cell[a2->where].modelgridindex;
+  int mgi_diff = get_cell_modelgridindex(a1->where) - get_cell_modelgridindex(a2->where);
   if (mgi_diff < 0)
     return -1;
   else if (mgi_diff > 0)

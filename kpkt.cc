@@ -477,7 +477,7 @@ double do_kpkt_bb(PKT *pkt_ptr)
 {
   //double nne = globals::cell[pkt_ptr->where].nne ;
   int cellindex = pkt_ptr->where;
-  const int modelgridindex = globals::cell[cellindex].modelgridindex;
+  const int modelgridindex = get_cell_modelgridindex(cellindex);
   const float T_e = get_Te(modelgridindex);
 
   pkt_ptr->nu_cmf = sample_planck(T_e);
@@ -516,7 +516,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
   const int tid = get_thread_num();
   const double t1 = pkt_ptr->prop_time;
   const int cellindex = pkt_ptr->where;
-  const int modelgridindex = globals::cell[cellindex].modelgridindex;
+  const int modelgridindex = get_cell_modelgridindex(cellindex);
 
   /// don't calculate cooling rates after each cell crossings anylonger
   /// but only if we really get a kpkt and they hadn't been calculated already
