@@ -364,7 +364,7 @@ __host__ __device__
 static void set_cell_modelgridindex(int cellindex, int new_modelgridindex)
 {
   assert_testmodeonly(cellindex < globals::ngrid);
-  assert_testmodeonly(new_modelgridindex < npts_model);
+  assert_testmodeonly(new_modelgridindex < npts_model || new_modelgridindex == MMODELGRID);
   cell[cellindex].modelgridindex = new_modelgridindex;
 }
 
