@@ -151,8 +151,6 @@ namespace globals
   extern __managed__ int total_nlte_levels;
   extern __managed__ int n_super_levels;
 
-  extern __managed__ CELL cell[MGRID+1];
-
   extern __managed__ bool homogeneous_abundances;
 
   extern __managed__ bool simulation_continued_from_saved;
