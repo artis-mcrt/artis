@@ -12,6 +12,8 @@
 __managed__ enum model_types model_type = RHO_1D_READ;
 __managed__ int npts_model = 0; // number of points in 1-D input model
 
+__managed__ CELL cell[MGRID + 1];
+
 static long mem_usage_nltepops = 0;
 
 static __managed__ int mg_associated_cells[MMODELGRID + 1];
@@ -82,7 +84,7 @@ double get_cellcoordmin(const int cellindex, const int axis)
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
 {
-  return globals::cell[cellindex].pos_init[axis];
+  return cell[cellindex].pos_init[axis];
   // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / globals::ncoordgrid[axis]);
 }
 
@@ -121,7 +123,7 @@ __host__ __device__
 int get_cellcoordpointnum(const int cellindex, const int axis)
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to globals::ncoordgrid[axis]
 {
-  // return globals::cell[cellindex].nxyz[axis];
+  // return cell[cellindex].nxyz[axis];
 
   switch (globals::grid_type)
   {
@@ -354,7 +356,7 @@ __host__ __device__
 int get_cell_modelgridindex(int cellindex)
 {
   assert_testmodeonly(cellindex < globals::ngrid);
-  return globals::cell[cellindex].modelgridindex;
+  return cell[cellindex].modelgridindex;
 }
 
 
@@ -363,7 +365,7 @@ static void set_cell_modelgridindex(int cellindex, int new_modelgridindex)
 {
   assert_testmodeonly(cellindex < globals::ngrid);
   assert_testmodeonly(new_modelgridindex < npts_model);
-  globals::cell[cellindex].modelgridindex = new_modelgridindex;
+  cell[cellindex].modelgridindex = new_modelgridindex;
 }
 
 
@@ -818,7 +820,7 @@ static void density_2d_read(void)
         dcen[d] = cellcoordmin + (0.5 * wid_init(0));
       }
 
-      globals::cell[n].modelgridindex = 0;
+      cell[n].modelgridindex = 0;
       const double zcylindrical = dcen[2];
       dcen[2] = 0.0;
       const double rcylindrical = vec_len(dcen);
@@ -831,7 +833,7 @@ static void density_2d_read(void)
         if (rcylindrical > (m * globals::dcoord1 * globals::tmin/globals::t_model))
         {
           mkeep1 = m;
-          //globals::cell[n].modelgridindex = m+1;
+          //cell[n].modelgridindex = m+1;
         }
       }
 
@@ -841,17 +843,17 @@ static void density_2d_read(void)
         if (zcylindrical > (((m * globals::dcoord2) * globals::tmin/globals::t_model) - globals::rmax))
         {
           mkeep2 = m;
-          //globals::cell[n].modelgridindex = m+1;
+          //cell[n].modelgridindex = m+1;
         }
       }
-      globals::cell[n].modelgridindex = (mkeep2 * globals::ncoord1_model) + mkeep1;
-      globals::modelgrid[globals::cell[n].modelgridindex].initial_radial_pos += radial_pos;
+      cell[n].modelgridindex = (mkeep2 * globals::ncoord1_model) + mkeep1;
+      globals::modelgrid[cell[n].modelgridindex].initial_radial_pos += radial_pos;
 
       //renorm[mkeep]++;
     }
     else
     {
-      globals::cell[n].modelgridindex = MMODELGRID;
+      cell[n].modelgridindex = MMODELGRID;
     }
   }
 }
@@ -1495,8 +1497,8 @@ static void uniform_grid_setup(void)
     for (int axis = 0; axis < 3; axis++)
     {
       assert(nxyz[axis] == get_cellcoordpointnum(n, axis));
-      globals::cell[n].pos_init[axis] = - globals::coordmax[axis] + (2 * nxyz[axis] * globals::coordmax[axis] / globals::ncoordgrid[axis]);
-      // globals::cell[n].xyz[axis] = nxyz[axis];
+      cell[n].pos_init[axis] = - globals::coordmax[axis] + (2 * nxyz[axis] * globals::coordmax[axis] / globals::ncoordgrid[axis]);
+      // cell[n].xyz[axis] = nxyz[axis];
     }
 
     assert(n == nxyz[2] * globals::ncoordgrid[1] * globals::ncoordgrid[2] + nxyz[1] * globals::ncoordgrid[0] + nxyz[0]);
@@ -1513,38 +1515,6 @@ static void uniform_grid_setup(void)
       nxyz[2]++;  // increment z coordinate
     }
   }
-
-  /*
-  /// Finally we must also create the composition dependent data structure for
-  /// the samplingcell which is located at MGRID (i.e. the MGRID+1th cell)
-  n = MGRID;
-  if ((globals::cell[n].composition = malloc(get_nelements()*sizeof(compositionlist_entry))) == NULL)
-  {
-    printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",n);
-    abort();
-  }
-  for (element = 0; element < get_nelements(); element++)
-  {
-    ///now set the abundances (by mass) of included elements, i.e.
-    ///read out the abundances specified in the atomic data file
-    ///and allocate memory to store the ground level populations for each ionisation stage
-    if ((globals::cell[n].composition[element].groundlevelpop = malloc(get_nions(element)*sizeof(float))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",element,n);
-      abort();
-    }
-    if ((globals::cell[n].composition[element].partfunct = malloc(get_nions(element)*sizeof(float))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to initialize partfunctlist for element %d in cell %d... abort\n",element,n);
-      abort();
-    }
-//     if ((globals::cell[n].composition[element].ltepartfunct = malloc(get_nions(element)*sizeof(float))) == NULL)
-//     {
-//       printout("[fatal] input: not enough memory to initialize lte partfunctlist for element %d in cell %d... abort\n",element,n);
-//       abort();
-//     }
-  }
-  */
 }
 
 static void spherical1d_grid_setup(void)
@@ -1568,10 +1538,10 @@ static void spherical1d_grid_setup(void)
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++)
   {
     const double v_inner = cellindex > 0 ? globals::vout_model[cellindex - 1] : 0.;
-    globals::cell[cellindex].modelgridindex = cellindex;
-    globals::cell[cellindex].pos_init[0] = v_inner * globals::tmin;
-    globals::cell[cellindex].pos_init[1] = 0.;
-    globals::cell[cellindex].pos_init[2] = 0.;
+    cell[cellindex].modelgridindex = cellindex;
+    cell[cellindex].pos_init[0] = v_inner * globals::tmin;
+    cell[cellindex].pos_init[1] = 0.;
+    cell[cellindex].pos_init[2] = 0.;
   }
 }
 
@@ -1629,7 +1599,7 @@ void grid_init(int my_rank)
     for (int n = 0; n < globals::ngrid; n++)
     {
       const double radial_pos = get_cellradialpos(n);
-      globals::modelgrid[globals::cell[n].modelgridindex].initial_radial_pos = radial_pos;
+      globals::modelgrid[cell[n].modelgridindex].initial_radial_pos = radial_pos;
     }
     // cells with rho > 0 are allocated by the above function
   }
