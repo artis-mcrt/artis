@@ -820,7 +820,7 @@ static void density_2d_read(void)
         dcen[d] = cellcoordmin + (0.5 * wid_init(0));
       }
 
-      cell[n].modelgridindex = 0;
+      set_cell_modelgridindex(n, 0);
       const double zcylindrical = dcen[2];
       dcen[2] = 0.0;
       const double rcylindrical = vec_len(dcen);
@@ -833,7 +833,7 @@ static void density_2d_read(void)
         if (rcylindrical > (m * globals::dcoord1 * globals::tmin/globals::t_model))
         {
           mkeep1 = m;
-          //cell[n].modelgridindex = m+1;
+          // set_cell_modelgridindex(n, m + 1);
         }
       }
 
@@ -843,17 +843,17 @@ static void density_2d_read(void)
         if (zcylindrical > (((m * globals::dcoord2) * globals::tmin/globals::t_model) - globals::rmax))
         {
           mkeep2 = m;
-          //cell[n].modelgridindex = m+1;
+          // set_cell_modelgridindex(n, m + 1);
         }
       }
-      cell[n].modelgridindex = (mkeep2 * globals::ncoord1_model) + mkeep1;
-      globals::modelgrid[cell[n].modelgridindex].initial_radial_pos += radial_pos;
+      set_cell_modelgridindex(n, (mkeep2 * globals::ncoord1_model) + mkeep1);
+      globals::modelgrid[get_cell_modelgridindex(n)].initial_radial_pos += radial_pos;
 
       //renorm[mkeep]++;
     }
     else
     {
-      cell[n].modelgridindex = MMODELGRID;
+      set_cell_modelgridindex(n, MMODELGRID);
     }
   }
 }
@@ -1538,7 +1538,7 @@ static void spherical1d_grid_setup(void)
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++)
   {
     const double v_inner = cellindex > 0 ? globals::vout_model[cellindex - 1] : 0.;
-    cell[cellindex].modelgridindex = cellindex;
+    set_cell_modelgridindex(cellindex, cellindex);
     cell[cellindex].pos_init[0] = v_inner * globals::tmin;
     cell[cellindex].pos_init[1] = 0.;
     cell[cellindex].pos_init[2] = 0.;
@@ -1599,7 +1599,7 @@ void grid_init(int my_rank)
     for (int n = 0; n < globals::ngrid; n++)
     {
       const double radial_pos = get_cellradialpos(n);
-      globals::modelgrid[cell[n].modelgridindex].initial_radial_pos = radial_pos;
+      globals::modelgrid[get_cell_modelgridindex(n)].initial_radial_pos = radial_pos;
     }
     // cells with rho > 0 are allocated by the above function
   }

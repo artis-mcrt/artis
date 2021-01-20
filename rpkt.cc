@@ -777,8 +777,6 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
 
     assert(tdist >= 0);
 
-    //if (globals::cell[pkt_ptr->where].nne < 1e-40)
-    //if (get_nne(globals::cell[pkt_ptr->where].modelgridindex) < 1e-40)
     double edist;
     int rpkt_eventtype;
     bool find_nextline = false;
