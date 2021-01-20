@@ -14,7 +14,7 @@ double sig_photo_electric(const PKT *pkt_ptr)
   // Start by working out the x-section in the co-moving frame.
 
   const int cellindex = pkt_ptr->where;
-  const int mgi = globals::cell[cellindex].modelgridindex;
+  const int mgi = get_cell_modelgridindex(cellindex);
   const double rho = get_rho(mgi);
 
   if (globals::gamma_grey < 0)
@@ -64,7 +64,7 @@ double sig_pair_prod(const PKT *pkt_ptr)
   // Start by working out the x-section in the co-moving frame.
 
   const int cellindex = pkt_ptr->where;
-  const int mgi = globals::cell[cellindex].modelgridindex;
+  const int mgi = get_cell_modelgridindex(cellindex);
   const double rho = get_rho(mgi);
 
   if (globals::gamma_grey < 0)

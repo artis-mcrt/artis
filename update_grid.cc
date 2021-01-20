@@ -1398,7 +1398,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   int mgi;
   for (n=0; n < ngrid; n++)
   {
-    mgi=globals::cell[n].modelgridindex;
+    mgi = get_cell_modelgridindex(n);
     check1 = check1 + (get_kappagrey(mgi)  * get_rho(mgi));
     check2 = check2 + get_rho(mgi);
   }

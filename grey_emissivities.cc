@@ -51,7 +51,7 @@ void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist)
   // dummy.last_cross = NONE;
 
   const int cellindex = pkt_ptr->where;
-  const int mgi = globals::cell[cellindex].modelgridindex;
+  const int mgi = get_cell_modelgridindex(cellindex);
 
   if (dist > 0)
   {
@@ -99,7 +99,7 @@ void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist)
   dummy.last_cross = NONE;*/
 
   const int cellindex = pkt_ptr->where;
-  const int mgi = globals::cell[cellindex].modelgridindex;
+  const int mgi = get_cell_modelgridindex(cellindex);
 
   if (dist > 0.0)
   {
@@ -297,13 +297,13 @@ void write_grey(int nts)
 
   if (tau_cont > 1.e-6)
   {
-    ray_ptr->e_rf[nray] += (rpkt_emiss[globals::cell[dummy.where].modelgridindex] /
+    ray_ptr->e_rf[nray] += (rpkt_emiss[get_cell_modelgridindex(dummy.where)] /
       doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec)
       *(1. - exp(-1. * tau_cont)) / kap_tot);
   }
   else
   {
-    ray_ptr->e_rf[nray] += (rpkt_emiss[globals::cell[dummy.where].modelgridindex]   /
+    ray_ptr->e_rf[nray] += (rpkt_emiss[get_cell_modelgridindex(dummy.where)]   /
         doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec)
           * ldist);
   }

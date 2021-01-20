@@ -169,7 +169,7 @@ static double get_event(
 
         if (tau_line < 0)
         {
-          //printout("[warning] get_event: tau_line %g < 0, n_l %g, n_u %g, B_lu %g, B_ul %g, W %g, T_R %g, element %d, ion %d, upper %d, lower %d ... abort\n",tau_line, n_l,n_u,B_lu,B_ul,get_W(globals::cell[pkt_ptr->where].modelgridindex),get_TR(globals::cell[pkt_ptr->where].modelgridindex),element,ion,upper,lower);
+          //printout("[warning] get_event: tau_line %g < 0, n_l %g, n_u %g, B_lu %g, B_ul %g, W %g, T_R %g, element %d, ion %d, upper %d, lower %d ... abort\n",tau_line, n_l,n_u,B_lu,B_ul,get_W(get_cell_modelgridindex(pkt_ptr->where)),get_TR(get_cell_modelgridindex(pkt_ptr->where)),element,ion,upper,lower);
           //printout("[warning] get_event: set tau_line = 0\n");
           tau_line = 0.;
           //printout("[fatal] get_event: tau_line < 0 ... abort\n");
@@ -638,7 +638,7 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
 /// packets which do not contribute to the radiation field.
 {
   const int cellindex = pkt_ptr->where;
-  const int modelgridindex = globals::cell[cellindex].modelgridindex;
+  const int modelgridindex = get_cell_modelgridindex(cellindex);
 
   /// Update only non-empty cells
   if (modelgridindex != MMODELGRID)
@@ -702,7 +702,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
 // return value - true if no mgi change, no pkttype change and not reached end of timestep, false otherwise
 {
   const int cellindex = pkt_ptr->where;
-  int mgi = globals::cell[cellindex].modelgridindex;
+  int mgi = get_cell_modelgridindex(cellindex);
   const int oldmgi = mgi;
 
   #ifdef DEBUG_ON
@@ -728,7 +728,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
   {
     change_cell(pkt_ptr, snext, pkt_ptr->prop_time);
     const int cellindexnew = pkt_ptr->where;
-    mgi = globals::cell[cellindexnew].modelgridindex;
+    mgi = get_cell_modelgridindex(cellindexnew);
 
     return (pkt_ptr->type == TYPE_RPKT && (mgi == MMODELGRID || mgi == oldmgi));
   }
@@ -843,7 +843,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
       {
         change_cell(pkt_ptr, snext, pkt_ptr->prop_time);
         const int cellindexnew = pkt_ptr->where;
-        mgi = globals::cell[cellindexnew].modelgridindex;
+        mgi = get_cell_modelgridindex(cellindexnew);
       }
       // New cell so reset the scat_counter
       pkt_ptr->scat_count = 0;
@@ -977,7 +977,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
   while (end_packet == false)
   {
     const int cellindex = vpkt.where;
-    const int mgi = globals::cell[cellindex].modelgridindex;
+    const int mgi = get_cell_modelgridindex(cellindex);
     if (globals::modelgrid[mgi].thick == 1)
     {
       return 0.;
@@ -988,7 +988,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
 
     if (snext >= 0)
     {
-      const int nextmgi = globals::cell[snext].modelgridindex;
+      const int nextmgi = get_cell_modelgridindex(snext);
       if (globals::modelgrid[nextmgi].thick == 1)
       {
         return 0.;
@@ -1050,7 +1050,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
       }
     }
 
-    if (snext < 0 || globals::cell[snext].modelgridindex == MMODELGRID)
+    if (snext < 0 || get_cell_modelgridindex(snext) == MMODELGRID)
     {
       break;
     }
@@ -1085,7 +1085,7 @@ double get_rpkt_escape_prob(PKT *pkt_ptr, const double tstart)
   vec_copy(startpos, pkt_ptr->pos);
   const double start_nu_cmf = pkt_ptr->nu_cmf;
   const enum cell_boundary last_cross = pkt_ptr->last_cross;
-  const int mgi = globals::cell[startcellindex].modelgridindex;
+  const int mgi = get_cell_modelgridindex(startcellindex);
   if (globals::modelgrid[mgi].thick == 1)
   {
     // escape prob in thick cell is zero
@@ -1369,7 +1369,7 @@ __host__ __device__
 void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr)
 {
   const int cellindex = pkt_ptr->where;
-  const int modelgridindex = globals::cell[cellindex].modelgridindex;
+  const int modelgridindex = get_cell_modelgridindex(cellindex);
   assert(modelgridindex != MMODELGRID);
   assert(globals::modelgrid[modelgridindex].thick != 1);
   const double nu_cmf = pkt_ptr->nu_cmf;

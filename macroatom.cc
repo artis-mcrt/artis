@@ -455,7 +455,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
   //printout("[debug] do MA\n");
 
   const int cellindex = pkt_ptr->where;
-  const int modelgridindex = globals::cell[cellindex].modelgridindex;
+  const int modelgridindex = get_cell_modelgridindex(cellindex);
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
 
@@ -661,7 +661,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
         printout("[debug]    zrand %g\n",zrand);
         printout("[debug]    jumps %d, jump %d\n",jumps,jump);
         printout("[debug]    pkt_ptr->number %d, pkt_ptr->where %d\n",pkt_ptr->number,cellindex);
-        printout("[debug]    groundlevelpop of current ion in current cell %g\n",globals::modelgrid[globals::cell[cellindex].modelgridindex].composition[element].groundlevelpop[ion]);
+        printout("[debug]    groundlevelpop of current ion in current cell %g\n",globals::modelgrid[get_cell_modelgridindex(cellindex)].composition[element].groundlevelpop[ion]);
 
         double R = 0.0;
         double C = 0.0;

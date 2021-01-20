@@ -199,7 +199,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
   // --------- compute the optical depth to boundary ----------------
 
-  mgi = globals::cell[dummy_ptr->where].modelgridindex;
+  mgi = get_cell_modelgridindex(dummy_ptr->where);
 
   while (end_packet == false)
   {
@@ -323,7 +323,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
     //printout("Completed change vpkt cell\n");
 
     //printout("dummy->nu_cmf = %g \n",dummy_ptr->nu_cmf);
-    mgi = globals::cell[dummy_ptr->where].modelgridindex;
+    mgi = get_cell_modelgridindex(dummy_ptr->where);
     // break if you reach an empty cell
     if (mgi == MMODELGRID) break;
 
@@ -909,7 +909,7 @@ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
 
   // Cut on vpkts
-  int mgi = globals::cell[pkt_ptr->where].modelgridindex;
+  int mgi = get_cell_modelgridindex(pkt_ptr->where);
 
   if (globals::modelgrid[mgi].thick != 0)
   {
@@ -954,7 +954,7 @@ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
 
           // Need to update the starting cell for next observer
           // If previous vpkt reached tau_lim, change_cell (and then update_cell) hasn't been called
-          mgi = globals::cell[pkt_ptr->where].modelgridindex;
+          mgi = get_cell_modelgridindex(pkt_ptr->where);
           cellhistory_reset(mgi, false);
         }
       }
