@@ -1215,7 +1215,9 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       }
       #endif
       else
+      {
         globals::modelgrid[mgi].thick = 0;
+      }
 
       /// Cooling rates depend only on cell properties, precalculate total cooling
       /// and ion contributions inside update grid and communicate between MPI tasks
@@ -1226,19 +1228,36 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
       printout("calculate_kpkt_rates for cell %d timestep %d took %ld seconds\n", mgi, nts, time(NULL) - sys_time_start_calc_kpkt_rates);
     }
-    else if (globals::opacity_case == 3)
+    else
     {
-      /// MK Begin
-      //printout("update_grid: opacity_case 3 ... updating globals::cell[n].kappa_grey"); //MK
-      if (get_rho(mgi) > globals::rho_crit)
+      // For opacity_case != 4 the opacity treatment is grey. Enforce
+      // optically thick treatment in this case (should be equivalent to grey)
+      globals::modelgrid[mgi].thick = 1;
+
+      /// Need the total number density of bound and free electrons for Compton scatterin
+      decay::update_abundances(mgi, nts, globals::time_step[nts].mid);
+      double nne_tot = 0.;
+      for (int element = 0; element < get_nelements(); element++)
       {
-        set_kappagrey(mgi, globals::opcase3_normal * (0.9 * get_ffegrp(mgi) + 0.1) * globals::rho_crit / get_rho(mgi));
+        double abundance = get_elem_abundance(mgi, element);
+        /// calculate number density of the current element (abundances are given by mass)
+        double nnelement = abundance / globals::elements[element].mass * get_rho(mgi);
+        nne_tot += nnelement * get_element(element);
       }
-      else
+      set_nnetot(mgi, nne_tot);
+
+      if (globals::opacity_case == 3)
       {
-        set_kappagrey(mgi, globals::opcase3_normal * (0.9 * get_ffegrp(mgi) + 0.1));
+        //printout("update_grid: opacity_case 3 ... updating globals::cell[n].kappa_grey"); //MK
+        if (get_rho(mgi) > globals::rho_crit)
+        {
+          set_kappagrey(mgi, globals::opcase3_normal * (0.9 * get_ffegrp(mgi) + 0.1) * globals::rho_crit / get_rho(mgi));
+        }
+        else
+        {
+          set_kappagrey(mgi, globals::opcase3_normal * (0.9 * get_ffegrp(mgi) + 0.1));
+        }
       }
-      /// MK End
     }
 
     if (globals::do_rlc_est == 2 && get_nne(mgi) > 0)
