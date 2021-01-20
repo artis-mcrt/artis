@@ -12,18 +12,15 @@ void escat_rpkt(PKT *pkt_ptr)
   double mu,M,tsc,phisc;
   double i1,i2,cos2i1,sin2i1,cos2i2,sin2i2;
   double ref1[3],ref2[3];
-  #ifdef DIPOLE
+#ifdef DIPOLE
   double p,x;
-  #endif
-
+#endif
 
   /// now make the packet a r-pkt and set further flags
   pkt_ptr->type = TYPE_RPKT;
   pkt_ptr->last_cross = NONE;  /// allow all further cell crossings
 
-
   get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
-
 
   // Transform Stokes Parameters from the RF to the CMF
 
@@ -32,66 +29,64 @@ void escat_rpkt(PKT *pkt_ptr)
 
   frame_transform(pkt_ptr->dir,&Qi,&Ui,vel_vec,old_dir_cmf);
 
-
   // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos & Whitlock 2008)
 
-  /* Assume dipole function (rejecton method, see Code & Whitney 1995) */
-  #ifdef DIPOLE
-
-    do
-    {
-
-        const double zrand = gsl_rng_uniform(rng);
-        const double zrand2 = gsl_rng_uniform(rng);
-        const double zrand3 = gsl_rng_uniform(rng);
-
-        phisc = 2 * PI * zrand ;
-        M = 2 * zrand2 - 1;
-        mu = pow(M,2.) ;
-
-        // NB: the rotational matrix R here is chosen in the clockwise direction ("+").
-        // In Bulla+2015 equation (10) and (12) refer to the specific case shown in Fig.2 where the angle i2
-        // is measured in the counter-clockwise direction. Therefore we use the clockwise rotation matrix but
-        // with -i1. Here, instead, we calculate the angle in the clockwise direction from 0 to 2PI.
-        // For instance, the i1 angle in Fig.2 of Bulla+2015 corresponds to 2PI-i1 here.
-        // NB2: the i1 and i2 angles computed in the code (before and after scattering) are instead as in Bulla+2015
-        p = (mu+1) + (mu-1) * ( cos(2*phisc) * Qi + sin(2*phisc) * Ui  );
-
-        // generate a number between 0 and the maximum of the previous function (2)
-        x = 2 * zrand3 ;
-    }
-
-    while (x>p);
-
-  /* Assume isotropic scattering */
-  #else
-
+#ifdef DIPOLE
+  // Assume dipole function (rejecton method, see Code & Whitney 1995)
+  do
+  {
     const double zrand = gsl_rng_uniform(rng);
     const double zrand2 = gsl_rng_uniform(rng);
+    const double zrand3 = gsl_rng_uniform(rng);
 
-    M = 2. * zrand - 1 ;
+    phisc = 2 * PI * zrand ;
+    M = 2 * zrand2 - 1;
     mu = pow(M,2.) ;
-    phisc = 2 * PI * zrand2 ;
 
-  #endif
+    // NB: the rotational matrix R here is chosen in the clockwise direction ("+").
+    // In Bulla+2015 equation (10) and (12) refer to the specific case shown in Fig.2 where the angle i2
+    // is measured in the counter-clockwise direction. Therefore we use the clockwise rotation matrix but
+    // with -i1. Here, instead, we calculate the angle in the clockwise direction from 0 to 2PI.
+    // For instance, the i1 angle in Fig.2 of Bulla+2015 corresponds to 2PI-i1 here.
+    // NB2: the i1 and i2 angles computed in the code (before and after scattering) are instead as in Bulla+2015
+    p = (mu + 1) + (mu - 1) * (cos(2 * phisc) * Qi + sin(2 * phisc) * Ui);
+
+    // generate a number between 0 and the maximum of the previous function (2)
+    x = 2 * zrand3;
+  }
+  while (x > p);
+
+#else
+  // Assume isotropic scattering
+  const double zrand = gsl_rng_uniform(rng);
+  const double zrand2 = gsl_rng_uniform(rng);
+
+  M = 2. * zrand - 1;
+  mu = pow(M, 2.);
+  phisc = 2 * PI * zrand2;
+
+#endif
 
   tsc = acos(M);
 
-  if( fabs(old_dir_cmf[2]) < 0.99999 ) {
-
-      new_dir_cmf[0] = sin(tsc)/sqrt(1.-pow(old_dir_cmf[2],2.)) * ( old_dir_cmf[1] * sin(phisc) - old_dir_cmf[0] * old_dir_cmf[2] * cos(phisc) ) + old_dir_cmf[0] * cos(tsc) ;
-      new_dir_cmf[1] = sin(tsc)/sqrt(1-pow(old_dir_cmf[2],2.)) * ( - old_dir_cmf[0] * sin(phisc) - old_dir_cmf[1] * old_dir_cmf[2] * cos(phisc) ) + old_dir_cmf[1] * cos(tsc) ;
-      new_dir_cmf[2] = sin(tsc) * cos(phisc) * sqrt(1-pow(old_dir_cmf[2],2.))  +  old_dir_cmf[2] * cos(tsc) ;
-
+  if (fabs(old_dir_cmf[2]) < 0.99999)
+  {
+    new_dir_cmf[0] = sin(tsc) / sqrt(1. - pow(old_dir_cmf[2], 2.)) * (old_dir_cmf[1] * sin(phisc) - old_dir_cmf[0] * old_dir_cmf[2] * cos(phisc) ) + old_dir_cmf[0] * cos(tsc);
+    new_dir_cmf[1] = sin(tsc) / sqrt(1 - pow(old_dir_cmf[2], 2.)) * (- old_dir_cmf[0] * sin(phisc) - old_dir_cmf[1] * old_dir_cmf[2] * cos(phisc) ) + old_dir_cmf[1] * cos(tsc);
+    new_dir_cmf[2] = sin(tsc) * cos(phisc) * sqrt(1 - pow(old_dir_cmf[2],2.)) + old_dir_cmf[2] * cos(tsc);
   }
-
-  else {
-
-      new_dir_cmf[0] = sin(tsc) * cos(phisc) ;
-      new_dir_cmf[1] = sin(tsc) * sin(phisc) ;
-      if(old_dir_cmf[2]>0 ) new_dir_cmf[2] = cos(tsc) ;
-      else new_dir_cmf[2] = - cos(tsc) ;
-
+  else
+  {
+    new_dir_cmf[0] = sin(tsc) * cos(phisc);
+    new_dir_cmf[1] = sin(tsc) * sin(phisc);
+    if (old_dir_cmf[2] > 0)
+    {
+      new_dir_cmf[2] = cos(tsc);
+    }
+    else
+    {
+      new_dir_cmf[2] = - cos(tsc);
+    }
   }
 
 

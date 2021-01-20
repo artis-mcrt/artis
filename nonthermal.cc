@@ -167,11 +167,11 @@ static int compare_excitation_lineindicies(const void *p1, const void *p2)
   const struct nt_excitation_struct *elem1 = (struct nt_excitation_struct *) p1;
   const struct nt_excitation_struct *elem2 = (struct nt_excitation_struct *) p2;
 
- if (elem1->lineindex > elem2->lineindex)
+  if (elem1->lineindex > elem2->lineindex)
     return 1;
- else if (elem1->lineindex < elem2->lineindex)
+  else if (elem1->lineindex < elem2->lineindex)
     return -1;
- else
+  else
     return 0;
 }
 
