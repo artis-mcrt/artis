@@ -83,6 +83,7 @@ inline void vec_scale(double vec[3], const double scalefactor)
   #endif
 }
 
+
 __host__ __device__
 inline void vec_copy(double destination[3], const double source[3])
 {
@@ -95,6 +96,7 @@ inline void vec_copy(double destination[3], const double source[3])
     cblas_dcopy(3, source, 1, destination, 1);
   #endif
 }
+
 
 __host__ __device__
 inline double doppler_packetpos(const PKT *const pkt_ptr)
