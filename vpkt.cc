@@ -32,9 +32,8 @@ double *nz_obs_vpkt;
 double *phiobs;
 double tmin_vspec_input;
 double tmax_vspec_input;
-double Nrange;
-double lmin_vspec_input[MRANGE];
-double lmax_vspec_input[MRANGE];
+int Nrange;
+
 double numin_vspec_input[MRANGE];
 double numax_vspec_input[MRANGE];
 double cell_is_optically_thick_vpkt;
@@ -55,7 +54,7 @@ struct vgrid vgrid_i[NY_VGRID][NZ_VGRID];
 struct vgrid vgrid_q[NY_VGRID][NZ_VGRID];
 struct vgrid vgrid_u[NY_VGRID][NZ_VGRID];
 
-double Nrange_grid;
+int Nrange_grid;
 double tmin_grid;
 double tmax_grid;
 double nu_grid_min[MRANGE_GRID];
@@ -745,7 +744,7 @@ void read_parameterfile_vpkt(void)
   fscanf(input_file, "%d", &dum1);
   Nobs = dum1;
 
-  printout("vpkt.txt: Nobs %d\n", Nobs);
+  printout("vpkt.txt: Nobs %d directions\n", Nobs);
 
   // nz_obs_vpkt. Cos(theta) to the observer. A list in the case of many observers
   nz_obs_vpkt = (double *) malloc(Nobs * sizeof(double));
@@ -775,6 +774,11 @@ void read_parameterfile_vpkt(void)
   {
     fscanf(input_file, "%g \n", &dum3);
     phiobs[i] = dum3 * PI / 180;
+  }
+
+  for (int i = 0; i < Nobs; i++)
+  {
+    printout("vpkt.txt:   direction %d costheta %g phi %g\n", i, nz_obs_vpkt[i], phiobs[i]);
   }
 
   // Nspectra opacity choices (i.e. Nspectra spectra for each observer)
@@ -809,19 +813,19 @@ void read_parameterfile_vpkt(void)
   // time window. If dum4=1 it restrict vpkt to time windown (dum5,dum6)
   fscanf(input_file, "%g %g %g \n", &dum4, &dum5, &dum6);
 
-  printout("vpkt: tmin_vspec %.1f d tmax_vspec %1.f d\n", tmin_vspec / DAY, tmax_vspec / DAY);
+  printout("vpkt: compiled with tmin_vspec %.1fd tmax_vspec %1.fd\n", tmin_vspec / DAY, tmax_vspec / DAY);
   if (dum4 == 1)
   {
     tmin_vspec_input = dum5 * DAY;
     tmax_vspec_input = dum6 * DAY;
+    printout("vpkt.txt: tmin_vspec_input %.1fd, tmax_vspec_input %.1fd\n", tmin_vspec_input / DAY, tmax_vspec_input / DAY);
   }
   else
   {
     tmin_vspec_input = tmin_vspec;
     tmax_vspec_input = tmax_vspec;
+    printout("vpkt.txt: tmin_vspec_input %.1fd, tmax_vspec_input %.1fd (inherited from tmin_vspec and tmax_vspec)\n", tmin_vspec_input / DAY, tmax_vspec_input / DAY);
   }
-
-  printout("vpkt.txt: tmin_vspec_input %.1f days, tmax_vspec_input %.1f day\n", tmin_vspec_input / DAY, tmax_vspec_input / DAY);
 
   assert(tmax_vspec_input >= tmin_vspec);
   assert(tmax_vspec_input <= tmax_vspec);
@@ -832,20 +836,18 @@ void read_parameterfile_vpkt(void)
 
   if (dum4 == 1)
   {
-    fscanf(input_file, "%g ", &dum5);
-
-    Nrange = dum5;
+    fscanf(input_file, "%d ", &Nrange);
     assert(Nrange <= MRANGE);
 
     for (int i = 0; i < Nrange; i++)
     {
       fscanf(input_file, "%g %g", &dum6, &dum7);
 
-      lmin_vspec_input[i] = dum6;
-      lmax_vspec_input[i] = dum7;
+      const double lmin_vspec_input = dum6;
+      const double lmax_vspec_input = dum7;
 
-      numin_vspec_input[i] = CLIGHT / (lmax_vspec_input[i] * 1e-8);
-      numax_vspec_input[i] = CLIGHT / (lmin_vspec_input[i] * 1e-8);
+      numin_vspec_input[i] = CLIGHT / (lmax_vspec_input * 1e-8);
+      numax_vspec_input[i] = CLIGHT / (lmin_vspec_input * 1e-8);
     }
   }
   else
@@ -855,6 +857,11 @@ void read_parameterfile_vpkt(void)
     numin_vspec_input[0] = numin_vspec;
     numax_vspec_input[0] = numax_vspec;
   }
+  printout("vpkt.txt: Nrange %d frequency intervals per spectrum per observer\n", Nspectra);
+  for (int i = 0; i < Nrange; i++)
+  {
+    printout("vpkt.txt:   range %d lambda [%g, %g] Angstroms\n", i, 1e8 * CLIGHT / numax_vspec_input[i], 1e8 * CLIGHT / numin_vspec_input[i]);
+  }
 
   // if dum7=1, vpkt are not created when cell optical depth is larger than cell_is_optically_thick_vpkt
   fscanf(input_file, "%g %lg \n", &dum7, &cell_is_optically_thick_vpkt);
@@ -862,18 +869,22 @@ void read_parameterfile_vpkt(void)
   if (dum7 != 1)
   {
     cell_is_optically_thick_vpkt = globals::cell_is_optically_thick;
+    printout("vpkt.txt: cell_is_optically_thick_vpkt %lg (inherited from cell_is_optically_thick)\n", cell_is_optically_thick_vpkt);
   }
-  printout("cell_is_optically_thick_vpkt %lg\n", cell_is_optically_thick_vpkt);
+  else
+  {
+    printout("vpkt.txt: cell_is_optically_thick_vpkt %lg\n", cell_is_optically_thick_vpkt);
+  }
 
   // Maximum optical depth. If a vpkt reaches dum7 is thrown away
   fscanf(input_file, "%g \n", &dum7);
   tau_max_vpkt = dum7;
-  printout("tau_max_vpkt %g\n", tau_max_vpkt);
+  printout("vpkt.txt: tau_max_vpkt %g\n", tau_max_vpkt);
 
   // Produce velocity grid map if dum8=1
   fscanf(input_file, "%d \n", &dum8);
   vgrid_flag = dum8;
-  printout("velocity grid map %s\n", (vgrid_flag == 1) ? "ON" : "OFF");
+  printout("vpkt.txt: velocity grid map %s\n", (vgrid_flag == 1) ? "ENABLED" : "DISABLED");
 
   if (dum8 == 1)
   {
@@ -882,9 +893,13 @@ void read_parameterfile_vpkt(void)
     tmin_grid = dum9 * DAY;
     tmax_grid = dum10 * DAY;
 
+    printout("vpkt.txt: velocity grid time range tmin_grid %gd tmax_grid %gd\n", tmin_grid / DAY, tmax_grid / DAY);
+
     // Specify wavelength range: number of intervals (dum9) and limits (dum10,dum11)
     fscanf(input_file, "%g ", &dum9);
     Nrange_grid = dum9;
+
+    printout("vpkt.txt: velocity grid frequency intervals %d\n", Nrange_grid);
 
     assert(Nrange_grid <= MRANGE_GRID);
 
@@ -894,6 +909,8 @@ void read_parameterfile_vpkt(void)
 
       nu_grid_max[i] = CLIGHT / (dum10 * 1e-8);
       nu_grid_min[i] = CLIGHT / (dum11 * 1e-8);
+
+      printout("vpkt.txt:   velgrid range %d lambda [%g, %g] Angstroms\n", i, 1e8 * CLIGHT / nu_grid_max[i], 1e8 * CLIGHT / nu_grid_min[i]);
     }
   }
   fclose(input_file);
@@ -913,6 +930,7 @@ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
 
   if (globals::modelgrid[mgi].thick != 0)
   {
+    printout("Cell is thick. ending\n");
     return 0;
   }
 
@@ -928,6 +946,7 @@ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
 
   for (int bin = 0; bin < Nobs; bin++)
   {
+    printout("nobs %d of %d\n", bin, Nobs);
     /* loop over different observers */
 
     obs[0] = sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * cos(phiobs[bin]);
