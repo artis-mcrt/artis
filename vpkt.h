@@ -14,7 +14,7 @@ void add_to_vspecpol(PKT *pkt_ptr, int bin, int ind, double t_arrive);
 void init_vspecpol(void);
 void read_parameterfile_vpkt(void);
 void write_vspecpol(FILE *specpol_file);
-void read_vspecpol(FILE *specpol_file);
+void read_vspecpol(int my_rank, int nts);
 void init_vpkt_grid(void);
 void add_to_vpkt_grid(PKT *dummy_ptr, double *vel, int bin_range, int bin, double *obs);
 void write_vpkt_grid(FILE *vpkt_grid_file);
