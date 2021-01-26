@@ -358,7 +358,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
     /* bin on fly and produce file with spectrum */
 
-    t_arrive = t_current - (dot(pkt_ptr->pos, dummy_ptr->dir)/globals::CLIGHT_PROP) ;
+    t_arrive = t_current - (dot(pkt_ptr->pos, dummy_ptr->dir) / globals::CLIGHT_PROP) ;
 
     add_to_vspecpol(dummy_ptr,bin,ind,t_arrive);
   }
@@ -425,7 +425,7 @@ void add_to_vspecpol(PKT *pkt_ptr, int bin, int ind, double t_arrive)
     int nt = (log(t_arrive) - log(tmin_vspec)) / dlogt_vspec;
     if (pkt_ptr->nu_rf > numin_vspec && pkt_ptr->nu_rf < numax_vspec)
     {
-      const int nnu = (log(pkt_ptr->nu_rf) - log(numin_vspec)) /  dlognu_vspec;
+      const int nnu = (log(pkt_ptr->nu_rf) - log(numin_vspec)) / dlognu_vspec;
       const double pktcontrib = pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC / PARSEC / globals::nprocs * 4 * PI;
 
       safeadd(vstokes_i[nt][ind_comb].flux[nnu], pkt_ptr->stokes[0] * pktcontrib);
@@ -441,6 +441,7 @@ void init_vspecpol(void)
   vstokes_i = (struct vspecpol **) malloc(VMTBINS * sizeof(struct vspecpol *));
   vstokes_q = (struct vspecpol **) malloc(VMTBINS * sizeof(struct vspecpol *));
   vstokes_u = (struct vspecpol **) malloc(VMTBINS * sizeof(struct vspecpol *));
+
   const int indexmax = Nspectra * Nobs;
   for (int p = 0; p < VMTBINS; p++)
   {
@@ -460,13 +461,13 @@ void init_vspecpol(void)
 
     for (int n = 0; n < VMTBINS; n++)
     {
-      vstokes_i[n][ind_comb].lower_time = exp( log(tmin_vspec) + (n * (dlogt_vspec)));
-      vstokes_i[n][ind_comb].delta_t = exp( log(tmin_vspec) + ((n+1) * (dlogt_vspec))) - vstokes_i[n][ind_comb].lower_time;
+      vstokes_i[n][ind_comb].lower_time = exp(log(tmin_vspec) + (n * (dlogt_vspec)));
+      vstokes_i[n][ind_comb].delta_t = exp(log(tmin_vspec) + ((n + 1) * (dlogt_vspec))) - vstokes_i[n][ind_comb].lower_time;
 
       for (int m = 0; m < VMNUBINS; m++)
       {
         lower_freq_vspec[m] = exp(log(numin_vspec) + (m * (dlognu_vspec)));
-        delta_freq_vspec[m] = exp(log(numin_vspec) + ((m+1) * (dlognu_vspec))) - lower_freq_vspec[m];
+        delta_freq_vspec[m] = exp(log(numin_vspec) + ((m + 1) * (dlognu_vspec))) - lower_freq_vspec[m];
 
         vstokes_i[n][ind_comb].flux[m] = 0.0;
         vstokes_q[n][ind_comb].flux[m] = 0.0;
@@ -481,13 +482,13 @@ void write_vspecpol(FILE *specpol_file)
 {
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++)
   {
-    fprintf(specpol_file, "%g ", 0.0);
+    fprintf(specpol_file, "%g ", 0.);
 
     for (int l = 0; l < 3; l++)
     {
       for (int p = 0; p < VMTBINS; p++)
       {
-        fprintf(specpol_file, "%g ", (vstokes_i[p][ind_comb].lower_time + (vstokes_i[p][ind_comb].delta_t/2))/DAY);
+        fprintf(specpol_file, "%g ", (vstokes_i[p][ind_comb].lower_time + (vstokes_i[p][ind_comb].delta_t / 2.)) / DAY);
       }
     }
 
@@ -495,7 +496,7 @@ void write_vspecpol(FILE *specpol_file)
 
     for (int m = 0; m < VMNUBINS; m++)
     {
-      fprintf(specpol_file, "%g ", (lower_freq_vspec[m]+(delta_freq_vspec[m]/2)));
+      fprintf(specpol_file, "%g ", (lower_freq_vspec[m] + (delta_freq_vspec[m] / 2.)));
 
       // Stokes I
       for (int p = 0; p < VMTBINS; p++)
@@ -528,8 +529,17 @@ void write_vspecpol(FILE *specpol_file)
 
 
 
-void read_vspecpol(FILE *specpol_file)
+void read_vspecpol(int my_rank, int nts)
 {
+  char filename[1024];
+
+  if (nts % 2 == 0)
+    sprintf(filename, "vspecpol_%d_%d_odd.tmp", 0, my_rank);
+  else
+    sprintf(filename, "vspecpol_%d_%d_even.tmp", 0, my_rank);
+
+  FILE *vspecpol_file = fopen_required(filename, "rb");
+
   float a,b,c;
 
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++)
@@ -540,8 +550,8 @@ void read_vspecpol(FILE *specpol_file)
 
     for (int n = 0; n < VMTBINS; n++)
     {
-      vstokes_i[n][ind_comb].lower_time = exp( log(tmin_vspec) + (n * (dlogt_vspec)));
-      vstokes_i[n][ind_comb].delta_t = exp( log(tmin_vspec) + ((n+1) * (dlogt_vspec))) - vstokes_i[n][ind_comb].lower_time;
+      vstokes_i[n][ind_comb].lower_time = exp(log(tmin_vspec) + (n * (dlogt_vspec)));
+      vstokes_i[n][ind_comb].delta_t = exp(log(tmin_vspec) + ((n+1) * (dlogt_vspec))) - vstokes_i[n][ind_comb].lower_time;
 
       for (int m = 0; m < VMNUBINS; m++)
       {
@@ -551,38 +561,35 @@ void read_vspecpol(FILE *specpol_file)
     }
 
     // Initialise I,Q,U fluxes (from temporary files)
-    fscanf(specpol_file, "%g ", &a);
+    fscanf(vspecpol_file, "%g ", &a);
 
     for (int l = 0; l < 3; l++) {
       for (int p = 0; p < VMTBINS; p++)
       {
-        fscanf(specpol_file, "%g ", &b);
+        fscanf(vspecpol_file, "%g ", &b);
       }
     }
 
-    fscanf(specpol_file, "\n");
+    fscanf(vspecpol_file, "\n");
 
     for (int j = 0; j < VMNUBINS; j++)
     {
-      fscanf(specpol_file, "%g ", &c);
+      fscanf(vspecpol_file, "%g ", &c);
 
       // Stokes I
-      for (int p = 0; p < VMTBINS; p++) fscanf(specpol_file, "%lg ", &vstokes_i[p][ind_comb].flux[j]);
+      for (int p = 0; p < VMTBINS; p++) fscanf(vspecpol_file, "%lg ", &vstokes_i[p][ind_comb].flux[j]);
 
       // Stokes Q
-      for (int p = 0; p < VMTBINS; p++) fscanf(specpol_file, "%lg ", &vstokes_q[p][ind_comb].flux[j]);
+      for (int p = 0; p < VMTBINS; p++) fscanf(vspecpol_file, "%lg ", &vstokes_q[p][ind_comb].flux[j]);
 
       // Stokes U
-      for (int p = 0; p < VMTBINS; p++) fscanf(specpol_file, "%lg ", &vstokes_u[p][ind_comb].flux[j]);
+      for (int p = 0; p < VMTBINS; p++) fscanf(vspecpol_file, "%lg ", &vstokes_u[p][ind_comb].flux[j]);
 
-      fscanf(specpol_file, "\n");
+      fscanf(vspecpol_file, "\n");
     }
-
-    /*
-     fclose(specpol_file);
-     fclose(emissionpol_file);
-     */
   }
+
+  fclose(vspecpol_file);
 }
 
 
@@ -735,14 +742,10 @@ void read_vpkt_grid(FILE *vpkt_grid_file)
 
 void read_parameterfile_vpkt(void)
 {
-  int dum1,dum8;
-  float dum2,dum3,dum4,dum5,dum6,dum7,dum9,dum10,dum11;
-
   FILE *input_file = fopen_required("vpkt.txt", "r");
 
   // Nobs
-  fscanf(input_file, "%d", &dum1);
-  Nobs = dum1;
+  fscanf(input_file, "%d", &Nobs);
 
   printout("vpkt.txt: Nobs %d directions\n", Nobs);
 
@@ -750,8 +753,7 @@ void read_parameterfile_vpkt(void)
   nz_obs_vpkt = (double *) malloc(Nobs * sizeof(double));
   for (int i = 0; i < Nobs; i++)
   {
-    fscanf(input_file, "%g", &dum2);
-    nz_obs_vpkt[i] = dum2;
+    fscanf(input_file, "%lg", &nz_obs_vpkt[i]);
 
     if (fabs(nz_obs_vpkt[i]) > 1)
     {
@@ -772,19 +774,18 @@ void read_parameterfile_vpkt(void)
   phiobs = (double *) malloc(Nobs * sizeof(double));
   for (int i = 0; i < Nobs; i++)
   {
-    fscanf(input_file, "%g \n", &dum3);
-    phiobs[i] = dum3 * PI / 180;
-  }
+    double phi_degrees = 0.;
+    fscanf(input_file, "%lg \n", &phi_degrees);
+    phiobs[i] = phi_degrees * PI / 180.;
 
-  for (int i = 0; i < Nobs; i++)
-  {
-    printout("vpkt.txt:   direction %d costheta %g phi %g\n", i, nz_obs_vpkt[i], phiobs[i]);
+    printout("vpkt.txt:   direction %d costheta %g phi %g (%g degrees)\n", i, nz_obs_vpkt[i], phiobs[i], phi_degrees);
   }
 
   // Nspectra opacity choices (i.e. Nspectra spectra for each observer)
-  fscanf(input_file, "%g ", &dum4);
+  int nspectra_customlist_flag;
+  fscanf(input_file, "%d ", &nspectra_customlist_flag);
 
-  if (dum4 != 1)
+  if (nspectra_customlist_flag != 1)
   {
     Nspectra = 1;
     exclude = (double *) malloc(Nspectra * sizeof(double));
@@ -793,14 +794,12 @@ void read_parameterfile_vpkt(void)
   }
   else
   {
-    fscanf(input_file, "%d ", &dum1);
-    Nspectra = dum1;
+    fscanf(input_file, "%d ", &Nspectra);
     exclude = (double *) malloc(Nspectra * sizeof(double));
 
     for (int i = 0; i < Nspectra; i++)
     {
-      fscanf(input_file, "%g ", &dum2);
-      exclude[i] = dum2;
+      fscanf(input_file, "%lg ", &exclude[i]);
 
       // The first number should be equal to zero!
       assert(exclude[0] == 0); // The first spectrum should allow for all opacities (exclude[i]=0)
@@ -811,13 +810,16 @@ void read_parameterfile_vpkt(void)
   tau_vpkt = (double *) malloc(Nspectra * sizeof(double));
 
   // time window. If dum4=1 it restrict vpkt to time windown (dum5,dum6)
-  fscanf(input_file, "%g %g %g \n", &dum4, &dum5, &dum6);
+  int override_tminmax = 0;
+  double vspec_tmin_in_days = 0.;
+  double vspec_tmax_in_days = 0.;
+  fscanf(input_file, "%d %lg %lg \n", &override_tminmax, &vspec_tmin_in_days, &vspec_tmax_in_days);
 
-  printout("vpkt: compiled with tmin_vspec %.1fd tmax_vspec %1.fd\n", tmin_vspec / DAY, tmax_vspec / DAY);
-  if (dum4 == 1)
+  printout("vpkt: compiled with tmin_vspec %.1fd tmax_vspec %1.fd VMTBINS %d\n", tmin_vspec / DAY, tmax_vspec / DAY, VMTBINS);
+  if (override_tminmax == 1)
   {
-    tmin_vspec_input = dum5 * DAY;
-    tmax_vspec_input = dum6 * DAY;
+    tmin_vspec_input = vspec_tmin_in_days * DAY;
+    tmax_vspec_input = vspec_tmax_in_days * DAY;
     printout("vpkt.txt: tmin_vspec_input %.1fd, tmax_vspec_input %.1fd\n", tmin_vspec_input / DAY, tmax_vspec_input / DAY);
   }
   else
@@ -832,22 +834,29 @@ void read_parameterfile_vpkt(void)
 
   // frequency window. dum4 restrict vpkt to a frequency range, dum5 indicates the number of ranges,
   // followed by a list of ranges (dum6,dum7)
-  fscanf(input_file, "%g ", &dum4);
+  int flag_custom_freq_ranges = 0;
+  fscanf(input_file, "%d ", &flag_custom_freq_ranges);
 
-  if (dum4 == 1)
+  printout("vpkt: compiled with VMNUBINS %d\n", VMNUBINS);
+  assert(numax_vspec > numin_vspec);
+  printout("vpkt: compiled with numax_vspec %g lambda_min %g Å\n", numax_vspec, 1e8 * CLIGHT / numax_vspec);
+  printout("vpkt: compiled with numin_vspec %g lambda_max %g Å\n", numin_vspec, 1e8 * CLIGHT / numin_vspec);
+  if (flag_custom_freq_ranges == 1)
   {
     fscanf(input_file, "%d ", &Nrange);
     assert(Nrange <= MRANGE);
 
+    printout("vpkt.txt: Nrange %d frequency intervals per spectrum per observer\n", Nrange);
+
     for (int i = 0; i < Nrange; i++)
     {
-      fscanf(input_file, "%g %g", &dum6, &dum7);
-
-      const double lmin_vspec_input = dum6;
-      const double lmax_vspec_input = dum7;
+      double lmin_vspec_input = 0.;
+      double lmax_vspec_input = 0.;
+      fscanf(input_file, "%lg %lg", &lmin_vspec_input, &lmax_vspec_input);
 
       numin_vspec_input[i] = CLIGHT / (lmax_vspec_input * 1e-8);
       numax_vspec_input[i] = CLIGHT / (lmin_vspec_input * 1e-8);
+      printout("vpkt.txt:   range %d lambda [%g, %g] Angstroms\n", i, 1e8 * CLIGHT / numax_vspec_input[i], 1e8 * CLIGHT / numin_vspec_input[i]);
     }
   }
   else
@@ -856,48 +865,47 @@ void read_parameterfile_vpkt(void)
 
     numin_vspec_input[0] = numin_vspec;
     numax_vspec_input[0] = numax_vspec;
-  }
-  printout("vpkt.txt: Nrange %d frequency intervals per spectrum per observer\n", Nspectra);
-  for (int i = 0; i < Nrange; i++)
-  {
+
+    printout("vpkt.txt: Nrange 1 frequency interval (inherited from numin_vspec and numax_vspec)\n");
+    const int i = 0;
     printout("vpkt.txt:   range %d lambda [%g, %g] Angstroms\n", i, 1e8 * CLIGHT / numax_vspec_input[i], 1e8 * CLIGHT / numin_vspec_input[i]);
   }
 
   // if dum7=1, vpkt are not created when cell optical depth is larger than cell_is_optically_thick_vpkt
-  fscanf(input_file, "%g %lg \n", &dum7, &cell_is_optically_thick_vpkt);
+  int overrride_thickcell_tau = 0;
+  fscanf(input_file, "%d %lg \n", &overrride_thickcell_tau, &cell_is_optically_thick_vpkt);
 
-  if (dum7 != 1)
+  if (overrride_thickcell_tau == 1)
+  {
+    printout("vpkt.txt: cell_is_optically_thick_vpkt %lg\n", cell_is_optically_thick_vpkt);
+  }
+  else
   {
     cell_is_optically_thick_vpkt = globals::cell_is_optically_thick;
     printout("vpkt.txt: cell_is_optically_thick_vpkt %lg (inherited from cell_is_optically_thick)\n", cell_is_optically_thick_vpkt);
   }
-  else
-  {
-    printout("vpkt.txt: cell_is_optically_thick_vpkt %lg\n", cell_is_optically_thick_vpkt);
-  }
 
   // Maximum optical depth. If a vpkt reaches dum7 is thrown away
-  fscanf(input_file, "%g \n", &dum7);
-  tau_max_vpkt = dum7;
+  fscanf(input_file, "%lg \n", &tau_max_vpkt);
   printout("vpkt.txt: tau_max_vpkt %g\n", tau_max_vpkt);
 
-  // Produce velocity grid map if dum8=1
-  fscanf(input_file, "%d \n", &dum8);
-  vgrid_flag = dum8;
+  // Produce velocity grid map if =1
+  fscanf(input_file, "%d \n", &vgrid_flag);
   printout("vpkt.txt: velocity grid map %s\n", (vgrid_flag == 1) ? "ENABLED" : "DISABLED");
 
-  if (dum8 == 1)
+  if (vgrid_flag == 1)
   {
+    double tmin_grid_in_days;
+    double tmax_grid_in_days;
     // Specify time range for velocity grid map
-    fscanf(input_file, "%g %g \n", &dum9, &dum10);
-    tmin_grid = dum9 * DAY;
-    tmax_grid = dum10 * DAY;
+    fscanf(input_file, "%lg %lg \n", &tmin_grid_in_days, &tmax_grid_in_days);
+    tmin_grid = tmin_grid_in_days * DAY;
+    tmax_grid = tmax_grid_in_days * DAY;
 
     printout("vpkt.txt: velocity grid time range tmin_grid %gd tmax_grid %gd\n", tmin_grid / DAY, tmax_grid / DAY);
 
     // Specify wavelength range: number of intervals (dum9) and limits (dum10,dum11)
-    fscanf(input_file, "%g ", &dum9);
-    Nrange_grid = dum9;
+    fscanf(input_file, "%d ", &Nrange_grid);
 
     printout("vpkt.txt: velocity grid frequency intervals %d\n", Nrange_grid);
 
@@ -905,16 +913,20 @@ void read_parameterfile_vpkt(void)
 
     for (int i = 0; i < Nrange_grid; i++)
     {
-      fscanf(input_file, "%g %g", &dum10, &dum11);
+      double range_lambda_min = 0.;
+      double range_lambda_max = 0.;
+      fscanf(input_file, "%lg %lg", &range_lambda_min, &range_lambda_max);
 
-      nu_grid_max[i] = CLIGHT / (dum10 * 1e-8);
-      nu_grid_min[i] = CLIGHT / (dum11 * 1e-8);
+      nu_grid_max[i] = CLIGHT / (range_lambda_min * 1e-8);
+      nu_grid_min[i] = CLIGHT / (range_lambda_max * 1e-8);
 
       printout("vpkt.txt:   velgrid range %d lambda [%g, %g] Angstroms\n", i, 1e8 * CLIGHT / nu_grid_max[i], 1e8 * CLIGHT / nu_grid_min[i]);
     }
   }
+
   fclose(input_file);
 }
+
 
 __host__ __device__
 int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
@@ -930,7 +942,6 @@ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
 
   if (globals::modelgrid[mgi].thick != 0)
   {
-    printout("Cell is thick. ending\n");
     return 0;
   }
 
@@ -946,7 +957,6 @@ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
 
   for (int bin = 0; bin < Nobs; bin++)
   {
-    printout("nobs %d of %d\n", bin, Nobs);
     /* loop over different observers */
 
     obs[0] = sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * cos(phiobs[bin]);

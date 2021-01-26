@@ -1007,16 +1007,7 @@ int main(int argc, char** argv)
     {
       // Continue simulation: read into temporary files
 
-      if (nts % 2 == 0)
-        sprintf(filename,"vspecpol_%d_%d_odd.tmp", 0, my_rank);
-      else
-        sprintf(filename,"vspecpol_%d_%d_even.tmp", 0 ,my_rank);
-
-      FILE *vspecpol_file = fopen_required(filename, "rb");
-
-      read_vspecpol(vspecpol_file);
-
-      fclose(vspecpol_file);
+      read_vspecpol(my_rank, nts);
 
       if (vgrid_flag == 1)
       {
