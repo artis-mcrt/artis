@@ -135,9 +135,9 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
   // trajectory is
   // x = x0 + (dir.x) * c * (t - tstart)
   // the boundries follow
-  // x+/- = x+/-(globals::tmin) * (t/globals::tmin)
+  // x+/- = x+/-(tmin) * (t/tmin)
   // so the crossing occurs when
-  // t = (x0 - (dir.x)*c*tstart)/(x+/-(globals::tmin)/globals::tmin - (dir.x)c)
+  // t = (x0 - (dir.x)*c*tstart)/(x+/-(tmin)/tmin - (dir.x)c)
 
   // Modified so that it also returns the distance to the closest cell
   // boundary, regardless of direction.
