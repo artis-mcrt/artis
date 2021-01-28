@@ -329,6 +329,7 @@ double boundary_cross (pkt_ptr, tstart, snext)
 
   if (choice == 0)
   {
+    double tstart_over_tmin = tstart / tmin;
     printout("Something wrong in boundary crossing - didn't find anything.\n");
     printout("tx_plus %g tx_minus %g \n", tx_plus, tx_minus);
     printout("ty_plus %g ty_minus %g \n", ty_plus, ty_minus);
@@ -337,10 +338,44 @@ double boundary_cross (pkt_ptr, tstart, snext)
     printout("vx %g vy %g vy %g \n", vx, vy, vz);
     printout("cellxmax %g cellymax %g cellzmax %g\n", cellxmax, cellymax, cellzmax);
     printout("cellxmin %g cellymin %g cellzmin %g\n", cellxmin, cellymin, cellzmin);
-    printout("tstart %g tmin %g\n", tstart, tmin);
+    printout("cellxmax %g cellymax %g cellzmax %g times tstart/tmin\n", cellxmax*tstart_over_tmin, cellymax*tstart_over_tmin, cellzmax*tstart_over_tmin);
+    printout("cellxmin %g cellymin %g cellzmin %g times tstart/tmin\n", cellxmin*tstart_over_tmin, cellymin*tstart_over_tmin, cellzmin*tstart_over_tmin);
+    printout("tstart %g tmin %g tstart/tmin %g\n", tstart, tmin, tstart_over_tmin);
     printout("value of not_allowed = %d\n", not_allowed);
-    printout("mgi %d pkt number %d", cell[pkt_ptr->where].modelgridindex, pkt_ptr->number);
-      
+    printout("mgi %d pkt number %d\n", cell[pkt_ptr->where].modelgridindex, pkt_ptr->number);
+    printout("wid init %g times tstart/tmin %g\n", wid_init, wid_init*tstart_over_tmin);
+
+    if(cellxmax*tstart_over_tmin > CLIGHT)
+    {
+      printout("cellxmax*tstart_over_tmin > CLIGHT");
+      exit(0);
+    }
+    if(cellymax*tstart_over_tmin > CLIGHT)
+    {
+      printout("cellymax*tstart_over_tmin > CLIGHT");
+      exit(0);
+    }
+    if(cellymax*tstart_over_tmin > CLIGHT)
+    {
+      printout("cellymax*tstart_over_tmin > CLIGHT");
+      exit(0);
+    }
+    if(cellxmin*tstart_over_tmin > CLIGHT)
+    {
+      printout("cellxmax*tstart_over_tmin > CLIGHT");
+      exit(0);
+    }
+    if(cellymin*tstart_over_tmin > CLIGHT)
+    {
+      printout("cellymax*tstart_over_tmin > CLIGHT");
+      exit(0);
+    }
+    if(cellzmin*tstart_over_tmin > CLIGHT)
+    {
+      printout("cellymax*tstart_over_tmin > CLIGHT");
+      exit(0);
+    }
+    printout("None of the above.");
     exit(0);
   }
 
