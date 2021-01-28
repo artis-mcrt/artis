@@ -15,6 +15,7 @@ int energy_init()
 
   energy_in_cells_1d_read();
   read_energy_file();
+  return(0);
 }
 
 void energy_in_cells_1d_read()
