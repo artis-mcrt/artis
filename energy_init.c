@@ -37,13 +37,6 @@ void energy_in_cells_1d_read()
     exit(0);
   }
 
-  /// read start and end times in days
-//  fscanf(cell_energies_file, "%g", &start_time);
-//  fscanf(cell_energies_file, "%g", &end_time);
-
-//  fscanf(cell_energies_file, "%lf", &etot_fromenergyfile);
-//  todo:remove, just get from summing energies
-
   fscanf(cell_energies_file, "%d", &number_of_cells);
   if (number_of_cells != npts_model)
   {
@@ -110,7 +103,6 @@ void read_energy_file()
            &time_energydep_days, &energy_fraction_deposited[t_iter]);
     time_energydep[t_iter] = time_energydep_days * DAY;
   }
-//  todo: make sure start and end times are similar to simulation times
 
 //  printout("%d \n", ntimes_energydep);
 //  for (int t_iter = 0; t_iter < ntimes_energydep; t_iter++)
