@@ -468,6 +468,7 @@ double gamma_grey; /* set to -ve for proper treatment. If possitive, then
 
 double min_den;
 
+// kappa grey
 #define GREY_OP 0.1 // cm2 / g
 
 //float cont[MGRID+1];
