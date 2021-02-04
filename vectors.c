@@ -150,21 +150,27 @@ doppler (dir1,vel)
   double ndotv, fact1;
   double vsqr;
 
-  //vsqr = dot(vel,vel)/CLIGHT2;
-  //gamma_rel = 1./(sqrt(1 - vsqr));
-  gamma_rel = 1.;
+  vsqr = dot(vel,vel);
+  if(vsqr >= CLIGHT2)
+  {
+    printout("vel^2 >= c^2 vel0 %g vel1 %g vel2 %g vsqr %g Abort.\n", vel[0], vel[1], vel[2], vsqr);
+    exit(0);
+  }
+  vsqr = vsqr/CLIGHT2;
+  gamma_rel = 1./(sqrt(1 - vsqr));
+//  gamma_rel = 1.;
 //  printout("vel (in doppler fn) %g\n",vel[0]);
   ndotv = dot(dir1,vel);
  
   fact1 = gamma_rel * (1. - (ndotv/CLIGHT));
 
-  if (fabs(fact1-1) > 0.99999)
-    {
-//    todo: if that needs to be as high need correct gamma_rel
-      printout("Dopper factor > 1.05?? fact1 = %g vel0 %g vel1 %g vel2 %g ndotv %g Abort.\n",
-             fact1, vel[0], vel[1], vel[2], ndotv);
-      exit(0);
-    }
+//  if (fabs(fact1-1) > 1)
+//    {
+////    todo: if that needs to be as high need correct gamma_rel
+//      printout("Doppler factor > 1.05?? fact1 = %g vel0 %g vel1 %g vel2 %g ndotv %g Abort.\n",
+//             fact1, vel[0], vel[1], vel[2], ndotv);
+//      exit(0);
+//    }
 
   return(fact1);
 }
