@@ -420,7 +420,7 @@ int change_cell(pkt_ptr, snext, end_packet, t_current)
     }
   #endif
 //    printout("[debug] snext %d pkt cell number %d mgi %d\n",snext, pkt_ptr->where, cell[pkt_ptr->where].modelgridindex);
-  if (snext == -99)
+  if (snext == -99 || cell[pkt_ptr->where].modelgridindex == MMODELGRID) //TODO: are pkts in mgi MMODELGRID always type escape?
   {
       /* Then the packet is exiting the grid. We need to record
     where and at what time it leaves the grid. */
