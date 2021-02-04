@@ -210,7 +210,7 @@ int main(int argc, char** argv)
           {
             //printout("add packet %d\n",j);
             /// We know that a packet escaped at "escape_time". However, we have
-            /// to allow for travel time. Use the formula in Leon's paper. The extra
+            /// to allow for travel time. Use the formula in Leon's paper -2005 section 4.2. The extra
             /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
             t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
             epkts[j].arrive_time = t_arrive;
