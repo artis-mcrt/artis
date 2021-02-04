@@ -90,8 +90,21 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
     {
       if (sdist > (rmax * t_current/tmin))
       {
-        printout("[fatal] do_rpkt: Unreasonably large sdist. Rpkt. Abort. %g %g %g\n", rmax, t_current/tmin, sdist);
+        printout("[fatal] do_rpkt: Unreasonably large sdist. Rpkt. Abort.\n "
+                 "rmax %g t_current/tmin %g sdist %g rmax * t_current/tmin %g mgi %d \n"
+                 " posx %g posy %g posz %g \n"
+                 "initposx %g initposy %g initposz %g \n"
+                 "pkt number %d\n",
+                 rmax, t_current/tmin, sdist, rmax * t_current/tmin, cell[pkt_ptr->where].modelgridindex,
+                 pkt_ptr->pos[0], pkt_ptr->pos[1], pkt_ptr->pos[2],
+                 cell[pkt_ptr->where].pos_init[0], cell[pkt_ptr->where].pos_init[1], cell[pkt_ptr->where].pos_init[2],
+                 pkt_ptr->number);
         abort();
+      }
+      if (pkt_ptr->pos[0] > (rmax * t_current/tmin) || pkt_ptr->pos[1] > (rmax * t_current/tmin) || pkt_ptr->pos[2] > (rmax * t_current/tmin))
+      {
+          printout("fatal packet outside simulation boundary");
+          abort();
       }
   
       if (sdist < 1)
