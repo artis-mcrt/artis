@@ -238,8 +238,15 @@ int setup_packets (int pktnumberoffset)
     }
 
     /// Pellet is in cell m, pointer is grid_ptr.
-    //  printout("Pellet in cell %d\n",m);
+    printout("Pellet in cell %d mgi %d number %d\n",m, cell[m].modelgridindex, n);
+//    printf("%d    %d    %d\n", n, cell[m].modelgridindex, m);
     place_pellet(grid_ptr, e0, m, n, pktnumberoffset);
+
+//    if (pkt[n].type != 200)
+//    {
+//        printout("DEBUG: didn't assign type 200 to packet number %d", n);
+//        exit(0);
+//    }
 
     if (pkt[n].tdecay < tmax)
     {
@@ -488,10 +495,10 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
     ii++;
   }
   pkt[n].tdecay = time_energydep[ii];
-//  printout("tdecay pellet %g \n", pkt[n].tdecay/DAY);
+  printout("tdecay pellet %g pkt number %d\n", pkt[n].tdecay/DAY, n);
   //todo: may want to change this to a fancier search if the list of times gets bigger
-//  printout("ii %d zrand %g energy_fraction_deposited %g time_energydep %g \n",
-//           ii, zrand, energy_fraction_deposited[ii], time_energydep[ii]/DAY);
+  printout("ii %d zrand %g energy_fraction_deposited %g time_energydep %g \n",
+           ii, zrand, energy_fraction_deposited[ii], time_energydep[ii]/DAY);
   //todo: need something here to set time to endtime if energy dep doesn't go to 1
 
   #else
