@@ -16,6 +16,9 @@
 #include "radfield.h"
 #include "rpkt.h"
 #include "vpkt.h"
+#ifdef USE_ENERGYINPUTFILE
+#include "energy_init.h"
+#endif
 #ifdef DO_EXSPEC
   #include "exspec.h"
 #endif
