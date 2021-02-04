@@ -218,7 +218,7 @@ int update_packets(int nts)
         }
         else if (pkt_ptr->type != TYPE_ESCAPE)
         {
-          printout("Unknown packet type %d %d. Abort.\n", pkt_ptr->type, n);
+          printout("Unknown packet type %d pkt number %d. Abort.\n", pkt_ptr->type, n);
           exit(0);
         }
         
