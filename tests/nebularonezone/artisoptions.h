@@ -59,10 +59,13 @@ return (level <= 80);
 
 // Polarisation for real packets
 // #define DIPOLE
-// #define POL_ON
+#define POL_ON
 
 // Polarisation for virtual packets
 // #define VPKT_ON
+
+// Generalised energy input
+#define USE_ENERGYINPUTFILE false
 
 // GSL integration workspace size
 static const size_t GSLWSIZE = 16384;
