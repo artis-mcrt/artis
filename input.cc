@@ -7,6 +7,7 @@
 //#include <cstdlib>
 #include "sn3d.h"
 #include "atomic.h"
+#include "energy_input.h"
 #include "gamma.h"
 #include "grid.h"
 #include "input.h"
@@ -15,9 +16,6 @@
 #include "radfield.h"
 #include "rpkt.h"
 #include "vpkt.h"
-#ifdef USE_ENERGYINPUTFILE
-#include "energy_init.h"
-#endif
 #ifdef DO_EXSPEC
   #include "exspec.h"
 #endif
@@ -1719,10 +1717,11 @@ void input(int rank)
 
   read_ejecta_model(get_model_type());
 
-#ifdef USE_ENERGYINPUTFILE
-  /// If using energy input files get cell energies
-    energy_init();
-#endif
+  if (USE_ENERGYINPUTFILE)
+  {
+    // If using energy input files to get cell energies instead of radioactive decays
+    energy_input_init();
+  }
 
   printout("npts_model: %d\n", get_npts_model());
   globals::rmax = globals::vmax * globals::tmin;

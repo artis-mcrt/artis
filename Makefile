@@ -115,11 +115,11 @@ CUDA_NVCC_FLAGS += -ccbin=$(CXX) -std=c++17 -O3 -use_fast_math -Xcompiler "$(CXX
 ### use pg when you want to use gprof profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)
 
-sn3d_files = sn3d.cc atomic.cc boundary.cc decay.cc emissivities.cc gamma.cc globals.cc grey_emissivities.cc grid.cc gsl_managed.cc input.cc kpkt.cc light_curve.cc ltepop.cc macroatom.cc md5.cc nltepop.cc nonthermal.cc packet_init.cc photo_electric.cc polarization.cc radfield.cc ratecoeff.cc rpkt.cc stats.cc thermalbalance.cc update_grid.cc update_packets.cc vectors.cc vpkt.cc
+sn3d_files = sn3d.cc atomic.cc boundary.cc decay.cc emissivities.cc energy_input.cc gamma.cc globals.cc grey_emissivities.cc grid.cc gsl_managed.cc input.cc kpkt.cc light_curve.cc ltepop.cc macroatom.cc md5.cc nltepop.cc nonthermal.cc packet_init.cc photo_electric.cc polarization.cc radfield.cc ratecoeff.cc rpkt.cc stats.cc thermalbalance.cc update_grid.cc update_packets.cc vectors.cc vpkt.cc
 
-sn3d_objects = sn3d.o atomic.o boundary.o decay.o emissivities.o gamma.o globals.o grey_emissivities.o grid.o gsl_managed.o input.o kpkt.o light_curve.o ltepop.o macroatom.o md5.o nltepop.o nonthermal.o packet_init.o photo_electric.o polarization.o radfield.o ratecoeff.o rpkt.o stats.o thermalbalance.o update_grid.o update_packets.o vectors.o vpkt.o
+sn3d_objects = sn3d.o atomic.o boundary.o decay.o emissivities.o energy_input.o gamma.o globals.o grey_emissivities.o grid.o gsl_managed.o input.o kpkt.o light_curve.o ltepop.o macroatom.o md5.o nltepop.o nonthermal.o packet_init.o photo_electric.o polarization.o radfield.o ratecoeff.o rpkt.o stats.o thermalbalance.o update_grid.o update_packets.o vectors.o vpkt.o
 
-exspec_files = exspec.cc atomic.cc boundary.cc decay.cc emissivities.cc gamma.cc globals.cc grey_emissivities.cc grid.cc gsl_managed.cc input.cc kpkt.cc light_curve.cc ltepop.cc macroatom.cc md5.cc nltepop.cc nonthermal.cc packet_init.cc photo_electric.cc polarization.cc radfield.cc ratecoeff.cc rpkt.cc spectrum.cc stats.cc thermalbalance.cc update_grid.cc update_packets.cc vectors.cc vpkt.cc
+exspec_files = exspec.cc atomic.cc boundary.cc decay.cc emissivities.cc energy_input.cc gamma.cc globals.cc grey_emissivities.cc grid.cc gsl_managed.cc input.cc kpkt.cc light_curve.cc ltepop.cc macroatom.cc md5.cc nltepop.cc nonthermal.cc packet_init.cc photo_electric.cc polarization.cc radfield.cc ratecoeff.cc rpkt.cc spectrum.cc stats.cc thermalbalance.cc update_grid.cc update_packets.cc vectors.cc vpkt.cc
 
 all: sn3d exspec
 

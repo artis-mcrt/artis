@@ -68,7 +68,7 @@ return (level <= 80);
 // #define VPKT_ON
 
 // Generalised energy input
-#define USE_ENERGYINPUTFILE
+#define USE_ENERGYINPUTFILE false
 
 // GSL integration workspace size
 static const size_t GSLWSIZE = 16384;
