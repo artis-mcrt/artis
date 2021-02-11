@@ -140,7 +140,7 @@ inline int get_timestep(const double time)
   assert(time < globals::tmax);
   for (int nts = 0; nts < globals::ntstep; nts++)
   {
-    const double tsend = globals::time_step[nts].start + globals::time_step[nts].width;
+    const double tsend = (nts < (globals::ntstep - 1)) ? globals::time_step[nts + 1].start : globals::tmax;
     if (time >= globals::time_step[nts].start && time < tsend)
     {
       return nts;
