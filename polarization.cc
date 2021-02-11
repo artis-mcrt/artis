@@ -159,7 +159,7 @@ void escat_rpkt(PKT *pkt_ptr)
   #ifdef DEBUG_ON
     if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-6)
     {
-      printout("[fatal] do_ma: Not a unit vector. Abort.\n");
+      printout("[fatal] escat_rpkt: Not a unit vector. Abort.\n");
       abort();
     }
   #endif
