@@ -1145,7 +1145,7 @@ void emitt_rpkt(PKT *pkt_ptr)
   #ifdef DEBUG_ON
     if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-8)
     {
-      printout("[fatal] do_ma: Not a unit vector. Abort.\n");
+      printout("[fatal] emitt_rpkt: Not a unit vector. Abort.\n");
       abort();
     }
   #endif
