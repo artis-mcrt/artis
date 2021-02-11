@@ -7,7 +7,7 @@ For a 1D model, we define the density and radioactive mass fractions for spheric
 ```
 line 1: [npts_model: number of cells]
 line 2: [t_model_days: time after explosion in days]
-lines >3: [mgi: cell number]   [shell outer velocity in km/s]  [log10(density in g/cm^3)]  [X_Fegroup]  [X_Ni56]  [X_Co56]  [X_Fe52]  [X_Cr48]
+lines >3: [mgi: cell number]   [shell outer velocity in km/s]  [log10(density in g/cm^3)]  [X_Fegroup]  [X_Ni56]  [X_Co56]  [X_Fe52]  [X_Cr48]  [X_Ni57]  [X_Co57]
 ```
 
 ## abundances.txt
