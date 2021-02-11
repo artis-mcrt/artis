@@ -176,6 +176,8 @@ __host__ __device__
 int get_element(int element)
 /// Returns the atomic number associated with a given elementindex.
 {
+  assert_testmodeonly(element >= 0);
+  assert_testmodeonly(element < nelements);
   return globals::elements[element].anumber;
 }
 
