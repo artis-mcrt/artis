@@ -878,8 +878,15 @@ static void abundances_read(void)
   {
     const int mgi = threedimensional ? get_cell_modelgridindex(n) : n;
 
+    assert(!feof(abundance_file));
+    char line[2048] = "";
+    assert(line == fgets(line, 2048, abundance_file));
+    char *linepos = line;
+    int offset = 0;
+
     int cellnumber;
-    fscanf(abundance_file, "%d", &cellnumber);
+    assert(sscanf(linepos, "%d%n", &cellnumber, &offset) == 1);
+    linepos += offset;
 
     if (cellnumber != n + 1)
     {
@@ -888,13 +895,24 @@ static void abundances_read(void)
       abort();
     }
 
+    // the abundances.txt file specifies the elemental mass fractions for each model cell
+    // (or proportial to mass frac, e.g. element densities because they will be normalised anyway)
+    // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
     double normfactor = 0.;
-    float abundances_in[30];
-    for (int anumber = 1; anumber <= 30; anumber++)
+    float abundances_in[150];
+    for (int anumber = 1; anumber <= 150; anumber++)
     {
-      fscanf(abundance_file, "%g", &abundances_in[anumber - 1]);
+      abundances_in[anumber - 1] = 0.;
+      const int itemsread = sscanf(linepos, "%g%n", &abundances_in[anumber - 1], &offset);
+      linepos += offset;
+      // printout("%d %d %d %g\n", cellnumber, anumber, itemsread, abundances_in[anumber - 1]);
+      if (itemsread != 1)
+      {
+        assert(anumber > 1); // at least one element (hydrogen) should have been specified
+        break;
+      }
 
-      assert(abundances_in[anumber - 1] >= 0);
+      assert(abundances_in[anumber - 1] >= 0.);
       normfactor += abundances_in[anumber - 1];
     }
 
@@ -924,8 +942,8 @@ static void abundances_read(void)
 
 static void read_2d3d_modelabundanceline(FILE * model_input, const int mgi, const bool keep)
 {
-  char line[1024] = "";
-  if (line != fgets(line, 1024, model_input))
+  char line[2048] = "";
+  if (line != fgets(line, 2048, model_input))
   {
     printout("Read failed on second line for cell %d\n", mgi);
     abort();
@@ -999,8 +1017,8 @@ static void read_1d_model(void)
   int mgi = 0;
   while (!feof(model_input))
   {
-    char line[1024] = "";
-    if (line != fgets(line, 1024, model_input))
+    char line[2048] = "";
+    if (line != fgets(line, 2048, model_input))
     {
       // no more lines to read in
       break;
@@ -1464,6 +1482,8 @@ static void assign_temperature(void)
          (factor52fe * get_modelinitradioabund(mgi, NUCLIDE_FE52)) +
          (factor48cr * get_modelinitradioabund(mgi, NUCLIDE_CR48))), 1. / 4.);
 
+    // printout("mgi %d: T_initial %g K tmin %g tstart %g rhoinit %g X_56Ni %g X_52Fe %g X_48cr %g\n",
+    //          mgi, T_initial, globals::tmin, tstart, get_rhoinit(mgi), get_modelinitradioabund(mgi, NUCLIDE_NI56), get_modelinitradioabund(mgi, NUCLIDE_FE52), get_modelinitradioabund(mgi, NUCLIDE_CR48));
     if (T_initial < MINTEMP)
     {
       printout("mgi %d: T_initial of %g is below MINTEMP %g K, setting to MINTEMP.\n", mgi, T_initial, MINTEMP);
