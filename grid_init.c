@@ -600,11 +600,16 @@ int density_1d_read ()
   allocate_compositiondata(MMODELGRID);
 
 #ifdef USE_ENERGYINPUTFILE
+  int assoc_cells;
+  double vol_init = wid_init * wid_init * wid_init;
+
   for (mgi = 0; mgi < npts_model; mgi++)
   {
-    if (modelgrid[mgi].associated_cells > 0)
+    assoc_cells = modelgrid[mgi].associated_cells;
+    if (assoc_cells > 0)
     {
-      set_modelcell_energydensity_init(mgi, modelcell_energydensity[mgi]);
+      printout("cell volume init %g associated cells %d volume %g\n", vol_init, assoc_cells, vol_init*assoc_cells);
+      set_modelcell_energydensity_init(mgi, (modelcell_energy[mgi] / (vol_init * assoc_cells)));
     }
   }
   set_modelcell_energydensity_init(MMODELGRID,0.);
@@ -1726,8 +1731,8 @@ void assign_temperature()
     for (n = 0; n < npts_model; n++)
     {
     #ifdef USE_ENERGYINPUTFILE
-      T_initial = pow((CLIGHT/4/STEBO * modelcell_energydensity[n]), 1./4.);
-//      todo: come back to this, seems to be much higher temp than normal case
+      T_initial = pow((CLIGHT/4/STEBO * modelcell_energy[n]), 1./4.);
+//      todo: FIX
 //      printout("T_initial %g", T_initial);
     #else
       //mgi = cell[n].modelgridindex;
@@ -1838,12 +1843,17 @@ double vol_init (CELL *grid_ptr)
 
 
 
-double get_volinit_modelcell(int modelgridindex)
-{
-  ///get volume of a model grid cell at the time tmin
-  return 4./3. * PI * (pow(tmin * vout_model[modelgridindex], 3)
-         - pow(tmin * (modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.), 3));
-}
+//double get_volinit_modelcell(int modelgridindex)
+//{
+//  ///get volume of a model grid cell at the time tmin
+//  printout("tmin %g vout_model %g mgi %d vout_model[modelgridindex - 1] %g\n",
+//           tmin, vout_model[modelgridindex], modelgridindex, vout_model[modelgridindex - 1]);
+//  return 4./3. * PI * (pow(tmin * vout_model[modelgridindex], 3)
+//         - pow(tmin * (modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.), 3));
+//
+////  double cellvolume = pow((2 * vmax * tmin),3.) / (nxgrid*nygrid*nzgrid);
+////  return cellvolume
+//}
 
 float get_rhoinit(int modelgridindex)
 {

@@ -53,9 +53,9 @@ void energy_in_cells_1d_read()
     fscanf(cell_energies_file, "%d %lf",
            &cellnumber, &cell_energies[mgi]);
     energy_counter += cell_energies[mgi];
-    modelcell_energydensity[mgi] = cell_energies[mgi] / get_volinit_modelcell(mgi);
-    printout("modelcell_energydensity %g get_volinit_modelcell %g \n",
-             modelcell_energydensity[mgi], get_volinit_modelcell(mgi));
+    modelcell_energy[mgi] = cell_energies[mgi];
+//    printout("modelcell_energy %g get_volinit_modelcell %g \n",
+//             modelcell_energy[mgi], get_volinit_modelcell(mgi));
   }
   etot_fromenergyfile = energy_counter;
 
@@ -63,7 +63,7 @@ void energy_in_cells_1d_read()
 //           start_time, end_time, number_of_cells);
 //  for (int mgi = 0; mgi < number_of_cells; mgi++)
 //  {
-//    printout("%d %g \n", mgi, modelcell_energydensity[mgi]);
+//    printout("%d %g \n", mgi, modelcell_energy[mgi]);
 //  }
 //  exit(0);
 #endif

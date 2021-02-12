@@ -205,7 +205,7 @@ int get_bfcontinua(int element, int ion);
 
 
 
-double get_volinit_modelcell(int modelgridindex);
+//double get_volinit_modelcell(int modelgridindex);
 float get_rhoinit(int modelgridindex);
 float get_rho(int modelgridindex);
 float get_nne(int modelgridindex);
@@ -449,7 +449,7 @@ int ncoord1_model, ncoord2_model; /*For 2d model, the input grid dimensions */
 double dcoord1, dcoord2; /*spacings of a 2d model grid - must be uniform grid */
 
 #ifdef USE_ENERGYINPUTFILE
-  double modelcell_energydensity[MMODELGRID]; // energy in model grid cell read from energydistribution.txt / initial model cell volume
+  double modelcell_energy[MMODELGRID]; // energy in model grid cell read from energydistribution.txt
   double etot_fromenergyfile; // total model energy -- used to initialise pellets. Read from energydistribution.txt
 
   int ntimes_energydep; // number of times included in energyrate.txt
