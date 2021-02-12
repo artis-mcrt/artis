@@ -45,13 +45,9 @@ double doppler(const double dir1[3], const double vel[3])
   const double dopplerfactor = gamma_rel * (1. - (ndotv / CLIGHT));
 
   #ifdef DEBUG_ON
-  if (fabs(dopplerfactor - 1) > 0.5)
-  {
-    printout("Dopper factor > 1.5?? Abort.\n");
-    abort();
-  }
-  assert(dopplerfactor > 0);
   assert(std::isfinite(dopplerfactor));
+  assert(dopplerfactor > 0);
+  assert(dopplerfactor <= 1.);
   #endif
 
   return dopplerfactor;
