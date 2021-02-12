@@ -47,7 +47,7 @@ double doppler(const double dir1[3], const double vel[3])
   #ifdef DEBUG_ON
   assert(std::isfinite(dopplerfactor));
   assert(dopplerfactor > 0);
-  assert(dopplerfactor <= 1.);
+  assert(dopplerfactor <= 2.);
   #endif
 
   return dopplerfactor;
