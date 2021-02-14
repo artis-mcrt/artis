@@ -8,9 +8,9 @@ void escat_rpkt(PKT *pkt_ptr)
 {
   double dummy_dir[3], vel_vec[3], vel_rev[3];
   double old_dir_cmf[3],new_dir_cmf[3];
-  double Qi, Ui, Inew, Unew, Qnew, Uold, Qold, I, Q, U;
-  double mu,M,tsc,phisc;
-  double i1,i2,cos2i1,sin2i1,cos2i2,sin2i2;
+  double Inew, Unew, Qnew, Uold, Qold, I, Q, U;
+  double mu,M,phisc;
+  // double i1,i2,cos2i1,sin2i1,cos2i2,sin2i2;
   double ref1[3],ref2[3];
 #ifdef DIPOLE
   double p,x;
@@ -24,8 +24,8 @@ void escat_rpkt(PKT *pkt_ptr)
 
   // Transform Stokes Parameters from the RF to the CMF
 
-  Qi = pkt_ptr->stokes[1];
-  Ui = pkt_ptr->stokes[2];
+  double Qi = pkt_ptr->stokes[1];
+  double Ui = pkt_ptr->stokes[2];
 
   frame_transform(pkt_ptr->dir,&Qi,&Ui,vel_vec,old_dir_cmf);
 
@@ -67,7 +67,7 @@ void escat_rpkt(PKT *pkt_ptr)
 
 #endif
 
-  tsc = acos(M);
+  double tsc = acos(M);
 
   if (fabs(old_dir_cmf[2]) < 0.99999)
   {
@@ -98,13 +98,12 @@ void escat_rpkt(PKT *pkt_ptr)
      reference axes ref1 and ref2 in the meridian frame and the corresponding axes
      ref1_sc and ref2_sc in the scattering plane. It is the supplementary angle of the
      scatt angle phisc chosen in the rejection technique above (phisc+i1=180 or phisc+i1=540) */
-  i1 = rot_angle(old_dir_cmf,new_dir_cmf,ref1,ref2);
-  cos2i1 = cos(2 * i1);
-  sin2i1 = sin(2 * i1);
+  double i1 = rot_angle(old_dir_cmf,new_dir_cmf,ref1,ref2);
+  double cos2i1 = cos(2 * i1);
+  double sin2i1 = sin(2 * i1);
 
   Qold = Qi * cos2i1 - Ui * sin2i1;
   Uold = Qi * sin2i1 + Ui * cos2i1;
-
 
   // Scattering
 
@@ -126,9 +125,9 @@ void escat_rpkt(PKT *pkt_ptr)
   /* This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
      reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
      meridian frame. NB: we need to add PI to transform THETA to i2 */
-  i2 = PI + rot_angle(new_dir_cmf,old_dir_cmf,ref1,ref2);
-  cos2i2 = cos(2 * i2);
-  sin2i2 = sin(2 * i2);
+  double i2 = PI + rot_angle(new_dir_cmf,old_dir_cmf,ref1,ref2);
+  double cos2i2 = cos(2 * i2);
+  double sin2i2 = sin(2 * i2);
 
   Q = Qnew * cos2i2 + Unew * sin2i2;
   U = - Qnew * sin2i2 + Unew * cos2i2;
@@ -140,13 +139,11 @@ void escat_rpkt(PKT *pkt_ptr)
   vel_rev[1] = - vel_vec[1];
   vel_rev[2] = - vel_vec[2];
 
-  frame_transform(new_dir_cmf,&Q,&U,vel_rev,dummy_dir);
+  frame_transform(new_dir_cmf, &Q, &U, vel_rev, dummy_dir);
 
-
-  pkt_ptr->stokes[0]=I;
-  pkt_ptr->stokes[1]=Q;
-  pkt_ptr->stokes[2]=U;
-
+  pkt_ptr->stokes[0] = I;
+  pkt_ptr->stokes[1] = Q;
+  pkt_ptr->stokes[2] = U;
 
 
   // ---------------------- Update rest frame direction, frequency and energy --------------------
@@ -157,11 +154,18 @@ void escat_rpkt(PKT *pkt_ptr)
 
   // Check unit vector.
   #ifdef DEBUG_ON
+  if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-6)
+  {
+    printout("WARNING: escat_rpkt: pkt_ptr->dir is not a unit vector. x %g y %g z %g length %.10f. Normalising to unit length...\n",
+             pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2], vec_len(pkt_ptr->dir));
+    vec_norm(pkt_ptr->dir, pkt_ptr->dir);
     if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-6)
     {
-      printout("[fatal] escat_rpkt: Not a unit vector. Abort.\n");
+      printout("[fatal] escat_rpkt: After normalising: pkt_ptr->dir is still not a unit vector. x %g y %g z %g length %.10f\n",
+               pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2], vec_len(pkt_ptr->dir));
       abort();
     }
+  }
   #endif
 
   // Finally we want to put in the rest frame energy and frequency.
