@@ -1431,12 +1431,8 @@ double col_ionization_ratecoeff(
 // multiply by lower level population to get a rate per second
 {
   #ifdef DEBUG_ON
-  if (phixstargetindex > get_nphixstargets(element,ion,lower))
-  {
-    printout("[fatal] col_ionization called with phixstargetindex %d > nphixstargets %d",
-             phixstargetindex, get_nphixstargets(element, ion, lower));
-    abort();
-  }
+  assert_testmodeonly(phixstargetindex >= 0);
+  assert_testmodeonly(phixstargetindex < get_nphixstargets(element,ion,lower));
   #endif
 
   ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
@@ -1453,13 +1449,10 @@ double col_ionization_ratecoeff(
   const double fac1 = epsilon_trans / KB / T_e;
 
   const double sigma_bf = globals::elements[element].ions[ion].levels[lower].photoion_xs[0] * get_phixsprobability(element,ion,lower,phixstargetindex);
-  const double C = nne * 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1; ///photoionization at the edge
+  const double C = nne * 1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1; ///photoionization at the edge
 
-  #ifdef DEBUG_ON
-    if (globals::debuglevel == 777)
-      printout("[debug] col_ion: nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n", nne,T_e,g,epsilon_trans,sigma_bf);
-    assert(std::isfinite(C));
-  #endif
+  // printout("[debug] col_ion: nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n", nne,T_e,g,epsilon_trans,sigma_bf);
+  assert(std::isfinite(C));
 
   return C;
 }
