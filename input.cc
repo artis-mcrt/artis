@@ -1878,6 +1878,7 @@ void read_parameterfile(int rank)
 
   assert(get_noncommentline(file, line));
   std::stringstream(line) >> globals::ntstep; // number of time steps
+  assert(globals::ntstep > 0);
 
   assert(get_noncommentline(file, line));
   // printout("line %s\n", line.c_str());
