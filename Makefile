@@ -60,18 +60,27 @@ else
 	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
 endif
 
-# if this doesn't work, fix pkg-config or change to
-# LDFLAGS += -lgsl -lgslcblas -lm
+# ** GSL (GNU Scientific Library) **
+
+# option 1: Use pkg-config to find GSL and use dynamic linking
 LDFLAGS += $(shell pkg-config --libs gsl)
 CXXFLAGS += $(shell pkg-config --cflags gsl)
+#
+# option 2: Use compiler default search paths to find GSL and use dynamic linking
+# LDFLAGS += -lgsl -lgslcblas -lm
+#
+# option 3: Specify the path to libgsl.a and libgslclas.a and use static linking (GSL needed to compile but not to run)
+# CXXFLAGS += /usr/local/Cellar/gsl/2.6/lib/libgsl.a
+# CXXFLAGS += /usr/local/Cellar/gsl/2.6/lib/libgslcblas.a
 
-# Use GSL inline functions and skip array range checking for performance
-CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE -DGSL_RANGE_CHECK_OFF
+# Use GSL inline functions
+CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
 ifeq ($(TESTMODE),ON)
 	CXXFLAGS += -DTESTMODE=true
 else
-	CXXFLAGS += -DTESTMODE=false
+	# skip array range checking for better performance
+	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF
 endif
 
 sn3dmpi: CXX = mpicxx
