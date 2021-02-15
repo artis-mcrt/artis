@@ -1884,6 +1884,8 @@ void read_parameterfile(int rank)
   // printout("line %s\n", line.c_str());
   std::stringstream(line) >> globals::itstep >> globals::ftstep; // number of start and end time step
   printout("input: itstep %d ftstep %d\n", globals::itstep, globals::ftstep);
+  assert(globals::itstep < globals::ntstep);
+  assert(globals::itstep <= globals::ftstep);
 
   float tmin_days = 0.;
   float tmax_days = 0.;
