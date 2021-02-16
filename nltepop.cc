@@ -224,7 +224,7 @@ static void print_level_rates_summary(
       const int nlevels_nlte = get_nlevels_nlte(element, selected_ion);
       if (ion_has_superlevel(element, selected_ion) && (selected_level == nlevels_nlte + 1))
       {
-        printout("      superlevel  ");
+        printout("      superlevel ");
       }
       else
       {
