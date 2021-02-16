@@ -888,8 +888,6 @@ int main(int argc, char** argv)
   #endif
 
   printout("time after input %ld\n", time(NULL));
-  printout("simulation propagates %d packets per process through a %d x %d x %d grid\n",
-           globals::npkts, globals::ncoordgrid[0], globals::ncoordgrid[1], globals::ncoordgrid[2]);
   printout("timesteps %d\n", globals::ntstep);
 
   /// Precalculate the rate coefficients for spontaneous and stimulated recombination
@@ -935,6 +933,8 @@ int main(int argc, char** argv)
     }
     printout("time time init %ld\n", time(NULL));
     grid_init(my_rank);
+
+    printout("Simulation propagates %g packets per process (total %g with nprocs %d)\n", 1. * globals::npkts, 1. * globals::npkts * globals::nprocs, globals::nprocs);
 
     printout("mem_usage: packets occupy %.1f MB\n", MPKTS * sizeof(PKT) / 1024. / 1024.);
 
