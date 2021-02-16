@@ -86,9 +86,6 @@
   #include "omp.h"
 #endif
 
-#define GRID_UNIFORM 1 // Simple cuboidal cells.
-#define GRID_SPHERICAL1D 2 // radial shells
-
 #define COOLING_UNDEFINED       -99
 
 #define RPKT_EVENTTYPE_BB 550
