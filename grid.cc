@@ -280,7 +280,7 @@ __host__ __device__
 void set_ffegrp(int modelgridindex, float x)
 {
   assert(x >= 0);
-  assert(x <= 1.);
+  assert(x <= 1.001);
   globals::modelgrid[modelgridindex].ffegrp = x;
 }
 
