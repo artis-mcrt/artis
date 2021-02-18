@@ -1875,67 +1875,6 @@ double get_Gamma_phys(int cellnumber, int element, int ion)
 #endif
 
 
-void write_grid_restart_data(const int timestep)
-{
-  char filename[100];
-  sprintf(filename, "gridsave_ts%d.tmp", timestep);
-
-  const time_t sys_time_start_write_restart = time(NULL);
-  printout("Write grid restart data to %s...", filename);
-
-  FILE *gridsave_file = fopen_required(filename, "w");
-
-  fprintf(gridsave_file, "%d ", globals::ntstep);
-
-  for (int i = 0; i < globals::ntstep; i++)
-  {
-    fprintf(gridsave_file, "%lg %lg ", globals::time_step[i].gamma_dep, globals::time_step[i].positron_dep);
-  }
-
-  fprintf(gridsave_file, "%d ", timestep);
-
-  for (int mgi = 0; mgi < get_npts_model(); mgi++)
-  {
-    const bool nonemptycell = (get_numassociatedcells(mgi) > 0);
-
-    if (nonemptycell)
-    {
-      fprintf(gridsave_file, "%d %g %g %g %g %hd %lg",
-              mgi, get_TR(mgi), get_Te(mgi), get_W(mgi), get_TJ(mgi),
-              globals::modelgrid[mgi].thick, globals::rpkt_emiss[mgi]);
-    }
-    else
-    {
-      fprintf(gridsave_file, "%d %g %g %g %g %d %lg", mgi, 0., 0., 0., 0., 0, 0.);
-    }
-
-    #ifndef FORCE_LTE
-      #if (!NO_LUT_PHOTOION)
-        for (int element = 0; element < get_nelements(); element++)
-        {
-          const int nions = get_nions(element);
-          for (int ion = 0; ion < nions; ion++)
-          {
-            const int estimindex = mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
-            fprintf(gridsave_file, " %lg %lg",
-                    (nonemptycell ? globals::corrphotoionrenorm[estimindex] : 0.),
-                    (nonemptycell ? globals::gammaestimator[estimindex] : 0.));
-          }
-        }
-      #endif
-    #endif
-    fprintf(gridsave_file,"\n");
-  }
-
-  // the order of these calls is very important!
-  radfield::write_restart_data(gridsave_file);
-  nonthermal::write_restart_data(gridsave_file);
-  nltepop_write_restart_data(gridsave_file);
-  fclose(gridsave_file);
-  printout("done in %ld seconds.\n", time(NULL) - sys_time_start_write_restart);
-}
-
-
 /*static int get_cell(double x, double y, double z, double t)
 /// subroutine to identify the cell index from a position and a time.
 {
