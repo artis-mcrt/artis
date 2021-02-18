@@ -9,6 +9,5 @@ void precalculate_partfuncts(int modelgridindex);
 __host__ __device__ void cellhistory_reset(int cellnumber, bool set_population);
 double calculate_populations(int modelgridindex);
 double calculate_electron_densities(int modelgridindex);
-void write_grid_restart_data(const int timestep);
 
 #endif //UPDATE_GRID_H
