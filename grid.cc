@@ -1596,6 +1596,10 @@ static void uniform_grid_setup(void)
   globals::ncoordgrid[2] = 50;
   #endif
 
+  // artis assumes in some places that the cells are cubes, not cubioids
+  assert(globals::ncoordgrid[0] == globals::ncoordgrid[1]);
+  assert(globals::ncoordgrid[0] == globals::ncoordgrid[2]);
+
   globals::ngrid = globals::ncoordgrid[0] * globals::ncoordgrid[1] * globals::ncoordgrid[2];
   assert(globals::ngrid <= MGRID);
 
