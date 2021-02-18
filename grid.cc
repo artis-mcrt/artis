@@ -443,29 +443,32 @@ float get_stable_abund(const int mgi, const int anumber)
 __host__ __device__
 static void set_elem_stable_abund_from_total(const int mgi, const int anumber, const float elemabundance)
 {
-  // store the stable mass fraction of an element given the total element mass fraction
-  // by subtracting the abundances of radioactive isotopes
+  // set the stable mass fraction of an element from the total element mass fraction
+  // by subtracting the abundances of radioactive isotopes.
   // if the element Z=anumber has no specific stable abundance variable then the function does nothing
   switch (anumber)
   {
     case 28:
     {
       globals::modelgrid[mgi].fnistable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_NI56) - get_modelinitradioabund(mgi, NUCLIDE_NI57);
-      assert(globals::modelgrid[mgi].fnistable >= 0.);
+      assert(globals::modelgrid[mgi].fnistable >= -1e-5);  // result can be slightly negative due to roundoff error
+      globals::modelgrid[mgi].fnistable = fmax(0., globals::modelgrid[mgi].fnistable); // bring up to zero if below
       break;
     }
 
     case 27:
     {
       globals::modelgrid[mgi].fcostable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_CO56) - get_modelinitradioabund(mgi, NUCLIDE_CO57);
-      assert(globals::modelgrid[mgi].fcostable >= 0.);
+      assert(globals::modelgrid[mgi].fcostable >= -1e-5);
+      globals::modelgrid[mgi].fcostable = fmax(0., globals::modelgrid[mgi].fcostable);
       break;
     }
 
     case 26:
     {
       globals::modelgrid[mgi].ffestable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_FE52);
-      assert(globals::modelgrid[mgi].ffestable >= 0.);
+      assert(globals::modelgrid[mgi].ffestable >= -1e-5);
+      globals::modelgrid[mgi].ffestable = fmax(0., globals::modelgrid[mgi].ffestable);
       break;
     }
 
@@ -479,7 +482,8 @@ static void set_elem_stable_abund_from_total(const int mgi, const int anumber, c
     case 24:
     {
       globals::modelgrid[mgi].fcrstable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_CR48);
-      assert(globals::modelgrid[mgi].fcrstable >= 0.);
+      assert(globals::modelgrid[mgi].fcrstable >= -1e-5);
+      globals::modelgrid[mgi].fcrstable = fmax(0., globals::modelgrid[mgi].fcrstable);
       break;
     }
 
