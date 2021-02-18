@@ -6,7 +6,7 @@ cd $SLURM_SUBMIT_DIR
 spack load gsl target=$(spack arch -t)
 
 echo "before srun sn3d"
-srun -- ./sn3d -w 8 > out.txt
+srun -- ./sn3d -w 24 > out.txt
 echo "after srun"
 
 mkdir ${SLURM_JOBID}.slurm
