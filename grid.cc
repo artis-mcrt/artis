@@ -449,34 +449,53 @@ static void set_elem_stable_abund_from_total(const int mgi, const int anumber, c
   switch (anumber)
   {
     case 28:
-      globals::modelgrid[mgi].fnistable = fmax(0.,
-        elemabundance - get_modelinitradioabund(mgi, NUCLIDE_NI56) - get_modelinitradioabund(mgi, NUCLIDE_NI57));
+    {
+      globals::modelgrid[mgi].fnistable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_NI56) - get_modelinitradioabund(mgi, NUCLIDE_NI57);
+      assert(globals::modelgrid[mgi].fnistable >= 0.);
       break;
+    }
 
     case 27:
-      globals::modelgrid[mgi].fcostable = fmax(0.,
-        elemabundance - get_modelinitradioabund(mgi, NUCLIDE_CO56) - get_modelinitradioabund(mgi, NUCLIDE_CO57));
+    {
+      globals::modelgrid[mgi].fcostable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_CO56) - get_modelinitradioabund(mgi, NUCLIDE_CO57);
+      assert(globals::modelgrid[mgi].fcostable >= 0.);
       break;
+    }
 
     case 26:
-      globals::modelgrid[mgi].ffestable = fmax(0., elemabundance - get_modelinitradioabund(mgi, NUCLIDE_FE52));
+    {
+      globals::modelgrid[mgi].ffestable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_FE52);
+      assert(globals::modelgrid[mgi].ffestable >= 0.);
       break;
+    }
 
     case 25:
-      globals::modelgrid[mgi].fmnstable = fmax(0., elemabundance);
+    {
+      globals::modelgrid[mgi].fmnstable = elemabundance;
+      assert(globals::modelgrid[mgi].fmnstable >= 0.);
       break;
+    }
 
     case 24:
-      globals::modelgrid[mgi].fcrstable = fmax(0., elemabundance - get_modelinitradioabund(mgi, NUCLIDE_CR48));
+    {
+      globals::modelgrid[mgi].fcrstable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_CR48);
+      assert(globals::modelgrid[mgi].fcrstable >= 0.);
       break;
+    }
 
     case 23:
-      globals::modelgrid[mgi].fvstable = fmax(0., elemabundance);
+    {
+      globals::modelgrid[mgi].fvstable = elemabundance;
+      assert(globals::modelgrid[mgi].fvstable >= 0.);
       break;
+    }
 
     case 22:
-      globals::modelgrid[mgi].ftistable = fmax(0., elemabundance);
+    {
+      globals::modelgrid[mgi].ftistable = elemabundance;
+      assert(globals::modelgrid[mgi].ftistable >= 0.);
       break;
+    }
   }
 }
 
