@@ -7,6 +7,7 @@
 #include "radfield.h"
 #include "rpkt.h"
 #include "vectors.h"
+#include <cstring>
 
 
 __managed__ enum model_types model_type = RHO_1D_READ;
@@ -279,7 +280,7 @@ __host__ __device__
 void set_ffegrp(int modelgridindex, float x)
 {
   assert(x >= 0);
-  assert(x <= 1.);
+  assert(x <= 1.001);
   globals::modelgrid[modelgridindex].ffegrp = x;
 }
 
@@ -1507,11 +1508,30 @@ static void assign_temperature(void)
 static void uniform_grid_setup(void)
 /// Routine for doing a uniform cuboidal grid.
 {
+  /// Set grid size for uniform xyz grid
+  #ifdef NCOORDGRID_0
+  globals::ncoordgrid[0] = CUBOID_NCOORDGRID_X;
+  #else
+  globals::ncoordgrid[0] = 50;
+  #endif
+  #ifdef NCOORDGRID_1
+  globals::ncoordgrid[1] = CUBOID_NCOORDGRID_Y;
+  #else
+  globals::ncoordgrid[1] = 50;
+  #endif
+  #ifdef NCOORDGRID_2
+  globals::ncoordgrid[2] = CUBOID_NCOORDGRID_Z;
+  #else
+  globals::ncoordgrid[2] = 50;
+  #endif
+
+  globals::ngrid = globals::ncoordgrid[0] * globals::ncoordgrid[1] * globals::ncoordgrid[2];
+  assert(globals::ngrid <= MGRID);
+
   globals::coordlabel[0] = 'X';
   globals::coordlabel[1] = 'Y';
   globals::coordlabel[2] = 'Z';
   int nxyz[3] = {0, 0, 0};
-  assert(globals::ngrid == globals::ncoordgrid[0] * globals::ncoordgrid[1] * globals::ncoordgrid[2]);
   for (int n = 0; n < globals::ngrid; n++)
   {
     for (int axis = 0; axis < 3; axis++)
@@ -1537,17 +1557,21 @@ static void uniform_grid_setup(void)
   }
 }
 
+
 static void spherical1d_grid_setup(void)
 {
   assert(get_model_type() == RHO_1D_READ);
   globals::coordlabel[0] = 'r';
-  globals::coordlabel[1] = '?';
-  globals::coordlabel[2] = '?';
+  globals::coordlabel[1] = '_';
+  globals::coordlabel[2] = '_';
 
   globals::ncoordgrid[0] = get_npts_model();
   globals::ncoordgrid[1] = 1;
   globals::ncoordgrid[2] = 1;
+
   globals::ngrid = globals::ncoordgrid[0] * globals::ncoordgrid[1] * globals::ncoordgrid[2];
+  assert(globals::ngrid <= MGRID);
+
   globals::coordmax[0] = globals::rmax;
   globals::coordmax[1] = 0.;
   globals::coordmax[2] = 0.;
@@ -1583,19 +1607,30 @@ void grid_init(int my_rank)
 
   /// The cells will be ordered by x then y, then z. Call a routine that
   /// sets up the initial positions and widths of the cells.
+  char grid_type_name[256] = "";
   if (globals::grid_type == GRID_UNIFORM)
   {
     uniform_grid_setup();
+    strcpy(grid_type_name, "uniform cuboidal");
   }
   else if (globals::grid_type == GRID_SPHERICAL1D)
   {
     spherical1d_grid_setup();
+    strcpy(grid_type_name, "spherical");
   }
   else
   {
     printout("[fatal] grid_init: Error: Unknown grid type. Abort.");
     abort();
   }
+
+  printout("Propagation grid is %d-dimensional %s\n", get_ngriddimensions(), grid_type_name);
+
+  for (int d = 0; d < get_ngriddimensions(); d++)
+  {
+    printout("  coordinate %d '%c': cells have %d possible values\n", d, globals::coordlabel[d], globals::ncoordgrid[d]);
+  }
+  printout("  Total propagration cells: %d\n", globals::ngrid);
 
   /// Now set up the density in each cell.
 

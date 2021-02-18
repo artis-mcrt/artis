@@ -1,4 +1,3 @@
-#include <string>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -1650,28 +1649,16 @@ void input(int rank)
   globals::t_model = 0.0;
 
   /// Select grid type
+  #ifdef GRID_TYPE
+  globals::grid_type = GRID_TYPE;
+  #else
   globals::grid_type = GRID_UNIFORM;
-  // globals::grid_type = GRID_SPHERICAL1D;
+  #endif
 
   // this gets overwritten by the input file
   // model_type = RHO_UNIFORM;
 
   globals::maxion = MIONS;
-
-  /// Set grid size for uniform xyz grid (will be overwritten for a spherical grid)
-  //globals::ncoordgrid[0] = 4; //pow(MGRID,1./3.); //10;
-  //globals::ncoordgrid[1] = 4; //pow(MGRID,1./3.); //10;
-  //globals::ncoordgrid[2] = 4; //pow(MGRID,1./3.); //10;
-  globals::ncoordgrid[0] = 50;
-  globals::ncoordgrid[1] = 50;
-  globals::ncoordgrid[2] = 50;
-  printout("globals::ncoordgrid: %d * %d * %d\n", globals::ncoordgrid[0], globals::ncoordgrid[1], globals::ncoordgrid[2]);
-  globals::ngrid = globals::ncoordgrid[0] * globals::ncoordgrid[1] * globals::ncoordgrid[2]; ///Moved to input.c
-  if (globals::ngrid > MGRID)
-  {
-    printout("[fatal] input: Error: too many grid cells. Abort. %d>%d", globals::ngrid, MGRID);
-    abort();
-  }
 
   /// Set number of packets, outer and middle iterations
   globals::npkts = MPKTS;

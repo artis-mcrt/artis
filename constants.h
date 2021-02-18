@@ -36,4 +36,7 @@
 
 #define H_ionpot (13.5979996 * EV)
 
+#define GRID_UNIFORM 1 // Simple cuboidal cells.
+#define GRID_SPHERICAL1D 2 // radial shells
+
 #endif
