@@ -6,13 +6,7 @@
 #ifndef __CUDA_ARCH__
   // host code
 
-  #define printout(...) fprintf(output_file, __VA_ARGS__)
-
-  // #ifdef assert
-  //   #undef assert
-  // #endif
-
-  #define __artis_assert(e) if (!(e)) { (void)printout("[rank %d] %s:%u: failed assertion `%s' in function %s\n", globals::rank_global, __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); (void)fprintf(stderr, "[rank %d] ", globals::rank_global); assert(e);}
+  #define __artis_assert(e) if (!(e)) { (void)fprintf(output_file, "[rank %d] %s:%u: failed assertion `%s' in function %s\n", globals::rank_global, __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); (void)fprintf(stderr, "[rank %d] %s:%u: failed assertion `%s' in function %s\n", globals::rank_global, __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); abort();}
   //
 
   #define assert_always(e) __artis_assert(e)
@@ -20,8 +14,10 @@
   #if defined TESTMODE && TESTMODE
     #define assert_testmodeonly(e) __artis_assert(e)
   #else
-    #define	assert_testmodeonly(e)	((void)0)
+    #define	assert_testmodeonly(e) ((void)0)
   #endif
+
+  #define printout(...) fprintf(output_file, __VA_ARGS__)
 
   #ifdef _OPENMP
   #ifndef __CUDACC__
