@@ -12,10 +12,10 @@
   //   #undef assert
   // #endif
 
-  #define __artis_assert(e) if (!(e)) { (void)printout("[rank %d] %s:%u: failed assertion `%s' in function %s\n", globals::rank_global, __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); (void)fprintf(stderr, "[rank %d] ", globals::rank_global);} assert(e)
+  #define artis_assert(e) if (!(e)) { (void)printout("[rank %d] %s:%u: failed assertion `%s' in function %s\n", globals::rank_global, __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); (void)fprintf(stderr, "[rank %d] ", globals::rank_global);} assert(e)
   //
 
-  #define assert_always(e) __artis_assert(e)
+  #define assert_always(e) artis_assert(e)
 
   #if defined TESTMODE && TESTMODE
     #define assert_testmodeonly(e) artis_assert(e)
