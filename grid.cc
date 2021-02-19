@@ -451,8 +451,17 @@ static void set_elem_stable_abund_from_total(const int mgi, const int anumber, c
     case 28:
     {
       globals::modelgrid[mgi].fnistable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_NI56) - get_modelinitradioabund(mgi, NUCLIDE_NI57);
-      assert(globals::modelgrid[mgi].fnistable >= -1e-5);  // result can be slightly negative due to roundoff error
-      globals::modelgrid[mgi].fnistable = fmax(0., globals::modelgrid[mgi].fnistable); // bring up to zero if below
+      if (globals::modelgrid[mgi].fnistable < -1e-5)  // result can be slightly negative due to roundoff error
+      {
+        printout("Ni isotopic abundances are greater than the element abundance for cell %d\n", mgi);
+        printout(" X_Ni %g X_Ni56 %g X_Ni57 %g\n", elemabundance,
+                 get_modelinitradioabund(mgi, NUCLIDE_NI56), get_modelinitradioabund(mgi, NUCLIDE_NI57));
+        abort();
+      }
+      else if (globals::modelgrid[mgi].fnistable < 0.)
+      {
+        globals::modelgrid[mgi].fnistable = fmax(0., globals::modelgrid[mgi].fnistable); // bring up to zero if below
+      }
       break;
     }
 
@@ -908,7 +917,7 @@ static void abundances_read(void)
     char *linepos = line;
     int offset = 0;
 
-    int cellnumber;
+    int cellnumber = -1;
     assert(sscanf(linepos, "%d%n", &cellnumber, &offset) == 1);
     linepos += offset;
 
