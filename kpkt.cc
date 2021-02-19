@@ -292,9 +292,9 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
     }
   }
 
-  assert(indexionstart == get_coolinglistoffset(element, ion));
-  assert(i == indexionstart + get_ncoolingterms(element, ion));
-  assert(fabs((globals::modelgrid[modelgridindex].cooling[element].contrib[ion] + oldcoolingsum - contrib) / contrib) < 1e-3);
+  assert_always(indexionstart == get_coolinglistoffset(element, ion));
+  assert_always(i == indexionstart + get_ncoolingterms(element, ion));
+  assert_always(fabs((globals::modelgrid[modelgridindex].cooling[element].contrib[ion] + oldcoolingsum - contrib) / contrib) < 1e-3);
 }
 
 
@@ -425,10 +425,10 @@ void setup_coolinglist(void)
           }
         }
       }
-      assert(i == get_coolinglistoffset(element, ion) + get_ncoolingterms(element, ion));
+      assert_always(i == get_coolinglistoffset(element, ion) + get_ncoolingterms(element, ion));
     }
   }
-  assert(globals::ncoolingterms == i); // if this doesn't match, we miscalculated the number of cooling terms
+  assert_always(globals::ncoolingterms == i); // if this doesn't match, we miscalculated the number of cooling terms
   printout("[info] read_atomicdata: number of coolingterms %d\n", globals::ncoolingterms);
 }
 
@@ -781,7 +781,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
                  modelgridindex, i, element, ion, level, rndcool, contrib_low, contrib, globals::cellhistory[tid].cooling_contrib[i], upper, nuptrans);
         abort();
       }
-      assert(upper >= 0);
+      assert_always(upper >= 0);
 
       const int element = coolinglist[i].element;
       const int ion = coolinglist[i].ion;

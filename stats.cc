@@ -84,8 +84,8 @@ namespace stats {
       stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION_FROMBOUNDFREE, n_photons_absorbed);
 
       const int bfindex = -1*et - 1;
-      assert(bfindex >= 0);
-      assert(bfindex <= globals::nbfcontinua);
+      assert_always(bfindex >= 0);
+      assert_always(bfindex <= globals::nbfcontinua);
       const int emissionelement = globals::bflist[bfindex].elementindex;
       const int emissionlowerion = globals::bflist[bfindex].ionindex;
       const int emissionupperion = emissionlowerion + 1;
@@ -119,8 +119,8 @@ namespace stats {
 
   double get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype)
   {
-    assert(ion < get_nions(element));
-    assert(ionstattype < ION_STAT_COUNT);
+    assert_always(ion < get_nions(element));
+    assert_always(ionstattype < ION_STAT_COUNT);
     const int uniqueionindex = get_uniqueionindex(element, ion);
     return ionstats[modelgridindex * globals::includedions * ION_STAT_COUNT + uniqueionindex * ION_STAT_COUNT + ionstattype];
   }
@@ -128,8 +128,8 @@ namespace stats {
 
   void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype, const double newvalue)
   {
-    assert(ion < get_nions(element));
-    assert(ionstattype < ION_STAT_COUNT);
+    assert_always(ion < get_nions(element));
+    assert_always(ionstattype < ION_STAT_COUNT);
     const int uniqueionindex = get_uniqueionindex(element, ion);
     ionstats[modelgridindex * globals::includedions * ION_STAT_COUNT + uniqueionindex * ION_STAT_COUNT + ionstattype] = newvalue;
   }
@@ -196,7 +196,7 @@ namespace stats {
 
   int get_counter(enum eventcounters i)
   {
-    assert(i < COUNTER_COUNT);
+    assert_always(i < COUNTER_COUNT);
     return eventstats[i];
   }
 

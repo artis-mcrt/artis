@@ -19,8 +19,8 @@ static void update_pellet(
   // decays in this time step and if it does handle that. (b) if it doesn't decay in
   // this time step then just move the packet along with the matter for the
   // start of the next time step.
-  assert(pkt_ptr->prop_time < t2);
-  assert(!decay_to_kpkt || !decay_to_ntlepton); // can't decay to both!
+  assert_always(pkt_ptr->prop_time < t2);
+  assert_always(!decay_to_kpkt || !decay_to_ntlepton); // can't decay to both!
   const double ts = pkt_ptr->prop_time;
 
   const double tdecay = pkt_ptr->tdecay; // after packet_init(), this value never changes
@@ -247,7 +247,7 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
       //   printout("packet index %d already escaped. Skipping rest of packets (which are all escaped).\n", n);
       //   // for (int n2 = n; n2 < globals::npkts; n2++)
       //   // {
-      //   //   assert(pkt[n2].type == TYPE_ESCAPE);
+      //   //   assert_always(pkt[n2].type == TYPE_ESCAPE);
       //   // }
       //   break;
       // }

@@ -1,4 +1,3 @@
-#include <cassert>
 #include <gsl/gsl_randist.h>
 #include "sn3d.h"
 #include "vectors.h"
@@ -45,9 +44,9 @@ double doppler(const double dir1[3], const double vel[3])
   const double dopplerfactor = gamma_rel * (1. - (ndotv / CLIGHT));
 
   #ifdef DEBUG_ON
-  assert(std::isfinite(dopplerfactor));
-  assert(dopplerfactor > 0);
-  assert(dopplerfactor <= 2.);
+  assert_always(std::isfinite(dopplerfactor));
+  assert_always(dopplerfactor > 0);
+  assert_always(dopplerfactor <= 2.);
   #endif
 
   return dopplerfactor;
@@ -121,7 +120,7 @@ void move_pkt(PKT *pkt_ptr, const double distance, const double time)
 /// dir vector). The distance moved is in the rest frame.
 {
   /// First update pos.
-  assert(distance >= 0);
+  assert_always(distance >= 0);
 
   pkt_ptr->pos[0] += (pkt_ptr->dir[0] * distance);
   pkt_ptr->pos[1] += (pkt_ptr->dir[1] * distance);

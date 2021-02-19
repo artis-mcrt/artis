@@ -1,5 +1,4 @@
 // #include <gsl/gsl_poly.h>
-#include <cassert>
 #ifndef __CUDA_ARCH__
 #include <gsl/gsl_blas.h>
 #endif
@@ -19,7 +18,7 @@ static double get_shellcrossdist(
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell
 // return -1 if there are no forward intersections (or if the intersection is tangential to the shell)
 {
-  assert(shellradius > 0);
+  assert_always(shellradius > 0);
   const bool debug = false;
   if (debug)
   {
@@ -36,7 +35,7 @@ static double get_shellcrossdist(
   if (discriminant < 0)
   {
     // no intersection
-    assert(shellradius < vec_len(pos));
+    assert_always(shellradius < vec_len(pos));
     if (debug)
       printout("no intersection\n");
     return -1;
@@ -67,7 +66,7 @@ static double get_shellcrossdist(
     const double shellradiusfinal2 = shellradius / tstart * (tstart + d2 / speed);
     // printout("solution1 d1 %g radiusfinal1 %g shellradiusfinal1 %g\n", d1, vec_len(posfinal1), shellradiusfinal1);
     // printout("solution2 d2 %g radiusfinal2 %g shellradiusfinal2 %g\n", d2, vec_len(posfinal2), shellradiusfinal2);
-    assert(fabs(vec_len(posfinal1) / shellradiusfinal1 - 1.) < 1e-3);
+    assert_always(fabs(vec_len(posfinal1) / shellradiusfinal1 - 1.) < 1e-3);
     assert(fabs(vec_len(posfinal2) / shellradiusfinal2 - 1.) < 1e-3);
 
     // invalidate any solutions that require entering the boundary from the wrong radial direction
@@ -117,7 +116,7 @@ static double get_shellcrossdist(
   {
     // exactly one intersection
     // ignore this and don't change which cell the packet is in
-    assert(shellradius <= vec_len(pos));
+    assert_always(shellradius <= vec_len(pos));
     printout("single intersection\n");
     return -1.;
   }
@@ -128,7 +127,7 @@ __host__ __device__
 double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
 /// Basic routine to compute distance to a cell boundary.
 {
-  assert(tstart == pkt_ptr->prop_time);
+  assert_always(tstart == pkt_ptr->prop_time);
 
   // There are six possible boundary crossings. Each of the three
   // cartesian coordinates may be taken in turn. For x, the packet
@@ -374,7 +373,7 @@ __host__ __device__
 void change_cell(PKT *pkt_ptr, int snext, double t_current)
 /// Routine to take a packet across a boundary.
 {
-  assert(pkt_ptr->prop_time == t_current);
+  assert_always(pkt_ptr->prop_time == t_current);
   #ifdef DEBUG_ON
     if (globals::debuglevel == 2)
     {

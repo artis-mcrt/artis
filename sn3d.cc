@@ -144,7 +144,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
         }
       }
       printout("mem_usage: MPI_BUFFER: used %d of %d bytes allocated to mpi_grid_buffer\n", position, mpi_grid_buffer_size);
-      assert(position <= mpi_grid_buffer_size);
+      assert_always(position <= mpi_grid_buffer_size);
     }
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
@@ -697,7 +697,7 @@ int main(int argc, char** argv)
   int deviceCount = -1;
   checkCudaErrors(cudaGetDeviceCount(&deviceCount));
   printf("deviceCount %d\n", deviceCount);
-  assert(deviceCount > 0);
+  assert_always(deviceCount > 0);
   {
     myGpuId = 0;
     #ifdef _OPENMP
@@ -798,7 +798,7 @@ int main(int argc, char** argv)
   PKT *const packets = (PKT *) malloc(MPKTS * sizeof(PKT));
   #endif
 
-  assert(packets != NULL);
+  assert_always(packets != NULL);
 
   #ifndef GIT_BRANCH
     #define GIT_BRANCH "UNKNOWN"

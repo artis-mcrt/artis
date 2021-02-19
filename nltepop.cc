@@ -133,7 +133,7 @@ static double get_total_rate(
   const bool into_level, const bool only_levels_below, const bool only_levels_above)
 {
   double total_rate = 0.;
-  assert(!only_levels_below || !only_levels_above);
+  assert_always(!only_levels_below || !only_levels_above);
 
   if (into_level)
   {
@@ -563,7 +563,7 @@ static void nltepop_matrix_add_ionisation(
   const int modelgridindex, const int element, const int ion,
   double *s_renorm, gsl_matrix *rate_matrix_rad_bf, gsl_matrix *rate_matrix_coll_bf)
 {
-  assert(ion + 1 < get_nions(element)); // can't ionise the top ion
+  assert_always(ion + 1 < get_nions(element)); // can't ionise the top ion
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
   const int nionisinglevels = get_ionisinglevels(element, ion);
@@ -624,7 +624,7 @@ static void nltepop_matrix_add_nt_ionisation(
 {
   // collisional ionization by non-thermal electrons
 
-  assert(ion + 1 < get_nions(element)); // can't ionise the top ion
+  assert_always(ion + 1 < get_nions(element)); // can't ionise the top ion
   const double Y_nt = nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion);
   if (Y_nt < 0.)
   {
@@ -658,9 +658,9 @@ static void nltepop_matrix_normalise(
   gsl_vector *pop_norm_factor_vec)
 {
   const unsigned int nlte_dimension = pop_norm_factor_vec->size;
-  assert(pop_norm_factor_vec->size == nlte_dimension);
-  assert(rate_matrix->size1 == nlte_dimension);
-  assert(rate_matrix->size2 == nlte_dimension);
+  assert_always(pop_norm_factor_vec->size == nlte_dimension);
+  assert_always(rate_matrix->size1 == nlte_dimension);
+  assert_always(rate_matrix->size2 == nlte_dimension);
 
   // TODO: consider replacing normalisation by LTE populations with
   // GSL's gsl_linalg_balance_matrix(gsl_matrix * A, gsl_vector * D) function instead
@@ -716,7 +716,7 @@ static void set_element_pops_lte(const int modelgridindex, const int element)
   //   globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (
   //     nnion * stat_weight(element,ion,0) / globals::modelgrid[modelgridindex].composition[element].partfunct[ion]);
   //
-  //   assert(std::isfinite(globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]));
+  //   assert_always(std::isfinite(globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]));
   // }
 }
 
@@ -754,9 +754,9 @@ static bool nltepop_matrix_solve(
 {
   bool completed_solution;
   const unsigned int nlte_dimension = balance_vector->size;
-  assert(pop_normfactor_vec->size == nlte_dimension);
-  assert(rate_matrix->size1 == nlte_dimension);
-  assert(rate_matrix->size2 == nlte_dimension);
+  assert_always(pop_normfactor_vec->size == nlte_dimension);
+  assert_always(rate_matrix->size1 == nlte_dimension);
+  assert_always(rate_matrix->size2 == nlte_dimension);
 
   gsl_vector *x = gsl_vector_alloc(nlte_dimension); // population solution vector (normalised)
 

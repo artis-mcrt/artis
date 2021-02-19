@@ -1,8 +1,6 @@
 #ifndef ATOMIC_H
 #define ATOMIC_H
 
-#include <cassert>
-
 #include "cuda.h"
 
 extern __managed__ double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge

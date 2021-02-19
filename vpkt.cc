@@ -802,7 +802,7 @@ void read_parameterfile_vpkt(void)
       fscanf(input_file, "%lg ", &exclude[i]);
 
       // The first number should be equal to zero!
-      assert(exclude[0] == 0); // The first spectrum should allow for all opacities (exclude[i]=0)
+      assert_always(exclude[0] == 0); // The first spectrum should allow for all opacities (exclude[i]=0)
     }
   }
 
@@ -829,8 +829,8 @@ void read_parameterfile_vpkt(void)
     printout("vpkt.txt: tmin_vspec_input %.1fd, tmax_vspec_input %.1fd (inherited from tmin_vspec and tmax_vspec)\n", tmin_vspec_input / DAY, tmax_vspec_input / DAY);
   }
 
-  assert(tmax_vspec_input >= tmin_vspec);
-  assert(tmax_vspec_input <= tmax_vspec);
+  assert_always(tmax_vspec_input >= tmin_vspec);
+  assert_always(tmax_vspec_input <= tmax_vspec);
 
   // frequency window. dum4 restrict vpkt to a frequency range, dum5 indicates the number of ranges,
   // followed by a list of ranges (dum6,dum7)
@@ -838,13 +838,13 @@ void read_parameterfile_vpkt(void)
   fscanf(input_file, "%d ", &flag_custom_freq_ranges);
 
   printout("vpkt: compiled with VMNUBINS %d\n", VMNUBINS);
-  assert(numax_vspec > numin_vspec);
+  assert_always(numax_vspec > numin_vspec);
   printout("vpkt: compiled with numax_vspec %g lambda_min %g Å\n", numax_vspec, 1e8 * CLIGHT / numax_vspec);
   printout("vpkt: compiled with numin_vspec %g lambda_max %g Å\n", numin_vspec, 1e8 * CLIGHT / numin_vspec);
   if (flag_custom_freq_ranges == 1)
   {
     fscanf(input_file, "%d ", &Nrange);
-    assert(Nrange <= MRANGE);
+    assert_always(Nrange <= MRANGE);
 
     printout("vpkt.txt: Nrange %d frequency intervals per spectrum per observer\n", Nrange);
 
@@ -909,7 +909,7 @@ void read_parameterfile_vpkt(void)
 
     printout("vpkt.txt: velocity grid frequency intervals %d\n", Nrange_grid);
 
-    assert(Nrange_grid <= MRANGE_GRID);
+    assert_always(Nrange_grid <= MRANGE_GRID);
 
     for (int i = 0; i < Nrange_grid; i++)
     {

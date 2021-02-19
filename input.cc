@@ -78,7 +78,7 @@ static void read_phixs_data_table(
   if (upperlevel_in >= 0) // file gives photoionisation to a single target state only
   {
     int upperlevel = upperlevel_in - groundstate_index_in;
-    assert(upperlevel >= 0);
+    assert_always(upperlevel >= 0);
     globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
     mem_usage_phixs += sizeof(phixstarget_entry);
     if ((globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(1, sizeof(phixstarget_entry))) == NULL)
@@ -95,7 +95,7 @@ static void read_phixs_data_table(
   {
     int in_nphixstargets;
     fscanf(phixsdata,"%d\n", &in_nphixstargets);
-    assert(in_nphixstargets >= 0);
+    assert_always(in_nphixstargets >= 0);
     // read in a table of target states and probabilities and store them
     if (!single_level_top_ion || upperion < get_nions(element) - 1) // in case the top ion has nlevelsmax = 1
     {
@@ -112,8 +112,8 @@ static void read_phixs_data_table(
         double phixstargetprobability;
         fscanf(phixsdata, "%d %lg\n", &upperlevel_in, &phixstargetprobability);
         const int upperlevel = upperlevel_in - groundstate_index_in;
-        assert(upperlevel >= 0);
-        assert(phixstargetprobability > 0);
+        assert_always(upperlevel >= 0);
+        assert_always(phixstargetprobability > 0);
         globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].levelindex = upperlevel;
         globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].probability = phixstargetprobability;
         probability_sum += phixstargetprobability;
@@ -198,7 +198,7 @@ static void read_phixs_data_table(
   {
     float phixs;
     fscanf(phixsdata,"%g\n", &phixs);
-    assert(phixs >= 0);
+    assert_always(phixs >= 0);
 
     ///the photoionisation cross-sections in the database are given in Mbarn = 1e6 * 1e-28m^2
     ///to convert to cgs units multiply by 1e-18
@@ -225,9 +225,9 @@ static void read_phixs_data(void)
   FILE *phixsdata = fopen_required("phixsdata_v2.txt", "r");
 
   fscanf(phixsdata,"%d\n",&globals::NPHIXSPOINTS);
-  assert(globals::NPHIXSPOINTS > 0);
+  assert_always(globals::NPHIXSPOINTS > 0);
   fscanf(phixsdata,"%lg\n",&globals::NPHIXSNUINCREMENT);
-  assert(globals::NPHIXSNUINCREMENT > 0.);
+  assert_always(globals::NPHIXSNUINCREMENT > 0.);
   int Z;
   int upperionstage;
   int upperlevel_in;
@@ -236,9 +236,9 @@ static void read_phixs_data(void)
   double phixs_threshold_ev;
   while (fscanf(phixsdata,"%d %d %d %d %d %lg\n",&Z,&upperionstage,&upperlevel_in,&lowerionstage,&lowerlevel_in,&phixs_threshold_ev) != EOF)
   {
-    assert(Z > 0);
-    assert(upperionstage >= 2);
-    assert(lowerionstage >= 1);
+    assert_always(Z > 0);
+    assert_always(upperionstage >= 2);
+    assert_always(lowerionstage >= 1);
     bool skip_this_phixs_table = false;
     //printout("[debug] Z %d, upperion %d, upperlevel %d, lowerion %d, lowerlevel, %d\n",Z,upperion,upperlevel,lowerion,lowerlevel);
     /// translate readin anumber to element index
@@ -252,8 +252,8 @@ static void read_phixs_data(void)
       const int upperion = upperionstage - get_ionstage(element, 0);
       const int lowerion = lowerionstage - get_ionstage(element, 0);
       const int lowerlevel = lowerlevel_in - groundstate_index_in;
-      assert(lowerionstage >= 0);
-      assert(lowerlevel >= 0);
+      assert_always(lowerionstage >= 0);
+      assert_always(lowerlevel >= 0);
       /// store only photoionization crosssections for ions that are part of the current model atom
       if (lowerion >= 0 && lowerlevel < get_nlevels(element, lowerion) && upperion < get_nions(element))
       {
@@ -309,8 +309,8 @@ static void read_ion_levels(
     double statweight;
     int ntransitions;
     fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex_in, &levelenergy, &statweight, &ntransitions);
-    assert(levelindex_in == level + groundstate_index_in);
-    // assert((ion < nions - 1) || (ntransitions > 0) || (nlevels == 1));
+    assert_always(levelindex_in == level + groundstate_index_in);
+    // assert_always((ion < nions - 1) || (ntransitions > 0) || (nlevels == 1));
     //if (element == 1 && ion == 0) printf("%d %16.10f %g %d\n",levelindex,levelenergy,statweight,ntransitions);
     if (level < nlevelsmax)
     {
@@ -401,8 +401,8 @@ static transitiontable_entry *read_ion_transitions(
       fscanf(transitiondata, "%d %d %lg %lg %d\n", &lower_in, &upper_in, &A, &coll_str, &intforbidden);
       const int lower = lower_in - groundstate_index_in;
       const int upper = upper_in - groundstate_index_in;
-      assert(lower >= 0);
-      assert(upper >= 0);
+      assert_always(lower >= 0);
+      assert_always(upper >= 0);
 
       // this entire block can be removed if we don't want to add in extra collisonal
       // transitions between levels
@@ -438,8 +438,8 @@ static transitiontable_entry *read_ion_transitions(
             printout("Could not reallocate transitiontable\n");
             abort();
           }
-          assert(prev_lower >= 0);
-          assert(tmplevel >= 0);
+          assert_always(prev_lower >= 0);
+          assert_always(tmplevel >= 0);
           transitiontable[i].lower = prev_lower;
           transitiontable[i].upper = tmplevel;
           transitiontable[i].A = 0.;
@@ -550,8 +550,8 @@ static void add_transitions_to_linelist(
 
     const int level = transitiontable[ii].upper;
     const int targetlevel = transitiontable[ii].lower;
-    assert(targetlevel >= 0);
-    assert(level > targetlevel);
+    assert_always(targetlevel >= 0);
+    assert_always(level > targetlevel);
     const double nu_trans = (epsilon(element, ion, level) - epsilon(element, ion, targetlevel)) / H;
     if (targetlevel < nlevelsmax && level < nlevelsmax && nu_trans > 0.)
     {
@@ -668,7 +668,8 @@ static int get_lineindex(const int lelement, const int lion, const int llowerlev
      return lineindex;
    }
   }
-  assert(false);
+  assert_always(false);
+  return -1;
 }
 
 
@@ -786,14 +787,14 @@ static void read_atomicdata_files(void)
     double mass_amu;
     fscanf(compositiondata,"%d %d %d %d %d %lg %lg", &Z, &nions, &lowermost_ionstage, &uppermost_ionstage, &nlevelsmax_readin, &abundance, &mass_amu);
     printout("readin compositiondata: next element Z %d, nions %d, lowermost %d, uppermost %d, nlevelsmax %d\n",Z,nions,lowermost_ionstage,uppermost_ionstage,nlevelsmax_readin);
-    assert(Z > 0);
-    assert(nions > 0);
-    assert(nions == uppermost_ionstage - lowermost_ionstage + 1);
-    assert(abundance >= 0);
-    assert(mass_amu >= 0);
+    assert_always(Z > 0);
+    assert_always(nions > 0);
+    assert_always(nions == uppermost_ionstage - lowermost_ionstage + 1);
+    assert_always(abundance >= 0);
+    assert_always(mass_amu >= 0);
 
     /// write this element's data to memory
-    assert(nions <= globals::maxion);
+    assert_always(nions <= globals::maxion);
     globals::elements[element].anumber = Z;
     globals::elements[element].nions = nions;
     globals::elements[element].abundance = abundance;       /// abundances are expected to be given by mass
@@ -906,7 +907,7 @@ static void read_atomicdata_files(void)
 
       printout("transdata header matched: transdata_Z_in %d, transdata_ionstage_in %d, tottransitions %d\n",
                transdata_Z_in, transdata_ionstage_in, tottransitions_in);
-      assert(tottransitions_in >= 0);
+      assert_always(tottransitions_in >= 0);
 
       int tottransitions = tottransitions_in;
 
@@ -915,8 +916,8 @@ static void read_atomicdata_files(void)
         tottransitions = 0;
       }
 
-      assert(transdata_Z_in == Z);
-      assert(transdata_ionstage_in == ionstage);
+      assert_always(transdata_Z_in == Z);
+      assert_always(transdata_ionstage_in == ionstage);
 
       /// read in the level and transition data for this ion
       transitiontable_entry *transitiontable = (transitiontable_entry *) calloc(tottransitions, sizeof(transitiontable_entry));
@@ -1347,15 +1348,15 @@ static void write_bflist_file(int includedphotoiontransitions)
           if (globals::rank_global == 0)
             fprintf(bflist_file,"%d %d %d %d %d\n", i, element, ion, level, upperionlevel);
 
-          assert(-1 - i == get_continuumindex(element, ion, level, upperionlevel));
+          assert_always(-1 - i == get_continuumindex(element, ion, level, upperionlevel));
 
-          assert(i != 9999999 - 1); // would cause the same packet emission type as the special value for free-free scattering
+          assert_always(i != 9999999 - 1); // would cause the same packet emission type as the special value for free-free scattering
           i++;
         }
       }
     }
   }
-  assert(i == includedphotoiontransitions);
+  assert_always(i == includedphotoiontransitions);
   if (globals::rank_global == 0)
     fclose(bflist_file);
 }
@@ -1401,7 +1402,7 @@ static void setup_phixs_list(void)
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n", globals::nbfcontinua_ground);
 
   globals::phixslist = (phixslist_t *) malloc(get_max_threads() * sizeof(phixslist_t));
-  assert(globals::phixslist != NULL);
+  assert_always(globals::phixslist != NULL);
 
   /// MK: 2012-01-19
   /// To fix the OpenMP problem on BlueGene machines this parallel section was removed and replaced by
@@ -1459,10 +1460,10 @@ static void setup_phixs_list(void)
     //if (TAKE_N_BFCONTINUA >= 0) phixslist = malloc(includedions*TAKE_N_BFCONTINUA*sizeof(phixslist_t));
     //else
     globals::phixslist[itid].kappa_bf_contr = (double *) malloc(globals::nbfcontinua * sizeof(double));
-    assert(globals::phixslist[itid].kappa_bf_contr != NULL);
+    assert_always(globals::phixslist[itid].kappa_bf_contr != NULL);
     #if (DETAILED_BF_ESTIMATORS_ON)
     globals::phixslist[itid].gamma_contr = (double *) malloc(globals::nbfcontinua * sizeof(double));
-    assert(globals::phixslist[itid].gamma_contr != NULL);
+    assert_always(globals::phixslist[itid].gamma_contr != NULL);
     #endif
 
     printout("mem_usage: phixslist[tid].kappa_bf_contr for thread %d occupies %.1f MB\n",
@@ -1582,7 +1583,7 @@ static void read_atomicdata(void)
       includedphotoiontransitions += photoiontransitions;
     }
   }
-  assert(includedphotoiontransitions == globals::nbfcontinua);
+  assert_always(includedphotoiontransitions == globals::nbfcontinua);
 
   printout("[input.c]   in total %d ions, %d levels (%d ionising), %d lines, %d photoionisation transitions\n",
            globals::includedions, includedlevels, includedionisinglevels, globals::nlines, globals::nbfcontinua);
@@ -1627,7 +1628,7 @@ static void read_atomicdata(void)
 
         globals::elements[element].ions[ion].nlevels_nlte = fullnlteexcitedlevelcount;
 
-        assert(has_superlevel == ion_has_superlevel(element, ion));
+        assert_always(has_superlevel == ion_has_superlevel(element, ion));
 
         printout("[input.c]  element %2d Z=%2d ion_stage %2d has %5d NLTE excited levels%s. Starting at %d\n",
                  element, get_element(element), get_ionstage(element, ion),
@@ -1817,11 +1818,11 @@ void read_parameterfile(int rank)
   unsigned long int pre_zseed;
 
   std::ifstream file("input.txt");
-  assert(file.is_open());
+  assert_always(file.is_open());
 
   std::string line;
 
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
 
   int dum1;
   std::stringstream(line) >> dum1;
@@ -1863,44 +1864,44 @@ void read_parameterfile(int rank)
     }
   #endif
 
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> globals::ntstep; // number of time steps
-  assert(globals::ntstep > 0);
+  assert_always(globals::ntstep > 0);
 
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   // printout("line %s\n", line.c_str());
   std::stringstream(line) >> globals::itstep >> globals::ftstep; // number of start and end time step
   printout("input: itstep %d ftstep %d\n", globals::itstep, globals::ftstep);
-  assert(globals::itstep < globals::ntstep);
-  assert(globals::itstep <= globals::ftstep);
+  assert_always(globals::itstep < globals::ntstep);
+  assert_always(globals::itstep <= globals::ftstep);
 
   float tmin_days = 0.;
   float tmax_days = 0.;
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> tmin_days >> tmax_days; // start and end times
-  assert(tmin_days > 0);
-  assert(tmax_days > 0);
-  assert(tmin_days < tmax_days);
+  assert_always(tmin_days > 0);
+  assert_always(tmax_days > 0);
+  assert_always(tmin_days < tmax_days);
   globals::tmin = tmin_days * DAY;
   globals::tmax = tmax_days * DAY;
 
   float dum2, dum3;
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> dum2 >> dum3;
   globals::nusyn_min = dum2 * MEV / H; // lowest frequency to synthesise
   globals::nusyn_max = dum3 * MEV / H; // highest frequency to synthesise
 
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> globals::nsyn_time; // number of times for synthesis
 
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> dum2 >> dum3; // start and end times for synthesis
   for (int i = 0; i < globals::nsyn_time; i++)
   {
     globals::time_syn[i] = exp(log(dum2) + (dum3 * i)) * DAY;
   }
 
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> dum1; // model type
   if (dum1 == 1)
   {
@@ -1915,7 +1916,7 @@ void read_parameterfile(int rank)
     set_model_type(RHO_3D_READ);
   }
 
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> dum1; // compute the r-light curve?
   // 1: lc no estimators
   // 2: lc case with thin cells
@@ -1926,21 +1927,21 @@ void read_parameterfile(int rank)
   {
     globals::do_rlc_est = dum1 - 1;
   }
-  assert(dum1 >= 0);
-  assert(dum1 <= 4);
+  assert_always(dum1 >= 0);
+  assert_always(dum1 <= 4);
 
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> globals::n_out_it; // number of iterations
 
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> dum2; // change speed of light?
   globals::CLIGHT_PROP = dum2 * CLIGHT;
 
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> globals::gamma_grey; // use grey opacity for gammas?
 
   float syn_dir_in[3];
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> syn_dir_in[0] >> syn_dir_in[1] >> syn_dir_in[2]; // components of syn_dir
 
   const double rr = (syn_dir_in[0] * syn_dir_in[0]) + (syn_dir_in[1] * syn_dir_in[1]) + (syn_dir_in[2] * syn_dir_in[2]);
@@ -1960,21 +1961,21 @@ void read_parameterfile(int rank)
     globals::syn_dir[1] = sqrt( (1. - (z1 * z1))) * sin(z2);
   }
 
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> globals::opacity_case; // opacity choice
 
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> globals::rho_crit_para; //free parameter for calculation of rho_crit
   printout("input: rho_crit_para %g\n", globals::rho_crit_para);
   /// he calculation of rho_crit itself depends on the time, therfore it happens in grid_init and update_grid
 
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> globals::debug_packet; // activate debug output for packet
   // select a negative value to deactivate
 
   // Do we start a new simulation or, continue another one?
   int continue_flag;
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> continue_flag;
   globals::simulation_continued_from_saved = (continue_flag == 1);
   if (globals::simulation_continued_from_saved)
@@ -1984,13 +1985,13 @@ void read_parameterfile(int rank)
 
   /// Wavelength (in Angstroms) at which the parameterisation of the radiation field
   /// switches from the nebular approximation to LTE.
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> dum2;  // free parameter for calculation of rho_crit
   globals::nu_rfcut = CLIGHT / (dum2 * 1e-8);
   printout("input: nu_rfcut %g\n", globals::nu_rfcut);
 
   /// Sets the number of initial LTE timesteps for NLTE runs
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> globals::n_lte_timesteps;
   #ifdef FORCE_LTE
     printout("input: this is a pure LTE run\n");
@@ -2026,12 +2027,12 @@ void read_parameterfile(int rank)
   #endif
 
   /// Set up initial grey approximation?
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> globals::cell_is_optically_thick >> globals::n_grey_timesteps;
   printout("input: cells with Thomson optical depth > %g are treated in grey approximation for the first %d timesteps\n", globals::cell_is_optically_thick, globals::n_grey_timesteps);
 
   /// Limit the number of bf-continua
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> globals::max_bf_continua;
   if (globals::max_bf_continua == -1)
   {
@@ -2045,7 +2046,7 @@ void read_parameterfile(int rank)
 
   /// The following parameters affect the DO_EXSPEC mode only /////////////////
   /// Read number of MPI tasks for exspec
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> dum1;
   #ifdef DO_EXSPEC
     nprocs_exspec = dum1;
@@ -2058,7 +2059,7 @@ void read_parameterfile(int rank)
   ///   if 0, no
   /// Only affects runs with DO_EXSPEC. But then it needs huge amounts of memory!!!
   /// Thus be aware to reduce MNUBINS for this mode of operation!
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> dum1;
   #ifdef DO_EXSPEC
     do_emission_res = dum1;
@@ -2072,7 +2073,7 @@ void read_parameterfile(int rank)
   /// Parameter one (a float) gives the relative fraction of a time step which individual
   /// kpkts live. Parameter two (an int) gives the number of time steps for which we
   /// want to use this approximation
-  assert(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> globals::kpktdiffusion_timescale >> globals::n_kpktdiffusion_timesteps;
   printout("input: kpkts diffuse %g of a time step's length for the first %d time steps\n", globals::kpktdiffusion_timescale, globals::n_kpktdiffusion_timesteps);
 
@@ -2106,10 +2107,10 @@ void update_parameterfile(int nts)
   printout("Update input.txt for restart at timestep %d...", nts);
 
   std::ifstream file("input.txt");
-  assert(file.is_open());
+  assert_always(file.is_open());
 
   std::ofstream fileout("input.txt.tmp");
-  assert(fileout.is_open());
+  assert_always(fileout.is_open());
 
   std::string line;
 
@@ -2203,16 +2204,16 @@ void time_init(void)
   // /// Part log, part fixed timestepss
   // const double t_transition = 40. * DAY; // transition from logarithmic to fixed timesteps
   // const double maxtsdelta = 0.5 * DAY; // maximum timestep width in fixed part
-  // assert(t_transition > globals::tmin);
-  // assert(t_transition < globals::tmax);
+  // assert_always(t_transition > globals::tmin);
+  // assert_always(t_transition < globals::tmax);
   // const int nts_fixed = ceil((globals::tmax - t_transition) / maxtsdelta);
   // const double fixed_tsdelta = (globals::tmax - t_transition) / nts_fixed;
-  // assert(nts_fixed >= 0);
-  // assert(nts_fixed <= globals::ntstep);
+  // assert_always(nts_fixed >= 0);
+  // assert_always(nts_fixed <= globals::ntstep);
   // const int nts_log = globals::ntstep - nts_fixed;
-  // assert(nts_log >= 0);
-  // assert(nts_log <= globals::ntstep);
-  // assert((nts_log + nts_fixed) == globals::ntstep);
+  // assert_always(nts_log >= 0);
+  // assert_always(nts_log <= globals::ntstep);
+  // assert_always((nts_log + nts_fixed) == globals::ntstep);
   // for (int n = 0; n < globals::ntstep; n++)
   // {
   //   if (n < nts_log)
@@ -2249,14 +2250,14 @@ void time_init(void)
   //     printout("TIME: Keeping logarithmic durations for timesteps <= %d\n", n);
   //   }
   // }
-  // assert(globals::time_step[0].width <= maxt); // no solution is possible with these constraints!
+  // assert_always(globals::time_step[0].width <= maxt); // no solution is possible with these constraints!
 
   // check consistency of start + width = start_next
   for (int n = 1; n < globals::ntstep; n++)
   {
-    assert(fabs((globals::time_step[n - 1].start + globals::time_step[n - 1].width) / globals::time_step[n].start) - 1 < 0.001);
+    assert_always(fabs((globals::time_step[n - 1].start + globals::time_step[n - 1].width) / globals::time_step[n].start) - 1 < 0.001);
   }
-  assert(fabs((globals::time_step[globals::ntstep - 1].start + globals::time_step[globals::ntstep - 1].width) / globals::tmax) - 1 < 0.001);
+  assert_always(fabs((globals::time_step[globals::ntstep - 1].start + globals::time_step[globals::ntstep - 1].width) / globals::tmax) - 1 < 0.001);
 
   for (int n = 0; n < globals::ntstep; n++)
   {

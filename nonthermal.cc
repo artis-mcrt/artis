@@ -227,7 +227,7 @@ static void read_binding_energies(void)
 
 static double get_auger_probability(int modelgridindex, int element, int ion, int naugerelec)
 {
-  assert(naugerelec <= NT_MAX_AUGER_ELECTRONS);
+  assert_always(naugerelec <= NT_MAX_AUGER_ELECTRONS);
   const int uniqueionindex = get_uniqueionindex(element, ion);
   return nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + naugerelec];
 }
@@ -235,7 +235,7 @@ static double get_auger_probability(int modelgridindex, int element, int ion, in
 
 static double get_ion_auger_enfrac(int modelgridindex, int element, int ion, int naugerelec)
 {
-  assert(naugerelec <= NT_MAX_AUGER_ELECTRONS);
+  assert_always(naugerelec <= NT_MAX_AUGER_ELECTRONS);
   const int uniqueionindex = get_uniqueionindex(element, ion);
   return nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + naugerelec];
 }
@@ -310,8 +310,8 @@ static void read_auger_data(void)
     char *linepos = line;
     int offset = 0;
 
-    assert(sscanf(linepos, "%d %d%n", &Z, &ionstage, &offset) == 2);
-    assert(offset == 5);
+    assert_always(sscanf(linepos, "%d %d%n", &Z, &ionstage, &offset) == 2);
+    assert_always(offset == 5);
     linepos += offset;
 
     const int element = get_elementindex(Z);
@@ -322,8 +322,8 @@ static void read_auger_data(void)
       float en_auger_ev_total_nocorrection = -1;
       int epsilon_e3 = -1;
 
-      assert(sscanf(linepos, "%d %g %g %d%n", &shellnum, &ionpot_ev, &en_auger_ev_total_nocorrection, &epsilon_e3, &offset) == 4);
-      assert(offset == 20);
+      assert_always(sscanf(linepos, "%d %g %g %d%n", &shellnum, &ionpot_ev, &en_auger_ev_total_nocorrection, &epsilon_e3, &offset) == 4);
+      assert_always(offset == 20);
       linepos += offset + 1; // skip one space after so all following columns are exactly 5 characters each
 
       float n_auger_elec_avg = 0;
@@ -333,17 +333,17 @@ static void read_auger_data(void)
         linepos = line + 26 + a * 5;
         // have to read out exactly 5 characters at a time because the columns are sometimes not separated by a space
         char strprob[6] = "00000";
-        assert(sscanf(linepos, "%5c%n", strprob, &offset) == 1);
-        assert(offset == 5);
+        assert_always(sscanf(linepos, "%5c%n", strprob, &offset) == 1);
+        assert_always(offset == 5);
         linepos += offset;
         strprob[5] = '\0';
 
         int probnaugerelece4 = -1;
-        assert(sscanf(strprob, "%d", &probnaugerelece4) == 1);
+        assert_always(sscanf(strprob, "%d", &probnaugerelece4) == 1);
 
         const double probnaugerelec = probnaugerelece4 / 10000.;
 
-        assert(probnaugerelec <= 1.0);
+        assert_always(probnaugerelec <= 1.0);
 
         n_auger_elec_avg += a * probnaugerelec;
 
@@ -385,7 +385,7 @@ static void read_auger_data(void)
             prob_sum += prob_num_auger[a];
             printout(" %d: %4.2f", a, prob_num_auger[a]);
           }
-          assert(fabs(prob_sum - 1.0) < 0.001);
+          assert_always(fabs(prob_sum - 1.0) < 0.001);
 
           printout("\n");
           // printout("ionpot %g %g, g %d\n", colliondata[i].ionpot_ev, ionpot_ev, g);
@@ -406,7 +406,7 @@ static void read_auger_data(void)
             colliondata[i].prob_num_auger[a] = oldweight * colliondata[i].prob_num_auger[a] + newweight * prob_num_auger[a];
             prob_sum += colliondata[i].prob_num_auger[a];
           }
-          assert(fabs(prob_sum - 1.0) < 0.001);
+          assert_always(fabs(prob_sum - 1.0) < 0.001);
 
           if (found_existing_data)
           {
@@ -488,8 +488,8 @@ static void read_collion_data(void)
 
 static void zero_all_effionpot(const int modelgridindex)
 {
-  assert(nt_solution[modelgridindex].prob_num_auger);
-  assert(nt_solution[modelgridindex].ionenfrac_num_auger);
+  assert_always(nt_solution[modelgridindex].prob_num_auger);
+  assert_always(nt_solution[modelgridindex].ionenfrac_num_auger);
 
   for (int uniqueionindex = 0; uniqueionindex < globals::includedions; uniqueionindex++)
   {
@@ -506,8 +506,8 @@ static void zero_all_effionpot(const int modelgridindex)
     int element = 0;
     int ion = 0;
     get_ionfromuniqueionindex(uniqueionindex, &element, &ion);
-    assert(fabs(get_auger_probability(modelgridindex, element, ion, 0) - 1.0) < 1e-3);
-    assert(fabs(get_ion_auger_enfrac(modelgridindex, element, ion, 0) - 1.0) < 1e-3);
+    assert_always(fabs(get_auger_probability(modelgridindex, element, ion, 0) - 1.0) < 1e-3);
+    assert_always(fabs(get_ion_auger_enfrac(modelgridindex, element, ion, 0) - 1.0) < 1e-3);
   }
   check_auger_probabilities(modelgridindex);
 }
@@ -515,7 +515,7 @@ static void zero_all_effionpot(const int modelgridindex)
 
 void init(const int my_rank)
 {
-  assert(nonthermal_initialized == false);
+  assert_always(nonthermal_initialized == false);
   nonthermal_initialized = true;
 
   deposition_rate_density = (double *) calloc(get_npts_model(), sizeof(double));
@@ -586,7 +586,7 @@ void init(const int my_rank)
       if (STORE_NT_SPECTRUM)
       {
         nt_solution[modelgridindex].yfunc = (double *) calloc(SFPTS, sizeof(double));
-        assert(nt_solution[modelgridindex].yfunc != NULL);
+        assert_always(nt_solution[modelgridindex].yfunc != NULL);
         mem_usage_yfunc += SFPTS * sizeof(double);
       }
 
@@ -707,8 +707,8 @@ double get_deposition_rate_density(const int modelgridindex)
   //   printout("No deposition_rate_density for cell %d. Calculated value of %g has been stored.\n",
   //            modelgridindex, deposition_rate_density[modelgridindex]);
   // }
-  assert(deposition_rate_density_timestep[modelgridindex] == globals::nts_global);
-  assert(deposition_rate_density[modelgridindex] >= 0);
+  assert_always(deposition_rate_density_timestep[modelgridindex] == globals::nts_global);
+  assert_always(deposition_rate_density[modelgridindex] >= 0);
   return deposition_rate_density[modelgridindex];
 }
 
@@ -866,11 +866,11 @@ static double get_y(const int modelgridindex, const double energy_ev)
     const int index = (energy_ev - SF_EMIN) / DELTA_E;
   #endif
 
-  // assert(index > 0);
+  // assert_always(index > 0);
   if (index < 0)
   {
     // return 0.;
-    assert(std::isfinite(get_y_sample(modelgridindex, 0)));
+    assert_always(std::isfinite(get_y_sample(modelgridindex, 0)));
     return get_y_sample(modelgridindex, 0);
   }
   else if (index > SFPTS - 1)
@@ -1080,10 +1080,10 @@ static double Psecondary(const double e_p, const double epsilon, const double I,
   {
     return 0.;
   }
-  assert(J > 0);
-  assert(e_p >= I);
-  assert(e_s >= 0);
-  assert(std::isfinite(atan((e_p - I) / 2 / J)));
+  assert_always(J > 0);
+  assert_always(e_p >= I);
+  assert_always(e_s >= 0);
+  assert_always(std::isfinite(atan((e_p - I) / 2 / J)));
   return 1 / (J * atan((e_p - I) / 2 / J) * (1 + pow(e_s / J, 2)));
 }
 
@@ -1201,7 +1201,7 @@ static double N_e(const int modelgridindex, const double energy)
   // source term, should be zero at the low end anyway
   N_e += gsl_vector_get(sourcevec, get_energyindex_ev_lteq(energy_ev));
 
-  assert(std::isfinite(N_e));
+  assert_always(std::isfinite(N_e));
   return N_e;
 }
 
@@ -1564,7 +1564,7 @@ static double calculate_nt_ionization_ratecoeff(
           ionpot_valence = ionpot_shell;
 
         // ensure that the first shell really was the valence shell (we assumed ascending energy order)
-        assert(ionpot_shell >= ionpot_valence);
+        assert_always(ionpot_shell >= ionpot_valence);
 
         // boost the ionization rate by assuming shell vacancy energy is used to eject valence electrons
         gsl_vector_scale(cross_section_vec, ionpot_shell / ionpot_valence);
@@ -1580,7 +1580,7 @@ static double calculate_nt_ionization_ratecoeff(
   gsl_vector_mul(cross_section_vec_allshells, delta_envec);
   #endif
 
-  assert(nt_solution[modelgridindex].yfunc != NULL);
+  assert_always(nt_solution[modelgridindex].yfunc != NULL);
 
   double y_dot_crosssection_de = 0.;
   gsl_vector_view yvecview_thismgi = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
@@ -1646,7 +1646,7 @@ static void calculate_eff_ionpot_auger_rates(
         ionpot_valence = ionpot_shell;
 
       // ensure that the first shell really was the valence shell (we assumed ascending energy order)
-      assert(ionpot_shell >= ionpot_valence);
+      assert_always(ionpot_shell >= ionpot_valence);
 
       const double ionpot = NT_USE_VALENCE_IONPOTENTIAL ? ionpot_valence : ionpot_shell;
       const double eta_over_ionpot = frac_ionization_shell / ionpot; // this is proportional to rate
@@ -1762,9 +1762,9 @@ __host__ __device__
 double nt_ionization_upperion_probability(
   const int modelgridindex, const int element, const int lowerion, const int upperion, const bool energyweighted)
 {
-  assert(upperion > lowerion);
-  assert(upperion < get_nions(element));
-  assert(upperion <= nt_ionisation_maxupperion(element, lowerion));
+  assert_always(upperion > lowerion);
+  assert_always(upperion < get_nions(element));
+  assert_always(upperion <= nt_ionisation_maxupperion(element, lowerion));
   if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0)
   {
     const int numaugerelec = upperion - lowerion - 1; // number of Auger electrons to go from lowerin to upper ion
@@ -1797,7 +1797,7 @@ double nt_ionization_upperion_probability(
       }
       if (energyweighted)
       {
-        assert(fabs(prob_remaining - nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + numaugerelec]) < 0.001);
+        assert_always(fabs(prob_remaining - nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + numaugerelec]) < 0.001);
       }
       else
       {
@@ -1831,7 +1831,7 @@ __host__ __device__
 int nt_ionisation_maxupperion(const int element, const int lowerion)
 {
   const int nions = get_nions(element);
-  assert(lowerion < nions - 1);
+  assert_always(lowerion < nions - 1);
   int maxupper = lowerion + 1;
 
   if (NT_SOLVE_SPENCERFANO)
@@ -1871,7 +1871,7 @@ int nt_random_upperion(const int modelgridindex, const int element, const int lo
 
       printout("ERROR: nt_ionization_upperion_probability did not sum to more than zrand = %lg, prob_sum = %lg (Z=%d ionstage %d). Retrying with new random number.\n",
                zrand, prob_sum, get_element(element), get_ionstage(element, lowerion));
-      assert(fabs(prob_sum - 1.0) < 1e-3);
+      assert_always(fabs(prob_sum - 1.0) < 1e-3);
     }
   }
   else
@@ -1884,8 +1884,8 @@ int nt_random_upperion(const int modelgridindex, const int element, const int lo
 __host__ __device__
 double nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion)
 {
-  assert(NT_ON);
-  assert(get_numassociatedcells(modelgridindex) > 0);
+  assert_always(NT_ON);
+  assert_always(get_numassociatedcells(modelgridindex) > 0);
 
   if (NT_SOLVE_SPENCERFANO)
   {
@@ -2043,7 +2043,7 @@ static void select_nt_ionization(int modelgridindex, int *element, int *lowerion
       return;
     }
   }
-  assert(false); // should not reach here
+  assert_always(false); // should not reach here
 }
 
 
@@ -2107,7 +2107,7 @@ static void select_nt_ionization2(int modelgridindex, int *element, int *lowerio
       }
     }
   }
-  assert(false);
+  assert_always(false);
 }
 
 
@@ -2162,8 +2162,8 @@ void do_ntlepton(PKT *pkt_ptr)
       stats::increment(stats::COUNTER_NT_STAT_TO_IONIZATION);
 
       #if (TRACK_ION_STATS)
-      assert(upperion < get_nions(element));
-      assert(lowerion >= 0);
+      assert_always(upperion < get_nions(element));
+      assert_always(lowerion >= 0);
       const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);
       stats::increment_ion_stats(modelgridindex, element, lowerion, stats::ION_NTION, pkt_ptr->e_cmf / epsilon_trans);
       stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_MACROATOM_ENERGYIN_NTCOLLION, pkt_ptr->e_cmf);
@@ -2406,7 +2406,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
             printout(" %d: %.3f", get_ionstage(element, upperion), probability);
         }
         printout("\n");
-        assert((fabs(prob_sum - 1.0) <= 1e-2) || (nt_ionization_ratecoeff_sf(modelgridindex, element, ion) < 1e-20));
+        assert_always((fabs(prob_sum - 1.0) <= 1e-2) || (nt_ionization_ratecoeff_sf(modelgridindex, element, ion) < 1e-20));
 
         printout("         enfrac to ionstage:");
         double enfrac_sum = 0.;
@@ -2418,7 +2418,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
             printout(" %d: %.3f", get_ionstage(element, upperion), probability);
         }
         printout("\n");
-        assert(fabs(enfrac_sum - 1.0) <= 1e-2 || (nt_ionization_ratecoeff_sf(modelgridindex, element, ion) < 1e-20));
+        assert_always(fabs(enfrac_sum - 1.0) <= 1e-2 || (nt_ionization_ratecoeff_sf(modelgridindex, element, ion) < 1e-20));
       }
     }
   }
@@ -2621,7 +2621,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
       // const double n_auger_elec_avg = colliondata[n].n_auger_elec_avg;
       const double J = get_J(Z, ionstage, ionpot_ev);
 
-      assert(ionpot_ev >= SF_EMIN);
+      assert_always(ionpot_ev >= SF_EMIN);
 
       // printout("Z=%2d ion_stage %d n %d l %d ionpot %g eV\n",
       //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
@@ -2717,7 +2717,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
             }
             else
             {
-              assert(en < en_auger_ev);
+              assert_always(en < en_auger_ev);
               // printout("SFAuger E %g < en_auger_ev %g so subtracting %g from element with value %g\n", en, en_auger_ev, nnion * xs, ij_contribution);
               *gsl_matrix_ptr(sfmatrix, i, j) -= nnion * xs; // * n_auger_elec_avg; // * en_auger_ev???
             }
@@ -3159,7 +3159,7 @@ void nt_MPI_Bcast(const int modelgridindex, const int root)
 
   if (NT_ON && NT_SOLVE_SPENCERFANO)
   {
-    assert(nonthermal_initialized);
+    assert_always(nonthermal_initialized);
     MPI_Bcast(&nt_solution[modelgridindex].nneperion_when_solved, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
     MPI_Bcast(&nt_solution[modelgridindex].timestep_last_solved, 1, MPI_INT, root, MPI_COMM_WORLD);
     MPI_Bcast(&nt_solution[modelgridindex].frac_heating, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
@@ -3178,7 +3178,7 @@ void nt_MPI_Bcast(const int modelgridindex, const int root)
 
     if (nt_solution[modelgridindex].frac_excitations_list_size != frac_excitations_list_size_old)
     {
-      assert(realloc_frac_excitations_list(modelgridindex, nt_solution[modelgridindex].frac_excitations_list_size));
+      assert_always(realloc_frac_excitations_list(modelgridindex, nt_solution[modelgridindex].frac_excitations_list_size));
     }
 
     const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list_size;
@@ -3191,7 +3191,7 @@ void nt_MPI_Bcast(const int modelgridindex, const int root)
 
     if (STORE_NT_SPECTRUM)
     {
-      assert(nt_solution[modelgridindex].yfunc != NULL);
+      assert_always(nt_solution[modelgridindex].yfunc != NULL);
       MPI_Bcast(nt_solution[modelgridindex].yfunc, SFPTS, MPI_DOUBLE, root, MPI_COMM_WORLD);
     }
 

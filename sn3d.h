@@ -1,29 +1,26 @@
 #ifndef SN3D_H
 #define SN3D_H
 
+#include <cassert>
+
 #ifndef __CUDA_ARCH__
   // host code
 
-  #define printout(...) fprintf (output_file, __VA_ARGS__)
+  #define printout(...) (void)fprintf (output_file, __VA_ARGS__)
 
-  #ifdef DEBUG_ON
-    #ifdef assert
-      #undef assert
-    #endif
-    #define assert(e) if (!(e)) { printout("%s:%u: failed assertion `%s' in function %s\n", __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); abort(); }
+  // #ifdef assert
+  //   #undef assert
+  // #endif
 
-    #if defined TESTMODE && TESTMODE
-      #define assert_testmodeonly(e) if (!(e)) { printout("%s:%u: failed testmode assertion `%s' in function %s\n", __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); abort(); }
-    #else
-      #define	assert_testmodeonly(e)	((void)0)
-    #endif
+  #define artis_assert(e) if (!(e)) { (void)printout("[rank %d] %s:%u: failed assertion `%s' in function %s\n", globals::rank_global, __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); (void)fprintf(stderr, "[rank %d] ", globals::rank_global);} assert(e)
+  //
 
+  #define assert_always(e) artis_assert(e)
+
+  #if defined TESTMODE && TESTMODE
+    #define assert_testmodeonly(e) artis_assert(e)
   #else
-    #ifdef assert
-      #undef assert
-    #endif
-    #define	assert(e) ((void)0)
-    #define	assert_testmodeonly(e) ((void)0)
+    #define	assert_testmodeonly(e)	((void)0)
   #endif
 
   #ifdef _OPENMP
@@ -41,6 +38,8 @@
   // device code
 
   #define printout(...) printf (__VA_ARGS__)
+
+  #define artis_assert(e) assert(e)
 
   #if defined TESTMODE && TESTMODE
     #define assert_testmodeonly(e) assert(e)
@@ -133,8 +132,8 @@ inline FILE *fopen_required(const char *filename, const char *mode)
 
 inline int get_timestep(const double time)
 {
-  assert(time >= globals::tmin);
-  assert(time < globals::tmax);
+  assert_always(time >= globals::tmin);
+  assert_always(time < globals::tmax);
   for (int nts = 0; nts < globals::ntstep; nts++)
   {
     const double tsend = (nts < (globals::ntstep - 1)) ? globals::time_step[nts + 1].start : globals::tmax;
@@ -143,7 +142,7 @@ inline int get_timestep(const double time)
       return nts;
     }
   }
-  assert(false); // could not find matching timestep
+  assert_always(false); // could not find matching timestep
 
   return -1;
 }

@@ -499,8 +499,8 @@ int get_Jblueindex(const int lineindex)
 __host__ __device__
 double get_Jb_lu(const int modelgridindex, const int jblueindex)
 {
-  assert(jblueindex >= 0);
-  assert(jblueindex < detailed_linecount);
+  assert_always(jblueindex >= 0);
+  assert_always(jblueindex < detailed_linecount);
   return prev_Jb_lu_normed[modelgridindex][jblueindex].value;
 }
 
@@ -508,8 +508,8 @@ double get_Jb_lu(const int modelgridindex, const int jblueindex)
 __host__ __device__
 int get_Jb_lu_contribcount(const int modelgridindex, const int jblueindex)
 {
-  assert(jblueindex >= 0);
-  assert(jblueindex < detailed_linecount);
+  assert_always(jblueindex >= 0);
+  assert_always(jblueindex < detailed_linecount);
   return prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount;
 }
 
@@ -649,7 +649,7 @@ int select_bin(double nu)
     //     return mid;
     //   }
     //  }
-    assert(false);
+    assert_always(false);
     return -3;
   }
 }
@@ -657,7 +657,7 @@ int select_bin(double nu)
 
 void write_to_file(int modelgridindex, int timestep)
 {
-  assert(MULTIBIN_RADFIELD_MODEL_ON);
+  assert_always(MULTIBIN_RADFIELD_MODEL_ON);
 
 # ifdef _OPENMP
 # pragma omp critical (out_file)
@@ -809,7 +809,7 @@ static void increment_bfestimators(
   const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
   const PKT *const pkt_ptr, const double t_current)
 {
-  assert(pkt_ptr->prop_time == t_current);
+  assert_always(pkt_ptr->prop_time == t_current);
   if (distance_e_cmf == 0)
     return;
 
@@ -844,7 +844,7 @@ static void increment_bfestimators(
           bfrate_raw_bytype[modelgridindex][allcontindex] = (struct bfratecontrib *) realloc(
             bfrate_raw_bytype[modelgridindex][allcontindex], (oldlistsize + 16) * sizeof(struct bfratecontrib));
 
-          assert(bfrate_raw_bytype[modelgridindex][allcontindex] != NULL);
+          assert_always(bfrate_raw_bytype[modelgridindex][allcontindex] != NULL);
         }
 
         int listindex = oldlistsize;
@@ -882,7 +882,7 @@ static void increment_bfestimators(
 __host__ __device__
 void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *const pkt_ptr, double t_current)
 {
-  assert(pkt_ptr->prop_time == t_current);
+  assert_always(pkt_ptr->prop_time == t_current);
   safeadd(J[modelgridindex], distance_e_cmf);
   #ifdef DEBUG_ON
     if (!std::isfinite(J[modelgridindex]))
@@ -1435,7 +1435,7 @@ void set_J_normfactor(int modelgridindex, double normfactor)
 __host__ __device__
 void normalise_J(const int modelgridindex, const double estimator_normfactor_over4pi)
 {
-  assert(std::isfinite(J[modelgridindex]));
+  assert_always(std::isfinite(J[modelgridindex]));
   J[modelgridindex] *= estimator_normfactor_over4pi;
   for (int i = 0; i < detailed_linecount; i++)
   {
@@ -1560,7 +1560,7 @@ void print_bfrate_contributions(const int element, const int lowerion, const int
         const double nuthreshold = get_phixs_threshold(element, ion, lower, phixstargetindex) / H;
         const double lambda_trans = 1e8 * CLIGHT / nuthreshold;
         const int upperionlevel = get_phixsupperlevel(element, ion, lower, phixstargetindex);
-        assert(get_continuumindex(element, ion, lower, upperionlevel) == et);
+        assert_always(get_continuumindex(element, ion, lower, upperionlevel) == et);
         const int lowerionstage = get_ionstage(element, ion);
         printout("%7d bound-free  Z=%2d ion_stage %d->%d upper+1 %4d lower+1 %4d lambda %5.1f\n", et, get_element(element), lowerionstage + 1, lowerionstage, upperionlevel + 1, lower + 1, lambda_trans);
       }
@@ -1608,7 +1608,7 @@ double get_bfrate_estimator(const int element, const int lowerion, const int low
 
 void normalise_nuJ(const int modelgridindex, const double estimator_normfactor_over4pi)
 {
-  assert(std::isfinite(nuJ[modelgridindex]));
+  assert_always(std::isfinite(nuJ[modelgridindex]));
   nuJ[modelgridindex] *= estimator_normfactor_over4pi;
 }
 
@@ -1891,7 +1891,7 @@ void read_restart_data(FILE *gridsave_file)
     {
       int binindex_in;
       fscanf(gridsave_file,"%d %lg\n", &binindex_in, &radfieldbin_nu_upper[binindex]);
-      assert(binindex_in == binindex);
+      assert_always(binindex_in == binindex);
     }
   }
 
@@ -1899,7 +1899,7 @@ void read_restart_data(FILE *gridsave_file)
   {
     int gridsave_nbf_in;
     fscanf(gridsave_file, "%d\n", &gridsave_nbf_in);
-    assert(gridsave_nbf_in == globals::nbfcontinua);
+    assert_always(gridsave_nbf_in == globals::nbfcontinua);
 
     for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
     {
@@ -1907,7 +1907,7 @@ void read_restart_data(FILE *gridsave_file)
       {
         int mgi_in;
         fscanf(gridsave_file, "%d\n", &mgi_in);
-        assert(mgi_in == modelgridindex);
+        assert_always(mgi_in == modelgridindex);
         for (int i = 0; i < globals::nbfcontinua; i++)
         {
           fscanf(gridsave_file, "%g ", &prev_bfrate_normed[modelgridindex][i]);

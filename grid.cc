@@ -279,8 +279,8 @@ void set_nnetot(int modelgridindex, float x)
 __host__ __device__
 void set_ffegrp(int modelgridindex, float x)
 {
-  assert(x >= 0);
-  assert(x <= 1.001);
+  assert_always(x >= 0);
+  assert_always(x <= 1.001);
   globals::modelgrid[modelgridindex].ffegrp = x;
 }
 
@@ -383,7 +383,7 @@ float get_modelinitradioabund(const int modelgridindex, const enum radionuclides
 {
   // this function replaces get_f56ni(mgi), get_fco56(mgi), etc.
 
-  assert(nuclide_type < RADIONUCLIDE_COUNT);
+  assert_always(nuclide_type < RADIONUCLIDE_COUNT);
 
   return globals::modelgrid[modelgridindex].initradioabund[nuclide_type];
 }
@@ -392,8 +392,8 @@ float get_modelinitradioabund(const int modelgridindex, const enum radionuclides
 __host__ __device__
 void set_modelinitradioabund(const int modelgridindex, const enum radionuclides nuclide_type, const float abund)
 {
-  assert(abund >= 0.);
-  assert(abund <= 1.);
+  assert_always(abund >= 0.);
+  assert_always(abund <= 1.);
   // this function replaces set_f56ni(mgi), set_fco56(mgi), etc.
 
   if ((nuclide_type == FAKE_GAM_LINE_ID && abund > 0) || nuclide_type >= RADIONUCLIDE_COUNT)
@@ -468,7 +468,7 @@ static void set_elem_stable_abund_from_total(const int mgi, const int anumber, c
     case 27:
     {
       globals::modelgrid[mgi].fcostable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_CO56) - get_modelinitradioabund(mgi, NUCLIDE_CO57);
-      assert(globals::modelgrid[mgi].fcostable >= -2e-5);
+      assert_always(globals::modelgrid[mgi].fcostable >= -2e-5);
       globals::modelgrid[mgi].fcostable = fmax(0., globals::modelgrid[mgi].fcostable);
       break;
     }
@@ -476,7 +476,7 @@ static void set_elem_stable_abund_from_total(const int mgi, const int anumber, c
     case 26:
     {
       globals::modelgrid[mgi].ffestable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_FE52);
-      assert(globals::modelgrid[mgi].ffestable >= -2e-5);
+      assert_always(globals::modelgrid[mgi].ffestable >= -2e-5);
       globals::modelgrid[mgi].ffestable = fmax(0., globals::modelgrid[mgi].ffestable);
       break;
     }
@@ -484,14 +484,14 @@ static void set_elem_stable_abund_from_total(const int mgi, const int anumber, c
     case 25:
     {
       globals::modelgrid[mgi].fmnstable = elemabundance;
-      assert(globals::modelgrid[mgi].fmnstable >= 0.);
+      assert_always(globals::modelgrid[mgi].fmnstable >= 0.);
       break;
     }
 
     case 24:
     {
       globals::modelgrid[mgi].fcrstable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_CR48);
-      assert(globals::modelgrid[mgi].fcrstable >= -2e-5);
+      assert_always(globals::modelgrid[mgi].fcrstable >= -2e-5);
       globals::modelgrid[mgi].fcrstable = fmax(0., globals::modelgrid[mgi].fcrstable);
       break;
     }
@@ -499,14 +499,14 @@ static void set_elem_stable_abund_from_total(const int mgi, const int anumber, c
     case 23:
     {
       globals::modelgrid[mgi].fvstable = elemabundance;
-      assert(globals::modelgrid[mgi].fvstable >= 0.);
+      assert_always(globals::modelgrid[mgi].fvstable >= 0.);
       break;
     }
 
     case 22:
     {
       globals::modelgrid[mgi].ftistable = elemabundance;
-      assert(globals::modelgrid[mgi].ftistable >= 0.);
+      assert_always(globals::modelgrid[mgi].ftistable >= 0.);
       break;
     }
   }
@@ -654,7 +654,7 @@ static void allocate_compositiondata(const int modelgridindex)
 /// Initialise composition dependent cell data for the given cell
 {
   globals::modelgrid[modelgridindex].elements_uppermost_ion = (int *) malloc(get_nelements() * sizeof(int));
-  assert(globals::modelgrid[modelgridindex].elements_uppermost_ion != NULL);
+  assert_always(globals::modelgrid[modelgridindex].elements_uppermost_ion != NULL);
 
   if ((globals::modelgrid[modelgridindex].composition = (compositionlist_entry *) malloc(get_nelements() * sizeof(compositionlist_entry))) == NULL)
   {
@@ -755,9 +755,9 @@ static void allocate_nonemptycells(void)
   for (int cellindex = 0; cellindex < globals::ngrid; cellindex++)
   {
     const int mgi = get_cell_modelgridindex(cellindex);
-    assert(!(get_model_type() == RHO_3D_READ) || (get_rhoinit(mgi) > 0) || (mgi == MMODELGRID));
+    assert_always(!(get_model_type() == RHO_3D_READ) || (get_rhoinit(mgi) > 0) || (mgi == MMODELGRID));
     mg_associated_cells[mgi] += 1;
-    assert(!(get_model_type() == RHO_3D_READ) || (mg_associated_cells[mgi] == 1) || (mgi == MMODELGRID));
+    assert_always(!(get_model_type() == RHO_3D_READ) || (mg_associated_cells[mgi] == 1) || (mgi == MMODELGRID));
   }
 
   int numnonemptycells = 0;
@@ -911,14 +911,14 @@ static void abundances_read(void)
   {
     const int mgi = threedimensional ? get_cell_modelgridindex(n) : n;
 
-    assert(!feof(abundance_file));
+    assert_always(!feof(abundance_file));
     char line[2048] = "";
-    assert(line == fgets(line, 2048, abundance_file));
+    assert_always(line == fgets(line, 2048, abundance_file));
     char *linepos = line;
     int offset = 0;
 
     int cellnumber = -1;
-    assert(sscanf(linepos, "%d%n", &cellnumber, &offset) == 1);
+    assert_always(sscanf(linepos, "%d%n", &cellnumber, &offset) == 1);
     linepos += offset;
 
     if (cellnumber != n + 1)
@@ -941,11 +941,11 @@ static void abundances_read(void)
       // printout("%d %d %d %g\n", cellnumber, anumber, itemsread, abundances_in[anumber - 1]);
       if (itemsread != 1)
       {
-        assert(anumber > 1); // at least one element (hydrogen) should have been specified
+        assert_always(anumber > 1); // at least one element (hydrogen) should have been specified
         break;
       }
 
-      assert(abundances_in[anumber - 1] >= 0.);
+      assert_always(abundances_in[anumber - 1] >= 0.);
       normfactor += abundances_in[anumber - 1];
     }
 
@@ -960,7 +960,7 @@ static void abundances_read(void)
         ///read out the abundances specified in the atomic data file
         const int anumber = get_element(element);
         const float elemabundance = abundances_in[anumber - 1] / normfactor;
-        assert(elemabundance >= 0.);
+        assert_always(elemabundance >= 0.);
         globals::modelgrid[mgi].composition[element].abundance = elemabundance;
 
         // radioactive nuclide abundances should have already been set by read_??_model
@@ -1073,7 +1073,7 @@ static void read_1d_model(void)
 
     if (items_read == 8 || items_read == 10)
     {
-      assert(cellnumberin == mgi + 1);
+      assert_always(cellnumberin == mgi + 1);
 
       globals::vout_model[mgi] = vout_kmps * 1.e5;
 
@@ -1166,16 +1166,16 @@ static void read_2d_model(void)
     double rho_tmodel;
 
     int items_read = sscanf(line, "%d %g %g %lg", &cellnumin, &cell_r_in, &cell_z_in, &rho_tmodel);
-    assert(items_read == 4);
+    assert_always(items_read == 4);
 
     const int ncoord1 = ((cellnumin - 1) % globals::ncoord1_model);
     const double r_cylindrical = (ncoord1 + 0.5) * globals::dcoord1;
-    assert(fabs(cell_r_in / r_cylindrical - 1) < 1e-3);
+    assert_always(fabs(cell_r_in / r_cylindrical - 1) < 1e-3);
     const int ncoord2 = ((cellnumin - 1) / globals::ncoord1_model);
     const double z = -globals::vmax * globals::t_model + ((ncoord2 + 0.5) * globals::dcoord2);
-    assert(fabs(cell_z_in / z - 1) < 1e-3);
+    assert_always(fabs(cell_z_in / z - 1) < 1e-3);
 
-    assert(cellnumin == mgi + 1);
+    assert_always(cellnumin == mgi + 1);
 
     const double rho_tmin = rho_tmodel * pow(globals::t_model / globals::tmin, 3);
     set_rhoinit(mgi, rho_tmin);
@@ -1246,10 +1246,10 @@ static void read_3d_model(void)
     float cellpos_in[3];
     float rho_model;
     int items_read = sscanf(line, "%d %g %g %g %g", &mgi_in, &cellpos_in[2], &cellpos_in[1], &cellpos_in[0], &rho_model);
-    assert(items_read == 5);
+    assert_always(items_read == 5);
     //printout("cell %d, posz %g, posy %g, posx %g, rho %g, rho_init %g\n",dum1,dum3,dum4,dum5,rho_model,rho_model* pow( (t_model/globals::tmin), 3.));
 
-    assert(mgi_in == n + 1);
+    assert_always(mgi_in == n + 1);
 
     // cell coordinates in the 3D model.txt file are sometimes reordered by the scaling script
     // however, the cellindex always should increment X first, then Y, then Z
@@ -1259,7 +1259,7 @@ static void read_3d_model(void)
     //   const double cellpos_expected = - rmax_tmodel + (2 * get_cellcoordpointnum(n, axis) * rmax_tmodel / globals::ncoordgrid[axis]);
     //   // printout("n %d axis %d expected %g found %g rmax %g get_cellcoordpointnum(n, axis) %d globals::ncoordgrid %d\n",
     //   // n, axis, cellpos_expected, cellpos_in[axis], rmax_model, get_cellcoordpointnum(n, axis), globals::ncoordgrid);
-    //   assert((fabs(cellpos_in[axis] / cellpos_expected - 1) < 1e-3) || ((cellpos_in[axis] == 0) && (cellpos_expected == 0)));
+    //   assert_always((fabs(cellpos_in[axis] / cellpos_expected - 1) < 1e-3) || ((cellpos_in[axis] == 0) && (cellpos_expected == 0)));
     // }
 
     if (rho_model < 0)
@@ -1325,7 +1325,7 @@ void read_ejecta_model(enum model_types model_type)
   {
     case RHO_UNIFORM:
     {
-      assert(false); // needs to be reimplemented using spherical coordinate mode
+      assert_always(false); // needs to be reimplemented using spherical coordinate mode
       break;
     }
 
@@ -1370,15 +1370,15 @@ static void read_grid_restart_data(const int timestep)
 
   int ntstep_in = -1;
   fscanf(gridsave_file, "%d ", &ntstep_in);
-  assert(ntstep_in == globals::ntstep);
+  assert_always(ntstep_in == globals::ntstep);
 
   int nprocs_in = -1;
   fscanf(gridsave_file, "%d ", &nprocs_in);
-  assert(nprocs_in == globals::nprocs);
+  assert_always(nprocs_in == globals::nprocs);
 
   int nthreads_in = -1;
   fscanf(gridsave_file, "%d ", &nthreads_in);
-  assert(nthreads_in == get_num_threads());
+  assert_always(nthreads_in == get_num_threads());
 
   for (int nts = 0; nts < globals::ntstep; nts++)
   {
@@ -1387,7 +1387,7 @@ static void read_grid_restart_data(const int timestep)
 
   int timestep_in;
   fscanf(gridsave_file, "%d ", &timestep_in);
-  assert(timestep_in = timestep);
+  assert_always(timestep_in = timestep);
 
   for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
@@ -1407,11 +1407,11 @@ static void read_grid_restart_data(const int timestep)
       abort();
     }
 
-    assert(T_R >= 0);
-    assert(T_e >= 0);
-    assert(W >= 0);
-    assert(T_J >= 0);
-    assert(globals::rpkt_emiss[mgi] >= 0);
+    assert_always(T_R >= 0);
+    assert_always(T_e >= 0);
+    assert_always(W >= 0);
+    assert_always(T_J >= 0);
+    assert_always(globals::rpkt_emiss[mgi] >= 0);
 
     set_TR(mgi, T_R);
     set_Te(mgi, T_e);
@@ -1629,11 +1629,11 @@ static void uniform_grid_setup(void)
   #endif
 
   // artis assumes in some places that the cells are cubes, not cubioids
-  assert(globals::ncoordgrid[0] == globals::ncoordgrid[1]);
-  assert(globals::ncoordgrid[0] == globals::ncoordgrid[2]);
+  assert_always(globals::ncoordgrid[0] == globals::ncoordgrid[1]);
+  assert_always(globals::ncoordgrid[0] == globals::ncoordgrid[2]);
 
   globals::ngrid = globals::ncoordgrid[0] * globals::ncoordgrid[1] * globals::ncoordgrid[2];
-  assert(globals::ngrid <= MGRID);
+  assert_always(globals::ngrid <= MGRID);
 
   globals::coordlabel[0] = 'X';
   globals::coordlabel[1] = 'Y';
@@ -1643,12 +1643,12 @@ static void uniform_grid_setup(void)
   {
     for (int axis = 0; axis < 3; axis++)
     {
-      assert(nxyz[axis] == get_cellcoordpointnum(n, axis));
+      assert_always(nxyz[axis] == get_cellcoordpointnum(n, axis));
       cell[n].pos_init[axis] = - globals::coordmax[axis] + (2 * nxyz[axis] * globals::coordmax[axis] / globals::ncoordgrid[axis]);
       // cell[n].xyz[axis] = nxyz[axis];
     }
 
-    assert(n == nxyz[2] * globals::ncoordgrid[1] * globals::ncoordgrid[2] + nxyz[1] * globals::ncoordgrid[0] + nxyz[0]);
+    assert_always(n == nxyz[2] * globals::ncoordgrid[1] * globals::ncoordgrid[2] + nxyz[1] * globals::ncoordgrid[0] + nxyz[0]);
 
     nxyz[0]++;  // increment x coordinate
     if (nxyz[0] == globals::ncoordgrid[0])
@@ -1667,7 +1667,7 @@ static void uniform_grid_setup(void)
 
 static void spherical1d_grid_setup(void)
 {
-  assert(get_model_type() == RHO_1D_READ);
+  assert_always(get_model_type() == RHO_1D_READ);
   globals::coordlabel[0] = 'r';
   globals::coordlabel[1] = '_';
   globals::coordlabel[2] = '_';
@@ -1677,13 +1677,13 @@ static void spherical1d_grid_setup(void)
   globals::ncoordgrid[2] = 1;
 
   globals::ngrid = globals::ncoordgrid[0] * globals::ncoordgrid[1] * globals::ncoordgrid[2];
-  assert(globals::ngrid <= MGRID);
+  assert_always(globals::ngrid <= MGRID);
 
   globals::coordmax[0] = globals::rmax;
   globals::coordmax[1] = 0.;
   globals::coordmax[2] = 0.;
 
-  assert(globals::ngrid <= MGRID);
+  assert_always(globals::ngrid <= MGRID);
 
   // in this mode, cellindex and modelgridindex are the same thing
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++)

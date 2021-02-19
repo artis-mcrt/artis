@@ -74,7 +74,7 @@ double meanlife(enum radionuclides nuclide_type)
     case RADIONUCLIDE_COUNT:
       ;
   }
-  assert(false);
+  assert_always(false);
   return -1;
 }
 
@@ -104,7 +104,7 @@ double nucmass(enum radionuclides nuclide_type)
     case RADIONUCLIDE_COUNT:
       ;
   }
-  assert(false);
+  assert_always(false);
   return -1;
 }
 
@@ -147,7 +147,7 @@ enum radionuclides decayparent(enum decaypathways decaypath)
     case DECAYPATH_COUNT:
       ;
   }
-  assert(false);
+  assert_always(false);
   return RADIONUCLIDE_COUNT;
 }
 
@@ -179,7 +179,7 @@ enum radionuclides decaydaughter(enum decaypathways decaypath)
     case DECAY_NI57_CO57:
       return NUCLIDE_CO57;
   }
-  assert(false);
+  assert_always(false);
   return RADIONUCLIDE_COUNT;
 }
 
@@ -207,7 +207,7 @@ static bool decaypath_is_chain(enum decaypathways decaypath)
     case DECAYPATH_COUNT:
       ;
   }
-  assert(false);
+  assert_always(false);
   return false;
 }
 
@@ -319,7 +319,7 @@ enum packet_type get_decay_pellet_type(enum decaypathways decaypath, bool *origi
       abort();
     }
   }
-  assert(false);
+  assert_always(false);
   return TYPE_ESCAPE; // will never reach here, but gcc needs a return value
 }
 
@@ -381,7 +381,7 @@ static void calculate_double_decay_chain(
   // printout("calculate_double_decay_chain: abund1 %g, abund2 %g abund3 %g\n", abund1, abund2, abund3);
 
   // ensure that the decays haven't altered the total abundance of all three species
-  assert(fabs((initabund1 + initabund2) - (*abund1 + *abund2 + *abund3)) < 0.001);
+  assert_always(fabs((initabund1 + initabund2) - (*abund1 + *abund2 + *abund3)) < 0.001);
 }
 
 
@@ -408,7 +408,7 @@ static double get_modelinitradioabund_decayed(
   const int modelgridindex, const enum radionuclides nuclide_type, const double time)
 // only allow decays to decrease the nuclide abundance (i.e. don't count increases due to decay of parent)
 {
-  assert(time >= 0.);
+  assert_always(time >= 0.);
   const double tdiff = time - globals::t_model;
   return get_modelinitradioabund(modelgridindex, nuclide_type) * exp(- tdiff / meanlife(nuclide_type));
 }
@@ -428,8 +428,8 @@ static double get_modelradioabund_at_time(
   {
     return 0.;
   }
-  assert(nuclide_type < RADIONUCLIDE_COUNT);
-  assert(time >= 0.);
+  assert_always(nuclide_type < RADIONUCLIDE_COUNT);
+  assert_always(time >= 0.);
 
   enum radionuclides nucparent = find_nucparent(nuclide_type);
   if (nucparent == RADIONUCLIDE_COUNT) // no parent exists, so use simple decay formula
@@ -459,7 +459,7 @@ static double get_endecay_per_ejectamass_at_time(const int mgi, enum decaypathwa
     // decays from the second nuclide (e.g. Co56) due to the initial abundance are not counted here
 
     const enum radionuclides nuc2 = decaydaughter(decaypath);
-    assert(nuc2 < RADIONUCLIDE_COUNT);
+    assert_always(nuc2 < RADIONUCLIDE_COUNT);
     const double initabund1 = get_modelinitradioabund(mgi, nuc1);
     const double initabund2 = 0.; // don't count initial abundance
     double abund1;
@@ -481,10 +481,10 @@ static double get_endecay_per_ejectamass_between_times(
   const int mgi, enum decaypathways decaypath, double tlow, double thigh)
 // energy per mass released by a decaypath between two times (in seconds)
 {
-  assert(tlow <= thigh);
+  assert_always(tlow <= thigh);
   const double energy_tlow = get_endecay_per_ejectamass_at_time(mgi, decaypath, tlow);
   const double energy_thigh = get_endecay_per_ejectamass_at_time(mgi, decaypath, thigh);
-  assert(energy_tlow >= energy_thigh);
+  assert_always(energy_tlow >= energy_thigh);
   return energy_tlow - energy_thigh;
 }
 
@@ -515,7 +515,7 @@ double get_decay_power_per_ejectamass(enum decaypathways decaypath, const int mo
     // decays from the second nuclide (e.g. Co56) due to the initial abundance are not counted here
 
     const enum radionuclides nuc2 = decaydaughter(decaypath);
-    assert(nuc2 < RADIONUCLIDE_COUNT);
+    assert_always(nuc2 < RADIONUCLIDE_COUNT);
     const double initabund1 = get_modelinitradioabund(modelgridindex, nuc1);
     const double initabund2 = 0.; // don't count initial abundance
     double abund1;
@@ -564,7 +564,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 /// Parameters: - modelgridindex: the grid cell for which to update the abundances
 ///             - t_current: current time (here mid of current timestep)
 {
-  assert(!globals::homogeneous_abundances); // no longer supported
+  assert_always(!globals::homogeneous_abundances); // no longer supported
 
   // Ni56 -> Co56 -> Fe56
   // abundances from the input model
