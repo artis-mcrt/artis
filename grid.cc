@@ -451,9 +451,9 @@ static void set_elem_stable_abund_from_total(const int mgi, const int anumber, c
     case 28:
     {
       globals::modelgrid[mgi].fnistable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_NI56) - get_modelinitradioabund(mgi, NUCLIDE_NI57);
-      if (globals::modelgrid[mgi].fnistable < -1e-5)  // result can be slightly negative due to roundoff error
+      if (globals::modelgrid[mgi].fnistable < -2e-5)  // result can be slightly negative due to roundoff error
       {
-        printout("Ni isotopic abundances are greater than the element abundance for cell %d\n", mgi);
+        printout("ERROR: Ni isotopic abundances are greater than the element abundance for cell %d\n", mgi);
         printout(" X_Ni %g X_Ni56 %g X_Ni57 %g\n", elemabundance,
                  get_modelinitradioabund(mgi, NUCLIDE_NI56), get_modelinitradioabund(mgi, NUCLIDE_NI57));
         abort();
@@ -468,7 +468,7 @@ static void set_elem_stable_abund_from_total(const int mgi, const int anumber, c
     case 27:
     {
       globals::modelgrid[mgi].fcostable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_CO56) - get_modelinitradioabund(mgi, NUCLIDE_CO57);
-      assert(globals::modelgrid[mgi].fcostable >= -1e-5);
+      assert(globals::modelgrid[mgi].fcostable >= -2e-5);
       globals::modelgrid[mgi].fcostable = fmax(0., globals::modelgrid[mgi].fcostable);
       break;
     }
@@ -476,7 +476,7 @@ static void set_elem_stable_abund_from_total(const int mgi, const int anumber, c
     case 26:
     {
       globals::modelgrid[mgi].ffestable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_FE52);
-      assert(globals::modelgrid[mgi].ffestable >= -1e-5);
+      assert(globals::modelgrid[mgi].ffestable >= -2e-5);
       globals::modelgrid[mgi].ffestable = fmax(0., globals::modelgrid[mgi].ffestable);
       break;
     }
@@ -491,7 +491,7 @@ static void set_elem_stable_abund_from_total(const int mgi, const int anumber, c
     case 24:
     {
       globals::modelgrid[mgi].fcrstable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_CR48);
-      assert(globals::modelgrid[mgi].fcrstable >= -1e-5);
+      assert(globals::modelgrid[mgi].fcrstable >= -2e-5);
       globals::modelgrid[mgi].fcrstable = fmax(0., globals::modelgrid[mgi].fcrstable);
       break;
     }
