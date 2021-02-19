@@ -152,10 +152,10 @@ static bool read_ratecoeff_dat(void)
                 double alpha_sp,bfcooling_coeff,corrphotoioncoeff,bfheating_coeff;
                 fscanf(ratecoeff_file,"%lg %lg %lg %lg\n", &alpha_sp, &bfcooling_coeff, &corrphotoioncoeff, &bfheating_coeff);
 
-                // assert(std::isfinite(alpha_sp) && alpha_sp >= 0);
+                // assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0);
                 globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[iter] = alpha_sp;
 
-                // assert(std::isfinite(bfcooling_coeff) && bfcooling_coeff >= 0);
+                // assert_always(std::isfinite(bfcooling_coeff) && bfcooling_coeff >= 0);
                 globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[iter] = bfcooling_coeff;
 
                 #if (!NO_LUT_PHOTOION)
@@ -613,7 +613,7 @@ static void precalculate_rate_coefficient_integrals(void)
                        level, alpha_sp, sfac, phixstargetindex, phixstargetprobability);
               alpha_sp = 0;
             }
-            // assert(alpha_sp >= 0);
+            // assert_always(alpha_sp >= 0);
             globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[iter] = alpha_sp;
 
             // if (atomic_number == 26 && ionstage == 3 && level < 5)
@@ -650,7 +650,7 @@ static void precalculate_rate_coefficient_integrals(void)
                 printout("gammcorr integrator status %d. Integral value %9.3e +/- %9.3e\n",status,gammacorr,error);
               }
               gammacorr *= FOURPI * phixstargetprobability;
-              assert(gammacorr >= 0);
+              assert_always(gammacorr >= 0);
               if (gammacorr < 0)
               {
                 printout("WARNING: gammacorr was negative for level %d\n", level);
@@ -711,13 +711,13 @@ static int get_index_from_cumulativesums(double *partialsums, size_t listsize, d
 {
   for (size_t i = 0; i < listsize; i++)
   {
-    assert((i == 0) || partialsums[i] >= partialsums[i - 1]); // ensure cumulative probabilties are ordered ascending
+    assert_always((i == 0) || partialsums[i] >= partialsums[i - 1]); // ensure cumulative probabilties are ordered ascending
     if (partialsums[i] >= targetsum)
     {
       return i;
     }
   }
-  assert(false);
+  assert_always(false);
   return -1;
 }
 
@@ -749,7 +749,7 @@ static double get_x_at_integralfrac(gsl_function *F_integrand, double xmin, doub
 
   const double total = partialsums[npieces - 1];
 
-  assert(total > 0);
+  assert_always(total > 0);
 
   const double targetintegral = targetintegralfrac * total;
 
@@ -790,7 +790,7 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
   // printout("emitted bf photon Z=%2d ionstage %d->%d upper %4d lower %4d lambda %7.1f lambda_edge %7.1f ratio %g zrand %g\n",
   //    get_element(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), upperionlevel, lower, 1e8 * CLIGHT / nu_selected, 1e8 * CLIGHT / nu_threshold, nu_selected / nu_threshold, zrand);
 
-  assert(std::isfinite(nu_selected));
+  assert_always(std::isfinite(nu_selected));
   return nu_selected;
 }
 
@@ -805,7 +805,7 @@ double get_spontrecombcoeff(int element, int ion, int level, int phixstargetinde
   double T_lower =  MINTEMP + lowerindex*T_step;*/
   double Alpha_sp;
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
-  assert(lowerindex >= 0);
+  assert_always(lowerindex >= 0);
   if (lowerindex < TABLESIZE - 1)
   {
     const int upperindex = lowerindex + 1;
@@ -1032,8 +1032,8 @@ static void read_recombrate_file(void)
       if (ion > 0 && ion < get_nions(element))
       {
         printout("Z=%d ionstage %d->%d\n", atomicnumber, upperionstage, upperionstage - 1);
-        assert(T_highestbelow.log_Te > 0);
-        assert(T_lowestabove.log_Te > 0);
+        assert_always(T_highestbelow.log_Te > 0);
+        assert_always(T_lowestabove.log_Te > 0);
 
         const int nlevels = get_ionisinglevels(element, ion - 1);
 
@@ -1083,7 +1083,7 @@ static void read_recombrate_file(void)
           {
             const double phixs_multiplier_superlevel = 1.0 + (input_rrc_total - rrc) / rrc_superlevel;
             printout("    scaling phixs of levels in the superlevel by %.3f\n", phixs_multiplier_superlevel);
-            assert(phixs_multiplier_superlevel >= 0);
+            assert_always(phixs_multiplier_superlevel >= 0);
 
             const int first_superlevel_level = get_nlevels_nlte(element, ion - 1) + 1;
             for (int level = first_superlevel_level; level < nlevels; level++)
@@ -1094,7 +1094,7 @@ static void read_recombrate_file(void)
             printout("There is no superlevel recombination, so multiplying all levels instead\n");
             const double phixs_multiplier = input_rrc_total / rrc;
             printout("    scaling phixs of all levels by %.3f\n", phixs_multiplier);
-            assert(phixs_multiplier >= 0);
+            assert_always(phixs_multiplier >= 0);
 
             for (int level = 0; level < nlevels; level++)
               scale_level_phixs(element, ion - 1, level, phixs_multiplier);
@@ -1105,7 +1105,7 @@ static void read_recombrate_file(void)
           printout("rrc >= input_rrc_total!\n");
           const double phixs_multiplier = input_rrc_total / rrc;
           printout("    scaling phixs of all levels by %.3f\n", phixs_multiplier);
-          assert(phixs_multiplier >= 0);
+          assert_always(phixs_multiplier >= 0);
 
           for (int level = 0; level < nlevels; level++)
             scale_level_phixs(element, ion - 1, level, phixs_multiplier);
@@ -1504,7 +1504,7 @@ double calculate_iongamma_per_ionpop(
   const bool assume_lte, const bool collisional_not_radiative, const bool printdebug, const bool use_bfest)
 // ionisation rate coefficient. multiply by the lower ion pop to get a rate
 {
-  assert(lowerion < get_nions(element) - 1);
+  assert_always(lowerion < get_nions(element) - 1);
 
   const float nne = (modelgridindex >= 0) ? get_nne(modelgridindex) : 1.0;
 

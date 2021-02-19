@@ -158,11 +158,11 @@ void write_spectrum(
   if (do_emission_res)
   {
     emission_file = fopen_required(emission_filename, "w");
-    assert(emission_file != NULL);
+    assert_always(emission_file != NULL);
     trueemission_file = fopen_required(trueemission_filename, "w");
-    assert(trueemission_file != NULL);
+    assert_always(trueemission_file != NULL);
     absorption_file = fopen_required(absorption_filename, "w");
-    assert(absorption_file != NULL);
+    assert_always(absorption_file != NULL);
     printout("write_spectrum %s, %s, %s, and %s\n", spec_filename, emission_filename, trueemission_filename, absorption_filename);
   }
   else
@@ -349,7 +349,7 @@ static int columnindex_from_emissiontype(const int et)
     const int phixstargetindex = globals::bflist[et_new].phixstargetindex;
     const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-    assert(get_continuumindex(element, ion, level, upperionlevel) == et);
+    assert_always(get_continuumindex(element, ion, level, upperionlevel) == et);
 
     return get_nelements() * globals::maxion + element * globals::maxion + ion;
   }
@@ -381,20 +381,20 @@ static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, struct
     if (stokes_i != NULL)
     {
       stokes_i[nt].flux[nnu] += pkt_ptr->stokes[0] * deltaE;
-      // assert(spectra[nt].nu_min == stokes_i[nt].nu_min);
-      // assert(spectra[nt].nu_max == stokes_i[nt].nu_max);
+      // assert_always(spectra[nt].nu_min == stokes_i[nt].nu_min);
+      // assert_always(spectra[nt].nu_max == stokes_i[nt].nu_max);
     }
     if (stokes_q != NULL)
     {
       stokes_q[nt].flux[nnu] += pkt_ptr->stokes[1] * deltaE;
-      // assert(spectra[nt].nu_min == stokes_q[nt].nu_min);
-      // assert(spectra[nt].nu_max == stokes_q[nt].nu_max);
+      // assert_always(spectra[nt].nu_min == stokes_q[nt].nu_min);
+      // assert_always(spectra[nt].nu_max == stokes_q[nt].nu_max);
     }
     if (stokes_u != NULL)
     {
       stokes_u[nt].flux[nnu] += pkt_ptr->stokes[2] * deltaE;
-      // assert(spectra[nt].nu_min == stokes_u[nt].nu_min);
-      // assert(spectra[nt].nu_max == stokes_u[nt].nu_max);
+      // assert_always(spectra[nt].nu_min == stokes_u[nt].nu_min);
+      // assert_always(spectra[nt].nu_max == stokes_u[nt].nu_max);
     }
 
     if (spectra[nt].do_emission_res)
@@ -554,7 +554,7 @@ struct spec *alloc_spectra(const bool do_emission_res)
     printout("WARNING: Too many frequency bins in spectrum - reducing.\n");
     globals::nnubins = MNUBINS;
   }
-  assert(globals::ntstep < MTBINS);
+  assert_always(globals::ntstep < MTBINS);
 
   for (int n = 0; n < globals::ntstep; n++)
   {
@@ -568,9 +568,9 @@ struct spec *alloc_spectra(const bool do_emission_res)
         spectra[n].stat[m].emission = (double *) calloc(emissioncount, sizeof(double));
         spectra[n].stat[m].trueemission = (double *) calloc(emissioncount, sizeof(double));
 
-        assert(spectra[n].stat[m].absorption != NULL);
-        assert(spectra[n].stat[m].emission != NULL);
-        assert(spectra[n].stat[m].trueemission != NULL);
+        assert_always(spectra[n].stat[m].absorption != NULL);
+        assert_always(spectra[n].stat[m].emission != NULL);
+        assert_always(spectra[n].stat[m].trueemission != NULL);
       }
     }
   }

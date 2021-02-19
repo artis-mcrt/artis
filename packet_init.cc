@@ -1,4 +1,3 @@
-#include <cassert>
 #include "sn3d.h"
 #include "grid.h"
 #include "decay.h"
@@ -22,8 +21,8 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     const double r_inner = get_cellcoordmin(cellindex, 0);
     const double r_outer = get_cellcoordmin(cellindex, 0) + wid_init(cellindex);
     const double radius = pow(zrand3 * pow(r_inner, 3) + (1. - zrand3) * pow(r_outer, 3), 1/3.);
-    // assert(radius >= r_inner);
-    // assert(radius <= r_outer);
+    // assert_always(radius >= r_inner);
+    // assert_always(radius <= r_outer);
 
     get_rand_isotropic_unitvec(pkt_ptr->pos);
     vec_scale(pkt_ptr->pos, radius);
@@ -56,7 +55,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
       break;
     }
   }
-  assert(decaypath != DECAYPATH_COUNT); // Failed to select pellet
+  assert_always(decaypath != DECAYPATH_COUNT); // Failed to select pellet
 
   #ifdef NO_INITIAL_PACKETS
   const double tdecaymin = globals::tmin;
@@ -82,7 +81,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     // according to: decay power at this time relative to the average decay power
     const double avgpower = decay::get_simtime_endecay_per_ejectamass(mgi, decaypath) / (globals::tmax - tdecaymin);
     pkt_ptr->e_cmf = e0 * decay::get_decay_power_per_ejectamass(decaypath, mgi, pkt_ptr->tdecay) / avgpower;
-    // assert(pkt_ptr->e_cmf >= 0);
+    // assert_always(pkt_ptr->e_cmf >= 0);
   }
 
   bool from_positron;
@@ -153,9 +152,9 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   const double etot = norm / MH;
   /// So energy per pellet is
   const double e0 = etot / globals::npkts / globals::n_out_it / globals::n_middle_it;
-  printout("packet e0 (in time range) %g\n", e0);
+  printout("packet e0 (in time range) %g erg\n", e0);
 
-  printout("etot %g erg (in time range)\n", etot);
+  printout("etot %g erg (in time range) erg\n", etot);
 
   // Now place the pellets in the ejecta and decide at what time they will decay.
 
@@ -214,7 +213,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
     m = m - 1;
     */
 
-    assert(cellindex < globals::ngrid);
+    assert_always(cellindex < globals::ngrid);
 
     place_pellet(e0, cellindex, n + pktnumberoffset, &pkt[n]);
   }

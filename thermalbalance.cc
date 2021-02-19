@@ -178,7 +178,7 @@ void calculate_bfheatingcoeffs(int modelgridindex)
 
             #endif
           }
-          assert(std::isfinite(bfheatingcoeff));
+          assert_always(std::isfinite(bfheatingcoeff));
 
           #if !NO_LUT_BFHEATING
           const int index_in_groundlevelcontestimator = globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
@@ -232,7 +232,7 @@ static void calculate_heating_rates(
   double bfheating = 0.;
   double ffheating = 0.;
 
-  assert(globals::cellhistory[tid].bfheating_mgi == modelgridindex);
+  assert_always(globals::cellhistory[tid].bfheating_mgi == modelgridindex);
 
   for (int element = 0; element < get_nelements(); element++)
   {

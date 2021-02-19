@@ -103,7 +103,7 @@ __host__ __device__ double calculate_integral_gpu(T intparas, double xlow, doubl
   checkCudaErrors(cudaDeviceSynchronize());
 
   const int samplecount = globals::NPHIXSPOINTS * 16 + 1; // need an odd number for Simpson rule
-  assert(samplecount % 2 == 1);
+  assert_always(samplecount % 2 == 1);
 
   dim3 threadsPerBlock(32, 1, 1);
   dim3 numBlocks((samplecount + threadsPerBlock.x - 1) / threadsPerBlock.x, 1, 1);

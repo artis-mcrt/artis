@@ -10,7 +10,6 @@
 *********************************************************************/
 
 /*************************** HEADER FILES ***************************/
-#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <memory.h>
@@ -200,7 +199,7 @@ void md5_file(const char filename[], char hashout[2 * MD5_BLOCK_SIZE + 1])
 
   FILE *infile = fopen(filename, "r");
 
-  assert(infile != NULL);
+  assert_always(infile != NULL);
 
   BYTE buffer[1024];
 

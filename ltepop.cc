@@ -41,7 +41,7 @@ double nne_solution_f(double x, void *paras)
         //printout("debug element %d, ion %d, ionfract(element,ion,T,x) %g\n",element,ion,ionfractions[ion]);
         innersum += (get_ionstage(element, ion) - 1) * ionfractions[ion];
       }
-      assert(std::isfinite(innersum));
+      assert_always(std::isfinite(innersum));
       outersum += abundance / globals::elements[element].mass * innersum;
       if (!std::isfinite(outersum))
       {
@@ -96,7 +96,7 @@ void get_ionfractions(int element, int modelgridindex, double nne, double ionfra
 __host__ __device__
 static double interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T)
 {
-  assert(T >= MINTEMP);
+  assert_always(T >= MINTEMP);
   int lowerindex = floor(log(T / MINTEMP) / T_step_log);
   if (lowerindex < TABLESIZE - 1)
   {
@@ -592,7 +592,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
     }
     else // level is in the superlevel
     {
-      assert(level_isinsuperlevel(element, ion, level));
+      assert_always(level_isinsuperlevel(element, ion, level));
 
       const int sl_nlte_index = globals::elements[element].ions[ion].first_nlte + get_nlevels_nlte(element, ion);
 

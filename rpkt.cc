@@ -261,7 +261,7 @@ static double get_event(
       {
         /// continuum process occurs
         edist = dist + (tau_rnd - tau) / kap_cont;
-        // assert((tau_rnd - tau) / kap_cont < ldist);
+        // assert_always((tau_rnd - tau) / kap_cont < ldist);
         dummypkt_ptr->next_trans -= 1;
         #ifdef DEBUG_ON
           if (globals::debuglevel == 2) printout("[debug] get_event:        distance to the occuring continuum event %g, abort_dist %g\n", edist, abort_dist);
@@ -775,7 +775,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
 
     double tdist = (t2 - pkt_ptr->prop_time) * globals::CLIGHT_PROP;
 
-    assert(tdist >= 0);
+    assert_always(tdist >= 0);
 
     double edist;
     int rpkt_eventtype;
@@ -814,7 +814,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
         }
       #endif
     }
-    assert(edist >= 0);
+    assert_always(edist >= 0);
     //printout("[debug] do_rpkt: sdist, tdist, edist %g, %g, %g\n",sdist,tdist,edist);
 
     if ((sdist < tdist) && (sdist < edist))
@@ -925,7 +925,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
       }
       else
       {
-        assert(false);
+        assert_always(false);
       }
 
       return (pkt_ptr->type == TYPE_RPKT && (mgi == MMODELGRID || mgi == oldmgi));
@@ -1026,7 +1026,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
           ldist = CLIGHT * t_future * (vpkt.nu_cmf / nutrans - 1);
         }
 
-        assert(ldist >= 0.);
+        assert_always(ldist >= 0.);
 
         if (ldist > sdist)
         {
@@ -1094,7 +1094,7 @@ double get_rpkt_escape_prob(PKT *pkt_ptr, const double tstart)
   const double pkt_radius = vec_len(startpos);
   const double rmaxnow = globals::rmax * tstart / globals::tmin;
   printout("get_rpkt_escape_prob pkt_radius %g rmax %g r/rmax %g tstart %g\n", pkt_radius, rmaxnow, pkt_radius / rmaxnow, tstart);
-  // assert(pkt_radius <= rmaxnow);
+  // assert_always(pkt_radius <= rmaxnow);
   double escape_prob_sum = 0.;
   const int ndirs = 40; // number of random directions to sample
   for (int n = 0; n < ndirs; n++)
@@ -1192,7 +1192,7 @@ __host__ __device__
 static double calculate_kappa_ff(const int modelgridindex, const double nu)
 /// free-free opacity
 {
-  assert(nu > 0.);
+  assert_always(nu > 0.);
   const double g_ff = 1;
 
   const float nne = get_nne(modelgridindex);
@@ -1225,7 +1225,7 @@ static double calculate_kappa_ff(const int modelgridindex, const double nu)
         {
           printout("kappa_ff %g nne %g T_e %g mgi %d element %d ion %d nnion %g\n", kappa_ff, nne, T_e, modelgridindex, element, ion, nnion);
         }
-        assert(std::isfinite(kappa_ff));
+        assert_always(std::isfinite(kappa_ff));
       }
     }
   }
@@ -1368,8 +1368,8 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr)
 {
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = get_cell_modelgridindex(cellindex);
-  assert(modelgridindex != MMODELGRID);
-  assert(globals::modelgrid[modelgridindex].thick != 1);
+  assert_always(modelgridindex != MMODELGRID);
+  assert_always(globals::modelgrid[modelgridindex].thick != 1);
   const double nu_cmf = pkt_ptr->nu_cmf;
   if ((modelgridindex == globals::kappa_rpkt_cont[tid].modelgridindex) && (!globals::kappa_rpkt_cont[tid].recalculate_required) && (fabs(globals::kappa_rpkt_cont[tid].nu / nu_cmf - 1.0) < 1e-4))
   {

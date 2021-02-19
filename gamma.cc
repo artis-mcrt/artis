@@ -1,4 +1,3 @@
-#include <cassert>
 #include "sn3d.h"
 #include "boundary.h"
 #include "emissivities.h"
@@ -36,7 +35,7 @@ static struct gamma_ll gam_line_list;
 static void read_gamma_spectrum(enum radionuclides isotope, const char filename[50])
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
 {
-  assert(isotope < RADIONUCLIDE_COUNT);
+  assert_always(isotope < RADIONUCLIDE_COUNT);
 
   FILE *filein = fopen_required(filename, "r");
   int nlines = 0;
@@ -144,7 +143,7 @@ void init_gamma_linelist(void)
       }
     }
 
-    assert(next >= 0);
+    assert_always(next >= 0);
     gam_line_list.nuclidetype[i] = next_type;
     gam_line_list.index[i] = next;
     energy_last = energy_try;

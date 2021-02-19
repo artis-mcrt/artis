@@ -130,10 +130,10 @@ namespace globals
   __managed__ int grid_type;
   __managed__ char coordlabel[3];
 
-  __managed__ int nprocs;      /// Global variable which holds the number of MPI processes
-  __managed__ int rank_global; /// Global variable which holds the rank of the active MPI process
-  __managed__ int npkts;
-  __managed__ int nesc; //number of packets that escape during current timestep
+  __managed__ int nprocs = -1;      /// Global variable which holds the number of MPI processes
+  __managed__ int rank_global = -1; /// Global variable which holds the rank of the active MPI process
+  __managed__ int npkts = -1;
+  __managed__ int nesc = 0; //number of packets that escape during current timestep
 
   __managed__ double coordmax[3];
   __managed__ double mtot;

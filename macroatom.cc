@@ -254,7 +254,7 @@ static void do_macroatom_raddeexcitation(
       break;
     }
   }
-  assert(linelistindex >= 0);
+  assert_always(linelistindex >= 0);
   #ifdef RECORD_LINESTAT
     safeincrement(globals::ecounter[linelistindex]);
   #endif
@@ -278,7 +278,7 @@ static void do_macroatom_raddeexcitation(
   }
 
   #ifdef DEBUG_ON
-    assert(std::isfinite(pkt_ptr->nu_cmf));
+    assert_always(std::isfinite(pkt_ptr->nu_cmf));
 
     if (linelistindex < 0)
     {
@@ -459,7 +459,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
 
-  assert(globals::modelgrid[modelgridindex].thick != 1); // macroatom should not be used in thick cells
+  assert_always(globals::modelgrid[modelgridindex].thick != 1); // macroatom should not be used in thick cells
 
   /// calculate occupation number for active MA level ////////////////////////////////////
   /// general QUESTION: is it better to calculate the n_1 (later the n_ionstage and
@@ -515,8 +515,8 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
       if (globals::debuglevel == 2000)
         printout("[debug] %s Z=%d ionstage %d level %d, jumps %d\n", __func__, get_element(element), ionstage, level, jumps);
 
-      assert(ion >= 0);
-      assert(ion < get_nions(element));
+      assert_always(ion >= 0);
+      assert_always(ion < get_nions(element));
     #endif
 
     const double epsilon_current = epsilon(element, ion, level);
@@ -533,7 +533,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
     {
       printout("globals::cellhistory[tid].cellnumber %d modelgridindex %d\n", globals::cellhistory[tid].cellnumber, modelgridindex);
     }
-    assert(globals::cellhistory[tid].cellnumber == modelgridindex);
+    assert_always(globals::cellhistory[tid].cellnumber == modelgridindex);
 
     double *processrates = get_transitionrates(modelgridindex, element, ion, level, t_mid, tid);
 
@@ -1203,7 +1203,7 @@ double rad_recombination_ratecoeff(
   }
 
   #ifdef DEBUG_ON
-  assert(std::isfinite(R));
+  assert_always(std::isfinite(R));
   #endif
 
   return R;
@@ -1232,7 +1232,7 @@ double stim_recombination_ratecoeff(
     break;
   }
 
-  assert(std::isfinite(R));
+  assert_always(std::isfinite(R));
 
   return R;
 }
@@ -1298,7 +1298,7 @@ double col_deexcitation_ratecoeff(const float T_e, const float nne, const double
       printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u,nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
     }*/
     //printout("col_deexc(%d,%d,%d,%d) %g\n",element,ion,upper,lower,C);
-    assert(std::isfinite(C));
+    assert_always(std::isfinite(C));
   #endif
 
   return C;
@@ -1452,7 +1452,7 @@ double col_ionization_ratecoeff(
   const double C = nne * 1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1; ///photoionization at the edge
 
   // printout("[debug] col_ion: nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n", nne,T_e,g,epsilon_trans,sigma_bf);
-  assert(std::isfinite(C));
+  assert_always(std::isfinite(C));
 
   return C;
 }
