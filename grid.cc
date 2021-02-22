@@ -456,7 +456,7 @@ static void set_elem_stable_abund_from_total(const int mgi, const int anumber, c
         printout("ERROR: Ni isotopic abundances are greater than the element abundance for cell %d\n", mgi);
         printout(" X_Ni %g X_Ni56 %g X_Ni57 %g\n", elemabundance,
                  get_modelinitradioabund(mgi, NUCLIDE_NI56), get_modelinitradioabund(mgi, NUCLIDE_NI57));
-        assert(False);
+        assert(false);
       }
       else if (globals::modelgrid[mgi].fnistable < 0.)
       {
