@@ -451,16 +451,13 @@ static void set_elem_stable_abund_from_total(const int mgi, const int anumber, c
     case 28:
     {
       globals::modelgrid[mgi].fnistable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_NI56) - get_modelinitradioabund(mgi, NUCLIDE_NI57);
-      if (globals::modelgrid[mgi].fnistable < -2e-5)  // result can be slightly negative due to roundoff error
+      if (globals::modelgrid[mgi].fnistable < 0.)
       {
-        printout("ERROR: Ni isotopic abundances are greater than the element abundance for cell %d\n", mgi);
-        printout(" X_Ni %g X_Ni56 %g X_Ni57 %g\n", elemabundance,
-                 get_modelinitradioabund(mgi, NUCLIDE_NI56), get_modelinitradioabund(mgi, NUCLIDE_NI57));
-        assert(false);
-      }
-      else if (globals::modelgrid[mgi].fnistable < 0.)
-      {
-        globals::modelgrid[mgi].fnistable = fmax(0., globals::modelgrid[mgi].fnistable); // bring up to zero if below
+          printout("WARNING: cell %d Ni element abundance is less than the sum of isotopic abundances \n", mgi);
+          printout("  X_Ni %g X_Ni56 %g X_Ni57 %g\n", elemabundance,
+                   get_modelinitradioabund(mgi, NUCLIDE_NI56), get_modelinitradioabund(mgi, NUCLIDE_NI57));
+          assert_always(globals::modelgrid[mgi].fnistable >= -1e-3);  // result is allowed to be slightly negative due to roundoff error
+          globals::modelgrid[mgi].fnistable = fmax(0., globals::modelgrid[mgi].fnistable); // bring up to zero if negative
       }
       break;
     }
@@ -468,8 +465,14 @@ static void set_elem_stable_abund_from_total(const int mgi, const int anumber, c
     case 27:
     {
       globals::modelgrid[mgi].fcostable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_CO56) - get_modelinitradioabund(mgi, NUCLIDE_CO57);
-      assert_always(globals::modelgrid[mgi].fcostable >= -2e-5);
-      globals::modelgrid[mgi].fcostable = fmax(0., globals::modelgrid[mgi].fcostable);
+      if (globals::modelgrid[mgi].fcostable < 0)  // result can be slightly negative due to roundoff error
+      {
+        printout("WARNING: cell %d Co element abundance is less than the sum of isotopic abundances\n", mgi);
+        printout("  X_Co %g X_Co56 %g X_Co57 %g\n", elemabundance,
+                 get_modelinitradioabund(mgi, NUCLIDE_CO56), get_modelinitradioabund(mgi, NUCLIDE_CO57));
+        assert_always(globals::modelgrid[mgi].fcostable >= -1e-3);  // result is allowed to be slightly negative due to roundoff error
+        globals::modelgrid[mgi].fcostable = fmax(0., globals::modelgrid[mgi].fcostable); // bring up to zero if negative
+      }
       break;
     }
 
