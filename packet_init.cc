@@ -14,6 +14,9 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   pkt_ptr->number = pktnumber;  ///record the packets number for debugging
   pkt_ptr->prop_time = globals::tmin;
   pkt_ptr->originated_from_positron = false;
+  pkt_ptr->dir[0] = 0.;
+  pkt_ptr->dir[1] = 0.;
+  pkt_ptr->dir[2] = 0.;
 
   if (globals::grid_type == GRID_SPHERICAL1D)
   {
@@ -89,9 +92,11 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   pkt_ptr->originated_from_positron = from_positron;
 
   /// Now assign the energy to the pellet.
-  pkt_ptr->prop_time = globals::tmin;
+  // LJS: is this needed? the packet doesn't have a meaningful direction yet
   const double dopplerfactor = doppler_packetpos(pkt_ptr);
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
+
+  pkt_ptr->prop_time = globals::tmin;
   pkt_ptr->trueemissiontype = -1;
 }
 
