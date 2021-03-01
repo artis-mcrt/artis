@@ -795,7 +795,7 @@ int main(int argc, char** argv)
     cudaMemAdvise(packets, MPKTS * sizeof(PKT), cudaMemAdviseSetPreferredLocation, myGpuId);
     #endif
   #else
-  PKT *const packets = (PKT *) calloc(MPKTS * sizeof(PKT));
+  PKT *const packets = (PKT *) calloc(MPKTS, sizeof(PKT));
   #endif
 
   assert_always(packets != NULL);
