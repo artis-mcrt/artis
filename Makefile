@@ -2,6 +2,63 @@ SHELL = /bin/sh
 GIT_HASH = $(shell git rev-parse HEAD)
 GIT_BRANCH = $(shell git branch | sed -n '/\* /s///p')
 
+RAIJINDIRAC := $(or $(findstring dirac,$(HOSTNAME)),$(findstring raijin,$(HOSTNAME)), $(findstring juwels,$(HOSTNAME)), $(findstring login,$(HOSTNAME)))
+KELVIN := $(findstring kelvin,$(HOSTNAME))
+virgo := $(findstring lxbk,$(HOSTNAME))
+
+ifneq (,$(RAIJINDIRAC))
+        # NCI Raijin cluster
+        # needs:
+        # module load intel-cc/
+        # module load openmpi
+        # module load gsl
+
+  CC = mpicc
+  CFLAGS = -DTIMED_RESTARTS -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing -std=c11 -DHAVE_INLINE #-fopenmp=libomp
+        LDFLAGS= -lgsl -lgslcblas -lm
+
+  sn3d: CFLAGS += -DMPI_ON
+  exspec: CFLAGS += -DDO_EXSPEC
+  exgamma: CFLAGS += -DDO_EXSPEC
+
+else ifneq (,$(KELVIN))
+ # needs
+ #  mpi/openmpi/1.8.5/gcc-4.4.7
+ #  compilers/gcc/system(default)
+ #  libs/gsl/1.16/gcc-4.4.7
+
+  CC = mpicc
+  CFLAGS = -DWALLTIMELIMITSECONDS=\(72\*3600\) -pg -mcmodel=medium -O3 -std=c99 -DHAVE_INLINE -I$(GSLINCLUDE) #-fopenmp=libomp  ## for gprof -pg
+  LDFLAGS= -lgsl -lgslcblas -lm -L$(GSLLIB)
+
+  sn3d: CFLAGS += -DMPI_ON
+  exspec: CFLAGS += -DDO_EXSPEC
+  exgamma: CFLAGS += -DDO_EXSPEC
+
+else ifneq (,$(virgo))
+
+  CC = mpicc
+  CFLAGS = -DTIMED_RESTARTS -mcmodel=medium -O3 -std=c11 -DHAVE_INLINE #-I$(GSLINCLUDE) #-fopenmp=libomp  ## for gprof -pg
+  LDFLAGS= -lgsl -lgslcblas -lm
+
+  sn3d: CFLAGS += -DMPI_ON
+  exspec: CFLAGS += -DDO_EXSPEC
+  exgamma: CFLAGS += -DDO_EXSPEC
+
+else
+
+  CC = clang
+  LDFLAGS= -lgsl -lgslcblas -lm -I/home/localadmin_ccollins/gsl/include
+  INCLUDE = /home/localadmin_ccollins/gsl/include
+  LIB = /home/localadmin_ccollins/gsl/lib
+  CFLAGS = -O3 -g -I$(INCLUDE)
+  LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
+
+  exspec: override CFLAGS =  -O3 -I$(INCLUDE) -DDO_EXSPEC
+  exspec_dd: override CFLAGS =  -O3  -DDO_EXSPEC
+  exgamma: override CFLAGS =  -O3 -I$(INCLUDE) -DDO_EXSPEC
+endif
+
 ### Settings for the miner
 ifeq ($(SYSTYPE),Haswell)
   CC = mpicc
