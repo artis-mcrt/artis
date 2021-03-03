@@ -16,27 +16,27 @@ int make_specpol()
 
 /*******************************************************/
 int write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpol_file)
-{  
+{
   int i,m,p,l;
 
   fprintf(specpol_file, "%g ", 0.0);
-  
+
   for (l=0;l<3;l++) {
     for (p = 0; p < ntbins; p++) fprintf(specpol_file, "%g ", (stokes_i[p].lower_time + (stokes_i[p].delta_t/2))/DAY);
   }
 
   fprintf(specpol_file, "\n");
-    
+
   for (m=0; m < nnubins; m++)
   {
-      
+
     fprintf(specpol_file, "%g ", ((stokes_i[0].lower_freq[m]+(stokes_i[0].delta_freq[m]/2))));
-    
+
     // Stokes I
     for (p = 0; p < ntbins; p++)
     {
       fprintf(specpol_file, "%g ", stokes_i[p].flux[m]);
-        
+
       if (do_emission_res == 1)
       {
         for (i = 0; i < 2*nelements*maxion+1; i++) fprintf(emissionpol_file, "%g ", stokes_i[p].stat[m].emission[i]);
@@ -45,13 +45,13 @@ int write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpo
         fprintf(absorptionpol_file, "\n");
       }
     }
-    
-      
+
+
     // Stokes Q
     for (p = 0; p < ntbins; p++)
     {
         fprintf(specpol_file, "%g ", stokes_q[p].flux[m]);
-        
+
         if (do_emission_res == 1)
         {
             for (i = 0; i < 2*nelements*maxion+1; i++) fprintf(emissionpol_file, "%g ", stokes_q[p].stat[m].emission[i]);
@@ -61,12 +61,12 @@ int write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpo
         }
     }
 
-      
+
     // Stokes U
     for (p = 0; p < ntbins; p++)
     {
         fprintf(specpol_file, "%g ", stokes_u[p].flux[m]);
-        
+
         if (do_emission_res == 1)
         {
             for (i = 0; i < 2*nelements*maxion+1; i++) fprintf(emissionpol_file, "%g ", stokes_u[p].stat[m].emission[i]);
@@ -75,10 +75,10 @@ int write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpo
             fprintf(absorptionpol_file, "\n");
         }
     }
-      
+
     fprintf(specpol_file, "\n");
   }
-  
+
   /*
   fclose(specpol_file);
   fclose(emissionpol_file);
@@ -91,7 +91,7 @@ int write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpo
 void init_specpol(void)
 {
   int n,m,i;
-  
+
   if (nnubins > MNUBINS)
   {
     printout("Too many frequency bins in spectrum - reducing.\n");
@@ -103,7 +103,7 @@ void init_specpol(void)
     ntbins = MTBINS;
   }
 
-  /** start by setting up the time and frequency bins. */ 
+  /** start by setting up the time and frequency bins. */
   /** it is all done interms of a logarithmic spacing in both t and nu - get the
   step sizes first. */
   ///Should be moved to input.c or exspec.c
@@ -118,23 +118,23 @@ void init_specpol(void)
     {
       stokes_i[n].lower_freq[m] = exp( log(nu_min_r) + (m * (dlognu)));
       stokes_i[n].delta_freq[m] = exp( log(nu_min_r) + ((m+1) * (dlognu))) - stokes_i[n].lower_freq[m];
-      
+
       stokes_i[n].flux[m] = 0.0;
       stokes_q[n].flux[m] = 0.0;
       stokes_u[n].flux[m] = 0.0;
-        
+
       for (i = 0; i < 2*nelements*maxion+1; i++) {
         stokes_i[n].stat[m].emission[i] = 0;
         stokes_q[n].stat[m].emission[i] = 0;
         stokes_u[n].stat[m].emission[i] = 0;
       }
-      
+
       for (i = 0; i < nelements*maxion; i++) {
         stokes_i[n].stat[m].absorption[i] = 0;
         stokes_q[n].stat[m].absorption[i] = 0;
         stokes_u[n].stat[m].absorption[i] = 0;
       }
-    
+
     }
   }
 }
@@ -151,10 +151,10 @@ int gather_specpol(int depth)
   //PKT *pkt_ptr;
   //int add_to_spec();
   double vcut,vem;
-  
+
   /// Set up the spectrum grid and initialise the bins to zero.
   init_specpol();
-    
+
   if (depth < 0)
   {
     /// Do not extract depth-dependent spectra
@@ -172,10 +172,10 @@ int gather_specpol(int depth)
     /// Extract depth-dependent spectra
     /// Set velocity cut
     if (depth < 9) vcut=(depth+1.)*vmax/10.;
-    else vcut=100*vmax;  /// Make sure that all escaping packets are taken for 
-                        /// depth=9 . For 2d and 3d models the corners of a 
+    else vcut=100*vmax;  /// Make sure that all escaping packets are taken for
+                        /// depth=9 . For 2d and 3d models the corners of a
                         /// simulation box contain material with v>vmax.
-  
+
     /// Now add the energy of all the escaping packets to the
     /// appropriate bins.
     for (p = 0; p < nepkts; p++)
@@ -203,7 +203,7 @@ int add_to_specpol(EPKT *pkt_ptr)
   int nt, nnu;
   int at,et,element,ion,nproc;
 
-    
+
   /// Put this into the time grid.
   t_arrive = pkt_ptr->arrive_time;
   if (t_arrive > tmin && t_arrive < tmax)
@@ -215,7 +215,7 @@ int add_to_specpol(EPKT *pkt_ptr)
       deltai = pkt_ptr->stokes[0]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
       deltaq = pkt_ptr->stokes[1]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
       deltau = pkt_ptr->stokes[2]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
-        
+
       stokes_i[nt].flux[nnu] += deltai;
       stokes_q[nt].flux[nnu] += deltaq;
       stokes_u[nt].flux[nnu] += deltau;
@@ -244,14 +244,14 @@ int add_to_specpol(EPKT *pkt_ptr)
       stokes_i[nt].stat[nnu].emission[nproc] += deltai;
       stokes_q[nt].stat[nnu].emission[nproc] += deltaq;
       stokes_u[nt].stat[nnu].emission[nproc] += deltau;
-      
+
       nnu = (log(pkt_ptr->absorptionfreq) - log(nu_min_r)) /  dlognu;
       if (nnu >= 0 && nnu < MNUBINS)
       {
         deltai = pkt_ptr->stokes[0]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
         deltaq = pkt_ptr->stokes[1]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
         deltau = pkt_ptr->stokes[2]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
-          
+
         at = pkt_ptr->absorptiontype;
         if (at >= 0)
         {
@@ -270,7 +270,7 @@ int add_to_specpol(EPKT *pkt_ptr)
   return(0);
 
 }
-	    
+
 
 
 /***********************************************/
@@ -283,10 +283,10 @@ int gather_specpol_res(int current_abin)
   EPKT *pkt_ptr;
   int p;
 
-  
+
   /// Set up the spectrum grid and initialise the bins to zero.
   init_specpol();
-  
+
   /// Now add the energy of all the escaping packets to the
   /// appropriate bins.
   for (p = 0; p < nepkts; p++)
@@ -307,7 +307,7 @@ int add_to_specpol_res(EPKT *pkt_ptr, int current_abin)
   /* Need to (1) decide which time bin to put it in and (2) which frequency bin. */
 
   /* Time bin - we know that it escaped at "escape_time". However, we have to allow
-     for travel time. Use the formula in Leon's paper. 
+     for travel time. Use the formula in Leon's paper.
      The extra distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
   */
 
@@ -345,7 +345,7 @@ int add_to_specpol_res(EPKT *pkt_ptr, int current_abin)
     phibin = ((acos(cosphi) + PI) /2. / PI * sqrt(MABINS));
   }
   na = (thetabin*sqrt(MABINS)) + phibin;
-    
+
   /// Add only packets which escape to the current angle bin
   if (na == current_abin)
   {
@@ -354,7 +354,7 @@ int add_to_specpol_res(EPKT *pkt_ptr, int current_abin)
     if (t_arrive > tmin && t_arrive < tmax)
     {
       nt = (log(t_arrive) - log(tmin)) / dlogt;
-  
+
       /// and the correct frequency bin.
       if (pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
       {
@@ -365,7 +365,7 @@ int add_to_specpol_res(EPKT *pkt_ptr, int current_abin)
         stokes_i[nt].flux[nnu] += deltai;
         stokes_q[nt].flux[nnu] += deltaq;
         stokes_u[nt].flux[nnu] += deltau;
-          
+
         if (do_emission_res == 1)
         {
           et = pkt_ptr->emissiontype;
@@ -392,14 +392,14 @@ int add_to_specpol_res(EPKT *pkt_ptr, int current_abin)
           stokes_i[nt].stat[nnu].emission[nproc] += deltai;
           stokes_q[nt].stat[nnu].emission[nproc] += deltaq;
           stokes_u[nt].stat[nnu].emission[nproc] += deltau;
-          
+
           nnu = (log(pkt_ptr->absorptionfreq) - log(nu_min_r)) /  dlognu;
           if (nnu >= 0 && nnu < MNUBINS)
           {
             deltai = pkt_ptr->stokes[0]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
             deltaq = pkt_ptr->stokes[1]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
             deltau = pkt_ptr->stokes[2]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
-            
+
             at = pkt_ptr->absorptiontype;
             if (at >= 0)
             {
@@ -419,5 +419,4 @@ int add_to_specpol_res(EPKT *pkt_ptr, int current_abin)
 
   return(0);
 }
-	    
- 
+

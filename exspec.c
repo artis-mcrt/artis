@@ -39,6 +39,8 @@ int main(int argc, char** argv)
   int update_packets();
 
   //void init_spectrum();
+  int gather_specpol(int depth);
+  int gather_specpol_res(int current_abin);
   int gather_spectrum(int depth);
   int gather_spectrum_res(int current_abin);
   int gather_light_curve();
@@ -57,7 +59,7 @@ int main(int argc, char** argv)
   //int make_spectrum();
   //int make_light_curve();
   //int make_light_curve_res();
-  //int make_gamma_light_curve();
+  int make_gamma_light_curve();
   double syn_gamma();
   int estim_switch();
   int outer_iteration;
