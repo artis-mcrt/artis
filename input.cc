@@ -323,6 +323,7 @@ static void read_ion_levels(
 
       //if (level == 0 && ion == 0) energyoffset = levelenergy;
       globals::elements[element].ions[ion].levels[level].stat_weight = statweight;
+      assert_always(statweight > 0.);
       ///Moved to the section with ionising levels below
       //globals::elements[element].ions[ion].levels[level].cont_index = cont_index;
       //cont_index--;
@@ -571,6 +572,7 @@ static void add_transitions_to_linelist(
 
         const double g = stat_weight(element,ion,level) / stat_weight(element,ion,targetlevel);
         const double f_ul = g * ME * pow(CLIGHT,3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
+        assert_always(std::isfinite(f_ul));
         //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
         //globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
 
