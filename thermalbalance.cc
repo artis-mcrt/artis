@@ -81,7 +81,7 @@ static double integrand_bfheatingcoeff_custom_radfield(double nu, void *voidpara
 static double calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
   double error = 0.0;
-  const double epsrel = 0.03;
+  const double epsrel = 1e-3;
   const double epsrelwarning = 1e-1;
   const double epsabs = 0.;
 
