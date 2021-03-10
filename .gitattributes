@@ -1,0 +1,14 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text=auto
+
+# these files require LF (Unix-style) line-endings
+*.cc text eol=lf
+*.h text eol=lf
+*.sh text eol=lf
+*.txt text eol=lf
+Makefile text eol=lf
+
+# Denote all files that are truly binary and should not be modified.
+*.png binary
+*.jpg binary
+*.gz binary
