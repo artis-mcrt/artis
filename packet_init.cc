@@ -14,9 +14,6 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   pkt_ptr->number = pktnumber;  ///record the packets number for debugging
   pkt_ptr->prop_time = globals::tmin;
   pkt_ptr->originated_from_positron = false;
-  pkt_ptr->dir[0] = 0.;
-  pkt_ptr->dir[1] = 0.;
-  pkt_ptr->dir[2] = 0.;
 
   if (globals::grid_type == GRID_SPHERICAL1D)
   {
@@ -91,8 +88,11 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   pkt_ptr->type = decay::get_decay_pellet_type(decaypath, &from_positron); // set the packet tdecay and type
   pkt_ptr->originated_from_positron = from_positron;
 
-  /// Now assign the energy to the pellet.
-  // LJS: is this needed? the packet doesn't have a meaningful direction yet
+  // initial e_rf is probably never needed (e_rf is set at pellet decay time), but we
+  // might as well give it a correct value since this code is fast and runs only once
+
+  // pellet packet is moving with the homologous flow, so dir is proportional to pos
+  vec_norm(pkt_ptr->pos, pkt_ptr->dir);  // assign dir = pos / vec_len(pos)
   const double dopplerfactor = doppler_packetpos(pkt_ptr);
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
