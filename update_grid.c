@@ -331,7 +331,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
             else tb_info = 0;
             /// Update current mass density of cell
             //n = nonemptycells[my_rank+ncl*nprocs];
-            printout("[info] update_grid: working on cell %d ...\n",n);
+//            if (n % 500 == 0) printout("[info] update_grid: working on cell %d ...\n",n);
             //n = nonemptycells[ncl];
             //printout("[debug] update_grid: ncl %d is %d non-empty cell updating grid cell %d ... T_e %g, rho %g\n",ncl,my_rank+ncl*nprocs,n,cell[n].T_e,cell[n].rho);
             modelgrid[n].rho = modelgrid[n].rhoinit / pow(tratmid,3);
