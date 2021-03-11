@@ -1,5 +1,6 @@
 #include "sn3d.h"
 #include "grid.h"
+#include "globals.h"
 
 
 static void read_energy_in_cells_1d(void)
@@ -14,35 +15,28 @@ static void read_energy_in_cells_1d(void)
   FILE *cell_energies_file = fopen_required("energydistribution.txt", "r");
 
   fscanf(cell_energies_file, "%d", &number_of_cells);
-  if (number_of_cells != get_npts_model())
+  if (number_of_cells > MMODELGRID)
   {
-    printout("number of cells in energy file (%d) "
-             "does not match number of model grid cells (%d) - abort",
-             number_of_cells, get_npts_model());
-    abort();
+    printout("too many cells in energy file (%d) > MMODELGRID %d",
+             number_of_cells, MMODELGRID); //todo: is there a better check?
+    exit(0);
   }
 
   double cell_energies[number_of_cells];
-  double modelcell_energydensity[number_of_cells];
   double energy_counter = 0;
   for (int mgi = 0; mgi < number_of_cells; mgi++)
   {
     fscanf(cell_energies_file, "%d %lf",
            &cellnumber, &cell_energies[mgi]);
     energy_counter += cell_energies[mgi];
-    modelcell_energydensity[mgi] = cell_energies[mgi] / vol_init_modelcell(mgi);
-    printout("modelcell_energydensity %g get_volinit_modelcell %g \n",
-             modelcell_energydensity[mgi], vol_init_modelcell(mgi));
+    modelcell_energy[mgi] = cell_energies[mgi];
+//    printout("modelcell_energy %g get_volinit_modelcell %g \n",
+//             modelcell_energy[mgi], get_volinit_modelcell(mgi));
   }
-  double etot_fromenergyfile = energy_counter;
+  etot_fromenergyfile = energy_counter;
+  //todo: broken here -- modelcell_energy and etot_fromenergyfile not defined properly.
+  // trying to set them in globals.h
 
-//  printout("start %d end %d ncells %d \n",
-//           start_time, end_time, number_of_cells);
-//  for (int mgi = 0; mgi < number_of_cells; mgi++)
-//  {
-//    printout("%d %g \n", mgi, modelcell_energydensity[mgi]);
-//  }
-//  exit(0);
 }
 
 
@@ -85,15 +79,13 @@ static void read_energy_file(void)
 
 void energy_input_init(void)
 {
-  printout("ngrid %d \n", globals::ngrid);
-  abort();  // If it gets to here I'm happy!!
+  printout("reading energy files \n");
 
-  for (int mgi = 0; mgi < get_npts_model(); mgi++)
-  {
-    printout("volume %g \n", vol_init_modelcell(mgi));
-    printout("mgi %d cells %d \n", mgi, get_numassociatedcells(mgi));
-  }
-
+//  for (int mgi = 0; mgi < get_npts_model(); mgi++)
+//  {
+//    printout("mgi %d cells %d \n", mgi, get_numassociatedcells(mgi));
+//  }
+//  exit(0);
   read_energy_in_cells_1d();
   read_energy_file();
 }

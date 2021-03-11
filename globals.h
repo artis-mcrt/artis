@@ -75,6 +75,17 @@ namespace globals
   extern __managed__ int ncoord2_model;
   extern __managed__ double dcoord1, dcoord2;
 
+#ifdef USE_ENERGYINPUTFILE
+  //todo:not working...
+    extern __managed__ double modelcell_energy[MMODELGRID]; // energy in model grid cell read from energydistribution.txt
+    extern __managed__ double etot_fromenergyfile; // total model energy -- used to initialise pellets. Read from energydistribution.txt
+
+    #define MTSTEP = 200; //todo: Luke what should this be now?
+    extern __managed__ int ntimes_energydep; // number of times included in energyrate.txt
+    extern __managed__ float time_energydep[MTSTEP]; // times in seconds from energyrate.txt
+    extern __managed__ float energy_fraction_deposited[MTSTEP]; // fraction of energy deposited by time from energyrate.txt
+#endif
+
   extern __managed__ double CLIGHT_PROP;
 
   extern __managed__ double gamma_grey;
