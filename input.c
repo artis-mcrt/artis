@@ -47,9 +47,9 @@ int input(rank)
 
   maxion = MIONS;
   /// Set grid size
-  nxgrid = 100; //pow(MGRID,1./3.); //10;
-  nygrid = 100; //pow(MGRID,1./3.); //10;
-  nzgrid = 100; //pow(MGRID,1./3.); //10;
+  nxgrid = 50; //pow(MGRID,1./3.); //10;
+  nygrid = 50; //pow(MGRID,1./3.); //10;
+  nzgrid = 50; //pow(MGRID,1./3.); //10;
   printout("nxgrid %d\n",nxgrid);
   /*nxgrid = 4;
   nygrid = 4;
