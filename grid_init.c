@@ -68,6 +68,32 @@ int grid_init ()
     exit(0);
   }
 
+#ifdef USE_ENERGYINPUTFILE
+  int assoc_cells;
+  int mgi;
+  double vol_init = wid_init * wid_init * wid_init;
+
+  for (mgi = 0; mgi < MMODELGRID; mgi++)
+  {
+    assoc_cells = modelgrid[mgi].associated_cells;
+    if (assoc_cells > 0)
+    {
+      set_modelcell_energydensity_init(mgi, (modelcell_energy[mgi] / (vol_init * assoc_cells))); //TODO: modelcell_energy/cell volume ==> vol_init*associated cells
+
+      printout("cell volume init %g associated cells %d volume %g energydensity %g mgi %d get_energydensity %g\n",
+               vol_init, assoc_cells, vol_init*assoc_cells,
+               modelcell_energy[mgi] / (vol_init * assoc_cells), mgi, get_modelcell_energydensity_init(mgi));
+    }
+//    else
+//    {
+//      set_modelcell_energydensity_init(mgi, 0.);
+//    }
+//    printout("cell volume init %g associated cells %d volume %g energydensity %g mgi %d get_energydensity %g\n",
+//             vol_init, assoc_cells, vol_init*assoc_cells, modelcell_energy[mgi] / (vol_init * assoc_cells), mgi, get_modelcell_energydensity_init(mgi));
+  }
+  set_modelcell_energydensity_init(MMODELGRID,0.);
+#endif
+
   /// and assign a temperature to the cells
   assign_temperature();
 //  todo: give this option to depend on energy input files
@@ -598,22 +624,6 @@ int density_1d_read ()
   set_TJ(MMODELGRID,MINTEMP);
   set_TR(MMODELGRID,MINTEMP);
   allocate_compositiondata(MMODELGRID);
-
-#ifdef USE_ENERGYINPUTFILE
-  int assoc_cells;
-  double vol_init = wid_init * wid_init * wid_init;
-
-  for (mgi = 0; mgi < npts_model; mgi++)
-  {
-    assoc_cells = modelgrid[mgi].associated_cells;
-    if (assoc_cells > 0)
-    {
-      printout("cell volume init %g associated cells %d volume %g\n", vol_init, assoc_cells, vol_init*assoc_cells);
-      set_modelcell_energydensity_init(mgi, (modelcell_energy[mgi] / (vol_init * assoc_cells)));
-    }
-  }
-  set_modelcell_energydensity_init(MMODELGRID,0.);
-#endif
   
   
   /// First pass through to get normalisation coefficients
@@ -1732,7 +1742,7 @@ void assign_temperature()
     {
     #ifdef USE_ENERGYINPUTFILE
       T_initial = pow((CLIGHT/4/STEBO * modelcell_energy[n]), 1./4.);
-//      todo: FIX
+//      todo: FIX -- modelcell energy should be mgi?
 //      printout("T_initial %g", T_initial);
     #else
       //mgi = cell[n].modelgridindex;
