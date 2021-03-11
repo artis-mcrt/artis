@@ -712,9 +712,9 @@ static int calculate_nlevels_groundterm(int element, int ion)
     {
       // there should be no duplicate stat weights within the ground term
       const float g_b = stat_weight(element, ion, levelb);
-      if (fabs(g / g_b - 1.) > 0.4)
+      if (fabs(g - g_b) < 0.4)
       {
-        printout("ERROR: duplicate g value in ground term for Z=%d ion_stage %d nlevels_groundterm %d g(level %d) %g g(level %d) %g\n",
+        printout("WARNING: duplicate g value in ground term for Z=%d ion_stage %d nlevels_groundterm %d g(level %d) %g g(level %d) %g\n",
                  get_element(element), get_ionstage(element, ion), nlevels_groundterm, level, g, levelb, g_b);
       }
     }
