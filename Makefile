@@ -7,7 +7,7 @@ SYSNAME := $(shell uname -s)
 ifeq ($(SYSNAME),Darwin)
 	# macOS
 
-	CXX = c++
+	# CXX = c++
 	CXXFLAGS += -std=c++17 -O3 -march=native -fstrict-aliasing -ftree-vectorize -flto
 
 	CXXFLAGS += -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing
@@ -46,16 +46,16 @@ else ifneq (, $(shell which mpicxx))
 sn3d sn3dcuda: CXXFLAGS += -DMPI_ON
 
 else ifneq ($(SYSNAME),ubuntu)
-	CXX = c++
-      LDFLAGS= -lgsl -lgslcblas -lm -I/home/localadmin_ccollins/gsl/include
-      INCLUDE = /home/localadmin_ccollins/gsl/include
-      LIB = /home/localadmin_ccollins/gsl/lib
-      CXXFLAGS += -O3 -g -I$(INCLUDE)
-      LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
+	# CXX = c++
+	LDFLAGS= -lgsl -lgslcblas -lm -I/home/localadmin_ccollins/gsl/include
+	INCLUDE = /home/localadmin_ccollins/gsl/include
+	LIB = /home/localadmin_ccollins/gsl/lib
+	CXXFLAGS += -O3 -g -I$(INCLUDE)
+	LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
 	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
 
 else
-	CXX = c++
+	# CXX = c++
 	# CXX = icpc
 	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
 endif
