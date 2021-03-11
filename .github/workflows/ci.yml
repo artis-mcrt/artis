@@ -29,6 +29,8 @@ jobs:
         c++ --version
         which clang++
         clang++ --version
+        export CC=clang
+        export CXX=clang++
 
     - name: "compile sn3d and exspec"
       run: make sn3d exspec
