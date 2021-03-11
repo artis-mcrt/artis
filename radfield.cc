@@ -396,7 +396,7 @@ void init(int my_rank)
       }
     }
   }
-  printout("mem_usage: radiation field bins for non-empty cells occupy %.2f MB\n", mem_usage / 1024. / 1024.);
+  printout("[info] mem_usage: radiation field bins for non-empty cells occupy %.2f MB\n", mem_usage / 1024. / 1024.);
 }
 
 

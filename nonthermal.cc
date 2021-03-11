@@ -608,7 +608,7 @@ void init(const int my_rank)
   }
 
   if (STORE_NT_SPECTRUM)
-    printout("mem_usage: storing non-thermal spectra for all allocated cells occupies %.3f MB\n", mem_usage_yfunc / 1024 / 1024.);;
+    printout("[info] mem_usage: storing non-thermal spectra for all allocated cells occupies %.3f MB\n", mem_usage_yfunc / 1024 / 1024.);;
 
   envec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
   logenvec = gsl_vector_calloc(SFPTS);
@@ -2447,7 +2447,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
       realloc_frac_excitations_list(modelgridindex, MAX_NT_EXCITATIONS_STORED);
     }
 
-    printout("mem_usage: non-thermal excitations for cell %d at this timestep occupy %.1f MB\n",
+    printout("[info] mem_usage: non-thermal excitations for cell %d at this timestep occupy %.1f MB\n",
              modelgridindex, nt_solution[modelgridindex].frac_excitations_list_size *
              (sizeof(nt_solution[modelgridindex].frac_excitations_list) + sizeof(nt_solution[modelgridindex].frac_excitations_list[0])) / 1024. / 1024.);
 
