@@ -131,28 +131,28 @@ int setup_packets (int pktnumberoffset)
  
   /* Need to get a normalisation factor. */
   norm = 0.0;
-#ifdef USE_ENERGYINPUTFILE
+//  double norm_contribution;
   for (m=0; m<ngrid; m++)
   {
     grid_ptr = &cell[m];
     cont[m] = norm;
 
-    norm += vol_init(grid_ptr)
-            * get_modelcell_energydensity_init(grid_ptr->modelgridindex);
+  #ifdef USE_ENERGYINPUTFILE
+//    norm += vol_init(grid_ptr) * get_modelcell_energydensity_init(grid_ptr->modelgridindex);
+//todo: check input file and set back
+    if (get_rhoinit(grid_ptr->modelgridindex) > 1e-9)
+    {
+      norm += get_rhoinit(grid_ptr->modelgridindex);
+    }
 
-//    if(get_modelcell_energydensity_init(grid_ptr->modelgridindex) != 0)
-//    {
-//      printout("get_modelcell_energydensity_init %g vol_init %g norm %g m %d \n",
-//               get_modelcell_energydensity_init(grid_ptr->modelgridindex),
-//               vol_init(grid_ptr), norm, m);
-//    }
-  }
 
-#else
-  for (m=0; m<ngrid; m++)
-  {
-    grid_ptr = &cell[m];
-    cont[m] = norm;
+    if(grid_ptr->modelgridindex != MMODELGRID)
+    {
+      printout("get_modelcell_energydensity_init %g vol_init %g norm %g m %d mgi %d rho %g\n",
+               get_modelcell_energydensity_init(grid_ptr->modelgridindex),
+               vol_init(grid_ptr), norm, m, grid_ptr->modelgridindex, get_rhoinit(grid_ptr->modelgridindex));
+    }
+    #else
     //printf("%g %g %g\n", (fni(grid_ptr)*(ENICKEL + ECOBALT)/MNI56),(f52fe(grid_ptr)*(E52FE + E52MN)/MFE52),(f48cr(grid_ptr)*(E48V + E48CR)/MCR48));
     norm += get_rhoinit(grid_ptr->modelgridindex) * vol_init(grid_ptr) *
       ((fni(grid_ptr)*(ENICKEL + ECOBALT)/56.)
@@ -160,10 +160,20 @@ int setup_packets (int pktnumberoffset)
        +(f52fe(grid_ptr)*(E52FE + E52MN)/52.)
        +(f48cr(grid_ptr)*(E48V + E48CR)/48.));
 
+//    norm_contribution = get_rhoinit(grid_ptr->modelgridindex) *
+//                        ((fni(grid_ptr)*(ENICKEL + ECOBALT)/56.)
+//                         +(fco(grid_ptr)*(ECOBALT)/56.)
+//                         +(f52fe(grid_ptr)*(E52FE + E52MN)/52.)
+//                         +(f48cr(grid_ptr)*(E48V + E48CR)/48.));
+//    printout("norm contribution %g norm %g mgi %d vol_init %g\n", norm_contribution, norm, grid_ptr->modelgridindex, vol_init(grid_ptr));
+//        if(grid_ptr->modelgridindex != MMODELGRID)
+//        {
+//          printout("norm contribution %g vol_init %g norm %g m %d mgi %d rho %g\n",
+//                   norm_contribution, vol_init(grid_ptr), norm, m, grid_ptr->modelgridindex, get_rhoinit(grid_ptr->modelgridindex));
+//        }
 //      printout("vol_init %g rho_inti %g \n", vol_init(grid_ptr), get_rhoinit(grid_ptr->modelgridindex));
-
+    #endif
   }
-#endif
 
   cont[ngrid] = norm;
 //  printout("norm %g \n", norm);
