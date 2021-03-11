@@ -654,6 +654,7 @@ void init(const int my_rank)
       gsl_vector_set(sourcevec, s, 1. / source_spread_en);
   }
 
+  // integrate the source vector to find the assumed injection rate
   gsl_vector *integralvec = gsl_vector_alloc(SFPTS);
   gsl_vector_memcpy(integralvec, sourcevec);
   #if (SF_USE_LOG_E_INCREMENT)
