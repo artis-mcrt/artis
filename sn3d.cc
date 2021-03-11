@@ -143,7 +143,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
           }
         }
       }
-      printout("mem_usage: MPI_BUFFER: used %d of %d bytes allocated to mpi_grid_buffer\n", position, mpi_grid_buffer_size);
+      printout("[info] mem_usage: MPI_BUFFER: used %d of %d bytes allocated to mpi_grid_buffer\n", position, mpi_grid_buffer_size);
       assert_always(position <= mpi_grid_buffer_size);
     }
     MPI_Barrier(MPI_COMM_WORLD);
@@ -745,9 +745,11 @@ int main(int argc, char** argv)
     /// Makes sure that the output_file is written line-by-line
     setvbuf(output_file, NULL, _IOLBF, 1);
 
-#   ifdef _OPENMP
+#ifdef _OPENMP
     printout("OpenMP parallelisation active with %d threads (max %d)\n", get_num_threads(), get_max_threads());
-#   endif
+#else
+    printout("OpenMP is not available in this build\n");
+#endif
 
     gslworkspace = gsl_integration_workspace_alloc(GSLWSIZE);
   }
@@ -816,13 +818,13 @@ int main(int argc, char** argv)
   #ifdef MPI_ON
     printout("MPI enabled with %d processes\n", globals::nprocs);
   #else
-    printout("MPI disabled\n");
+    printout("MPI is disabled in this build\n");
   #endif
 
   #ifdef __CUDACC__
-  printout("[CUDA] NVIDIA CUDA is available\n");
+  printout("[CUDA] NVIDIA CUDA is available in this build\n");
   #else
-  printout("[CUDA] NVIDIA CUDA is not available\n");
+  printout("[CUDA] NVIDIA CUDA is not available in this build\n");
   #endif
 
   #if CUDA_ENABLED
@@ -936,7 +938,7 @@ int main(int argc, char** argv)
 
     printout("Simulation propagates %g packets per process (total %g with nprocs %d)\n", 1. * globals::npkts, 1. * globals::npkts * globals::nprocs, globals::nprocs);
 
-    printout("mem_usage: packets occupy %.1f MB\n", MPKTS * sizeof(PKT) / 1024. / 1024.);
+    printout("[info] mem_usage: packets occupy %.1f MB\n", MPKTS * sizeof(PKT) / 1024. / 1024.);
 
     if (!globals::simulation_continued_from_saved)
     {
