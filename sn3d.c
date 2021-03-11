@@ -349,6 +349,34 @@ int main(int argc, char** argv)
       packet_init(middle_iteration,my_rank);
     }
 
+//    //    if (nts == ftstep-1)
+////    {
+//    sprintf(filename,"packets%.2d_%.4d.out",0,my_rank);
+//    //sprintf(filename,"packets%.2d_%.4d.out",middle_iteration,my_rank);
+//    if ((packets_file = fopen(filename, "w")) == NULL)
+//    {
+//      printf("Cannot write to final packets file %s\n",filename);
+//      exit(0);
+//    }
+//    write_packets(packets_file);
+//    fclose(packets_file);
+//
+//    // write specpol of the virtual packets
+//#ifdef VPKT_ON
+//    write_vspecpol(vspecpol_file);
+//              fclose(vspecpol_file);
+//
+//              if (vgrid_flag==1)
+//              {
+//                  write_vpkt_grid(vpkt_grid_file);
+//                  fclose(vpkt_grid_file);
+//              }
+//#endif
+//
+//    printout("time after write final packets file %d\n",time(NULL));
+//              exit(0);
+////    }
+
     /// For the parallelisation of update_grid, the process needs to be told which cells belong to it.
     /// The next loop is over all grid cells. For parallelisation, we want to split this loop between
     /// processes. This is done by assigning each MPI process nblock processes. The residual n_leftover
