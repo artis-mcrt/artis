@@ -62,7 +62,7 @@ int update_packets(int nts)
         if (n % 500 == 0) printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
         //if (n == 5000) exit(0);
         
-	pkt_ptr = &pkt[n];
+	      pkt_ptr = &pkt[n];
         pkt_ptr->interactions = 0;
         //pkt_ptr->timestep = nts;
         
@@ -204,7 +204,8 @@ int update_packets(int nts)
           }
           else
           {
-            printout("Something gone wrong with decaying pellets. Abort.\n");
+            printout("Something gone wrong with decaying pellets. Abort. tdecay %g pkt number %d \n",
+                     pkt_ptr->tdecay, pkt_ptr->number);
             exit(0);
           }
         }
