@@ -290,7 +290,7 @@ typedef struct levellist_entry
   phixstarget_entry *phixstargets;  /// pointer to table of target states and probabilities
   float *photoion_xs;               /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
   int nphixstargets;                         /// length of phixstargets array:
-  int stat_weight;                           /// Statistical weight of this level.
+  float stat_weight;                           /// Statistical weight of this level.
 
   int cont_index;                            /// Index of the continuum associated to this level. Negative number.
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
