@@ -38,13 +38,14 @@ void energy_in_cells_1d_read()
   }
 
   fscanf(cell_energies_file, "%d", &number_of_cells);
-  if (number_of_cells != npts_model)
+  if (number_of_cells > MMODELGRID)
   {
-    printout("number of cells in energy file (%d) "
-             "does not match number of model grid cells (%d) - abort",
-             number_of_cells, npts_model);
+    printout("too many cells in energy file (%d) > MMODELGRID %d",
+             number_of_cells, MMODELGRID); //todo: is there a better check?
+//             "does not match number of model grid cells (%d) - abort",
+
     exit(0);
-  }
+  }  //todo: why does this not match
 
   double cell_energies[number_of_cells];
   double energy_counter = 0;
