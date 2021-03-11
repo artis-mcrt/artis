@@ -53,6 +53,13 @@ jobs:
         cp sn3d tests/nebularonezone/
         cp exspec tests/nebularonezone/
 
+    # we can cache this, but then we don't test the code that generates ratecoeff.dat
+    # - name: Cache ratecoeff.dat
+    #   uses: actions/cache@v2.1.4
+    #   with:
+    #     path: "tests/nebularonezone/ratecoeff.dat"
+    #     key: "tests/nebularonezone/ratecoeff.dat"
+
     - name: "Run test nebularonezone test"
       run: |
         cd tests/nebularonezone/
