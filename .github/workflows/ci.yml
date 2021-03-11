@@ -19,7 +19,7 @@ jobs:
     - name: "install dependencies"
       run: |
         sudo apt-get update
-        sudo apt-get install libgsl-dev
+        sudo apt-get install libgsl-dev clang
         cp artisoptions_example.h artisoptions.h
 
     - name: "diagnostic info"
@@ -27,6 +27,8 @@ jobs:
         git status
         which c++
         c++ --version
+        which clang++
+        clang++ --version
 
     - name: "compile sn3d and exspec"
       run: make sn3d exspec
