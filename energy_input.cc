@@ -3,6 +3,14 @@
 #include "globals.h"
 
 
+__managed__ double *modelcell_energy; // energy in model grid cell read from energydistribution.txt
+__managed__ double etot_fromenergyfile; // total model energy -- used to initialise pellets. Read from energydistribution.txt
+
+__managed__ int ntimes_energydep; // number of times included in energyrate.txt
+__managed__ float *time_energydep; // times in seconds from energyrate.txt
+__managed__ float *energy_fraction_deposited; // fraction of energy deposited by time from energyrate.txt
+
+
 static void read_energy_in_cells_1d(void)
 {
   /// energy released in simulation during start time and end time
@@ -81,6 +89,10 @@ static void read_energy_file(void)
 void energy_input_init(void)
 {
   printout("reading energy files \n");
+
+  modelcell_energy = (double *) calloc(get_npts_model(), sizeof(double));
+  time_energydep = (float *) calloc(globals::ntstep, sizeof(float));
+  energy_fraction_deposited = (float *) calloc(globals::ntstep, sizeof(float));
 
   read_energy_in_cells_1d();
   read_energy_file();
