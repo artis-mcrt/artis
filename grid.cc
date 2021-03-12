@@ -7,6 +7,7 @@
 #include "radfield.h"
 #include "rpkt.h"
 #include "vectors.h"
+#include "energy_input.h"
 #include <cstring>
 
 
@@ -247,6 +248,10 @@ float get_W(int modelgridindex)
   return globals::modelgrid[modelgridindex].W;
 }
 
+float get_modelcell_energydensity_init(int modelgridindex)
+{
+  return modelgrid[modelgridindex].modelcell_energydensity_init;
+}
 
 __host__ __device__
 void set_rhoinit(int modelgridindex, float x)
@@ -318,6 +323,12 @@ void set_W(int modelgridindex, float W)
 {
   globals::modelgrid[modelgridindex].W = W;
 }
+
+void set_modelcell_energydensity_init(int modelgridindex, float x)
+{
+  globals::modelgrid[modelgridindex].modelcell_energydensity_init = x;
+}
+
 
 
 __host__ __device__
@@ -1777,6 +1788,29 @@ void grid_init(int my_rank)
   calculate_kappagrey();
   abundances_read();
 
+  if (USE_ENERGYINPUTFILE)
+  {
+    int assoc_cells;
+    int mgi;
+    double vol_init = wid_init * wid_init * wid_init;
+
+    for (mgi = 0; mgi < MMODELGRID; mgi++)
+    {
+      assoc_cells = get_numassociatedcells(mgi);
+      if (assoc_cells > 0)
+      {
+        //Luke: how do I call modelcell_energy here? defined in new energy cc file
+        set_modelcell_energydensity_init(mgi, (modelcell_energy[mgi] / (vol_init * assoc_cells))); //modelcell_energy/cell volume ==> vol_init*associated cells
+
+        printout("cell volume init %g associated cells %d volume %g energydensity %g mgi %d get_energydensity %g\n",
+                 vol_init, assoc_cells, vol_init*assoc_cells,
+                 modelcell_energy[mgi] / (vol_init * assoc_cells), mgi, get_modelcell_energydensity_init(mgi));
+      }
+
+    }
+    set_modelcell_energydensity_init(MMODELGRID,0.);
+  }
+
   radfield::init(my_rank);
   nonthermal::init(my_rank);
 
@@ -1789,6 +1823,7 @@ void grid_init(int my_rank)
   }
   else
   {
+    //todo: this will need changed to use energy input, but I haven't done that yet- grey doesn't need it
     assign_temperature();
   }
 
