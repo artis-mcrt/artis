@@ -103,6 +103,7 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
 
     case TYPE_52FE_PELLET:
     case TYPE_52MN_PELLET:
+    case TYPE_GENERIC_ENERGY_PELLET:
       // convert to kpkts
       update_pellet(pkt_ptr, true, false, nts, t2);
       break;
