@@ -155,6 +155,14 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   cont[globals::ngrid] = norm;
 
   const double etot = norm / MH;
+
+  if (USE_ENERGYINPUTFILE)
+  {
+    //todo:Luke: how do I link this? defined in energy_input.cc
+    //todo: I wasn't sure what all above was to calculate etot - should be if / else here
+    etot = etot_fromenergyfile;
+  }
+
   /// So energy per pellet is
   const double e0 = etot / globals::npkts / globals::n_out_it / globals::n_middle_it;
   printout("packet e0 (in time range) %g erg\n", e0);
