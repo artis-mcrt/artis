@@ -9,6 +9,26 @@ __managed__ double etot_fromenergyfile; // total model energy -- used to initial
 __managed__ int ntimes_energydep; // number of times included in energyrate.txt
 __managed__ float *time_energydep; // times in seconds from energyrate.txt
 __managed__ float *energy_fraction_deposited; // fraction of energy deposited by time from energyrate.txt
+__managed__ float *modelcell_energydensity_init;
+
+
+
+double get_etot_fromenergyfile()
+{
+  return etot_fromenergyfile;
+}
+
+
+float get_modelcell_energydensity_init(int modelgridindex)
+{
+  return modelcell_energydensity_init[modelgridindex];
+}
+
+
+void set_modelcell_energydensity_init(int modelgridindex, float x)
+{
+  modelcell_energydensity_init[modelgridindex] = x;
+}
 
 
 static void read_energy_in_cells_1d(void)
@@ -55,14 +75,7 @@ static void read_energy_file(void)
   // number of times included in file
   fscanf(energyrate_file, "%d", &ntimes_energydep);
 
-  if (ntimes_energydep > 300) // todo: time_energydep defined to be 300 long. Use a better way to set this and have a check here
-  {
-    printout("number of times in file %d > length of array to store values - abort \n", ntimes_energydep, globals::ntstep);
-    // Arrays time_energydep[] and energy_fraction_deposited[]
-    // defined using MTSTEP - if needs to be longer? redefine
-    // with new variable
-    abort();
-  }
+  time_energydep = (float *) calloc(ntimes_energydep, sizeof(float));
 
   /// read times and fraction of energy deposited
   float time_energydep_days; //file times in days - convert to seconds
@@ -84,11 +97,11 @@ static void read_energy_file(void)
 
 void energy_input_init(void)
 {
-  printout("reading energy files npts model %g \n", get_npts_model());
+  printout("reading energy files npts model %d \n", get_npts_model());
 
   modelcell_energy = (double *) calloc(get_npts_model(), sizeof(double));
-  time_energydep = (float *) calloc(300, sizeof(float)); //todo: change 300 to some defined number. Stores energyrate values
   energy_fraction_deposited = (float *) calloc(globals::ntstep, sizeof(float));
+  modelcell_energydensity_init = (float *) calloc(get_npts_model(), sizeof(float));
 
   read_energy_in_cells_1d();
   read_energy_file();

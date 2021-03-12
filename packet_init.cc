@@ -1,6 +1,7 @@
 #include "sn3d.h"
-#include "grid.h"
+#include "energy_input.h"
 #include "decay.h"
+#include "grid.h"
 #include "packet_init.h"
 #include "vectors.h"
 
@@ -163,13 +164,13 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   }
   cont[globals::ngrid] = norm;
 
-  const double etot = norm / MH;
+  double etot = norm / MH;
 
   if (USE_ENERGYINPUTFILE)
   {
     //todo:Luke: how do I link this? defined in energy_input.cc
     //todo: I wasn't sure what all above was to calculate etot - should be if / else here
-    etot = etot_fromenergyfile;
+    etot = get_etot_fromenergyfile();
   }
 
   /// So energy per pellet is

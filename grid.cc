@@ -248,10 +248,6 @@ float get_W(int modelgridindex)
   return globals::modelgrid[modelgridindex].W;
 }
 
-float get_modelcell_energydensity_init(int modelgridindex)
-{
-  return modelgrid[modelgridindex].modelcell_energydensity_init;
-}
 
 __host__ __device__
 void set_rhoinit(int modelgridindex, float x)
@@ -323,12 +319,6 @@ void set_W(int modelgridindex, float W)
 {
   globals::modelgrid[modelgridindex].W = W;
 }
-
-void set_modelcell_energydensity_init(int modelgridindex, float x)
-{
-  globals::modelgrid[modelgridindex].modelcell_energydensity_init = x;
-}
-
 
 
 __host__ __device__
@@ -1792,13 +1782,13 @@ void grid_init(int my_rank)
   {
     int assoc_cells;
     int mgi;
-    double vol_init = wid_init * wid_init * wid_init;
 
     for (mgi = 0; mgi < MMODELGRID; mgi++)
     {
       assoc_cells = get_numassociatedcells(mgi);
       if (assoc_cells > 0)
       {
+        const double vol_init = vol_init_modelcell(mgi);
         //Luke: how do I call modelcell_energy here? defined in new energy cc file
         set_modelcell_energydensity_init(mgi, (modelcell_energy[mgi] / (vol_init * assoc_cells))); //modelcell_energy/cell volume ==> vol_init*associated cells
 
