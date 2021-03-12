@@ -21,13 +21,13 @@ static void read_energy_in_cells_1d(void)
   int cellnumber; // dummy value - this isn't saved
 
   FILE *cell_energies_file = fopen_required("energydistribution.txt", "r");
-  printout("read energydistribution.txt");
+  printout("read energydistribution.txt \n");
 
   fscanf(cell_energies_file, "%d", &number_of_cells);
-  if (number_of_cells != get_npts_model())
+  if (number_of_cells != get_npts_model())  //Might not work for 3D - in classic it throws away empty cells for npts_model
   {
     printout("number of cells in energy file (%d) "
-             "does not match number of model grid cells (%d) - abort",
+             "does not match number of model grid cells (%d) - abort\n",
              number_of_cells, get_npts_model());
     abort();
   }
@@ -43,7 +43,7 @@ static void read_energy_in_cells_1d(void)
              modelcell_energy[mgi], cellnumber);
   }
   etot_fromenergyfile = energy_counter;
-
+  printout("etot %g \n", etot_fromenergyfile);
 }
 
 
@@ -51,13 +51,13 @@ static void read_energy_file(void)
 {
   FILE *energyrate_file = fopen_required("energyrate.txt", "r");
 
-  int ntimes_energydep = 0;
+//  int ntimes_energydep = 0;
   // number of times included in file
   fscanf(energyrate_file, "%d", &ntimes_energydep);
 
-  if (ntimes_energydep > globals::ntstep)
+  if (ntimes_energydep > 300) // todo: time_energydep defined to be 300 long. Use a better way to set this and have a check here
   {
-    printout("number of times in file > ntstep - abort'n");
+    printout("number of times in file %d > length of array to store values - abort \n", ntimes_energydep, globals::ntstep);
     // Arrays time_energydep[] and energy_fraction_deposited[]
     // defined using MTSTEP - if needs to be longer? redefine
     // with new variable
@@ -65,12 +65,10 @@ static void read_energy_file(void)
   }
 
   /// read times and fraction of energy deposited
-  double time_energydep[ntimes_energydep];
-  double energy_fraction_deposited[ntimes_energydep];
   float time_energydep_days; //file times in days - convert to seconds
   for (int t_iter = 0; t_iter < ntimes_energydep; t_iter++)
   {
-    fscanf(energyrate_file, "%g %lg",
+    fscanf(energyrate_file, "%g %g",
            &time_energydep_days, &energy_fraction_deposited[t_iter]);
     time_energydep[t_iter] = time_energydep_days * DAY;
   }
@@ -86,12 +84,11 @@ static void read_energy_file(void)
 
 void energy_input_init(void)
 {
-  printout("reading energy files \n");
-// Crashes here?? help pls
+  printout("reading energy files npts model %g \n", get_npts_model());
+
   modelcell_energy = (double *) calloc(get_npts_model(), sizeof(double));
-  time_energydep = (float *) calloc(globals::ntstep, sizeof(float));
+  time_energydep = (float *) calloc(300, sizeof(float)); //todo: change 300 to some defined number. Stores energyrate values
   energy_fraction_deposited = (float *) calloc(globals::ntstep, sizeof(float));
-  printout("here");
 
   read_energy_in_cells_1d();
   read_energy_file();
