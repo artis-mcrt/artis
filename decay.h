@@ -41,10 +41,6 @@ namespace decay
   __host__ __device__ double nucdecayenergy(enum radionuclides nuclide_type);
   __host__ __device__ double meanlife(enum radionuclides nuclide_type);
   __host__ __device__ double nucmass(enum radionuclides nuclide_type);
-  __host__ __device__ double sample_decaytime(enum decaypathways decaypath, const double tdecaymin, const double tdecaymax);
-  __host__ __device__ enum packet_type get_decay_pellet_type(enum decaypathways decaypath, bool *originated_from_positron);
-  __host__ __device__ enum radionuclides decayparent(enum decaypathways decaypath);
-  __host__ __device__ enum radionuclides decaydaughter(enum decaypathways decaypath);
   __host__ __device__ void update_abundances(const int modelgridindex, const int timestep, const double t_current);
   __host__ __device__ double get_simtime_endecay_per_ejectamass(const int mgi, enum decaypathways decaypath);
   __host__ __device__ double get_positroninjection_rate_density(const int modelgridindex, const double t);

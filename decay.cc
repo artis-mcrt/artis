@@ -110,7 +110,7 @@ double nucmass(enum radionuclides nuclide_type)
 
 
 __host__ __device__
-enum radionuclides decayparent(enum decaypathways decaypath)
+static enum radionuclides decayparent(enum decaypathways decaypath)
 {
   switch (decaypath)
   {
@@ -153,7 +153,7 @@ enum radionuclides decayparent(enum decaypathways decaypath)
 
 
 __host__ __device__
-enum radionuclides decaydaughter(enum decaypathways decaypath)
+static enum radionuclides decaydaughter(enum decaypathways decaypath)
 {
   switch (decaypath)
   {
@@ -213,7 +213,7 @@ static bool decaypath_is_chain(enum decaypathways decaypath)
 
 
 __host__ __device__
-double sample_decaytime(enum decaypathways decaypath, const double tdecaymin, const double tdecaymax)
+static double sample_decaytime(enum decaypathways decaypath, const double tdecaymin, const double tdecaymax)
 {
   double tdecay = -1;
   const bool ischain = decaypath_is_chain(decaypath);
@@ -244,7 +244,7 @@ double sample_decaytime(enum decaypathways decaypath, const double tdecaymin, co
 
 
 __host__ __device__
-enum packet_type get_decay_pellet_type(enum decaypathways decaypath, bool *originated_from_positron)
+static enum packet_type get_decay_pellet_type(enum decaypathways decaypath, bool *originated_from_positron)
 {
   *originated_from_positron = false; // will be changed if necessary before returning
   switch (decaypath)
