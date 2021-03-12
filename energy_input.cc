@@ -21,6 +21,7 @@ static void read_energy_in_cells_1d(void)
   int cellnumber; // dummy value - this isn't saved
 
   FILE *cell_energies_file = fopen_required("energydistribution.txt", "r");
+  printout("read energydistribution.txt");
 
   fscanf(cell_energies_file, "%d", &number_of_cells);
   if (number_of_cells != get_npts_model())
@@ -35,16 +36,13 @@ static void read_energy_in_cells_1d(void)
   double energy_counter = 0;
   for (int mgi = 0; mgi < number_of_cells; mgi++)
   {
-    fscanf(cell_energies_file, "%d %lf",
-           &cellnumber, &cell_energies[mgi]);
+    fscanf(cell_energies_file, "%d %lf", &cellnumber, &cell_energies[mgi]);
     energy_counter += cell_energies[mgi];
     modelcell_energy[mgi] = cell_energies[mgi];
-//    printout("modelcell_energy %g get_volinit_modelcell %g \n",
-//             modelcell_energy[mgi], get_volinit_modelcell(mgi));
+    printout("modelcell_energy %g cellnumber %d\n",
+             modelcell_energy[mgi], cellnumber);
   }
   etot_fromenergyfile = energy_counter;
-  //todo: broken here -- modelcell_energy and etot_fromenergyfile not defined properly.
-  // trying to set them in globals.h
 
 }
 
@@ -89,10 +87,11 @@ static void read_energy_file(void)
 void energy_input_init(void)
 {
   printout("reading energy files \n");
-
+// Crashes here?? help pls
   modelcell_energy = (double *) calloc(get_npts_model(), sizeof(double));
   time_energydep = (float *) calloc(globals::ntstep, sizeof(float));
   energy_fraction_deposited = (float *) calloc(globals::ntstep, sizeof(float));
+  printout("here");
 
   read_energy_in_cells_1d();
   read_energy_file();
