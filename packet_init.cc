@@ -40,11 +40,11 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   const int mgi = get_cell_modelgridindex(cellindex);
   if (USE_ENERGYINPUTFILE)
   {
-    setup_generic_pellet(e0, mgi, pkt_ptr)
+    setup_generic_pellet(e0, mgi, pkt_ptr);
   }
   else
   {
-    setup_radioactive_pellet(e0, mgi, pkt_ptr);
+    decay::setup_radioactive_pellet(e0, mgi, pkt_ptr);
   }
 
   // initial e_rf is probably never needed (e_rf is set at pellet decay time), but we
