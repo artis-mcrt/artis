@@ -47,9 +47,8 @@ namespace decay
   __host__ __device__ enum radionuclides decaydaughter(enum decaypathways decaypath);
   __host__ __device__ void update_abundances(const int modelgridindex, const int timestep, const double t_current);
   __host__ __device__ double get_simtime_endecay_per_ejectamass(const int mgi, enum decaypathways decaypath);
-  __host__ __device__ double get_decay_power_per_ejectamass(enum decaypathways decaypath, const int modelgridindex, const double time);
   __host__ __device__ double get_positroninjection_rate_density(const int modelgridindex, const double t);
-  __host__ __device__ double get_decayedenergy_per_ejectamass(const int n, const double tstart);
+  void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr);
 }
 
 #endif //DECAY_H

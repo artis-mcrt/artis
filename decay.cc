@@ -503,7 +503,7 @@ double get_simtime_endecay_per_ejectamass(const int mgi, enum decaypathways deca
 
 
 __host__ __device__
-double get_decay_power_per_ejectamass(enum decaypathways decaypath, const int modelgridindex, const double time)
+static double get_decay_power_per_ejectamass(enum decaypathways decaypath, const int modelgridindex, const double time)
 // total decay energy injection rate in erg / s / kg
 {
   double decaypower = 0.;
@@ -642,7 +642,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 
 
 __host__ __device__
-double get_decayedenergy_per_ejectamass(const int modelgridindex, const double tstart)
+static double get_decayedenergy_per_ejectamass(const int modelgridindex, const double tstart)
 {
   double endecaytot = 0.;
   for (int i = 0; i < DECAYPATH_COUNT; i++)
@@ -650,6 +650,60 @@ double get_decayedenergy_per_ejectamass(const int modelgridindex, const double t
     endecaytot += get_endecay_per_ejectamass_between_times(modelgridindex, (enum decaypathways)(i), 0., tstart);
   }
   return endecaytot;
+}
+
+
+void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
+{
+  double cumulative_decay_energy_per_mass[DECAYPATH_COUNT];
+  for (int i = 0; i < DECAYPATH_COUNT; i++)
+  {
+    const double lower_sum = ((i > 0) ? cumulative_decay_energy_per_mass[i - 1] : 0);
+    cumulative_decay_energy_per_mass[i] = lower_sum + decay::get_simtime_endecay_per_ejectamass(mgi, (enum decaypathways) i);
+  }
+
+  const double zrand_chain = gsl_rng_uniform(rng) * cumulative_decay_energy_per_mass[DECAYPATH_COUNT - 1];
+  enum decaypathways decaypath = DECAYPATH_COUNT;
+  for (int i = 0; i < DECAYPATH_COUNT; i++)
+  {
+    if (zrand_chain <= cumulative_decay_energy_per_mass[i])
+    {
+      decaypath = (enum decaypathways)(i);
+      break;
+    }
+  }
+  assert_always(decaypath != DECAYPATH_COUNT); // Failed to select pellet
+
+  #ifdef NO_INITIAL_PACKETS
+  const double tdecaymin = globals::tmin;
+  #else
+  const double tdecaymin = 0.; // allow decays before the first timestep
+  #endif
+
+  if (UNIFORM_PELLET_ENERGIES)
+  {
+    pkt_ptr->tdecay = decay::sample_decaytime(decaypath, tdecaymin, globals::tmax);
+    pkt_ptr->e_cmf = e0;
+  }
+  else
+  {
+    // use uniform decay time distribution (scale the packet energies instead)
+    // keeping the pellet decay rate constant will give better statistics at very late times when very little
+    // energy is released
+    const double zrand = gsl_rng_uniform(rng);
+    pkt_ptr->tdecay = zrand * tdecaymin + (1. - zrand) * globals::tmax;
+
+    // we need to scale the packet energy up or down according to decay rate at the randomly selected time.
+    // e0 is the average energy per packet for this cell and decaypath, so we scale this up or down
+    // according to: decay power at this time relative to the average decay power
+    const double avgpower = decay::get_simtime_endecay_per_ejectamass(mgi, decaypath) / (globals::tmax - tdecaymin);
+    pkt_ptr->e_cmf = e0 * decay::get_decay_power_per_ejectamass(decaypath, mgi, pkt_ptr->tdecay) / avgpower;
+    // assert_always(pkt_ptr->e_cmf >= 0);
+  }
+
+  bool from_positron;
+  pkt_ptr->type = decay::get_decay_pellet_type(decaypath, &from_positron); // set the packet tdecay and type
+  pkt_ptr->originated_from_positron = from_positron;
 }
 
 }

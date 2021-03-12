@@ -13,7 +13,7 @@ __managed__ float *modelcell_energydensity_init;
 
 
 
-double get_etot_fromenergyfile()
+double get_etot_fromenergyfile(void)
 {
   return etot_fromenergyfile;
 }
@@ -105,4 +105,24 @@ void energy_input_init(void)
 
   read_energy_in_cells_1d();
   read_energy_file();
+}
+
+
+void setup_generic_pellet(const double e0, const int mgi, PKT *pkt_ptr)
+{
+  // I set TYPE_GENERIC_ENERGY_PELLET = 200, but let me know how you want to do this
+  pkt_ptr->type = TYPE_GENERIC_ENERGY_PELLET;
+
+  /// Choose decay time
+  double zrand = gsl_rng_uniform(rng);
+  // randomly sample what fraction of energy has been deposited
+  // then find time by which that fraction has been deposited
+  int ii = 0;
+  while (energy_fraction_deposited[ii] < zrand){
+    ii++;
+  }
+  pkt_ptr->tdecay = time_energydep[ii];
+  //    printout("tdecay pellet %g pkt number %d\n", pkt[n].tdecay/DAY, n);
+  //    printout("ii %d zrand %g energy_fraction_deposited %g time_energydep %g \n",
+  //             ii, zrand, energy_fraction_deposited[ii], time_energydep[ii]/DAY);
 }

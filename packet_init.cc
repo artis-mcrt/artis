@@ -6,81 +6,6 @@
 #include "vectors.h"
 
 
-static void setup_radioactive_pellet(const double e0, const int cellindex, PKT *pkt_ptr)
-{
-  const int mgi = get_cell_modelgridindex(cellindex);
-
-  double cumulative_decay_energy_per_mass[DECAYPATH_COUNT];
-  for (int i = 0; i < DECAYPATH_COUNT; i++)
-  {
-    const double lower_sum = ((i > 0) ? cumulative_decay_energy_per_mass[i - 1] : 0);
-    cumulative_decay_energy_per_mass[i] = lower_sum + decay::get_simtime_endecay_per_ejectamass(mgi, (enum decaypathways) i);
-  }
-
-  const double zrand_chain = gsl_rng_uniform(rng) * cumulative_decay_energy_per_mass[DECAYPATH_COUNT - 1];
-  enum decaypathways decaypath = DECAYPATH_COUNT;
-  for (int i = 0; i < DECAYPATH_COUNT; i++)
-  {
-    if (zrand_chain <= cumulative_decay_energy_per_mass[i])
-    {
-      decaypath = (enum decaypathways)(i);
-      break;
-    }
-  }
-  assert_always(decaypath != DECAYPATH_COUNT); // Failed to select pellet
-
-  #ifdef NO_INITIAL_PACKETS
-  const double tdecaymin = globals::tmin;
-  #else
-  const double tdecaymin = 0.; // allow decays before the first timestep
-  #endif
-
-  if (UNIFORM_PELLET_ENERGIES)
-  {
-    pkt_ptr->tdecay = decay::sample_decaytime(decaypath, tdecaymin, globals::tmax);
-    pkt_ptr->e_cmf = e0;
-  }
-  else
-  {
-    // use uniform decay time distribution (scale the packet energies instead)
-    // keeping the pellet decay rate constant will give better statistics at very late times when very little
-    // energy is released
-    const double zrand = gsl_rng_uniform(rng);
-    pkt_ptr->tdecay = zrand * tdecaymin + (1. - zrand) * globals::tmax;
-
-    // we need to scale the packet energy up or down according to decay rate at the randomly selected time.
-    // e0 is the average energy per packet for this cell and decaypath, so we scale this up or down
-    // according to: decay power at this time relative to the average decay power
-    const double avgpower = decay::get_simtime_endecay_per_ejectamass(mgi, decaypath) / (globals::tmax - tdecaymin);
-    pkt_ptr->e_cmf = e0 * decay::get_decay_power_per_ejectamass(decaypath, mgi, pkt_ptr->tdecay) / avgpower;
-    // assert_always(pkt_ptr->e_cmf >= 0);
-  }
-
-//  if (USE_ENERGYINPUTFILE)
-//  {
-//    // I set TYPE_GENERIC_ENERGY_PELLET = 200, but let me know how you want to do this
-//    pkt[n].type = TYPE_GENERIC_ENERGY_PELLET;
-//
-//    /// Choose decay time
-//    zrand = gsl_rng_uniform(rng);
-//    // randomly sample what fraction of energy has been deposited
-//    // then find time by which that fraction has been deposited
-//    int ii = 0;
-//    while (energy_fraction_deposited[ii] < zrand){
-//      ii++;
-//    }
-//    pkt[n].tdecay = time_energydep[ii];
-////    printout("tdecay pellet %g pkt number %d\n", pkt[n].tdecay/DAY, n);
-////    printout("ii %d zrand %g energy_fraction_deposited %g time_energydep %g \n",
-////             ii, zrand, energy_fraction_deposited[ii], time_energydep[ii]/DAY);
-//  }
-
-  bool from_positron;
-  pkt_ptr->type = decay::get_decay_pellet_type(decaypath, &from_positron); // set the packet tdecay and type
-  pkt_ptr->originated_from_positron = from_positron;
-}
-
-
 static void place_pellet(const double e0, const int cellindex, const int pktnumber, PKT *pkt_ptr)
 /// This subroutine places pellet n with energy e0 in cell m
 {
@@ -112,7 +37,15 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     }
   }
 
-  setup_radioactive_pellet(e0, cellindex, pkt_ptr);
+  const int mgi = get_cell_modelgridindex(cellindex);
+  if (USE_ENERGYINPUTFILE)
+  {
+    setup_generic_pellet(e0, mgi, pkt_ptr)
+  }
+  else
+  {
+    setup_radioactive_pellet(e0, mgi, pkt_ptr);
+  }
 
   // initial e_rf is probably never needed (e_rf is set at pellet decay time), but we
   // might as well give it a correct value since this code is fast and runs only once
