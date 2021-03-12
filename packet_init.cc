@@ -85,6 +85,25 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     // assert_always(pkt_ptr->e_cmf >= 0);
   }
 
+//  if (USE_ENERGYINPUTFILE)
+//  {
+//    // I set TYPE_GENERIC_ENERGY_PELLET = 200, but let me know how you want to do this
+//    pkt[n].type = TYPE_GENERIC_ENERGY_PELLET;
+//
+//    /// Choose decay time
+//    zrand = gsl_rng_uniform(rng);
+//    // randomly sample what fraction of energy has been deposited
+//    // then find time by which that fraction has been deposited
+//    int ii = 0;
+//    while (energy_fraction_deposited[ii] < zrand){
+//      ii++;
+//    }
+//    pkt[n].tdecay = time_energydep[ii];
+////    printout("tdecay pellet %g pkt number %d\n", pkt[n].tdecay/DAY, n);
+////    printout("ii %d zrand %g energy_fraction_deposited %g time_energydep %g \n",
+////             ii, zrand, energy_fraction_deposited[ii], time_energydep[ii]/DAY);
+//  }
+
   bool from_positron;
   pkt_ptr->type = decay::get_decay_pellet_type(decaypath, &from_positron); // set the packet tdecay and type
   pkt_ptr->originated_from_positron = from_positron;
