@@ -6,37 +6,8 @@
 #include "vectors.h"
 
 
-static void place_pellet(const double e0, const int cellindex, const int pktnumber, PKT *pkt_ptr)
-/// This subroutine places pellet n with energy e0 in cell m
+static void setup_radioactive_pellet(const double e0, const int cellindex, PKT *pkt_ptr)
 {
-  /// First choose a position for the pellet. In the cell.
-  /// n is the index of the packet. m is the index for the grid cell.
-  pkt_ptr->where = cellindex;
-  pkt_ptr->number = pktnumber;  ///record the packets number for debugging
-  pkt_ptr->prop_time = globals::tmin;
-  pkt_ptr->originated_from_positron = false;
-
-  if (globals::grid_type == GRID_SPHERICAL1D)
-  {
-    const double zrand3 = gsl_rng_uniform(rng);
-    const double r_inner = get_cellcoordmin(cellindex, 0);
-    const double r_outer = get_cellcoordmin(cellindex, 0) + wid_init(cellindex);
-    const double radius = pow(zrand3 * pow(r_inner, 3) + (1. - zrand3) * pow(r_outer, 3), 1/3.);
-    // assert_always(radius >= r_inner);
-    // assert_always(radius <= r_outer);
-
-    get_rand_isotropic_unitvec(pkt_ptr->pos);
-    vec_scale(pkt_ptr->pos, radius);
-  }
-  else
-  {
-    for (int axis = 0; axis < 3; axis++)
-    {
-      const double zrand = gsl_rng_uniform_pos(rng);
-      pkt_ptr->pos[axis] = get_cellcoordmin(cellindex, axis) + (zrand * wid_init(0));
-    }
-  }
-
   const int mgi = get_cell_modelgridindex(cellindex);
 
   double cumulative_decay_energy_per_mass[DECAYPATH_COUNT];
@@ -107,6 +78,41 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   bool from_positron;
   pkt_ptr->type = decay::get_decay_pellet_type(decaypath, &from_positron); // set the packet tdecay and type
   pkt_ptr->originated_from_positron = from_positron;
+}
+
+
+static void place_pellet(const double e0, const int cellindex, const int pktnumber, PKT *pkt_ptr)
+/// This subroutine places pellet n with energy e0 in cell m
+{
+  /// First choose a position for the pellet. In the cell.
+  /// n is the index of the packet. m is the index for the grid cell.
+  pkt_ptr->where = cellindex;
+  pkt_ptr->number = pktnumber;  ///record the packets number for debugging
+  pkt_ptr->prop_time = globals::tmin;
+  pkt_ptr->originated_from_positron = false;
+
+  if (globals::grid_type == GRID_SPHERICAL1D)
+  {
+    const double zrand3 = gsl_rng_uniform(rng);
+    const double r_inner = get_cellcoordmin(cellindex, 0);
+    const double r_outer = get_cellcoordmin(cellindex, 0) + wid_init(cellindex);
+    const double radius = pow(zrand3 * pow(r_inner, 3) + (1. - zrand3) * pow(r_outer, 3), 1/3.);
+    // assert_always(radius >= r_inner);
+    // assert_always(radius <= r_outer);
+
+    get_rand_isotropic_unitvec(pkt_ptr->pos);
+    vec_scale(pkt_ptr->pos, radius);
+  }
+  else
+  {
+    for (int axis = 0; axis < 3; axis++)
+    {
+      const double zrand = gsl_rng_uniform_pos(rng);
+      pkt_ptr->pos[axis] = get_cellcoordmin(cellindex, axis) + (zrand * wid_init(0));
+    }
+  }
+
+  setup_radioactive_pellet(e0, cellindex, pkt_ptr);
 
   // initial e_rf is probably never needed (e_rf is set at pellet decay time), but we
   // might as well give it a correct value since this code is fast and runs only once
