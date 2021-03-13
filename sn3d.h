@@ -6,7 +6,7 @@
 #ifndef __CUDA_ARCH__
   // host code
 
-  #define __artis_assert(e) if (!(e)) { (void)fprintf(output_file, "[rank %d] %s:%u: failed assertion `%s' in function %s\n", globals::rank_global, __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); (void)fprintf(stderr, "[rank %d] %s:%u: failed assertion `%s' in function %s\n", globals::rank_global, __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); abort();}
+  #define __artis_assert(e) if (!(e)) { (void)fprintf(output_file, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global, __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); (void)fprintf(stderr, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global, __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); abort();}
   //
 
   #define assert_always(e) __artis_assert(e)
