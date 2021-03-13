@@ -1651,16 +1651,6 @@ void input(int rank)
   globals::homogeneous_abundances = false;
   globals::t_model = 0.0;
 
-  /// Select grid type
-  #ifdef GRID_TYPE
-  globals::grid_type = GRID_TYPE;
-  #else
-  globals::grid_type = GRID_UNIFORM;
-  #endif
-
-  // this gets overwritten by the input file
-  // model_type = RHO_UNIFORM;
-
   globals::maxion = MIONS;
 
   /// Set number of packets, outer and middle iterations
@@ -1725,7 +1715,6 @@ void input(int rank)
   globals::coordmax[0] = globals::coordmax[1] = globals::coordmax[2] = globals::rmax;
 
   show_totmassradionuclides();
-
 
   /// Read in data for gamma ray lines and make a list of them in energy order.
   init_gamma_linelist();

@@ -864,7 +864,7 @@ static void density_2d_read(void)
       // Grid is uniform so only need to search in 1d to get r and z positions
 
       int mkeep1 = 0;
-      for (int m = 0; m < globals::ncoord1_model; m++)
+      for (int m = 0; m < globals::ncoord_model[0]; m++)
       {
         if (rcylindrical > (m * globals::dcoord1 * globals::tmin/globals::t_model))
         {
@@ -874,7 +874,7 @@ static void density_2d_read(void)
       }
 
       int mkeep2 = 0;
-      for (int m = 0; m < globals::ncoord2_model; m++)
+      for (int m = 0; m < globals::ncoord_model[1]; m++)
       {
         if (zcylindrical > (((m * globals::dcoord2) * globals::tmin/globals::t_model) - globals::rmax))
         {
@@ -882,7 +882,7 @@ static void density_2d_read(void)
           // set_cell_modelgridindex(n, m + 1);
         }
       }
-      set_cell_modelgridindex(n, (mkeep2 * globals::ncoord1_model) + mkeep1);
+      set_cell_modelgridindex(n, (mkeep2 * globals::ncoord_model[0]) + mkeep1);
       globals::modelgrid[get_cell_modelgridindex(n)].initial_radial_pos += radial_pos;
 
       //renorm[mkeep]++;
@@ -1037,6 +1037,7 @@ static void read_1d_model(void)
   int npts_model_in = 0;
   fscanf(model_input, "%d", &npts_model_in);
   set_npts_model(npts_model_in);
+  globals::ncoord_model[0] = npts_model_in;
 
   // Now read the time (in days) at which the model is specified.
   double t_model_days;
@@ -1134,9 +1135,9 @@ static void read_2d_model(void)
   FILE *model_input = fopen_required("model.txt", "r");
 
   // 1st read the number of data points in the table of input model.
-  fscanf(model_input, "%d %d", &globals::ncoord1_model, &globals::ncoord2_model);  // r and z (cylindrical polar)
+  fscanf(model_input, "%d %d", &globals::ncoord_model[0], &globals::ncoord_model[1]);  // r and z (cylindrical polar)
 
-  set_npts_model(globals::ncoord1_model * globals::ncoord2_model);
+  set_npts_model(globals::ncoord_model[0] * globals::ncoord_model[1]);
 
   // Now read the time (in days) at which the model is specified.
   double t_model_days;
@@ -1145,8 +1146,8 @@ static void read_2d_model(void)
 
   // Now read in globals::vmax (in cm/s)
   fscanf(model_input, "%lg\n", &globals::vmax);
-  globals::dcoord1 = globals::vmax * globals::t_model / globals::ncoord1_model; //dr for input model
-  globals::dcoord2 = 2. * globals::vmax * globals::t_model / globals::ncoord2_model; //dz for input model
+  globals::dcoord1 = globals::vmax * globals::t_model / globals::ncoord_model[0]; //dr for input model
+  globals::dcoord2 = 2. * globals::vmax * globals::t_model / globals::ncoord_model[1]; //dz for input model
 
   // Now read in the model. Each point in the model has two lines of input.
   // First is an index for the cell then its r-mid point then its z-mid point
@@ -1171,10 +1172,10 @@ static void read_2d_model(void)
     int items_read = sscanf(line, "%d %g %g %lg", &cellnumin, &cell_r_in, &cell_z_in, &rho_tmodel);
     assert_always(items_read == 4);
 
-    const int ncoord1 = ((cellnumin - 1) % globals::ncoord1_model);
+    const int ncoord1 = ((cellnumin - 1) % globals::ncoord_model[0]);
     const double r_cylindrical = (ncoord1 + 0.5) * globals::dcoord1;
     assert_always(fabs(cell_r_in / r_cylindrical - 1) < 1e-3);
-    const int ncoord2 = ((cellnumin - 1) / globals::ncoord1_model);
+    const int ncoord2 = ((cellnumin - 1) / globals::ncoord_model[0]);
     const double z = -globals::vmax * globals::t_model + ((ncoord2 + 0.5) * globals::dcoord2);
     assert_always(fabs(cell_z_in / z - 1) < 1e-3);
 
@@ -1213,11 +1214,16 @@ static void read_3d_model(void)
     printout("Too many points in input model. Abort. (%d > %d)\n", npts_model_in, MMODELGRID);
     abort();
   }
-  if (npts_model_in != globals::ngrid)
-  {
-    printout("3D model/grid mismatch. Abort. %d != %d\n", npts_model_in, globals::ngrid);
-    abort();
-  }
+
+  globals::ncoord_model[0] = globals::ncoord_model[1] = globals::ncoord_model[2] = round(pow(npts_model_in, 1/3.));
+  assert_always(globals::ncoord_model[0] * globals::ncoord_model[1] * globals::ncoord_model[2] == npts_model_in);
+
+  // for a 3D input model, the progation cells will match the input cells exactly
+  globals::ncoordgrid[0] = globals::ncoord_model[0];
+  globals::ncoordgrid[1] = globals::ncoord_model[1];
+  globals::ncoordgrid[2] = globals::ncoord_model[2];
+  globals::ngrid = npts_model_in;
+  globals::grid_type = GRID_UNIFORM;
 
   /// Now read the time (in days) at which the model is specified.
   float t_model_days;
@@ -1227,10 +1233,15 @@ static void read_3d_model(void)
   /// Now read in globals::vmax for the model (in cm s^-1).
   fscanf(model_input, "%lg\n", &globals::vmax);
 
-  // double rmax_tmodel = globals::vmax * t_model;
+  double xmax_tmodel = globals::vmax * globals::t_model;
 
   /// Now read in the lines of the model.
   globals::min_den = 1.e99;
+
+  // check if expected positions match in either xyz or zyx column order
+  // set false if a problem is detected
+  bool posmatch_xyz = true;
+  bool posmatch_zyx = true;
 
   // mgi is the index to the model grid - empty cells are sent to MMODELGRID,
   // otherwise each input cell is one modelgrid cell
@@ -1248,7 +1259,7 @@ static void read_3d_model(void)
     int mgi_in;
     float cellpos_in[3];
     float rho_model;
-    int items_read = sscanf(line, "%d %g %g %g %g", &mgi_in, &cellpos_in[2], &cellpos_in[1], &cellpos_in[0], &rho_model);
+    int items_read = sscanf(line, "%d %g %g %g %g", &mgi_in, &cellpos_in[0], &cellpos_in[1], &cellpos_in[2], &rho_model);
     assert_always(items_read == 5);
     //printout("cell %d, posz %g, posy %g, posx %g, rho %g, rho_init %g\n",dum1,dum3,dum4,dum5,rho_model,rho_model* pow( (t_model/globals::tmin), 3.));
 
@@ -1257,13 +1268,21 @@ static void read_3d_model(void)
     // cell coordinates in the 3D model.txt file are sometimes reordered by the scaling script
     // however, the cellindex always should increment X first, then Y, then Z
 
-    // for (int axis = 0; axis < 3; axis++)
-    // {
-    //   const double cellpos_expected = - rmax_tmodel + (2 * get_cellcoordpointnum(n, axis) * rmax_tmodel / globals::ncoordgrid[axis]);
-    //   // printout("n %d axis %d expected %g found %g rmax %g get_cellcoordpointnum(n, axis) %d globals::ncoordgrid %d\n",
-    //   // n, axis, cellpos_expected, cellpos_in[axis], rmax_model, get_cellcoordpointnum(n, axis), globals::ncoordgrid);
-    //   assert_always((fabs(cellpos_in[axis] / cellpos_expected - 1) < 1e-3) || ((cellpos_in[axis] == 0) && (cellpos_expected == 0)));
-    // }
+    for (int axis = 0; axis < 3; axis++)
+    {
+      const double cellwidth = 2 * xmax_tmodel / globals::ncoordgrid[axis];
+      const double cellpos_expected = - xmax_tmodel + cellwidth * get_cellcoordpointnum(n, axis);
+      // printout("n %d coord %d expected %g found %g rmax %g get_cellcoordpointnum(n, axis) %d globals::ncoordgrid %d\n",
+      // n, axis, cellpos_expected, cellpos_in[axis], xmax_tmodel, get_cellcoordpointnum(n, axis), globals::ncoordgrid[axis]);
+      if (fabs(cellpos_expected - cellpos_in[axis]) > 0.5 * cellwidth)
+      {
+        posmatch_xyz = false;
+      }
+      if (fabs(cellpos_expected - cellpos_in[2 - axis]) > 0.5 * cellwidth)
+      {
+        posmatch_zyx = false;
+      }
+    }
 
     if (rho_model < 0)
     {
@@ -1311,7 +1330,17 @@ static void read_3d_model(void)
     abort();
   }
 
-  printout("min_den %g\n", globals::min_den);
+  assert_always(posmatch_zyx ^ posmatch_xyz);  // xor because if both match then probably an infinity occurred
+  if (posmatch_xyz)
+  {
+    printout("Cell positions in model.txt are consistent with calculated values when x-y-z column order is used.\n");
+  }
+  if (posmatch_zyx)
+  {
+    printout("Cell positions in model.txt are consistent with calculated values when z-y-x column order is used.\n");
+  }
+
+  printout("min_den %g [g/cm3]\n", globals::min_den);
   printout("Effectively used model grid cells %d\n", mgi);
 
   /// Now, set actual size of the modelgrid to the number of non-empty cells.
@@ -1334,14 +1363,14 @@ void read_ejecta_model(enum model_types model_type)
 
     case RHO_1D_READ:
     {
-      printout("Read 1D model!\n");
+      printout("Read 1D model\n");
       read_1d_model();
       break;
     }
 
     case RHO_2D_READ:
     {
-      printout("Read 2D model!\n");
+      printout("Read 2D model\n");
 
       read_2d_model();
       break;
@@ -1349,7 +1378,8 @@ void read_ejecta_model(enum model_types model_type)
 
     case RHO_3D_READ:
     {
-      printout("Read 3D model!\n");
+      printout("Read 3D model\n");
+
       read_3d_model();
       break;
     }
@@ -1614,22 +1644,44 @@ static void assign_temperature(void)
 static void uniform_grid_setup(void)
 /// Routine for doing a uniform cuboidal grid.
 {
+
   /// Set grid size for uniform xyz grid
-  #ifdef NCOORDGRID_0
-  globals::ncoordgrid[0] = CUBOID_NCOORDGRID_X;
-  #else
-  globals::ncoordgrid[0] = 50;
-  #endif
-  #ifdef NCOORDGRID_1
-  globals::ncoordgrid[1] = CUBOID_NCOORDGRID_Y;
-  #else
-  globals::ncoordgrid[1] = 50;
-  #endif
-  #ifdef NCOORDGRID_2
-  globals::ncoordgrid[2] = CUBOID_NCOORDGRID_Z;
-  #else
-  globals::ncoordgrid[2] = 50;
-  #endif
+  if (get_model_type() == RHO_3D_READ)
+  {
+    // if we used in a 3D ejecta model, the propagation grid must match the input grid exactly
+    globals::ncoordgrid[0] = globals::ncoord_model[0];
+    globals::ncoordgrid[1] = globals::ncoord_model[1];
+    globals::ncoordgrid[2] = globals::ncoord_model[2];
+
+    // in case the user specified a grid size, we should ensure that it matches
+    #ifdef CUBOID_NCOORDGRID_X
+    assert(globals::ncoordgrid[0] == CUBOID_NCOORDGRID_X);
+    #endif
+    #ifdef CUBOID_NCOORDGRID_Y
+    assert(globals::ncoordgrid[1] == CUBOID_NCOORDGRID_Y);
+    #endif
+    #ifdef CUBOID_NCOORDGRID_Z
+    assert(globals::ncoordgrid[2] == CUBOID_NCOORDGRID_Z);
+    #endif
+  }
+  else
+  {
+    #ifdef CUBOID_NCOORDGRID_X
+    globals::ncoordgrid[0] = CUBOID_NCOORDGRID_X;
+    #else
+    globals::ncoordgrid[0] = 50;
+    #endif
+    #ifdef CUBOID_NCOORDGRID_Y
+    globals::ncoordgrid[1] = CUBOID_NCOORDGRID_Y;
+    #else
+    globals::ncoordgrid[1] = 50;
+    #endif
+    #ifdef CUBOID_NCOORDGRID_Z
+    globals::ncoordgrid[2] = CUBOID_NCOORDGRID_Z;
+    #else
+    globals::ncoordgrid[2] = 50;
+    #endif
+  }
 
   // artis assumes in some places that the cells are cubes, not cubioids
   assert_always(globals::ncoordgrid[0] == globals::ncoordgrid[1]);
@@ -1715,6 +1767,13 @@ void grid_init(int my_rank)
     globals::modelgrid[n].initial_radial_pos = 0;
   }
 
+  /// Select grid type
+  #ifdef GRID_TYPE
+  globals::grid_type = GRID_TYPE;
+  #else
+  globals::grid_type = GRID_UNIFORM;
+  #endif
+
   /// The cells will be ordered by x then y, then z. Call a routine that
   /// sets up the initial positions and widths of the cells.
   char grid_type_name[256] = "";
@@ -1734,13 +1793,13 @@ void grid_init(int my_rank)
     abort();
   }
 
-  printout("Propagation grid is %d-dimensional %s\n", get_ngriddimensions(), grid_type_name);
+  printout("propagation grid: %d-dimensional %s\n", get_ngriddimensions(), grid_type_name);
 
   for (int d = 0; d < get_ngriddimensions(); d++)
   {
-    printout("  coordinate %d '%c': cells have %d possible values\n", d, globals::coordlabel[d], globals::ncoordgrid[d]);
+    printout("    coordinate %d '%c': cells have %d coordinate values\n", d, globals::coordlabel[d], globals::ncoordgrid[d]);
   }
-  printout("  Total propagration cells: %d\n", globals::ngrid);
+  printout("    total propagration cells: %d\n", globals::ngrid);
 
   /// Now set up the density in each cell.
 
@@ -1749,7 +1808,7 @@ void grid_init(int my_rank)
   // This is done by solving for tau_sobolev == 1
   // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(NUCLIDE_NI56) * 3000e-8 * globals::time_step[m].mid;
   globals::rho_crit = ME * CLIGHT * decay::nucmass(NUCLIDE_NI56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::tmin);
-  printout("grid_init: rho_crit = %g\n", globals::rho_crit);
+  printout("grid_init: rho_crit = %g [g/cm3]\n", globals::rho_crit);
 
   if (get_model_type() == RHO_1D_READ)
   {
@@ -1761,10 +1820,15 @@ void grid_init(int my_rank)
   }
   else if (get_model_type() == RHO_3D_READ)
   {
+    assert_always(globals::grid_type == GRID_UNIFORM);
+    // propagation grid must match input model.txt grid exactly for 3D models
+    assert_always(globals::ncoord_model[0] == globals::ncoordgrid[0]);
+    assert_always(globals::ncoord_model[1] == globals::ncoordgrid[1]);
+    assert_always(globals::ncoord_model[2] == globals::ncoordgrid[2]);
+
     for (int n = 0; n < globals::ngrid; n++)
     {
-      const double radial_pos = get_cellradialpos(n);
-      globals::modelgrid[get_cell_modelgridindex(n)].initial_radial_pos = radial_pos;
+      globals::modelgrid[get_cell_modelgridindex(n)].initial_radial_pos = get_cellradialpos(n);
     }
     // cells with rho > 0 are allocated by the above function
   }
@@ -1843,7 +1907,7 @@ void show_totmassradionuclides(void)
     {
       cellvolume = pow(globals::tmin / globals::t_model, 3) * ((2 * n1) + 1) * PI * globals::dcoord2 * pow(globals::dcoord1, 2.);
       n1++;
-      if (n1 == globals::ncoord1_model)
+      if (n1 == globals::ncoord_model[0])
       {
         n1 = 0;
       }

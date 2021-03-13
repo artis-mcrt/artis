@@ -73,8 +73,7 @@ namespace globals
 
   __managed__ double vout_model[MMODELGRID];
   __managed__ double t_model; // time at which densities in input model are correct.
-  __managed__ int ncoord1_model;
-  __managed__ int ncoord2_model; // For 2D model, the input grid dimensions
+  __managed__ int ncoord_model[3]; // the model.txt input grid dimensions
   __managed__ double dcoord1;
   __managed__ double dcoord2; // spacings of a 2D model grid - must be uniform grid
 

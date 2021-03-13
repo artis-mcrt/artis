@@ -71,8 +71,8 @@ namespace globals
 
   extern __managed__ double vout_model[MMODELGRID];
   extern __managed__ double t_model;
-  extern __managed__ int ncoord1_model;
-  extern __managed__ int ncoord2_model;
+  extern __managed__ int ncoord_model[3];
+
   extern __managed__ double dcoord1, dcoord2;
 
   extern __managed__ double CLIGHT_PROP;
