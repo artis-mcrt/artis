@@ -166,7 +166,6 @@ namespace globals
   __managed__ int n_middle_it;
 
   __managed__ int total_nlte_levels;            ///total number of nlte levels
-  __managed__ int n_super_levels;
 
   __managed__ bool homogeneous_abundances;
 
