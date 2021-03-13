@@ -1597,7 +1597,7 @@ static void read_atomicdata(void)
   ///set-up/gather information for nlte stuff
 
   globals::total_nlte_levels = 0;
-  globals::n_super_levels = 0;
+  int n_super_levels = 0;
 
   if (NLTE_POPS_ON)
   {
@@ -1625,7 +1625,7 @@ static void read_atomicdata(void)
           // slot to store data for the "superlevel", which is a representation of all the other levels that
           // are not treated in detail.
           globals::total_nlte_levels++;
-          globals::n_super_levels++;
+          n_super_levels++;
         }
 
         globals::elements[element].ions[ion].nlevels_nlte = fullnlteexcitedlevelcount;
@@ -1641,7 +1641,7 @@ static void read_atomicdata(void)
     }
   }
 
-  printout("[input.c] Total NLTE levels: %d, of which %d are superlevels\n", globals::total_nlte_levels, globals::n_super_levels);
+  printout("[input.c] Total NLTE levels: %d, of which %d are superlevels\n", globals::total_nlte_levels, n_super_levels);
 }
 
 
