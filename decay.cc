@@ -450,7 +450,7 @@ static double get_modelradioabund_at_time(
 
 __host__ __device__
 static double get_endecay_per_ejectamass_at_time(const int mgi, enum decaypathways decaypath, double time)
-// decay energy that would be released from time tstart to time infinity from each decaypath
+// returns decay energy [erg] that would be released from time tstart [s] to time infinity a given decaypath
 {
   const enum radionuclides nuc1 = decayparent(decaypath);
   if (decaypath_is_chain(decaypath))
@@ -479,7 +479,7 @@ static double get_endecay_per_ejectamass_at_time(const int mgi, enum decaypathwa
 __host__ __device__
 static double get_endecay_per_ejectamass_between_times(
   const int mgi, enum decaypathways decaypath, double tlow, double thigh)
-// energy per mass released by a decaypath between two times (in seconds)
+// energy per mass [erg/g] released by a decaypath between two times [s]
 {
   assert_always(tlow <= thigh);
   const double energy_tlow = get_endecay_per_ejectamass_at_time(mgi, decaypath, tlow);
@@ -494,9 +494,10 @@ double get_simtime_endecay_per_ejectamass(const int mgi, enum decaypathways deca
 // get the decay energy released during the simulation time
 {
 #ifdef NO_INITIAL_PACKETS
+  // get decay energy released from t=tmin to tmax
   return get_endecay_per_ejectamass_between_times(mgi, decaypath, globals::tmin, globals::tmax);
 #else
-  // allow decays from time zero
+  // get decay energy released from t=0 to tmax
   return get_endecay_per_ejectamass_between_times(mgi, decaypath, 0., globals::tmax);
 #endif
 }
@@ -504,7 +505,7 @@ double get_simtime_endecay_per_ejectamass(const int mgi, enum decaypathways deca
 
 __host__ __device__
 double get_decay_power_per_ejectamass(enum decaypathways decaypath, const int modelgridindex, const double time)
-// total decay energy injection rate in erg / s / kg
+// total decay power per mass [erg / s / kg] for a given decaypath
 {
   double decaypower = 0.;
 
@@ -538,7 +539,7 @@ double get_decay_power_per_ejectamass(enum decaypathways decaypath, const int mo
 
 __host__ __device__
 double get_positroninjection_rate_density(const int modelgridindex, const double t)
-// energy injection rate from positrons in erg / s / cm^3
+// energy release rate from positrons in erg / s / cm^3
 {
   const double rho = get_rho(modelgridindex);
 
@@ -571,25 +572,29 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   double ni56frac = 0.;
   double co56frac = 0.;
   double fe56frac_fromdecay = 0.;
-  calculate_doubledecay_modelabund(modelgridindex, NUCLIDE_NI56, NUCLIDE_CO56, t_current, &ni56frac, &co56frac, &fe56frac_fromdecay);
+  calculate_doubledecay_modelabund(
+    modelgridindex, NUCLIDE_NI56, NUCLIDE_CO56, t_current, &ni56frac, &co56frac, &fe56frac_fromdecay);
 
   // Ni57 -> Co57 -> Fe57
   double ni57frac = 0.;
   double co57frac = 0.;
   double fe57frac_fromdecay = 0.;
-  calculate_doubledecay_modelabund(modelgridindex, NUCLIDE_NI57, NUCLIDE_CO57, t_current, &ni57frac, &co57frac, &fe57frac_fromdecay);
+  calculate_doubledecay_modelabund(
+    modelgridindex, NUCLIDE_NI57, NUCLIDE_CO57, t_current, &ni57frac, &co57frac, &fe57frac_fromdecay);
 
   // Fe52 -> Mn52 -> Cr52
   double fe52frac = 0.;
   double mn52frac = 0.;
   double cr52frac_fromdecay = 0.;
-  calculate_doubledecay_modelabund(modelgridindex, NUCLIDE_FE52, NUCLIDE_MN52, t_current, &fe52frac, &mn52frac, &cr52frac_fromdecay);
+  calculate_doubledecay_modelabund(
+    modelgridindex, NUCLIDE_FE52, NUCLIDE_MN52, t_current, &fe52frac, &mn52frac, &cr52frac_fromdecay);
 
   // Cr48 -> V48 -> Ti48
   double cr48frac = 0.;
   double v48frac = 0.;
   double ti48frac_fromdecay = 0.;
-  calculate_doubledecay_modelabund(modelgridindex, NUCLIDE_CR48, NUCLIDE_V48, t_current, &cr48frac, &v48frac, &ti48frac_fromdecay);
+  calculate_doubledecay_modelabund(
+    modelgridindex, NUCLIDE_CR48, NUCLIDE_V48, t_current, &cr48frac, &v48frac, &ti48frac_fromdecay);
 
   // printout("model cell %d, has input radioactive ni56_init %g, co56_init %g, fe52_init %g\n",modelgridindex,ni56_init,co56_init,fe52_in);
 
@@ -643,6 +648,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 
 __host__ __device__
 double get_decayedenergy_per_ejectamass(const int modelgridindex, const double tstart)
+// get the total radioactive energy release in [erg/g] from time 0 to tstart [s]
 {
   double endecaytot = 0.;
   for (int i = 0; i < DECAYPATH_COUNT; i++)
