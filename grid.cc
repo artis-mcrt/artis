@@ -518,12 +518,15 @@ static void set_elem_stable_abund_from_total(const int mgi, const int anumber, c
 
 __host__ __device__
 double get_cellradialpos(const int cellindex)
+// get the radial distance from the origin to the centre of the cell
 {
+  // spherical coordinate case is trivial
   if (globals::grid_type == GRID_SPHERICAL1D)
   {
     return get_cellcoordmin(cellindex, 0) + (0.5 * wid_init(cellindex));
   }
 
+  // cubic grid requires taking the length of the 3D position vector
   double dcen[3];
   for (int axis = 0; axis < 3; axis++)
   {
@@ -730,7 +733,7 @@ static void allocate_cooling(const int modelgridindex)
 }
 
 
-static void allocate_nonemptycells(void)
+static void allocate_nonemptymodelcells(void)
 {
   printout("[info] mem_usage: the modelgrid array occupies %.1f MB\n", sizeof(globals::modelgrid) / 1024. / 1024.);
   mem_usage_nltepops = 0;
@@ -797,7 +800,7 @@ static void allocate_nonemptycells(void)
 
 
 static void density_1d_read(void)
-/// Routine for doing a density grid read from a 1-D model.
+// Map 1D spherical model grid onto 3D propagation grid
 {
   for (int cellindex = 0; cellindex < globals::ngrid; cellindex++)
   {
@@ -841,7 +844,7 @@ static void density_1d_read(void)
 
 
 static void density_2d_read(void)
-// Routine for doing a density grid read from a 2-D model.
+// Map 2D model grid onto 3D propagation grid
 {
   for (int n = 0; n < globals::ngrid; n++)
   {
@@ -1029,7 +1032,7 @@ static void read_2d3d_modelabundanceline(FILE * model_input, const int mgi, cons
 
 
 static void read_1d_model(void)
-/// Subroutine to read in a 1-D model.
+// Read in a 1D spherical model
 {
   FILE *model_input = fopen_required("model.txt", "r");
 
@@ -1130,7 +1133,7 @@ static void read_1d_model(void)
 
 
 static void read_2d_model(void)
-/// Subroutine to read in a 2-D model.
+// Read in a 2D axisymmetric spherical coordinate model
 {
   FILE *model_input = fopen_required("model.txt", "r");
 
@@ -1797,7 +1800,7 @@ void grid_init(int my_rank)
 
   for (int d = 0; d < get_ngriddimensions(); d++)
   {
-    printout("    coordinate %d '%c': cells have %d coordinate values\n", d, globals::coordlabel[d], globals::ncoordgrid[d]);
+    printout("    coordinate %d '%c': cells have %d position values\n", d, globals::coordlabel[d], globals::ncoordgrid[d]);
   }
   printout("    total propagration cells: %d\n", globals::ngrid);
 
@@ -1821,7 +1824,7 @@ void grid_init(int my_rank)
   else if (get_model_type() == RHO_3D_READ)
   {
     assert_always(globals::grid_type == GRID_UNIFORM);
-    // propagation grid must match input model.txt grid exactly for 3D models
+    // propagation grid must match the input model grid exactly for 3D models
     assert_always(globals::ncoord_model[0] == globals::ncoordgrid[0]);
     assert_always(globals::ncoord_model[1] == globals::ncoordgrid[1]);
     assert_always(globals::ncoord_model[2] == globals::ncoordgrid[2]);
@@ -1837,7 +1840,8 @@ void grid_init(int my_rank)
     printout("[fatal] grid_init: Error: Unknown density type. Abort.");
     abort();
   }
-  allocate_nonemptycells();
+
+  allocate_nonemptymodelcells();
   calculate_kappagrey();
   abundances_read();
 
