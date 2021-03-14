@@ -1300,7 +1300,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 /// m timestep
 {
   //printout("[debug] update_grid: starting update for timestep %d...\n",m);
-  const double trat = globals::time_step[nts].start / globals::tmin;
   const double tratmid = globals::time_step[nts].mid / globals::tmin;
 
   double mps[get_max_threads()];  /// Thread private substitution of max_path_step. Its minimum is
@@ -1310,30 +1309,12 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     mps[i] = 1.e35;
   }
 
-  /// For debug temperature output
-  /*
-  sprintf(tempfilename,"d%d_thermal_%.4d.out",m,my_rank);
-  //sprintf(tempfilename,"t%d_temperature_%d-%d.out",m,nstart,nstart+nblock-1);
-  thermal_file = fopen_required(tempfilename, "w");
-  setvbuf(thermal_file, NULL, _IOLBF, 1);
-  */
-
-  //printout("[debug] update_grid: time before initialisation of heating file %ld\n", time(NULL));
-  //#ifndef FORCE_LTE
-  //  sprintf(filename,"h%d-%d_heating_%.4d.out",m,titer,my_rank);
-  //  heating_file = fopen_required(filename, "w")) == NULL);
-  //  setvbuf(heating_file, NULL, _IOLBF, 1);
-  //#endif
-  //printout("[debug] update_grid: heating file initialised %ld\n", time(NULL));
-
   ///Calculate the critical opacity at which opacity_case 3 switches from a
   ///regime proportional to the density to a regime independent of the density
   ///This is done by solving for tau_sobolev == 1
   ///tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(NUCLIDE_NI56) * 3000e-8 * globals::time_step[m].mid;
   globals::rho_crit = ME * CLIGHT * decay::nucmass(NUCLIDE_NI56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::time_step[nts].mid);
   printout("update_grid: rho_crit = %g\n", globals::rho_crit);
-
-  // const double t_current = globals::time_step[nts].start;
 
   // These values will not be used if nts == 0, but set them anyway
   // nts_prev is the previous timestep, unless this is timestep zero
@@ -1354,12 +1335,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     /// Updating cell information
     #ifdef _OPENMP
       #pragma omp for schedule(dynamic)
-      //T_D,W_D,nne,deltarho_old,deltaT_R_old,deltaT_e_old, deltarho,deltaT_R,deltaT_e,i,rhoindex,T_Rindex,T_eindex,ncl)
     #endif
-    //for (n = nstart; n < nstart+nblock; n++)
-    //for (ncl = 0; ncl < nblock; ncl++)
-    //for (ncl = nstart; ncl < nstart+nblock; ncl++)
-    //for (n = nstart; n < nstart+nblock; n++)
 
     for (int mgi = 0; mgi < get_npts_model(); mgi++)
     {
@@ -1436,6 +1412,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 
   if (globals::do_rlc_est == 2)
   {
+    const double trat = globals::time_step[nts].start / globals::tmin;
     if (globals::max_path_step < (wid_init(0) * trat / 10.))
     {
       globals::max_path_step = wid_init(0) / 10. * trat;
@@ -1443,10 +1420,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   }
   globals::max_path_step = fmin(globals::max_path_step, globals::rmax / 10.);
   printout("max_path_step %g\n", globals::max_path_step);
-
-  //#ifndef FORCE_LTE
-  //  fclose(heating_file);
-  //#endif
 }
 
 
@@ -1692,14 +1665,6 @@ double calculate_populations(const int modelgridindex)
         {
           //printout("calculate_populations: not setting groundlevelpop of ion %d\n",ion);
         }
-  /*
-  if (element == 21)
-    {
-      printout("Setting ion %d to have glp %g in cell %d\n", ion, globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion], modelgridindex);
-      printout("ion pop was %g and partfn was %g\n", nnion, globals::modelgrid[modelgridindex].composition[element].partfunct[ion]);
-      printout("the ion frac was %g, abundance %g and density %g\n",ionfractions[ion], abundance, get_rho(modelgridindex));
-    }
-  */
 
         if (!std::isfinite(globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]))
           printout("[warning] calculate_populations: groundlevelpop infinite in connection with MINPOP\n");
