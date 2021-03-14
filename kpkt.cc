@@ -632,7 +632,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     }
 
 
-    if (globals::debuglevel == 2) printout("do_kpkt: selected process %d, coolingsum %g, importantcoolingterms %d\n",i,coolingsum,globals::importantcoolingterms);
+    if (globals::debuglevel == 2) printout("do_kpkt: selected process %d, coolingsum %g\n",i,coolingsum);
     //printout("do_kpkt: selected process %d, coolingsum %g, importantcoolingterms %d, type %d\n",i,coolingsum,importantcoolingterms,globals::cellhistory[tid].coolinglist[i].type);
 
     // printout("element Z=%d, ion_stage %d, leve %d upper %d offset %d, terms %d, coolingsum %g\n",

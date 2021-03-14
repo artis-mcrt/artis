@@ -69,17 +69,11 @@ namespace globals
 
   extern __managed__ int n_out_it;
 
-  extern __managed__ double vout_model[MMODELGRID];
   extern __managed__ double t_model;
-  extern __managed__ int ncoord_model[3];
-
-  extern __managed__ double dcoord1, dcoord2;
 
   extern __managed__ double CLIGHT_PROP;
 
   extern __managed__ double gamma_grey;
-
-  extern __managed__ double min_den;
 
   #define GREY_OP 0.1
 
@@ -97,7 +91,6 @@ namespace globals
   extern __managed__ rpkt_cont_opacity_struct *kappa_rpkt_cont;
 
   extern __managed__ int ncoolingterms;
-  extern __managed__ int importantcoolingterms;
 
   extern __managed__ double *allcont_nu_edge;
   extern __managed__ fullphixslist_t *allcont;
@@ -122,10 +115,8 @@ namespace globals
   extern __managed__ int nesc;
 
   extern __managed__ double coordmax[3];
-  extern __managed__ double mtot;
   extern __managed__ double vmax;
   extern __managed__ double rmax;
-  extern __managed__ double mfeg;
   extern __managed__ double tmax;
   extern __managed__ double tmin;
 
