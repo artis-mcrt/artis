@@ -13,6 +13,16 @@
 __managed__ enum model_types model_type = RHO_1D_READ;
 __managed__ int npts_model = 0; // number of points in 1-D input model
 
+__managed__ double vout_model[MMODELGRID];
+__managed__ int ncoord_model[3]; // the model.txt input grid dimensions
+__managed__ double dcoord1;
+__managed__ double dcoord2; // spacings of a 2D model grid - must be uniform grid
+
+__managed__ double min_den; // minimum model density
+
+__managed__ double mtot;
+__managed__ double mfeg;              /// Total mass of Fe group elements in ejecta
+
 __managed__ CELL cell[MGRID + 1];
 
 static long mem_usage_nltepops = 0;
@@ -32,8 +42,8 @@ double wid_init(const int cellindex)
     case GRID_SPHERICAL1D:
     {
       const int modelgridindex = get_cell_modelgridindex(cellindex);
-      const double v_inner = modelgridindex > 0 ? globals::vout_model[modelgridindex - 1] : 0.;
-      return (globals::vout_model[modelgridindex] - v_inner) * globals::tmin;
+      const double v_inner = modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.;
+      return (vout_model[modelgridindex] - v_inner) * globals::tmin;
     }
 
     default:
@@ -50,7 +60,7 @@ double vol_init_modelcell(const int modelgridindex)
   switch (globals::grid_type)
   {
     case GRID_SPHERICAL1D:
-      return 4./3. * PI * (pow(globals::tmin * globals::vout_model[modelgridindex], 3) - pow(globals::tmin * (modelgridindex > 0 ? globals::vout_model[modelgridindex - 1] : 0.), 3));
+      return 4./3. * PI * (pow(globals::tmin * vout_model[modelgridindex], 3) - pow(globals::tmin * (modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.), 3));
 
     default:
     {
@@ -611,7 +621,7 @@ static void calculate_kappagrey(void)
       }
       else if (globals::opacity_case == 1)
       {
-        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 * globals::mfeg / globals::mtot) + 0.1));
+        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 * mfeg / mtot) + 0.1));
       }
       else if (globals::opacity_case == 2)
       {
@@ -626,7 +636,7 @@ static void calculate_kappagrey(void)
       else if (globals::opacity_case == 4)
       {
         ///kappagrey used for initial grey approximation in this case
-        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 *  globals::mfeg / globals::mtot) + 0.1));
+        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
         //set_kappagrey(mgi, SIGMA_T);
       }
       else
@@ -819,14 +829,14 @@ static void density_1d_read(void)
 
         for (int mgi = 0; mgi < (get_npts_model() - 1); mgi++)
         {
-          if (globals::vout_model[mgi] < vcell)
+          if (vout_model[mgi] < vcell)
           {
             set_cell_modelgridindex(cellindex, mgi + 1);
           }
         }
       }
 
-      if (globals::vout_model[get_cell_modelgridindex(cellindex)] >= vmin)
+      if (vout_model[get_cell_modelgridindex(cellindex)] >= vmin)
       {
         globals::modelgrid[get_cell_modelgridindex(cellindex)].initial_radial_pos += radial_pos;
       }
@@ -867,9 +877,9 @@ static void density_2d_read(void)
       // Grid is uniform so only need to search in 1d to get r and z positions
 
       int mkeep1 = 0;
-      for (int m = 0; m < globals::ncoord_model[0]; m++)
+      for (int m = 0; m < ncoord_model[0]; m++)
       {
-        if (rcylindrical > (m * globals::dcoord1 * globals::tmin/globals::t_model))
+        if (rcylindrical > (m * dcoord1 * globals::tmin/globals::t_model))
         {
           mkeep1 = m;
           // set_cell_modelgridindex(n, m + 1);
@@ -877,15 +887,15 @@ static void density_2d_read(void)
       }
 
       int mkeep2 = 0;
-      for (int m = 0; m < globals::ncoord_model[1]; m++)
+      for (int m = 0; m < ncoord_model[1]; m++)
       {
-        if (zcylindrical > (((m * globals::dcoord2) * globals::tmin/globals::t_model) - globals::rmax))
+        if (zcylindrical > (((m * dcoord2) * globals::tmin/globals::t_model) - globals::rmax))
         {
           mkeep2 = m;
           // set_cell_modelgridindex(n, m + 1);
         }
       }
-      set_cell_modelgridindex(n, (mkeep2 * globals::ncoord_model[0]) + mkeep1);
+      set_cell_modelgridindex(n, (mkeep2 * ncoord_model[0]) + mkeep1);
       globals::modelgrid[get_cell_modelgridindex(n)].initial_radial_pos += radial_pos;
 
       //renorm[mkeep]++;
@@ -1040,7 +1050,7 @@ static void read_1d_model(void)
   int npts_model_in = 0;
   fscanf(model_input, "%d", &npts_model_in);
   set_npts_model(npts_model_in);
-  globals::ncoord_model[0] = npts_model_in;
+  ncoord_model[0] = npts_model_in;
 
   // Now read the time (in days) at which the model is specified.
   double t_model_days;
@@ -1082,7 +1092,7 @@ static void read_1d_model(void)
     {
       assert_always(cellnumberin == mgi + 1);
 
-      globals::vout_model[mgi] = vout_kmps * 1.e5;
+      vout_model[mgi] = vout_kmps * 1.e5;
 
       const double rho_tmin = pow(10., log_rho) * pow(globals::t_model / globals::tmin, 3);
       set_rhoinit(mgi, rho_tmin);
@@ -1128,7 +1138,7 @@ static void read_1d_model(void)
 
   fclose(model_input);
 
-  globals::vmax = globals::vout_model[get_npts_model() - 1];
+  globals::vmax = vout_model[get_npts_model() - 1];
 }
 
 
@@ -1138,9 +1148,9 @@ static void read_2d_model(void)
   FILE *model_input = fopen_required("model.txt", "r");
 
   // 1st read the number of data points in the table of input model.
-  fscanf(model_input, "%d %d", &globals::ncoord_model[0], &globals::ncoord_model[1]);  // r and z (cylindrical polar)
+  fscanf(model_input, "%d %d", &ncoord_model[0], &ncoord_model[1]);  // r and z (cylindrical polar)
 
-  set_npts_model(globals::ncoord_model[0] * globals::ncoord_model[1]);
+  set_npts_model(ncoord_model[0] * ncoord_model[1]);
 
   // Now read the time (in days) at which the model is specified.
   double t_model_days;
@@ -1149,8 +1159,8 @@ static void read_2d_model(void)
 
   // Now read in globals::vmax (in cm/s)
   fscanf(model_input, "%lg\n", &globals::vmax);
-  globals::dcoord1 = globals::vmax * globals::t_model / globals::ncoord_model[0]; //dr for input model
-  globals::dcoord2 = 2. * globals::vmax * globals::t_model / globals::ncoord_model[1]; //dz for input model
+  dcoord1 = globals::vmax * globals::t_model / ncoord_model[0]; //dr for input model
+  dcoord2 = 2. * globals::vmax * globals::t_model / ncoord_model[1]; //dz for input model
 
   // Now read in the model. Each point in the model has two lines of input.
   // First is an index for the cell then its r-mid point then its z-mid point
@@ -1175,11 +1185,11 @@ static void read_2d_model(void)
     int items_read = sscanf(line, "%d %g %g %lg", &cellnumin, &cell_r_in, &cell_z_in, &rho_tmodel);
     assert_always(items_read == 4);
 
-    const int ncoord1 = ((cellnumin - 1) % globals::ncoord_model[0]);
-    const double r_cylindrical = (ncoord1 + 0.5) * globals::dcoord1;
+    const int ncoord1 = ((cellnumin - 1) % ncoord_model[0]);
+    const double r_cylindrical = (ncoord1 + 0.5) * dcoord1;
     assert_always(fabs(cell_r_in / r_cylindrical - 1) < 1e-3);
-    const int ncoord2 = ((cellnumin - 1) / globals::ncoord_model[0]);
-    const double z = -globals::vmax * globals::t_model + ((ncoord2 + 0.5) * globals::dcoord2);
+    const int ncoord2 = ((cellnumin - 1) / ncoord_model[0]);
+    const double z = -globals::vmax * globals::t_model + ((ncoord2 + 0.5) * dcoord2);
     assert_always(fabs(cell_z_in / z - 1) < 1e-3);
 
     assert_always(cellnumin == mgi + 1);
@@ -1218,13 +1228,13 @@ static void read_3d_model(void)
     abort();
   }
 
-  globals::ncoord_model[0] = globals::ncoord_model[1] = globals::ncoord_model[2] = round(pow(npts_model_in, 1/3.));
-  assert_always(globals::ncoord_model[0] * globals::ncoord_model[1] * globals::ncoord_model[2] == npts_model_in);
+  ncoord_model[0] = ncoord_model[1] = ncoord_model[2] = round(pow(npts_model_in, 1/3.));
+  assert_always(ncoord_model[0] * ncoord_model[1] * ncoord_model[2] == npts_model_in);
 
   // for a 3D input model, the progation cells will match the input cells exactly
-  globals::ncoordgrid[0] = globals::ncoord_model[0];
-  globals::ncoordgrid[1] = globals::ncoord_model[1];
-  globals::ncoordgrid[2] = globals::ncoord_model[2];
+  globals::ncoordgrid[0] = ncoord_model[0];
+  globals::ncoordgrid[1] = ncoord_model[1];
+  globals::ncoordgrid[2] = ncoord_model[2];
   globals::ngrid = npts_model_in;
   globals::grid_type = GRID_UNIFORM;
 
@@ -1239,7 +1249,7 @@ static void read_3d_model(void)
   double xmax_tmodel = globals::vmax * globals::t_model;
 
   /// Now read in the lines of the model.
-  globals::min_den = 1.e99;
+  min_den = 1.e99;
 
   // check if expected positions match in either xyz or zyx column order
   // set false if a problem is detected
@@ -1309,9 +1319,9 @@ static void read_3d_model(void)
       //printout("mgi %d, rho_init %g\n",mgi,get_rhoinit(mgi));
       set_rho(mgi, rho_tmin);
 
-      if (globals::min_den > rho_model)
+      if (min_den > rho_model)
       {
-        globals::min_den = rho_model;
+        min_den = rho_model;
       }
     }
     else
@@ -1343,7 +1353,7 @@ static void read_3d_model(void)
     printout("Cell positions in model.txt are consistent with calculated values when z-y-x column order is used.\n");
   }
 
-  printout("min_den %g [g/cm3]\n", globals::min_den);
+  printout("min_den %g [g/cm3]\n", min_den);
   printout("Effectively used model grid cells %d\n", mgi);
 
   /// Now, set actual size of the modelgrid to the number of non-empty cells.
@@ -1351,6 +1361,67 @@ static void read_3d_model(void)
   set_npts_model(mgi);
 
   fclose(model_input);
+}
+
+
+static void show_totmassradionuclides(void)
+{
+  mtot = 0.;
+  mfeg = 0.;
+
+  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+    totmassradionuclide[iso] = 0.;
+
+  int n1 = 0;
+  for (int mgi = 0; mgi < get_npts_model(); mgi++)
+  {
+    double cellvolume = 0.;
+    if (get_model_type() == RHO_1D_READ)
+    {
+      const double v_inner = (mgi == 0) ? 0. : vout_model[mgi - 1];
+      // mass_in_shell = rho_model[mgi] * (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(t_model, 3) / 3.;
+      cellvolume = (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(globals::tmin, 3) / 3.;
+    }
+    else if (get_model_type() == RHO_2D_READ)
+    {
+      cellvolume = pow(globals::tmin / globals::t_model, 3) * ((2 * n1) + 1) * PI * dcoord2 * pow(dcoord1, 2.);
+      n1++;
+      if (n1 == ncoord_model[0])
+      {
+        n1 = 0;
+      }
+    }
+    else if (get_model_type() == RHO_3D_READ)
+    {
+      /// Assumes cells are cubes here - all same volume.
+      cellvolume = pow((2 * globals::vmax * globals::tmin), 3.) / (globals::ncoordgrid[0] * globals::ncoordgrid[1] * globals::ncoordgrid[2]);
+    }
+    else
+    {
+      printout("Unknown model type %d in function %s\n", get_model_type(), __func__);
+      abort();
+    }
+
+    const double mass_in_shell = get_rhoinit(mgi) * cellvolume;
+
+    mtot += mass_in_shell;
+
+    for (int isoint = 0; isoint < RADIONUCLIDE_COUNT; isoint++)
+    {
+      const enum radionuclides iso = (enum radionuclides) isoint;
+      totmassradionuclide[iso] += mass_in_shell * get_modelinitradioabund(mgi, iso);
+    }
+
+    mfeg += mass_in_shell * get_ffegrp(mgi);
+  }
+
+
+  printout("Masses / Msun:    Total: %9.3e  56Ni: %9.3e  56Co: %9.3e  52Fe: %9.3e  48Cr: %9.3e\n",
+           mtot / MSUN, totmassradionuclide[NUCLIDE_NI56] / MSUN,
+           totmassradionuclide[NUCLIDE_CO56] / MSUN, totmassradionuclide[NUCLIDE_FE52] / MSUN,
+           totmassradionuclide[NUCLIDE_CR48] / MSUN);
+  printout("Masses / Msun: Fe-group: %9.3e  57Ni: %9.3e  57Co: %9.3e\n",
+           mfeg / MSUN, totmassradionuclide[NUCLIDE_NI57] / MSUN, totmassradionuclide[NUCLIDE_CO57] / MSUN);
 }
 
 
@@ -1393,6 +1464,16 @@ void read_ejecta_model(enum model_types model_type)
       abort();
     }
   }
+
+  printout("npts_model: %d\n", get_npts_model());
+  globals::rmax = globals::vmax * globals::tmin;
+  printout("vmax %g\n", globals::vmax);
+  printout("tmin %g\n", globals::tmin);
+  printout("rmax %g\n", globals::rmax);
+
+  globals::coordmax[0] = globals::coordmax[1] = globals::coordmax[2] = globals::rmax;
+
+  show_totmassradionuclides();
 }
 
 
@@ -1652,9 +1733,9 @@ static void uniform_grid_setup(void)
   if (get_model_type() == RHO_3D_READ)
   {
     // if we used in a 3D ejecta model, the propagation grid must match the input grid exactly
-    globals::ncoordgrid[0] = globals::ncoord_model[0];
-    globals::ncoordgrid[1] = globals::ncoord_model[1];
-    globals::ncoordgrid[2] = globals::ncoord_model[2];
+    globals::ncoordgrid[0] = ncoord_model[0];
+    globals::ncoordgrid[1] = ncoord_model[1];
+    globals::ncoordgrid[2] = ncoord_model[2];
 
     // in case the user specified a grid size, we should ensure that it matches
     #ifdef CUBOID_NCOORDGRID_X
@@ -1746,7 +1827,7 @@ static void spherical1d_grid_setup(void)
   // in this mode, cellindex and modelgridindex are the same thing
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++)
   {
-    const double v_inner = cellindex > 0 ? globals::vout_model[cellindex - 1] : 0.;
+    const double v_inner = cellindex > 0 ? vout_model[cellindex - 1] : 0.;
     set_cell_modelgridindex(cellindex, cellindex);
     cell[cellindex].pos_init[0] = v_inner * globals::tmin;
     cell[cellindex].pos_init[1] = 0.;
@@ -1825,9 +1906,9 @@ void grid_init(int my_rank)
   {
     assert_always(globals::grid_type == GRID_UNIFORM);
     // propagation grid must match the input model grid exactly for 3D models
-    assert_always(globals::ncoord_model[0] == globals::ncoordgrid[0]);
-    assert_always(globals::ncoord_model[1] == globals::ncoordgrid[1]);
-    assert_always(globals::ncoord_model[2] == globals::ncoordgrid[2]);
+    assert_always(ncoord_model[0] == globals::ncoordgrid[0]);
+    assert_always(ncoord_model[1] == globals::ncoordgrid[1]);
+    assert_always(ncoord_model[2] == globals::ncoordgrid[2]);
 
     for (int n = 0; n < globals::ngrid; n++)
     {
@@ -1886,67 +1967,6 @@ void grid_init(int my_rank)
       }
     }
   }
-}
-
-
-void show_totmassradionuclides(void)
-{
-  globals::mtot = 0.;
-  globals::mfeg = 0.;
-
-  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
-    totmassradionuclide[iso] = 0.;
-
-  int n1 = 0;
-  for (int mgi = 0; mgi < get_npts_model(); mgi++)
-  {
-    double cellvolume = 0.;
-    if (get_model_type() == RHO_1D_READ)
-    {
-      const double v_inner = (mgi == 0) ? 0. : globals::vout_model[mgi - 1];
-      // mass_in_shell = rho_model[mgi] * (pow(globals::vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(t_model, 3) / 3.;
-      cellvolume = (pow(globals::vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(globals::tmin, 3) / 3.;
-    }
-    else if (get_model_type() == RHO_2D_READ)
-    {
-      cellvolume = pow(globals::tmin / globals::t_model, 3) * ((2 * n1) + 1) * PI * globals::dcoord2 * pow(globals::dcoord1, 2.);
-      n1++;
-      if (n1 == globals::ncoord_model[0])
-      {
-        n1 = 0;
-      }
-    }
-    else if (get_model_type() == RHO_3D_READ)
-    {
-      /// Assumes cells are cubes here - all same volume.
-      cellvolume = pow((2 * globals::vmax * globals::tmin), 3.) / (globals::ncoordgrid[0] * globals::ncoordgrid[1] * globals::ncoordgrid[2]);
-    }
-    else
-    {
-      printout("Unknown model type %d in function %s\n", get_model_type(), __func__);
-      abort();
-    }
-
-    const double mass_in_shell = get_rhoinit(mgi) * cellvolume;
-
-    globals::mtot += mass_in_shell;
-
-    for (int isoint = 0; isoint < RADIONUCLIDE_COUNT; isoint++)
-    {
-      const enum radionuclides iso = (enum radionuclides) isoint;
-      totmassradionuclide[iso] += mass_in_shell * get_modelinitradioabund(mgi, iso);
-    }
-
-    globals::mfeg += mass_in_shell * get_ffegrp(mgi);
-  }
-
-
-  printout("Masses / Msun:    Total: %9.3e  56Ni: %9.3e  56Co: %9.3e  52Fe: %9.3e  48Cr: %9.3e\n",
-           globals::mtot / MSUN, totmassradionuclide[NUCLIDE_NI56] / MSUN,
-           totmassradionuclide[NUCLIDE_CO56] / MSUN, totmassradionuclide[NUCLIDE_FE52] / MSUN,
-           totmassradionuclide[NUCLIDE_CR48] / MSUN);
-  printout("Masses / Msun: Fe-group: %9.3e  57Ni: %9.3e  57Co: %9.3e\n",
-           globals::mfeg / MSUN, totmassradionuclide[NUCLIDE_NI57] / MSUN, totmassradionuclide[NUCLIDE_CO57] / MSUN);
 }
 
 

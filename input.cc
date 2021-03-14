@@ -1706,16 +1706,6 @@ void input(int rank)
 
   read_ejecta_model(get_model_type());
 
-  printout("npts_model: %d\n", get_npts_model());
-  globals::rmax = globals::vmax * globals::tmin;
-  printout("vmax %g\n", globals::vmax);
-  printout("tmin %g\n", globals::tmin);
-  printout("rmax %g\n", globals::rmax);
-
-  globals::coordmax[0] = globals::coordmax[1] = globals::coordmax[2] = globals::rmax;
-
-  show_totmassradionuclides();
-
   /// Read in data for gamma ray lines and make a list of them in energy order.
   init_gamma_linelist();
 

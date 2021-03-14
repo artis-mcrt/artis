@@ -71,19 +71,13 @@ namespace globals
 
   __managed__ int n_out_it; // # of sets of 1,000,000 photons to run.
 
-  __managed__ double vout_model[MMODELGRID];
   __managed__ double t_model; // time at which densities in input model are correct.
-  __managed__ int ncoord_model[3]; // the model.txt input grid dimensions
-  __managed__ double dcoord1;
-  __managed__ double dcoord2; // spacings of a 2D model grid - must be uniform grid
 
   __managed__ double CLIGHT_PROP; // Speed of light for ray travel. Physically = CLIGHT but
                                   // can be changed for testing.
 
   __managed__ double gamma_grey; // set to -ve for proper treatment. If possitive, then
                                  // gamma_rays are treated as grey with this opacity.
-
-  __managed__ double min_den;
 
   __managed__ double max_path_step;
 
@@ -108,7 +102,6 @@ namespace globals
 
   /// Coolinglist
   __managed__ int ncoolingterms;
-  __managed__ int importantcoolingterms;
 
   /// PHIXSLIST
 
@@ -135,10 +128,8 @@ namespace globals
   __managed__ int nesc = 0; //number of packets that escape during current timestep
 
   __managed__ double coordmax[3];
-  __managed__ double mtot;
   __managed__ double vmax;
   __managed__ double rmax;  /// Total mass and outer velocity/radius
-  __managed__ double mfeg;              /// Total mass of Fe group elements in ejecta
   __managed__ double tmax;              /// End time of current simulation
   __managed__ double tmin;              /// Start time of current simulation
 
