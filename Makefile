@@ -45,7 +45,7 @@ else ifneq (, $(shell which mpicxx))
 
 sn3d sn3dcuda: CXXFLAGS += -DMPI_ON
 
-else ifneq ($(SYSNAME),ubuntu)
+else ifneq ($(USER),ccollins)
 	# CXX = c++
 	LDFLAGS= -lgsl -lgslcblas -lm -I/home/localadmin_ccollins/gsl/include
 	INCLUDE = /home/localadmin_ccollins/gsl/include
