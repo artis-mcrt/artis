@@ -6,9 +6,10 @@ cd $SLURM_SUBMIT_DIR
 
 spack load gsl target=$(spack arch -t)
 
-echo "before srun sn3d"
-srun -- ./sn3d -w 24 > out.txt
-echo "after srun"
+echo "$(date): time before srun sn3d"
+time srun -- ./sn3d -w 24 > out.txt
+echo "$(date): time after srun sn3d finished"
+echo "seconds elapsed: $SECONDS"
 
 mkdir ${SLURM_JOBID}.slurm
 ./artis/scripts/movefiles.sh ${SLURM_JOBID}.slurm
