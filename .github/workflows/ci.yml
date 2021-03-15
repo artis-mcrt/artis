@@ -27,8 +27,8 @@ jobs:
     - name: "diagnostic info"
       run: |
         git status
-        which gcc
-        gcc --version
+        which g++
+        g++ --version
         which clang++
         clang++ --version
         export CC=clang
