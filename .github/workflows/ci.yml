@@ -33,11 +33,14 @@ jobs:
         export CC=clang
         export CXX=clang++
 
-    - name: "compile with gcc"
-      run: make CXX=gcc sn3d exspec
+    # - name: "compile with gcc"
+    #   run: make CXX=gcc sn3d exspec
 
-    - name: "compile with clang"
-      run: make CXX=clang++ sn3d exspec
+    # - name: "compile with clang"
+    #   run: make CXX=clang++ sn3d exspec
+
+    - name: "compile"
+      run: make
 
     # - name: "compile sn3d with OpenMP"
     #   run: make sn3dopenmp
