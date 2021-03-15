@@ -18,7 +18,7 @@ jobs:
 
     - name: "install dependencies"
       run: |
-        sudo apt-get update
+        # sudo apt-get update
         sudo apt-get install libgsl-dev clang
         cp artisoptions_example.h artisoptions.h
 
