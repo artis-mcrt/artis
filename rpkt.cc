@@ -89,6 +89,7 @@ __host__ __device__
 static double get_event(
   const int modelgridindex,
   PKT *pkt_ptr,             // pointer to packet object
+  const double dopplerfactor,
   int *rpkt_eventtype,
   const double tau_rnd,     // random optical depth until which the packet travels
   const double abort_dist   // maximal travel distance before packet leaves cell or time step ends
@@ -104,8 +105,8 @@ static double get_event(
   PKT dummypkt = *pkt_ptr;
   PKT *dummypkt_ptr = &dummypkt;
   bool endloop = false;
-  calculate_kappa_rpkt_cont(pkt_ptr);
-  const double kap_cont = globals::kappa_rpkt_cont[tid].total;
+  calculate_kappa_rpkt_cont(pkt_ptr, &globals::kappa_rpkt_cont[tid]);
+  const double kap_cont = globals::kappa_rpkt_cont[tid].total * dopplerfactor;
   while (!endloop)
   {
     /// calculate distance to next line encounter ldist
@@ -320,14 +321,14 @@ static double get_event(
 
 
 __host__ __device__
-static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rpkt_cont_thisthread, int modelgridindex)
+static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rpkt_cont_thisthread, const double dopplerfactor, int modelgridindex)
 {
   const double nu = pkt_ptr->nu_cmf;
 
-  const double kappa_cont = kappa_rpkt_cont_thisthread.total;
-  const double sigma = kappa_rpkt_cont_thisthread.es;
-  const double kappa_ff = kappa_rpkt_cont_thisthread.ff;
-  const double kappa_bf = kappa_rpkt_cont_thisthread.bf;
+  const double kappa_cont = kappa_rpkt_cont_thisthread.total * dopplerfactor;
+  const double sigma = kappa_rpkt_cont_thisthread.es * dopplerfactor;
+  const double kappa_ff = kappa_rpkt_cont_thisthread.ff * dopplerfactor;
+  const double kappa_bf = kappa_rpkt_cont_thisthread.bf * dopplerfactor;
 
   /// continuum process happens. select due to its probabilities sigma/kappa_cont, kappa_ff/kappa_cont, kappa_bf/kappa_cont
   const double zrand = gsl_rng_uniform(rng);
@@ -393,7 +394,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
     #endif
     pkt_ptr->absorptiontype = -2;
 
-    const double kappa_bf_inrest = kappa_rpkt_cont_thisthread.bf_inrest;
+    const double kappa_bf_inrest = kappa_rpkt_cont_thisthread.bf;
 
     /// Determine in which continuum the bf-absorption occurs
     const double zrand2 = gsl_rng_uniform(rng);
@@ -777,6 +778,8 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
 
     assert_always(tdist >= 0);
 
+    const double dopplerfactor = doppler_packetpos(pkt_ptr);
+
     double edist;
     int rpkt_eventtype;
     bool find_nextline = false;
@@ -794,7 +797,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
       /// In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
       /// Get distance to the next physical event in this case only electron scattering
       //kappa = SIGMA_T*get_nne(mgi);
-      const double kappa = get_kappagrey(mgi) * get_rho(mgi) * doppler_packetpos(pkt_ptr);
+      const double kappa = get_kappagrey(mgi) * get_rho(mgi) * dopplerfactor;
       const double tau_current = 0.0;
       edist = (tau_next - tau_current) / kappa;
       find_nextline = true;
@@ -805,7 +808,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
     else
     {
       // get distance to the next physical event (continuum or bound-bound)
-      edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, tau_next, fmin(tdist, sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+      edist = get_event(mgi, pkt_ptr, dopplerfactor, &rpkt_eventtype, tau_next, fmin(tdist, sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
       #ifdef DEBUG_ON
         if (globals::debuglevel == 2)
         {
@@ -886,7 +889,9 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
       /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
       /// find the next possible line interaction.
       if (find_nextline)
+      {
         closest_transition_empty(pkt_ptr);
+      }
 
       return false;
     }
@@ -921,7 +926,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
       }
       else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT)
       {
-        rpkt_event_continuum(pkt_ptr, globals::kappa_rpkt_cont[tid], mgi);
+        rpkt_event_continuum(pkt_ptr, globals::kappa_rpkt_cont[tid], dopplerfactor, mgi);
       }
       else
       {
@@ -994,9 +999,9 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
     }
 
     vpkt.prop_time = t_future;
-    calculate_kappa_rpkt_cont(&vpkt);
+    calculate_kappa_rpkt_cont(&vpkt, &globals::kappa_rpkt_cont[tid]);
 
-    const double kappa_cont = globals::kappa_rpkt_cont[tid].total;
+    const double kappa_cont = globals::kappa_rpkt_cont[tid].total * doppler_packetpos(&vpkt);
 
     *tot_tau_cont += kappa_cont * sdist;
 
@@ -1364,14 +1369,14 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
 
 
 __host__ __device__
-void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr)
+void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, rpkt_cont_opacity_struct *kappa_rpkt_cont_thisthread)
 {
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = get_cell_modelgridindex(cellindex);
   assert_always(modelgridindex != MMODELGRID);
   assert_always(globals::modelgrid[modelgridindex].thick != 1);
   const double nu_cmf = pkt_ptr->nu_cmf;
-  if ((modelgridindex == globals::kappa_rpkt_cont[tid].modelgridindex) && (!globals::kappa_rpkt_cont[tid].recalculate_required) && (fabs(globals::kappa_rpkt_cont[tid].nu / nu_cmf - 1.0) < 1e-4))
+  if ((modelgridindex == kappa_rpkt_cont_thisthread->modelgridindex) && (!kappa_rpkt_cont_thisthread->recalculate_required) && (fabs(kappa_rpkt_cont_thisthread->nu / nu_cmf - 1.0) < 1e-4))
   {
     // calculated values are a match already
     return;
@@ -1403,8 +1408,6 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr)
       /// Third contribution: bound-free absorption
       calculate_kappa_bf_gammacontr(modelgridindex, nu_cmf, &kappa_bf);
 
-      globals::kappa_rpkt_cont[tid].bf_inrest = kappa_bf;
-
       // const double pkt_lambda = 1e8 * CLIGHT / nu_cmf;
       // if (pkt_lambda < 4000)
       // {
@@ -1428,42 +1431,36 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr)
 
       kappa_bf = 0.;
     }
-
-    // convert between frames.
-    const double dopplerfactor = doppler_packetpos(pkt_ptr);
-    sigma *= dopplerfactor;
-    kappa_ff *= dopplerfactor;
-    kappa_bf *= dopplerfactor;
   }
 
-  globals::kappa_rpkt_cont[tid].nu = nu_cmf;
-  globals::kappa_rpkt_cont[tid].modelgridindex = modelgridindex;
-  globals::kappa_rpkt_cont[tid].recalculate_required = false;
-  globals::kappa_rpkt_cont[tid].total = sigma + kappa_bf + kappa_ff;
+  kappa_rpkt_cont_thisthread->nu = nu_cmf;
+  kappa_rpkt_cont_thisthread->modelgridindex = modelgridindex;
+  kappa_rpkt_cont_thisthread->recalculate_required = false;
+  kappa_rpkt_cont_thisthread->total = sigma + kappa_bf + kappa_ff;
   #ifdef DEBUG_ON
     //if (globals::debuglevel == 2)
     //  printout("[debug]  ____kappa_rpkt____: kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n",kappa_rpkt_cont[tid].total,sigma,kappa_ff,kappa_bf);
   #endif
-  globals::kappa_rpkt_cont[tid].es = sigma;
-  globals::kappa_rpkt_cont[tid].ff = kappa_ff;
-  globals::kappa_rpkt_cont[tid].bf = kappa_bf;
-  globals::kappa_rpkt_cont[tid].ffheating = kappa_ffheating;
-  //globals::kappa_rpkt_cont[tid].bfheating = kappa_bfheating;
+  kappa_rpkt_cont_thisthread->es = sigma;
+  kappa_rpkt_cont_thisthread->ff = kappa_ff;
+  kappa_rpkt_cont_thisthread->bf = kappa_bf;
+  kappa_rpkt_cont_thisthread->ffheating = kappa_ffheating;
+  //kappa_rpkt_cont_thisthread.bfheating = kappa_bfheating;
 
   #ifdef DEBUG_ON
-    if (!std::isfinite(globals::kappa_rpkt_cont[tid].total))
+    if (!std::isfinite(kappa_rpkt_cont_thisthread->total))
     {
       printout("[fatal] calculate_kappa_rpkt_cont: resulted in non-finite kappa_rpkt_cont.total ... abort\n");
       printout("[fatal] es %g, ff %g, bf %g\n",
-      globals::kappa_rpkt_cont[tid].es,globals::kappa_rpkt_cont[tid].ff,globals::kappa_rpkt_cont[tid].bf);
+      kappa_rpkt_cont_thisthread->es,kappa_rpkt_cont_thisthread->ff,kappa_rpkt_cont_thisthread->bf);
       printout("[fatal] nbfcontinua %d\n",globals::nbfcontinua);
       printout("[fatal] in cell %d with density %g\n",modelgridindex,get_rho(modelgridindex));
       printout("[fatal] pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
-      if (std::isfinite(globals::kappa_rpkt_cont[tid].es))
+      if (std::isfinite(kappa_rpkt_cont_thisthread->es))
       {
-        globals::kappa_rpkt_cont[tid].ff = 0.;
-        globals::kappa_rpkt_cont[tid].bf = 0.;
-        globals::kappa_rpkt_cont[tid].total = globals::kappa_rpkt_cont[tid].es;
+        kappa_rpkt_cont_thisthread->ff = 0.;
+        kappa_rpkt_cont_thisthread->bf = 0.;
+        kappa_rpkt_cont_thisthread->total = kappa_rpkt_cont_thisthread->es;
       }
       else
       {
@@ -1474,9 +1471,4 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr)
 
 }
 
-
-#ifdef VPKT_ON
-
-
-#endif
 

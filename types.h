@@ -399,9 +399,6 @@ typedef struct rpkt_cont_opacity_struct
   double es;
   double ff;
   double bf;
-  double fb;
-  double bf_inrest;
-  double fb_inrest;
   double ffheating;
   //double bfheating;
   int modelgridindex;
