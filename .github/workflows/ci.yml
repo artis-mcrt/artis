@@ -79,14 +79,19 @@ jobs:
         mkdir output
         cp output_0-0.txt exspec.txt *.out output/
 
-    - name: Checksum output files
-      working-directory: tests/nebularonezone/
-      run: |
-        md5sum *.out
-        # md5sum -c <(echo b8f6bc739894a563cb55ee83a9a81f8c test_output/adata.txt)
-
     - name: Upload output files
       uses: actions/upload-artifact@v1
       with:
         name: test-nebularonezone-output
         path: tests/nebularonezone/output
+
+    - name: Checksum output files
+      working-directory: tests/nebularonezone/output
+      run: |
+        md5sum *.out
+        md5sum -c <(echo e4963320fa6da60fc14aba0d6aa7c52d estimators_0000.out)
+        md5sum -c <(echo 43dc783d438b33bcd350cfb5967364a8 light_curve.out)
+        md5sum -c <(echo f8a7677f193e17341a62a08697f70711 spec.out)
+        md5sum -c <(echo 8e7163982f1aa938dc1505478b8c60d1 timesteps.out)
+        md5sum -c <(echo 73da2aa7a706efdb62b5f1dc610bbf14 deposition.out)
+
