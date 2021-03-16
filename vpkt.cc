@@ -208,7 +208,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
     sdist = boundary_cross(dummy_ptr, t_future, &snext);
     s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
 
-    calculate_kappa_rpkt_cont(dummy_ptr);
+    calculate_kappa_rpkt_cont(dummy_ptr, &globals::kappa_rpkt_cont[tid]);
 
     kap_cont = globals::kappa_rpkt_cont[tid].total;
     kap_cont_nobf = kap_cont - globals::kappa_rpkt_cont[tid].bf;
@@ -991,7 +991,7 @@ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
   }
 
   // we just used the opacity variables for v-packets. We need to reset them for the original r packet
-  calculate_kappa_rpkt_cont(pkt_ptr);
+  calculate_kappa_rpkt_cont(pkt_ptr, &globals::kappa_rpkt_cont[tid]);
 
   return vflag;
 }
