@@ -57,6 +57,7 @@ jobs:
         make TESTMODE=ON sn3d exspec
         cp sn3d tests/nebularonezone/
         cp exspec tests/nebularonezone/
+        gunzip -v tests/nebularonezone/*.gz
 
     # we can cache this, but then we don't test the code that generates ratecoeff.dat
     # - name: Cache ratecoeff.dat
@@ -65,22 +66,37 @@ jobs:
     #     path: "tests/nebularonezone/ratecoeff.dat"
     #     key: "tests/nebularonezone/ratecoeff.dat"
 
-    - name: "Run test nebularonezone test"
+    - name: "Run nebularonezone test"
       working-directory: tests/nebularonezone/
       run: |
-        gunzip -v *.gz
         cp input-newrun.txt input.txt
         touch output_0-0.txt
         time ./sn3d
+
+    - name: "cat output log"
+      working-directory: tests/nebularonezone/
+      run: |
         cat output_0-0.txt
-        cat estimators_0000.out
+
+    - name: "Run exspec"
+      working-directory: tests/nebularonezone/
+      run: |
         time ./exspec
-        cat exspec.txt
         mkdir output
         cp output_0-0.txt exspec.txt *.out output/
 
+    - name: "cat exspec log"
+      working-directory: tests/nebularonezone/output/
+      run: |
+        cat exspec.txt
+
+    - name: Upload estimators file
+      uses: actions/upload-artifact@v2
+      with:
+        path: tests/nebularonezone/output/estimators_0000.out
+
     - name: Upload output files
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2
       with:
         name: test-nebularonezone-output
         path: tests/nebularonezone/output
