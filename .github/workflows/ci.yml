@@ -31,7 +31,6 @@ jobs:
         g++ --version
         which clang++
         clang++ --version
-        export CC=clang
         export CXX=clang++
 
     - name: "compile with gcc"
@@ -39,9 +38,6 @@ jobs:
 
     - name: "compile with clang"
       run: make CXX=clang++ sn3d exspec
-
-    - name: "compile"
-      run: make
 
     # - name: "compile sn3d with OpenMP"
     #   run: make sn3dopenmp
@@ -54,7 +50,7 @@ jobs:
     - name: "Setup test nebularonezone"
       run: |
         cp tests/nebularonezone/artisoptions.h .
-        make TESTMODE=ON sn3d exspec
+        make TESTMODE=ON CXX=clang++ sn3d exspec
         cp sn3d tests/nebularonezone/
         cp exspec tests/nebularonezone/
         gunzip -v tests/nebularonezone/*.gz
@@ -73,10 +69,15 @@ jobs:
         touch output_0-0.txt
         time ./sn3d
 
+    - name: "cat estimators"
+      working-directory: tests/nebularonezone/
+      run: |
+        cat estimators*.txt
+
     - name: "cat output log"
       working-directory: tests/nebularonezone/
       run: |
-        cat output_0-0.txt
+        cat output_*.txt
 
     - name: "Run exspec"
       working-directory: tests/nebularonezone/
@@ -89,11 +90,6 @@ jobs:
       working-directory: tests/nebularonezone/output/
       run: |
         cat exspec.txt
-
-    - name: Upload estimators file
-      uses: actions/upload-artifact@v2
-      with:
-        path: tests/nebularonezone/output/estimators_0000.out
 
     - name: Upload output files
       uses: actions/upload-artifact@v2
