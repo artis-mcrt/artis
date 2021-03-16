@@ -66,8 +66,8 @@ jobs:
     #     key: "tests/nebularonezone/ratecoeff.dat"
 
     - name: "Run test nebularonezone test"
+      working-directory: tests/nebularonezone/
       run: |
-        cd tests/nebularonezone/
         gunzip -v *.gz
         cp input-newrun.txt input.txt
         touch output_0-0.txt
@@ -79,8 +79,14 @@ jobs:
         mkdir output
         cp output_0-0.txt exspec.txt *.out output/
 
-    # - name: Upload output files
-    #   uses: actions/upload-artifact@v1
-    #   with:
-    #     name: test-nebularonezone-output
-    #     path: tests/nebularonezone/output
+    - name: Checksum output files
+      working-directory: tests/nebularonezone/
+      run: |
+        md5sum *.out
+        # md5sum -c <(echo b8f6bc739894a563cb55ee83a9a81f8c test_output/adata.txt)
+
+    - name: Upload output files
+      uses: actions/upload-artifact@v1
+      with:
+        name: test-nebularonezone-output
+        path: tests/nebularonezone/output
