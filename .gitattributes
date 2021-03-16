@@ -2,8 +2,8 @@
 * text=auto
 
 # these files require LF (Unix-style) line-endings
-*.cc text eol=lf
-*.h text eol=lf
+*.cc text eol=lf linguist-language=C++
+*.h text eol=lf linguist-language=C++
 *.sh text eol=lf
 *.txt text eol=lf
 Makefile text eol=lf
