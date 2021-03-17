@@ -72,7 +72,7 @@ jobs:
     - name: "cat estimators"
       working-directory: tests/nebularonezone/
       run: |
-        cat estimators*.txt
+        cat estimators*.out
 
     - name: "cat output log"
       working-directory: tests/nebularonezone/
