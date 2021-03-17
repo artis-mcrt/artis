@@ -228,7 +228,7 @@ float get_TR(int modelgridindex);
 float get_TJ(int modelgridindex);
 float get_W(int modelgridindex);
 #ifdef USE_ENERGYINPUTFILE
-  float get_modelcell_energydensity_init(int modelgridindex);
+  double get_modelcell_energydensity_init(int modelgridindex);
 #endif
 void set_rhoinit(int modelgridindex, float x);
 void set_rho(int modelgridindex, float x);
@@ -252,7 +252,7 @@ void set_TR(int modelgridindex, float x);
 void set_TJ(int modelgridindex, float x);
 void set_W(int modelgridindex, float x);
 #ifdef USE_ENERGYINPUTFILE
-  void set_modelcell_energydensity_init(int modelgridindex, float x);
+  void set_modelcell_energydensity_init(int modelgridindex, double x);
 #endif
 
 

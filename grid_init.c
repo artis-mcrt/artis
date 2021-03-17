@@ -1971,7 +1971,7 @@ float get_W(int modelgridindex)
 }
 
 #ifdef USE_ENERGYINPUTFILE
-  float get_modelcell_energydensity_init(int modelgridindex)
+  double get_modelcell_energydensity_init(int modelgridindex)
   {
     return modelgrid[modelgridindex].modelcell_energydensity_init;
   }
@@ -2141,7 +2141,7 @@ void set_W(int modelgridindex, float x)
 }
 
 #ifdef USE_ENERGYINPUTFILE
-  void set_modelcell_energydensity_init(int modelgridindex, float x)
+  void set_modelcell_energydensity_init(int modelgridindex, double x)
   {
     modelgrid[modelgridindex].modelcell_energydensity_init = x;
   }

@@ -267,7 +267,7 @@ typedef struct
   float TR;
   float TJ;
   float W;
-  float modelcell_energydensity_init;
+  double modelcell_energydensity_init;
   float grey_depth;                      /// Grey optical depth to surface of the modelgridcell
                                          /// This is only stored to print it outside the OpenMP loop in update_grid to the estimatorsfile
                                          /// so there is no need to communicate it via MPI so far!
