@@ -53,6 +53,7 @@ jobs:
         make TESTMODE=ON CXX=g++ sn3d exspec
         cp sn3d tests/nebularonezone/
         cp exspec tests/nebularonezone/
+        cp data/*.txt tests/nebularonezone/
         gunzip -v tests/nebularonezone/*.gz
 
     # we can cache this, but then we don't test the code that generates ratecoeff.dat
