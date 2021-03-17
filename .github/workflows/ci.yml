@@ -50,7 +50,7 @@ jobs:
     - name: "Setup test nebularonezone"
       run: |
         cp tests/nebularonezone/artisoptions.h .
-        make TESTMODE=ON CXX=clang++ sn3d exspec
+        make TESTMODE=ON CXX=g++ sn3d exspec
         cp sn3d tests/nebularonezone/
         cp exspec tests/nebularonezone/
         gunzip -v tests/nebularonezone/*.gz
