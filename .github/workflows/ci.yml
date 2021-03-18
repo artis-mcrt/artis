@@ -12,24 +12,25 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2.3.4
 
     - name: "install dependencies"
       run: |
-        sudo apt-get update
-        sudo apt-get install libgsl-dev clang
+        # sudo apt-get update
+        sudo apt-get install libgsl-dev
+        # sudo apt-get install clang
         cp artisoptions_example.h artisoptions.h
 
     - name: "diagnostic info"
       run: |
         git status
-        which c++
-        c++ --version
+        which g++
+        g++ --version
         which clang++
         clang++ --version
-        export CC=clang
         export CXX=clang++
 
     - name: "compile with gcc"
@@ -49,9 +50,11 @@ jobs:
     - name: "Setup test nebularonezone"
       run: |
         cp tests/nebularonezone/artisoptions.h .
-        make TESTMODE=ON sn3d exspec
+        make TESTMODE=ON CXX=g++ sn3d exspec
         cp sn3d tests/nebularonezone/
         cp exspec tests/nebularonezone/
+        cp data/*.txt tests/nebularonezone/
+        gunzip -v tests/nebularonezone/*.gz
 
     # we can cache this, but then we don't test the code that generates ratecoeff.dat
     # - name: Cache ratecoeff.dat
@@ -60,22 +63,48 @@ jobs:
     #     path: "tests/nebularonezone/ratecoeff.dat"
     #     key: "tests/nebularonezone/ratecoeff.dat"
 
-    - name: "Run test nebularonezone test"
+    - name: "Run nebularonezone test"
+      working-directory: tests/nebularonezone/
       run: |
-        cd tests/nebularonezone/
-        gunzip -v *.gz
         cp input-newrun.txt input.txt
         touch output_0-0.txt
-        ./sn3d
-        cat output_0-0.txt
-        cat estimators_0000.out
-        ./exspec
-        cat exspec.txt
+        time ./sn3d
+
+    - name: "cat estimators"
+      working-directory: tests/nebularonezone/
+      run: |
+        cat estimators*.out
+
+    - name: "cat output log"
+      working-directory: tests/nebularonezone/
+      run: |
+        cat output_*.txt
+
+    - name: "Run exspec"
+      working-directory: tests/nebularonezone/
+      run: |
+        time ./exspec
         mkdir output
         cp output_0-0.txt exspec.txt *.out output/
 
-    # - name: Upload output files
-    #   uses: actions/upload-artifact@v1
-    #   with:
-    #     name: test-nebularonezone-output
-    #     path: tests/nebularonezone/output
+    - name: "cat exspec log"
+      working-directory: tests/nebularonezone/output/
+      run: |
+        cat exspec.txt
+
+    - name: Upload output files
+      uses: actions/upload-artifact@v2
+      with:
+        name: test-nebularonezone-output
+        path: tests/nebularonezone/output
+
+    - name: Checksum output files
+      working-directory: tests/nebularonezone/output
+      run: |
+        md5sum *.out
+        md5sum -c <(echo e4963320fa6da60fc14aba0d6aa7c52d estimators_0000.out)
+        md5sum -c <(echo 43dc783d438b33bcd350cfb5967364a8 light_curve.out)
+        md5sum -c <(echo f8a7677f193e17341a62a08697f70711 spec.out)
+        md5sum -c <(echo 8e7163982f1aa938dc1505478b8c60d1 timesteps.out)
+        md5sum -c <(echo 73da2aa7a706efdb62b5f1dc610bbf14 deposition.out)
+

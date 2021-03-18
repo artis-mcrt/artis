@@ -1598,7 +1598,7 @@ static void read_atomicdata(void)
   ///set-up/gather information for nlte stuff
 
   globals::total_nlte_levels = 0;
-  globals::n_super_levels = 0;
+  int n_super_levels = 0;
 
   if (NLTE_POPS_ON)
   {
@@ -1626,7 +1626,7 @@ static void read_atomicdata(void)
           // slot to store data for the "superlevel", which is a representation of all the other levels that
           // are not treated in detail.
           globals::total_nlte_levels++;
-          globals::n_super_levels++;
+          n_super_levels++;
         }
 
         globals::elements[element].ions[ion].nlevels_nlte = fullnlteexcitedlevelcount;
@@ -1642,7 +1642,7 @@ static void read_atomicdata(void)
     }
   }
 
-  printout("[input.c] Total NLTE levels: %d, of which %d are superlevels\n", globals::total_nlte_levels, globals::n_super_levels);
+  printout("[input.c] Total NLTE levels: %d, of which %d are superlevels\n", globals::total_nlte_levels, n_super_levels);
 }
 
 
@@ -1651,16 +1651,6 @@ void input(int rank)
 {
   globals::homogeneous_abundances = false;
   globals::t_model = 0.0;
-
-  /// Select grid type
-  #ifdef GRID_TYPE
-  globals::grid_type = GRID_TYPE;
-  #else
-  globals::grid_type = GRID_UNIFORM;
-  #endif
-
-  // this gets overwritten by the input file
-  // model_type = RHO_UNIFORM;
 
   globals::maxion = MIONS;
 
@@ -1722,17 +1712,6 @@ void input(int rank)
     // If using energy input files to get cell energies instead of radioactive decays
     energy_input_init();
   }
-
-  printout("npts_model: %d\n", get_npts_model());
-  globals::rmax = globals::vmax * globals::tmin;
-  printout("vmax %g\n", globals::vmax);
-  printout("tmin %g\n", globals::tmin);
-  printout("rmax %g\n", globals::rmax);
-
-  globals::coordmax[0] = globals::coordmax[1] = globals::coordmax[2] = globals::rmax;
-
-  show_totmassradionuclides();
-
 
   /// Read in data for gamma ray lines and make a list of them in energy order.
   init_gamma_linelist();
