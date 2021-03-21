@@ -59,7 +59,7 @@ return (level <= 80);
 
 // Polarisation for real packets
 // #define DIPOLE
-#define POL_ON
+// #define POL_ON
 
 // Polarisation for virtual packets
 // #define VPKT_ON

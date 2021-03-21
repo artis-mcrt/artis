@@ -712,4 +712,5 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
   pkt_ptr->originated_from_positron = from_positron;
 }
 
+
 }

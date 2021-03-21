@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # this script will move the ARTIS output files from the current run into a subfolder
 # given by the command line argument

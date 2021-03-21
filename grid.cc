@@ -1,5 +1,6 @@
 #include "sn3d.h"
 #include "atomic.h"
+#include "energy_input.h"
 #include "grid.h"
 #include "nltepop.h"
 #include "nonthermal.h"
@@ -7,7 +8,6 @@
 #include "radfield.h"
 #include "rpkt.h"
 #include "vectors.h"
-#include "energy_input.h"
 #include <cstring>
 
 
