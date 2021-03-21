@@ -144,7 +144,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   printout("packet e0 (t_0 to t_inf) %g erg\n", e0_tinf);
 
   // Need to get a normalisation factor.
-  float norm = 0.0;
+  double norm = 0.0;
   for (int m = 0; m < globals::ngrid; m++)
   {
     cont[m] = norm;
