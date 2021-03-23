@@ -46,6 +46,26 @@ jobs:
     #     sudo apt-get install libopenmpi-dev
     #     make sn3dmpi
 
+    # we can cache this, but then we don't test the code that generates ratecoeff.dat
+    # - name: Cache ratecoeff.dat
+    #   uses: actions/cache@v2.1.4
+    #   with:
+    #     path: "tests/nebularonezone/ratecoeff.dat"
+    #     key: "tests/nebularonezone/ratecoeff.dat"
+
+    - name: Cache atomic data
+      uses: actions/cache@v2.1.4
+      id: cache-atomicdata
+      with:
+          path: "tests/atomicdata_feconi.tar.xz"
+          key: "tests/atomicdata_feconi.tar.xz"
+
+    - name: Download atomic data
+      if: steps.cache-atomicdata.outputs.cache-hit != 'true'
+      working-directory: tests/
+      run: |
+          curl -O https://psweb.mp.qub.ac.uk/artis/tests/atomicdata_feconi.tar.xz
+
     - name: "Setup test nebularonezone"
       run: |
         cp tests/nebularonezone/artisoptions.h .
@@ -53,14 +73,9 @@ jobs:
         cp sn3d tests/nebularonezone/
         cp exspec tests/nebularonezone/
         cp data/*.txt tests/nebularonezone/
-        gunzip -v tests/nebularonezone/*.gz
 
-    # we can cache this, but then we don't test the code that generates ratecoeff.dat
-    # - name: Cache ratecoeff.dat
-    #   uses: actions/cache@v2.1.4
-    #   with:
-    #     path: "tests/nebularonezone/ratecoeff.dat"
-    #     key: "tests/nebularonezone/ratecoeff.dat"
+        # gunzip -v tests/nebularonezone/*.gz
+        tar -xvf tests/atomicdata_feconi.tar.xz --directory tests/nebularonezone/
 
     - name: "Run nebularonezone test"
       working-directory: tests/nebularonezone/
