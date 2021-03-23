@@ -1,9 +1,0 @@
-
-===========> Co IV input:
-Read 0 transitions
-
-===========> Co IV output:
-Adding in 0 extra transitions with only upsilon values
-Writing to 'adata.txt'
-Writing to 'transitiondata.txt'
-Output 0 transitions of which 0 are forbidden and 0 have collision strengths
