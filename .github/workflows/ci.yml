@@ -58,13 +58,13 @@ jobs:
       id: cache-atomicdata
       with:
           path: "tests/atomicdata_feconi.tar.xz"
-          key: "tests/atomicdata_feconi.tar.xz"
+          key: "https://psweb.mp.qub.ac.uk/artis/artis/atomicdata_feconi.tar.xz"
 
     - name: Download atomic data
       if: steps.cache-atomicdata.outputs.cache-hit != 'true'
       working-directory: tests/
       run: |
-          curl -O https://psweb.mp.qub.ac.uk/artis/tests/atomicdata_feconi.tar.xz
+          curl -O https://psweb.mp.qub.ac.uk/artis/artis/atomicdata_feconi.tar.xz
 
     - name: "Setup test nebularonezone"
       run: |
