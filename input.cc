@@ -1706,9 +1706,6 @@ void input(int rank)
 
   read_ejecta_model(get_model_type());
 
-  /// Read in data for gamma ray lines and make a list of them in energy order.
-  init_gamma_linelist();
-
   /// Now that the list exists use it to find values for spectral synthesis
   /// stuff.
   const int lindex_max = get_nul(globals::nusyn_max);

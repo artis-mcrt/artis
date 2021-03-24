@@ -1,5 +1,6 @@
 #include "sn3d.h"
 #include "atomic.h"
+#include "gamma.h"
 #include "grid.h"
 #include "decay.h"
 
@@ -59,6 +60,8 @@ int get_nuc_index(int z, int a)
 // get the nuclide array index from the atomic number and mass number
 {
   assert_always(get_num_nuclides() > 0);
+  assert_always(nuclides != NULL);
+
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
     if (nuclides[nucindex].z == z and nuclides[nucindex].a == a)
@@ -69,6 +72,24 @@ int get_nuc_index(int z, int a)
   printout("Could not find nuclide Z=%d A=%d\n", z, a);
   assert_always(false); // nuclide not found
   return -1;
+}
+
+
+__host__ __device__
+static bool nuc_exists(int z, int a)
+// check if nuclide exists in the simulation
+{
+  assert_always(get_num_nuclides() > 0);
+  assert_always(nuclides != NULL);
+
+  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
+  {
+    if (nuclides[nucindex].z == z and nuclides[nucindex].a == a)
+    {
+      return true;
+    }
+  }
+  return false;
 }
 
 
@@ -118,6 +139,9 @@ void init_nuclides(void)
   nuclides[8].meanlife = 0.0211395 * DAY;
 
   printout("init_nuclides() done. num_nuclides %d\n", get_num_nuclides());
+
+  /// Read in data for gamma ray lines and make a list of them in energy order.
+  init_gamma_linelist();
 }
 
 
@@ -392,26 +416,6 @@ static enum packet_type get_decay_pellet_type(enum decaypathways decaypath, bool
 
 
 __host__ __device__
-static int find_nucparent(const int nuclide)
-// get the parent nuclide, or if it doesn't have one then the value -1 is used
-{
-  for (int d = 0; d < DECAYPATH_COUNT; d++)
-  {
-    enum decaypathways decaypath = (enum decaypathways)(d);
-    if (decaypath_is_chain(decaypath))
-    {
-      const int nuc2 = decaydaughter(decaypath);
-      if (nuc2 == nuclide)
-      {
-        return decayparent(decaypath);
-      }
-    }
-  }
-  return -1;
-}
-
-
-__host__ __device__
 static void calculate_double_decay_chain(
   const double initabund1, const double meanlife1,
   const double initabund2, const double meanlife2,
@@ -505,14 +509,15 @@ static double get_modelradioabund_at_time(
   assert_always(time >= 0.);
 
   const int nucindex = get_nuc_index(z, a);
-  const int nucparent = find_nucparent(nucindex);
-  if (nucparent < 0) // no parent exists, so use simple decay formula
+  if (!nuc_exists(z + 1, a)) // no parent exists, so use simple decay formula
   {
     return get_modelinitradioabund_decayed(modelgridindex, z, a, time);
   }
   else
   {
     // nuclide is part of a double-decay chain, e.g., Co56 in the chain: Ni56 -> Co56 -> Fe56
+    const int nucparent = get_nuc_index(z + 1, a);
+    assert_always(!nuc_exists(z + 2, a)); // only three-nuclide chains work for now
     double abund1 = 0.;
     double abund2 = 0.;
     double abund3 = 0.;
