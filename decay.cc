@@ -213,109 +213,6 @@ double nucmass(int z, int a)
 
 
 __host__ __device__
-static int decayparent(enum decaypathways decaypath)
-{
-  switch (decaypath)
-  {
-    case DECAY_NI56:
-      return NUCLIDE_NI56;
-
-    case DECAY_NI56_CO56:
-      return NUCLIDE_NI56;
-
-    case DECAY_FE52:
-      return NUCLIDE_FE52;
-
-    case DECAY_FE52_MN52:
-      return NUCLIDE_FE52;
-
-    case DECAY_CR48:
-      return NUCLIDE_CR48;
-
-    case DECAY_CR48_V48:
-      return NUCLIDE_CR48;
-
-    case DECAY_CO56:
-      return NUCLIDE_CO56;
-
-    case DECAY_NI57:
-      return NUCLIDE_NI57;
-
-    case DECAY_NI57_CO57:
-      return NUCLIDE_NI57;
-
-    case DECAY_CO57:
-      return NUCLIDE_CO57;
-
-    case DECAYPATH_COUNT:
-      ;
-  }
-  assert_always(false);
-  return -1;
-}
-
-
-__host__ __device__
-static int decaydaughter(enum decaypathways decaypath)
-{
-  switch (decaypath)
-  {
-    case DECAY_NI56:
-    case DECAY_FE52:
-    case DECAY_CR48:
-    case DECAY_CO56:
-    case DECAY_NI57:
-    case DECAY_CO57:
-    case DECAYPATH_COUNT:
-      // value for no second radioactive nuclide (decay only from initial abund and not from radioactive parent)
-      return -1;
-
-    case DECAY_NI56_CO56:
-      return NUCLIDE_CO56;
-
-    case DECAY_FE52_MN52:
-      return NUCLIDE_MN52;
-
-    case DECAY_CR48_V48:
-      return NUCLIDE_V48;
-
-    case DECAY_NI57_CO57:
-      return NUCLIDE_CO57;
-  }
-  assert_always(false);
-  return -1;
-}
-
-
-__host__ __device__
-static bool decaypath_is_chain(enum decaypathways decaypath)
-// return true if the second nuclide in the decay path is also radioactive
-{
-  switch (decaypath)
-  {
-    case DECAY_NI56:
-    case DECAY_FE52:
-    case DECAY_CR48:
-    case DECAY_CO56:
-    case DECAY_NI57:
-    case DECAY_CO57:
-      return false;
-
-    case DECAY_NI56_CO56:
-    case DECAY_FE52_MN52:
-    case DECAY_CR48_V48:
-    case DECAY_NI57_CO57:
-      return true;
-
-    case DECAYPATH_COUNT:
-      ;
-  }
-  assert_always(false);
-  return false;
-}
-
-
-__host__ __device__
 static double sample_decaytime(bool from_parent_abund, int z, int a, const double tdecaymin, const double tdecaymax)
 {
   double tdecay = -1;
@@ -491,7 +388,7 @@ static double get_modelradioabund_at_time(
   {
     return get_modelinitradioabund(modelgridindex, z, a);
   }
-  else if (z < 1) // FAKE_GAM_LINE_ID
+  else if (z < 1) // skip FAKE_GAM_LINE_ID
   {
     return 0.;
   }
@@ -527,6 +424,12 @@ static double get_endecay_per_ejectamass_at_time(
     // that were produced from decays of Ni56 in the initial abundance.
     // Decays from Co56 due to the initial abundance of Co56 are not counted here,
     // nor is the energy from decays of Ni56
+
+    if (!nuc_exists(z + 1, a)) // parent is not included (e.g. Ni56 has no parent)
+    {
+      return 0.;
+    }
+    assert(!nuc_exists(z + 2, a)); // no more than three-nuclide chains for now
 
     const double initabund1 = get_modelinitradioabund(mgi, z + 1, a);
     const double initabund2 = 0.; // don't count initial abundance
@@ -581,7 +484,10 @@ static double get_decay_power_per_ejectamass(
   {
     // double decay, e.g. DECAY_NI56_CO56, the decay of Co56 nuclei that were produced from Ni56 decays
     // decays from the second nuclide (e.g. Co56) due to the initial abundance are not counted here
-    assert(nuc_exists(z + 1, a));
+    if (!nuc_exists(z + 1, a))
+    {
+      return 0.;
+    }
     assert(!nuc_exists(z + 2, a)); // no more than three-nuclide chains for now
 
     const double initabund1 = get_modelinitradioabund(modelgridindex, z + 1, a);
@@ -607,14 +513,18 @@ __host__ __device__
 double get_modelcell_decay_energy_density(const int mgi)
 {
   double modelcell_decay_energy_density = 0.;
-  for (int i = 0; i < DECAYPATH_COUNT; i++)
+  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
-    const bool from_parent_abund = decay::decaypath_is_chain((enum decaypathways) i);
-    const int nucindex = from_parent_abund ? decay::decaydaughter((enum decaypathways) i) : decay::decayparent((enum decaypathways) i);
     const int z = decay::get_nuc_z(nucindex);
-    const int a = decay::get_nuc_a(nucindex);
-    modelcell_decay_energy_density += (
-      get_rhoinit(mgi) * decay::get_simtime_endecay_per_ejectamass(mgi, from_parent_abund, z, a) * MH);
+    if (z > 0) // skip FAKE_GAM_LINE_ID
+    {
+      const int a = decay::get_nuc_a(nucindex);
+      for (int from_parent_abund = 0; from_parent_abund < 2; from_parent_abund++)
+      {
+        modelcell_decay_energy_density += (
+          get_rhoinit(mgi) * get_simtime_endecay_per_ejectamass(mgi, from_parent_abund, z, a) * MH);
+      }
+    }
   }
   return modelcell_decay_energy_density;
 }
@@ -732,29 +642,40 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 
 void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
 {
-  double cumulative_decay_energy_per_mass[DECAYPATH_COUNT];
-  for (int i = 0; i < DECAYPATH_COUNT; i++)
+  double cumulative_decay_energy_per_mass[2 * get_num_nuclides()];
+  for (int i = 0; i < 2 * get_num_nuclides(); i++)
   {
-    const bool from_parent_abund = decaypath_is_chain((enum decaypathways) i);
-    const int nucindex = from_parent_abund ? decaydaughter((enum decaypathways) i) : decayparent((enum decaypathways) i);
-    const int z = get_nuc_z(nucindex);
-    const int a = get_nuc_a(nucindex);
+    // visit each radioactive nuclide twice - once for decays from the initial abundance,
+    // and again for decays from the abundance coming from decays of a parent nucleus
+    const int nucindex = i / 2;
+    const bool from_parent_abund = i % 2;
+    const int z = decay::get_nuc_z(nucindex);
+    const int a = decay::get_nuc_a(nucindex);
+    double simtime_endecay_thispath = 0.;
+
+    if (z > 0) // skip for the FAKE_GAM_LINE_ID
+    {
+      simtime_endecay_thispath = decay::get_simtime_endecay_per_ejectamass(mgi, from_parent_abund, z, a);
+    }
 
     const double lower_sum = ((i > 0) ? cumulative_decay_energy_per_mass[i - 1] : 0);
-    cumulative_decay_energy_per_mass[i] = lower_sum + decay::get_simtime_endecay_per_ejectamass(mgi, from_parent_abund, z, a);
+    cumulative_decay_energy_per_mass[i] = lower_sum + simtime_endecay_thispath;
   }
 
-  const double zrand_chain = gsl_rng_uniform(rng) * cumulative_decay_energy_per_mass[DECAYPATH_COUNT - 1];
-  enum decaypathways decaypath = DECAYPATH_COUNT;
-  for (int i = 0; i < DECAYPATH_COUNT; i++)
+  const double zrand_chain = gsl_rng_uniform(rng) * cumulative_decay_energy_per_mass[2 * get_num_nuclides() - 1];
+
+  int nucindex = -1;
+  bool from_parent_abund;
+  for (int i = 0; i < 2 * get_num_nuclides(); i++)
   {
     if (zrand_chain <= cumulative_decay_energy_per_mass[i])
     {
-      decaypath = (enum decaypathways)(i);
+      nucindex = i / 2;
+      from_parent_abund = i % 2;
       break;
     }
   }
-  assert_always(decaypath != DECAYPATH_COUNT); // Failed to select pellet
+  assert_always(nucindex >= 0); // Failed to select pellet
 
   #ifdef NO_INITIAL_PACKETS
   const double tdecaymin = globals::tmin;
@@ -762,10 +683,6 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
   const double tdecaymin = 0.; // allow decays before the first timestep
   #endif
 
-  const bool from_parent_abund = decaypath_is_chain(decaypath);
-  const int nucindex = from_parent_abund ? decaydaughter(decaypath) : decayparent(decaypath);
-  // nucindex points to the last radioactive nuclide in the chain,
-  // so points to Co56 for both Co56 -> Fe56 path, and the Ni56 -> Co56 -> Fe56 path
   const int z = get_nuc_z(nucindex);
   const int a = get_nuc_a(nucindex);
   if (UNIFORM_PELLET_ENERGIES)

@@ -693,7 +693,7 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
 
   deposition_rate_density[modelgridindex] = gamma_deposition + positron_deposition;
 
-  printout("nt_deposition_rate(mgi %d timestep %d): gammadep %9.2f, posdep %9.2f eV/s/cm^3\n", modelgridindex, timestep, gamma_deposition / EV, positron_deposition / EV);
+  printout("nt_deposition_rates for mgi %d timestep %d: gamma(montecarlo ts%d) %9.2f, positron(analytic) %9.2f eV/s/cm^3\n", modelgridindex, timestep, timestep - 1, gamma_deposition / EV, positron_deposition / EV);
 
   deposition_rate_density_timestep[modelgridindex] = timestep;
 }
