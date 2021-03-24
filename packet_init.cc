@@ -59,7 +59,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   printout("UNIFORM_PELLET_ENERGIES is %s\n", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
 
   const int pktnumberoffset = middle_iteration * globals::npkts;
-  float cont[MGRID + 1];
+  double cont[MGRID + 1];
 
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
@@ -87,7 +87,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   printout("packet e0 (t_0 to t_inf) %g erg\n", e0_tinf);
 
   // Need to get a normalisation factor.
-  float norm = 0.0;
+  double norm = 0.0;
   for (int m = 0; m < globals::ngrid; m++)
   {
     cont[m] = norm;
