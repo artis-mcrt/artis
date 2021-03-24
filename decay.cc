@@ -56,15 +56,18 @@ int get_nuc_a(int nucindex)
 
 
 __host__ __device__
-int get_nuc_index(int atomic_number, int mass_number)
+int get_nuc_index(int z, int a)
+// get the nuclide array index from the atomic number and mass number
 {
+  assert_always(get_num_nuclides() > 0);
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
-    if (nuclides[nucindex].z == atomic_number and nuclides[nucindex].a == mass_number)
+    if (nuclides[nucindex].z == z and nuclides[nucindex].a == a)
     {
       return nucindex;
     }
   }
+  printout("Could not find nuclide Z=%d A=%d\n", z, a);
   assert_always(false); // nuclide not found
   return -1;
 }
@@ -106,6 +109,8 @@ void init_nuclides(void)
 
   nuclides[8].z = 25; // Mn
   nuclides[8].a = 52;
+
+  printout("init_nuclides() done. num_nuclides %d\n", get_num_nuclides());
 }
 
 
@@ -488,9 +493,9 @@ static void calculate_doubledecay_modelabund(
   double *abund1, double *abund2, double *abund3)
 {
   const int z1 = get_nuc_z(nuclide1);
-  const int a = get_nuc_z(nuclide1);
+  const int a = get_nuc_a(nuclide1);
   const int z2 = get_nuc_z(nuclide2);
-  const int a2 = get_nuc_z(nuclide2);
+  const int a2 = get_nuc_a(nuclide2);
   assert_always(a2 == a); // mass number is conserved
   assert_always(z2 == (z1 - 1)); // beta decay p -> n
 
@@ -572,7 +577,7 @@ static double get_endecay_per_ejectamass_at_time(const int mgi, enum decaypathwa
     double abund1;
     double abund2;
     double abund3;
-    calculate_double_decay_chain(initabund1, meanlife(z1, z1), initabund2, meanlife(z2, a2), time, &abund1, &abund2, &abund3);
+    calculate_double_decay_chain(initabund1, meanlife(z1, a1), initabund2, meanlife(z2, a2), time, &abund1, &abund2, &abund3);
     return (abund1 / nucmass(z1, a1) + abund2 / nucmass(z2, a2)) * nucdecayenergy(z2, a2);
   }
   else

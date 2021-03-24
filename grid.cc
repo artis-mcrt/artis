@@ -396,6 +396,7 @@ float get_modelinitradioabund(const int modelgridindex, const int z, const int a
   const int nucindex = decay::get_nuc_index(z, a);
   assert_always(decay::get_nuc_z(nucindex) >= 0); // check not FAKE_GAM_LINE_ID nuclide
 
+  assert_always(globals::modelgrid[modelgridindex].initradioabund != NULL);
   return globals::modelgrid[modelgridindex].initradioabund[nucindex];
 }
 
@@ -407,8 +408,9 @@ void set_modelinitradioabund(const int modelgridindex, const int z, const int a,
   assert_always(abund <= 1.);
 
   const int nucindex = decay::get_nuc_index(z, a);
-  assert_always(decay::get_nuc_z(nucindex) >= 0); // check not FAKE_GAM_LINE_ID nuclide
+  assert_always(decay::get_nuc_z(nucindex) >= 0 || abund == 0.); // check not FAKE_GAM_LINE_ID nuclide
 
+  assert_always(globals::modelgrid[modelgridindex].initradioabund != NULL);
   globals::modelgrid[modelgridindex].initradioabund[nucindex] = abund;
 }
 
@@ -666,9 +668,6 @@ static void calculate_kappagrey(void)
 static void allocate_compositiondata(const int modelgridindex)
 /// Initialise composition dependent cell data for the given cell
 {
-  globals::modelgrid[modelgridindex].initradioabund = (float *) calloc(decay::get_num_nuclides(), sizeof(float));
-  assert_always(globals::modelgrid[modelgridindex].initradioabund != NULL);
-
   globals::modelgrid[modelgridindex].elements_uppermost_ion = (int *) malloc(get_nelements() * sizeof(int));
   assert_always(globals::modelgrid[modelgridindex].elements_uppermost_ion != NULL);
 
@@ -753,6 +752,8 @@ static void allocate_nonemptymodelcells(void)
   set_rho(MMODELGRID, 0.);
   set_nne(MMODELGRID, 0.);
   set_ffegrp(MMODELGRID, 0.);
+  globals::modelgrid[MMODELGRID].initradioabund = (float *) calloc(decay::get_num_nuclides(), sizeof(float));
+  assert_always(globals::modelgrid[MMODELGRID].initradioabund != NULL);
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
   {
     const int z = decay::get_nuc_z(nucindex);
@@ -1022,6 +1023,9 @@ static void read_2d3d_modelradioabundanceline(FILE * model_input, const int mgi,
 
     if (keep)
     {
+      globals::modelgrid[mgi].initradioabund = (float *) calloc(decay::get_num_nuclides(), sizeof(float));
+      assert_always(globals::modelgrid[mgi].initradioabund != NULL);
+
       set_modelinitradioabund(mgi, 28, 56, f56ni_model);
       set_modelinitradioabund(mgi, 27, 56, f56co_model);
       set_modelinitradioabund(mgi, 28, 57, f57ni_model);
@@ -1118,6 +1122,9 @@ static void read_1d_model(void)
     //          cellnumin, vout_kmps, log_rho, ffegrp_model[n], f56ni_model[n],
     //          f56co_model[n], f52fe_model[n], f48cr_model[n]);
     // printout("   %lg %lg\n", f57ni_model[n], f57co_model[n]);
+    globals::modelgrid[mgi].initradioabund = (float *) calloc(decay::get_num_nuclides(), sizeof(float));
+    assert_always(globals::modelgrid[mgi].initradioabund != NULL);
+
     set_modelinitradioabund(mgi, 28, 56, f56ni_model);
     set_modelinitradioabund(mgi, 27, 56, f56co_model);
     set_modelinitradioabund(mgi, 28, 57, f57ni_model);
@@ -1372,7 +1379,7 @@ static void read_3d_model(void)
 }
 
 
-static void show_totmassradionuclides(void)
+static void calc_totmassradionuclides(void)
 {
   mtot = 0.;
   mfeg = 0.;
@@ -1422,7 +1429,10 @@ static void show_totmassradionuclides(void)
     {
       const int z = decay::get_nuc_z(nucindex);
       const int a = decay::get_nuc_a(nucindex);
-      totmassradionuclide[nucindex] += mass_in_shell * get_modelinitradioabund(mgi, z, a);
+      if (z > 0)  // skips FAKE_GAM_LINE_ID
+      {
+        totmassradionuclide[nucindex] += mass_in_shell * get_modelinitradioabund(mgi, z, a);
+      }
     }
 
     mfeg += mass_in_shell * get_ffegrp(mgi);
@@ -1486,7 +1496,7 @@ void read_ejecta_model(enum model_types model_type)
 
   globals::coordmax[0] = globals::coordmax[1] = globals::coordmax[2] = globals::rmax;
 
-  show_totmassradionuclides();
+  calc_totmassradionuclides();
 }
 
 
@@ -1935,8 +1945,11 @@ void grid_init(int my_rank)
     abort();
   }
 
+  printout("allocate_nonemptymodelcells\n");
   allocate_nonemptymodelcells();
+  printout("calculate_kappagrey\n");
   calculate_kappagrey();
+  printout("abundances_read\n");
   abundances_read();
 
   radfield::init(my_rank);
