@@ -60,7 +60,7 @@ int get_nuc_index(int atomic_number, int mass_number)
 {
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
-    if (nuclides[nucindex].z == atomic_number and nuclides[nucindex].z == mass_number)
+    if (nuclides[nucindex].z == atomic_number and nuclides[nucindex].a == mass_number)
     {
       return nucindex;
     }
