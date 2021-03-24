@@ -103,7 +103,7 @@ jobs:
     - name: "Run exspec"
       working-directory: tests/nebularonezone/
       run: |
-        cp nebularonezone/input.txt nebularonezone_reference/
+        cp input.txt ../nebularonezone_reference/
         time ./exspec
         mkdir output
         cp output_0-0.txt exspec.txt *.out output/
