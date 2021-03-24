@@ -10,7 +10,6 @@ namespace decay
 const int NUCLIDE_NI57 = 0;
 const int NUCLIDE_NI56 = 1;
 const int NUCLIDE_CO56 = 2;
-const int FAKE_GAM_LINE_ID = 3;
 const int NUCLIDE_CR48 = 4;
 const int NUCLIDE_V48 = 5;
 const int NUCLIDE_CO57 = 6;
@@ -64,7 +63,7 @@ int get_nuc_index(int z, int a)
 
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
-    if (nuclides[nucindex].z == z and nuclides[nucindex].a == a)
+    if (nuclides[nucindex].z == z && nuclides[nucindex].a == a)
     {
       return nucindex;
     }
@@ -84,7 +83,7 @@ static bool nuc_exists(int z, int a)
 
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
-    if (nuclides[nucindex].z == z and nuclides[nucindex].a == a)
+    if (nuclides[nucindex].z == z && nuclides[nucindex].a == a)
     {
       return true;
     }
@@ -335,81 +334,56 @@ static double sample_decaytime(bool from_parent_abund, int z, int a, const doubl
 
 
 __host__ __device__
-static enum packet_type get_decay_pellet_type(enum decaypathways decaypath, bool *originated_from_positron)
+static enum packet_type get_decay_pellet_type(const int z, const int a, bool *originated_from_positron)
 {
   *originated_from_positron = false; // will be changed if necessary before returning
-  switch (decaypath)
+  if (z == 28 && a == 56)
   {
-    case DECAY_NI56:  // Ni56 pellet
-      return TYPE_56NI_PELLET;
-
-    case DECAY_NI56_CO56: // Ni56 -> Co56 pellet
+    return TYPE_56NI_PELLET;
+  }
+  else if (z == 27 && a == 56)
+  {
+    const double zrand = gsl_rng_uniform(rng);
+    if (zrand < nucdecayenergygamma(27, 56) / nucdecayenergy(27, 56))
     {
-      const double zrand = gsl_rng_uniform(rng);
-      if (zrand < nucdecayenergygamma(27, 56) / nucdecayenergy(27, 56))
-      {
-        return TYPE_56CO_PELLET;
-      }
-      else
-      {
-        *originated_from_positron = true;
-        return TYPE_56CO_POSITRON_PELLET;
-      }
+      return TYPE_56CO_PELLET;
     }
-
-    case DECAY_FE52:
-      return TYPE_52FE_PELLET;
-
-    case DECAY_FE52_MN52:
-      return TYPE_52MN_PELLET;
-
-    case DECAY_CR48:
-      return TYPE_48CR_PELLET;
-
-    case DECAY_CR48_V48:
-      return TYPE_48V_PELLET;
-
-    case DECAY_CO56:
+    else
     {
-      // Now it is a 56Co pellet, choose whether it becomes a positron
-      const double zrand = gsl_rng_uniform(rng);
-      if (zrand < nucdecayenergygamma(27, 56) / nucdecayenergy(27, 56))
-      {
-        return TYPE_56CO_PELLET;
-      }
-      else
-      {
-        *originated_from_positron = true;
-        return TYPE_56CO_POSITRON_PELLET;
-      }
-    }
-
-    case DECAY_NI57: // Ni57 pellet
-    {
-      const double zrand = gsl_rng_uniform(rng);
-      if (zrand < nucdecayenergygamma(28, 57) / nucdecayenergy(28, 57))
-      {
-        return TYPE_57NI_PELLET;
-      }
-      else
-      {
-        *originated_from_positron = true;
-        return TYPE_57NI_POSITRON_PELLET;
-      }
-    }
-
-    case DECAY_NI57_CO57: // Ni57 -> Co57 pellet
-      return TYPE_57CO_PELLET;
-
-    case DECAY_CO57: // Co57 pellet
-      return TYPE_57CO_PELLET;
-
-    case DECAYPATH_COUNT:
-    {
-      printout("Problem selecting pellet type\n");
-      abort();
+      *originated_from_positron = true;
+      return TYPE_56CO_POSITRON_PELLET;
     }
   }
+  else if (z == 26 && a == 52)
+  {
+    return TYPE_52FE_PELLET;
+  }
+  else if (z == 25 && a == 52)
+  {
+    return TYPE_52MN_PELLET;
+  }
+  else if (z == 24 && a == 48)
+  {
+    return TYPE_48CR_PELLET;
+  }
+  else if (z == 23 && a == 48)
+  {
+    return TYPE_48V_PELLET;
+  }
+  else if (z == 28 && a == 57)
+  {
+    const double zrand = gsl_rng_uniform(rng);
+    if (zrand < nucdecayenergygamma(28, 57) / nucdecayenergy(28, 57))
+    {
+      return TYPE_57NI_PELLET;
+    }
+    else
+    {
+      *originated_from_positron = true;
+      return TYPE_57NI_POSITRON_PELLET;
+    }
+  }
+
   assert_always(false);
   return TYPE_ESCAPE; // will never reach here, but gcc needs a return value
 }
@@ -775,14 +749,14 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
   const double tdecaymin = 0.; // allow decays before the first timestep
   #endif
 
+  const bool from_parent_abund = decaypath_is_chain(decaypath);
+  const int nucindex = from_parent_abund ? decaydaughter(decaypath) : decayparent(decaypath);
+  // nucindex points to the last radioactive nuclide in the chain,
+  // so points to Co56 for both Co56 -> Fe56 path, and the Ni56 -> Co56 -> Fe56 path
+  const int z = get_nuc_z(nucindex);
+  const int a = get_nuc_a(nucindex);
   if (UNIFORM_PELLET_ENERGIES)
   {
-    const bool from_parent_abund = decaypath_is_chain(decaypath);
-    const int nucindex = from_parent_abund ? decaydaughter(decaypath) : decayparent(decaypath);
-    // nuc is Co56 in Co56 -> Fe56 path, and Co56 also in Ni56 -> Co56 -> Fe56 path
-
-    const int z = get_nuc_z(nucindex);
-    const int a = get_nuc_a(nucindex);
     pkt_ptr->tdecay = decay::sample_decaytime(from_parent_abund, z, a, tdecaymin, globals::tmax);
     pkt_ptr->e_cmf = e0;
   }
@@ -803,7 +777,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
   }
 
   bool from_positron;
-  pkt_ptr->type = decay::get_decay_pellet_type(decaypath, &from_positron); // set the packet tdecay and type
+  pkt_ptr->type = decay::get_decay_pellet_type(z, a, &from_positron); // set the packet tdecay and type
   pkt_ptr->originated_from_positron = from_positron;
 }
 

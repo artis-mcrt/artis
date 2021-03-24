@@ -98,7 +98,6 @@ void init_gamma_linelist(void)
 {
   read_decaydata();
 
-  const int FAKE_GAM_LINE_ID = 3;
   /* Start by setting up the grid of fake lines and their energies. */
   gamma_spectra[FAKE_GAM_LINE_ID].nlines = globals::nfake_gam;
   gamma_spectra[FAKE_GAM_LINE_ID].energy = (double *) malloc(globals::nfake_gam * sizeof(double));

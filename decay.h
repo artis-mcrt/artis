@@ -3,6 +3,8 @@
 
 // #include <cstdio>
 
+const int FAKE_GAM_LINE_ID = 3;
+
 enum decaypathways {
   DECAY_NI56 = 0,
   DECAY_NI56_CO56 = 1,
