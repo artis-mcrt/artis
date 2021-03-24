@@ -122,7 +122,7 @@ jobs:
         md5sum -c <(echo 8e7163982f1aa938dc1505478b8c60d1 timesteps.out)
         md5sum -c <(echo 73da2aa7a706efdb62b5f1dc610bbf14 deposition.out)
 
-  test output:
+  plotoutput:
     needs: build
     runs-on: ubuntu-latest
 
