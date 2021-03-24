@@ -302,16 +302,12 @@ static bool decaypath_is_chain(enum decaypathways decaypath)
 
 
 __host__ __device__
-static double sample_decaytime(enum decaypathways decaypath, const double tdecaymin, const double tdecaymax)
+static double sample_decaytime(bool from_parent_abund, int z, int a, const double tdecaymin, const double tdecaymax)
 {
   double tdecay = -1;
-  const bool ischain = decaypath_is_chain(decaypath);
-  const int nuc = decayparent(decaypath);
-  const int z = get_nuc_z(nuc);
-  const int a = get_nuc_a(nuc);
   const double meanlife = get_meanlife(z, a);
 
-  if (!ischain)
+  if (!from_parent_abund)
   {
     // simple decay from initial abundances, e.g. Ni56 -> Co56
     while (tdecay <= tdecaymin || tdecay >= tdecaymax)
@@ -322,14 +318,16 @@ static double sample_decaytime(enum decaypathways decaypath, const double tdecay
   }
   else
   {
-    // decay of daughter nuclei produced by decay of parent, e.g. Co56 decay from in Ni56 -> Co56 -> Fe56 (no initial contribution)
-    const int nuc2 = decaydaughter(decaypath);
-    const double meanlife2 = get_meanlife(get_nuc_z(nuc2), get_nuc_a(nuc2));
+    // decay nuclei that were produced by decay of parent, e.g. Co56 decay from Ni56 -> Co56 -> Fe56
+    // (no initial Co56 contribution)
+
+    assert_always(nuc_exists(z + 1, a));
+    const double meanlife_parent = get_meanlife(z + 1, a);
     while (tdecay <= tdecaymin || tdecay >= tdecaymax)
     {
       const double zrand = gsl_rng_uniform_pos(rng);
       const double zrand2 = gsl_rng_uniform_pos(rng);
-      tdecay = (-meanlife * log(zrand)) + (-meanlife2 * log(zrand2));
+      tdecay = (-meanlife_parent * log(zrand)) + (-meanlife * log(zrand2));
     }
   }
   return tdecay;
@@ -779,7 +777,13 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
 
   if (UNIFORM_PELLET_ENERGIES)
   {
-    pkt_ptr->tdecay = decay::sample_decaytime(decaypath, tdecaymin, globals::tmax);
+    const bool from_parent_abund = decaypath_is_chain(decaypath);
+    const int nucindex = from_parent_abund ? decaydaughter(decaypath) : decayparent(decaypath);
+    // nuc is Co56 in Co56 -> Fe56 path, and Co56 also in Ni56 -> Co56 -> Fe56 path
+
+    const int z = get_nuc_z(nucindex);
+    const int a = get_nuc_a(nucindex);
+    pkt_ptr->tdecay = decay::sample_decaytime(from_parent_abund, z, a, tdecaymin, globals::tmax);
     pkt_ptr->e_cmf = e0;
   }
   else
