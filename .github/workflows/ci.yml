@@ -122,3 +122,54 @@ jobs:
         md5sum -c <(echo 8e7163982f1aa938dc1505478b8c60d1 timesteps.out)
         md5sum -c <(echo 73da2aa7a706efdb62b5f1dc610bbf14 deposition.out)
 
+  test output:
+    needs: build
+    runs-on: ubuntu-latest
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Get pip cache dir
+      id: pip-cache
+      run: |
+        pip list --format=freeze > piplist.txt
+        echo "::set-output name=dir::$(pip cache dir)"
+
+    - name: Cache pip
+      uses: actions/cache@v2.1.4
+      with:
+        path: ${{ steps.pip-cache.outputs.dir }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('piplist.txt') }}
+        restore-keys: |
+         ${{ runner.os }}-pip-
+
+    - name: Clone artistools
+      run: |
+        git clone https://github.com/artis-mcrt/artistools.git
+
+    - name: Install dependencies
+      working-directory: artistools/
+      run: |
+        python3 -m pip install --upgrade pip
+        python3 -m pip install -r requirements.txt
+
+        # upgrade all installed packages to their latest versions
+        python3 -m pip list --format=freeze --outdated | cut -d '=' -f1 | xargs -n1 python3 -m pip install --upgrade
+
+    - name: Install artistools
+      working-directory: artistools/
+      run: |
+        python -m pip install -e .
+
+    - name: Plot output
+      working-directory: tests/nebularonezone/output
+      run: |
+        plotartislightcurve
+
+    - name: Upload plot files files
+      uses: actions/upload-artifact@v2
+      with:
+        name: test-nebularonezone-output-pdf
+        path: tests/nebularonezone/output/*.pdf
