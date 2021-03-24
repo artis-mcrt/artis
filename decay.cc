@@ -178,31 +178,13 @@ double meanlife(int z, int a)
 __host__ __device__
 double nucmass(int z, int a)
 {
-  const int nucindex = get_nuc_index(z, a);
-  switch (nucindex)
-  {
-    case NUCLIDE_NI56:
-      return 56 * MH;
-    case NUCLIDE_NI57:
-      return 57 * MH;
-    case NUCLIDE_CO56:
-      return 56 * MH;
-    case NUCLIDE_CR48:
-      return 48 * MH;
-    case NUCLIDE_V48:
-      return 48 * MH;
-    case NUCLIDE_CO57:
-      return 57 * MH;
-    case NUCLIDE_FE52:
-      return 52 * MH;
-    case NUCLIDE_MN52:
-      return 52 * MH;
-    case FAKE_GAM_LINE_ID:
-    case RADIONUCLIDE_COUNT:
-      ;
-  }
-  assert_always(false);
-  return -1;
+  assert_always(z > 0);
+  assert_always(a >= z);
+
+  return a * MH;
+
+  // const int nucindex = get_nuc_index(z, a);
+  // return nuclides[nucindex].amass;
 }
 
 
