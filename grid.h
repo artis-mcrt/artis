@@ -24,14 +24,8 @@ typedef struct modelgrid_t
   //modelgrid nn_tot
   float nnetot;           // total electron density (free + bound).
   float *initradioabund;
+  float *initmassfracstable;
   float ffegrp;
-  float fnistable;
-  float fcostable;
-  float ffestable;
-  float fmnstable;
-  float fcrstable;
-  float fvstable;
-  float ftistable;
   float kappagrey;
   float grey_depth;                      /// Grey optical depth to surface of the modelgridcell
                                          /// This is only stored to print it outside the OpenMP loop in update_grid to the estimatorsfile

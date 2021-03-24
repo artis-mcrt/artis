@@ -358,7 +358,7 @@ static double get_modelradioabund_at_time(
 // Get the mass fraction of a nuclide accounting for all decays including those of its parent and grandparent.
 // e.g., Co56 abundance may first increase with time due to Ni56 decays, then decease due to Co56 decay
 // Can be called for stable nuclides that are one step off the radioactive nuclide list e.g., Fe56
-// For stable nuclides, abundance returned only comes from other decays (some could be included in init model elem frac) 
+// For stable nuclides, abundance returned only comes from other decays (some could be included in init model elem frac)
 {
   if (time == 0)
   {
@@ -572,7 +572,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
       }
     }
 
-    const double elmassfrac = get_stable_initabund(modelgridindex, atomic_number) + isofracsum;
+    const double elmassfrac = get_stable_initabund(modelgridindex, element) + isofracsum;
     set_elem_abundance(modelgridindex, element, elmassfrac);
   }
   // printout("model cell %d at t_current %g has frac: Ni %g Co %g Fe %g, stable: Ni %g Co %g Fe %g\n",

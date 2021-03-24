@@ -416,112 +416,44 @@ void set_modelinitradioabund(const int modelgridindex, const int z, const int a,
 
 
 __host__ __device__
-float get_stable_initabund(const int mgi, const int anumber)
+float get_stable_initabund(const int mgi, const int element)
 {
-  switch (anumber)
-  {
-    case 28:
-      return globals::modelgrid[mgi].fnistable;
-
-    case 27:
-      return globals::modelgrid[mgi].fcostable;
-
-    case 26:
-      return globals::modelgrid[mgi].ffestable;
-
-    case 25:
-      return globals::modelgrid[mgi].fmnstable;
-
-    case 24:
-      return globals::modelgrid[mgi].fcrstable;
-
-    case 23:
-      return globals::modelgrid[mgi].fvstable;
-
-    case 22:
-      return globals::modelgrid[mgi].ftistable;
-
-    default:
-      printout("ERROR: no stable abundance variable for element Z=%d\n", anumber);
-      abort();
-      return -1;
-  }
+  return globals::modelgrid[mgi].initmassfracstable[element];
 }
 
 
 __host__ __device__
-static void set_elem_stable_abund_from_total(const int mgi, const int anumber, const float elemabundance)
+static void set_elem_stable_abund_from_total(const int mgi, const int element, const float elemabundance)
 {
   // set the stable mass fraction of an element from the total element mass fraction
   // by subtracting the abundances of radioactive isotopes.
   // if the element Z=anumber has no specific stable abundance variable then the function does nothing
-  switch (anumber)
+
+  const int atomic_number = get_element(element);
+
+  double isofracsum = 0.; // mass fraction sum of radioactive isotopes
+  for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
   {
-    case 28:
+    const int a = decay::get_nuc_a(nucindex);
+    if (decay::get_nuc_z(nucindex) == atomic_number)
     {
-      globals::modelgrid[mgi].fnistable = elemabundance - get_modelinitradioabund(mgi, 28, 56) - get_modelinitradioabund(mgi, 28, 57);
-      if (globals::modelgrid[mgi].fnistable < 0.)
-      {
-          printout("WARNING: cell %d Ni element abundance is less than the sum of isotopic abundances \n", mgi);
-          printout("  X_Ni %g X_Ni56 %g X_Ni57 %g\n", elemabundance,
-                   get_modelinitradioabund(mgi, 28, 56), get_modelinitradioabund(mgi, 28, 57));
-          assert_always(globals::modelgrid[mgi].fnistable >= -1e-3);  // result is allowed to be slightly negative due to roundoff error
-          globals::modelgrid[mgi].fnistable = fmax(0., globals::modelgrid[mgi].fnistable); // bring up to zero if negative
-      }
-      break;
-    }
-
-    case 27:
-    {
-      globals::modelgrid[mgi].fcostable = elemabundance - get_modelinitradioabund(mgi, 27, 56) - get_modelinitradioabund(mgi, 27, 57);
-      if (globals::modelgrid[mgi].fcostable < 0)  // result can be slightly negative due to roundoff error
-      {
-        printout("WARNING: cell %d Co element abundance is less than the sum of isotopic abundances\n", mgi);
-        printout("  X_Co %g X_Co56 %g X_Co57 %g\n", elemabundance,
-                 get_modelinitradioabund(mgi, 27, 56), get_modelinitradioabund(mgi, 27, 57));
-        assert_always(globals::modelgrid[mgi].fcostable >= -1e-3);  // result is allowed to be slightly negative due to roundoff error
-        globals::modelgrid[mgi].fcostable = fmax(0., globals::modelgrid[mgi].fcostable); // bring up to zero if negative
-      }
-      break;
-    }
-
-    case 26:
-    {
-      globals::modelgrid[mgi].ffestable = elemabundance - get_modelinitradioabund(mgi, 26, 52);
-      assert_always(globals::modelgrid[mgi].ffestable >= -2e-5);
-      globals::modelgrid[mgi].ffestable = fmax(0., globals::modelgrid[mgi].ffestable);
-      break;
-    }
-
-    case 25:
-    {
-      globals::modelgrid[mgi].fmnstable = elemabundance;
-      assert_always(globals::modelgrid[mgi].fmnstable >= 0.);
-      break;
-    }
-
-    case 24:
-    {
-      globals::modelgrid[mgi].fcrstable = elemabundance - get_modelinitradioabund(mgi, 24, 48);
-      assert_always(globals::modelgrid[mgi].fcrstable >= -2e-5);
-      globals::modelgrid[mgi].fcrstable = fmax(0., globals::modelgrid[mgi].fcrstable);
-      break;
-    }
-
-    case 23:
-    {
-      globals::modelgrid[mgi].fvstable = elemabundance;
-      assert_always(globals::modelgrid[mgi].fvstable >= 0.);
-      break;
-    }
-
-    case 22:
-    {
-      globals::modelgrid[mgi].ftistable = elemabundance;
-      assert_always(globals::modelgrid[mgi].ftistable >= 0.);
-      break;
+      // radioactive isotope of this element
+      isofracsum += get_modelinitradioabund(mgi, atomic_number, a);
     }
   }
+
+  double massfracstable = elemabundance - isofracsum;
+
+  if (massfracstable < 0.)
+  {
+      printout("WARNING: cell %d Z=%d element abundance is less than the sum of its radioisotope abundances \n",
+               mgi, atomic_number);
+      printout("  massfrac(Z) %g massfrac_radioisotopes(Z) %g\n", elemabundance, isofracsum);
+      assert_always(massfracstable >= -1e-3);  // result is allowed to be slightly negative due to roundoff error
+      massfracstable = fmax(0., massfracstable); // bring up to zero if negative
+  }
+
+  globals::modelgrid[mgi].initmassfracstable[element] = massfracstable;
 }
 
 
@@ -676,6 +608,9 @@ static void allocate_compositiondata(const int modelgridindex)
     printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",modelgridindex);
     abort();
   }
+
+  globals::modelgrid[modelgridindex].initmassfracstable = (float *) malloc(get_nelements() * sizeof(float));
+  assert_always(globals::modelgrid[modelgridindex].initmassfracstable != NULL);
 
   mem_usage_nltepops += globals::total_nlte_levels * sizeof(double);
 
@@ -983,7 +918,7 @@ static void abundances_read(void)
         globals::modelgrid[mgi].composition[element].abundance = elemabundance;
 
         // radioactive nuclide abundances should have already been set by read_??_model
-        set_elem_stable_abund_from_total(mgi, anumber, elemabundance);
+        set_elem_stable_abund_from_total(mgi, element, elemabundance);
       }
     }
   }
@@ -1945,11 +1880,8 @@ void grid_init(int my_rank)
     abort();
   }
 
-  printout("allocate_nonemptymodelcells\n");
   allocate_nonemptymodelcells();
-  printout("calculate_kappagrey\n");
   calculate_kappagrey();
-  printout("abundances_read\n");
   abundances_read();
 
   radfield::init(my_rank);
