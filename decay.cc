@@ -15,19 +15,17 @@ const int NUCLIDE_V48 = 5;
 const int NUCLIDE_CO57 = 6;
 const int NUCLIDE_FE52 = 7;
 const int NUCLIDE_MN52 = 8;
-const int RADIONUCLIDE_COUNT = 9;
 
 struct nuclide {
   int z;
   int a;
-  double endecay_positrons;
   double meanlife;
+  double endecay_positrons;
+  double endecay_gamma;
 };
 
 struct nuclide *nuclides = NULL;
 int num_nuclides = 0;
-
-__managed__ double arr_nucdecayenergygamma[RADIONUCLIDE_COUNT] = {0};
 
 
 __host__ __device__
@@ -127,14 +125,14 @@ __host__ __device__
 double nucdecayenergygamma(int z, int a)
 // average energy (erg) per decay in the form of gamma rays
 {
-  return arr_nucdecayenergygamma[get_nuc_index(z, a)];
+  return nuclides[get_nuc_index(z, a)].endecay_gamma;
 }
 
 
 __host__ __device__
 void set_nucdecayenergygamma(int z, int a, double value)
 {
-  arr_nucdecayenergygamma[get_nuc_index(z, a)] = value;
+  nuclides[get_nuc_index(z, a)].endecay_gamma = value;
 }
 
 
@@ -215,7 +213,7 @@ static int decayparent(enum decaypathways decaypath)
       ;
   }
   assert_always(false);
-  return RADIONUCLIDE_COUNT;
+  return -1;
 }
 
 
@@ -232,7 +230,7 @@ static int decaydaughter(enum decaypathways decaypath)
     case DECAY_CO57:
     case DECAYPATH_COUNT:
       // value for no second radioactive nuclide (decay only from initial abund and not from radioactive parent)
-      return RADIONUCLIDE_COUNT;
+      return -1;
 
     case DECAY_NI56_CO56:
       return NUCLIDE_CO56;
@@ -247,7 +245,7 @@ static int decaydaughter(enum decaypathways decaypath)
       return NUCLIDE_CO57;
   }
   assert_always(false);
-  return RADIONUCLIDE_COUNT;
+  return -1;
 }
 
 
@@ -395,7 +393,7 @@ static enum packet_type get_decay_pellet_type(enum decaypathways decaypath, bool
 
 __host__ __device__
 static int find_nucparent(const int nuclide)
-// get the parent nuclide, or if it doesn't have one then the value RADIONUCLIDE_COUNT is used
+// get the parent nuclide, or if it doesn't have one then the value -1 is used
 {
   for (int d = 0; d < DECAYPATH_COUNT; d++)
   {
@@ -409,7 +407,7 @@ static int find_nucparent(const int nuclide)
       }
     }
   }
-  return RADIONUCLIDE_COUNT;
+  return -1;
 }
 
 
@@ -508,7 +506,7 @@ static double get_modelradioabund_at_time(
 
   const int nucindex = get_nuc_index(z, a);
   const int nucparent = find_nucparent(nucindex);
-  if (nucparent == RADIONUCLIDE_COUNT) // no parent exists, so use simple decay formula
+  if (nucparent < 0) // no parent exists, so use simple decay formula
   {
     return get_modelinitradioabund_decayed(modelgridindex, z, a, time);
   }
@@ -600,7 +598,6 @@ static double get_decay_power_per_ejectamass(enum decaypathways decaypath, const
     // decays from the second nuclide (e.g. Co56) due to the initial abundance are not counted here
 
     const int nuc2 = decaydaughter(decaypath);
-    assert_always(nuc2 < RADIONUCLIDE_COUNT);
     const int z2 = decay::get_nuc_z(nuc2);
     const int a2 = decay::get_nuc_a(nuc2);
     const double initabund1 = get_modelinitradioabund(modelgridindex, z1, a1);
