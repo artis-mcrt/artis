@@ -416,7 +416,7 @@ void set_modelinitradioabund(const int modelgridindex, const int z, const int a,
 
 
 __host__ __device__
-float get_stable_abund(const int mgi, const int anumber)
+float get_stable_initabund(const int mgi, const int anumber)
 {
   switch (anumber)
   {

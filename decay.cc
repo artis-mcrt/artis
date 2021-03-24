@@ -355,8 +355,9 @@ static double get_modelinitradioabund_decayed(
 __host__ __device__
 static double get_modelradioabund_at_time(
   const int modelgridindex, const int z, const int a, const double time)
-// get the mass fraction of a nuclide accounting for all decays including those of its parent
-// e.g. Co56 abundance may first increase with time due to Ni56 decays, then decease due to Co56 decay
+// Get the mass fraction of a nuclide accounting for all decays including those of its parent and grandparent.
+// e.g., Co56 abundance may first increase with time due to Ni56 decays, then decease due to Co56 decay
+// Can be called for stable nuclides that are one step off the radioactive nuclide list e.g., Fe56
 {
   if (time == 0)
   {
@@ -368,13 +369,14 @@ static double get_modelradioabund_at_time(
   }
   assert_always(time >= 0.);
 
-  if (!nuc_exists(z + 1, a)) // no parent exists, so use simple decay formula
+  if (!nuc_exists(z + 1, a))
   {
+    // no parent exists, so use simple decay formula (e.g. Ni56)
     return get_modelinitradioabund_decayed(modelgridindex, z, a, time);
   }
-  else
+  else if (!nuc_exists(z + 2, a))
   {
-    // nuclide is part of a double-decay chain, e.g., Co56 in the chain: Ni56 -> Co56 -> Fe56
+    // one parent exists, but no grandparent (e.g., Co56 in the chain: Ni56 -> Co56 -> Fe56)
     assert_always(nuc_exists(z + 1, a));
     assert_always(!nuc_exists(z + 2, a)); // only three-nuclide chains work for now
     double abund1 = 0.;
@@ -382,6 +384,17 @@ static double get_modelradioabund_at_time(
     double abund3 = 0.;
     calculate_doubledecay_modelabund(modelgridindex, z + 1, a, time, &abund1, &abund2, &abund3);
     return abund2;
+  }
+  else if (!nuc_exists(z + 3, a))
+  {
+    // parent and grandparent exist (e.g. Fe56)
+    assert_always(nuc_exists(z + 2, a));
+    assert_always(!nuc_exists(z + 3, a)); // only three-nuclide chains work for now
+    double abund1 = 0.;
+    double abund2 = 0.;
+    double abund3 = 0.;
+    calculate_doubledecay_modelabund(modelgridindex, z + 2, a, time, &abund1, &abund2, &abund3);
+    return abund3;
   }
 }
 
@@ -534,75 +547,29 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 {
   assert_always(!globals::homogeneous_abundances); // no longer supported
 
-  // Ni56 -> Co56 -> Fe56
-  // abundances from the input model
-  double ni56frac = 0.;
-  double co56frac = 0.;
-  double fe56frac_fromdecay = 0.;
-  calculate_doubledecay_modelabund(
-    modelgridindex, 28, 56, t_current, &ni56frac, &co56frac, &fe56frac_fromdecay);
-
-  // Ni57 -> Co57 -> Fe57
-  double ni57frac = 0.;
-  double co57frac = 0.;
-  double fe57frac_fromdecay = 0.;
-  calculate_doubledecay_modelabund(
-    modelgridindex, 28, 57, t_current, &ni57frac, &co57frac, &fe57frac_fromdecay);
-
-  // Fe52 -> Mn52 -> Cr52
-  double fe52frac = 0.;
-  double mn52frac = 0.;
-  double cr52frac_fromdecay = 0.;
-  calculate_doubledecay_modelabund(
-    modelgridindex, 26, 52, t_current, &fe52frac, &mn52frac, &cr52frac_fromdecay);
-
-  // Cr48 -> V48 -> Ti48
-  double cr48frac = 0.;
-  double v48frac = 0.;
-  double ti48frac_fromdecay = 0.;
-  calculate_doubledecay_modelabund(
-    modelgridindex, 24, 48, t_current, &cr48frac, &v48frac, &ti48frac_fromdecay);
-
-  // printout("model cell %d, has input radioactive ni56_init %g, co56_init %g, fe52_init %g\n",modelgridindex,ni56_init,co56_init,fe52_in);
-
   for (int element = get_nelements() - 1; element >= 0; element--)
   {
     const int atomic_number = get_element(element);
-    if (atomic_number == 28)
+    double isofracsum = 0.; // mass fraction sum of radioactive isotopes, and stable nuclei coming from other decays
+    for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
     {
-      const double nifrac = get_stable_abund(modelgridindex, atomic_number) + ni56frac + ni57frac;
-      set_elem_abundance(modelgridindex, element, nifrac);
+      const int a = get_nuc_a(nucindex);
+      if (get_nuc_z(nucindex) == atomic_number)
+      {
+        // radioactive isotope of this element
+        isofracsum += get_modelradioabund_at_time(modelgridindex, atomic_number, a, t_current);
+      }
+      else if (!nuc_exists(atomic_number, a) && get_nuc_z(nucindex) == atomic_number + 1)
+      {
+        // nuclide is one step off the network (only includes radioactive nuclides), e.g. Fe56
+        // note: there could also be Fe56 included in stable_initabund(z), but
+        // here we only count the contribution from decays
+        isofracsum += get_modelradioabund_at_time(modelgridindex, atomic_number, a, t_current);
+      }
     }
-    else if (atomic_number == 27)
-    {
-      const double cofrac = get_stable_abund(modelgridindex, atomic_number) + co56frac + co57frac;
-      set_elem_abundance(modelgridindex, element, cofrac);
-    }
-    else if (atomic_number == 26)
-    {
-      const double fefrac = get_stable_abund(modelgridindex, atomic_number) + fe52frac + fe56frac_fromdecay + fe57frac_fromdecay;
-      set_elem_abundance(modelgridindex, element, fefrac);
-    }
-    else if (atomic_number == 25)
-    {
-      const double mnfrac = get_stable_abund(modelgridindex, atomic_number) + mn52frac;
-      set_elem_abundance(modelgridindex, element, mnfrac);
-    }
-    else if (atomic_number == 24)
-    {
-      const double crfrac = get_stable_abund(modelgridindex, atomic_number) + cr48frac + cr52frac_fromdecay;
-      set_elem_abundance(modelgridindex, element, crfrac);
-    }
-    else if (atomic_number == 23)
-    {
-      const double vfrac = get_stable_abund(modelgridindex, atomic_number) + v48frac;
-      set_elem_abundance(modelgridindex, element, vfrac);
-    }
-    else if (atomic_number == 22)
-    {
-      const double tifrac = get_stable_abund(modelgridindex, atomic_number) + ti48frac_fromdecay;
-      set_elem_abundance(modelgridindex, element, tifrac);
-    }
+
+    const double elmassfrac = get_stable_initabund(modelgridindex, atomic_number) + isofracsum;
+    set_elem_abundance(modelgridindex, element, elmassfrac);
   }
   // printout("model cell %d at t_current %g has frac: Ni %g Co %g Fe %g, stable: Ni %g Co %g Fe %g\n",
   //          modelgridindex, t_current,

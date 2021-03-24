@@ -84,7 +84,7 @@ void grid_init(int my_rank);
 __host__ __device__ double get_cellradialpos(int cellindex);
 __host__ __device__ float get_modelinitradioabund(int modelgridindex, int z, int a);
 __host__ __device__ void set_modelinitradioabund(int modelgridindex, int z, int a, float abund);
-__host__ __device__ float get_stable_abund(int mgi, int anumber);
+__host__ __device__ float get_stable_initabund(int mgi, int anumber);
 __host__ __device__ int get_numassociatedcells(int modelgridindex);
 __host__ __device__ enum model_types get_model_type(void);
 __host__ __device__ void set_model_type(enum model_types model_type_value);
