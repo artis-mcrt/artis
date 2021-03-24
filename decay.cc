@@ -21,6 +21,7 @@ struct nuclide {
   int z;
   int a;
   double endecay_positrons;
+  double meanlife;
 };
 
 struct nuclide *nuclides = NULL;
@@ -82,13 +83,16 @@ void init_nuclides(void)
 
   nuclides[0].z = 28; // Ni
   nuclides[0].a = 57;
+  nuclides[0].meanlife = 51.36 * 60;
   nuclides[0].endecay_positrons = 0.354 * MEV * 0.436;
 
   nuclides[1].z = 28;
   nuclides[1].a = 56;
+  nuclides[1].meanlife = 8.80 * DAY;
 
   nuclides[2].z = 27; // Co
   nuclides[2].a = 56;
+  nuclides[2].meanlife = 113.7 * DAY;
   nuclides[2].endecay_positrons = 0.63 * MEV * 0.19;
 
   nuclides[3].z = -1;  // FAKE_GAM_LINE_ID
@@ -96,19 +100,24 @@ void init_nuclides(void)
 
   nuclides[4].z = 24; // Cr
   nuclides[4].a = 48;
+  nuclides[4].meanlife = 1.29602 * DAY;
 
   nuclides[5].z = 23; // V
   nuclides[5].a = 48;
+  nuclides[5].meanlife = 23.0442 * DAY;
   nuclides[5].endecay_positrons = 0.290 * 0.499 * MEV;
 
   nuclides[6].z = 27; // Co
   nuclides[6].a = 57;
+  nuclides[6].meanlife = 392.03 * DAY;
 
   nuclides[7].z = 26; // Fe
   nuclides[7].a = 52;
+  nuclides[7].meanlife = 0.497429 * DAY;
 
   nuclides[8].z = 25; // Mn
   nuclides[8].a = 52;
+  nuclides[8].meanlife = 0.0211395 * DAY;
 
   printout("init_nuclides() done. num_nuclides %d\n", get_num_nuclides());
 }
@@ -147,31 +156,10 @@ double nucdecayenergy(int z, int a)
 __host__ __device__
 double meanlife(int z, int a)
 {
+  assert_always(z > 0);
+  assert_always(a >= z);
   const int nucindex = get_nuc_index(z, a);
-  switch (nucindex)
-  {
-    case NUCLIDE_NI56:
-      return 8.80 * DAY;
-    case NUCLIDE_NI57:
-      return 51.36 * 60;
-    case NUCLIDE_CO56:
-      return 113.7 * DAY;
-    case NUCLIDE_CR48:
-      return 1.29602 * DAY;
-    case NUCLIDE_V48:
-      return 23.0442 * DAY;
-    case NUCLIDE_CO57:
-      return 392.03 * DAY;
-    case NUCLIDE_FE52:
-      return 0.497429 * DAY;
-    case NUCLIDE_MN52:
-      return 0.0211395 * DAY;
-    case FAKE_GAM_LINE_ID:
-    case RADIONUCLIDE_COUNT:
-      ;
-  }
-  assert_always(false);
-  return -1;
+  return nuclides[nucindex].meanlife;
 }
 
 
