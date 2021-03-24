@@ -553,8 +553,7 @@ static bool do_timestep(
       FILE *dep_file = fopen_required("deposition.out", "w");
       for (int i = 0; i <= nts; i++)
       {
-        fprintf(dep_file, "%d %g %g %g %g\n",
-                i, globals::time_step[i].mid / DAY,
+        fprintf(dep_file, "%g %g %g %g\n", globals::time_step[i].mid / DAY,
                 globals::time_step[i].gamma_dep / globals::time_step[i].width / LSUN,
                 globals::time_step[i].positron_dep / globals::time_step[i].width / LSUN,
                 (globals::time_step[i].gamma_dep + globals::time_step[i].positron_dep) / globals::time_step[i].width / LSUN);
