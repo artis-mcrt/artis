@@ -7,30 +7,6 @@
 namespace decay
 {
 
-const int NUCLIDE_NI57 = 0;
-const int NUCLIDE_NI56 = 1;
-const int NUCLIDE_CO56 = 2;
-const int NUCLIDE_CR48 = 4;
-const int NUCLIDE_V48 = 5;
-const int NUCLIDE_CO57 = 6;
-const int NUCLIDE_FE52 = 7;
-const int NUCLIDE_MN52 = 8;
-
-enum decaypathways {
-  DECAY_NI56 = 0,
-  DECAY_NI56_CO56 = 1,
-  DECAY_FE52 = 2,
-  DECAY_FE52_MN52 = 3,
-  DECAY_CR48 = 4,
-  DECAY_CR48_V48 = 5,
-  DECAY_CO56 = 6,
-  DECAY_NI57 = 7,
-  DECAY_NI57_CO57 = 8,
-  DECAY_CO57 = 9,
-  DECAYPATH_COUNT = 10,
-};
-
-
 struct nuclide {
   int z;
   int a;
@@ -345,22 +321,20 @@ static void calculate_double_decay_chain(
 __host__ __device__
 static void calculate_doubledecay_modelabund(
   const int modelgridindex,
-  const int nuclide1,
-  const int nuclide2,
+  const int z1,
+  const int a,
   const double t_current,
   double *abund1, double *abund2, double *abund3)
+  // z, a are the atomic number and mass number of the first nuclide in the chain,
+  // e.g. z=28, a=56 for Ni56 in Ni56 -> Co56 -> Fe56
 {
-  const int z1 = get_nuc_z(nuclide1);
-  const int a = get_nuc_a(nuclide1);
-  const int z2 = get_nuc_z(nuclide2);
-  const int a2 = get_nuc_a(nuclide2);
-  assert_always(a2 == a); // mass number is conserved
-  assert_always(z2 == (z1 - 1)); // beta decay p -> n
+  assert_always(nuc_exists(z1, a));
+  assert_always(nuc_exists(z1 - 1, a));
 
   const double initabund1 = get_modelinitradioabund(modelgridindex, z1, a);
   const double meanlife1 = get_meanlife(z1, a);
-  const double initabund2 = get_modelinitradioabund(modelgridindex, z2, a);
-  const double meanlife2 = get_meanlife(z2, a);
+  const double initabund2 = get_modelinitradioabund(modelgridindex, z1 - 1, a);
+  const double meanlife2 = get_meanlife(z1 - 1, a);
 
   const double tdiff = t_current - globals::t_model;
   calculate_double_decay_chain(initabund1, meanlife1, initabund2, meanlife2, tdiff, abund1, abund2, abund3);
@@ -394,7 +368,6 @@ static double get_modelradioabund_at_time(
   }
   assert_always(time >= 0.);
 
-  const int nucindex = get_nuc_index(z, a);
   if (!nuc_exists(z + 1, a)) // no parent exists, so use simple decay formula
   {
     return get_modelinitradioabund_decayed(modelgridindex, z, a, time);
@@ -402,12 +375,12 @@ static double get_modelradioabund_at_time(
   else
   {
     // nuclide is part of a double-decay chain, e.g., Co56 in the chain: Ni56 -> Co56 -> Fe56
-    const int nucparent = get_nuc_index(z + 1, a);
+    assert_always(nuc_exists(z + 1, a));
     assert_always(!nuc_exists(z + 2, a)); // only three-nuclide chains work for now
     double abund1 = 0.;
     double abund2 = 0.;
     double abund3 = 0.;
-    calculate_doubledecay_modelabund(modelgridindex, nucparent, nucindex, time, &abund1, &abund2, &abund3);
+    calculate_doubledecay_modelabund(modelgridindex, z + 1, a, time, &abund1, &abund2, &abund3);
     return abund2;
   }
 }
@@ -567,28 +540,28 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   double co56frac = 0.;
   double fe56frac_fromdecay = 0.;
   calculate_doubledecay_modelabund(
-    modelgridindex, NUCLIDE_NI56, NUCLIDE_CO56, t_current, &ni56frac, &co56frac, &fe56frac_fromdecay);
+    modelgridindex, 28, 56, t_current, &ni56frac, &co56frac, &fe56frac_fromdecay);
 
   // Ni57 -> Co57 -> Fe57
   double ni57frac = 0.;
   double co57frac = 0.;
   double fe57frac_fromdecay = 0.;
   calculate_doubledecay_modelabund(
-    modelgridindex, NUCLIDE_NI57, NUCLIDE_CO57, t_current, &ni57frac, &co57frac, &fe57frac_fromdecay);
+    modelgridindex, 28, 57, t_current, &ni57frac, &co57frac, &fe57frac_fromdecay);
 
   // Fe52 -> Mn52 -> Cr52
   double fe52frac = 0.;
   double mn52frac = 0.;
   double cr52frac_fromdecay = 0.;
   calculate_doubledecay_modelabund(
-    modelgridindex, NUCLIDE_FE52, NUCLIDE_MN52, t_current, &fe52frac, &mn52frac, &cr52frac_fromdecay);
+    modelgridindex, 26, 52, t_current, &fe52frac, &mn52frac, &cr52frac_fromdecay);
 
   // Cr48 -> V48 -> Ti48
   double cr48frac = 0.;
   double v48frac = 0.;
   double ti48frac_fromdecay = 0.;
   calculate_doubledecay_modelabund(
-    modelgridindex, NUCLIDE_CR48, NUCLIDE_V48, t_current, &cr48frac, &v48frac, &ti48frac_fromdecay);
+    modelgridindex, 24, 48, t_current, &cr48frac, &v48frac, &ti48frac_fromdecay);
 
   // printout("model cell %d, has input radioactive ni56_init %g, co56_init %g, fe52_init %g\n",modelgridindex,ni56_init,co56_init,fe52_in);
 
