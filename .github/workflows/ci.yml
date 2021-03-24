@@ -169,8 +169,8 @@ jobs:
     - name: Plot output
       working-directory: tests/
       run: |
-        python3 -m artistools.lightcurve -modelpath nebularonezone nebularonezone_reference
-         python3 -m artistools.spectra -ts 9 -specpath nebularonezone nebularonezone_reference
+        python3 -m artistools.lightcurve nebularonezone nebularonezone_reference
+         python3 -m artistools.spectra -ts 9 nebularonezone nebularonezone_reference
 
     - name: Upload plot files files
       uses: actions/upload-artifact@v2
