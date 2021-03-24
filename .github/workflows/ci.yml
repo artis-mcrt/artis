@@ -157,7 +157,7 @@ jobs:
         python -m pip install -e .
 
     - name: Plot output
-      working-directory: tests/nebularonezone/output
+      working-directory: tests/
       run: |
         python3 -m artistools.lightcurve -modelpath nebularonezone nebularonezone_reference
          python3 -m artistools.spectra -ts 9 -specpath nebularonezone nebularonezone_reference
