@@ -198,7 +198,7 @@ double nucmass(int z, int a)
 
 
 __host__ __device__
-static int decayparent(enum decaypathways decaypath)
+int decayparent(enum decaypathways decaypath)
 {
   switch (decaypath)
   {
@@ -241,7 +241,7 @@ static int decayparent(enum decaypathways decaypath)
 
 
 __host__ __device__
-static int decaydaughter(enum decaypathways decaypath)
+int decaydaughter(enum decaypathways decaypath)
 {
   switch (decaypath)
   {
@@ -273,7 +273,7 @@ static int decaydaughter(enum decaypathways decaypath)
 
 
 __host__ __device__
-static bool decaypath_is_chain(enum decaypathways decaypath)
+bool decaypath_is_chain(enum decaypathways decaypath)
 // return true if the second nuclide in the decay path is also radioactive
 {
   switch (decaypath)
@@ -502,62 +502,56 @@ static double get_modelradioabund_at_time(
 
 
 __host__ __device__
-static double get_endecay_per_ejectamass_at_time(const int mgi, enum decaypathways decaypath, double time)
+static double get_endecay_per_ejectamass_at_time(
+  const int mgi, const bool from_parent_abund, const int z, const int a, const double time)
 // returns decay energy [erg] that would be released from time tstart [s] to time infinity a given decaypath
 {
-  const int nuc1 = decayparent(decaypath);
-  const int z1 = decay::get_nuc_z(nuc1);
-  const int a1 = decay::get_nuc_a(nuc1);
-  if (decaypath_is_chain(decaypath))
+  if (from_parent_abund)
   {
     // double decaypath, e.g. DECAY_NI56_CO56, represents the decay of Co56 nuclei
     // that were produced from decays of Ni56 in the initial abundance.
     // Decays from Co56 due to the initial abundance of Co56 are not counted here,
     // nor is the energy from decays of Ni56
 
-    const int nuc2 = decaydaughter(decaypath);
-    const int z2 = decay::get_nuc_z(nuc2);
-    const int a2 = decay::get_nuc_a(nuc2);
-
-    const double initabund1 = get_modelinitradioabund(mgi, z1, a1);
+    const double initabund1 = get_modelinitradioabund(mgi, z + 1, a);
     const double initabund2 = 0.; // don't count initial abundance
     double abund1;
     double abund2;
     double abund3;
-    calculate_double_decay_chain(initabund1, get_meanlife(z1, a1), initabund2, get_meanlife(z2, a2), time, &abund1, &abund2, &abund3);
-    return (abund1 / nucmass(z1, a1) + abund2 / nucmass(z2, a2)) * nucdecayenergy(z2, a2);
+    calculate_double_decay_chain(initabund1, get_meanlife(z + 1, a), initabund2, get_meanlife(z, a), time, &abund1, &abund2, &abund3);
+    return (abund1 / nucmass(z + 1, a) + abund2 / nucmass(z, a)) * nucdecayenergy(z, a);
   }
   else
   {
     // simple decay from initial abundance , e.g. DECAY_NI56 or DECAY_CO56
-    return get_modelinitradioabund_decayed(mgi, z1, a1, time) / nucmass(z1, a1) * nucdecayenergy(z1, a1);
+    return get_modelinitradioabund_decayed(mgi, z, a, time) / nucmass(z, a) * nucdecayenergy(z, a);
   }
 }
 
 
 __host__ __device__
 static double get_endecay_per_ejectamass_between_times(
-  const int mgi, enum decaypathways decaypath, double tlow, double thigh)
+  const int mgi, const bool from_parent_abund, const int z, const int a, double tlow, double thigh)
 // energy per mass [erg/g] released by a decaypath between two times [s]
 {
   assert_always(tlow <= thigh);
-  const double energy_tlow = get_endecay_per_ejectamass_at_time(mgi, decaypath, tlow);
-  const double energy_thigh = get_endecay_per_ejectamass_at_time(mgi, decaypath, thigh);
+  const double energy_tlow = get_endecay_per_ejectamass_at_time(mgi, from_parent_abund, a, z, tlow);
+  const double energy_thigh = get_endecay_per_ejectamass_at_time(mgi, from_parent_abund, a, z, thigh);
   assert_always(energy_tlow >= energy_thigh);
   return energy_tlow - energy_thigh;
 }
 
 
 __host__ __device__
-double get_simtime_endecay_per_ejectamass(const int mgi, enum decaypathways decaypath)
+double get_simtime_endecay_per_ejectamass(const int mgi, const bool from_parent_abund, const int z, const int a)
 // get the decay energy released during the simulation time
 {
 #ifdef NO_INITIAL_PACKETS
   // get decay energy released from t=tmin to tmax
-  return get_endecay_per_ejectamass_between_times(mgi, decaypath, globals::tmin, globals::tmax);
+  return get_endecay_per_ejectamass_between_times(mgi, from_parent_abund, a, z, globals::tmin, globals::tmax);
 #else
   // get decay energy released from t=0 to tmax
-  return get_endecay_per_ejectamass_between_times(mgi, decaypath, 0., globals::tmax);
+  return get_endecay_per_ejectamass_between_times(mgi, from_parent_abund, a, z, 0., globals::tmax);
 #endif
 }
 
@@ -716,7 +710,11 @@ static double get_decayedenergy_per_ejectamass(const int modelgridindex, const d
   double endecaytot = 0.;
   for (int i = 0; i < DECAYPATH_COUNT; i++)
   {
-    endecaytot += get_endecay_per_ejectamass_between_times(modelgridindex, (enum decaypathways)(i), 0., tstart);
+    const bool from_parent_abund = decaypath_is_chain((enum decaypathways) i);
+    const int nucindex = from_parent_abund ? decaydaughter((enum decaypathways) i) : decayparent((enum decaypathways) i);
+    const int z = get_nuc_z(nucindex);
+    const int a = get_nuc_a(nucindex);
+    endecaytot += get_endecay_per_ejectamass_between_times(modelgridindex, from_parent_abund, z, a, 0., tstart);
   }
   return endecaytot;
 }
@@ -727,8 +725,13 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
   double cumulative_decay_energy_per_mass[DECAYPATH_COUNT];
   for (int i = 0; i < DECAYPATH_COUNT; i++)
   {
+    const bool from_parent_abund = decaypath_is_chain((enum decaypathways) i);
+    const int nucindex = from_parent_abund ? decaydaughter((enum decaypathways) i) : decayparent((enum decaypathways) i);
+    const int z = get_nuc_z(nucindex);
+    const int a = get_nuc_a(nucindex);
+
     const double lower_sum = ((i > 0) ? cumulative_decay_energy_per_mass[i - 1] : 0);
-    cumulative_decay_energy_per_mass[i] = lower_sum + decay::get_simtime_endecay_per_ejectamass(mgi, (enum decaypathways) i);
+    cumulative_decay_energy_per_mass[i] = lower_sum + decay::get_simtime_endecay_per_ejectamass(mgi, from_parent_abund, z, a);
   }
 
   const double zrand_chain = gsl_rng_uniform(rng) * cumulative_decay_energy_per_mass[DECAYPATH_COUNT - 1];
@@ -771,7 +774,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
     // we need to scale the packet energy up or down according to decay rate at the randomly selected time.
     // e0 is the average energy per packet for this cell and decaypath, so we scale this up or down
     // according to: decay power at this time relative to the average decay power
-    const double avgpower = decay::get_simtime_endecay_per_ejectamass(mgi, decaypath) / (globals::tmax - tdecaymin);
+    const double avgpower = decay::get_simtime_endecay_per_ejectamass(mgi, from_parent_abund, z, a) / (globals::tmax - tdecaymin);
     pkt_ptr->e_cmf = e0 * decay::get_decay_power_per_ejectamass(decaypath, mgi, pkt_ptr->tdecay) / avgpower;
     // assert_always(pkt_ptr->e_cmf >= 0);
   }

@@ -88,7 +88,12 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
     modelcell_decay_energy_density[mgi] = 0.;
     for (int i = 0; i < DECAYPATH_COUNT; i++)
     {
-      modelcell_decay_energy_density[mgi] += get_rhoinit(mgi) * decay::get_simtime_endecay_per_ejectamass(mgi, (enum decaypathways)(i)) * MH;
+      const bool from_parent_abund = decay::decaypath_is_chain((enum decaypathways) i);
+      const int nucindex = from_parent_abund ? decay::decaydaughter((enum decaypathways) i) : decay::decayparent((enum decaypathways) i);
+      const int z = decay::get_nuc_z(nucindex);
+      const int a = decay::get_nuc_a(nucindex);
+      modelcell_decay_energy_density[mgi] += (
+        get_rhoinit(mgi) * decay::get_simtime_endecay_per_ejectamass(mgi, from_parent_abund, z, a) * MH);
     }
   }
 
