@@ -13,6 +13,5 @@ if [ ! -f nebularonezone_reference_20210324.tar.xz ]; then curl -O https://psweb
 tar -xf nebularonezone_reference_20210324.tar.xz
 tar -xf atomicdata_feconi.tar.xz --directory nebularonezone_reference/
 cp ../data/* nebularonezone_reference/
-cp nebularonezone/input.txt nebularonezone_reference/
 
 set +x
