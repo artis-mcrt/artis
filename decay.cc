@@ -455,8 +455,10 @@ static double get_endecay_per_ejectamass_at_time(const int mgi, enum decaypathwa
   const enum radionuclides nuc1 = decayparent(decaypath);
   if (decaypath_is_chain(decaypath))
   {
-    // double decay, e.g. DECAY_NI56_CO56, the decay of Co56 nuclei that were produced from Ni56 decays
-    // decays from the second nuclide (e.g. Co56) due to the initial abundance are not counted here
+    // double decaypath, e.g. DECAY_NI56_CO56, represents the decay of Co56 nuclei
+    // that were produced from decays of Ni56 in the initial abundance.
+    // Decays from Co56 due to the initial abundance of Co56 are not counted here,
+    // nor is the energy from decays of Ni56
 
     const enum radionuclides nuc2 = decaydaughter(decaypath);
     assert_always(nuc2 < RADIONUCLIDE_COUNT);
