@@ -369,15 +369,14 @@ static double get_modelradioabund_at_time(
   }
   assert_always(time >= 0.);
 
-  if (!nuc_exists(z + 1, a))
+  if (!nuc_exists(z + 1, a) && nuc_exists(z, a))
   {
     // no parent exists, so use simple decay formula (e.g. Ni56)
     return get_modelinitradioabund_decayed(modelgridindex, z, a, time);
   }
-  else if (!nuc_exists(z + 2, a))
+  else if (!nuc_exists(z + 2, a) && nuc_exists(z + 1, a) && nuc_exists(z, a))
   {
-    // one parent exists, but no grandparent (e.g., Co56 in the chain: Ni56 -> Co56 -> Fe56)
-    assert_always(nuc_exists(z + 1, a));
+    // parent exists, but no grandparent (e.g., Co56 in the chain: Ni56 -> Co56 -> Fe56)
     assert_always(!nuc_exists(z + 2, a)); // only three-nuclide chains work for now
     double abund1 = 0.;
     double abund2 = 0.;
@@ -385,16 +384,20 @@ static double get_modelradioabund_at_time(
     calculate_doubledecay_modelabund(modelgridindex, z + 1, a, time, &abund1, &abund2, &abund3);
     return abund2;
   }
-  else if (!nuc_exists(z + 3, a))
+  else if (!nuc_exists(z + 3, a) && nuc_exists(z + 2, a) && nuc_exists(z + 1, a))
   {
     // parent and grandparent exist (e.g. Fe56)
-    assert_always(nuc_exists(z + 2, a));
     assert_always(!nuc_exists(z + 3, a)); // only three-nuclide chains work for now
     double abund1 = 0.;
     double abund2 = 0.;
     double abund3 = 0.;
     calculate_doubledecay_modelabund(modelgridindex, z + 2, a, time, &abund1, &abund2, &abund3);
     return abund3;
+  }
+  else
+  {
+    assert(false); // cannot calculate this abundance
+    return 0.;
   }
 }
 
