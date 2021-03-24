@@ -3,10 +3,12 @@ name: Continuous integration
 on:
   push:
     branches:
-    - nebular
+    - nebular*
+    - main
   pull_request:
     branches:
-    - nebular
+    - nebular*
+    - main
 
 jobs:
   build_and_test:
