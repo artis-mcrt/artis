@@ -6,53 +6,144 @@
 namespace decay
 {
 
+const int NUCLIDE_NI57 = 0;
+const int NUCLIDE_NI56 = 1;
+const int NUCLIDE_CO56 = 2;
+const int FAKE_GAM_LINE_ID = 3;
+const int NUCLIDE_CR48 = 4;
+const int NUCLIDE_V48 = 5;
+const int NUCLIDE_CO57 = 6;
+const int NUCLIDE_FE52 = 7;
+const int NUCLIDE_MN52 = 8;
+const int RADIONUCLIDE_COUNT = 9;
+
+struct nuclide {
+  int z;
+  int a;
+  double endecay_positrons;
+};
+
+struct nuclide *nuclides = NULL;
+int num_nuclides = 0;
+
 __managed__ double arr_nucdecayenergygamma[RADIONUCLIDE_COUNT] = {0};
 
 
 __host__ __device__
-double nucdecayenergygamma(enum radionuclides nuclide_type)
+int get_num_nuclides(void)
+{
+  assert_always(num_nuclides > 0);
+  return num_nuclides;
+}
+
+
+__host__ __device__
+int get_nuc_z(int nucindex)
+{
+  assert_always(nucindex >= 0);
+  assert_always(nucindex < get_num_nuclides());
+  return nuclides[nucindex].z;
+}
+
+
+__host__ __device__
+int get_nuc_a(int nucindex)
+{
+  assert_always(nucindex >= 0);
+  assert_always(nucindex < get_num_nuclides());
+  return nuclides[nucindex].a;
+}
+
+
+__host__ __device__
+int get_nuc_index(int atomic_number, int mass_number)
+{
+  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
+  {
+    if (nuclides[nucindex].z == atomic_number and nuclides[nucindex].z == mass_number)
+    {
+      return nucindex;
+    }
+  }
+  assert_always(false); // nuclide not found
+  return -1;
+}
+
+
+__host__ __device__
+void init_nuclides(void)
+{
+  num_nuclides = 9;
+  nuclides = (struct nuclide *) calloc(num_nuclides, sizeof(struct nuclide));
+  assert_always(nuclides != NULL);
+
+  nuclides[0].z = 28; // Ni
+  nuclides[0].a = 57;
+  nuclides[0].endecay_positrons = 0.354 * MEV * 0.436;
+
+  nuclides[1].z = 28;
+  nuclides[1].a = 56;
+
+  nuclides[2].z = 27; // Co
+  nuclides[2].a = 56;
+  nuclides[2].endecay_positrons = 0.63 * MEV * 0.19;
+
+  nuclides[3].z = -1;  // FAKE_GAM_LINE_ID
+  nuclides[3].a = -1;
+
+  nuclides[4].z = 24; // Cr
+  nuclides[4].a = 48;
+
+  nuclides[5].z = 23; // V
+  nuclides[5].a = 48;
+  nuclides[5].endecay_positrons = 0.290 * 0.499 * MEV;
+
+  nuclides[6].z = 27; // Co
+  nuclides[6].a = 57;
+
+  nuclides[7].z = 26; // Fe
+  nuclides[7].a = 52;
+
+  nuclides[8].z = 25; // Mn
+  nuclides[8].a = 52;
+}
+
+
+__host__ __device__
+double nucdecayenergygamma(int z, int a)
 // average energy (erg) per decay in the form of gamma rays
 {
-  return arr_nucdecayenergygamma[nuclide_type];
+  return arr_nucdecayenergygamma[get_nuc_index(z, a)];
 }
 
 
 __host__ __device__
-void set_nucdecayenergygamma(enum radionuclides nuclide_type, double value)
+void set_nucdecayenergygamma(int z, int a, double value)
 {
-  arr_nucdecayenergygamma[nuclide_type] = value;
+  arr_nucdecayenergygamma[get_nuc_index(z, a)] = value;
 }
 
 
 __host__ __device__
-double nucdecayenergypositrons(enum radionuclides nuclide_type)
+double nucdecayenergypositrons(int z, int a)
 // average energy (erg) per decay in the form of positrons
 {
-  switch (nuclide_type)
-  {
-    case NUCLIDE_NI57:
-      return 0.354 * MEV * 0.436;
-    case NUCLIDE_CO56:
-      return 0.63 * MEV * 0.19;
-    case NUCLIDE_V48:
-      return 0.290 * 0.499 * MEV;
-    default:
-      return 0.;
-  }
+  return nuclides[get_nuc_index(z, a)].endecay_positrons;
 }
 
 
 __host__ __device__
-double nucdecayenergy(enum radionuclides nuclide_type)
+double nucdecayenergy(int z, int a)
 {
-  return nucdecayenergygamma(nuclide_type) + nucdecayenergypositrons(nuclide_type);
+  return nucdecayenergygamma(z, a) + nucdecayenergypositrons(z, a);
 }
 
 
 __host__ __device__
-double meanlife(enum radionuclides nuclide_type)
+double meanlife(int z, int a)
 {
-  switch (nuclide_type)
+  const int nucindex = get_nuc_index(z, a);
+  switch (nucindex)
   {
     case NUCLIDE_NI56:
       return 8.80 * DAY;
@@ -80,9 +171,10 @@ double meanlife(enum radionuclides nuclide_type)
 
 
 __host__ __device__
-double nucmass(enum radionuclides nuclide_type)
+double nucmass(int z, int a)
 {
-  switch (nuclide_type)
+  const int nucindex = get_nuc_index(z, a);
+  switch (nucindex)
   {
     case NUCLIDE_NI56:
       return 56 * MH;
@@ -110,7 +202,7 @@ double nucmass(enum radionuclides nuclide_type)
 
 
 __host__ __device__
-static enum radionuclides decayparent(enum decaypathways decaypath)
+static int decayparent(enum decaypathways decaypath)
 {
   switch (decaypath)
   {
@@ -153,7 +245,7 @@ static enum radionuclides decayparent(enum decaypathways decaypath)
 
 
 __host__ __device__
-static enum radionuclides decaydaughter(enum decaypathways decaypath)
+static int decaydaughter(enum decaypathways decaypath)
 {
   switch (decaypath)
   {
@@ -217,7 +309,8 @@ static double sample_decaytime(enum decaypathways decaypath, const double tdecay
 {
   double tdecay = -1;
   const bool ischain = decaypath_is_chain(decaypath);
-  const double meanlife1 = meanlife(decayparent(decaypath));
+  const int nuc1 = decayparent(decaypath);
+  const double meanlife1 = meanlife(get_nuc_z(nuc1), get_nuc_a(nuc1));
 
   if (!ischain)
   {
@@ -231,7 +324,8 @@ static double sample_decaytime(enum decaypathways decaypath, const double tdecay
   else
   {
     // decay of daughter nuclei produced by decay of parent, e.g. Co56 decay from in Ni56 -> Co56 -> Fe56 (no initial contribution)
-    const double meanlife2 = meanlife(decaydaughter(decaypath));
+    const int nuc2 = decaydaughter(decaypath);
+    const double meanlife2 = meanlife(get_nuc_z(nuc2), get_nuc_a(nuc2));
     while (tdecay <= tdecaymin || tdecay >= tdecaymax)
     {
       const double zrand = gsl_rng_uniform_pos(rng);
@@ -255,7 +349,7 @@ static enum packet_type get_decay_pellet_type(enum decaypathways decaypath, bool
     case DECAY_NI56_CO56: // Ni56 -> Co56 pellet
     {
       const double zrand = gsl_rng_uniform(rng);
-      if (zrand < nucdecayenergygamma(NUCLIDE_CO56) / nucdecayenergy(NUCLIDE_CO56))
+      if (zrand < nucdecayenergygamma(27, 56) / nucdecayenergy(27, 56))
       {
         return TYPE_56CO_PELLET;
       }
@@ -282,7 +376,7 @@ static enum packet_type get_decay_pellet_type(enum decaypathways decaypath, bool
     {
       // Now it is a 56Co pellet, choose whether it becomes a positron
       const double zrand = gsl_rng_uniform(rng);
-      if (zrand < nucdecayenergygamma(NUCLIDE_CO56) / nucdecayenergy(NUCLIDE_CO56))
+      if (zrand < nucdecayenergygamma(27, 56) / nucdecayenergy(27, 56))
       {
         return TYPE_56CO_PELLET;
       }
@@ -296,7 +390,7 @@ static enum packet_type get_decay_pellet_type(enum decaypathways decaypath, bool
     case DECAY_NI57: // Ni57 pellet
     {
       const double zrand = gsl_rng_uniform(rng);
-      if (zrand < nucdecayenergygamma(NUCLIDE_NI57) / nucdecayenergy(NUCLIDE_NI57))
+      if (zrand < nucdecayenergygamma(28, 57) / nucdecayenergy(28, 57))
       {
         return TYPE_57NI_PELLET;
       }
@@ -325,7 +419,7 @@ static enum packet_type get_decay_pellet_type(enum decaypathways decaypath, bool
 
 
 __host__ __device__
-static enum radionuclides find_nucparent(enum radionuclides nuclide)
+static int find_nucparent(const int nuclide)
 // get the parent nuclide, or if it doesn't have one then the value RADIONUCLIDE_COUNT is used
 {
   for (int d = 0; d < DECAYPATH_COUNT; d++)
@@ -333,7 +427,7 @@ static enum radionuclides find_nucparent(enum radionuclides nuclide)
     enum decaypathways decaypath = (enum decaypathways)(d);
     if (decaypath_is_chain(decaypath))
     {
-      enum radionuclides nuc2 = decaydaughter(decaypath);
+      const int nuc2 = decaydaughter(decaypath);
       if (nuc2 == nuclide)
       {
         return decayparent(decaypath);
@@ -388,15 +482,22 @@ static void calculate_double_decay_chain(
 __host__ __device__
 static void calculate_doubledecay_modelabund(
   const int modelgridindex,
-  enum radionuclides nuclide1,
-  enum radionuclides nuclide2,
+  const int nuclide1,
+  const int nuclide2,
   const double t_current,
   double *abund1, double *abund2, double *abund3)
 {
-  const double initabund1 = get_modelinitradioabund(modelgridindex, nuclide1);
-  const double meanlife1 = meanlife(nuclide1);
-  const double initabund2 = get_modelinitradioabund(modelgridindex, nuclide2);
-  const double meanlife2 = meanlife(nuclide2);
+  const int z1 = get_nuc_z(nuclide1);
+  const int a = get_nuc_z(nuclide1);
+  const int z2 = get_nuc_z(nuclide2);
+  const int a2 = get_nuc_z(nuclide2);
+  assert_always(a2 == a); // mass number is conserved
+  assert_always(z2 == (z1 - 1)); // beta decay p -> n
+
+  const double initabund1 = get_modelinitradioabund(modelgridindex, z1, a);
+  const double meanlife1 = meanlife(z1, a);
+  const double initabund2 = get_modelinitradioabund(modelgridindex, z2, a);
+  const double meanlife2 = meanlife(z2, a);
 
   const double tdiff = t_current - globals::t_model;
   calculate_double_decay_chain(initabund1, meanlife1, initabund2, meanlife2, tdiff, abund1, abund2, abund3);
@@ -405,36 +506,36 @@ static void calculate_doubledecay_modelabund(
 
 __host__ __device__
 static double get_modelinitradioabund_decayed(
-  const int modelgridindex, const enum radionuclides nuclide_type, const double time)
+  const int modelgridindex, const int z, const int a, const double time)
 // only allow decays to decrease the nuclide abundance (i.e. don't count increases due to decay of parent)
 {
   assert_always(time >= 0.);
   const double tdiff = time - globals::t_model;
-  return get_modelinitradioabund(modelgridindex, nuclide_type) * exp(- tdiff / meanlife(nuclide_type));
+  return get_modelinitradioabund(modelgridindex, z, a) * exp(- tdiff / meanlife(z, a));
 }
 
 
 __host__ __device__
 static double get_modelradioabund_at_time(
-  const int modelgridindex, const enum radionuclides nuclide_type, const double time)
+  const int modelgridindex, const int z, const int a, const double time)
 // get the mass fraction of a nuclide accounting for all decays including those of its parent
 // e.g. Co56 abundance may first increase with time due to Ni56 decays, then decease due to Co56 decay
 {
   if (time == 0)
   {
-    return get_modelinitradioabund(modelgridindex, nuclide_type);
+    return get_modelinitradioabund(modelgridindex, z, a);
   }
-  else if (nuclide_type == FAKE_GAM_LINE_ID)
+  else if (z < 1) // FAKE_GAM_LINE_ID
   {
     return 0.;
   }
-  assert_always(nuclide_type < RADIONUCLIDE_COUNT);
   assert_always(time >= 0.);
 
-  enum radionuclides nucparent = find_nucparent(nuclide_type);
+  const int nucindex = get_nuc_index(z, a);
+  const int nucparent = find_nucparent(nucindex);
   if (nucparent == RADIONUCLIDE_COUNT) // no parent exists, so use simple decay formula
   {
-    return get_modelinitradioabund_decayed(modelgridindex, nuclide_type, time);
+    return get_modelinitradioabund_decayed(modelgridindex, z, a, time);
   }
   else
   {
@@ -442,7 +543,7 @@ static double get_modelradioabund_at_time(
     double abund1 = 0.;
     double abund2 = 0.;
     double abund3 = 0.;
-    calculate_doubledecay_modelabund(modelgridindex, nucparent, nuclide_type, time, &abund1, &abund2, &abund3);
+    calculate_doubledecay_modelabund(modelgridindex, nucparent, nucindex, time, &abund1, &abund2, &abund3);
     return abund2;
   }
 }
@@ -452,7 +553,9 @@ __host__ __device__
 static double get_endecay_per_ejectamass_at_time(const int mgi, enum decaypathways decaypath, double time)
 // returns decay energy [erg] that would be released from time tstart [s] to time infinity a given decaypath
 {
-  const enum radionuclides nuc1 = decayparent(decaypath);
+  const int nuc1 = decayparent(decaypath);
+  const int z1 = decay::get_nuc_z(nuc1);
+  const int a1 = decay::get_nuc_a(nuc1);
   if (decaypath_is_chain(decaypath))
   {
     // double decaypath, e.g. DECAY_NI56_CO56, represents the decay of Co56 nuclei
@@ -460,20 +563,22 @@ static double get_endecay_per_ejectamass_at_time(const int mgi, enum decaypathwa
     // Decays from Co56 due to the initial abundance of Co56 are not counted here,
     // nor is the energy from decays of Ni56
 
-    const enum radionuclides nuc2 = decaydaughter(decaypath);
-    assert_always(nuc2 < RADIONUCLIDE_COUNT);
-    const double initabund1 = get_modelinitradioabund(mgi, nuc1);
+    const int nuc2 = decaydaughter(decaypath);
+    const int z2 = decay::get_nuc_z(nuc2);
+    const int a2 = decay::get_nuc_a(nuc2);
+
+    const double initabund1 = get_modelinitradioabund(mgi, z1, a1);
     const double initabund2 = 0.; // don't count initial abundance
     double abund1;
     double abund2;
     double abund3;
-    calculate_double_decay_chain(initabund1, meanlife(nuc1), initabund2, meanlife(nuc2), time, &abund1, &abund2, &abund3);
-    return (abund1 / nucmass(nuc1) + abund2 / nucmass(nuc2)) * nucdecayenergy(nuc2);
+    calculate_double_decay_chain(initabund1, meanlife(z1, z1), initabund2, meanlife(z2, a2), time, &abund1, &abund2, &abund3);
+    return (abund1 / nucmass(z1, a1) + abund2 / nucmass(z2, a2)) * nucdecayenergy(z2, a2);
   }
   else
   {
     // simple decay from initial abundance , e.g. DECAY_NI56 or DECAY_CO56
-    return get_modelinitradioabund_decayed(mgi, nuc1, time) / nucmass(nuc1) * nucdecayenergy(nuc1);
+    return get_modelinitradioabund_decayed(mgi, z1, a1, time) / nucmass(z1, a1) * nucdecayenergy(z1, a1);
   }
 }
 
@@ -511,26 +616,30 @@ static double get_decay_power_per_ejectamass(enum decaypathways decaypath, const
 {
   double decaypower = 0.;
 
-  const enum radionuclides nuc1 = decayparent(decaypath);
+  const int nuc1 = decayparent(decaypath);
+  const int z1 = decay::get_nuc_z(nuc1);
+  const int a1 = decay::get_nuc_a(nuc1);
   if (decaypath_is_chain(decaypath))
   {
     // double decay, e.g. DECAY_NI56_CO56, the decay of Co56 nuclei that were produced from Ni56 decays
     // decays from the second nuclide (e.g. Co56) due to the initial abundance are not counted here
 
-    const enum radionuclides nuc2 = decaydaughter(decaypath);
+    const int nuc2 = decaydaughter(decaypath);
     assert_always(nuc2 < RADIONUCLIDE_COUNT);
-    const double initabund1 = get_modelinitradioabund(modelgridindex, nuc1);
+    const int z2 = decay::get_nuc_z(nuc2);
+    const int a2 = decay::get_nuc_a(nuc2);
+    const double initabund1 = get_modelinitradioabund(modelgridindex, z1, a1);
     const double initabund2 = 0.; // don't count initial abundance
     double abund1;
     double abund2;
     double abund3;
-    calculate_double_decay_chain(initabund1, meanlife(nuc1), initabund2, meanlife(nuc2), time, &abund1, &abund2, &abund3);
-    decaypower = abund2 / nucmass(nuc2) / meanlife(nuc2) * nucdecayenergy(nuc2);
+    calculate_double_decay_chain(initabund1, meanlife(z1, a1), initabund2, meanlife(z1, a1), time, &abund1, &abund2, &abund3);
+    decaypower = abund2 / nucmass(z2, a2) / meanlife(z2, a2) * nucdecayenergy(z2, a2);
   }
   else
   {
     // simple decay from initial abundance , e.g. DECAY_NI56 or DECAY_CO56
-    decaypower = get_modelinitradioabund_decayed(modelgridindex, nuc1, time) / nucmass(nuc1) / meanlife(nuc1) * nucdecayenergy(nuc1);
+    decaypower = get_modelinitradioabund_decayed(modelgridindex, z1, a1, time) / nucmass(z1, a1) / meanlife(z1, a1) * nucdecayenergy(z1, a1);
   }
   // const double time2 = time * 1.001;
   // const double decaypower2 = get_endecay_per_ejectamass_between_times(modelgridindex, decaypath, time, time2) / (time2 - time);
@@ -546,14 +655,15 @@ double get_positroninjection_rate_density(const int modelgridindex, const double
   const double rho = get_rho(modelgridindex);
 
   double pos_dep_sum = 0.;
-  for (int n = 0; n < RADIONUCLIDE_COUNT; n++)
+  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
-    enum radionuclides nuclide = (enum radionuclides)(n);
-    if (nucdecayenergypositrons(nuclide) > 0. && get_modelradioabund_at_time(modelgridindex, nuclide, t) > 0.)
+    const int z = decay::get_nuc_z(nucindex);
+    const int a = decay::get_nuc_a(nucindex);
+    if (nucdecayenergypositrons(z, a) > 0. && get_modelradioabund_at_time(modelgridindex, z, a, t) > 0.)
     {
       // printout("positrons coming from nuclide %d en %g abund %g\n", nuclide, nucdecayenergypositrons(nuclide), get_modelradioabund_at_time(modelgridindex, nuclide, t));
-      const double decayratefactor = get_modelradioabund_at_time(modelgridindex, nuclide, t) / meanlife(nuclide);
-      pos_dep_sum += decayratefactor * nucdecayenergypositrons(nuclide) * rho / nucmass(nuclide);
+      const double decayratefactor = get_modelradioabund_at_time(modelgridindex, z, a, t) / meanlife(z, a);
+      pos_dep_sum += decayratefactor * nucdecayenergypositrons(z, a) * rho / nucmass(z, a);
     }
   }
 

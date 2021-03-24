@@ -64,23 +64,23 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
   const double etot_tinf = (
-    (decay::nucdecayenergy(NUCLIDE_NI56) + decay::nucdecayenergy(NUCLIDE_CO56)) * get_totmassradionuclide(NUCLIDE_NI56) / decay::nucmass(NUCLIDE_NI56) +
-    decay::nucdecayenergy(NUCLIDE_CO56) * get_totmassradionuclide(NUCLIDE_CO56) / decay::nucmass(NUCLIDE_CO56) +
-    (decay::nucdecayenergy(NUCLIDE_NI57) + decay::nucdecayenergy(NUCLIDE_CO57)) * get_totmassradionuclide(NUCLIDE_NI57) / decay::nucmass(NUCLIDE_NI57) +
-    decay::nucdecayenergy(NUCLIDE_CO57) * get_totmassradionuclide(NUCLIDE_CO57) / decay::nucmass(NUCLIDE_CO57) +
-    (decay::nucdecayenergy(NUCLIDE_V48) + decay::nucdecayenergy(NUCLIDE_CR48)) * get_totmassradionuclide(NUCLIDE_CR48) / decay::nucmass(NUCLIDE_CR48) +
-    (decay::nucdecayenergy(NUCLIDE_FE52) + decay::nucdecayenergy(NUCLIDE_MN52)) * get_totmassradionuclide(NUCLIDE_FE52) / decay::nucmass(NUCLIDE_FE52));
+    (decay::nucdecayenergy(28, 56) + decay::nucdecayenergy(27, 56)) * get_totmassradionuclide(28, 56) / decay::nucmass(28, 56) +
+    decay::nucdecayenergy(27, 56) * get_totmassradionuclide(27, 56) / decay::nucmass(27, 56) +
+    (decay::nucdecayenergy(28, 57) + decay::nucdecayenergy(27, 57)) * get_totmassradionuclide(28, 57) / decay::nucmass(28, 57) +
+    decay::nucdecayenergy(27, 57) * get_totmassradionuclide(27, 57) / decay::nucmass(27, 57) +
+    (decay::nucdecayenergy(23, 48) + decay::nucdecayenergy(24, 48)) * get_totmassradionuclide(24, 48) / decay::nucmass(24, 48) +
+    (decay::nucdecayenergy(26, 52) + decay::nucdecayenergy(25, 52)) * get_totmassradionuclide(26, 52) / decay::nucmass(26, 52));
   printout("etot %g (t_0 to t_inf)\n", etot_tinf);
   printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n",
-           decay::nucdecayenergy(NUCLIDE_NI56) / MEV, decay::nucdecayenergy(NUCLIDE_CO56) / MEV,
-           decay::nucdecayenergygamma(NUCLIDE_CO56) / MEV);
+           decay::nucdecayenergy(28, 56) / MEV, decay::nucdecayenergy(27, 56) / MEV,
+           decay::nucdecayenergygamma(27, 56) / MEV);
   printout("decayenergy(NI57), decayenergy_gamma(NI57), decay::nucdecayenergy(CO57): %g, %g, %g\n",
-           decay::nucdecayenergy(NUCLIDE_NI57) / MEV, decay::nucdecayenergygamma(NUCLIDE_NI57) / MEV,
-           decay::nucdecayenergy(NUCLIDE_CO57) / MEV);
+           decay::nucdecayenergy(28, 57) / MEV, decay::nucdecayenergygamma(28, 57) / MEV,
+           decay::nucdecayenergy(27, 57) / MEV);
   printout("decayenergy(CR48), decayenergy(V48): %g %g\n",
-           decay::nucdecayenergy(NUCLIDE_CR48) / MEV, decay::nucdecayenergy(NUCLIDE_V48) / MEV);
+           decay::nucdecayenergy(24, 48) / MEV, decay::nucdecayenergy(23, 48) / MEV);
   printout("decayenergy(FE52), decayenergy(MN52): %g %g\n",
-           decay::nucdecayenergy(NUCLIDE_FE52) / MEV, decay::nucdecayenergy(NUCLIDE_MN52) / MEV);
+           decay::nucdecayenergy(26, 52) / MEV, decay::nucdecayenergy(25, 52) / MEV);
 
   double modelcell_decay_energy_density[get_npts_model()];
   for (int mgi = 0; mgi < get_npts_model(); mgi++)

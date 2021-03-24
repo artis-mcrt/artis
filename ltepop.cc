@@ -174,7 +174,7 @@ double phi(const int element, const int ion, const int modelgridindex)
     // Gamma is the photoionization rate per ground level pop
     const double Gamma_ion = Gamma * stat_weight(element, ion, 0) / globals::modelgrid[modelgridindex].composition[element].partfunct[ion];
 
-    if (Gamma == 0. && (!NT_ON || (globals::rpkt_emiss[modelgridindex] == 0. && get_modelinitradioabund(modelgridindex, NUCLIDE_CR48) == 0. && get_modelinitradioabund(modelgridindex, NUCLIDE_NI56) == 0.)))
+    if (Gamma == 0. && (!NT_ON || (globals::rpkt_emiss[modelgridindex] == 0. && get_modelinitradioabund(modelgridindex, 24, 48) == 0. && get_modelinitradioabund(modelgridindex, 28, 56) == 0.)))
     {
       printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n",element,ion);
       abort();

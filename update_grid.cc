@@ -1312,8 +1312,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   ///Calculate the critical opacity at which opacity_case 3 switches from a
   ///regime proportional to the density to a regime independent of the density
   ///This is done by solving for tau_sobolev == 1
-  ///tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(NUCLIDE_NI56) * 3000e-8 * globals::time_step[m].mid;
-  globals::rho_crit = ME * CLIGHT * decay::nucmass(NUCLIDE_NI56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::time_step[nts].mid);
+  ///tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(28, 56) * 3000e-8 * globals::time_step[m].mid;
+  globals::rho_crit = ME * CLIGHT * decay::nucmass(28, 56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::time_step[nts].mid);
   printout("update_grid: rho_crit = %g\n", globals::rho_crit);
 
   // These values will not be used if nts == 0, but set them anyway
@@ -1481,7 +1481,7 @@ double calculate_populations(const int modelgridindex)
           #endif
 
           if ((Gamma == 0) &&
-             (!NT_ON || ((globals::rpkt_emiss[modelgridindex] == 0.) && (get_modelinitradioabund(modelgridindex, NUCLIDE_CR48) == 0.) && (get_modelinitradioabund(modelgridindex, NUCLIDE_NI56) == 0.))))
+             (!NT_ON || ((globals::rpkt_emiss[modelgridindex] == 0.) && (get_modelinitradioabund(modelgridindex, 24, 48) == 0.) && (get_modelinitradioabund(modelgridindex, 28, 56) == 0.))))
             break;
         }
         uppermost_ion = ion;
