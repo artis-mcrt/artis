@@ -31,7 +31,7 @@ namespace decay
   __host__ __device__ void set_nucdecayenergygamma(int z, int a, double value);
   __host__ __device__ double nucdecayenergypositrons(int z, int a);
   __host__ __device__ double nucdecayenergy(int z, int a);
-  __host__ __device__ double meanlife(int z, int a);
+  __host__ __device__ double get_meanlife(int z, int a);
   __host__ __device__ double nucmass(int z, int a);
   __host__ __device__ void update_abundances(const int modelgridindex, const int timestep, const double t_current);
   __host__ __device__ double get_simtime_endecay_per_ejectamass(const int mgi, enum decaypathways decaypath);

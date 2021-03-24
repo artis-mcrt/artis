@@ -1658,9 +1658,9 @@ static void assign_temperature(void)
   const double tstart = globals::time_step[0].mid;
 
   const double e_ni56 = decay::nucdecayenergy(28, 56);
-  const double t_ni56 = decay::meanlife(28, 56);
+  const double t_ni56 = decay::get_meanlife(28, 56);
   const double e_co56 = decay::nucdecayenergy(27, 56);
-  const double t_co56 = decay::meanlife(27, 56);
+  const double t_co56 = decay::get_meanlife(27, 56);
 
   const double factor56ni = 1. / 56 / MH * (-1. / (tstart * (- t_co56 + t_ni56)))
     * (- e_ni56 * exp(- tstart / t_ni56) * tstart * t_co56 - e_ni56 * exp(- tstart / t_ni56) * t_ni56 * t_co56
@@ -1673,9 +1673,9 @@ static void assign_temperature(void)
     * (t_co56 * tstart * e_co56 * exp(- tstart / t_co56) + pow(t_co56, 2) * e_co56 * exp(- tstart / t_co56));
 
   const double e_ni57 = decay::nucdecayenergy(28, 57);
-  const double t_ni57 = decay::meanlife(28, 57);
+  const double t_ni57 = decay::get_meanlife(28, 57);
   const double e_co57 = decay::nucdecayenergy(27, 57);
-  const double t_co57 = decay::meanlife(27, 57);
+  const double t_co57 = decay::get_meanlife(27, 57);
 
   const double factor57ni = 1. / 57 / MH * (-1. / (tstart * (- t_co57 + t_ni57)))
     * (- e_ni57 * exp(- tstart / t_ni57) * tstart * t_co57 - e_ni57 * exp(- tstart / t_ni57) * t_ni57 * t_co57
@@ -1685,9 +1685,9 @@ static void assign_temperature(void)
        + e_ni57 * t_co57 * t_ni57 - e_ni57 * pow(t_ni57, 2) - pow(t_ni57, 2) * e_co57 + e_co57 * pow(t_co57, 2));
 
  const double e_fe52 = decay::nucdecayenergy(26, 52);
- const double t_fe52 = decay::meanlife(26, 52);
+ const double t_fe52 = decay::get_meanlife(26, 52);
  const double e_mn52 = decay::nucdecayenergy(25, 52);
- const double t_mn52 = decay::meanlife(25, 52);
+ const double t_mn52 = decay::get_meanlife(25, 52);
 
   const double factor52fe = 1. / 52 / MH * (-1. / (tstart * (- t_mn52 + t_fe52)))
     * (- e_fe52 * exp(- tstart / t_fe52) * tstart * t_mn52 - e_fe52 * exp(- tstart / t_fe52) * t_fe52 * t_mn52
@@ -1697,9 +1697,9 @@ static void assign_temperature(void)
        + e_fe52 * t_mn52 * t_fe52 - e_fe52 * pow(t_fe52, 2) - pow(t_fe52, 2) * e_mn52 + e_mn52 * pow(t_mn52, 2));
 
   const double e_cr48 = decay::nucdecayenergy(24, 48);
-  const double t_cr48 = decay::meanlife(24, 48);
+  const double t_cr48 = decay::get_meanlife(24, 48);
   const double e_v48 = decay::nucdecayenergy(23, 48);
-  const double t_v48 = decay::meanlife(23, 48);
+  const double t_v48 = decay::get_meanlife(23, 48);
 
   const double factor48cr = 1. / 48 / MH * (-1. / (tstart * (- t_v48 + t_cr48)))
     * (- e_cr48 * exp(- tstart / t_cr48) * tstart * t_v48 - e_cr48 * exp(- tstart / t_cr48) * t_cr48 * t_v48
