@@ -166,4 +166,4 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: test-nebularonezone-output-pdf
-        path: tests/nebularonezone/output/*.pdf
+        path: tests/*.pdf
