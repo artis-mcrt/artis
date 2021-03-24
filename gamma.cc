@@ -1,5 +1,6 @@
 #include "sn3d.h"
 #include "boundary.h"
+#include "decay.h"
 #include "emissivities.h"
 #include "gamma.h"
 #include "grey_emissivities.h"

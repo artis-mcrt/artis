@@ -82,20 +82,6 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   printout("decayenergy(FE52), decayenergy(MN52): %g %g\n",
            decay::nucdecayenergy(26, 52) / MEV, decay::nucdecayenergy(25, 52) / MEV);
 
-  double modelcell_decay_energy_density[get_npts_model()];
-  for (int mgi = 0; mgi < get_npts_model(); mgi++)
-  {
-    modelcell_decay_energy_density[mgi] = 0.;
-    for (int i = 0; i < DECAYPATH_COUNT; i++)
-    {
-      const bool from_parent_abund = decay::decaypath_is_chain((enum decaypathways) i);
-      const int nucindex = from_parent_abund ? decay::decaydaughter((enum decaypathways) i) : decay::decayparent((enum decaypathways) i);
-      const int z = decay::get_nuc_z(nucindex);
-      const int a = decay::get_nuc_a(nucindex);
-      modelcell_decay_energy_density[mgi] += (
-        get_rhoinit(mgi) * decay::get_simtime_endecay_per_ejectamass(mgi, from_parent_abund, z, a) * MH);
-    }
-  }
 
   const double e0_tinf = etot_tinf / globals::npkts / globals::n_out_it / globals::n_middle_it;
   printout("packet e0 (t_0 to t_inf) %g erg\n", e0_tinf);
@@ -107,7 +93,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
     cont[m] = norm;
     const int mgi = get_cell_modelgridindex(m);
 
-    norm += vol_init_gridcell(m) * modelcell_decay_energy_density[mgi];
+    norm += vol_init_gridcell(m) * decay::get_modelcell_decay_energy_density(mgi);
   }
   cont[globals::ngrid] = norm;
 

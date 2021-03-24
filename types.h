@@ -1,6 +1,5 @@
 #include "constants.h"
 #include "artisoptions.h"
-#include "decay.h"
 
 #ifndef TYPES_H
 #define TYPES_H
