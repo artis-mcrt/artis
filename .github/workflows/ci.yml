@@ -9,7 +9,7 @@ on:
     - nebular
 
 jobs:
-  build:
+  build_and_test:
 
     runs-on: ubuntu-latest
 
@@ -53,18 +53,18 @@ jobs:
     #     path: "tests/nebularonezone/ratecoeff.dat"
     #     key: "tests/nebularonezone/ratecoeff.dat"
 
-    - name: Cache atomic data
+    - name: Cache test data
       uses: actions/cache@v2.1.4
-      id: cache-atomicdata
+      id: cache-testdata
       with:
-          path: "tests/atomicdata_feconi.tar.xz"
-          key: "https://psweb.mp.qub.ac.uk/artis/artis/atomicdata_feconi.tar.xz"
+          path: "tests/*.tar.xz"
+          key: testdata-${{ hashFiles('tests/*.tar.xz') }}
 
-    - name: Download atomic data
-      if: steps.cache-atomicdata.outputs.cache-hit != 'true'
+    - name: Download/extract test data
+      # if: steps.cache-atomicdata.outputs.cache-hit != 'true'
       working-directory: tests/
       run: |
-          curl -O https://psweb.mp.qub.ac.uk/artis/artis/atomicdata_feconi.tar.xz
+          source ./setuptestdata.sh
 
     - name: "Setup test nebularonezone"
       run: |
@@ -73,9 +73,6 @@ jobs:
         cp sn3d tests/nebularonezone/
         cp exspec tests/nebularonezone/
         cp data/*.txt tests/nebularonezone/
-
-        # gunzip -v tests/nebularonezone/*.gz
-        tar -xvf tests/atomicdata_feconi.tar.xz --directory tests/nebularonezone/
 
     - name: "Run nebularonezone test"
       working-directory: tests/nebularonezone/
@@ -122,11 +119,6 @@ jobs:
         md5sum -c <(echo 8e7163982f1aa938dc1505478b8c60d1 timesteps.out)
         md5sum -c <(echo 73da2aa7a706efdb62b5f1dc610bbf14 deposition.out)
 
-  plotoutput:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
@@ -167,7 +159,8 @@ jobs:
     - name: Plot output
       working-directory: tests/nebularonezone/output
       run: |
-        plotartislightcurve
+        python3 -m artistools.lightcurve -modelpath nebularonezone nebularonezone_reference
+         python3 -m artistools.spectra -ts 9 -specpath nebularonezone nebularonezone_reference
 
     - name: Upload plot files files
       uses: actions/upload-artifact@v2
