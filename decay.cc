@@ -396,7 +396,7 @@ static void calculate_double_decay_chain(
   const double t_current,
   double *abund1, double *abund2, double *abund3)
 {
-  // calculate abundances from double decay, e.g., Ni56 -> Co56 -> Fe56
+  // calculate abundances from double decay, e.g., Ni56 -> Co56 -> Fe56 (nuc1 -> nuc2 -> nuc3)
   // initabund3 is assumed to be zero, so the abundance of species 3 is only from decays of species 2
 
   const double lambda1 = 1 / meanlife1;
