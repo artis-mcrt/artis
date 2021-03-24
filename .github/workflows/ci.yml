@@ -55,14 +55,14 @@ jobs:
 
     - name: Cache test atomic data
       uses: actions/cache@v2.1.4
-      id: cache-testdata
+      id: cache-testatomicdata
       with:
           path: "tests/atomicdata_feconi.tar.xz"
           key: tests/atomicdata_feconi.tar.xz
 
     - name: Cache reference data
       uses: actions/cache@v2.1.4
-      id: cache-testdata
+      id: cache-testreferencedata
       with:
           path: "tests/nebularonezone_reference_20210324.tar.xz"
           key: tests/nebularonezone_reference_20210324.tar.xz
