@@ -53,12 +53,19 @@ jobs:
     #     path: "tests/nebularonezone/ratecoeff.dat"
     #     key: "tests/nebularonezone/ratecoeff.dat"
 
-    - name: Cache test data
+    - name: Cache test atomic data
       uses: actions/cache@v2.1.4
       id: cache-testdata
       with:
-          path: "tests/*.tar.xz"
-          key: testdata-${{ hashFiles('tests/*.tar.xz') }}
+          path: "tests/atomicdata_feconi.tar.xz"
+          key: tests/atomicdata_feconi.tar.xz
+
+    - name: Cache reference data
+      uses: actions/cache@v2.1.4
+      id: cache-testdata
+      with:
+          path: "tests/nebularonezone_reference_20210324.tar.xz"
+          key: tests/nebularonezone_reference_20210324.tar.xz
 
     - name: Download/extract test data
       # if: steps.cache-atomicdata.outputs.cache-hit != 'true'
