@@ -1742,6 +1742,7 @@ static bool lineiscommentonly(std::string &line)
 
 
 static bool get_noncommentline(std::istream &input, std::string &line)
+// read the next line, skipping any comment lines beginning with '#'
 {
   while (true)
   {
@@ -2145,13 +2146,13 @@ void update_parameterfile(int nts)
   fileout.close();
   file.close();
 
-  if (globals::simulation_continued_from_saved)
+  if (!globals::simulation_continued_from_saved && nts == (globals::itstep + 1))
   {
-    std::remove("input.txt");
+    std::rename("input.txt", "input-newrun.txt"); // back up the original for starting a new simulation
   }
   else
   {
-    std::rename("input.txt", "input-newrun.txt"); // back up the original for starting a new simulation
+    std::remove("input.txt");
   }
   std::rename("input.txt.tmp", "input.txt");
 
