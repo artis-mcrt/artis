@@ -98,7 +98,7 @@ void init_nuclides(void)
     nuclides[0].a = -1;
     nuclides[0].meanlife = -1;
     nuclides[0].endecay_positrons = 0.;
-    nuclides[0].endecay_gamms = 0.;
+    nuclides[0].endecay_gamma = 0.;
   }
 
   nuclides[0].z = 28; // Ni57

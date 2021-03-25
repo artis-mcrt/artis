@@ -25,7 +25,7 @@ static const int RED_OF_LIST = -956;  // must be negative
 
 struct gamma_ll
 {
-  int *nuclidetype; // is it a Ni56, Co56, a fake line, etc
+  int *nucindex; // is it a Ni56, Co56, a fake line, etc
   int *index;               // which of the lines of that element is it
   int total;                // the total number of lines in the list
 };
@@ -121,7 +121,7 @@ void init_gamma_linelist(void)
   printout("total gamma-ray lines %d\n", total_lines);
 
   gam_line_list.total = total_lines;
-  gam_line_list.nuclidetype = (int *) malloc(total_lines * sizeof(int));
+  gam_line_list.nucindex = (int *) malloc(total_lines * sizeof(int));
   gam_line_list.index = (int *) malloc(total_lines * sizeof(int));
 
   double energy_last = 0.0;
@@ -148,19 +148,20 @@ void init_gamma_linelist(void)
     }
 
     assert_always(next >= 0);
-    gam_line_list.nuclidetype[i] = next_type;
+    gam_line_list.nucindex[i] = next_type;
     gam_line_list.index[i] = next;
     energy_last = energy_try;
   }
 
   FILE *const line_list = fopen_required("gammalinelist.out", "w+");
 
+  fprintf(line_list, "#index nucindex nucgammmaindex en_gamma_mev en_gamma_probability\n");
   for (int i = 0; i < total_lines; i++)
   {
-    const int nucindex = gam_line_list.nuclidetype[i];
+    const int nucindex = gam_line_list.nucindex[i];
     const int index = gam_line_list.index[i];
     fprintf(line_list, "%d %d %d %g %g \n",
-            i, gam_line_list.nuclidetype[i], gam_line_list.index[i],
+            i, gam_line_list.nucindex[i], gam_line_list.index[i],
             gamma_spectra[nucindex].energy[index] / MEV, gamma_spectra[nucindex].probability[index]);
   }
   fclose(line_list);
@@ -721,14 +722,14 @@ double get_gam_freq(const int n)
   }
 
   // returns the frequency of line n
-  const int nucindex = gam_line_list.nuclidetype[n];
+  const int nucindex = gam_line_list.nucindex[n];
   const int lineid = gam_line_list.index[n];
 
   if (nucindex >= decay::get_num_nuclides() || lineid >= gamma_spectra[nucindex].nlines)
   {
     printout("Unknown line. %d Abort.\n", n);
-    printout("line_list->nuclidetype[n] %d line_list->index[n] %d\n", gam_line_list.nuclidetype[n], gam_line_list.index[n]);
-    // printout(" %d %d \n", gam_line_list.nuclidetype[n], gam_line_list.index[n]);
+    printout("line_list->nucindex[n] %d line_list->index[n] %d\n", gam_line_list.nucindex[n], gam_line_list.index[n]);
+    // printout(" %d %d \n", gam_line_list.nucindex[n], gam_line_list.index[n]);
     abort();
   }
 
