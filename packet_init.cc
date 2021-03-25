@@ -219,6 +219,7 @@ void write_packets(char filename[], PKT *pkt)
     fprintf(packets_file, "%d ", pkt[i].originated_from_positron);
     fprintf(packets_file, "%g ", pkt[i].trueemissionvelocity);
     fprintf(packets_file, "%d ", pkt[i].trueem_time);
+    fprintf(packets_file, "%d ", pkt[i].pellet_nucindex);
     fprintf(packets_file, "\n");
   }
   fclose(packets_file);
@@ -302,7 +303,7 @@ void read_packets(char filename[], PKT *pkt)
     sscanf(linepos, "%d %lg %d%n", &pkt[i].absorptiontype, &pkt[i].absorptionfreq, &pkt[i].nscatterings, &offset);
     linepos += offset;
 
-    sscanf(linepos, "%d%n", &pkt[i].em_time, &offset);
+    sscanf(linepos, "%g%n", &pkt[i].em_time, &offset);
     linepos += offset;
 
     sscanf(linepos, "%lg %lg %lg%n", &pkt[i].absorptiondir[0], &pkt[i].absorptiondir[1], &pkt[i].absorptiondir[2], &offset);
@@ -322,9 +323,11 @@ void read_packets(char filename[], PKT *pkt)
     sscanf(linepos, "%g%n", &pkt[i].trueemissionvelocity, &offset);
     linepos += offset;
 
-    sscanf(linepos, "%d%n", &pkt[i].trueem_time, &offset);
+    sscanf(linepos, "%g%n", &pkt[i].trueem_time, &offset);
     linepos += offset;
 
+    sscanf(linepos, "%d%n", &pkt[i].pellet_nucindex, &offset);
+    linepos += offset;
   }
 
   if (packets_read < globals::npkts)

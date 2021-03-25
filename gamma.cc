@@ -89,8 +89,8 @@ static void read_decaydata(void)
 
   read_gamma_spectrum(27, 57, "co57_lines.txt");
 
-  decay::set_nucdecayenergygamma(26, 52, 0.86 * MEV);
-  decay::set_nucdecayenergygamma(25, 52, 3.415 * MEV);
+  decay::set_nucdecayenergygamma(26, 52, 0.86 * MEV);  // Fe52
+  decay::set_nucdecayenergygamma(25, 52, 3.415 * MEV);  // Mn52
 }
 
 
@@ -171,47 +171,9 @@ static void choose_gamma_ray(PKT *pkt_ptr)
 {
   // Routine to choose which gamma ray line it'll be.
 
-  int z = 0;
-  int a = 0;
-  switch (pkt_ptr->type)
-  {
-    case TYPE_56NI_PELLET:
-      z = 28;
-      a = 56;
-      break;
-
-    case TYPE_56CO_PELLET:
-      z = 27;
-      a = 56;
-      break;
-
-    case TYPE_57NI_PELLET:
-      z = 28;
-      a = 57;
-      break;
-
-    case TYPE_57CO_PELLET:
-      z = 27;
-      a = 57;
-      break;
-
-    case TYPE_48CR_PELLET:
-      z = 24;
-      a = 48;
-      break;
-
-    case TYPE_48V_PELLET:
-      z = 23;
-      a = 48;
-      break;
-
-    default:
-      z = -1;
-      a = -1;
-  }
-  assert_always(z > 0);
-  assert_always(a > 0);
-  const int nucindex = decay::get_nuc_index(z, a);
+  const int nucindex = pkt_ptr->pellet_nucindex;
+  const int z = decay::get_nuc_z(nucindex);
+  const int a = decay::get_nuc_a(nucindex);
   double E_gamma = decay::nucdecayenergygamma(z, a); // Average energy per gamma line of a decay
 
   const double zrand = gsl_rng_uniform(rng);
@@ -229,7 +191,8 @@ static void choose_gamma_ray(PKT *pkt_ptr)
 
   if (nselected < 0)
   {
-    printout("Failure to choose line (packet type %d). Abort. zrand %g runtot %g\n", pkt_ptr->type, zrand, runtot);
+    printout("Failure to choose line (packet type %d pellet_nucindex %d). Abort. zrand %g runtot %g\n",
+             pkt_ptr->type, pkt_ptr->pellet_nucindex, zrand, runtot);
     abort();
   }
 
@@ -238,18 +201,25 @@ static void choose_gamma_ray(PKT *pkt_ptr)
 }
 
 
-void pellet_decay(const int nts, PKT *pkt_ptr)
+void pellet_gamma_decay(const int nts, PKT *pkt_ptr)
 {
-  // Subroutine to convert a pellet to a gamma ray.
+  // Subroutine to convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
+
   // nts defines the time step we are in. pkt_ptr is a pointer to the packet
   // that is decaying.
-  // Record decay.
 
   // Start by getting the position of the pellet at the point of decay. Pellet
   // is moving with the matter.
 
-  // Now let's give the gamma ray a direction.
+  // if no gamma spectra is known, then covert straight to kpkts (e.g., Fe52, Mn52)
+  if (gamma_spectra[pkt_ptr->pellet_nucindex].nlines == 0)
+  {
+    pkt_ptr->type = TYPE_KPKT;
+    pkt_ptr->absorptiontype = -6;
+    return;
+  }
 
+  // Now let's give the gamma ray a direction.
   // Assuming isotropic emission in cmf
 
   double dir_cmf[3];

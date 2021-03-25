@@ -102,16 +102,7 @@ typedef struct phixslist_t
 
 enum packet_type {
   TYPE_ESCAPE = 32,
-  TYPE_56NI_PELLET = 100,
-  TYPE_56CO_PELLET = 101,
-  TYPE_48CR_PELLET = 102,
-  TYPE_48V_PELLET = 103,
-  TYPE_52FE_PELLET = 104,
-  TYPE_52MN_PELLET = 105,
-  TYPE_56CO_POSITRON_PELLET = 106,
-  TYPE_57NI_PELLET = 107,
-  TYPE_57NI_POSITRON_PELLET = 108,
-  TYPE_57CO_PELLET = 109,
+  TYPE_RADIOACTIVE_PELLET = 100,
   TYPE_GAMMA = 10,
   TYPE_RPKT = 11,
   TYPE_KPKT = 12,
@@ -180,6 +171,7 @@ typedef struct packet
   int scat_count;  /// WHAT'S THAT???
   int number;     /// A unique number to identify which packet caused potential troubles.
   bool originated_from_positron; // first-non-pellet packet type was positron
+  int pellet_nucindex;           // nuclide index of the decaying species
   float trueemissionvelocity;
   mastate_t mastate;
 } PKT;

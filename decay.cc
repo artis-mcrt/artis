@@ -92,16 +92,25 @@ void init_nuclides(void)
   nuclides = (struct nuclide *) calloc(num_nuclides, sizeof(struct nuclide));
   assert_always(nuclides != NULL);
 
-  nuclides[0].z = 28; // Ni
+  for (int nucindex = 0; nucindex < num_nuclides; nucindex++)
+  {
+    nuclides[0].z = -1;
+    nuclides[0].a = -1;
+    nuclides[0].meanlife = -1;
+    nuclides[0].endecay_positrons = 0.;
+    nuclides[0].endecay_gamms = 0.;
+  }
+
+  nuclides[0].z = 28; // Ni57
   nuclides[0].a = 57;
   nuclides[0].meanlife = 51.36 * 60;
   nuclides[0].endecay_positrons = 0.354 * MEV * 0.436;
 
-  nuclides[1].z = 28;
+  nuclides[1].z = 28; // Ni56
   nuclides[1].a = 56;
   nuclides[1].meanlife = 8.80 * DAY;
 
-  nuclides[2].z = 27; // Co
+  nuclides[2].z = 27; // Co56
   nuclides[2].a = 56;
   nuclides[2].meanlife = 113.7 * DAY;
   nuclides[2].endecay_positrons = 0.63 * MEV * 0.19;
@@ -109,24 +118,24 @@ void init_nuclides(void)
   nuclides[3].z = -1;  // FAKE_GAM_LINE_ID
   nuclides[3].a = -1;
 
-  nuclides[4].z = 24; // Cr
+  nuclides[4].z = 24; // Cr48
   nuclides[4].a = 48;
   nuclides[4].meanlife = 1.29602 * DAY;
 
-  nuclides[5].z = 23; // V
+  nuclides[5].z = 23; // V48
   nuclides[5].a = 48;
   nuclides[5].meanlife = 23.0442 * DAY;
   nuclides[5].endecay_positrons = 0.290 * 0.499 * MEV;
 
-  nuclides[6].z = 27; // Co
+  nuclides[6].z = 27; // Co57
   nuclides[6].a = 57;
   nuclides[6].meanlife = 392.03 * DAY;
 
-  nuclides[7].z = 26; // Fe
+  nuclides[7].z = 26; // Fe52
   nuclides[7].a = 52;
   nuclides[7].meanlife = 0.497429 * DAY;
 
-  nuclides[8].z = 25; // Mn
+  nuclides[8].z = 25; // Mn52
   nuclides[8].a = 52;
   nuclides[8].meanlife = 0.0211395 * DAY;
 
@@ -222,62 +231,6 @@ static double sample_decaytime(bool from_parent_abund, int z, int a, const doubl
     }
   }
   return tdecay;
-}
-
-
-__host__ __device__
-static enum packet_type get_decay_pellet_type(const int z, const int a, bool *originated_from_positron)
-{
-  *originated_from_positron = false; // will be changed if necessary before returning
-  if (z == 28 && a == 56)
-  {
-    return TYPE_56NI_PELLET;
-  }
-  else if (z == 27 && a == 56)
-  {
-    const double zrand = gsl_rng_uniform(rng);
-    if (zrand < nucdecayenergygamma(27, 56) / nucdecayenergy(27, 56))
-    {
-      return TYPE_56CO_PELLET;
-    }
-    else
-    {
-      *originated_from_positron = true;
-      return TYPE_56CO_POSITRON_PELLET;
-    }
-  }
-  else if (z == 26 && a == 52)
-  {
-    return TYPE_52FE_PELLET;
-  }
-  else if (z == 25 && a == 52)
-  {
-    return TYPE_52MN_PELLET;
-  }
-  else if (z == 24 && a == 48)
-  {
-    return TYPE_48CR_PELLET;
-  }
-  else if (z == 23 && a == 48)
-  {
-    return TYPE_48V_PELLET;
-  }
-  else if (z == 28 && a == 57)
-  {
-    const double zrand = gsl_rng_uniform(rng);
-    if (zrand < nucdecayenergygamma(28, 57) / nucdecayenergy(28, 57))
-    {
-      return TYPE_57NI_PELLET;
-    }
-    else
-    {
-      *originated_from_positron = true;
-      return TYPE_57NI_POSITRON_PELLET;
-    }
-  }
-
-  assert_always(false);
-  return TYPE_ESCAPE; // will never reach here, but gcc needs a return value
 }
 
 
@@ -658,9 +611,11 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
     // assert_always(pkt_ptr->e_cmf >= 0);
   }
 
-  bool from_positron;
-  pkt_ptr->type = decay::get_decay_pellet_type(z, a, &from_positron); // set the packet tdecay and type
-  pkt_ptr->originated_from_positron = from_positron;
+  pkt_ptr->type = TYPE_RADIOACTIVE_PELLET;
+  pkt_ptr->pellet_nucindex = nucindex;
+
+  const double zrand = gsl_rng_uniform(rng);
+  pkt_ptr->originated_from_positron = (zrand >= nucdecayenergygamma(z, a) / nucdecayenergy(z, a));
 }
 
 }
