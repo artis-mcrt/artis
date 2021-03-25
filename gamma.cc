@@ -87,7 +87,7 @@ static void read_decaydata(void)
   if (!filesys::exists("ni56_lines.txt") && filesys::exists("ni_lines.txt"))
   {
     printout("Moving ni_lines.txt to ni56_lines.txt\n");
-    filesys::rename("ni_lines.txt", "ni56_lines.txt");
+    std::rename("ni_lines.txt", "ni56_lines.txt");
   }
   read_gamma_spectrum(28, 56, "ni56_lines.txt");
 
@@ -95,7 +95,7 @@ static void read_decaydata(void)
   if (!filesys::exists("co56_lines.txt") && filesys::exists("co_lines.txt"))
   {
     printout("Moving co_lines.txt to co56_lines.txt\n");
-    filesys::rename("co_lines.txt", "co56_lines.txt");
+    std::rename("co_lines.txt", "co56_lines.txt");
   }
   read_gamma_spectrum(27, 56, "co56_lines.txt");
 
