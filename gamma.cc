@@ -10,7 +10,10 @@
 #include "stats.h"
 #include "vectors.h"
 
-// Material for handing gamma rays - creation and propagation.
+#include <filesystem>
+namespace filesys = std::filesystem;
+
+// Code for handing gamma rays - creation and propagation
 
 struct gamma_spec
 {
@@ -80,9 +83,21 @@ static void read_decaydata(void)
     decay::set_nucdecayenergygamma(z, a, 0.);
   }
 
-  read_gamma_spectrum(28, 56, "ni_lines.txt");
+  // migrate from old filename
+  if (!filesys::exists("ni56_lines.txt") && filesys::exists("ni_lines.txt"))
+  {
+    printout("Moving ni_lines.txt to ni56_lines.txt\n");
+    filesys::rename("ni_lines.txt", "ni56_lines.txt");
+  }
+  read_gamma_spectrum(28, 56, "ni56_lines.txt");
 
-  read_gamma_spectrum(27, 56, "co_lines.txt");
+  // migrate from old filename
+  if (!filesys::exists("co56_lines.txt") && filesys::exists("co_lines.txt"))
+  {
+    printout("Moving co_lines.txt to co56_lines.txt\n");
+    filesys::rename("co_lines.txt", "co56_lines.txt");
+  }
+  read_gamma_spectrum(27, 56, "co56_lines.txt");
 
   read_gamma_spectrum(23, 48, "v48_lines.txt");
 
