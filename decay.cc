@@ -88,6 +88,8 @@ static bool nuc_exists(int z, int a)
 __host__ __device__
 void init_nuclides(void)
 {
+  // all decays are currently assumed to be electron-capture or beta+ (Z -> Z - 1)
+
   num_nuclides = 9;
   nuclides = (struct nuclide *) calloc(num_nuclides, sizeof(struct nuclide));
   assert_always(nuclides != NULL);
