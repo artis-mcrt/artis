@@ -5,10 +5,10 @@ on:
     branches:
     - nebular*
     - main
-  pull_request:
-    branches:
-    - nebular*
-    - main
+  # pull_request:
+  #   branches:
+  #   - nebular*
+  #   - main
 
 jobs:
   build_and_test:
@@ -103,6 +103,7 @@ jobs:
     - name: "Run exspec"
       working-directory: tests/nebularonezone/
       run: |
+        cp input.txt ../nebularonezone_reference/
         time ./exspec
         mkdir output
         cp output_0-0.txt exspec.txt *.out output/
@@ -122,11 +123,11 @@ jobs:
       working-directory: tests/nebularonezone/output
       run: |
         md5sum *.out
-        md5sum -c <(echo e4963320fa6da60fc14aba0d6aa7c52d estimators_0000.out)
-        md5sum -c <(echo 43dc783d438b33bcd350cfb5967364a8 light_curve.out)
-        md5sum -c <(echo f8a7677f193e17341a62a08697f70711 spec.out)
-        md5sum -c <(echo 8e7163982f1aa938dc1505478b8c60d1 timesteps.out)
-        md5sum -c <(echo 73da2aa7a706efdb62b5f1dc610bbf14 deposition.out)
+        # md5sum -c <(echo e4963320fa6da60fc14aba0d6aa7c52d estimators_0000.out)
+        # md5sum -c <(echo 43dc783d438b33bcd350cfb5967364a8 light_curve.out)
+        # md5sum -c <(echo f8a7677f193e17341a62a08697f70711 spec.out)
+        # md5sum -c <(echo 8e7163982f1aa938dc1505478b8c60d1 timesteps.out)
+        # md5sum -c <(echo 73da2aa7a706efdb62b5f1dc610bbf14 deposition.out)
 
     - name: Set up Python
       uses: actions/setup-python@v2
@@ -168,8 +169,8 @@ jobs:
     - name: Plot output
       working-directory: tests/
       run: |
-        python3 -m artistools.lightcurve -modelpath nebularonezone nebularonezone_reference
-         python3 -m artistools.spectra -ts 9 -specpath nebularonezone nebularonezone_reference
+        python3 -m artistools.lightcurve nebularonezone nebularonezone_reference
+         python3 -m artistools.spectra -ts 9 nebularonezone nebularonezone_reference
 
     - name: Upload plot files files
       uses: actions/upload-artifact@v2

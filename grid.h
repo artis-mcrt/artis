@@ -1,7 +1,6 @@
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
-#include "decay.h"
 #include "types.h"
 
 enum model_types {
@@ -24,15 +23,9 @@ typedef struct modelgrid_t
   float rho;
   //modelgrid nn_tot
   float nnetot;           // total electron density (free + bound).
-  float initradioabund[RADIONUCLIDE_COUNT];
+  float *initradioabund;
+  float *initmassfracstable;
   float ffegrp;
-  float fnistable;
-  float fcostable;
-  float ffestable;
-  float fmnstable;
-  float fcrstable;
-  float fvstable;
-  float ftistable;
   float kappagrey;
   float grey_depth;                      /// Grey optical depth to surface of the modelgridcell
                                          /// This is only stored to print it outside the OpenMP loop in update_grid to the estimatorsfile
@@ -83,9 +76,9 @@ __host__ __device__ void set_TJ(int modelgridindex, float x);
 __host__ __device__ void set_W(int modelgridindex, float x);
 void grid_init(int my_rank);
 __host__ __device__ double get_cellradialpos(int cellindex);
-__host__ __device__ float get_modelinitradioabund(int modelgridindex, enum radionuclides nuclide_type);
-__host__ __device__ void set_modelinitradioabund(int modelgridindex, enum radionuclides nuclide_type, float abund);
-__host__ __device__ float get_stable_abund(int mgi, int anumber);
+__host__ __device__ float get_modelinitradioabund(int modelgridindex, int z, int a);
+__host__ __device__ void set_modelinitradioabund(int modelgridindex, int z, int a, float abund);
+__host__ __device__ float get_stable_initabund(int mgi, int anumber);
 __host__ __device__ int get_numassociatedcells(int modelgridindex);
 __host__ __device__ enum model_types get_model_type(void);
 __host__ __device__ void set_model_type(enum model_types model_type_value);
@@ -94,6 +87,6 @@ __host__ __device__ void set_npts_model(int npts_model);
 __host__ __device__ int get_cell_modelgridindex(int cellindex);
 void read_ejecta_model(enum model_types model_type);
 void write_grid_restart_data(const int timestep);
-double get_totmassradionuclide(enum radionuclides nuc);
+double get_totmassradionuclide(const int z, const int a);
 
 #endif //GRIDINIT_H

@@ -1054,14 +1054,10 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     /// This is done outside update grid now
     //globals::modelgrid[n].totalcooling = COOLING_UNDEFINED;
 
+    /// Update abundances of radioactive isotopes
+    decay::update_abundances(mgi, nts, globals::time_step[nts].mid);
     if (globals::opacity_case == 4)
     {
-      /// Update abundances of radioactive isotopes
-      //printout("call update abundances for timestep %d in model cell %d\n",m,n);
-      decay::update_abundances(mgi, nts, globals::time_step[nts].mid);
-      nonthermal::calculate_deposition_rate_density(mgi, nts);
-      printout("update_abundances for cell %d timestep %d\n", mgi, nts);
-
       /// For timestep 0 we calculate the level populations straight forward wihout
       /// applying any temperature correction
       if ((nts - globals::itstep) == 0 && titer == 0)
@@ -1235,16 +1231,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       globals::modelgrid[mgi].thick = 1;
 
       /// Need the total number density of bound and free electrons for Compton scatterin
-      decay::update_abundances(mgi, nts, globals::time_step[nts].mid);
-      double nne_tot = 0.;
-      for (int element = 0; element < get_nelements(); element++)
-      {
-        double abundance = get_elem_abundance(mgi, element);
-        /// calculate number density of the current element (abundances are given by mass)
-        double nnelement = abundance / globals::elements[element].mass * get_rho(mgi);
-        nne_tot += nnelement * get_element(element);
-      }
-      set_nnetot(mgi, nne_tot);
+      calculate_electron_densities(mgi); // if this causes problems, disable the nne calculation (only need nne_tot)
 
       if (globals::opacity_case == 3)
       {
@@ -1312,8 +1299,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   ///Calculate the critical opacity at which opacity_case 3 switches from a
   ///regime proportional to the density to a regime independent of the density
   ///This is done by solving for tau_sobolev == 1
-  ///tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(NUCLIDE_NI56) * 3000e-8 * globals::time_step[m].mid;
-  globals::rho_crit = ME * CLIGHT * decay::nucmass(NUCLIDE_NI56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::time_step[nts].mid);
+  ///tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(28, 56) * 3000e-8 * globals::time_step[m].mid;
+  globals::rho_crit = ME * CLIGHT * decay::nucmass(28, 56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::time_step[nts].mid);
   printout("update_grid: rho_crit = %g\n", globals::rho_crit);
 
   // These values will not be used if nts == 0, but set them anyway
@@ -1481,7 +1468,7 @@ double calculate_populations(const int modelgridindex)
           #endif
 
           if ((Gamma == 0) &&
-             (!NT_ON || ((globals::rpkt_emiss[modelgridindex] == 0.) && (get_modelinitradioabund(modelgridindex, NUCLIDE_CR48) == 0.) && (get_modelinitradioabund(modelgridindex, NUCLIDE_NI56) == 0.))))
+             (!NT_ON || ((globals::rpkt_emiss[modelgridindex] == 0.) && (get_modelinitradioabund(modelgridindex, 24, 48) == 0.) && (get_modelinitradioabund(modelgridindex, 28, 56) == 0.))))
             break;
         }
         uppermost_ion = ion;
@@ -1699,7 +1686,7 @@ double calculate_electron_densities(const int modelgridindex)
       for (int ion = 0; ion < nions; ion++)
       {
         //if (ion <= globals::elements[element].uppermost_ion)
-        nne += (get_ionstage(element,ion)-1) * ionstagepop(modelgridindex,element,ion);
+        nne += (get_ionstage(element,ion) - 1) * ionstagepop(modelgridindex,element,ion);
       }
     }
   }

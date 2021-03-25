@@ -29,7 +29,7 @@ static long mem_usage_nltepops = 0;
 
 static __managed__ int mg_associated_cells[MMODELGRID + 1];
 
-__managed__ double totmassradionuclide[RADIONUCLIDE_COUNT]; /// total mass of each radionuclide in the ejecta
+__managed__ double *totmassradionuclide = NULL; /// total mass of each radionuclide in the ejecta
 
 __host__ __device__
 double wid_init(const int cellindex)
@@ -389,140 +389,71 @@ int get_numassociatedcells(const int modelgridindex)
 
 
 __host__ __device__
-float get_modelinitradioabund(const int modelgridindex, const enum radionuclides nuclide_type)
+float get_modelinitradioabund(const int modelgridindex, const int z, const int a)
 {
   // this function replaces get_f56ni(mgi), get_fco56(mgi), etc.
 
-  assert_always(nuclide_type < RADIONUCLIDE_COUNT);
+  const int nucindex = decay::get_nuc_index(z, a);
+  assert_always(decay::get_nuc_z(nucindex) >= 0); // check not FAKE_GAM_LINE_ID nuclide
 
-  return globals::modelgrid[modelgridindex].initradioabund[nuclide_type];
+  assert_always(globals::modelgrid[modelgridindex].initradioabund != NULL);
+  return globals::modelgrid[modelgridindex].initradioabund[nucindex];
 }
 
 
 __host__ __device__
-void set_modelinitradioabund(const int modelgridindex, const enum radionuclides nuclide_type, const float abund)
+void set_modelinitradioabund(const int modelgridindex, const int z, const int a, const float abund)
 {
   assert_always(abund >= 0.);
   assert_always(abund <= 1.);
-  // this function replaces set_f56ni(mgi), set_fco56(mgi), etc.
 
-  if ((nuclide_type == FAKE_GAM_LINE_ID && abund > 0) || nuclide_type >= RADIONUCLIDE_COUNT)
-  {
-    printout("set_initfracradio called with invalid nuclide_type type %d\n", nuclide_type);
-    abort();
-  }
+  const int nucindex = decay::get_nuc_index(z, a);
+  assert_always(decay::get_nuc_z(nucindex) >= 0 || abund == 0.); // check not FAKE_GAM_LINE_ID nuclide
 
-  globals::modelgrid[modelgridindex].initradioabund[nuclide_type] = abund;
+  assert_always(globals::modelgrid[modelgridindex].initradioabund != NULL);
+  globals::modelgrid[modelgridindex].initradioabund[nucindex] = abund;
 }
 
 
 __host__ __device__
-float get_stable_abund(const int mgi, const int anumber)
+float get_stable_initabund(const int mgi, const int element)
 {
-  switch (anumber)
-  {
-    case 28:
-      return globals::modelgrid[mgi].fnistable;
-
-    case 27:
-      return globals::modelgrid[mgi].fcostable;
-
-    case 26:
-      return globals::modelgrid[mgi].ffestable;
-
-    case 25:
-      return globals::modelgrid[mgi].fmnstable;
-
-    case 24:
-      return globals::modelgrid[mgi].fcrstable;
-
-    case 23:
-      return globals::modelgrid[mgi].fvstable;
-
-    case 22:
-      return globals::modelgrid[mgi].ftistable;
-
-    default:
-      printout("ERROR: no stable abundance variable for element Z=%d\n", anumber);
-      abort();
-      return -1;
-  }
+  return globals::modelgrid[mgi].initmassfracstable[element];
 }
 
 
 __host__ __device__
-static void set_elem_stable_abund_from_total(const int mgi, const int anumber, const float elemabundance)
+static void set_elem_stable_abund_from_total(const int mgi, const int element, const float elemabundance)
 {
   // set the stable mass fraction of an element from the total element mass fraction
   // by subtracting the abundances of radioactive isotopes.
   // if the element Z=anumber has no specific stable abundance variable then the function does nothing
-  switch (anumber)
+
+  const int atomic_number = get_element(element);
+
+  double isofracsum = 0.; // mass fraction sum of radioactive isotopes
+  for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
   {
-    case 28:
+    const int a = decay::get_nuc_a(nucindex);
+    if (decay::get_nuc_z(nucindex) == atomic_number)
     {
-      globals::modelgrid[mgi].fnistable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_NI56) - get_modelinitradioabund(mgi, NUCLIDE_NI57);
-      if (globals::modelgrid[mgi].fnistable < 0.)
-      {
-          printout("WARNING: cell %d Ni element abundance is less than the sum of isotopic abundances \n", mgi);
-          printout("  X_Ni %g X_Ni56 %g X_Ni57 %g\n", elemabundance,
-                   get_modelinitradioabund(mgi, NUCLIDE_NI56), get_modelinitradioabund(mgi, NUCLIDE_NI57));
-          assert_always(globals::modelgrid[mgi].fnistable >= -1e-3);  // result is allowed to be slightly negative due to roundoff error
-          globals::modelgrid[mgi].fnistable = fmax(0., globals::modelgrid[mgi].fnistable); // bring up to zero if negative
-      }
-      break;
-    }
-
-    case 27:
-    {
-      globals::modelgrid[mgi].fcostable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_CO56) - get_modelinitradioabund(mgi, NUCLIDE_CO57);
-      if (globals::modelgrid[mgi].fcostable < 0)  // result can be slightly negative due to roundoff error
-      {
-        printout("WARNING: cell %d Co element abundance is less than the sum of isotopic abundances\n", mgi);
-        printout("  X_Co %g X_Co56 %g X_Co57 %g\n", elemabundance,
-                 get_modelinitradioabund(mgi, NUCLIDE_CO56), get_modelinitradioabund(mgi, NUCLIDE_CO57));
-        assert_always(globals::modelgrid[mgi].fcostable >= -1e-3);  // result is allowed to be slightly negative due to roundoff error
-        globals::modelgrid[mgi].fcostable = fmax(0., globals::modelgrid[mgi].fcostable); // bring up to zero if negative
-      }
-      break;
-    }
-
-    case 26:
-    {
-      globals::modelgrid[mgi].ffestable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_FE52);
-      assert_always(globals::modelgrid[mgi].ffestable >= -2e-5);
-      globals::modelgrid[mgi].ffestable = fmax(0., globals::modelgrid[mgi].ffestable);
-      break;
-    }
-
-    case 25:
-    {
-      globals::modelgrid[mgi].fmnstable = elemabundance;
-      assert_always(globals::modelgrid[mgi].fmnstable >= 0.);
-      break;
-    }
-
-    case 24:
-    {
-      globals::modelgrid[mgi].fcrstable = elemabundance - get_modelinitradioabund(mgi, NUCLIDE_CR48);
-      assert_always(globals::modelgrid[mgi].fcrstable >= -2e-5);
-      globals::modelgrid[mgi].fcrstable = fmax(0., globals::modelgrid[mgi].fcrstable);
-      break;
-    }
-
-    case 23:
-    {
-      globals::modelgrid[mgi].fvstable = elemabundance;
-      assert_always(globals::modelgrid[mgi].fvstable >= 0.);
-      break;
-    }
-
-    case 22:
-    {
-      globals::modelgrid[mgi].ftistable = elemabundance;
-      assert_always(globals::modelgrid[mgi].ftistable >= 0.);
-      break;
+      // radioactive isotope of this element
+      isofracsum += get_modelinitradioabund(mgi, atomic_number, a);
     }
   }
+
+  double massfracstable = elemabundance - isofracsum;
+
+  if (massfracstable < 0.)
+  {
+      printout("WARNING: cell %d Z=%d element abundance is less than the sum of its radioisotope abundances \n",
+               mgi, atomic_number);
+      printout("  massfrac(Z) %g massfrac_radioisotopes(Z) %g\n", elemabundance, isofracsum);
+      assert_always(massfracstable >= -1e-3);  // result is allowed to be slightly negative due to roundoff error
+      massfracstable = fmax(0., massfracstable); // bring up to zero if negative
+  }
+
+  globals::modelgrid[mgi].initmassfracstable[element] = massfracstable;
 }
 
 
@@ -678,6 +609,9 @@ static void allocate_compositiondata(const int modelgridindex)
     abort();
   }
 
+  globals::modelgrid[modelgridindex].initmassfracstable = (float *) malloc(get_nelements() * sizeof(float));
+  assert_always(globals::modelgrid[modelgridindex].initmassfracstable != NULL);
+
   mem_usage_nltepops += globals::total_nlte_levels * sizeof(double);
 
   if ((globals::modelgrid[modelgridindex].nlte_pops = (double *) malloc(globals::total_nlte_levels * sizeof(double))) == NULL)
@@ -753,10 +687,13 @@ static void allocate_nonemptymodelcells(void)
   set_rho(MMODELGRID, 0.);
   set_nne(MMODELGRID, 0.);
   set_ffegrp(MMODELGRID, 0.);
-  for (int isoint = 0; isoint < RADIONUCLIDE_COUNT; isoint++)
+  globals::modelgrid[MMODELGRID].initradioabund = (float *) calloc(decay::get_num_nuclides(), sizeof(float));
+  assert_always(globals::modelgrid[MMODELGRID].initradioabund != NULL);
+  for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
   {
-    const enum radionuclides iso = (enum radionuclides) isoint;
-    set_modelinitradioabund(MMODELGRID, iso, 0.);
+    const int z = decay::get_nuc_z(nucindex);
+    const int a = decay::get_nuc_a(nucindex);
+    set_modelinitradioabund(MMODELGRID, z, a, 0.);
   }
   set_Te(MMODELGRID, MINTEMP);
   set_TJ(MMODELGRID, MINTEMP);
@@ -795,10 +732,11 @@ static void allocate_nonemptymodelcells(void)
     {
       set_rhoinit(mgi, 0.);
       set_rho(mgi, 0.);
-      for (int isoint = 0; isoint < RADIONUCLIDE_COUNT; isoint++)
+      for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
       {
-        const enum radionuclides iso = (enum radionuclides) isoint;
-        set_modelinitradioabund(mgi, iso, 0.);
+        const int z = decay::get_nuc_z(nucindex);
+        const int a = decay::get_nuc_a(nucindex);
+        set_modelinitradioabund(mgi, z, a, 0.);
       }
     }
   }
@@ -980,7 +918,7 @@ static void abundances_read(void)
         globals::modelgrid[mgi].composition[element].abundance = elemabundance;
 
         // radioactive nuclide abundances should have already been set by read_??_model
-        set_elem_stable_abund_from_total(mgi, anumber, elemabundance);
+        set_elem_stable_abund_from_total(mgi, element, elemabundance);
       }
     }
   }
@@ -989,7 +927,7 @@ static void abundances_read(void)
 }
 
 
-static void read_2d3d_modelabundanceline(FILE * model_input, const int mgi, const bool keep)
+static void read_2d3d_modelradioabundanceline(FILE * model_input, const int mgi, const bool keep)
 {
   char line[2048] = "";
   if (line != fgets(line, 2048, model_input))
@@ -1020,13 +958,16 @@ static void read_2d3d_modelabundanceline(FILE * model_input, const int mgi, cons
 
     if (keep)
     {
-      set_modelinitradioabund(mgi, NUCLIDE_NI56, f56ni_model);
-      set_modelinitradioabund(mgi, NUCLIDE_CO56, f56co_model);
-      set_modelinitradioabund(mgi, NUCLIDE_NI57, f57ni_model);
-      set_modelinitradioabund(mgi, NUCLIDE_CO57, f57co_model);
-      set_modelinitradioabund(mgi, NUCLIDE_FE52, f52fe_model);
-      set_modelinitradioabund(mgi, NUCLIDE_CR48, f48cr_model);
-      set_modelinitradioabund(mgi, NUCLIDE_V48, 0.);
+      globals::modelgrid[mgi].initradioabund = (float *) calloc(decay::get_num_nuclides(), sizeof(float));
+      assert_always(globals::modelgrid[mgi].initradioabund != NULL);
+
+      set_modelinitradioabund(mgi, 28, 56, f56ni_model);
+      set_modelinitradioabund(mgi, 27, 56, f56co_model);
+      set_modelinitradioabund(mgi, 28, 57, f57ni_model);
+      set_modelinitradioabund(mgi, 27, 57, f57co_model);
+      set_modelinitradioabund(mgi, 26, 52, f52fe_model);
+      set_modelinitradioabund(mgi, 24, 48, f48cr_model);
+      set_modelinitradioabund(mgi, 23, 48, 0.);
 
       set_ffegrp(mgi, ffegrp_model);
       //printout("mgi %d, control rho_init %g\n",mgi,get_rhoinit(mgi));
@@ -1063,6 +1004,8 @@ static void read_1d_model(void)
   // in the cell (float) and the total abundance of all Fe-grp elements
   // in the cell (float). For now, the last number is recorded but never
   // used.
+
+  decay::init_nuclides();
 
   int mgi = 0;
   while (!feof(model_input))
@@ -1114,13 +1057,16 @@ static void read_1d_model(void)
     //          cellnumin, vout_kmps, log_rho, ffegrp_model[n], f56ni_model[n],
     //          f56co_model[n], f52fe_model[n], f48cr_model[n]);
     // printout("   %lg %lg\n", f57ni_model[n], f57co_model[n]);
-    set_modelinitradioabund(mgi, NUCLIDE_NI56, f56ni_model);
-    set_modelinitradioabund(mgi, NUCLIDE_CO56, f56co_model);
-    set_modelinitradioabund(mgi, NUCLIDE_NI57, f57ni_model);
-    set_modelinitradioabund(mgi, NUCLIDE_CO57, f57co_model);
-    set_modelinitradioabund(mgi, NUCLIDE_FE52, f52fe_model);
-    set_modelinitradioabund(mgi, NUCLIDE_CR48, f48cr_model);
-    set_modelinitradioabund(mgi, NUCLIDE_V48, 0.);
+    globals::modelgrid[mgi].initradioabund = (float *) calloc(decay::get_num_nuclides(), sizeof(float));
+    assert_always(globals::modelgrid[mgi].initradioabund != NULL);
+
+    set_modelinitradioabund(mgi, 28, 56, f56ni_model);
+    set_modelinitradioabund(mgi, 27, 56, f56co_model);
+    set_modelinitradioabund(mgi, 28, 57, f57ni_model);
+    set_modelinitradioabund(mgi, 27, 57, f57co_model);
+    set_modelinitradioabund(mgi, 26, 52, f52fe_model);
+    set_modelinitradioabund(mgi, 24, 48, f48cr_model);
+    set_modelinitradioabund(mgi, 23, 48, 0.);
     set_ffegrp(mgi, ffegrp_model);
 
     mgi += 1;
@@ -1167,6 +1113,8 @@ static void read_2d_model(void)
   // then its total mass density.
   // Second is the total FeG mass, initial 56Ni mass, initial 56Co mass
 
+  decay::init_nuclides();
+
   int mgi = 0;
   while (!feof(model_input))
   {
@@ -1198,7 +1146,7 @@ static void read_2d_model(void)
     set_rhoinit(mgi, rho_tmin);
     set_rho(mgi, rho_tmin);
 
-    read_2d3d_modelabundanceline(model_input, mgi, true);
+    read_2d3d_modelradioabundanceline(model_input, mgi, true);
 
     mgi++;
   }
@@ -1255,6 +1203,8 @@ static void read_3d_model(void)
   // set false if a problem is detected
   bool posmatch_xyz = true;
   bool posmatch_zyx = true;
+
+  decay::init_nuclides();
 
   // mgi is the index to the model grid - empty cells are sent to MMODELGRID,
   // otherwise each input cell is one modelgrid cell
@@ -1329,7 +1279,7 @@ static void read_3d_model(void)
       set_cell_modelgridindex(n, MMODELGRID);
     }
 
-    read_2d3d_modelabundanceline(model_input, mgi, keepcell);
+    read_2d3d_modelradioabundanceline(model_input, mgi, keepcell);
     if (keepcell)
     {
       mgi++;
@@ -1364,13 +1314,17 @@ static void read_3d_model(void)
 }
 
 
-static void show_totmassradionuclides(void)
+static void calc_totmassradionuclides(void)
 {
   mtot = 0.;
   mfeg = 0.;
 
-  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
-    totmassradionuclide[iso] = 0.;
+  assert_always(totmassradionuclide == NULL);
+  totmassradionuclide = (double *) calloc(decay::get_num_nuclides(), sizeof(double));
+  assert_always(totmassradionuclide != NULL);
+
+  for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
+    totmassradionuclide[nucindex] = 0.;
 
   int n1 = 0;
   for (int mgi = 0; mgi < get_npts_model(); mgi++)
@@ -1406,10 +1360,14 @@ static void show_totmassradionuclides(void)
 
     mtot += mass_in_shell;
 
-    for (int isoint = 0; isoint < RADIONUCLIDE_COUNT; isoint++)
+    for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
     {
-      const enum radionuclides iso = (enum radionuclides) isoint;
-      totmassradionuclide[iso] += mass_in_shell * get_modelinitradioabund(mgi, iso);
+      const int z = decay::get_nuc_z(nucindex);
+      const int a = decay::get_nuc_a(nucindex);
+      if (z > 0)  // skips FAKE_GAM_LINE_ID
+      {
+        totmassradionuclide[nucindex] += mass_in_shell * get_modelinitradioabund(mgi, z, a);
+      }
     }
 
     mfeg += mass_in_shell * get_ffegrp(mgi);
@@ -1417,11 +1375,11 @@ static void show_totmassradionuclides(void)
 
 
   printout("Masses / Msun:    Total: %9.3e  56Ni: %9.3e  56Co: %9.3e  52Fe: %9.3e  48Cr: %9.3e\n",
-           mtot / MSUN, totmassradionuclide[NUCLIDE_NI56] / MSUN,
-           totmassradionuclide[NUCLIDE_CO56] / MSUN, totmassradionuclide[NUCLIDE_FE52] / MSUN,
-           totmassradionuclide[NUCLIDE_CR48] / MSUN);
+           mtot / MSUN, get_totmassradionuclide(28, 56) / MSUN,
+           get_totmassradionuclide(27, 56) / MSUN, get_totmassradionuclide(26, 52) / MSUN,
+           get_totmassradionuclide(24, 48) / MSUN);
   printout("Masses / Msun: Fe-group: %9.3e  57Ni: %9.3e  57Co: %9.3e\n",
-           mfeg / MSUN, totmassradionuclide[NUCLIDE_NI57] / MSUN, totmassradionuclide[NUCLIDE_CO57] / MSUN);
+           mfeg / MSUN, get_totmassradionuclide(28, 57) / MSUN, get_totmassradionuclide(27, 57) / MSUN);
 }
 
 
@@ -1473,7 +1431,7 @@ void read_ejecta_model(enum model_types model_type)
 
   globals::coordmax[0] = globals::coordmax[1] = globals::coordmax[2] = globals::rmax;
 
-  show_totmassradionuclides();
+  calc_totmassradionuclides();
 }
 
 
@@ -1634,10 +1592,10 @@ static void assign_temperature(void)
 
   const double tstart = globals::time_step[0].mid;
 
-  const double e_ni56 = decay::nucdecayenergy(NUCLIDE_NI56);
-  const double t_ni56 = decay::meanlife(NUCLIDE_NI56);
-  const double e_co56 = decay::nucdecayenergy(NUCLIDE_CO56);
-  const double t_co56 = decay::meanlife(NUCLIDE_CO56);
+  const double e_ni56 = decay::nucdecayenergy(28, 56);
+  const double t_ni56 = decay::get_meanlife(28, 56);
+  const double e_co56 = decay::nucdecayenergy(27, 56);
+  const double t_co56 = decay::get_meanlife(27, 56);
 
   const double factor56ni = 1. / 56 / MH * (-1. / (tstart * (- t_co56 + t_ni56)))
     * (- e_ni56 * exp(- tstart / t_ni56) * tstart * t_co56 - e_ni56 * exp(- tstart / t_ni56) * t_ni56 * t_co56
@@ -1649,10 +1607,10 @@ static void assign_temperature(void)
   const double factor56co = 1. / 56 / MH * (1. / (tstart * t_co56))
     * (t_co56 * tstart * e_co56 * exp(- tstart / t_co56) + pow(t_co56, 2) * e_co56 * exp(- tstart / t_co56));
 
-  const double e_ni57 = decay::nucdecayenergy(NUCLIDE_NI57);
-  const double t_ni57 = decay::meanlife(NUCLIDE_NI57);
-  const double e_co57 = decay::nucdecayenergy(NUCLIDE_CO57);
-  const double t_co57 = decay::meanlife(NUCLIDE_CO57);
+  const double e_ni57 = decay::nucdecayenergy(28, 57);
+  const double t_ni57 = decay::get_meanlife(28, 57);
+  const double e_co57 = decay::nucdecayenergy(27, 57);
+  const double t_co57 = decay::get_meanlife(27, 57);
 
   const double factor57ni = 1. / 57 / MH * (-1. / (tstart * (- t_co57 + t_ni57)))
     * (- e_ni57 * exp(- tstart / t_ni57) * tstart * t_co57 - e_ni57 * exp(- tstart / t_ni57) * t_ni57 * t_co57
@@ -1661,10 +1619,10 @@ static void assign_temperature(void)
        + e_co57 * tstart * t_ni57 * exp(- tstart / t_ni57) + pow(t_ni57, 2) * e_co57 * exp(- tstart / t_ni57)
        + e_ni57 * t_co57 * t_ni57 - e_ni57 * pow(t_ni57, 2) - pow(t_ni57, 2) * e_co57 + e_co57 * pow(t_co57, 2));
 
- const double e_fe52 = decay::nucdecayenergy(NUCLIDE_FE52);
- const double t_fe52 = decay::meanlife(NUCLIDE_FE52);
- const double e_mn52 = decay::nucdecayenergy(NUCLIDE_MN52);
- const double t_mn52 = decay::meanlife(NUCLIDE_MN52);
+ const double e_fe52 = decay::nucdecayenergy(26, 52);
+ const double t_fe52 = decay::get_meanlife(26, 52);
+ const double e_mn52 = decay::nucdecayenergy(25, 52);
+ const double t_mn52 = decay::get_meanlife(25, 52);
 
   const double factor52fe = 1. / 52 / MH * (-1. / (tstart * (- t_mn52 + t_fe52)))
     * (- e_fe52 * exp(- tstart / t_fe52) * tstart * t_mn52 - e_fe52 * exp(- tstart / t_fe52) * t_fe52 * t_mn52
@@ -1673,10 +1631,10 @@ static void assign_temperature(void)
        + e_mn52 * tstart * t_fe52 * exp(- tstart / t_fe52) + pow(t_fe52, 2) * e_mn52 * exp(- tstart / t_fe52)
        + e_fe52 * t_mn52 * t_fe52 - e_fe52 * pow(t_fe52, 2) - pow(t_fe52, 2) * e_mn52 + e_mn52 * pow(t_mn52, 2));
 
-  const double e_cr48 = decay::nucdecayenergy(NUCLIDE_CR48);
-  const double t_cr48 = decay::meanlife(NUCLIDE_CR48);
-  const double e_v48 = decay::nucdecayenergy(NUCLIDE_V48);
-  const double t_v48 = decay::meanlife(NUCLIDE_V48);
+  const double e_cr48 = decay::nucdecayenergy(24, 48);
+  const double t_cr48 = decay::get_meanlife(24, 48);
+  const double e_v48 = decay::nucdecayenergy(23, 48);
+  const double t_v48 = decay::get_meanlife(23, 48);
 
   const double factor48cr = 1. / 48 / MH * (-1. / (tstart * (- t_v48 + t_cr48)))
     * (- e_cr48 * exp(- tstart / t_cr48) * tstart * t_v48 - e_cr48 * exp(- tstart / t_cr48) * t_cr48 * t_v48
@@ -1685,9 +1643,9 @@ static void assign_temperature(void)
        + e_v48 * tstart * t_cr48 * exp(- tstart / t_cr48) + pow(t_cr48, 2) * e_v48 * exp(- tstart / t_cr48)
        + e_cr48 * t_v48 * t_cr48 - e_cr48 * pow(t_cr48, 2) - pow(t_cr48, 2) * e_v48 + e_v48 * pow(t_v48, 2));
 
-  //factor56ni = CLIGHT/4/STEBO * nucdecayenergy(NUCLIDE_NI56)/56/MH;
+  //factor56ni = CLIGHT/4/STEBO * nucdecayenergy(28, 56)/56/MH;
   /// This works only for the inbuilt Lucy model
-  //factor56ni = CLIGHT/4/STEBO * 3*mtot/4/PI * nucdecayenergy(NUCLIDE_NI56)/56/MH  / pow(vmax,3);
+  //factor56ni = CLIGHT/4/STEBO * 3*mtot/4/PI * nucdecayenergy(28, 56)/56/MH  / pow(vmax,3);
   for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
     // alternative, not correct because it neglects expansion factor
@@ -1696,15 +1654,15 @@ static void assign_temperature(void)
     // double T_initial = pow(CLIGHT / 4 / STEBO  * pow(globals::tmin / tstart, 3) * get_rhoinit(mgi) * decayedenergy_per_mass, 1. / 4.);
 
     double T_initial = pow(CLIGHT / 4 / STEBO  * pow(globals::tmin / tstart, 3) * get_rhoinit(mgi) * (
-         (factor56ni * get_modelinitradioabund(mgi, NUCLIDE_NI56)) +
-         (factor56co * get_modelinitradioabund(mgi, NUCLIDE_CO56)) +
-         (factor57ni * get_modelinitradioabund(mgi, NUCLIDE_NI57)) +
-         // (factor57co * get_modelinitradioabund(mgi, NUCLIDE_CO57)) +
-         (factor52fe * get_modelinitradioabund(mgi, NUCLIDE_FE52)) +
-         (factor48cr * get_modelinitradioabund(mgi, NUCLIDE_CR48))), 1. / 4.);
+         (factor56ni * get_modelinitradioabund(mgi, 28, 56)) +
+         (factor56co * get_modelinitradioabund(mgi, 27, 56)) +
+         (factor57ni * get_modelinitradioabund(mgi, 28, 57)) +
+         // (factor57co * get_modelinitradioabund(mgi, 27, 57)) +
+         (factor52fe * get_modelinitradioabund(mgi, 26, 52)) +
+         (factor48cr * get_modelinitradioabund(mgi, 23, 48))), 1. / 4.);
 
     // printout("mgi %d: T_initial %g K tmin %g tstart %g rhoinit %g X_56Ni %g X_52Fe %g X_48cr %g\n",
-    //          mgi, T_initial, globals::tmin, tstart, get_rhoinit(mgi), get_modelinitradioabund(mgi, NUCLIDE_NI56), get_modelinitradioabund(mgi, NUCLIDE_FE52), get_modelinitradioabund(mgi, NUCLIDE_CR48));
+    //          mgi, T_initial, globals::tmin, tstart, get_rhoinit(mgi), get_modelinitradioabund(mgi, 28, 56), get_modelinitradioabund(mgi, 26, 52), get_modelinitradioabund(mgi, 24, 48));
     if (T_initial < MINTEMP)
     {
       printout("mgi %d: T_initial of %g is below MINTEMP %g K, setting to MINTEMP.\n", mgi, T_initial, MINTEMP);
@@ -1890,8 +1848,8 @@ void grid_init(int my_rank)
   // Calculate the critical opacity at which opacity_case 3 switches from a
   // regime proportional to the density to a regime independent of the density
   // This is done by solving for tau_sobolev == 1
-  // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(NUCLIDE_NI56) * 3000e-8 * globals::time_step[m].mid;
-  globals::rho_crit = ME * CLIGHT * decay::nucmass(NUCLIDE_NI56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::tmin);
+  // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(28, 56) * 3000e-8 * globals::time_step[m].mid;
+  globals::rho_crit = ME * CLIGHT * decay::nucmass(28, 56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::tmin);
   printout("grid_init: rho_crit = %g [g/cm3]\n", globals::rho_crit);
 
   if (get_model_type() == RHO_1D_READ)
@@ -1943,26 +1901,28 @@ void grid_init(int my_rank)
 
   // scale up the radioactive abundances to account for the missing masses in
   // the model cells that are not associated with any propagation cells
-  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
   {
-    if (totmassradionuclide[iso] <= 0)
+    const int z = decay::get_nuc_z(nucindex);
+    const int a = decay::get_nuc_a(nucindex);
+    if (totmassradionuclide[nucindex] <= 0)
       continue;
     double totmassradionuclide_actual = 0.;
     for (int mgi = 0; mgi < get_npts_model(); mgi++)
     {
-      totmassradionuclide_actual += get_modelinitradioabund(mgi, (enum radionuclides) iso) * get_rhoinit(mgi) * vol_init_modelcell(mgi);
+      totmassradionuclide_actual += get_modelinitradioabund(mgi, z, a) * get_rhoinit(mgi) * vol_init_modelcell(mgi);
     }
     if (totmassradionuclide_actual >= 0.)
     {
-      const double ratio = totmassradionuclide[iso] / totmassradionuclide_actual;
-      // printout("nuclide %d ratio %g\n", iso, ratio);
+      const double ratio = totmassradionuclide[nucindex] / totmassradionuclide_actual;
+      // printout("nuclide %d ratio %g\n", nucindex, ratio);
       for (int mgi = 0; mgi < get_npts_model(); mgi++)
       {
         if (get_numassociatedcells(mgi) > 0)
         {
-          const double prev_abund = get_modelinitradioabund(mgi, (enum radionuclides)(iso));
+          const double prev_abund = get_modelinitradioabund(mgi, z, a);
           const double new_abund = prev_abund * ratio;
-          set_modelinitradioabund(mgi, (enum radionuclides)(iso), new_abund);
+          set_modelinitradioabund(mgi, z, a, new_abund);
         }
       }
     }
@@ -1970,7 +1930,7 @@ void grid_init(int my_rank)
 }
 
 
-double get_totmassradionuclide(enum radionuclides nuc)
+double get_totmassradionuclide(const int z, const int a)
 {
-  return totmassradionuclide[nuc];
+  return totmassradionuclide[decay::get_nuc_index(z, a)];
 }
