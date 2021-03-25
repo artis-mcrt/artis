@@ -1054,14 +1054,10 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     /// This is done outside update grid now
     //globals::modelgrid[n].totalcooling = COOLING_UNDEFINED;
 
+    /// Update abundances of radioactive isotopes
+    decay::update_abundances(mgi, nts, globals::time_step[nts].mid);
     if (globals::opacity_case == 4)
     {
-      /// Update abundances of radioactive isotopes
-      //printout("call update abundances for timestep %d in model cell %d\n",m,n);
-      decay::update_abundances(mgi, nts, globals::time_step[nts].mid);
-      nonthermal::calculate_deposition_rate_density(mgi, nts);
-      printout("update_abundances for cell %d timestep %d\n", mgi, nts);
-
       /// For timestep 0 we calculate the level populations straight forward wihout
       /// applying any temperature correction
       if ((nts - globals::itstep) == 0 && titer == 0)
@@ -1235,16 +1231,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       globals::modelgrid[mgi].thick = 1;
 
       /// Need the total number density of bound and free electrons for Compton scatterin
-      decay::update_abundances(mgi, nts, globals::time_step[nts].mid);
-      double nne_tot = 0.;
-      for (int element = 0; element < get_nelements(); element++)
-      {
-        double abundance = get_elem_abundance(mgi, element);
-        /// calculate number density of the current element (abundances are given by mass)
-        double nnelement = abundance / globals::elements[element].mass * get_rho(mgi);
-        nne_tot += nnelement * get_element(element);
-      }
-      set_nnetot(mgi, nne_tot);
+      calculate_electron_densities(mgi); // if this causes problems, disable the nne calculation (only need nne_tot)
 
       if (globals::opacity_case == 3)
       {
@@ -1699,7 +1686,7 @@ double calculate_electron_densities(const int modelgridindex)
       for (int ion = 0; ion < nions; ion++)
       {
         //if (ion <= globals::elements[element].uppermost_ion)
-        nne += (get_ionstage(element,ion)-1) * ionstagepop(modelgridindex,element,ion);
+        nne += (get_ionstage(element,ion) - 1) * ionstagepop(modelgridindex,element,ion);
       }
     }
   }

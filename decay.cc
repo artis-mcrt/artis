@@ -2,17 +2,19 @@
 #include "atomic.h"
 #include "gamma.h"
 #include "grid.h"
+#include "nonthermal.h"
+
 #include "decay.h"
 
 namespace decay
 {
 
 struct nuclide {
-  int z;
-  int a;
-  double meanlife;
-  double endecay_positrons;
-  double endecay_gamma;
+  int z;                     // atomic number
+  int a;                     // mass number
+  double meanlife;           // mean lifetime before decay [s]
+  double endecay_positrons;  // average energy per decay in kinetic energy of emitted positrons [erg]
+  double endecay_gamma;      // average energy per decay in gamma rays [erg]
 };
 
 struct nuclide *nuclides = NULL;
@@ -145,6 +147,7 @@ double nucdecayenergygamma(int z, int a)
 
 __host__ __device__
 void set_nucdecayenergygamma(int z, int a, double value)
+// average energy per decay in the form of gamma rays [erg]
 {
   nuclides[get_nuc_index(z, a)].endecay_gamma = value;
 }
@@ -152,7 +155,7 @@ void set_nucdecayenergygamma(int z, int a, double value)
 
 __host__ __device__
 double nucdecayenergypositrons(int z, int a)
-// average energy (erg) per decay in the form of positrons
+// average energy (erg) per decay in the form of positron kinetic energy [erg]
 {
   return nuclides[get_nuc_index(z, a)].endecay_positrons;
 }
@@ -160,6 +163,7 @@ double nucdecayenergypositrons(int z, int a)
 
 __host__ __device__
 double nucdecayenergy(int z, int a)
+// energy release per decay [erg]
 {
   return nucdecayenergygamma(z, a) + nucdecayenergypositrons(z, a);
 }
@@ -551,6 +555,8 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 {
   assert_always(!globals::homogeneous_abundances); // no longer supported
 
+  printout("update_abundances for cell %d timestep %d\n", modelgridindex, timestep);
+
   for (int element = get_nelements() - 1; element >= 0; element--)
   {
     const int atomic_number = get_element(element);
@@ -575,6 +581,8 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
     const double elmassfrac = get_stable_initabund(modelgridindex, element) + isofracsum;
     set_elem_abundance(modelgridindex, element, elmassfrac);
   }
+
+  nonthermal::calculate_deposition_rate_density(modelgridindex, timestep);
   // printout("model cell %d at t_current %g has frac: Ni %g Co %g Fe %g, stable: Ni %g Co %g Fe %g\n",
   //          modelgridindex, t_current,
   //          get_elem_abundance(modelgridinex, get_elementindex(28)),
