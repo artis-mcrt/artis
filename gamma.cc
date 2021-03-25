@@ -47,7 +47,7 @@ static void read_gamma_spectrum(const int z, const int a, const char filename[50
   gamma_spectra[nucindex].energy = (double *) calloc(nlines, sizeof(double));
   gamma_spectra[nucindex].probability = (double *) calloc(nlines, sizeof(double));
 
-  double E_gamma_avg = 0.0;
+  double E_gamma_avg = 0.;
   for (int n = 0; n < nlines; n++)
   {
     double en_mev;
@@ -60,6 +60,9 @@ static void read_gamma_spectrum(const int z, const int a, const char filename[50
   fclose(filein);
 
   decay::set_nucdecayenergygamma(z, a, E_gamma_avg);
+
+  printout("gamma spectrum for Z=%d A=%d read from %s: nlines %d avg_en_gamma %g MeV\n",
+           z, a, filename, nlines, E_gamma_avg / MEV);
 }
 
 
@@ -155,13 +158,15 @@ void init_gamma_linelist(void)
 
   FILE *const line_list = fopen_required("gammalinelist.out", "w+");
 
-  fprintf(line_list, "#index nucindex nucgammmaindex en_gamma_mev en_gamma_probability\n");
+  fprintf(line_list, "#index nucindex Z A nucgammmaindex en_gamma_mev gammaline_probability\n");
   for (int i = 0; i < total_lines; i++)
   {
     const int nucindex = gam_line_list.nucindex[i];
     const int index = gam_line_list.index[i];
-    fprintf(line_list, "%d %d %d %g %g \n",
-            i, gam_line_list.nucindex[i], gam_line_list.index[i],
+    fprintf(line_list, "%d %d %d %d %d %g %g \n",
+            i, gam_line_list.nucindex[i],
+            decay::get_nuc_z(gam_line_list.nucindex[i]), decay::get_nuc_a(gam_line_list.nucindex[i]),
+            gam_line_list.index[i],
             gamma_spectra[nucindex].energy[index] / MEV, gamma_spectra[nucindex].probability[index]);
   }
   fclose(line_list);
