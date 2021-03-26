@@ -123,11 +123,16 @@ jobs:
       working-directory: tests/nebularonezone/output
       run: |
         md5sum *.out
-        # md5sum -c <(echo e4963320fa6da60fc14aba0d6aa7c52d estimators_0000.out)
-        # md5sum -c <(echo 43dc783d438b33bcd350cfb5967364a8 light_curve.out)
-        # md5sum -c <(echo f8a7677f193e17341a62a08697f70711 spec.out)
-        # md5sum -c <(echo 8e7163982f1aa938dc1505478b8c60d1 timesteps.out)
-        # md5sum -c <(echo 73da2aa7a706efdb62b5f1dc610bbf14 deposition.out)
+        md5sum -c <(echo e7e4d172ca0d1fb13bcf99891be68f18 estimators_0000.out)
+        md5sum -c <(echo 3f641aefb2c14fe31d93bf0826154fa2 light_curve.out)
+        md5sum -c <(echo 88e4591d14b1a46cdd77120d70dbbf2f gamma_light_curve.out)
+        md5sum -c <(echo 28760611670129a32d8de4326c6abddb spec.out)
+        md5sum -c <(echo 8e7163982f1aa938dc1505478b8c60d1 timesteps.out)
+        md5sum -c <(echo 1c4b1ccb2ea3bd56f3ef976e4dce870e nonthermalspec_0000.out)
+        md5sum -c <(echo 60482b8632dd22597e29732e38496d5c gamma_spec.out)
+        md5sum -c <(echo 23d8c0893fdd950bc64e7a18dc8c2d92 absorption.out)
+        md5sum -c <(echo 34996393c1ac2721b49b8da362246291 emission.out)
+        md5sum -c <(echo 54dbeaf121582f58f0f2d0fe6aca67b5 emissiontrue.out)
 
     - name: Set up Python
       uses: actions/setup-python@v2
