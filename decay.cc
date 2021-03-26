@@ -237,6 +237,57 @@ static double sample_decaytime(bool from_parent_abund, int z, int a, const doubl
 
 
 __host__ __device__
+static double calculate_bateman_chain(
+  const double firstinitabund, const double *meanlifetimes, const int num_nuclides, const double time)
+{
+  // calculate final abundance from multiple decay, e.g., Ni56 -> Co56 -> Fe56 (nuc1 -> nuc2 -> nuc3)
+  // assuming intermediate nuclides start with no abundance, return the abundance at the end of the chain
+  assert_always(num_nuclides >= 1);
+
+  // if the meanlife is zero or negative, that indicates a stable nuclide
+
+  // last nuclide might be stable (meanlife <= 0.)
+  double lambdas[num_nuclides];
+  for (int i = 0; i < num_nuclides; i++)
+  {
+    assert_always(meanlifetimes[i] > 0. || (i == num_nuclides - 1)); // only the last nuclide can be stable
+    lambdas[i] = (meanlifetimes[i] > 0.) ? 1. / meanlifetimes[i] : 0.;
+  }
+
+  double lastabund = 0.;
+
+  // for (int i = 0; i < num_nuclides; i++) // step in the chain, 0 for the top
+  const int i = 0;
+
+  double sumterm = firstinitabund; // initabund of step i
+
+  for (int j = i; j < num_nuclides - 1; j++) // step in the chain, 0 for the top
+  {
+    sumterm *= lambdas[j];
+  }
+
+  double innersum = 0;
+  for (int j = i; j < num_nuclides; j++)
+  {
+    double denominator = 1.;
+    for (int p = i; p < num_nuclides; p++)
+    {
+      if (p != j)
+      {
+        denominator *= (lambdas[p] - lambdas[j]);
+      }
+    }
+    innersum += exp(-lambdas[j] * time) / denominator;
+  }
+  sumterm *= innersum;
+
+  lastabund = sumterm;
+
+  return lastabund;
+}
+
+
+__host__ __device__
 static void calculate_double_decay_chain(
   const double initabund1, const double meanlife1,
   const double initabund2, const double meanlife2,
@@ -369,10 +420,10 @@ static double get_endecay_per_ejectamass_at_time(
 {
   if (from_parent_abund)
   {
-    // double decaypath, e.g. DECAY_NI56_CO56, represents the decay of Co56 nuclei
-    // that were produced from decays of Ni56 in the initial abundance.
+    // e.g. DECAY_NI56_CO56, represents the decay of Co56 nuclei
+    // that were produced from Ni56 in the initial abundance.
     // Decays from Co56 due to the initial abundance of Co56 are not counted here,
-    // nor is the energy from decays of Ni56
+    // nor is the energy from Ni56 decays
 
     if (!nuc_exists(z + 1, a)) // parent is not included (e.g. Ni56 has no parent)
     {
