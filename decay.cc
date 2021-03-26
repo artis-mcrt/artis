@@ -237,11 +237,15 @@ static double sample_decaytime(bool from_parent_abund, int z, int a, const doubl
 
 
 __host__ __device__
-static double calculate_bateman_chain(
+static double calculate_bateman_decaychain(
   const double firstinitabund, const double *meanlifetimes, const int num_nuclides, const double time)
 {
-  // calculate final abundance from multiple decay, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
+  // calculate final abundance from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
+  // the first nuclide abundance is given and the last abundance is returned (all intermediates are assumed zero abundances)
+  // note: first and last can be nuclide can be the same if num_nuclides==1, giving simple decay formula
+  // meanlifetimes: array of mean lifetimes from nuc[0]
   // assuming intermediate nuclides start with no abundance, return the abundance at the end of the chain
+
   assert_always(num_nuclides >= 1);
 
   // if the meanlife is zero or negative, that indicates a stable nuclide
@@ -254,19 +258,16 @@ static double calculate_bateman_chain(
     lambdas[i] = (meanlifetimes[i] > 0.) ? 1. / meanlifetimes[i] : 0.;
   }
 
-  double lastabund = 0.;
-
   // for (int i = 0; i < num_nuclides; i++) // step in the chain, 0 for the top
   const int i = 0;
 
-  double sumterm = firstinitabund; // initabund of step i
-
+  double lambdaproduct = 1.;
   for (int j = i; j < num_nuclides - 1; j++) // step in the chain, 0 for the top
   {
-    sumterm *= lambdas[j];
+    lambdaproduct *= lambdas[j];
   }
 
-  double innersum = 0;
+  double sum = 0;
   for (int j = i; j < num_nuclides; j++)
   {
     double denominator = 1.;
@@ -277,11 +278,9 @@ static double calculate_bateman_chain(
         denominator *= (lambdas[p] - lambdas[j]);
       }
     }
-    innersum += exp(-lambdas[j] * time) / denominator;
+    sum += exp(-lambdas[j] * time) / denominator;
   }
-  sumterm *= innersum;
-
-  lastabund = sumterm;
+  const double lastabund = firstinitabund * lambdaproduct * sum;
 
   return lastabund;
 }
@@ -291,7 +290,7 @@ __host__ __device__
 static void calculate_double_decay_chain(
   const double initabund1, const double meanlife1,
   const double initabund2, const double meanlife2,
-  const double t_current,
+  const double t_afterinit,
   double *abund1, double *abund2, double *abund3)
 {
   // calculate abundances from double decay, e.g., Ni56 -> Co56 -> Fe56 (nuc1 -> nuc2 -> nuc3)
@@ -300,17 +299,17 @@ static void calculate_double_decay_chain(
   double meanlifetimes[3];
   meanlifetimes[0] = meanlife1;
   meanlifetimes[1] = meanlife2;
-  meanlifetimes[2] = -1.;
+  meanlifetimes[2] = -1.;  // stable nuclide
 
-  *abund1 = calculate_bateman_chain(initabund1, meanlifetimes, 1, t_current);
+  *abund1 = calculate_bateman_decaychain(initabund1, meanlifetimes, 1, t_afterinit);
 
   *abund2 = (
-    calculate_bateman_chain(initabund1, meanlifetimes, 2, t_current) +
-    calculate_bateman_chain(initabund2, &meanlifetimes[1], 1, t_current));
+    calculate_bateman_decaychain(initabund1, meanlifetimes, 2, t_afterinit) +
+    calculate_bateman_decaychain(initabund2, &meanlifetimes[1], 1, t_afterinit));
 
   *abund3 = (
-    calculate_bateman_chain(initabund1, meanlifetimes, 3, t_current) +
-    calculate_bateman_chain(initabund2, &meanlifetimes[1], 2, t_current));
+    calculate_bateman_decaychain(initabund1, meanlifetimes, 3, t_afterinit) +
+    calculate_bateman_decaychain(initabund2, &meanlifetimes[1], 2, t_afterinit));
 
   // ensure that the decays haven't altered the total abundance of all three species
   assert_always(fabs((initabund1 + initabund2) - (*abund1 + *abund2 + *abund3)) < 0.001);
