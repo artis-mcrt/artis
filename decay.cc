@@ -237,7 +237,7 @@ static double sample_decaytime(bool from_parent_abund, int z, int a, const doubl
 
 
 __host__ __device__
-static double calculate_bateman_decaychain(
+static double calculate_decaychain_abund(
   const double firstinitabund, const double *meanlifetimes, const int num_nuclides, const double time)
 {
   // calculate final abundance from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
@@ -301,41 +301,18 @@ static void calculate_double_decay_chain(
   meanlifetimes[1] = meanlife2;
   meanlifetimes[2] = -1.;  // stable nuclide
 
-  *abund1 = calculate_bateman_decaychain(initabund1, meanlifetimes, 1, t_afterinit);
+  *abund1 = calculate_decaychain_abund(initabund1, meanlifetimes, 1, t_afterinit);
 
   *abund2 = (
-    calculate_bateman_decaychain(initabund1, meanlifetimes, 2, t_afterinit) +
-    calculate_bateman_decaychain(initabund2, &meanlifetimes[1], 1, t_afterinit));
+    calculate_decaychain_abund(initabund1, meanlifetimes, 2, t_afterinit) +
+    calculate_decaychain_abund(initabund2, &meanlifetimes[1], 1, t_afterinit));
 
   *abund3 = (
-    calculate_bateman_decaychain(initabund1, meanlifetimes, 3, t_afterinit) +
-    calculate_bateman_decaychain(initabund2, &meanlifetimes[1], 2, t_afterinit));
+    calculate_decaychain_abund(initabund1, meanlifetimes, 3, t_afterinit) +
+    calculate_decaychain_abund(initabund2, &meanlifetimes[1], 2, t_afterinit));
 
   // ensure that the decays haven't altered the total abundance of all three species
   assert_always(fabs((initabund1 + initabund2) - (*abund1 + *abund2 + *abund3)) < 0.001);
-}
-
-
-__host__ __device__
-static void calculate_doubledecay_modelabund(
-  const int modelgridindex,
-  const int z1,
-  const int a,
-  const double t_current,
-  double *abund1, double *abund2, double *abund3)
-  // z, a are the atomic number and mass number of the first nuclide in the chain,
-  // e.g. z=28, a=56 for Ni56 in Ni56 -> Co56 -> Fe56
-{
-  assert_always(nuc_exists(z1, a));
-  assert_always(nuc_exists(z1 - 1, a));
-
-  const double initabund1 = get_modelinitradioabund(modelgridindex, z1, a);
-  const double meanlife1 = get_meanlife(z1, a);
-  const double initabund2 = get_modelinitradioabund(modelgridindex, z1 - 1, a);
-  const double meanlife2 = get_meanlife(z1 - 1, a);
-
-  const double tdiff = t_current - globals::t_model;
-  calculate_double_decay_chain(initabund1, meanlife1, initabund2, meanlife2, tdiff, abund1, abund2, abund3);
 }
 
 
@@ -380,7 +357,19 @@ static double get_modelradioabund_at_time(
     double abund1 = 0.;
     double abund2 = 0.;
     double abund3 = 0.;
-    calculate_doubledecay_modelabund(modelgridindex, z + 1, a, time, &abund1, &abund2, &abund3);
+    const double z1 = z + 1;
+
+    assert_always(nuc_exists(z1, a));
+    assert_always(nuc_exists(z1 - 1, a));
+
+    const double initabund1 = get_modelinitradioabund(modelgridindex, z1, a);
+    const double meanlife1 = get_meanlife(z1, a);
+    const double initabund2 = get_modelinitradioabund(modelgridindex, z1 - 1, a);
+    const double meanlife2 = get_meanlife(z1 - 1, a);
+
+    const double tdiff = time - globals::t_model;
+    calculate_double_decay_chain(initabund1, meanlife1, initabund2, meanlife2, tdiff, &abund1, &abund2, &abund3);
+
     return abund2;
   }
   else if (!nuc_exists(z + 3, a) && nuc_exists(z + 2, a) && nuc_exists(z + 1, a))
@@ -390,7 +379,20 @@ static double get_modelradioabund_at_time(
     double abund1 = 0.;
     double abund2 = 0.;
     double abund3 = 0.;
-    calculate_doubledecay_modelabund(modelgridindex, z + 2, a, time, &abund1, &abund2, &abund3);
+
+    const double z1 = z + 2;
+
+    assert_always(nuc_exists(z1, a));
+    assert_always(nuc_exists(z1 - 1, a));
+
+    const double initabund1 = get_modelinitradioabund(modelgridindex, z1, a);
+    const double meanlife1 = get_meanlife(z1, a);
+    const double initabund2 = get_modelinitradioabund(modelgridindex, z1 - 1, a);
+    const double meanlife2 = get_meanlife(z1 - 1, a);
+
+    const double tdiff = time - globals::t_model;
+    calculate_double_decay_chain(initabund1, meanlife1, initabund2, meanlife2, tdiff, &abund1, &abund2, &abund3);
+
     return abund3;
   }
   else
