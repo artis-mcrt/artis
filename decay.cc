@@ -321,7 +321,27 @@ static void calculate_double_decay_chain(
   *abund2 = newabund2;
   *abund3 = newabund3;
 
-  // printout("calculate_double_decay_chain: abund1 %g, abund2 %g abund3 %g\n", abund1, abund2, abund3);
+  double meanlifetimes[3];
+  meanlifetimes[0] = meanlife1;
+  meanlifetimes[1] = meanlife2;
+  meanlifetimes[2] = -1.;
+
+  const double abund1_alt = calculate_bateman_chain(initabund1, meanlifetimes, 1, t_current);
+  const double abund2_alt = (
+    calculate_bateman_chain(initabund1, meanlifetimes, 2, t_current) +
+    calculate_bateman_chain(initabund2, &meanlifetimes[1], 1, t_current));
+  const double abund3_alt = (
+    calculate_bateman_chain(initabund1, meanlifetimes, 3, t_current) +
+    calculate_bateman_chain(initabund2, &meanlifetimes[1], 2, t_current));
+  // if (initabund1 > 0)
+  // {
+  //   printout("\ncalculate_double_decay_chain:   abund1 %g, abund2 %g abund3 %g\n", newabund1, newabund2, newabund3);
+  //   printout("calculate_bateman_chain:        abund1 %g, abund2 %g abund3 %g\n", abund1_alt, abund2_alt, abund3_alt);
+  // }
+
+  *abund1 = abund1_alt;
+  *abund2 = abund2_alt;
+  *abund3 = abund3_alt;
 
   // ensure that the decays haven't altered the total abundance of all three species
   assert_always(fabs((initabund1 + initabund2) - (*abund1 + *abund2 + *abund3)) < 0.001);
