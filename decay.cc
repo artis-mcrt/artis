@@ -354,21 +354,26 @@ static double get_modelradioabund_at_time(
   {
     // parent exists, but no grandparent (e.g., Co56 in the chain: Ni56 -> Co56 -> Fe56)
     assert_always(!nuc_exists(z + 2, a)); // only three-nuclide chains work for now
-    double abund1 = 0.;
     double abund2 = 0.;
-    double abund3 = 0.;
     const double z1 = z + 1;
 
     assert_always(nuc_exists(z1, a));
     assert_always(nuc_exists(z1 - 1, a));
 
     const double initabund1 = get_modelinitradioabund(modelgridindex, z1, a);
-    const double meanlife1 = get_meanlife(z1, a);
     const double initabund2 = get_modelinitradioabund(modelgridindex, z1 - 1, a);
-    const double meanlife2 = get_meanlife(z1 - 1, a);
 
-    const double tdiff = time - globals::t_model;
-    calculate_double_decay_chain(initabund1, meanlife1, initabund2, meanlife2, tdiff, &abund1, &abund2, &abund3);
+    double meanlifetimes[3];
+    meanlifetimes[0] = get_meanlife(z1, a);
+    meanlifetimes[1] = get_meanlife(z1 - 1, a);
+    meanlifetimes[2] = -1.;  // stable nuclide
+
+    const double t_afterinit = time - globals::t_model;
+    // calculate_double_decay_chain(initabund1, meanlife1, initabund2, meanlife2, t_afterinit, &abund1, &abund2, &abund3);
+
+    abund2 = (
+      calculate_decaychain_abund(initabund1, meanlifetimes, 2, t_afterinit) +
+      calculate_decaychain_abund(initabund2, &meanlifetimes[1], 1, t_afterinit));
 
     return abund2;
   }
@@ -376,8 +381,6 @@ static double get_modelradioabund_at_time(
   {
     // parent and grandparent exist (e.g. Fe56)
     assert_always(!nuc_exists(z + 3, a)); // only three-nuclide chains work for now
-    double abund1 = 0.;
-    double abund2 = 0.;
     double abund3 = 0.;
 
     const double z1 = z + 2;
@@ -386,12 +389,19 @@ static double get_modelradioabund_at_time(
     assert_always(nuc_exists(z1 - 1, a));
 
     const double initabund1 = get_modelinitradioabund(modelgridindex, z1, a);
-    const double meanlife1 = get_meanlife(z1, a);
     const double initabund2 = get_modelinitradioabund(modelgridindex, z1 - 1, a);
-    const double meanlife2 = get_meanlife(z1 - 1, a);
 
-    const double tdiff = time - globals::t_model;
-    calculate_double_decay_chain(initabund1, meanlife1, initabund2, meanlife2, tdiff, &abund1, &abund2, &abund3);
+    double meanlifetimes[3];
+    meanlifetimes[0] = get_meanlife(z1, a);
+    meanlifetimes[1] = get_meanlife(z1 - 1, a);
+    meanlifetimes[2] = -1.;  // stable nuclide
+
+    const double t_afterinit = time - globals::t_model;
+    // calculate_double_decay_chain(initabund1, meanlife1, initabund2, meanlife2, t_afterinit, &abund1, &abund2, &abund3);
+
+    abund3 = (
+      calculate_decaychain_abund(initabund1, meanlifetimes, 3, t_afterinit) +
+      calculate_decaychain_abund(initabund2, &meanlifetimes[1], 2, t_afterinit));
 
     return abund3;
   }
