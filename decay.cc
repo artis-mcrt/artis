@@ -240,7 +240,7 @@ __host__ __device__
 static double calculate_bateman_chain(
   const double firstinitabund, const double *meanlifetimes, const int num_nuclides, const double time)
 {
-  // calculate final abundance from multiple decay, e.g., Ni56 -> Co56 -> Fe56 (nuc1 -> nuc2 -> nuc3)
+  // calculate final abundance from multiple decay, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
   // assuming intermediate nuclides start with no abundance, return the abundance at the end of the chain
   assert_always(num_nuclides >= 1);
 
@@ -297,51 +297,20 @@ static void calculate_double_decay_chain(
   // calculate abundances from double decay, e.g., Ni56 -> Co56 -> Fe56 (nuc1 -> nuc2 -> nuc3)
   // initabund3 is assumed to be zero, so the abundance of species 3 is only from decays of species 2
 
-  const double lambda1 = 1 / meanlife1;
-  const double lambda2 = 1 / meanlife2;
-
-  const double newabund1 = initabund1 * exp(-lambda1 * t_current);
-
-  const double newabund2 = (
-    initabund2 * exp(-lambda2 * t_current) +
-    initabund1 * lambda1 / (lambda1 - lambda2) * (exp(-lambda2 * t_current) - exp(-lambda1 * t_current)));
-
-  const double newabund3 = (
-    (initabund2 + initabund1) * (lambda1 - lambda2) -
-    initabund2 * lambda1 * exp(-lambda2 * t_current) +
-    initabund2 * lambda2 * exp(-lambda2 * t_current) -
-    initabund1 * lambda1 * exp(-lambda2 * t_current) +
-    initabund1 * lambda2 * exp(-lambda1 * t_current)) / (lambda1 - lambda2);
-
-  // printout("calculate_double_decay_chain: initabund1 %g, initabund2 %g\n", initabund1, initabund2);
-
-  // update the pointed to values after calculating all threedimensional
-  // to ensure no aliasing problems, e.g. if abund1 = &initabund1
-  *abund1 = newabund1;
-  *abund2 = newabund2;
-  *abund3 = newabund3;
-
   double meanlifetimes[3];
   meanlifetimes[0] = meanlife1;
   meanlifetimes[1] = meanlife2;
   meanlifetimes[2] = -1.;
 
-  const double abund1_alt = calculate_bateman_chain(initabund1, meanlifetimes, 1, t_current);
-  const double abund2_alt = (
+  *abund1 = calculate_bateman_chain(initabund1, meanlifetimes, 1, t_current);
+
+  *abund2 = (
     calculate_bateman_chain(initabund1, meanlifetimes, 2, t_current) +
     calculate_bateman_chain(initabund2, &meanlifetimes[1], 1, t_current));
-  const double abund3_alt = (
+
+  *abund3 = (
     calculate_bateman_chain(initabund1, meanlifetimes, 3, t_current) +
     calculate_bateman_chain(initabund2, &meanlifetimes[1], 2, t_current));
-  // if (initabund1 > 0)
-  // {
-  //   printout("\ncalculate_double_decay_chain:   abund1 %g, abund2 %g abund3 %g\n", newabund1, newabund2, newabund3);
-  //   printout("calculate_bateman_chain:        abund1 %g, abund2 %g abund3 %g\n", abund1_alt, abund2_alt, abund3_alt);
-  // }
-
-  *abund1 = abund1_alt;
-  *abund2 = abund2_alt;
-  *abund3 = abund3_alt;
 
   // ensure that the decays haven't altered the total abundance of all three species
   assert_always(fabs((initabund1 + initabund2) - (*abund1 + *abund2 + *abund3)) < 0.001);
