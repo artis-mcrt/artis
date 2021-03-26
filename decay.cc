@@ -185,6 +185,11 @@ double get_meanlife(int z, int a)
 {
   assert_always(z > 0);
   assert_always(a >= z);
+  if (!nuc_exists(z, a))
+  {
+    assert_always(nuc_exists(z + 1, a));
+    return -1;
+  }
   const int nucindex = get_nuc_index(z, a);
   return nuclides[nucindex].meanlife;
 }
@@ -241,7 +246,8 @@ static double calculate_decaychain_abund(
   const double firstinitabund, const double *meanlifetimes, const int num_nuclides, const double time)
 {
   // calculate final abundance from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
-  // the first nuclide abundance is given and the last abundance is returned (all intermediates are assumed zero abundances)
+  // the top nuclide abundance is given and the end abundance is returned (all intermediates are assumed to start
+  // with zero abundance)
   // note: first and last can be nuclide can be the same if num_nuclides==1, giving simple decay formula
   // meanlifetimes: array of mean lifetimes from nuc[0]
   // assuming intermediate nuclides start with no abundance, return the abundance at the end of the chain
@@ -327,80 +333,75 @@ static double get_modelinitradioabund_decayed(
 }
 
 
+static double get_ancestor_abundcontrib(
+  const double modelgridindex, const int *const z_list, const int *const a_list, const int chainlength, const double time)
+// get the contribution to the abundance of (z_list[-1] a_list[-1]) from the initial abundance of (z_list[0], a_list[0])
+// with chained decays (recursive, with items appended to the start of the z_list and a_list)
+// chainlength can be one, in which case we get the deca
+{
+  assert_always(chainlength > 0);
+  double meanlifetimes[chainlength];
+  for (int i = 0; i < chainlength; i++)
+  {
+    meanlifetimes[i] = get_meanlife(z_list[i], a_list[i]);
+  }
+
+  const double t_afterinit = time - globals::t_model;
+
+  double abundcontrib = 0.;
+
+  const int z_top = z_list[0]; // current top of chain considered (but might be a partial chain)
+  const int a_top = a_list[0];
+
+  // add the contribution from the current top of the chain (if it's in the radioactive list)
+  if (nuc_exists(z_top, a_top))
+  {
+    const double top_abund = get_modelinitradioabund(modelgridindex, z_top, a_top);
+    abundcontrib += calculate_decaychain_abund(top_abund, meanlifetimes, chainlength, t_afterinit);
+  }
+
+  // find any extensions to append to the top of the chain
+  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
+  {
+    const int z_check = get_nuc_z(nucindex);
+    const int a_check = get_nuc_a(nucindex);
+    if ((a_check == a_top) && ((z_check - 1) == z_top))
+    {
+      // found a parent nuclide of the current top nuclide, so add it to the chain
+      int zlist_plusone[chainlength + 1];
+      int alist_plusone[chainlength + 1];
+      for (int i = 0; i < chainlength; i++)
+      {
+        zlist_plusone[i + 1] = z_list[i];
+        alist_plusone[i + 1] = a_list[i];
+      }
+      zlist_plusone[0] = z_check;
+      alist_plusone[0] = a_check;
+
+      abundcontrib += get_ancestor_abundcontrib(modelgridindex, zlist_plusone, alist_plusone, chainlength + 1, time);
+    }
+  }
+
+  return abundcontrib;
+}
+
+
 __host__ __device__
 static double get_modelradioabund_at_time(
   const int modelgridindex, const int z, const int a, const double time)
 // Get the mass fraction of a nuclide accounting for all decays including those of its parent and grandparent.
 // e.g., Co56 abundance may first increase with time due to Ni56 decays, then decease due to Co56 decay
-// Can be called for stable nuclides that are one step off the radioactive nuclide list e.g., Fe56
+// Can be called for stable nuclides that are one daughters of the radioactive nuclide list e.g., Fe56
 // For stable nuclides, abundance returned only comes from other decays (some could be included in init model elem frac)
 {
-  if (time == 0)
-  {
-    return get_modelinitradioabund(modelgridindex, z, a);
-  }
-  else if (z < 1) // skip FAKE_GAM_LINE_ID
+  if (z < 1) // skip FAKE_GAM_LINE_ID
   {
     return 0.;
   }
   assert_always(time >= 0.);
 
-  if (!nuc_exists(z + 1, a) && nuc_exists(z, a))
-  {
-    // no parent exists, so use simple decay formula (e.g. Ni56)
-    return get_modelinitradioabund_decayed(modelgridindex, z, a, time);
-  }
-  else if (!nuc_exists(z + 2, a) && nuc_exists(z + 1, a) && nuc_exists(z, a))
-  {
-    // parent exists, but no grandparent (e.g., Co56 in the chain: Ni56 -> Co56 -> Fe56)
-    assert_always(!nuc_exists(z + 2, a)); // only three-nuclide chains work for now
-    double abund2 = 0.;
-
-    const double initabund1 = get_modelinitradioabund(modelgridindex, z + 1, a);
-    const double initabund2 = get_modelinitradioabund(modelgridindex, z, a);
-
-    double meanlifetimes[3];
-    meanlifetimes[0] = get_meanlife(z + 1, a);
-    meanlifetimes[1] = get_meanlife(z, a);
-    meanlifetimes[2] = -1.;  // stable nuclide
-
-    const double t_afterinit = time - globals::t_model;
-
-    abund2 = (
-      calculate_decaychain_abund(initabund1, meanlifetimes, 2, t_afterinit) +
-      calculate_decaychain_abund(initabund2, &meanlifetimes[1], 1, t_afterinit));
-
-    return abund2;
-  }
-  else if (!nuc_exists(z + 3, a) && nuc_exists(z + 2, a) && nuc_exists(z + 1, a))
-  {
-    // parent and grandparent exist (e.g. Fe56)
-
-    assert_always(!nuc_exists(z + 3, a)); // only three-nuclide chains work for now
-
-    double abund3 = 0.;
-
-    const double initabund1 = get_modelinitradioabund(modelgridindex, z + 2, a);
-    const double initabund2 = get_modelinitradioabund(modelgridindex, z + 1, a);
-
-    double meanlifetimes[3];
-    meanlifetimes[0] = get_meanlife(z + 2, a);
-    meanlifetimes[1] = get_meanlife(z + 1, a);
-    meanlifetimes[2] = -1.;  // stable nuclide
-
-    const double t_afterinit = time - globals::t_model;
-
-    abund3 = (
-      calculate_decaychain_abund(initabund1, meanlifetimes, 3, t_afterinit) +
-      calculate_decaychain_abund(initabund2, &meanlifetimes[1], 2, t_afterinit));
-
-    return abund3;
-  }
-  else
-  {
-    assert(false); // cannot calculate this abundance
-    return 0.;
-  }
+  // function with start with the decayed initial abundance, and add any decays from ancestor nuclides
+  return get_ancestor_abundcontrib(modelgridindex, &z, &a, 1, time);
 }
 
 
