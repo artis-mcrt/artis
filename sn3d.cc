@@ -467,7 +467,7 @@ static bool do_timestep(
   #ifdef DO_TITER
     /// No iterations over the zeroth timestep, set titer > n_titer
     if (nts == 0)
-      titer = n_titer + 1;
+      titer = globals::n_titer + 1;
   #endif
   #ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
