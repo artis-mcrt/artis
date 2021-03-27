@@ -353,14 +353,15 @@ static double get_ancestor_abundcontrib(
   const int z_top = z_list[0]; // current top of chain considered (but might be a partial chain)
   const int a_top = a_list[0];
 
-  // add the contribution from the current top of the chain (if it's in the radioactive list)
-  if (nuc_exists(z_top, a_top))
+  // add the decayed contribution from the current top of the chain (if it's in the radioactive list)
+  // we're only counting ancestor contributions, so don't add for the single-nuclide 'chain'
+  if (nuc_exists(z_top, a_top) && chainlength > 1)
   {
     const double top_abund = get_modelinitradioabund(modelgridindex, z_top, a_top);
     abundcontrib += calculate_decaychain_abund(top_abund, meanlifetimes, chainlength, t_afterinit);
   }
 
-  // find any extensions to append to the top of the chain
+  // find parent nulides to append to the top of the chain
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
     const int z_check = get_nuc_z(nucindex);
@@ -401,7 +402,13 @@ static double get_modelradioabund_at_time(
   assert_always(time >= 0.);
 
   // function with start with the decayed initial abundance, and add any decays from ancestor nuclides
-  return get_ancestor_abundcontrib(modelgridindex, &z, &a, 1, time);
+  double abund = get_ancestor_abundcontrib(modelgridindex, &z, &a, 1, time);
+  if (nuc_exists(z, a))  // stable nuclide e.g. Fe56 will not exist in the list or have an init abundance
+  {
+    abund += get_modelinitradioabund_decayed(modelgridindex, z, a, time);
+  }
+
+  return abund;
 }
 
 
