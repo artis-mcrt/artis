@@ -491,7 +491,7 @@ static double get_decay_power_per_ejectamass(
     const double initabund2 = 0.; // don't count initial abundance
     double abund1;
     double abund3;
-    calculate_double_decay_chain(initabund1, get_meanlife(z + 1, a), initabund2, get_meanlife(z + 1, a), time, &abund1, &nucabund, &abund3);
+    calculate_double_decay_chain(initabund1, get_meanlife(z + 1, a), initabund2, get_meanlife(z, a), time, &abund1, &nucabund, &abund3);
   }
   else
   {
