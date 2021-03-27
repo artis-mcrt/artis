@@ -401,7 +401,7 @@ static double get_modelradioabund_at_time(
   }
   assert_always(time >= 0.);
 
-  // function with start with the decayed initial abundance, and add any decays from ancestor nuclides
+  // start with contribution of decays from ancestor nuclides and add decayed initial abundance (if present)
   double abund = get_ancestor_abundcontrib(modelgridindex, &z, &a, 1, time);
   if (nuc_exists(z, a))  // stable nuclide e.g. Fe56 will not exist in the list or have an init abundance
   {
