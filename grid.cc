@@ -1579,7 +1579,7 @@ void write_grid_restart_data(const int timestep)
 }
 
 
-static void assign_temperature(void)
+static void assign_initial_temperaturesvoid)
 /// Routine for assigning temperatures to the grid cells at the start of the simulation.
 {
   /// For a simulation started from scratch we estimate the initial temperatures
@@ -1896,7 +1896,7 @@ void grid_init(int my_rank)
   }
   else
   {
-    assign_temperature();
+    assign_initial_temperatures);
   }
 
   // scale up the radioactive abundances to account for the missing masses in
