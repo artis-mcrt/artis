@@ -264,20 +264,17 @@ static double calculate_decaychain_abund(
     lambdas[i] = (meanlifetimes[i] > 0.) ? 1. / meanlifetimes[i] : 0.;
   }
 
-  // for (int i = 0; i < num_nuclides; i++) // step in the chain, 0 for the top
-  const int i = 0;
-
   double lambdaproduct = 1.;
-  for (int j = i; j < num_nuclides - 1; j++) // step in the chain, 0 for the top
+  for (int j = 0; j < num_nuclides - 1; j++)
   {
     lambdaproduct *= lambdas[j];
   }
 
   double sum = 0;
-  for (int j = i; j < num_nuclides; j++)
+  for (int j = 0; j < num_nuclides; j++)
   {
     double denominator = 1.;
-    for (int p = i; p < num_nuclides; p++)
+    for (int p = 0; p < num_nuclides; p++)
     {
       if (p != j)
       {
@@ -286,6 +283,7 @@ static double calculate_decaychain_abund(
     }
     sum += exp(-lambdas[j] * time) / denominator;
   }
+
   const double lastabund = firstinitabund * lambdaproduct * sum;
 
   return lastabund;
@@ -481,8 +479,8 @@ static double get_decay_power_per_ejectamass(
   double nucabund = 0.;
   if (from_parent_abund)
   {
-    // double decay, e.g. DECAY_NI56_CO56, the decay of Co56 nuclei that were produced from Ni56 decays
-    // decays from the second nuclide (e.g. Co56) due to the initial abundance are not counted here
+    // double decay, e.g. Ni56 -> Co56 -> Fe56, the decay of Co56 nuclei that were produced from Ni56 decays
+    // decays of the second nuclide (e.g. Co56) due to its initial abundance are not counted here
     if (!nuc_exists(z + 1, a))
     {
       return 0.;
