@@ -510,8 +510,6 @@ static double get_endecay_per_ejectamass_at_time(
   // all ancestors
   const int z_end = decaychains_z[decaychainindex].back();
   const int a_end = decaychains_a[decaychainindex].back();
-  const int z_endplusone = decay_daughter_z(z_end, a_end);  // the nuclide past the end of the chain radionuclide
-  const int a_endplusone = decay_daughter_a(z_end, a_end);
 
   const int chainlength = decaychains_z[decaychainindex].size();
   double meanlifetimes[chainlength + 1];
@@ -520,6 +518,7 @@ static double get_endecay_per_ejectamass_at_time(
     meanlifetimes[i] = get_meanlife(decaychains_z[decaychainindex][i], decaychains_a[decaychainindex][i]);
   }
 
+  // the nuclide past the end of the chain radionuclide
   meanlifetimes[chainlength] = -1.; // nuclide at the end is a sink, so treat it as stable (even if it's not)
 
   const double top_initabund = get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
@@ -593,12 +592,13 @@ static double get_chain_decay_power_per_ejectamass(
 
 __host__ __device__
 double get_modelcell_decay_energy_density(const int mgi)
+// get the density (at time tmin) of decay energy liberated during the simulation time range [erg/cm3]
 {
   double modelcell_decay_energy_density = 0.;
   for (size_t decaychainindex = 0; decaychainindex < decaychains_z.size(); decaychainindex++)
   {
     modelcell_decay_energy_density += (
-      get_rhoinit(mgi) * get_simtime_endecay_per_ejectamass(mgi, decaychainindex) * MH);
+      get_rhoinit(mgi) * get_simtime_endecay_per_ejectamass(mgi, decaychainindex));
   }
   return modelcell_decay_energy_density;
 }

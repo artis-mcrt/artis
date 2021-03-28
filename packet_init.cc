@@ -92,7 +92,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   }
   cont[globals::ngrid] = norm;
 
-  const double etot = norm / MH;
+  const double etot = norm;
   /// So energy per pellet is
   const double e0 = etot / globals::npkts / globals::n_out_it / globals::n_middle_it;
   printout("packet e0 (in time range) %g erg\n", e0);
