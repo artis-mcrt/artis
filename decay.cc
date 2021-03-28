@@ -536,7 +536,7 @@ static double get_endecay_per_ejectamass_at_time(
 
   // // alternative: add up the ancestor abundances that will eventually cause decays at the end of chain
   // double ndecays_remaining = 0.;
-  // for (int c = 0; c < chainlength; c++)
+  // for (int c = 1; c <= chainlength; c++)
   // {
   //   ndecays_remaining += calculate_decaychain_abund(top_initabund, meanlifetimes, c, t_afterinit);
   // }
