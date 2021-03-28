@@ -1,3 +1,6 @@
+#include <algorithm> // std::max
+#include <vector>
+
 #include "sn3d.h"
 #include "atomic.h"
 #include "gamma.h"
@@ -85,6 +88,70 @@ static bool nuc_exists(int z, int a)
 }
 
 
+static bool nuc_is_parent(const int z_parent, const int a_parent, const int z, const int a)
+// check if (z_parent, a_parent) is a parent of (z, a)
+{
+  // electron capture/beta plus decay only for now
+  return nuc_exists(z_parent, a_parent) && (a_parent == a) && z_parent == z + 1;
+}
+
+static void print_chain(std::vector<int> &z_list, std::vector<int> &a_list)
+{
+  assert_always(z_list.size() == a_list.size());
+  if (z_list.size() > 0)
+  {
+    printout(" chain (len %lu): (%d,%d)", z_list.size(), z_list[0], a_list[0]);
+  }
+
+  for (size_t i = 1; i < z_list.size(); i++)
+  {
+    printout(" -> (%d,%d)", z_list[i], a_list[i]);
+  }
+  printout("\n");
+}
+
+
+static void find_chains(void)
+{
+  int maxchainlength = 0;
+  int numchains = 0;
+  for (int endnuc = 0; endnuc < get_num_nuclides(); endnuc++)
+  {
+    if (get_nuc_z(endnuc) < 1) // FAKE_GAM_LINE_ID
+    {
+      continue;
+    }
+
+    std::vector<int> z_list = {get_nuc_z(endnuc)};
+    std::vector<int> a_list = {get_nuc_a(endnuc)};
+    maxchainlength = std::max(maxchainlength, (int) z_list.size());
+    numchains++;
+
+    print_chain(z_list, a_list);
+
+    bool endofchain = false;
+    while (!endofchain)
+    {
+      endofchain = true; // start true and set to false if we find a parent
+      for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
+      {
+        if (nuc_is_parent(get_nuc_z(nucindex), get_nuc_a(nucindex), z_list[0], a_list[0]))
+        {
+          z_list.insert(z_list.begin(), get_nuc_z(nucindex));
+          a_list.insert(a_list.begin(), get_nuc_a(nucindex));
+          maxchainlength = std::max(maxchainlength, (int) z_list.size());
+          numchains++;
+
+          print_chain(z_list, a_list);
+          endofchain = false;
+        }
+      }
+    }
+  }
+  printout("Number of chains: %d (max length %d)\n", numchains, maxchainlength);
+}
+
+
 __host__ __device__
 void init_nuclides(void)
 {
@@ -145,6 +212,8 @@ void init_nuclides(void)
 
   /// Read in data for gamma ray lines and make a list of them in energy order.
   init_gamma_linelist();
+
+  find_chains();
 }
 
 
@@ -364,7 +433,7 @@ static double get_ancestor_abundcontrib(
   {
     const int z_check = get_nuc_z(nucindex);
     const int a_check = get_nuc_a(nucindex);
-    if ((a_check == a_top) && ((z_check - 1) == z_top))
+    if (nuc_is_parent(z_check, a_check, z_top, a_top))
     {
       // found a parent nuclide of the current top nuclide, so add it to the chain
       int zlist_plusone[chainlength + 1];
@@ -401,6 +470,7 @@ static double get_modelradioabund_at_time(
 
   // start with contribution of decays from ancestor nuclides and add decayed initial abundance (if present)
   double abund = get_ancestor_abundcontrib(modelgridindex, &z, &a, 1, time);
+
   if (nuc_exists(z, a))  // stable nuclide e.g. Fe56 will not exist in the list or have an init abundance
   {
     abund += get_modelinitradioabund_decayed(modelgridindex, z, a, time);
