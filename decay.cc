@@ -158,8 +158,8 @@ static void add_ancestorchains(const int z, const int a, const int startchainind
     // printout("z_parent %d a_parent %d isparent(%d, %d) %d\n", z_parent, a_parent, z_list[0], a_list[0], nuc_is_parent(z_parent, a_parent, z_list[0], a_list[0]));
     if (nuc_is_parent(z_parent, a_parent, z, a))
     {
-      std::vector<int> new_z_list = decaychains_z[startchainindex];
-      std::vector<int> new_a_list = decaychains_a[startchainindex];
+      std::vector<int> new_z_list(decaychains_z[startchainindex]);
+      std::vector<int> new_a_list(decaychains_a[startchainindex]);
 
       // check for repeated nuclides, which would indicate a loop in the decay chain
       for (size_t i = 1; i < new_z_list.size(); i++)
