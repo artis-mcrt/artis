@@ -120,7 +120,7 @@ jobs:
         path: tests/nebularonezone/output
 
     - name: Checksum output files
-      working-directory: tests/nebularonezone/output
+      working-directory: tests/nebularonezone
       run: |
         md5sum *.out
         md5sum -c results_md5.txt
