@@ -125,6 +125,7 @@ all: sn3d exspec
 
 sn3d: clean version
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
+# $(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
 
 sn3ddebug: clean version $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_objects) -o sn3d
@@ -136,8 +137,8 @@ sn3dcuda: version $(sn3d_objects)
 	nvcc --gpu-architecture=sm_70 --device-link $(sn3d_objects) --output-file gpucode.o
 	$(CXX) $(CXXFLAGS) gpucode.o $(INCLUDE) -lcudadevrt $(LDFLAGS) $(sn3d_objects) -o sn3d
 
-%.o: %.cc
-	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c
+# %.o: %.cc
+# 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c
 
 exspec: clean version
 	$(CXX) $(CXXFLAGS) -DDO_EXSPEC $(exspec_files) $(LDFLAGS) -o exspec
