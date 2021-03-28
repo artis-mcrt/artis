@@ -534,10 +534,11 @@ static double get_endecay_per_ejectamass_at_time(
   const double abund_endplusone = calculate_decaychain_abund(top_initabund, meanlifetimes, chainlength + 1, t_afterinit);
   const double ndecays_remaining = top_initabund - abund_endplusone;
 
+  // // alternative: add up the ancestor abundances that will eventually cause decays at the end of chain
   // double ndecays_remaining = 0.;
   // for (int c = 0; c < chainlength; c++)
   // {
-  //   const double ndecays_remaining += calculate_decaychain(top_initabund, meanlifetimes, c, tstart);
+  //   ndecays_remaining += calculate_decaychain_abund(top_initabund, meanlifetimes, c, t_afterinit);
   // }
 
   const double endecay = ndecays_remaining * nucdecayenergy(z_end, a_end);
