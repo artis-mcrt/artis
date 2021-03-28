@@ -12,6 +12,14 @@
 namespace decay
 {
 
+const char *elsymbols[119] = {
+  "n", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca",
+  "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn", "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr",
+  "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd",
+  "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt", "Au", "Hg",
+  "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm",
+  "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Uut", "Fl", "Uup", "Lv", "Uus", "Uuo"};
+
 struct nuclide {
   int z;                     // atomic number
   int a;                     // mass number
@@ -23,12 +31,20 @@ struct nuclide {
 struct nuclide *nuclides = NULL;
 int num_nuclides = 0;
 
+std::vector<std::vector<int>> decaychains_z;
+std::vector<std::vector<int>> decaychains_a;
 
 __host__ __device__
 int get_num_nuclides(void)
 {
   assert_always(num_nuclides > 0);
   return num_nuclides;
+}
+
+
+static void printout_nuclidename(const int z, const int a)
+{
+  printout("%s-%d", elsymbols[z], a);
 }
 
 
@@ -88,33 +104,85 @@ static bool nuc_exists(int z, int a)
 }
 
 
+static int decay_daughter_z(const int z_parent, const int a_parent)
+// check if (z_parent, a_parent) is a parent of (z, a)
+{
+  assert_always(nuc_exists(z_parent, a_parent));
+  // electron capture/beta plus decay only for now
+  return z_parent - 1;
+}
+
+
+static int decay_daughter_a(const int z_parent, const int a_parent)
+// check if (z_parent, a_parent) is a parent of (z, a)
+{
+  assert_always(nuc_exists(z_parent, a_parent));
+  // electron capture/beta +/- keep mass number costant (no alpha decay or fission supported)
+  return a_parent;
+}
+
+
 static bool nuc_is_parent(const int z_parent, const int a_parent, const int z, const int a)
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
-  // electron capture/beta plus decay only for now
-  return nuc_exists(z_parent, a_parent) && (a_parent == a) && z_parent == z + 1;
+  assert_always(nuc_exists(z_parent, a_parent));
+  // each radioactive nuclide is limited to one daughter nuclide
+  return (decay_daughter_z(z_parent, a_parent) == z && decay_daughter_a(z_parent, a_parent) == a);
 }
 
-static void print_chain(std::vector<int> &z_list, std::vector<int> &a_list)
+
+static void print_chain(const int chainindex)
 {
-  assert_always(z_list.size() == a_list.size());
-  if (z_list.size() > 0)
+  assert_always(decaychains_z[chainindex].size() == decaychains_a[chainindex].size());
+  if (decaychains_z.size() > 0)
   {
-    printout(" chain (len %lu): (%d,%d)", z_list.size(), z_list[0], a_list[0]);
+    printout(" decay chain: ");
+    printout_nuclidename(decaychains_z[chainindex][0], decaychains_a[chainindex][0]);
   }
 
-  for (size_t i = 1; i < z_list.size(); i++)
+  for (size_t i = 1; i < decaychains_z[chainindex].size(); i++)
   {
-    printout(" -> (%d,%d)", z_list[i], a_list[i]);
+    printout(" -> ");
+    printout_nuclidename(decaychains_z[chainindex][i], decaychains_a[chainindex][i]);
   }
   printout("\n");
 }
 
 
+static void add_ancestorchains(const int z, const int a, const int startchainindex)
+{
+  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
+  {
+    const int z_parent = get_nuc_z(nucindex); // possible parent, will check if true
+    const int a_parent = get_nuc_a(nucindex);
+    // printout("z_parent %d a_parent %d isparent(%d, %d) %d\n", z_parent, a_parent, z_list[0], a_list[0], nuc_is_parent(z_parent, a_parent, z_list[0], a_list[0]));
+    if (nuc_is_parent(z_parent, a_parent, z, a))
+    {
+      std::vector<int> new_z_list = decaychains_z[startchainindex];
+      std::vector<int> new_a_list = decaychains_a[startchainindex];
+
+      // check for repeated nuclides, which would indicate a loop in the decay chain
+      for (size_t i = 1; i < new_z_list.size(); i++)
+      {
+        if (new_z_list[i] == z_parent && new_a_list[i] == a_parent)
+        {
+          printout("\nERROR: Loop found in nuclear decay chain.\n");
+          abort();
+        }
+      }
+      new_z_list.insert(new_z_list.begin(), z_parent);
+      new_a_list.insert(new_a_list.begin(), a_parent);
+      decaychains_z.push_back(new_z_list);
+      decaychains_a.push_back(new_a_list);
+
+      add_ancestorchains(z_parent, a_parent, decaychains_z.size() - 1);
+    }
+  }
+}
+
+
 static void find_chains(void)
 {
-  int maxchainlength = 0;
-  int numchains = 0;
   for (int endnuc = 0; endnuc < get_num_nuclides(); endnuc++)
   {
     if (get_nuc_z(endnuc) < 1) // FAKE_GAM_LINE_ID
@@ -124,31 +192,11 @@ static void find_chains(void)
 
     std::vector<int> z_list = {get_nuc_z(endnuc)};
     std::vector<int> a_list = {get_nuc_a(endnuc)};
-    maxchainlength = std::max(maxchainlength, (int) z_list.size());
-    numchains++;
+    decaychains_z.push_back(z_list);
+    decaychains_a.push_back(a_list);
 
-    print_chain(z_list, a_list);
-
-    bool endofchain = false;
-    while (!endofchain)
-    {
-      endofchain = true; // start true and set to false if we find a parent
-      for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
-      {
-        if (nuc_is_parent(get_nuc_z(nucindex), get_nuc_a(nucindex), z_list[0], a_list[0]))
-        {
-          z_list.insert(z_list.begin(), get_nuc_z(nucindex));
-          a_list.insert(a_list.begin(), get_nuc_a(nucindex));
-          maxchainlength = std::max(maxchainlength, (int) z_list.size());
-          numchains++;
-
-          print_chain(z_list, a_list);
-          endofchain = false;
-        }
-      }
-    }
+    add_ancestorchains(get_nuc_z(endnuc), get_nuc_a(endnuc), decaychains_z.size() - 1);
   }
-  printout("Number of chains: %d (max length %d)\n", numchains, maxchainlength);
 }
 
 
@@ -208,12 +256,20 @@ void init_nuclides(void)
   nuclides[8].a = 52;
   nuclides[8].meanlife = 0.0211395 * DAY;
 
-  printout("init_nuclides() done. num_nuclides %d\n", get_num_nuclides());
+  printout("init_nuclides: num_nuclides %d\n", get_num_nuclides());
 
   /// Read in data for gamma ray lines and make a list of them in energy order.
   init_gamma_linelist();
 
   find_chains();
+
+  int maxchainlength = 0;
+  for (size_t chainindex = 0; chainindex < decaychains_z.size(); chainindex++)
+  {
+    print_chain(chainindex);
+    maxchainlength = std::max(maxchainlength, (int) decaychains_a[chainindex].size());
+  }
+  printout("Number of chains: %lu (max length %d)\n", decaychains_z.size(), maxchainlength);
 }
 
 
