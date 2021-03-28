@@ -496,7 +496,7 @@ static double get_modelradioabund_at_time(
 __host__ __device__
 static double get_endecay_per_ejectamass_at_time(
   const int modelgridindex, const int decaychainindex, const double time)
-// returns decay energy [erg] that would be released from time tstart [s] to time infinity a given decaypath
+// returns decay energy [erg] that would be released from time tstart [s] to time infinity by a given decaypath
 {
   // e.g. NI56 -> CO56, represents the decay of Co56 nuclei
   // that were produced from Ni56 in the initial abundance.
