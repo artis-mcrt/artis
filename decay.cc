@@ -606,6 +606,8 @@ static double get_endecay_to_tinf_per_ejectamass_at_time(
 __host__ __device__
 double get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(
   const int modelgridindex, const int chainindex, const double tstart)
+// just here as as check on the analytic result from get_endecay_per_ejectamass_t0_to_time_withexpansion()
+// this version does an Euler integration
 {
   double min_meanlife = -1;
   for (size_t i = 0; i < decaychains_a[chainindex].size(); i++)
@@ -661,7 +663,7 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
       continue;
     }
     print_chain(chainindex);
-    get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(modelgridindex, chainindex, tstart);
+    // get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(modelgridindex, chainindex, tstart);
 
     const int chainlength = decaychains_z[chainindex].size();
     double meanlifetimes[chainlength + 1];
@@ -674,7 +676,7 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
 
     const double factor = calculate_decaychain(1., meanlifetimes, chainlength + 1, tdiff, MODE_ABUNDEXPANSION);
     const double factor2 = factor / calculate_decaychain(1., meanlifetimes, chainlength + 1, tdiff, MODE_ABUND);
-    printout("  Analytical expansion factor: %g\n", factor2);
+    // printout("  Analytical expansion factor: %g\n", factor2);
 
     const int z_top = decaychains_z[chainindex][0];
     const int a_top = decaychains_a[chainindex][0];
@@ -682,7 +684,7 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
     const int a_end = decaychains_a[chainindex].back();
     const double top_initabund = get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
     const double chain_endecay = calculate_decaychain(top_initabund, meanlifetimes, chainlength + 1, tstart - globals::t_model, MODE_ABUNDEXPANSION) * nucdecayenergy(z_end, a_end);
-    printout("  Analytical chain_endecay: %g\n", chain_endecay);
+    // printout("  Analytical chain_endecay: %g\n", chain_endecay);
     tot_endecay += chain_endecay;
   }
 
