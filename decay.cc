@@ -34,6 +34,12 @@ int num_nuclides = 0;
 std::vector<std::vector<int>> decaychains_z;
 std::vector<std::vector<int>> decaychains_a;
 
+enum nucmodes {
+  MODE_ABUND = 0,  // get the abundance
+  MODE_DECAYRATE = 1,  // get the decayrate
+  MODE_ABUNDEXPANSION = 2,  // get the abundance with expansion factor
+};
+
 __host__ __device__
 int get_num_nuclides(void)
 {
@@ -361,17 +367,25 @@ static double sample_decaytime(const int decaychainindex, const double tdecaymin
 
 __host__ __device__
 static double calculate_decaychain(
-  const double firstinitabund, const double *meanlifetimes, const int num_nuclides, const double timediff, const bool rate_not_abund)
+  const double firstinitabund, const double *meanlifetimes, const int num_nuclides, const double timediff, const enum nucmodes mode)
 {
-  // calculate final abundance (or decayrate) from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
-  // the top nuclide abundance is given and the end abundance is returned (all intermediates are assumed to start
-  // with zero abundance)
-  // note: first and last can be nuclide can be the same if num_nuclides==1, giving simple decay formula
-  // meanlifetimes: array of mean lifetimes from nuc[0]
-  // assuming intermediate nuclides start with no abundance, return the abundance at the end of the chain
-  // ratemode will return the last nuclide's decay rate instead of its abundance
+  // calculate final abundance or decayrate from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
+  // the top nuclide initial abundance is set and the chain-end abundance is returned (all intermediates nuclides
+  // are assumed to start with zero abundance)
+  // note: first and last can be nuclide can be the same if num_nuclides==1, reducing to simple decay formula
+  //
+  // meanlifetimes: array of mean lifetimes for nuc[0]..nuc[num_nuclides-1]
+  // mode:
+  //   MODE_ABUND:          assuming intermediate nuclides start with no abundance,
+  //                          return the abundance at the end of the chain
+  //   MODE_DECAYRATE:      will return the last nuclide's decay rate instead of its abundance
+  //   MODE_ABUNDEXPANSION: return a modified abundance at the end of the chain, with a weighting factor2
+  //                          accounting from phton energy loss from expansion since the prior decays occured
+  //                          (This is needed to get the initial temperature)
 
   assert_always(num_nuclides >= 1);
+  assert_always(mode >= 0);
+  assert_always(mode <= 2);
 
   // if the meanlife is zero or negative, that indicates a stable nuclide
 
@@ -401,73 +415,26 @@ static double calculate_decaychain(
       }
     }
 
-    if (rate_not_abund) // derivative with respect to time
-    {
-      sum += lambdas[j] * exp(-lambdas[j] * timediff) / denominator;
-    }
-    else
+    if (mode == MODE_ABUND) // abundance output
     {
       sum += exp(-lambdas[j] * timediff) / denominator;
     }
-  }
-
-  const double lastabund = firstinitabund * lambdaproduct * sum;
-
-  return lastabund;
-}
-
-
-__host__ __device__
-static double calculate_decaychain_withexpansion(
-  const double firstinitabund, const double *meanlifetimes, const int num_nuclides, const double tstart)
-{
-  // calculate final abundance (or decayrate) from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
-  // the top nuclide abundance is given and the end abundance is returned (all intermediates are assumed to start
-  // with zero abundance)
-  // note: first and last can be nuclide can be the same if num_nuclides==1, giving simple decay formula
-  // meanlifetimes: array of mean lifetimes from nuc[0]
-  // assuming intermediate nuclides start with no abundance, return the abundance at the end of the chain
-  // ratemode will return the last nuclide's decay rate instead of its abundance
-
-  assert_always(num_nuclides >= 1);
-
-  // if the meanlife is zero or negative, that indicates a stable nuclide
-
-  // last nuclide might be stable (meanlife <= 0.)
-  double lambdas[num_nuclides];
-  for (int i = 0; i < num_nuclides; i++)
-  {
-    assert_always(meanlifetimes[i] > 0. || (i == num_nuclides - 1)); // only the last nuclide can be stable
-    lambdas[i] = (meanlifetimes[i] > 0.) ? 1. / meanlifetimes[i] : 0.;
-  }
-
-  double lambdaproduct = 1.;
-  for (int j = 0; j < num_nuclides - 1; j++)
-  {
-    lambdaproduct *= lambdas[j];
-  }
-
-  double sum = 0;
-  for (int j = 0; j < num_nuclides; j++)
-  {
-    double denominator = 1.;
-    for (int p = 0; p < num_nuclides; p++)
+    else if (mode == MODE_DECAYRATE)  // decay rate: derivative of abundance with respect to time
     {
-      if (p != j)
+      sum += lambdas[j] * exp(-lambdas[j] * timediff) / denominator;
+    }
+    else if (mode == MODE_ABUNDEXPANSION)
+    {
+      double sumterm = 0.;
+      if (lambdas[j] > 0.)
       {
-        denominator *= (lambdas[p] - lambdas[j]);
+        // sumterm = exp(-lambdas[j] * tstart);
+        const double factor3 = (1 + meanlifetimes[j] / timediff) * exp(-timediff / meanlifetimes[j]) - meanlifetimes[j] / timediff;
+        // const double factor3b = factor3 / (1 - exp(-tstart / meanlifetimes[j]));
+        sumterm = factor3;
       }
+      sum += sumterm / denominator;
     }
-
-    double sumterm = 0.;
-    if (lambdas[j] > 0.)
-    {
-      // sumterm = exp(-lambdas[j] * tstart);
-      const double factor3 = (1 + meanlifetimes[j] / tstart) * exp(-tstart / meanlifetimes[j]) - meanlifetimes[j] / tstart;
-      // const double factor3b = factor3 / (1 - exp(-tstart / meanlifetimes[j]));
-      sumterm = factor3;
-    }
-    sum += sumterm / denominator;
   }
 
   const double lastabund = firstinitabund * lambdaproduct * sum;
@@ -512,7 +479,7 @@ static double get_nuc_ancestor_contrib(
   if (nuc_exists(z_top, a_top) && chainlength > 1)
   {
     const double top_abund = get_modelinitradioabund(modelgridindex, z_top, a_top);
-    abundcontrib += calculate_decaychain(top_abund, meanlifetimes, chainlength, t_afterinit, rate_not_abund);
+    abundcontrib += calculate_decaychain(top_abund, meanlifetimes, chainlength, t_afterinit, rate_not_abund ? MODE_DECAYRATE : MODE_ABUND);
   }
 
   // find parent nulides to append to the top of the chain
@@ -533,7 +500,7 @@ static double get_nuc_ancestor_contrib(
       zlist_plusone[0] = z_check;
       alist_plusone[0] = a_check;
 
-      abundcontrib += get_nuc_ancestor_contrib(modelgridindex, zlist_plusone, alist_plusone, chainlength + 1, time, rate_not_abund);
+      abundcontrib += get_nuc_ancestor_contrib(modelgridindex, zlist_plusone, alist_plusone, chainlength + 1, time, rate_not_abund ? MODE_DECAYRATE : MODE_ABUND);
     }
   }
 
@@ -626,7 +593,7 @@ static double get_endecay_to_tinf_per_ejectamass_at_time(
 
   // count the number of chain-top nuclei that haven't decayed past the end of the chain
 
-  const double abund_endplusone = calculate_decaychain(top_initabund, meanlifetimes, chainlength + 1, t_afterinit, false);
+  const double abund_endplusone = calculate_decaychain(top_initabund, meanlifetimes, chainlength + 1, t_afterinit, MODE_ABUND);
   const double ndecays_remaining = top_initabund - abund_endplusone;
 
   // // alternative: add up the ancestor abundances that will eventually cause decays at the end of chain
@@ -643,8 +610,54 @@ static double get_endecay_to_tinf_per_ejectamass_at_time(
 
 
 __host__ __device__
-double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridindex, const double tstart)
+double get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(
+  const int modelgridindex, const int chainindex, const double tstart)
 {
+  double min_meanlife = -1;
+  for (size_t i = 0; i < decaychains_a[chainindex].size(); i++)
+  {
+    const double meanlife = get_meanlife(decaychains_z[chainindex][i], decaychains_a[chainindex][i]);
+    if (min_meanlife < 0. or meanlife < min_meanlife)
+    {
+      min_meanlife = meanlife;
+    }
+  }
+
+  const int nsteps = ceil((tstart - globals::t_model) / min_meanlife) * 100000; // min steps across the meanlifetime
+  double chain_endecay = 0.;
+  double last_chain_endecay = -1.;
+  double last_t = -1.;
+  for (int i = 0; i < nsteps; i++)
+  {
+    const double t = globals::t_model + (tstart - globals::t_model) * i / nsteps;
+    const double chain_endecay_t = get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, chainindex, t);
+    if (last_chain_endecay >= 0)
+    {
+      const double chain_step_endecay_diff = last_chain_endecay - chain_endecay_t;
+      const double expansionfactor = 0.5 * (t + last_t) / tstart; // photons lose energy as 1/t for homologous expansion
+      chain_endecay += chain_step_endecay_diff * expansionfactor;
+    }
+    last_chain_endecay = chain_endecay_t;
+    last_t = t;
+  }
+
+  const double chain_endecay_noexpansion = (
+    get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, chainindex, globals::t_model) - get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, chainindex, tstart));
+
+  printout("  chain_endecay:              %g\n", chain_endecay);
+  printout("  chain_endecay_noexpansion:  %g\n", chain_endecay_noexpansion);
+  printout("  expansion energy factor:    %g\n", chain_endecay / chain_endecay_noexpansion);
+
+  return chain_endecay;
+}
+
+
+__host__ __device__
+double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridindex, const double tstart)
+// calculate the decay energy per unit mass [erg/g] released from time zero to tstart, accounting for
+// the photon energy loss due to expansion between time of decays and tstart (equation 18 of Lucy 2005)
+{
+  const double tdiff = tstart - globals::t_model;
   double tot_endecay = 0.;
   for (size_t chainindex = 0; chainindex < decaychains_z.size(); chainindex++)
   {
@@ -653,59 +666,30 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
       // skip unused chains
       continue;
     }
-    double min_meanlife = -1;
-    for (size_t i = 0; i < decaychains_a[chainindex].size(); i++)
-    {
-      const double meanlife = get_meanlife(decaychains_z[chainindex][i], decaychains_a[chainindex][i]);
-      if (min_meanlife < 0. or meanlife < min_meanlife)
-      {
-        min_meanlife = meanlife;
-      }
-    }
-
-    const int nsteps = ceil((tstart - globals::t_model) / min_meanlife) * 100000; // min steps across the meanlifetime
-    double chain_endecay = 0.;
-    double last_chain_endecay = -1.;
-    double last_t = -1.;
-    for (int i = 0; i < nsteps; i++)
-    {
-      const double t = globals::t_model + (tstart - globals::t_model) * i / nsteps;
-      const double chain_endecay_t = get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, chainindex, t);
-      if (last_chain_endecay >= 0)
-      {
-        const double chain_step_endecay_diff = last_chain_endecay - chain_endecay_t;
-        const double expansionfactor = 0.5 * (t + last_t) / tstart; // photons lose energy as 1/t for homologous expansion
-        chain_endecay += chain_step_endecay_diff * expansionfactor;
-      }
-      last_chain_endecay = chain_endecay_t;
-      last_t = t;
-    }
-    tot_endecay += chain_endecay;
-
-    const double chain_endecay_noexpansion = (
-      get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, chainindex, globals::t_model) - get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, chainindex, tstart));
-
     print_chain(chainindex);
-    printout("  chain_endecay:              %g\n", chain_endecay);
-    printout("  chain_endecay_noexpansion:  %g\n", chain_endecay_noexpansion);
-    printout("  expansion energy factor:    %g\n", chain_endecay / chain_endecay_noexpansion);
+    get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(modelgridindex, chainindex, tstart);
 
     const int chainlength = decaychains_z[chainindex].size();
-    double meanlifesum = 0.;
     double meanlifetimes[chainlength + 1];
     for (int i = 0; i < chainlength; i++)
     {
       meanlifetimes[i] = get_meanlife(decaychains_z[chainindex][i], decaychains_a[chainindex][i]);
-      if (meanlifetimes[i] > 0)
-        meanlifesum += meanlifetimes[i];
     }
     // the nuclide past the end of the chain radionuclide
     meanlifetimes[chainlength] = -1.; // nuclide at the end is a sink, so treat it as stable (even if it's not)
 
-    const double factor = calculate_decaychain_withexpansion(1., meanlifetimes, chainlength + 1, tstart - globals::t_model);
-    const double factor2 = factor / calculate_decaychain(1., meanlifetimes, chainlength + 1, tstart - globals::t_model, false);
-    printout("  Analytical: %g\n", factor2);
-    printout("  Analytical chain_endecay: %g\n", factor2 * chain_endecay_noexpansion);
+    const double factor = calculate_decaychain(1., meanlifetimes, chainlength + 1, tdiff, MODE_ABUNDEXPANSION);
+    const double factor2 = factor / calculate_decaychain(1., meanlifetimes, chainlength + 1, tdiff, MODE_ABUND);
+    printout("  Analytical expansion factor: %g\n", factor2);
+
+    const int z_top = decaychains_z[chainindex][0];
+    const int a_top = decaychains_a[chainindex][0];
+    const int z_end = decaychains_z[chainindex].back();
+    const int a_end = decaychains_a[chainindex].back();
+    const double top_initabund = get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
+    const double chain_endecay = calculate_decaychain(top_initabund, meanlifetimes, chainlength + 1, tstart - globals::t_model, MODE_ABUNDEXPANSION) * nucdecayenergy(z_end, a_end);
+    printout("  Analytical chain_endecay: %g\n", chain_endecay);
+    tot_endecay += chain_endecay;
   }
 
   return tot_endecay;
