@@ -662,7 +662,7 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
       // skip unused chains
       continue;
     }
-    print_chain(chainindex);
+    // print_chain(chainindex);
     // get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(modelgridindex, chainindex, tstart);
 
     const int chainlength = decaychains_z[chainindex].size();
@@ -674,9 +674,9 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
     // the nuclide past the end of the chain radionuclide
     meanlifetimes[chainlength] = -1.; // nuclide at the end is a sink, so treat it as stable (even if it's not)
 
-    const double factor = calculate_decaychain(1., meanlifetimes, chainlength + 1, tdiff, MODE_ABUNDEXPANSION);
-    const double factor2 = factor / calculate_decaychain(1., meanlifetimes, chainlength + 1, tdiff, MODE_ABUND);
-    // printout("  Analytical expansion factor: %g\n", factor2);
+    // const double numerator = calculate_decaychain(1., meanlifetimes, chainlength + 1, tdiff, MODE_ABUNDEXPANSION);
+    // const double factor = numerator / calculate_decaychain(1., meanlifetimes, chainlength + 1, tdiff, MODE_ABUND);
+    // printout("  Analytical expansion factor: %g\n", factor);
 
     const int z_top = decaychains_z[chainindex][0];
     const int a_top = decaychains_a[chainindex][0];
