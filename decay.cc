@@ -423,15 +423,11 @@ static double calculate_decaychain(
     }
     else if (mode == MODE_ABUNDEXPANSION)
     {
-      double sumterm = 0.;
       if (lambdas[j] > 0.)
       {
-        // sumterm = exp(-lambdas[j] * tstart);
-        const double factor3 = (1 + meanlifetimes[j] / timediff) * exp(-timediff / meanlifetimes[j]) - meanlifetimes[j] / timediff;
-        // const double factor3b = factor3 / (1 - exp(-tstart / meanlifetimes[j]));
-        sumterm = factor3;
+        const double sumtermtop = (1 + meanlifetimes[j] / timediff) * exp(-timediff / meanlifetimes[j]) - meanlifetimes[j] / timediff;
+        sum += sumtermtop / denominator;
       }
-      sum += sumterm / denominator;
     }
   }
 
