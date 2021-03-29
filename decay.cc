@@ -384,8 +384,6 @@ static double calculate_decaychain(
   //                          (This is needed to get the initial temperature)
 
   assert_always(num_nuclides >= 1);
-  assert_always(mode >= 0);
-  assert_always(mode <= 2);
 
   // if the meanlife is zero or negative, that indicates a stable nuclide
 
