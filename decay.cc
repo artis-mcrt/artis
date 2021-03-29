@@ -531,7 +531,7 @@ static double get_modelradionuclide_decayrate(
 
 
 __host__ __device__
-static double get_endecay_per_ejectamass_at_time(
+static double get_endecay_to_tinf_per_ejectamass_at_time(
   const int modelgridindex, const int decaychainindex, const double time)
 // returns decay energy [erg] that would be released from time tstart [s] to time infinity by a given decaypath
 {
@@ -590,8 +590,8 @@ static double get_endecay_per_ejectamass_between_times(
 // energy per mass [erg/g] released by a decaypath between two times [s]
 {
   assert_always(tlow <= thigh);
-  const double energy_tlow = get_endecay_per_ejectamass_at_time(mgi, decaychainindex, tlow);
-  const double energy_thigh = get_endecay_per_ejectamass_at_time(mgi, decaychainindex, thigh);
+  const double energy_tlow = get_endecay_to_tinf_per_ejectamass_at_time(mgi, decaychainindex, tlow);
+  const double energy_thigh = get_endecay_to_tinf_per_ejectamass_at_time(mgi, decaychainindex, thigh);
   assert_always(energy_tlow >= energy_thigh);
   return energy_tlow - energy_thigh;
 }
