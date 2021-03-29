@@ -1648,18 +1648,23 @@ static void assign_initial_temperatures(void)
   //factor56ni = CLIGHT/4/STEBO * 3*mtot/4/PI * nucdecayenergy(28, 56)/56/MH  / pow(vmax,3);
   for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
-    // alternative, not correct because it neglects expansion factor
-    // const double decayedenergy_per_mass = get_decayedenergy_per_ejectamass(mgi, tstart);
-    //
-    // double T_initial = pow(CLIGHT / 4 / STEBO  * pow(globals::tmin / tstart, 3) * get_rhoinit(mgi) * decayedenergy_per_mass, 1. / 4.);
 
-    double T_initial = pow(CLIGHT / 4 / STEBO  * pow(globals::tmin / tstart, 3) * get_rhoinit(mgi) * (
+    printout("tstart %g days\n", tstart / DAY);
+    printout("factor56ni * X_Ni56 %g\n", factor56ni * get_modelinitradioabund(mgi, 28, 56));
+    printout("factor56co * X_Co56 %g\n", factor56co * get_modelinitradioabund(mgi, 27, 56));
+    const double decayedenergy_per_mass = decay::get_endecay_per_ejectamass_t0_to_time_withexpansion(mgi, tstart);
+
+    double T_initial_alt = pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) * get_rhoinit(mgi) * decayedenergy_per_mass, 1. / 4.);
+
+    double T_initial = pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) * get_rhoinit(mgi) * (
          (factor56ni * get_modelinitradioabund(mgi, 28, 56)) +
          (factor56co * get_modelinitradioabund(mgi, 27, 56)) +
          (factor57ni * get_modelinitradioabund(mgi, 28, 57)) +
          // (factor57co * get_modelinitradioabund(mgi, 27, 57)) +
          (factor52fe * get_modelinitradioabund(mgi, 26, 52)) +
          (factor48cr * get_modelinitradioabund(mgi, 23, 48))), 1. / 4.);
+
+    printout("T_initial %g T_initial_alt %g\n", T_initial, T_initial_alt);
 
     // printout("mgi %d: T_initial %g K tmin %g tstart %g rhoinit %g X_56Ni %g X_52Fe %g X_48cr %g\n",
     //          mgi, T_initial, globals::tmin, tstart, get_rhoinit(mgi), get_modelinitradioabund(mgi, 28, 56), get_modelinitradioabund(mgi, 26, 52), get_modelinitradioabund(mgi, 24, 48));
