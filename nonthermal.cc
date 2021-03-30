@@ -2854,25 +2854,25 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   bool enable_sfexcitation = true;
   bool enable_sfionization = true;
-  // if (timestep <= globals::n_lte_timesteps)
-  // {
-  //   // for the first run of the solver at the first NLTE timestep (which usually requires many iterations),
-  //   // do a fast initial solution but mark it has an invalid nne per ion so it gets replaced at the next timestep
-  //   nt_solution[modelgridindex].nneperion_when_solved = -1.;
-  //   enable_sfexcitation = false;
-  //   enable_sfionization = false;
-  //
-  //   printout("Doing a fast initial solution without ionization or excitation in the SF equation for the first NLTE timestep.\n");
-  // }
-  // else if (timestep <= globals::n_lte_timesteps + 2)
-  // {
-  //   // run the solver in a faster mode for the first couple of NLTE timesteps
-  //   // nt_solution[modelgridindex].nneperion_when_solved = -1.;
-  //   enable_sfexcitation = false;
-  //   // enable_sfionization = false;
-  //
-  //   printout("Doing a faster solution without excitation in the SF equation for the first couple of NLTE timesteps.\n");
-  // }
+  if (timestep <= globals::n_lte_timesteps)
+  {
+    // for the first run of the solver at the first NLTE timestep (which usually requires many iterations),
+    // do a fast initial solution but mark it has an invalid nne per ion so it gets replaced at the next timestep
+    nt_solution[modelgridindex].nneperion_when_solved = -1.;
+    enable_sfexcitation = false;
+    enable_sfionization = false;
+
+    printout("Doing a fast initial solution without ionization or excitation in the SF equation for the first NLTE timestep.\n");
+  }
+  else if (timestep <= globals::n_lte_timesteps + 2)
+  {
+    // run the solver in a faster mode for the first couple of NLTE timesteps
+    // nt_solution[modelgridindex].nneperion_when_solved = -1.;
+    enable_sfexcitation = false;
+    // enable_sfionization = false;
+
+    printout("Doing a faster solution without excitation in the SF equation for the first couple of NLTE timesteps.\n");
+  }
 
   gsl_matrix *const sfmatrix = gsl_matrix_calloc(SFPTS, SFPTS);
   gsl_vector *const rhsvec = gsl_vector_calloc(SFPTS); // constant term (not dependent on y func) in each equation
