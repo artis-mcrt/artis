@@ -438,18 +438,7 @@ static double calculate_decaychain(
 
 
 __host__ __device__
-static double get_modelinitradioabund_decayed(
-  const int modelgridindex, const int z, const int a, const double time)
-// only allow decays to decrease the nuclide abundance (i.e. don't count increases due to decay of parent)
-{
-  assert_always(time >= 0.);
-  const double tdiff = time - get_t_model();
-  return get_modelinitradioabund(modelgridindex, z, a) * exp(- tdiff / get_meanlife(z, a));
-}
-
-
-__host__ __device__
-static double get_modelradionuclide_at_time(
+static double get_nuc_abund_or_rate(
   const int modelgridindex, const int z, const int a, const double time, const enum nucmodes mode)
 // Get the mass fraction of a nuclide accounting for all decays including those of its parent and grandparent.
 // e.g., Co56 abundance may first increase with time due to Ni56 decays, then decease due to Co56 decay
@@ -516,17 +505,17 @@ static double get_modelradionuclide_at_time(
 }
 
 
-static double get_modelradioabund_at_time(
+static double get_nuc_abund(
   const int modelgridindex, const int z, const int a, const double time)
 {
-  return get_modelradionuclide_at_time(modelgridindex, z, a, time, MODE_ABUND);
+  return get_nuc_abund_or_rate(modelgridindex, z, a, time, MODE_ABUND);
 }
 
 
-static double get_modelradionuclide_decayrate(
+static double get_nuc_decayrate(
   const int modelgridindex, const int z, const int a, const double time)
 {
-  return get_modelradionuclide_at_time(modelgridindex, z, a, time, MODE_DECAYRATE);
+  return get_nuc_abund_or_rate(modelgridindex, z, a, time, MODE_DECAYRATE);
 }
 
 
@@ -732,7 +721,7 @@ static double get_chain_decay_power_per_ejectamass(
      * nucdecayenergy(z_end, a_end));
 
    // const double decaypower = (
-   //   get_modelradioabund_at_time(modelgridindex, z_end, a_end, time) / nucmass(z_top, a_top)
+   //   get_nuc_abund(modelgridindex, z_end, a_end, time) / nucmass(z_top, a_top)
    //   / get_meanlife(z_end, a_end) * nucdecayenergy(z_end, a_end));
 
   // const double time2 = time * 1.001;
@@ -745,7 +734,8 @@ static double get_chain_decay_power_per_ejectamass(
 
 __host__ __device__
 double get_modelcell_decay_energy_density(const int mgi)
-// get the density (at time tmin) of decay energy liberated during the simulation time range [erg/cm3]
+// get the density at time tmin of decay energy that will
+// be released during the simulation time range [erg/cm3]
 {
   double modelcell_decay_energy_density = 0.;
   for (size_t decaychainindex = 0; decaychainindex < decaychains_z.size(); decaychainindex++)
@@ -768,10 +758,10 @@ double get_positroninjection_rate_density(const int modelgridindex, const double
   {
     const int z = decay::get_nuc_z(nucindex);
     const int a = decay::get_nuc_a(nucindex);
-    if (nucdecayenergypositrons(z, a) > 0. && get_modelradioabund_at_time(modelgridindex, z, a, t) > 0.)
+    if (nucdecayenergypositrons(z, a) > 0. && get_nuc_abund(modelgridindex, z, a, t) > 0.)
     {
-      // printout("positrons coming from nuclide %d en %g abund %g\n", nuclide, nucdecayenergypositrons(nuclide), get_modelradioabund_at_time(modelgridindex, nuclide, t));
-      const double decayratefactor = get_modelradionuclide_decayrate(modelgridindex, z, a, t);
+      // printout("positrons coming from nuclide %d en %g abund %g\n", nuclide, nucdecayenergypositrons(nuclide), get_nuc_abund(modelgridindex, nuclide, t));
+      const double decayratefactor = get_nuc_decayrate(modelgridindex, z, a, t);
       pos_dep_sum += decayratefactor * nucdecayenergypositrons(z, a) * rho / nucmass(z, a);
     }
   }
@@ -820,14 +810,14 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
       if (nuc_z == atomic_number)
       {
         // radioactive isotope of the element
-        isofracsum += get_modelradioabund_at_time(modelgridindex, atomic_number, a, t_current);
+        isofracsum += get_nuc_abund(modelgridindex, atomic_number, a, t_current);
       }
       else if (!nuc_exists(decay_daughter_z(nuc_z, a), decay_daughter_a(nuc_z, a)) && decay_daughter_z(nuc_z, a) == atomic_number)
       {
         // nuclide decays into correct atomic number but outside of the radionuclide list
         // note: there could also be stable isotopes of this element included in stable_initabund(z), but
         // here we only count the contribution from decays
-        isofracsum += get_modelradioabund_at_time(modelgridindex, decay_daughter_z(nuc_z, a), decay_daughter_a(nuc_z, a), t_current);
+        isofracsum += get_nuc_abund(modelgridindex, decay_daughter_z(nuc_z, a), decay_daughter_a(nuc_z, a), t_current);
       }
     }
 
