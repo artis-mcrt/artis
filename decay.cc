@@ -129,7 +129,7 @@ static int decay_daughter_a(const int z_parent, const int a_parent)
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
   assert_always(nuc_exists(z_parent, a_parent));
-  // electron capture/beta +/- keep mass number costant (no alpha decay or fission supported)
+  // electron capture/beta +/- keep mass number constant (no alpha decay or fission yet)
   return a_parent;
 }
 
