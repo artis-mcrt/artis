@@ -414,8 +414,8 @@ void initialise_prev_titer_photoionestimators(void)
     #ifndef FORCE_LTE
       #ifdef DO_TITER
         nuJ_reduced_save[n] = -1.;
-        ffheatingestimator_save[n] = -1.;
-        colheatingestimator_save[n] = -1.;
+        globals::ffheatingestimator_save[n] = -1.;
+        globals::colheatingestimator_save[n] = -1.;
       #endif
       for (int element = 0; element < get_nelements(); element++)
       {
@@ -434,9 +434,9 @@ void initialise_prev_titer_photoionestimators(void)
           ////photoionestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = Gamma; //gamma_lte/zeta;
 
           #ifdef DO_TITER
-            gammaestimator_save[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = -1.;
+            globals::gammaestimator_save[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = -1.;
             if (!NO_LUT_BFHEATING)
-              bfheatingestimator_save[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = -1.;
+              globals::bfheatingestimator_save[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = -1.;
             /*
             photoionestimator_save[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = -1.;
             stimrecombestimator_save[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = -1.;

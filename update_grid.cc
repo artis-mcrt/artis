@@ -915,11 +915,11 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
         globals::gammaestimator[ionestimindex] *= estimator_normfactor / H;
         //printout("mgi %d, element %d, ion %d, gammaest %g\n",n,element,ion,globals::gammaestimator[ionestimindex]);
         #ifdef DO_TITER
-          if (gammaestimator_save[ionestimindex] >= 0)
+          if (globals::gammaestimator_save[ionestimindex] >= 0)
           {
-            globals::gammaestimator[ionestimindex] = (globals::gammaestimator[ionestimindex] + gammaestimator_save[ionestimindex]) / 2;
+            globals::gammaestimator[ionestimindex] = (globals::gammaestimator[ionestimindex] + globals::gammaestimator_save[ionestimindex]) / 2;
           }
-          gammaestimator_save[ionestimindex] = globals::gammaestimator[ionestimindex];
+          globals::gammaestimator_save[ionestimindex] = globals::gammaestimator[ionestimindex];
         #endif
 
         globals::corrphotoionrenorm[ionestimindex] = globals::gammaestimator[ionestimindex] / get_corrphotoioncoeff_ana(element,ion,0,0,n);
@@ -991,16 +991,16 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
 #ifndef FORCE_LTE
   static void titer_average_estimators(const int n)
   {
-    if (ffheatingestimator_save[n] >= 0)
+    if (globals::ffheatingestimator_save[n] >= 0)
     {
-      ffheatingestimator[n] = (ffheatingestimator[n] + ffheatingestimator_save[n]) / 2;
+      globals::ffheatingestimator[n] = (globals::ffheatingestimator[n] + globals::ffheatingestimator_save[n]) / 2;
     }
-    ffheatingestimator_save[n] = ffheatingestimator[n];
-    if (colheatingestimator_save[n] >= 0)
+    globals::ffheatingestimator_save[n] = globals::ffheatingestimator[n];
+    if (globals::colheatingestimator_save[n] >= 0)
     {
-      colheatingestimator[n] = (colheatingestimator[n] + colheatingestimator_save[n]) / 2;
+      globals::colheatingestimator[n] = (globals::colheatingestimator[n] + globals::colheatingestimator_save[n]) / 2;
     }
-    colheatingestimator_save[n] = colheatingestimator[n];
+    globals::colheatingestimator_save[n] = globals::colheatingestimator[n];
   }
 #endif
 #endif

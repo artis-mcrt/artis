@@ -403,7 +403,7 @@ static void save_grid_and_packets(
 }
 
 static bool do_timestep(
-  const int outer_iteration, const int nts, const int titer,
+  const int outer_iteration, const int nts, int titer,
   const int my_rank, PKT* packets, const int walltimelimitseconds)
 {
   bool do_this_full_loop = true;
@@ -464,11 +464,6 @@ static bool do_timestep(
   printout("timestep %d: update_grid: process %d finished update grid at %ld (took %ld seconds)\n",
            nts, my_rank, sys_time_finish_update_grid, sys_time_finish_update_grid - sys_time_start_update_grid);
 
-  #ifdef DO_TITER
-    /// No iterations over the zeroth timestep, set titer > n_titer
-    if (nts == 0)
-      titer = globals::n_titer + 1;
-  #endif
   #ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
   #endif
@@ -1043,7 +1038,7 @@ int main(int argc, char** argv)
 
       #ifdef DO_TITER
         // The first time step must solve the ionisation balance in LTE
-        initial_iteration = (nts == 0);
+        globals::initial_iteration = (nts == 0);
       #else
         /// Do 3 iterations on timestep 0-9
         /*if (nts == 0)
@@ -1068,6 +1063,11 @@ int main(int argc, char** argv)
       for (int titer = 0; titer < globals::n_titer; titer++)
       {
         terminate_early = do_timestep(outer_iteration, nts, titer, my_rank, packets, walltimelimitseconds);
+        #ifdef DO_TITER
+          /// No iterations over the zeroth timestep, set titer > n_titer
+          if (nts == 0)
+            titer = globals::n_titer + 1;
+        #endif
       }
 
       nts++;
