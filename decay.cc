@@ -653,7 +653,6 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
 // calculate the decay energy per unit mass [erg/g] released from time zero to tstart, accounting for
 // the photon energy loss due to expansion between time of decays and tstart (equation 18 of Lucy 2005)
 {
-  const double tdiff = tstart - globals::t_model;
   double tot_endecay = 0.;
   for (size_t chainindex = 0; chainindex < decaychains_z.size(); chainindex++)
   {
@@ -732,12 +731,35 @@ static double get_chain_decay_power_per_ejectamass(
   const int z_end = decaychains_z[decaychainindex].back();
   const int a_end = decaychains_a[decaychainindex].back();
 
+  // const double decaypower = (
+  //   get_modelradioabund_at_time(modelgridindex, z_end, a_end, time) / nucmass(z_top, a_top)
+  //   / get_meanlife(z_end, a_end) * nucdecayenergy(z_end, a_end));
+
+  const int chainlength = decaychains_z[decaychainindex].size();
+  double meanlifetimes[chainlength];
+  for (int i = 0; i < chainlength; i++)
+  {
+    meanlifetimes[i] = get_meanlife(decaychains_z[decaychainindex][i], decaychains_a[decaychainindex][i]);
+  }
+
+  const double top_initabund = get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
+  assert_always(top_initabund >= 0.)
+  if (top_initabund <= 0.)
+  {
+    return 0.;
+  }
+  const double t_afterinit = time - globals::t_model;
+
+  // count the number of chain-top nuclei that haven't decayed past the end of the chain
+
   const double decaypower = (
-    get_modelradioabund_at_time(modelgridindex, z_top, a_top, time) / nucmass(z_top, a_top) * nucdecayenergy(z_end, a_end));
+    calculate_decaychain(top_initabund, meanlifetimes, chainlength, t_afterinit, MODE_DECAYRATE)
+     * nucdecayenergy(z_end, a_end));
 
   // const double time2 = time * 1.001;
-  // const double decaypower2 = get_endecay_per_ejectamass_between_times(modelgridindex, decaypath, time, time2) / (time2 - time);
-  // printout("compare decaypath %d answer %g and %g\n", decaypath, decaypower, decaypower2);
+  // const double decaypower2 = get_endecay_per_ejectamass_between_times(modelgridindex, decaychainindex, time, time2) / (time2 - time);
+  // printout("compare decaychainindex %d answer %g and %g\n", decaychainindex, decaypower, decaypower2);
+
   return decaypower;
 }
 
