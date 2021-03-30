@@ -443,7 +443,7 @@ static double get_modelinitradioabund_decayed(
 // only allow decays to decrease the nuclide abundance (i.e. don't count increases due to decay of parent)
 {
   assert_always(time >= 0.);
-  const double tdiff = time - globals::t_model;
+  const double tdiff = time - get_t_model();
   return get_modelinitradioabund(modelgridindex, z, a) * exp(- tdiff / get_meanlife(z, a));
 }
 
@@ -465,7 +465,7 @@ static double get_modelradionuclide_at_time(
   assert_always(mode == MODE_ABUND || mode == MODE_DECAYRATE);
   assert_always(mode != MODE_DECAYRATE || (nuc_exists(z, a) && get_meanlife(z, a))); // decay rate for radioactive nuclides only
 
-  const double t_afterinit = time - globals::t_model;
+  const double t_afterinit = time - get_t_model();
 
   // decay chains include all paths from radionuclides to other radionuclides (including trivial size-one chains)
 
@@ -563,7 +563,7 @@ static double get_endecay_to_tinf_per_ejectamass_at_time(
   {
     return 0.;
   }
-  const double t_afterinit = time - globals::t_model;
+  const double t_afterinit = time - get_t_model();
 
   // count the number of chain-top nuclei that haven't decayed past the end of the chain
 
@@ -599,13 +599,13 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(
     }
   }
 
-  const int nsteps = ceil((tstart - globals::t_model) / min_meanlife) * 100000; // min steps across the meanlifetime
+  const int nsteps = ceil((tstart - get_t_model()) / min_meanlife) * 100000; // min steps across the meanlifetime
   double chain_endecay = 0.;
   double last_chain_endecay = -1.;
   double last_t = -1.;
   for (int i = 0; i < nsteps; i++)
   {
-    const double t = globals::t_model + (tstart - globals::t_model) * i / nsteps;
+    const double t = get_t_model() + (tstart - get_t_model()) * i / nsteps;
     const double chain_endecay_t = get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, chainindex, t);
     if (last_chain_endecay >= 0)
     {
@@ -618,7 +618,7 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(
   }
 
   const double chain_endecay_noexpansion = (
-    get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, chainindex, globals::t_model) - get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, chainindex, tstart));
+    get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, chainindex, get_t_model()) - get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, chainindex, tstart));
 
   printout("  chain_endecay:              %g\n", chain_endecay);
   printout("  chain_endecay_noexpansion:  %g\n", chain_endecay_noexpansion);
@@ -636,7 +636,7 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
   double tot_endecay = 0.;
   for (size_t chainindex = 0; chainindex < decaychains_z.size(); chainindex++)
   {
-    if (get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, chainindex, globals::t_model) <= 0.)
+    if (get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, chainindex, get_t_model()) <= 0.)
     {
       // skip unused chains
       continue;
@@ -662,7 +662,7 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
     const int z_end = decaychains_z[chainindex].back();
     const int a_end = decaychains_a[chainindex].back();
     const double top_initabund = get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
-    const double chain_endecay = calculate_decaychain(top_initabund, meanlifetimes, chainlength + 1, tstart - globals::t_model, MODE_ABUNDEXPANSION) * nucdecayenergy(z_end, a_end);
+    const double chain_endecay = calculate_decaychain(top_initabund, meanlifetimes, chainlength + 1, tstart - get_t_model(), MODE_ABUNDEXPANSION) * nucdecayenergy(z_end, a_end);
     // printout("  Analytical chain_endecay: %g\n", chain_endecay);
     tot_endecay += chain_endecay;
   }
@@ -693,7 +693,7 @@ double get_simtime_endecay_per_ejectamass(const int mgi, const int decaychainind
   return get_endecay_per_ejectamass_between_times(mgi, decaychainindex, globals::tmin, globals::tmax);
 #else
   // get decay energy released from t=0 to tmax
-  return get_endecay_per_ejectamass_between_times(mgi, decaychainindex, globals::t_model, globals::tmax);
+  return get_endecay_per_ejectamass_between_times(mgi, decaychainindex, get_t_model(), globals::tmax);
 #endif
 }
 
@@ -725,7 +725,7 @@ static double get_chain_decay_power_per_ejectamass(
     meanlifetimes[i] = get_meanlife(decaychains_z[decaychainindex][i], decaychains_a[decaychainindex][i]);
   }
 
-  const double t_afterinit = time - globals::t_model;
+  const double t_afterinit = time - get_t_model();
 
   const double decaypower = (
     calculate_decaychain(top_initabund, meanlifetimes, chainlength, t_afterinit, MODE_DECAYRATE)

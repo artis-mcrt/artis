@@ -13,6 +13,7 @@
 __managed__ enum model_types model_type = RHO_1D_READ;
 __managed__ int npts_model = 0; // number of points in 1-D input model
 
+__managed__ double t_model = -1.; // time at which densities in input model are correct.
 __managed__ double vout_model[MMODELGRID];
 __managed__ int ncoord_model[3]; // the model.txt input grid dimensions
 __managed__ double dcoord1;
@@ -346,6 +347,7 @@ void set_model_type(enum model_types model_type_value)
 
 __host__ __device__
 int get_npts_model(void)
+// number of model grid cells
 {
   return npts_model;
 }
@@ -360,6 +362,14 @@ void set_npts_model(int new_npts_model)
     abort();
   }
   npts_model = new_npts_model;
+}
+
+__host__ __device__
+int get_t_model(void)
+// get time at which model input densities are defined
+{
+  assert_testmodeonly(t_model > 0.);
+  return t_model;
 }
 
 
@@ -817,7 +827,7 @@ static void density_2d_read(void)
       int mkeep1 = 0;
       for (int m = 0; m < ncoord_model[0]; m++)
       {
-        if (rcylindrical > (m * dcoord1 * globals::tmin/globals::t_model))
+        if (rcylindrical > (m * dcoord1 * globals::tmin/t_model))
         {
           mkeep1 = m;
           // set_cell_modelgridindex(n, m + 1);
@@ -827,7 +837,7 @@ static void density_2d_read(void)
       int mkeep2 = 0;
       for (int m = 0; m < ncoord_model[1]; m++)
       {
-        if (zcylindrical > (((m * dcoord2) * globals::tmin/globals::t_model) - globals::rmax))
+        if (zcylindrical > (((m * dcoord2) * globals::tmin/t_model) - globals::rmax))
         {
           mkeep2 = m;
           // set_cell_modelgridindex(n, m + 1);
@@ -996,7 +1006,7 @@ static void read_1d_model(void)
   // Now read the time (in days) at which the model is specified.
   double t_model_days;
   fscanf(model_input, "%lg\n", &t_model_days);
-  globals::t_model = t_model_days * DAY;
+  t_model = t_model_days * DAY;
 
   // Now read in the lines of the model. Each line has 5 entries: the
   // cell number (integer) the velocity at outer boundary of cell (float),
@@ -1037,7 +1047,7 @@ static void read_1d_model(void)
 
       vout_model[mgi] = vout_kmps * 1.e5;
 
-      const double rho_tmin = pow(10., log_rho) * pow(globals::t_model / globals::tmin, 3);
+      const double rho_tmin = pow(10., log_rho) * pow(t_model / globals::tmin, 3);
       set_rhoinit(mgi, rho_tmin);
       set_rho(mgi, rho_tmin);
 
@@ -1101,12 +1111,12 @@ static void read_2d_model(void)
   // Now read the time (in days) at which the model is specified.
   double t_model_days;
   fscanf(model_input, "%lg", &t_model_days);
-  globals::t_model = t_model_days * DAY;
+  t_model = t_model_days * DAY;
 
   // Now read in globals::vmax (in cm/s)
   fscanf(model_input, "%lg\n", &globals::vmax);
-  dcoord1 = globals::vmax * globals::t_model / ncoord_model[0]; //dr for input model
-  dcoord2 = 2. * globals::vmax * globals::t_model / ncoord_model[1]; //dz for input model
+  dcoord1 = globals::vmax * t_model / ncoord_model[0]; //dr for input model
+  dcoord2 = 2. * globals::vmax * t_model / ncoord_model[1]; //dz for input model
 
   // Now read in the model. Each point in the model has two lines of input.
   // First is an index for the cell then its r-mid point then its z-mid point
@@ -1137,12 +1147,12 @@ static void read_2d_model(void)
     const double r_cylindrical = (ncoord1 + 0.5) * dcoord1;
     assert_always(fabs(cell_r_in / r_cylindrical - 1) < 1e-3);
     const int ncoord2 = ((cellnumin - 1) / ncoord_model[0]);
-    const double z = -globals::vmax * globals::t_model + ((ncoord2 + 0.5) * dcoord2);
+    const double z = -globals::vmax * t_model + ((ncoord2 + 0.5) * dcoord2);
     assert_always(fabs(cell_z_in / z - 1) < 1e-3);
 
     assert_always(cellnumin == mgi + 1);
 
-    const double rho_tmin = rho_tmodel * pow(globals::t_model / globals::tmin, 3);
+    const double rho_tmin = rho_tmodel * pow(t_model / globals::tmin, 3);
     set_rhoinit(mgi, rho_tmin);
     set_rho(mgi, rho_tmin);
 
@@ -1189,12 +1199,12 @@ static void read_3d_model(void)
   /// Now read the time (in days) at which the model is specified.
   float t_model_days;
   fscanf(model_input, "%g", &t_model_days);
-  globals::t_model = t_model_days * DAY;
+  t_model = t_model_days * DAY;
 
   /// Now read in globals::vmax for the model (in cm s^-1).
   fscanf(model_input, "%lg\n", &globals::vmax);
 
-  double xmax_tmodel = globals::vmax * globals::t_model;
+  double xmax_tmodel = globals::vmax * t_model;
 
   /// Now read in the lines of the model.
   min_den = 1.e99;
@@ -1263,7 +1273,7 @@ static void read_3d_model(void)
     if (keepcell)
     {
       set_cell_modelgridindex(n, mgi);
-      const double rho_tmin = rho_model * pow((globals::t_model / globals::tmin), 3.);
+      const double rho_tmin = rho_model * pow((t_model / globals::tmin), 3.);
       //printout("mgi %d, helper %g\n",mgi,helper);
       set_rhoinit(mgi, rho_tmin);
       //printout("mgi %d, rho_init %g\n",mgi,get_rhoinit(mgi));
@@ -1338,7 +1348,7 @@ static void calc_totmassradionuclides(void)
     }
     else if (get_model_type() == RHO_2D_READ)
     {
-      cellvolume = pow(globals::tmin / globals::t_model, 3) * ((2 * n1) + 1) * PI * dcoord2 * pow(dcoord1, 2.);
+      cellvolume = pow(globals::tmin / t_model, 3) * ((2 * n1) + 1) * PI * dcoord2 * pow(dcoord1, 2.);
       n1++;
       if (n1 == ncoord_model[0])
       {

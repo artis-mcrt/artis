@@ -71,8 +71,6 @@ namespace globals
 
   __managed__ int n_out_it; // # of sets of 1,000,000 photons to run.
 
-  __managed__ double t_model; // time at which densities in input model are correct.
-
   __managed__ double CLIGHT_PROP; // Speed of light for ray travel. Physically = CLIGHT but
                                   // can be changed for testing.
 

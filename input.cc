@@ -1649,7 +1649,6 @@ void input(int rank)
 /// To govern the input. For now hardwire everything.
 {
   globals::homogeneous_abundances = false;
-  globals::t_model = 0.0;
 
   globals::maxion = MIONS;
 
