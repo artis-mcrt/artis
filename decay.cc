@@ -819,15 +819,15 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
       const int a = get_nuc_a(nucindex);
       if (nuc_z == atomic_number)
       {
-        // radioactive isotope of element
+        // radioactive isotope of the element
         isofracsum += get_modelradioabund_at_time(modelgridindex, atomic_number, a, t_current);
       }
-      else if (!nuc_exists(atomic_number, a) && nuc_is_parent(nuc_z, a, atomic_number, a)) // assumes mass number conserved
+      else if (decay_daughter_z(nuc_z, a) == atomic_number)
       {
-        // nuclide is one step off the network (only includes radioactive nuclides), e.g. Fe56
+        // nuclide decays off the network (only includes radioactive nuclides), e.g. Fe56
         // note: there could also be Fe56 included in stable_initabund(z), but
         // here we only count the contribution from decays
-        isofracsum += get_modelradioabund_at_time(modelgridindex, atomic_number, a, t_current);
+        isofracsum += get_modelradioabund_at_time(modelgridindex, atomic_number, decay_daughter_a(nuc_z, a), t_current);
       }
     }
 
