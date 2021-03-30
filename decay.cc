@@ -693,7 +693,7 @@ double get_simtime_endecay_per_ejectamass(const int mgi, const int decaychainind
   return get_endecay_per_ejectamass_between_times(mgi, decaychainindex, globals::tmin, globals::tmax);
 #else
   // get decay energy released from t=0 to tmax
-  return get_endecay_per_ejectamass_between_times(mgi, decaychainindex, globals::tmodel, globals::tmax);
+  return get_endecay_per_ejectamass_between_times(mgi, decaychainindex, globals::t_model, globals::tmax);
 #endif
 }
 
