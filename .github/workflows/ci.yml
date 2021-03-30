@@ -178,7 +178,7 @@ jobs:
         python3 -m artistools.lightcurve nebularonezone nebularonezone_reference
          python3 -m artistools.spectra -ts 9 nebularonezone nebularonezone_reference
 
-    - name: Upload plot files files
+    - name: Upload plot files
       uses: actions/upload-artifact@v2
       with:
         name: test-nebularonezone-output-pdf
