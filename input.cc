@@ -2146,7 +2146,7 @@ void update_parameterfile(int nts)
   fileout.close();
   file.close();
 
-  if (!globals::simulation_continued_from_saved && nts == (globals::itstep + 1))
+  if (!globals::simulation_continued_from_saved && nts == (globals::itstep + 1) && (globals::itstep == 0))
   {
     std::rename("input.txt", "input-newrun.txt"); // back up the original for starting a new simulation
   }

@@ -63,13 +63,8 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
 
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
-  const double etot_tinf = (
-    (decay::nucdecayenergy(28, 56) + decay::nucdecayenergy(27, 56)) * get_totmassradionuclide(28, 56) / decay::nucmass(28, 56) +
-    decay::nucdecayenergy(27, 56) * get_totmassradionuclide(27, 56) / decay::nucmass(27, 56) +
-    (decay::nucdecayenergy(28, 57) + decay::nucdecayenergy(27, 57)) * get_totmassradionuclide(28, 57) / decay::nucmass(28, 57) +
-    decay::nucdecayenergy(27, 57) * get_totmassradionuclide(27, 57) / decay::nucmass(27, 57) +
-    (decay::nucdecayenergy(23, 48) + decay::nucdecayenergy(24, 48)) * get_totmassradionuclide(24, 48) / decay::nucmass(24, 48) +
-    (decay::nucdecayenergy(26, 52) + decay::nucdecayenergy(25, 52)) * get_totmassradionuclide(26, 52) / decay::nucmass(26, 52));
+  const double etot_tinf = decay::get_global_etot_t0_tinf();
+
   printout("etot %g (t_0 to t_inf)\n", etot_tinf);
   printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n",
            decay::nucdecayenergy(28, 56) / MEV, decay::nucdecayenergy(27, 56) / MEV,
@@ -97,7 +92,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   }
   cont[globals::ngrid] = norm;
 
-  const double etot = norm / MH;
+  const double etot = norm;
   /// So energy per pellet is
   const double e0 = etot / globals::npkts / globals::n_out_it / globals::n_middle_it;
   printout("packet e0 (in time range) %g erg\n", e0);
