@@ -822,9 +822,9 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
         // radioactive isotope of the element
         isofracsum += get_modelradioabund_at_time(modelgridindex, atomic_number, a, t_current);
       }
-      else if (decay_daughter_z(nuc_z, a) == atomic_number)
+      else if (!nuc_exists(decay_daughter_z(nuc_z, a), decay_daughter_a(nuc_z, a)) && decay_daughter_z(nuc_z, a) == atomic_number)
       {
-        // nuclide decays into correct atomic number (possibly outside the radionuclide list)
+        // nuclide decays into correct atomic number but outside of the radionuclide list
         // note: there could also be stable isotopes of this element included in stable_initabund(z), but
         // here we only count the contribution from decays
         isofracsum += get_modelradioabund_at_time(modelgridindex, decay_daughter_z(nuc_z, a), decay_daughter_a(nuc_z, a), t_current);
