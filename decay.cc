@@ -282,6 +282,17 @@ void init_nuclides(void)
     maxchainlength = std::max(maxchainlength, (int) decaychains_a[chainindex].size());
   }
   printout("Number of chains: %lu (max length %d)\n", decaychains_z.size(), maxchainlength);
+
+  printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n",
+           nucdecayenergy(28, 56) / MEV, nucdecayenergy(27, 56) / MEV,
+           nucdecayenergygamma(27, 56) / MEV);
+  printout("decayenergy(NI57), decayenergy_gamma(NI57), nucdecayenergy(CO57): %g, %g, %g\n",
+           nucdecayenergy(28, 57) / MEV, nucdecayenergygamma(28, 57) / MEV,
+           nucdecayenergy(27, 57) / MEV);
+  printout("decayenergy(CR48), decayenergy(V48): %g %g\n",
+           nucdecayenergy(24, 48) / MEV, nucdecayenergy(23, 48) / MEV);
+  printout("decayenergy(FE52), decayenergy(MN52): %g %g\n",
+           nucdecayenergy(26, 52) / MEV, nucdecayenergy(25, 52) / MEV);
 }
 
 
@@ -756,8 +767,8 @@ double get_positroninjection_rate_density(const int modelgridindex, const double
   double pos_dep_sum = 0.;
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
-    const int z = decay::get_nuc_z(nucindex);
-    const int a = decay::get_nuc_a(nucindex);
+    const int z = get_nuc_z(nucindex);
+    const int a = get_nuc_a(nucindex);
     if (nucdecayenergypositrons(z, a) > 0. && get_nuc_abund(modelgridindex, z, a, t) > 0.)
     {
       // printout("positrons coming from nuclide %d en %g abund %g\n", nuclide, nucdecayenergypositrons(nuclide), get_nuc_abund(modelgridindex, nuclide, t));

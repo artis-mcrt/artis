@@ -66,17 +66,6 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   const double etot_tinf = decay::get_global_etot_t0_tinf();
 
   printout("etot %g (t_0 to t_inf)\n", etot_tinf);
-  printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n",
-           decay::nucdecayenergy(28, 56) / MEV, decay::nucdecayenergy(27, 56) / MEV,
-           decay::nucdecayenergygamma(27, 56) / MEV);
-  printout("decayenergy(NI57), decayenergy_gamma(NI57), decay::nucdecayenergy(CO57): %g, %g, %g\n",
-           decay::nucdecayenergy(28, 57) / MEV, decay::nucdecayenergygamma(28, 57) / MEV,
-           decay::nucdecayenergy(27, 57) / MEV);
-  printout("decayenergy(CR48), decayenergy(V48): %g %g\n",
-           decay::nucdecayenergy(24, 48) / MEV, decay::nucdecayenergy(23, 48) / MEV);
-  printout("decayenergy(FE52), decayenergy(MN52): %g %g\n",
-           decay::nucdecayenergy(26, 52) / MEV, decay::nucdecayenergy(25, 52) / MEV);
-
 
   const double e0_tinf = etot_tinf / globals::npkts / globals::n_out_it / globals::n_middle_it;
   printout("packet e0 (t_0 to t_inf) %g erg\n", e0_tinf);
