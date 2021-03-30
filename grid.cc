@@ -13,7 +13,7 @@
 __managed__ enum model_types model_type = RHO_1D_READ;
 __managed__ int npts_model = 0; // number of points in 1-D input model
 
-__managed__ double t_model = -1.; // time at which densities in input model are correct.
+__managed__ double t_model = 0.; // time at which densities in input model are correct.
 __managed__ double vout_model[MMODELGRID];
 __managed__ int ncoord_model[3]; // the model.txt input grid dimensions
 __managed__ double dcoord1;
@@ -368,7 +368,7 @@ __host__ __device__
 int get_t_model(void)
 // get time at which model input densities are defined
 {
-  assert_testmodeonly(t_model > 0.);
+  // assert_testmodeonly(t_model > 0.);
   return t_model;
 }
 
