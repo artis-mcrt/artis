@@ -61,8 +61,8 @@ else
 endif
 
 # For Virgo, GCC 8.1.0 requires -lstdc++fs for std::filesystem to work
-GCCVERSION = $(shell gcc --version | grep ^gcc | sed 's/^.* //g')
-ifeq "$(GCCVERSION)" "8.10"
+GCCVERSION = $(shell mpicxx --version | grep GCC | sed 's/^.* //g')
+ifeq "$(GCCVERSION)" "8.1.0"
     LDFLAGS += -lstdc++fs
 endif
 
