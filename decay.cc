@@ -686,7 +686,27 @@ static double get_chain_decay_power_per_ejectamass(
   const int z_end = decaychains_z[decaychainindex].back();
   const int a_end = decaychains_a[decaychainindex].back();
 
-  const double decaypower = get_nuc_abund(modelgridindex, z_end, a_end, time) / get_meanlife(z_end, a_end) / nucmass(z_top, a_top);
+  const double top_initabund = get_modelinitradioabund(modelgridindex, z_top, a_top);
+  assert_always(top_initabund >= 0.)
+  if (top_initabund <= 0.)
+  {
+    return 0.;
+  }
+
+  const double t_afterinit = time - get_t_model();
+
+  int chainlength = decaychains_z[decaychainindex].size();
+  double meanlifetimes[chainlength];
+  for (int i = 0; i < chainlength; i++)
+  {
+    meanlifetimes[i] = get_meanlife(decaychains_z[decaychainindex][i], decaychains_a[decaychainindex][i]);
+  }
+
+  // contribution to the end nuclide abundance from the top of chain (could be a length-one chain Z,A_top = Z,A_end
+  // so contribution would be from init abundance only)
+  const double endnucabund = calculate_decaychain(top_initabund, meanlifetimes, chainlength, t_afterinit, false);
+
+  const double decaypower = endnucabund / get_meanlife(z_end, a_end) / nucmass(z_top, a_top);
 
   assert_always(decaypower >= 0.);
   assert_always(std::isfinite(decaypower));
