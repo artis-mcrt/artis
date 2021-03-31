@@ -965,6 +965,7 @@ int main(int argc, char** argv)
     }
 
     #ifdef MPI_ON
+      MPI_Barrier(MPI_COMM_WORLD);
       /// Initialise the exchange buffer
       /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
       /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
