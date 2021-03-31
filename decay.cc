@@ -745,6 +745,7 @@ static double get_chain_decay_power_per_ejectamass(
   // const double decaypower2 = get_endecay_per_ejectamass_between_times(modelgridindex, decaychainindex, time, time2) / (time2 - time);
   // printout("compare decaychainindex %d answer %g and %g\n", decaychainindex, decaypower, decaypower2);
 
+  assert_always(decaypower >= 0.);
   assert_always(std::isfinite(decaypower));
 
   return decaypower;
@@ -887,7 +888,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
   int decaychainindex = -1;
   for (size_t i = 0; i < decaychains_z.size(); i++)
   {
-    if (zrand_chain <= cumulative_decay_energy_per_mass[i])
+    if (cumulative_decay_energy_per_mass[i] > zrand_chain)
     {
       decaychainindex = i;
       break;
@@ -918,7 +919,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
     // e0 is the average energy per packet for this cell and decaypath, so we scale this up or down
     // according to: decay power at this time relative to the average decay power
     const double avgpower = get_simtime_endecay_per_ejectamass(mgi, decaychainindex) / (globals::tmax - tdecaymin);
-    assert_always(avgpower >= 0);
+    assert_always(avgpower > 0.);
     assert_always(std::isfinite(avgpower));
     pkt_ptr->e_cmf = e0 * get_chain_decay_power_per_ejectamass(decaychainindex, mgi, pkt_ptr->tdecay) / avgpower;
     assert_always(pkt_ptr->e_cmf >= 0);
