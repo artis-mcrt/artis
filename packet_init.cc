@@ -158,6 +158,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   }
   const double e_ratio = etot / e_cmf_total;
   printout("packet energy sum %g should be %g normalisation factor: %g\n", e_cmf_total, etot, e_ratio);
+  assert_always(std::isfinite(e_cmf_total));
   e_cmf_total *= e_ratio;
   for (int n = 0; n < globals::npkts; n++)
   {

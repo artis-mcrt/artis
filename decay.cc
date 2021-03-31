@@ -360,9 +360,10 @@ __host__ __device__
 static double sample_decaytime(const int decaychainindex, const double tdecaymin, const double tdecaymax)
 {
   double tdecay = -1;
+  const double t_model = get_t_model();
   while (tdecay <= tdecaymin || tdecay >= tdecaymax)
   {
-    tdecay = 0.;
+    tdecay = t_model; // can't decay before initial model snapshot time
 
     for (size_t i = 0; i < decaychains_z[decaychainindex].size(); i++)
     {
@@ -541,6 +542,9 @@ static double get_endecay_to_tinf_per_ejectamass_at_time(
   // nor is the energy from Ni56 decays
   // decaying nucleus at the end of the chain
 
+  assert_always(decaychainindex >= 0);
+  assert_always(decaychainindex < (int) decaychains_z.size());
+
   const int z_top = decaychains_z[decaychainindex][0];
   const int a_top = decaychains_a[decaychainindex][0];
   // if we're a single-nuclide decay chain, then contribution the initial abundance, otherwise contribute
@@ -680,7 +684,9 @@ static double get_endecay_per_ejectamass_between_times(
   const double energy_tlow = get_endecay_to_tinf_per_ejectamass_at_time(mgi, decaychainindex, tlow);
   const double energy_thigh = get_endecay_to_tinf_per_ejectamass_at_time(mgi, decaychainindex, thigh);
   assert_always(energy_tlow >= energy_thigh);
-  return energy_tlow - energy_thigh;
+  const double endiff = energy_tlow - energy_thigh;
+  assert_always(std::isfinite(endiff));
+  return endiff;
 }
 
 
@@ -738,6 +744,8 @@ static double get_chain_decay_power_per_ejectamass(
   // const double time2 = time * 1.001;
   // const double decaypower2 = get_endecay_per_ejectamass_between_times(modelgridindex, decaychainindex, time, time2) / (time2 - time);
   // printout("compare decaychainindex %d answer %g and %g\n", decaychainindex, decaypower, decaypower2);
+
+  assert_always(std::isfinite(decaypower));
 
   return decaypower;
 }
@@ -910,8 +918,11 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
     // e0 is the average energy per packet for this cell and decaypath, so we scale this up or down
     // according to: decay power at this time relative to the average decay power
     const double avgpower = get_simtime_endecay_per_ejectamass(mgi, decaychainindex) / (globals::tmax - tdecaymin);
+    assert_always(avgpower >= 0);
+    assert_always(std::isfinite(avgpower));
     pkt_ptr->e_cmf = e0 * get_chain_decay_power_per_ejectamass(decaychainindex, mgi, pkt_ptr->tdecay) / avgpower;
-    // assert_always(pkt_ptr->e_cmf >= 0);
+    assert_always(pkt_ptr->e_cmf >= 0);
+    assert_always(std::isfinite(pkt_ptr->e_cmf));
   }
 
   // final decaying nuclide at the end of the chain
