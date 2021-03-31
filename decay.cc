@@ -724,7 +724,7 @@ double get_positroninjection_rate_density(const int modelgridindex, const double
     if (nucdecayenergypositrons(z, a) > 0. && get_nuc_abund(modelgridindex, z, a, t) > 0.)
     {
       const double nucdecayrate = get_nuc_abund(modelgridindex, z, a, t) / get_meanlife(z, a);
-      printout("positrons coming from %s-%d en_e+ %g abund %g nucdecayrate %g\n", get_elname(z), a, nucdecayenergypositrons(z, a), get_nuc_abund(modelgridindex, z, a, t), nucdecayrate);
+      // printout("positrons coming from %s-%d en_e+ %g abund %g nucdecayrate %g\n", get_elname(z), a, nucdecayenergypositrons(z, a), get_nuc_abund(modelgridindex, z, a, t), nucdecayrate);
       assert_always(nucdecayrate >= 0);
       pos_dep_sum += nucdecayrate * nucdecayenergypositrons(z, a) * rho / nucmass(z, a);
     }
