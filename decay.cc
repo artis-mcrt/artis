@@ -223,11 +223,11 @@ void init_nuclides(void)
 
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++)
   {
-    nuclides[0].z = -1;
-    nuclides[0].a = -1;
-    nuclides[0].meanlife = -1;
-    nuclides[0].endecay_positrons = 0.;
-    nuclides[0].endecay_gamma = 0.;
+    nuclides[nucindex].z = -1;
+    nuclides[nucindex].a = -1;
+    nuclides[nucindex].meanlife = -1;
+    nuclides[nucindex].endecay_positrons = 0.;
+    nuclides[nucindex].endecay_gamma = 0.;
   }
 
   nuclides[0].z = 28; // Ni57
@@ -281,7 +281,7 @@ void init_nuclides(void)
     print_chain(chainindex);
     maxchainlength = std::max(maxchainlength, (int) decaychains_a[chainindex].size());
   }
-  printout("Number of chains: %lu (max length %d)\n", decaychains_z.size(), maxchainlength);
+  printout("Number of chains: %d (max length %d)\n", (int) decaychains_z.size(), maxchainlength);
 
   printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n",
            nucdecayenergy(28, 56) / MEV, nucdecayenergy(27, 56) / MEV,
