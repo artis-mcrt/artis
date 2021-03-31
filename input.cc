@@ -1702,6 +1702,12 @@ void input(int rank)
   #endif
 
   read_atomicdata();
+  #ifdef MPI_ON
+    const time_t time_before_barrier = time(NULL);
+    printout("barrier after read_atomicdata(): time before barrier %d, ", (int) time_before_barrier);
+    MPI_Barrier(MPI_COMM_WORLD);
+    printout("time after barrier %d (waited %d seconds)\n", (int) time(NULL), (int) (time(NULL) - time_before_barrier));
+  #endif
 
   read_ejecta_model(get_model_type());
 

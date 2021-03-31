@@ -898,7 +898,7 @@ int main(int argc, char** argv)
  #ifdef MPI_ON
    printout("barrier after tabulation of rate coefficients: time before barrier %d, ", (int) time(NULL));
    MPI_Barrier(MPI_COMM_WORLD);
-   printout("time after barrier %d\n", (int) (int) time(NULL));
+   printout("time after barrier %d\n", (int) time(NULL));
  #endif
 
   stats::init();
