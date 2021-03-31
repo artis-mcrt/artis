@@ -41,7 +41,7 @@ else ifneq (, $(shell which mpicxx))
 	# any other system which has mpicxx available (Juwels, Cambridge, Gadi, etc)
 
 	CXX = mpicxx
-	CXXFLAGS += -std=c++17 -march=native -O3 -g #-fopenmp=libomp
+	CXXFLAGS += -std=c++17 -march=native -O3 #-fopenmp=libomp
 
 sn3d sn3dcuda: CXXFLAGS += -DMPI_ON
 
