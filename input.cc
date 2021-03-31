@@ -1730,7 +1730,7 @@ void input(int rank)
 }
 
 
-static bool lineiscommentonly(std::string &line)
+bool lineiscommentonly(std::string &line)
 {
   // if (line.length() == 0)
   //   return true;
@@ -1746,7 +1746,7 @@ static bool lineiscommentonly(std::string &line)
 }
 
 
-static bool get_noncommentline(std::istream &input, std::string &line)
+bool get_noncommentline(std::istream &input, std::string &line)
 // read the next line, skipping any comment lines beginning with '#'
 {
   while (true)

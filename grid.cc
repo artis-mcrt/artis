@@ -1,6 +1,7 @@
 #include "sn3d.h"
 #include "atomic.h"
 #include "grid.h"
+#include "input.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "decay.h"
@@ -9,6 +10,12 @@
 #include "vectors.h"
 #include <cstring>
 
+#include <fstream>
+#include <iostream>
+#include <sstream>
+// #include <cstdio>
+// #include <string>
+// #include <sstream>
 
 __managed__ enum model_types model_type = RHO_1D_READ;
 __managed__ int npts_model = 0; // number of points in 1-D input model
@@ -995,17 +1002,23 @@ static void read_2d3d_modelradioabundanceline(FILE * model_input, const int mgi,
 static void read_1d_model(void)
 // Read in a 1D spherical model
 {
-  FILE *model_input = fopen_required("model.txt", "r");
+  std::ifstream fmodel("model.txt");
+  assert_always(fmodel.is_open());
+
+  std::string line;
 
   // 1st read the number of data points in the table of input model.
   int npts_model_in = 0;
-  fscanf(model_input, "%d", &npts_model_in);
+  assert_always(get_noncommentline(fmodel, line));
+  std::stringstream(line) >> npts_model_in;
+
   set_npts_model(npts_model_in);
   ncoord_model[0] = npts_model_in;
 
   // Now read the time (in days) at which the model is specified.
   double t_model_days;
-  fscanf(model_input, "%lg\n", &t_model_days);
+  assert_always(get_noncommentline(fmodel, line));
+  std::stringstream(line) >> t_model_days;
   t_model = t_model_days * DAY;
 
   // Now read in the lines of the model. Each line has 5 entries: the
@@ -1015,18 +1028,29 @@ static void read_1d_model(void)
   // in the cell (float). For now, the last number is recorded but never
   // used.
 
+  std::streampos oldpos = fmodel.tellg();  // get position in case we need to undo getline
+  std::getline(fmodel, line);
+  if (lineiscommentonly(line))
+  {
+    // custom header line
+    std::istringstream iss(line);
+    std::string token;
+    while (std::getline(iss, token, ' '))
+    {
+      // std::cout << token << std::endl;
+      printout("Custom header column: %s\n", token.c_str());
+    }
+  }
+  else
+  {
+    fmodel.seekg(oldpos); // undo getline
+  }
+
   decay::init_nuclides();
 
   int mgi = 0;
-  while (!feof(model_input))
+  while (std::getline(fmodel, line))
   {
-    char line[2048] = "";
-    if (line != fgets(line, 2048, model_input))
-    {
-      // no more lines to read in
-      break;
-    }
-
     int cellnumberin;
     double vout_kmps;
     double log_rho;
@@ -1037,9 +1061,10 @@ static void read_1d_model(void)
     double f52fe_model = 0.;
     double f57ni_model = 0.;
     double f57co_model = 0.;
-    const int items_read = sscanf(line, "%d %lg %lg %lg %lg %lg %lg %lg %lg %lg",
-                                   &cellnumberin, &vout_kmps, &log_rho, &ffegrp_model, &f56ni_model,
-                                   &f56co_model, &f52fe_model, &f48cr_model, &f57ni_model, &f57co_model);
+
+    const int items_read = sscanf(line.c_str(), "%d %lg %lg %lg %lg %lg %lg %lg %lg %lg",
+                                  &cellnumberin, &vout_kmps, &log_rho, &ffegrp_model, &f56ni_model,
+                                  &f56co_model, &f52fe_model, &f48cr_model, &f57ni_model, &f57co_model);
 
     if (items_read == 8 || items_read == 10)
     {
@@ -1059,7 +1084,7 @@ static void read_1d_model(void)
     else
     {
       printout("Unexpected number of values in model.txt. items_read = %d\n", items_read);
-      printout("line: %s\n", line);
+      printout("line: %s\n", line.c_str());
       abort();
     }
 
@@ -1092,7 +1117,7 @@ static void read_1d_model(void)
     abort();
   }
 
-  fclose(model_input);
+  fmodel.close();
 
   globals::vmax = vout_model[get_npts_model() - 1];
 }
