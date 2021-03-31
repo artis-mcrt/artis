@@ -60,6 +60,12 @@ else
 	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
 endif
 
+# For Virgo, GCC 8.1.0 requires -lstdc++fs for std::filesystem to work
+GCCVERSION = $(shell gcc --version | grep ^gcc | sed 's/^.* //g')
+ifeq "$(GCCVERSION)" "8.10"
+    LDFLAGS += -lstdc++fs
+endif
+
 # ** GSL (GNU Scientific Library) **
 
 # option 1: Use pkg-config to find GSL and use dynamic linking
