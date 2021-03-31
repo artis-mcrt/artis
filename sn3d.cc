@@ -895,12 +895,11 @@ int main(int argc, char** argv)
   ratecoefficients_init();
   printout("time after tabulation of rate coefficients %ld\n", time(NULL));
 //  abort();
-//  #ifdef MPI_ON
-//    const time_t time_before_barrier = time(NULL);
-//    MPI_Barrier(MPI_COMM_WORLD);
-//    const time_t time_after_barrier = time(NULL);
-//    printout("barrier after tabulation of rate coefficients: time before barrier %d, time after barrier %d\n", time_before_barrier, time_after_barrier);
-//  #endif
+ #ifdef MPI_ON
+   printout("barrier after tabulation of rate coefficients: time before barrier %d, ", (int) time(NULL));
+   MPI_Barrier(MPI_COMM_WORLD);
+   printout("time after barrier %d\n", (int) (int) time(NULL));
+ #endif
 
   stats::init();
 
