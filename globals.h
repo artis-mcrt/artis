@@ -69,8 +69,6 @@ namespace globals
 
   extern __managed__ int n_out_it;
 
-  extern __managed__ double t_model;
-
   extern __managed__ double CLIGHT_PROP;
 
   extern __managed__ double gamma_grey;

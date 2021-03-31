@@ -1,4 +1,5 @@
 #include <cmath>
+#include <algorithm>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_blas.h>
@@ -693,7 +694,7 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
 
   deposition_rate_density[modelgridindex] = gamma_deposition + positron_deposition;
 
-  printout("nt_deposition_rate(mgi %d timestep %d): gammadep %9.2f, posdep %9.2f eV/s/cm^3\n", modelgridindex, timestep, gamma_deposition / EV, positron_deposition / EV);
+  printout("deposition rates [eV/s/cm^3] for mgi %d timestep %d: gamma %9.2f (Monte Carlo), positron %9.2f (analytic t_mid)\n", modelgridindex, timestep, gamma_deposition / EV, positron_deposition / EV);
 
   deposition_rate_density_timestep[modelgridindex] = timestep;
 }
@@ -2634,7 +2635,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
       for (int j = xsstartindex; j < SFPTS; j++)
       {
         const double endash = gsl_vector_get(envec, j);
-        const double epsilon_upper = (endash + ionpot_ev) / 2;
+        const double epsilon_upper = std::min((endash + ionpot_ev) / 2, endash);
         atanexp[j] = atan((epsilon_upper - ionpot_ev) / J);
         prefactors[j] = gsl_vector_get(vec_xs_ionization, j) * nnion / atan((endash - ionpot_ev) / 2 / J);
       }
@@ -2659,7 +2660,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
           // J * atan[(epsilon - ionpot_ev) / J] is the indefinite integral of 1/[1 + (epsilon - ionpot_ev)^2/ J^2]
           // in Kozma & Fransson 1992 equation 4
 
-          const double epsilon_lower = endash - en; // and epsilon_upper = (endash + ionpot_ev) / 2;
+          const double epsilon_lower = std::max(endash - en, ionpot_ev); // and epsilon_upper = (endash + ionpot_ev) / 2;
           *gsl_matrix_ptr(sfmatrix, i, j) += prefactors[j] * (atanexp[j] - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
         }
 
@@ -2843,9 +2844,10 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
     return;
   }
-
   printout("Setting up Spencer-Fano equation with %d energy points from %g eV to %g eV in cell %d at timestep %d iteration %d (nne=%g e-/cm^3)\n",
            SFPTS, SF_EMIN, SF_EMAX, modelgridindex, timestep, iteration, nne);
+
+  assert_always(SF_EMIN > 0.)
 
   nt_solution[modelgridindex].nneperion_when_solved = nne_per_ion;
   nt_solution[modelgridindex].timestep_last_solved = timestep;

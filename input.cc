@@ -1650,7 +1650,6 @@ void input(int rank)
 /// To govern the input. For now hardwire everything.
 {
   globals::homogeneous_abundances = false;
-  globals::t_model = 0.0;
 
   globals::maxion = MIONS;
 
@@ -1704,6 +1703,12 @@ void input(int rank)
   #endif
 
   read_atomicdata();
+  #ifdef MPI_ON
+    const time_t time_before_barrier = time(NULL);
+    printout("barrier after read_atomicdata(): time before barrier %d, ", (int) time_before_barrier);
+    MPI_Barrier(MPI_COMM_WORLD);
+    printout("time after barrier %d (waited %d seconds)\n", (int) time(NULL), (int) (time(NULL) - time_before_barrier));
+  #endif
 
   read_ejecta_model(get_model_type());
 
@@ -1712,9 +1717,6 @@ void input(int rank)
     // If using energy input files to get cell energies instead of radioactive decays
     energy_input_init();
   }
-
-  /// Read in data for gamma ray lines and make a list of them in energy order.
-  init_gamma_linelist();
 
   /// Now that the list exists use it to find values for spectral synthesis
   /// stuff.
@@ -1752,6 +1754,7 @@ static bool lineiscommentonly(std::string &line)
 
 
 static bool get_noncommentline(std::istream &input, std::string &line)
+// read the next line, skipping any comment lines beginning with '#'
 {
   while (true)
   {
@@ -2155,7 +2158,14 @@ void update_parameterfile(int nts)
   fileout.close();
   file.close();
 
-  std::remove("input.txt");
+  if (!globals::simulation_continued_from_saved && nts == (globals::itstep + 1) && (globals::itstep == 0))
+  {
+    std::rename("input.txt", "input-newrun.txt"); // back up the original for starting a new simulation
+  }
+  else
+  {
+    std::remove("input.txt");
+  }
   std::rename("input.txt.tmp", "input.txt");
 
   printout("done\n");

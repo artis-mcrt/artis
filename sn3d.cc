@@ -464,11 +464,6 @@ static bool do_timestep(
   printout("timestep %d: update_grid: process %d finished update grid at %ld (took %ld seconds)\n",
            nts, my_rank, sys_time_finish_update_grid, sys_time_finish_update_grid - sys_time_start_update_grid);
 
-  #ifdef DO_TITER
-    /// No iterations over the zeroth timestep, set titer > n_titer
-    if (nts == 0)
-      titer = n_titer + 1;
-  #endif
   #ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
   #endif
@@ -720,14 +715,13 @@ int main(int argc, char** argv)
     MPI_Init(&argc, &argv);
     int my_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-    int p;
-    MPI_Comm_size(MPI_COMM_WORLD, &p);
+    MPI_Comm_size(MPI_COMM_WORLD, &globals::nprocs);
+    MPI_Barrier(MPI_COMM_WORLD);
   #else
     int my_rank = 0;
-    int p = 1;
+    globals::nprocs = 1;
   #endif
 
-  globals::nprocs = p;              /// Global variable which holds the number of MPI processes
   globals::rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
 
 #ifdef _OPENMP
@@ -901,12 +895,11 @@ int main(int argc, char** argv)
   ratecoefficients_init();
   printout("time after tabulation of rate coefficients %ld\n", time(NULL));
 //  abort();
-//  #ifdef MPI_ON
-//    const time_t time_before_barrier = time(NULL);
-//    MPI_Barrier(MPI_COMM_WORLD);
-//    const time_t time_after_barrier = time(NULL);
-//    printout("barrier after tabulation of rate coefficients: time before barrier %d, time after barrier %d\n", time_before_barrier, time_after_barrier);
-//  #endif
+ #ifdef MPI_ON
+   printout("barrier after tabulation of rate coefficients: time before barrier %d, ", (int) time(NULL));
+   MPI_Barrier(MPI_COMM_WORLD);
+   printout("time after barrier %d\n", (int) time(NULL));
+ #endif
 
   stats::init();
 
@@ -958,8 +951,8 @@ int main(int argc, char** argv)
     /// processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
     /// cells are sent to processes 0 ... process n_leftover -1.
     int maxndo = 0;
-    get_nstart_ndo(my_rank, p, &nstart, &ndo, &maxndo);
-    printout("process rank %d (of %d) doing %d cells", my_rank, globals::nprocs, ndo);
+    get_nstart_ndo(my_rank, globals::nprocs, &nstart, &ndo, &maxndo);
+    printout("process rank %d (range 0 to %d) doing %d cells", my_rank, globals::nprocs - 1, ndo);
     if (ndo > 0)
     {
       printout(": numbers %d to %d\n", nstart, nstart + ndo - 1);
@@ -970,6 +963,7 @@ int main(int argc, char** argv)
     }
 
     #ifdef MPI_ON
+      MPI_Barrier(MPI_COMM_WORLD);
       /// Initialise the exchange buffer
       /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
       /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
@@ -1043,7 +1037,7 @@ int main(int argc, char** argv)
 
       #ifdef DO_TITER
         // The first time step must solve the ionisation balance in LTE
-        initial_iteration = (nts == 0);
+        globals::initial_iteration = (nts == 0);
       #else
         /// Do 3 iterations on timestep 0-9
         /*if (nts == 0)
@@ -1068,6 +1062,11 @@ int main(int argc, char** argv)
       for (int titer = 0; titer < globals::n_titer; titer++)
       {
         terminate_early = do_timestep(outer_iteration, nts, titer, my_rank, packets, walltimelimitseconds);
+        #ifdef DO_TITER
+          /// No iterations over the zeroth timestep, set titer > n_titer
+          if (nts == 0)
+            titer = globals::n_titer + 1;
+        #endif
       }
 
       nts++;

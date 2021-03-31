@@ -1,5 +1,6 @@
 #include "sn3d.h"
 #include "boundary.h"
+#include "decay.h"
 #include "emissivities.h"
 #include "gamma.h"
 #include "grey_emissivities.h"
@@ -9,7 +10,10 @@
 #include "stats.h"
 #include "vectors.h"
 
-// Material for handing gamma rays - creation and propagation.
+#include <filesystem>
+namespace filesys = std::filesystem;
+
+// Code for handing gamma rays - creation and propagation
 
 struct gamma_spec
 {
@@ -18,13 +22,13 @@ struct gamma_spec
   int nlines;
 };
 
-static struct gamma_spec gamma_spectra[RADIONUCLIDE_COUNT];
+static struct gamma_spec *gamma_spectra;
 
 static const int RED_OF_LIST = -956;  // must be negative
 
 struct gamma_ll
 {
-  enum radionuclides *nuclidetype; // is it a Ni56, Co56, a fake line, etc
+  int *nucindex; // is it a Ni56, Co56, a fake line, etc
   int *index;               // which of the lines of that element is it
   int total;                // the total number of lines in the list
 };
@@ -32,60 +36,79 @@ struct gamma_ll
 static struct gamma_ll gam_line_list;
 
 
-static void read_gamma_spectrum(enum radionuclides isotope, const char filename[50])
+static void read_gamma_spectrum(const int z, const int a, const char filename[50])
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
 {
-  assert_always(isotope < RADIONUCLIDE_COUNT);
+  const int nucindex = decay::get_nuc_index(z, a);
 
   FILE *filein = fopen_required(filename, "r");
   int nlines = 0;
   fscanf(filein, "%d", &nlines);
 
-  gamma_spectra[isotope].nlines = nlines;
+  gamma_spectra[nucindex].nlines = nlines;
 
-  gamma_spectra[isotope].energy = (double *) calloc(nlines, sizeof(double));
-  gamma_spectra[isotope].probability = (double *) calloc(nlines, sizeof(double));
+  gamma_spectra[nucindex].energy = (double *) calloc(nlines, sizeof(double));
+  gamma_spectra[nucindex].probability = (double *) calloc(nlines, sizeof(double));
 
-  double E_gamma_avg = 0.0;
+  double E_gamma_avg = 0.;
   for (int n = 0; n < nlines; n++)
   {
     double en_mev;
     double prob;
     fscanf(filein, "%lg %lg", &en_mev, &prob);
-    gamma_spectra[isotope].energy[n] = en_mev * MEV;
-    gamma_spectra[isotope].probability[n] = prob;
+    gamma_spectra[nucindex].energy[n] = en_mev * MEV;
+    gamma_spectra[nucindex].probability[n] = prob;
     E_gamma_avg += en_mev * MEV * prob;
   }
   fclose(filein);
 
-  decay::set_nucdecayenergygamma(isotope, E_gamma_avg);
+  decay::set_nucdecayenergygamma(z, a, E_gamma_avg);
+
+  printout("gamma spectrum for Z=%d A=%d read from %s: nlines %d avg_en_gamma %g MeV\n",
+           z, a, filename, nlines, E_gamma_avg / MEV);
 }
 
 
 static void read_decaydata(void)
 {
-  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  gamma_spectra = (struct gamma_spec *) calloc(decay::get_num_nuclides(), sizeof(struct gamma_spec));
+
+  for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
   {
-    gamma_spectra[iso].nlines = 0;
-    gamma_spectra[iso].energy = NULL;
-    gamma_spectra[iso].probability = NULL;
-    decay::set_nucdecayenergygamma((enum radionuclides) iso, 0.);
+    gamma_spectra[nucindex].nlines = 0;
+    gamma_spectra[nucindex].energy = NULL;
+    gamma_spectra[nucindex].probability = NULL;
+    const int z = decay::get_nuc_z(nucindex);
+    const int a = decay::get_nuc_a(nucindex);
+    decay::set_nucdecayenergygamma(z, a, 0.);
   }
 
-  read_gamma_spectrum(NUCLIDE_NI56, "ni_lines.txt");
+  // migrate from old filename
+  if (!filesys::exists("ni56_lines.txt") && filesys::exists("ni_lines.txt"))
+  {
+    printout("Moving ni_lines.txt to ni56_lines.txt\n");
+    std::rename("ni_lines.txt", "ni56_lines.txt");
+  }
+  read_gamma_spectrum(28, 56, "ni56_lines.txt");
 
-  read_gamma_spectrum(NUCLIDE_CO56, "co_lines.txt");
+  // migrate from old filename
+  if (!filesys::exists("co56_lines.txt") && filesys::exists("co_lines.txt"))
+  {
+    printout("Moving co_lines.txt to co56_lines.txt\n");
+    std::rename("co_lines.txt", "co56_lines.txt");
+  }
+  read_gamma_spectrum(27, 56, "co56_lines.txt");
 
-  read_gamma_spectrum(NUCLIDE_V48, "v48_lines.txt");
+  read_gamma_spectrum(23, 48, "v48_lines.txt");
 
-  read_gamma_spectrum(NUCLIDE_CR48, "cr48_lines.txt");
+  read_gamma_spectrum(24, 48, "cr48_lines.txt");
 
-  read_gamma_spectrum(NUCLIDE_NI57, "ni57_lines.txt");
+  read_gamma_spectrum(28, 57, "ni57_lines.txt");
 
-  read_gamma_spectrum(NUCLIDE_CO57, "co57_lines.txt");
+  read_gamma_spectrum(27, 57, "co57_lines.txt");
 
-  decay::set_nucdecayenergygamma(NUCLIDE_FE52, 0.86 * MEV);
-  decay::set_nucdecayenergygamma(NUCLIDE_MN52, 3.415 * MEV);
+  decay::set_nucdecayenergygamma(26, 52, 0.86 * MEV);  // Fe52
+  decay::set_nucdecayenergygamma(25, 52, 3.415 * MEV);  // Mn52
 }
 
 
@@ -109,55 +132,57 @@ void init_gamma_linelist(void)
   /* Now do the sorting. */
 
   int total_lines = 0;
-  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
   {
-    total_lines += gamma_spectra[iso].nlines;
+    total_lines += gamma_spectra[nucindex].nlines;
   }
   printout("total gamma-ray lines %d\n", total_lines);
 
   gam_line_list.total = total_lines;
-  gam_line_list.nuclidetype = (enum radionuclides *) malloc(total_lines * sizeof(enum radionuclides));
+  gam_line_list.nucindex = (int *) malloc(total_lines * sizeof(int));
   gam_line_list.index = (int *) malloc(total_lines * sizeof(int));
 
   double energy_last = 0.0;
   int next = -99;
-  enum radionuclides next_type;
+  int next_type;
 
   for (int i = 0; i < total_lines; i++)
   {
     double energy_try = 1.e50;
 
-    for (int isoint = 0; isoint < RADIONUCLIDE_COUNT; isoint++)
+    for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
     {
-      enum radionuclides iso = (enum radionuclides) isoint;
-      // printout("iso %d nlines %d\n", iso, gamma_spectra[iso].nlines);
-      for (int j = 0; j < gamma_spectra[iso].nlines; j++)
+      // printout("nucindex %d nlines %d\n", nucindex, gamma_spectra[nucindex].nlines);
+      for (int j = 0; j < gamma_spectra[nucindex].nlines; j++)
       {
-        if (gamma_spectra[iso].energy[j] > energy_last && gamma_spectra[iso].energy[j] < energy_try)
+        if (gamma_spectra[nucindex].energy[j] > energy_last && gamma_spectra[nucindex].energy[j] < energy_try)
         {
           // next_type = spec_type[iso];
-          next_type = iso;
+          next_type = nucindex;
           next = j;
-          energy_try = gamma_spectra[iso].energy[j];
+          energy_try = gamma_spectra[nucindex].energy[j];
         }
       }
     }
 
     assert_always(next >= 0);
-    gam_line_list.nuclidetype[i] = next_type;
+    gam_line_list.nucindex[i] = next_type;
     gam_line_list.index[i] = next;
     energy_last = energy_try;
   }
 
   FILE *const line_list = fopen_required("gammalinelist.out", "w+");
 
+  fprintf(line_list, "#index nucindex Z A nucgammmaindex en_gamma_mev gammaline_probability\n");
   for (int i = 0; i < total_lines; i++)
   {
-    const enum radionuclides iso = gam_line_list.nuclidetype[i];
+    const int nucindex = gam_line_list.nucindex[i];
     const int index = gam_line_list.index[i];
-    fprintf(line_list, "%d %d %d %g %g \n",
-            i, gam_line_list.nuclidetype[i], gam_line_list.index[i],
-            gamma_spectra[iso].energy[index] / MEV, gamma_spectra[iso].probability[index]);
+    fprintf(line_list, "%d %d %d %d %d %g %g \n",
+            i, gam_line_list.nucindex[i],
+            decay::get_nuc_z(gam_line_list.nucindex[i]), decay::get_nuc_a(gam_line_list.nucindex[i]),
+            gam_line_list.index[i],
+            gamma_spectra[nucindex].energy[index] / MEV, gamma_spectra[nucindex].probability[index]);
   }
   fclose(line_list);
 }
@@ -167,46 +192,17 @@ static void choose_gamma_ray(PKT *pkt_ptr)
 {
   // Routine to choose which gamma ray line it'll be.
 
-  enum radionuclides iso;
-  switch (pkt_ptr->type)
-  {
-    case TYPE_56NI_PELLET:
-      iso = NUCLIDE_NI56;
-      break;
-
-    case TYPE_56CO_PELLET:
-      iso = NUCLIDE_CO56;
-      break;
-
-    case TYPE_57NI_PELLET:
-      iso = NUCLIDE_NI57;
-      break;
-
-    case TYPE_57CO_PELLET:
-      iso = NUCLIDE_CO57;
-      break;
-
-    case TYPE_48CR_PELLET:
-      iso = NUCLIDE_CR48;
-      break;
-
-    case TYPE_48V_PELLET:
-      iso = NUCLIDE_V48;
-      break;
-
-    default:
-      printout("Unrecognised pellet. Abort.\n");
-      abort();
-  }
-
-  double E_gamma = decay::nucdecayenergygamma(iso); // Average energy per gamma line of a decay
+  const int nucindex = pkt_ptr->pellet_nucindex;
+  const int z = decay::get_nuc_z(nucindex);
+  const int a = decay::get_nuc_a(nucindex);
+  double E_gamma = decay::nucdecayenergygamma(z, a); // Average energy per gamma line of a decay
 
   const double zrand = gsl_rng_uniform(rng);
   int nselected = -1;
   double runtot = 0.;
-  for (int n = 0; n < gamma_spectra[iso].nlines; n++)
+  for (int n = 0; n < gamma_spectra[nucindex].nlines; n++)
   {
-    runtot += gamma_spectra[iso].probability[n] * gamma_spectra[iso].energy[n] / E_gamma;
+    runtot += gamma_spectra[nucindex].probability[n] * gamma_spectra[nucindex].energy[n] / E_gamma;
     if (zrand <= runtot)
     {
       nselected = n;
@@ -216,27 +212,35 @@ static void choose_gamma_ray(PKT *pkt_ptr)
 
   if (nselected < 0)
   {
-    printout("Failure to choose line (packet type %d). Abort. zrand %g runtot %g\n", pkt_ptr->type, zrand, runtot);
+    printout("Failure to choose line (packet type %d pellet_nucindex %d). Abort. zrand %g runtot %g\n",
+             pkt_ptr->type, pkt_ptr->pellet_nucindex, zrand, runtot);
     abort();
   }
 
-  pkt_ptr->nu_cmf = gamma_spectra[iso].energy[nselected] / H;
+  pkt_ptr->nu_cmf = gamma_spectra[nucindex].energy[nselected] / H;
   // printout("%s PELLET %g\n", gammaspec->filename, gammaspec->energy[nselected]);
 }
 
 
-void pellet_decay(const int nts, PKT *pkt_ptr)
+void pellet_gamma_decay(const int nts, PKT *pkt_ptr)
 {
-  // Subroutine to convert a pellet to a gamma ray.
+  // Subroutine to convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
+
   // nts defines the time step we are in. pkt_ptr is a pointer to the packet
   // that is decaying.
-  // Record decay.
 
   // Start by getting the position of the pellet at the point of decay. Pellet
   // is moving with the matter.
 
-  // Now let's give the gamma ray a direction.
+  // if no gamma spectra is known, then covert straight to kpkts (e.g., Fe52, Mn52)
+  if (gamma_spectra[pkt_ptr->pellet_nucindex].nlines == 0)
+  {
+    pkt_ptr->type = TYPE_KPKT;
+    pkt_ptr->absorptiontype = -6;
+    return;
+  }
 
+  // Now let's give the gamma ray a direction.
   // Assuming isotropic emission in cmf
 
   double dir_cmf[3];
@@ -738,18 +742,18 @@ double get_gam_freq(const int n)
   }
 
   // returns the frequency of line n
-  enum radionuclides iso = gam_line_list.nuclidetype[n];
+  const int nucindex = gam_line_list.nucindex[n];
   const int lineid = gam_line_list.index[n];
 
-  if (iso >= RADIONUCLIDE_COUNT || lineid >= gamma_spectra[iso].nlines)
+  if (nucindex >= decay::get_num_nuclides() || lineid >= gamma_spectra[nucindex].nlines)
   {
     printout("Unknown line. %d Abort.\n", n);
-    printout("line_list->nuclidetype[n] %d line_list->index[n] %d\n", gam_line_list.nuclidetype[n], gam_line_list.index[n]);
-    // printout(" %d %d \n", gam_line_list.nuclidetype[n], gam_line_list.index[n]);
+    printout("line_list->nucindex[n] %d line_list->index[n] %d\n", gam_line_list.nucindex[n], gam_line_list.index[n]);
+    // printout(" %d %d \n", gam_line_list.nucindex[n], gam_line_list.index[n]);
     abort();
   }
 
-  return gamma_spectra[iso].energy[lineid] / H;
+  return gamma_spectra[nucindex].energy[lineid] / H;
 }
 
 

@@ -66,38 +66,13 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   printout("UNIFORM_PELLET_ENERGIES is %s\n", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
 
   const int pktnumberoffset = middle_iteration * globals::npkts;
-  float cont[MGRID + 1];
+  double cont[MGRID + 1];
 
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
-  const double etot_tinf = (
-    (decay::nucdecayenergy(NUCLIDE_NI56) + decay::nucdecayenergy(NUCLIDE_CO56)) * get_totmassradionuclide(NUCLIDE_NI56) / decay::nucmass(NUCLIDE_NI56) +
-    decay::nucdecayenergy(NUCLIDE_CO56) * get_totmassradionuclide(NUCLIDE_CO56) / decay::nucmass(NUCLIDE_CO56) +
-    (decay::nucdecayenergy(NUCLIDE_NI57) + decay::nucdecayenergy(NUCLIDE_CO57)) * get_totmassradionuclide(NUCLIDE_NI57) / decay::nucmass(NUCLIDE_NI57) +
-    decay::nucdecayenergy(NUCLIDE_CO57) * get_totmassradionuclide(NUCLIDE_CO57) / decay::nucmass(NUCLIDE_CO57) +
-    (decay::nucdecayenergy(NUCLIDE_V48) + decay::nucdecayenergy(NUCLIDE_CR48)) * get_totmassradionuclide(NUCLIDE_CR48) / decay::nucmass(NUCLIDE_CR48) +
-    (decay::nucdecayenergy(NUCLIDE_FE52) + decay::nucdecayenergy(NUCLIDE_MN52)) * get_totmassradionuclide(NUCLIDE_FE52) / decay::nucmass(NUCLIDE_FE52));
-  printout("etot %g (t_0 to t_inf)\n", etot_tinf);
-  printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n",
-           decay::nucdecayenergy(NUCLIDE_NI56) / MEV, decay::nucdecayenergy(NUCLIDE_CO56) / MEV,
-           decay::nucdecayenergygamma(NUCLIDE_CO56) / MEV);
-  printout("decayenergy(NI57), decayenergy_gamma(NI57), decay::nucdecayenergy(CO57): %g, %g, %g\n",
-           decay::nucdecayenergy(NUCLIDE_NI57) / MEV, decay::nucdecayenergygamma(NUCLIDE_NI57) / MEV,
-           decay::nucdecayenergy(NUCLIDE_CO57) / MEV);
-  printout("decayenergy(CR48), decayenergy(V48): %g %g\n",
-           decay::nucdecayenergy(NUCLIDE_CR48) / MEV, decay::nucdecayenergy(NUCLIDE_V48) / MEV);
-  printout("decayenergy(FE52), decayenergy(MN52): %g %g\n",
-           decay::nucdecayenergy(NUCLIDE_FE52) / MEV, decay::nucdecayenergy(NUCLIDE_MN52) / MEV);
+  const double etot_tinf = decay::get_global_etot_t0_tinf();
 
-  double modelcell_decay_energy_density[get_npts_model()];
-  for (int mgi = 0; mgi < get_npts_model(); mgi++)
-  {
-    modelcell_decay_energy_density[mgi] = 0.;
-    for (int i = 0; i < DECAYPATH_COUNT; i++)
-    {
-      modelcell_decay_energy_density[mgi] += get_rhoinit(mgi) * decay::get_simtime_endecay_per_ejectamass(mgi, (enum decaypathways)(i)) * MH;
-    }
-  }
+  printout("etot %g (t_0 to t_inf)\n", etot_tinf);
 
   const double e0_tinf = etot_tinf / globals::npkts / globals::n_out_it / globals::n_middle_it;
   printout("packet e0 (t_0 to t_inf) %g erg\n", e0_tinf);
@@ -116,13 +91,13 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
     }
     else
     {
-      norm += vol_init_gridcell(m) * modelcell_decay_energy_density[mgi];
+      norm += vol_init_gridcell(m) * decay::get_modelcell_decay_energy_density(mgi);
     }
 
   }
   cont[globals::ngrid] = norm;
 
-  double etot = norm / MH;
+  double etot = norm;
 
   if (USE_ENERGYINPUTFILE)
   {
@@ -207,6 +182,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   }
   const double e_ratio = etot / e_cmf_total;
   printout("packet energy sum %g should be %g normalisation factor: %g\n", e_cmf_total, etot, e_ratio);
+  assert_always(std::isfinite(e_cmf_total));
   e_cmf_total *= e_ratio;
   for (int n = 0; n < globals::npkts; n++)
   {
@@ -252,6 +228,7 @@ void write_packets(char filename[], PKT *pkt)
     fprintf(packets_file, "%d ", pkt[i].originated_from_positron);
     fprintf(packets_file, "%g ", pkt[i].trueemissionvelocity);
     fprintf(packets_file, "%d ", pkt[i].trueem_time);
+    fprintf(packets_file, "%d ", pkt[i].pellet_nucindex);
     fprintf(packets_file, "\n");
   }
   fclose(packets_file);
@@ -358,6 +335,8 @@ void read_packets(char filename[], PKT *pkt)
     sscanf(linepos, "%d%n", &pkt[i].trueem_time, &offset);
     linepos += offset;
 
+    sscanf(linepos, "%d%n", &pkt[i].pellet_nucindex, &offset);
+    linepos += offset;
   }
 
   if (packets_read < globals::npkts)

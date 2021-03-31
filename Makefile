@@ -41,11 +41,11 @@ else ifneq (, $(shell which mpicxx))
 	# any other system which has mpicxx available (Juwels, Cambridge, Gadi, etc)
 
 	CXX = mpicxx
-	CXXFLAGS += -std=c++17 -march=native -O3 -g #-fopenmp=libomp
+	CXXFLAGS += -std=c++17 -march=native -O3 #-fopenmp=libomp
 
 sn3d sn3dcuda: CXXFLAGS += -DMPI_ON
 
-else ifeq ($(USER),ccollins)
+else ifeq ($(USER),localadmin_ccollins)
 	# CXX = c++
 	LDFLAGS= -lgsl -lgslcblas -lm -I/home/localadmin_ccollins/gsl/include
 	INCLUDE = /home/localadmin_ccollins/gsl/include
@@ -58,6 +58,12 @@ else
 	# CXX = c++
 	# CXX = icpc
 	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
+endif
+
+# For Virgo, GCC 8.1.0 requires -lstdc++fs for std::filesystem to work
+GCCVERSION = $(shell mpicxx --version | grep GCC | sed 's/^.* //g')
+ifeq "$(GCCVERSION)" "8.1.0"
+    LDFLAGS += -lstdc++fs
 endif
 
 # ** GSL (GNU Scientific Library) **
@@ -125,6 +131,7 @@ all: sn3d exspec
 
 sn3d: clean version
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
+# $(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
 
 sn3ddebug: clean version $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_objects) -o sn3d
@@ -136,8 +143,8 @@ sn3dcuda: version $(sn3d_objects)
 	nvcc --gpu-architecture=sm_70 --device-link $(sn3d_objects) --output-file gpucode.o
 	$(CXX) $(CXXFLAGS) gpucode.o $(INCLUDE) -lcudadevrt $(LDFLAGS) $(sn3d_objects) -o sn3d
 
-%.o: %.cc
-	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c
+# %.o: %.cc
+# 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c
 
 exspec: clean version
 	$(CXX) $(CXXFLAGS) -DDO_EXSPEC $(exspec_files) $(LDFLAGS) -o exspec

@@ -52,8 +52,6 @@
 
 #include "cuda.h"
 
-#include "globals.h"
-
 #include <stdarg.h>  /// MK: needed for printout()
 #include <gsl/gsl_integration.h>
 
@@ -61,6 +59,7 @@
 // #define DO_TITER
 // #define FORCE_LTE
 
+#include "globals.h"
 #include "types.h"
 #include "vectors.h"
 

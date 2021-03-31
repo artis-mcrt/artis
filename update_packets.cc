@@ -12,15 +12,15 @@
 
 #include <algorithm>
 
+
 static void update_pellet(
-  PKT *pkt_ptr, const bool decay_to_kpkt, const bool decay_to_ntlepton, const int nts, const double t2)
+  PKT *pkt_ptr, const int nts, const double t2)
 {
   // Handle inactive pellets. Need to do two things (a) check if it
   // decays in this time step and if it does handle that. (b) if it doesn't decay in
   // this time step then just move the packet along with the matter for the
   // start of the next time step.
   assert_always(pkt_ptr->prop_time < t2);
-  assert_always(!decay_to_kpkt || !decay_to_ntlepton); // can't decay to both!
   const double ts = pkt_ptr->prop_time;
 
   const double tdecay = pkt_ptr->tdecay; // after packet_init(), this value never changes
@@ -40,12 +40,7 @@ static void update_pellet(
     pkt_ptr->prop_time = tdecay;
     vec_scale(pkt_ptr->pos, tdecay / ts);
 
-    if (decay_to_kpkt)
-    {
-      pkt_ptr->type = TYPE_KPKT;
-      pkt_ptr->absorptiontype = -6;
-    }
-    else if (decay_to_ntlepton)
+    if (pkt_ptr->originated_from_positron) // will decay to non-thermal lepton
     {
       safeadd(globals::time_step[nts].positron_dep, pkt_ptr->e_cmf);
 
@@ -54,9 +49,8 @@ static void update_pellet(
     }
     else
     {
-      // decay to gamma ray
-      pellet_decay(nts, pkt_ptr);
-      //printout("pellet to photon packet and propagation by packet_prop\n");
+      // decay to gamma-ray, kpkt, or ntlepton
+      pellet_gamma_decay(nts, pkt_ptr);
     }
   }
   else if ((tdecay > 0) && (nts == 0))
@@ -91,30 +85,15 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
 
   switch (pkt_type)
   {
-    case TYPE_56NI_PELLET:
-    case TYPE_56CO_PELLET:
-    case TYPE_57NI_PELLET:
-    case TYPE_57CO_PELLET:
-    case TYPE_48CR_PELLET:
-    case TYPE_48V_PELLET:
-      // decay to gamma ray
-      update_pellet(pkt_ptr, false, false, nts, t2);
-      break;
-
-    case TYPE_52FE_PELLET:
-    case TYPE_52MN_PELLET:
     case TYPE_GENERIC_ENERGY_PELLET:
-      // convert to kpkts
-      update_pellet(pkt_ptr, true, false, nts, t2);
+    case TYPE_RADIOACTIVE_PELLET:
+    {
+      update_pellet(pkt_ptr, nts, t2);
       break;
-
-    case TYPE_57NI_POSITRON_PELLET:
-    case TYPE_56CO_POSITRON_PELLET:
-      // convert to to non-thermal leptons
-      update_pellet(pkt_ptr, false, true, nts, t2);
-      break;
+    }
 
     case TYPE_GAMMA:
+    {
       do_gamma(pkt_ptr, t2);
 	    /* This returns a flag if the packet gets to t2 without
       changing to something else. If the packet does change it
@@ -125,8 +104,10 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
         safeadd(globals::time_step[nts].gamma_dep, pkt_ptr->e_cmf);
       }
       break;
+    }
 
     case TYPE_RPKT:
+    {
       do_rpkt(pkt_ptr, t2);
 
       if (pkt_ptr->type == TYPE_ESCAPE)
@@ -134,10 +115,13 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
         safeadd(globals::time_step[nts].cmf_lum, pkt_ptr->e_cmf);
       }
       break;
+    }
 
     case TYPE_NTLEPTON:
+    {
       nonthermal::do_ntlepton(pkt_ptr);
       break;
+    }
 
     case TYPE_KPKT:
     case TYPE_PRE_KPKT:

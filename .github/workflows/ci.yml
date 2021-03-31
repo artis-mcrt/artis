@@ -3,16 +3,17 @@ name: Continuous integration
 on:
   push:
     branches:
-    - nebular
-  pull_request:
-    branches:
-    - nebular
+    - nebular*
+    - main
+  # pull_request:
+  #   branches:
+  #   - nebular*
+  #   - main
 
 jobs:
-  build:
+  build_and_test:
 
     runs-on: ubuntu-latest
-    continue-on-error: true
 
     steps:
     - uses: actions/checkout@v2.3.4
@@ -47,6 +48,33 @@ jobs:
     #     sudo apt-get install libopenmpi-dev
     #     make sn3dmpi
 
+    # we can cache this, but then we don't test the code that generates ratecoeff.dat
+    # - name: Cache ratecoeff.dat
+    #   uses: actions/cache@v2.1.4
+    #   with:
+    #     path: "tests/nebularonezone/ratecoeff.dat"
+    #     key: "tests/nebularonezone/ratecoeff.dat"
+
+    - name: Cache test atomic data
+      uses: actions/cache@v2.1.4
+      id: cache-testatomicdata
+      with:
+          path: "tests/atomicdata_feconi.tar.xz"
+          key: tests/atomicdata_feconi.tar.xz
+
+    - name: Cache reference data
+      uses: actions/cache@v2.1.4
+      id: cache-testreferencedata
+      with:
+          path: "tests/nebularonezone_reference_20210324.tar.xz"
+          key: tests/nebularonezone_reference_20210324.tar.xz
+
+    - name: Download/extract test data
+      # if: steps.cache-atomicdata.outputs.cache-hit != 'true'
+      working-directory: tests/
+      run: |
+          source ./setuptestdata.sh
+
     - name: "Setup test nebularonezone"
       run: |
         cp tests/nebularonezone/artisoptions.h .
@@ -54,14 +82,6 @@ jobs:
         cp sn3d tests/nebularonezone/
         cp exspec tests/nebularonezone/
         cp data/*.txt tests/nebularonezone/
-        gunzip -v tests/nebularonezone/*.gz
-
-    # we can cache this, but then we don't test the code that generates ratecoeff.dat
-    # - name: Cache ratecoeff.dat
-    #   uses: actions/cache@v2.1.4
-    #   with:
-    #     path: "tests/nebularonezone/ratecoeff.dat"
-    #     key: "tests/nebularonezone/ratecoeff.dat"
 
     - name: "Run nebularonezone test"
       working-directory: tests/nebularonezone/
@@ -83,6 +103,7 @@ jobs:
     - name: "Run exspec"
       working-directory: tests/nebularonezone/
       run: |
+        cp input.txt ../nebularonezone_reference/
         time ./exspec
         mkdir output
         cp output_0-0.txt exspec.txt *.out output/
@@ -99,12 +120,66 @@ jobs:
         path: tests/nebularonezone/output
 
     - name: Checksum output files
-      working-directory: tests/nebularonezone/output
+      working-directory: tests/nebularonezone
       run: |
         md5sum *.out
-        md5sum -c <(echo e4963320fa6da60fc14aba0d6aa7c52d estimators_0000.out)
-        md5sum -c <(echo 43dc783d438b33bcd350cfb5967364a8 light_curve.out)
-        md5sum -c <(echo f8a7677f193e17341a62a08697f70711 spec.out)
-        md5sum -c <(echo 8e7163982f1aa938dc1505478b8c60d1 timesteps.out)
-        md5sum -c <(echo 73da2aa7a706efdb62b5f1dc610bbf14 deposition.out)
+        md5sum -c results_md5.txt
+        # md5sum -c <(echo e7e4d172ca0d1fb13bcf99891be68f18 estimators_0000.out)
+        # md5sum -c <(echo 3f641aefb2c14fe31d93bf0826154fa2 light_curve.out)
+        # md5sum -c <(echo 88e4591d14b1a46cdd77120d70dbbf2f gamma_light_curve.out)
+        # md5sum -c <(echo 28760611670129a32d8de4326c6abddb spec.out)
+        # md5sum -c <(echo 8e7163982f1aa938dc1505478b8c60d1 timesteps.out)
+        # md5sum -c <(echo 1c4b1ccb2ea3bd56f3ef976e4dce870e nonthermalspec_0000.out)
+        # md5sum -c <(echo 60482b8632dd22597e29732e38496d5c gamma_spec.out)
+        # md5sum -c <(echo 23d8c0893fdd950bc64e7a18dc8c2d92 absorption.out)
+        # md5sum -c <(echo 34996393c1ac2721b49b8da362246291 emission.out)
+        # md5sum -c <(echo 54dbeaf121582f58f0f2d0fe6aca67b5 emissiontrue.out)
 
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Get pip cache dir
+      id: pip-cache
+      run: |
+        pip list --format=freeze > piplist.txt
+        echo "::set-output name=dir::$(pip cache dir)"
+
+    - name: Cache pip
+      uses: actions/cache@v2.1.4
+      with:
+        path: ${{ steps.pip-cache.outputs.dir }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('piplist.txt') }}
+        restore-keys: |
+         ${{ runner.os }}-pip-
+
+    - name: Clone artistools
+      run: |
+        git clone https://github.com/artis-mcrt/artistools.git
+
+    - name: Install dependencies
+      working-directory: artistools/
+      run: |
+        python3 -m pip install --upgrade pip
+        python3 -m pip install -r requirements.txt
+
+        # upgrade all installed packages to their latest versions
+        python3 -m pip list --format=freeze --outdated | cut -d '=' -f1 | xargs -n1 python3 -m pip install --upgrade
+
+    - name: Install artistools
+      working-directory: artistools/
+      run: |
+        python -m pip install -e .
+
+    - name: Plot output
+      working-directory: tests/
+      run: |
+        python3 -m artistools.lightcurve nebularonezone nebularonezone_reference
+         python3 -m artistools.spectra -ts 9 nebularonezone nebularonezone_reference
+
+    - name: Upload plot files
+      uses: actions/upload-artifact@v2
+      with:
+        name: test-nebularonezone-output-pdf
+        path: tests/*.pdf
