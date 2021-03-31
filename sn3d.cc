@@ -715,14 +715,13 @@ int main(int argc, char** argv)
     MPI_Init(&argc, &argv);
     int my_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-    int p;
-    MPI_Comm_size(MPI_COMM_WORLD, &p);
+    MPI_Comm_size(MPI_COMM_WORLD, &globals::nprocs);
+    MPI_Barrier(MPI_COMM_WORLD);
   #else
     int my_rank = 0;
-    int p = 1;
+    globals::nprocs = 1;
   #endif
 
-  globals::nprocs = p;              /// Global variable which holds the number of MPI processes
   globals::rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
 
 #ifdef _OPENMP
@@ -953,8 +952,8 @@ int main(int argc, char** argv)
     /// processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
     /// cells are sent to processes 0 ... process n_leftover -1.
     int maxndo = 0;
-    get_nstart_ndo(my_rank, p, &nstart, &ndo, &maxndo);
-    printout("process rank %d (of %d) doing %d cells", my_rank, globals::nprocs, ndo);
+    get_nstart_ndo(my_rank, globals::nprocs, &nstart, &ndo, &maxndo);
+    printout("process rank %d (range 0 to %d) doing %d cells", my_rank, globals::nprocs - 1, ndo);
     if (ndo > 0)
     {
       printout(": numbers %d to %d\n", nstart, nstart + ndo - 1);
