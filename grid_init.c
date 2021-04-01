@@ -702,6 +702,13 @@ int density_1d_read ()
         set_kappagrey(mgi, ((0.9 * get_ffe(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
         //set_kappagrey(mgi, SIGMA_T);
       }
+      else if (opacity_case == 5)
+      {
+        //TODO: cell dependent opacity 1D
+        set_kappagrey(mgi, GREY_OP);
+        printout("1D opacity case 5 not written yet\n");
+        exit(0);
+      }
       else
       {
         printout("Unknown opacity case. Abort.\n");
@@ -1181,6 +1188,7 @@ int density_2d_read ()
 int density_3d_read ()
 {
   void allocate_compositiondata(int cellnumber);
+  void set_cell_dependent_opacities();
   double vec_len();
   int n;
   double radial_pos;
@@ -1287,6 +1295,11 @@ int density_3d_read ()
   }
   
   /// Second pass through allows calculation of normalized kappa_grey
+  if (opacity_case == 5)
+  {
+    printout("grey opacity set to values in opacity.txt\n");
+    set_cell_dependent_opacities();
+  }
   for (n=0; n < ngrid; n++)
   {
     mgi = cell[n].modelgridindex;
@@ -1316,6 +1329,13 @@ int density_3d_read ()
         ///kappagrey used for initial grey approximation in this case
         set_kappagrey(mgi, ((0.9 * get_ffe(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
         //set_kappagrey(mgi, SIGMA_T);
+      }
+      else if (opacity_case == 5)
+      {
+        //todo cell dependent opacity 3D
+//        printout("grey opacity in cell %d set to %g\n", mgi, get_kappagrey(mgi));
+        continue;
+//        set_kappagrey(mgi, GREY_OP);
       }
       else
       {
@@ -1582,6 +1602,44 @@ void allocate_cooling(int modelgridindex)
     }
   }
 }*/
+
+void set_cell_dependent_opacities()
+{
+  ///opacity case 5 - read in file where opacity in each cell is defined
+  FILE *cell_opacities_file;
+  if ((cell_opacities_file = fopen("opacity.txt", "r")) == NULL)
+  {
+    printout("Cannot open opacity.txt.\n");
+    exit(0);
+  }
+  int number_of_cells; // number of model grid cells
+  fscanf(cell_opacities_file, "%d", &number_of_cells);
+  printout("number of cells in opacity file %d \n", number_of_cells);
+
+  int cellnumber;
+  float cell_opacity;
+  int n, mgi;
+  for (n = 0; n < ngrid; n++)
+  {
+    mgi = cell[n].modelgridindex;
+    fscanf(cell_opacities_file, "%d %g", &cellnumber, &cell_opacity);
+
+    if(cellnumber-1 != n)
+    {
+      printout("cell number in opacity file does not match\n");
+      exit(0);
+    }
+    if (mgi != MMODELGRID) //If cell is not empty
+    {
+      set_kappagrey(mgi, cell_opacity);
+    }
+    else
+    {
+//      empty cells must have 0 opacity
+      set_kappagrey(mgi, 0.);
+    }
+  }
+}
 
 
 void abundances_3d_read()
