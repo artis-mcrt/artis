@@ -26,8 +26,6 @@ void energy_in_cells_1d_read()
 //  float start_time; //todo: change to model read in time
 //  float end_time; //todo: do I need this?
 
-  int number_of_cells; // number of model grid cells
-
   /// Open the file
   if ((cell_energies_file = fopen("energydistribution.txt",
                                   "r")) == NULL)
@@ -36,6 +34,7 @@ void energy_in_cells_1d_read()
     exit(0);
   }
 
+  int number_of_cells; // number of model grid cells
   fscanf(cell_energies_file, "%d", &number_of_cells);
   if (number_of_cells > MMODELGRID)
   {
@@ -53,8 +52,10 @@ void energy_in_cells_1d_read()
   int n, mgi;
   for (n = 0; n < ngrid; n++)
   {
+//    printout("cell n %d mgi %d\n", n, cell[n].modelgridindex);
     mgi = cell[n].modelgridindex;
     fscanf(cell_energies_file, "%d %lf", &cellnumber, &cell_energy);
+//    printout("cellnumber %d cell energy %g\n", cellnumber, cell_energy);
     if(cellnumber-1 != n)
     {
       printout("cell number in file does not match \n");
