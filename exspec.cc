@@ -11,7 +11,6 @@
    explosions. */
 
 #include <cstdio>
-// #include <filesystem>
 #include <unistd.h>
 #include "exspec.h"
 #include "sn3d.h"
@@ -44,7 +43,6 @@ static void get_final_packets(int rank, int nprocs, PKT pkt[])
   printout("reading %s (file %d of %d)\n", filename, rank + 1, nprocs);
 
   if (!access(filename, F_OK))
-  // if (std::filesystem::exists(filename))
   {
     read_packets(filename, pkt);
   }
