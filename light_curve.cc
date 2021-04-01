@@ -130,12 +130,6 @@ void write_partial_lightcurve(int my_rank, int nts, PKT *pkts)
   #ifdef MPI_ON
   MPI_Allreduce(MPI_IN_PLACE, rpkt_light_curve_lum, globals::ntstep, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, rpkt_light_curve_lumcmf, globals::ntstep, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-  for (int i = 0; i < globals::ntstep; i++)
-  {
-    rpkt_light_curve_lum[i] /= globals::nprocs;
-    rpkt_light_curve_lumcmf[i] /= globals::nprocs;
-  }
   #endif
 
   if (my_rank == 0)
