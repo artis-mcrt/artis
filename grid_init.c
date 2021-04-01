@@ -79,10 +79,11 @@ int grid_init ()
     if (assoc_cells > 0)
     {
       set_modelcell_energydensity_init(mgi, (modelcell_energy[mgi] / (vol_init * assoc_cells))); //TODO: modelcell_energy/cell volume ==> vol_init*associated cells
+//      set_modelcell_energydensity_init(mgi, modelcell_energy[mgi]); //TODO: modelcell_energy/cell volume ==> vol_init*associated cells
 
-      printout("cell volume init %g associated cells %d volume %g energydensity %g mgi %d get_energydensity %g\n",
-               vol_init, assoc_cells, vol_init*assoc_cells,
-               modelcell_energy[mgi] / (vol_init * assoc_cells), mgi, get_modelcell_energydensity_init(mgi));
+//      printout("cell volume init %g associated cells %d volume %g energy %g energydensity %g mgi %d get_energydensity %g\n",
+//               vol_init, assoc_cells, vol_init*assoc_cells, modelcell_energy[mgi],
+//               modelcell_energy[mgi] / (vol_init * assoc_cells), mgi, get_modelcell_energydensity_init(mgi));
     }
     else
     {
