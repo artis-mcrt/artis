@@ -10,12 +10,13 @@
 #include "vectors.h"
 #include <cstring>
 
+#include <algorithm>
+#include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <sstream>
-// #include <cstdio>
-// #include <string>
-// #include <sstream>
+#include <string>
+#include <vector>
 
 __managed__ enum model_types model_type = RHO_1D_READ;
 __managed__ int npts_model = 0; // number of points in 1-D input model
@@ -1028,6 +1029,9 @@ static void read_1d_model(void)
   // in the cell (float). For now, the last number is recorded but never
   // used.
 
+  std::vector<int> zlist;
+  std::vector<int> alist;
+  std::vector<std::string> customnuclidecolumns; // vector of strings containing column names
   std::streampos oldpos = fmodel.tellg();  // get position in case we need to undo getline
   std::getline(fmodel, line);
   if (lineiscommentonly(line))
@@ -1037,16 +1041,50 @@ static void read_1d_model(void)
     std::string token;
     while (std::getline(iss, token, ' '))
     {
-      // std::cout << token << std::endl;
-      printout("Custom header column: %s\n", token.c_str());
+      if (std::all_of(token.begin(), token.end(), isspace)) // skip whitespace tokens
+        continue;
+      if (token.rfind("X_", 0) != 0) // skip if doesn't start with 'X_'
+         continue;
+      if (token == "X_Fegroup")
+        continue;
+      if (token == "X_Ni56")
+        continue;
+      if (token == "X_Co56")
+        continue;
+      if (token == "X_Fe52")
+        continue;
+      if (token == "X_Cr48")
+        continue;
+      if (token == "X_Ni57")
+        continue;
+      if (token == "X_Co57")
+        continue;
+
+      const int z = decay::get_nucstring_z(token.c_str() + 2); // + 2 skips the 'X_'
+      const int a = decay::get_nucstring_a(token.c_str() + 2);
+      printout("Custom nuclide column: '%s' Z %d A %d\n", token.c_str(), z, a);
+      zlist.push_back(z);
+      alist.push_back(a);
     }
+
+    // alternative:
+    // while(iss >> token)
+    // {
+    //   printout("Custom header column: %s\n", token.c_str());
+    //   columns.push_back(token);
+    // }
+
+    // for(std::vector<std::string>::iterator it = columns.begin(); it != columns.end(); ++it)
+    // {
+    //   printout("Repeat of Custom header column: %s\n", it->c_str());
+    // }
   }
   else
   {
     fmodel.seekg(oldpos); // undo getline
   }
 
-  decay::init_nuclides();
+  decay::init_nuclides(zlist, alist);
 
   int mgi = 0;
   while (std::getline(fmodel, line))
@@ -1054,9 +1092,10 @@ static void read_1d_model(void)
     int cellnumberin;
     double vout_kmps;
     double log_rho;
+    double ffegrp_model = 0.;
+
     double f56ni_model = 0.;
     double f56co_model = 0.;
-    double ffegrp_model = 0.;
     double f48cr_model = 0.;
     double f52fe_model = 0.;
     double f57ni_model = 0.;
@@ -1148,7 +1187,7 @@ static void read_2d_model(void)
   // then its total mass density.
   // Second is the total FeG mass, initial 56Ni mass, initial 56Co mass
 
-  decay::init_nuclides();
+  decay::init_nuclides(std::vector<int>(), std::vector<int>());
 
   int mgi = 0;
   while (!feof(model_input))
@@ -1239,7 +1278,7 @@ static void read_3d_model(void)
   bool posmatch_xyz = true;
   bool posmatch_zyx = true;
 
-  decay::init_nuclides();
+  decay::init_nuclides(std::vector<int>(), std::vector<int>());
 
   // mgi is the index to the model grid - empty cells are sent to MMODELGRID,
   // otherwise each input cell is one modelgrid cell

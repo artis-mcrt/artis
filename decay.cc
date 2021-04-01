@@ -1,6 +1,3 @@
-#include <algorithm> // std::max
-#include <vector>
-
 #include "sn3d.h"
 #include "atomic.h"
 #include "gamma.h"
@@ -8,6 +5,11 @@
 #include "nonthermal.h"
 
 #include "decay.h"
+
+#include <algorithm> // std::max
+#include <vector>
+#include <string>
+#include <regex>
 
 namespace decay
 {
@@ -20,12 +22,19 @@ const char *elsymbols[119] = {
   "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm",
   "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Uut", "Fl", "Uup", "Lv", "Uus", "Uuo"};
 
+enum decaytypes {
+  DECAYTYPE_ELECTRONCAPTURE,
+  DECAYTYPE_BETAPLUS,
+  DECAYTYPE_BETAMINUS,
+};
+
 struct nuclide {
   int z;                     // atomic number
   int a;                     // mass number
   double meanlife;           // mean lifetime before decay [s]
   double endecay_positrons;  // average energy per decay in kinetic energy of emitted positrons [erg]
   double endecay_gamma;      // average energy per decay in gamma rays [erg]
+  enum decaytypes decaytype;
 };
 
 struct nuclide *nuclides = NULL;
@@ -44,7 +53,7 @@ int get_num_nuclides(void)
 
 static void printout_nuclidename(const int z, const int a)
 {
-  printout("%s-%d", elsymbols[z], a);
+  printout("(Z=%d)%s%d", z, elsymbols[z], a);
 }
 
 
@@ -115,7 +124,19 @@ static int decay_daughter_z(const int z_parent, const int a_parent)
 {
   assert_always(nuc_exists(z_parent, a_parent));
   // electron capture/beta plus decay only for now
-  return z_parent - 1;
+  const enum decaytypes decaytype = nuclides[get_nuc_index(z_parent, a_parent)].decaytype;
+  if (decaytype == DECAYTYPE_BETAPLUS || decaytype == DECAYTYPE_ELECTRONCAPTURE)
+  {
+    return z_parent - 1; // lose a proton, gain a neutron
+  }
+  if (decaytype == DECAYTYPE_BETAMINUS)
+  {
+    return z_parent + 1;  // lose a neutron, gain a proton
+  }
+  else
+  {
+    assert(false);
+  }
 }
 
 
@@ -206,12 +227,43 @@ static void find_chains(void)
 }
 
 
+int get_nucstring_z(const char *strnuc)
+// convert something like Ni56 to integer 28
+{
+  std::string elcode = strnuc;
+  elcode.erase(std::remove_if(elcode.begin(), elcode.end(), &isdigit), elcode.end());
+
+  for (int z = 1; z < 110; z++)
+  {
+    if (strcmp(elcode.c_str(), elsymbols[z]) == 0)  // first to letters match el symbol
+    {
+      return z;
+    }
+  }
+  printout("Could not get atomic number of '%s' '%s'\n", strnuc, elcode.c_str());
+  assert(false); // could not match to an element
+  return -1;
+}
+
+
+int get_nucstring_a(const char *strnuc)
+// convert something like Ni56 to integer 56
+{
+  std::string strmassnum = std::regex_replace(strnuc, std::regex("[^0-9]*([0-9]+).*"), std::string("$1"));
+  const int a = std::stoi(strmassnum);
+  assert(a > 0);
+  return a;
+}
+
+
 __host__ __device__
-void init_nuclides(void)
+void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist) // std::vector<std::string> nuclides
 {
   // all decays are currently assumed to be electron-capture or beta+ (Z -> Z - 1)
 
-  num_nuclides = 9;
+  assert(custom_zlist.size() == custom_alist.size());
+
+  num_nuclides = 9 + custom_zlist.size();
   nuclides = (struct nuclide *) calloc(num_nuclides, sizeof(struct nuclide));
   assert_always(nuclides != NULL);
 
@@ -224,43 +276,76 @@ void init_nuclides(void)
     nuclides[nucindex].endecay_gamma = 0.;
   }
 
-  nuclides[0].z = 28; // Ni57
-  nuclides[0].a = 57;
-  nuclides[0].meanlife = 51.36 * 60;
-  nuclides[0].endecay_positrons = 0.354 * MEV * 0.436;
+  int nucindex = 0;
 
-  nuclides[1].z = 28; // Ni56
-  nuclides[1].a = 56;
-  nuclides[1].meanlife = 8.80 * DAY;
+  nuclides[nucindex].z = 28; // Ni57
+  nuclides[nucindex].a = 57;
+  nuclides[nucindex].meanlife = 51.36 * 60;
+  nuclides[nucindex].endecay_positrons = 0.354 * MEV * 0.436;
+  nuclides[nucindex].decaytype = DECAYTYPE_BETAPLUS;
+  nucindex++;
 
-  nuclides[2].z = 27; // Co56
-  nuclides[2].a = 56;
-  nuclides[2].meanlife = 113.7 * DAY;
-  nuclides[2].endecay_positrons = 0.63 * MEV * 0.19;
+  nuclides[nucindex].z = 28; // Ni56
+  nuclides[nucindex].a = 56;
+  nuclides[nucindex].meanlife = 8.80 * DAY;
+  nuclides[nucindex].decaytype = DECAYTYPE_ELECTRONCAPTURE;
+  nucindex++;
 
-  nuclides[3].z = -1;  // FAKE_GAM_LINE_ID
-  nuclides[3].a = -1;
+  nuclides[nucindex].z = 27; // Co56
+  nuclides[nucindex].a = 56;
+  nuclides[nucindex].meanlife = 113.7 * DAY;
+  nuclides[nucindex].endecay_positrons = 0.63 * MEV * 0.19;
+  nuclides[nucindex].decaytype = DECAYTYPE_BETAPLUS;
+  nucindex++;
 
-  nuclides[4].z = 24; // Cr48
-  nuclides[4].a = 48;
-  nuclides[4].meanlife = 1.29602 * DAY;
+  nuclides[nucindex].z = -1;  // FAKE_GAM_LINE_ID
+  nuclides[nucindex].a = -1;
+  nucindex++;
 
-  nuclides[5].z = 23; // V48
-  nuclides[5].a = 48;
-  nuclides[5].meanlife = 23.0442 * DAY;
-  nuclides[5].endecay_positrons = 0.290 * 0.499 * MEV;
+  nuclides[nucindex].z = 24; // Cr48
+  nuclides[nucindex].a = 48;
+  nuclides[nucindex].meanlife = 1.29602 * DAY;
+  nuclides[nucindex].decaytype = DECAYTYPE_ELECTRONCAPTURE;
+  nucindex++;
 
-  nuclides[6].z = 27; // Co57
-  nuclides[6].a = 57;
-  nuclides[6].meanlife = 392.03 * DAY;
+  nuclides[nucindex].z = 23; // V48
+  nuclides[nucindex].a = 48;
+  nuclides[nucindex].meanlife = 23.0442 * DAY;
+  nuclides[nucindex].endecay_positrons = 0.290 * 0.499 * MEV;
+  nuclides[nucindex].decaytype = DECAYTYPE_BETAPLUS;
+  nucindex++;
 
-  nuclides[7].z = 26; // Fe52
-  nuclides[7].a = 52;
-  nuclides[7].meanlife = 0.497429 * DAY;
+  nuclides[nucindex].z = 27; // Co57
+  nuclides[nucindex].a = 57;
+  nuclides[nucindex].meanlife = 392.03 * DAY;
+  nuclides[nucindex].decaytype = DECAYTYPE_ELECTRONCAPTURE;
+  nucindex++;
 
-  nuclides[8].z = 25; // Mn52
-  nuclides[8].a = 52;
-  nuclides[8].meanlife = 0.0211395 * DAY;
+  nuclides[nucindex].z = 26; // Fe52
+  nuclides[nucindex].a = 52;
+  nuclides[nucindex].meanlife = 0.497429 * DAY;
+  nuclides[nucindex].decaytype = DECAYTYPE_ELECTRONCAPTURE;
+  nucindex++;
+
+  nuclides[nucindex].z = 25; // Mn52
+  nuclides[nucindex].a = 52;
+  nuclides[nucindex].meanlife = 0.0211395 * DAY;
+  nuclides[nucindex].decaytype = DECAYTYPE_ELECTRONCAPTURE;
+  nucindex++;
+
+  for (int i = 0; i < (int) custom_zlist.size(); i++)
+  {
+    nuclides[nucindex].z = custom_zlist[i];
+    nuclides[nucindex].a = custom_alist[i];
+    nuclides[nucindex].decaytype = DECAYTYPE_BETAMINUS;
+
+    // todo: read Hotokezaka files for beta minus
+    // file path 'data/betaminus/' + A + '.txt'
+    // columns: A, Z, Q[MeV], Egamma[MeV], Eelec[MeV], Eneutrino[MeV], tau[s]
+
+    nucindex++;
+  }
+
 
   printout("init_nuclides: num_nuclides %d\n", get_num_nuclides());
 
@@ -277,6 +362,7 @@ void init_nuclides(void)
   }
   printout("Number of chains: %d (max length %d)\n", (int) decaychains_z.size(), maxchainlength);
 
+  // TODO: generalise this to all included nuclides
   printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n",
            nucdecayenergy(28, 56) / MEV, nucdecayenergy(27, 56) / MEV,
            nucdecayenergygamma(27, 56) / MEV);
