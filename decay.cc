@@ -158,7 +158,7 @@ static bool nuc_is_parent(const int z_parent, const int a_parent, const int z, c
 }
 
 
-static void print_chain(const int chainindex)
+static void printout_chain(const int chainindex)
 {
   assert_always(decaychains_z[chainindex].size() == decaychains_a[chainindex].size());
   if (decaychains_z.size() > 0)
@@ -357,7 +357,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
   int maxchainlength = 0;
   for (size_t chainindex = 0; chainindex < decaychains_z.size(); chainindex++)
   {
-    print_chain(chainindex);
+    printout_chain(chainindex);
     maxchainlength = std::max(maxchainlength, (int) decaychains_a[chainindex].size());
   }
   printout("Number of chains: %d (max length %d)\n", (int) decaychains_z.size(), maxchainlength);
@@ -561,7 +561,7 @@ static double get_nuc_abund(
     assert_always(top_initabund >= 0.)
     if (top_initabund <= 0.)
     {
-      return 0.;
+      continue;
     }
 
     int chainlength = decaychains_z[decaychainindex].size();
@@ -700,7 +700,7 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
       // skip unused chains
       continue;
     }
-    // print_chain(chainindex);
+    // printout_chain(chainindex);
     // get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(modelgridindex, chainindex, tstart);
 
     const int chainlength = decaychains_z[chainindex].size();
@@ -868,7 +868,6 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 
   printout("update_abundances for cell %d timestep %d\n", modelgridindex, timestep);
 
-  double nucfracsum = 0.;
   for (int element = get_nelements() - 1; element >= 0; element--)
   {
     const int atomic_number = get_element(element);
@@ -893,18 +892,33 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 
     const double elmassfrac = get_stable_initabund(modelgridindex, element) + isofracsum;
     set_elem_abundance(modelgridindex, element, elmassfrac);
-
-    nucfracsum += isofracsum;
   }
 
   double initnucfracsum = 0.;
+  double nucfracsum = 0.;
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
     const int z = get_nuc_z(nucindex);
+    const int a = get_nuc_a(nucindex);
     if (z < 1) // FAKE_GAM_LINE_ID
       continue;
-    initnucfracsum += get_modelinitradioabund(modelgridindex, z, get_nuc_a(nucindex));
+    initnucfracsum += get_modelinitradioabund(modelgridindex, z, a);
+    nucfracsum += get_nuc_abund(modelgridindex, z, a, t_current);
+
+    // printout_nuclidename(z, a);
+    // printout(" init: %g now: %g\n", get_modelinitradioabund(modelgridindex, z, a), get_nuc_abund(modelgridindex, z, a, t_current));
+
+    if (!nuc_exists(decay_daughter_z(z, a), decay_daughter_a(z, a)))
+    {
+      // printout_nuclidename(decay_daughter_z(z, a), decay_daughter_a(z, a));
+      // printout("(stable) init: 0 now: %g\n", get_nuc_abund(modelgridindex, decay_daughter_z(z, a), decay_daughter_a(z, a), t_current));
+      // this decay steps off the nuclide list, so add its daughter abundance to the total
+      nucfracsum += get_nuc_abund(modelgridindex, decay_daughter_z(z, a), decay_daughter_a(z, a), t_current);
+    }
   }
+
+  // printout("initnucfracsum %g\n", initnucfracsum);
+  // printout("nucfracsum %g\n", nucfracsum);
 
   assert_always(fabs(nucfracsum - initnucfracsum) < 0.001); // decays shouldn't change nuclear mass fraction sum
 
