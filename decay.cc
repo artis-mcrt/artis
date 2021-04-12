@@ -41,9 +41,9 @@ struct nuclide *nuclides = NULL;
 int num_nuclides = 0;
 
 struct decaypath {
+  int pathlength;
   int *z;                     // atomic number
   int *a;                     // mass number
-  int pathlength;
 };
 
 std::vector<struct decaypath> decaychains;
@@ -287,7 +287,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
   assert(custom_zlist.size() == custom_alist.size());
 
   num_nuclides = 9 + custom_zlist.size();
-  nuclides = (struct nuclide *) calloc(num_nuclides, sizeof(struct nuclide));
+  nuclides = (struct nuclide *) malloc(num_nuclides * sizeof(struct nuclide));
   assert_always(nuclides != NULL);
 
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++)
