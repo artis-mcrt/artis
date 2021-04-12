@@ -131,17 +131,21 @@ static int decay_daughter_z(const int z_parent, const int a_parent)
   assert_always(nuc_exists(z_parent, a_parent));
   // electron capture/beta plus decay only for now
   const enum decaytypes decaytype = nuclides[get_nuc_index(z_parent, a_parent)].decaytype;
-  if (decaytype == DECAYTYPE_BETAPLUS || decaytype == DECAYTYPE_ELECTRONCAPTURE)
+  switch (decaytype)
   {
-    return z_parent - 1; // lose a proton, gain a neutron
-  }
-  if (decaytype == DECAYTYPE_BETAMINUS)
-  {
-    return z_parent + 1;  // lose a neutron, gain a proton
-  }
-  else
-  {
-    assert(false);
+    case DECAYTYPE_BETAPLUS:
+    case DECAYTYPE_ELECTRONCAPTURE:
+    {
+      return z_parent - 1; // lose a proton, gain a neutron
+    }
+    case DECAYTYPE_BETAMINUS:
+    {
+      return z_parent + 1;  // lose a neutron, gain a proton
+    }
+    case DECAYTYPE_NONE:
+    {
+      return -1; // no daughter
+    }
   }
 }
 
