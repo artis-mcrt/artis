@@ -152,7 +152,7 @@ static const bool NT_SOLVE_SPENCERFANO = true;
 #define SF_EMIN 0.1
 
 // use a grid of energy points with constant spacing in log energy
-#define SF_USE_LOG_E_INCREMENT true
+#define SF_USE_LOG_E_INCREMENT false
 
 // trigger a Spencer-Fano solution at least once every n timesteps
 // 0 can only use solutions from previous NLTE iterations on the current timestep
