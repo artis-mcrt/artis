@@ -26,6 +26,7 @@ enum decaytypes {
   DECAYTYPE_ELECTRONCAPTURE,
   DECAYTYPE_BETAPLUS,
   DECAYTYPE_BETAMINUS,
+  DECAYTYPE_NONE,
 };
 
 struct nuclide {
@@ -297,6 +298,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
     nuclides[nucindex].meanlife = -1;
     nuclides[nucindex].endecay_positrons = 0.;
     nuclides[nucindex].endecay_gamma = 0.;
+    nuclides[nucindex].decaytype = DECAYTYPE_NONE;
   }
 
   int nucindex = 0;
@@ -323,6 +325,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
 
   nuclides[nucindex].z = -1;  // FAKE_GAM_LINE_ID
   nuclides[nucindex].a = -1;
+  nuclides[nucindex].decaytype = DECAYTYPE_NONE;
   nucindex++;
 
   nuclides[nucindex].z = 24; // Cr48
