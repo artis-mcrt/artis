@@ -1218,10 +1218,7 @@ static float calculate_frac_heating(const int modelgridindex)
   const float nne = get_nne(modelgridindex);
   // const float nnetot = get_nnetot(modelgridindex);
 
-  const double E_0 = SF_EMIN;
-
-  const int startindex = get_energyindex_ev_lteq(E_0);
-  for (int i = startindex; i < SFPTS; i++)
+  for (int i = 0; i < SFPTS; i++)
   {
     const double endash = gsl_vector_get(envec, i);
     #if (SF_USE_LOG_E_INCREMENT)
@@ -1230,23 +1227,19 @@ static float calculate_frac_heating(const int modelgridindex)
     double deltaendash = DELTA_E;
     #endif
 
-    if (i == startindex && endash < E_0)
-    {
-      deltaendash = endash + deltaendash - E_0;
-    }
     // first term
     frac_heating_Einit += get_y_sample(modelgridindex, i) * (electron_loss_rate(endash * EV, nne) / EV) * deltaendash;
   }
 
   // second term
-  frac_heating_Einit += E_0 * get_y(modelgridindex, E_0) * (electron_loss_rate(E_0 * EV, nne) / EV);
+  frac_heating_Einit += SF_EMIN * get_y(modelgridindex, SF_EMIN) * (electron_loss_rate(SF_EMIN * EV, nne) / EV);
 
-  // third term (integral from zero to E_0)
+  // third term (integral from zero to SF_EMIN)
   const int nsteps = 100;
-  const double delta_endash = E_0 / nsteps;
+  const double delta_endash = SF_EMIN / nsteps;
   for (int j = 0; j < nsteps; j++)
   {
-    const double endash = E_0 * j / nsteps;
+    const double endash = SF_EMIN * j / nsteps;
     frac_heating_Einit += N_e(modelgridindex, endash * EV) * endash * delta_endash;
   }
 
@@ -2591,17 +2584,6 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
           {
             *gsl_matrix_ptr(sfmatrix, i, j) += nnlevel * gsl_vector_get(vec_xs_excitation_deltae, j);
           }
-
-          // do the last bit separately because we're not using the full delta_e interval
-          #if (SF_USE_LOG_E_INCREMENT)
-          const double delta_en = gsl_vector_get(delta_envec, stopindex);
-          #else
-          const double delta_en = DELTA_E;
-          #endif
-
-          const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get(envec, stopindex));
-
-          *gsl_matrix_ptr(sfmatrix, i, stopindex) += nnlevel * gsl_vector_get(vec_xs_excitation_deltae, stopindex) * delta_en_actual / delta_en;
         }
       }
     }
@@ -2630,13 +2612,13 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
 
       const int xsstartindex = get_xs_ionization_vector(vec_xs_ionization, collionindex);
 
-      double atanexp[SFPTS];
+      double int_eps_upper[SFPTS];
       double prefactors[SFPTS];
       for (int j = xsstartindex; j < SFPTS; j++)
       {
         const double endash = gsl_vector_get(envec, j);
         const double epsilon_upper = std::min((endash + ionpot_ev) / 2, endash);
-        atanexp[j] = atan((epsilon_upper - ionpot_ev) / J);
+        int_eps_upper[j] = atan((epsilon_upper - ionpot_ev) / J);
         prefactors[j] = gsl_vector_get(vec_xs_ionization, j) * nnion / atan((endash - ionpot_ev) / 2 / J);
       }
 
@@ -2661,25 +2643,35 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
           // in Kozma & Fransson 1992 equation 4
 
           const double epsilon_lower = std::max(endash - en, ionpot_ev); // and epsilon_upper = (endash + ionpot_ev) / 2;
-          *gsl_matrix_ptr(sfmatrix, i, j) += prefactors[j] * (atanexp[j] - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
+          const double int_eps_lower = atan((epsilon_lower - ionpot_ev) / J);
+          if (int_eps_lower <= int_eps_upper[j])
+          {
+            *gsl_matrix_ptr(sfmatrix, i, j) += prefactors[j] * (int_eps_upper[j] - int_eps_lower) * deltaendash;
+          }
         }
 
         // below is atan((epsilon_lower - ionpot_ev) / J) where epsilon_lower = en + ionpot_ev;
-        const double atanexp2 = atan(en / J);
+        const double int_eps_lower2 = atan(en / J);
 
         // endash ranges from 2 * en + ionpot_ev to SF_EMAX
-        const int secondintegralstartindex = get_energyindex_ev_lteq(2 * en + ionpot_ev);
-        for (int j = secondintegralstartindex; j < SFPTS; j++)
+        if (2 * en + ionpot_ev <= SF_EMAX)
         {
-          #if (SF_USE_LOG_E_INCREMENT)
-          const double deltaendash = gsl_vector_get(delta_envec, j);
-          #else
-          const double deltaendash = DELTA_E;
-          #endif
+          const int secondintegralstartindex = get_energyindex_ev_lteq(2 * en + ionpot_ev);
+          for (int j = secondintegralstartindex; j < SFPTS; j++)
+          {
+            #if (SF_USE_LOG_E_INCREMENT)
+            const double deltaendash = gsl_vector_get(delta_envec, j);
+            #else
+            const double deltaendash = DELTA_E;
+            #endif
 
-          // epsilon_lower = en + ionpot_ev;
-          // epsilon_upper = (endash + ionpot_ev) / 2;
-          *gsl_matrix_ptr(sfmatrix, i, j) -= prefactors[j] * (atanexp[j] - atanexp2) * deltaendash;
+            // epsilon_lower = en + ionpot_ev;
+            // epsilon_upper = (endash + ionpot_ev) / 2;
+            if (int_eps_lower2 <= int_eps_upper[j])
+            {
+              *gsl_matrix_ptr(sfmatrix, i, j) -= prefactors[j] * (int_eps_upper[j] - int_eps_lower2) * deltaendash;
+            }
+          }
         }
       }
 
@@ -2854,25 +2846,25 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   bool enable_sfexcitation = true;
   bool enable_sfionization = true;
-  if (timestep <= globals::n_lte_timesteps)
-  {
-    // for the first run of the solver at the first NLTE timestep (which usually requires many iterations),
-    // do a fast initial solution but mark it has an invalid nne per ion so it gets replaced at the next timestep
-    nt_solution[modelgridindex].nneperion_when_solved = -1.;
-    enable_sfexcitation = false;
-    enable_sfionization = false;
-
-    printout("Doing a fast initial solution without ionization or excitation in the SF equation for the first NLTE timestep.\n");
-  }
-  else if (timestep <= globals::n_lte_timesteps + 2)
-  {
-    // run the solver in a faster mode for the first couple of NLTE timesteps
-    // nt_solution[modelgridindex].nneperion_when_solved = -1.;
-    enable_sfexcitation = false;
-    // enable_sfionization = false;
-
-    printout("Doing a faster solution without excitation in the SF equation for the first couple of NLTE timesteps.\n");
-  }
+  // if (timestep <= globals::n_lte_timesteps)
+  // {
+  //   // for the first run of the solver at the first NLTE timestep (which usually requires many iterations),
+  //   // do a fast initial solution but mark it has an invalid nne per ion so it gets replaced at the next timestep
+  //   nt_solution[modelgridindex].nneperion_when_solved = -1.;
+  //   enable_sfexcitation = false;
+  //   enable_sfionization = false;
+  //
+  //   printout("Doing a fast initial solution without ionization or excitation in the SF equation for the first NLTE timestep.\n");
+  // }
+  // else if (timestep <= globals::n_lte_timesteps + 2)
+  // {
+  //   // run the solver in a faster mode for the first couple of NLTE timesteps
+  //   // nt_solution[modelgridindex].nneperion_when_solved = -1.;
+  //   enable_sfexcitation = false;
+  //   // enable_sfionization = false;
+  //
+  //   printout("Doing a faster solution without excitation in the SF equation for the first couple of NLTE timesteps.\n");
+  // }
 
   gsl_matrix *const sfmatrix = gsl_matrix_calloc(SFPTS, SFPTS);
   gsl_vector *const rhsvec = gsl_vector_calloc(SFPTS); // constant term (not dependent on y func) in each equation
