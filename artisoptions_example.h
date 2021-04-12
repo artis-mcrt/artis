@@ -149,7 +149,7 @@ static const bool NT_SOLVE_SPENCERFANO = true;
 #define SF_EMAX 16000.
 
 // eV
-#define SF_EMIN 0.1
+#define SF_EMIN 1.
 
 // use a grid of energy points with constant spacing in log energy
 #define SF_USE_LOG_E_INCREMENT false
