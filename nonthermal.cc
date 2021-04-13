@@ -1222,7 +1222,7 @@ static float calculate_frac_heating(const int modelgridindex)
   {
     const double endash = gsl_vector_get(envec, i);
     #if (SF_USE_LOG_E_INCREMENT)
-    const double deltaendash = gsl_vector_get(delta_envec, i);
+    const double deltaendash = gsl_vector_get(delta_envec, 0);
     #else
     const double deltaendash = DELTA_E;
     #endif
