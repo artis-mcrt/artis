@@ -2599,7 +2599,8 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
 
           const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get(envec, stopindex));
 
-          *gsl_matrix_ptr(sfmatrix, i, stopindex) += nnlevel * gsl_vector_get(vec_xs_excitation_deltae, stopindex) * delta_en_actual / delta_en;        }
+          *gsl_matrix_ptr(sfmatrix, i, stopindex) += nnlevel * gsl_vector_get(vec_xs_excitation_deltae, stopindex) * delta_en_actual / delta_en;
+        }
       }
     }
   }
