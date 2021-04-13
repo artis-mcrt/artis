@@ -2589,7 +2589,17 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
           {
             *gsl_matrix_ptr(sfmatrix, i, j) += nnlevel * gsl_vector_get(vec_xs_excitation_deltae, j);
           }
-        }
+
+          // do the last bit separately because we're not using the full delta_e interval
+          #if (SF_USE_LOG_E_INCREMENT)
+          const double delta_en = gsl_vector_get(delta_envec, stopindex);
+          #else
+          const double delta_en = DELTA_E;
+          #endif
+
+          const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get(envec, stopindex));
+
+          *gsl_matrix_ptr(sfmatrix, i, stopindex) += nnlevel * gsl_vector_get(vec_xs_excitation_deltae, stopindex) * delta_en_actual / delta_en;        }
       }
     }
   }
