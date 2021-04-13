@@ -1135,7 +1135,7 @@ static double N_e(const int modelgridindex, const double energy)
       // excitation terms
 
       const int nlevels_all = get_nlevels(element, ion);
-      const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
+      const int nlevels = std::min(NTEXCITATION_MAXNLEVELS_LOWER, nlevels_all);
 
       for (int lower = 0; lower < nlevels; lower++)
       {
