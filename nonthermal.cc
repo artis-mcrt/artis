@@ -1222,9 +1222,9 @@ static float calculate_frac_heating(const int modelgridindex)
   {
     const double endash = gsl_vector_get(envec, i);
     #if (SF_USE_LOG_E_INCREMENT)
-    double deltaendash = gsl_vector_get(delta_envec, i);
+    const double deltaendash = gsl_vector_get(delta_envec, i);
     #else
-    double deltaendash = DELTA_E;
+    const double deltaendash = DELTA_E;
     #endif
 
     // first term
@@ -1234,14 +1234,22 @@ static float calculate_frac_heating(const int modelgridindex)
   // second term
   frac_heating_Einit += SF_EMIN * get_y(modelgridindex, SF_EMIN) * (electron_loss_rate(SF_EMIN * EV, nne) / EV);
 
+  double N_e_contrib = 0.;
   // third term (integral from zero to SF_EMIN)
-  const int nsteps = 100;
+  #if (SF_USE_LOG_E_INCREMENT)
+  const double firstdeltaendash = gsl_vector_get(delta_envec, i);
+  #else
+  const double firstdeltaendash = DELTA_E;
+  #endif
+  const int nsteps = ceil(SF_EMIN / firstdeltaendash) * 10;
   const double delta_endash = SF_EMIN / nsteps;
   for (int j = 0; j < nsteps; j++)
   {
     const double endash = SF_EMIN * j / nsteps;
-    frac_heating_Einit += N_e(modelgridindex, endash * EV) * endash * delta_endash;
+    N_e_contrib += N_e(modelgridindex, endash * EV) * endash * delta_endash;
   }
+  frac_heating_Einit += N_e_contrib;
+  printout(" heating N_e contrib (en < EMIN) %g nsteps %d\n", N_e_contrib / E_init_ev, nsteps);
 
   const float frac_heating = frac_heating_Einit / E_init_ev;
 
@@ -2124,8 +2132,6 @@ void do_ntlepton(PKT *pkt_ptr)
     // component of the deposition fractions
     // until we end and select transition_ij when zrand < dep_frac_transition_ij
 
-    // const double frac_heating = get_nt_frac_heating(modelgridindex);
-
     // const double frac_ionization = get_nt_frac_ionization(modelgridindex);
     const double frac_ionization = get_ntion_energyrate(modelgridindex) / get_deposition_rate_density(modelgridindex);
     // printout("frac_ionization compare %g and %g\n", frac_ionization, get_nt_frac_ionization(modelgridindex));
@@ -2239,14 +2245,11 @@ static bool realloc_frac_excitations_list(const int modelgridindex, const int ne
 }
 
 
-static void analyse_sf_solution(const int modelgridindex, const int timestep)
+static void analyse_sf_solution(const int modelgridindex, const int timestep, const bool enable_sfexcitation)
 {
   const float nne = get_nne(modelgridindex);
   const double nntot = get_tot_nion(modelgridindex);
   const double nnetot = get_nnetot(modelgridindex);
-
-  // store the solution properties now while the NT spectrum is in memory (in case we free before packet prop)
-  nt_solution[modelgridindex].frac_heating = calculate_frac_heating(modelgridindex);
 
   double frac_excitation_total = 0.;
   double frac_ionization_total = 0.;
@@ -2314,7 +2317,11 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
       // excitation from all levels is very SLOW
       const int nlevels_all = get_nlevels(element, ion);
       // So limit the lower levels to improve performance
-      const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
+      int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
+      if (!enable_sfexcitation)
+      {
+        nlevels = -1; // disable all excitations
+      }
 #if NT_EXCITATION_ON
       const bool above_minionfraction = (nnion >= minionfraction * get_tot_nion(modelgridindex));
 #endif
@@ -2490,8 +2497,6 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
 
   } // NT_EXCITATION_ON
 
-  const float frac_heating = get_nt_frac_heating(modelgridindex);
-
   // calculate number density of non-thermal electrons
   const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
   const double yscalefactor = deposition_rate_density_ev / E_init_ev;
@@ -2518,10 +2523,14 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
   printout("  nnetot:      %9.3e e-/cm^3\n", nnetot);
   printout("  nne_nt     < %9.3e e-/cm^3\n", nne_nt_max);
   printout("  nne_nt/nne < %9.3e\n", nne_nt_max / nne);
-  printout("  frac_heating_tot:    %g\n", frac_heating);
+
+  // store the solution properties now while the NT spectrum is in memory (in case we free before packet prop)
+  nt_solution[modelgridindex].frac_heating = calculate_frac_heating(modelgridindex);
+
+  printout("  frac_heating_tot:    %g\n", nt_solution[modelgridindex].frac_heating);
   printout("  frac_excitation_tot: %g\n", frac_excitation_total);
   printout("  frac_ionization_tot: %g\n", frac_ionization_total);
-  const double frac_sum = frac_heating + frac_excitation_total + frac_ionization_total;
+  const double frac_sum = nt_solution[modelgridindex].frac_heating + frac_excitation_total + frac_ionization_total;
   printout("  frac_sum:            %g (should be close to 1.0)\n", frac_sum);
 
   nt_solution[modelgridindex].frac_heating = 1. - frac_excitation_total - frac_ionization_total;
@@ -2997,7 +3006,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   if (timestep % 10 == 0)
     nt_write_to_file(modelgridindex, timestep, iteration);
 
-  analyse_sf_solution(modelgridindex, timestep);
+  analyse_sf_solution(modelgridindex, timestep, enable_sfexcitation);
 
   if (!STORE_NT_SPECTRUM)
   {
