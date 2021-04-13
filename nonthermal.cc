@@ -2369,9 +2369,14 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
         } // for t
       } // for lower
 
-      frac_excitation_total += frac_excitation_ion;
 
       printout("    frac_excitation: %g\n", frac_excitation_ion);
+      if (frac_excitation_ion > 1. || !std::isfinite(frac_excitation_ion))
+      {
+        printout("      WARNING: invalid frac_excitation. Replacing with zero\n");
+        frac_excitation_ion = 0.;
+      }
+      frac_excitation_total += frac_excitation_ion;
       printout("    workfn:       %9.2f eV\n", (1. / get_oneoverw(element, ion, modelgridindex)) / EV);
       printout("    eff_ionpot:   %9.2f eV  (always use valence potential is %s)\n",
                get_eff_ionpot(modelgridindex, element, ion) / EV, (NT_USE_VALENCE_IONPOTENTIAL ? "true" : "false"));
@@ -2794,17 +2799,28 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 // solve the Spencer-Fano equation to get the non-thermal electron flux energy distribution
 // based on Equation (2) of Li et al. (2012)
 {
+  bool skip_solution = false;
   if (get_numassociatedcells(modelgridindex) < 1)
   {
     printout("Associated_cells < 1 in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", modelgridindex, timestep);
 
     return;
   }
+  else if (timestep <= globals::n_lte_timesteps + 1)
+  {
+    printout("Skipping Spencer-Fano solution for first couple of NLTE timesteps\n");
+    skip_solution = true;
+  }
   else if (get_deposition_rate_density(modelgridindex) / EV < MINDEPRATE)
   {
     printout("Non-thermal deposition rate of %g eV/cm/s/cm^3 below  MINDEPRATE %g in cell %d at timestep %d. Skipping Spencer-Fano solution.\n",
     get_deposition_rate_density(modelgridindex) / EV, MINDEPRATE, modelgridindex, timestep);
 
+    skip_solution = true;
+  }
+
+  if (skip_solution)
+  {
     nt_solution[modelgridindex].frac_heating = 0.97;
     nt_solution[modelgridindex].frac_ionization = 0.03;
     nt_solution[modelgridindex].frac_excitation = 0.;
@@ -2856,15 +2872,15 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   //
   //   printout("Doing a fast initial solution without ionization or excitation in the SF equation for the first NLTE timestep.\n");
   // }
-  if (timestep <= globals::n_lte_timesteps + 2)
-  {
-    // run the solver in a faster mode for the first couple of NLTE timesteps
-    // nt_solution[modelgridindex].nneperion_when_solved = -1.;
-    enable_sfexcitation = false;
-    // enable_sfionization = false;
-
-    printout("Doing a faster solution without excitation in the SF equation for the first couple of NLTE timesteps.\n");
-  }
+  // if (timestep <= globals::n_lte_timesteps + 2)
+  // {
+  //   // run the solver in a faster mode for the first couple of NLTE timesteps
+  //   // nt_solution[modelgridindex].nneperion_when_solved = -1.;
+  //   enable_sfexcitation = false;
+  //   // enable_sfionization = false;
+  //
+  //   printout("Doing a faster solution without excitation in the SF equation for the first couple of NLTE timesteps.\n");
+  // }
 
   gsl_matrix *const sfmatrix = gsl_matrix_calloc(SFPTS, SFPTS);
   gsl_vector *const rhsvec = gsl_vector_calloc(SFPTS); // constant term (not dependent on y func) in each equation
