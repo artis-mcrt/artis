@@ -2817,9 +2817,9 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
     return;
   }
-  else if (timestep <= globals::n_lte_timesteps + 1)
+  else if (timestep < globals::n_lte_timesteps + 1)
   {
-    printout("Skipping Spencer-Fano solution for first couple of NLTE timesteps\n");
+    printout("Skipping Spencer-Fano solution for first NLTE timestep\n");
     skip_solution = true;
   }
   else if (get_deposition_rate_density(modelgridindex) / EV < MINDEPRATE)
