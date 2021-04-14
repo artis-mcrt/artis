@@ -1152,7 +1152,7 @@ static double N_e(const int modelgridindex, const double energy)
           }
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           const double epsilon_trans_ev = epsilon_trans / EV;
-          N_e_ion += nnlevel * get_y(modelgridindex, energy_ev + epsilon_trans_ev) * xs_excitation(lineindex, epsilon_trans, energy + epsilon_trans);
+          N_e_ion += (nnlevel / nnion) * get_y(modelgridindex, energy_ev + epsilon_trans_ev) * xs_excitation(lineindex, epsilon_trans, energy + epsilon_trans);
         }
       }
 
