@@ -14,7 +14,6 @@ jobs:
   build_and_test:
 
     runs-on: ubuntu-latest
-    continue-on-error: true
 
     steps:
     - uses: actions/checkout@v2.3.4
@@ -35,8 +34,8 @@ jobs:
         clang++ --version
         export CXX=clang++
 
-    - name: "compile with gcc"
-      run: make CXX=g++ sn3d exspec
+    # - name: "compile with gcc"
+      # run: make CXX=g++ sn3d exspec
 
     - name: "compile with clang"
       run: make CXX=clang++ sn3d exspec
@@ -97,6 +96,7 @@ jobs:
         cat estimators*.out
 
     - name: "cat output log"
+      if: always()
       working-directory: tests/nebularonezone/
       run: |
         cat output_*.txt
