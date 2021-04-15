@@ -67,7 +67,7 @@ static double get_shellcrossdist(
     // printout("solution1 d1 %g radiusfinal1 %g shellradiusfinal1 %g\n", d1, vec_len(posfinal1), shellradiusfinal1);
     // printout("solution2 d2 %g radiusfinal2 %g shellradiusfinal2 %g\n", d2, vec_len(posfinal2), shellradiusfinal2);
     assert_always(fabs(vec_len(posfinal1) / shellradiusfinal1 - 1.) < 1e-3);
-    assert(fabs(vec_len(posfinal2) / shellradiusfinal2 - 1.) < 1e-3);
+    assert_always(fabs(vec_len(posfinal2) / shellradiusfinal2 - 1.) < 1e-3);
 
     // invalidate any solutions that require entering the boundary from the wrong radial direction
     if (isinnerboundary)

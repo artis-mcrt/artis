@@ -54,7 +54,9 @@ struct decaypath {
 
 std::vector<struct decaypath> decaychains;
 
-double *cumulative_decay_energy_per_mass_allcells = NULL;
+// cumulative_chain_energy_per_mass point to an array of length npts_model * num_decaypaths
+// the index [mgi * num_decaypaths + i] will hold the decay energy released by chains [0, i] in cell mgi
+double *cumulative_chain_energy_per_mass = NULL;
 
 
 __host__ __device__
@@ -277,7 +279,6 @@ int get_nucstring_z(const char *strnuc)
     }
   }
   printout("Could not get atomic number of '%s' '%s'\n", strnuc, elcode.c_str());
-  assert(false); // could not match to an element
   return -1;
 }
 
@@ -297,7 +298,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
 {
   // all decays are currently assumed to be electron-capture or beta+ (Z -> Z - 1)
 
-  assert(custom_zlist.size() == custom_alist.size());
+  assert_always(custom_zlist.size() == custom_alist.size());
 
   num_nuclides = 9 + custom_zlist.size();
   nuclides = (struct nuclide *) malloc(num_nuclides * sizeof(struct nuclide));
@@ -844,20 +845,16 @@ double get_modelcell_decay_energy_density(const int mgi)
 // get the density at time tmin of decay energy that will
 // be released during the simulation time range [erg/cm3]
 {
-  double modelcell_decay_energy_density = 0.;
-  for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++)
-  {
-    modelcell_decay_energy_density += (
-      get_rhoinit(mgi) * get_simtime_endecay_per_ejectamass(mgi, decaypathindex));
-  }
-  return modelcell_decay_energy_density;
+  assert_always(cumulative_chain_energy_per_mass != NULL);
+  // use the last chain from the cell's cumulative chain energies
+  return get_rhoinit(mgi) *  cumulative_chain_energy_per_mass[mgi * get_num_decaypaths() + get_num_decaypaths() - 1];
 }
 
 
-void setup_cumulative_decay_energy_per_mass_allcells(void)
+void setup_cumulative_chain_energy_per_mass(void)
 {
-  assert(cumulative_decay_energy_per_mass_allcells == NULL); // ensure not allocated yet
-  cumulative_decay_energy_per_mass_allcells = (double *) malloc(get_npts_model() * get_num_decaypaths() * sizeof(double));
+  assert_always(cumulative_chain_energy_per_mass == NULL); // ensure not allocated yet
+  cumulative_chain_energy_per_mass = (double *) malloc(get_npts_model() * get_num_decaypaths() * sizeof(double));
   for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
     double lower_sum = 0.;
@@ -868,17 +865,17 @@ void setup_cumulative_decay_energy_per_mass_allcells(void)
       double simtime_endecay_thispath = 0.;
 
       simtime_endecay_thispath = get_simtime_endecay_per_ejectamass(mgi, decaypathindex);
-      cumulative_decay_energy_per_mass_allcells[mgi * get_num_decaypaths() + decaypathindex] = lower_sum + simtime_endecay_thispath;
+      cumulative_chain_energy_per_mass[mgi * get_num_decaypaths() + decaypathindex] = lower_sum + simtime_endecay_thispath;
       lower_sum += simtime_endecay_thispath;
     }
   }
 }
 
 
-void free_cumulative_decay_energy_per_mass_allcells(void)
+void free_cumulative_chain_energy_per_mass(void)
 {
-  free(cumulative_decay_energy_per_mass_allcells);
-  cumulative_decay_energy_per_mass_allcells = NULL;
+  free(cumulative_chain_energy_per_mass);
+  cumulative_chain_energy_per_mass = NULL;
 }
 
 
@@ -1000,13 +997,14 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 
 void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
 {
-  const double *cumulative_decay_energy_per_mass = &cumulative_decay_energy_per_mass_allcells[mgi * get_num_decaypaths()];
-  const double zrand_chain = gsl_rng_uniform(rng) * cumulative_decay_energy_per_mass[get_num_decaypaths() - 1];
+  assert_testmodeonly(cumulative_chain_energy_per_mass != NULL);
+  const double *cumulative_decay_energy_per_mass_thiscell = &cumulative_chain_energy_per_mass[mgi * get_num_decaypaths()];
+  const double zrand_chain = gsl_rng_uniform(rng) * cumulative_decay_energy_per_mass_thiscell[get_num_decaypaths() - 1];
 
   int decaypathindex = -1;
   for (int i = 0; i < get_num_decaypaths(); i++)
   {
-    if (cumulative_decay_energy_per_mass[i] > zrand_chain)
+    if (cumulative_decay_energy_per_mass_thiscell[i] > zrand_chain)
     {
       decaypathindex = i;
       break;
