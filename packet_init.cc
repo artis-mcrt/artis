@@ -78,8 +78,10 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   {
     cont[m] = norm;
     const int mgi = get_cell_modelgridindex(m);
-
-    norm += vol_init_gridcell(m) * get_rhoinit(mgi) * decay::get_modelcell_endecay_per_mass(mgi);
+    if (mgi < get_npts_model())  // some grid cells are empty
+    {
+      norm += vol_init_gridcell(m) * get_rhoinit(mgi) * decay::get_modelcell_endecay_per_mass(mgi);
+    }
   }
   assert_always(norm > 0);
   cont[globals::ngrid] = norm;
