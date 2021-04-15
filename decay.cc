@@ -832,7 +832,7 @@ static void calculate_simtime_endecay_per_ejectamass(const int mgi, const int de
 
 
 __host__ __device__
-double get_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex)
+static double get_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex)
 // get the decay energy released during the simulation time
 {
   assert(chain_energy_per_mass != NULL);
