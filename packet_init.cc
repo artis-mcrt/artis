@@ -59,7 +59,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   printout("UNIFORM_PELLET_ENERGIES is %s\n", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
 
   const int pktnumberoffset = middle_iteration * globals::npkts;
-  double cont[MGRID + 1];
+  double cont[globals::ngrid + 1];
 
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
@@ -81,6 +81,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
 
     norm += vol_init_gridcell(m) * get_rhoinit(mgi) * decay::get_modelcell_endecay_per_mass(mgi);
   }
+  assert_always(norm > 0);
   cont[globals::ngrid] = norm;
 
   const double etot = norm;

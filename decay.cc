@@ -158,6 +158,7 @@ static int decay_daughter_z(const int z_parent, const int a_parent)
       return -1; // no daughter
     }
   }
+  return -1; // no daughter
 }
 
 
@@ -835,7 +836,7 @@ __host__ __device__
 static double get_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex)
 // get the decay energy released during the simulation time
 {
-  assert(chain_energy_per_mass != NULL);
+  assert_testmodeonly(chain_energy_per_mass != NULL);
   return chain_energy_per_mass[mgi * get_num_decaypaths() + decaypathindex];
 }
 
@@ -1043,6 +1044,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
     endecaysum += get_simtime_endecay_per_ejectamass(mgi, decaypathindex);
     cumulative_endecay[decaypathindex] = endecaysum;
   }
+  assert_testmodeonly(cumulative_endecay[get_num_decaypaths() - 1] > 0.);
   const double zrand_chain = gsl_rng_uniform(rng) * cumulative_endecay[get_num_decaypaths() - 1];
 
   int decaypathindex = -1;
