@@ -883,16 +883,16 @@ static double get_chain_decay_power_per_ejectamass(
 
 
 __host__ __device__
-double get_modelcell_endecay_density(const int mgi)
+double get_modelcell_endecay_per_mass(const int mgi)
 // get the density at time tmin of decay energy that will
 // be released during the simulation time range [erg/cm3]
 {
-  double modelcell_endecay_density = 0.;
+  double endecay_per_mass = 0.;
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++)
   {
-    modelcell_endecay_density += get_rhoinit(mgi) * get_simtime_endecay_per_ejectamass(mgi, decaypathindex);
+    endecay_per_mass += get_simtime_endecay_per_ejectamass(mgi, decaypathindex);
   }
-  return modelcell_endecay_density;
+  return endecay_per_mass;
 }
 
 

@@ -26,7 +26,7 @@ namespace decay
   __host__ __device__ double nucmass(int z, int a);
   __host__ __device__ void update_abundances(const int modelgridindex, const int timestep, const double t_current);
   __host__ __device__ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridindex, const double tstart);
-  __host__ __device__ double get_modelcell_endecay_density(const int mgi);
+  __host__ __device__ double get_modelcell_endecay_per_mass(const int mgi);
   __host__ __device__ void setup_chain_energy_per_mass(void);
   __host__ __device__ void free_chain_energy_per_mass(void);
   __host__ __device__ double get_positroninjection_rate_density(const int modelgridindex, const double t);
