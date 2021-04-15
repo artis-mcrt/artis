@@ -820,13 +820,12 @@ static double get_endecay_per_ejectamass_between_times(
 static void calculate_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex)
 // get the decay energy released during the simulation time
 {
-  double simtime_endecay = 0.;
   #ifdef NO_INITIAL_PACKETS
     // get decay energy released from t=tmin to tmax
-    simtime_endecay = get_endecay_per_ejectamass_between_times(mgi, decaypathindex, globals::tmin, globals::tmax);
+    const double simtime_endecay = get_endecay_per_ejectamass_between_times(mgi, decaypathindex, globals::tmin, globals::tmax);
   #else
     // get decay energy released from t=0 to tmax
-    simtime_endecay = get_endecay_per_ejectamass_between_times(mgi, decaypathindex, get_t_model(), globals::tmax);
+    const double simtime_endecay = get_endecay_per_ejectamass_between_times(mgi, decaypathindex, get_t_model(), globals::tmax);
   #endif
   chain_energy_per_mass[mgi * get_num_decaypaths() + decaypathindex] = simtime_endecay;
 }
@@ -837,7 +836,15 @@ static double get_simtime_endecay_per_ejectamass(const int mgi, const int decayp
 // get the decay energy released during the simulation time
 {
   assert_testmodeonly(chain_energy_per_mass != NULL);
-  return chain_energy_per_mass[mgi * get_num_decaypaths() + decaypathindex];
+  // return chain_energy_per_mass[mgi * get_num_decaypaths() + decaypathindex];
+  #ifdef NO_INITIAL_PACKETS
+    // get decay energy released from t=tmin to tmax
+    const double simtime_endecay = get_endecay_per_ejectamass_between_times(mgi, decaypathindex, globals::tmin, globals::tmax);
+  #else
+    // get decay energy released from t=0 to tmax
+    const double simtime_endecay = get_endecay_per_ejectamass_between_times(mgi, decaypathindex, get_t_model(), globals::tmax);
+  #endif
+  return simtime_endecay;
 }
 
 
