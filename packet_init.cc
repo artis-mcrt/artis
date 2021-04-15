@@ -70,7 +70,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   const double e0_tinf = etot_tinf / globals::npkts / globals::n_out_it / globals::n_middle_it;
   printout("packet e0 (t_0 to t_inf) %g erg\n", e0_tinf);
 
-  decay::setup_cumulative_chain_energy_per_mass();
+  decay::setup_chain_energy_per_mass();
 
   // Need to get a normalisation factor.
   double norm = 0.0;
@@ -79,7 +79,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
     cont[m] = norm;
     const int mgi = get_cell_modelgridindex(m);
 
-    norm += vol_init_gridcell(m) * decay::get_modelcell_decay_energy_density(mgi);
+    norm += vol_init_gridcell(m) * decay::get_modelcell_endecay_density(mgi);
   }
   cont[globals::ngrid] = norm;
 
@@ -152,7 +152,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
     place_pellet(e0, cellindex, n + pktnumberoffset, &pkt[n]);
   }
 
-  decay::free_cumulative_chain_energy_per_mass(); // will no longer be needed after packets are set up
+  decay::free_chain_energy_per_mass(); // will no longer be needed after packets are set up
 
   double e_cmf_total = 0.;
   for (int n = 0; n < globals::npkts; n++)

@@ -54,9 +54,10 @@ struct decaypath {
 
 std::vector<struct decaypath> decaychains;
 
-// cumulative_chain_energy_per_mass point to an array of length npts_model * num_decaypaths
-// the index [mgi * num_decaypaths + i] will hold the decay energy released by chains [0, i] in cell mgi
-static double *cumulative_chain_energy_per_mass = NULL;
+// chain_energy_per_mass point to an array of length npts_model * num_decaypaths
+// the index [mgi * num_decaypaths + i] will hold the decay energy per mass [erg/g] released by chain i in cell mgi
+// during the simulation time range
+static double *chain_energy_per_mass = NULL;
 
 
 __host__ __device__
@@ -815,17 +816,27 @@ static double get_endecay_per_ejectamass_between_times(
 }
 
 
+static void calculate_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex)
+// get the decay energy released during the simulation time
+{
+  double simtime_endecay = 0.;
+  #ifdef NO_INITIAL_PACKETS
+    // get decay energy released from t=tmin to tmax
+    simtime_endecay = get_endecay_per_ejectamass_between_times(mgi, decaypathindex, globals::tmin, globals::tmax);
+  #else
+    // get decay energy released from t=0 to tmax
+    simtime_endecay = get_endecay_per_ejectamass_between_times(mgi, decaypathindex, get_t_model(), globals::tmax);
+  #endif
+  chain_energy_per_mass[mgi * get_num_decaypaths() + decaypathindex] = simtime_endecay;
+}
+
+
 __host__ __device__
 double get_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex)
 // get the decay energy released during the simulation time
 {
-#ifdef NO_INITIAL_PACKETS
-  // get decay energy released from t=tmin to tmax
-  return get_endecay_per_ejectamass_between_times(mgi, decaypathindex, globals::tmin, globals::tmax);
-#else
-  // get decay energy released from t=0 to tmax
-  return get_endecay_per_ejectamass_between_times(mgi, decaypathindex, get_t_model(), globals::tmax);
-#endif
+  assert(chain_energy_per_mass != NULL);
+  return chain_energy_per_mass[mgi * get_num_decaypaths() + decaypathindex];
 }
 
 
@@ -872,48 +883,37 @@ static double get_chain_decay_power_per_ejectamass(
 
 
 __host__ __device__
-double get_modelcell_decay_energy_density(const int mgi)
+double get_modelcell_endecay_density(const int mgi)
 // get the density at time tmin of decay energy that will
 // be released during the simulation time range [erg/cm3]
 {
-  double modelcell_decay_energy_density = 0.;
+  double modelcell_endecay_density = 0.;
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++)
   {
-    modelcell_decay_energy_density += (
-      get_rhoinit(mgi) * get_simtime_endecay_per_ejectamass(mgi, decaypathindex));
+    modelcell_endecay_density += get_rhoinit(mgi) * get_simtime_endecay_per_ejectamass(mgi, decaypathindex);
   }
-  return modelcell_decay_energy_density;
-  // assert_always(cumulative_chain_energy_per_mass != NULL);
-  // use the last chain from the cell's cumulative chain energies
-  // return get_rhoinit(mgi) *  cumulative_chain_energy_per_mass[mgi * get_num_decaypaths() + get_num_decaypaths() - 1];
+  return modelcell_endecay_density;
 }
 
 
-void setup_cumulative_chain_energy_per_mass(void)
+void setup_chain_energy_per_mass(void)
 {
-  assert_always(cumulative_chain_energy_per_mass == NULL); // ensure not allocated yet
-  cumulative_chain_energy_per_mass = (double *) malloc((get_npts_model() + 1) * get_num_decaypaths() * sizeof(double));
+  assert_always(chain_energy_per_mass == NULL); // ensure not allocated yet
+  chain_energy_per_mass = (double *) malloc((get_npts_model() + 1) * get_num_decaypaths() * sizeof(double));
   for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
-    double lower_sum = 0.;
     for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++)
     {
-      // visit each radioactive nuclide and any chains of ancestors
-      // the ancestor chains need to be treated separately so that the decay time can be randomly sampled
-      double simtime_endecay_thispath = 0.;
-
-      simtime_endecay_thispath = get_simtime_endecay_per_ejectamass(mgi, decaypathindex);
-      cumulative_chain_energy_per_mass[mgi * get_num_decaypaths() + decaypathindex] = lower_sum + simtime_endecay_thispath;
-      lower_sum += simtime_endecay_thispath;
+      calculate_simtime_endecay_per_ejectamass(mgi, decaypathindex);
     }
   }
 }
 
 
-void free_cumulative_chain_energy_per_mass(void)
+void free_chain_energy_per_mass(void)
 {
-  free(cumulative_chain_energy_per_mass);
-  cumulative_chain_energy_per_mass = NULL;
+  free(chain_energy_per_mass);
+  chain_energy_per_mass = NULL;
 }
 
 
@@ -1035,16 +1035,21 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 
 void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
 {
-  assert_testmodeonly(cumulative_chain_energy_per_mass != NULL);
-  double *cumulative_decay_energy_per_mass_thiscell = &cumulative_chain_energy_per_mass[mgi * get_num_decaypaths()];
-  const double zrand_chain = gsl_rng_uniform(rng) * cumulative_decay_energy_per_mass_thiscell[get_num_decaypaths() - 1];
+  assert_testmodeonly(chain_energy_per_mass != NULL);
+  double cumulative_endecay[get_num_decaypaths()];
+  double endecaysum = 0.;
+  for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++)
+  {
+    endecaysum += get_simtime_endecay_per_ejectamass(mgi, decaypathindex);
+    cumulative_endecay[mgi * get_num_decaypaths() + decaypathindex] = endecaysum;
+  }
+  const double zrand_chain = gsl_rng_uniform(rng) * cumulative_endecay[get_num_decaypaths() - 1];
 
   int decaypathindex = -1;
   for (int i = 0; i < get_num_decaypaths(); i++)
   {
-    if (cumulative_decay_energy_per_mass_thiscell[i] > zrand_chain)
+    if (cumulative_endecay[i] > zrand_chain)
     {
-      printout("cell %d path %d en %g en2 %g\n", mgi, i, cumulative_decay_energy_per_mass_thiscell[i], cumulative_chain_energy_per_mass[mgi * get_num_decaypaths() + i]);
       decaypathindex = i;
       break;
     }
