@@ -1041,7 +1041,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++)
   {
     endecaysum += get_simtime_endecay_per_ejectamass(mgi, decaypathindex);
-    cumulative_endecay[mgi * get_num_decaypaths() + decaypathindex] = endecaysum;
+    cumulative_endecay[decaypathindex] = endecaysum;
   }
   const double zrand_chain = gsl_rng_uniform(rng) * cumulative_endecay[get_num_decaypaths() - 1];
 
