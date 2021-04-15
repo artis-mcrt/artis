@@ -836,7 +836,10 @@ static double get_simtime_endecay_per_ejectamass(const int mgi, const int decayp
 // get the decay energy released during the simulation time
 {
   assert_testmodeonly(chain_energy_per_mass != NULL);
-  return chain_energy_per_mass[mgi * get_num_decaypaths() + decaypathindex];
+  const double chainendecay = chain_energy_per_mass[mgi * get_num_decaypaths() + decaypathindex];
+  assert_testmodeonly(chainendecay >= 0.);
+  assert_testmodeonly(std::isfinite(chainendecay));
+  return chainendecay;
 }
 
 
