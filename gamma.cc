@@ -46,8 +46,8 @@ static void read_gamma_spectrum(const int z, const int a, const char filename[50
 
   gamma_spectra[nucindex].nlines = nlines;
 
-  gamma_spectra[nucindex].energy = (double *) calloc(nlines, sizeof(double));
-  gamma_spectra[nucindex].probability = (double *) calloc(nlines, sizeof(double));
+  gamma_spectra[nucindex].energy = (double *) malloc(nlines * sizeof(double));
+  gamma_spectra[nucindex].probability = (double *) malloc(nlines * sizeof(double));
 
   double E_gamma_avg = 0.;
   for (int n = 0; n < nlines; n++)
@@ -68,6 +68,19 @@ static void read_gamma_spectrum(const int z, const int a, const char filename[50
 }
 
 
+static void set_trivial_gamma_spectrum(const int z, const int a)
+{
+  // printout("Setting trivial gamma spectrum for z %d a %d engamma %g\n", z, a, decay::nucdecayenergygamma(z, a));
+  const int nucindex = decay::get_nuc_index(z, a);
+  const int nlines = 1;
+  gamma_spectra[nucindex].nlines = nlines;
+  gamma_spectra[nucindex].energy = (double *) malloc(nlines * sizeof(double));
+  gamma_spectra[nucindex].probability = (double *) malloc(nlines * sizeof(double));
+  gamma_spectra[nucindex].energy[0] = decay::nucdecayenergygamma(z, a);
+  gamma_spectra[nucindex].probability[0] = 1.;
+}
+
+
 static void read_decaydata(void)
 {
   gamma_spectra = (struct gamma_spec *) calloc(decay::get_num_nuclides(), sizeof(struct gamma_spec));
@@ -79,7 +92,11 @@ static void read_decaydata(void)
     gamma_spectra[nucindex].probability = NULL;
     const int z = decay::get_nuc_z(nucindex);
     const int a = decay::get_nuc_a(nucindex);
-    decay::set_nucdecayenergygamma(z, a, 0.);
+    // decay::set_nucdecayenergygamma(z, a, 0.);
+    if (decay::nucdecayenergygamma(z, a) > 0.)
+    {
+      set_trivial_gamma_spectrum(z, a);
+    }
   }
 
   // migrate from old filename
