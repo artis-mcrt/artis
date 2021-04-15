@@ -2,6 +2,7 @@
 #include "atomic.h"
 #include "gamma.h"
 #include "grid.h"
+#include "input.h"
 #include "nonthermal.h"
 
 #include "decay.h"
@@ -10,6 +11,10 @@
 #include <vector>
 #include <string>
 #include <regex>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
 
 namespace decay
 {
@@ -48,6 +53,9 @@ struct decaypath {
 };
 
 std::vector<struct decaypath> decaychains;
+
+double *cumulative_decay_energy_per_mass_allcells = NULL;
+
 
 __host__ __device__
 int get_num_nuclides(void)
@@ -846,6 +854,34 @@ double get_modelcell_decay_energy_density(const int mgi)
 }
 
 
+void setup_cumulative_decay_energy_per_mass_allcells(void)
+{
+  assert(cumulative_decay_energy_per_mass_allcells == NULL); // ensure not allocated yet
+  cumulative_decay_energy_per_mass_allcells = (double *) malloc(get_npts_model() * get_num_decaypaths() * sizeof(double));
+  for (int mgi = 0; mgi < get_npts_model(); mgi++)
+  {
+    double lower_sum = 0.;
+    for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++)
+    {
+      // visit each radioactive nuclide and any chains of ancestors
+      // the ancestor chains need to be treated separately so that the decay time can be randomly sampled
+      double simtime_endecay_thispath = 0.;
+
+      simtime_endecay_thispath = get_simtime_endecay_per_ejectamass(mgi, decaypathindex);
+      cumulative_decay_energy_per_mass_allcells[mgi * get_num_decaypaths() + decaypathindex] = lower_sum + simtime_endecay_thispath;
+      lower_sum += simtime_endecay_thispath;
+    }
+  }
+}
+
+
+void free_cumulative_decay_energy_per_mass_allcells(void)
+{
+  free(cumulative_decay_energy_per_mass_allcells);
+  cumulative_decay_energy_per_mass_allcells = NULL;
+}
+
+
 __host__ __device__
 double get_positroninjection_rate_density(const int modelgridindex, const double t)
 // energy release rate from positrons in erg / s / cm^3
@@ -964,19 +1000,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 
 void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
 {
-  double lower_sum = 0.;
-  double cumulative_decay_energy_per_mass[get_num_decaypaths()];
-  for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++)
-  {
-    // visit each radioactive nuclide and any chains of ancestors
-    // the ancestor chains need to be treated separately so that the decay time can be randomly sampled
-    double simtime_endecay_thispath = 0.;
-
-    simtime_endecay_thispath = get_simtime_endecay_per_ejectamass(mgi, decaypathindex);
-    cumulative_decay_energy_per_mass[decaypathindex] = lower_sum + simtime_endecay_thispath;
-    lower_sum += simtime_endecay_thispath;
-  }
-
+  const double *cumulative_decay_energy_per_mass = &cumulative_decay_energy_per_mass_allcells[mgi * get_num_decaypaths()];
   const double zrand_chain = gsl_rng_uniform(rng) * cumulative_decay_energy_per_mass[get_num_decaypaths() - 1];
 
   int decaypathindex = -1;

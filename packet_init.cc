@@ -96,6 +96,8 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
     abort();
   }
 
+  decay::setup_cumulative_decay_energy_per_mass_allcells();
+
   printout("Placing pellets...\n");
   for (int n = 0; n < globals::npkts; n++)
   {
@@ -149,6 +151,8 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
 
     place_pellet(e0, cellindex, n + pktnumberoffset, &pkt[n]);
   }
+
+  decay::free_cumulative_decay_energy_per_mass_allcells(); // will no longer be needed after packets are set up
 
   double e_cmf_total = 0.;
   for (int n = 0; n < globals::npkts; n++)

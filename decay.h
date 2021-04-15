@@ -28,9 +28,11 @@ namespace decay
   __host__ __device__ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridindex, const double tstart);
   __host__ __device__ double get_simtime_endecay_per_ejectamass(const int mgi, const bool from_parent_abund, const int z, const int a);
   __host__ __device__ double get_modelcell_decay_energy_density(const int mgi);
+  __host__ __device__ void setup_cumulative_decay_energy_per_mass_allcells(void);
+  __host__ __device__ void free_cumulative_decay_energy_per_mass_allcells(void);
   __host__ __device__ double get_positroninjection_rate_density(const int modelgridindex, const double t);
   __host__ __device__ double get_global_etot_t0_tinf(void);
-  void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr);
+  __host__ __device__ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr);
 }
 
 #endif //DECAY_H
