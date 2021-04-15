@@ -279,6 +279,7 @@ int get_nucstring_z(const char *strnuc)
     }
   }
   printout("Could not get atomic number of '%s' '%s'\n", strnuc, elcode.c_str());
+  assert_always(false); // could not match to an element
   return -1;
 }
 
@@ -288,7 +289,7 @@ int get_nucstring_a(const char *strnuc)
 {
   std::string strmassnum = std::regex_replace(strnuc, std::regex("[^0-9]*([0-9]+).*"), std::string("$1"));
   const int a = std::stoi(strmassnum);
-  assert(a > 0);
+  assert_always(a > 0);
   return a;
 }
 
@@ -300,7 +301,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
 
   assert_always(custom_zlist.size() == custom_alist.size());
 
-  num_nuclides = 9 + custom_zlist.size();
+  num_nuclides = 1000;  // todo: remove limit
   nuclides = (struct nuclide *) malloc(num_nuclides * sizeof(struct nuclide));
   assert_always(nuclides != NULL);
 
@@ -372,19 +373,63 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
   nuclides[nucindex].decaytype = DECAYTYPE_ELECTRONCAPTURE;
   nucindex++;
 
-  for (int i = 0; i < (int) custom_zlist.size(); i++)
+  if (custom_alist.size() > 0)
   {
-    nuclides[nucindex].z = custom_zlist[i];
-    nuclides[nucindex].a = custom_alist[i];
-    nuclides[nucindex].decaytype = DECAYTYPE_BETAMINUS;
+    std::ifstream fbetaminus("betaminusdecays.txt");
+    assert_always(fbetaminus.is_open());
+    std::string line;
+    while (get_noncommentline(fbetaminus, line))
+    {
+      // columns: A, Z, Q[MeV], Egamma[MeV], Eelec[MeV], Eneutrino[MeV], tau[s]
+      int a = -1;
+      int z = -1;
+      double q_mev = 0.;
+      double e_gamma_mev = 0.;
+      double e_elec_mev = 0.;
+      double e_neutrino = 0.;
+      double tau_sec = 0.;
+      std::stringstream(line) >> a >> z >> q_mev >> e_gamma_mev >> e_elec_mev >> e_neutrino >> tau_sec;
 
-    // todo: read Hotokezaka files for beta minus
-    // file path 'data/betaminus/' + A + '.txt'
-    // columns: A, Z, Q[MeV], Egamma[MeV], Eelec[MeV], Eneutrino[MeV], tau[s]
-
-    nucindex++;
+      bool keeprow = false; // keep if the mass number matches one of the input nuclides
+      for (int i = 0; i < (int) custom_alist.size(); i++)
+      {
+        if (custom_alist[i] == a)
+        {
+          keeprow = true;
+          break;
+        }
+      }
+      if (keeprow)
+      {
+        nuclides[nucindex].z = z;
+        nuclides[nucindex].a = a;
+        nuclides[nucindex].meanlife = tau_sec;
+        nuclides[nucindex].decaytype = DECAYTYPE_BETAMINUS;
+        nuclides[nucindex].endecay_positrons = e_elec_mev * MEV;
+        nuclides[nucindex].endecay_gamma = e_gamma_mev * MEV;
+        nucindex++;
+        printout("betaminus: z %d a %d endecay_positrons %g endecay_gamma %g tau_s %g\n",
+                 z, a, e_elec_mev, e_gamma_mev, tau_sec);
+      }
+    }
+    fbetaminus.close();
   }
 
+  num_nuclides = nucindex;
+  // std::stringstream(line) >> npts_model_in;
+  //
+  // for (int i = 0; i < (int) custom_zlist.size(); i++)
+  // {
+  //   nuclides[nucindex].z = custom_zlist[i];
+  //   nuclides[nucindex].a = custom_alist[i];
+  //   nuclides[nucindex].decaytype = DECAYTYPE_BETAMINUS;
+  //
+  //   // todo: read Hotokezaka files for beta minus
+  //   // file path 'data/betaminus/' + A + '.txt'
+  //
+  //   nucindex++;
+  // }
+  //
 
   printout("init_nuclides: num_nuclides %d\n", get_num_nuclides());
 
@@ -1010,7 +1055,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
       break;
     }
   }
-  assert_always(decaypathindex >= 0); // Failed to select pellet
+  assert_always(decaypathindex >= 0); // Failed to select chain
 
   #ifdef NO_INITIAL_PACKETS
   const double tdecaymin = globals::tmin;

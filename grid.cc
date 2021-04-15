@@ -1089,6 +1089,7 @@ static void read_1d_model(void)
   int mgi = 0;
   while (std::getline(fmodel, line))
   {
+    std::istringstream ssline(line);
     int cellnumberin;
     double vout_kmps;
     double log_rho;
@@ -1142,6 +1143,17 @@ static void read_1d_model(void)
     set_modelinitradioabund(mgi, 24, 48, f48cr_model);
     set_modelinitradioabund(mgi, 23, 48, 0.);
     set_ffegrp(mgi, ffegrp_model);
+    for (int i = 0; i < 10; i++)
+    {
+      double abundin = 0.;
+      ssline >> abundin; // ignore
+    }
+    for (int i = 0; i < (int) zlist.size(); i++)
+    {
+      double abundin = 0.;
+      ssline >> abundin;
+      set_modelinitradioabund(mgi, zlist[i], alist[i], abundin);
+    }
 
     mgi += 1;
     if (mgi == get_npts_model())
