@@ -58,7 +58,6 @@ void packet_init(int my_rank, PKT *pkt)
 {
   printout("UNIFORM_PELLET_ENERGIES is %s\n", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
 
-  const int pktnumberoffset = globals::npkts;
   double cont[MGRID + 1];
 
   /// The total number of pellets that we want to start with is just
@@ -147,7 +146,7 @@ void packet_init(int my_rank, PKT *pkt)
 
     assert_always(cellindex < globals::ngrid);
 
-    place_pellet(e0, cellindex, n + pktnumberoffset, &pkt[n]);
+    place_pellet(e0, cellindex, n, &pkt[n]);
   }
 
   double e_cmf_total = 0.;
