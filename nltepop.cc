@@ -1625,7 +1625,9 @@ void nltepop_open_file(const int my_rank)
 
 void nltepop_close_file(void)
 {
+  assert_always(nlte_file != NULL);
   fclose(nlte_file);
+  nlte_file = NULL;
 }
 
 
@@ -1634,6 +1636,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep)
   if (globals::initial_iteration) // NLTE solver hasn't been run yet
     return;
 
+  assert_always(nlte_file != NULL);
   // fprintf(nlte_file,"#timestep %d modelgridindex %d T_R %g T_e %g W %g T_J %g nne %g\n",
   //         timestep, n, get_TR(n), get_Te(n), get_W(n), get_TJ(n), get_nne(n));
 

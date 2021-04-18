@@ -44,13 +44,11 @@ gsl_rng *rng;
 __device__ void *rng = NULL;
 #endif
 gsl_integration_workspace *gslworkspace = NULL;
-FILE *output_file;
-static FILE *linestat_file;
+FILE *output_file = NULL;
+static FILE *linestat_file = NULL;
 static time_t real_time_start;
 static time_t time_timestep_start = -1; // this will be set after the first update of the grid and before packet prop
-static FILE *estimators_file;
-static int nstart = 0;
-static int ndo = 0;
+static FILE *estimators_file = NULL;
 
 int mpi_grid_buffer_size = 0;
 char *mpi_grid_buffer = NULL;
@@ -401,7 +399,7 @@ static void save_grid_and_packets(
 
 static bool do_timestep(
   const int outer_iteration, const int nts, const int titer,
-  const int my_rank, PKT* packets, const int walltimelimitseconds)
+  const int my_rank, const int nstart, const int ndo, PKT* packets, const int walltimelimitseconds)
 {
   bool do_this_full_loop = true;
 
@@ -859,15 +857,6 @@ int main(int argc, char** argv)
   //(tb_file = fopen_required(filename, "w");
   //setvbuf(tb_file, NULL, _IOLBF, 1);
 
-  macroatom_open_file(my_rank);
-
-  sprintf(filename, "estimators_%.4d.out", my_rank);
-  estimators_file = fopen_required(filename, "w");
-  //setvbuf(estimators_file, NULL, _IOLBF, 1);
-
-  if (NLTE_POPS_ON)
-    nltepop_open_file(my_rank);
-
   //printout("CELLHISTORYSIZE %d\n",CELLHISTORYSIZE);
 
   /// Get input stuff
@@ -947,6 +936,8 @@ int main(int argc, char** argv)
     /// The next loop is over all grid cells. For parallelisation, we want to split this loop between
     /// processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
     /// cells are sent to processes 0 ... process n_leftover -1.
+    int nstart = 0;
+    int ndo = 0;
     int maxndo = 0;
     get_nstart_ndo(my_rank, globals::nprocs, &nstart, &ndo, &maxndo);
     printout("process rank %d (range 0 to %d) doing %d cells", my_rank, globals::nprocs - 1, ndo);
@@ -990,6 +981,21 @@ int main(int argc, char** argv)
     /// Now use while loop to allow for timed restarts
     const int last_loop = globals::ftstep;
     int nts = globals::itstep;
+
+    if (ndo > 0)
+    {
+      macroatom_open_file(my_rank);
+    }
+
+    assert_always(estimators_file == NULL)
+    sprintf(filename, "estimators_%.4d.out", my_rank);
+    estimators_file = fopen_required(filename, "w");
+
+    if (NLTE_POPS_ON && ndo > 0)
+      nltepop_open_file(my_rank);
+
+    radfield::init(my_rank, ndo);
+    nonthermal::init(my_rank, ndo);
 
     // Initialise virtual packets file and vspecpol
     #ifdef VPKT_ON
@@ -1058,7 +1064,7 @@ int main(int argc, char** argv)
 
       for (int titer = 0; titer < globals::n_titer; titer++)
       {
-        terminate_early = do_timestep(outer_iteration, nts, titer, my_rank, packets, walltimelimitseconds);
+        terminate_early = do_timestep(outer_iteration, nts, nstart, ndo, titer, my_rank, packets, walltimelimitseconds);
         #ifdef DO_TITER
           /// No iterations over the zeroth timestep, set titer > n_titer
           if (nts == 0)

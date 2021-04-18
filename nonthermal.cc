@@ -514,7 +514,7 @@ static void zero_all_effionpot(const int modelgridindex)
 }
 
 
-void init(const int my_rank)
+void init(const int my_rank, const int ndo)
 {
   assert_always(nonthermal_initialized == false);
   nonthermal_initialized = true;
@@ -556,12 +556,15 @@ void init(const int my_rank)
   printout("  SF_AUGER_CONTRIBUTION %s\n", SF_AUGER_CONTRIBUTION_ON ? "on" : "off");
   printout("  SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN %s\n", SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN ? "on" : "off");
 
-  char filename[100];
-  sprintf(filename,"nonthermalspec_%.4d.out", my_rank);
-  nonthermalfile = fopen_required(filename, "w");
-  fprintf(nonthermalfile,"%8s %15s %8s %11s %11s %11s\n",
-          "timestep","modelgridindex","index","energy_ev","source","y");
-  fflush(nonthermalfile);
+  if (ndo > 0)
+  {
+    char filename[100];
+    sprintf(filename,"nonthermalspec_%.4d.out", my_rank);
+    nonthermalfile = fopen_required(filename, "w");
+    fprintf(nonthermalfile,"%8s %15s %8s %11s %11s %11s\n",
+            "timestep","modelgridindex","index","energy_ev","source","y");
+    fflush(nonthermalfile);
+  }
 
   nt_solution = (struct nt_solution_struct *) calloc(get_npts_model(), sizeof(struct nt_solution_struct));
 

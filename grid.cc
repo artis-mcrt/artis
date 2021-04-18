@@ -1833,9 +1833,6 @@ void grid_init(int my_rank)
   calculate_kappagrey();
   abundances_read();
 
-  radfield::init(my_rank);
-  nonthermal::init(my_rank);
-
   /// and assign a temperature to the cells
   if (globals::simulation_continued_from_saved)
   {
