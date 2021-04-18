@@ -985,11 +985,11 @@ int main(int argc, char** argv)
     if (ndo > 0)
     {
       macroatom_open_file(my_rank);
-    }
 
-    assert_always(estimators_file == NULL)
-    sprintf(filename, "estimators_%.4d.out", my_rank);
-    estimators_file = fopen_required(filename, "w");
+      assert_always(estimators_file == NULL)
+      sprintf(filename, "estimators_%.4d.out", my_rank);
+      estimators_file = fopen_required(filename, "w");
+    }
 
     if (NLTE_POPS_ON && ndo > 0)
       nltepop_open_file(my_rank);
