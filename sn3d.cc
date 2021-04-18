@@ -398,7 +398,7 @@ static void save_grid_and_packets(
 }
 
 static bool do_timestep(
-  const int outer_iteration, const int nts, const int titer,
+  const int nts, const int titer,
   const int my_rank, const int nstart, const int ndo, PKT* packets, const int walltimelimitseconds)
 {
   bool do_this_full_loop = true;
@@ -556,12 +556,12 @@ static bool do_timestep(
       printout("timestep %d: time after estimators have been communicated %ld (took %ld seconds)\n", nts, time(NULL), time(NULL) - time_communicate_estimators_start);
     #endif
 
-    printout("%d: During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (t=%gd)\n",
-             outer_iteration, nts, my_rank, globals::time_step[nts].pellet_decays, globals::nesc, globals::time_step[nts].mid / DAY);
+    printout("During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (t=%gd)\n",
+             nts, my_rank, globals::time_step[nts].pellet_decays, globals::nesc, globals::time_step[nts].mid / DAY);
 
     #ifdef VPKT_ON
-      printout("%d: During timestep %d on MPI process %d, %d virtual packets were generated and %d escaped. \n",
-               outer_iteration, nts, my_rank, nvpkt, nvpkt_esc1 + nvpkt_esc2 + nvpkt_esc3);
+      printout("During timestep %d on MPI process %d, %d virtual packets were generated and %d escaped. \n",
+               nts, my_rank, nvpkt, nvpkt_esc1 + nvpkt_esc2 + nvpkt_esc3);
       printout("%d virtual packets came from an electron scattering event, %d from a kpkt deactivation and %d from a macroatom deactivation. \n",
                nvpkt_esc1, nvpkt_esc2, nvpkt_esc3);
 
@@ -903,194 +903,182 @@ int main(int argc, char** argv)
   bool terminate_early = false;
   globals::file_set = false; // LJS: deprecate this switch?
   globals::debuglevel = 4;  /// Selects detail level of debug output, needs still some work.
-  for (int outer_iteration = 0; outer_iteration < globals::n_out_it; outer_iteration++)
+
+  /// Initialise the grid. Call routine that sets up the initial positions
+  /// and sizes of the grid cells.
+  time_init();
+  if (my_rank == 0)
   {
-    /// Initialise the grid. Call routine that sets up the initial positions
-    /// and sizes of the grid cells.
-    time_init();
-    if (my_rank == 0)
+    write_timestep_file();
+  }
+  printout("time time init %ld\n", time(NULL));
+  grid_init(my_rank);
+
+  printout("Simulation propagates %g packets per process (total %g with nprocs %d)\n", 1. * globals::npkts, 1. * globals::npkts * globals::nprocs, globals::nprocs);
+
+  printout("[info] mem_usage: packets occupy %.1f MB\n", MPKTS * sizeof(PKT) / 1024. / 1024.);
+
+  if (!globals::simulation_continued_from_saved)
+  {
+    /// Next we want to initialise the packets.
+    /// Create a bunch of npkts packets
+    /// and write them to a binary file for later readin.
+    packet_init(my_rank, packets);
+  }
+
+  /// For the parallelisation of update_grid, the process needs to be told which cells belong to it.
+  /// The next loop is over all grid cells. For parallelisation, we want to split this loop between
+  /// processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
+  /// cells are sent to processes 0 ... process n_leftover -1.
+  int nstart = 0;
+  int ndo = 0;
+  int maxndo = 0;
+  get_nstart_ndo(my_rank, globals::nprocs, &nstart, &ndo, &maxndo);
+  printout("process rank %d (range 0 to %d) doing %d cells", my_rank, globals::nprocs - 1, ndo);
+  if (ndo > 0)
+  {
+    printout(": numbers %d to %d\n", nstart, nstart + ndo - 1);
+  }
+  else
+  {
+    printout("\n");
+  }
+
+  #ifdef MPI_ON
+    MPI_Barrier(MPI_COMM_WORLD);
+    /// Initialise the exchange buffer
+    /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
+    /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
+    mpi_grid_buffer_size = 4 * ((12 + 4 * globals::includedions) * (maxndo) + 1);
+    printout("reserve mpi_grid_buffer_size %d space for MPI communication buffer\n", mpi_grid_buffer_size);
+    //char buffer[mpi_grid_buffer_size];
+    mpi_grid_buffer  = (char *) malloc(mpi_grid_buffer_size * sizeof(char));
+    if (mpi_grid_buffer == NULL)
     {
-      write_timestep_file();
+      printout("[fatal] input: not enough memory to initialize MPI grid buffer ... abort.\n");
+      abort();
     }
-    printout("time time init %ld\n", time(NULL));
-    grid_init(my_rank);
-
-    printout("Simulation propagates %g packets per process (total %g with nprocs %d)\n", 1. * globals::npkts, 1. * globals::npkts * globals::nprocs, globals::nprocs);
-
-    printout("[info] mem_usage: packets occupy %.1f MB\n", MPKTS * sizeof(PKT) / 1024. / 1024.);
-
-    if (!globals::simulation_continued_from_saved)
-    {
-      /// Next we want to initialise the packets.
-      /// To overcome memory limitations for large numbers of packets, which need to be
-      /// propagated on the _same_ grid, this middle_iteration loop was introduced.
-      for (int middle_iteration = 0; middle_iteration < globals::n_middle_it; middle_iteration++)
-      {
-        /// Create a bunch of npkts packets
-        /// and write them to a binary file for later readin.
-        packet_init(middle_iteration, my_rank, packets);
-      }
-    }
-
-    /// For the parallelisation of update_grid, the process needs to be told which cells belong to it.
-    /// The next loop is over all grid cells. For parallelisation, we want to split this loop between
-    /// processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
-    /// cells are sent to processes 0 ... process n_leftover -1.
-    int nstart = 0;
-    int ndo = 0;
-    int maxndo = 0;
-    get_nstart_ndo(my_rank, globals::nprocs, &nstart, &ndo, &maxndo);
-    printout("process rank %d (range 0 to %d) doing %d cells", my_rank, globals::nprocs - 1, ndo);
-    if (ndo > 0)
-    {
-      printout(": numbers %d to %d\n", nstart, nstart + ndo - 1);
-    }
-    else
-    {
-      printout("\n");
-    }
-
-    #ifdef MPI_ON
-      MPI_Barrier(MPI_COMM_WORLD);
-      /// Initialise the exchange buffer
-      /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
-      /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
-      mpi_grid_buffer_size = 4 * ((12 + 4 * globals::includedions) * (maxndo) + 1);
-      printout("reserve mpi_grid_buffer_size %d space for MPI communication buffer\n", mpi_grid_buffer_size);
-      //char buffer[mpi_grid_buffer_size];
-      mpi_grid_buffer  = (char *) malloc(mpi_grid_buffer_size * sizeof(char));
-      if (mpi_grid_buffer == NULL)
-      {
-        printout("[fatal] input: not enough memory to initialize MPI grid buffer ... abort.\n");
-        abort();
-      }
-    #endif
+  #endif
 
 
-    /** That's the end of the initialisation. */
-    /** *******************************************/
+  /** That's the end of the initialisation. */
+  /** *******************************************/
 
-    /// Now comes the loop over timesteps. Before doing this we need to
-    /// define the time steps.
-    //time_init();
+  /// Now comes the loop over timesteps. Before doing this we need to
+  /// define the time steps.
+  //time_init();
 
-    /// Standard approach: for loop over given number of time steps
-    //for (nts = globals::itstep; nts < ftstep; nts++)
-    //{
+  /// Standard approach: for loop over given number of time steps
+  //for (nts = globals::itstep; nts < ftstep; nts++)
+  //{
 
-    /// Now use while loop to allow for timed restarts
-    const int last_loop = globals::ftstep;
-    int nts = globals::itstep;
+  /// Now use while loop to allow for timed restarts
+  const int last_loop = globals::ftstep;
+  int nts = globals::itstep;
 
-    if (ndo > 0)
-    {
-      macroatom_open_file(my_rank);
+  if (ndo > 0)
+  {
+    macroatom_open_file(my_rank);
 
-      assert_always(estimators_file == NULL)
-      sprintf(filename, "estimators_%.4d.out", my_rank);
-      estimators_file = fopen_required(filename, "w");
-    }
+    assert_always(estimators_file == NULL)
+    sprintf(filename, "estimators_%.4d.out", my_rank);
+    estimators_file = fopen_required(filename, "w");
+  }
 
-    if (NLTE_POPS_ON && ndo > 0)
-      nltepop_open_file(my_rank);
+  if (NLTE_POPS_ON && ndo > 0)
+    nltepop_open_file(my_rank);
 
-    radfield::init(my_rank, ndo);
-    nonthermal::init(my_rank, ndo);
+  radfield::init(my_rank, ndo);
+  nonthermal::init(my_rank, ndo);
 
-    // Initialise virtual packets file and vspecpol
-    #ifdef VPKT_ON
-    init_vspecpol();
+  // Initialise virtual packets file and vspecpol
+  #ifdef VPKT_ON
+  init_vspecpol();
+  if (vgrid_flag == 1)
+    init_vpkt_grid();
+  if (globals::simulation_continued_from_saved)
+  {
+    // Continue simulation: read into temporary files
+
+    read_vspecpol(my_rank, nts);
+
     if (vgrid_flag == 1)
-      init_vpkt_grid();
-    if (globals::simulation_continued_from_saved)
     {
-      // Continue simulation: read into temporary files
-
-      read_vspecpol(my_rank, nts);
-
-      if (vgrid_flag == 1)
+      if (nts % 2 == 0)
       {
-        if (nts % 2 == 0)
-        {
-          sprintf(filename,"vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
-        }
-        else
-        {
-          sprintf(filename,"vpkt_grid_%d_%d_even.tmp", 0, my_rank);
-        }
-
-        FILE *vpktgrid_file = fopen_required(filename, "rb");
-
-        read_vpkt_grid(vpktgrid_file);
-
-        fclose(vpktgrid_file);
+        sprintf(filename,"vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
       }
-    }
-    #endif
-
-    while (nts < last_loop && !terminate_early)
-    {
-      globals::nts_global = nts;
-      #ifdef MPI_ON
-//        const time_t time_before_barrier = time(NULL);
-        MPI_Barrier(MPI_COMM_WORLD);
-//        const time_t time_after_barrier = time(NULL);
-//        printout("timestep %d: time before barrier %d, time after barrier %d\n", nts, time_before_barrier, time_after_barrier);
-      #endif
-
-      #ifdef DO_TITER
-        // The first time step must solve the ionisation balance in LTE
-        globals::initial_iteration = (nts == 0);
-      #else
-        /// Do 3 iterations on timestep 0-9
-        /*if (nts == 0)
-        {
-          n_titer = 3;
-          initial_iteration = true;
-        }
-        else if (nts < 6)
-        {
-          n_titer = 3;
-          initial_iteration = false;
-        }
-        else
-        {
-          n_titer = 1;
-          initial_iteration = false;
-        }*/
-        globals::n_titer = 1;
-        globals::initial_iteration = (nts < globals::n_lte_timesteps);
-      #endif
-
-      for (int titer = 0; titer < globals::n_titer; titer++)
+      else
       {
-        terminate_early = do_timestep(outer_iteration, nts, titer, my_rank, nstart, ndo, packets, walltimelimitseconds);
-        #ifdef DO_TITER
-          /// No iterations over the zeroth timestep, set titer > n_titer
-          if (nts == 0)
-            titer = globals::n_titer + 1;
-        #endif
+        sprintf(filename,"vpkt_grid_%d_%d_even.tmp", 0, my_rank);
       }
 
-      nts++;
-    }
+      FILE *vpktgrid_file = fopen_required(filename, "rb");
 
+      read_vpkt_grid(vpktgrid_file);
 
-    /// The main calculation is now over. The packets now have all stored the time, place and direction
-    /// at which they left the grid. Also their rest frame energies and frequencies.
-    /// Spectra and light curves are now extracted using exspec which is another make target of this
-    /// code.
-
-    #ifdef MPI_ON
-      MPI_Barrier(MPI_COMM_WORLD);
-      free(mpi_grid_buffer);
-    #endif
-
-    if (terminate_early)
-    {
-      break;
+      fclose(vpktgrid_file);
     }
   }
+  #endif
+
+  while (nts < last_loop && !terminate_early)
+  {
+    globals::nts_global = nts;
+    #ifdef MPI_ON
+//        const time_t time_before_barrier = time(NULL);
+      MPI_Barrier(MPI_COMM_WORLD);
+//        const time_t time_after_barrier = time(NULL);
+//        printout("timestep %d: time before barrier %d, time after barrier %d\n", nts, time_before_barrier, time_after_barrier);
+    #endif
+
+    #ifdef DO_TITER
+      // The first time step must solve the ionisation balance in LTE
+      globals::initial_iteration = (nts == 0);
+    #else
+      /// Do 3 iterations on timestep 0-9
+      /*if (nts == 0)
+      {
+        n_titer = 3;
+        initial_iteration = true;
+      }
+      else if (nts < 6)
+      {
+        n_titer = 3;
+        initial_iteration = false;
+      }
+      else
+      {
+        n_titer = 1;
+        initial_iteration = false;
+      }*/
+      globals::n_titer = 1;
+      globals::initial_iteration = (nts < globals::n_lte_timesteps);
+    #endif
+
+    for (int titer = 0; titer < globals::n_titer; titer++)
+    {
+      terminate_early = do_timestep(nts, titer, my_rank, nstart, ndo, packets, walltimelimitseconds);
+      #ifdef DO_TITER
+        /// No iterations over the zeroth timestep, set titer > n_titer
+        if (nts == 0)
+          titer = globals::n_titer + 1;
+      #endif
+    }
+
+    nts++;
+  }
+
+
+  /// The main calculation is now over. The packets now have all stored the time, place and direction
+  /// at which they left the grid. Also their rest frame energies and frequencies.
+  /// Spectra and light curves are now extracted using exspec which is another make target of this
+  /// code.
+
+  #ifdef MPI_ON
+    MPI_Barrier(MPI_COMM_WORLD);
+    free(mpi_grid_buffer);
+  #endif
 
   if (my_rank == 0)
   {
@@ -1121,8 +1109,12 @@ int main(int argc, char** argv)
   cudaDeviceReset();
   #endif
   //fclose(tb_file);
-  fclose(estimators_file);
-  macroatom_close_file();
+  if (ndo > 0)
+  {
+    macroatom_close_file();
+    fclose(estimators_file);
+  }
+
   if (NLTE_POPS_ON)
     nltepop_close_file();
   radfield::close_file();

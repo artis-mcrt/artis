@@ -53,12 +53,12 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
 }
 
 
-void packet_init(int middle_iteration, int my_rank, PKT *pkt)
+void packet_init(int my_rank, PKT *pkt)
 /// Subroutine that initialises the packets if we start a new simulation.
 {
   printout("UNIFORM_PELLET_ENERGIES is %s\n", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
 
-  const int pktnumberoffset = middle_iteration * globals::npkts;
+  const int pktnumberoffset = globals::npkts;
   double cont[MGRID + 1];
 
   /// The total number of pellets that we want to start with is just
@@ -67,7 +67,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
 
   printout("etot %g (t_0 to t_inf)\n", etot_tinf);
 
-  const double e0_tinf = etot_tinf / globals::npkts / globals::n_out_it / globals::n_middle_it;
+  const double e0_tinf = etot_tinf / globals::npkts;
   printout("packet e0 (t_0 to t_inf) %g erg\n", e0_tinf);
 
   // Need to get a normalisation factor.
@@ -83,7 +83,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
 
   const double etot = norm;
   /// So energy per pellet is
-  const double e0 = etot / globals::npkts / globals::n_out_it / globals::n_middle_it;
+  const double e0 = etot / globals::npkts;
   printout("packet e0 (in time range) %g erg\n", e0);
 
   printout("etot %g erg (in time range) erg\n", etot);

@@ -93,134 +93,131 @@ int main(int argc, char** argv)
 
   struct spec *gamma_spectra = alloc_spectra(false);
 
-  for (int outer_iteration = 0; outer_iteration < globals::n_out_it; outer_iteration++)
+  /// Initialise the grid. Call routine that sets up the initial positions
+  /// and sizes of the grid cells.
+  //grid_init();
+  time_init();
+
+  const int amax = ((get_model_type() == RHO_1D_READ)) ? 0 : MABINS;
+  // a is the escape direction angle bin
+  for (int a = -1; a < amax; a++)
   {
-    /// Initialise the grid. Call routine that sets up the initial positions
-    /// and sizes of the grid cells.
-    //grid_init();
-    time_init();
+    /// Set up the light curve grid and initialise the bins to zero.
+    double *rpkt_light_curve_lum = (double *) calloc(globals::ntstep, sizeof(double));
+    double *rpkt_light_curve_lumcmf = (double *) calloc(globals::ntstep, sizeof(double));
+    double *gamma_light_curve_lum = (double *) calloc(globals::ntstep, sizeof(double));
+    double *gamma_light_curve_lumcmf = (double *) calloc(globals::ntstep, sizeof(double));
+    /// Set up the spectrum grid and initialise the bins to zero.
 
-    const int amax = ((get_model_type() == RHO_1D_READ)) ? 0 : MABINS;
-    // a is the escape direction angle bin
-    for (int a = -1; a < amax; a++)
+    init_spectra(rpkt_spectra, globals::nu_min_r, globals::nu_max_r, do_emission_res);
+
+    #ifdef POL_ON
+    init_spectra(stokes_i, globals::nu_min_r, globals::nu_max_r, do_emission_res);
+    init_spectra(stokes_q, globals::nu_min_r, globals::nu_max_r, do_emission_res);
+    init_spectra(stokes_u, globals::nu_min_r, globals::nu_max_r, do_emission_res);
+    #endif
+
+    const double nu_min_gamma = 0.05 * MEV / H;
+    const double nu_max_gamma = 4. * MEV / H;
+    init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
+
+    for (int p = 0; p < globals::nprocs; p++)
     {
-      /// Set up the light curve grid and initialise the bins to zero.
-      double *rpkt_light_curve_lum = (double *) calloc(globals::ntstep, sizeof(double));
-      double *rpkt_light_curve_lumcmf = (double *) calloc(globals::ntstep, sizeof(double));
-      double *gamma_light_curve_lum = (double *) calloc(globals::ntstep, sizeof(double));
-      double *gamma_light_curve_lumcmf = (double *) calloc(globals::ntstep, sizeof(double));
-      /// Set up the spectrum grid and initialise the bins to zero.
-
-      init_spectra(rpkt_spectra, globals::nu_min_r, globals::nu_max_r, do_emission_res);
-
-      #ifdef POL_ON
-      init_spectra(stokes_i, globals::nu_min_r, globals::nu_max_r, do_emission_res);
-      init_spectra(stokes_q, globals::nu_min_r, globals::nu_max_r, do_emission_res);
-      init_spectra(stokes_u, globals::nu_min_r, globals::nu_max_r, do_emission_res);
-      #endif
-
-      const double nu_min_gamma = 0.05 * MEV / H;
-      const double nu_max_gamma = 4. * MEV / H;
-      init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
-
-      for (int p = 0; p < globals::nprocs; p++)
+      get_final_packets(p, globals::nprocs, pkts);
+      int nesc_tot = 0;
+      int nesc_gamma = 0;
+      int nesc_rpkt = 0;
+      for (int ii = 0; ii < globals::npkts; ii++)
       {
-        get_final_packets(p, globals::nprocs, pkts);
-        int nesc_tot = 0;
-        int nesc_gamma = 0;
-        int nesc_rpkt = 0;
-        for (int ii = 0; ii < globals::npkts; ii++)
+        // printout("packet %d escape_type %d type %d", ii, pkts[ii].escape_type, pkts[ii].type);
+        if (pkts[ii].type == TYPE_ESCAPE)
         {
-          // printout("packet %d escape_type %d type %d", ii, pkts[ii].escape_type, pkts[ii].type);
-          if (pkts[ii].type == TYPE_ESCAPE)
+          nesc_tot++;
+          if (pkts[ii].escape_type == TYPE_RPKT)
           {
-            nesc_tot++;
-            if (pkts[ii].escape_type == TYPE_RPKT)
-            {
-              nesc_rpkt++;
-              add_to_lc_res(&pkts[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-              add_to_spec_res(&pkts[ii], a, rpkt_spectra, stokes_i, stokes_q, stokes_u);
-            }
-            else if (pkts[ii].escape_type == TYPE_GAMMA && a == -1)
-            {
-              nesc_gamma++;
-              add_to_lc_res(&pkts[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-              add_to_spec_res(&pkts[ii], a, gamma_spectra, NULL, NULL, NULL);
-            }
+            nesc_rpkt++;
+            add_to_lc_res(&pkts[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+            add_to_spec_res(&pkts[ii], a, rpkt_spectra, stokes_i, stokes_q, stokes_u);
+          }
+          else if (pkts[ii].escape_type == TYPE_GAMMA && a == -1)
+          {
+            nesc_gamma++;
+            add_to_lc_res(&pkts[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+            add_to_spec_res(&pkts[ii], a, gamma_spectra, NULL, NULL, NULL);
           }
         }
-        printout("  %d of %d packets escaped (%d gamma-pkts and %d r-pkts)\n", nesc_tot, globals::npkts, nesc_gamma, nesc_rpkt);
       }
-
-      if (a == -1)
-      {
-        /// Extract angle-averaged spectra and light curves
-        write_light_curve((char *) "light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-        write_light_curve((char *) "gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-
-        write_spectrum((char *) "spec.out", (char *) "emission.out",
-                       (char *) "emissiontrue.out", (char *) "absorption.out", rpkt_spectra);
-        #ifdef POL_ON
-        write_specpol((char *) "specpol.out", (char *) "emissionpol.out", (char *) "absorptionpol.out",
-                      stokes_i, stokes_q, stokes_u);
-        #endif
-        write_spectrum((char *) "gamma_spec.out", NULL, NULL, NULL, gamma_spectra);
-      }
-      else
-      {
-        /// Extract LOS dependent spectra and light curves
-        char lc_filename[100] = "";
-        char spec_filename[100] = "";
-        char emission_filename[100] = "";
-        char trueemission_filename[100] = "";
-        char absorption_filename[100] = "";
-
-        #ifdef POL_ON
-        char specpol_filename[100] = "";
-        sprintf(specpol_filename, "specpol_res_%.2d.out", a);
-        char emissionpol_filename[100] = "";
-        char absorptionpol_filename[100] = "";
-        #endif
-
-        sprintf(lc_filename, "light_curve_res_%.2d.out", a);
-        sprintf(spec_filename, "spec_res_%.2d.out", a);
-
-        if (do_emission_res)
-        {
-          sprintf(emission_filename, "emission_res_%.2d.out", a);
-          sprintf(trueemission_filename, "emissiontrue_res_%.2d.out", a);
-          sprintf(absorption_filename, "absorption_res_%.2d.out", a);
-          #ifdef POL_ON
-          sprintf(emissionpol_filename, "emissionpol_res_%.2d.out", a);
-          sprintf(absorptionpol_filename, "absorptionpol_res_%.2d.out", a);
-          #endif
-        }
-
-        write_light_curve(lc_filename, a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-        write_spectrum(spec_filename, emission_filename, trueemission_filename, absorption_filename, rpkt_spectra);
-
-        #ifdef POL_ON
-        write_specpol(
-          specpol_filename, emissionpol_filename, absorptionpol_filename,
-          stokes_i, stokes_q, stokes_u);
-        #endif
-      }
-
-      if (a == -1)
-      {
-        printout("finished angle-averaged stuff\n");
-      }
-      else
-      {
-        printout("Did %d of %d angle bins.\n", a + 1, MABINS);
-      }
-
-      free(rpkt_light_curve_lum);
-      free(rpkt_light_curve_lumcmf);
-
-      free(gamma_light_curve_lum);
-      free(gamma_light_curve_lumcmf);
+      printout("  %d of %d packets escaped (%d gamma-pkts and %d r-pkts)\n", nesc_tot, globals::npkts, nesc_gamma, nesc_rpkt);
     }
+
+    if (a == -1)
+    {
+      /// Extract angle-averaged spectra and light curves
+      write_light_curve((char *) "light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+      write_light_curve((char *) "gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+
+      write_spectrum((char *) "spec.out", (char *) "emission.out",
+                     (char *) "emissiontrue.out", (char *) "absorption.out", rpkt_spectra);
+      #ifdef POL_ON
+      write_specpol((char *) "specpol.out", (char *) "emissionpol.out", (char *) "absorptionpol.out",
+                    stokes_i, stokes_q, stokes_u);
+      #endif
+      write_spectrum((char *) "gamma_spec.out", NULL, NULL, NULL, gamma_spectra);
+    }
+    else
+    {
+      /// Extract LOS dependent spectra and light curves
+      char lc_filename[100] = "";
+      char spec_filename[100] = "";
+      char emission_filename[100] = "";
+      char trueemission_filename[100] = "";
+      char absorption_filename[100] = "";
+
+      #ifdef POL_ON
+      char specpol_filename[100] = "";
+      sprintf(specpol_filename, "specpol_res_%.2d.out", a);
+      char emissionpol_filename[100] = "";
+      char absorptionpol_filename[100] = "";
+      #endif
+
+      sprintf(lc_filename, "light_curve_res_%.2d.out", a);
+      sprintf(spec_filename, "spec_res_%.2d.out", a);
+
+      if (do_emission_res)
+      {
+        sprintf(emission_filename, "emission_res_%.2d.out", a);
+        sprintf(trueemission_filename, "emissiontrue_res_%.2d.out", a);
+        sprintf(absorption_filename, "absorption_res_%.2d.out", a);
+        #ifdef POL_ON
+        sprintf(emissionpol_filename, "emissionpol_res_%.2d.out", a);
+        sprintf(absorptionpol_filename, "absorptionpol_res_%.2d.out", a);
+        #endif
+      }
+
+      write_light_curve(lc_filename, a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+      write_spectrum(spec_filename, emission_filename, trueemission_filename, absorption_filename, rpkt_spectra);
+
+      #ifdef POL_ON
+      write_specpol(
+        specpol_filename, emissionpol_filename, absorptionpol_filename,
+        stokes_i, stokes_q, stokes_u);
+      #endif
+    }
+
+    if (a == -1)
+    {
+      printout("finished angle-averaged stuff\n");
+    }
+    else
+    {
+      printout("Did %d of %d angle bins.\n", a + 1, MABINS);
+    }
+
+    free(rpkt_light_curve_lum);
+    free(rpkt_light_curve_lumcmf);
+
+    free(gamma_light_curve_lum);
+    free(gamma_light_curve_lumcmf);
   }
 
   free_spectra(rpkt_spectra);
