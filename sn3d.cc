@@ -185,11 +185,11 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
         MPI_Barrier(MPI_COMM_WORLD);
         /// Reduce the corrphotoionrenorm array.
         printout("nts %d, titer %d: bcast corr photoionrenorm\n", nts, titer);
-        MPI_Allreduce(MPI_IN_PLACE, &corrphotoionrenorm, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &globals::corrphotoionrenorm, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         /// Reduce the gammaestimator array. Only needed to write restart data.
         printout("nts %d, titer %d: bcast gammaestimator\n", nts, titer);
-        MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &globals::gammaestimator, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       }
     #endif
   #endif
@@ -206,11 +206,11 @@ static void mpi_reduce_estimators(int my_rank, int nts)
     MPI_Barrier(MPI_COMM_WORLD);
     #if (!NO_LUT_PHOTOION)
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &globals::gammaestimator, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
     #if (!NO_LUT_BFHEATING)
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &bfheatingestimator, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &globals::bfheatingestimator, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
   #endif
 
@@ -1064,7 +1064,7 @@ int main(int argc, char** argv)
 
       for (int titer = 0; titer < globals::n_titer; titer++)
       {
-        terminate_early = do_timestep(outer_iteration, nts, nstart, ndo, titer, my_rank, packets, walltimelimitseconds);
+        terminate_early = do_timestep(outer_iteration, nts, titer, my_rank, nstart, ndo, packets, walltimelimitseconds);
         #ifdef DO_TITER
           /// No iterations over the zeroth timestep, set titer > n_titer
           if (nts == 0)
