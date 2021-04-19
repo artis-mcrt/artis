@@ -170,6 +170,7 @@ void packet_init(int my_rank, PKT *pkt)
 
 void write_packets(char filename[], PKT *pkt)
 {
+  // write packets text file
   FILE *packets_file = fopen_required(filename, "w");
   for (int i = 0; i < globals::npkts; i++)
   {
@@ -212,6 +213,7 @@ void write_packets(char filename[], PKT *pkt)
 
 void read_temp_packetsfile(const int timestep, const int my_rank, PKT *const pkt)
 {
+  // read packets binary file
   char filename[100];
   sprintf(filename, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
@@ -226,6 +228,7 @@ void read_temp_packetsfile(const int timestep, const int my_rank, PKT *const pkt
 
 void read_packets(char filename[], PKT *pkt)
 {
+  // read packets text file
   FILE *packets_file = fopen_required(filename, "r");
   char *line = (char *) malloc(sizeof(char) * 4096);
 

@@ -251,6 +251,7 @@ static void mpi_reduce_estimators(int my_rank, int nts)
 
 static void write_temp_packetsfile(const int timestep, const int my_rank, const PKT *const pkt)
 {
+  // write packets binary file
   char filename[100];
   sprintf(filename, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
