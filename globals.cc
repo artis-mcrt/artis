@@ -69,8 +69,6 @@ namespace globals
                                // 3 = compute estimators, but use only for gamma-heating rate
 
 
-  __managed__ int n_out_it; // # of sets of 1,000,000 photons to run.
-
   __managed__ double CLIGHT_PROP; // Speed of light for ray travel. Physically = CLIGHT but
                                   // can be changed for testing.
 
@@ -151,7 +149,6 @@ namespace globals
 
   /// New variables for the non-grey case
   __managed__ int debug_packet;                /// activate debug output for this packet if non negative
-  __managed__ int n_middle_it;
 
   __managed__ int total_nlte_levels;            ///total number of nlte levels
 
