@@ -156,7 +156,6 @@ jobs:
          ${{ runner.os }}-pip-
 
     - name: Install artistools
-      working-directory: artistools/
       run: |
         python3 -m pip install --upgrade pip
         python3 -m pip install artistools
