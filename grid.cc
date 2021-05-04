@@ -1445,7 +1445,7 @@ void read_ejecta_model(enum model_types model_type)
 }
 
 
-static void read_grid_restart_data(const int timestep)
+void read_grid_restart_data(const int timestep)
 {
   char filename[100];
   sprintf(filename, "gridsave_ts%d.tmp", timestep);
@@ -1589,7 +1589,7 @@ void write_grid_restart_data(const int timestep)
 }
 
 
-static void assign_initial_temperatures(void)
+void assign_initial_temperatures(void)
 /// Routine for assigning temperatures to the grid cells at the start of the simulation.
 {
   /// For a simulation started from scratch we estimate the initial temperatures
@@ -1832,18 +1832,6 @@ void grid_init(int my_rank)
   allocate_nonemptymodelcells();
   calculate_kappagrey();
   abundances_read();
-
-  /// and assign a temperature to the cells
-  if (globals::simulation_continued_from_saved)
-  {
-    /// For continuation of an existing simulation we read the temperatures
-    /// at the end of the simulation and write them to the grid.
-    read_grid_restart_data(globals::itstep);
-  }
-  else
-  {
-    assign_initial_temperatures();
-  }
 
   // scale up the radioactive abundances to account for the missing masses in
   // the model cells that are not associated with any propagation cells

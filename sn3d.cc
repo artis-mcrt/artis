@@ -992,6 +992,18 @@ int main(int argc, char** argv)
   radfield::init(my_rank, ndo);
   nonthermal::init(my_rank, ndo);
 
+  /// and assign a temperature to the cells
+  if (globals::simulation_continued_from_saved)
+  {
+    /// For continuation of an existing simulation we read the temperatures
+    /// at the end of the simulation and write them to the grid.
+    read_grid_restart_data(globals::itstep);
+  }
+  else
+  {
+    assign_initial_temperatures();
+  }
+
   // Initialise virtual packets file and vspecpol
   #ifdef VPKT_ON
   init_vspecpol();
