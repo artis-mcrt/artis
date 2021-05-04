@@ -1632,6 +1632,49 @@ static void assign_initial_temperatures(void)
 }
 
 
+void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *maxndo)
+{
+  #ifndef MPI_ON
+    // no MPI, single process updates all cells
+    *nstart = 0;
+    *ndo = get_npts_model();
+    return;
+  #endif
+
+  int n_leftover = 0;
+
+  int nblock = get_npts_model() / nprocesses; // integer division, minimum cells for any process
+  const int numtot = nblock * nprocesses; // cells counted if all processes do the minimum number of cells
+  if (numtot > get_npts_model()) // LJS: should never be the case?
+  {
+    nblock = nblock - 1;
+    *maxndo = nblock + 1;
+    n_leftover = get_npts_model() - (nblock * nprocesses);
+  }
+  else if (numtot < get_npts_model())
+  {
+    *maxndo = nblock + 1;
+    n_leftover = get_npts_model() - (nblock * nprocesses);
+  }
+  else
+  {
+    *maxndo = nblock;
+    n_leftover = 0;
+  }
+
+  if (my_rank < n_leftover)
+  {
+    *ndo = nblock + 1;
+    *nstart = my_rank * (nblock + 1);
+  }
+  else
+  {
+    *ndo = nblock;
+    *nstart = n_leftover * (nblock + 1) + (my_rank - n_leftover) * (nblock);
+  }
+}
+
+
 static void uniform_grid_setup(void)
 /// Routine for doing a uniform cuboidal grid.
 {
@@ -1832,6 +1875,14 @@ void grid_init(int my_rank)
   allocate_nonemptymodelcells();
   calculate_kappagrey();
   abundances_read();
+
+  int nstart = 0;
+  int ndo = 0;
+  int maxndo = 0;
+  get_nstart_ndo(my_rank, globals::nprocs, &nstart, &ndo, &maxndo);
+
+  radfield::init(my_rank, ndo);
+  nonthermal::init(my_rank, ndo);
 
   /// and assign a temperature to the cells
   if (globals::simulation_continued_from_saved)

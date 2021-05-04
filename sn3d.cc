@@ -627,49 +627,6 @@ static bool do_timestep(
 }
 
 
-static void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *maxndo)
-{
-  #ifndef MPI_ON
-    // no MPI, single process updates all cells
-    *nstart = 0;
-    *ndo = get_npts_model();
-    return;
-  #endif
-
-  int n_leftover = 0;
-
-  int nblock = get_npts_model() / nprocesses; // integer division, minimum cells for any process
-  const int numtot = nblock * nprocesses; // cells counted if all processes do the minimum number of cells
-  if (numtot > get_npts_model()) // LJS: should never be the case?
-  {
-    nblock = nblock - 1;
-    *maxndo = nblock + 1;
-    n_leftover = get_npts_model() - (nblock * nprocesses);
-  }
-  else if (numtot < get_npts_model())
-  {
-    *maxndo = nblock + 1;
-    n_leftover = get_npts_model() - (nblock * nprocesses);
-  }
-  else
-  {
-    *maxndo = nblock;
-    n_leftover = 0;
-  }
-
-  if (my_rank < n_leftover)
-  {
-    *ndo = nblock + 1;
-    *nstart = my_rank * (nblock + 1);
-  }
-  else
-  {
-    *ndo = nblock;
-    *nstart = n_leftover * (nblock + 1) + (my_rank - n_leftover) * (nblock);
-  }
-}
-
-
 int main(int argc, char** argv)
 // Main - top level routine.
 {
@@ -988,9 +945,6 @@ int main(int argc, char** argv)
 
   if (NLTE_POPS_ON && ndo > 0)
     nltepop_open_file(my_rank);
-
-  radfield::init(my_rank, ndo);
-  nonthermal::init(my_rank, ndo);
 
   // Initialise virtual packets file and vspecpol
   #ifdef VPKT_ON
