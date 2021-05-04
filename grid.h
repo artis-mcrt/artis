@@ -87,9 +87,7 @@ __host__ __device__ void set_npts_model(int npts_model);
 __host__ __device__ int get_t_model(void);
 __host__ __device__ int get_cell_modelgridindex(int cellindex);
 void read_ejecta_model(enum model_types model_type);
-void read_grid_restart_data(const int timestep);
 void write_grid_restart_data(const int timestep);
-void assign_initial_temperatures(void);
 double get_totmassradionuclide(const int z, const int a);
 
 #endif //GRIDINIT_H
