@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -948,10 +949,9 @@ static void read_atomicdata_files(void)
         nlevels_requiretransitions = 0;
         nlevels_requiretransitions_upperlevels = nlevelsmax; // no effect if previous line is zero
       }
-      if (nlevels_requiretransitions > nlevelsmax)
-        nlevels_requiretransitions = nlevelsmax;
-      if (nlevels_requiretransitions_upperlevels > nlevelsmax)
-        nlevels_requiretransitions_upperlevels = nlevelsmax;
+
+      nlevels_requiretransitions = std::min(nlevelsmax, nlevels_requiretransitions);
+      nlevels_requiretransitions_upperlevels = std::min(nlevelsmax, nlevels_requiretransitions_upperlevels);
 
       transitiontable = read_ion_transitions(transitiondata, tottransitions_in, &tottransitions, transitiontable,
         nlevels_requiretransitions, nlevels_requiretransitions_upperlevels, Z, ionstage);
