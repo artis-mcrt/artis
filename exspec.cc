@@ -25,7 +25,7 @@ int nprocs_exspec;
 bool do_emission_res;
 
 // threadprivate variables
-FILE *output_file;
+FILE *output_file = NULL;
 int tid;
 bool use_cellhist;
 bool neutral_flag;

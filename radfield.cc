@@ -345,6 +345,7 @@ void init(int my_rank, int ndo)
     {
       char filename[100];
       sprintf(filename,"radfield_%.4d.out", my_rank);
+      assert_always(radfieldfile == NULL);
       radfieldfile = fopen_required(filename, "w");
       fprintf(radfieldfile,"%8s %15s %8s %11s %11s %9s %9s %9s %9s %9s %12s\n",
               "timestep","modelgridindex","bin_num","nu_lower","nu_upper",
@@ -744,9 +745,10 @@ void write_to_file(int modelgridindex, int timestep)
 
 void close_file(void)
 {
-  if (MULTIBIN_RADFIELD_MODEL_ON)
+  if (radfieldfile != NULL)
   {
     fclose(radfieldfile);
+    radfieldfile = NULL;
   }
 
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)

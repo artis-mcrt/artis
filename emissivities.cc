@@ -234,7 +234,8 @@ void normalise_compton_estimators(const int nts, struct time *time_step)
 
 void write_compton_estimators(int nts)
 {
-  FILE *est_file, *dummy;
+  FILE *est_file = NULL;
+  FILE *dummy = NULL;
   char chch;
   char filename[100] = "est_";
   char junk[100];

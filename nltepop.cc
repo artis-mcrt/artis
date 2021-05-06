@@ -1617,6 +1617,7 @@ void nltepop_open_file(const int my_rank)
 {
   char filename[100];
   sprintf(filename, "nlte_%.4d.out",my_rank);
+  assert_always(nlte_file == NULL);
   nlte_file = fopen_required(filename, "w");
   fprintf(nlte_file, "%8s %14s %2s %9s %5s %11s %11s %11s\n",
           "timestep", "modelgridindex", "Z", "ion_stage", "level", "n_LTE", "n_NLTE", "ion_popfrac");
@@ -1625,9 +1626,11 @@ void nltepop_open_file(const int my_rank)
 
 void nltepop_close_file(void)
 {
-  assert_always(nlte_file != NULL);
-  fclose(nlte_file);
-  nlte_file = NULL;
+  if (nlte_file != NULL)
+  {
+    fclose(nlte_file);
+    nlte_file = NULL;
+  }
 }
 
 
