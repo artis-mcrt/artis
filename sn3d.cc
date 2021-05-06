@@ -1070,7 +1070,7 @@ int main(int argc, char** argv)
     fclose(estimators_file);
   }
 
-  if (NLTE_POPS_ON)
+  if (NLTE_POPS_ON && ndo > 0)
     nltepop_close_file();
   radfield::close_file();
   nonthermal::close_file();
