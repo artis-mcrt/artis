@@ -547,7 +547,7 @@ static void calculate_kappagrey(void)
     }
   }
 
-  FILE *grid_file;
+  FILE *grid_file = NULL;
   if (globals::rank_global == 0)
   {
     grid_file = fopen_required("grid.out", "w");

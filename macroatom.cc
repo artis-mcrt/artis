@@ -18,7 +18,7 @@
 // save to the macroatom_*.out file
 #define LOG_MACROATOM false
 
-static FILE *macroatom_file;
+static FILE *macroatom_file = NULL;
 
 
 __host__ __device__
@@ -977,6 +977,7 @@ void macroatom_open_file(const int my_rank)
     return;
   char filename[100];
   sprintf(filename, "macroatom_%.4d.out",my_rank);
+  assert_always(macroatom_file == NULL);
   macroatom_file = fopen_required(filename, "w");
   fprintf(macroatom_file, "%8s %14s %2s %12s %12s %9s %9s %9s %11s %11s %11s %11s %9s\n",
           "timestep", "modelgridindex", "Z", "ionstage_in", "ionstage_out", "level_in", "level_out", "activline",
@@ -986,7 +987,7 @@ void macroatom_open_file(const int my_rank)
 
 void macroatom_close_file(void)
 {
-  if (LOG_MACROATOM)
+  if (macroatom_file != NULL)
   {
     fclose(macroatom_file);
   }

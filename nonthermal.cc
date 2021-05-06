@@ -796,7 +796,11 @@ void close_file(void)
   if (!NT_ON || !NT_SOLVE_SPENCERFANO)
     return;
 
-  fclose(nonthermalfile);
+  if (nonthermalfile != NULL)
+  {
+    fclose(nonthermalfile);
+    nonthermalfile = NULL;
+  }
   gsl_vector_free(envec);
   gsl_vector_free(sourcevec);
   for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)

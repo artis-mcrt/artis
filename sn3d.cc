@@ -934,17 +934,16 @@ int main(int argc, char** argv)
   const int last_loop = globals::ftstep;
   int nts = globals::itstep;
 
+  macroatom_open_file(my_rank);
   if (ndo > 0)
   {
-    macroatom_open_file(my_rank);
-
     assert_always(estimators_file == NULL)
     sprintf(filename, "estimators_%.4d.out", my_rank);
     estimators_file = fopen_required(filename, "w");
-  }
 
-  if (NLTE_POPS_ON && ndo > 0)
-    nltepop_open_file(my_rank);
+    if (NLTE_POPS_ON)
+      nltepop_open_file(my_rank);
+  }
 
   // Initialise virtual packets file and vspecpol
   #ifdef VPKT_ON
@@ -1064,14 +1063,15 @@ int main(int argc, char** argv)
   cudaDeviceReset();
   #endif
   //fclose(tb_file);
-  if (ndo > 0)
+  if (estimators_file != NULL)
   {
-    macroatom_close_file();
     fclose(estimators_file);
   }
 
+  macroatom_close_file();
   if (NLTE_POPS_ON)
     nltepop_close_file();
+
   radfield::close_file();
   nonthermal::close_file();
 
