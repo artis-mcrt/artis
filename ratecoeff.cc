@@ -530,7 +530,8 @@ static double bfcooling_integrand_gsl(double nu, void *voidparas)
 
 static void precalculate_rate_coefficient_integrals(void)
 {
-  const double intaccuracy = 1e-3;        /// Fractional accuracy of the integrator //=1e-5 took 8 hours with Fe I to V!
+  const double intaccuracy = 1e-3;     // target fractional accuracy of the integrator //=1e-5 took 8 hours with Fe I to V!
+  const double epsrelwarning = 1e-2;   // fractional error to emit a warning
 
   /// Calculate the rate coefficients for each level of each ion of each element
   for (int element = 0; element < get_nelements(); element++)
@@ -601,9 +602,9 @@ static void precalculate_rate_coefficient_integrals(void)
             F_alpha_sp.function = &alpha_sp_integrand_gsl;
             F_alpha_sp.params = &intparas;
             status = gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &alpha_sp, &error);
-            if (status != 0)
+            if (status != 0 && (status != 18 || (error / alpha_sp) > epsrelwarning))
             {
-                printout("alpha_sp integrator status %d. Integral value %9.3e +/- %9.3e\n",status,alpha_sp,error);
+                printout("alpha_sp integrator status %d. Integral value %9.3e +/- %9.3e\n",status, alpha_sp, error);
             }
             alpha_sp *= FOURPI * sfac * phixstargetprobability;
 
@@ -645,9 +646,9 @@ static void precalculate_rate_coefficient_integrals(void)
               F_gammacorr.function = &gammacorr_integrand_gsl;
               F_gammacorr.params = &intparas;
               status = gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &gammacorr, &error);
-              if (status != 0)
+              if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning))
               {
-                printout("gammcorr integrator status %d. Integral value %9.3e +/- %9.3e\n",status,gammacorr,error);
+                printout("gammcorr integrator status %d. Integral value %9.3e +/- %9.3e\n",status, gammacorr, error);
               }
               gammacorr *= FOURPI * phixstargetprobability;
               assert_always(gammacorr >= 0);
@@ -665,9 +666,9 @@ static void precalculate_rate_coefficient_integrals(void)
               F_bfheating.function = &approx_bfheating_integrand_gsl;
               F_bfheating.params = &intparas;
               status = gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &bfheating_coeff, &error);
-              if (status != 0)
+              if (status != 0 && (status != 18 || (error / bfheating_coeff) > epsrelwarning))
               {
-                printout("bfheating_coeff integrator status %d. Integral value %9.3e +/- %9.3e\n",status,bfheating_coeff,error);
+                printout("bfheating_coeff integrator status %d. Integral value %9.3e +/- %9.3e\n", status, bfheating_coeff, error);
               }
               bfheating_coeff *= FOURPI * phixstargetprobability;
               if (bfheating_coeff < 0)
@@ -683,9 +684,9 @@ static void precalculate_rate_coefficient_integrals(void)
             F_bfcooling.function = &bfcooling_integrand_gsl;
             F_bfcooling.params = &intparas;
             status = gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &bfcooling_coeff, &error);
-            if (status != 0)
+            if (status != 0 && (status != 18 || (error / bfcooling_coeff) > epsrelwarning))
             {
-              printout("bfcooling_coeff integrator status %d. Integral value %9.3e +/- %9.3e\n",status,bfcooling_coeff,error);
+              printout("bfcooling_coeff integrator status %d. Integral value %9.3e +/- %9.3e\n",status, bfcooling_coeff, error);
             }
             bfcooling_coeff *= FOURPI * sfac * phixstargetprobability;
             if (!std::isfinite(bfcooling_coeff) || bfcooling_coeff < 0)
