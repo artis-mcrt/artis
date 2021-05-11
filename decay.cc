@@ -74,7 +74,7 @@ static void printout_nuclidename(const int z, const int a)
 }
 
 
-static const char *get_elname(const int z)
+const char *get_elname(const int z)
 {
   return elsymbols[z];
 }

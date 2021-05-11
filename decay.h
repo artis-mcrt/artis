@@ -16,6 +16,7 @@ namespace decay
   __host__ __device__ int get_nucstring_z(const char *strnuc);
   __host__ __device__ int get_nucstring_a(const char *strnuc);
   __host__ __device__ int get_num_nuclides(void);
+  const char *get_elname(const int z);
   __host__ __device__ int get_nuc_z(int nucindex);
   __host__ __device__ int get_nuc_a(int nucindex);
   __host__ __device__ int get_nuc_index(int z, int a);

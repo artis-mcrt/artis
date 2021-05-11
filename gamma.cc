@@ -83,6 +83,20 @@ static void set_trivial_gamma_spectrum(const int z, const int a)
 
 static void read_decaydata(void)
 {
+  // migrate from old filename
+  if (!std::ifstream("ni56_lines.txt") && std::ifstream("ni_lines.txt"))
+  {
+    printout("Moving ni_lines.txt to ni56_lines.txt\n");
+    std::rename("ni_lines.txt", "ni56_lines.txt");
+  }
+
+  // migrate from old filename
+  if (!std::ifstream("co56_lines.txt") && std::ifstream("co_lines.txt"))
+  {
+    printout("Moving co_lines.txt to co56_lines.txt\n");
+    std::rename("co_lines.txt", "co56_lines.txt");
+  }
+
   gamma_spectra = (struct gamma_spec *) calloc(decay::get_num_nuclides(), sizeof(struct gamma_spec));
 
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
@@ -92,36 +106,48 @@ static void read_decaydata(void)
     gamma_spectra[nucindex].probability = NULL;
     const int z = decay::get_nuc_z(nucindex);
     const int a = decay::get_nuc_a(nucindex);
-    // decay::set_nucdecayenergygamma(z, a, 0.);
-    if (decay::nucdecayenergygamma(z, a) > 0.)
+    if (z < 1)
     {
+      continue;
+    }
+
+    const char *elname = decay::get_elname(z);
+    char elnamelower[strlen(elname) + 1];
+    for(int i = 0; i <= (int) strlen(elname); i++)
+    {
+      elnamelower[i] = tolower(elname[i]);
+    }
+
+    char filename[100];
+    sprintf(filename, "%s%d_lines.txt", elnamelower, a);
+
+    if (std::ifstream(filename))
+    {
+      read_gamma_spectrum(z, a, filename);
+    }
+    else if (decay::nucdecayenergygamma(z, a) > 0.)
+    {
+      printout("%s does not exist. Setting 100%% chance of single gamma-line with energy %g MeV\n",
+        filename, decay::nucdecayenergygamma(z, a) / EV / 1e6);
       set_trivial_gamma_spectrum(z, a);
+    }
+    else
+    {
+      printout("%s does not exist. No gamma decay from this nuclide.\n", filename);
     }
   }
 
-  // migrate from old filename
-  if (!std::ifstream("ni56_lines.txt") && std::ifstream("ni_lines.txt"))
-  {
-    printout("Moving ni_lines.txt to ni56_lines.txt\n");
-    std::rename("ni_lines.txt", "ni56_lines.txt");
-  }
-  read_gamma_spectrum(28, 56, "ni56_lines.txt");
-
-  // migrate from old filename
-  if (!std::ifstream("co56_lines.txt") && std::ifstream("co_lines.txt"))
-  {
-    printout("Moving co_lines.txt to co56_lines.txt\n");
-    std::rename("co_lines.txt", "co56_lines.txt");
-  }
-  read_gamma_spectrum(27, 56, "co56_lines.txt");
-
-  read_gamma_spectrum(23, 48, "v48_lines.txt");
-
-  read_gamma_spectrum(24, 48, "cr48_lines.txt");
-
-  read_gamma_spectrum(28, 57, "ni57_lines.txt");
-
-  read_gamma_spectrum(27, 57, "co57_lines.txt");
+  // read_gamma_spectrum(28, 56, "ni56_lines.txt");
+  //
+  // read_gamma_spectrum(27, 56, "co56_lines.txt");
+  //
+  // read_gamma_spectrum(23, 48, "v48_lines.txt");
+  //
+  // read_gamma_spectrum(24, 48, "cr48_lines.txt");
+  //
+  // read_gamma_spectrum(28, 57, "ni57_lines.txt");
+  //
+  // read_gamma_spectrum(27, 57, "co57_lines.txt");
 
   decay::set_nucdecayenergygamma(26, 52, 0.86 * MEV);  // Fe52
   decay::set_nucdecayenergygamma(25, 52, 3.415 * MEV);  // Mn52
