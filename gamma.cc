@@ -11,6 +11,7 @@
 #include "vectors.h"
 
 #include <fstream>
+#include <cstring>
 
 // Code for handing gamma rays - creation and propagation
 
