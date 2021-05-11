@@ -119,12 +119,21 @@ static void read_decaydata(void)
       elnamelower[i] = tolower(elname[i]);
     }
 
+    // look in the current folder
     char filename[100];
     sprintf(filename, "%s%d_lines.txt", elnamelower, a);
+
+    // look in the 'data' subfolder
+    char filename2[100];
+    sprintf(filename2, "data/%s%d_lines.txt", elnamelower, a);
 
     if (std::ifstream(filename))
     {
       read_gamma_spectrum(z, a, filename);
+    }
+    else if (std::ifstream(filename2))
+    {
+      read_gamma_spectrum(z, a, filename2);
     }
     else if (decay::nucdecayenergygamma(z, a) > 0.)
     {
