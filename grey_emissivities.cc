@@ -138,7 +138,8 @@ void normalise_grey(int nts)
 
 void write_grey(int nts)
 {
-  FILE *est_file, *dummy;
+  FILE *est_file = NULL;
+  FILE *dummy = NULL;
   char chch;
   char filename[100] = "grey_est_";
   char junk[100];

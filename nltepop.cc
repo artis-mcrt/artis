@@ -1617,6 +1617,7 @@ void nltepop_open_file(const int my_rank)
 {
   char filename[100];
   sprintf(filename, "nlte_%.4d.out",my_rank);
+  assert_always(nlte_file == NULL);
   nlte_file = fopen_required(filename, "w");
   fprintf(nlte_file, "%8s %14s %2s %9s %5s %11s %11s %11s\n",
           "timestep", "modelgridindex", "Z", "ion_stage", "level", "n_LTE", "n_NLTE", "ion_popfrac");
@@ -1625,7 +1626,11 @@ void nltepop_open_file(const int my_rank)
 
 void nltepop_close_file(void)
 {
-  fclose(nlte_file);
+  if (nlte_file != NULL)
+  {
+    fclose(nlte_file);
+    nlte_file = NULL;
+  }
 }
 
 
@@ -1634,6 +1639,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep)
   if (globals::initial_iteration) // NLTE solver hasn't been run yet
     return;
 
+  assert_always(nlte_file != NULL);
   // fprintf(nlte_file,"#timestep %d modelgridindex %d T_R %g T_e %g W %g T_J %g nne %g\n",
   //         timestep, n, get_TR(n), get_Te(n), get_W(n), get_TJ(n), get_nne(n));
 

@@ -150,7 +150,7 @@ static const bool NT_SOLVE_SPENCERFANO = true;
 #define SF_EMIN 0.1
 
 // use a grid of energy points with constant spacing in log energy
-#define SF_USE_LOG_E_INCREMENT true
+#define SF_USE_LOG_E_INCREMENT false
 
 // trigger a Spencer-Fano solution at least once every n timesteps
 // 0 can only use solutions from previous NLTE iterations on the current timestep
@@ -189,7 +189,7 @@ static const int MAX_NT_EXCITATIONS_STORED = 25000;
 #define NT_MAX_AUGER_ELECTRONS 2
 
 // add the Auger electron term to the Spencer-Fano equation
-#define SF_AUGER_CONTRIBUTION_ON true
+#define SF_AUGER_CONTRIBUTION_ON false
 
 // set true to divide up the mean Auger energy by the number of electrons that come out
 #define SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN false

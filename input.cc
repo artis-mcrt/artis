@@ -51,7 +51,7 @@ std::string inputlinecomments[inputlinecommentcount] = {
   "start and end times for synthesis",
   "model_type: number of dimensions (1, 2, or 3)",
   "compute r-light curve (1: no estimators, 2: thin cells, 3: thick cells, 4: gamma-ray heating)",
-  "n_out_it: number of iterations",
+  "n_out_it: UNUSED number of iterations",
   "globals::CLIGHT_PROP/CLIGHT: change speed of light by some factor",
   "use grey opacity for gammas?",
   "syn_dir: x, y, and z components of unit vector (will be normalised after input or randomised if zero length)",
@@ -1653,10 +1653,7 @@ void input(int rank)
 
   globals::maxion = MIONS;
 
-  /// Set number of packets, outer and middle iterations
   globals::npkts = MPKTS;
-  globals::n_out_it = 10;
-  globals::n_middle_it = 1;
 /*  #ifdef FORCE_LTE
     n_titer = 1;
   #else
@@ -1922,7 +1919,8 @@ void read_parameterfile(int rank)
   assert_always(dum1 <= 4);
 
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> globals::n_out_it; // number of iterations
+  int n_out_it;
+  std::stringstream(line) >> n_out_it; // UNUSED number of iterations
 
   assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> dum2; // change speed of light?

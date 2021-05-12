@@ -67,8 +67,6 @@ namespace globals
   extern __managed__ bool do_r_lc;
   extern __managed__ int do_rlc_est;
 
-  extern __managed__ int n_out_it;
-
   extern __managed__ double CLIGHT_PROP;
 
   extern __managed__ double gamma_grey;
@@ -135,7 +133,6 @@ namespace globals
   extern __managed__ double rho_crit;
 
   extern __managed__ int debug_packet;
-  extern __managed__ int n_middle_it;
 
   extern __managed__ int total_nlte_levels;
 

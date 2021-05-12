@@ -275,7 +275,7 @@ static int compare_integers(const void* a, const void* b)
 }
 
 
-void init(int my_rank)
+void init(int my_rank, int ndo)
 // this should be called only after the atomic data is in memory
 {
   if (initialized)
@@ -341,13 +341,17 @@ void init(int my_rank)
     printout("Initialising multibin radiation field with %d bins from (%.2f eV, %6.1f A) to (%.2f eV, %6.1f A)\n",
              RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
              H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
-    char filename[100];
-    sprintf(filename,"radfield_%.4d.out", my_rank);
-    radfieldfile = fopen_required(filename, "w");
-    fprintf(radfieldfile,"%8s %15s %8s %11s %11s %9s %9s %9s %9s %9s %12s\n",
-            "timestep","modelgridindex","bin_num","nu_lower","nu_upper",
-            "nuJ","J","J_nu_avg","ncontrib","T_R","W");
-    fflush(radfieldfile);
+    if (ndo > 0)
+    {
+      char filename[100];
+      sprintf(filename,"radfield_%.4d.out", my_rank);
+      assert_always(radfieldfile == NULL);
+      radfieldfile = fopen_required(filename, "w");
+      fprintf(radfieldfile,"%8s %15s %8s %11s %11s %9s %9s %9s %9s %9s %12s\n",
+              "timestep","modelgridindex","bin_num","nu_lower","nu_upper",
+              "nuJ","J","J_nu_avg","ncontrib","T_R","W");
+      fflush(radfieldfile);
+    }
 
     setup_bin_boundaries();
   }
@@ -741,9 +745,10 @@ void write_to_file(int modelgridindex, int timestep)
 
 void close_file(void)
 {
-  if (MULTIBIN_RADFIELD_MODEL_ON)
+  if (radfieldfile != NULL)
   {
     fclose(radfieldfile);
+    radfieldfile = NULL;
   }
 
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)

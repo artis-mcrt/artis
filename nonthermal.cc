@@ -514,7 +514,7 @@ static void zero_all_effionpot(const int modelgridindex)
 }
 
 
-void init(const int my_rank)
+void init(const int my_rank, const int ndo)
 {
   assert_always(nonthermal_initialized == false);
   nonthermal_initialized = true;
@@ -556,12 +556,15 @@ void init(const int my_rank)
   printout("  SF_AUGER_CONTRIBUTION %s\n", SF_AUGER_CONTRIBUTION_ON ? "on" : "off");
   printout("  SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN %s\n", SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN ? "on" : "off");
 
-  char filename[100];
-  sprintf(filename,"nonthermalspec_%.4d.out", my_rank);
-  nonthermalfile = fopen_required(filename, "w");
-  fprintf(nonthermalfile,"%8s %15s %8s %11s %11s %11s\n",
-          "timestep","modelgridindex","index","energy_ev","source","y");
-  fflush(nonthermalfile);
+  if (ndo > 0)
+  {
+    char filename[100];
+    sprintf(filename,"nonthermalspec_%.4d.out", my_rank);
+    nonthermalfile = fopen_required(filename, "w");
+    fprintf(nonthermalfile,"%8s %15s %8s %11s %11s %11s\n",
+            "timestep","modelgridindex","index","energy_ev","source","y");
+    fflush(nonthermalfile);
+  }
 
   nt_solution = (struct nt_solution_struct *) calloc(get_npts_model(), sizeof(struct nt_solution_struct));
 
@@ -793,7 +796,11 @@ void close_file(void)
   if (!NT_ON || !NT_SOLVE_SPENCERFANO)
     return;
 
-  fclose(nonthermalfile);
+  if (nonthermalfile != NULL)
+  {
+    fclose(nonthermalfile);
+    nonthermalfile = NULL;
+  }
   gsl_vector_free(envec);
   gsl_vector_free(sourcevec);
   for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
@@ -1135,7 +1142,7 @@ static double N_e(const int modelgridindex, const double energy)
       // excitation terms
 
       const int nlevels_all = get_nlevels(element, ion);
-      const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
+      const int nlevels = std::min(NTEXCITATION_MAXNLEVELS_LOWER, nlevels_all);
 
       for (int lower = 0; lower < nlevels; lower++)
       {
@@ -1218,37 +1225,38 @@ static float calculate_frac_heating(const int modelgridindex)
   const float nne = get_nne(modelgridindex);
   // const float nnetot = get_nnetot(modelgridindex);
 
-  const double E_0 = SF_EMIN;
-
-  const int startindex = get_energyindex_ev_lteq(E_0);
-  for (int i = startindex; i < SFPTS; i++)
+  for (int i = 0; i < SFPTS; i++)
   {
     const double endash = gsl_vector_get(envec, i);
     #if (SF_USE_LOG_E_INCREMENT)
-    double deltaendash = gsl_vector_get(delta_envec, i);
+    const double deltaendash = gsl_vector_get(delta_envec, 0);
     #else
-    double deltaendash = DELTA_E;
+    const double deltaendash = DELTA_E;
     #endif
 
-    if (i == startindex && endash < E_0)
-    {
-      deltaendash = endash + deltaendash - E_0;
-    }
     // first term
     frac_heating_Einit += get_y_sample(modelgridindex, i) * (electron_loss_rate(endash * EV, nne) / EV) * deltaendash;
   }
 
   // second term
-  frac_heating_Einit += E_0 * get_y(modelgridindex, E_0) * (electron_loss_rate(E_0 * EV, nne) / EV);
+  frac_heating_Einit += SF_EMIN * get_y(modelgridindex, SF_EMIN) * (electron_loss_rate(SF_EMIN * EV, nne) / EV);
 
-  // third term (integral from zero to E_0)
-  const int nsteps = 100;
-  const double delta_endash = E_0 / nsteps;
+  double N_e_contrib = 0.;
+  // third term (integral from zero to SF_EMIN)
+  #if (SF_USE_LOG_E_INCREMENT)
+  const double firstdeltaendash = gsl_vector_get(delta_envec, 0);
+  #else
+  const double firstdeltaendash = DELTA_E;
+  #endif
+  const int nsteps = ceil(SF_EMIN / firstdeltaendash) * 10;
+  const double delta_endash = SF_EMIN / nsteps;
   for (int j = 0; j < nsteps; j++)
   {
-    const double endash = E_0 * j / nsteps;
-    frac_heating_Einit += N_e(modelgridindex, endash * EV) * endash * delta_endash;
+    const double endash = SF_EMIN * j / nsteps;
+    N_e_contrib += N_e(modelgridindex, endash * EV) * endash * delta_endash;
   }
+  frac_heating_Einit += N_e_contrib;
+  printout(" heating N_e contrib (en < EMIN) %g nsteps %d\n", N_e_contrib / E_init_ev, nsteps);
 
   const float frac_heating = frac_heating_Einit / E_init_ev;
 
@@ -2131,8 +2139,6 @@ void do_ntlepton(PKT *pkt_ptr)
     // component of the deposition fractions
     // until we end and select transition_ij when zrand < dep_frac_transition_ij
 
-    // const double frac_heating = get_nt_frac_heating(modelgridindex);
-
     // const double frac_ionization = get_nt_frac_ionization(modelgridindex);
     const double frac_ionization = get_ntion_energyrate(modelgridindex) / get_deposition_rate_density(modelgridindex);
     // printout("frac_ionization compare %g and %g\n", frac_ionization, get_nt_frac_ionization(modelgridindex));
@@ -2246,14 +2252,11 @@ static bool realloc_frac_excitations_list(const int modelgridindex, const int ne
 }
 
 
-static void analyse_sf_solution(const int modelgridindex, const int timestep)
+static void analyse_sf_solution(const int modelgridindex, const int timestep, const bool enable_sfexcitation)
 {
   const float nne = get_nne(modelgridindex);
   const double nntot = get_tot_nion(modelgridindex);
   const double nnetot = get_nnetot(modelgridindex);
-
-  // store the solution properties now while the NT spectrum is in memory (in case we free before packet prop)
-  nt_solution[modelgridindex].frac_heating = calculate_frac_heating(modelgridindex);
 
   double frac_excitation_total = 0.;
   double frac_ionization_total = 0.;
@@ -2321,7 +2324,11 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
       // excitation from all levels is very SLOW
       const int nlevels_all = get_nlevels(element, ion);
       // So limit the lower levels to improve performance
-      const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
+      int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
+      if (!enable_sfexcitation)
+      {
+        nlevels = -1; // disable all excitations
+      }
 #if NT_EXCITATION_ON
       const bool above_minionfraction = (nnion >= minionfraction * get_tot_nion(modelgridindex));
 #endif
@@ -2376,9 +2383,14 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
         } // for t
       } // for lower
 
-      frac_excitation_total += frac_excitation_ion;
 
       printout("    frac_excitation: %g\n", frac_excitation_ion);
+      if (frac_excitation_ion > 1. || !std::isfinite(frac_excitation_ion))
+      {
+        printout("      WARNING: invalid frac_excitation. Replacing with zero\n");
+        frac_excitation_ion = 0.;
+      }
+      frac_excitation_total += frac_excitation_ion;
       printout("    workfn:       %9.2f eV\n", (1. / get_oneoverw(element, ion, modelgridindex)) / EV);
       printout("    eff_ionpot:   %9.2f eV  (always use valence potential is %s)\n",
                get_eff_ionpot(modelgridindex, element, ion) / EV, (NT_USE_VALENCE_IONPOTENTIAL ? "true" : "false"));
@@ -2492,8 +2504,6 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
 
   } // NT_EXCITATION_ON
 
-  const float frac_heating = get_nt_frac_heating(modelgridindex);
-
   // calculate number density of non-thermal electrons
   const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
   const double yscalefactor = deposition_rate_density_ev / E_init_ev;
@@ -2520,10 +2530,14 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
   printout("  nnetot:      %9.3e e-/cm^3\n", nnetot);
   printout("  nne_nt     < %9.3e e-/cm^3\n", nne_nt_max);
   printout("  nne_nt/nne < %9.3e\n", nne_nt_max / nne);
-  printout("  frac_heating_tot:    %g\n", frac_heating);
+
+  // store the solution properties now while the NT spectrum is in memory (in case we free before packet prop)
+  nt_solution[modelgridindex].frac_heating = calculate_frac_heating(modelgridindex);
+
+  printout("  frac_heating_tot:    %g\n", nt_solution[modelgridindex].frac_heating);
   printout("  frac_excitation_tot: %g\n", frac_excitation_total);
   printout("  frac_ionization_tot: %g\n", frac_ionization_total);
-  const double frac_sum = frac_heating + frac_excitation_total + frac_ionization_total;
+  const double frac_sum = nt_solution[modelgridindex].frac_heating + frac_excitation_total + frac_ionization_total;
   printout("  frac_sum:            %g (should be close to 1.0)\n", frac_sum);
 
   nt_solution[modelgridindex].frac_heating = 1. - frac_excitation_total - frac_ionization_total;
@@ -2630,13 +2644,13 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
 
       const int xsstartindex = get_xs_ionization_vector(vec_xs_ionization, collionindex);
 
-      double atanexp[SFPTS];
+      double int_eps_upper[SFPTS];
       double prefactors[SFPTS];
       for (int j = xsstartindex; j < SFPTS; j++)
       {
         const double endash = gsl_vector_get(envec, j);
         const double epsilon_upper = std::min((endash + ionpot_ev) / 2, endash);
-        atanexp[j] = atan((epsilon_upper - ionpot_ev) / J);
+        int_eps_upper[j] = atan((epsilon_upper - ionpot_ev) / J);
         prefactors[j] = gsl_vector_get(vec_xs_ionization, j) * nnion / atan((endash - ionpot_ev) / 2 / J);
       }
 
@@ -2661,25 +2675,35 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
           // in Kozma & Fransson 1992 equation 4
 
           const double epsilon_lower = std::max(endash - en, ionpot_ev); // and epsilon_upper = (endash + ionpot_ev) / 2;
-          *gsl_matrix_ptr(sfmatrix, i, j) += prefactors[j] * (atanexp[j] - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
+          const double int_eps_lower = atan((epsilon_lower - ionpot_ev) / J);
+          if (int_eps_lower <= int_eps_upper[j])
+          {
+            *gsl_matrix_ptr(sfmatrix, i, j) += prefactors[j] * (int_eps_upper[j] - int_eps_lower) * deltaendash;
+          }
         }
 
         // below is atan((epsilon_lower - ionpot_ev) / J) where epsilon_lower = en + ionpot_ev;
-        const double atanexp2 = atan(en / J);
+        const double int_eps_lower2 = atan(en / J);
 
         // endash ranges from 2 * en + ionpot_ev to SF_EMAX
-        const int secondintegralstartindex = get_energyindex_ev_lteq(2 * en + ionpot_ev);
-        for (int j = secondintegralstartindex; j < SFPTS; j++)
+        if (2 * en + ionpot_ev <= SF_EMAX)
         {
-          #if (SF_USE_LOG_E_INCREMENT)
-          const double deltaendash = gsl_vector_get(delta_envec, j);
-          #else
-          const double deltaendash = DELTA_E;
-          #endif
+          const int secondintegralstartindex = get_energyindex_ev_lteq(2 * en + ionpot_ev);
+          for (int j = secondintegralstartindex; j < SFPTS; j++)
+          {
+            #if (SF_USE_LOG_E_INCREMENT)
+            const double deltaendash = gsl_vector_get(delta_envec, j);
+            #else
+            const double deltaendash = DELTA_E;
+            #endif
 
-          // epsilon_lower = en + ionpot_ev;
-          // epsilon_upper = (endash + ionpot_ev) / 2;
-          *gsl_matrix_ptr(sfmatrix, i, j) -= prefactors[j] * (atanexp[j] - atanexp2) * deltaendash;
+            // epsilon_lower = en + ionpot_ev;
+            // epsilon_upper = (endash + ionpot_ev) / 2;
+            if (int_eps_lower2 <= int_eps_upper[j])
+            {
+              *gsl_matrix_ptr(sfmatrix, i, j) -= prefactors[j] * (int_eps_upper[j] - int_eps_lower2) * deltaendash;
+            }
+          }
         }
       }
 
@@ -2802,17 +2826,28 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 // solve the Spencer-Fano equation to get the non-thermal electron flux energy distribution
 // based on Equation (2) of Li et al. (2012)
 {
+  bool skip_solution = false;
   if (get_numassociatedcells(modelgridindex) < 1)
   {
     printout("Associated_cells < 1 in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", modelgridindex, timestep);
 
     return;
   }
+  else if (timestep < globals::n_lte_timesteps + 1)
+  {
+    printout("Skipping Spencer-Fano solution for first NLTE timestep\n");
+    skip_solution = true;
+  }
   else if (get_deposition_rate_density(modelgridindex) / EV < MINDEPRATE)
   {
     printout("Non-thermal deposition rate of %g eV/cm/s/cm^3 below  MINDEPRATE %g in cell %d at timestep %d. Skipping Spencer-Fano solution.\n",
     get_deposition_rate_density(modelgridindex) / EV, MINDEPRATE, modelgridindex, timestep);
 
+    skip_solution = true;
+  }
+
+  if (skip_solution)
+  {
     nt_solution[modelgridindex].frac_heating = 0.97;
     nt_solution[modelgridindex].frac_ionization = 0.03;
     nt_solution[modelgridindex].frac_excitation = 0.;
@@ -2854,25 +2889,25 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   bool enable_sfexcitation = true;
   bool enable_sfionization = true;
-  if (timestep <= globals::n_lte_timesteps)
-  {
-    // for the first run of the solver at the first NLTE timestep (which usually requires many iterations),
-    // do a fast initial solution but mark it has an invalid nne per ion so it gets replaced at the next timestep
-    nt_solution[modelgridindex].nneperion_when_solved = -1.;
-    enable_sfexcitation = false;
-    enable_sfionization = false;
-
-    printout("Doing a fast initial solution without ionization or excitation in the SF equation for the first NLTE timestep.\n");
-  }
-  else if (timestep <= globals::n_lte_timesteps + 2)
-  {
-    // run the solver in a faster mode for the first couple of NLTE timesteps
-    // nt_solution[modelgridindex].nneperion_when_solved = -1.;
-    enable_sfexcitation = false;
-    // enable_sfionization = false;
-
-    printout("Doing a faster solution without excitation in the SF equation for the first couple of NLTE timesteps.\n");
-  }
+  // if (timestep <= globals::n_lte_timesteps)
+  // {
+  //   // for the first run of the solver at the first NLTE timestep (which usually requires many iterations),
+  //   // do a fast initial solution but mark it has an invalid nne per ion so it gets replaced at the next timestep
+  //   nt_solution[modelgridindex].nneperion_when_solved = -1.;
+  //   enable_sfexcitation = false;
+  //   enable_sfionization = false;
+  //
+  //   printout("Doing a fast initial solution without ionization or excitation in the SF equation for the first NLTE timestep.\n");
+  // }
+  // if (timestep <= globals::n_lte_timesteps + 2)
+  // {
+  //   // run the solver in a faster mode for the first couple of NLTE timesteps
+  //   // nt_solution[modelgridindex].nneperion_when_solved = -1.;
+  //   enable_sfexcitation = false;
+  //   // enable_sfionization = false;
+  //
+  //   printout("Doing a faster solution without excitation in the SF equation for the first couple of NLTE timesteps.\n");
+  // }
 
   gsl_matrix *const sfmatrix = gsl_matrix_calloc(SFPTS, SFPTS);
   gsl_vector *const rhsvec = gsl_vector_calloc(SFPTS); // constant term (not dependent on y func) in each equation
@@ -2978,7 +3013,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   if (timestep % 10 == 0)
     nt_write_to_file(modelgridindex, timestep, iteration);
 
-  analyse_sf_solution(modelgridindex, timestep);
+  analyse_sf_solution(modelgridindex, timestep, enable_sfexcitation);
 
   if (!STORE_NT_SPECTRUM)
   {

@@ -89,6 +89,7 @@ __host__ __device__ int get_t_model(void);
 __host__ __device__ int get_cell_modelgridindex(int cellindex);
 void read_ejecta_model(enum model_types model_type);
 void write_grid_restart_data(const int timestep);
+void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *maxndo);
 double get_totmassradionuclide(const int z, const int a);
 
 #endif //GRIDINIT_H
