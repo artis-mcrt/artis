@@ -70,7 +70,9 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         elpop += ionstagepop(mgi, element, ion);
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ionstagepop(mgi, element, ion));
       }
-      fprintf(estimators_file, "  SUM: %9.3e\n", elpop);
+      fprintf(estimators_file, "  SUM: %9.3e", elpop);
+
+      decay::fprint_nuc_abundances(estimators_file, mgi, globals::time_step[timestep].mid, element);
 
       const bool printdebug = false;
 

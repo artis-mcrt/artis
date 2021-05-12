@@ -1036,6 +1036,38 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 }
 
 
+void fprint_nuc_abundances(
+  FILE *estimators_file, const int modelgridindex, const double t_current, const int element)
+{
+  const int atomic_number = get_element(element);
+
+  // factor to convert convert mass fraction to number density
+  const double densityfactor = 1. / globals::elements[element].mass * get_rho(modelgridindex);
+
+  double stablefracsum = get_stable_initabund(modelgridindex, element);
+
+  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
+  {
+    const int nuc_z = get_nuc_z(nucindex);
+    const int a = get_nuc_a(nucindex);
+    if (nuc_z == atomic_number)
+    {
+      // radioactive isotope of the element
+      const double massfrac = get_nuc_abund(modelgridindex, atomic_number, a, t_current);
+
+      fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number), a, massfrac * densityfactor);
+    }
+    else if (!nuc_exists(decay_daughter_z(nuc_z, a), decay_daughter_a(nuc_z, a)) && decay_daughter_z(nuc_z, a) == atomic_number)
+    {
+      // nuclide decays into correct atomic number but outside of the radionuclide list. Daughter is assumed stable
+      stablefracsum += get_nuc_abund(modelgridindex, decay_daughter_z(nuc_z, a), decay_daughter_a(nuc_z, a), t_current);
+    }
+  }
+
+  fprintf(estimators_file, "  %s_otherstable: %9.3e\n", get_elname(atomic_number), stablefracsum * densityfactor);
+}
+
+
 void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
 {
   assert_testmodeonly(chain_energy_per_mass != NULL);

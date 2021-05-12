@@ -32,6 +32,7 @@ namespace decay
   __host__ __device__ void free_chain_energy_per_mass(void);
   __host__ __device__ double get_positroninjection_rate_density(const int modelgridindex, const double t);
   __host__ __device__ double get_global_etot_t0_tinf(void);
+  void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, const double t_current, const int element);
   __host__ __device__ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr);
 }
 
