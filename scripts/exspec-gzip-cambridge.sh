@@ -123,10 +123,14 @@ fi
 
 echo -e "\nnumtasks=$numtasks, numnodes=$numnodes, mpi_tasks_per_node=$mpi_tasks_per_node (OMP_NUM_THREADS=$OMP_NUM_THREADS)"
 
-./artis/scripts/exspec-before.sh
+if [ ! -f spec.out ]; then
+  ./artis/scripts/exspec-before.sh
 
-echo -e "\nExecuting command:\n==================\n$CMD\n"
+  echo -e "\nExecuting command:\n==================\n$CMD\n"
 
-eval $CMD
+  eval $CMD
+else
+  echo 'Not running exspec because spec.out was found'
+fi
 
 ./artis/scripts/exspec-after.sh
