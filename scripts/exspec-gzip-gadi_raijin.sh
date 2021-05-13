@@ -25,8 +25,11 @@ module load gsl/2.5
 module load intel-mpi/2018.3.222
 module load intel-cc/2018.3.222
 
-./artis/scripts/exspec-before.sh
-
-./exspec
+if [ ! -f spec.out ]; then
+  ./artis/scripts/exspec-before.sh
+  ./exspec
+else
+  echo 'Not running exspec because spec.out was found'
+fi
 
 ./artis/scripts/exspec-after.sh
