@@ -1887,7 +1887,7 @@ void grid_init(int my_rank)
       assoc_cells = get_numassociatedcells(mgi);
       if (assoc_cells > 0)
       {
-        const double vol_init = vol_init_modelcell(mgi);
+        const double vol_init = pow(wid_init(0), 3);
         //Luke: how do I call modelcell_energy here? defined in new energy cc file
         set_modelcell_energydensity_init(mgi, (modelcell_energy[mgi] / (vol_init * assoc_cells))); //modelcell_energy/cell volume ==> vol_init*associated cells
 
@@ -1895,9 +1895,12 @@ void grid_init(int my_rank)
                  vol_init, assoc_cells, vol_init*assoc_cells,
                  modelcell_energy[mgi] / (vol_init * assoc_cells), mgi, get_modelcell_energydensity_init(mgi));
       }
-
+      else
+      {
+        set_modelcell_energydensity_init(mgi, 0.);
+      }
     }
-    set_modelcell_energydensity_init(MMODELGRID,0.);
+//    set_modelcell_energydensity_init(MMODELGRID,0.);
   }
 
   int nstart = 0;
