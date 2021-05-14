@@ -200,7 +200,7 @@ float get_nne(int modelgridindex)
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex < (get_npts_model() + 1));
 
-  const double nne = globals::modelgrid[modelgridindex].nnetot;
+  const double nne = globals::modelgrid[modelgridindex].nne;
   assert_testmodeonly(std::isfinite(nne));
   return nne;
 }
