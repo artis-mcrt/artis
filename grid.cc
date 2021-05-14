@@ -390,7 +390,10 @@ int get_cell_modelgridindex(int cellindex)
 {
   assert_testmodeonly(cellindex >= 0);
   assert_testmodeonly(cellindex < globals::ngrid);
-  return cell[cellindex].modelgridindex;
+  const int mgi = cell[cellindex].modelgridindex;
+  assert_testmodeonly(mgi >= 0);
+  assert_testmodeonly(mgi < get_npts_model());
+  return mgi;
 }
 
 
