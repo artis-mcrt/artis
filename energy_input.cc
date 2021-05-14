@@ -39,6 +39,9 @@ static void read_energy_in_cells_1d(void)
 
   int number_of_cells; // number of model grid cells
   int cellnumber; // dummy value - this isn't saved
+  double cell_energy;
+  double energy_counter = 0.;
+  int n, mgi;
 
   FILE *cell_energies_file = fopen_required("energydistribution.txt", "r");
   printout("read energydistribution.txt \n");
@@ -52,15 +55,29 @@ static void read_energy_in_cells_1d(void)
     abort();
   }
 
-  double cell_energies[number_of_cells];
-  double energy_counter = 0;
-  for (int mgi = 0; mgi < number_of_cells; mgi++)
+//  double cell_energies[number_of_cells];
+//  double energy_counter = 0;
+  for (n = 0; n < get_npts_model(); n++)
   {
-    fscanf(cell_energies_file, "%d %lf", &cellnumber, &cell_energies[mgi]);
-    energy_counter += cell_energies[mgi];
-    modelcell_energy[mgi] = cell_energies[mgi];
-    printout("modelcell_energy %g cellnumber %d\n",
-             modelcell_energy[mgi], cellnumber);
+//    mgi = cell[n].modelgridindex;
+    mgi = get_cell_modelgridindex(n);
+    fscanf(cell_energies_file, "%d %lf", &cellnumber, &cell_energy);
+//    printout("cellnumber %d cell energy %g\n", cellnumber, cell_energy);
+    if(cellnumber-1 != n)
+    {
+      printout("cell number in file does not match \n");
+      exit(0);
+    }
+    if (mgi != MMODELGRID)
+    {
+      energy_counter += cell_energy;
+      modelcell_energy[mgi] = cell_energy;
+    }
+    else
+    {
+//      empty cells must have 0 energy
+      modelcell_energy[mgi] = 0.;
+    }
   }
   etot_fromenergyfile = energy_counter;
   printout("etot %g \n", etot_fromenergyfile);
