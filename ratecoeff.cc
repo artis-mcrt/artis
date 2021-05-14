@@ -403,6 +403,8 @@ static double gammacorr_integrand_gsl(double nu, void *voidparas)
 /*double ffheating_integrand_gsl(double nu, void *paras)
 /// Integrand to calculate the free-free heating rate using gsl integrators.
 {
+  double ionstagepop(int cellnumber, int element, int ion);
+
   double nne;//,nnion;//,nnlevel;
   double g_ff,kappa_ff;
   double T_R,T_D,W,W_D;

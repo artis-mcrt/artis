@@ -1541,8 +1541,8 @@ void read_ejecta_model(enum model_types model_type)
   globals::rpkt_emiss = (double *) malloc((get_npts_model() + 1) * sizeof(double));
 
   #if (!NO_LUT_PHOTOION)
-  globals::corrphotoionrenorm = (double *) calloc((get_npts_model() + 1) * get_nelements() * get_max_nions(), sizeof(double));
-  globals::gammaestimator = (double *) calloc((get_npts_model() + 1) * get_nelements() * get_max_nions(), sizeof(double));
+  globals::corrphotoionrenorm = (double *) malloc(get_npts_model() * get_nelements() * get_max_nions() * sizeof(double));
+  globals::gammaestimator = (double *) malloc(get_npts_model() * get_nelements() * get_max_nions() * sizeof(double));
 
   #ifdef DO_TITER
   globals::gammaestimator_save = (double *) malloc(get_npts_model() * get_nelements() * get_max_nions() * sizeof(double));
