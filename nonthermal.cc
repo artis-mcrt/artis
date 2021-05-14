@@ -519,8 +519,8 @@ void init(const int my_rank, const int ndo)
   assert_always(nonthermal_initialized == false);
   nonthermal_initialized = true;
 
-  deposition_rate_density = (double *) calloc(get_npts_model(), sizeof(double));
-  deposition_rate_density_timestep = (int *) calloc(get_npts_model(), sizeof(int));
+  deposition_rate_density = (double *) malloc(get_npts_model() * sizeof(double));
+  deposition_rate_density_timestep = (int *) malloc(get_npts_model() * sizeof(int));
 
   for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
   {

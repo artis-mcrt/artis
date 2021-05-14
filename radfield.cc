@@ -13,7 +13,7 @@
 namespace radfield
 {
 
-__managed__ static double J_normfactor[MMODELGRID + 1];
+__managed__ static double *J_normfactor = NULL;
 
 __managed__ static bool initialized = false;
 
@@ -37,7 +37,7 @@ struct radfieldbin
 };
 
 __managed__ static double radfieldbin_nu_upper[RADFIELDBINCOUNT]; // array of upper frequency boundaries of bins
-__managed__ static struct radfieldbin *radfieldbins[MMODELGRID + 1];
+__managed__ static struct radfieldbin **radfieldbins = NULL;
 
 // ** Detailed lines - Jblue_lu estimators for selected lines
 
@@ -54,15 +54,15 @@ __managed__ static int detailed_linecount = 0;
 // array of indicies into the linelist[] array for selected lines
 __managed__ static int *detailed_lineindicies;
 
-__managed__ static struct Jb_lu_estimator *prev_Jb_lu_normed[MMODELGRID + 1];  // value from the previous timestep
-__managed__ static struct Jb_lu_estimator *Jb_lu_raw[MMODELGRID + 1];   // unnormalised estimator for the current timestep
+__managed__ static struct Jb_lu_estimator **prev_Jb_lu_normed = NULL;  // value from the previous timestep
+__managed__ static struct Jb_lu_estimator **Jb_lu_raw = NULL;   // unnormalised estimator for the current timestep
 
 // ** end detailed lines
 
 #if (DETAILED_BF_ESTIMATORS_ON)
 __managed__ static bool normed_bfrates_available = false;
-__managed__ static float *prev_bfrate_normed[MMODELGRID + 1];  // values from the previous timestep
-__managed__ static double *bfrate_raw[MMODELGRID + 1];   // unnormalised estimators for the current timestep
+__managed__ static float **prev_bfrate_normed = NULL;  // values from the previous timestep
+__managed__ static double **bfrate_raw = NULL;   // unnormalised estimators for the current timestep
 
 // expensive debugging mode to track the contributions to each bound-free rate estimator
 #if (DETAILED_BF_ESTIMATORS_BYTYPE)
@@ -72,8 +72,8 @@ __managed__ static double *bfrate_raw[MMODELGRID + 1];   // unnormalised estimat
     double ratecontrib;
   };
 
-  __managed__ static struct bfratecontrib **bfrate_raw_bytype[MMODELGRID + 1];   // unnormalised estimator contributions for stats
-  __managed__ static int *bfrate_raw_bytype_size[MMODELGRID + 1];
+  __managed__ static struct bfratecontrib ***bfrate_raw_bytype;   // unnormalised estimator contributions for stats
+  __managed__ static int **bfrate_raw_bytype_size;
 
   static int compare_bfrate_raw_bytype(const void *p1, const void *p2)
   {
@@ -90,17 +90,17 @@ __managed__ static double *bfrate_raw[MMODELGRID + 1];   // unnormalised estimat
   #endif
 #endif
 
-__managed__ static double J[MMODELGRID + 1]; // after normalisation: [ergs/s/sr/cm2/Hz]
+__managed__ static double *J = NULL; // after normalisation: [ergs/s/sr/cm2/Hz]
 #ifdef DO_TITER
-  __managed__ static double J_reduced_save[MMODELGRID + 1];
+  __managed__ static double *J_reduced_save = NULL;
 #endif
 
 // J and nuJ are accumulated and then normalised in-place
 // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
 #ifndef FORCE_LTE
-  __managed__ static double nuJ[MMODELGRID + 1];
+  __managed__ static double *nuJ = NULL;
   #ifdef DO_TITER
-    __managed__ static double nuJ_reduced_save[MMODELGRID + 1];
+    __managed__ static double *nuJ_reduced_save = NULL;
   #endif
 #endif
 
@@ -201,7 +201,7 @@ void jblue_init(void)
   detailed_linecount = 0;
 
   detailed_lineindicies = NULL;
-  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
   {
     prev_Jb_lu_normed[modelgridindex] = NULL;
     Jb_lu_raw[modelgridindex] = NULL;
@@ -218,7 +218,7 @@ static void realloc_detailed_lines(const int new_size)
     abort();
   }
 
-  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
@@ -248,7 +248,7 @@ static void add_detailed_line(const int lineindex)
     realloc_detailed_lines(new_size);
   }
 
-  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
@@ -278,6 +278,7 @@ static int compare_integers(const void* a, const void* b)
 void init(int my_rank, int ndo)
 // this should be called only after the atomic data is in memory
 {
+  // printout("radfield::init()\n");
   if (initialized)
   {
     printout("ERROR: Tried to initialize radfield twice!\n");
@@ -285,6 +286,24 @@ void init(int my_rank, int ndo)
   }
 
   initialized = true;
+
+  J_normfactor = (double *) malloc((get_npts_model() + 1) * sizeof(double));
+  J = (double *) malloc((get_npts_model() + 1) * sizeof(double));
+  #ifdef DO_TITER
+    J_reduced_save = (double *) malloc((get_npts_model() + 1) * sizeof(double));
+  #endif
+
+  // J and nuJ are accumulated and then normalised in-place
+  // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
+  #ifndef FORCE_LTE
+    nuJ = (double *) malloc((get_npts_model() + 1) * sizeof(double));
+    #ifdef DO_TITER
+    nuJ_reduced_save = (double *) malloc((get_npts_model() + 1) * sizeof(double));
+    #endif
+  #endif
+
+  prev_Jb_lu_normed = (struct Jb_lu_estimator **) malloc((get_npts_model() + 1) * sizeof(struct Jb_lu_estimator *));
+  Jb_lu_raw = (struct Jb_lu_estimator **) malloc((get_npts_model() + 1) * sizeof(struct Jb_lu_estimator *));
 
   if (DETAILED_LINE_ESTIMATORS_ON)
   {
@@ -360,8 +379,24 @@ void init(int my_rank, int ndo)
     printout("The radiation field model is a whole-spectrum fit to a single diluted blackbody.\n");
   }
 
+  radfieldbins = (struct radfieldbin **) malloc((get_npts_model() + 1) * sizeof(struct radfieldbin *));
+
+  #if (DETAILED_BF_ESTIMATORS_ON)
+  {
+    prev_bfrate_normed = (float **) malloc((get_npts_model() + 1) * sizeof(float *));
+    bfrate_raw = (double **) malloc((get_npts_model() + 1) * sizeof(double *));
+
+    #if (DETAILED_BF_ESTIMATORS_BYTYPE)
+    {
+      bfrate_raw_bytype = (struct bfratecontrib ***) malloc((get_npts_model() + 1) * sizeof(struct bfratecontrib **));
+      bfrate_raw_bytype_size = (int **) malloc((get_npts_model() + 1) * sizeof(int *));
+    }
+    #endif
+  }
+  #endif
+
   long mem_usage = 0;
-  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
   {
     set_J_normfactor(modelgridindex, -1.0);
     // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, get_numassociatedcells(modelgridindex));
@@ -373,12 +408,14 @@ void init(int my_rank, int ndo)
         prev_bfrate_normed[modelgridindex] = (float *) malloc(globals::nbfcontinua * sizeof(float));
 
         #if (DETAILED_BF_ESTIMATORS_BYTYPE)
-        bfrate_raw_bytype[modelgridindex] = (struct bfratecontrib **) malloc(globals::nbfcontinua * sizeof(struct bfratecontrib *));
-        bfrate_raw_bytype_size[modelgridindex] = (int *) malloc(globals::nbfcontinua * sizeof(int));
-        for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++)
         {
-          bfrate_raw_bytype[modelgridindex][allcontindex] = NULL;
-          bfrate_raw_bytype_size[modelgridindex][allcontindex] = 0.;
+          bfrate_raw_bytype[modelgridindex] = (struct bfratecontrib **) malloc(globals::nbfcontinua * sizeof(struct bfratecontrib *));
+          bfrate_raw_bytype_size[modelgridindex] = (int *) malloc(globals::nbfcontinua * sizeof(int));
+          for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++)
+          {
+            bfrate_raw_bytype[modelgridindex][allcontindex] = NULL;
+            bfrate_raw_bytype_size[modelgridindex][allcontindex] = 0.;
+          }
         }
         #endif
       }
@@ -526,9 +563,9 @@ static double get_bin_J(int modelgridindex, int binindex)
     printout("radfield: Fatal error: get_bin_J called before J_normfactor set for modelgridindex %d, = %g",modelgridindex,J_normfactor[modelgridindex]);
     abort();
   }
-  else if (modelgridindex >= MMODELGRID)
+  else if (modelgridindex >= get_npts_model())
   {
-    printout("radfield: Fatal error: get_bin_J called before on modelgridindex %d >= MMODELGRID",modelgridindex);
+    printout("radfield: Fatal error: get_bin_J called before on modelgridindex %d >= get_npts_model()",modelgridindex);
     abort();
   }
 
@@ -545,9 +582,9 @@ static void set_bin_J(int modelgridindex, int binindex, double value)
     printout("radfield: Fatal error: set_bin_J called before J_normfactor set for modelgridindex %d",modelgridindex);
     abort();
   }
-  else if (modelgridindex >= MMODELGRID)
+  else if (modelgridindex >= get_npts_model())
   {
-    printout("radfield: Fatal error: set_bin_J called before on modelgridindex %d >= MMODELGRID",modelgridindex);
+    printout("radfield: Fatal error: set_bin_J called before on modelgridindex %d >= get_npts_model()",modelgridindex);
     abort();
   }
   radfieldbins[modelgridindex][binindex].J_raw = value / J_normfactor[modelgridindex];
@@ -562,9 +599,9 @@ static double get_bin_nuJ(int modelgridindex, int binindex)
     printout("radfield: Fatal error: get_bin_nuJ called before J_normfactor set for modelgridindex %d",modelgridindex);
     abort();
   }
-  else if (modelgridindex >= MMODELGRID)
+  else if (modelgridindex >= get_npts_model())
   {
-    printout("radfield: Fatal error: get_bin_nuJ called before on modelgridindex %d >= MMODELGRID",modelgridindex);
+    printout("radfield: Fatal error: get_bin_nuJ called before on modelgridindex %d >= get_npts_model()",modelgridindex);
     abort();
   }
   return radfieldbins[modelgridindex][binindex].nuJ_raw * J_normfactor[modelgridindex];
@@ -751,7 +788,7 @@ void close_file(void)
     radfieldfile = NULL;
   }
 
-  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
@@ -773,8 +810,10 @@ void zero_estimators(int modelgridindex)
 // for a timestep
 {
   #if (DETAILED_BF_ESTIMATORS_ON)
+  assert_always(bfrate_raw != NULL);
   if (initialized && (get_numassociatedcells(modelgridindex) > 0))
   {
+    assert_always(bfrate_raw[modelgridindex] != NULL);
     for (int i = 0; i < globals::nbfcontinua; i++)
     {
       bfrate_raw[modelgridindex][i] = 0.;
@@ -782,20 +821,29 @@ void zero_estimators(int modelgridindex)
   }
   #endif
 
-  for (int i = 0; i < detailed_linecount; i++)
+  if (DETAILED_LINE_ESTIMATORS_ON)
   {
-    Jb_lu_raw[modelgridindex][i].value = 0.;
-    Jb_lu_raw[modelgridindex][i].contribcount = 0.;
+    assert_always(Jb_lu_raw != NULL);
+    assert_always(Jb_lu_raw[modelgridindex] != NULL);
+    for (int i = 0; i < detailed_linecount; i++)
+    {
+      Jb_lu_raw[modelgridindex][i].value = 0.;
+      Jb_lu_raw[modelgridindex][i].contribcount = 0.;
+    }
   }
 
+  assert_always(J != NULL);
   J[modelgridindex] = 0.; // this is required even if FORCE_LTE is on
 #ifndef FORCE_LTE
+  assert_always(nuJ != NULL);
   nuJ[modelgridindex] = 0.;
 
   if (MULTIBIN_RADFIELD_MODEL_ON && initialized && (get_numassociatedcells(modelgridindex) > 0))
   {
     // printout("radfield: zeroing estimators in %d bins in cell %d\n",RADFIELDBINCOUNT,modelgridindex);
 
+    assert_always(radfieldbins != NULL);
+    assert_always(radfieldbins[modelgridindex] != NULL);
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {
       radfieldbins[modelgridindex][binindex].J_raw = 0.0;

@@ -22,7 +22,7 @@ __managed__ enum model_types model_type = RHO_1D_READ;
 __managed__ int npts_model = 0; // number of points in 1-D input model
 
 __managed__ double t_model = -1.; // time at which densities in input model are correct.
-__managed__ double vout_model[MMODELGRID];
+__managed__ double *vout_model = NULL;
 __managed__ int ncoord_model[3]; // the model.txt input grid dimensions
 __managed__ double dcoord1;
 __managed__ double dcoord2; // spacings of a 2D model grid - must be uniform grid
@@ -36,7 +36,7 @@ __managed__ CELL cell[MGRID + 1];
 
 static long mem_usage_nltepops = 0;
 
-static __managed__ int mg_associated_cells[MMODELGRID + 1];
+static __managed__ int *mg_associated_cells = NULL;
 
 __managed__ double *totmassradionuclide = NULL; /// total mass of each radionuclide in the ejecta
 
@@ -362,14 +362,12 @@ int get_npts_model(void)
 
 
 __host__ __device__
-void set_npts_model(int new_npts_model)
+static void set_npts_model(int new_npts_model)
 {
-  if (new_npts_model >= MMODELGRID)
-  {
-    printout("ERROR: %d = npts_model >= MMODELGRID = %d.\n", new_npts_model, MMODELGRID);
-    abort();
-  }
   npts_model = new_npts_model;
+
+  assert_always(globals::modelgrid == NULL);
+  globals::modelgrid = (modelgrid_t *) malloc((npts_model + 1) * sizeof(modelgrid_t));
 }
 
 __host__ __device__
@@ -384,6 +382,7 @@ int get_t_model(void)
 __host__ __device__
 int get_cell_modelgridindex(int cellindex)
 {
+  assert_testmodeonly(cellindex >= 0);
   assert_testmodeonly(cellindex < globals::ngrid);
   return cell[cellindex].modelgridindex;
 }
@@ -393,7 +392,7 @@ __host__ __device__
 static void set_cell_modelgridindex(int cellindex, int new_modelgridindex)
 {
   assert_testmodeonly(cellindex < globals::ngrid);
-  assert_testmodeonly(new_modelgridindex < npts_model || new_modelgridindex == MMODELGRID);
+  assert_testmodeonly(new_modelgridindex < npts_model || new_modelgridindex == get_npts_model());
   cell[cellindex].modelgridindex = new_modelgridindex;
 }
 
@@ -402,6 +401,7 @@ __host__ __device__
 int get_numassociatedcells(const int modelgridindex)
 // number of propagation cells associated with each modelgrid cell
 {
+  assert_testmodeonly(mg_associated_cells != NULL);
   return mg_associated_cells[modelgridindex];
 }
 
@@ -559,7 +559,7 @@ static void calculate_kappagrey(void)
   for (int n = 0; n < globals::ngrid; n++)
   {
     const int mgi = get_cell_modelgridindex(n);
-    if (globals::rank_global == 0 && mgi != MMODELGRID)
+    if (globals::rank_global == 0 && mgi != get_npts_model())
       fprintf(grid_file,"%d %d\n", n, mgi); ///write only non-empty cells to grid file
 
     if (get_rhoinit(mgi) > 0)
@@ -701,34 +701,36 @@ static void allocate_nonemptymodelcells(void)
   mem_usage_nltepops = 0;
   /// This is the placeholder for empty cells. Temperatures must be positive
   /// as long as ff opacities are calculated.
-  set_rhoinit(MMODELGRID, 0.);
-  set_rho(MMODELGRID, 0.);
-  set_nne(MMODELGRID, 0.);
-  set_ffegrp(MMODELGRID, 0.);
-  globals::modelgrid[MMODELGRID].initradioabund = (float *) calloc(decay::get_num_nuclides(), sizeof(float));
-  assert_always(globals::modelgrid[MMODELGRID].initradioabund != NULL);
+  set_rhoinit(get_npts_model(), 0.);
+  set_rho(get_npts_model(), 0.);
+  set_nne(get_npts_model(), 0.);
+  set_ffegrp(get_npts_model(), 0.);
+  globals::modelgrid[get_npts_model()].initradioabund = (float *) calloc(decay::get_num_nuclides(), sizeof(float));
+  assert_always(globals::modelgrid[get_npts_model()].initradioabund != NULL);
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
   {
     const int z = decay::get_nuc_z(nucindex);
     const int a = decay::get_nuc_a(nucindex);
-    set_modelinitradioabund(MMODELGRID, z, a, 0.);
+    set_modelinitradioabund(get_npts_model(), z, a, 0.);
   }
-  set_Te(MMODELGRID, MINTEMP);
-  set_TJ(MMODELGRID, MINTEMP);
-  set_TR(MMODELGRID, MINTEMP);
-  allocate_compositiondata(MMODELGRID);
-  allocate_cooling(MMODELGRID);
+  set_Te(get_npts_model(), MINTEMP);
+  set_TJ(get_npts_model(), MINTEMP);
+  set_TR(get_npts_model(), MINTEMP);
+  allocate_compositiondata(get_npts_model());
+  allocate_cooling(get_npts_model());
+
+  mg_associated_cells = (int *) malloc((get_npts_model() + 1) * sizeof(int));
 
   // Determine the number of simulation cells associated with the model cells
-  for (int mgi = 0; mgi < (MMODELGRID + 1); mgi++)
+  for (int mgi = 0; mgi < (get_npts_model() + 1); mgi++)
     mg_associated_cells[mgi] = 0;
 
   for (int cellindex = 0; cellindex < globals::ngrid; cellindex++)
   {
     const int mgi = get_cell_modelgridindex(cellindex);
-    assert_always(!(get_model_type() == RHO_3D_READ) || (get_rhoinit(mgi) > 0) || (mgi == MMODELGRID));
+    assert_always(!(get_model_type() == RHO_3D_READ) || (get_rhoinit(mgi) > 0) || (mgi == get_npts_model()));
     mg_associated_cells[mgi] += 1;
-    assert_always(!(get_model_type() == RHO_3D_READ) || (mg_associated_cells[mgi] == 1) || (mgi == MMODELGRID));
+    assert_always(!(get_model_type() == RHO_3D_READ) || (mg_associated_cells[mgi] == 1) || (mgi == get_npts_model()));
   }
 
   int numnonemptycells = 0;
@@ -798,12 +800,12 @@ static void density_1d_read(void)
       }
       else
       {
-        set_cell_modelgridindex(cellindex, MMODELGRID);
+        set_cell_modelgridindex(cellindex, get_npts_model());
       }
     }
     else
     {
-      set_cell_modelgridindex(cellindex, MMODELGRID);
+      set_cell_modelgridindex(cellindex, get_npts_model());
     }
   }
 }
@@ -858,7 +860,7 @@ static void density_2d_read(void)
     }
     else
     {
-      set_cell_modelgridindex(n, MMODELGRID);
+      set_cell_modelgridindex(n, get_npts_model());
     }
   }
 }
@@ -1015,6 +1017,8 @@ static void read_1d_model(void)
 
   set_npts_model(npts_model_in);
   ncoord_model[0] = npts_model_in;
+
+  vout_model = (double *) malloc((get_npts_model() + 1) * sizeof(double));
 
   // Now read the time (in days) at which the model is specified.
   double t_model_days;
@@ -1256,9 +1260,9 @@ static void read_3d_model(void)
   /// This MUST be the same number as the maximum number of points used in the grid - if not, abort.
   int npts_model_in = 0;
   fscanf(model_input, "%d", &npts_model_in);
-  if (npts_model_in > MMODELGRID)
+  if (npts_model_in > get_npts_model())
   {
-    printout("Too many points in input model. Abort. (%d > %d)\n", npts_model_in, MMODELGRID);
+    printout("Too many points in input model. Abort. (%d > %d)\n", npts_model_in, get_npts_model());
     abort();
   }
 
@@ -1292,7 +1296,7 @@ static void read_3d_model(void)
 
   decay::init_nuclides(std::vector<int>(), std::vector<int>());
 
-  // mgi is the index to the model grid - empty cells are sent to MMODELGRID,
+  // mgi is the index to the model grid - empty cells are sent to get_npts_model(),
   // otherwise each input cell is one modelgrid cell
   int mgi = 0;
   int n = 0;
@@ -1339,9 +1343,9 @@ static void read_3d_model(void)
       abort();
     }
 
-    if (mgi > MMODELGRID - 1)
+    if (mgi > get_npts_model() - 1)
     {
-      printout("3D model wants more modelgrid cells than MMODELGRID. Abort.\n");
+      printout("3D model wants more modelgrid cells than get_npts_model(). Abort.\n");
       abort();
     }
 
@@ -1362,7 +1366,7 @@ static void read_3d_model(void)
     }
     else
     {
-      set_cell_modelgridindex(n, MMODELGRID);
+      set_cell_modelgridindex(n, get_npts_model());
     }
 
     read_2d3d_modelradioabundanceline(model_input, mgi, keepcell);
@@ -1516,6 +1520,34 @@ void read_ejecta_model(enum model_types model_type)
   printout("rmax %g\n", globals::rmax);
 
   globals::coordmax[0] = globals::coordmax[1] = globals::coordmax[2] = globals::rmax;
+
+  globals::compton_emiss = (float *) malloc((get_npts_model() + 1) * EMISS_MAX * sizeof(float));
+  globals::rpkt_emiss = (double *) malloc((get_npts_model() + 1) * sizeof(double));
+
+  #if (!NO_LUT_PHOTOION)
+  globals::corrphotoionrenorm = (double *) malloc(get_npts_model() * get_nelements() * get_max_nions() * sizeof(double));
+  globals::gammaestimator = (double *) malloc(get_npts_model() * get_nelements() * get_max_nions() * sizeof(double));
+
+  #ifdef DO_TITER
+  globals::gammaestimator_save = (double *) malloc(get_npts_model() * get_nelements() * get_max_nions() * sizeof(double));
+  #endif
+  #endif
+
+  #if (!NO_LUT_BFHEATING)
+  globals::bfheatingestimator = (double *) malloc(get_npts_model() * get_nelements() * get_max_nions() * sizeof(double));
+  #ifdef DO_TITER
+  globals::bfheatingestimator_save = (double *) malloc(get_npts_model() * get_nelements() * get_max_nions() * sizeof(double));
+  #endif
+  #endif
+
+  #ifndef FORCE_LTE
+  globals::ffheatingestimator = (double *) malloc((get_npts_model() + 1) * sizeof(double));
+  globals::colheatingestimator = (double *) malloc((get_npts_model() + 1) * sizeof(double));
+  #ifdef DO_TITER
+  globals::ffheatingestimator_save = (double *) malloc((get_npts_model() + 1) * sizeof(double));
+  globals::colheatingestimator_save = (double *) malloc((get_npts_model() + 1) * sizeof(double));
+  #endif
+  #endif
 
   calc_totmassradionuclides();
 }
@@ -1704,6 +1736,7 @@ static void assign_initial_temperatures(void)
     set_TR(mgi, T_initial);
 
     set_W(mgi, 1.);
+    globals::modelgrid[mgi].thick = 0;
   }
 }
 
@@ -1872,7 +1905,7 @@ void grid_init(int my_rank)
   //  printout("[fatal] grid_init: Error: too many grid cells. Abort.");
   //  abort();
   //}
-  for (int n = 0; n <= MMODELGRID; n++)
+  for (int n = 0; n <= get_npts_model(); n++)
   {
     globals::modelgrid[n].initial_radial_pos = 0;
   }

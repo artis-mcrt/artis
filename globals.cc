@@ -24,32 +24,28 @@ namespace globals
   __managed__ int emiss_max;      // actual number of frequency points in emissivity grid
 
 
-  __managed__ modelgrid_t modelgrid[MMODELGRID + 1];
+  __managed__ modelgrid_t *modelgrid;
 
   /// THESE ARE THE GRID BASED ESTIMATORS
-  __managed__ float compton_emiss[MMODELGRID+1][EMISS_MAX];  /// Volume estimator for the compton emissivity
-  __managed__ double rpkt_emiss[MMODELGRID+1];                /// Volume estimator for the rpkt emissivity
+  __managed__ float *compton_emiss = NULL;  /// Volume estimator for the compton emissivity
+  __managed__ double *rpkt_emiss = NULL;                /// Volume estimator for the rpkt emissivity
 
 
   #if (!NO_LUT_PHOTOION)
-    __managed__ double corrphotoionrenorm[MMODELGRID * MELEMENTS * MIONS];
-    __managed__ double gammaestimator[MMODELGRID * MELEMENTS * MIONS];
+    __managed__ double *corrphotoionrenorm = NULL;
+    __managed__ double *gammaestimator = NULL;
   #endif
   #if (!NO_LUT_BFHEATING)
-    __managed__ double bfheatingestimator[MMODELGRID * MELEMENTS * MIONS];
+    __managed__ double *bfheatingestimator = NULL;
   #endif
-  #ifdef FORCE_LTE
-    // don't use the variables below in LTE mode, just declare them here so the code compiles
-    __managed__ double *ffheatingestimator;
-  #else
-    __managed__ double ffheatingestimator[MMODELGRID + 1];
-    __managed__ double colheatingestimator[MMODELGRID + 1];
-
+  __managed__ double *ffheatingestimator = NULL;
+  __managed__ double *colheatingestimator = NULL;
+  #ifndef FORCE_LTE
     #ifdef DO_TITER
-      __managed__ double ffheatingestimator_save[MMODELGRID];
-      __managed__ double colheatingestimator_save[MMODELGRID];
-      __managed__ double gammaestimator_save[MMODELGRID * MELEMENTS * MIONS];
-      __managed__ double bfheatingestimator_save[MMODELGRID * MELEMENTS * MIONS];
+      __managed__ double *gammaestimator_save = NULL;
+      __managed__ double *bfheatingestimator_save = NULL;
+      __managed__ double *ffheatingestimator_save = NULL;
+      __managed__ double *colheatingestimator_save = NULL;
     #endif
   #endif
 

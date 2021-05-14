@@ -324,7 +324,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
     //printout("dummy->nu_cmf = %g \n",dummy_ptr->nu_cmf);
     mgi = get_cell_modelgridindex(dummy_ptr->where);
     // break if you reach an empty cell
-    if (mgi == MMODELGRID) break;
+    if (mgi == get_npts_model()) break;
 
     /* kill vpkt with pass through a thick cell */
     if (globals::modelgrid[mgi].thick == 1)

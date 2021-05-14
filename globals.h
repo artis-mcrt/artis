@@ -27,31 +27,26 @@ namespace globals
   extern __managed__ int emiss_offset;
   extern __managed__ int emiss_max;
 
+  extern __managed__ modelgrid_t *modelgrid;
 
-  extern __managed__ modelgrid_t modelgrid[MMODELGRID + 1];
-
-  extern __managed__ float compton_emiss[MMODELGRID+1][EMISS_MAX];
-  extern __managed__ double rpkt_emiss[MMODELGRID+1];
-
+  extern __managed__ float *compton_emiss;
+  extern __managed__ double *rpkt_emiss;
 
   #if (!NO_LUT_PHOTOION)
-    extern __managed__ double corrphotoionrenorm[MMODELGRID * MELEMENTS * MIONS];
-    extern __managed__ double gammaestimator[MMODELGRID * MELEMENTS * MIONS];
+    extern __managed__ double *corrphotoionrenorm;
+    extern __managed__ double *gammaestimator;
   #endif
   #if (!NO_LUT_BFHEATING)
-    extern __managed__ double bfheatingestimator[MMODELGRID * MELEMENTS * MIONS];
+    extern __managed__ double *bfheatingestimator;
   #endif
-  #ifdef FORCE_LTE
-    extern __managed__ double *ffheatingestimator;
-  #else
-    extern __managed__ double ffheatingestimator[MMODELGRID + 1];
-    extern __managed__ double colheatingestimator[MMODELGRID + 1];
-
+  extern __managed__ double *ffheatingestimator;
+  extern __managed__ double *colheatingestimator;
+  #ifndef FORCE_LTE
     #ifdef DO_TITER
-      extern __managed__ double ffheatingestimator_save[MMODELGRID];
-      extern __managed__ double colheatingestimator_save[MMODELGRID];
-      extern __managed__ double gammaestimator_save[MMODELGRID * MELEMENTS * MIONS];
-      extern __managed__ double bfheatingestimator_save[MMODELGRID * MELEMENTS * MIONS];
+      extern __managed__ double *gammaestimator_save;
+      extern __managed__ double *bfheatingestimator_save;
+      extern __managed__ double *ffheatingestimator_save;
+      extern __managed__ double *colheatingestimator_save;
     #endif
   #endif
 

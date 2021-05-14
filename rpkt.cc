@@ -642,7 +642,7 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
   const int modelgridindex = get_cell_modelgridindex(cellindex);
 
   /// Update only non-empty cells
-  if (modelgridindex != MMODELGRID)
+  if (modelgridindex != get_npts_model())
   {
     const double distance_e_cmf = distance * pkt_ptr->e_cmf;
     const double nu = pkt_ptr->nu_cmf;
@@ -731,7 +731,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
     const int cellindexnew = pkt_ptr->where;
     mgi = get_cell_modelgridindex(cellindexnew);
 
-    return (pkt_ptr->type == TYPE_RPKT && (mgi == MMODELGRID || mgi == oldmgi));
+    return (pkt_ptr->type == TYPE_RPKT && (mgi == get_npts_model() || mgi == oldmgi));
   }
   else
   {
@@ -783,7 +783,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
     double edist;
     int rpkt_eventtype;
     bool find_nextline = false;
-    if (mgi == MMODELGRID)
+    if (mgi == get_npts_model())
     {
       /// for empty cells no physical event occurs. The packets just propagate.
       edist = 1e99;
@@ -855,13 +855,13 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
       if (find_nextline)
       {
         /// However, this is only required if the new cell is non-empty or non-grey
-        if (mgi != MMODELGRID && globals::modelgrid[mgi].thick != 1)
+        if (mgi != get_npts_model() && globals::modelgrid[mgi].thick != 1)
         {
           closest_transition_empty(pkt_ptr);
         }
       }
 
-      return (pkt_ptr->type == TYPE_RPKT && (mgi == MMODELGRID || mgi == oldmgi));
+      return (pkt_ptr->type == TYPE_RPKT && (mgi == get_npts_model() || mgi == oldmgi));
     }
     else if ((tdist < sdist) && (tdist < edist))
     {
@@ -933,7 +933,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
         assert_always(false);
       }
 
-      return (pkt_ptr->type == TYPE_RPKT && (mgi == MMODELGRID || mgi == oldmgi));
+      return (pkt_ptr->type == TYPE_RPKT && (mgi == get_npts_model() || mgi == oldmgi));
     }
     else
     {
@@ -1053,7 +1053,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
       }
     }
 
-    if (snext < 0 || get_cell_modelgridindex(snext) == MMODELGRID)
+    if (snext < 0 || get_cell_modelgridindex(snext) == get_npts_model())
     {
       break;
     }
@@ -1373,7 +1373,7 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, rpkt_cont_opacity_struc
 {
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = get_cell_modelgridindex(cellindex);
-  assert_always(modelgridindex != MMODELGRID);
+  assert_always(modelgridindex != get_npts_model());
   assert_always(globals::modelgrid[modelgridindex].thick != 1);
   const double nu_cmf = pkt_ptr->nu_cmf;
   if ((modelgridindex == kappa_rpkt_cont_thisthread->modelgridindex) && (!kappa_rpkt_cont_thisthread->recalculate_required) && (fabs(kappa_rpkt_cont_thisthread->nu / nu_cmf - 1.0) < 1e-4))

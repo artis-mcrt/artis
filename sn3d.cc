@@ -185,11 +185,11 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
         MPI_Barrier(MPI_COMM_WORLD);
         /// Reduce the corrphotoionrenorm array.
         printout("nts %d, titer %d: bcast corr photoionrenorm\n", nts, titer);
-        MPI_Allreduce(MPI_IN_PLACE, &globals::corrphotoionrenorm, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &globals::corrphotoionrenorm, get_npts_model() * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         /// Reduce the gammaestimator array. Only needed to write restart data.
         printout("nts %d, titer %d: bcast gammaestimator\n", nts, titer);
-        MPI_Allreduce(MPI_IN_PLACE, &globals::gammaestimator, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &globals::gammaestimator, get_npts_model() * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       }
     #endif
   #endif
@@ -201,16 +201,16 @@ static void mpi_reduce_estimators(int my_rank, int nts)
 {
   radfield::reduce_estimators();
   #ifndef FORCE_LTE
-    MPI_Allreduce(MPI_IN_PLACE, &globals::ffheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::colheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::ffheatingestimator, get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::colheatingestimator, get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
     #if (!NO_LUT_PHOTOION)
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &globals::gammaestimator, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &globals::gammaestimator, get_npts_model() * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
     #if (!NO_LUT_BFHEATING)
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &globals::bfheatingestimator, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &globals::bfheatingestimator, get_npts_model() * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
   #endif
 
@@ -223,11 +223,11 @@ static void mpi_reduce_estimators(int my_rank, int nts)
   //double deltat = globals::time_step[nts].width;
   if (globals::do_rlc_est != 0)
   {
-    MPI_Allreduce(MPI_IN_PLACE, &globals::rpkt_emiss, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::rpkt_emiss, get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
   if (globals::do_comp_est)
   {
-    MPI_Allreduce(MPI_IN_PLACE, &globals::compton_emiss, MMODELGRID * EMISS_MAX, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::compton_emiss, get_npts_model() * EMISS_MAX, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
   }
 
   /// Communicate gamma and positron deposition and write to file
@@ -445,7 +445,7 @@ static bool do_timestep(
       if ((!globals::simulation_continued_from_saved) || (nts - globals::itstep != 0) || (titer != 0))
       {
         printout("nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
-        for (int i = 0; i < MMODELGRID * get_nelements() * get_max_nions(); i++)
+        for (int i = 0; i < get_npts_model() * get_nelements() * get_max_nions(); i++)
         {
           globals::corrphotoionrenorm[i] = 0.;
         }
@@ -847,11 +847,6 @@ int main(int argc, char** argv)
 
   stats::init();
 
-  /// As a precaution, explicitly zero all the estimators here
-  zero_estimators();
-
-  printout("time after zero estimators %ld\n", time(NULL));
-
   /// Record the chosen syn_dir
   FILE *syn_file = fopen_required("syn_dir.txt", "w");
   fprintf(syn_file, "%g %g %g", globals::syn_dir[0], globals::syn_dir[1], globals::syn_dir[2]);
@@ -875,6 +870,8 @@ int main(int argc, char** argv)
   printout("Simulation propagates %g packets per process (total %g with nprocs %d)\n", 1. * globals::npkts, 1. * globals::npkts * globals::nprocs, globals::nprocs);
 
   printout("[info] mem_usage: packets occupy %.1f MB\n", MPKTS * sizeof(PKT) / 1024. / 1024.);
+
+  zero_estimators();
 
   if (!globals::simulation_continued_from_saved)
   {

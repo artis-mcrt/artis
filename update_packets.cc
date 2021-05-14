@@ -249,7 +249,7 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
         const int mgi = get_cell_modelgridindex(cellindex);
         /// for non empty cells update the global available level populations and cooling terms
         /// Reset cellhistory if packet starts up in another than the last active cell
-        if (mgi != MMODELGRID && globals::cellhistory[tid].cellnumber != mgi)
+        if (mgi != get_npts_model() && globals::cellhistory[tid].cellnumber != mgi)
         {
           stats::increment(stats::COUNTER_UPDATECELL);
           cellhistory_reset(mgi, false);
@@ -258,7 +258,7 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
         // enum packet_type oldtype = pkt_ptr->type;
         int newmgi = mgi;
         bool workedonpacket = false;
-        while ((newmgi == mgi || newmgi == MMODELGRID) && pkt_ptr->prop_time < (ts + tw) && pkt_ptr->type != TYPE_ESCAPE)
+        while ((newmgi == mgi || newmgi == get_npts_model()) && pkt_ptr->prop_time < (ts + tw) && pkt_ptr->type != TYPE_ESCAPE)
         {
           workedonpacket = true;
           do_packet(pkt_ptr, ts + tw, nts);

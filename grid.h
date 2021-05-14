@@ -83,7 +83,6 @@ __host__ __device__ int get_numassociatedcells(int modelgridindex);
 __host__ __device__ enum model_types get_model_type(void);
 __host__ __device__ void set_model_type(enum model_types model_type_value);
 __host__ __device__ int get_npts_model(void);
-__host__ __device__ void set_npts_model(int npts_model);
 __host__ __device__ int get_t_model(void);
 __host__ __device__ int get_cell_modelgridindex(int cellindex);
 void read_ejecta_model(enum model_types model_type);
