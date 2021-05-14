@@ -199,10 +199,6 @@ float get_nne(int modelgridindex)
 {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex < (get_npts_model() + 1));
-  if (modelgridindex == get_npts_model())
-  {
-    return 0.;
-  }
 
   const double nne = globals::modelgrid[modelgridindex].nnetot;
   assert_testmodeonly(std::isfinite(nne));
@@ -215,10 +211,6 @@ float get_nnetot(int modelgridindex)
 {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex < (get_npts_model() + 1));
-  if (modelgridindex == get_npts_model())
-  {
-    return 0.;
-  }
 
   const double nnetot = globals::modelgrid[modelgridindex].nnetot;
   assert_always(std::isfinite(nnetot));
@@ -387,7 +379,7 @@ static void set_npts_model(int new_npts_model)
   npts_model = new_npts_model;
 
   assert_always(globals::modelgrid == NULL);
-  globals::modelgrid = (modelgrid_t *) malloc((npts_model + 1) * sizeof(modelgrid_t));
+  globals::modelgrid = (modelgrid_t *) calloc((npts_model + 1), sizeof(modelgrid_t));
 }
 
 __host__ __device__
@@ -727,6 +719,7 @@ static void allocate_nonemptymodelcells(void)
   set_rhoinit(get_npts_model(), 0.);
   set_rho(get_npts_model(), 0.);
   set_nne(get_npts_model(), 0.);
+  set_nnetot(get_npts_model(), 0.);
   set_ffegrp(get_npts_model(), 0.);
   globals::modelgrid[get_npts_model()].initradioabund = (float *) calloc(decay::get_num_nuclides(), sizeof(float));
   assert_always(globals::modelgrid[get_npts_model()].initradioabund != NULL);
