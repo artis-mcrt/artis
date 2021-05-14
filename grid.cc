@@ -204,7 +204,11 @@ float get_nne(int modelgridindex)
 __host__ __device__
 float get_nnetot(int modelgridindex)
 {
-  return globals::modelgrid[modelgridindex].nnetot;
+  assert_testmodeonly(modelgridindex >= 0);
+  assert_testmodeonly(modelgridindex < get_npts_model());
+  const double nnetot = globals::modelgrid[modelgridindex].nnetot;
+  assert_always(std::isfinite(nnetot));
+  return nnetot;
 }
 
 
