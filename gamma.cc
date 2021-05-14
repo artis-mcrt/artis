@@ -638,6 +638,10 @@ void do_gamma(PKT *pkt_ptr, double t2)
   const double kap_pair_prod = sig_pair_prod(pkt_ptr);
   const double kap_tot = kap_compton + kap_photo_electric + kap_pair_prod;
 
+  assert_testmodeonly(std::isfinite(kap_compton));
+  assert_testmodeonly(std::isfinite(kap_photo_electric));
+  assert_testmodeonly(std::isfinite(kap_pair_prod));
+
   // So distance before physical event is...
 
   double edist = (tau_next - tau_current) / kap_tot;
