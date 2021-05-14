@@ -197,7 +197,16 @@ float get_rho(int modelgridindex)
 __host__ __device__
 float get_nne(int modelgridindex)
 {
-  return globals::modelgrid[modelgridindex].nne;
+  assert_testmodeonly(modelgridindex >= 0);
+  assert_testmodeonly(modelgridindex < (get_npts_model() + 1));
+  if (modelgridindex == get_npts_model())
+  {
+    return 0.;
+  }
+
+  const double nne = globals::modelgrid[modelgridindex].nnetot;
+  assert_testmodeonly(std::isfinite(nne));
+  return nne;
 }
 
 
@@ -205,7 +214,12 @@ __host__ __device__
 float get_nnetot(int modelgridindex)
 {
   assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex < get_npts_model());
+  assert_testmodeonly(modelgridindex < (get_npts_model() + 1));
+  if (modelgridindex == get_npts_model())
+  {
+    return 0.;
+  }
+
   const double nnetot = globals::modelgrid[modelgridindex].nnetot;
   assert_always(std::isfinite(nnetot));
   return nnetot;
@@ -392,7 +406,7 @@ int get_cell_modelgridindex(int cellindex)
   assert_testmodeonly(cellindex < globals::ngrid);
   const int mgi = cell[cellindex].modelgridindex;
   assert_testmodeonly(mgi >= 0);
-  assert_testmodeonly(mgi < get_npts_model());
+  assert_testmodeonly(mgi < (get_npts_model() + 1));
   return mgi;
 }
 
