@@ -376,13 +376,19 @@ static double sig_comp(const PKT *pkt_ptr)
     sigma_cmf = sigma_compton_partial(xx, fmax);
   }
 
+  assert_testmodeonly(std::isfinite(sigma_cmf));
+
   // Now need to multiply by the electron number density.
   const int cellindex = pkt_ptr->where;
   sigma_cmf *= get_nnetot(get_cell_modelgridindex(cellindex));
 
+  assert_testmodeonly(std::isfinite(sigma_cmf));
+
   // Now need to convert between frames.
 
   const double sigma_rf = sigma_cmf * doppler_packetpos(pkt_ptr);
+
+  assert_testmodeonly(std::isfinite(sigma_rf));
 
   return sigma_rf;
 }
