@@ -1882,7 +1882,7 @@ void grid_init(int my_rank)
     int assoc_cells;
     int mgi;
 
-    for (mgi = 0; mgi < MMODELGRID; mgi++)
+    for (mgi = 0; mgi < npts_model; mgi++)
     {
       assoc_cells = get_numassociatedcells(mgi);
       if (assoc_cells > 0)
