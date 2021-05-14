@@ -291,6 +291,8 @@ void set_nne(int modelgridindex, float x)
 __host__ __device__
 void set_nnetot(int modelgridindex, float x)
 {
+  assert_always(x >= 0.);
+  assert_always(std::isfinite(x));
   globals::modelgrid[modelgridindex].nnetot = x;
 }
 
