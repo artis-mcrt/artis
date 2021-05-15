@@ -13,9 +13,6 @@
 #define CUBOID_NCOORDGRID_Z 50
 // #define GRID_TYPE GRID_SPHERICAL1D
 
-// Max number of ion stages for any element
-#define MIONS 5
-
 // non-LTE population solver
 static const bool NLTE_POPS_ON = true;
 

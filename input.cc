@@ -768,7 +768,6 @@ static void read_atomicdata_files(void)
 
   int lineindex = 0;  ///counter to determine the total number of lines, initialisation
   int uniqueionindex = -1; // index into list of all ions of all elements
-
   /// readin
   int nbfcheck = 0;
   int heatingcheck = 0;
@@ -790,9 +789,10 @@ static void read_atomicdata_files(void)
     assert_always(nions == uppermost_ionstage - lowermost_ionstage + 1);
     assert_always(abundance >= 0);
     assert_always(mass_amu >= 0);
+    update_max_nions(nions);
 
     /// write this element's data to memory
-    assert_always(nions <= globals::maxion);
+    assert_always(nions <= get_max_nions());
     globals::elements[element].anumber = Z;
     globals::elements[element].nions = nions;
     globals::elements[element].abundance = abundance;       /// abundances are expected to be given by mass
@@ -1225,7 +1225,7 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
       element = globals::phixslist[tid].groundcont[index].element;
       ion = globals::phixslist[tid].groundcont[index].ion;
     }
-    *index_in_groundlevelcontestimator = element * globals::maxion + ion;
+    *index_in_groundlevelcontestimator = element * get_max_nions() + ion;
   }
 
   return index;
@@ -1644,8 +1644,6 @@ void input(int rank)
 /// To govern the input. For now hardwire everything.
 {
   globals::homogeneous_abundances = false;
-
-  globals::maxion = MIONS;
 
   globals::npkts = MPKTS;
 /*  #ifdef FORCE_LTE

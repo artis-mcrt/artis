@@ -171,7 +171,7 @@ void zero_estimators(void)
 
       for (int element = 0; element < get_nelements(); element++)
       {
-        for (int ion = 0; ion < globals::maxion; ion++)
+        for (int ion = 0; ion < get_max_nions(); ion++)
         {
           #if (!NO_LUT_PHOTOION)
             globals::gammaestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;

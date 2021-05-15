@@ -193,15 +193,15 @@ void write_spectrum(
       fprintf(spec_file, "%g ", spectra[p].flux[m]);
       if (do_emission_res)
       {
-        for (int i = 0; i < 2 * get_nelements() * globals::maxion + 1; i++)
+        for (int i = 0; i < 2 * get_nelements() * get_max_nions() + 1; i++)
           fprintf(emission_file, "%g ", spectra[p].stat[m].emission[i]);
         fprintf(emission_file, "\n");
 
-        for (int i = 0; i < 2 * get_nelements() * globals::maxion + 1; i++)
+        for (int i = 0; i < 2 * get_nelements() * get_max_nions() + 1; i++)
           fprintf(trueemission_file, "%g ", spectra[p].stat[m].trueemission[i]);
         fprintf(trueemission_file, "\n");
 
-        for (int i = 0; i < get_nelements() * globals::maxion; i++)
+        for (int i = 0; i < get_nelements() * get_max_nions(); i++)
           fprintf(absorption_file, "%g ", spectra[p].stat[m].absorption[i]);
         fprintf(absorption_file, "\n");
       }
@@ -258,13 +258,13 @@ void write_specpol(
 
       if (do_emission_res)
       {
-        for (int i = 0; i < 2 * get_nelements() * globals::maxion + 1; i++)
+        for (int i = 0; i < 2 * get_nelements() * get_max_nions() + 1; i++)
         {
           fprintf(emissionpol_file, "%g ", stokes_i[p].stat[m].emission[i]);
         }
         fprintf(emissionpol_file, "\n");
 
-        for (int i = 0; i < get_nelements() * globals::maxion; i++)
+        for (int i = 0; i < get_nelements() * get_max_nions(); i++)
         {
           fprintf(absorptionpol_file, "%g ", stokes_i[p].stat[m].absorption[i]);
         }
@@ -279,13 +279,13 @@ void write_specpol(
 
       if (do_emission_res)
       {
-          for (int i = 0; i < 2 * get_nelements() * globals::maxion + 1; i++)
+          for (int i = 0; i < 2 * get_nelements() * get_max_nions() + 1; i++)
           {
             fprintf(emissionpol_file, "%g ", stokes_q[p].stat[m].emission[i]);
           }
           fprintf(emissionpol_file, "\n");
 
-          for (int i = 0; i < get_nelements() * globals::maxion; i++)
+          for (int i = 0; i < get_nelements() * get_max_nions(); i++)
           {
             fprintf(absorptionpol_file, "%g ", stokes_q[p].stat[m].absorption[i]);
           }
@@ -300,13 +300,13 @@ void write_specpol(
 
       if (do_emission_res)
       {
-        for (int i = 0; i < 2 * get_nelements() * globals::maxion + 1; i++)
+        for (int i = 0; i < 2 * get_nelements() * get_max_nions() + 1; i++)
         {
           fprintf(emissionpol_file, "%g ", stokes_u[p].stat[m].emission[i]);
         }
         fprintf(emissionpol_file, "\n");
 
-        for (int i = 0; i < get_nelements() * globals::maxion; i++)
+        for (int i = 0; i < get_nelements() * get_max_nions(); i++)
         {
           fprintf(absorptionpol_file, "%g ", stokes_u[p].stat[m].absorption[i]);
         }
@@ -332,12 +332,12 @@ static int columnindex_from_emissiontype(const int et)
     /// bb-emission
     const int element = globals::linelist[et].elementindex;
     const int ion = globals::linelist[et].ionindex;
-    return element * globals::maxion + ion;
+    return element * get_max_nions() + ion;
   }
   else if (et == -9999999)
   {
     /// ff-emission
-    return 2 * get_nelements() * globals::maxion;
+    return 2 * get_nelements() * get_max_nions();
   }
   else
   {
@@ -351,7 +351,7 @@ static int columnindex_from_emissiontype(const int et)
 
     assert_always(get_continuumindex(element, ion, level, upperionlevel) == et);
 
-    return get_nelements() * globals::maxion + element * globals::maxion + ion;
+    return get_nelements() * get_max_nions() + element * get_max_nions() + ion;
   }
 }
 
@@ -441,7 +441,7 @@ static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, struct
           /// bb-emission
           const int element = globals::linelist[at].elementindex;
           const int ion = globals::linelist[at].ionindex;
-          spectra[nt].stat[nnu_abs].absorption[element * globals::maxion + ion] += deltaE_absorption;
+          spectra[nt].stat[nnu_abs].absorption[element * get_max_nions() + ion] += deltaE_absorption;
 
           if (stokes_i != NULL && stokes_i[nt].do_emission_res)
             stokes_i[nt].stat[nnu].absorption[nproc] += pkt_ptr->stokes[0] * deltaE_absorption;
@@ -528,13 +528,13 @@ void init_spectra(struct spec *spectra, const double nu_min, const double nu_max
 
       if (do_emission_res)
       {
-        for (int i = 0; i < 2 * get_nelements() * globals::maxion + 1; i++)
+        for (int i = 0; i < 2 * get_nelements() * get_max_nions() + 1; i++)
         {
           spectra[n].stat[m].emission[i] = 0;
           spectra[n].stat[m].trueemission[i] = 0;
         }
 
-        for (int i = 0; i < get_nelements() * globals::maxion; i++)
+        for (int i = 0; i < get_nelements() * get_max_nions(); i++)
         {
           spectra[n].stat[m].absorption[i] = 0;
         }
@@ -563,8 +563,8 @@ struct spec *alloc_spectra(const bool do_emission_res)
     {
       for (int m = 0; m < globals::nnubins; m++)
       {
-        const int emissioncount = 2 * get_nelements() * globals::maxion + 1;
-        spectra[n].stat[m].absorption = (double *) calloc(get_nelements() * globals::maxion, sizeof(double));
+        const int emissioncount = 2 * get_nelements() * get_max_nions() + 1;
+        spectra[n].stat[m].absorption = (double *) calloc(get_nelements() * get_max_nions(), sizeof(double));
         spectra[n].stat[m].emission = (double *) calloc(emissioncount, sizeof(double));
         spectra[n].stat[m].trueemission = (double *) calloc(emissioncount, sizeof(double));
 

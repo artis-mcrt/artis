@@ -7,9 +7,6 @@
 // Number of energy packets per process (OpenMP threads share these pacekts)
 #define MPKTS 100000
 
-// Max number of ion stages for any element
-#define MIONS 5
-
 // Max number of OpenMP threads
 #define MTHREADS 8
 

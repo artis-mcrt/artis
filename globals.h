@@ -72,7 +72,6 @@ namespace globals
 
   extern __managed__ int opacity_case;
 
-  extern __managed__ int maxion;
   extern __managed__ int nlines;
   extern __managed__ int includedions;
   extern __managed__ elementlist_entry *elements;

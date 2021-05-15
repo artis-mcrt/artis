@@ -82,8 +82,6 @@ namespace globals
 
   /// ATOMIC DATA
 
-  __managed__ int maxion;
-
   __managed__ int nlines;
   __managed__ int includedions;
   __managed__ elementlist_entry *elements;
