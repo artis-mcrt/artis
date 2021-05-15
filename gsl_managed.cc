@@ -1,6 +1,9 @@
 #include "gsl_managed.h"
 #include "sn3d.h"
 
+// these functions modify their GSL implementations for CUDA compatability
+// memory is allocated in managed memory instead of host memory
+
 gsl_matrix *gsl_matrix_alloc_managed(const size_t n1, const size_t n2)
 {
 #if CUDA_ENABLED

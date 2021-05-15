@@ -731,7 +731,6 @@ static void read_atomicdata_files(void)
   int totaluptrans = 0;
   int totaldowntrans = 0;
 
-  ///open atomic data file
   FILE *compositiondata = fopen_required("compositiondata.txt", "r");
 
   FILE *adata = fopen_required("adata.txt", "r");
@@ -1005,13 +1004,7 @@ static void read_atomicdata_files(void)
       /// Also the phixslist
       if (ion < nions - 1)
       {
-//            globals::elements[element].ions[ion].nbfcontinua = globals::elements[element].ions[ion].ionisinglevels;//nlevelsmax;
         nbfcheck += globals::elements[element].ions[ion].ionisinglevels; //nlevelsmax;
-/*            if ((globals::elements[element].ions[ion].phixslist = calloc(nlevelsmax, sizeof(ionsphixslist_t))) == NULL)
-        {
-          printout("[fatal] input: not enough memory to initialize phixslist for element %d, ion %d ... abort\n",element,ion);
-          abort();
-        }*/
       }
     }
   }
