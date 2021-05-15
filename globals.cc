@@ -14,7 +14,7 @@ namespace globals
   //#define NRAYS_SYN 1 // number of rays traced in a syn calculation
 
   //RAY rays[NRAYS_SYN];
-  __managed__ struct time *time_step;
+  __managed__ struct time *time_step = NULL;
 
   __managed__ int nsyn_time;
   __managed__ double time_syn[MSYN_TIME];
@@ -24,7 +24,7 @@ namespace globals
   __managed__ int emiss_max;      // actual number of frequency points in emissivity grid
 
 
-  __managed__ modelgrid_t *modelgrid;
+  __managed__ modelgrid_t *modelgrid = NULL;
 
   /// THESE ARE THE GRID BASED ESTIMATORS
   __managed__ float *compton_emiss = NULL;  /// Volume estimator for the compton emissivity
@@ -50,9 +50,9 @@ namespace globals
   #endif
 
   #ifdef RECORD_LINESTAT
-    __managed__ int *ecounter;
-    __managed__ int *acounter;
-    __managed__ int *linestat_reduced;
+    __managed__ int *ecounter = NULL;
+    __managed__ int *acounter = NULL;
+    __managed__ int *linestat_reduced = NULL;
   #endif
 
 
@@ -84,26 +84,26 @@ namespace globals
 
   __managed__ int nlines;
   __managed__ int includedions;
-  __managed__ elementlist_entry *elements;
-  __managed__ linelist_entry *linelist;
-  __managed__ bflist_t *bflist;
+  __managed__ elementlist_entry *elements = NULL;
+  __managed__ linelist_entry *linelist = NULL;
+  __managed__ bflist_t *bflist = NULL;
 
-  __managed__ rpkt_cont_opacity_struct *kappa_rpkt_cont;
+  __managed__ rpkt_cont_opacity_struct *kappa_rpkt_cont = NULL;
 
   /// Coolinglist
   __managed__ int ncoolingterms;
 
   /// PHIXSLIST
 
-  __managed__ double *allcont_nu_edge;
-  __managed__ fullphixslist_t *allcont;
-  __managed__ phixslist_t *phixslist;
+  __managed__ double *allcont_nu_edge = NULL;
+  __managed__ fullphixslist_t *allcont = NULL;
+  __managed__ phixslist_t *phixslist = NULL;
   __managed__ int nbfcontinua;
   __managed__ int nbfcontinua_ground; ///number of bf-continua
   __managed__ int NPHIXSPOINTS;
   __managed__ double NPHIXSNUINCREMENT;
 
-  __managed__ cellhistory_struct *cellhistory;
+  __managed__ cellhistory_struct *cellhistory = NULL;
 
   __managed__ int debuglevel;
 

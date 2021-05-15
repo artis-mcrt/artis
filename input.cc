@@ -789,10 +789,11 @@ static void read_atomicdata_files(void)
     assert_always(nions == uppermost_ionstage - lowermost_ionstage + 1);
     assert_always(abundance >= 0);
     assert_always(mass_amu >= 0);
+
     update_max_nions(nions);
+    assert_always(nions <= get_max_nions());
 
     /// write this element's data to memory
-    assert_always(nions <= get_max_nions());
     globals::elements[element].anumber = Z;
     globals::elements[element].nions = nions;
     globals::elements[element].abundance = abundance;       /// abundances are expected to be given by mass

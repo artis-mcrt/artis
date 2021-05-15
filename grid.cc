@@ -32,13 +32,14 @@ __managed__ double min_den; // minimum model density
 __managed__ double mtot;
 __managed__ double mfeg;              /// Total mass of Fe group elements in ejecta
 
-__managed__ CELL *cell;
+__managed__ CELL *cell = NULL;
 
 static long mem_usage_nltepops = 0;
 
 static __managed__ int *mg_associated_cells = NULL;
 
 __managed__ double *totmassradionuclide = NULL; /// total mass of each radionuclide in the ejecta
+
 
 __host__ __device__
 double wid_init(const int cellindex)
