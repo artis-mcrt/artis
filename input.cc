@@ -739,11 +739,6 @@ static void read_atomicdata_files(void)
   /// initialize atomic data structure to number of elements
   int nelements_in;
   fscanf(compositiondata,"%d", &nelements_in);
-  if (nelements_in > MELEMENTS)
-  {
-    printout("ERROR: nelements_in = %d > %d MELEMENTS", get_nelements(), MELEMENTS);
-    abort();
-  }
   set_nelements(nelements_in);
   if ((globals::elements = (elementlist_entry *) calloc(get_nelements(), sizeof(elementlist_entry))) == NULL)
   {
