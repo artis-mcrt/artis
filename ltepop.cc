@@ -80,7 +80,7 @@ void get_ionfractions(int element, int modelgridindex, double nne, double ionfra
 
     if (!std::isfinite(ionfractions[ion]))
     {
-      if (modelgridindex != MGRID)
+      if (modelgridindex != get_npts_model())
       {
         printout("[warning] ionfract set to zero for ionstage %d of Z=%d in cell %d with T_e %g, T_R %g\n",
                  get_ionstage(element,ion), get_element(element), modelgridindex, get_Te(modelgridindex), get_TR(modelgridindex));

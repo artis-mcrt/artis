@@ -32,7 +32,7 @@ __managed__ double min_den; // minimum model density
 __managed__ double mtot;
 __managed__ double mfeg;              /// Total mass of Fe group elements in ejecta
 
-__managed__ CELL cell[MGRID + 1];
+__managed__ CELL *cell;
 
 static long mem_usage_nltepops = 0;
 
@@ -1847,7 +1847,7 @@ static void uniform_grid_setup(void)
   assert_always(globals::ncoordgrid[0] == globals::ncoordgrid[2]);
 
   globals::ngrid = globals::ncoordgrid[0] * globals::ncoordgrid[1] * globals::ncoordgrid[2];
-  assert_always(globals::ngrid <= MGRID);
+  cell = (CELL *) malloc(globals::ngrid * sizeof(CELL));
 
   globals::coordlabel[0] = 'X';
   globals::coordlabel[1] = 'Y';
@@ -1891,13 +1891,11 @@ static void spherical1d_grid_setup(void)
   globals::ncoordgrid[2] = 1;
 
   globals::ngrid = globals::ncoordgrid[0] * globals::ncoordgrid[1] * globals::ncoordgrid[2];
-  assert_always(globals::ngrid <= MGRID);
+  cell = (CELL *) malloc(globals::ngrid * sizeof(CELL));
 
   globals::coordmax[0] = globals::rmax;
   globals::coordmax[1] = 0.;
   globals::coordmax[2] = 0.;
-
-  assert_always(globals::ngrid <= MGRID);
 
   // in this mode, cellindex and modelgridindex are the same thing
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++)
@@ -1914,13 +1912,6 @@ static void spherical1d_grid_setup(void)
 void grid_init(int my_rank)
 /// Initialises the propagation grid cells and associates them with modelgrid cells
 {
-  /// Start by checking that the number of grid cells is okay */
-  //ngrid = globals::ncoordgrid[0] * globals::ncoordgrid[1] * globals::ncoordgrid[2]; ///Moved to input.c
-  //if (ngrid > MGRID)
-  //{
-  //  printout("[fatal] grid_init: Error: too many grid cells. Abort.");
-  //  abort();
-  //}
   for (int n = 0; n <= get_npts_model(); n++)
   {
     globals::modelgrid[n].initial_radial_pos = 0;
