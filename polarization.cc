@@ -6,14 +6,28 @@
 
 void escat_rpkt(PKT *pkt_ptr)
 {
-  double dummy_dir[3], vel_vec[3], vel_rev[3];
-  double old_dir_cmf[3],new_dir_cmf[3];
-  double Inew, Unew, Qnew, Uold, Qold, I, Q, U;
-  double mu,M,phisc;
+  double dummy_dir[3];
+  double vel_vec[3];
+  double vel_rev[3];
+  double old_dir_cmf[3];
+  double new_dir_cmf[3];
+  double Inew;
+  double Unew;
+  double Qnew;
+  double Uold;
+  double Qold;
+  double I;
+  double Q;
+  double U;
+  double mu;
+  double M;
+  double phisc;
   // double i1,i2,cos2i1,sin2i1,cos2i2,sin2i2;
-  double ref1[3],ref2[3];
+  double ref1[3];
+  double ref2[3];
 #ifdef DIPOLE
-  double p,x;
+  double p;
+  double x;
 #endif
 
   /// now make the packet a r-pkt and set further flags
