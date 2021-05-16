@@ -380,7 +380,7 @@ static double sig_comp(const PKT *pkt_ptr)
 
   // Now need to multiply by the electron number density.
   const int cellindex = pkt_ptr->where;
-  sigma_cmf *= get_nnetot(get_cell_modelgridindex(cellindex));
+  sigma_cmf *= grid::get_nnetot(grid::get_cell_modelgridindex(cellindex));
 
   assert_testmodeonly(std::isfinite(sigma_cmf));
 
@@ -604,7 +604,7 @@ void do_gamma(PKT *pkt_ptr, double t2)
   int snext;
   double sdist = boundary_cross(pkt_ptr, pkt_ptr->prop_time, &snext);
 
-  const double maxsdist = (globals::grid_type == GRID_SPHERICAL1D) ? 2 * globals::rmax * (pkt_ptr->prop_time + sdist / globals::CLIGHT_PROP) / globals::tmin : globals::rmax * pkt_ptr->prop_time / globals::tmin;
+  const double maxsdist = (grid::grid_type == GRID_SPHERICAL1D) ? 2 * globals::rmax * (pkt_ptr->prop_time + sdist / globals::CLIGHT_PROP) / globals::tmin : globals::rmax * pkt_ptr->prop_time / globals::tmin;
   if (sdist > maxsdist)
   {
     printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", globals::rmax, pkt_ptr->prop_time/globals::tmin, sdist);
@@ -617,7 +617,7 @@ void do_gamma(PKT *pkt_ptr, double t2)
     sdist = 0;
   }
 
-  if (((snext < 0) && (snext != -99)) || (snext >= globals::ngrid))
+  if (((snext < 0) && (snext != -99)) || (snext >= grid::ngrid))
   {
     printout("Heading for inappropriate grid cell. Abort.\n");
     printout("Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
@@ -783,7 +783,7 @@ void do_gamma(PKT *pkt_ptr, double t2)
     {
       printout("Failed to identify event. Gamma (1). kap_compton %g kap_photo_electric %g kap_tot %g zrand %g Abort.\n", kap_compton, kap_photo_electric, kap_tot, zrand);
       const int cellindex = pkt_ptr->where;
-      printout(" /*globals::cell[*/pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g pkt_ptr->dir[2] %g pkt_ptr->pos[0] %g pkt_ptr->pos[1] %g pkt_ptr->pos[2] %g \n",get_rho(get_cell_modelgridindex(cellindex)), pkt_ptr->nu_cmf,pkt_ptr->dir[0],pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2],pkt_ptr->pos[1],pkt_ptr->pos[2]);
+      printout(" /*globals::cell[*/pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g pkt_ptr->dir[2] %g pkt_ptr->pos[0] %g pkt_ptr->pos[1] %g pkt_ptr->pos[2] %g \n",grid::get_rho(grid::get_cell_modelgridindex(cellindex)), pkt_ptr->nu_cmf,pkt_ptr->dir[0],pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2],pkt_ptr->pos[1],pkt_ptr->pos[2]);
 
       abort();
     }

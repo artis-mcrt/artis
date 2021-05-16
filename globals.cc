@@ -24,8 +24,6 @@ namespace globals
   __managed__ int emiss_max;      // actual number of frequency points in emissivity grid
 
 
-  __managed__ modelgrid_t *modelgrid = NULL;
-
   /// THESE ARE THE GRID BASED ESTIMATORS
   __managed__ float *compton_emiss = NULL;  /// Volume estimator for the compton emissivity
   __managed__ double *rpkt_emiss = NULL;                /// Volume estimator for the rpkt emissivity
@@ -106,11 +104,6 @@ namespace globals
   __managed__ cellhistory_struct *cellhistory = NULL;
 
   __managed__ int debuglevel;
-
-  __managed__ int ncoordgrid[3]; /// propagration grid dimensions
-  __managed__ int ngrid;
-  __managed__ int grid_type;
-  __managed__ char coordlabel[3];
 
   __managed__ int nprocs = -1;      /// Global variable which holds the number of MPI processes
   __managed__ int rank_global = -1; /// Global variable which holds the rank of the active MPI process

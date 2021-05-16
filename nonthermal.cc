@@ -27,7 +27,7 @@ namespace nonthermal
 // #define yscalefactoroverride(mgi) (1e10)
 // #define get_tot_nion(x) (1e10)
 // #define ionstagepop(modelgridindex, element, ion) ionstagepop_override(modelgridindex, element, ion)
-// #define get_nne(x) (1e8)
+// #define grid::get_nne(x) (1e8)
 // #define SFPTS 10000  // number of energy points in the Spencer-Fano solution vector
 // #define SF_EMAX 3000. // eV
 // #define SF_EMIN 1. // eV
@@ -184,7 +184,7 @@ static double get_tot_nion(const int modelgridindex)
   double result = 0.;
   for (int element = 0; element < get_nelements(); element++)
   {
-    result += globals::modelgrid[modelgridindex].composition[element].abundance / globals::elements[element].mass * get_rho(modelgridindex);
+    result += grid::modelgrid[modelgridindex].composition[element].abundance / globals::elements[element].mass * grid::get_rho(modelgridindex);
 
     // alternative method is to add the ion populations
     // const int nions = get_nions(element);
@@ -519,10 +519,10 @@ void init(const int my_rank, const int ndo)
   assert_always(nonthermal_initialized == false);
   nonthermal_initialized = true;
 
-  deposition_rate_density = (double *) malloc(get_npts_model() * sizeof(double));
-  deposition_rate_density_timestep = (int *) malloc(get_npts_model() * sizeof(int));
+  deposition_rate_density = (double *) malloc(grid::get_npts_model() * sizeof(double));
+  deposition_rate_density_timestep = (int *) malloc(grid::get_npts_model() * sizeof(int));
 
-  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
   {
     deposition_rate_density[modelgridindex] = -1.;
     deposition_rate_density_timestep[modelgridindex] = -1;
@@ -566,10 +566,10 @@ void init(const int my_rank, const int ndo)
     fflush(nonthermalfile);
   }
 
-  nt_solution = (struct nt_solution_struct *) calloc(get_npts_model(), sizeof(struct nt_solution_struct));
+  nt_solution = (struct nt_solution_struct *) calloc(grid::get_npts_model(), sizeof(struct nt_solution_struct));
 
   long mem_usage_yfunc = 0;
-  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
   {
     // should make these negative?
     nt_solution[modelgridindex].frac_heating = 0.97;
@@ -579,7 +579,7 @@ void init(const int my_rank, const int ndo)
     nt_solution[modelgridindex].nneperion_when_solved = -1.;
     nt_solution[modelgridindex].timestep_last_solved = -1;
 
-    if (get_numassociatedcells(modelgridindex) > 0)
+    if (grid::get_numassociatedcells(modelgridindex) > 0)
     {
       nt_solution[modelgridindex].eff_ionpot = (float *) calloc(globals::includedions, sizeof(float));
       nt_solution[modelgridindex].fracdep_ionization_ion = (double *) calloc(globals::includedions, sizeof(double));
@@ -803,9 +803,9 @@ void close_file(void)
   }
   gsl_vector_free(envec);
   gsl_vector_free(sourcevec);
-  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
   {
-    if (get_numassociatedcells(modelgridindex) > 0)
+    if (grid::get_numassociatedcells(modelgridindex) > 0)
     {
       if (STORE_NT_SPECTRUM)
       {
@@ -1222,8 +1222,8 @@ static float calculate_frac_heating(const int modelgridindex)
   // frac_heating multiplied by E_init, which will be divided out at the end
   double frac_heating_Einit = 0.;
 
-  const float nne = get_nne(modelgridindex);
-  // const float nnetot = get_nnetot(modelgridindex);
+  const float nne = grid::get_nne(modelgridindex);
+  // const float nnetot = grid::get_nnetot(modelgridindex);
 
   for (int i = 0; i < SFPTS; i++)
   {
@@ -1492,7 +1492,7 @@ static double get_oneoverw(const int element, const int ion, const int modelgrid
   double Zbar = 0.0;  // mass-weighted average atomic number
   for (int ielement = 0; ielement < get_nelements(); ielement++)
   {
-    Zbar += globals::modelgrid[modelgridindex].composition[ielement].abundance * globals::elements[ielement].anumber;
+    Zbar += grid::modelgrid[modelgridindex].composition[ielement].abundance * globals::elements[ielement].anumber;
   }
   //printout("cell %d has Zbar of %g\n", modelgridindex, Zbar);
 
@@ -1750,7 +1750,7 @@ __host__ __device__
 static double nt_ionization_ratecoeff_sf(const int modelgridindex, const int element, const int ion)
 // Kozma & Fransson 1992 equation 13
 {
-  if (get_numassociatedcells(modelgridindex) <= 0)
+  if (grid::get_numassociatedcells(modelgridindex) <= 0)
   {
     printout("ERROR: nt_ionization_ratecoeff_sf called on empty cell %d\n", modelgridindex);
     abort();
@@ -1895,7 +1895,7 @@ __host__ __device__
 double nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion)
 {
   assert_always(NT_ON);
-  assert_always(get_numassociatedcells(modelgridindex) > 0);
+  assert_always(grid::get_numassociatedcells(modelgridindex) > 0);
 
   if (NT_SOLVE_SPENCERFANO)
   {
@@ -1975,7 +1975,7 @@ double nt_excitation_ratecoeff(const int modelgridindex, const int element, cons
       (upper >= NTEXCITATION_MAXNLEVELS_UPPER))
     return 0.;
 
-  if (get_numassociatedcells(modelgridindex) <= 0)
+  if (grid::get_numassociatedcells(modelgridindex) <= 0)
   {
     printout("ERROR: nt_excitation_ratecoeff called on empty cell %d\n", modelgridindex);
     abort();
@@ -2126,10 +2126,10 @@ void do_ntlepton(PKT *pkt_ptr)
 {
   safeadd(nt_energy_deposited, pkt_ptr->e_cmf);
 
-  const int modelgridindex = get_cell_modelgridindex(pkt_ptr->where);
+  const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
 
   // macroatom should not be activated in thick cells
-  if (NT_ON && NT_SOLVE_SPENCERFANO && globals::modelgrid[modelgridindex].thick != 1)
+  if (NT_ON && NT_SOLVE_SPENCERFANO && grid::modelgrid[modelgridindex].thick != 1)
   {
     // here there is some probability to cause ionisation or excitation to a macroatom packet
     // instead of converting directly to k-packet (unless the heating channel is selected)
@@ -2254,9 +2254,9 @@ static bool realloc_frac_excitations_list(const int modelgridindex, const int ne
 
 static void analyse_sf_solution(const int modelgridindex, const int timestep, const bool enable_sfexcitation)
 {
-  const float nne = get_nne(modelgridindex);
+  const float nne = grid::get_nne(modelgridindex);
   const double nntot = get_tot_nion(modelgridindex);
-  const double nnetot = get_nnetot(modelgridindex);
+  const double nnetot = grid::get_nnetot(modelgridindex);
 
   double frac_excitation_total = 0.;
   double frac_ionization_total = 0.;
@@ -2464,7 +2464,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
              modelgridindex, nt_solution[modelgridindex].frac_excitations_list_size *
              (sizeof(nt_solution[modelgridindex].frac_excitations_list) + sizeof(nt_solution[modelgridindex].frac_excitations_list[0])) / 1024. / 1024.);
 
-    const float T_e = get_Te(modelgridindex);
+    const float T_e = grid::get_Te(modelgridindex);
     printout("  Top non-thermal excitation fractions (total excitations = %d):\n",
              nt_solution[modelgridindex].frac_excitations_list_size);
     int ntransdisplayed = nt_solution[modelgridindex].frac_excitations_list_size;
@@ -2827,7 +2827,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 // based on Equation (2) of Li et al. (2012)
 {
   bool skip_solution = false;
-  if (get_numassociatedcells(modelgridindex) < 1)
+  if (grid::get_numassociatedcells(modelgridindex) < 1)
   {
     printout("Associated_cells < 1 in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", modelgridindex, timestep);
 
@@ -2862,8 +2862,8 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
     return;
   }
 
-  const float nne = get_nne(modelgridindex); // electrons per cm^3
-  // const double nnetot = get_nnetot(modelgridindex);
+  const float nne = grid::get_nne(modelgridindex); // electrons per cm^3
+  // const double nnetot = grid::get_nnetot(modelgridindex);
   const double nne_per_ion = nne / get_tot_nion(modelgridindex);
   const double nne_per_ion_last = nt_solution[modelgridindex].nneperion_when_solved;
   const double nne_per_ion_fracdiff = fabs((nne_per_ion_last / nne_per_ion) - 1.);
@@ -3029,9 +3029,9 @@ void write_restart_data(FILE *gridsave_file)
   fprintf(gridsave_file, "%d\n", 24724518); // special number marking the beginning of NT data
   fprintf(gridsave_file, "%d %lg %lg\n", SFPTS, SF_EMIN, SF_EMAX);
 
-  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
   {
-    if (get_numassociatedcells(modelgridindex) > 0)
+    if (grid::get_numassociatedcells(modelgridindex) > 0)
     {
       fprintf(gridsave_file, "%d %d %lg ",
               modelgridindex,
@@ -3112,9 +3112,9 @@ void read_restart_data(FILE *gridsave_file)
     abort();
   }
 
-  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
   {
-    if (get_numassociatedcells(modelgridindex) > 0)
+    if (grid::get_numassociatedcells(modelgridindex) > 0)
     {
       int mgi_in;
       fscanf(gridsave_file, "%d %d %lg ",
@@ -3184,7 +3184,7 @@ void read_restart_data(FILE *gridsave_file)
 #ifdef MPI_ON
 void nt_MPI_Bcast(const int modelgridindex, const int root)
 {
-  if (get_numassociatedcells(modelgridindex) == 0)
+  if (grid::get_numassociatedcells(modelgridindex) == 0)
     return;
 
   // printout("nonthermal_MPI_Bcast cell %d before: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",

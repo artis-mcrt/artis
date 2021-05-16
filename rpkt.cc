@@ -170,7 +170,7 @@ static double get_event(
 
         if (tau_line < 0)
         {
-          //printout("[warning] get_event: tau_line %g < 0, n_l %g, n_u %g, B_lu %g, B_ul %g, W %g, T_R %g, element %d, ion %d, upper %d, lower %d ... abort\n",tau_line, n_l,n_u,B_lu,B_ul,get_W(get_cell_modelgridindex(pkt_ptr->where)),get_TR(get_cell_modelgridindex(pkt_ptr->where)),element,ion,upper,lower);
+          //printout("[warning] get_event: tau_line %g < 0, n_l %g, n_u %g, B_lu %g, B_ul %g, W %g, T_R %g, element %d, ion %d, upper %d, lower %d ... abort\n",tau_line, n_l,n_u,B_lu,B_ul,get_W(grid::get_cell_modelgridindex(pkt_ptr->where)),get_TR(grid::get_cell_modelgridindex(pkt_ptr->where)),element,ion,upper,lower);
           //printout("[warning] get_event: set tau_line = 0\n");
           tau_line = 0.;
           //printout("[fatal] get_event: tau_line < 0 ... abort\n");
@@ -639,10 +639,10 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
 /// packets which do not contribute to the radiation field.
 {
   const int cellindex = pkt_ptr->where;
-  const int modelgridindex = get_cell_modelgridindex(cellindex);
+  const int modelgridindex = grid::get_cell_modelgridindex(cellindex);
 
   /// Update only non-empty cells
-  if (modelgridindex != get_npts_model())
+  if (modelgridindex != grid::get_npts_model())
   {
     const double distance_e_cmf = distance * pkt_ptr->e_cmf;
     const double nu = pkt_ptr->nu_cmf;
@@ -668,7 +668,7 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
             /// Cells with zero abundance for a specific element have zero contribution
             /// (set in calculate_kappa_rpkt_cont and therefore do not contribute to
             /// the estimators
-            if (get_elem_abundance(modelgridindex, element) > 0)
+            if (grid::get_elem_abundance(modelgridindex, element) > 0)
             {
               const int ionestimindex = modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
               #if (!NO_LUT_PHOTOION)
@@ -703,7 +703,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
 // return value - true if no mgi change, no pkttype change and not reached end of timestep, false otherwise
 {
   const int cellindex = pkt_ptr->where;
-  int mgi = get_cell_modelgridindex(cellindex);
+  int mgi = grid::get_cell_modelgridindex(cellindex);
   const int oldmgi = mgi;
 
   #ifdef DEBUG_ON
@@ -729,13 +729,13 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
   {
     change_cell(pkt_ptr, snext, pkt_ptr->prop_time);
     const int cellindexnew = pkt_ptr->where;
-    mgi = get_cell_modelgridindex(cellindexnew);
+    mgi = grid::get_cell_modelgridindex(cellindexnew);
 
-    return (pkt_ptr->type == TYPE_RPKT && (mgi == get_npts_model() || mgi == oldmgi));
+    return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
   }
   else
   {
-    const double maxsdist = (globals::grid_type == GRID_SPHERICAL1D) ? 2 * globals::rmax * (pkt_ptr->prop_time + sdist / globals::CLIGHT_PROP) / globals::tmin : globals::rmax * pkt_ptr->prop_time / globals::tmin;
+    const double maxsdist = (grid::grid_type == GRID_SPHERICAL1D) ? 2 * globals::rmax * (pkt_ptr->prop_time + sdist / globals::CLIGHT_PROP) / globals::tmin : globals::rmax * pkt_ptr->prop_time / globals::tmin;
     if (sdist > maxsdist)
     {
       printout("[fatal] do_rpkt: Unreasonably large sdist. Rpkt. Abort. %g %g %g\n", globals::rmax, pkt_ptr->prop_time/globals::tmin, sdist);
@@ -750,13 +750,13 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
       printout("[warning] r_pkt: pos %g %g %g\n", pkt_ptr->pos[0], pkt_ptr->pos[1], pkt_ptr->pos[2]);
       printout("[warning] r_pkt: dir %g %g %g\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
       printout("[warning] r_pkt: cell corner %g %g %g\n",
-               get_cellcoordmin(cellindexnew, 0) * pkt_ptr->prop_time / globals::tmin,
-               get_cellcoordmin(cellindexnew, 1) * pkt_ptr->prop_time / globals::tmin,
-               get_cellcoordmin(cellindexnew, 2) * pkt_ptr->prop_time / globals::tmin);
-      printout("[warning] r_pkt: cell width %g\n",wid_init(0)*pkt_ptr->prop_time/globals::tmin);
+               grid::get_cellcoordmin(cellindexnew, 0) * pkt_ptr->prop_time / globals::tmin,
+               grid::get_cellcoordmin(cellindexnew, 1) * pkt_ptr->prop_time / globals::tmin,
+               grid::get_cellcoordmin(cellindexnew, 2) * pkt_ptr->prop_time / globals::tmin);
+      printout("[warning] r_pkt: cell width %g\n",grid::wid_init(0)*pkt_ptr->prop_time/globals::tmin);
       //abort();
     }
-    if (((snext != -99) && (snext < 0)) || (snext >= globals::ngrid))
+    if (((snext != -99) && (snext < 0)) || (snext >= grid::ngrid))
     {
       printout("[fatal] r_pkt: Heading for inappropriate grid cell. Abort.\n");
       printout("[fatal] r_pkt: Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
@@ -783,7 +783,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
     double edist;
     int rpkt_eventtype;
     bool find_nextline = false;
-    if (mgi == get_npts_model())
+    if (mgi == grid::get_npts_model())
     {
       /// for empty cells no physical event occurs. The packets just propagate.
       edist = 1e99;
@@ -792,12 +792,12 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
         if (globals::debuglevel == 2) printout("[debug] do_rpkt: propagating through empty cell, set edist=1e99\n");
       #endif
     }
-    else if (globals::modelgrid[mgi].thick == 1)
+    else if (grid::modelgrid[mgi].thick == 1)
     {
       /// In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
       /// Get distance to the next physical event in this case only electron scattering
-      //kappa = SIGMA_T*get_nne(mgi);
-      const double kappa = get_kappagrey(mgi) * get_rho(mgi) * dopplerfactor;
+      //kappa = SIGMA_T*grid::get_nne(mgi);
+      const double kappa = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * dopplerfactor;
       const double tau_current = 0.0;
       edist = (tau_next - tau_current) / kappa;
       find_nextline = true;
@@ -844,7 +844,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
       {
         change_cell(pkt_ptr, snext, pkt_ptr->prop_time);
         const int cellindexnew = pkt_ptr->where;
-        mgi = get_cell_modelgridindex(cellindexnew);
+        mgi = grid::get_cell_modelgridindex(cellindexnew);
       }
       // New cell so reset the scat_counter
       pkt_ptr->scat_count = 0;
@@ -855,13 +855,13 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
       if (find_nextline)
       {
         /// However, this is only required if the new cell is non-empty or non-grey
-        if (mgi != get_npts_model() && globals::modelgrid[mgi].thick != 1)
+        if (mgi != grid::get_npts_model() && grid::modelgrid[mgi].thick != 1)
         {
           closest_transition_empty(pkt_ptr);
         }
       }
 
-      return (pkt_ptr->type == TYPE_RPKT && (mgi == get_npts_model() || mgi == oldmgi));
+      return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
     }
     else if ((tdist < sdist) && (tdist < edist))
     {
@@ -916,7 +916,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
       edist = edist * 2.;
 
       // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
-      if (globals::modelgrid[mgi].thick == 1)
+      if (grid::modelgrid[mgi].thick == 1)
       {
         rpkt_event_thickcell(pkt_ptr);
       }
@@ -933,7 +933,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
         assert_always(false);
       }
 
-      return (pkt_ptr->type == TYPE_RPKT && (mgi == get_npts_model() || mgi == oldmgi));
+      return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
     }
     else
     {
@@ -980,8 +980,8 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
   while (end_packet == false)
   {
     const int cellindex = vpkt.where;
-    const int mgi = get_cell_modelgridindex(cellindex);
-    if (globals::modelgrid[mgi].thick == 1)
+    const int mgi = grid::get_cell_modelgridindex(cellindex);
+    if (grid::modelgrid[mgi].thick == 1)
     {
       return 0.;
     }
@@ -991,8 +991,8 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
 
     if (snext >= 0)
     {
-      const int nextmgi = get_cell_modelgridindex(snext);
-      if (globals::modelgrid[nextmgi].thick == 1)
+      const int nextmgi = grid::get_cell_modelgridindex(snext);
+      if (grid::modelgrid[nextmgi].thick == 1)
       {
         return 0.;
       }
@@ -1053,7 +1053,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
       }
     }
 
-    if (snext < 0 || get_cell_modelgridindex(snext) == get_npts_model())
+    if (snext < 0 || grid::get_cell_modelgridindex(snext) == grid::get_npts_model())
     {
       break;
     }
@@ -1088,8 +1088,8 @@ double get_rpkt_escape_prob(PKT *pkt_ptr, const double tstart)
   vec_copy(startpos, pkt_ptr->pos);
   const double start_nu_cmf = pkt_ptr->nu_cmf;
   const enum cell_boundary last_cross = pkt_ptr->last_cross;
-  const int mgi = get_cell_modelgridindex(startcellindex);
-  if (globals::modelgrid[mgi].thick == 1)
+  const int mgi = grid::get_cell_modelgridindex(startcellindex);
+  if (grid::modelgrid[mgi].thick == 1)
   {
     // escape prob in thick cell is zero
     return 0.;
@@ -1200,8 +1200,8 @@ static double calculate_kappa_ff(const int modelgridindex, const double nu)
   assert_always(nu > 0.);
   const double g_ff = 1;
 
-  const float nne = get_nne(modelgridindex);
-  const float T_e = get_Te(modelgridindex);
+  const float nne = grid::get_nne(modelgridindex);
+  const float T_e = grid::get_Te(modelgridindex);
 
   double kappa_ff = 0.;
   //kappa_ffheating = 0.;
@@ -1257,10 +1257,10 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
   }
 
 #if (!SEPARATE_STIMRECOMB)
-  const double T_e = get_Te(modelgridindex);
-  const double nne = get_nne(modelgridindex);
+  const double T_e = grid::get_Te(modelgridindex);
+  const double nne = grid::get_nne(modelgridindex);
 #endif
-  const double nnetot = get_nnetot(modelgridindex);
+  const double nnetot = grid::get_nnetot(modelgridindex);
   for (int i = 0; i < globals::nbfcontinua; i++)
   {
     const int element = globals::allcont[i].element;
@@ -1268,7 +1268,7 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
     const int level = globals::allcont[i].level;
     /// The bf process happens only if the current cell contains
     /// the involved atomic species
-    if ((get_elem_abundance(modelgridindex,element) > 0) && (DETAILED_BF_ESTIMATORS_ON || (level < 100) || (ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6)))
+    if ((grid::get_elem_abundance(modelgridindex,element) > 0) && (DETAILED_BF_ESTIMATORS_ON || (level < 100) || (ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6)))
     {
       const double nu_edge = globals::allcont[i].nu_edge;
       const int phixstargetindex = globals::allcont[i].phixstargetindex;
@@ -1314,9 +1314,9 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
             printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf_contr %g ... abort\n",kappa_bf_contr);
             printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n",i,element,ion,level);
             printout("[fatal] Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
-            printout("[fatal] globals::cell[%d].composition[%d].abundance = %g\n",modelgridindex,element,get_elem_abundance(modelgridindex,element));
-            printout("[fatal] nne %g, nnlevel %g, (or %g)\n", get_nne(modelgridindex), nnlevel, calculate_exclevelpop(modelgridindex,element,ion,level));
-            printout("[fatal] sigma_bf %g, T_e %g, nu %g, nu_edge %g\n",sigma_bf,get_Te(modelgridindex),nu,nu_edge);
+            printout("[fatal] globals::cell[%d].composition[%d].abundance = %g\n",modelgridindex,element,grid::get_elem_abundance(modelgridindex,element));
+            printout("[fatal] nne %g, nnlevel %g, (or %g)\n", grid::get_nne(modelgridindex), nnlevel, calculate_exclevelpop(modelgridindex,element,ion,level));
+            printout("[fatal] sigma_bf %g, T_e %g, nu %g, nu_edge %g\n",sigma_bf,grid::get_Te(modelgridindex),nu,nu_edge);
             abort();
           }
         #endif
@@ -1372,9 +1372,9 @@ __host__ __device__
 void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, rpkt_cont_opacity_struct *kappa_rpkt_cont_thisthread)
 {
   const int cellindex = pkt_ptr->where;
-  const int modelgridindex = get_cell_modelgridindex(cellindex);
-  assert_always(modelgridindex != get_npts_model());
-  assert_always(globals::modelgrid[modelgridindex].thick != 1);
+  const int modelgridindex = grid::get_cell_modelgridindex(cellindex);
+  assert_always(modelgridindex != grid::get_npts_model());
+  assert_always(grid::modelgrid[modelgridindex].thick != 1);
   const double nu_cmf = pkt_ptr->nu_cmf;
   if ((modelgridindex == kappa_rpkt_cont_thisthread->modelgridindex) && (!kappa_rpkt_cont_thisthread->recalculate_required) && (fabs(kappa_rpkt_cont_thisthread->nu / nu_cmf - 1.0) < 1e-4))
   {
@@ -1382,7 +1382,7 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, rpkt_cont_opacity_struc
     return;
   }
 
-  const float nne = get_nne(modelgridindex);
+  const float nne = grid::get_nne(modelgridindex);
 
   double sigma = 0.0;
   double kappa_ff = 0.;
@@ -1454,7 +1454,7 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, rpkt_cont_opacity_struc
       printout("[fatal] es %g, ff %g, bf %g\n",
       kappa_rpkt_cont_thisthread->es,kappa_rpkt_cont_thisthread->ff,kappa_rpkt_cont_thisthread->bf);
       printout("[fatal] nbfcontinua %d\n",globals::nbfcontinua);
-      printout("[fatal] in cell %d with density %g\n",modelgridindex,get_rho(modelgridindex));
+      printout("[fatal] in cell %d with density %g\n",modelgridindex,grid::get_rho(modelgridindex));
       printout("[fatal] pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
       if (std::isfinite(kappa_rpkt_cont_thisthread->es))
       {

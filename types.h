@@ -212,7 +212,7 @@ typedef struct compositionlist_entry
   //                         /// of all included ionisation stages for the element.
 } compositionlist_entry;
 
-typedef struct grid
+typedef struct gridcell
 {
   double pos_init[3]; /// Initial co-ordinates of inner most corner of cell.
   // int xyz[3];         /// Integer position of cell in grid.

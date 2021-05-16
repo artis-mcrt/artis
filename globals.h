@@ -27,8 +27,6 @@ namespace globals
   extern __managed__ int emiss_offset;
   extern __managed__ int emiss_max;
 
-  extern __managed__ modelgrid_t *modelgrid;
-
   extern __managed__ float *compton_emiss;
   extern __managed__ double *rpkt_emiss;
 
@@ -93,11 +91,6 @@ namespace globals
   extern __managed__ cellhistory_struct *cellhistory;
 
   extern __managed__ int debuglevel;
-
-  extern __managed__ int ncoordgrid[3];
-  extern __managed__ int ngrid;
-  extern __managed__ int grid_type;
-  extern __managed__ char coordlabel[3];
 
   extern __managed__ int nprocs;
   extern __managed__ int rank_global;

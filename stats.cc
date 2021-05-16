@@ -15,7 +15,7 @@ namespace stats {
   {
     if (TRACK_ION_STATS)
     {
-      ionstats = (double *) malloc(get_npts_model() * globals::includedions * ION_STAT_COUNT * sizeof(double));
+      ionstats = (double *) malloc(grid::get_npts_model() * globals::includedions * ION_STAT_COUNT * sizeof(double));
     }
     eventstats = (int *) malloc(COUNTER_COUNT * sizeof(int));
   }
@@ -213,9 +213,9 @@ namespace stats {
 
     const double deltat = globals::time_step[nts].width;
     double modelvolume = 0.;
-    for (int mgi = 0; mgi < get_npts_model(); mgi++)
+    for (int mgi = 0; mgi < grid::get_npts_model(); mgi++)
     {
-      modelvolume += vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
+      modelvolume += grid::vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
     }
 
     /// Printout packet statistics

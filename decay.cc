@@ -512,7 +512,7 @@ __host__ __device__
 static double sample_decaytime(const int decaypathindex, const double tdecaymin, const double tdecaymax)
 {
   double tdecay = -1;
-  const double t_model = get_t_model();
+  const double t_model = grid::get_t_model();
   while (tdecay <= tdecaymin || tdecay >= tdecaymax)
   {
     tdecay = t_model; // can't decay before initial model snapshot time
@@ -607,7 +607,7 @@ static double get_nuc_abund(
   }
   assert_always(time >= 0.);
 
-  const double t_afterinit = time - get_t_model();
+  const double t_afterinit = time - grid::get_t_model();
 
   // decay chains include all paths from radionuclides to other radionuclides (including trivial size-one chains)
 
@@ -629,7 +629,7 @@ static double get_nuc_abund(
       continue;
     }
 
-    const double top_initabund = get_modelinitradioabund(modelgridindex, z_top, a_top);
+    const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top);
     assert_always(top_initabund >= 0.)
     if (top_initabund <= 0.)
     {
@@ -688,13 +688,13 @@ static double get_endecay_to_tinf_per_ejectamass_at_time(
   // the nuclide past the end of the chain radionuclide
   meanlifetimes[decaypathlength] = -1.; // nuclide at the end is a sink, so treat it as stable (even if it's not)
 
-  const double top_initabund = get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
+  const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
   assert_always(top_initabund >= 0.)
   if (top_initabund <= 0.)
   {
     return 0.;
   }
-  const double t_afterinit = time - get_t_model();
+  const double t_afterinit = time - grid::get_t_model();
 
   // count the number of chain-top nuclei that haven't decayed past the end of the chain
 
@@ -730,13 +730,13 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(
     }
   }
 
-  const int nsteps = ceil((tstart - get_t_model()) / min_meanlife) * 100000; // min steps across the meanlifetime
+  const int nsteps = ceil((tstart - grid::get_t_model()) / min_meanlife) * 100000; // min steps across the meanlifetime
   double chain_endecay = 0.;
   double last_chain_endecay = -1.;
   double last_t = -1.;
   for (int i = 0; i < nsteps; i++)
   {
-    const double t = get_t_model() + (tstart - get_t_model()) * i / nsteps;
+    const double t = grid::get_t_model() + (tstart - grid::get_t_model()) * i / nsteps;
     const double chain_endecay_t = get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, decaypathindex, t);
     if (last_chain_endecay >= 0)
     {
@@ -749,7 +749,7 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(
   }
 
   const double chain_endecay_noexpansion = (
-    get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, decaypathindex, get_t_model()) - get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, decaypathindex, tstart));
+    get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, decaypathindex, grid::get_t_model()) - get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, decaypathindex, tstart));
 
   printout("  chain_endecay:              %g\n", chain_endecay);
   printout("  chain_endecay_noexpansion:  %g\n", chain_endecay_noexpansion);
@@ -767,7 +767,7 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
   double tot_endecay = 0.;
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++)
   {
-    if (get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, decaypathindex, get_t_model()) <= 0.)
+    if (get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, decaypathindex, grid::get_t_model()) <= 0.)
     {
       // skip unused chains
       continue;
@@ -792,8 +792,8 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
     const int a_top = decaychains[decaypathindex].a[0];
     const int z_end = decaychains[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
     const int a_end = decaychains[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
-    const double top_initabund = get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
-    const double chain_endecay = calculate_decaychain(top_initabund, meanlifetimes, decaypathlength + 1, tstart - get_t_model(), true) * nucdecayenergy(z_end, a_end);
+    const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
+    const double chain_endecay = calculate_decaychain(top_initabund, meanlifetimes, decaypathlength + 1, tstart - grid::get_t_model(), true) * nucdecayenergy(z_end, a_end);
     // printout("  Analytical chain_endecay: %g\n", chain_endecay);
     tot_endecay += chain_endecay;
   }
@@ -825,7 +825,7 @@ static void calculate_simtime_endecay_per_ejectamass(const int mgi, const int de
     const double simtime_endecay = get_endecay_per_ejectamass_between_times(mgi, decaypathindex, globals::tmin, globals::tmax);
   #else
     // get decay energy released from t=0 to tmax
-    const double simtime_endecay = get_endecay_per_ejectamass_between_times(mgi, decaypathindex, get_t_model(), globals::tmax);
+    const double simtime_endecay = get_endecay_per_ejectamass_between_times(mgi, decaypathindex, grid::get_t_model(), globals::tmax);
   #endif
   chain_energy_per_mass[mgi * get_num_decaypaths() + decaypathindex] = simtime_endecay;
 }
@@ -856,14 +856,14 @@ static double get_chain_decay_power_per_ejectamass(
   const int z_end = decaychains[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
   const int a_end = decaychains[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];;
 
-  const double top_initabund = get_modelinitradioabund(modelgridindex, z_top, a_top);
+  const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top);
   assert_always(top_initabund >= 0.)
   if (top_initabund <= 0.)
   {
     return 0.;
   }
 
-  const double t_afterinit = time - get_t_model();
+  const double t_afterinit = time - grid::get_t_model();
 
   int decaypathlength = get_decaypathlength(decaypathindex);
   double meanlifetimes[decaypathlength];
@@ -902,8 +902,8 @@ double get_modelcell_endecay_per_mass(const int mgi)
 void setup_chain_energy_per_mass(void)
 {
   assert_always(chain_energy_per_mass == NULL); // ensure not allocated yet
-  chain_energy_per_mass = (double *) malloc((get_npts_model() + 1) * get_num_decaypaths() * sizeof(double));
-  for (int mgi = 0; mgi < get_npts_model(); mgi++)
+  chain_energy_per_mass = (double *) malloc((grid::get_npts_model() + 1) * get_num_decaypaths() * sizeof(double));
+  for (int mgi = 0; mgi < grid::get_npts_model(); mgi++)
   {
     for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++)
     {
@@ -924,7 +924,7 @@ __host__ __device__
 double get_positroninjection_rate_density(const int modelgridindex, const double t)
 // energy release rate from positrons in erg / s / cm^3
 {
-  const double rho = get_rho(modelgridindex);
+  const double rho = grid::get_rho(modelgridindex);
 
   double pos_dep_sum = 0.;
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
@@ -956,7 +956,7 @@ double get_global_etot_t0_tinf(void)
     const int z_end = decaychains[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
     const int a_end = decaychains[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
     etot_tinf += (
-      get_totmassradionuclide(z_top, a_top) / nucmass(z_top, a_top) * nucdecayenergy(z_end, a_end));
+    grid::get_totmassradionuclide(z_top, a_top) / nucmass(z_top, a_top) * nucdecayenergy(z_end, a_end));
   }
   return etot_tinf;
 }
@@ -994,8 +994,8 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
       }
     }
 
-    const double elmassfrac = get_stable_initabund(modelgridindex, element) + isofracsum;
-    set_elem_abundance(modelgridindex, element, elmassfrac);
+    const double elmassfrac = grid::get_stable_initabund(modelgridindex, element) + isofracsum;
+    grid::set_elem_abundance(modelgridindex, element, elmassfrac);
   }
 
   double initnucfracsum = 0.;
@@ -1006,11 +1006,11 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
     const int a = get_nuc_a(nucindex);
     if (z < 1) // FAKE_GAM_LINE_ID
       continue;
-    initnucfracsum += get_modelinitradioabund(modelgridindex, z, a);
+    initnucfracsum += grid::get_modelinitradioabund(modelgridindex, z, a);
     nucfracsum += get_nuc_abund(modelgridindex, z, a, t_current);
 
     // printout_nuclidename(z, a);
-    // printout(" init: %g now: %g\n", get_modelinitradioabund(modelgridindex, z, a), get_nuc_abund(modelgridindex, z, a, t_current));
+    // printout(" init: %g now: %g\n", grid::get_modelinitradioabund(modelgridindex, z, a), get_nuc_abund(modelgridindex, z, a, t_current));
 
     if (!nuc_exists(decay_daughter_z(z, a), decay_daughter_a(z, a)))
     {
@@ -1029,9 +1029,9 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   nonthermal::calculate_deposition_rate_density(modelgridindex, timestep);
   // printout("model cell %d at t_current %g has frac: Ni %g Co %g Fe %g, stable: Ni %g Co %g Fe %g\n",
   //          modelgridindex, t_current,
-  //          get_elem_abundance(modelgridinex, get_elementindex(28)),
-  //          get_elem_abundance(modelgridinex, get_elementindex(27)),
-  //          get_elem_abundance(modelgridinex, get_elementindex(26)),
+  //          grid::get_elem_abundance(modelgridinex, get_elementindex(28)),
+  //          grid::get_elem_abundance(modelgridinex, get_elementindex(27)),
+  //          grid::get_elem_abundance(modelgridinex, get_elementindex(26)),
   //          get_fnistabel(modelgridindex), get_fcostable(modelgridindex), get_ffestable(modelgridindex));
 }
 
@@ -1042,9 +1042,9 @@ void fprint_nuc_abundances(
   const int atomic_number = get_element(element);
 
   // factor to convert convert mass fraction to number density
-  const double densityfactor = 1. / globals::elements[element].mass * get_rho(modelgridindex);
+  const double densityfactor = 1. / globals::elements[element].mass * grid::get_rho(modelgridindex);
 
-  double stablefracsum = get_stable_initabund(modelgridindex, element);
+  double stablefracsum = grid::get_stable_initabund(modelgridindex, element);
 
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {

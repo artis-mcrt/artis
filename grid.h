@@ -3,6 +3,9 @@
 
 #include "types.h"
 
+namespace grid
+{
+
 enum model_types {
   RHO_UNIFORM = 1,  // Constant density. NOT IN USE
   RHO_1D_READ = 2,  // Read model 1D
@@ -43,6 +46,14 @@ typedef struct modelgrid_t
   short thick;
 } modelgrid_t;
 
+extern __managed__ modelgrid_t *modelgrid;
+
+extern __managed__ int ncoordgrid[3];
+extern __managed__ int ngrid;
+extern __managed__ int grid_type;
+extern __managed__ char coordlabel[3];
+
+
 __host__ __device__ int get_elements_uppermost_ion(const int modelgridindex, const int element);
 __host__ __device__ void set_elements_uppermost_ion(const int modelgridindex, const int element, const int newvalue);
 __host__ __device__ double wid_init(int cellindex);
@@ -64,11 +75,8 @@ __host__ __device__ float get_Te(int modelgridindex);
 __host__ __device__ float get_TR(int modelgridindex);
 __host__ __device__ float get_TJ(int modelgridindex);
 __host__ __device__ float get_W(int modelgridindex);
-__host__ __device__ void set_rhoinit(int modelgridindex, float x);
-__host__ __device__ void set_rho(int modelgridindex, float x);
 __host__ __device__ void set_nne(int modelgridindex, float x);
 __host__ __device__ void set_nnetot(int modelgridindex, float x);
-__host__ __device__ void set_ffegrp(int modelgridindex, float x);
 __host__ __device__ void set_kappagrey(int modelgridindex, float x);
 __host__ __device__ void set_Te(int modelgridindex, float x);
 __host__ __device__ void set_TR(int modelgridindex, float x);
@@ -77,7 +85,6 @@ __host__ __device__ void set_W(int modelgridindex, float x);
 void grid_init(int my_rank);
 __host__ __device__ double get_cellradialpos(int cellindex);
 __host__ __device__ float get_modelinitradioabund(int modelgridindex, int z, int a);
-__host__ __device__ void set_modelinitradioabund(int modelgridindex, int z, int a, float abund);
 __host__ __device__ float get_stable_initabund(int mgi, int anumber);
 __host__ __device__ int get_numassociatedcells(int modelgridindex);
 __host__ __device__ enum model_types get_model_type(void);
@@ -85,9 +92,11 @@ __host__ __device__ void set_model_type(enum model_types model_type_value);
 __host__ __device__ int get_npts_model(void);
 __host__ __device__ int get_t_model(void);
 __host__ __device__ int get_cell_modelgridindex(int cellindex);
-void read_ejecta_model(enum model_types model_type);
+void read_ejecta_model(void);
 void write_grid_restart_data(const int timestep);
 void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *maxndo);
 double get_totmassradionuclide(const int z, const int a);
+
+}
 
 #endif //GRIDINIT_H

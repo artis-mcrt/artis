@@ -168,7 +168,7 @@ code until 2012-07-30:
  - [FIXED] Interaction counters now really collect the numbers
    for all OpenMP threads (the limitation of recording them
    only for thread zero has been removed)
- - [FIXED] globals::modelgrid[n].initial_radial_pos was not initialised
+ - [FIXED] grid::modelgrid[n].initial_radial_pos was not initialised
    properly for 3D models with empty cells, where modelgrid
    and simulation grid differ. MAKE SURE THAT OTHER MODELGRID
    QUANTITIES ARE NOT AFFECTED BY THE SAME THING. MOST LIKELY

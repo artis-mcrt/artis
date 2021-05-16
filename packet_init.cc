@@ -15,11 +15,11 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   pkt_ptr->prop_time = globals::tmin;
   pkt_ptr->originated_from_positron = false;
 
-  if (globals::grid_type == GRID_SPHERICAL1D)
+  if (grid::grid_type == GRID_SPHERICAL1D)
   {
     const double zrand3 = gsl_rng_uniform(rng);
-    const double r_inner = get_cellcoordmin(cellindex, 0);
-    const double r_outer = get_cellcoordmin(cellindex, 0) + wid_init(cellindex);
+    const double r_inner = grid::get_cellcoordmin(cellindex, 0);
+    const double r_outer = grid::get_cellcoordmin(cellindex, 0) + grid::wid_init(cellindex);
     const double radius = pow(zrand3 * pow(r_inner, 3) + (1. - zrand3) * pow(r_outer, 3), 1/3.);
     // assert_always(radius >= r_inner);
     // assert_always(radius <= r_outer);
@@ -32,11 +32,11 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     for (int axis = 0; axis < 3; axis++)
     {
       const double zrand = gsl_rng_uniform_pos(rng);
-      pkt_ptr->pos[axis] = get_cellcoordmin(cellindex, axis) + (zrand * wid_init(0));
+      pkt_ptr->pos[axis] = grid::get_cellcoordmin(cellindex, axis) + (zrand * grid::wid_init(0));
     }
   }
 
-  const int mgi = get_cell_modelgridindex(cellindex);
+  const int mgi = grid::get_cell_modelgridindex(cellindex);
 
   decay::setup_radioactive_pellet(e0, mgi, pkt_ptr);
 
@@ -58,7 +58,7 @@ void packet_init(int my_rank, PKT *pkt)
 {
   printout("UNIFORM_PELLET_ENERGIES is %s\n", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
 
-  double cont[globals::ngrid + 1];
+  double cont[grid::ngrid + 1];
 
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
@@ -73,17 +73,17 @@ void packet_init(int my_rank, PKT *pkt)
 
   // Need to get a normalisation factor.
   double norm = 0.0;
-  for (int m = 0; m < globals::ngrid; m++)
+  for (int m = 0; m < grid::ngrid; m++)
   {
     cont[m] = norm;
-    const int mgi = get_cell_modelgridindex(m);
-    if (mgi < get_npts_model())  // some grid cells are empty
+    const int mgi = grid::get_cell_modelgridindex(m);
+    if (mgi < grid::get_npts_model())  // some grid cells are empty
     {
-      norm += vol_init_gridcell(m) * get_rhoinit(mgi) * decay::get_modelcell_endecay_per_mass(mgi);
+      norm += grid::vol_init_gridcell(m) * grid::get_rhoinit(mgi) * decay::get_modelcell_endecay_per_mass(mgi);
     }
   }
   assert_always(norm > 0);
-  cont[globals::ngrid] = norm;
+  cont[grid::ngrid] = norm;
 
   const double etot = norm;
   /// So energy per pellet is
@@ -104,7 +104,7 @@ void packet_init(int my_rank, PKT *pkt)
   for (int n = 0; n < globals::npkts; n++)
   {
     // Get random number.
-    int mabove = globals::ngrid;
+    int mabove = grid::ngrid;
     int mbelow = 0;
     double zrand = gsl_rng_uniform(rng);
 
@@ -128,7 +128,7 @@ void packet_init(int my_rank, PKT *pkt)
       printout("mbelow %d cont[mbelow] %g zrand*norm %g\n", mbelow, cont[mbelow], zrand*norm);
       abort();
     }
-    if ((cont[mabove] < (zrand * norm)) && (mabove != globals::ngrid))
+    if ((cont[mabove] < (zrand * norm)) && (mabove != grid::ngrid))
     {
       printout("mabove %d cont[mabove] %g zrand*norm %g\n", mabove, cont[mabove], zrand*norm);
       abort();
@@ -149,7 +149,7 @@ void packet_init(int my_rank, PKT *pkt)
     m = m - 1;
     */
 
-    assert_always(cellindex < globals::ngrid);
+    assert_always(cellindex < grid::ngrid);
 
     place_pellet(e0, cellindex, n, &pkt[n]);
   }

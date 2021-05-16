@@ -14,8 +14,8 @@ double sig_photo_electric(const PKT *pkt_ptr)
   // Start by working out the x-section in the co-moving frame.
 
   const int cellindex = pkt_ptr->where;
-  const int mgi = get_cell_modelgridindex(cellindex);
-  const double rho = get_rho(mgi);
+  const int mgi = grid::get_cell_modelgridindex(cellindex);
+  const double rho = grid::get_rho(mgi);
 
   if (globals::gamma_grey < 0)
   {
@@ -38,7 +38,7 @@ double sig_photo_electric(const PKT *pkt_ptr)
     sigma_cmf_fe *= rho / MH / 56;
     // Assumes Z = 28. So mass = 56.
 
-    const double f_fe = get_ffegrp(mgi);
+    const double f_fe = grid::get_ffegrp(mgi);
 
     sigma_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
   }
@@ -64,8 +64,8 @@ double sig_pair_prod(const PKT *pkt_ptr)
   // Start by working out the x-section in the co-moving frame.
 
   const int cellindex = pkt_ptr->where;
-  const int mgi = get_cell_modelgridindex(cellindex);
-  const double rho = get_rho(mgi);
+  const int mgi = grid::get_cell_modelgridindex(cellindex);
+  const double rho = grid::get_rho(mgi);
 
   if (globals::gamma_grey < 0)
   {
@@ -77,7 +77,7 @@ double sig_pair_prod(const PKT *pkt_ptr)
       double sigma_cmf_si;
       double sigma_cmf_cno;
       double sigma_cmf_fe;
-      const double f_fe = get_ffegrp(mgi);
+      const double f_fe = grid::get_ffegrp(mgi);
       if (pkt_ptr->nu_cmf > 3.61990e+20)
       {
         sigma_cmf_cno = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.5))) * 49.e-27;

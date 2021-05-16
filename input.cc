@@ -1686,6 +1686,7 @@ void input(int rank)
   #endif
 
   read_atomicdata();
+
   #ifdef MPI_ON
     const time_t time_before_barrier = time(NULL);
     printout("barrier after read_atomicdata(): time before barrier %d, ", (int) time_before_barrier);
@@ -1693,7 +1694,7 @@ void input(int rank)
     printout("time after barrier %d (waited %d seconds)\n", (int) time(NULL), (int) (time(NULL) - time_before_barrier));
   #endif
 
-  read_ejecta_model(get_model_type());
+  grid::read_ejecta_model();
 
   /// Now that the list exists use it to find values for spectral synthesis
   /// stuff.
@@ -1853,7 +1854,8 @@ void read_parameterfile(int rank)
   globals::tmin = tmin_days * DAY;
   globals::tmax = tmax_days * DAY;
 
-  float dum2, dum3;
+  float dum2 = 0.;
+  float dum3 = 0.;
   assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> dum2 >> dum3;
   globals::nusyn_min = dum2 * MEV / H; // lowest frequency to synthesise
@@ -1873,15 +1875,15 @@ void read_parameterfile(int rank)
   std::stringstream(line) >> dum1; // model type
   if (dum1 == 1)
   {
-    set_model_type(RHO_1D_READ);
+    set_model_type(grid::RHO_1D_READ);
   }
   else if (dum1 == 2)
   {
-    set_model_type(RHO_2D_READ);
+    set_model_type(grid::RHO_2D_READ);
   }
   else if (dum1 == 3)
   {
-    set_model_type(RHO_3D_READ);
+    set_model_type(grid::RHO_3D_READ);
   }
 
   assert_always(get_noncommentline(file, line));

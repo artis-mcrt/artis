@@ -108,7 +108,7 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist)
     else
     {
       const int cellindex = pkt_ptr->where;
-      safeadd(globals::compton_emiss[get_cell_modelgridindex(cellindex) * EMISS_MAX + lindex - globals::emiss_offset], emiss_cont);
+      safeadd(globals::compton_emiss[grid::get_cell_modelgridindex(cellindex) * EMISS_MAX + lindex - globals::emiss_offset], emiss_cont);
     }
 
   }
@@ -133,7 +133,7 @@ void pp_emiss_cont(const PKT *pkt_ptr, double dist)
   //  This will all be done later
 
   const int cellindex = pkt_ptr->where;
-  safeadd(globals::compton_emiss[get_cell_modelgridindex(cellindex) * EMISS_MAX + globals::emiss_max - 1], 1.e-20 * emiss_cont);
+  safeadd(globals::compton_emiss[grid::get_cell_modelgridindex(cellindex) * EMISS_MAX + globals::emiss_max - 1], 1.e-20 * emiss_cont);
 
   //  printf("emiss_cont %g\n", emiss_cont);
 
@@ -145,7 +145,7 @@ void pp_emiss_cont(const PKT *pkt_ptr, double dist)
 void zero_estimators(void)
 {
   // printout("zero_estimators()");
-  for (int n = 0; n < get_npts_model(); n++)
+  for (int n = 0; n < grid::get_npts_model(); n++)
   {
     radfield::zero_estimators(n);
 
@@ -215,9 +215,9 @@ void normalise_compton_estimators(const int nts, struct time *time_step)
   }
 
   // for (n=0; n < ngrid; n++)
-  for (int n = 0; n < get_npts_model(); n++)
+  for (int n = 0; n < grid::get_npts_model(); n++)
   {
-    const double volume = vol_init_modelcell(n);
+    const double volume = grid::vol_init_modelcell(n);
     for (int m = 0; m < globals::emiss_max; m++)
     {
       globals::compton_emiss[n * EMISS_MAX + m] = globals::compton_emiss[n * EMISS_MAX + m] * time_factor / volume / globals::nprocs;
@@ -225,7 +225,7 @@ void normalise_compton_estimators(const int nts, struct time *time_step)
       if (m < globals::emiss_max - 1)
       // (emiss_max - 1) contains the pair production case so it doesn't need the nne nor the dfreq
       {
-        globals::compton_emiss[n * EMISS_MAX + m] = globals::compton_emiss[n * EMISS_MAX + m] * get_nne(n) * dfreq[m];
+        globals::compton_emiss[n * EMISS_MAX + m] = globals::compton_emiss[n * EMISS_MAX + m] * grid::get_nne(n) * dfreq[m];
       }
     }
   }
@@ -261,7 +261,7 @@ void write_compton_estimators(int nts)
     est_file = fopen_required(filename, "rb");
 
       //for (n=0; n < ngrid; n++)
-    for (int n = 0; n < get_npts_model(); n++)
+    for (int n = 0; n < grid::get_npts_model(); n++)
     {
       for (int m = 0; m < globals::emiss_max; m++)
       {
@@ -276,7 +276,7 @@ void write_compton_estimators(int nts)
 
   est_file = fopen_required(filename, "wb+");
 
-  for (int n = 0; n < get_npts_model(); n++)
+  for (int n = 0; n < grid::get_npts_model(); n++)
   {
     for (int m = 0; m < globals::emiss_max; m++)
     {
@@ -380,12 +380,12 @@ bool estim_switch(int nts, struct time *time_step)
 //
 //     if (tau_cont > 1.e-6)
 //     {
-//       ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[get_cell_modelgridindex(dummy.where) * EMISS_MAX + lindex - emiss_offset] *
+//       ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[grid::get_cell_modelgridindex(dummy.where) * EMISS_MAX + lindex - emiss_offset] *
 //           (1. - exp(-1. * tau_cont)) / kap_tot);
 //     }
 //     else
 //     {
-//       ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[get_cell_modelgridindex(dummy.where) * EMISS_MAX + lindex - emiss_offset] *
+//       ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[grid::get_cell_modelgridindex(dummy.where) * EMISS_MAX + lindex - emiss_offset] *
 //             ldist);
 //     }
 //   }
@@ -405,7 +405,7 @@ bool estim_switch(int nts, struct time *time_step)
 //
 //   if (gam_line_list.type[lindex] == 28, 56)
 //   {
-//     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / nucmass(28, 56) / 4. / PI
+//     emitt_energy = grid::get_rhoinit(grid_ptr->modelgridindex) / nucmass(28, 56) / 4. / PI
 //         * exp(-single_t/get_meanlife(28, 56)) / get_meanlife(28, 56) *
 //         ni56_spec.probability[gam_line_list.index[lindex]]
 //         * ni56_spec.energy[gam_line_list.index[lindex]]
@@ -413,7 +413,7 @@ bool estim_switch(int nts, struct time *time_step)
 //   }
 //   else if (gam_line_list.type[lindex] == NUCLIDE_CO56)
 //   {
-//     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / nucmass(28, 56) / 4. / PI
+//     emitt_energy = grid::get_rhoinit(grid_ptr->modelgridindex) / nucmass(28, 56) / 4. / PI
 //       * (exp(-single_t/get_meanlife(28, 56)) - exp(-single_t/get_meanlife(NUCLIDE_CO56)))
 //       / (get_meanlife(28, 56) - get_meanlife(NUCLIDE_CO56))
 //       * co56_spec.probability[gam_line_list.index[lindex]]
@@ -427,7 +427,7 @@ bool estim_switch(int nts, struct time *time_step)
 //   }
 //   else if (gam_line_list.type[lindex] == NUCLIDE_CR48)
 //   {
-//     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / nucmass(NUCLIDE_CR48) / 4. / PI
+//     emitt_energy = grid::get_rhoinit(grid_ptr->modelgridindex) / nucmass(NUCLIDE_CR48) / 4. / PI
 //         * exp(-single_t/get_meanlife(NUCLIDE_CR48)) / get_meanlife(NUCLIDE_CR48)
 //         * cr48_spec.probability[gam_line_list.index[lindex]]
 //         * cr48_spec.energy[gam_line_list.index[lindex]]
@@ -436,7 +436,7 @@ bool estim_switch(int nts, struct time *time_step)
 //   else if (gam_line_list.type[lindex] == NUCLIDE_V48)
 //   {
 //
-//       emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / nucmass(NUCLIDE_CR48) / 4. / PI
+//       emitt_energy = grid::get_rhoinit(grid_ptr->modelgridindex) / nucmass(NUCLIDE_CR48) / 4. / PI
 //           * (exp(-single_t/get_meanlife(NUCLIDE_CR48)) - exp(-single_t/get_meanlife(NUCLIDE_V48)))
 //           / (get_meanlife(NUCLIDE_CR48) - get_meanlife(NUCLIDE_V48))
 //           * v48_spec.probability[gam_line_list.index[lindex]]
