@@ -1709,12 +1709,6 @@ void input(int rank)
 
   read_ejecta_model(get_model_type());
 
-  if (USE_ENERGYINPUTFILE)
-  {
-    // If using energy input files to get cell energies instead of radioactive decays
-    energy_input_init();
-  }
-
   /// Now that the list exists use it to find values for spectral synthesis
   /// stuff.
   const int lindex_max = get_nul(globals::nusyn_max);

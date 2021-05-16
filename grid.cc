@@ -1879,6 +1879,8 @@ void grid_init(int my_rank)
 
   if (USE_ENERGYINPUTFILE)
   {
+    // If using energy input files to get cell energies instead of radioactive decays
+    energy_input_init();
     int assoc_cells;
     int mgi;
 
