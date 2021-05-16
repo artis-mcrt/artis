@@ -17,3 +17,4 @@ sn3d.dSYM
 build
 .DS_Store
 artisoptions.h
+.idea/*

@@ -915,4 +915,5 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
   pkt_ptr->originated_from_positron = (zrand >= nucdecayenergygamma(z, a) / nucdecayenergy(z, a));
 }
 
+
 }

@@ -1,5 +1,6 @@
 #include "sn3d.h"
 #include "atomic.h"
+#include "energy_input.h"
 #include "grid.h"
 #include "nltepop.h"
 #include "nonthermal.h"
@@ -1876,6 +1877,34 @@ void grid_init(int my_rank)
   calculate_kappagrey();
   abundances_read();
 
+  if (USE_ENERGYINPUTFILE)
+  {
+    // If using energy input files to get cell energies instead of radioactive decays
+    energy_input_init();
+    int assoc_cells;
+    int mgi;
+
+    for (mgi = 0; mgi < npts_model; mgi++)
+    {
+      assoc_cells = get_numassociatedcells(mgi);
+      if (assoc_cells > 0)
+      {
+        const double vol_init = pow(wid_init(0), 3);
+        //Luke: how do I call modelcell_energy here? defined in new energy cc file
+        set_modelcell_energydensity_init(mgi, (modelcell_energy[mgi] / (vol_init * assoc_cells))); //modelcell_energy/cell volume ==> vol_init*associated cells
+
+        printout("cell volume init %g associated cells %d volume %g energydensity %g mgi %d get_energydensity %g\n",
+                 vol_init, assoc_cells, vol_init*assoc_cells,
+                 modelcell_energy[mgi] / (vol_init * assoc_cells), mgi, get_modelcell_energydensity_init(mgi));
+      }
+      else
+      {
+        set_modelcell_energydensity_init(mgi, 0.);
+      }
+    }
+//    set_modelcell_energydensity_init(MMODELGRID,0.);
+  }
+
   int nstart = 0;
   int ndo = 0;
   int maxndo = 0;
@@ -1893,6 +1922,7 @@ void grid_init(int my_rank)
   }
   else
   {
+    //todo: this will need changed to use energy input, but I haven't done that yet- grey doesn't need it
     assign_initial_temperatures();
   }
 

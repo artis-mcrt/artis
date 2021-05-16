@@ -85,6 +85,7 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
 
   switch (pkt_type)
   {
+    case TYPE_GENERIC_ENERGY_PELLET:
     case TYPE_RADIOACTIVE_PELLET:
     {
       update_pellet(pkt_ptr, nts, t2);

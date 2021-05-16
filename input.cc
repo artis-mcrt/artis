@@ -7,6 +7,7 @@
 //#include <cstdlib>
 #include "sn3d.h"
 #include "atomic.h"
+#include "energy_input.h"
 #include "gamma.h"
 #include "grid.h"
 #include "input.h"

@@ -110,6 +110,7 @@ enum packet_type {
   TYPE_NTLEPTON = 20,
   TYPE_PRE_KPKT = 120,
   TYPE_GAMMA_KPKT = 121,
+  TYPE_GENERIC_ENERGY_PELLET = 200,
 };
 
 enum cell_boundary {

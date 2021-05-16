@@ -1,6 +1,7 @@
 #include "sn3d.h"
-#include "grid.h"
+#include "energy_input.h"
 #include "decay.h"
+#include "grid.h"
 #include "packet_init.h"
 #include "vectors.h"
 
@@ -37,8 +38,14 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   }
 
   const int mgi = get_cell_modelgridindex(cellindex);
-
-  decay::setup_radioactive_pellet(e0, mgi, pkt_ptr);
+  if (USE_ENERGYINPUTFILE)
+  {
+    setup_generic_pellet(e0, mgi, pkt_ptr);
+  }
+  else
+  {
+    decay::setup_radioactive_pellet(e0, mgi, pkt_ptr);
+  }
 
   // initial e_rf is probably never needed (e_rf is set at pellet decay time), but we
   // might as well give it a correct value since this code is fast and runs only once
@@ -76,11 +83,28 @@ void packet_init(int my_rank, PKT *pkt)
     cont[m] = norm;
     const int mgi = get_cell_modelgridindex(m);
 
-    norm += vol_init_gridcell(m) * decay::get_modelcell_decay_energy_density(mgi);
+    if (USE_ENERGYINPUTFILE)
+    {
+      //todo: Luke: how do I call this? I put it in grid.cc
+      norm += vol_init_gridcell(m) * get_modelcell_energydensity_init(mgi);
+    }
+    else
+    {
+      norm += vol_init_gridcell(m) * decay::get_modelcell_decay_energy_density(mgi);
+    }
+
   }
   cont[globals::ngrid] = norm;
 
-  const double etot = norm;
+  double etot = norm;
+
+  if (USE_ENERGYINPUTFILE)
+  {
+    //todo:Luke: how do I link this? defined in energy_input.cc
+    //todo: I wasn't sure what all above was to calculate etot - should be if / else here
+    etot = get_etot_fromenergyfile();
+  }
+
   /// So energy per pellet is
   const double e0 = etot / globals::npkts;
   printout("packet e0 (in time range) %g erg\n", e0);

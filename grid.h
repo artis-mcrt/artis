@@ -18,6 +18,7 @@ typedef struct modelgrid_t
   float TJ;
   float W;
   float nne;
+  float modelcell_energydensity_init;
   float initial_radial_pos;
   float rhoinit;
   float rho;
