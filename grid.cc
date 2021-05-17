@@ -1502,8 +1502,7 @@ static void calc_totmassradionuclides(void)
 
 void read_ejecta_model(void)
 {
-  enum model_types model_type = get_model_type();
-  switch (model_type)
+  switch (get_model_type())
   {
     case RHO_UNIFORM:
     {
@@ -1608,7 +1607,7 @@ static void read_grid_restart_data(const int timestep)
 
   int timestep_in;
   fscanf(gridsave_file, "%d ", &timestep_in);
-  assert_always(timestep_in = timestep);
+  assert_always(timestep_in == timestep);
 
   for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
