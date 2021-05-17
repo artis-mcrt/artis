@@ -2,6 +2,7 @@
 #define GRIDINIT_H
 
 #include "types.h"
+#include "cuda.h"
 
 namespace grid
 {
