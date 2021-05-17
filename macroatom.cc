@@ -557,7 +557,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
       total_transitions += processrates[action];
     }
 
-    enum ma_action selected_action;
+    enum ma_action selected_action = MA_ACTION_COUNT;
     double zrand = gsl_rng_uniform(rng);
     //printout("zrand %g\n",zrand);
     const double randomrate = zrand * total_transitions;
@@ -946,7 +946,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
 
       case MA_ACTION_COUNT:
       {
-        printout("ERROR: Somehow selected MA_ACTION_COUNT\n");
+        printout("ERROR: Problem selecting MA_ACTION\n");
         abort();
       }
     }
