@@ -4,6 +4,7 @@
 #include <cmath>
 #include <gsl/gsl_blas.h>
 #include "types.h"
+#include "cuda.h"
 
 __host__ __device__ void angle_ab(const double dir1[3], const double vel[3], double dir2[3]);
 __host__ __device__ double doppler(const double dir1[3], const double vel[3]);

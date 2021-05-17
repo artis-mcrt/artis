@@ -2,6 +2,7 @@
 #define STATS_H
 
 #include "types.h"
+#include "cuda.h"
 
 namespace stats {
   // number of ion stats counters that should be divided by the ion populations
