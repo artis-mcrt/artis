@@ -70,7 +70,7 @@ int get_num_nuclides(void)
 
 static void printout_nuclidename(const int z, const int a)
 {
-  printout("(Z=%d)%s%d", z, elsymbols[z], a);
+  printout("(Z=%d)%s-%d", z, elsymbols[z], a);
 }
 
 
@@ -410,8 +410,8 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
         nuclides[nucindex].endecay_positrons = e_elec_mev * MEV;
         nuclides[nucindex].endecay_gamma = e_gamma_mev * MEV;
         nucindex++;
-        printout("betaminus: z %d a %d endecay_positrons %g endecay_gamma %g tau_s %g\n",
-                 z, a, e_elec_mev, e_gamma_mev, tau_sec);
+        printout("betaminus file: Adding (Z=%d)%s-%d endecay_positrons %g endecay_gamma %g tau_s %g\n",
+                 z, elsymbols[z], a, e_elec_mev, e_gamma_mev, tau_sec);
       }
     }
     fbetaminus.close();
