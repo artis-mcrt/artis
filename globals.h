@@ -27,31 +27,24 @@ namespace globals
   extern __managed__ int emiss_offset;
   extern __managed__ int emiss_max;
 
-
-  extern __managed__ modelgrid_t modelgrid[MMODELGRID + 1];
-
-  extern __managed__ float compton_emiss[MMODELGRID+1][EMISS_MAX];
-  extern __managed__ double rpkt_emiss[MMODELGRID+1];
-
+  extern __managed__ float *compton_emiss;
+  extern __managed__ double *rpkt_emiss;
 
   #if (!NO_LUT_PHOTOION)
-    extern __managed__ double corrphotoionrenorm[MMODELGRID * MELEMENTS * MIONS];
-    extern __managed__ double gammaestimator[MMODELGRID * MELEMENTS * MIONS];
+    extern __managed__ double *corrphotoionrenorm;
+    extern __managed__ double *gammaestimator;
   #endif
   #if (!NO_LUT_BFHEATING)
-    extern __managed__ double bfheatingestimator[MMODELGRID * MELEMENTS * MIONS];
+    extern __managed__ double *bfheatingestimator;
   #endif
-  #ifdef FORCE_LTE
-    extern __managed__ double *ffheatingestimator;
-  #else
-    extern __managed__ double ffheatingestimator[MMODELGRID + 1];
-    extern __managed__ double colheatingestimator[MMODELGRID + 1];
-
+  extern __managed__ double *ffheatingestimator;
+  extern __managed__ double *colheatingestimator;
+  #ifndef FORCE_LTE
     #ifdef DO_TITER
-      extern __managed__ double ffheatingestimator_save[MMODELGRID];
-      extern __managed__ double colheatingestimator_save[MMODELGRID];
-      extern __managed__ double gammaestimator_save[MMODELGRID * MELEMENTS * MIONS];
-      extern __managed__ double bfheatingestimator_save[MMODELGRID * MELEMENTS * MIONS];
+      extern __managed__ double *gammaestimator_save;
+      extern __managed__ double *bfheatingestimator_save;
+      extern __managed__ double *ffheatingestimator_save;
+      extern __managed__ double *colheatingestimator_save;
     #endif
   #endif
 
@@ -77,7 +70,6 @@ namespace globals
 
   extern __managed__ int opacity_case;
 
-  extern __managed__ int maxion;
   extern __managed__ int nlines;
   extern __managed__ int includedions;
   extern __managed__ elementlist_entry *elements;
@@ -99,11 +91,6 @@ namespace globals
   extern __managed__ cellhistory_struct *cellhistory;
 
   extern __managed__ int debuglevel;
-
-  extern __managed__ int ncoordgrid[3];
-  extern __managed__ int ngrid;
-  extern __managed__ int grid_type;
-  extern __managed__ char coordlabel[3];
 
   extern __managed__ int nprocs;
   extern __managed__ int rank_global;

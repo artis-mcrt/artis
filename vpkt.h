@@ -3,6 +3,7 @@
 
 #include <cstdio>
 #include "types.h"
+#include "cuda.h"
 
 double rot_angle(double *n1, double *n2, double *ref1, double *ref2);
 void meridian(double *n, double *ref1, double *ref2);

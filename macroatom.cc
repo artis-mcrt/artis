@@ -61,8 +61,8 @@ static void calculate_macroatom_transitionrates(
   chlevels_struct *const chlevel)
 {
   double *processrates = chlevel->processrates;
-  const float T_e = get_Te(modelgridindex);
-  const float nne = get_nne(modelgridindex);
+  const float T_e = grid::get_Te(modelgridindex);
+  const float nne = grid::get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, ion, level);
 
   /// Downward transitions within the current ionisation stage:
@@ -181,8 +181,8 @@ __host__ __device__
 static int do_macroatom_internal_down_same(
   int modelgridindex, int element, int ion, int level, double t_mid, double total_internal_down_same)
 {
-  const float T_e = get_Te(modelgridindex);
-  const float nne = get_nne(modelgridindex);
+  const float T_e = grid::get_Te(modelgridindex);
+  const float nne = grid::get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, ion, level);
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
@@ -320,8 +320,8 @@ static void do_macroatom_radrecomb(
   PKT *pkt_ptr, const int modelgridindex, const int element, int *ion, int *level,
   const double rad_recomb)
 {
-  const float T_e = get_Te(modelgridindex);
-  const float nne = get_nne(modelgridindex);
+  const float T_e = grid::get_Te(modelgridindex);
+  const float nne = grid::get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, *ion, *level);
   const int upperion = *ion;
   const int upperionlevel = *level;
@@ -414,8 +414,8 @@ static void do_macroatom_ionisation(
   const int modelgridindex, const int element, int *ion, int *level,
   const double epsilon_current, const double internal_up_higher)
 {
-  const float T_e = get_Te(modelgridindex);
-  const float nne = get_nne(modelgridindex);
+  const float T_e = grid::get_Te(modelgridindex);
+  const float nne = grid::get_nne(modelgridindex);
 
   int upper;
   /// Randomly select the occuring transition
@@ -455,11 +455,11 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
   //printout("[debug] do MA\n");
 
   const int cellindex = pkt_ptr->where;
-  const int modelgridindex = get_cell_modelgridindex(cellindex);
-  const float T_e = get_Te(modelgridindex);
-  const float nne = get_nne(modelgridindex);
+  const int modelgridindex = grid::get_cell_modelgridindex(cellindex);
+  const float T_e = grid::get_Te(modelgridindex);
+  const float nne = grid::get_nne(modelgridindex);
 
-  assert_always(globals::modelgrid[modelgridindex].thick != 1); // macroatom should not be used in thick cells
+  assert_always(grid::modelgrid[modelgridindex].thick != 1); // macroatom should not be used in thick cells
 
   /// calculate occupation number for active MA level ////////////////////////////////////
   /// general QUESTION: is it better to calculate the n_1 (later the n_ionstage and
@@ -557,7 +557,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
       total_transitions += processrates[action];
     }
 
-    enum ma_action selected_action;
+    enum ma_action selected_action = MA_ACTION_COUNT;
     double zrand = gsl_rng_uniform(rng);
     //printout("zrand %g\n",zrand);
     const double randomrate = zrand * total_transitions;
@@ -661,7 +661,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
         printout("[debug]    zrand %g\n",zrand);
         printout("[debug]    jumps %d, jump %d\n",jumps,jump);
         printout("[debug]    pkt_ptr->number %d, pkt_ptr->where %d\n",pkt_ptr->number,cellindex);
-        printout("[debug]    groundlevelpop of current ion in current cell %g\n",globals::modelgrid[get_cell_modelgridindex(cellindex)].composition[element].groundlevelpop[ion]);
+        printout("[debug]    groundlevelpop of current ion in current cell %g\n",grid::modelgrid[grid::get_cell_modelgridindex(cellindex)].composition[element].groundlevelpop[ion]);
 
         double R = 0.0;
         double C = 0.0;
@@ -674,9 +674,9 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
           printout("epsilon_current %g, epsilon_trans %g, photion %g, colion %g, internal_up_higher %g\n",epsilon_current,epsilon_trans,R,C,(R + C) * epsilon_current);
         }
 
-        const float T_R = get_TR(modelgridindex);
-        const float W = get_W(modelgridindex);
-        printout("modelgridindex %d, T_R %g, T_e %g, W %g, T_J %g\n",modelgridindex,T_R,get_Te(modelgridindex),W,get_TJ(modelgridindex));
+        const float T_R = grid::get_TR(modelgridindex);
+        const float W = grid::get_W(modelgridindex);
+        printout("modelgridindex %d, T_R %g, T_e %g, W %g, T_J %g\n",modelgridindex,T_R,grid::get_Te(modelgridindex),W,grid::get_TJ(modelgridindex));
         #if (!NO_LUT_PHOTOION)
           const double gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,0,T_R);
           const int index_in_groundlevelcontestimor = globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
@@ -946,7 +946,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
 
       case MA_ACTION_COUNT:
       {
-        printout("ERROR: Somehow selected MA_ACTION_COUNT\n");
+        printout("ERROR: Problem selecting MA_ACTION\n");
         abort();
       }
     }
@@ -1035,7 +1035,7 @@ double rad_deexcitation_ratecoeff(
       //printout("[warning] rad_deexcitation: tau_sobolev %g <= 0, set beta=1\n",tau_sobolev);
       //printout("[warning] rad_deexcitation: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
       //printout("[warning] rad_deexcitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
-      //printout("[warning] rad_deexcitation: T_e %g, T_R %g, W %g in model cell %d\n",get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex),modelgridindex);
+      //printout("[warning] rad_deexcitation: T_e %g, T_R %g, W %g in model cell %d\n",grid::get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex),modelgridindex);
       R = 0.0;
       //printout("[fatal] rad_excitation: tau_sobolev <= 0 ... %g abort",tau_sobolev);
       //abort();
@@ -1131,7 +1131,7 @@ double rad_excitation_ratecoeff(
       //printout("[warning] rad_excitation: tau_sobolev %g <= 0, set beta=1\n",tau_sobolev);
       //printout("[warning] rad_excitation: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
       //printout("[warning] rad_excitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
-      //printout("[warning] rad_excitation: T_e %g, T_R %g, W %g\n",get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex));
+      //printout("[warning] rad_excitation: T_e %g, T_R %g, W %g\n",grid::get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex));
       R = 0.;
 
       //printout("[fatal] rad_excitation: tau_sobolev <= 0 ... %g abort",tau_sobolev);
@@ -1394,8 +1394,8 @@ double col_recombination_ratecoeff(
   {
     if (get_phixsupperlevel(element, upperion - 1, lower, phixstargetindex) == upper)
     {
-      const float nne = get_nne(modelgridindex);
-      const float T_e = get_Te(modelgridindex);
+      const float nne = grid::get_nne(modelgridindex);
+      const float T_e = grid::get_Te(modelgridindex);
       const double fac1 = epsilon_trans / KB / T_e;
       const int ionstage = get_ionstage(element, upperion);
 

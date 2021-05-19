@@ -71,7 +71,7 @@ static double integrand_bfheatingcoeff_custom_radfield(double nu, void *voidpara
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
-  // const float T_e = get_Te(modelgridindex);
+  // const float T_e = grid::get_Te(modelgridindex);
   // return sigma_bf * (1 - nu_edge/nu) * radfield::radfield(nu,modelgridindex) * (1 - Te_TR_factor * exp(-HOVERKB * nu / T_e));
 
   return sigma_bf * (1 - nu_edge/nu) * radfield::radfield(nu,modelgridindex) * (1 - exp(-HOVERKB*nu/T_R));
@@ -92,15 +92,15 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; // nu of the uppermost point in the phixs table
 
-  // const float T_e = get_Te(modelgridindex);
-  // const double T_R = get_TR(modelgridindex);
+  // const float T_e = grid::get_Te(modelgridindex);
+  // const double T_R = grid::get_TR(modelgridindex);
   // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
   // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
 
   gsl_integral_paras_bfheating intparas;
   intparas.nu_edge = nu_threshold;
   intparas.modelgridindex = modelgridindex;
-  intparas.T_R = get_TR(modelgridindex);
+  intparas.T_R = grid::get_TR(modelgridindex);
   intparas.photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
   // intparas.Te_TR_factor = sqrt(T_e/T_R) * sf_Te / sf_TR;
 
@@ -147,9 +147,9 @@ void calculate_bfheatingcoeffs(int modelgridindex)
   const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++)
   {
-    if (!(get_elem_abundance(modelgridindex, element) > minelfrac || !NO_LUT_BFHEATING))
+    if (!(grid::get_elem_abundance(modelgridindex, element) > minelfrac || !NO_LUT_BFHEATING))
     {
-      printout("skipping Z=%d X=%g, ", get_element(element), get_elem_abundance(modelgridindex, element));
+      printout("skipping Z=%d X=%g, ", get_element(element), grid::get_elem_abundance(modelgridindex, element));
     }
 
     const int nions = get_nions(element);
@@ -159,7 +159,7 @@ void calculate_bfheatingcoeffs(int modelgridindex)
       for (int level = 0; level < nlevels; level++)
       {
         double bfheatingcoeff = 0.;
-        if (get_elem_abundance(modelgridindex, element) > minelfrac || !NO_LUT_BFHEATING)
+        if (grid::get_elem_abundance(modelgridindex, element) > minelfrac || !NO_LUT_BFHEATING)
         {
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
@@ -172,8 +172,8 @@ void calculate_bfheatingcoeffs(int modelgridindex)
             /// The correction factor for stimulated emission in gammacorr is set to its
             /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
             /// correction may be evaluated at T_R!
-            const double T_R = get_TR(modelgridindex);
-            const double W = get_W(modelgridindex);
+            const double T_R = grid::get_TR(modelgridindex);
+            const double W = grid::get_W(modelgridindex);
             bfheatingcoeff += W * get_bfheatingcoeff_ana(element, ion, level, phixstargetindex, T_R, W);
 
             #endif
@@ -369,7 +369,7 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
 
   /// Set new T_e guess for the current cell and update populations
   //globals::cell[cellnumber].T_e = T_e;
-  set_Te(modelgridindex, T_e);
+  grid::set_Te(modelgridindex, T_e);
   double nntot;
   if (NLTE_POPS_ON && NLTE_POPS_ALL_IONS_SIMULTANEOUS)
     nntot = calculate_electron_densities(modelgridindex);
@@ -377,7 +377,7 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
     nntot = calculate_populations(modelgridindex);
 
   /// Then calculate heating and cooling rates
-  const float nne = get_nne(modelgridindex);
+  const float nne = grid::get_nne(modelgridindex);
   calculate_cooling_rates(modelgridindex, heatingcoolingrates);
   calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates);
 
@@ -395,7 +395,7 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
 
   /// Adiabatic cooling term
   const double p = nntot * KB * T_e;
-  const double volumetmin = vol_init_modelcell(modelgridindex);
+  const double volumetmin = grid::vol_init_modelcell(modelgridindex);
   const double dV = 3 * volumetmin / pow(globals::tmin, 3) * pow(t_current, 2);
   const double V = volumetmin * pow(t_current / globals::tmin, 3);
   //printout("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
@@ -410,7 +410,7 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
 
 void call_T_e_finder(const int modelgridindex, const int timestep, const double t_current, const double T_min, const double T_max, heatingcoolingrates_t *heatingcoolingrates)
 {
-  const double T_e_old = get_Te(modelgridindex);
+  const double T_e_old = grid::get_Te(modelgridindex);
   printout("Finding T_e in cell %d at timestep %d...", modelgridindex, timestep);
 
   //double deltat = (T_max - T_min) / 100;
@@ -447,7 +447,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
   if (!std::isfinite(thermalmin) || !std::isfinite(thermalmax))
   {
     printout("[abort request] call_T_e_finder: non-finite results in modelcell %d (T_R=%g, W=%g). T_e forced to be MINTEMP\n",
-             modelgridindex, get_TR(modelgridindex), get_W(modelgridindex));
+             modelgridindex, grid::get_TR(modelgridindex), grid::get_W(modelgridindex));
     thermalmax = thermalmin = -1;
   }
 
@@ -516,7 +516,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
     /// Calculate the rates again at this T_e to print them to file
     T_e = MINTEMP;
     //if (nts_global >= 15) T_e = MAXTEMP; ///DEBUG ONLY!!!!!!!!!!!!!!!!!!!!!!!!! invert boundaries!
-    printout("[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary %g in modelcell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",MINTEMP,modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
+    printout("[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary %g in modelcell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",MINTEMP,modelgridindex,grid::get_TR(modelgridindex),grid::get_W(modelgridindex));
   }
   else
   {
@@ -524,7 +524,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
     /// Calculate the rates again at this T_e to print them to file
     T_e = MAXTEMP;
     //if (nts_global >= 15) T_e = MINTEMP; ///DEBUG ONLY!!!!!!!!!!!!!!!!!!!!!!!!! invert boundaries!
-    printout("[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [%g,%g] in modelcell %d (T_R=%g,W=%g). T_e forced to be MAXTEMP\n",MINTEMP,MAXTEMP,modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
+    printout("[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [%g,%g] in modelcell %d (T_R=%g,W=%g). T_e forced to be MAXTEMP\n",MINTEMP,MAXTEMP,modelgridindex,grid::get_TR(modelgridindex),grid::get_W(modelgridindex));
     //printout("hot cell %d, with T_R %g, T_e %g, W %g, nne %g\n",cellnumber,globals::cell[cellnumber].T_R,T_e,globals::cell[cellnumber].W,globals::cell[cellnumber].nne);
   }
 
@@ -579,7 +579,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
           status = gsl_root_fsolver_iterate(T_e_solver);
           T_e = gsl_root_fsolver_root(T_e_solver);
           //globals::cell[cellnumber].T_e = T_e;
-          set_Te(modelgridindex,T_e);
+          grid::set_Te(modelgridindex,T_e);
           T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
           T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
           status = gsl_root_test_interval(T_e_min,T_e_max,0,fractional_accuracy);
@@ -613,7 +613,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
       T_e = MINTEMP;
   }
 
-  set_Te(modelgridindex, T_e);
+  grid::set_Te(modelgridindex, T_e);
 }
 
 

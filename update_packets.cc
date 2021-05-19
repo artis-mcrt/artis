@@ -129,7 +129,7 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
       //printout("k-packet propagation\n");
 
       //t_change_type = do_kpkt(pkt_ptr, t_current, t2);
-      if (pkt_type == TYPE_PRE_KPKT || globals::modelgrid[get_cell_modelgridindex(pkt_ptr->where)].thick == 1)
+      if (pkt_type == TYPE_PRE_KPKT || grid::modelgrid[grid::get_cell_modelgridindex(pkt_ptr->where)].thick == 1)
       {
         do_kpkt_bb(pkt_ptr);
       }
@@ -175,12 +175,12 @@ static bool std_compare_packets_bymodelgriddensity(const PKT &p1, const PKT &p2)
   const int a1_where = p1.where;
   const int a2_where = p2.where;
 
-  const int mgi1 = get_cell_modelgridindex(a1_where);
-  const int mgi2 = get_cell_modelgridindex(a2_where);
-  if (get_rho(mgi1) > get_rho(mgi2))
+  const int mgi1 = grid::get_cell_modelgridindex(a1_where);
+  const int mgi2 = grid::get_cell_modelgridindex(a2_where);
+  if (grid::get_rho(mgi1) > grid::get_rho(mgi2))
     return true;
 
-  if (get_rho(mgi1) == get_rho(mgi2) && (mgi1 < mgi2))
+  if (grid::get_rho(mgi1) == grid::get_rho(mgi2) && (mgi1 < mgi2))
     return true;
 
   return false;
@@ -246,10 +246,10 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
       if (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < (ts + tw))
       {
         const int cellindex = pkt_ptr->where;
-        const int mgi = get_cell_modelgridindex(cellindex);
+        const int mgi = grid::get_cell_modelgridindex(cellindex);
         /// for non empty cells update the global available level populations and cooling terms
         /// Reset cellhistory if packet starts up in another than the last active cell
-        if (mgi != MMODELGRID && globals::cellhistory[tid].cellnumber != mgi)
+        if (mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi)
         {
           stats::increment(stats::COUNTER_UPDATECELL);
           cellhistory_reset(mgi, false);
@@ -258,12 +258,12 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
         // enum packet_type oldtype = pkt_ptr->type;
         int newmgi = mgi;
         bool workedonpacket = false;
-        while ((newmgi == mgi || newmgi == MMODELGRID) && pkt_ptr->prop_time < (ts + tw) && pkt_ptr->type != TYPE_ESCAPE)
+        while ((newmgi == mgi || newmgi == grid::get_npts_model()) && pkt_ptr->prop_time < (ts + tw) && pkt_ptr->type != TYPE_ESCAPE)
         {
           workedonpacket = true;
           do_packet(pkt_ptr, ts + tw, nts);
           const int newcellnum = pkt_ptr->where;
-          newmgi = get_cell_modelgridindex(newcellnum);
+          newmgi = grid::get_cell_modelgridindex(newcellnum);
         }
         count_pktupdates += workedonpacket ? 1 : 0;
 
@@ -306,7 +306,7 @@ static int compare_packets_bymodelgridposition(const void *p1, const void *p2)
   const PKT *a1 = (PKT *)(p1);
   const PKT *a2 = (PKT *)(p2);
 
-  int mgi_diff = get_cell_modelgridindex(a1->where) - get_cell_modelgridindex(a2->where);
+  int mgi_diff = grid::get_cell_modelgridindex(a1->where) - grid::get_cell_modelgridindex(a2->where);
   if (mgi_diff < 0)
     return -1;
   else if (mgi_diff > 0)

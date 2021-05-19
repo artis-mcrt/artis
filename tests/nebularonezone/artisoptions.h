@@ -7,20 +7,6 @@
 // Number of energy packets per process (OpenMP threads share these pacekts)
 #define MPKTS 100000
 
-// Max number of propagation grid cells
-//125000 //1000000 //1000000//262144 //2100000 //125000 //1000000
-#define MGRID  125000
-
-// Max number of input model grid cells
-//125000 //12800 //12800 //125 //3200 //200 //200 //200 //8192 //125 //125000 //200 //125000 //8200 //200 //8200 //200 //125000
-#define MMODELGRID 177
-
-// Max number of elements
-#define MELEMENTS 4
-
-// Max number of ion stages for any element
-#define MIONS 5
-
 // Max number of OpenMP threads
 #define MTHREADS 8
 

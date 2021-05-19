@@ -51,7 +51,7 @@ void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist)
   // dummy.last_cross = NONE;
 
   const int cellindex = pkt_ptr->where;
-  const int mgi = get_cell_modelgridindex(cellindex);
+  const int mgi = grid::get_cell_modelgridindex(cellindex);
 
   if (dist > 0)
   {
@@ -59,7 +59,7 @@ void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist)
     get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
     const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
 
-    double heating_cont = ((meanf_sigma(xx) * get_nnetot(mgi)) + sig_photo_electric(pkt_ptr) + (sig_pair_prod(pkt_ptr) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
+    double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + sig_photo_electric(pkt_ptr) + (sig_pair_prod(pkt_ptr) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
     heating_cont = heating_cont * pkt_ptr->e_rf * dist * (1. - (2. * dot(vel_vec, pkt_ptr->dir) / CLIGHT));
 
     // The terms in the above are for Compton, photoelectric and pair production. The pair production one
@@ -99,7 +99,7 @@ void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist)
   dummy.last_cross = NONE;*/
 
   const int cellindex = pkt_ptr->where;
-  const int mgi = get_cell_modelgridindex(cellindex);
+  const int mgi = grid::get_cell_modelgridindex(cellindex);
 
   if (dist > 0.0)
   {
@@ -108,7 +108,7 @@ void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist)
     double vel_vec[3];
     get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
 
-    double cont = (get_kappagrey(mgi) * get_rho(mgi));
+    double cont = (grid::get_kappagrey(mgi) * grid::get_rho(mgi));
     cont = cont * pkt_ptr->e_rf * dist * (1. - (2. * dot(vel_vec, pkt_ptr->dir) / CLIGHT));
 
     /* For normalisation this needs to be
@@ -127,9 +127,9 @@ void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist)
 void normalise_grey(int nts)
 {
   const double dt = globals::time_step[nts].width;
-  for (int mgi = 0; mgi < get_npts_model(); mgi++)
+  for (int mgi = 0; mgi < grid::get_npts_model(); mgi++)
   {
-    const double dV = vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
+    const double dV = grid::vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
 
     globals::rpkt_emiss[mgi] = globals::rpkt_emiss[mgi] * ONEOVER4PI / dV / dt / globals::nprocs;
   }
@@ -177,7 +177,7 @@ void write_grey(int nts)
     }
 
     //for (n=0; n < ngrid; n++)
-    for (int n = 0; n < get_npts_model(); n++)
+    for (int n = 0; n < grid::get_npts_model(); n++)
     {
       float dum;
       fscanf(est_file, "%g", &dum);
@@ -193,7 +193,7 @@ void write_grey(int nts)
   }
 
   //for (n=0; n < ngrid; n++)
-  for (int n = 0; n < get_npts_model(); n++)
+  for (int n = 0; n < grid::get_npts_model(); n++)
   {
     fprintf(est_file, " %g\n ", globals::rpkt_emiss[n]);
   }
@@ -298,13 +298,13 @@ void write_grey(int nts)
 
   if (tau_cont > 1.e-6)
   {
-    ray_ptr->e_rf[nray] += (rpkt_emiss[get_cell_modelgridindex(dummy.where)] /
+    ray_ptr->e_rf[nray] += (rpkt_emiss[grid::get_cell_modelgridindex(dummy.where)] /
       doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec)
       *(1. - exp(-1. * tau_cont)) / kap_tot);
   }
   else
   {
-    ray_ptr->e_rf[nray] += (rpkt_emiss[get_cell_modelgridindex(dummy.where)]   /
+    ray_ptr->e_rf[nray] += (rpkt_emiss[grid::get_cell_modelgridindex(dummy.where)]   /
         doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec)
           * ldist);
   }

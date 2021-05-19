@@ -34,11 +34,16 @@ jobs:
         clang++ --version
         export CXX=clang++
 
-    - name: "compile with gcc"
-      run: make CXX=g++ sn3d exspec
+    # - name: "compile with gcc"
+    #   run: make CXX=g++ sn3d exspec
 
     - name: "compile with clang"
       run: make CXX=clang++ sn3d exspec
+
+    - name: "run cppcheck"
+      run: |
+        sudo apt-get -y install cppcheck
+        cppcheck --force --language=c++ --std=c++17 .
 
     # - name: "compile sn3d with OpenMP"
     #   run: make sn3dopenmp
@@ -96,6 +101,7 @@ jobs:
         cat estimators*.out
 
     - name: "cat output log"
+      if: always()
       working-directory: tests/nebularonezone/
       run: |
         cat output_*.txt

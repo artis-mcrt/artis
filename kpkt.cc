@@ -81,8 +81,8 @@ void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates_t *he
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
 {
-  const float nne = get_nne(modelgridindex);
-  const float T_e = get_Te(modelgridindex);
+  const float nne = grid::get_nne(modelgridindex);
+  const float T_e = grid::get_Te(modelgridindex);
 
   double C_total = 0.;
   double C_ff_all = 0.;   /// free-free creation of rpkts
@@ -147,10 +147,10 @@ void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates_t *he
       }
 
       C_total += C_ion;
-      globals::modelgrid[modelgridindex].cooling[element].contrib[ion] = C_ion;
+      grid::modelgrid[modelgridindex].cooling[element].contrib[ion] = C_ion;
     }
   }
-  globals::modelgrid[modelgridindex].totalcooling = C_total;
+  grid::modelgrid[modelgridindex].totalcooling = C_total;
 
   // only used in the T_e solver and write_to_estimators file
   if (heatingcoolingrates != NULL)
@@ -168,10 +168,10 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
 /// by applying a cut to the total cooling rate. Then sort the global
 /// cooling list by the strength of the individual process contribution.
 {
-  const float nne = get_nne(modelgridindex);
-  const float T_e = get_Te(modelgridindex);
-  //double T_R = get_TR(modelgridindex);
-  //double W = get_W(modelgridindex);
+  const float nne = grid::get_nne(modelgridindex);
+  const float T_e = grid::get_Te(modelgridindex);
+  //double T_R = grid::get_TR(modelgridindex);
+  //double W = grid::get_W(modelgridindex);
 
   /// calculate rates for
   //C_ff = 0.;   /// free-free creation of rpkts
@@ -294,7 +294,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
 
   assert_always(indexionstart == get_coolinglistoffset(element, ion));
   assert_always(i == indexionstart + get_ncoolingterms(element, ion));
-  assert_always(fabs((globals::modelgrid[modelgridindex].cooling[element].contrib[ion] + oldcoolingsum - contrib) / contrib) < 1e-3);
+  assert_always(fabs((grid::modelgrid[modelgridindex].cooling[element].contrib[ion] + oldcoolingsum - contrib) / contrib) < 1e-3);
 }
 
 
@@ -477,8 +477,8 @@ double do_kpkt_bb(PKT *pkt_ptr)
 {
   //double nne = globals::cell[pkt_ptr->where].nne ;
   int cellindex = pkt_ptr->where;
-  const int modelgridindex = get_cell_modelgridindex(cellindex);
-  const float T_e = get_Te(modelgridindex);
+  const int modelgridindex = grid::get_cell_modelgridindex(cellindex);
+  const float T_e = grid::get_Te(modelgridindex);
 
   pkt_ptr->nu_cmf = sample_planck(T_e);
   if (!std::isfinite(pkt_ptr->nu_cmf))
@@ -516,26 +516,26 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
   const int tid = get_thread_num();
   const double t1 = pkt_ptr->prop_time;
   const int cellindex = pkt_ptr->where;
-  const int modelgridindex = get_cell_modelgridindex(cellindex);
+  const int modelgridindex = grid::get_cell_modelgridindex(cellindex);
 
   /// don't calculate cooling rates after each cell crossings anylonger
   /// but only if we really get a kpkt and they hadn't been calculated already
   //if (globals::cellhistory[tid].totalcooling == COOLING_UNDEFINED)
 /*  int ondemand = 1;
-  if (globals::modelgrid[modelgridindex].totalcooling == COOLING_UNDEFINED)
+  if (grid::modelgrid[modelgridindex].totalcooling == COOLING_UNDEFINED)
   {
     //printout("initial calculation of all cooling rates\n");
     coolingratecalccounter++;
     ondemand = 0;
     calculate_kpkt_rates(modelgridindex);
   }*/
-  //printout("totalcooling %g\n",globals::modelgrid[modelgridindex].totalcooling );
+  //printout("totalcooling %g\n",grid::modelgrid[modelgridindex].totalcooling );
 
   //printout("[debug] do_kpkt: propagate k-pkt\n");
   //double cut = 0.99; //1.;
 
 
-  const float T_e = get_Te(modelgridindex);
+  const float T_e = grid::get_Te(modelgridindex);
   double deltat = 0.;
   if (nts < globals::n_kpktdiffusion_timesteps)
     deltat = globals::kpktdiffusion_timescale * globals::time_step[nts].width;
@@ -552,8 +552,8 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     double coolingsum = 0.;
     double zrand = gsl_rng_uniform(rng);
 
-    const double rndcool = zrand * globals::modelgrid[modelgridindex].totalcooling;
-    // printout("rndcool %g totalcooling %g\n",rndcool, globals::modelgrid[modelgridindex].totalcooling);
+    const double rndcool = zrand * grid::modelgrid[modelgridindex].totalcooling;
+    // printout("rndcool %g totalcooling %g\n",rndcool, grid::modelgrid[modelgridindex].totalcooling);
     double oldcoolingsum;
     int element;
     int ion;
@@ -563,7 +563,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       for (ion = 0; ion < nions; ion++)
       {
         oldcoolingsum = coolingsum;
-        coolingsum += globals::modelgrid[modelgridindex].cooling[element].contrib[ion];
+        coolingsum += grid::modelgrid[modelgridindex].cooling[element].contrib[ion];
         // printout("Z=%d, ionstage %d, coolingsum %g\n", get_element(element), get_ionstage(element, ion), coolingsum);
         if (coolingsum > rndcool) break;
       }
@@ -575,14 +575,14 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     {
       printout("do_kpkt: problem selecting a cooling process ... abort\n");
       printout("do_kpkt: tried to select element %d, ion %d (Z=%d ionstage %d)\n",element, ion, get_element(element), get_ionstage(element, ion));
-      printout("do_kpkt: totalcooling %g, coolingsum %g, rndcool %g\n",globals::modelgrid[modelgridindex].totalcooling,coolingsum,rndcool);
-      printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n",modelgridindex,pkt_ptr->where,get_nne(modelgridindex));
+      printout("do_kpkt: totalcooling %g, coolingsum %g, rndcool %g\n",grid::modelgrid[modelgridindex].totalcooling,coolingsum,rndcool);
+      printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n",modelgridindex,pkt_ptr->where,grid::get_nne(modelgridindex));
       for (element = 0; element < get_nelements(); element++)
       {
         const int nions = get_nions(element);
         for (ion = 0; ion < nions; ion++)
         {
-          printout("do_kpkt: element %d, ion %d, coolingcontr %g\n",element,ion,globals::modelgrid[modelgridindex].cooling[element].contrib[ion]);
+          printout("do_kpkt: element %d, ion %d, coolingcontr %g\n",element,ion,grid::modelgrid[modelgridindex].cooling[element].contrib[ion]);
         }
       }
       abort();
@@ -745,7 +745,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     {
       /// the k-packet activates a macro-atom due to collisional excitation
       // printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
-      const float nne = get_nne(modelgridindex);
+      const float nne = grid::get_nne(modelgridindex);
 
       // if the previous entry belongs to a different ion, it might have an invalid (uncalculated)
       // cooling_contrib, so need to use oldcoolingsum (coolingsum up to the start of the current ion)
@@ -833,7 +833,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     else
     {
       printout("[fatal] do_kpkt: coolinglist.type mismatch\n");
-      printout("[fatal] do_kpkt: zrand %g, globals::modelgrid[modelgridindex].totalcooling %g, coolingsum %g, i %d\n", zrand, globals::modelgrid[modelgridindex].totalcooling, coolingsum,i);
+      printout("[fatal] do_kpkt: zrand %g, grid::modelgrid[modelgridindex].totalcooling %g, coolingsum %g, i %d\n", zrand, grid::modelgrid[modelgridindex].totalcooling, coolingsum,i);
       printout("[fatal] do_kpkt: coolinglist[i].type %d\n",coolinglist[i].type);
       printout("[fatal] do_kpkt: pkt_ptr->where %d, mgi %d\n",pkt_ptr->where,modelgridindex);
       abort();

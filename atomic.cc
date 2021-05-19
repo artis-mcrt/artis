@@ -6,8 +6,8 @@
 #include "update_grid.h"
 
 __managed__ double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
-__managed__ int nelements;
-
+__managed__ int nelements = 0;  // total number of elements included in the simulation
+__managed__ int maxnions = 0;  // highest number of ions for any element
 
 __host__ __device__
 static int get_continuumindex_phixstargetindex(int element, int ion, int level, int phixstargetindex)
@@ -65,11 +65,11 @@ __host__ __device__
 double get_nntot(int modelgridindex)
 // total ion (nuclei) density
 {
-  const double rho = get_rho(modelgridindex);
+  const double rho = grid::get_rho(modelgridindex);
   int nntot = 0.;
   for (int element = 0; element < get_nelements(); element++)
   {
-    nntot += get_elem_abundance(modelgridindex, element) / globals::elements[element].mass * rho;
+    nntot += grid::get_elem_abundance(modelgridindex, element) / globals::elements[element].mass * rho;
   }
 
   return nntot;
@@ -203,10 +203,22 @@ int get_elementindex(int Z)
 
 
 __host__ __device__
+void update_max_nions(const int nions)
+// Will ensure that maxnions is always greater than or equal to the number of nions
+// this is called at startup once per element with the number of ions
+{
+  if (nions > maxnions || maxnions < 0)
+  {
+    maxnions = nions;
+  }
+}
+
+
+__host__ __device__
 int get_max_nions(void)
 {
   // number greater than or equal to nions(element) for all elements
-  return globals::maxion;
+  return maxnions;
 }
 
 

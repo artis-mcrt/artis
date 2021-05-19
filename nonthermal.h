@@ -3,6 +3,7 @@
 
 // #include "sn3d.h"
 #include "types.h"
+#include "cuda.h"
 #include <cstdio>
 
 namespace nonthermal

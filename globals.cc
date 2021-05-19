@@ -14,7 +14,7 @@ namespace globals
   //#define NRAYS_SYN 1 // number of rays traced in a syn calculation
 
   //RAY rays[NRAYS_SYN];
-  __managed__ struct time *time_step;
+  __managed__ struct time *time_step = NULL;
 
   __managed__ int nsyn_time;
   __managed__ double time_syn[MSYN_TIME];
@@ -24,39 +24,33 @@ namespace globals
   __managed__ int emiss_max;      // actual number of frequency points in emissivity grid
 
 
-  __managed__ modelgrid_t modelgrid[MMODELGRID + 1];
-
   /// THESE ARE THE GRID BASED ESTIMATORS
-  __managed__ float compton_emiss[MMODELGRID+1][EMISS_MAX];  /// Volume estimator for the compton emissivity
-  __managed__ double rpkt_emiss[MMODELGRID+1];                /// Volume estimator for the rpkt emissivity
+  __managed__ float *compton_emiss = NULL;  /// Volume estimator for the compton emissivity
+  __managed__ double *rpkt_emiss = NULL;                /// Volume estimator for the rpkt emissivity
 
 
   #if (!NO_LUT_PHOTOION)
-    __managed__ double corrphotoionrenorm[MMODELGRID * MELEMENTS * MIONS];
-    __managed__ double gammaestimator[MMODELGRID * MELEMENTS * MIONS];
+    __managed__ double *corrphotoionrenorm = NULL;
+    __managed__ double *gammaestimator = NULL;
   #endif
   #if (!NO_LUT_BFHEATING)
-    __managed__ double bfheatingestimator[MMODELGRID * MELEMENTS * MIONS];
+    __managed__ double *bfheatingestimator = NULL;
   #endif
-  #ifdef FORCE_LTE
-    // don't use the variables below in LTE mode, just declare them here so the code compiles
-    __managed__ double *ffheatingestimator;
-  #else
-    __managed__ double ffheatingestimator[MMODELGRID + 1];
-    __managed__ double colheatingestimator[MMODELGRID + 1];
-
+  __managed__ double *ffheatingestimator = NULL;
+  __managed__ double *colheatingestimator = NULL;
+  #ifndef FORCE_LTE
     #ifdef DO_TITER
-      __managed__ double ffheatingestimator_save[MMODELGRID];
-      __managed__ double colheatingestimator_save[MMODELGRID];
-      __managed__ double gammaestimator_save[MMODELGRID * MELEMENTS * MIONS];
-      __managed__ double bfheatingestimator_save[MMODELGRID * MELEMENTS * MIONS];
+      __managed__ double *gammaestimator_save = NULL;
+      __managed__ double *bfheatingestimator_save = NULL;
+      __managed__ double *ffheatingestimator_save = NULL;
+      __managed__ double *colheatingestimator_save = NULL;
     #endif
   #endif
 
   #ifdef RECORD_LINESTAT
-    __managed__ int *ecounter;
-    __managed__ int *acounter;
-    __managed__ int *linestat_reduced;
+    __managed__ int *ecounter = NULL;
+    __managed__ int *acounter = NULL;
+    __managed__ int *linestat_reduced = NULL;
   #endif
 
 
@@ -86,37 +80,30 @@ namespace globals
 
   /// ATOMIC DATA
 
-  __managed__ int maxion;
-
   __managed__ int nlines;
   __managed__ int includedions;
-  __managed__ elementlist_entry *elements;
-  __managed__ linelist_entry *linelist;
-  __managed__ bflist_t *bflist;
+  __managed__ elementlist_entry *elements = NULL;
+  __managed__ linelist_entry *linelist = NULL;
+  __managed__ bflist_t *bflist = NULL;
 
-  __managed__ rpkt_cont_opacity_struct *kappa_rpkt_cont;
+  __managed__ rpkt_cont_opacity_struct *kappa_rpkt_cont = NULL;
 
   /// Coolinglist
   __managed__ int ncoolingterms;
 
   /// PHIXSLIST
 
-  __managed__ double *allcont_nu_edge;
-  __managed__ fullphixslist_t *allcont;
-  __managed__ phixslist_t *phixslist;
+  __managed__ double *allcont_nu_edge = NULL;
+  __managed__ fullphixslist_t *allcont = NULL;
+  __managed__ phixslist_t *phixslist = NULL;
   __managed__ int nbfcontinua;
   __managed__ int nbfcontinua_ground; ///number of bf-continua
   __managed__ int NPHIXSPOINTS;
   __managed__ double NPHIXSNUINCREMENT;
 
-  __managed__ cellhistory_struct *cellhistory;
+  __managed__ cellhistory_struct *cellhistory = NULL;
 
   __managed__ int debuglevel;
-
-  __managed__ int ncoordgrid[3]; /// propagration grid dimensions
-  __managed__ int ngrid;
-  __managed__ int grid_type;
-  __managed__ char coordlabel[3];
 
   __managed__ int nprocs = -1;      /// Global variable which holds the number of MPI processes
   __managed__ int rank_global = -1; /// Global variable which holds the rank of the active MPI process

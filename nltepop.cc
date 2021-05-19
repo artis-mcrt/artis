@@ -20,7 +20,7 @@ static FILE *nlte_file = NULL;
 static inline
 int get_nlte_vector_index(const int element, const int ion, const int level)
 // this is the index for the NLTE solver that is handling all ions of a single element
-// This is NOT an index into globals::modelgrid[modelgridindex].nlte_pops that contains all elements
+// This is NOT an index into grid::modelgrid[modelgridindex].nlte_pops that contains all elements
 {
   // have to convert from nlte_pops index to nlte_vector index
   // the difference is that nlte vectors apply to a single element and include ground states
@@ -308,7 +308,7 @@ static void print_element_rates_summary(
       if (level == 0)
       {
         printout("  modelgridindex %d timestep %d NLTE iteration %d Te %g nne %g: NLTE summary for Z=%d ion_stage %d:\n",
-                 modelgridindex, timestep, nlte_iter, get_Te(modelgridindex), get_nne(modelgridindex), atomic_number, ionstage);
+                 modelgridindex, timestep, nlte_iter, grid::get_Te(modelgridindex), grid::get_nne(modelgridindex), atomic_number, ionstage);
         printout("                         pop       rates     bb_rad     bb_col   bb_ntcol     bf_rad     bf_col   bf_ntcol\n");
       }
 
@@ -358,7 +358,7 @@ static void print_level_rates(
   const int selected_index = get_nlte_vector_index(element, selected_ion, selected_level);
   const double pop_selectedlevel = gsl_vector_get(popvec, selected_index);
   printout("timestep %d cell %d Te %g nne %g NLTE level diagnostics for Z=%d ion_stage %d level %d rates into and out of this level\n",
-           timestep, modelgridindex, get_Te(modelgridindex), get_nne(modelgridindex), atomic_number, selected_ionstage, selected_level);
+           timestep, modelgridindex, grid::get_Te(modelgridindex), grid::get_nne(modelgridindex), atomic_number, selected_ionstage, selected_level);
 
   const double rad_bb_in_total = get_total_rate_in(selected_index, rate_matrix_rad_bb, popvec);
   const double coll_bb_in_total = get_total_rate_in(selected_index, rate_matrix_coll_bb, popvec);
@@ -434,12 +434,12 @@ static void nltepop_reset_element(const int modelgridindex, const int element)
     const int nlevels_nlte = get_nlevels_nlte(element,ion);
     for (int level = 1; level < nlevels_nlte; level++)
     {
-      globals::modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] = -1.0; // flag to indicate no useful data
+      grid::modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] = -1.0; // flag to indicate no useful data
     }
 
     if (ion_has_superlevel(element, ion))
     {
-      globals::modelgrid[modelgridindex].nlte_pops[nlte_start + nlevels_nlte] = -1.0;
+      grid::modelgrid[modelgridindex].nlte_pops[nlte_start + nlevels_nlte] = -1.0;
     }
   }
 }
@@ -487,8 +487,8 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
                                           gsl_matrix *rate_matrix_coll_bb,
                                           gsl_matrix *rate_matrix_ntcoll_bb)
 {
-  const float T_e = get_Te(modelgridindex);
-  const float nne = get_nne(modelgridindex);
+  const float T_e = grid::get_Te(modelgridindex);
+  const float nne = grid::get_nne(modelgridindex);
   const int nlevels = get_nlevels(element, ion);
   // const int Z = get_element(element);
   // const int ionstage = get_ionstage(element, ion);
@@ -564,8 +564,8 @@ static void nltepop_matrix_add_ionisation(
   double *s_renorm, gsl_matrix *rate_matrix_rad_bf, gsl_matrix *rate_matrix_coll_bf)
 {
   assert_always(ion + 1 < get_nions(element)); // can't ionise the top ion
-  const float T_e = get_Te(modelgridindex);
-  const float nne = get_nne(modelgridindex);
+  const float T_e = grid::get_Te(modelgridindex);
+  const float nne = grid::get_nne(modelgridindex);
   const int nionisinglevels = get_ionisinglevels(element, ion);
   const int maxrecombininglevel = get_maxrecombininglevel(element, ion + 1);
 
@@ -701,10 +701,10 @@ static void set_element_pops_lte(const int modelgridindex, const int element)
 
   // const int nions = get_nions(element);
   // for (int ion = 0; ion < nions; ion++)
-  //   globals::modelgrid[modelgridindex].composition[element].partfunct[ion] = calculate_partfunct(element, ion, modelgridindex);
+  //   grid::modelgrid[modelgridindex].composition[element].partfunct[ion] = calculate_partfunct(element, ion, modelgridindex);
   //
-  // const float nne = get_nne(modelgridindex);
-  // const double nnelement = get_elem_abundance(modelgridindex, element) / elements[element].mass * get_rho(modelgridindex);
+  // const float nne = grid::get_nne(modelgridindex);
+  // const double nnelement = grid::get_elem_abundance(modelgridindex, element) / elements[element].mass * grid::get_rho(modelgridindex);
   // for (int ion = 0; ion < nions; ion++)
   // {
   //   double nnion;
@@ -713,10 +713,10 @@ static void set_element_pops_lte(const int modelgridindex, const int element)
   //   else
   //     nnion = MINPOP;
   //
-  //   globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (
-  //     nnion * stat_weight(element,ion,0) / globals::modelgrid[modelgridindex].composition[element].partfunct[ion]);
+  //   grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (
+  //     nnion * stat_weight(element,ion,0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
   //
-  //   assert_always(std::isfinite(globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]));
+  //   assert_always(std::isfinite(grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]));
   // }
 }
 
@@ -869,7 +869,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 {
   const int atomic_number = get_element(element);
 
-  if (get_elem_abundance(modelgridindex, element) <= 0.)
+  if (grid::get_elem_abundance(modelgridindex, element) <= 0.)
   {
     //abundance of this element is zero, so do not store any NLTE populations
     printout("Not solving for NLTE populations in cell %d at timestep %d for element Z=%d due to zero abundance\n",
@@ -888,13 +888,13 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   const int nions = get_nions(element);
 
   printout("Solving for NLTE populations in cell %d at timestep %d NLTE iteration %d for element Z=%d (mass fraction %.2e, population %.2e)\n",
-           modelgridindex, timestep, nlte_iter, atomic_number, get_elem_abundance(modelgridindex, element),
-           get_elem_abundance(modelgridindex, element) / globals::elements[element].mass * get_rho(modelgridindex));
+           modelgridindex, timestep, nlte_iter, atomic_number, grid::get_elem_abundance(modelgridindex, element),
+           grid::get_elem_abundance(modelgridindex, element) / globals::elements[element].mass * grid::get_rho(modelgridindex));
 
   // LTE test, make sure binned radfield is off
-  //set_TR(modelgridindex,3000);
-  //set_W(modelgridindex,1.0);
-  //printout("T_E %g T_R was %g, setting to 3000 \n",get_Te(modelgridindex),get_TR(modelgridindex));
+  //grid::set_TR(modelgridindex,3000);
+  //grid::set_W(modelgridindex,1.0);
+  //printout("T_E %g T_R was %g, setting to 3000 \n",grid::get_Te(modelgridindex),get_TR(modelgridindex));
 
   double superlevel_partfunc[nions]; // space is allocated for every ion, even if it does not have a superlevel
   const int nlte_dimension = get_element_nlte_dimension_and_slpartfunc(modelgridindex, element, nions, superlevel_partfunc);
@@ -984,7 +984,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_vector_view first_row_view = gsl_matrix_row(rate_matrix, 0);
   gsl_vector_set_all(&first_row_view.vector, 1.0);
   // set first balance vector entry to the element population (all other entries will be zero)
-  const double element_population = get_elem_abundance(modelgridindex, element) / globals::elements[element].mass * get_rho(modelgridindex);
+  const double element_population = grid::get_elem_abundance(modelgridindex, element) / globals::elements[element].mass * grid::get_rho(modelgridindex);
   gsl_vector_set(balance_vector, 0, element_population);
 
   // calculate the normalisation factors and apply them to the matrix
@@ -1042,7 +1042,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       for (int level = 1; level <= nlevels_nlte; level++)
       {
         const int index = get_nlte_vector_index(element, ion, level);
-        globals::modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] = gsl_vector_get(popvec, index) / get_rho(modelgridindex);
+        grid::modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] = gsl_vector_get(popvec, index) / grid::get_rho(modelgridindex);
         solution_ion_pop += gsl_vector_get(popvec, index);
       }
 
@@ -1050,20 +1050,20 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       if (ion_has_superlevel(element, ion)) //a superlevel exists
       {
         const int index_sl = get_nlte_vector_index(element, ion, nlevels_nlte + 1);
-        globals::modelgrid[modelgridindex].nlte_pops[nlte_start + nlevels_nlte] = (
-          gsl_vector_get(popvec, index_sl) / globals::modelgrid[modelgridindex].rho / superlevel_partfunc[ion]);
+        grid::modelgrid[modelgridindex].nlte_pops[nlte_start + nlevels_nlte] = (
+          gsl_vector_get(popvec, index_sl) / grid::modelgrid[modelgridindex].rho / superlevel_partfunc[ion]);
 
-        // printout("solve_nlte_pops_element: The Z=%d ionstage %d superlevel population is %g with rho %g and superlevel_partfunc %g Te %g scaled pop stored as %g\n", get_element(element), get_ionstage(element, ion), gsl_vector_get(popvec, index_sl), globals::modelgrid[modelgridindex].rho, superlevel_partfunc[ion], get_Te(modelgridindex), globals::modelgrid[modelgridindex].nlte_pops[nlte_start + nlevels_nlte]);
+        // printout("solve_nlte_pops_element: The Z=%d ionstage %d superlevel population is %g with rho %g and superlevel_partfunc %g Te %g scaled pop stored as %g\n", get_element(element), get_ionstage(element, ion), gsl_vector_get(popvec, index_sl), grid::modelgrid[modelgridindex].rho, superlevel_partfunc[ion], grid::get_Te(modelgridindex), grid::modelgrid[modelgridindex].nlte_pops[nlte_start + nlevels_nlte]);
         // the stored population is already divided by the partfunc, so just multiply
         // it by the superlevel_boltzmann to get the population of a level in the SL
 
         solution_ion_pop += gsl_vector_get(popvec, index_sl);
       }
       // printout("    I had a ground level pop of %g, a part fn of %g and therefore an ion pop of %g\n",
-      //          globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
-      //          globals::modelgrid[modelgridindex].composition[element].partfunct[ion],
-      //          (globals::modelgrid[modelgridindex].composition[element].partfunct[ion] *
-      //            globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]
+      //          grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
+      //          grid::modelgrid[modelgridindex].composition[element].partfunct[ion],
+      //          (grid::modelgrid[modelgridindex].composition[element].partfunct[ion] *
+      //            grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]
       //            / stat_weight(element, ion, 0)));
 
       // ionstagepop here must be called before setting the new ground level population
@@ -1071,7 +1071,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       //          ion_stage,solution_ion_pop,ionstagepop(modelgridindex, element, ion));
 
       // store the ground level population
-      globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = gsl_vector_get(popvec, index_gs);
+      grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = gsl_vector_get(popvec, index_gs);
       solution_ion_pop += gsl_vector_get(popvec, index_gs);
 
       precalculate_partfuncts(modelgridindex);
@@ -1079,35 +1079,35 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       // ion_populations[ion] = solution_ion_pop;
       // if (ion > 0)
       // {
-      //   const double gspopratio = globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion-1] / globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
+      //   const double gspopratio = grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion-1] / grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
       //
       //   const double ionpot = epsilon(element,ion,0) - epsilon(element,ion-1,0);
-      //   const float T_e = get_Te(modelgridindex);
-      //   const double partfunct_ratio = globals::modelgrid[modelgridindex].composition[element].partfunct[ion-1] / globals::modelgrid[modelgridindex].composition[element].partfunct[ion];
+      //   const float T_e = grid::get_Te(modelgridindex);
+      //   const double partfunct_ratio = grid::modelgrid[modelgridindex].composition[element].partfunct[ion-1] / grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
       //   const double gs_g_ratio = stat_weight(element,ion-1,0) / stat_weight(element,ion,0);
-      //   const double sbphi_gs = gs_g_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e) * get_nne(modelgridindex);
+      //   const double sbphi_gs = gs_g_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e) * grid::get_nne(modelgridindex);
       //   const double solution_ion_pop_ratio = ion_populations[ion-1] / ion_populations[ion];
-      //   const double sbphi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e) * get_nne(modelgridindex);
+      //   const double sbphi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e) * grid::get_nne(modelgridindex);
       //
       //   printout("    The ratio of groundlevel pops (ion %d)/(ion %d) is %g, Saha-Boltzmann value is %g ratio %g\n",
       //            get_ionstage(element,ion-1),ion_stage,gspopratio,sbphi_gs,gspopratio/sbphi_gs);
       //   printout("    The ratio of total pops (ion %d)/(ion %d) is %g, Saha-Boltzmann value is %g ratio %g\n",
       //            get_ionstage(element,ion-1),ion_stage,solution_ion_pop_ratio,sbphi,solution_ion_pop_ratio/sbphi);
-      //   const float nne = get_nne(modelgridindex);
-      //   // calculate_partfunct(element, ion, modelgridindex) * globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] / stat_weight(element,ion,0))
+      //   const float nne = grid::get_nne(modelgridindex);
+      //   // calculate_partfunct(element, ion, modelgridindex) * grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] / stat_weight(element,ion,0))
       //   printout("    The corresponding phi-factor is: %g\n", (solution_ion_pop_ratio / nne));
       //   printout("    The ionization solver gives phi(ion_stage=%d / %d) = %g\n",
       //            get_ionstage(element, ion-1), get_ionstage(element, ion), phi(element, ion-1, modelgridindex));
       // }
 
 
-      //double nne = get_nne(modelgridindex);
-      //printout("  From ion fract, the ion pop should be %g\n", ionfract(element, ion, modelgridindex, nne)*get_elem_abundance(modelgridindex,element)/ elements[element].mass * get_rho(modelgridindex));
-      //printout("  I think that the element population is: %g (from abundance %g and rho %g)\n", get_elem_abundance(modelgridindex,element)/elements[element].mass*get_rho(modelgridindex), get_elem_abundance(modelgridindex,element), get_rho(modelgridindex));
+      //double nne = grid::get_nne(modelgridindex);
+      //printout("  From ion fract, the ion pop should be %g\n", ionfract(element, ion, modelgridindex, nne)*grid::get_elem_abundance(modelgridindex,element)/ elements[element].mass * grid::get_rho(modelgridindex));
+      //printout("  I think that the element population is: %g (from abundance %g and rho %g)\n", grid::get_elem_abundance(modelgridindex,element)/elements[element].mass*grid::get_rho(modelgridindex), grid::get_elem_abundance(modelgridindex,element), grid::get_rho(modelgridindex));
       //printout("  I currently think that the top ion is: %d\n", elements_uppermost_ion[tid][element]);
     }
 
-    const double elem_pop_abundance = get_elem_abundance(modelgridindex, element) / globals::elements[element].mass * get_rho(modelgridindex);
+    const double elem_pop_abundance = grid::get_elem_abundance(modelgridindex, element) / globals::elements[element].mass * grid::get_rho(modelgridindex);
     const double elem_pop_matrix = gsl_blas_dasum(popvec);
     const double elem_pop_error_percent = fabs((elem_pop_abundance / elem_pop_matrix) - 1) * 100;
     if (elem_pop_error_percent > 1.0)
@@ -1193,8 +1193,8 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
     double test_ratio;//,lag, check;
     int super_level;
 
-    const float T_e = get_Te(modelgridindex);
-    const float nne = get_nne(modelgridindex);
+    const float T_e = grid::get_Te(modelgridindex);
+    const float nne = grid::get_nne(modelgridindex);
 
     printout("Solving for NLTE populations in cell %d. Doing element %d, ion %d. I think it's timestep %d\n", modelgridindex, element, ion, timestep);
     //printout("Current Te %g and ne %g\n",T_e, nne);
@@ -1222,7 +1222,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
     nlte_start = globals::elements[element].ions[ion].first_nlte;
 
     //      if (get_groundlevelpop(modelgridindex,element,ion) > (1.2*MINPOP))
-    if (get_elem_abundance(modelgridindex, element) > 0.0)
+    if (grid::get_elem_abundance(modelgridindex, element) > 0.0)
     {
       if ((rate_matrix = (double *) calloc((nlte_size)*(nlte_size), sizeof(double))) == NULL)
       {
@@ -1483,7 +1483,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
         get_groundlevelpop(modelgridindex,element,ion),gsl_vector_get(x,0),
         get_groundlevelpop(modelgridindex,element,ion+1),gsl_vector_get(x,nlte_size-1));
 
-      //printout("The partition functions (and ratios to gs) were: %g (%g) %g (%g)\n", globals::modelgrid[modelgridindex].composition[element].partfunct[ion], globals::modelgrid[modelgridindex].composition[element].partfunct[ion]/stat_weight(element,ion,0),globals::modelgrid[modelgridindex].composition[element].partfunct[ion+1], globals::modelgrid[modelgridindex].composition[element].partfunct[ion+1]/stat_weight(element,ion+1,0));
+      //printout("The partition functions (and ratios to gs) were: %g (%g) %g (%g)\n", grid::modelgrid[modelgridindex].composition[element].partfunct[ion], grid::modelgrid[modelgridindex].composition[element].partfunct[ion]/stat_weight(element,ion,0),grid::modelgrid[modelgridindex].composition[element].partfunct[ion+1], grid::modelgrid[modelgridindex].composition[element].partfunct[ion+1]/stat_weight(element,ion+1,0));
 
 
       if ((get_groundlevelpop(modelgridindex,element,ion) > (1.1 * MINPOP)) && (gsl_vector_get(x,0) > (1.1 * MINPOP)))
@@ -1502,7 +1502,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
       double test_ratio_upper;
       if ((get_groundlevelpop(modelgridindex,element,ion+1) > (1.1 * MINPOP)) && (gsl_vector_get(x,nlte_size-1) > (1.1 * MINPOP)))
       {
-        test_ratio_upper = get_groundlevelpop(modelgridindex,element,ion+1) * globals::modelgrid[modelgridindex].composition[element].partfunct[ion+1]
+        test_ratio_upper = get_groundlevelpop(modelgridindex,element,ion+1) * grid::modelgrid[modelgridindex].composition[element].partfunct[ion+1]
           / stat_weight(element,ion+1,0) / gsl_vector_get(x,nlte_size-1);
         if (test_ratio_upper < 1)
         {
@@ -1520,9 +1520,9 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
       }
 
       printout("The test ratios are %g %g. Passing %g.\n", get_groundlevelpop(modelgridindex,element,ion)/gsl_vector_get(x,0),
-        get_groundlevelpop(modelgridindex,element,ion+1)*globals::modelgrid[modelgridindex].composition[element].partfunct[ion+1]/stat_weight(element,ion+1,0)/gsl_vector_get(x,nlte_size-1),
+        get_groundlevelpop(modelgridindex,element,ion+1)*grid::modelgrid[modelgridindex].composition[element].partfunct[ion+1]/stat_weight(element,ion+1,0)/gsl_vector_get(x,nlte_size-1),
         test_ratio);
-      //	  printout("The test ratio is %g. Passing %g.\n", get_groundlevelpop(modelgridindex,element,ion+1)*globals::modelgrid[modelgridindex].composition[element].partfunct[ion+1]/stat_weight(element,ion+1,0)/gsl_vector_get(x,nlte_size-1), test_ratio);
+      //	  printout("The test ratio is %g. Passing %g.\n", get_groundlevelpop(modelgridindex,element,ion+1)*grid::modelgrid[modelgridindex].composition[element].partfunct[ion+1]/stat_weight(element,ion+1,0)/gsl_vector_get(x,nlte_size-1), test_ratio);
 
 
       //printout("The top five excited states were %g, %g, %g, %g and %g.\n",gsl_vector_get(x,nlevels_nlte-4),gsl_vector_get(x,nlevels_nlte-3),gsl_vector_get(x,nlevels_nlte-2),gsl_vector_get(x,nlevels_nlte-1),gsl_vector_get(x,nlevels_nlte));
@@ -1539,38 +1539,38 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
       // Write the NLTE level populations to the array
       for (int level = 1; level < nlevels_nlte+1; level++)
       {
-        globals::modelgrid[modelgridindex].nlte_pops[nlte_start+level-1] = gsl_vector_get(x,level)/get_rho(modelgridindex);
+        grid::modelgrid[modelgridindex].nlte_pops[nlte_start+level-1] = gsl_vector_get(x,level)/grid::get_rho(modelgridindex);
         //printout("I have interfered with index %d.\n", nlte_start+level-1);
-        //globals::modelgrid[modelgridindex].nlte_pops[nlte_start+level-1] = ((lag*globals::modelgrid[modelgridindex].nlte_pops[nlte_start+level-1]) + gsl_vector_get(x,level))/(lag + 1.0)/get_rho(modelgridindex);
+        //grid::modelgrid[modelgridindex].nlte_pops[nlte_start+level-1] = ((lag*grid::modelgrid[modelgridindex].nlte_pops[nlte_start+level-1]) + gsl_vector_get(x,level))/(lag + 1.0)/grid::get_rho(modelgridindex);
       }
       // If there is a superlevel then write that too
 
       if (super_level == 1)
       {
-        //printout("I thought the super level was: %g\n", globals::modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte]);
+        //printout("I thought the super level was: %g\n", grid::modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte]);
 
-        globals::modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte] = gsl_vector_get(x,nlevels_nlte+1) / globals::modelgrid[modelgridindex].rho / superlevel_partition;
-        //	      globals::modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte] = ((lag*globals::modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte]) + gsl_vector_get(x,nlevels_nlte+1))/(lag + 1.0)/globals::modelgrid[modelgridindex].rho/superlevel_partition;
+        grid::modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte] = gsl_vector_get(x,nlevels_nlte+1) / grid::modelgrid[modelgridindex].rho / superlevel_partition;
+        //	      grid::modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte] = ((lag*grid::modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte]) + gsl_vector_get(x,nlevels_nlte+1))/(lag + 1.0)/grid::modelgrid[modelgridindex].rho/superlevel_partition;
 
-        //printout("Now I think it is: %g\n", globals::modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte]);
+        //printout("Now I think it is: %g\n", grid::modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte]);
         //printout("I also interfered with index %d.\n", nlte_start+nlevels_nlte);
       }
 
-      //printout("I had a ground level pop of %g, a part fn of %g and therefore an ion pop of %g\n", globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion], globals::modelgrid[modelgridindex].composition[element].partfunct[ion], globals::modelgrid[modelgridindex].composition[element].partfunct[ion]*globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]/stat_weight(element,ion,0));
+      //printout("I had a ground level pop of %g, a part fn of %g and therefore an ion pop of %g\n", grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion], grid::modelgrid[modelgridindex].composition[element].partfunct[ion], grid::modelgrid[modelgridindex].composition[element].partfunct[ion]*grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]/stat_weight(element,ion,0));
 
-      globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = gsl_vector_get(x,0);
+      grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = gsl_vector_get(x,0);
 
-      //printout("Now I have a ground level pop of %g, a part fn of %g and therefore an ion pop of %g\n", globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion], calculate_partfunct(element, ion, modelgridindex), calculate_partfunct(element, ion, modelgridindex)*globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]/stat_weight(element,ion,0));
+      //printout("Now I have a ground level pop of %g, a part fn of %g and therefore an ion pop of %g\n", grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion], calculate_partfunct(element, ion, modelgridindex), calculate_partfunct(element, ion, modelgridindex)*grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]/stat_weight(element,ion,0));
 
-      //printout("For the ion above, I had ground state of  %g, a part fn of %g and therefore an ion pop of %g\n",globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion+1], globals::modelgrid[modelgridindex].composition[element].partfunct[ion+1], globals::modelgrid[modelgridindex].composition[element].partfunct[ion+1]*globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion+1]/stat_weight(element,ion+1,0));
+      //printout("For the ion above, I had ground state of  %g, a part fn of %g and therefore an ion pop of %g\n",grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion+1], grid::modelgrid[modelgridindex].composition[element].partfunct[ion+1], grid::modelgrid[modelgridindex].composition[element].partfunct[ion+1]*grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion+1]/stat_weight(element,ion+1,0));
 
       //printout("Now I get that it should have an ion pop of %g\n", gsl_vector_get(x,nlte_size-1));
 
-      //printout("Accordingly, my phi-factor is: %g\n", calculate_partfunct(element, ion, modelgridindex)*globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]/stat_weight(element,ion,0)/gsl_vector_get(x,nlte_size-1)/nne);
+      //printout("Accordingly, my phi-factor is: %g\n", calculate_partfunct(element, ion, modelgridindex)*grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]/stat_weight(element,ion,0)/gsl_vector_get(x,nlte_size-1)/nne);
       //printout("The ionization solver gives phi = %g\n", phi(element, ion, modelgridindex));
 
-      //printout("From ion fract, the lower and upper ion pops should be %g and %g\n", ionfract(element, ion, modelgridindex, nne)*get_elem_abundance(modelgridindex,element)/ elements[element].mass * get_rho(modelgridindex), ionfract(element, ion+1, modelgridindex, nne)*get_elem_abundance(modelgridindex,element)/ elements[element].mass * get_rho(modelgridindex));
-      //printout("I think that the element population is: %g (from %g and %g)\n", get_elem_abundance(modelgridindex,element)/ elements[element].mass * get_rho(modelgridindex), get_elem_abundance(modelgridindex,element), get_rho(modelgridindex));
+      //printout("From ion fract, the lower and upper ion pops should be %g and %g\n", ionfract(element, ion, modelgridindex, nne)*grid::get_elem_abundance(modelgridindex,element)/ elements[element].mass * grid::get_rho(modelgridindex), ionfract(element, ion+1, modelgridindex, nne)*grid::get_elem_abundance(modelgridindex,element)/ elements[element].mass * grid::get_rho(modelgridindex));
+      //printout("I think that the element population is: %g (from %g and %g)\n", grid::get_elem_abundance(modelgridindex,element)/ elements[element].mass * grid::get_rho(modelgridindex), grid::get_elem_abundance(modelgridindex,element), grid::get_rho(modelgridindex));
       //printout("I currently think that the top ion is: %d\n", elements_uppermost_ion[tid][element]);
 
       gsl_permutation_free(p);
@@ -1604,8 +1604,8 @@ __host__ __device__
 double superlevel_boltzmann(const int modelgridindex, const int element, const int ion, const int level)
 {
   const int superlevel_index = get_nlevels_nlte(element,ion) + 1;
-  // const double T_exc = get_TJ(modelgridindex);
-  const double T_exc = get_Te(modelgridindex);
+  // const double T_exc = grid::get_TJ(modelgridindex);
+  const double T_exc = grid::get_Te(modelgridindex);
   const double E_level = epsilon(element, ion, level);
   const double E_superlevel = epsilon(element, ion, superlevel_index);
 
@@ -1641,7 +1641,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep)
 
   assert_always(nlte_file != NULL);
   // fprintf(nlte_file,"#timestep %d modelgridindex %d T_R %g T_e %g W %g T_J %g nne %g\n",
-  //         timestep, n, get_TR(n), get_Te(n), get_W(n), get_TJ(n), get_nne(n));
+  //         timestep, n, grid::get_TR(n), grid::get_Te(n), grid::get_W(n), grid::get_TJ(n), grid::get_nne(n));
 
   for (int element = 0; element < get_nelements(); element++)
   {
@@ -1674,14 +1674,14 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep)
           else
           {
             nnlevelnlte =  (
-               globals::modelgrid[modelgridindex].nlte_pops[ion_first_nlte + level - 1] * globals::modelgrid[modelgridindex].rho);
+               grid::modelgrid[modelgridindex].nlte_pops[ion_first_nlte + level - 1] * grid::modelgrid[modelgridindex].rho);
           }
         }
         else
         {
           // superlevel, so add the populations of all other levels in the superlevel
           const double slpopfactor = (
-            globals::modelgrid[modelgridindex].nlte_pops[ion_first_nlte + nlevels_nlte] * globals::modelgrid[modelgridindex].rho);
+            grid::modelgrid[modelgridindex].nlte_pops[ion_first_nlte + nlevels_nlte] * grid::modelgrid[modelgridindex].rho);
 
           nnlevellte = 0;
           double superlevel_partfunc = 0;
@@ -1694,7 +1694,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep)
 
           nnlevelnlte = slpopfactor * superlevel_partfunc;
 
-          // printout("nltepop_write_to_file: The Z=%d ionstage %d superlevel population is %g with rho %g and superlevel_partfunc %g Te %g scaled pop stored as %g\n", get_element(element), get_ionstage(element, ion), nnlevelnlte, globals::modelgrid[modelgridindex].rho, superlevel_partfunc, get_Te(modelgridindex), globals::modelgrid[modelgridindex].nlte_pops[ion_first_nlte + nlevels_nlte]);
+          // printout("nltepop_write_to_file: The Z=%d ionstage %d superlevel population is %g with rho %g and superlevel_partfunc %g Te %g scaled pop stored as %g\n", get_element(element), get_ionstage(element, ion), nnlevelnlte, grid::modelgrid[modelgridindex].rho, superlevel_partfunc, grid::get_Te(modelgridindex), grid::modelgrid[modelgridindex].nlte_pops[ion_first_nlte + nlevels_nlte]);
         }
 
         const double ion_popfrac = nnlevelnlte / ionstagepop(modelgridindex, element, ion);
@@ -1715,9 +1715,9 @@ void nltepop_write_restart_data(FILE *restart_file)
 
   fprintf(restart_file, "%d\n", globals::total_nlte_levels);
 
-  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
   {
-    if (get_numassociatedcells(modelgridindex) > 0)
+    if (grid::get_numassociatedcells(modelgridindex) > 0)
     {
       fprintf(restart_file, "%d\n", modelgridindex);
       for (int element = 0; element < get_nelements(); element++)
@@ -1727,16 +1727,16 @@ void nltepop_write_restart_data(FILE *restart_file)
         {
           fprintf(restart_file, "%d %g %g %lg\n",
                   ion,
-                  globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
-                  globals::modelgrid[modelgridindex].composition[element].partfunct[ion],
-                  globals::modelgrid[modelgridindex].cooling[element].contrib[ion]);
+                  grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
+                  grid::modelgrid[modelgridindex].composition[element].partfunct[ion],
+                  grid::modelgrid[modelgridindex].cooling[element].contrib[ion]);
         }
       }
       if (NLTE_POPS_ON)
       {
         for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++)
         {
-          fprintf(restart_file, "%lg ", globals::modelgrid[modelgridindex].nlte_pops[nlteindex]);
+          fprintf(restart_file, "%lg ", grid::modelgrid[modelgridindex].nlte_pops[nlteindex]);
         }
       }
     }
@@ -1764,9 +1764,9 @@ void nltepop_read_restart_data(FILE *restart_file)
     abort();
   }
 
-  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
   {
-    if (get_numassociatedcells(modelgridindex) > 0)
+    if (grid::get_numassociatedcells(modelgridindex) > 0)
     {
       int mgi_in;
       fscanf(restart_file, "%d\n", &mgi_in);
@@ -1784,9 +1784,9 @@ void nltepop_read_restart_data(FILE *restart_file)
           int ion_in;
           fscanf(restart_file, "%d %g %g %lg\n",
                  &ion_in,
-                 &globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
-                 &globals::modelgrid[modelgridindex].composition[element].partfunct[ion],
-                 &globals::modelgrid[modelgridindex].cooling[element].contrib[ion]);
+                 &grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
+                 &grid::modelgrid[modelgridindex].composition[element].partfunct[ion],
+                 &grid::modelgrid[modelgridindex].cooling[element].contrib[ion]);
           if (ion_in != ion)
           {
             printout("ERROR: expected data for ion %d but found ion %d\n", ion, ion_in);
@@ -1798,7 +1798,7 @@ void nltepop_read_restart_data(FILE *restart_file)
       {
         for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++)
         {
-          fscanf(restart_file, "%lg ", &globals::modelgrid[modelgridindex].nlte_pops[nlteindex]);
+          fscanf(restart_file, "%lg ", &grid::modelgrid[modelgridindex].nlte_pops[nlteindex]);
         }
       }
     }

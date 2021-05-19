@@ -1,6 +1,8 @@
 #ifndef RATECOEFF_H
 #define RATECOEFF_H
 
+#include "cuda.h"
+
 void ratecoefficients_init(void);
 
 __host__ __device__ double select_continuum_nu(int element, int ion, int level, int upperionlevel, float T_e);

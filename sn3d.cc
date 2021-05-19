@@ -99,12 +99,12 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
     {
       radfield::do_MPI_Bcast(modelgridindex, root);
 
-      if (get_numassociatedcells(modelgridindex) > 0)
+      if (grid::get_numassociatedcells(modelgridindex) > 0)
       {
         nonthermal::nt_MPI_Bcast(modelgridindex, root);
         if (NLTE_POPS_ON)
         {
-          MPI_Bcast(globals::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, root, MPI_COMM_WORLD);
+          MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, root, MPI_COMM_WORLD);
         }
       }
     }
@@ -119,24 +119,24 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
         //nn = nonemptycells[my_rank+nncl*nprocs];
         MPI_Pack(&mgi, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
         //if (globals::cell[nn].rho > MINDENSITY)
-        if (get_numassociatedcells(mgi) > 0)
+        if (grid::get_numassociatedcells(mgi) > 0)
         {
-          MPI_Pack(&globals::modelgrid[mgi].Te, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(&globals::modelgrid[mgi].TR, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(&globals::modelgrid[mgi].TJ, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(&globals::modelgrid[mgi].W, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(&globals::modelgrid[mgi].rho, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(&globals::modelgrid[mgi].nne, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(&globals::modelgrid[mgi].nnetot, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(&globals::modelgrid[mgi].kappagrey, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(&globals::modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(&globals::modelgrid[mgi].thick, 1, MPI_SHORT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&grid::modelgrid[mgi].Te, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&grid::modelgrid[mgi].TR, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&grid::modelgrid[mgi].TJ, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&grid::modelgrid[mgi].W, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&grid::modelgrid[mgi].rho, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&grid::modelgrid[mgi].nne, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&grid::modelgrid[mgi].nnetot, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&grid::modelgrid[mgi].kappagrey, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&grid::modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&grid::modelgrid[mgi].thick, 1, MPI_SHORT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
 
           for (int element = 0; element < get_nelements(); element++)
           {
-            MPI_Pack(globals::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-            MPI_Pack(globals::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-            MPI_Pack(globals::modelgrid[mgi].cooling[element].contrib, get_nions(element), MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+            MPI_Pack(grid::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+            MPI_Pack(grid::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+            MPI_Pack(grid::modelgrid[mgi].cooling[element].contrib, get_nions(element), MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
           }
         }
       }
@@ -155,24 +155,24 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
       int mgi;
       MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
       //if (globals::cell[ncl].rho > MINDENSITY)
-      if (get_numassociatedcells(mgi) > 0)
+      if (grid::get_numassociatedcells(mgi) > 0)
       {
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].Te, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].TR, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].TJ, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].W, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].rho, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].nne, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].nnetot, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].kappagrey, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].thick, 1, MPI_SHORT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].Te, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].TR, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].TJ, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].W, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].rho, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].nne, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].nnetot, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].kappagrey, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].thick, 1, MPI_SHORT, MPI_COMM_WORLD);
 
         for (int element = 0; element < get_nelements(); element++)
         {
-          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, globals::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
-          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, globals::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
-          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, globals::modelgrid[mgi].cooling[element].contrib, get_nions(element), MPI_DOUBLE, MPI_COMM_WORLD);
+          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
+          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
+          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].cooling[element].contrib, get_nions(element), MPI_DOUBLE, MPI_COMM_WORLD);
         }
       }
     }
@@ -185,11 +185,11 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
         MPI_Barrier(MPI_COMM_WORLD);
         /// Reduce the corrphotoionrenorm array.
         printout("nts %d, titer %d: bcast corr photoionrenorm\n", nts, titer);
-        MPI_Allreduce(MPI_IN_PLACE, &globals::corrphotoionrenorm, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &globals::corrphotoionrenorm, grid::get_npts_model() * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         /// Reduce the gammaestimator array. Only needed to write restart data.
         printout("nts %d, titer %d: bcast gammaestimator\n", nts, titer);
-        MPI_Allreduce(MPI_IN_PLACE, &globals::gammaestimator, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &globals::gammaestimator, grid::get_npts_model() * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       }
     #endif
   #endif
@@ -201,16 +201,16 @@ static void mpi_reduce_estimators(int my_rank, int nts)
 {
   radfield::reduce_estimators();
   #ifndef FORCE_LTE
-    MPI_Allreduce(MPI_IN_PLACE, &globals::ffheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::colheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::ffheatingestimator, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::colheatingestimator, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
     #if (!NO_LUT_PHOTOION)
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &globals::gammaestimator, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &globals::gammaestimator, grid::get_npts_model() * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
     #if (!NO_LUT_BFHEATING)
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &globals::bfheatingestimator, MMODELGRID * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &globals::bfheatingestimator, grid::get_npts_model() * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
   #endif
 
@@ -219,15 +219,15 @@ static void mpi_reduce_estimators(int my_rank, int nts)
     MPI_Allreduce(MPI_IN_PLACE, globals::acounter, globals::nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   #endif
 
-  //double deltaV = pow(wid_init * globals::time_step[nts].mid/globals::tmin, 3.0);
+  //double deltaV = pow(grid::wid_init * globals::time_step[nts].mid/globals::tmin, 3.0);
   //double deltat = globals::time_step[nts].width;
   if (globals::do_rlc_est != 0)
   {
-    MPI_Allreduce(MPI_IN_PLACE, &globals::rpkt_emiss, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::rpkt_emiss, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
   if (globals::do_comp_est)
   {
-    MPI_Allreduce(MPI_IN_PLACE, &globals::compton_emiss, MMODELGRID * EMISS_MAX, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::compton_emiss, grid::get_npts_model() * EMISS_MAX, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
   }
 
   /// Communicate gamma and positron deposition and write to file
@@ -379,7 +379,7 @@ static void save_grid_and_packets(
 
   if (my_rank == 0)
   {
-    write_grid_restart_data(nts);
+    grid::write_grid_restart_data(nts);
     update_parameterfile(nts);
   }
 
@@ -445,7 +445,7 @@ static bool do_timestep(
       if ((!globals::simulation_continued_from_saved) || (nts - globals::itstep != 0) || (titer != 0))
       {
         printout("nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
-        for (int i = 0; i < MMODELGRID * get_nelements() * get_max_nions(); i++)
+        for (int i = 0; i < grid::get_npts_model() * get_nelements() * get_max_nions(); i++)
         {
           globals::corrphotoionrenorm[i] = 0.;
         }
@@ -847,11 +847,6 @@ int main(int argc, char** argv)
 
   stats::init();
 
-  /// As a precaution, explicitly zero all the estimators here
-  zero_estimators();
-
-  printout("time after zero estimators %ld\n", time(NULL));
-
   /// Record the chosen syn_dir
   FILE *syn_file = fopen_required("syn_dir.txt", "w");
   fprintf(syn_file, "%g %g %g", globals::syn_dir[0], globals::syn_dir[1], globals::syn_dir[2]);
@@ -870,11 +865,13 @@ int main(int argc, char** argv)
     write_timestep_file();
   }
   printout("time time init %ld\n", time(NULL));
-  grid_init(my_rank);
+  grid::grid_init(my_rank);
 
   printout("Simulation propagates %g packets per process (total %g with nprocs %d)\n", 1. * globals::npkts, 1. * globals::npkts * globals::nprocs, globals::nprocs);
 
   printout("[info] mem_usage: packets occupy %.1f MB\n", MPKTS * sizeof(PKT) / 1024. / 1024.);
+
+  zero_estimators();
 
   if (!globals::simulation_continued_from_saved)
   {
@@ -891,7 +888,7 @@ int main(int argc, char** argv)
   int nstart = 0;
   int ndo = 0;
   int maxndo = 0;
-  get_nstart_ndo(my_rank, globals::nprocs, &nstart, &ndo, &maxndo);
+  grid::get_nstart_ndo(my_rank, globals::nprocs, &nstart, &ndo, &maxndo);
   printout("process rank %d (range 0 to %d) doing %d cells", my_rank, globals::nprocs - 1, ndo);
   if (ndo > 0)
   {

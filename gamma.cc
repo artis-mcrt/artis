@@ -11,6 +11,7 @@
 #include "vectors.h"
 
 #include <fstream>
+#include <cstring>
 
 // Code for handing gamma rays - creation and propagation
 
@@ -46,8 +47,8 @@ static void read_gamma_spectrum(const int z, const int a, const char filename[50
 
   gamma_spectra[nucindex].nlines = nlines;
 
-  gamma_spectra[nucindex].energy = (double *) calloc(nlines, sizeof(double));
-  gamma_spectra[nucindex].probability = (double *) calloc(nlines, sizeof(double));
+  gamma_spectra[nucindex].energy = (double *) malloc(nlines * sizeof(double));
+  gamma_spectra[nucindex].probability = (double *) malloc(nlines * sizeof(double));
 
   double E_gamma_avg = 0.;
   for (int n = 0; n < nlines; n++)
@@ -68,8 +69,35 @@ static void read_gamma_spectrum(const int z, const int a, const char filename[50
 }
 
 
+static void set_trivial_gamma_spectrum(const int z, const int a)
+{
+  // printout("Setting trivial gamma spectrum for z %d a %d engamma %g\n", z, a, decay::nucdecayenergygamma(z, a));
+  const int nucindex = decay::get_nuc_index(z, a);
+  const int nlines = 1;
+  gamma_spectra[nucindex].nlines = nlines;
+  gamma_spectra[nucindex].energy = (double *) malloc(nlines * sizeof(double));
+  gamma_spectra[nucindex].probability = (double *) malloc(nlines * sizeof(double));
+  gamma_spectra[nucindex].energy[0] = decay::nucdecayenergygamma(z, a);
+  gamma_spectra[nucindex].probability[0] = 1.;
+}
+
+
 static void read_decaydata(void)
 {
+  // migrate from old filename
+  if (!std::ifstream("ni56_lines.txt") && std::ifstream("ni_lines.txt"))
+  {
+    printout("Moving ni_lines.txt to ni56_lines.txt\n");
+    std::rename("ni_lines.txt", "ni56_lines.txt");
+  }
+
+  // migrate from old filename
+  if (!std::ifstream("co56_lines.txt") && std::ifstream("co_lines.txt"))
+  {
+    printout("Moving co_lines.txt to co56_lines.txt\n");
+    std::rename("co_lines.txt", "co56_lines.txt");
+  }
+
   gamma_spectra = (struct gamma_spec *) calloc(decay::get_num_nuclides(), sizeof(struct gamma_spec));
 
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
@@ -79,32 +107,57 @@ static void read_decaydata(void)
     gamma_spectra[nucindex].probability = NULL;
     const int z = decay::get_nuc_z(nucindex);
     const int a = decay::get_nuc_a(nucindex);
-    decay::set_nucdecayenergygamma(z, a, 0.);
+    if (z < 1)
+    {
+      continue;
+    }
+
+    const char *elname = decay::get_elname(z);
+    char elnamelower[strlen(elname) + 1];
+    for(int i = 0; i <= (int) strlen(elname); i++)
+    {
+      elnamelower[i] = tolower(elname[i]);
+    }
+
+    // look in the current folder
+    char filename[100];
+    sprintf(filename, "%s%d_lines.txt", elnamelower, a);
+
+    // look in the 'data' subfolder
+    char filename2[100];
+    sprintf(filename2, "data/%s%d_lines.txt", elnamelower, a);
+
+    if (std::ifstream(filename))
+    {
+      read_gamma_spectrum(z, a, filename);
+    }
+    else if (std::ifstream(filename2))
+    {
+      read_gamma_spectrum(z, a, filename2);
+    }
+    else if (decay::nucdecayenergygamma(z, a) > 0.)
+    {
+      printout("%s does not exist. Setting 100%% chance of single gamma-line with energy %g MeV\n",
+        filename, decay::nucdecayenergygamma(z, a) / EV / 1e6);
+      set_trivial_gamma_spectrum(z, a);
+    }
+    else
+    {
+      printout("%s does not exist. No gamma decay from this nuclide.\n", filename);
+    }
   }
 
-  // migrate from old filename
-  if (!std::ifstream("ni56_lines.txt") && std::ifstream("ni_lines.txt"))
-  {
-    printout("Moving ni_lines.txt to ni56_lines.txt\n");
-    std::rename("ni_lines.txt", "ni56_lines.txt");
-  }
-  read_gamma_spectrum(28, 56, "ni56_lines.txt");
-
-  // migrate from old filename
-  if (!std::ifstream("co56_lines.txt") && std::ifstream("co_lines.txt"))
-  {
-    printout("Moving co_lines.txt to co56_lines.txt\n");
-    std::rename("co_lines.txt", "co56_lines.txt");
-  }
-  read_gamma_spectrum(27, 56, "co56_lines.txt");
-
-  read_gamma_spectrum(23, 48, "v48_lines.txt");
-
-  read_gamma_spectrum(24, 48, "cr48_lines.txt");
-
-  read_gamma_spectrum(28, 57, "ni57_lines.txt");
-
-  read_gamma_spectrum(27, 57, "co57_lines.txt");
+  // read_gamma_spectrum(28, 56, "ni56_lines.txt");
+  //
+  // read_gamma_spectrum(27, 56, "co56_lines.txt");
+  //
+  // read_gamma_spectrum(23, 48, "v48_lines.txt");
+  //
+  // read_gamma_spectrum(24, 48, "cr48_lines.txt");
+  //
+  // read_gamma_spectrum(28, 57, "ni57_lines.txt");
+  //
+  // read_gamma_spectrum(27, 57, "co57_lines.txt");
 
   decay::set_nucdecayenergygamma(26, 52, 0.86 * MEV);  // Fe52
   decay::set_nucdecayenergygamma(25, 52, 3.415 * MEV);  // Mn52
@@ -323,13 +376,19 @@ static double sig_comp(const PKT *pkt_ptr)
     sigma_cmf = sigma_compton_partial(xx, fmax);
   }
 
+  assert_testmodeonly(std::isfinite(sigma_cmf));
+
   // Now need to multiply by the electron number density.
   const int cellindex = pkt_ptr->where;
-  sigma_cmf *= get_nnetot(get_cell_modelgridindex(cellindex));
+  sigma_cmf *= grid::get_nnetot(grid::get_cell_modelgridindex(cellindex));
+
+  assert_testmodeonly(std::isfinite(sigma_cmf));
 
   // Now need to convert between frames.
 
   const double sigma_rf = sigma_cmf * doppler_packetpos(pkt_ptr);
+
+  assert_testmodeonly(std::isfinite(sigma_rf));
 
   return sigma_rf;
 }
@@ -545,7 +604,7 @@ void do_gamma(PKT *pkt_ptr, double t2)
   int snext;
   double sdist = boundary_cross(pkt_ptr, pkt_ptr->prop_time, &snext);
 
-  const double maxsdist = (globals::grid_type == GRID_SPHERICAL1D) ? 2 * globals::rmax * (pkt_ptr->prop_time + sdist / globals::CLIGHT_PROP) / globals::tmin : globals::rmax * pkt_ptr->prop_time / globals::tmin;
+  const double maxsdist = (grid::grid_type == GRID_SPHERICAL1D) ? 2 * globals::rmax * (pkt_ptr->prop_time + sdist / globals::CLIGHT_PROP) / globals::tmin : globals::rmax * pkt_ptr->prop_time / globals::tmin;
   if (sdist > maxsdist)
   {
     printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", globals::rmax, pkt_ptr->prop_time/globals::tmin, sdist);
@@ -558,7 +617,7 @@ void do_gamma(PKT *pkt_ptr, double t2)
     sdist = 0;
   }
 
-  if (((snext < 0) && (snext != -99)) || (snext >= globals::ngrid))
+  if (((snext < 0) && (snext != -99)) || (snext >= grid::ngrid))
   {
     printout("Heading for inappropriate grid cell. Abort.\n");
     printout("Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
@@ -584,6 +643,10 @@ void do_gamma(PKT *pkt_ptr, double t2)
   const double kap_photo_electric = sig_photo_electric(pkt_ptr);
   const double kap_pair_prod = sig_pair_prod(pkt_ptr);
   const double kap_tot = kap_compton + kap_photo_electric + kap_pair_prod;
+
+  assert_testmodeonly(std::isfinite(kap_compton));
+  assert_testmodeonly(std::isfinite(kap_photo_electric));
+  assert_testmodeonly(std::isfinite(kap_pair_prod));
 
   // So distance before physical event is...
 
@@ -720,7 +783,7 @@ void do_gamma(PKT *pkt_ptr, double t2)
     {
       printout("Failed to identify event. Gamma (1). kap_compton %g kap_photo_electric %g kap_tot %g zrand %g Abort.\n", kap_compton, kap_photo_electric, kap_tot, zrand);
       const int cellindex = pkt_ptr->where;
-      printout(" /*globals::cell[*/pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g pkt_ptr->dir[2] %g pkt_ptr->pos[0] %g pkt_ptr->pos[1] %g pkt_ptr->pos[2] %g \n",get_rho(get_cell_modelgridindex(cellindex)), pkt_ptr->nu_cmf,pkt_ptr->dir[0],pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2],pkt_ptr->pos[1],pkt_ptr->pos[2]);
+      printout(" /*globals::cell[*/pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g pkt_ptr->dir[2] %g pkt_ptr->pos[0] %g pkt_ptr->pos[1] %g pkt_ptr->pos[2] %g \n",grid::get_rho(grid::get_cell_modelgridindex(cellindex)), pkt_ptr->nu_cmf,pkt_ptr->dir[0],pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2],pkt_ptr->pos[1],pkt_ptr->pos[2]);
 
       abort();
     }

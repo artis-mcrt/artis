@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -730,7 +731,6 @@ static void read_atomicdata_files(void)
   int totaluptrans = 0;
   int totaldowntrans = 0;
 
-  ///open atomic data file
   FILE *compositiondata = fopen_required("compositiondata.txt", "r");
 
   FILE *adata = fopen_required("adata.txt", "r");
@@ -738,11 +738,6 @@ static void read_atomicdata_files(void)
   /// initialize atomic data structure to number of elements
   int nelements_in;
   fscanf(compositiondata,"%d", &nelements_in);
-  if (nelements_in > MELEMENTS)
-  {
-    printout("ERROR: nelements_in = %d > %d MELEMENTS", get_nelements(), MELEMENTS);
-    abort();
-  }
   set_nelements(nelements_in);
   if ((globals::elements = (elementlist_entry *) calloc(get_nelements(), sizeof(elementlist_entry))) == NULL)
   {
@@ -772,7 +767,6 @@ static void read_atomicdata_files(void)
 
   int lineindex = 0;  ///counter to determine the total number of lines, initialisation
   int uniqueionindex = -1; // index into list of all ions of all elements
-
   /// readin
   int nbfcheck = 0;
   int heatingcheck = 0;
@@ -795,8 +789,10 @@ static void read_atomicdata_files(void)
     assert_always(abundance >= 0);
     assert_always(mass_amu >= 0);
 
+    update_max_nions(nions);
+    assert_always(nions <= get_max_nions());
+
     /// write this element's data to memory
-    assert_always(nions <= globals::maxion);
     globals::elements[element].anumber = Z;
     globals::elements[element].nions = nions;
     globals::elements[element].abundance = abundance;       /// abundances are expected to be given by mass
@@ -948,10 +944,9 @@ static void read_atomicdata_files(void)
         nlevels_requiretransitions = 0;
         nlevels_requiretransitions_upperlevels = nlevelsmax; // no effect if previous line is zero
       }
-      if (nlevels_requiretransitions > nlevelsmax)
-        nlevels_requiretransitions = nlevelsmax;
-      if (nlevels_requiretransitions_upperlevels > nlevelsmax)
-        nlevels_requiretransitions_upperlevels = nlevelsmax;
+
+      nlevels_requiretransitions = std::min(nlevelsmax, nlevels_requiretransitions);
+      nlevels_requiretransitions_upperlevels = std::min(nlevelsmax, nlevels_requiretransitions_upperlevels);
 
       transitiontable = read_ion_transitions(transitiondata, tottransitions_in, &tottransitions, transitiontable,
         nlevels_requiretransitions, nlevels_requiretransitions_upperlevels, Z, ionstage);
@@ -1009,13 +1004,7 @@ static void read_atomicdata_files(void)
       /// Also the phixslist
       if (ion < nions - 1)
       {
-//            globals::elements[element].ions[ion].nbfcontinua = globals::elements[element].ions[ion].ionisinglevels;//nlevelsmax;
         nbfcheck += globals::elements[element].ions[ion].ionisinglevels; //nlevelsmax;
-/*            if ((globals::elements[element].ions[ion].phixslist = calloc(nlevelsmax, sizeof(ionsphixslist_t))) == NULL)
-        {
-          printout("[fatal] input: not enough memory to initialize phixslist for element %d, ion %d ... abort\n",element,ion);
-          abort();
-        }*/
       }
     }
   }
@@ -1230,7 +1219,7 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
       element = globals::phixslist[tid].groundcont[index].element;
       ion = globals::phixslist[tid].groundcont[index].ion;
     }
-    *index_in_groundlevelcontestimator = element * globals::maxion + ion;
+    *index_in_groundlevelcontestimator = element * get_max_nions() + ion;
   }
 
   return index;
@@ -1259,7 +1248,7 @@ static void setup_cellhistory(void)
 
       globals::cellhistory[tid].cellnumber = -99;
 
-      mem_usage_cellhistory += globals::ncoolingterms * sizeof(sizeof(double));
+      mem_usage_cellhistory += globals::ncoolingterms * sizeof(double);
       globals::cellhistory[tid].cooling_contrib = (double *) calloc(globals::ncoolingterms, sizeof(double));
 
       for (int element = 0; element < get_nelements(); element++)
@@ -1650,8 +1639,6 @@ void input(int rank)
 {
   globals::homogeneous_abundances = false;
 
-  globals::maxion = MIONS;
-
   globals::npkts = MPKTS;
 /*  #ifdef FORCE_LTE
     n_titer = 1;
@@ -1699,6 +1686,7 @@ void input(int rank)
   #endif
 
   read_atomicdata();
+
   #ifdef MPI_ON
     const time_t time_before_barrier = time(NULL);
     printout("barrier after read_atomicdata(): time before barrier %d, ", (int) time_before_barrier);
@@ -1706,7 +1694,7 @@ void input(int rank)
     printout("time after barrier %d (waited %d seconds)\n", (int) time(NULL), (int) (time(NULL) - time_before_barrier));
   #endif
 
-  read_ejecta_model(get_model_type());
+  grid::read_ejecta_model();
 
   /// Now that the list exists use it to find values for spectral synthesis
   /// stuff.
@@ -1727,7 +1715,7 @@ void input(int rank)
 }
 
 
-static bool lineiscommentonly(std::string &line)
+bool lineiscommentonly(std::string &line)
 {
   // if (line.length() == 0)
   //   return true;
@@ -1743,7 +1731,7 @@ static bool lineiscommentonly(std::string &line)
 }
 
 
-static bool get_noncommentline(std::istream &input, std::string &line)
+bool get_noncommentline(std::istream &input, std::string &line)
 // read the next line, skipping any comment lines beginning with '#'
 {
   while (true)
@@ -1866,7 +1854,8 @@ void read_parameterfile(int rank)
   globals::tmin = tmin_days * DAY;
   globals::tmax = tmax_days * DAY;
 
-  float dum2, dum3;
+  float dum2 = 0.;
+  float dum3 = 0.;
   assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> dum2 >> dum3;
   globals::nusyn_min = dum2 * MEV / H; // lowest frequency to synthesise
@@ -1886,15 +1875,15 @@ void read_parameterfile(int rank)
   std::stringstream(line) >> dum1; // model type
   if (dum1 == 1)
   {
-    set_model_type(RHO_1D_READ);
+    set_model_type(grid::RHO_1D_READ);
   }
   else if (dum1 == 2)
   {
-    set_model_type(RHO_2D_READ);
+    set_model_type(grid::RHO_2D_READ);
   }
   else if (dum1 == 3)
   {
-    set_model_type(RHO_3D_READ);
+    set_model_type(grid::RHO_3D_READ);
   }
 
   assert_always(get_noncommentline(file, line));
