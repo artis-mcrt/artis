@@ -54,14 +54,20 @@ static void read_energy_in_cells_1d(void)
     abort();
   }
 
-//  double cell_energies[number_of_cells];
-//  double energy_counter = 0;
+  int cellnumber; // dummy value - this isn't saved
+  double cell_energy;
+  double energy_counter = 0.;
+  int n, mgi;
   for (n = 0; n < globals::ngrid; n++)
   {
-    int cellnumber; // dummy value - this isn't saved
-    double cell_energy;
+    mgi = get_cell_modelgridindex(n);
     fscanf(cell_energies_file, "%d %lf", &cellnumber, &cell_energy);
 //    printout("cellnumber %d cell energy %g\n", cellnumber, cell_energy);
+    if(cellnumber-1 != n)
+    {
+      printout("cell number in file does not match \n");
+      exit(0);
+    }
     if (mgi != MMODELGRID)
     {
       energy_counter += cell_energy;
