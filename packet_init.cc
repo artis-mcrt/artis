@@ -85,8 +85,8 @@ void packet_init(int my_rank, PKT *pkt)
 
     if (USE_ENERGYINPUTFILE)
     {
-      //todo: Luke: how do I call this? I put it in grid.cc
-      norm += vol_init_gridcell(m) * get_modelcell_energydensity_init(mgi);
+      norm += vol_init_gridcell(mgi) * get_modelcell_energydensity_init(mgi);
+      printout("norm %g vol_init_gridcell %g get_modelcell_energydensity_init %g", norm, vol_init_gridcell(mgi), get_modelcell_energydensity_init(mgi));
     }
     else
     {
