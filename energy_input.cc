@@ -55,20 +55,23 @@ static void read_energy_in_cells_1d(void)
   }
 
 //  double cell_energies[number_of_cells];
-  double energy_counter = 0;
-  for (int mgi = 0; mgi < get_npts_model(); mgi++)
+//  double energy_counter = 0;
+  for (n = 0; n < globals::ngrid; n++)
   {
     int cellnumber; // dummy value - this isn't saved
     double cell_energy;
     fscanf(cell_energies_file, "%d %lf", &cellnumber, &cell_energy);
 //    printout("cellnumber %d cell energy %g\n", cellnumber, cell_energy);
-    if(cellnumber-1 != mgi)
+    if (mgi != MMODELGRID)
     {
-      printout("cell number in file does not match \n");
-      exit(0);
+      energy_counter += cell_energy;
+      modelcell_energy[mgi] = cell_energy;
     }
-    energy_counter += cell_energy;
-    modelcell_energy[mgi] = cell_energy;
+    else
+    {
+//      empty cells must have 0 energy
+      modelcell_energy[mgi] = 0.;
+    }
   }
   modelcell_energy[get_npts_model()] = 0.; // special empty model cell
 
