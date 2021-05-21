@@ -39,7 +39,7 @@ void set_modelcell_energydensity_init(int modelgridindex, float x)
 }
 
 
-static void read_energy_in_cells_1d(void)
+static void read_energy_in_cells_3d(void)
 {
   /// energy released in simulation during start time and end time
 //  float start_time; //todo: change to model read in time
@@ -132,7 +132,7 @@ void energy_input_init(void)
   energy_fraction_deposited = (float *) calloc(300, sizeof(float));  //haven't decided how long this needs to be yet
   modelcell_energydensity_init = (float *) calloc((MMODELGRID), sizeof(float));
 
-  read_energy_in_cells_1d();
+  read_energy_in_cells_3d();
   read_energy_file();
 }
 
