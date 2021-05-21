@@ -1893,9 +1893,9 @@ void grid_init(int my_rank)
         //Luke: how do I call modelcell_energy here? defined in new energy cc file
         set_modelcell_energydensity_init(mgi, (modelcell_energy[mgi] / (vol_init * assoc_cells))); //modelcell_energy/cell volume ==> vol_init*associated cells
 
-        printout("cell volume init %g associated cells %d volume %g energydensity %g mgi %d get_energydensity %g\n",
+        printout("cell volume init %g associated cells %d volume %g energydensity %g mgi %d get_energydensity %g modelcell_energy %g\n",
                  vol_init, assoc_cells, vol_init*assoc_cells,
-                 modelcell_energy[mgi] / (vol_init * assoc_cells), mgi, get_modelcell_energydensity_init(mgi));
+                 modelcell_energy[mgi] / (vol_init * assoc_cells), mgi, get_modelcell_energydensity_init(mgi), modelcell_energy[mgi]);
       }
       else
       {
