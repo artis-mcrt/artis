@@ -180,7 +180,7 @@ void setup_generic_pellet(const double e0, const int mgi, PKT *pkt_ptr)
   }
   assert_always(ii < ntimes_energydep);
   pkt_ptr->tdecay = time_energydep[ii];
-  //    printout("tdecay pellet %g pkt number %d\n", pkt[n].tdecay/DAY, n);
-  //    printout("ii %d zrand %g energy_fraction_deposited %g time_energydep %g \n",
-  //             ii, zrand, energy_fraction_deposited[ii], time_energydep[ii]/DAY);
+//      printout("tdecay pellet %g pkt number %d\n", pkt_ptr->tdecay/DAY, pkt_ptr->number);
+//      printout("ii %d zrand %g energy_fraction_deposited %g time_energydep %g \n",
+//               ii, zrand, energy_fraction_deposited[ii], time_energydep[ii]/DAY);
 }
