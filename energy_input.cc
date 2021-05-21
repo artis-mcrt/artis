@@ -21,7 +21,10 @@ double get_etot_fromenergyfile(void)
 
 float get_modelcell_energydensity_init(int modelgridindex)
 {
-  printout("mgi %d", modelgridindex);
+//  if (modelgridindex != MMODELGRID)
+//  {
+//    printout("mgi %d modelcell_energydensity_init %g\n", modelgridindex, modelcell_energydensity_init[modelgridindex]);
+//  }
   assert_always(modelgridindex <= MMODELGRID);
   return modelcell_energydensity_init[modelgridindex];
 }
@@ -172,7 +175,6 @@ void energy_input_init(void)
 
 void setup_generic_pellet(const double e0, const int mgi, PKT *pkt_ptr)
 {
-  // I set TYPE_GENERIC_ENERGY_PELLET = 200, but let me know how you want to do this
   pkt_ptr->type = TYPE_GENERIC_ENERGY_PELLET;
 
   /// Choose decay time
