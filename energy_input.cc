@@ -21,7 +21,8 @@ double get_etot_fromenergyfile(void)
 
 float get_modelcell_energydensity_init(int modelgridindex)
 {
-  assert_always(modelgridindex < get_npts_model());
+  printout("mgi %d", modelgridindex);
+  assert_always(modelgridindex <= MMODELGRID);
   return modelcell_energydensity_init[modelgridindex];
 }
 
@@ -29,7 +30,11 @@ float get_modelcell_energydensity_init(int modelgridindex)
 void set_modelcell_energydensity_init(int modelgridindex, float x)
 {
   assert_always(modelcell_energydensity_init != NULL);
-  assert_always(modelgridindex < get_npts_model());
+  assert_always(modelgridindex < MMODELGRID);
+  if (x == 0)
+  {
+    assert_always(modelgridindex == MMODELGRID)
+  }
   modelcell_energydensity_init[modelgridindex] = x;
 }
 
@@ -46,13 +51,13 @@ static void read_energy_in_cells_1d(void)
   printout("read energydistribution.txt \n");
 
   fscanf(cell_energies_file, "%d", &number_of_cells);
-  if (number_of_cells != get_npts_model())  //Might not work for 3D - in classic it throws away empty cells for npts_model
-  {
-    printout("number of cells in energy file (%d) "
-             "does not match number of model grid cells (%d) - abort\n",
-             number_of_cells, get_npts_model());
-    abort();
-  }
+//  if (number_of_cells != get_npts_model())  //Might not work for 3D - in classic it throws away empty cells for npts_model
+//  {
+//    printout("number of cells in energy file (%d) "
+//             "does not match number of model grid cells (%d) - abort\n",
+//             number_of_cells, get_npts_model());
+//    abort();
+//  }
 
   int cellnumber; // dummy value - this isn't saved
   double cell_energy;
@@ -62,10 +67,10 @@ static void read_energy_in_cells_1d(void)
   {
     mgi = get_cell_modelgridindex(n);
     fscanf(cell_energies_file, "%d %lf", &cellnumber, &cell_energy);
-//    printout("cellnumber %d cell energy %g\n", cellnumber, cell_energy);
+    printout("cellnumber %d cell energy %g mgi %d MMODELGRID %d npointsmodel %d\n", cellnumber, cell_energy, mgi, MMODELGRID, get_npts_model());
     if(cellnumber-1 != n)
     {
-      printout("cell number in file does not match \n");
+      printout("cell number in file does not match: cellnumber %d n %d \n", cellnumber, n);
       exit(0);
     }
     if (mgi != MMODELGRID)
@@ -93,7 +98,7 @@ static void read_energy_file(void)
 //  int ntimes_energydep = 0;
   // number of times included in file
   fscanf(energyrate_file, "%d", &ntimes_energydep);
-  assert_always(ntimes_energydep <= globals::ntstep);  // Luke: can it be less than all of the timesteps?
+//  assert_always(ntimes_energydep <= globals::ntstep);  // todo: put this back when length array decided
 
   time_energydep = (float *) calloc(ntimes_energydep, sizeof(float));
 
@@ -119,9 +124,13 @@ void energy_input_init(void)
 {
   printout("reading energy files npts model %d \n", get_npts_model());
 
-  modelcell_energy = (double *) calloc((get_npts_model() + 1), sizeof(double));
-  energy_fraction_deposited = (float *) calloc(globals::ntstep, sizeof(float));
-  modelcell_energydensity_init = (float *) calloc((get_npts_model() + 1), sizeof(float));
+//  modelcell_energy = (double *) calloc((get_npts_model() + 1), sizeof(double));
+//  energy_fraction_deposited = (float *) calloc(globals::ntstep, sizeof(float));
+//  modelcell_energydensity_init = (float *) calloc((get_npts_model() + 1), sizeof(float));
+
+  modelcell_energy = (double *) calloc((MMODELGRID), sizeof(double));
+  energy_fraction_deposited = (float *) calloc(300, sizeof(float));  //haven't decided how long this needs to be yet
+  modelcell_energydensity_init = (float *) calloc((MMODELGRID), sizeof(float));
 
   read_energy_in_cells_1d();
   read_energy_file();
