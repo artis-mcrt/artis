@@ -902,7 +902,7 @@ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf,
   #ifdef DEBUG_ON
     if (!std::isfinite(nuJ[modelgridindex]))
     {
-      printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,nu_cmf);
+      printout("[fatal] update_estimators (LTE): estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,nu_cmf);
       abort();
     }
   #endif
