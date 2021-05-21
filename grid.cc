@@ -1287,11 +1287,8 @@ static void read_3d_model(void)
   /// This MUST be the same number as the maximum number of points used in the grid - if not, abort.
   int npts_model_in = 0;
   fscanf(model_input, "%d", &npts_model_in);
-  if (npts_model_in > get_npts_model())
-  {
-    printout("Too many points in input model. Abort. (%d > %d)\n", npts_model_in, get_npts_model());
-    abort();
-  }
+
+  set_npts_model(npts_model_in);
 
   ncoord_model[0] = ncoord_model[1] = ncoord_model[2] = round(pow(npts_model_in, 1/3.));
   assert_always(ncoord_model[0] * ncoord_model[1] * ncoord_model[2] == npts_model_in);
@@ -1323,10 +1320,10 @@ static void read_3d_model(void)
 
   decay::init_nuclides(std::vector<int>(), std::vector<int>());
 
-  // mgi is the index to the model grid - empty cells are sent to get_npts_model(),
+  // mgi is the index to the model grid - empty cells are sent to special value get_npts_model(),
   // otherwise each input cell is one modelgrid cell
-  int mgi = 0;
   int n = 0;
+  int mgi_nonempty = 0;
   while (!feof(model_input))
   {
     char line[1024] = "";
@@ -1370,15 +1367,10 @@ static void read_3d_model(void)
       abort();
     }
 
-    if (mgi > get_npts_model() - 1)
-    {
-      printout("3D model wants more modelgrid cells than get_npts_model(). Abort.\n");
-      abort();
-    }
-
     const bool keepcell = (rho_model > 0);
     if (keepcell)
     {
+      const int mgi = n;
       set_cell_modelgridindex(n, mgi);
       const double rho_tmin = rho_model * pow((t_model / globals::tmin), 3.);
       //printout("mgi %d, helper %g\n",mgi,helper);
@@ -1396,10 +1388,10 @@ static void read_3d_model(void)
       set_cell_modelgridindex(n, get_npts_model());
     }
 
-    read_2d3d_modelradioabundanceline(model_input, mgi, keepcell);
+    read_2d3d_modelradioabundanceline(model_input, n, keepcell);
     if (keepcell)
     {
-      mgi++;
+      mgi_nonempty++;
     }
 
     n++;
@@ -1421,11 +1413,9 @@ static void read_3d_model(void)
   }
 
   printout("min_den %g [g/cm3]\n", min_den);
-  printout("Effectively used model grid cells %d\n", mgi);
+  printout("Effectively used model grid cells %d\n", mgi_nonempty);
 
   /// Now, set actual size of the modelgrid to the number of non-empty cells.
-
-  set_npts_model(mgi);
 
   fclose(model_input);
 }
