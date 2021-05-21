@@ -184,4 +184,5 @@ void setup_generic_pellet(const double e0, const int mgi, PKT *pkt_ptr)
 //      printout("tdecay pellet %g pkt number %d\n", pkt_ptr->tdecay/DAY, pkt_ptr->number);
 //      printout("ii %d zrand %g energy_fraction_deposited %g time_energydep %g \n",
 //               ii, zrand, energy_fraction_deposited[ii], time_energydep[ii]/DAY);
+  pkt_ptr->e_cmf = e0;
 }
