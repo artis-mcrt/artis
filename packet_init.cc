@@ -86,7 +86,7 @@ void packet_init(int my_rank, PKT *pkt)
     if (USE_ENERGYINPUTFILE)
     {
       norm += vol_init_gridcell(mgi) * get_modelcell_energydensity_init(mgi);
-      printout("norm %g vol_init_gridcell %g get_modelcell_energydensity_init %g\n", norm, vol_init_gridcell(mgi), get_modelcell_energydensity_init(mgi));
+//      printout("norm %g vol_init_gridcell %g get_modelcell_energydensity_init %g\n", norm, vol_init_gridcell(mgi), get_modelcell_energydensity_init(mgi));
     }
     else
     {
