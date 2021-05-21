@@ -50,12 +50,13 @@ static void read_energy_in_cells_1d(void)
   fscanf(cell_energies_file, "%d", &number_of_cells);
 
   int cellnumber;
-  double cell_energy;
-  double energy_counter = 0;
+  double cell_energy = 0.;
+  double energy_counter = 0.;
   for (int mgi = 0; mgi < number_of_cells; mgi++)
   {
     fscanf(cell_energies_file, "%d %lf",
            &cellnumber, &cell_energy);
+    assert_always(cellnumber = mgi + 1);
     energy_counter += cell_energy;
     modelcell_energy[mgi] = cell_energy;
     printout("modelcell_energy %g mgi %d cellnumber %d \n",
