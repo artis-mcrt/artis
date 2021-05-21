@@ -31,13 +31,39 @@ void set_modelcell_energydensity_init(int modelgridindex, float x)
 {
   assert_always(modelcell_energydensity_init != NULL);
   assert_always(modelgridindex < MMODELGRID);
-  if (x == 0)
-  {
-    assert_always(modelgridindex == MMODELGRID)
-  }
+//  if (x == 0)
+//  {
+//    assert_always(modelgridindex == MMODELGRID) //true in 3D
+//  }
+//  printout("set_modelcell_energydensity_init x: %g \n", x);
   modelcell_energydensity_init[modelgridindex] = x;
 }
 
+
+static void read_energy_in_cells_1d(void)
+{
+  int number_of_cells; // number of model grid cells
+
+  FILE *cell_energies_file = fopen_required("energydistribution.txt", "r");
+  printout("read energydistribution.txt \n");
+
+  fscanf(cell_energies_file, "%d", &number_of_cells);
+
+  int cellnumber;
+  double cell_energy;
+  double energy_counter = 0;
+  for (int mgi = 0; mgi < number_of_cells; mgi++)
+  {
+    fscanf(cell_energies_file, "%d %lf",
+           &cellnumber, &cell_energy);
+    energy_counter += cell_energy;
+    modelcell_energy[mgi] = cell_energy;
+    printout("modelcell_energy %g mgi %d cellnumber %d \n",
+             modelcell_energy[mgi], mgi, cellnumber);
+  }
+  etot_fromenergyfile = energy_counter;
+
+}
 
 static void read_energy_in_cells_3d(void)
 {
@@ -132,7 +158,8 @@ void energy_input_init(void)
   energy_fraction_deposited = (float *) calloc(300, sizeof(float));  //haven't decided how long this needs to be yet
   modelcell_energydensity_init = (float *) calloc((MMODELGRID), sizeof(float));
 
-  read_energy_in_cells_3d();
+  read_energy_in_cells_1d();
+//  read_energy_in_cells_3d();
   read_energy_file();
 }
 
