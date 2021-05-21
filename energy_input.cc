@@ -159,8 +159,13 @@ void energy_input_init(void)
   energy_fraction_deposited = (float *) calloc(300, sizeof(float));  //haven't decided how long this needs to be yet
   modelcell_energydensity_init = (float *) calloc((MMODELGRID), sizeof(float));
 
-  read_energy_in_cells_1d();
-//  read_energy_in_cells_3d();
+  if (get_model_type() == RHO_1D_READ){
+    read_energy_in_cells_1d();
+  }
+  else if (get_model_type() == RHO_3D_READ){
+    read_energy_in_cells_3d();
+  }
+
   read_energy_file();
 }
 
