@@ -383,7 +383,15 @@ void change_cell(PKT *pkt_ptr, int snext, double t_current)
     }
   #endif
 
-  if (snext == -99)
+  double cell_distance = sqrt((get_cellcoordmin(pkt_ptr->where, 0) * get_cellcoordmin(pkt_ptr->where, 0))
+                              + (get_cellcoordmin(pkt_ptr->where, 1) * get_cellcoordmin(pkt_ptr->where, 1))
+                              + (get_cellcoordmin(pkt_ptr->where, 2) * get_cellcoordmin(pkt_ptr->where, 2)));
+  if (cell_distance > globals::rmax)
+  {
+    printout("celldist %g rmax %g\n", cell_distance, globals::rmax);
+  }
+
+  if (snext == -99 || (get_cell_modelgridindex(pkt_ptr->where) == MMODELGRID && cell_distance > globals::rmax))
   {
     // Then the packet is exiting the grid. We need to record
     // where and at what time it leaves the grid.
