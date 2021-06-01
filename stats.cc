@@ -258,4 +258,12 @@ namespace stats {
     printout("upscatterings  = %d\n", get_counter(COUNTER_UPSCATTER));
     printout("downscatterings  = %d\n", get_counter(COUNTER_DOWNSCATTER));
   }
+
+
+  void reduce_estimators(void)
+  {
+    #ifdef MPI_ON
+    MPI_Allreduce(MPI_IN_PLACE, &stats::ionstats, grid::get_npts_model() * globals::includedions * stats::ION_STAT_COUNT, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    #endif
+  }
 }

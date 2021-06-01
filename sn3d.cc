@@ -177,22 +177,6 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
       }
     }
   }
-
-  #ifndef FORCE_LTE
-    #if (!NO_LUT_PHOTOION)
-      if ((!globals::simulation_continued_from_saved) || (nts - globals::itstep != 0) || (titer != 0))
-      {
-        MPI_Barrier(MPI_COMM_WORLD);
-        /// Reduce the corrphotoionrenorm array.
-        printout("nts %d, titer %d: bcast corr photoionrenorm\n", nts, titer);
-        MPI_Allreduce(MPI_IN_PLACE, &globals::corrphotoionrenorm, grid::get_npts_model() * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-        /// Reduce the gammaestimator array. Only needed to write restart data.
-        printout("nts %d, titer %d: bcast gammaestimator\n", nts, titer);
-        MPI_Allreduce(MPI_IN_PLACE, &globals::gammaestimator, grid::get_npts_model() * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      }
-    #endif
-  #endif
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -201,21 +185,31 @@ static void mpi_reduce_estimators(int my_rank, int nts)
 {
   radfield::reduce_estimators();
   #ifndef FORCE_LTE
-    MPI_Allreduce(MPI_IN_PLACE, &globals::ffheatingestimator, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::colheatingestimator, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, globals::ffheatingestimator, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, globals::colheatingestimator, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
+    #if (!NO_LUT_PHOTOION) || (!NO_LUT_BFHEATING)
+    const int arraylen = grid::get_npts_model() * get_nelements() * get_max_nions();
+    #endif
     #if (!NO_LUT_PHOTOION)
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &globals::gammaestimator, grid::get_npts_model() * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      assert_always(globals::corrphotoionrenorm != NULL);
+      MPI_Allreduce(MPI_IN_PLACE, globals::corrphotoionrenorm, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      assert_always(globals::gammaestimator != NULL);
+      MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
     #if (!NO_LUT_BFHEATING)
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &globals::bfheatingestimator, grid::get_npts_model() * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
   #endif
 
   #ifdef RECORD_LINESTAT
+    MPI_Barrier(MPI_COMM_WORLD);
+    assert_always(globals::ecounter != NULL);
     MPI_Allreduce(MPI_IN_PLACE, globals::ecounter, globals::nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    assert_always(globals::acounter != NULL);
     MPI_Allreduce(MPI_IN_PLACE, globals::acounter, globals::nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   #endif
 
@@ -223,12 +217,16 @@ static void mpi_reduce_estimators(int my_rank, int nts)
   //double deltat = globals::time_step[nts].width;
   if (globals::do_rlc_est != 0)
   {
-    MPI_Allreduce(MPI_IN_PLACE, &globals::rpkt_emiss, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    assert_always(globals::rpkt_emiss != NULL);
+    MPI_Allreduce(MPI_IN_PLACE, globals::rpkt_emiss, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
   if (globals::do_comp_est)
   {
-    MPI_Allreduce(MPI_IN_PLACE, &globals::compton_emiss, grid::get_npts_model() * EMISS_MAX, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
+    assert_always(globals::compton_emiss != NULL);
+    MPI_Allreduce(MPI_IN_PLACE, globals::compton_emiss, grid::get_npts_model() * EMISS_MAX, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
   }
+
+  MPI_Barrier(MPI_COMM_WORLD);
 
   /// Communicate gamma and positron deposition and write to file
   MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].cmf_lum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -240,7 +238,7 @@ static void mpi_reduce_estimators(int my_rank, int nts)
   globals::time_step[nts].positron_dep /= globals::nprocs;
 
   #if TRACK_ION_STATS
-  MPI_Allreduce(MPI_IN_PLACE, ionstats, npts_model * includedions * ION_STAT_COUNT, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  stats::reduce_estimators();
   #endif
 
   MPI_Barrier(MPI_COMM_WORLD);

@@ -193,22 +193,6 @@ setup_bin_boundaries(void)
 }
 
 
-void jblue_init(void)
-// set up the data structures assocated with the Jb_lu estimators
-// this is called before/during atomic data input, whereas the
-// init() is called after the atomic data is known
-{
-  detailed_linecount = 0;
-
-  detailed_lineindicies = NULL;
-  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
-  {
-    prev_Jb_lu_normed[modelgridindex] = NULL;
-    Jb_lu_raw[modelgridindex] = NULL;
-  }
-}
-
-
 static void realloc_detailed_lines(const int new_size)
 {
   detailed_lineindicies = (int *) realloc(detailed_lineindicies, new_size * sizeof(int));
@@ -304,6 +288,15 @@ void init(int my_rank, int ndo)
 
   prev_Jb_lu_normed = (struct Jb_lu_estimator **) malloc((grid::get_npts_model() + 1) * sizeof(struct Jb_lu_estimator *));
   Jb_lu_raw = (struct Jb_lu_estimator **) malloc((grid::get_npts_model() + 1) * sizeof(struct Jb_lu_estimator *));
+
+  detailed_linecount = 0;
+
+  detailed_lineindicies = NULL;
+  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
+  {
+    prev_Jb_lu_normed[modelgridindex] = NULL;
+    Jb_lu_raw[modelgridindex] = NULL;
+  }
 
   if (DETAILED_LINE_ESTIMATORS_ON)
   {
@@ -1740,6 +1733,7 @@ void reduce_estimators(void)
   {
     const time_t sys_time_start_reduction = time(NULL);
     printout("Reducing binned radiation field estimators");
+    assert_always(radfieldbins != NULL);
 
     for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
     {
@@ -1748,12 +1742,13 @@ void reduce_estimators(void)
       {
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
         {
-          // printout("MPI: pre-MPI_Allreduce, process %d modelgrid %d binindex %d has a individual contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+          assert_always(radfieldbins[modelgridindex] != NULL);
+          // printout("MPI: pre-MPI_Allreduce, this process modelgrid %d binindex %d has a individual contribcount of %d\n",modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
           MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
           MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
           MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-          // printout("MPI: After MPI_Allreduce: Process %d modelgrid %d binindex %d has a contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+          // printout("MPI: After MPI_Allreduce: this process modelgrid %d binindex %d has a contribcount of %d\n",modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
         }
       }
     }
@@ -1781,6 +1776,7 @@ void reduce_estimators(void)
     const int duration_reduction = time(NULL) - sys_time_start_reduction;
     printout(" (took %d s)\n", duration_reduction);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 

@@ -106,6 +106,8 @@ namespace stats {
   int get_counter(enum eventcounters i);
 
   void pkt_action_counters_printout(const PKT *const pkt, const int nts);
+
+  void reduce_estimators(void);
 }
 
 #endif //STATS_H

@@ -380,6 +380,7 @@ __host__ __device__
 int get_npts_model(void)
 // number of model grid cells
 {
+  assert_always(npts_model > 0);
   return npts_model;
 }
 
@@ -418,7 +419,7 @@ __host__ __device__
 static void set_cell_modelgridindex(int cellindex, int new_modelgridindex)
 {
   assert_testmodeonly(cellindex < ngrid);
-  assert_testmodeonly(new_modelgridindex < npts_model || new_modelgridindex == get_npts_model());
+  assert_testmodeonly(new_modelgridindex <= get_npts_model());
   cell[cellindex].modelgridindex = new_modelgridindex;
 }
 
@@ -1542,18 +1543,18 @@ void read_ejecta_model(void)
   globals::rpkt_emiss = (double *) malloc((get_npts_model() + 1) * sizeof(double));
 
   #if (!NO_LUT_PHOTOION)
-  globals::corrphotoionrenorm = (double *) malloc(get_npts_model() * get_nelements() * get_max_nions() * sizeof(double));
-  globals::gammaestimator = (double *) malloc(get_npts_model() * get_nelements() * get_max_nions() * sizeof(double));
+  globals::corrphotoionrenorm = (double *) malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double));
+  globals::gammaestimator = (double *) malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double));
 
   #ifdef DO_TITER
-  globals::gammaestimator_save = (double *) malloc(get_npts_model() * get_nelements() * get_max_nions() * sizeof(double));
+  globals::gammaestimator_save = (double *) malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double));
   #endif
   #endif
 
   #if (!NO_LUT_BFHEATING)
-  globals::bfheatingestimator = (double *) malloc(get_npts_model() * get_nelements() * get_max_nions() * sizeof(double));
+  globals::bfheatingestimator = (double *) malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double));
   #ifdef DO_TITER
-  globals::bfheatingestimator_save = (double *) malloc(get_npts_model() * get_nelements() * get_max_nions() * sizeof(double));
+  globals::bfheatingestimator_save = (double *) malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double));
   #endif
   #endif
 

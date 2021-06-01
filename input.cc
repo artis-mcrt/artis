@@ -727,7 +727,6 @@ static int calculate_nlevels_groundterm(int element, int ion)
 
 static void read_atomicdata_files(void)
 {
-  radfield::jblue_init();
   int totaluptrans = 0;
   int totaldowntrans = 0;
 
