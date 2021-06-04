@@ -829,7 +829,7 @@ void read_parameterfile_vpkt(void)
     printout("vpkt.txt: tmin_vspec_input %.1fd, tmax_vspec_input %.1fd (inherited from tmin_vspec and tmax_vspec)\n", tmin_vspec_input / DAY, tmax_vspec_input / DAY);
   }
 
-  assert_always(tmax_vspec_input >= tmin_vspec);
+  assert_always(tmin_vspec_input >= tmin_vspec);
   assert_always(tmax_vspec_input <= tmax_vspec);
 
   // frequency window. dum4 restrict vpkt to a frequency range, dum5 indicates the number of ranges,
