@@ -116,9 +116,8 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
       for (int mgi = nstart; mgi < (nstart + ndo); mgi++)
       //for (int nncl = 0; nncl < ndo; nncl++)
       {
-        //nn = nonemptycells[my_rank+nncl*nprocs];
         MPI_Pack(&mgi, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-        //if (globals::cell[nn].rho > MINDENSITY)
+
         if (grid::get_numassociatedcells(mgi) > 0)
         {
           MPI_Pack(&grid::modelgrid[mgi].Te, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
@@ -154,7 +153,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
     {
       int mgi;
       MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
-      //if (globals::cell[ncl].rho > MINDENSITY)
+
       if (grid::get_numassociatedcells(mgi) > 0)
       {
         MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &grid::modelgrid[mgi].Te, 1, MPI_FLOAT, MPI_COMM_WORLD);
