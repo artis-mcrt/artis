@@ -1080,13 +1080,13 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         if (grid::modelgrid[mgi].thick == 0 && grid::get_W(mgi) == 1)
         {
           if (log_this_cell)
-            printout("force modelgrid cell to be grey at restart\n");
+            printout("force modelgrid cell %d to be grey at restart\n", mgi);
           grid::modelgrid[mgi].thick = 1;
         }
         if (log_this_cell)
         {
           printout("initial_iteration %d\n", globals::initial_iteration);
-          printout("modelgrid.thick: %d\n", grid::modelgrid[mgi].thick);
+          printout("mgi %d modelgrid.thick: %d\n", mgi, grid::modelgrid[mgi].thick);
         }
 
         precalculate_partfuncts(mgi);
