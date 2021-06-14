@@ -289,7 +289,7 @@ int get_nucstring_z(const char *strnuc)
 int get_nucstring_a(const char *strnuc)
 // convert something like Ni56 to integer 56
 {
-  std::string strmassnum = std::regex_replace(strnuc, std::regex("[^0-9]*([0-9]+).*"), std::string("$1"));
+  std::string strmassnum = std::regex_replace(std::string(strnuc), std::regex("[^0-9]*([0-9]+).*"), std::string("$1"));
   const int a = std::stoi(strmassnum);
   assert_always(a > 0);
   return a;
