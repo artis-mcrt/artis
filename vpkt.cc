@@ -111,7 +111,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
   dummy_ptr->dir[1] = obs[1];
   dummy_ptr->dir[2] = obs[2];
 
-  nvpkt++;          // increment the number of virtual packet in the given timestep
+  safeincrement(nvpkt);          // increment the number of virtual packet in the given timestep
 
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
 
