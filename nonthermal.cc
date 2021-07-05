@@ -2752,7 +2752,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
       }
     }
   }
-  free(vec_xs_ionization);
+  gsl_vector_free(vec_xs_ionization);
 }
 
 
