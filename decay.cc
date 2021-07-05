@@ -218,25 +218,24 @@ static void add_ancestorchains(const int z, const int a, const int startdecaypat
     // printout("z_parent %d a_parent %d isparent(%d, %d) %d\n", z_parent, a_parent, z_list[0], a_list[0], nuc_is_parent(z_parent, a_parent, z_list[0], a_list[0]));
     if (nuc_is_parent(z_parent, a_parent, z, a))
     {
-      struct decaypath newdecaypath;
-      newdecaypath.pathlength = get_decaypathlength(startdecaypathindex) + 1;
-      newdecaypath.z = (int *) malloc((get_decaypathlength(startdecaypathindex) + 1) * sizeof(int));
-      newdecaypath.a = (int *) malloc((get_decaypathlength(startdecaypathindex) + 1) * sizeof(int));
+      decaychains.push_back({0, NULL, NULL});
+      decaychains.back().pathlength = get_decaypathlength(startdecaypathindex) + 1;
+      decaychains.back().z = (int *) malloc((get_decaypathlength(startdecaypathindex) + 1) * sizeof(int));
+      decaychains.back().a = (int *) malloc((get_decaypathlength(startdecaypathindex) + 1) * sizeof(int));
 
       // check for repeated nuclides, which would indicate a loop in the decay chain
-      for (int i = 1; i < newdecaypath.pathlength; i++)
+      for (int i = 1; i < decaychains.back().pathlength; i++)
       {
-        newdecaypath.z[i] = decaychains[startdecaypathindex].z[i - 1];
-        newdecaypath.a[i] = decaychains[startdecaypathindex].a[i - 1];
-        if (newdecaypath.z[i] == z_parent && newdecaypath.a[i] == a_parent)
+        decaychains.back().z[i] = decaychains[startdecaypathindex].z[i - 1];
+        decaychains.back().a[i] = decaychains[startdecaypathindex].a[i - 1];
+        if (decaychains.back().z[i] == z_parent && decaychains.back().a[i] == a_parent)
         {
           printout("\nERROR: Loop found in nuclear decay chain.\n");
           abort();
         }
       }
-      newdecaypath.z[0] = z_parent;
-      newdecaypath.a[0] = a_parent;
-      decaychains.push_back(newdecaypath);
+      decaychains.back().z[0] = z_parent;
+      decaychains.back().a[0] = a_parent;
 
       add_ancestorchains(z_parent, a_parent, decaychains.size() - 1);
     }
@@ -253,14 +252,14 @@ static void find_chains(void)
       continue;
     }
 
-    struct decaypath newdecaypath;
-    newdecaypath.pathlength = 1;
-    newdecaypath.z = (int *) malloc(sizeof(int));
-    newdecaypath.a = (int *) malloc(sizeof(int));
+    decaychains.push_back({0, NULL, NULL});
 
-    newdecaypath.z[0] = get_nuc_z(endnuc);
-    newdecaypath.a[0] = get_nuc_a(endnuc);
-    decaychains.push_back(newdecaypath);
+    decaychains.back().pathlength = 1;
+    decaychains.back().z = (int *) malloc(sizeof(int));
+    decaychains.back().a = (int *) malloc(sizeof(int));
+
+    decaychains.back().z[0] = get_nuc_z(endnuc);
+    decaychains.back().a[0] = get_nuc_a(endnuc);
 
     add_ancestorchains(get_nuc_z(endnuc), get_nuc_a(endnuc), decaychains.size() - 1);
   }
