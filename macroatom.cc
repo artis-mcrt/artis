@@ -860,7 +860,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
             printout("abort at rate %g, zrand %g\n",rate,zrand);
             abort();
           }
-          if (get_ionstage(element,ion-1) == 0 && lower == 0)
+          if (get_ionstage(element,ion) == 0 && lower == 0)
   	  //        if (ion-1 == 0 && lower == 0)
           {
             printout("internal downward transition to ground level occured ... abort\n");
