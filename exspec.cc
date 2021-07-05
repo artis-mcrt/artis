@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include "exspec.h"
 #include "sn3d.h"
+#include "decay.h"
 #include "grid.h"
 #include "input.h"
 #include "light_curve.h"
@@ -238,6 +239,7 @@ int main(int argc, char** argv)
   //grid_init();
   //syn_gamma();
   free(pkts);
+  decay::cleanup();
 
   printout("exspec finished at %ld (tstart + %ld seconds)\n", time(NULL), time(NULL) - sys_time_start);
   fclose(output_file);
