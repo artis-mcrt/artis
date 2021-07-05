@@ -318,6 +318,9 @@ __host__ __device__
 double epsilon(int element, int ion, int level)
 /// Returns the energy of (element,ion,level).
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
   return globals::elements[element].ions[ion].levels[level].epsilon;
 }
 
