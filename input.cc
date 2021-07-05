@@ -554,10 +554,13 @@ static void add_transitions_to_linelist(
     const int targetlevel = transitiontable[ii].lower;
     assert_always(targetlevel >= 0);
     assert_always(level > targetlevel);
-    const double nu_trans = (epsilon(element, ion, level) - epsilon(element, ion, targetlevel)) / H;
-    if (targetlevel < nlevelsmax && level < nlevelsmax && nu_trans > 0.)
+    double nu_trans = -1;
+    if (targetlevel < nlevelsmax && level < nlevelsmax)
     {
-
+      nu_trans = (epsilon(element, ion, level) - epsilon(element, ion, targetlevel)) / H;
+    }
+    if (nu_trans > 0.)
+    {
       //if (level == transitiontable[ii].upper && level-i-1 == transitiontable[ii].lower)
       //{
       //printout("ii %d\n",ii);
