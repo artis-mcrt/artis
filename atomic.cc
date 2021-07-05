@@ -227,6 +227,7 @@ int get_nions(int element)
 /// Returns the number of ions associated with a specific element given by
 /// its elementindex.
 {
+  assert_testmodeonly(element < get_nelements());
   return globals::elements[element].nions;
 }
 
@@ -236,6 +237,8 @@ int get_ionstage(int element, int ion)
 /// Returns the ionisation stage of an ion specified by its elementindex and
 /// ionindex.
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
   return globals::elements[element].ions[ion].ionstage;
 }
 
@@ -245,6 +248,8 @@ int get_nlevels(int element, int ion)
 /// Returns the number of levels associated with with a specific ion given
 /// its elementindex and ionindex.
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
   return globals::elements[element].ions[ion].nlevels;
 }
 
@@ -254,6 +259,8 @@ int get_nlevels_nlte(int element, int ion)
 // Returns the number of NLTE levels associated with with a specific ion given
 // its elementindex and ionindex. Includes the superlevel if there is one but does not include the ground state
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
   return globals::elements[element].ions[ion].nlevels_nlte;
 }
 
@@ -261,6 +268,8 @@ int get_nlevels_nlte(int element, int ion)
 __host__ __device__
 int get_nlevels_groundterm(int element, int ion)
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
   return globals::elements[element].ions[ion].nlevels_groundterm;
 }
 
@@ -270,6 +279,8 @@ int get_ionisinglevels(int element, int ion)
 /// Returns the number of levels associated with an ion that
 /// have energies below the ionisation threshold.
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
   return globals::elements[element].ions[ion].ionisinglevels;
 }
 
@@ -278,6 +289,8 @@ __host__ __device__
 int get_uniqueionindex(const int element, const int ion)
 // Get an index for an ionstage of an element that is unique for every ion of every element
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
   int index = 0;
   for (int e = 0; e < element; e++)
   {
@@ -329,7 +342,9 @@ __host__ __device__
 double stat_weight(int element, int ion, int level)
 /// Returns the statistical weight of (element,ion,level).
 {
-  assert_testmodeonly(level <= globals::elements[element].ions[ion].nlevels);
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
   return globals::elements[element].ions[ion].levels[level].stat_weight;
 }
 
@@ -338,6 +353,8 @@ __host__ __device__
 int get_maxrecombininglevel(int element, int ion)
 /// Returns the number of bf-continua associated with ion ion of element element.
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
   return globals::elements[element].ions[ion].maxrecombininglevel;
 }
 
@@ -345,6 +362,8 @@ int get_maxrecombininglevel(int element, int ion)
 __host__ __device__
 bool ion_has_superlevel(const int element, const int ion)
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
   return (get_nlevels(element, ion) > get_nlevels_nlte(element, ion) + 1);
 }
 
@@ -353,6 +372,9 @@ __host__ __device__
 int get_ndowntrans(int element, int ion, int level)
 // the number of downward bound-bound transitions from the specified level
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
   return globals::elements[element].ions[ion].levels[level].ndowntrans;
 }
 
@@ -361,6 +383,9 @@ __host__ __device__
 int get_nuptrans(int element, int ion, int level)
 // the number of upward bound-bound transitions from the specified level
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
   return globals::elements[element].ions[ion].levels[level].nuptrans;
 }
 
@@ -369,6 +394,9 @@ __host__ __device__
 void set_ndowntrans(const int element, const int ion, const int level, const int ndowntrans)
 // the number of downward bound-bound transitions from the specified level
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
   globals::elements[element].ions[ion].levels[level].ndowntrans = ndowntrans;
 }
 
@@ -377,6 +405,9 @@ __host__ __device__
 void set_nuptrans(const int element, const int ion, const int level, const int nuptrans)
 // the number of upward bound-bound transitions from the specified level
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
   globals::elements[element].ions[ion].levels[level].nuptrans = nuptrans;
 }
 
@@ -385,6 +416,9 @@ __host__ __device__
 int get_nphixstargets(const int element, const int ion, const int level)
 /// Returns the number of target states for photoionization of (element,ion,level).
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
   const int nions = get_nions(element);
   const int nionisinglevels = get_ionisinglevels(element,ion);
   if ((ion < nions-1) && (level < nionisinglevels))
@@ -400,6 +434,9 @@ __host__ __device__
 int get_phixsupperlevel(const int element, const int ion, const int level, const int phixstargetindex)
 /// Returns the level index of a target state for photoionization of (element,ion,level).
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element,ion,level));
 
@@ -411,6 +448,10 @@ __host__ __device__
 double get_phixs_threshold(int element, int ion, int level, int phixstargetindex)
 /// Returns the energy of (element,ion,level).
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+  assert_testmodeonly(phixstargetindex < get_nphixstargets(element,ion,level));
   // const double phixs_threshold_stored = globals::elements[element].ions[ion].levels[level].phixs_threshold;
   // if (phixs_threshold_stored > 0.)
   //   return phixs_threshold_stored;
@@ -427,6 +468,9 @@ __host__ __device__
 double get_phixsprobability(int element, int ion, int level, int phixstargetindex)
 /// Returns the probability of a target state for photoionization of (element,ion,level).
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element,ion,level));
 
@@ -488,6 +532,9 @@ double statw_lower(int lineindex)
 __host__ __device__
 double photoionization_crosssection(int element, int ion, int level, double nu_edge, double nu)
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
   return photoionization_crosssection_fromtable(globals::elements[element].ions[ion].levels[level].photoion_xs, nu_edge, nu);
 }
 
