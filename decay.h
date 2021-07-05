@@ -34,6 +34,7 @@ namespace decay
   __host__ __device__ double get_global_etot_t0_tinf(void);
   void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, const double t_current, const int element);
   __host__ __device__ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr);
+  void cleanup(void);
 }
 
 #endif //DECAY_H

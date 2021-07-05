@@ -13,6 +13,7 @@
 #include <getopt.h>
 #include <unistd.h>
 #include "sn3d.h"
+#include "decay.h"
 #include "emissivities.h"
 #include "grey_emissivities.h"
 #include "grid.h"
@@ -1091,6 +1092,8 @@ int main(int argc, char** argv)
   {
     stats::cleanup();
   }
+
+  decay::cleanup();
 
   #ifdef MPI_ON
     MPI_Finalize();

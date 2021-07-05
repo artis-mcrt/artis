@@ -220,8 +220,8 @@ static void add_ancestorchains(const int z, const int a, const int startdecaypat
     {
       decaychains.push_back({0, NULL, NULL});
       decaychains.back().pathlength = get_decaypathlength(startdecaypathindex) + 1;
-      decaychains.back().z = (int *) malloc((get_decaypathlength(startdecaypathindex) + 1) * sizeof(int));
-      decaychains.back().a = (int *) malloc((get_decaypathlength(startdecaypathindex) + 1) * sizeof(int));
+      decaychains.back().z = (int *) malloc(decaychains.back().pathlength * sizeof(int));
+      decaychains.back().a = (int *) malloc(decaychains.back().pathlength * sizeof(int));
 
       // check for repeated nuclides, which would indicate a loop in the decay chain
       for (int i = 1; i < decaychains.back().pathlength; i++)
@@ -1131,5 +1131,17 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
   const double zrand = gsl_rng_uniform(rng);
   pkt_ptr->originated_from_positron = (zrand >= nucdecayenergygamma(z, a) / nucdecayenergy(z, a));
 }
+
+
+void cleanup(void)
+{
+  for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++)
+  {
+    free(decaychains[decaypathindex].z);
+    free(decaychains[decaypathindex].a);
+  }
+  free(nuclides);
+}
+
 
 }
