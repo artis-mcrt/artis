@@ -83,7 +83,7 @@ CXXFLAGS += $(shell pkg-config --cflags gsl)
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true
+	CXXFLAGS += -DTESTMODE=true -fsanitize=address -g -fno-omit-frame-pointer
 else
 	# skip array range checking for better performance
 	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF
