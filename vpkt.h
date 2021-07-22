@@ -6,7 +6,7 @@
 #include "cuda.h"
 
 double rot_angle(double *n1, double *n2, double *ref1, double *ref2);
-void meridian(double *n, double *ref1, double *ref2);
+void meridian(const double *n, double *ref1, double *ref2);
 void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf);
 void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf);
 

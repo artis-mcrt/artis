@@ -1004,8 +1004,9 @@ double rot_angle(double *n1, double *n2, double *ref1, double *ref2)
 /* -------- We need to rotate Stokes Parameters to (or from) the scattering plane from (or to) -------- */
 /* -------- the meridian frame such that Q=1 is in the scattering plane and along ref1 ---------------- */
 
-  double ref1_sc[3], i;
+  double i = 0;
 
+  double ref1_sc[3];
   // ref1_sc is the ref1 axis in the scattering plane ref1 = n1 x ( n1 x n2 )
   ref1_sc[0] = n1[0] * dot(n1,n2) - n2[0];
   ref1_sc[1] = n1[1] * dot(n1,n2) - n2[1];
@@ -1034,7 +1035,7 @@ double rot_angle(double *n1, double *n2, double *ref1, double *ref2)
 
 
 // Routine to compute the meridian frame axes ref1 and ref2
-void meridian(double *n, double *ref1, double *ref2)
+void meridian(const double *n, double *ref1, double *ref2)
 {
   // for ref_1 use (from triple product rule)
 
@@ -1053,21 +1054,27 @@ void meridian(double *n, double *ref1, double *ref2)
 // Routine to transform the Stokes Parameters from RF to CMF
 void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf)
 {
-  double rot_angle,cos2rot_angle,sin2rot_angle,p,Q0,U0;
-  double ref1[3],ref2[3],e_rf[3],e_cmf[3];
-  double e_cmf_ref1, e_cmf_ref2, theta_rot;
+  double cos2rot_angle;
+  double sin2rot_angle;
+  double e_rf[3];
+  double e_cmf[3];
+  double e_cmf_ref1 = 0.;
+  double e_cmf_ref2 = 0.;
+  double theta_rot = 0.;
 
+  double ref1[3];
+  double ref2[3];
   // Meridian frame in the RF
-  meridian(n_rf,ref1,ref2);
+  meridian(n_rf, ref1, ref2);
 
-  Q0 = *Q;
-  U0 = *U;
+  const double Q0 = *Q;
+  const double U0 = *U;
 
   // Compute polarisation (which is invariant)
-  p = sqrt(Q0*Q0+U0*U0);
+  const double p = sqrt(Q0*Q0+U0*U0);
 
   // We want to compute the angle between ref1 and the electric field
-  rot_angle = 0;
+  double rot_angle = 0;
 
   if (p > 0)
   {
