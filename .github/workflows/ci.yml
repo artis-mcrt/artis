@@ -35,15 +35,15 @@ jobs:
         export CXX=clang++
 
     # - name: "compile with gcc"
-    #   run: make CXX=g++ sn3d exspec
+    #   run: make CXX=g++ clean sn3d exspec
 
     - name: "compile with clang"
-      run: make CXX=clang++ sn3d exspec
+      run: make CXX=clang++ clean sn3d exspec
 
     - name: "compile with OpenMPI"
       run: |
         sudo apt install -y openmpi-bin libopenmpi-dev
-        make sn3d
+        make clean sn3d
         sudo apt remove openmpi-bin libopenmpi-dev
 
     - name: "run cppcheck"
