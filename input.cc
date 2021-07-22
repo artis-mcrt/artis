@@ -920,7 +920,11 @@ static void read_atomicdata_files(void)
       assert_always(transdata_ionstage_in == ionstage);
 
       /// read in the level and transition data for this ion
-      transitiontable_entry *transitiontable = (transitiontable_entry *) calloc(tottransitions, sizeof(transitiontable_entry));
+      transitiontable_entry *transitiontable = NULL;
+      if (tottransitions > 0)
+      {
+        transitiontable = (transitiontable_entry *) calloc(tottransitions, sizeof(transitiontable_entry));
+      }
 
       /// load transition table for the CURRENT ion to temporary memory
       if (transitiontable == NULL)
