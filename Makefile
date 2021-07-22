@@ -126,7 +126,9 @@ all: sn3d exspec
 
 sn3d: version $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
-#	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
+
+sn3dwhole: version
+	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
 
 sn3dcudawhole: version
 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_files) -o sn3d
