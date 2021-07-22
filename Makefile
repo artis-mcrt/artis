@@ -41,7 +41,7 @@ else ifneq (, $(shell which mpicxx))
 	# any other system which has mpicxx available (Juwels, Cambridge, Gadi, etc)
 
 	CXX = mpicxx
-	CXXFLAGS += -std=c++17 -march=native -flto #-fopenmp=libomp
+	CXXFLAGS += -std=c++17 -march=native #-fopenmp=libomp
 
 sn3d sn3dcuda: CXXFLAGS += -DMPI_ON
 
@@ -81,7 +81,7 @@ ifeq ($(TESTMODE),ON)
 	CXXFLAGS += -DTESTMODE=true -O3 -g -fsanitize=address -fno-omit-frame-pointer
 else
 	# skip array range checking for better performance and use optimizations
-	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3
+	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3 -flto
 endif
 
 sn3dmpi: CXX = mpicxx
@@ -150,4 +150,4 @@ version:
 	@echo "#define COMPILETIME \"`date`\"" >> version.h
 
 clean:
-	rm -f *.o version.h
+	rm -f sn3d exspec *.o version.h
