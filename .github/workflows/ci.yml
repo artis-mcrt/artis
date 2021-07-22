@@ -20,30 +20,30 @@ jobs:
 
     - name: "install dependencies"
       run: |
-        git status
         # sudo apt-get update
         sudo apt-get install libgsl-dev
         # sudo apt-get install clang
         cp artisoptions_example.h artisoptions.h
 
-    # - name: "compile with gcc"
-    #   run: |
-    #     which g++
-    #     g++ --version
-    #     make CXX=g++ clean sn3d exspec
-
-    - name: "compile with clang"
+    - name: "diagnostic info"
       run: |
+        git status
+        which g++
+        g++ --version
         which clang++
         clang++ --version
         export CXX=clang++
-        make CXX=clang++ clean sn3d exspec
+
+    # - name: "compile with gcc"
+    #   run: make CXX=g++ sn3d exspec
+
+    - name: "compile with clang"
+      run: make CXX=clang++ sn3d exspec
 
     - name: "compile with OpenMPI"
       run: |
         sudo apt install -y openmpi-bin libopenmpi-dev
-        mpicxx --version
-        make clean sn3d
+        make sn3d
         sudo apt remove openmpi-bin libopenmpi-dev
 
     - name: "run cppcheck"
@@ -89,7 +89,7 @@ jobs:
     - name: "Setup test nebularonezone"
       run: |
         cp tests/nebularonezone/artisoptions.h .
-        make TESTMODE=ON CXX=g++ clean sn3dwhole exspec
+        make TESTMODE=ON CXX=g++ sn3d exspec
         cp sn3d tests/nebularonezone/
         cp exspec tests/nebularonezone/
         cp data/*.txt tests/nebularonezone/
