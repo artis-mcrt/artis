@@ -8,7 +8,7 @@ ifeq ($(SYSNAME),Darwin)
 	# macOS
 
 	# CXX = c++
-	CXXFLAGS += -std=c++17 -march=native -fstrict-aliasing -ftree-vectorize -flto
+	CXXFLAGS += -std=c++17 -O3 -march=native -fstrict-aliasing -ftree-vectorize -flto
 
 	CXXFLAGS += -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing
 
@@ -34,14 +34,14 @@ else ifneq (,$(findstring kelvin,$(HOSTNAME)))
 	#  libs/gsl/1.16/gcc-4.4.7
 
 	CXX = mpicxx
-	CXXFLAGS += -std=c++17 -mcmodel=medium #-fopenmp=libomp
+	CXXFLAGS += -std=c++17 -mcmodel=medium -O3 #-fopenmp=libomp
 sn3d: CXXFLAGS += -DMPI_ON
 
 else ifneq (, $(shell which mpicxx))
 	# any other system which has mpicxx available (Juwels, Cambridge, Gadi, etc)
 
 	CXX = mpicxx
-	CXXFLAGS += -std=c++17 -march=native #-fopenmp=libomp
+	CXXFLAGS += -std=c++17 -march=native -O3 #-fopenmp=libomp
 
 sn3d sn3dcuda: CXXFLAGS += -DMPI_ON
 
@@ -50,16 +50,21 @@ else ifeq ($(USER),localadmin_ccollins)
 	LDFLAGS= -lgsl -lgslcblas -lm -I/home/localadmin_ccollins/gsl/include
 	INCLUDE = /home/localadmin_ccollins/gsl/include
 	LIB = /home/localadmin_ccollins/gsl/lib
-	CXXFLAGS += -g -I$(INCLUDE)
+	CXXFLAGS += -O3 -g -I$(INCLUDE)
 	LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
-	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
+	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
 
 else
 	# CXX = c++
 	# CXX = icpc
-	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
+	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
 endif
 
+# # For Virgo, GCC 8.1.0 requires -lstdc++fs for std::filesystem to work
+# GCCVERSION = $(shell mpicxx --version | grep GCC | sed 's/^.* //g')
+# ifeq "$(GCCVERSION)" "8.1.0"
+#     LDFLAGS += -lstdc++fs
+# endif
 
 # ** GSL (GNU Scientific Library) **
 
@@ -78,10 +83,10 @@ CXXFLAGS += $(shell pkg-config --cflags gsl)
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true -O3 -g -fsanitize=address -fno-omit-frame-pointer
+	CXXFLAGS += -DTESTMODE=true -fsanitize=address -g -fno-omit-frame-pointer
 else
-	# skip array range checking for better performance and use optimizations
-	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3 -flto
+	# skip array range checking for better performance
+	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF
 endif
 
 sn3dmpi: CXX = mpicxx
@@ -110,7 +115,7 @@ endif
 # CXXFLAGS += -std=c++17
 # CXXFLAGS += -fPIC -shared
 # CUDA_NVCC_FLAGS += -Xcompiler -fPIC -shared -rdc=true
-CUDA_NVCC_FLAGS += -ccbin=$(CXX) -std=c++17 -use_fast_math -Xcompiler "$(CXXFLAGS)" -rdc=true --expt-relaxed-constexpr
+CUDA_NVCC_FLAGS += -ccbin=$(CXX) -std=c++17 -O3 -use_fast_math -Xcompiler "$(CXXFLAGS)" -rdc=true --expt-relaxed-constexpr
 # CUDA_NVCC_FLAGS += -G -g
 
 ### use pg when you want to use gprof profiler
@@ -124,11 +129,12 @@ exspec_files = exspec.cc atomic.cc boundary.cc decay.cc emissivities.cc gamma.cc
 
 all: sn3d exspec
 
-sn3d: version $(sn3d_objects)
-	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
-
-sn3dwhole: version
+sn3d: clean version
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
+# $(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
+
+sn3ddebug: clean version $(sn3d_objects)
+	$(CXX) $(CXXFLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_objects) -o sn3d
 
 sn3dcudawhole: version
 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_files) -o sn3d
@@ -140,7 +146,7 @@ sn3dcuda: version $(sn3d_objects)
 # %.o: %.cc
 # 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c
 
-exspec: version
+exspec: clean version
 	$(CXX) $(CXXFLAGS) -DDO_EXSPEC $(exspec_files) $(LDFLAGS) -o exspec
 
 .PHONY: clean version
@@ -152,4 +158,4 @@ version:
 	@echo "#define COMPILETIME \"`date`\"" >> version.h
 
 clean:
-	rm -f sn3d exspec *.o version.h
+	rm -f *.o version.h
