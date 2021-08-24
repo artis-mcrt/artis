@@ -495,10 +495,14 @@ static void set_elem_stable_abund_from_total(const int mgi, const int element, c
                mgi, atomic_number);
       printout("  massfrac(Z) %g massfrac_radioisotopes(Z) %g\n", elemabundance, isofracsum);
       assert_always(massfracstable >= -1e-3);  // result is allowed to be slightly negative due to roundoff error
-      massfracstable = fmax(0., massfracstable); // bring up to zero if negative
+      printout("  increasing elemental abundance to %g and setting stable isotopic abundance to zero\n", isofracsum);
+      massfracstable = 0.; // bring up to zero if negative
   }
 
   modelgrid[mgi].initmassfracstable[element] = massfracstable;
+
+  // (isofracsum + massfracstable) might not exactly match elemabundance if we had to boost it to reach isofracsum
+  modelgrid[mgi].composition[element].abundance = isofracsum + massfracstable;
 }
 
 
@@ -963,7 +967,6 @@ static void abundances_read(void)
         const int anumber = get_element(element);
         const float elemabundance = abundances_in[anumber - 1] / normfactor;
         assert_always(elemabundance >= 0.);
-        modelgrid[mgi].composition[element].abundance = elemabundance;
 
         // radioactive nuclide abundances should have already been set by read_??_model
         set_elem_stable_abund_from_total(mgi, element, elemabundance);
