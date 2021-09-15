@@ -938,7 +938,7 @@ static void abundances_read(void)
     // (or proportial to mass frac, e.g. element densities because they will be normalised anyway)
     // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
     double normfactor = 0.;
-    float abundances_in[150];
+    float abundances_in[150] = { 0. };
     for (int anumber = 1; anumber <= 150; anumber++)
     {
       abundances_in[anumber - 1] = 0.;
