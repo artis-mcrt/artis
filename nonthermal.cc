@@ -907,17 +907,21 @@ static double electron_loss_rate(const double energy, const double nne)
 {
   if (energy <= 0.)
     return 0;
+
+  // normally set to 1.0, but Shingles et al. (2021) boosted this to increase heating
+  const double boostfactor = 1.;
+
   const double omegap = sqrt(4 * PI * nne * pow(QE, 2) / ME);
   const double zetae = H * omegap / 2 / PI;
   if (energy > 14 * EV)
   {
-    return nne * 2 * PI * pow(QE, 4) / energy * log(2 * energy / zetae);
+    return boostfactor * nne * 2 * PI * pow(QE, 4) / energy * log(2 * energy / zetae);
   }
   else
   {
     const double v = sqrt(2 * energy / ME);
     const double eulergamma = 0.577215664901532;
-    return nne * 2 * PI * pow(QE, 4) / energy * log(ME * pow(v, 3) / (eulergamma * pow(QE, 2) * omegap));
+    return boostfactor * nne * 2 * PI * pow(QE, 4) / energy * log(ME * pow(v, 3) / (eulergamma * pow(QE, 2) * omegap));
   }
 }
 
