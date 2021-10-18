@@ -938,14 +938,14 @@ static void read_atomicdata_files(void)
       // first <nlevels_requiretransitions> levels will be collisionally
       // coupled to the first <nlevels_requiretransitions_upperlevels> levels (assumed forbidden)
       // use 0 to disable adding extra transitions
+      int nlevels_requiretransitions = 0;
+      int nlevels_requiretransitions_upperlevels = 0;
       if (((Z == 26 || Z == 28) && ionstage >= 1))
       {
         nlevels_requiretransitions = 80;
         nlevels_requiretransitions_upperlevels = nlevelsmax;
       }
       else
-      int nlevels_requiretransitions = 0;
-      int nlevels_requiretransitions_upperlevels = 0;
       {
         nlevels_requiretransitions = 0;
         nlevels_requiretransitions_upperlevels = nlevelsmax; // no effect if previous line is zero
