@@ -124,7 +124,8 @@ static bool read_ratecoeff_dat(void)
       }
       else
       {
-        printout("\nMISMATCH: this simulation has MINTEMP %g MAXTEMP %g TABLESIZE %d\n", MINTEMP, MAXTEMP, TABLESIZE);
+        printout("\nMISMATCH: this simulation has MINTEMP %g MAXTEMP %g TABLESIZE %d nlines %d\n",
+                 MINTEMP, MAXTEMP, TABLESIZE, globals::nlines);
         fileisamatch = false;
       }
     }
