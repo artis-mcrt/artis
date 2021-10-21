@@ -18,7 +18,8 @@ mkdir ${SLURM_JOBID}.slurm
 
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
-    sbatch $SLURM_JOB_NAME
+    sbatch ./artis/scripts/artis-juwels.sh
+    # sbatch $SLURM_JOB_NAME
 fi
 
 if [ -f packets00_0000.out ]; then
