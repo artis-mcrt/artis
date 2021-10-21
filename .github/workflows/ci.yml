@@ -24,7 +24,7 @@ jobs:
         # sudo apt-get update
         sudo apt-get install libgsl-dev
         # sudo apt-get install clang
-        cp artisoptions_example.h artisoptions.h
+        cp artisoptions_nltenebular.h artisoptions.h
 
     # - name: "compile with gcc"
     #   run: |
