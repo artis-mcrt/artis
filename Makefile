@@ -125,28 +125,28 @@ exspec_files = exspec.cc atomic.cc boundary.cc decay.cc emissivities.cc gamma.cc
 
 all: sn3d exspec
 
-sn3d: version $(sn3d_objects)
+sn3d: version.h $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
 
-sn3dwhole: version
+sn3dwhole: version.h
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
 
-sn3dcudawhole: version
+sn3dcudawhole: version.h
 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_files) -o sn3d
 
-sn3dcuda: version $(sn3d_objects)
+sn3dcuda: version.h $(sn3d_objects)
 	nvcc --gpu-architecture=sm_70 --device-link $(sn3d_objects) --output-file gpucode.o
 	$(CXX) $(CXXFLAGS) gpucode.o $(INCLUDE) -lcudadevrt $(LDFLAGS) $(sn3d_objects) -o sn3d
 
 # %.o: %.cc
 # 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c
 
-exspec: version
+exspec: version.h
 	$(CXX) $(CXXFLAGS) -DDO_EXSPEC $(exspec_files) $(LDFLAGS) -o exspec
 
-.PHONY: clean version
+.PHONY: clean version.h
 
-version:
+version.h:
 	@echo "#define GIT_VERSION \"$(GIT_VERSION)\"" > version.h
 	@echo "#define GIT_HASH \"$(GIT_HASH)\"" >> version.h
 	@echo "#define GIT_BRANCH \"$(GIT_BRANCH)\"" >> version.h
