@@ -689,6 +689,7 @@ int select_bin(double nu)
 }
 
 
+#ifndef FORCE_LTE
 void write_to_file(int modelgridindex, int timestep)
 {
   assert_always(MULTIBIN_RADFIELD_MODEL_ON);
@@ -771,6 +772,7 @@ void write_to_file(int modelgridindex, int timestep)
   }
 # endif
 }
+#endif
 
 
 void close_file(void)
@@ -1294,7 +1296,7 @@ static float find_T_R(int modelgridindex, int binindex)
 #endif
 
 
-#ifndef __CUDA_ARCH__
+#if (!defined __CUDA_ARCH__ && !defined FORCE_LTE)
 static void set_params_fullspec(const int modelgridindex, const int timestep)
 {
   const double nubar = nuJ[modelgridindex] / J[modelgridindex];
@@ -1342,7 +1344,7 @@ static void set_params_fullspec(const int modelgridindex, const int timestep)
 #endif
 
 
-#ifndef __CUDA_ARCH__
+#if (!defined __CUDA_ARCH__ && !defined FORCE_LTE)
 void fit_parameters(int modelgridindex, int timestep)
 // finds the best fitting W and temperature parameters in each spectral bin
 // using J and nuJ
@@ -1652,11 +1654,13 @@ double get_bfrate_estimator(const int element, const int lowerion, const int low
 #endif
 }
 
+#ifndef FORCE_LTE
 void normalise_nuJ(const int modelgridindex, const double estimator_normfactor_over4pi)
 {
   assert_always(std::isfinite(nuJ[modelgridindex]));
   nuJ[modelgridindex] *= estimator_normfactor_over4pi;
 }
+#endif
 
 
 double get_T_R_from_J(const int modelgridindex)
