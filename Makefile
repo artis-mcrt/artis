@@ -128,8 +128,8 @@ exspec_files = exspec.cc atomic.cc boundary.cc decay.cc emissivities.cc gamma.cc
 all: sn3d exspec
 
 sn3d: version.h artisoptions.h $(sn3d_objects) Makefile
-	$(LINK.cpp) $(filter %.o,$^) -o $@
-#	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
+	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
+#	$(LINK.cpp) $(filter %.o,$^) -o $@
 
 sn3dwhole: version.h
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
