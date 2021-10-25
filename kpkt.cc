@@ -574,7 +574,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     if (element >= get_nelements() || ion >= get_nions(element))
     {
       printout("do_kpkt: problem selecting a cooling process ... abort\n");
-      printout("do_kpkt: tried to select element %d, ion %d (Z=%d ionstage %d)\n",element, ion, get_element(element), get_ionstage(element, ion));
+      printout("do_kpkt: modelgridindex %d element %d ion %d\n", modelgridindex, element, ion);
       printout("do_kpkt: totalcooling %g, coolingsum %g, rndcool %g\n",grid::modelgrid[modelgridindex].totalcooling,coolingsum,rndcool);
       printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n",modelgridindex,pkt_ptr->where,grid::get_nne(modelgridindex));
       for (element = 0; element < get_nelements(); element++)
