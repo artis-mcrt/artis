@@ -758,7 +758,7 @@ int main(int argc, char** argv)
   printout("Current version: %s\n", GIT_VERSION);
 
   //printout("Hash of most recent commit: %s\n",GIT_HASH);
-  printout("Compiled at %s on %s\n", __TIME__, __DATE__);
+  printout("sn3d.cc compiled at %s on %s\n", __TIME__, __DATE__);
 
   #ifdef MPI_ON
     printout("MPI enabled with %d processes\n", globals::nprocs);
