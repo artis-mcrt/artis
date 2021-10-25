@@ -127,9 +127,9 @@ exspec_files = exspec.cc atomic.cc boundary.cc decay.cc emissivities.cc gamma.cc
 
 all: sn3d exspec
 
-sn3d: version.h artisoptions.h $(sn3d_objects) Makefile TESTMODE$(TESTMODE)
+sn3d: version.h artisoptions.h $(sn3d_objects) Makefile
+	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
 #	$(LINK.cpp) $(filter %.o,$^) -o $@
- $(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
 
 sn3dwhole: version.h
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
@@ -144,14 +144,14 @@ sn3dcuda: version.h $(sn3d_objects)
 # %.o: %.cc
 # 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c
 
-build/%.o: %.cc Makefile artisoptions.h TESTMODE$(TESTMODE)
+build/%.o: %.cc Makefile artisoptions.h
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -MD -MP -c $(filter-out %.h,$<) -o $@
 
 exspec: version.h
 	$(CXX) $(CXXFLAGS) -DDO_EXSPEC $(exspec_files) $(LDFLAGS) -o exspec
 
-.PHONY: clean version.h
+.PHONY: clean version.h TESTMODE TESTMODEON
 
 version.h:
 	@echo "#define GIT_VERSION \"$(GIT_VERSION)\"" > version.h
@@ -161,4 +161,3 @@ version.h:
 clean:
 	rm -f sn3d exspec *.o version.h
 
-TESTMODE TESTMODEON:
