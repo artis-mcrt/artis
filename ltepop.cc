@@ -62,6 +62,10 @@ void get_ionfractions(int element, int modelgridindex, double nne, double ionfra
 // Calculate the fractions of an element's population in each ionization stage
 // size of ionfractions array must be >= uppermostion + 1
 {
+  assert_testmodeonly(modelgridindex < get_npts_model());
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(uppermost_ion < get_nions(element));
+
   double nnionfactor[uppermost_ion + 1];
   nnionfactor[uppermost_ion] = 1;
 
@@ -96,6 +100,8 @@ void get_ionfractions(int element, int modelgridindex, double nne, double ionfra
 __host__ __device__
 static double interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T)
 {
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
   assert_always(T >= MINTEMP);
   int lowerindex = floor(log(T / MINTEMP) / T_step_log);
   if (lowerindex < TABLESIZE - 1)
@@ -118,7 +124,11 @@ double phi(const int element, const int ion, const int modelgridindex)
 /// Calculates population ratio (a saha factor) of two consecutive ionisation stages
 /// in nebular approximation phi_j,k* = N_j,k*/(N_j+1,k* * nne)
 {
-  double phi;
+  assert_testmodeonly(modelgridindex < get_npts_model());
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+
+  double phi = 0;
 
   //double Y_nt, ionpot_in;
   //int element_in, ion_in, nions_in;
@@ -295,6 +305,9 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
 /// Calculates the partition function for ion=ion of element=element in
 /// cell modelgridindex
 {
+  assert_testmodeonly(modelgridindex < get_npts_model());
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
   double pop_store;
   //double E_level, E_ground, test;
 
@@ -428,6 +441,9 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
 /// Returns the given ions groundlevel population for modelgridindex which was precalculated
 /// during update_grid and stored to the grid.
 {
+  assert_testmodeonly(modelgridindex < get_npts_model());
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
   //double nn = grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
   //if (nn < MINPOP) nn = MINPOP;
   //return nn;
@@ -450,6 +466,9 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
 __host__ __device__
 double get_groundmultiplet_pop(int modelgridindex, int element, int ion)
 {
+  assert_testmodeonly(modelgridindex < get_npts_model());
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
   const int nlevels_gm = get_nlevels_groundterm(element, ion);
 
   double gmpop = 0.;
@@ -521,6 +540,10 @@ __host__ __device__
 double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
 /// Calculates occupation population of a level assuming LTE excitation
 {
+  assert_testmodeonly(modelgridindex < get_npts_model());
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
   if (level == 0)
     return get_groundlevelpop(modelgridindex, element, ion);
 
@@ -542,6 +565,10 @@ __host__ __device__
 double calculate_exclevelpop(int modelgridindex, int element, int ion, int level)
 /// Calculates the population of a level from either LTE or NLTE information
 {
+  assert_testmodeonly(modelgridindex < get_npts_model());
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
   double nn;
 
   //  T_exc = MINTEMP;

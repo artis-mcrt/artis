@@ -177,7 +177,7 @@ int get_element(int element)
 /// Returns the atomic number associated with a given elementindex.
 {
   assert_testmodeonly(element >= 0);
-  assert_testmodeonly(element < nelements);
+  assert_testmodeonly(element < get_nelements());
   return globals::elements[element].anumber;
 }
 
