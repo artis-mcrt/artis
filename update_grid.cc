@@ -651,32 +651,28 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "\n");
         #endif
       }
-    }
 
-    #ifndef FORCE_LTE
-      #if (!NO_LUT_PHOTOION)
-        fprintf(estimators_file, "corrphotoionrenorm: ");
-        for (int element = 0; element < get_nelements(); element++)
+      #if (!defined FORCE_LTE && !NO_LUT_PHOTOION)
+        fprintf(estimators_file, "corrphotoionrenorm Z=%2d", get_element(element));
+        for (int ion = 0; ion < nions; ion++)
         {
-          const int nions = get_nions(element);
-          for (int ion = 0; ion < nions; ion++)
-          {
-            fprintf(estimators_file,"%g ", globals::corrphotoionrenorm[mgi*get_nelements()*get_max_nions()+element*get_max_nions()+ion]);
-          }
+          fprintf(estimators_file, "  %d: %9.3e",
+                  get_ionstage(element, ion),
+                  globals::corrphotoionrenorm[mgi*get_nelements()*get_max_nions()+element*get_max_nions()+ion]);
         }
         fprintf(estimators_file, "\n");
-        fprintf(estimators_file, "gammaestimator: ");
-        for (int element = 0; element < get_nelements(); element++)
+        fprintf(estimators_file, "gammaestimator     Z=%2d", get_element(element));
+        for (int ion = 0; ion < nions; ion++)
         {
-          const int nions = get_nions(element);
-          for (int ion = 0; ion < nions; ion++)
-          {
-            fprintf(estimators_file,"%g ", globals::gammaestimator[mgi*get_nelements()*get_max_nions()+element*get_max_nions()+ion]);
-          }
+          fprintf(estimators_file, "  %d: %9.3e",
+                  get_ionstage(element, ion),
+                  globals::gammaestimator[mgi*get_nelements()*get_max_nions()+element*get_max_nions()+ion]);
         }
         fprintf(estimators_file,"\n");
       #endif
+    }
 
+    #ifndef FORCE_LTE
       fprintf(estimators_file, "heating: ff %11.5e bf %11.5e coll %11.5e       dep %11.5e heating_dep/total_dep %.3f\n",
               heatingcoolingrates->heating_ff, heatingcoolingrates->heating_bf, heatingcoolingrates->heating_collisional, heatingcoolingrates->heating_gamma, heatingcoolingrates->nt_frac_heating);
       fprintf(estimators_file, "cooling: ff %11.5e fb %11.5e coll %11.5e adiabatic %11.5e\n",
