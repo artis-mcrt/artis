@@ -869,8 +869,6 @@ int main(int argc, char** argv)
 
   printout("[info] mem_usage: packets occupy %.1f MB\n", MPKTS * sizeof(PKT) / 1024. / 1024.);
 
-  zero_estimators();
-
   if (!globals::simulation_continued_from_saved)
   {
     /// Next we want to initialise the packets.
