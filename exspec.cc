@@ -22,8 +22,6 @@
 #include "spectrum.h"
 #include "vectors.h"
 
-int nprocs_exspec = 1;
-bool do_emission_res = 1;
 const bool do_exspec = true;
 
 // threadprivate variables

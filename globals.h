@@ -54,6 +54,9 @@ namespace globals
     extern __managed__ int *linestat_reduced;
   #endif
 
+  extern __managed__ int nprocs_exspec;
+  extern __managed__ bool do_emission_res;
+
   extern __managed__ bool file_set;
 
   extern __managed__ bool do_comp_est;

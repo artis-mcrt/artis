@@ -2025,8 +2025,8 @@ void read_parameterfile(int rank)
   std::stringstream(line) >> dum1;
   if (do_exspec)
   {
-    nprocs_exspec = dum1;
-    printout("input: do_exspec ... extract spectra for %d MPI tasks\n", nprocs_exspec);
+    globals::nprocs_exspec = dum1;
+    printout("input: do_exspec ... extract spectra for %d MPI tasks\n", globals::nprocs_exspec);
     printout("input: do_exspec ... and %d packets per task\n", globals::npkts);
   }
 
@@ -2039,8 +2039,8 @@ void read_parameterfile(int rank)
   std::stringstream(line) >> dum1;
   if (do_exspec)
   {
-    do_emission_res = dum1;
-    if (do_emission_res == 1) printout("input: do_exspec ... extract LOS dependent emission information\n");
+    globals::do_emission_res = dum1;
+    if (globals::do_emission_res == 1) printout("input: do_exspec ... extract LOS dependent emission information\n");
   }
 
   /// To reduce the work imbalance between different MPI tasks I introduced a diffusion

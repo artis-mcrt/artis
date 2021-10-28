@@ -54,6 +54,9 @@ namespace globals
   #endif
 
 
+  __managed__ int nprocs_exspec = 1;
+  __managed__ bool do_emission_res = 1;
+
   __managed__ bool file_set; // 1 if the output files already exist. 0 otherwise.
 
   __managed__ bool do_comp_est; // 1 = compute compton emissivity estimators. 0 = don't
