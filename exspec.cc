@@ -109,7 +109,7 @@ int main(int argc, char** argv)
     double *gamma_light_curve_lumcmf = (double *) calloc(globals::ntstep, sizeof(double));
     /// Set up the spectrum grid and initialise the bins to zero.
 
-    init_spectra(rpkt_spectra, globals::nu_min_r, globals::nu_max_r, globals:do_emission_res);
+    init_spectra(rpkt_spectra, globals::nu_min_r, globals::nu_max_r, globals::do_emission_res);
 
     #ifdef POL_ON
     init_spectra(stokes_i, globals::nu_min_r, globals::nu_max_r, do_emission_res);
