@@ -42,7 +42,7 @@ __managed__ int myGpuId = 0;
 __managed__ bool use_cellhist;
 __managed__ bool neutral_flag;
 #ifndef __CUDA_ARCH__
-gsl_rng *rng;
+gsl_rng *rng = NULL;
 #else
 __device__ void *rng = NULL;
 #endif

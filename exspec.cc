@@ -71,7 +71,7 @@ int main(int argc, char** argv)
   printout("time before input %ld\n", time(NULL));
   input(my_rank);
   printout("time after input %ld\n", time(NULL));
-  globals::nprocs = nprocs_exspec;
+  globals::nprocs = globals::nprocs_exspec;
 
   PKT *pkts = (PKT *) malloc(globals::npkts * sizeof(PKT));
 
@@ -79,7 +79,7 @@ int main(int argc, char** argv)
 
   init_spectrum_trace(); // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
 
-  struct spec *rpkt_spectra = alloc_spectra(do_emission_res);
+  struct spec *rpkt_spectra = alloc_spectra(globals::do_emission_res);
 
   struct spec *stokes_i = NULL;
   struct spec *stokes_q = NULL;
@@ -109,7 +109,7 @@ int main(int argc, char** argv)
     double *gamma_light_curve_lumcmf = (double *) calloc(globals::ntstep, sizeof(double));
     /// Set up the spectrum grid and initialise the bins to zero.
 
-    init_spectra(rpkt_spectra, globals::nu_min_r, globals::nu_max_r, do_emission_res);
+    init_spectra(rpkt_spectra, globals::nu_min_r, globals::nu_max_r, globals:do_emission_res);
 
     #ifdef POL_ON
     init_spectra(stokes_i, globals::nu_min_r, globals::nu_max_r, do_emission_res);
@@ -183,7 +183,7 @@ int main(int argc, char** argv)
       sprintf(lc_filename, "light_curve_res_%.2d.out", a);
       sprintf(spec_filename, "spec_res_%.2d.out", a);
 
-      if (do_emission_res)
+      if (globals::do_emission_res)
       {
         sprintf(emission_filename, "emission_res_%.2d.out", a);
         sprintf(trueemission_filename, "emissiontrue_res_%.2d.out", a);
