@@ -25,9 +25,6 @@ set(EXSPEC_SOURCES exspec.cc grid.cc globals.cc input.cc vectors.cc packet_init.
 add_executable(exspec ${EXSPEC_SOURCES})
 add_executable(exgamma ${EXSPEC_SOURCES})
 
-target_compile_definitions(exspec  PRIVATE DO_EXSPEC)
-target_compile_definitions(exgamma PRIVATE DO_EXSPEC DO_EXGAMMA)
-
 if(UNIX AND NOT APPLE)
   find_package(MPI)
   include_directories(SYSTEM ${MPI_INCLUDE_PATH})

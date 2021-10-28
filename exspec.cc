@@ -22,16 +22,17 @@
 #include "spectrum.h"
 #include "vectors.h"
 
-int nprocs_exspec;
-bool do_emission_res;
+int nprocs_exspec = 1;
+bool do_emission_res = 1;
+const bool do_exspec = true;
 
 // threadprivate variables
 FILE *output_file = NULL;
-int tid;
-bool use_cellhist;
-bool neutral_flag;
-gsl_rng *rng;
-gsl_integration_workspace *gslworkspace;
+int tid = 0;
+bool use_cellhist = false;
+bool neutral_flag = false;
+gsl_rng *rng = NULL;
+gsl_integration_workspace *gslworkspace = NULL;
 
 
 static void get_final_packets(int rank, int nprocs, PKT pkt[])

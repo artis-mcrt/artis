@@ -67,7 +67,7 @@
   #error Must use NO_LUT_PHOTOION with DETAILED_BF_ESTIMATORS_ON
 #endif
 
-#if !defined DO_EXSPEC && !defined MPI_ON
+#if !defined MPI_ON
   // #define MPI_ON //only needed for debugging MPI, the makefile will switch this on
 #endif
 

@@ -28,6 +28,7 @@ struct spec
 
 extern int nprocs_exspec;
 extern bool do_emission_res;
+extern const bool do_exspec;
 
 
 #endif //EXSPEC_H

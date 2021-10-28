@@ -34,6 +34,8 @@
 
 const bool KEEP_ALL_RESTART_FILES = false; // once a new gridsave and packets*.tmp have been written, don't delete the previous set
 
+const bool do_exspec = false;
+
 // threadprivate variables
 int tid;
 __managed__ int myGpuId = 0;

@@ -16,9 +16,7 @@
 #include "radfield.h"
 #include "rpkt.h"
 #include "vpkt.h"
-#ifdef DO_EXSPEC
-  #include "exspec.h"
-#endif
+#include "exspec.h"
 
 const bool single_level_top_ion = false; // Only include a single level for the highest ion stage
 
