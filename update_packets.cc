@@ -188,7 +188,7 @@ static bool std_compare_packets_bymodelgriddensity(const PKT &p1, const PKT &p2)
 }
 
 
-void update_packets(const int my_rank, const int nts, PKT *pkt)
+void update_packets(const int my_rank, const int nts, PKT *packets)
 // Subroutine to move and update packets during the current timestep (nts)
 {
   /** At the start, the packets have all either just been initialised or have already been
@@ -199,22 +199,21 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
   const double ts = globals::time_step[nts].start;
   const double tw = globals::time_step[nts].width;
 
-  printout("start of parallel update_packets loop %ld\n", time(NULL));
+  const time_t time_update_packets_start = time(NULL);
+  printout("timestep %d: start update_packets at time %ld\n", nts, time_update_packets_start);
   bool timestepcomplete = false;
   int passnumber = 0;
   while (!timestepcomplete)
   {
-    timestepcomplete = true;
+    timestepcomplete = true;  // will be set false if any packets did not finish propagating in this pass
 
-    const time_t sys_time_start_sort = time(NULL);
+    const time_t sys_time_start_pass = time(NULL);
 
-    std::sort(pkt, pkt + globals::npkts, std_compare_packets_bymodelgriddensity);
+    printout("sorting packets...");
 
-    const int duration_sortpackets = time(NULL) - sys_time_start_sort;
-    if (duration_sortpackets > 1)
-    {
-      printout("sorting packets took %ds\n", duration_sortpackets);
-    }
+    std::sort(packets, packets + globals::npkts, std_compare_packets_bymodelgriddensity);
+
+    printout("took %lds\n", time(NULL) - sys_time_start_pass);
 
     int count_pktupdates = 0;
     const int updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
@@ -224,14 +223,14 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
     #endif
     for (int n = 0; n < globals::npkts; n++)
     {
-      PKT *pkt_ptr = &pkt[n];
+      PKT *pkt_ptr = &packets[n];
 
       // if (pkt_ptr->type == TYPE_ESCAPE)
       // {
       //   printout("packet index %d already escaped. Skipping rest of packets (which are all escaped).\n", n);
       //   // for (int n2 = n; n2 < globals::npkts; n2++)
       //   // {
-      //   //   assert_always(pkt[n2].type == TYPE_ESCAPE);
+      //   //   assert_always(packets[n2].type == TYPE_ESCAPE);
       //   // }
       //   break;
       // }
@@ -274,13 +273,21 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
       }
     }
     const int cellhistresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
-    printout("  update_packets timestep %d pass %3d: updated packets %7d cellhistoryresets %7d at %ld\n",
-             nts, passnumber, count_pktupdates, cellhistresets, time(NULL));
+    printout("  update_packets timestep %d pass %3d: updated packets %7d cellhistoryresets %7d at %ld (took %lds)\n",
+             nts, passnumber, count_pktupdates, cellhistresets, time(NULL), time(NULL) - sys_time_start_pass);
 
     passnumber++;
   }
 
-  printout("end of update_packets parallel for loop %ld\n", time(NULL));
+  stats::pkt_action_counters_printout(packets, nts);
+
+  const time_t time_update_packets_end_thisrank = time(NULL);
+  printout("end of update_packets for this rank at time %ld\n", time_update_packets_end_thisrank);
+
+  #ifdef MPI_ON
+    MPI_Barrier(MPI_COMM_WORLD); // hold all processes once the packets are updated
+  #endif
+  printout("timestep %d: time after update packets barrier %ld (this rank took %ld seconds and waited %ld seconds)\n", nts, time(NULL), time_update_packets_end_thisrank - time_update_packets_start, time(NULL) - time_update_packets_end_thisrank);
 }
 
 

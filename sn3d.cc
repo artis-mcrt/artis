@@ -498,24 +498,15 @@ static bool do_timestep(
   if ((nts < globals::ftstep) && do_this_full_loop)
   {
     /// Now process the packets.
-    const time_t time_update_packets_start = time(NULL);
-    printout("timestep %d: time before update packets %ld\n", nts, time_update_packets_start);
 
     update_packets(my_rank, nts, packets);
-
-    stats::pkt_action_counters_printout(packets, nts);
-
-    #ifdef MPI_ON
-      MPI_Barrier(MPI_COMM_WORLD); // hold all processes once the packets are updated
-      const time_t time_communicate_estimators_start = time(NULL);
-    #endif
-    printout("timestep %d: time after update packets %ld (took %ld seconds)\n", nts, time(NULL), time(NULL) - time_update_packets_start);
 
     #ifdef MPI_ON
       // All the processes have their own versions of the estimators for this time step now.
       // Since these are going to be needed in the next time step, we will gather all the
       // estimators together now, sum them, and distribute the results
 
+      const time_t time_communicate_estimators_start = time(NULL);
       mpi_reduce_estimators(my_rank, nts);
     #endif
 
