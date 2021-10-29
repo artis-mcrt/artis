@@ -273,7 +273,7 @@ void update_packets(const int my_rank, const int nts, PKT *packets)
       }
     }
     const int cellhistresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
-    printout("  update_packets timestep %d pass %3d: updated packets %7d cellhistoryresets %7d at %ld (took %lds)\n",
+    printout("  update_packets timestep %d pass %3d: packetsupdated %7d cellhistoryresets %7d at %ld (took %lds)\n",
              nts, passnumber, count_pktupdates, cellhistresets, time(NULL), time(NULL) - sys_time_start_pass);
 
     passnumber++;
@@ -287,7 +287,7 @@ void update_packets(const int my_rank, const int nts, PKT *packets)
   #ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD); // hold all processes once the packets are updated
   #endif
-  printout("timestep %d: time after update packets barrier %ld (this rank took %ld seconds and waited %ld seconds)\n", nts, time(NULL), time_update_packets_end_thisrank - time_update_packets_start, time(NULL) - time_update_packets_end_thisrank);
+  printout("timestep %d: time after update packets barrier %ld (took %ld seconds on this rank and waited %ld seconds)\n", nts, time(NULL), time_update_packets_end_thisrank - time_update_packets_start, time(NULL) - time_update_packets_end_thisrank);
 }
 
 
