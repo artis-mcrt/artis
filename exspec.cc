@@ -56,8 +56,18 @@ static void get_final_packets(int rank, int nprocs, PKT pkt[])
 
 int main(int argc, char** argv)
 {
-  const int my_rank = 0;
+  #ifdef MPI_ON
+    MPI_Init(&argc, &argv);
+    int my_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &globals::nprocs);
+    MPI_Barrier(MPI_COMM_WORLD);
+  #else
+    int my_rank = 0;
+    globals::nprocs = 1;
+  #endif
   char filename[100];
+  assert_always(globals::nprocs == 1); // single rank only for now
 
   sprintf(filename, "exspec.txt");
   output_file = fopen_required(filename, "w");
@@ -242,6 +252,10 @@ int main(int argc, char** argv)
 
   printout("exspec finished at %ld (tstart + %ld seconds)\n", time(NULL), time(NULL) - sys_time_start);
   fclose(output_file);
+
+  #ifdef MPI_ON
+    MPI_Finalize();
+  #endif
 
   return 0;
 }
