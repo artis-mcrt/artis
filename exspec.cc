@@ -67,7 +67,10 @@ int main(int argc, char** argv)
     globals::nprocs = 1;
   #endif
   char filename[100];
-  assert_always(globals::nprocs == 1); // single rank only for now
+
+  // single rank only for now
+  assert_always(my_rank == 0);
+  assert_always(globals::nprocs == 1);
 
   sprintf(filename, "exspec.txt");
   output_file = fopen_required(filename, "w");
