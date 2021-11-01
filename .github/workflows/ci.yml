@@ -43,7 +43,7 @@ jobs:
       run: |
         sudo apt install -y openmpi-bin libopenmpi-dev
         mpicxx --version
-        make clean sn3d
+        make OPENMP=TRUE clean sn3d
         sudo apt remove openmpi-bin libopenmpi-dev
 
     - name: "run cppcheck"
@@ -52,12 +52,12 @@ jobs:
         cppcheck --force --language=c++ --std=c++17 .
 
     # - name: "compile sn3d with OpenMP"
-    #   run: make sn3dopenmp
+    #   run: make OPENMP=ON sn3d
 
     # - name: "compile sn3d with MPI"
     #   run: |
     #     sudo apt-get install libopenmpi-dev
-    #     make sn3dmpi
+    #     make MPI=ON sn3dmpi
 
     # we can cache this, but then we don't test the code that generates ratecoeff.dat
     # - name: Cache ratecoeff.dat

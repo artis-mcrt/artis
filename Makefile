@@ -84,22 +84,26 @@ CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 ifeq ($(TESTMODE),ON)
 	CXXFLAGS += -DTESTMODE=true -O3 -g
 	# CXXFLAGS += -fsanitize=address -fno-omit-frame-pointer
+	BUILD_DIR := $(BUILD_DIR)/testmode
 else
 	# skip array range checking for better performance and use optimizations
 	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3 -flto
 endif
 
-sn3dmpi: CXX = mpicxx
-sn3dmpi: CXXFLAGS += -DMPI_ON
-sn3dmpi: sn3d
+ifeq ($(MPI),ON)
+	CXX = mpicxx
+	CXXFLAGS += -DMPI_ON
+	BUILD_DIR := $(BUILD_DIR)/mpi
+endif
 
-sn3dopenmp: CXXFLAGS += -Xpreprocessor
-sn3dopenmp: CXXFLAGS += -fopenmp
-sn3dopenmp: LDFLAGS += -lomp
-sn3dopenmp: sn3d
+ifeq ($(OPENMP),ON)
+	CXXFLAGS += -Xpreprocessor
+	CXXFLAGS += -fopenmp
+	LDFLAGS += -lomp
+	BUILD_DIR := $(BUILD_DIR)/openmp
+endif
 
 sn3dcuda sn3dcudawhole: LDFLAGS += -lcudart
-
 sn3dcuda sn3dcudawhole: CXXFLAGS += -DCUDA_ENABLED=true
 
 # Gadi
@@ -139,11 +143,11 @@ sn3dwhole: version.h
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
 
 sn3dcudawhole: version.h
-	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_files) -o sn3d
+	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_files) -o sn3dcuda
 
 sn3dcuda: version.h $(sn3d_objects)
 	nvcc --gpu-architecture=sm_70 --device-link $(sn3d_objects) --output-file gpucode.o
-	$(CXX) $(CXXFLAGS) gpucode.o $(INCLUDE) -lcudadevrt $(LDFLAGS) $(sn3d_objects) -o sn3d
+	$(CXX) $(CXXFLAGS) gpucode.o $(INCLUDE) -lcudadevrt $(LDFLAGS) $(sn3d_objects) -o sn3dcuda
 
 # %.o: %.cc
 # 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c
