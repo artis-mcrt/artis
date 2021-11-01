@@ -25,6 +25,7 @@ ifeq ($(SYSNAME),Darwin)
 	# add -lprofiler for gperftools
 	LDFLAGS += $(LIB)
 	# LDFLAGS += -lprofiler
+	BUILD_DIR = build
 
 else ifneq (,$(findstring kelvin,$(HOSTNAME)))
 	# QUB Kelvin cluster
@@ -35,15 +36,16 @@ else ifneq (,$(findstring kelvin,$(HOSTNAME)))
 
 	CXX = mpicxx
 	CXXFLAGS += -std=c++17 -mcmodel=medium #-fopenmp=libomp
-sn3d: CXXFLAGS += -DMPI_ON
+	CXXFLAGS += -DMPI_ON
+	BUILD_DIR = build/mpi
 
 else ifneq (, $(shell which mpicxx))
 	# any other system which has mpicxx available (Juwels, Cambridge, Gadi, etc)
 
 	CXX = mpicxx
 	CXXFLAGS += -std=c++17 -march=native #-fopenmp=libomp
-
-sn3d sn3dcuda: CXXFLAGS += -DMPI_ON
+	CXXFLAGS += -DMPI_ON
+	BUILD_DIR = build/mpi
 
 else ifeq ($(USER),localadmin_ccollins)
 	# CXX = c++
@@ -53,11 +55,13 @@ else ifeq ($(USER),localadmin_ccollins)
 	CXXFLAGS += -g -I$(INCLUDE)
 	LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
 	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
+	BUILD_DIR = build
 
 else
 	# CXX = c++
 	# CXX = icpc
 	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
+	BUILD_DIR = build
 endif
 
 
@@ -117,15 +121,13 @@ CUDA_NVCC_FLAGS += -ccbin=$(CXX) -std=c++17 -O3 -use_fast_math -Xcompiler "$(CXX
 ### use pg when you want to use gprof profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)
 
-BUILD_DIR = build/
-
 sn3d_files = sn3d.cc atomic.cc boundary.cc decay.cc emissivities.cc gamma.cc globals.cc grey_emissivities.cc grid.cc gsl_managed.cc input.cc kpkt.cc light_curve.cc ltepop.cc macroatom.cc md5.cc nltepop.cc nonthermal.cc packet_init.cc photo_electric.cc polarization.cc radfield.cc ratecoeff.cc rpkt.cc stats.cc thermalbalance.cc update_grid.cc update_packets.cc vectors.cc vpkt.cc
 
-sn3d_objects = $(addprefix $(BUILD_DIR),$(sn3d_files:.cc=.o))
+sn3d_objects = $(addprefix $(BUILD_DIR)/,$(sn3d_files:.cc=.o))
 
 exspec_files = exspec.cc atomic.cc boundary.cc decay.cc emissivities.cc gamma.cc globals.cc grey_emissivities.cc grid.cc gsl_managed.cc input.cc kpkt.cc light_curve.cc ltepop.cc macroatom.cc md5.cc nltepop.cc nonthermal.cc packet_init.cc photo_electric.cc polarization.cc radfield.cc ratecoeff.cc rpkt.cc spectrum.cc stats.cc thermalbalance.cc update_grid.cc update_packets.cc vectors.cc vpkt.cc
 
-exspec_objects = $(addprefix $(BUILD_DIR),$(exspec_files:.cc=.o))
+exspec_objects = $(addprefix $(BUILD_DIR)/,$(exspec_files:.cc=.o))
 
 all: sn3d exspec
 
@@ -146,7 +148,7 @@ sn3dcuda: version.h $(sn3d_objects)
 # %.o: %.cc
 # 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c
 
-$(BUILD_DIR)%.o: %.cc Makefile artisoptions.h
+$(BUILD_DIR)/%.o: %.cc Makefile artisoptions.h
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -MD -MP -c $(filter-out %.h,$<) -o $@
 
@@ -161,5 +163,5 @@ version.h:
 	@echo "#define GIT_BRANCH \"$(GIT_BRANCH)\"" >> version.h
 
 clean:
-	rm -f sn3d exspec build/*.o build/*.d version.h
+	rm -rf sn3d exspec build version.h
 
