@@ -43,7 +43,7 @@ jobs:
       run: |
         sudo apt install -y openmpi-bin libopenmpi-dev
         mpicxx --version
-        make OPENMP=ON clean sn3d
+        make clean sn3d
         sudo apt remove openmpi-bin libopenmpi-dev
 
     - name: "run cppcheck"
