@@ -68,13 +68,16 @@ int main(int argc, char** argv)
   #endif
   char filename[100];
 
+  if (my_rank == 0)
+  {
+    sprintf(filename, "exspec.txt");
+    output_file = fopen_required(filename, "w");
+    setvbuf(output_file, NULL, _IOLBF, 1);
+  }
+
   // single rank only for now
   assert_always(my_rank == 0);
   assert_always(globals::nprocs == 1);
-
-  sprintf(filename, "exspec.txt");
-  output_file = fopen_required(filename, "w");
-  setvbuf(output_file, NULL, _IOLBF, 1);
 
   const time_t sys_time_start = time(NULL);
 
