@@ -58,17 +58,16 @@ int main(int argc, char** argv)
 {
   #ifdef MPI_ON
     MPI_Init(&argc, &argv);
-    int my_rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    MPI_Comm_rank(MPI_COMM_WORLD, &globals::rank_global);
     MPI_Comm_size(MPI_COMM_WORLD, &globals::nprocs);
     MPI_Barrier(MPI_COMM_WORLD);
   #else
-    int my_rank = 0;
+    globals::rank_global = 0;
     globals::nprocs = 1;
   #endif
   char filename[100];
 
-  if (my_rank == 0)
+  if (globals::rank_global == 0)
   {
     sprintf(filename, "exspec.txt");
     output_file = fopen_required(filename, "w");
@@ -76,7 +75,7 @@ int main(int argc, char** argv)
   }
 
   // single rank only for now
-  assert_always(my_rank == 0);
+  assert_always(globals::rank_global == 0);
   assert_always(globals::nprocs == 1);
 
   const time_t sys_time_start = time(NULL);
@@ -85,7 +84,7 @@ int main(int argc, char** argv)
 
   /// Get input stuff
   printout("time before input %ld\n", time(NULL));
-  input(my_rank);
+  input(globals::rank_global);
   printout("time after input %ld\n", time(NULL));
   globals::nprocs = globals::nprocs_exspec;
 
