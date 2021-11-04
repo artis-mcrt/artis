@@ -97,6 +97,8 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
     MPI_Bcast(&root_nstart, 1, MPI_INT, root, MPI_COMM_WORLD);
     int root_ndo = ndo;
     MPI_Bcast(&root_ndo, 1, MPI_INT, root, MPI_COMM_WORLD);
+    int root_node_id = globals::node_id;
+    MPI_Bcast(&root_node_id, 1, MPI_INT, root, MPI_COMM_WORLD);
 
     for (int modelgridindex = root_nstart; modelgridindex < (root_nstart + root_ndo); modelgridindex++)
     {
@@ -105,16 +107,13 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
       if (grid::get_numassociatedcells(modelgridindex) > 0)
       {
         nonthermal::nt_MPI_Bcast(modelgridindex, root);
-        if (NLTE_POPS_ON)
+        if (NLTE_POPS_ON && !MPI_SHARED_NODE_MEMORY)
         {
-          if (MPI_SHARED_NODE_MEMORY)
-          {
-            MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, globals::node_id, globals::mpi_comm_internode);
-          }
-          else
-          {
-            MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, my_rank, MPI_COMM_WORLD);
-          }
+          MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, my_rank, MPI_COMM_WORLD);
+        }
+        else if (NLTE_POPS_ON && MPI_SHARED_NODE_MEMORY && globals::rank_in_node == 0)
+        {
+          MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
         }
       }
     }
