@@ -87,10 +87,10 @@ static void initialise_linestat_file(void)
 
 
 #ifdef MPI_ON
-static void mpi_communicate_grid_properties(const int my_rank, const int p, const int nstart, const int ndo, const int nts, const int titer, char *mpi_grid_buffer, const int mpi_grid_buffer_size)
+static void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const int nstart, const int ndo, const int nts, const int titer, char *mpi_grid_buffer, const int mpi_grid_buffer_size)
 {
   int position = 0;
-  for (int root = 0; root < p; root++)
+  for (int root = 0; root < nprocs; root++)
   {
     MPI_Barrier(MPI_COMM_WORLD);
     int root_nstart = nstart;
@@ -107,7 +107,14 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
         nonthermal::nt_MPI_Bcast(modelgridindex, root);
         if (NLTE_POPS_ON)
         {
-          MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, root, MPI_COMM_WORLD);
+          if (MPI_SHARED_NODE_MEMORY)
+          {
+            MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, globals::node_id, globals::mpi_comm_internode);
+          }
+          else
+          {
+            MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, my_rank, MPI_COMM_WORLD);
+          }
         }
       }
     }
@@ -117,7 +124,6 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
       position = 0;
       MPI_Pack(&ndo, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
       for (int mgi = nstart; mgi < (nstart + ndo); mgi++)
-      //for (int nncl = 0; nncl < ndo; nncl++)
       {
         MPI_Pack(&mgi, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
 
@@ -655,18 +661,42 @@ int main(int argc, char** argv)
   cudaSetDevice(myGpuId);
   #endif
 
-  #ifdef MPI_ON
-    MPI_Init(&argc, &argv);
-    int my_rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &globals::nprocs);
-    MPI_Barrier(MPI_COMM_WORLD);
-  #else
-    int my_rank = 0;
-    globals::nprocs = 1;
-  #endif
+#ifdef MPI_ON
+  MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &globals::rank_global);
+  MPI_Comm_size(MPI_COMM_WORLD, &globals::nprocs);
 
-  globals::rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
+  // make an intra-node communicator (group ranks that can share memory)
+  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, globals::rank_global, MPI_INFO_NULL, &globals::mpi_comm_node);
+  // get the local rank within this node
+  MPI_Comm_rank(globals::mpi_comm_node, &globals::rank_in_node);
+  // get the number of ranks on the node
+  MPI_Comm_size(globals::mpi_comm_node, &globals::node_nprocs);
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  // make an inter-node communicator (using local rank as the key for group membership)
+  MPI_Comm_split(MPI_COMM_WORLD, globals::rank_in_node, globals::rank_global, &globals::mpi_comm_internode);
+
+  // take the node id from the local rank 0 (node master) and broadcast it
+  if (globals::rank_in_node == 0)
+  {
+      MPI_Comm_rank(globals::mpi_comm_internode, &globals::node_id);
+      MPI_Comm_size(globals::mpi_comm_internode, &globals::node_count);
+  }
+
+  MPI_Bcast(&globals::node_id, 1, MPI_INT, 0, globals::mpi_comm_node);
+  MPI_Bcast(&globals::node_count, 1, MPI_INT, 0, globals::mpi_comm_node);
+
+#else
+  globals::rank_global = 0;
+  globals::nprocs = 1;
+  globals::rank_in_node = 0;
+  globals::node_nprocs = 1;
+  globals::node_id = 0;
+  globals::node_count = 0;
+#endif
+
+  const int my_rank = globals::rank_global;
 
 #ifdef _OPENMP
   /// Explicitly turn off dynamic threads because we use the threadprivate directive!!!
@@ -754,7 +784,10 @@ int main(int argc, char** argv)
   printout("sn3d.cc compiled at %s on %s\n", __TIME__, __DATE__);
 
   #ifdef MPI_ON
-    printout("MPI enabled with %d processes\n", globals::nprocs);
+    printout("MPI enabled:\n");
+    printout("  rank %d of %d in MPI_COMM_WORLD\n", globals::rank_global, globals::nprocs);
+    printout("  rank %d of %d within node (MPI_COMM_WORLD_SHARED)\n", globals::rank_in_node, globals::node_nprocs);
+    printout("  node %d of %d\n", globals::node_id, globals::node_count);
   #else
     printout("MPI is disabled in this build\n");
   #endif

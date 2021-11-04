@@ -8,6 +8,11 @@
 #include "grid.h"
 #include "types.h"
 #include "cuda.h"
+#ifdef MPI_ON
+  #include "mpi.h"
+#endif
+
+static const bool MPI_SHARED_NODE_MEMORY = true;
 
 namespace globals
 {
@@ -95,8 +100,20 @@ namespace globals
 
   extern __managed__ int debuglevel;
 
+  #ifdef MPI_ON
+  extern MPI_Comm mpi_comm_node;
+  extern MPI_Comm mpi_comm_internode;
+  #endif
+
   extern __managed__ int nprocs;
   extern __managed__ int rank_global;
+
+  extern __managed__ int node_nprocs;
+  extern __managed__ int rank_in_node;
+
+  extern __managed__ int node_count;
+  extern __managed__ int node_id;
+
   extern __managed__ int npkts;
   extern __managed__ int nesc;
 
