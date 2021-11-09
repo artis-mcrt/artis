@@ -377,13 +377,28 @@ void init(int my_rank, int ndo)
   }
 
   radfieldbins = (struct radfieldbin **) malloc((grid::get_npts_model() + 1) * sizeof(struct radfieldbin *));
+
+#ifdef MPI_ON
+  MPI_Win win;
+  MPI_Aint size = (globals::rank_in_node == 0) ? (grid::get_npts_model() + 1) * sizeof(struct radfieldbin_solution *) : 0;
+  MPI_Win_allocate_shared(size, sizeof(struct radfieldbin_solution *), MPI_INFO_NULL, globals::mpi_comm_node, &radfieldbin_solutions, &win);
+  if (globals::rank_in_node != 0)
+  {
+    int disp_unit;
+    MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &radfieldbin_solutions);
+  }
+#else
   radfieldbin_solutions = (struct radfieldbin_solution **) malloc((grid::get_npts_model() + 1) * sizeof(struct radfieldbin_solution *));
+#endif
+
 
   long mem_usage_bf_estim = 0;
+  long mem_usage_bf_estim_accum = 0; // accumulators for current timestep
 
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
-    mem_usage_bf_estim += (grid::get_npts_model() + 1) * (sizeof(double *) + sizeof(float *));
+    mem_usage_bf_estim += (grid::get_npts_model() + 1) * sizeof(double *);
+    mem_usage_bf_estim_accum += (grid::get_npts_model() + 1) * sizeof(float *);
     prev_bfrate_normed = (float **) malloc((grid::get_npts_model() + 1) * sizeof(float *));
     bfrate_raw = (double **) malloc((grid::get_npts_model() + 1) * sizeof(double *));
 
@@ -397,6 +412,7 @@ void init(int my_rank, int ndo)
   #endif
 
   long mem_usage_bins = 0;
+  long mem_usage_bin_solutions = 0;
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
   {
     set_J_normfactor(modelgridindex, -1.0);
@@ -405,9 +421,22 @@ void init(int my_rank, int ndo)
     {
       #if (DETAILED_BF_ESTIMATORS_ON)
       {
-        mem_usage_bf_estim += globals::nbfcontinua * (sizeof(double) + sizeof(float));
+        mem_usage_bf_estim_accum += globals::nbfcontinua * sizeof(double);
         bfrate_raw[modelgridindex] = (double *) malloc(globals::nbfcontinua * sizeof(double));
+
+        mem_usage_bf_estim += globals::nbfcontinua * sizeof(float);
+        #ifdef MPI_ON
+        MPI_Win win;
+        MPI_Aint size = (globals::rank_in_node == 0) ? globals::nbfcontinua * sizeof(float) : 0;
+        MPI_Win_allocate_shared(size, sizeof(float), MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed[modelgridindex], &win);
+        if (globals::rank_in_node != 0)
+        {
+          int disp_unit;
+          MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &prev_bfrate_normed[modelgridindex]);
+        }
+        #else
         prev_bfrate_normed[modelgridindex] = (float *) malloc(globals::nbfcontinua * sizeof(float));
+        #endif
 
         #if (DETAILED_BF_ESTIMATORS_BYTYPE)
         {
@@ -428,7 +457,7 @@ void init(int my_rank, int ndo)
         radfieldbins[modelgridindex] = (struct radfieldbin *) malloc(RADFIELDBINCOUNT * sizeof(struct radfieldbin));
         radfieldbin_solutions[modelgridindex] = (struct radfieldbin_solution *) malloc(RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution));
         mem_usage_bins += RADFIELDBINCOUNT * sizeof(struct radfieldbin);
-        mem_usage_bins += RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution);
+        mem_usage_bin_solutions += RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution);
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
         {
           radfieldbins[modelgridindex][binindex].J_raw = 0.;
@@ -440,10 +469,13 @@ void init(int my_rank, int ndo)
       }
     }
   }
-  printout("[info] mem_usage: radiation field bins for non-empty cells occupy %.2f MB\n", mem_usage_bins / 1024. / 1024.);
+  printout("[info] mem_usage: radiation field bin accumulators for non-empty cells occupy %.3f MB\n", mem_usage_bins / 1024. / 1024.);
+  printout("[info] mem_usage: radiation field bin solutions for non-empty cells occupy %.3f MB (shared node memory)\n", mem_usage_bin_solutions / 1024. / 1024.);
+
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
-    printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.2f MB\n", mem_usage_bf_estim / 1024. / 1024.);
+    printout("[info] mem_usage: detailed bf estimator acculumators for non-empty cells occupy %.3f MB\n", mem_usage_bf_estim_accum / 1024. / 1024.);
+    printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (shared node memory)\n", mem_usage_bf_estim / 1024. / 1024.);
   }
   #endif
 }
@@ -787,10 +819,21 @@ void close_file(void)
       if (MULTIBIN_RADFIELD_MODEL_ON)
       {
         free(radfieldbins[modelgridindex]);
+        #ifdef MPI_ON
+        if (globals::rank_in_node == 0)
+        #endif
+        {
+          free(radfieldbin_solutions[modelgridindex]);
+        }
       }
       #if (DETAILED_BF_ESTIMATORS_ON)
       free(bfrate_raw[modelgridindex]);
-      free(prev_bfrate_normed[modelgridindex]);
+      #ifdef MPI_ON
+      if (globals::rank_in_node == 0)
+      #endif
+      {
+        free(prev_bfrate_normed[modelgridindex]);
+      }
       #endif
     }
   }
@@ -1497,7 +1540,12 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
   printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
   for (int i = 0; i < globals::nbfcontinua; i++)
   {
-    prev_bfrate_normed[modelgridindex][i] = bfrate_raw[modelgridindex][i] * estimator_normfactor_over_H;
+    #ifdef MPI_ON
+    if (globals::rank_in_node == 0)
+    #endif
+    {
+      prev_bfrate_normed[modelgridindex][i] = bfrate_raw[modelgridindex][i] * estimator_normfactor_over_H;
+    }
 
     #if (DETAILED_BF_ESTIMATORS_BYTYPE)
     const int listsize = bfrate_raw_bytype_size[modelgridindex][i];
@@ -1781,7 +1829,7 @@ void reduce_estimators(void)
 }
 
 
-void do_MPI_Bcast(const int modelgridindex, const int root)
+void do_MPI_Bcast(const int modelgridindex, const int root, int root_node_id)
 // broadcast computed radfield results including parameters
 // from the cells belonging to root process to all processes
 {
@@ -1792,8 +1840,11 @@ void do_MPI_Bcast(const int modelgridindex, const int root)
     {
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
-        MPI_Bcast(&radfieldbin_solutions[modelgridindex][binindex].W, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-        MPI_Bcast(&radfieldbin_solutions[modelgridindex][binindex].T_R, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+        if (globals::rank_in_node == 0)
+        {
+          MPI_Bcast(&radfieldbin_solutions[modelgridindex][binindex].W, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
+          MPI_Bcast(&radfieldbin_solutions[modelgridindex][binindex].T_R, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
+        }
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
@@ -1960,7 +2011,14 @@ void read_restart_data(FILE *gridsave_file)
         assert_always(mgi_in == modelgridindex);
         for (int i = 0; i < globals::nbfcontinua; i++)
         {
-          fscanf(gridsave_file, "%g ", &prev_bfrate_normed[modelgridindex][i]);
+          float bfrate_normed = 0;
+          fscanf(gridsave_file, "%g ", &bfrate_normed);
+          #ifdef MPI_ON
+          if (globals::rank_in_node == 0)
+          #endif
+          {
+            prev_bfrate_normed[modelgridindex][i] = bfrate_normed;
+          }
           if (!normed_bfrates_available && prev_bfrate_normed[modelgridindex][i] > 0.)
           {
             normed_bfrates_available = true;
@@ -2010,12 +2068,21 @@ void read_restart_data(FILE *gridsave_file)
       {
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
         {
+          float W = 0;
+          float T_R = 0;
           fscanf(gridsave_file, "%lg %lg %g %g %d\n",
                  &radfieldbins[modelgridindex][binindex].J_raw,
                  &radfieldbins[modelgridindex][binindex].nuJ_raw,
-                 &radfieldbin_solutions[modelgridindex][binindex].W,
-                 &radfieldbin_solutions[modelgridindex][binindex].T_R,
+                 &W,
+                 &T_R,
                  &radfieldbins[modelgridindex][binindex].contribcount);
+#ifdef MPI_ON
+         if (globals::rank_in_node == 0)
+#endif
+          {
+            radfieldbin_solutions[modelgridindex][binindex].W = W;
+            radfieldbin_solutions[modelgridindex][binindex].T_R = T_R;
+          }
         }
       }
 

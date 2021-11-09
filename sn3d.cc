@@ -102,7 +102,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
 
     for (int modelgridindex = root_nstart; modelgridindex < (root_nstart + root_ndo); modelgridindex++)
     {
-      radfield::do_MPI_Bcast(modelgridindex, root);
+      radfield::do_MPI_Bcast(modelgridindex, root, root_node_id);
 
       if (grid::get_numassociatedcells(modelgridindex) > 0)
       {
@@ -888,7 +888,7 @@ int main(int argc, char** argv)
 
   printout("Simulation propagates %g packets per process (total %g with nprocs %d)\n", 1. * globals::npkts, 1. * globals::npkts * globals::nprocs, globals::nprocs);
 
-  printout("[info] mem_usage: packets occupy %.1f MB\n", MPKTS * sizeof(PKT) / 1024. / 1024.);
+  printout("[info] mem_usage: packets occupy %.3f MB\n", MPKTS * sizeof(PKT) / 1024. / 1024.);
 
   if (!globals::simulation_continued_from_saved)
   {

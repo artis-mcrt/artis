@@ -746,7 +746,7 @@ static void allocate_cooling(const int modelgridindex)
 
 static void allocate_nonemptymodelcells(void)
 {
-  printout("[info] mem_usage: the modelgrid array occupies %.1f MB\n", sizeof(modelgrid) / 1024. / 1024.);
+  printout("[info] mem_usage: the modelgrid array occupies %.3f MB\n", sizeof(modelgrid) / 1024. / 1024.);
   mem_usage_nltepops = 0;
   /// This is the placeholder for empty cells. Temperatures must be positive
   /// as long as ff opacities are calculated.
@@ -814,7 +814,7 @@ static void allocate_nonemptymodelcells(void)
 
   printout("There are %d modelgrid cells with associated propagation cells\n", numnonemptycells);
 
-  printout("[info] mem_usage: NLTE populations for all allocated cells occupy a total of %.1f MB\n", mem_usage_nltepops / 1024. / 1024.);
+  printout("[info] mem_usage: NLTE populations for all allocated cells occupy a total of %.3f MB (shared node memory)\n", mem_usage_nltepops / 1024. / 1024.);
 }
 
 

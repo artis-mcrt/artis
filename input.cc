@@ -291,8 +291,8 @@ static void read_phixs_data(void)
   }
 
   fclose(phixsdata);
-  printout("[info] mem_usage: photoionisation tables occupy %.1f MB\n", mem_usage_phixs / 1024. / 1024.);
-  printout("[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and corrphotoioncoeff/bfheating if enabled) occupy %.1f MB\n", mem_usage_phixsderivedcoeffs / 1024. / 1024.);
+  printout("[info] mem_usage: photoionisation tables occupy %.3f MB\n", mem_usage_phixs / 1024. / 1024.);
+  printout("[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and corrphotoioncoeff/bfheating if enabled) occupy %.3f MB\n", mem_usage_phixsderivedcoeffs / 1024. / 1024.);
 }
 
 
@@ -1024,7 +1024,7 @@ static void read_atomicdata_files(void)
       printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
       abort();
     }
-    printout("[info] mem_usage: linelist occupies %.1f MB\n", globals::nlines * (sizeof(globals::linelist[0]) + sizeof(&globals::linelist[0])) / 1024. / 1024);
+    printout("[info] mem_usage: linelist occupies %.3f MB\n", globals::nlines * (sizeof(globals::linelist[0]) + sizeof(&globals::linelist[0])) / 1024. / 1024);
   }
 
   if (T_preset > 0)
@@ -1036,7 +1036,7 @@ static void read_atomicdata_files(void)
   printout("total downtrans %d\n", totaldowntrans);
   printout("coolingcheck %d\n", coolingcheck);
 
-  printout("[info] mem_usage: transitions occupy %.1f MB\n", (totaluptrans + totaldowntrans) * (sizeof(int)) / 1024. / 1024.);
+  printout("[info] mem_usage: transitions occupy %.3f MB\n", (totaluptrans + totaldowntrans) * (sizeof(int)) / 1024. / 1024.);
   ///debug output
   /*
   FILE *linelist_file = fopen_required("linelist_unsorted.out", "w");
@@ -1258,7 +1258,7 @@ static void setup_cellhistory(void)
         }
       }
 
-      printout("[info] mem_usage: coolinglist contribs (part of cellhistory) for thread %d occupies %.1f MB\n",
+      printout("[info] mem_usage: coolinglist contribs (part of cellhistory) for thread %d occupies %.3f MB\n",
                tid, globals::ncoolingterms * sizeof(double) / 1024. / 1024.);
 
       mem_usage_cellhistory += get_nelements() * sizeof(chelements_struct);
@@ -1297,7 +1297,7 @@ static void setup_cellhistory(void)
           }
         }
       }
-      printout("[info] mem_usage: cellhistory for thread %d occupies %.1f MB\n", tid, mem_usage_cellhistory / 1024. / 1024.);
+      printout("[info] mem_usage: cellhistory for thread %d occupies %.3f MB\n", tid, mem_usage_cellhistory / 1024. / 1024.);
   #ifdef _OPENMP
     }
   #endif
@@ -1415,7 +1415,7 @@ static void setup_phixs_list(void)
       printout("[fatal] read_atomicdata: not enough memory to initialize globals::phixslist[%d].groundcont... abort\n", itid);
       abort();
     }
-    printout("[info] mem_usage: phixslist[tid].groundcont for thread %d occupies %.1f MB\n",
+    printout("[info] mem_usage: phixslist[tid].groundcont for thread %d occupies %.3f MB\n",
              itid, globals::nbfcontinua_ground * sizeof(groundphixslist_t) / 1024. / 1024.);
 
     int i = 0;
@@ -1456,7 +1456,7 @@ static void setup_phixs_list(void)
     assert_always(globals::phixslist[itid].gamma_contr != NULL);
     #endif
 
-    printout("[info] mem_usage: phixslist[tid].kappa_bf_contr for thread %d occupies %.1f MB\n",
+    printout("[info] mem_usage: phixslist[tid].kappa_bf_contr for thread %d occupies %.3f MB\n",
              itid, globals::nbfcontinua * sizeof(double) / 1024. / 1024.);
    }
 
