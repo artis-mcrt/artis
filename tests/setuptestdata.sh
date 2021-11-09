@@ -8,9 +8,9 @@ tar -xf atomicdata_feconi.tar.xz --directory nebularonezone/
 
 cp ../data/* nebularonezone/
 
-if [ ! -f nebularonezone_reference_2021109.tar.xz ]; then curl -O https://theory.gsi.de/~lshingle/artis_http_public/artis/nebularonezone_reference_2021109.tar.xz; fi
+if [ ! -f nebularonezone_reference_20211109.tar.xz ]; then curl -O https://theory.gsi.de/~lshingle/artis_http_public/artis/nebularonezone_reference_20211109.tar.xz; fi
 
-tar -xf nebularonezone_reference_2021109.tar.xz
+tar -xf nebularonezone_reference_20211109.tar.xz
 tar -xf atomicdata_feconi.tar.xz --directory nebularonezone_reference/
 cp ../data/* nebularonezone_reference/
 
