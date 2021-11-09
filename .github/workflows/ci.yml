@@ -26,6 +26,19 @@ jobs:
         sudo apt-get install libgsl-dev
         # sudo apt-get install clang
         cp artisoptions_nltenebular.h artisoptions.h
+        python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())'
+
+    - name: "CPU count"
+      id: cpu-count
+      run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
+
+    - name: "echo CPU count"
+      run: echo "CPU count: ${{ steps.cpu-count.outputs.count }}"
+
+    - name: Cache pip
+      uses: actions/cache@v2.1.4
+      with:
+        path: ${{ steps.pip-cache.outputs.dir }}
 
     - name: "CPU count"
       id: cpu-count
