@@ -26,7 +26,6 @@ jobs:
         sudo apt-get install libgsl-dev
         # sudo apt-get install clang
         cp artisoptions_nltenebular.h artisoptions.h
-        python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())'
 
     - name: "CPU count"
       id: cpu-count
