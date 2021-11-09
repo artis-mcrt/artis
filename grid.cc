@@ -1450,11 +1450,13 @@ static void calc_totmassradionuclides(void)
   mfeg = 0.;
 
   assert_always(totmassradionuclide == NULL);
-  totmassradionuclide = (double *) calloc(decay::get_num_nuclides(), sizeof(double));
+  totmassradionuclide = (double *) malloc(decay::get_num_nuclides() * sizeof(double));
   assert_always(totmassradionuclide != NULL);
 
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
+  {
     totmassradionuclide[nucindex] = 0.;
+  }
 
   int n1 = 0;
   for (int mgi = 0; mgi < get_npts_model(); mgi++)
