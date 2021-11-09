@@ -79,7 +79,7 @@ static void read_phixs_data_table(
     int upperlevel = upperlevel_in - groundstate_index_in;
     assert_always(upperlevel >= 0);
     globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
-    mem_usage_phixs += sizeof(phixstarget_entry);
+    *mem_usage_phixs += sizeof(phixstarget_entry);
     if ((globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(1, sizeof(phixstarget_entry))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize phixstargets... abort\n");
@@ -99,7 +99,7 @@ static void read_phixs_data_table(
     if (!single_level_top_ion || upperion < get_nions(element) - 1) // in case the top ion has nlevelsmax = 1
     {
       globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = in_nphixstargets;
-      mem_usage_phixs += in_nphixstargets * sizeof(phixstarget_entry);
+      *mem_usage_phixs += in_nphixstargets * sizeof(phixstarget_entry);
       if ((globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(in_nphixstargets, sizeof(phixstarget_entry))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize phixstargets list... abort\n");
@@ -126,7 +126,7 @@ static void read_phixs_data_table(
     else // file has table of target states and probabilities but our top ion is limited to one level
     {
       globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
-      mem_usage_phixs += sizeof(phixstarget_entry);
+      *mem_usage_phixs += sizeof(phixstarget_entry);
       if ((globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(1, sizeof(phixstarget_entry))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize phixstargets... abort\n");
@@ -156,14 +156,14 @@ static void read_phixs_data_table(
       if (upperlevel > get_maxrecombininglevel(element, lowerion + 1))
         globals::elements[element].ions[lowerion + 1].maxrecombininglevel = upperlevel;
 
-      mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
+      *mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
       if ((globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].spontrecombcoeff = (double *) calloc(TABLESIZE, sizeof(double))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize spontrecombcoeff table for element %d, ion %d, level %d\n",element,lowerion,lowerlevel);
         abort();
       }
       #if (!NO_LUT_PHOTOION)
-      mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
+      *mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
       if ((globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].corrphotoioncoeff = (double *) calloc(TABLESIZE, sizeof(double))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize photoioncoeff table for element %d, ion %d, level %d\n",element,lowerion,lowerlevel);
@@ -171,14 +171,14 @@ static void read_phixs_data_table(
       }
       #endif
       #if (!NO_LUT_BFHEATING)
-      mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
+      *mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
       if ((globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfheating_coeff = (double *) calloc(TABLESIZE, sizeof(double))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize modified_photoioncoeff table for element %d, ion %d, level %d\n",element,lowerion,lowerlevel);
         abort();
       }
       #endif
-      mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
+      *mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
       if ((globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfcooling_coeff = (double *) calloc(TABLESIZE, sizeof(double))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize bfcooling table for element %d, ion %d, level %d\n",element,lowerion,lowerlevel);
@@ -187,7 +187,7 @@ static void read_phixs_data_table(
     }
   }
 
-  mem_usage_phixs += globals::NPHIXSPOINTS * sizeof(float);
+  *mem_usage_phixs += globals::NPHIXSPOINTS * sizeof(float);
   if ((globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs = (float *) calloc(globals::NPHIXSPOINTS, sizeof(float))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize photoion_xslist... abort\n");
@@ -292,8 +292,7 @@ static void read_phixs_data(void)
 
   fclose(phixsdata);
   printout("[info] mem_usage: photoionisation tables occupy %.1f MB\n", mem_usage_phixs / 1024. / 1024.);
-  printout("[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and corrphotoioncoeff/bfheating if enabled) occupy %.1f MB\n",
-           mem_usage_phixsderivedcoeffs / 1024. / 1024.);
+  printout("[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and corrphotoioncoeff/bfheating if enabled) occupy %.1f MB\n", mem_usage_phixsderivedcoeffs / 1024. / 1024.);
 }
 
 
@@ -433,11 +432,7 @@ static transitiontable_entry *read_ion_transitions(
           // printout("+adding transition index %d Z=%02d ionstage %d lower %d upper %d\n", i, Z, ionstage, prev_lower, tmplevel);
           (*tottransitions)++;
           transitiontable = (transitiontable_entry *) realloc(transitiontable, *tottransitions * sizeof(transitiontable_entry));
-          if (transitiontable == NULL)
-          {
-            printout("Could not reallocate transitiontable\n");
-            abort();
-          }
+          assert_always(transitiontable != NULL);
           assert_always(prev_lower >= 0);
           assert_always(tmplevel >= 0);
           transitiontable[i].lower = prev_lower;
