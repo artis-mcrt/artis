@@ -33,12 +33,7 @@ jobs:
       run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
 
     - name: "echo CPU count"
-      run: echo ${{ steps.cpu-count.outputs.count }}
-
-    - name: Cache pip
-      uses: actions/cache@v2.1.4
-      with:
-        path: ${{ steps.pip-cache.outputs.dir }}
+      run: echo CPU Count: ${{ steps.cpu-count.outputs.count }}
 
     - name: "CPU count"
       id: cpu-count
