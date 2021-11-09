@@ -662,26 +662,19 @@ static void allocate_compositiondata(const int modelgridindex)
     abort();
   }
 
-  printout("allocate_compositiondata mgi %d initmassfracstable \n", modelgridindex);
   modelgrid[modelgridindex].initmassfracstable = (float *) malloc(get_nelements() * sizeof(float));
   assert_always(modelgrid[modelgridindex].initmassfracstable != NULL);
 
   mem_usage_nltepops += globals::total_nlte_levels * sizeof(double);
 
-  printout("allocate_compositiondata mgi %d nlte_pops \n", modelgridindex);
 #ifdef MPI_ON
   MPI_Win win;
-  MPI_Aint size = globals::total_nlte_levels * sizeof(double);
-  if (globals::rank_in_node == 0)
-  {
-    MPI_Win_allocate_shared(size, sizeof(double), MPI_INFO_NULL, globals::mpi_comm_node,
-                            &modelgrid[modelgridindex].nlte_pops, &win);
-  }
-  else
+  MPI_Aint size = (globals::rank_in_node == 0) ? globals::total_nlte_levels * sizeof(double) : 0;
+  MPI_Win_allocate_shared(size, sizeof(double), MPI_INFO_NULL, globals::mpi_comm_node,
+                          &modelgrid[modelgridindex].nlte_pops, &win);
+  if (globals::rank_in_node != 0)
   {
     int disp_unit;
-    MPI_Win_allocate_shared(0, sizeof(double), MPI_INFO_NULL, globals::mpi_comm_node,
-                            &modelgrid[modelgridindex].nlte_pops, &win);
     MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &modelgrid[modelgridindex].nlte_pops);
   }
 #else
