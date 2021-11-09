@@ -1792,8 +1792,8 @@ void do_MPI_Bcast(const int modelgridindex, const int root)
     {
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
-        MPI_Bcast(&radfieldbins[modelgridindex][binindex].W, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-        MPI_Bcast(&radfieldbins[modelgridindex][binindex].T_R, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbin_solutions[modelgridindex][binindex].W, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbin_solutions[modelgridindex][binindex].T_R, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
