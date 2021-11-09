@@ -377,20 +377,7 @@ void init(int my_rank, int ndo)
   }
 
   radfieldbins = (struct radfieldbin **) malloc((grid::get_npts_model() + 1) * sizeof(struct radfieldbin *));
-
-#ifdef MPI_ON
-  MPI_Win win;
-  MPI_Aint size = (globals::rank_in_node == 0) ? (grid::get_npts_model() + 1) * sizeof(struct radfieldbin_solution *) : 0;
-  MPI_Win_allocate_shared(size, sizeof(struct radfieldbin_solution *), MPI_INFO_NULL, globals::mpi_comm_node, &radfieldbin_solutions, &win);
-  if (globals::rank_in_node != 0)
-  {
-    int disp_unit;
-    MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &radfieldbin_solutions);
-  }
-#else
   radfieldbin_solutions = (struct radfieldbin_solution **) malloc((grid::get_npts_model() + 1) * sizeof(struct radfieldbin_solution *));
-#endif
-
 
   long mem_usage_bf_estim = 0;
   long mem_usage_bf_estim_accum = 0; // accumulators for current timestep
@@ -455,16 +442,41 @@ void init(int my_rank, int ndo)
       if (MULTIBIN_RADFIELD_MODEL_ON)
       {
         radfieldbins[modelgridindex] = (struct radfieldbin *) malloc(RADFIELDBINCOUNT * sizeof(struct radfieldbin));
-        radfieldbin_solutions[modelgridindex] = (struct radfieldbin_solution *) malloc(RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution));
         mem_usage_bins += RADFIELDBINCOUNT * sizeof(struct radfieldbin);
-        mem_usage_bin_solutions += RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution);
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
         {
           radfieldbins[modelgridindex][binindex].J_raw = 0.;
           radfieldbins[modelgridindex][binindex].nuJ_raw = 0.;
           radfieldbins[modelgridindex][binindex].contribcount = 0;
-          radfieldbin_solutions[modelgridindex][binindex].W = -1.;
-          radfieldbin_solutions[modelgridindex][binindex].T_R = -1.;
+        }
+
+        mem_usage_bin_solutions += RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution);
+        #ifdef MPI_ON
+        {
+          MPI_Win win;
+          MPI_Aint size = (globals::rank_in_node == 0) ? RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution) : 0;
+          MPI_Win_allocate_shared(size, sizeof(struct radfieldbin_solution *), MPI_INFO_NULL, globals::mpi_comm_node, &radfieldbin_solutions[modelgridindex], &win);
+          if (globals::rank_in_node != 0)
+          {
+            int disp_unit;
+            MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &radfieldbin_solutions[modelgridindex]);
+          }
+        }
+        #else
+        {
+          radfieldbin_solutions[modelgridindex] = (struct radfieldbin_solution *) malloc(RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution));
+        }
+        #endif
+
+        #ifdef MPI_ON
+        if (globals::rank_in_node == 0)
+        #endif
+        {
+          for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+          {
+            radfieldbin_solutions[modelgridindex][binindex].W = -1.;
+            radfieldbin_solutions[modelgridindex][binindex].T_R = -1.;
+          }
         }
       }
     }
