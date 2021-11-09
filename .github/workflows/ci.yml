@@ -4,6 +4,7 @@ on:
   push:
     branches:
     - nebular*
+    - mpi*
     - main
   # pull_request:
   #   branches:
@@ -26,6 +27,14 @@ jobs:
         # sudo apt-get install clang
         cp artisoptions_nltenebular.h artisoptions.h
 
+    - name: "CPU count"
+      id: cpu-count
+      run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
+
+    - name: "echo CPU count"
+      run: |
+        echo CPU Count: ${{ steps.cpu-count.outputs.count }}
+
     # - name: "compile with gcc"
     #   run: |
     #     which g++
@@ -37,14 +46,16 @@ jobs:
         which clang++
         clang++ --version
         export CXX=clang++
-        make CXX=clang++ clean sn3d exspec
+        make clean
+        make CXX=clang++ -j${{ steps.cpu-count.outputs.count }} sn3d exspec
 
-    - name: "compile with OpenMPI"
+    - name: "compile with GCC+OpenMPI"
       run: |
         sudo apt install -y openmpi-bin libopenmpi-dev
         mpicxx --version
-        make clean sn3d
-        sudo apt remove openmpi-bin libopenmpi-dev
+        make clean
+        make -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+    # sudo apt remove openmpi-bin libopenmpi-dev
 
     - name: "run cppcheck"
       run: |
@@ -89,7 +100,8 @@ jobs:
     - name: "Setup test nebularonezone"
       run: |
         cp tests/nebularonezone/artisoptions.h .
-        make TESTMODE=ON CXX=g++ clean sn3d exspec
+        make clean
+        make TESTMODE=ON MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
         cp sn3d tests/nebularonezone/
         cp exspec tests/nebularonezone/
         cp data/*.txt tests/nebularonezone/
@@ -99,7 +111,7 @@ jobs:
       run: |
         cp input-newrun.txt input.txt
         touch output_0-0.txt
-        time ./sn3d
+        time mpirun -np 2 ./sn3d
 
     - name: "cat estimators"
       working-directory: tests/nebularonezone/
@@ -110,7 +122,7 @@ jobs:
       if: always()
       working-directory: tests/nebularonezone/
       run: |
-        cat output_*.txt
+        cat output_0-0.txt
 
     - name: "Run exspec"
       working-directory: tests/nebularonezone/
@@ -130,22 +142,6 @@ jobs:
       with:
         name: test-nebularonezone-output
         path: tests/nebularonezone/output
-
-    - name: Checksum output files
-      working-directory: tests/nebularonezone
-      run: |
-        md5sum *.out
-        md5sum -c results_md5.txt
-        # md5sum -c <(echo e7e4d172ca0d1fb13bcf99891be68f18 estimators_0000.out)
-        # md5sum -c <(echo 3f641aefb2c14fe31d93bf0826154fa2 light_curve.out)
-        # md5sum -c <(echo 88e4591d14b1a46cdd77120d70dbbf2f gamma_light_curve.out)
-        # md5sum -c <(echo 28760611670129a32d8de4326c6abddb spec.out)
-        # md5sum -c <(echo 8e7163982f1aa938dc1505478b8c60d1 timesteps.out)
-        # md5sum -c <(echo 1c4b1ccb2ea3bd56f3ef976e4dce870e nonthermalspec_0000.out)
-        # md5sum -c <(echo 60482b8632dd22597e29732e38496d5c gamma_spec.out)
-        # md5sum -c <(echo 23d8c0893fdd950bc64e7a18dc8c2d92 absorption.out)
-        # md5sum -c <(echo 34996393c1ac2721b49b8da362246291 emission.out)
-        # md5sum -c <(echo 54dbeaf121582f58f0f2d0fe6aca67b5 emissiontrue.out)
 
     - name: Set up Python
       uses: actions/setup-python@v2
@@ -185,3 +181,9 @@ jobs:
       with:
         name: test-nebularonezone-output-pdf
         path: tests/*.pdf
+
+    - name: Checksum output files
+      working-directory: tests/nebularonezone
+      run: |
+        md5sum *.out
+        md5sum -c results_md5.txt

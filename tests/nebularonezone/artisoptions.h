@@ -5,7 +5,7 @@
 #include "constants.h"
 
 // Number of energy packets per process (OpenMP threads share these pacekts)
-#define MPKTS 100000
+#define MPKTS 1000000
 
 // Max number of OpenMP threads
 #define MTHREADS 8
