@@ -835,7 +835,8 @@ void close_file(void)
         if (globals::rank_in_node == 0)
         #endif
         {
-          free(radfieldbin_solutions[modelgridindex]);
+          // need to store the MPI window so it can be freed
+          // free(radfieldbin_solutions[modelgridindex]);
         }
       }
       #if (DETAILED_BF_ESTIMATORS_ON)
@@ -844,7 +845,7 @@ void close_file(void)
       if (globals::rank_in_node == 0)
       #endif
       {
-        free(prev_bfrate_normed[modelgridindex]);
+        // free(prev_bfrate_normed[modelgridindex]);
       }
       #endif
     }
