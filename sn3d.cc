@@ -107,11 +107,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
       if (grid::get_numassociatedcells(modelgridindex) > 0)
       {
         nonthermal::nt_MPI_Bcast(modelgridindex, root);
-        if (NLTE_POPS_ON && !MPI_SHARED_NODE_MEMORY)
-        {
-          MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, my_rank, MPI_COMM_WORLD);
-        }
-        else if (NLTE_POPS_ON && MPI_SHARED_NODE_MEMORY && globals::rank_in_node == 0)
+        if (NLTE_POPS_ON && globals::rank_in_node == 0)
         {
           MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
         }

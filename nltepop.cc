@@ -1799,7 +1799,7 @@ void nltepop_read_restart_data(FILE *restart_file)
         for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++)
         {
 #ifdef MPI_ON
-          if (MPI_SHARED_NODE_MEMORY && globals::rank_in_node != 0)
+          if (globals::rank_in_node != 0)
           {
             fscanf(restart_file, "%*lg ");  // discard value (master rank of this node will set it)
           }

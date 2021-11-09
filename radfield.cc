@@ -374,8 +374,11 @@ void init(int my_rank, int ndo)
 
   radfieldbins = (struct radfieldbin **) malloc((grid::get_npts_model() + 1) * sizeof(struct radfieldbin *));
 
+  long mem_usage_bf_estim = 0;
+
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
+    mem_usage_bf_estim += (grid::get_npts_model() + 1) * (sizeof(double *) + sizeof(float *));
     prev_bfrate_normed = (float **) malloc((grid::get_npts_model() + 1) * sizeof(float *));
     bfrate_raw = (double **) malloc((grid::get_npts_model() + 1) * sizeof(double *));
 
@@ -388,7 +391,7 @@ void init(int my_rank, int ndo)
   }
   #endif
 
-  long mem_usage = 0;
+  long mem_usage_bins = 0;
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
   {
     set_J_normfactor(modelgridindex, -1.0);
@@ -397,6 +400,7 @@ void init(int my_rank, int ndo)
     {
       #if (DETAILED_BF_ESTIMATORS_ON)
       {
+        mem_usage_bf_estim += globals::nbfcontinua * (sizeof(double) + sizeof(float));
         bfrate_raw[modelgridindex] = (double *) malloc(globals::nbfcontinua * sizeof(double));
         prev_bfrate_normed[modelgridindex] = (float *) malloc(globals::nbfcontinua * sizeof(float));
 
@@ -417,7 +421,7 @@ void init(int my_rank, int ndo)
       if (MULTIBIN_RADFIELD_MODEL_ON)
       {
         radfieldbins[modelgridindex] = (struct radfieldbin *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin));
-        mem_usage += RADFIELDBINCOUNT * sizeof(struct radfieldbin);
+        mem_usage_bins += RADFIELDBINCOUNT * sizeof(struct radfieldbin);
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
         {
           radfieldbins[modelgridindex][binindex].J_raw = 0.;
@@ -430,7 +434,12 @@ void init(int my_rank, int ndo)
       }
     }
   }
-  printout("[info] mem_usage: radiation field bins for non-empty cells occupy %.2f MB\n", mem_usage / 1024. / 1024.);
+  printout("[info] mem_usage: radiation field bins for non-empty cells occupy %.2f MB\n", mem_usage_bins / 1024. / 1024.);
+  #if (DETAILED_BF_ESTIMATORS_ON)
+  {
+    printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.2f MB\n", mem_usage_bf_estim / 1024. / 1024.);
+  }
+  #endif
 }
 
 

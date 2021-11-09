@@ -12,8 +12,6 @@
   #include "mpi.h"
 #endif
 
-static const bool MPI_SHARED_NODE_MEMORY = true;
-
 namespace globals
 {
   #if CUDA_ENABLED
