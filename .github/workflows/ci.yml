@@ -33,7 +33,8 @@ jobs:
       run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
 
     - name: "echo CPU count"
-      run: echo CPU Count: ${{ steps.cpu-count.outputs.count }}
+      run: |
+        echo CPU Count: ${{ steps.cpu-count.outputs.count }}
 
     - name: "CPU count"
       id: cpu-count
