@@ -855,33 +855,21 @@ void close_file(void)
     radfieldfile = NULL;
   }
 
-  if (MULTIBIN_RADFIELD_MODEL_ON)
-  {
-    free(radfieldbins);
-    #ifdef MPI_ON
-    if (globals::rank_in_node == 0)
-    #endif
-    {
-      // need to store the MPI window so it can be freed
-      // free(radfieldbin_solutions);
-    }
-  }
-
-  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
-  {
-    if (grid::get_numassociatedcells(modelgridindex) > 0)
-    {
-      #if (DETAILED_BF_ESTIMATORS_ON)
-      free(bfrate_raw[modelgridindex]);
-      #ifdef MPI_ON
-      if (globals::rank_in_node == 0)
-      #endif
-      {
-        // free(prev_bfrate_normed[modelgridindex]);
-      }
-      #endif
-    }
-  }
+  // if (MULTIBIN_RADFIELD_MODEL_ON)
+  // {
+  //   free(radfieldbins);
+  //   #ifdef MPI_ON
+  //   if (globals::rank_in_node == 0)
+  //   #endif
+  //   {
+  //     // need to store the MPI window so it can be freed
+  //     // free(radfieldbin_solutions);
+  //   }
+  // }
+  //
+  // #if (DETAILED_BF_ESTIMATORS_ON)
+  // free(bfrate_raw);
+  // #endif
 }
 
 
