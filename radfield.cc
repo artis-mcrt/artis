@@ -381,23 +381,7 @@ void init(int my_rank, int ndo)
   }
 
   const long mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin);
-
-  #ifdef MPI_ON
-  {
-    MPI_Win win;
-    MPI_Aint size = (rank_in_node == 0) ? nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin) : 0;
-    MPI_Win_allocate_shared(size, sizeof(struct radfieldbin), MPI_INFO_NULL, globals::mpi_comm_node, &radfieldbins, &win);
-    if (rank_in_node != 0)
-    {
-      int disp_unit;
-      MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &radfieldbins);
-    }
-  }
-  #else
-  {
-    radfieldbins = (struct radfieldbin *) malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin));
-  }
-  #endif
+  radfieldbins = (struct radfieldbin *) malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin));
 
   const long mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution);
 
