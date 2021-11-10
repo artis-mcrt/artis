@@ -22,10 +22,11 @@ jobs:
     - name: "install dependencies"
       run: |
         git status
+        cp artisoptions_nltenebular.h artisoptions.h
         # sudo apt-get update
         sudo apt-get install libgsl-dev
         # sudo apt-get install clang
-        cp artisoptions_nltenebular.h artisoptions.h
+        sudo apt install -y openmpi-bin libopenmpi-dev
 
     - name: "CPU count"
       id: cpu-count
@@ -51,11 +52,10 @@ jobs:
 
     - name: "compile with GCC (OpenMPI)"
       run: |
-        sudo apt install -y openmpi-bin libopenmpi-dev
+        which mpicxx
         mpicxx --version
         make clean
         make -j${{ steps.cpu-count.outputs.count }} sn3d exspec
-    # sudo apt remove openmpi-bin libopenmpi-dev
 
     - name: "run cppcheck"
       run: |
