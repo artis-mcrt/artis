@@ -88,8 +88,8 @@ jobs:
       uses: actions/cache@v2.1.4
       id: cache-testreferencedata
       with:
-          path: "tests/nebularonezone_reference_20210324.tar.xz"
-          key: tests/nebularonezone_reference_20210324.tar.xz
+          path: "tests/nebularonezone_reference_20211109.tar.xz"
+          key: tests/nebularonezone_reference_20211109.tar.xz
 
     - name: Download/extract test data
       # if: steps.cache-atomicdata.outputs.cache-hit != 'true'
