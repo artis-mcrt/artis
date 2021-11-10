@@ -43,6 +43,12 @@ __managed__ static double radfieldbin_nu_upper[RADFIELDBINCOUNT]; // array of up
 __managed__ static struct radfieldbin *radfieldbins = NULL;
 __managed__ static struct radfieldbin_solution *radfieldbin_solutions = NULL;
 
+
+#ifdef MPI_ON
+  MPI_Win win_radfieldbin_solutions = NULL;
+  MPI_Win win_prev_bfrate_normed = NULL;
+#endif
+
 // ** Detailed lines - Jblue_lu estimators for selected lines
 
 struct Jb_lu_estimator
@@ -387,13 +393,12 @@ void init(int my_rank, int ndo)
 
   #ifdef MPI_ON
   {
-    MPI_Win win;
     MPI_Aint size = (rank_in_node == 0) ? nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution) : 0;
-    MPI_Win_allocate_shared(size, sizeof(struct radfieldbin_solution), MPI_INFO_NULL, globals::mpi_comm_node, &radfieldbin_solutions, &win);
+    MPI_Win_allocate_shared(size, sizeof(struct radfieldbin_solution), MPI_INFO_NULL, globals::mpi_comm_node, &radfieldbin_solutions, &win_radfieldbin_solutions);
     if (rank_in_node != 0)
     {
       int disp_unit;
-      MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &radfieldbin_solutions);
+      MPI_Win_shared_query(win_radfieldbin_solutions, MPI_PROC_NULL, &size, &disp_unit, &radfieldbin_solutions);
     }
   }
   #else
@@ -410,13 +415,13 @@ void init(int my_rank, int ndo)
     mem_usage_bf_estim_accum = nonempty_npts_model * globals::nbfcontinua * sizeof(float);
     #ifdef MPI_ON
     {
-      MPI_Win win;
+      MPI_Win win_prev_bfrate_normed;
       MPI_Aint size = (rank_in_node == 0) ? nonempty_npts_model * globals::nbfcontinua * sizeof(float) : 0;
-      MPI_Win_allocate_shared(size, sizeof(float), MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed, &win);
+      MPI_Win_allocate_shared(size, sizeof(float), MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed, &win_prev_bfrate_normed);
       if (rank_in_node != 0)
       {
         int disp_unit;
-        MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &prev_bfrate_normed);
+        MPI_Win_shared_query(win_prev_bfrate_normed, MPI_PROC_NULL, &size, &disp_unit, &prev_bfrate_normed);
       }
     }
     #else
@@ -838,16 +843,19 @@ void close_file(void)
   {
     free(radfieldbins);
     #ifdef MPI_ON
-    if (globals::rank_in_node == 0)
+    MPI_Win_free(win_radfieldbin_solutions);
+    #else
+    free(radfieldbin_solutions);
     #endif
-    {
-      // need to store the MPI window so it can be freed
-      // free(radfieldbin_solutions);
-    }
   }
 
   #if (DETAILED_BF_ESTIMATORS_ON)
-  free(bfrate_raw);
+    free(bfrate_raw);
+    #ifdef MPI_ON
+    MPI_Win_free(win_prev_bfrate_normed);
+    #else
+    free(prev_bfrate_normed);
+    #endif
   #endif
 }
 

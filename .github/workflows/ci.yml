@@ -41,7 +41,7 @@ jobs:
     #     g++ --version
     #     make CXX=g++ clean sn3d exspec
 
-    - name: "compile with clang"
+    - name: "compile with clang (no MPI)"
       run: |
         which clang++
         clang++ --version
@@ -49,7 +49,7 @@ jobs:
         make clean
         make CXX=clang++ -j${{ steps.cpu-count.outputs.count }} sn3d exspec
 
-    - name: "compile with GCC+OpenMPI"
+    - name: "compile with GCC (OpenMPI)"
       run: |
         sudo apt install -y openmpi-bin libopenmpi-dev
         mpicxx --version
