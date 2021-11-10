@@ -45,8 +45,8 @@ __managed__ static struct radfieldbin_solution *radfieldbin_solutions = NULL;
 
 
 #ifdef MPI_ON
-  MPI_Win win_radfieldbin_solutions = NULL;
-  MPI_Win win_prev_bfrate_normed = NULL;
+  MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
+  MPI_Win win_prev_bfrate_normed = MPI_WIN_NULL;
 #endif
 
 // ** Detailed lines - Jblue_lu estimators for selected lines
@@ -836,18 +836,30 @@ void close_file(void)
   {
     free(radfieldbins);
     #ifdef MPI_ON
-    MPI_Win_free(&win_radfieldbin_solutions);
+    if (win_radfieldbin_solutions != MPI_WIN_NULL)
+    {
+      MPI_Win_free(&win_radfieldbin_solutions);
+    }
     #else
-    free(radfieldbin_solutions);
+    if (radfieldbin_solutions != NULL)
+    {
+      free(radfieldbin_solutions);
+    }
     #endif
   }
 
   #if (DETAILED_BF_ESTIMATORS_ON)
     free(bfrate_raw);
     #ifdef MPI_ON
-    MPI_Win_free(&win_prev_bfrate_normed);
+    if (win_radfieldbin_solutions != MPI_WIN_NULL)
+    {
+      MPI_Win_free(&win_prev_bfrate_normed);
+    }
     #else
-    free(prev_bfrate_normed);
+    if (prev_bfrate_normed != NULL)
+    {
+      free(prev_bfrate_normed);
+    }
     #endif
   #endif
 }
