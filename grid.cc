@@ -457,7 +457,9 @@ int get_modelcell_nonemptymgi(int mgi)
   assert_testmodeonly(nonempty_npts_model > 0);
   assert_testmodeonly(mgi < get_npts_model());
 
-  return nonemptymgi_of_mgi[mgi];
+  const int nonemptymgi = nonemptymgi_of_mgi[mgi];
+  assert_testmodeonly(nonemptymgi >= 0);
+  return nonemptymgi;
 }
 
 
