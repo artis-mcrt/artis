@@ -48,7 +48,7 @@ jobs:
         clang++ --version
         export CXX=clang++
         make clean
-        make CXX=clang++ -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+        make CXX=clang++ MPI=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
 
     - name: "compile with GCC (OpenMPI)"
       run: |
