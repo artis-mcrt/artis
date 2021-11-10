@@ -65,8 +65,8 @@ __managed__ static struct Jb_lu_estimator **Jb_lu_raw = NULL;   // unnormalised 
 
 #if (DETAILED_BF_ESTIMATORS_ON)
 __managed__ static bool normed_bfrates_available = false;
-__managed__ static float **prev_bfrate_normed = NULL;  // values from the previous timestep [nonemptymgi][binindex]
-__managed__ static double **bfrate_raw = NULL;   // unnormalised estimators for the current timestep
+__managed__ static float *prev_bfrate_normed = NULL;  // values from the previous timestep
+__managed__ static double *bfrate_raw = NULL;   // unnormalised estimators for the current timestep
 
 // expensive debugging mode to track the contributions to each bound-free rate estimator
 #if (DETAILED_BF_ESTIMATORS_BYTYPE)
@@ -407,10 +407,26 @@ void init(int my_rank, int ndo)
 
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
-    mem_usage_bf_estim += (grid::get_npts_model() + 1) * sizeof(double *);
-    mem_usage_bf_estim_accum += (grid::get_npts_model() + 1) * sizeof(float *);
-    prev_bfrate_normed = (float **) malloc((grid::get_npts_model() + 1) * sizeof(float *));
-    bfrate_raw = (double **) malloc((grid::get_npts_model() + 1) * sizeof(double *));
+    mem_usage_bf_estim_accum = nonempty_npts_model * globals::nbfcontinua * sizeof(float);
+    #ifdef MPI_ON
+    {
+      MPI_Win win;
+      MPI_Aint size = (rank_in_node == 0) ? nonempty_npts_model * globals::nbfcontinua * sizeof(float) : 0;
+      MPI_Win_allocate_shared(size, sizeof(float), MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed, &win);
+      if (rank_in_node != 0)
+      {
+        int disp_unit;
+        MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &prev_bfrate_normed);
+      }
+    }
+    #else
+    {
+      prev_bfrate_normed = (float *) malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(float));
+    }
+    #endif
+
+    mem_usage_bf_estim = nonempty_npts_model * globals::nbfcontinua * sizeof(double);
+    bfrate_raw = (double *) malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(double));
 
     #if (DETAILED_BF_ESTIMATORS_BYTYPE)
     {
@@ -429,36 +445,15 @@ void init(int my_rank, int ndo)
     {
       const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
       assert_always(grid::get_modelcell_nonemptymgi(modelgridindex) >= 0);
-      #if (DETAILED_BF_ESTIMATORS_ON)
+      #if (DETAILED_BF_ESTIMATORS_ON && DETAILED_BF_ESTIMATORS_BYTYPE)
       {
-        mem_usage_bf_estim_accum += globals::nbfcontinua * sizeof(double);
-        bfrate_raw[modelgridindex] = (double *) malloc(globals::nbfcontinua * sizeof(double));
-
-        mem_usage_bf_estim += globals::nbfcontinua * sizeof(float);
-        #ifdef MPI_ON
-        MPI_Win win;
-        MPI_Aint size = (rank_in_node == 0) ? globals::nbfcontinua * sizeof(float) : 0;
-        MPI_Win_allocate_shared(size, sizeof(float), MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed[modelgridindex], &win);
-        if (rank_in_node != 0)
+        bfrate_raw_bytype[modelgridindex] = (struct bfratecontrib **) malloc(globals::nbfcontinua * sizeof(struct bfratecontrib *));
+        bfrate_raw_bytype_size[modelgridindex] = (int *) malloc(globals::nbfcontinua * sizeof(int));
+        for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++)
         {
-          int disp_unit;
-          MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &prev_bfrate_normed[modelgridindex]);
+          bfrate_raw_bytype[modelgridindex][allcontindex] = NULL;
+          bfrate_raw_bytype_size[modelgridindex][allcontindex] = 0.;
         }
-        #else
-        prev_bfrate_normed[modelgridindex] = (float *) malloc(globals::nbfcontinua * sizeof(float));
-        #endif
-
-        #if (DETAILED_BF_ESTIMATORS_BYTYPE)
-        {
-          bfrate_raw_bytype[modelgridindex] = (struct bfratecontrib **) malloc(globals::nbfcontinua * sizeof(struct bfratecontrib *));
-          bfrate_raw_bytype_size[modelgridindex] = (int *) malloc(globals::nbfcontinua * sizeof(int));
-          for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++)
-          {
-            bfrate_raw_bytype[modelgridindex][allcontindex] = NULL;
-            bfrate_raw_bytype_size[modelgridindex][allcontindex] = 0.;
-          }
-        }
-        #endif
       }
       #endif
 
@@ -839,21 +834,21 @@ void close_file(void)
     radfieldfile = NULL;
   }
 
-  // if (MULTIBIN_RADFIELD_MODEL_ON)
-  // {
-  //   free(radfieldbins);
-  //   #ifdef MPI_ON
-  //   if (globals::rank_in_node == 0)
-  //   #endif
-  //   {
-  //     // need to store the MPI window so it can be freed
-  //     // free(radfieldbin_solutions);
-  //   }
-  // }
-  //
-  // #if (DETAILED_BF_ESTIMATORS_ON)
-  // free(bfrate_raw);
-  // #endif
+  if (MULTIBIN_RADFIELD_MODEL_ON)
+  {
+    free(radfieldbins);
+    #ifdef MPI_ON
+    if (globals::rank_in_node == 0)
+    #endif
+    {
+      // need to store the MPI window so it can be freed
+      // free(radfieldbin_solutions);
+    }
+  }
+
+  #if (DETAILED_BF_ESTIMATORS_ON)
+  free(bfrate_raw);
+  #endif
 }
 
 
@@ -865,10 +860,10 @@ void zero_estimators(int modelgridindex)
   assert_always(bfrate_raw != NULL);
   if (initialized && (grid::get_numassociatedcells(modelgridindex) > 0))
   {
-    assert_always(bfrate_raw[modelgridindex] != NULL);
+    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
     for (int i = 0; i < globals::nbfcontinua; i++)
     {
-      bfrate_raw[modelgridindex][i] = 0.;
+      bfrate_raw[nonemptymgi * globals::nbfcontinua + i] = 0.;
     }
   }
   #endif
@@ -918,7 +913,9 @@ static void increment_bfestimators(
   if (distance_e_cmf == 0)
     return;
 
+  const int nbfcontinua = globals::nbfcontinua;
   const double dopplerfactor = doppler_packetpos(pkt_ptr);
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   // const double dopplerfactor = 1.;
 
   // const double deltaV = grid::vol_init_modelcell(modelgridindex) * pow(globals::time_step[nts_global].mid / globals::tmin, 3);
@@ -927,14 +924,14 @@ static void increment_bfestimators(
 
   const int tid = get_thread_num();
   const double distance_e_cmf_over_nu = distance_e_cmf / nu_cmf * dopplerfactor;
-  for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++)
+  for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++)
   {
     const double nu_edge = globals::allcont_nu_edge[allcontindex];
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
     if (nu_cmf >= nu_edge && nu_cmf <= nu_max_phixs)
     {
-      safeadd(bfrate_raw[modelgridindex][allcontindex], globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
+      safeadd(bfrate_raw[nonemptymgi * nbfcontinua + allcontindex], globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
 
       #if (DETAILED_BF_ESTIMATORS_BYTYPE)
       const int element = allcont[allcontindex].element;
@@ -1558,13 +1555,17 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
 {
   #if (DETAILED_BF_ESTIMATORS_ON)
   printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
+  const int nbfcontinua = globals::nbfcontinua;
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  assert_always(nonemptymgi >= 0);
   for (int i = 0; i < globals::nbfcontinua; i++)
   {
     #ifdef MPI_ON
     if (globals::rank_in_node == 0)
     #endif
     {
-      prev_bfrate_normed[modelgridindex][i] = bfrate_raw[modelgridindex][i] * estimator_normfactor_over_H;
+      const int mgibfindex = nonemptymgi * nbfcontinua + i;
+      prev_bfrate_normed[mgibfindex] = bfrate_raw[mgibfindex] * estimator_normfactor_over_H;
     }
 
     #if (DETAILED_BF_ESTIMATORS_BYTYPE)
@@ -1583,7 +1584,8 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
   {
     for (int i = 0; i < globals::nbfcontinua; i++)
     {
-      if (prev_bfrate_normed[modelgridindex][i] > 0.)
+      const int mgibfindex = nonemptymgi * nbfcontinua + i;
+      if (prev_bfrate_normed[mgibfindex] > 0.)
       {
         normed_bfrates_available = true;
         printout("radfield: normed_bfrates_available is now true\n");
@@ -1701,6 +1703,9 @@ double get_bfrate_estimator(const int element, const int lowerion, const int low
   if (!normed_bfrates_available)
     return -1.;
 
+  const int nbfcontinua = globals::nbfcontinua;
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+
   // TODO: speed this up with a binary search
   const double nu_edge = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
   for (int i = 0; i < globals::nbfcontinua; i++)
@@ -1708,7 +1713,7 @@ double get_bfrate_estimator(const int element, const int lowerion, const int low
     if ((globals::allcont[i].element == element) && (globals::allcont[i].ion == lowerion) &&
         (globals::allcont[i].level == lower) && (globals::allcont[i].phixstargetindex == phixstargetindex))
     {
-      return prev_bfrate_normed[modelgridindex][i];
+      return prev_bfrate_normed[nonemptymgi * nbfcontinua + i];
     }
 
     if (nu_edge > globals::allcont[i].nu_edge)
@@ -1792,7 +1797,7 @@ void reduce_estimators(void)
     {
       if (grid::get_numassociatedcells(modelgridindex) > 0)
       {
-        MPI_Allreduce(MPI_IN_PLACE, bfrate_raw[modelgridindex], globals::nbfcontinua, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, bfrate_raw, grid::get_nonempty_npts_model() * globals::nbfcontinua, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       }
     }
   }
@@ -1908,16 +1913,18 @@ void write_restart_data(FILE *gridsave_file)
 
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
-    fprintf(gridsave_file, "%d\n", globals::nbfcontinua);
+    const int nbfcontinua = globals::nbfcontinua;
+    fprintf(gridsave_file, "%d\n", nbfcontinua);
 
     for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
     {
       if (grid::get_numassociatedcells(modelgridindex) > 0)
       {
+        const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         fprintf(gridsave_file, "%d\n", modelgridindex);
-        for (int i = 0; i < globals::nbfcontinua; i++)
+        for (int i = 0; i < nbfcontinua; i++)
         {
-          fprintf(gridsave_file, "%g ", prev_bfrate_normed[modelgridindex][i]);
+          fprintf(gridsave_file, "%g ", prev_bfrate_normed[nonemptymgi * nbfcontinua + i]);
         }
       }
     }
@@ -2032,6 +2039,7 @@ void read_restart_data(FILE *gridsave_file)
     {
       if (grid::get_numassociatedcells(modelgridindex) > 0)
       {
+        const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         int mgi_in;
         fscanf(gridsave_file, "%d\n", &mgi_in);
         assert_always(mgi_in == modelgridindex);
@@ -2039,13 +2047,15 @@ void read_restart_data(FILE *gridsave_file)
         {
           float bfrate_normed = 0;
           fscanf(gridsave_file, "%g ", &bfrate_normed);
+
+          const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
           #ifdef MPI_ON
           if (globals::rank_in_node == 0)
           #endif
           {
-            prev_bfrate_normed[modelgridindex][i] = bfrate_normed;
+            prev_bfrate_normed[mgibfindex] = bfrate_normed;
           }
-          if (!normed_bfrates_available && prev_bfrate_normed[modelgridindex][i] > 0.)
+          if (!normed_bfrates_available && bfrate_normed > 0.)
           {
             normed_bfrates_available = true;
             printout("radfield::read_restart_data: normed_bfrates_available is now true\n");
