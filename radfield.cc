@@ -843,7 +843,7 @@ void close_file(void)
   {
     free(radfieldbins);
     #ifdef MPI_ON
-    MPI_Win_free(win_radfieldbin_solutions);
+    MPI_Win_free(&win_radfieldbin_solutions);
     #else
     free(radfieldbin_solutions);
     #endif
@@ -852,7 +852,7 @@ void close_file(void)
   #if (DETAILED_BF_ESTIMATORS_ON)
     free(bfrate_raw);
     #ifdef MPI_ON
-    MPI_Win_free(win_prev_bfrate_normed);
+    MPI_Win_free(&win_prev_bfrate_normed);
     #else
     free(prev_bfrate_normed);
     #endif
