@@ -836,7 +836,7 @@ void close_file(void)
       {
         free(radfieldbins[modelgridindex]);
         #ifdef MPI_ON
-        if (rank_in_node == 0)
+        if (globals::rank_in_node == 0)
         #endif
         {
           // need to store the MPI window so it can be freed
