@@ -65,7 +65,7 @@ __managed__ static struct Jb_lu_estimator **Jb_lu_raw = NULL;   // unnormalised 
 
 #if (DETAILED_BF_ESTIMATORS_ON)
 __managed__ static bool normed_bfrates_available = false;
-__managed__ static float **prev_bfrate_normed = NULL;  // values from the previous timestep
+__managed__ static float **prev_bfrate_normed = NULL;  // values from the previous timestep [nonemptymgi][binindex]
 __managed__ static double **bfrate_raw = NULL;   // unnormalised estimators for the current timestep
 
 // expensive debugging mode to track the contributions to each bound-free rate estimator
@@ -275,6 +275,10 @@ void init(int my_rank, int ndo)
 
   initialized = true;
 
+  #ifdef MPI_ON
+  const int rank_in_node = globals::rank_in_node;
+  #endif
+
   J_normfactor = (double *) malloc((grid::get_npts_model() + 1) * sizeof(double));
   J = (double *) malloc((grid::get_npts_model() + 1) * sizeof(double));
   #ifdef DO_TITER
@@ -414,9 +418,9 @@ void init(int my_rank, int ndo)
         mem_usage_bf_estim += globals::nbfcontinua * sizeof(float);
         #ifdef MPI_ON
         MPI_Win win;
-        MPI_Aint size = (globals::rank_in_node == 0) ? globals::nbfcontinua * sizeof(float) : 0;
+        MPI_Aint size = (rank_in_node == 0) ? globals::nbfcontinua * sizeof(float) : 0;
         MPI_Win_allocate_shared(size, sizeof(float), MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed[modelgridindex], &win);
-        if (globals::rank_in_node != 0)
+        if (rank_in_node != 0)
         {
           int disp_unit;
           MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &prev_bfrate_normed[modelgridindex]);
@@ -454,9 +458,9 @@ void init(int my_rank, int ndo)
         #ifdef MPI_ON
         {
           MPI_Win win;
-          MPI_Aint size = (globals::rank_in_node == 0) ? RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution) : 0;
+          MPI_Aint size = (rank_in_node == 0) ? RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution) : 0;
           MPI_Win_allocate_shared(size, sizeof(struct radfieldbin_solution *), MPI_INFO_NULL, globals::mpi_comm_node, &radfieldbin_solutions[modelgridindex], &win);
-          if (globals::rank_in_node != 0)
+          if (rank_in_node != 0)
           {
             int disp_unit;
             MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &radfieldbin_solutions[modelgridindex]);
@@ -469,7 +473,7 @@ void init(int my_rank, int ndo)
         #endif
 
         #ifdef MPI_ON
-        if (globals::rank_in_node == 0)
+        if (rank_in_node == 0)
         #endif
         {
           for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
@@ -832,7 +836,7 @@ void close_file(void)
       {
         free(radfieldbins[modelgridindex]);
         #ifdef MPI_ON
-        if (globals::rank_in_node == 0)
+        if (rank_in_node == 0)
         #endif
         {
           // need to store the MPI window so it can be freed

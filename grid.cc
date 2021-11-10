@@ -29,7 +29,8 @@ __managed__ int grid_type;
 __managed__ char coordlabel[3];
 
 __managed__ enum model_types model_type = RHO_1D_READ;
-__managed__ int npts_model = 0; // number of points in 1-D input model
+__managed__ int npts_model = 0; // number of model grid cells
+__managed__ int nonempty_npts_model = 0; // number of allocated non-empty model grid cells
 
 __managed__ double t_model = -1.; // time at which densities in input model are correct.
 __managed__ double *vout_model = NULL;
@@ -47,6 +48,7 @@ __managed__ CELL *cell = NULL;
 static long mem_usage_nltepops = 0;
 
 static __managed__ int *mg_associated_cells = NULL;
+static __managed__ int *nonemptymgi_of_mgi = NULL;
 
 __managed__ double *totmassradionuclide = NULL; /// total mass of each radionuclide in the ejecta
 
@@ -386,14 +388,28 @@ int get_npts_model(void)
 
 
 __host__ __device__
+int get_nonempty_npts_model(void)
+// number of model grid cells
+{
+  assert_always(nonempty_npts_model > 0);
+  return nonempty_npts_model;
+}
+
+
+__host__ __device__
 static void set_npts_model(int new_npts_model)
 {
   npts_model = new_npts_model;
 
   assert_always(modelgrid == NULL);
   modelgrid = (modelgrid_t *) calloc(npts_model + 1, sizeof(modelgrid_t));
+  assert_always(mg_associated_cells == NULL);
+  mg_associated_cells = (int *) malloc((get_npts_model() + 1) * sizeof(int));
+  assert_always(nonemptymgi_of_mgi == NULL);
+  nonemptymgi_of_mgi = (int *) malloc((get_npts_model() + 1) * sizeof(int));
   assert_always(modelgrid != NULL);
 }
+
 
 __host__ __device__
 int get_t_model(void)
@@ -431,6 +447,17 @@ int get_numassociatedcells(const int modelgridindex)
 {
   assert_testmodeonly(mg_associated_cells != NULL);
   return mg_associated_cells[modelgridindex];
+}
+
+
+__host__ __device__
+int get_modelcell_nonemptymgi(int mgi)
+{
+  // get the index in the list of non-empty cells for a given model grid cell
+  assert_testmodeonly(nonempty_npts_model > 0);
+  assert_testmodeonly(mgi < get_npts_model());
+
+  return nonemptymgi_of_mgi[mgi];
 }
 
 
@@ -770,11 +797,11 @@ static void allocate_nonemptymodelcells(void)
   allocate_compositiondata(get_npts_model());
   allocate_cooling(get_npts_model());
 
-  mg_associated_cells = (int *) malloc((get_npts_model() + 1) * sizeof(int));
-
   // Determine the number of simulation cells associated with the model cells
   for (int mgi = 0; mgi < (get_npts_model() + 1); mgi++)
+  {
     mg_associated_cells[mgi] = 0;
+  }
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++)
   {
@@ -784,7 +811,7 @@ static void allocate_nonemptymodelcells(void)
     assert_always(!(get_model_type() == RHO_3D_READ) || (mg_associated_cells[mgi] == 1) || (mgi == get_npts_model()));
   }
 
-  int numnonemptycells = 0;
+  int nonemptymgi = 0;  // index within list of non-empty modelgrid cells
   for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
     if (get_numassociatedcells(mgi) > 0)
@@ -797,10 +824,12 @@ static void allocate_nonemptymodelcells(void)
         printout("Error: negative or zero density. Abort.\n");
         abort();
       }
-      numnonemptycells++;
+      nonemptymgi_of_mgi[mgi] = nonemptymgi;
+      nonemptymgi++;
     }
     else
     {
+      nonemptymgi_of_mgi[mgi] = -1;
       set_rhoinit(mgi, 0.);
       set_rho(mgi, 0.);
       for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
@@ -812,7 +841,9 @@ static void allocate_nonemptymodelcells(void)
     }
   }
 
-  printout("There are %d modelgrid cells with associated propagation cells\n", numnonemptycells);
+  nonempty_npts_model = nonemptymgi;
+
+  printout("There are %d modelgrid cells with associated propagation cells\n", nonempty_npts_model);
 
   printout("[info] mem_usage: NLTE populations for all allocated cells occupy a total of %.3f MB (shared node memory)\n", mem_usage_nltepops / 1024. / 1024.);
 }
@@ -834,15 +865,16 @@ static void density_1d_read(void)
       }
       else
       {
-        set_cell_modelgridindex(cellindex, 0);
+        int mgi = 0;
 
         for (int mgi = 0; mgi < (get_npts_model() - 1); mgi++)
         {
           if (vout_model[mgi] < vcell)
           {
-            set_cell_modelgridindex(cellindex, mgi + 1);
+            mgi = mgi + 1;
           }
         }
+        set_cell_modelgridindex(cellindex, mgi);
       }
 
       if (vout_model[get_cell_modelgridindex(cellindex)] >= vmin)
@@ -1345,8 +1377,8 @@ static void read_3d_model(void)
 
   // mgi is the index to the model grid - empty cells are sent to special value get_npts_model(),
   // otherwise each input cell is one modelgrid cell
-  int n = 0;
-  int mgi_nonempty = 0;
+  int mgi = 0; // corresponds to model.txt index column, but zero indexed! (model.txt might be 1-indexed)
+  int nonemptymgi = 0;
   while (!feof(model_input))
   {
     char line[1024] = "";
@@ -1363,7 +1395,7 @@ static void read_3d_model(void)
     assert_always(items_read == 5);
     //printout("cell %d, posz %g, posy %g, posx %g, rho %g, rho_init %g\n",dum1,dum3,dum4,dum5,rho_model,rho_model* pow( (t_model/globals::tmin), 3.));
 
-    assert_always(mgi_in == n + 1);
+    assert_always(mgi_in == mgi + 1);
 
     // cell coordinates in the 3D model.txt file are sometimes reordered by the scaling script
     // however, the cellindex always should increment X first, then Y, then Z
@@ -1371,7 +1403,7 @@ static void read_3d_model(void)
     for (int axis = 0; axis < 3; axis++)
     {
       const double cellwidth = 2 * xmax_tmodel / ncoordgrid[axis];
-      const double cellpos_expected = - xmax_tmodel + cellwidth * get_cellcoordpointnum(n, axis);
+      const double cellpos_expected = - xmax_tmodel + cellwidth * get_cellcoordpointnum(mgi, axis);
       // printout("n %d coord %d expected %g found %g rmax %g get_cellcoordpointnum(n, axis) %d ncoordgrid %d\n",
       // n, axis, cellpos_expected, cellpos_in[axis], xmax_tmodel, get_cellcoordpointnum(n, axis), ncoordgrid[axis]);
       if (fabs(cellpos_expected - cellpos_in[axis]) > 0.5 * cellwidth)
@@ -1386,19 +1418,17 @@ static void read_3d_model(void)
 
     if (rho_model < 0)
     {
-      printout("negative input density %g %d\n", rho_model, n);
+      printout("negative input density %g %d\n", rho_model, mgi);
       abort();
     }
 
+    // in 3D cartesian, cellindex and modelgridindex are interchangeable
     const bool keepcell = (rho_model > 0);
     if (keepcell)
     {
-      const int mgi = n;
-      set_cell_modelgridindex(n, mgi);
+      set_cell_modelgridindex(mgi, mgi);
       const double rho_tmin = rho_model * pow((t_model / globals::tmin), 3.);
-      //printout("mgi %d, helper %g\n",mgi,helper);
       set_rhoinit(mgi, rho_tmin);
-      //printout("mgi %d, rho_init %g\n",mgi,get_rhoinit(mgi));
       set_rho(mgi, rho_tmin);
 
       if (min_den > rho_model)
@@ -1408,20 +1438,20 @@ static void read_3d_model(void)
     }
     else
     {
-      set_cell_modelgridindex(n, get_npts_model());
+      set_cell_modelgridindex(mgi, get_npts_model());
     }
 
-    read_2d3d_modelradioabundanceline(model_input, n, keepcell);
+    read_2d3d_modelradioabundanceline(model_input, mgi, keepcell);
     if (keepcell)
     {
-      mgi_nonempty++;
+      nonemptymgi++;
     }
 
-    n++;
+    mgi++;
   }
-  if (n != npts_model_in)
+  if (mgi != npts_model_in)
   {
-    printout("ERROR in model.txt. Found %d cells instead of %d expected.\n", n, npts_model_in);
+    printout("ERROR in model.txt. Found %d cells instead of %d expected.\n", mgi, npts_model_in);
     abort();
   }
 
@@ -1436,7 +1466,7 @@ static void read_3d_model(void)
   }
 
   printout("min_den %g [g/cm3]\n", min_den);
-  printout("Effectively used model grid cells %d\n", mgi_nonempty);
+  printout("Effectively used model grid cells %d\n", nonemptymgi);
 
   /// Now, set actual size of the modelgrid to the number of non-empty cells.
 
