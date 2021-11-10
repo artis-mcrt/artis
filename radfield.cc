@@ -407,12 +407,8 @@ void init(int my_rank, int ndo)
   }
   #endif
 
-  long mem_usage_bf_estim = 0;
-  long mem_usage_bf_estim_accum = 0; // accumulators for current timestep
-
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
-    mem_usage_bf_estim = nonempty_npts_model * globals::nbfcontinua * sizeof(float);
     #ifdef MPI_ON
     {
       MPI_Win win_prev_bfrate_normed;
@@ -429,9 +425,13 @@ void init(int my_rank, int ndo)
       prev_bfrate_normed = (float *) malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(float));
     }
     #endif
+    printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (shared node memory)\n",
+             nonempty_npts_model * globals::nbfcontinua * sizeof(float) / 1024. / 1024.);
 
-    mem_usage_bf_estim_accum = nonempty_npts_model * globals::nbfcontinua * sizeof(double);
     bfrate_raw = (double *) malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(double));
+
+    printout("[info] mem_usage: detailed bf estimator acculumators for non-empty cells occupy %.3f MB\n",
+             nonempty_npts_model * globals::nbfcontinua * sizeof(double) / 1024. / 1024.);
 
     #if (DETAILED_BF_ESTIMATORS_BYTYPE)
     {
@@ -488,13 +488,6 @@ void init(int my_rank, int ndo)
   }
   printout("[info] mem_usage: radiation field bin accumulators for non-empty cells occupy %.3f MB\n", mem_usage_bins / 1024. / 1024.);
   printout("[info] mem_usage: radiation field bin solutions for non-empty cells occupy %.3f MB (shared node memory)\n", mem_usage_bin_solutions / 1024. / 1024.);
-
-  #if (DETAILED_BF_ESTIMATORS_ON)
-  {
-    printout("[info] mem_usage: detailed bf estimator acculumators for non-empty cells occupy %.3f MB\n", mem_usage_bf_estim_accum / 1024. / 1024.);
-    printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (shared node memory)\n", mem_usage_bf_estim / 1024. / 1024.);
-  }
-  #endif
 
   initialized = true;
 }
