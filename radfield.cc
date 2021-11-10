@@ -412,7 +412,7 @@ void init(int my_rank, int ndo)
 
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
-    mem_usage_bf_estim_accum = nonempty_npts_model * globals::nbfcontinua * sizeof(float);
+    mem_usage_bf_estim = nonempty_npts_model * globals::nbfcontinua * sizeof(float);
     #ifdef MPI_ON
     {
       MPI_Win win_prev_bfrate_normed;
@@ -430,7 +430,7 @@ void init(int my_rank, int ndo)
     }
     #endif
 
-    mem_usage_bf_estim = nonempty_npts_model * globals::nbfcontinua * sizeof(double);
+    mem_usage_bf_estim_accum = nonempty_npts_model * globals::nbfcontinua * sizeof(double);
     bfrate_raw = (double *) malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(double));
 
     #if (DETAILED_BF_ESTIMATORS_BYTYPE)
