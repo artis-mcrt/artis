@@ -141,6 +141,7 @@ jobs:
 
     - name: Upload output files
       uses: actions/upload-artifact@v2
+      if: always()
       with:
         name: test-nebularonezone-output
         path: tests/nebularonezone/output
