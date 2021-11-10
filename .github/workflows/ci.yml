@@ -114,6 +114,7 @@ jobs:
         time mpirun -np 2 ./sn3d
 
     - name: "cat estimators"
+      if: always()
       working-directory: tests/nebularonezone/
       run: |
         cat estimators*.out
@@ -133,6 +134,7 @@ jobs:
         cp output_0-0.txt exspec.txt *.out output/
 
     - name: "cat exspec log"
+      if: always()
       working-directory: tests/nebularonezone/output/
       run: |
         cat exspec.txt
