@@ -18,7 +18,8 @@ __host__ __device__ double get_corrphotoioncoeff_ana(int element, int ion, int l
 __host__ __device__ double calculate_iongamma_per_gspop(int modelgridindex, int element, int ion);
 __host__ __device__ double calculate_iongamma_per_ionpop(
   int modelgridindex, float T_e, int element, int lowerion,
-  bool assume_lte, bool collisional_not_radiative, bool printdebug, bool use_bfest);
+  bool assume_lte, bool collisional_not_radiative, bool printdebug, const bool force_bfest,
+  const bool force_bfintegral);
 
 double calculate_ionrecombcoeff(
   int modelgridindex, float T_e,

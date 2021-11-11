@@ -440,8 +440,24 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "\n");
       }
 
+      // if (!DETAILED_BF_ESTIMATORS_ON || (timestep % 10) == 0)
+      {
+        fprintf(estimators_file, "gamma_R            Z=%2d", get_element(element));
+        for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+          fprintf(estimators_file, "              ");
+        for (int ion = 0; ion < nions - 1; ion++)
+        {
+          // const bool printdebug_gammar = (get_element(element) == 26 && get_ionstage(element, ion) == 2);
+          const bool printdebug_gammar = false;
+          fprintf(estimators_file, "  %d: %9.3e",
+                  get_ionstage(element, ion),
+                  calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, false, false));
+        }
+        fprintf(estimators_file, "\n");
+      }
+
       // this is expensive
-      if (!DETAILED_BF_ESTIMATORS_ON || (timestep % 20) == 0)
+      if (DETAILED_BF_ESTIMATORS_ON && (timestep % 10) == 0)
       {
         fprintf(estimators_file, "gamma_R_integral   Z=%2d", get_element(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
@@ -452,7 +468,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
           const bool printdebug_gammar = false;
           fprintf(estimators_file, "  %d: %9.3e",
                   get_ionstage(element, ion),
-                  calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, false));
+                  calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, false, true));
         }
         fprintf(estimators_file, "\n");
       }
@@ -469,7 +485,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
           const bool printdebug_gammar = false;
           fprintf(estimators_file, "  %d: %9.3e",
                   get_ionstage(element, ion),
-                  calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, true));
+                  calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, true, false));
         }
         fprintf(estimators_file, "\n");
       }

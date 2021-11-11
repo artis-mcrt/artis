@@ -1503,10 +1503,12 @@ double calculate_iongamma_per_gspop(const int modelgridindex, const int element,
 
 double calculate_iongamma_per_ionpop(
   const int modelgridindex, const float T_e, const int element, const int lowerion,
-  const bool assume_lte, const bool collisional_not_radiative, const bool printdebug, const bool use_bfest)
+  const bool assume_lte, const bool collisional_not_radiative, const bool printdebug, const bool force_bfest,
+  const bool force_bfintegral)
 // ionisation rate coefficient. multiply by the lower ion pop to get a rate
 {
   assert_always(lowerion < get_nions(element) - 1);
+  assert_always(!force_bfest || !force_bfintegral);
 
   const float nne = (modelgridindex >= 0) ? grid::get_nne(modelgridindex) : 1.0;
 
@@ -1592,13 +1594,17 @@ double calculate_iongamma_per_ionpop(
       const double gamma_ion_contribution_bfest = gamma_coeff_bfest * nnlowerlevel / nnlowerion;
       const double gamma_ion_contribution_integral = gamma_coeff_integral * nnlowerlevel / nnlowerion;
       gamma_ion_used += gamma_ion_contribution_used;
-      if (use_bfest)
+      if (force_bfest)
       {
         gamma_ion += gamma_ion_contribution_bfest;
       }
-      else
+      else if (force_bfintegral)
       {
         gamma_ion += gamma_ion_contribution_integral;
+      }
+      else
+      {
+        gamma_ion += gamma_ion_contribution_used;
       }
 
       if (printdebug && (gamma_ion_contribution_integral < 0. || gamma_ion_contribution_used > 0.) && lower < 20)
