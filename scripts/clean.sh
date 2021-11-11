@@ -9,7 +9,8 @@ paths="*.tmp *.out output_*.txt exspec.txt"
 #   ls $paths 2>/dev/null
 # fi
 
-if !(ls $paths >/dev/null 2>&1); then
+if ls $paths >/dev/null 2>&1; then
+else
   echo "No ARTIS run files to delete"
   exit 0
 fi
