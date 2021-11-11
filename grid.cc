@@ -776,7 +776,6 @@ static void allocate_cooling(const int modelgridindex)
 
 static void allocate_nonemptymodelcells(void)
 {
-  printout("[info] mem_usage: the modelgrid array occupies %.3f MB\n", sizeof(modelgrid) / 1024. / 1024.);
   mem_usage_nltepops = 0;
   /// This is the placeholder for empty cells. Temperatures must be positive
   /// as long as ff opacities are calculated.
@@ -846,6 +845,8 @@ static void allocate_nonemptymodelcells(void)
 
   nonempty_npts_model = nonemptymgi;
 
+  printout("[info] mem_usage: the modelgrid array occupies %.3f MB\n", (get_npts_model() + 1) * sizeof(modelgrid) / 1024. / 1024.);
+
   printout("There are %d modelgrid cells with associated propagation cells\n", nonempty_npts_model);
 
   printout("[info] mem_usage: NLTE populations for all allocated cells occupy a total of %.3f MB (shared node memory)\n", mem_usage_nltepops / 1024. / 1024.);
@@ -870,11 +871,11 @@ static void density_1d_read(void)
       {
         int mgi = 0;
 
-        for (int mgi = 0; mgi < (get_npts_model() - 1); mgi++)
+        for (int i = 0; i < (get_npts_model() - 1); i++)
         {
           if (vout_model[mgi] < vcell)
           {
-            mgi = mgi + 1;
+            mgi = i + 1;
           }
         }
         set_cell_modelgridindex(cellindex, mgi);
