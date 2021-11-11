@@ -10,17 +10,15 @@ paths="*.tmp *.out output_*.txt exspec.txt"
 # fi
 
 if ls $paths >/dev/null 2>&1; then
-  :
+  echo "The following ARTIS run files will be deleted:"
+  ls $paths 2>/dev/null
+
+  read -p "Are you sure? " -n 1 -r
+  echo    # (optional) move to a new line
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    rm -v $paths
+  fi
 else
   echo "No ARTIS run files to delete"
-  exit 0
 fi
 
-echo "The following ARTIS run files will be deleted:"
-ls $paths 2>/dev/null
-
-read -p "Are you sure? " -n 1 -r
-echo    # (optional) move to a new line
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-  rm -v $paths
-fi
