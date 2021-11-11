@@ -1805,12 +1805,6 @@ void reduce_estimators(void)
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
     MPI_Allreduce(MPI_IN_PLACE, bfrate_raw, grid::get_nonempty_npts_model() * globals::nbfcontinua, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-    MPI_Allreduce(MPI_IN_PLACE, &normed_bfrates_available, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
-    if (normed_bfrates_available)
-    {
-      printout("normed_bfrates_available is %s\n", normed_bfrates_available ? "TRUE" : "FALSE");
-    }
   }
   #endif
 
@@ -1889,6 +1883,18 @@ void do_MPI_Bcast(const int modelgridindex, const int root, int root_node_id)
         MPI_Bcast(&radfieldbins[mgibinindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
       }
     }
+
+    #if (DETAILED_BF_ESTIMATORS_ON)
+    {
+      MPI_Bcast(&prev_bfrate_normed[nonemptymgi * globals::nbfcontinua], globals::nbfcontinua, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
+      const bool normed_bfrates_available_before = normed_bfrates_available;
+      MPI_Allreduce(MPI_IN_PLACE, &normed_bfrates_available, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
+      if (!normed_bfrates_available_before && normed_bfrates_available)
+      {
+        printout("normed_bfrates_available is now %s\n", normed_bfrates_available ? "TRUE" : "FALSE");
+      }
+    }
+    #endif
 
     if (DETAILED_LINE_ESTIMATORS_ON)
     {
