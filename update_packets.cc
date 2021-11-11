@@ -287,7 +287,7 @@ void update_packets(const int my_rank, const int nts, PKT *packets)
   #ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD); // hold all processes once the packets are updated
   #endif
-  printout("timestep %d: time after update packets barrier %ld (took %ld seconds on this rank and waited %ld seconds)\n", nts, time(NULL), time_update_packets_end_thisrank - time_update_packets_start, time(NULL) - time_update_packets_end_thisrank);
+  printout("timestep %d: time after update packets %ld (took %ld seconds, rank %d took %ld and waited %ld s)\n", nts, time(NULL), time(NULL) - time_update_packets_start, my_rank, time_update_packets_end_thisrank - time_update_packets_start, time(NULL) - time_update_packets_end_thisrank);
 }
 
 
