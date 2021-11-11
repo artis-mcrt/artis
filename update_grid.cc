@@ -1284,6 +1284,28 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 //   of the new timestep.
 /// m timestep
 {
+  const time_t sys_time_start_update_grid = time(NULL);
+  printout("\ntimestep %d: time before update grid %ld (tstart + %ld)\n",
+           nts, sys_time_start_update_grid, sys_time_start_update_grid - real_time_start);
+
+  #ifndef FORCE_LTE
+    #if (!NO_LUT_PHOTOION)
+      /// Initialise globals::corrphotoionrenorm[i] to zero before update_grid is called
+      /// This allows reduction after update_grid has finished
+      /// unless they have been read from file and must neither be touched
+      /// nor broadcasted after update_grid
+      if ((!globals::simulation_continued_from_saved) || (nts - globals::itstep != 0) || (titer != 0))
+      {
+        printout("nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
+        for (int i = 0; i < grid::get_npts_model() * get_nelements() * get_max_nions(); i++)
+        {
+          globals::corrphotoionrenorm[i] = 0.;
+        }
+        printout("after nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
+      }
+    #endif
+  #endif
+
   //printout("[debug] update_grid: starting update for timestep %d...\n",m);
   const double tratmid = globals::time_step[nts].mid / globals::tmin;
 
@@ -1405,6 +1427,17 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   }
   globals::max_path_step = fmin(globals::max_path_step, globals::rmax / 10.);
   printout("max_path_step %g\n", globals::max_path_step);
+
+  const time_t time_update_grid_end_thisrank = time(NULL);
+
+  #ifdef MPI_ON
+    MPI_Barrier(MPI_COMM_WORLD);
+  #endif
+  printout("timestep %d: time after update grid for all processes %ld (took %ld seconds, rank %d took %lds and waited %lds)\n",
+           nts, time(NULL), time(NULL) - sys_time_start_update_grid,
+           my_rank,
+           time_update_grid_end_thisrank - sys_time_start_update_grid,
+           time(NULL) - time_update_grid_end_thisrank);
 }
 
 

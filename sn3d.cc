@@ -433,42 +433,7 @@ static bool do_timestep(
 
   // Update the matter quantities in the grid for the new timestep.
 
-  const time_t sys_time_start_update_grid = time(NULL);
-  printout("\ntimestep %d: time before update grid %ld (tstart + %ld)\n",
-           nts, sys_time_start_update_grid, sys_time_start_update_grid - real_time_start);
-
-  #ifndef FORCE_LTE
-    #if (!NO_LUT_PHOTOION)
-      /// Initialise globals::corrphotoionrenorm[i] to zero before update_grid is called
-      /// This allows reduction after update_grid has finished
-      /// unless they have been read from file and must neither be touched
-      /// nor broadcasted after update_grid
-      if ((!globals::simulation_continued_from_saved) || (nts - globals::itstep != 0) || (titer != 0))
-      {
-        printout("nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
-        for (int i = 0; i < grid::get_npts_model() * get_nelements() * get_max_nions(); i++)
-        {
-          globals::corrphotoionrenorm[i] = 0.;
-        }
-        printout("after nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
-      }
-    #endif
-  #endif
-
   update_grid(estimators_file, nts, nts_prev, my_rank, nstart, ndo, titer);
-
-  const time_t sys_time_finish_update_grid = time(NULL);
-  printout("timestep %d: update_grid: process %d finished update grid at %ld (took %ld seconds)\n",
-           nts, my_rank, sys_time_finish_update_grid, sys_time_finish_update_grid - sys_time_start_update_grid);
-
-  #ifdef MPI_ON
-    MPI_Barrier(MPI_COMM_WORLD);
-  #endif
-  const time_t sys_time_finish_update_grid_all_processes = time(NULL);
-  printout("timestep %d: waiting for update grid to finish on other processes took %ld seconds\n",
-           nts, sys_time_finish_update_grid_all_processes - sys_time_finish_update_grid);
-  printout("timestep %d: time after update grid for all processes %ld (took %ld seconds)\n",
-           nts, sys_time_finish_update_grid_all_processes, sys_time_finish_update_grid_all_processes - sys_time_start_update_grid);
 
   const time_t sys_time_start_communicate_grid = time(NULL);
 
