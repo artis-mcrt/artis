@@ -8,8 +8,12 @@ paths="*.tmp *.out output_*.txt exspec.txt"
 #   echo 1>&2 "ADD -d TO CONFIRM DELETION OF THE FOLLOWING FILES"
 #   ls $paths 2>/dev/null
 # fi
+if [ ! -f $paths ]; then
+  echo "No files to delete"
+  exit 0
+fi
 
-echo "The following files will be deleted"
+echo "The following files will be deleted:"
 ls $paths 2>/dev/null
 
 read -p "Are you sure? " -n 1 -r
