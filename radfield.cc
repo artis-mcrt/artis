@@ -1809,7 +1809,7 @@ void reduce_estimators(void)
     MPI_Allreduce(MPI_IN_PLACE, &normed_bfrates_available, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
     if (normed_bfrates_available)
     {
-      printout("normed_bfrates_available is true\n", normed_bfrates_available);
+      printout("normed_bfrates_available is %s\n", normed_bfrates_available ? "TRUE" : "FALSE");
     }
   }
   #endif
