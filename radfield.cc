@@ -1568,7 +1568,6 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
 {
   #if (DETAILED_BF_ESTIMATORS_ON)
   printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
-  const int nbfcontinua = globals::nbfcontinua;
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   assert_always(nonemptymgi >= 0);
   for (int i = 0; i < globals::nbfcontinua; i++)
@@ -1577,7 +1576,7 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
     if (globals::rank_in_node == 0)
     #endif
     {
-      const int mgibfindex = nonemptymgi * nbfcontinua + i;
+      const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
       prev_bfrate_normed[mgibfindex] = bfrate_raw[mgibfindex] * estimator_normfactor_over_H;
     }
 
@@ -1597,7 +1596,7 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
   {
     for (int i = 0; i < globals::nbfcontinua; i++)
     {
-      const int mgibfindex = nonemptymgi * nbfcontinua + i;
+      const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
       if (prev_bfrate_normed[mgibfindex] > 0.)
       {
         normed_bfrates_available = true;
@@ -1806,13 +1805,7 @@ void reduce_estimators(void)
 
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
-    for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
-    {
-      if (grid::get_numassociatedcells(modelgridindex) > 0)
-      {
-        MPI_Allreduce(MPI_IN_PLACE, bfrate_raw, grid::get_nonempty_npts_model() * globals::nbfcontinua, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      }
-    }
+    MPI_Allreduce(MPI_IN_PLACE, bfrate_raw, grid::get_nonempty_npts_model() * globals::nbfcontinua, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
   #endif
 
