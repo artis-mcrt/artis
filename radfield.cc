@@ -1886,7 +1886,11 @@ void do_MPI_Bcast(const int modelgridindex, const int root, int root_node_id)
 
     #if (DETAILED_BF_ESTIMATORS_ON)
     {
-      MPI_Bcast(&prev_bfrate_normed[nonemptymgi * globals::nbfcontinua], globals::nbfcontinua, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
+      if (globals::rank_in_node == 0)
+      {
+        MPI_Bcast(&prev_bfrate_normed[nonemptymgi * globals::nbfcontinua], globals::nbfcontinua, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
+      }
+
       const bool normed_bfrates_available_before = normed_bfrates_available;
       MPI_Allreduce(MPI_IN_PLACE, &normed_bfrates_available, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
       if (!normed_bfrates_available_before && normed_bfrates_available)
