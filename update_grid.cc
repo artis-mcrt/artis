@@ -440,7 +440,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "\n");
       }
 
-      // if (!DETAILED_BF_ESTIMATORS_ON || (timestep % 10) == 0)
+      if (!DETAILED_BF_ESTIMATORS_ON || (timestep % 10) == 0)
       {
         fprintf(estimators_file, "gamma_R            Z=%2d", get_element(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
