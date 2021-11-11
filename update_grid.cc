@@ -1433,11 +1433,11 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   #ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
   #endif
-  printout("timestep %d: time after update grid for all processes %ld (took %ld seconds, rank %d took %lds and waited %lds)\n",
-           nts, time(NULL), time(NULL) - sys_time_start_update_grid,
-           my_rank,
+  printout("timestep %d: time after update grid for all processes %ld (rank %d took %lds and waited %lds, total %ld seconds)\n",
+           nts, time(NULL), my_rank,
            time_update_grid_end_thisrank - sys_time_start_update_grid,
-           time(NULL) - time_update_grid_end_thisrank);
+           time(NULL) - time_update_grid_end_thisrank,
+           time(NULL) - sys_time_start_update_grid);
 }
 
 
