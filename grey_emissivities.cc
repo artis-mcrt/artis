@@ -71,8 +71,7 @@ void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist)
     //  2) divided by the length of the time step
     //  3) divided by 4 pi sr
     //  This will all be done later
-    assert_testmodeonly(heating_cont >= 0.);
-    assert_testmodeonly(isfinite(heating_cont));
+
     safeadd(globals::rpkt_emiss[mgi], 1.e-20 * heating_cont);
   }
 }
@@ -119,8 +118,7 @@ void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist)
        This will all be done later
     */
 
-    assert_testmodeonly(cont >= 0.);
-    assert_testmodeonly(isfinite(cont));
+    //printout("%g %g(2)\n",tautau,cont);
     safeadd(globals::rpkt_emiss[mgi], 1.e-20 * cont);
   }
 }
@@ -134,8 +132,6 @@ void normalise_grey(int nts)
     const double dV = grid::vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
 
     globals::rpkt_emiss[mgi] = globals::rpkt_emiss[mgi] * ONEOVER4PI / dV / dt / globals::nprocs;
-    assert_testmodeonly(globals::rpkt_emiss[mgi] >= 0.);
-    assert_testmodeonly(isfinite(globals::rpkt_emiss[mgi]));
   }
 }
 
