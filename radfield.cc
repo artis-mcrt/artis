@@ -449,7 +449,6 @@ void init(int my_rank, int ndo)
     if (grid::get_numassociatedcells(modelgridindex) > 0)
     {
       const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-      assert_always(grid::get_modelcell_nonemptymgi(modelgridindex) >= 0);
       #if (DETAILED_BF_ESTIMATORS_ON && DETAILED_BF_ESTIMATORS_BYTYPE)
       {
         bfrate_raw_bytype[modelgridindex] = (struct bfratecontrib **) malloc(globals::nbfcontinua * sizeof(struct bfratecontrib *));
