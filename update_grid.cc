@@ -1279,7 +1279,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 }
 
 
-void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int my_rank, const int nstart, const int ndo, const int titer)
+void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int my_rank, const int nstart, const int ndo, const int titer, const time_t real_time_start)
 // Subroutine to update the matter quantities in the grid cells at the start
 //   of the new timestep.
 /// m timestep

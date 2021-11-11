@@ -49,7 +49,7 @@ __device__ void *rng = NULL;
 gsl_integration_workspace *gslworkspace = NULL;
 FILE *output_file = NULL;
 static FILE *linestat_file = NULL;
-static time_t real_time_start;
+static time_t real_time_start = -1;
 static time_t time_timestep_start = -1; // this will be set after the first update of the grid and before packet prop
 static FILE *estimators_file = NULL;
 
@@ -433,7 +433,7 @@ static bool do_timestep(
 
   // Update the matter quantities in the grid for the new timestep.
 
-  update_grid(estimators_file, nts, nts_prev, my_rank, nstart, ndo, titer);
+  update_grid(estimators_file, nts, nts_prev, my_rank, nstart, ndo, titer, real_time_start);
 
   const time_t sys_time_start_communicate_grid = time(NULL);
 
