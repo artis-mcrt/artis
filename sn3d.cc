@@ -896,6 +896,7 @@ int main(int argc, char** argv)
     /// Create a bunch of npkts packets
     /// and write them to a binary file for later readin.
     packet_init(my_rank, packets);
+    zero_estimators();
   }
 
   /// For the parallelisation of update_grid, the process needs to be told which cells belong to it.
