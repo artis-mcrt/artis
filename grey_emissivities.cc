@@ -134,7 +134,7 @@ void normalise_grey(int nts)
     const double dV = grid::vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
 
     globals::rpkt_emiss[mgi] = globals::rpkt_emiss[mgi] * ONEOVER4PI / dV / dt / globals::nprocs;
-    assert_testmodeonly(globals::rpkt_emiss[mgi] >= 0.);
+    // assert_testmodeonly(globals::rpkt_emiss[mgi] >= 0.);
     assert_testmodeonly(isfinite(globals::rpkt_emiss[mgi]));
   }
 }
