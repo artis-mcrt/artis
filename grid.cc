@@ -459,6 +459,7 @@ int get_modelcell_nonemptymgi(int mgi)
 
   const int nonemptymgi = nonemptymgi_of_mgi[mgi];
   assert_testmodeonly(nonemptymgi >= 0 || get_numassociatedcells(mgi) == 0);
+  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
 
   return nonemptymgi;
 }
