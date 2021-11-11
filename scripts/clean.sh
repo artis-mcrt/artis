@@ -10,6 +10,7 @@ paths="*.tmp *.out output_*.txt exspec.txt"
 # fi
 
 if ls $paths >/dev/null 2>&1; then
+  :
 else
   echo "No ARTIS run files to delete"
   exit 0
