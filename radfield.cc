@@ -1806,11 +1806,10 @@ void reduce_estimators(void)
   {
     MPI_Allreduce(MPI_IN_PLACE, bfrate_raw, grid::get_nonempty_npts_model() * globals::nbfcontinua, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-    const bool normed_bfrates_available_before = normed_bfrates_available;
     MPI_Allreduce(MPI_IN_PLACE, &normed_bfrates_available, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
-    if (!normed_bfrates_available_before && normed_bfrates_available)
+    if (normed_bfrates_available)
     {
-      printout("normed_bfrates_available is now true after MPI communication\n", normed_bfrates_available);
+      printout("normed_bfrates_available is true\n", normed_bfrates_available);
     }
   }
   #endif
