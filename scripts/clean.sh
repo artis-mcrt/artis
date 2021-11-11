@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 paths="*.tmp *.out output_*.txt exspec.txt"
 
@@ -9,14 +9,15 @@ paths="*.tmp *.out output_*.txt exspec.txt"
 #   ls $paths 2>/dev/null
 # fi
 
-if ls $paths >/dev/null 2>&1; then
+if [ 0 -lt $(ls $paths 2>/dev/null | wc -w) ]; then
   echo "The following ARTIS run files will be deleted:"
   ls $paths 2>/dev/null
 
   read -p "Are you sure? " -n 1 -r
   echo    # (optional) move to a new line
   if [[ $REPLY =~ ^[Yy]$ ]]; then
-    rm -v $paths
+    echo "Deleting:"
+    rm -v $paths 2>/dev/null
   fi
 else
   echo "No ARTIS run files to delete"
