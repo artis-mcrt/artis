@@ -1571,13 +1571,8 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
   assert_always(nonemptymgi >= 0);
   for (int i = 0; i < globals::nbfcontinua; i++)
   {
-    #ifdef MPI_ON
-    if (globals::rank_in_node == 0)
-    #endif
-    {
-      const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
-      prev_bfrate_normed[mgibfindex] = bfrate_raw[mgibfindex] * estimator_normfactor_over_H;
-    }
+    const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
+    prev_bfrate_normed[mgibfindex] = bfrate_raw[mgibfindex] * estimator_normfactor_over_H;
 
     #if (DETAILED_BF_ESTIMATORS_BYTYPE)
     const int listsize = bfrate_raw_bytype_size[modelgridindex][i];
