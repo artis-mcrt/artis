@@ -746,16 +746,14 @@ int main(int argc, char** argv)
   #ifdef MPI_ON
     printout("MPI enabled:\n");
     printout("  rank %d of %d in MPI_COMM_WORLD\n", globals::rank_global, globals::nprocs);
-    printout("  rank %d of %d within node (MPI_COMM_WORLD_SHARED)\n", globals::rank_in_node, globals::node_nprocs);
     printout("  node %d of %d\n", globals::node_id, globals::node_count);
+    printout("  rank %d of %d within this node (MPI_COMM_WORLD_SHARED)\n", globals::rank_in_node, globals::node_nprocs);
   #else
     printout("MPI is disabled in this build\n");
   #endif
 
   #ifdef __CUDACC__
   printout("[CUDA] NVIDIA CUDA is available in this build\n");
-  #else
-  printout("[CUDA] NVIDIA CUDA is not available in this build\n");
   #endif
 
   #if CUDA_ENABLED
@@ -769,8 +767,6 @@ int main(int argc, char** argv)
   printout("[CUDA] maxThreadsPerMultiProcessor %d\n", deviceProp.maxThreadsPerMultiProcessor);
   printout("[CUDA] maxThreadsPerBlock %d\n", deviceProp.maxThreadsPerBlock);
   printout("[CUDA] warpSize %d\n", deviceProp.warpSize);
-  #else
-  printout("[CUDA] NVIDIA CUDA accelerated routines are disabled\n");
   #endif
 
   if ((globals::kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(get_max_threads(), sizeof(rpkt_cont_opacity_struct))) == NULL)
