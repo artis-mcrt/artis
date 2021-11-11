@@ -70,7 +70,6 @@ __managed__ static struct Jb_lu_estimator **Jb_lu_raw = NULL;   // unnormalised 
 // ** end detailed lines
 
 #if (DETAILED_BF_ESTIMATORS_ON)
-__managed__ static bool normed_bfrates_available = false;
 __managed__ static float *prev_bfrate_normed = NULL;  // values from the previous timestep
 __managed__ static double *bfrate_raw = NULL;   // unnormalised estimators for the current timestep
 
@@ -1585,20 +1584,6 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
     qsort(bfrate_raw_bytype[modelgridindex][i], listsize, sizeof(struct bfratecontrib), compare_bfrate_raw_bytype);
     #endif
   }
-
-  if (!normed_bfrates_available)
-  {
-    for (int i = 0; i < globals::nbfcontinua; i++)
-    {
-      const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
-      if (prev_bfrate_normed[mgibfindex] > 0.)
-      {
-        normed_bfrates_available = true;
-        printout("radfield: normed_bfrates_available is now true\n");
-        break;
-      }
-    }
-  }
   #endif
 }
 
@@ -1706,9 +1691,6 @@ double get_bfrate_estimator(const int element, const int lowerion, const int low
 #if (!DETAILED_BF_ESTIMATORS_ON)
   return -1;
 #else
-  if (!normed_bfrates_available)
-    return -1.;
-
   const int nbfcontinua = globals::nbfcontinua;
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
@@ -1884,13 +1866,6 @@ void do_MPI_Bcast(const int modelgridindex, const int root, int root_node_id)
       if (globals::rank_in_node == 0)
       {
         MPI_Bcast(&prev_bfrate_normed[nonemptymgi * globals::nbfcontinua], globals::nbfcontinua, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
-      }
-
-      const bool normed_bfrates_available_before = normed_bfrates_available;
-      MPI_Allreduce(MPI_IN_PLACE, &normed_bfrates_available, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
-      if (!normed_bfrates_available_before && normed_bfrates_available)
-      {
-        printout("normed_bfrates_available is now %s\n", normed_bfrates_available ? "TRUE" : "FALSE");
       }
     }
     #endif
@@ -2071,18 +2046,9 @@ void read_restart_data(FILE *gridsave_file)
           {
             prev_bfrate_normed[mgibfindex] = bfrate_normed;
           }
-          if (!normed_bfrates_available && bfrate_normed > 0.)
-          {
-            normed_bfrates_available = true;
-            printout("radfield::read_restart_data: normed_bfrates_available is now true\n");
-          }
         }
       }
     }
-  }
-  if (!normed_bfrates_available)
-  {
-    printout("radfield::read_restart_data: normed_bfrates_available is false\n");
   }
   #endif
 
