@@ -12,11 +12,11 @@ module load intel/mpi/18.0.3
 
 cd $PBS_O_WORKDIR
 
-if [ ! -f spec.out ]; then
+if [ ! -f emission.out.xz ]; then
   ./artis/scripts/exspec-before.sh
   ./exspec
 else
-  echo 'Not running exspec because spec.out was found'
+  echo 'Not running exspec because emission.out.xz was found'
 fi
 
 ./artis/scripts/exspec-after.sh

@@ -21,5 +21,6 @@ struct spec *alloc_spectra(const bool do_emission_res);
 void init_spectra(struct spec *spectra, const double nu_min, const double nu_max, const bool do_emission_res);
 void init_spectrum_trace(void);
 void free_spectra(struct spec *spectra);
+void write_partial_spectra(int my_rank, int nts, PKT *pkts);
 
 #endif //SPECTRUM_H

@@ -5,7 +5,7 @@
 #include "vectors.h"
 
 
-const bool TRACE_EMISSION_ABSORPTION_REGION_ON = true;
+bool TRACE_EMISSION_ABSORPTION_REGION_ON = true;
 
 #define traceemissabs_lambdamin 1000.  // in Angstroms
 #define traceemissabs_lambdamax 25000.
@@ -513,7 +513,9 @@ void init_spectra(struct spec *spectra, const double nu_min, const double nu_max
   // start by setting up the time and frequency bins.
   // it is all done interms of a logarithmic spacing in both t and nu - get the
   // step sizes first.
-  ///Should be moved to input.c or exspec.c
+
+  assert_always(globals::nnubins > 0);
+
   const double dlognu = (log(nu_max) - log(nu_min)) / globals::nnubins;
 
   for (int n = 0; n < globals::ntstep; n++)
@@ -630,4 +632,64 @@ void add_to_spec_res(
       add_to_spec(pkt_ptr, current_abin, spectra, stokes_i, stokes_q, stokes_u);
     }
   }
+}
+
+
+#ifdef MPI_ON
+static void mpi_reduce_spectra(struct spec *spectra)
+{
+  for (int n = 0; n < globals::ntstep; n++)
+  {
+    if (spectra[n].do_emission_res)
+    {
+      MPI_Allreduce(MPI_IN_PLACE, spectra[n].flux, globals::nnubins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      for (int m = 0; m < globals::nnubins; m++)
+      {
+        const int emissioncount = 2 * get_nelements() * get_max_nions() + 1;
+        MPI_Allreduce(MPI_IN_PLACE, spectra[n].stat[m].absorption, get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, spectra[n].stat[m].emission, emissioncount, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, spectra[n].stat[m].trueemission, emissioncount, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      }
+    }
+  }
+}
+#endif
+
+
+void write_partial_spectra(int my_rank, int nts, PKT *pkts)
+{
+  TRACE_EMISSION_ABSORPTION_REGION_ON = false;
+  globals::nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
+
+  const time_t time_func_start = time(NULL);
+
+  struct spec *rpkt_spectra = alloc_spectra(globals::do_emission_res);
+
+  struct spec *stokes_i = NULL;
+  struct spec *stokes_q = NULL;
+  struct spec *stokes_u = NULL;
+
+  init_spectra(rpkt_spectra, globals::nu_min_r, globals::nu_max_r, globals::do_emission_res);
+
+  for (int ii = 0; ii < globals::npkts; ii++)
+  {
+    if (pkts[ii].type == TYPE_ESCAPE && pkts[ii].escape_type == TYPE_RPKT)
+    {
+      add_to_spec(&pkts[ii], -1, rpkt_spectra, stokes_i, stokes_q, stokes_u);
+    }
+  }
+
+  #ifdef MPI_ON
+  mpi_reduce_spectra(rpkt_spectra);
+  #endif
+
+  if (my_rank == 0)
+  {
+    write_spectrum((char *) "spec.out", (char *) "emission.out",
+                   (char *) "emissiontrue.out", (char *) "absorption.out", rpkt_spectra);
+  }
+
+  free_spectra(rpkt_spectra);
+
+  printout("Saving partial spectra took %lds\n", time(NULL) - time_func_start);
 }

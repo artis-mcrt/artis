@@ -26,6 +26,7 @@
 #include "packet_init.h"
 #include "radfield.h"
 #include "ratecoeff.h"
+#include "spectrum.h"
 #include "stats.h"
 #include "update_grid.h"
 #include "update_packets.h"
@@ -509,6 +510,7 @@ static bool do_timestep(
       fclose(dep_file);
     }
     write_partial_lightcurve(my_rank, nts, packets);
+    write_partial_spectra(my_rank, nts, packets);
 
     #ifdef MPI_ON
       printout("timestep %d: time after estimators have been communicated %ld (took %ld seconds)\n", nts, time(NULL), time(NULL) - time_communicate_estimators_start);
