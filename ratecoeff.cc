@@ -1503,7 +1503,7 @@ static int get_nlevels_important(
     nlevels_important = lower + 1;
   }
   *nnlevelsum_out = nnlevelsum;
-  printout("mgi %d element %d ion %d nlevels_important %d popfrac %g\n", modelgridindex, element, ion, nlevels_important, nnlevelsum / nnion_real);
+  // printout("mgi %d element %d ion %d nlevels_important %d popfrac %g\n", modelgridindex, element, ion, nlevels_important, nnlevelsum / nnion_real);
   return nlevels_important;
 }
 
