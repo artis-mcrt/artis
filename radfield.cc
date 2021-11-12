@@ -443,8 +443,6 @@ void init(int my_rank, int ndo)
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
   {
-    set_J_normfactor(modelgridindex, -1.0);
-    // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, grid::get_numassociatedcells(modelgridindex));
     if (grid::get_numassociatedcells(modelgridindex) > 0)
     {
       const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
@@ -460,16 +458,10 @@ void init(int my_rank, int ndo)
       }
       #endif
 
+      zero_estimators(modelgridindex);
+
       if (MULTIBIN_RADFIELD_MODEL_ON)
       {
-        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
-        {
-          const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
-          radfieldbins[mgibinindex].J_raw = 0.;
-          radfieldbins[mgibinindex].nuJ_raw = 0.;
-          radfieldbins[mgibinindex].contribcount = 0;
-        }
-
         #ifdef MPI_ON
         if (rank_in_node == 0)
         #endif

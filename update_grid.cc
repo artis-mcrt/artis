@@ -422,25 +422,24 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       // }
       // fprintf(estimators_file, "\n");
 
-      if (timestep % 20 == 0)
-      {
-        fprintf(estimators_file, "kappa_bf(nuedge)   Z=%2d", get_element(element));
-        for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-          fprintf(estimators_file, "              ");
-        for (int ion = 0; ion < nions - 1; ion++)
-        {
-          double nu_edge = (epsilon(element, ion + 1, 0) - epsilon(element, ion, 0)) / H;
-          double kappa_bf = 0.;
-          calculate_kappa_bf_gammacontr(mgi, nu_edge, &kappa_bf);
+      // if (timestep % 20 == 0)
+      // {
+      //   fprintf(estimators_file, "kappa_bf(nuedge)   Z=%2d", get_element(element));
+      //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+      //     fprintf(estimators_file, "              ");
+      //   for (int ion = 0; ion < nions - 1; ion++)
+      //   {
+      //     double nu_edge = (epsilon(element, ion + 1, 0) - epsilon(element, ion, 0)) / H;
+      //     double kappa_bf = 0.;
+      //     calculate_kappa_bf_gammacontr(mgi, nu_edge, &kappa_bf);
+      //
+      //     fprintf(estimators_file, "  %d: %9.3e",
+      //             get_ionstage(element, ion),
+      //             kappa_bf);
+      //   }
+      //   fprintf(estimators_file, "\n");
+      // }
 
-          fprintf(estimators_file, "  %d: %9.3e",
-                  get_ionstage(element, ion),
-                  kappa_bf);
-        }
-        fprintf(estimators_file, "\n");
-      }
-
-      if (!DETAILED_BF_ESTIMATORS_ON || (timestep % 10) == 0)
       {
         fprintf(estimators_file, "gamma_R            Z=%2d", get_element(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
@@ -456,8 +455,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "\n");
       }
 
-      // this is expensive
-      if (DETAILED_BF_ESTIMATORS_ON && (timestep % 10) == 0)
+      if (DETAILED_BF_ESTIMATORS_ON)
       {
         fprintf(estimators_file, "gamma_R_integral   Z=%2d", get_element(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
