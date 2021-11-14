@@ -5,6 +5,24 @@
 #include "exspec.h"
 #include "types.h"
 
+struct timestepspec
+{
+  double *flux;
+  double *absorption;
+  double *emission;
+  double *trueemission;
+};
+
+struct spec
+{
+  float *lower_freq;
+  float *delta_freq;
+  struct timestepspec *timesteps;
+  double nu_min;
+  double nu_max;
+  bool do_emission_res;
+};
+
 void write_spectrum(
   char spec_filename[], char emission_filename[], char trueemission_filename[],
   char absorption_filename[], struct spec *spectra, int num_timesteps);
