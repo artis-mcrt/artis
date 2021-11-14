@@ -672,7 +672,7 @@ static void mpi_reduce_spectra(int my_rank, struct spec *spectra)
       {
         const int proccount = 2 * get_nelements() * get_max_nions() + 1;
         MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra[n].absorption,
-                   spectra[n].absorption, globals::nnubins * get_nelements() * get_max_nions(), MPI_DOUBLE, 0, MPI_SUM, MPI_COMM_WORLD);§
+                   spectra[n].absorption, globals::nnubins * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, 0,  MPI_COMM_WORLD);
         MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra[n].emission,
                    spectra[n].emission, globals::nnubins * proccount, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
         MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra[n].trueemission,
