@@ -671,25 +671,22 @@ void add_to_spec_res(
 
 
 #ifdef MPI_ON
-static void mpi_reduce_spectra(int my_rank, struct spec *spectra)
+static void mpi_reduce_spectra(int my_rank, struct spec *spectra, int numtimesteps)
 {
-  for (int n = 0; n < globals::ntstep; n++)
+  for (int n = 0; n < numtimesteps; n++)
   {
     MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra[n].flux,
                spectra[n].flux, globals::nnubins, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
-   if (spectra[n].do_emission_res)
-   {
-      for (int m = 0; m < globals::nnubins; m++)
-      {
-        const int proccount = 2 * get_nelements() * get_max_nions() + 1;
-        MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra[n].absorption, spectra[n].absorption,
-                   globals::nnubins * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, 0,  MPI_COMM_WORLD);
-        MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra[n].emission, spectra[n].emission,
-                   globals::nnubins * proccount, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-        MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra[n].trueemission, spectra[n].trueemission,
-                   globals::nnubins * proccount, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      }
+    if (spectra[n].do_emission_res)
+    {
+      const int proccount = 2 * get_nelements() * get_max_nions() + 1;
+      MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra[n].absorption, spectra[n].absorption,
+                 globals::nnubins * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, 0,  MPI_COMM_WORLD);
+      MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra[n].emission, spectra[n].emission,
+                 globals::nnubins * proccount, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+      MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra[n].trueemission, spectra[n].trueemission,
+                 globals::nnubins * proccount, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     }
   }
 }
@@ -709,7 +706,8 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts)
   globals::nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
 
   // the emission resolved spectra are slow to generate, so only allow making them for the final timestep
-  bool do_emission_res = (nts >= globals::ftstep - 1) ? globals::do_emission_res : false;
+  // bool do_emission_res = (nts >= globals::ftstep - 1) ? globals::do_emission_res : false;
+  bool do_emission_res = globals::do_emission_res;
 
   if (rpkt_spectra == NULL)
   {
@@ -740,26 +738,29 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts)
     }
   }
 
+  const int numtimesteps = nts + 1;  // only produce spectra and light curves up to one past nts
+  assert_always(numtimesteps <= globals::ntstep);
+
   const time_t time_mpireduction_start = time(NULL);
   #ifdef MPI_ON
-  mpi_reduce_spectra(my_rank, rpkt_spectra);
+  mpi_reduce_spectra(my_rank, rpkt_spectra, numtimesteps);
   MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lum, rpkt_light_curve_lum,
-             globals::ntstep, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+             numtimesteps, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lum, rpkt_light_curve_lumcmf,
-             globals::ntstep, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+             numtimesteps, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : gamma_light_curve_lum, gamma_light_curve_lum,
-             globals::ntstep, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+             numtimesteps, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : gamma_light_curve_lumcmf, gamma_light_curve_lumcmf,
-             globals::ntstep, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+             numtimesteps, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   #endif
   const time_t time_mpireduction_end = time(NULL);
 
   if (my_rank == 0)
   {
-    write_light_curve((char *) "light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, nts + 1);
-    write_light_curve((char *) "gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf, nts + 1);
+    write_light_curve((char *) "light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, numtimesteps);
+    write_light_curve((char *) "gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf, numtimesteps);
     write_spectrum((char *) "spec.out", (char *) "emission.out",
-                   (char *) "emissiontrue.out", (char *) "absorption.out", rpkt_spectra, nts + 1);
+                   (char *) "emissiontrue.out", (char *) "absorption.out", rpkt_spectra, numtimesteps);
   }
 
   free(rpkt_light_curve_lum);
