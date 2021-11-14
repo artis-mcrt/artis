@@ -28,7 +28,7 @@ namespace radfield
   void titer_J(int modelgridindex);
   void titer_nuJ(int modelgridindex);
   void reduce_estimators(void);
-  void do_MPI_Bcast(int modelgridindex, int root);
+  void do_MPI_Bcast(int modelgridindex, int root, int root_node_id);
   void write_restart_data(FILE *gridsave_file);
   void read_restart_data(FILE *gridsave_file);
   __host__ __device__ void normalise_bf_estimators(int modelgridindex, double estimator_normfactor_over_H);

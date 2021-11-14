@@ -4,7 +4,7 @@
 #include <cstdio>
 #include "sn3d.h"
 
-void update_grid(FILE *estimators_file, int nts, int nts_prev, int my_rank, int nstart, int ndo, int titer);
+void update_grid(FILE *estimators_file, int nts, int nts_prev, int my_rank, int nstart, int ndo, int titer, const time_t real_time_start);
 void precalculate_partfuncts(int modelgridindex);
 __host__ __device__ void cellhistory_reset(int cellnumber, bool set_population);
 double calculate_populations(int modelgridindex);

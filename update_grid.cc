@@ -422,26 +422,40 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       // }
       // fprintf(estimators_file, "\n");
 
-      if (timestep % 20 == 0)
+      // if (timestep % 20 == 0)
+      // {
+      //   fprintf(estimators_file, "kappa_bf(nuedge)   Z=%2d", get_element(element));
+      //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+      //     fprintf(estimators_file, "              ");
+      //   for (int ion = 0; ion < nions - 1; ion++)
+      //   {
+      //     double nu_edge = (epsilon(element, ion + 1, 0) - epsilon(element, ion, 0)) / H;
+      //     double kappa_bf = 0.;
+      //     calculate_kappa_bf_gammacontr(mgi, nu_edge, &kappa_bf);
+      //
+      //     fprintf(estimators_file, "  %d: %9.3e",
+      //             get_ionstage(element, ion),
+      //             kappa_bf);
+      //   }
+      //   fprintf(estimators_file, "\n");
+      // }
+
       {
-        fprintf(estimators_file, "kappa_bf(nuedge)   Z=%2d", get_element(element));
+        fprintf(estimators_file, "gamma_R            Z=%2d", get_element(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
           fprintf(estimators_file, "              ");
         for (int ion = 0; ion < nions - 1; ion++)
         {
-          double nu_edge = (epsilon(element, ion + 1, 0) - epsilon(element, ion, 0)) / H;
-          double kappa_bf = 0.;
-          calculate_kappa_bf_gammacontr(mgi, nu_edge, &kappa_bf);
-
+          // const bool printdebug_gammar = (get_element(element) == 26 && get_ionstage(element, ion) == 2);
+          const bool printdebug_gammar = false;
           fprintf(estimators_file, "  %d: %9.3e",
                   get_ionstage(element, ion),
-                  kappa_bf);
+                  calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, false, false));
         }
         fprintf(estimators_file, "\n");
       }
 
-      // this is expensive
-      if (!DETAILED_BF_ESTIMATORS_ON || (timestep % 20) == 0)
+      if (DETAILED_BF_ESTIMATORS_ON)
       {
         fprintf(estimators_file, "gamma_R_integral   Z=%2d", get_element(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
@@ -452,7 +466,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
           const bool printdebug_gammar = false;
           fprintf(estimators_file, "  %d: %9.3e",
                   get_ionstage(element, ion),
-                  calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, false));
+                  calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, false, true));
         }
         fprintf(estimators_file, "\n");
       }
@@ -469,7 +483,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
           const bool printdebug_gammar = false;
           fprintf(estimators_file, "  %d: %9.3e",
                   get_ionstage(element, ion),
-                  calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, true));
+                  calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, true, false));
         }
         fprintf(estimators_file, "\n");
       }
@@ -1279,11 +1293,33 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 }
 
 
-void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int my_rank, const int nstart, const int ndo, const int titer)
+void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int my_rank, const int nstart, const int ndo, const int titer, const time_t real_time_start)
 // Subroutine to update the matter quantities in the grid cells at the start
 //   of the new timestep.
 /// m timestep
 {
+  const time_t sys_time_start_update_grid = time(NULL);
+  printout("\ntimestep %d: time before update grid %ld (tstart + %ld)\n",
+           nts, sys_time_start_update_grid, sys_time_start_update_grid - real_time_start);
+
+  #ifndef FORCE_LTE
+    #if (!NO_LUT_PHOTOION)
+      /// Initialise globals::corrphotoionrenorm[i] to zero before update_grid is called
+      /// This allows reduction after update_grid has finished
+      /// unless they have been read from file and must neither be touched
+      /// nor broadcasted after update_grid
+      if ((!globals::simulation_continued_from_saved) || (nts - globals::itstep != 0) || (titer != 0))
+      {
+        printout("nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
+        for (int i = 0; i < grid::get_npts_model() * get_nelements() * get_max_nions(); i++)
+        {
+          globals::corrphotoionrenorm[i] = 0.;
+        }
+        printout("after nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
+      }
+    #endif
+  #endif
+
   //printout("[debug] update_grid: starting update for timestep %d...\n",m);
   const double tratmid = globals::time_step[nts].mid / globals::tmin;
 
@@ -1405,6 +1441,18 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   }
   globals::max_path_step = fmin(globals::max_path_step, globals::rmax / 10.);
   printout("max_path_step %g\n", globals::max_path_step);
+
+  const time_t time_update_grid_end_thisrank = time(NULL);
+  printout("finished update grid on this rank at time %ld\n", time_update_grid_end_thisrank);
+
+  #ifdef MPI_ON
+    MPI_Barrier(MPI_COMM_WORLD);
+  #endif
+  printout("timestep %d: time after update grid for all processes %ld (rank %d took %lds, waited %lds, total %lds)\n",
+           nts, time(NULL), my_rank,
+           time_update_grid_end_thisrank - sys_time_start_update_grid,
+           time(NULL) - time_update_grid_end_thisrank,
+           time(NULL) - sys_time_start_update_grid);
 }
 
 

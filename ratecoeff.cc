@@ -41,6 +41,9 @@ static char adatafile_hash[33];
 static char compositionfile_hash[33];
 static char phixsfile_hash[33];
 
+// when calculating ion ionisation rate coefficient, contribute the lowest n levels that
+// make up at least min_popfrac_iongamma fraction of the ion population
+static const double min_popfrac_iongamma = 0.999;
 
 static bool read_ratecoeff_dat(void)
 /// Try to read in the precalculated rate coefficients from file
@@ -1465,73 +1468,99 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
 }
 
 
+static int get_nlevels_important(
+  int modelgridindex, int element, int ion, bool assume_lte, float T_e, double *nnlevelsum_out)
+{
+  // get the stored ion population for comparison with the cumulative sum of level pops
+  const double nnion_real = ionstagepop(modelgridindex, element, ion);
+
+  double nnlevelsum = 0.;
+  int nlevels_important = get_ionisinglevels(element, ion); // levels needed to get majority of ion pop
+
+  // debug: treat all ionising levels as important
+  // *nnlevelsum_out = nnion_real;
+  // return nlevels_important;
+
+  for (int lower = 0; (nnlevelsum / nnion_real < min_popfrac_iongamma) && (lower < get_ionisinglevels(element, ion)); lower++)
+  {
+    double nnlowerlevel;
+    if (assume_lte)
+    {
+      const double T_exc = T_e; // remember, other parts of the code in LTE mode use TJ, not T_e
+      const double E_level = epsilon(element, ion, lower);
+      const double E_ground = epsilon(element, ion, 0);
+      const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, ion) : 1.0;
+
+      nnlowerlevel = (
+        nnground * stat_weight(element, ion, lower) / stat_weight(element, ion, 0) *
+        exp(-(E_level - E_ground) / KB / T_exc));
+    }
+    else
+    {
+      nnlowerlevel = calculate_exclevelpop(modelgridindex, element, ion, lower);
+    }
+    nnlevelsum += nnlowerlevel;
+    nlevels_important = lower + 1;
+  }
+  *nnlevelsum_out = nnlevelsum;
+  // printout("mgi %d element %d ion %d nlevels_important %d popfrac %g\n", modelgridindex, element, ion, nlevels_important, nnlevelsum / nnion_real);
+  return nlevels_important;
+}
+
+
 double calculate_iongamma_per_gspop(const int modelgridindex, const int element, const int ion)
 // ionisation rate coefficient. multiply by get_groundlevelpop to get a rate
 {
   const int nions = get_nions(element);
   double Gamma = 0.;
-  if (ion < nions - 1)
+  if (ion >= nions - 1)
   {
-    const float T_e = grid::get_Te(modelgridindex);
-    const float nne = grid::get_nne(modelgridindex);
-    const int ionisinglevels = get_ionisinglevels(element,ion);
-
-    double Col_ion = 0.;
-    for (int level = 0; level < ionisinglevels; level++)
-    {
-      const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
-      const int nphixstargets = get_nphixstargets(element,ion,level);
-      for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
-      {
-        const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-
-        Gamma += nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
-
-        const double epsilon_trans = epsilon(element,ion + 1,upperlevel) - epsilon(element,ion,level);
-        //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
-
-        Col_ion += nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
-      }
-    }
-    //printout("element %d ion %d: col/gamma %g Te %g ne %g\n", element, ion, Col_ion/Gamma, grid::get_Te(n), grid::get_nne(n));
-    Gamma += Col_ion;
-    Gamma /= get_groundlevelpop(modelgridindex, element, ion);
+    return 0.;
   }
+
+  const float T_e = grid::get_Te(modelgridindex);
+  const float nne = grid::get_nne(modelgridindex);
+
+  double nnlowerion = 0.;
+  const int nlevels_important = get_nlevels_important(modelgridindex, element, ion, false, T_e, &nnlowerion);
+
+  double Col_ion = 0.;
+  for (int level = 0; level < nlevels_important; level++)
+  {
+    const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+    const int nphixstargets = get_nphixstargets(element,ion,level);
+    for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
+    {
+      const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+
+      Gamma += nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
+
+      const double epsilon_trans = epsilon(element,ion + 1,upperlevel) - epsilon(element,ion,level);
+      //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
+
+      Col_ion += nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
+    }
+  }
+  //printout("element %d ion %d: col/gamma %g Te %g ne %g\n", element, ion, Col_ion/Gamma, grid::get_Te(n), grid::get_nne(n));
+  Gamma += Col_ion;
+  Gamma /= get_groundlevelpop(modelgridindex, element, ion);
   return Gamma;
 }
 
 
 double calculate_iongamma_per_ionpop(
   const int modelgridindex, const float T_e, const int element, const int lowerion,
-  const bool assume_lte, const bool collisional_not_radiative, const bool printdebug, const bool use_bfest)
+  const bool assume_lte, const bool collisional_not_radiative, const bool printdebug, const bool force_bfest,
+  const bool force_bfintegral)
 // ionisation rate coefficient. multiply by the lower ion pop to get a rate
 {
   assert_always(lowerion < get_nions(element) - 1);
+  assert_always(!force_bfest || !force_bfintegral);
 
   const float nne = (modelgridindex >= 0) ? grid::get_nne(modelgridindex) : 1.0;
 
-  // const double nnlowerion = ionstagepop(modelgridindex, element, lowerion);
   double nnlowerion = 0.;
-  for (int lower = 0; lower < get_ionisinglevels(element, lowerion); lower++)
-  {
-    double nnlowerlevel;
-    if (assume_lte)
-    {
-      const double T_exc = T_e; // remember, other parts of the code in LTE mode use TJ, not T_e
-      const double E_level = epsilon(element, lowerion, lower);
-      const double E_ground = epsilon(element, lowerion, 0);
-      const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, lowerion) : 1.0;
-
-      nnlowerlevel = (
-        nnground * stat_weight(element, lowerion, lower) / stat_weight(element, lowerion, 0) *
-        exp(-(E_level - E_ground) / KB / T_exc));
-    }
-    else
-    {
-      nnlowerlevel = calculate_exclevelpop(modelgridindex, element, lowerion, lower);
-    }
-    nnlowerion += nnlowerlevel;
-  }
+  const int nlevels_important = get_nlevels_important(modelgridindex, element, lowerion, assume_lte, T_e, &nnlowerion);
 
   if (nnlowerion <= 0.)
   {
@@ -1540,7 +1569,7 @@ double calculate_iongamma_per_ionpop(
 
   double gamma_ion = 0.;
   double gamma_ion_used = 0.;
-  for (int lower = 0; lower < get_nlevels(element, lowerion); lower++)
+  for (int lower = 0; lower < nlevels_important; lower++)
   {
     double nnlowerlevel;
     if (assume_lte)
@@ -1592,13 +1621,17 @@ double calculate_iongamma_per_ionpop(
       const double gamma_ion_contribution_bfest = gamma_coeff_bfest * nnlowerlevel / nnlowerion;
       const double gamma_ion_contribution_integral = gamma_coeff_integral * nnlowerlevel / nnlowerion;
       gamma_ion_used += gamma_ion_contribution_used;
-      if (use_bfest)
+      if (force_bfest)
       {
         gamma_ion += gamma_ion_contribution_bfest;
       }
-      else
+      else if (force_bfintegral)
       {
         gamma_ion += gamma_ion_contribution_integral;
+      }
+      else
+      {
+        gamma_ion += gamma_ion_contribution_used;
       }
 
       if (printdebug && (gamma_ion_contribution_integral < 0. || gamma_ion_contribution_used > 0.) && lower < 20)

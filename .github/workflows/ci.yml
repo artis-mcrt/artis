@@ -22,10 +22,11 @@ jobs:
     - name: "install dependencies"
       run: |
         git status
+        cp artisoptions_nltenebular.h artisoptions.h
         # sudo apt-get update
         sudo apt-get install libgsl-dev
         # sudo apt-get install clang
-        cp artisoptions_nltenebular.h artisoptions.h
+        sudo apt install -y openmpi-bin libopenmpi-dev
 
     - name: "CPU count"
       id: cpu-count
@@ -41,21 +42,20 @@ jobs:
     #     g++ --version
     #     make CXX=g++ clean sn3d exspec
 
-    - name: "compile with clang"
+    - name: "compile with clang (no MPI)"
       run: |
         which clang++
         clang++ --version
         export CXX=clang++
         make clean
-        make CXX=clang++ -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+        make CXX=clang++ MPI=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
 
-    - name: "compile with GCC+OpenMPI"
+    - name: "compile with GCC (OpenMPI)"
       run: |
-        sudo apt install -y openmpi-bin libopenmpi-dev
+        which mpicxx
         mpicxx --version
         make clean
         make -j${{ steps.cpu-count.outputs.count }} sn3d exspec
-    # sudo apt remove openmpi-bin libopenmpi-dev
 
     - name: "run cppcheck"
       run: |
@@ -88,8 +88,8 @@ jobs:
       uses: actions/cache@v2.1.4
       id: cache-testreferencedata
       with:
-          path: "tests/nebularonezone_reference_20210324.tar.xz"
-          key: tests/nebularonezone_reference_20210324.tar.xz
+          path: "tests/nebularonezone_reference_20211109.tar.xz"
+          key: tests/nebularonezone_reference_20211109.tar.xz
 
     - name: Download/extract test data
       # if: steps.cache-atomicdata.outputs.cache-hit != 'true'
@@ -114,6 +114,7 @@ jobs:
         time mpirun -np 2 ./sn3d
 
     - name: "cat estimators"
+      if: always()
       working-directory: tests/nebularonezone/
       run: |
         cat estimators*.out
@@ -124,6 +125,11 @@ jobs:
       run: |
         cat output_0-0.txt
 
+    - name: Checksum output files
+      working-directory: tests/nebularonezone
+      run: |
+        md5sum *.out
+
     - name: "Run exspec"
       working-directory: tests/nebularonezone/
       run: |
@@ -133,12 +139,14 @@ jobs:
         cp output_0-0.txt exspec.txt *.out output/
 
     - name: "cat exspec log"
+      if: always()
       working-directory: tests/nebularonezone/output/
       run: |
         cat exspec.txt
 
     - name: Upload output files
       uses: actions/upload-artifact@v2
+      if: always()
       with:
         name: test-nebularonezone-output
         path: tests/nebularonezone/output

@@ -26,6 +26,7 @@
 #include "packet_init.h"
 #include "radfield.h"
 #include "ratecoeff.h"
+#include "spectrum.h"
 #include "stats.h"
 #include "update_grid.h"
 #include "update_packets.h"
@@ -49,7 +50,7 @@ __device__ void *rng = NULL;
 gsl_integration_workspace *gslworkspace = NULL;
 FILE *output_file = NULL;
 static FILE *linestat_file = NULL;
-static time_t real_time_start;
+static time_t real_time_start = -1;
 static time_t time_timestep_start = -1; // this will be set after the first update of the grid and before packet prop
 static FILE *estimators_file = NULL;
 
@@ -87,27 +88,29 @@ static void initialise_linestat_file(void)
 
 
 #ifdef MPI_ON
-static void mpi_communicate_grid_properties(const int my_rank, const int p, const int nstart, const int ndo, const int nts, const int titer, char *mpi_grid_buffer, const int mpi_grid_buffer_size)
+static void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const int nstart, const int ndo, const int nts, const int titer, char *mpi_grid_buffer, const int mpi_grid_buffer_size)
 {
   int position = 0;
-  for (int root = 0; root < p; root++)
+  for (int root = 0; root < nprocs; root++)
   {
     MPI_Barrier(MPI_COMM_WORLD);
     int root_nstart = nstart;
     MPI_Bcast(&root_nstart, 1, MPI_INT, root, MPI_COMM_WORLD);
     int root_ndo = ndo;
     MPI_Bcast(&root_ndo, 1, MPI_INT, root, MPI_COMM_WORLD);
+    int root_node_id = globals::node_id;
+    MPI_Bcast(&root_node_id, 1, MPI_INT, root, MPI_COMM_WORLD);
 
     for (int modelgridindex = root_nstart; modelgridindex < (root_nstart + root_ndo); modelgridindex++)
     {
-      radfield::do_MPI_Bcast(modelgridindex, root);
+      radfield::do_MPI_Bcast(modelgridindex, root, root_node_id);
 
       if (grid::get_numassociatedcells(modelgridindex) > 0)
       {
         nonthermal::nt_MPI_Bcast(modelgridindex, root);
-        if (NLTE_POPS_ON)
+        if (NLTE_POPS_ON && globals::rank_in_node == 0)
         {
-          MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, root, MPI_COMM_WORLD);
+          MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
         }
       }
     }
@@ -117,7 +120,6 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
       position = 0;
       MPI_Pack(&ndo, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
       for (int mgi = nstart; mgi < (nstart + ndo); mgi++)
-      //for (int nncl = 0; nncl < ndo; nncl++)
       {
         MPI_Pack(&mgi, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
 
@@ -432,42 +434,7 @@ static bool do_timestep(
 
   // Update the matter quantities in the grid for the new timestep.
 
-  const time_t sys_time_start_update_grid = time(NULL);
-  printout("\ntimestep %d: time before update grid %ld (tstart + %ld)\n",
-           nts, sys_time_start_update_grid, sys_time_start_update_grid - real_time_start);
-
-  #ifndef FORCE_LTE
-    #if (!NO_LUT_PHOTOION)
-      /// Initialise globals::corrphotoionrenorm[i] to zero before update_grid is called
-      /// This allows reduction after update_grid has finished
-      /// unless they have been read from file and must neither be touched
-      /// nor broadcasted after update_grid
-      if ((!globals::simulation_continued_from_saved) || (nts - globals::itstep != 0) || (titer != 0))
-      {
-        printout("nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
-        for (int i = 0; i < grid::get_npts_model() * get_nelements() * get_max_nions(); i++)
-        {
-          globals::corrphotoionrenorm[i] = 0.;
-        }
-        printout("after nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
-      }
-    #endif
-  #endif
-
-  update_grid(estimators_file, nts, nts_prev, my_rank, nstart, ndo, titer);
-
-  const time_t sys_time_finish_update_grid = time(NULL);
-  printout("timestep %d: update_grid: process %d finished update grid at %ld (took %ld seconds)\n",
-           nts, my_rank, sys_time_finish_update_grid, sys_time_finish_update_grid - sys_time_start_update_grid);
-
-  #ifdef MPI_ON
-    MPI_Barrier(MPI_COMM_WORLD);
-  #endif
-  const time_t sys_time_finish_update_grid_all_processes = time(NULL);
-  printout("timestep %d: waiting for update grid to finish on other processes took %ld seconds\n",
-           nts, sys_time_finish_update_grid_all_processes - sys_time_finish_update_grid);
-  printout("timestep %d: time after update grid for all processes %ld (took %ld seconds)\n",
-           nts, sys_time_finish_update_grid_all_processes, sys_time_finish_update_grid_all_processes - sys_time_start_update_grid);
+  update_grid(estimators_file, nts, nts_prev, my_rank, nstart, ndo, titer, real_time_start);
 
   const time_t sys_time_start_communicate_grid = time(NULL);
 
@@ -542,7 +509,8 @@ static bool do_timestep(
       }
       fclose(dep_file);
     }
-    write_partial_lightcurve(my_rank, nts, packets);
+
+    write_partial_lightcurve_spectra(my_rank, nts, packets);
 
     #ifdef MPI_ON
       printout("timestep %d: time after estimators have been communicated %ld (took %ld seconds)\n", nts, time(NULL), time(NULL) - time_communicate_estimators_start);
@@ -655,18 +623,42 @@ int main(int argc, char** argv)
   cudaSetDevice(myGpuId);
   #endif
 
-  #ifdef MPI_ON
-    MPI_Init(&argc, &argv);
-    int my_rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &globals::nprocs);
-    MPI_Barrier(MPI_COMM_WORLD);
-  #else
-    int my_rank = 0;
-    globals::nprocs = 1;
-  #endif
+#ifdef MPI_ON
+  MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &globals::rank_global);
+  MPI_Comm_size(MPI_COMM_WORLD, &globals::nprocs);
 
-  globals::rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
+  // make an intra-node communicator (group ranks that can share memory)
+  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, globals::rank_global, MPI_INFO_NULL, &globals::mpi_comm_node);
+  // get the local rank within this node
+  MPI_Comm_rank(globals::mpi_comm_node, &globals::rank_in_node);
+  // get the number of ranks on the node
+  MPI_Comm_size(globals::mpi_comm_node, &globals::node_nprocs);
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  // make an inter-node communicator (using local rank as the key for group membership)
+  MPI_Comm_split(MPI_COMM_WORLD, globals::rank_in_node, globals::rank_global, &globals::mpi_comm_internode);
+
+  // take the node id from the local rank 0 (node master) and broadcast it
+  if (globals::rank_in_node == 0)
+  {
+      MPI_Comm_rank(globals::mpi_comm_internode, &globals::node_id);
+      MPI_Comm_size(globals::mpi_comm_internode, &globals::node_count);
+  }
+
+  MPI_Bcast(&globals::node_id, 1, MPI_INT, 0, globals::mpi_comm_node);
+  MPI_Bcast(&globals::node_count, 1, MPI_INT, 0, globals::mpi_comm_node);
+
+#else
+  globals::rank_global = 0;
+  globals::nprocs = 1;
+  globals::rank_in_node = 0;
+  globals::node_nprocs = 1;
+  globals::node_id = 0;
+  globals::node_count = 0;
+#endif
+
+  const int my_rank = globals::rank_global;
 
 #ifdef _OPENMP
   /// Explicitly turn off dynamic threads because we use the threadprivate directive!!!
@@ -754,15 +746,16 @@ int main(int argc, char** argv)
   printout("sn3d.cc compiled at %s on %s\n", __TIME__, __DATE__);
 
   #ifdef MPI_ON
-    printout("MPI enabled with %d processes\n", globals::nprocs);
+    printout("MPI enabled:\n");
+    printout("  rank %d of %d in MPI_COMM_WORLD\n", globals::rank_global, globals::nprocs);
+    printout("  node %d of %d\n", globals::node_id, globals::node_count);
+    printout("  rank %d of %d within this node (MPI_COMM_WORLD_SHARED)\n", globals::rank_in_node, globals::node_nprocs);
   #else
     printout("MPI is disabled in this build\n");
   #endif
 
   #ifdef __CUDACC__
   printout("[CUDA] NVIDIA CUDA is available in this build\n");
-  #else
-  printout("[CUDA] NVIDIA CUDA is not available in this build\n");
   #endif
 
   #if CUDA_ENABLED
@@ -776,8 +769,6 @@ int main(int argc, char** argv)
   printout("[CUDA] maxThreadsPerMultiProcessor %d\n", deviceProp.maxThreadsPerMultiProcessor);
   printout("[CUDA] maxThreadsPerBlock %d\n", deviceProp.maxThreadsPerBlock);
   printout("[CUDA] warpSize %d\n", deviceProp.warpSize);
-  #else
-  printout("[CUDA] NVIDIA CUDA accelerated routines are disabled\n");
   #endif
 
   if ((globals::kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(get_max_threads(), sizeof(rpkt_cont_opacity_struct))) == NULL)
@@ -860,7 +851,7 @@ int main(int argc, char** argv)
 
   printout("Simulation propagates %g packets per process (total %g with nprocs %d)\n", 1. * globals::npkts, 1. * globals::npkts * globals::nprocs, globals::nprocs);
 
-  printout("[info] mem_usage: packets occupy %.1f MB\n", MPKTS * sizeof(PKT) / 1024. / 1024.);
+  printout("[info] mem_usage: packets occupy %.3f MB\n", MPKTS * sizeof(PKT) / 1024. / 1024.);
 
   if (!globals::simulation_continued_from_saved)
   {

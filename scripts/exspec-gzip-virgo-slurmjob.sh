@@ -4,11 +4,11 @@ spack load gsl target=$(spack arch -t)
 
 cd $SLURM_SUBMIT_DIR
 
-if [ ! -f spec.out ]; then
-  ./artis/scripts/exspec-before.sh
+if [ ! -f emission.out.xz ]; then
+  source ./artis/scripts/exspec-before.sh
   ./exspec
 else
-  echo 'Not running exspec because spec.out was found'
+  echo 'Not running exspec because emission.out.xz was found'
 fi
 
-./artis/scripts/exspec-after.sh
+source ./artis/scripts/exspec-after.sh

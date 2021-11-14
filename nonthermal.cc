@@ -2464,7 +2464,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
       realloc_frac_excitations_list(modelgridindex, MAX_NT_EXCITATIONS_STORED);
     }
 
-    printout("[info] mem_usage: non-thermal excitations for cell %d at this timestep occupy %.1f MB\n",
+    printout("[info] mem_usage: non-thermal excitations for cell %d at this timestep occupy %.3f MB\n",
              modelgridindex, nt_solution[modelgridindex].frac_excitations_list_size *
              (sizeof(nt_solution[modelgridindex].frac_excitations_list) + sizeof(nt_solution[modelgridindex].frac_excitations_list[0])) / 1024. / 1024.);
 

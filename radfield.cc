@@ -23,12 +23,8 @@ __managed__ static bool initialized = false;
 //   FIT_CONSTANT = 1,
 // } enum_bin_fit_type;
 
-struct radfieldbin
+struct radfieldbin_solution
 {
-  double J_raw;           // value needs to be multipled by J_normfactor to get the true value
-  double nuJ_raw;
-  int contribcount;
-
   // these two parameters are used in the current timestep, but were calculated
   // from the values of J and nuJ in the previous timestep
   float W;                // dilution (scaling) factor
@@ -36,8 +32,22 @@ struct radfieldbin
   // enum_bin_fit_type fit_type;
 };
 
+struct radfieldbin
+{
+  double J_raw;           // value needs to be multipled by J_normfactor to get the true value
+  double nuJ_raw;
+  int contribcount;
+};
+
 __managed__ static double radfieldbin_nu_upper[RADFIELDBINCOUNT]; // array of upper frequency boundaries of bins
-__managed__ static struct radfieldbin **radfieldbins = NULL;
+__managed__ static struct radfieldbin *radfieldbins = NULL;
+__managed__ static struct radfieldbin_solution *radfieldbin_solutions = NULL;
+
+
+#ifdef MPI_ON
+  MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
+  MPI_Win win_prev_bfrate_normed = MPI_WIN_NULL;
+#endif
 
 // ** Detailed lines - Jblue_lu estimators for selected lines
 
@@ -60,9 +70,8 @@ __managed__ static struct Jb_lu_estimator **Jb_lu_raw = NULL;   // unnormalised 
 // ** end detailed lines
 
 #if (DETAILED_BF_ESTIMATORS_ON)
-__managed__ static bool normed_bfrates_available = false;
-__managed__ static float **prev_bfrate_normed = NULL;  // values from the previous timestep
-__managed__ static double **bfrate_raw = NULL;   // unnormalised estimators for the current timestep
+__managed__ static float *prev_bfrate_normed = NULL;  // values from the previous timestep
+__managed__ static double *bfrate_raw = NULL;   // unnormalised estimators for the current timestep
 
 // expensive debugging mode to track the contributions to each bound-free rate estimator
 #if (DETAILED_BF_ESTIMATORS_BYTYPE)
@@ -269,7 +278,11 @@ void init(int my_rank, int ndo)
     abort();
   }
 
-  initialized = true;
+#ifdef MPI_ON
+  const int rank_in_node = globals::rank_in_node;
+#endif
+
+  const int nonempty_npts_model = grid::get_nonempty_npts_model();
 
   J_normfactor = (double *) malloc((grid::get_npts_model() + 1) * sizeof(double));
   J = (double *) malloc((grid::get_npts_model() + 1) * sizeof(double));
@@ -372,12 +385,52 @@ void init(int my_rank, int ndo)
     printout("The radiation field model is a whole-spectrum fit to a single diluted blackbody.\n");
   }
 
-  radfieldbins = (struct radfieldbin **) malloc((grid::get_npts_model() + 1) * sizeof(struct radfieldbin *));
+  const long mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin);
+  radfieldbins = (struct radfieldbin *) malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin));
+
+  const long mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution);
+
+  #ifdef MPI_ON
+  {
+    MPI_Aint size = (rank_in_node == 0) ? nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution) : 0;
+    MPI_Win_allocate_shared(size, sizeof(struct radfieldbin_solution), MPI_INFO_NULL, globals::mpi_comm_node, &radfieldbin_solutions, &win_radfieldbin_solutions);
+    if (rank_in_node != 0)
+    {
+      int disp_unit;
+      MPI_Win_shared_query(win_radfieldbin_solutions, MPI_PROC_NULL, &size, &disp_unit, &radfieldbin_solutions);
+    }
+  }
+  #else
+  {
+    radfieldbin_solutions = (struct radfieldbin_solution *) malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution));
+  }
+  #endif
 
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
-    prev_bfrate_normed = (float **) malloc((grid::get_npts_model() + 1) * sizeof(float *));
-    bfrate_raw = (double **) malloc((grid::get_npts_model() + 1) * sizeof(double *));
+    #ifdef MPI_ON
+    {
+      MPI_Win win_prev_bfrate_normed;
+      MPI_Aint size = (rank_in_node == 0) ? nonempty_npts_model * globals::nbfcontinua * sizeof(float) : 0;
+      MPI_Win_allocate_shared(size, sizeof(float), MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed, &win_prev_bfrate_normed);
+      if (rank_in_node != 0)
+      {
+        int disp_unit;
+        MPI_Win_shared_query(win_prev_bfrate_normed, MPI_PROC_NULL, &size, &disp_unit, &prev_bfrate_normed);
+      }
+    }
+    #else
+    {
+      prev_bfrate_normed = (float *) malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(float));
+    }
+    #endif
+    printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (shared node memory)\n",
+             nonempty_npts_model * globals::nbfcontinua * sizeof(float) / 1024. / 1024.);
+
+    bfrate_raw = (double *) malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(double));
+
+    printout("[info] mem_usage: detailed bf estimator acculumators for non-empty cells occupy %.3f MB\n",
+             nonempty_npts_model * globals::nbfcontinua * sizeof(double) / 1024. / 1024.);
 
     #if (DETAILED_BF_ESTIMATORS_BYTYPE)
     {
@@ -388,49 +441,45 @@ void init(int my_rank, int ndo)
   }
   #endif
 
-  long mem_usage = 0;
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
   {
-    set_J_normfactor(modelgridindex, -1.0);
-    // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, grid::get_numassociatedcells(modelgridindex));
     if (grid::get_numassociatedcells(modelgridindex) > 0)
     {
-      #if (DETAILED_BF_ESTIMATORS_ON)
+      const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+      #if (DETAILED_BF_ESTIMATORS_ON && DETAILED_BF_ESTIMATORS_BYTYPE)
       {
-        bfrate_raw[modelgridindex] = (double *) malloc(globals::nbfcontinua * sizeof(double));
-        prev_bfrate_normed[modelgridindex] = (float *) malloc(globals::nbfcontinua * sizeof(float));
-
-        #if (DETAILED_BF_ESTIMATORS_BYTYPE)
+        bfrate_raw_bytype[modelgridindex] = (struct bfratecontrib **) malloc(globals::nbfcontinua * sizeof(struct bfratecontrib *));
+        bfrate_raw_bytype_size[modelgridindex] = (int *) malloc(globals::nbfcontinua * sizeof(int));
+        for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++)
         {
-          bfrate_raw_bytype[modelgridindex] = (struct bfratecontrib **) malloc(globals::nbfcontinua * sizeof(struct bfratecontrib *));
-          bfrate_raw_bytype_size[modelgridindex] = (int *) malloc(globals::nbfcontinua * sizeof(int));
-          for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++)
-          {
-            bfrate_raw_bytype[modelgridindex][allcontindex] = NULL;
-            bfrate_raw_bytype_size[modelgridindex][allcontindex] = 0.;
-          }
+          bfrate_raw_bytype[modelgridindex][allcontindex] = NULL;
+          bfrate_raw_bytype_size[modelgridindex][allcontindex] = 0.;
         }
-        #endif
       }
       #endif
 
+      zero_estimators(modelgridindex);
+
       if (MULTIBIN_RADFIELD_MODEL_ON)
       {
-        radfieldbins[modelgridindex] = (struct radfieldbin *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin));
-        mem_usage += RADFIELDBINCOUNT * sizeof(struct radfieldbin);
-        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+        #ifdef MPI_ON
+        if (rank_in_node == 0)
+        #endif
         {
-          radfieldbins[modelgridindex][binindex].J_raw = 0.;
-          radfieldbins[modelgridindex][binindex].nuJ_raw = 0.;
-          radfieldbins[modelgridindex][binindex].contribcount = 0;
-          radfieldbins[modelgridindex][binindex].W = -1.;
-          radfieldbins[modelgridindex][binindex].T_R = -1.;
-          // radfieldbins[modelgridindex][binindex].fit_type = FIT_DILUTE_BLACKBODY;
+          for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+          {
+            const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+            radfieldbin_solutions[mgibinindex].W = -1.;
+            radfieldbin_solutions[mgibinindex].T_R = -1.;
+          }
         }
       }
     }
   }
-  printout("[info] mem_usage: radiation field bins for non-empty cells occupy %.2f MB\n", mem_usage / 1024. / 1024.);
+  printout("[info] mem_usage: radiation field bin accumulators for non-empty cells occupy %.3f MB\n", mem_usage_bins / 1024. / 1024.);
+  printout("[info] mem_usage: radiation field bin solutions for non-empty cells occupy %.3f MB (shared node memory)\n", mem_usage_bin_solutions / 1024. / 1024.);
+
+  initialized = true;
 }
 
 
@@ -561,26 +610,10 @@ static double get_bin_J(int modelgridindex, int binindex)
     printout("radfield: Fatal error: get_bin_J called before on modelgridindex %d >= grid::get_npts_model()",modelgridindex);
     abort();
   }
-
-  return radfieldbins[modelgridindex][binindex].J_raw * J_normfactor[modelgridindex];
-}
-
-
-__host__ __device__
-static void set_bin_J(int modelgridindex, int binindex, double value)
-// set the normalised J_nu
-{
-  if (J_normfactor[modelgridindex] <= 0.0)
-  {
-    printout("radfield: Fatal error: set_bin_J called before J_normfactor set for modelgridindex %d",modelgridindex);
-    abort();
-  }
-  else if (modelgridindex >= grid::get_npts_model())
-  {
-    printout("radfield: Fatal error: set_bin_J called before on modelgridindex %d >= grid::get_npts_model()",modelgridindex);
-    abort();
-  }
-  radfieldbins[modelgridindex][binindex].J_raw = value / J_normfactor[modelgridindex];
+  assert_testmodeonly(binindex >= 0);
+  assert_testmodeonly(binindex < RADFIELDBINCOUNT);
+  const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
+  return radfieldbins[mgibinindex].J_raw * J_normfactor[modelgridindex];
 }
 
 
@@ -597,7 +630,10 @@ static double get_bin_nuJ(int modelgridindex, int binindex)
     printout("radfield: Fatal error: get_bin_nuJ called before on modelgridindex %d >= grid::get_npts_model()",modelgridindex);
     abort();
   }
-  return radfieldbins[modelgridindex][binindex].nuJ_raw * J_normfactor[modelgridindex];
+  assert_testmodeonly(binindex >= 0);
+  assert_testmodeonly(binindex < RADFIELDBINCOUNT);
+  const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
+  return radfieldbins[mgibinindex].nuJ_raw * J_normfactor[modelgridindex];
 }
 
 
@@ -627,21 +663,24 @@ __host__ __device__
 static inline
 int get_bin_contribcount(int modelgridindex, int binindex)
 {
-  return radfieldbins[modelgridindex][binindex].contribcount;
+  const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
+  return radfieldbins[mgibinindex].contribcount;
 }
 
 
 static inline
 float get_bin_W(int modelgridindex, int binindex)
 {
-  return radfieldbins[modelgridindex][binindex].W;
+  const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
+  return radfieldbin_solutions[mgibinindex].W;
 }
 
 
 static inline
 float get_bin_T_R(int modelgridindex, int binindex)
 {
-  return radfieldbins[modelgridindex][binindex].T_R;
+  const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
+  return radfieldbin_solutions[mgibinindex].T_R;
 }
 
 
@@ -783,20 +822,36 @@ void close_file(void)
     radfieldfile = NULL;
   }
 
-  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
+  if (MULTIBIN_RADFIELD_MODEL_ON)
   {
-    if (grid::get_numassociatedcells(modelgridindex) > 0)
+    free(radfieldbins);
+    #ifdef MPI_ON
+    if (win_radfieldbin_solutions != MPI_WIN_NULL)
     {
-      if (MULTIBIN_RADFIELD_MODEL_ON)
-      {
-        free(radfieldbins[modelgridindex]);
-      }
-      #if (DETAILED_BF_ESTIMATORS_ON)
-      free(bfrate_raw[modelgridindex]);
-      free(prev_bfrate_normed[modelgridindex]);
-      #endif
+      MPI_Win_free(&win_radfieldbin_solutions);
     }
+    #else
+    if (radfieldbin_solutions != NULL)
+    {
+      free(radfieldbin_solutions);
+    }
+    #endif
   }
+
+  #if (DETAILED_BF_ESTIMATORS_ON)
+    free(bfrate_raw);
+    #ifdef MPI_ON
+    if (win_radfieldbin_solutions != MPI_WIN_NULL)
+    {
+      MPI_Win_free(&win_prev_bfrate_normed);
+    }
+    #else
+    if (prev_bfrate_normed != NULL)
+    {
+      free(prev_bfrate_normed);
+    }
+    #endif
+  #endif
 }
 
 
@@ -808,10 +863,10 @@ void zero_estimators(int modelgridindex)
   assert_always(bfrate_raw != NULL);
   if (initialized && (grid::get_numassociatedcells(modelgridindex) > 0))
   {
-    assert_always(bfrate_raw[modelgridindex] != NULL);
+    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
     for (int i = 0; i < globals::nbfcontinua; i++)
     {
-      bfrate_raw[modelgridindex][i] = 0.;
+      bfrate_raw[nonemptymgi * globals::nbfcontinua + i] = 0.;
     }
   }
   #endif
@@ -838,12 +893,12 @@ void zero_estimators(int modelgridindex)
     // printout("radfield: zeroing estimators in %d bins in cell %d\n",RADFIELDBINCOUNT,modelgridindex);
 
     assert_always(radfieldbins != NULL);
-    assert_always(radfieldbins[modelgridindex] != NULL);
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {
-      radfieldbins[modelgridindex][binindex].J_raw = 0.0;
-      radfieldbins[modelgridindex][binindex].nuJ_raw = 0.0;
-      radfieldbins[modelgridindex][binindex].contribcount = 0;
+      const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
+      radfieldbins[mgibinindex].J_raw = 0.0;
+      radfieldbins[mgibinindex].nuJ_raw = 0.0;
+      radfieldbins[mgibinindex].contribcount = 0;
     }
   }
   set_J_normfactor(modelgridindex, -1.0);
@@ -861,7 +916,9 @@ static void increment_bfestimators(
   if (distance_e_cmf == 0)
     return;
 
+  const int nbfcontinua = globals::nbfcontinua;
   const double dopplerfactor = doppler_packetpos(pkt_ptr);
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   // const double dopplerfactor = 1.;
 
   // const double deltaV = grid::vol_init_modelcell(modelgridindex) * pow(globals::time_step[nts_global].mid / globals::tmin, 3);
@@ -870,14 +927,14 @@ static void increment_bfestimators(
 
   const int tid = get_thread_num();
   const double distance_e_cmf_over_nu = distance_e_cmf / nu_cmf * dopplerfactor;
-  for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++)
+  for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++)
   {
     const double nu_edge = globals::allcont_nu_edge[allcontindex];
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
     if (nu_cmf >= nu_edge && nu_cmf <= nu_max_phixs)
     {
-      safeadd(bfrate_raw[modelgridindex][allcontindex], globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
+      safeadd(bfrate_raw[nonemptymgi * nbfcontinua + allcontindex], globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
 
       #if (DETAILED_BF_ESTIMATORS_BYTYPE)
       const int element = allcont[allcontindex].element;
@@ -980,9 +1037,10 @@ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf,
 
     if (binindex >= 0)
     {
-      safeadd(radfieldbins[modelgridindex][binindex].J_raw, distance_e_cmf);
-      safeadd(radfieldbins[modelgridindex][binindex].nuJ_raw, distance_e_cmf * nu_cmf);
-      safeincrement(radfieldbins[modelgridindex][binindex].contribcount);
+      const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
+      safeadd(radfieldbins[mgibinindex].J_raw, distance_e_cmf);
+      safeadd(radfieldbins[mgibinindex].nuJ_raw, distance_e_cmf * nu_cmf);
+      safeincrement(radfieldbins[mgibinindex].contribcount);
     }
     // else
     // {
@@ -1035,7 +1093,8 @@ double radfield(double nu, int modelgridindex)
     const int binindex = select_bin(nu);
     if (binindex >= 0)
     {
-      const struct radfieldbin *const bin = &radfieldbins[modelgridindex][binindex];
+      const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
+      const struct radfieldbin_solution *const bin = &radfieldbin_solutions[mgibinindex];
       if (bin->W >= 0.)
       {
         // if (bin->fit_type == FIT_DILUTE_BLACKBODY)
@@ -1386,7 +1445,7 @@ void fit_parameters(int modelgridindex, int timestep)
 
       if (contribcount > 0)
       {
-        // // enum_bin_fit_type bin_fit_type = radfieldbins[modelgridindex][binindex].fit_type;
+        // // enum_bin_fit_type bin_fit_type = radfieldbin_solutions[modelgridindex][binindex].fit_type;
         // if (bin_fit_type == FIT_DILUTE_BLACKBODY)
         {
           T_R_bin = find_T_R(modelgridindex, binindex);
@@ -1395,7 +1454,7 @@ void fit_parameters(int modelgridindex, int timestep)
           {
             const float T_e = grid::get_Te(modelgridindex);
             printout("    replacing bin %d T_R %7.1f with cell T_e = %7.1f\n",
-                     binindex, radfieldbins[modelgridindex][binindex].T_R, T_e);
+                     binindex, get_bin_T_R(modelgridindex, binindex), T_e);
             T_R_bin = T_e;
           }
 
@@ -1447,8 +1506,9 @@ void fit_parameters(int modelgridindex, int timestep)
       //   T_R_bin = -1;
       //   W_bin = -1;
       // }
-      radfieldbins[modelgridindex][binindex].T_R = T_R_bin;
-      radfieldbins[modelgridindex][binindex].W = W_bin;
+      const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
+      radfieldbin_solutions[mgibinindex].T_R = T_R_bin;
+      radfieldbin_solutions[mgibinindex].W = W_bin;
     }
 
     // double prev_nu_upper = nu_lower_first_initial;
@@ -1498,9 +1558,12 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
 {
   #if (DETAILED_BF_ESTIMATORS_ON)
   printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  assert_always(nonemptymgi >= 0);
   for (int i = 0; i < globals::nbfcontinua; i++)
   {
-    prev_bfrate_normed[modelgridindex][i] = bfrate_raw[modelgridindex][i] * estimator_normfactor_over_H;
+    const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
+    prev_bfrate_normed[mgibfindex] = bfrate_raw[mgibfindex] * estimator_normfactor_over_H;
 
     #if (DETAILED_BF_ESTIMATORS_BYTYPE)
     const int listsize = bfrate_raw_bytype_size[modelgridindex][i];
@@ -1512,19 +1575,6 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
 
     qsort(bfrate_raw_bytype[modelgridindex][i], listsize, sizeof(struct bfratecontrib), compare_bfrate_raw_bytype);
     #endif
-  }
-
-  if (!normed_bfrates_available)
-  {
-    for (int i = 0; i < globals::nbfcontinua; i++)
-    {
-      if (prev_bfrate_normed[modelgridindex][i] > 0.)
-      {
-        normed_bfrates_available = true;
-        printout("radfield: normed_bfrates_available is now true\n");
-        break;
-      }
-    }
   }
   #endif
 }
@@ -1633,8 +1683,8 @@ double get_bfrate_estimator(const int element, const int lowerion, const int low
 #if (!DETAILED_BF_ESTIMATORS_ON)
   return -1;
 #else
-  if (!normed_bfrates_available)
-    return -1.;
+  const int nbfcontinua = globals::nbfcontinua;
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
   // TODO: speed this up with a binary search
   const double nu_edge = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
@@ -1643,7 +1693,7 @@ double get_bfrate_estimator(const int element, const int lowerion, const int low
     if ((globals::allcont[i].element == element) && (globals::allcont[i].ion == lowerion) &&
         (globals::allcont[i].level == lower) && (globals::allcont[i].phixstargetindex == phixstargetindex))
     {
-      return prev_bfrate_normed[modelgridindex][i];
+      return prev_bfrate_normed[nonemptymgi * nbfcontinua + i];
     }
 
     if (nu_edge > globals::allcont[i].nu_edge)
@@ -1723,13 +1773,7 @@ void reduce_estimators(void)
 
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
-    for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
-    {
-      if (grid::get_numassociatedcells(modelgridindex) > 0)
-      {
-        MPI_Allreduce(MPI_IN_PLACE, bfrate_raw[modelgridindex], globals::nbfcontinua, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      }
-    }
+    MPI_Allreduce(MPI_IN_PLACE, bfrate_raw, grid::get_nonempty_npts_model() * globals::nbfcontinua, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
   #endif
 
@@ -1744,15 +1788,16 @@ void reduce_estimators(void)
       // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, grid::get_numassociatedcells(modelgridindex));
       if (grid::get_numassociatedcells(modelgridindex) > 0)
       {
+        const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
         {
-          assert_always(radfieldbins[modelgridindex] != NULL);
-          // printout("MPI: pre-MPI_Allreduce, this process modelgrid %d binindex %d has a individual contribcount of %d\n",modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
-          MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-          MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-          MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+          const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+          // printout("MPI: pre-MPI_Allreduce, this process modelgrid %d binindex %d has a individual contribcount of %d\n",modelgridindex,binindex,radfieldbins[mgibinindex].contribcount);
+          MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+          MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+          MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-          // printout("MPI: After MPI_Allreduce: this process modelgrid %d binindex %d has a contribcount of %d\n",modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+          // printout("MPI: After MPI_Allreduce: this process modelgrid %d binindex %d has a contribcount of %d\n",modelgridindex,binindex,radfieldbins[mgibinindex].contribcount);
         }
       }
     }
@@ -1784,24 +1829,38 @@ void reduce_estimators(void)
 }
 
 
-void do_MPI_Bcast(const int modelgridindex, const int root)
+void do_MPI_Bcast(const int modelgridindex, const int root, int root_node_id)
 // broadcast computed radfield results including parameters
 // from the cells belonging to root process to all processes
 {
   MPI_Bcast(&J_normfactor[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
   if (grid::get_numassociatedcells(modelgridindex) > 0)
   {
+    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
     if (MULTIBIN_RADFIELD_MODEL_ON)
     {
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
-        MPI_Bcast(&radfieldbins[modelgridindex][binindex].W, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-        MPI_Bcast(&radfieldbins[modelgridindex][binindex].T_R, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-        MPI_Bcast(&radfieldbins[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-        MPI_Bcast(&radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-        MPI_Bcast(&radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
+        const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+        if (globals::rank_in_node == 0)
+        {
+          MPI_Bcast(&radfieldbin_solutions[mgibinindex].W, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
+          MPI_Bcast(&radfieldbin_solutions[mgibinindex].T_R, 1, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
+        }
+        MPI_Bcast(&radfieldbins[mgibinindex].J_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[mgibinindex].nuJ_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[mgibinindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
       }
     }
+
+    #if (DETAILED_BF_ESTIMATORS_ON)
+    {
+      if (globals::rank_in_node == 0)
+      {
+        MPI_Bcast(&prev_bfrate_normed[nonemptymgi * globals::nbfcontinua], globals::nbfcontinua, MPI_FLOAT, root_node_id, globals::mpi_comm_internode);
+      }
+    }
+    #endif
 
     if (DETAILED_LINE_ESTIMATORS_ON)
     {
@@ -1837,16 +1896,18 @@ void write_restart_data(FILE *gridsave_file)
 
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
-    fprintf(gridsave_file, "%d\n", globals::nbfcontinua);
+    const int nbfcontinua = globals::nbfcontinua;
+    fprintf(gridsave_file, "%d\n", nbfcontinua);
 
     for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
     {
       if (grid::get_numassociatedcells(modelgridindex) > 0)
       {
+        const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         fprintf(gridsave_file, "%d\n", modelgridindex);
-        for (int i = 0; i < globals::nbfcontinua; i++)
+        for (int i = 0; i < nbfcontinua; i++)
         {
-          fprintf(gridsave_file, "%g ", prev_bfrate_normed[modelgridindex][i]);
+          fprintf(gridsave_file, "%g ", prev_bfrate_normed[nonemptymgi * nbfcontinua + i]);
         }
       }
     }
@@ -1867,19 +1928,22 @@ void write_restart_data(FILE *gridsave_file)
   {
     if (grid::get_numassociatedcells(modelgridindex) > 0)
     {
+      const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+      assert_testmodeonly(nonemptymgi >= 0);
       fprintf(gridsave_file,"%d %lg\n", modelgridindex, J_normfactor[modelgridindex]);
 
       if (MULTIBIN_RADFIELD_MODEL_ON)
       {
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
         {
+          const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
           fprintf(gridsave_file, "%lg %lg %g %g %d\n",
-                  radfieldbins[modelgridindex][binindex].J_raw,
-                  radfieldbins[modelgridindex][binindex].nuJ_raw,
-                  radfieldbins[modelgridindex][binindex].W,
-                  radfieldbins[modelgridindex][binindex].T_R,
-                  radfieldbins[modelgridindex][binindex].contribcount);
-                  //radfieldbins[modelgridindex][binindex].fit_type
+                  radfieldbins[mgibinindex].J_raw,
+                  radfieldbins[mgibinindex].nuJ_raw,
+                  radfieldbin_solutions[mgibinindex].W,
+                  radfieldbin_solutions[mgibinindex].T_R,
+                  radfieldbins[mgibinindex].contribcount);
+                  //radfieldbins[mgibinindex].fit_type
         }
       }
 
@@ -1958,24 +2022,25 @@ void read_restart_data(FILE *gridsave_file)
     {
       if (grid::get_numassociatedcells(modelgridindex) > 0)
       {
+        const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         int mgi_in;
         fscanf(gridsave_file, "%d\n", &mgi_in);
         assert_always(mgi_in == modelgridindex);
         for (int i = 0; i < globals::nbfcontinua; i++)
         {
-          fscanf(gridsave_file, "%g ", &prev_bfrate_normed[modelgridindex][i]);
-          if (!normed_bfrates_available && prev_bfrate_normed[modelgridindex][i] > 0.)
+          float bfrate_normed = 0;
+          fscanf(gridsave_file, "%g ", &bfrate_normed);
+
+          const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
+          #ifdef MPI_ON
+          if (globals::rank_in_node == 0)
+          #endif
           {
-            normed_bfrates_available = true;
-            printout("radfield::read_restart_data: normed_bfrates_available is now true\n");
+            prev_bfrate_normed[mgibfindex] = bfrate_normed;
           }
         }
       }
     }
-  }
-  if (!normed_bfrates_available)
-  {
-    printout("radfield::read_restart_data: normed_bfrates_available is false\n");
   }
   #endif
 
@@ -2001,6 +2066,7 @@ void read_restart_data(FILE *gridsave_file)
   {
     if (grid::get_numassociatedcells(modelgridindex) > 0)
     {
+      const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
       int mgi_in;
       fscanf(gridsave_file,"%d %lg\n", &mgi_in, &J_normfactor[modelgridindex]);
       if (mgi_in != modelgridindex)
@@ -2013,12 +2079,22 @@ void read_restart_data(FILE *gridsave_file)
       {
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
         {
+          const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+          float W = 0;
+          float T_R = 0;
           fscanf(gridsave_file, "%lg %lg %g %g %d\n",
-                 &radfieldbins[modelgridindex][binindex].J_raw,
-                 &radfieldbins[modelgridindex][binindex].nuJ_raw,
-                 &radfieldbins[modelgridindex][binindex].W,
-                 &radfieldbins[modelgridindex][binindex].T_R,
-                 &radfieldbins[modelgridindex][binindex].contribcount);
+                 &radfieldbins[mgibinindex].J_raw,
+                 &radfieldbins[mgibinindex].nuJ_raw,
+                 &W,
+                 &T_R,
+                 &radfieldbins[mgibinindex].contribcount);
+#ifdef MPI_ON
+          if (globals::rank_in_node == 0)
+#endif
+          {
+            radfieldbin_solutions[mgibinindex].W = W;
+            radfieldbin_solutions[mgibinindex].T_R = T_R;
+          }
         }
       }
 

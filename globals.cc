@@ -1,6 +1,9 @@
 #include "types.h"
 #include "sn3d.h"
 #include "globals.h"
+#ifdef MPI_ON
+  #include "mpi.h"
+#endif
 
 namespace globals
 {
@@ -108,25 +111,37 @@ namespace globals
 
   __managed__ int debuglevel;
 
-  __managed__ int nprocs = -1;      /// Global variable which holds the number of MPI processes
-  __managed__ int rank_global = -1; /// Global variable which holds the rank of the active MPI process
+  #ifdef MPI_ON
+  MPI_Comm mpi_comm_node = NULL;
+  MPI_Comm mpi_comm_internode = NULL;
+  #endif
+
+  __managed__ int nprocs = -1;         // number of MPI processes
+  __managed__ int rank_global = -1;    // rank of the active MPI process
+
+  __managed__ int node_nprocs = -1;    // number of MPI processes on this node
+  __managed__ int rank_in_node = -1;   // local rank within this node
+
+  __managed__ int node_count = -1;      // number of MPI nodes
+  __managed__ int node_id = -1;         // unique number for each node
+
   __managed__ int npkts = -1;
   __managed__ int nesc = 0; //number of packets that escape during current timestep
 
   __managed__ double coordmax[3];
   __managed__ double vmax;
   __managed__ double rmax;  /// Total mass and outer velocity/radius
-  __managed__ double tmax;              /// End time of current simulation
-  __managed__ double tmin;              /// Start time of current simulation
+  __managed__ double tmax = -1.;              /// End time of current simulation
+  __managed__ double tmin = -1.;              /// Start time of current simulation
 
-  __managed__ int ntstep;       /// Number of timesteps
-  __managed__ int itstep;       /// Initial timestep's number
-  __managed__ int ftstep;       /// Final timestep's number
-  __managed__ int nts_global;   /// Current time step
+  __managed__ int ntstep = -1;       /// Number of timesteps
+  __managed__ int itstep = -1;       /// Initial timestep's number
+  __managed__ int ftstep = -1;       /// Final timestep's number
+  __managed__ int nts_global = -1;   /// Current time step
 
-  __managed__ int nnubins; //number of bins for spectrum
-  __managed__ double nu_min_r;
-  __managed__ double nu_max_r; //limits on frequency range for r-pkt spectrum
+  __managed__ int nnubins = -1; //number of bins for spectrum
+  __managed__ double nu_min_r = -1.;
+  __managed__ double nu_max_r = -1.; //limits on frequency range for r-pkt spectrum
 
   __managed__ double nusyn_min;
   __managed__ double nusyn_max; //limits on range for syn

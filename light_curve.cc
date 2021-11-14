@@ -13,14 +13,15 @@ const int MALCBINS = 100;
 void write_light_curve(
   char lc_filename[], int current_abin,
   const double *light_curve_lum,
-  const double *light_curve_lumcmf)
+  const double *light_curve_lumcmf, int numtimesteps)
 {
   FILE *lc_file = fopen_required(lc_filename, "w");
+  assert_always(numtimesteps <= globals::ntstep);
 
   printout("Writing %s\n", lc_filename);
 
   /// Print out the UVOIR bolometric light curve.
-  for (int nts = 0; nts < globals::ntstep; nts++)
+  for (int nts = 0; nts < numtimesteps; nts++)
   {
     fprintf(lc_file, "%g %g %g\n", globals::time_step[nts].mid / DAY,
             (light_curve_lum[nts] / LSUN), (light_curve_lumcmf[nts] / LSUN));
@@ -29,7 +30,7 @@ void write_light_curve(
   if (current_abin == -1)
   {
     /// Now print out the gamma ray deposition rate in the same file.
-    for (int m = 0; m < globals::ntstep; m++)
+    for (int m = 0; m < numtimesteps; m++)
     {
       fprintf(lc_file, "%g %g %g\n", globals::time_step[m].mid / DAY,
               (globals::time_step[m].gamma_dep / LSUN / globals::time_step[m].width),
@@ -105,40 +106,4 @@ void add_to_lc_res(const PKT *pkt_ptr, int current_abin, double *light_curve_lum
       safeadd(light_curve_lum[nt], pkt_ptr->e_rf / globals::time_step[nt].width * MALCBINS / globals::nprocs);
     }
   }
-}
-
-
-void write_partial_lightcurve(int my_rank, int nts, PKT *pkts)
-{
-  const time_t time_func_start = time(NULL);
-
-  double *rpkt_light_curve_lum = (double *) calloc(globals::ntstep, sizeof(double));
-  double *rpkt_light_curve_lumcmf = (double *) calloc(globals::ntstep, sizeof(double));
-
-  for (int ii = 0; ii < globals::npkts; ii++)
-  {
-    // printout("packet %d escape_type %d type %d", ii, pkt[ii].escape_type, pkt[ii].type);
-    if (pkts[ii].type == TYPE_ESCAPE)
-    {
-      if (pkts[ii].escape_type == TYPE_RPKT)
-      {
-        add_to_lc_res(&pkts[ii], -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-      }
-    }
-  }
-
-  #ifdef MPI_ON
-  MPI_Allreduce(MPI_IN_PLACE, rpkt_light_curve_lum, globals::ntstep, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, rpkt_light_curve_lumcmf, globals::ntstep, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  #endif
-
-  if (my_rank == 0)
-  {
-    write_light_curve((char *) "light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-  }
-
-  free(rpkt_light_curve_lum);
-  free(rpkt_light_curve_lumcmf);
-
-  printout("Saving partial light curve took %lds\n", time(NULL) - time_func_start);
 }

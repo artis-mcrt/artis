@@ -4,6 +4,8 @@ GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 .DEFAULT_GOAL := all
 SYSNAME := $(shell uname -s)
 
+BUILD_DIR = build
+
 ifeq ($(SYSNAME),Darwin)
 	# macOS
 
@@ -12,6 +14,7 @@ ifeq ($(SYSNAME),Darwin)
 
 	CXXFLAGS += -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing
 
+	MPI := OFF
 	# CXXFLAGS += -fopenmp-simd
 	# CXXFLAGS += -fvectorize
 
@@ -25,7 +28,6 @@ ifeq ($(SYSNAME),Darwin)
 	# add -lprofiler for gperftools
 	LDFLAGS += $(LIB)
 	# LDFLAGS += -lprofiler
-	BUILD_DIR = build
 
 else ifneq (,$(findstring kelvin,$(HOSTNAME)))
 	# QUB Kelvin cluster
@@ -37,15 +39,13 @@ else ifneq (,$(findstring kelvin,$(HOSTNAME)))
 	CXX = mpicxx
 	CXXFLAGS += -std=c++17 -mcmodel=medium #-fopenmp=libomp
 	CXXFLAGS += -DMPI_ON
-	BUILD_DIR = build/mpi
+	BUILD_DIR := $(BUILD_DIR)/mpi
 
 else ifneq (, $(shell which mpicxx))
-	# any other system which has mpicxx available (Juwels, Cambridge, Gadi, etc)
+	# any other system that has mpicxx available (Juwels, Cambridge, Gadi, etc)
 
-	CXX = mpicxx
 	CXXFLAGS += -std=c++17 -march=native #-fopenmp=libomp
-	CXXFLAGS += -DMPI_ON
-	BUILD_DIR = build/mpi
+	MPI := ON
 
 else ifeq ($(USER),localadmin_ccollins)
 	# CXX = c++
@@ -55,26 +55,23 @@ else ifeq ($(USER),localadmin_ccollins)
 	CXXFLAGS += -g -I$(INCLUDE)
 	LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
 	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
-	BUILD_DIR = build
 
 else
 	# CXX = c++
 	# CXX = icpc
 	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
-	BUILD_DIR = build
 endif
 
 
-# ** GSL (GNU Scientific Library) **
-
-# option 1: Use pkg-config to find GSL and use dynamic linking
+# GSL (GNU Scientific Library)
+# GSL option 1: Use pkg-config to find GSL and use dynamic linking
 LDFLAGS += $(shell pkg-config --libs gsl)
 CXXFLAGS += $(shell pkg-config --cflags gsl)
 #
-# option 2: Use compiler default search paths to find GSL and use dynamic linking
+# GSL option 2: Use compiler default search paths to find GSL and use dynamic linking
 # LDFLAGS += -lgsl -lgslcblas -lm
 #
-# option 3: Specify the path to libgsl.a and libgslclas.a and use static linking (GSL needed to compile but not to run)
+# GSL option 3: Specify the path to libgsl.a and libgslclas.a and use static linking (GSL needed to compile but not to run)
 # CXXFLAGS += /usr/local/Cellar/gsl/2.6/lib/libgsl.a
 # CXXFLAGS += /usr/local/Cellar/gsl/2.6/lib/libgslcblas.a
 
@@ -88,6 +85,19 @@ ifeq ($(TESTMODE),ON)
 else
 	# skip array range checking for better performance and use optimizations
 	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3 -flto
+endif
+
+ifeq ($(MPI),ON)
+else ifeq ($(MPI),OFF)
+else ifeq ($(MPI),)
+	# MPI option not specified. set to true if mpicxx is found
+	ifneq (, $(shell which mpicxx)))
+		MPI := ON
+	else
+		MPI := OFF
+	endif
+else
+$(error bad value of MPI. Should be ON or OFF)
 endif
 
 ifeq ($(MPI),ON)
@@ -125,12 +135,12 @@ CUDA_NVCC_FLAGS += -ccbin=$(CXX) -std=c++17 -O3 -use_fast_math -Xcompiler "$(CXX
 ### use pg when you want to use gprof profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)
 
-sn3d_files = sn3d.cc atomic.cc boundary.cc decay.cc emissivities.cc gamma.cc globals.cc grey_emissivities.cc grid.cc gsl_managed.cc input.cc kpkt.cc light_curve.cc ltepop.cc macroatom.cc md5.cc nltepop.cc nonthermal.cc packet_init.cc photo_electric.cc polarization.cc radfield.cc ratecoeff.cc rpkt.cc stats.cc thermalbalance.cc update_grid.cc update_packets.cc vectors.cc vpkt.cc
+common_files = atomic.cc boundary.cc decay.cc emissivities.cc gamma.cc globals.cc grey_emissivities.cc grid.cc gsl_managed.cc input.cc kpkt.cc light_curve.cc ltepop.cc macroatom.cc md5.cc nltepop.cc nonthermal.cc packet_init.cc photo_electric.cc polarization.cc radfield.cc ratecoeff.cc rpkt.cc spectrum.cc stats.cc thermalbalance.cc update_grid.cc update_packets.cc vectors.cc vpkt.cc
 
+sn3d_files = sn3d.cc $(common_files)
 sn3d_objects = $(addprefix $(BUILD_DIR)/,$(sn3d_files:.cc=.o))
 
-exspec_files = exspec.cc atomic.cc boundary.cc decay.cc emissivities.cc gamma.cc globals.cc grey_emissivities.cc grid.cc gsl_managed.cc input.cc kpkt.cc light_curve.cc ltepop.cc macroatom.cc md5.cc nltepop.cc nonthermal.cc packet_init.cc photo_electric.cc polarization.cc radfield.cc ratecoeff.cc rpkt.cc spectrum.cc stats.cc thermalbalance.cc update_grid.cc update_packets.cc vectors.cc vpkt.cc
-
+exspec_files = exspec.cc $(common_files)
 exspec_objects = $(addprefix $(BUILD_DIR)/,$(exspec_files:.cc=.o))
 
 all: sn3d exspec

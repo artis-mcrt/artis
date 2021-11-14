@@ -147,52 +147,55 @@ void zero_estimators(void)
   // printout("zero_estimators()");
   for (int n = 0; n < grid::get_npts_model(); n++)
   {
-    radfield::zero_estimators(n);
-
-    #ifndef FORCE_LTE
-      globals::ffheatingestimator[n] = 0.;
-      globals::colheatingestimator[n] = 0.;
-
-      // mabfcount[n] = 0.;
-      // mabfcount_thermal[n] = 0.;
-      // matotem[n] = 0.;
-      // maabs[n] = 0.;
-      // kbfcount[n] = 0.;
-      // kbfcount_ion[n] = 0.;
-      // kffcount[n] = 0.;
-      // kffabs[n] = 0.;
-      // kbfabs[n] = 0.;
-      // kgammadep[n] = 0.;
-
-      if (TRACK_ION_STATS)
-      {
-        stats::reset_ion_stats(n);
-      }
-
-      for (int element = 0; element < get_nelements(); element++)
-      {
-        for (int ion = 0; ion < get_max_nions(); ion++)
-        {
-          #if (!NO_LUT_PHOTOION)
-            globals::gammaestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
-          #endif
-          #if (!NO_LUT_BFHEATING)
-            globals::bfheatingestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
-          #endif
-
-          // photoionestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
-          // stimrecombestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
-          // ionfluxestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
-          // twiddle[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
-        }
-      }
-    #endif
-    for (int m = 0; m < globals::emiss_max; m++)
+    if (grid::get_numassociatedcells(n) > 0)
     {
-      globals::compton_emiss[n * EMISS_MAX + m] = 0.0;
-    }
+      radfield::zero_estimators(n);
 
-    globals::rpkt_emiss[n] = 0.0;
+      #ifndef FORCE_LTE
+        globals::ffheatingestimator[n] = 0.;
+        globals::colheatingestimator[n] = 0.;
+
+        // mabfcount[n] = 0.;
+        // mabfcount_thermal[n] = 0.;
+        // matotem[n] = 0.;
+        // maabs[n] = 0.;
+        // kbfcount[n] = 0.;
+        // kbfcount_ion[n] = 0.;
+        // kffcount[n] = 0.;
+        // kffabs[n] = 0.;
+        // kbfabs[n] = 0.;
+        // kgammadep[n] = 0.;
+
+        if (TRACK_ION_STATS)
+        {
+          stats::reset_ion_stats(n);
+        }
+
+        for (int element = 0; element < get_nelements(); element++)
+        {
+          for (int ion = 0; ion < get_max_nions(); ion++)
+          {
+            #if (!NO_LUT_PHOTOION)
+              globals::gammaestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
+            #endif
+            #if (!NO_LUT_BFHEATING)
+              globals::bfheatingestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
+            #endif
+
+            // photoionestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
+            // stimrecombestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
+            // ionfluxestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
+            // twiddle[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
+          }
+        }
+      #endif
+      for (int m = 0; m < globals::emiss_max; m++)
+      {
+        globals::compton_emiss[n * EMISS_MAX + m] = 0.0;
+      }
+
+      globals::rpkt_emiss[n] = 0.0;
+    }
   }
 }
 
