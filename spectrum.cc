@@ -583,34 +583,43 @@ void init_spectra(struct spec *spectra, const double nu_min, const double nu_max
 
 struct spec *alloc_spectra(const bool do_emission_res)
 {
+  long mem_usage = 0;
   assert_always(globals::ntstep > 0);
   struct spec *spectra = (struct spec *) malloc(globals::ntstep * sizeof(struct spec));
+  mem_usage += globals::ntstep * sizeof(struct spec);
 
   assert_always(globals::nnubins > 0);
   const int proccount = 2 * get_nelements() * get_max_nions() + 1;
-  for (int n = 0; n < globals::ntstep; n++)
+  for (int nts = 0; nts < globals::ntstep; nts++)
   {
-    spectra[n].do_emission_res = do_emission_res;
-    spectra[n].lower_freq = (float *) malloc(globals::nnubins * sizeof(float));
-    spectra[n].delta_freq = (float *) malloc(globals::nnubins * sizeof(float));
-    spectra[n].flux = (double *) malloc(globals::nnubins * sizeof(double));
-    if (spectra[n].do_emission_res)
+    spectra[nts].do_emission_res = do_emission_res;
+    spectra[nts].lower_freq = (float *) malloc(globals::nnubins * sizeof(float));
+    spectra[nts].delta_freq = (float *) malloc(globals::nnubins * sizeof(float));
+    spectra[nts].flux = (double *) malloc(globals::nnubins * sizeof(double));
+    mem_usage += 2 * globals::nnubins * sizeof(float);
+    mem_usage += globals::nnubins * sizeof(double);
+    if (spectra[nts].do_emission_res)
     {
-      spectra[n].absorption = (double *) malloc(globals::nnubins * get_nelements() * get_max_nions() * sizeof(double));
-      spectra[n].emission = (double *) malloc(globals::nnubins * proccount * sizeof(double));
-      spectra[n].trueemission = (double *) malloc(globals::nnubins * proccount * sizeof(double));
+      spectra[nts].absorption = (double *) malloc(globals::nnubins * get_nelements() * get_max_nions() * sizeof(double));
+      spectra[nts].emission = (double *) malloc(globals::nnubins * proccount * sizeof(double));
+      spectra[nts].trueemission = (double *) malloc(globals::nnubins * proccount * sizeof(double));
 
-      assert_always(spectra[n].absorption != NULL);
-      assert_always(spectra[n].emission != NULL);
-      assert_always(spectra[n].trueemission != NULL);
+      mem_usage += globals::nnubins * get_nelements() * get_max_nions() * sizeof(double);
+      mem_usage += 2 * globals::nnubins * proccount * sizeof(double);
+
+      assert_always(spectra[nts].absorption != NULL);
+      assert_always(spectra[nts].emission != NULL);
+      assert_always(spectra[nts].trueemission != NULL);
     }
     else
     {
-      spectra[n].absorption = NULL;
-      spectra[n].emission = NULL;
-      spectra[n].trueemission = NULL;
+      spectra[nts].absorption = NULL;
+      spectra[nts].emission = NULL;
+      spectra[nts].trueemission = NULL;
     }
   }
+
+  printout("[info] mem_usage: allocated set of spectra occupying total of %.3f MB (nnubins %d)\n", mem_usage / 1024. / 1024., globals::nnubins);
 
   return spectra;
 }
