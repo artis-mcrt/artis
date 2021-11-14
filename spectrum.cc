@@ -701,7 +701,7 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts)
 
   if (rpkt_spectra == NULL)
   {
-    rpkt_spectra = alloc_spectra(do_emission_res);
+    rpkt_spectra = alloc_spectra(globals::do_emission_res);
     assert_always(rpkt_spectra != NULL);
   }
 
