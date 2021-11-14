@@ -642,11 +642,11 @@ static void mpi_reduce_spectra(int my_rank, struct spec *spectra)
 {
   for (int n = 0; n < globals::ntstep; n++)
   {
-    if (spectra[n].do_emission_res)
-    {
-      MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra[n].flux,
-                 spectra[n].flux, globals::nnubins, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra[n].flux,
+               spectra[n].flux, globals::nnubins, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
+   if (spectra[n].do_emission_res)
+   {
       for (int m = 0; m < globals::nnubins; m++)
       {
         const int emissioncount = 2 * get_nelements() * get_max_nions() + 1;
@@ -665,13 +665,13 @@ static void mpi_reduce_spectra(int my_rank, struct spec *spectra)
 
 void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts)
 {
+  const time_t time_func_start = time(NULL);
+
   double *rpkt_light_curve_lum = (double *) calloc(globals::ntstep, sizeof(double));
   double *rpkt_light_curve_lumcmf = (double *) calloc(globals::ntstep, sizeof(double));
 
   TRACE_EMISSION_ABSORPTION_REGION_ON = false;
   globals::nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
-
-  const time_t time_func_start = time(NULL);
 
   if (rpkt_spectra == NULL)
   {
