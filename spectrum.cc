@@ -705,10 +705,6 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts)
   TRACE_EMISSION_ABSORPTION_REGION_ON = false;
   globals::nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
 
-  // the emission resolved spectra are slow to generate, so only allow making them for the final timestep
-  // bool do_emission_res = (nts >= globals::ftstep - 1) ? globals::do_emission_res : false;
-  bool do_emission_res = globals::do_emission_res;
-
   if (rpkt_spectra == NULL)
   {
     rpkt_spectra = alloc_spectra(globals::do_emission_res);
@@ -719,7 +715,7 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts)
   struct spec *stokes_q = NULL;
   struct spec *stokes_u = NULL;
 
-  init_spectra(rpkt_spectra, globals::nu_min_r, globals::nu_max_r, do_emission_res);
+  init_spectra(rpkt_spectra, globals::nu_min_r, globals::nu_max_r, globals::do_emission_res);
 
   for (int ii = 0; ii < globals::npkts; ii++)
   {
@@ -768,7 +764,7 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts)
   free(gamma_light_curve_lum);
   free(gamma_light_curve_lumcmf);
 
-  printout("timestep %d: Saving partial light curves and %sspectra took %lds (%lds for MPI reduction)\n",
-           nts, do_emission_res ? "emission/absorption " : "", time(NULL) - time_func_start,
+  printout("timestep %d: Saving partial light curves and spectra took %lds (%lds for MPI reduction)\n",
+           nts, time(NULL) - time_func_start,
            time_mpireduction_end - time_mpireduction_start);
 }
