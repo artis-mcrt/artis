@@ -6,20 +6,15 @@
 #define MABINS    100
 #define MTBINS    400
 
-typedef struct
-{
-  double *absorption;
-  double *emission;
-  double *trueemission;
-} emstat_t;
-
 
 struct spec
 {
   float lower_freq[MNUBINS];
   float delta_freq[MNUBINS];
   double flux[MNUBINS];
-  emstat_t stat[MNUBINS];
+  double *absorption;
+  double *emission;
+  double *trueemission;
   double nu_min;
   double nu_max;
   bool do_emission_res;

@@ -509,6 +509,7 @@ static bool do_timestep(
       }
       fclose(dep_file);
     }
+
     write_partial_lightcurve_spectra(my_rank, nts, packets);
 
     #ifdef MPI_ON
