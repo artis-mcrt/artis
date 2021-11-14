@@ -1,6 +1,7 @@
 #include "sn3d.h"
 #include "exspec.h"
 #include "atomic.h"
+#include "light_curve.h"
 #include "spectrum.h"
 #include "vectors.h"
 
@@ -27,6 +28,7 @@ struct emissionabsorptioncontrib *traceemissionabsorption;
 double traceemission_totalenergy = 0.;
 double traceabsorption_totalenergy = 0.;
 
+static struct spec *rpkt_spectra = NULL;
 
 static int compare_emission(const void *p1, const void *p2)
 {
@@ -636,7 +638,7 @@ void add_to_spec_res(
 
 
 #ifdef MPI_ON
-static void mpi_reduce_spectra(struct spec *spectra)
+static void mpi_reduce_spectra(int my_rank, struct spec *spectra)
 {
   for (int n = 0; n < globals::ntstep; n++)
   {
@@ -646,9 +648,12 @@ static void mpi_reduce_spectra(struct spec *spectra)
       for (int m = 0; m < globals::nnubins; m++)
       {
         const int emissioncount = 2 * get_nelements() * get_max_nions() + 1;
-        MPI_Allreduce(MPI_IN_PLACE, spectra[n].stat[m].absorption, get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, spectra[n].stat[m].emission, emissioncount, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, spectra[n].stat[m].trueemission, emissioncount, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra[n].stat[m].absorption,
+                   spectra[n].stat[m].absorption, get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra[n].stat[m].emission,
+                   spectra[n].stat[m].emission, emissioncount, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra[n].stat[m].trueemission,
+                   spectra[n].stat[m].trueemission, emissioncount, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
       }
     }
   }
@@ -656,14 +661,21 @@ static void mpi_reduce_spectra(struct spec *spectra)
 #endif
 
 
-void write_partial_spectra(int my_rank, int nts, PKT *pkts)
+void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts)
 {
+  double *rpkt_light_curve_lum = (double *) calloc(globals::ntstep, sizeof(double));
+  double *rpkt_light_curve_lumcmf = (double *) calloc(globals::ntstep, sizeof(double));
+
   TRACE_EMISSION_ABSORPTION_REGION_ON = false;
   globals::nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
 
   const time_t time_func_start = time(NULL);
 
-  struct spec *rpkt_spectra = alloc_spectra(globals::do_emission_res);
+  if (rpkt_spectra == NULL)
+  {
+    rpkt_spectra = alloc_spectra(globals::do_emission_res);
+    assert_always(rpkt_spectra != NULL);
+  }
 
   struct spec *stokes_i = NULL;
   struct spec *stokes_q = NULL;
@@ -675,21 +687,30 @@ void write_partial_spectra(int my_rank, int nts, PKT *pkts)
   {
     if (pkts[ii].type == TYPE_ESCAPE && pkts[ii].escape_type == TYPE_RPKT)
     {
+      add_to_lc_res(&pkts[ii], -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
       add_to_spec(&pkts[ii], -1, rpkt_spectra, stokes_i, stokes_q, stokes_u);
     }
   }
 
+  const time_t time_mpireduction_start = time(NULL);
   #ifdef MPI_ON
-  mpi_reduce_spectra(rpkt_spectra);
+  mpi_reduce_spectra(my_rank, rpkt_spectra);
+  MPI_Allreduce(MPI_IN_PLACE, rpkt_light_curve_lum, globals::ntstep, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, rpkt_light_curve_lumcmf, globals::ntstep, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   #endif
+  const time_t time_mpireduction_end = time(NULL);
 
   if (my_rank == 0)
   {
+    write_light_curve((char *) "light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
     write_spectrum((char *) "spec.out", (char *) "emission.out",
                    (char *) "emissiontrue.out", (char *) "absorption.out", rpkt_spectra);
   }
 
-  free_spectra(rpkt_spectra);
+  free(rpkt_light_curve_lum);
+  free(rpkt_light_curve_lumcmf);
 
-  printout("Saving partial spectra took %lds\n", time(NULL) - time_func_start);
+  printout("Saving partial light curve and spectra took %lds (%lds for MPI reduction)\n",
+           time(NULL) - time_func_start,
+           time_mpireduction_end - time_mpireduction_start);
 }
