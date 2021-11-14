@@ -131,17 +131,17 @@ namespace globals
   __managed__ double coordmax[3];
   __managed__ double vmax;
   __managed__ double rmax;  /// Total mass and outer velocity/radius
-  __managed__ double tmax;              /// End time of current simulation
-  __managed__ double tmin;              /// Start time of current simulation
+  __managed__ double tmax = -1.;              /// End time of current simulation
+  __managed__ double tmin = -1.;              /// Start time of current simulation
 
-  __managed__ int ntstep;       /// Number of timesteps
-  __managed__ int itstep;       /// Initial timestep's number
-  __managed__ int ftstep;       /// Final timestep's number
-  __managed__ int nts_global;   /// Current time step
+  __managed__ int ntstep = -1;       /// Number of timesteps
+  __managed__ int itstep = -1;       /// Initial timestep's number
+  __managed__ int ftstep = -1;       /// Final timestep's number
+  __managed__ int nts_global = -1;   /// Current time step
 
-  __managed__ int nnubins; //number of bins for spectrum
-  __managed__ double nu_min_r;
-  __managed__ double nu_max_r; //limits on frequency range for r-pkt spectrum
+  __managed__ int nnubins = -1; //number of bins for spectrum
+  __managed__ double nu_min_r = -1.;
+  __managed__ double nu_max_r = -1.; //limits on frequency range for r-pkt spectrum
 
   __managed__ double nusyn_min;
   __managed__ double nusyn_max; //limits on range for syn

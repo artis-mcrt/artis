@@ -454,7 +454,7 @@ static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, struct
       }
 
       const int nnu_abs = (log(pkt_ptr->absorptionfreq) - log(nu_min)) /  dlognu;
-      if (nnu_abs >= 0 && nnu_abs < MNUBINS)
+      if (nnu_abs >= 0 && nnu_abs < globals::nnubins)
       {
         const int ioncount = get_nelements() * get_max_nions();
         const double deltaE_absorption = pkt_ptr->e_rf / globals::time_step[nt].width / spectra[nt].delta_freq[nnu_abs] / 4.e12 / PI / PARSEC / PARSEC / globals::nprocs * anglefactor;
@@ -522,6 +522,9 @@ void free_spectra(struct spec *spectra)
 {
   for (int n = 0; n < globals::ntstep; n++)
   {
+    free(spectra[n].lower_freq);
+    free(spectra[n].delta_freq);
+    free(spectra[n].flux);
     if (spectra[n].do_emission_res)
     {
       free(spectra[n].absorption);
@@ -580,25 +583,22 @@ void init_spectra(struct spec *spectra, const double nu_min, const double nu_max
 
 struct spec *alloc_spectra(const bool do_emission_res)
 {
-  struct spec *spectra = (struct spec *) calloc(MTBINS, sizeof(struct spec));
-  /// Check if enough  memory for spectra has been assigned
-  /// and allocate memory for the emission statistics
-  if (globals::nnubins > MNUBINS)
-  {
-    printout("WARNING: Too many frequency bins in spectrum - reducing.\n");
-    globals::nnubins = MNUBINS;
-  }
-  assert_always(globals::ntstep < MTBINS);
+  assert_always(globals::ntstep > 0);
+  struct spec *spectra = (struct spec *) malloc(globals::ntstep * sizeof(struct spec));
 
+  assert_always(globals::nnubins > 0);
   const int proccount = 2 * get_nelements() * get_max_nions() + 1;
   for (int n = 0; n < globals::ntstep; n++)
   {
     spectra[n].do_emission_res = do_emission_res;
+    spectra[n].lower_freq = (float *) malloc(globals::nnubins * sizeof(float));
+    spectra[n].delta_freq = (float *) malloc(globals::nnubins * sizeof(float));
+    spectra[n].flux = (double *) malloc(globals::nnubins * sizeof(double));
     if (spectra[n].do_emission_res)
     {
-      spectra[n].absorption = (double *) calloc(globals::nnubins * get_nelements() * get_max_nions(), sizeof(double));
-      spectra[n].emission = (double *) calloc(globals::nnubins * proccount, sizeof(double));
-      spectra[n].trueemission = (double *) calloc(globals::nnubins * proccount, sizeof(double));
+      spectra[n].absorption = (double *) malloc(globals::nnubins * get_nelements() * get_max_nions() * sizeof(double));
+      spectra[n].emission = (double *) malloc(globals::nnubins * proccount * sizeof(double));
+      spectra[n].trueemission = (double *) malloc(globals::nnubins * proccount * sizeof(double));
 
       assert_always(spectra[n].absorption != NULL);
       assert_always(spectra[n].emission != NULL);
