@@ -729,7 +729,7 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts)
       if (pkts[ii].escape_type == TYPE_RPKT)
       {
         add_to_lc_res(&pkts[ii], abin, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-        add_to_spec(&pkts[ii], abin, rpkt_spectra, stokes_i, stokes_q, stokes_u);
+        add_to_spec_res(&pkts[ii], abin, rpkt_spectra, stokes_i, stokes_q, stokes_u);
       }
       else if (abin == -1 && pkts[ii].escape_type == TYPE_GAMMA)
       {
