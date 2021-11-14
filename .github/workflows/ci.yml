@@ -22,7 +22,6 @@ jobs:
     - name: "install dependencies"
       run: |
         git status
-        cp artisoptions_nltenebular.h artisoptions.h
         # sudo apt-get update
         sudo apt-get install libgsl-dev
         # sudo apt-get install clang
@@ -47,13 +46,21 @@ jobs:
         which clang++
         clang++ --version
         export CXX=clang++
+        cp artisoptions_nltenebular.h artisoptions.h
         make clean
+        make CXX=clang++ MPI=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+        make clean
+        cp artisoptions_classic.h artisoptions.h
         make CXX=clang++ MPI=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
 
     - name: "compile with GCC (OpenMPI)"
       run: |
         which mpicxx
         mpicxx --version
+        cp artisoptions_nltenebular.h artisoptions.h
+        make clean
+        make -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+        cp artisoptions_classic.h artisoptions.h
         make clean
         make -j${{ steps.cpu-count.outputs.count }} sn3d exspec
 
