@@ -644,7 +644,9 @@ static void mpi_reduce_spectra(int my_rank, struct spec *spectra)
   {
     if (spectra[n].do_emission_res)
     {
-      MPI_Allreduce(MPI_IN_PLACE, spectra[n].flux, globals::nnubins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra[n].flux,
+                 spectra[n].flux, globals::nnubins, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
       for (int m = 0; m < globals::nnubins; m++)
       {
         const int emissioncount = 2 * get_nelements() * get_max_nions() + 1;
