@@ -7,20 +7,20 @@
 
 struct timestepspec
 {
-  double *flux;
-  double *absorption;
-  double *emission;
-  double *trueemission;
+  double *flux = NULL;
+  double *absorption = NULL;
+  double *emission = NULL;
+  double *trueemission = NULL;
 };
 
 struct spec
 {
-  float *lower_freq;
+  double nu_min = -1.;
+  double nu_max = -1.;
+  float *lower_freq = NULL;
   float *delta_freq;
-  struct timestepspec *timesteps;
-  double nu_min;
-  double nu_max;
-  bool do_emission_res;
+  struct timestepspec *timesteps = NULL;
+  bool do_emission_res = true;
 };
 
 void write_spectrum(
