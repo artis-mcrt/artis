@@ -736,7 +736,7 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts)
   free(rpkt_light_curve_lum);
   free(rpkt_light_curve_lumcmf);
 
-  printout("timestep %d: Saving partial light curve and spectra took %lds (%lds for MPI reduction)\n",
-           nts, time(NULL) - time_func_start,
+  printout("timestep %d: Saving partial light curve and %sspectra took %lds (%lds for MPI reduction)\n",
+           nts, do_emission_res ? "emission/absorption " : "", time(NULL) - time_func_start,
            time_mpireduction_end - time_mpireduction_start);
 }
