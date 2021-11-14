@@ -13,14 +13,15 @@ const int MALCBINS = 100;
 void write_light_curve(
   char lc_filename[], int current_abin,
   const double *light_curve_lum,
-  const double *light_curve_lumcmf)
+  const double *light_curve_lumcmf, int numtimesteps)
 {
   FILE *lc_file = fopen_required(lc_filename, "w");
+  assert_always(numtimesteps <= globals::ntstep);
 
   printout("Writing %s\n", lc_filename);
 
   /// Print out the UVOIR bolometric light curve.
-  for (int nts = 0; nts < globals::ntstep; nts++)
+  for (int nts = 0; nts < numtimesteps; nts++)
   {
     fprintf(lc_file, "%g %g %g\n", globals::time_step[nts].mid / DAY,
             (light_curve_lum[nts] / LSUN), (light_curve_lumcmf[nts] / LSUN));
@@ -29,7 +30,7 @@ void write_light_curve(
   if (current_abin == -1)
   {
     /// Now print out the gamma ray deposition rate in the same file.
-    for (int m = 0; m < globals::ntstep; m++)
+    for (int m = 0; m < numtimesteps; m++)
     {
       fprintf(lc_file, "%g %g %g\n", globals::time_step[m].mid / DAY,
               (globals::time_step[m].gamma_dep / LSUN / globals::time_step[m].width),

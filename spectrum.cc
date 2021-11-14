@@ -147,7 +147,7 @@ static void printout_tracemission_stats(void)
 
 void write_spectrum(
   char spec_filename[], char emission_filename[], char trueemission_filename[],
-  char absorption_filename[], struct spec *spectra)
+  char absorption_filename[], struct spec *spectra, int numtimesteps)
 {
   FILE *spec_file = fopen_required(spec_filename, "w");
 
@@ -177,8 +177,10 @@ void write_spectrum(
     printout_tracemission_stats();
   }
 
+  assert_always(numtimesteps <= globals::ntstep);
+
   fprintf(spec_file, "%g ", 0.0);
-  for (int p = 0; p < globals::ntstep; p++)
+  for (int p = 0; p < numtimesteps; p++)
   {
     /// ????????????????????????????????????????????????????????????????????????????????????????????????
     /// WHY HERE OTHER CALCULATION OF "SPECTRA.MIDTIME" THAN FOR time_step.mid ?????????????????????????
@@ -192,7 +194,7 @@ void write_spectrum(
   {
     fprintf(spec_file, "%g ", ((spectra[0].lower_freq[nnu] + (spectra[0].delta_freq[nnu] / 2))));
 
-    for (int nts = 0; nts < globals::ntstep; nts++)
+    for (int nts = 0; nts < numtimesteps; nts++)
     {
       fprintf(spec_file, "%g ", spectra[nts].flux[nnu]);
       if (do_emission_res)
@@ -555,14 +557,18 @@ void init_spectra(struct spec *spectra, const double nu_min, const double nu_max
       spectra[n].flux[nnu] = 0.0;
     }
 
+    spectra[n].do_emission_res = do_emission_res;
     if (do_emission_res)
     {
+      assert_always(spectra[n].emission != NULL);
+      assert_always(spectra[n].trueemission != NULL);
       for (int i = 0; i < globals::nnubins * proccount; i++)
       {
         spectra[n].emission[i] = 0;
         spectra[n].trueemission[i] = 0;
       }
 
+      assert_always(spectra[n].absorption != NULL);
       for (int i = 0; i < globals::nnubins * ioncount; i++)
       {
         spectra[n].absorption[i] = 0;
@@ -597,6 +603,12 @@ struct spec *alloc_spectra(const bool do_emission_res)
       assert_always(spectra[n].absorption != NULL);
       assert_always(spectra[n].emission != NULL);
       assert_always(spectra[n].trueemission != NULL);
+    }
+    else
+    {
+      spectra[n].absorption = NULL;
+      spectra[n].emission = NULL;
+      spectra[n].trueemission = NULL;
     }
   }
 
@@ -744,10 +756,10 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts)
 
   if (my_rank == 0)
   {
-    write_light_curve((char *) "light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-    write_light_curve((char *) "gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+    write_light_curve((char *) "light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, nts + 1);
+    write_light_curve((char *) "gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf, nts + 1);
     write_spectrum((char *) "spec.out", (char *) "emission.out",
-                   (char *) "emissiontrue.out", (char *) "absorption.out", rpkt_spectra);
+                   (char *) "emissiontrue.out", (char *) "absorption.out", rpkt_spectra, nts + 1);
   }
 
   free(rpkt_light_curve_lum);

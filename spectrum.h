@@ -7,7 +7,7 @@
 
 void write_spectrum(
   char spec_filename[], char emission_filename[], char trueemission_filename[],
-  char absorption_filename[], struct spec *spectra);
+  char absorption_filename[], struct spec *spectra, int num_timesteps);
 
 void write_specpol(
   char spec_filename[], char emission_filename[], char absorption_filename[],
