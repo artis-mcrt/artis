@@ -747,7 +747,7 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts)
   mpi_reduce_spectra(my_rank, rpkt_spectra, numtimesteps);
   MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lum, rpkt_light_curve_lum,
              numtimesteps, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lum, rpkt_light_curve_lumcmf,
+  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lumcmf, rpkt_light_curve_lumcmf,
              numtimesteps, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : gamma_light_curve_lum, gamma_light_curve_lum,
              numtimesteps, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
