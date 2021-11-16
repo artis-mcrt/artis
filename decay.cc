@@ -209,14 +209,14 @@ static void printout_chain(const int decaypathindex)
 }
 
 
-static void add_ancestorchains(const int z, const int a, const int startdecaypathindex)
+static void add_decaychains(const int z, const int a, const int startdecaypathindex)
 {
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
-    const int z_parent = get_nuc_z(nucindex); // possible parent, will check if true
-    const int a_parent = get_nuc_a(nucindex);
+    const int z2 = get_nuc_z(nucindex); // possible parent, will check if true
+    const int a2 = get_nuc_a(nucindex);
     // printout("z_parent %d a_parent %d isparent(%d, %d) %d\n", z_parent, a_parent, z_list[0], a_list[0], nuc_is_parent(z_parent, a_parent, z_list[0], a_list[0]));
-    if (nuc_is_parent(z_parent, a_parent, z, a))
+    if (decay_daughter_a(z, a) == a2 && decay_daughter_z(z, a) == z2)
     {
       decaychains.push_back({0, NULL, NULL});
       decaychains.back().pathlength = get_decaypathlength(startdecaypathindex) + 1;
@@ -224,22 +224,61 @@ static void add_ancestorchains(const int z, const int a, const int startdecaypat
       decaychains.back().a = (int *) malloc(decaychains.back().pathlength * sizeof(int));
 
       // check for repeated nuclides, which would indicate a loop in the decay chain
-      for (int i = 1; i < decaychains.back().pathlength; i++)
+      for (int i = 0; i < (decaychains.back().pathlength - 1); i++)
       {
-        decaychains.back().z[i] = decaychains[startdecaypathindex].z[i - 1];
-        decaychains.back().a[i] = decaychains[startdecaypathindex].a[i - 1];
-        if (decaychains.back().z[i] == z_parent && decaychains.back().a[i] == a_parent)
+        decaychains.back().z[i] = decaychains[startdecaypathindex].z[i];
+        decaychains.back().a[i] = decaychains[startdecaypathindex].a[i];
+        if (decaychains.back().z[i] == z2 && decaychains.back().a[i] == a2)
         {
           printout("\nERROR: Loop found in nuclear decay chain.\n");
           abort();
         }
       }
-      decaychains.back().z[0] = z_parent;
-      decaychains.back().a[0] = a_parent;
+      decaychains.back().z[decaychains.back().pathlength - 1] = z2;
+      decaychains.back().a[decaychains.back().pathlength - 1] = a2;
 
-      add_ancestorchains(z_parent, a_parent, decaychains.size() - 1);
+      add_decaychains(z2, a2, decaychains.size() - 1);
     }
   }
+}
+
+
+static bool compare_chains(struct decaypath &d1, struct decaypath &d2)
+// true if d1 < d2
+// order the chains in the same way as when the search moved up from the descendant
+// instead of down from the ancestor, for ease of test comparsion
+{
+  const int smallestpathlength = std::min(d1.pathlength, d2.pathlength);
+  bool matchingoverlap = true;
+  for (int i = 0; i < smallestpathlength; i++)
+  {
+    const int d1pos = d1.pathlength - 1 - i;
+    assert_always(d1pos >= 0);
+    assert_always(d1pos < d1.pathlength);
+    const int d2pos = d2.pathlength - 1 - i;
+    assert_always(d2pos >= 0);
+    assert_always(d2pos < d2.pathlength);
+    // if (get_nuc_index(d1.z[d1pos], d1.a[d1pos]) < get_nuc_index(d2.z[d2pos], d2.a[d2pos]))
+    if (d1.a[d1pos] < d2.a[d2pos])
+    {
+      return true;
+    }
+    else if (d1.a[d1pos] == d2.a[d2pos] && d1.z[d1pos] < d2.z[d2pos])
+    {
+      return true;
+    }
+    if (d1.a[d1pos] != d2.a[d2pos] || d1.z[d1pos] != d2.z[d2pos])
+    {
+      matchingoverlap = false;
+    }
+  }
+  // one is an extension of the other
+  if (matchingoverlap && d1.pathlength < d2.pathlength)
+  {
+    return true;
+  }
+
+  return false;
 }
 
 
@@ -261,8 +300,10 @@ static void find_chains(void)
     decaychains.back().z[0] = get_nuc_z(endnuc);
     decaychains.back().a[0] = get_nuc_a(endnuc);
 
-    add_ancestorchains(get_nuc_z(endnuc), get_nuc_a(endnuc), decaychains.size() - 1);
+    add_decaychains(get_nuc_z(endnuc), get_nuc_a(endnuc), decaychains.size() - 1);
   }
+
+  std::sort(decaychains.begin(), decaychains.end(), compare_chains);
 }
 
 
