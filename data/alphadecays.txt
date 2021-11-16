@@ -1,7 +1,7 @@
 # Data source: Evaluated Nuclear Data File library (ENDF/B-VII.1; Chadwick et al. 2011)
 # via Hotokezaka et al. https://github.com/hotokezaka/HeatingRate
-# A, Z, br_alpha, br_beta, unknown, Q_total_alphas, Q_total_betas, Q_alpha, Q_gamma, Q_beta
-# 0, 1, 2,        3,       4,       5,              6,             7,       8,       9
+# A, Z, br_alpha, br_beta, tau[s], Q_total_alphas, Q_total_betas, Q_alpha, Q_gamma, Q_beta
+# 0, 1, 2,        3,       4,      5,              6,             7,       8,       9
 209 80 5.292 0 0 0 52.6584
 209 80 0 1 36.5 0 5.292 0.0000000000000000        1.7640000000000000        0.0000000000000000
 209 81 0 1 132 0 3.977 0.0000000000000000        2.1421209999999999       0.65539999999999998
