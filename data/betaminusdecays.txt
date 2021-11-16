@@ -1,6 +1,6 @@
 # Data source: Evaluated Nuclear Data File library (ENDF/B-VII.1; Chadwick et al. 2011)
 # via Hotokezaka et al. https://github.com/hotokezaka/HeatingRate
-# A, Z, Q[MeV], Egamma[MeV], Eelec[MeV], Eneutrino[MeV], tau[s]
+# A, Z, Q[MeV], Egamma[MeV], Eelec[MeV], Eneutrino[MeV], meanlife[s]
 50 19 12.1157 0 0 0 0.680952
 50 20 4.71 1.569 1.34 1.747 20.0535
 50 21 6.89 3.192 1.638 2.074 147.876
