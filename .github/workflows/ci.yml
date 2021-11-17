@@ -66,6 +66,7 @@ jobs:
     - name: "run cppcheck"
       run: |
         sudo apt-get -y install cppcheck
+        cp artisoptions_nltenebular.h artisoptions.h
         cppcheck --force --language=c++ --std=c++17 .
 
   test_nebularonezone:
