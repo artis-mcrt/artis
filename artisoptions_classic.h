@@ -35,7 +35,7 @@ return (level <= 80);
 #define UNIFORM_PELLET_ENERGIES true
 
 #define DIRECT_COL_HEAT
-#define NO_INITIAL_PACKETS
+// #define NO_INITIAL_PACKETS
 #define RECORD_LINESTAT
 
 /// Rate coefficients
