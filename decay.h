@@ -10,8 +10,18 @@ const int FAKE_GAM_LINE_ID = 3;
 
 #include <vector>
 
+
 namespace decay
 {
+  enum decaytypes {
+    DECAYTYPE_ALPHA = 0,
+    DECAYTYPE_ELECTRONCAPTURE = 1,
+    DECAYTYPE_BETAPLUS = 2,
+    DECAYTYPE_BETAMINUS = 3,
+    DECAYTYPE_NONE = 4,
+    DECAYTYPE_COUNT = 5,
+  };
+
   __host__ __device__ void init_nuclides(std::vector<int> zlist, std::vector<int> alist);
   __host__ __device__ int get_nucstring_z(const char *strnuc);
   __host__ __device__ int get_nucstring_a(const char *strnuc);
