@@ -1,4 +1,4 @@
-name: Continuous integration
+name: CI
 
 on:
   push:
@@ -68,7 +68,7 @@ jobs:
         sudo apt-get -y install cppcheck
         cppcheck --force --language=c++ --std=c++17 .
 
-  build_and_test_nebularonezone:
+  test_nebularonezone:
     runs-on: ubuntu-latest
 
     steps:
