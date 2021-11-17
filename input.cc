@@ -1439,6 +1439,7 @@ static void setup_phixs_list(void)
             globals::phixslist[itid].groundcont[i].level = level;
             globals::phixslist[itid].groundcont[i].nu_edge = nu_edge;
             globals::phixslist[itid].groundcont[i].phixstargetindex = phixstargetindex;
+           globals::phixslist[tid].groundcont[i].gamma_contr = 0.;
             //printout("phixslist.groundcont nbfcontinua_ground %d, i %d, element %d, ion %d, level %d, nu_edge %g\n",nbfcontinua_ground,i,element,ion,level,nu_edge);
             i++;
           }
