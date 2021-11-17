@@ -713,7 +713,7 @@ static void allocate_compositiondata(const int modelgridindex)
   modelgrid[modelgridindex].nlte_pops = (double *) malloc(globals::total_nlte_levels * sizeof(double));
 #endif
 
-  if (modelgrid[modelgridindex].nlte_pops == NULL)
+  if (modelgrid[modelgridindex].nlte_pops == NULL && globals::total_nlte_levels > 0)
   {
     printout("[fatal] input: not enough memory to initialize nlte memory for cell %d... abort\n",modelgridindex);
     abort();
