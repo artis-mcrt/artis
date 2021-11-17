@@ -677,7 +677,7 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
                 #ifdef DEBUG_ON
                 if (!std::isfinite(globals::gammaestimator[ionestimindex]))
                 {
-                  printout("[fatal] update_estimators: gamma estimator becomes non finite: level %d, gamma_contr %g, distance_e_cmf_over_nu %g\n", i, globals::phixslist[tid].groundcont[i].gamma_contr, distance_e_cmf_over_nu);
+                  printout("[fatal] update_estimators: gamma estimator becomes non finite: mgi %d element %d ion %d gamma_contr %g, distance_e_cmf_over_nu %g\n", modelgridindex, element, ion, globals::phixslist[tid].groundcont[i].gamma_contr, distance_e_cmf_over_nu);
                   abort();
                 }
                 #endif
