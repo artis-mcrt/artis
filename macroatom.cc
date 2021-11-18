@@ -1241,8 +1241,6 @@ double col_excitation_ratecoeff(const float T_e, const float nne, const int line
   const double coll_strength = get_coll_str(lineindex);
   const double eoverkt = epsilon_trans / (KB * T_e);
 
-  assert_testmodeonly(upper > lower);
-
   if (coll_strength < 0)
   {
     const bool forbidden = globals::linelist[lineindex].forbidden;
