@@ -606,9 +606,9 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
         if (nuc_exists(z, a))
         {
           alphanucindex = get_nuc_index(z, a);
-          printout("compare z %d a %d e_gamma_mev1 %g e_gamma_mev2 %g\n", z, a, nucdecayenergygamma(z, a) / MEV, e_gamma_mev);
-          printout("compare z %d a %d tau1 %g tau2 %g\n", z, a, get_meanlife(z, a), tau_sec);
-          printout("compare z %d a %d e_beta_mev1 %g e_beta_mev2 %g\n", z, a, nuclides[get_nuc_index(z, a)].endecay_positrons / MEV, e_beta_mev);
+          // printout("compare z %d a %d e_gamma_mev1 %g e_gamma_mev2 %g\n", z, a, nucdecayenergygamma(z, a) / MEV, e_gamma_mev);
+          // printout("compare z %d a %d tau1 %g tau2 %g\n", z, a, get_meanlife(z, a), tau_sec);
+          // printout("compare z %d a %d e_beta_mev1 %g e_beta_mev2 %g\n", z, a, nuclides[get_nuc_index(z, a)].endecay_positrons / MEV, e_beta_mev);
         }
         else
         {
@@ -1216,37 +1216,37 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
     grid::set_elem_abundance(modelgridindex, element, elmassfrac);
   }
 
-  double initnucfracsum = 0.;
-  double nucfracsum = 0.;
-  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
-  {
-    const int z = get_nuc_z(nucindex);
-    const int a = get_nuc_a(nucindex);
-    if (z < 1) // FAKE_GAM_LINE_ID
-      continue;
-    initnucfracsum += grid::get_modelinitradioabund(modelgridindex, z, a);
-    nucfracsum += get_nuc_abund(modelgridindex, z, a, t_current);
-
-    // printout_nuclidename(z, a);
-    // printout(" init: %g now: %g\n", grid::get_modelinitradioabund(modelgridindex, z, a), get_nuc_abund(modelgridindex, z, a, t_current));
-
-    for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
-    {
-      if (!nuc_exists(decay_daughter_z(z, a, dectypeindex), decay_daughter_a(z, a, dectypeindex)) &&
-          get_nuc_decaybranchfactor(z, a, dectypeindex) > 0.)
-      {
-        // printout_nuclidename(decay_daughter_z(z, a), decay_daughter_a(z, a));
-        // printout("(stable) init: 0 now: %g\n", get_nuc_abund(modelgridindex, decay_daughter_z(z, a), decay_daughter_a(z, a), t_current));
-        // this decay steps off the nuclide list, so add its daughter abundance to the total
-        nucfracsum += get_nuc_abund(modelgridindex, decay_daughter_z(z, a, dectypeindex), decay_daughter_a(z, a, dectypeindex), t_current);
-      }
-    }
-  }
+  // double initnucfracsum = 0.;
+  // double nucfracsum = 0.;
+  // for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
+  // {
+  //   const int z = get_nuc_z(nucindex);
+  //   const int a = get_nuc_a(nucindex);
+  //   if (z < 1) // FAKE_GAM_LINE_ID
+  //     continue;
+  //   initnucfracsum += grid::get_modelinitradioabund(modelgridindex, z, a);
+  //   nucfracsum += get_nuc_abund(modelgridindex, z, a, t_current);
+  //
+  //   // printout_nuclidename(z, a);
+  //   // printout(" init: %g now: %g\n", grid::get_modelinitradioabund(modelgridindex, z, a), get_nuc_abund(modelgridindex, z, a, t_current));
+  //
+  //   for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
+  //   {
+  //     if (!nuc_exists(decay_daughter_z(z, a, dectypeindex), decay_daughter_a(z, a, dectypeindex)) &&
+  //         get_nuc_decaybranchfactor(z, a, dectypeindex) > 0.)
+  //     {
+  //       // printout_nuclidename(decay_daughter_z(z, a), decay_daughter_a(z, a));
+  //       // printout("(stable) init: 0 now: %g\n", get_nuc_abund(modelgridindex, decay_daughter_z(z, a), decay_daughter_a(z, a), t_current));
+  //       // this decay steps off the nuclide list, so add its daughter abundance to the total
+  //       nucfracsum += get_nuc_abund(modelgridindex, decay_daughter_z(z, a, dectypeindex), decay_daughter_a(z, a, dectypeindex), t_current);
+  //     }
+  //   }
+  // }
 
   // printout("initnucfracsum %g\n", initnucfracsum);
   // printout("nucfracsum %g\n", nucfracsum);
 
-  assert_always(fabs(nucfracsum - initnucfracsum) < 0.001); // decays shouldn't change nuclear mass fraction sum
+  // assert_always(fabs(nucfracsum - initnucfracsum) < 0.001); // decays shouldn't change nuclear mass fraction sum
 
   nonthermal::calculate_deposition_rate_density(modelgridindex, timestep);
   // printout("model cell %d at t_current %g has frac: Ni %g Co %g Fe %g, stable: Ni %g Co %g Fe %g\n",
