@@ -144,7 +144,6 @@ double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge
     sigma_bf = photoion_xs[globals::NPHIXSPOINTS-1] * pow(nu_max_phixs / nu, 3);
   }
 
-#ifdef DEBUG_ON
   // if (sigma_bf < 0)
   // {
   //   printout("[warning] photoionization_crosssection returns negative cross-section %g\n",sigma_bf);
@@ -152,7 +151,6 @@ double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge
   //   printout("[warning]   xs@edge=%g, xs@maxfreq\n",elements[element].ions[ion].levels[level].photoion_xs[0],elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1]);
   //   printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot);
   // }
-#endif
 
   return sigma_bf;
 }

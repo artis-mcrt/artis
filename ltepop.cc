@@ -523,15 +523,13 @@ double get_groundmultiplet_pop(int modelgridindex, int element, int ion)
       nn = 0.;
   }
 
-  #ifdef DEBUG_ON
-    if (!std::isfinite(nn))
-    {
-      printout("[fatal] calculate_exclevelpop: level %d of ion %d of element %d has infinite level population %g\n",level,ion,element,nn);
-      printout("[fatal] calculate_exclevelpop: associated ground level has pop %g\n",get_groundlevelpop(modelgridindex,element,ion));
-      printout("[fatal] calculate_exclevelpop: associated ion has pop %g\n",ionstagepop(modelgridindex,element,ion));
-      printout("[fatal] calculate_exclevelpop: associated partition function %g\n",grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
-    }
-  #endif
+  if (!std::isfinite(nn))
+  {
+    printout("[fatal] calculate_exclevelpop: level %d of ion %d of element %d has infinite level population %g\n",level,ion,element,nn);
+    printout("[fatal] calculate_exclevelpop: associated ground level has pop %g\n",get_groundlevelpop(modelgridindex,element,ion));
+    printout("[fatal] calculate_exclevelpop: associated ion has pop %g\n",ionstagepop(modelgridindex,element,ion));
+    printout("[fatal] calculate_exclevelpop: associated partition function %g\n",grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
+  }
   return nn;
 }*/
 
@@ -659,15 +657,14 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
       nn = 0.;
   }
 
-  #ifdef DEBUG_ON
-    if (!std::isfinite(nn))
-    {
-      printout("[fatal] calculate_exclevelpop: level %d of ion %d of element %d has infinite level population %g\n",level,ion,element,nn);
-      printout("[fatal] calculate_exclevelpop: associated ground level has pop %g\n", get_groundlevelpop(modelgridindex, element, ion));
-      printout("[fatal] calculate_exclevelpop: associated ion has pop %g\n", ionstagepop(modelgridindex, element, ion));
-      printout("[fatal] calculate_exclevelpop: associated partition function %g\n",grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
-    }
-  #endif
+  if (!std::isfinite(nn))
+  {
+    printout("[fatal] calculate_exclevelpop: level %d of ion %d of element %d has infinite level population %g\n",level,ion,element,nn);
+    printout("[fatal] calculate_exclevelpop: associated ground level has pop %g\n", get_groundlevelpop(modelgridindex, element, ion));
+    printout("[fatal] calculate_exclevelpop: associated ion has pop %g\n", ionstagepop(modelgridindex, element, ion));
+    printout("[fatal] calculate_exclevelpop: associated partition function %g\n",grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
+  }
+
   return nn;
 }
 

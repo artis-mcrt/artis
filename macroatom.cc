@@ -90,10 +90,8 @@ static void calculate_macroatom_transitionrates(
     processrates[MA_ACTION_COLDEEXC] += individ_col_deexc;
     processrates[MA_ACTION_INTERNALDOWNSAME] += individ_internal_down_same;
 
-    #ifdef DEBUG_ON
-      if (globals::debuglevel == 2)
-        printout("checking downtrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,lower,R,C,epsilon_trans);
-    #endif
+    if (false)
+      printout("checking downtrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,lower,R,C,epsilon_trans);
   }
 
   /// Downward transitions to lower ionisation stages:
@@ -186,10 +184,8 @@ static int do_macroatom_internal_down_same(
   const double epsilon_current = epsilon(element, ion, level);
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
-  #ifdef DEBUG_ON
-    if (globals::debuglevel == 2)
-      printout("[debug] do_ma:   internal downward jump within current ionstage\n");
-  #endif
+  if (false)
+    printout("[debug] do_ma:   internal downward jump within current ionstage\n");
 
   /// Randomly select the occuring transition
   const double zrand = gsl_rng_uniform(rng);
@@ -217,19 +213,17 @@ static int do_macroatom_internal_down_same(
 
   return lower;
 
-  #ifdef DEBUG_ON
-    if (globals::debuglevel == 2)
-      printout("[debug] do_ma:   to level %d\n", lower);
-    if (get_ionstage(element,ion) == 0 && lower == 0)
-    {
-      printout("internal downward transition to ground level occured ... abort\n");
-      printout("element %d, ion %d, level %d, lower %d\n", element, ion, level, lower);
-      printout("Z %d, ionstage %d, energy %g\n",
-               get_element(element), get_ionstage(element,ion), globals::elements[element].ions[ion].levels[lower].epsilon);
-      printout("[debug] do_ma:   internal downward jump within current ionstage\n");
-      abort();
-    }
-  #endif
+  if (false) printout("[debug] do_ma:   to level %d\n", lower);
+  if (get_ionstage(element,ion) == 0 && lower == 0)
+  {
+    printout("internal downward transition to ground level occured ... abort\n");
+    printout("element %d, ion %d, level %d, lower %d\n", element, ion, level, lower);
+    printout("Z %d, ionstage %d, energy %g\n",
+             get_element(element), get_ionstage(element,ion), globals::elements[element].ions[ion].levels[lower].epsilon);
+    printout("[debug] do_ma:   internal downward jump within current ionstage\n");
+    abort();
+  }
+
 }
 
 
@@ -277,20 +271,18 @@ static void do_macroatom_raddeexcitation(
       stats::increment(stats::COUNTER_DOWNSCATTER);
   }
 
-  #ifdef DEBUG_ON
-    assert_always(std::isfinite(pkt_ptr->nu_cmf));
+  assert_always(std::isfinite(pkt_ptr->nu_cmf));
 
-    if (linelistindex < 0)
-    {
-      printout("[fatal] problem in selecting radiative downward transition of MA zrand %g, rate %g, rad_deexc %g, ndowntrans %d\n", zrand, rate, rad_deexc, ndowntrans);
-      printout("[fatal] total_transitions %g, element %d, ion %d, level %d\n", total_transitions, element, ion, level);
-      abort();
-    }
+  if (linelistindex < 0)
+  {
+    printout("[fatal] problem in selecting radiative downward transition of MA zrand %g, rate %g, rad_deexc %g, ndowntrans %d\n", zrand, rate, rad_deexc, ndowntrans);
+    printout("[fatal] total_transitions %g, element %d, ion %d, level %d\n", total_transitions, element, ion, level);
+    abort();
+  }
 
-    stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_BB);
-    pkt_ptr->interactions += 1;
-    pkt_ptr->last_event = 0;
-  #endif
+  stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_BB);
+  pkt_ptr->interactions += 1;
+  pkt_ptr->last_event = 0;
 
   // Emit the rpkt in a random direction
   emitt_rpkt(pkt_ptr);
@@ -336,14 +328,14 @@ static void do_macroatom_radrecomb(
     const double R = rad_recombination_ratecoeff(T_e, nne, element, upperion, upperionlevel, lower, modelgridindex);
 
     rate += R * epsilon_trans;
-    #ifdef DEBUG_ON
-      if (globals::debuglevel == 2)
-      {
-        printout("[debug] do_ma:   R %g, deltae %g\n",R,(epsilon(element, upperion, upperionlevel) - epsilon(element, upperion - 1, lower)));
-        printout("[debug] do_ma:   rate to level %d of ion %d = %g\n", lower, upperion - 1, rate);
-        printout("[debug] do_ma:   zrand*rad_recomb = %g\n", zrand * rad_recomb);
-      }
-    #endif
+
+    if (false)
+    {
+      printout("[debug] do_ma:   R %g, deltae %g\n",R,(epsilon(element, upperion, upperionlevel) - epsilon(element, upperion - 1, lower)));
+      printout("[debug] do_ma:   rate to level %d of ion %d = %g\n", lower, upperion - 1, rate);
+      printout("[debug] do_ma:   zrand*rad_recomb = %g\n", zrand * rad_recomb);
+    }
+
     if (zrand * rad_recomb < rate)
     {
       break;
@@ -368,22 +360,20 @@ static void do_macroatom_radrecomb(
     //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
   #endif
 
-  #ifdef DEBUG_ON
-    if (globals::debuglevel == 2)
-    {
-      printout("%s: From Z=%d ionstage %d, recombining to ionstage %d level %d\n",
-               __func__, get_element(element), get_ionstage(element, *ion + 1), get_ionstage(element, *ion), lower);
-      printout("[debug] do_ma:   pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
-    }
-    if (!std::isfinite(pkt_ptr->nu_cmf))
-    {
-      printout("[fatal] rad recombination of MA: selected frequency not finite ... abort\n");
-      abort();
-    }
-    stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_FB);
-    pkt_ptr->interactions += 1;
-    pkt_ptr->last_event = 2;
-  #endif
+  if (false)
+  {
+    printout("%s: From Z=%d ionstage %d, recombining to ionstage %d level %d\n",
+             __func__, get_element(element), get_ionstage(element, *ion + 1), get_ionstage(element, *ion), lower);
+    printout("[debug] do_ma:   pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
+  }
+  if (!std::isfinite(pkt_ptr->nu_cmf))
+  {
+    printout("[fatal] rad recombination of MA: selected frequency not finite ... abort\n");
+    abort();
+  }
+  stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_FB);
+  pkt_ptr->interactions += 1;
+  pkt_ptr->last_event = 2;
 
   /// Finally emit the packet into a randomly chosen direction, update the continuum opacity and set some flags
   emitt_rpkt(pkt_ptr);
@@ -684,13 +674,11 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
     {
       case MA_ACTION_RADDEEXC:
       {
-        #ifdef DEBUG_ON
-        // if (globals::debuglevel == 2)
-        // {
-        //   printout("[debug] do_ma:   radiative deexcitation\n");
-        //   printout("[debug] do_ma:   jumps = %d\n",jumps);
-        // }
-        #endif
+        if (false)
+        {
+          printout("[debug] do_ma:   radiative deexcitation\n");
+          printout("[debug] do_ma:   jumps = %d\n",jumps);
+        }
 
         do_macroatom_raddeexcitation(pkt_ptr, modelgridindex, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, activatingline, t_mid);
 
@@ -718,16 +706,14 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
       case MA_ACTION_COLDEEXC:
       {
         ///collisional deexcitation of macro atom => convert the packet into a k-packet
-        #ifdef DEBUG_ON
-          if (globals::debuglevel == 2)
-          {
-            printout("[debug] do_ma:   collisonal deexcitation\n");
-            printout("[debug] do_ma: jumps = %d\n", jumps);
-          }
-          stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLDEEXC);
-          pkt_ptr->interactions += 1;
-          pkt_ptr->last_event = 10;
-        #endif
+        if (false)
+        {
+          printout("[debug] do_ma:   collisonal deexcitation\n");
+          printout("[debug] do_ma: jumps = %d\n", jumps);
+        }
+        stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLDEEXC);
+        pkt_ptr->interactions += 1;
+        pkt_ptr->last_event = 10;
 
         #if (TRACK_ION_STATS)
         stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLDEEXC, pkt_ptr->e_cmf);
@@ -839,34 +825,30 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
         stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt_ptr->e_cmf);
         #endif
 
-        #ifdef DEBUG_ON
-          if (lower >= nlevels)
-          {
-            printout("internal_down_lower  %g\n", processrates[MA_ACTION_INTERNALDOWNLOWER]);
-            printout("abort at rate %g, zrand %g\n",rate,zrand);
-            abort();
-          }
-          if (get_ionstage(element,ion) == 0 && lower == 0)
-  	  //        if (ion-1 == 0 && lower == 0)
-          {
-            printout("internal downward transition to ground level occured ... abort\n");
-            printout("element %d, ion %d, level %d, lower %d\n",element,ion,level,lower);
-            printout("Z %d, ionstage %d, energy %g\n",get_element(element),get_ionstage(element,ion-1),globals::elements[element].ions[ion-1].levels[lower].epsilon);
-            printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
-            abort();
-          }
-        #endif
+        if (lower >= nlevels)
+        {
+          printout("internal_down_lower  %g\n", processrates[MA_ACTION_INTERNALDOWNLOWER]);
+          printout("abort at rate %g, zrand %g\n",rate,zrand);
+          abort();
+        }
+        if (get_ionstage(element,ion) == 0 && lower == 0)
+	  //        if (ion-1 == 0 && lower == 0)
+        {
+          printout("internal downward transition to ground level occured ... abort\n");
+          printout("element %d, ion %d, level %d, lower %d\n",element,ion,level,lower);
+          printout("Z %d, ionstage %d, energy %g\n",get_element(element),get_ionstage(element,ion-1),globals::elements[element].ions[ion-1].levels[lower].epsilon);
+          printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
+          abort();
+        }
         break;
       }
 
       case MA_ACTION_INTERNALUPSAME:
       {
-        #ifdef DEBUG_ON
-          if (false) printout("[debug] do_ma:   internal upward jump within current ionstage\n");
-          pkt_ptr->interactions += 1;
-          jumps++;
-          jump = 2;
-        #endif
+        if (false) printout("[debug] do_ma:   internal upward jump within current ionstage\n");
+        pkt_ptr->interactions += 1;
+        jumps++;
+        jump = 2;
 
         ///randomly select the occuring transition
         zrand = gsl_rng_uniform(rng);
@@ -889,12 +871,10 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
 
       case MA_ACTION_INTERNALUPHIGHER:
       {
-        #ifdef DEBUG_ON
-          if (false) printout("[debug] do_ma:   internal upward jump to next ionstage\n");
-          pkt_ptr->interactions += 1;
-          jumps++;
-          jump = 3;
-        #endif
+        if (false) printout("[debug] do_ma:   internal upward jump to next ionstage\n");
+        pkt_ptr->interactions += 1;
+        jumps++;
+        jump = 3;
 
         stats::increment(stats::COUNTER_MA_STAT_INTERNALUPHIGHER);
 
@@ -1102,7 +1082,6 @@ double rad_excitation_ratecoeff(
       //abort();
     }
 
-    #ifdef DEBUG_ON
     if (R < 0)
     {
       const double g_u = statw_upper(lineindex);
@@ -1115,15 +1094,10 @@ double rad_excitation_ratecoeff(
       printout("radfield::radfield(nutrans=%g) = %g\n", nu_trans, radfield::radfield(nu_trans, modelgridindex));
       abort();
     }
-    if (globals::debuglevel == 2)
-    {
-      // printout("[debug] rad_rates_up: Z=%d, ionstage %d, upper, lower, A_ul, n_u: %d, %d, %d, %d, %g, %g\n",
-      //          get_element(element), get_ionstage(element, ion), upper, lower, A_ul, n_l);
-      // printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n",
-      //          A_ul, tau_sobolev, n_u, n_l, radfield::radfield(nu_trans,modelgridindex));
-    }
-    else if (globals::debuglevel == 777)
+
+    if (false)
       printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n", A_ul, tau_sobolev, n_u, n_l, radfield::radfield(nu_trans, modelgridindex));
+
     if (!std::isfinite(R))
     {
       printout("[fatal] rad_excitation: abort\n");
@@ -1132,7 +1106,6 @@ double rad_excitation_ratecoeff(
       printout("[fatal] rad_excitation: %g, %g, %g\n", 1.0 / tau_sobolev, exp(-tau_sobolev), 1.0 / tau_sobolev * (1. - exp(-tau_sobolev)));
       abort();
     }
-    #endif
   }
 
   return R;
@@ -1167,9 +1140,7 @@ double rad_recombination_ratecoeff(
     }
   }
 
-  #ifdef DEBUG_ON
   assert_always(std::isfinite(R));
-  #endif
 
   return R;
 }
@@ -1256,15 +1227,7 @@ double col_deexcitation_ratecoeff(const float T_e, const float nne, const double
     //C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
   }
 
-  #ifdef DEBUG_ON
-    /*if (globals::debuglevel == 2)
-    {
-      //printout("[debug] col_deexc: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
-      printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u,nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
-    }*/
-    //printout("col_deexc(%d,%d,%d,%d) %g\n",element,ion,upper,lower,C);
-    assert_always(std::isfinite(C));
-  #endif
+  assert_always(std::isfinite(C));
 
   return C;
 }
@@ -1278,13 +1241,7 @@ double col_excitation_ratecoeff(const float T_e, const float nne, const int line
   const double coll_strength = get_coll_str(lineindex);
   const double eoverkt = epsilon_trans / (KB * T_e);
 
-  #ifdef DEBUG_ON
-  // if (upper <= lower)
-  // {
-  //   printout("[fatal] col_excitation: tried to calculate downward transition ... abort");
-  //   abort();
-  // }
-  #endif
+  assert_testmodeonly(upper > lower);
 
   if (coll_strength < 0)
   {
@@ -1321,23 +1278,7 @@ double col_excitation_ratecoeff(const float T_e, const float nne, const int line
     //C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_upper(lineindex);
   }
 
-  #ifdef DEBUG_ON
-    // if (globals::debuglevel == 2)
-    // {
-      //printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
-      //printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
-    // }
-
-    //if (!std::isfinite(C))
-    //{
-    //  printout("fatal a5: abort\n");
-      //printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
-      //printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
-      //printout("[debug] col_exc: g_bar %g, fac1 %g, test %g, %g, %g, %g\n",g_bar,fac1,test,0.276 * exp(fac1),-0.5772156649 - log(fac1),0.276 * exp(fac1) * (-0.5772156649 - log(fac1)));
-    //  printout("[debug] col_exc: get_coll_str(lineindex) %g statw_upper(lineindex) %g pkt_ptr->mastate.statweight %g\n", get_coll_str(lineindex),statw_upper(lineindex),pkt_ptr->mastate.statweight);
-    //  abort();
-    //}
-  #endif
+  assert_testmodeonly(std::isfinite(C));
 
   return C;
 }
@@ -1395,10 +1336,8 @@ double col_ionization_ratecoeff(
 /// collisional ionization rate: paperII 3.5.1
 // multiply by lower level population to get a rate per second
 {
-  #ifdef DEBUG_ON
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element,ion,lower));
-  #endif
 
   ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
   ///select gaunt factor according to ionic charge

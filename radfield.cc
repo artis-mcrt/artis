@@ -989,23 +989,19 @@ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf,
 {
   assert_always(pkt_ptr->prop_time == t_current);
   safeadd(J[modelgridindex], distance_e_cmf);
-  #ifdef DEBUG_ON
-    if (!std::isfinite(J[modelgridindex]))
-    {
-      printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,nu_cmf);
-      abort();
-    }
-  #endif
+  if (!std::isfinite(J[modelgridindex]))
+  {
+    printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,nu_cmf);
+    abort();
+  }
 
 #ifndef FORCE_LTE
   safeadd(nuJ[modelgridindex], distance_e_cmf * nu_cmf);
-  #ifdef DEBUG_ON
-    if (!std::isfinite(nuJ[modelgridindex]))
-    {
-      printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,nu_cmf);
-      abort();
-    }
-  #endif
+  if (!std::isfinite(nuJ[modelgridindex]))
+  {
+    printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,nu_cmf);
+    abort();
+  }
 
   #if (DETAILED_BF_ESTIMATORS_ON)
   increment_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr, t_current);
@@ -1016,17 +1012,13 @@ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf,
     // int binindex = 0;
     // if (nu_cmf <= get_bin_nu_lower(modelgridindex,binindex))
     // {
-    //   #ifdef DEBUG_ON
     //   printout("radfield: Extending nu_lower_first from %g down to %g\n",nu_lower_first,nu_cmf);
-    //   #endif
     //   nu_lower_first = nu_cmf;
     // }
     // else if (nu_cmf > radfieldbin_nu_upper[modelgridindex][RADFIELDBINCOUNT - 1])
     // {
     //   binindex = RADFIELDBINCOUNT - 1;
-    //   #ifdef DEBUG_ON
     //   printout("radfield: Extending nu_upper_last from %g up to %g\n",get_bin_nu_upper(modelgridindex,binindex),nu_cmf);
-    //   #endif
     //   get_bin_nu_upper(modelgridindex, binindex) = nu_cmf;
     // }
     // else

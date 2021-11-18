@@ -248,16 +248,14 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
   }
 
 
-  #ifdef DEBUG_ON
-    if (globals::debuglevel == 2)
-    {
-      printout("pkt_ptr->number %d\n", pkt_ptr->number);
-      printout("delta1x %g delta2x %g\n",  (initpos[0] * globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 0), cellcoordmax[0] - (initpos[0] * globals::tmin/tstart));
-      printout("delta1y %g delta2y %g\n",  (initpos[1] * globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 1), cellcoordmax[1] - (initpos[1] * globals::tmin/tstart));
-      printout("delta1z %g delta2z %g\n",  (initpos[2] * globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 2), cellcoordmax[2] - (initpos[2] * globals::tmin/tstart));
-      printout("dir [%g, %g, %g]\n", pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
-    }
-  #endif
+  if (false)
+  {
+    printout("pkt_ptr->number %d\n", pkt_ptr->number);
+    printout("delta1x %g delta2x %g\n",  (initpos[0] * globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 0), cellcoordmax[0] - (initpos[0] * globals::tmin/tstart));
+    printout("delta1y %g delta2y %g\n",  (initpos[1] * globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 1), cellcoordmax[1] - (initpos[1] * globals::tmin/tstart));
+    printout("delta1z %g delta2z %g\n",  (initpos[2] * globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 2), cellcoordmax[2] - (initpos[2] * globals::tmin/tstart));
+    printout("dir [%g, %g, %g]\n", pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
+  }
 
   double t_plus_coordboundary[3];  // time to reach the cell's upper boundary on each coordinate
   double t_minus_coordboundary[3];  // likewise, the lower boundaries (smallest x,y,z or radius value in the cell)
@@ -374,14 +372,12 @@ void change_cell(PKT *pkt_ptr, int snext, double t_current)
 /// Routine to take a packet across a boundary.
 {
   assert_always(pkt_ptr->prop_time == t_current);
-  #ifdef DEBUG_ON
-    if (globals::debuglevel == 2)
-    {
-      const int cellindex = pkt_ptr->where;
-      printout("[debug] cellnumber %d nne %g\n",cellindex,grid::get_nne(grid::get_cell_modelgridindex(cellindex)));
-      printout("[debug] snext %d\n",snext);
-    }
-  #endif
+  if (false)
+  {
+    const int cellindex = pkt_ptr->where;
+    printout("[debug] cellnumber %d nne %g\n",cellindex,grid::get_nne(grid::get_cell_modelgridindex(cellindex)));
+    printout("[debug] snext %d\n",snext);
+  }
 
   if (snext == -99)
   {
