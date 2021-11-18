@@ -508,7 +508,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
   nuclides[nucindex].z = 23; // V48
   nuclides[nucindex].a = 48;
   nuclides[nucindex].meanlife = 23.0442 * DAY;
-  nuclides[nucindex].endecay_positrons = 0.290 * 0.499 * MEV;
+  nuclides[nucindex].endecay_positrons = 0.290 * MEV * 0.499;
   nuclides[nucindex].branchprobs[DECAYTYPE_BETAPLUS] = 1.;
   nucindex++;
 
@@ -832,12 +832,12 @@ static double get_nuc_abund(
     const int z_end = decaychains[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
     const int a_end = decaychains[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
 
-    if (nuc_exists(z, a) && !(z_end == z && a_end == a)) // requested nuclide is radioactive, so match last nuc in chain
+    if (nuc_exists(z, a) && !(z_end == z && a_end == a)) // requested nuclide is in network, so match last nuc in chain
     {
       continue;
     }
 
-    if (!nuc_exists(z, a) && !nuc_is_parent(z_end, a_end, z, a)) // requested nuclide is stable, so add match daughter of last nuc in chain
+    if (!nuc_exists(z, a) && !nuc_is_parent(z_end, a_end, z, a)) // requested nuclide not in network, so match daughter of last nucleus in chain
     {
       continue;
     }
@@ -866,7 +866,7 @@ static double get_nuc_abund(
     }
 
     nuctotal += calculate_decaychain(top_initabund, wtmeanlifetimes, fulldecaypathlength, t_afterinit, false);
-   }
+  }
 
   return nuctotal;
 }
@@ -1191,27 +1191,34 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   for (int element = get_nelements() - 1; element >= 0; element--)
   {
     const int atomic_number = get_element(element);
-    double isofracsum = 0.; // mass fraction sum of radioactive isotopes, and stable nuclei coming from other decays
+
+    // for the current element,
+    // the mass fraction sum of radioactive isotopes, and stable nuclei coming from other decays
+    double isofracsum = 0.;
     for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
     {
       const int nuc_z = get_nuc_z(nucindex);
       const int a = get_nuc_a(nucindex);
       if (nuc_z == atomic_number)
       {
-        // radioactive isotope of the element
+        // this nucleus is an isotope of the element
         isofracsum += get_nuc_abund(modelgridindex, atomic_number, a, t_current);
       }
       else
       {
+        // check if the nucleus decays off the network but into the selected element
         for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
         {
-          if (!nuc_exists(decay_daughter_z(nuc_z, a, dectypeindex), decay_daughter_a(nuc_z, a, dectypeindex)) &&
-              decay_daughter_z(nuc_z, a, dectypeindex) == atomic_number &&
+          const int daughter_z = decay_daughter_z(nuc_z, a, dectypeindex);
+          const int daughter_a = decay_daughter_a(nuc_z, a, dectypeindex);
+          if (!nuc_exists(daughter_z, daughter_a) && daughter_z == atomic_number &&
               get_nuc_decaybranchprob(nuc_z, a, dectypeindex) > 0.)
-          // nuclide decays into correct atomic number but outside of the radionuclide list
-          // note: there could also be stable isotopes of this element included in stable_initabund(z), but
-          // here we only count the contribution from decays
-          isofracsum += get_nuc_abund(modelgridindex, decay_daughter_z(nuc_z, a, dectypeindex), decay_daughter_a(nuc_z, a, dectypeindex), t_current);
+          {
+            // nuclide decays into correct atomic number but outside of the radionuclide list
+            // note: there could also be stable isotopes of this element included in stable_initabund(z), but
+            // here we only count the contribution from decays
+            isofracsum += get_nuc_abund(modelgridindex, daughter_z, daughter_a, t_current);
+          }
         }
       }
     }
