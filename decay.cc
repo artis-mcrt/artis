@@ -743,7 +743,8 @@ static double sample_decaytime(const int decaypathindex, const double tdecaymin,
 
 __host__ __device__
 static double calculate_decaychain(
-  const double firstinitabund, const double *meanlifetimes, const int num_nuclides, const double timediff, bool useexpansionfactor)
+  const double firstinitabund, const double *meanlifetimes, const int num_nuclides,
+  const double timediff, bool useexpansionfactor)
 {
   // calculate final abundance or decayrate from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
   // the top nuclide initial abundance is set and the chain-end abundance is returned (all intermediates nuclides
@@ -849,21 +850,22 @@ static double get_nuc_abund(
     }
 
     int decaypathlength = get_decaypathlength(decaypathindex);
-    double meanlifetimes[decaypathlength + 1];
+    double wtmeanlifetimes[decaypathlength + 1]; // mean lifetimes weighted by branchfactor
     for (int i = 0; i < decaypathlength; i++)
     {
-      meanlifetimes[i] = get_meanlife(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i]);
+      const double branchfactor = get_nuc_decaybranchfactor(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i], decaychains[decaypathindex].decaytypes[i]);
+      wtmeanlifetimes[i] = get_meanlife(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i]) * branchfactor;
     }
 
     int fulldecaypathlength = decaypathlength;
     if (!nuc_exists(z, a))
     {
       // the nuclide is past the end of the chain, in case requested (Z, A) is stable and not in the radionuclides
-      meanlifetimes[decaypathlength] = -1.;
+      wtmeanlifetimes[decaypathlength] = -1.;
       fulldecaypathlength = decaypathlength + 1;
     }
 
-    nuctotal += calculate_decaychain(top_initabund, meanlifetimes, fulldecaypathlength, t_afterinit, false);
+    nuctotal += calculate_decaychain(top_initabund, wtmeanlifetimes, fulldecaypathlength, t_afterinit, false);
    }
 
   return nuctotal;
@@ -875,30 +877,30 @@ static double get_endecay_to_tinf_per_ejectamass_at_time(
   const int modelgridindex, const int decaypathindex, const double time)
 // returns decay energy [erg] that would be released from time tstart [s] to time infinity by a given decaypath
 {
-  // e.g. NI56 -> CO56, represents the decay of Co56 nuclei
+  // e.g. Ni56 -> Co56, represents the decay of Co56 nuclei
   // that were produced from Ni56 in the initial abundance.
   // Decays from Co56 due to the initial abundance of Co56 are not counted here,
   // nor is the energy from Ni56 decays
-  // decaying nucleus at the end of the chain
 
   assert_always(decaypathindex >= 0);
   assert_always(decaypathindex < get_num_decaypaths());
 
   const int z_top = decaychains[decaypathindex].z[0];
   const int a_top = decaychains[decaypathindex].a[0];
-  // if we're a single-nuclide decay chain, then contribution the initial abundance, otherwise contribute
+  // if it's a single-nuclide decay chain, then contribute the initial abundance, otherwise contribute
   // all ancestors
   const int z_end = decaychains[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
   const int a_end = decaychains[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
 
   const int decaypathlength = get_decaypathlength(decaypathindex);
-  double meanlifetimes[decaypathlength + 1];
+  double wtmeanlifetimes[decaypathlength + 1];  // weighted by branchfactor
   for (int i = 0; i < decaypathlength; i++)
   {
-    meanlifetimes[i] = get_meanlife(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i]);
+    const double branchfactor = get_nuc_decaybranchfactor(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i], decaychains[decaypathindex].decaytypes[i]);
+    wtmeanlifetimes[i] = get_meanlife(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i]) * branchfactor;
   }
   // the nuclide past the end of the chain radionuclide
-  meanlifetimes[decaypathlength] = -1.; // nuclide at the end is a sink, so treat it as stable (even if it's not)
+  wtmeanlifetimes[decaypathlength] = -1.; // nuclide at the end is a sink, so treat it as stable (even if it's not)
 
   const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
   assert_always(top_initabund >= 0.)
@@ -910,7 +912,7 @@ static double get_endecay_to_tinf_per_ejectamass_at_time(
 
   // count the number of chain-top nuclei that haven't decayed past the end of the chain
 
-  const double abund_endplusone = calculate_decaychain(top_initabund, meanlifetimes, decaypathlength + 1, t_afterinit, false);
+  const double abund_endplusone = calculate_decaychain(top_initabund, wtmeanlifetimes, decaypathlength + 1, t_afterinit, false);
   const double ndecays_remaining = top_initabund - abund_endplusone;
 
   // // alternative: add up the ancestor abundances that will eventually cause decays at the end of chain
@@ -988,16 +990,17 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
     // get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(modelgridindex, decaypathindex, tstart);
 
     const int decaypathlength = get_decaypathlength(decaypathindex);
-    double meanlifetimes[decaypathlength + 1];
+    double wtmeanlifetimes[decaypathlength + 1];  // weighted by branchfactor
     for (int i = 0; i < decaypathlength; i++)
     {
-      meanlifetimes[i] = get_meanlife(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i]);
+      const double branchfactor = get_nuc_decaybranchfactor(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i], decaychains[decaypathindex].decaytypes[i]);
+      wtmeanlifetimes[i] = get_meanlife(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i]) * branchfactor;
     }
     // the nuclide past the end of the chain radionuclide
-    meanlifetimes[decaypathlength] = -1.; // nuclide at the end is a sink, so treat it as stable (even if it's not)
+    wtmeanlifetimes[decaypathlength] = -1.; // nuclide at the end is a sink, so treat it as stable (even if it's not)
 
-    // const double numerator = calculate_decaychain(1., meanlifetimes, decaypathlength + 1, tdiff, true);
-    // const double factor = numerator / calculate_decaychain(1., meanlifetimes, decaypathlength + 1, tdiff, MODE_ABUND);
+    // const double numerator = calculate_decaychain(1., wtmeanlifetimes, decaypathlength + 1, tdiff, true);
+    // const double factor = numerator / calculate_decaychain(1., wtmeanlifetimes, decaypathlength + 1, tdiff, MODE_ABUND);
     // printout("  Analytical expansion factor: %g\n", factor);
 
     const int z_top = decaychains[decaypathindex].z[0];
@@ -1005,7 +1008,7 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
     const int z_end = decaychains[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
     const int a_end = decaychains[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
     const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
-    const double chain_endecay = calculate_decaychain(top_initabund, meanlifetimes, decaypathlength + 1, tstart - grid::get_t_model(), true) * nucdecayenergy(z_end, a_end);
+    const double chain_endecay = calculate_decaychain(top_initabund, wtmeanlifetimes, decaypathlength + 1, tstart - grid::get_t_model(), true) * nucdecayenergy(z_end, a_end);
     // printout("  Analytical chain_endecay: %g\n", chain_endecay);
     tot_endecay += chain_endecay;
   }
@@ -1078,15 +1081,16 @@ static double get_chain_decay_power_per_ejectamass(
   const double t_afterinit = time - grid::get_t_model();
 
   int decaypathlength = get_decaypathlength(decaypathindex);
-  double meanlifetimes[decaypathlength];
+  double wtmeanlifetimes[decaypathlength];  // weighted by branchfactor
   for (int i = 0; i < decaypathlength; i++)
   {
-    meanlifetimes[i] = get_meanlife(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i]);
+    const double branchfactor = get_nuc_decaybranchfactor(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i], decaychains[decaypathindex].decaytypes[i]);
+    wtmeanlifetimes[i] = get_meanlife(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i]) * branchfactor;
   }
 
   // contribution to the end nuclide abundance from the top of chain (could be a length-one chain Z,A_top = Z,A_end
   // so contribution would be from init abundance only)
-  const double endnucabund = calculate_decaychain(top_initabund, meanlifetimes, decaypathlength, t_afterinit, false);
+  const double endnucabund = calculate_decaychain(top_initabund, wtmeanlifetimes, decaypathlength, t_afterinit, false);
 
   const double decaypower = endnucabund / get_meanlife(z_end, a_end) / nucmass(z_top, a_top);
 
