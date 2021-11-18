@@ -1,4 +1,4 @@
-name: Continuous integration
+name: CI
 
 on:
   push:
@@ -12,8 +12,7 @@ on:
   #   - main
 
 jobs:
-  build_and_test:
-
+  compile_and_statictest:
     runs-on: ubuntu-latest
 
     steps:
@@ -67,15 +66,30 @@ jobs:
     - name: "run cppcheck"
       run: |
         sudo apt-get -y install cppcheck
+        cp artisoptions_nltenebular.h artisoptions.h
         cppcheck --force --language=c++ --std=c++17 .
 
-    # - name: "compile sn3d with OpenMP"
-    #   run: make OPENMP=ON sn3d
+  test_nebularonezone:
+    runs-on: ubuntu-latest
 
-    # - name: "compile sn3d with MPI"
-    #   run: |
-    #     sudo apt-get install libopenmpi-dev
-    #     make MPI=ON sn3dmpi
+    steps:
+    - uses: actions/checkout@v2.3.4
+
+    - name: "install dependencies"
+      run: |
+        git status
+        # sudo apt-get update
+        sudo apt-get install libgsl-dev
+        # sudo apt-get install clang
+        sudo apt install -y openmpi-bin libopenmpi-dev
+
+    - name: "CPU count"
+      id: cpu-count
+      run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
+
+    - name: "echo CPU count"
+      run: |
+        echo CPU Count: ${{ steps.cpu-count.outputs.count }}
 
     # we can cache this, but then we don't test the code that generates ratecoeff.dat
     # - name: Cache ratecoeff.dat

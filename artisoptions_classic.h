@@ -8,9 +8,9 @@
 #define MPKTS 100000
 
 #define GRID_TYPE GRID_UNIFORM
-#define CUBOID_NCOORDGRID_X 50
-#define CUBOID_NCOORDGRID_Y 50
-#define CUBOID_NCOORDGRID_Z 50
+#define CUBOID_NCOORDGRID_X 100
+#define CUBOID_NCOORDGRID_Y 100
+#define CUBOID_NCOORDGRID_Z 100
 // #define GRID_TYPE GRID_SPHERICAL1D
 
 // non-LTE population solver
@@ -35,7 +35,7 @@ return (level <= 80);
 #define UNIFORM_PELLET_ENERGIES true
 
 #define DIRECT_COL_HEAT
-#define NO_INITIAL_PACKETS
+// #define NO_INITIAL_PACKETS
 #define RECORD_LINESTAT
 
 /// Rate coefficients
@@ -63,7 +63,7 @@ static const size_t GSLWSIZE = 16384;
 #define MLINES 500000    // Increase linelist by this blocksize
 
 #define MINDENSITY 1e-40         /// Minimum cell density. Below cells are treated as empty.
-#define MINPOP 1e-40
+#define MINPOP 1e-30
 
 #define NU_MIN_R 1e14   /// lower frequency boundary for UVOIR spectra and BB sampling
 #define NU_MAX_R 5e15   /// upper frequency boundary for UVOIR spectra and BB sampling
