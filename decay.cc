@@ -33,6 +33,7 @@ struct nuclide {
   double meanlife;           // mean lifetime before decay [s]
   double endecay_positrons;  // average energy per decay in kinetic energy of emitted positrons [erg]
   double endecay_gamma;      // average energy per decay in gamma rays [erg]
+  double endecay_alpha;      // average energy per decay in kinetic energy of alpha particles [erg]
   double branchfactors[DECAYTYPE_COUNT];
 };
 
@@ -536,7 +537,8 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
     std::string line;
     while (get_noncommentline(fbetaminus, line))
     {
-      // columns: A, Z, Q[MeV], Egamma[MeV], Eelec[MeV], Eneutrino[MeV], tau[s]
+      // energies are average per beta decay
+      // columns: # A, Z, Q[MeV], E_gamma[MeV], E_elec[MeV], E_neutrino[MeV], meanlife[s]
       int a = -1;
       int z = -1;
       double q_mev = 0.;
@@ -557,6 +559,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
       }
       if (keeprow)
       {
+        assert_always(!nuc_exists(z, a));
         nuclides[nucindex].z = z;
         nuclides[nucindex].a = a;
         nuclides[nucindex].meanlife = tau_sec;
@@ -569,6 +572,61 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
       }
     }
     fbetaminus.close();
+
+    std::ifstream falpha("alphadecays.txt");
+    assert_always(falpha.is_open());
+    while (get_noncommentline(falpha, line))
+    {
+      // columns: # A, Z, branch_alpha, branch_beta, halflife[s], Q_total_alphadec[MeV], Q_total_betadec[MeV], E_alpha[MeV], E_gamma[MeV], E_beta[MeV]
+      int a = -1;
+      int z = -1;
+      double branch_alpha = 0.;
+      double branch_beta = 0.;
+      double halflife = 0.;
+      double Q_total_alphadec = 0.;
+      double Q_total_betadec = 0.;
+      double e_alpha_mev = 0.;
+      double e_gamma_mev = 0.;
+      double e_beta_mev = 0.;
+      std::stringstream(line) >> a >> z >> branch_alpha >> branch_beta >> halflife >> Q_total_alphadec >> Q_total_betadec >> e_alpha_mev >> e_gamma_mev >> e_beta_mev;
+
+      bool keeprow = true;
+      // for (int i = 0; i < (int) custom_alist.size(); i++)
+      // {
+      //   if (custom_alist[i] == a)
+      //   {
+      //     keeprow = true;
+      //     break;
+      //   }
+      // }
+      if (keeprow)
+      {
+        const double tau_sec = halflife / log(2);
+        int alphanucindex = -1;
+        if (nuc_exists(z, a))
+        {
+          alphanucindex = get_nuc_index(z, a);
+          printout("compare z %d a %d e_gamma_mev1 %g e_gamma_mev2 %g\n", z, a, nucdecayenergygamma(z, a) / MEV, e_gamma_mev);
+          printout("compare z %d a %d tau1 %g tau2 %g\n", z, a, get_meanlife(z, a), tau_sec);
+          printout("compare z %d a %d e_beta_mev1 %g e_beta_mev2 %g\n", z, a, nuclides[get_nuc_index(z, a)].endecay_positrons / MEV, e_beta_mev);
+        }
+        else
+        {
+          nuclides[nucindex].z = z;
+          nuclides[nucindex].a = a;
+          nuclides[nucindex].meanlife = tau_sec;
+          nuclides[alphanucindex].endecay_gamma = e_gamma_mev * MEV;
+          alphanucindex = nucindex;
+          nucindex++;
+        }
+        nuclides[alphanucindex].endecay_alpha = e_alpha_mev * MEV;
+        nuclides[alphanucindex].branchfactors[DECAYTYPE_BETAMINUS] = branch_beta;
+        nuclides[alphanucindex].branchfactors[DECAYTYPE_ALPHA] = branch_alpha;
+        printout("alphadecay file: Adding (Z=%d)%s-%d endecay_alpha %g endecay_gamma %g tau_s %g\n",
+                 z, elsymbols[z], a, e_alpha_mev, e_gamma_mev, tau_sec);
+      }
+    }
+    falpha.close();
   }
 
   num_nuclides = nucindex;
@@ -619,7 +677,7 @@ void set_nucdecayenergygamma(int z, int a, double value)
 
 
 __host__ __device__
-double nucdecayenergypositrons(int z, int a)
+static double nucdecayenergypositrons(int z, int a)
 // average energy (erg) per decay in the form of positron kinetic energy [erg]
 {
   return nuclides[get_nuc_index(z, a)].endecay_positrons;
