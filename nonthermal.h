@@ -8,7 +8,7 @@
 
 namespace nonthermal
 {
-  void init(int my_rank, int ndo);
+  void init(int my_rank, int ndo, int ndo_nonempty);
   void close_file(void);
   void solve_spencerfano(int modelgridindex, int timestep, int iteration);
   __host__ __device__ double nt_ionization_ratecoeff(int modelgridindex, int element, int ion);

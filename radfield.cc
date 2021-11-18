@@ -268,7 +268,7 @@ static int compare_integers(const void* a, const void* b)
 }
 
 
-void init(int my_rank, int ndo)
+void init(int my_rank, int ndo, int ndo_nonempty)
 // this should be called only after the atomic data is in memory
 {
   // printout("radfield::init()\n");
@@ -366,7 +366,7 @@ void init(int my_rank, int ndo)
     printout("Initialising multibin radiation field with %d bins from (%.2f eV, %6.1f A) to (%.2f eV, %6.1f A)\n",
              RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
              H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
-    if (ndo > 0)
+    if (ndo_nonempty > 0)
     {
       char filename[100];
       sprintf(filename,"radfield_%.4d.out", my_rank);

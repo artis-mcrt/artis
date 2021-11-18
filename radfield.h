@@ -9,7 +9,7 @@
 namespace radfield
 {
   void zero_estimators(int modelgridindex);
-  void init(int my_rank, int ndo);
+  void init(int my_rank, int ndo, int ndo_nonempty);
   void initialise_prev_titer_photoionestimators(void);
   void write_to_file(int modelgridindex, int timestep);
   void close_file(void);
