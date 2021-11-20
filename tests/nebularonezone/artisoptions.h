@@ -181,5 +181,6 @@ static const int MAX_NT_EXCITATIONS_STORED = 25000;
 // End of non-thermal solution options
 // ****
 
+const bool single_level_top_ion = false; // Only include a single level for the highest ion stage
 
 #endif //ARTISOPTIONS_H
