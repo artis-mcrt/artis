@@ -186,5 +186,8 @@ static const int MAX_NT_EXCITATIONS_STORED = 25000;
 // End of non-thermal solution options
 // ****
 
+#define LTEPOP_EXCITATIONTEMPERATURE_FUNCTION grid::get_TJ
+
+const bool single_level_top_ion = true; // Only include a single level for the highest ion stage
 
 #endif //ARTISOPTIONS_H

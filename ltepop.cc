@@ -8,6 +8,11 @@
 #include "ratecoeff.h"
 #include "update_grid.h"
 
+// default option if not specified
+#ifndef LTEPOP_EXCITATIONTEMPERATURE_FUNCTION
+  #define LTEPOP_EXCITATIONTEMPERATURE_FUNCTION grid::get_Te
+#endif
+
 extern __host__ __device__ inline double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
 extern __host__ __device__ inline double ionstagepop(int modelgridindex, int element, int ion);
 
@@ -547,7 +552,7 @@ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int leve
   if (level == 0)
     return get_groundlevelpop(modelgridindex, element, ion);
 
-  const double T_exc = grid::get_Te(modelgridindex);
+  const double T_exc = LTEPOP_EXCITATIONTEMPERATURE_FUNCTION(modelgridindex);
   const double W = 1.;
 
   const double E_level = epsilon(element, ion, level);
