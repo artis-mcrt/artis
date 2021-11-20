@@ -1270,7 +1270,7 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
     /// the involved atomic species
 
   	if ((DETAILED_BF_ESTIMATORS_ON && grid::get_elem_abundance(modelgridindex,element) > 0) ||
-        !DETAILED_BF_ESTIMATORS_ON && ((ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6) || (level == 0)))
+        (!DETAILED_BF_ESTIMATORS_ON && ((ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6) || (level == 0))))
     {
       const double nu_edge = globals::allcont[i].nu_edge;
       const int phixstargetindex = globals::allcont[i].phixstargetindex;
