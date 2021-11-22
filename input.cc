@@ -738,7 +738,7 @@ static void read_atomicdata_files(void)
 
   printout("single_level_top_ion: %s\n", single_level_top_ion ? "true" : "false");
   printout("single_ground_level: %s\n", single_ground_level ? "true" : "false");
-  printout("exclude_non_ionising_levels: %s\n", single_ground_level ? "true" : "false");
+  printout("exclude_non_ionising_levels: %s\n", exclude_non_ionising_levels ? "true" : "false");
   /// initialize atomic data structure to number of elements
   int nelements_in;
   fscanf(compositiondata,"%d", &nelements_in);
