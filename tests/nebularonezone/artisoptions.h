@@ -28,6 +28,19 @@ return (level <= 197); \
 else \
 return (level <= 80);
 
+// atomic data and LTE
+#define LTEPOP_EXCITATIONTEMPERATURE grid::get_Te(modelgridindex)
+
+const bool single_level_top_ion = false; // Only include a single level for the highest ion stage
+
+const bool single_ground_level = false; // if false, read from file or autodetect
+
+const bool exclude_non_ionising_levels = false;
+
+// option to enforce connecting the lower n levels to all other levels with collisions
+// disable by returning zero
+#define NLEVELS_REQUIRETRANSITIONS(Z, ionstage) ((Z == 26 || Z == 28) && ionstage >= 1) ? 80 : 0
+
 // if uniform pellet energies are not used, a uniform decay time distribution is used with scaled packet energies
 #define UNIFORM_PELLET_ENERGIES true
 
@@ -180,6 +193,5 @@ static const int MAX_NT_EXCITATIONS_STORED = 25000;
 //
 // End of non-thermal solution options
 // ****
-
 
 #endif //ARTISOPTIONS_H

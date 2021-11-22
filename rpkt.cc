@@ -1203,7 +1203,9 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
     const int level = globals::allcont[i].level;
     /// The bf process happens only if the current cell contains
     /// the involved atomic species
-    if ((grid::get_elem_abundance(modelgridindex,element) > 0) && (DETAILED_BF_ESTIMATORS_ON || (level < 100) || (ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6)))
+
+  	if ((DETAILED_BF_ESTIMATORS_ON && grid::get_elem_abundance(modelgridindex,element) > 0) ||
+        (!DETAILED_BF_ESTIMATORS_ON && ((ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6) || (level == 0))))
     {
       const double nu_edge = globals::allcont[i].nu_edge;
       const int phixstargetindex = globals::allcont[i].phixstargetindex;
