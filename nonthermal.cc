@@ -1278,9 +1278,13 @@ __host__ __device__
 float get_nt_frac_heating(const int modelgridindex)
 {
   if (!NT_ON)
+  {
     return 1.;
+  }
   else if (!NT_SOLVE_SPENCERFANO)
+  {
     return 0.97;
+  }
   else
   {
     const float frac_heating = nt_solution[modelgridindex].frac_heating;
