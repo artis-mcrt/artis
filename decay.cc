@@ -842,7 +842,7 @@ static double get_nuc_abund(
       continue;
     }
 
-    const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top);
+    const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
     assert_always(top_initabund >= 0.)
     if (top_initabund <= 0.)
     {
@@ -865,7 +865,7 @@ static double get_nuc_abund(
       fulldecaypathlength = decaypathlength + 1;
     }
 
-    nuctotal += calculate_decaychain(top_initabund, wtmeanlifetimes, fulldecaypathlength, t_afterinit, false);
+    nuctotal += calculate_decaychain(top_initabund, wtmeanlifetimes, fulldecaypathlength, t_afterinit, false) * nucmass(z, a);
   }
 
   return nuctotal;
