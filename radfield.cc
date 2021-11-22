@@ -382,7 +382,7 @@ void init(int my_rank, int ndo, int ndo_nonempty)
   }
   else
   {
-    printout("The radiation field model is a whole-spectrum fit to a single diluted blackbody.\n");
+    printout("The radiation field model is a whole-spectrum fit to a single dilute blackbody.\n");
   }
 
   const long mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin);
