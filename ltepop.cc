@@ -200,9 +200,13 @@ double phi(const int element, const int ion, const int modelgridindex)
 
     double Alpha_sp = 0.;
     if (NLTE_POPS_ON)
+    {
       Alpha_sp = calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, false, false, false, false, false);
+    }
     else
+    {
       Alpha_sp = interpolate_ions_spontrecombcoeff(element, ion, T_e);
+    }
 
     // const double Col_rec = calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, true, false, false, false);
     const double Col_rec = 0.;
@@ -221,28 +225,9 @@ double phi(const int element, const int ion, const int modelgridindex)
     //alpha_sp = interpolate_spontrecombcoeff(element,ion,0,T_e);
     //phi = gamma_lte*(Alpha_sp+Apha_st)/(Gamma*alpha_sp) * partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
 
-    //printout("testing: Y_nt/Gamma: %g (%d %d)\n", Y_nt/Gamma/stat_weight(element,ion,0)*grid::modelgrid[modelgridindex].composition[element].partfunct[ion], element, ion);
-    // OLD
-    //phi = (Alpha_sp+Alpha_st)/(Gamma + Y_nt) * grid::modelgrid[modelgridindex].composition[element].partfunct[ion]/
-    //stat_weight(element,ion,0);
-    //
-
-    //changed July14 to include partition function to stat. weight ratio for upper ion
-    // recombinations / ionizations
-    //printout("[debug-luke] phi for ion %d Gamma-part %g, Y_nt %g\n",ion,(Gamma * stat_weight(element,ion,0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]),Y_nt);
-    //Gamma = 0.0; //TODO: testing testing no gamma part
-
     phi = (Alpha_sp + Alpha_st + Col_rec) / (Gamma_ion + Y_nt);
 
     // Y_nt should generally be higher than the Gamma term for nebular epoch
-
-    //phi = (Alpha_sp+Alpha_st)/(Y_nt);
-
-    /*if (element == 0)
-    {
-      printout("phi %g, Alpha_sp %g, Alpha_st %g, Y_nt %g, element %d, ion %d, Col_rec %g, mgi %d, get_nne %g, ratio_u %g ratio_l %g Gamma %g T_e %g\n",
-            phi, Alpha_sp, Alpha_st, Y_nt, element, ion, Col_rec, modelgridindex, grid::get_nne(modelgridindex), stat_weight(element,ion+1,0)/grid::modelgrid[modelgridindex].composition[element].partfunct[ion+1], stat_weight(element,ion,0)/grid::modelgrid[modelgridindex].composition[element].partfunct[ion],Gamma, T_e);
-    }*/
 
     if (!std::isfinite(phi) || phi == 0.)
     {
