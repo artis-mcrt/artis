@@ -295,7 +295,7 @@ static void read_phixs_data(void)
 
 
 static void read_ion_levels(
-  FILE* adata, const int element, const int ion, const int nions, const int nlevels, const int nlevelsmax,
+  FILE* adata, const int element, const int ion, const int nions, const int nlevels, int *nlevelsmax,
   const double energyoffset, const double ionpot)
 {
   for (int level = 0; level < nlevels; level++)
@@ -308,7 +308,15 @@ static void read_ion_levels(
     assert_always(levelindex_in == level + groundstate_index_in);
     // assert_always((ion < nions - 1) || (ntransitions > 0) || (nlevels == 1));
     //if (element == 1 && ion == 0) printf("%d %16.10f %g %d\n",levelindex,levelenergy,statweight,ntransitions);
-    if (level < nlevelsmax)
+    if (level < *nlevelsmax && levelenergy > ionpot)
+    {
+      printout("reducing Z %d ionstage %d nlevelsmax from %d to %d to avoid levels above ionisation potential\n",
+               get_element(element), get_ionstage(element, ion), *nlevelsmax, level);
+      assert_always(level > 0);
+      *nlevelsmax = level;
+      globals::elements[element].ions[ion].nlevels = *nlevelsmax;
+    }
+    if (level < *nlevelsmax)
     {
       //globals::elements[element].ions[ion].levels[level].epsilon = (energyoffset + levelenergy) * EV;
       const double currentlevelenergy = (energyoffset + levelenergy) * EV;
@@ -728,6 +736,9 @@ static void read_atomicdata_files(void)
 
   FILE *adata = fopen_required("adata.txt", "r");
 
+  printout("single_level_top_ion: %s\n", single_level_top_ion ? "true" : "false");
+  printout("single_ground_level: %s\n", single_ground_level ? "true" : "false");
+  printout("exclude_non_ionising_levels: %s\n", single_ground_level ? "true" : "false");
   /// initialize atomic data structure to number of elements
   int nelements_in;
   fscanf(compositiondata,"%d", &nelements_in);
@@ -864,7 +875,7 @@ static void read_atomicdata_files(void)
       }
       else if (nlevels >= nlevelsmax)
       {
-        printout("[info] read_atomicdata: reduce number of levels from %d to %d for ion %d of element %d\n", nlevels, nlevelsmax, ion, element);
+        printout("[info] read_atomicdata: reduce number of levels from %d to %d for Z %2d ionstage %d\n", nlevels, nlevelsmax, get_element(element), get_ionstage(element, ion));
       }
       else
       {
@@ -973,7 +984,7 @@ static void read_atomicdata_files(void)
         abort();
       }
 
-      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot);
+      read_ion_levels(adata, element, ion, nions, nlevels, &nlevelsmax, energyoffset, ionpot);
 
       add_transitions_to_linelist(element, ion, nlevelsmax, tottransitions, transitiontable, &lineindex);
 
