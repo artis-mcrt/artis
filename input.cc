@@ -929,18 +929,9 @@ static void read_atomicdata_files(void)
       // first <nlevels_requiretransitions> levels will be collisionally
       // coupled to the first <nlevels_requiretransitions_upperlevels> levels (assumed forbidden)
       // use 0 to disable adding extra transitions
-      int nlevels_requiretransitions = 0;
-      int nlevels_requiretransitions_upperlevels = 0;
-      if (((Z == 26 || Z == 28) && ionstage >= 1))
-      {
-        nlevels_requiretransitions = 80;
-        nlevels_requiretransitions_upperlevels = nlevelsmax;
-      }
-      else
-      {
-        nlevels_requiretransitions = 0;
-        nlevels_requiretransitions_upperlevels = nlevelsmax; // no effect if previous line is zero
-      }
+
+      int nlevels_requiretransitions = NLEVELS_REQUIRETRANSITIONS(Z, ionstage);
+      int nlevels_requiretransitions_upperlevels = nlevelsmax; // no effect if previous line is zero
 
       nlevels_requiretransitions = std::min(nlevelsmax, nlevels_requiretransitions);
       nlevels_requiretransitions_upperlevels = std::min(nlevelsmax, nlevels_requiretransitions_upperlevels);
@@ -954,7 +945,7 @@ static void read_atomicdata_files(void)
       globals::elements[element].ions[ion].ionisinglevels = 0;
       globals::elements[element].ions[ion].maxrecombininglevel = 0;
       globals::elements[element].ions[ion].ionpot = ionpot * EV;
-      globals::elements[element].ions[ion].nlevels_groundterm = 0;
+      globals::elements[element].ions[ion].nlevels_groundterm = -1;
       globals::elements[element].ions[ion].uniqueionindex = uniqueionindex;
 
 //           if ((globals::elements[element].ions[ion].zeta = calloc(TABLESIZE, sizeof(float))) == NULL)
@@ -1103,7 +1094,16 @@ static void read_atomicdata_files(void)
     for (int ion = 0; ion < nions; ion++)
     {
       if (globals::elements[element].ions[ion].nlevels_groundterm <= 0)
-        globals::elements[element].ions[ion].nlevels_groundterm = calculate_nlevels_groundterm(element, ion);
+      {
+        if (single_ground_level)
+        {
+          globals::elements[element].ions[ion].nlevels_groundterm = 1;
+        }
+        else
+        {
+          globals::elements[element].ions[ion].nlevels_groundterm = calculate_nlevels_groundterm(element, ion);
+        }
+      }
     }
   }
 
