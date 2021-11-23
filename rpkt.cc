@@ -771,19 +771,15 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
     {
       if (false) printout("[debug] do_rpkt: sdist < tdist && sdist < edist\n");
       // Move it into the new cell.
-      sdist = sdist / 2.;
-      pkt_ptr->prop_time += sdist / globals::CLIGHT_PROP;
-      move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
-      update_estimators(pkt_ptr, sdist * 2);
+      pkt_ptr->prop_time += sdist / 2. / globals::CLIGHT_PROP;
+      move_pkt(pkt_ptr, sdist / 2., pkt_ptr->prop_time);
+      update_estimators(pkt_ptr, sdist);
       if (globals::do_rlc_est != 0 && globals::do_rlc_est != 3)
       {
-        sdist = sdist * 2.;
         rlc_emiss_rpkt(pkt_ptr, sdist);
-        sdist = sdist / 2.;
       }
-      pkt_ptr->prop_time += sdist / globals::CLIGHT_PROP;
-      move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
-      sdist = sdist * 2.;
+      pkt_ptr->prop_time += sdist / 2. / globals::CLIGHT_PROP;
+      move_pkt(pkt_ptr, sdist / 2., pkt_ptr->prop_time);
 
       if (snext != pkt_ptr->where)
       {
