@@ -832,19 +832,15 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
     {
       // bound-bound or continuum event
       if (false) printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
-      edist = edist / 2.;
-      pkt_ptr->prop_time += edist / globals::CLIGHT_PROP;
-      move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
-      update_estimators(pkt_ptr, edist * 2);
+      pkt_ptr->prop_time += edist / 2. / globals::CLIGHT_PROP;
+      move_pkt(pkt_ptr, edist / 2., pkt_ptr->prop_time);
+      update_estimators(pkt_ptr, edist);
       if (globals::do_rlc_est != 0 && globals::do_rlc_est != 3)
       {
-        edist = edist * 2.;
         rlc_emiss_rpkt(pkt_ptr, edist);
-        edist = edist / 2.;
       }
-      pkt_ptr->prop_time += edist / globals::CLIGHT_PROP;
-      move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
-      edist = edist * 2.;
+      pkt_ptr->prop_time += edist / 2. / globals::CLIGHT_PROP;
+      move_pkt(pkt_ptr, edist / 2., pkt_ptr->prop_time);
 
       // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
       if (grid::modelgrid[mgi].thick == 1)
