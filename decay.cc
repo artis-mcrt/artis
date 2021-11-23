@@ -9,6 +9,7 @@
 
 #include <algorithm> // std::max
 #include <vector>
+#include <set>
 #include <string>
 #include <regex>
 #include <fstream>
@@ -1191,7 +1192,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   for (int element = get_nelements() - 1; element >= 0; element--)
   {
     const int atomic_number = get_element(element);
-
+    std::set<int> a_isotopes;
     // for the current element,
     // the mass fraction sum of radioactive isotopes, and stable nuclei coming from other decays
     double isofracsum = 0.;
@@ -1202,7 +1203,11 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
       if (nuc_z == atomic_number)
       {
         // this nucleus is an isotope of the element
-        isofracsum += get_nuc_abund(modelgridindex, atomic_number, a, t_current);
+        if (!a_isotopes.count(a))
+        {
+          a_isotopes.insert(a);
+          isofracsum += get_nuc_abund(modelgridindex, atomic_number, a, t_current);
+        }
       }
       else
       {
@@ -1214,13 +1219,23 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
           if (!nuc_exists(daughter_z, daughter_a) && daughter_z == atomic_number &&
               get_nuc_decaybranchprob(nuc_z, a, dectypeindex) > 0.)
           {
-            // nuclide decays into correct atomic number but outside of the radionuclide list
-            // note: there could also be stable isotopes of this element included in stable_initabund(z), but
-            // here we only count the contribution from decays
-            isofracsum += get_nuc_abund(modelgridindex, daughter_z, daughter_a, t_current);
+            if (!a_isotopes.count(daughter_a))
+            {
+              a_isotopes.insert(daughter_a);
+              // nuclide decays into correct atomic number but outside of the radionuclide list
+              // note: there could also be stable isotopes of this element included in stable_initabund(z), but
+              // here we only count the contribution from decays
+              isofracsum += get_nuc_abund(modelgridindex, daughter_z, daughter_a, t_current);
+            }
           }
         }
       }
+    }
+
+    if (!nuc_exists(2, 4) && atomic_number == 2 && !a_isotopes.count(4))
+    {
+      // 4He will not be identified as a daughter nucleus of above decays, so add it in
+      isofracsum += get_nuc_abund(modelgridindex, 2, 4, t_current);
     }
 
     const double elmassfrac = grid::get_stable_initabund(modelgridindex, element) + isofracsum;
