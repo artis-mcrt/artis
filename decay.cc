@@ -747,7 +747,7 @@ static double calculate_decaychain(
   const double firstinitabund, const double *meanlifetimes, const int num_nuclides,
   const double timediff, bool useexpansionfactor)
 {
-  // calculate final abundance or decayrate from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
+  // calculate final number abundance from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
   // the top nuclide initial abundance is set and the chain-end abundance is returned (all intermediates nuclides
   // are assumed to start with zero abundance)
   // note: first and last can be nuclide can be the same if num_nuclides==1, reducing to simple decay formula
@@ -833,14 +833,18 @@ static double get_nuc_abund(
     const int z_end = decaychains[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
     const int a_end = decaychains[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
 
-    if (nuc_exists(z, a) && !(z_end == z && a_end == a)) // requested nuclide is in network, so match last nuc in chain
+    // match 4He contribution from alpha decay of any nucleus
+    if (z != 2 || a != 4 || decaychains[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1] != DECAYTYPE_ALPHA)
     {
-      continue;
-    }
+      if (nuc_exists(z, a) && !(z_end == z && a_end == a)) // requested nuclide is in network, so match last nuc in chain
+      {
+        continue;
+      }
 
-    if (!nuc_exists(z, a) && !nuc_is_parent(z_end, a_end, z, a)) // requested nuclide not in network, so match daughter of last nucleus in chain
-    {
-      continue;
+      if (!nuc_exists(z, a) && !nuc_is_parent(z_end, a_end, z, a)) // requested nuclide not in network, so match daughter of last nucleus in chain
+      {
+        continue;
+      }
     }
 
     const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
