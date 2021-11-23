@@ -808,19 +808,15 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
     {
       if (false) printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
       // Doesn't reach boundary
-      tdist = tdist / 2.;
-      pkt_ptr->prop_time += tdist / globals::CLIGHT_PROP;
-      move_pkt(pkt_ptr, tdist, pkt_ptr->prop_time);
-      update_estimators(pkt_ptr, tdist * 2);
+      pkt_ptr->prop_time += tdist / 2. / globals::CLIGHT_PROP;
+      move_pkt(pkt_ptr, tdist / 2., pkt_ptr->prop_time);
+      update_estimators(pkt_ptr, tdist);
       if (globals::do_rlc_est != 0 && globals::do_rlc_est != 3)
       {
-        tdist = tdist * 2.;
         rlc_emiss_rpkt(pkt_ptr, tdist);
-        tdist = tdist / 2.;
       }
       pkt_ptr->prop_time = t2;
-      move_pkt(pkt_ptr, tdist, pkt_ptr->prop_time);
-      tdist = tdist * 2.;
+      move_pkt(pkt_ptr, tdist / 2., pkt_ptr->prop_time);
       pkt_ptr->last_event = pkt_ptr->last_event + 1000;
 
       /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
