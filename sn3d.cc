@@ -933,7 +933,7 @@ int main(int argc, char** argv)
   {
     init_vpkt_grid();
   }
-  
+
   if (globals::simulation_continued_from_saved)
   {
     // Continue simulation: read into temporary files
@@ -1145,23 +1145,4 @@ extern inline FILE *fopen_required(const char *filename, const char *mode);
     }
   }
   fclose(tau_file);
-}*/
-
-
-
-/*void *my_malloc(size_t size)
-{
-  //char *adr;
-  void *adr;
-  #ifdef POWER6
-    adr = &heap[heapcounter];
-    heapcounter += size;
-    if (heapcounter >= heapsize) adr = NULL;
-  #else
-//    adr = &heap[heapcounter];
-//    heapcounter += size;
-//    if (heapcounter >= heapsize) adr = NULL;
-    adr = malloc(size);
-  #endif
-  return adr;
 }*/
