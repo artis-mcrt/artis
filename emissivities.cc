@@ -155,17 +155,6 @@ void zero_estimators(void)
         globals::ffheatingestimator[n] = 0.;
         globals::colheatingestimator[n] = 0.;
 
-        // mabfcount[n] = 0.;
-        // mabfcount_thermal[n] = 0.;
-        // matotem[n] = 0.;
-        // maabs[n] = 0.;
-        // kbfcount[n] = 0.;
-        // kbfcount_ion[n] = 0.;
-        // kffcount[n] = 0.;
-        // kffabs[n] = 0.;
-        // kbfabs[n] = 0.;
-        // kgammadep[n] = 0.;
-
         if (TRACK_ION_STATS)
         {
           stats::reset_ion_stats(n);
@@ -181,11 +170,6 @@ void zero_estimators(void)
             #if (!NO_LUT_BFHEATING)
               globals::bfheatingestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
             #endif
-
-            // photoionestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
-            // stimrecombestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
-            // ionfluxestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
-            // twiddle[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 0.;
           }
         }
       #endif
