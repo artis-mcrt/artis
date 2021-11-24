@@ -794,7 +794,6 @@ double get_gam_freq(const int n)
   {
     printout("Unknown line. %d Abort.\n", n);
     printout("line_list->nucindex[n] %d line_list->index[n] %d\n", gam_line_list.nucindex[n], gam_line_list.index[n]);
-    // printout(" %d %d \n", gam_line_list.nucindex[n], gam_line_list.index[n]);
     abort();
   }
 
