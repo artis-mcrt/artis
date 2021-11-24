@@ -672,31 +672,26 @@ void do_gamma(PKT *pkt_ptr, double t2)
 
   if ((sdist < tdist) && (sdist < edist))
   {
-    sdist = sdist / 2.;
-    pkt_ptr->prop_time += sdist / globals::CLIGHT_PROP;
-    move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
+    pkt_ptr->prop_time += sdist / 2. / globals::CLIGHT_PROP;
+    move_pkt(pkt_ptr, sdist / 2., pkt_ptr->prop_time);
 
     // Move it into the new cell.
     if (kap_tot > 0)
     {
       if (globals::do_comp_est)
       {
-        sdist = sdist * 2.;
         compton_emiss_cont(pkt_ptr, sdist);
         pp_emiss_cont(pkt_ptr, sdist);
-        sdist = sdist / 2.;
       }
       if (globals::do_rlc_est != 0)
       {
-        sdist = sdist * 2.;
         rlc_emiss_gamma(pkt_ptr, sdist);
-        sdist = sdist / 2.;
       }
     }
 
-    pkt_ptr->prop_time += sdist / globals::CLIGHT_PROP;
-    move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
-    sdist = sdist * 2.;
+    pkt_ptr->prop_time += sdist / 2. / globals::CLIGHT_PROP;
+    move_pkt(pkt_ptr, sdist / 2., pkt_ptr->prop_time);
+
     if (snext != pkt_ptr->where)
     {
       change_cell(pkt_ptr, snext, pkt_ptr->prop_time);
