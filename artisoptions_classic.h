@@ -38,7 +38,7 @@ const bool single_level_top_ion = true; // Only include a single level for the h
 
 const bool single_ground_level = true; // if false, read from file or autodetect
 
-const bool exclude_non_ionising_levels = true;
+const bool exclude_non_ionising_levels = false;
 
 // option to enforce connecting the lower n levels to all other levels with collisions
 // disable by returning zero
