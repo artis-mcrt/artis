@@ -308,7 +308,7 @@ static void read_ion_levels(
     assert_always(levelindex_in == level + groundstate_index_in);
     // assert_always((ion < nions - 1) || (ntransitions > 0) || (nlevels == 1));
     //if (element == 1 && ion == 0) printf("%d %16.10f %g %d\n",levelindex,levelenergy,statweight,ntransitions);
-    if (level < *nlevelsmax && levelenergy > ionpot)
+    if (exclude_non_ionising_levels && level < *nlevelsmax && levelenergy > ionpot)
     {
       printout("reducing Z %d ionstage %d nlevelsmax from %d to %d to avoid levels above ionisation potential\n",
                get_element(element), get_ionstage(element, ion), *nlevelsmax, level);
@@ -875,7 +875,7 @@ static void read_atomicdata_files(void)
       }
       else if (nlevels >= nlevelsmax)
       {
-        printout("[info] read_atomicdata: reduce number of levels from %d to %d for Z %2d ionstage %d\n", nlevels, nlevelsmax, get_element(element), get_ionstage(element, ion));
+        printout("[info] read_atomicdata: reduce number of levels from %d to %d for Z %2d ionstage %d\n", nlevels, nlevelsmax, adata_Z_in, ionstage);
       }
       else
       {
