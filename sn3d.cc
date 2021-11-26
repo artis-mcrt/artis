@@ -868,9 +868,10 @@ int main(int argc, char** argv)
   /// cells are sent to processes 0 ... process n_leftover -1.
   int nstart = 0;
   int ndo = 0;
+  int ndo_nonempty = 0;
   int maxndo = 0;
-  grid::get_nstart_ndo(my_rank, globals::nprocs, &nstart, &ndo, &maxndo);
-  printout("process rank %d (range 0 to %d) doing %d cells", my_rank, globals::nprocs - 1, ndo);
+  grid::get_nstart_ndo(my_rank, globals::nprocs, &nstart, &ndo, &ndo_nonempty, &maxndo);
+  printout("process rank %d (range 0 to %d) doing %d cells (%d nonempty)", my_rank, globals::nprocs - 1, ndo, ndo_nonempty);
   if (ndo > 0)
   {
     printout(": numbers %d to %d\n", nstart, nstart + ndo - 1);
@@ -880,21 +881,21 @@ int main(int argc, char** argv)
     printout("\n");
   }
 
-  #ifdef MPI_ON
-    MPI_Barrier(MPI_COMM_WORLD);
-    /// Initialise the exchange buffer
-    /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
-    /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
-    mpi_grid_buffer_size = 4 * ((12 + 4 * globals::includedions) * (maxndo) + 1);
-    printout("reserve mpi_grid_buffer_size %d space for MPI communication buffer\n", mpi_grid_buffer_size);
-    //char buffer[mpi_grid_buffer_size];
-    mpi_grid_buffer  = (char *) malloc(mpi_grid_buffer_size * sizeof(char));
-    if (mpi_grid_buffer == NULL)
-    {
-      printout("[fatal] input: not enough memory to initialize MPI grid buffer ... abort.\n");
-      abort();
-    }
-  #endif
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+  /// Initialise the exchange buffer
+  /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
+  /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
+  mpi_grid_buffer_size = 4 * ((12 + 4 * globals::includedions) * (maxndo) + 1);
+  printout("reserve mpi_grid_buffer_size %d space for MPI communication buffer\n", mpi_grid_buffer_size);
+  //char buffer[mpi_grid_buffer_size];
+  mpi_grid_buffer  = (char *) malloc(mpi_grid_buffer_size * sizeof(char));
+  if (mpi_grid_buffer == NULL)
+  {
+    printout("[fatal] input: not enough memory to initialize MPI grid buffer ... abort.\n");
+    abort();
+  }
+#endif
 
 
   /** That's the end of the initialisation. */
@@ -919,15 +920,20 @@ int main(int argc, char** argv)
     sprintf(filename, "estimators_%.4d.out", my_rank);
     estimators_file = fopen_required(filename, "w");
 
-    if (NLTE_POPS_ON)
+    if (NLTE_POPS_ON && ndo_nonempty > 0)
+    {
       nltepop_open_file(my_rank);
+    }
   }
 
   // Initialise virtual packets file and vspecpol
   #ifdef VPKT_ON
   init_vspecpol();
   if (vgrid_flag == 1)
+  {
     init_vpkt_grid();
+  }
+
   if (globals::simulation_continued_from_saved)
   {
     // Continue simulation: read into temporary files
@@ -1139,23 +1145,4 @@ extern inline FILE *fopen_required(const char *filename, const char *mode);
     }
   }
   fclose(tau_file);
-}*/
-
-
-
-/*void *my_malloc(size_t size)
-{
-  //char *adr;
-  void *adr;
-  #ifdef POWER6
-    adr = &heap[heapcounter];
-    heapcounter += size;
-    if (heapcounter >= heapsize) adr = NULL;
-  #else
-//    adr = &heap[heapcounter];
-//    heapcounter += size;
-//    if (heapcounter >= heapsize) adr = NULL;
-    adr = malloc(size);
-  #endif
-  return adr;
 }*/

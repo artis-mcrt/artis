@@ -268,7 +268,7 @@ static int compare_integers(const void* a, const void* b)
 }
 
 
-void init(int my_rank, int ndo)
+void init(int my_rank, int ndo, int ndo_nonempty)
 // this should be called only after the atomic data is in memory
 {
   // printout("radfield::init()\n");
@@ -366,7 +366,7 @@ void init(int my_rank, int ndo)
     printout("Initialising multibin radiation field with %d bins from (%.2f eV, %6.1f A) to (%.2f eV, %6.1f A)\n",
              RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
              H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
-    if (ndo > 0)
+    if (ndo_nonempty > 0)
     {
       char filename[100];
       sprintf(filename,"radfield_%.4d.out", my_rank);
@@ -382,7 +382,7 @@ void init(int my_rank, int ndo)
   }
   else
   {
-    printout("The radiation field model is a whole-spectrum fit to a single diluted blackbody.\n");
+    printout("The radiation field model is a whole-spectrum fit to a single dilute blackbody.\n");
   }
 
   const long mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin);
@@ -989,23 +989,19 @@ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf,
 {
   assert_always(pkt_ptr->prop_time == t_current);
   safeadd(J[modelgridindex], distance_e_cmf);
-  #ifdef DEBUG_ON
-    if (!std::isfinite(J[modelgridindex]))
-    {
-      printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,nu_cmf);
-      abort();
-    }
-  #endif
+  if (!std::isfinite(J[modelgridindex]))
+  {
+    printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,nu_cmf);
+    abort();
+  }
 
 #ifndef FORCE_LTE
   safeadd(nuJ[modelgridindex], distance_e_cmf * nu_cmf);
-  #ifdef DEBUG_ON
-    if (!std::isfinite(nuJ[modelgridindex]))
-    {
-      printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,nu_cmf);
-      abort();
-    }
-  #endif
+  if (!std::isfinite(nuJ[modelgridindex]))
+  {
+    printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,nu_cmf);
+    abort();
+  }
 
   #if (DETAILED_BF_ESTIMATORS_ON)
   increment_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr, t_current);
@@ -1016,17 +1012,13 @@ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf,
     // int binindex = 0;
     // if (nu_cmf <= get_bin_nu_lower(modelgridindex,binindex))
     // {
-    //   #ifdef DEBUG_ON
     //   printout("radfield: Extending nu_lower_first from %g down to %g\n",nu_lower_first,nu_cmf);
-    //   #endif
     //   nu_lower_first = nu_cmf;
     // }
     // else if (nu_cmf > radfieldbin_nu_upper[modelgridindex][RADFIELDBINCOUNT - 1])
     // {
     //   binindex = RADFIELDBINCOUNT - 1;
-    //   #ifdef DEBUG_ON
     //   printout("radfield: Extending nu_upper_last from %g up to %g\n",get_bin_nu_upper(modelgridindex,binindex),nu_cmf);
-    //   #endif
     //   get_bin_nu_upper(modelgridindex, binindex) = nu_cmf;
     // }
     // else

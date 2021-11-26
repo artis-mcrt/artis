@@ -1819,15 +1819,13 @@ static void assign_initial_temperatures(void)
 }
 
 
-void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *maxndo)
+void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo_nonempty, int *maxndo)
 {
-  #ifndef MPI_ON
-    // no MPI, single process updates all cells
-    *nstart = 0;
-    *ndo = get_npts_model();
-    return;
-  #endif
-
+#ifndef MPI_ON
+  // no MPI, single process updates all cells
+  *nstart = 0;
+  *ndo = get_npts_model();
+#else
   int n_leftover = 0;
 
   int nblock = get_npts_model() / nprocesses; // integer division, minimum cells for any process
@@ -1858,6 +1856,16 @@ void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *max
   {
     *ndo = nblock;
     *nstart = n_leftover * (nblock + 1) + (my_rank - n_leftover) * (nblock);
+  }
+#endif
+
+  *ndo_nonempty = 0;
+  for (int mgi = *nstart; mgi < *nstart + *ndo; mgi++)
+  {
+    if (get_numassociatedcells(mgi) > 0)
+    {
+      *ndo_nonempty += 1;
+    }
   }
 }
 
@@ -2056,11 +2064,12 @@ void grid_init(int my_rank)
 
   int nstart = 0;
   int ndo = 0;
+  int ndo_nonempty = 0;
   int maxndo = 0;
-  get_nstart_ndo(my_rank, globals::nprocs, &nstart, &ndo, &maxndo);
+  get_nstart_ndo(my_rank, globals::nprocs, &nstart, &ndo, &ndo_nonempty, &maxndo);
 
-  radfield::init(my_rank, ndo);
-  nonthermal::init(my_rank, ndo);
+  radfield::init(my_rank, ndo, ndo_nonempty);
+  nonthermal::init(my_rank, ndo, ndo_nonempty);
 
   /// and assign a temperature to the cells
   if (globals::simulation_continued_from_saved)

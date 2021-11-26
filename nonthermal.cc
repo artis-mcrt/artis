@@ -514,7 +514,7 @@ static void zero_all_effionpot(const int modelgridindex)
 }
 
 
-void init(const int my_rank, const int ndo)
+void init(const int my_rank, const int ndo, const int ndo_nonempty)
 {
   assert_always(nonthermal_initialized == false);
   nonthermal_initialized = true;
@@ -556,7 +556,7 @@ void init(const int my_rank, const int ndo)
   printout("  SF_AUGER_CONTRIBUTION %s\n", SF_AUGER_CONTRIBUTION_ON ? "on" : "off");
   printout("  SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN %s\n", SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN ? "on" : "off");
 
-  if (ndo > 0)
+  if (ndo_nonempty > 0)
   {
     char filename[100];
     sprintf(filename,"nonthermalspec_%.4d.out", my_rank);
@@ -1278,9 +1278,13 @@ __host__ __device__
 float get_nt_frac_heating(const int modelgridindex)
 {
   if (!NT_ON)
+  {
     return 1.;
+  }
   else if (!NT_SOLVE_SPENCERFANO)
+  {
     return 0.97;
+  }
   else
   {
     const float frac_heating = nt_solution[modelgridindex].frac_heating;

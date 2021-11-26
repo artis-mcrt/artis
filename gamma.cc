@@ -672,31 +672,26 @@ void do_gamma(PKT *pkt_ptr, double t2)
 
   if ((sdist < tdist) && (sdist < edist))
   {
-    sdist = sdist / 2.;
-    pkt_ptr->prop_time += sdist / globals::CLIGHT_PROP;
-    move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
+    pkt_ptr->prop_time += sdist / 2. / globals::CLIGHT_PROP;
+    move_pkt(pkt_ptr, sdist / 2., pkt_ptr->prop_time);
 
     // Move it into the new cell.
     if (kap_tot > 0)
     {
       if (globals::do_comp_est)
       {
-        sdist = sdist * 2.;
         compton_emiss_cont(pkt_ptr, sdist);
         pp_emiss_cont(pkt_ptr, sdist);
-        sdist = sdist / 2.;
       }
       if (globals::do_rlc_est != 0)
       {
-        sdist = sdist * 2.;
         rlc_emiss_gamma(pkt_ptr, sdist);
-        sdist = sdist / 2.;
       }
     }
 
-    pkt_ptr->prop_time += sdist / globals::CLIGHT_PROP;
-    move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
-    sdist = sdist * 2.;
+    pkt_ptr->prop_time += sdist / 2. / globals::CLIGHT_PROP;
+    move_pkt(pkt_ptr, sdist / 2., pkt_ptr->prop_time);
+
     if (snext != pkt_ptr->where)
     {
       change_cell(pkt_ptr, snext, pkt_ptr->prop_time);
@@ -705,54 +700,42 @@ void do_gamma(PKT *pkt_ptr, double t2)
   else if ((tdist < sdist) && (tdist < edist))
   {
     // Doesn't reach boundary.
-    tdist = tdist / 2.;
-    pkt_ptr->prop_time += tdist / globals::CLIGHT_PROP;
-    move_pkt(pkt_ptr, tdist, pkt_ptr->prop_time);
+    pkt_ptr->prop_time += tdist / 2. / globals::CLIGHT_PROP;
+    move_pkt(pkt_ptr, tdist / 2., pkt_ptr->prop_time);
 
     if (kap_tot > 0)
     {
       if (globals::do_comp_est)
       {
-        tdist = tdist * 2.;
         compton_emiss_cont(pkt_ptr, tdist);
         pp_emiss_cont(pkt_ptr, tdist);
-        tdist = tdist / 2.;
       }
       if (globals::do_rlc_est != 0)
       {
-        tdist = tdist * 2.;
         rlc_emiss_gamma(pkt_ptr, tdist);
-        tdist = tdist / 2.;
       }
     }
     pkt_ptr->prop_time = t2;
-    move_pkt(pkt_ptr, tdist, pkt_ptr->prop_time);
-    tdist = tdist * 2.;
+    move_pkt(pkt_ptr, tdist / 2., pkt_ptr->prop_time);
   }
   else if ((edist < sdist) && (edist < tdist))
   {
-    edist = edist / 2.;
-    pkt_ptr->prop_time += edist / globals::CLIGHT_PROP;
-    move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
+    pkt_ptr->prop_time += edist / 2. / globals::CLIGHT_PROP;
+    move_pkt(pkt_ptr, edist / 2., pkt_ptr->prop_time);
     if (kap_tot > 0)
     {
       if (globals::do_comp_est)
       {
-        edist = edist * 2.;
         compton_emiss_cont(pkt_ptr, edist);
         pp_emiss_cont(pkt_ptr, edist);
-        edist = edist / 2.;
       }
       if (globals::do_rlc_est != 0)
       {
-        edist = edist * 2.;
         rlc_emiss_gamma(pkt_ptr, edist);
-        edist = edist / 2.;
       }
     }
-    pkt_ptr->prop_time += edist / globals::CLIGHT_PROP;
-    move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
-    edist = edist * 2.;
+    pkt_ptr->prop_time += edist / 2. / globals::CLIGHT_PROP;
+    move_pkt(pkt_ptr, edist / 2., pkt_ptr->prop_time);
 
     // event occurs. Choose which event and call the appropriate subroutine.
     zrand = gsl_rng_uniform(rng);
@@ -811,7 +794,6 @@ double get_gam_freq(const int n)
   {
     printout("Unknown line. %d Abort.\n", n);
     printout("line_list->nucindex[n] %d line_list->index[n] %d\n", gam_line_list.nucindex[n], gam_line_list.index[n]);
-    // printout(" %d %d \n", gam_line_list.nucindex[n], gam_line_list.index[n]);
     abort();
   }
 

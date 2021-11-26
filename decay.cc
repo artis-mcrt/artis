@@ -9,6 +9,7 @@
 
 #include <algorithm> // std::max
 #include <vector>
+#include <set>
 #include <string>
 #include <regex>
 #include <fstream>
@@ -27,20 +28,14 @@ const char *elsymbols[119] = {
   "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm",
   "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Uut", "Fl", "Uup", "Lv", "Uus", "Uuo"};
 
-enum decaytypes {
-  DECAYTYPE_ELECTRONCAPTURE,
-  DECAYTYPE_BETAPLUS,
-  DECAYTYPE_BETAMINUS,
-  DECAYTYPE_NONE,
-};
-
 struct nuclide {
   int z;                     // atomic number
   int a;                     // mass number
   double meanlife;           // mean lifetime before decay [s]
   double endecay_positrons;  // average energy per decay in kinetic energy of emitted positrons [erg]
   double endecay_gamma;      // average energy per decay in gamma rays [erg]
-  enum decaytypes decaytype;
+  double endecay_alpha;      // average energy per decay in kinetic energy of alpha particles [erg]
+  double branchprobs[DECAYTYPE_COUNT];
 };
 
 struct nuclide *nuclides = NULL;
@@ -50,6 +45,7 @@ struct decaypath {
   int pathlength;
   int *z;                     // atomic number
   int *a;                     // mass number
+  int *decaytypes;
 };
 
 std::vector<struct decaypath> decaychains;
@@ -136,14 +132,29 @@ static bool nuc_exists(int z, int a)
 }
 
 
-static int decay_daughter_z(const int z_parent, const int a_parent)
+__host__ __device__
+static int get_nuc_decaybranchprob(const int z_parent, const int a_parent, int decaytype)
+{
+  assert_always(nuc_exists(z_parent, a_parent));
+  assert_always(decaytype >= 0);
+  assert_always(decaytype < DECAYTYPE_COUNT);
+  return nuclides[get_nuc_index(z_parent, a_parent)].branchprobs[decaytype];
+}
+
+
+static int decay_daughter_z(const int z_parent, const int a_parent, int decaytype)
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
   assert_always(nuc_exists(z_parent, a_parent));
+  assert_always(decaytype >= 0);
+  assert_always(decaytype < DECAYTYPE_COUNT);
   // electron capture/beta plus decay only for now
-  const enum decaytypes decaytype = nuclides[get_nuc_index(z_parent, a_parent)].decaytype;
   switch (decaytype)
   {
+    case DECAYTYPE_ALPHA:
+    {
+      return z_parent - 2; // lose two protons and two neutrons
+    }
     case DECAYTYPE_BETAPLUS:
     case DECAYTYPE_ELECTRONCAPTURE:
     {
@@ -162,11 +173,31 @@ static int decay_daughter_z(const int z_parent, const int a_parent)
 }
 
 
-static int decay_daughter_a(const int z_parent, const int a_parent)
+static int decay_daughter_a(const int z_parent, const int a_parent, int decaytype)
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
   assert_always(nuc_exists(z_parent, a_parent));
   // electron capture/beta +/- keep mass number constant (no alpha decay or fission yet)
+
+  switch (decaytype)
+  {
+    case DECAYTYPE_ALPHA:
+    {
+      return a_parent - 4; // lose two protons and two neutrons
+    }
+    case DECAYTYPE_BETAPLUS:
+    case DECAYTYPE_ELECTRONCAPTURE:
+    case DECAYTYPE_BETAMINUS:
+    {
+      return a_parent;  // swap a neutron to proton or vice-versa
+    }
+    case DECAYTYPE_NONE:
+    {
+      return -1; // no daughter
+    }
+  }
+  return -1; // no daughter
+
   return a_parent;
 }
 
@@ -176,7 +207,16 @@ static bool nuc_is_parent(const int z_parent, const int a_parent, const int z, c
 {
   assert_always(nuc_exists(z_parent, a_parent));
   // each radioactive nuclide is limited to one daughter nuclide
-  return (decay_daughter_z(z_parent, a_parent) == z && decay_daughter_a(z_parent, a_parent) == a);
+  for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
+  {
+    if (decay_daughter_z(z_parent, a_parent, dectypeindex) == z &&
+        decay_daughter_a(z_parent, a_parent, dectypeindex) == a &&
+        get_nuc_decaybranchprob(z_parent, a_parent, dectypeindex) > 0.)
+    {
+      return true;
+    }
+  }
+  return false;
 }
 
 
@@ -192,6 +232,39 @@ static int get_decaypathlength(int decaypathindex)
 }
 
 
+static void prinout_decaytype(const int decaytype)
+{
+  switch (decaytype)
+  {
+    case DECAYTYPE_ALPHA:
+    {
+      printout("alpha");
+      break;
+    }
+    case DECAYTYPE_BETAPLUS:
+    {
+      printout("beta+");
+      break;
+    }
+    case DECAYTYPE_ELECTRONCAPTURE:
+    {
+      printout("ec");
+      break;
+    }
+    case DECAYTYPE_BETAMINUS:
+    {
+      printout("beta-");
+      break;
+    }
+    case DECAYTYPE_NONE:
+    {
+      printout("none");
+      break;
+    }
+  }
+}
+
+
 static void printout_chain(const int decaypathindex)
 {
   if (decaychains.size() > 0)
@@ -203,66 +276,143 @@ static void printout_chain(const int decaypathindex)
   for (int i = 1; i < get_decaypathlength(decaypathindex); i++)
   {
     printout(" -> ");
+    prinout_decaytype(decaychains[decaypathindex].decaytypes[i]);
+    printout(" -> ");
     printout_nuclidename(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i]);
   }
+  const int last_z = decaychains[decaypathindex].z[get_decaypathlength(decaypathindex)-1];
+  const int last_a = decaychains[decaypathindex].a[get_decaypathlength(decaypathindex)-1];
+  const int last_decaytype = decaychains[decaypathindex].decaytypes[get_decaypathlength(decaypathindex)-1];
+  const int end_z = decay_daughter_z(last_z, last_a, last_decaytype);
+  const int end_a = decay_daughter_a(last_z, last_a, last_decaytype);
+  printout(" -> ");
+  prinout_decaytype(last_decaytype);
+  printout(" -> ");
+  printout_nuclidename(end_z, end_a);
+
   printout("\n");
 }
 
 
-static void add_ancestorchains(const int z, const int a, const int startdecaypathindex)
+static void add_decaychains(const int z, const int a, int dectypeindex, const int startdecaypathindex)
 {
+  if (get_nuc_decaybranchprob(z, a, dectypeindex) == 0.)
+  {
+    return;
+  }
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
-    const int z_parent = get_nuc_z(nucindex); // possible parent, will check if true
-    const int a_parent = get_nuc_a(nucindex);
-    // printout("z_parent %d a_parent %d isparent(%d, %d) %d\n", z_parent, a_parent, z_list[0], a_list[0], nuc_is_parent(z_parent, a_parent, z_list[0], a_list[0]));
-    if (nuc_is_parent(z_parent, a_parent, z, a))
+    const int z2 = get_nuc_z(nucindex); // possible child, will check if true
+    const int a2 = get_nuc_a(nucindex);
+    if (decay_daughter_a(z, a, dectypeindex) == a2 && decay_daughter_z(z, a, dectypeindex) == z2)
     {
-      decaychains.push_back({0, NULL, NULL});
-      decaychains.back().pathlength = get_decaypathlength(startdecaypathindex) + 1;
-      decaychains.back().z = (int *) malloc(decaychains.back().pathlength * sizeof(int));
-      decaychains.back().a = (int *) malloc(decaychains.back().pathlength * sizeof(int));
-
-      // check for repeated nuclides, which would indicate a loop in the decay chain
-      for (int i = 1; i < decaychains.back().pathlength; i++)
+      for (int dectypeindex2 = 0; dectypeindex2 < DECAYTYPE_COUNT; dectypeindex2++)
       {
-        decaychains.back().z[i] = decaychains[startdecaypathindex].z[i - 1];
-        decaychains.back().a[i] = decaychains[startdecaypathindex].a[i - 1];
-        if (decaychains.back().z[i] == z_parent && decaychains.back().a[i] == a_parent)
+        if (get_nuc_decaybranchprob(z2, a2, dectypeindex2) == 0.)
         {
-          printout("\nERROR: Loop found in nuclear decay chain.\n");
-          abort();
+          continue;
         }
-      }
-      decaychains.back().z[0] = z_parent;
-      decaychains.back().a[0] = a_parent;
+        decaychains.push_back({0, NULL, NULL, NULL});
+        decaychains.back().pathlength = get_decaypathlength(startdecaypathindex) + 1;
+        decaychains.back().z = (int *) malloc(decaychains.back().pathlength * sizeof(int));
+        decaychains.back().a = (int *) malloc(decaychains.back().pathlength * sizeof(int));
+        decaychains.back().decaytypes = (int *) malloc(decaychains.back().pathlength * sizeof(int));
 
-      add_ancestorchains(z_parent, a_parent, decaychains.size() - 1);
+        // check for repeated nuclides, which would indicate a loop in the decay chain
+        for (int i = 0; i < (decaychains.back().pathlength - 1); i++)
+        {
+          decaychains.back().z[i] = decaychains[startdecaypathindex].z[i];
+          decaychains.back().a[i] = decaychains[startdecaypathindex].a[i];
+          decaychains.back().decaytypes[i] = decaychains[startdecaypathindex].decaytypes[i];
+          if (decaychains.back().z[i] == z2 && decaychains.back().a[i] == a2)
+          {
+            printout("\nERROR: Loop found in nuclear decay chain.\n");
+            abort();
+          }
+        }
+        decaychains.back().z[decaychains.back().pathlength - 1] = z2;
+        decaychains.back().a[decaychains.back().pathlength - 1] = a2;
+        decaychains.back().decaytypes[decaychains.back().pathlength - 1] = dectypeindex2;
+
+        add_decaychains(z2, a2, dectypeindex2, decaychains.size() - 1);
+      }
     }
   }
+}
+
+
+static bool compare_chains(struct decaypath &d1, struct decaypath &d2)
+// true if d1 < d2
+// order the chains in the same way as when the search moved up from the descendant
+// instead of down from the ancestor, for ease of test comparsion
+{
+  const int smallestpathlength = std::min(d1.pathlength, d2.pathlength);
+  bool matchingoverlap = true;
+  for (int i = 0; i < smallestpathlength; i++)
+  {
+    const int d1pos = d1.pathlength - 1 - i;
+    assert_always(d1pos >= 0);
+    assert_always(d1pos < d1.pathlength);
+    const int d2pos = d2.pathlength - 1 - i;
+    assert_always(d2pos >= 0);
+    assert_always(d2pos < d2.pathlength);
+    // if (get_nuc_index(d1.z[d1pos], d1.a[d1pos]) < get_nuc_index(d2.z[d2pos], d2.a[d2pos]))
+    if (d1.a[d1pos] < d2.a[d2pos])
+    {
+      return true;
+    }
+    else if (d1.a[d1pos] == d2.a[d2pos] && d1.z[d1pos] < d2.z[d2pos])
+    {
+      return true;
+    }
+    if (d1.a[d1pos] != d2.a[d2pos] || d1.z[d1pos] != d2.z[d2pos])
+    {
+      matchingoverlap = false;
+    }
+  }
+  // one is an extension of the other
+  if (matchingoverlap && d1.pathlength < d2.pathlength)
+  {
+    return true;
+  }
+
+  return false;
 }
 
 
 static void find_chains(void)
 {
-  for (int endnuc = 0; endnuc < get_num_nuclides(); endnuc++)
+  for (int startnucindex = 0; startnucindex < get_num_nuclides(); startnucindex++)
   {
-    if (get_nuc_z(endnuc) < 1) // FAKE_GAM_LINE_ID
+    if (get_nuc_z(startnucindex) < 1) // FAKE_GAM_LINE_ID
     {
       continue;
     }
+    const int z = get_nuc_z(startnucindex);
+    const int a = get_nuc_a(startnucindex);
 
-    decaychains.push_back({0, NULL, NULL});
+    for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
+    {
+      if (get_nuc_decaybranchprob(z, a, dectypeindex) == 0.)
+      {
+        continue;
+      }
+      decaychains.push_back({0, NULL, NULL, NULL});
 
-    decaychains.back().pathlength = 1;
-    decaychains.back().z = (int *) malloc(sizeof(int));
-    decaychains.back().a = (int *) malloc(sizeof(int));
+      decaychains.back().pathlength = 1;
+      decaychains.back().z = (int *) malloc(sizeof(int));
+      decaychains.back().a = (int *) malloc(sizeof(int));
+      decaychains.back().decaytypes = (int *) malloc(sizeof(int));
 
-    decaychains.back().z[0] = get_nuc_z(endnuc);
-    decaychains.back().a[0] = get_nuc_a(endnuc);
+      decaychains.back().z[0] = z;
+      decaychains.back().a[0] = a;
+      decaychains.back().decaytypes[0] = dectypeindex;
 
-    add_ancestorchains(get_nuc_z(endnuc), get_nuc_a(endnuc), decaychains.size() - 1);
+      add_decaychains(get_nuc_z(startnucindex), get_nuc_a(startnucindex), dectypeindex, decaychains.size() - 1);
+    }
   }
+
+  std::sort(decaychains.begin(), decaychains.end(), compare_chains);
 }
 
 
@@ -313,7 +463,10 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
     nuclides[nucindex].meanlife = -1;
     nuclides[nucindex].endecay_positrons = 0.;
     nuclides[nucindex].endecay_gamma = 0.;
-    nuclides[nucindex].decaytype = DECAYTYPE_NONE;
+    for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
+    {
+      nuclides[nucindex].branchprobs[dectypeindex] = 0.;
+    }
   }
 
   int nucindex = 0;
@@ -322,56 +475,60 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
   nuclides[nucindex].a = 57;
   nuclides[nucindex].meanlife = 51.36 * 60;
   nuclides[nucindex].endecay_positrons = 0.354 * MEV * 0.436;
-  nuclides[nucindex].decaytype = DECAYTYPE_BETAPLUS;
+  nuclides[nucindex].branchprobs[DECAYTYPE_BETAPLUS] = 1.;
+  // nuclides[nucindex].branchprobs[DECAYTYPE_BETAPLUS] = 0.436;
+  // nuclides[nucindex].branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.436;
   nucindex++;
 
   nuclides[nucindex].z = 28; // Ni56
   nuclides[nucindex].a = 56;
   nuclides[nucindex].meanlife = 8.80 * DAY;
-  nuclides[nucindex].decaytype = DECAYTYPE_ELECTRONCAPTURE;
+  nuclides[nucindex].branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
   nucindex++;
 
   nuclides[nucindex].z = 27; // Co56
   nuclides[nucindex].a = 56;
   nuclides[nucindex].meanlife = 113.7 * DAY;
   nuclides[nucindex].endecay_positrons = 0.63 * MEV * 0.19;
-  nuclides[nucindex].decaytype = DECAYTYPE_BETAPLUS;
+  nuclides[nucindex].branchprobs[DECAYTYPE_BETAPLUS] = 1.;
+  // nuclides[nucindex].branchprobs[DECAYTYPE_BETAPLUS] = 0.19;
+  // nuclides[nucindex].branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 0.81;
   nucindex++;
 
   nuclides[nucindex].z = -1;  // FAKE_GAM_LINE_ID
   nuclides[nucindex].a = -1;
-  nuclides[nucindex].decaytype = DECAYTYPE_NONE;
+  nuclides[nucindex].branchprobs[DECAYTYPE_NONE] = 1.;
   nucindex++;
 
   nuclides[nucindex].z = 24; // Cr48
   nuclides[nucindex].a = 48;
   nuclides[nucindex].meanlife = 1.29602 * DAY;
-  nuclides[nucindex].decaytype = DECAYTYPE_ELECTRONCAPTURE;
+  nuclides[nucindex].branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
   nucindex++;
 
   nuclides[nucindex].z = 23; // V48
   nuclides[nucindex].a = 48;
   nuclides[nucindex].meanlife = 23.0442 * DAY;
-  nuclides[nucindex].endecay_positrons = 0.290 * 0.499 * MEV;
-  nuclides[nucindex].decaytype = DECAYTYPE_BETAPLUS;
+  nuclides[nucindex].endecay_positrons = 0.290 * MEV * 0.499;
+  nuclides[nucindex].branchprobs[DECAYTYPE_BETAPLUS] = 1.;
   nucindex++;
 
   nuclides[nucindex].z = 27; // Co57
   nuclides[nucindex].a = 57;
   nuclides[nucindex].meanlife = 392.03 * DAY;
-  nuclides[nucindex].decaytype = DECAYTYPE_ELECTRONCAPTURE;
+  nuclides[nucindex].branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
   nucindex++;
 
   nuclides[nucindex].z = 26; // Fe52
   nuclides[nucindex].a = 52;
   nuclides[nucindex].meanlife = 0.497429 * DAY;
-  nuclides[nucindex].decaytype = DECAYTYPE_ELECTRONCAPTURE;
+  nuclides[nucindex].branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
   nucindex++;
 
   nuclides[nucindex].z = 25; // Mn52
   nuclides[nucindex].a = 52;
   nuclides[nucindex].meanlife = 0.0211395 * DAY;
-  nuclides[nucindex].decaytype = DECAYTYPE_ELECTRONCAPTURE;
+  nuclides[nucindex].branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
   nucindex++;
 
   if (custom_alist.size() > 0)
@@ -381,7 +538,8 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
     std::string line;
     while (get_noncommentline(fbetaminus, line))
     {
-      // columns: A, Z, Q[MeV], Egamma[MeV], Eelec[MeV], Eneutrino[MeV], tau[s]
+      // energies are average per beta decay
+      // columns: # A, Z, Q[MeV], E_gamma[MeV], E_elec[MeV], E_neutrino[MeV], meanlife[s]
       int a = -1;
       int z = -1;
       double q_mev = 0.;
@@ -402,10 +560,11 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
       }
       if (keeprow)
       {
+        assert_always(!nuc_exists(z, a));
         nuclides[nucindex].z = z;
         nuclides[nucindex].a = a;
         nuclides[nucindex].meanlife = tau_sec;
-        nuclides[nucindex].decaytype = DECAYTYPE_BETAMINUS;
+        nuclides[nucindex].branchprobs[DECAYTYPE_BETAMINUS] = 1.;
         nuclides[nucindex].endecay_positrons = e_elec_mev * MEV;
         nuclides[nucindex].endecay_gamma = e_gamma_mev * MEV;
         nucindex++;
@@ -414,6 +573,61 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
       }
     }
     fbetaminus.close();
+
+    std::ifstream falpha("alphadecays.txt");
+    assert_always(falpha.is_open());
+    while (get_noncommentline(falpha, line))
+    {
+      // columns: # A, Z, branch_alpha, branch_beta, halflife[s], Q_total_alphadec[MeV], Q_total_betadec[MeV], E_alpha[MeV], E_gamma[MeV], E_beta[MeV]
+      int a = -1;
+      int z = -1;
+      double branch_alpha = 0.;
+      double branch_beta = 0.;
+      double halflife = 0.;
+      double Q_total_alphadec = 0.;
+      double Q_total_betadec = 0.;
+      double e_alpha_mev = 0.;
+      double e_gamma_mev = 0.;
+      double e_beta_mev = 0.;
+      std::stringstream(line) >> a >> z >> branch_alpha >> branch_beta >> halflife >> Q_total_alphadec >> Q_total_betadec >> e_alpha_mev >> e_gamma_mev >> e_beta_mev;
+
+      bool keeprow = true;
+      // for (int i = 0; i < (int) custom_alist.size(); i++)
+      // {
+      //   if (custom_alist[i] == a)
+      //   {
+      //     keeprow = true;
+      //     break;
+      //   }
+      // }
+      if (keeprow)
+      {
+        const double tau_sec = halflife / log(2);
+        int alphanucindex = -1;
+        if (nuc_exists(z, a))
+        {
+          alphanucindex = get_nuc_index(z, a);
+          // printout("compare z %d a %d e_gamma_mev1 %g e_gamma_mev2 %g\n", z, a, nucdecayenergygamma(z, a) / MEV, e_gamma_mev);
+          // printout("compare z %d a %d tau1 %g tau2 %g\n", z, a, get_meanlife(z, a), tau_sec);
+          // printout("compare z %d a %d e_beta_mev1 %g e_beta_mev2 %g\n", z, a, nuclides[get_nuc_index(z, a)].endecay_positrons / MEV, e_beta_mev);
+        }
+        else
+        {
+          nuclides[nucindex].z = z;
+          nuclides[nucindex].a = a;
+          nuclides[nucindex].meanlife = tau_sec;
+          nuclides[alphanucindex].endecay_gamma = e_gamma_mev * MEV;
+          alphanucindex = nucindex;
+          nucindex++;
+        }
+        nuclides[alphanucindex].endecay_alpha = e_alpha_mev * MEV;
+        nuclides[alphanucindex].branchprobs[DECAYTYPE_BETAMINUS] = branch_beta;
+        nuclides[alphanucindex].branchprobs[DECAYTYPE_ALPHA] = branch_alpha;
+        printout("alphadecay file: Adding (Z=%d)%s-%d endecay_alpha %g endecay_gamma %g tau_s %g\n",
+                 z, elsymbols[z], a, e_alpha_mev, e_gamma_mev, tau_sec);
+      }
+    }
+    falpha.close();
   }
 
   num_nuclides = nucindex;
@@ -464,7 +678,7 @@ void set_nucdecayenergygamma(int z, int a, double value)
 
 
 __host__ __device__
-double nucdecayenergypositrons(int z, int a)
+static double nucdecayenergypositrons(int z, int a)
 // average energy (erg) per decay in the form of positron kinetic energy [erg]
 {
   return nuclides[get_nuc_index(z, a)].endecay_positrons;
@@ -530,9 +744,10 @@ static double sample_decaytime(const int decaypathindex, const double tdecaymin,
 
 __host__ __device__
 static double calculate_decaychain(
-  const double firstinitabund, const double *meanlifetimes, const int num_nuclides, const double timediff, bool useexpansionfactor)
+  const double firstinitabund, const double *meanlifetimes, const int num_nuclides,
+  const double timediff, bool useexpansionfactor)
 {
-  // calculate final abundance or decayrate from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
+  // calculate final number abundance from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
   // the top nuclide initial abundance is set and the chain-end abundance is returned (all intermediates nuclides
   // are assumed to start with zero abundance)
   // note: first and last can be nuclide can be the same if num_nuclides==1, reducing to simple decay formula
@@ -618,17 +833,21 @@ static double get_nuc_abund(
     const int z_end = decaychains[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
     const int a_end = decaychains[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
 
-    if (nuc_exists(z, a) && !(z_end == z && a_end == a)) // requested nuclide is radioactive, so match last nuc in chain
+    // match 4He contribution from alpha decay of any nucleus
+    if (z != 2 || a != 4 || decaychains[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1] != DECAYTYPE_ALPHA)
     {
-      continue;
+      if (nuc_exists(z, a) && !(z_end == z && a_end == a)) // requested nuclide is in network, so match last nuc in chain
+      {
+        continue;
+      }
+
+      if (!nuc_exists(z, a) && !nuc_is_parent(z_end, a_end, z, a)) // requested nuclide not in network, so match daughter of last nucleus in chain
+      {
+        continue;
+      }
     }
 
-    if (!nuc_exists(z, a) && !nuc_is_parent(z_end, a_end, z, a)) // requested nuclide is stable, so add match daughter of last nuc in chain
-    {
-      continue;
-    }
-
-    const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top);
+    const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
     assert_always(top_initabund >= 0.)
     if (top_initabund <= 0.)
     {
@@ -636,22 +855,23 @@ static double get_nuc_abund(
     }
 
     int decaypathlength = get_decaypathlength(decaypathindex);
-    double meanlifetimes[decaypathlength + 1];
+    double wtmeanlifetimes[decaypathlength + 1]; // mean lifetimes weighted by branchprob
     for (int i = 0; i < decaypathlength; i++)
     {
-      meanlifetimes[i] = get_meanlife(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i]);
+      const double branchprob = get_nuc_decaybranchprob(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i], decaychains[decaypathindex].decaytypes[i]);
+      wtmeanlifetimes[i] = get_meanlife(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i]) * branchprob;
     }
 
     int fulldecaypathlength = decaypathlength;
     if (!nuc_exists(z, a))
     {
       // the nuclide is past the end of the chain, in case requested (Z, A) is stable and not in the radionuclides
-      meanlifetimes[decaypathlength] = -1.;
+      wtmeanlifetimes[decaypathlength] = -1.;
       fulldecaypathlength = decaypathlength + 1;
     }
 
-    nuctotal += calculate_decaychain(top_initabund, meanlifetimes, fulldecaypathlength, t_afterinit, false);
-   }
+    nuctotal += calculate_decaychain(top_initabund, wtmeanlifetimes, fulldecaypathlength, t_afterinit, false) * nucmass(z, a);
+  }
 
   return nuctotal;
 }
@@ -662,30 +882,30 @@ static double get_endecay_to_tinf_per_ejectamass_at_time(
   const int modelgridindex, const int decaypathindex, const double time)
 // returns decay energy [erg] that would be released from time tstart [s] to time infinity by a given decaypath
 {
-  // e.g. NI56 -> CO56, represents the decay of Co56 nuclei
+  // e.g. Ni56 -> Co56, represents the decay of Co56 nuclei
   // that were produced from Ni56 in the initial abundance.
   // Decays from Co56 due to the initial abundance of Co56 are not counted here,
   // nor is the energy from Ni56 decays
-  // decaying nucleus at the end of the chain
 
   assert_always(decaypathindex >= 0);
   assert_always(decaypathindex < get_num_decaypaths());
 
   const int z_top = decaychains[decaypathindex].z[0];
   const int a_top = decaychains[decaypathindex].a[0];
-  // if we're a single-nuclide decay chain, then contribution the initial abundance, otherwise contribute
+  // if it's a single-nuclide decay chain, then contribute the initial abundance, otherwise contribute
   // all ancestors
   const int z_end = decaychains[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
   const int a_end = decaychains[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
 
   const int decaypathlength = get_decaypathlength(decaypathindex);
-  double meanlifetimes[decaypathlength + 1];
+  double wtmeanlifetimes[decaypathlength + 1];  // weighted by branchprob
   for (int i = 0; i < decaypathlength; i++)
   {
-    meanlifetimes[i] = get_meanlife(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i]);
+    const double branchprob = get_nuc_decaybranchprob(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i], decaychains[decaypathindex].decaytypes[i]);
+    wtmeanlifetimes[i] = get_meanlife(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i]) * branchprob;
   }
   // the nuclide past the end of the chain radionuclide
-  meanlifetimes[decaypathlength] = -1.; // nuclide at the end is a sink, so treat it as stable (even if it's not)
+  wtmeanlifetimes[decaypathlength] = -1.; // nuclide at the end is a sink, so treat it as stable (even if it's not)
 
   const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
   assert_always(top_initabund >= 0.)
@@ -697,7 +917,7 @@ static double get_endecay_to_tinf_per_ejectamass_at_time(
 
   // count the number of chain-top nuclei that haven't decayed past the end of the chain
 
-  const double abund_endplusone = calculate_decaychain(top_initabund, meanlifetimes, decaypathlength + 1, t_afterinit, false);
+  const double abund_endplusone = calculate_decaychain(top_initabund, wtmeanlifetimes, decaypathlength + 1, t_afterinit, false);
   const double ndecays_remaining = top_initabund - abund_endplusone;
 
   // // alternative: add up the ancestor abundances that will eventually cause decays at the end of chain
@@ -775,16 +995,17 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
     // get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(modelgridindex, decaypathindex, tstart);
 
     const int decaypathlength = get_decaypathlength(decaypathindex);
-    double meanlifetimes[decaypathlength + 1];
+    double wtmeanlifetimes[decaypathlength + 1];  // weighted by branchprob
     for (int i = 0; i < decaypathlength; i++)
     {
-      meanlifetimes[i] = get_meanlife(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i]);
+      const double branchprob = get_nuc_decaybranchprob(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i], decaychains[decaypathindex].decaytypes[i]);
+      wtmeanlifetimes[i] = get_meanlife(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i]) * branchprob;
     }
     // the nuclide past the end of the chain radionuclide
-    meanlifetimes[decaypathlength] = -1.; // nuclide at the end is a sink, so treat it as stable (even if it's not)
+    wtmeanlifetimes[decaypathlength] = -1.; // nuclide at the end is a sink, so treat it as stable (even if it's not)
 
-    // const double numerator = calculate_decaychain(1., meanlifetimes, decaypathlength + 1, tdiff, true);
-    // const double factor = numerator / calculate_decaychain(1., meanlifetimes, decaypathlength + 1, tdiff, MODE_ABUND);
+    // const double numerator = calculate_decaychain(1., wtmeanlifetimes, decaypathlength + 1, tdiff, true);
+    // const double factor = numerator / calculate_decaychain(1., wtmeanlifetimes, decaypathlength + 1, tdiff, MODE_ABUND);
     // printout("  Analytical expansion factor: %g\n", factor);
 
     const int z_top = decaychains[decaypathindex].z[0];
@@ -792,7 +1013,7 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
     const int z_end = decaychains[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
     const int a_end = decaychains[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
     const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
-    const double chain_endecay = calculate_decaychain(top_initabund, meanlifetimes, decaypathlength + 1, tstart - grid::get_t_model(), true) * nucdecayenergy(z_end, a_end);
+    const double chain_endecay = calculate_decaychain(top_initabund, wtmeanlifetimes, decaypathlength + 1, tstart - grid::get_t_model(), true) * nucdecayenergy(z_end, a_end);
     // printout("  Analytical chain_endecay: %g\n", chain_endecay);
     tot_endecay += chain_endecay;
   }
@@ -865,15 +1086,16 @@ static double get_chain_decay_power_per_ejectamass(
   const double t_afterinit = time - grid::get_t_model();
 
   int decaypathlength = get_decaypathlength(decaypathindex);
-  double meanlifetimes[decaypathlength];
+  double wtmeanlifetimes[decaypathlength];  // weighted by branchprob
   for (int i = 0; i < decaypathlength; i++)
   {
-    meanlifetimes[i] = get_meanlife(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i]);
+    const double branchprob = get_nuc_decaybranchprob(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i], decaychains[decaypathindex].decaytypes[i]);
+    wtmeanlifetimes[i] = get_meanlife(decaychains[decaypathindex].z[i], decaychains[decaypathindex].a[i]) * branchprob;
   }
 
   // contribution to the end nuclide abundance from the top of chain (could be a length-one chain Z,A_top = Z,A_end
   // so contribution would be from init abundance only)
-  const double endnucabund = calculate_decaychain(top_initabund, meanlifetimes, decaypathlength, t_afterinit, false);
+  const double endnucabund = calculate_decaychain(top_initabund, wtmeanlifetimes, decaypathlength, t_afterinit, false);
 
   const double decaypower = endnucabund / get_meanlife(z_end, a_end) / nucmass(z_top, a_top);
 
@@ -974,56 +1196,87 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   for (int element = get_nelements() - 1; element >= 0; element--)
   {
     const int atomic_number = get_element(element);
-    double isofracsum = 0.; // mass fraction sum of radioactive isotopes, and stable nuclei coming from other decays
+    std::set<int> a_isotopes;
+    // for the current element,
+    // the mass fraction sum of radioactive isotopes, and stable nuclei coming from other decays
+    double isofracsum = 0.;
     for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
     {
       const int nuc_z = get_nuc_z(nucindex);
       const int a = get_nuc_a(nucindex);
       if (nuc_z == atomic_number)
       {
-        // radioactive isotope of the element
-        isofracsum += get_nuc_abund(modelgridindex, atomic_number, a, t_current);
+        // this nucleus is an isotope of the element
+        if (!a_isotopes.count(a))
+        {
+          a_isotopes.insert(a);
+          isofracsum += get_nuc_abund(modelgridindex, atomic_number, a, t_current);
+        }
       }
-      else if (!nuc_exists(decay_daughter_z(nuc_z, a), decay_daughter_a(nuc_z, a)) && decay_daughter_z(nuc_z, a) == atomic_number)
+      else
       {
-        // nuclide decays into correct atomic number but outside of the radionuclide list
-        // note: there could also be stable isotopes of this element included in stable_initabund(z), but
-        // here we only count the contribution from decays
-        isofracsum += get_nuc_abund(modelgridindex, decay_daughter_z(nuc_z, a), decay_daughter_a(nuc_z, a), t_current);
+        // check if the nucleus decays off the network but into the selected element
+        for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
+        {
+          const int daughter_z = decay_daughter_z(nuc_z, a, dectypeindex);
+          const int daughter_a = decay_daughter_a(nuc_z, a, dectypeindex);
+          if (!nuc_exists(daughter_z, daughter_a) && daughter_z == atomic_number &&
+              get_nuc_decaybranchprob(nuc_z, a, dectypeindex) > 0.)
+          {
+            if (!a_isotopes.count(daughter_a))
+            {
+              a_isotopes.insert(daughter_a);
+              // nuclide decays into correct atomic number but outside of the radionuclide list
+              // note: there could also be stable isotopes of this element included in stable_initabund(z), but
+              // here we only count the contribution from decays
+              isofracsum += get_nuc_abund(modelgridindex, daughter_z, daughter_a, t_current);
+            }
+          }
+        }
       }
+    }
+
+    if (!nuc_exists(2, 4) && atomic_number == 2 && !a_isotopes.count(4))
+    {
+      // 4He will not be identified as a daughter nucleus of above decays, so add it in
+      isofracsum += get_nuc_abund(modelgridindex, 2, 4, t_current);
     }
 
     const double elmassfrac = grid::get_stable_initabund(modelgridindex, element) + isofracsum;
     grid::set_elem_abundance(modelgridindex, element, elmassfrac);
   }
 
-  double initnucfracsum = 0.;
-  double nucfracsum = 0.;
-  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
-  {
-    const int z = get_nuc_z(nucindex);
-    const int a = get_nuc_a(nucindex);
-    if (z < 1) // FAKE_GAM_LINE_ID
-      continue;
-    initnucfracsum += grid::get_modelinitradioabund(modelgridindex, z, a);
-    nucfracsum += get_nuc_abund(modelgridindex, z, a, t_current);
-
-    // printout_nuclidename(z, a);
-    // printout(" init: %g now: %g\n", grid::get_modelinitradioabund(modelgridindex, z, a), get_nuc_abund(modelgridindex, z, a, t_current));
-
-    if (!nuc_exists(decay_daughter_z(z, a), decay_daughter_a(z, a)))
-    {
-      // printout_nuclidename(decay_daughter_z(z, a), decay_daughter_a(z, a));
-      // printout("(stable) init: 0 now: %g\n", get_nuc_abund(modelgridindex, decay_daughter_z(z, a), decay_daughter_a(z, a), t_current));
-      // this decay steps off the nuclide list, so add its daughter abundance to the total
-      nucfracsum += get_nuc_abund(modelgridindex, decay_daughter_z(z, a), decay_daughter_a(z, a), t_current);
-    }
-  }
+  // double initnucfracsum = 0.;
+  // double nucfracsum = 0.;
+  // for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
+  // {
+  //   const int z = get_nuc_z(nucindex);
+  //   const int a = get_nuc_a(nucindex);
+  //   if (z < 1) // FAKE_GAM_LINE_ID
+  //     continue;
+  //   initnucfracsum += grid::get_modelinitradioabund(modelgridindex, z, a);
+  //   nucfracsum += get_nuc_abund(modelgridindex, z, a, t_current);
+  //
+  //   // printout_nuclidename(z, a);
+  //   // printout(" init: %g now: %g\n", grid::get_modelinitradioabund(modelgridindex, z, a), get_nuc_abund(modelgridindex, z, a, t_current));
+  //
+  //   for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
+  //   {
+  //     if (!nuc_exists(decay_daughter_z(z, a, dectypeindex), decay_daughter_a(z, a, dectypeindex)) &&
+  //         get_nuc_decaybranchprob(z, a, dectypeindex) > 0.)
+  //     {
+  //       // printout_nuclidename(decay_daughter_z(z, a), decay_daughter_a(z, a));
+  //       // printout("(stable) init: 0 now: %g\n", get_nuc_abund(modelgridindex, decay_daughter_z(z, a), decay_daughter_a(z, a), t_current));
+  //       // this decay steps off the nuclide list, so add its daughter abundance to the total
+  //       nucfracsum += get_nuc_abund(modelgridindex, decay_daughter_z(z, a, dectypeindex), decay_daughter_a(z, a, dectypeindex), t_current);
+  //     }
+  //   }
+  // }
 
   // printout("initnucfracsum %g\n", initnucfracsum);
   // printout("nucfracsum %g\n", nucfracsum);
 
-  assert_always(fabs(nucfracsum - initnucfracsum) < 0.001); // decays shouldn't change nuclear mass fraction sum
+  // assert_always(fabs(nucfracsum - initnucfracsum) < 0.001); // decays shouldn't change nuclear mass fraction sum
 
   nonthermal::calculate_deposition_rate_density(modelgridindex, timestep);
   // printout("model cell %d at t_current %g has frac: Ni %g Co %g Fe %g, stable: Ni %g Co %g Fe %g\n",
@@ -1056,10 +1309,18 @@ void fprint_nuc_abundances(
 
       fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number), a, massfrac * densityfactor);
     }
-    else if (!nuc_exists(decay_daughter_z(nuc_z, a), decay_daughter_a(nuc_z, a)) && decay_daughter_z(nuc_z, a) == atomic_number)
+    else
     {
-      // nuclide decays into correct atomic number but outside of the radionuclide list. Daughter is assumed stable
-      stablefracsum += get_nuc_abund(modelgridindex, decay_daughter_z(nuc_z, a), decay_daughter_a(nuc_z, a), t_current);
+      for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
+      {
+        if (!nuc_exists(decay_daughter_z(nuc_z, a, dectypeindex), decay_daughter_a(nuc_z, a, dectypeindex)) &&
+            decay_daughter_z(nuc_z, a, dectypeindex) == atomic_number &&
+            get_nuc_decaybranchprob(nuc_z, a, dectypeindex) > 0.)
+        {
+          // nuclide decays into correct atomic number but outside of the radionuclide list. Daughter is assumed stable
+          stablefracsum += get_nuc_abund(modelgridindex, decay_daughter_z(nuc_z, a, dectypeindex), decay_daughter_a(nuc_z, a, dectypeindex), t_current);
+        }
+      }
     }
   }
 
