@@ -43,7 +43,7 @@ static void read_gamma_spectrum(const int z, const int a, const char filename[50
 
   FILE *filein = fopen_required(filename, "r");
   int nlines = 0;
-  fscanf(filein, "%d", &nlines);
+  assert_always(fscanf(filein, "%d", &nlines) == 1);
 
   gamma_spectra[nucindex].nlines = nlines;
 
@@ -55,7 +55,7 @@ static void read_gamma_spectrum(const int z, const int a, const char filename[50
   {
     double en_mev;
     double prob;
-    fscanf(filein, "%lg %lg", &en_mev, &prob);
+    assert_always(fscanf(filein, "%lg %lg", &en_mev, &prob) == 2);
     gamma_spectra[nucindex].energy[n] = en_mev * MEV;
     gamma_spectra[nucindex].probability[n] = prob;
     E_gamma_avg += en_mev * MEV * prob;

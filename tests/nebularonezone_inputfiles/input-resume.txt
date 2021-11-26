@@ -1,6 +1,6 @@
 1281360349               # pre_zseed: specific random number seed if > 0 or random if negative
 10                       # globals::ntstep: number of timesteps
-000 008                  # itstep ftstep: number of start and end time step
+007 010                  # itstep ftstep: number of start and end time step
 170 230                  # tmin_days tmax_days: start and end times [day]
 1.33  1.330000001        # nusyn_min_mev nusyn_max_mev: lowest and highest frequency to synthesise [MeV]
 80                       # nsyn_time: number of times for synthesis
@@ -14,7 +14,7 @@
 4                        # opacity_case: opacity choice
 1.0e-10                  # rho_crit_para: free parameter for calculation of rho_crit
 -1                       # UNUSED debug_packet: (>=0: activate debug output for packet id, <0: ignore)
-0                        # simulation_continued_from_saved: (0: start new simulation, 1: continue from gridsave and packets files)
+1                        # simulation_continued_from_saved: (0: start new simulation, 1: continue from gridsave and packets files)
 1e-6                     # UNUSED rfcut_angstroms: wavelength (in Angstroms) at which the parameterisation of the radiation field switches from the nebular approximation to LTE.
 4                        # n_lte_timesteps
 0.0 4                    # cell_is_optically_thick n_grey_timesteps

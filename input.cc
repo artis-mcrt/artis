@@ -91,7 +91,7 @@ static void read_phixs_data_table(
   else // upperlevel < 0, indicating that a table of upper levels and their probabilities will follow
   {
     int in_nphixstargets;
-    fscanf(phixsdata,"%d\n", &in_nphixstargets);
+    assert_always(fscanf(phixsdata,"%d\n", &in_nphixstargets) == 1);
     assert_always(in_nphixstargets >= 0);
     // read in a table of target states and probabilities and store them
     if (!single_level_top_ion || upperion < get_nions(element) - 1) // in case the top ion has nlevelsmax = 1
@@ -107,7 +107,7 @@ static void read_phixs_data_table(
       for (int i = 0; i < in_nphixstargets; i++)
       {
         double phixstargetprobability;
-        fscanf(phixsdata, "%d %lg\n", &upperlevel_in, &phixstargetprobability);
+        assert_always(fscanf(phixsdata, "%d %lg\n", &upperlevel_in, &phixstargetprobability) == 2);
         const int upperlevel = upperlevel_in - groundstate_index_in;
         assert_always(upperlevel >= 0);
         assert_always(phixstargetprobability > 0);
@@ -133,7 +133,7 @@ static void read_phixs_data_table(
       for (int i = 0; i < in_nphixstargets; i++)
       {
         double phixstargetprobability;
-        fscanf(phixsdata, "%d %lg\n", &upperlevel_in, &phixstargetprobability);
+        assert_always(fscanf(phixsdata, "%d %lg\n", &upperlevel_in, &phixstargetprobability) == 2);
       }
       // send it to the ground state of the top ion
       globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex = 0;
@@ -194,7 +194,7 @@ static void read_phixs_data_table(
   for (int i = 0; i < globals::NPHIXSPOINTS; i++)
   {
     float phixs;
-    fscanf(phixsdata,"%g\n", &phixs);
+    assert_always(fscanf(phixsdata,"%g\n", &phixs) == 1);
     assert_always(phixs >= 0);
 
     ///the photoionisation cross-sections in the database are given in Mbarn = 1e6 * 1e-28m^2
@@ -221,9 +221,9 @@ static void read_phixs_data(void)
 
   FILE *phixsdata = fopen_required("phixsdata_v2.txt", "r");
 
-  fscanf(phixsdata,"%d\n",&globals::NPHIXSPOINTS);
+  assert_always(fscanf(phixsdata,"%d\n", &globals::NPHIXSPOINTS) == 1);
   assert_always(globals::NPHIXSPOINTS > 0);
-  fscanf(phixsdata,"%lg\n",&globals::NPHIXSNUINCREMENT);
+  assert_always(fscanf(phixsdata,"%lg\n",&globals::NPHIXSNUINCREMENT) == 1);
   assert_always(globals::NPHIXSNUINCREMENT > 0.);
   int Z;
   int upperionstage;
@@ -273,17 +273,17 @@ static void read_phixs_data(void)
       if (upperlevel_in < 0) // a table of target states and probabilities will follow, so read past those lines
       {
         int nphixstargets;
-        fscanf(phixsdata, "%d\n", &nphixstargets);
+        assert_always(fscanf(phixsdata, "%d\n", &nphixstargets) == 1);
         for (int i = 0; i < nphixstargets; i++)
         {
           double phixstargetprobability;
-          fscanf(phixsdata, "%d %lg\n", &upperlevel_in, &phixstargetprobability);
+          assert_always(fscanf(phixsdata, "%d %lg\n", &upperlevel_in, &phixstargetprobability) == 2);
         }
       }
       for (int i = 0; i < globals::NPHIXSPOINTS; i++) //skip through cross section list
       {
         float phixs;
-        fscanf(phixsdata, "%g\n", &phixs);
+        assert_always(fscanf(phixsdata, "%g\n", &phixs) == 1);
       }
     }
   }
@@ -304,7 +304,7 @@ static void read_ion_levels(
     double levelenergy;
     double statweight;
     int ntransitions;
-    fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex_in, &levelenergy, &statweight, &ntransitions);
+    assert_always(fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex_in, &levelenergy, &statweight, &ntransitions) == 4);
     assert_always(levelindex_in == level + groundstate_index_in);
 
     if (level < *nlevelsmax)
@@ -379,7 +379,7 @@ static transitiontable_entry *read_ion_transitions(
     {
       double A, coll_str;
       int lower,upper,intforbidden;
-      fscanf(transitiondata, "%d %d %lg %lg %d\n", &lower, &upper, &A, &coll_str, &intforbidden);
+      assert_always(fscanf(transitiondata, "%d %d %lg %lg %d\n", &lower, &upper, &A, &coll_str, &intforbidden) == 5);
       //printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
     }
   }
@@ -394,7 +394,7 @@ static transitiontable_entry *read_ion_transitions(
       double A;
       double coll_str;
       int intforbidden;
-      fscanf(transitiondata, "%d %d %lg %lg %d\n", &lower_in, &upper_in, &A, &coll_str, &intforbidden);
+      assert_always(fscanf(transitiondata, "%d %d %lg %lg %d\n", &lower_in, &upper_in, &A, &coll_str, &intforbidden) == 5);
       const int lower = lower_in - groundstate_index_in;
       const int upper = upper_in - groundstate_index_in;
       assert_always(lower >= 0);
@@ -731,7 +731,7 @@ static void read_atomicdata_files(void)
   printout("single_ground_level: %s\n", single_ground_level ? "true" : "false");
   /// initialize atomic data structure to number of elements
   int nelements_in;
-  fscanf(compositiondata,"%d", &nelements_in);
+  assert_always(fscanf(compositiondata,"%d", &nelements_in) == 1);
   set_nelements(nelements_in);
   if ((globals::elements = (elementlist_entry *) calloc(get_nelements(), sizeof(elementlist_entry))) == NULL)
   {
@@ -749,9 +749,9 @@ static void read_atomicdata_files(void)
 
   /// temperature to determine relevant ionstages
   int T_preset;
-  fscanf(compositiondata,"%d",&T_preset);
+  assert_always(fscanf(compositiondata,"%d", &T_preset) == 1);
   int homogeneous_abundances_in;
-  fscanf(compositiondata,"%d",&homogeneous_abundances_in);
+  assert_always(fscanf(compositiondata,"%d", &homogeneous_abundances_in) == 1);
   globals::homogeneous_abundances = (homogeneous_abundances_in != 0);
   if (globals::homogeneous_abundances)
     printout("[info] read_atomicdata: homogeneous abundances as defined in compositiondata.txt are active\n");
@@ -775,7 +775,7 @@ static void read_atomicdata_files(void)
     int nlevelsmax_readin;
     double abundance;
     double mass_amu;
-    fscanf(compositiondata,"%d %d %d %d %d %lg %lg", &Z, &nions, &lowermost_ionstage, &uppermost_ionstage, &nlevelsmax_readin, &abundance, &mass_amu);
+    assert_always(fscanf(compositiondata,"%d %d %d %d %d %lg %lg", &Z, &nions, &lowermost_ionstage, &uppermost_ionstage, &nlevelsmax_readin, &abundance, &mass_amu) == 7);
     printout("readin compositiondata: next element Z %d, nions %d, lowermost %d, uppermost %d, nlevelsmax %d\n",Z,nions,lowermost_ionstage,uppermost_ionstage,nlevelsmax_readin);
     assert_always(Z > 0);
     assert_always(nions > 0);
@@ -831,7 +831,7 @@ static void read_atomicdata_files(void)
           double statweight;
           int levelindex;
           int ntransitions;
-          fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex, &levelenergy, &statweight, &ntransitions);
+          assert_always(fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex, &levelenergy, &statweight, &ntransitions) == 4);
         }
 
         const int fscanfadata = fscanf(adata, "%d %d %d %lg\n", &adata_Z_in, &ionstage, &nlevels, &ionpot);
@@ -887,7 +887,7 @@ static void read_atomicdata_files(void)
           double A;
           double coll_str;
           int intforbidden;
-          fscanf(transitiondata, "%d %d %lg %lg %d\n", &lower, &upper, &A, &coll_str, &intforbidden);
+          assert_always(fscanf(transitiondata, "%d %d %lg %lg %d\n", &lower, &upper, &A, &coll_str, &intforbidden) == 5);
         }
         const int readtransdata = fscanf(transitiondata,"%d %d %d", &transdata_Z_in, &transdata_ionstage_in, &tottransitions_in);
         if (readtransdata == EOF)

@@ -1640,24 +1640,25 @@ static void read_grid_restart_data(const int timestep)
   FILE *gridsave_file = fopen_required(filename, "r");
 
   int ntstep_in = -1;
-  fscanf(gridsave_file, "%d ", &ntstep_in);
+  assert_always(fscanf(gridsave_file, "%d ", &ntstep_in) == 1);
   assert_always(ntstep_in == globals::ntstep);
 
   int nprocs_in = -1;
-  fscanf(gridsave_file, "%d ", &nprocs_in);
+  assert_always(fscanf(gridsave_file, "%d ", &nprocs_in) == 1);
   assert_always(nprocs_in == globals::nprocs);
 
   int nthreads_in = -1;
-  fscanf(gridsave_file, "%d ", &nthreads_in);
+  assert_always(fscanf(gridsave_file, "%d ", &nthreads_in) == 1);
   assert_always(nthreads_in == get_num_threads());
 
   for (int nts = 0; nts < globals::ntstep; nts++)
   {
-    fscanf(gridsave_file, "%lg %lg ", &globals::time_step[nts].gamma_dep, &globals::time_step[nts].positron_dep);
+    assert_always(fscanf(
+      gridsave_file, "%lg %lg ", &globals::time_step[nts].gamma_dep, &globals::time_step[nts].positron_dep) == 2);
   }
 
   int timestep_in;
-  fscanf(gridsave_file, "%d ", &timestep_in);
+  assert_always(fscanf(gridsave_file, "%d ", &timestep_in) == 1);
   assert_always(timestep_in == timestep);
 
   for (int mgi = 0; mgi < get_npts_model(); mgi++)
@@ -1667,9 +1668,9 @@ static void read_grid_restart_data(const int timestep)
     float T_e;
     float W;
     float T_J;
-    fscanf(gridsave_file, "%d %g %g %g %g %hd %lg",
+    assert_always(fscanf(gridsave_file, "%d %g %g %g %g %hd %lg",
            &mgi_in, &T_R, &T_e, &W, &T_J,
-           &modelgrid[mgi].thick, &globals::rpkt_emiss[mgi]);
+           &modelgrid[mgi].thick, &globals::rpkt_emiss[mgi]) == 7);
 
     if (mgi_in != mgi)
     {

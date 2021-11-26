@@ -1749,7 +1749,7 @@ void nltepop_read_restart_data(FILE *restart_file)
   printout("Reading restart data for populations\n");
 
   int code_check;
-  fscanf(restart_file, "%d\n", &code_check);
+  assert_always(fscanf(restart_file, "%d\n", &code_check) == 1);
   if (code_check != 75618527)
   {
     printout("ERROR: Beginning of NLTE restart data not found!\n");
@@ -1757,7 +1757,7 @@ void nltepop_read_restart_data(FILE *restart_file)
   }
 
   int total_nlte_levels_in;
-  fscanf(restart_file, "%d\n", &total_nlte_levels_in);
+  assert_always(fscanf(restart_file, "%d\n", &total_nlte_levels_in) == 1);
   if (total_nlte_levels_in != globals::total_nlte_levels)
   {
     printout("ERROR: Expected %d NLTE levels but found %d in restart file\n", globals::total_nlte_levels, total_nlte_levels_in);
@@ -1769,7 +1769,7 @@ void nltepop_read_restart_data(FILE *restart_file)
     if (grid::get_numassociatedcells(modelgridindex) > 0)
     {
       int mgi_in;
-      fscanf(restart_file, "%d\n", &mgi_in);
+      assert_always(fscanf(restart_file, "%d\n", &mgi_in) == 1);
       if (mgi_in != modelgridindex)
       {
         printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
@@ -1782,11 +1782,11 @@ void nltepop_read_restart_data(FILE *restart_file)
         for (int ion = 0; ion < nions; ion++)
         {
           int ion_in;
-          fscanf(restart_file, "%d %g %g %lg\n",
+          assert_always(fscanf(restart_file, "%d %g %g %lg\n",
                  &ion_in,
                  &grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
                  &grid::modelgrid[modelgridindex].composition[element].partfunct[ion],
-                 &grid::modelgrid[modelgridindex].cooling[element].contrib[ion]);
+                 &grid::modelgrid[modelgridindex].cooling[element].contrib[ion]) == 4);
           if (ion_in != ion)
           {
             printout("ERROR: expected data for ion %d but found ion %d\n", ion, ion_in);
@@ -1805,7 +1805,7 @@ void nltepop_read_restart_data(FILE *restart_file)
           }
           else
 #endif
-          fscanf(restart_file, "%lg ", &grid::modelgrid[modelgridindex].nlte_pops[nlteindex]);
+          assert_always(fscanf(restart_file, "%lg ", &grid::modelgrid[modelgridindex].nlte_pops[nlteindex]) == 1);
         }
       }
     }

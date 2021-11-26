@@ -126,36 +126,56 @@ jobs:
         cp sn3d tests/nebularonezone_testrun/
         cp exspec tests/nebularonezone_testrun/
 
-    - name: "Run nebularonezone test"
+    - name: "Run nebularonezone test job0 start"
       working-directory: tests/nebularonezone_testrun/
       run: |
         cp input-newrun.txt input.txt
         touch output_0-0.txt
         time mpirun -np 2 ./sn3d
+        mkdir job0
+        ../../scripts/movefiles.sh job0
 
-    - name: "cat estimators"
+    - name: "cat job0 estimators"
       if: always()
+      working-directory: tests/nebularonezone_testrun/job0/
+      run: cat estimators*.out
+
+    - name: "cat job0 output log"
+      if: always()
+      working-directory: tests/nebularonezone_testrun/job0/
+      run: cat output_0-0.txt
+
+    - name: "Run nebularonezone test job1 resume"
       working-directory: tests/nebularonezone_testrun/
       run: |
-        cat estimators*.out
+        cp input-resume.txt input.txt
+        time mpirun -np 2 ./sn3d
+        mkdir job1
+        ../../scripts/movefiles.sh job1
 
-    - name: "cat output log"
+    - name: "cat job1 estimators"
       if: always()
-      working-directory: tests/nebularonezone_testrun/
-      run: |
-        cat output_0-0.txt
+      working-directory: tests/nebularonezone_testrun/job1/
+      run: cat estimators*.out
+
+    - name: "cat job1 output log"
+      if: always()
+      working-directory: tests/nebularonezone_testrun/job1/
+      run: cat output_0-0.txt
 
     - name: Checksum output files
       working-directory: tests/nebularonezone_testrun
       run: |
-        md5sum *.out
+        md5sum *.out job0/*.out job1/*.out
 
     - name: "Run exspec"
       working-directory: tests/nebularonezone_testrun/
       run: |
         time ./exspec
         mkdir output
-        cp output_0-0.txt exspec.txt *.out output/
+        cp -r output_0-0.txt exspec.txt output/
+        rsync -av job0 output/
+        rsync -av job1 output/
 
     - name: "cat exspec log"
       if: always()
@@ -201,7 +221,7 @@ jobs:
       working-directory: tests/
       run: |
         python3 -m artistools.lightcurve nebularonezone_testrun nebularonezone_reference
-        python3 -m artistools.spectra -ts 9 nebularonezone_testrun nebularonezone_reference
+        python3 -m artistools.spectra -ts 8 nebularonezone_testrun nebularonezone_reference
 
     - name: Upload plot files
       uses: actions/upload-artifact@v2
@@ -212,5 +232,5 @@ jobs:
     - name: Checksum output files
       working-directory: tests/nebularonezone_testrun
       run: |
-        md5sum *.out
+        md5sum *.out job0/*.out job1/*.out
         md5sum -c results_md5.txt
