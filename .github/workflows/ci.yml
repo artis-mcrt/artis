@@ -109,8 +109,8 @@ jobs:
       uses: actions/cache@v2.1.4
       id: cache-testreferencedata
       with:
-          path: "tests/nebularonezone_reference_20211109.tar.xz"
-          key: tests/nebularonezone_reference_20211109.tar.xz
+          path: "tests/nebularonezone_reference_20211126.tar.xz"
+          key: tests/nebularonezone_reference_20211126.tar.xz
 
     - name: Download/extract test data
       # if: steps.cache-atomicdata.outputs.cache-hit != 'true'
@@ -153,7 +153,6 @@ jobs:
     - name: "Run exspec"
       working-directory: tests/nebularonezone_testrun/
       run: |
-        cp input.txt ../nebularonezone_reference/
         time ./exspec
         mkdir output
         cp output_0-0.txt exspec.txt *.out output/
