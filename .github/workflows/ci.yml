@@ -95,8 +95,8 @@ jobs:
     # - name: Cache ratecoeff.dat
     #   uses: actions/cache@v2.1.4
     #   with:
-    #     path: "tests/nebularonezone/ratecoeff.dat"
-    #     key: "tests/nebularonezone/ratecoeff.dat"
+    #     path: "tests/nebularonezone_testrun/ratecoeff.dat"
+    #     key: "tests/nebularonezone_testrun/ratecoeff.dat"
 
     - name: Cache test atomic data
       uses: actions/cache@v2.1.4
@@ -116,19 +116,18 @@ jobs:
       # if: steps.cache-atomicdata.outputs.cache-hit != 'true'
       working-directory: tests/
       run: |
-          source ./setuptestdata.sh
+          source ./setup_nebularonezone.sh
 
     - name: "Setup test nebularonezone"
       run: |
-        cp tests/nebularonezone/artisoptions.h .
+        cp tests/nebularonezone_inputfiles/artisoptions.h .
         make clean
         make TESTMODE=ON MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
-        cp sn3d tests/nebularonezone/
-        cp exspec tests/nebularonezone/
-        cp data/*.txt tests/nebularonezone/
+        cp sn3d tests/nebularonezone_testrun/
+        cp exspec tests/nebularonezone_testrun/
 
     - name: "Run nebularonezone test"
-      working-directory: tests/nebularonezone/
+      working-directory: tests/nebularonezone_testrun/
       run: |
         cp input-newrun.txt input.txt
         touch output_0-0.txt
@@ -136,23 +135,23 @@ jobs:
 
     - name: "cat estimators"
       if: always()
-      working-directory: tests/nebularonezone/
+      working-directory: tests/nebularonezone_testrun/
       run: |
         cat estimators*.out
 
     - name: "cat output log"
       if: always()
-      working-directory: tests/nebularonezone/
+      working-directory: tests/nebularonezone_testrun/
       run: |
         cat output_0-0.txt
 
     - name: Checksum output files
-      working-directory: tests/nebularonezone
+      working-directory: tests/nebularonezone_testrun
       run: |
         md5sum *.out
 
     - name: "Run exspec"
-      working-directory: tests/nebularonezone/
+      working-directory: tests/nebularonezone_testrun/
       run: |
         cp input.txt ../nebularonezone_reference/
         time ./exspec
@@ -161,7 +160,7 @@ jobs:
 
     - name: "cat exspec log"
       if: always()
-      working-directory: tests/nebularonezone/output/
+      working-directory: tests/nebularonezone_testrun/output/
       run: |
         cat exspec.txt
 
@@ -170,7 +169,7 @@ jobs:
       if: always()
       with:
         name: test-nebularonezone-output
-        path: tests/nebularonezone/output
+        path: tests/nebularonezone_testrun/output
 
     - name: Set up Python
       uses: actions/setup-python@v2
@@ -202,8 +201,8 @@ jobs:
     - name: Plot output
       working-directory: tests/
       run: |
-        python3 -m artistools.lightcurve nebularonezone nebularonezone_reference
-        python3 -m artistools.spectra -ts 9 nebularonezone nebularonezone_reference
+        python3 -m artistools.lightcurve nebularonezone_testrun nebularonezone_reference
+        python3 -m artistools.spectra -ts 9 nebularonezone_testrun nebularonezone_reference
 
     - name: Upload plot files
       uses: actions/upload-artifact@v2
@@ -212,7 +211,7 @@ jobs:
         path: tests/*.pdf
 
     - name: Checksum output files
-      working-directory: tests/nebularonezone
+      working-directory: tests/nebularonezone_testrun
       run: |
         md5sum *.out
         md5sum -c results_md5.txt
