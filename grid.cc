@@ -975,8 +975,8 @@ static void abundances_read(void)
     const int mgi = threedimensional ? get_cell_modelgridindex(n) : n;
 
     assert_always(!feof(abundance_file));
-    char line[2048] = "";
-    assert_always(line == fgets(line, 2048, abundance_file));
+    char line[8192] = "";
+    assert_always(line == fgets(line, 8192, abundance_file));
     char *linepos = line;
     int offset = 0;
 

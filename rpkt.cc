@@ -1083,7 +1083,7 @@ void emitt_rpkt(PKT *pkt_ptr)
   /// Finally we want to put in the rest frame energy and frequency. And record
   /// that it's now a r-pkt.
 
-  if (pkt_ptr->e_cmf >1e50)
+  if (pkt_ptr->e_cmf >1e52)
   {
     printout("[fatal] emitt_rpkt: here %g\n", pkt_ptr->e_cmf);
     abort();

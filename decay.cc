@@ -393,7 +393,7 @@ static void find_chains(void)
 
     for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
     {
-      if (get_nuc_decaybranchprob(z, a, dectypeindex) == 0.)
+      if (get_nuc_decaybranchprob(z, a, dectypeindex) == 0. || get_meanlife(z, a) <= 0.)
       {
         continue;
       }
@@ -452,7 +452,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
 
   assert_always(custom_zlist.size() == custom_alist.size());
 
-  num_nuclides = 1000;  // todo: remove limit
+  num_nuclides = 10240;  // todo: remove limit
   nuclides = (struct nuclide *) malloc(num_nuclides * sizeof(struct nuclide));
   assert_always(nuclides != NULL);
 
