@@ -1299,7 +1299,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 /// nts timestep
 {
   const time_t sys_time_start_update_grid = time(NULL);
-  printout("\ntimestep %d: time before update grid %ld (tstart + %ld) simtime ts_mid %g\n",
+  printout("\ntimestep %d: time before update grid %ld (tstart + %ld) simtime ts_mid %g days\n",
            nts, sys_time_start_update_grid, sys_time_start_update_grid - real_time_start,
            globals::time_step[nts].mid / DAY);
 
