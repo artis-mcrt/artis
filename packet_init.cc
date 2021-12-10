@@ -13,7 +13,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   pkt_ptr->where = cellindex;
   pkt_ptr->number = pktnumber;  ///record the packets number for debugging
   pkt_ptr->prop_time = globals::tmin;
-  pkt_ptr->originated_from_elecpositronalpha = false;
+  pkt_ptr->originated_from_particlenotgamma = false;
 
   if (grid::grid_type == GRID_SPHERICAL1D)
   {
@@ -208,7 +208,7 @@ void write_packets(char filename[], PKT *pkt)
     fprintf(packets_file, "%lg %lg %lg ", pkt[i].absorptiondir[0], pkt[i].absorptiondir[1], pkt[i].absorptiondir[2]);
     fprintf(packets_file, "%lg %lg %lg ", pkt[i].stokes[0], pkt[i].stokes[1], pkt[i].stokes[2]);
     fprintf(packets_file, "%lg %lg %lg ", pkt[i].pol_dir[0], pkt[i].pol_dir[1], pkt[i].pol_dir[2]);
-    fprintf(packets_file, "%d ", pkt[i].originated_from_elecpositronalpha);
+    fprintf(packets_file, "%d ", pkt[i].originated_from_particlenotgamma);
     fprintf(packets_file, "%g ", pkt[i].trueemissionvelocity);
     fprintf(packets_file, "%d ", pkt[i].trueem_time);
     fprintf(packets_file, "%d ", pkt[i].pellet_nucindex);
@@ -309,10 +309,10 @@ void read_packets(char filename[], PKT *pkt)
     sscanf(linepos, "%lg %lg %lg%n", &pkt[i].pol_dir[0], &pkt[i].pol_dir[1], &pkt[i].pol_dir[2], &offset);
     linepos += offset;
 
-    int int_originated_from_elecpositronalpha;
-    sscanf(linepos, "%d%n", &int_originated_from_elecpositronalpha, &offset);
+    int int_originated_from_particlenotgamma;
+    sscanf(linepos, "%d%n", &int_originated_from_particlenotgamma, &offset);
     linepos += offset;
-    pkt[i].originated_from_elecpositronalpha = (int_originated_from_elecpositronalpha != 0);
+    pkt[i].originated_from_particlenotgamma = (int_originated_from_particlenotgamma != 0);
 
     sscanf(linepos, "%g%n", &pkt[i].trueemissionvelocity, &offset);
     linepos += offset;

@@ -271,51 +271,13 @@ static double nucdecayenergytotal(int z, int a)
   double endecay = 0.;
   endecay += nuclides[get_nuc_index(z, a)].endecay_gamma;
   endecay += nuclides[get_nuc_index(z, a)].endecay_positron;
+  endecay += nuclides[get_nuc_index(z, a)].endecay_electron;
   endecay += nuclides[get_nuc_index(z, a)].endecay_alpha;
   return endecay;
 }
 
 
-__host__ __device__
-double nucdecayenergy(int z, int a, int decaytype, bool includegamma)
-// energy release per decay [erg]
-{
-  assert_always(nuc_exists(z, a));
-  double endecay = includegamma ? nucdecayenergygamma(z, a) : 0.;
-
-  switch (decaytype)
-  {
-    case DECAYTYPE_ALPHA:
-    {
-      endecay += nucdecayenergyalpha(z, a);
-      break;
-    }
-    case DECAYTYPE_BETAPLUS:
-    {
-      endecay += nucdecayenergypositrons(z, a);
-      break;
-    }
-    case DECAYTYPE_ELECTRONCAPTURE:
-    {
-      break;
-    }
-    case DECAYTYPE_BETAMINUS:
-    {
-      endecay += nucdecayenergypositrons(z, a);
-      break;
-    }
-    case DECAYTYPE_NONE:
-    {
-      endecay += nucdecayenergypositrons(z, a);
-      endecay += nucdecayenergyalpha(z, a);
-      break;
-    }
-  }
-  return endecay;
-}
-
-
-static int nucdecayenergy_particle(const int z_parent, const int a_parent, const int decaytype)
+static int nucdecayenergyparticle(const int z_parent, const int a_parent, const int decaytype)
 // decay energy in the form of kinetic energy of electrons, positrons, or alpha particles,
 // depending on the relevant decay type (but not including neutrinos)
 {
@@ -347,6 +309,19 @@ static int nucdecayenergy_particle(const int z_parent, const int a_parent, const
     }
   }
   return 0.;
+}
+
+
+__host__ __device__
+double nucdecayenergy(int z, int a, int decaytype, bool includegamma)
+// energy release per decay [erg] for decaytype (e.g. DECAYTYPE_BETAPLUS)
+{
+  assert_always(nuc_exists(z, a));
+  double endecay = includegamma ? nucdecayenergygamma(z, a) : 0.;
+
+  endecay += nucdecayenergyparticle(z, a, decaytype);
+
+  return endecay;
 }
 
 
@@ -1277,7 +1252,7 @@ double get_particle_injection_rate_density(const int modelgridindex, const doubl
     {
       const double nucdecayrate = get_nuc_abund(modelgridindex, z, a, t) / get_meanlife(z, a);
       assert_always(nucdecayrate >= 0);
-      dep_sum += nucdecayrate * nucdecayenergy_particle(z, a, decaytype) * rho / nucmass(z, a);
+      dep_sum += nucdecayrate * nucdecayenergyparticle(z, a, decaytype) * rho / nucmass(z, a);
     }
   }
 
@@ -1506,13 +1481,15 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
   // final decaying nuclide at the end of the chain
   const int z = decaychains[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
   const int a = decaychains[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
+  const int decaytype = decaychains[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1];
 
   pkt_ptr->type = TYPE_RADIOACTIVE_PELLET;
   pkt_ptr->pellet_nucindex = get_nuc_index(z, a);
+  pkt_ptr->pellet_decaytype = decaytype;
 
   const double zrand = gsl_rng_uniform(rng);
-  pkt_ptr->originated_from_elecpositronalpha = (zrand >= nucdecayenergygamma(z, a) / (
-    nucdecayenergygamma(z, a) + nucdecayenergypositrons(z, a) + nucdecayenergyalpha(z, a)));
+  pkt_ptr->originated_from_particlenotgamma = (zrand >= nucdecayenergygamma(z, a) / (
+    nucdecayenergygamma(z, a) + nucdecayenergyparticle(z, a, decaytype)));
 }
 
 
