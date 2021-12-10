@@ -1248,13 +1248,17 @@ double get_particle_injection_rate_density(const int modelgridindex, const doubl
   {
     const int z = get_nuc_z(nucindex);
     const int a = get_nuc_a(nucindex);
-    if (get_meanlife(z, a) > 0 && get_nuc_abund(modelgridindex, z, a, t) > 0.)
+    const double abund = get_nuc_abund(modelgridindex, z, a, t);
+    const double en_particles = nucdecayenergyparticle(z, a, decaytype);
+    if (abund > 0. && en_particles > 0.)
     {
-      const double nucdecayrate = get_nuc_abund(modelgridindex, z, a, t) / get_meanlife(z, a);
+      const double nucdecayrate = abund / get_meanlife(z, a);
       assert_always(nucdecayrate >= 0);
-      dep_sum += nucdecayrate * nucdecayenergyparticle(z, a, decaytype) * rho / nucmass(z, a);
+      dep_sum += nucdecayrate * en_particles * rho / nucmass(z, a);
     }
   }
+
+  assert_always(std::isfinite(dep_sum));
 
   return dep_sum;
 }
