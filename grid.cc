@@ -1654,7 +1654,8 @@ static void read_grid_restart_data(const int timestep)
   for (int nts = 0; nts < globals::ntstep; nts++)
   {
     assert_always(fscanf(
-      gridsave_file, "%lg %lg ", &globals::time_step[nts].gamma_dep, &globals::time_step[nts].positron_dep) == 2);
+      gridsave_file, "%lg %lg %lg %lg ", &globals::time_step[nts].gamma_dep, &globals::time_step[nts].positron_dep,
+      &globals::time_step[nts].electron_dep, &globals::time_step[nts].alpha_dep) == 4);
   }
 
   int timestep_in;
@@ -1727,9 +1728,10 @@ void write_grid_restart_data(const int timestep)
   fprintf(gridsave_file, "%d ", globals::nprocs);
   fprintf(gridsave_file, "%d ", get_num_threads());
 
-  for (int i = 0; i < globals::ntstep; i++)
+  for (int nts = 0; nts < globals::ntstep; nts++)
   {
-    fprintf(gridsave_file, "%lg %lg ", globals::time_step[i].gamma_dep, globals::time_step[i].positron_dep);
+    fprintf(gridsave_file, "%lg %lg %lg %lg ", globals::time_step[nts].gamma_dep, globals::time_step[nts].positron_dep,
+            globals::time_step[nts].electron_dep, globals::time_step[nts].alpha_dep);
   }
 
   fprintf(gridsave_file, "%d ", timestep);
