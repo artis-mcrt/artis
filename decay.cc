@@ -1248,7 +1248,7 @@ double get_particle_injection_rate_density(const int modelgridindex, const doubl
   {
     const int z = get_nuc_z(nucindex);
     const int a = get_nuc_a(nucindex);
-    if (get_nuc_abund(modelgridindex, z, a, t) > 0.)
+    if (get_meanlife(z, a) > 0 && get_nuc_abund(modelgridindex, z, a, t) > 0.)
     {
       const double nucdecayrate = get_nuc_abund(modelgridindex, z, a, t) / get_meanlife(z, a);
       assert_always(nucdecayrate >= 0);
