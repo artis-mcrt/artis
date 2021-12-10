@@ -40,7 +40,7 @@ static void update_pellet(
     pkt_ptr->prop_time = tdecay;
     vec_scale(pkt_ptr->pos, tdecay / ts);
 
-    if (pkt_ptr->originated_from_positron) // will decay to non-thermal lepton
+    if (pkt_ptr->originated_from_elecpositronalpha) // will decay to non-thermal lepton
     {
       safeadd(globals::time_step[nts].positron_dep, pkt_ptr->e_cmf);
 
