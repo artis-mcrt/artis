@@ -703,7 +703,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
         nuclides[nucindex].endecay_electron = e_elec_mev * MEV;
         nuclides[nucindex].endecay_gamma = e_gamma_mev * MEV;
         nucindex++;
-        printout("betaminus file: Adding (Z=%d)%s-%d endecay_positron %g endecay_gamma %g tau_s %g\n",
+        printout("betaminus file: Adding (Z=%d)%s-%d endecay_electron %g endecay_gamma %g tau_s %g\n",
                  z, elsymbols[z], a, e_elec_mev, e_gamma_mev, tau_sec);
       }
     }

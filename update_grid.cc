@@ -1296,11 +1296,12 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int my_rank, const int nstart, const int ndo, const int titer, const time_t real_time_start)
 // Subroutine to update the matter quantities in the grid cells at the start
 //   of the new timestep.
-/// m timestep
+/// nts timestep
 {
   const time_t sys_time_start_update_grid = time(NULL);
-  printout("\ntimestep %d: time before update grid %ld (tstart + %ld)\n",
-           nts, sys_time_start_update_grid, sys_time_start_update_grid - real_time_start);
+  printout("\ntimestep %d: time before update grid %ld (tstart + %ld) simtime ts_mid %g\n",
+           nts, sys_time_start_update_grid, sys_time_start_update_grid - real_time_start,
+           globals::time_step[nts].mid / DAY);
 
   #ifndef FORCE_LTE
     #if (!NO_LUT_PHOTOION)
