@@ -236,10 +236,14 @@ static void mpi_reduce_estimators(int my_rank, int nts)
   MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].cmf_lum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].gamma_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].positron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].electron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].alpha_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
   globals::time_step[nts].cmf_lum /= globals::nprocs;
   globals::time_step[nts].gamma_dep /= globals::nprocs;
   globals::time_step[nts].positron_dep /= globals::nprocs;
+  globals::time_step[nts].electron_dep /= globals::nprocs;
+  globals::time_step[nts].alpha_dep /= globals::nprocs;
 
   #if TRACK_ION_STATS
   stats::reduce_estimators();
