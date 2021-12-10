@@ -1248,10 +1248,10 @@ double get_particle_injection_rate_density(const int modelgridindex, const doubl
   {
     const int z = get_nuc_z(nucindex);
     const int a = get_nuc_a(nucindex);
-    const double abund = get_nuc_abund(modelgridindex, z, a, t);
     const double en_particles = nucdecayenergyparticle(z, a, decaytype);
-    if (abund > 0. && en_particles > 0.)
+    if (en_particles > 0.)
     {
+      const double abund = get_nuc_abund(modelgridindex, z, a, t);
       const double nucdecayrate = abund / get_meanlife(z, a);
       assert_always(nucdecayrate >= 0);
       dep_sum += nucdecayrate * en_particles * rho / nucmass(z, a);
