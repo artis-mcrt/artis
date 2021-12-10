@@ -688,7 +688,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
     #ifndef FORCE_LTE
       fprintf(estimators_file, "heating: ff %11.5e bf %11.5e coll %11.5e       dep %11.5e heating_dep/total_dep %.3f\n",
-              heatingcoolingrates->heating_ff, heatingcoolingrates->heating_bf, heatingcoolingrates->heating_collisional, heatingcoolingrates->heating_gamma, heatingcoolingrates->nt_frac_heating);
+              heatingcoolingrates->heating_ff, heatingcoolingrates->heating_bf, heatingcoolingrates->heating_collisional, heatingcoolingrates->heating_dep, heatingcoolingrates->nt_frac_heating);
       fprintf(estimators_file, "cooling: ff %11.5e fb %11.5e coll %11.5e adiabatic %11.5e\n",
               heatingcoolingrates->cooling_ff, heatingcoolingrates->cooling_fb, heatingcoolingrates->cooling_collisional, heatingcoolingrates->cooling_adiabatic);
     #endif
@@ -1296,11 +1296,12 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int my_rank, const int nstart, const int ndo, const int titer, const time_t real_time_start)
 // Subroutine to update the matter quantities in the grid cells at the start
 //   of the new timestep.
-/// m timestep
+/// nts timestep
 {
   const time_t sys_time_start_update_grid = time(NULL);
-  printout("\ntimestep %d: time before update grid %ld (tstart + %ld)\n",
-           nts, sys_time_start_update_grid, sys_time_start_update_grid - real_time_start);
+  printout("\ntimestep %d: time before update grid %ld (tstart + %ld) simtime ts_mid %g days\n",
+           nts, sys_time_start_update_grid, sys_time_start_update_grid - real_time_start,
+           globals::time_step[nts].mid / DAY);
 
   #ifndef FORCE_LTE
     #if (!NO_LUT_PHOTOION)

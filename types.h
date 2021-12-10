@@ -21,6 +21,8 @@ struct time
   double mid; // Mid time in step - computed logarithmically.
   double gamma_dep; // cmf gamma ray energy deposition rate
   double positron_dep; // cmf positron energy deposition rate
+  double electron_dep; // cmf positron energy deposition rate
+  double alpha_dep; // cmf positron energy deposition rate
   double cmf_lum; // cmf luminosity light curve
   int pellet_decays; // Number of pellets that decay in this time step.
 };
@@ -60,7 +62,7 @@ typedef struct heatingcoolingrates
   double heating_collisional;
   double heating_bf;
   double heating_ff;
-  double heating_gamma;
+  double heating_dep;
   double nt_frac_heating; // = heatingrates.gamma / total_gamma_deposition, = get_nt_frac_heating(modelgridindex) when T_e solver runs
 } heatingcoolingrates_t;
 
@@ -170,7 +172,8 @@ typedef struct packet
                    /// Pos, dir, where, e_rf, nu_rf should all remain set at the exit point.
   int scat_count;  /// WHAT'S THAT???
   int number;     /// A unique number to identify which packet caused potential troubles.
-  bool originated_from_elecpositronalpha; // first-non-pellet packet type was positron
+  bool originated_from_particlenotgamma;    // first-non-pellet packet type was gamma
+  int pellet_decaytype;           // index into decay::decaytypes
   int pellet_nucindex;           // nuclide index of the decaying species
   float trueemissionvelocity;
   mastate_t mastate;

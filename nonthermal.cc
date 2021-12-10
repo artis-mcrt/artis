@@ -693,11 +693,20 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   const double gamma_deposition = globals::rpkt_emiss[modelgridindex] * 1.e20 * FOURPI;
 
   const double tmid = globals::time_step[timestep].mid;
-  const double positron_deposition = decay::get_positroninjection_rate_density(modelgridindex, tmid);
 
-  deposition_rate_density[modelgridindex] = gamma_deposition + positron_deposition;
+  const double positron_deposition = decay::get_particle_injection_rate_density(
+    modelgridindex, tmid, decay::DECAYTYPE_BETAPLUS);
 
-  printout("deposition rates [eV/s/cm^3] for mgi %d timestep %d: gamma %8.2e (Monte Carlo), positron %8.2e (analytic t_mid)\n", modelgridindex, timestep, gamma_deposition / EV, positron_deposition / EV);
+  const double electron_deposition = decay::get_particle_injection_rate_density(
+    modelgridindex, tmid, decay::DECAYTYPE_BETAMINUS);
+
+  const double alpha_deposition = decay::get_particle_injection_rate_density(
+    modelgridindex, tmid, decay::DECAYTYPE_ALPHA);
+
+  deposition_rate_density[modelgridindex] = (
+    gamma_deposition + positron_deposition + electron_deposition + alpha_deposition);
+
+  printout("deposition rates [eV/s/cm^3] for mgi %d timestep %d: gamma %8.2e (Monte Carlo), positron %8.2e elec %8.2e alpha %8.2e (analytic t_mid)\n", modelgridindex, timestep, gamma_deposition / EV, positron_deposition / EV, electron_deposition / EV, alpha_deposition / EV);
 
   deposition_rate_density_timestep[modelgridindex] = timestep;
 }

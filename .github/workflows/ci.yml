@@ -2,10 +2,8 @@ name: CI
 
 on:
   push:
-    branches:
-    - nebular*
-    - mpi*
-    - main
+    branches-ignore:
+    - 'classic*'
   # pull_request:
   #   branches:
   #   - nebular*

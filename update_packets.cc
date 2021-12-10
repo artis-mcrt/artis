@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "decay.h"
 #include "gamma.h"
 #include "grid.h"
 #include "kpkt.h"
@@ -40,9 +41,20 @@ static void update_pellet(
     pkt_ptr->prop_time = tdecay;
     vec_scale(pkt_ptr->pos, tdecay / ts);
 
-    if (pkt_ptr->originated_from_elecpositronalpha) // will decay to non-thermal lepton
+    if (pkt_ptr->originated_from_particlenotgamma) // will decay to non-thermal lepton
     {
-      safeadd(globals::time_step[nts].positron_dep, pkt_ptr->e_cmf);
+      if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_BETAPLUS)
+      {
+        safeadd(globals::time_step[nts].positron_dep, pkt_ptr->e_cmf);
+      }
+      else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_BETAMINUS)
+      {
+        safeadd(globals::time_step[nts].electron_dep, pkt_ptr->e_cmf);
+      }
+      else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA)
+      {
+        safeadd(globals::time_step[nts].alpha_dep, pkt_ptr->e_cmf);
+      }
 
       pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -10;

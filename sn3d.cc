@@ -236,10 +236,14 @@ static void mpi_reduce_estimators(int my_rank, int nts)
   MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].cmf_lum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].gamma_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].positron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].electron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].alpha_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
   globals::time_step[nts].cmf_lum /= globals::nprocs;
   globals::time_step[nts].gamma_dep /= globals::nprocs;
   globals::time_step[nts].positron_dep /= globals::nprocs;
+  globals::time_step[nts].electron_dep /= globals::nprocs;
+  globals::time_step[nts].alpha_dep /= globals::nprocs;
 
   #if TRACK_ION_STATS
   stats::reduce_estimators();
@@ -500,12 +504,21 @@ static bool do_timestep(
     if (my_rank == 0)
     {
       FILE *dep_file = fopen_required("deposition.out", "w");
+      fprintf(dep_file, "#ts tmid_days gammadep_Lsun positrondep_Lsun total_dep_Lsun elecdep_Lsun alphadep_Lsun\n");
       for (int i = 0; i <= nts; i++)
       {
-        fprintf(dep_file, "%g %g %g %g\n", globals::time_step[i].mid / DAY,
+        const double total_dep = (
+          globals::time_step[i].gamma_dep + globals::time_step[i].positron_dep +
+          globals::time_step[i].electron_dep + globals::time_step[i].alpha_dep);
+
+        fprintf(dep_file, "%d %g %g %g %g %g %g\n",
+                i, globals::time_step[i].mid / DAY,
                 globals::time_step[i].gamma_dep / globals::time_step[i].width / LSUN,
                 globals::time_step[i].positron_dep / globals::time_step[i].width / LSUN,
-                (globals::time_step[i].gamma_dep + globals::time_step[i].positron_dep) / globals::time_step[i].width / LSUN);
+                total_dep / globals::time_step[i].width / LSUN,
+                globals::time_step[i].electron_dep / globals::time_step[i].width / LSUN,
+                globals::time_step[i].alpha_dep / globals::time_step[i].width / LSUN
+        );
       }
       fclose(dep_file);
     }

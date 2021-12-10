@@ -2242,6 +2242,8 @@ void time_init(void)
   {
     globals::time_step[n].pellet_decays = 0;
     globals::time_step[n].positron_dep = 0.;
+    globals::time_step[n].electron_dep = 0.;
+    globals::time_step[n].alpha_dep = 0.;
     globals::time_step[n].gamma_dep = 0.0;
     globals::time_step[n].cmf_lum = 0.0;
   }

@@ -385,12 +385,12 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
   if (globals::do_rlc_est == 3)
   {
     const double nt_frac_heating = nonthermal::get_nt_frac_heating(modelgridindex);
-    heatingcoolingrates->heating_gamma = nonthermal::get_deposition_rate_density(modelgridindex) * nt_frac_heating;
+    heatingcoolingrates->heating_dep = nonthermal::get_deposition_rate_density(modelgridindex) * nt_frac_heating;
     heatingcoolingrates->nt_frac_heating = nt_frac_heating;
   }
   else
   {
-    heatingcoolingrates->heating_gamma = 0.;
+    heatingcoolingrates->heating_dep = 0.;
   }
 
   /// Adiabatic cooling term
@@ -401,7 +401,7 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
   //printout("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
   heatingcoolingrates->cooling_adiabatic = p * dV / V;
 
-  const double total_heating_rate = heatingcoolingrates->heating_ff + heatingcoolingrates->heating_bf + heatingcoolingrates->heating_collisional + heatingcoolingrates->heating_gamma;
+  const double total_heating_rate = heatingcoolingrates->heating_ff + heatingcoolingrates->heating_bf + heatingcoolingrates->heating_collisional + heatingcoolingrates->heating_dep;
   const double total_coolingrate = heatingcoolingrates->cooling_ff + heatingcoolingrates->cooling_fb + heatingcoolingrates->cooling_collisional + heatingcoolingrates->cooling_adiabatic;
 
   return total_heating_rate - total_coolingrate; // - 0.01*(heatingrates_thisthread->bf+coolingrates[tid].fb)/2;
