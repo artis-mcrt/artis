@@ -277,7 +277,7 @@ static double nucdecayenergytotal(int z, int a)
 }
 
 
-static int nucdecayenergyparticle(const int z_parent, const int a_parent, const int decaytype)
+static double nucdecayenergyparticle(const int z_parent, const int a_parent, const int decaytype)
 // decay energy in the form of kinetic energy of electrons, positrons, or alpha particles,
 // depending on the relevant decay type (but not including neutrinos)
 {
