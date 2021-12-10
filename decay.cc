@@ -32,7 +32,8 @@ struct nuclide {
   int z;                     // atomic number
   int a;                     // mass number
   double meanlife;           // mean lifetime before decay [s]
-  double endecay_positrons;  // average energy per decay in kinetic energy of emitted positrons [erg]
+  double endecay_electron;  // average energy per decay in kinetic energy of emitted positrons [erg]
+  double endecay_positron;  // average energy per decay in kinetic energy of emitted positrons [erg]
   double endecay_gamma;      // average energy per decay in gamma rays [erg]
   double endecay_alpha;      // average energy per decay in kinetic energy of alpha particles [erg]
   double branchprobs[DECAYTYPE_COUNT];
@@ -148,7 +149,7 @@ static int decay_daughter_z(const int z_parent, const int a_parent, int decaytyp
   assert_always(nuc_exists(z_parent, a_parent));
   assert_always(decaytype >= 0);
   assert_always(decaytype < DECAYTYPE_COUNT);
-  // electron capture/beta plus decay only for now
+
   switch (decaytype)
   {
     case DECAYTYPE_ALPHA:
@@ -243,7 +244,15 @@ __host__ __device__
 static double nucdecayenergypositrons(int z, int a)
 // average energy (erg) per decay in the form of positron kinetic energy [erg]
 {
-  return nuclides[get_nuc_index(z, a)].endecay_positrons;
+  return nuclides[get_nuc_index(z, a)].endecay_positron;
+}
+
+
+__host__ __device__
+static double nucdecayenergyelectrons(int z, int a)
+// average energy (erg) per decay in the form of positron kinetic energy [erg]
+{
+  return nuclides[get_nuc_index(z, a)].endecay_electron;
 }
 
 
@@ -261,7 +270,7 @@ static double nucdecayenergytotal(int z, int a)
 {
   double endecay = 0.;
   endecay += nuclides[get_nuc_index(z, a)].endecay_gamma;
-  endecay += nuclides[get_nuc_index(z, a)].endecay_positrons;
+  endecay += nuclides[get_nuc_index(z, a)].endecay_positron;
   endecay += nuclides[get_nuc_index(z, a)].endecay_alpha;
   return endecay;
 }
@@ -303,6 +312,41 @@ double nucdecayenergy(int z, int a, int decaytype, bool includegamma)
     }
   }
   return endecay;
+}
+
+
+static int nucdecayenergy_particle(const int z_parent, const int a_parent, const int decaytype)
+// decay energy in the form of kinetic energy of electrons, positrons, or alpha particles,
+// depending on the relevant decay type (but not including neutrinos)
+{
+  assert_always(nuc_exists(z_parent, a_parent));
+  assert_always(decaytype >= 0);
+  assert_always(decaytype < DECAYTYPE_COUNT);
+
+  switch (decaytype)
+  {
+    case DECAYTYPE_ALPHA:
+    {
+      return nucdecayenergyalpha(z_parent, a_parent);
+    }
+    case DECAYTYPE_BETAPLUS:
+    {
+      return nucdecayenergypositrons(z_parent, a_parent);
+    }
+    case DECAYTYPE_ELECTRONCAPTURE:
+    {
+      return 0.;
+    }
+    case DECAYTYPE_BETAMINUS:
+    {
+      return nucdecayenergyelectrons(z_parent, a_parent);
+    }
+    case DECAYTYPE_NONE:
+    {
+      return 0.;
+    }
+  }
+  return 0.;
 }
 
 
@@ -575,7 +619,8 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
     nuclides[nucindex].z = -1;
     nuclides[nucindex].a = -1;
     nuclides[nucindex].meanlife = -1;
-    nuclides[nucindex].endecay_positrons = 0.;
+    nuclides[nucindex].endecay_electron = 0.;
+    nuclides[nucindex].endecay_positron = 0.;
     nuclides[nucindex].endecay_gamma = 0.;
     nuclides[nucindex].endecay_alpha = 0.;
     for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
@@ -589,7 +634,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
   nuclides[nucindex].z = 28; // Ni57
   nuclides[nucindex].a = 57;
   nuclides[nucindex].meanlife = 51.36 * 60;
-  nuclides[nucindex].endecay_positrons = 0.354 * MEV * 0.436;
+  nuclides[nucindex].endecay_positron = 0.354 * MEV * 0.436;
   nuclides[nucindex].branchprobs[DECAYTYPE_BETAPLUS] = 1.;
   // nuclides[nucindex].branchprobs[DECAYTYPE_BETAPLUS] = 0.436;
   // nuclides[nucindex].branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.436;
@@ -604,7 +649,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
   nuclides[nucindex].z = 27; // Co56
   nuclides[nucindex].a = 56;
   nuclides[nucindex].meanlife = 113.7 * DAY;
-  nuclides[nucindex].endecay_positrons = 0.63 * MEV * 0.19;
+  nuclides[nucindex].endecay_positron = 0.63 * MEV * 0.19;
   nuclides[nucindex].branchprobs[DECAYTYPE_BETAPLUS] = 1.;
   // nuclides[nucindex].branchprobs[DECAYTYPE_BETAPLUS] = 0.19;
   // nuclides[nucindex].branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 0.81;
@@ -624,7 +669,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
   nuclides[nucindex].z = 23; // V48
   nuclides[nucindex].a = 48;
   nuclides[nucindex].meanlife = 23.0442 * DAY;
-  nuclides[nucindex].endecay_positrons = 0.290 * MEV * 0.499;
+  nuclides[nucindex].endecay_positron = 0.290 * MEV * 0.499;
   nuclides[nucindex].branchprobs[DECAYTYPE_BETAPLUS] = 1.;
   nucindex++;
 
@@ -680,10 +725,10 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
         nuclides[nucindex].a = a;
         nuclides[nucindex].meanlife = tau_sec;
         nuclides[nucindex].branchprobs[DECAYTYPE_BETAMINUS] = 1.;
-        nuclides[nucindex].endecay_positrons = e_elec_mev * MEV;
+        nuclides[nucindex].endecay_electron = e_elec_mev * MEV;
         nuclides[nucindex].endecay_gamma = e_gamma_mev * MEV;
         nucindex++;
-        printout("betaminus file: Adding (Z=%d)%s-%d endecay_positrons %g endecay_gamma %g tau_s %g\n",
+        printout("betaminus file: Adding (Z=%d)%s-%d endecay_positron %g endecay_gamma %g tau_s %g\n",
                  z, elsymbols[z], a, e_elec_mev, e_gamma_mev, tau_sec);
       }
     }
@@ -724,7 +769,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
           alphanucindex = get_nuc_index(z, a);
           // printout("compare z %d a %d e_gamma_mev1 %g e_gamma_mev2 %g\n", z, a, nucdecayenergygamma(z, a) / MEV, e_gamma_mev);
           // printout("compare z %d a %d tau1 %g tau2 %g\n", z, a, get_meanlife(z, a), tau_sec);
-          // printout("compare z %d a %d e_beta_mev1 %g e_beta_mev2 %g\n", z, a, nuclides[get_nuc_index(z, a)].endecay_positrons / MEV, e_beta_mev);
+          // printout("compare z %d a %d e_beta_mev1 %g e_beta_mev2 %g\n", z, a, nuclides[get_nuc_index(z, a)].endecay_positron / MEV, e_beta_mev);
         }
         else
         {
@@ -1218,26 +1263,25 @@ void free_chain_energy_per_mass(void)
 
 
 __host__ __device__
-double get_positroninjection_rate_density(const int modelgridindex, const double t)
-// energy release rate from positrons in erg/s/cm^3
+double get_particle_injection_rate_density(const int modelgridindex, const double t, const int decaytype)
+// energy release rate from positrons, electrons, and alpha particles in erg/s/cm^3
 {
   const double rho = grid::get_rho(modelgridindex);
 
-  double pos_dep_sum = 0.;
+  double dep_sum = 0.;
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
     const int z = get_nuc_z(nucindex);
     const int a = get_nuc_a(nucindex);
-    if (nucdecayenergypositrons(z, a) > 0. && get_nuc_abund(modelgridindex, z, a, t) > 0.)
+    if (get_nuc_abund(modelgridindex, z, a, t) > 0.)
     {
       const double nucdecayrate = get_nuc_abund(modelgridindex, z, a, t) / get_meanlife(z, a);
-      // printout("positrons coming from %s-%d en_e+ %g abund %g nucdecayrate %g\n", get_elname(z), a, nucdecayenergypositrons(z, a), get_nuc_abund(modelgridindex, z, a, t), nucdecayrate);
       assert_always(nucdecayrate >= 0);
-      pos_dep_sum += nucdecayrate * nucdecayenergypositrons(z, a) * rho / nucmass(z, a);
+      dep_sum += nucdecayrate * nucdecayenergy_particle(z, a, decaytype) * rho / nucmass(z, a);
     }
   }
 
-  return pos_dep_sum;
+  return dep_sum;
 }
 
 
