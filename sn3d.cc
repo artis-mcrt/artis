@@ -504,15 +504,15 @@ static bool do_timestep(
     if (my_rank == 0)
     {
       FILE *dep_file = fopen_required("deposition.out", "w");
-      fprintf(dep_file, "#tmid_days gammadep_Lsun positrondep_Lsun total_dep_Lsun elecdep_Lsun alphadep_Lsun\n");
+      fprintf(dep_file, "#ts tmid_days gammadep_Lsun positrondep_Lsun total_dep_Lsun elecdep_Lsun alphadep_Lsun\n");
       for (int i = 0; i <= nts; i++)
       {
         const double total_dep = (
           globals::time_step[i].gamma_dep + globals::time_step[i].positron_dep +
           globals::time_step[i].electron_dep + globals::time_step[i].alpha_dep);
 
-        fprintf(dep_file, "%g %g %g %g %g %g\n",
-                globals::time_step[i].mid / DAY,
+        fprintf(dep_file, "%d %g %g %g %g %g %g\n",
+                i, globals::time_step[i].mid / DAY,
                 globals::time_step[i].gamma_dep / globals::time_step[i].width / LSUN,
                 globals::time_step[i].positron_dep / globals::time_step[i].width / LSUN,
                 total_dep / globals::time_step[i].width / LSUN,
