@@ -69,7 +69,7 @@ void packet_init(int my_rank, PKT *pkt)
   const double e0_tinf = etot_tinf / globals::npkts;
   printout("packet e0 (t_0 to t_inf) %g erg\n", e0_tinf);
 
-  decay::setup_chain_energy_per_mass();
+  decay::setup_decaypath_energy_per_mass();
 
   // Need to get a normalisation factor.
   double norm = 0.0;
@@ -154,7 +154,7 @@ void packet_init(int my_rank, PKT *pkt)
     place_pellet(e0, cellindex, n, &pkt[n]);
   }
 
-  decay::free_chain_energy_per_mass(); // will no longer be needed after packets are set up
+  decay::free_decaypath_energy_per_mass(); // will no longer be needed after packets are set up
 
   double e_cmf_total = 0.;
   for (int n = 0; n < globals::npkts; n++)
