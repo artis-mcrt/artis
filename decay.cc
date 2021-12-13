@@ -718,7 +718,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
       double e_beta_mev = 0.;
       std::stringstream(line) >> a >> z >> branch_alpha >> branch_beta >> halflife >> Q_total_alphadec >> Q_total_betadec >> e_alpha_mev >> e_gamma_mev >> e_beta_mev;
 
-      bool keeprow = true;
+      bool keeprow = ((branch_alpha > 0. || branch_beta > 0.) && halflife > 0.);
       // for (int i = 0; i < (int) custom_alist.size(); i++)
       // {
       //   if (custom_alist[i] == a)
