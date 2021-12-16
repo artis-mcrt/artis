@@ -39,8 +39,7 @@ struct nuclide {
   double branchprobs[DECAYTYPE_COUNT];  // branching probabilities of each decay type
 };
 
-struct nuclide *nuclides = NULL;
-int num_nuclides = 0;
+std::vector<struct nuclide> nuclides;
 
 // a decay path follows the contribution from an initial nuclear abundance
 // to another (daughter of last nuclide in decaypath) via decays
@@ -63,8 +62,8 @@ static double *decaypath_energy_per_mass = NULL;
 __host__ __device__
 int get_num_nuclides(void)
 {
-  assert_always(num_nuclides > 0);
-  return num_nuclides;
+  assert_always(nuclides.size() > 0);
+  return nuclides.size();
 }
 
 
@@ -98,7 +97,6 @@ int get_nuc_index(int z, int a)
 // get the nuclide array index from the atomic number and mass number
 {
   assert_always(get_num_nuclides() > 0);
-  assert_always(nuclides != NULL);
 
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
@@ -118,7 +116,6 @@ static bool nuc_exists(int z, int a)
 // check if nuclide exists in the simulation
 {
   assert_always(get_num_nuclides() > 0);
-  assert_always(nuclides != NULL);
 
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
@@ -594,90 +591,84 @@ int get_nucstring_a(const char *strnuc)
 __host__ __device__
 void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist) // std::vector<std::string> nuclides
 {
-  // all decays are currently assumed to be electron-capture or beta+ (Z -> Z - 1)
-
   assert_always(custom_zlist.size() == custom_alist.size());
 
-  num_nuclides = 10240;  // todo: remove limit
-  nuclides = (struct nuclide *) malloc(num_nuclides * sizeof(struct nuclide));
-  assert_always(nuclides != NULL);
+  // num_nuclides = 10240;  // todo: remove limit
+  // nuclides = (struct nuclide *) malloc(num_nuclides * sizeof(struct nuclide));
+  // assert_always(nuclides != NULL);
 
-  for (int nucindex = 0; nucindex < num_nuclides; nucindex++)
+  struct nuclide default_nuclide;
+  default_nuclide.z = -1;
+  default_nuclide.a = -1;
+  default_nuclide.meanlife = -1;
+  default_nuclide.endecay_electron = 0.;
+  default_nuclide.endecay_positron = 0.;
+  default_nuclide.endecay_gamma = 0.;
+  default_nuclide.endecay_alpha = 0.;
+  for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
   {
-    nuclides[nucindex].z = -1;
-    nuclides[nucindex].a = -1;
-    nuclides[nucindex].meanlife = -1;
-    nuclides[nucindex].endecay_electron = 0.;
-    nuclides[nucindex].endecay_positron = 0.;
-    nuclides[nucindex].endecay_gamma = 0.;
-    nuclides[nucindex].endecay_alpha = 0.;
-    for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
-    {
-      nuclides[nucindex].branchprobs[dectypeindex] = 0.;
-    }
+    default_nuclide.branchprobs[dectypeindex] = 0.;
   }
 
-  int nucindex = 0;
+  nuclides.push_back(default_nuclide);
+  nuclides.back().z = 28; // Ni57
+  nuclides.back().a = 57;
+  nuclides.back().meanlife = 51.36 * 60;
+  nuclides.back().endecay_positron = 0.354 * MEV * 0.436;
+  nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 1.;
+  // nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.436;
+  // nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.436;
 
-  nuclides[nucindex].z = 28; // Ni57
-  nuclides[nucindex].a = 57;
-  nuclides[nucindex].meanlife = 51.36 * 60;
-  nuclides[nucindex].endecay_positron = 0.354 * MEV * 0.436;
-  nuclides[nucindex].branchprobs[DECAYTYPE_BETAPLUS] = 1.;
-  // nuclides[nucindex].branchprobs[DECAYTYPE_BETAPLUS] = 0.436;
-  // nuclides[nucindex].branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.436;
-  nucindex++;
+  nuclides.push_back(default_nuclide);
+  nuclides.back().z = 28; // Ni56
+  nuclides.back().a = 56;
+  nuclides.back().meanlife = 8.80 * DAY;
+  nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
 
-  nuclides[nucindex].z = 28; // Ni56
-  nuclides[nucindex].a = 56;
-  nuclides[nucindex].meanlife = 8.80 * DAY;
-  nuclides[nucindex].branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
-  nucindex++;
+  nuclides.push_back(default_nuclide);
+  nuclides.back().z = 27; // Co56
+  nuclides.back().a = 56;
+  nuclides.back().meanlife = 113.7 * DAY;
+  nuclides.back().endecay_positron = 0.63 * MEV * 0.19;
+  nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 1.;
+  // nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.19;
+  // nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 0.81;
 
-  nuclides[nucindex].z = 27; // Co56
-  nuclides[nucindex].a = 56;
-  nuclides[nucindex].meanlife = 113.7 * DAY;
-  nuclides[nucindex].endecay_positron = 0.63 * MEV * 0.19;
-  nuclides[nucindex].branchprobs[DECAYTYPE_BETAPLUS] = 1.;
-  // nuclides[nucindex].branchprobs[DECAYTYPE_BETAPLUS] = 0.19;
-  // nuclides[nucindex].branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 0.81;
-  nucindex++;
+  nuclides.push_back(default_nuclide);
+  nuclides.back().z = -1;  // FAKE_GAM_LINE_ID
+  nuclides.back().a = -1;
+  nuclides.back().branchprobs[DECAYTYPE_NONE] = 1.;
 
-  nuclides[nucindex].z = -1;  // FAKE_GAM_LINE_ID
-  nuclides[nucindex].a = -1;
-  nuclides[nucindex].branchprobs[DECAYTYPE_NONE] = 1.;
-  nucindex++;
+  nuclides.push_back(default_nuclide);
+  nuclides.back().z = 24; // Cr48
+  nuclides.back().a = 48;
+  nuclides.back().meanlife = 1.29602 * DAY;
+  nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
 
-  nuclides[nucindex].z = 24; // Cr48
-  nuclides[nucindex].a = 48;
-  nuclides[nucindex].meanlife = 1.29602 * DAY;
-  nuclides[nucindex].branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
-  nucindex++;
+  nuclides.push_back(default_nuclide);
+  nuclides.back().z = 23; // V48
+  nuclides.back().a = 48;
+  nuclides.back().meanlife = 23.0442 * DAY;
+  nuclides.back().endecay_positron = 0.290 * MEV * 0.499;
+  nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 1.;
 
-  nuclides[nucindex].z = 23; // V48
-  nuclides[nucindex].a = 48;
-  nuclides[nucindex].meanlife = 23.0442 * DAY;
-  nuclides[nucindex].endecay_positron = 0.290 * MEV * 0.499;
-  nuclides[nucindex].branchprobs[DECAYTYPE_BETAPLUS] = 1.;
-  nucindex++;
+  nuclides.push_back(default_nuclide);
+  nuclides.back().z = 27; // Co57
+  nuclides.back().a = 57;
+  nuclides.back().meanlife = 392.03 * DAY;
+  nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
 
-  nuclides[nucindex].z = 27; // Co57
-  nuclides[nucindex].a = 57;
-  nuclides[nucindex].meanlife = 392.03 * DAY;
-  nuclides[nucindex].branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
-  nucindex++;
+  nuclides.push_back(default_nuclide);
+  nuclides.back().z = 26; // Fe52
+  nuclides.back().a = 52;
+  nuclides.back().meanlife = 0.497429 * DAY;
+  nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
 
-  nuclides[nucindex].z = 26; // Fe52
-  nuclides[nucindex].a = 52;
-  nuclides[nucindex].meanlife = 0.497429 * DAY;
-  nuclides[nucindex].branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
-  nucindex++;
-
-  nuclides[nucindex].z = 25; // Mn52
-  nuclides[nucindex].a = 52;
-  nuclides[nucindex].meanlife = 0.0211395 * DAY;
-  nuclides[nucindex].branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
-  nucindex++;
+  nuclides.push_back(default_nuclide);
+  nuclides.back().z = 25; // Mn52
+  nuclides.back().a = 52;
+  nuclides.back().meanlife = 0.0211395 * DAY;
+  nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
 
   if (custom_alist.size() > 0)
   {
@@ -709,15 +700,16 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
       if (keeprow)
       {
         assert_always(!nuc_exists(z, a));
-        nuclides[nucindex].z = z;
-        nuclides[nucindex].a = a;
-        nuclides[nucindex].meanlife = tau_sec;
-        nuclides[nucindex].branchprobs[DECAYTYPE_BETAMINUS] = 1.;
-        nuclides[nucindex].endecay_electron = e_elec_mev * MEV;
-        nuclides[nucindex].endecay_gamma = e_gamma_mev * MEV;
-        nucindex++;
+        nuclides.push_back(default_nuclide);
+        nuclides.back().z = z;
+        nuclides.back().a = a;
+        nuclides.back().meanlife = tau_sec;
+        nuclides.back().branchprobs[DECAYTYPE_BETAMINUS] = 1.;
+        nuclides.back().endecay_electron = e_elec_mev * MEV;
+        nuclides.back().endecay_gamma = e_gamma_mev * MEV;
         printout("betaminus file: Adding (Z=%d)%s-%d endecay_electron %g endecay_gamma %g tau_s %g\n",
-                 z, elsymbols[z], a, e_elec_mev, e_gamma_mev, tau_sec);
+                 z, get_elname(z), a, e_elec_mev, e_gamma_mev, tau_sec);
+        assert_always(e_elec_mev > 0);
       }
     }
     fbetaminus.close();
@@ -761,12 +753,12 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
         }
         else
         {
-          nuclides[nucindex].z = z;
-          nuclides[nucindex].a = a;
-          nuclides[nucindex].meanlife = tau_sec;
-          nuclides[alphanucindex].endecay_gamma = e_gamma_mev * MEV;
-          alphanucindex = nucindex;
-          nucindex++;
+          nuclides.push_back(default_nuclide);
+          nuclides.back().z = z;
+          nuclides.back().a = a;
+          nuclides.back().meanlife = tau_sec;
+          nuclides.back().endecay_gamma = e_gamma_mev * MEV;
+          alphanucindex = nuclides.size() - 1;
         }
         nuclides[alphanucindex].endecay_alpha = e_alpha_mev * MEV;
         nuclides[alphanucindex].branchprobs[DECAYTYPE_BETAMINUS] = branch_beta;
@@ -785,16 +777,12 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
     if (!nuc_exists(z, a))
     {
       printout("Adding Z %d A %d with no decay data (assuming stable)\n", z, a);
-      nuclides[nucindex].z = z;
-      nuclides[nucindex].a = a;
-      nuclides[nucindex].meanlife = -1;
-      nucindex++;
+      nuclides.push_back(default_nuclide);
+      nuclides.back().z = z;
+      nuclides.back().a = a;
+      nuclides.back().meanlife = -1;
     }
   }
-
-  // shrink over-allocated array
-  assert_always(nucindex <= num_nuclides);
-  num_nuclides = nucindex;
 
   printout("init_nuclides: num_nuclides %d\n", get_num_nuclides());
 
@@ -1529,7 +1517,6 @@ void cleanup(void)
     free(decaypaths[decaypathindex].z);
     free(decaypaths[decaypathindex].a);
   }
-  free(nuclides);
 }
 
 
