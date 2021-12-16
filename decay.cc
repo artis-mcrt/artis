@@ -65,14 +65,9 @@ int get_num_nuclides(void)
 }
 
 
-static void printout_nuclidename(const int z, const int a)
-{
-  printout("(Z=%d)%s-%d", z, elsymbols[z], a);
-}
-
-
 const char *get_elname(const int z)
 {
+  assert_always(z < 119);
   return elsymbols[z];
 }
 
@@ -130,6 +125,28 @@ static bool nuc_exists(int z, int a)
     }
   }
   return false;
+}
+
+
+static void printout_nuclidename(const int z, const int a)
+{
+  printout("(Z=%d)%s-%d", z, get_elname(z), a);
+}
+
+static void printout_nuclidemeanlife(const int z, const int a)
+{
+  if (nuc_exists(z, a) && get_meanlife(z, a) > 0.)
+  {
+    printout("(tau %.1es)", get_meanlife(z, a));
+  }
+  else if (nuc_exists(z, a))
+  {
+    printout("(stable,exists)");
+  }
+  else
+  {
+    printout("(stable,offnet)");
+  }
 }
 
 
@@ -392,11 +409,10 @@ static void printout_decaytype(const int decaytype)
 
 static void printout_decaypath(const int decaypathindex)
 {
-  if (decaypaths.size() > 0)
-  {
-    printout(" decay path %d: ", decaypathindex);
-    printout_nuclidename(decaypaths[decaypathindex].z[0], decaypaths[decaypathindex].a[0]);
-  }
+  assert_always(decaypaths.size() > 0);
+  printout(" decaypath %d: ", decaypathindex);
+  printout_nuclidename(decaypaths[decaypathindex].z[0], decaypaths[decaypathindex].a[0]);
+  printout_nuclidemeanlife(decaypaths[decaypathindex].z[0], decaypaths[decaypathindex].a[0]);
 
   for (int i = 1; i < get_decaypathlength(decaypathindex); i++)
   {
@@ -404,6 +420,7 @@ static void printout_decaypath(const int decaypathindex)
     printout_decaytype(decaypaths[decaypathindex].decaytypes[i - 1]);
     printout(" -> ");
     printout_nuclidename(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i]);
+    printout_nuclidemeanlife(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i]);
   }
   const int last_z = decaypaths[decaypathindex].z[get_decaypathlength(decaypathindex)-1];
   const int last_a = decaypaths[decaypathindex].a[get_decaypathlength(decaypathindex)-1];
@@ -414,12 +431,13 @@ static void printout_decaypath(const int decaypathindex)
   printout_decaytype(last_decaytype);
   printout(" -> ");
   printout_nuclidename(end_z, end_a);
+  printout_nuclidemeanlife(end_z, end_a);
 
   printout("\n");
 }
 
 
-static void extend_lastdecaychain(void)
+static void extend_lastdecaypath(void)
 {
   const int startdecaypathindex = decaypaths.size() - 1;
   const int last_z = decaypaths[startdecaypathindex].z[get_decaypathlength(startdecaypathindex) - 1];
@@ -459,13 +477,13 @@ static void extend_lastdecaychain(void)
       decaypaths[lastindex].a[decaypaths[lastindex].pathlength - 1] = daughter_a;
       decaypaths[lastindex].decaytypes[decaypaths[lastindex].pathlength - 1] = dectypeindex2;
 
-      extend_lastdecaychain();
+      extend_lastdecaypath();
     }
   }
 }
 
 
-static bool compare_chains(struct decaypath &d1, struct decaypath &d2)
+static bool compare_decaypaths(struct decaypath &d1, struct decaypath &d2)
 // true if d1 < d2
 // order the chains in the same way as when the search moved up from the descendant
 // instead of down from the ancestor, for ease of test comparsion
@@ -504,7 +522,7 @@ static bool compare_chains(struct decaypath &d1, struct decaypath &d2)
 }
 
 
-static void find_chains(void)
+static void find_decaypaths(void)
 {
   for (int startnucindex = 0; startnucindex < get_num_nuclides(); startnucindex++)
   {
@@ -533,11 +551,11 @@ static void find_chains(void)
       decaypaths[lastindex].a[0] = a;
       decaypaths[lastindex].decaytypes[0] = dectypeindex;
 
-      extend_lastdecaychain();  // take this single step chain and find all descendants
+      extend_lastdecaypath();  // take this single step chain and find all descendants
     }
   }
 
-  std::sort(decaypaths.begin(), decaypaths.end(), compare_chains);
+  std::sort(decaypaths.begin(), decaypaths.end(), compare_decaypaths);
 }
 
 
@@ -549,7 +567,7 @@ int get_nucstring_z(const char *strnuc)
 
   for (int z = 1; z < 110; z++)
   {
-    if (strcmp(elcode.c_str(), elsymbols[z]) == 0)  // first to letters match el symbol
+    if (strcmp(elcode.c_str(), get_elname(z)) == 0)  // first to letters match el symbol
     {
       return z;
     }
@@ -751,7 +769,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
         nuclides[alphanucindex].branchprobs[DECAYTYPE_BETAMINUS] = branch_beta;
         nuclides[alphanucindex].branchprobs[DECAYTYPE_ALPHA] = branch_alpha;
         printout("alphadecay file: Adding (Z=%d)%s-%d endecay_alpha %g endecay_gamma %g tau_s %g\n",
-                 z, elsymbols[z], a, e_alpha_mev, e_gamma_mev, tau_sec);
+                 z, get_elname(z), a, e_alpha_mev, e_gamma_mev, tau_sec);
       }
     }
     falpha.close();
@@ -780,7 +798,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
   /// Read in data for gamma ray lines and make a list of them in energy order.
   init_gamma_linelist();
 
-  find_chains();
+  find_decaypaths();
 
   int maxdecaypathlength = 0;
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++)

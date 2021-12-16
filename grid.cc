@@ -1154,7 +1154,7 @@ static void read_1d_model(void)
 
       const int z = decay::get_nucstring_z(token.c_str() + 2); // + 2 skips the 'X_'
       const int a = decay::get_nucstring_a(token.c_str() + 2);
-      printout("Custom nuclide column: '%s' Z %d A %d\n", token.c_str(), z, a);
+      // printout("Custom nuclide column: '%s' Z %d A %d\n", token.c_str(), z, a);
       zlist.push_back(z);
       alist.push_back(a);
     }
