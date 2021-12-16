@@ -32,16 +32,19 @@ struct nuclide {
   int z;                     // atomic number
   int a;                     // mass number
   double meanlife;           // mean lifetime before decay [s]
-  double endecay_electron;  // average energy per decay in kinetic energy of emitted positrons [erg]
-  double endecay_positron;  // average energy per decay in kinetic energy of emitted positrons [erg]
+  double endecay_electron;   // average energy per decay in kinetic energy of emitted electons [erg]
+  double endecay_positron;   // average energy per decay in kinetic energy of emitted positrons [erg]
   double endecay_gamma;      // average energy per decay in gamma rays [erg]
   double endecay_alpha;      // average energy per decay in kinetic energy of alpha particles [erg]
-  double branchprobs[DECAYTYPE_COUNT];
+  double branchprobs[DECAYTYPE_COUNT];  // branching probabilities of each decay type
 };
 
 struct nuclide *nuclides = NULL;
 int num_nuclides = 0;
 
+// a decay path follows the contribution from an initial nuclear abundance
+// to another (daughter of last nuclide in decaypath) via decays
+// every different path within the network is considered, e.g. 56Ni -> 56Co -> 56Fe is separate to 56Ni -> 56Co
 struct decaypath {
   int pathlength;
   int *z;                     // atomic number
