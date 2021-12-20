@@ -3,6 +3,10 @@ if [ -f spec.out ]; then
   xz -v phixsdata_v2.txt transitiondata.txt ratecoeff.dat linestat.out || true
   mkdir packets || true
   mv packets*.out* packets/
-  # xz -v -2 -T 0 packets/packets*.out || true
-  gzip -v --best packets/packets*.out || true
+
+  # gzip -v --best packets/packets*.out || true
+  xz -v --best -T0 packets/packets*.out || true
+
+  find . -name '*.out' -size +1M -exec xz --best -v -T0 {} \;
+  find . -name 'output*.txt' -size +1M -exec xz --best -v -T0 {} \;
 fi
