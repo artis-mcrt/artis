@@ -48,8 +48,8 @@ static inline double get_individ_internal_up_same(
 
   const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
   const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
-  // const double NT = nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
-  const double NT = 0.;
+  const double NT = nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
+  // const double NT = 0.;
 
   return (R + C + NT) * epsilon_current;
 }
