@@ -2097,9 +2097,9 @@ void grid_init(int my_rank)
     double totmassradionuclide_actual = 0.;
     for (int mgi = 0; mgi < get_npts_model(); mgi++)
     {
-      totmassradionuclide_actual += get_modelinitradioabund(mgi, z, a) *get_rhoinit(mgi) * vol_init_modelcell(mgi);
+      totmassradionuclide_actual += get_modelinitradioabund(mgi, z, a) * get_rhoinit(mgi) * vol_init_modelcell(mgi);
     }
-    if (totmassradionuclide_actual >= 0.)
+    if (totmassradionuclide_actual > 0.)
     {
       const double ratio = totmassradionuclide[nucindex] / totmassradionuclide_actual;
       // printout("nuclide %d ratio %g\n", nucindex, ratio);
