@@ -483,7 +483,7 @@ static void extend_lastdecaypath(void)
 }
 
 
-static bool compare_decaypaths(struct decaypath &d1, struct decaypath &d2)
+static bool compare_decaypaths(const struct decaypath &d1, const struct decaypath &d2)
 // true if d1 < d2
 // order the chains in the same way as when the search moved up from the descendant
 // instead of down from the ancestor, for ease of test comparsion
