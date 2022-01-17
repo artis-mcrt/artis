@@ -1705,28 +1705,28 @@ void normalise_nuJ(const int modelgridindex, const double estimator_normfactor_o
 #endif
 
 
-double get_T_R_from_J(const int modelgridindex)
+double get_T_J_from_J(const int modelgridindex)
 {
-  const double T_R = pow(PI / STEBO * J[modelgridindex], 1. / 4.);
-  if (!std::isfinite(T_R))
+  const double T_J = pow(J[modelgridindex] * PI / STEBO, 1. / 4.);
+  if (!std::isfinite(T_J))
   {
-    /// keep old value of T_R
-    printout("[warning] get_T_R_from_J: T_R estimator infinite in cell %d, use value of last timestep\n", modelgridindex);
+    /// keep old value of T_J
+    printout("[warning] get_T_J_from_J: T_J estimator infinite in cell %d, use value of last timestep\n", modelgridindex);
     return grid::get_TR(modelgridindex);
   }
   /// Make sure that T is in the allowed temperature range.
-  else if (T_R > MAXTEMP)
+  else if (T_J > MAXTEMP)
   {
-    printout("[warning] get_T_R_from_J: T_R would be %.1f > MAXTEMP. Clamping to MAXTEMP = %.0f K\n", T_R, MAXTEMP);
+    printout("[warning] get_T_J_from_J: T_J would be %.1f > MAXTEMP. Clamping to MAXTEMP = %.0f K\n", T_J, MAXTEMP);
     return MAXTEMP;
   }
-  else if (T_R < MINTEMP)
+  else if (T_J < MINTEMP)
   {
-    printout("[warning] get_T_R_from_J: T_R would be %.1f < MINTEMP. Clamping to MINTEMP = %.0f K\n", T_R, MINTEMP);
+    printout("[warning] get_T_J_from_J: T_J would be %.1f < MINTEMP. Clamping to MINTEMP = %.0f K\n", T_J, MINTEMP);
     return MINTEMP;
   }
   else
-    return T_R;
+    return T_J;
 }
 
 

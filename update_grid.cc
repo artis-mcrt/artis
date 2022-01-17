@@ -1141,10 +1141,10 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         if (globals::initial_iteration || grid::modelgrid[mgi].thick == 1)
         #endif
         {
-          const double T_R = radfield::get_T_R_from_J(mgi);
-          grid::set_TR(mgi, T_R);
-          grid::set_Te(mgi, T_R);
-          grid::set_TJ(mgi, T_R);
+          const double T_J = radfield::get_T_J_from_J(mgi);
+          grid::set_TR(mgi, T_J);
+          grid::set_Te(mgi, T_J);
+          grid::set_TJ(mgi, T_J);
           grid::set_W(mgi, 1);
 
           #ifndef FORCE_LTE

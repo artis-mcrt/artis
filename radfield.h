@@ -21,7 +21,7 @@ namespace radfield
   __host__ __device__ void set_J_normfactor(int modelgridindex, double normfactor);
   __host__ __device__ void normalise_J(int modelgridindex, double estimator_normfactor_over4pi);
   __host__ __device__ void normalise_nuJ(int modelgridindex, double estimator_normfactor_over4pi);
-  __host__ __device__ double get_T_R_from_J(int modelgridindex);
+  __host__ __device__ double get_T_J_from_J(int modelgridindex);
   __host__ __device__ int get_Jblueindex(int lineindex);
   __host__ __device__ double get_Jb_lu(int modelgridindex, int jblueindex);
   __host__ __device__ int get_Jb_lu_contribcount(int modelgridindex, int jblueindex);
