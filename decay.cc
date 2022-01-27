@@ -302,7 +302,7 @@ static double nucdecayenergytotal(int z, int a)
   endecay += nuclides[get_nuc_index(z, a)].endecay_gamma;
   for (int decaytype = 0; decaytype < DECAYTYPE_COUNT; decaytype++)
   {
-    endecay += nucdecayenergyparticle(z, a, decaytype) * get_nuc_decaybranchprob(z, a, decaytype);
+    endecay += nucdecayenergyparticle(z, a, decaytype);
   }
 
   return endecay;
