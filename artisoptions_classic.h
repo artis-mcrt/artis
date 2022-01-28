@@ -45,7 +45,7 @@ const bool single_ground_level = true; // if false, read from file or autodetect
 // if uniform pellet energies are not used, a uniform decay time distribution is used with scaled packet energies
 #define UNIFORM_PELLET_ENERGIES true
 
-#define DIRECT_COL_HEAT
+// #define DIRECT_COL_HEAT
 // #define NO_INITIAL_PACKETS
 #define RECORD_LINESTAT
 
