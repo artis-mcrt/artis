@@ -734,7 +734,14 @@ static bool lumatrix_is_singular(const gsl_matrix *LU, const int element)
       int ion = -1;
       int level = -1;
       get_ion_level_of_nlte_vector_index(i, element, &ion, &level);
-      printout("NLTE disconnected level: Z=%d ionstage %d level %d\n", get_element(element), get_ionstage(element, ion), level);
+      if (is_nlte(element, ion, level))
+      {
+        printout("NLTE disconnected level: Z=%d ionstage %d level %d\n", get_element(element), get_ionstage(element, ion), level);
+      }
+      else
+      {
+        printout("NLTE disconnected superlevel: Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
+      }
       is_singular = true;
     }
   }
