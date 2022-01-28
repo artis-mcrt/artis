@@ -1024,6 +1024,13 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   }
   else
   {
+    // check calculated NLTE populations are valid
+    for (int index = 0; index < nlte_dimension; index++)
+    {
+      assert_always(std::isfinite(gsl_vector_get(popvec, index)));
+      assert_always(gsl_vector_get(popvec, index) >= 0.);
+    }
+
     // double ion_populations[nions];
     for (int ion = 0; ion < nions; ion++)
     {
