@@ -352,7 +352,7 @@ static void calculate_heating_rates(
   heatingcoolingrates->heating_collisional = C_deexc;
 #else
   /// Collisional heating (from estimators)
-  heatingcoolingrates->heating_collisional = colheatingestimator[modelgridindex];//C_deexc + C_recomb;
+  heatingcoolingrates->heating_collisional = globals::colheatingestimator[modelgridindex];//C_deexc + C_recomb;
 #endif
 
   heatingcoolingrates->heating_bf = bfheating;
