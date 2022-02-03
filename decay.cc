@@ -1428,7 +1428,7 @@ void fprint_nuc_abundances(
           {
             a_isotopes.insert(a);
             // nuclide decays into correct atomic number but outside of the radionuclide list. Daughter is assumed stable
-            stablefracsum += get_nuc_abund(modelgridindex, decay_daughter_z(nuc_z, a, dectypeindex), decay_daughter_a(nuc_z, a, dectypeindex), t_current);
+            stablefracsum += get_nuc_abund(modelgridindex, decay_daughter_z(nuc_z, a, dectypeindex), decay_daughter_a(nuc_z, a, dectypeindex), t_current) / nucmass(nuc_z, a);
           }
         }
       }
@@ -1436,7 +1436,7 @@ void fprint_nuc_abundances(
   }
 
   // factor to convert convert mass fraction to number density
-  const double stable_numberdens = stablefracsum / globals::elements[element].mass * grid::get_rho(modelgridindex);
+  const double stable_numberdens = stablefracsum * grid::get_rho(modelgridindex);
   fprintf(estimators_file, "  %s_otherstable: %9.3e\n", get_elname(atomic_number), stable_numberdens);
 }
 
