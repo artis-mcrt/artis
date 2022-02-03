@@ -709,7 +709,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
         nuclides.back().endecay_gamma = e_gamma_mev * MEV;
         printout("betaminus file: Adding (Z=%d)%s-%d endecay_electron %g endecay_gamma %g tau_s %g\n",
                  z, get_elname(z), a, e_elec_mev, e_gamma_mev, tau_sec);
-        assert_always(e_elec_mev > 0);
+        assert_always(e_elec_mev >= 0.);
       }
     }
     fbetaminus.close();
@@ -1396,9 +1396,6 @@ void fprint_nuc_abundances(
 {
   const int atomic_number = get_element(element);
 
-  // factor to convert convert mass fraction to number density
-  const double densityfactor = 1. / globals::elements[element].mass * grid::get_rho(modelgridindex);
-
   double stablefracsum = grid::get_stable_initabund(modelgridindex, element);
 
   std::set<int> a_isotopes;
@@ -1413,8 +1410,9 @@ void fprint_nuc_abundances(
         a_isotopes.insert(a);
         // radioactive isotope of the element
         const double massfrac = get_nuc_abund(modelgridindex, atomic_number, a, t_current);
+        const double numberdens = massfrac / nucmass(atomic_number, a) * grid::get_rho(modelgridindex);
 
-        fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number), a, massfrac * densityfactor);
+        fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number), a, numberdens);
       }
     }
     else
@@ -1437,7 +1435,9 @@ void fprint_nuc_abundances(
     }
   }
 
-  fprintf(estimators_file, "  %s_otherstable: %9.3e\n", get_elname(atomic_number), stablefracsum * densityfactor);
+  // factor to convert convert mass fraction to number density
+  const double stable_numberdens = stablefracsum / globals::elements[element].mass * grid::get_rho(modelgridindex);
+  fprintf(estimators_file, "  %s_otherstable: %9.3e\n", get_elname(atomic_number), stable_numberdens);
 }
 
 
