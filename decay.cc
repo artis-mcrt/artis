@@ -1396,7 +1396,7 @@ void fprint_nuc_abundances(
 {
   const int atomic_number = get_element(element);
 
-  double stablefracsum = grid::get_stable_initabund(modelgridindex, element);
+  double stablefracsum = grid::get_stable_initabund(modelgridindex, element) / globals::elements[element].mass;
 
   std::set<int> a_isotopes;
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
