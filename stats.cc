@@ -191,6 +191,7 @@ namespace stats {
     }
 
     nonthermal::nt_reset_stats();
+    globals::nesc = 0;
   }
 
 
