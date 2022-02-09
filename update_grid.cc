@@ -1667,7 +1667,11 @@ double calculate_populations(const int modelgridindex)
 
       const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
       double ionfractions[uppermost_ion + 1];
-      get_ionfractions(element, modelgridindex, nne, ionfractions, uppermost_ion);
+
+      if (abundance > 0)
+      {
+        get_ionfractions(element, modelgridindex, nne, ionfractions, uppermost_ion);
+      }
 
       /// Use ionizationfractions to calculate the groundlevel populations
       for (int ion = 0; ion < nions; ion++)
@@ -1682,26 +1686,23 @@ double calculate_populations(const int modelgridindex)
               nnion = MINPOP;
           }
           else
+          {
             nnion = 0.;
+          }
         }
         else
+        {
           nnion = MINPOP;  /// uppermost_ion is only < nions-1 in cells with nonzero abundance of the given species
+        }
         nntot += nnion;
-        //nne_check += nnion * (get_ionstage(element,ion)-1);
-        //if (grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] < 0)
-        //if (initial_iteration || grid::modelgrid[modelgridindex].thick == 1)
-        {
-          grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (nnion *
-                stat_weight(element,ion,0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
-          //printout("calculate_populations: setting groundlevelpop of ion %d\n",ion);
-        }
-        //else
-        {
-          //printout("calculate_populations: not setting groundlevelpop of ion %d\n",ion);
-        }
+
+        grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (nnion *
+              stat_weight(element,ion,0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
 
         if (!std::isfinite(grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]))
+        {
           printout("[warning] calculate_populations: groundlevelpop infinite in connection with MINPOP\n");
+        }
       }
     }
   }
