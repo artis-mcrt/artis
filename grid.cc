@@ -1654,8 +1654,8 @@ static void read_grid_restart_data(const int timestep)
   for (int nts = 0; nts < globals::ntstep; nts++)
   {
     assert_always(fscanf(
-      gridsave_file, "%lg %lg %lg %lg ", &globals::time_step[nts].gamma_dep, &globals::time_step[nts].positron_dep,
-      &globals::time_step[nts].electron_dep, &globals::time_step[nts].alpha_dep) == 4);
+      gridsave_file, "%lg %lg %lg %lg %lg ", &globals::time_step[nts].gamma_dep, &globals::time_step[nts].positron_dep,
+      &globals::time_step[nts].electron_dep, &globals::time_step[nts].alpha_dep, &globals::time_step[nts].gamma_decay) == 5);
   }
 
   int timestep_in;
@@ -1730,8 +1730,8 @@ void write_grid_restart_data(const int timestep)
 
   for (int nts = 0; nts < globals::ntstep; nts++)
   {
-    fprintf(gridsave_file, "%lg %lg %lg %lg ", globals::time_step[nts].gamma_dep, globals::time_step[nts].positron_dep,
-            globals::time_step[nts].electron_dep, globals::time_step[nts].alpha_dep);
+    fprintf(gridsave_file, "%lg %lg %lg %lg %lg ", globals::time_step[nts].gamma_dep, globals::time_step[nts].positron_dep,
+            globals::time_step[nts].electron_dep, globals::time_step[nts].alpha_dep, globals::time_step[nts].gamma_decay);
   }
 
   fprintf(gridsave_file, "%d ", timestep);

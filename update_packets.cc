@@ -61,6 +61,7 @@ static void update_pellet(
     }
     else
     {
+      safeadd(globals::time_step[nts].gamma_decay, pkt_ptr->e_cmf);
       // decay to gamma-ray, kpkt, or ntlepton
       pellet_gamma_decay(nts, pkt_ptr);
     }
