@@ -53,6 +53,11 @@ static __managed__ int *nonemptymgi_of_mgi = NULL;
 __managed__ double *totmassradionuclide = NULL; /// total mass of each radionuclide in the ejecta
 
 
+double get_mtot(void)
+{
+  return mtot;
+}
+
 __host__ __device__
 double wid_init(const int cellindex)
 // for a uniform grid this is the extent along the x,y,z coordinate (x_2 - x_1, etc.)
@@ -1524,7 +1529,7 @@ static void calc_totmassradionuclides(void)
       abort();
     }
 
-    const double mass_in_shell =get_rhoinit(mgi) * cellvolume;
+    const double mass_in_shell = get_rhoinit(mgi) * cellvolume;
 
     mtot += mass_in_shell;
 

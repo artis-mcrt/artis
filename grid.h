@@ -55,6 +55,7 @@ extern __managed__ int grid_type;
 extern __managed__ char coordlabel[3];
 
 
+double get_mtot(void);
 __host__ __device__ int get_elements_uppermost_ion(const int modelgridindex, const int element);
 __host__ __device__ void set_elements_uppermost_ion(const int modelgridindex, const int element, const int newvalue);
 __host__ __device__ double wid_init(int cellindex);
