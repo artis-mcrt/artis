@@ -17,6 +17,7 @@
 #include "emissivities.h"
 #include "grey_emissivities.h"
 #include "grid.h"
+#include "globals.h"
 #include "input.h"
 #include "light_curve.h"
 #include "ltepop.h"

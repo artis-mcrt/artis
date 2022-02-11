@@ -713,7 +713,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
         nuclides.back().a = a;
         nuclides.back().meanlife = tau_sec;
         nuclides.back().branchprobs[DECAYTYPE_BETAMINUS] = 1.;
-        nuclides.back().endecay_q[DECAYTYPE_BETAMINUS] = q_mev;
+        nuclides.back().endecay_q[DECAYTYPE_BETAMINUS] = q_mev * MEV;
         nuclides.back().endecay_electron = e_elec_mev * MEV;
         nuclides.back().endecay_gamma = e_gamma_mev * MEV;
         printout("betaminus file: Adding (Z=%d)%s-%d endecay_electron %g endecay_gamma %g tau_s %g\n",
@@ -771,9 +771,9 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
         }
         nuclides[alphanucindex].endecay_alpha = e_alpha_mev * MEV;
         nuclides[alphanucindex].branchprobs[DECAYTYPE_BETAMINUS] = branch_beta;
-        nuclides[alphanucindex].endecay_q[DECAYTYPE_BETAMINUS] = Q_total_betadec;
+        nuclides[alphanucindex].endecay_q[DECAYTYPE_BETAMINUS] = Q_total_betadec * MEV;
         nuclides[alphanucindex].branchprobs[DECAYTYPE_ALPHA] = branch_alpha;
-        nuclides[alphanucindex].endecay_q[DECAYTYPE_ALPHA] = Q_total_alphadec;
+        nuclides[alphanucindex].endecay_q[DECAYTYPE_ALPHA] = Q_total_alphadec * MEV;
 
         printout("alphadecay file: Adding (Z=%d)%s-%d endecay_alpha %g endecay_gamma %g tau_s %g\n",
                  z, get_elname(z), a, e_alpha_mev, e_gamma_mev, tau_sec);
@@ -1281,18 +1281,19 @@ double get_qdot_modelcell(const int modelgridindex, const double t, const int de
 // energy release rate [erg/g/s] including everything (even neutrinos that are ignored elsewhere)
 {
   const double mass_in_shell = grid::get_rhoinit(modelgridindex) * grid::vol_init_modelcell(modelgridindex);
+  // const double vol_t = grid::vol_init_modelcell(mgi2) * pow(t_mid / globals::tmin, 3);
 
   double qdot = 0.;
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
     const int z = get_nuc_z(nucindex);
     const int a = get_nuc_a(nucindex);
-    const double q_decay = nucdecayenergyqval(z, a, decaytype);
+    const double q_decay = nucdecayenergyqval(z, a, decaytype) * get_nuc_decaybranchprob(z, a, decaytype);
     if (q_decay > 0.)
     {
-      const double nucdecayrate = get_nuc_abund(modelgridindex, z, a, t) / get_meanlife(z, a) * get_nuc_decaybranchprob(z, a, decaytype);
+      const double nucdecayrate = get_nuc_abund(modelgridindex, z, a, t) / get_meanlife(z, a);
       assert_always(nucdecayrate >= 0);
-      qdot += nucdecayrate * q_decay * mass_in_shell / nucmass(z, a);
+      qdot += nucdecayrate * q_decay / nucmass(z, a);
     }
   }
 
