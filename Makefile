@@ -4,13 +4,19 @@ GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 .DEFAULT_GOAL := all
 SYSNAME := $(shell uname -s)
 
-BUILD_DIR = build
+BUILD_DIR = build/$(shell uname -m)
 
 ifeq ($(SYSNAME),Darwin)
 	# macOS
 
 	# CXX = c++
-	CXXFLAGS += -std=c++17 -march=native -fstrict-aliasing -ftree-vectorize -flto
+	CXXFLAGS += -std=c++17 -fstrict-aliasing -ftree-vectorize -flto
+
+	ifeq ($(shell uname -m),arm64)
+		CXXFLAGS += -mcpu=apple-m1
+	else
+		CXXFLAGS += -march=native
+	endif
 
 	CXXFLAGS += -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing
 
@@ -39,7 +45,7 @@ else ifneq (,$(findstring kelvin,$(HOSTNAME)))
 	CXX = mpicxx
 	CXXFLAGS += -std=c++17 -mcmodel=medium #-fopenmp=libomp
 	CXXFLAGS += -DMPI_ON
-	BUILD_DIR := $(BUILD_DIR)/mpi
+	BUILD_DIR := $(BUILD_DIR)_mpi
 
 else ifneq (, $(shell which mpicxx))
 	# any other system that has mpicxx available (Juwels, Cambridge, Gadi, etc)
@@ -81,7 +87,7 @@ CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 ifeq ($(TESTMODE),ON)
 	CXXFLAGS += -DTESTMODE=true -O3 -g
 	# CXXFLAGS += -fsanitize=address -fno-omit-frame-pointer
-	BUILD_DIR := $(BUILD_DIR)/testmode
+	BUILD_DIR := $(BUILD_DIR)_testmode
 else
 	# skip array range checking for better performance and use optimizations
 	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3 -flto
@@ -103,14 +109,14 @@ endif
 ifeq ($(MPI),ON)
 	CXX = mpicxx
 	CXXFLAGS += -DMPI_ON
-	BUILD_DIR := $(BUILD_DIR)/mpi
+	BUILD_DIR := $(BUILD_DIR)_mpi
 endif
 
 ifeq ($(OPENMP),ON)
 	CXXFLAGS += -Xpreprocessor
 	CXXFLAGS += -fopenmp
 	LDFLAGS += -lomp
-	BUILD_DIR := $(BUILD_DIR)/openmp
+	BUILD_DIR := $(BUILD_DIR)_openmp
 endif
 
 sn3dcuda sn3dcudawhole: LDFLAGS += -lcudart
@@ -164,7 +170,7 @@ sn3dcuda: version.h $(sn3d_objects)
 
 $(BUILD_DIR)/%.o: %.cc Makefile artisoptions.h
 	@mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) -MD -MP -c $(filter-out %.h,$<) -o $@
+	$(CXX) $(CXXFLAGS) -MD -MP -c $< -o $@
 
 exspec: version.h artisoptions.h $(exspec_objects) Makefile
 	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec
