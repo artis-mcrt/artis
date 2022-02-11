@@ -36,6 +36,7 @@ struct nuclide {
   double endecay_positron;   // average energy per decay in kinetic energy of emitted positrons [erg]
   double endecay_gamma;      // average energy per decay in gamma rays [erg]
   double endecay_alpha;      // average energy per decay in kinetic energy of alpha particles [erg]
+  double endecay_q[DECAYTYPE_COUNT];  // Q-value for decay (reactant minus product energy) of each decay type
   double branchprobs[DECAYTYPE_COUNT];  // branching probabilities of each decay type
 };
 
@@ -308,9 +309,9 @@ static double nucdecayenergytotal(int z, int a)
   return endecay;
 }
 
-__host__ __device__
 double nucdecayenergy(int z, int a, int decaytype, bool includegamma)
-// energy release per decay [erg] for decaytype (e.g. DECAYTYPE_BETAPLUS)
+// contributed energy release per decay [erg] for decaytype (e.g. DECAYTYPE_BETAPLUS)
+// (excludes neutrinos!)
 {
   assert_always(nuc_exists(z, a));
   double endecay = includegamma ? nucdecayenergygamma(z, a) : 0.;
@@ -318,6 +319,12 @@ double nucdecayenergy(int z, int a, int decaytype, bool includegamma)
   endecay += nucdecayenergyparticle(z, a, decaytype);
 
   return endecay;
+}
+
+
+static double nucdecayenergyqval(int z, int a, int decaytype)
+{
+  return nuclides[get_nuc_index(z, a)].endecay_q[decaytype];
 }
 
 
@@ -608,6 +615,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
   for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
   {
     default_nuclide.branchprobs[dectypeindex] = 0.;
+    default_nuclide.endecay_q[dectypeindex] = 0.;
   }
 
   nuclides.push_back(default_nuclide);
@@ -705,6 +713,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
         nuclides.back().a = a;
         nuclides.back().meanlife = tau_sec;
         nuclides.back().branchprobs[DECAYTYPE_BETAMINUS] = 1.;
+        nuclides.back().endecay_q[DECAYTYPE_BETAMINUS] = q_mev;
         nuclides.back().endecay_electron = e_elec_mev * MEV;
         nuclides.back().endecay_gamma = e_gamma_mev * MEV;
         printout("betaminus file: Adding (Z=%d)%s-%d endecay_electron %g endecay_gamma %g tau_s %g\n",
@@ -762,7 +771,10 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
         }
         nuclides[alphanucindex].endecay_alpha = e_alpha_mev * MEV;
         nuclides[alphanucindex].branchprobs[DECAYTYPE_BETAMINUS] = branch_beta;
+        nuclides[alphanucindex].endecay_q[DECAYTYPE_BETAMINUS] = Q_total_betadec;
         nuclides[alphanucindex].branchprobs[DECAYTYPE_ALPHA] = branch_alpha;
+        nuclides[alphanucindex].endecay_q[DECAYTYPE_ALPHA] = Q_total_alphadec;
+
         printout("alphadecay file: Adding (Z=%d)%s-%d endecay_alpha %g endecay_gamma %g tau_s %g\n",
                  z, get_elname(z), a, e_alpha_mev, e_gamma_mev, tau_sec);
       }
@@ -1262,6 +1274,60 @@ double get_particle_injection_rate_density(const int modelgridindex, const doubl
   assert_always(std::isfinite(dep_sum));
 
   return dep_sum;
+}
+
+
+double get_qdot_modelcell(const int modelgridindex, const double t, const int decaytype)
+// energy release rate [erg/g/s] including everything (even neutrinos that are ignored elsewhere)
+{
+  const double mass_in_shell = grid::get_rhoinit(modelgridindex) * grid::vol_init_modelcell(modelgridindex);
+
+  double qdot = 0.;
+  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
+  {
+    const int z = get_nuc_z(nucindex);
+    const int a = get_nuc_a(nucindex);
+    const double q_decay = nucdecayenergyqval(z, a, decaytype);
+    if (q_decay > 0.)
+    {
+      const double nucdecayrate = get_nuc_abund(modelgridindex, z, a, t) / get_meanlife(z, a) * get_nuc_decaybranchprob(z, a, decaytype);
+      assert_always(nucdecayrate >= 0);
+      qdot += nucdecayrate * q_decay * mass_in_shell / nucmass(z, a);
+    }
+  }
+
+  assert_always(std::isfinite(qdot));
+
+  return qdot;
+}
+
+
+double get_qdot_decaytype(const double t, const int decaytype)
+// global energy release rate [erg/g/s] including everything (even neutrinos that are ignored elsewhere)
+{
+  double qdot_sum = 0.;
+  double m_sum = 0.;
+  for (int mgi = 0; mgi < grid::get_npts_model(); mgi++)
+  {
+    const double cellmass = grid::get_rhoinit(mgi) * grid::vol_init_modelcell(mgi);
+    m_sum += cellmass;
+    qdot_sum += get_qdot_modelcell(mgi, t, decaytype) * cellmass;
+  }
+
+  return qdot_sum / m_sum;
+}
+
+
+double get_qdot_total(const double t)
+// global energy release rate [erg/g/s] including everything (even neutrinos that are ignored elsewhere)
+{
+  double qdot = 0.;
+  for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
+  {
+    qdot += get_qdot_decaytype(t, dectypeindex);
+  }
+
+  return qdot;
 }
 
 
