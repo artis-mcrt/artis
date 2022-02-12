@@ -227,7 +227,9 @@ static void calculate_heating_rates(
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the heatingrates data structure.
 {
+  #ifdef DIRECT_COL_HEAT
   double C_deexc = 0.;
+  #endif
   //double C_recomb = 0.;
   double bfheating = 0.;
   double ffheating = 0.;

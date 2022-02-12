@@ -1280,9 +1280,6 @@ double get_particle_injection_rate_density(const int modelgridindex, const doubl
 double get_qdot_modelcell(const int modelgridindex, const double t, const int decaytype)
 // energy release rate [erg/g/s] including everything (even neutrinos that are ignored elsewhere)
 {
-  const double mass_in_shell = grid::get_rhoinit(modelgridindex) * grid::vol_init_modelcell(modelgridindex);
-  // const double vol_t = grid::vol_init_modelcell(mgi2) * pow(t_mid / globals::tmin, 3);
-
   double qdot = 0.;
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
@@ -1296,8 +1293,6 @@ double get_qdot_modelcell(const int modelgridindex, const double t, const int de
       qdot += nucdecayrate * q_decay / nucmass(z, a);
     }
   }
-
-  assert_always(std::isfinite(qdot));
 
   return qdot;
 }
@@ -1314,6 +1309,7 @@ double get_qdot_decaytype(const double t, const int decaytype)
     m_sum += cellmass;
     qdot_sum += get_qdot_modelcell(mgi, t, decaytype) * cellmass;
   }
+  assert_always(std::isfinite(qdot_sum));
 
   return qdot_sum / m_sum;
 }
