@@ -330,7 +330,7 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
 
   //printout("groundlevelpop %g\n", get_groundlevelpop(modelgridindex,element,ion));
 
-  double U = stat_weight(element,ion,0);
+  double U = 1.;
 
   const int nlevels = get_nlevels(element, ion);
   const double groundpop = get_groundlevelpop(modelgridindex, element, ion);
@@ -338,8 +338,9 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
   {
     bool skipminpop;
     const double nn = calculate_exclevelpop_nominpop(modelgridindex, element, ion, level, &skipminpop) / groundpop;
-    U += nn * stat_weight(element,ion,0);
+    U += nn;
   }
+  U *= stat_weight(element,ion,0);
 
   if (!std::isfinite(U))
   {
