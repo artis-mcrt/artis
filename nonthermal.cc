@@ -3044,7 +3044,7 @@ void write_restart_data(FILE *gridsave_file)
   printout("non-thermal solver, ");
 
   fprintf(gridsave_file, "%d\n", 24724518); // special number marking the beginning of NT data
-  fprintf(gridsave_file, "%d %lg %lg\n", SFPTS, SF_EMIN, SF_EMAX);
+  fprintf(gridsave_file, "%d %la %la\n", SFPTS, SF_EMIN, SF_EMAX);
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
   {
@@ -3118,7 +3118,7 @@ void read_restart_data(FILE *gridsave_file)
   int sfpts_in;
   double SF_EMIN_in;
   double SF_EMAX_in;
-  fscanf(gridsave_file, "%d %lg %lg\n", &sfpts_in, &SF_EMIN_in, &SF_EMAX_in);
+  assert_always(fscanf(gridsave_file, "%d %la %la\n", &sfpts_in, &SF_EMIN_in, &SF_EMAX_in) == 3);
 
   if (sfpts_in != SFPTS || SF_EMIN_in != SF_EMIN || SF_EMAX_in != SF_EMAX)
   {
