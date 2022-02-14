@@ -1,3 +1,6 @@
+f2ab9b2d2087cb40a75d13a32163ac18  gammalinelist.out
+47dd2e31cc98d5d1dda67520fb399429  grid.out
+8e7163982f1aa938dc1505478b8c60d1  timesteps.out
 a2057f04cfd6815396594770bc5d1356  job0/estimators_0000.out
 1f9248344e320e99b4ed91a45dd9d3e7  job0/nlte_0000.out
 1c4b1ccb2ea3bd56f3ef976e4dce870e  job0/nonthermalspec_0000.out
