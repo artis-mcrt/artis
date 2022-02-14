@@ -341,9 +341,6 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
         T_exc = grid::get_TJ(modelgridindex);
         W = 1.;
       }
-      else
-      {
-        T_exc = grid::get_TR(modelgridindex);
         W = grid::get_W(modelgridindex);
       }
       U += W*stat_weight(element,ion,level) * exp(-(epsilon(element,ion,level)-epsilon_groundlevel)*oneoverkbtexc);
