@@ -670,6 +670,7 @@ static void precalculate_rate_coefficient_integrals(void)
               F_bfheating.function = &approx_bfheating_integrand_gsl;
               F_bfheating.params = &intparas;
               status = gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &bfheating_coeff, &error);
+
               if (status != 0 && (status != 18 || (error / bfheating_coeff) > epsrelwarning))
               {
                 printout("bfheating_coeff integrator status %d. Integral value %9.3e +/- %9.3e\n", status, bfheating_coeff, error);

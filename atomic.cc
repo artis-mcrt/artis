@@ -115,6 +115,29 @@ double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge
   // return 1. * pow(nu_edge / nu, 3);
 
   float sigma_bf;
+
+  if (phixs_file_version == 1)
+  {
+    // classic mode: no interpolation
+    if (nu == nu_edge)
+    {
+      sigma_bf = photoion_xs[0];
+    }
+    else if (nu <= nu_edge*(1 + globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS))
+    {
+      int i = floor(nu/(globals::NPHIXSNUINCREMENT * nu_edge)) - 10;
+      sigma_bf = photoion_xs[i];
+    }
+    else
+    {
+      /// use a parameterization of sigma_bf by the Kramers formula
+      /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
+      /// so far the highest grid point, otherwise the cross-section is not continuous
+      sigma_bf = photoion_xs[globals::NPHIXSPOINTS - 1] * pow(nu_edge*(1 + globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS)/nu,3);
+    }
+    return sigma_bf;
+  }
+
   const double ireal = (nu / nu_edge - 1.0) / globals::NPHIXSNUINCREMENT;
   const int i = floor(ireal);
 
