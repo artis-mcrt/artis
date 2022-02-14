@@ -8,15 +8,9 @@ f2ab9b2d2087cb40a75d13a32163ac18  gammalinelist.out
 47dd2e31cc98d5d1dda67520fb399429  grid.out
 17428867f8b51352cbf24312db05b04f  light_curve.out
 c3ba1c869d4e50d27a2652c6c0e7ebc4  linestat.out
-ac25e2e0ce84fc6b85581a2fd1fd4cfc  packets00_0000.out
-cff8a783f2b5c930f3d4f4dff7eaf07f  packets00_0001.out
 b7a40fcf6bb01070240154921dac01c4  spec.out
 8e7163982f1aa938dc1505478b8c60d1  timesteps.out
 a2057f04cfd6815396594770bc5d1356  job0/estimators_0000.out
 1f9248344e320e99b4ed91a45dd9d3e7  job0/nlte_0000.out
 1c4b1ccb2ea3bd56f3ef976e4dce870e  job0/nonthermalspec_0000.out
 94fa16aaa71820d092aeb029898da168  job0/radfield_0000.out
-004ac69607eb4b325bd3e4a22ecb3a64  job1/estimators_0000.out
-34c0e85877c1098b1cc874e332ca9b08  job1/nlte_0000.out
-1c4b1ccb2ea3bd56f3ef976e4dce870e  job1/nonthermalspec_0000.out
-2b0fb89ee7dcf3d885e9aeadb3365158  job1/radfield_0000.out

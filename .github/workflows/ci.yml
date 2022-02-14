@@ -143,6 +143,12 @@ jobs:
       working-directory: tests/nebularonezone_testrun/job0/
       run: cat output_0-0.txt
 
+    - name: Checksum output files
+      working-directory: tests/nebularonezone_testrun
+      run: |
+        md5sum *.out job0/*.out
+        md5sum -c results_md5_step0.txt
+
     - name: "Run nebularonezone test job1 resume"
       working-directory: tests/nebularonezone_testrun/
       run: |
@@ -231,4 +237,4 @@ jobs:
       working-directory: tests/nebularonezone_testrun
       run: |
         md5sum *.out job0/*.out job1/*.out
-        md5sum -c results_md5.txt
+        md5sum -c results_md5_step1.txt
