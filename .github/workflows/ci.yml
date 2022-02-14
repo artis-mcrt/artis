@@ -143,7 +143,7 @@ jobs:
       working-directory: tests/nebularonezone_testrun/job0/
       run: cat output_0-0.txt
 
-    - name: Checksum output files
+    - name: Checksum job0 output files
       working-directory: tests/nebularonezone_testrun
       run: |
         md5sum *.out job0/*.out
@@ -167,10 +167,10 @@ jobs:
       working-directory: tests/nebularonezone_testrun/job1/
       run: cat output_0-0.txt
 
-    - name: Checksum output files
+    - name: Checksum job1 output files
       working-directory: tests/nebularonezone_testrun
       run: |
-        md5sum *.out job0/*.out job1/*.out
+        md5sum *.out job1/*.out
 
     - name: "Run exspec"
       working-directory: tests/nebularonezone_testrun/

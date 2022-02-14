@@ -1,0 +1,4 @@
+a2057f04cfd6815396594770bc5d1356  job0/estimators_0000.out
+1f9248344e320e99b4ed91a45dd9d3e7  job0/nlte_0000.out
+1c4b1ccb2ea3bd56f3ef976e4dce870e  job0/nonthermalspec_0000.out
+94fa16aaa71820d092aeb029898da168  job0/radfield_0000.out
