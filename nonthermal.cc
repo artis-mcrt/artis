@@ -3050,7 +3050,7 @@ void write_restart_data(FILE *gridsave_file)
   {
     if (grid::get_numassociatedcells(modelgridindex) > 0)
     {
-      fprintf(gridsave_file, "%d %d %lg ",
+      fprintf(gridsave_file, "%d %d %la ",
               modelgridindex,
               deposition_rate_density_timestep[modelgridindex],
               deposition_rate_density[modelgridindex]);
@@ -3059,7 +3059,7 @@ void write_restart_data(FILE *gridsave_file)
       {
         check_auger_probabilities(modelgridindex);
 
-        fprintf(gridsave_file, "%g %g %g %g\n",
+        fprintf(gridsave_file, "%a %a %a %a\n",
                 nt_solution[modelgridindex].nneperion_when_solved,
                 nt_solution[modelgridindex].frac_heating,
                 nt_solution[modelgridindex].frac_ionization,
@@ -3067,13 +3067,14 @@ void write_restart_data(FILE *gridsave_file)
 
         for (int uniqueionindex = 0; uniqueionindex < globals::includedions; uniqueionindex++)
         {
-          fprintf(gridsave_file, "%lg ", nt_solution[modelgridindex].fracdep_ionization_ion[uniqueionindex]);
-          fprintf(gridsave_file, "%g ", nt_solution[modelgridindex].eff_ionpot[uniqueionindex]);
+          fprintf(gridsave_file, "%la ", nt_solution[modelgridindex].fracdep_ionization_ion[uniqueionindex]);
+          fprintf(gridsave_file, "%a ", nt_solution[modelgridindex].eff_ionpot[uniqueionindex]);
 
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++)
           {
-            fprintf(gridsave_file, "%g ", nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a]);
-            fprintf(gridsave_file, "%g ", nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a]);
+            fprintf(gridsave_file, "%a %a ",
+              nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a],
+              nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a]);
           }
         }
 
@@ -3083,7 +3084,7 @@ void write_restart_data(FILE *gridsave_file)
         const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list_size;
         for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++)
         {
-          fprintf(gridsave_file, "%lg %lg %d\n",
+          fprintf(gridsave_file, "%la %la %d\n",
                   nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition,
                   nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition,
                   nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex);
@@ -3094,7 +3095,7 @@ void write_restart_data(FILE *gridsave_file)
         {
           for (int s = 0; s < SFPTS; s++)
           {
-            fprintf(gridsave_file, "%lg\n", nt_solution[modelgridindex].yfunc[s]);
+            fprintf(gridsave_file, "%la\n", nt_solution[modelgridindex].yfunc[s]);
           }
         }
       }
@@ -3108,7 +3109,7 @@ void read_restart_data(FILE *gridsave_file)
   printout("Reading restart data for non-thermal solver\n");
 
   int code_check;
-  fscanf(gridsave_file, "%d\n", &code_check);
+  assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
   if (code_check != 24724518)
   {
     printout("ERROR: Beginning of non-thermal restart data not found! Found %d instead of 24724518\n", code_check);
@@ -3134,18 +3135,18 @@ void read_restart_data(FILE *gridsave_file)
     if (grid::get_numassociatedcells(modelgridindex) > 0)
     {
       int mgi_in;
-      fscanf(gridsave_file, "%d %d %lg ",
-             &mgi_in,
-             &deposition_rate_density_timestep[modelgridindex],
-             &deposition_rate_density[modelgridindex]);
+      assert_always(fscanf(gridsave_file, "%d %d %la ",
+        &mgi_in,
+        &deposition_rate_density_timestep[modelgridindex],
+        &deposition_rate_density[modelgridindex]) == 3);
 
       if (NT_ON && NT_SOLVE_SPENCERFANO)
       {
-        fscanf(gridsave_file, "%g %g %g %g\n",
-               &nt_solution[modelgridindex].nneperion_when_solved,
-               &nt_solution[modelgridindex].frac_heating,
-               &nt_solution[modelgridindex].frac_ionization,
-               &nt_solution[modelgridindex].frac_excitation);
+        assert_always(fscanf(gridsave_file, "%a %a %a %a\n",
+          &nt_solution[modelgridindex].nneperion_when_solved,
+          &nt_solution[modelgridindex].frac_heating,
+          &nt_solution[modelgridindex].frac_ionization,
+          &nt_solution[modelgridindex].frac_excitation) == 4);
 
         if (mgi_in != modelgridindex)
         {
@@ -3155,13 +3156,14 @@ void read_restart_data(FILE *gridsave_file)
 
         for (int uniqueionindex = 0; uniqueionindex < globals::includedions; uniqueionindex++)
         {
-          fscanf(gridsave_file, "%lg ", &nt_solution[modelgridindex].fracdep_ionization_ion[uniqueionindex]),
-          fscanf(gridsave_file, "%g ", &nt_solution[modelgridindex].eff_ionpot[uniqueionindex]);
+          assert_always(fscanf(gridsave_file, "%la ", &nt_solution[modelgridindex].fracdep_ionization_ion[uniqueionindex]) == 1);
+          assert_always(fscanf(gridsave_file, "%a ", &nt_solution[modelgridindex].eff_ionpot[uniqueionindex]) == 1);
 
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++)
           {
-            fscanf(gridsave_file, "%g ", &nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a]);
-            fscanf(gridsave_file, "%g ", &nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a]);
+            assert_always(fscanf(gridsave_file, "%a %a ",
+              &nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a],
+              &nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a]) == 2);
           }
         }
 
@@ -3169,7 +3171,7 @@ void read_restart_data(FILE *gridsave_file)
 
         // read NT excitations
         int frac_excitations_list_size_in;
-        fscanf(gridsave_file, "%d\n", &frac_excitations_list_size_in);
+        assert_always(fscanf(gridsave_file, "%d\n", &frac_excitations_list_size_in) == 1);
 
         if (nt_solution[modelgridindex].frac_excitations_list_size != frac_excitations_list_size_in)
         {
@@ -3178,10 +3180,10 @@ void read_restart_data(FILE *gridsave_file)
 
         for (int excitationindex = 0; excitationindex < frac_excitations_list_size_in; excitationindex++)
         {
-          fscanf(gridsave_file, "%lg %lg %d\n",
+          assert_always(fscanf(gridsave_file, "%la %la %d\n",
                   &nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition,
                   &nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition,
-                  &nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex);
+                  &nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex) == 3);
         }
 
         // read non-thermal spectrum
@@ -3189,7 +3191,7 @@ void read_restart_data(FILE *gridsave_file)
         {
           for (int s = 0; s < SFPTS; s++)
           {
-            fscanf(gridsave_file, "%lg\n", &nt_solution[modelgridindex].yfunc[s]);
+            assert_always(fscanf(gridsave_file, "%la\n", &nt_solution[modelgridindex].yfunc[s]) == 1);
           }
         }
       }

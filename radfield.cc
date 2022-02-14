@@ -1876,13 +1876,13 @@ void write_restart_data(FILE *gridsave_file)
 
   if (MULTIBIN_RADFIELD_MODEL_ON)
   {
-    fprintf(gridsave_file, "%d %lg %lg %lg %lg\n",
+    fprintf(gridsave_file, "%d %la %la %la %la\n",
             RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial,
             T_R_min, T_R_max);
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {
-      fprintf(gridsave_file,"%d %lg\n", binindex, radfieldbin_nu_upper[binindex]);
+      fprintf(gridsave_file,"%d %la\n", binindex, radfieldbin_nu_upper[binindex]);
     }
   }
 
@@ -1899,7 +1899,7 @@ void write_restart_data(FILE *gridsave_file)
         fprintf(gridsave_file, "%d\n", modelgridindex);
         for (int i = 0; i < nbfcontinua; i++)
         {
-          fprintf(gridsave_file, "%g ", prev_bfrate_normed[nonemptymgi * nbfcontinua + i]);
+          fprintf(gridsave_file, "%a ", prev_bfrate_normed[nonemptymgi * nbfcontinua + i]);
         }
       }
     }
@@ -1922,14 +1922,14 @@ void write_restart_data(FILE *gridsave_file)
     {
       const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
       assert_testmodeonly(nonemptymgi >= 0);
-      fprintf(gridsave_file,"%d %lg\n", modelgridindex, J_normfactor[modelgridindex]);
+      fprintf(gridsave_file,"%d %la\n", modelgridindex, J_normfactor[modelgridindex]);
 
       if (MULTIBIN_RADFIELD_MODEL_ON)
       {
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
         {
           const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
-          fprintf(gridsave_file, "%lg %lg %g %g %d\n",
+          fprintf(gridsave_file, "%la %la %a %a %d\n",
                   radfieldbins[mgibinindex].J_raw,
                   radfieldbins[mgibinindex].nuJ_raw,
                   radfieldbin_solutions[mgibinindex].W,
@@ -1943,7 +1943,7 @@ void write_restart_data(FILE *gridsave_file)
       {
         for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
         {
-          fprintf(gridsave_file, "%lg %d\n",
+          fprintf(gridsave_file, "%la %d\n",
                   Jb_lu_raw[modelgridindex][jblueindex].value,
                   Jb_lu_raw[modelgridindex][jblueindex].contribcount);
         }
@@ -1965,7 +1965,7 @@ void read_restart_data(FILE *gridsave_file)
   }
 
   int code_check;
-  fscanf(gridsave_file, "%d\n", &code_check);
+  assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
   if (code_check != 30490824)
   {
     printout("ERROR: Beginning of radfield restart data not found! Found %d instead of 30490824\n", code_check);
@@ -1976,9 +1976,9 @@ void read_restart_data(FILE *gridsave_file)
   {
     int bincount_in;
     double T_R_min_in, T_R_max_in, nu_lower_first_initial_in, nu_upper_last_initial_in;
-    fscanf(gridsave_file,"%d %lg %lg %lg %lg\n",
+    assert_always(fscanf(gridsave_file,"%d %la %la %la %la\n",
            &bincount_in, &nu_lower_first_initial_in, &nu_upper_last_initial_in,
-           &T_R_min_in, &T_R_max_in);
+           &T_R_min_in, &T_R_max_in) == 5);
 
     double nu_lower_first_ratio = nu_lower_first_initial_in / nu_lower_first_initial;
     if (nu_lower_first_ratio > 1.0) nu_lower_first_ratio = 1 / nu_lower_first_ratio;
@@ -1999,7 +1999,7 @@ void read_restart_data(FILE *gridsave_file)
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {
       int binindex_in;
-      fscanf(gridsave_file,"%d %lg\n", &binindex_in, &radfieldbin_nu_upper[binindex]);
+      assert_always(fscanf(gridsave_file,"%d %la\n", &binindex_in, &radfieldbin_nu_upper[binindex]) == 2);
       assert_always(binindex_in == binindex);
     }
   }
@@ -2007,7 +2007,7 @@ void read_restart_data(FILE *gridsave_file)
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
     int gridsave_nbf_in;
-    fscanf(gridsave_file, "%d\n", &gridsave_nbf_in);
+    assert_always(fscanf(gridsave_file, "%d\n", &gridsave_nbf_in) == 1);
     assert_always(gridsave_nbf_in == globals::nbfcontinua);
 
     for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++)
@@ -2016,12 +2016,12 @@ void read_restart_data(FILE *gridsave_file)
       {
         const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         int mgi_in;
-        fscanf(gridsave_file, "%d\n", &mgi_in);
+        assert_always(fscanf(gridsave_file, "%d\n", &mgi_in) == 1);
         assert_always(mgi_in == modelgridindex);
         for (int i = 0; i < globals::nbfcontinua; i++)
         {
           float bfrate_normed = 0;
-          fscanf(gridsave_file, "%g ", &bfrate_normed);
+          assert_always(fscanf(gridsave_file, "%a ", &bfrate_normed) == 1);
 
           const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
           #ifdef MPI_ON
@@ -2039,7 +2039,7 @@ void read_restart_data(FILE *gridsave_file)
   if (DETAILED_LINE_ESTIMATORS_ON)
   {
     int detailed_linecount_in;
-    fscanf(gridsave_file,"%d\n", &detailed_linecount_in);
+    assert_always(fscanf(gridsave_file,"%d\n", &detailed_linecount_in) == 1);
 
     if (detailed_linecount_in != detailed_linecount)
     {
@@ -2050,7 +2050,7 @@ void read_restart_data(FILE *gridsave_file)
 
     for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
     {
-      fscanf(gridsave_file, "%d ", &detailed_lineindicies[jblueindex]);
+      assert_always(fscanf(gridsave_file, "%d ", &detailed_lineindicies[jblueindex]) == 1);
     }
   }
 
@@ -2060,7 +2060,7 @@ void read_restart_data(FILE *gridsave_file)
     {
       const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
       int mgi_in;
-      fscanf(gridsave_file,"%d %lg\n", &mgi_in, &J_normfactor[modelgridindex]);
+      assert_always(fscanf(gridsave_file,"%d %la\n", &mgi_in, &J_normfactor[modelgridindex]) == 2);
       if (mgi_in != modelgridindex)
       {
         printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
@@ -2074,12 +2074,12 @@ void read_restart_data(FILE *gridsave_file)
           const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
           float W = 0;
           float T_R = 0;
-          fscanf(gridsave_file, "%lg %lg %g %g %d\n",
+          assert_always(fscanf(gridsave_file, "%la %la %a %a %d\n",
                  &radfieldbins[mgibinindex].J_raw,
                  &radfieldbins[mgibinindex].nuJ_raw,
                  &W,
                  &T_R,
-                 &radfieldbins[mgibinindex].contribcount);
+                 &radfieldbins[mgibinindex].contribcount) == 5);
 #ifdef MPI_ON
           if (globals::rank_in_node == 0)
 #endif
@@ -2094,14 +2094,14 @@ void read_restart_data(FILE *gridsave_file)
       {
         for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
         {
-          fscanf(gridsave_file, "%lg %d\n",
-                  &Jb_lu_raw[modelgridindex][jblueindex].value,
-                  &Jb_lu_raw[modelgridindex][jblueindex].contribcount);
+          assert_always(fscanf(gridsave_file, "%la %d\n",
+            &Jb_lu_raw[modelgridindex][jblueindex].value,
+            &Jb_lu_raw[modelgridindex][jblueindex].contribcount) == 2);
         }
       }
     }
   }
-  fscanf(gridsave_file, "%d\n", &code_check);
+  assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
   if (code_check != 42809403)
   {
     printout("ERROR: End of radfield restart data not found! Found %d instead of 42809403\n", code_check);

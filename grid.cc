@@ -1659,7 +1659,7 @@ static void read_grid_restart_data(const int timestep)
   for (int nts = 0; nts < globals::ntstep; nts++)
   {
     assert_always(fscanf(
-      gridsave_file, "%lg %lg %lg %lg %lg ", &globals::time_step[nts].gamma_dep, &globals::time_step[nts].positron_dep,
+      gridsave_file, "%la %la %la %la %la ", &globals::time_step[nts].gamma_dep, &globals::time_step[nts].positron_dep,
       &globals::time_step[nts].electron_dep, &globals::time_step[nts].alpha_dep, &globals::time_step[nts].gamma_decay) == 5);
   }
 
@@ -1674,7 +1674,7 @@ static void read_grid_restart_data(const int timestep)
     float T_e;
     float W;
     float T_J;
-    assert_always(fscanf(gridsave_file, "%d %g %g %g %g %hd %lg",
+    assert_always(fscanf(gridsave_file, "%d %a %a %a %a %hd %la",
            &mgi_in, &T_R, &T_e, &W, &T_J,
            &modelgrid[mgi].thick, &globals::rpkt_emiss[mgi]) == 7);
 
@@ -1704,7 +1704,8 @@ static void read_grid_restart_data(const int timestep)
           for (int ion = 0; ion < nions; ion++)
           {
             const int estimindex = mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
-            fscanf(gridsave_file, " %lg %lg", &globals::corrphotoionrenorm[estimindex], &globals::gammaestimator[estimindex]);
+            assert_always(fscanf(gridsave_file, " %la %la",
+              &globals::corrphotoionrenorm[estimindex], &globals::gammaestimator[estimindex]) == 2);
           }
         }
       #endif
@@ -1735,7 +1736,7 @@ void write_grid_restart_data(const int timestep)
 
   for (int nts = 0; nts < globals::ntstep; nts++)
   {
-    fprintf(gridsave_file, "%lg %lg %lg %lg %lg ", globals::time_step[nts].gamma_dep, globals::time_step[nts].positron_dep,
+    fprintf(gridsave_file, "%la %la %la %la %la ", globals::time_step[nts].gamma_dep, globals::time_step[nts].positron_dep,
             globals::time_step[nts].electron_dep, globals::time_step[nts].alpha_dep, globals::time_step[nts].gamma_decay);
   }
 
@@ -1747,13 +1748,13 @@ void write_grid_restart_data(const int timestep)
 
     if (nonemptycell)
     {
-      fprintf(gridsave_file, "%d %g %g %g %g %hd %lg",
+      fprintf(gridsave_file, "%d %a %a %a %a %hd %la",
               mgi, get_TR(mgi), get_Te(mgi), get_W(mgi), get_TJ(mgi),
               modelgrid[mgi].thick, globals::rpkt_emiss[mgi]);
     }
     else
     {
-      fprintf(gridsave_file, "%d %g %g %g %g %d %lg", mgi, 0., 0., 0., 0., 0, 0.);
+      fprintf(gridsave_file, "%d %a %a %a %a %d %la", mgi, 0., 0., 0., 0., 0, 0.);
     }
 
     #ifndef FORCE_LTE
@@ -1764,7 +1765,7 @@ void write_grid_restart_data(const int timestep)
           for (int ion = 0; ion < nions; ion++)
           {
             const int estimindex = mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
-            fprintf(gridsave_file, " %lg %lg",
+            fprintf(gridsave_file, " %la %la",
                     (nonemptycell ? globals::corrphotoionrenorm[estimindex] : 0.),
                     (nonemptycell ? globals::gammaestimator[estimindex] : 0.));
           }
@@ -1892,13 +1893,13 @@ static void uniform_grid_setup(void)
 
     // in case the user specified a grid size, we should ensure that it matches
     #ifdef CUBOID_NCOORDGRID_X
-    assert(ncoordgrid[0] == CUBOID_NCOORDGRID_X);
+    assert_always(ncoordgrid[0] == CUBOID_NCOORDGRID_X);
     #endif
     #ifdef CUBOID_NCOORDGRID_Y
-    assert(ncoordgrid[1] == CUBOID_NCOORDGRID_Y);
+    assert_always(ncoordgrid[1] == CUBOID_NCOORDGRID_Y);
     #endif
     #ifdef CUBOID_NCOORDGRID_Z
-    assert(ncoordgrid[2] == CUBOID_NCOORDGRID_Z);
+    assert_always(ncoordgrid[2] == CUBOID_NCOORDGRID_Z);
     #endif
   }
   else
