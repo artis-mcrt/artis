@@ -80,12 +80,12 @@ static bool read_ratecoeff_dat(void)
 
     char phixsfile_hash_in[33];
     fscanf(ratecoeff_file,"%32s\n",phixsfile_hash_in);
-    printout("ratecoeff.dat: MD5 phixsdata_v2.txt = %s ", phixsfile_hash_in);
+    printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixs_file_version], phixsfile_hash_in);
     if (strcmp(phixsfile_hash, phixsfile_hash_in) == 0)
       printout("(pass)\n");
     else
     {
-      printout("\nMISMATCH: MD5 phixsdata_v2.txt = %s\n", phixsfile_hash);
+      printout("\nMISMATCH: MD5 %s = %s\n", phixsdata_filenames[phixs_file_version], phixsfile_hash);
       fileisamatch = false;
     }
 
@@ -1168,7 +1168,8 @@ void ratecoefficients_init(void)
 
   md5_file("adata.txt", adatafile_hash);
   md5_file("compositiondata.txt", compositionfile_hash);
-  md5_file("phixsdata_v2.txt", phixsfile_hash);
+  assert_always(phixs_file_version >= 0); // check that it has been changed from the default value of -1
+  md5_file(phixsdata_filenames[phixs_file_version], phixsfile_hash);
 
   /// Check if we need to calculate the ratecoefficients or if we were able to read them from file
   if (!read_ratecoeff_dat())

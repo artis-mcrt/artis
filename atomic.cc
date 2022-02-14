@@ -5,9 +5,10 @@
 #include "ltepop.h"
 #include "update_grid.h"
 
-__managed__ double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
+__managed__ double last_phixs_nuovernuedge = -1; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 __managed__ int nelements = 0;  // total number of elements included in the simulation
 __managed__ int maxnions = 0;  // highest number of ions for any element
+int phixs_file_version = -1; // 1 for phixsdata.txt (classic) and 2 for phixsdata_v2.txt
 
 __host__ __device__
 static int get_continuumindex_phixstargetindex(int element, int ion, int level, int phixstargetindex)
@@ -141,7 +142,7 @@ double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge
     /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
     /// so far the highest grid point, otherwise the cross-section is not continuous
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
-    sigma_bf = photoion_xs[globals::NPHIXSPOINTS-1] * pow(nu_max_phixs / nu, 3);
+    sigma_bf = photoion_xs[globals::NPHIXSPOINTS - 1] * pow(nu_max_phixs / nu, 3);
   }
 
   // if (sigma_bf < 0)
