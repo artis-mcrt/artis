@@ -147,7 +147,7 @@ jobs:
       working-directory: tests/nebularonezone_testrun
       run: |
         md5sum *.out job0/*.out
-        md5sum -c results_md5_step0.txt
+        md5sum -c results_md5_job0.txt
 
     - name: "Run nebularonezone test job1 resume"
       working-directory: tests/nebularonezone_testrun/
@@ -171,6 +171,7 @@ jobs:
       working-directory: tests/nebularonezone_testrun
       run: |
         md5sum *.out job1/*.out
+        md5sum -c results_md5_job1.txt
 
     - name: "Run exspec"
       working-directory: tests/nebularonezone_testrun/
@@ -237,4 +238,4 @@ jobs:
       working-directory: tests/nebularonezone_testrun
       run: |
         md5sum *.out job0/*.out job1/*.out
-        md5sum -c results_md5_step1.txt
+        md5sum -c results_md5_final.txt
