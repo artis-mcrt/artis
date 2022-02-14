@@ -330,59 +330,16 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
 
   //printout("groundlevelpop %g\n", get_groundlevelpop(modelgridindex,element,ion));
 
-  double U = 1.0;//stat_weight(element,ion,0);
+  double U = stat_weight(element,ion,0);
+
   const int nlevels = get_nlevels(element, ion);
-/*  if (T_exc <= MINTEMP)
+  const double groundpop = get_groundlevelpop(modelgridindex, element, ion);
+  for (int level = 1; level < nlevels; level++)
   {
-    for (level = 1; level < nlevels; level++)
-    {
-      if (globals::elements[element].ions[ion].levels[level].metastable)
-      {
-        T_exc = grid::get_TJ(modelgridindex);
-        W = 1.;
-      }
-        W = grid::get_W(modelgridindex);
-      }
-      U += W*stat_weight(element,ion,level) * exp(-(epsilon(element,ion,level)-epsilon_groundlevel)*oneoverkbtexc);
-    }
+    bool skipminpop;
+    const double nn = calculate_exclevelpop_nominpop(modelgridindex, element, ion, level, &skipminpop) / groundpop;
+    U += nn * stat_weight(element,ion,0);
   }
-  else
-  {*/
-    const double groundpop = get_groundlevelpop(modelgridindex, element, ion);
-    for (int level = 1; level < nlevels; level++)
-    {
-      const double nn = calculate_exclevelpop(modelgridindex, element, ion, level) / groundpop;//*stat_weight(element,ion,0);
-
-      //if (NLTE_POPS_ON)
-      //{
-      //if ((is_nlte(element,ion,level) != 1) || (test = grid::modelgrid[modelgridindex].nlte_pops[globals::elements[element].ions[ion].first_nlte+level-1]) < -0.9)
-      //{
-	  /* Case for when no NLTE level information is available yet */
-      //  E_level = epsilon(element,ion,level);
-      //  E_ground = epsilon(element,ion,0);
-      //  nn = W * stat_weight(element,ion,level) * exp(-(E_level-E_ground)/KB/T_exc);
-      //	}
-      //else
-      //	{
-	  //printout("Using an nlte population!\n");
-      //	  nn = test * grid::modelgrid[modelgridindex].rho / get_groundlevelpop(modelgridindex,element,ion)*stat_weight(element,ion,0);
-      //	  if (!std::isfinite(nn))
-      //	    {
-      //
-      //      printout("[fatal] NLTE population failure.\n");
-      //	      printout("element %d ion %d level %d\n", element, ion, level);
-      //	      printout("nn %g test %g rho %g\n", nn, test, grid::modelgrid[modelgridindex].rho);
-      //	      printout("ground level %g\n", get_groundlevelpop(modelgridindex,element,ion));
-      //	      abort();
-      //	    }
-
-      //	}
-      //}
-	     U += nn;//W*stat_weight(element,ion,level) * exp(-(epsilon(element,ion,level)-epsilon_groundlevel)*oneoverkbtexc);
-    }
-//   }
-
-  U *= stat_weight(element,ion,0);
 
   if (!std::isfinite(U))
   {
