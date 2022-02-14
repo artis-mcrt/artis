@@ -11,6 +11,7 @@ double calculate_partfunct(int element, int ion, int modelgridindex);
 __host__ __device__ double get_groundlevelpop(int modelgridindex, int element, int ion);
 __host__ __device__ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level);
 __host__ __device__ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
+__host__ __device__ double calculate_exclevelpop_nominpop(int modelgridindex, int element, int ion, int level, bool *skipminpop);
 __host__ __device__ double get_groundmultiplet_pop(int modelgridindex, int element, int ion);
 
 

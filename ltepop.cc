@@ -550,30 +550,17 @@ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int leve
 
 
 __host__ __device__
-double calculate_exclevelpop(int modelgridindex, int element, int ion, int level)
-/// Calculates the population of a level from either LTE or NLTE information
+double calculate_exclevelpop_nominpop(int modelgridindex, int element, int ion, int level, bool *skipminpop)
 {
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
+
   double nn;
 
   //  T_exc = MINTEMP;
 
-
-/*  if (T_exc <= MINTEMP)
-  {
-    if (globals::elements[element].ions[ion].levels[level].metastable)
-    {
-      T_exc = grid::get_TJ(modelgridindex);
-    }
-    else
-    {
-      T_exc = grid::get_TR(modelgridindex);
-      W = grid::get_W(modelgridindex);
-    }
-  }*/
 
   if (level == 0)
   {
@@ -637,14 +624,29 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   {
     nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
   }
+  *skipminpop = false;
+  return nn;
+}
 
-  if (nn < MINPOP)
+
+__host__ __device__
+double calculate_exclevelpop(int modelgridindex, int element, int ion, int level)
+/// Calculates the population of a level from either LTE or NLTE information
+{
+
+  bool skipminpop = false;
+  double nn = calculate_exclevelpop_nominpop(modelgridindex, element, ion, level, &skipminpop);
+  if (!skipminpop && nn < MINPOP)
   {
     if (grid::get_elem_abundance(modelgridindex,element) > 0)
+    {
       nn = MINPOP;
       // nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
+    }
     else
+    {
       nn = 0.;
+    }
   }
 
   if (!std::isfinite(nn))
