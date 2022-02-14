@@ -589,6 +589,7 @@ double calculate_exclevelpop_nominpop(int modelgridindex, int element, int ion, 
           printout("ground level %g\n", get_groundlevelpop(modelgridindex, element, ion));
           abort();
         }
+        *skipminpop = true;
         return nn;
       }
     }
@@ -616,6 +617,7 @@ double calculate_exclevelpop_nominpop(int modelgridindex, int element, int ion, 
           printout("ground level %g\n", get_groundlevelpop(modelgridindex, element, ion));
           abort();
         }
+        *skipminpop = true;
         return nn;
       }
     }
