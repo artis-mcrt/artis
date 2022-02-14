@@ -1,5 +1,15 @@
+20e6abd1cbc51140fccf9fd320d388d8  absorption.out
+e542f79d6a9c125efab91fbc835869f3  deposition.out
+c59813edf59cc9f3a11c07f071cbdddb  emission.out
+3935b44b1879dacf3c2296e1c77dbb26  emissiontrue.out
+046f4f0fab31dd5a9076607d6d8eed2c  gamma_light_curve.out
 f2ab9b2d2087cb40a75d13a32163ac18  gammalinelist.out
 47dd2e31cc98d5d1dda67520fb399429  grid.out
+4ff3c033c6bd1bd629b0e1365f0cf688  light_curve.out
+1a48c4b51a222a593fe2110abbceb01b  linestat.out
+f28250d432cd990f88756352b7fce65c  packets00_0000.out
+a81a506e8cd7e46015219dd5dbdf520a  packets00_0001.out
+807b159e3418be0846e5f9c93d788b67  spec.out
 8e7163982f1aa938dc1505478b8c60d1  timesteps.out
 a2057f04cfd6815396594770bc5d1356  job0/estimators_0000.out
 1f9248344e320e99b4ed91a45dd9d3e7  job0/nlte_0000.out

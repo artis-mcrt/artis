@@ -237,5 +237,5 @@ jobs:
     - name: Checksum output files
       working-directory: tests/nebularonezone_testrun
       run: |
-        md5sum *.out job0/*.out job1/*.out
+        md5sum *.out
         md5sum -c results_md5_final.txt
