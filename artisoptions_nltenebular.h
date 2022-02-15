@@ -203,7 +203,7 @@ static const int MAX_NT_EXCITATIONS_STORED = 25000;
 
 #define RATECOEFF_INTEGRAL_ACCURACY 1e-3
 
-// when calculating ion ionisation rate coefficient, contribute the lowest n levels that
+// when calculating ion ionisation rate coefficient (for estimator files), contribute the lowest n levels that
 // make up at least IONGAMMA_POPFRAC_LEVELS_INCLUDED fraction of the ion population
 #define IONGAMMA_POPFRAC_LEVELS_INCLUDED 0.999
 
