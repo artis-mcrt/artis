@@ -336,9 +336,9 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
   const double groundpop = get_groundlevelpop(modelgridindex, element, ion);
   for (int level = 1; level < nlevels; level++)
   {
-    // bool skipminpop;
-    // const double nn = calculate_exclevelpop_nominpop(modelgridindex, element, ion, level, &skipminpop) / groundpop;
-    const double nn = calculate_exclevelpop(modelgridindex, element, ion, level) / groundpop;
+    bool skipminpop;
+    const double nn = calculate_exclevelpop_nominpop(modelgridindex, element, ion, level, &skipminpop) / groundpop;
+    // const double nn = calculate_exclevelpop(modelgridindex, element, ion, level) / groundpop;
     U += nn;
   }
   U *= stat_weight(element,ion,0);
