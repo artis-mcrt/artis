@@ -150,6 +150,7 @@ jobs:
         md5sum -c results_md5_job0.txt
 
     - name: "Run nebularonezone test job1 resume"
+      if: always()
       working-directory: tests/nebularonezone_testrun/
       run: |
         cp input-resume.txt input.txt
@@ -168,12 +169,14 @@ jobs:
       run: cat output_0-0.txt
 
     - name: Checksum job1 output files
+      if: always()
       working-directory: tests/nebularonezone_testrun
       run: |
         md5sum *.out job1/*.out
         md5sum -c results_md5_job1.txt
 
     - name: "Run exspec"
+      if: always()
       working-directory: tests/nebularonezone_testrun/
       run: |
         time ./exspec
@@ -235,6 +238,7 @@ jobs:
         path: tests/*.pdf
 
     - name: Checksum output files
+      if: always()
       working-directory: tests/nebularonezone_testrun
       run: |
         md5sum *.out
