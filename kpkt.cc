@@ -136,10 +136,11 @@ void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates_t *he
           /// --------------------
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
-            const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-            const double nnupperlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
+            // const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+            // const double nnupperlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
+            const double nnupperion = ionstagepop(modelgridindex,element,ion+1);
 
-            const double C_fb_ion_thistarget = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperlevel * nne;
+            const double C_fb_ion_thistarget = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperion * nne;
             C_fb_all += C_fb_ion_thistarget;
             C_ion += C_fb_ion_thistarget;
           }
@@ -276,10 +277,11 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
       /// --------------------
       for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
       {
-        const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-        const double nnupperlevel = calculate_exclevelpop(modelgridindex,element,ion + 1, upper);
+        // const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+        // const double nnupperlevel = calculate_exclevelpop(modelgridindex,element,ion + 1, upper);
+        const double nnupperion = ionstagepop(modelgridindex,element,ion+1);
 
-        const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperlevel * nne;
+        const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperion * nne;
         contrib += C;
         globals::cellhistory[tid].cooling_contrib[i] = contrib;
 
