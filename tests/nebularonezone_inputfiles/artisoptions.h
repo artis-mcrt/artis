@@ -4,11 +4,14 @@
 #include <cstdlib>
 #include "constants.h"
 
-// Number of energy packets per process (OpenMP threads share these pacekts)
+// Number of energy packets per process (MPI rank). OpenMP threads share these packets
 #define MPKTS 1000000
 
-// Max number of OpenMP threads
-#define MTHREADS 8
+#define GRID_TYPE GRID_UNIFORM
+#define CUBOID_NCOORDGRID_X 50
+#define CUBOID_NCOORDGRID_Y 50
+#define CUBOID_NCOORDGRID_Z 50
+// #define GRID_TYPE GRID_SPHERICAL1D
 
 // non-LTE population solver
 static const bool NLTE_POPS_ON = true;
@@ -191,5 +194,10 @@ static const int MAX_NT_EXCITATIONS_STORED = 25000;
 //
 // End of non-thermal solution options
 // ****
+#define TEMPERATURE_SOLVER_ACCURACY 1e-3
+
+#define CONTINUUM_NU_INTEGRAL_ACCURACY 1e-3
+
+#define RATECOEFF_INTEGRAL_ACCURACY 1e-3
 
 #endif //ARTISOPTIONS_H

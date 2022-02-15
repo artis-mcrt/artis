@@ -197,4 +197,10 @@ static const int MAX_NT_EXCITATIONS_STORED = 25000;
 // End of non-thermal solution options
 // ****
 
+#define TEMPERATURE_SOLVER_ACCURACY 1e-2
+
+#define CONTINUUM_NU_INTEGRAL_ACCURACY 1e-2
+
+#define RATECOEFF_INTEGRAL_ACCURACY 1e-2
+
 #endif //ARTISOPTIONS_H

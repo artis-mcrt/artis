@@ -3,6 +3,7 @@
 // #define  _XOPEN_SOURCE
 #define D_POSIX_SOURCE
 #include <cstdio>
+#include "artisoptions.h"
 #include "md5.h"
 #include "sn3d.h"
 #include "atomic.h"
@@ -534,7 +535,8 @@ static double bfcooling_integrand_gsl(double nu, void *voidparas)
 
 static void precalculate_rate_coefficient_integrals(void)
 {
-  const double intaccuracy = 1e-3;     // target fractional accuracy of the integrator //=1e-5 took 8 hours with Fe I to V!
+  // target fractional accuracy of the integrator //=1e-5 took 8 hours with Fe I to V!
+  const double intaccuracy = RATECOEFF_INTEGRAL_ACCURACY;
   const double epsrelwarning = 1e-2;   // fractional error to emit a warning
 
   /// Calculate the rate coefficients for each level of each ion of each element
@@ -733,7 +735,7 @@ static double get_x_at_integralfrac(gsl_function *F_integrand, double xmin, doub
 // of the total integral from xmin to xmax
 // this is done by breaking the integral into npieces intervals
 {
-  const double intaccuracy = 1e-3;        /// Fractional accuracy of the integrator
+  const double intaccuracy = CONTINUUM_NU_INTEGRAL_ACCURACY;        /// Fractional accuracy of the integrator
 
   const double deltax = (xmax - xmin) / npieces;
 

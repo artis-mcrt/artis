@@ -1,5 +1,6 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_roots.h>
+#include "artisoptions.h"
 #include "sn3d.h"
 #include "atomic.h"
 #include "grid.h"
@@ -494,7 +495,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
     gsl_root_fsolver *T_e_solver = gsl_root_fsolver_alloc(solvertype);
 
     gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
-    const double fractional_accuracy = 1e-3;
+    const double fractional_accuracy = TEMPERATURE_SOLVER_ACCURACY;
     const int maxit = 100;
     int status;
     for (int iternum = 0; iternum < maxit; iternum++)
