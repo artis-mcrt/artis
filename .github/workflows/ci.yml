@@ -125,6 +125,7 @@ jobs:
         cp exspec tests/nebularonezone_testrun/
 
     - name: "Run nebularonezone test job0 start"
+      if: always()
       working-directory: tests/nebularonezone_testrun/
       run: |
         cp input-newrun.txt input.txt
@@ -144,6 +145,7 @@ jobs:
       run: cat output_0-0.txt
 
     - name: Checksum job0 output files
+      if: always()
       working-directory: tests/nebularonezone_testrun
       run: |
         md5sum *.out job0/*.out
@@ -199,17 +201,20 @@ jobs:
         path: tests/nebularonezone_testrun/output
 
     - name: Set up Python
+      if: always()
       uses: actions/setup-python@v2
       with:
         python-version: 3.9
 
     - name: Get pip cache dir
+      if: always()
       id: pip-cache
       run: |
         pip list --format=freeze > piplist.txt
         echo "::set-output name=dir::$(pip cache dir)"
 
     - name: Cache pip
+      if: always()
       uses: actions/cache@v2.1.4
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
@@ -218,6 +223,7 @@ jobs:
          ${{ runner.os }}-pip-
 
     - name: Install artistools
+      if: always()
       run: |
         python3 -m pip install --upgrade pip
         python3 -m pip install artistools
@@ -226,12 +232,14 @@ jobs:
         python3 -m pip list --format=freeze --outdated | cut -d '=' -f1 | xargs -n1 python3 -m pip install --upgrade
 
     - name: Plot output
+      if: always()
       working-directory: tests/
       run: |
         python3 -m artistools.lightcurve nebularonezone_testrun nebularonezone_reference
         python3 -m artistools.spectra -ts 8 nebularonezone_testrun nebularonezone_reference
 
     - name: Upload plot files
+      if: always()
       uses: actions/upload-artifact@v2
       with:
         name: test-nebularonezone-output-pdf
