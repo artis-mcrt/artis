@@ -118,7 +118,8 @@ jobs:
 
     - name: "Setup test nebularonezone"
       run: |
-        cp tests/nebularonezone_inputfiles/artisoptions.h .
+        # cp tests/nebularonezone_inputfiles/artisoptions.h .
+        cp artisoptions_nltenebular.h artisoptions.h
         make clean
         make TESTMODE=ON MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
         cp sn3d tests/nebularonezone_testrun/
