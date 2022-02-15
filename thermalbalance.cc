@@ -30,7 +30,7 @@ typedef struct
 
 
 #if (!NO_LUT_BFHEATING)
-  double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, float T, double W)
+  double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T, double W)
   {
     /// The correction factor for stimulated emission in gammacorr is set to its
     /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
@@ -52,7 +52,9 @@ typedef struct
       bfheatingcoeff = (f_lower + (f_upper - f_lower)/(T_upper - T_lower) * (T - T_lower));
     }
     else
+    {
       bfheatingcoeff = globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[TABLESIZE-1];
+    }
 
     return W * bfheatingcoeff;
   }
@@ -174,7 +176,7 @@ void calculate_bfheatingcoeffs(int modelgridindex)
             /// correction may be evaluated at T_R!
             const double T_R = grid::get_TR(modelgridindex);
             const double W = grid::get_W(modelgridindex);
-            bfheatingcoeff += W * get_bfheatingcoeff_ana(element, ion, level, phixstargetindex, T_R, W);
+            bfheatingcoeff += get_bfheatingcoeff_ana(element, ion, level, phixstargetindex, T_R, W);
 
             #endif
           }
@@ -183,7 +185,9 @@ void calculate_bfheatingcoeffs(int modelgridindex)
           #if !NO_LUT_BFHEATING
           const int index_in_groundlevelcontestimator = globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
           if (index_in_groundlevelcontestimator >= 0)
+          {
             bfheatingcoeff *= globals::bfheatingestimator[modelgridindex*get_nelements()*get_max_nions() + index_in_groundlevelcontestimator];
+          }
           #endif
         }
         globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].bfheatingcoeff = bfheatingcoeff;
@@ -374,9 +378,13 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
   grid::set_Te(modelgridindex, T_e);
   double nntot;
   if (NLTE_POPS_ON && NLTE_POPS_ALL_IONS_SIMULTANEOUS)
+  {
     nntot = calculate_electron_densities(modelgridindex);
+  }
   else
+  {
     nntot = calculate_populations(modelgridindex);
+  }
 
   /// Then calculate heating and cooling rates
   const float nne = grid::get_nne(modelgridindex);

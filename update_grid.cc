@@ -1171,15 +1171,15 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
             titer_average_estimators(mgi);
           #endif
 
+          #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
+          update_gamma_corrphotoionrenorm_bfheating_estimators(mgi, estimator_normfactor);
+          #endif
+
           // Get radiation field parameters out of the full-spectrum and binned J and nuJ estimators
           radfield::fit_parameters(mgi, nts);
 
           #if (DETAILED_BF_ESTIMATORS_ON)
           radfield::normalise_bf_estimators(mgi, estimator_normfactor / H);
-          #endif
-
-          #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-          update_gamma_corrphotoionrenorm_bfheating_estimators(mgi, estimator_normfactor);
           #endif
 
           solve_Te_nltepops(mgi, nts, titer, heatingcoolingrates);
