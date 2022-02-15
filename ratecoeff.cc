@@ -42,10 +42,6 @@ static char adatafile_hash[33];
 static char compositionfile_hash[33];
 static char phixsfile_hash[33];
 
-// when calculating ion ionisation rate coefficient, contribute the lowest n levels that
-// make up at least min_popfrac_iongamma fraction of the ion population
-static const double min_popfrac_iongamma = 0.999;
-
 static bool read_ratecoeff_dat(void)
 /// Try to read in the precalculated rate coefficients from file
 /// return true if successful or false otherwise
@@ -1475,6 +1471,10 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
 static int get_nlevels_important(
   int modelgridindex, int element, int ion, bool assume_lte, float T_e, double *nnlevelsum_out)
 {
+  if (IONGAMMA_POPFRAC_LEVELS_INCLUDED >= 1.)
+  {
+    return get_nlevels(element, ion);
+  }
   // get the stored ion population for comparison with the cumulative sum of level pops
   const double nnion_real = ionstagepop(modelgridindex, element, ion);
 
@@ -1485,7 +1485,7 @@ static int get_nlevels_important(
   // *nnlevelsum_out = nnion_real;
   // return nlevels_important;
 
-  for (int lower = 0; (nnlevelsum / nnion_real < min_popfrac_iongamma) && (lower < get_ionisinglevels(element, ion)); lower++)
+  for (int lower = 0; (nnlevelsum / nnion_real < IONGAMMA_POPFRAC_LEVELS_INCLUDED) && (lower < get_ionisinglevels(element, ion)); lower++)
   {
     double nnlowerlevel;
     if (assume_lte)
@@ -1526,8 +1526,9 @@ double calculate_iongamma_per_gspop(const int modelgridindex, const int element,
   const float T_e = grid::get_Te(modelgridindex);
   const float nne = grid::get_nne(modelgridindex);
 
-  double nnlowerion = 0.;
-  const int nlevels_important = get_nlevels_important(modelgridindex, element, ion, false, T_e, &nnlowerion);
+  // double nnlowerion = 0.;
+  // const int nlevels_important = get_nlevels_important(modelgridindex, element, ion, false, T_e, &nnlowerion);
+  const int nlevels_important = get_nlevels(element, ion);
 
   double Col_ion = 0.;
   for (int level = 0; level < nlevels_important; level++)
@@ -1558,6 +1559,7 @@ double calculate_iongamma_per_ionpop(
   const bool assume_lte, const bool collisional_not_radiative, const bool printdebug, const bool force_bfest,
   const bool force_bfintegral)
 // ionisation rate coefficient. multiply by the lower ion pop to get a rate
+// currently only used for the estimator output file, not the simulation
 {
   assert_always(lowerion < get_nions(element) - 1);
   assert_always(!force_bfest || !force_bfintegral);
