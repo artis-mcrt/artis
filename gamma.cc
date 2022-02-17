@@ -137,13 +137,13 @@ static void read_decaydata(void)
     }
     else if (decay::nucdecayenergygamma(z, a) > 0.)
     {
-      printout("%s does not exist. Setting 100%% chance of single gamma-line with energy %g MeV\n",
-        filename, decay::nucdecayenergygamma(z, a) / EV / 1e6);
+      // printout("%s does not exist. Setting 100%% chance of single gamma-line with energy %g MeV\n",
+      //   filename, decay::nucdecayenergygamma(z, a) / EV / 1e6);
       set_trivial_gamma_spectrum(z, a);
     }
     else
     {
-      printout("%s does not exist. No gamma decay from this nuclide.\n", filename);
+      // printout("%s does not exist. No gamma decay from this nuclide.\n", filename);
     }
   }
 
