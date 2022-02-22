@@ -309,14 +309,13 @@ static double nucdecayenergytotal(int z, int a)
   return endecay;
 }
 
-double nucdecayenergy(int z, int a, int decaytype, bool includegamma)
+
+double nucdecayenergy(int z, int a, int decaytype)
 // contributed energy release per decay [erg] for decaytype (e.g. DECAYTYPE_BETAPLUS)
 // (excludes neutrinos!)
 {
   assert_always(nuc_exists(z, a));
-  double endecay = includegamma ? nucdecayenergygamma(z, a) : 0.;
-
-  endecay += nucdecayenergyparticle(z, a, decaytype);
+  const double endecay = nucdecayenergygamma(z, a) + nucdecayenergyparticle(z, a, decaytype);
 
   return endecay;
 }
@@ -1031,7 +1030,7 @@ static double get_endecay_to_tinf_per_ejectamass_at_time(
   //   ndecays_remaining += calculate_decaychain(top_initabund, meanlifetimes, c, t_afterinit);
   // }
 
-  const double endecay = ndecays_remaining * nucdecayenergy(z_end, a_end, decaytype_end, true);
+  const double endecay = ndecays_remaining * nucdecayenergy(z_end, a_end, decaytype_end);
 
   return endecay;
 }
@@ -1084,7 +1083,7 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(
 
 __host__ __device__
 double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridindex, const double tstart)
-// calculate the decay energy per unit mass [erg/g] released from time zero to tstart, accounting for
+// calculate the decay energy per unit mass [erg/g] released from time t_model to tstart, accounting for
 // the photon energy loss due to expansion between time of decays and tstart (equation 18 of Lucy 2005)
 {
   double tot_endecay = 0.;
@@ -1119,7 +1118,7 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
     const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
     const double chain_endecay = (get_decaypath_branchproduct(decaypathindex) *
         calculate_decaychain(top_initabund, meanlifetimes, decaypathlength + 1, tstart - grid::get_t_model(), true) *
-        nucdecayenergy(z_end, a_end, decaytype_end, true));
+        nucdecayenergy(z_end, a_end, decaytype_end));
 
     // printout("  Analytical chain_endecay: %g\n", chain_endecay);
     tot_endecay += chain_endecay;
@@ -1205,7 +1204,7 @@ static double get_chain_decay_power_per_ejectamass(
   // so contribution would be from init abundance only)
   const double endnucabund = get_decaypath_branchproduct(decaypathindex) * calculate_decaychain(top_initabund, meanlifetimes, decaypathlength, t_afterinit, false);
 
-  const double endecay = nucdecayenergy(z_end, a_end, decaytype_end, true);
+  const double endecay = nucdecayenergy(z_end, a_end, decaytype_end);
 
   const double decaypower = endecay * endnucabund / get_meanlife(z_end, a_end) / nucmass(z_top, a_top);
 
@@ -1343,7 +1342,7 @@ double get_global_etot_t0_tinf(void)
 
     etot_tinf += (
       get_decaypath_branchproduct(decaypathindex) * grid::get_totmassradionuclide(z_top, a_top) /
-      nucmass(z_top, a_top) * nucdecayenergy(z_end, a_end, decaytype_end, true));
+      nucmass(z_top, a_top) * nucdecayenergy(z_end, a_end, decaytype_end));
   }
   return etot_tinf;
 }
