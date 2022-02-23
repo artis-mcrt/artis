@@ -9,6 +9,7 @@
 #include <sstream>
 #include <string>
 
+
 static void place_pellet(const double e0, const int cellindex, const int pktnumber, PKT *pkt_ptr)
 /// This subroutine places pellet n with energy e0 in cell m
 {
@@ -183,6 +184,7 @@ void write_packets(char filename[], PKT *pkt)
 {
   // write packets text file
   FILE *packets_file = fopen_required(filename, "w");
+  fprintf(packets_file, "#number where type_id posx posy posz dirx diry dirz last_cross tdecay e_cmf e_rf nu_cmf nu_rf escape_type_id escape_time scat_count next_trans interactions last_event emissiontype trueemissiontype em_posx em_posy em_posz absorption_type absorption_freq nscatterings em_time absorptiondirx absorptiondiry absorptiondirz stokes1 stokes2 stokes3 pol_dirx pol_diry pol_dirz originated_from_positron true_emission_velocity trueem_time pellet_nucindex");
   for (int i = 0; i < globals::npkts; i++)
   {
     fprintf(packets_file, "%d ", pkt[i].number);
