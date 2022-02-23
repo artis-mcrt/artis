@@ -1826,10 +1826,8 @@ void input(int rank)
 
 
 bool lineiscommentonly(std::string &line)
+// return true for whitepace-only lines, and lines that are exclusively whitepace up to a '#' character
 {
-  // if (line.length() == 0)
-  //   return true;
-  // if (line.find('#') != std::string::npos)
   for (unsigned int i = 0; i < line.find('#'); i++)
   {
     if (line[i] != ' ')

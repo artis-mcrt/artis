@@ -1178,7 +1178,7 @@ static void read_1d_model(void)
   }
   else
   {
-    fmodel.seekg(oldpos); // undo getline
+    fmodel.seekg(oldpos); // undo getline because it was data, not a header line
   }
 
   decay::init_nuclides(zlist, alist);
