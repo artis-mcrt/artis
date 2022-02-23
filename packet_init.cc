@@ -1,9 +1,13 @@
 #include "sn3d.h"
-#include "grid.h"
 #include "decay.h"
+#include "grid.h"
+#include "input.h"
 #include "packet_init.h"
 #include "vectors.h"
 
+#include <fstream>
+#include <sstream>
+#include <string>
 
 static void place_pellet(const double e0, const int cellindex, const int pktnumber, PKT *pkt_ptr)
 /// This subroutine places pellet n with energy e0 in cell m
@@ -236,14 +240,18 @@ void read_temp_packetsfile(const int timestep, const int my_rank, PKT *const pkt
 void read_packets(char filename[], PKT *pkt)
 {
   // read packets text file
-  FILE *packets_file = fopen_required(filename, "r");
-  char *line = (char *) malloc(sizeof(char) * 4096);
+  std::ifstream packets_file(filename);
+  assert_always(packets_file.is_open());
+
+  std::string line;
 
   int packets_read = 0;
-  while (!feof(packets_file))
+  while (std::getline(packets_file, line))
   {
-    if (line != fgets(line, 4096, packets_file))
-      break;
+    if (lineiscommentonly(line))
+    {
+      continue;
+    }
 
     packets_read++;
     const int i = packets_read - 1;
@@ -255,73 +263,53 @@ void read_packets(char filename[], PKT *pkt)
       abort();
     }
 
-    char *linepos = line;
-    int offset = 0;
+    std::istringstream ssline(line);
 
     int pkt_type_in;
-    sscanf(linepos, "%d %d %d%n", &pkt[i].number, &pkt[i].where, &pkt_type_in, &offset);
-    linepos += offset;
+    ssline >> pkt[i].number >> pkt[i].where >> pkt_type_in;
     pkt[i].type = (enum packet_type) pkt_type_in;
 
-    sscanf(linepos, "%lg %lg %lg%n", &pkt[i].pos[0], &pkt[i].pos[1], &pkt[i].pos[2], &offset);
-    linepos += offset;
+    ssline >> pkt[i].pos[0] >> pkt[i].pos[1] >> pkt[i].pos[2];
 
-    sscanf(linepos, "%lg %lg %lg%n", &pkt[i].dir[0], &pkt[i].dir[1], &pkt[i].dir[2], &offset);
-    linepos += offset;
+    ssline >> pkt[i].dir[0] >> pkt[i].dir[1] >> pkt[i].dir[2];
 
     int last_cross_in;
-    sscanf(linepos, "%d%n", &last_cross_in, &offset);
-    linepos += offset;
+    ssline >> last_cross_in;
     pkt[i].last_cross = (enum cell_boundary) last_cross_in;
 
-    sscanf(linepos, "%lg%n", &pkt[i].tdecay, &offset);
-    linepos += offset;
+    ssline >> pkt[i].tdecay;
 
-    sscanf(linepos, "%lg %lg %lg %lg%n", &pkt[i].e_cmf, &pkt[i].e_rf, &pkt[i].nu_cmf, &pkt[i].nu_rf, &offset);
-    linepos += offset;
+    ssline >> pkt[i].e_cmf >> pkt[i].e_rf >> pkt[i].nu_cmf >> pkt[i].nu_rf;
 
     int escape_type;
-    sscanf(linepos, "%d %d %d%n", &escape_type, &pkt[i].escape_time, &pkt[i].scat_count, &offset);
-    linepos += offset;
+    ssline >> escape_type >> pkt[i].escape_time >> pkt[i].scat_count;
     pkt[i].escape_type = (enum packet_type) escape_type;
 
-    sscanf(linepos, "%d %d %d%n", &pkt[i].next_trans, &pkt[i].interactions, &pkt[i].last_event, &offset);
-    linepos += offset;
+    ssline >> pkt[i].next_trans >> pkt[i].interactions >> pkt[i].last_event;
 
-    sscanf(linepos, "%d %d%n", &pkt[i].emissiontype, &pkt[i].trueemissiontype, &offset);
-    linepos += offset;
+    ssline >> pkt[i].emissiontype >> pkt[i].trueemissiontype;
 
-    sscanf(linepos, "%lg %lg %lg%n", &pkt[i].em_pos[0], &pkt[i].em_pos[1], &pkt[i].em_pos[2], &offset);
-    linepos += offset;
+    ssline >> pkt[i].em_pos[0] >> pkt[i].em_pos[1] >> pkt[i].em_pos[2];
 
-    sscanf(linepos, "%d %lg %d%n", &pkt[i].absorptiontype, &pkt[i].absorptionfreq, &pkt[i].nscatterings, &offset);
-    linepos += offset;
+    ssline >> pkt[i].absorptiontype >> pkt[i].absorptionfreq >> pkt[i].nscatterings;
 
-    sscanf(linepos, "%d%n", &pkt[i].em_time, &offset);
-    linepos += offset;
+    ssline >> pkt[i].em_time;
 
-    sscanf(linepos, "%lg %lg %lg%n", &pkt[i].absorptiondir[0], &pkt[i].absorptiondir[1], &pkt[i].absorptiondir[2], &offset);
-    linepos += offset;
+    ssline >> pkt[i].absorptiondir[0] >> pkt[i].absorptiondir[1] >> pkt[i].absorptiondir[2];
 
-    sscanf(linepos, "%lg %lg %lg%n", &pkt[i].stokes[0], &pkt[i].stokes[1], &pkt[i].stokes[2], &offset);
-    linepos += offset;
+    ssline >> pkt[i].stokes[0] >> pkt[i].stokes[1] >> pkt[i].stokes[2];
 
-    sscanf(linepos, "%lg %lg %lg%n", &pkt[i].pol_dir[0], &pkt[i].pol_dir[1], &pkt[i].pol_dir[2], &offset);
-    linepos += offset;
+    ssline >> pkt[i].pol_dir[0] >> pkt[i].pol_dir[1] >> pkt[i].pol_dir[2];
 
     int int_originated_from_particlenotgamma;
-    sscanf(linepos, "%d%n", &int_originated_from_particlenotgamma, &offset);
-    linepos += offset;
+    ssline >> int_originated_from_particlenotgamma;
     pkt[i].originated_from_particlenotgamma = (int_originated_from_particlenotgamma != 0);
 
-    sscanf(linepos, "%g%n", &pkt[i].trueemissionvelocity, &offset);
-    linepos += offset;
+    ssline >> pkt[i].trueemissionvelocity;
 
-    sscanf(linepos, "%d%n", &pkt[i].trueem_time, &offset);
-    linepos += offset;
+    ssline >> pkt[i].trueem_time;
 
-    sscanf(linepos, "%d%n", &pkt[i].pellet_nucindex, &offset);
-    linepos += offset;
+    ssline >> pkt[i].pellet_nucindex;
   }
 
   if (packets_read < globals::npkts)
@@ -330,6 +318,6 @@ void read_packets(char filename[], PKT *pkt)
              packets_read, globals::npkts);
     abort();
   }
-  free(line);
-  fclose(packets_file);
+
+  packets_file.close();
 }
