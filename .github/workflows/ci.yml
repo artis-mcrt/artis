@@ -183,7 +183,7 @@ jobs:
       run: |
         time ./exspec
         mkdir output
-        cp -r output_0-0.txt exspec.txt output/
+        cp -r output_0-0.txt exspec.txt *.out output/
         rsync -av job0 output/
         rsync -av job1 output/
 
