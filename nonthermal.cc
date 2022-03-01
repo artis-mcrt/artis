@@ -2660,7 +2660,11 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
       //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
 
       const int xsstartindex = get_xs_ionization_vector(vec_xs_ionization, collionindex);
-
+      // Luke Shingles: the use of min and max on the epsilon limits keeps energies
+      // from becoming unphysical. This insight came from reading the
+      // CMFGEN Fortran source code (Li, Dessart, Hillier 2012, doi:10.1111/j.1365-2966.2012.21198.x)
+      // I had neglected this, so the limits of integration were incorrect. The fix didn't massively affect
+      // ionisation rates or spectra, but it was a source of error that let to energy fractions not adding up to 100%
       double int_eps_upper[SFPTS];
       double prefactors[SFPTS];
       for (int j = xsstartindex; j < SFPTS; j++)
