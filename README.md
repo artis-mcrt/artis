@@ -8,10 +8,10 @@
 The ARTIS source code is available because it forms part of the method used in published scientific results. Anyone who is interested in understanding the detailed numerical techniques (in greater detail than the published descriptions) used to obtain these results now has access to this information. We anticipate that other scientific software developers may find our code useful as a reference, and in this case we ask that authors of any derivative works acknowledge and cite the ARTIS collaboration. This is in additional to the legal requirements of attribution and preservation of copyright notices on any substantial copies under the MIT licence.
 
 ## Can you help me to run the code?
-We are not able to provide support to users of the code outside of our team of collaborators.
+We are not able to provide support to users of the code outside our team of collaborators.
 
 ## License
 
-Distributed under the BSD 3-clause license. See [LICENSE](https://github.com/artis-mcrt/artis/blob/main/LICENSE) for more information.
+Distributed under the BSD 3-Clause license. See [LICENSE](https://github.com/artis-mcrt/artis/blob/nebular/LICENSE) for more information.
 
 [https://github.com/artis-mcrt/artistools](https://github.com/artis-mcrt/artis)
