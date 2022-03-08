@@ -58,8 +58,8 @@ const bool single_ground_level = true; // if false, read from file or autodetect
 #define RECOMBCALIBRATION_T_ELEC 6000.
 
 // Polarisation for real packets
-// #define DIPOLE
-// #define POL_ON
+#define DIPOLE
+#define POL_ON
 
 // Polarisation for virtual packets
 // #define VPKT_ON
