@@ -1138,9 +1138,12 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         }
 
         #ifndef FORCE_LTE
+        // initial_iteration really means either ts 0 or nts < globals::n_lte_timesteps
         if (globals::initial_iteration || grid::modelgrid[mgi].thick == 1)
         #endif
         {
+          // LTE mode or grey mode (where temperature doesn't matter but is calculated anyway)
+
           const double T_J = radfield::get_T_J_from_J(mgi);
           grid::set_TR(mgi, T_J);
           grid::set_Te(mgi, T_J);
@@ -1159,7 +1162,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         #ifndef FORCE_LTE
         else // not (initial_iteration || grid::modelgrid[n].thick == 1)
         {
-          /// Calculate estimators
+          // non-LTE timesteps with T_e from heating/cooling
 
           radfield::normalise_nuJ(mgi, estimator_normfactor_over4pi);
 
@@ -1175,7 +1178,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
           update_gamma_corrphotoionrenorm_bfheating_estimators(mgi, estimator_normfactor);
           #endif
 
-          // Get radiation field parameters out of the full-spectrum and binned J and nuJ estimators
+          // Get radiation field parameters (T_J, T_R, W, and bins if enabled) out of the full-spectrum and binned J and nuJ estimators
           radfield::fit_parameters(mgi, nts);
 
           #if (DETAILED_BF_ESTIMATORS_ON)

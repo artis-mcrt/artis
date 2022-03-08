@@ -1114,7 +1114,7 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
     meanlifetimes[decaypathlength] = -1.; // nuclide at the end is a sink, so treat it as stable (even if it's not)
 
     // const double numerator = calculate_decaychain(1., meanlifetimes, decaypathlength + 1, tdiff, true);
-    // const double factor = numerator / calculate_decaychain(1., meanlifetimes, decaypathlength + 1, tdiff, MODE_ABUND);
+    // const double factor = numerator / calculate_decaychain(1., meanlifetimes, decaypathlength + 1, tdiff, false);
     // printout("  Analytical expansion factor: %g\n", factor);
 
     const int z_top = decaypaths[decaypathindex].z[0];

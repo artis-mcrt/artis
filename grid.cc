@@ -1804,7 +1804,7 @@ static void assign_initial_temperatures(void)
   {
     const double decayedenergy_per_mass = decay::get_endecay_per_ejectamass_t0_to_time_withexpansion(mgi, tstart);
 
-    double T_initial = pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) *get_rhoinit(mgi) * decayedenergy_per_mass, 1. / 4.);
+    double T_initial = pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) * get_rhoinit(mgi) * decayedenergy_per_mass, 1. / 4.);
 
     // printout("T_initial %g T_initial_alt %g\n", T_initial, T_initial_alt);
 
