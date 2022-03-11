@@ -19,7 +19,8 @@ struct time
   double start; // time at start of this timestep.
   double width; // Width of timestep.
   double mid; // Mid time in step - computed logarithmically.
-  double gamma_dep; // cmf gamma ray energy deposition rate
+  double gamma_dep; // cmf gamma ray energy deposition rate from absorption events
+  double gamma_dep_pathint; // cmf gamma ray energy deposition rate from packet trajectories
   double positron_dep; // cmf positron energy deposition rate
   double electron_dep; // cmf positron energy deposition rate
   double alpha_dep; // cmf positron energy deposition rate

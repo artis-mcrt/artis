@@ -509,7 +509,7 @@ static bool do_timestep(
       const double mtot = grid::get_mtot();
 
       FILE *dep_file = fopen_required("deposition.out", "w");
-      fprintf(dep_file, "#ts tmid_days tmid_s total_dep_Lsun gammadep_Lsun positrondep_Lsun positrondep_ana_Lsun elecdep_Lsun elecdep_ana_Lsun alphadep_Lsun alphadep_ana_Lsun gammadecay_Lsun Qdot_betaminus_ana_erg/g/s Qdotalpha_ana_erg/g/s Qdot_erg/g/s Qdot_ana_erg/g/s\n");
+      fprintf(dep_file, "#ts tmid_days tmid_s total_dep_Lsun gammadep_Lsun gammadeppathint_Lsun positrondep_Lsun positrondep_ana_Lsun elecdep_Lsun elecdep_ana_Lsun alphadep_Lsun alphadep_ana_Lsun gammadecay_Lsun Qdot_betaminus_ana_erg/g/s Qdotalpha_ana_erg/g/s Qdot_erg/g/s Qdot_ana_erg/g/s\n");
 
       for (int i = 0; i <= nts; i++)
       {
@@ -535,10 +535,11 @@ static bool do_timestep(
           alpha_dep_ana += vol_tmid * get_particle_injection_rate_density(mgi2, t_mid, decay::DECAYTYPE_ALPHA);
         }
 
-        fprintf(dep_file, "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n",
+        fprintf(dep_file, "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n",
                 i, t_mid / DAY, t_mid,
                 total_dep / globals::time_step[i].width / LSUN,
                 globals::time_step[i].gamma_dep / t_width / LSUN,
+                globals::time_step[i].gamma_dep_pathint / t_width / LSUN,
                 globals::time_step[i].positron_dep / t_width / LSUN,
                 positron_dep_ana / LSUN,
                 globals::time_step[i].electron_dep / t_width / LSUN,

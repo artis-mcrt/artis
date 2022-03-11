@@ -129,13 +129,17 @@ void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist)
 void normalise_grey(int nts)
 {
   const double dt = globals::time_step[nts].width;
+  globals::time_step[nts].gamma_dep_pathint = 0.;
   for (int mgi = 0; mgi < grid::get_npts_model(); mgi++)
   {
     if (grid::get_numassociatedcells(mgi) > 0)
     {
       const double dV = grid::vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
 
+      globals::time_step[nts].gamma_dep_pathint += globals::rpkt_emiss[mgi] * 1.e20 / globals::nprocs;
+
       globals::rpkt_emiss[mgi] = globals::rpkt_emiss[mgi] * ONEOVER4PI / dV / dt / globals::nprocs;
+
       // assert_testmodeonly(globals::rpkt_emiss[mgi] >= 0.);
       assert_testmodeonly(isfinite(globals::rpkt_emiss[mgi]));
     }
