@@ -54,7 +54,7 @@ static bool read_ratecoeff_dat(void)
     bool fileisamatch = true; // assume true until a mismatch is detected
 
     char adatafile_hash_in[33];
-    fscanf(ratecoeff_file,"%32s\n",adatafile_hash_in);
+    assert_always(fscanf(ratecoeff_file,"%32s\n", adatafile_hash_in) == 1);
     printout("ratecoeff.dat: MD5 adata.txt = %s ", adatafile_hash_in);
     if (strcmp(adatafile_hash, adatafile_hash_in) == 0)
       printout("(pass)\n");
@@ -65,7 +65,7 @@ static bool read_ratecoeff_dat(void)
     }
 
     char compositionfile_hash_in[33];
-    fscanf(ratecoeff_file,"%32s\n",compositionfile_hash_in);
+    assert_always(fscanf(ratecoeff_file,"%32s\n",compositionfile_hash_in) == 1);
     printout("ratecoeff.dat: MD5 compositiondata.txt %s ", compositionfile_hash_in);
     if (strcmp(compositionfile_hash, compositionfile_hash_in) == 0)
       printout("(pass)\n");
@@ -76,7 +76,7 @@ static bool read_ratecoeff_dat(void)
     }
 
     char phixsfile_hash_in[33];
-    fscanf(ratecoeff_file,"%32s\n",phixsfile_hash_in);
+    assert_always(fscanf(ratecoeff_file,"%32s\n",phixsfile_hash_in) == 1);
     printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixs_file_version], phixsfile_hash_in);
     if (strcmp(phixsfile_hash, phixsfile_hash_in) == 0)
       printout("(pass)\n");
@@ -91,7 +91,7 @@ static bool read_ratecoeff_dat(void)
       float T_min,T_max;
       int in_tablesize;
       int in_nlines;
-      fscanf(ratecoeff_file, "%g %g %d %d\n", &T_min, &T_max, &in_tablesize, &in_nlines);
+      assert_always(fscanf(ratecoeff_file, "%g %g %d %d\n", &T_min, &T_max, &in_tablesize, &in_nlines) == 4);
       printout("ratecoeff.dat: Tmin %g Tmax %g TABLESIZE %d nlines %d ", T_min, T_max, in_tablesize, in_nlines);
 
       if (T_min == MINTEMP && T_max == MAXTEMP && in_tablesize == TABLESIZE && in_nlines == globals::nlines)
@@ -105,7 +105,8 @@ static bool read_ratecoeff_dat(void)
           for (int ion = 0; ion < nions; ion++)
           {
             int in_element,in_ionstage,in_levels,in_ionisinglevels;
-            fscanf(ratecoeff_file,"%d %d %d %d\n",&in_element,&in_ionstage,&in_levels,&in_ionisinglevels);
+            assert_always(fscanf(
+              ratecoeff_file, "%d %d %d %d\n", &in_element, &in_ionstage, &in_levels, &in_ionisinglevels) == 4);
             const int nlevels = get_nlevels(element,ion);
             int ionisinglevels = get_ionisinglevels(element,ion);
             if (get_element(element) != in_element || get_ionstage(element,ion) != in_ionstage || nlevels != in_levels || ionisinglevels != in_ionisinglevels)
@@ -151,7 +152,8 @@ static bool read_ratecoeff_dat(void)
               for (int iter = 0; iter < TABLESIZE; iter++)
               {
                 double alpha_sp,bfcooling_coeff,corrphotoioncoeff,bfheating_coeff;
-                fscanf(ratecoeff_file,"%lg %lg %lg %lg\n", &alpha_sp, &bfcooling_coeff, &corrphotoioncoeff, &bfheating_coeff);
+                assert_always(fscanf(
+                  ratecoeff_file, "%lg %lg %lg %lg\n", &alpha_sp, &bfcooling_coeff, &corrphotoioncoeff, &bfheating_coeff) == 4);
 
                 // assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0);
                 globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[iter] = alpha_sp;
@@ -1022,7 +1024,7 @@ static void read_recombrate_file(void)
     for (int i = 0; i < tablerows; i++)
     {
       struct rrc_row row;
-      fscanf(recombrate_file, "%lg %lg %lg\n", &row.log_Te, &row.rrc_low_n, &row.rrc_total);
+      assert_always(fscanf(recombrate_file, "%lg %lg %lg\n", &row.log_Te, &row.rrc_low_n, &row.rrc_total) == 3);
       if (row.log_Te < log_Te_estimate && row.log_Te > T_highestbelow.log_Te)
         memcpy(&T_highestbelow, &row, sizeof(struct rrc_row));
 
