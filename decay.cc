@@ -20,7 +20,8 @@
 namespace decay
 {
 
-const char *elsymbols[119] = {
+const int Z_MAX = 119;
+const char *elsymbols[1 + Z_MAX] = {
   "n", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca",
   "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn", "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr",
   "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd",
@@ -70,7 +71,7 @@ int get_num_nuclides(void)
 
 const char *get_elname(const int z)
 {
-  assert_always(z < 119);
+  assert_always(z <= Z_MAX);
   return elsymbols[z];
 }
 
@@ -131,22 +132,22 @@ static bool nuc_exists(int z, int a)
 
 static void printout_nuclidename(const int z, const int a)
 {
-  printout("(Z=%d)%s-%d", z, get_elname(z), a);
+  printout("(Z=%d)%s%d", z, get_elname(z), a);
 }
 
 static void printout_nuclidemeanlife(const int z, const int a)
 {
   if (nuc_exists(z, a) && get_meanlife(z, a) > 0.)
   {
-    printout("(tau %.1es)", get_meanlife(z, a));
+    printout("[tau %.1es]", get_meanlife(z, a));
   }
   else if (nuc_exists(z, a))
   {
-    printout("(stable,exists)");
+    printout("[stable,in_net]");
   }
   else
   {
-    printout("(stable,offnet)");
+    printout("[stable,offnet]");
   }
 }
 
@@ -454,6 +455,8 @@ static void printout_decaypath(const int decaypathindex)
 
 
 static void extend_lastdecaypath(void)
+// follow decays at the ends of the current list of decaypaths,
+// to get decaypaths from all descendants
 {
   const int startdecaypathindex = decaypaths.size() - 1;
   const int last_z = decaypaths[startdecaypathindex].z[get_decaypathlength(startdecaypathindex) - 1];
@@ -581,7 +584,7 @@ int get_nucstring_z(const char *strnuc)
   std::string elcode = strnuc;
   elcode.erase(std::remove_if(elcode.begin(), elcode.end(), &isdigit), elcode.end());
 
-  for (int z = 1; z < 110; z++)
+  for (int z = 1; z <= Z_MAX; z++)
   {
     if (strcmp(elcode.c_str(), get_elname(z)) == 0)  // first to letters match el symbol
     {
@@ -605,7 +608,7 @@ int get_nucstring_a(const char *strnuc)
 
 
 __host__ __device__
-void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist) // std::vector<std::string> nuclides
+void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
 {
   assert_always(custom_zlist.size() == custom_alist.size());
 
