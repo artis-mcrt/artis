@@ -793,9 +793,9 @@ int main(int argc, char** argv)
 
   #ifdef MPI_ON
     printout("MPI enabled:\n");
-    printout("  rank %d of %d in MPI_COMM_WORLD\n", globals::rank_global, globals::nprocs);
-    printout("  node %d of %d\n", globals::node_id, globals::node_count);
-    printout("  rank %d of %d within this node (MPI_COMM_WORLD_SHARED)\n", globals::rank_in_node, globals::node_nprocs);
+    printout("  rank %d of [0..%d] in MPI_COMM_WORLD\n", globals::rank_global, globals::nprocs - 1);
+    printout("  node %d of [0..%d]\n", globals::node_id, globals::node_count - 1);
+    printout("  rank %d of [0..%d] within this node (MPI_COMM_WORLD_SHARED)\n", globals::rank_in_node, globals::node_nprocs - 1);
   #else
     printout("MPI is disabled in this build\n");
   #endif
@@ -868,9 +868,9 @@ int main(int argc, char** argv)
   printout("time after tabulation of rate coefficients %ld\n", time(NULL));
 //  abort();
  #ifdef MPI_ON
-   printout("barrier after tabulation of rate coefficients: time before barrier %d, ", (int) time(NULL));
+   printout("barrier after tabulation of rate coefficients: time before barrier %ld, ", time(NULL));
    MPI_Barrier(MPI_COMM_WORLD);
-   printout("time after barrier %d\n", (int) time(NULL));
+   printout("time after barrier %ld\n", time(NULL));
  #endif
 
   stats::init();
