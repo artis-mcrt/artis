@@ -49,6 +49,7 @@ static long mem_usage_nltepops = 0;
 
 static __managed__ int *mg_associated_cells = NULL;
 static __managed__ int *nonemptymgi_of_mgi = NULL;
+static __managed__ int *mgi_of_nonemptymgi = NULL;
 
 __managed__ double *totmassradionuclide = NULL; /// total mass of each radionuclide in the ejecta
 
@@ -457,9 +458,9 @@ int get_numassociatedcells(const int modelgridindex)
 
 __host__ __device__
 int get_modelcell_nonemptymgi(int mgi)
+// get the index in the list of non-empty cells for a given model grid cell
 {
-  // get the index in the list of non-empty cells for a given model grid cell
-  assert_testmodeonly(nonempty_npts_model > 0);
+  assert_testmodeonly(get_nonempty_npts_model() > 0);
   assert_testmodeonly(mgi < get_npts_model());
 
   const int nonemptymgi = nonemptymgi_of_mgi[mgi];
@@ -468,6 +469,21 @@ int get_modelcell_nonemptymgi(int mgi)
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
 
   return nonemptymgi;
+}
+
+
+__host__ __device__
+int get_mgi_of_nonemptymgi(int nonemptymgi)
+// get the index in the list of non-empty cells for a given model grid cell
+{
+  assert_testmodeonly(get_nonempty_npts_model() > 0);
+  assert_testmodeonly(nonemptymgi >= 0);
+  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
+
+  const int mgi = mgi_of_nonemptymgi[nonemptymgi];
+
+  assert_always(mgi >= 0);
+  return mgi;
 }
 
 
@@ -826,7 +842,21 @@ static void allocate_nonemptymodelcells(void)
     assert_always(!(get_model_type() == RHO_3D_READ) || (mg_associated_cells[mgi] == 1) || (mgi == get_npts_model()));
   }
 
+  // find number of non-empty cells and allocate nonempty list
+  nonempty_npts_model = 0;
+  for (int mgi = 0; mgi < get_npts_model(); mgi++)
+  {
+    if (get_numassociatedcells(mgi) > 0)
+    {
+      nonempty_npts_model++;
+    }
+  }
+
+  assert_always(mgi_of_nonemptymgi == NULL);
+  mgi_of_nonemptymgi = (int *) malloc((nonempty_npts_model) * sizeof(int));
+
   int nonemptymgi = 0;  // index within list of non-empty modelgrid cells
+
   for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
     if (get_numassociatedcells(mgi) > 0)
@@ -840,6 +870,7 @@ static void allocate_nonemptymodelcells(void)
         abort();
       }
       nonemptymgi_of_mgi[mgi] = nonemptymgi;
+      mgi_of_nonemptymgi[nonemptymgi] = mgi;
       nonemptymgi++;
     }
     else
@@ -859,7 +890,6 @@ static void allocate_nonemptymodelcells(void)
     }
   }
 
-  nonempty_npts_model = nonemptymgi;
 
   printout("[info] mem_usage: the modelgrid array occupies %.3f MB\n", (get_npts_model() + 1) * sizeof(modelgrid) / 1024. / 1024.);
 
@@ -1911,52 +1941,39 @@ static void assign_initial_temperatures(void)
 
 void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo_nonempty, int *maxndo)
 {
-#ifndef MPI_ON
-  // no MPI, single process updates all cells
-  *nstart = 0;
-  *ndo = get_npts_model();
-#else
-  int n_leftover = 0;
+  const int npts_nonempty = get_nonempty_npts_model();
+  const int min_nonempty_perproc = npts_nonempty / nprocesses; // integer division, minimum non-empty cells per process
+  *maxndo = 0;
+  int ranks_nstart[nprocesses];
+  int ranks_ndo[nprocesses];
+  int ranks_ndo_nonempty[nprocesses];
+  int rank = 0;
+  ranks_nstart[0] = 0;
+  ranks_ndo[0] = 0;
+  ranks_ndo_nonempty[0] = 0;
 
-  int nblock = get_npts_model() / nprocesses; // integer division, minimum cells for any process
-  const int numtot = nblock * nprocesses; // cells counted if all processes do the minimum number of cells
-  if (numtot > get_npts_model()) // LJS: should never be the case?
+  for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
-    nblock = nblock - 1;
-    *maxndo = nblock + 1;
-    n_leftover = get_npts_model() - (nblock * nprocesses);
-  }
-  else if (numtot < get_npts_model())
-  {
-    *maxndo = nblock + 1;
-    n_leftover = get_npts_model() - (nblock * nprocesses);
-  }
-  else
-  {
-    *maxndo = nblock;
-    n_leftover = 0;
-  }
+    if ((ranks_ndo_nonempty[rank] >= min_nonempty_perproc) && (rank < (nprocesses - 1)))
+    {
+      // current rank has enough non-empty cells, so start assigning cells to the next rank
+      rank++;
+      ranks_nstart[rank] = mgi;
+      ranks_ndo[rank] = 0;
+      ranks_ndo_nonempty[rank] = 0;
+    }
 
-  if (my_rank < n_leftover)
-  {
-    *ndo = nblock + 1;
-    *nstart = my_rank * (nblock + 1);
-  }
-  else
-  {
-    *ndo = nblock;
-    *nstart = n_leftover * (nblock + 1) + (my_rank - n_leftover) * (nblock);
-  }
-#endif
-
-  *ndo_nonempty = 0;
-  for (int mgi = *nstart; mgi < *nstart + *ndo; mgi++)
-  {
+    ranks_ndo[rank]++;
+    *maxndo = std::max(*maxndo, ranks_ndo[rank]);
     if (get_numassociatedcells(mgi) > 0)
     {
-      *ndo_nonempty += 1;
+      ranks_ndo_nonempty[rank]++;
     }
   }
+
+  *nstart = ranks_nstart[my_rank];
+  *ndo = ranks_ndo[my_rank];
+  *ndo_nonempty = ranks_ndo_nonempty[my_rank];
 }
 
 

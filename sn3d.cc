@@ -917,10 +917,10 @@ int main(int argc, char** argv)
   int ndo_nonempty = 0;
   int maxndo = 0;
   grid::get_nstart_ndo(my_rank, globals::nprocs, &nstart, &ndo, &ndo_nonempty, &maxndo);
-  printout("process rank %d (range 0 to %d) doing %d cells (%d nonempty)", my_rank, globals::nprocs - 1, ndo, ndo_nonempty);
+  printout("process rank %d (global max rank %d) assigned %d modelgrid cells (%d nonempty)", my_rank, globals::nprocs - 1, ndo, ndo_nonempty);
   if (ndo > 0)
   {
-    printout(": numbers %d to %d\n", nstart, nstart + ndo - 1);
+    printout(": cells [%d, %d] (model has max mgi %d)\n", nstart, nstart + ndo - 1, grid::get_npts_model() - 1);
   }
   else
   {
