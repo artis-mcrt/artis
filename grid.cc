@@ -1947,15 +1947,15 @@ void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo
   int ranks_nstart[nprocesses];
   int ranks_ndo[nprocesses];
   int ranks_ndo_nonempty[nprocesses];
-  int rank = 0;
 
-  for (int rank = 0; rank < nprocesses - 1; rank++)
+  for (int r = 0; r < (nprocesses - 1); r++)
   {
-    ranks_nstart[rank] = 0;
-    ranks_ndo[rank] = 0;
-    ranks_ndo_nonempty[rank] = 0;
+    ranks_nstart[r] = 0;
+    ranks_ndo[r] = 0;
+    ranks_ndo_nonempty[r] = 0;
   }
 
+  int rank = 0;
   for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
     if ((ranks_ndo_nonempty[rank] >= min_nonempty_perproc) && (rank < (nprocesses - 1)))
