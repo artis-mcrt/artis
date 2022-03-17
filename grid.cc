@@ -1975,9 +1975,21 @@ void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo
     }
   }
   // for possible unused higher ranks with no cells, give nstart as last mgi
-  for (int r = rank + 1; r < (nprocesses - 1); r++)
+  for (int r = rank + 1; r < nprocesses; r++)
   {
-    ranks_nstart[rank] = get_npts_model() - 1;
+    ranks_nstart[r] = get_npts_model() - 1;
+  }
+
+  if (my_rank == 0)
+  {
+    std::ofstream fileout("modelgridrankassignments.out");
+    assert_always(fileout.is_open());
+    fileout << "#rank nstart ndo ndo_nonempty\n";
+    for (int r = 0; r < nprocesses; r++)
+    {
+      fileout << r << " " << ranks_nstart[r] << " " << ranks_ndo[r] << " " << ranks_ndo_nonempty[r] << "\n";
+    }
+    fileout.close();
   }
 
   *nstart = ranks_nstart[my_rank];
