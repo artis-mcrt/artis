@@ -1948,7 +1948,7 @@ void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo
   int ranks_ndo[nprocesses];
   int ranks_ndo_nonempty[nprocesses];
 
-  for (int r = 0; r < (nprocesses - 1); r++)
+  for (int r = 0; r < nprocesses; r++)
   {
     ranks_nstart[r] = 0;
     ranks_ndo[r] = 0;
