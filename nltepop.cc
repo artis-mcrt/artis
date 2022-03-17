@@ -1291,9 +1291,9 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
         // deexcitation
         for (i = 0; i < ndowntrans; i++)
         {
-          epsilon_trans = epsilon_current - epsilon(element, ion, lower);
           lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
           lower = globals::linelist[lineindex].lowerlevelindex;
+          epsilon_trans = epsilon_current - epsilon(element, ion, lower);
 
           R = rad_deexcitation_ratecoeff(modelgridindex,element,ion,level,lower,epsilon_trans,lineindex,t_mid);
           C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);

@@ -556,9 +556,9 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
 
     const double rndcool = zrand * grid::modelgrid[modelgridindex].totalcooling;
     // printout("rndcool %g totalcooling %g\n",rndcool, grid::modelgrid[modelgridindex].totalcooling);
-    double oldcoolingsum;
-    int element;
-    int ion;
+    double oldcoolingsum = 0.;
+    int element = -1;
+    int ion = -1;
     for (element = 0; element < get_nelements(); element++)
     {
       const int nions = get_nions(element);

@@ -211,19 +211,18 @@ static int do_macroatom_internal_down_same(
     }
   }
 
+  // if (false) printout("[debug] do_ma:   to level %d\n", lower);
+  // if (get_ionstage(element,ion) == 0 && lower == 0)
+  // {
+  //   printout("internal downward transition to ground level occured ... abort\n");
+  //   printout("element %d, ion %d, level %d, lower %d\n", element, ion, level, lower);
+  //   printout("Z %d, ionstage %d, energy %g\n",
+  //            get_element(element), get_ionstage(element,ion), globals::elements[element].ions[ion].levels[lower].epsilon);
+  //   printout("[debug] do_ma:   internal downward jump within current ionstage\n");
+  //   abort();
+  // }
+
   return lower;
-
-  if (false) printout("[debug] do_ma:   to level %d\n", lower);
-  if (get_ionstage(element,ion) == 0 && lower == 0)
-  {
-    printout("internal downward transition to ground level occured ... abort\n");
-    printout("element %d, ion %d, level %d, lower %d\n", element, ion, level, lower);
-    printout("Z %d, ionstage %d, energy %g\n",
-             get_element(element), get_ionstage(element,ion), globals::elements[element].ions[ion].levels[lower].epsilon);
-    printout("[debug] do_ma:   internal downward jump within current ionstage\n");
-    abort();
-  }
-
 }
 
 

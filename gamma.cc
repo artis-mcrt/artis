@@ -408,7 +408,7 @@ static double choose_f(double xx, double zrand)
 
   //printout("new\n");
 
-  double ftry;
+  double ftry = (f_max + f_min) / 2;
   while ((err > 1.e-4) && (count < 1000))
   {
     ftry = (f_max + f_min) / 2;
