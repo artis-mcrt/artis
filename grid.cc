@@ -1948,9 +1948,13 @@ void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo
   int ranks_ndo[nprocesses];
   int ranks_ndo_nonempty[nprocesses];
   int rank = 0;
-  ranks_nstart[0] = 0;
-  ranks_ndo[0] = 0;
-  ranks_ndo_nonempty[0] = 0;
+
+  for (int rank = 0; rank < nprocesses - 1; rank++)
+  {
+    ranks_nstart[rank] = 0;
+    ranks_ndo[rank] = 0;
+    ranks_ndo_nonempty[rank] = 0;
+  }
 
   for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
@@ -1959,8 +1963,6 @@ void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo
       // current rank has enough non-empty cells, so start assigning cells to the next rank
       rank++;
       ranks_nstart[rank] = mgi;
-      ranks_ndo[rank] = 0;
-      ranks_ndo_nonempty[rank] = 0;
     }
 
     ranks_ndo[rank]++;
