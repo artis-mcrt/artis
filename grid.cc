@@ -1972,6 +1972,11 @@ void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo
       ranks_ndo_nonempty[rank]++;
     }
   }
+  // for possible unused higher ranks with no cells, give nstart as last mgi
+  for (int r = rank + 1; r < (nprocesses - 1); r++)
+  {
+    ranks_nstart[rank] = get_npts_model() - 1;
+  }
 
   *nstart = ranks_nstart[my_rank];
   *ndo = ranks_ndo[my_rank];
