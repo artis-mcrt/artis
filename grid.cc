@@ -1959,7 +1959,7 @@ void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo
   int rank = 0;
   for (int mgi = 0; mgi < get_npts_model(); mgi++)
   {
-    const int target_nonempty_thisrank = (rank == 0) ? min_nonempty_perproc + n_leftover : min_nonempty_perproc;
+    const int target_nonempty_thisrank = (rank < n_leftover) ? min_nonempty_perproc + 1 : min_nonempty_perproc;
     if ((ranks_ndo_nonempty[rank] >= target_nonempty_thisrank) && (rank < (nprocesses - 1)))
     {
       // current rank has enough non-empty cells, so start assigning cells to the next rank
