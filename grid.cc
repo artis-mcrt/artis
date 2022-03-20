@@ -926,10 +926,10 @@ static void map_1dmodeltogrid(void)
         }
         set_cell_modelgridindex(cellindex, mgi);
       }
-
-      if (vout_model[get_cell_modelgridindex(cellindex)] >= vmin)
+      const int mgi = get_cell_modelgridindex(cellindex);
+      if ((vout_model[mgi] >= vmin) && (get_rhoinit(mgi) > 0))
       {
-        modelgrid[get_cell_modelgridindex(cellindex)].initial_radial_pos += radial_pos;
+        modelgrid[mgi].initial_radial_pos += radial_pos;
       }
       else
       {
