@@ -1952,7 +1952,7 @@ void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo
   // begin with no cell assignments
   for (int r = 0; r < nprocesses; r++)
   {
-    ranks_nstart[r] = get_npts_model() - 1;
+    ranks_nstart[r] = 0;
     ranks_ndo[r] = 0;
     ranks_ndo_nonempty[r] = 0;
   }
