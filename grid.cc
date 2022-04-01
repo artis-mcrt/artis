@@ -452,7 +452,7 @@ int get_numassociatedcells(const int modelgridindex)
 // number of propagation cells associated with each modelgrid cell
 {
   assert_testmodeonly(mg_associated_cells != NULL);
-  assert_testmodeonly(new_modelgridindex <= get_npts_model());
+  assert_testmodeonly(modelgridindex <= get_npts_model());
   return mg_associated_cells[modelgridindex];
 }
 
