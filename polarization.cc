@@ -53,9 +53,9 @@ void escat_rpkt(PKT *pkt_ptr)
     const double zrand2 = gsl_rng_uniform(rng);
     const double zrand3 = gsl_rng_uniform(rng);
 
-    phisc = 2 * PI * zrand ;
-    M = 2 * zrand2 - 1;
-    mu = pow(M,2.) ;
+    M = 2 * zrand - 1;
+    mu = pow(M, 2.) ;
+    phisc = 2 * PI * zrand2;
 
     // NB: the rotational matrix R here is chosen in the clockwise direction ("+").
     // In Bulla+2015 equation (10) and (12) refer to the specific case shown in Fig.2 where the angle i2
