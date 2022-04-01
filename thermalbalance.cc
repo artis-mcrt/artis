@@ -625,5 +625,9 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
   }
 
   grid::set_Te(modelgridindex, T_e);
+
+  // this call with make sure heating/cooling rates and populations are updated for the final T_e
+  // in case T_e got modified after the T_e solver finished
+  T_e_eqn_heating_minus_cooling(T_e, find_T_e_f.params);
 }
 
