@@ -1949,35 +1949,51 @@ void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo
   int ranks_ndo[nprocesses];
   int ranks_ndo_nonempty[nprocesses];
 
+  // begin with no cell assignments
   for (int r = 0; r < nprocesses; r++)
   {
-    ranks_nstart[r] = 0;
+    ranks_nstart[r] = get_npts_model();
     ranks_ndo[r] = 0;
     ranks_ndo_nonempty[r] = 0;
   }
 
-  int rank = 0;
-  for (int mgi = 0; mgi < get_npts_model(); mgi++)
+  if (nprocesses >= get_npts_model())
   {
-    const int target_nonempty_thisrank = (rank < n_leftover) ? min_nonempty_perproc + 1 : min_nonempty_perproc;
-    if ((ranks_ndo_nonempty[rank] >= target_nonempty_thisrank) && (rank < (nprocesses - 1)))
-    {
-      // current rank has enough non-empty cells, so start assigning cells to the next rank
-      rank++;
-      ranks_nstart[rank] = mgi;
-    }
+    // for convenience, rank == mgi when there is at least one rank per cell
 
-    ranks_ndo[rank]++;
-    *maxndo = std::max(*maxndo, ranks_ndo[rank]);
-    if (get_numassociatedcells(mgi) > 0)
+    for (int r = 0; r < nprocesses; r++)
     {
-      ranks_ndo_nonempty[rank]++;
+      if (r < get_npts_model())
+      {
+        const int mgi = r;
+        ranks_nstart[r] = mgi;
+        ranks_ndo[r] = 1;
+        ranks_ndo_nonempty[r] = (get_numassociatedcells(mgi) > 0) ? 1 : 0;
+      }
     }
   }
-  // for possible unused higher ranks with no cells, give nstart as last mgi
-  for (int r = rank + 1; r < nprocesses; r++)
+  else
   {
-    ranks_nstart[r] = get_npts_model() - 1;
+    // evenly divide up the non-empty cells among the ranks
+
+    int rank = 0;
+    for (int mgi = 0; mgi < get_npts_model(); mgi++)
+    {
+      const int target_nonempty_thisrank = (rank < n_leftover) ? min_nonempty_perproc + 1 : min_nonempty_perproc;
+      if ((ranks_ndo_nonempty[rank] >= target_nonempty_thisrank) && (rank < (nprocesses - 1)))
+      {
+        // current rank has enough non-empty cells, so start assigning cells to the next rank
+        rank++;
+        ranks_nstart[rank] = mgi;
+      }
+
+      ranks_ndo[rank]++;
+      *maxndo = std::max(*maxndo, ranks_ndo[rank]);
+      if (get_numassociatedcells(mgi) > 0)
+      {
+        ranks_ndo_nonempty[rank]++;
+      }
+    }
   }
 
   if (my_rank == 0)
