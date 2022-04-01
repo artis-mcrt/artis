@@ -6,34 +6,11 @@
 
 void escat_rpkt(PKT *pkt_ptr)
 {
-  double dummy_dir[3];
-  double vel_vec[3];
-  double vel_rev[3];
-  double old_dir_cmf[3];
-  double new_dir_cmf[3];
-  double Inew;
-  double Unew;
-  double Qnew;
-  double Uold;
-  double Qold;
-  double I;
-  double Q;
-  double U;
-  double mu;
-  double M;
-  double phisc;
-  // double i1,i2,cos2i1,sin2i1,cos2i2,sin2i2;
-  double ref1[3];
-  double ref2[3];
-#ifdef DIPOLE
-  double p;
-  double x;
-#endif
-
   /// now make the packet a r-pkt and set further flags
   pkt_ptr->type = TYPE_RPKT;
   pkt_ptr->last_cross = NONE;  /// allow all further cell crossings
 
+  double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
 
   // Transform Stokes Parameters from the RF to the CMF
@@ -41,19 +18,25 @@ void escat_rpkt(PKT *pkt_ptr)
   double Qi = pkt_ptr->stokes[1];
   double Ui = pkt_ptr->stokes[2];
 
+  double old_dir_cmf[3];
   frame_transform(pkt_ptr->dir,&Qi,&Ui,vel_vec,old_dir_cmf);
 
   // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos & Whitlock 2008)
 
+  double mu = 0.;
+  double phisc = 0.;
+
 #ifdef DIPOLE
   // Assume dipole function (rejecton method, see Code & Whitney 1995)
+  double p = 0.;
+  double x - 0.;
   do
   {
     const double zrand = gsl_rng_uniform(rng);
     const double zrand2 = gsl_rng_uniform(rng);
     const double zrand3 = gsl_rng_uniform(rng);
 
-    M = 2 * zrand - 1;
+    const double M = 2 * zrand - 1;
     mu = pow(M, 2.) ;
     phisc = 2 * PI * zrand2;
 
@@ -71,17 +54,19 @@ void escat_rpkt(PKT *pkt_ptr)
   while (x > p);
 
 #else
+
   // Assume isotropic scattering
   const double zrand = gsl_rng_uniform(rng);
   const double zrand2 = gsl_rng_uniform(rng);
 
-  M = 2. * zrand - 1;
+  const double M = 2. * zrand - 1;
   mu = pow(M, 2.);
   phisc = 2 * PI * zrand2;
 
 #endif
 
-  double tsc = acos(M);
+  const double tsc = acos(M);
+  double new_dir_cmf[3];
 
   if (fabs(old_dir_cmf[2]) < 0.99999)
   {
@@ -103,56 +88,56 @@ void escat_rpkt(PKT *pkt_ptr)
     }
   }
 
-
   // Need to rotate Stokes Parameters in the scattering plane
 
+  double ref1[3];
+  double ref2[3];
   meridian(old_dir_cmf,ref1,ref2);
 
   /* This is the i1 angle of Bulla+2015, obtained by computing the angle between the
      reference axes ref1 and ref2 in the meridian frame and the corresponding axes
      ref1_sc and ref2_sc in the scattering plane. It is the supplementary angle of the
      scatt angle phisc chosen in the rejection technique above (phisc+i1=180 or phisc+i1=540) */
-  double i1 = rot_angle(old_dir_cmf,new_dir_cmf,ref1,ref2);
-  double cos2i1 = cos(2 * i1);
-  double sin2i1 = sin(2 * i1);
+  const double i1 = rot_angle(old_dir_cmf,new_dir_cmf,ref1,ref2);
+  const double cos2i1 = cos(2 * i1);
+  const double sin2i1 = sin(2 * i1);
 
-  Qold = Qi * cos2i1 - Ui * sin2i1;
-  Uold = Qi * sin2i1 + Ui * cos2i1;
+  const double Qold = Qi * cos2i1 - Ui * sin2i1;
+  const double Uold = Qi * sin2i1 + Ui * cos2i1;
 
   // Scattering
 
   mu = dot(old_dir_cmf,new_dir_cmf);
 
-  Inew = 0.75 * ( (mu * mu + 1.0) + Qold * (mu * mu - 1.0) );
-  Qnew = 0.75 * ( (mu * mu - 1.0) + Qold * (mu * mu + 1.0) );
-  Unew = 1.5 * mu * Uold ;
+  const double Inew = 0.75 * ( (mu * mu + 1.0) + Qold * (mu * mu - 1.0) );
+  double Qnew = 0.75 * ( (mu * mu - 1.0) + Qold * (mu * mu + 1.0) );
+  double Unew = 1.5 * mu * Uold ;
 
   Qnew = Qnew / Inew;
   Unew = Unew / Inew;
-  I = 1.0; // Inew / Inew
-
+  const double I = 1.0; // Inew / Inew
 
   // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame (Clockwise rotation of PI-i2)
 
-  meridian(new_dir_cmf,ref1,ref2);
+  meridian(new_dir_cmf, ref1, ref2);
 
-  /* This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
-     reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
-     meridian frame. NB: we need to add PI to transform THETA to i2 */
-  double i2 = PI + rot_angle(new_dir_cmf,old_dir_cmf,ref1,ref2);
-  double cos2i2 = cos(2 * i2);
-  double sin2i2 = sin(2 * i2);
+  // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
+  //   reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
+  //   meridian frame. NB: we need to add PI to transform THETA to i2
+  const double i2 = PI + rot_angle(new_dir_cmf, old_dir_cmf, ref1, ref2);
+  const double cos2i2 = cos(2 * i2);
+  const double sin2i2 = sin(2 * i2);
 
-  Q = Qnew * cos2i2 + Unew * sin2i2;
-  U = - Qnew * sin2i2 + Unew * cos2i2;
-
+  double Q = Qnew * cos2i2 + Unew * sin2i2;
+  double U = - Qnew * sin2i2 + Unew * cos2i2;
 
   // Transform Stokes Parameters from the CMF to the RF
-
+  double vel_rev[3];
   vel_rev[0] = - vel_vec[0];
   vel_rev[1] = - vel_vec[1];
   vel_rev[2] = - vel_vec[2];
 
+  double dummy_dir[3];
   frame_transform(new_dir_cmf, &Q, &U, vel_rev, dummy_dir);
 
   pkt_ptr->stokes[0] = I;
