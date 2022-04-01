@@ -19,7 +19,6 @@
 #include "grid.h"
 #include "globals.h"
 #include "input.h"
-#include "light_curve.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nltepop.h"

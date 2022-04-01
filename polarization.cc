@@ -1,6 +1,5 @@
 #include "sn3d.h"
 #include "polarization.h"
-#include "vectors.h"
 #include "vpkt.h"
 
 
@@ -22,21 +21,21 @@ void escat_rpkt(PKT *pkt_ptr)
   frame_transform(pkt_ptr->dir,&Qi,&Ui,vel_vec,old_dir_cmf);
 
   // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos & Whitlock 2008)
-
+  double M = 0.;
   double mu = 0.;
   double phisc = 0.;
 
 #ifdef DIPOLE
   // Assume dipole function (rejecton method, see Code & Whitney 1995)
   double p = 0.;
-  double x - 0.;
+  double x = 0.;
   do
   {
     const double zrand = gsl_rng_uniform(rng);
     const double zrand2 = gsl_rng_uniform(rng);
     const double zrand3 = gsl_rng_uniform(rng);
 
-    const double M = 2 * zrand - 1;
+    M = 2 * zrand - 1;
     mu = pow(M, 2.) ;
     phisc = 2 * PI * zrand2;
 
@@ -59,7 +58,7 @@ void escat_rpkt(PKT *pkt_ptr)
   const double zrand = gsl_rng_uniform(rng);
   const double zrand2 = gsl_rng_uniform(rng);
 
-  const double M = 2. * zrand - 1;
+  M = 2. * zrand - 1;
   mu = pow(M, 2.);
   phisc = 2 * PI * zrand2;
 
