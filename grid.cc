@@ -452,6 +452,7 @@ int get_numassociatedcells(const int modelgridindex)
 // number of propagation cells associated with each modelgrid cell
 {
   assert_testmodeonly(mg_associated_cells != NULL);
+  assert_testmodeonly(new_modelgridindex <= get_npts_model());
   return mg_associated_cells[modelgridindex];
 }
 
@@ -1960,7 +1961,7 @@ void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo
   if (nprocesses >= get_npts_model())
   {
     // for convenience, rank == mgi when there is at least one rank per cell
-
+    *maxndo = 1;
     for (int r = 0; r < nprocesses; r++)
     {
       if (r < get_npts_model())

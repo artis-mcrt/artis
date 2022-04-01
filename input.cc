@@ -894,6 +894,7 @@ static void read_atomicdata_files(void)
 
   /// open transition data file
   std::ifstream ftransitiondata("transitiondata.txt");
+  assert_always(ftransitiondata.is_open());
 
   int lineindex = 0;  ///counter to determine the total number of lines, initialisation
   int uniqueionindex = -1; // index into list of all ions of all elements
