@@ -26,7 +26,7 @@ jobs:
 
     - name: "CPU count"
       id: cpu-count
-      run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
+      run: echo "::set-output name=count::$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')"
 
     - name: "echo CPU count"
       run: |
@@ -83,7 +83,7 @@ jobs:
 
     - name: "CPU count"
       id: cpu-count
-      run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
+      run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count()))')"
 
     - name: "echo CPU count"
       run: |
@@ -261,7 +261,7 @@ jobs:
 
     - name: "CPU count"
       id: cpu-count
-      run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
+      run: echo "::set-output name=count::$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False))')"
 
     - name: "echo CPU count"
       run: |
@@ -322,12 +322,12 @@ jobs:
       working-directory: tests/nebularonezone_testrun/job0/
       run: cat output_0-0.txt
 
-    - name: Checksum job0 output files
-      if: always()
-      working-directory: tests/nebularonezone_testrun
-      run: |
-        md5sum *.out job0/*.out
-        md5sum -c results_md5_job0.txt
+    # - name: Checksum job0 output files
+    #   if: always()
+    #   working-directory: tests/nebularonezone_testrun
+    #   run: |
+    #     md5sum *.out job0/*.out
+    #     md5sum -c results_md5_job0.txt
 
     - name: "Run nebularonezone test job1 resume"
       if: always()
@@ -348,12 +348,12 @@ jobs:
       working-directory: tests/nebularonezone_testrun/job1/
       run: cat output_0-0.txt
 
-    - name: Checksum job1 output files
-      if: always()
-      working-directory: tests/nebularonezone_testrun
-      run: |
-        md5sum *.out job1/*.out
-        md5sum -c results_md5_job1.txt
+    # - name: Checksum job1 output files
+    #   if: always()
+    #   working-directory: tests/nebularonezone_testrun
+    #   run: |
+    #     md5sum *.out job1/*.out
+    #     md5sum -c results_md5_job1.txt
 
     - name: "Run exspec"
       if: always()
@@ -377,37 +377,6 @@ jobs:
       with:
         name: test-nebularonezone-output
         path: tests/nebularonezone_testrun/output
-
-    - name: Set up Python
-      if: always()
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.9
-
-    - name: Get pip cache dir
-      if: always()
-      id: pip-cache
-      run: |
-        pip list --format=freeze > piplist.txt
-        echo "::set-output name=dir::$(pip cache dir)"
-
-    - name: Cache pip
-      if: always()
-      uses: actions/cache@v2.1.4
-      with:
-        path: ${{ steps.pip-cache.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('piplist.txt') }}
-        restore-keys: |
-         ${{ runner.os }}-pip-
-
-    - name: Install artistools
-      if: always()
-      run: |
-        python3 -m pip install --upgrade pip
-        python3 -m pip install artistools
-
-        # upgrade all installed packages to their latest versions
-        python3 -m pip list --format=freeze --outdated | cut -d '=' -f1 | xargs -n1 python3 -m pip install --upgrade
 
     - name: Plot output
       if: always()
