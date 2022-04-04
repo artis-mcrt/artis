@@ -251,3 +251,181 @@ jobs:
       run: |
         md5sum *.out
         md5sum -c results_md5_final.txt
+
+
+  test_nebularonezone_selfhost:
+    runs-on: self-hosted
+
+    steps:
+    - uses: actions/checkout@v2.3.4
+
+    - name: "CPU count"
+      id: cpu-count
+      run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
+
+    - name: "echo CPU count"
+      run: |
+        echo CPU Count: ${{ steps.cpu-count.outputs.count }}
+
+    # we can cache this, but then we don't test the code that generates ratecoeff.dat
+    # - name: Cache ratecoeff.dat
+    #   uses: actions/cache@v2.1.4
+    #   with:
+    #     path: "tests/nebularonezone_testrun/ratecoeff.dat"
+    #     key: "tests/nebularonezone_testrun/ratecoeff.dat"
+
+    - name: Cache test atomic data
+      uses: actions/cache@v2.1.4
+      id: cache-testatomicdata
+      with:
+          path: "tests/atomicdata_feconi.tar.xz"
+          key: tests/atomicdata_feconi.tar.xz
+
+    - name: Cache reference data
+      uses: actions/cache@v2.1.4
+      id: cache-testreferencedata
+      with:
+          path: "tests/nebularonezone_reference_20211126.tar.xz"
+          key: tests/nebularonezone_reference_20211126.tar.xz
+
+    - name: Download/extract test data
+      # if: steps.cache-atomicdata.outputs.cache-hit != 'true'
+      working-directory: tests/
+      run: |
+          source ./setup_nebularonezone.sh
+
+    - name: "Setup test nebularonezone"
+      run: |
+        cp tests/nebularonezone_inputfiles/artisoptions.h .
+        make clean
+        make TESTMODE=ON MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+        cp sn3d tests/nebularonezone_testrun/
+        cp exspec tests/nebularonezone_testrun/
+
+    - name: "Run nebularonezone test job0 start"
+      if: always()
+      working-directory: tests/nebularonezone_testrun/
+      run: |
+        cp input-newrun.txt input.txt
+        touch output_0-0.txt
+        time mpirun -np 2 ./sn3d
+        mkdir job0
+        ../../scripts/movefiles.sh job0
+
+    - name: "cat job0 estimators"
+      if: always()
+      working-directory: tests/nebularonezone_testrun/job0/
+      run: cat estimators*.out
+
+    - name: "cat job0 output log"
+      if: always()
+      working-directory: tests/nebularonezone_testrun/job0/
+      run: cat output_0-0.txt
+
+    - name: Checksum job0 output files
+      if: always()
+      working-directory: tests/nebularonezone_testrun
+      run: |
+        md5sum *.out job0/*.out
+        md5sum -c results_md5_job0.txt
+
+    - name: "Run nebularonezone test job1 resume"
+      if: always()
+      working-directory: tests/nebularonezone_testrun/
+      run: |
+        cp input-resume.txt input.txt
+        time mpirun -np 2 ./sn3d
+        mkdir job1
+        ../../scripts/movefiles.sh job1
+
+    - name: "cat job1 estimators"
+      if: always()
+      working-directory: tests/nebularonezone_testrun/job1/
+      run: cat estimators*.out
+
+    - name: "cat job1 output log"
+      if: always()
+      working-directory: tests/nebularonezone_testrun/job1/
+      run: cat output_0-0.txt
+
+    - name: Checksum job1 output files
+      if: always()
+      working-directory: tests/nebularonezone_testrun
+      run: |
+        md5sum *.out job1/*.out
+        md5sum -c results_md5_job1.txt
+
+    - name: "Run exspec"
+      if: always()
+      working-directory: tests/nebularonezone_testrun/
+      run: |
+        time ./exspec
+        mkdir output
+        cp -r output_0-0.txt exspec.txt *.out output/
+        rsync -av job0 output/
+        rsync -av job1 output/
+
+    - name: "cat exspec log"
+      if: always()
+      working-directory: tests/nebularonezone_testrun/output/
+      run: |
+        cat exspec.txt
+
+    - name: Upload output files
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: test-nebularonezone-output
+        path: tests/nebularonezone_testrun/output
+
+    - name: Set up Python
+      if: always()
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Get pip cache dir
+      if: always()
+      id: pip-cache
+      run: |
+        pip list --format=freeze > piplist.txt
+        echo "::set-output name=dir::$(pip cache dir)"
+
+    - name: Cache pip
+      if: always()
+      uses: actions/cache@v2.1.4
+      with:
+        path: ${{ steps.pip-cache.outputs.dir }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('piplist.txt') }}
+        restore-keys: |
+         ${{ runner.os }}-pip-
+
+    - name: Install artistools
+      if: always()
+      run: |
+        python3 -m pip install --upgrade pip
+        python3 -m pip install artistools
+
+        # upgrade all installed packages to their latest versions
+        python3 -m pip list --format=freeze --outdated | cut -d '=' -f1 | xargs -n1 python3 -m pip install --upgrade
+
+    - name: Plot output
+      if: always()
+      working-directory: tests/
+      run: |
+        python3 -m artistools.lightcurve nebularonezone_testrun nebularonezone_reference
+        python3 -m artistools.spectra -ts 8 nebularonezone_testrun nebularonezone_reference
+
+    - name: Upload plot files
+      if: always()
+      uses: actions/upload-artifact@v2
+      with:
+        name: test-nebularonezone-output-pdf
+        path: tests/*.pdf
+
+    - name: Checksum output files
+      if: always()
+      working-directory: tests/nebularonezone_testrun
+      run: |
+        md5sum *.out
+        md5sum -c results_md5_final.txt
