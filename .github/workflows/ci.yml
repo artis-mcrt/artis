@@ -391,10 +391,10 @@ jobs:
       with:
         name: test-nebularonezone-output-pdf
         path: tests/*.pdf
-
-    - name: Checksum output files
-      if: always()
-      working-directory: tests/nebularonezone_testrun
-      run: |
-        md5sum *.out
-        md5sum -c results_md5_final.txt
+    # 
+    # - name: Checksum output files
+    #   if: always()
+    #   working-directory: tests/nebularonezone_testrun
+    #   run: |
+    #     md5sum *.out
+    #     md5sum -c results_md5_final.txt
