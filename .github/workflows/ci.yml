@@ -9,6 +9,9 @@ on:
   #   - nebular*
   #   - main
 
+env:
+  ASAN_OPTIONS: detect_stack_use_after_return=1:detect_leaks=0
+
 jobs:
   compile_and_statictest:
     runs-on: ubuntu-latest
@@ -69,8 +72,6 @@ jobs:
 
   test_nebularonezone:
     runs-on: ubuntu-latest
-    env:
-      ASAN_OPTIONS: detect_stack_use_after_return=1:detect_leaks=0
 
     steps:
     - uses: actions/checkout@v2.3.4
@@ -85,7 +86,7 @@ jobs:
 
     - name: "CPU count"
       id: cpu-count
-      run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count()))')"
+      run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
 
     - name: "echo CPU count"
       run: |
@@ -263,7 +264,7 @@ jobs:
 
     - name: "CPU count"
       id: cpu-count
-      run: echo "::set-output name=count::$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False))')"
+      run: echo "::set-output name=count::$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')"
 
     - name: "echo CPU count"
       run: |
@@ -300,7 +301,7 @@ jobs:
       run: |
         cp tests/nebularonezone_inputfiles/artisoptions.h .
         make clean
-        make TESTMODE=ON MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+        make TESTMODE=OFF MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
         cp sn3d tests/nebularonezone_testrun/
         cp exspec tests/nebularonezone_testrun/
 
