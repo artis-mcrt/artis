@@ -1581,7 +1581,9 @@ void cleanup(void)
   {
     free(decaypaths[decaypathindex].z);
     free(decaypaths[decaypathindex].a);
+    free(decaypaths[decaypathindex].decaytypes);
   }
+  free(decaypath_energy_per_mass);
 }
 
 

@@ -86,7 +86,7 @@ CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
 ifeq ($(TESTMODE),ON)
 	CXXFLAGS += -DTESTMODE=true -O3 -g
-	CXXFLAGS += -fsanitize=address -fno-omit-frame-pointer
+	CXXFLAGS += -fsanitize=address -fno-omit-frame-pointer -fno-common
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
 	# skip array range checking for better performance and use optimizations

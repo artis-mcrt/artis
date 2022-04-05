@@ -121,6 +121,7 @@ jobs:
         cp tests/nebularonezone_inputfiles/artisoptions.h .
         make clean
         make TESTMODE=ON MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+        export ASAN_OPTIONS='detect_stack_use_after_return'
         cp sn3d tests/nebularonezone_testrun/
         cp exspec tests/nebularonezone_testrun/
 
@@ -391,7 +392,7 @@ jobs:
       with:
         name: test-nebularonezone-output-pdf
         path: tests/*.pdf
-    # 
+    #
     # - name: Checksum output files
     #   if: always()
     #   working-directory: tests/nebularonezone_testrun
