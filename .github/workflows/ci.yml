@@ -378,7 +378,7 @@ jobs:
       uses: actions/upload-artifact@v2
       if: always()
       with:
-        name: test-nebularonezone-output
+        name: test-nebularonezone-selfhost-output
         path: tests/nebularonezone_testrun/output
 
     - name: Plot output
@@ -392,7 +392,7 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v2
       with:
-        name: test-nebularonezone-output-pdf
+        name: test-nebularonezone-output-selfhost-pdf
         path: tests/*.pdf
     #
     # - name: Checksum output files
