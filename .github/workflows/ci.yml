@@ -121,7 +121,7 @@ jobs:
         cp tests/nebularonezone_inputfiles/artisoptions.h .
         make clean
         make TESTMODE=ON MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
-        export ASAN_OPTIONS='detect_stack_use_after_return'
+        export ASAN_OPTIONS='detect_stack_use_after_return:detect_leaks=0'
         cp sn3d tests/nebularonezone_testrun/
         cp exspec tests/nebularonezone_testrun/
 
