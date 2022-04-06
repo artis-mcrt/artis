@@ -1692,7 +1692,16 @@ void read_ejecta_model(void)
 
   printout("npts_model: %d\n", get_npts_model());
   globals::rmax = globals::vmax * globals::tmin;
-  printout("vmax %g\n", globals::vmax);
+  printout("vmax %g (%.2fc)\n", globals::vmax, globals::vmax / CLIGHT);
+  assert_always(globals::vmax < CLIGHT);
+  if (grid_type == GRID_UNIFORM)
+  {
+    // above vmax was per coordinate, but the simulation volume corners will
+    // have a higher expansion velocity than the sides
+    const double vmax_corner = sqrt(3 * pow(globals::vmax, 2));
+    printout("corner vmax %g (%.2fc)\n", vmax_corner, vmax_corner / CLIGHT);
+    assert_always(vmax_corner < CLIGHT);
+  }
   printout("tmin %g\n", globals::tmin);
   printout("rmax %g\n", globals::rmax);
 
