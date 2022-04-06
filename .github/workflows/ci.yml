@@ -71,8 +71,12 @@ jobs:
         cppcheck --force --language=c++ --std=c++17 .
 
   test_nebularonezone:
+    strategy:
+      matrix:
+        testmode: ['OFF', 'ON']
     runs-on: ubuntu-latest
 
+    name: Testmode ${{ matrix.testmode }}
     steps:
     - uses: actions/checkout@v2.3.4
 
@@ -123,7 +127,7 @@ jobs:
       run: |
         cp tests/nebularonezone_inputfiles/artisoptions.h .
         make clean
-        make TESTMODE=ON MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+        make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
         cp sn3d tests/nebularonezone_testrun/
         cp exspec tests/nebularonezone_testrun/
 
