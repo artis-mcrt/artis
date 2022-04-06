@@ -34,20 +34,21 @@ void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
 
 __host__ __device__
 double doppler(const double dir1[3], const double vel[3])
-// Routine for Doppler shift in SR. Takes one direction and velocity
+// Doppler shift in SR. Takes one direction and velocity
 //  as input and gives back double.
 {
-  //double vsqr = dot(vel,vel)/CLIGHTSQUARED;
-  //double gamma_rel = 1./(sqrt(1 - vsqr));
-  const double gamma_rel = 1.;
   const double ndotv = dot(dir1, vel);
-  const double dopplerfactor = gamma_rel * (1. - (ndotv / CLIGHT));
+  const double beta = ndotv / CLIGHT;
+  assert_always(beta > -1.); // v < c
+  assert_always(beta < 1.); // v < c
 
-  #ifdef DEBUG_ON
+  const double dopplerfactor = sqrt((1 - beta) / (1 + beta));
+
+  // old (artis classic) formula can be use for |beta| < 0.1 c
+  // const double dopplerfactor_old = (1. - beta);
+
   assert_always(std::isfinite(dopplerfactor));
   assert_always(dopplerfactor > 0);
-  assert_always(dopplerfactor <= 2.);
-  #endif
 
   return dopplerfactor;
 }
