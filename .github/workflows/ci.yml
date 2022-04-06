@@ -128,26 +128,22 @@ jobs:
       id: cpu-count
       run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
 
-    - name: "echo CPU count"
-      run: |
-        echo CPU Count: ${{ steps.cpu-count.outputs.count }}
-
     # we can cache this, but then we don't test the code that generates ratecoeff.dat
     # - name: Cache ratecoeff.dat
-    #   uses: actions/cache@v2.1.4
+    #   uses: actions/cache@v3
     #   with:
     #     path: "tests/nebularonezone_testrun/ratecoeff.dat"
     #     key: "tests/nebularonezone_testrun/ratecoeff.dat"
 
     - name: Cache test atomic data
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v3
       id: cache-testatomicdata
       with:
           path: "tests/atomicdata_feconi.tar.xz"
           key: tests/atomicdata_feconi.tar.xz
 
     - name: Cache reference data
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v3
       id: cache-testreferencedata
       with:
           path: "tests/nebularonezone_reference_20211126.tar.xz"
@@ -258,7 +254,7 @@ jobs:
 
     - name: Cache pip
       if: always() && matrix.os != 'selfhosted'
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v3
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
         key: ${{ runner.os }}-pip-${{ hashFiles('piplist.txt') }}
