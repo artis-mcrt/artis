@@ -74,7 +74,8 @@ jobs:
   test_nebularonezone:
     strategy:
       matrix:
-        os: ['ubuntu-latest', 'self-hosted']
+        # os: ['ubuntu-latest', 'self-hosted']
+        os: ['ubuntu-latest']
         testmode: ['OFF', 'ON']
       exclude:
       - os: self-hosted
@@ -87,12 +88,12 @@ jobs:
 
     - name: "install dependencies"
       if: matrix.os != 'selfhosted'
-        run: |
-          git status
-          # sudo apt-get update
-          sudo apt-get install libgsl-dev
-          # sudo apt-get install clang
-          sudo apt install -y openmpi-bin libopenmpi-dev
+      run: |
+        git status
+        # sudo apt-get update
+        sudo apt-get install libgsl-dev
+        # sudo apt-get install clang
+        sudo apt install -y openmpi-bin libopenmpi-dev
 
     - name: "CPU count"
       id: cpu-count
