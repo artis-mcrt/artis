@@ -77,9 +77,9 @@ jobs:
         # os: ['ubuntu-latest', 'self-hosted']
         os: ['ubuntu-latest']
         testmode: ['OFF', 'ON']
-      exclude:
-      - os: self-hosted
-        testmode: 'ON'
+        exclude:
+        - os: self-hosted
+          testmode: 'ON'
     runs-on: ${{ matrix.os }}
 
     name: test_nebularonezone testmode ${{ matrix.testmode }}
