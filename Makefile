@@ -14,6 +14,8 @@ ifeq ($(SYSNAME),Darwin)
 
 	ifeq ($(shell uname -m),arm64)
 		CXXFLAGS += -mcpu=apple-m1
+		# march=native on Apple Silicon will work on Clang 15
+		# CXXFLAGS += -march=native
 	else
 		CXXFLAGS += -march=native
 	endif
