@@ -1694,14 +1694,6 @@ void read_ejecta_model(void)
   globals::rmax = globals::vmax * globals::tmin;
   printout("vmax %g (%.2fc)\n", globals::vmax, globals::vmax / CLIGHT);
   assert_always(globals::vmax < CLIGHT);
-  if (grid_type == GRID_UNIFORM)
-  {
-    // above vmax was per coordinate, but the simulation volume corners will
-    // have a higher expansion velocity than the sides
-    const double vmax_corner = sqrt(3 * pow(globals::vmax, 2));
-    printout("corner vmax %g (%.2fc)\n", vmax_corner, vmax_corner / CLIGHT);
-    assert_always(vmax_corner < CLIGHT);
-  }
   printout("tmin %g\n", globals::tmin);
   printout("rmax %g\n", globals::rmax);
 
@@ -2027,6 +2019,11 @@ void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo
 static void uniform_grid_setup(void)
 /// Routine for doing a uniform cuboidal grid.
 {
+  // vmax is per coordinate, but the simulation volume corners will
+  // have a higher expansion velocity than the sides
+  const double vmax_corner = sqrt(3 * pow(globals::vmax, 2));
+  printout("corner vmax %g (%.2fc)\n", vmax_corner, vmax_corner / CLIGHT);
+  assert_always(vmax_corner < CLIGHT);
 
   /// Set grid size for uniform xyz grid
   if (get_model_type() == RHO_3D_READ)
