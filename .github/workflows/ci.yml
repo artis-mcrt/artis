@@ -13,19 +13,37 @@ env:
   ASAN_OPTIONS: detect_stack_use_after_return=1:detect_leaks=0
 
 jobs:
-  compile_clang:
+  cppcheck:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2.3.4
+    - uses: actions/checkout@v3
+
+    - name: "install dependencies"
+      run: |
+        # git status
+        # sudo apt-get update
+        # sudo apt-get install libgsl-dev
+        # sudo apt-get install clang
+        # sudo apt install -y openmpi-bin libopenmpi-dev
+        sudo apt-get -y install cppcheck
+
+    - name: "run cppcheck"
+      run: |
+        cp artisoptions_nltenebular.h artisoptions.h
+        cppcheck --force --language=c++ --std=c++17 .
+
+  compile_clang:
+    name: "Compile with Clang"
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
 
     - name: "install dependencies"
       run: |
         git status
-        # sudo apt-get update
         sudo apt-get install libgsl-dev
-        # sudo apt-get install clang
-        # sudo apt install -y openmpi-bin libopenmpi-dev
 
     - name: "CPU count"
       id: cpu-count
@@ -46,15 +64,15 @@ jobs:
         make CXX=clang++ MPI=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
 
   compile_gcc_openmpi:
+    name: "Compile with GCC and OpenMPI"
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2.3.4
+    - uses: actions/checkout@v3
 
     - name: "install dependencies"
       run: |
         git status
-        # sudo apt-get update
         sudo apt-get install libgsl-dev
         sudo apt install -y openmpi-bin libopenmpi-dev
 
@@ -81,26 +99,6 @@ jobs:
         make clean
         make -j${{ steps.cpu-count.outputs.count }} sn3d exspec
 
-  statictest:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v2.3.4
-
-    # - name: "install dependencies"
-    #   run: |
-    #     git status
-    #     # sudo apt-get update
-    #     sudo apt-get install libgsl-dev
-    #     # sudo apt-get install clang
-    #     sudo apt install -y openmpi-bin libopenmpi-dev
-
-    - name: "run cppcheck"
-      run: |
-        sudo apt-get -y install cppcheck
-        cp artisoptions_nltenebular.h artisoptions.h
-        cppcheck --force --language=c++ --std=c++17 .
-
   test_nebularonezone:
     strategy:
       matrix:
@@ -110,11 +108,12 @@ jobs:
         exclude:
         - os: self-hosted
           testmode: 'ON'
-    runs-on: ${{ matrix.os }}
 
+    runs-on: ${{ matrix.os }}
     name: test_nebularonezone testmode ${{ matrix.testmode }}
+
     steps:
-    - uses: actions/checkout@v2.3.4
+    - uses: actions/checkout@v3
 
     - name: "install dependencies"
       if: matrix.os != 'selfhosted'
