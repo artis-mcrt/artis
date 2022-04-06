@@ -97,7 +97,7 @@ ifeq ($(MPI),ON)
 else ifeq ($(MPI),OFF)
 else ifeq ($(MPI),)
 	# MPI option not specified. set to true if mpicxx is found
-	ifneq (, $(shell which mpicxx)))
+	ifneq (, $(shell which mpicxx))
 		MPI := ON
 	else
 		MPI := OFF
