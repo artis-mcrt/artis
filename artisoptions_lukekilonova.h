@@ -5,7 +5,7 @@
 #include "constants.h"
 
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
-#define MPKTS 100000
+#define MPKTS 10000
 
 #define GRID_TYPE GRID_UNIFORM
 #define CUBOID_NCOORDGRID_X 50
@@ -14,7 +14,7 @@
 // #define GRID_TYPE GRID_SPHERICAL1D
 
 // non-LTE population solver
-static const bool NLTE_POPS_ON = true;
+static const bool NLTE_POPS_ON = false;
 
 // solve the NLTE population matrix equation simultaneously for levels of all ions of an element
 static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;
@@ -29,7 +29,7 @@ static const int NLTEITER = 30;
 if (get_element(element) == 26 && get_ionstage(element, ion) == 2) \
 return (level <= 197); \
 else \
-return (level <= 80);
+return (level <= 40);
 
 // atomic data and LTE
 #define LTEPOP_EXCITATIONTEMPERATURE grid::get_Te(modelgridindex)
@@ -50,9 +50,9 @@ const bool single_ground_level = false; // if false, read from file or autodetec
 #define RECORD_LINESTAT
 
 /// Rate coefficients
-#define TABLESIZE 100 //200 //100
-#define MINTEMP 1000.
-#define MAXTEMP 30000. //1000000.
+#define TABLESIZE 200 //200 //100
+#define MINTEMP 4000.
+#define MAXTEMP 150000. //1000000.
 
 // temperature for which total ion recombination rate are calibrated to input data (recombrates.txt)
 #define RECOMBCALIBRATION_T_ELEC 6000.
@@ -86,7 +86,7 @@ static const size_t GSLWSIZE = 16384;
 
 // if using this, avoid look up tables and switch on the direct integration options below
 // (since LUTs created with Planck function J_nu)
-static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
+static const bool MULTIBIN_RADFIELD_MODEL_ON = false;
 
 #define RADFIELDBINCOUNT 256
 
@@ -103,7 +103,7 @@ static const double T_R_max = 250000;
 static const bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 // store detailed bound-free rate estimators
-#define DETAILED_BF_ESTIMATORS_ON true
+#define DETAILED_BF_ESTIMATORS_ON false
 
 // if DETAILED_BF_ESTIMATORS_ON, then use BF estimators at the following timestep and later
 #define DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP 13
@@ -116,10 +116,10 @@ static const bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 // dynamically calculate photoionization rates for the current radiation field
 // instead of interpolating values from a lookup table for a blackbody radiation field
-#define NO_LUT_PHOTOION true
+#define NO_LUT_PHOTOION false
 
 // as above for bound-free heating
-#define NO_LUT_BFHEATING true
+#define NO_LUT_BFHEATING false
 
 // if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
 #define SEPARATE_STIMRECOMB false
@@ -134,10 +134,10 @@ static const bool DETAILED_LINE_ESTIMATORS_ON = false;
 //
 
 /// non-thermal ionisation
-static const bool NT_ON = true;
+static const bool NT_ON = false;
 
 /// use the detailed Spencer-Fano solver instead of the work function approximation
-static const bool NT_SOLVE_SPENCERFANO = true;
+static const bool NT_SOLVE_SPENCERFANO = false;
 
 // number of energy points in the Spencer-Fano solution vector
 #define SFPTS 4096
@@ -206,5 +206,7 @@ static const int MAX_NT_EXCITATIONS_STORED = 25000;
 // when calculating ion ionisation rate coefficient (for estimator files), contribute the lowest n levels that
 // make up at least IONGAMMA_POPFRAC_LEVELS_INCLUDED fraction of the ion population
 #define IONGAMMA_POPFRAC_LEVELS_INCLUDED 0.999
+
+static bool USE_RELATIVISTIC_DOPPLER = true;
 
 #endif //ARTISOPTIONS_H

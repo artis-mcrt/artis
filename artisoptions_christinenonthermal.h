@@ -208,4 +208,6 @@ static const int MAX_NT_EXCITATIONS_STORED = 25000;
 // make up at least IONGAMMA_POPFRAC_LEVELS_INCLUDED fraction of the ion population
 #define IONGAMMA_POPFRAC_LEVELS_INCLUDED 0.999
 
+static bool USE_RELATIVISTIC_DOPPLER = false;
+
 #endif //ARTISOPTIONS_H

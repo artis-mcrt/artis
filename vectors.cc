@@ -40,9 +40,7 @@ double doppler(const double dir1[3], const double vel[3])
   double betasq = dot(vel, vel) / CLIGHTSQUARED;
   assert_always(betasq > -1.); // v < c
   assert_always(betasq < 1.); // v < c
-  double gamma_rel = 1. / sqrt(1 - betasq);
-  // old (artis classic) formula can be use for |beta| < ~0.1 c
-  // const double gamma_rel = 1.;
+  double gamma_rel = USE_RELATIVISTIC_DOPPLER ? 1. / sqrt(1 - betasq) : 1.;
 
   const double ndotv = dot(dir1, vel);
   const double dopplerfactor = gamma_rel * (1. - (ndotv / CLIGHT));
