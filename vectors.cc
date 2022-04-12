@@ -37,15 +37,15 @@ double doppler(const double dir1[3], const double vel[3])
 // Doppler shift in SR. Takes one direction and velocity
 //  as input and gives back double.
 {
+  double betasq = dot(vel, vel) / CLIGHTSQUARED;
+  assert_always(betasq > -1.); // v < c
+  assert_always(betasq < 1.); // v < c
+  double gamma_rel = 1. / sqrt(1 - betasq);
+  // old (artis classic) formula can be use for |beta| < ~0.1 c
+  // const double gamma_rel = 1.;
+
   const double ndotv = dot(dir1, vel);
-  const double beta = ndotv / CLIGHT;
-  assert_always(beta > -1.); // v < c
-  assert_always(beta < 1.); // v < c
-
-  const double dopplerfactor = sqrt((1 - beta) / (1 + beta));
-
-  // old (artis classic) formula can be use for |beta| < 0.1 c
-  // const double dopplerfactor_old = (1. - beta);
+  const double dopplerfactor = gamma_rel * (1. - (ndotv / CLIGHT));
 
   assert_always(std::isfinite(dopplerfactor));
   assert_always(dopplerfactor > 0);
