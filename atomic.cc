@@ -66,7 +66,7 @@ __host__ __device__
 double get_nntot(int modelgridindex)
 // total ion (nuclei) density
 {
-  int nntot = 0.;
+  double nntot = 0.;
   for (int element = 0; element < get_nelements(); element++)
   {
     nntot += grid::get_elem_numberdens(modelgridindex, element);

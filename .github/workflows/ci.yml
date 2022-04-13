@@ -104,7 +104,7 @@ jobs:
       matrix:
         # os: ['ubuntu-latest', 'self-hosted']
         os: ['ubuntu-latest']
-        testmode: ['OFF', 'ON']
+        testmode: ['OFF']
         exclude:
         - os: self-hosted
           testmode: 'ON'
@@ -232,6 +232,13 @@ jobs:
       run: |
         cat exspec.txt
 
+    - name: Checksum output files
+      if: always() && matrix.os != 'selfhosted'
+      working-directory: tests/nebularonezone_testrun
+      run: |
+        md5sum *.out
+        md5sum -c results_md5_final.txt
+
     - name: Upload output files
       uses: actions/upload-artifact@v2
       if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
@@ -241,25 +248,9 @@ jobs:
 
     - name: Set up Python
       if: always() && matrix.os != 'selfhosted'
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
-        python-version: 3.9
-
-    - name: Get pip cache dir
-      if: always()
-      id: pip-cache
-      run: |
-        pip list --format=freeze > piplist.txt
-        echo "::set-output name=dir::$(pip cache dir)"
-
-    - name: Cache pip
-      if: always() && matrix.os != 'selfhosted'
-      uses: actions/cache@v3
-      with:
-        path: ${{ steps.pip-cache.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('piplist.txt') }}
-        restore-keys: |
-         ${{ runner.os }}-pip-
+        cache: 'pip'
 
     - name: Install artistools
       if: always()
@@ -283,10 +274,3 @@ jobs:
       with:
         name: test-nebularonezone-output-pdf
         path: tests/*.pdf
-
-    - name: Checksum output files
-      if: always() && matrix.os != 'selfhosted'
-      working-directory: tests/nebularonezone_testrun
-      run: |
-        md5sum *.out
-        md5sum -c results_md5_final.txt

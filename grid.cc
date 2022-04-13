@@ -559,7 +559,12 @@ void set_element_meanweight(const int mgi, const int element, float meanweight)
 __host__ __device__
 double get_electronfrac(const int modelgridindex)
 {
-  return get_nnetot(modelgridindex) / get_nntot(modelgridindex);
+  double nucleondens = 0.;
+  for (int element = 0; element < get_nelements(); element++)
+  {
+    nucleondens += get_elem_numberdens(modelgridindex, element) * get_element_meanweight(modelgridindex, element) / MH;
+  }
+  return get_nnetot(modelgridindex) / nucleondens;
 }
 
 

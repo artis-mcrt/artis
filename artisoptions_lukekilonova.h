@@ -43,10 +43,10 @@ const bool single_ground_level = false; // if false, read from file or autodetec
 #define NLEVELS_REQUIRETRANSITIONS(Z, ionstage) ((Z == 26 || Z == 28) && ionstage >= 1) ? 80 : 0
 
 // if uniform pellet energies are not used, a uniform decay time distribution is used with scaled packet energies
-#define UNIFORM_PELLET_ENERGIES true
+#define UNIFORM_PELLET_ENERGIES false
 
 #define DIRECT_COL_HEAT
-#define NO_INITIAL_PACKETS
+// #define NO_INITIAL_PACKETS
 #define RECORD_LINESTAT
 
 /// Rate coefficients

@@ -876,9 +876,8 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 // (ionisation balance follows from this too)
 {
   const int atomic_number = get_element(element);
-  const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
 
-  if (nnelement <= 0.)
+  if (grid::get_elem_abundance(modelgridindex, element) <= 0.)
   {
     //abundance of this element is zero, so do not store any NLTE populations
     printout("Not solving for NLTE populations in cell %d at timestep %d for element Z=%d due to zero abundance\n",
@@ -895,6 +894,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   const double t_mid = globals::time_step[timestep].mid;
   const int nions = get_nions(element);
+  const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
 
   printout("Solving for NLTE populations in cell %d at timestep %d NLTE iteration %d for element Z=%d (mass fraction %.2e, population %.2e)\n",
            modelgridindex, timestep, nlte_iter, atomic_number, grid::get_elem_abundance(modelgridindex, element),
@@ -1118,7 +1118,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
       //double nne = grid::get_nne(modelgridindex);
       //printout("  From ion fract, the ion pop should be %g\n", ionfract(element, ion, modelgridindex, nne)*nnelement);
-      //printout("  I think that the element population is: %g (from abundance %g and rho %g)\n", nnelement, grid::get_elem_abundance(modelgridindex,element), grid::get_rho(modelgridindex));
+      //printout("  I think that the element population is: %g (from abundance %g and rho %g)\n", grid::get_elem_abundance(modelgridindex,element)/elem_meanweight*grid::get_rho(modelgridindex), grid::get_elem_abundance(modelgridindex,element), grid::get_rho(modelgridindex));
       //printout("  I currently think that the top ion is: %d\n", elements_uppermost_ion[tid][element]);
     }
 
@@ -1816,7 +1816,7 @@ void nltepop_read_restart_data(FILE *restart_file)
 #ifdef MPI_ON
           if (globals::rank_in_node != 0)
           {
-            assert_always(fscanf(restart_file, "%*la ") == 0);  // discard value (master rank of this node will set it)
+            assert_always(fscanf(restart_file, "%*a ") == 0);  // discard value (master rank of this node will set it)
           }
           else
 #endif
