@@ -266,7 +266,7 @@ double get_elem_numberdens(int modelgridindex, int element)
 // mass fraction of an element (all isotopes combined)
 {
   const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
-  return get_elem_abundance(modelgridindex, element) * elem_meanweight * grid::get_rho(modelgridindex);
+  return get_elem_abundance(modelgridindex, element) / elem_meanweight * grid::get_rho(modelgridindex);
 }
 
 
