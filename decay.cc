@@ -938,6 +938,7 @@ static double get_nuc_massfrac(
   assert_always(time >= 0.);
 
   const double t_afterinit = time - grid::get_t_model();
+  const bool nuc_exists_z_a = nuc_exists(z, a);
 
   // decay chains include all paths from radionuclides to other radionuclides (including trivial size-one chains)
 
@@ -952,12 +953,12 @@ static double get_nuc_massfrac(
     // match 4He contribution from alpha decay of any nucleus
     if (z != 2 || a != 4 || decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1] != DECAYTYPE_ALPHA)
     {
-      if (nuc_exists(z, a) && !(z_end == z && a_end == a)) // requested nuclide is in network, so match last nuc in chain
+      if (nuc_exists_z_a && !(z_end == z && a_end == a)) // requested nuclide is in network, so match last nuc in chain
       {
         continue;
       }
 
-      if (!nuc_exists(z, a) && !nuc_is_parent(z_end, a_end, z, a)) // requested nuclide not in network, so match daughter of last nucleus in chain
+      if (!nuc_exists_z_a && !nuc_is_parent(z_end, a_end, z, a)) // requested nuclide not in network, so match daughter of last nucleus in chain
       {
         continue;
       }
@@ -978,7 +979,7 @@ static double get_nuc_massfrac(
     }
 
     int fulldecaypathlength = decaypathlength;
-    if (!nuc_exists(z, a))
+    if (!nuc_exists_z_a)
     {
       // the nuclide is past the end of the chain, in case requested (Z, A) is stable and not in the radionuclides
       meanlifetimes[decaypathlength] = -1.;
@@ -1391,7 +1392,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
         {
           const int daughter_z = decay_daughter_z(nuc_z, a, dectypeindex);
           const int daughter_a = decay_daughter_a(nuc_z, a, dectypeindex);
-          if (!nuc_exists(daughter_z, daughter_a) && daughter_z == atomic_number &&
+          if (daughter_z == atomic_number && !nuc_exists(daughter_z, daughter_a) &&
               get_nuc_decaybranchprob(nuc_z, a, dectypeindex) > 0.)
           {
             if (!a_isotopes.count(daughter_a))
