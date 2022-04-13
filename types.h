@@ -351,7 +351,7 @@ typedef struct elementlist_entry
                                              /// Be aware that this must not be used outside of the update_grid routine
                                              /// and their daughters. Neither it will work with OpenMP threads.
   float abundance;                           ///
-  float mass;                                /// Atomic mass number in multiple of MH
+  float initstablemeannucmass;                   /// Atomic mass number in multiple of MH
 } elementlist_entry;
 
 typedef struct linelist_entry

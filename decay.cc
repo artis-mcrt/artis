@@ -924,7 +924,7 @@ static double calculate_decaychain(
 
 
 __host__ __device__
-static double get_nuc_abund(
+static double get_nuc_massfrac(
   const int modelgridindex, const int z, const int a, const double time)
 // Get the mass fraction of a nuclide accounting for all decays including those of its parent and grandparent.
 // e.g., Co56 abundance may first increase with time due to Ni56 decays, then decease due to Co56 decay
@@ -1272,7 +1272,7 @@ double get_particle_injection_rate_density(const int modelgridindex, const doubl
     const double en_particles = nucdecayenergyparticle(z, a, decaytype);
     if (en_particles > 0.)
     {
-      const double nucdecayrate = get_nuc_abund(modelgridindex, z, a, t) / get_meanlife(z, a) * get_nuc_decaybranchprob(z, a, decaytype);
+      const double nucdecayrate = get_nuc_massfrac(modelgridindex, z, a, t) / get_meanlife(z, a) * get_nuc_decaybranchprob(z, a, decaytype);
       assert_always(nucdecayrate >= 0);
       dep_sum += nucdecayrate * en_particles * rho / nucmass(z, a);
     }
@@ -1295,7 +1295,7 @@ double get_qdot_modelcell(const int modelgridindex, const double t, const int de
     const double q_decay = nucdecayenergyqval(z, a, decaytype) * get_nuc_decaybranchprob(z, a, decaytype);
     if (q_decay > 0.)
     {
-      const double nucdecayrate = get_nuc_abund(modelgridindex, z, a, t) / get_meanlife(z, a);
+      const double nucdecayrate = get_nuc_massfrac(modelgridindex, z, a, t) / get_meanlife(z, a);
       assert_always(nucdecayrate >= 0);
       qdot += nucdecayrate * q_decay / nucmass(z, a);
     }
@@ -1367,7 +1367,8 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
     std::set<int> a_isotopes;
     // for the current element,
     // the mass fraction sum of radioactive isotopes, and stable nuclei coming from other decays
-    double isofracsum = 0.;
+    double isomassfracsum = 0.;
+    double isomassfrac_on_nucmass_sum = 0.;
     for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
     {
       const int nuc_z = get_nuc_z(nucindex);
@@ -1378,7 +1379,9 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
         if (!a_isotopes.count(a))
         {
           a_isotopes.insert(a);
-          isofracsum += get_nuc_abund(modelgridindex, atomic_number, a, t_current);
+          const double nuc_massfrac = get_nuc_massfrac(modelgridindex, atomic_number, a, t_current);
+          isomassfracsum += nuc_massfrac;
+          isomassfrac_on_nucmass_sum += nuc_massfrac / nucmass(atomic_number, a);
         }
       }
       else
@@ -1397,22 +1400,32 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
               // nuclide decays into correct atomic number but outside of the radionuclide list
               // note: there could also be stable isotopes of this element included in stable_initabund(z), but
               // here we only count the contribution from decays
-              isofracsum += get_nuc_abund(modelgridindex, daughter_z, daughter_a, t_current);
+              const double nuc_massfrac = get_nuc_massfrac(modelgridindex, atomic_number, daughter_a, t_current);
+              isomassfracsum += nuc_massfrac;
+              isomassfrac_on_nucmass_sum += nuc_massfrac / nucmass(atomic_number, daughter_a);
             }
           }
         }
       }
     }
 
-    if (!nuc_exists(2, 4) && atomic_number == 2 && !a_isotopes.count(4))
+    if (atomic_number == 2 && !nuc_exists(2, 4) && !a_isotopes.count(4))
     {
       // 4He will not be identified as a daughter nucleus of above decays, so add it in
-      isofracsum += get_nuc_abund(modelgridindex, 2, 4, t_current);
+      const double nuc_massfrac = get_nuc_massfrac(modelgridindex, 2, 4, t_current);
+      isomassfracsum += nuc_massfrac;
+      isomassfrac_on_nucmass_sum += nuc_massfrac / nucmass(2, 4);
     }
 
-    const double elmassfrac = grid::get_stable_initabund(modelgridindex, element) + isofracsum;
-    grid::set_elem_abundance(modelgridindex, element, elmassfrac);
+    const double stable_init_massfrac = grid::get_stable_initabund(modelgridindex, element);
+    isomassfracsum += stable_init_massfrac;
+    isomassfrac_on_nucmass_sum += stable_init_massfrac / globals::elements[element].initstablemeannucmass;
+
+    grid::set_elem_abundance(modelgridindex, element, isomassfracsum);
+    grid::set_element_meanweight(modelgridindex, element, isomassfracsum / isomassfrac_on_nucmass_sum);
   }
+
+  // consider calling calculate_electron_densities() here
 
   // double initnucfracsum = 0.;
   // double nucfracsum = 0.;
@@ -1423,10 +1436,10 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   //   if (z < 1) // FAKE_GAM_LINE_ID
   //     continue;
   //   initnucfracsum += grid::get_modelinitradioabund(modelgridindex, z, a);
-  //   nucfracsum += get_nuc_abund(modelgridindex, z, a, t_current);
+  //   nucfracsum += get_nuc_massfrac(modelgridindex, z, a, t_current);
   //
   //   // printout_nuclidename(z, a);
-  //   // printout(" init: %g now: %g\n", grid::get_modelinitradioabund(modelgridindex, z, a), get_nuc_abund(modelgridindex, z, a, t_current));
+  //   // printout(" init: %g now: %g\n", grid::get_modelinitradioabund(modelgridindex, z, a), get_nuc_massfrac(modelgridindex, z, a, t_current));
   //
   //   for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
   //   {
@@ -1434,9 +1447,9 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   //         get_nuc_decaybranchprob(z, a, dectypeindex) > 0.)
   //     {
   //       // printout_nuclidename(decay_daughter_z(z, a), decay_daughter_a(z, a));
-  //       // printout("(stable) init: 0 now: %g\n", get_nuc_abund(modelgridindex, decay_daughter_z(z, a), decay_daughter_a(z, a), t_current));
+  //       // printout("(stable) init: 0 now: %g\n", get_nuc_massfrac(modelgridindex, decay_daughter_z(z, a), decay_daughter_a(z, a), t_current));
   //       // this decay steps off the nuclide list, so add its daughter abundance to the total
-  //       nucfracsum += get_nuc_abund(modelgridindex, decay_daughter_z(z, a, dectypeindex), decay_daughter_a(z, a, dectypeindex), t_current);
+  //       nucfracsum += get_nuc_massfrac(modelgridindex, decay_daughter_z(z, a, dectypeindex), decay_daughter_a(z, a, dectypeindex), t_current);
   //     }
   //   }
   // }
@@ -1461,7 +1474,8 @@ void fprint_nuc_abundances(
 {
   const int atomic_number = get_element(element);
 
-  double stablefracsum = grid::get_stable_initabund(modelgridindex, element) / globals::elements[element].mass;
+  double stablefracsum = (
+      grid::get_stable_initabund(modelgridindex, element) / globals::elements[element].initstablemeannucmass);
 
   std::set<int> a_isotopes;
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
@@ -1474,7 +1488,7 @@ void fprint_nuc_abundances(
       {
         a_isotopes.insert(a);
         // radioactive isotope of the element
-        const double massfrac = get_nuc_abund(modelgridindex, atomic_number, a, t_current);
+        const double massfrac = get_nuc_massfrac(modelgridindex, atomic_number, a, t_current);
         const double numberdens = massfrac / nucmass(atomic_number, a) * grid::get_rho(modelgridindex);
 
         fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number), a, numberdens);
@@ -1493,7 +1507,7 @@ void fprint_nuc_abundances(
           {
             a_isotopes.insert(a);
             // nuclide decays into correct atomic number but outside of the radionuclide list. Daughter is assumed stable
-            stablefracsum += get_nuc_abund(modelgridindex, decay_daughter_z(nuc_z, a, dectypeindex), decay_daughter_a(nuc_z, a, dectypeindex), t_current) / nucmass(nuc_z, a);
+            stablefracsum += get_nuc_massfrac(modelgridindex, daughter_z, daughter_a, t_current) / nucmass(nuc_z, a);
           }
         }
       }

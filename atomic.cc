@@ -66,11 +66,10 @@ __host__ __device__
 double get_nntot(int modelgridindex)
 // total ion (nuclei) density
 {
-  const double rho = grid::get_rho(modelgridindex);
   int nntot = 0.;
   for (int element = 0; element < get_nelements(); element++)
   {
-    nntot += grid::get_elem_abundance(modelgridindex, element) / globals::elements[element].mass * rho;
+    nntot += grid::get_elem_numberdens(modelgridindex, element);
   }
 
   return nntot;

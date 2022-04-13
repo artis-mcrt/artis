@@ -1049,7 +1049,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
   if (assoc_cells > 0)
   {
     // estimators were accumulated in nts_prev, but radiation density, etc should be scaled to the cell volume at nts
-    const double deltaV = grid::vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
+    const double deltaV = grid::vol_init_modelcell(mgi) * pow(globals::time_step[nts_prev].mid / globals::tmin, 3);
     const time_t sys_time_start_update_cell = time(NULL);
     // const bool log_this_cell = ((n % 50 == 0) || (npts_model < 50));
     const bool log_this_cell = true;
@@ -1090,7 +1090,9 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         if (grid::modelgrid[mgi].thick == 0 && grid::get_W(mgi) == 1)
         {
           if (log_this_cell)
+          {
             printout("force modelgrid cell %d to be grey at restart\n", mgi);
+          }
           grid::modelgrid[mgi].thick = 1;
         }
         if (log_this_cell)
@@ -1567,8 +1569,9 @@ double calculate_populations(const int modelgridindex)
     for (int element = 0; element < get_nelements(); element++)
     {
       const double abundance = grid::get_elem_abundance(modelgridindex,element);
+      const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
       /// calculate number density of the current element (abundances are given by mass)
-      const double nnelement = abundance / globals::elements[element].mass * grid::get_rho(modelgridindex);
+      const double nnelement = abundance / elem_meanweight * grid::get_rho(modelgridindex);
       nne_tot += nnelement * get_element(element);
 
       const int nions = get_nions(element);
@@ -1662,16 +1665,15 @@ double calculate_populations(const int modelgridindex)
     nntot = nne;
     for (int element = 0; element < get_nelements(); element++)
     {
-      const double abundance = grid::get_elem_abundance(modelgridindex, element);
       const int nions = get_nions(element);
       /// calculate number density of the current element (abundances are given by mass)
-      const double nnelement = abundance / globals::elements[element].mass * grid::get_rho(modelgridindex);
+      const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
       nne_tot += nnelement * get_element(element);
 
       const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
       double ionfractions[uppermost_ion + 1];
 
-      if (abundance > 0)
+      if (nnelement > 0)
       {
         get_ionfractions(element, modelgridindex, nne, ionfractions, uppermost_ion);
       }
@@ -1682,7 +1684,7 @@ double calculate_populations(const int modelgridindex)
         double nnion;
         if (ion <= uppermost_ion)
         {
-          if (abundance > 0)
+          if (nnelement > 0)
           {
             nnion = nnelement * ionfractions[ion];
             if (nnion < MINPOP)
@@ -1725,13 +1727,12 @@ double calculate_electron_densities(const int modelgridindex)
 
   for (int element = 0; element < get_nelements(); element++)
   {
-    const double elem_abundance = grid::get_elem_abundance(modelgridindex,element);
     // calculate number density of the current element (abundances are given by mass)
-    const double nnelement = elem_abundance / globals::elements[element].mass * grid::get_rho(modelgridindex);
+    const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
     nne_tot += nnelement * get_element(element);
 
     // Use ionization fractions to calculate the free electron contributions
-    if (elem_abundance > 0)
+    if (nnelement > 0)
     {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++)

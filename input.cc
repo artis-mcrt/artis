@@ -927,7 +927,7 @@ static void read_atomicdata_files(void)
     globals::elements[element].anumber = Z;
     globals::elements[element].nions = nions;
     globals::elements[element].abundance = abundance;       /// abundances are expected to be given by mass
-    globals::elements[element].mass = mass_amu * MH;
+    globals::elements[element].initstablemeannucmass = mass_amu * MH;
     globals::includedions += nions;
 
     /// Initialize the elements ionlist

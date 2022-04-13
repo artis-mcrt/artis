@@ -262,6 +262,15 @@ void set_elem_abundance(int modelgridindex, int element, float newabundance)
 
 
 __host__ __device__
+double get_elem_numberdens(int modelgridindex, int element)
+// mass fraction of an element (all isotopes combined)
+{
+  const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
+  return get_elem_abundance(modelgridindex, element) * elem_meanweight * grid::get_rho(modelgridindex);
+}
+
+
+__host__ __device__
 float get_kappagrey(int modelgridindex)
 {
   return modelgrid[modelgridindex].kappagrey;
@@ -521,7 +530,36 @@ static void set_modelinitradioabund(const int modelgridindex, const int z, const
 __host__ __device__
 float get_stable_initabund(const int mgi, const int element)
 {
+  assert_testmodeonly(modelgrid[mgi].initmassfracstable != NULL);
   return modelgrid[mgi].initmassfracstable[element];
+}
+
+
+__host__ __device__
+float get_element_meanweight(const int mgi, const int element)
+// weight is in grams
+{
+  const double mu = modelgrid[mgi].elem_meanweight[element];
+  if (USE_CALCULATED_MEANATOMICWEIGHT && mu > 0)
+  {
+    return mu;
+  }
+  return globals::elements[element].initstablemeannucmass;
+}
+
+
+__host__ __device__
+void set_element_meanweight(const int mgi, const int element, float meanweight)
+// weight is in grams
+{
+  modelgrid[mgi].elem_meanweight[element] = meanweight;
+}
+
+
+__host__ __device__
+double get_electronfrac(const int modelgridindex)
+{
+  return get_nnetot(modelgridindex) / get_nntot(modelgridindex);
 }
 
 
@@ -724,6 +762,9 @@ static void allocate_compositiondata(const int modelgridindex)
 
   modelgrid[modelgridindex].initmassfracstable = (float *) malloc(get_nelements() * sizeof(float));
   assert_always(modelgrid[modelgridindex].initmassfracstable != NULL);
+
+  modelgrid[modelgridindex].elem_meanweight = (float *) malloc(get_nelements() * sizeof(float));
+  assert_always(modelgrid[modelgridindex].elem_meanweight != NULL);
 
   mem_usage_nltepops += globals::total_nlte_levels * sizeof(double);
 

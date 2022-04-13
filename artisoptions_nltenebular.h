@@ -209,4 +209,6 @@ static const int MAX_NT_EXCITATIONS_STORED = 25000;
 
 static bool USE_RELATIVISTIC_DOPPLER = true;
 
+static bool USE_CALCULATED_MEANATOMICWEIGHT = false;
+
 #endif //ARTISOPTIONS_H

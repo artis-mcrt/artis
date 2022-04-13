@@ -29,6 +29,8 @@ typedef struct modelgrid_t
   float nnetot;           // total electron density (free + bound).
   float *initradioabund;
   float *initmassfracstable;
+  float *elem_meanweight;
+  float electronfrac;  // Ye: electrons (or protons) per nucleon
   float ffegrp;
   float kappagrey;
   float grey_depth;                      /// Grey optical depth to surface of the modelgridcell
@@ -72,6 +74,7 @@ __host__ __device__ float get_nnetot(int modelgridindex);
 __host__ __device__ float get_ffegrp(int modelgridindex);
 __host__ __device__ float get_elem_abundance(int modelgridindex, int element);
 __host__ __device__ void set_elem_abundance(int modelgridindex, int element, float newabundance);
+__host__ __device__ double get_elem_numberdens(int modelgridindex, int element);
 __host__ __device__ float get_kappagrey(int modelgridindex);
 __host__ __device__ float get_Te(int modelgridindex);
 __host__ __device__ float get_TR(int modelgridindex);
@@ -88,6 +91,9 @@ void grid_init(int my_rank);
 __host__ __device__ double get_cellradialpos(int cellindex);
 __host__ __device__ float get_modelinitradioabund(int modelgridindex, int z, int a);
 __host__ __device__ float get_stable_initabund(int mgi, int anumber);
+__host__ __device__ float get_element_meanweight(const int mgi, const int element);
+__host__ __device__ void set_element_meanweight(const int mgi, const int element, float meanweight);
+__host__ __device__ double get_electronfrac(const int mgi);
 __host__ __device__ int get_numassociatedcells(int modelgridindex);
 __host__ __device__ int get_modelcell_nonemptymgi(int mgi);
 __host__ __device__ enum model_types get_model_type(void);
