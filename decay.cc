@@ -165,7 +165,7 @@ static double get_nuc_decaybranchprob(const int z_parent, const int a_parent, in
 static int decay_daughter_z(const int z_parent, const int a_parent, int decaytype)
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
-  assert_always(nuc_exists(z_parent, a_parent));
+  assert_testmodeonly(nuc_exists(z_parent, a_parent));
   assert_always(decaytype >= 0);
   assert_always(decaytype < DECAYTYPE_COUNT);
 
@@ -196,11 +196,7 @@ static int decay_daughter_z(const int z_parent, const int a_parent, int decaytyp
 static int decay_daughter_a(const int z_parent, const int a_parent, int decaytype)
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
-  if (!nuc_exists(z_parent, a_parent))
-  {
-    printout("nuclide Z %d A %d is not in the network\n", z_parent, a_parent);
-    assert_always(nuc_exists(z_parent, a_parent));
-  }
+  assert_testmodeonly(nuc_exists(z_parent, a_parent));
 
   switch (decaytype)
   {
