@@ -238,6 +238,7 @@ jobs:
       run: |
         md5sum *.out
         md5sum -c results_md5_final.txt
+        touch requirements.txt
 
     - name: Upload output files
       uses: actions/upload-artifact@v2
