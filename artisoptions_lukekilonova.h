@@ -46,7 +46,7 @@ const bool single_ground_level = false; // if false, read from file or autodetec
 #define UNIFORM_PELLET_ENERGIES false
 
 #define DIRECT_COL_HEAT
-// #define NO_INITIAL_PACKETS
+#define NO_INITIAL_PACKETS
 #define RECORD_LINESTAT
 
 /// Rate coefficients
