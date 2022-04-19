@@ -58,7 +58,7 @@ module purge                               # Removes all modules still loaded
 module load rhel7/default-peta4            # REQUIRED - loads the basic environment
 
 #! Insert additional module load commands after this line if needed:
-module load intel/bundles/complib/2020.2
+module load openmpi/gcc/9.3/4.0.4 
 module load gsl/2.4
 
 #! Full path to application executable:
@@ -92,14 +92,14 @@ export I_MPI_PIN_ORDER=scatter # Adjacent domains have minimal sharing of caches
 #! Uncomment one choice for CMD below (add mpirun/mpiexec options if necessary):
 
 #! Choose this for a MPI code (possibly using OpenMP) using Intel MPI.
-CMD="mpirun -ppn $mpi_tasks_per_node -np $np $application $options"
+#CMD="mpirun -ppn $mpi_tasks_per_node -np $np $application $options"
 
 #! Choose this for a pure shared-memory OpenMP parallel program on a single node:
 #! (OMP_NUM_THREADS threads will be created):
 #CMD="$application $options"
 
 #! Choose this for a MPI code (possibly using OpenMP) using OpenMPI:
-#CMD="mpirun -npernode $mpi_tasks_per_node -np $np $application $options"
+CMD="mpirun -npernode $mpi_tasks_per_node -np $np $application $options"
 
 
 
@@ -141,5 +141,5 @@ then
 fi
 
 if [ -f packets00_0000.out ]; then
-    sbatch ./artis/scripts/exspec-gzip-gadi_raijin.sh
+    sbatch ./artis/scripts/exspec-gzip-cambridge.sh
 fi
