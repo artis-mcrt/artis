@@ -655,7 +655,7 @@ static void calculate_kappagrey(void)
   for (int n = 0; n < ngrid; n++)
   {
     const int mgi = get_cell_modelgridindex(n);
-    rho_sum +=get_rhoinit(mgi);
+    rho_sum += get_rhoinit(mgi);
     fe_sum += get_ffegrp(mgi);
 
     if (globals::opacity_case == 3)
@@ -678,7 +678,7 @@ static void calculate_kappagrey(void)
         printout("Error: negative density. Abort.\n");
         abort();
       }
-      opcase3_sum += get_kappagrey(mgi) *get_rhoinit(mgi);
+      opcase3_sum += get_kappagrey(mgi) * get_rhoinit(mgi);
     }
   }
 
@@ -695,39 +695,78 @@ static void calculate_kappagrey(void)
   {
     const int mgi = get_cell_modelgridindex(n);
     if (globals::rank_global == 0 && mgi != get_npts_model())
+    {
       fprintf(grid_file,"%d %d\n", n, mgi); ///write only non-empty cells to grid file
+    }
 
     if (get_rhoinit(mgi) > 0)
     {
+      double kappa = 0.;
       if (globals::opacity_case == 0)
       {
-        set_kappagrey(mgi, GREY_OP);
+        kappa = GREY_OP;
       }
       else if (globals::opacity_case == 1)
       {
-        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 * mfeg / mtot) + 0.1));
+        kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 * mfeg / mtot) + 0.1);
       }
       else if (globals::opacity_case == 2)
       {
         const double opcase2_normal = GREY_OP * rho_sum / ((0.9 * fe_sum) + (0.1 * (ngrid - empty_cells)));
-        set_kappagrey(mgi, opcase2_normal/get_rhoinit(mgi) * ((0.9 * get_ffegrp(mgi)) + 0.1));
+        kappa = opcase2_normal/get_rhoinit(mgi) * ((0.9 * get_ffegrp(mgi)) + 0.1);
       }
       else if (globals::opacity_case == 3)
       {
         globals::opcase3_normal = GREY_OP * rho_sum / opcase3_sum;
-        set_kappagrey(mgi, get_kappagrey(mgi) * globals::opcase3_normal);
+        kappa = get_kappagrey(mgi) * globals::opcase3_normal;
       }
       else if (globals::opacity_case == 4)
       {
         ///kappagrey used for initial grey approximation in this case
-        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 * mfeg / mtot) + 0.1));
-        //set_kappagrey(mgi, SIGMA_T);
+        kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 * mfeg / mtot) + 0.1);
+        // kappa = SIGMA_T;
+      }
+      else if (globals::opacity_case == 5)
+      {
+        // electron-fraction-dependent opacities
+        // values from table 1 of Tanaka et al. (2020).
+        double Ye = get_electronfrac(mgi);
+        if (Ye <= 0.1)
+        {
+          kappa = 19.5;
+        }
+        else if (Ye <= 0.15)
+        {
+          kappa = 32.2;
+        }
+        else if (Ye <= 0.20)
+        {
+          kappa = 22.3;
+        }
+        else if (Ye <= 0.25)
+        {
+          kappa = 5.6;
+        }
+        else if (Ye <= 0.30)
+        {
+          kappa = 5.36;
+        }
+        else if (Ye <= 0.35)
+        {
+          kappa = 3.3;
+        }
+        else
+        {
+          kappa = 0.96;
+        }
       }
       else
       {
         printout("Unknown opacity case. Abort.\n");
         abort();
       }
+
+      set_kappagrey(mgi, kappa);
     }
     else if (get_rhoinit(mgi) == 0.)
     {
