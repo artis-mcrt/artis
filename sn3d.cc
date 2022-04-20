@@ -111,12 +111,14 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
     {
       if (grid::get_numassociatedcells(mgi) > 0)
       {
-        const double vol_tmid = grid::vol_init_modelcell(mgi) * pow(t_mid / globals::tmin, 3);
-        globals::time_step[i].positron_dep_ana_power += vol_tmid * get_particle_injection_rate_density(mgi, t_mid, decay::DECAYTYPE_BETAPLUS);
-        globals::time_step[i].electron_dep_ana_power += vol_tmid * get_particle_injection_rate_density(mgi, t_mid, decay::DECAYTYPE_BETAMINUS);
-        globals::time_step[i].alpha_dep_ana_power += vol_tmid * get_particle_injection_rate_density(mgi, t_mid, decay::DECAYTYPE_ALPHA);
-
         const double cellmass = grid::get_rhoinit(mgi) * grid::vol_init_modelcell(mgi);
+
+        // get_particle_injection_rate_density will use rho from current timestep nts
+        const double cellmass_on_rho = cellmass / grid::get_rho(mgi);
+        globals::time_step[i].positron_dep_ana_power += cellmass_on_rho * get_particle_injection_rate_density(mgi, t_mid, decay::DECAYTYPE_BETAPLUS);
+        globals::time_step[i].electron_dep_ana_power += cellmass_on_rho * get_particle_injection_rate_density(mgi, t_mid, decay::DECAYTYPE_BETAMINUS);
+        globals::time_step[i].alpha_dep_ana_power += cellmass_on_rho * get_particle_injection_rate_density(mgi, t_mid, decay::DECAYTYPE_ALPHA);
+
         if (i == nts)
         {
           mtot += cellmass;
