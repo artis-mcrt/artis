@@ -30,6 +30,7 @@ namespace decay
   __host__ __device__ int get_nuc_z(int nucindex);
   __host__ __device__ int get_nuc_a(int nucindex);
   __host__ __device__ int get_nuc_index(int z, int a);
+  __host__ __device__ bool nuc_exists(int z, int a);
   __host__ __device__ double nucdecayenergygamma(int z, int a);
   __host__ __device__ void set_nucdecayenergygamma(int z, int a, double value);
   __host__ __device__ double nucdecayenergy(int z, int a);

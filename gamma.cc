@@ -158,9 +158,14 @@ static void read_decaydata(void)
   // read_gamma_spectrum(28, 57, "ni57_lines.txt");
   //
   // read_gamma_spectrum(27, 57, "co57_lines.txt");
-
-  decay::set_nucdecayenergygamma(26, 52, 0.86 * MEV);  // Fe52
-  decay::set_nucdecayenergygamma(25, 52, 3.415 * MEV);  // Mn52
+  if (decay::nuc_exists(26, 52))
+  {
+    decay::set_nucdecayenergygamma(26, 52, 0.86 * MEV);  // Fe52
+  }
+  if (decay::nuc_exists(25, 52))
+  {
+    decay::set_nucdecayenergygamma(25, 52, 3.415 * MEV);  // Mn52
+  }
 }
 
 

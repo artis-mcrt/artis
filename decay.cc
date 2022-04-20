@@ -64,7 +64,6 @@ static double *decaypath_energy_per_mass = NULL;
 __host__ __device__
 int get_num_nuclides(void)
 {
-  assert_always(nuclides.size() > 0);
   return nuclides.size();
 }
 
@@ -114,11 +113,9 @@ int get_nuc_index(int z, int a)
 
 
 __host__ __device__
-static bool nuc_exists(int z, int a)
+bool nuc_exists(int z, int a)
 // check if nuclide exists in the simulation
 {
-  assert_always(get_num_nuclides() > 0);
-
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
     if (nuclides[nucindex].z == z && nuclides[nucindex].a == a)
@@ -300,7 +297,7 @@ static double nucdecayenergytotal(int z, int a)
   endecay += nuclides[get_nuc_index(z, a)].endecay_gamma;
   for (int decaytype = 0; decaytype < DECAYTYPE_COUNT; decaytype++)
   {
-    endecay += nucdecayenergyparticle(z, a, decaytype);
+    endecay += nucdecayenergyparticle(z, a, decaytype) * get_nuc_decaybranchprob(z, a, decaytype);
   }
 
   return endecay;
@@ -607,10 +604,6 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
 {
   assert_always(custom_zlist.size() == custom_alist.size());
 
-  // num_nuclides = 10240;  // todo: remove limit
-  // nuclides = (struct nuclide *) malloc(num_nuclides * sizeof(struct nuclide));
-  // assert_always(nuclides != NULL);
-
   struct nuclide default_nuclide;
   default_nuclide.z = -1;
   default_nuclide.a = -1;
@@ -803,6 +796,16 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
     }
   }
 
+  // TESTING: REMOVE
+  // for (int i = 0; i < get_num_nuclides(); i++)
+  // {
+  //   for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
+  //   {
+  //     nuclides[i].branchprobs[dectypeindex] *= 1e-4;
+  //     nuclides[i].endecay_gamma = 0.;
+  //   }
+  // }
+
   printout("init_nuclides: num_nuclides %d\n", get_num_nuclides());
 
   /// Read in data for gamma ray lines and make a list of them in energy order.
@@ -846,7 +849,7 @@ static double sample_decaytime(const int decaypathindex, const double tdecaymin,
       const int z = decaypaths[decaypathindex].z[i];
       const int a = decaypaths[decaypathindex].a[i];
       const double zrand = gsl_rng_uniform_pos(rng);
-      tdecay += -get_meanlife(z, a) * log(zrand);
+      tdecay += - get_meanlife(z, a) * log(zrand);
     }
   }
   return tdecay;
@@ -992,7 +995,7 @@ static double get_nuc_massfrac(
 __host__ __device__
 static double get_endecay_to_tinf_per_ejectamass_at_time(
   const int modelgridindex, const int decaypathindex, const double time)
-// returns decay energy [erg] that would be released from time tstart [s] to time infinity by a given decaypath
+// returns decay energy [erg/g] that would be released from time tstart [s] to time infinity by a given decaypath
 {
   // e.g. Ni56 -> Co56, represents the decay of Co56 nuclei
   // that were produced from Ni56 in the initial abundance.
@@ -1200,8 +1203,7 @@ static double get_chain_decay_power_per_ejectamass(
   double meanlifetimes[decaypathlength];  // weighted by branchprob
   for (int i = 0; i < decaypathlength; i++)
   {
-    const double branchprob = get_nuc_decaybranchprob(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i], decaypaths[decaypathindex].decaytypes[i]);
-    meanlifetimes[i] = get_meanlife(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i]) / branchprob;
+    meanlifetimes[i] = get_meanlife(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i]);
   }
 
   // contribution to the end nuclide abundance from the top of chain (could be a length-one chain Z,A_top = Z,A_end
@@ -1256,7 +1258,7 @@ void free_decaypath_energy_per_mass(void)
 
 __host__ __device__
 double get_particle_injection_rate_density(const int modelgridindex, const double t, const int decaytype)
-// energy release rate from positrons, electrons, and alpha particles in erg/s/cm^3
+// energy release rate in form of kinetic energy of positrons, electrons, and alpha particles in erg/s/cm^3
 {
   const double rho = grid::get_rho(modelgridindex);
 
