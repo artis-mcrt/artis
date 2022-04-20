@@ -238,7 +238,13 @@ jobs:
       run: |
         md5sum *.out
         md5sum -c results_md5_final.txt
+
+    - name: Prepare for next steps
+      if: always() && matrix.os != 'selfhosted'
+      working-directory: tests/nebularonezone_testrun
+      run: |
         touch requirements.txt
+        rm packets*.*
 
     - name: Upload output files
       uses: actions/upload-artifact@v2
