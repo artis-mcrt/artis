@@ -141,7 +141,7 @@ static void write_deposition_file(const int nts)
   fclose(dep_file);
 
   std::remove("deposition.out");
-  std::rename("deposition.out.tmp", "deposition.out.txt");
+  std::rename("deposition.out.tmp", "deposition.out");
 
   printout("writing deposition.out file took %ld seconds\n", time(NULL) - time_write_deposition_file_start);
 }
