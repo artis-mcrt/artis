@@ -152,6 +152,7 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
 
   #ifdef MPI_ON
   MPI_Allreduce(MPI_IN_PLACE, &mtot, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_WORLD);
   #endif
 
   if (my_rank == 0)
