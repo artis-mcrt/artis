@@ -913,6 +913,7 @@ int main(int argc, char** argv)
 
   if (!globals::simulation_continued_from_saved)
   {
+    std::remove("deposition.out");
     /// Next we want to initialise the packets.
     /// Create a bunch of npkts packets
     /// and write them to a binary file for later readin.
