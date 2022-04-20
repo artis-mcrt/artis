@@ -1322,36 +1322,6 @@ double get_qdot_modelcell(const int modelgridindex, const double t, const int de
 }
 
 
-double get_qdot_decaytype(const double t, const int decaytype)
-// global energy release rate [erg/g/s] including everything (even neutrinos that are ignored elsewhere)
-{
-  double qdot_sum = 0.;
-  double m_sum = 0.;
-  for (int mgi = 0; mgi < grid::get_npts_model(); mgi++)
-  {
-    const double cellmass = grid::get_rhoinit(mgi) * grid::vol_init_modelcell(mgi);
-    m_sum += cellmass;
-    qdot_sum += get_qdot_modelcell(mgi, t, decaytype) * cellmass;
-  }
-  assert_always(std::isfinite(qdot_sum));
-
-  return qdot_sum / m_sum;
-}
-
-
-double get_qdot_total(const double t)
-// global energy release rate [erg/g/s] including everything (even neutrinos that are ignored elsewhere)
-{
-  double qdot = 0.;
-  for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
-  {
-    qdot += get_qdot_decaytype(t, dectypeindex);
-  }
-
-  return qdot;
-}
-
-
 double get_global_etot_t0_tinf(void)
 {
   double etot_tinf = 0.;

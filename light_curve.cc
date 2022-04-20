@@ -34,7 +34,7 @@ void write_light_curve(
     {
       fprintf(lc_file, "%g %g %g\n", globals::time_step[m].mid / DAY,
               (globals::time_step[m].gamma_dep / LSUN / globals::time_step[m].width),
-              (globals::time_step[m].cmf_lum / globals::time_step[m].width/LSUN));
+              (globals::time_step[m].cmf_lum / globals::time_step[m].width / LSUN));
     }
   }
 

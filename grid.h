@@ -57,7 +57,6 @@ extern __managed__ int grid_type;
 extern __managed__ char coordlabel[3];
 
 
-double get_mtot(void);
 __host__ __device__ int get_elements_uppermost_ion(const int modelgridindex, const int element);
 __host__ __device__ void set_elements_uppermost_ion(const int modelgridindex, const int element, const int newvalue);
 __host__ __device__ double wid_init(int cellindex);
@@ -96,6 +95,7 @@ __host__ __device__ void set_element_meanweight(const int mgi, const int element
 __host__ __device__ double get_electronfrac(const int mgi);
 __host__ __device__ int get_numassociatedcells(int modelgridindex);
 __host__ __device__ int get_modelcell_nonemptymgi(int mgi);
+__host__ __device__ int get_mgi_of_nonemptymgi(int nonemptymgi);
 __host__ __device__ enum model_types get_model_type(void);
 __host__ __device__ void set_model_type(enum model_types model_type_value);
 __host__ __device__ int get_npts_model(void);

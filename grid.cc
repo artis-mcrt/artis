@@ -40,7 +40,7 @@ __managed__ double dcoord2; // spacings of a 2D model grid - must be uniform gri
 
 __managed__ double min_den; // minimum model density
 
-__managed__ double mtot;
+__managed__ double mtot_input;
 __managed__ double mfeg;              /// Total mass of Fe group elements in ejecta
 
 __managed__ CELL *cell = NULL;
@@ -54,9 +54,11 @@ static __managed__ int *mgi_of_nonemptymgi = NULL;
 __managed__ double *totmassradionuclide = NULL; /// total mass of each radionuclide in the ejecta
 
 
-double get_mtot(void)
+double get_mtot_input(void)
+// mass of the input model, which can be slightly different to the simulation mass
+// e.g. spherical shells mapped to cartesian grid
 {
-  return mtot;
+  return mtot_input;
 }
 
 __host__ __device__
@@ -708,7 +710,7 @@ static void calculate_kappagrey(void)
       }
       else if (globals::opacity_case == 1)
       {
-        kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 * mfeg / mtot) + 0.1);
+        kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 * mfeg / mtot_input) + 0.1);
       }
       else if (globals::opacity_case == 2)
       {
@@ -723,7 +725,7 @@ static void calculate_kappagrey(void)
       else if (globals::opacity_case == 4)
       {
         ///kappagrey used for initial grey approximation in this case
-        kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 * mfeg / mtot) + 0.1);
+        kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 * mfeg / mtot_input) + 0.1);
         // kappa = SIGMA_T;
       }
       else if (globals::opacity_case == 5)
@@ -1662,7 +1664,7 @@ static void read_3d_model(void)
 
 static void calc_totmassradionuclides(void)
 {
-  mtot = 0.;
+  mtot_input = 0.;
   mfeg = 0.;
 
   assert_always(totmassradionuclide == NULL);
@@ -1707,10 +1709,11 @@ static void calc_totmassradionuclides(void)
       printout("Unknown model type %d in function %s\n", get_model_type(), __func__);
       abort();
     }
+    // can use grid::vol_init_modelcell(mgi) to get actual simulated volume (with slight error versus input)
 
     const double mass_in_shell = get_rhoinit(mgi) * cellvolume;
 
-    mtot += mass_in_shell;
+    mtot_input += mass_in_shell;
 
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
     {
@@ -1727,7 +1730,7 @@ static void calc_totmassradionuclides(void)
 
 
   printout("Masses / Msun:    Total: %9.3e  56Ni: %9.3e  56Co: %9.3e  52Fe: %9.3e  48Cr: %9.3e\n",
-           mtot / MSUN, get_totmassradionuclide(28, 56) / MSUN,
+           mtot_input / MSUN, get_totmassradionuclide(28, 56) / MSUN,
            get_totmassradionuclide(27, 56) / MSUN, get_totmassradionuclide(26, 52) / MSUN,
            get_totmassradionuclide(24, 48) / MSUN);
   printout("Masses / Msun: Fe-group: %9.3e  57Ni: %9.3e  57Co: %9.3e\n",

@@ -16,16 +16,22 @@
 
 struct time
 {
-  double start; // time at start of this timestep.
-  double width; // Width of timestep.
-  double mid; // Mid time in step - computed logarithmically.
-  double gamma_dep; // cmf gamma ray energy deposition rate from absorption events
-  double gamma_dep_pathint; // cmf gamma ray energy deposition rate from packet trajectories
-  double positron_dep; // cmf positron energy deposition rate
-  double electron_dep; // cmf positron energy deposition rate
-  double alpha_dep; // cmf positron energy deposition rate
-  double gamma_decay; // gamma decay energy release rate
-  double cmf_lum; // cmf luminosity light curve
+  double start; // time at start of this timestep. [s]
+  double width; // Width of timestep. [s]
+  double mid; // Mid time in step - computed logarithmically. [s]
+  double gamma_dep; // cmf gamma ray energy deposition from absorption events [erg]
+  double gamma_dep_pathint; // cmf gamma ray energy deposition from packet trajectories [erg]
+  double positron_dep; // cmf positron energy deposition [erg]
+  double positron_dep_ana_power; // cmf positron energy deposition rate analytical [erg/s]
+  double electron_dep; // cmf electron energy deposition [erg]
+  double electron_dep_ana_power; // cmf positron energy deposition rate analytical [erg/s]
+  double alpha_dep; // cmf alpha energy deposition [erg]
+  double alpha_dep_ana_power; // cmf alpha energy deposition rate analytical [erg/s]
+  double gamma_decay; // gamma decay energy release rate  [erg]
+  double qdot_betaminus; // energy release from beta-minus decays (including neutrinos) [erg/g/s]
+  double qdot_alpha;  // energy release from alpha decays (including neutrinos) [erg/g/s]
+  double qdot_total;  // energy release from all decays (including neutrinos) [erg/g/s]
+  double cmf_lum; // cmf luminosity light curve [erg]
   int pellet_decays; // Number of pellets that decay in this time step.
 };
 
