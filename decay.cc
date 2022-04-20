@@ -1287,18 +1287,24 @@ double get_qdot_modelcell(const int modelgridindex, const double t, const int de
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
     const int z = get_nuc_z(nucindex);
+    if (z < 1)
+    {
+      continue;
+    }
     const int a = get_nuc_a(nucindex);
     const double meanlife = get_meanlife(z, a);
-    if (meanlife > 0)
+    if (meanlife <= 0)
     {
-      const double q_decay = nucdecayenergyqval(z, a, decaytype) * get_nuc_decaybranchprob(z, a, decaytype);
-      if (q_decay > 0.)
-      {
-        const double nucdecayrate = get_nuc_massfrac(modelgridindex, z, a, t) / meanlife;
-        assert_always(nucdecayrate >= 0);
-        qdot += nucdecayrate * q_decay / nucmass(z, a);
-      }
+      continue;
     }
+    const double q_decay = nucdecayenergyqval(z, a, decaytype) * get_nuc_decaybranchprob(z, a, decaytype);
+    if (q_decay > 0.)
+    {
+      continue;
+    }
+    const double nucdecayrate = get_nuc_massfrac(modelgridindex, z, a, t) / meanlife;
+    assert_always(nucdecayrate >= 0);
+    qdot += nucdecayrate * q_decay / nucmass(z, a);
   }
 
   return qdot;
