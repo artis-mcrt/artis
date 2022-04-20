@@ -381,7 +381,7 @@ static double get_decaypath_lastnucdecayenergy(const int decaypathindex)
 {
   const int z_end = decaypaths[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
   const int a_end = decaypaths[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
-  const int decaytype_end =  decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1];
+  const int decaytype_end = decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1];
   return nucdecayenergy(z_end, a_end, decaytype_end);
 }
 
@@ -1264,11 +1264,20 @@ double get_particle_injection_rate_density(const int modelgridindex, const doubl
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
     const int z = get_nuc_z(nucindex);
+    if (z < 1)
+    {
+      continue;
+    }
     const int a = get_nuc_a(nucindex);
+    const double meanlife = get_meanlife(z, a);
+    if (meanlife < 0.)
+    {
+      continue;
+    }
     const double en_particles = nucdecayenergyparticle(z, a, decaytype);
     if (en_particles > 0.)
     {
-      const double nucdecayrate = get_nuc_massfrac(modelgridindex, z, a, t) / get_meanlife(z, a) * get_nuc_decaybranchprob(z, a, decaytype);
+      const double nucdecayrate = get_nuc_massfrac(modelgridindex, z, a, t) / meanlife * get_nuc_decaybranchprob(z, a, decaytype);
       assert_always(nucdecayrate >= 0);
       dep_sum += nucdecayrate * en_particles * rho / nucmass(z, a);
     }
@@ -1298,7 +1307,7 @@ double get_qdot_modelcell(const int modelgridindex, const double t, const int de
       continue;
     }
     const double q_decay = nucdecayenergyqval(z, a, decaytype) * get_nuc_decaybranchprob(z, a, decaytype);
-    if (q_decay > 0.)
+    if (q_decay <= 0.)
     {
       continue;
     }

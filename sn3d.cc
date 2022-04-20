@@ -122,7 +122,7 @@ static void write_deposition_file(const int nts)
 
     fprintf(dep_file, "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n",
             i, t_mid / DAY, t_mid,
-            total_dep / globals::time_step[i].width / LSUN,
+            total_dep / t_width / LSUN,
             globals::time_step[i].gamma_dep / t_width / LSUN,
             globals::time_step[i].gamma_dep_pathint / t_width / LSUN,
             globals::time_step[i].positron_dep / t_width / LSUN,
