@@ -89,11 +89,11 @@ static void initialise_linestat_file(void)
 
 static void write_deposition_file(const int nts)
 {
-  printout("writing deposition.out file\n");
+  printout("writing deposition.out file...\n");
   time_t time_write_deposition_file_start = time(NULL);
   const double mtot = grid::get_mtot();
 
-  FILE *dep_file = fopen_required("deposition.out", "w");
+  FILE *dep_file = fopen_required("deposition.out.tmp", "w");
   fprintf(dep_file, "#ts tmid_days tmid_s total_dep_Lsun gammadep_Lsun gammadeppathint_Lsun positrondep_Lsun positrondep_ana_Lsun elecdep_Lsun elecdep_ana_Lsun alphadep_Lsun alphadep_ana_Lsun gammadecay_Lsun Qdot_betaminus_ana_erg/g/s Qdotalpha_ana_erg/g/s Qdot_erg/g/s Qdot_ana_erg/g/s\n");
 
   for (int i = 0; i <= nts; i++)
@@ -139,6 +139,10 @@ static void write_deposition_file(const int nts)
     );
   }
   fclose(dep_file);
+
+  std::remove("deposition.out");
+  std::rename("deposition.out.tmp", "deposition.out.txt");
+
   printout("writing deposition.out file took %ld seconds\n", time(NULL) - time_write_deposition_file_start);
 }
 
