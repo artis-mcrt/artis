@@ -680,14 +680,16 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   const double gamma_deposition = globals::rpkt_emiss[modelgridindex] * 1.e20 * FOURPI;
 
   const double tmid = globals::time_step[timestep].mid;
+  const double rho = grid::get_rho(modelgridindex);
 
-  const double positron_deposition = decay::get_particle_injection_rate_density(
+  // convert from [erg/s/g] to [erg/s/cm3]
+  const double positron_deposition = rho * decay::get_particle_injection_rate(
     modelgridindex, tmid, decay::DECAYTYPE_BETAPLUS);
 
-  const double electron_deposition = decay::get_particle_injection_rate_density(
+  const double electron_deposition = rho * decay::get_particle_injection_rate(
     modelgridindex, tmid, decay::DECAYTYPE_BETAMINUS);
 
-  const double alpha_deposition = decay::get_particle_injection_rate_density(
+  const double alpha_deposition = rho * decay::get_particle_injection_rate(
     modelgridindex, tmid, decay::DECAYTYPE_ALPHA);
 
   deposition_rate_density[modelgridindex] = (

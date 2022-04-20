@@ -1257,11 +1257,9 @@ void free_decaypath_energy_per_mass(void)
 
 
 __host__ __device__
-double get_particle_injection_rate_density(const int modelgridindex, const double t, const int decaytype)
-// energy release rate in form of kinetic energy of positrons, electrons, and alpha particles in erg/s/cm^3
+double get_particle_injection_rate(const int modelgridindex, const double t, const int decaytype)
+// energy release rate in form of kinetic energy of positrons, electrons, and alpha particles in [erg/s/g]
 {
-  const double rho = grid::get_rho(modelgridindex);
-
   double dep_sum = 0.;
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
@@ -1281,7 +1279,7 @@ double get_particle_injection_rate_density(const int modelgridindex, const doubl
     {
       const double nucdecayrate = get_nuc_massfrac(modelgridindex, z, a, t) / meanlife * get_nuc_decaybranchprob(z, a, decaytype);
       assert_always(nucdecayrate >= 0);
-      dep_sum += nucdecayrate * en_particles * rho / nucmass(z, a);
+      dep_sum += nucdecayrate * en_particles / nucmass(z, a);
     }
   }
 
