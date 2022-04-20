@@ -87,6 +87,62 @@ static void initialise_linestat_file(void)
 }
 
 
+static void write_deposition_file(const int nts)
+{
+  printout("writing deposition.out file\n");
+  time_t time_write_deposition_file_start = time(NULL);
+  const double mtot = grid::get_mtot();
+
+  FILE *dep_file = fopen_required("deposition.out", "w");
+  fprintf(dep_file, "#ts tmid_days tmid_s total_dep_Lsun gammadep_Lsun gammadeppathint_Lsun positrondep_Lsun positrondep_ana_Lsun elecdep_Lsun elecdep_ana_Lsun alphadep_Lsun alphadep_ana_Lsun gammadecay_Lsun Qdot_betaminus_ana_erg/g/s Qdotalpha_ana_erg/g/s Qdot_erg/g/s Qdot_ana_erg/g/s\n");
+
+  for (int i = 0; i <= nts; i++)
+  {
+    const double t_mid = globals::time_step[i].mid;
+    const double t_width = globals::time_step[i].width;
+    const double total_dep = (
+      globals::time_step[i].gamma_dep + globals::time_step[i].positron_dep +
+      globals::time_step[i].electron_dep + globals::time_step[i].alpha_dep);
+
+    const double qdot_mc = (
+      globals::time_step[i].gamma_decay + globals::time_step[i].positron_dep +
+      globals::time_step[i].electron_dep + globals::time_step[i].alpha_dep) / mtot / t_width;
+
+    // power in [erg/s]
+    double positron_dep_ana = 0.;
+    double electron_dep_ana = 0.;
+    double alpha_dep_ana = 0.;
+    for (int mgi2 = 0; mgi2 < grid::get_npts_model(); mgi2++)
+    {
+      const double vol_tmid = grid::vol_init_modelcell(mgi2) * pow(t_mid / globals::tmin, 3);
+      positron_dep_ana += vol_tmid * get_particle_injection_rate_density(mgi2, t_mid, decay::DECAYTYPE_BETAPLUS);
+      electron_dep_ana += vol_tmid * get_particle_injection_rate_density(mgi2, t_mid, decay::DECAYTYPE_BETAMINUS);
+      alpha_dep_ana += vol_tmid * get_particle_injection_rate_density(mgi2, t_mid, decay::DECAYTYPE_ALPHA);
+    }
+
+    fprintf(dep_file, "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n",
+            i, t_mid / DAY, t_mid,
+            total_dep / globals::time_step[i].width / LSUN,
+            globals::time_step[i].gamma_dep / t_width / LSUN,
+            globals::time_step[i].gamma_dep_pathint / t_width / LSUN,
+            globals::time_step[i].positron_dep / t_width / LSUN,
+            positron_dep_ana / LSUN,
+            globals::time_step[i].electron_dep / t_width / LSUN,
+            electron_dep_ana / LSUN,
+            globals::time_step[i].alpha_dep / t_width / LSUN,
+            alpha_dep_ana / LSUN,
+            globals::time_step[i].gamma_decay / t_width / LSUN,
+            decay::get_qdot_decaytype(t_mid, decay::DECAYTYPE_BETAMINUS),
+            decay::get_qdot_decaytype(t_mid, decay::DECAYTYPE_ALPHA),
+            qdot_mc,
+            decay::get_qdot_total(t_mid)
+    );
+  }
+  fclose(dep_file);
+  printout("writing deposition.out file took %ld seconds\n", time(NULL) - time_write_deposition_file_start);
+}
+
+
 #ifdef MPI_ON
 static void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const int nstart, const int ndo, const int nts, const int titer, char *mpi_grid_buffer, const int mpi_grid_buffer_size)
 {
@@ -505,54 +561,7 @@ static bool do_timestep(
 
     if (my_rank == 0)
     {
-      const double mtot = grid::get_mtot();
-
-      FILE *dep_file = fopen_required("deposition.out", "w");
-      fprintf(dep_file, "#ts tmid_days tmid_s total_dep_Lsun gammadep_Lsun gammadeppathint_Lsun positrondep_Lsun positrondep_ana_Lsun elecdep_Lsun elecdep_ana_Lsun alphadep_Lsun alphadep_ana_Lsun gammadecay_Lsun Qdot_betaminus_ana_erg/g/s Qdotalpha_ana_erg/g/s Qdot_erg/g/s Qdot_ana_erg/g/s\n");
-
-      for (int i = 0; i <= nts; i++)
-      {
-        const double t_mid = globals::time_step[i].mid;
-        const double t_width = globals::time_step[i].width;
-        const double total_dep = (
-          globals::time_step[i].gamma_dep + globals::time_step[i].positron_dep +
-          globals::time_step[i].electron_dep + globals::time_step[i].alpha_dep);
-
-        const double qdot_mc = (
-          globals::time_step[i].gamma_decay + globals::time_step[i].positron_dep +
-          globals::time_step[i].electron_dep + globals::time_step[i].alpha_dep) / mtot / t_width;
-
-        // power in [erg/s]
-        double positron_dep_ana = 0.;
-        double electron_dep_ana = 0.;
-        double alpha_dep_ana = 0.;
-        for (int mgi2 = 0; mgi2 < grid::get_npts_model(); mgi2++)
-        {
-          const double vol_tmid = grid::vol_init_modelcell(mgi2) * pow(t_mid / globals::tmin, 3);
-          positron_dep_ana += vol_tmid * get_particle_injection_rate_density(mgi2, t_mid, decay::DECAYTYPE_BETAPLUS);
-          electron_dep_ana += vol_tmid * get_particle_injection_rate_density(mgi2, t_mid, decay::DECAYTYPE_BETAMINUS);
-          alpha_dep_ana += vol_tmid * get_particle_injection_rate_density(mgi2, t_mid, decay::DECAYTYPE_ALPHA);
-        }
-
-        fprintf(dep_file, "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n",
-                i, t_mid / DAY, t_mid,
-                total_dep / globals::time_step[i].width / LSUN,
-                globals::time_step[i].gamma_dep / t_width / LSUN,
-                globals::time_step[i].gamma_dep_pathint / t_width / LSUN,
-                globals::time_step[i].positron_dep / t_width / LSUN,
-                positron_dep_ana / LSUN,
-                globals::time_step[i].electron_dep / t_width / LSUN,
-                electron_dep_ana / LSUN,
-                globals::time_step[i].alpha_dep / t_width / LSUN,
-                alpha_dep_ana / LSUN,
-                globals::time_step[i].gamma_decay / t_width / LSUN,
-                decay::get_qdot_decaytype(t_mid, decay::DECAYTYPE_BETAMINUS),
-                decay::get_qdot_decaytype(t_mid, decay::DECAYTYPE_ALPHA),
-                qdot_mc,
-                decay::get_qdot_total(t_mid)
-        );
-      }
-      fclose(dep_file);
+      write_deposition_file(nts);
     }
 
     write_partial_lightcurve_spectra(my_rank, nts, packets);

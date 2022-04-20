@@ -331,7 +331,6 @@ double get_meanlife(int z, int a)
   assert_always(a >= z);
   if (!nuc_exists(z, a))
   {
-    assert_always(nuc_exists(z + 1, a));
     return -1;
   }
   const int nucindex = get_nuc_index(z, a);
@@ -968,7 +967,7 @@ static double get_nuc_massfrac(
     }
 
     int decaypathlength = get_decaypathlength(decaypathindex);
-    double meanlifetimes[decaypathlength + 1]; // mean lifetimes weighted by branchprob
+    double meanlifetimes[decaypathlength + 1]; // mean lifetimes
     for (int i = 0; i < decaypathlength; i++)
     {
       meanlifetimes[i] = get_meanlife(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i]);
@@ -1289,12 +1288,16 @@ double get_qdot_modelcell(const int modelgridindex, const double t, const int de
   {
     const int z = get_nuc_z(nucindex);
     const int a = get_nuc_a(nucindex);
-    const double q_decay = nucdecayenergyqval(z, a, decaytype) * get_nuc_decaybranchprob(z, a, decaytype);
-    if (q_decay > 0.)
+    const double meanlife = get_meanlife(z, a);
+    if (meanlife > 0)
     {
-      const double nucdecayrate = get_nuc_massfrac(modelgridindex, z, a, t) / get_meanlife(z, a);
-      assert_always(nucdecayrate >= 0);
-      qdot += nucdecayrate * q_decay / nucmass(z, a);
+      const double q_decay = nucdecayenergyqval(z, a, decaytype) * get_nuc_decaybranchprob(z, a, decaytype);
+      if (q_decay > 0.)
+      {
+        const double nucdecayrate = get_nuc_massfrac(modelgridindex, z, a, t) / meanlife;
+        assert_always(nucdecayrate >= 0);
+        qdot += nucdecayrate * q_decay / nucmass(z, a);
+      }
     }
   }
 
