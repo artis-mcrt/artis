@@ -1457,11 +1457,9 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 void fprint_nuc_abundances(
   FILE *estimators_file, const int modelgridindex, const double t_current, const int element)
 {
+  const double rho = grid::get_rho(modelgridindex);
+
   const int atomic_number = get_element(element);
-
-  double stablefracsum = (
-      grid::get_stable_initabund(modelgridindex, element) / globals::elements[element].initstablemeannucmass);
-
   std::set<int> a_isotopes;
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)
   {
@@ -1474,9 +1472,12 @@ void fprint_nuc_abundances(
         a_isotopes.insert(a);
         // radioactive isotope of the element
         const double massfrac = get_nuc_massfrac(modelgridindex, atomic_number, a, t_current);
-        const double numberdens = massfrac / nucmass(atomic_number, a) * grid::get_rho(modelgridindex);
+        if (massfrac > 0)
+        {
+          const double numberdens = massfrac / nucmass(atomic_number, a) * rho;
 
-        fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number), a, numberdens);
+          fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number), a, numberdens);
+        }
       }
     }
     else
@@ -1492,7 +1493,9 @@ void fprint_nuc_abundances(
           {
             a_isotopes.insert(a);
             // nuclide decays into correct atomic number but outside of the radionuclide list. Daughter is assumed stable
-            stablefracsum += get_nuc_massfrac(modelgridindex, daughter_z, daughter_a, t_current) / nucmass(nuc_z, a);
+            const double massfrac = get_nuc_massfrac(modelgridindex, atomic_number, a, t_current);
+            const double numberdens = massfrac / nucmass(nuc_z, a) * rho;
+            fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number), a, numberdens);
           }
         }
       }
@@ -1500,8 +1503,14 @@ void fprint_nuc_abundances(
   }
 
   // factor to convert convert mass fraction to number density
-  const double stable_numberdens = stablefracsum * grid::get_rho(modelgridindex);
-  fprintf(estimators_file, "  %s_otherstable: %9.3e\n", get_elname(atomic_number), stable_numberdens);
+  const double otherstablemassfrac = grid::get_stable_initabund(modelgridindex, element);
+  if (otherstablemassfrac > 0)
+  {
+    const double meannucmass = globals::elements[element].initstablemeannucmass;
+    const double otherstable_numberdens = otherstablemassfrac / meannucmass * grid::get_rho(modelgridindex);
+    fprintf(estimators_file, "  %s_otherstable: %9.3e", get_elname(atomic_number), otherstable_numberdens);
+  }
+  fprintf(estimators_file, "\n");
 }
 
 
