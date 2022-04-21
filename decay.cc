@@ -988,7 +988,9 @@ static double get_nuc_massfrac(
         calculate_decaychain(top_initabund, meanlifetimes, fulldecaypathlength, t_afterinit, false) * nucmass(z, a));
   }
 
-  if (nuc_exists_z_a && get_meanlife(z, a) <= 0.)  // stable nuclei will not be in the decay path list
+  // stable nuclei in the network will not have a size-one decay path associated with them,
+  // so we need to contribute the initial abundance as-is (no decay)
+  if (nuc_exists_z_a && get_meanlife(z, a) <= 0.)
   {
     nuctotal += grid::get_modelinitradioabund(modelgridindex, z, a);
   }
