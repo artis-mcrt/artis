@@ -977,7 +977,7 @@ static double get_nuc_massfrac(
     }
 
     int fulldecaypathlength = decaypathlength;
-    if (!nuc_exists_z_a)
+    if (!nuc_exists_z_a || (z == 2 && a == 4 && decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1] == DECAYTYPE_ALPHA))
     {
       // the nuclide is past the end of the chain, in case requested (Z, A) is stable and not in the radionuclides
       meanlifetimes[decaypathlength] = -1.;
@@ -986,6 +986,11 @@ static double get_nuc_massfrac(
 
     nuctotal += (get_decaypath_branchproduct(decaypathindex) *
         calculate_decaychain(top_initabund, meanlifetimes, fulldecaypathlength, t_afterinit, false) * nucmass(z, a));
+  }
+
+  if (nuc_exists_z_a && get_meanlife(z, a) <= 0.)  // stable nuclei will not be in the decay path list
+  {
+    nuctotal += grid::get_modelinitradioabund(modelgridindex, z, a);
   }
 
   return nuctotal;
