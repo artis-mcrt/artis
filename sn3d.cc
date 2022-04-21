@@ -113,9 +113,9 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
       {
         const double cellmass = grid::get_rhoinit(mgi) * grid::vol_init_modelcell(mgi);
 
-        globals::time_step[i].positron_dep_ana_power += cellmass * get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAPLUS);
-        globals::time_step[i].electron_dep_ana_power += cellmass * get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAMINUS);
-        globals::time_step[i].alpha_dep_ana_power += cellmass * get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_ALPHA);
+        globals::time_step[i].positron_dep_ana_power += cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAPLUS);
+        globals::time_step[i].electron_dep_ana_power += cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAMINUS);
+        globals::time_step[i].alpha_dep_ana_power += cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_ALPHA);
 
         if (i == nts)
         {
