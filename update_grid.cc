@@ -871,7 +871,10 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
       {
         for (int element = 0; element < get_nelements(); element++)
         {
-          solve_nlte_pops_element(element, n, nts, nlte_iter);
+          if (get_nions(element) > 0)
+          {
+            solve_nlte_pops_element(element, n, nts, nlte_iter);
+          }
         }
       }
       else
@@ -879,7 +882,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
         for (int element = 0; element < get_nelements(); element++)
         {
           const int nions = get_nions(element);
-          for (int ion = 0; ion < nions-1; ion++)
+          for (int ion = 0; ion < nions - 1; ion++)
           {
             const double trial = fabs(solve_nlte_pops_ion(element, ion, n, nts) - 1);
 
