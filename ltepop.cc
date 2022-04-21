@@ -30,9 +30,9 @@ double nne_solution_f(double x, void *paras)
   for (int element = 0; element < get_nelements(); element++)
   {
     const double abundance = grid::modelgrid[modelgridindex].composition[element].abundance;
-    const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
-    if (abundance > 0)
+    if (abundance > 0 && get_nions(element) > 0)
     {
+      const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
       double innersum = 0.;
       //printout("debug get_nions (element %d) %d =========================\n",element,get_nions(element));
       //uppermost_ion = globals::elements[element].uppermost_ion;

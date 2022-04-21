@@ -71,9 +71,19 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         elpop += ionstagepop(mgi, element, ion);
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ionstagepop(mgi, element, ion));
       }
+      if (nions == 0)
+      {
+        elpop = grid::get_elem_numberdens(mgi, element);
+      }
       fprintf(estimators_file, "  SUM: %9.3e", elpop);
 
       decay::fprint_nuc_abundances(estimators_file, mgi, globals::time_step[timestep].mid, element);
+
+      if (nions == 0)
+      {
+        // dummy element for nuclear abundances only
+        continue;
+      }
 
       const bool printdebug = false;
 

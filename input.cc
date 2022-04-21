@@ -915,8 +915,8 @@ static void read_atomicdata_files(void)
     assert_always(fscanf(compositiondata,"%d %d %d %d %d %lg %lg", &Z, &nions, &lowermost_ionstage, &uppermost_ionstage, &nlevelsmax_readin, &abundance, &mass_amu) == 7);
     printout("readin compositiondata: next element Z %d, nions %d, lowermost %d, uppermost %d, nlevelsmax %d\n",Z,nions,lowermost_ionstage,uppermost_ionstage,nlevelsmax_readin);
     assert_always(Z > 0);
-    assert_always(nions > 0);
-    assert_always(nions == uppermost_ionstage - lowermost_ionstage + 1);
+    assert_always(nions >= 0);
+    assert_always(nions == 0 || (nions == uppermost_ionstage - lowermost_ionstage + 1));
     assert_always(abundance >= 0);
     assert_always(mass_amu >= 0);
 
