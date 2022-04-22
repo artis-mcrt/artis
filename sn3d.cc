@@ -94,7 +94,8 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
   double mtot = 0.;
 
   // calculate analytical decay rates
-  for (int i = 0; i <= nts; i++)
+  // for (int i = 0; i <= nts; i++)
+  const int i = nts;
   {
     const double t_mid = globals::time_step[i].mid;
 

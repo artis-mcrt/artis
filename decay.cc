@@ -1189,7 +1189,7 @@ static double get_simtime_endecay_per_ejectamass(const int mgi, const int decayp
 __host__ __device__
 static double get_chain_decay_power_per_ejectamass(
   const int decaypathindex, const int modelgridindex, const double time)
-// total decay power per mass [erg/s/kg] for a given decaypath
+// total decay power per mass [erg/s/g] for a given decaypath
 {
   // only decays at the end of the chain contributed from the initial abundance of the top of the chain are counted
   // (these can be can be same for a chain of length one)
