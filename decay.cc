@@ -986,7 +986,7 @@ static double get_nuc_massfrac(
 
     const double massfraccontrib = (get_decaypath_branchproduct(decaypathindex) *
         calculate_decaychain(top_initabund, meanlifetimes, fulldecaypathlength, t_afterinit, false) * nucmass(z, a));
-    assert_always(massfraccontrib >= 0.);
+    // assert_always(massfraccontrib >= 0.);
     nuctotal += massfraccontrib;
   }
 
