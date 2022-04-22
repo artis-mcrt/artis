@@ -209,13 +209,6 @@ jobs:
       working-directory: tests/nebularonezone_testrun/job1/
       run: cat output_0-0.txt
 
-    - name: Checksum job1 output files
-      if: always() && matrix.os != 'selfhosted'
-      working-directory: tests/nebularonezone_testrun
-      run: |
-        md5sum *.out job1/*.out
-        md5sum -c results_md5_job1.txt
-
     - name: "Run exspec"
       if: always()
       working-directory: tests/nebularonezone_testrun/
@@ -236,7 +229,7 @@ jobs:
       if: always() && matrix.os != 'selfhosted'
       working-directory: tests/nebularonezone_testrun
       run: |
-        md5sum *.out
+        md5sum *.out job1/*.out
         md5sum -c results_md5_final.txt
 
     - name: Prepare for next steps
