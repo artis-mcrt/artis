@@ -1842,21 +1842,22 @@ static void read_grid_restart_data(const int timestep)
   for (int nts = 0; nts < globals::ntstep; nts++)
   {
     assert_always(fscanf(
-      gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
+      gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
       &globals::time_step[nts].gamma_dep,
       &globals::time_step[nts].gamma_dep_pathint,
       &globals::time_step[nts].positron_dep,
-      &globals::time_step[nts].positron_dep_ana_power,
+      &globals::time_step[nts].eps_positron_ana_power,
       &globals::time_step[nts].electron_dep,
-      &globals::time_step[nts].electron_dep_ana_power,
+      &globals::time_step[nts].electron_emission,
+      &globals::time_step[nts].eps_electron_ana_power,
       &globals::time_step[nts].alpha_dep,
-      &globals::time_step[nts].alpha_dep_ana_power,
+      &globals::time_step[nts].eps_alpha_ana_power,
       &globals::time_step[nts].qdot_betaminus,
       &globals::time_step[nts].qdot_alpha,
       &globals::time_step[nts].qdot_total,
-      &globals::time_step[nts].gamma_decay,
+      &globals::time_step[nts].gamma_emission,
       &globals::time_step[nts].cmf_lum,
-      &globals::time_step[nts].pellet_decays) == 14);
+      &globals::time_step[nts].pellet_decays) == 15);
   }
 
   int timestep_in;
@@ -1932,19 +1933,20 @@ void write_grid_restart_data(const int timestep)
 
   for (int nts = 0; nts < globals::ntstep; nts++)
   {
-    fprintf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
+    fprintf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
             globals::time_step[nts].gamma_dep,
             globals::time_step[nts].gamma_dep_pathint,
             globals::time_step[nts].positron_dep,
-            globals::time_step[nts].positron_dep_ana_power,
+            globals::time_step[nts].eps_positron_ana_power,
             globals::time_step[nts].electron_dep,
-            globals::time_step[nts].electron_dep_ana_power,
+            globals::time_step[nts].electron_emission,
+            globals::time_step[nts].eps_electron_ana_power,
             globals::time_step[nts].alpha_dep,
-            globals::time_step[nts].alpha_dep_ana_power,
+            globals::time_step[nts].eps_alpha_ana_power,
             globals::time_step[nts].qdot_betaminus,
             globals::time_step[nts].qdot_alpha,
             globals::time_step[nts].qdot_total,
-            globals::time_step[nts].gamma_decay,
+            globals::time_step[nts].gamma_emission,
             globals::time_step[nts].cmf_lum,
             globals::time_step[nts].pellet_decays);
   }

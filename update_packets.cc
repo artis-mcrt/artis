@@ -49,6 +49,7 @@ static void update_pellet(
       }
       else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_BETAMINUS)
       {
+        safeadd(globals::time_step[nts].electron_emission, pkt_ptr->e_cmf);
         safeadd(globals::time_step[nts].electron_dep, pkt_ptr->e_cmf);
       }
       else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA)
@@ -61,7 +62,7 @@ static void update_pellet(
     }
     else
     {
-      safeadd(globals::time_step[nts].gamma_decay, pkt_ptr->e_cmf);
+      safeadd(globals::time_step[nts].gamma_emission, pkt_ptr->e_cmf);
       // decay to gamma-ray, kpkt, or ntlepton
       pellet_gamma_decay(nts, pkt_ptr);
     }

@@ -2381,17 +2381,18 @@ void time_init(void)
   for (int n = 0; n < globals::ntstep; n++)
   {
     globals::time_step[n].positron_dep = 0.;
-    globals::time_step[n].positron_dep_ana_power = 0.;
+    globals::time_step[n].eps_positron_ana_power = 0.;
     globals::time_step[n].electron_dep = 0.;
-    globals::time_step[n].electron_dep_ana_power = 0.;
+    globals::time_step[n].electron_emission = 0.;
+    globals::time_step[n].eps_electron_ana_power = 0.;
     globals::time_step[n].alpha_dep = 0.;
-    globals::time_step[n].alpha_dep_ana_power = 0.;
+    globals::time_step[n].eps_alpha_ana_power = 0.;
     globals::time_step[n].gamma_dep = 0.;
     globals::time_step[n].gamma_dep_pathint = 0.;
     globals::time_step[n].qdot_betaminus = 0.;
     globals::time_step[n].qdot_alpha = 0.;
     globals::time_step[n].qdot_total = 0.;
-    globals::time_step[n].gamma_decay = 0.;
+    globals::time_step[n].gamma_emission = 0.;
     globals::time_step[n].cmf_lum = 0.0;
     globals::time_step[n].pellet_decays = 0;
   }

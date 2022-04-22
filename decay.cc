@@ -1299,7 +1299,7 @@ double get_particle_injection_rate(const int modelgridindex, const double t, con
 
 
 double get_qdot_modelcell(const int modelgridindex, const double t, const int decaytype)
-// energy release rate [erg/g/s] including everything (even neutrinos that are ignored elsewhere)
+// energy release rate [erg/s/g] including everything (even neutrinos that are ignored elsewhere)
 {
   double qdot = 0.;
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++)

@@ -100,9 +100,9 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
     const double t_mid = globals::time_step[i].mid;
 
     // power in [erg/s]
-    globals::time_step[i].positron_dep_ana_power = 0.;
-    globals::time_step[i].electron_dep_ana_power = 0.;
-    globals::time_step[i].alpha_dep_ana_power = 0.;
+    globals::time_step[i].eps_positron_ana_power = 0.;
+    globals::time_step[i].eps_electron_ana_power = 0.;
+    globals::time_step[i].eps_alpha_ana_power = 0.;
     globals::time_step[i].qdot_betaminus = 0.;
     globals::time_step[i].qdot_alpha = 0.;
     globals::time_step[i].qdot_total = 0.;
@@ -114,9 +114,9 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
       {
         const double cellmass = grid::get_rhoinit(mgi) * grid::vol_init_modelcell(mgi);
 
-        globals::time_step[i].positron_dep_ana_power += cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAPLUS);
-        globals::time_step[i].electron_dep_ana_power += cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAMINUS);
-        globals::time_step[i].alpha_dep_ana_power += cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_ALPHA);
+        globals::time_step[i].eps_positron_ana_power += cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAPLUS);
+        globals::time_step[i].eps_electron_ana_power += cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAMINUS);
+        globals::time_step[i].eps_alpha_ana_power += cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_ALPHA);
 
         if (i == nts)
         {
@@ -142,9 +142,9 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
 
     #ifdef MPI_ON
     // in MPI mode, each process only did some fraction of the cells
-    MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[i].positron_dep_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[i].electron_dep_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[i].alpha_dep_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[i].eps_positron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[i].eps_electron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[i].eps_alpha_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[i].qdot_betaminus, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[i].qdot_alpha, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[i].qdot_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -159,7 +159,7 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
   if (my_rank == 0)
   {
     FILE *dep_file = fopen_required("deposition.out.tmp", "w");
-    fprintf(dep_file, "#ts tmid_days tmid_s total_dep_Lsun gammadep_Lsun gammadeppathint_Lsun positrondep_Lsun positrondep_ana_Lsun elecdep_Lsun elecdep_ana_Lsun alphadep_Lsun alphadep_ana_Lsun gammadecay_Lsun Qdot_betaminus_ana_erg/g/s Qdotalpha_ana_erg/g/s Qdot_erg/g/s Qdot_ana_erg/g/s\n");
+    fprintf(dep_file, "#ts tmid_days tmid_s total_dep_Lsun gammadep_Lsun gammadeppathint_Lsun positrondep_Lsun eps_positron_ana_Lsun elecdep_Lsun eps_elec_Lsun eps_elec_ana_Lsun alphadep_Lsun eps_alpha_ana_Lsun eps_gamma_Lsun Qdot_betaminus_ana_erg/s/g Qdotalpha_ana_erg/s/g eps_erg/s/g Qdot_ana_erg/s/g\n");
 
     for (int i = 0; i <= nts; i++)
     {
@@ -169,25 +169,27 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
         globals::time_step[i].gamma_dep + globals::time_step[i].positron_dep +
         globals::time_step[i].electron_dep + globals::time_step[i].alpha_dep);
 
-      const double qdot_mc = (
-        globals::time_step[i].gamma_decay + globals::time_step[i].positron_dep +
-        globals::time_step[i].electron_dep + globals::time_step[i].alpha_dep) / mtot / t_width;
+      // dep is used here for positrons and alphas because it is the same as the emission rate
+      const double epsilon_mc = (
+        globals::time_step[i].gamma_emission + globals::time_step[i].positron_dep +
+        globals::time_step[i].electron_emission + globals::time_step[i].alpha_dep) / mtot / t_width;
 
-      fprintf(dep_file, "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n",
+      fprintf(dep_file, "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n",
               i, t_mid / DAY, t_mid,
               total_dep / t_width / LSUN,
               globals::time_step[i].gamma_dep / t_width / LSUN,
               globals::time_step[i].gamma_dep_pathint / t_width / LSUN,
               globals::time_step[i].positron_dep / t_width / LSUN,
-              globals::time_step[i].positron_dep_ana_power / LSUN,
+              globals::time_step[i].eps_positron_ana_power / LSUN,
               globals::time_step[i].electron_dep / t_width / LSUN,
-              globals::time_step[i].electron_dep_ana_power / LSUN,
+              globals::time_step[i].electron_emission / t_width / LSUN,
+              globals::time_step[i].eps_electron_ana_power / LSUN,
               globals::time_step[i].alpha_dep / t_width / LSUN,
-              globals::time_step[i].alpha_dep_ana_power / LSUN,
-              globals::time_step[i].gamma_decay / t_width / LSUN,
+              globals::time_step[i].eps_alpha_ana_power / LSUN,
+              globals::time_step[i].gamma_emission / t_width / LSUN,
               globals::time_step[i].qdot_betaminus / mtot,
               globals::time_step[i].qdot_alpha / mtot,
-              qdot_mc,
+              epsilon_mc,
               globals::time_step[i].qdot_total / mtot
       );
     }
@@ -351,15 +353,17 @@ static void mpi_reduce_estimators(int my_rank, int nts)
   MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].gamma_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].positron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].electron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].electron_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].alpha_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].gamma_decay, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].gamma_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
   globals::time_step[nts].cmf_lum /= globals::nprocs;
   globals::time_step[nts].gamma_dep /= globals::nprocs;
   globals::time_step[nts].positron_dep /= globals::nprocs;
   globals::time_step[nts].electron_dep /= globals::nprocs;
+  globals::time_step[nts].electron_emission /= globals::nprocs;
   globals::time_step[nts].alpha_dep /= globals::nprocs;
-  globals::time_step[nts].gamma_decay /= globals::nprocs;
+  globals::time_step[nts].gamma_emission /= globals::nprocs;
 
   #if TRACK_ION_STATS
   stats::reduce_estimators();
