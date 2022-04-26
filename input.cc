@@ -2190,6 +2190,12 @@ void read_parameterfile(int rank)
   printout("input: kpkts diffuse %g of a time step's length for the first %d time steps\n", globals::kpktdiffusion_timescale, globals::n_kpktdiffusion_timesteps);
 
   file.close();
+
+  if (!globals::simulation_continued_from_saved)
+  {
+    // back up original input file, adding comments to each line
+    update_parameterfile(-1);
+  }
 }
 #endif
 
@@ -2216,7 +2222,14 @@ int compare_linelistentry(const void *p1, const void *p2)
 void update_parameterfile(int nts)
 /// Subroutine to read in input parameters from input.txt.
 {
-  printout("Update input.txt for restart at timestep %d...", nts);
+  if (nts >= 0)
+  {
+    printout("Update input.txt for restart at timestep %d...", nts);
+  }
+  else
+  {
+    printout("Copying input.txt to input-newrun.txt...");
+  }
 
   std::ifstream file("input.txt");
   assert_always(file.is_open());
@@ -2243,14 +2256,14 @@ void update_parameterfile(int nts)
       // }
 
       // overwrite particular lines to enable restarting from the current timestep
-      if (noncomment_linenum == 2)
+      if (noncomment_linenum == 2 && nts >= 0)
       {
         /// Number of start and end time step
         sprintf(c_line, "%3.3d %3.3d", nts, globals::ftstep);
         // line.assign(c_line);
         line.replace(0, strlen(c_line), c_line);
       }
-      else if (noncomment_linenum == 16)
+      else if (noncomment_linenum == 16 && nts >= 0)
       {
         /// resume from gridsave file
         sprintf(c_line, "%d", 1); /// Force continuation
@@ -2279,15 +2292,15 @@ void update_parameterfile(int nts)
   fileout.close();
   file.close();
 
-  if (!globals::simulation_continued_from_saved && nts == (globals::itstep + 1) && (globals::itstep == 0))
+  if (!globals::simulation_continued_from_saved && nts < 0)
   {
-    std::rename("input.txt", "input-newrun.txt"); // back up the original for starting a new simulation
+    std::rename("input.txt.tmp", "input-newrun.txt"); // back up the original for starting a new simulation
   }
   else
   {
     std::remove("input.txt");
+    std::rename("input.txt.tmp", "input.txt");
   }
-  std::rename("input.txt.tmp", "input.txt");
 
   printout("done\n");
 }
