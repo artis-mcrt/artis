@@ -2191,7 +2191,7 @@ void read_parameterfile(int rank)
 
   file.close();
 
-  if (!globals::simulation_continued_from_saved)
+  if (rank == 0 && !globals::simulation_continued_from_saved)
   {
     // back up original input file, adding comments to each line
     update_parameterfile(-1);
@@ -2296,7 +2296,7 @@ void update_parameterfile(int nts)
   {
     std::rename("input.txt.tmp", "input-newrun.txt"); // back up the original for starting a new simulation
   }
-  else
+  else if (nts >= 0)
   {
     std::remove("input.txt");
     std::rename("input.txt.tmp", "input.txt");
