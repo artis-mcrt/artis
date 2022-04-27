@@ -518,6 +518,11 @@ float get_modelinitradioabund(const int modelgridindex, const int z, const int a
 __host__ __device__
 static void set_modelinitradioabund(const int modelgridindex, const int z, const int a, const float abund)
 {
+  // initradioabund is in shared node memory. only first rank in the node sets the values
+  if (globals::rank_in_node != 0)
+  {
+    return;
+  }
   assert_always(abund >= 0.);
   assert_always(abund <= 1.);
 
@@ -605,7 +610,10 @@ static void set_elem_stable_abund_from_total(const int mgi, const int element, c
     massfracstable = 0.; // bring up to zero if negative
   }
 
-  modelgrid[mgi].initmassfracstable[element] = massfracstable;
+  if (globals::rank_in_node == 0)
+  {
+    modelgrid[mgi].initmassfracstable[element] = massfracstable;
+  }
 
   // (isofracsum + massfracstable) might not exactly match elemabundance if we had to boost it to reach isofracsum
   modelgrid[mgi].composition[element].abundance = isofracsum + massfracstable;
