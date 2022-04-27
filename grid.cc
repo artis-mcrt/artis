@@ -1284,7 +1284,20 @@ static void read_2d3d_modelradioabundanceline(
 
     if (keepcell)
     {
-      modelgrid[mgi].initradioabund = (float *) calloc(decay::get_num_nuclides(), sizeof(float));
+      #ifdef MPI_ON
+        MPI_Win win;
+        MPI_Aint size = (globals::rank_in_node == 0) ? decay::get_num_nuclides() * sizeof(float) : 0;
+        MPI_Win_allocate_shared(size, sizeof(float), MPI_INFO_NULL, globals::mpi_comm_node,
+                                &modelgrid[mgi].initradioabund, &win);
+        if (globals::rank_in_node != 0)
+        {
+          int disp_unit;
+          MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &modelgrid[mgi].initradioabund);
+        }
+      #else
+        modelgrid[mgi].initradioabund = (float *) malloc(decay::get_num_nuclides() * sizeof(float));
+      #endif
+
       assert_always(modelgrid[mgi].initradioabund != NULL);
 
       set_modelinitradioabund(mgi, 28, 56, f56ni_model);
