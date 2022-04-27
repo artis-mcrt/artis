@@ -2066,6 +2066,9 @@ void write_grid_restart_data(const int timestep)
 static void assign_initial_temperatures(void)
 /// Routine for assigning temperatures to the grid cells at the start of the simulation.
 {
+  #ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+  #endif
   /// For a simulation started from scratch we estimate the initial temperatures
 
   /// We assume that for early times the material is so optically thick, that
