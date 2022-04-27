@@ -2222,6 +2222,7 @@ int compare_linelistentry(const void *p1, const void *p2)
 void update_parameterfile(int nts)
 /// Subroutine to read in input parameters from input.txt.
 {
+  assert_always(globals::rank_global == 0);
   if (nts >= 0)
   {
     printout("Update input.txt for restart at timestep %d...", nts);
@@ -2292,11 +2293,11 @@ void update_parameterfile(int nts)
   fileout.close();
   file.close();
 
-  if (!globals::simulation_continued_from_saved && nts < 0)
+  if (nts < 0)
   {
     std::rename("input.txt.tmp", "input-newrun.txt"); // back up the original for starting a new simulation
   }
-  else if (nts >= 0)
+  else
   {
     std::remove("input.txt");
     std::rename("input.txt.tmp", "input.txt");
