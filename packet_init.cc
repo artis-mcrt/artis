@@ -61,6 +61,9 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
 void packet_init(int my_rank, PKT *pkt)
 /// Subroutine that initialises the packets if we start a new simulation.
 {
+  #ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+  #endif
   printout("UNIFORM_PELLET_ENERGIES is %s\n", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
 
   double cont[grid::ngrid + 1];
