@@ -1009,6 +1009,11 @@ static void allocate_nonemptymodelcells(void)
     }
   }
 
+  #ifdef MPI_ON
+  // barrier to make sure node master has set abundance values to shared node memory
+  MPI_Barrier(MPI_COMM_WORLD);
+  #endif
+
 
   printout("[info] mem_usage: the modelgrid array occupies %.3f MB\n", (get_npts_model() + 1) * sizeof(modelgrid) / 1024. / 1024.);
 
@@ -1145,6 +1150,10 @@ static void map_3dmodeltogrid(void)
 
 static void abundances_read(void)
 {
+  #ifdef MPI_ON
+  // barrier to make sure node master has set values in shared node memory
+  MPI_Barrier(MPI_COMM_WORLD);
+  #endif
   const bool threedimensional = (get_model_type() == RHO_3D_READ);
 
   /// Open the abundances file
@@ -1206,6 +1215,10 @@ static void abundances_read(void)
   }
 
   abundance_file.close();
+  #ifdef MPI_ON
+  // barrier to make sure node master has set values in shared node memory
+  MPI_Barrier(MPI_COMM_WORLD);
+  #endif
 }
 
 static void read_model_headerline(
