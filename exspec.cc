@@ -64,6 +64,10 @@ int main(int argc, char** argv)
   #else
     globals::rank_global = 0;
     globals::nprocs = 1;
+    globals::rank_in_node = 0;
+    globals::node_nprocs = 1;
+    globals::node_id = 0;
+    globals::node_count = 0;
   #endif
   char filename[100];
 
