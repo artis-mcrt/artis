@@ -2402,32 +2402,39 @@ void grid_init(int my_rank)
 
   // scale up the radioactive abundances to account for the missing masses in
   // the model cells that are not associated with any propagation cells
-  for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
+  if (globals::rank_in_node == 0)
   {
-    const int z = decay::get_nuc_z(nucindex);
-    const int a = decay::get_nuc_a(nucindex);
-    if (totmassradionuclide[nucindex] <= 0)
-      continue;
-    double totmassradionuclide_actual = 0.;
-    for (int mgi = 0; mgi < get_npts_model(); mgi++)
+    for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
     {
-      totmassradionuclide_actual += get_modelinitradioabund(mgi, z, a) * get_rhoinit(mgi) * vol_init_modelcell(mgi);
-    }
-    if (totmassradionuclide_actual > 0.)
-    {
-      const double ratio = totmassradionuclide[nucindex] / totmassradionuclide_actual;
-      // printout("nuclide %d ratio %g\n", nucindex, ratio);
+      const int z = decay::get_nuc_z(nucindex);
+      const int a = decay::get_nuc_a(nucindex);
+      if (totmassradionuclide[nucindex] <= 0)
+        continue;
+      double totmassradionuclide_actual = 0.;
       for (int mgi = 0; mgi < get_npts_model(); mgi++)
       {
-        if (get_numassociatedcells(mgi) > 0)
+        totmassradionuclide_actual += get_modelinitradioabund(mgi, z, a) * get_rhoinit(mgi) * vol_init_modelcell(mgi);
+      }
+      if (totmassradionuclide_actual > 0.)
+      {
+        const double ratio = totmassradionuclide[nucindex] / totmassradionuclide_actual;
+        // printout("nuclide %d ratio %g\n", nucindex, ratio);
+        for (int mgi = 0; mgi < get_npts_model(); mgi++)
         {
-          const double prev_abund = get_modelinitradioabund(mgi, z, a);
-          const double new_abund = prev_abund * ratio;
-          set_modelinitradioabund(mgi, z, a, new_abund);
+          if (get_numassociatedcells(mgi) > 0)
+          {
+            const double prev_abund = get_modelinitradioabund(mgi, z, a);
+            const double new_abund = prev_abund * ratio;
+            set_modelinitradioabund(mgi, z, a, new_abund);
+          }
         }
       }
     }
   }
+  #ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+  #endif
+
 }
 
 
