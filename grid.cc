@@ -822,7 +822,19 @@ static void allocate_compositiondata(const int modelgridindex)
 
   assert_always(modelgrid[modelgridindex].initmassfracstable != NULL);
 
-  modelgrid[modelgridindex].elem_meanweight = (float *) malloc(get_nelements() * sizeof(float));
+  #ifdef MPI_ON
+    MPI_Win win;
+    MPI_Aint size = (globals::rank_in_node == 0) ? get_nelements() * sizeof(float) : 0;
+    MPI_Win_allocate_shared(size, sizeof(float), MPI_INFO_NULL, globals::mpi_comm_node,
+                            &modelgrid[modelgridindex].elem_meanweight, &win);
+    if (globals::rank_in_node != 0)
+    {
+      int disp_unit;
+      MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &modelgrid[modelgridindex].elem_meanweight);
+    }
+  #else
+    modelgrid[modelgridindex].elem_meanweight = (float *) malloc(get_nelements() * sizeof(float));
+  #endif
   assert_always(modelgrid[modelgridindex].elem_meanweight != NULL);
 
   mem_usage_nltepops += globals::total_nlte_levels * sizeof(double);
