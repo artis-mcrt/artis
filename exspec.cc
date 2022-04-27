@@ -60,6 +60,26 @@ int main(int argc, char** argv)
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &globals::rank_global);
     MPI_Comm_size(MPI_COMM_WORLD, &globals::nprocs);
+
+    MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, globals::rank_global, MPI_INFO_NULL, &globals::mpi_comm_node);
+    // get the local rank within this node
+    MPI_Comm_rank(globals::mpi_comm_node, &globals::rank_in_node);
+    // get the number of ranks on the node
+    MPI_Comm_size(globals::mpi_comm_node, &globals::node_nprocs);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    // make an inter-node communicator (using local rank as the key for group membership)
+    MPI_Comm_split(MPI_COMM_WORLD, globals::rank_in_node, globals::rank_global, &globals::mpi_comm_internode);
+
+    // take the node id from the local rank 0 (node master) and broadcast it
+    if (globals::rank_in_node == 0)
+    {
+      MPI_Comm_rank(globals::mpi_comm_internode, &globals::node_id);
+      MPI_Comm_size(globals::mpi_comm_internode, &globals::node_count);
+    }
+
+    MPI_Bcast(&globals::node_id, 1, MPI_INT, 0, globals::mpi_comm_node);
+    MPI_Bcast(&globals::node_count, 1, MPI_INT, 0, globals::mpi_comm_node);
     MPI_Barrier(MPI_COMM_WORLD);
   #else
     globals::rank_global = 0;
