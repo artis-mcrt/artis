@@ -518,11 +518,11 @@ float get_modelinitradioabund(const int modelgridindex, const int z, const int a
 __host__ __device__
 static void set_modelinitradioabund(const int modelgridindex, const int z, const int a, const float abund)
 {
-  // initradioabund is in shared node memory. only first rank in the node sets the values
-  if (globals::rank_in_node != 0)
-  {
-    return;
-  }
+  // // initradioabund is in shared node memory. only first rank in the node sets the values
+  // if (globals::rank_in_node != 0)
+  // {
+  //   return;
+  // }
   assert_always(abund >= 0.);
   assert_always(abund <= 1.);
 
@@ -610,7 +610,7 @@ static void set_elem_stable_abund_from_total(const int mgi, const int element, c
     massfracstable = 0.; // bring up to zero if negative
   }
 
-  if (globals::rank_in_node == 0)
+  // if (globals::rank_in_node == 0)
   {
     modelgrid[mgi].initmassfracstable[element] = massfracstable;
   }
@@ -814,7 +814,7 @@ static void allocate_cell_initradioabund(const int mgi)
   #else
     modelgrid[mgi].initradioabund = (float *) malloc(decay::get_num_nuclides() * sizeof(float));
   #endif
-  if (globals::rank_in_node != 0)
+  if (globals::rank_in_node == 0)
   {
     for (int i = 0; i < decay::get_num_nuclides(); i++)
     {
