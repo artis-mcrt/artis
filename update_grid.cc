@@ -1082,6 +1082,9 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
     /// Update abundances of radioactive isotopes
     decay::update_abundances(mgi, nts, globals::time_step[nts].mid);
+    const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
+    const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
+
     if (globals::opacity_case == 4)
     {
       /// For timestep 0 we calculate the level populations straight forward wihout
@@ -1137,8 +1140,6 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         /// Then update T_R and W using the estimators.
         /// (This could in principle also be done for empty cells)
 
-        const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
-        const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
         const time_t sys_time_start_temperature_corrections = time(NULL);
 
         radfield::normalise_J(mgi, estimator_normfactor_over4pi); // this applies normalisation to the fullspec J
@@ -1261,8 +1262,20 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       // optically thick treatment in this case (should be equivalent to grey)
       grid::modelgrid[mgi].thick = 1;
 
-      /// Need the total number density of bound and free electrons for Compton scatterin
+      /// Need the total number density of bound and free electrons for Compton scattering
       calculate_electron_densities(mgi); // if this causes problems, disable the nne calculation (only need nne_tot)
+
+      if (!((nts - globals::itstep) == 0 && titer == 0))
+      {
+        radfield::normalise_J(mgi, estimator_normfactor_over4pi); // this applies normalisation to the fullspec J
+        radfield::set_J_normfactor(mgi, estimator_normfactor_over4pi); // this stores the factor that will be applied later for the J bins but not fullspec J
+
+        const double T_J = radfield::get_T_J_from_J(mgi);
+        grid::set_TR(mgi, T_J);
+        grid::set_Te(mgi, T_J);
+        grid::set_TJ(mgi, T_J);
+        grid::set_W(mgi, 1);
+      }
 
       if (globals::opacity_case == 3)
       {
