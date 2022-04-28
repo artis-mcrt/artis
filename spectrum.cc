@@ -638,7 +638,7 @@ struct spec *alloc_spectra(const bool do_emission_res)
 
   printout("[info] mem_usage: allocated set of spectra occupying total of %.3f MB (nnubins %d)\n", mem_usage / 1024. / 1024., globals::nnubins);
 
-  if (spectra->do_emission_res)
+  if (do_emission_res)
   {
     alloc_emissionabsorption_spectra(spectra);
   }
