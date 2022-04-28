@@ -585,6 +585,31 @@ void init_spectra(struct spec *spectra, const double nu_min, const double nu_max
   }
 }
 
+static void alloc_emissionabsorption_spectra(spec *spectra)
+{
+  long mem_usage = 0;
+  const int proccount = get_proccount();
+  spectra->do_emission_res = true;
+  for (int nts = 0; nts < globals::ntstep; nts++)
+  {
+    assert_always(spectra->timesteps[nts].absorption == NULL);
+    assert_always(spectra->timesteps[nts].emission == NULL);
+    assert_always(spectra->timesteps[nts].trueemission == NULL);
+
+    spectra->timesteps[nts].absorption = (double *) malloc(globals::nnubins * get_nelements() * get_max_nions() * sizeof(double));
+    mem_usage += globals::nnubins * get_nelements() * get_max_nions() * sizeof(double);
+
+    spectra->timesteps[nts].emission = (double *) malloc(globals::nnubins * proccount * sizeof(double));
+    spectra->timesteps[nts].trueemission = (double *) malloc(globals::nnubins * proccount * sizeof(double));
+    mem_usage += 2 * globals::nnubins * proccount * sizeof(double);
+
+    assert_always(spectra->timesteps[nts].absorption != NULL);
+    assert_always(spectra->timesteps[nts].emission != NULL);
+    assert_always(spectra->timesteps[nts].trueemission != NULL);
+  }
+  printout("[info] mem_usage: allocated set of emission/absorption spectra occupying total of %.3f MB (nnubins %d)\n", mem_usage / 1024. / 1024., globals::nnubins);
+}
+
 
 struct spec *alloc_spectra(const bool do_emission_res)
 {
@@ -593,7 +618,7 @@ struct spec *alloc_spectra(const bool do_emission_res)
   struct spec *spectra = (struct spec *) malloc(sizeof(struct spec));
   mem_usage += globals::ntstep * sizeof(struct spec);
 
-  spectra->do_emission_res = do_emission_res;
+  spectra->do_emission_res = false; // might be set true later by alloc_emissionabsorption_spectra
   spectra->lower_freq = (float *) malloc(globals::nnubins * sizeof(float));
   spectra->delta_freq = (float *) malloc(globals::nnubins * sizeof(float));
 
@@ -601,34 +626,22 @@ struct spec *alloc_spectra(const bool do_emission_res)
   mem_usage += globals::ntstep * sizeof(struct timestepspec);
 
   assert_always(globals::nnubins > 0);
-  const int proccount = get_proccount();
   for (int nts = 0; nts < globals::ntstep; nts++)
   {
     spectra->timesteps[nts].flux = (double *) malloc(globals::nnubins * sizeof(double));
     mem_usage += globals::nnubins * sizeof(double);
 
-    if (spectra->do_emission_res)
-    {
-      spectra->timesteps[nts].absorption = (double *) malloc(globals::nnubins * get_nelements() * get_max_nions() * sizeof(double));
-      mem_usage += globals::nnubins * get_nelements() * get_max_nions() * sizeof(double);
-
-      spectra->timesteps[nts].emission = (double *) malloc(globals::nnubins * proccount * sizeof(double));
-      spectra->timesteps[nts].trueemission = (double *) malloc(globals::nnubins * proccount * sizeof(double));
-      mem_usage += 2 * globals::nnubins * proccount * sizeof(double);
-
-      assert_always(spectra->timesteps[nts].absorption != NULL);
-      assert_always(spectra->timesteps[nts].emission != NULL);
-      assert_always(spectra->timesteps[nts].trueemission != NULL);
-    }
-    else
-    {
-      spectra->timesteps[nts].absorption = NULL;
-      spectra->timesteps[nts].emission = NULL;
-      spectra->timesteps[nts].trueemission = NULL;
-    }
+    spectra->timesteps[nts].absorption = NULL;
+    spectra->timesteps[nts].emission = NULL;
+    spectra->timesteps[nts].trueemission = NULL;
   }
 
   printout("[info] mem_usage: allocated set of spectra occupying total of %.3f MB (nnubins %d)\n", mem_usage / 1024. / 1024., globals::nnubins);
+
+  if (spectra->do_emission_res)
+  {
+    alloc_emissionabsorption_spectra(spectra);
+  }
 
   return spectra;
 }
@@ -723,9 +736,11 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts)
   TRACE_EMISSION_ABSORPTION_REGION_ON = false;
   globals::nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
 
+  // bool do_emission_res = globals::do_emission_res;
+  bool do_emission_res = false;
   if (rpkt_spectra == NULL)
   {
-    rpkt_spectra = alloc_spectra(globals::do_emission_res);
+    rpkt_spectra = alloc_spectra(do_emission_res);
     assert_always(rpkt_spectra != NULL);
   }
 
@@ -734,8 +749,7 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts)
   struct spec *stokes_u = NULL;
 
   // the emission resolved spectra are slow to generate, so only allow making them for the final timestep or every n
-  bool do_emission_res = (nts >= globals::ftstep - 1) || (nts % 5 == 0) ? globals::do_emission_res : false;
-  // bool do_emission_res = globals::do_emission_res;
+  // do_emission_res = (nts >= globals::ftstep - 1) || (nts % 5 == 0) ? globals::do_emission_res : false;
 
   init_spectra(rpkt_spectra, globals::nu_min_r, globals::nu_max_r, do_emission_res);
 
