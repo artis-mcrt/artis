@@ -736,8 +736,8 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts)
   TRACE_EMISSION_ABSORPTION_REGION_ON = false;
   globals::nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
 
-  bool do_emission_res = globals::do_emission_res;
-  // bool do_emission_res = false;
+  bool do_emission_res = WRITE_PARTIAL_EMISSIONABSORPTIONSPEC ? globals::do_emission_res : false;
+
   if (rpkt_spectra == NULL)
   {
     rpkt_spectra = alloc_spectra(do_emission_res);
@@ -749,7 +749,13 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts)
   struct spec *stokes_u = NULL;
 
   // the emission resolved spectra are slow to generate, so only allow making them for the final timestep or every n
-  do_emission_res = (nts >= globals::ftstep - 1) || (nts % 5 == 0) ? globals::do_emission_res : false;
+  if (WRITE_PARTIAL_EMISSIONABSORPTIONSPEC && globals::do_emission_res)
+  {
+    if (nts >= globals::ftstep - 1) || (nts % 5 == 0))
+    {
+      do_emission_res = true;
+    }
+  }
 
   init_spectra(rpkt_spectra, globals::nu_min_r, globals::nu_max_r, do_emission_res);
 
