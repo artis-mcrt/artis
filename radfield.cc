@@ -410,7 +410,6 @@ void init(int my_rank, int ndo, int ndo_nonempty)
   {
     #ifdef MPI_ON
     {
-      MPI_Win win_prev_bfrate_normed;
       MPI_Aint size = (rank_in_node == 0) ? nonempty_npts_model * globals::nbfcontinua * sizeof(float) : 0;
       MPI_Win_allocate_shared(size, sizeof(float), MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed, &win_prev_bfrate_normed);
       if (rank_in_node != 0)
