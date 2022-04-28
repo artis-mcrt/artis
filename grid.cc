@@ -1910,7 +1910,7 @@ static void read_grid_restart_data(const int timestep)
   for (int nts = 0; nts < globals::ntstep; nts++)
   {
     assert_always(fscanf(
-      gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
+      gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
       &globals::time_step[nts].gamma_dep,
       &globals::time_step[nts].gamma_dep_pathint,
       &globals::time_step[nts].positron_dep,
@@ -1919,6 +1919,7 @@ static void read_grid_restart_data(const int timestep)
       &globals::time_step[nts].electron_emission,
       &globals::time_step[nts].eps_electron_ana_power,
       &globals::time_step[nts].alpha_dep,
+      &globals::time_step[nts].alpha_emission,
       &globals::time_step[nts].eps_alpha_ana_power,
       &globals::time_step[nts].qdot_betaminus,
       &globals::time_step[nts].qdot_alpha,
@@ -2001,7 +2002,7 @@ void write_grid_restart_data(const int timestep)
 
   for (int nts = 0; nts < globals::ntstep; nts++)
   {
-    fprintf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
+    fprintf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
             globals::time_step[nts].gamma_dep,
             globals::time_step[nts].gamma_dep_pathint,
             globals::time_step[nts].positron_dep,
@@ -2010,6 +2011,7 @@ void write_grid_restart_data(const int timestep)
             globals::time_step[nts].electron_emission,
             globals::time_step[nts].eps_electron_ana_power,
             globals::time_step[nts].alpha_dep,
+            globals::time_step[nts].alpha_emission,
             globals::time_step[nts].eps_alpha_ana_power,
             globals::time_step[nts].qdot_betaminus,
             globals::time_step[nts].qdot_alpha,

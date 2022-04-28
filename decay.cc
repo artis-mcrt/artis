@@ -252,7 +252,7 @@ void set_nucdecayenergygamma(int z, int a, double value)
 }
 
 
-static double nucdecayenergyparticle(const int z_parent, const int a_parent, const int decaytype)
+double nucdecayenergyparticle(const int z_parent, const int a_parent, const int decaytype)
 // decay energy in the form of kinetic energy of electrons, positrons, or alpha particles,
 // depending on the relevant decay type (but not including neutrinos)
 // important: the branching factor has been applied. so, e.g. energy in positrons is
@@ -1589,6 +1589,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
   const double zrand = gsl_rng_uniform(rng);
   pkt_ptr->originated_from_particlenotgamma = (zrand >= nucdecayenergygamma(z, a) / (
     nucdecayenergygamma(z, a) + nucdecayenergyparticle(z, a, decaytype)));
+  pkt_ptr->nu_cmf = nucdecayenergyparticle(z, a, decaytype) / H;
 }
 
 

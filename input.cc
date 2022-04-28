@@ -2400,6 +2400,7 @@ void time_init(void)
     globals::time_step[n].electron_emission = 0.;
     globals::time_step[n].eps_electron_ana_power = 0.;
     globals::time_step[n].alpha_dep = 0.;
+    globals::time_step[n].alpha_emission = 0.;
     globals::time_step[n].eps_alpha_ana_power = 0.;
     globals::time_step[n].gamma_dep = 0.;
     globals::time_step[n].gamma_dep_pathint = 0.;

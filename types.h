@@ -27,6 +27,7 @@ struct time
   double electron_emission; // cmf electron KE energy generation [erg]
   double eps_electron_ana_power; // cmf electron KE energy generation rate analytical [erg/s]
   double alpha_dep; // cmf alpha energy deposition [erg]
+  double alpha_emission; // cmf alpha KE energy generation [erg]
   double eps_alpha_ana_power; // cmf alpha KE energy generation rate analytical [erg/s]
   double gamma_emission; // gamma decay energy generation in this timestep [erg]
   double qdot_betaminus; // energy generation from beta-minus decays (including neutrinos) [erg/s/g]
@@ -119,6 +120,7 @@ enum packet_type {
   TYPE_KPKT = 12,
   TYPE_MA = 13,
   TYPE_NTLEPTON = 20,
+  TYPE_NONTHERMAL_PREDEPOSIT = 21,
   TYPE_PRE_KPKT = 120,
   TYPE_GAMMA_KPKT = 121,
 };

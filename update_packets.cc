@@ -14,6 +14,75 @@
 #include <algorithm>
 
 
+static void do_nonthermal_predeposit(PKT *pkt_ptr, const int nts, const double t2)
+{
+  const bool instant_deposition = true;
+  const double ts = pkt_ptr->prop_time;
+
+  const double particle_en = H * pkt_ptr->nu_cmf;
+  // endot is energy loss rate (positive) in [erg/s]
+  double endot = 0.;
+
+  double t_absorb = ts; // default to instant deposition
+  if (!instant_deposition)
+  {
+    const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+    const double rho = grid::get_rho(mgi);
+    // const double rho2 = grid::get_rhoinit(mgi) / pow(t_sim_th / globals::tmin, 3);
+
+    // endot [erg/s]
+    endot = (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
+
+    const double deltat_zeroen = particle_en / endot;
+
+    // A discrete absorption event should occur somewhere along the
+    // continuous track from initial kinetic energy to zero KE.
+    // The probability of being absorbed in energy range [E, E+delta_E] is proportional to
+    // endot(E) * delta_t = endot(E) * delta_E / endot(E) = delta_E (delta_t is the time spent in the bin range)
+    // so all final energies are equally likely.
+    // Choose random en_absorb [0, particle_en]
+    const double zrand = gsl_rng_uniform(rng);
+    const double en_absorb = zrand * particle_en;
+
+    // for endot independent of energy, the next line is trival (for E dependent endot, an integral would be needed)
+    t_absorb = ts + en_absorb / endot;
+
+    const double t_sim_zeroen = ts + deltat_zeroen;
+
+    printout("%s packet: nts %d energy_mev %g ts %g deltat_zeroen %g t_sim_zeroen %g t2 %g t_absorb %g\n",
+             pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA ? "alpha" : "beta", nts,
+             particle_en / MEV,
+             ts / 86400,
+             deltat_zeroen / 86400, t_sim_zeroen / 86400, t2 / 86400, t_absorb / 86400);
+  }
+
+  if (t_absorb <= t2)
+  {
+    if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA)
+    {
+      safeadd(globals::time_step[nts].alpha_dep, pkt_ptr->e_cmf);
+    }
+    else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_BETAMINUS)
+    {
+      safeadd(globals::time_step[nts].electron_dep, pkt_ptr->e_cmf);
+    }
+    else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_BETAPLUS)
+    {
+      safeadd(globals::time_step[nts].positron_dep, pkt_ptr->e_cmf);
+    }
+    vec_scale(pkt_ptr->pos, t_absorb / ts);
+    pkt_ptr->prop_time = t_absorb;
+    pkt_ptr->type = TYPE_NTLEPTON;
+  }
+  else
+  {
+    pkt_ptr->nu_cmf = (particle_en - endot * (t2 - ts)) / H;
+    vec_scale(pkt_ptr->pos, t2 / ts);
+    pkt_ptr->prop_time = t2;
+  }
+}
+
+
 static void update_pellet(
   PKT *pkt_ptr, const int nts, const double t2)
 {
@@ -41,24 +110,30 @@ static void update_pellet(
     pkt_ptr->prop_time = tdecay;
     vec_scale(pkt_ptr->pos, tdecay / ts);
 
-    if (pkt_ptr->originated_from_particlenotgamma) // will decay to non-thermal lepton
+    if (pkt_ptr->originated_from_particlenotgamma) // will decay to non-thermal particle
     {
       if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_BETAPLUS)
       {
         safeadd(globals::time_step[nts].positron_dep, pkt_ptr->e_cmf);
+        pkt_ptr->type = TYPE_NTLEPTON;
+        pkt_ptr->absorptiontype = -10;
       }
       else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_BETAMINUS)
       {
         safeadd(globals::time_step[nts].electron_emission, pkt_ptr->e_cmf);
-        safeadd(globals::time_step[nts].electron_dep, pkt_ptr->e_cmf);
+        pkt_ptr->em_time = pkt_ptr->prop_time;
+        pkt_ptr->type = TYPE_NONTHERMAL_PREDEPOSIT;
+        // pkt_ptr->type = TYPE_NTLEPTON;
+        pkt_ptr->absorptiontype = -10;
       }
       else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA)
       {
-        safeadd(globals::time_step[nts].alpha_dep, pkt_ptr->e_cmf);
+        safeadd(globals::time_step[nts].alpha_emission, pkt_ptr->e_cmf);
+        pkt_ptr->em_time = pkt_ptr->prop_time;
+        pkt_ptr->type = TYPE_NONTHERMAL_PREDEPOSIT;
+        // pkt_ptr->type = TYPE_NTLEPTON;
+        pkt_ptr->absorptiontype = -10;
       }
-
-      pkt_ptr->type = TYPE_NTLEPTON;
-      pkt_ptr->absorptiontype = -10;
     }
     else
     {
@@ -127,6 +202,12 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
       {
         safeadd(globals::time_step[nts].cmf_lum, pkt_ptr->e_cmf);
       }
+      break;
+    }
+
+    case TYPE_NONTHERMAL_PREDEPOSIT:
+    {
+      do_nonthermal_predeposit(pkt_ptr, nts, t2);
       break;
     }
 

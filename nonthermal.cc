@@ -682,6 +682,9 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   const double tmid = globals::time_step[timestep].mid;
   const double rho = grid::get_rho(modelgridindex);
 
+  // TODO: calculate thermalisation ratio from the previous timestep either globally (easy) or per cell
+  // f = E_dep / E_rad
+
   // convert from [erg/s/g] to [erg/s/cm3]
   const double positron_deposition = rho * decay::get_particle_injection_rate(
     modelgridindex, tmid, decay::DECAYTYPE_BETAPLUS);
