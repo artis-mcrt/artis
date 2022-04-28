@@ -1926,7 +1926,7 @@ static void read_grid_restart_data(const int timestep)
       &globals::time_step[nts].qdot_total,
       &globals::time_step[nts].gamma_emission,
       &globals::time_step[nts].cmf_lum,
-      &globals::time_step[nts].pellet_decays) == 15);
+      &globals::time_step[nts].pellet_decays) == 16);
   }
 
   int timestep_in;
