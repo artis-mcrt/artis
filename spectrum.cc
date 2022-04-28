@@ -751,7 +751,7 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts)
   // the emission resolved spectra are slow to generate, so only allow making them for the final timestep or every n
   if (WRITE_PARTIAL_EMISSIONABSORPTIONSPEC && globals::do_emission_res)
   {
-    if (nts >= globals::ftstep - 1) || (nts % 5 == 0))
+    if ((nts >= globals::ftstep - 1) || (nts % 5 == 0))
     {
       do_emission_res = true;
     }
