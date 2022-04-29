@@ -1550,7 +1550,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
   #ifdef NO_INITIAL_PACKETS
   const double tdecaymin = globals::tmin;
   #else
-  const double tdecaymin = 0.; // allow decays before the first timestep
+  const double tdecaymin = grid::get_t_model(); // allow decays before the first timestep
   #endif
 
   if (UNIFORM_PELLET_ENERGIES)
