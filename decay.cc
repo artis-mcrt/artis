@@ -840,6 +840,7 @@ static double sample_decaytime(const int decaypathindex, const double tdecaymin,
 {
   double tdecay = -1;
   const double t_model = grid::get_t_model();
+  // rejection method. draw random times until they are within the correct range.
   while (tdecay <= tdecaymin || tdecay >= tdecaymax)
   {
     tdecay = t_model; // can't decay before initial model snapshot time
