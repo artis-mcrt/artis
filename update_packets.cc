@@ -16,7 +16,6 @@
 
 static void do_nonthermal_predeposit(PKT *pkt_ptr, const int nts, const double t2)
 {
-  const bool instant_deposition = true;
   const double ts = pkt_ptr->prop_time;
 
   const double particle_en = H * pkt_ptr->nu_cmf;
@@ -24,7 +23,7 @@ static void do_nonthermal_predeposit(PKT *pkt_ptr, const int nts, const double t
   double endot = 0.;
 
   double t_absorb = ts; // default to instant deposition
-  if (!instant_deposition)
+  if (!INSTANT_PARTICLE_DEPOSITION)
   {
     const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
     const double rho = grid::get_rho(mgi);
@@ -32,8 +31,6 @@ static void do_nonthermal_predeposit(PKT *pkt_ptr, const int nts, const double t
 
     // endot [erg/s]
     endot = (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
-
-    const double deltat_zeroen = particle_en / endot;
 
     // A discrete absorption event should occur somewhere along the
     // continuous track from initial kinetic energy to zero KE.
@@ -47,13 +44,13 @@ static void do_nonthermal_predeposit(PKT *pkt_ptr, const int nts, const double t
     // for endot independent of energy, the next line is trival (for E dependent endot, an integral would be needed)
     t_absorb = ts + en_absorb / endot;
 
-    const double t_sim_zeroen = ts + deltat_zeroen;
-
-    printout("%s packet: nts %d energy_mev %g ts %g deltat_zeroen %g t_sim_zeroen %g t2 %g t_absorb %g\n",
-             pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA ? "alpha" : "beta", nts,
-             particle_en / MEV,
-             ts / 86400,
-             deltat_zeroen / 86400, t_sim_zeroen / 86400, t2 / 86400, t_absorb / 86400);
+    // const double deltat_zeroen = particle_en / endot;
+    // const double t_sim_zeroen = ts + deltat_zeroen;
+    // printout("%s packet: nts %d energy_mev %g ts %g deltat_zeroen %g t_sim_zeroen %g t2 %g t_absorb %g\n",
+    //          pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA ? "alpha" : "beta", nts,
+    //          particle_en / MEV,
+    //          ts / 86400,
+    //          deltat_zeroen / 86400, t_sim_zeroen / 86400, t2 / 86400, t_absorb / 86400);
   }
 
   if (t_absorb <= t2)

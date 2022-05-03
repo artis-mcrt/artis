@@ -43,7 +43,7 @@ const bool single_ground_level = false; // if false, read from file or autodetec
 #define NLEVELS_REQUIRETRANSITIONS(Z, ionstage) ((Z == 26 || Z == 28) && ionstage >= 1) ? 80 : 0
 
 // if uniform pellet energies are not used, a uniform decay time distribution is used with scaled packet energies
-#define UNIFORM_PELLET_ENERGIES false
+#define UNIFORM_PELLET_ENERGIES true
 
 #define DIRECT_COL_HEAT
 #define NO_INITIAL_PACKETS
@@ -209,8 +209,13 @@ static const int MAX_NT_EXCITATIONS_STORED = 25000;
 
 static bool USE_RELATIVISTIC_DOPPLER = true;
 
+// when converting mass fraction to a number density, use a mean atomic mass
+// calcuated from the nuclear composition (plus stable component),
+// rather than just from the compositiondata.txt values
 static bool USE_CALCULATED_MEANATOMICWEIGHT = true;
 
 static bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = false;
+
+static bool INSTANT_PARTICLE_DEPOSITION = false;
 
 #endif //ARTISOPTIONS_H
