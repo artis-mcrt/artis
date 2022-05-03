@@ -576,6 +576,51 @@ double get_electronfrac(const int modelgridindex)
 
 
 __host__ __device__
+double get_initelectronfrac(const int modelgridindex)
+{
+  return modelgrid[modelgridindex].initelectronfrac;
+}
+
+
+__host__ __device__
+static void set_initelectronfrac(const int modelgridindex, const double electronfrac)
+{
+  modelgrid[modelgridindex].initelectronfrac = electronfrac;
+}
+
+
+void read_possible_yefile(void)
+{
+  if (!std::ifstream("Ye.txt"))
+  {
+    printout("Ye.txt not found\n");
+    return;
+  }
+
+  FILE *filein = fopen_required("Ye.txt", "r");
+  int nlines_in = 0;
+  assert_always(fscanf(filein, "%d", &nlines_in) == 1);
+
+  for (int n = 0; n < nlines_in; n++)
+  {
+    int mgiplusone = -1;
+    double initelecfrac = 0.;
+    assert_always(fscanf(filein, "%d %lg", &mgiplusone, &initelecfrac) == 2);
+    const int mgi = mgiplusone - 1;
+    if (mgi >= 0 and mgi < get_npts_model())
+    {
+      set_initelectronfrac(mgi, initelecfrac);
+      // printout("Ye.txt: setting mgi %d init_ye %g\n", mgi, initelecfrac);
+    }
+    else
+    {
+      // printout("Ye.txt: ignoring mgi %d init_ye %g\n", mgi, initelecfrac);
+    }
+  }
+  fclose(filein);
+}
+
+__host__ __device__
 static void set_elem_stable_abund_from_total(const int mgi, const int element, const float elemabundance)
 {
   // set the stable mass fraction of an element from the total element mass fraction
@@ -740,7 +785,8 @@ static void calculate_kappagrey(void)
       {
         // electron-fraction-dependent opacities
         // values from table 1 of Tanaka et al. (2020).
-        double Ye = get_electronfrac(mgi);
+        // const double Ye = get_electronfrac(mgi);
+        const double Ye = get_initelectronfrac(mgi);
         if (Ye <= 0.1)
         {
           kappa = 19.5;
@@ -1884,6 +1930,8 @@ void read_ejecta_model(void)
   #endif
 
   calc_totmassradionuclides();
+
+  read_possible_yefile();
 }
 
 
