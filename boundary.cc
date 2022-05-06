@@ -219,7 +219,7 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
         for (int d2 = 0; d2 < ndim; d2++)
         {
           printout("[warning] outside coord %d %c%c boundary of cell %d. pkttype %d initpos(tmin) %g, vel %g, cellcoordmin %g, cellcoordmax %g. Abort?\n",
-                   d, flip ? '+' : '-', grid::coordlabel[d], cellindex, pkt_ptr->type, initpos[d2], vel[d2], grid::get_cellcoordmin(cellindex, d2) / globals::tmin * tstart, cellcoordmax[d2] / globals::tmin * tstart);
+                   d, flip ? '-' : '+', grid::coordlabel[d], cellindex, pkt_ptr->type, initpos[d2], vel[d2], grid::get_cellcoordmin(cellindex, d2) / globals::tmin * tstart, cellcoordmax[d2] / globals::tmin * tstart);
         }
         printout("globals::tmin %g tstart %g tstart/globals::tmin %g tdecay %g\n", globals::tmin, tstart, tstart/globals::tmin, pkt_ptr->tdecay);
         // printout("[warning] pkt_ptr->number %d\n", pkt_ptr->number);
