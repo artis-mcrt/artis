@@ -203,18 +203,23 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
       enum cell_boundary invdirection = !flip ? posdirections[d] : negdirections[d];
       const int cellindexdiff = flip ? - grid::get_coordcellindexincrement(d) : grid::get_coordcellindexincrement(d);
 
+      const double tolerance = 1e-6 * globals::vmax * tstart;  // maximum position of out bound tolerance
       bool isoutside;
       if (flip)
-        isoutside = initpos[d] - (grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart) < -10.; // 10 cm accuracy tolerance
+      {
+        isoutside = initpos[d] < (grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart - tolerance);
+      }
       else
-        isoutside = initpos[d] - (cellcoordmax[d] / globals::tmin * tstart) > -10.;
+      {
+        isoutside = initpos[d] > (cellcoordmax[d] / globals::tmin * tstart + tolerance);
+      }
 
       if (isoutside && (not_allowed != direction))
       {
         for (int d2 = 0; d2 < ndim; d2++)
         {
-          printout("[warning] outside coord %d '%c' boundary of cell %d. pkttype %d initpos %g, vel %g, cellcoordmin %g, cellcoordmax %g. Abort?\n",
-                   d, grid::coordlabel[d], cellindex, pkt_ptr->type, initpos[d2] * globals::tmin/tstart, vel[d2], grid::get_cellcoordmin(cellindex, d2), cellcoordmax[d2]);
+          printout("[warning] outside coord %d %c%c boundary of cell %d. pkttype %d initpos(tmin) %g, vel %g, cellcoordmin %g, cellcoordmax %g. Abort?\n",
+                   d, flip ? '+' : '-', grid::coordlabel[d], cellindex, pkt_ptr->type, initpos[d2], vel[d2], grid::get_cellcoordmin(cellindex, d2) / globals::tmin * tstart, cellcoordmax[d2] / globals::tmin * tstart);
         }
         printout("globals::tmin %g tstart %g tstart/globals::tmin %g tdecay %g\n", globals::tmin, tstart, tstart/globals::tmin, pkt_ptr->tdecay);
         // printout("[warning] pkt_ptr->number %d\n", pkt_ptr->number);
