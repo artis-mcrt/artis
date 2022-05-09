@@ -104,7 +104,7 @@ jobs:
       matrix:
         # os: ['ubuntu-latest', 'self-hosted']
         os: ['ubuntu-latest']
-        testmode: ['OFF']
+        testmode: ['OFF', 'ON']
         exclude:
         - os: self-hosted
           testmode: 'ON'
