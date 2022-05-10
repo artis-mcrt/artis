@@ -651,7 +651,7 @@ static void set_elem_stable_abund_from_total(const int mgi, const int element, c
       printout("  massfrac(Z) %g massfrac_radioisotopes(Z) %g\n", elemabundance, isofracsum);
       printout("  increasing elemental abundance to %g and setting stable isotopic abundance to zero\n", isofracsum);
     }
-    assert_always(massfracstable >= -1e-3);  // result is allowed to be slightly negative due to roundoff error
+    assert_always(massfracstable >= -1e-2);  // result is allowed to be slightly negative due to roundoff error
     massfracstable = 0.; // bring up to zero if negative
   }
 
