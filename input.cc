@@ -192,23 +192,26 @@ static void read_phixs_data_table(
     abort();
   }
 
-  const int lowestupperlevel = get_phixsupperlevel(element, lowerion, lowerlevel, 0);
   if (phixs_threshold_ev > 0)
   {
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixs_threshold = phixs_threshold_ev * EV;
   }
   else
   {
-    const double calced_phixs_threshold = (epsilon(element, upperion, lowestupperlevel) - epsilon(element, lowerion, lowerlevel));
-    globals::elements[element].ions[lowerion].levels[lowerlevel].phixs_threshold = calced_phixs_threshold;
+    if (get_nphixstargets(element, lowerion, lowerlevel) > 0)
+    {
+      const int lowestupperlevel = get_phixsupperlevel(element, lowerion, lowerlevel, 0);
+      const double calced_phixs_threshold = (epsilon(element, upperion, lowestupperlevel) - epsilon(element, lowerion, lowerlevel));
+      globals::elements[element].ions[lowerion].levels[lowerlevel].phixs_threshold = calced_phixs_threshold;
+    }
   }
 
   if (phixs_file_version == 1)
   {
     assert_always(get_nphixstargets(element, lowerion, lowerlevel) == 1);
-    assert_always(lowestupperlevel == 0);
+    assert_always(get_phixsupperlevel(element, lowerion, lowerlevel, 0) == 0);
 
-    double nu_edge = (epsilon(element,upperion,lowestupperlevel) - epsilon(element,lowerion,lowerlevel)) / H;
+    double nu_edge = (epsilon(element, upperion, 0) - epsilon(element, lowerion, lowerlevel)) / H;
 
     double *nutable = (double *) calloc(nphixspoints_inputtable, sizeof(double));
     assert_always(nutable != NULL);
@@ -344,6 +347,7 @@ static void read_phixs_data(void)
     const int element = get_elementindex(Z);
 
     /// store only photoionization crosssections for elements that are part of the current model atom
+    skip_this_phixs_table = true;  // will be set to false for good data
     if (element >= 0)
     {
       /// translate readin ionstages to ion indices
@@ -362,14 +366,6 @@ static void read_phixs_data(void)
 
         skip_this_phixs_table = false;
       }
-      else
-      {
-        skip_this_phixs_table = true;
-      }
-    }
-    else
-    {
-      skip_this_phixs_table = true;
     }
 
     if (skip_this_phixs_table) // for ions or elements that are not part of the current model atom, proceed through the lines and throw away the data
