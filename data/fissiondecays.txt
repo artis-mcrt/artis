@@ -1,0 +1,4 @@
+# Data source: Evaluated Nuclear Data File library (ENDF/B-VII.1; Chadwick et al. 2011)
+# via Hotokezaka et al. https://github.com/hotokezaka/HeatingRate
+#A, Z, Q[MeV]?, ?, Eelec1[MeV], Eelec2[Mev], m1, m2, z1, z2, ?
+254 98 182.0 0.0 79.5 102.1 143.0 111.0 43.0 55.0 7541255.0
