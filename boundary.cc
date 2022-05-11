@@ -203,16 +203,11 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
       enum cell_boundary invdirection = !flip ? posdirections[d] : negdirections[d];
       const int cellindexdiff = flip ? - grid::get_coordcellindexincrement(d) : grid::get_coordcellindexincrement(d);
 
-      const double tolerance = 1e-6 * globals::vmax * tstart;  // maximum position of out bound tolerance
       bool isoutside;
       if (flip)
-      {
-        isoutside = initpos[d] < (grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart - tolerance);
-      }
+        isoutside = initpos[d] - (grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart) < -10.; // 10 cm accuracy tolerance
       else
-      {
-        isoutside = initpos[d] > (cellcoordmax[d] / globals::tmin * tstart + tolerance);
-      }
+        isoutside = initpos[d] - (cellcoordmax[d] / globals::tmin * tstart) > -10.;
 
       if (isoutside && (not_allowed != direction))
       {
