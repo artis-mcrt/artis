@@ -861,6 +861,10 @@ int main(int argc, char** argv)
   //printout("Hash of most recent commit: %s\n",GIT_HASH);
   printout("sn3d.cc compiled at %s on %s\n", __TIME__, __DATE__);
 
+  #if defined TESTMODE && TESTMODE
+  printout("TESTMODE is ON");
+  #endif
+
   #ifdef MPI_ON
     printout("MPI enabled:\n");
     printout("  rank %d of [0..%d] in MPI_COMM_WORLD\n", globals::rank_global, globals::nprocs - 1);

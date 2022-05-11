@@ -180,7 +180,7 @@ void packet_init(int my_rank, PKT *pkt)
     pkt[n].e_cmf *= e_ratio;
     pkt[n].e_rf *= e_ratio;
   }
-  printout("radioactive energy which will be freed during simulation time: %g erg\n", e_cmf_total);
+  printout("radioactive energy that will be freed during simulation time: %g erg\n", e_cmf_total);
 }
 
 
