@@ -1493,11 +1493,6 @@ double calculate_populations(const int modelgridindex)
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
-  /// Initialise the gsl solver
-  const gsl_root_fsolver_type *const solvertype = gsl_root_fsolver_brent;
-  gsl_root_fsolver *solver;
-  solver = gsl_root_fsolver_alloc(solvertype);
-
   /// and the solution function
   gsl_function f;
   nne_solution_paras paras;
@@ -1653,6 +1648,8 @@ double calculate_populations(const int modelgridindex)
       }
 #     endif
     }
+    gsl_root_fsolver *solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
+
     gsl_root_fsolver_set(solver, &f, nne_lo, nne_hi);
     int iter = 0;
     const int maxit = 100;

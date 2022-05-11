@@ -491,8 +491,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
     fdf.fdf = &nne_solution_fdf;*/
 
     // one-dimensional gsl root solver, bracketing type
-    const gsl_root_fsolver_type *solvertype = gsl_root_fsolver_brent;
-    gsl_root_fsolver *T_e_solver = gsl_root_fsolver_alloc(solvertype);
+    gsl_root_fsolver *T_e_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
 
     gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
     const double fractional_accuracy = TEMPERATURE_SOLVER_ACCURACY;
