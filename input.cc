@@ -1628,11 +1628,9 @@ static void setup_phixs_list(void)
           globals::allcont[allcontindex].index_in_groundphixslist = search_groundphixslist(
                 nu_edge, &index_in_groundlevelcontestimator, element, ion, level);
 
-          #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-            globals::elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
-          #endif
-          allcontindex++;
+          globals::elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
 #endif
+          allcontindex++;
         }
       }
     }
