@@ -1289,7 +1289,7 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
 {
   int index;
 
-  if (nu_edge < globals::phixslist[tid].groundcont[0].nu_edge)
+  if (nu_edge < globals::groundcont[0].nu_edge)
   {
     index = -1;
     *index_in_groundlevelcontestimator = -1;
@@ -1301,21 +1301,21 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
     int ion;
     for (i = 1; i < globals::nbfcontinua_ground; i++)
     {
-      if (nu_edge < globals::phixslist[tid].groundcont[i].nu_edge)
+      if (nu_edge < globals::groundcont[i].nu_edge)
         break;
     }
 /*    if (i == nbfcontinua_ground)
     {
-      printout("[fatal] search_groundphixslist: i %d, nu_edge %g, globals::phixslist[tid].groundcont[i-1].nu_edge %g ... abort\n",i,nu_edge,phixslist[tid].groundcont[i-1].nu_edge);
+      printout("[fatal] search_groundphixslist: i %d, nu_edge %g, globals::groundcont[i-1].nu_edge %g ... abort\n",i,nu_edge,phixslist[tid].groundcont[i-1].nu_edge);
       printout("[fatal] search_groundphixslist: this is element %d, ion %d, level %d in groundphixslist at i-1\n",el,in,ll);
       //printout("[fatal] search_groundphixslist: this is element %d, ion %d, level %d in groundphixslist at i-1\n",phixslist[tid].groundcont[i-1].element,phixslist[tid].groundcont[i-1].ion,groundphixslist[i-1].level);
       abort();
     }*/
     if (i == globals::nbfcontinua_ground)
     {
-      element = globals::phixslist[tid].groundcont[i - 1].element;
-      ion = globals::phixslist[tid].groundcont[i - 1].ion;
-      int level = globals::phixslist[tid].groundcont[i - 1].level;
+      element = globals::groundcont[i - 1].element;
+      ion = globals::groundcont[i - 1].ion;
+      int level = globals::groundcont[i - 1].level;
       if (element == el && ion == in && level == ll)
       {
         index = i - 1;
@@ -1323,7 +1323,7 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
       else
       {
         printout("[fatal] search_groundphixslist: element %d, ion %d, level %d has edge_frequency %g equal to the bluest ground-level continuum\n",el,in,ll,nu_edge);
-        printout("[fatal] search_groundphixslist: bluest ground level continuum is element %d, ion %d, level %d at nu_edge %g\n",element,ion,level, globals::phixslist[tid].groundcont[i-1].nu_edge);
+        printout("[fatal] search_groundphixslist: bluest ground level continuum is element %d, ion %d, level %d at nu_edge %g\n",element,ion,level, globals::groundcont[i - 1].nu_edge);
         printout("[fatal] search_groundphixslist: i %d, nbfcontinua_ground %d\n", i, globals::nbfcontinua_ground);
         printout("[fatal] This shouldn't happen, is hoewever possible if there are multiple levels in the adata file at energy=0\n");
         for (int looplevels = 0; looplevels < get_nlevels(el,in); looplevels++)
@@ -1337,11 +1337,11 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
     }
     else
     {
-      const double left_diff = nu_edge - globals::phixslist[tid].groundcont[i - 1].nu_edge;
-      const double right_diff = globals::phixslist[tid].groundcont[i].nu_edge - nu_edge;
+      const double left_diff = nu_edge - globals::groundcont[i - 1].nu_edge;
+      const double right_diff = globals::groundcont[i].nu_edge - nu_edge;
       index = (left_diff <= right_diff) ? i - 1 : i;
-      element = globals::phixslist[tid].groundcont[index].element;
-      ion = globals::phixslist[tid].groundcont[index].ion;
+      element = globals::groundcont[index].element;
+      ion = globals::groundcont[index].ion;
     }
     *index_in_groundlevelcontestimator = element * get_max_nions() + ion;
   }
@@ -1511,8 +1511,9 @@ static int compare_groundphixslistentry_bynuedge(const void *p1, const void *p2)
 
 static void setup_phixs_list(void)
 {
-  /// SET UP THE PHIXSLIST
-  ///======================================================
+  // set up the photoionisation transition lists
+  // and temporary gamma/kappa lists for each thread
+
   printout("[info] read_atomicdata: number of bfcontinua %d\n", globals::nbfcontinua);
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n", globals::nbfcontinua_ground);
 
@@ -1532,64 +1533,44 @@ static void setup_phixs_list(void)
   {
     /// Number of ground level bf-continua equals the total number of included ions minus the number
     /// of included elements, because the uppermost ionisation stages can't ionise.
-    //printout("groundphixslist nbfcontinua_ground %d\n",nbfcontinua_ground);
-    printout("initialising groundphixslist for itid %d\n", itid);
-    globals::phixslist[itid].groundcont = (groundphixslist_t *) malloc(globals::nbfcontinua_ground * sizeof(groundphixslist_t));
-    assert_always(globals::phixslist[itid].groundcont != NULL)
-
     globals::phixslist[itid].groundcont_gamma_contr = (double *) malloc(globals::nbfcontinua_ground * sizeof(double));
     assert_always(globals::phixslist[itid].groundcont_gamma_contr != NULL)
 
-    printout("[info] mem_usage: phixslist[tid].groundcont for thread %d occupies %.3f MB\n",
-             itid, globals::nbfcontinua_ground * (sizeof(double) + sizeof(groundphixslist_t)) / 1024. / 1024.);
-
-    int i = 0;
-    for (int element = 0; element < get_nelements(); element++)
+    for (int groundcontindex = 0; groundcontindex < globals::nbfcontinua_ground; groundcontindex++)
     {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions-1; ion++)
-      {
-        const int nlevels_groundterm = get_nlevels_groundterm(element, ion);
-        for (int level = 0; level < nlevels_groundterm; level++)
-        {
-          const int nphixstargets = get_nphixstargets(element, ion, level);
-          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
-          {
-            // const int upperlevel = get_phixsupperlevel(element, ion, level, 0);
-            // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
-            const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
-            const double nu_edge = E_threshold / H;
-            globals::phixslist[itid].groundcont[i].element = element;
-            globals::phixslist[itid].groundcont[i].ion = ion;
-            globals::phixslist[itid].groundcont[i].level = level;
-            globals::phixslist[itid].groundcont[i].nu_edge = nu_edge;
-            globals::phixslist[itid].groundcont[i].phixstargetindex = phixstargetindex;
-            globals::phixslist[tid].groundcont_gamma_contr[i] = 0.;
-            //printout("phixslist.groundcont nbfcontinua_ground %d, i %d, element %d, ion %d, level %d, nu_edge %g\n",nbfcontinua_ground,i,element,ion,level,nu_edge);
-            i++;
-          }
-        }
-      }
+      globals::phixslist[tid].groundcont_gamma_contr[groundcontindex] = 0.;
     }
-    qsort(globals::phixslist[itid].groundcont, globals::nbfcontinua_ground, sizeof(groundphixslist_t), compare_groundphixslistentry_bynuedge);
 
-    //if (TAKE_N_BFCONTINUA >= 0) phixslist = malloc(includedions*TAKE_N_BFCONTINUA*sizeof(phixslist_t));
-    //else
     globals::phixslist[itid].kappa_bf_contr = (double *) malloc(globals::nbfcontinua * sizeof(double));
     assert_always(globals::phixslist[itid].kappa_bf_contr != NULL);
+
     #if (DETAILED_BF_ESTIMATORS_ON)
     globals::phixslist[itid].gamma_contr = (double *) malloc(globals::nbfcontinua * sizeof(double));
     assert_always(globals::phixslist[itid].gamma_contr != NULL);
     #endif
 
+    for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++)
+    {
+      globals::phixslist[itid].kappa_bf_contr[allcontindex] = 0.;
+
+      #if (DETAILED_BF_ESTIMATORS_ON)
+      globals::phixslist[itid].gamma_contr[allcontindex] = 0.;
+      #endif
+    }
+
     printout("[info] mem_usage: phixslist[tid].kappa_bf_contr for thread %d occupies %.3f MB\n",
              itid, globals::nbfcontinua * sizeof(double) / 1024. / 1024.);
   }
 
-  globals::allcont = (fullphixslist_t *) malloc(globals::nbfcontinua * sizeof(fullphixslist_t));
-  globals::allcont_nu_edge = (double *) malloc(globals::nbfcontinua * sizeof(double));
+  globals::groundcont = (groundphixslist_t *) malloc(globals::nbfcontinua_ground * sizeof(groundphixslist_t));
+  assert_always(globals::groundcont != NULL)
 
-  int i = 0;
+  globals::allcont = (fullphixslist_t *) malloc(globals::nbfcontinua * sizeof(fullphixslist_t));
+  printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
+           globals::nbfcontinua * (sizeof(fullphixslist_t)) / 1024. / 1024.);
+
+  int groundcontindex = 0;
+  int allcontindex = 0;
   for (int element = 0; element < get_nelements(); element++)
   {
     const int nions = get_nions(element);
@@ -1599,6 +1580,27 @@ static void setup_phixs_list(void)
       //nlevels = get_ionisinglevels(element,ion);
       ///// The following line reduces the number of bf-continua per ion
       //if (nlevels > TAKE_N_BFCONTINUA) nlevels = TAKE_N_BFCONTINUA;
+      const int nlevels_groundterm = get_nlevels_groundterm(element, ion);
+      for (int level = 0; level < nlevels_groundterm; level++)
+      {
+        const int nphixstargets = get_nphixstargets(element, ion, level);
+        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
+        {
+          // const int upperlevel = get_phixsupperlevel(element, ion, level, 0);
+          // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
+          const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
+          const double nu_edge = E_threshold / H;
+
+          assert_always(groundcontindex < globals::nbfcontinua_ground);
+          globals::groundcont[groundcontindex].element = element;
+          globals::groundcont[groundcontindex].ion = ion;
+          globals::groundcont[groundcontindex].level = level;
+          globals::groundcont[groundcontindex].nu_edge = nu_edge;
+          globals::groundcont[groundcontindex].phixstargetindex = phixstargetindex;
+          groundcontindex++;
+        }
+      }
+
       for (int level = 0; level < nlevels; level++)
       {
         const int nphixstargets = get_nphixstargets(element, ion, level);
@@ -1609,32 +1611,39 @@ static void setup_phixs_list(void)
           const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
           const double nu_edge = E_threshold / H;
 
-          int index_in_groundlevelcontestimator;
+          assert_always(allcontindex < globals::nbfcontinua);
+          globals::allcont[allcontindex].nu_edge = nu_edge;
+          globals::allcont[allcontindex].element = element;
+          globals::allcont[allcontindex].ion = ion;
+          globals::allcont[allcontindex].level = level;
+          globals::allcont[allcontindex].phixstargetindex = phixstargetindex;
 
-          globals::allcont[i].nu_edge = nu_edge;
-          globals::allcont[i].element = element;
-          globals::allcont[i].ion = ion;
-          globals::allcont[i].level = level;
-          globals::allcont[i].phixstargetindex = phixstargetindex;
-          globals::allcont[i].index_in_groundphixslist = search_groundphixslist(nu_edge, &index_in_groundlevelcontestimator, element, ion, level);
+          int index_in_groundlevelcontestimator;
+          globals::allcont[allcontindex].index_in_groundphixslist = search_groundphixslist(
+                nu_edge, &index_in_groundlevelcontestimator, element, ion, level);
+
           #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
             globals::elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
           #endif
-          i++;
+          allcontindex++;
         }
       }
     }
   }
+  assert_always(groundcontindex == globals::nbfcontinua_ground);
+  assert_always(allcontindex == globals::nbfcontinua);
+
+  qsort(globals::groundcont, globals::nbfcontinua_ground, sizeof(groundphixslist_t), compare_groundphixslistentry_bynuedge);
 
   qsort(globals::allcont, globals::nbfcontinua, sizeof(fullphixslist_t), compare_phixslistentry_bynuedge);
+
+  globals::allcont_nu_edge = (double *) malloc(globals::nbfcontinua * sizeof(double));
+
   for (int i = 0; i < globals::nbfcontinua; i++)
   {
     globals::allcont_nu_edge[i] = globals::allcont[i].nu_edge;
   }
 
-  //#ifdef _OPENMP
-  //  }
-  //#endif
 }
 
 

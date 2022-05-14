@@ -101,6 +101,7 @@ namespace globals
 
   __managed__ double *allcont_nu_edge = NULL;
   __managed__ fullphixslist_t *allcont = NULL;
+  __managed__ groundphixslist_t *groundcont = NULL;
   __managed__ phixslist_t *phixslist = NULL;
   __managed__ int nbfcontinua;
   __managed__ int nbfcontinua_ground; ///number of bf-continua

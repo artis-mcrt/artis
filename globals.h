@@ -88,6 +88,7 @@ namespace globals
 
   extern __managed__ double *allcont_nu_edge;
   extern __managed__ fullphixslist_t *allcont;
+  extern __managed__ groundphixslist_t *groundcont;
   extern __managed__ phixslist_t *phixslist;
   extern __managed__ int nbfcontinua;
   extern __managed__ int nbfcontinua_ground;
