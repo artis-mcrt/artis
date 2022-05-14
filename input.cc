@@ -1564,7 +1564,7 @@ static void setup_phixs_list(void)
             globals::phixslist[itid].groundcont[i].level = level;
             globals::phixslist[itid].groundcont[i].nu_edge = nu_edge;
             globals::phixslist[itid].groundcont[i].phixstargetindex = phixstargetindex;
-           globals::phixslist[tid].groundcont[i].gamma_contr = 0.;
+            globals::phixslist[tid].groundcont[i].gamma_contr = 0.;
             //printout("phixslist.groundcont nbfcontinua_ground %d, i %d, element %d, ion %d, level %d, nu_edge %g\n",nbfcontinua_ground,i,element,ion,level,nu_edge);
             i++;
           }
@@ -1584,7 +1584,7 @@ static void setup_phixs_list(void)
 
     printout("[info] mem_usage: phixslist[tid].kappa_bf_contr for thread %d occupies %.3f MB\n",
              itid, globals::nbfcontinua * sizeof(double) / 1024. / 1024.);
-   }
+  }
 
   globals::allcont = (fullphixslist_t *) malloc(globals::nbfcontinua * sizeof(fullphixslist_t));
   globals::allcont_nu_edge = (double *) malloc(globals::nbfcontinua * sizeof(double));
