@@ -92,9 +92,6 @@ typedef struct fullphixslist_t
 typedef struct groundphixslist_t
 {
   double nu_edge;
-  //double photoion_contr;
-  //double stimrecomb_contr;
-  //double bfheating_contr;
   int element;
   int ion;
   int level;
@@ -104,7 +101,9 @@ typedef struct groundphixslist_t
 
 typedef struct phixslist_t
 {
+   #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
   double *groundcont_gamma_contr;
+  #endif
   double *kappa_bf_contr;
 #if (DETAILED_BF_ESTIMATORS_ON)
   double *gamma_contr;

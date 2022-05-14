@@ -1281,6 +1281,7 @@ static void read_atomicdata_files(void)
 }
 
 
+#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
 static int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimator, int el, int in, int ll)
 /// Return the closest ground level continuum index to the given edge
 /// frequency. If the given edge frequency is redder than the reddest
@@ -1348,6 +1349,7 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
 
   return index;
 }
+#endif
 
 
 static void setup_cellhistory(void)
@@ -1533,6 +1535,7 @@ static void setup_phixs_list(void)
   {
     /// Number of ground level bf-continua equals the total number of included ions minus the number
     /// of included elements, because the uppermost ionisation stages can't ionise.
+  #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
     globals::phixslist[itid].groundcont_gamma_contr = (double *) malloc(globals::nbfcontinua_ground * sizeof(double));
     assert_always(globals::phixslist[itid].groundcont_gamma_contr != NULL)
 
@@ -1540,6 +1543,7 @@ static void setup_phixs_list(void)
     {
       globals::phixslist[tid].groundcont_gamma_contr[groundcontindex] = 0.;
     }
+  #endif
 
     globals::phixslist[itid].kappa_bf_contr = (double *) malloc(globals::nbfcontinua * sizeof(double));
     assert_always(globals::phixslist[itid].kappa_bf_contr != NULL);
@@ -1562,8 +1566,10 @@ static void setup_phixs_list(void)
              itid, globals::nbfcontinua * sizeof(double) / 1024. / 1024.);
   }
 
+#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
   globals::groundcont = (groundphixslist_t *) malloc(globals::nbfcontinua_ground * sizeof(groundphixslist_t));
   assert_always(globals::groundcont != NULL)
+#endif
 
   globals::allcont = (fullphixslist_t *) malloc(globals::nbfcontinua * sizeof(fullphixslist_t));
   printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
@@ -1576,10 +1582,7 @@ static void setup_phixs_list(void)
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions - 1; ion++)
     {
-      const int nlevels = get_ionisinglevels(element, ion);
-      //nlevels = get_ionisinglevels(element,ion);
-      ///// The following line reduces the number of bf-continua per ion
-      //if (nlevels > TAKE_N_BFCONTINUA) nlevels = TAKE_N_BFCONTINUA;
+#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
       const int nlevels_groundterm = get_nlevels_groundterm(element, ion);
       for (int level = 0; level < nlevels_groundterm; level++)
       {
@@ -1600,7 +1603,9 @@ static void setup_phixs_list(void)
           groundcontindex++;
         }
       }
+#endif
 
+      const int nlevels = get_ionisinglevels(element, ion);
       for (int level = 0; level < nlevels; level++)
       {
         const int nphixstargets = get_nphixstargets(element, ion, level);
@@ -1618,6 +1623,7 @@ static void setup_phixs_list(void)
           globals::allcont[allcontindex].level = level;
           globals::allcont[allcontindex].phixstargetindex = phixstargetindex;
 
+#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
           int index_in_groundlevelcontestimator;
           globals::allcont[allcontindex].index_in_groundphixslist = search_groundphixslist(
                 nu_edge, &index_in_groundlevelcontestimator, element, ion, level);
@@ -1626,15 +1632,18 @@ static void setup_phixs_list(void)
             globals::elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
           #endif
           allcontindex++;
+#endif
         }
       }
     }
   }
+
+  #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
   assert_always(groundcontindex == globals::nbfcontinua_ground);
-  assert_always(allcontindex == globals::nbfcontinua);
-
   qsort(globals::groundcont, globals::nbfcontinua_ground, sizeof(groundphixslist_t), compare_groundphixslistentry_bynuedge);
+  #endif
 
+  assert_always(allcontindex == globals::nbfcontinua);
   qsort(globals::allcont, globals::nbfcontinua, sizeof(fullphixslist_t), compare_phixslistentry_bynuedge);
 
   globals::allcont_nu_edge = (double *) malloc(globals::nbfcontinua * sizeof(double));

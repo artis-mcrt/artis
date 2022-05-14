@@ -101,7 +101,9 @@ namespace globals
 
   __managed__ double *allcont_nu_edge = NULL;
   __managed__ fullphixslist_t *allcont = NULL;
+  #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
   __managed__ groundphixslist_t *groundcont = NULL;
+  #endif
   __managed__ phixslist_t *phixslist = NULL;
   __managed__ int nbfcontinua;
   __managed__ int nbfcontinua_ground; ///number of bf-continua

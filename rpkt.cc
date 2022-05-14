@@ -607,8 +607,11 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
   const double nu = pkt_ptr->nu_cmf;
   //double bf = exp(-HOVERKB*nu/globals::cell[modelgridindex].T_e);
   radfield::update_estimators(modelgridindex, distance_e_cmf, nu, pkt_ptr, pkt_ptr->prop_time);
+
+#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
   const int nelements = get_nelements();
   const int max_nions = get_max_nions();
+#endif
 
   #ifndef FORCE_LTE
     ///ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
@@ -1177,10 +1180,12 @@ __host__ __device__
 void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, double *kappa_bf)
 // bound-free opacity
 {
+#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
   for (int gphixsindex = 0; gphixsindex < globals::nbfcontinua_ground; gphixsindex++)
   {
     globals::phixslist[tid].groundcont_gamma_contr[gphixsindex] = 0.;
   }
+#endif
 
 #if (!SEPARATE_STIMRECOMB)
   const double T_e = grid::get_Te(modelgridindex);
@@ -1226,11 +1231,13 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
 
         const double kappa_bf_contr = nnlevel * sigma_bf * probability * corrfactor;
 
+        #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
         if (level == 0)
         {
           const int gphixsindex = globals::allcont[i].index_in_groundphixslist;
           globals::phixslist[tid].groundcont_gamma_contr[gphixsindex] += sigma_bf * probability * corrfactor;
         }
+        #endif
 
         #if (DETAILED_BF_ESTIMATORS_ON)
         globals::phixslist[tid].gamma_contr[i] = sigma_bf * probability * corrfactor;
@@ -1284,11 +1291,13 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
       #if (DETAILED_BF_ESTIMATORS_ON)
       globals::phixslist[tid].gamma_contr[i] = 0.;
       #endif
+      #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
       if (globals::allcont[i].level == 0)
       {
         const int gphixsindex = globals::allcont[i].index_in_groundphixslist;
         globals::phixslist[tid].groundcont_gamma_contr[gphixsindex] = 0.;
       }
+      #endif
     }
   }
 }
