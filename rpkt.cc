@@ -316,13 +316,13 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
     /// electron scattering occurs
     /// in this case the packet stays a R_PKT of same nu_cmf than before (coherent scattering)
     /// but with different direction
-    if (false) printout("[debug] rpkt_event:   electron scattering\n");
+    // printout("[debug] rpkt_event:   electron scattering\n");
     pkt_ptr->interactions += 1;
     pkt_ptr->nscatterings += 1;
     pkt_ptr->last_event = 12;
     stats::increment(stats::COUNTER_ESCOUNTER);
 
-    /* call the estimator routine - generate a virtual packet */
+    // generate a virtual packet
     #ifdef VPKT_ON
       int realtype = 1;
       pkt_ptr->last_cross = NONE;
@@ -344,7 +344,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
   else if (zrand * kappa_cont < sigma + kappa_ff)
   {
     /// ff: transform to k-pkt
-    if (false) printout("[debug] rpkt_event:   free-free transition\n");
+    // printout("[debug] rpkt_event:   free-free transition\n");
     stats::increment(stats::COUNTER_K_STAT_FROM_FF);
     pkt_ptr->interactions += 1;
     pkt_ptr->last_event = 5;
@@ -357,7 +357,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
   else if (zrand * kappa_cont < sigma + kappa_ff + kappa_bf)
   {
     /// bf: transform to k-pkt or activate macroatom corresponding to probabilities
-    if (false) printout("[debug] rpkt_event:   bound-free transition\n");
+    // printout("[debug] rpkt_event:   bound-free transition\n");
 
     pkt_ptr->absorptiontype = -2;
 
@@ -599,56 +599,59 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
   const int modelgridindex = grid::get_cell_modelgridindex(cellindex);
 
   /// Update only non-empty cells
-  if (modelgridindex != grid::get_npts_model())
+  if (modelgridindex == grid::get_npts_model())
   {
-    const double distance_e_cmf = distance * pkt_ptr->e_cmf;
-    const double nu = pkt_ptr->nu_cmf;
-    //double bf = exp(-HOVERKB*nu/globals::cell[modelgridindex].T_e);
-    radfield::update_estimators(modelgridindex, distance_e_cmf, nu, pkt_ptr, pkt_ptr->prop_time);
-
-    #ifndef FORCE_LTE
-      ///ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
-      ///quick and dirty solution: store info in element=ion=0, and leave the others untouched (i.e. zero)
-      safeadd(globals::ffheatingestimator[modelgridindex], distance_e_cmf * globals::kappa_rpkt_cont[tid].ffheating);
-
-      #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-        #if (!NO_LUT_PHOTOION)
-        const double distance_e_cmf_over_nu = distance_e_cmf / nu;
-        #endif
-        for (int i = 0; i < globals::nbfcontinua_ground; i++)
-        {
-          const double nu_edge = globals::groundcont[i].nu_edge;
-          if (nu > nu_edge)
-          {
-            const int element = globals::groundcont[i].element;
-            const int ion = globals::groundcont[i].ion;
-            /// Cells with zero abundance for a specific element have zero contribution
-            /// (set in calculate_kappa_rpkt_cont and therefore do not contribute to
-            /// the estimators
-            if (grid::get_elem_abundance(modelgridindex, element) > 0)
-            {
-              const int ionestimindex = modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
-              #if (!NO_LUT_PHOTOION)
-                safeadd(globals::gammaestimator[ionestimindex], globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf_over_nu);
-
-                if (!std::isfinite(globals::gammaestimator[ionestimindex]))
-                {
-                  printout("[fatal] update_estimators: gamma estimator becomes non finite: mgi %d element %d ion %d gamma_contr %g, distance_e_cmf_over_nu %g\n", modelgridindex, element, ion, globals::phixslist[tid].groundcont_gamma_contr[i], distance_e_cmf_over_nu);
-                  abort();
-                }
-              #endif
-              #if (!NO_LUT_BFHEATING)
-                safeadd(globals::bfheatingestimator[ionestimindex], globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge/nu));
-              #endif
-            }
-          }
-          else
-            break; // because groundcont is sorted by nu_edge, nu < nu_edge for all remaining items
-        }
-      #endif
-
-    #endif
+    return;
   }
+  const double distance_e_cmf = distance * pkt_ptr->e_cmf;
+  const double nu = pkt_ptr->nu_cmf;
+  //double bf = exp(-HOVERKB*nu/globals::cell[modelgridindex].T_e);
+  radfield::update_estimators(modelgridindex, distance_e_cmf, nu, pkt_ptr, pkt_ptr->prop_time);
+  const int nelements = get_nelements();
+  const int max_nions = get_max_nions();
+
+  #ifndef FORCE_LTE
+    ///ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
+    ///quick and dirty solution: store info in element=ion=0, and leave the others untouched (i.e. zero)
+    safeadd(globals::ffheatingestimator[modelgridindex], distance_e_cmf * globals::kappa_rpkt_cont[tid].ffheating);
+
+    #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
+      #if (!NO_LUT_PHOTOION)
+      const double distance_e_cmf_over_nu = distance_e_cmf / nu;
+      #endif
+      for (int i = 0; i < globals::nbfcontinua_ground; i++)
+      {
+        const double nu_edge = globals::groundcont[i].nu_edge;
+        if (nu > nu_edge)
+        {
+          const int element = globals::groundcont[i].element;
+          /// Cells with zero abundance for a specific element have zero contribution
+          /// (set in calculate_kappa_rpkt_cont and therefore do not contribute to
+          /// the estimators
+          if (grid::get_elem_abundance(modelgridindex, element) > 0)
+          {
+            const int ion = globals::groundcont[i].ion;
+            const int ionestimindex = modelgridindex * nelements * max_nions + element * max_nions + ion;
+            #if (!NO_LUT_PHOTOION)
+              safeadd(globals::gammaestimator[ionestimindex], globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf_over_nu);
+
+              if (!std::isfinite(globals::gammaestimator[ionestimindex]))
+              {
+                printout("[fatal] update_estimators: gamma estimator becomes non finite: mgi %d element %d ion %d gamma_contr %g, distance_e_cmf_over_nu %g\n", modelgridindex, element, ion, globals::phixslist[tid].groundcont_gamma_contr[i], distance_e_cmf_over_nu);
+                abort();
+              }
+            #endif
+            #if (!NO_LUT_BFHEATING)
+              safeadd(globals::bfheatingestimator[ionestimindex], globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge/nu));
+            #endif
+          }
+        }
+        else
+          break; // because groundcont is sorted by nu_edge, nu < nu_edge for all remaining items
+      }
+    #endif
+
+  #endif
 }
 
 
