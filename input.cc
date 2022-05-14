@@ -1306,9 +1306,9 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
     }
 /*    if (i == nbfcontinua_ground)
     {
-      printout("[fatal] search_groundphixslist: i %d, nu_edge %g, globals::groundcont[i-1].nu_edge %g ... abort\n",i,nu_edge,phixslist[tid].groundcont[i-1].nu_edge);
+      printout("[fatal] search_groundphixslist: i %d, nu_edge %g, globals::groundcont[i-1].nu_edge %g ... abort\n",i,nu_edge,globals::groundcont[i-1].nu_edge);
       printout("[fatal] search_groundphixslist: this is element %d, ion %d, level %d in groundphixslist at i-1\n",el,in,ll);
-      //printout("[fatal] search_groundphixslist: this is element %d, ion %d, level %d in groundphixslist at i-1\n",phixslist[tid].groundcont[i-1].element,phixslist[tid].groundcont[i-1].ion,groundphixslist[i-1].level);
+      //printout("[fatal] search_groundphixslist: this is element %d, ion %d, level %d in groundphixslist at i-1\n",globals::groundcont[i-1].element,globals::groundcont[i-1].ion,groundphixslist[i-1].level);
       abort();
     }*/
     if (i == globals::nbfcontinua_ground)

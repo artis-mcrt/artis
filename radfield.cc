@@ -166,13 +166,13 @@ setup_bin_boundaries(void)
     // {
     //   for (int i = 0; i < globals::nbfcontinua_ground; i++)
     //   {
-    //     const double nu_edge = phixslist[tid].groundcont[i].nu_edge;
+    //     const double nu_edge = globals::groundcont[i].nu_edge;
     //     const double eV_edge = H * nu_edge / EV;
     //     const double angstrom_edge = 1e8 * CLIGHT / nu_edge;
-    //     const int element = phixslist[tid].groundcont[i].element;
-    //     const int ion = phixslist[tid].groundcont[i].ion;
-    //     const int level = phixslist[tid].groundcont[i].level;
-    //     const int phixstargetindex = phixslist[tid].groundcont[i].phixstargetindex;
+    //     const int element = globals::groundcont[i].element;
+    //     const int ion = globals::groundcont[i].ion;
+    //     const int level = globals::groundcont[i].level;
+    //     const int phixstargetindex = globals::groundcont[i].phixstargetindex;
     //
     //     const int Z = get_element(element);
     //     const int ion_stage = get_ionstage(element, ion);

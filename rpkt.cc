@@ -617,11 +617,11 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
         #endif
         for (int i = 0; i < globals::nbfcontinua_ground; i++)
         {
-          const double nu_edge = globals::phixslist[tid].groundcont[i].nu_edge;
+          const double nu_edge = globals::groundcont[i].nu_edge;
           if (nu > nu_edge)
           {
-            const int element = globals::phixslist[tid].groundcont[i].element;
-            const int ion = globals::phixslist[tid].groundcont[i].ion;
+            const int element = globals::groundcont[i].element;
+            const int ion = globals::groundcont[i].ion;
             /// Cells with zero abundance for a specific element have zero contribution
             /// (set in calculate_kappa_rpkt_cont and therefore do not contribute to
             /// the estimators
