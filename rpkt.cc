@@ -419,7 +419,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
         else
         {
           /// transform to k-pkt
-          if (false) printout("[debug] rpkt_event:   bound-free: transform to k-pkt\n");
+          // printout("[debug] rpkt_event:   bound-free: transform to k-pkt\n");
           stats::increment(stats::COUNTER_K_STAT_FROM_BF);
           pkt_ptr->interactions += 1;
           pkt_ptr->last_event = 4;
@@ -629,16 +629,16 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
             {
               const int ionestimindex = modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
               #if (!NO_LUT_PHOTOION)
-                safeadd(globals::gammaestimator[ionestimindex], globals::phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf_over_nu);
+                safeadd(globals::gammaestimator[ionestimindex], globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf_over_nu);
 
                 if (!std::isfinite(globals::gammaestimator[ionestimindex]))
                 {
-                  printout("[fatal] update_estimators: gamma estimator becomes non finite: mgi %d element %d ion %d gamma_contr %g, distance_e_cmf_over_nu %g\n", modelgridindex, element, ion, globals::phixslist[tid].groundcont[i].gamma_contr, distance_e_cmf_over_nu);
+                  printout("[fatal] update_estimators: gamma estimator becomes non finite: mgi %d element %d ion %d gamma_contr %g, distance_e_cmf_over_nu %g\n", modelgridindex, element, ion, globals::phixslist[tid].groundcont_gamma_contr[i], distance_e_cmf_over_nu);
                   abort();
                 }
               #endif
               #if (!NO_LUT_BFHEATING)
-                safeadd(globals::bfheatingestimator[ionestimindex], globals::phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf * (1. - nu_edge/nu));
+                safeadd(globals::bfheatingestimator[ionestimindex], globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge/nu));
               #endif
             }
           }
@@ -1176,7 +1176,7 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
 {
   for (int gphixsindex = 0; gphixsindex < globals::nbfcontinua_ground; gphixsindex++)
   {
-    globals::phixslist[tid].groundcont[gphixsindex].gamma_contr = 0.;
+    globals::phixslist[tid].groundcont_gamma_contr[gphixsindex] = 0.;
   }
 
 #if (!SEPARATE_STIMRECOMB)
@@ -1226,7 +1226,7 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
         if (level == 0)
         {
           const int gphixsindex = globals::allcont[i].index_in_groundphixslist;
-          globals::phixslist[tid].groundcont[gphixsindex].gamma_contr += sigma_bf * probability * corrfactor;
+          globals::phixslist[tid].groundcont_gamma_contr[gphixsindex] += sigma_bf * probability * corrfactor;
         }
 
         #if (DETAILED_BF_ESTIMATORS_ON)
@@ -1284,7 +1284,7 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
       if (globals::allcont[i].level == 0)
       {
         const int gphixsindex = globals::allcont[i].index_in_groundphixslist;
-        globals::phixslist[tid].groundcont[gphixsindex].gamma_contr = 0.;
+        globals::phixslist[tid].groundcont_gamma_contr[gphixsindex] = 0.;
       }
     }
   }

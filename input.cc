@@ -1535,13 +1535,13 @@ static void setup_phixs_list(void)
     //printout("groundphixslist nbfcontinua_ground %d\n",nbfcontinua_ground);
     printout("initialising groundphixslist for itid %d\n", itid);
     globals::phixslist[itid].groundcont = (groundphixslist_t *) malloc(globals::nbfcontinua_ground * sizeof(groundphixslist_t));
-    if (globals::phixslist[itid].groundcont == NULL)
-    {
-      printout("[fatal] read_atomicdata: not enough memory to initialize globals::phixslist[%d].groundcont... abort\n", itid);
-      abort();
-    }
+    assert_always(globals::phixslist[itid].groundcont != NULL)
+
+    globals::phixslist[itid].groundcont_gamma_contr = (double *) malloc(globals::nbfcontinua_ground * sizeof(double));
+    assert_always(globals::phixslist[itid].groundcont_gamma_contr != NULL)
+
     printout("[info] mem_usage: phixslist[tid].groundcont for thread %d occupies %.3f MB\n",
-             itid, globals::nbfcontinua_ground * sizeof(groundphixslist_t) / 1024. / 1024.);
+             itid, globals::nbfcontinua_ground * (sizeof(double) + sizeof(groundphixslist_t)) / 1024. / 1024.);
 
     int i = 0;
     for (int element = 0; element < get_nelements(); element++)
@@ -1564,7 +1564,7 @@ static void setup_phixs_list(void)
             globals::phixslist[itid].groundcont[i].level = level;
             globals::phixslist[itid].groundcont[i].nu_edge = nu_edge;
             globals::phixslist[itid].groundcont[i].phixstargetindex = phixstargetindex;
-            globals::phixslist[tid].groundcont[i].gamma_contr = 0.;
+            globals::phixslist[tid].groundcont_gamma_contr[i] = 0.;
             //printout("phixslist.groundcont nbfcontinua_ground %d, i %d, element %d, ion %d, level %d, nu_edge %g\n",nbfcontinua_ground,i,element,ion,level,nu_edge);
             i++;
           }

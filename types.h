@@ -93,7 +93,6 @@ typedef struct groundphixslist_t
 {
   double nu_edge;
   //double photoion_contr;
-  double gamma_contr;
   //double stimrecomb_contr;
   //double bfheating_contr;
   int element;
@@ -106,6 +105,7 @@ typedef struct groundphixslist_t
 typedef struct phixslist_t
 {
   groundphixslist_t *groundcont;
+  double *groundcont_gamma_contr;
   double *kappa_bf_contr;
 #if (DETAILED_BF_ESTIMATORS_ON)
   double *gamma_contr;
