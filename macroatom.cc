@@ -354,9 +354,9 @@ static void do_macroatom_radrecomb(
     //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
   #endif
 
-  printout("%s: From Z=%d ionstage %d, recombining to ionstage %d level %d\n",
-           __func__, get_element(element), get_ionstage(element, *ion + 1), get_ionstage(element, *ion), lower);
-  printout("[debug] do_ma:   pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
+  // printout("%s: From Z=%d ionstage %d, recombining to ionstage %d level %d\n",
+  //          __func__, get_element(element), get_ionstage(element, *ion + 1), get_ionstage(element, *ion), lower);
+  // printout("[debug] do_ma:   pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
 
   if (!std::isfinite(pkt_ptr->nu_cmf))
   {
