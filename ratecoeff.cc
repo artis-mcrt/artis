@@ -1357,8 +1357,6 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
 
 double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 /// Returns the photoionisation rate coefficient (corrected for stimulated emission)
-/// Only needed during packet propagation, therefore the value is taken from the
-/// cell history if known.
 {
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
@@ -1370,11 +1368,15 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
     gammacorr = radfield::get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
     //gammacorr will be -1 if no estimators available
     if (gammacorr > 0)
+    {
       return gammacorr;
+    }
   }
 
   if (use_cellhist)
+  {
     gammacorr = globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff;
+  }
 
   if (!use_cellhist || gammacorr < 0)
   {
@@ -1411,6 +1413,8 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
 
 static int get_nlevels_important(
   int modelgridindex, int element, int ion, bool assume_lte, float T_e, double *nnlevelsum_out)
+// get the number of levels that make up a fraction of the ion population
+// of at least IONGAMMA_POPFRAC_LEVELS_INCLUDED
 {
   if (IONGAMMA_POPFRAC_LEVELS_INCLUDED >= 1.)
   {
@@ -1455,7 +1459,7 @@ static int get_nlevels_important(
 
 
 double calculate_iongamma_per_gspop(const int modelgridindex, const int element, const int ion)
-// ionisation rate coefficient. multiply by get_groundlevelpop to get a rate
+// ionisation rate coefficient. multiply by get_groundlevelpop to get a rate [s^-1]
 {
   const int nions = get_nions(element);
   double Gamma = 0.;
