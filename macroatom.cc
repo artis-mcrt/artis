@@ -688,8 +688,8 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
       case MA_ACTION_COLDEEXC:
       {
         ///collisional deexcitation of macro atom => convert the packet into a k-packet
-        printout("[debug] do_ma:   collisonal deexcitation\n");
-        printout("[debug] do_ma: jumps = %d\n", jumps);
+        // printout("[debug] do_ma:   collisional deexcitation\n");
+        // printout("[debug] do_ma: jumps = %d\n", jumps);
 
         stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLDEEXC);
         pkt_ptr->interactions += 1;
