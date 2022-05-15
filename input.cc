@@ -419,7 +419,6 @@ static void read_ion_levels(
     {
       //globals::elements[element].ions[ion].levels[level].epsilon = (energyoffset + levelenergy) * EV;
       const double currentlevelenergy = (energyoffset + levelenergy) * EV;
-      //if (element == 1 && ion == 0) printf("%d %16.10e\n",levelindex,currentlevelenergy);
       //printout("energy for level %d of ionstage %d of element %d is %g\n",level,ionstage,element,currentlevelenergy/EV);
       globals::elements[element].ions[ion].levels[level].epsilon = currentlevelenergy;
       //printout("epsilon(%d,%d,%d)=%g",element,ion,level,globals::elements[element].ions[ion].levels[level].epsilon);

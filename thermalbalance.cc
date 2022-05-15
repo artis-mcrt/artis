@@ -287,13 +287,6 @@ static void calculate_heating_rates(
 //           /// range for T_R which changes the coefficient strongly).
 //           //C = interpolate_bfheatingcoeff(element,ion,level,T_R)*W*nnlevel;
 //           C = nnlevel * (W*interpolate_bfheatingcoeff_below(element,ion,level,T_R));// + W_D*interpolate_bfheatingcoeff_above(element,ion,level,T_D));
-//           if (element == 6)
-//           {
-//             if (ion == 1)
-//             {
-//               printout("T_e %g, nnlevel %g, W %g, heatingcoeff %g\n",T_e,nnlevel,W,interpolate_bfheatingcoeff_below(element,ion,level,T_R));
-//             }
-//           }
 //
 //           /// Exact calculation of the bf-heating coefficients using integrators.
 //           /// This makes things SLOW!!!
@@ -426,14 +419,6 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 
   //double deltat = (T_max - T_min) / 100;
 
-  /// Force tb_info switch to 1 for selected cells in serial calculations
-  /*
-  if (modelgridindex % 14 == 0)
-  {
-    tb_info = 1;
-  }
-  else tb_info = 0;
-  */
   /// Force tb_info for all cells
   //tb_info = 1;
 
@@ -518,14 +503,13 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
     gsl_root_fsolver_free(T_e_solver);
   }
   /// Quick solver style: works if we can assume that there is either one or no
-  /// solution on [MINTEM.MAXTEMP] (check that by doing a plot of heating-cooling
+  /// solution on [MINTEMP.MAXTEMP] (check that by doing a plot of heating-cooling
   /// vs. T_e using the tb_info switch)
   else if (thermalmax < 0)
   {
     /// Thermal balance equation always negative ===> T_e = T_min
     /// Calculate the rates again at this T_e to print them to file
     T_e = MINTEMP;
-    //if (nts_global >= 15) T_e = MAXTEMP; ///DEBUG ONLY!!!!!!!!!!!!!!!!!!!!!!!!! invert boundaries!
     printout("[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary %g in modelcell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",MINTEMP,modelgridindex,grid::get_TR(modelgridindex),grid::get_W(modelgridindex));
   }
   else
@@ -533,9 +517,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
     /// Thermal balance equation always negative ===> T_e = T_max
     /// Calculate the rates again at this T_e to print them to file
     T_e = MAXTEMP;
-    //if (nts_global >= 15) T_e = MINTEMP; ///DEBUG ONLY!!!!!!!!!!!!!!!!!!!!!!!!! invert boundaries!
     printout("[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [%g,%g] in modelcell %d (T_R=%g,W=%g). T_e forced to be MAXTEMP\n",MINTEMP,MAXTEMP,modelgridindex,grid::get_TR(modelgridindex),grid::get_W(modelgridindex));
-    //printout("hot cell %d, with T_R %g, T_e %g, W %g, nne %g\n",cellnumber,globals::cell[cellnumber].T_R,T_e,globals::cell[cellnumber].W,globals::cell[cellnumber].nne);
   }
 
   /// Otherwise the more expensive solver style _might_ work
@@ -588,7 +570,6 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
           iter2++;
           status = gsl_root_fsolver_iterate(T_e_solver);
           T_e = gsl_root_fsolver_root(T_e_solver);
-          //globals::cell[cellnumber].T_e = T_e;
           grid::set_Te(modelgridindex,T_e);
           T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
           T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
@@ -603,24 +584,28 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
   }
   */
 
-  //fprintf(heating_file,"%d %g %g %g %g %g %g %g %g\n",modelgridindex,heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collisional, heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collisional,coolingrates[tid].adiabatic);
-
   if (neutral_flag)
+  {
     printout("[info] call_T_e_finder: cell %d contains only neutral ions\n", modelgridindex);
+  }
 
   if (T_e > 2 * T_e_old)
   {
     T_e = 2 * T_e_old;
     printout("use T_e damping in cell %d\n", modelgridindex);
     if (T_e > MAXTEMP)
+    {
       T_e = MAXTEMP;
+    }
   }
   else if (T_e < 0.5 * T_e_old)
   {
     T_e = 0.5 * T_e_old;
     printout("use T_e damping in cell %d\n", modelgridindex);
     if (T_e < MINTEMP)
+    {
       T_e = MINTEMP;
+    }
   }
 
   grid::set_Te(modelgridindex, T_e);

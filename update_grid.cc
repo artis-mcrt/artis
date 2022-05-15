@@ -441,8 +441,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       //   for (int ion = 0; ion < nions - 1; ion++)
       //   {
       //     double nu_edge = (epsilon(element, ion + 1, 0) - epsilon(element, ion, 0)) / H;
-      //     double kappa_bf = 0.;
-      //     calculate_kappa_bf_gammacontr(mgi, nu_edge, &kappa_bf);
+      //     double kappa_bf = calculate_kappa_bf_gammacontr(mgi, nu_edge);
       //
       //     fprintf(estimators_file, "  %d: %9.3e",
       //             get_ionstage(element, ion),
@@ -1600,23 +1599,33 @@ double calculate_populations(const int modelgridindex)
       {
         double nnion;
         if (ion == 0)
+        {
           nnion = nnelement;
+        }
         else if (nnelement > 0.)
+        {
           nnion = MINPOP;
+        }
         else
+        {
           nnion = 0.;
+        }
         nntot += nnion;
-        nne += nnion * (get_ionstage(element,ion)-1);
+        nne += nnion * (get_ionstage(element,ion) - 1);
         grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (
           nnion * stat_weight(element,ion,0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
 
         if (!std::isfinite(grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]))
+        {
           printout("[warning] calculate_populations: groundlevelpop infinite in connection with MINPOP\n");
+        }
       }
     }
     nntot += nne;
     if (nne < MINPOP)
+    {
       nne = MINPOP;
+    }
     grid::set_nne(modelgridindex,nne);
   }
   else
@@ -1639,11 +1648,11 @@ double calculate_populations(const int modelgridindex)
                   modelgridindex, element, grid::get_elements_uppermost_ion(modelgridindex, element));
 
         #if (!NO_LUT_PHOTOION)
-          for (int ion = 0; ion <= grid::get_elements_uppermost_ion(modelgridindex, element); ion++)
-          {
-            //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*get_nelements()*get_max_nions()+element*get_max_nions()+ion]);
-            printout("element %d, ion %d, gammaionest %g\n", element, ion, globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() + ion]);
-          }
+        for (int ion = 0; ion <= grid::get_elements_uppermost_ion(modelgridindex, element); ion++)
+        {
+          //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*get_nelements()*get_max_nions()+element*get_max_nions()+ion]);
+          printout("element %d, ion %d, gammaionest %g\n", element, ion, globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() + ion]);
+        }
         #endif
       }
 #     endif
@@ -1663,7 +1672,6 @@ double calculate_populations(const int modelgridindex)
       nne_lo = gsl_root_fsolver_x_lower(solver);
       nne_hi = gsl_root_fsolver_x_upper(solver);
       status = gsl_root_test_interval(nne_lo, nne_hi, 0, fractional_accuracy);
-      //if (first_nonempty_cell == -1000) printout("[debug] update_grid:   %d [%g, %g] %g %g\n",iter,x_lo,x_hi,x_0,x_hi-x_lo);
     }
     while (status == GSL_CONTINUE && iter < maxit);
 
@@ -1673,7 +1681,6 @@ double calculate_populations(const int modelgridindex)
       nne = MINPOP;
 
     grid::set_nne(modelgridindex,nne);
-    //globals::cell[modelgridindex].nne = nne;
     if (status == GSL_CONTINUE)
       printout("[warning] calculate_populations: nne did not converge within %d iterations\n",maxit);
     //printout("[debug] update_grid:   status = %s\n",gsl_strerror(status));

@@ -276,7 +276,6 @@ static double alpha_sp_integrand_gsl(double nu, void *voidparas)
   ///x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
 
   ///set contributions from Lyman continuum artificially to zero to overcome it's large opacity
-  //if (exchangepkt_ptr->MA_level == 0) x = 0;
   return x;
 }
 
@@ -296,7 +295,6 @@ static double alpha_sp_E_integrand_gsl(double nu, void *voidparas)
   ///x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
 
   ///set contributions from Lyman continuum artificially to zero to overcome it's large opacity
-  //if (exchangepkt_ptr->MA_level == 0) x = 0;
   return x;
 }
 
@@ -362,9 +360,6 @@ static double gammacorr_integrand_gsl(double nu, void *voidparas)
     /// Precalculation for T_e=T_R and W=1
     const double x = sigma_bf * (1-nu_edge/nu) * radfield::dbb(nu,T,1) * (1-exp(-HOVERKB*nu/T));
 
-    /// Information about the current level is passed via the global variable
-    /// mastate[tid] and its child values element, ion, level
-    /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
     /// Precalculation for a (T_R,T_e)-grid, but still W is assumed to be 1.
     /// The radfield part can be corrected later because of its linear dependence.
     /// But not the W in the stimulated correction term!
@@ -403,57 +398,6 @@ static double gammacorr_integrand_gsl(double nu, void *voidparas)
   return x;
 }*/
 
-/*double ffheating_integrand_gsl(double nu, void *paras)
-/// Integrand to calculate the free-free heating rate using gsl integrators.
-{
-  double ionstagepop(int cellnumber, int element, int ion);
-
-  double nne;//,nnion;//,nnlevel;
-  double g_ff,kappa_ff;
-  double T_R,T_D,W,W_D;
-  double x;
-
-  int element,ion;
-  int nions,Z;
-
-  float T_e = ((gslintegration_ffheatingparas *) paras)->T_e;
-  int cellnumber = ((gslintegration_ffheatingparas *) paras)->cellnumber;
-
-  nne = globals::cell[cellnumber].nne;
-  T_R = globals::cell[cellnumber].T_R;
-//  T_D = globals::cell[cellnumber].T_D;
-  W = globals::cell[cellnumber].W;
-//  W_D = globals::cell[cellnumber].W_D;
-
-  g_ff = 1;
-  kappa_ff = 0.;
-  for (element = 0; element < get_nelements(); element++)
-  {
-    //Z = get_element(element); ///atomic number
-    nions = get_nions(element);
-    for (ion = 0; ion < nions; ion++)
-    {
-      /// Z is ionic charge in the following formula
-      Z = get_ionstage(element,ion)-1;
-      if (get_ionstage(element,ion) > 1)
-      {
-        //nnion = ionstagepop(cellnumber,element,ion);
-        //kappa_ff += 3.69255e8 * pow(Z,2) / sqrt(T_e) * pow(nu,-3) * g_ff * nne * nnion * (1-exp(-HOVERKB*nu/T_e));
-
-        kappa_ff += pow(Z,2) * ionstagepop(cellnumber,element,ion);
-
-        //kappa_ff += ionstagepop(cellnumber,element,ion)*(1-exp(-HOVERKB*nu/T_e))*pow(Z,2)*nne* pow(nu,-3) ;
-      }
-    }
-  }
-  kappa_ff *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * g_ff * nne * (1-exp(-HOVERKB*nu/T_e));
-//  if (nu <= nu_rfcut)
-    x = kappa_ff * radfield::dbb(nu,T_R,W);
-//  else
-//    x = kappa_ff * radfield::dbb(nu,T_D,W_D);
-
-  return x;
-}*/
 
 static double bfcooling_integrand_gsl(double nu, void *voidparas)
 /// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
@@ -516,7 +460,6 @@ static double bfcooling_integrand_gsl(double nu, void *voidparas)
   double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
 
   //double nu_edge = (epsilon(element,ion+1,0)-epsilon(element,ion,level))/H;
-  //printout("[debug] alpha_sp_integrand: element, ion, level: %d, %d, %d\n",exchangepkt_ptr->MA_element,exchangepkt_ptr->MA_ion,exchangepkt_ptr->MA_level);
   /// Information about the current level is passed via the global variable
   /// mastate[tid] and its child values element, ion, level
   /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
@@ -526,7 +469,6 @@ static double bfcooling_integrand_gsl(double nu, void *voidparas)
   ///x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
 
   ///set contributions from Lyman continuum artificially to zero to overcome it's large opacity
-  //if (exchangepkt_ptr->MA_level == 0) x = 0;
   return x;
 }*/
 

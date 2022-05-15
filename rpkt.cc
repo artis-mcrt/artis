@@ -373,17 +373,13 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
       if (kappa_bf_sum > zrand2 * kappa_bf_inrest)
       {
         const double nu_edge = globals::allcont[i].nu_edge;
-        //if (nu < nu_edge) printout("does this ever happen?\n");
         const int element = globals::allcont[i].element;
         const int ion = globals::allcont[i].ion;
         const int level = globals::allcont[i].level;
         const int phixstargetindex = globals::allcont[i].phixstargetindex;
 
-        if (false)
-        {
-          printout("[debug] rpkt_event:   bound-free: element %d, ion+1 %d, upper %d, ion %d, lower %d\n", element, ion + 1, 0, ion, level);
-          printout("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n", nu_edge, nu);
-        }
+        // printout("[debug] rpkt_event:   bound-free: element %d, ion+1 %d, upper %d, ion %d, lower %d\n", element, ion + 1, 0, ion, level);
+        // printout("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n", nu_edge, nu);
 
         if (TRACK_ION_STATS)
         {
@@ -411,9 +407,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
           pkt_ptr->mastate.ion     = ion + 1;
           const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
           pkt_ptr->mastate.level   = upper;
-          // pkt_ptr->mastate.nnlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
           pkt_ptr->mastate.activatingline = -99;
-          //if (element == 6) globals::cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
         }
         /// or to the thermal pool
         else
@@ -424,10 +418,6 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
           pkt_ptr->interactions += 1;
           pkt_ptr->last_event = 4;
           pkt_ptr->type = TYPE_KPKT;
-          #ifndef FORCE_LTE
-            //kbfabs[pkt_ptr->where] += pkt_ptr->e_cmf;
-          #endif
-          //if (element == 6) globals::cell[pkt_ptr->where].bfabs[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
         }
         break;
       }
@@ -1177,9 +1167,10 @@ static double calculate_kappa_ff(const int modelgridindex, const double nu)
 
 
 __host__ __device__
-void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, double *kappa_bf)
+double calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu)
 // bound-free opacity
 {
+  double kappa_bf_sum = 0.;
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
   for (int gphixsindex = 0; gphixsindex < globals::nbfcontinua_ground; gphixsindex++)
   {
@@ -1225,7 +1216,9 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
         const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
         double corrfactor = 1 - stimfactor; // photoionisation minus stimulated recombination
         if (corrfactor < 0)
+        {
           corrfactor = 0.;
+        }
         // const double corrfactor = 1.; // no subtraction of stimulated recombination
 #endif
 
@@ -1254,8 +1247,8 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
           abort();
         }
 
-        *kappa_bf = *kappa_bf + kappa_bf_contr;
-        globals::phixslist[tid].kappa_bf_sum[i] = *kappa_bf;
+        kappa_bf_sum += kappa_bf_contr;
+        globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
       }
       else if (nu < nu_edge) // nu < nu_edge
       {
@@ -1269,7 +1262,7 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
         // a slight red-shifting is ignored
         for (int j = i; j < globals::nbfcontinua; j++)
         {
-          globals::phixslist[tid].kappa_bf_sum[j] = *kappa_bf;
+          globals::phixslist[tid].kappa_bf_sum[j] = kappa_bf_sum;
           #if (DETAILED_BF_ESTIMATORS_ON)
           globals::phixslist[tid].gamma_contr[j] = 0.;
           #endif
@@ -1279,7 +1272,7 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
       else
       {
         // ignore this particular process but continue through the list
-        globals::phixslist[tid].kappa_bf_sum[i] = *kappa_bf;
+        globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
         #if (DETAILED_BF_ESTIMATORS_ON)
         globals::phixslist[tid].gamma_contr[i] = 0.;
         #endif
@@ -1287,7 +1280,7 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
     }
     else // no element present or not an important level
     {
-      globals::phixslist[tid].kappa_bf_sum[i] = *kappa_bf;
+      globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
       #if (DETAILED_BF_ESTIMATORS_ON)
       globals::phixslist[tid].gamma_contr[i] = 0.;
       #endif
@@ -1300,6 +1293,7 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
       #endif
     }
   }
+  return kappa_bf_sum;
 }
 
 
@@ -1341,7 +1335,7 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, rpkt_cont_opacity_struc
       kappa_ffheating = kappa_ff;
 
       /// Third contribution: bound-free absorption
-      calculate_kappa_bf_gammacontr(modelgridindex, nu_cmf, &kappa_bf);
+      kappa_bf = calculate_kappa_bf_gammacontr(modelgridindex, nu_cmf);
 
       // const double pkt_lambda = 1e8 * CLIGHT / nu_cmf;
       // if (pkt_lambda < 4000)
