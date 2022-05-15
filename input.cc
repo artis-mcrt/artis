@@ -1575,7 +1575,9 @@ static void setup_phixs_list(void)
   printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
            globals::nbfcontinua * (sizeof(fullphixslist_t)) / 1024. / 1024.);
 
+#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
   int groundcontindex = 0;
+#endif
   int allcontindex = 0;
   for (int element = 0; element < get_nelements(); element++)
   {
@@ -1584,27 +1586,7 @@ static void setup_phixs_list(void)
     {
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
       const int nlevels_groundterm = get_nlevels_groundterm(element, ion);
-      for (int level = 0; level < nlevels_groundterm; level++)
-      {
-        const int nphixstargets = get_nphixstargets(element, ion, level);
-        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
-        {
-          // const int upperlevel = get_phixsupperlevel(element, ion, level, 0);
-          // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
-          const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
-          const double nu_edge = E_threshold / H;
-
-          assert_always(groundcontindex < globals::nbfcontinua_ground);
-          globals::groundcont[groundcontindex].element = element;
-          globals::groundcont[groundcontindex].ion = ion;
-          globals::groundcont[groundcontindex].level = level;
-          globals::groundcont[groundcontindex].nu_edge = nu_edge;
-          globals::groundcont[groundcontindex].phixstargetindex = phixstargetindex;
-          groundcontindex++;
-        }
-      }
 #endif
-
       const int nlevels = get_ionisinglevels(element, ion);
       for (int level = 0; level < nlevels; level++)
       {
@@ -1615,6 +1597,19 @@ static void setup_phixs_list(void)
           // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
           const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
           const double nu_edge = E_threshold / H;
+
+#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
+          if (level < nlevels_groundterm)
+          {
+            assert_always(groundcontindex < globals::nbfcontinua_ground);
+            globals::groundcont[groundcontindex].element = element;
+            globals::groundcont[groundcontindex].ion = ion;
+            globals::groundcont[groundcontindex].level = level;
+            globals::groundcont[groundcontindex].nu_edge = nu_edge;
+            globals::groundcont[groundcontindex].phixstargetindex = phixstargetindex;
+            groundcontindex++;
+          }
+#endif
 
           assert_always(allcontindex < globals::nbfcontinua);
           globals::allcont[allcontindex].nu_edge = nu_edge;
