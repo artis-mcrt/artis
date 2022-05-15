@@ -305,11 +305,8 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
 
   /// continuum process happens. select due to its probabilities sigma/kappa_cont, kappa_ff/kappa_cont, kappa_bf/kappa_cont
   const double zrand = gsl_rng_uniform(rng);
-  if (false)
-  {
-    printout("[debug] rpkt_event:   r-pkt undergoes a continuum transition\n");
-    printout("[debug] rpkt_event:   zrand*kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n", zrand * kappa_cont, sigma, kappa_ff, kappa_bf);
-  }
+  printout("[debug] rpkt_event:   r-pkt undergoes a continuum transition\n");
+  printout("[debug] rpkt_event:   zrand*kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n", zrand * kappa_cont, sigma, kappa_ff, kappa_bf);
 
   if (zrand * kappa_cont < sigma)
   {

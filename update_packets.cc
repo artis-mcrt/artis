@@ -386,34 +386,3 @@ void update_packets(const int my_rank, const int nts, PKT *packets)
            time(NULL) - time_update_packets_start);
 }
 
-
-/*static int compare_packets_byposition(const void *p1, const void *p2)
-/// Helper function to sort the phixslist by ascending threshold frequency.
-{
-  const PKT *a1 = (PKT *)(p1);
-  const PKT *a2 = (PKT *)(p2);
-
-  int cell_diff = a1->where - a2->where;
-  if (cell_diff < 0)
-    return -1;
-  else if (cell_diff > 0)
-    return 1;
-  else
-    return 0;
-}
-
-
-static int compare_packets_bymodelgridposition(const void *p1, const void *p2)
-/// Helper function to sort the phixslist by ascending threshold frequency.
-{
-  const PKT *a1 = (PKT *)(p1);
-  const PKT *a2 = (PKT *)(p2);
-
-  int mgi_diff = grid::get_cell_modelgridindex(a1->where) - grid::get_cell_modelgridindex(a2->where);
-  if (mgi_diff < 0)
-    return -1;
-  else if (mgi_diff > 0)
-    return 1;
-  else
-    return 0;
-}*/

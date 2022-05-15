@@ -1296,9 +1296,6 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   const double epsrelwarning = 1e-1;
   const double epsabs = 0.;
 
-  // const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-  // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
-
   const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
