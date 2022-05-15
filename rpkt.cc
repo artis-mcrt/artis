@@ -293,6 +293,39 @@ static double get_event(
 }
 
 
+// todo: place next to ratecoeff.cc get_index_from_cumulativesums()
+static int upper_bound(double arr[], int arraylen, double searchval)
+// return the index of arr such that arr[index] >= searchval, or arraylen-1
+// if searchval > arr[arraylen-1]
+{
+  int low = 0;
+  int high = arraylen;
+
+  while (low < high)
+  {
+    // Find the middle index
+    const int mid = low + (high - low) / 2;
+
+    if (searchval >= arr[mid])
+    {
+      low = mid + 1;
+    }
+    else
+    {
+      high = mid;
+    }
+  }
+
+  // if searchval is greater than arr[arraylen - 1]
+  if (low < arraylen && arr[low] <= searchval)
+  {
+     low++;
+  }
+
+  return low;
+}
+
+
 __host__ __device__
 static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rpkt_cont_thisthread, const double dopplerfactor, int modelgridindex)
 {
@@ -362,65 +395,58 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
 
     /// Determine in which continuum the bf-absorption occurs
     const double zrand2 = gsl_rng_uniform(rng);
-    double kappa_bf_sum = 0.;
-    int i;
-    for (i = 0; i < globals::nbfcontinua; i++)
+    const double kappa_bf_rand = zrand2 * kappa_bf_inrest;
+
+    const int allcontindex = upper_bound(globals::phixslist[tid].kappa_bf_sum, globals::nbfcontinua, kappa_bf_rand);
+    assert_always(globals::phixslist[tid].kappa_bf_sum[globals::nbfcontinua - 1] == kappa_bf_inrest);
+
+    const double nu_edge = globals::allcont[allcontindex].nu_edge;
+    const int element = globals::allcont[allcontindex].element;
+    const int ion = globals::allcont[allcontindex].ion;
+    const int level = globals::allcont[allcontindex].level;
+    const int phixstargetindex = globals::allcont[allcontindex].phixstargetindex;
+
+    // printout("[debug] rpkt_event:   bound-free: element %d, ion+1 %d, upper %d, ion %d, lower %d\n", element, ion + 1, 0, ion, level);
+    // printout("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n", nu_edge, nu);
+
+    if (TRACK_ION_STATS)
     {
-      kappa_bf_sum = globals::phixslist[tid].kappa_bf_sum[i];
-      if (kappa_bf_sum > zrand2 * kappa_bf_inrest)
-      {
-        const double nu_edge = globals::allcont[i].nu_edge;
-        const int element = globals::allcont[i].element;
-        const int ion = globals::allcont[i].ion;
-        const int level = globals::allcont[i].level;
-        const int phixstargetindex = globals::allcont[i].phixstargetindex;
-
-        // printout("[debug] rpkt_event:   bound-free: element %d, ion+1 %d, upper %d, ion %d, lower %d\n", element, ion + 1, 0, ion, level);
-        // printout("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n", nu_edge, nu);
-
-        if (TRACK_ION_STATS)
-        {
-          stats::increment_ion_stats_contabsorption(pkt_ptr, modelgridindex, element, ion);
-        }
-
-        /// and decide whether we go to ionisation energy
-        const double zrand3 = gsl_rng_uniform(rng);
-        if (zrand3 < nu_edge / nu)
-        {
-          stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_BF);
-          pkt_ptr->interactions += 1;
-          pkt_ptr->last_event = 3;
-
-          if (TRACK_ION_STATS)
-          {
-            stats::increment_ion_stats(modelgridindex, element, ion + 1, stats::ION_MACROATOM_ENERGYIN_PHOTOION, pkt_ptr->e_cmf);
-          }
-
-          pkt_ptr->type = TYPE_MA;
-          #ifndef FORCE_LTE
-            //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
-          #endif
-          pkt_ptr->mastate.element = element;
-          pkt_ptr->mastate.ion     = ion + 1;
-          const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-          pkt_ptr->mastate.level   = upper;
-          pkt_ptr->mastate.activatingline = -99;
-        }
-        /// or to the thermal pool
-        else
-        {
-          /// transform to k-pkt
-          // printout("[debug] rpkt_event:   bound-free: transform to k-pkt\n");
-          stats::increment(stats::COUNTER_K_STAT_FROM_BF);
-          pkt_ptr->interactions += 1;
-          pkt_ptr->last_event = 4;
-          pkt_ptr->type = TYPE_KPKT;
-        }
-        break;
-      }
+      stats::increment_ion_stats_contabsorption(pkt_ptr, modelgridindex, element, ion);
     }
 
-    if (i >= globals::nbfcontinua) printout("[warning] rpkt_event: problem in selecting bf-continuum zrand2 %g, kappa_bf_sum %g, kappa_bf_inrest %g\n",zrand,kappa_bf_sum,kappa_bf_inrest);
+    /// and decide whether we go to ionisation energy
+    const double zrand3 = gsl_rng_uniform(rng);
+    if (zrand3 < nu_edge / nu)
+    {
+      stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_BF);
+      pkt_ptr->interactions += 1;
+      pkt_ptr->last_event = 3;
+
+      if (TRACK_ION_STATS)
+      {
+        stats::increment_ion_stats(modelgridindex, element, ion + 1, stats::ION_MACROATOM_ENERGYIN_PHOTOION, pkt_ptr->e_cmf);
+      }
+
+      pkt_ptr->type = TYPE_MA;
+      #ifndef FORCE_LTE
+        //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
+      #endif
+      pkt_ptr->mastate.element = element;
+      pkt_ptr->mastate.ion     = ion + 1;
+      const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+      pkt_ptr->mastate.level   = upper;
+      pkt_ptr->mastate.activatingline = -99;
+    }
+    /// or to the thermal pool
+    else
+    {
+      /// transform to k-pkt
+      // printout("[debug] rpkt_event:   bound-free: transform to k-pkt\n");
+      stats::increment(stats::COUNTER_K_STAT_FROM_BF);
+      pkt_ptr->interactions += 1;
+      pkt_ptr->last_event = 4;
+      pkt_ptr->type = TYPE_KPKT;
+    }
   }
   else
   {
