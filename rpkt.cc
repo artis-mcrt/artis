@@ -369,7 +369,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
     int i;
     for (i = 0; i < globals::nbfcontinua; i++)
     {
-      kappa_bf_sum += globals::phixslist[tid].kappa_bf_contr[i];
+      kappa_bf_sum = globals::phixslist[tid].kappa_bf_sum[i];
       if (kappa_bf_sum > zrand2 * kappa_bf_inrest)
       {
         const double nu_edge = globals::allcont[i].nu_edge;
@@ -1254,8 +1254,8 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
           abort();
         }
 
-        globals::phixslist[tid].kappa_bf_contr[i] = kappa_bf_contr;
         *kappa_bf = *kappa_bf + kappa_bf_contr;
+        globals::phixslist[tid].kappa_bf_sum[i] = *kappa_bf;
       }
       else if (nu < nu_edge) // nu < nu_edge
       {
@@ -1269,7 +1269,7 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
         // a slight red-shifting is ignored
         for (int j = i; j < globals::nbfcontinua; j++)
         {
-          globals::phixslist[tid].kappa_bf_contr[j] = 0.;
+          globals::phixslist[tid].kappa_bf_sum[j] = *kappa_bf;
           #if (DETAILED_BF_ESTIMATORS_ON)
           globals::phixslist[tid].gamma_contr[j] = 0.;
           #endif
@@ -1279,7 +1279,7 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
       else
       {
         // ignore this particular process but continue through the list
-        globals::phixslist[tid].kappa_bf_contr[i] = 0.;
+        globals::phixslist[tid].kappa_bf_sum[i] = *kappa_bf;
         #if (DETAILED_BF_ESTIMATORS_ON)
         globals::phixslist[tid].gamma_contr[i] = 0.;
         #endif
@@ -1287,7 +1287,7 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
     }
     else // no element present or not an important level
     {
-      globals::phixslist[tid].kappa_bf_contr[i] = 0.;
+      globals::phixslist[tid].kappa_bf_sum[i] = *kappa_bf;
       #if (DETAILED_BF_ESTIMATORS_ON)
       globals::phixslist[tid].gamma_contr[i] = 0.;
       #endif

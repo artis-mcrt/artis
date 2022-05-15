@@ -1545,8 +1545,8 @@ static void setup_phixs_list(void)
     }
   #endif
 
-    globals::phixslist[itid].kappa_bf_contr = (double *) malloc(globals::nbfcontinua * sizeof(double));
-    assert_always(globals::phixslist[itid].kappa_bf_contr != NULL);
+    globals::phixslist[itid].kappa_bf_sum = (double *) malloc(globals::nbfcontinua * sizeof(double));
+    assert_always(globals::phixslist[itid].kappa_bf_sum != NULL);
 
     #if (DETAILED_BF_ESTIMATORS_ON)
     globals::phixslist[itid].gamma_contr = (double *) malloc(globals::nbfcontinua * sizeof(double));
@@ -1555,7 +1555,7 @@ static void setup_phixs_list(void)
 
     for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++)
     {
-      globals::phixslist[itid].kappa_bf_contr[allcontindex] = 0.;
+      globals::phixslist[itid].kappa_bf_sum[allcontindex] = 0.;
 
       #if (DETAILED_BF_ESTIMATORS_ON)
       globals::phixslist[itid].gamma_contr[allcontindex] = 0.;

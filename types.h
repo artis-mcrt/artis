@@ -104,7 +104,7 @@ typedef struct phixslist_t
    #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
   double *groundcont_gamma_contr;
   #endif
-  double *kappa_bf_contr;
+  double *kappa_bf_sum;
 #if (DETAILED_BF_ESTIMATORS_ON)
   double *gamma_contr;
 #endif
