@@ -359,6 +359,12 @@ void init(int my_rank, int ndo, int ndo_nonempty)
 
   printout("There are %d lines with detailed Jblue_lu estimators.\n", detailed_linecount);
 
+  printout("DETAILED_BF_ESTIMATORS %s", DETAILED_BF_ESTIMATORS_ON ? "ON" : "OFF\n");
+  if (DETAILED_BF_ESTIMATORS_ON)
+  {
+    printout(" from timestep %d\n", DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP);
+  }
+
   if (MULTIBIN_RADFIELD_MODEL_ON)
   {
     printout("The multibin radiation field estimators are being used instead of the whole-spectrum fit from timestep %d onwards.\n", FIRST_NLTE_RADFIELD_TIMESTEP);
