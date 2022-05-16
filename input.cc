@@ -921,7 +921,7 @@ static void read_atomicdata_files(void)
     globals::elements[element].nions = nions;
     globals::elements[element].abundance = abundance;       /// abundances are expected to be given by mass
     globals::elements[element].initstablemeannucmass = mass_amu * MH;
-    globals::includedions += nions;
+    increase_includedions(nions);
 
     /// Initialize the elements ionlist
     if ((globals::elements[element].ions = (ionlist_entry *) calloc(nions, sizeof(ionlist_entry))) == NULL)
@@ -1655,11 +1655,10 @@ static void read_atomicdata(void)
 /// Subroutine to read in input parameters.
 {
   ///new atomic data scheme by readin of adata////////////////////////////////////////////////////////////////////////
-  globals::includedions = 0;
 
   read_atomicdata_files();
 
-  printout("included ions %d\n", globals::includedions);
+  printout("included ions %d\n", get_includedions());
 
   /// INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
   ///======================================================
@@ -1714,7 +1713,7 @@ static void read_atomicdata(void)
   assert_always(includedphotoiontransitions == globals::nbfcontinua);
 
   printout("[input.c]   in total %d ions, %d levels (%d ionising), %d lines, %d photoionisation transitions\n",
-           globals::includedions, includedlevels, includedionisinglevels, globals::nlines, globals::nbfcontinua);
+           get_includedions(), includedlevels, includedionisinglevels, globals::nlines, globals::nbfcontinua);
 
   write_bflist_file(globals::nbfcontinua);
 

@@ -87,7 +87,6 @@ namespace globals
   /// ATOMIC DATA
 
   __managed__ int nlines;
-  __managed__ int includedions;
   __managed__ elementlist_entry *elements = NULL;
   __managed__ linelist_entry *linelist = NULL;
   __managed__ bflist_t *bflist = NULL;

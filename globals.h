@@ -77,7 +77,6 @@ namespace globals
   extern __managed__ int opacity_case;
 
   extern __managed__ int nlines;
-  extern __managed__ int includedions;
   extern __managed__ elementlist_entry *elements;
   extern __managed__ linelist_entry *linelist;
   extern __managed__ bflist_t *bflist;

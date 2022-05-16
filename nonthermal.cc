@@ -479,7 +479,7 @@ static void zero_all_effionpot(const int modelgridindex)
   assert_always(nt_solution[modelgridindex].prob_num_auger);
   assert_always(nt_solution[modelgridindex].ionenfrac_num_auger);
 
-  for (int uniqueionindex = 0; uniqueionindex < globals::includedions; uniqueionindex++)
+  for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++)
   {
     nt_solution[modelgridindex].eff_ionpot[uniqueionindex] = 0.;
 
@@ -568,11 +568,11 @@ void init(const int my_rank, const int ndo, const int ndo_nonempty)
 
     if (grid::get_numassociatedcells(modelgridindex) > 0)
     {
-      nt_solution[modelgridindex].eff_ionpot = (float *) calloc(globals::includedions, sizeof(float));
-      nt_solution[modelgridindex].fracdep_ionization_ion = (double *) calloc(globals::includedions, sizeof(double));
+      nt_solution[modelgridindex].eff_ionpot = (float *) calloc(get_includedions(), sizeof(float));
+      nt_solution[modelgridindex].fracdep_ionization_ion = (double *) calloc(get_includedions(), sizeof(double));
 
-      nt_solution[modelgridindex].prob_num_auger = (float *) calloc(globals::includedions * (NT_MAX_AUGER_ELECTRONS + 1), sizeof(float));
-      nt_solution[modelgridindex].ionenfrac_num_auger = (float *) calloc(globals::includedions * (NT_MAX_AUGER_ELECTRONS + 1), sizeof(float));
+      nt_solution[modelgridindex].prob_num_auger = (float *) calloc(get_includedions() * (NT_MAX_AUGER_ELECTRONS + 1), sizeof(float));
+      nt_solution[modelgridindex].ionenfrac_num_auger = (float *) calloc(get_includedions() * (NT_MAX_AUGER_ELECTRONS + 1), sizeof(float));
 
       if (STORE_NT_SPECTRUM)
       {
@@ -2052,7 +2052,7 @@ static void select_nt_ionization(int modelgridindex, int *element, int *lowerion
   // keep subtracting off deposition fractions of ionizations transitions until we hit the right one
   // e.g. if zrand was less than frac_dep_trans1, then use the first transition
   // e.g. if zrand was between frac_dep_trans1 and frac_dep_trans2 then use the second transition, etc
-  for (int allionindex = 0; allionindex < globals::includedions; allionindex++)
+  for (int allionindex = 0; allionindex < get_includedions(); allionindex++)
   {
     frac_deposition_ion_sum += nt_solution[modelgridindex].fracdep_ionization_ion[allionindex];
     if (frac_deposition_ion_sum >= zrand)
@@ -3061,7 +3061,7 @@ void write_restart_data(FILE *gridsave_file)
                 nt_solution[modelgridindex].frac_ionization,
                 nt_solution[modelgridindex].frac_excitation);
 
-        for (int uniqueionindex = 0; uniqueionindex < globals::includedions; uniqueionindex++)
+        for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++)
         {
           fprintf(gridsave_file, "%la ", nt_solution[modelgridindex].fracdep_ionization_ion[uniqueionindex]);
           fprintf(gridsave_file, "%a ", nt_solution[modelgridindex].eff_ionpot[uniqueionindex]);
@@ -3150,7 +3150,7 @@ void read_restart_data(FILE *gridsave_file)
           abort();
         }
 
-        for (int uniqueionindex = 0; uniqueionindex < globals::includedions; uniqueionindex++)
+        for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++)
         {
           assert_always(fscanf(gridsave_file, "%la ", &nt_solution[modelgridindex].fracdep_ionization_ion[uniqueionindex]) == 1);
           assert_always(fscanf(gridsave_file, "%a ", &nt_solution[modelgridindex].eff_ionpot[uniqueionindex]) == 1);
@@ -3219,11 +3219,11 @@ void nt_MPI_Bcast(const int modelgridindex, const int root)
     MPI_Bcast(&nt_solution[modelgridindex].frac_ionization, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
     MPI_Bcast(&nt_solution[modelgridindex].frac_excitation, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
 
-    MPI_Bcast(nt_solution[modelgridindex].fracdep_ionization_ion, globals::includedions, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    MPI_Bcast(nt_solution[modelgridindex].eff_ionpot, globals::includedions, MPI_FLOAT, root, MPI_COMM_WORLD);
+    MPI_Bcast(nt_solution[modelgridindex].fracdep_ionization_ion, get_includedions(), MPI_DOUBLE, root, MPI_COMM_WORLD);
+    MPI_Bcast(nt_solution[modelgridindex].eff_ionpot, get_includedions(), MPI_FLOAT, root, MPI_COMM_WORLD);
 
-    MPI_Bcast(nt_solution[modelgridindex].prob_num_auger, globals::includedions * (NT_MAX_AUGER_ELECTRONS + 1), MPI_FLOAT, root, MPI_COMM_WORLD);
-    MPI_Bcast(nt_solution[modelgridindex].ionenfrac_num_auger, globals::includedions * (NT_MAX_AUGER_ELECTRONS + 1), MPI_FLOAT, root, MPI_COMM_WORLD);
+    MPI_Bcast(nt_solution[modelgridindex].prob_num_auger, get_includedions() * (NT_MAX_AUGER_ELECTRONS + 1), MPI_FLOAT, root, MPI_COMM_WORLD);
+    MPI_Bcast(nt_solution[modelgridindex].ionenfrac_num_auger, get_includedions() * (NT_MAX_AUGER_ELECTRONS + 1), MPI_FLOAT, root, MPI_COMM_WORLD);
 
     // communicate NT excitations
     const int frac_excitations_list_size_old = nt_solution[modelgridindex].frac_excitations_list_size;

@@ -15,7 +15,7 @@ namespace stats {
   {
     if (TRACK_ION_STATS)
     {
-      ionstats = (double *) malloc(grid::get_npts_model() * globals::includedions * ION_STAT_COUNT * sizeof(double));
+      ionstats = (double *) malloc(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT * sizeof(double));
     }
     eventstats = (int *) malloc(COUNTER_COUNT * sizeof(int));
   }
@@ -43,7 +43,7 @@ namespace stats {
     assert_testmodeonly(ionstattype < ION_STAT_COUNT);
 
     const int uniqueionindex = get_uniqueionindex(element, ion);
-    safeadd(ionstats[modelgridindex * globals::includedions * ION_STAT_COUNT + uniqueionindex * ION_STAT_COUNT + ionstattype], increment);
+    safeadd(ionstats[modelgridindex * get_includedions() * ION_STAT_COUNT + uniqueionindex * ION_STAT_COUNT + ionstattype], increment);
   }
 
 
@@ -122,7 +122,7 @@ namespace stats {
     assert_always(ion < get_nions(element));
     assert_always(ionstattype < ION_STAT_COUNT);
     const int uniqueionindex = get_uniqueionindex(element, ion);
-    return ionstats[modelgridindex * globals::includedions * ION_STAT_COUNT + uniqueionindex * ION_STAT_COUNT + ionstattype];
+    return ionstats[modelgridindex * get_includedions() * ION_STAT_COUNT + uniqueionindex * ION_STAT_COUNT + ionstattype];
   }
 
 
@@ -131,7 +131,7 @@ namespace stats {
     assert_always(ion < get_nions(element));
     assert_always(ionstattype < ION_STAT_COUNT);
     const int uniqueionindex = get_uniqueionindex(element, ion);
-    ionstats[modelgridindex * globals::includedions * ION_STAT_COUNT + uniqueionindex * ION_STAT_COUNT + ionstattype] = newvalue;
+    ionstats[modelgridindex * get_includedions() * ION_STAT_COUNT + uniqueionindex * ION_STAT_COUNT + ionstattype] = newvalue;
   }
 
 
@@ -264,7 +264,7 @@ namespace stats {
   void reduce_estimators(void)
   {
     #ifdef MPI_ON
-    MPI_Allreduce(MPI_IN_PLACE, &stats::ionstats, grid::get_npts_model() * globals::includedions * stats::ION_STAT_COUNT, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &stats::ionstats, grid::get_npts_model() * get_includedions() * stats::ION_STAT_COUNT, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
   }
 }

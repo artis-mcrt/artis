@@ -1007,7 +1007,7 @@ int main(int argc, char** argv)
   /// Initialise the exchange buffer
   /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
   /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
-  mpi_grid_buffer_size = 4 * ((12 + 4 * globals::includedions) * (maxndo) + 1);
+  mpi_grid_buffer_size = 4 * ((12 + 4 * get_includedions()) * (maxndo) + 1);
   printout("reserve mpi_grid_buffer_size %d space for MPI communication buffer\n", mpi_grid_buffer_size);
   //char buffer[mpi_grid_buffer_size];
   mpi_grid_buffer  = (char *) malloc(mpi_grid_buffer_size * sizeof(char));

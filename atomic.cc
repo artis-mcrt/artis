@@ -8,6 +8,7 @@
 __managed__ double last_phixs_nuovernuedge = -1; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 __managed__ int nelements = 0;  // total number of elements included in the simulation
 __managed__ int maxnions = 0;  // highest number of ions for any element
+__managed__ int includedions = 0; // number of ions of any element
 int phixs_file_version = -1; // 1 for phixsdata.txt (classic) and 2 for phixsdata_v2.txt
 
 __host__ __device__
@@ -213,13 +214,30 @@ int get_elementindex(int Z)
   {
     //printf("i %d, Z %d, elements[i].anumber %d\n",i,Z,elements[i].anumber);
     if (Z == globals::elements[i].anumber)
+    {
       return i;
+    }
   }
 
   //printout("[debug] get_elementindex: element Z=%d was not found in atomic data ... skip readin of cross sections for this element\n",Z);
   //printout("[fatal] get_elementindex: element Z=%d was not found in atomic data ... abort\n");
   //abort();;
   return -100;
+}
+
+
+__host__ __device__
+void increase_includedions(int nions)
+{
+  includedions += nions;
+}
+
+
+__host__ __device__
+int get_includedions(void)
+// returns the number of ions of all elements combined
+{
+  return includedions;
 }
 
 
@@ -320,7 +338,7 @@ int get_uniqueionindex(const int element, const int ion)
   index += ion;
 
   assert_testmodeonly(index == globals::elements[element].ions[ion].uniqueionindex);
-  assert_testmodeonly(index < globals::includedions);
+  assert_testmodeonly(index < includedions);
   return index;
 }
 
