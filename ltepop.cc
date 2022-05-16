@@ -289,76 +289,6 @@ double calculate_ltepartfunct(int element, int ion, double T)
 */
 
 
-double calculate_partfunct(int element, int ion, int modelgridindex)
-/// Calculates the partition function for ion=ion of element=element in
-/// cell modelgridindex
-{
-  assert_testmodeonly(modelgridindex < grid::get_npts_model());
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  double pop_store;
-  //double E_level, E_ground, test;
-
-  //double T_exc = grid::get_TJ(modelgridindex);
-  //double W = 1.;
-
-  //  T_exc = MINTEMP;
-
-/*  if (T_exc <= MINTEMP)
-  {
-    T_exc = grid::get_TR(modelgridindex);
-    W = grid::get_W(modelgridindex);
-  }*/
-  //double T_R = grid::modelgrid[modelgridindex].T_R;
-  //double W = grid::modelgrid[modelgridindex].W;
-  //double T_J = pow(W,1./4.)*T_R;
-  //double oneoverkbtexc = 1/KB/T_exc;
-  //double epsilon_groundlevel = epsilon(element,ion,0);
-
-  int initial = 0;
-  if (get_groundlevelpop(modelgridindex, element, ion) < MINPOP)
-  {
-    //either there reall is none of this ion or this is a first pass through
-    //in either case, we won't have any real nlte_populations so the actual value of
-    //of groundlevelpop for this calculation doesn't matter, so long as it's not zero!
-    pop_store = get_groundlevelpop(modelgridindex, element, ion);
-    initial = 1;
-    grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = 1.0;
-  }
-
-  //printout("groundlevelpop %g\n", get_groundlevelpop(modelgridindex,element,ion));
-
-  double U = 1.;
-
-  const int nlevels = get_nlevels(element, ion);
-  const double groundpop = get_groundlevelpop(modelgridindex, element, ion);
-  for (int level = 1; level < nlevels; level++)
-  {
-    bool skipminpop;
-    const double nn = calculate_exclevelpop_nominpop(modelgridindex, element, ion, level, &skipminpop) / groundpop;
-    // const double nn = calculate_exclevelpop(modelgridindex, element, ion, level) / groundpop;
-    U += nn;
-  }
-  U *= stat_weight(element,ion,0);
-
-  if (!std::isfinite(U))
-  {
-    printout("element %d ion %d\n",element,ion);
-    printout("modelgridindex %d\n",modelgridindex);
-    printout("nlevels %d\n",nlevels);
-    printout("sw %g\n",stat_weight(element,ion,0));
-    //printout("T_exc %g \n",T_exc);
-    abort();
-  }
-
-  if (initial == 1)
-  {
-    //put back the zero, just in case it matters for something
-    grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = pop_store;
-  }
-
-  return U;
-}
 
 
 /*
@@ -418,7 +348,7 @@ double get_groundmultiplet_pop(int modelgridindex, int element, int ion)
   double gmpop = 0.;
   for (int level = 0; level < nlevels_gm; level++)
   {
-    gmpop += calculate_exclevelpop(modelgridindex, element, ion, level);
+    gmpop += get_levelpop(modelgridindex, element, ion, level);
   }
 
   return gmpop;
@@ -504,7 +434,7 @@ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int leve
 
 
 __host__ __device__
-double calculate_exclevelpop_nominpop(int modelgridindex, int element, int ion, int level, bool *skipminpop)
+static double calculate_levelpop_nominpop(int modelgridindex, int element, int ion, int level, bool *skipminpop)
 {
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
@@ -586,12 +516,10 @@ double calculate_exclevelpop_nominpop(int modelgridindex, int element, int ion, 
 
 
 __host__ __device__
-double calculate_exclevelpop(int modelgridindex, int element, int ion, int level)
-/// Calculates the population of a level from either LTE or NLTE information
+double calculate_levelpop(int modelgridindex, int element, int ion, int level)
 {
-
   bool skipminpop = false;
-  double nn = calculate_exclevelpop_nominpop(modelgridindex, element, ion, level, &skipminpop);
+  double nn = calculate_levelpop_nominpop(modelgridindex, element, ion, level, &skipminpop);
   if (!skipminpop && nn < MINPOP)
   {
     if (grid::get_elem_abundance(modelgridindex,element) > 0)
@@ -605,13 +533,27 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
     }
   }
 
-  if (!std::isfinite(nn))
+  return nn;
+}
+
+
+__host__ __device__
+double get_levelpop(int modelgridindex, int element, int ion, int level)
+/// Calculates the population of a level from either LTE or NLTE information
+{
+  double nn = 0.;
+  if (use_cellhist)
   {
-    printout("[fatal] calculate_exclevelpop: level %d of ion %d of element %d has infinite level population %g\n",level,ion,element,nn);
-    printout("[fatal] calculate_exclevelpop: associated ground level has pop %g\n", get_groundlevelpop(modelgridindex, element, ion));
-    printout("[fatal] calculate_exclevelpop: associated ion has pop %g\n", ionstagepop(modelgridindex, element, ion));
-    printout("[fatal] calculate_exclevelpop: associated partition function %g\n",grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
+    assert_always(modelgridindex == globals::cellhistory[tid].cellnumber)
+    nn = globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].population;
   }
+  else
+  {
+    nn = calculate_levelpop(modelgridindex, element, ion, level);
+  }
+
+  assert_testmodeonly(nn >= 0.);
+  assert_testmodeonly(std::isfinite(nn));
 
   return nn;
 }
@@ -668,12 +610,68 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
       const int nlevels = get_nlevels(element,ion);
       for (int level = 1; level < nlevels; level++)
       {
-        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = calculate_exclevelpop(modelgridindex,element,ion,level);
+        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = get_levelpop(modelgridindex,element,ion,level);
         //printout("element %d, ion %d, level %d: population %g\n",element,ion,level,exclevelpop(cellnumber,element,ion,level,T));
       }
     }
   }
 }*/
+
+
+double calculate_partfunct(int element, int ion, int modelgridindex)
+/// Calculates the partition function for ion=ion of element=element in
+/// cell modelgridindex
+{
+  assert_testmodeonly(modelgridindex < grid::get_npts_model());
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  double pop_store;
+  //double E_level, E_ground, test;
+
+  int initial = 0;
+  if (get_groundlevelpop(modelgridindex, element, ion) < MINPOP)
+  {
+    //either there reall is none of this ion or this is a first pass through
+    //in either case, we won't have any real nlte_populations so the actual value of
+    //of groundlevelpop for this calculation doesn't matter, so long as it's not zero!
+    pop_store = get_groundlevelpop(modelgridindex, element, ion);
+    initial = 1;
+    grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = 1.0;
+  }
+
+  //printout("groundlevelpop %g\n", get_groundlevelpop(modelgridindex,element,ion));
+
+  double U = 1.;
+
+  const int nlevels = get_nlevels(element, ion);
+  const double groundpop = get_groundlevelpop(modelgridindex, element, ion);
+  for (int level = 1; level < nlevels; level++)
+  {
+    bool skipminpop;
+    const double nn = calculate_levelpop_nominpop(modelgridindex, element, ion, level, &skipminpop) / groundpop;
+    // const double nn = get_levelpop(modelgridindex, element, ion, level) / groundpop;
+    U += nn;
+  }
+  U *= stat_weight(element,ion,0);
+
+  if (!std::isfinite(U))
+  {
+    printout("element %d ion %d\n",element,ion);
+    printout("modelgridindex %d\n",modelgridindex);
+    printout("nlevels %d\n",nlevels);
+    printout("sw %g\n",stat_weight(element,ion,0));
+    //printout("T_exc %g \n",T_exc);
+    abort();
+  }
+
+  if (initial == 1)
+  {
+    //put back the zero, just in case it matters for something
+    grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = pop_store;
+  }
+
+  return U;
+}
 
 
 __host__ __device__

@@ -1152,7 +1152,7 @@ static double N_e(const int modelgridindex, const double energy)
       for (int lower = 0; lower < nlevels; lower++)
       {
         const int nuptrans = get_nuptrans(element, ion, lower);
-        const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, lower);
+        const double nnlevel = get_levelpop(modelgridindex, element, ion, lower);
         const double epsilon_lower = epsilon(element, ion, lower);
         for (int t = 0; t < nuptrans; t++)
         {
@@ -2077,7 +2077,7 @@ static double ion_ntion_energyrate(int modelgridindex, int element, int lowerion
     // for (int lower = 0; lower < get_nlevels(element, lowerion); lower++)
     // {
     //   const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, lower);
-    //   const double nnlower = calculate_exclevelpop(modelgridindex, element, lowerion, lower);
+    //   const double nnlower = get_levelpop(modelgridindex, element, lowerion, lower);
     //   enrate += nnlower * upperionprobfrac * epsilon_trans;
     // }
     const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);
@@ -2346,7 +2346,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
       {
         const double statweight_lower = stat_weight(element, ion, lower);
         const int nuptrans = get_nuptrans(element, ion, lower);
-        const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, lower);
+        const double nnlevel = get_levelpop(modelgridindex, element, ion, lower);
         const double epsilon_lower = epsilon(element, ion, lower);
 
         for (int t = 0; t < nuptrans; t++)
@@ -2577,7 +2577,7 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
   for (int lower = 0; lower < nlevels; lower++)
   {
     const double statweight_lower = stat_weight(element, ion, lower);
-    const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, lower);
+    const double nnlevel = get_levelpop(modelgridindex, element, ion, lower);
     const double epsilon_lower = epsilon(element, ion, lower);
     const int nuptrans = get_nuptrans(element, ion, lower);
     for (int t = 0; t < nuptrans; t++)

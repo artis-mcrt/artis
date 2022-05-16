@@ -157,8 +157,8 @@ static double get_event(
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
-        const double n_u = calculate_exclevelpop(modelgridindex, element, ion, upper);
-        const double n_l = calculate_exclevelpop(modelgridindex, element, ion, lower);
+        const double n_u = get_levelpop(modelgridindex, element, ion, upper);
+        const double n_l = get_levelpop(modelgridindex, element, ion, lower);
 
         double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * dummypkt_ptr->prop_time;
 
@@ -1219,7 +1219,7 @@ double calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu)
     {
       const double nu_edge = globals::allcont[i].nu_edge;
       const int phixstargetindex = globals::allcont[i].phixstargetindex;
-      const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+      const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
       //printout("i %d, nu_edge %g\n",i,nu_edge);
       const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
@@ -1233,7 +1233,7 @@ double calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu)
         const double corrfactor = 1.; // no subtraction of stimulated recombination
 #else
         const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-        const double nnupperionlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
+        const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
         const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
         const double departure_ratio = nnupperionlevel / nnlevel * nne * sf; // put that to phixslist
         const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
@@ -1265,7 +1265,7 @@ double calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu)
           printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n",i,element,ion,level);
           printout("[fatal] Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
           printout("[fatal] globals::cell[%d].composition[%d].abundance = %g\n",modelgridindex,element,grid::get_elem_abundance(modelgridindex,element));
-          printout("[fatal] nne %g, nnlevel %g, (or %g)\n", grid::get_nne(modelgridindex), nnlevel, calculate_exclevelpop(modelgridindex,element,ion,level));
+          printout("[fatal] nne %g, nnlevel %g, (or %g)\n", grid::get_nne(modelgridindex), nnlevel, get_levelpop(modelgridindex,element,ion,level));
           printout("[fatal] sigma_bf %g, T_e %g, nu %g, nu_edge %g\n",sigma_bf,grid::get_Te(modelgridindex),nu,nu_edge);
           abort();
         }

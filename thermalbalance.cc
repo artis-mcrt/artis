@@ -38,7 +38,7 @@ typedef struct
     /// correction may be evaluated at T_R!
     double bfheatingcoeff = 0.;
 
-    /*double nnlevel = calculate_exclevelpop(cellnumber,element,ion,level);
+    /*double nnlevel = get_levelpop(cellnumber,element,ion,level);
     bfheating = nnlevel * W * interpolate_bfheatingcoeff_below(element,ion,level,T_R);*/
     const int lowerindex = floor(log(T/MINTEMP)/T_step_log);
     if (lowerindex < TABLESIZE - 1)
@@ -207,7 +207,7 @@ static double get_heating_ion_coll_deexc(
 
   for (int level = 0; level < nlevels; level++)
   {
-    const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+    const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
     const double epsilon_level = epsilon(element, ion, level);
     // Collisional heating: deexcitation to same ionization stage
     // ----------------------------------------------------------
@@ -317,7 +317,7 @@ static void calculate_heating_rates(
       const int nbflevels = get_ionisinglevels(element, ion);
       for (int level = 0; level < nbflevels; level++)
       {
-        const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
+        const double nnlevel = get_levelpop(modelgridindex,element,ion,level);
         bfheating += nnlevel * get_bfheatingcoeff(element, ion, level);
       }
     }

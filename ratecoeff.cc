@@ -823,7 +823,7 @@ double calculate_ionrecombcoeff(
       }
       else
       {
-        nnupperlevel = calculate_exclevelpop(modelgridindex, element, lowerion + 1, upper);
+        nnupperlevel = get_levelpop(modelgridindex, element, lowerion + 1, upper);
       }
       nnupperion += nnupperlevel;
     }
@@ -851,7 +851,7 @@ double calculate_ionrecombcoeff(
       }
       else
       {
-        nnupperlevel = calculate_exclevelpop(modelgridindex, element, lowerion + 1, upper);
+        nnupperlevel = get_levelpop(modelgridindex, element, lowerion + 1, upper);
       }
       nnupperlevel_so_far += nnupperlevel;
       for (int lower = 0; lower < get_nlevels(element, lowerion); lower++)
@@ -1311,7 +1311,7 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   intparas.departure_ratio = 0.; // zero the stimulated recomb contribution
 #else
   // stimulated recombination is negative photoionisation
-  const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+  const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
   // if (nnlevel <= 1.1 * MINPOP)
   // {
   //   return 0.;
@@ -1319,7 +1319,7 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   const double nne = grid::get_nne(modelgridindex);
   const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
   const double sf = calculate_sahafact(element, ion, level, upperionlevel, T_e, H * nu_threshold);
-  const double nnupperionlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upperionlevel);
+  const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upperionlevel);
   double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.0; // put that to phixslist
   if (!std::isfinite(departure_ratio))
   {
@@ -1446,7 +1446,7 @@ static int get_nlevels_important(
     }
     else
     {
-      nnlowerlevel = calculate_exclevelpop(modelgridindex, element, ion, lower);
+      nnlowerlevel = get_levelpop(modelgridindex, element, ion, lower);
     }
     nnlevelsum += nnlowerlevel;
     nlevels_important = lower + 1;
@@ -1478,7 +1478,7 @@ double calculate_iongamma_per_gspop(const int modelgridindex, const int element,
   double Col_ion = 0.;
   for (int level = 0; level < nlevels_important; level++)
   {
-    const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+    const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
     const int nphixstargets = get_nphixstargets(element,ion,level);
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
     {
@@ -1487,7 +1487,7 @@ double calculate_iongamma_per_gspop(const int modelgridindex, const int element,
       Gamma += nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
 
       const double epsilon_trans = epsilon(element,ion + 1,upperlevel) - epsilon(element,ion,level);
-      //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
+      //printout("%g %g %g\n", get_levelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
 
       Col_ion += nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
     }
@@ -1537,7 +1537,7 @@ double calculate_iongamma_per_ionpop(
     }
     else
     {
-      nnlowerlevel = calculate_exclevelpop(modelgridindex, element, lowerion, lower);
+      nnlowerlevel = get_levelpop(modelgridindex, element, lowerion, lower);
     }
 
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lower); phixstargetindex++)

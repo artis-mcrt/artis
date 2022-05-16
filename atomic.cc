@@ -50,8 +50,8 @@ double get_tau_sobolev(int modelgridindex, int lineindex, double t_current)
   const int lower = globals::linelist[lineindex].lowerlevelindex;
   const int upper = globals::linelist[lineindex].upperlevelindex;
 
-  const double n_l = calculate_exclevelpop(modelgridindex,element,ion,lower);
-  const double n_u = calculate_exclevelpop(modelgridindex,element,ion,upper);
+  const double n_l = get_levelpop(modelgridindex,element,ion,lower);
+  const double n_u = get_levelpop(modelgridindex,element,ion,upper);
 
   const double nu_trans = (epsilon(element, ion, upper) - epsilon(element, ion, lower)) / H;
   const double A_ul = einstein_spontaneous_emission(lineindex);

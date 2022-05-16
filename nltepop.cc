@@ -1266,7 +1266,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
       {
         for (int level = 0; level < get_nlevels(element,ion+1); level++)
         {
-          upperion_partition += calculate_exclevelpop(modelgridindex,element,ion+1,level);
+          upperion_partition += get_levelpop(modelgridindex,element,ion+1,level);
         }
       }
 
@@ -1421,7 +1421,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
             C = col_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level, epsilon_trans);
             //C=C*1.e-10;
 
-            double upper_renorm = calculate_exclevelpop(modelgridindex,element,ion+1,upper) / upperion_partition;
+            double upper_renorm = get_levelpop(modelgridindex,element,ion+1,upper) / upperion_partition;
             //TODO: would the line below be correct, or is it equal to the above line?
             //double upper_renorm = superlevel_boltzmann(modelgridindex,element,ion+1,upper) / upperion_partition;
             rate_matrix[upper_use*(nlte_size) + upper_use] -= (R + C) * upper_renorm;

@@ -430,6 +430,7 @@ typedef struct chlevels_struct
   double processrates[MA_ACTION_COUNT];
   chphixstargets_struct *chphixstargets;
   double bfheatingcoeff;
+  double population;
 } chlevels_struct;
 
 typedef struct chions_struct

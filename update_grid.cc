@@ -746,9 +746,13 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
       const int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
-        // bool levelhasvalue = false;
+        if (modelgridindex >= 0)
+        {
+          globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = calculate_levelpop(modelgridindex, element, ion, level);
+        }
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
         {
+          // bool levelhasvalue = false;
           // if (globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff >= 0)
           // {
           //   levelhasvalue = true;
@@ -763,27 +767,26 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
         //   nlevels_with_processrates++;
 
         globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC] = -99.;
-        /*
-        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_deexc = -99.;
-        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_recomb = -99.;
-        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_recomb = -99.;
-        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_same = -99.;
-        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_same = -99.;
-        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_lower = -99.;
-        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher = -99.;
 
-        ndowntrans = get_ndowntrans(element, ion, level);
-        nuptrans = get_nuptrans(element, ion, level);
-        for (i = 0; i < ndowntrans; i++)
-        {
-          globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i] = -99.;
-          globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i] = -99.;
-        }
-        for (i = 0; i < nuptrans; i++)
-        {
-          globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i] = -99.;
-        }
-        */
+        // globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_deexc = -99.;
+        // globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_recomb = -99.;
+        // globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_recomb = -99.;
+        // globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_same = -99.;
+        // globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_same = -99.;
+        // globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_lower = -99.;
+        // globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher = -99.;
+        //
+        // ndowntrans = get_ndowntrans(element, ion, level);
+        // nuptrans = get_nuptrans(element, ion, level);
+        // for (i = 0; i < ndowntrans; i++)
+        // {
+        //   globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i] = -99.;
+        //   globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i] = -99.;
+        // }
+        // for (i = 0; i < nuptrans; i++)
+        // {
+        //   globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i] = -99.;
+        // }
         // if (levelhasvalue)
         //   nlevels_with_photoioncoeffs++;
       }
@@ -1879,9 +1882,9 @@ double get_Gamma(int cellnumber, int element, int ion)
 
   for (i = 0; i < nlevels; i++)
   {
-    Gamma += calculate_exclevelpop(cellnumber,element,ion,level) * get_corrphotoioncoeff(element,ion,level,cellnumber);
+    Gamma += get_levelpop(cellnumber,element,ion,level) * get_corrphotoioncoeff(element,ion,level,cellnumber);
   }
-  Gamma /= calculate_exclevelpop(cellnumber,element,ion,0);
+  Gamma /= get_levelpop(cellnumber,element,ion,0);
 
   return Gamma;
 }

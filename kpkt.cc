@@ -38,7 +38,7 @@ static double get_cooling_ion_coll_exc(const int modelgridindex, const int eleme
   /// -----------------------------------
   for (int level = 0; level < nlevels; level++)
   {
-    const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+    const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
     const double epsilon_current = epsilon(element,ion,level);
     const int nuptrans = get_nuptrans(element, ion, level);
     for (int ii = 0; ii < nuptrans; ii++)
@@ -117,7 +117,7 @@ void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates_t *he
         {
           //printout("[debug] do_kpkt: element %d, ion %d, level %d\n",element,ion,level);
           const double epsilon_current = epsilon(element,ion,level);
-          const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+          const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
           //printout("    ionisation possible\n");
           /// ionization to higher ionization stage
           /// -------------------------------------
@@ -137,7 +137,7 @@ void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates_t *he
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
             // const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-            // const double nnupperlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
+            // const double nnupperlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
             const double nnupperion = ionstagepop(modelgridindex,element,ion+1);
 
             const double C_fb_ion_thistarget = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperion * nne;
@@ -213,7 +213,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
   {
     //printout("[debug] do_kpkt: element %d, ion %d, level %d\n",element,ion,level);
     const double epsilon_current = epsilon(element,ion,level);
-    const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+    const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
 
     const int nuptrans = get_nuptrans(element, ion, level);
     if (nuptrans > 0)
@@ -278,7 +278,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
       for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
       {
         // const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-        // const double nnupperlevel = calculate_exclevelpop(modelgridindex,element,ion + 1, upper);
+        // const double nnupperlevel = get_levelpop(modelgridindex,element,ion + 1, upper);
         const double nnupperion = ionstagepop(modelgridindex,element,ion+1);
 
         const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperion * nne;
@@ -758,7 +758,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       assert_testmodeonly(coolinglist[i].ion == ion);
       const int level = coolinglist[i].level;
       const double epsilon_current = epsilon(element, ion, level);
-      const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+      const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
       int upper = -1;
       // excitation to same ionization stage
       const int nuptrans = get_nuptrans(element, ion, level);
