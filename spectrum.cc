@@ -523,15 +523,12 @@ void free_spectra(struct spec *spectra)
 {
   free(spectra->lower_freq);
   free(spectra->delta_freq);
-  for (int n = 0; n < globals::ntstep; n++)
+  free(spectra->fluxalltimesteps);
+  if (spectra->do_emission_res)
   {
-    free(spectra->timesteps[n].flux);
-    if (spectra->do_emission_res)
-    {
-      free(spectra->timesteps[n].absorption);
-      free(spectra->timesteps[n].emission);
-      free(spectra->timesteps[n].trueemission);
-    }
+    free(spectra->absorptionalltimesteps);
+    free(spectra->emissionalltimesteps);
+    free(spectra->trueemissionalltimesteps);
   }
   free(spectra->timesteps);
   free(spectra);
@@ -590,18 +587,32 @@ static void alloc_emissionabsorption_spectra(spec *spectra)
   long mem_usage = 0;
   const int proccount = get_proccount();
   spectra->do_emission_res = true;
+
+  mem_usage += globals::ntstep * globals::nnubins * get_nelements() * get_max_nions() * sizeof(double);
+  spectra->absorptionalltimesteps = (double *) malloc(
+    globals::ntstep * globals::nnubins * get_nelements() * get_max_nions() * sizeof(double));
+
+  mem_usage += 2 * globals::ntstep * globals::nnubins * proccount * sizeof(double);
+  spectra->emissionalltimesteps = (double *) malloc(
+    globals::ntstep * globals::nnubins * proccount * sizeof(double));
+
+  spectra->trueemissionalltimesteps = (double *) malloc(
+    globals::ntstep * globals::nnubins * proccount * sizeof(double));
+
   for (int nts = 0; nts < globals::ntstep; nts++)
   {
     assert_always(spectra->timesteps[nts].absorption == NULL);
     assert_always(spectra->timesteps[nts].emission == NULL);
     assert_always(spectra->timesteps[nts].trueemission == NULL);
 
-    spectra->timesteps[nts].absorption = (double *) malloc(globals::nnubins * get_nelements() * get_max_nions() * sizeof(double));
-    mem_usage += globals::nnubins * get_nelements() * get_max_nions() * sizeof(double);
+    spectra->timesteps[nts].absorption = &spectra->absorptionalltimesteps[
+      nts * globals::nnubins * get_nelements() * get_max_nions()];
 
-    spectra->timesteps[nts].emission = (double *) malloc(globals::nnubins * proccount * sizeof(double));
-    spectra->timesteps[nts].trueemission = (double *) malloc(globals::nnubins * proccount * sizeof(double));
-    mem_usage += 2 * globals::nnubins * proccount * sizeof(double);
+    spectra->timesteps[nts].emission = &spectra->emissionalltimesteps[
+      nts * globals::nnubins * proccount];
+
+    spectra->timesteps[nts].trueemission = &spectra->trueemissionalltimesteps[
+      nts * globals::nnubins * proccount];
 
     assert_always(spectra->timesteps[nts].absorption != NULL);
     assert_always(spectra->timesteps[nts].emission != NULL);
@@ -626,12 +637,12 @@ struct spec *alloc_spectra(const bool do_emission_res)
   mem_usage += globals::ntstep * sizeof(struct timestepspec);
 
   spectra->fluxalltimesteps = (double *) malloc(globals::ntstep * globals::nnubins * sizeof(double));
+  mem_usage += globals::ntstep * globals::nnubins * sizeof(double);
 
   assert_always(globals::nnubins > 0);
   for (int nts = 0; nts < globals::ntstep; nts++)
   {
-    spectra->timesteps[nts].flux = (double *) &spectra->fluxalltimesteps[nts * globals::nnubins];
-    mem_usage += globals::nnubins * sizeof(double);
+    spectra->timesteps[nts].flux = &spectra->fluxalltimesteps[nts * globals::nnubins];
 
     spectra->timesteps[nts].absorption = NULL;
     spectra->timesteps[nts].emission = NULL;

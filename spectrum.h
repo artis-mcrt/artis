@@ -20,6 +20,9 @@ struct spec
   float *lower_freq = NULL;
   float *delta_freq;
   double *fluxalltimesteps = NULL;
+  double *absorptionalltimesteps = NULL;
+  double *emissionalltimesteps = NULL;
+  double *trueemissionalltimesteps = NULL;
   struct timestepspec *timesteps = NULL;
   bool do_emission_res = true;
 };
