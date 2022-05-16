@@ -1393,6 +1393,29 @@ static void setup_cellhistory(void)
         printout("[fatal] input: not enough memory to initialize cellhistory's elementlist ... abort\n");
         abort();
       }
+
+      long chlevelblocksize = 0;
+      long chphixsblocksize = 0;
+      for (int element = 0; element < get_nelements(); element++)
+      {
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions; ion++)
+        {
+          const int nlevels = get_nlevels(element,ion);
+          chlevelblocksize += nlevels * sizeof(chlevels_struct);
+          for (int level = 0; level < nlevels; level++)
+          {
+            const int nphixstargets = get_nphixstargets(element, ion, level);
+            chphixsblocksize += nphixstargets * sizeof(chphixstargets_struct);
+          }
+        }
+      }
+
+      chlevels_struct *chlevel = (chlevels_struct *) malloc(chlevelblocksize);
+      chphixstargets_struct *chphixs = (chphixstargets_struct *) malloc(chphixsblocksize);
+      mem_usage_cellhistory += chlevelblocksize + chphixsblocksize;
+      int alllevelindex = 0;
+      int allphixstargetindex = 0;
       for (int element = 0; element < get_nelements(); element++)
       {
         const int nions = get_nions(element);
@@ -1405,21 +1428,14 @@ static void setup_cellhistory(void)
         for (int ion = 0; ion < nions; ion++)
         {
           const int nlevels = get_nlevels(element,ion);
-          mem_usage_cellhistory += nlevels * sizeof(chlevels_struct);
-          if ((globals::cellhistory[tid].chelements[element].chions[ion].chlevels = (chlevels_struct *) malloc(nlevels * sizeof(chlevels_struct))) == NULL)
-          {
-            printout("[fatal] input: not enough memory to initialize cellhistory's levellist ... abort\n");
-            abort();
-          }
+          globals::cellhistory[tid].chelements[element].chions[ion].chlevels = &chlevel[alllevelindex];
+          alllevelindex += nlevels;
+
           for (int level = 0; level < nlevels; level++)
           {
-            const int nphixstargets = get_nphixstargets(element,ion,level);
-            mem_usage_cellhistory += nphixstargets * sizeof(chphixstargets_struct);
-            if ((globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets = (chphixstargets_struct *) malloc(nphixstargets * sizeof(chphixstargets_struct))) == NULL)
-            {
-              printout("[fatal] input: not enough memory to initialize cellhistory's chphixstargets ... abort\n");
-              abort();
-            }
+            const int nphixstargets = get_nphixstargets(element, ion, level);
+            globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets = &chphixs[allphixstargetindex];
+            allphixstargetindex += nphixstargets;
           }
         }
       }
