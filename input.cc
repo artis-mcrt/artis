@@ -403,7 +403,7 @@ static void read_phixs_data(void)
 
 
 static void read_ion_levels(
-  FILE* adata, const int element, const int ion, const int nions, const int nlevels, int *nlevelsmax,
+  FILE* adata, const int element, const int ion, const int nions, const int nlevels, int nlevelsmax,
   const double energyoffset, const double ionpot)
 {
   for (int level = 0; level < nlevels; level++)
@@ -415,7 +415,7 @@ static void read_ion_levels(
     assert_always(fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex_in, &levelenergy, &statweight, &ntransitions) == 4);
     assert_always(levelindex_in == level + groundstate_index_in);
 
-    if (level < *nlevelsmax)
+    if (level < nlevelsmax)
     {
       //globals::elements[element].ions[ion].levels[level].epsilon = (energyoffset + levelenergy) * EV;
       const double currentlevelenergy = (energyoffset + levelenergy) * EV;
@@ -891,12 +891,10 @@ static void read_atomicdata_files(void)
   std::ifstream ftransitiondata("transitiondata.txt");
   assert_always(ftransitiondata.is_open());
 
-  int lineindex = 0;  ///counter to determine the total number of lines, initialisation
-  int uniqueionindex = -1; // index into list of all ions of all elements
-  /// readin
+  int lineindex = 0;  /// counter to determine the total number of lines
+  int uniqueionindex = 0; // index into list of all ions of all elements
+  int uniquelevelindex = 0; // index into list of all levels of all ions of all elements
   int nbfcheck = 0;
-  int heatingcheck = 0;
-  int coolingcheck = 0;
   for (int element = 0; element < get_nelements(); element++)
   {
     /// read information about the next element which should be stored to memory
@@ -939,7 +937,6 @@ static void read_atomicdata_files(void)
     double ionpot = 0.;
     for (int ion = 0; ion < nions; ion++)
     {
-      uniqueionindex++;
       int nlevelsmax = nlevelsmax_readin;
       printout("element %d ion %d\n", element, ion);
       /// calculate the current levels ground level energy
@@ -1074,11 +1071,6 @@ static void read_atomicdata_files(void)
       globals::elements[element].ions[ion].nlevels_groundterm = -1;
       globals::elements[element].ions[ion].uniqueionindex = uniqueionindex;
 
-//           if ((globals::elements[element].ions[ion].zeta = calloc(TABLESIZE, sizeof(float))) == NULL)
-//           {
-//             printout("[fatal] input: not enough memory to initialize zetalist for element %d, ion %d ... abort\n",element,ion);
-//             abort();
-//           }
       if ((globals::elements[element].ions[ion].Alpha_sp = (float *) calloc(TABLESIZE, sizeof(float))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize Alpha_sp list for element %d, ion %d ... abort\n",element,ion);
@@ -1090,7 +1082,6 @@ static void read_atomicdata_files(void)
         abort();
       }
 
-
       /// now we need to readout the data for all those levels, write them to memory
       /// and set up the list of possible transitions for each level
       if ((transitions = (transitions_t *) calloc(nlevelsmax, sizeof(transitions_t))) == NULL)
@@ -1099,15 +1090,14 @@ static void read_atomicdata_files(void)
         abort();
       }
 
-      read_ion_levels(adata, element, ion, nions, nlevels, &nlevelsmax, energyoffset, ionpot);
+      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot);
 
       add_transitions_to_linelist(element, ion, nlevelsmax, tottransitions, transitiontable, &lineindex);
 
-      //printf("A %g\n",globals::elements[element].ions[ion].levels[level].transitions[i].einstein_A );
-      //printout("%d -> %d has A %g\n",level,level-i-1,globals::elements[element].ions[ion].levels[level].transitions[i].einstein_A );
-
       for (int level = 0; level < nlevelsmax; level++)
       {
+        globals::elements[element].ions[ion].levels[level].uniquelevelindex = uniquelevelindex;
+        uniquelevelindex++;
         totaldowntrans += get_ndowntrans(element, ion, level);
         totaluptrans += get_nuptrans(element, ion, level);
         free(transitions[level].to);
@@ -1115,18 +1105,17 @@ static void read_atomicdata_files(void)
       free(transitiontable);
       free(transitions);
 
-      /// Also the phixslist
       if (ion < nions - 1)
       {
         nbfcheck += globals::elements[element].ions[ion].ionisinglevels; //nlevelsmax;
       }
+      uniqueionindex++;
     }
   }
   fclose(adata);
   ftransitiondata.close();
   fclose(compositiondata);
   printout("nbfcheck %d\n",nbfcheck);
-  printout("heatingcheck %d\n",heatingcheck);
 
   /// Save the linecounters value to the global variable containing the number of lines
   globals::nlines = lineindex;
@@ -1145,11 +1134,9 @@ static void read_atomicdata_files(void)
   if (T_preset > 0)
     abort();
 
-
   /// Set up the list of allowed upward transitions for each level
   printout("total uptrans %d\n", totaluptrans);
   printout("total downtrans %d\n", totaldowntrans);
-  printout("coolingcheck %d\n", coolingcheck);
 
   printout("[info] mem_usage: transitions occupy %.3f MB\n", (totaluptrans + totaldowntrans) * (sizeof(int)) / 1024. / 1024.);
   ///debug output
@@ -1401,7 +1388,7 @@ static void setup_cellhistory(void)
         const int nions = get_nions(element);
         for (int ion = 0; ion < nions; ion++)
         {
-          const int nlevels = get_nlevels(element,ion);
+          const int nlevels = get_nlevels(element, ion);
           chlevelblocksize += nlevels * sizeof(chlevels_struct);
           for (int level = 0; level < nlevels; level++)
           {
@@ -1427,7 +1414,7 @@ static void setup_cellhistory(void)
         }
         for (int ion = 0; ion < nions; ion++)
         {
-          const int nlevels = get_nlevels(element,ion);
+          const int nlevels = get_nlevels(element, ion);
           globals::cellhistory[tid].chelements[element].chions[ion].chlevels = &chlevel[alllevelindex];
           alllevelindex += nlevels;
 

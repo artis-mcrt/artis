@@ -300,6 +300,7 @@ typedef struct levellist_entry
   int closestgroundlevelcont;
 #endif
 
+  int uniquelevelindex;
   bool metastable;                            ///
 
 //  double photoion_xs_nu_edge;              /// nu of the first grid point in the photoion_xs lookup-table.

@@ -343,8 +343,70 @@ void get_ionfromuniqueionindex(const int allionsindex, int *element, int *ion)
       return;
     }
   }
+  assert_always(false); // allionsindex too high to be valid
   *element = -1;
   *ion = -1;
+}
+
+
+__host__ __device__
+int get_uniquelevelindex(const int element, const int ion, const int level)
+// Get an index for level of an ionstage of an element that is unique across every ion of every element
+{
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(ion < get_nions(element));
+  assert_testmodeonly(level < get_nlevels(element, ion));
+
+  int index = 0;
+  for (int e = 0; e < element; e++)
+  {
+    const int nions = get_nions(e);
+    for (int i = 0; i < nions; i++)
+    {
+      index += get_nlevels(e, i);
+    }
+  }
+  // selected element, levels from lower ions
+  for (int i = 0; i < ion; i++)
+  {
+    index += get_nlevels(element, i);
+  }
+  // lower levels in selected element/ion
+  index += level;
+
+  assert_testmodeonly(index == globals::elements[element].ions[ion].levels[level].uniquelevelindex);
+  return index;
+}
+
+
+__host__ __device__
+void get_levelfromuniquelevelindex(const int alllevelsindex, int *element, int *ion, int *level)
+// inverse of get_uniquelevelindex(). get the element/ion/level from a unique level index
+{
+  int allionsindex_thisionfirstlevel = 0;
+  for (int e = 0; e < get_nelements(); e++)
+  {
+    const int nions = get_nions(e);
+    for (int i = 0; i < nions; i++)
+    {
+      if ((alllevelsindex - allionsindex_thisionfirstlevel) >= get_nlevels(e, i))
+      {
+        allionsindex_thisionfirstlevel += get_nlevels(e, i); // skip this ion
+      }
+      else
+      {
+        *element = e;
+        *ion = i;
+        *level = alllevelsindex - allionsindex_thisionfirstlevel;
+        assert_testmodeonly(get_uniquelevelindex(*element, *ion, *level) == alllevelsindex);
+        return;
+      }
+    }
+  }
+  assert_always(false); // alllevelsindex too high to be valid
+  *element = -1;
+  *ion = -1;
+  *level = -1;
 }
 
 
