@@ -118,7 +118,7 @@ static double get_event(
     if (lineindex >= 0)
     {
       /// line interaction in principle possible (nu_cmf > nu_trans)
-      if (false) printout("[debug] get_event:   line interaction possible\n");
+      // printout("[debug] get_event:   line interaction possible\n");
 
       const double nu_trans = globals::linelist[lineindex].nu;
 
@@ -145,11 +145,11 @@ static double get_event(
       //fprintf(ldist_file,"%25.16e %25.16e\n",dummypkt_ptr->nu_cmf,ldist);
       if (ldist < 0.) printout("[warning] get_event: ldist < 0 %g\n",ldist);
 
-      if (false) printout("[debug] get_event:     ldist %g\n",ldist);
+      // printout("[debug] get_event:     ldist %g\n",ldist);
 
       const double tau_cont = kap_cont * ldist;
 
-      if (false) printout("[debug] get_event:     tau_rnd %g, tau %g, tau_cont %g\n", tau_rnd, tau, tau_cont);
+      // printout("[debug] get_event:     tau_rnd %g, tau %g, tau_cont %g\n", tau_rnd, tau, tau_cont);
 
       if (tau_rnd - tau > tau_cont)
       {
@@ -192,7 +192,7 @@ static double get_event(
           {
             dummypkt_ptr->next_trans -= 1;
             pkt_ptr->next_trans = dummypkt_ptr->next_trans;
-            if (false) printout("[debug] get_event:         leave propagation loop (dist %g > abort_dist %g) ... dummypkt_ptr->next_trans %d\n", dist, abort_dist, dummypkt_ptr->next_trans);
+            // printout("[debug] get_event:         leave propagation loop (dist %g > abort_dist %g) ... dummypkt_ptr->next_trans %d\n", dist, abort_dist, dummypkt_ptr->next_trans);
             return abort_dist + 1e20;
           }
 
@@ -219,7 +219,7 @@ static double get_event(
         else
         {
           /// bound-bound process occurs
-          if (false) printout("[debug] get_event:         tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
+          // printout("[debug] get_event:         tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
 
           pkt_ptr->mastate.element = element;
           pkt_ptr->mastate.ion = ion;
@@ -241,7 +241,7 @@ static double get_event(
           *rpkt_eventtype = RPKT_EVENTTYPE_BB;
           /// the line and its parameters were already selected by closest_transition!
           endloop = true;
-          if (false) printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop   %d\n",edist,abort_dist,edist-abort_dist,endloop);
+          // printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop   %d\n",edist,abort_dist,edist-abort_dist,endloop);
         }
       }
       else
@@ -250,7 +250,7 @@ static double get_event(
         edist = dist + (tau_rnd - tau) / kap_cont;
         // assert_always((tau_rnd - tau) / kap_cont < ldist);
         dummypkt_ptr->next_trans -= 1;
-        if (false) printout("[debug] get_event:        distance to the occuring continuum event %g, abort_dist %g\n", edist, abort_dist);
+        // printout("[debug] get_event:        distance to the occuring continuum event %g, abort_dist %g\n", edist, abort_dist);
 
         *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
         endloop = true;
@@ -260,15 +260,15 @@ static double get_event(
     {
       dummypkt_ptr->next_trans = globals::nlines + 1;  ///helper variable to overcome numerical problems after line scattering
       /// no line interaction possible - check whether continuum process occurs in cell
-      if (false) printout("[debug] get_event:     line interaction impossible\n");
+      // printout("[debug] get_event:     line interaction impossible\n");
       const double tau_cont = kap_cont * (abort_dist - dist);
       //printout("nu_cmf %g, opticaldepths in ff %g, es %g\n",pkt_ptr->nu_cmf,kappa_rpkt_cont[tid].ff*(abort_dist-dist),kappa_rpkt_cont[tid].es*(abort_dist-dist));
-      if (false) printout("[debug] get_event:     tau_rnd %g, tau %g, tau_cont %g\n", tau_rnd, tau, tau_cont);
+      // printout("[debug] get_event:     tau_rnd %g, tau %g, tau_cont %g\n", tau_rnd, tau, tau_cont);
 
       if (tau_rnd - tau > tau_cont)
       {
         /// travel out of cell or time step
-        if (false) printout("[debug] get_event:       travel out of cell or time step\n");
+        // printout("[debug] get_event:       travel out of cell or time step\n");
 
         edist = abort_dist + 1e20;
         endloop = true;
@@ -277,7 +277,7 @@ static double get_event(
       {
         /// continuum process occurs at edist
         edist = dist + (tau_rnd - tau) / kap_cont;
-        if (false) printout("[debug] get_event:       continuum process occurs at edist %g\n",edist);
+        // printout("[debug] get_event:       continuum process occurs at edist %g\n",edist);
 
         *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
         endloop = true;
@@ -463,7 +463,7 @@ static void rpkt_event_boundbound(PKT *pkt_ptr, const int mgi)
   /// activate macro-atom in corresponding upper-level. Actually all the information
   /// about the macro atoms state has already been set by closest_transition, so
   /// we need here just the activation!
-  if (false) printout("[debug] rpkt_event: bound-bound activation of macroatom\n");
+  // printout("[debug] rpkt_event: bound-bound activation of macroatom\n");
   //if (tid == 0) ma_stat_activation_bb++;
   stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_BB);
   pkt_ptr->interactions += 1;
@@ -506,7 +506,7 @@ static void rpkt_event_thickcell(PKT *pkt_ptr)
 /// The packet stays an R_PKT of same nu_cmf than before (coherent scattering)
 /// but with different direction.
 {
-  if (false) printout("[debug] rpkt_event_thickcell:   electron scattering\n");
+  // printout("[debug] rpkt_event_thickcell:   electron scattering\n");
   pkt_ptr->interactions += 1;
   pkt_ptr->nscatterings += 1;
   pkt_ptr->last_event = 12;
@@ -760,7 +760,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
       /// for empty cells no physical event occurs. The packets just propagate.
       edist = 1e99;
       find_nextline = true;
-      if (false) printout("[debug] do_rpkt: propagating through empty cell, set edist=1e99\n");
+      // printout("[debug] do_rpkt: propagating through empty cell, set edist=1e99\n");
     }
     else if (grid::modelgrid[mgi].thick == 1)
     {
@@ -771,7 +771,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
       const double tau_current = 0.0;
       edist = (tau_next - tau_current) / kappa;
       find_nextline = true;
-      if (false) printout("[debug] do_rpkt: propagating through grey cell, edist  %g\n",edist);
+      // printout("[debug] do_rpkt: propagating through grey cell, edist  %g\n",edist);
     }
     else
     {
@@ -788,7 +788,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
 
     if ((sdist < tdist) && (sdist < edist))
     {
-      if (false) printout("[debug] do_rpkt: sdist < tdist && sdist < edist\n");
+      // printout("[debug] do_rpkt: sdist < tdist && sdist < edist\n");
       // Move it into the new cell.
       pkt_ptr->prop_time += sdist / 2. / globals::CLIGHT_PROP;
       move_pkt(pkt_ptr, sdist / 2., pkt_ptr->prop_time);
@@ -825,7 +825,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
     }
     else if ((tdist < sdist) && (tdist < edist))
     {
-      if (false) printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
+      // printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
       // Doesn't reach boundary
       pkt_ptr->prop_time += tdist / 2. / globals::CLIGHT_PROP;
       move_pkt(pkt_ptr, tdist / 2., pkt_ptr->prop_time);
@@ -850,7 +850,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
     else if ((edist < sdist) && (edist < tdist))
     {
       // bound-bound or continuum event
-      if (false) printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
+      // printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
       pkt_ptr->prop_time += edist / 2. / globals::CLIGHT_PROP;
       move_pkt(pkt_ptr, edist / 2., pkt_ptr->prop_time);
       update_estimators(pkt_ptr, edist);
