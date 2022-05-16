@@ -367,7 +367,7 @@ void init(int my_rank, int ndo, int ndo_nonempty)
 
   if (MULTIBIN_RADFIELD_MODEL_ON)
   {
-    printout("The multibin radiation field estimators are being used instead of the whole-spectrum fit from timestep %d onwards.\n", FIRST_NLTE_RADFIELD_TIMESTEP);
+    printout("The multibin radiation field is being used from timestep %d onwards.\n", FIRST_NLTE_RADFIELD_TIMESTEP);
 
     printout("Initialising multibin radiation field with %d bins from (%.2f eV, %6.1f A) to (%.2f eV, %6.1f A)\n",
              RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
@@ -388,7 +388,7 @@ void init(int my_rank, int ndo, int ndo_nonempty)
   }
   else
   {
-    printout("The radiation field model is a whole-spectrum fit to a single dilute blackbody.\n");
+    printout("The radiation field model is a full-spectrum fit to a single dilute blackbody TR & W.\n");
   }
 
   const long mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin);
@@ -571,7 +571,7 @@ int get_Jblueindex(const int lineindex)
     {
       return mid;
     }
-   }
+  }
 
    // const int element = linelist[lineindex].elementindex;
    // const int ion = linelist[lineindex].ionindex;
@@ -1577,10 +1577,12 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
 }
 
 
-// TODO: use in get_bfrate_estimator
 static int get_bfcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex)
 {
   const double nu_edge = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
+
+  // simple linear search seems to be faster than the binary search
+  // possibly because lower frequency transitions near start of list are more likely to be called?
   for (int i = 0; i < globals::nbfcontinua; i++)
   {
     if ((globals::allcont[i].element == element) && (globals::allcont[i].ion == lowerion) &&
@@ -1592,6 +1594,35 @@ static int get_bfcontindex(const int element, const int lowerion, const int lowe
     if (nu_edge > globals::allcont[i].nu_edge)
       break;
   }
+
+  // binary search
+  // int low = 0;
+  // int high = globals::nbfcontinua;
+  // while (low <= high)
+  // {
+  //   const int mid = low + ((high - low) / 2);
+  //   const double mid_nu_edge = globals::allcont_nu_edge[mid];
+  //   if (mid_nu_edge < nu_edge)
+  //   {
+  //     low = mid + 1;
+  //   }
+  //   else if (mid_nu_edge > nu_edge)
+  //   {
+  //     high = mid - 1;
+  //   }
+  //   else
+  //   {
+  //     assert_testmodeonly(globals::allcont[mid].element == element);
+  //     assert_testmodeonly(globals::allcont[mid].ion == lowerion);
+  //     assert_testmodeonly(globals::allcont[mid].level == lower);
+  //     assert_testmodeonly(globals::allcont[mid].phixstargetindex == phixstargetindex);
+  //
+  //     return mid;
+  //   }
+  // }
+
+  // not found in the continua list
+
   return -1;
 }
 
@@ -1680,24 +1711,15 @@ double get_bfrate_estimator(const int element, const int lowerion, const int low
 #if (!DETAILED_BF_ESTIMATORS_ON)
   return -1;
 #else
-  const int nbfcontinua = globals::nbfcontinua;
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-
-  // TODO: speed this up with a binary search
-  const double nu_edge = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
-  for (int i = 0; i < globals::nbfcontinua; i++)
+  const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
+  if (allcontindex >= 0)
   {
-    if ((globals::allcont[i].element == element) && (globals::allcont[i].ion == lowerion) &&
-        (globals::allcont[i].level == lower) && (globals::allcont[i].phixstargetindex == phixstargetindex))
-    {
-      return prev_bfrate_normed[nonemptymgi * nbfcontinua + i];
-    }
-
-    if (nu_edge > globals::allcont[i].nu_edge)
-      break;
+    return prev_bfrate_normed[nonemptymgi * globals::nbfcontinua + allcontindex];
   }
+
   printout("no bf rate for element Z=%d ion_stage %d lower %d phixstargetindex %d\n", get_element(element), get_ionstage(element, lowerion), lower, phixstargetindex);
-  return 0.;
+  return -1.;
 #endif
 }
 
