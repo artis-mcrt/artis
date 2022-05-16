@@ -19,6 +19,7 @@ struct spec
   double nu_max = -1.;
   float *lower_freq = NULL;
   float *delta_freq;
+  double *fluxalltimesteps = NULL;
   struct timestepspec *timesteps = NULL;
   bool do_emission_res = true;
 };

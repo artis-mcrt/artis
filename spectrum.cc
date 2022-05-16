@@ -625,10 +625,12 @@ struct spec *alloc_spectra(const bool do_emission_res)
   spectra->timesteps = (struct timestepspec *) malloc(globals::ntstep * sizeof(struct timestepspec));
   mem_usage += globals::ntstep * sizeof(struct timestepspec);
 
+  spectra->fluxalltimesteps = (double *) malloc(globals::ntstep * globals::nnubins * sizeof(double));
+
   assert_always(globals::nnubins > 0);
   for (int nts = 0; nts < globals::ntstep; nts++)
   {
-    spectra->timesteps[nts].flux = (double *) malloc(globals::nnubins * sizeof(double));
+    spectra->timesteps[nts].flux = (double *) &spectra->fluxalltimesteps[nts * globals::nnubins * sizeof(double)];
     mem_usage += globals::nnubins * sizeof(double);
 
     spectra->timesteps[nts].absorption = NULL;
