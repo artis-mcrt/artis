@@ -630,7 +630,7 @@ struct spec *alloc_spectra(const bool do_emission_res)
   assert_always(globals::nnubins > 0);
   for (int nts = 0; nts < globals::ntstep; nts++)
   {
-    spectra->timesteps[nts].flux = (double *) &spectra->fluxalltimesteps[nts * globals::nnubins * sizeof(double)];
+    spectra->timesteps[nts].flux = (double *) &spectra->fluxalltimesteps[nts * globals::nnubins];
     mem_usage += globals::nnubins * sizeof(double);
 
     spectra->timesteps[nts].absorption = NULL;
