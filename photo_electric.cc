@@ -180,15 +180,9 @@ void pair_prod(PKT *pkt_ptr)
 
     angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
 
-    const double prop_time_before = pkt_ptr->prop_time;
-    pkt_ptr->prop_time = pkt_ptr->tdecay;
-
-    // possible bug: should this be prop_time instead of tdecay?
     const double dopplerfactor = doppler_packetpos(pkt_ptr);
     pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
     pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
-
-    pkt_ptr->prop_time = prop_time_before;
 
     pkt_ptr->type = TYPE_GAMMA;
     pkt_ptr->last_cross = NONE;
