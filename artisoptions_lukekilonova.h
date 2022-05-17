@@ -5,7 +5,7 @@
 #include "constants.h"
 
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
-#define MPKTS 10000
+#define MPKTS 600000
 
 #define GRID_TYPE GRID_UNIFORM
 #define CUBOID_NCOORDGRID_X 50
