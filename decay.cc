@@ -1179,7 +1179,6 @@ __host__ __device__
 static double get_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex)
 // get the decay energy released during the simulation time per unit mass [erg/g]
 {
-  assert_testmodeonly(decaypath_energy_per_mass != NULL);
   const double chainendecay = decaypath_energy_per_mass[mgi * get_num_decaypaths() + decaypathindex];
   assert_testmodeonly(chainendecay >= 0.);
   assert_testmodeonly(std::isfinite(chainendecay));
@@ -1524,7 +1523,6 @@ void fprint_nuc_abundances(
 
 void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
 {
-  assert_testmodeonly(decaypath_energy_per_mass != NULL);
   double cumulative_endecay[get_num_decaypaths()];
   double endecaysum = 0.;
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++)
