@@ -1705,6 +1705,11 @@ static void read_3d_model(void)
 
     assert_always(mgi_in == mgi + 1);
 
+    if (mgi % (ncoord_model[1] * ncoord_model[2]) == 0)
+    {
+      printout("read up to cell mgi %d\n", mgi);
+    }
+
     // cell coordinates in the 3D model.txt file are sometimes reordered by the scaling script
     // however, the cellindex always should increment X first, then Y, then Z
 

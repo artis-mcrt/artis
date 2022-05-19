@@ -966,7 +966,7 @@ int main(int argc, char** argv)
   {
     write_timestep_file();
   }
-  printout("time time init %ld\n", time(NULL));
+  printout("time grid_init %ld\n", time(NULL));
   grid::grid_init(my_rank);
 
   printout("Simulation propagates %g packets per process (total %g with nprocs %d)\n", 1. * globals::npkts, 1. * globals::npkts * globals::nprocs, globals::nprocs);
