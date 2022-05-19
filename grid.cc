@@ -871,129 +871,125 @@ static void allocate_cell_initradioabund(const int mgi)
 }
 
 
-static void allocate_composition_cooling(const int modelgridindex)
+static void allocate_composition_cooling(void)
 /// Initialise composition dependent cell data for the given cell
 {
-  modelgrid[modelgridindex].elements_uppermost_ion = (int *) malloc(get_nelements() * sizeof(int));
+  const int npts_nonempty = get_nonempty_npts_model();
 
-  assert_always(modelgrid[modelgridindex].elements_uppermost_ion != NULL);
+  float *initmassfracstable_allcells = (float *) malloc(npts_nonempty * get_nelements() * sizeof(float));
+  float *elem_meanweight_allcells = (float *) malloc(npts_nonempty * get_nelements() * sizeof(float));
 
-  modelgrid[modelgridindex].composition = (compositionlist_entry *) malloc(get_nelements() * sizeof(compositionlist_entry));
-
-  if (modelgrid[modelgridindex].composition == NULL)
+  for (int modelgridindex = 0; modelgridindex <= get_npts_model(); modelgridindex++)
   {
-    printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",modelgridindex);
-    abort();
-  }
-
-  #ifdef MPI_ON
-    MPI_Win win;
-    MPI_Aint size = (globals::rank_in_node == 0) ? get_nelements() * sizeof(float) : 0;
-    MPI_Win_allocate_shared(size, sizeof(float), MPI_INFO_NULL, globals::mpi_comm_node,
-                            &modelgrid[modelgridindex].initmassfracstable, &win);
-    if (globals::rank_in_node != 0)
+    if (get_numassociatedcells(modelgridindex) <= 0)
     {
-      int disp_unit;
-      MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &modelgrid[modelgridindex].initmassfracstable);
+      continue;
     }
-  #else
-    modelgrid[modelgridindex].initmassfracstable = (float *) malloc(get_nelements() * sizeof(float));
-  #endif
 
-  assert_always(modelgrid[modelgridindex].initmassfracstable != NULL);
+    const int nonemptymgi = (modelgridindex < get_npts_model()) ?
+        grid::get_modelcell_nonemptymgi(modelgridindex) :
+        grid::get_modelcell_nonemptymgi(get_npts_model() - 1) + 1;
 
-  #ifdef MPI_ON
-    size = (globals::rank_in_node == 0) ? get_nelements() * sizeof(float) : 0;
-    MPI_Win_allocate_shared(size, sizeof(float), MPI_INFO_NULL, globals::mpi_comm_node,
-                            &modelgrid[modelgridindex].elem_meanweight, &win);
-    if (globals::rank_in_node != 0)
+    modelgrid[modelgridindex].elements_uppermost_ion = (int *) malloc(get_nelements() * sizeof(int));
+
+    assert_always(modelgrid[modelgridindex].elements_uppermost_ion != NULL);
+
+    modelgrid[modelgridindex].composition = (compositionlist_entry *) malloc(get_nelements() * sizeof(compositionlist_entry));
+
+    if (modelgrid[modelgridindex].composition == NULL)
     {
-      int disp_unit;
-      MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &modelgrid[modelgridindex].elem_meanweight);
+      printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",modelgridindex);
+      abort();
     }
-  #else
-    modelgrid[modelgridindex].elem_meanweight = (float *) malloc(get_nelements() * sizeof(float));
-  #endif
-  assert_always(modelgrid[modelgridindex].elem_meanweight != NULL);
 
-  mem_usage_nltepops += globals::total_nlte_levels * sizeof(double);
+    printout("allocate initmassfracstable mgi %d\n", modelgridindex);
 
-  if (globals::total_nlte_levels > 0)
-  {
-#ifdef MPI_ON
-    size = (globals::rank_in_node == 0) ? globals::total_nlte_levels * sizeof(double) : 0;
-    MPI_Win_allocate_shared(size, sizeof(double), MPI_INFO_NULL, globals::mpi_comm_node,
-                            &modelgrid[modelgridindex].nlte_pops, &win);
-    if (globals::rank_in_node != 0)
+    modelgrid[modelgridindex].initmassfracstable = &initmassfracstable_allcells[nonemptymgi];
+
+    assert_always(modelgrid[modelgridindex].initmassfracstable != NULL);
+
+    printout("allocate elem_meanweight mgi %d\n", modelgridindex);
+    modelgrid[modelgridindex].elem_meanweight = &elem_meanweight_allcells[nonemptymgi];
+
+    assert_always(modelgrid[modelgridindex].elem_meanweight != NULL);
+
+    mem_usage_nltepops += globals::total_nlte_levels * sizeof(double);
+
+    if (globals::total_nlte_levels > 0)
     {
-      int disp_unit;
+  #ifdef MPI_ON
+      MPI_Win win;
+      MPI_Aint size = (globals::rank_in_node == 0) ? globals::total_nlte_levels * sizeof(double) : 0;
+      int disp_unit = sizeof(double);
+      MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                              &modelgrid[modelgridindex].nlte_pops, &win);
       MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &modelgrid[modelgridindex].nlte_pops);
+  #else
+      modelgrid[modelgridindex].nlte_pops = (double *) malloc(globals::total_nlte_levels * sizeof(double));
+  #endif
     }
-#else
-    modelgrid[modelgridindex].nlte_pops = (double *) malloc(globals::total_nlte_levels * sizeof(double));
-#endif
-  }
-  else
-  {
-    modelgrid[modelgridindex].nlte_pops = NULL;
-  }
-
-  if (modelgrid[modelgridindex].nlte_pops == NULL && globals::total_nlte_levels > 0)
-  {
-    printout("[fatal] input: not enough memory to initialize nlte memory for cell %d... abort\n",modelgridindex);
-    abort();
-  }
-
-  for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++)
-  {
-    modelgrid[modelgridindex].nlte_pops[nlteindex] = -1.0; ///flag to indicate that there is
-                                                           /// currently no information on the nlte populations
-  }
-
-  //printout("Managed to allocate memory for %d nlte levels\n", total_nlte_levels);
-
-  for (int element = 0; element < get_nelements(); element++)
-  {
-    /// Set initial abundances to zero
-    modelgrid[modelgridindex].composition[element].abundance = 0.;
-
-    /// and allocate memory to store the ground level populations for each ionisation stage
-    modelgrid[modelgridindex].composition[element].groundlevelpop = (float *) calloc(get_nions(element), sizeof(float));
-    if (modelgrid[modelgridindex].composition[element].groundlevelpop == NULL)
+    else
     {
-      printout("[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",element,modelgridindex);
+      modelgrid[modelgridindex].nlte_pops = NULL;
+    }
+
+    if (modelgrid[modelgridindex].nlte_pops == NULL && globals::total_nlte_levels > 0)
+    {
+      printout("[fatal] input: not enough memory to initialize nlte memory for cell %d... abort\n",modelgridindex);
       abort();
     }
 
-    modelgrid[modelgridindex].composition[element].partfunct = (float *) calloc(get_nions(element), sizeof(float));
-
-    if (modelgrid[modelgridindex].composition[element].partfunct == NULL)
+    for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++)
     {
-      printout("[fatal] input: not enough memory to initialize partfunctlist for element %d in cell %d... abort\n",element,modelgridindex);
+      modelgrid[modelgridindex].nlte_pops[nlteindex] = -1.0; ///flag to indicate that there is
+                                                             /// currently no information on the nlte populations
+    }
+
+    //printout("Managed to allocate memory for %d nlte levels\n", total_nlte_levels);
+
+    for (int element = 0; element < get_nelements(); element++)
+    {
+      /// Set initial abundances to zero
+      modelgrid[modelgridindex].composition[element].abundance = 0.;
+
+      /// and allocate memory to store the ground level populations for each ionisation stage
+      modelgrid[modelgridindex].composition[element].groundlevelpop = (float *) calloc(get_nions(element), sizeof(float));
+      if (modelgrid[modelgridindex].composition[element].groundlevelpop == NULL)
+      {
+        printout("[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",element,modelgridindex);
+        abort();
+      }
+
+      modelgrid[modelgridindex].composition[element].partfunct = (float *) calloc(get_nions(element), sizeof(float));
+
+      if (modelgrid[modelgridindex].composition[element].partfunct == NULL)
+      {
+        printout("[fatal] input: not enough memory to initialize partfunctlist for element %d in cell %d... abort\n",element,modelgridindex);
+        abort();
+      }
+    }
+
+    modelgrid[modelgridindex].cooling = (mgicooling_t *) malloc(get_nelements() * sizeof(mgicooling_t));
+
+    if (modelgrid[modelgridindex].cooling == NULL)
+    {
+      printout("[fatal] input: not enough memory to initialize coolinglist for cell %d... abort\n",modelgridindex);
       abort();
     }
-  }
 
-  modelgrid[modelgridindex].cooling = (mgicooling_t *) malloc(get_nelements() * sizeof(mgicooling_t));
+    double *elemcontrib = (double *) malloc(get_includedions() * sizeof(double));
 
-  if (modelgrid[modelgridindex].cooling == NULL)
-  {
-    printout("[fatal] input: not enough memory to initialize coolinglist for cell %d... abort\n",modelgridindex);
-    abort();
-  }
+    int allionindex = 0;
+    for (int element = 0; element < get_nelements(); element++)
+    {
+      /// and allocate memory to store the ground level populations for each ionisation stage
 
-  double *elemcontrib = (double *) malloc(get_includedions() * sizeof(double));
+      modelgrid[modelgridindex].cooling[element].contrib = &elemcontrib[allionindex];
 
-  int allionindex = 0;
-  for (int element = 0; element < get_nelements(); element++)
-  {
-    /// and allocate memory to store the ground level populations for each ionisation stage
+      assert_always(modelgrid[modelgridindex].cooling[element].contrib != NULL);
 
-    modelgrid[modelgridindex].cooling[element].contrib = &elemcontrib[allionindex];
-
-    assert_always(modelgrid[modelgridindex].cooling[element].contrib != NULL);
-
-    allionindex += get_nions(element);
+      allionindex += get_nions(element);
+    }
   }
 }
 
@@ -1021,7 +1017,6 @@ static void allocate_nonemptymodelcells(void)
   set_Te(get_npts_model(), MINTEMP);
   set_TJ(get_npts_model(), MINTEMP);
   set_TR(get_npts_model(), MINTEMP);
-  allocate_composition_cooling(get_npts_model());
 
   // Determine the number of simulation cells associated with the model cells
   for (int mgi = 0; mgi < (get_npts_model() + 1); mgi++)
@@ -1056,8 +1051,6 @@ static void allocate_nonemptymodelcells(void)
   {
     if (get_numassociatedcells(mgi) > 0)
     {
-      allocate_composition_cooling(mgi);
-
       if (get_rhoinit(mgi) <= 0)
       {
         printout("Error: negative or zero density. Abort.\n");
@@ -1083,6 +1076,8 @@ static void allocate_nonemptymodelcells(void)
       }
     }
   }
+
+  allocate_composition_cooling();
 
   #ifdef MPI_ON
   // barrier to make sure node master has set abundance values to shared node memory
