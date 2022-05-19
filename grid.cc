@@ -874,7 +874,7 @@ static void allocate_cell_initradioabund(const int mgi)
 static void allocate_composition_cooling(void)
 /// Initialise composition dependent cell data for the given cell
 {
-  const int npts_nonempty = get_nonempty_npts_model();
+  const int npts_nonempty = get_nonempty_npts_model() + 1; // add one for the combined empty cell at the end
 
   float *initmassfracstable_allcells = (float *) malloc(npts_nonempty * get_nelements() * sizeof(float));
   float *elem_meanweight_allcells = (float *) malloc(npts_nonempty * get_nelements() * sizeof(float));
