@@ -8,14 +8,14 @@
 #include "decay.h"
 
 #include <algorithm> // std::max
-#include <vector>
-#include <set>
-#include <string>
-#include <regex>
+#include <cstring>
 #include <fstream>
 #include <iostream>
+#include <regex>
+#include <set>
+#include <string>
 #include <sstream>
-#include <cstring>
+#include <vector>
 
 namespace decay
 {
@@ -58,7 +58,7 @@ std::vector<struct decaypath> decaypaths;
 // decaypath_energy_per_mass points to an array of length npts_model * num_decaypaths
 // the index [mgi * num_decaypaths + i] will hold the decay energy per mass [erg/g] released by chain i in cell mgi
 // during the simulation time range
-static double *decaypath_energy_per_mass = NULL;
+std::vector<double> decaypath_energy_per_mass;
 
 
 __host__ __device__
@@ -1247,8 +1247,7 @@ double get_modelcell_endecay_per_mass(const int mgi)
 
 void setup_decaypath_energy_per_mass(void)
 {
-  assert_always(decaypath_energy_per_mass == NULL); // ensure not allocated yet
-  decaypath_energy_per_mass = (double *) malloc((grid::get_npts_model() + 1) * get_num_decaypaths() * sizeof(double));
+  decaypath_energy_per_mass.reserve((grid::get_npts_model() + 1) * get_num_decaypaths());
   for (int mgi = 0; mgi < grid::get_npts_model(); mgi++)
   {
     for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++)
@@ -1261,8 +1260,7 @@ void setup_decaypath_energy_per_mass(void)
 
 void free_decaypath_energy_per_mass(void)
 {
-  free(decaypath_energy_per_mass);
-  decaypath_energy_per_mass = NULL;
+  decaypath_energy_per_mass = std::vector<double>();
 }
 
 
@@ -1602,7 +1600,7 @@ void cleanup(void)
     free(decaypaths[decaypathindex].a);
     free(decaypaths[decaypathindex].decaytypes);
   }
-  free(decaypath_energy_per_mass);
+  free_decaypath_energy_per_mass();
 }
 
 
