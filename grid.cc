@@ -933,20 +933,18 @@ static void allocate_composition_cooling(void)
 
     if (globals::total_nlte_levels > 0)
     {
-        modelgrid[modelgridindex].nlte_pops = &nltepops_allcells[nonemptymgi * globals::total_nlte_levels];
+      modelgrid[modelgridindex].nlte_pops = &nltepops_allcells[nonemptymgi * globals::total_nlte_levels];
+
+      for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++)
+      {
+        modelgrid[modelgridindex].nlte_pops[nlteindex] = -1.0; ///flag to indicate that there is
+                                                               /// currently no information on the nlte populations
+      }
     }
     else
     {
       modelgrid[modelgridindex].nlte_pops = NULL;
     }
-
-    for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++)
-    {
-      modelgrid[modelgridindex].nlte_pops[nlteindex] = -1.0; ///flag to indicate that there is
-                                                             /// currently no information on the nlte populations
-    }
-
-    //printout("Managed to allocate memory for %d nlte levels\n", total_nlte_levels);
 
     for (int element = 0; element < get_nelements(); element++)
     {
