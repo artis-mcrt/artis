@@ -902,13 +902,10 @@ static void allocate_composition_cooling(void)
       abort();
     }
 
-    printout("allocate initmassfracstable mgi %d\n", modelgridindex);
-
     modelgrid[modelgridindex].initmassfracstable = &initmassfracstable_allcells[nonemptymgi];
 
     assert_always(modelgrid[modelgridindex].initmassfracstable != NULL);
 
-    printout("allocate elem_meanweight mgi %d\n", modelgridindex);
     modelgrid[modelgridindex].elem_meanweight = &elem_meanweight_allcells[nonemptymgi];
 
     assert_always(modelgrid[modelgridindex].elem_meanweight != NULL);
