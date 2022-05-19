@@ -53,6 +53,9 @@ static __managed__ int *mgi_of_nonemptymgi = NULL;
 
 __managed__ double *totmassradionuclide = NULL; /// total mass of each radionuclide in the ejecta
 
+#ifdef MPI_ON
+MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
+#endif
 
 double get_mtot_input(void)
 // mass of the input model, which can be slightly different to the simulation mass
@@ -879,6 +882,24 @@ static void allocate_composition_cooling(void)
   float *initmassfracstable_allcells = (float *) malloc(npts_nonempty * get_nelements() * sizeof(float));
   float *elem_meanweight_allcells = (float *) malloc(npts_nonempty * get_nelements() * sizeof(float));
 
+  double *nltepops_allcells = NULL;
+  if (globals::total_nlte_levels > 0)
+  {
+#ifdef MPI_ON
+    MPI_Aint size = (globals::rank_in_node == 0) ? (npts_nonempty * globals::total_nlte_levels * sizeof(double)) : 0;
+    int disp_unit = sizeof(double);
+    MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                            &nltepops_allcells, &win_nltepops_allcells);
+    MPI_Win_shared_query(win_nltepops_allcells, MPI_PROC_NULL, &size, &disp_unit, &nltepops_allcells);
+#else
+    nltepops_allcells = (double *) malloc(npts_nonempty * globals::total_nlte_levels * sizeof(double));
+#endif
+
+    assert_always(nltepops_allcells != NULL);
+  }
+
+  mem_usage_nltepops += npts_nonempty * globals::total_nlte_levels * sizeof(double);
+
   for (int modelgridindex = 0; modelgridindex <= get_npts_model(); modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) <= 0)
@@ -902,38 +923,21 @@ static void allocate_composition_cooling(void)
       abort();
     }
 
-    modelgrid[modelgridindex].initmassfracstable = &initmassfracstable_allcells[nonemptymgi];
+    modelgrid[modelgridindex].initmassfracstable = &initmassfracstable_allcells[nonemptymgi * get_nelements()];
 
     assert_always(modelgrid[modelgridindex].initmassfracstable != NULL);
 
-    modelgrid[modelgridindex].elem_meanweight = &elem_meanweight_allcells[nonemptymgi];
+    modelgrid[modelgridindex].elem_meanweight = &elem_meanweight_allcells[nonemptymgi * get_nelements()];
 
     assert_always(modelgrid[modelgridindex].elem_meanweight != NULL);
 
-    mem_usage_nltepops += globals::total_nlte_levels * sizeof(double);
-
     if (globals::total_nlte_levels > 0)
     {
-  #ifdef MPI_ON
-      MPI_Win win;
-      MPI_Aint size = (globals::rank_in_node == 0) ? globals::total_nlte_levels * sizeof(double) : 0;
-      int disp_unit = sizeof(double);
-      MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                              &modelgrid[modelgridindex].nlte_pops, &win);
-      MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &modelgrid[modelgridindex].nlte_pops);
-  #else
-      modelgrid[modelgridindex].nlte_pops = (double *) malloc(globals::total_nlte_levels * sizeof(double));
-  #endif
+        modelgrid[modelgridindex].nlte_pops = &nltepops_allcells[nonemptymgi * globals::total_nlte_levels];
     }
     else
     {
       modelgrid[modelgridindex].nlte_pops = NULL;
-    }
-
-    if (modelgrid[modelgridindex].nlte_pops == NULL && globals::total_nlte_levels > 0)
-    {
-      printout("[fatal] input: not enough memory to initialize nlte memory for cell %d... abort\n",modelgridindex);
-      abort();
     }
 
     for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++)
