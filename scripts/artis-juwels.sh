@@ -3,7 +3,7 @@
 #SBATCH --ntasks-per-node=48
 #SBATCH --time=24:00:00
 #SBATCH --partition=batch
-#SBATCH --account=hmu14
+#SBATCH --account=rtsn22
 ##SBATCH --mail-type=ALL
 ##SBATCH --mail-user=luke.shingles@gmail.com
 
