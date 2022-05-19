@@ -871,7 +871,7 @@ static void allocate_cell_initradioabund(const int mgi)
 }
 
 
-static void allocate_compositiondata(const int modelgridindex)
+static void allocate_composition_cooling(const int modelgridindex)
 /// Initialise composition dependent cell data for the given cell
 {
   modelgrid[modelgridindex].elements_uppermost_ion = (int *) malloc(get_nelements() * sizeof(int));
@@ -973,12 +973,7 @@ static void allocate_compositiondata(const int modelgridindex)
       abort();
     }
   }
-}
 
-
-static void allocate_cooling(const int modelgridindex)
-/// Initialise composition dependent cell data for the given cell
-{
   modelgrid[modelgridindex].cooling = (mgicooling_t *) malloc(get_nelements() * sizeof(mgicooling_t));
 
   if (modelgrid[modelgridindex].cooling == NULL)
@@ -987,18 +982,21 @@ static void allocate_cooling(const int modelgridindex)
     abort();
   }
 
+  double *elemcontrib = (double *) malloc(get_includedions() * sizeof(double));
+
+  int allionindex = 0;
   for (int element = 0; element < get_nelements(); element++)
   {
     /// and allocate memory to store the ground level populations for each ionisation stage
 
-    modelgrid[modelgridindex].cooling[element].contrib = (double *) malloc(get_nions(element) * sizeof(double));
-    if (modelgrid[modelgridindex].cooling[element].contrib == NULL)
-    {
-      printout("[fatal] input: not enough memory to initialize coolinglist for element %d in cell %d... abort\n",element,modelgridindex);
-      abort();
-    }
+    modelgrid[modelgridindex].cooling[element].contrib = &elemcontrib[allionindex];
+
+    assert_always(modelgrid[modelgridindex].cooling[element].contrib != NULL);
+
+    allionindex += get_nions(element);
   }
 }
+
 
 
 static void allocate_nonemptymodelcells(void)
@@ -1023,8 +1021,7 @@ static void allocate_nonemptymodelcells(void)
   set_Te(get_npts_model(), MINTEMP);
   set_TJ(get_npts_model(), MINTEMP);
   set_TR(get_npts_model(), MINTEMP);
-  allocate_compositiondata(get_npts_model());
-  allocate_cooling(get_npts_model());
+  allocate_composition_cooling(get_npts_model());
 
   // Determine the number of simulation cells associated with the model cells
   for (int mgi = 0; mgi < (get_npts_model() + 1); mgi++)
@@ -1059,8 +1056,7 @@ static void allocate_nonemptymodelcells(void)
   {
     if (get_numassociatedcells(mgi) > 0)
     {
-      allocate_compositiondata(mgi);
-      allocate_cooling(mgi);
+      allocate_composition_cooling(mgi);
 
       if (get_rhoinit(mgi) <= 0)
       {
