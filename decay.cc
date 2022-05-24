@@ -58,7 +58,7 @@ std::vector<struct decaypath> decaypaths;
 // decaypath_energy_per_mass points to an array of length npts_model * num_decaypaths
 // the index [mgi * num_decaypaths + i] will hold the decay energy per mass [erg/g] released by chain i in cell mgi
 // during the simulation time range
-float *decaypath_energy_per_mass = NULL;
+double *decaypath_energy_per_mass = NULL;
 #ifdef MPI_ON
 MPI_Win win_decaypath_energy_per_mass = MPI_WIN_NULL;
 #endif
@@ -1242,15 +1242,15 @@ double get_modelcell_endecay_per_mass(const int mgi)
 void setup_decaypath_energy_per_mass(void)
 {
   printout("Allocating %.1f MiB for decaypath_energy_per_mass...",
-           (grid::get_npts_model() + 1) * get_num_decaypaths() * sizeof(float) / 1024. / 1024.);
+           (grid::get_npts_model() + 1) * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
 #ifdef MPI_ON
-  MPI_Aint size = (globals::rank_in_node == 0) ? (grid::get_npts_model() + 1) * get_num_decaypaths() * sizeof(float) : 0;
-  int disp_unit = sizeof(float);
+  MPI_Aint size = (globals::rank_in_node == 0) ? (grid::get_npts_model() + 1) * get_num_decaypaths() * sizeof(double) : 0;
+  int disp_unit = sizeof(double);
   MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
                           &decaypath_energy_per_mass, &win_decaypath_energy_per_mass);
   MPI_Win_shared_query(win_decaypath_energy_per_mass, MPI_PROC_NULL, &size, &disp_unit, &decaypath_energy_per_mass);
 #else
-  decaypath_energy_per_mass = (float *) malloc(decay::get_num_nuclides() * sizeof(float));
+  decaypath_energy_per_mass = (double *) malloc(decay::get_num_nuclides() * sizeof(double));
 #endif
   printout("done.\n");
 
