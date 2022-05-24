@@ -55,7 +55,10 @@ __managed__ double *totmassradionuclide = NULL; /// total mass of each radionucl
 
 #ifdef MPI_ON
 MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
+MPI_Win win_initradioabund_allcells = MPI_WIN_NULL;
 #endif
+
+float *initradioabund_allcells = NULL;
 
 double get_mtot_input(void)
 // mass of the input model, which can be slightly different to the simulation mass
@@ -424,10 +427,36 @@ static void set_npts_model(int new_npts_model)
   assert_always(modelgrid == NULL);
   modelgrid = (modelgrid_t *) calloc(npts_model + 1, sizeof(modelgrid_t));
   assert_always(mg_associated_cells == NULL);
-  mg_associated_cells = (int *) malloc((get_npts_model() + 1) * sizeof(int));
+  mg_associated_cells = (int *) malloc((npts_model + 1) * sizeof(int));
   assert_always(nonemptymgi_of_mgi == NULL);
-  nonemptymgi_of_mgi = (int *) malloc((get_npts_model() + 1) * sizeof(int));
+  nonemptymgi_of_mgi = (int *) malloc((npts_model + 1) * sizeof(int));
   assert_always(modelgrid != NULL);
+
+  const int num_nuclides = decay::get_num_nuclides();
+
+  #ifdef MPI_ON
+    MPI_Aint size = (globals::rank_in_node == 0) ? (npts_model + 1) * num_nuclides * sizeof(float) : 0;
+    int disp_unit = sizeof(float);
+    MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                            &initradioabund_allcells, &win_initradioabund_allcells);
+    MPI_Win_shared_query(win_initradioabund_allcells, MPI_PROC_NULL, &size, &disp_unit, &initradioabund_allcells);
+  #else
+    initradioabund_allcells = (float *) malloc((npts_model + 1) * num_nuclides * sizeof(float));
+  #endif
+
+  assert_always(initradioabund_allcells != NULL);
+
+  for (int mgi = 0; mgi < (npts_model + 1); mgi++)
+  {
+    if (mgi % globals::node_nprocs == globals::rank_in_node)
+    {
+      modelgrid[mgi].initradioabund = &initradioabund_allcells[mgi * num_nuclides];
+      for (int i = 0; i < decay::get_num_nuclides(); i++)
+      {
+        modelgrid[mgi].initradioabund[i] = 0.;
+      }
+    }
+  }
 }
 
 
@@ -848,32 +877,6 @@ static void calculate_kappagrey(void)
 }
 
 
-static void allocate_cell_initradioabund(const int mgi)
-{
-  #ifdef MPI_ON
-    MPI_Win win;
-    MPI_Aint size = (globals::rank_in_node == 0) ? decay::get_num_nuclides() * sizeof(float) : 0;
-    MPI_Win_allocate_shared(size, sizeof(float), MPI_INFO_NULL, globals::mpi_comm_node,
-                            &modelgrid[mgi].initradioabund, &win);
-    if (globals::rank_in_node != 0)
-    {
-      int disp_unit;
-      MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &modelgrid[mgi].initradioabund);
-    }
-  #else
-    modelgrid[mgi].initradioabund = (float *) malloc(decay::get_num_nuclides() * sizeof(float));
-  #endif
-  if (globals::rank_in_node == 0)
-  {
-    for (int i = 0; i < decay::get_num_nuclides(); i++)
-    {
-      modelgrid[mgi].initradioabund[i] = 0.;
-    }
-  }
-  assert_always(modelgrid[mgi].initradioabund != NULL);
-}
-
-
 static void allocate_composition_cooling(void)
 /// Initialise composition dependent cell data for the given cell
 {
@@ -1005,14 +1008,6 @@ static void allocate_nonemptymodelcells(void)
   set_nnetot(get_npts_model(), 0.);
   set_ffegrp(get_npts_model(), 0.);
 
-  allocate_cell_initradioabund(get_npts_model());
-
-  for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
-  {
-    const int z = decay::get_nuc_z(nucindex);
-    const int a = decay::get_nuc_a(nucindex);
-    set_modelinitradioabund(get_npts_model(), z, a, 0.);
-  }
   set_Te(get_npts_model(), MINTEMP);
   set_TJ(get_npts_model(), MINTEMP);
   set_TR(get_npts_model(), MINTEMP);
@@ -1372,8 +1367,6 @@ static void read_2d3d_modelradioabundanceline(
 
     if (keepcell)
     {
-      allocate_cell_initradioabund(mgi);
-
       set_modelinitradioabund(mgi, 28, 56, f56ni_model);
       set_modelinitradioabund(mgi, 27, 56, f56co_model);
       set_modelinitradioabund(mgi, 28, 57, f57ni_model);
@@ -1501,7 +1494,6 @@ static void read_1d_model(void)
     //          cellnumin, vout_kmps, log_rho, ffegrp_model[n], f56ni_model[n],
     //          f56co_model[n], f52fe_model[n], f48cr_model[n]);
     // printout("   %lg %lg\n", f57ni_model[n], f57co_model[n]);
-    allocate_cell_initradioabund(mgi);
 
     set_modelinitradioabund(mgi, 28, 56, f56ni_model);
     set_modelinitradioabund(mgi, 27, 56, f56co_model);
