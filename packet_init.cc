@@ -76,9 +76,7 @@ void packet_init(int my_rank, PKT *pkt)
   const double e0_tinf = etot_tinf / globals::npkts;
   printout("packet e0 (t_0 to t_inf) %g erg\n", e0_tinf);
 
-  printout("calculating decaypath_energy_per_mass for all cells...");
   decay::setup_decaypath_energy_per_mass();
-  printout("done\n");
 
   // Need to get a normalisation factor.
   double cont[grid::ngrid + 1];

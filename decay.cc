@@ -1241,6 +1241,8 @@ double get_modelcell_endecay_per_mass(const int mgi)
 
 void setup_decaypath_energy_per_mass(void)
 {
+  printout("Allocating %.1f MiB for decaypath_energy_per_mass...",
+           (grid::get_npts_model() + 1) * get_num_decaypaths() * sizeof(float) / 1024. / 1024.);
 #ifdef MPI_ON
   MPI_Aint size = (globals::rank_in_node == 0) ? (grid::get_npts_model() + 1) * get_num_decaypaths() * sizeof(float) : 0;
   int disp_unit = sizeof(float);
@@ -1250,7 +1252,9 @@ void setup_decaypath_energy_per_mass(void)
 #else
   decaypath_energy_per_mass = (float *) malloc(decay::get_num_nuclides() * sizeof(float));
 #endif
+  printout("done.\n");
 
+  printout("Calculating for decaypath_energy_per_mass for all cells...");
   for (int mgi = 0; mgi < grid::get_npts_model(); mgi++)
   {
     if (mgi % globals::node_nprocs == globals::rank_in_node)
@@ -1261,6 +1265,7 @@ void setup_decaypath_energy_per_mass(void)
       }
     }
   }
+  printout("done.\n");
 
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
