@@ -58,7 +58,10 @@ std::vector<struct decaypath> decaypaths;
 // decaypath_energy_per_mass points to an array of length npts_model * num_decaypaths
 // the index [mgi * num_decaypaths + i] will hold the decay energy per mass [erg/g] released by chain i in cell mgi
 // during the simulation time range
-std::vector<double> decaypath_energy_per_mass;
+float *decaypath_energy_per_mass;
+#ifdef MPI_ON
+MPI_Win win_decaypath_energy_per_mass;
+#endif
 
 
 __host__ __device__
@@ -741,14 +744,6 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
       std::stringstream(line) >> a >> z >> branch_alpha >> branch_beta >> halflife >> Q_total_alphadec >> Q_total_betadec >> e_alpha_mev >> e_gamma_mev >> e_beta_mev;
 
       bool keeprow = ((branch_alpha > 0. || branch_beta > 0.) && halflife > 0.);
-      // for (int i = 0; i < (int) custom_alist.size(); i++)
-      // {
-      //   if (custom_alist[i] == a)
-      //   {
-      //     keeprow = true;
-      //     break;
-      //   }
-      // }
       if (keeprow)
       {
         const double tau_sec = halflife / log(2);
@@ -1246,20 +1241,46 @@ double get_modelcell_endecay_per_mass(const int mgi)
 
 void setup_decaypath_energy_per_mass(void)
 {
-  decaypath_energy_per_mass.reserve((grid::get_npts_model() + 1) * get_num_decaypaths());
+#ifdef MPI_ON
+  MPI_Aint size = (globals::rank_in_node == 0) ? (grid::get_npts_model() + 1) * get_num_decaypaths() * sizeof(float) : 0;
+  int disp_unit = sizeof(float);
+  MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                          &decaypath_energy_per_mass, &win_decaypath_energy_per_mass);
+  MPI_Win_shared_query(win_decaypath_energy_per_mass, MPI_PROC_NULL, &size, &disp_unit, &decaypath_energy_per_mass);
+#else
+  decaypath_energy_per_mass = (float *) malloc(decay::get_num_nuclides() * sizeof(float));
+#endif
+
   for (int mgi = 0; mgi < grid::get_npts_model(); mgi++)
   {
-    for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++)
+    if (mgi % globals::node_nprocs == globals::rank_in_node)
     {
-      calculate_simtime_endecay_per_ejectamass(mgi, decaypathindex);
+      for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++)
+      {
+        calculate_simtime_endecay_per_ejectamass(mgi, decaypathindex);
+      }
     }
   }
+
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 }
 
 
 void free_decaypath_energy_per_mass(void)
 {
-  decaypath_energy_per_mass = std::vector<double>();
+#ifdef MPI_ON
+  if (win_decaypath_energy_per_mass != MPI_WIN_NULL)
+  {
+    MPI_Win_free(&win_decaypath_energy_per_mass);
+  }
+#else
+  if (decaypath_energy_per_mass != NULL)
+  {
+    free(decaypath_energy_per_mass);
+  }
+#endif
 }
 
 
