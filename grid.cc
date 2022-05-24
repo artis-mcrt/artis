@@ -431,18 +431,22 @@ static void set_npts_model(int new_npts_model)
   assert_always(nonemptymgi_of_mgi == NULL);
   nonemptymgi_of_mgi = (int *) malloc((npts_model + 1) * sizeof(int));
   assert_always(modelgrid != NULL);
+}
 
+
+static void allocate_initradiobund(void)
+{
+  assert_always(npts_model > 0);
   const int num_nuclides = decay::get_num_nuclides();
-
-  #ifdef MPI_ON
-    MPI_Aint size = (globals::rank_in_node == 0) ? (npts_model + 1) * num_nuclides * sizeof(float) : 0;
-    int disp_unit = sizeof(float);
-    MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                            &initradioabund_allcells, &win_initradioabund_allcells);
-    MPI_Win_shared_query(win_initradioabund_allcells, MPI_PROC_NULL, &size, &disp_unit, &initradioabund_allcells);
-  #else
-    initradioabund_allcells = (float *) malloc((npts_model + 1) * num_nuclides * sizeof(float));
-  #endif
+#ifdef MPI_ON
+  MPI_Aint size = (globals::rank_in_node == 0) ? (npts_model + 1) * num_nuclides * sizeof(float) : 0;
+  int disp_unit = sizeof(float);
+  MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                          &initradioabund_allcells, &win_initradioabund_allcells);
+  MPI_Win_shared_query(win_initradioabund_allcells, MPI_PROC_NULL, &size, &disp_unit, &initradioabund_allcells);
+#else
+  initradioabund_allcells = (float *) malloc((npts_model + 1) * num_nuclides * sizeof(float));
+#endif
 
   assert_always(initradioabund_allcells != NULL);
 
@@ -1447,6 +1451,7 @@ static void read_1d_model(void)
   }
 
   decay::init_nuclides(zlist, alist);
+  allocate_initradiobund();
 
   int mgi = 0;
   while (std::getline(fmodel, line))
@@ -1578,6 +1583,7 @@ static void read_2d_model(void)
   }
 
   decay::init_nuclides(zlist, alist);
+  allocate_initradiobund();
 
   // Now read in the model. Each point in the model has two lines of input.
   // First is an index for the cell then its r-mid point then its z-mid point
@@ -1681,6 +1687,7 @@ static void read_3d_model(void)
   }
 
   decay::init_nuclides(zlist, alist);
+  allocate_initradiobund();
 
   // mgi is the index to the model grid - empty cells are sent to special value get_npts_model(),
   // otherwise each input cell is one modelgrid cell
