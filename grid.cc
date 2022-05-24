@@ -452,15 +452,18 @@ static void allocate_initradiobund(void)
 
   for (int mgi = 0; mgi < (npts_model + 1); mgi++)
   {
+    modelgrid[mgi].initradioabund = &initradioabund_allcells[mgi * num_nuclides];
     if (mgi % globals::node_nprocs == globals::rank_in_node)
     {
-      modelgrid[mgi].initradioabund = &initradioabund_allcells[mgi * num_nuclides];
       for (int i = 0; i < decay::get_num_nuclides(); i++)
       {
         modelgrid[mgi].initradioabund[i] = 0.;
       }
     }
   }
+#ifdef MPI_ON
+  MPI_Barrier(globals::mpi_comm_node);
+#endif
 }
 
 
