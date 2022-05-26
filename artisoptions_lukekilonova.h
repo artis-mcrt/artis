@@ -46,12 +46,12 @@ const bool single_ground_level = false; // if false, read from file or autodetec
 #define UNIFORM_PELLET_ENERGIES true
 
 #define DIRECT_COL_HEAT
-#define NO_INITIAL_PACKETS
+// #define NO_INITIAL_PACKETS
 #define RECORD_LINESTAT
 
 /// Rate coefficients
 #define TABLESIZE 200 //200 //100
-#define MINTEMP 4000.
+#define MINTEMP 1000.
 #define MAXTEMP 150000. //1000000.
 
 // temperature for which total ion recombination rate are calibrated to input data (recombrates.txt)
@@ -77,7 +77,7 @@ static const size_t GSLWSIZE = 16384;
 #define MINPOP 1e-40
 
 #define NU_MIN_R 1e13   /// lower frequency boundary for UVOIR spectra and BB sampling
-#define NU_MAX_R 5e15   /// upper frequency boundary for UVOIR spectra and BB sampling
+#define NU_MAX_R 5e16   /// upper frequency boundary for UVOIR spectra and BB sampling
 
 
 // ****
