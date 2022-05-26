@@ -1241,7 +1241,7 @@ double get_modelcell_endecay_per_mass(const int mgi)
 
 void setup_decaypath_energy_per_mass(void)
 {
-  printout("Allocating %.1f MiB for decaypath_energy_per_mass...",
+  printout("mem_usage: allocating %.1f MiB for decaypath_energy_per_mass...",
            (grid::get_npts_model() + 1) * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
 #ifdef MPI_ON
   MPI_Aint size = (globals::rank_in_node == 0) ? (grid::get_npts_model() + 1) * get_num_decaypaths() * sizeof(double) : 0;

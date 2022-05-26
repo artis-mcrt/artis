@@ -1669,7 +1669,7 @@ static void read_3d_model(void)
   double xmax_tmodel = globals::vmax * t_model;
 
   /// Now read in the lines of the model.
-  min_den = 1.e99;
+  min_den = -1.;
 
   // check if expected positions match in either xyz or zyx column order
   // set false if a problem is detected
@@ -1743,11 +1743,13 @@ static void read_3d_model(void)
     set_rhoinit(mgi, rho_tmin);
     set_rho(mgi, rho_tmin);
 
-    if (min_den > rho_model)
+    if (min_den < 0. || min_den > rho_model)
     {
       min_den = rho_model;
     }
+
     read_2d3d_modelradioabundanceline(fmodel, mgi, keepcell, zlist, alist);
+
     if (keepcell)
     {
       nonemptymgi++;
@@ -1891,17 +1893,17 @@ void read_ejecta_model(void)
 
     default:
     {
-      printout("Unknown model. Abort.\n");
+      printout("Unknown model type. Abort.\n");
       abort();
     }
   }
 
   printout("npts_model: %d\n", get_npts_model());
   globals::rmax = globals::vmax * globals::tmin;
-  printout("vmax %g (%.2fc)\n", globals::vmax, globals::vmax / CLIGHT);
+  printout("vmax %g [cm/s] (%.2fc)\n", globals::vmax, globals::vmax / CLIGHT);
   assert_always(globals::vmax < CLIGHT);
-  printout("tmin %g\n", globals::tmin);
-  printout("rmax %g\n", globals::rmax);
+  printout("tmin %g [s]\n", globals::tmin);
+  printout("rmax %g [cm] (at t=tmin)\n", globals::rmax);
 
   globals::coordmax[0] = globals::coordmax[1] = globals::coordmax[2] = globals::rmax;
 
@@ -2249,7 +2251,7 @@ static void uniform_grid_setup(void)
   // vmax is per coordinate, but the simulation volume corners will
   // have a higher expansion velocity than the sides
   const double vmax_corner = sqrt(3 * pow(globals::vmax, 2));
-  printout("corner vmax %g (%.2fc)\n", vmax_corner, vmax_corner / CLIGHT);
+  printout("corner vmax %g [cm/s] (%.2fc)\n", vmax_corner, vmax_corner / CLIGHT);
   assert_always(vmax_corner < CLIGHT);
 
   /// Set grid size for uniform xyz grid
