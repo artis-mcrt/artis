@@ -1635,6 +1635,7 @@ static void read_2d_model(void)
 static void read_3d_model(void)
 /// Subroutine to read in a 3-D model.
 {
+  printout("reading 3D model.txt...\n");
   std::ifstream fmodel("model.txt");
   assert_always(fmodel.is_open());
 

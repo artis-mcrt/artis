@@ -301,11 +301,14 @@ void update_packets(const int my_rank, const int nts, PKT *packets)
 
     const time_t sys_time_start_pass = time(NULL);
 
-    printout("sorting packets...");
+    // printout("sorting packets...");
 
     std::sort(packets, packets + globals::npkts, std_compare_packets_bymodelgriddensity);
 
-    printout("took %lds\n", time(NULL) - sys_time_start_pass);
+    // printout("took %lds\n", time(NULL) - sys_time_start_pass);
+
+    printout("  update_packets timestep %d pass %3d: started at %ld\n",
+             nts, passnumber, sys_time_start_pass);
 
     int count_pktupdates = 0;
     const int updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
@@ -365,8 +368,8 @@ void update_packets(const int my_rank, const int nts, PKT *packets)
       }
     }
     const int cellhistresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
-    printout("  update_packets timestep %d pass %3d: packetsupdated %7d cellhistoryresets %7d at %ld (took %lds)\n",
-             nts, passnumber, count_pktupdates, cellhistresets, time(NULL), time(NULL) - sys_time_start_pass);
+    printout("  update_packets timestep %d pass %3d: finished at %ld packetsupdated %7d cellhistoryresets %7d (took %lds)\n",
+             nts, passnumber, time(NULL), count_pktupdates, cellhistresets, time(NULL) - sys_time_start_pass);
 
     passnumber++;
   }
