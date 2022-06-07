@@ -10,16 +10,16 @@
 
 #! sbatch directives begin here ###############################
 #! Name of the job:
-#SBATCH -J exspec-gzip-cambridge.sh
+#SBATCH -J artis-cambridge.sh
 #! Which project should be charged:
 #SBATCH -A DIRAC-DP033-CPU
 #SBATCH -p icelake
 #! How many whole nodes should be allocated?
-#SBATCH --nodes=1
+#SBATCH --nodes=13
 #! How many (MPI) tasks will there be in total? (<= nodes*76)
 #! The Ice Lake (icelake) nodes have 76 CPUs (cores) each and
 #! 3380 MiB of memory per CPU.
-#SBATCH --ntasks=1
+#SBATCH --ntasks=988
 #! How much wallclock time will be required?
 #SBATCH --time=36:00:00
 #! What types of email messages do you wish to receive?
@@ -27,10 +27,7 @@
 ##SBATCH --mail-user=luke.shingles@gmail.com
 #! Uncomment this to prevent the job from being requeued (e.g. if
 #! interrupted by node failure or system downtime):
-##SBATCH --no-requeue
-
-#! For 6GB per CPU, set "-p skylake"; for 12GB per CPU, set "-p skylake-himem":
-#SBATCH -p skylake
+#SBATCH --no-requeue
 
 #! sbatch directives end here (put any additional directives above this line)
 
@@ -58,12 +55,15 @@ module purge                               # Removes all modules still loaded
 module load rhel8/default-icl              # REQUIRED - loads the basic environment
 
 #! Insert additional module load commands after this line if needed:
+# module load intel/bundles/complib/2020.4
+module load openmpi/gcc/9.3/4.0.4
+module load gsl/2.7
 
 #! Full path to application executable:
-application="./exspec"
+application="./sn3d"
 
 #! Run options for the application:
-options=""
+options="-w 36"
 
 #! Work directory (i.e. where the job will run):
 workdir="$SLURM_SUBMIT_DIR"  # The value of SLURM_SUBMIT_DIR sets workdir to the directory
@@ -94,10 +94,11 @@ export I_MPI_PIN_ORDER=scatter # Adjacent domains have minimal sharing of caches
 
 #! Choose this for a pure shared-memory OpenMP parallel program on a single node:
 #! (OMP_NUM_THREADS threads will be created):
-CMD="$application $options"
+# CMD="$application $options"
 
 #! Choose this for a MPI code (possibly using OpenMP) using OpenMPI:
-#CMD="mpirun -npernode $mpi_tasks_per_node -np $np $application $options"
+CMD="mpirun -npernode $mpi_tasks_per_node -np $np $application $options"
+
 
 cd $workdir
 echo -e "Changed directory to `pwd`.\n"
@@ -119,15 +120,23 @@ fi
 
 echo -e "\nnumtasks=$numtasks, numnodes=$numnodes, mpi_tasks_per_node=$mpi_tasks_per_node (OMP_NUM_THREADS=$OMP_NUM_THREADS)"
 
+echo -e "\nExecuting command:\n==================\n$CMD\n"
 
-if [ ! -f emission.out.xz ]; then
-  ./artis/scripts/exspec-before.sh
+eval $CMD
 
-  echo -e "\nExecuting command:\n==================\n$CMD\n"
 
-  eval $CMD
-else
-  echo 'Not running exspec because emission.out.xz was found'
+###############################################################
+### ARTIS cleanup and resubmit if needed
+###############################################################
+
+mkdir ${SLURM_JOBID}.slurm
+./artis/scripts/movefiles.sh ${SLURM_JOBID}.slurm
+
+if grep -q "RESTART_NEEDED" "output_0-0.txt"
+then
+    sbatch $SLURM_JOB_NAME
 fi
 
-./artis/scripts/exspec-after.sh
+if [ -f packets00_0000.out ]; then
+    sbatch ./artis/scripts/exspec-gzip-cambridge.sh
+fi
