@@ -142,5 +142,5 @@ then
 fi
 
 if [ -f packets00_0000.out ]; then
-    sbatch ./artis/scripts/exspec-gzip-cambridge.sh
+    sbatch ./artis/scripts/exspec-gzip-cambridge-skylake.sh
 fi
