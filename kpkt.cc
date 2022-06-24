@@ -366,7 +366,6 @@ void setup_coolinglist(void)
       //C_ion = 0.;  /// collisional ionisation of macroatoms
 
       //printout("[debug] do_kpkt: element %d\n",element);
-      const int nions = get_nions(element);
       const int nlevels_currention = get_nlevels(element,ion);
 
       const int ionisinglevels = get_ionisinglevels(element,ion);
@@ -490,8 +489,7 @@ double do_kpkt_bb(PKT *pkt_ptr)
   }
   /// and then emitt the packet randomly in the comoving frame
   emitt_rpkt(pkt_ptr);
-  if (globals::debuglevel == 2)
-    printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
+  // printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
   cellindex = pkt_ptr->where;
   pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
   //if (tid == 0) k_stat_to_r_bb++;
