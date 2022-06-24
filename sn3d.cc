@@ -381,8 +381,8 @@ static void mpi_reduce_estimators(int my_rank, int nts)
 static void write_temp_packetsfile(const int timestep, const int my_rank, const PKT *const pkt)
 {
   // write packets binary file
-  char filename[100];
-  sprintf(filename, "packets_%.4d_ts%d.tmp", my_rank, timestep);
+  char filename[128];
+  snprintf(filename, 128, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   printout("Writing %s...", filename);
   FILE *packets_file = fopen_required(filename, "wb");
@@ -395,8 +395,8 @@ static void write_temp_packetsfile(const int timestep, const int my_rank, const 
 
 static void remove_temp_packetsfile(const int timestep, const int my_rank)
 {
-  char filename[100];
-  sprintf(filename, "packets_%.4d_ts%d.tmp", my_rank, timestep);
+  char filename[128];
+  snprintf(filename, 128, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   if (!access(filename, F_OK))
   {
@@ -408,8 +408,8 @@ static void remove_temp_packetsfile(const int timestep, const int my_rank)
 
 static void remove_grid_restart_data(const int timestep)
 {
-  char prevfilename[100];
-  sprintf(prevfilename, "gridsave_ts%d.tmp", timestep);
+  char prevfilename[128];
+  snprintf(prevfilename, 128, "gridsave_ts%d.tmp", timestep);
 
   if (!access(prevfilename, F_OK))
   {
@@ -478,11 +478,8 @@ static void save_grid_and_packets(
   write_temp_packetsfile(nts, my_rank, packets);
 
   #ifdef VPKT_ON
-  char filename[100];
-  if (nts % 2 == 0)
-    sprintf(filename,"vspecpol_%d_%d_even.tmp", 0, my_rank);
-  else
-    sprintf(filename,"vspecpol_%d_%d_odd.tmp", 0, my_rank);
+  char filename[128];
+  snprintf(filename, 128, "vspecpol_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
 
   FILE *vspecpol_file = fopen_required(filename, "wb");
 
@@ -492,10 +489,7 @@ static void save_grid_and_packets(
   // Write temporary files for vpkt_grid
   if (vgrid_flag == 1)
   {
-    if (nts % 2 == 0)
-      sprintf(filename,"vpkt_grid_%d_%d_even.tmp", 0, my_rank);
-    else
-      sprintf(filename,"vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
+    snprintf(filename, 128, "vpkt_grid_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
 
     FILE *vpkt_grid_file = fopen_required(filename, "wb");
 
@@ -666,14 +660,14 @@ static bool do_timestep(
 
     if (nts == globals::ftstep - 1)
     {
-      char filename[100];
-      sprintf(filename, "packets%.2d_%.4d.out", 0, my_rank);
-      //sprintf(filename,"packets%.2d_%.4d.out", middle_iteration, my_rank);
+      char filename[128];
+      snprintf(filename, 128, "packets%.2d_%.4d.out", 0, my_rank);
+      //snprintf(filename, 128, "packets%.2d_%.4d.out", middle_iteration, my_rank);
       write_packets(filename, packets);
 
       // write specpol of the virtual packets
       #ifdef VPKT_ON
-        sprintf(filename,"vspecpol_%d-%d.out",my_rank,tid);
+        snprintf(filename, 128, "vspecpol_%d-%d.out",my_rank,tid);
         FILE *vspecpol_file = fopen_required(filename, "w");
 
         write_vspecpol(vspecpol_file);
@@ -681,7 +675,7 @@ static bool do_timestep(
 
         if (vgrid_flag == 1)
         {
-          sprintf(filename,"vpkt_grid_%d-%d.out",my_rank,tid);
+          snprintf(filename, 128, "vpkt_grid_%d-%d.out",my_rank,tid);
           FILE *vpkt_grid_file = fopen_required(filename, "w");
           write_vpkt_grid(vpkt_grid_file);
           fclose(vpkt_grid_file);
@@ -692,9 +686,9 @@ static bool do_timestep(
 
       // final packets*.out have been written, so remove the temporary packets files
       // commented out because you might still want to resume the simulation
-      // sprintf(filename, "packets%d_%d_odd.tmp", 0, my_rank);
+      // snprintf(filename, 128, "packets%d_%d_odd.tmp", 0, my_rank);
       // remove(filename);
-      // sprintf(filename, "packets%d_%d_even.tmp", 0, my_rank);
+      // snprintf(filename, 128, "packets%d_%d_even.tmp", 0, my_rank);
       // remove(filename);
     }
   }
@@ -706,7 +700,7 @@ int main(int argc, char** argv)
 // Main - top level routine.
 {
   //FILE *temperature_file;
-  char filename[100];
+  char filename[128];
 
   #ifdef VPKT_ON
     nvpkt = 0;
@@ -786,7 +780,7 @@ int main(int argc, char** argv)
     /// Get the current threads ID, copy it to a threadprivate variable
     tid = get_thread_num();
     /// and initialise the threads outputfile
-    sprintf(filename,"output_%d-%d.txt", my_rank, tid);
+    snprintf(filename, 128, "output_%d-%d.txt", my_rank, tid);
     output_file = fopen_required(filename, "w");
     /// Makes sure that the output_file is written line-by-line
     setvbuf(output_file, NULL, _IOLBF, 1);
@@ -913,13 +907,12 @@ int main(int argc, char** argv)
   */
 
 
-  //sprintf(filename,"tb%.4d.txt",my_rank);
+  //snprintf(filename, 128, "tb%.4d.txt", my_rank);
   //(tb_file = fopen_required(filename, "w");
   //setvbuf(tb_file, NULL, _IOLBF, 1);
 
   //printout("CELLHISTORYSIZE %d\n",CELLHISTORYSIZE);
 
-  /// Get input stuff
   input(my_rank);
 
   #ifdef RECORD_LINESTAT
@@ -1038,7 +1031,7 @@ int main(int argc, char** argv)
   if (ndo > 0)
   {
     assert_always(estimators_file == NULL)
-    sprintf(filename, "estimators_%.4d.out", my_rank);
+    snprintf(filename, 128, "estimators_%.4d.out", my_rank);
     estimators_file = fopen_required(filename, "w");
 
     if (NLTE_POPS_ON && ndo_nonempty > 0)
@@ -1065,11 +1058,11 @@ int main(int argc, char** argv)
     {
       if (nts % 2 == 0)
       {
-        sprintf(filename,"vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
+        snprintf(filename, 128, "vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
       }
       else
       {
-        sprintf(filename,"vpkt_grid_%d_%d_even.tmp", 0, my_rank);
+        snprintf(filename, 128, "vpkt_grid_%d_%d_even.tmp", 0, my_rank);
       }
 
       FILE *vpktgrid_file = fopen_required(filename, "rb");

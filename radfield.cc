@@ -374,8 +374,8 @@ void init(int my_rank, int ndo, int ndo_nonempty)
              H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
     if (ndo_nonempty > 0)
     {
-      char filename[100];
-      sprintf(filename,"radfield_%.4d.out", my_rank);
+      char filename[128];
+      snprintf(filename, 128, "radfield_%.4d.out", my_rank);
       assert_always(radfieldfile == NULL);
       radfieldfile = fopen_required(filename, "w");
       fprintf(radfieldfile,"%8s %15s %8s %11s %11s %9s %9s %9s %9s %9s %12s\n",

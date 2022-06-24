@@ -223,8 +223,8 @@ void write_compton_estimators(int nts)
   FILE *est_file = NULL;
   FILE *dummy = NULL;
   char chch;
-  char filename[100] = "est_";
-  char junk[100];
+  char filename[128] = "est_";
+  char junk[128];
 
   dummy = fopen_required("dummy", "w+");
   fprintf(dummy, "%d", nts);

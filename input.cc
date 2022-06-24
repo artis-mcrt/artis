@@ -2313,14 +2313,14 @@ void update_parameterfile(int nts)
       if (noncomment_linenum == 2 && nts >= 0)
       {
         /// Number of start and end time step
-        sprintf(c_line, "%3.3d %3.3d", nts, globals::ftstep);
+        snprintf(c_line, 1024, "%3.3d %3.3d", nts, globals::ftstep);
         // line.assign(c_line);
         line.replace(0, strlen(c_line), c_line);
       }
       else if (noncomment_linenum == 16 && nts >= 0)
       {
         /// resume from gridsave file
-        sprintf(c_line, "%d", 1); /// Force continuation
+        snprintf(c_line, 1024, "%d", 1); /// Force continuation
         line.assign(c_line);
       }
 

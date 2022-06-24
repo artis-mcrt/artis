@@ -1006,12 +1006,12 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   //   for (int column = 0; column < nlte_dimension; column++)
   //   {
   //     char str[15];
-  //     sprintf(str, "%+.1e ", gsl_matrix_get(rate_matrix, row, column));
+  //     snprintf(str, 15, "%+.1e ", gsl_matrix_get(rate_matrix, row, column));
   //     printout(str);
   //   }
   //   printout("| ");
   //   char str[15];
-  //   sprintf(str, "%+.1e\n", gsl_vector_get(balance_vector, row));
+  //   snprintf(str, 15, "%+.1e\n", gsl_vector_get(balance_vector, row));
   //   printout(str);
   // }
   // printout("\n");
@@ -1630,8 +1630,8 @@ double superlevel_boltzmann(const int modelgridindex, const int element, const i
 
 void nltepop_open_file(const int my_rank)
 {
-  char filename[100];
-  sprintf(filename, "nlte_%.4d.out",my_rank);
+  char filename[128];
+  snprintf(filename, 128, "nlte_%.4d.out",my_rank);
   assert_always(nlte_file == NULL);
   nlte_file = fopen_required(filename, "w");
   fprintf(nlte_file, "%8s %14s %2s %9s %5s %11s %11s %11s\n",

@@ -152,8 +152,8 @@ void write_grey(int nts)
   FILE *est_file = NULL;
   FILE *dummy = NULL;
   char chch;
-  char filename[100] = "grey_est_";
-  char junk[100];
+  char filename[128] = "grey_est_";
+  char junk[128];
 
   if ((dummy = fopen("dummy", "w+")) == NULL)
   {

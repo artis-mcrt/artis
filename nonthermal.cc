@@ -545,8 +545,8 @@ void init(const int my_rank, const int ndo, const int ndo_nonempty)
 
   if (ndo_nonempty > 0)
   {
-    char filename[100];
-    sprintf(filename,"nonthermalspec_%.4d.out", my_rank);
+    char filename[128];
+    snprintf(filename, 128, "nonthermalspec_%.4d.out", my_rank);
     nonthermalfile = fopen_required(filename, "w");
     fprintf(nonthermalfile,"%8s %15s %8s %11s %11s %11s\n",
             "timestep","modelgridindex","index","energy_ev","source","y");
@@ -2998,12 +2998,12 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   //   for (int column = 0; column < 10; column++)
   //   {
   //     char str[15];
-  //     sprintf(str, "%+.1e ", gsl_matrix_get(sfmatrix, row, column));
+  //     snprintf(str, 15, "%+.1e ", gsl_matrix_get(sfmatrix, row, column));
   //     printout(str);
   //   }
   //   printout("| ");
   //   char str[15];
-  //   sprintf(str, "%+.1e\n", gsl_vector_get(rhsvec, row));
+  //   snprintf(str, 15, "%+.1e\n", gsl_vector_get(rhsvec, row));
   //   printout(str);
   // }
   // printout("\n");

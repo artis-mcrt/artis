@@ -1944,8 +1944,8 @@ void read_ejecta_model(void)
 
 static void read_grid_restart_data(const int timestep)
 {
-  char filename[100];
-  sprintf(filename, "gridsave_ts%d.tmp", timestep);
+  char filename[128];
+  snprintf(filename, 128, "gridsave_ts%d.tmp", timestep);
 
   printout("READIN GRID SNAPSHOT from %s\n", filename);
   FILE *gridsave_file = fopen_required(filename, "r");
@@ -2043,8 +2043,8 @@ static void read_grid_restart_data(const int timestep)
 
 void write_grid_restart_data(const int timestep)
 {
-  char filename[100];
-  sprintf(filename, "gridsave_ts%d.tmp", timestep);
+  char filename[128];
+  snprintf(filename, 128, "gridsave_ts%d.tmp", timestep);
 
   const time_t sys_time_start_write_restart = time(NULL);
   printout("Write grid restart data to %s...", filename);

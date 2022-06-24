@@ -35,11 +35,11 @@ gsl_integration_workspace *gslworkspace = NULL;
 
 static void get_final_packets(int rank, int nprocs, PKT pkt[])
 {
-  char filename[100];
-  /// Read in the next bunch of packets to work on
-  //sprintf(filename,"packets%d_%d.tmp",0,i);
+  // Read in the final packets*.out (text format) files
 
-  sprintf(filename, "packets%.2d_%.4d.out", 0, rank);
+  char filename[128];
+
+  snprintf(filename, 128, "packets%.2d_%.4d.out", 0, rank);
   printout("reading %s (file %d of %d)\n", filename, rank + 1, nprocs);
 
   if (!access(filename, F_OK))
@@ -89,11 +89,11 @@ int main(int argc, char** argv)
     globals::node_id = 0;
     globals::node_count = 0;
   #endif
-  char filename[100];
+  char filename[128];
 
   if (globals::rank_global == 0)
   {
-    sprintf(filename, "exspec.txt");
+    snprintf(filename, 128, "exspec.txt");
     output_file = fopen_required(filename, "w");
     setvbuf(output_file, NULL, _IOLBF, 1);
   }
@@ -206,30 +206,30 @@ int main(int argc, char** argv)
     else
     {
       /// Extract LOS dependent spectra and light curves
-      char lc_filename[100] = "";
-      char spec_filename[100] = "";
-      char emission_filename[100] = "";
-      char trueemission_filename[100] = "";
-      char absorption_filename[100] = "";
+      char lc_filename[128] = "";
+      char spec_filename[128] = "";
+      char emission_filename[128] = "";
+      char trueemission_filename[128] = "";
+      char absorption_filename[128] = "";
 
       #ifdef POL_ON
-      char specpol_filename[100] = "";
-      sprintf(specpol_filename, "specpol_res_%.2d.out", a);
-      char emissionpol_filename[100] = "";
-      char absorptionpol_filename[100] = "";
+      char specpol_filename[128] = "";
+      snprintf(specpol_filename, 128, "specpol_res_%.2d.out", a);
+      char emissionpol_filename[128] = "";
+      char absorptionpol_filename[128] = "";
       #endif
 
-      sprintf(lc_filename, "light_curve_res_%.2d.out", a);
-      sprintf(spec_filename, "spec_res_%.2d.out", a);
+      snprintf(lc_filename, 128, "light_curve_res_%.2d.out", a);
+      snprintf(spec_filename, 128, "spec_res_%.2d.out", a);
 
       if (globals::do_emission_res)
       {
-        sprintf(emission_filename, "emission_res_%.2d.out", a);
-        sprintf(trueemission_filename, "emissiontrue_res_%.2d.out", a);
-        sprintf(absorption_filename, "absorption_res_%.2d.out", a);
+        snprintf(emission_filename, 128, "emission_res_%.2d.out", a);
+        snprintf(trueemission_filename, 128, "emissiontrue_res_%.2d.out", a);
+        snprintf(absorption_filename, 128, "absorption_res_%.2d.out", a);
         #ifdef POL_ON
-        sprintf(emissionpol_filename, "emissionpol_res_%.2d.out", a);
-        sprintf(absorptionpol_filename, "absorptionpol_res_%.2d.out", a);
+        snprintf(emissionpol_filename, 128, "emissionpol_res_%.2d.out", a);
+        snprintf(absorptionpol_filename, 128, "absorptionpol_res_%.2d.out", a);
         #endif
       }
 
@@ -262,11 +262,19 @@ int main(int argc, char** argv)
   free_spectra(rpkt_spectra);
 
   if (stokes_i != NULL)
+  {
     free_spectra(stokes_i);
+  }
+
   if (stokes_q != NULL)
+  {
     free_spectra(stokes_q);
+  }
+
   if (stokes_u != NULL)
+  {
     free_spectra(stokes_u);
+  }
 
   free_spectra(gamma_spectra);
 

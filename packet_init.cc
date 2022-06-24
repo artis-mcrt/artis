@@ -230,8 +230,8 @@ void write_packets(char filename[], PKT *pkt)
 void read_temp_packetsfile(const int timestep, const int my_rank, PKT *const pkt)
 {
   // read packets binary file
-  char filename[100];
-  sprintf(filename, "packets_%.4d_ts%d.tmp", my_rank, timestep);
+  char filename[128];
+  snprintf(filename, 128, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   printout("Reading %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");
@@ -244,7 +244,7 @@ void read_temp_packetsfile(const int timestep, const int my_rank, PKT *const pkt
 
 void read_packets(char filename[], PKT *pkt)
 {
-  // read packets text file
+  // read packets*.out text format file
   std::ifstream packets_file(filename);
   assert_always(packets_file.is_open());
 
