@@ -1280,11 +1280,13 @@ void free_decaypath_energy_per_mass(void)
   if (win_decaypath_energy_per_mass != MPI_WIN_NULL)
   {
     MPI_Win_free(&win_decaypath_energy_per_mass);
+    win_decaypath_energy_per_mass = MPI_WIN_NULL;
   }
 #else
   if (decaypath_energy_per_mass != NULL)
   {
     free(decaypath_energy_per_mass);
+    decaypath_energy_per_mass = NULL;
   }
 #endif
 }
