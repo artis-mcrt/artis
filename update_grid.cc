@@ -79,7 +79,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
       decay::fprint_nuc_abundances(estimators_file, mgi, globals::time_step[timestep].mid, element);
 
-      if (nions == 0)
+      if (nions == 0 || elpop <= 0.)
       {
         // dummy element for nuclear abundances only
         continue;
