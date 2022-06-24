@@ -191,7 +191,7 @@ static void read_binding_energies(void)
   FILE *binding = fopen_required("binding_energies.txt", "r");
 
   int dum1, dum2;
-  fscanf(binding, "%d %d", &dum1, &dum2); //dimensions of the table
+  assert_always(fscanf(binding, "%d %d", &dum1, &dum2) == 2); //dimensions of the table
   if ((dum1 != M_NT_SHELLS) || (dum2 != MAX_Z_BINDING))
   {
     printout("Wrong size for the binding energy tables!\n");
@@ -201,8 +201,8 @@ static void read_binding_energies(void)
   for (int index1 = 0; index1 < dum2; index1++)
   {
     float dum[10];
-    fscanf(binding, "%g %g %g %g %g %g %g %g %g %g",
-           &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5], &dum[6], &dum[7], &dum[8], &dum[9]);
+    assert_always(fscanf(binding, "%g %g %g %g %g %g %g %g %g %g",
+           &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5], &dum[6], &dum[7], &dum[8], &dum[9]) == 10);
 
     for (int index2 = 0; index2 < 10; index2++)
     {
@@ -420,15 +420,15 @@ static void read_collion_data(void)
 
   FILE *cifile = fopen_required("collion.txt", "r");
 
-  fscanf(cifile, "%d", &colliondatacount);
+  assert_always(fscanf(cifile, "%d", &colliondatacount) == 1);
   printout("Reading %d collisional transition rows\n", colliondatacount);
   colliondata = (struct collionrow *) calloc(colliondatacount, sizeof(struct collionrow));
   int n = 0; // the index of kept rows, skipping rows that aren't in the simulation
   for (int i = 0; i < colliondatacount; i++)
   {
-    fscanf(cifile, "%2d %2d %1d %1d %lg %lg %lg %lg %lg",
+    assert_always(fscanf(cifile, "%2d %2d %1d %1d %lg %lg %lg %lg %lg",
            &colliondata[n].Z, &colliondata[n].nelec, &colliondata[n].n, &colliondata[n].l,
-           &colliondata[n].ionpot_ev, &colliondata[n].A, &colliondata[n].B, &colliondata[n].C, &colliondata[n].D);
+           &colliondata[n].ionpot_ev, &colliondata[n].A, &colliondata[n].B, &colliondata[n].C, &colliondata[n].D) == 9);
 
     colliondata[n].prob_num_auger[0] = 1.;
     for (int a = 1; a <= NT_MAX_AUGER_ELECTRONS; a++)
