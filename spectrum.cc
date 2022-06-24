@@ -6,7 +6,7 @@
 #include "vectors.h"
 
 
-bool TRACE_EMISSION_ABSORPTION_REGION_ON = true;
+bool TRACE_EMISSION_ABSORPTION_REGION_ON = false;
 
 #define traceemissabs_lambdamin 1000.  // in Angstroms
 #define traceemissabs_lambdamax 25000.
