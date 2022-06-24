@@ -216,6 +216,9 @@ void md5_file(const char filename[], char hashout[2 * MD5_BLOCK_SIZE + 1])
 	md5_final(&ctx, hashbytes);
 
   for(int j = 0; j < MD5_BLOCK_SIZE; j++)
-    sprintf(&hashout[2 * j], "%02x", hashbytes[j]);
+	{
+    snprintf(&hashout[2 * j], 2 * MD5_BLOCK_SIZE + 1 - 2 * j, "%02x", hashbytes[j]);
+	}
+
   hashout[2 * MD5_BLOCK_SIZE] = '\0';
 }
