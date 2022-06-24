@@ -2036,8 +2036,8 @@ void read_parameterfile(int rank)
   assert_always(globals::itstep < globals::ntstep);
   assert_always(globals::itstep <= globals::ftstep);
 
-  float tmin_days = 0.;
-  float tmax_days = 0.;
+  double tmin_days = 0.;
+  double tmax_days = 0.;
   assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> tmin_days >> tmax_days; // start and end times
   assert_always(tmin_days > 0);
