@@ -555,6 +555,19 @@ float get_modelinitradioabund(const int modelgridindex, const int z, const int a
 
 
 __host__ __device__
+float get_modelinitradioabund_bynucindex(const int modelgridindex, const int nucindex)
+{
+  // this function replaces get_f56ni(mgi), get_fco56(mgi), etc.
+
+  if (modelgrid[modelgridindex].initradioabund == NULL)
+  {
+    return 0.;
+  }
+  return modelgrid[modelgridindex].initradioabund[nucindex];
+}
+
+
+__host__ __device__
 static void set_modelinitradioabund(const int modelgridindex, const int z, const int a, const float abund)
 {
   // // initradioabund is in shared node memory. only first rank in the node sets the values
@@ -1859,12 +1872,7 @@ static void calc_totmassradionuclides(void)
 
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
     {
-      const int z = decay::get_nuc_z(nucindex);
-      const int a = decay::get_nuc_a(nucindex);
-      if (z > 0)  // skips FAKE_GAM_LINE_ID
-      {
-        totmassradionuclide[nucindex] += mass_in_shell * get_modelinitradioabund(mgi, z, a);
-      }
+      totmassradionuclide[nucindex] += mass_in_shell * get_modelinitradioabund_bynucindex(mgi, nucindex);
     }
 
     mfeg += mass_in_shell * get_ffegrp(mgi);
