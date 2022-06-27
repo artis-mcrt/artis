@@ -804,7 +804,9 @@ static bool nltepop_matrix_solve(
     for (iteration = 0; iteration < 10; iteration++)
     {
       if (iteration > 0)
+      {
         gsl_linalg_LU_refine(rate_matrix, rate_matrix_LU_decomp, p, balance_vector, x, gsl_work_vector);
+      }
 
       gsl_vector_memcpy(residual_vector, balance_vector);
       gsl_blas_dgemv(CblasNoTrans, 1.0, rate_matrix, x, -1.0, residual_vector); // calculate Ax - b = residual
@@ -825,9 +827,13 @@ static bool nltepop_matrix_solve(
     {
       // printout("  NLTE solver matrix LU_refine: After %d iterations, keeping solution vector with a max residual of %g\n",iteration,error_best);
       if (error_best > 1e-10)
+      {
         printout("  NLTE solver matrix LU_refine: After %d iterations, best solution vector has a max residual of %g (WARNING!)\n",iteration,error_best);
+      }
+
       gsl_vector_memcpy(x, x_best);
     }
+
     gsl_vector_free(x_best);
     gsl_vector_free(gsl_work_vector);
 
@@ -972,7 +978,9 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       // this is the slowest component
       nltepop_matrix_add_ionisation(modelgridindex, element, ion, s_renorm, rate_matrix_rad_bf, rate_matrix_coll_bf);
       if (NT_ON)
+      {
         nltepop_matrix_add_nt_ionisation(modelgridindex, element, ion, s_renorm, rate_matrix_ntcoll_bf);
+      }
     }
   }
   // printout("\n");

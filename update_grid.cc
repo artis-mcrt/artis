@@ -889,7 +889,9 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
             const double trial = fabs(solve_nlte_pops_ion(element, ion, n, nts) - 1);
 
             if (trial > nlte_test)
+            {
               nlte_test = trial;
+            }
           }
         }
       }
