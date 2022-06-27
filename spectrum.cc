@@ -24,7 +24,7 @@ typedef struct emissionabsorptioncontrib
   int lineindex;   // this will be important when the list gets sorted
 } emissionabsorptioncontrib;
 
-struct emissionabsorptioncontrib *traceemissionabsorption;
+static struct emissionabsorptioncontrib *traceemissionabsorption = NULL;
 double traceemission_totalenergy = 0.;
 double traceabsorption_totalenergy = 0.;
 
@@ -140,8 +140,9 @@ static void printout_tracemission_stats(void)
     }
     printout("\n");
   }
-
+  
   free(traceemissionabsorption);
+  traceemissionabsorption = NULL;
 }
 
 
@@ -179,7 +180,7 @@ void write_spectrum(
     printout("Writing %s\n", spec_filename);
   }
 
-  if (TRACE_EMISSION_ABSORPTION_REGION_ON && do_emission_res)
+  if (TRACE_EMISSION_ABSORPTION_REGION_ON && do_emission_res && traceemissionabsorption != NULL)
   {
     printout_tracemission_stats();
   }
