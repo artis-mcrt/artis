@@ -574,6 +574,22 @@ static void set_modelinitradioabund(const int modelgridindex, const int z, const
 
 
 __host__ __device__
+static void set_modelinitradioabund_bynucindex(const int modelgridindex, const int nucindex, const float abund)
+{
+  // // initradioabund is in shared node memory. only first rank in the node sets the values
+  // if (globals::rank_in_node != 0)
+  // {
+  //   return;
+  // }
+  assert_always(abund >= 0.);
+  assert_always(abund <= 1.);
+
+  assert_always(modelgrid[modelgridindex].initradioabund != NULL);
+  modelgrid[modelgridindex].initradioabund[nucindex] = abund;
+}
+
+
+__host__ __device__
 float get_stable_initabund(const int mgi, const int element)
 {
   assert_testmodeonly(modelgrid[mgi].initmassfracstable != NULL);
@@ -1070,9 +1086,7 @@ static void allocate_nonemptymodelcells(void)
       {
         for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
         {
-          const int z = decay::get_nuc_z(nucindex);
-          const int a = decay::get_nuc_a(nucindex);
-          set_modelinitradioabund(mgi, z, a, 0.);
+          set_modelinitradioabund_bynucindex(mgi, nucindex, 0.);
         }
       }
     }
@@ -1347,7 +1361,8 @@ static void read_2d3d_modelradioabundanceline(
     const int mgi,
     const bool keepcell,
     std::vector<int> zlist,
-    std::vector<int> alist)
+    std::vector<int> alist,
+    std::vector<int> nucindexlist)
 {
   std::string line;
   assert_always(std::getline(fmodel, line));
@@ -1395,7 +1410,7 @@ static void read_2d3d_modelradioabundanceline(
         {
           double abundin = 0.;
           ssline >> abundin;
-          set_modelinitradioabund(mgi, zlist[i], alist[i], abundin);
+          set_modelinitradioabund_bynucindex(mgi, nucindexlist[i], abundin);
         }
       }
     }
@@ -1617,7 +1632,7 @@ static void read_2d_model(void)
     set_rhoinit(mgi, rho_tmin);
     set_rho(mgi, rho_tmin);
 
-    read_2d3d_modelradioabundanceline(fmodel, mgi, true, std::vector<int>(), std::vector<int>());
+    read_2d3d_modelradioabundanceline(fmodel, mgi, true, std::vector<int>(), std::vector<int>(), std::vector<int>());
 
     mgi++;
   }
@@ -1693,6 +1708,12 @@ static void read_3d_model(void)
   decay::init_nuclides(zlist, alist);
   allocate_initradiobund();
 
+  std::vector<int> nucindexlist(zlist.size());
+  for (int i = 0; i < (int) zlist.size(); i++)
+  {
+    nucindexlist[i] = decay::get_nuc_index(zlist[i], alist[i]);
+  }
+
   // mgi is the index to the model grid - empty cells are sent to special value get_npts_model(),
   // otherwise each input cell is one modelgrid cell
   int mgi = 0; // corresponds to model.txt index column, but zero indexed! (model.txt might be 1-indexed)
@@ -1749,7 +1770,7 @@ static void read_3d_model(void)
       min_den = rho_model;
     }
 
-    read_2d3d_modelradioabundanceline(fmodel, mgi, keepcell, zlist, alist);
+    read_2d3d_modelradioabundanceline(fmodel, mgi, keepcell, zlist, alist, nucindexlist);
 
     if (keepcell)
     {
