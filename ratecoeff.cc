@@ -968,10 +968,18 @@ static void read_recombrate_file(void)
       struct rrc_row row;
       assert_always(fscanf(recombrate_file, "%lg %lg %lg\n", &row.log_Te, &row.rrc_low_n, &row.rrc_total) == 3);
       if (row.log_Te < log_Te_estimate && row.log_Te > T_highestbelow.log_Te)
-        memcpy(&T_highestbelow, &row, sizeof(struct rrc_row));
+      {
+        T_highestbelow.log_Te = row.log_Te;
+        T_highestbelow.rrc_low_n = row.rrc_low_n;
+        T_highestbelow.rrc_total = row.rrc_total;
+      }
 
       if (row.log_Te > log_Te_estimate && (row.log_Te < T_lowestabove.log_Te || T_lowestabove.log_Te < 0))
-        memcpy(&T_lowestabove, &row, sizeof(struct rrc_row));
+      {
+        T_lowestabove.log_Te = row.log_Te;
+        T_lowestabove.rrc_low_n = row.rrc_low_n;
+        T_lowestabove.rrc_total = row.rrc_total;
+      }
     }
     const int element = get_elementindex(atomicnumber);
     if (element >= 0)
