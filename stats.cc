@@ -207,6 +207,7 @@ namespace stats {
     int allpktinteractions = 0;
     for (int i = 0; i < globals::npkts; i++)
     {
+      assert_always(pkt[i].interactions >= 0);
       allpktinteractions += pkt[i].interactions;
     }
     const double meaninteractions = (double) allpktinteractions / globals::npkts;
