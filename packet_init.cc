@@ -291,6 +291,7 @@ void read_packets(char filename[], PKT *pkt)
     pkt[i].escape_type = (enum packet_type) escape_type;
 
     ssline >> pkt[i].next_trans >> pkt[i].interactions >> pkt[i].last_event;
+    assert_always(pkt[i].interactions >= 0);
 
     ssline >> pkt[i].emissiontype >> pkt[i].trueemissiontype;
 
