@@ -1623,9 +1623,21 @@ void cleanup(void)
 {
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++)
   {
-    free(decaypaths[decaypathindex].z);
-    free(decaypaths[decaypathindex].a);
-    free(decaypaths[decaypathindex].decaytypes);
+    if (decaypaths[decaypathindex].z != NULL)
+    {
+      free(decaypaths[decaypathindex].z);
+      decaypaths[decaypathindex].z = NULL;
+    }
+    if (decaypaths[decaypathindex].a != NULL)
+    {
+      free(decaypaths[decaypathindex].a);
+      decaypaths[decaypathindex].a = NULL;
+    }
+    if (decaypaths[decaypathindex].decaytypes != NULL)
+    {
+      free(decaypaths[decaypathindex].decaytypes);
+      decaypaths[decaypathindex].decaytypes = NULL;
+    }
   }
   free_decaypath_energy_per_mass();
 }
