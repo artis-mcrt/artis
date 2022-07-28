@@ -529,6 +529,7 @@ static void precalculate_rate_coefficient_integrals(void)
             //printout("%d %g\n",iter,T_e);
 
             intparas.T = T_e;
+            assert_always(globals::elements[element].ions[ion].levels[level].photoion_xs != NULL);
             intparas.photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
 
             //gsl_function F_gamma;

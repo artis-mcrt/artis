@@ -74,15 +74,18 @@ static void read_phixs_data_table(
   {
     int upperlevel = upperlevel_in - groundstate_index_in;
     assert_always(upperlevel >= 0);
+    assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets == 0);
     globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
     *mem_usage_phixs += sizeof(phixstarget_entry);
-    if ((globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(1, sizeof(phixstarget_entry))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to initialize phixstargets... abort\n");
-      abort();
-    }
+
+    assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets == NULL);
+    globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(1, sizeof(phixstarget_entry));
+    assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != NULL);
+
     if (single_level_top_ion && (upperion == get_nions(element) - 1)) // top ion has only one level, so send it to that level
+    {
       upperlevel = 0;
+    }
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex = upperlevel;
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.0;
   }
@@ -1108,6 +1111,9 @@ static void read_atomicdata_files(void)
       for (int level = 0; level < nlevelsmax; level++)
       {
         globals::elements[element].ions[ion].levels[level].uniquelevelindex = uniquelevelindex;
+        globals::elements[element].ions[ion].levels[level].nphixstargets = 0;
+        globals::elements[element].ions[ion].levels[level].phixstargets = NULL;
+        globals::elements[element].ions[ion].levels[level].photoion_xs = NULL;
         uniquelevelindex++;
         totaldowntrans += get_ndowntrans(element, ion, level);
         totaluptrans += get_nuptrans(element, ion, level);
@@ -1277,9 +1283,9 @@ static void read_atomicdata_files(void)
       // all levels in the ground term should be photoionisation targets from the lower ground state
       if (ion > 0 && ion < get_nions(element) - 1)
       {
-        if (get_phixsupperlevel(element, ion - 1, 0, 0) == 0)
+        const int nphixstargets = get_nphixstargets(element, ion - 1, 0);
+        if (nphixstargets > 0 && get_phixsupperlevel(element, ion - 1, 0, 0) == 0)
         {
-          const int nphixstargets = get_nphixstargets(element, ion - 1, 0);
           const int phixstargetlevels = get_phixsupperlevel(element, ion - 1, 0, nphixstargets - 1) + 1;
 
           if (nlevels_groundterm != phixstargetlevels)
