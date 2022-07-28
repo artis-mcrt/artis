@@ -204,7 +204,7 @@ namespace stats {
 
   void pkt_action_counters_printout(const PKT *const pkt, const int nts)
   {
-    int allpktinteractions = 0;
+    long allpktinteractions = 0;
     for (int i = 0; i < globals::npkts; i++)
     {
       assert_always(pkt[i].interactions >= 0);
