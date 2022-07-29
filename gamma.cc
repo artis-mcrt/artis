@@ -616,7 +616,7 @@ void do_gamma(PKT *pkt_ptr, double t2)
     abort();
   }
 
-  if (sdist < 1)
+  if (sdist < 0)
   {
     printout("Negative distance (sdist). Abort?\n");
     sdist = 0;
