@@ -1645,8 +1645,11 @@ static void setup_phixs_list(void)
       }
     }
   }
-
+  assert_always(groundcontindex == globals::nbfcontinua_ground);
+  qsort(globals::groundcont, globals::nbfcontinua_ground, sizeof(groundphixslist_t),
+        compare_groundphixslistentry_bynuedge);
 #endif
+
   int allcontindex = 0;
   for (int element = 0; element < get_nelements(); element++)
   {
@@ -1683,11 +1686,6 @@ static void setup_phixs_list(void)
       }
     }
   }
-
-  #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-  assert_always(groundcontindex == globals::nbfcontinua_ground);
-  qsort(globals::groundcont, globals::nbfcontinua_ground, sizeof(groundphixslist_t), compare_groundphixslistentry_bynuedge);
-  #endif
 
   assert_always(allcontindex == globals::nbfcontinua);
   qsort(globals::allcont, globals::nbfcontinua, sizeof(fullphixslist_t), compare_phixslistentry_bynuedge);
