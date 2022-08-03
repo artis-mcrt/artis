@@ -157,7 +157,7 @@ jobs:
 
     - name: "Setup test nebularonezone"
       run: |
-        cp tests/nebularonezone_inputfiles/artisoptions.h .
+        cp tests/nebularonezone_testrun/artisoptions.h .
         make clean
         make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
         cp sn3d tests/nebularonezone_testrun/
@@ -273,4 +273,182 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: test-nebularonezone-output-pdf
+        path: tests/*.pdf
+
+  test_classicmode:
+    strategy:
+      matrix:
+        # os: ['ubuntu-latest', 'self-hosted']
+        os: ['ubuntu-latest']
+        testmode: ['OFF', 'ON']
+        exclude:
+        - os: self-hosted
+          testmode: 'ON'
+
+    runs-on: ${{ matrix.os }}
+    name: test_classicmode testmode ${{ matrix.testmode }}
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: "install dependencies"
+      if: matrix.os != 'selfhosted'
+      run: |
+        git status
+        # sudo apt-get update
+        sudo apt-get install libgsl-dev
+        # sudo apt-get install clang
+        sudo apt install -y openmpi-bin libopenmpi-dev
+
+    - name: "CPU count"
+      id: cpu-count
+      run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
+
+    # we can cache this, but then we don't test the code that generates ratecoeff.dat
+    # - name: Cache ratecoeff.dat
+    #   uses: actions/cache@v3
+    #   with:
+    #     path: "tests/classicmode_testrun/ratecoeff.dat"
+    #     key: "tests/classicmode_testrun/ratecoeff.dat"
+
+    - name: Cache test atomic data
+      uses: actions/cache@v3
+      id: cache-testatomicdata
+      with:
+          path: "tests/atomicdata_feconi.tar.xz"
+          key: tests/atomicdata_feconi.tar.xz
+
+    # - name: Cache reference data
+    #   uses: actions/cache@v3
+    #   id: cache-testreferencedata
+    #   with:
+    #       path: "tests/classicmode_reference_20211126.tar.xz"
+    #       key: tests/classicmode_reference_20211126.tar.xz
+
+    - name: Download/extract test data
+      # if: steps.cache-atomicdata.outputs.cache-hit != 'true'
+      working-directory: tests/
+      run: |
+          source ./setup_classicmode.sh
+
+    - name: "Setup test classicmode"
+      run: |
+        cp tests/classicmode_testrun/artisoptions.h .
+        make clean
+        make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+        cp sn3d tests/classicmode_testrun/
+        cp exspec tests/classicmode_testrun/
+
+    - name: "Run classicmode test job0 start"
+      if: always()
+      working-directory: tests/classicmode_testrun/
+      run: |
+        cp input-newrun.txt input.txt
+        touch output_0-0.txt
+        time mpirun -np 2 ./sn3d
+        mkdir job0
+        ../../scripts/movefiles.sh job0
+
+    - name: "cat job0 estimators"
+      if: always()
+      working-directory: tests/classicmode_testrun/job0/
+      run: cat estimators*.out
+
+    - name: "cat job0 output log"
+      if: always()
+      working-directory: tests/classicmode_testrun/job0/
+      run: cat output_0-0.txt
+
+    - name: Checksum job0 output files
+      if: always() && matrix.os != 'selfhosted'
+      working-directory: tests/classicmode_testrun
+      run: |
+        md5sum *.out job0/*.out
+        # md5sum -c results_md5_job0.txt
+
+    - name: "Run classicmode test job1 resume"
+      if: always()
+      working-directory: tests/classicmode_testrun/
+      run: |
+        cp input-resume.txt input.txt
+        time mpirun -np 2 ./sn3d
+        mkdir job1
+        ../../scripts/movefiles.sh job1
+
+    - name: "cat job1 estimators"
+      if: always()
+      working-directory: tests/classicmode_testrun/job1/
+      run: cat estimators*.out
+
+    - name: "cat job1 output log"
+      if: always()
+      working-directory: tests/classicmode_testrun/job1/
+      run: cat output_0-0.txt
+
+    - name: "Run exspec"
+      if: always()
+      working-directory: tests/classicmode_testrun/
+      run: |
+        time ./exspec
+        mkdir output
+        cp -r output_0-0.txt exspec.txt *.out output/
+        rsync -av job0 output/
+        rsync -av job1 output/
+
+    - name: "cat exspec log"
+      if: always()
+      working-directory: tests/classicmode_testrun/output/
+      run: |
+        cat exspec.txt
+
+    - name: Checksum output files
+      if: always() && matrix.os != 'selfhosted'
+      working-directory: tests/classicmode_testrun
+      run: |
+        md5sum *.out job1/*.out
+        # md5sum -c results_md5_final.txt
+
+    - name: Prepare for next steps
+      if: always() && matrix.os != 'selfhosted'
+      working-directory: tests/classicmode_testrun
+      run: |
+        touch requirements.txt
+        rm packets*.*
+
+    - name: Upload output files
+      uses: actions/upload-artifact@v2
+      if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
+      with:
+        name: test-classicmode-output
+        path: tests/classicmode_testrun/output
+
+    - name: Set up Python
+      if: always() && matrix.os != 'selfhosted'
+      uses: actions/setup-python@v3
+      with:
+        cache: 'pip'
+
+    - name: Install artistools
+      if: always()
+      run: |
+        python3 -m pip install --upgrade pip
+        python3 -m pip install artistools
+
+        # upgrade all installed packages to their latest versions
+        python3 -m pip list --format=freeze --outdated | cut -d '=' -f1 | xargs -n1 python3 -m pip install --upgrade
+
+    - name: Plot output
+      if: always()
+      working-directory: tests/
+      run: |
+        # python3 -m artistools.lightcurve classicmode_testrun classicmode_reference
+        # python3 -m artistools.spectra -ts 8 classicmode_testrun classicmode_reference
+        python3 -m artistools.lightcurve classicmode_testrun
+        python3 -m artistools.spectra -ts 8 classicmode_testrun
+
+    - name: Upload plot files
+      if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
+      uses: actions/upload-artifact@v2
+      with:
+        name: test-classicmode-output-pdf
         path: tests/*.pdf

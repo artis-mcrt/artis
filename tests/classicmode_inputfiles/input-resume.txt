@@ -1,0 +1,24 @@
+1281360349               # pre_zseed: specific random number seed if > 0 or random if negative
+10                       # globals::ntstep: number of timesteps
+007 010                  # itstep ftstep: number of start and end time step
+4 20                     # tmin_days tmax_days: start and end times [day]
+1.33  1.330000001        # nusyn_min_mev nusyn_max_mev: lowest and highest frequency to synthesise [MeV]
+80                       # nsyn_time: number of times for synthesis
+3. 0.037                 # start and end times for synthesis
+1                        # model_type: number of dimensions (1, 2, or 3)
+4                        # compute r-light curve (1: no estimators, 2: thin cells, 3: thick cells, 4: gamma-ray heating)
+1                        # n_out_it: UNUSED number of iterations
+1.0                      # globals::CLIGHT_PROP/CLIGHT: change speed of light by some factor
+-1                       # use grey opacity for gammas?
+0 0 1                    # syn_dir: x, y, and z components of unit vector (will be normalised after input or randomised if zero length)
+4                        # opacity_case: opacity choice
+1.0e-10                  # rho_crit_para: free parameter for calculation of rho_crit
+-1                       # UNUSED debug_packet: (>=0: activate debug output for packet id, <0: ignore)
+1                        # simulation_continued_from_saved: (0: start new simulation, 1: continue from gridsave and packets files)
+1e-6                     # UNUSED rfcut_angstroms: wavelength (in Angstroms) at which the parameterisation of the radiation field switches from the nebular approximation to LTE.
+4                        # n_lte_timesteps
+0.0 2                    # cell_is_optically_thick n_grey_timesteps
+-1                       # UNUSED max_bf_continua: (>0: max bound-free continua per ion, <0 unlimited)
+2                        # nprocs_exspec: extract spectra for n MPI tasks
+1                        # do_emission_res: Extract line-of-sight dependent information of last emission for spectrum_res (1: yes, 2: no)
+0.001 1000               # kpktdiffusion_timescale n_kpktdiffusion_timesteps: kpkts diffuse x of a time step's length for the first y time steps
