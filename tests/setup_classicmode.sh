@@ -9,8 +9,8 @@ if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O https://theory.gsi.de/~lshing
 tar -xf atomicdata_feconi.tar.xz --directory classicmode_testrun/
 
 cp ../data/* classicmode_testrun/
-cp ../artisoptions_classic.h classicmode_testrun/artisoptions.h
-sed 's/#define MPKTS.*/#define MPKTS 1000/g' classicmode_testrun/artisoptions.h
+# cp ../artisoptions_classic.h classicmode_testrun/artisoptions.h
+sed 's/#define MPKTS.*/#define MPKTS 1000/g' ../artisoptions_classic.h > classicmode_testrun/artisoptions.h
 
 #if [ ! -f classicmode_reference_20211126.tar.xz ]; then curl -O https://theory.gsi.de/~lshingle/artis_http_public/artis/classicmode_reference_20211126.tar.xz; fi
 
