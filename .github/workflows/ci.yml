@@ -280,7 +280,7 @@ jobs:
       matrix:
         # os: ['ubuntu-latest', 'self-hosted']
         os: ['ubuntu-latest']
-        testmode: ['OFF', 'ON']
+        testmode: ['OFF']
         exclude:
         - os: self-hosted
           testmode: 'ON'
@@ -334,6 +334,7 @@ jobs:
     - name: "Setup test classicmode"
       run: |
         cp tests/classicmode_testrun/artisoptions.h .
+        cat artisoptions.h
         make clean
         make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
         cp sn3d tests/classicmode_testrun/
