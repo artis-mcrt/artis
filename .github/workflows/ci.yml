@@ -104,7 +104,7 @@ jobs:
       matrix:
         # os: ['ubuntu-latest', 'self-hosted']
         os: ['ubuntu-latest']
-        testmode: ['OFF', 'ON']
+        testmode: ['OFF']
         exclude:
         - os: self-hosted
           testmode: 'ON'
@@ -305,11 +305,11 @@ jobs:
       run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
 
     # we can cache this, but then we don't test the code that generates ratecoeff.dat
-    # - name: Cache ratecoeff.dat
-    #   uses: actions/cache@v3
-    #   with:
-    #     path: "tests/classicmode_testrun/ratecoeff.dat"
-    #     key: "tests/classicmode_testrun/ratecoeff.dat"
+    - name: Cache ratecoeff.dat
+      uses: actions/cache@v3
+      with:
+        path: "tests/classicmode_testrun/ratecoeff.dat"
+        key: "tests/classicmode_testrun/ratecoeff.dat"
 
     - name: Cache test atomic data
       uses: actions/cache@v3
