@@ -143,15 +143,7 @@ jobs:
           path: "tests/atomicdata_feconi.tar.xz"
           key: tests/atomicdata_feconi.tar.xz
 
-    - name: Cache reference data
-      uses: actions/cache@v3
-      id: cache-testreferencedata
-      with:
-          path: "tests/nebularonezone_reference_20211126.tar.xz"
-          key: tests/nebularonezone_reference_20211126.tar.xz
-
     - name: Download/extract test data
-      # if: steps.cache-atomicdata.outputs.cache-hit != 'true'
       working-directory: tests/
       run: |
           source ./setup_nebularonezone.sh
@@ -241,7 +233,7 @@ jobs:
         rm packets*.*
 
     - name: Upload output files
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
       with:
         name: test-nebularonezone-output
@@ -249,7 +241,7 @@ jobs:
 
     - name: Set up Python
       if: always() && matrix.os != 'selfhosted'
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         cache: 'pip'
 
@@ -266,8 +258,8 @@ jobs:
       if: always()
       working-directory: tests/
       run: |
-        python3 -m artistools.lightcurve nebularonezone_testrun nebularonezone_reference
-        python3 -m artistools.spectra -ts 8 nebularonezone_testrun nebularonezone_reference
+        python3 -m artistools.lightcurve nebularonezone_testrun
+        python3 -m artistools.spectra -ts 8 nebularonezone_testrun
 
     - name: Upload plot files
       if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
@@ -319,15 +311,7 @@ jobs:
           path: "tests/atomicdata_feconi.tar.xz"
           key: tests/atomicdata_feconi.tar.xz
 
-    # - name: Cache reference data
-    #   uses: actions/cache@v3
-    #   id: cache-testreferencedata
-    #   with:
-    #       path: "tests/classicmode_reference_20211126.tar.xz"
-    #       key: tests/classicmode_reference_20211126.tar.xz
-
     - name: Download/extract test data
-      # if: steps.cache-atomicdata.outputs.cache-hit != 'true'
       working-directory: tests/
       run: |
           source ./setup_classicmode.sh
@@ -418,7 +402,7 @@ jobs:
         rm packets*.*
 
     - name: Upload output files
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
       with:
         name: test-classicmode-output
@@ -426,7 +410,7 @@ jobs:
 
     - name: Set up Python
       if: always() && matrix.os != 'selfhosted'
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         cache: 'pip'
 
@@ -443,14 +427,12 @@ jobs:
       if: always()
       working-directory: tests/
       run: |
-        # python3 -m artistools.lightcurve classicmode_testrun classicmode_reference
-        # python3 -m artistools.spectra -ts 8 classicmode_testrun classicmode_reference
         python3 -m artistools.lightcurve classicmode_testrun
-        python3 -m artistools.spectra -ts 8 classicmode_testrun
+        python3 -m artistools.spectra -t 18-22 classicmode_testrun
 
     - name: Upload plot files
       if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: test-classicmode-output-pdf
         path: tests/*.pdf
