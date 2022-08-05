@@ -46,8 +46,11 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
     const double Y_e = grid::get_electronfrac(mgi);
     //fprintf(estimators_file,"%d %g %g %g %g %d ",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grid::modelgrid[n].thick);
     //fprintf(estimators_file,"%d %g %g %g %g %g ",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grey_optical_depth);
-    fprintf(estimators_file, "timestep %d modelgridindex %d titeration %d TR %g Te %g W %g TJ %g grey_depth %g nne %g Ye %g tdays %7.2f\n",
-            timestep, mgi, titer, grid::get_TR(mgi), T_e, grid::get_W(mgi), grid::get_TJ(mgi), grid::modelgrid[mgi].grey_depth, nne, Y_e, globals::time_step[timestep].mid / DAY);
+    fprintf(estimators_file,
+            "timestep %d modelgridindex %d titeration %d TR %g Te %g W %g TJ %g grey_depth %g thick %d nne %g Ye %g "
+            "tdays %7.2f\n",
+            timestep, mgi, titer, grid::get_TR(mgi), T_e, grid::get_W(mgi), grid::get_TJ(mgi),
+            grid::modelgrid[mgi].grey_depth, grid::modelgrid[mgi].thick, nne, Y_e, globals::time_step[timestep].mid / DAY);
     //fprintf(estimators_file,"%d %g %g %g %g %g %g %g
     //",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
 
@@ -923,7 +926,9 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
         break;
       }
       else if (nlte_iter == NLTEITER)
+      {
         printout("WARNING: NLTE solver failed to converge after %d iterations. Keeping solution from last iteration\n", nlte_iter + 1);
+      }
     }
     else
       break; // no iteration is needed without NLTE_POPS_ON
@@ -1053,7 +1058,9 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
     {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++)
+      {
         globals::corrphotoionrenorm[modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() + ion] = value;
+      }
     }
   }
 #endif
@@ -1342,9 +1349,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   #ifndef FORCE_LTE
     #if (!NO_LUT_PHOTOION)
       /// Initialise globals::corrphotoionrenorm[i] to zero before update_grid is called
-      /// This allows reduction after update_grid has finished
-      /// unless they have been read from file and must neither be touched
-      /// nor broadcasted after update_grid
+      /// unless they have been read from file
       if ((!globals::simulation_continued_from_saved) || (nts - globals::itstep != 0) || (titer != 0))
       {
         printout("nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
@@ -1683,7 +1688,9 @@ double calculate_populations(const int modelgridindex)
     gsl_root_fsolver_free(solver);
 
     if (nne < MINPOP)
+    {
       nne = MINPOP;
+    }
 
     grid::set_nne(modelgridindex,nne);
     if (status == GSL_CONTINUE)

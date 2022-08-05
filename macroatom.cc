@@ -648,7 +648,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
       #if (!NO_LUT_PHOTOION)
         const double gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,0,T_R);
         const int index_in_groundlevelcontestimor = globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
-        const double renorm  = globals::corrphotoionrenorm[modelgridindex * get_nelements() * get_max_nions() + index_in_groundlevelcontestimor];
+        const double renorm = globals::corrphotoionrenorm[modelgridindex * get_nelements() * get_max_nions() + index_in_groundlevelcontestimor];
         printout("gammacorr %g, index %d, renorm %g, total %g\n",gammacorr,index_in_groundlevelcontestimor,renorm,gammacorr*renorm);
       #endif
 
