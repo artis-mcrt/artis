@@ -229,6 +229,15 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
         {
           MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
         }
+
+        #if (!NO_LUT_PHOTOION)
+        assert_always(globals::corrphotoionrenorm != NULL);
+        MPI_Bcast(&globals::corrphotoionrenorm[modelgridindex * get_nelements() * get_max_nions()],
+                  get_nelements() * get_max_nions(), MPI_DOUBLE, root, MPI_COMM_WORLD);
+        assert_always(globals::gammaestimator != NULL);
+        MPI_Bcast(&globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions()],
+                  get_nelements() * get_max_nions(), MPI_DOUBLE, root, MPI_COMM_WORLD);
+        #endif
       }
     }
 
@@ -315,8 +324,6 @@ static void mpi_reduce_estimators(int my_rank, int nts)
     #endif
     #if (!NO_LUT_PHOTOION)
       MPI_Barrier(MPI_COMM_WORLD);
-      assert_always(globals::corrphotoionrenorm != NULL);
-      MPI_Allreduce(MPI_IN_PLACE, globals::corrphotoionrenorm, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       assert_always(globals::gammaestimator != NULL);
       MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
@@ -885,11 +892,8 @@ int main(int argc, char** argv)
   printout("[CUDA] warpSize %d\n", deviceProp.warpSize);
   #endif
 
-  if ((globals::kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(get_max_threads(), sizeof(rpkt_cont_opacity_struct))) == NULL)
-  {
-    printout("[fatal] input: error initializing continuum opacity communication variables ... abort\n");
-    abort();
-  }
+  globals::kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(get_max_threads(), sizeof(rpkt_cont_opacity_struct));
+  assert_always(globals::kappa_rpkt_cont != NULL);
 
   /// Using this and the global variable output_file opens and closes the output_file
   /// only once, which speeds up the simulation with a lots of output switched on (debugging).

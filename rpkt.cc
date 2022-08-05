@@ -1307,13 +1307,6 @@ double calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu)
       #if (DETAILED_BF_ESTIMATORS_ON)
       globals::phixslist[tid].gamma_contr[i] = 0.;
       #endif
-      #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-      if (globals::allcont[i].level == 0)
-      {
-        const int gphixsindex = globals::allcont[i].index_in_groundphixslist;
-        globals::phixslist[tid].groundcont_gamma_contr[gphixsindex] = 0.;
-      }
-      #endif
     }
   }
   return kappa_bf_sum;
