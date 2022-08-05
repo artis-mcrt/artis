@@ -16,8 +16,8 @@
 -1                       # UNUSED debug_packet: (>=0: activate debug output for packet id, <0: ignore)
 0                        # simulation_continued_from_saved: (0: start new simulation, 1: continue from gridsave and packets files)
 1e-6                     # UNUSED rfcut_angstroms: wavelength (in Angstroms) at which the parameterisation of the radiation field switches from the nebular approximation to LTE.
-10                       # n_lte_timesteps
-5.0 999                  # cell_is_optically_thick n_grey_timesteps
+5                        # n_lte_timesteps
+8.0 999                  # cell_is_optically_thick n_grey_timesteps
 -1                       # UNUSED max_bf_continua: (>0: max bound-free continua per ion, <0 unlimited)
 2                        # nprocs_exspec: extract spectra for n MPI tasks
 1                        # do_emission_res: Extract line-of-sight dependent information of last emission for spectrum_res (1: yes, 2: no)

@@ -101,7 +101,7 @@ typedef struct groundphixslist_t
 
 typedef struct phixslist_t
 {
-   #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
+  #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
   double *groundcont_gamma_contr;
   #endif
   double *kappa_bf_sum;
