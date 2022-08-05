@@ -16,6 +16,6 @@ auger*.txt
 collion*.txt
 exspec.txt
 binding_energies.txt
-nebularonezone_reference
-nebularonezone_testrun
+*_reference
+*_testrun
 *.pdf
