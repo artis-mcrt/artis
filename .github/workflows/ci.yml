@@ -351,7 +351,7 @@ jobs:
       working-directory: tests/classicmode_testrun
       run: |
         md5sum *.out job0/*.out
-        # md5sum -c results_md5_job0.txt
+        md5sum -c results_md5_job0.txt
 
     - name: "Run classicmode test job1 resume"
       if: always()
@@ -393,7 +393,7 @@ jobs:
       working-directory: tests/classicmode_testrun
       run: |
         md5sum *.out job1/*.out
-        # md5sum -c results_md5_final.txt
+        md5sum -c results_md5_final.txt
 
     - name: Prepare for next steps
       if: always() && matrix.os != 'selfhosted'
