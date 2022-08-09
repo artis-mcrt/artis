@@ -365,6 +365,7 @@ static int columnindex_from_emissiontype(const int et)
   {
     /// bf-emission
     const int et_new = -1 - et;
+    assert_always(et_new < globals::nbfcontinua);
     const int element = globals::bflist[et_new].elementindex;
     const int ion = globals::bflist[et_new].ionindex;
     const int level = globals::bflist[et_new].levelindex;
