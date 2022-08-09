@@ -1505,7 +1505,9 @@ static void write_bflist_file(int includedphotoiontransitions)
           globals::bflist[i].phixstargetindex = phixstargetindex;
 
           if (globals::rank_global == 0)
+          {
             fprintf(bflist_file,"%d %d %d %d %d\n", i, element, ion, level, upperionlevel);
+          }
 
           assert_always(-1 - i == get_continuumindex(element, ion, level, upperionlevel));
 
@@ -1696,9 +1698,7 @@ static void setup_phixs_list(void)
   {
     globals::allcont_nu_edge[i] = globals::allcont[i].nu_edge;
   }
-
 }
-
 
 static void read_atomicdata(void)
 /// Subroutine to read in input parameters.
@@ -2039,6 +2039,7 @@ void read_parameterfile(int rank)
   printout("input: itstep %d ftstep %d\n", globals::itstep, globals::ftstep);
   assert_always(globals::itstep < globals::ntstep);
   assert_always(globals::itstep <= globals::ftstep);
+  assert_always(globals::ftstep <= globals::ntstep);
 
   double tmin_days = 0.;
   double tmax_days = 0.;

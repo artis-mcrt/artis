@@ -558,7 +558,7 @@ static bool do_timestep(
     }
   #endif
 
-  globals::do_comp_est = globals::do_r_lc ? false : estim_switch(nts, globals::time_step);
+  globals::do_comp_est = globals::do_r_lc ? false : estim_switch(nts);
 
   // Update the matter quantities in the grid for the new timestep.
 
@@ -609,7 +609,7 @@ static bool do_timestep(
     // They will now be normalised independently on all processes
     if (globals::do_comp_est)
     {
-      normalise_compton_estimators(nts, globals::time_step);
+      normalise_compton_estimators(nts);
       if (my_rank == 0)
       {
         write_compton_estimators(nts);

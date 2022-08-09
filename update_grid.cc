@@ -871,7 +871,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
     {
       const time_t sys_time_start_nltepops = time(NULL);
       // fractional difference between previous and current iteration's (nne or max(ground state population change))
-      double nlte_test;
+      double nlte_test = 0.;
       if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
       {
         for (int element = 0; element < get_nelements(); element++)

@@ -538,7 +538,9 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
   const float T_e = grid::get_Te(modelgridindex);
   double deltat = 0.;
   if (nts < globals::n_kpktdiffusion_timesteps)
+  {
     deltat = globals::kpktdiffusion_timescale * globals::time_step[nts].width;
+  }
   //double deltat = 1./(nne*1.02e-12*pow(T_e/1e4,0.843));
   //printout("kpkt diffusion time simple %g, advanced %g\n",deltat,1/(nne*1.02e-12*pow(T_e/1e4,0.843)));
   double t_current = t1 + deltat;
@@ -632,7 +634,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     }
 
 
-    if (globals::debuglevel == 2) printout("do_kpkt: selected process %d, coolingsum %g\n",i,coolingsum);
+    // if (globals::debuglevel == 2) printout("do_kpkt: selected process %d, coolingsum %g\n",i,coolingsum);
     //printout("do_kpkt: selected process %d, coolingsum %g, importantcoolingterms %d, type %d\n",i,coolingsum,importantcoolingterms,globals::cellhistory[tid].coolinglist[i].type);
 
     // printout("element Z=%d, ion_stage %d, leve %d upper %d offset %d, terms %d, coolingsum %g\n",

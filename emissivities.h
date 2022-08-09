@@ -6,8 +6,8 @@
 void compton_emiss_cont(const PKT *pkt_ptr, double dist);
 void pp_emiss_cont(const PKT *pkt_ptr, double dist);
 void zero_estimators(void);
-void normalise_compton_estimators(const int nts, struct time *time_step);
+void normalise_compton_estimators(const int nts);
 void write_compton_estimators(int nts);
-bool estim_switch(int nts, struct time *time_step);
+bool estim_switch(int nts);
 
 #endif //EMISSIVITIES_H

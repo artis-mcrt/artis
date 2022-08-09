@@ -905,8 +905,11 @@ static void calculate_kappagrey(void)
     check1 = check1 + (get_kappagrey(mgi) * get_rhoinit(mgi));
     check2 = check2 + get_rhoinit(mgi);
   }
+
   if (globals::rank_global == 0)
+  {
     fclose(grid_file);
+  }
 
   printout("Initial densities taken from readin.\n");
   printout("Grey normalisation check: %g\n", check1 / check2);
