@@ -148,15 +148,18 @@ common_files := $(filter-out sn3d.cc exspec.cc, $(wildcard *.cc))
 
 sn3d_files = sn3d.cc $(common_files)
 sn3d_objects = $(addprefix $(BUILD_DIR)/,$(sn3d_files:.cc=.o))
+sn3d_dep = $(sn3d_objects:%.o=%.d)
 
 exspec_files = exspec.cc $(common_files)
 exspec_objects = $(addprefix $(BUILD_DIR)/,$(exspec_files:.cc=.o))
+exspec_dep = $(exspec_objects:%.o=%.d)
 
 all: sn3d exspec
 
 sn3d: version.h artisoptions.h $(sn3d_objects) Makefile
 	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
 #	$(LINK.cpp) $(filter %.o,$^) -o $@
+-include $(sn3d_dep)
 
 sn3dwhole: version.h
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
@@ -177,6 +180,7 @@ $(BUILD_DIR)/%.o: %.cc Makefile artisoptions.h
 
 exspec: version.h artisoptions.h $(exspec_objects) Makefile
 	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec
+-include $(exspec_dep)
 
 .PHONY: clean version.h TESTMODE TESTMODEON
 
