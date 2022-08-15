@@ -1438,7 +1438,7 @@ static void setup_cellhistory(void)
         }
       }
 
-      chlevels_struct *chlevel = (chlevels_struct *) malloc(chlevelblocksize);
+      chlevels_struct *chlevelblock = (chlevels_struct *) malloc(chlevelblocksize);
       chphixstargets_struct *chphixs = (chphixstargets_struct *) malloc(chphixsblocksize);
       mem_usage_cellhistory += chlevelblocksize + chphixsblocksize;
       int alllevelindex = 0;
@@ -1447,21 +1447,20 @@ static void setup_cellhistory(void)
       {
         const int nions = get_nions(element);
         mem_usage_cellhistory += nions * sizeof(chions_struct);
-        if ((globals::cellhistory[tid].chelements[element].chions = (chions_struct *) malloc(nions * sizeof(chions_struct))) == NULL)
-        {
-          printout("[fatal] input: not enough memory to initialize cellhistory's ionlist ... abort\n");
-          abort();
-        }
+        globals::cellhistory[tid].chelements[element].chions = (chions_struct *) malloc(nions * sizeof(chions_struct));
+        assert_always(globals::cellhistory[tid].chelements[element].chions != NULL);
+
         for (int ion = 0; ion < nions; ion++)
         {
           const int nlevels = get_nlevels(element, ion);
-          globals::cellhistory[tid].chelements[element].chions[ion].chlevels = &chlevel[alllevelindex];
+          globals::cellhistory[tid].chelements[element].chions[ion].chlevels = &chlevelblock[alllevelindex];
           alllevelindex += nlevels;
 
           for (int level = 0; level < nlevels; level++)
           {
+            chlevels_struct *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
             const int nphixstargets = get_nphixstargets(element, ion, level);
-            globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets = &chphixs[allphixstargetindex];
+            chlevel->chphixstargets = &chphixs[allphixstargetindex];
             allphixstargetindex += nphixstargets;
           }
         }
@@ -1519,7 +1518,9 @@ static void write_bflist_file(int includedphotoiontransitions)
   }
   assert_always(i == includedphotoiontransitions);
   if (globals::rank_global == 0)
+  {
     fclose(bflist_file);
+  }
 }
 
 
