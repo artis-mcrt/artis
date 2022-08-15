@@ -205,24 +205,32 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
 
       bool isoutside;
       if (flip)
-        isoutside = initpos[d] - (grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart) < -10.; // 10 cm accuracy tolerance
+      {
+        isoutside = initpos[d] < grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart - 10.; // 10 cm accuracy tolerance
+      }
       else
-        isoutside = initpos[d] - (cellcoordmax[d] / globals::tmin * tstart) > -10.;
+      {
+        isoutside = initpos[d] > cellcoordmax[d] / globals::tmin * tstart + 10.;
+      }
 
       if (isoutside && (not_allowed != direction))
       {
         // for (int d2 = 0; d2 < ndim; d2++)
         const int d2 = d;
         {
-          printout("[warning] outside coord %d %c%c boundary of cell %d. pkttype %d initpos(tmin) %g, vel %g, cellcoordmin %g, cellcoordmax %g. Abort?\n",
-                   d, flip ? '-' : '+', grid::coordlabel[d], cellindex, pkt_ptr->type, initpos[d2], vel[d2], grid::get_cellcoordmin(cellindex, d2) / globals::tmin * tstart, cellcoordmax[d2] / globals::tmin * tstart);
+          printout("[warning] packet %d outside coord %d %c%c boundary of cell %d. pkttype %d initpos(tmin) %g, vel %g, cellcoordmin %g, cellcoordmax %g. Abort?\n",
+                   pkt_ptr->number, d, flip ? '-' : '+', grid::coordlabel[d], cellindex, pkt_ptr->type, initpos[d2], vel[d2], grid::get_cellcoordmin(cellindex, d2) / globals::tmin * tstart, cellcoordmax[d2] / globals::tmin * tstart);
         }
         printout("globals::tmin %g tstart %g tstart/globals::tmin %g tdecay %g\n", globals::tmin, tstart, tstart/globals::tmin, pkt_ptr->tdecay);
         // printout("[warning] pkt_ptr->number %d\n", pkt_ptr->number);
-        if (flip == 0)
-          printout("[warning] delta %g\n", cellcoordmax[d] - (initpos[d] * globals::tmin / tstart));
-        else
+        if (flip)
+        {
           printout("[warning] delta %g\n",  (initpos[d] * globals::tmin / tstart) - grid::get_cellcoordmin(cellindex, d));
+        }
+        else
+        {
+          printout("[warning] delta %g\n", cellcoordmax[d] - (initpos[d] * globals::tmin / tstart));
+        }
 
         printout("[warning] dir [%g, %g, %g]\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
         if ((vel[d] - (initpos[d] / tstart)) > 0)
