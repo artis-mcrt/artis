@@ -1226,7 +1226,7 @@ static double get_chain_decay_power_per_ejectamass(
 
 
 __host__ __device__
-double get_modelcell_endecay_per_mass(const int mgi)
+double get_modelcell_simtime_endecay_per_mass(const int mgi)
 // get the density at time tmin of decay energy that will
 // be released during the simulation time range [erg/cm3]
 {

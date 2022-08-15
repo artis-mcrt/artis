@@ -87,7 +87,7 @@ void packet_init(int my_rank, PKT *pkt)
     const int mgi = grid::get_cell_modelgridindex(m);
     if (mgi < grid::get_npts_model())  // some grid cells are empty
     {
-      norm += grid::vol_init_gridcell(m) * grid::get_rhoinit(mgi) * decay::get_modelcell_endecay_per_mass(mgi);
+      norm += grid::vol_init_gridcell(m) * grid::get_rhoinit(mgi) * decay::get_modelcell_simtime_endecay_per_mass(mgi);
     }
   }
   assert_always(norm > 0);
