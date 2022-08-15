@@ -714,7 +714,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
       abort();
     }
 
-    if (sdist < 1)
+    if (sdist < 0)
     {
       const int cellindexnew = pkt_ptr->where;
       printout("[warning] r_pkt: Negative distance (sdist = %g). Abort.\n", sdist);
