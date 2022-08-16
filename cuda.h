@@ -60,7 +60,7 @@
                int const line) {
       if (result != cudaSuccess)
       {
-        printf("CUDA error at %s:%d code=%d \"%s\" \n", file, line,
+        printf("CUDA error at %s:%d code=%u \"%s\" \n", file, line,
                 static_cast<unsigned int>(result), func);
         assert(result == cudaSuccess);
       }
