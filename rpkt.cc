@@ -784,7 +784,8 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
       }
     }
     assert_always(edist >= 0);
-    //printout("[debug] do_rpkt: sdist, tdist, edist %g, %g, %g\n",sdist,tdist,edist);
+
+    // printout("[debug] do_rpkt: packet %d sdist, tdist, edist %g, %g, %g old_last_cross %d next_cross %d cellindex %d dir %g %g %g\n",pkt_ptr->number,sdist,tdist,edist,old_last_cross,pkt_ptr->last_cross,pkt_ptr->where,pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 
     if ((sdist < tdist) && (sdist < edist))
     {
@@ -823,30 +824,6 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
 
       return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
     }
-    else if ((tdist < sdist) && (tdist < edist))
-    {
-      // printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
-      // Doesn't reach boundary
-      pkt_ptr->prop_time += tdist / 2. / globals::CLIGHT_PROP;
-      move_pkt(pkt_ptr, tdist / 2., pkt_ptr->prop_time);
-      update_estimators(pkt_ptr, tdist);
-      if (globals::do_rlc_est != 0 && globals::do_rlc_est != 3)
-      {
-        rlc_emiss_rpkt(pkt_ptr, tdist);
-      }
-      pkt_ptr->prop_time = t2;
-      move_pkt(pkt_ptr, tdist / 2., pkt_ptr->prop_time);
-      pkt_ptr->last_event = pkt_ptr->last_event + 1000;
-
-      /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
-      /// find the next possible line interaction.
-      if (find_nextline)
-      {
-        closest_transition_empty(pkt_ptr);
-      }
-
-      return false;
-    }
     else if ((edist < sdist) && (edist < tdist))
     {
       // bound-bound or continuum event
@@ -880,6 +857,30 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
       }
 
       return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
+    }
+    else if ((tdist < sdist) && (tdist < edist))
+    {
+      // reaches end of timestep before cell boundary or interaction
+      // printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
+      pkt_ptr->prop_time += tdist / 2. / globals::CLIGHT_PROP;
+      move_pkt(pkt_ptr, tdist / 2., pkt_ptr->prop_time);
+      update_estimators(pkt_ptr, tdist);
+      if (globals::do_rlc_est != 0 && globals::do_rlc_est != 3)
+      {
+        rlc_emiss_rpkt(pkt_ptr, tdist);
+      }
+      pkt_ptr->prop_time = t2;
+      move_pkt(pkt_ptr, tdist / 2., pkt_ptr->prop_time);
+      pkt_ptr->last_event = pkt_ptr->last_event + 1000;
+
+      /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
+      /// find the next possible line interaction.
+      if (find_nextline)
+      {
+        closest_transition_empty(pkt_ptr);
+      }
+
+      return false;
     }
     else
     {
