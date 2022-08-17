@@ -62,6 +62,7 @@ __host__ __device__ void set_elements_uppermost_ion(const int modelgridindex, co
 __host__ __device__ double wid_init(int cellindex);
 __host__ __device__ double vol_init_modelcell(int modelgridindex);
 __host__ __device__ double vol_init_gridcell(int cellindex);
+__host__ __device__ double get_cellcoordmax(const int cellindex, const int axis);
 __host__ __device__ double get_cellcoordmin(int cellindex, int axis);
 __host__ __device__ int get_cellcoordpointnum(const int cellindex, const int axis);
 __host__ __device__ int get_coordcellindexincrement(int axis);
