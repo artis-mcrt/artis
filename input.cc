@@ -2378,7 +2378,7 @@ void time_init(void)
   globals::time_step = (struct time *) malloc((globals::ntstep + 1) * sizeof(struct time));
 
   /// Now set the individual time steps
-  if (LOG_TIMESTEPS)
+  if (TIMESTEP_SIZE_METHOD == 0)
   {
       for (int n = 0; n < globals::ntstep; n++)
       {   // For logarithmic steps, the logarithmic inverval will be
@@ -2389,7 +2389,7 @@ void time_init(void)
       }
   }
 
-  if (FIXED_TIMESTEPS)
+  if (TIMESTEP_SIZE_METHOD == 1)
   {
       for (int n = 0; n < globals::ntstep; n++)
       {
@@ -2401,7 +2401,7 @@ void time_init(void)
       }
   }
 
-  if (LOG_THEN_FIXED_TIMESTEPS)
+  if (TIMESTEP_SIZE_METHOD == 2)
   {
       // /// First part log, second part fixed timesteps
        const double t_transition = TIMESTEP_TRANSITION_TIME * DAY; // transition from logarithmic to fixed timesteps
@@ -2437,7 +2437,7 @@ void time_init(void)
        }
   }
 
-  if (FIXED_THEN_LOG_TIMESTEPS)
+  if (TIMESTEP_SIZE_METHOD == 3)
   {
       // /// First part fixed timesteps, second part log timesteps
       const double t_transition = TIMESTEP_TRANSITION_TIME * DAY; // transition from fixed to logarithmic timesteps

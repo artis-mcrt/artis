@@ -224,13 +224,14 @@ static bool INSTANT_PARTICLE_DEPOSITION = false;
 // values that would give the same number or more more fixed timesteps than the total number of timesteps in the
 // simulation. The times are set in days.
 
-static const bool LOG_TIMESTEPS = true;
+enum timestepsizemethods {
+    TIMESTEP_SIZES_LOGARITHMIC = 0,
+    TIMESTEP_SIZES_CONSTANT = 1,
+    TIMESTEP_SIZES_LOGARITHMIC_THEN_CONSTANT = 2,
+    TIMESTEP_SIZES_CONSTANT_THEN_LOGARITHMIC = 3,
+};
 
-static const bool FIXED_TIMESTEPS = false;
-
-static const bool LOG_THEN_FIXED_TIMESTEPS = false;
-
-static const bool FIXED_THEN_LOG_TIMESTEPS = false;
+static const enum timestepsizemethods TIMESTEP_SIZE_METHOD = TIMESTEP_SIZES_LOGARITHMIC;
 
 static const double FIXED_TIMESTEP_WIDTH = 0.1;
 
