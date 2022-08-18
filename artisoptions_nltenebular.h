@@ -34,9 +34,11 @@ return (level <= 80);
 // atomic data and LTE
 #define LTEPOP_EXCITATIONTEMPERATURE grid::get_Te(modelgridindex)
 
-const bool single_level_top_ion = false; // Only include a single level for the highest ion stage
+// Only include a single level for the highest ion stage
+const bool single_level_top_ion = false;
 
-const bool single_ground_level = false; // if false, read from file or autodetect
+// if false, read from file or autodetect
+const bool single_ground_level = false; 
 
 // option to enforce connecting the lower n levels to all other levels with collisions
 // disable by returning zero
@@ -71,41 +73,49 @@ static const size_t GSLWSIZE = 16384;
 #define TRACK_ION_STATS false
 #define TRACK_ION_MASTATS false
 
-#define MLINES 500000    // Increase linelist by this blocksize
+// Increase linelist by this blocksize
+#define MLINES 500000
 
-#define MINDENSITY 1e-40         /// Minimum cell density. Below cells are treated as empty.
+// Minimum cell density. Below cells are treated as empty.
+#define MINDENSITY 1e-40
 #define MINPOP 1e-40
 
-#define NU_MIN_R 1e13   /// lower frequency boundary for UVOIR spectra and BB sampling
-#define NU_MAX_R 5e15   /// upper frequency boundary for UVOIR spectra and BB sampling
+// lower frequency boundary for UVOIR spectra and BB sampling
+#define NU_MIN_R 1e13
+// upper frequency boundary for UVOIR spectra and BB sampling
+#define NU_MAX_R 5e15
 
 
-// ****
-// Start of radiation field model options
-//
+// ** Start of radiation field model options **
 
 // if using this, avoid look up tables and switch on the direct integration options below
 // (since LUTs created with Planck function J_nu)
 static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
 
+// number of bins (including the T=T_e superbin)
 #define RADFIELDBINCOUNT 256
 
+// from this timestep number (0-indexed), radfield switches from T_R,W dilute blackbody to binned radfield
 static const int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
 
-static const double nu_lower_first_initial = (CLIGHT / (40000e-8)); // CLIGHT / ([lambda Angstroms]e-8)
-static const double nu_upper_last_initial = (CLIGHT /  (1085e-8));  // not including the very top super bin
-static const double nu_upper_superbin = (CLIGHT /  (10e-8)); // very top end super bin
+// nu_lower of lowest-frequency bin = CLIGHT / ([lambda Angstroms]e-8)
+static const double nu_lower_first_initial = (CLIGHT / (40000e-8));
+// nu_upper of highest-frequency bin just below the very top super bin
+static const double nu_upper_last_initial = (CLIGHT /  (1085e-8)); 
+// nu_upper of top super bin with fixed T=T_e (nu_lower will be nu_upper_last_initial)
+static const double nu_upper_superbin = (CLIGHT /  (10e-8));
 
+// range of 'temperatures' for the scaled Planck function fit to each bin
 static const double T_R_min = 500;
 static const double T_R_max = 250000;
 
-// store Jb_lu estimators for particular lines chosen in radfield::init()
+// store Jb_lu estimators for particular lines (which are chosen in radfield::init())
 static const bool DETAILED_LINE_ESTIMATORS_ON = false;
 
-// store detailed bound-free rate estimators
+// track detailed bound-free rate estimators instead of doing radiation field model integrals or lookup table
 #define DETAILED_BF_ESTIMATORS_ON true
 
-// if DETAILED_BF_ESTIMATORS_ON, then use BF estimators at the following timestep and later
+// if DETAILED_BF_ESTIMATORS_ON, then use BF estimators at the following timestep (0-indexed) and later
 #define DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP 13
 
 // extremely slow and memory consuming - for debugging only
@@ -124,19 +134,15 @@ static const bool DETAILED_LINE_ESTIMATORS_ON = false;
 // if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
 #define SEPARATE_STIMRECOMB false
 
-//
-// End of radiation field model options
-// ****
+// ** End of radiation field model options **
 
 
-// ****
-// Start of non-thermal solution options
-//
+// ** Start of non-thermal solution options **
 
 /// non-thermal ionisation
 static const bool NT_ON = true;
 
-/// use the detailed Spencer-Fano solver instead of the work function approximation
+/// use the detailed Spencer-Fano solver instead of the work function approximation (only works if NT_ON)
 static const bool NT_SOLVE_SPENCERFANO = true;
 
 // number of energy points in the Spencer-Fano solution vector
@@ -193,9 +199,7 @@ static const int MAX_NT_EXCITATIONS_STORED = 25000;
 // set true to divide up the mean Auger energy by the number of electrons that come out
 #define SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN false
 
-//
-// End of non-thermal solution options
-// ****
+// ** End of non-thermal solution options **
 
 #define TEMPERATURE_SOLVER_ACCURACY 1e-3
 
@@ -203,16 +207,23 @@ static const int MAX_NT_EXCITATIONS_STORED = 25000;
 
 #define RATECOEFF_INTEGRAL_ACCURACY 1e-3
 
-// when calculating ion ionisation rate coefficient (for estimator files), contribute the lowest n levels that
+// when calculating ion ionisation rate coefficient (for estimator files only, not the simulation), contribute the lowest n levels that
 // make up at least IONGAMMA_POPFRAC_LEVELS_INCLUDED fraction of the ion population
 #define IONGAMMA_POPFRAC_LEVELS_INCLUDED 0.999
 
+// setting true currently causes issues with r-packet propagation distance to line resonance
 static bool USE_RELATIVISTIC_DOPPLER = false;
 
+// when converting mass fraction to a number density, use a mean atomic mass
+// calcuated from the nuclear composition (plus stable component),
+// rather than just from the compositiondata.txt values
 static bool USE_CALCULATED_MEANATOMICWEIGHT = false;
 
+// output emission.out, absorption.out during the sn3d simulation (without running exspec)
+// this can occupy a lot of memory with large atomic data sets
 static bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = false;
 
+// setting to false is highly experimental
 static bool INSTANT_PARTICLE_DEPOSITION = true;
 
 #endif //ARTISOPTIONS_H
