@@ -750,7 +750,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
 
     assert_always(tdist >= 0);
 
-    const double dopplerfactor = doppler_packetpos(pkt_ptr);
+    const double dopplerfactor = doppler_packet_cmf_to_rf(pkt_ptr);
 
     double edist;
     int rpkt_eventtype;
@@ -917,7 +917,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
   vec_copy(vpkt.pos, startpos);
 
   vpkt.prop_time = tstart;
-  const double dopplerfactor = doppler_packetpos(&vpkt);
+  const double dopplerfactor = doppler_packet_cmf_to_rf(&vpkt);
   vpkt.nu_rf = vpkt.nu_cmf / dopplerfactor;
 
   double t_future = tstart;
@@ -948,7 +948,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
     vpkt.prop_time = t_future;
     calculate_kappa_rpkt_cont(&vpkt, &globals::kappa_rpkt_cont[tid]);
 
-    const double kappa_cont = globals::kappa_rpkt_cont[tid].total * doppler_packetpos(&vpkt);
+    const double kappa_cont = globals::kappa_rpkt_cont[tid].total * doppler_packet_cmf_to_rf(&vpkt);
 
     *tot_tau_cont += kappa_cont * sdist;
 
@@ -1109,7 +1109,7 @@ void emitt_rpkt(PKT *pkt_ptr)
     abort();
   }
 
-  const double dopplerfactor = doppler_packetpos(pkt_ptr);
+  const double dopplerfactor = doppler_packet_cmf_to_rf(pkt_ptr);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
