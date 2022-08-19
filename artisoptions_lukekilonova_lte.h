@@ -71,7 +71,7 @@ static const size_t GSLWSIZE = 16384;
 #define TRACK_ION_STATS false
 #define TRACK_ION_MASTATS false
 
-#define MLINES 500000    // Increase linelist by this blocksize
+#define MLINES 1000000    // Increase linelist by this blocksize
 
 #define MINDENSITY 1e-40         /// Minimum cell density. Below cells are treated as empty.
 #define MINPOP 1e-40
@@ -80,9 +80,7 @@ static const size_t GSLWSIZE = 16384;
 #define NU_MAX_R 5e16   /// upper frequency boundary for UVOIR spectra and BB sampling
 
 
-// ****
-// Start of radiation field model options
-//
+// ** Start of radiation field model options **
 
 // if using this, avoid look up tables and switch on the direct integration options below
 // (since LUTs created with Planck function J_nu)
@@ -124,19 +122,15 @@ static const bool DETAILED_LINE_ESTIMATORS_ON = false;
 // if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
 #define SEPARATE_STIMRECOMB false
 
-//
-// End of radiation field model options
-// ****
+// ** End of radiation field model options **
 
 
-// ****
-// Start of non-thermal solution options
-//
+// ** Start of non-thermal solution options **
 
-/// non-thermal ionisation
+// non-thermal ionisation
 static const bool NT_ON = false;
 
-/// use the detailed Spencer-Fano solver instead of the work function approximation
+// use the detailed Spencer-Fano solver instead of the work function approximation (only works if NT_ON)
 static const bool NT_SOLVE_SPENCERFANO = false;
 
 // number of energy points in the Spencer-Fano solution vector
@@ -193,9 +187,7 @@ static const int MAX_NT_EXCITATIONS_STORED = 25000;
 // set true to divide up the mean Auger energy by the number of electrons that come out
 #define SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN false
 
-//
-// End of non-thermal solution options
-// ****
+// ** End of non-thermal solution options **
 
 #define TEMPERATURE_SOLVER_ACCURACY 1e-3
 
@@ -207,7 +199,8 @@ static const int MAX_NT_EXCITATIONS_STORED = 25000;
 // make up at least IONGAMMA_POPFRAC_LEVELS_INCLUDED fraction of the ion population
 #define IONGAMMA_POPFRAC_LEVELS_INCLUDED 0.999
 
-static bool USE_RELATIVISTIC_DOPPLER = true;
+// incomplete work in progress
+static bool USE_RELATIVISTIC_CORRECTIONS = false;
 
 // when converting mass fraction to a number density, use a mean atomic mass
 // calcuated from the nuclear composition (plus stable component),

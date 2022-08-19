@@ -41,7 +41,7 @@ double doppler(const double dir1[3], const double vel[3])
 
   assert_testmodeonly(dot(vel, vel) / CLIGHTSQUARED >= 0.);
   assert_testmodeonly(dot(vel, vel) / CLIGHTSQUARED < 1.);
-  if (USE_RELATIVISTIC_DOPPLER)
+  if (USE_RELATIVISTIC_CORRECTIONS)
   {
     const double betasq = dot(vel, vel) / CLIGHTSQUARED;
     assert_always(betasq >= 0.); // v < c

@@ -622,19 +622,21 @@ static int compare_linelistentry(const void *p1, const void *p2)
     {
       printout("Duplicate atomic line?\n");
       printout(
-        "Z=%d ionstage %d lower %d upper %d nu %g\n",
+        "Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n",
         get_element(a1->elementindex),
         get_ionstage(a1->elementindex, a1->ionindex),
         a1->lowerlevelindex,
         a1->upperlevelindex,
-        a1->nu);
+        a1->nu,
+        1e8 * CLIGHT / a1->nu);
       printout(
-        "Z=%d ionstage %d lower %d upper %d nu %g\n",
+        "Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n",
         get_element(a2->elementindex),
         get_ionstage(a2->elementindex, a2->ionindex),
         a2->lowerlevelindex,
         a2->upperlevelindex,
-        a2->nu);
+        a2->nu,
+        1e8 * CLIGHT / a2->nu);
       return 0;
     }
   }
@@ -952,7 +954,7 @@ static void read_atomicdata_files(void)
     for (int ion = 0; ion < nions; ion++)
     {
       int nlevelsmax = nlevelsmax_readin;
-      printout("element %d ion %d\n", element, ion);
+      // printout("element %d ion %d\n", element, ion);
       /// calculate the current levels ground level energy
       energyoffset += ionpot;
 
