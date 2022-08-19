@@ -2387,6 +2387,7 @@ void time_init(void)
           globals::time_step[n].mid = globals::tmin * exp((n + 0.5) * dlogt);
           globals::time_step[n].width = (globals::tmin * exp((n + 1) * dlogt)) - globals::time_step[n].start;
       }
+      break;
     }
 
     case TIMESTEP_SIZES_CONSTANT:
@@ -2399,6 +2400,7 @@ void time_init(void)
           globals::time_step[n].width = dt;
           globals::time_step[n].mid = globals::time_step[n].start + 0.5 * globals::time_step[n].width;
       }
+      break;
     }
 
     case TIMESTEP_SIZES_LOGARITHMIC_THEN_CONSTANT:
@@ -2435,9 +2437,10 @@ void time_init(void)
           globals::time_step[n].mid = globals::time_step[n].start + 0.5 * globals::time_step[n].width;
         }
       }
+      break;
     }
 
-   case TIMESTEP_SIZES_CONSTANT_THEN_LOGARITHMIC:
+    case TIMESTEP_SIZES_CONSTANT_THEN_LOGARITHMIC:
     {
       // /// First part fixed timesteps, second part log timesteps
       const double t_transition = TIMESTEP_TRANSITION_TIME * DAY; // transition from fixed to logarithmic timesteps
@@ -2471,6 +2474,7 @@ void time_init(void)
           globals::time_step[n].mid = globals::time_step[n].start + 0.5 * globals::time_step[n].width;
         }
       }
+      break;
     }
   }
 
