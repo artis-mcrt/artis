@@ -100,7 +100,7 @@ inline void vec_copy(double destination[3], const double source[3])
 
 
 __host__ __device__
-inline double doppler_packetpos_cmf_to_rf(const PKT *const pkt_ptr)
+inline double doppler_packet_cmf_to_rf(const PKT *const pkt_ptr)
 {
   double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time); // homologous flow velocity
