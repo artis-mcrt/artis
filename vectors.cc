@@ -10,7 +10,7 @@ extern __host__ __device__ inline void get_velocity(const double x[3], double y[
 extern __host__ __device__ inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
 extern __host__ __device__ inline void vec_scale(double vec[3], const double scalefactor);
 extern __host__ __device__ inline void vec_copy(double dest[3], const double source[3]);
-extern __host__ __device__ inline double doppler_packet_cmf_to_rf(const PKT *const pkt_ptr, const double t);
+extern __host__ __device__ inline double doppler_packet_cmf_to_rf(const PKT *const pkt_ptr);
 
 
 __host__ __device__
