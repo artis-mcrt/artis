@@ -235,7 +235,7 @@ void read_temp_packetsfile(const int timestep, const int my_rank, PKT *const pkt
 
   printout("Reading %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");
-  fread(pkt, sizeof(PKT), globals::npkts, packets_file);
+  assert_always(fread(pkt, sizeof(PKT), globals::npkts, packets_file) == (size_t) globals::npkts);
   //read_packets(packets_file);
   fclose(packets_file);
   printout("done\n");
