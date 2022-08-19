@@ -226,8 +226,8 @@ typedef struct compositionlist_entry
 
 typedef struct gridcell
 {
-  double pos_init[3]; /// Initial co-ordinates of inner most corner of cell.
-  // int xyz[3];         /// Integer position of cell in grid.
+  double pos_min[3];   // Initial co-ordinates of inner most corner of cell.
+  // int xyz[3];       // Integer position of cell in grid.
   int modelgridindex;
 } CELL;
 

@@ -1927,40 +1927,40 @@ double get_Gamma_phys(int cellnumber, int element, int ion)
   // faster but only work for regular grid.
 
   double trat = t / globals::tmin;
-  int nx = (x - (globals::cell[0].pos_init[0] * trat))/(grid::wid_init * trat);
-  int ny = (y - (globals::cell[0].pos_init[1] * trat))/(grid::wid_init * trat);
-  int nz = (z - (globals::cell[0].pos_init[2] * trat))/(grid::wid_init * trat);
+  int nx = (x - (globals::cell[0].pos_min[0] * trat))/(grid::wid_init * trat);
+  int ny = (y - (globals::cell[0].pos_min[1] * trat))/(grid::wid_init * trat);
+  int nz = (z - (globals::cell[0].pos_min[2] * trat))/(grid::wid_init * trat);
 
   int n = nx + (grid::ncoordgrid[0] * ny) + (grid::ncoordgrid[0] * grid::ncoordgrid[1] * nz);
 
   // do a check
 
-  if (x < globals::cell[n].pos_init[0] * trat)
+  if (x < globals::cell[n].pos_min[0] * trat)
   {
     printout("Problem with get_cell (1).\n");
     abort();
   }
-  if (x > (globals::cell[n].pos_init[0]+grid::wid_init) * trat)
+  if (x > (globals::cell[n].pos_min[0]+grid::wid_init) * trat)
   {
     printout("Problem with get_cell (2).\n");
     abort();
   }
-  if (y < globals::cell[n].pos_init[1] * trat)
+  if (y < globals::cell[n].pos_min[1] * trat)
   {
     printout("Problem with get_cell (3).\n");
     abort();
   }
-  if (y > (globals::cell[n].pos_init[1]+grid::wid_init) * trat)
+  if (y > (globals::cell[n].pos_min[1]+grid::wid_init) * trat)
   {
     printout("Problem with get_cell (4).\n");
     abort();
   }
-  if (z < globals::cell[n].pos_init[2] * trat)
+  if (z < globals::cell[n].pos_min[2] * trat)
   {
     printout("Problem with get_cell (5).\n");
     abort();
   }
-  if (z > (globals::cell[n].pos_init[2]+grid::wid_init) * trat)
+  if (z > (globals::cell[n].pos_min[2]+grid::wid_init) * trat)
   {
     printout("Problem with get_cell (6).\n");
     abort();
@@ -1974,12 +1974,12 @@ double get_Gamma_phys(int cellnumber, int element, int ion)
         //   for (n = 0; n < ngrid; n++)
         //   {
         //   if (
-        //   (x > globals::cell[n].pos_init[0] * trat) &&
-        //   (x < (globals::cell[n].pos_init[0] + grid::wid_init) *trat) &&
-        //   (y > globals::cell[n].pos_init[1] * trat) &&
-        //   (y < (globals::cell[n].pos_init[1] + grid::wid_init) *trat) &&
-        //   (z > globals::cell[n].pos_init[2] * trat) &&
-        //   (z < (globals::cell[n].pos_init[2] + grid::wid_init) *trat))
+        //   (x > globals::cell[n].pos_min[0] * trat) &&
+        //   (x < (globals::cell[n].pos_min[0] + grid::wid_init) *trat) &&
+        //   (y > globals::cell[n].pos_min[1] * trat) &&
+        //   (y < (globals::cell[n].pos_min[1] + grid::wid_init) *trat) &&
+        //   (z > globals::cell[n].pos_min[2] * trat) &&
+        //   (z < (globals::cell[n].pos_min[2] + grid::wid_init) *trat))
         //   {
         //   return(n);
         // }
@@ -1988,9 +1988,9 @@ double get_Gamma_phys(int cellnumber, int element, int ion)
 
   printout("Failed to find cell (get_cell). \n");
   printout("x %g, y %g, z %g, t %g\n", x, y, z, t);
-  printout("xend %g yend %g zend %g\n", globals::cell[ngrid-1].pos_init[0] * trat, globals::cell[ngrid-1].pos_init[1] * trat,globals::cell[ngrid-1].pos_init[2] * trat);
-  printout("xend %g yend %g zend %g\n", globals::cell[0].pos_init[0] * trat, globals::cell[0].pos_init[1] * trat,globals::cell[0].pos_init[2] * trat);
-  printout("xend %g yend %g zend %g\n", (globals::cell[0].pos_init[0]+grid::wid_init) * trat, (globals::cell[0].pos_init[1]+grid::wid_init) * trat,(globals::cell[0].pos_init[2]+grid::wid_init) * trat);
+  printout("xend %g yend %g zend %g\n", globals::cell[ngrid-1].pos_min[0] * trat, globals::cell[ngrid-1].pos_min[1] * trat,globals::cell[ngrid-1].pos_min[2] * trat);
+  printout("xend %g yend %g zend %g\n", globals::cell[0].pos_min[0] * trat, globals::cell[0].pos_min[1] * trat,globals::cell[0].pos_min[2] * trat);
+  printout("xend %g yend %g zend %g\n", (globals::cell[0].pos_min[0]+grid::wid_init) * trat, (globals::cell[0].pos_min[1]+grid::wid_init) * trat,(globals::cell[0].pos_min[2]+grid::wid_init) * trat);
   printout("xwid %g ywid %g zwid %g\n", (grid::wid_init) * trat, (grid::wid_init) * trat,(grid::wid_init) * trat);
 
   abort();

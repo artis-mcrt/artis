@@ -151,7 +151,7 @@ double get_cellcoordmin(const int cellindex, const int axis)
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
 {
-  return cell[cellindex].pos_init[axis];
+  return cell[cellindex].pos_min[axis];
   // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
 }
 
@@ -2361,7 +2361,7 @@ static void uniform_grid_setup(void)
     for (int axis = 0; axis < 3; axis++)
     {
       assert_always(nxyz[axis] == get_cellcoordpointnum(n, axis));
-      cell[n].pos_init[axis] = - globals::coordmax[axis] + (2 * nxyz[axis] * globals::coordmax[axis] / ncoordgrid[axis]);
+      cell[n].pos_min[axis] = - globals::coordmax[axis] + (2 * nxyz[axis] * globals::coordmax[axis] / ncoordgrid[axis]);
       // cell[n].xyz[axis] = nxyz[axis];
     }
 
@@ -2406,9 +2406,9 @@ static void spherical1d_grid_setup(void)
     const int mgi = cellindex;  // interchangeable in this mode
     const double v_inner = mgi > 0 ? vout_model[mgi - 1] : 0.;
     set_cell_modelgridindex(cellindex, mgi);
-    cell[cellindex].pos_init[0] = v_inner * globals::tmin;
-    cell[cellindex].pos_init[1] = 0.;
-    cell[cellindex].pos_init[2] = 0.;
+    cell[cellindex].pos_min[0] = v_inner * globals::tmin;
+    cell[cellindex].pos_min[1] = 0.;
+    cell[cellindex].pos_min[2] = 0.;
   }
 }
 

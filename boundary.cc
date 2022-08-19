@@ -414,9 +414,9 @@ void change_cell(PKT *pkt_ptr, int snext, double t_current)
 // /// Routine to return which grid cell the packet is in.
 // {
 //   // Cheap and nasty version for now - assume a uniform grid.
-//   int xx = (pkt_ptr->pos[0] - (globals::cell[0].pos_init[0]*t_current/globals::tmin)) / (grid::wid_init*t_current/globals::tmin);
-//   int yy = (pkt_ptr->pos[1] - (globals::cell[0].pos_init[1]*t_current/globals::tmin)) / (grid::wid_init*t_current/globals::tmin);
-//   int zz = (pkt_ptr->pos[2] - (globals::cell[0].pos_init[2]*t_current/globals::tmin)) / (grid::wid_init*t_current/globals::tmin);
+//   int xx = (pkt_ptr->pos[0] - (globals::cell[0].pos_min[0]*t_current/globals::tmin)) / (grid::wid_init*t_current/globals::tmin);
+//   int yy = (pkt_ptr->pos[1] - (globals::cell[0].pos_min[1]*t_current/globals::tmin)) / (grid::wid_init*t_current/globals::tmin);
+//   int zz = (pkt_ptr->pos[2] - (globals::cell[0].pos_min[2]*t_current/globals::tmin)) / (grid::wid_init*t_current/globals::tmin);
 //
 //   return xx + (grid::ncoordgrid[0] * yy) + (grid::ncoordgrid[0] * grid::ncoordgrid[1] * zz);
 // }
