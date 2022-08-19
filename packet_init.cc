@@ -51,7 +51,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
 
   // pellet packet is moving with the homologous flow, so dir is proportional to pos
   vec_norm(pkt_ptr->pos, pkt_ptr->dir);  // assign dir = pos / vec_len(pos)
-  const double dopplerfactor = doppler_packetpos(pkt_ptr);
+  const double dopplerfactor = doppler_packet_cmf_to_rf(pkt_ptr);
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
   pkt_ptr->prop_time = globals::tmin;

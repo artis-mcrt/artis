@@ -923,7 +923,7 @@ static void increment_bfestimators(
     return;
 
   const int nbfcontinua = globals::nbfcontinua;
-  const double dopplerfactor = doppler_packetpos(pkt_ptr);
+  const double dopplerfactor = doppler_packet_cmf_to_rf(pkt_ptr);
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   // const double dopplerfactor = 1.;
 

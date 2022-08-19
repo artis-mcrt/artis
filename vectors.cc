@@ -10,7 +10,7 @@ extern __host__ __device__ inline void get_velocity(const double x[3], double y[
 extern __host__ __device__ inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
 extern __host__ __device__ inline void vec_scale(double vec[3], const double scalefactor);
 extern __host__ __device__ inline void vec_copy(double dest[3], const double source[3]);
-extern __host__ __device__ inline double doppler_packetpos(const PKT *const pkt_ptr, const double t);
+extern __host__ __device__ inline double doppler_packet_cmf_to_rf(const PKT *const pkt_ptr, const double t);
 
 
 __host__ __device__
@@ -134,7 +134,7 @@ void move_pkt(PKT *pkt_ptr, const double distance, const double time)
 
   /// During motion, rest frame energy and frequency are conserved.
   /// But need to update the co-moving ones.
-  const double dopplerfactor = doppler_packetpos(pkt_ptr);
+  const double dopplerfactor = doppler_packet_cmf_to_rf(pkt_ptr);
   pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
   pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
 }
