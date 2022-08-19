@@ -216,4 +216,23 @@ static bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = false;
 
 static bool INSTANT_PARTICLE_DEPOSITION = true;
 
+// Options for different types of timestep set_ups, only one of these can be true at one time. The hybrid timestep
+// schemes that switch between log and fixed require a transition time from one scheme to the other as well as the
+// fixed timestep width to be set. These values need to be consistent with the number of timesteps i.e. don't give
+// values that would give the same number or more more fixed timesteps than the total number of timesteps in the
+// simulation. The times are set in days.
+
+enum timestepsizemethods {
+  TIMESTEP_SIZES_LOGARITHMIC = 0,
+  TIMESTEP_SIZES_CONSTANT = 1,
+  TIMESTEP_SIZES_LOGARITHMIC_THEN_CONSTANT = 2,
+  TIMESTEP_SIZES_CONSTANT_THEN_LOGARITHMIC = 3,
+};
+
+static const enum timestepsizemethods TIMESTEP_SIZE_METHOD = TIMESTEP_SIZES_LOGARITHMIC;
+
+static const double FIXED_TIMESTEP_WIDTH = 0.1;
+
+static const double TIMESTEP_TRANSITION_TIME = 5;
+
 #endif //ARTISOPTIONS_H

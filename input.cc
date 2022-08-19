@@ -2371,60 +2371,113 @@ void time_init(void)
 // Subroutine to define the time steps.
 {
   /// t=globals::tmin is the start of the calcualtion. t=globals::tmax is the end of the calculation.
-  /// globals::ntstep is the number of time steps wanted. For now the time steps
-  /// are logarithmically spaced, but the code should be written such that
-  /// they don't have to be.
+  /// globals::ntstep is the number of time steps wanted.
 
   globals::time_step = (struct time *) malloc((globals::ntstep + 1) * sizeof(struct time));
 
   /// Now set the individual time steps
-  for (int n = 0; n < globals::ntstep; n++)
+  switch (TIMESTEP_SIZE_METHOD)
   {
-    // For logarithmic steps, the logarithmic inverval will be
-    const double dlogt = (log(globals::tmax) - log(globals::tmin)) / globals::ntstep;
-    globals::time_step[n].start = globals::tmin * exp(n * dlogt);
-    globals::time_step[n].mid = globals::tmin * exp((n + 0.5) * dlogt);
-    globals::time_step[n].width = (globals::tmin * exp((n + 1) * dlogt)) - globals::time_step[n].start;
+    case TIMESTEP_SIZES_LOGARITHMIC:
+    {
+      for (int n = 0; n < globals::ntstep; n++)
+      {   // For logarithmic steps, the logarithmic inverval will be
+          const double dlogt = (log(globals::tmax) - log(globals::tmin)) / globals::ntstep;
+          globals::time_step[n].start = globals::tmin * exp(n * dlogt);
+          globals::time_step[n].mid = globals::tmin * exp((n + 0.5) * dlogt);
+          globals::time_step[n].width = (globals::tmin * exp((n + 1) * dlogt)) - globals::time_step[n].start;
+      }
+      break;
+    }
 
-    // for constant timesteps
-    // const double dt = (globals::tmax - globals::tmin) / globals::ntstep;
-    // globals::time_step[n].start = globals::tmin + n * dt;
-    // globals::time_step[n].width = dt;
-    // globals::time_step[n].mid = globals::time_step[n].start + 0.5 * globals::time_step[n].width;
+    case TIMESTEP_SIZES_CONSTANT:
+    {
+      for (int n = 0; n < globals::ntstep; n++)
+      {
+          // for constant timesteps
+          const double dt = (globals::tmax - globals::tmin) / globals::ntstep;
+          globals::time_step[n].start = globals::tmin + n * dt;
+          globals::time_step[n].width = dt;
+          globals::time_step[n].mid = globals::time_step[n].start + 0.5 * globals::time_step[n].width;
+      }
+      break;
+    }
+
+    case TIMESTEP_SIZES_LOGARITHMIC_THEN_CONSTANT:
+    {
+      // First part log, second part fixed timesteps
+      const double t_transition = TIMESTEP_TRANSITION_TIME * DAY; // transition from logarithmic to fixed timesteps
+      const double maxtsdelta = FIXED_TIMESTEP_WIDTH * DAY; // maximum timestep width in fixed part
+      assert_always(t_transition > globals::tmin);
+      assert_always(t_transition < globals::tmax);
+      const int nts_fixed = ceil((globals::tmax - t_transition) / maxtsdelta);
+      const double fixed_tsdelta = (globals::tmax - t_transition) / nts_fixed;
+      assert_always(nts_fixed > 0);
+      assert_always(nts_fixed < globals::ntstep);
+      const int nts_log = globals::ntstep - nts_fixed;
+      assert_always(nts_log > 0);
+      assert_always(nts_log < globals::ntstep);
+      assert_always((nts_log + nts_fixed) == globals::ntstep);
+      for (int n = 0; n < globals::ntstep; n++)
+      {
+        if (n < nts_log)
+        {
+          // For logarithmic steps, the logarithmic inverval will be
+          const double dlogt = (log(t_transition) - log(globals::tmin)) / nts_log;
+          globals::time_step[n].start = globals::tmin * exp(n * dlogt);
+          globals::time_step[n].mid = globals::tmin * exp((n + 0.5) * dlogt);
+          globals::time_step[n].width = (globals::tmin * exp((n + 1) * dlogt)) - globals::time_step[n].start;
+        }
+        else
+        {
+          // for constant timesteps
+          const double prev_start = n > 0 ? (globals::time_step[n - 1].start + globals::time_step[n - 1].width) : globals::tmin;
+          globals::time_step[n].start = prev_start;
+          globals::time_step[n].width = fixed_tsdelta;
+          globals::time_step[n].mid = globals::time_step[n].start + 0.5 * globals::time_step[n].width;
+        }
+      }
+      break;
+    }
+
+    case TIMESTEP_SIZES_CONSTANT_THEN_LOGARITHMIC:
+    {
+      // /// First part fixed timesteps, second part log timesteps
+      const double t_transition = TIMESTEP_TRANSITION_TIME * DAY; // transition from fixed to logarithmic timesteps
+      const double maxtsdelta = FIXED_TIMESTEP_WIDTH * DAY; // timestep width of fixed timesteps
+      assert_always(t_transition > globals::tmin);
+      assert_always(t_transition < globals::tmax);
+      const int nts_fixed = ceil((t_transition - globals::tmin) / maxtsdelta);
+      const double fixed_tsdelta = (t_transition - globals::tmin) / nts_fixed;
+      assert_always(nts_fixed > 0);
+      assert_always(nts_fixed < globals::ntstep);
+      const int nts_log = globals::ntstep - nts_fixed;
+      assert_always(nts_log > 0);
+      assert_always(nts_log < globals::ntstep);
+      assert_always((nts_log + nts_fixed) == globals::ntstep);
+      for (int n = 0; n < globals::ntstep; n++)
+      {
+        if (n < nts_fixed)
+        {
+          // for constant timesteps
+          globals::time_step[n].start = globals::tmin + n * fixed_tsdelta;
+          globals::time_step[n].width = fixed_tsdelta;
+          globals::time_step[n].mid = globals::time_step[n].start + 0.5 * globals::time_step[n].width;
+        }
+        else
+        {
+          // For logarithmic time steps, the logarithmic interval will be
+          const double dlogt = (log(globals::tmax) - log(t_transition)) / nts_log;
+          const double prev_start = n > 0 ? (globals::time_step[n - 1].start + globals::time_step[n - 1].width) : globals::tmin;
+          globals::time_step[n].start = prev_start;
+          globals::time_step[n].width = (t_transition * exp((n - nts_fixed + 1) * dlogt)) - globals::time_step[n].start;
+          globals::time_step[n].mid = globals::time_step[n].start + 0.5 * globals::time_step[n].width;
+        }
+      }
+      break;
+    }
   }
 
-  // /// Part log, part fixed timestepss
-  // const double t_transition = 40. * DAY; // transition from logarithmic to fixed timesteps
-  // const double maxtsdelta = 0.5 * DAY; // maximum timestep width in fixed part
-  // assert_always(t_transition > globals::tmin);
-  // assert_always(t_transition < globals::tmax);
-  // const int nts_fixed = ceil((globals::tmax - t_transition) / maxtsdelta);
-  // const double fixed_tsdelta = (globals::tmax - t_transition) / nts_fixed;
-  // assert_always(nts_fixed >= 0);
-  // assert_always(nts_fixed <= globals::ntstep);
-  // const int nts_log = globals::ntstep - nts_fixed;
-  // assert_always(nts_log >= 0);
-  // assert_always(nts_log <= globals::ntstep);
-  // assert_always((nts_log + nts_fixed) == globals::ntstep);
-  // for (int n = 0; n < globals::ntstep; n++)
-  // {
-  //   if (n < nts_log)
-  //   {
-  //     // For logarithmic steps, the logarithmic inverval will be
-  //     const double dlogt = (log(t_transition) - log(globals::tmin)) / nts_log;
-  //     globals::time_step[n].start = globals::tmin * exp(n * dlogt);
-  //     globals::time_step[n].mid = globals::tmin * exp((n + 0.5) * dlogt);
-  //     globals::time_step[n].width = (globals::tmin * exp((n + 1) * dlogt)) - globals::time_step[n].start;
-  //   }
-  //   else
-  //   {
-  //     // for constant timesteps
-  //     const double prev_start = n > 0 ? (globals::time_step[n - 1].start + globals::time_step[n - 1].width) : globals::tmin;
-  //     globals::time_step[n].start = prev_start;
-  //     globals::time_step[n].width = fixed_tsdelta;
-  //     globals::time_step[n].mid = globals::time_step[n].start + 0.5 * globals::time_step[n].width;
-  //   }
-  // }
 
   // to limit the timestep durations
   // const double maxt = 0.5 * DAY;
