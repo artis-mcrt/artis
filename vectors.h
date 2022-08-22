@@ -7,7 +7,7 @@
 #include "cuda.h"
 
 __host__ __device__ void angle_ab(const double dir1[3], const double vel[3], double dir2[3]);
-__host__ __device__ double doppler(const double dir1[3], const double vel[3]);
+__host__ __device__ double doppler_cmf_to_rf(const double dir_rf[3], const double vel_rf[3]);
 __host__ __device__ void scatter_dir(const double dir_in[3], double cos_theta, double dir_out[3]);
 __host__ __device__ void get_rand_isotropic_unitvec(double vecout[3]);
 __host__ __device__ void move_pkt(PKT *pkt_ptr, double distance, const double time);
@@ -102,10 +102,9 @@ inline void vec_copy(double destination[3], const double source[3])
 __host__ __device__
 inline double doppler_packet_cmf_to_rf(const PKT *const pkt_ptr)
 {
-  double vel_vec[3];
-  get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time); // homologous flow velocity
-  const double dopplerfactor = doppler(pkt_ptr->dir, vel_vec);
-  return dopplerfactor;
+  double flow_velocity[3];  // homologous flow velocity
+  get_velocity(pkt_ptr->pos, flow_velocity, pkt_ptr->prop_time);
+  return doppler_cmf_to_rf(pkt_ptr->dir, flow_velocity);
 }
 
 #endif //VECTORS_H

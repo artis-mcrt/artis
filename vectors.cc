@@ -33,27 +33,29 @@ void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
 
 
 __host__ __device__
-double doppler(const double dir1[3], const double vel[3])
-// Doppler shift in SR. Takes one direction and velocity
-//  as input and gives back double.
+double doppler_cmf_to_rf(const double dir_rf[3], const double vel_rf[3])
+// Doppler factor
+// arguments: the rest-frame direction and velocity of the source
+// returns: the ratio f = nu_rf / nu_cmf
 {
   double gamma_rel = 1.;
 
-  assert_testmodeonly(dot(vel, vel) / CLIGHTSQUARED >= 0.);
-  assert_testmodeonly(dot(vel, vel) / CLIGHTSQUARED < 1.);
+  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
+  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
+
   if (USE_RELATIVISTIC_CORRECTIONS)
   {
-    const double betasq = dot(vel, vel) / CLIGHTSQUARED;
+    const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;
     assert_always(betasq >= 0.); // v < c
     assert_always(betasq < 1.); // v < c
     gamma_rel = 1. / sqrt(1 - betasq);
   }
 
-  const double ndotv = dot(dir1, vel);
+  const double ndotv = dot(dir_rf, vel_rf);
   const double dopplerfactor = gamma_rel * (1. - (ndotv / CLIGHT));
 
-  assert_always(std::isfinite(dopplerfactor));
-  assert_always(dopplerfactor > 0);
+  assert_testmodeonly(std::isfinite(dopplerfactor));
+  assert_testmodeonly(dopplerfactor > 0);
 
   return dopplerfactor;
 }
