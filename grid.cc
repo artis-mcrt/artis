@@ -1291,7 +1291,7 @@ static void abundances_read(void)
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
     std::string line = "";
-    assert_always(getline(abundance_file, line));
+    assert_always(get_noncommentline(abundance_file, line));
     std::istringstream ssline(line);
 
     int cellnumberinput = -1;
