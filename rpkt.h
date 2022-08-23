@@ -1,6 +1,7 @@
 #ifndef RPKT_H
 #define RPKT_H
 
+#include "cuda.h"
 #include "types.h"
 
 __host__ __device__ void do_rpkt(PKT *pkt_ptr, double t2);

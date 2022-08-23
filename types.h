@@ -431,6 +431,9 @@ typedef struct chlevels_struct
   chphixstargets_struct *chphixstargets;
   double bfheatingcoeff;
   double population;
+  double *individ_rad_deexc;
+  double *individ_internal_down_same;
+  double *individ_internal_up_same;
 } chlevels_struct;
 
 typedef struct chions_struct

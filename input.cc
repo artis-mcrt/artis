@@ -1464,6 +1464,23 @@ static void setup_cellhistory(void)
             const int nphixstargets = get_nphixstargets(element, ion, level);
             chlevel->chphixstargets = &chphixs[allphixstargetindex];
             allphixstargetindex += nphixstargets;
+
+            const int ndowntrans = get_ndowntrans(element, ion, level);
+            const int nuptrans = get_nuptrans(element, ion, level);
+
+            chlevel->individ_rad_deexc = (double *) malloc((ndowntrans + 1) * sizeof(double));
+            assert_always(chlevel->individ_rad_deexc != NULL);
+            chlevel->individ_rad_deexc[0] = ndowntrans;
+
+            chlevel->individ_internal_down_same = (double *) malloc((ndowntrans + 1) * sizeof(double));
+            assert_always(chlevel->individ_internal_down_same != NULL);
+            chlevel->individ_internal_down_same[0] = ndowntrans;
+
+            chlevel->individ_internal_up_same = (double *) malloc((nuptrans + 1) * sizeof(double));
+            assert_always(chlevel->individ_internal_up_same != NULL);
+            chlevel->individ_internal_up_same[0] = nuptrans;
+
+            mem_usage_cellhistory += (2 * (ndowntrans + 1) + (nuptrans + 1)) * sizeof(double);
           }
         }
       }

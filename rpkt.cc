@@ -294,7 +294,7 @@ static double get_event(
 
 
 // todo: place next to ratecoeff.cc get_index_from_cumulativesums()
-static int upper_bound(double arr[], int arraylen, double searchval)
+static int upper_bound(const double arr[], int arraylen, double searchval)
 // return the index of arr such that arr[index] >= searchval, or arraylen-1
 // if searchval > arr[arraylen-1]
 {

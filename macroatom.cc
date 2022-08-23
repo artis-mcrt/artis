@@ -90,6 +90,9 @@ static void calculate_macroatom_transitionrates(
     processrates[MA_ACTION_COLDEEXC] += individ_col_deexc;
     processrates[MA_ACTION_INTERNALDOWNSAME] += individ_internal_down_same;
 
+    chlevel->individ_rad_deexc[i] = individ_rad_deexc;
+    chlevel->individ_internal_down_same[i] = individ_internal_down_same;
+
     // printout("checking downtrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,lower,R,C,epsilon_trans);
   }
 
@@ -128,6 +131,7 @@ static void calculate_macroatom_transitionrates(
       modelgridindex, element, ion, level, i, epsilon_current, t_mid, T_e, nne);
 
     processrates[MA_ACTION_INTERNALUPSAME] += individ_internal_up_same;
+    chlevel->individ_internal_up_same[i] = individ_internal_up_same;
   }
   if (!std::isfinite(processrates[MA_ACTION_INTERNALUPSAME]))
     printout("fatal: internal_up_same has nan contribution\n");
@@ -191,15 +195,16 @@ static int do_macroatom_internal_down_same(
   double rate = 0.;
   for (int i = 0; i < ndowntrans; i++)
   {
-    const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
-    const int tmp_lower = globals::linelist[lineindex].lowerlevelindex;
-    const double epsilon_target = epsilon(element, ion, tmp_lower);
-    const double epsilon_trans = epsilon_current - epsilon_target;
+    // const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+    // const int tmp_lower = globals::linelist[lineindex].lowerlevelindex;
+    // const double epsilon_target = epsilon(element, ion, tmp_lower);
+    // const double epsilon_trans = epsilon_current - epsilon_target;
 
-    const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, tmp_lower, epsilon_trans, lineindex, t_mid);
-    const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
+    // const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, tmp_lower, epsilon_trans, lineindex, t_mid);
+    // const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
 
-    const double individ_internal_down_same = (R + C) * epsilon_target;
+    // const double individ_internal_down_same = (R + C) * epsilon_target;
+    const double individ_internal_down_same = globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i];
     rate += individ_internal_down_same;
     if (zrand * total_internal_down_same < rate)
     {
@@ -238,7 +243,8 @@ static void do_macroatom_raddeexcitation(
   const double epsilon_current = epsilon(element, ion, level);
   for (int i = 0; i < ndowntrans; i++)
   {
-    rate += get_individ_rad_deexc(modelgridindex, element, ion, level, i, t_mid, epsilon_current);
+    // rate += get_individ_rad_deexc(modelgridindex, element, ion, level, i, t_mid, epsilon_current);
+    rate += globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i];
     if (zrand * rad_deexc < rate)
     {
       linelistindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
@@ -399,7 +405,7 @@ static void do_macroatom_ionisation(
   const float T_e = grid::get_Te(modelgridindex);
   const float nne = grid::get_nne(modelgridindex);
 
-  int upper;
+  int upper = -1;
   /// Randomly select the occuring transition
   const double zrand = gsl_rng_uniform(rng);
   double rate = 0.;
@@ -420,6 +426,8 @@ static void do_macroatom_ionisation(
              __func__, get_element(element), get_ionstage(element, *ion), *level, zrand, internal_up_higher, rate);
     abort();
   }
+
+  assert_always(upper >= 0);
 
   /// and set the macroatom's new state
   *ion += 1;
@@ -828,7 +836,8 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
         rate = 0.;
         for (int i = 0; i < nuptrans; i++)
         {
-          rate += get_individ_internal_up_same(modelgridindex, element, ion, level, i, epsilon_current, t_mid, T_e, nne);
+          rate += globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i];
+          // rate += get_individ_internal_up_same(modelgridindex, element, ion, level, i, epsilon_current, t_mid, T_e, nne);
           if (zrand * processrates[MA_ACTION_INTERNALUPSAME] < rate)
           {
             const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
