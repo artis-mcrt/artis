@@ -158,7 +158,7 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
     for (int d = 0; d < ndim; d++)
     {
       initpos[d] = pkt_ptr->pos[d];
-      cellcoordmax[d] = grid::get_cellcoordmin(cellindex, d) + grid::wid_init(0);
+      cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
       vel[d] = pkt_ptr->dir[d] * globals::CLIGHT_PROP;
     }
   }
@@ -166,8 +166,12 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
   {
     // the only coordinate is radius from the origin
     initpos[0] = vec_len(pkt_ptr->pos);
-    cellcoordmax[0] = grid::get_cellcoordmin(cellindex, 0) + grid::wid_init(cellindex);
+    cellcoordmax[0] = grid::get_cellcoordmax(cellindex, 0);
     vel[0] = dot(pkt_ptr->pos, pkt_ptr->dir) / vec_len(pkt_ptr->pos) * globals::CLIGHT_PROP; // radial velocity
+  }
+  else
+  {
+    assert_always(false);
   }
 
   // for (int d = 0; d < ndim; d++)
@@ -181,14 +185,10 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
   // }
 
   //printout("boundary.c: x0 %g, y0 %g, z0 %g\n", initpos[0] initpos[1] initpos[2]);
-
   //printout("boundary.c: vx %g, vy %g, vz %g\n",vel[0],vel[1],vel[2]);
-
   //printout("boundary.c: cellxmin %g, cellymin %g, cellzmin %g\n",grid::get_cellcoordmin(cellindex, 0),grid::get_cellcoordmin(cellindex, 1),grid::get_cellcoordmin(cellindex, 2));
-
   //printout("boundary.c: cellxmax %g, cellymax %g, cellzmax %g\n",cellcoordmax[0],cellcoordmax[1],cellcoordmax[2]);
 
-  // enum cell_boundary not_allowed = pkt_ptr->last_cross;
   enum cell_boundary not_allowed = pkt_ptr->last_cross;
   enum cell_boundary negdirections[3] = {NEG_X, NEG_Y, NEG_Z}; // 'X' might actually be radial coordinate
   enum cell_boundary posdirections[3] = {POS_X, POS_Y, POS_Z};
@@ -256,15 +256,11 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
     }
   }
 
-
-  if (false)
-  {
-    printout("pkt_ptr->number %d\n", pkt_ptr->number);
-    printout("delta1x %g delta2x %g\n",  (initpos[0] * globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 0), cellcoordmax[0] - (initpos[0] * globals::tmin/tstart));
-    printout("delta1y %g delta2y %g\n",  (initpos[1] * globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 1), cellcoordmax[1] - (initpos[1] * globals::tmin/tstart));
-    printout("delta1z %g delta2z %g\n",  (initpos[2] * globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 2), cellcoordmax[2] - (initpos[2] * globals::tmin/tstart));
-    printout("dir [%g, %g, %g]\n", pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
-  }
+  // printout("pkt_ptr->number %d\n", pkt_ptr->number);
+  // printout("delta1x %g delta2x %g\n",  (initpos[0] * globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 0), cellcoordmax[0] - (initpos[0] * globals::tmin/tstart));
+  // printout("delta1y %g delta2y %g\n",  (initpos[1] * globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 1), cellcoordmax[1] - (initpos[1] * globals::tmin/tstart));
+  // printout("delta1z %g delta2z %g\n",  (initpos[2] * globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 2), cellcoordmax[2] - (initpos[2] * globals::tmin/tstart));
+  // printout("dir [%g, %g, %g]\n", pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 
   double t_plus_coordboundary[3];  // time to reach the cell's upper boundary on each coordinate
   double t_minus_coordboundary[3];  // likewise, the lower boundaries (smallest x,y,z or radius value in the cell)
