@@ -10,11 +10,11 @@ ifeq ($(SYSNAME),Darwin)
 	# macOS
 
 	# CXX = c++
-	CXXFLAGS += -std=c++17 -fstrict-aliasing -ftree-vectorize -flto
+	CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto
 
 	ifeq ($(shell uname -m),arm64)
 		CXXFLAGS += -mcpu=apple-m1
-		# march=native on Apple Silicon will work on Clang 15
+		# march=native will work on Apple Silicon in Clang 15
 		# CXXFLAGS += -march=native
 	else
 		CXXFLAGS += -march=native
