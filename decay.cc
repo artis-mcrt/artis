@@ -169,7 +169,7 @@ static int decay_daughter_z(const int z_parent, const int a_parent, int decaytyp
   assert_always(decaytype >= 0);
   assert_always(decaytype < DECAYTYPE_COUNT);
 
-  switch (decaytype)
+  switch ((enum decaytypes) decaytype)
   {
     case DECAYTYPE_ALPHA:
     {
@@ -188,6 +188,10 @@ static int decay_daughter_z(const int z_parent, const int a_parent, int decaytyp
     {
       return -1; // no daughter
     }
+    case DECAYTYPE_COUNT:
+    {
+      assert_always(false);
+    }
   }
   return -1; // no daughter
 }
@@ -198,7 +202,7 @@ static int decay_daughter_a(const int z_parent, const int a_parent, int decaytyp
 {
   assert_testmodeonly(nuc_exists(z_parent, a_parent));
 
-  switch (decaytype)
+  switch ((enum decaytypes) decaytype)
   {
     case DECAYTYPE_ALPHA:
     {
@@ -213,6 +217,10 @@ static int decay_daughter_a(const int z_parent, const int a_parent, int decaytyp
     case DECAYTYPE_NONE:
     {
       return -1; // no daughter
+    }
+    case DECAYTYPE_COUNT:
+    {
+      assert_always(false);
     }
   }
   return -1; // no daughter
@@ -811,7 +819,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
   int maxdecaypathlength = 0;
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++)
   {
-    printout_decaypath(decaypathindex);
+    // printout_decaypath(decaypathindex);
     maxdecaypathlength = std::max(maxdecaypathlength, get_decaypathlength(decaypathindex));
   }
   printout("Number of decay paths: %d (max length %d)\n", (int) get_num_decaypaths(), maxdecaypathlength);
