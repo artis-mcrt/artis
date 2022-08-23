@@ -177,7 +177,7 @@ void escat_rpkt(PKT *pkt_ptr)
     }
   #endif
 
-  const double dopplerfactor = doppler_packet_cmf_to_rf(pkt_ptr);
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
  }

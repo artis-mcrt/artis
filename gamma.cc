@@ -321,7 +321,7 @@ void pellet_gamma_decay(const int nts, PKT *pkt_ptr)
   // that it's now a gamma ray.
 
   pkt_ptr->prop_time = pkt_ptr->tdecay;
-  const double dopplerfactor = doppler_packet_cmf_to_rf(pkt_ptr);
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
@@ -387,7 +387,7 @@ static double sig_comp(const PKT *pkt_ptr)
 
   // Now need to convert between frames.
 
-  const double sigma_rf = sigma_cmf * doppler_packet_cmf_to_rf(pkt_ptr);
+  const double sigma_rf = sigma_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
 
   assert_testmodeonly(std::isfinite(sigma_rf));
 
@@ -571,7 +571,7 @@ static void compton_scatter(PKT *pkt_ptr)
 
     // It now has a rest frame direction and a co-moving frequency.
     //  Just need to set the rest frame energy.
-    const double dopplerfactor = doppler_packet_cmf_to_rf(pkt_ptr);
+    const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
     pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
     pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 

@@ -10,15 +10,17 @@ extern __host__ __device__ inline void get_velocity(const double x[3], double y[
 extern __host__ __device__ inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
 extern __host__ __device__ inline void vec_scale(double vec[3], const double scalefactor);
 extern __host__ __device__ inline void vec_copy(double dest[3], const double source[3]);
-extern __host__ __device__ inline double doppler_packet_cmf_to_rf(const PKT *const pkt_ptr);
+extern __host__ __device__ inline double doppler_packet_nucmf_on_nurf(const PKT *const pkt_ptr);
 
 
 __host__ __device__
 void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
-// Routine for aberation of angles in SR. Takes one direction and velocity
-// as input and gives back another direction.
+// aberation of angles in special relativity
+//   dir1: direction unit vector in frame1
+//   vel: velocity of frame2 relative to frame1
+//   dir2: direction vector in frame2
 {
-  const double vsqr = dot(vel,vel) / CLIGHTSQUARED;
+  const double vsqr = dot(vel, vel) / CLIGHTSQUARED;
   const double gamma_rel = 1. / (sqrt(1 - vsqr));
 
   const double ndotv = dot(dir1,vel);
@@ -33,9 +35,11 @@ void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
 
 
 __host__ __device__
-double doppler_cmf_to_rf(const double dir_rf[3], const double vel_rf[3])
+double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
 // Doppler factor
-// arguments: the rest-frame direction and velocity of the source
+// arguments:
+//   dir_rf: the rest frame direction (unit vector) of emission
+//   vel_rf: rest frame velocity of the comoving frame
 // returns: the ratio f = nu_rf / nu_cmf
 {
   double gamma_rel = 1.;
@@ -101,7 +105,7 @@ void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[
 
 __host__ __device__
 void get_rand_isotropic_unitvec(double vecout[3])
-// Assume isotropic distribution, get a random direction vector
+// Assuming isotropic distribution, get a random direction vector
 {
   // alternatively, use GSL's functions:
   // gsl_ran_dir_3d(rng, &vecout[0], &vecout[1], &vecout[2]);
@@ -136,7 +140,7 @@ void move_pkt(PKT *pkt_ptr, const double distance, const double time)
 
   /// During motion, rest frame energy and frequency are conserved.
   /// But need to update the co-moving ones.
-  const double dopplerfactor = doppler_packet_cmf_to_rf(pkt_ptr);
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
   pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
   pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
 }

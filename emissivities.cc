@@ -56,8 +56,8 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist)
   // light will have frequency (nu_cmf / f) in the cmf frame. And it
   // travels in direction syn_dir in the rf.
 
-  const double freq_out = pkt_ptr->nu_cmf / f; /// doppler_cmf_to_rf(syn_dir, vel_vec);
-  // do we want ?/ doppler_cmf_to_rf(syn_dir, vel_vec)
+  const double freq_out = pkt_ptr->nu_cmf / f; /// doppler_nurf_over_nucmf(syn_dir, vel_vec);
+  // do we want ?/ doppler_nurf_over_nucmf(syn_dir, vel_vec)
 
   const int lindex = get_nul(freq_out); // This is the index of the next line to
                                         // the red. The emissivity will go in this
@@ -79,18 +79,18 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist)
     const double dsigma_domega_cmf = 0.0596831 * SIGMA_T / f / f * (f + (1./f) + (mu_cmf * mu_cmf) - 1.);
 
     //speed = vec_len(vel_vec);
-    //solid_angle_factor =  doppler_cmf_to_rf(pkt_ptr->dir, vel_vec) * doppler_cmf_to_rf(pkt_ptr->dir, vel_vec);
+    //solid_angle_factor =  doppler_nurf_over_nucmf(pkt_ptr->dir, vel_vec) * doppler_nurf_over_nucmf(pkt_ptr->dir, vel_vec);
 
     //   pow((1 + (dot(vel_vec, syn_dir)/CLIGHT)),2)
     //   / (1.0 - (speed* speed / CLIGHT / CLIGHT));
 
-    //dsigma_domega_rf = dsigma_domega_cmf //* doppler_cmf_to_rf(pkt_ptr->dir, vel_vec)
+    //dsigma_domega_rf = dsigma_domega_cmf //* doppler_nurf_over_nucmf(pkt_ptr->dir, vel_vec)
     //* solid_angle_factor;
 
     // so now determine the contribution to the emissivity and which
     // frequency bin it should be in
 
-    const double dop_fac = doppler_cmf_to_rf(pkt_ptr->dir, vel_vec);
+    const double dop_fac = doppler_nucmf_on_nurf(pkt_ptr->dir, vel_vec);
 
     const double emiss_cont = pkt_ptr->e_rf * dsigma_domega_cmf * dist * dop_fac * dop_fac / f;
 

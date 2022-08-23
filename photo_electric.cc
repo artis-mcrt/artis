@@ -49,7 +49,7 @@ double sig_photo_electric(const PKT *pkt_ptr)
 
   // Now need to convert between frames.
 
-  const double sigma_rf = sigma_cmf * doppler_packet_cmf_to_rf(pkt_ptr);
+  const double sigma_rf = sigma_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
   return sigma_rf;
 }
 
@@ -120,7 +120,7 @@ double sig_pair_prod(const PKT *pkt_ptr)
 
   // Now need to convert between frames.
 
-  double sigma_rf = sigma_cmf * doppler_packet_cmf_to_rf(pkt_ptr);
+  double sigma_rf = sigma_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
 
   if (sigma_rf < 0)
   {
@@ -180,7 +180,7 @@ void pair_prod(PKT *pkt_ptr)
 
     angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
 
-    const double dopplerfactor = doppler_packet_cmf_to_rf(pkt_ptr);
+    const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
     pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
     pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 

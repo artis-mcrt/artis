@@ -116,7 +116,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
 
   // rf frequency and energy
-  dummy_ptr->nu_rf = dummy_ptr->nu_cmf / doppler_cmf_to_rf(dummy_ptr->dir, vel_vec);
+  dummy_ptr->nu_rf = dummy_ptr->nu_cmf / doppler_nucmf_on_nurf(dummy_ptr->dir, vel_vec);
   dummy_ptr->e_rf = dummy_ptr->e_cmf * dummy_ptr->nu_rf /dummy_ptr->nu_cmf;
 
   double Qi = dummy_ptr->stokes[1];
@@ -977,7 +977,7 @@ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
       {
         // Loop over frequency ranges
 
-        if (pkt_ptr->nu_cmf / doppler_cmf_to_rf(obs, vel_vec) > numin_vspec_input[i] && pkt_ptr->nu_cmf / doppler_cmf_to_rf(obs, vel_vec) < numax_vspec_input[i])
+        if (pkt_ptr->nu_cmf / doppler_nucmf_on_nurf(obs, vel_vec) > numin_vspec_input[i] && pkt_ptr->nu_cmf / doppler_nucmf_on_nurf(obs, vel_vec) < numax_vspec_input[i])
         {
           // frequency selection
 
