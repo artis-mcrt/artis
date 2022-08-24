@@ -330,6 +330,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
 {
   const double nu = pkt_ptr->nu_cmf;
 
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
   const double kappa_cont = kappa_rpkt_cont_thisthread.total * dopplerfactor;
   const double sigma = kappa_rpkt_cont_thisthread.es * dopplerfactor;
   const double kappa_ff = kappa_rpkt_cont_thisthread.ff * dopplerfactor;
