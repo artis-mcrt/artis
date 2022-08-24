@@ -22,7 +22,7 @@ typedef struct modelgrid_t
   float TJ;
   float W;
   float nne;
-  float initial_radial_pos;
+  float initial_radial_pos_sum;
   float rhoinit;
   float rho;
   //modelgrid nn_tot

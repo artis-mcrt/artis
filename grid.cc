@@ -1092,7 +1092,6 @@ static void allocate_nonemptymodelcells(void)
     if (get_numassociatedcells(mgi) > 0)
     {
       nonempty_npts_model++;
-      modelgrid[mgi].initial_radial_pos /= get_numassociatedcells(mgi);
     }
   }
 
@@ -1175,7 +1174,7 @@ static void map_1dmodeltogrid(void)
       const int mgi = get_cell_modelgridindex(cellindex);
       if ((vout_model[mgi] >= vmin) && (get_rhoinit(mgi) > 0))
       {
-        modelgrid[mgi].initial_radial_pos += radial_pos;
+        modelgrid[mgi].initial_radial_pos_sum += radial_pos;
       }
       else
       {
@@ -1233,7 +1232,7 @@ static void map_2dmodeltogrid(void)
         }
       }
       set_cell_modelgridindex(n, (mkeep2 * ncoord_model[0]) + mkeep1);
-      modelgrid[get_cell_modelgridindex(n)].initial_radial_pos += radial_pos;
+      modelgrid[get_cell_modelgridindex(n)].initial_radial_pos_sum += radial_pos;
 
       //renorm[mkeep]++;
     }
@@ -1256,7 +1255,7 @@ static void map_3dmodeltogrid(void)
   {
     // mgi and cellindex are interchangeable in this mode
     const int mgi = cellindex;
-    modelgrid[mgi].initial_radial_pos = get_cellradialpos(cellindex);
+    modelgrid[mgi].initial_radial_pos_sum = get_cellradialpos(cellindex);
     const bool keepcell = (get_rhoinit(mgi) > 0);
     if (keepcell)
     {
@@ -2419,7 +2418,7 @@ void grid_init(int my_rank)
 {
   for (int n = 0; n <= get_npts_model(); n++)
   {
-    modelgrid[n].initial_radial_pos = 0;
+    modelgrid[n].initial_radial_pos_sum = 0;
   }
 
   /// Select grid type
