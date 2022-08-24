@@ -89,7 +89,6 @@ __host__ __device__
 static double get_event(
   const int modelgridindex,
   PKT *pkt_ptr,             // pointer to packet object
-  const double dopplerfactor,
   int *rpkt_eventtype,
   const double tau_rnd,     // random optical depth until which the packet travels
   const double abort_dist   // maximal travel distance before packet leaves cell or time step ends
@@ -106,7 +105,7 @@ static double get_event(
   PKT *dummypkt_ptr = &dummypkt;
   bool endloop = false;
   calculate_kappa_rpkt_cont(pkt_ptr, &globals::kappa_rpkt_cont[tid]);
-  const double kap_cont = globals::kappa_rpkt_cont[tid].total * dopplerfactor;
+  const double kap_cont = globals::kappa_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(pkt_ptr);
   while (!endloop)
   {
     /// calculate distance to next line encounter ldist
@@ -327,7 +326,7 @@ static int upper_bound(const double arr[], int arraylen, double searchval)
 
 
 __host__ __device__
-static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rpkt_cont_thisthread, const double dopplerfactor, int modelgridindex)
+static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rpkt_cont_thisthread, int modelgridindex)
 {
   const double nu = pkt_ptr->nu_cmf;
 
@@ -750,8 +749,6 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
 
     assert_always(tdist >= 0);
 
-    const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
-
     double edist;
     int rpkt_eventtype;
     bool find_nextline = false;
@@ -767,7 +764,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
       /// In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
       /// Get distance to the next physical event in this case only electron scattering
       //kappa = SIGMA_T*grid::get_nne(mgi);
-      const double kappa = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * dopplerfactor;
+      const double kappa = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * doppler_packet_nucmf_on_nurf(pkt_ptr);
       const double tau_current = 0.0;
       edist = (tau_next - tau_current) / kappa;
       find_nextline = true;
@@ -776,7 +773,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
     else
     {
       // get distance to the next physical event (continuum or bound-bound)
-      edist = get_event(mgi, pkt_ptr, dopplerfactor, &rpkt_eventtype, tau_next, fmin(tdist, sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+      edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, tau_next, fmin(tdist, sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
       if (false)
       {
         const int next_trans = pkt_ptr->next_trans;
@@ -849,7 +846,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
       }
       else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT)
       {
-        rpkt_event_continuum(pkt_ptr, globals::kappa_rpkt_cont[tid], dopplerfactor, mgi);
+        rpkt_event_continuum(pkt_ptr, globals::kappa_rpkt_cont[tid], mgi);
       }
       else
       {
