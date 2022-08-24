@@ -760,6 +760,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
     {
       sdist = globals::max_path_step;
       snext = pkt_ptr->where;
+      pkt_ptr->last_cross = NONE;
     }
 
     // At present there is no scattering/destruction process so all that needs to
