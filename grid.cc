@@ -1092,6 +1092,7 @@ static void allocate_nonemptymodelcells(void)
     if (get_numassociatedcells(mgi) > 0)
     {
       nonempty_npts_model++;
+      modelgrid[mgi].initial_radial_pos /= get_numassociatedcells(mgi);
     }
   }
 
@@ -1186,10 +1187,6 @@ static void map_1dmodeltogrid(void)
       set_cell_modelgridindex(cellindex, get_npts_model());
     }
   }
-  for (int mgi = 0; mgi < get_npts_model(); mgi++)
-  {
-    modelgrid[mgi].initial_radial_pos /= get_numassociatedcells(mgi);
-  }
 }
 
 
@@ -1244,10 +1241,6 @@ static void map_2dmodeltogrid(void)
     {
       set_cell_modelgridindex(n, get_npts_model());
     }
-  }
-  for (int mgi = 0; mgi < get_npts_model(); mgi++)
-  {
-    modelgrid[mgi].initial_radial_pos /= get_numassociatedcells(mgi);
   }
 }
 
