@@ -1222,10 +1222,10 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       const float nne = grid::get_nne(mgi);
       const double compton_optical_depth = SIGMA_T * nne * grid::wid_init(mgi) * tratmid;
 
-      double radial_pos = grid::modelgrid[mgi].initial_radial_pos * tratmid / assoc_cells;
+      double radial_pos = grid::modelgrid[mgi].initial_radial_pos * tratmid;
       if (grid::grid_type == GRID_SPHERICAL1D)
       {
-        const double r_inner = grid::get_cellcoordmin(mgi, 0) * tratmid / assoc_cells;
+        const double r_inner = grid::get_cellcoordmin(mgi, 0) * tratmid;
         const double r_outer = r_inner + grid::wid_init(mgi) * tratmid;
         radial_pos = 3./4 * (pow(r_outer, 4.) - pow(r_inner, 4.)) / (pow(r_outer, 3) - pow(r_inner, 3.)); // volume averaged mean radius
         // printout("r_inner %g r_outer %g tratmid %g assoc_cells %d\n", r_inner, r_outer, tratmid, assoc_cells);
@@ -1244,7 +1244,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
       if ((grey_optical_depth > globals::cell_is_optically_thick) && (nts < globals::n_grey_timesteps))
       {
-        printout("cell %d is treated in grey approximation (tau %g)\n", mgi, grey_optical_depth);
+        printout("cell %d is treated in grey approximation (kappa_grey %g [cm2/g], tau %g)\n", mgi, grid::get_kappagrey(mgi), grey_optical_depth);
         grid::modelgrid[mgi].thick = 1;
       }
       #ifdef VPKT_ON
