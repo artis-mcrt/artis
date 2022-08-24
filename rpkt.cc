@@ -149,7 +149,7 @@ static double get_event(
         // on packet position and direction
 
         // relativistic distance formula from tardis-sn project
-        // (commited by Christian Vogl, https://github.com/tardis-sn/tardis/pull/697)
+        // (committed by Christian Vogl, https://github.com/tardis-sn/tardis/pull/697)
         const double nu_r = nu_trans / dummypkt_ptr->nu_rf; // TODO: should be nu_rf, just testing cmf
         const double ct = CLIGHT * dummypkt_ptr->prop_time;
         const double mu = dot(dummypkt_ptr->dir, dummypkt_ptr->pos) / vec_len(dummypkt_ptr->pos);
@@ -212,7 +212,6 @@ static double get_event(
           }
 
           tau += tau_cont + tau_line;
-          //dummypkt_ptr->next_trans += 1;
           dummypkt_ptr->prop_time += ldist / globals::CLIGHT_PROP;
           move_pkt(dummypkt_ptr, ldist, dummypkt_ptr->prop_time);
           radfield::increment_lineestimator(modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
@@ -229,11 +228,17 @@ static double get_event(
             printout("[debug] get_event:         (dummypkt_ptr->nu_cmf - nu(dummypkt_ptr->next_trans-1))/dummypkt_ptr->nu_cmf %g\n", (dummypkt_ptr->nu_cmf- globals::linelist[next_trans-1].nu)/dummypkt_ptr->nu_cmf);
 
             if (dummypkt_ptr->nu_cmf >= globals::linelist[next_trans].nu && dummypkt_ptr->nu_cmf < globals::linelist[next_trans-1].nu)
+            {
               printout("[debug] get_event:           nu(next_trans-1) > nu_cmf >= nu(next_trans)\n");
+            }
             else if (dummypkt_ptr->nu_cmf < globals::linelist[next_trans].nu)
+            {
               printout("[debug] get_event:           nu_cmf < nu(next_trans)\n");
+            }
             else
+            {
               printout("[debug] get_event:           nu_cmf >= nu(next_trans-1)\n");
+            }
           }
         }
         else
@@ -760,7 +765,6 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
     {
       sdist = globals::max_path_step;
       snext = pkt_ptr->where;
-      pkt_ptr->last_cross = NONE;
     }
 
     // At present there is no scattering/destruction process so all that needs to
