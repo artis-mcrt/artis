@@ -101,8 +101,26 @@ static double get_event(
   double dist = 0.;       ///initial position on path
   double edist = 0.;
 
+  double nu_cmf_abort = 0.;
+  double delta_nuratio_on_delta_dist = 0.;
+
+  if (USE_RELATIVISTIC_CORRECTIONS)
+  {
+    PKT dummypkt_final = *pkt_ptr;
+
+    dummypkt_final.em_pos[0] += pkt_ptr->dir[0] * abort_dist;
+    dummypkt_final.pos[1] += pkt_ptr->dir[1] * abort_dist;
+    dummypkt_final.pos[2] += pkt_ptr->dir[2] * abort_dist;
+    dummypkt_final.prop_time = pkt_ptr->prop_time + abort_dist / CLIGHT;
+
+    nu_cmf_abort = pkt_ptr->nu_rf * doppler_packet_nucmf_on_nurf(&dummypkt_final);
+
+    delta_nuratio_on_delta_dist = (1. - nu_cmf_abort / pkt_ptr->nu_cmf) / abort_dist;
+  }
+
   PKT dummypkt = *pkt_ptr;
   PKT *dummypkt_ptr = &dummypkt;
+
   bool endloop = false;
   calculate_kappa_rpkt_cont(pkt_ptr, &globals::kappa_rpkt_cont[tid]);
   const double kap_cont = globals::kappa_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(pkt_ptr);
@@ -137,11 +155,28 @@ static double get_event(
         //printout("dummypkt_ptr->nu_cmf %g < nu_trans %g, next_trans %d, element %d, ion %d, lower%d, upper %d\n",dummypkt_ptr->nu_cmf,nu_trans,dummypkt_ptr->next_trans,element,ion,lower,upper);
         ldist = 0;  /// photon was propagated too far, make sure that we don't miss a line
       }
-      else
+      else if (!USE_RELATIVISTIC_CORRECTIONS)
       {
         ldist = CLIGHT * dummypkt_ptr->prop_time * (dummypkt_ptr->nu_cmf / nu_trans - 1);
       }
-      //fprintf(ldist_file,"%25.16e %25.16e\n",dummypkt_ptr->nu_cmf,ldist);
+      else
+      {
+        // With special relativity, the Doppler shift formula has an extra factor of 1/gamma in it.
+        // This changes the travel distance to Doppler shift into a line resonance and introduces
+        // a complex dependence on position (can we find an analytic solution?).
+        // Since the packets do not travel very far through the ejecta in a single step,
+        // a linear approximation for Doppler shift vs position should be good enough
+        // instead of trying to do a complicated (and slow) multi-step numerical solution
+        if (abort_dist > dist)
+        {
+          // if we're not already past the abort dist, update gradient using current location
+          delta_nuratio_on_delta_dist = (1. - nu_cmf_abort / dummypkt_ptr->nu_cmf) / (abort_dist - dist);
+        }
+        // estimate for nu_cmf(x)/nu_cmf(0) assuming that it changes linearly with distance
+        ldist = (1. - nu_trans / dummypkt_ptr->nu_cmf) / delta_nuratio_on_delta_dist;
+      }
+
+      // assert_always(ldist >= 0.);
       if (ldist < 0.) printout("[warning] get_event: ldist < 0 %g\n",ldist);
 
       // printout("[debug] get_event:     ldist %g\n",ldist);
@@ -200,6 +235,11 @@ static double get_event(
           dummypkt_ptr->prop_time += ldist / globals::CLIGHT_PROP;
           move_pkt(dummypkt_ptr, ldist, dummypkt_ptr->prop_time);
           radfield::increment_lineestimator(modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
+
+          // if (fabs(dummypkt_ptr->nu_cmf / nu_trans - 1.) > 1e-10)
+          // {
+          //   printout("dopplercheck: packet %d nu_cmf %g nu_line %g ratio %g errorfrac %g\n", pkt_ptr->number, dummypkt_ptr->nu_cmf, nu_trans, dummypkt_ptr->nu_cmf / nu_trans, fabs(dummypkt_ptr->nu_cmf / nu_trans - 1.));
+          // }
 
           if (false)
           {
