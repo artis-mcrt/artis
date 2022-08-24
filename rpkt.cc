@@ -101,23 +101,6 @@ static double get_event(
   double dist = 0.;       ///initial position on path
   double edist = 0.;
 
-  double nu_cmf_abort = 0.;
-  double delta_nuratio_on_delta_dist = 0.;
-
-  if (USE_RELATIVISTIC_CORRECTIONS)
-  {
-    PKT dummypkt_final = *pkt_ptr;
-
-    dummypkt_final.em_pos[0] += pkt_ptr->dir[0] * abort_dist;
-    dummypkt_final.pos[1] += pkt_ptr->dir[1] * abort_dist;
-    dummypkt_final.pos[2] += pkt_ptr->dir[2] * abort_dist;
-    dummypkt_final.prop_time = pkt_ptr->prop_time + abort_dist / CLIGHT;
-
-    nu_cmf_abort = pkt_ptr->nu_rf * doppler_packet_nucmf_on_nurf(&dummypkt_final);
-
-    delta_nuratio_on_delta_dist = (1. - nu_cmf_abort / pkt_ptr->nu_cmf) / abort_dist;
-  }
-
   PKT dummypkt = *pkt_ptr;
   PKT *dummypkt_ptr = &dummypkt;
 
@@ -161,19 +144,17 @@ static double get_event(
       }
       else
       {
-        // With special relativity, the Doppler shift formula has an extra factor of 1/gamma in it.
-        // This changes the travel distance to Doppler shift into a line resonance and introduces
-        // a complex dependence on position (can we find an analytic solution?).
-        // Since the packets do not travel very far through the ejecta in a single step,
-        // a linear approximation for Doppler shift vs position should be good enough
-        // instead of trying to do a complicated (and slow) multi-step numerical solution
-        if (abort_dist > dist)
-        {
-          // if we're not already past the abort dist, update gradient using current location
-          delta_nuratio_on_delta_dist = (1. - nu_cmf_abort / dummypkt_ptr->nu_cmf) / (abort_dist - dist);
-        }
-        // estimate for nu_cmf(x)/nu_cmf(0) assuming that it changes linearly with distance
-        ldist = (1. - nu_trans / dummypkt_ptr->nu_cmf) / delta_nuratio_on_delta_dist;
+        // With special relativity, the Doppler shift formula has an extra factor of 1/gamma in it,
+        // which changes the distance reach a line resonance and creates a dependence
+        // on packet position and direction
+
+        // relativistic distance formula from tardis-sn project
+        // (commited by Christian Vogl, https://github.com/tardis-sn/tardis/pull/697)
+        const double nu_r = nu_trans / dummypkt_ptr->nu_rf; // TODO: should be nu_rf, just testing cmf
+        const double ct = CLIGHT * dummypkt_ptr->prop_time;
+        const double mu = dot(dummypkt_ptr->dir, dummypkt_ptr->pos) / vec_len(dummypkt_ptr->pos);
+        const double r = vec_len(dummypkt_ptr->pos);  // radius
+        ldist = - mu * r + (ct - nu_r * nu_r * sqrt(ct * ct - (1 + r * r * (1 - mu * mu) * (1 + pow(nu_r, -2))))) / (1 + nu_r * nu_r);
       }
 
       // assert_always(ldist >= 0.);
