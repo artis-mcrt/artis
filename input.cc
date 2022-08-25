@@ -21,21 +21,21 @@
 
 const int groundstate_index_in = 1; // starting level index in the input files
 
-typedef struct transitions_t
+struct transitions
 {
   int *to;
-} transitions_t;
+};
 
-static transitions_t *transitions;
+static struct transitions *transitions;
 
-typedef struct
+struct transitiontable_entry
 {
   int lower;
   int upper;
   double A;
   double coll_str;
   bool forbidden;
-} transitiontable_entry;  /// only used temporarily during input
+};  /// only used temporarily during input
 
 const int inputlinecommentcount = 24;
 std::string inputlinecomments[inputlinecommentcount] = {
@@ -477,9 +477,9 @@ static void read_ion_levels(
 }
 
 
-static transitiontable_entry *read_ion_transitions(
+static struct transitiontable_entry *read_ion_transitions(
   std::istream &ftransitiondata, const int tottransitions_in,
-  int *tottransitions, transitiontable_entry *transitiontable,
+  int *tottransitions, struct transitiontable_entry *transitiontable,
   const int nlevels_requiretransitions, const int nlevels_requiretransitions_upperlevels,
   const int Z, const int ionstage)
 {
@@ -562,7 +562,7 @@ static transitiontable_entry *read_ion_transitions(
           }
           // printout("+adding transition index %d Z=%02d ionstage %d lower %d upper %d\n", i, Z, ionstage, prev_lower, tmplevel);
           (*tottransitions)++;
-          transitiontable = (transitiontable_entry *) realloc(transitiontable, *tottransitions * sizeof(transitiontable_entry));
+          transitiontable = (struct transitiontable_entry *) realloc(transitiontable, *tottransitions * sizeof(struct transitiontable_entry));
           assert_always(transitiontable != NULL);
           assert_always(prev_lower >= 0);
           assert_always(tmplevel >= 0);
@@ -668,7 +668,7 @@ static int transitioncheck(const int upper, const int lower)
 
 static void add_transitions_to_linelist(
   const int element, const int ion, const int nlevelsmax, const int tottransitions,
-  transitiontable_entry *transitiontable, int *lineindex)
+  struct transitiontable_entry *transitiontable, int *lineindex)
 {
   for (int ii = 0; ii < tottransitions; ii++)
   {
@@ -1055,10 +1055,10 @@ static void read_atomicdata_files(void)
       assert_always(transdata_ionstage_in == ionstage);
 
       /// read in the level and transition data for this ion
-      transitiontable_entry *transitiontable = NULL;
+      struct transitiontable_entry *transitiontable = NULL;
       if (tottransitions > 0)
       {
-        transitiontable = (transitiontable_entry *) calloc(tottransitions, sizeof(transitiontable_entry));
+        transitiontable = (struct transitiontable_entry *) calloc(tottransitions, sizeof(struct transitiontable_entry));
       }
 
       /// load transition table for the CURRENT ion to temporary memory
@@ -1097,7 +1097,7 @@ static void read_atomicdata_files(void)
         printout("[fatal] input: not enough memory to initialize Alpha_sp list for element %d, ion %d ... abort\n",element,ion);
         abort();
       }
-      if ((globals::elements[element].ions[ion].levels = (levellist_entry *) calloc(nlevelsmax, sizeof(levellist_entry))) == NULL)
+      if ((globals::elements[element].ions[ion].levels = (struct levellist_entry *) calloc(nlevelsmax, sizeof(struct levellist_entry))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize level list of element %d, ion %d ... abort\n",element,ion);
         abort();
@@ -1105,7 +1105,7 @@ static void read_atomicdata_files(void)
 
       /// now we need to readout the data for all those levels, write them to memory
       /// and set up the list of possible transitions for each level
-      if ((transitions = (transitions_t *) calloc(nlevelsmax, sizeof(transitions_t))) == NULL)
+      if ((transitions = (struct transitions *) calloc(nlevelsmax, sizeof(struct transitions))) == NULL)
       {
         printout("[fatal] input: not enough memory to allocate transitions ... abort\n");
         abort();

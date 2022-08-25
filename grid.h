@@ -20,7 +20,7 @@ struct mgicooling
 };
 
 
-typedef struct modelgrid_t
+struct modelgrid
 {
   float Te;
   float TR;
@@ -52,9 +52,9 @@ typedef struct modelgrid_t
   double totalcooling;
   struct mgicooling *cooling;
   short thick;
-} modelgrid_t;
+};
 
-extern __managed__ modelgrid_t *modelgrid;
+extern __managed__ struct modelgrid *modelgrid;
 
 extern __managed__ int ncoordgrid[3];
 extern __managed__ int ngrid;

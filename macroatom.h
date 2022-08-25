@@ -23,13 +23,13 @@ enum ma_action {
   MA_ACTION_COUNT = 9,
 };
 
-typedef struct mastate_t
+struct mastate
 {
   int element;              /// macro atom of type element (this is an element index)
   int ion;                  /// in ionstage ion (this is an ion index)
   int level;                /// and level=level (this is a level index)
   int activatingline;       /// Linelistindex of the activating line for bb activated MAs, -99 else.
-} mastate_t;
+};
 
 
 #include "cuda.h"

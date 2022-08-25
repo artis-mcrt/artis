@@ -14,20 +14,20 @@
 #include "update_grid.h"
 
 
-typedef struct Te_solution_paras
+struct Te_solution_paras
 {
   double t_current;
   int modelgridindex;
   struct heatingcoolingrates *heatingcoolingrates;
-} Te_solution_paras;
+};
 
-typedef struct
+struct gsl_integral_paras_bfheating
 {
   double nu_edge;
   int modelgridindex;
   float T_R;
   float *photoion_xs;
-} gsl_integral_paras_bfheating;
+};
 
 
 #if (!NO_LUT_BFHEATING)
@@ -65,7 +65,7 @@ typedef struct
 static double integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas)
 /// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
 {
-  const gsl_integral_paras_bfheating *const params = (gsl_integral_paras_bfheating *) voidparas;
+  const struct gsl_integral_paras_bfheating *const params = (struct gsl_integral_paras_bfheating *) voidparas;
 
   const int modelgridindex = params->modelgridindex;
   const double nu_edge = params->nu_edge;
@@ -100,7 +100,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
   // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
 
-  gsl_integral_paras_bfheating intparas;
+  struct gsl_integral_paras_bfheating intparas;
   intparas.nu_edge = nu_threshold;
   intparas.modelgridindex = modelgridindex;
   intparas.T_R = grid::get_TR(modelgridindex);
@@ -363,9 +363,9 @@ static void calculate_heating_rates(
 static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
 /// Thermal balance equation on which we have to iterate to get T_e
 {
-  const int modelgridindex = ((Te_solution_paras *) paras)->modelgridindex;
-  const double t_current = ((Te_solution_paras *) paras)->t_current;
-  struct heatingcoolingrates *heatingcoolingrates = ((Te_solution_paras *) paras)->heatingcoolingrates;
+  const int modelgridindex = ((struct Te_solution_paras *) paras)->modelgridindex;
+  const double t_current = ((struct Te_solution_paras *) paras)->t_current;
+  struct heatingcoolingrates *heatingcoolingrates = ((struct Te_solution_paras *) paras)->heatingcoolingrates;
 
   /// Set new T_e guess for the current cell and update populations
   //globals::cell[cellnumber].T_e = T_e;
@@ -428,7 +428,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
   //mintemp_f.function = &mintemp_solution_f;
   //maxtemp_f.function = &maxtemp_solution_f;
 
-  Te_solution_paras paras;
+  struct Te_solution_paras paras;
   paras.modelgridindex = modelgridindex;
   paras.t_current = t_current;
   paras.heatingcoolingrates = heatingcoolingrates;

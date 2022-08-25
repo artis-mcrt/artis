@@ -63,7 +63,7 @@ struct packet
   int pellet_decaytype;           // index into decay::decaytypes
   int pellet_nucindex;           // nuclide index of the decaying species
   float trueemissionvelocity;
-  mastate_t mastate;
+  struct mastate mastate;
 };
 
 

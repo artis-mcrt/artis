@@ -21,7 +21,7 @@
 namespace grid
 {
 
-__managed__ modelgrid_t *modelgrid = NULL;
+__managed__ struct modelgrid *modelgrid = NULL;
 
 __managed__ int ncoordgrid[3]; /// propagration grid dimensions
 __managed__ int ngrid;
@@ -445,7 +445,7 @@ static void set_npts_model(int new_npts_model)
   npts_model = new_npts_model;
 
   assert_always(modelgrid == NULL);
-  modelgrid = (modelgrid_t *) calloc(npts_model + 1, sizeof(modelgrid_t));
+  modelgrid = (struct modelgrid *) calloc(npts_model + 1, sizeof(struct modelgrid));
   assert_always(mg_associated_cells == NULL);
   mg_associated_cells = (int *) malloc((npts_model + 1) * sizeof(int));
   assert_always(nonemptymgi_of_mgi == NULL);
