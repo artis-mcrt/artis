@@ -596,6 +596,11 @@ static int compare_linelistentry(const void *p1, const void *p2)
 {
   linelist_entry *a1 = (linelist_entry *)(p1);
   linelist_entry *a2 = (linelist_entry *)(p2);
+
+  // if (a1->nu > a2->nu) return -1;
+  // if (a1->nu < a2->nu) return 1;
+  // return 0;
+
   //printf("%d %d %d %d %g\n",a1->elementindex,a1->ionindex,a1->lowerlevelindex,a1->upperlevelindex,a1->nu);
   //printf("%d %d %d %d %g\n",a2->elementindex,a2->ionindex,a2->lowerlevelindex,a2->upperlevelindex,a2->nu);
   //printf("%g\n",a2->nu - a1->nu);
@@ -1170,6 +1175,30 @@ static void read_atomicdata_files(void)
   if (globals::rank_in_node == 0)
   {
     qsort(globals::linelist, globals::nlines, sizeof(linelist_entry), compare_linelistentry);
+    // printout("Fixing duplicate atomic lines...\n");
+    // int pass = 0;
+    // bool found_dupe = false;
+    // do
+    // {
+    //   pass++;
+    //   printout("pass %d\n", pass);
+    //   qsort(globals::linelist, globals::nlines, sizeof(linelist_entry), compare_linelistentry);
+
+    //   found_dupe = false;
+    //   for (int i = 0; i < globals::nlines - 1; i++)
+    //   {
+    //     if (globals::linelist[i].nu == globals::linelist[i + 1].nu)
+    //     {
+    //       found_dupe = true;
+    //       const double lambda_prev = 1e8 * CLIGHT / globals::linelist[i].nu;
+    //       const double lambda_new = lambda_prev + 0.01 * ((i % 10) + 1);
+    //       globals::linelist[i].nu = 1e8 * CLIGHT / lambda_new;
+    //     }
+    //   }
+
+    //   printout("done fixing duplicate atomic lines...resorting...\n");
+    // }
+    // while (found_dupe);
   }
 
   // create a linelist shared on node and then copy data across, freeing the local copy
