@@ -88,7 +88,7 @@ int closest_transition(const double nu_cmf, const int next_trans)
 __host__ __device__
 static double get_event(
   const int modelgridindex,
-  PKT *pkt_ptr,             // pointer to packet object
+  struct packet *pkt_ptr,             // pointer to packet object
   int *rpkt_eventtype,
   const double tau_rnd,     // random optical depth until which the packet travels
   const double abort_dist   // maximal travel distance before packet leaves cell or time step ends
@@ -101,8 +101,8 @@ static double get_event(
   double dist = 0.;       ///initial position on path
   double edist = 0.;
 
-  PKT dummypkt = *pkt_ptr;
-  PKT *dummypkt_ptr = &dummypkt;
+  struct packet dummypkt = *pkt_ptr;
+  struct packet *dummypkt_ptr = &dummypkt;
 
   bool endloop = false;
   calculate_kappa_rpkt_cont(pkt_ptr, &globals::kappa_rpkt_cont[tid]);
@@ -352,7 +352,7 @@ static int upper_bound(const double arr[], int arraylen, double searchval)
 
 
 __host__ __device__
-static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rpkt_cont_thisthread, int modelgridindex)
+static void rpkt_event_continuum(struct packet *pkt_ptr, struct rpkt_cont_opacity kappa_rpkt_cont_thisthread, int modelgridindex)
 {
   const double nu = pkt_ptr->nu_cmf;
 
@@ -483,7 +483,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
 
 
 __host__ __device__
-static void rpkt_event_boundbound(PKT *pkt_ptr, const int mgi)
+static void rpkt_event_boundbound(struct packet *pkt_ptr, const int mgi)
 {
   /// bound-bound transition occured
   /// activate macro-atom in corresponding upper-level. Actually all the information
@@ -526,7 +526,7 @@ static void rpkt_event_boundbound(PKT *pkt_ptr, const int mgi)
 
 
 __host__ __device__
-static void rpkt_event_thickcell(PKT *pkt_ptr)
+static void rpkt_event_thickcell(struct packet *pkt_ptr)
 /// Event handling for optically thick cells. Those cells are treated in a grey
 /// approximation with electron scattering only.
 /// The packet stays an R_PKT of same nu_cmf than before (coherent scattering)
@@ -548,7 +548,7 @@ static void rpkt_event_thickcell(PKT *pkt_ptr)
 
 
 __host__ __device__
-static double closest_transition_empty(PKT *pkt_ptr)
+static double closest_transition_empty(struct packet *pkt_ptr)
 /// for the propagation through empty cells
 /// here its possible that the packet jumps over several lines
 {
@@ -629,7 +629,7 @@ static double closest_transition_empty(PKT *pkt_ptr)
 
 
 __host__ __device__
-static void update_estimators(PKT *pkt_ptr, const double distance)
+static void update_estimators(struct packet *pkt_ptr, const double distance)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.
@@ -698,7 +698,7 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
 
 
 __host__ __device__
-static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
+static bool do_rpkt_step(struct packet *pkt_ptr, const double t2)
 // Routine for moving an r-packet. Similar to do_gamma in objective.
 // return value - true if no mgi change, no pkttype change and not reached end of timestep, false otherwise
 {
@@ -918,7 +918,7 @@ static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
 
 
 __host__ __device__
-void do_rpkt(PKT *pkt_ptr, const double t2)
+void do_rpkt(struct packet *pkt_ptr, const double t2)
 {
   while (do_rpkt_step(pkt_ptr, t2))
   {
@@ -930,7 +930,7 @@ void do_rpkt(PKT *pkt_ptr, const double t2)
 __host__ __device__
 static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double start_nu_cmf, int startcellindex, double tstart, double dirvec[3], enum cell_boundary last_cross, double *tot_tau_cont, double *tot_tau_lines)
 {
-  PKT vpkt;
+  struct packet vpkt;
   vpkt.type = TYPE_RPKT;
   vpkt.nu_cmf = start_nu_cmf;
   vpkt.where = startcellindex;
@@ -1050,7 +1050,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
 
 
 __host__ __device__
-double get_rpkt_escape_prob(PKT *pkt_ptr, const double tstart)
+double get_rpkt_escape_prob(struct packet *pkt_ptr, const double tstart)
 {
   // return -1.; // disable this functionality and speed up the code
 
@@ -1096,7 +1096,7 @@ double get_rpkt_escape_prob(PKT *pkt_ptr, const double tstart)
 
 
 __host__ __device__
-void emitt_rpkt(PKT *pkt_ptr)
+void emitt_rpkt(struct packet *pkt_ptr)
 {
   /// now make the packet a r-pkt and set further flags
   pkt_ptr->type = TYPE_RPKT;
@@ -1339,7 +1339,7 @@ double calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu)
 
 
 __host__ __device__
-void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, rpkt_cont_opacity_struct *kappa_rpkt_cont_thisthread)
+void calculate_kappa_rpkt_cont(const struct packet *const pkt_ptr, struct rpkt_cont_opacity *kappa_rpkt_cont_thisthread)
 {
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = grid::get_cell_modelgridindex(cellindex);

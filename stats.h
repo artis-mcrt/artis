@@ -89,7 +89,7 @@ namespace stats {
 
   __host__ __device__ void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype, const double increment);
 
-  __host__ __device__ void increment_ion_stats_contabsorption(const PKT *const pkt_ptr, const int modelgridindex, const int element, const int ion);
+  __host__ __device__ void increment_ion_stats_contabsorption(const struct packet *const pkt_ptr, const int modelgridindex, const int element, const int ion);
 
   double get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype);
 
@@ -105,7 +105,7 @@ namespace stats {
 
   int get_counter(enum eventcounters i);
 
-  void pkt_action_counters_printout(const PKT *const pkt, const int nts);
+  void pkt_action_counters_printout(const struct packet *const pkt, const int nts);
 
   void reduce_estimators(void);
 }

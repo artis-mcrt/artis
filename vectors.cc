@@ -10,7 +10,7 @@ extern __host__ __device__ inline void get_velocity(const double x[3], double y[
 extern __host__ __device__ inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
 extern __host__ __device__ inline void vec_scale(double vec[3], const double scalefactor);
 extern __host__ __device__ inline void vec_copy(double dest[3], const double source[3]);
-extern __host__ __device__ inline double doppler_packet_nucmf_on_nurf(const PKT *const pkt_ptr);
+extern __host__ __device__ inline double doppler_packet_nucmf_on_nurf(const struct packet *const pkt_ptr);
 
 
 __host__ __device__
@@ -127,7 +127,7 @@ void get_rand_isotropic_unitvec(double vecout[3])
 
 
 __host__ __device__
-void move_pkt(PKT *pkt_ptr, const double distance, const double time)
+void move_pkt(struct packet *pkt_ptr, const double distance, const double time)
 /// Subroutine to move a packet along a straight line (specified by current
 /// dir vector). The distance moved is in the rest frame.
 {

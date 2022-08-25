@@ -87,11 +87,11 @@ namespace globals
   /// ATOMIC DATA
 
   __managed__ int nlines;
-  __managed__ elementlist_entry *elements = NULL;
-  __managed__ linelist_entry *linelist = NULL;
-  __managed__ bflist_t *bflist = NULL;
+  __managed__ struct elementlist_entry *elements = NULL;
+  __managed__ struct linelist_entry *linelist = NULL;
+  __managed__ struct bflist_t *bflist = NULL;
 
-  __managed__ rpkt_cont_opacity_struct *kappa_rpkt_cont = NULL;
+  __managed__ struct rpkt_cont_opacity *kappa_rpkt_cont = NULL;
 
   /// Coolinglist
   __managed__ int ncoolingterms;
@@ -99,17 +99,17 @@ namespace globals
   /// PHIXSLIST
 
   __managed__ double *allcont_nu_edge = NULL;
-  __managed__ fullphixslist_t *allcont = NULL;
+  __managed__ struct fullphixslist *allcont = NULL;
   #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-  __managed__ groundphixslist_t *groundcont = NULL;
+  __managed__ struct groundphixslist *groundcont = NULL;
   #endif
-  __managed__ phixslist_t *phixslist = NULL;
+  __managed__ struct phixslist *phixslist = NULL;
   __managed__ int nbfcontinua;
   __managed__ int nbfcontinua_ground; ///number of bf-continua
   __managed__ int NPHIXSPOINTS;
   __managed__ double NPHIXSNUINCREMENT;
 
-  __managed__ cellhistory_struct *cellhistory = NULL;
+  __managed__ struct cellhistory *cellhistory = NULL;
 
   __managed__ int debuglevel;
 

@@ -3,7 +3,6 @@
 #include "atomic.h"
 #include "grid.h"
 #include "emissivities.h"
-#include "packet_init.h"
 #include "photo_electric.h"
 #include "radfield.h"
 #include "stats.h"
@@ -11,7 +10,7 @@
 #include "vectors.h"
 
 
-void compton_emiss_cont(const PKT *pkt_ptr, double dist)
+void compton_emiss_cont(const struct packet *pkt_ptr, double dist)
 {
   // Subroutine to add contribution to the MC estimator for the
   // compton emissivity. Called with a packet that is about to travel a
@@ -115,7 +114,7 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist)
 }
 
 
-void pp_emiss_cont(const PKT *pkt_ptr, double dist)
+void pp_emiss_cont(const struct packet *pkt_ptr, double dist)
 {
   // New routine for getting a pair production emissivity. Closely based on compton_emiss but simpler. The
   // emissivity itself is stored in the last row of the compton emissivity structure. Idea here is to get something

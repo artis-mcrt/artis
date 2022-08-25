@@ -1386,7 +1386,7 @@ static void setup_cellhistory(void)
   ///======================================================
   /// Stack which holds information about population and other cell specific data
   /// ===> move to update_packets
-  if ((globals::cellhistory = (cellhistory_struct *) malloc(get_max_threads() * sizeof(cellhistory_struct))) == NULL)
+  if ((globals::cellhistory = (struct cellhistory *) malloc(get_max_threads() * sizeof(struct cellhistory))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize cellhistory of size %d... abort\n", get_max_threads());
     abort();
@@ -1397,7 +1397,7 @@ static void setup_cellhistory(void)
     {
   #endif
       long mem_usage_cellhistory = 0;
-      mem_usage_cellhistory += sizeof(cellhistory_struct);;
+      mem_usage_cellhistory += sizeof(struct cellhistory);;
       printout("[info] input: initializing cellhistory for thread %d ...\n", tid);
 
       globals::cellhistory[tid].cellnumber = -99;
@@ -1416,8 +1416,8 @@ static void setup_cellhistory(void)
       printout("[info] mem_usage: coolinglist contribs (part of cellhistory) for thread %d occupies %.3f MB\n",
                tid, globals::ncoolingterms * sizeof(double) / 1024. / 1024.);
 
-      mem_usage_cellhistory += get_nelements() * sizeof(chelements_struct);
-      if ((globals::cellhistory[tid].chelements = (chelements_struct *) malloc(get_nelements() * sizeof(chelements_struct))) == NULL)
+      mem_usage_cellhistory += get_nelements() * sizeof(struct chelements);
+      if ((globals::cellhistory[tid].chelements = (struct chelements *) malloc(get_nelements() * sizeof(struct chelements))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize cellhistory's elementlist ... abort\n");
         abort();
@@ -1431,25 +1431,25 @@ static void setup_cellhistory(void)
         for (int ion = 0; ion < nions; ion++)
         {
           const int nlevels = get_nlevels(element, ion);
-          chlevelblocksize += nlevels * sizeof(chlevels_struct);
+          chlevelblocksize += nlevels * sizeof(struct chlevels);
           for (int level = 0; level < nlevels; level++)
           {
             const int nphixstargets = get_nphixstargets(element, ion, level);
-            chphixsblocksize += nphixstargets * sizeof(chphixstargets_struct);
+            chphixsblocksize += nphixstargets * sizeof(struct chphixstargets);
           }
         }
       }
 
-      chlevels_struct *chlevelblock = (chlevels_struct *) malloc(chlevelblocksize);
-      chphixstargets_struct *chphixs = (chphixstargets_struct *) malloc(chphixsblocksize);
+      struct chlevels *chlevelblock = (struct chlevels *) malloc(chlevelblocksize);
+      struct chphixstargets *chphixs = (struct chphixstargets *) malloc(chphixsblocksize);
       mem_usage_cellhistory += chlevelblocksize + chphixsblocksize;
       int alllevelindex = 0;
       int allphixstargetindex = 0;
       for (int element = 0; element < get_nelements(); element++)
       {
         const int nions = get_nions(element);
-        mem_usage_cellhistory += nions * sizeof(chions_struct);
-        globals::cellhistory[tid].chelements[element].chions = (chions_struct *) malloc(nions * sizeof(chions_struct));
+        mem_usage_cellhistory += nions * sizeof(struct chions);
+        globals::cellhistory[tid].chelements[element].chions = (struct chions *) malloc(nions * sizeof(struct chions));
         assert_always(globals::cellhistory[tid].chelements[element].chions != NULL);
 
         for (int ion = 0; ion < nions; ion++)
@@ -1460,7 +1460,7 @@ static void setup_cellhistory(void)
 
           for (int level = 0; level < nlevels; level++)
           {
-            chlevels_struct *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
+            struct chlevels *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
             const int nphixstargets = get_nphixstargets(element, ion, level);
             chlevel->chphixstargets = &chphixs[allphixstargetindex];
             allphixstargetindex += nphixstargets;
@@ -1493,7 +1493,7 @@ static void setup_cellhistory(void)
 
 static void write_bflist_file(int includedphotoiontransitions)
 {
-  if ((globals::bflist = (bflist_t *) malloc(includedphotoiontransitions * sizeof(bflist_t))) == NULL)
+  if ((globals::bflist = (struct bflist_t *) malloc(includedphotoiontransitions * sizeof(struct bflist_t))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize bflist ... abort\n");
     abort();
@@ -1546,8 +1546,8 @@ static void write_bflist_file(int includedphotoiontransitions)
 static int compare_phixslistentry_bynuedge(const void *p1, const void *p2)
 /// Helper function to sort the phixslist by ascending threshold frequency.
 {
-  const fullphixslist_t *a1 = (fullphixslist_t *)(p1);
-  const fullphixslist_t *a2 = (fullphixslist_t *)(p2);
+  const fullphixslist *a1 = (fullphixslist *)(p1);
+  const fullphixslist *a2 = (fullphixslist *)(p2);
 
   double edge_diff = a1->nu_edge - a2->nu_edge;
   if (edge_diff < 0)
@@ -1562,8 +1562,8 @@ static int compare_phixslistentry_bynuedge(const void *p1, const void *p2)
 static int compare_groundphixslistentry_bynuedge(const void *p1, const void *p2)
 /// Helper function to sort the groundphixslist by ascending threshold frequency.
 {
-  const groundphixslist_t *a1 = (groundphixslist_t *)(p1);
-  const groundphixslist_t *a2 = (groundphixslist_t *)(p2);
+  const groundphixslist *a1 = (groundphixslist *)(p1);
+  const groundphixslist *a2 = (groundphixslist *)(p2);
 
   double edge_diff = a1->nu_edge - a2->nu_edge;
   if (edge_diff < 0)
@@ -1583,7 +1583,7 @@ static void setup_phixs_list(void)
   printout("[info] read_atomicdata: number of bfcontinua %d\n", globals::nbfcontinua);
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n", globals::nbfcontinua_ground);
 
-  globals::phixslist = (phixslist_t *) malloc(get_max_threads() * sizeof(phixslist_t));
+  globals::phixslist = (struct phixslist *) malloc(get_max_threads() * sizeof(struct phixslist));
   assert_always(globals::phixslist != NULL);
 
   /// MK: 2012-01-19
@@ -1631,13 +1631,13 @@ static void setup_phixs_list(void)
   }
 
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-  globals::groundcont = (groundphixslist_t *) malloc(globals::nbfcontinua_ground * sizeof(groundphixslist_t));
+  globals::groundcont = (struct groundphixslist *) malloc(globals::nbfcontinua_ground * sizeof(struct groundphixslist));
   assert_always(globals::groundcont != NULL)
 #endif
 
-  globals::allcont = (fullphixslist_t *) malloc(globals::nbfcontinua * sizeof(fullphixslist_t));
+  globals::allcont = (struct fullphixslist *) malloc(globals::nbfcontinua * sizeof(struct fullphixslist));
   printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
-           globals::nbfcontinua * (sizeof(fullphixslist_t)) / 1024. / 1024.);
+           globals::nbfcontinua * (sizeof(fullphixslist)) / 1024. / 1024.);
 
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
   int groundcontindex = 0;
@@ -1668,7 +1668,7 @@ static void setup_phixs_list(void)
     }
   }
   assert_always(groundcontindex == globals::nbfcontinua_ground);
-  qsort(globals::groundcont, globals::nbfcontinua_ground, sizeof(groundphixslist_t),
+  qsort(globals::groundcont, globals::nbfcontinua_ground, sizeof(struct groundphixslist),
         compare_groundphixslistentry_bynuedge);
 #endif
 
@@ -1710,7 +1710,7 @@ static void setup_phixs_list(void)
   }
 
   assert_always(allcontindex == globals::nbfcontinua);
-  qsort(globals::allcont, globals::nbfcontinua, sizeof(fullphixslist_t), compare_phixslistentry_bynuedge);
+  qsort(globals::allcont, globals::nbfcontinua, sizeof(struct fullphixslist), compare_phixslistentry_bynuedge);
 
   globals::allcont_nu_edge = (double *) malloc(globals::nbfcontinua * sizeof(double));
 

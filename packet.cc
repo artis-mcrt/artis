@@ -2,7 +2,7 @@
 #include "decay.h"
 #include "grid.h"
 #include "input.h"
-#include "packet_init.h"
+#include "packet.h"
 #include "vectors.h"
 
 #include <fstream>
@@ -10,7 +10,7 @@
 #include <string>
 
 
-static void place_pellet(const double e0, const int cellindex, const int pktnumber, PKT *pkt_ptr)
+static void place_pellet(const double e0, const int cellindex, const int pktnumber, struct packet *pkt_ptr)
 /// This subroutine places pellet n with energy e0 in cell m
 {
   /// First choose a position for the pellet. In the cell.
@@ -59,7 +59,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
 }
 
 
-void packet_init(int my_rank, PKT *pkt)
+void packet_init(int my_rank, struct packet *pkt)
 /// Subroutine that initialises the packets if we start a new simulation.
 {
   #ifdef MPI_ON
@@ -183,7 +183,7 @@ void packet_init(int my_rank, PKT *pkt)
 }
 
 
-void write_packets(char filename[], PKT *pkt)
+void write_packets(char filename[], struct packet *pkt)
 {
   // write packets text file
   FILE *packets_file = fopen_required(filename, "w");
@@ -227,7 +227,7 @@ void write_packets(char filename[], PKT *pkt)
 }
 
 
-void read_temp_packetsfile(const int timestep, const int my_rank, PKT *const pkt)
+void read_temp_packetsfile(const int timestep, const int my_rank, struct packet *const pkt)
 {
   // read packets binary file
   char filename[128];
@@ -235,14 +235,14 @@ void read_temp_packetsfile(const int timestep, const int my_rank, PKT *const pkt
 
   printout("Reading %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");
-  assert_always(fread(pkt, sizeof(PKT), globals::npkts, packets_file) == (size_t) globals::npkts);
+  assert_always(fread(pkt, sizeof(struct packet), globals::npkts, packets_file) == (size_t) globals::npkts);
   //read_packets(packets_file);
   fclose(packets_file);
   printout("done\n");
 }
 
 
-void read_packets(char filename[], PKT *pkt)
+void read_packets(char filename[], struct packet *pkt)
 {
   // read packets*.out text format file
   std::ifstream packets_file(filename);

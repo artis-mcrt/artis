@@ -14,7 +14,7 @@
 #include <algorithm>
 
 
-static void do_nonthermal_predeposit(PKT *pkt_ptr, const int nts, const double t2)
+static void do_nonthermal_predeposit(struct packet *pkt_ptr, const int nts, const double t2)
 {
   const double ts = pkt_ptr->prop_time;
 
@@ -81,7 +81,7 @@ static void do_nonthermal_predeposit(PKT *pkt_ptr, const int nts, const double t
 
 
 static void update_pellet(
-  PKT *pkt_ptr, const int nts, const double t2)
+  struct packet *pkt_ptr, const int nts, const double t2)
 {
   // Handle inactive pellets. Need to do two things (a) check if it
   // decays in this time step and if it does handle that. (b) if it doesn't decay in
@@ -164,7 +164,7 @@ static void update_pellet(
 }
 
 
-static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
+static void do_packet(struct packet *const pkt_ptr, const double t2, const int nts)
 // update a packet no further than time t2
 {
   const int pkt_type = pkt_ptr->type; // avoid dereferencing multiple times
@@ -248,7 +248,7 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
 }
 
 
-static bool std_compare_packets_bymodelgriddensity(const PKT &p1, const PKT &p2)
+static bool std_compare_packets_bymodelgriddensity(const struct packet &p1, const struct packet &p2)
 {
   // return true if packet p1 goes before p2
 
@@ -280,7 +280,7 @@ static bool std_compare_packets_bymodelgriddensity(const PKT &p1, const PKT &p2)
 }
 
 
-void update_packets(const int my_rank, const int nts, PKT *packets)
+void update_packets(const int my_rank, const int nts, struct packet *packets)
 // Subroutine to move and update packets during the current timestep (nts)
 {
   /** At the start, the packets have all either just been initialised or have already been
@@ -318,7 +318,7 @@ void update_packets(const int my_rank, const int nts, PKT *packets)
     #endif
     for (int n = 0; n < globals::npkts; n++)
     {
-      PKT *pkt_ptr = &packets[n];
+      struct packet *pkt_ptr = &packets[n];
 
       // if (pkt_ptr->type == TYPE_ESCAPE)
       // {

@@ -3,6 +3,6 @@
 
 #include "types.h"
 
-void escat_rpkt(PKT *pkt_ptr);
+void escat_rpkt(struct packet *pkt_ptr);
 
 #endif //POLARIZATION_H

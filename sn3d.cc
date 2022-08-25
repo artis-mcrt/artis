@@ -18,12 +18,11 @@
 #include "grey_emissivities.h"
 #include "grid.h"
 #include "globals.h"
+#include "atomic.h"
 #include "input.h"
-#include "ltepop.h"
-#include "macroatom.h"
+// #include "ltepop.h"
 #include "nltepop.h"
 #include "nonthermal.h"
-#include "packet_init.h"
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "spectrum.h"
@@ -385,7 +384,7 @@ static void mpi_reduce_estimators(int my_rank, int nts)
 
 
 
-static void write_temp_packetsfile(const int timestep, const int my_rank, const PKT *const pkt)
+static void write_temp_packetsfile(const int timestep, const int my_rank, const struct packet *const pkt)
 {
   // write packets binary file
   char filename[128];
@@ -394,7 +393,7 @@ static void write_temp_packetsfile(const int timestep, const int my_rank, const 
   printout("Writing %s...", filename);
   FILE *packets_file = fopen_required(filename, "wb");
 
-  fwrite(pkt, sizeof(PKT), globals::npkts, packets_file);
+  fwrite(pkt, sizeof(struct packet), globals::npkts, packets_file);
   fclose(packets_file);
   printout("done\n");
 }
@@ -476,7 +475,7 @@ void* makemanaged(void* ptr, size_t curSize)
 
 
 static void save_grid_and_packets(
-  const int nts, const int my_rank, PKT* packets)
+  const int nts, const int my_rank, struct packet* packets)
 {
   const time_t time_write_packets_file_start = time(NULL);
   printout("time before write temporary packets file %ld\n", time_write_packets_file_start);
@@ -530,7 +529,7 @@ static void save_grid_and_packets(
 
 static bool do_timestep(
   const int nts, const int titer,
-  const int my_rank, const int nstart, const int ndo, PKT* packets, const int walltimelimitseconds)
+  const int my_rank, const int nstart, const int ndo, struct packet* packets, const int walltimelimitseconds)
 {
   bool do_this_full_loop = true;
 
@@ -838,13 +837,13 @@ int main(int argc, char** argv)
   }
 
   #if CUDA_ENABLED
-  PKT *packets;
-  cudaMallocManaged(&packets, MPKTS * sizeof(PKT));
+  struct packet *packets;
+  cudaMallocManaged(&packets, MPKTS * sizeof(struct packet));
     #if USECUDA_UPDATEPACKETS
-    cudaMemAdvise(packets, MPKTS * sizeof(PKT), cudaMemAdviseSetPreferredLocation, myGpuId);
+    cudaMemAdvise(packets, MPKTS * sizeof(struct packet), cudaMemAdviseSetPreferredLocation, myGpuId);
     #endif
   #else
-  PKT *const packets = (PKT *) calloc(MPKTS, sizeof(PKT));
+  struct packet *const packets = (struct packet *) calloc(MPKTS, sizeof(struct packet));
   #endif
 
   assert_always(packets != NULL);
@@ -892,7 +891,7 @@ int main(int argc, char** argv)
   printout("[CUDA] warpSize %d\n", deviceProp.warpSize);
   #endif
 
-  globals::kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(get_max_threads(), sizeof(rpkt_cont_opacity_struct));
+  globals::kappa_rpkt_cont = (struct rpkt_cont_opacity *) calloc(get_max_threads(), sizeof(struct rpkt_cont_opacity));
   assert_always(globals::kappa_rpkt_cont != NULL);
 
   /// Using this and the global variable output_file opens and closes the output_file
@@ -968,7 +967,7 @@ int main(int argc, char** argv)
 
   printout("Simulation propagates %g packets per process (total %g with nprocs %d)\n", 1. * globals::npkts, 1. * globals::npkts * globals::nprocs, globals::nprocs);
 
-  printout("[info] mem_usage: packets occupy %.3f MB\n", MPKTS * sizeof(PKT) / 1024. / 1024.);
+  printout("[info] mem_usage: packets occupy %.3f MB\n", MPKTS * sizeof(struct packet) / 1024. / 1024.);
 
   if (!globals::simulation_continued_from_saved)
   {

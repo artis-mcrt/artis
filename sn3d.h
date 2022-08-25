@@ -3,6 +3,8 @@
 
 #include <cassert>
 
+#include "artisoptions.h"
+
 #ifndef __CUDA_ARCH__
   // host code
 
@@ -59,9 +61,6 @@
 // #define DO_TITER
 // #define FORCE_LTE
 
-#include "globals.h"
-#include "types.h"
-#include "vectors.h"
 
 #if (DETAILED_BF_ESTIMATORS_ON && !NO_LUT_PHOTOION)
   #error Must use NO_LUT_PHOTOION with DETAILED_BF_ESTIMATORS_ON
@@ -89,6 +88,8 @@ extern int tid;
 extern __managed__ bool use_cellhist;
 extern __managed__ bool neutral_flag;
 #ifndef __CUDA_ARCH__
+
+#include <gsl/gsl_rng.h>
 extern gsl_rng *rng;  // pointer for random number generator
 #else
 extern __device__ void *rng;
@@ -100,6 +101,10 @@ extern __managed__ int myGpuId;
 #ifdef _OPENMP
   #pragma omp threadprivate(tid, myGpuId, use_cellhist, neutral_flag, rng, gslworkspace, output_file)
 #endif
+
+
+#include "globals.h"
+#include "vectors.h"
 
 
 inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno)
@@ -143,7 +148,7 @@ inline int get_timestep(const double time)
 }
 
 
-inline double get_arrive_time(const PKT *pkt_ptr)
+inline double get_arrive_time(const struct packet *pkt_ptr)
 /// We know that a packet escaped at "escape_time". However, we have
 /// to allow for travel time. Use the formula in Leon's paper. The extra
 /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
@@ -152,7 +157,7 @@ inline double get_arrive_time(const PKT *pkt_ptr)
 }
 
 
-inline double get_arrive_time_cmf(const PKT *pkt_ptr)
+inline double get_arrive_time_cmf(const struct packet *pkt_ptr)
 {
   return pkt_ptr->escape_time * sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
 }

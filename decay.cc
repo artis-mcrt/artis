@@ -1557,7 +1557,7 @@ void fprint_nuc_abundances(
 }
 
 
-void setup_radioactive_pellet(const double e0, const int mgi, PKT *pkt_ptr)
+void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt_ptr)
 {
   double cumulative_endecay[get_num_decaypaths()];
   double endecaysum = 0.;

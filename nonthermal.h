@@ -1,8 +1,6 @@
 #ifndef NONTHERMAL_H
 #define NONTHERMAL_H
 
-// #include "sn3d.h"
-#include "types.h"
 #include "cuda.h"
 #include <cstdio>
 
@@ -19,7 +17,7 @@ namespace nonthermal
   __host__ __device__ double get_deposition_rate_density(int modelgridindex);
   __host__ __device__ float get_nt_frac_heating(int modelgridindex);
   double nt_excitation_ratecoeff(int modelgridindex, int element, int ion, int lower, int upper, double epsilon_trans, int lineindex);
-  __host__ __device__ void do_ntlepton(PKT *pkt_ptr);
+  __host__ __device__ void do_ntlepton(struct packet *pkt_ptr);
   void write_restart_data(FILE *gridsave_file);
   void read_restart_data(FILE *gridsave_file);
   void nt_MPI_Bcast(const int modelgridindex, const int root);

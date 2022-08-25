@@ -916,7 +916,7 @@ void zero_estimators(int modelgridindex)
 __host__ __device__
 static void increment_bfestimators(
   const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
-  const PKT *const pkt_ptr, const double t_current)
+  const struct packet *const pkt_ptr, const double t_current)
 {
   assert_always(pkt_ptr->prop_time == t_current);
   if (distance_e_cmf == 0)
@@ -991,7 +991,7 @@ static void increment_bfestimators(
 
 
 __host__ __device__
-void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *const pkt_ptr, double t_current)
+void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const struct packet *const pkt_ptr, double t_current)
 {
   assert_always(pkt_ptr->prop_time == t_current);
   safeadd(J[modelgridindex], distance_e_cmf);

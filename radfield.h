@@ -13,7 +13,7 @@ namespace radfield
   void initialise_prev_titer_photoionestimators(void);
   void write_to_file(int modelgridindex, int timestep);
   void close_file(void);
-  __host__ __device__ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *pkt_ptr, double t_current);
+  __host__ __device__ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const struct packet *pkt_ptr, double t_current);
   void increment_lineestimator(int modelgridindex, int lineindex, double increment);
   __host__ __device__ double radfield(double nu, int modelgridindex);
   __host__ __device__ double dbb_mgi(double nu, int modelgridindex);

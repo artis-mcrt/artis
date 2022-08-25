@@ -1,11 +1,12 @@
 #include "sn3d.h"
-#include "vpkt.h"
-#include "rpkt.h"
-#include "boundary.h"
-#include "ltepop.h"
-#include "vectors.h"
-#include "update_grid.h"
 #include "atomic.h"
+#include "boundary.h"
+#include "grid.h"
+#include "ltepop.h"
+#include "rpkt.h"
+#include "update_grid.h"
+#include "vectors.h"
+#include "vpkt.h"
 #include <cstring>
 
 
@@ -41,7 +42,7 @@ double tau_max_vpkt;
 double *exclude;
 double *tau_vpkt;
 
-// --------- VPKT GRID -----------
+// --------- Vstruct packet GRID -----------
 
 struct vgrid
 {
@@ -74,7 +75,7 @@ int nvpkt_esc2; // kpkt deactivation
 int nvpkt_esc3; // macroatom deactivation
 
 
-void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype)
+void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *obs, int realtype)
 {
   double vel_vec[3],old_dir_cmf[3],obs_cmf[3],vel_rev[3];
   double s_cont;
@@ -92,9 +93,9 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
   int bin_range;
 
-  PKT dummy;
+  struct packet dummy;
   dummy = *pkt_ptr;
-  PKT *dummy_ptr;
+  struct packet *dummy_ptr;
   dummy_ptr = &dummy;
 
   bool end_packet = false;
@@ -413,7 +414,7 @@ int check_tau(double *tau, double *tau_max)
 
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vspecpol(PKT *pkt_ptr, int bin, int ind, double t_arrive)
+void add_to_vspecpol(struct packet *pkt_ptr, int bin, int ind, double t_arrive)
 {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
 
@@ -637,7 +638,7 @@ void init_vpkt_grid(void)
 
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vpkt_grid(PKT *dummy_ptr, double *vel, int bin_range, int bin, double *obs)
+void add_to_vpkt_grid(struct packet *dummy_ptr, double *vel, int bin_range, int bin, double *obs)
 {
   double vref1,vref2;
   double ybin, zbin;
@@ -933,7 +934,7 @@ void read_parameterfile_vpkt(void)
 
 
 __host__ __device__
-int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
+int vpkt_call_estimators(struct packet *pkt_ptr, double t_current, int realtype)
 {
   double obs[3];
   int vflag = 0;

@@ -245,7 +245,7 @@ void init_gamma_linelist(void)
 }
 
 
-static void choose_gamma_ray(PKT *pkt_ptr)
+static void choose_gamma_ray(struct packet *pkt_ptr)
 {
   // Routine to choose which gamma ray line it'll be.
 
@@ -279,7 +279,7 @@ static void choose_gamma_ray(PKT *pkt_ptr)
 }
 
 
-void pellet_gamma_decay(const int nts, PKT *pkt_ptr)
+void pellet_gamma_decay(const int nts, struct packet *pkt_ptr)
 {
   // Subroutine to convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
 
@@ -362,7 +362,7 @@ static double sigma_compton_partial(const double x, const double f)
 }
 
 
-static double sig_comp(const PKT *pkt_ptr)
+static double sig_comp(const struct packet *pkt_ptr)
 {
   // Start by working out the compton x-section in the co-moving frame.
 
@@ -462,7 +462,7 @@ static double thomson_angle(void)
 }
 
 
-static void compton_scatter(PKT *pkt_ptr)
+static void compton_scatter(struct packet *pkt_ptr)
 // Routine to deal with physical Compton scattering event.
 {
   double f;
@@ -587,7 +587,7 @@ static void compton_scatter(PKT *pkt_ptr)
 }
 
 
-void do_gamma(PKT *pkt_ptr, double t2)
+void do_gamma(struct packet *pkt_ptr, double t2)
 // Now routine for moving a gamma packet. Idea is that we have as input
 // a gamma packet with known properties at time t1 and we want to follow it
 // until time t2.

@@ -48,7 +48,7 @@ namespace stats {
 
 
   __host__ __device__
-  void increment_ion_stats_contabsorption(const PKT *const pkt_ptr, const int modelgridindex, const int element, const int ion)
+  void increment_ion_stats_contabsorption(const struct packet *const pkt_ptr, const int modelgridindex, const int element, const int ion)
   {
     const double n_photons_absorbed = pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
 
@@ -202,7 +202,7 @@ namespace stats {
   }
 
 
-  void pkt_action_counters_printout(const PKT *const pkt, const int nts)
+  void pkt_action_counters_printout(const struct packet *const pkt, const int nts)
   {
     long allpktinteractions = 0;
     for (int i = 0; i < globals::npkts; i++)

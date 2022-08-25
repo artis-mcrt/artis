@@ -3,14 +3,14 @@
 
 #include <cmath>
 #include <gsl/gsl_blas.h>
-#include "types.h"
+#include "packet.h"
 #include "cuda.h"
 
 __host__ __device__ void angle_ab(const double dir1[3], const double vel[3], double dir2[3]);
 __host__ __device__ double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3]);
 __host__ __device__ void scatter_dir(const double dir_in[3], double cos_theta, double dir_out[3]);
 __host__ __device__ void get_rand_isotropic_unitvec(double vecout[3]);
-__host__ __device__ void move_pkt(PKT *pkt_ptr, double distance, const double time);
+__host__ __device__ void move_pkt(struct packet *pkt_ptr, double distance, const double time);
 
 
 __host__ __device__
@@ -100,7 +100,7 @@ inline void vec_copy(double destination[3], const double source[3])
 
 
 __host__ __device__
-inline double doppler_packet_nucmf_on_nurf(const PKT *const pkt_ptr)
+inline double doppler_packet_nucmf_on_nurf(const struct packet *const pkt_ptr)
 {
   double flow_velocity[3];  // homologous flow velocity
   get_velocity(pkt_ptr->pos, flow_velocity, pkt_ptr->prop_time);

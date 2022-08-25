@@ -43,7 +43,7 @@ __managed__ double min_den; // minimum model density
 __managed__ double mtot_input;
 __managed__ double mfeg;              /// Total mass of Fe group elements in ejecta
 
-__managed__ CELL *cell = NULL;
+__managed__ struct gridcell *cell = NULL;
 
 static long mem_usage_nltepops = 0;
 
@@ -2350,7 +2350,7 @@ static void uniform_grid_setup(void)
   assert_always(ncoordgrid[0] == ncoordgrid[2]);
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  cell = (CELL *) malloc(ngrid * sizeof(CELL));
+  cell = (struct gridcell *) malloc(ngrid * sizeof(struct gridcell));
 
   coordlabel[0] = 'X';
   coordlabel[1] = 'Y';
@@ -2394,7 +2394,7 @@ static void spherical1d_grid_setup(void)
   ncoordgrid[2] = 1;
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  cell = (CELL *) malloc(ngrid * sizeof(CELL));
+  cell = (struct gridcell *) malloc(ngrid * sizeof(struct gridcell));
 
   globals::coordmax[0] = globals::rmax;
   globals::coordmax[1] = 0.;

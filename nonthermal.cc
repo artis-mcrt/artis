@@ -2131,7 +2131,7 @@ static void select_nt_ionization2(int modelgridindex, int *element, int *lowerio
 
 
 __host__ __device__
-void do_ntlepton(PKT *pkt_ptr)
+void do_ntlepton(struct packet *pkt_ptr)
 {
   safeadd(nt_energy_deposited, pkt_ptr->e_cmf);
 

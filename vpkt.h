@@ -2,6 +2,8 @@
 #define VPKT_H
 
 #include <cstdio>
+
+#include "artisoptions.h"
 #include "types.h"
 #include "cuda.h"
 
@@ -10,18 +12,18 @@ void meridian(const double *n, double *ref1, double *ref2);
 void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf);
 void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf);
 
-void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype);
-void add_to_vspecpol(PKT *pkt_ptr, int bin, int ind, double t_arrive);
+void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *obs, int realtype);
+void add_to_vspecpol(struct packet *pkt_ptr, int bin, int ind, double t_arrive);
 void init_vspecpol(void);
 void read_parameterfile_vpkt(void);
 void write_vspecpol(FILE *specpol_file);
 void read_vspecpol(int my_rank, int nts);
 void init_vpkt_grid(void);
-void add_to_vpkt_grid(PKT *dummy_ptr, double *vel, int bin_range, int bin, double *obs);
+void add_to_vpkt_grid(struct packet *dummy_ptr, double *vel, int bin_range, int bin, double *obs);
 void write_vpkt_grid(FILE *vpkt_grid_file);
 void read_vpkt_grid(FILE *vpkt_grid_file);
 int check_tau(double *tau, double *tau_max);
-__host__ __device__ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype);
+__host__ __device__ int vpkt_call_estimators(struct packet *pkt_ptr, double t_current, int realtype);
 
 // --------------------------------------------------------------------------------
 // ---------------------------  VIRTUAL PACKETS -----------------------------------

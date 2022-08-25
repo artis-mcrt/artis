@@ -1,7 +1,9 @@
 #include <gsl/gsl_integration.h>
+
 #include "sn3d.h"
 #include "atomic.h"
 #include "grid.h"
+#include "globals.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"
@@ -9,7 +11,6 @@
 #include "ratecoeff.h"
 #include "rpkt.h"
 #include "stats.h"
-#include "vectors.h"
 #include "vpkt.h"
 
 // constant for van-Regemorter approximation.
@@ -58,7 +59,7 @@ static inline double get_individ_internal_up_same(
 __host__ __device__
 static void calculate_macroatom_transitionrates(
   const int modelgridindex, const int element, const int ion, const int level, const double t_mid,
-  chlevels_struct *const chlevel)
+  struct chlevels *const chlevel)
 {
   double *processrates = chlevel->processrates;
   const float T_e = grid::get_Te(modelgridindex);
@@ -165,7 +166,7 @@ static void calculate_macroatom_transitionrates(
 __host__ __device__
 static double *get_transitionrates(int modelgridindex, int element, int ion, int level, double t_mid, int tid)
 {
-  chlevels_struct *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
+  struct chlevels *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
 
   /// If there are no precalculated rates available then calculate them
   if (chlevel->processrates[MA_ACTION_COLDEEXC] < 0)
@@ -231,7 +232,7 @@ static int do_macroatom_internal_down_same(
 
 __host__ __device__
 static void do_macroatom_raddeexcitation(
-  PKT *pkt_ptr, const int modelgridindex, const int element, const int ion, const int level, const double rad_deexc,
+  struct packet *pkt_ptr, const int modelgridindex, const int element, const int ion, const int level, const double rad_deexc,
   const double total_transitions, const int activatingline, const double t_mid)
 {
   ///radiative deexcitation of MA: emitt rpkt
@@ -312,7 +313,7 @@ static void do_macroatom_raddeexcitation(
 
 __host__ __device__
 static void do_macroatom_radrecomb(
-  PKT *pkt_ptr, const int modelgridindex, const int element, int *ion, int *level,
+  struct packet *pkt_ptr, const int modelgridindex, const int element, int *ion, int *level,
   const double rad_recomb)
 {
   const float T_e = grid::get_Te(modelgridindex);
@@ -436,7 +437,7 @@ static void do_macroatom_ionisation(
 
 
 __host__ __device__
-void do_macroatom(PKT *pkt_ptr, const int timestep)
+void do_macroatom(struct packet *pkt_ptr, const int timestep)
 /// Material for handling activated macro atoms.
 {
   const int tid = get_thread_num();

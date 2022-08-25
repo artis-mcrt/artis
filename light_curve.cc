@@ -42,7 +42,7 @@ void write_light_curve(
 }
 
 
-void add_to_lc_res(const PKT *pkt_ptr, int current_abin, double *light_curve_lum, double *light_curve_lumcmf)
+void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, double *light_curve_lum, double *light_curve_lumcmf)
 /**Routine to add a packet to the outcoming light-curve.*/
 /**See add_to_spec.*/
 {

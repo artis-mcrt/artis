@@ -5,7 +5,6 @@
 #include <curand_kernel.h>
 #endif
 
-#include "grid.h"
 #include "types.h"
 #include "cuda.h"
 #ifdef MPI_ON
@@ -77,26 +76,26 @@ namespace globals
   extern __managed__ int opacity_case;
 
   extern __managed__ int nlines;
-  extern __managed__ elementlist_entry *elements;
-  extern __managed__ linelist_entry *linelist;
-  extern __managed__ bflist_t *bflist;
+  extern __managed__ struct elementlist_entry *elements;
+  extern __managed__ struct linelist_entry *linelist;
+  extern __managed__ struct bflist_t *bflist;
 
-  extern __managed__ rpkt_cont_opacity_struct *kappa_rpkt_cont;
+  extern __managed__ struct rpkt_cont_opacity *kappa_rpkt_cont;
 
   extern __managed__ int ncoolingterms;
 
   extern __managed__ double *allcont_nu_edge;
-  extern __managed__ fullphixslist_t *allcont;
+  extern __managed__ struct fullphixslist *allcont;
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-  extern __managed__ groundphixslist_t *groundcont;
+  extern __managed__ struct groundphixslist *groundcont;
 #endif
-  extern __managed__ phixslist_t *phixslist;
+  extern __managed__ struct phixslist *phixslist;
   extern __managed__ int nbfcontinua;
   extern __managed__ int nbfcontinua_ground;
   extern __managed__ int NPHIXSPOINTS;
   extern __managed__ double NPHIXSNUINCREMENT;
 
-  extern __managed__ cellhistory_struct *cellhistory;
+  extern __managed__ struct cellhistory *cellhistory;
 
   extern __managed__ int debuglevel;
 

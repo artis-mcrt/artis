@@ -8,7 +8,7 @@
 
 
 __host__ __device__
-double sig_photo_electric(const PKT *pkt_ptr)
+double sig_photo_electric(const struct packet *pkt_ptr)
 {
   double sigma_cmf;
   // Start by working out the x-section in the co-moving frame.
@@ -55,7 +55,7 @@ double sig_photo_electric(const PKT *pkt_ptr)
 
 
 __host__ __device__
-double sig_pair_prod(const PKT *pkt_ptr)
+double sig_pair_prod(const struct packet *pkt_ptr)
 {
   // Cross section for pair production.
 
@@ -132,7 +132,7 @@ double sig_pair_prod(const PKT *pkt_ptr)
 }
 
 __host__ __device__
-void pair_prod(PKT *pkt_ptr)
+void pair_prod(struct packet *pkt_ptr)
 {
   // Routine to deal with pair production.
 

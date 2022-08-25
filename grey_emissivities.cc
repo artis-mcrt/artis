@@ -25,7 +25,7 @@ static double meanf_sigma(const double x)
 }
 
 
-void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist)
+void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist)
 {
   // Subroutine to record the heating rate in a cell due to gamma rays.
   // By heating rate I mean, for now, really the rate at which the code is making
@@ -40,7 +40,7 @@ void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist)
   // Called with a packet that is about to travel a
   // distance dist in the lab frame.
 
-  // PKT dummy;
+  // struct packet dummy;
   // dummy.pos[0] = pkt_ptr->pos[0];
   // dummy.pos[1] = pkt_ptr->pos[1];
   // dummy.pos[2] = pkt_ptr->pos[2];
@@ -78,7 +78,7 @@ void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist)
 }
 
 
-void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist)
+void rlc_emiss_rpkt(const struct packet *pkt_ptr, double dist)
 {
   // Subroutine to record the rate of destruction (and re-creation) of
   // r-packets by the grey opacity.
@@ -88,7 +88,7 @@ void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist)
   // Called with a packet that is about to travel a
   //    distance dist in the lab frame.
 
-  /*PKT dummy;
+  /*struct packet dummy;
 
   dummy.pos[0] = pkt_ptr->pos[0];
   dummy.pos[1] = pkt_ptr->pos[1];

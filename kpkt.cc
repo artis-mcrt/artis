@@ -11,7 +11,7 @@
 #include "vectors.h"
 #include "vpkt.h"
 
-static __managed__ cellhistorycoolinglist_t *coolinglist;
+static __managed__ struct cellhistorycoolinglist *coolinglist;
 
 
 __host__ __device__
@@ -77,7 +77,7 @@ static double get_bfcoolingcoeff(int element, int ion, int level, int phixstarge
 
 
 __host__ __device__
-void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates_t *heatingcoolingrates)
+void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrates *heatingcoolingrates)
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
 {
@@ -349,8 +349,8 @@ void setup_coolinglist(void)
   /// \sum_{elements,ions}get_nlevels(element,ion) and free-free which is \sum_{elements} get_nions(element)-1
 
   set_ncoolingterms();
-  const long mem_usage_coolinglist = globals::ncoolingterms * sizeof(cellhistorycoolinglist_t);
-  coolinglist = (cellhistorycoolinglist_t *) malloc(globals::ncoolingterms * sizeof(cellhistorycoolinglist_t));
+  const long mem_usage_coolinglist = globals::ncoolingterms * sizeof(struct cellhistorycoolinglist);
+  coolinglist = (struct cellhistorycoolinglist *) malloc(globals::ncoolingterms * sizeof(struct cellhistorycoolinglist));
   printout("[info] mem_usage: coolinglist occupies %.3f MB\n", mem_usage_coolinglist / 1024. / 1024.);
 
   int i = 0; // cooling list index
@@ -473,7 +473,7 @@ static double sample_planck(const double T)
 
 
 __host__ __device__
-double do_kpkt_bb(PKT *pkt_ptr)
+double do_kpkt_bb(struct packet *pkt_ptr)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 {
   //double nne = globals::cell[pkt_ptr->where].nne ;
@@ -506,10 +506,10 @@ double do_kpkt_bb(PKT *pkt_ptr)
 
 
 __host__ __device__
-double do_kpkt(PKT *pkt_ptr, double t2, int nts)
+double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 //{
-//  double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2);
+//  double do_kpkt_bb(struct packet *pkt_ptr, double t1, double t2);
 //  return do_kpkt_bb(pkt_ptr, t1, t2);
 //}
 {

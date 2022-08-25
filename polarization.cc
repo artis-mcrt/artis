@@ -3,7 +3,7 @@
 #include "vpkt.h"
 
 
-void escat_rpkt(PKT *pkt_ptr)
+void escat_rpkt(struct packet *pkt_ptr)
 {
   /// now make the packet a r-pkt and set further flags
   pkt_ptr->type = TYPE_RPKT;

@@ -36,13 +36,13 @@ void write_specpol(
   struct spec *stokes_i, struct spec *stokes_q, struct spec *stokes_u);
 
 void add_to_spec_res(
-  const PKT *const pkt_ptr, int current_abin, struct spec *spectra,
+  const struct packet *const pkt_ptr, int current_abin, struct spec *spectra,
   struct spec *stokes_i, struct spec *stokes_q, struct spec *stokes_u);
 
 struct spec *alloc_spectra(const bool do_emission_res);
 void init_spectra(struct spec *spectra, const double nu_min, const double nu_max, const bool do_emission_res);
 void init_spectrum_trace(void);
 void free_spectra(struct spec *spectra);
-void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts);
+void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts);
 
 #endif //SPECTRUM_H

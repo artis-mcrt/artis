@@ -36,7 +36,7 @@ void precalculate_partfuncts(int modelgridindex)
   }
 }
 
-static void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer, const heatingcoolingrates_t *heatingcoolingrates)
+static void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer, const struct heatingcoolingrates *heatingcoolingrates)
 {
   // return; disable for better performance (if estimators files are not needed)
   if (grid::get_numassociatedcells(mgi) > 0)
@@ -803,7 +803,7 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
 }
 
 
-static void solve_Te_nltepops(const int n, const int nts, const int titer, heatingcoolingrates_t *heatingcoolingrates)
+static void solve_Te_nltepops(const int n, const int nts, const int titer, struct heatingcoolingrates *heatingcoolingrates)
 // n is the modelgridindex (TODO: rename to mgi)
 // nts is the timestep number
 {
@@ -1067,7 +1067,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
 
 
 static void update_grid_cell(const int mgi, const int nts, const int nts_prev, const int titer, const double tratmid,
-                             const double deltat, double *mps, heatingcoolingrates_t *heatingcoolingrates)
+                             const double deltat, double *mps, struct heatingcoolingrates *heatingcoolingrates)
 // n is the modelgrid index
 {
   const int assoc_cells = grid::get_numassociatedcells(mgi);
@@ -1406,7 +1406,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       /// If yes, update the cell and write out the estimators
       if (mgi >= nstart && mgi < nstart + ndo)
       {
-        heatingcoolingrates_t heatingcoolingrates = {};
+        struct heatingcoolingrates heatingcoolingrates = {};
         update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, mps, &heatingcoolingrates);
 
         //maybe want to add omp ordered here if the modelgrid cells should be output in order

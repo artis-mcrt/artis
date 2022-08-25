@@ -18,7 +18,6 @@
 #include "grid.h"
 #include "input.h"
 #include "light_curve.h"
-#include "packet_init.h"
 #include "spectrum.h"
 #include "vectors.h"
 
@@ -33,7 +32,7 @@ gsl_rng *rng = NULL;
 gsl_integration_workspace *gslworkspace = NULL;
 
 
-static void get_final_packets(int rank, int nprocs, PKT pkt[])
+static void get_final_packets(int rank, int nprocs, struct packet pkt[])
 {
   // Read in the final packets*.out (text format) files
 
@@ -112,7 +111,7 @@ int main(int argc, char** argv)
   printout("time after input %ld\n", time(NULL));
   globals::nprocs = globals::nprocs_exspec;
 
-  PKT *pkts = (PKT *) malloc(globals::npkts * sizeof(PKT));
+  struct packet *pkts = (struct packet *) malloc(globals::npkts * sizeof(struct packet));
 
   globals::nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
 

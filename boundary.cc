@@ -124,7 +124,7 @@ static double get_shellcrossdist(
 
 
 __host__ __device__
-double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
+double boundary_cross(struct packet *const pkt_ptr, const double tstart, int *snext)
 /// Basic routine to compute distance to a cell boundary.
 {
   assert_always(tstart == pkt_ptr->prop_time);
@@ -375,7 +375,7 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
 
 
 __host__ __device__
-void change_cell(PKT *pkt_ptr, int snext, double t_current)
+void change_cell(struct packet *pkt_ptr, int snext, double t_current)
 /// Routine to take a packet across a boundary.
 {
   assert_always(pkt_ptr->prop_time == t_current);
@@ -408,7 +408,7 @@ void change_cell(PKT *pkt_ptr, int snext, double t_current)
 }
 
 
-// static int locate(const PKT *pkt_ptr, double t_current)
+// static int locate(const struct packet *pkt_ptr, double t_current)
 // /// Routine to return which grid cell the packet is in.
 // {
 //   // Cheap and nasty version for now - assume a uniform grid.

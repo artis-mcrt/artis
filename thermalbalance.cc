@@ -18,7 +18,7 @@ typedef struct Te_solution_paras
 {
   double t_current;
   int modelgridindex;
-  heatingcoolingrates_t *heatingcoolingrates;
+  struct heatingcoolingrates *heatingcoolingrates;
 } Te_solution_paras;
 
 typedef struct
@@ -228,7 +228,7 @@ static double get_heating_ion_coll_deexc(
 
 
 static void calculate_heating_rates(
-  const int modelgridindex, const double T_e, const double nne, heatingcoolingrates_t *heatingcoolingrates)
+  const int modelgridindex, const double T_e, const double nne, struct heatingcoolingrates *heatingcoolingrates)
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the heatingrates data structure.
 {
@@ -365,7 +365,7 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
 {
   const int modelgridindex = ((Te_solution_paras *) paras)->modelgridindex;
   const double t_current = ((Te_solution_paras *) paras)->t_current;
-  heatingcoolingrates_t *heatingcoolingrates = ((Te_solution_paras *) paras)->heatingcoolingrates;
+  struct heatingcoolingrates *heatingcoolingrates = ((Te_solution_paras *) paras)->heatingcoolingrates;
 
   /// Set new T_e guess for the current cell and update populations
   //globals::cell[cellnumber].T_e = T_e;
@@ -412,7 +412,7 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
 }
 
 
-void call_T_e_finder(const int modelgridindex, const int timestep, const double t_current, const double T_min, const double T_max, heatingcoolingrates_t *heatingcoolingrates)
+void call_T_e_finder(const int modelgridindex, const int timestep, const double t_current, const double T_min, const double T_max, struct heatingcoolingrates *heatingcoolingrates)
 {
   const double T_e_old = grid::get_Te(modelgridindex);
   printout("Finding T_e in cell %d at timestep %d...", modelgridindex, timestep);

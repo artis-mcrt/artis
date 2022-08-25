@@ -365,6 +365,11 @@ static int columnindex_from_emissiontype(const int et)
   {
     /// bf-emission
     const int et_new = -1 - et;
+    if (globals::nbfcontinua == 0)
+    {
+      // TODO: remove. testing only
+      return 2 * get_nelements() * get_max_nions();
+    }
     assert_always(et_new < globals::nbfcontinua);
     const int element = globals::bflist[et_new].elementindex;
     const int ion = globals::bflist[et_new].ionindex;
@@ -379,7 +384,7 @@ static int columnindex_from_emissiontype(const int et)
 }
 
 
-static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, struct spec *spectra, struct spec *stokes_i, struct spec *stokes_q, struct spec *stokes_u)
+static void add_to_spec(const struct packet *const pkt_ptr, const int current_abin, struct spec *spectra, struct spec *stokes_i, struct spec *stokes_q, struct spec *stokes_u)
 // Routine to add a packet to the outgoing spectrum.
 {
   // Need to (1) decide which time bin to put it in and (2) which frequency bin.
@@ -663,7 +668,7 @@ struct spec *alloc_spectra(const bool do_emission_res)
 
 
 void add_to_spec_res(
-  const PKT *const pkt_ptr, int current_abin, struct spec *spectra,
+  const struct packet *const pkt_ptr, int current_abin, struct spec *spectra,
   struct spec *stokes_i, struct spec *stokes_q, struct spec *stokes_u)
 // Routine to add a packet to the outgoing spectrum.
 {
@@ -739,7 +744,7 @@ static void mpi_reduce_spectra(int my_rank, struct spec *spectra, int numtimeste
 #endif
 
 
-void write_partial_lightcurve_spectra(int my_rank, int nts, PKT *pkts)
+void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
 {
   const time_t time_func_start = time(NULL);
 
