@@ -19,7 +19,7 @@ double nne_solution_f(double x, void *paras)
 /// provides the equation which has to be solved to obtain the electron number
 /// density (passed by x)
 {
-  const int modelgridindex = ((nne_solution_paras *) paras)->cellnumber;
+  const int modelgridindex = ((struct nne_solution_paras *) paras)->cellnumber;
   const double rho = grid::get_rho(modelgridindex);
 
   double outersum = 0.;

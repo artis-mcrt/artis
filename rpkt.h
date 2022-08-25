@@ -2,7 +2,6 @@
 #define RPKT_H
 
 #include "cuda.h"
-#include "types.h"
 
 __host__ __device__ void do_rpkt(struct packet *pkt_ptr, double t2);
 __host__ __device__ void emitt_rpkt(struct packet *pkt_ptr);

@@ -3,7 +3,6 @@
 
 #include <cstdio>
 #include <gsl/gsl_integration.h>
-#include "types.h"
 #include "sn3d.h"
 
 namespace radfield

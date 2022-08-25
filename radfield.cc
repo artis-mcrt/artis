@@ -1,4 +1,5 @@
 #include <cmath>
+#include <time.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_sf_debye.h>
 #include <gsl/gsl_roots.h>

@@ -1,11 +1,30 @@
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
-#include "types.h"
 #include "cuda.h"
 
 namespace grid
 {
+
+
+struct compositionlist_entry
+{
+  float abundance;         /// Abundance of the element (by mass!).
+  float *groundlevelpop;   /// Pointer to an array of floats which contains the groundlevel populations
+                           /// of all included ionisation stages for the element.
+  float *partfunct;        /// Pointer to an array of floats which contains the partition functions
+                           /// of all included ionisation stages for the element.
+  //float *ltepartfunct;     /// Pointer to an array of floats which contains the LTE partition functions
+  //                         /// of all included ionisation stages for the element.
+};
+
+struct gridcell
+{
+  double pos_min[3];   // Initial co-ordinates of inner most corner of cell.
+  // int xyz[3];       // Integer position of cell in grid.
+  int modelgridindex;
+};
+
 
 enum model_types {
   RHO_UNIFORM = 1,  // Constant density. NOT IN USE

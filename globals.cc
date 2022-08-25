@@ -1,4 +1,3 @@
-#include "types.h"
 #include "sn3d.h"
 #include "globals.h"
 #ifdef MPI_ON

@@ -5,7 +5,6 @@
 
 const int FAKE_GAM_LINE_ID = 3;
 
-#include "types.h"
 #include "cuda.h"
 
 #include <vector>

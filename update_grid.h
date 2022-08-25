@@ -1,6 +1,7 @@
 #ifndef UPDATE_GRID_H
 #define UPDATE_GRID_H
 
+#include <time.h>
 #include <cstdio>
 #include "sn3d.h"
 

@@ -1,7 +1,6 @@
 #ifndef STATS_H
 #define STATS_H
 
-#include "types.h"
 #include "cuda.h"
 
 namespace stats {

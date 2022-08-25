@@ -3,7 +3,6 @@
 
 #include <cstdio>
 #include "exspec.h"
-#include "types.h"
 
 struct timestepspec
 {

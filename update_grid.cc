@@ -1504,7 +1504,7 @@ double calculate_populations(const int modelgridindex)
 {
   /// and the solution function
   gsl_function f;
-  nne_solution_paras paras;
+  struct nne_solution_paras paras;
   paras.cellnumber = modelgridindex;
   f.function = &nne_solution_f;
   f.params = &paras;

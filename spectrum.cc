@@ -1,3 +1,5 @@
+#include <time.h>
+
 #include "sn3d.h"
 #include "exspec.h"
 #include "atomic.h"

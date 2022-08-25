@@ -20,7 +20,6 @@ struct cellhistorycoolinglist
 
 #include "thermalbalance.h"
 #include "sn3d.h"
-#include "types.h"
 
 
 void setup_coolinglist(void);
