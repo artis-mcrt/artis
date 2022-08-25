@@ -977,7 +977,7 @@ static void allocate_composition_cooling(void)
 
     assert_always(modelgrid[modelgridindex].elements_uppermost_ion != NULL);
 
-    modelgrid[modelgridindex].composition = (compositionlist_entry *) malloc(get_nelements() * sizeof(compositionlist_entry));
+    modelgrid[modelgridindex].composition = (struct compositionlist_entry *) malloc(get_nelements() * sizeof(struct compositionlist_entry));
 
     if (modelgrid[modelgridindex].composition == NULL)
     {
@@ -1030,7 +1030,7 @@ static void allocate_composition_cooling(void)
       }
     }
 
-    modelgrid[modelgridindex].cooling = (mgicooling_t *) malloc(get_nelements() * sizeof(mgicooling_t));
+    modelgrid[modelgridindex].cooling = (struct mgicooling *) malloc(get_nelements() * sizeof(struct mgicooling *));
 
     if (modelgrid[modelgridindex].cooling == NULL)
     {

@@ -14,6 +14,11 @@ enum model_types {
   RHO_3D_READ = 3,  // Read model 3D
 };
 
+struct mgicooling
+{
+  double *contrib;
+};
+
 
 typedef struct modelgrid_t
 {
@@ -45,7 +50,7 @@ typedef struct modelgrid_t
                                          /// populations for this cell
 
   double totalcooling;
-  mgicooling_t *cooling;
+  struct mgicooling *cooling;
   short thick;
 } modelgrid_t;
 

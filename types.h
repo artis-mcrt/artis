@@ -93,11 +93,6 @@ struct gridcell
   int modelgridindex;
 };
 
-struct mgicooling_t
-{
-  double *contrib;
-};
-
 
 #define NSYN 1 /* number of frequency points in syn calculation */
 
