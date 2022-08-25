@@ -1096,7 +1096,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
     const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
 
-    if (globals::opacity_case == 4)
+    if (globals::opacity_case >= 4)
     {
       /// For timestep 0 we calculate the level populations straight forward wihout
       /// applying any temperature correction
