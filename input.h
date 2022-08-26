@@ -11,4 +11,4 @@ void write_timestep_file(void);
 bool get_noncommentline(std::istream &input, std::string &line);
 bool lineiscommentonly(std::string &line);
 
-#endif //INPUT_H
+#endif  // INPUT_H

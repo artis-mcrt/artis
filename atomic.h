@@ -3,7 +3,8 @@
 
 #include "cuda.h"
 
-extern __managed__ double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
+extern __managed__ double
+    last_phixs_nuovernuedge;  // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 extern __managed__ int phixs_file_version;
 __managed__ static const char *phixsdata_filenames[] = {"version0ignore", "phixsdata.txt", "phixsdata_v2.txt"};
 
@@ -41,8 +42,8 @@ __host__ __device__ int get_nuptrans(int element, int ion, int level);
 __host__ __device__ int get_nphixstargets(int element, int ion, int level);
 __host__ __device__ int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
 __host__ __device__ double get_phixsprobability(int element, int ion, int level, int phixstargetindex);
-__host__ __device__ void set_ndowntrans( int element,  int ion,  int level,  int ndowntrans);
-__host__ __device__ void set_nuptrans( int element, int ion,  int level,  int nuptrans);
+__host__ __device__ void set_ndowntrans(int element, int ion, int level, int ndowntrans);
+__host__ __device__ void set_nuptrans(int element, int ion, int level, int nuptrans);
 __host__ __device__ double einstein_spontaneous_emission(int lineindex);
 __host__ __device__ double osc_strength(int lineindex);
 __host__ __device__ double get_coll_str(int lineindex);
@@ -51,5 +52,4 @@ __host__ __device__ double statw_lower(int lineindex);
 __host__ __device__ double photoionization_crosssection(int element, int ion, int level, double nu_edge, double nu);
 __host__ __device__ double get_phixs_threshold(int element, int ion, int level, int phixstargetindex);
 
-
-#endif //ATOMIC_H
+#endif  // ATOMIC_H

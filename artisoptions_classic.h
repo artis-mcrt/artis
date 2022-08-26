@@ -2,6 +2,7 @@
 #define ARTISOPTIONS_H
 
 #include <cstdlib>
+
 #include "constants.h"
 
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
@@ -25,8 +26,7 @@ static const int NLTEITER = 30;
 // this macro function determines which levels of which ions will be treated in full NLTE (if NLTE_POPS_ON is true)
 // for now, all NLTE levels should be contiguous and include the ground state
 // (i.e. level indices < X should return true for some X)
-#define LEVEL_IS_NLTE(element, ion, level) \
-return false;
+#define LEVEL_IS_NLTE(element, ion, level) return false;
 
 // atomic data and LTE
 #define LTEPOP_EXCITATIONTEMPERATURE grid::get_TJ(modelgridindex)
@@ -49,9 +49,9 @@ const bool single_ground_level = true;
 #define RECORD_LINESTAT
 
 /// Rate coefficients
-#define TABLESIZE 100 //200 //100
+#define TABLESIZE 100  // 200 //100
 #define MINTEMP 3500.
-#define MAXTEMP 140000. //1000000.
+#define MAXTEMP 140000.  // 1000000.
 
 // temperature for which total ion recombination rate are calibrated to input data (recombrates.txt)
 #define RECOMBCALIBRATION_T_ELEC 6000.
@@ -65,7 +65,6 @@ const bool single_ground_level = true;
 
 // GSL integration workspace size
 static const size_t GSLWSIZE = 16384;
-
 
 #define TRACK_ION_STATS false
 #define TRACK_ION_MASTATS false
@@ -82,7 +81,6 @@ static const size_t GSLWSIZE = 16384;
 // upper frequency boundary for UVOIR spectra and BB sampling
 #define NU_MAX_R 5e15
 
-
 // ** Start of radiation field model options **
 
 // if using this, avoid look up tables and switch on the direct integration options below
@@ -98,9 +96,9 @@ static const int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
 // nu_lower of lowest-frequency bin = CLIGHT / ([lambda Angstroms]e-8)
 static const double nu_lower_first_initial = (CLIGHT / (40000e-8));
 // nu_upper of highest-frequency bin just below the very top super bin
-static const double nu_upper_last_initial = (CLIGHT /  (1085e-8));
+static const double nu_upper_last_initial = (CLIGHT / (1085e-8));
 // nu_upper of top super bin with fixed T=T_e (nu_lower will be nu_upper_last_initial)
-static const double nu_upper_superbin = (CLIGHT /  (10e-8));
+static const double nu_upper_superbin = (CLIGHT / (10e-8));
 
 // range of 'temperatures' for the scaled Planck function fit to each bin
 static const double T_R_min = 500;
@@ -133,7 +131,6 @@ static const bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 // ** End of radiation field model options **
 
-
 // ** Start of non-thermal solution options **
 
 /// non-thermal ionisation
@@ -164,8 +161,8 @@ static const double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS = 0.05;
 
 // just consider excitation from the first N levels and to the first M upper levels,
 // because these transitions really slow down the solver
-static const int NTEXCITATION_MAXNLEVELS_LOWER = 5;  // set to zero for none
-static const int NTEXCITATION_MAXNLEVELS_UPPER = 250; // maximum number of upper levels included
+static const int NTEXCITATION_MAXNLEVELS_LOWER = 5;    // set to zero for none
+static const int NTEXCITATION_MAXNLEVELS_UPPER = 250;  // maximum number of upper levels included
 
 // limit the number of stored non-thermal excitation transition rates to reduce memory cost.
 // if this is higher than SFPTS, then you might as well just store
@@ -204,8 +201,8 @@ static const int MAX_NT_EXCITATIONS_STORED = 25000;
 
 #define RATECOEFF_INTEGRAL_ACCURACY 1e-2
 
-// when calculating ion ionisation rate coefficient (for estimator files only, not the simulation), contribute the lowest n levels that
-// make up at least IONGAMMA_POPFRAC_LEVELS_INCLUDED fraction of the ion population
+// when calculating ion ionisation rate coefficient (for estimator files only, not the simulation), contribute the
+// lowest n levels that make up at least IONGAMMA_POPFRAC_LEVELS_INCLUDED fraction of the ion population
 #define IONGAMMA_POPFRAC_LEVELS_INCLUDED 1.
 
 // incomplete work in progress
@@ -242,4 +239,4 @@ static const double FIXED_TIMESTEP_WIDTH = 0.1;
 
 static const double TIMESTEP_TRANSITION_TIME = 5;
 
-#endif //ARTISOPTIONS_H
+#endif  // ARTISOPTIONS_H

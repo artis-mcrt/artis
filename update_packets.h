@@ -6,4 +6,4 @@
 
 void update_packets(const int my_rank, int nts, struct packet *packets);
 
-#endif //UPDATE_PACKETS_H
+#endif  // UPDATE_PACKETS_H

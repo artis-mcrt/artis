@@ -1,15 +1,13 @@
-#include "sn3d.h"
-#include "grid.h"
 #include "photo_electric.h"
+
+#include "grid.h"
+#include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"
 
 // Stuff for photo electric effect scattering.
 
-
-__host__ __device__
-double sig_photo_electric(const struct packet *pkt_ptr)
-{
+__host__ __device__ double sig_photo_electric(const struct packet *pkt_ptr) {
   double sigma_cmf;
   // Start by working out the x-section in the co-moving frame.
 
@@ -17,9 +15,8 @@ double sig_photo_electric(const struct packet *pkt_ptr)
   const int mgi = grid::get_cell_modelgridindex(cellindex);
   const double rho = grid::get_rho(mgi);
 
-  if (globals::gamma_grey < 0)
-  {
-    //double sigma_cmf_cno = 0.0448e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.2);
+  if (globals::gamma_grey < 0) {
+    // double sigma_cmf_cno = 0.0448e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.2);
 
     double sigma_cmf_si = 1.16e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.13);
 
@@ -29,8 +26,8 @@ double sig_photo_electric(const struct packet *pkt_ptr)
 
     // Now need to multiply by the particle number density.
 
-    //sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
-    // Assumes Z = 7. So mass = 14.
+    // sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
+    //  Assumes Z = 7. So mass = 14.
 
     sigma_cmf_si *= rho / MH / 28;
     // Assumes Z = 14. So mass = 28.
@@ -41,9 +38,7 @@ double sig_photo_electric(const struct packet *pkt_ptr)
     const double f_fe = grid::get_ffegrp(mgi);
 
     sigma_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
-  }
-  else
-  {
+  } else {
     sigma_cmf = globals::gamma_grey * rho;
   }
 
@@ -53,10 +48,7 @@ double sig_photo_electric(const struct packet *pkt_ptr)
   return sigma_rf;
 }
 
-
-__host__ __device__
-double sig_pair_prod(const struct packet *pkt_ptr)
-{
+__host__ __device__ double sig_pair_prod(const struct packet *pkt_ptr) {
   // Cross section for pair production.
 
   double sigma_cmf;
@@ -67,32 +59,27 @@ double sig_pair_prod(const struct packet *pkt_ptr)
   const int mgi = grid::get_cell_modelgridindex(cellindex);
   const double rho = grid::get_rho(mgi);
 
-  if (globals::gamma_grey < 0)
-  {
+  if (globals::gamma_grey < 0) {
     // 2.46636e+20 = 1022 keV in frequency
     // 3.61990e+20 = 1500 keV in frequency
 
-    if (pkt_ptr->nu_cmf > 2.46636e+20)
-    {
+    if (pkt_ptr->nu_cmf > 2.46636e+20) {
       // double sigma_cmf_cno;
       double sigma_cmf_si;
       double sigma_cmf_fe;
       const double f_fe = grid::get_ffegrp(mgi);
-      if (pkt_ptr->nu_cmf > 3.61990e+20)
-      {
+      if (pkt_ptr->nu_cmf > 3.61990e+20) {
         // sigma_cmf_cno = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.5))) * 49.e-27;
 
-        sigma_cmf_si  = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.5))) * 196.e-27;
+        sigma_cmf_si = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.5))) * 196.e-27;
 
-        sigma_cmf_fe  = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.5))) * 784.e-27;
-      }
-      else
-      {
+        sigma_cmf_fe = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.5))) * 784.e-27;
+      } else {
         // sigma_cmf_cno = 1.0063 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.022) * 49.e-27;
 
-        sigma_cmf_si  = 1.0063 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.022) * 196.e-27;
+        sigma_cmf_si = 1.0063 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.022) * 196.e-27;
 
-        sigma_cmf_fe  = 1.0063 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.022) * 784.e-27;
+        sigma_cmf_fe = 1.0063 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.022) * 784.e-27;
       }
 
       // Now need to multiply by the particle number density.
@@ -107,14 +94,10 @@ double sig_pair_prod(const struct packet *pkt_ptr)
       // Assumes Z = 28. So mass = 56.
 
       sigma_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
-    }
-    else
-    {
+    } else {
       sigma_cmf = 0.0;
     }
-  }
-  else
-  {
+  } else {
     sigma_cmf = 0.0;
   }
 
@@ -122,8 +105,7 @@ double sig_pair_prod(const struct packet *pkt_ptr)
 
   double sigma_rf = sigma_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
 
-  if (sigma_rf < 0)
-  {
+  if (sigma_rf < 0) {
     printout("Negative pair production sigma. Setting to zero. Abort? %g\n", sigma_rf);
     sigma_rf = 0.0;
   }
@@ -131,9 +113,7 @@ double sig_pair_prod(const struct packet *pkt_ptr)
   return sigma_rf;
 }
 
-__host__ __device__
-void pair_prod(struct packet *pkt_ptr)
-{
+__host__ __device__ void pair_prod(struct packet *pkt_ptr) {
   // Routine to deal with pair production.
 
   //  In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
@@ -144,24 +124,20 @@ void pair_prod(struct packet *pkt_ptr)
 
   const double prob_gamma = 1.022 * MEV / (H * pkt_ptr->nu_cmf);
 
-  if (prob_gamma < 0)
-  {
+  if (prob_gamma < 0) {
     printout("prob_gamma < 0. pair_prod. Abort. %g\n", prob_gamma);
     abort();
   }
 
   const double zrand = gsl_rng_uniform(rng);
 
-  if (zrand > prob_gamma)
-  {
+  if (zrand > prob_gamma) {
     // Convert it to an e-minus packet - actually it could be positron EK too, but this works
     // for consistency with compton_scatter.
     pkt_ptr->type = TYPE_NTLEPTON;
     pkt_ptr->absorptiontype = -5;
     stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
-  }
-  else
-  {
+  } else {
     // The energy goes into emission at 511 keV.
     pkt_ptr->nu_cmf = 0.511 * MEV / H;
 
@@ -186,6 +162,5 @@ void pair_prod(struct packet *pkt_ptr)
 
     pkt_ptr->type = TYPE_GAMMA;
     pkt_ptr->last_cross = NONE;
-
   }
 }

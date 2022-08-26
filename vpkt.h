@@ -6,7 +6,6 @@
 #include "artisoptions.h"
 #include "cuda.h"
 
-
 double rot_angle(double *n1, double *n2, double *ref1, double *ref2);
 void meridian(const double *n, double *ref1, double *ref2);
 void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf);
@@ -50,10 +49,10 @@ __host__ __device__ int vpkt_call_estimators(struct packet *pkt_ptr, double t_cu
 extern int vgrid_flag;
 
 extern int nvpkt;
-extern int nvpkt_esc1; // electron scattering event
-extern int nvpkt_esc2; // kpkt deactivation
-extern int nvpkt_esc3; // macroatom deactivation
+extern int nvpkt_esc1;  // electron scattering event
+extern int nvpkt_esc2;  // kpkt deactivation
+extern int nvpkt_esc3;  // macroatom deactivation
 
 extern double cell_is_optically_thick_vpkt;
 
-#endif //VPKT_H
+#endif  // VPKT_H

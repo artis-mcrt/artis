@@ -2,6 +2,7 @@
 #define ARTISOPTIONS_H
 
 #include <cstdlib>
+
 #include "constants.h"
 
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
@@ -26,22 +27,22 @@ static const int NLTEITER = 30;
 // for now, all NLTE levels should be contiguous and include the ground state
 // (i.e. level indices < X should return true for some X)
 #define LEVEL_IS_NLTE(element, ion, level) \
-if (get_element(element) < 22) \
-return (level <= 200); \
-else \
-return (level <= 300);
+  if (get_element(element) < 22)           \
+    return (level <= 200);                 \
+  else                                     \
+    return (level <= 300);
 
 // atomic data and LTE
 #define LTEPOP_EXCITATIONTEMPERATURE grid::get_Te(modelgridindex)
 
-const bool single_level_top_ion = false; // Only include a single level for the highest ion stage
+const bool single_level_top_ion = false;  // Only include a single level for the highest ion stage
 
-const bool single_ground_level = false; // if false, read from file or autodetect
+const bool single_ground_level = false;  // if false, read from file or autodetect
 
 // option to enforce connecting the lower n levels to all other levels with collisions
 // disable by returning zero
-#define NLEVELS_REQUIRETRANSITIONS(Z, ionstage) ((Z == 27) && ionstage == 5) ? 80 : 0 \
-// if Co V require 80 transitions, else return 0
+#define NLEVELS_REQUIRETRANSITIONS(Z, ionstage) \
+  ((Z == 27) && ionstage == 5) ? 80 : 0  // if Co V require 80 transitions, else return 0
 
 // if uniform pellet energies are not used, a uniform decay time distribution is used with scaled packet energies
 #define UNIFORM_PELLET_ENERGIES true
@@ -51,9 +52,9 @@ const bool single_ground_level = false; // if false, read from file or autodetec
 #define RECORD_LINESTAT
 
 /// Rate coefficients
-#define TABLESIZE 100 //200 //100
+#define TABLESIZE 100  // 200 //100
 #define MINTEMP 3000.
-#define MAXTEMP 140000. //1000000.
+#define MAXTEMP 140000.  // 1000000.
 
 // temperature for which total ion recombination rate are calibrated to input data (recombrates.txt)
 #define RECOMBCALIBRATION_T_ELEC 15000.
@@ -68,18 +69,16 @@ const bool single_ground_level = false; // if false, read from file or autodetec
 // GSL integration workspace size
 static const size_t GSLWSIZE = 16384;
 
-
 #define TRACK_ION_STATS false
 #define TRACK_ION_MASTATS false
 
-#define MLINES 500000    // Increase linelist by this blocksize
+#define MLINES 500000  // Increase linelist by this blocksize
 
-#define MINDENSITY 1e-40         /// Minimum cell density. Below cells are treated as empty.
+#define MINDENSITY 1e-40  /// Minimum cell density. Below cells are treated as empty.
 #define MINPOP 1e-40
 
-#define NU_MIN_R 1e13   /// lower frequency boundary for UVOIR spectra and BB sampling
-#define NU_MAX_R 5e16   /// upper frequency boundary for UVOIR spectra and BB sampling
-
+#define NU_MIN_R 1e13  /// lower frequency boundary for UVOIR spectra and BB sampling
+#define NU_MAX_R 5e16  /// upper frequency boundary for UVOIR spectra and BB sampling
 
 // ****
 // Start of radiation field model options
@@ -93,9 +92,9 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
 
 static const int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
 
-static const double nu_lower_first_initial = (CLIGHT / (40000e-8)); // CLIGHT / ([lambda Angstroms]e-8)
-static const double nu_upper_last_initial = (CLIGHT /  (500e-8));  // not including the very top super bin
-static const double nu_upper_superbin = (CLIGHT /  (50e-8)); // very top end super bin
+static const double nu_lower_first_initial = (CLIGHT / (40000e-8));  // CLIGHT / ([lambda Angstroms]e-8)
+static const double nu_upper_last_initial = (CLIGHT / (500e-8));     // not including the very top super bin
+static const double nu_upper_superbin = (CLIGHT / (50e-8));          // very top end super bin
 
 static const double T_R_min = 500;
 static const double T_R_max = 250000;
@@ -129,7 +128,6 @@ static const bool DETAILED_LINE_ESTIMATORS_ON = false;
 // End of radiation field model options
 // ****
 
-
 // ****
 // Start of non-thermal solution options
 //
@@ -162,8 +160,8 @@ static const double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS = 0.05;
 
 // just consider excitation from the first N levels and to the first M upper levels,
 // because these transitions really slow down the solver
-static const int NTEXCITATION_MAXNLEVELS_LOWER = 5;  // set to zero for none
-static const int NTEXCITATION_MAXNLEVELS_UPPER = 250; // maximum number of upper levels included
+static const int NTEXCITATION_MAXNLEVELS_LOWER = 5;    // set to zero for none
+static const int NTEXCITATION_MAXNLEVELS_UPPER = 250;  // maximum number of upper levels included
 
 // limit the number of stored non-thermal excitation transition rates to reduce memory cost.
 // if this is higher than SFPTS, then you might as well just store
@@ -235,4 +233,4 @@ static const double FIXED_TIMESTEP_WIDTH = 0.1;
 
 static const double TIMESTEP_TRANSITION_TIME = 5;
 
-#endif //ARTISOPTIONS_H
+#endif  // ARTISOPTIONS_H

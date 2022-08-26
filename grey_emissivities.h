@@ -6,4 +6,4 @@ void rlc_emiss_rpkt(const struct packet *pkt_ptr, double dist);
 void normalise_grey(int nts);
 void write_grey(int nts);
 
-#endif //GREY_EMISSIVITIES_H
+#endif  // GREY_EMISSIVITIES_H

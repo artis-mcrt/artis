@@ -8,4 +8,4 @@ void normalise_compton_estimators(const int nts);
 void write_compton_estimators(int nts);
 bool estim_switch(int nts);
 
-#endif //EMISSIVITIES_H
+#endif  // EMISSIVITIES_H

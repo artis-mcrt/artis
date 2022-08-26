@@ -1,7 +1,8 @@
-#include <gsl/gsl_randist.h>
-#include "sn3d.h"
 #include "vectors.h"
 
+#include <gsl/gsl_randist.h>
+
+#include "sn3d.h"
 
 extern __host__ __device__ inline double vec_len(const double x[3]);
 extern __host__ __device__ inline void vec_norm(const double vec_in[3], double vec_out[3]);
@@ -12,9 +13,7 @@ extern __host__ __device__ inline void vec_scale(double vec[3], const double sca
 extern __host__ __device__ inline void vec_copy(double dest[3], const double source[3]);
 extern __host__ __device__ inline double doppler_packet_nucmf_on_nurf(const struct packet *const pkt_ptr);
 
-
-__host__ __device__
-void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
+__host__ __device__ void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
 // aberation of angles in special relativity
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1
@@ -23,19 +22,16 @@ void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
   const double vsqr = dot(vel, vel) / CLIGHTSQUARED;
   const double gamma_rel = 1. / (sqrt(1 - vsqr));
 
-  const double ndotv = dot(dir1,vel);
+  const double ndotv = dot(dir1, vel);
   const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
   const double fact2 = (gamma_rel - (gamma_rel * gamma_rel * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
 
-  for (int d = 0; d < 3; d++)
-  {
+  for (int d = 0; d < 3; d++) {
     dir2[d] = (dir1[d] - (vel[d] * fact2)) / fact1;
   }
 }
 
-
-__host__ __device__
-double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
+__host__ __device__ double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
 // Doppler factor
 // arguments:
 //   dir_rf: the rest frame direction (unit vector) of emission
@@ -47,11 +43,10 @@ double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
 
-  if (USE_RELATIVISTIC_CORRECTIONS)
-  {
+  if (USE_RELATIVISTIC_CORRECTIONS) {
     const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;
-    assert_always(betasq >= 0.); // v < c
-    assert_always(betasq < 1.); // v < c
+    assert_always(betasq >= 0.);  // v < c
+    assert_always(betasq < 1.);   // v < c
     gamma_rel = 1. / sqrt(1 - betasq);
   }
 
@@ -64,9 +59,7 @@ double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
   return dopplerfactor;
 }
 
-
-__host__ __device__
-void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[3])
+__host__ __device__ void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[3])
 // Routine for scattering a direction through angle theta.
 {
   // begin with setting the direction in coordinates where original direction
@@ -102,9 +95,7 @@ void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[
   dir_out[2] = (r13 * xprime) + (r23 * yprime) + (r33 * zprime);
 }
 
-
-__host__ __device__
-void get_rand_isotropic_unitvec(double vecout[3])
+__host__ __device__ void get_rand_isotropic_unitvec(double vecout[3])
 // Assuming isotropic distribution, get a random direction vector
 {
   // alternatively, use GSL's functions:
@@ -125,9 +116,7 @@ void get_rand_isotropic_unitvec(double vecout[3])
   vecout[2] = mu;
 }
 
-
-__host__ __device__
-void move_pkt(struct packet *pkt_ptr, const double distance, const double time)
+__host__ __device__ void move_pkt(struct packet *pkt_ptr, const double distance, const double time)
 /// Subroutine to move a packet along a straight line (specified by current
 /// dir vector). The distance moved is in the rest frame.
 {

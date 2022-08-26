@@ -1,11 +1,12 @@
-#include "sn3d.h"
 #include "grey_emissivities.h"
+
+#include <cstring>
+
 #include "grid.h"
 #include "nonthermal.h"
 #include "photo_electric.h"
+#include "sn3d.h"
 #include "vectors.h"
-#include <cstring>
-
 
 static double meanf_sigma(const double x)
 // Routine to compute the mean energy converted to non-thermal electrons times
@@ -14,19 +15,17 @@ static double meanf_sigma(const double x)
   double f = 1 + (2 * x);
 
   double term0 = 2 / x;
-  double term1 = (1 - (2 / x) - (3 / (x * x)) ) * log(f);
+  double term1 = (1 - (2 / x) - (3 / (x * x))) * log(f);
   double term2 = ((4 / x) + (3 / (x * x)) - 1) * 2 * x / f;
   double term3 = (1 - (2 / x) - (1 / (x * x))) * 2 * x * (1 + x) / f / f;
-  double term4 =  -2. * x * ((4 * x * x) + (6 * x) + 3) / 3 / f / f / f;
+  double term4 = -2. * x * ((4 * x * x) + (6 * x) + 3) / 3 / f / f / f;
 
   double tot = 3 * SIGMA_T * (term0 + term1 + term2 + term3 + term4) / (8 * x);
 
   return tot;
 }
 
-
-void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist)
-{
+void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist) {
   // Subroutine to record the heating rate in a cell due to gamma rays.
   // By heating rate I mean, for now, really the rate at which the code is making
   // k-packets in that cell which will then convert into r-packets. This is (going
@@ -53,13 +52,13 @@ void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist)
   const int cellindex = pkt_ptr->where;
   const int mgi = grid::get_cell_modelgridindex(cellindex);
 
-  if (dist > 0)
-  {
+  if (dist > 0) {
     double vel_vec[3];
     get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
     const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
 
-    double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + sig_photo_electric(pkt_ptr) + (sig_pair_prod(pkt_ptr) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
+    double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + sig_photo_electric(pkt_ptr) +
+                           (sig_pair_prod(pkt_ptr) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
     heating_cont = heating_cont * pkt_ptr->e_rf * dist * (1. - (2. * dot(vel_vec, pkt_ptr->dir) / CLIGHT));
 
     // The terms in the above are for Compton, photoelectric and pair production. The pair production one
@@ -77,9 +76,7 @@ void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist)
   }
 }
 
-
-void rlc_emiss_rpkt(const struct packet *pkt_ptr, double dist)
-{
+void rlc_emiss_rpkt(const struct packet *pkt_ptr, double dist) {
   // Subroutine to record the rate of destruction (and re-creation) of
   // r-packets by the grey opacity.
 
@@ -102,8 +99,7 @@ void rlc_emiss_rpkt(const struct packet *pkt_ptr, double dist)
   const int cellindex = pkt_ptr->where;
   const int mgi = grid::get_cell_modelgridindex(cellindex);
 
-  if (dist > 0.0)
-  {
+  if (dist > 0.0) {
     // for the weighted estimators version
 
     double vel_vec[3];
@@ -125,15 +121,11 @@ void rlc_emiss_rpkt(const struct packet *pkt_ptr, double dist)
   }
 }
 
-
-void normalise_grey(int nts)
-{
+void normalise_grey(int nts) {
   const double dt = globals::time_step[nts].width;
   globals::time_step[nts].gamma_dep_pathint = 0.;
-  for (int mgi = 0; mgi < grid::get_npts_model(); mgi++)
-  {
-    if (grid::get_numassociatedcells(mgi) > 0)
-    {
+  for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
+    if (grid::get_numassociatedcells(mgi) > 0) {
       const double dV = grid::vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
 
       globals::time_step[nts].gamma_dep_pathint += globals::rpkt_emiss[mgi] * 1.e20 / globals::nprocs;
@@ -146,30 +138,25 @@ void normalise_grey(int nts)
   }
 }
 
-
-void write_grey(int nts)
-{
+void write_grey(int nts) {
   FILE *est_file = NULL;
   FILE *dummy = NULL;
   char chch;
   char filename[128] = "grey_est_";
   char junk[128];
 
-  if ((dummy = fopen("dummy", "w+")) == NULL)
-  {
+  if ((dummy = fopen("dummy", "w+")) == NULL) {
     printout("Cannot open dummy.\n");
     abort();
   }
   fprintf(dummy, "%d", nts);
   fclose(dummy);
-  if ((dummy = fopen("dummy", "r")) == NULL)
-  {
+  if ((dummy = fopen("dummy", "r")) == NULL) {
     printout("Cannot open dummy.\n");
     abort();
   }
   int i = 0;
-  while ((chch = fgetc(dummy)) != EOF)
-  {
+  while ((chch = fgetc(dummy)) != EOF) {
     junk[i] = chch;
     i = i + 1;
   }
@@ -179,17 +166,14 @@ void write_grey(int nts)
   strcat(filename, junk);
   strcat(filename, ".out");
 
-  if (globals::file_set)
-  {
-    if ((est_file = fopen(filename, "r")) == NULL)
-    {
+  if (globals::file_set) {
+    if ((est_file = fopen(filename, "r")) == NULL) {
       printout("Cannot open grey_est_file.txt.\n");
       abort();
     }
 
-    //for (n=0; n < ngrid; n++)
-    for (int n = 0; n < grid::get_npts_model(); n++)
-    {
+    // for (n=0; n < ngrid; n++)
+    for (int n = 0; n < grid::get_npts_model(); n++) {
       float dum;
       fscanf(est_file, "%g", &dum);
       globals::rpkt_emiss[n] += dum;
@@ -197,17 +181,14 @@ void write_grey(int nts)
     fclose(est_file);
   }
 
-  if ((est_file = fopen(filename, "w+")) == NULL)
-  {
+  if ((est_file = fopen(filename, "w+")) == NULL) {
     printout("Cannot open grey_est_file.txt.\n");
     abort();
   }
 
-  //for (n=0; n < ngrid; n++)
-  for (int n = 0; n < grid::get_npts_model(); n++)
-  {
+  // for (n=0; n < ngrid; n++)
+  for (int n = 0; n < grid::get_npts_model(); n++) {
     fprintf(est_file, " %g\n ", globals::rpkt_emiss[n]);
   }
   fclose(est_file);
 }
-
