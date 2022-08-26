@@ -33,6 +33,16 @@ jobs:
         cp artisoptions_nltenebular.h artisoptions.h
         cppcheck --force --language=c++ --std=c++17 .
 
+  clang-format:
+    runs-on: ubuntu-latest
+
+    - uses: actions/checkout@v2
+    - name: Run clang-format style check
+      uses: jidicula/clang-format-action@v4.8.0
+      with:
+        clang-format-version: '14'
+        check-path: '.'
+
   compile_clang:
     name: "Compile with Clang"
     runs-on: ubuntu-latest
