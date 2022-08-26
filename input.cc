@@ -1,21 +1,20 @@
+#include "input.h"
+
+#include <gsl/gsl_spline.h>
+
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <iostream>
 #include <sstream>
-//#include <cmath>
-//#include <cstdlib>
-#include <gsl/gsl_spline.h>
 
 #include "atomic.h"
 #include "exspec.h"
 #include "gamma.h"
 #include "grid.h"
-#include "input.h"
 #include "kpkt.h"
 #include "nltepop.h"
-#include "radfield.h"
 #include "rpkt.h"
 #include "sn3d.h"
 #include "vpkt.h"
@@ -1324,7 +1323,7 @@ static void setup_cellhistory(void) {
 
     for (int element = 0; element < get_nelements(); element++) {
       for (int ion = 0; ion < get_nions(element); ion++) {
-        globals::cellhistory[tid].cooling_contrib[get_coolinglistoffset(element, ion)] = COOLING_UNDEFINED;
+        globals::cellhistory[tid].cooling_contrib[kpkt::get_coolinglistoffset(element, ion)] = COOLING_UNDEFINED;
       }
     }
 
@@ -1632,7 +1631,7 @@ static void read_atomicdata(void)
   }
 #endif
 
-  setup_coolinglist();
+  kpkt::setup_coolinglist();
 
   setup_cellhistory();
 

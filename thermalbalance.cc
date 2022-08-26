@@ -362,7 +362,7 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
 
   /// Then calculate heating and cooling rates
   const float nne = grid::get_nne(modelgridindex);
-  calculate_cooling_rates(modelgridindex, heatingcoolingrates);
+  kpkt::calculate_cooling_rates(modelgridindex, heatingcoolingrates);
   calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates);
 
   /// If selected take direct gamma heating into account

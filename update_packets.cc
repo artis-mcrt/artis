@@ -185,9 +185,9 @@ new packet.*/
 
       // t_change_type = do_kpkt(pkt_ptr, t_current, t2);
       if (pkt_type == TYPE_PRE_KPKT || grid::modelgrid[grid::get_cell_modelgridindex(pkt_ptr->where)].thick == 1) {
-        do_kpkt_bb(pkt_ptr);
+        kpkt::do_kpkt_bb(pkt_ptr);
       } else if (pkt_type == TYPE_KPKT) {
-        do_kpkt(pkt_ptr, t2, nts);
+        kpkt::do_kpkt(pkt_ptr, t2, nts);
       } else {
         printout("kpkt not of type TYPE_KPKT or TYPE_PRE_KPKT\n");
         abort();

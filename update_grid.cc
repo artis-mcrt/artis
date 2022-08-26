@@ -674,7 +674,7 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      globals::cellhistory[tid].cooling_contrib[get_coolinglistoffset(element, ion)] = COOLING_UNDEFINED;
+      globals::cellhistory[tid].cooling_contrib[kpkt::get_coolinglistoffset(element, ion)] = COOLING_UNDEFINED;
       const int nlevels = get_nlevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
         if (modelgridindex >= 0) {
@@ -1181,7 +1181,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       const time_t sys_time_start_calc_kpkt_rates = time(NULL);
 
       // don't pass pointer to heatingcoolingrates because current populations and rates weren't used to determine T_e
-      calculate_cooling_rates(mgi, NULL);
+      kpkt::calculate_cooling_rates(mgi, NULL);
 
       printout("calculate_kpkt_rates for cell %d timestep %d took %ld seconds\n", mgi, nts,
                time(NULL) - sys_time_start_calc_kpkt_rates);

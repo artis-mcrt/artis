@@ -13,6 +13,23 @@
 #include "vectors.h"
 #include "vpkt.h"
 
+namespace kpkt {
+
+enum coolingtype {
+  COOLINGTYPE_FF = 880,
+  COOLINGTYPE_FB = 881,
+  COOLINGTYPE_COLLEXC = 882,
+  COOLINGTYPE_COLLION = 883,
+};
+
+struct cellhistorycoolinglist {
+  enum coolingtype type;
+  int element;
+  int ion;
+  int level;
+  int upperlevel;
+};
+
 static __managed__ struct cellhistorycoolinglist *coolinglist;
 
 __host__ __device__ int get_coolinglistoffset(int element, int ion) {
@@ -847,3 +864,5 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
   return bfcooling;
 }*/
+
+}  // namespace kpkt
