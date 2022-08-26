@@ -993,7 +993,8 @@ int main(int argc, char **argv)
 
   macroatom_open_file(my_rank);
   if (ndo > 0) {
-    assert_always(estimators_file == NULL) snprintf(filename, 128, "estimators_%.4d.out", my_rank);
+    assert_always(estimators_file == NULL);
+    snprintf(filename, 128, "estimators_%.4d.out", my_rank);
     estimators_file = fopen_required(filename, "w");
 
     if (NLTE_POPS_ON && ndo_nonempty > 0) {
