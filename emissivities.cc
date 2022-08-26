@@ -57,11 +57,11 @@ void compton_emiss_cont(const struct packet *pkt_ptr, double dist) {
   const double freq_out = pkt_ptr->nu_cmf / f;  /// doppler_nurf_over_nucmf(syn_dir, vel_vec);
   // do we want ?/ doppler_nurf_over_nucmf(syn_dir, vel_vec)
 
-  const int lindex = get_nul(freq_out);  // This is the index of the next line to
-                                         // the red. The emissivity will go in this
-                                         // bin. However, since there's an offset
-                                         // in the emissivities, we shift the
-                                         // index by that
+  const int lindex = gamma::get_nul(freq_out);  // This is the index of the next line to
+                                                // the red. The emissivity will go in this
+                                                // bin. However, since there's an offset
+                                                // in the emissivities, we shift the
+                                                // index by that
 
   // If it's gonna be in a bin of interest, carry on - otherwise leave it.
 
@@ -175,7 +175,7 @@ void normalise_compton_estimators(const int nts) {
   const double time_factor = 1. / pow(globals::time_step[nts].mid / globals::tmin, 3.0) / globals::time_step[nts].width;
 
   for (int m = 0; m < globals::emiss_max; m++) {
-    dfreq[m] = get_gam_freq(m + globals::emiss_offset + 1) - get_gam_freq(m + globals::emiss_offset);
+    dfreq[m] = gamma::get_gam_freq(m + globals::emiss_offset + 1) - gamma::get_gam_freq(m + globals::emiss_offset);
     if (dfreq[m] < 0) {
       printout("Problem with normalisation of estimators. Abort.\n");
       abort();

@@ -682,7 +682,7 @@ __host__ __device__ void init_nuclides(std::vector<int> custom_zlist, std::vecto
   printout("init_nuclides: num_nuclides %d\n", get_num_nuclides());
 
   /// Read in data for gamma ray lines and make a list of them in energy order.
-  init_gamma_linelist();
+  gamma::init_gamma_linelist();
 
   find_decaypaths();
 

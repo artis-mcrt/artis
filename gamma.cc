@@ -9,11 +9,13 @@
 #include "grey_emissivities.h"
 #include "grid.h"
 #include "nonthermal.h"
+#include "packet.h"
 #include "photo_electric.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"
 
+namespace gamma {
 // Code for handing gamma rays - creation and propagation
 
 struct gamma_spec {
@@ -731,3 +733,5 @@ int get_nul(double freq) {
     return too_low;
   }
 }
+
+}  // namespace gamma
