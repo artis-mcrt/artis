@@ -750,7 +750,7 @@ static bool nltepop_matrix_solve(const int element, const gsl_matrix *rate_matri
     gsl_vector_mul(popvec, pop_normfactor_vec);
     // popvec will be used contains the real population densities
 
-    for (unsigned int row = 0; row < nlte_dimension; row++) {
+    for (int row = 0; row < nlte_dimension; row++) {
       double recovered_balance_vector_elem = 0.;
       gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, row);
       gsl_blas_ddot(&row_view.vector, x, &recovered_balance_vector_elem);

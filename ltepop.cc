@@ -322,74 +322,6 @@ __host__ __device__ double get_groundlevelpop(int modelgridindex, int element, i
   }
 }
 
-__host__ __device__ double get_groundmultiplet_pop(int modelgridindex, int element, int ion) {
-  assert_testmodeonly(modelgridindex < grid::get_npts_model());
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  const int nlevels_gm = get_nlevels_groundterm(element, ion);
-
-  double gmpop = 0.;
-  for (int level = 0; level < nlevels_gm; level++) {
-    gmpop += get_levelpop(modelgridindex, element, ion, level);
-  }
-
-  return gmpop;
-}
-
-/*static double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int level)
-/// Calculates occupation number of level relative to the ions ground level population
-/// using a modified version of the Boltzmann formula, which fulfills the diluted BB
-/// approximation (or nebular approximation).
-{
-  double T_exc = grid::get_TJ(modelgridindex);
-  double W = 1.;
-
-  //  T_exc = MINTEMP;
-
-
-  // if (T_exc <= MINTEMP)
-  // {
-  //   if (globals::elements[element].ions[ion].levels[level].metastable)
-  //   {
-  //     T_exc = grid::get_TJ(modelgridindex);
-  //   }
-  //   else
-  //   {
-  //     T_exc = grid::get_TR(modelgridindex);
-  //     W = grid::get_W(modelgridindex);
-  //   }
-  // }
-
-  double nn;
-  if (level == 0)
-    nn = get_groundlevelpop(modelgridindex,element,ion);
-  else
-  {
-    double E_level = epsilon(element,ion,level);
-    double E_ground = epsilon(element,ion,0);
-    nn = get_groundlevelpop(modelgridindex,element,ion) * W * stat_weight(element,ion,level) /
-stat_weight(element,ion,0) * exp(-(E_level-E_ground)/KB/T_exc);
-  }
-
-  if (nn < MINPOP)
-  {
-    if (grid::get_elem_abundance(modelgridindex,element) > 0)
-      nn = MINPOP;
-    else
-      nn = 0.;
-  }
-
-  if (!std::isfinite(nn))
-  {
-    printout("[fatal] calculate_exclevelpop: level %d of ion %d of element %d has infinite level population
-%g\n",level,ion,element,nn); printout("[fatal] calculate_exclevelpop: associated ground level has pop
-%g\n",get_groundlevelpop(modelgridindex,element,ion)); printout("[fatal] calculate_exclevelpop: associated ion has pop
-%g\n",ionstagepop(modelgridindex,element,ion)); printout("[fatal] calculate_exclevelpop: associated partition function
-%g\n",grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
-  }
-  return nn;
-}*/
-
 __host__ __device__ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
 /// Calculates occupation population of a level assuming LTE excitation
 {
@@ -548,30 +480,6 @@ exp(-(E_level-E_ground)/KB/T_J);
 }
 #endif
 */
-
-/*void calculate_levelpops(int modelgridindex)
-/// Calculates the full level populations for a given grid cell
-/// and stores them to the active entry of the cellhistory.
-{
-  for (int element = 0; element < get_nelements(); element++)
-  {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++)
-    {
-      globals::cellhistory[tid].chelements[element].chions[ion].chlevels[0].population =
-get_groundlevelpop(modelgridindex, element, ion);
-      //printout("element %d, ion %d, level 0: population %g\n",element,ion,groundlevelpop(cellnumber, element, ion));
-      const int nlevels = get_nlevels(element,ion);
-      for (int level = 1; level < nlevels; level++)
-      {
-        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].population =
-get_levelpop(modelgridindex,element,ion,level);
-        //printout("element %d, ion %d, level %d: population
-%g\n",element,ion,level,exclevelpop(cellnumber,element,ion,level,T));
-      }
-    }
-  }
-}*/
 
 double calculate_partfunct(int element, int ion, int modelgridindex)
 /// Calculates the partition function for ion=ion of element=element in

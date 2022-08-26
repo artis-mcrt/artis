@@ -287,8 +287,10 @@ static void read_phixs_data(void) {
 
   const bool phixs_v1_exists = std::ifstream(phixsdata_filenames[1]).good();
   const bool phixs_v2_exists = std::ifstream(phixsdata_filenames[2]).good();
-  assert_always(phixs_v1_exists ^ phixs_v2_exists);  // XOR: exactly one of the those files must exist
+  assert_always(phixs_v1_exists ^ phixs_v2_exists);  // XOR: one of the the two files must exist but not both
+
   phixs_file_version = phixs_v2_exists ? 2 : 1;
+
   printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version]);
 
   FILE *phixsdata = fopen_required(phixsdata_filenames[phixs_file_version], "r");
@@ -775,16 +777,17 @@ static int calculate_nlevels_groundterm(int element, int ion) {
     }
   }
 
-  for (int level = 0; level < nlevels_groundterm; level++) {
-    const float g = stat_weight(element, ion, level);
-    for (int levelb = 0; levelb < level; levelb++) {
-      // there should be no duplicate stat weights within the ground term
-      const float g_b = stat_weight(element, ion, levelb);
-      if (fabs(g - g_b) < 0.4) {
-        printout(
-            "WARNING: duplicate g value in ground term for Z=%d ion_stage %d nlevels_groundterm %d g(level %d) %g "
-            "g(level %d) %g\n",
-            get_element(element), get_ionstage(element, ion), nlevels_groundterm, level, g, levelb, g_b);
+  // there should be no duplicate stat weights within the ground term
+  // limit the ground multiplet to nnnnlowest levels below the first duplicated stat weight
+  for (int level_a = 1; level_a < nlevels_groundterm; level_a++) {
+    const float g_a = stat_weight(element, ion, level_a);
+
+    for (int level_b = 0; level_b < level_a; level_b++) {
+      const float g_b = stat_weight(element, ion, level_b);
+      if (fabs(g_a - g_b) < 0.4) {
+        // level_a is outside the ground term because of duplicate stat weight
+        // highest ground level index is level_a - 1, so nlevels_groundterm == level_a
+        return level_a;
       }
     }
   }
@@ -806,11 +809,8 @@ static void read_atomicdata_files(void) {
   int nelements_in;
   assert_always(fscanf(compositiondata, "%d", &nelements_in) == 1);
   set_nelements(nelements_in);
-  if ((globals::elements = (elementlist_entry *)calloc(get_nelements(), sizeof(elementlist_entry))) == NULL) {
-    printout("[fatal] input: not enough memory to initialize elementlist ... abort\n");
-    abort();
-  }
-  // printout("elements initialized\n");
+  globals::elements = static_cast<elementlist_entry *>(calloc(get_nelements(), sizeof(elementlist_entry)));
+  assert_always(globals::elements != NULL);
 
   /// Initialize the linelist
 
@@ -1077,8 +1077,9 @@ static void read_atomicdata_files(void) {
   for (i = 0; i < nlines; i++)
     fprintf(linelist_file,"element %d, ion %d, ionstage %d, upperindex %d, lowerindex %d, nu
   %g\n",linelist[i].elementindex, globals::linelist[i].ionindex,
-  globals::elements[linelist[i].elementindex].ions[linelist[i].ionindex].ionstage, globals::linelist[i].upperlevelindex,
-  globals::linelist[i].lowerlevelindex, globals::linelist[i].nu); fclose(linelist_file);
+  globals::elements[linelist[i].elementindex].ions[linelist[i].ionindex].ionstage,
+  globals::linelist[i].upperlevelindex, globals::linelist[i].lowerlevelindex, globals::linelist[i].nu);
+  fclose(linelist_file);
   //abort();
   */
 
@@ -1251,8 +1252,8 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
     /*    if (i == nbfcontinua_ground)
         {
           printout("[fatal] search_groundphixslist: i %d, nu_edge %g, globals::groundcont[i-1].nu_edge %g ...
-       abort\n",i,nu_edge,globals::groundcont[i-1].nu_edge); printout("[fatal] search_groundphixslist: this is element
-       %d, ion %d, level %d in groundphixslist at i-1\n",el,in,ll);
+       abort\n",i,nu_edge,globals::groundcont[i-1].nu_edge); printout("[fatal] search_groundphixslist: this is
+       element %d, ion %d, level %d in groundphixslist at i-1\n",el,in,ll);
           //printout("[fatal] search_groundphixslist: this is element %d, ion %d, level %d in groundphixslist at
        i-1\n",globals::groundcont[i-1].element,globals::groundcont[i-1].ion,groundphixslist[i-1].level); abort();
         }*/
@@ -1264,12 +1265,12 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
         index = i - 1;
       } else {
         printout(
-            "[fatal] search_groundphixslist: element %d, ion %d, level %d has edge_frequency %g equal to the bluest "
-            "ground-level continuum\n",
+            "[fatal] search_groundphixslist: element %d, ion %d, level %d has edge_frequency %g equal to the "
+            "bluest ground-level continuum\n",
             el, in, ll, nu_edge);
         printout(
-            "[fatal] search_groundphixslist: bluest ground level continuum is element %d, ion %d, level %d at nu_edge "
-            "%g\n",
+            "[fatal] search_groundphixslist: bluest ground level continuum is element %d, ion %d, level %d at "
+            "nu_edge %g\n",
             element, ion, level, globals::groundcont[i - 1].nu_edge);
         printout("[fatal] search_groundphixslist: i %d, nbfcontinua_ground %d\n", i, globals::nbfcontinua_ground);
         printout(
@@ -1351,15 +1352,16 @@ static void setup_cellhistory(void) {
       }
     }
 
-    struct chlevels *chlevelblock = (struct chlevels *)malloc(chlevelblocksize);
-    struct chphixstargets *chphixs = (struct chphixstargets *)malloc(chphixsblocksize);
+    struct chlevels *chlevelblock = static_cast<struct chlevels *>(malloc(chlevelblocksize));
+    struct chphixstargets *chphixs = static_cast<struct chphixstargets *>(malloc(chphixsblocksize));
     mem_usage_cellhistory += chlevelblocksize + chphixsblocksize;
     int alllevelindex = 0;
     int allphixstargetindex = 0;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       mem_usage_cellhistory += nions * sizeof(struct chions);
-      globals::cellhistory[tid].chelements[element].chions = (struct chions *)malloc(nions * sizeof(struct chions));
+      globals::cellhistory[tid].chelements[element].chions =
+          static_cast<struct chions *>(malloc(nions * sizeof(struct chions)));
       assert_always(globals::cellhistory[tid].chelements[element].chions != NULL);
 
       for (int ion = 0; ion < nions; ion++) {
@@ -1376,15 +1378,15 @@ static void setup_cellhistory(void) {
           const int ndowntrans = get_ndowntrans(element, ion, level);
           const int nuptrans = get_nuptrans(element, ion, level);
 
-          chlevel->individ_rad_deexc = (double *)malloc((ndowntrans + 1) * sizeof(double));
+          chlevel->individ_rad_deexc = static_cast<double *>(malloc((ndowntrans + 1) * sizeof(double)));
           assert_always(chlevel->individ_rad_deexc != NULL);
           chlevel->individ_rad_deexc[0] = ndowntrans;
 
-          chlevel->individ_internal_down_same = (double *)malloc((ndowntrans + 1) * sizeof(double));
+          chlevel->individ_internal_down_same = static_cast<double *>(malloc((ndowntrans + 1) * sizeof(double)));
           assert_always(chlevel->individ_internal_down_same != NULL);
           chlevel->individ_internal_down_same[0] = ndowntrans;
 
-          chlevel->individ_internal_up_same = (double *)malloc((nuptrans + 1) * sizeof(double));
+          chlevel->individ_internal_up_same = static_cast<double *>(malloc((nuptrans + 1) * sizeof(double)));
           assert_always(chlevel->individ_internal_up_same != NULL);
           chlevel->individ_internal_up_same[0] = nuptrans;
 
@@ -1405,7 +1407,7 @@ static void write_bflist_file(int includedphotoiontransitions) {
     abort();
   }
 
-  FILE *bflist_file;
+  FILE *bflist_file = NULL;
   if (globals::rank_global == 0) {
     bflist_file = fopen_required("bflist.dat", "w");
     fprintf(bflist_file, "%d\n", includedphotoiontransitions);
@@ -1608,8 +1610,6 @@ static void setup_phixs_list(void) {
 static void read_atomicdata(void)
 /// Subroutine to read in input parameters.
 {
-  /// new atomic data scheme by readin of adata////////////////////////////////////////////////////////////////////////
-
   read_atomicdata_files();
 
   printout("included ions %d\n", get_includedions());
@@ -1617,18 +1617,14 @@ static void read_atomicdata(void)
 /// INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
 ///======================================================
 #ifdef RECORD_LINESTAT
-  if ((globals::ecounter = (int *)malloc(globals::nlines * sizeof(int))) == NULL) {
-    printout("[fatal] input: not enough memory to initialise ecounter array ... abort\n");
-    abort();
-  }
-  if ((globals::acounter = (int *)malloc(globals::nlines * sizeof(int))) == NULL) {
-    printout("[fatal] input: not enough memory to initialise ecounter array ... abort\n");
-    abort();
-  }
-  if ((globals::linestat_reduced = (int *)malloc(globals::nlines * sizeof(int))) == NULL) {
-    printout("[fatal] input: not enough memory to initialise ecounter array ... abort\n");
-    abort();
-  }
+  globals::ecounter = static_cast<int *>(malloc(globals::nlines * sizeof(int)));
+  assert_always(globals::ecounter != NULL);
+
+  globals::acounter = static_cast<int *>(malloc(globals::nlines * sizeof(int)));
+  assert_always(globals::acounter != NULL);
+
+  globals::linestat_reduced = static_cast<int *>(malloc(globals::nlines * sizeof(int)));
+  assert_always(globals::linestat_reduced != NULL);
 #endif
 
   kpkt::setup_coolinglist();
@@ -1636,8 +1632,7 @@ static void read_atomicdata(void)
   setup_cellhistory();
 
   /// Printout some information about the read-in model atom
-  ///======================================================
-  // includedions = 0;
+
   int includedlevels = 0;
   int includedionisinglevels = 0;
   int includedphotoiontransitions = 0;
@@ -1646,7 +1641,6 @@ static void read_atomicdata(void)
   for (int element = 0; element < get_nelements(); element++) {
     printout("[input.c]   element %d (Z=%2d)\n", element, get_element(element));
     const int nions = get_nions(element);
-    // includedions += nions;
     for (int ion = 0; ion < nions; ion++) {
       int photoiontransitions = 0;
       for (int level = 0; level < get_nlevels(element, ion); level++)
@@ -2042,7 +2036,8 @@ void read_parameterfile(int rank)
 
 #if (NO_LUT_PHOTOION)
   printout(
-      "Corrphotoioncoeff is calculated from the radiation field at each timestep in each modelgrid cell (no LUT).\n");
+      "Corrphotoioncoeff is calculated from the radiation field at each timestep in each modelgrid cell (no "
+      "LUT).\n");
 #else
   printout(
       "Corrphotoioncoeff is calculated from LTE lookup tables (ratecoeff.dat) and corrphotoionrenorm estimator.\n");

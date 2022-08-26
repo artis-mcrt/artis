@@ -12,7 +12,6 @@ __host__ __device__ double get_groundlevelpop(int modelgridindex, int element, i
 __host__ __device__ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level);
 __host__ __device__ double get_levelpop(int modelgridindex, int element, int ion, int level);
 __host__ __device__ double calculate_levelpop(int modelgridindex, int element, int ion, int level);
-__host__ __device__ double get_groundmultiplet_pop(int modelgridindex, int element, int ion);
 __host__ __device__ double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T,
                                               double E_threshold);
 __host__ __device__ double ionstagepop(int modelgridindex, int element, int ion);

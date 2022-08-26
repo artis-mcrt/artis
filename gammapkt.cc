@@ -72,8 +72,8 @@ static void set_trivial_gamma_spectrum(const int z, const int a) {
   const int nucindex = decay::get_nuc_index(z, a);
   const int nlines = 1;
   gamma_spectra[nucindex].nlines = nlines;
-  gamma_spectra[nucindex].energy = (double *)malloc(nlines * sizeof(double));
-  gamma_spectra[nucindex].probability = (double *)malloc(nlines * sizeof(double));
+  gamma_spectra[nucindex].energy = static_cast<double *>(malloc(nlines * sizeof(double)));
+  gamma_spectra[nucindex].probability = static_cast<double *>(malloc(nlines * sizeof(double)));
   gamma_spectra[nucindex].energy[0] = decay::nucdecayenergygamma(z, a);
   gamma_spectra[nucindex].probability[0] = 1.;
 }
@@ -91,7 +91,7 @@ static void read_decaydata(void) {
     std::rename("co_lines.txt", "co56_lines.txt");
   }
 
-  gamma_spectra = (struct gamma_spec *)calloc(decay::get_num_nuclides(), sizeof(struct gamma_spec));
+  gamma_spectra = static_cast<struct gamma_spec *>(calloc(decay::get_num_nuclides(), sizeof(struct gamma_spec)));
 
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     gamma_spectra[nucindex].nlines = 0;
@@ -155,8 +155,8 @@ void init_gamma_linelist(void) {
 
   /* Start by setting up the grid of fake lines and their energies. */
   gamma_spectra[FAKE_GAM_LINE_ID].nlines = globals::nfake_gam;
-  gamma_spectra[FAKE_GAM_LINE_ID].energy = (double *)malloc(globals::nfake_gam * sizeof(double));
-  gamma_spectra[FAKE_GAM_LINE_ID].probability = (double *)malloc(globals::nfake_gam * sizeof(double));
+  gamma_spectra[FAKE_GAM_LINE_ID].energy = static_cast<double *>(malloc(globals::nfake_gam * sizeof(double)));
+  gamma_spectra[FAKE_GAM_LINE_ID].probability = static_cast<double *>(malloc(globals::nfake_gam * sizeof(double)));
 
   const double deltanu = (globals::nusyn_max - globals::nusyn_min) / (gamma_spectra[FAKE_GAM_LINE_ID].nlines - 3);
   for (int i = 0; i < gamma_spectra[FAKE_GAM_LINE_ID].nlines; i++) {

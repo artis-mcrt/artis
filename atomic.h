@@ -6,6 +6,7 @@
 extern __managed__ double
     last_phixs_nuovernuedge;  // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 extern __managed__ int phixs_file_version;
+
 __managed__ static const char *phixsdata_filenames[] = {"version0ignore", "phixsdata.txt", "phixsdata_v2.txt"};
 
 __host__ __device__ int get_continuumindex(int element, int ion, int level, int upperionlevel);
