@@ -10,8 +10,7 @@ struct heatingcoolingrates {
   double heating_bf;
   double heating_ff;
   double heating_dep;
-  double nt_frac_heating;  // = heatingrates.gamma / total_gamma_deposition, = get_nt_frac_heating(modelgridindex) when
-                           // T_e solver runs
+  double nt_frac_heating;
 };
 
 void call_T_e_finder(int modelgridindex, int timestep, double t_current, double T_min, double T_max,

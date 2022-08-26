@@ -3,9 +3,9 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_sf_debye.h>
-#include <time.h>
 
 #include <cmath>
+#include <ctime>
 
 #include "atomic.h"
 #include "grid.h"

@@ -1,6 +1,6 @@
 #include "spectrum.h"
 
-#include <time.h>
+#include <ctime>
 
 #include "atomic.h"
 #include "exspec.h"

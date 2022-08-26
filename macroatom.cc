@@ -2,7 +2,7 @@
 
 #include <gsl/gsl_integration.h>
 
-#include "atomic.h"
+#include "artisoptions.h"
 #include "globals.h"
 #include "grid.h"
 #include "ltepop.h"

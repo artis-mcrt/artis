@@ -1,11 +1,10 @@
 #ifndef UPDATE_GRID_H
 #define UPDATE_GRID_H
 
-#include <time.h>
-
 #include <cstdio>
+#include <ctime>
 
-#include "sn3d.h"
+#include "cuda.h"
 
 void update_grid(FILE *estimators_file, int nts, int nts_prev, int my_rank, int nstart, int ndo, int titer,
                  const time_t real_time_start);

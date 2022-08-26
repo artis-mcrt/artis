@@ -3,6 +3,8 @@
 
 #include <iostream>
 
+#include "exspec.h"
+
 void input(int rank);
 void read_parameterfile(int rank);
 void update_parameterfile(int nts);

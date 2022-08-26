@@ -6,13 +6,12 @@
 #include "gamma.h"
 #include "grid.h"
 #include "kpkt.h"
-#include "ltepop.h"
-#include "macroatom.h"
 #include "nonthermal.h"
+#include "packet.h"
 #include "rpkt.h"
 #include "sn3d.h"
 #include "stats.h"
-#include "vectors.h"
+#include "update_grid.h"
 
 static void do_nonthermal_predeposit(struct packet *pkt_ptr, const int nts, const double t2) {
   const double ts = pkt_ptr->prop_time;

@@ -3,8 +3,6 @@
 
 #include <cstdio>
 
-#include "exspec.h"
-
 struct timestepspec {
   double *flux = NULL;
   double *absorption = NULL;

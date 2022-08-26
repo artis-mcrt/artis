@@ -22,7 +22,6 @@
 #include "light_curve.h"
 #include "sn3d.h"
 #include "spectrum.h"
-#include "vectors.h"
 
 const bool do_exspec = true;
 
