@@ -1437,8 +1437,8 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
                  stat_weight(element, ion + 1, 0) / gsl_vector_get(x, nlte_size - 1),
              test_ratio);
     //	  printout("The test ratio is %g. Passing %g.\n",
-    //get_groundlevelpop(modelgridindex,element,ion+1)*grid::modelgrid[modelgridindex].composition[element].partfunct[ion+1]/stat_weight(element,ion+1,0)/gsl_vector_get(x,nlte_size-1),
-    //test_ratio);
+    // get_groundlevelpop(modelgridindex,element,ion+1)*grid::modelgrid[modelgridindex].composition[element].partfunct[ion+1]/stat_weight(element,ion+1,0)/gsl_vector_get(x,nlte_size-1),
+    // test_ratio);
 
     // printout("The top five excited states were %g, %g, %g, %g and
     // %g.\n",gsl_vector_get(x,nlevels_nlte-4),gsl_vector_get(x,nlevels_nlte-3),gsl_vector_get(x,nlevels_nlte-2),gsl_vector_get(x,nlevels_nlte-1),gsl_vector_get(x,nlevels_nlte));
@@ -1472,7 +1472,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
           gsl_vector_get(x, nlevels_nlte + 1) / grid::modelgrid[modelgridindex].rho / superlevel_partition;
       //	      grid::modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte] =
       //((lag*grid::modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte]) +
-      //gsl_vector_get(x,nlevels_nlte+1))/(lag + 1.0)/grid::modelgrid[modelgridindex].rho/superlevel_partition;
+      // gsl_vector_get(x,nlevels_nlte+1))/(lag + 1.0)/grid::modelgrid[modelgridindex].rho/superlevel_partition;
 
       // printout("Now I think it is: %g\n", grid::modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte]);
       // printout("I also interfered with index %d.\n", nlte_start+nlevels_nlte);

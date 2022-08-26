@@ -475,7 +475,7 @@ void initialise_prev_titer_photoionestimators(void) {
         // sw_ratio = stat_weight(element,ion+1,0)/stat_weight(element,ion,0);
         // Gamma = Alpha_sp * sw_ratio / SAHACONST * pow(T_e,1.5) * exp(-ionpot/KB/T_e);
         ////gamma_lte = interpolate_photoioncoeff_below(element,ion,0,T_e) +
-        ///interpolate_photoioncoeff_above(element,ion,0,T_e); /zeta = interpolate_zeta(element,ion,T_e);
+        /// interpolate_photoioncoeff_above(element,ion,0,T_e); /zeta = interpolate_zeta(element,ion,T_e);
         // gammaestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = Gamma; //gamma_lte/zeta;
         ////globals::corrphotoionrenorm[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 1.;
         ////photoionestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = Gamma; //gamma_lte/zeta;
