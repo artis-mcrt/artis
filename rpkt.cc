@@ -83,34 +83,10 @@ __host__ __device__ static double get_event(
 // returns edist, the distance to the next physical event (continuum or bound-bound)
 // BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
 {
-  printout("get_event()\n");
   /// initialize loop variables
   double tau = 0.;   /// initial optical depth along path
   double dist = 0.;  /// initial position on path
   double edist = 0.;
-
-  double doppler_start = doppler_packet_nucmf_on_nurf(pkt_ptr);
-  double doppler_abort = 0.;
-  double dnu_on_ds = 0.;
-
-  if (USE_RELATIVISTIC_CORRECTIONS) {
-    struct packet dummypkt_final = *pkt_ptr;
-
-    dummypkt_final.em_pos[0] += pkt_ptr->dir[0] * abort_dist;
-    dummypkt_final.pos[1] += pkt_ptr->dir[1] * abort_dist;
-    dummypkt_final.pos[2] += pkt_ptr->dir[2] * abort_dist;
-    dummypkt_final.prop_time = pkt_ptr->prop_time + abort_dist / CLIGHT;
-
-    doppler_abort = doppler_packet_nucmf_on_nurf(&dummypkt_final);
-    double nu_cmf_abort = pkt_ptr->nu_rf * doppler_abort;
-
-    dnu_on_ds = (nu_cmf_abort - pkt_ptr->nu_cmf) / abort_dist;
-
-    // if (dnu_on_ds <= 0)
-    {
-      printout("dnu_on_ds %lg abort_dist %lg nucmfratio %lg\n", dnu_on_ds, abort_dist, nu_cmf_abort / pkt_ptr->nu_cmf);
-    }
-  }
 
   struct packet dummypkt = *pkt_ptr;
   struct packet *dummypkt_ptr = &dummypkt;
@@ -156,26 +132,12 @@ __host__ __device__ static double get_event(
 
         // relativistic distance formula from tardis-sn project
         // (committed by Christian Vogl, https://github.com/tardis-sn/tardis/pull/697)
-        const double nu_r = nu_trans / dummypkt_ptr->nu_rf;
+        const double nu_r = nu_trans / dummypkt_ptr->nu_rf;  // TODO: should be nu_rf, just testing cmf
         const double ct = CLIGHT * dummypkt_ptr->prop_time;
         const double mu = dot(dummypkt_ptr->dir, dummypkt_ptr->pos) / vec_len(dummypkt_ptr->pos);
         const double r = vec_len(dummypkt_ptr->pos);  // radius
-        double ldist_tardis =
-            -mu * r +
-            (ct - nu_r * nu_r * sqrt(ct * ct - (1 + r * r * (1 - mu * mu) * (1 + pow(nu_r, -2))))) / (1 + nu_r * nu_r);
-
-        // double ldist_linear = (nu_trans - pkt_ptr->nu_cmf) / dnu_on_ds - dist;
-        double ldist_linear = (nu_trans - dummypkt_ptr->nu_cmf) / dnu_on_ds;
-        if (ldist_linear < 0) {
-          ldist_linear = 0.;
-        }
-        printout("nu_trans - dummypkt_ptr->nu_cmf = %g\n", nu_trans - dummypkt_ptr->nu_cmf);
-        printout(
-            "compare packet %d lineindex %d nu_trans %lg nu_cmf %lg nu_ratio-1 %g ldist_tardis %g ldist_linear %g dist "
-            "%g abort_dist %g dnu_on_ds %g\n",
-            pkt_ptr->number, lineindex, nu_trans, dummypkt_ptr->nu_cmf, nu_trans / dummypkt_ptr->nu_cmf - 1.,
-            ldist_tardis, ldist_linear, dist, abort_dist, dnu_on_ds);
-        ldist = ldist_linear;
+        ldist = -mu * r + (ct - nu_r * nu_r * sqrt(ct * ct - (1 + r * r * (1 - mu * mu) * (1 + pow(nu_r, -2))))) /
+                              (1 + nu_r * nu_r);
       }
 
       // assert_always(ldist >= 0.);
@@ -235,19 +197,15 @@ __host__ __device__ static double get_event(
           tau += tau_cont + tau_line;
           dummypkt_ptr->prop_time += ldist / globals::CLIGHT_PROP;
           move_pkt(dummypkt_ptr, ldist, dummypkt_ptr->prop_time);
-
-          dummypkt_ptr->nu_cmf = pkt_ptr->nu_cmf + dnu_on_ds * edist;
-          dummypkt_ptr->e_cmf = H * dummypkt_ptr->nu_cmf;
-
           radfield::increment_lineestimator(
               modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
 
           // if (fabs(dummypkt_ptr->nu_cmf / nu_trans - 1.) > 1e-10)
-          {
-            printout("dopplercheck: packet %d nu_cmf %g nu_line %g ratio %g errorfrac %g\n", pkt_ptr->number,
-                     dummypkt_ptr->nu_cmf, nu_trans, dummypkt_ptr->nu_cmf / nu_trans,
-                     fabs(dummypkt_ptr->nu_cmf / nu_trans - 1.));
-          }
+          // {
+          //   printout("dopplercheck: packet %d nu_cmf %g nu_line %g ratio %g errorfrac %g\n", pkt_ptr->number,
+          //   dummypkt_ptr->nu_cmf, nu_trans, dummypkt_ptr->nu_cmf / nu_trans, fabs(dummypkt_ptr->nu_cmf / nu_trans
+          //   - 1.));
+          // }
 
           if (false) {
             const int next_trans = dummypkt_ptr->next_trans;
@@ -272,7 +230,7 @@ __host__ __device__ static double get_event(
           }
         } else {
           /// bound-bound process occurs
-          printout("[debug] get_event:         tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
+          // printout("[debug] get_event:         tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
 
           pkt_ptr->mastate.element = element;
           pkt_ptr->mastate.ion = ion;
@@ -289,15 +247,6 @@ __host__ __device__ static double get_event(
                 modelgridindex, lineindex,
                 dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
           }
-
-          dummypkt_ptr->nu_cmf = nu_trans;
-          dummypkt_ptr->e_cmf = H * nu_trans;
-
-          // this doppler factor will be slightly different to our linear approximated Doppler value
-          // shift the rest frame frequency to match the line (not physical, but the error is small)
-          const double doppler_interaction = doppler_packet_nucmf_on_nurf(dummypkt_ptr);
-          dummypkt_ptr->nu_rf = dummypkt_ptr->nu_cmf / doppler_interaction;
-          dummypkt_ptr->e_rf = dummypkt_ptr->e_cmf / doppler_interaction;
 
           *rpkt_eventtype = RPKT_EVENTTYPE_BB;
           /// the line and its parameters were already selected by closest_transition!
