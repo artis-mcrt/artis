@@ -3,7 +3,7 @@
 #include <algorithm>
 
 #include "decay.h"
-#include "gamma.h"
+#include "gammapkt.h"
 #include "grid.h"
 #include "kpkt.h"
 #include "nonthermal.h"
@@ -112,7 +112,7 @@ static void update_pellet(struct packet *pkt_ptr, const int nts, const double t2
     } else {
       safeadd(globals::time_step[nts].gamma_emission, pkt_ptr->e_cmf);
       // decay to gamma-ray, kpkt, or ntlepton
-      gamma::pellet_gamma_decay(nts, pkt_ptr);
+      gammapkt::pellet_gamma_decay(nts, pkt_ptr);
     }
   } else if ((tdecay > 0) && (nts == 0)) {
     // These are pellets whose decay times were before the first time step
@@ -147,7 +147,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
     }
 
     case TYPE_GAMMA: {
-      gamma::do_gamma(pkt_ptr, t2);
+      gammapkt::do_gamma(pkt_ptr, t2);
       /* This returns a flag if the packet gets to t2 without
 changing to something else. If the packet does change it
 returns the time of change and sets everything for the

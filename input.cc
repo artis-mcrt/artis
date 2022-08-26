@@ -11,7 +11,7 @@
 
 #include "atomic.h"
 #include "exspec.h"
-#include "gamma.h"
+#include "gammapkt.h"
 #include "grid.h"
 #include "kpkt.h"
 #include "nltepop.h"
@@ -1772,8 +1772,8 @@ void input(int rank)
 
   /// Now that the list exists use it to find values for spectral synthesis
   /// stuff.
-  const int lindex_max = gamma::get_nul(globals::nusyn_max);
-  const int lindex_min = gamma::get_nul(globals::nusyn_min);
+  const int lindex_max = gammapkt::get_nul(globals::nusyn_max);
+  const int lindex_min = gammapkt::get_nul(globals::nusyn_min);
   printout("lindex_max %d, lindex_min %d\n", lindex_max, lindex_min);
 
   globals::emiss_offset = lindex_min;

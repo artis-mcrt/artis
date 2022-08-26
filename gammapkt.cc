@@ -1,4 +1,4 @@
-#include "gamma.h"
+#include "gammapkt.h"
 
 #include <cstring>
 #include <fstream>
@@ -15,7 +15,7 @@
 #include "stats.h"
 #include "vectors.h"
 
-namespace gamma {
+namespace gammapkt {
 // Code for handing gamma rays - creation and propagation
 
 struct gamma_spec {
