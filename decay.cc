@@ -379,9 +379,9 @@ static void extend_lastdecaypath(void)
       decaypaths.push_back({0, NULL, NULL, NULL});
       const int lastindex = decaypaths.size() - 1;
       decaypaths[lastindex].pathlength = get_decaypathlength(startdecaypathindex) + 1;
-      decaypaths[lastindex].z = (int *)malloc(decaypaths[lastindex].pathlength * sizeof(int));
-      decaypaths[lastindex].a = (int *)malloc(decaypaths[lastindex].pathlength * sizeof(int));
-      decaypaths[lastindex].decaytypes = (int *)malloc(decaypaths[lastindex].pathlength * sizeof(int));
+      decaypaths[lastindex].z = static_cast<int *>(malloc(decaypaths[lastindex].pathlength * sizeof(int)));
+      decaypaths[lastindex].a = static_cast<int *>(malloc(decaypaths[lastindex].pathlength * sizeof(int)));
+      decaypaths[lastindex].decaytypes = static_cast<int *>(malloc(decaypaths[lastindex].pathlength * sizeof(int)));
 
       // check for repeated nuclides, which would indicate a loop in the decay chain
       for (int i = 0; i < get_decaypathlength(startdecaypathindex); i++) {
@@ -451,9 +451,9 @@ static void find_decaypaths(void) {
       decaypaths.push_back({0, NULL, NULL, NULL});
       const int lastindex = decaypaths.size() - 1;
       decaypaths[lastindex].pathlength = 1;
-      decaypaths[lastindex].z = (int *)malloc(sizeof(int));
-      decaypaths[lastindex].a = (int *)malloc(sizeof(int));
-      decaypaths[lastindex].decaytypes = (int *)malloc(sizeof(int));
+      decaypaths[lastindex].z = static_cast<int *>(malloc(sizeof(int)));
+      decaypaths[lastindex].a = static_cast<int *>(malloc(sizeof(int)));
+      decaypaths[lastindex].decaytypes = static_cast<int *>(malloc(sizeof(int)));
 
       decaypaths[lastindex].z[0] = z;
       decaypaths[lastindex].a[0] = a;
@@ -1340,17 +1340,18 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
 }
 
 void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt_ptr) {
-  double cumulative_endecay[get_num_decaypaths()];
+  const int num_decaypaths = get_num_decaypaths();
+  double cumulative_endecay[num_decaypaths];
   double endecaysum = 0.;
-  for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
+  for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
     endecaysum += get_simtime_endecay_per_ejectamass(mgi, decaypathindex);
     cumulative_endecay[decaypathindex] = endecaysum;
   }
-  assert_testmodeonly(cumulative_endecay[get_num_decaypaths() - 1] > 0.);
-  const double zrand_chain = gsl_rng_uniform(rng) * cumulative_endecay[get_num_decaypaths() - 1];
+  assert_testmodeonly(cumulative_endecay[num_decaypaths - 1] > 0.);
+  const double zrand_chain = gsl_rng_uniform(rng) * cumulative_endecay[num_decaypaths - 1];
 
   int decaypathindex = -1;
-  for (int i = 0; i < get_num_decaypaths(); i++) {
+  for (int i = 0; i < num_decaypaths; i++) {
     if (cumulative_endecay[i] > zrand_chain) {
       decaypathindex = i;
       break;

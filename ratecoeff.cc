@@ -1,3 +1,5 @@
+#include "ratecoeff.h"
+
 #include <gsl/gsl_integration.h>
 
 #include <cstring>
@@ -13,7 +15,6 @@
 #include "macroatom.h"
 #include "md5.h"
 #include "radfield.h"
-#include "ratecoeff.h"
 #include "sn3d.h"
 
 // typedef struct gslintegration_ffheatingparas
@@ -267,7 +268,7 @@ static double alpha_sp_integrand_gsl(double nu, void *voidparas)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
-  const gslintegration_paras *const params = (gslintegration_paras *)voidparas;
+  const gslintegration_paras *const params = static_cast<gslintegration_paras *>(voidparas);
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
   const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu, 2) * exp(-HOVERKB * nu / params->T);

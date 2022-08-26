@@ -21,7 +21,7 @@
 
 namespace grid {
 
-__managed__ struct modelgrid *modelgrid = NULL;
+__managed__ struct modelgrid_t *modelgrid = NULL;
 
 __managed__ int ncoordgrid[3];  /// propagration grid dimensions
 __managed__ int ngrid;
@@ -304,12 +304,12 @@ __host__ __device__ static void set_npts_model(int new_npts_model) {
   npts_model = new_npts_model;
 
   assert_always(modelgrid == NULL);
-  modelgrid = (struct modelgrid *)calloc(npts_model + 1, sizeof(struct modelgrid));
-  assert_always(mg_associated_cells == NULL);
-  mg_associated_cells = (int *)malloc((npts_model + 1) * sizeof(int));
-  assert_always(nonemptymgi_of_mgi == NULL);
-  nonemptymgi_of_mgi = (int *)malloc((npts_model + 1) * sizeof(int));
+  modelgrid = static_cast<struct modelgrid_t *>(calloc(npts_model + 1, sizeof(struct modelgrid_t)));
   assert_always(modelgrid != NULL);
+  assert_always(mg_associated_cells == NULL);
+  mg_associated_cells = static_cast<int *>(malloc((npts_model + 1) * sizeof(int)));
+  assert_always(nonemptymgi_of_mgi == NULL);
+  nonemptymgi_of_mgi = static_cast<int *>(malloc((npts_model + 1) * sizeof(int)));
 }
 
 static void allocate_initradiobund(void) {
@@ -772,7 +772,7 @@ static void allocate_composition_cooling(void)
       abort();
     }
 
-    double *elemcontrib = (double *)malloc(get_includedions() * sizeof(double));
+    double *elemcontrib = static_cast<double *>(malloc(get_includedions() * sizeof(double)));
 
     int allionindex = 0;
     for (int element = 0; element < get_nelements(); element++) {

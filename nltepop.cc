@@ -417,7 +417,7 @@ static int get_element_nlte_dimension_and_slpartfunc(const int modelgridindex, c
 }
 
 static void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, const int ion,
-                                          const double t_mid, double *s_renorm, gsl_matrix *rate_matrix_rad_bb,
+                                          const double t_mid, const double *s_renorm, gsl_matrix *rate_matrix_rad_bb,
                                           gsl_matrix *rate_matrix_coll_bb, gsl_matrix *rate_matrix_ntcoll_bb) {
   const float T_e = grid::get_Te(modelgridindex);
   const float nne = grid::get_nne(modelgridindex);

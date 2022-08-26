@@ -32,7 +32,7 @@ struct mgicooling {
   double *contrib;
 };
 
-struct modelgrid {
+struct modelgrid_t {
   float Te;
   float TR;
   float TJ;
@@ -65,7 +65,7 @@ struct modelgrid {
   short thick;
 };
 
-extern __managed__ struct modelgrid *modelgrid;
+extern __managed__ struct modelgrid_t *modelgrid;
 
 extern __managed__ int ncoordgrid[3];
 extern __managed__ int ngrid;
