@@ -734,4 +734,4 @@ int get_nul(double freq) {
   }
 }
 
-}  // namespace gamma
+}  // namespace gammapkt
