@@ -1,11 +1,12 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#include "cuda.h"
+
 #if CUDA_ENABLED
 #include <curand_kernel.h>
 #endif
 
-#include "cuda.h"
 #ifdef MPI_ON
 #include "mpi.h"
 #endif
