@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # files outside the artis folder, so move them back
 if [ ! -f packets00_0000.out* ]; then
   mv packets/packets*.out* .

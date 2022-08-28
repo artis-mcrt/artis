@@ -2,6 +2,7 @@
 #define INPUT_H
 
 #include <iostream>
+#include <string>
 
 #include "exspec.h"
 

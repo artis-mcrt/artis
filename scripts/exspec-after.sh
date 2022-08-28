@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 if [ -f spec.out ]; then
   xz -v absorption.out emission*.out || true
   xz -v phixsdata*.txt transitiondata.txt ratecoeff.dat linestat.out || true
