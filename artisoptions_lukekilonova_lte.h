@@ -15,13 +15,13 @@
 // #define GRID_TYPE GRID_SPHERICAL1D
 
 // non-LTE population solver
-static const bool NLTE_POPS_ON = false;
+constexpr bool NLTE_POPS_ON = false;
 
 // solve the NLTE population matrix equation simultaneously for levels of all ions of an element
-static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;
+constexpr bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;
 
 // maximum number of NLTE/Te/Spencer-Fano iterations
-static const int NLTEITER = 30;
+constexpr int NLTEITER = 30;
 
 // this macro function determines which levels of which ions will be treated in full NLTE (if NLTE_POPS_ON is true)
 // for now, all NLTE levels should be contiguous and include the ground state
@@ -35,9 +35,9 @@ static const int NLTEITER = 30;
 // atomic data and LTE
 #define LTEPOP_EXCITATIONTEMPERATURE grid::get_Te(modelgridindex)
 
-const bool single_level_top_ion = false;  // Only include a single level for the highest ion stage
+constexpr bool single_level_top_ion = false;  // Only include a single level for the highest ion stage
 
-const bool single_ground_level = false;  // if false, read from file or autodetect
+constexpr bool single_ground_level = false;  // if false, read from file or autodetect
 
 // option to enforce connecting the lower n levels to all other levels with collisions
 // disable by returning zero
@@ -66,7 +66,7 @@ const bool single_ground_level = false;  // if false, read from file or autodete
 // #define VPKT_ON
 
 // GSL integration workspace size
-static const size_t GSLWSIZE = 16384;
+constexpr size_t GSLWSIZE = 16384;
 
 #define TRACK_ION_STATS false
 #define TRACK_ION_MASTATS false
@@ -83,21 +83,21 @@ static const size_t GSLWSIZE = 16384;
 
 // if using this, avoid look up tables and switch on the direct integration options below
 // (since LUTs created with Planck function J_nu)
-static const bool MULTIBIN_RADFIELD_MODEL_ON = false;
+constexpr bool MULTIBIN_RADFIELD_MODEL_ON = false;
 
 #define RADFIELDBINCOUNT 256
 
-static const int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
+constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
 
-static const double nu_lower_first_initial = (CLIGHT / (40000e-8));  // CLIGHT / ([lambda Angstroms]e-8)
-static const double nu_upper_last_initial = (CLIGHT / (1085e-8));    // not including the very top super bin
-static const double nu_upper_superbin = (CLIGHT / (10e-8));          // very top end super bin
+constexpr double nu_lower_first_initial = (CLIGHT / (40000e-8));  // CLIGHT / ([lambda Angstroms]e-8)
+constexpr double nu_upper_last_initial = (CLIGHT / (1085e-8));    // not including the very top super bin
+constexpr double nu_upper_superbin = (CLIGHT / (10e-8));          // very top end super bin
 
-static const double T_R_min = 500;
-static const double T_R_max = 250000;
+constexpr double T_R_min = 500;
+constexpr double T_R_max = 250000;
 
 // store Jb_lu estimators for particular lines chosen in radfield::init()
-static const bool DETAILED_LINE_ESTIMATORS_ON = false;
+constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 // store detailed bound-free rate estimators
 #define DETAILED_BF_ESTIMATORS_ON false
@@ -126,10 +126,10 @@ static const bool DETAILED_LINE_ESTIMATORS_ON = false;
 // ** Start of non-thermal solution options **
 
 // non-thermal ionisation
-static const bool NT_ON = false;
+constexpr bool NT_ON = false;
 
 // use the detailed Spencer-Fano solver instead of the work function approximation (only works if NT_ON)
-static const bool NT_SOLVE_SPENCERFANO = false;
+constexpr bool NT_SOLVE_SPENCERFANO = false;
 
 // number of energy points in the Spencer-Fano solution vector
 #define SFPTS 4096
@@ -146,20 +146,20 @@ static const bool NT_SOLVE_SPENCERFANO = false;
 // trigger a Spencer-Fano solution at least once every n timesteps
 // 0 can only use solutions from previous NLTE iterations on the current timestep
 // <=-1 will always solve the SF equation for every iteration of every timestep
-static const int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 0;
+constexpr int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 0;
 
 // a change in the electron fraction (e.g. 0.5 is a 50% change) since the previous solution will also trigger a solution
-static const double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS = 0.05;
+constexpr double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS = 0.05;
 
 // just consider excitation from the first N levels and to the first M upper levels,
 // because these transitions really slow down the solver
-static const int NTEXCITATION_MAXNLEVELS_LOWER = 5;    // set to zero for none
-static const int NTEXCITATION_MAXNLEVELS_UPPER = 250;  // maximum number of upper levels included
+constexpr int NTEXCITATION_MAXNLEVELS_LOWER = 5;    // set to zero for none
+constexpr int NTEXCITATION_MAXNLEVELS_UPPER = 250;  // maximum number of upper levels included
 
 // limit the number of stored non-thermal excitation transition rates to reduce memory cost.
 // if this is higher than SFPTS, then you might as well just store
 // the full NT degradation spectrum and calculate the rates as needed (although CPU costs)
-static const int MAX_NT_EXCITATIONS_STORED = 25000;
+constexpr int MAX_NT_EXCITATIONS_STORED = 25000;
 
 // set to true to keep a list of non-thermal excitation rates for use
 // in the NLTE pop solver, macroatom, and NTLEPTON packets.
@@ -198,16 +198,16 @@ static const int MAX_NT_EXCITATIONS_STORED = 25000;
 #define IONGAMMA_POPFRAC_LEVELS_INCLUDED 0.999
 
 // incomplete work in progress
-static bool USE_RELATIVISTIC_CORRECTIONS = true;
+constexpr bool USE_RELATIVISTIC_CORRECTIONS = true;
 
 // when converting mass fraction to a number density, use a mean atomic mass
 // calcuated from the nuclear composition (plus stable component),
 // rather than just from the compositiondata.txt values
-static bool USE_CALCULATED_MEANATOMICWEIGHT = true;
+constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = true;
 
-static bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = false;
+constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = false;
 
-static bool INSTANT_PARTICLE_DEPOSITION = false;
+constexpr bool INSTANT_PARTICLE_DEPOSITION = false;
 
 // Options for different types of timestep set_ups, only one of these can be true at one time. The hybrid timestep
 // schemes that switch between log and fixed require a transition time from one scheme to the other as well as the
@@ -222,10 +222,10 @@ enum timestepsizemethods {
   TIMESTEP_SIZES_CONSTANT_THEN_LOGARITHMIC = 3,
 };
 
-static const enum timestepsizemethods TIMESTEP_SIZE_METHOD = TIMESTEP_SIZES_LOGARITHMIC;
+constexpr enum timestepsizemethods TIMESTEP_SIZE_METHOD = TIMESTEP_SIZES_LOGARITHMIC;
 
-static const double FIXED_TIMESTEP_WIDTH = 0.1;
+constexpr double FIXED_TIMESTEP_WIDTH = 0.1;
 
-static const double TIMESTEP_TRANSITION_TIME = 5;
+constexpr double TIMESTEP_TRANSITION_TIME = 5;
 
 #endif  // ARTISOPTIONS_H

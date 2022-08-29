@@ -20,13 +20,13 @@ sed -i 's/#define TABLESIZE.*/#define TABLESIZE 20/g' artisoptions.h
 sed -i 's/#define MINTEMP.*/#define MINTEMP 2000./g' artisoptions.h
 sed -i 's/#define MAXTEMP.*/#define MAXTEMP 10000./g' artisoptions.h
 
-sed -i 's/static const int FIRST_NLTE_RADFIELD_TIMESTEP.*/static const int FIRST_NLTE_RADFIELD_TIMESTEP = 7;/g' artisoptions.h
+sed -i 's/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 7;/g' artisoptions.h
 
 sed -i 's/#define DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*/#define DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP 7/g' artisoptions.h
 
 sed -i 's/#define SF_AUGER_CONTRIBUTION_ON.*/#define SF_AUGER_CONTRIBUTION_ON false/g' artisoptions.h
 
-sed -i 's/static bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/static bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' artisoptions.h
+sed -i 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' artisoptions.h
 
 cd -
 
