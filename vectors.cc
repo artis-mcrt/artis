@@ -2,6 +2,7 @@
 
 #include <gsl/gsl_randist.h>
 
+#include "artisoptions.h"
 #include "sn3d.h"
 
 extern __host__ __device__ inline double vec_len(const double x[3]);
