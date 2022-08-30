@@ -1,6 +1,8 @@
 #include "update_grid.h"
 
 #include <gsl/gsl_roots.h>
+#include <stdlib.h>
+#include <cmath>
 
 #include "atomic.h"
 #include "decay.h"
@@ -12,11 +14,14 @@
 #include "nonthermal.h"
 #include "radfield.h"
 #include "ratecoeff.h"
-#include "rpkt.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "thermalbalance.h"
-#include "vpkt.h"
+#include "artisoptions.h"
+#include "constants.h"
+#include "globals.h"
+#include "gsl/gsl_errno.h"
+#include "gsl/gsl_math.h"
 
 void precalculate_partfuncts(int modelgridindex)
 /// The partition functions depend only on T_R and W. This means they don't
@@ -1668,117 +1673,6 @@ double B_nu_integrand(double nu, void *paras)
   return TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1/(exp(H*nu/KB/T)-1);
 }
 */
-
-#ifndef FORCE_LTE
-
-/*
-double get_ffcooling(int element, int ion, int cellnumber)
-{
-  double ionstagepop(int cellnumber, int element, int ion);
-  int ioncharge;
-  double T_e,nne,nncurrention,C_ff;
-
-  ion++;
-  nncurrention = ionstagepop(cellnumber,element,ion);
-  nne = globals::cell[cellnumber].nne;
-  T_e = globals::cell[cellnumber].T_e;
-
-  C_ff = 0.;
-  ioncharge = get_ionstage(element,ion) - 1;
-  if (ioncharge > 0)
-  {
-    C_ff += 1.426e-27 * sqrt(T_e) * pow(ioncharge,2) * nncurrention * nne;
-  }
-
-  return C_ff;
-}
-
-double get_adcool(int cellnumber, int nts)
-{
-
-  double t_current,nntot,T_e;
-  double p,dV,V;
-
-  t_current = globals::time_step[nts].mid;
-  nntot = globals::cell[cellnumber].nn_tot;
-  T_e = globals::cell[cellnumber].T_e;
-  p = nntot*KB*T_e;
-  dV = 3*pow(grid::wid_init/globals::tmin,3)*pow(t_current,2);
-  V = pow(grid::wid_init*t_current/globals::tmin,3);
-
-  return p*dV/V;
-}
-
-double get_radrecomb(int element, int ion, int level, int cellnumber)
-{
-  double T_e,nne,nnion,E_threshold,alpha_sp;
-
-  T_e = globals::cell[cellnumber].T_e;
-  nne = globals::cell[cellnumber].nne;
-  nnion = get_groundlevelpop(cellnumber,element,ion+1);
-  E_threshold = epsilon(element,ion+1,0) - epsilon(element,ion,level);
-  alpha_sp = interpolate_spontrecombcoeff(element,ion,level,T_e);
-  ///// This is ion-wise Alpha_st is the sum of the level-wise alpha_st, so it should be added only once if mulitple
-levels are present
-  //double Alpha_st = stimrecombestimator_save[cellnumber*get_nelements()*get_max_nions()+element*get_max_nions()+ion];
-
-  //return nnion*nne*(alpha_sp+Alpha_st)*E_threshold;
-  return nnion*nne*alpha_sp*E_threshold;
-}
-
-*/
-
-/*
-double get_thermalratio(int element, int ion, int level, int cellnumber)
-{
-  double T_e,alpha_sp,alpha_sp_E;
-
-  T_e = globals::cell[cellnumber].T_e;
-  alpha_sp = interpolate_spontrecombcoeff(element,ion,level,T_e);
-  alpha_sp_E = interpolate_spontrecombcoeff_E(element,ion,level,T_e);
-
-  return alpha_sp/alpha_sp_E;
-}*/
-
-/*
-
-double get_Gamma(int cellnumber, int element, int ion)
-///photoionization rate: paperII 3.5.2
-/// n_1 - occupation number of ground state
-{
-  int i,level;
-  const int nlevels = get_nlevels(element,ion);
-  double Gamma = 0.;
-
-  for (i = 0; i < nlevels; i++)
-  {
-    Gamma += get_levelpop(cellnumber,element,ion,level) * get_corrphotoioncoeff(element,ion,level,cellnumber);
-  }
-  Gamma /= get_levelpop(cellnumber,element,ion,0);
-
-  return Gamma;
-}
-
-
-double get_Gamma_phys(int cellnumber, int element, int ion)
-///photoionization rate: paperII 3.5.2
-/// n_1 - occupation number of ground state
-{
-  int i,level;
-  const int nlevels = get_nlevels(element,ion);
-  double Gamma = 0.;
-
-  //for (i = 0; i < nlevels; i++)
-  for (i = 0; i < TAKE_N_BFCONTINUA; i++)
-  {
-    Gamma += get_corrphotoioncoeff_ana(element,ion,level,cellnumber);
-  }
-
-  return Gamma;
-}
-
-*/
-#endif
 
 /*static int get_cell(double x, double y, double z, double t)
 /// subroutine to identify the cell index from a position and a time.

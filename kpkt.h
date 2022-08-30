@@ -3,6 +3,7 @@
 
 #include "sn3d.h"
 #include "thermalbalance.h"
+#include "cuda.h"
 
 namespace kpkt {
 

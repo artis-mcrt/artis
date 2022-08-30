@@ -1,17 +1,25 @@
 #include "update_packets.h"
 
-#include <algorithm>
+#include <__algorithm/sort.h>  // for sort
+#include <stdlib.h>            // for abort
+#include <time.h>              // for time, NULL, time_t
 
-#include "decay.h"
-#include "gammapkt.h"
-#include "grid.h"
-#include "kpkt.h"
-#include "nonthermal.h"
-#include "packet.h"
-#include "rpkt.h"
-#include "sn3d.h"
-#include "stats.h"
-#include "update_grid.h"
+#include "artisoptions.h"  // for INSTANT_PARTICLE_DEPOSITION
+#include "constants.h"     // for H, MEV
+#include "decay.h"         // for DECAYTYPE_ALPHA, DECAYTYPE_BETAMINUS
+#include "gammapkt.h"      // for do_gamma, pellet_gamma_decay
+#include "globals.h"       // for time, time_step, cellhistory, npkts, tmin
+#include "grid.h"          // for get_cell_modelgridindex, get_rho, get_...
+#include "gsl/gsl_rng.h"   // for gsl_rng_uniform
+#include "kpkt.h"          // for do_kpkt, do_kpkt_bb
+#include "macroatom.h"     // for do_macroatom
+#include "nonthermal.h"    // for do_ntlepton
+#include "packet.h"        // for packet, TYPE_ESCAPE, TYPE_NONTHERMAL_P...
+#include "rpkt.h"          // for do_rpkt
+#include "sn3d.h"          // for safeadd, printout, assert_always, rng
+#include "stats.h"         // for get_counter, increment, COUNTER_UPDATE...
+#include "update_grid.h"   // for cellhistory_reset
+#include "vectors.h"       // for vec_scale
 
 static void do_nonthermal_predeposit(struct packet *pkt_ptr, const int nts, const double t2) {
   const double ts = pkt_ptr->prop_time;

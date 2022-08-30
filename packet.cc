@@ -1,11 +1,18 @@
 #include "packet.h"
 
+#include <stdlib.h>
+
+#include <cmath>
+#include <cstdio>
 #include <fstream>
 #include <sstream>
-#include <string>
 
+#include "artisoptions.h"
+#include "constants.h"
 #include "decay.h"
+#include "globals.h"
 #include "grid.h"
+#include "gsl/gsl_rng.h"
 #include "input.h"
 #include "sn3d.h"
 #include "vectors.h"

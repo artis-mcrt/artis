@@ -1,8 +1,10 @@
 #include "ratecoeff.h"
 
 #include <gsl/gsl_integration.h>
-
+#include <stdlib.h>
 #include <cstring>
+#include <cmath>
+
 // #define  _XOPEN_SOURCE
 #define D_POSIX_SOURCE
 #include <cstdio>
@@ -10,12 +12,16 @@
 #include "artisoptions.h"
 #include "atomic.h"
 #include "grid.h"
-#include "input.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "md5.h"
 #include "radfield.h"
 #include "sn3d.h"
+#include "constants.h"
+#include "globals.h"
+#include "gsl/gsl_errno.h"
+#include "gsl/gsl_math.h"
+#include "gsl/gsl_rng.h"
 
 // typedef struct gslintegration_ffheatingparas
 // {

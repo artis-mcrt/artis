@@ -1,5 +1,8 @@
 #include "emissivities.h"
 
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <cstring>
 
 #include "atomic.h"
@@ -10,6 +13,10 @@
 #include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"
+#include "artisoptions.h"
+#include "constants.h"
+#include "globals.h"
+#include "packet.h"
 
 void compton_emiss_cont(const struct packet *pkt_ptr, double dist) {
   // Subroutine to add contribution to the MC estimator for the

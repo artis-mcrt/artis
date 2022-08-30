@@ -1,25 +1,30 @@
 #include "nonthermal.h"
 
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_linalg.h>
-#include <gsl/gsl_matrix_double.h>
-#include <gsl/gsl_roots.h>
-#include <gsl/gsl_vector_double.h>
+#include <__algorithm/max.h>        // for max
+#include <__algorithm/min.h>        // for min
+#include <gsl/gsl_blas.h>           // for gsl_blas_dasum, gsl_blas_ddot
+#include <gsl/gsl_linalg.h>         // for gsl_linalg_LU_refine, gsl_linalg_...
+#include <gsl/gsl_matrix_double.h>  // for gsl_matrix_ptr, gsl_matrix, gsl_m...
+#include <gsl/gsl_vector_double.h>  // for gsl_vector_get, gsl_vector_free
+#include <stdlib.h>                 // for abort, free, calloc, malloc, qsort
 
-#include <algorithm>
-#include <cmath>
+#include <cmath>  // for pow, isfinite, fabs, log, atan, ceil
 
-#include "atomic.h"
-#include "decay.h"
-#include "grid.h"
-#include "gsl_managed.h"
-#include "kpkt.h"
-#include "ltepop.h"
-#include "macroatom.h"
-#include "sn3d.h"
-#include "stats.h"
-#include "update_grid.h"
+#include "artisoptions.h"         // for NT_MAX_AUGER_ELECTRONS, SFPTS
+#include "atomic.h"               // for get_ionstage, get_element, get_nions
+#include "constants.h"            // for EV, PI, QE, H_ionpot, ME, FOURPI, H
+#include "decay.h"                // for get_particle_injection_rate, DECA...
+#include "globals.h"              // for linelist_entry, linelist, element...
+#include "grid.h"                 // for get_npts_model, get_numassociated...
+#include "gsl/gsl_cblas.h"        // for CblasNoTrans
+#include "gsl/gsl_permutation.h"  // for gsl_permutation_calloc, gsl_permu...
+#include "gsl/gsl_rng.h"          // for gsl_rng_uniform
+#include "gsl_managed.h"          // for gsl_vector_get_managed
+#include "ltepop.h"               // for ionstagepop, get_levelpop
+#include "macroatom.h"            // for mastate, col_excitation_ratecoeff
+#include "packet.h"               // for packet, TYPE_MA, TYPE_KPKT
+#include "sn3d.h"                 // for printout, assert_always, fopen_re...
+#include "stats.h"                // for increment, COUNTER_MA_STAT_ACTIVA...
 
 namespace nonthermal {
 

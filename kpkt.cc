@@ -1,6 +1,7 @@
 #include "kpkt.h"
 
-#include <gsl/gsl_integration.h>
+#include <stdlib.h>
+#include <cmath>
 
 #include "atomic.h"
 #include "grid.h"
@@ -11,7 +12,12 @@
 #include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"
-#include "vpkt.h"
+#include "artisoptions.h"
+#include "constants.h"
+#include "globals.h"
+#include "gsl/gsl_rng.h"
+#include "packet.h"
+#include "thermalbalance.h"
 
 namespace kpkt {
 

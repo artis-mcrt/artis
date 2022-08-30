@@ -1,6 +1,7 @@
 #include "vpkt.h"
 
-#include <cstring>
+#include <stdlib.h>
+#include <cmath>
 
 #include "atomic.h"
 #include "boundary.h"
@@ -10,6 +11,8 @@
 #include "sn3d.h"
 #include "update_grid.h"
 #include "vectors.h"
+#include "globals.h"
+#include "packet.h"
 
 struct vspecpol {
   double flux[VMNUBINS];

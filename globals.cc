@@ -1,6 +1,6 @@
 #include "globals.h"
 
-#include "sn3d.h"
+#include <stddef.h>
 #ifdef MPI_ON
 #include "mpi.h"
 #endif
@@ -16,7 +16,7 @@ __managed__ double syn_dir[3];  // vector pointing from origin to observer
 //#define NRAYS_SYN 1 // number of rays traced in a syn calculation
 
 // RAY rays[NRAYS_SYN];
-__managed__ struct time *time_step = NULL;
+__managed__ struct timestep *time_step = NULL;
 
 __managed__ int nsyn_time;
 __managed__ double time_syn[MSYN_TIME];

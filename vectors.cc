@@ -1,9 +1,11 @@
 #include "vectors.h"
 
-#include <gsl/gsl_randist.h>
+#include <cmath>
 
 #include "artisoptions.h"
 #include "sn3d.h"
+#include "constants.h"
+#include "gsl/gsl_rng.h"
 
 extern __host__ __device__ inline double vec_len(const double x[3]);
 extern __host__ __device__ inline void vec_norm(const double vec_in[3], double vec_out[3]);

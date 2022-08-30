@@ -15,7 +15,7 @@
 #include "boundary.h"
 #include "macroatom.h"
 
-struct time {
+struct timestep {
   double start;                   // time at start of this timestep. [s]
   double width;                   // Width of timestep. [s]
   double mid;                     // Mid time in step - computed logarithmically. [s]
@@ -211,7 +211,7 @@ extern __managed__ curandState curandstates[MCUDATHREADS];
 
 extern __managed__ double syn_dir[3];  // vector pointing from origin to observer
 
-extern __managed__ struct time *time_step;
+extern __managed__ struct timestep *time_step;
 
 #define MSYN_TIME 100
 extern __managed__ int nsyn_time;

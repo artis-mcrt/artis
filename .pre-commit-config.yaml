@@ -27,25 +27,25 @@ repos:
       rev: v1.3.5
       hooks:
           - id: clang-format
-  # - id: clang-tidy
-  # - id: oclint
-  # - id: uncrustify
-  # - id: cppcheck
-  #   args:
-  #     [
-  #       "--force",
-  #       "--language=c++",
-  #       "--std=c++17",
-  #       "--suppress=missingIncludeSystem",
-  #     ]
-  # - id: cpplint
-  #   args:
-  #     [
-  #       "--linelength=120",
-  #       "--filter=-legal/copyright,-readability/casting,-whitespace/braces,-readability/todo",
-  #     ]
-  # - id: include-what-you-use
-  #   args: ["--cxx17ns", "--update_comments"]
+    # - id: clang-tidy
+    # - id: oclint
+    # - id: uncrustify
+    # - id: cppcheck
+    #   args:
+    #     [
+    #       "--force",
+    #       "--language=c++",
+    #       "--std=c++17",
+    #       "--suppress=missingIncludeSystem",
+    #     ]
+    # - id: cpplint
+    #   args:
+    #     [
+    #       "--linelength=120",
+    #       "--filter=-legal/copyright,-readability/casting,-whitespace/braces,-readability/todo",
+    #     ]
+    # - id: include-what-you-use
+    #   args: ["-Xiwyu", "--cxx17ns", "-Xiwyu", "--max_line_length=120", "-Xiwyu", "--update_comments"]
 
     - repo: https://github.com/jumanjihouse/pre-commit-hook-yamlfmt
       rev: 0.2.2 # or other specific tag

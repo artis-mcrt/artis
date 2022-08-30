@@ -1,9 +1,9 @@
 #ifndef NONTHERMAL_H
 #define NONTHERMAL_H
 
-#include <cstdio>
+#include <cstdio>  // for FILE
 
-#include "cuda.h"
+#include "cuda.h"  // for __device__, __host__
 #include "packet.h"
 
 namespace nonthermal {

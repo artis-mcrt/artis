@@ -5,6 +5,7 @@
 
 #include "artisoptions.h"
 #include "cuda.h"
+#include "constants.h"
 
 double rot_angle(double *n1, double *n2, double *ref1, double *ref2);
 void meridian(const double *n, double *ref1, double *ref2);

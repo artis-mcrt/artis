@@ -1,8 +1,13 @@
 #include "light_curve.h"
 
-#include "exspec.h"
+#include <math.h>
+#include <cstdio>
+
 #include "sn3d.h"
 #include "vectors.h"
+#include "constants.h"
+#include "globals.h"
+#include "packet.h"
 
 // Routine to make a MC light curve from the r-packets.
 

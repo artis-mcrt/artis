@@ -1,6 +1,7 @@
 #include "gsl_managed.h"
 
-#include "sn3d.h"
+#include "gsl/gsl_matrix_double.h"
+#include "gsl/gsl_vector_double.h"
 
 // these functions modify their GSL implementations for CUDA compatability
 // memory is allocated in managed memory instead of host memory

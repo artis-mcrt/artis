@@ -1,19 +1,24 @@
 #include "gammapkt.h"
 
-#include <cstring>
+#include <_ctype.h>
+#include <math.h>
+#include <stdlib.h>
 #include <fstream>
+#include <cstdio>
 
 #include "boundary.h"
 #include "decay.h"
 #include "emissivities.h"
 #include "grey_emissivities.h"
 #include "grid.h"
-#include "nonthermal.h"
 #include "packet.h"
 #include "photo_electric.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"
+#include "constants.h"
+#include "globals.h"
+#include "gsl/gsl_rng.h"
 
 namespace gammapkt {
 // Code for handing gamma rays - creation and propagation
@@ -662,9 +667,6 @@ void do_gamma(struct packet *pkt_ptr, double t2)
       // Photo electric effect - makes it a k-packet for sure.
       pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -4;
-#ifndef FORCE_LTE
-      // kgammadep[pkt_ptr->where] += pkt_ptr->e_cmf;
-#endif
       // pkt_ptr->type = TYPE_PRE_KPKT;
       // pkt_ptr->type = TYPE_GAMMA_KPKT;
       // if (tid == 0) nt_stat_from_gamma++;
