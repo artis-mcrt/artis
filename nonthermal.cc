@@ -1,13 +1,14 @@
 #include "nonthermal.h"
 
+#include <__algorithm/max.h>        // for max
+#include <__algorithm/min.h>        // for min
 #include <gsl/gsl_blas.h>           // for gsl_blas_dasum, gsl_blas_ddot
 #include <gsl/gsl_linalg.h>         // for gsl_linalg_LU_refine, gsl_linalg_...
 #include <gsl/gsl_matrix_double.h>  // for gsl_matrix_ptr, gsl_matrix, gsl_m...
 #include <gsl/gsl_vector_double.h>  // for gsl_vector_get, gsl_vector_free
 #include <stdlib.h>                 // for abort, free, calloc, malloc, qsort
 
-#include <algorithm>  // for min, max
-#include <cmath>      // for pow, isfinite, fabs, log, atan, ceil
+#include <cmath>  // for pow, isfinite, fabs, log, atan, ceil
 
 #include "artisoptions.h"         // for NT_MAX_AUGER_ELECTRONS, SFPTS
 #include "atomic.h"               // for get_ionstage, get_element, get_nions
