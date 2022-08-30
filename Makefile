@@ -144,52 +144,52 @@ CUDA_NVCC_FLAGS += -ccbin=$(CXX) -std=c++17 -O3 -use_fast_math -Xcompiler "$(CXX
 ### use pg when you want to use gprof profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)
 
-# sn3d.cc and exspec.cc have main() defined
-common_files := $(filter-out sn3d.cc exspec.cc, $(wildcard *.cc))
+# sn3d.cpp and exspec.cpp have main() defined
+common_files := $(filter-out sn3d.cpp exspec.cpp, $(wildcard *.cpp))
 
-sn3d_files = sn3d.cc $(common_files)
-sn3d_objects = $(addprefix $(BUILD_DIR)/,$(sn3d_files:.cc=.o))
+sn3d_files = sn3d.cpp $(common_files)
+sn3d_objects = $(addprefix $(BUILD_DIR)/,$(sn3d_files:.cpp=.o))
 sn3d_dep = $(sn3d_objects:%.o=%.d)
 
-exspec_files = exspec.cc $(common_files)
-exspec_objects = $(addprefix $(BUILD_DIR)/,$(exspec_files:.cc=.o))
+exspec_files = exspec.cpp $(common_files)
+exspec_objects = $(addprefix $(BUILD_DIR)/,$(exspec_files:.cpp=.o))
 exspec_dep = $(exspec_objects:%.o=%.d)
 
 all: sn3d exspec
 
-sn3d: version.h artisoptions.h $(sn3d_objects) Makefile
+sn3d: version.hpp artisoptions.hpp $(sn3d_objects) Makefile
 	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
 #	$(LINK.cpp) $(filter %.o,$^) -o $@
 -include $(sn3d_dep)
 
-sn3dwhole: version.h
+sn3dwhole: version.hpp
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
 
-sn3dcudawhole: version.h
+sn3dcudawhole: version.hpp
 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_files) -o sn3dcuda
 
-sn3dcuda: version.h $(sn3d_objects)
+sn3dcuda: version.hpp $(sn3d_objects)
 	nvcc --gpu-architecture=sm_70 --device-link $(sn3d_objects) --output-file gpucode.o
 	$(CXX) $(CXXFLAGS) gpucode.o $(INCLUDE) -lcudadevrt $(LDFLAGS) $(sn3d_objects) -o sn3dcuda
 
-# %.o: %.cc
+# %.o: %.cpp
 # 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c
 
-$(BUILD_DIR)/%.o: %.cc Makefile artisoptions.h
+$(BUILD_DIR)/%.o: %.cpp Makefile artisoptions.hpp
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -MD -MP -c $< -o $@
 
-exspec: version.h artisoptions.h $(exspec_objects) Makefile
+exspec: version.hpp artisoptions.hpp $(exspec_objects) Makefile
 	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec
 -include $(exspec_dep)
 
-.PHONY: clean version.h TESTMODE TESTMODEON
+.PHONY: clean version.hpp TESTMODE TESTMODEON
 
-version.h:
-	@echo "#define GIT_VERSION \"$(GIT_VERSION)\"" > version.h
-	@echo "#define GIT_HASH \"$(GIT_HASH)\"" >> version.h
-	@echo "#define GIT_BRANCH \"$(GIT_BRANCH)\"" >> version.h
+version.hpp:
+	@echo "#define GIT_VERSION \"$(GIT_VERSION)\"" > version.hpp
+	@echo "#define GIT_HASH \"$(GIT_HASH)\"" >> version.hpp
+	@echo "#define GIT_BRANCH \"$(GIT_BRANCH)\"" >> version.hpp
 
 clean:
-	rm -rf sn3d exspec build version.h
+	rm -rf sn3d exspec build version.hpp
 
