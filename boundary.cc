@@ -168,7 +168,7 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, const do
     for (int flip = 0; flip < 2; flip++) {
       enum cell_boundary direction = flip ? posdirections[d] : negdirections[d];
       enum cell_boundary invdirection = !flip ? posdirections[d] : negdirections[d];
-      const int cellindexdiff = flip ? -grid::get_coordcellindexincrement(d) : grid::get_coordcellindexincrement(d);
+      const int cellindexstride = flip ? -grid::get_coordcellindexincrement(d) : grid::get_coordcellindexincrement(d);
 
       bool isoutside_thisside;
       if (flip) {
@@ -201,13 +201,13 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, const do
 
         printout("[warning] dir [%g, %g, %g]\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
         if ((vel[d] - (initpos[d] / tstart)) > 0) {
-          if ((grid::get_cellcoordpointnum(cellindex, d) == (grid::ncoordgrid[d] - 1) && cellindexdiff > 0) ||
-              (grid::get_cellcoordpointnum(cellindex, d) == 0 && cellindexdiff < 0)) {
+          if ((grid::get_cellcoordpointnum(cellindex, d) == (grid::ncoordgrid[d] - 1) && cellindexstride > 0) ||
+              (grid::get_cellcoordpointnum(cellindex, d) == 0 && cellindexstride < 0)) {
             printout("escaping packet\n");
             *snext = -99;
             return 0;
           } else {
-            *snext = pkt_ptr->where + cellindexdiff;
+            *snext = pkt_ptr->where + cellindexstride;
             pkt_ptr->last_cross = invdirection;
             printout("swapping packet cellindex from %d to %d and setting last_cross to %d\n", pkt_ptr->where, *snext,
                      pkt_ptr->last_cross);
