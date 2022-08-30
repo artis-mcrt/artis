@@ -5,10 +5,10 @@
 #include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_vector_double.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include <cmath>
 #include <cstdio>
-#include <ctime>
 
 #include "artisoptions.h"
 #include "atomic.h"

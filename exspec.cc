@@ -14,10 +14,10 @@
 
 #include <stdlib.h>
 #include <sys/unistd.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <cstdio>
-#include <ctime>
 
 #include "constants.h"
 #include "decay.h"

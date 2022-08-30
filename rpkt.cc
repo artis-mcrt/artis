@@ -1,9 +1,9 @@
 #include "rpkt.h"
 
 #include <stdlib.h>
+#include <time.h>
 
 #include <cmath>
-#include <ctime>
 
 #include "artisoptions.h"
 #include "atomic.h"

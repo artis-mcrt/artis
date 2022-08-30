@@ -2,11 +2,11 @@
 
 #include <gsl/gsl_spline.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <sstream>
