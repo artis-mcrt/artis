@@ -3,13 +3,13 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "artisoptions.h"
 #include "atomic.h"
-#include "constants.h"
 #include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
 #include "nonthermal.h"
+#include "artisoptions.h"
+#include "constants.h"
 #include "packet.h"
 #include "sn3d.h"
 

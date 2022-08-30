@@ -6,24 +6,23 @@
 #include <gsl/gsl_vector_double.h>
 #include <stdlib.h>
 #include <time.h>
-
-#include <cmath>
 #include <cstdio>
+#include <cmath>
 
-#include "artisoptions.h"
 #include "atomic.h"
-#include "constants.h"
-#include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_cblas.h"
-#include "gsl/gsl_errno.h"
-#include "gsl/gsl_permutation.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"
 #include "ratecoeff.h"
 #include "sn3d.h"
 #include "update_grid.h"
+#include "artisoptions.h"
+#include "constants.h"
+#include "globals.h"
+#include "gsl/gsl_cblas.h"
+#include "gsl/gsl_errno.h"
+#include "gsl/gsl_permutation.h"
 
 static FILE *nlte_file = NULL;
 

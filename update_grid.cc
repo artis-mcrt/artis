@@ -2,17 +2,11 @@
 
 #include <gsl/gsl_roots.h>
 #include <stdlib.h>
-
 #include <cmath>
 
-#include "artisoptions.h"
 #include "atomic.h"
-#include "constants.h"
 #include "decay.h"
-#include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_errno.h"
-#include "gsl/gsl_math.h"
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
@@ -23,6 +17,11 @@
 #include "sn3d.h"
 #include "stats.h"
 #include "thermalbalance.h"
+#include "artisoptions.h"
+#include "constants.h"
+#include "globals.h"
+#include "gsl/gsl_errno.h"
+#include "gsl/gsl_math.h"
 
 void precalculate_partfuncts(int modelgridindex)
 /// The partition functions depend only on T_R and W. This means they don't

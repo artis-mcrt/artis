@@ -3,21 +3,20 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-
 #include <cstring>
 
-#include "artisoptions.h"
 #include "atomic.h"
-#include "constants.h"
 #include "gammapkt.h"
-#include "globals.h"
 #include "grid.h"
-#include "packet.h"
 #include "photo_electric.h"
 #include "radfield.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"
+#include "artisoptions.h"
+#include "constants.h"
+#include "globals.h"
+#include "packet.h"
 
 void compton_emiss_cont(const struct packet *pkt_ptr, double dist) {
   // Subroutine to add contribution to the MC estimator for the

@@ -3,16 +3,15 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-
 #include <cstring>
 
-#include "constants.h"
-#include "globals.h"
 #include "grid.h"
-#include "packet.h"
 #include "photo_electric.h"
 #include "sn3d.h"
 #include "vectors.h"
+#include "constants.h"
+#include "globals.h"
+#include "packet.h"
 
 static double meanf_sigma(const double x)
 // Routine to compute the mean energy converted to non-thermal electrons times

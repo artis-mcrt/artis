@@ -2,18 +2,17 @@
 
 #include <math.h>
 #include <stdlib.h>
-
 #include <ctime>
 
-#include "artisoptions.h"
 #include "atomic.h"
-#include "constants.h"
 #include "exspec.h"
-#include "globals.h"
 #include "light_curve.h"
-#include "packet.h"
 #include "sn3d.h"
 #include "vectors.h"
+#include "artisoptions.h"
+#include "constants.h"
+#include "globals.h"
+#include "packet.h"
 
 bool TRACE_EMISSION_ABSORPTION_REGION_ON = false;
 

@@ -4,11 +4,11 @@
 #include <stdlib.h>
 
 #include "artisoptions.h"
-#include "constants.h"
-#include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
 #include "sn3d.h"
+#include "constants.h"
+#include "globals.h"
 
 __managed__ double last_phixs_nuovernuedge =
     -1;                            // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge

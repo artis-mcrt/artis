@@ -62,8 +62,8 @@
 #define safeincrement(var) safeadd(var, 1)
 
 #include <gsl/gsl_integration.h>
-#include <math.h>
 #include <stdarg.h>  /// MK: needed for printout()
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 

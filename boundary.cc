@@ -3,14 +3,14 @@
 
 #include <math.h>
 
-#include "constants.h"
-#include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_cblas.h"
-#include "packet.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"
+#include "constants.h"
+#include "globals.h"
+#include "gsl/gsl_cblas.h"
+#include "packet.h"
 
 __host__ __device__ static double get_shellcrossdist(const double pos[3], const double dir[3], const double shellradius,
                                                      const bool isinnerboundary, const double tstart)
