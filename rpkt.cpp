@@ -1,27 +1,27 @@
-#include "rpkt.h"
+#include "rpkt.hpp"
 
 #include <stdlib.h>
 
 #include <cmath>
 #include <ctime>
 
-#include "artisoptions.h"
-#include "atomic.h"
-#include "boundary.h"
-#include "constants.h"
-#include "globals.h"
-#include "grey_emissivities.h"
-#include "grid.h"
+#include "artisoptions.hpp"
+#include "atomic.hpp"
+#include "boundary.hpp"
+#include "constants.hpp"
+#include "globals.hpp"
+#include "grey_emissivities.hpp"
+#include "grid.hpp"
 #include "gsl/gsl_rng.h"
-#include "ltepop.h"
-#include "macroatom.h"
-#include "packet.h"
-#include "polarization.h"
-#include "radfield.h"
-#include "sn3d.h"
-#include "stats.h"
-#include "update_grid.h"
-#include "vectors.h"
+#include "ltepop.hpp"
+#include "macroatom.hpp"
+#include "packet.hpp"
+#include "polarization.hpp"
+#include "radfield.hpp"
+#include "sn3d.hpp"
+#include "stats.hpp"
+#include "update_grid.hpp"
+#include "vectors.hpp"
 
 // Material for handing r-packet propagation.
 
