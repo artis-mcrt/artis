@@ -496,8 +496,9 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
   }
 }
 
-static void nltepop_matrix_add_ionisation(const int modelgridindex, const int element, const int ion, double *s_renorm,
-                                          gsl_matrix *rate_matrix_rad_bf, gsl_matrix *rate_matrix_coll_bf) {
+static void nltepop_matrix_add_ionisation(const int modelgridindex, const int element, const int ion,
+                                          const double *s_renorm, gsl_matrix *rate_matrix_rad_bf,
+                                          gsl_matrix *rate_matrix_coll_bf) {
   assert_always(ion + 1 < get_nions(element));  // can't ionise the top ion
   const float T_e = grid::get_Te(modelgridindex);
   const float nne = grid::get_nne(modelgridindex);
@@ -767,7 +768,7 @@ static bool nltepop_matrix_solve(const int element, const gsl_matrix *rate_matri
 
       if (gsl_vector_get(popvec, row) < 0.0) {
         printout(
-            "  WARNING: NLTE solver gave negative population to index %d (Z=%d ion_stage %d level %d), pop = %g. "
+            "  WARNING: NLTE solver gave negative population to index %ud (Z=%d ion_stage %d level %d), pop = %g. "
             "Replacing with LTE pop of %g\n",
             row, get_element(element), get_ionstage(element, ion), level,
             gsl_vector_get(x, row) * gsl_vector_get(pop_normfactor_vec, row), gsl_vector_get(pop_normfactor_vec, row));
@@ -1143,13 +1144,11 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
 
   //      if (get_groundlevelpop(modelgridindex,element,ion) > (1.2*MINPOP))
   if (grid::get_elem_abundance(modelgridindex, element) > 0.0) {
-    if ((rate_matrix = (double *)calloc((nlte_size * nlte_size), sizeof(double))) == NULL) {
-      printout("Cannot allocate NLTE rate matrix memory.\n");
-    }
+    rate_matrix = static_cast<double *>(calloc(nlte_size * nlte_size, sizeof(double)));
+    assert_always(rate_matrix != NULL);
 
-    if ((balance_vector = (double *)calloc(nlte_size, sizeof(double))) == NULL) {
-      printout("Cannot allocate NLTE vector memory.\n");
-    }
+    balance_vector = static_cast<double *>(calloc(nlte_size, sizeof(double)));
+    assert_always(balance_vector != NULL);
 
     // printf("rate %p balance %p NULL %p\n", rate_matrix, balance_vector, NULL);
     // printout("I think there are %d levels to deal with and managed to allocate memory.\n", nlte_size);
@@ -1207,14 +1206,14 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
         const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
         assert_always(std::isfinite(C));
 
-        int level_use = level;
+        int level_use;
         if ((level == 0) || is_nlte(element, ion, level)) {
           level_use = level;
         } else {
           level_use = nlevels_nlte + 1;
         }
 
-        int lower_use = lower;
+        int lower_use;
         if ((lower == 0) || (is_nlte(element, ion, lower))) {
           lower_use = lower;
         } else {
@@ -1241,7 +1240,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
         const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
         assert_always(std::isfinite(C));
 
-        int level_use = level;
+        int level_use;
         double s_renorm = 1.;
         if ((level == 0) || (is_nlte(element, ion, level))) {
           level_use = level;
@@ -1252,7 +1251,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
         }
         assert_always(std::isfinite(s_renorm));
 
-        int upper_use = upper;
+        int upper_use;
         if ((upper == 0) || (is_nlte(element, ion, upper))) {
           upper_use = upper;
         } else {
@@ -1268,7 +1267,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
       if (NT_ON && ion < get_nions(element) - 1) {
         const double Y = nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion);
 
-        int level_use = level;
+        int level_use;
         double s_renorm = 1.0;
         if ((level == 0) || (is_nlte(element, ion, level))) {
           level_use = level;
@@ -1289,7 +1288,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
       if ((ion < get_nions(element) - 1) && (level < ionisinglevels)) {
         double s_renorm = 1.;
 
-        int level_use = level;
+        int level_use;
         if ((level == 0) || (is_nlte(element, ion, level))) {
           level_use = level;
         } else {

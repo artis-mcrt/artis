@@ -1041,7 +1041,7 @@ __host__ __device__ static double get_chain_decay_power_per_ejectamass(const int
   const double t_afterinit = time - grid::get_t_model();
 
   int decaypathlength = get_decaypathlength(decaypathindex);
-  double meanlifetimes[decaypathlength];  // weighted by branchprob
+  double meanlifetimes[decaypathlength] = {-1};  // weighted by branchprob
   for (int i = 0; i < decaypathlength; i++) {
     meanlifetimes[i] = get_meanlife(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i]);
   }
@@ -1342,7 +1342,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
 
 void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt_ptr) {
   const int num_decaypaths = get_num_decaypaths();
-  double cumulative_endecay[num_decaypaths];
+  double cumulative_endecay[num_decaypaths] = {0};
   double endecaysum = 0.;
   for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
     endecaysum += get_simtime_endecay_per_ejectamass(mgi, decaypathindex);
