@@ -1,1 +1,0 @@
-artisoptions_lukekilonova_lte.hpp
