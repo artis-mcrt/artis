@@ -1,9 +1,5 @@
 #include "rpkt.h"
 
-#include <stdlib.h>
-#include <time.h>
-#include <cmath>
-
 #include "atomic.h"
 #include "boundary.h"
 #include "grey_emissivities.h"
@@ -17,11 +13,7 @@
 #include "stats.h"
 #include "update_grid.h"
 #include "vectors.h"
-#include "artisoptions.h"
-#include "constants.h"
-#include "globals.h"
-#include "gsl/gsl_rng.h"
-#include "packet.h"
+#include "vpkt.h"
 
 // Material for handing r-packet propagation.
 

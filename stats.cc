@@ -1,17 +1,10 @@
 #include "stats.h"
 
-#include <math.h>
-#include <stdlib.h>
-
 #include "atomic.h"
 #include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
 #include "nonthermal.h"
-#include "artisoptions.h"
-#include "constants.h"
-#include "packet.h"
-#include "sn3d.h"
 
 namespace stats {
 

@@ -13,9 +13,7 @@
 #include "exspec.h"
 
 #include <unistd.h>
-#include <stdlib.h>
-#include <sys/unistd.h>
-#include <time.h>
+
 #include <cstdio>
 
 #include "decay.h"
@@ -24,11 +22,6 @@
 #include "light_curve.h"
 #include "sn3d.h"
 #include "spectrum.h"
-#include "constants.h"
-#include "globals.h"
-#include "gsl/gsl_integration.h"
-#include "gsl/gsl_rng.h"
-#include "packet.h"
 
 const bool do_exspec = true;
 

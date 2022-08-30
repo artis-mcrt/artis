@@ -1,17 +1,9 @@
 #include "photo_electric.h"
 
-#include <math.h>
-#include <stdlib.h>
-
 #include "grid.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"
-#include "boundary.h"
-#include "constants.h"
-#include "globals.h"
-#include "gsl/gsl_rng.h"
-#include "packet.h"
 
 // Stuff for photo electric effect scattering.
 

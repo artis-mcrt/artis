@@ -2,11 +2,11 @@
 #define VECTORS_H
 
 #include <gsl/gsl_blas.h>
+
 #include <cmath>
 
 #include "cuda.h"
 #include "packet.h"
-#include "gsl/gsl_cblas.h"
 
 __host__ __device__ void angle_ab(const double dir1[3], const double vel[3], double dir2[3]);
 __host__ __device__ double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3]);

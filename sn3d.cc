@@ -14,9 +14,6 @@
 
 #include <getopt.h>
 #include <unistd.h>
-#include <sys/unistd.h>
-#include <time.h>
-#include <cstdio>
 
 #include "atomic.h"
 #include "decay.h"
@@ -35,9 +32,7 @@
 #include "update_grid.h"
 #include "update_packets.h"
 #include "version.h"
-#include "gsl/gsl_integration.h"
-#include "gsl/gsl_rng.h"
-#include "macroatom.h"
+#include "vpkt.h"
 
 const bool KEEP_ALL_RESTART_FILES =
     false;  // once a new gridsave and packets*.tmp have been written, don't delete the previous set

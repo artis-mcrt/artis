@@ -1,13 +1,12 @@
 #include "nltepop.h"
 
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_integration.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_vector_double.h>
-#include <stdlib.h>
-#include <time.h>
+
 #include <cstdio>
-#include <cmath>
 
 #include "atomic.h"
 #include "grid.h"
@@ -17,12 +16,6 @@
 #include "ratecoeff.h"
 #include "sn3d.h"
 #include "update_grid.h"
-#include "artisoptions.h"
-#include "constants.h"
-#include "globals.h"
-#include "gsl/gsl_cblas.h"
-#include "gsl/gsl_errno.h"
-#include "gsl/gsl_permutation.h"
 
 static FILE *nlte_file = NULL;
 

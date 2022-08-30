@@ -2,7 +2,6 @@
 
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_roots.h>
-#include <cmath>
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -15,10 +14,6 @@
 #include "ratecoeff.h"
 #include "sn3d.h"
 #include "update_grid.h"
-#include "constants.h"
-#include "globals.h"
-#include "gsl/gsl_errno.h"
-#include "gsl/gsl_math.h"
 
 struct Te_solution_paras {
   double t_current;

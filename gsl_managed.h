@@ -3,7 +3,6 @@
 
 #include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_vector_double.h>
-#include <stddef.h>
 
 #include "cuda.h"
 

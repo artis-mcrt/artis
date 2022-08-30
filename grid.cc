@@ -1,28 +1,21 @@
 #include "grid.h"
 
-#include <__algorithm/all_of.h>
-#include <__algorithm/max.h>
-#include <_ctype.h>
-#include <stdlib.h>
-#include <time.h>
-
-#include <cmath>
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
 
-#include "artisoptions.h"
 #include "atomic.h"
-#include "constants.h"
 #include "decay.h"
-#include "globals.h"
 #include "input.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "radfield.h"
+#include "rpkt.h"
 #include "sn3d.h"
 #include "vectors.h"
 

@@ -1,15 +1,7 @@
 #include "polarization.h"
 
-#include <math.h>
-#include <stdlib.h>
-
 #include "sn3d.h"
 #include "vpkt.h"
-#include "boundary.h"
-#include "constants.h"
-#include "gsl/gsl_rng.h"
-#include "packet.h"
-#include "vectors.h"
 
 void escat_rpkt(struct packet *pkt_ptr) {
   /// now make the packet a r-pkt and set further flags

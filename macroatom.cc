@@ -1,8 +1,6 @@
 #include "macroatom.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <cmath>
+#include <gsl/gsl_integration.h>
 
 #include "artisoptions.h"
 #include "globals.h"
@@ -14,11 +12,7 @@
 #include "rpkt.h"
 #include "sn3d.h"
 #include "stats.h"
-#include "atomic.h"
-#include "constants.h"
-#include "gsl/gsl_rng.h"
-#include "packet.h"
-#include "vectors.h"
+#include "vpkt.h"
 
 // constant for van-Regemorter approximation.
 #define C_0 (5.465e-11)
@@ -339,6 +333,12 @@ __host__ __device__ static void do_macroatom_radrecomb(struct packet *pkt_ptr, c
   *level = lower;
 
   pkt_ptr->nu_cmf = select_continuum_nu(element, upperion - 1, lower, upperionlevel, T_e);
+
+#ifndef FORCE_LTE
+  // mabfcount[pkt_ptr->where] += pkt_ptr->e_cmf;
+  // mabfcount_thermal[pkt_ptr->where] += pkt_ptr->e_cmf*(1-nu_threshold/pkt_ptr->nu_cmf);
+  // matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
+#endif
 
   // printout("%s: From Z=%d ionstage %d, recombining to ionstage %d level %d\n",
   //          __func__, get_element(element), get_ionstage(element, *ion + 1), get_ionstage(element, *ion), lower);
@@ -719,6 +719,11 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
         // printout("[debug] do_ma:   radiative recombination\n");
         // printout("[debug] do_ma:   jumps = %d\n", jumps);
         // printout("[debug] do_ma:   element %d, ion %d, level %d\n", element, ion, level);
+
+#if (TRACK_ION_STATS)
+// stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADRECOMB, pkt_ptr->e_cmf);
+// stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
+#endif
 
         do_macroatom_radrecomb(pkt_ptr, modelgridindex, element, &ion, &level, processrates[MA_ACTION_RADRECOMB]);
         end_packet = true;

@@ -1,17 +1,13 @@
 #include "ltepop.h"
 
-#include <stdlib.h>
-#include <cmath>
-
 #include "atomic.h"
 #include "grid.h"
+#include "macroatom.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "ratecoeff.h"
 #include "sn3d.h"
-#include "artisoptions.h"
-#include "constants.h"
-#include "globals.h"
+#include "update_grid.h"
 
 // default option if not specified
 #ifndef LTEPOP_EXCITATIONTEMPERATURE

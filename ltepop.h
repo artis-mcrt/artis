@@ -3,7 +3,6 @@
 
 #include "atomic.h"
 #include "sn3d.h"
-#include "cuda.h"
 
 double nne_solution_f(double x, void *paras);
 void get_ionfractions(int element, int modelgridindex, double nne, double ionfractions[], int uppermost_ion);

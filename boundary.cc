@@ -1,16 +1,15 @@
 // #include <gsl/gsl_poly.h>
+#ifndef __CUDA_ARCH__
+#include <gsl/gsl_blas.h>
+#endif
+
 #include "boundary.h"
-
-#include <math.h>
-
 #include "grid.h"
+#include "rpkt.h"
 #include "sn3d.h"
 #include "stats.h"
+#include "update_packets.h"
 #include "vectors.h"
-#include "constants.h"
-#include "globals.h"
-#include "gsl/gsl_cblas.h"
-#include "packet.h"
 
 __host__ __device__ static double get_shellcrossdist(const double pos[3], const double dir[3], const double shellradius,
                                                      const bool isinnerboundary, const double tstart)
@@ -185,7 +184,7 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, const do
         {
           printout(
               "[warning] packet %d outside coord %d %c%c boundary of cell %d. pkttype %d initpos(tmin) %g, vel %g, "
-              "cellcoordmin %g, cellcoordmax %g\n",
+              "cellcoordmin %g, cellcoordmax %g. Abort?\n",
               pkt_ptr->number, d, flip ? '-' : '+', grid::coordlabel[d], cellindex, pkt_ptr->type, initpos[d2], vel[d2],
               grid::get_cellcoordmin(cellindex, d2) / globals::tmin * tstart,
               cellcoordmax[d2] / globals::tmin * tstart);
@@ -201,23 +200,23 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, const do
         }
 
         printout("[warning] dir [%g, %g, %g]\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
-        // if ((vel[d] - (initpos[d] / tstart)) > 0) {
-        if ((grid::get_cellcoordpointnum(cellindex, d) == (grid::ncoordgrid[d] - 1) && cellindexstride > 0) ||
-            (grid::get_cellcoordpointnum(cellindex, d) == 0 && cellindexstride < 0)) {
-          printout("escaping packet\n");
-          *snext = -99;
-          return 0;
+        if ((vel[d] - (initpos[d] / tstart)) > 0) {
+          if ((grid::get_cellcoordpointnum(cellindex, d) == (grid::ncoordgrid[d] - 1) && cellindexstride > 0) ||
+              (grid::get_cellcoordpointnum(cellindex, d) == 0 && cellindexstride < 0)) {
+            printout("escaping packet\n");
+            *snext = -99;
+            return 0;
+          } else {
+            *snext = pkt_ptr->where + cellindexstride;
+            pkt_ptr->last_cross = invdirection;
+            printout("swapping packet cellindex from %d to %d and setting last_cross to %d\n", pkt_ptr->where, *snext,
+                     pkt_ptr->last_cross);
+            return 0;
+          }
         } else {
-          *snext = pkt_ptr->where + cellindexstride;
-          pkt_ptr->last_cross = invdirection;
-          printout("swapping packet cellindex from %d to %d and setting last_cross to %d\n", pkt_ptr->where, *snext,
-                   pkt_ptr->last_cross);
-          return 0;
+          printout("pretending last_cross is %d\n", direction);
+          last_cross = direction;
         }
-        // } else {
-        //   printout("pretending last_cross is %d\n", direction);
-        //   last_cross = direction;
-        // }
       }
     }
   }

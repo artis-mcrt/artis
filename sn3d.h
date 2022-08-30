@@ -4,8 +4,6 @@
 #include <cassert>
 
 #include "artisoptions.h"
-#include "constants.h"
-#include "packet.h"
 
 #ifndef __CUDA_ARCH__
 // host code
@@ -63,9 +61,6 @@
 
 #include <gsl/gsl_integration.h>
 #include <stdarg.h>  /// MK: needed for printout()
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "cuda.h"
 
@@ -101,7 +96,6 @@ extern __managed__ bool neutral_flag;
 #ifndef __CUDA_ARCH__
 
 #include <gsl/gsl_rng.h>
-
 extern gsl_rng *rng;  // pointer for random number generator
 #else
 extern __device__ void *rng;
