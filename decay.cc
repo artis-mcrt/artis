@@ -1083,7 +1083,8 @@ void setup_decaypath_energy_per_mass(void) {
                           &win_decaypath_energy_per_mass);
   MPI_Win_shared_query(win_decaypath_energy_per_mass, MPI_PROC_NULL, &size, &disp_unit, &decaypath_energy_per_mass);
 #else
-  decaypath_energy_per_mass = (double *)malloc((grid::get_npts_model() + 1) * get_num_decaypaths() * sizeof(double));
+  decaypath_energy_per_mass =
+      static_cast<double *>(malloc((grid::get_npts_model() + 1) * get_num_decaypaths() * sizeof(double)));
 #endif
   printout("done.\n");
 

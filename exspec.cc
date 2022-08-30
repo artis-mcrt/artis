@@ -135,10 +135,10 @@ int main(int argc, char **argv) {
   // a is the escape direction angle bin
   for (int a = -1; a < amax; a++) {
     /// Set up the light curve grid and initialise the bins to zero.
-    double *rpkt_light_curve_lum = (double *)calloc(globals::ntstep, sizeof(double));
-    double *rpkt_light_curve_lumcmf = (double *)calloc(globals::ntstep, sizeof(double));
-    double *gamma_light_curve_lum = (double *)calloc(globals::ntstep, sizeof(double));
-    double *gamma_light_curve_lumcmf = (double *)calloc(globals::ntstep, sizeof(double));
+    double *rpkt_light_curve_lum = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
+    double *rpkt_light_curve_lumcmf = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
+    double *gamma_light_curve_lum = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
+    double *gamma_light_curve_lumcmf = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
     /// Set up the spectrum grid and initialise the bins to zero.
 
     init_spectra(rpkt_spectra, globals::nu_min_r, globals::nu_max_r, globals::do_emission_res);
