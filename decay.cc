@@ -10,11 +10,16 @@
 #include <string>
 #include <vector>
 
+#include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
 #include "gammapkt.h"
+#include "globals.h"
 #include "grid.h"
+#include "gsl/gsl_rng.h"
 #include "input.h"
 #include "nonthermal.h"
+#include "packet.h"
 #include "sn3d.h"
 
 namespace decay {
