@@ -1,9 +1,8 @@
 #include "gammapkt.h"
 
-#include <_ctype.h>
-#include <math.h>
-#include <stdlib.h>
+#include <ctype.h>
 
+#include <cmath>
 #include <cstdio>
 #include <fstream>
 
