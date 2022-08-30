@@ -1,11 +1,10 @@
 #include "grid.h"
 
-#include <__algorithm/all_of.h>
-#include <__algorithm/max.h>
 #include <_ctype.h>
 #include <stdlib.h>
 #include <time.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstring>

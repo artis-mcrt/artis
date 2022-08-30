@@ -1,10 +1,10 @@
 #include "input.h"
 
-#include <__algorithm/min.h>
 #include <gsl/gsl_spline.h>
 #include <stdlib.h>
 #include <time.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <fstream>
