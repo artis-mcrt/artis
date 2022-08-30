@@ -14,10 +14,10 @@
 
 #include <getopt.h>
 #include <sys/unistd.h>
-#include <time.h>
 #include <unistd.h>
 
 #include <cstdio>
+#include <ctime>
 
 #include "atomic.h"
 #include "decay.h"

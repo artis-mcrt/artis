@@ -1,9 +1,9 @@
 #include "update_packets.h"
 
 #include <stdlib.h>  // for abort
-#include <time.h>    // for time, NULL, time_t
 
 #include <algorithm>  // for sort
+#include <ctime>      // for time, NULL, time_t
 
 #include "artisoptions.h"  // for INSTANT_PARTICLE_DEPOSITION
 #include "constants.h"     // for H, MEV

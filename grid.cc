@@ -1,13 +1,10 @@
 #include "grid.h"
 
-#include <_ctype.h>
-#include <stdlib.h>
-#include <time.h>
-
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <ctime>
 #include <fstream>
 #include <sstream>
 #include <string>
