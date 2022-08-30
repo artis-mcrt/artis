@@ -3,12 +3,13 @@
 
 #include <gsl/gsl_integration.h>
 #include <math.h>
+
 #include <cstdio>
 
-#include "sn3d.h"
 #include "constants.h"
 #include "cuda.h"
 #include "gsl/gsl_math.h"
+#include "sn3d.h"
 
 namespace radfield {
 void zero_estimators(int modelgridindex);

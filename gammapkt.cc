@@ -3,22 +3,23 @@
 #include <_ctype.h>
 #include <math.h>
 #include <stdlib.h>
-#include <fstream>
+
 #include <cstdio>
+#include <fstream>
 
 #include "boundary.h"
+#include "constants.h"
 #include "decay.h"
 #include "emissivities.h"
+#include "globals.h"
 #include "grey_emissivities.h"
 #include "grid.h"
+#include "gsl/gsl_rng.h"
 #include "packet.h"
 #include "photo_electric.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"
-#include "constants.h"
-#include "globals.h"
-#include "gsl/gsl_rng.h"
 
 namespace gammapkt {
 // Code for handing gamma rays - creation and propagation

@@ -1,23 +1,24 @@
 #include "kpkt.h"
 
 #include <stdlib.h>
+
 #include <cmath>
 
+#include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
+#include "globals.h"
 #include "grid.h"
+#include "gsl/gsl_rng.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "packet.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
 #include "sn3d.h"
 #include "stats.h"
-#include "vectors.h"
-#include "artisoptions.h"
-#include "constants.h"
-#include "globals.h"
-#include "gsl/gsl_rng.h"
-#include "packet.h"
 #include "thermalbalance.h"
+#include "vectors.h"
 
 namespace kpkt {
 

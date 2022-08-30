@@ -13,9 +13,10 @@
 #include "sn3d.h"
 
 #include <getopt.h>
-#include <unistd.h>
 #include <sys/unistd.h>
 #include <time.h>
+#include <unistd.h>
+
 #include <cstdio>
 
 #include "atomic.h"
@@ -26,6 +27,9 @@
 #include "grid.h"
 #include "input.h"
 // #include "ltepop.h"
+#include "gsl/gsl_integration.h"
+#include "gsl/gsl_rng.h"
+#include "macroatom.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "radfield.h"
@@ -35,9 +39,6 @@
 #include "update_grid.h"
 #include "update_packets.h"
 #include "version.h"
-#include "gsl/gsl_integration.h"
-#include "gsl/gsl_rng.h"
-#include "macroatom.h"
 
 const bool KEEP_ALL_RESTART_FILES =
     false;  // once a new gridsave and packets*.tmp have been written, don't delete the previous set
