@@ -35,24 +35,22 @@ __host__ __device__ void angle_ab(const double dir1[3], const double vel[3], dou
 __host__ __device__ double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
 // Doppler factor
 // arguments:
-//   dir_rf: the rest frame direction (unit vector) of emission
-//   vel_rf: rest frame velocity of the comoving frame
-// returns: the ratio f = nu_rf / nu_cmf
+//   dir_rf: the rest frame direction (unit vector) of light propagation
+//   vel_rf: velocity of the comoving frame relative to the rest frame
+// returns: the ratio f = nu_cmf / nu_rf
 {
-  double gamma_rel = 1.;
-
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
+
+  const double ndotv = dot(dir_rf, vel_rf);
+  double dopplerfactor = 1. - (ndotv / CLIGHT);
 
   if (USE_RELATIVISTIC_CORRECTIONS) {
     const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;
     assert_always(betasq >= 0.);  // v < c
     assert_always(betasq < 1.);   // v < c
-    gamma_rel = 1. / sqrt(1 - betasq);
+    dopplerfactor = dopplerfactor / sqrt(1 - betasq);
   }
-
-  const double ndotv = dot(dir_rf, vel_rf);
-  const double dopplerfactor = gamma_rel * (1. - (ndotv / CLIGHT));
 
   assert_testmodeonly(std::isfinite(dopplerfactor));
   assert_testmodeonly(dopplerfactor > 0);
