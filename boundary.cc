@@ -209,8 +209,8 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, const do
           } else {
             *snext = pkt_ptr->where + cellindexstride;
             pkt_ptr->last_cross = invdirection;
-            printout("swapping packet cellindex from %d to %d and setting last_cross to %d\n", pkt_ptr->where, *snext,
-                     pkt_ptr->last_cross);
+            printout("[warning] swapping packet cellindex from %d to %d and setting last_cross to %d\n", pkt_ptr->where,
+                     *snext, pkt_ptr->last_cross);
             return 0;
           }
         } else {
