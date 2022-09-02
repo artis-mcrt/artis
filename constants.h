@@ -2,13 +2,13 @@
 #define CONSTANTS_H
 
 /// fundamental constants
-#define CLIGHT 2.99792458e+10  /// Speed of light [cm/s]
-#define H 6.6260755e-27        /// Planck constant [erg s]
-#define MSUN 1.98855e+33       /// Solar mass [g]
-#define LSUN 3.826e+33         /// Solar luminosity [erg/s]
-#define MH 1.67352e-24         /// Mass of hydrogen atom [g]
-#define ME 9.1093897e-28       /// Mass of free electron [g]
-#define QE 4.80325E-10         /// elementary charge in cgs units [statcoulomb]
+constexpr double CLIGHT = 2.99792458e+10;  /// Speed of light [cm/s]
+#define H 6.6260755e-27                    /// Planck constant [erg s]
+#define MSUN 1.98855e+33                   /// Solar mass [g]
+#define LSUN 3.826e+33                     /// Solar luminosity [erg/s]
+#define MH 1.67352e-24                     /// Mass of hydrogen atom [g]
+#define ME 9.1093897e-28                   /// Mass of free electron [g]
+#define QE 4.80325E-10                     /// elementary charge in cgs units [statcoulomb]
 #define PI 3.1415926535987
 #define EV 1.6021772e-12    /// eV to ergs [eV/erg]
 #define MEV 1.6021772e-6    /// MeV to ergs [MeV/erg]
