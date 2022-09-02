@@ -184,7 +184,7 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, const do
         {
           printout(
               "[warning] packet %d outside coord %d %c%c boundary of cell %d. pkttype %d initpos(tmin) %g, vel %g, "
-              "cellcoordmin %g, cellcoordmax %g. Abort?\n",
+              "cellcoordmin %g, cellcoordmax %g\n",
               pkt_ptr->number, d, flip ? '-' : '+', grid::coordlabel[d], cellindex, pkt_ptr->type, initpos[d2], vel[d2],
               grid::get_cellcoordmin(cellindex, d2) / globals::tmin * tstart,
               cellcoordmax[d2] / globals::tmin * tstart);
