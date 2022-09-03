@@ -292,7 +292,7 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
 
     t_future += (sdist / globals::CLIGHT_PROP);
     dummy_ptr->prop_time = t_future;
-    move_pkt(dummy_ptr, sdist, t_future);
+    move_pkt(dummy_ptr, sdist);
 
     // printout("About to change vpkt cell\n");
     change_cell(dummy_ptr, snext, t_future);

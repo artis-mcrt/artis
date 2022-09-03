@@ -115,7 +115,7 @@ __host__ __device__ void get_rand_isotropic_unitvec(double vecout[3])
   vecout[2] = mu;
 }
 
-__host__ __device__ void move_pkt(struct packet *pkt_ptr, const double distance, const double time)
+__host__ __device__ void move_pkt(struct packet *pkt_ptr, const double distance)
 /// Subroutine to move a packet along a straight line (specified by current
 /// dir vector). The distance moved is in the rest frame.
 {

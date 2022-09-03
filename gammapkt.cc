@@ -603,7 +603,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
   if ((sdist < tdist) && (sdist < edist)) {
     pkt_ptr->prop_time += sdist / 2. / globals::CLIGHT_PROP;
-    move_pkt(pkt_ptr, sdist / 2., pkt_ptr->prop_time);
+    move_pkt(pkt_ptr, sdist / 2.);
 
     // Move it into the new cell.
     if (kap_tot > 0) {
@@ -617,7 +617,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     }
 
     pkt_ptr->prop_time += sdist / 2. / globals::CLIGHT_PROP;
-    move_pkt(pkt_ptr, sdist / 2., pkt_ptr->prop_time);
+    move_pkt(pkt_ptr, sdist / 2.);
 
     if (snext != pkt_ptr->where) {
       change_cell(pkt_ptr, snext, pkt_ptr->prop_time);
@@ -625,7 +625,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   } else if ((tdist < sdist) && (tdist < edist)) {
     // Doesn't reach boundary.
     pkt_ptr->prop_time += tdist / 2. / globals::CLIGHT_PROP;
-    move_pkt(pkt_ptr, tdist / 2., pkt_ptr->prop_time);
+    move_pkt(pkt_ptr, tdist / 2.);
 
     if (kap_tot > 0) {
       if (globals::do_comp_est) {
@@ -637,10 +637,10 @@ void do_gamma(struct packet *pkt_ptr, double t2)
       }
     }
     pkt_ptr->prop_time = t2;
-    move_pkt(pkt_ptr, tdist / 2., pkt_ptr->prop_time);
+    move_pkt(pkt_ptr, tdist / 2.);
   } else if ((edist < sdist) && (edist < tdist)) {
     pkt_ptr->prop_time += edist / 2. / globals::CLIGHT_PROP;
-    move_pkt(pkt_ptr, edist / 2., pkt_ptr->prop_time);
+    move_pkt(pkt_ptr, edist / 2.);
     if (kap_tot > 0) {
       if (globals::do_comp_est) {
         compton_emiss_cont(pkt_ptr, edist);
@@ -651,7 +651,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
       }
     }
     pkt_ptr->prop_time += edist / 2. / globals::CLIGHT_PROP;
-    move_pkt(pkt_ptr, edist / 2., pkt_ptr->prop_time);
+    move_pkt(pkt_ptr, edist / 2.);
 
     // event occurs. Choose which event and call the appropriate subroutine.
     zrand = gsl_rng_uniform(rng);

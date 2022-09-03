@@ -196,7 +196,7 @@ __host__ __device__ static double get_event(
 
           tau += tau_cont + tau_line;
           dummypkt_ptr->prop_time += ldist / globals::CLIGHT_PROP;
-          move_pkt(dummypkt_ptr, ldist, dummypkt_ptr->prop_time);
+          move_pkt(dummypkt_ptr, ldist);
           radfield::increment_lineestimator(
               modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
 
@@ -242,7 +242,7 @@ __host__ __device__ static double get_event(
             dummypkt_ptr->next_trans = dummypkt_ptr->next_trans - 1;
           } else if (DETAILED_LINE_ESTIMATORS_ON) {
             dummypkt_ptr->prop_time += ldist / globals::CLIGHT_PROP;
-            move_pkt(dummypkt_ptr, ldist, dummypkt_ptr->prop_time);
+            move_pkt(dummypkt_ptr, ldist);
             radfield::increment_lineestimator(
                 modelgridindex, lineindex,
                 dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
@@ -768,13 +768,13 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
       // printout("[debug] do_rpkt: sdist < tdist && sdist < edist\n");
       // Move it into the new cell.
       pkt_ptr->prop_time += sdist / 2. / globals::CLIGHT_PROP;
-      move_pkt(pkt_ptr, sdist / 2., pkt_ptr->prop_time);
+      move_pkt(pkt_ptr, sdist / 2.);
       update_estimators(pkt_ptr, sdist);
       if (globals::do_rlc_est != 0 && globals::do_rlc_est != 3) {
         rlc_emiss_rpkt(pkt_ptr, sdist);
       }
       pkt_ptr->prop_time += sdist / 2. / globals::CLIGHT_PROP;
-      move_pkt(pkt_ptr, sdist / 2., pkt_ptr->prop_time);
+      move_pkt(pkt_ptr, sdist / 2.);
 
       if (snext != pkt_ptr->where) {
         change_cell(pkt_ptr, snext, pkt_ptr->prop_time);
@@ -799,13 +799,13 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
       // bound-bound or continuum event
       // printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
       pkt_ptr->prop_time += edist / 2. / globals::CLIGHT_PROP;
-      move_pkt(pkt_ptr, edist / 2., pkt_ptr->prop_time);
+      move_pkt(pkt_ptr, edist / 2.);
       update_estimators(pkt_ptr, edist);
       if (globals::do_rlc_est != 0 && globals::do_rlc_est != 3) {
         rlc_emiss_rpkt(pkt_ptr, edist);
       }
       pkt_ptr->prop_time += edist / 2. / globals::CLIGHT_PROP;
-      move_pkt(pkt_ptr, edist / 2., pkt_ptr->prop_time);
+      move_pkt(pkt_ptr, edist / 2.);
 
       // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
       if (grid::modelgrid[mgi].thick == 1) {
@@ -823,13 +823,13 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
       // reaches end of timestep before cell boundary or interaction
       // printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
       pkt_ptr->prop_time += tdist / 2. / globals::CLIGHT_PROP;
-      move_pkt(pkt_ptr, tdist / 2., pkt_ptr->prop_time);
+      move_pkt(pkt_ptr, tdist / 2.);
       update_estimators(pkt_ptr, tdist);
       if (globals::do_rlc_est != 0 && globals::do_rlc_est != 3) {
         rlc_emiss_rpkt(pkt_ptr, tdist);
       }
       pkt_ptr->prop_time = t2;
-      move_pkt(pkt_ptr, tdist / 2., pkt_ptr->prop_time);
+      move_pkt(pkt_ptr, tdist / 2.);
       pkt_ptr->last_event = pkt_ptr->last_event + 1000;
 
       /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
@@ -947,7 +947,7 @@ __host__ __device__ static double get_rpkt_escapeprob_fromdirection(const double
 
     t_future += (sdist / globals::CLIGHT_PROP);
     vpkt.prop_time = t_future;
-    move_pkt(&vpkt, sdist, t_future);
+    move_pkt(&vpkt, sdist);
 
     if (snext != vpkt.where) {
       vpkt.prop_time = t_future;
