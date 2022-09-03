@@ -380,9 +380,6 @@ __host__ __device__ static void rpkt_event_continuum(struct packet *pkt_ptr,
     pkt_ptr->last_event = 5;
     pkt_ptr->type = TYPE_KPKT;
     pkt_ptr->absorptiontype = -1;
-#ifndef FORCE_LTE
-    // kffabs[pkt_ptr->where] += pkt_ptr->e_cmf;
-#endif
   } else if (zrand * kappa_cont < sigma + kappa_ff + kappa_bf) {
     /// bf: transform to k-pkt or activate macroatom corresponding to probabilities
     // printout("[debug] rpkt_event:   bound-free transition\n");
@@ -424,9 +421,6 @@ __host__ __device__ static void rpkt_event_continuum(struct packet *pkt_ptr,
       }
 
       pkt_ptr->type = TYPE_MA;
-#ifndef FORCE_LTE
-      // maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
-#endif
       pkt_ptr->mastate.element = element;
       pkt_ptr->mastate.ion = ion + 1;
       const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
