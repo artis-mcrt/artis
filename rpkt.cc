@@ -682,7 +682,7 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
   double sdist = boundary_cross(pkt_ptr, pkt_ptr->prop_time, &snext);
 
   if (sdist == 0) {
-    change_cell(pkt_ptr, snext, pkt_ptr->prop_time);
+    change_cell(pkt_ptr, snext);
     const int cellindexnew = pkt_ptr->where;
     mgi = grid::get_cell_modelgridindex(cellindexnew);
 
@@ -777,7 +777,7 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
       move_pkt(pkt_ptr, sdist / 2.);
 
       if (snext != pkt_ptr->where) {
-        change_cell(pkt_ptr, snext, pkt_ptr->prop_time);
+        change_cell(pkt_ptr, snext);
         const int cellindexnew = pkt_ptr->where;
         mgi = grid::get_cell_modelgridindex(cellindexnew);
       }
@@ -951,7 +951,7 @@ __host__ __device__ static double get_rpkt_escapeprob_fromdirection(const double
 
     if (snext != vpkt.where) {
       vpkt.prop_time = t_future;
-      change_cell(&vpkt, snext, t_future);
+      change_cell(&vpkt, snext);
       end_packet = (vpkt.type == TYPE_ESCAPE);
     }
   }

@@ -620,7 +620,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     move_pkt(pkt_ptr, sdist / 2.);
 
     if (snext != pkt_ptr->where) {
-      change_cell(pkt_ptr, snext, pkt_ptr->prop_time);
+      change_cell(pkt_ptr, snext);
     }
   } else if ((tdist < sdist) && (tdist < edist)) {
     // Doesn't reach boundary.

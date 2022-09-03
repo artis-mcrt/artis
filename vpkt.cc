@@ -295,7 +295,7 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
     move_pkt(dummy_ptr, sdist);
 
     // printout("About to change vpkt cell\n");
-    change_cell(dummy_ptr, snext, t_future);
+    change_cell(dummy_ptr, snext);
     end_packet = (dummy_ptr->type == TYPE_ESCAPE);
     // printout("Completed change vpkt cell\n");
 

@@ -324,10 +324,9 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, const do
   return distance;
 }
 
-__host__ __device__ void change_cell(struct packet *pkt_ptr, int snext, double t_current)
+__host__ __device__ void change_cell(struct packet *pkt_ptr, int snext)
 /// Routine to take a packet across a boundary.
 {
-  assert_always(pkt_ptr->prop_time == t_current);
   if (false) {
     const int cellindex = pkt_ptr->where;
     printout("[debug] cellnumber %d nne %g\n", cellindex, grid::get_nne(grid::get_cell_modelgridindex(cellindex)));
