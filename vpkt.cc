@@ -195,7 +195,7 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
     ldist = 0;
 
     /* distance to the next cell */
-    sdist = boundary_cross(dummy_ptr, t_future, &snext);
+    sdist = boundary_cross(dummy_ptr, &snext);
     s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
 
     calculate_kappa_rpkt_cont(dummy_ptr, &globals::kappa_rpkt_cont[tid]);

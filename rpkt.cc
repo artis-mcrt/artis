@@ -673,7 +673,7 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
   // boundaries. sdist is the boundary distance and snext is the
   // grid cell into which we pass.
   int snext;
-  double sdist = boundary_cross(pkt_ptr, pkt_ptr->prop_time, &snext);
+  double sdist = boundary_cross(pkt_ptr, &snext);
 
   if (sdist == 0) {
     change_cell(pkt_ptr, snext);
@@ -879,7 +879,8 @@ __host__ __device__ static double get_rpkt_escapeprob_fromdirection(const double
     }
 
     // distance to the next cell
-    const double sdist = boundary_cross(&vpkt, t_future, &snext);
+    vpkt.prop_time = t_future;
+    const double sdist = boundary_cross(&vpkt, &snext);
 
     if (snext >= 0) {
       const int nextmgi = grid::get_cell_modelgridindex(snext);
@@ -888,7 +889,6 @@ __host__ __device__ static double get_rpkt_escapeprob_fromdirection(const double
       }
     }
 
-    vpkt.prop_time = t_future;
     calculate_kappa_rpkt_cont(&vpkt, &globals::kappa_rpkt_cont[tid]);
 
     const double kappa_cont = globals::kappa_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(&vpkt);

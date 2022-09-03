@@ -98,10 +98,10 @@ __host__ __device__ static double get_shellcrossdist(const double pos[3], const 
   }
 }
 
-__host__ __device__ double boundary_cross(struct packet *const pkt_ptr, const double tstart, int *snext)
+__host__ __device__ double boundary_cross(struct packet *const pkt_ptr, int *snext)
 /// Basic routine to compute distance to a cell boundary.
 {
-  assert_always(tstart == pkt_ptr->prop_time);
+  const double tstart = pkt_ptr->prop_time;
 
   // There are six possible boundary crossings. Each of the three
   // cartesian coordinates may be taken in turn. For x, the packet
