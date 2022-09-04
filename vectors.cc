@@ -132,3 +132,11 @@ __host__ __device__ void move_pkt(struct packet *pkt_ptr, const double distance)
   pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
   pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
 }
+
+__host__ __device__ void move_pkt_withtime(struct packet *pkt_ptr, const double distance)
+/// Subroutine to move a packet along a straight line (specified by current
+/// dir vector). The distance moved is in the rest frame.
+{
+  pkt_ptr->prop_time += distance / globals::CLIGHT_PROP;
+  move_pkt(pkt_ptr, distance);
+}

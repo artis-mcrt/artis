@@ -13,6 +13,7 @@ __host__ __device__ double doppler_nucmf_on_nurf(const double dir_rf[3], const d
 __host__ __device__ void scatter_dir(const double dir_in[3], double cos_theta, double dir_out[3]);
 __host__ __device__ void get_rand_isotropic_unitvec(double vecout[3]);
 __host__ __device__ void move_pkt(struct packet *pkt_ptr, double distance);
+__host__ __device__ void move_pkt_withtime(struct packet *pkt_ptr, double distance);
 
 __host__ __device__ inline double vec_len(const double x[3])
 // return the the magnitude of a vector

@@ -195,8 +195,8 @@ __host__ __device__ static double get_event(
           }
 
           tau += tau_cont + tau_line;
-          dummypkt_ptr->prop_time += ldist / globals::CLIGHT_PROP;
-          move_pkt(dummypkt_ptr, ldist);
+          //   dummypkt_ptr->prop_time += ldist / globals::CLIGHT_PROP;
+          move_pkt_withtime(dummypkt_ptr, ldist);
           radfield::increment_lineestimator(
               modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
 
