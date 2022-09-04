@@ -790,14 +790,14 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
     } else if ((edist < sdist) && (edist < tdist)) {
       // bound-bound or continuum event
       // printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
-      pkt_ptr->prop_time += edist / 2. / globals::CLIGHT_PROP;
-      move_pkt(pkt_ptr, edist / 2.);
+      // pkt_ptr->prop_time += edist / 2. / globals::CLIGHT_PROP;
+      move_pkt_withtime(pkt_ptr, edist / 2.);
       update_estimators(pkt_ptr, edist);
       if (globals::do_rlc_est != 0 && globals::do_rlc_est != 3) {
         rlc_emiss_rpkt(pkt_ptr, edist);
       }
-      pkt_ptr->prop_time += edist / 2. / globals::CLIGHT_PROP;
-      move_pkt(pkt_ptr, edist / 2.);
+      // pkt_ptr->prop_time += edist / 2. / globals::CLIGHT_PROP;
+      move_pkt_withtime(pkt_ptr, edist / 2.);
 
       // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
       if (grid::modelgrid[mgi].thick == 1) {
@@ -814,8 +814,8 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
     } else if ((tdist < sdist) && (tdist < edist)) {
       // reaches end of timestep before cell boundary or interaction
       // printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
-      pkt_ptr->prop_time += tdist / 2. / globals::CLIGHT_PROP;
-      move_pkt(pkt_ptr, tdist / 2.);
+      // pkt_ptr->prop_time += tdist / 2. / globals::CLIGHT_PROP;
+      move_pkt_withtime(pkt_ptr, tdist / 2.);
       update_estimators(pkt_ptr, tdist);
       if (globals::do_rlc_est != 0 && globals::do_rlc_est != 3) {
         rlc_emiss_rpkt(pkt_ptr, tdist);
