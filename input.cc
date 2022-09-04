@@ -1303,10 +1303,8 @@ static void setup_cellhistory(void) {
   ///======================================================
   /// Stack which holds information about population and other cell specific data
   /// ===> move to update_packets
-  if ((globals::cellhistory = (struct cellhistory *)malloc(get_max_threads() * sizeof(struct cellhistory))) == NULL) {
-    printout("[fatal] input: not enough memory to initialize cellhistory of size %d... abort\n", get_max_threads());
-    abort();
-  }
+  globals::cellhistory = static_cast<struct cellhistory *>(malloc(get_max_threads() * sizeof(struct cellhistory)));
+  assert_always(globals::cellhistory != NULL);
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -1320,7 +1318,7 @@ static void setup_cellhistory(void) {
     globals::cellhistory[tid].cellnumber = -99;
 
     mem_usage_cellhistory += globals::ncoolingterms * sizeof(double);
-    globals::cellhistory[tid].cooling_contrib = (double *)calloc(globals::ncoolingterms, sizeof(double));
+    globals::cellhistory[tid].cooling_contrib = static_cast<double *>(calloc(globals::ncoolingterms, sizeof(double)));
 
     for (int element = 0; element < get_nelements(); element++) {
       for (int ion = 0; ion < get_nions(element); ion++) {
@@ -1333,7 +1331,7 @@ static void setup_cellhistory(void) {
 
     mem_usage_cellhistory += get_nelements() * sizeof(struct chelements);
     if ((globals::cellhistory[tid].chelements =
-             (struct chelements *)malloc(get_nelements() * sizeof(struct chelements))) == NULL) {
+             static_cast<struct chelements *>(malloc(get_nelements() * sizeof(struct chelements)))) == NULL) {
       printout("[fatal] input: not enough memory to initialize cellhistory's elementlist ... abort\n");
       abort();
     }
