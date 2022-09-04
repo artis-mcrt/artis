@@ -195,7 +195,6 @@ __host__ __device__ static double get_event(
           }
 
           tau += tau_cont + tau_line;
-          //   dummypkt_ptr->prop_time += ldist / globals::CLIGHT_PROP;
           move_pkt_withtime(dummypkt_ptr, ldist);
           radfield::increment_lineestimator(
               modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
@@ -241,8 +240,7 @@ __host__ __device__ static double get_event(
           if (edist > abort_dist) {
             dummypkt_ptr->next_trans = dummypkt_ptr->next_trans - 1;
           } else if (DETAILED_LINE_ESTIMATORS_ON) {
-            dummypkt_ptr->prop_time += ldist / globals::CLIGHT_PROP;
-            move_pkt(dummypkt_ptr, ldist);
+            move_pkt_withtime(dummypkt_ptr, ldist);
             radfield::increment_lineestimator(
                 modelgridindex, lineindex,
                 dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
@@ -761,14 +759,14 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
     if ((sdist < tdist) && (sdist < edist)) {
       // printout("[debug] do_rpkt: sdist < tdist && sdist < edist\n");
       // Move it into the new cell.
-      pkt_ptr->prop_time += sdist / 2. / globals::CLIGHT_PROP;
-      move_pkt(pkt_ptr, sdist / 2.);
+      // pkt_ptr->prop_time += sdist / 2. / globals::CLIGHT_PROP;
+      move_pkt_withtime(pkt_ptr, sdist / 2.);
       update_estimators(pkt_ptr, sdist);
       if (globals::do_rlc_est != 0 && globals::do_rlc_est != 3) {
         rlc_emiss_rpkt(pkt_ptr, sdist);
       }
-      pkt_ptr->prop_time += sdist / 2. / globals::CLIGHT_PROP;
-      move_pkt(pkt_ptr, sdist / 2.);
+      // pkt_ptr->prop_time += sdist / 2. / globals::CLIGHT_PROP;
+      move_pkt_withtime(pkt_ptr, sdist / 2.);
 
       if (snext != pkt_ptr->where) {
         change_cell(pkt_ptr, snext);
