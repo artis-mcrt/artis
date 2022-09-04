@@ -121,7 +121,6 @@ __host__ __device__ void move_pkt(struct packet *pkt_ptr, const double distance)
 {
   /// First update pos.
   assert_always(distance >= 0);
-  pkt_ptr->prop_time += distance / globals::CLIGHT_PROP;
 
   pkt_ptr->pos[0] += (pkt_ptr->dir[0] * distance);
   pkt_ptr->pos[1] += (pkt_ptr->dir[1] * distance);
