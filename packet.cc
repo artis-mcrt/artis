@@ -60,6 +60,11 @@ void packet_init(int my_rank, struct packet *pkt)
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
   printout("UNIFORM_PELLET_ENERGIES is %s\n", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
+#ifdef NO_INITIAL_PACKETS
+  printout("INITIAL_PACKETS is off\n");
+#else
+  printout("INITIAL_PACKETS is on\n");
+#endif
 
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
