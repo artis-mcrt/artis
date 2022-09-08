@@ -172,10 +172,10 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, int *sne
 
       bool isoutside_thisside;
       if (flip) {
-        isoutside_thisside = initpos[d] < grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart -
-                                              10.;  // 10 cm accuracy tolerance
+        isoutside_thisside = initpos[d] < (grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart -
+                                           10.);  // 10 cm accuracy tolerance
       } else {
-        isoutside_thisside = initpos[d] > cellcoordmax[d] / globals::tmin * tstart + 10.;
+        isoutside_thisside = initpos[d] > (cellcoordmax[d] / globals::tmin * tstart + 10.);
       }
 
       if (isoutside_thisside && (last_cross != direction)) {
