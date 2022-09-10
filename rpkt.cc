@@ -724,7 +724,7 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
     assert_always(tdist >= 0);
 
     double edist;
-    int rpkt_eventtype;
+    int rpkt_eventtype = -1;
     bool find_nextline = false;
     if (mgi == grid::get_npts_model()) {
       /// for empty cells no physical event occurs. The packets just propagate.
