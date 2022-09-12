@@ -23,7 +23,6 @@ ifeq ($(SYSNAME),Darwin)
 
 	CXXFLAGS += -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing
 
-	MPI := OFF
 	# CXXFLAGS += -fopenmp-simd
 	# CXXFLAGS += -fvectorize
 
