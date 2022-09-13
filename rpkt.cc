@@ -175,8 +175,8 @@ __host__ __device__ static double get_event(
         // printout("[debug] get_event:     tau_line %g\n", tau_line);
         // printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
 
-        // if (nu_trans < nu_cmf_abort) {
-        if ((dist + ldist) > abort_dist) {
+        // if ((dist + ldist) > abort_dist) {
+        if (nu_trans < nu_cmf_abort) {
           dummypkt_ptr->next_trans -= 1;  // back up one line, because we didn't reach it before the boundary/timelimit
           pkt_ptr->next_trans = dummypkt_ptr->next_trans;
 
