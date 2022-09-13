@@ -92,10 +92,9 @@ __host__ __device__ static double get_event(
   struct packet dummypkt = *pkt_ptr;
   struct packet *dummypkt_ptr = &dummypkt;
 
-  bool endloop = false;
   calculate_kappa_rpkt_cont(pkt_ptr, &globals::kappa_rpkt_cont[tid]);
   const double kap_cont = globals::kappa_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(pkt_ptr);
-  while (!endloop) {
+  while (true) {
     /// calculate distance to next line encounter ldist
     /// first select the closest transition in frequency
     /// we need its frequency nu_trans, the element/ion and the corresponding levels
@@ -251,7 +250,6 @@ __host__ __device__ static double get_event(
 
           *rpkt_eventtype = RPKT_EVENTTYPE_BB;
           /// the line and its parameters were already selected by closest_transition!
-          endloop = true;
           // printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop
           // %d\n",edist,abort_dist,edist-abort_dist,endloop);
 
@@ -268,7 +266,6 @@ __host__ __device__ static double get_event(
         // abort_dist);
 
         *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
-        endloop = true;
 
         pkt_ptr->next_trans = dummypkt_ptr->next_trans;
 
@@ -289,22 +286,20 @@ __host__ __device__ static double get_event(
         // printout("[debug] get_event:       travel out of cell or time step\n");
 
         edist = abort_dist + 1e20;
-        endloop = true;
       } else {
         /// continuum process occurs at edist
         edist = dist + (tau_rnd - tau) / kap_cont;
         // printout("[debug] get_event:       continuum process occurs at edist %g\n",edist);
 
         *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
-        endloop = true;
       }
       pkt_ptr->next_trans = dummypkt_ptr->next_trans;
       return edist;
     }
   }
 
-  pkt_ptr->next_trans = dummypkt_ptr->next_trans;
-  assert_always(std::isfinite(edist));
+  // should have already returned somewhere!
+  assert_always(false);
 
   return edist;
 }
