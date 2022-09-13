@@ -290,6 +290,8 @@ __host__ __device__ static double get_event(
         *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
         endloop = true;
       }
+      pkt_ptr->next_trans = dummypkt_ptr->next_trans;
+      return edist;
     }
   }
 
