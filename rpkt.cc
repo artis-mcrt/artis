@@ -89,6 +89,12 @@ __host__ __device__ static double get_event(
   double dist = 0.;  /// initial position on path
   double edist = 0.;
 
+  struct packet dummypkt_abort = *pkt_ptr;
+  move_pkt_withtime(&dummypkt_abort, abort_dist / 2.);
+  move_pkt_withtime(&dummypkt_abort, abort_dist / 2.);
+  const double nu_cmf_abort = dummypkt_abort.nu_cmf;
+  assert_testmodeonly(nu_cmf_abort <= pkt_ptr->nu_cmf);
+
   struct packet dummypkt = *pkt_ptr;
   struct packet *dummypkt_ptr = &dummypkt;
 
