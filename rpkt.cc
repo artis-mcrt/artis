@@ -136,7 +136,7 @@ __host__ __device__ static double get_event(
 
         // relativistic distance formula from tardis-sn project
         // (committed by Christian Vogl, https://github.com/tardis-sn/tardis/pull/697)
-        const double nu_r = nu_trans / dummypkt_ptr->nu_rf;  // TODO: should be nu_rf, just testing cmf
+        const double nu_r = nu_trans / dummypkt_ptr->nu_rf;
         const double ct = CLIGHT * dummypkt_ptr->prop_time;
         const double mu = dot(dummypkt_ptr->dir, dummypkt_ptr->pos) / vec_len(dummypkt_ptr->pos);
         const double r = vec_len(dummypkt_ptr->pos);  // radius
@@ -145,7 +145,7 @@ __host__ __device__ static double get_event(
       }
 
       // assert_always(ldist >= 0.);
-      if (ldist < 0.) printout("[warning] get_event: ldist < 0 %g\n", ldist);
+      assert_always(ldist >= 0.);
 
       // printout("[debug] get_event:     ldist %g\n",ldist);
 
@@ -569,7 +569,8 @@ __host__ __device__ static double closest_transition_empty(struct packet *pkt_pt
   // pkt_ptr->mastate.element = globals::linelist[match].elementindex;
   // pkt_ptr->mastate.ion     = globals::linelist[match].ionindex;
   // pkt_ptr->mastate.level   = globals::linelist[match].upperlevelindex;  ///if the MA will be activated it must be in
-  // the transitions upper level pkt_ptr->mastate.activatedfromlevel   = globals::linelist[match].lowerlevelindex;
+  // pkt_ptr->mastate.level   = globals::linelist[match].upperlevelindex;  ///if the MA will be activated it must be
+  // in the transitions upper level pkt_ptr->mastate.activatedfromlevel   = globals::linelist[match].lowerlevelindex;
   // ///helper variable for the transitions lower level
 
   /// For the empty case it's match not match+1: a line interaction is only possible in the next iteration
@@ -630,8 +631,8 @@ __host__ __device__ static void update_estimators(struct packet *pkt_ptr, const 
 
         if (!std::isfinite(globals::gammaestimator[ionestimindex])) {
           printout(
-              "[fatal] update_estimators: gamma estimator becomes non finite: mgi %d element %d ion %d gamma_contr %g, "
-              "distance_e_cmf_over_nu %g\n",
+              "[fatal] update_estimators: gamma estimator becomes non finite: mgi %d element %d ion %d gamma_contr "
+              "%g, distance_e_cmf_over_nu %g\n",
               modelgridindex, element, ion, globals::phixslist[tid].groundcont_gamma_contr[i], distance_e_cmf_over_nu);
           abort();
         }
@@ -658,8 +659,8 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
   const int oldmgi = mgi;
 
   if (pkt_ptr->next_trans > 0) {
-    // if (globals::debuglevel == 2) printout("[debug] do_rpkt: init: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g,
-    // nu(pkt_ptr->next_trans-1=%d) %g, pkt_ptr->where %d\n", pkt_ptr->nu_cmf, pkt_ptr->next_trans,
+    // if (globals::debuglevel == 2) printout("[debug] do_rpkt: init: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d)
+    // %g, nu(pkt_ptr->next_trans-1=%d) %g, pkt_ptr->where %d\n", pkt_ptr->nu_cmf, pkt_ptr->next_trans,
     // globals::linelist[pkt_ptr->next_trans].nu, pkt_ptr->next_trans-1, globals::linelist[pkt_ptr->next_trans-1].nu,
     // pkt_ptr->where );
     if (globals::debuglevel == 2)
@@ -690,8 +691,8 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
             ? 2 * globals::rmax * (pkt_ptr->prop_time + sdist / globals::CLIGHT_PROP) / globals::tmin
             : globals::rmax * pkt_ptr->prop_time / globals::tmin;
     if (sdist > maxsdist) {
-      printout("[fatal] do_rpkt: Unreasonably large sdist. Rpkt. Abort. %g %g %g\n", globals::rmax,
-               pkt_ptr->prop_time / globals::tmin, sdist);
+      printout("[fatal] do_rpkt: Unreasonably large sdist for packet %d. Rpkt. Abort. %g %g %g\n", pkt_ptr->number,
+               globals::rmax, pkt_ptr->prop_time / globals::tmin, sdist);
       abort();
     }
 
