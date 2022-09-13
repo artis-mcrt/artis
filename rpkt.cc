@@ -83,6 +83,7 @@ __host__ __device__ static double get_event(
 // returns edist, the distance to the next physical event (continuum or bound-bound)
 // BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
 {
+  // printout("get_event()\n");
   /// initialize loop variables
   double tau = 0.;   /// initial optical depth along path
   double dist = 0.;  /// initial position on path
@@ -150,6 +151,7 @@ __host__ __device__ static double get_event(
       // printout("[debug] get_event:     tau_rnd %g, tau %g, tau_cont %g\n", tau_rnd, tau, tau_cont);
 
       if (tau_rnd - tau > tau_cont) {
+        // got past the continuum optical depth so propagate to the line, and check interaction
         const double A_ul = einstein_spontaneous_emission(lineindex);
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
@@ -160,8 +162,8 @@ __host__ __device__ static double get_event(
         double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * dummypkt_ptr->prop_time;
 
         if (tau_line < 0) {
-          // printout("[warning] get_event: tau_line %g < 0, n_l %g, n_u %g, B_lu %g, B_ul %g, W %g, T_R %g, element %d,
-          // ion %d, upper %d, lower %d ... abort\n",tau_line,
+          // printout("[warning] get_event: tau_line %g < 0, n_l %g, n_u %g, B_lu %g, B_ul %g, W %g, T_R %g, element
+          // %d, ion %d, upper %d, lower %d ... abort\n",tau_line,
           // n_l,n_u,B_lu,B_ul,get_W(grid::get_cell_modelgridindex(pkt_ptr->where)),get_TR(grid::get_cell_modelgridindex(pkt_ptr->where)),element,ion,upper,lower);
           // printout("[warning] get_event: set tau_line = 0\n");
           tau_line = 0.;
@@ -179,7 +181,7 @@ __host__ __device__ static double get_event(
 
           if (false) {
             printout(
-                "[debug] get_event:         tau_rnd - tau > tau_cont + tau_line ... proceed this packets "
+                "[debug] get_event: tau_rnd - tau > tau_cont + tau_line ... proceed this packets "
                 "propagation\n");
             printout("[debug] get_event:         dist %g, abort_dist %g, dist-abort_dist %g\n", dist, abort_dist,
                      dist - abort_dist);
@@ -229,7 +231,7 @@ __host__ __device__ static double get_event(
           }
         } else {
           /// bound-bound process occurs
-          // printout("[debug] get_event:         tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
+          // printout("[debug] get_event: tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
 
           pkt_ptr->mastate.element = element;
           pkt_ptr->mastate.ion = ion;
@@ -752,8 +754,8 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
     }
     assert_always(edist >= 0);
 
-    // printout("[debug] do_rpkt: packet %d sdist, tdist, edist %g, %g, %g old_last_cross %d next_cross %d cellindex %d
-    // dir %g %g
+    // printout("[debug] do_rpkt: packet %d sdist, tdist, edist %g, %g, %g old_last_cross %d next_cross %d cellindex
+    // %d dir %g %g
     // %g\n",pkt_ptr->number,sdist,tdist,edist,old_last_cross,pkt_ptr->last_cross,pkt_ptr->where,pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 
     if ((sdist < tdist) && (sdist < edist)) {
