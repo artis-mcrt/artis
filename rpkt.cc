@@ -254,6 +254,10 @@ __host__ __device__ static double get_event(
           endloop = true;
           // printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop
           // %d\n",edist,abort_dist,edist-abort_dist,endloop);
+
+          pkt_ptr->next_trans = dummypkt_ptr->next_trans;
+
+          return edist;
         }
       } else {
         /// continuum process occurs
