@@ -202,13 +202,6 @@ __host__ __device__ static double get_event(
           }
 
           dist = dist + ldist;
-          if (dist > abort_dist) {
-            dummypkt_ptr->next_trans -= 1;
-            pkt_ptr->next_trans = dummypkt_ptr->next_trans;
-            // printout("[debug] get_event:         leave propagation loop (dist %g > abort_dist %g) ...
-            // dummypkt_ptr->next_trans %d\n", dist, abort_dist, dummypkt_ptr->next_trans);
-            return abort_dist + 1e20;
-          }
 
           tau += tau_cont + tau_line;
           move_pkt_withtime(dummypkt_ptr, ldist);
@@ -252,9 +245,7 @@ __host__ __device__ static double get_event(
           pkt_ptr->mastate.activatingline = lineindex;
 
           edist = dist + ldist;
-          if (edist > abort_dist) {
-            dummypkt_ptr->next_trans = dummypkt_ptr->next_trans - 1;
-          } else if (DETAILED_LINE_ESTIMATORS_ON) {
+          if (DETAILED_LINE_ESTIMATORS_ON) {
             move_pkt_withtime(dummypkt_ptr, ldist);
             radfield::increment_lineestimator(
                 modelgridindex, lineindex,
