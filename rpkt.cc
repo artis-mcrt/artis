@@ -172,9 +172,22 @@ __host__ __device__ static double get_event(
           // abort();
         }
 
-        if (false) {
-          printout("[debug] get_event:     tau_line %g\n", tau_line);
-          printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
+        // printout("[debug] get_event:     tau_line %g\n", tau_line);
+        // printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
+
+        // if (nu_trans < nu_cmf_abort) {
+        if ((dist + ldist) > abort_dist) {
+          dummypkt_ptr->next_trans -= 1;  // back up one line, because we didn't reach it before the boundary/timelimit
+          pkt_ptr->next_trans = dummypkt_ptr->next_trans;
+
+          const double nextline_nu = globals::linelist[pkt_ptr->next_trans].nu;
+
+          // printout("[debug] get_event:         leave propagation loop (dist %g > abort_dist %g) ...
+          // dummypkt_ptr->next_trans %d\n", dist, abort_dist, dummypkt_ptr->next_trans);
+
+          assert_always(nextline_nu <= nu_cmf_abort);
+
+          return abort_dist + 1e20;
         }
 
         if (tau_rnd - tau > tau_cont + tau_line) {
