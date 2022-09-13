@@ -137,6 +137,13 @@ __host__ __device__ void move_pkt_withtime(struct packet *pkt_ptr, const double 
 /// Subroutine to move a packet along a straight line (specified by current
 /// dir vector). The distance moved is in the rest frame.
 {
+  const double nu_cmf_old = pkt_ptr->nu_cmf;
   pkt_ptr->prop_time += distance / globals::CLIGHT_PROP;
   move_pkt(pkt_ptr, distance);
+
+  // frequency should only over decrease due to packet movement
+  // enforce this to overcome numerical error
+  if (pkt_ptr->nu_cmf > nu_cmf_old) {
+    pkt_ptr->nu_cmf = nu_cmf_old;
+  }
 }
