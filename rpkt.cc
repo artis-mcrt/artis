@@ -144,7 +144,6 @@ __host__ __device__ static double get_event(
                               (1 + nu_r * nu_r);
       }
 
-      // assert_always(ldist >= 0.);
       assert_always(ldist >= 0.);
 
       // printout("[debug] get_event:     ldist %g\n",ldist);
@@ -201,15 +200,14 @@ __host__ __device__ static double get_event(
 
           tau += tau_cont + tau_line;
           move_pkt_withtime(dummypkt_ptr, ldist);
+          //   if (fabs(dummypkt_ptr->nu_cmf / nu_trans - 1.) > 1e-5) {
+          // printout("dopplercheck: packet %d nu_cmf %g nu_line %g ratio-1 %g errorfrac %g\n", pkt_ptr->number,
+          //          dummypkt_ptr->nu_cmf, nu_trans, (dummypkt_ptr->nu_cmf - nu_trans) / nu_trans,
+          //          fabs(dummypkt_ptr->nu_cmf / nu_trans - 1.));
+          // }
+
           radfield::increment_lineestimator(
               modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
-
-          // if (fabs(dummypkt_ptr->nu_cmf / nu_trans - 1.) > 1e-10)
-          // {
-          //   printout("dopplercheck: packet %d nu_cmf %g nu_line %g ratio %g errorfrac %g\n", pkt_ptr->number,
-          //   dummypkt_ptr->nu_cmf, nu_trans, dummypkt_ptr->nu_cmf / nu_trans, fabs(dummypkt_ptr->nu_cmf / nu_trans
-          //   - 1.));
-          // }
 
           if (false) {
             const int next_trans = dummypkt_ptr->next_trans;
@@ -293,7 +291,6 @@ __host__ __device__ static double get_event(
         endloop = true;
       }
     }
-    // propagationcounter++;
   }
 
   pkt_ptr->next_trans = dummypkt_ptr->next_trans;
@@ -568,11 +565,9 @@ __host__ __device__ static double closest_transition_empty(struct packet *pkt_pt
   const double nu_trans = globals::linelist[match].nu;
   // pkt_ptr->mastate.element = globals::linelist[match].elementindex;
   // pkt_ptr->mastate.ion     = globals::linelist[match].ionindex;
-  // pkt_ptr->mastate.level   = globals::linelist[match].upperlevelindex;  ///if the MA will be activated it must be in
   // pkt_ptr->mastate.level   = globals::linelist[match].upperlevelindex;  ///if the MA will be activated it must be
   // in the transitions upper level pkt_ptr->mastate.activatedfromlevel   = globals::linelist[match].lowerlevelindex;
   // ///helper variable for the transitions lower level
-
   /// For the empty case it's match not match+1: a line interaction is only possible in the next iteration
   /// of the propagation loop. We just have to make sure that the next "normal" line search knows about the
   /// current position of the photon in the frequency list.
