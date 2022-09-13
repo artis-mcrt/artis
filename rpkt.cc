@@ -120,9 +120,12 @@ __host__ __device__ static double get_event(
       const int lower = globals::linelist[lineindex].lowerlevelindex;
 
       double ldist;  // distance from current position to the line interaction
-      if (dummypkt_ptr->nu_cmf < nu_trans) {
-        // printout("dummypkt_ptr->nu_cmf %g < nu_trans %g, next_trans %d, element %d, ion %d, lower%d, upper
-        // %d\n",dummypkt_ptr->nu_cmf,nu_trans,dummypkt_ptr->next_trans,element,ion,lower,upper);
+      if (dummypkt_ptr->nu_cmf <= nu_trans) {
+        // printout(
+        //     "[warning] packet %d dummypkt_ptr->nu_cmf %lg <= nu_trans %lg diff %lg next_trans %d, Z=%d ionstage %d
+        //     " "lower %d upper %d\n", pkt_ptr->number, dummypkt_ptr->nu_cmf, nu_trans, (dummypkt_ptr->nu_cmf -
+        //     nu_trans) / nu_trans, dummypkt_ptr->next_trans, get_element(element), get_ionstage(element, ion),
+        //     lower, upper);
         ldist = 0;  /// photon was propagated too far, make sure that we don't miss a line
       } else if (!USE_RELATIVISTIC_CORRECTIONS) {
         ldist = CLIGHT * dummypkt_ptr->prop_time * (dummypkt_ptr->nu_cmf / nu_trans - 1);
