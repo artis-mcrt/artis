@@ -251,6 +251,11 @@ __host__ __device__ static double get_event(
           pkt_ptr->mastate.activatingline = lineindex;
 
           edist = dist + ldist;
+          if (edist >= abort_dist) {
+            printout("[warning] edist %lg was >= abort_dist %lg but we haven't redshifted past it. fixing...\n", edist,
+                     abort_dist);
+            edist = abort_dist * (1 - 2e-8);  // if the edist > abort_dist, the line will not be activated in do_rpkt
+          }
           if (DETAILED_LINE_ESTIMATORS_ON) {
             move_pkt_withtime(dummypkt_ptr, ldist);
             radfield::increment_lineestimator(
