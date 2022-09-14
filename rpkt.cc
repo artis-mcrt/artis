@@ -132,7 +132,7 @@ __host__ __device__ static double get_event(
         //     nu_trans) / nu_trans, dummypkt_ptr->next_trans, get_element(element), get_ionstage(element, ion),
         //     lower, upper);
         ldist = 0;  /// photon was propagated too far, make sure that we don't miss a line
-      } else if (!USE_RELATIVISTIC_CORRECTIONS) {
+      } else if (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
         ldist = CLIGHT * dummypkt_ptr->prop_time * (dummypkt_ptr->nu_cmf / nu_trans - 1);
       } else {
         // With special relativity, the Doppler shift formula has an extra factor of 1/gamma in it,

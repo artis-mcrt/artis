@@ -210,7 +210,7 @@ constexpr int MAX_NT_EXCITATIONS_STORED = 25000;
 #define IONGAMMA_POPFRAC_LEVELS_INCLUDED 0.999
 
 // incomplete work in progress
-constexpr bool USE_RELATIVISTIC_CORRECTIONS = false;
+constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = false;
 
 // when converting mass fraction to a number density, use a mean atomic mass
 // calcuated from the nuclear composition (plus stable component),

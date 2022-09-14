@@ -206,7 +206,7 @@ constexpr int MAX_NT_EXCITATIONS_STORED = 25000;
 // make up at least IONGAMMA_POPFRAC_LEVELS_INCLUDED fraction of the ion population
 #define IONGAMMA_POPFRAC_LEVELS_INCLUDED 0.999
 
-constexpr bool USE_RELATIVISTIC_CORRECTIONS = false;
+constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = false;
 
 constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = false;
 

@@ -45,7 +45,7 @@ __host__ __device__ double doppler_nucmf_on_nurf(const double dir_rf[3], const d
   const double ndotv = dot(dir_rf, vel_rf);
   double dopplerfactor = 1. - (ndotv / CLIGHT);
 
-  if (USE_RELATIVISTIC_CORRECTIONS) {
+  if (USE_RELATIVISTIC_DOPPLER_SHIFT) {
     const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;
     assert_always(betasq >= 0.);  // v < c
     assert_always(betasq < 1.);   // v < c
