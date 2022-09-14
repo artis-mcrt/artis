@@ -8,10 +8,10 @@
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
 #define MPKTS 1000000
 
-constexpr int GRID_TYPE = GRID_UNIFORM;
-constexpr int CUBOID_NCOORDGRID_X = 50;
-constexpr int CUBOID_NCOORDGRID_Y = 50;
-constexpr int CUBOID_NCOORDGRID_Z = 50;
+#define GRID_TYPE GRID_UNIFORM
+#define CUBOID_NCOORDGRID_X 50
+#define CUBOID_NCOORDGRID_Y 50
+#define CUBOID_NCOORDGRID_Z 50
 // #define GRID_TYPE GRID_SPHERICAL1D
 
 // non-LTE population solver
@@ -71,19 +71,19 @@ constexpr bool single_ground_level = false;
 constexpr size_t GSLWSIZE = 16384;
 
 #define TRACK_ION_STATS false
-constexpr bool TRACK_ION_MASTATS = false;
+#define TRACK_ION_MASTATS false
 
 // Increase linelist by this blocksize
-constexpr int MLINES = 500000;
+#define MLINES 500000
 
 // Minimum cell density. Below cells are treated as empty.
 #define MINDENSITY 1e-40
 #define MINPOP 1e-40
 
 // lower frequency boundary for UVOIR spectra and BB sampling
-constexpr double NU_MIN_R = 1e13;
+#define NU_MIN_R 1e13
 // upper frequency boundary for UVOIR spectra and BB sampling
-constexpr double NU_MAX_R = 5e15;
+#define NU_MAX_R 5e15
 
 // ** Start of radiation field model options **
 
@@ -92,7 +92,7 @@ constexpr double NU_MAX_R = 5e15;
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON = true;
 
 // number of bins (including the T=T_e superbin)
-constexpr int RADFIELDBINCOUNT = 256;
+#define RADFIELDBINCOUNT 256
 
 // from this timestep number (0-indexed), radfield switches from T_R,W dilute blackbody to binned radfield
 constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
@@ -109,7 +109,7 @@ constexpr double T_R_min = 500;
 constexpr double T_R_max = 250000;
 
 // store Jb_lu estimators for particular lines (which are chosen in radfield::init())
-#define DETAILED_LINE_ESTIMATORS_ON false
+constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 // track detailed bound-free rate estimators instead of doing radiation field model integrals or lookup table
 #define DETAILED_BF_ESTIMATORS_ON true
@@ -144,13 +144,13 @@ constexpr bool NT_ON = true;
 constexpr bool NT_SOLVE_SPENCERFANO = true;
 
 // number of energy points in the Spencer-Fano solution vector
-constexpr int SFPTS = 4096;
+#define SFPTS 4096
 
 // eV
-constexpr double SF_EMAX = 16000.;
+#define SF_EMAX 16000.
 
 // eV
-constexpr double SF_EMIN = .1;
+#define SF_EMIN .1
 
 // use a grid of energy points with constant spacing in log energy
 #define SF_USE_LOG_E_INCREMENT false
@@ -184,30 +184,30 @@ constexpr int MAX_NT_EXCITATIONS_STORED = 25000;
 
 // calculate eff_ionpot and ionisation rates by always dividing by the valence shell potential for the ion
 // instead of the specific shell potentials
-constexpr bool NT_USE_VALENCE_IONPOTENTIAL = false;
+#define NT_USE_VALENCE_IONPOTENTIAL false
 
 // allow ions to lose more than one electron per impact ionisation using Auger effect probabilities
 // associate with electron shells
 // if this is greater than zero, make sure NT_USE_VALENCE_IONPOTENTIAL is false!
-constexpr int NT_MAX_AUGER_ELECTRONS = 2;
+#define NT_MAX_AUGER_ELECTRONS 2
 
 // add the Auger electron term to the Spencer-Fano equation
-constexpr bool SF_AUGER_CONTRIBUTION_ON = true;
+#define SF_AUGER_CONTRIBUTION_ON true
 
 // set true to divide up the mean Auger energy by the number of electrons that come out
-constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN = false;
+#define SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN false
 
 // ** End of non-thermal solution options **
 
-constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-3;
+#define TEMPERATURE_SOLVER_ACCURACY 1e-3
 
-constexpr double CONTINUUM_NU_INTEGRAL_ACCURACY = 1e-3;
+#define CONTINUUM_NU_INTEGRAL_ACCURACY 1e-3
 
-constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
+#define RATECOEFF_INTEGRAL_ACCURACY 1e-3
 
 // when calculating ion ionisation rate coefficient (for estimator files only, not the simulation), contribute the
 // lowest n levels that make up at least IONGAMMA_POPFRAC_LEVELS_INCLUDED fraction of the ion population
-constexpr double IONGAMMA_POPFRAC_LEVELS_INCLUDED = 0.999;
+#define IONGAMMA_POPFRAC_LEVELS_INCLUDED 0.999
 
 // incomplete work in progress
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = false;

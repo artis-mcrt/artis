@@ -8,10 +8,10 @@
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
 #define MPKTS 10000
 
-constexpr int GRID_TYPE = GRID_UNIFORM;
-constexpr int CUBOID_NCOORDGRID_X = 100;
-constexpr int CUBOID_NCOORDGRID_Y = 100;
-constexpr int CUBOID_NCOORDGRID_Z = 100;
+#define GRID_TYPE GRID_UNIFORM
+#define CUBOID_NCOORDGRID_X 100
+#define CUBOID_NCOORDGRID_Y 100
+#define CUBOID_NCOORDGRID_Z 100
 // #define GRID_TYPE GRID_SPHERICAL1D
 
 // non-LTE population solver
@@ -69,18 +69,16 @@ constexpr bool single_ground_level = false;  // if false, read from file or auto
 // GSL integration workspace size
 constexpr size_t GSLWSIZE = 16384;
 
-constexpr bool TRACK_ION_STATS = false;
-constexpr bool TRACK_ION_MASTATS = false;
+#define TRACK_ION_STATS false
+#define TRACK_ION_MASTATS false
 
-constexpr int MLINES = 500000;  // Increase linelist by this blocksize
+#define MLINES 500000  // Increase linelist by this blocksize
 
 #define MINDENSITY 1e-40  /// Minimum cell density. Below cells are treated as empty.
 #define MINPOP 1e-40
 
-/// lower frequency boundary for UVOIR spectra and BB sampling
-constexpr double NU_MIN_R = 1e13;
-/// upper frequency boundary for UVOIR spectra and BB sampling
-constexpr double NU_MAX_R = 5e16;
+#define NU_MIN_R 1e13  /// lower frequency boundary for UVOIR spectra and BB sampling
+#define NU_MAX_R 5e16  /// upper frequency boundary for UVOIR spectra and BB sampling
 
 // ****
 // Start of radiation field model options
@@ -90,7 +88,7 @@ constexpr double NU_MAX_R = 5e16;
 // (since LUTs created with Planck function J_nu)
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON = true;
 
-constexpr int RADFIELDBINCOUNT = 64;
+#define RADFIELDBINCOUNT 64
 
 constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
 
@@ -102,7 +100,7 @@ constexpr double T_R_min = 500;
 constexpr double T_R_max = 250000;
 
 // store Jb_lu estimators for particular lines chosen in radfield::init()
-#define DETAILED_LINE_ESTIMATORS_ON false
+constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 // store detailed bound-free rate estimators
 #define DETAILED_BF_ESTIMATORS_ON true
@@ -141,13 +139,13 @@ constexpr bool NT_ON = true;
 constexpr bool NT_SOLVE_SPENCERFANO = true;
 
 // number of energy points in the Spencer-Fano solution vector
-constexpr int SFPTS = 4096;
+#define SFPTS 4096
 
 // eV
-constexpr double SF_EMAX = 16000.;
+#define SF_EMAX 16000.
 
 // eV
-constexpr double SF_EMIN = .1;
+#define SF_EMIN .1
 
 // use a grid of energy points with constant spacing in log energy
 #define SF_USE_LOG_E_INCREMENT false
@@ -181,32 +179,32 @@ constexpr int MAX_NT_EXCITATIONS_STORED = 25000;
 
 // calculate eff_ionpot and ionisation rates by always dividing by the valence shell potential for the ion
 // instead of the specific shell potentials
-constexpr bool NT_USE_VALENCE_IONPOTENTIAL = false;
+#define NT_USE_VALENCE_IONPOTENTIAL false
 
 // allow ions to lose more than one electron per impact ionisation using Auger effect probabilities
 // associate with electron shells
 // if this is greater than zero, make sure NT_USE_VALENCE_IONPOTENTIAL is false!
-constexpr int NT_MAX_AUGER_ELECTRONS = 2;
+#define NT_MAX_AUGER_ELECTRONS 2
 
 // add the Auger electron term to the Spencer-Fano equation
-constexpr bool SF_AUGER_CONTRIBUTION_ON = true;
+#define SF_AUGER_CONTRIBUTION_ON true
 
 // set true to divide up the mean Auger energy by the number of electrons that come out
-constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN = false;
+#define SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN false
 
 //
 // End of non-thermal solution options
 // ****
 
-constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-3;
+#define TEMPERATURE_SOLVER_ACCURACY 1e-3
 
-constexpr double CONTINUUM_NU_INTEGRAL_ACCURACY = 1e-3;
+#define CONTINUUM_NU_INTEGRAL_ACCURACY 1e-3
 
-constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
+#define RATECOEFF_INTEGRAL_ACCURACY 1e-3
 
 // when calculating ion ionisation rate coefficient (for estimator files), contribute the lowest n levels that
 // make up at least IONGAMMA_POPFRAC_LEVELS_INCLUDED fraction of the ion population
-constexpr double IONGAMMA_POPFRAC_LEVELS_INCLUDED = 0.999;
+#define IONGAMMA_POPFRAC_LEVELS_INCLUDED 0.999
 
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = false;
 

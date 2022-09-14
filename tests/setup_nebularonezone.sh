@@ -14,6 +14,8 @@ cp ../artisoptions_nltenebular.h nebularonezone_testrun/artisoptions.h
 
 cd nebularonezone_testrun
 
+# sed -i 's/#define MPKTS.*/#define MPKTS 15000/g' artisoptions.h
+
 sed -i 's/#define TABLESIZE.*/#define TABLESIZE 20/g' artisoptions.h
 sed -i 's/#define MINTEMP.*/#define MINTEMP 2000./g' artisoptions.h
 sed -i 's/#define MAXTEMP.*/#define MAXTEMP 10000./g' artisoptions.h
