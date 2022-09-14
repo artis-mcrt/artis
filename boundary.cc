@@ -122,9 +122,9 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, int *sne
   // the following four vectors are in grid coordinates, so either x,y,z or r
   const int ndim = grid::get_ngriddimensions();
   assert_testmodeonly(ndim <= 3);
-  double initpos[3];  // pkt_ptr->pos converted to grid coordinates
-  double cellcoordmax[3];
-  double vel[3];  // pkt_ptr->dir * globals::CLIGHT_PROP converted to grid coordinates
+  double initpos[3] = {0};  // pkt_ptr->pos converted to grid coordinates
+  double cellcoordmax[3] = {0};
+  double vel[3] = {0};  // pkt_ptr->dir * globals::CLIGHT_PROP converted to grid coordinates
 
   if (grid::grid_type == GRID_UNIFORM) {
     // XYZ coordinates
