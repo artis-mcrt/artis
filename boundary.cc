@@ -251,12 +251,17 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, int *sne
     //          globals::tmin);
     // printout("tstart %g\n", tstart);
   } else {
+    // const double overshoot = grid::wid_init(cellindex) * 2e-7;
+    constexpr double overshoot = 0.;
     for (int d = 0; d < 3; d++) {
-      t_coordmaxboundary[d] =
-          ((initpos[d] - (vel[d] * tstart)) / (cellcoordmax[d] - (vel[d] * globals::tmin)) * globals::tmin) - tstart;
-      t_coordminboundary[d] = ((initpos[d] - (vel[d] * tstart)) /
-                               (grid::get_cellcoordmin(cellindex, d) - (vel[d] * globals::tmin)) * globals::tmin) -
+      t_coordmaxboundary[d] = ((initpos[d] - (vel[d] * tstart)) /
+                               ((cellcoordmax[d] + overshoot) - (vel[d] * globals::tmin)) * globals::tmin) -
                               tstart;
+
+      t_coordminboundary[d] =
+          ((initpos[d] - (vel[d] * tstart)) /
+           ((grid::get_cellcoordmin(cellindex, d) - overshoot) - (vel[d] * globals::tmin)) * globals::tmin) -
+          tstart;
     }
   }
 
