@@ -580,7 +580,7 @@ static int compare_linelistentry(const void *p1, const void *p2)
              get_ionstage(a2->elementindex, a2->ionindex), a2->lowerlevelindex, a2->upperlevelindex, a2->nu,
              1e8 * CLIGHT / a2->nu);
 
-    a2->nu = a1->nu;
+    // a2->nu = a1->nu;
     // if ((a1->elementindex == a2->elementindex) && (a1->ionindex == a2->ionindex)) {
     if (a1->lowerlevelindex > a2->lowerlevelindex) {
       return -1;
