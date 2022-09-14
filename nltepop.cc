@@ -961,13 +961,13 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
       // store the NLTE level populations
       const int nlte_start = globals::elements[element].ions[ion].first_nlte;
-      // double solution_ion_pop = 0.0;
-      // for (int level = 1; level <= nlevels_nlte; level++) {
-      //   const int index = get_nlte_vector_index(element, ion, level);
-      //   grid::modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] =
-      //       gsl_vector_get(popvec, index) / grid::get_rho(modelgridindex);
-      //   solution_ion_pop += gsl_vector_get(popvec, index);
-      // }
+      double solution_ion_pop = 0.0;
+      for (int level = 1; level <= nlevels_nlte; level++) {
+        const int index = get_nlte_vector_index(element, ion, level);
+        grid::modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] =
+            gsl_vector_get(popvec, index) / grid::get_rho(modelgridindex);
+        solution_ion_pop += gsl_vector_get(popvec, index);
+      }
 
       // store the superlevel population if there is one
       if (ion_has_superlevel(element, ion))  // a superlevel exists
