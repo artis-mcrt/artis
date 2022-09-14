@@ -284,6 +284,7 @@ __host__ __device__ static double get_event(
         }
       } else {
         /// continuum process occurs
+
         edist = dist + (tau_rnd - tau) / kap_cont;
         // assert_always((tau_rnd - tau) / kap_cont < ldist);
         dummypkt_ptr->next_trans -= 1;
@@ -297,14 +298,14 @@ __host__ __device__ static double get_event(
         return edist;
       }
     } else {
-      dummypkt_ptr->next_trans =
-          globals::nlines + 1;  /// helper variable to overcome numerical problems after line scattering
       /// no line interaction possible - check whether continuum process occurs in cell
+
       // printout("[debug] get_event:     line interaction impossible\n");
+
+      /// helper variable to overcome numerical problems after line scattering
+      dummypkt_ptr->next_trans = globals::nlines + 1;
+
       const double tau_cont = kap_cont * (abort_dist - dist);
-      // printout("nu_cmf %g, opticaldepths in ff %g, es
-      // %g\n",pkt_ptr->nu_cmf,kappa_rpkt_cont[tid].ff*(abort_dist-dist),kappa_rpkt_cont[tid].es*(abort_dist-dist));
-      //  printout("[debug] get_event:     tau_rnd %g, tau %g, tau_cont %g\n", tau_rnd, tau, tau_cont);
 
       if (tau_rnd - tau > tau_cont) {
         /// travel out of cell or time step
@@ -318,7 +319,9 @@ __host__ __device__ static double get_event(
 
         *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
       }
+
       pkt_ptr->next_trans = dummypkt_ptr->next_trans;
+
       return edist;
     }
   }
