@@ -1098,7 +1098,7 @@ static void read_atomicdata_files(void) {
       }
     }
 
-    sort(globals::linelist, globals::nlines, sizeof(linelist_entry), compare_linelistentry);
+    qsort(globals::linelist, globals::nlines, sizeof(linelist_entry), compare_linelistentry);
 
     // printout("Checking for duplicate transition lines...\n");
     // int pass = 0;
