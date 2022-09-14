@@ -171,9 +171,9 @@ __host__ __device__ static double *get_transitionrates(int modelgridindex, int e
 
 __host__ __device__ static int do_macroatom_internal_down_same(int modelgridindex, int element, int ion, int level,
                                                                double t_mid, double total_internal_down_same) {
-  const float T_e = grid::get_Te(modelgridindex);
-  const float nne = grid::get_nne(modelgridindex);
-  const double epsilon_current = epsilon(element, ion, level);
+  // const float T_e = grid::get_Te(modelgridindex);
+  // const float nne = grid::get_nne(modelgridindex);
+  // const double epsilon_current = epsilon(element, ion, level);
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
   // printout("[debug] do_ma:   internal downward jump within current ionstage\n");
