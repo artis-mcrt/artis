@@ -12,7 +12,7 @@ cp ../data/* classicmode_testrun/
 
 cp ../artisoptions_classic.h classicmode_testrun/artisoptions.h
 
-sed -i 's/constexpr int MPKTS.*/constexpr int MPKTS = 15000;/g' classicmode_testrun/artisoptions.h
+sed -i 's/#define MPKTS.*/#define MPKTS 15000/g' classicmode_testrun/artisoptions.h
 
 sed -i 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' classicmode_testrun/artisoptions.h
 
