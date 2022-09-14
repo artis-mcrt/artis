@@ -557,8 +557,8 @@ static struct transitiontable_entry *read_ion_transitions(std::istream &ftransit
 static int compare_linelistentry_simple(const void *p1, const void *p2)
 // sort the lineline in descending frequency
 {
-  linelist_entry *a1 = (linelist_entry *)(p1);
-  linelist_entry *a2 = (linelist_entry *)(p2);
+  auto *a1 = static_cast<const linelist_entry *>(p1);
+  auto *a2 = static_cast<const linelist_entry *>(p2);
 
   if (a1->nu > a2->nu) return -1;
   if (a1->nu < a2->nu) return 1;
@@ -581,19 +581,19 @@ static int compare_linelistentry(const void *p1, const void *p2)
              1e8 * CLIGHT / a2->nu);
 
     a2->nu = a1->nu;
-    if ((a1->elementindex == a2->elementindex) && (a1->ionindex == a2->ionindex)) {
-      if (a1->lowerlevelindex > a2->lowerlevelindex) {
-        return -1;
-      } else if (a1->lowerlevelindex < a2->lowerlevelindex) {
-        return 1;
-      } else if (a1->upperlevelindex > a2->upperlevelindex) {
-        return -1;
-      } else if (a1->upperlevelindex < a2->upperlevelindex) {
-        return 1;
-      } else {
-        return 0;
-      }
+    // if ((a1->elementindex == a2->elementindex) && (a1->ionindex == a2->ionindex)) {
+    if (a1->lowerlevelindex > a2->lowerlevelindex) {
+      return -1;
+    } else if (a1->lowerlevelindex < a2->lowerlevelindex) {
+      return 1;
+    } else if (a1->upperlevelindex > a2->upperlevelindex) {
+      return -1;
+    } else if (a1->upperlevelindex < a2->upperlevelindex) {
+      return 1;
+    } else {
+      return 0;
     }
+    // }
   }
 
   if ((a1->nu < a2->nu) || (a1->nu == a2->nu))

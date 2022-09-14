@@ -667,12 +667,12 @@ void read_parameterfile_vpkt(void) {
   FILE *input_file = fopen_required("vpkt.txt", "r");
 
   // Nobs
-  fscanf(input_file, "%d", &Nobs);
+  assert_always(fscanf(input_file, "%d", &Nobs) == 1);
 
   printout("vpkt.txt: Nobs %d directions\n", Nobs);
 
   // nz_obs_vpkt. Cos(theta) to the observer. A list in the case of many observers
-  nz_obs_vpkt = (double *)malloc(Nobs * sizeof(double));
+  nz_obs_vpkt = static_cast<double *>(malloc(Nobs * sizeof(double)));
   for (int i = 0; i < Nobs; i++) {
     fscanf(input_file, "%lg", &nz_obs_vpkt[i]);
 
@@ -687,10 +687,10 @@ void read_parameterfile_vpkt(void) {
   }
 
   // phi to the observer (degrees). A list in the case of many observers
-  phiobs = (double *)malloc(Nobs * sizeof(double));
+  phiobs = static_cast<double *>(malloc(Nobs * sizeof(double)));
   for (int i = 0; i < Nobs; i++) {
     double phi_degrees = 0.;
-    fscanf(input_file, "%lg \n", &phi_degrees);
+    assert_always(fscanf(input_file, "%lg \n", &phi_degrees) == 1);
     phiobs[i] = phi_degrees * PI / 180.;
 
     printout("vpkt.txt:   direction %d costheta %g phi %g (%g degrees)\n", i, nz_obs_vpkt[i], phiobs[i], phi_degrees);
@@ -698,19 +698,19 @@ void read_parameterfile_vpkt(void) {
 
   // Nspectra opacity choices (i.e. Nspectra spectra for each observer)
   int nspectra_customlist_flag;
-  fscanf(input_file, "%d ", &nspectra_customlist_flag);
+  assert_always(fscanf(input_file, "%d ", &nspectra_customlist_flag) == 1);
 
   if (nspectra_customlist_flag != 1) {
     Nspectra = 1;
-    exclude = (double *)malloc(Nspectra * sizeof(double));
+    exclude = static_cast<double *>(malloc(Nspectra * sizeof(double)));
 
     exclude[0] = 0;
   } else {
-    fscanf(input_file, "%d ", &Nspectra);
-    exclude = (double *)malloc(Nspectra * sizeof(double));
+    assert_always(fscanf(input_file, "%d ", &Nspectra) == 1);
+    exclude = static_cast<double *>(malloc(Nspectra * sizeof(double)));
 
     for (int i = 0; i < Nspectra; i++) {
-      fscanf(input_file, "%lg ", &exclude[i]);
+      assert_always(fscanf(input_file, "%lg ", &exclude[i]) == 1);
 
       // The first number should be equal to zero!
       assert_always(exclude[0] == 0);  // The first spectrum should allow for all opacities (exclude[i]=0)
@@ -718,13 +718,13 @@ void read_parameterfile_vpkt(void) {
   }
 
   printout("vpkt.txt: Nspectra %d per observer\n", Nspectra);
-  tau_vpkt = (double *)malloc(Nspectra * sizeof(double));
+  tau_vpkt = static_cast<double *>(malloc(Nspectra * sizeof(double)));
 
   // time window. If dum4=1 it restrict vpkt to time windown (dum5,dum6)
   int override_tminmax = 0;
   double vspec_tmin_in_days = 0.;
   double vspec_tmax_in_days = 0.;
-  fscanf(input_file, "%d %lg %lg \n", &override_tminmax, &vspec_tmin_in_days, &vspec_tmax_in_days);
+  assert_always(fscanf(input_file, "%d %lg %lg \n", &override_tminmax, &vspec_tmin_in_days, &vspec_tmax_in_days) == 3);
 
   printout("vpkt: compiled with tmin_vspec %.1fd tmax_vspec %1.fd VMTBINS %d\n", tmin_vspec / DAY, tmax_vspec / DAY,
            VMTBINS);
@@ -746,14 +746,14 @@ void read_parameterfile_vpkt(void) {
   // frequency window. dum4 restrict vpkt to a frequency range, dum5 indicates the number of ranges,
   // followed by a list of ranges (dum6,dum7)
   int flag_custom_freq_ranges = 0;
-  fscanf(input_file, "%d ", &flag_custom_freq_ranges);
+  assert_always(fscanf(input_file, "%d ", &flag_custom_freq_ranges) == 1);
 
   printout("vpkt: compiled with VMNUBINS %d\n", VMNUBINS);
   assert_always(numax_vspec > numin_vspec);
   printout("vpkt: compiled with numax_vspec %g lambda_min %g Å\n", numax_vspec, 1e8 * CLIGHT / numax_vspec);
   printout("vpkt: compiled with numin_vspec %g lambda_max %g Å\n", numin_vspec, 1e8 * CLIGHT / numin_vspec);
   if (flag_custom_freq_ranges == 1) {
-    fscanf(input_file, "%d ", &Nrange);
+    assert_always(fscanf(input_file, "%d ", &Nrange) == 1);
     assert_always(Nrange <= MRANGE);
 
     printout("vpkt.txt: Nrange %d frequency intervals per spectrum per observer\n", Nrange);
@@ -761,7 +761,7 @@ void read_parameterfile_vpkt(void) {
     for (int i = 0; i < Nrange; i++) {
       double lmin_vspec_input = 0.;
       double lmax_vspec_input = 0.;
-      fscanf(input_file, "%lg %lg", &lmin_vspec_input, &lmax_vspec_input);
+      assert_always(fscanf(input_file, "%lg %lg", &lmin_vspec_input, &lmax_vspec_input) == 2);
 
       numin_vspec_input[i] = CLIGHT / (lmax_vspec_input * 1e-8);
       numax_vspec_input[i] = CLIGHT / (lmin_vspec_input * 1e-8);
@@ -782,7 +782,7 @@ void read_parameterfile_vpkt(void) {
 
   // if dum7=1, vpkt are not created when cell optical depth is larger than cell_is_optically_thick_vpkt
   int overrride_thickcell_tau = 0;
-  fscanf(input_file, "%d %lg \n", &overrride_thickcell_tau, &cell_is_optically_thick_vpkt);
+  assert_always(fscanf(input_file, "%d %lg \n", &overrride_thickcell_tau, &cell_is_optically_thick_vpkt) == 2);
 
   if (overrride_thickcell_tau == 1) {
     printout("vpkt.txt: cell_is_optically_thick_vpkt %lg\n", cell_is_optically_thick_vpkt);
@@ -793,25 +793,25 @@ void read_parameterfile_vpkt(void) {
   }
 
   // Maximum optical depth. If a vpkt reaches dum7 is thrown away
-  fscanf(input_file, "%lg \n", &tau_max_vpkt);
+  assert_always(fscanf(input_file, "%lg \n", &tau_max_vpkt) == 1);
   printout("vpkt.txt: tau_max_vpkt %g\n", tau_max_vpkt);
 
   // Produce velocity grid map if =1
-  fscanf(input_file, "%d \n", &vgrid_flag);
+  assert_always(fscanf(input_file, "%d \n", &vgrid_flag) == 1);
   printout("vpkt.txt: velocity grid map %s\n", (vgrid_flag == 1) ? "ENABLED" : "DISABLED");
 
   if (vgrid_flag == 1) {
     double tmin_grid_in_days;
     double tmax_grid_in_days;
     // Specify time range for velocity grid map
-    fscanf(input_file, "%lg %lg \n", &tmin_grid_in_days, &tmax_grid_in_days);
+    assert_always(fscanf(input_file, "%lg %lg \n", &tmin_grid_in_days, &tmax_grid_in_days) == 2);
     tmin_grid = tmin_grid_in_days * DAY;
     tmax_grid = tmax_grid_in_days * DAY;
 
     printout("vpkt.txt: velocity grid time range tmin_grid %gd tmax_grid %gd\n", tmin_grid / DAY, tmax_grid / DAY);
 
     // Specify wavelength range: number of intervals (dum9) and limits (dum10,dum11)
-    fscanf(input_file, "%d ", &Nrange_grid);
+    assert_always(fscanf(input_file, "%d ", &Nrange_grid) == 1);
 
     printout("vpkt.txt: velocity grid frequency intervals %d\n", Nrange_grid);
 
@@ -820,7 +820,7 @@ void read_parameterfile_vpkt(void) {
     for (int i = 0; i < Nrange_grid; i++) {
       double range_lambda_min = 0.;
       double range_lambda_max = 0.;
-      fscanf(input_file, "%lg %lg", &range_lambda_min, &range_lambda_max);
+      assert_always(fscanf(input_file, "%lg %lg", &range_lambda_min, &range_lambda_max) == 2);
 
       nu_grid_max[i] = CLIGHT / (range_lambda_min * 1e-8);
       nu_grid_min[i] = CLIGHT / (range_lambda_max * 1e-8);
