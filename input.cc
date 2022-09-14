@@ -1088,30 +1088,41 @@ static void read_atomicdata_files(void) {
   /// then sort the linelist by decreasing frequency
   if (globals::rank_in_node == 0) {
     qsort(globals::linelist, globals::nlines, sizeof(linelist_entry), compare_linelistentry);
-    // printout("Fixing duplicate atomic lines...\n");
-    // int pass = 0;
-    // bool found_dupe = false;
-    // do
-    // {
-    //   pass++;
-    //   printout("pass %d\n", pass);
-    //   qsort(globals::linelist, globals::nlines, sizeof(linelist_entry), compare_linelistentry);
 
-    //   found_dupe = false;
-    //   for (int i = 0; i < globals::nlines - 1; i++)
-    //   {
-    //     if (globals::linelist[i].nu == globals::linelist[i + 1].nu)
-    //     {
-    //       found_dupe = true;
+    // clamp close lines to exact overlaps
+    for (int i = 0; i < globals::nlines - 1; i++) {
+      const double nu = globals::linelist[i].nu;
+      const double nu_next = globals::linelist[i + 1].nu;
+      if (fabs(nu_next - nu) < (1.e-10 * nu)) {
+        globals::linelist[i + 1].nu = globals::linelist[i].nu;
+      }
+    }
+
+    sort(globals::linelist, globals::nlines, sizeof(linelist_entry), compare_linelistentry);
+
+    // printout("Checking for duplicate transition lines...\n");
+    // int pass = 0;
+    // int numduplicates = 0;
+    // do {
+    //   pass++;
+
+    //   qsort(globals::linelist, globals::nlines, sizeof(linelist_entry), compare_linelistentry_simple);
+
+    //   numduplicates = 0;
+    //   for (int i = 0; i < globals::nlines - 1; i++) {
+    //     const double nu = globals::linelist[i].nu;
+    //     const double nu_next = globals::linelist[i + 1].nu;
+
+    //     if (nu == nu_next) {
+    //       numduplicates++;
     //       const double lambda_prev = 1e8 * CLIGHT / globals::linelist[i].nu;
     //       const double lambda_new = lambda_prev + 0.01 * ((i % 10) + 1);
     //       globals::linelist[i].nu = 1e8 * CLIGHT / lambda_new;
     //     }
     //   }
 
-    //   printout("done fixing duplicate atomic lines...resorting...\n");
-    // }
-    // while (found_dupe);
+    //   printout("pass %d found %d duplicate atomic lines...resorting...\n", pass, numduplicates);
+    // } while (numduplicates > 0);
   }
 
 // create a linelist shared on node and then copy data across, freeing the local copy
