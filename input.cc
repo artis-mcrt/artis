@@ -554,29 +554,36 @@ static struct transitiontable_entry *read_ion_transitions(std::istream &ftransit
   return transitiontable;
 }
 
+static int compare_linelistentry_simple(const void *p1, const void *p2)
+// sort the lineline in descending frequency
+{
+  linelist_entry *a1 = (linelist_entry *)(p1);
+  linelist_entry *a2 = (linelist_entry *)(p2);
+
+  if (a1->nu > a2->nu) return -1;
+  if (a1->nu < a2->nu) return 1;
+  return 0;
+}
+
 static int compare_linelistentry(const void *p1, const void *p2)
 /// Helper function to sort the linelist by frequency.
 {
   linelist_entry *a1 = (linelist_entry *)(p1);
   linelist_entry *a2 = (linelist_entry *)(p2);
 
-  // if (a1->nu > a2->nu) return -1;
-  // if (a1->nu < a2->nu) return 1;
-  // return 0;
-
   // printf("%d %d %d %d %g\n",a1->elementindex,a1->ionindex,a1->lowerlevelindex,a1->upperlevelindex,a1->nu);
   // printf("%d %d %d %d %g\n",a2->elementindex,a2->ionindex,a2->lowerlevelindex,a2->upperlevelindex,a2->nu);
   // printf("%g\n",a2->nu - a1->nu);
   if (fabs(a2->nu - a1->nu) < (1.e-10 * a1->nu)) {
-    a2->nu = a1->nu;
-
-    printout("Duplicate atomic line?\n");
+    printout("Duplicate transition line?\n");
     printout("Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_element(a1->elementindex),
              get_ionstage(a1->elementindex, a1->ionindex), a1->lowerlevelindex, a1->upperlevelindex, a1->nu,
              1e8 * CLIGHT / a1->nu);
     printout("Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_element(a2->elementindex),
              get_ionstage(a2->elementindex, a2->ionindex), a2->lowerlevelindex, a2->upperlevelindex, a2->nu,
              1e8 * CLIGHT / a2->nu);
+
+    a2->nu = a1->nu;
 
     if (a1->lowerlevelindex > a2->lowerlevelindex) {
       return -1;
@@ -597,13 +604,6 @@ static int compare_linelistentry(const void *p1, const void *p2)
     return -1;
   else
     return 0;
-}
-
-static int transitioncheck(const int upper, const int lower) {
-  const int index = (upper - lower) - 1;
-  const int flag = transitions[upper].to[index];
-
-  return flag;
 }
 
 static void add_transitions_to_linelist(const int element, const int ion, const int nlevelsmax,
@@ -631,11 +631,13 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
       // if (level == transitiontable[ii].upper && level-i-1 == transitiontable[ii].lower)
       //{
       // printout("ii %d\n",ii);
-      // printout("transtable upper %d, lower %d, A %g, iii %d\n",transitiontable[ii].upper,transitiontable[ii].lower,
-      // transitiontable[ii].A,iii);
+      // printout("transtable upper %d, lower %d, A %g, iii
+      // %d\n",transitiontable[ii].upper,transitiontable[ii].lower, transitiontable[ii].A,iii);
       /// Make sure that we don't allow duplicate. In that case take only the lines
       /// first occurrence
-      if (transitioncheck(level, targetlevel) == -99) {
+      const int transitioncheck = transitions[level].to[(level - targetlevel) - 1];
+
+      if (transitioncheck == -99) {
         transitions[level].to[level - targetlevel - 1] = *lineindex;
         const double A_ul = transitiontable[ii].A;
         const double coll_str = transitiontable[ii].coll_str;
@@ -645,8 +647,8 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
         const double f_ul = g * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
         assert_always(std::isfinite(f_ul));
         // f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
-        // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g *
-        // ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
+        // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength =
+        // g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
 
         // printout("lineindex %d, element %d, ion %d, lower %d, upper %d, nu
         // %g\n",*lineindex,element,ion,level-i-1,level,nu_trans);
@@ -709,8 +711,8 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
         const double g = stat_weight(element, ion, level) / stat_weight(element, ion, targetlevel);
         const double f_ul = g * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
         // f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
-        // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g *
-        // ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
+        // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength =
+        // g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
 
         if (globals::rank_in_node == 0) {
           if ((globals::linelist[linelistindex].elementindex != element) ||
@@ -724,8 +726,8 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
             printout("[input.c]   A_ul %g, coll_str %g\n", A_ul, coll_str);
             printout(
                 "[input.c]   globals::linelist[linelistindex].elementindex %d, "
-                "globals::linelist[linelistindex].ionindex %d, globals::linelist[linelistindex].upperlevelindex %d, "
-                "globals::linelist[linelistindex].lowerlevelindex %d\n",
+                "globals::linelist[linelistindex].ionindex %d, globals::linelist[linelistindex].upperlevelindex "
+                "%d, globals::linelist[linelistindex].lowerlevelindex %d\n",
                 globals::linelist[linelistindex].elementindex, globals::linelist[linelistindex].ionindex,
                 globals::linelist[linelistindex].upperlevelindex, globals::linelist[linelistindex].lowerlevelindex);
             abort();
@@ -2110,24 +2112,6 @@ void read_parameterfile(int rank)
   }
 }
 #endif
-
-/*
-int compare_linelistentry(const void *p1, const void *p2)
-{
-  linelist_entry *a1, *a2;
-  a1 = (linelist_entry *)(p1);
-  a2 = (linelist_entry *)(p2);
-  //printf("%d %d %d %d %g\n",a1->elementindex,a1->ionindex,a1->lowerlevelindex,a1->upperlevelindex,a1->nu);
-  //printf("%d %d %d %d %g\n",a2->elementindex,a2->ionindex,a2->lowerlevelindex,a2->upperlevelindex,a2->nu);
-  //printf("%g\n",a2->nu - a1->nu);
-  if (a1->nu - a2->nu < 0)
-    return 1;
-  else if (a1->nu - a2->nu > 0)
-    return -1;
-  else
-    return 0;
-}
-*/
 
 void update_parameterfile(int nts)
 /// Subroutine to read in input parameters from input.txt.
