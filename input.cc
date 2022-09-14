@@ -572,15 +572,18 @@ static int compare_linelistentry(const void *p1, const void *p2)
   linelist_entry *a2 = (linelist_entry *)(p2);
 
   if (fabs(a2->nu - a1->nu) < (1.e-10 * a1->nu)) {
-    printout("Duplicate transition line? %s\n", a1->nu == a2->nu ? "nu match exact" : "close to nu match");
-    printout("a: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_element(a1->elementindex),
-             get_ionstage(a1->elementindex, a1->ionindex), a1->lowerlevelindex, a1->upperlevelindex, a1->nu,
-             1e8 * CLIGHT / a1->nu);
-    printout("b: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_element(a2->elementindex),
-             get_ionstage(a2->elementindex, a2->ionindex), a2->lowerlevelindex, a2->upperlevelindex, a2->nu,
-             1e8 * CLIGHT / a2->nu);
+    if ((a1->elementindex == a2->elementindex) && (a1->ionindex == a2->ionindex) &&
+        (a1->lowerlevelindex == a2->lowerlevelindex) && (a1->upperlevelindex == a2->upperlevelindex)) {
+      printout("Duplicate transition line? %s\n", a1->nu == a2->nu ? "nu match exact" : "close to nu match");
+      printout("a: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_element(a1->elementindex),
+               get_ionstage(a1->elementindex, a1->ionindex), a1->lowerlevelindex, a1->upperlevelindex, a1->nu,
+               1e8 * CLIGHT / a1->nu);
+      printout("b: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_element(a2->elementindex),
+               get_ionstage(a2->elementindex, a2->ionindex), a2->lowerlevelindex, a2->upperlevelindex, a2->nu,
+               1e8 * CLIGHT / a2->nu);
+    }
 
-    // a2->nu = a1->nu;
+    a2->nu = a1->nu;
     // if ((a1->elementindex == a2->elementindex) && (a1->ionindex == a2->ionindex)) {
     if (a1->lowerlevelindex > a2->lowerlevelindex) {
       return -1;
@@ -1090,17 +1093,15 @@ static void read_atomicdata_files(void) {
     qsort(globals::linelist, globals::nlines, sizeof(linelist_entry), compare_linelistentry);
 
     // clamp close lines to exact overlaps
-    for (int i = 0; i < globals::nlines - 1; i++) {
-      const double nu = globals::linelist[i].nu;
-      const double nu_next = globals::linelist[i + 1].nu;
-      if (fabs(nu_next - nu) < (1.e-10 * nu)) {
-        globals::linelist[i + 1].nu = globals::linelist[i].nu;
-      }
-    }
+    // for (int i = 0; i < globals::nlines - 1; i++) {
+    //   const double nu = globals::linelist[i].nu;
+    //   const double nu_next = globals::linelist[i + 1].nu;
+    //   if (fabs(nu_next - nu) < (1.e-10 * nu)) {
+    //     globals::linelist[i + 1].nu = globals::linelist[i].nu;
+    //   }
+    // }
 
-    qsort(globals::linelist, globals::nlines, sizeof(linelist_entry), compare_linelistentry);
-
-    // printout("Checking for duplicate transition lines...\n");
+    // printout("Preventing duplicate transition lines...\n");
     // int pass = 0;
     // int numduplicates = 0;
     // do {
