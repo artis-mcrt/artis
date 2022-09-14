@@ -34,7 +34,7 @@ constexpr double ONEOVER4PI = 7.957747153555701e-02;
 constexpr double HCLIGHTOVERFOURPI = 1.580764662876770e-17;
 constexpr double OSCSTRENGTHCONVERSION = 1.3473837e+21;
 
-#define H_ionpot (13.5979996 * EV)
+constexpr double H_ionpot = 13.5979996 * EV;
 
 #define GRID_UNIFORM 1      // Simple cuboidal cells.
 #define GRID_SPHERICAL1D 2  // radial shells
