@@ -378,10 +378,11 @@ static void extend_lastdecaypath(void)
       }
       decaypaths.push_back({0, NULL, NULL, NULL});
       const int lastindex = decaypaths.size() - 1;
-      decaypaths[lastindex].pathlength = get_decaypathlength(startdecaypathindex) + 1;
-      decaypaths[lastindex].z = static_cast<int *>(malloc(decaypaths[lastindex].pathlength * sizeof(int)));
-      decaypaths[lastindex].a = static_cast<int *>(malloc(decaypaths[lastindex].pathlength * sizeof(int)));
-      decaypaths[lastindex].decaytypes = static_cast<int *>(malloc(decaypaths[lastindex].pathlength * sizeof(int)));
+      const int pathlength = get_decaypathlength(startdecaypathindex) + 1;
+      decaypaths[lastindex].pathlength = pathlength;
+      decaypaths[lastindex].z = new int[pathlength];
+      decaypaths[lastindex].a = new int[pathlength];
+      decaypaths[lastindex].decaytypes = new int[pathlength];
 
       // check for repeated nuclides, which would indicate a loop in the decay chain
       for (int i = 0; i < get_decaypathlength(startdecaypathindex); i++) {
@@ -451,9 +452,9 @@ static void find_decaypaths(void) {
       decaypaths.push_back({0, NULL, NULL, NULL});
       const int lastindex = decaypaths.size() - 1;
       decaypaths[lastindex].pathlength = 1;
-      decaypaths[lastindex].z = static_cast<int *>(malloc(sizeof(int)));
-      decaypaths[lastindex].a = static_cast<int *>(malloc(sizeof(int)));
-      decaypaths[lastindex].decaytypes = static_cast<int *>(malloc(sizeof(int)));
+      decaypaths[lastindex].z = new int[1];
+      decaypaths[lastindex].a = new int[1];
+      decaypaths[lastindex].decaytypes = new int[1];
 
       decaypaths[lastindex].z[0] = z;
       decaypaths[lastindex].a[0] = a;
