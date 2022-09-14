@@ -252,10 +252,17 @@ __host__ __device__ static double get_event(
 
           edist = dist + ldist;
           if (edist >= abort_dist) {
-            printout("[warning] edist %lg was >= abort_dist %lg but we haven't redshifted past it. fixing...\n", edist,
-                     abort_dist);
-            edist = abort_dist * (1 - 2e-8);  // if the edist > abort_dist, the line will not be activated in do_rpkt
+            // if the edist > abort_dist, the line will not be activated in do_rpkt, even thought we are sure that we
+            // should hit based on the frequency checks
+            // this seems to only occur with relativistic doppler shift and/or massive atomic datasets with dense lines
+            const double edist_new = abort_dist * (1 - 2e-8);
+            printout(
+                "[warning] edist %lg was >= abort_dist %lg but nu_trans >= nu_cmf_abort (we haven't redshifted past "
+                "boundary) fixing by reducing distance to ...\n",
+                edist, abort_dist, edist_new);
+            edist = edist_new;
           }
+
           if (DETAILED_LINE_ESTIMATORS_ON) {
             move_pkt_withtime(dummypkt_ptr, ldist);
             radfield::increment_lineestimator(
@@ -792,6 +799,7 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
         const int cellindexnew = pkt_ptr->where;
         mgi = grid::get_cell_modelgridindex(cellindexnew);
       }
+
       // New cell so reset the scat_counter
       pkt_ptr->scat_count = 0;
       pkt_ptr->last_event = pkt_ptr->last_event + 100;
