@@ -8,10 +8,10 @@
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
 constexpr int MPKTS = 1000000;
 
-#define GRID_TYPE GRID_UNIFORM
-#define CUBOID_NCOORDGRID_X 50
-#define CUBOID_NCOORDGRID_Y 50
-#define CUBOID_NCOORDGRID_Z 50
+constexpr int GRID_TYPE = GRID_UNIFORM;
+constexpr int CUBOID_NCOORDGRID_X = 50;
+constexpr int CUBOID_NCOORDGRID_Y = 50;
+constexpr int CUBOID_NCOORDGRID_Z = 50;
 // #define GRID_TYPE GRID_SPHERICAL1D
 
 // non-LTE population solver
@@ -70,7 +70,7 @@ constexpr double RECOMBCALIBRATION_T_ELEC = 6000.;
 // GSL integration workspace size
 constexpr size_t GSLWSIZE = 16384;
 
-constexpr bool TRACK_ION_STATS = false;
+#define TRACK_ION_STATS false
 constexpr bool TRACK_ION_MASTATS = false;
 
 // Increase linelist by this blocksize
@@ -109,10 +109,10 @@ constexpr double T_R_min = 500;
 constexpr double T_R_max = 250000;
 
 // store Jb_lu estimators for particular lines (which are chosen in radfield::init())
-constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
+#define DETAILED_LINE_ESTIMATORS_ON false
 
 // track detailed bound-free rate estimators instead of doing radiation field model integrals or lookup table
-constexpr bool DETAILED_BF_ESTIMATORS_ON = true;
+#define DETAILED_BF_ESTIMATORS_ON true
 
 // if DETAILED_BF_ESTIMATORS_ON, then use BF estimators at the following timestep (0-indexed) and later
 #define DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP 13
@@ -121,17 +121,17 @@ constexpr bool DETAILED_BF_ESTIMATORS_ON = true;
 // not safe for MPI or OpenMP - single process and single thread only!
 // this will output a list of contributions to each bound-free rate estimator
 // with each packet emission type ranked by their contribution to the rate
-constexpr bool DETAILED_BF_ESTIMATORS_BYTYPE = false;
+#define DETAILED_BF_ESTIMATORS_BYTYPE false
 
 // dynamically calculate photoionization rates for the current radiation field
 // instead of interpolating values from a lookup table for a blackbody radiation field
-constexpr bool NO_LUT_PHOTOION = true;
+#define NO_LUT_PHOTOION true
 
 // as above for bound-free heating
-constexpr bool NO_LUT_BFHEATING = true;
+#define NO_LUT_BFHEATING true
 
 // if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
-constexpr bool SEPARATE_STIMRECOMB = false;
+#define SEPARATE_STIMRECOMB false
 
 // ** End of radiation field model options **
 
@@ -144,13 +144,13 @@ constexpr bool NT_ON = true;
 constexpr bool NT_SOLVE_SPENCERFANO = true;
 
 // number of energy points in the Spencer-Fano solution vector
-#define SFPTS 4096
+constexpr int SFPTS = 4096;
 
 // eV
-#define SF_EMAX 16000.
+constexpr double SF_EMAX = 16000.;
 
 // eV
-#define SF_EMIN .1
+constexpr double SF_EMIN = .1;
 
 // use a grid of energy points with constant spacing in log energy
 #define SF_USE_LOG_E_INCREMENT false
@@ -199,18 +199,18 @@ constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN = false;
 
 // ** End of non-thermal solution options **
 
-constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-3
+constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-3;
 
-    constexpr double CONTINUUM_NU_INTEGRAL_ACCURACY = 1e-3
+constexpr double CONTINUUM_NU_INTEGRAL_ACCURACY = 1e-3;
 
-    constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3
+constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
 
-    // when calculating ion ionisation rate coefficient (for estimator files only, not the simulation), contribute the
-    // lowest n levels that make up at least IONGAMMA_POPFRAC_LEVELS_INCLUDED fraction of the ion population
-    constexpr double IONGAMMA_POPFRAC_LEVELS_INCLUDED = 0.999
+// when calculating ion ionisation rate coefficient (for estimator files only, not the simulation), contribute the
+// lowest n levels that make up at least IONGAMMA_POPFRAC_LEVELS_INCLUDED fraction of the ion population
+constexpr double IONGAMMA_POPFRAC_LEVELS_INCLUDED = 0.999;
 
-    // incomplete work in progress
-    constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = false;
+// incomplete work in progress
+constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = false;
 
 // when converting mass fraction to a number density, use a mean atomic mass
 // calcuated from the nuclear composition (plus stable component),

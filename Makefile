@@ -190,5 +190,5 @@ version.h:
 	@echo "#define GIT_BRANCH \"$(GIT_BRANCH)\"" >> version.h
 
 clean:
-	rm -rf sn3d exspec build version.h
+	rm -rf sn3d exspec build version.h *.o *.d
 

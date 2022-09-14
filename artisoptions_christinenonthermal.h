@@ -8,10 +8,10 @@
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
 constexpr int MPKTS = 10000;
 
-#define GRID_TYPE GRID_UNIFORM
-#define CUBOID_NCOORDGRID_X 100
-#define CUBOID_NCOORDGRID_Y 100
-#define CUBOID_NCOORDGRID_Z 100
+constexpr int GRID_TYPE = GRID_UNIFORM;
+constexpr int CUBOID_NCOORDGRID_X = 100;
+constexpr int CUBOID_NCOORDGRID_Y = 100;
+constexpr int CUBOID_NCOORDGRID_Z = 100;
 // #define GRID_TYPE GRID_SPHERICAL1D
 
 // non-LTE population solver
@@ -102,10 +102,10 @@ constexpr double T_R_min = 500;
 constexpr double T_R_max = 250000;
 
 // store Jb_lu estimators for particular lines chosen in radfield::init()
-constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
+#define DETAILED_LINE_ESTIMATORS_ON false
 
 // store detailed bound-free rate estimators
-constexpr bool DETAILED_BF_ESTIMATORS_ON = true;
+#define DETAILED_BF_ESTIMATORS_ON true
 
 // if DETAILED_BF_ESTIMATORS_ON, then use BF estimators at the following timestep and later
 #define DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP 13
@@ -114,17 +114,17 @@ constexpr bool DETAILED_BF_ESTIMATORS_ON = true;
 // not safe for MPI or OpenMP - single process and single thread only!
 // this will output a list of contributions to each bound-free rate estimator
 // with each packet emission type ranked by their contribution to the rate
-constexpr bool DETAILED_BF_ESTIMATORS_BYTYPE = false;
+#define DETAILED_BF_ESTIMATORS_BYTYPE false
 
 // dynamically calculate photoionization rates for the current radiation field
 // instead of interpolating values from a lookup table for a blackbody radiation field
-constexpr bool NO_LUT_PHOTOION = true;
+#define NO_LUT_PHOTOION true
 
 // as above for bound-free heating
-constexpr bool NO_LUT_BFHEATING = true;
+#define NO_LUT_BFHEATING true
 
 // if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
-constexpr bool SEPARATE_STIMRECOMB = false;
+#define SEPARATE_STIMRECOMB false
 
 //
 // End of radiation field model options
@@ -141,16 +141,16 @@ constexpr bool NT_ON = true;
 constexpr bool NT_SOLVE_SPENCERFANO = true;
 
 // number of energy points in the Spencer-Fano solution vector
-#define SFPTS 4096
+constexpr int SFPTS = 4096;
 
 // eV
-#define SF_EMAX 16000.
+constexpr double SF_EMAX = 16000.;
 
 // eV
-#define SF_EMIN .1
+constexpr double SF_EMIN = .1;
 
 // use a grid of energy points with constant spacing in log energy
-#define SF_USE_LOG_E_INCREMENT false
+constexpr bool SF_USE_LOG_E_INCREMENT = false;
 
 // trigger a Spencer-Fano solution at least once every n timesteps
 // 0 can only use solutions from previous NLTE iterations on the current timestep

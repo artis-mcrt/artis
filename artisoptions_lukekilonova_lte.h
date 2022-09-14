@@ -8,10 +8,10 @@
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
 constexpr int MPKTS = 15000;
 
-#define GRID_TYPE GRID_UNIFORM
-#define CUBOID_NCOORDGRID_X 50
-#define CUBOID_NCOORDGRID_Y 50
-#define CUBOID_NCOORDGRID_Z 50
+constexpr int GRID_TYPE = GRID_UNIFORM;
+constexpr int CUBOID_NCOORDGRID_X = 50;
+constexpr int CUBOID_NCOORDGRID_Y = 50;
+constexpr int CUBOID_NCOORDGRID_Z = 50;
 // #define GRID_TYPE GRID_SPHERICAL1D
 
 // non-LTE population solver
@@ -68,7 +68,7 @@ constexpr double RECOMBCALIBRATION_T_ELEC = 6000.;
 // GSL integration workspace size
 constexpr size_t GSLWSIZE = 16384;
 
-constexpr bool TRACK_ION_STATS = false;
+#define TRACK_ION_STATS false
 constexpr bool TRACK_ION_MASTATS = false;
 
 constexpr int MLINES = 1000000;  // Increase linelist by this blocksize
@@ -99,10 +99,10 @@ constexpr double T_R_min = 500;
 constexpr double T_R_max = 250000;
 
 // store Jb_lu estimators for particular lines chosen in radfield::init()
-constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
+#define DETAILED_LINE_ESTIMATORS_ON false
 
 // store detailed bound-free rate estimators
-constexpr bool DETAILED_BF_ESTIMATORS_ON = false;
+#define DETAILED_BF_ESTIMATORS_ON false
 
 // if DETAILED_BF_ESTIMATORS_ON, then use BF estimators at the following timestep and later
 #define DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP 13
@@ -111,17 +111,17 @@ constexpr bool DETAILED_BF_ESTIMATORS_ON = false;
 // not safe for MPI or OpenMP - single process and single thread only!
 // this will output a list of contributions to each bound-free rate estimator
 // with each packet emission type ranked by their contribution to the rate
-constexpr bool DETAILED_BF_ESTIMATORS_BYTYPE = false;
+#define DETAILED_BF_ESTIMATORS_BYTYPE false
 
 // dynamically calculate photoionization rates for the current radiation field
 // instead of interpolating values from a lookup table for a blackbody radiation field
-constexpr bool NO_LUT_PHOTOION = false;
+#define NO_LUT_PHOTOION false
 
 // as above for bound-free heating
-constexpr bool NO_LUT_BFHEATING = false;
+#define NO_LUT_BFHEATING false
 
 // if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
-constexpr bool SEPARATE_STIMRECOMB = false;
+#define SEPARATE_STIMRECOMB false
 
 // ** End of radiation field model options **
 
@@ -134,13 +134,13 @@ constexpr bool NT_ON = false;
 constexpr bool NT_SOLVE_SPENCERFANO = false;
 
 // number of energy points in the Spencer-Fano solution vector
-#define SFPTS 4096
+constexpr int SFPTS = 4096;
 
 // eV
-#define SF_EMAX 16000.
+constexpr double SF_EMAX = 16000.;
 
 // eV
-#define SF_EMIN .1
+constexpr double SF_EMIN = .1;
 
 // use a grid of energy points with constant spacing in log energy
 #define SF_USE_LOG_E_INCREMENT false
