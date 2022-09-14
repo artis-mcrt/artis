@@ -568,32 +568,13 @@ static int compare_linelistentry(const void *p1, const void *p2)
   // printf("%d %d %d %d %g\n",a2->elementindex,a2->ionindex,a2->lowerlevelindex,a2->upperlevelindex,a2->nu);
   // printf("%g\n",a2->nu - a1->nu);
   if (fabs(a2->nu - a1->nu) < (1.e-10 * a1->nu)) {
-    a2->nu = a1->nu;
-    if (a1->lowerlevelindex > a2->lowerlevelindex) {
-      return -1;
-    } else if (a1->lowerlevelindex < a2->lowerlevelindex) {
-      return 1;
-    } else if (a1->upperlevelindex > a2->upperlevelindex) {
-      return -1;
-    } else if (a1->upperlevelindex < a2->upperlevelindex) {
-      return 1;
-    } else {
-      printout("Duplicate atomic line?\n");
-      printout("Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_element(a1->elementindex),
-               get_ionstage(a1->elementindex, a1->ionindex), a1->lowerlevelindex, a1->upperlevelindex, a1->nu,
-               1e8 * CLIGHT / a1->nu);
-      printout("Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_element(a2->elementindex),
-               get_ionstage(a2->elementindex, a2->ionindex), a2->lowerlevelindex, a2->upperlevelindex, a2->nu,
-               1e8 * CLIGHT / a2->nu);
-      return 0;
-    }
-  } else {
-    if ((a1->nu < a2->nu) || (a1->nu == a2->nu))
-      return 1;
-    else if (a1->nu > a2->nu)
-      return -1;
-    else
-      return 0;
+    printout("Duplicate atomic line?\n");
+    printout("Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_element(a1->elementindex),
+             get_ionstage(a1->elementindex, a1->ionindex), a1->lowerlevelindex, a1->upperlevelindex, a1->nu,
+             1e8 * CLIGHT / a1->nu);
+    printout("Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_element(a2->elementindex),
+             get_ionstage(a2->elementindex, a2->ionindex), a2->lowerlevelindex, a2->upperlevelindex, a2->nu,
+             1e8 * CLIGHT / a2->nu);
   }
 }
 
