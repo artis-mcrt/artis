@@ -6,7 +6,7 @@
 #include "constants.h"
 
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
-#define MPKTS 100000
+constexpr int MPKTS = 100000;
 
 #define GRID_TYPE GRID_UNIFORM
 #define CUBOID_NCOORDGRID_X 100
@@ -42,7 +42,7 @@ constexpr bool single_ground_level = true;
 #define NLEVELS_REQUIRETRANSITIONS(Z, ionstage) 0
 
 // if uniform pellet energies are not used, a uniform decay time distribution is used with scaled packet energies
-#define UNIFORM_PELLET_ENERGIES true
+constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
 // #define DIRECT_COL_HEAT
 // #define NO_INITIAL_PACKETS
@@ -54,7 +54,7 @@ constexpr bool single_ground_level = true;
 #define MAXTEMP 140000.  // 1000000.
 
 // temperature for which total ion recombination rate are calibrated to input data (recombrates.txt)
-#define RECOMBCALIBRATION_T_ELEC 6000.
+constexpr double RECOMBCALIBRATION_T_ELEC = 6000.;
 
 // Polarisation for real packets
 #define DIPOLE
