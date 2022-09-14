@@ -98,11 +98,11 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
     {
       globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = in_nphixstargets;
       *mem_usage_phixs += in_nphixstargets * sizeof(phixstarget_entry);
-      if ((globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
-               (phixstarget_entry *)calloc(in_nphixstargets, sizeof(phixstarget_entry))) == NULL) {
-        printout("[fatal] input: not enough memory to initialize phixstargets list... abort\n");
-        abort();
-      }
+
+      globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
+          static_cast<phixstarget_entry *>(calloc(in_nphixstargets, sizeof(phixstarget_entry)));
+      assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != NULL);
+
       double probability_sum = 0.;
       for (int i = 0; i < in_nphixstargets; i++) {
         double phixstargetprobability;
@@ -123,15 +123,15 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
     {
       globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
       *mem_usage_phixs += sizeof(phixstarget_entry);
-      if ((globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
-               (phixstarget_entry *)calloc(1, sizeof(phixstarget_entry))) == NULL) {
-        printout("[fatal] input: not enough memory to initialize phixstargets... abort\n");
-        abort();
-      }
+      globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
+          static_cast<phixstarget_entry *>(calloc(1, sizeof(phixstarget_entry)));
+      assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != NULL);
+
       for (int i = 0; i < in_nphixstargets; i++) {
         double phixstargetprobability;
         assert_always(fscanf(phixsdata, "%d %lg\n", &upperlevel_in, &phixstargetprobability) == 2);
       }
+
       // send it to the ground state of the top ion
       globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex = 0;
       globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.0;
