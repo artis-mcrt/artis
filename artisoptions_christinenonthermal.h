@@ -69,16 +69,18 @@ constexpr double RECOMBCALIBRATION_T_ELEC = 15000.;
 // GSL integration workspace size
 constexpr size_t GSLWSIZE = 16384;
 
-#define TRACK_ION_STATS false
-#define TRACK_ION_MASTATS false
+constexpr bool TRACK_ION_STATS = false;
+constexpr bool TRACK_ION_MASTATS = false;
 
-#define MLINES 500000  // Increase linelist by this blocksize
+constexpr int MLINES = 500000;  // Increase linelist by this blocksize
 
 #define MINDENSITY 1e-40  /// Minimum cell density. Below cells are treated as empty.
 #define MINPOP 1e-40
 
-#define NU_MIN_R 1e13  /// lower frequency boundary for UVOIR spectra and BB sampling
-#define NU_MAX_R 5e16  /// upper frequency boundary for UVOIR spectra and BB sampling
+/// lower frequency boundary for UVOIR spectra and BB sampling
+constexpr double NU_MIN_R = 1e13;
+/// upper frequency boundary for UVOIR spectra and BB sampling
+constexpr double NU_MAX_R = 5e16;
 
 // ****
 // Start of radiation field model options
@@ -88,7 +90,7 @@ constexpr size_t GSLWSIZE = 16384;
 // (since LUTs created with Planck function J_nu)
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON = true;
 
-#define RADFIELDBINCOUNT 64
+constexpr int RADFIELDBINCOUNT = 64;
 
 constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
 
@@ -103,7 +105,7 @@ constexpr double T_R_max = 250000;
 constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 // store detailed bound-free rate estimators
-#define DETAILED_BF_ESTIMATORS_ON true
+constexpr bool DETAILED_BF_ESTIMATORS_ON = true;
 
 // if DETAILED_BF_ESTIMATORS_ON, then use BF estimators at the following timestep and later
 #define DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP 13
@@ -112,17 +114,17 @@ constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 // not safe for MPI or OpenMP - single process and single thread only!
 // this will output a list of contributions to each bound-free rate estimator
 // with each packet emission type ranked by their contribution to the rate
-#define DETAILED_BF_ESTIMATORS_BYTYPE false
+constexpr bool DETAILED_BF_ESTIMATORS_BYTYPE = false;
 
 // dynamically calculate photoionization rates for the current radiation field
 // instead of interpolating values from a lookup table for a blackbody radiation field
-#define NO_LUT_PHOTOION true
+constexpr bool NO_LUT_PHOTOION = true;
 
 // as above for bound-free heating
-#define NO_LUT_BFHEATING true
+constexpr bool NO_LUT_BFHEATING = true;
 
 // if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
-#define SEPARATE_STIMRECOMB false
+constexpr bool SEPARATE_STIMRECOMB = false;
 
 //
 // End of radiation field model options
@@ -172,39 +174,39 @@ constexpr int MAX_NT_EXCITATIONS_STORED = 25000;
 // in the NLTE pop solver, macroatom, and NTLEPTON packets.
 // Even with this off, excitations will be included in the solution
 // and their combined deposition fraction is calculated
-#define NT_EXCITATION_ON false
+constexpr bool NT_EXCITATION_ON = false;
 
 // increase the excitation and ionization lists by this blocksize when reallocating
 #define NT_BLOCKSIZEEXCITATION 5192
 
 // calculate eff_ionpot and ionisation rates by always dividing by the valence shell potential for the ion
 // instead of the specific shell potentials
-#define NT_USE_VALENCE_IONPOTENTIAL false
+constexpr bool NT_USE_VALENCE_IONPOTENTIAL = false;
 
 // allow ions to lose more than one electron per impact ionisation using Auger effect probabilities
 // associate with electron shells
 // if this is greater than zero, make sure NT_USE_VALENCE_IONPOTENTIAL is false!
-#define NT_MAX_AUGER_ELECTRONS 2
+constexpr int NT_MAX_AUGER_ELECTRONS = 2;
 
 // add the Auger electron term to the Spencer-Fano equation
-#define SF_AUGER_CONTRIBUTION_ON true
+constexpr bool SF_AUGER_CONTRIBUTION_ON = true;
 
 // set true to divide up the mean Auger energy by the number of electrons that come out
-#define SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN false
+constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN = false;
 
 //
 // End of non-thermal solution options
 // ****
 
-#define TEMPERATURE_SOLVER_ACCURACY 1e-3
+constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-3;
 
-#define CONTINUUM_NU_INTEGRAL_ACCURACY 1e-3
+constexpr double CONTINUUM_NU_INTEGRAL_ACCURACY = 1e-3;
 
-#define RATECOEFF_INTEGRAL_ACCURACY 1e-3
+constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
 
 // when calculating ion ionisation rate coefficient (for estimator files), contribute the lowest n levels that
 // make up at least IONGAMMA_POPFRAC_LEVELS_INCLUDED fraction of the ion population
-#define IONGAMMA_POPFRAC_LEVELS_INCLUDED 0.999
+constexpr double IONGAMMA_POPFRAC_LEVELS_INCLUDED = 0.999;
 
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = false;
 
