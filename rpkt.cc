@@ -96,7 +96,7 @@ __host__ __device__ static double get_event(
   assert_testmodeonly(nu_cmf_abort <= pkt_ptr->nu_cmf);
 
   struct packet dummypkt = *pkt_ptr;
-  struct packet *dummypkt_ptr = &dummypkt;
+  struct packet *const dummypkt_ptr = &dummypkt;
 
   calculate_kappa_rpkt_cont(pkt_ptr, &globals::kappa_rpkt_cont[tid]);
   const double kap_cont = globals::kappa_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(pkt_ptr);
@@ -143,13 +143,17 @@ __host__ __device__ static double get_event(
         // (committed by Christian Vogl, https://github.com/tardis-sn/tardis/pull/697)
         const double nu_r = nu_trans / dummypkt_ptr->nu_rf;
         const double ct = CLIGHT * dummypkt_ptr->prop_time;
-        const double mu = dot(dummypkt_ptr->dir, dummypkt_ptr->pos) / vec_len(dummypkt_ptr->pos);
         const double r = vec_len(dummypkt_ptr->pos);  // radius
+        const double mu = dot(dummypkt_ptr->dir, dummypkt_ptr->pos) / r;
         ldist = -mu * r + (ct - nu_r * nu_r * sqrt(ct * ct - (1 + r * r * (1 - mu * mu) * (1 + pow(nu_r, -2))))) /
                               (1 + nu_r * nu_r);
       }
 
-      assert_always(ldist >= 0.);
+      if (ldist < 0.) {
+        printout("[warning] ldist %lg < 0.\n", ldist);
+        assert_always(ldist >= -100.);
+        ldist = 0.;
+      }
 
       // printout("[debug] get_event:     ldist %g\n",ldist);
 
