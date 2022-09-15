@@ -765,10 +765,9 @@ static void allocate_composition_cooling(void)
       }
     }
 
-    modelgrid[modelgridindex].cooling =
-        static_cast<struct mgicooling *>(malloc(get_nelements() * sizeof(struct mgicooling)));
+    modelgrid[modelgridindex].cooling_contrib_ion = static_cast<double **>(malloc(get_nelements() * sizeof(double **)));
 
-    if (modelgrid[modelgridindex].cooling == NULL) {
+    if (modelgrid[modelgridindex].cooling_contrib_ion == NULL) {
       printout("[fatal] input: not enough memory to initialize coolinglist for cell %d... abort\n", modelgridindex);
       abort();
     }
@@ -779,9 +778,9 @@ static void allocate_composition_cooling(void)
     for (int element = 0; element < get_nelements(); element++) {
       /// and allocate memory to store the ground level populations for each ionisation stage
 
-      modelgrid[modelgridindex].cooling[element].contrib = &elemcontrib[allionindex];
+      modelgrid[modelgridindex].cooling_contrib_ion[element] = &elemcontrib[allionindex];
 
-      assert_always(modelgrid[modelgridindex].cooling[element].contrib != NULL);
+      assert_always(modelgrid[modelgridindex].cooling_contrib_ion[element] != NULL);
 
       allionindex += get_nions(element);
     }

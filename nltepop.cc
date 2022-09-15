@@ -1635,7 +1635,7 @@ void nltepop_write_restart_data(FILE *restart_file) {
           fprintf(restart_file, "%d %a %a %la\n", ion,
                   grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
                   grid::modelgrid[modelgridindex].composition[element].partfunct[ion],
-                  grid::modelgrid[modelgridindex].cooling[element].contrib[ion]);
+                  grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]);
         }
       }
       if (NLTE_POPS_ON) {
@@ -1681,7 +1681,7 @@ void nltepop_read_restart_data(FILE *restart_file) {
           assert_always(fscanf(restart_file, "%d %a %a %la\n", &ion_in,
                                &grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
                                &grid::modelgrid[modelgridindex].composition[element].partfunct[ion],
-                               &grid::modelgrid[modelgridindex].cooling[element].contrib[ion]) == 4);
+                               &grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]) == 4);
           if (ion_in != ion) {
             printout("ERROR: expected data for ion %d but found ion %d\n", ion, ion_in);
             abort();

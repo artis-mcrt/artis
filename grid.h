@@ -28,10 +28,6 @@ enum model_types {
   RHO_3D_READ = 3,  // Read model 3D
 };
 
-struct mgicooling {
-  double *contrib;
-};
-
 struct modelgrid_t {
   float Te;
   float TR;
@@ -47,6 +43,7 @@ struct modelgrid_t {
   float *initmassfracstable;
   float *elem_meanweight;
   float initelectronfrac;  // Ye: electrons (or protons) per nucleon
+  float initenergyq;       // q: energy in the model at t_model to use with USE_MODEL_INITIAL_ENERGY [erg/g]
   float ffegrp;
   float kappagrey;
   float grey_depth;  /// Grey optical depth to surface of the modelgridcell
@@ -61,7 +58,7 @@ struct modelgrid_t {
                                        /// populations for this cell
 
   double totalcooling;
-  struct mgicooling *cooling;
+  double **cooling_contrib_ion;
   short thick;
 };
 

@@ -152,7 +152,7 @@ __host__ __device__ void calculate_cooling_rates(const int modelgridindex,
       }
 
       C_total += C_ion;
-      grid::modelgrid[modelgridindex].cooling[element].contrib[ion] = C_ion;
+      grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] = C_ion;
     }
   }
   grid::modelgrid[modelgridindex].totalcooling = C_total;
@@ -299,8 +299,8 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
 
   assert_always(indexionstart == get_coolinglistoffset(element, ion));
   assert_always(i == indexionstart + get_ncoolingterms(element, ion));
-  assert_always(
-      fabs((grid::modelgrid[modelgridindex].cooling[element].contrib[ion] + oldcoolingsum - contrib) / contrib) < 1e-3);
+  assert_always(fabs((grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] + oldcoolingsum - contrib) /
+                     contrib) < 1e-3);
 }
 
 __host__ __device__ static void set_ncoolingterms(void) {
@@ -536,7 +536,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       const int nions = get_nions(element);
       for (ion = 0; ion < nions; ion++) {
         oldcoolingsum = coolingsum;
-        coolingsum += grid::modelgrid[modelgridindex].cooling[element].contrib[ion];
+        coolingsum += grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion];
         // printout("Z=%d, ionstage %d, coolingsum %g\n", get_element(element), get_ionstage(element, ion), coolingsum);
         if (coolingsum > rndcool) break;
       }
@@ -555,7 +555,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
         const int nions = get_nions(element);
         for (ion = 0; ion < nions; ion++) {
           printout("do_kpkt: element %d, ion %d, coolingcontr %g\n", element, ion,
-                   grid::modelgrid[modelgridindex].cooling[element].contrib[ion]);
+                   grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]);
         }
       }
       abort();
