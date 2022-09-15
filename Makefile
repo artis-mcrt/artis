@@ -11,7 +11,7 @@ ifeq ($(SYSNAME),Darwin)
 
 	# CXX = c++
 	# -fmodules-ts -fimplicit-modules -fimplicit-module-maps
-	CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto -g
+	CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto
 
 	ifeq ($(shell uname -m),arm64)
 		CXXFLAGS += -mcpu=apple-m1
@@ -92,7 +92,7 @@ ifeq ($(TESTMODE),ON)
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
 	# skip array range checking for better performance and use optimizations
-	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O2 -flto
+	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3 -flto
 endif
 
 ifeq ($(MPI),ON)
@@ -161,7 +161,7 @@ sn3d: version.h artisoptions.h $(sn3d_objects) Makefile
 #	$(LINK.cpp) $(filter %.o,$^) -o $@
 -include $(sn3d_dep)
 
-sn3dwhole: version.h Makefile
+sn3dwhole: version.h
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
 
 sn3dcudawhole: version.h
