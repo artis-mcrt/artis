@@ -1027,15 +1027,19 @@ static void abundances_read(void) {
 #endif
 }
 
-static void read_model_headerline(std::string line, std::vector<int> &zlist, std::vector<int> &alist) {
+static void read_model_headerline(std::string line, std::vector<int> &zlist, std::vector<int> &alist,
+                                  std::vector<std::string> &columnname) {
   // custom header line
   std::istringstream iss(line);
   std::string token;
   while (std::getline(iss, token, ' ')) {
     if (std::all_of(token.begin(), token.end(), isspace))  // skip whitespace tokens
       continue;
-    if (token.rfind("X_", 0) != 0)  // skip if doesn't start with 'X_'
-      continue;
+
+    if (token == "#inputcellid") continue;
+    if (token == "velocity_outer") continue;
+    if (token == "logrho") continue;
+    if (token == "rho") continue;
     if (token == "X_Fegroup") continue;
     if (token == "X_Ni56") continue;
     if (token == "X_Co56") continue;
@@ -1044,11 +1048,18 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
     if (token == "X_Ni57") continue;
     if (token == "X_Co57") continue;
 
-    const int z = decay::get_nucstring_z(token.c_str() + 2);  // + 2 skips the 'X_'
-    const int a = decay::get_nucstring_a(token.c_str() + 2);
-    // printout("Custom nuclide column: '%s' Z %d A %d\n", token.c_str(), z, a);
-    zlist.push_back(z);
-    alist.push_back(a);
+    columnname.push_back(token);
+
+    if (token.rfind("X_", 0) == 0) {                            // if starts with 'X_'
+      const int z = decay::get_nucstring_z(token.c_str() + 2);  // + 2 skips the 'X_'
+      const int a = decay::get_nucstring_a(token.c_str() + 2);
+      // printout("Custom nuclide column: '%s' Z %d A %d\n", token.c_str(), z, a);
+      zlist.push_back(z);
+      alist.push_back(a);
+    } else {
+      zlist.push_back(-1);
+      alist.push_back(-1);
+    }
   }
 
   // alternative:
@@ -1066,7 +1077,7 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
 
 static void read_2d3d_modelradioabundanceline(std::ifstream &fmodel, const int mgi, const bool keepcell,
                                               std::vector<int> zlist, std::vector<int> alist,
-                                              std::vector<int> nucindexlist) {
+                                              std::vector<std::string> colnames, std::vector<int> nucindexlist) {
   std::string line;
   assert_always(std::getline(fmodel, line));
   std::istringstream ssline(line);
@@ -1104,10 +1115,14 @@ static void read_2d3d_modelradioabundanceline(std::ifstream &fmodel, const int m
           double abundin = 0.;
           ssline >> abundin;  // ignore
         }
-        for (int i = 0; i < (int)zlist.size(); i++) {
-          double abundin = 0.;
-          ssline >> abundin;
-          set_modelinitradioabund_bynucindex(mgi, nucindexlist[i], abundin);
+        for (int i = 0; i < (int)colnames.size(); i++) {
+          double valuein = 0.;
+          ssline >> valuein;  // usually a mass fraction, but now can be anthing
+          if (colnames[i].substr(0, 2) == "X_") {
+            set_modelinitradioabund(mgi, zlist[i], alist[i], valuein);
+          } else if (colnames[i] == "cellYe") {
+            set_initelectronfrac(mgi, valuein);
+          }
         }
       }
     }
@@ -1134,7 +1149,7 @@ static void read_1d_model(void)
   set_npts_model(npts_model_in);
   ncoord_model[0] = npts_model_in;
 
-  vout_model = (double *)malloc((get_npts_model() + 1) * sizeof(double));
+  vout_model = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
 
   // Now read the time (in days) at which the model is specified.
   double t_model_days;
@@ -1151,10 +1166,11 @@ static void read_1d_model(void)
 
   std::vector<int> zlist;
   std::vector<int> alist;
+  std::vector<std::string> colnames;
   std::streampos oldpos = fmodel.tellg();  // get position in case we need to undo getline
   std::getline(fmodel, line);
   if (lineiscommentonly(line)) {
-    read_model_headerline(line, zlist, alist);
+    read_model_headerline(line, zlist, alist, colnames);
   } else {
     fmodel.seekg(oldpos);  // undo getline because it was data, not a header line
   }
@@ -1217,10 +1233,14 @@ static void read_1d_model(void)
         double abundin = 0.;
         ssline >> abundin;  // ignore
       }
-      for (int i = 0; i < (int)zlist.size(); i++) {
-        double abundin = 0.;
-        ssline >> abundin;
-        set_modelinitradioabund(mgi, zlist[i], alist[i], abundin);
+      for (int i = 0; i < (int)colnames.size(); i++) {
+        double valuein = 0.;
+        ssline >> valuein;  // usually a mass fraction, but now can be anthing
+        if (colnames[i].substr(0, 2) == "X_") {
+          set_modelinitradioabund(mgi, zlist[i], alist[i], valuein);
+        } else if (colnames[i] == "cellYe") {
+          set_initelectronfrac(mgi, valuein);
+        }
       }
     }
 
@@ -1269,10 +1289,11 @@ static void read_2d_model(void)
 
   std::vector<int> zlist;
   std::vector<int> alist;
+  std::vector<std::string> colnames;
   std::streampos oldpos = fmodel.tellg();  // get position in case we need to undo getline
   std::getline(fmodel, line);
   if (lineiscommentonly(line)) {
-    read_model_headerline(line, zlist, alist);
+    read_model_headerline(line, zlist, alist, colnames);
   } else {
     fmodel.seekg(oldpos);  // undo getline because it was data, not a header line
   }
@@ -1308,7 +1329,8 @@ static void read_2d_model(void)
     set_rhoinit(mgi, rho_tmin);
     set_rho(mgi, rho_tmin);
 
-    read_2d3d_modelradioabundanceline(fmodel, mgi, true, std::vector<int>(), std::vector<int>(), std::vector<int>());
+    read_2d3d_modelradioabundanceline(fmodel, mgi, true, std::vector<int>(), std::vector<int>(),
+                                      std::vector<std::string>(), std::vector<int>());
 
     mgi++;
   }
@@ -1368,10 +1390,11 @@ static void read_3d_model(void)
 
   std::vector<int> zlist;
   std::vector<int> alist;
+  std::vector<std::string> colnames;
   std::streampos oldpos = fmodel.tellg();  // get position in case we need to undo getline
   std::getline(fmodel, line);
   if (lineiscommentonly(line)) {
-    read_model_headerline(line, zlist, alist);
+    read_model_headerline(line, zlist, alist, colnames);
   } else {
     fmodel.seekg(oldpos);  // undo getline because it was data, not a header line
   }
@@ -1435,7 +1458,7 @@ static void read_3d_model(void)
       min_den = rho_model;
     }
 
-    read_2d3d_modelradioabundanceline(fmodel, mgi, keepcell, zlist, alist, nucindexlist);
+    read_2d3d_modelradioabundanceline(fmodel, mgi, keepcell, zlist, alist, colnames, nucindexlist);
 
     if (keepcell) {
       nonemptymgi++;
