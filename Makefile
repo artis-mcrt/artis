@@ -9,7 +9,6 @@ BUILD_DIR = build/$(shell uname -m)
 ifeq ($(SYSNAME),Darwin)
 	# macOS
 
-	# CXX = c++
 	# -fmodules-ts -fimplicit-modules -fimplicit-module-maps
 	CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto
 
@@ -29,7 +28,6 @@ ifeq ($(SYSNAME),Darwin)
 	# enable OpenMP for Clang
 	# CXXFLAGS += -Xpreprocessor -fopenmp -lomp
 
-	# in GCC, -Wmisleading-indentation will be useful
 	# also -fopenmp after -I$(INCLUDE)
 	# maybe  -fopt-info-vec-missed
 	#  -fwhole-program
@@ -49,12 +47,6 @@ else ifneq (,$(findstring kelvin,$(HOSTNAME)))
 	CXXFLAGS += -DMPI_ON
 	BUILD_DIR := $(BUILD_DIR)_mpi
 
-else ifneq (, $(shell which mpicxx))
-	# any other system that has mpicxx available (Juwels, Cambridge, Gadi, etc)
-
-	CXXFLAGS += -std=c++17 -march=native #-fopenmp=libomp
-	MPI := ON
-
 else ifeq ($(USER),localadmin_ccollins)
 	# CXX = c++
 	LDFLAGS= -lgsl -lgslcblas -lm -I/home/localadmin_ccollins/gsl/include
@@ -65,9 +57,9 @@ else ifeq ($(USER),localadmin_ccollins)
 	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
 
 else
-	# CXX = c++
-	# CXX = icpc
-	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
+
+	CXXFLAGS += -std=c++17 -march=native
+	# CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
 endif
 
 
@@ -98,12 +90,8 @@ endif
 ifeq ($(MPI),ON)
 else ifeq ($(MPI),OFF)
 else ifeq ($(MPI),)
-	# MPI option not specified. set to true if mpicxx is found
-	ifneq (, $(shell which mpicxx))
-		MPI := ON
-	else
-		MPI := OFF
-	endif
+	# MPI option not specified. set to true by default
+	MPI := ON
 else
 $(error bad value of MPI. Should be ON or OFF)
 endif
