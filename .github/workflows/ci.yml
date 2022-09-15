@@ -5,10 +5,10 @@ on:
     push:
         branches-ignore:
             - classic*
-  # pull_request:
-  #   branches:
-  #   - nebular*
-  #   - main
+    # pull_request:
+    #   branches:
+    #   - nebular*
+    #   - main
 
 env:
     ASAN_OPTIONS: detect_stack_use_after_return=1:detect_leaks=0
@@ -95,11 +95,11 @@ jobs:
                   # echo "::set-output name=count::$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')"
                   echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
 
-    # - name: "compile with gcc"
-    #   run: |
-    #     which g++
-    #     g++ --version
-    #     make CXX=g++ clean sn3d exspec
+            # - name: "compile with gcc"
+            #   run: |
+            #     which g++
+            #     g++ --version
+            #     make CXX=g++ clean sn3d exspec
 
             - name: compile with GCC (OpenMPI)
               run: |
@@ -115,7 +115,7 @@ jobs:
     test_nebularonezone:
         strategy:
             matrix:
-        # os: ['ubuntu-latest', 'self-hosted']
+                # os: ['ubuntu-latest', 'self-hosted']
                 os: [ubuntu-latest]
                 testmode: [OFF]
                 exclude:
@@ -141,13 +141,13 @@ jobs:
               id: cpu-count
               run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
 
-    # we can cache this, but then we don't test the code that generates ratecoeff.dat
-    # - name: Cache ratecoeff.dat
-    #   uses: actions/cache@v3
-    #   # if: matrix.testmode != 'ON'
-    #   with:
-    #     path: "tests/nebularonezone_testrun/ratecoeff.dat"
-    #     key: "tests/nebularonezone_testrun/ratecoeff.dat"
+            # we can cache this, but then we don't test the code that generates ratecoeff.dat
+            # - name: Cache ratecoeff.dat
+            #   uses: actions/cache@v3
+            #   # if: matrix.testmode != 'ON'
+            #   with:
+            #     path: "tests/nebularonezone_testrun/ratecoeff.dat"
+            #     key: "tests/nebularonezone_testrun/ratecoeff.dat"
 
             - name: Cache test atomic data
               uses: actions/cache@v3
@@ -244,7 +244,7 @@ jobs:
               working-directory: tests/nebularonezone_testrun
               run: |
                   touch requirements.txt
-                  rm packets*.*
+                  rm output/packets*.*
 
             - name: Upload output files
               uses: actions/upload-artifact@v3
@@ -286,7 +286,7 @@ jobs:
     test_classicmode:
         strategy:
             matrix:
-        # os: ['ubuntu-latest', 'self-hosted']
+                # os: ['ubuntu-latest', 'self-hosted']
                 os: [ubuntu-latest]
                 testmode: [OFF]
                 exclude:
@@ -312,7 +312,7 @@ jobs:
               id: cpu-count
               run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
 
-    # we can cache this, but then we don't test the code that generates ratecoeff.dat
+            # we can cache this, but then we don't test the code that generates ratecoeff.dat
             - name: Cache ratecoeff.dat
               uses: actions/cache@v3
               with:
@@ -414,7 +414,7 @@ jobs:
               working-directory: tests/classicmode_testrun
               run: |
                   touch requirements.txt
-                  rm packets*.*
+                  rm */packets*.*
 
             - name: Upload output files
               uses: actions/upload-artifact@v3
