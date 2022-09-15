@@ -731,8 +731,10 @@ __host__ __device__ static double calculate_decaychain(const double firstinitabu
   // are assumed to start with zero abundance)
   // note: first and last can be nuclide can be the same if num_nuclides==1, reducing to simple decay formula
   //
-  // meanlifetimes:      array of mean lifetimes for nuc[0]..nuc[num_nuclides-1]
-  // useexpansionfactor: if true, return a modified abundance at the end of the chain, with a weighting factor
+  // timediff:           time elapsed since firstinitabund was true [seconds]
+  // numnuclides:        number of items in meanlifetimes to use
+  // meanlifetimes:      array of mean lifetimes for nuc[0]..nuc[num_nuclides-1]  [seconds]
+  // useexpansionfactor: if true, return a modified 'abundance' at the end of the chain, with a weighting factor
   //                          accounting for photon energy loss from expansion since the decays occured
   //                          (This is needed to get the initial temperature)
 
