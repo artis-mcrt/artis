@@ -1458,7 +1458,7 @@ static void write_bflist_file(int includedphotoiontransitions) {
   }
 }
 
-static bool compare_phixslistentry_bynuedge(const fullphixslist &a1, const fullphixslist &a2)
+static bool operator<(const fullphixslist &a1, const fullphixslist &a2)
 /// Helper function to sort the phixslist by ascending threshold frequency.
 {
   return a1.nu_edge < a2.nu_edge;
@@ -1602,7 +1602,7 @@ static void setup_phixs_list(void) {
   }
 
   assert_always(allcontindex == globals::nbfcontinua);
-  std::stable_sort(globals::allcont, globals::allcont + globals::nbfcontinua, compare_phixslistentry_bynuedge);
+  std::sort(globals::allcont, globals::allcont + globals::nbfcontinua);
 
   globals::allcont_nu_edge = (double *)malloc(globals::nbfcontinua * sizeof(double));
 
