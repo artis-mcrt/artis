@@ -52,6 +52,10 @@ constexpr bool single_ground_level = false;
 #define NO_INITIAL_PACKETS
 #define RECORD_LINESTAT
 
+// allows non-zero energy density at time t_model using q column in model.txt
+// NO_INITIAL_PACKETS must be disabled to make use of this
+constexpr bool USE_MODEL_INITIAL_ENERGY = true;
+
 /// Rate coefficients
 #define TABLESIZE 100  // 200 //100
 #define MINTEMP 1000.

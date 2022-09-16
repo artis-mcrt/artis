@@ -486,6 +486,12 @@ __host__ __device__ static void set_initelectronfrac(const int modelgridindex, c
   modelgrid[modelgridindex].initelectronfrac = electronfrac;
 }
 
+__host__ __device__ double get_initenergyq(const int modelgridindex) { return modelgrid[modelgridindex].initenergyq; }
+
+__host__ __device__ static void set_initenergyq(const int modelgridindex, const double initenergyq) {
+  modelgrid[modelgridindex].initenergyq = initenergyq;
+}
+
 void read_possible_yefile(void) {
   if (!std::ifstream("Ye.txt")) {
     printout("Ye.txt not found\n");
@@ -1240,6 +1246,8 @@ static void read_1d_model(void)
           set_modelinitradioabund(mgi, zlist[i], alist[i], valuein);
         } else if (colnames[i] == "cellYe") {
           set_initelectronfrac(mgi, valuein);
+        } else if (colnames[i] == "q") {
+          set_initenergyq(mgi, valuein);
         }
       }
     }
@@ -1784,7 +1792,12 @@ static void assign_initial_temperatures(void)
     if (get_numassociatedcells(mgi) == 0) {
       continue;
     }
-    const double decayedenergy_per_mass = decay::get_endecay_per_ejectamass_t0_to_time_withexpansion(mgi, tstart);
+    double decayedenergy_per_mass = decay::get_endecay_per_ejectamass_t0_to_time_withexpansion(mgi, tstart);
+#ifndef NO_INITIAL_PACKETS
+    if (USE_MODEL_INITIAL_ENERGY) {
+      decayedenergy_per_mass += get_initenergyq(mgi);
+    }
+#endif
 
     double T_initial =
         pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) * get_rhoinit(mgi) * decayedenergy_per_mass, 1. / 4.);

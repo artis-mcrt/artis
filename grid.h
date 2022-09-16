@@ -88,6 +88,7 @@ __host__ __device__ float get_elem_abundance(int modelgridindex, int element);
 __host__ __device__ void set_elem_abundance(int modelgridindex, int element, float newabundance);
 __host__ __device__ double get_elem_numberdens(int modelgridindex, int element);
 __host__ __device__ double get_initelectronfrac(const int modelgridindex);
+__host__ __device__ double get_initenergyq(const int modelgridindex);
 __host__ __device__ float get_kappagrey(int modelgridindex);
 __host__ __device__ float get_Te(int modelgridindex);
 __host__ __device__ float get_TR(int modelgridindex);

@@ -83,7 +83,7 @@ static void update_pellet(struct packet *pkt_ptr, const int nts, const double t2
     pkt_ptr->prop_time = t2;
 
     // That's all that needs to be done for the inactive pellet.
-  } else if (tdecay >= ts) {
+  } else if (tdecay > ts) {
     // The packet decays in the current timestep.
     safeincrement(globals::time_step[nts].pellet_decays);
 
@@ -122,7 +122,6 @@ static void update_pellet(struct packet *pkt_ptr, const int nts, const double t2
     // that it is fixed in place from decay to globals::tmin - i.e. short mfp.
 
     pkt_ptr->e_cmf *= tdecay / globals::tmin;
-    // pkt_ptr->type = TYPE_KPKT;
     pkt_ptr->type = TYPE_PRE_KPKT;
     pkt_ptr->absorptiontype = -7;
     stats::increment(stats::COUNTER_K_STAT_FROM_EARLIERDECAY);
@@ -148,10 +147,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
 
     case TYPE_GAMMA: {
       gammapkt::do_gamma(pkt_ptr, t2);
-      /* This returns a flag if the packet gets to t2 without
-changing to something else. If the packet does change it
-returns the time of change and sets everything for the
-new packet.*/
+
       if (pkt_ptr->type != TYPE_GAMMA && pkt_ptr->type != TYPE_ESCAPE) {
         safeadd(globals::time_step[nts].gamma_dep, pkt_ptr->e_cmf);
       }

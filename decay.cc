@@ -1352,15 +1352,39 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
     cumulative_endecay[decaypathindex] = endecaysum;
   }
   assert_testmodeonly(cumulative_endecay[num_decaypaths - 1] > 0.);
-  const double zrand_chain = gsl_rng_uniform(rng) * cumulative_endecay[num_decaypaths - 1];
+
+  double total_endecay_per_ejectamass = cumulative_endecay[num_decaypaths - 1];
+#ifndef NO_INITIAL_PACKETS
+  if (USE_MODEL_INITIAL_ENERGY) {
+    total_endecay_per_ejectamass += grid::get_initenergyq(mgi);
+  }
+#endif
+
+  const double zrand_chain = gsl_rng_uniform(rng) * total_endecay_per_ejectamass;
+
+  if (zrand_chain >= cumulative_endecay[num_decaypaths - 1]) {
+    assert_always(USE_MODEL_INITIAL_ENERGY);
+
+    pkt_ptr->prop_time = globals::tmin;
+    pkt_ptr->tdecay = globals::tmin;
+    // pkt_ptr->type = TYPE_PRE_KPKT;
+    pkt_ptr->type = TYPE_RADIOACTIVE_PELLET;
+    pkt_ptr->e_cmf = e0;
+    pkt_ptr->nu_cmf = e0 / H;
+    pkt_ptr->pellet_nucindex = -1;
+    pkt_ptr->pellet_decaytype = -1;
+    return;
+  }
 
   int decaypathindex = -1;
+
   for (int i = 0; i < num_decaypaths; i++) {
     if (cumulative_endecay[i] > zrand_chain) {
       decaypathindex = i;
       break;
     }
   }
+
   assert_always(decaypathindex >= 0);  // Failed to select chain
 
 #ifdef NO_INITIAL_PACKETS
@@ -1373,6 +1397,9 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
     pkt_ptr->tdecay = sample_decaytime(decaypathindex, tdecaymin, globals::tmax);
     pkt_ptr->e_cmf = e0;
   } else {
+#ifndef NO_INITIAL_PACKETS
+    assert_always(!USE_MODEL_INITIAL_ENERGY);  // not implemented
+#endif
     // use uniform decay time distribution (scale the packet energies instead)
     // keeping the pellet decay rate constant will give better statistics at very late times when very little
     // energy is released
