@@ -127,8 +127,6 @@ typedef struct {
 
 static FILE *radfieldfile = NULL;
 
-__host__ __device__ extern inline double dbb(double nu, float T, float W);
-
 static inline double get_bin_nu_upper(int binindex) { return radfieldbin_nu_upper[binindex]; }
 
 static void setup_bin_boundaries(void) {
