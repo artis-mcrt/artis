@@ -197,10 +197,10 @@ struct chelements {
 };
 
 struct cellhistory {
-  double *cooling_contrib;        /// Cooling contributions by the different processes.
-  struct chelements *chelements;  /// Pointer to a nested list which helds compositional
-                                  /// information for all the elements=0,1,...,nelements-1
-  int cellnumber;                 /// Identifies the cell the data is valid for.
+  double *cooling_contrib;  /// Cooling contributions by the different processes.
+  struct chelements *chelements;
+  struct chlevels *ch_all_levels;
+  int cellnumber;  /// Identifies the cell the data is valid for.
   int bfheating_mgi;
 };
 

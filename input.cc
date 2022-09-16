@@ -1362,6 +1362,7 @@ static void setup_cellhistory(void) {
     }
 
     struct chlevels *chlevelblock = static_cast<struct chlevels *>(malloc(chlevelblocksize));
+    globals::cellhistory[tid].ch_all_levels = chlevelblock;
     struct chphixstargets *chphixs = static_cast<struct chphixstargets *>(malloc(chphixsblocksize));
     mem_usage_cellhistory += chlevelblocksize + chphixsblocksize;
     int alllevelindex = 0;
