@@ -1464,19 +1464,10 @@ static bool operator<(const fullphixslist &a1, const fullphixslist &a2)
   return a1.nu_edge < a2.nu_edge;
 }
 
-static int compare_groundphixslistentry_bynuedge(const void *p1, const void *p2)
+static bool operator<(const groundphixslist &a1, const groundphixslist &a2)
 /// Helper function to sort the groundphixslist by ascending threshold frequency.
 {
-  const groundphixslist *a1 = (groundphixslist *)(p1);
-  const groundphixslist *a2 = (groundphixslist *)(p2);
-
-  double edge_diff = a1->nu_edge - a2->nu_edge;
-  if (edge_diff < 0)
-    return -1;
-  else if (edge_diff > 0)
-    return 1;
-  else
-    return 0;
+  return a1.nu_edge < a2.nu_edge;
 }
 
 static void setup_phixs_list(void) {
@@ -1564,8 +1555,7 @@ static void setup_phixs_list(void) {
     }
   }
   assert_always(groundcontindex == globals::nbfcontinua_ground);
-  qsort(globals::groundcont, globals::nbfcontinua_ground, sizeof(struct groundphixslist),
-        compare_groundphixslistentry_bynuedge);
+  std::sort(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground);
 #endif
 
   int allcontindex = 0;
