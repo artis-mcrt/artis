@@ -41,7 +41,7 @@ int integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, do
               gsl_integration_workspace *workspace, double *result, double *abserr);
 
 template <typename numtype>
-__host__ __device__ static inline double dbb(double nu, numtype T, numtype W)
+__host__ __device__ static inline double dbb(double nu, numtype T, float W)
 // returns J_nu for a dilute black body [ergs/s/sr/cm2/Hz]
 {
   return W * TWOHOVERCLIGHTSQUARED * pow(nu, 3) / expm1(HOVERKB * nu / T);
