@@ -63,13 +63,9 @@ __host__ __device__ inline void cross_prod(const double vec1[3], const double ve
 }
 
 __host__ __device__ inline void vec_scale(double vec[3], const double scalefactor) {
-#ifdef __CUDA_ARCH__
   for (int d = 0; d < 3; d++) {
     vec[d] *= scalefactor;
   }
-#else
-  cblas_dscal(3, scalefactor, vec, 1);
-#endif
 }
 
 __host__ __device__ inline void vec_copy(double destination[3], const double source[3]) {
