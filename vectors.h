@@ -38,11 +38,7 @@ __host__ __device__ inline void vec_norm(const double vec_in[3], double vec_out[
 __host__ __device__ inline double dot(const double x[3], const double y[3])
 // vector dot product
 {
-#ifdef __CUDA_ARCH__
   return (x[0] * y[0]) + (x[1] * y[1]) + (x[2] * y[2]);
-#else
-  return cblas_ddot(3, x, 1, y, 1);
-#endif
 }
 
 __host__ __device__ constexpr void get_velocity(const double x[3], double y[3], const double t)
