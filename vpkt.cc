@@ -1,5 +1,6 @@
 #include "vpkt.h"
 
+#include <cmath>
 #include <cstring>
 
 #include "atomic.h"

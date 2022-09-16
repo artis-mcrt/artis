@@ -3,6 +3,7 @@
 #include <gsl/gsl_spline.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <fstream>

@@ -2,6 +2,8 @@
 
 #include <gsl/gsl_integration.h>
 
+#include <cmath>
+
 #include "atomic.h"
 #include "grid.h"
 #include "ltepop.h"

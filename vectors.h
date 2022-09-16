@@ -16,7 +16,7 @@ __host__ __device__ void move_pkt_withtime(struct packet *pkt_ptr, double distan
 __host__ __device__ static inline double vec_len(const double x[3])
 // return the the magnitude of a vector
 {
-  return sqrt((x[0] * x[0]) + (x[1] * x[1]) + (x[2] * x[2]));
+  return std::sqrt((x[0] * x[0]) + (x[1] * x[1]) + (x[2] * x[2]));
 }
 
 __host__ __device__ inline void vec_norm(const double vec_in[3], double vec_out[3])

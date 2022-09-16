@@ -2,6 +2,8 @@
 
 #include <gsl/gsl_integration.h>
 
+#include <cmath>
+
 #include "artisoptions.h"
 #include "globals.h"
 #include "grid.h"

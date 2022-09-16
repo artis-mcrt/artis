@@ -2,6 +2,7 @@
 
 #include <gsl/gsl_integration.h>
 
+#include <cmath>
 #include <cstring>
 // #define  _XOPEN_SOURCE
 #define D_POSIX_SOURCE

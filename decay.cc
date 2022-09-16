@@ -1,6 +1,7 @@
 #include "decay.h"
 
 #include <algorithm>  // std::max
+#include <cmath>
 #include <cstring>
 #include <fstream>
 #include <iostream>

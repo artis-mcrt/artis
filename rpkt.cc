@@ -1,5 +1,7 @@
 #include "rpkt.h"
 
+#include <cmath>
+
 #include "atomic.h"
 #include "boundary.h"
 #include "grey_emissivities.h"

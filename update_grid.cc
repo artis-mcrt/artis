@@ -2,6 +2,8 @@
 
 #include <gsl/gsl_roots.h>
 
+#include <cmath>
+
 #include "atomic.h"
 #include "decay.h"
 #include "grid.h"

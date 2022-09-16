@@ -1,6 +1,8 @@
 #include "vectors.h"
 
-#include <gsl/gsl_randist.h>
+// #include <gsl/gsl_randist.h>
+
+#include <cmath>
 
 #include "artisoptions.h"
 #include "sn3d.h"
@@ -15,7 +17,7 @@ __host__ __device__ void angle_ab(const double dir1[3], const double vel[3], dou
 //   dir2: direction vector in frame2
 {
   const double vsqr = dot(vel, vel) / CLIGHTSQUARED;
-  const double gamma_rel = 1. / (sqrt(1 - vsqr));
+  const double gamma_rel = 1. / std::sqrt(1 - vsqr);
 
   const double ndotv = dot(dir1, vel);
   const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
@@ -62,7 +64,7 @@ __host__ __device__ void scatter_dir(const double dir_in[3], const double cos_th
   const double phi = zrand * 2 * PI;
 
   const double sin_theta_sq = 1. - (cos_theta * cos_theta);
-  const double sin_theta = sqrt(sin_theta_sq);
+  const double sin_theta = std::sqrt(sin_theta_sq);
   const double zprime = cos_theta;
   const double xprime = sin_theta * cos(phi);
   const double yprime = sin_theta * sin(phi);
@@ -70,8 +72,8 @@ __host__ __device__ void scatter_dir(const double dir_in[3], const double cos_th
   // Now need to derotate the coordinates back to real x,y,z.
   // Rotation matrix is determined by dir_in.
 
-  const double norm1 = 1. / (sqrt((dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1])));
-  const double norm2 = 1. / (sqrt((dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1]) + (dir_in[2] * dir_in[2])));
+  const double norm1 = 1. / std::sqrt((dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1]));
+  const double norm2 = 1. / std::sqrt((dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1]) + (dir_in[2] * dir_in[2]));
 
   const double r11 = dir_in[1] * norm1;
   const double r12 = -1 * dir_in[0] * norm1;
@@ -102,10 +104,10 @@ __host__ __device__ void get_rand_isotropic_unitvec(double vecout[3])
 
   const double mu = -1 + (2. * zrand);
   const double phi = zrand2 * 2 * PI;
-  const double sintheta = sqrt(1. - (mu * mu));
+  const double sintheta = std::sqrt(1. - (mu * mu));
 
-  vecout[0] = sintheta * cos(phi);
-  vecout[1] = sintheta * sin(phi);
+  vecout[0] = sintheta * std::cos(phi);
+  vecout[1] = sintheta * std::sin(phi);
   vecout[2] = mu;
 }
 

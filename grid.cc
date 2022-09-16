@@ -1,6 +1,7 @@
 #include "grid.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <fstream>

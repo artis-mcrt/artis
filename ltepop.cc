@@ -1,5 +1,7 @@
 #include "ltepop.h"
 
+#include <cmath>
+
 #include "atomic.h"
 #include "grid.h"
 #include "macroatom.h"

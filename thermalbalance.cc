@@ -3,6 +3,8 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_roots.h>
 
+#include <cmath>
+
 #include "artisoptions.h"
 #include "atomic.h"
 #include "grid.h"

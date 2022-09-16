@@ -1,5 +1,6 @@
 #include "packet.h"
 
+#include <cmath>
 #include <fstream>
 #include <sstream>
 #include <string>
