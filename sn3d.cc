@@ -1148,7 +1148,3 @@ int main(int argc, char **argv)
 
   return 0;
 }
-
-// printout should be used instead of printf throughout the whole code for output messages
-extern inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno);
-extern inline FILE *fopen_required(const char *filename, const char *mode);

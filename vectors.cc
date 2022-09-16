@@ -7,7 +7,6 @@
 
 extern __host__ __device__ inline void vec_norm(const double vec_in[3], double vec_out[3]);
 extern __host__ __device__ inline double dot(const double x[3], const double y[3]);
-extern __host__ __device__ inline void get_velocity(const double x[3], double y[3], const double t);
 extern __host__ __device__ inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
 extern __host__ __device__ inline void vec_scale(double vec[3], const double scalefactor);
 extern __host__ __device__ inline void vec_copy(double dest[3], const double source[3]);

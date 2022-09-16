@@ -111,7 +111,7 @@ extern __managed__ int myGpuId;
 #include "globals.h"
 #include "vectors.h"
 
-inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno) {
+static inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno) {
   if (gsl_errno != 18)  // roundoff error
   {
     printout("WARNING: gsl (%s:%d): %s (Error code %d)\n", file, line, reason, gsl_errno);
@@ -119,7 +119,7 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
   }
 }
 
-inline FILE *fopen_required(const char *filename, const char *mode) {
+static inline FILE *fopen_required(const char *filename, const char *mode) {
   FILE *file = fopen(filename, mode);
   if (file == NULL) {
     printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename, mode);
@@ -129,7 +129,7 @@ inline FILE *fopen_required(const char *filename, const char *mode) {
   return file;
 }
 
-inline int get_timestep(const double time) {
+static inline int get_timestep(const double time) {
   assert_always(time >= globals::tmin);
   assert_always(time < globals::tmax);
   for (int nts = 0; nts < globals::ntstep; nts++) {

@@ -48,7 +48,7 @@ __host__ __device__ inline double dot(const double x[3], const double y[3])
 #endif
 }
 
-__host__ __device__ inline void get_velocity(const double x[3], double y[3], const double t)
+__host__ __device__ constexpr void get_velocity(const double x[3], double y[3], const double t)
 // Routine for getting velocity vector of the flow at a position with homologous expansion.
 {
   y[0] = x[0] / t;
