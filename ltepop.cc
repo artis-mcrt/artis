@@ -432,8 +432,8 @@ __host__ __device__ double get_levelpop(int modelgridindex, int element, int ion
 {
   double nn = 0.;
   if (use_cellhist) {
-    assert_always(modelgridindex == globals::cellhistory[tid].cellnumber) nn =
-        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].population;
+    assert_testmodeonly(modelgridindex == globals::cellhistory[tid].cellnumber);
+    nn = globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].population;
   } else {
     nn = calculate_levelpop(modelgridindex, element, ion, level);
   }
