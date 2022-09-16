@@ -160,33 +160,33 @@ static bool read_ratecoeff_dat(void)
                     .phixstargets[phixstargetindex]
                     .bfcooling_coeff[iter] = bfcooling_coeff;
 
-#if (!NO_LUT_PHOTOION)
-                if (corrphotoioncoeff >= 0) {
-                  globals::elements[element]
-                      .ions[ion]
-                      .levels[level]
-                      .phixstargets[phixstargetindex]
-                      .corrphotoioncoeff[iter] = corrphotoioncoeff;
-                } else {
-                  printout(
-                      "ERROR: NO_LUT_PHOTOION is off, but there are no corrphotoioncoeff values in ratecoeff file\n");
-                  abort();
+                if constexpr (!NO_LUT_PHOTOION) {
+                  if (corrphotoioncoeff >= 0) {
+                    globals::elements[element]
+                        .ions[ion]
+                        .levels[level]
+                        .phixstargets[phixstargetindex]
+                        .corrphotoioncoeff[iter] = corrphotoioncoeff;
+                  } else {
+                    printout(
+                        "ERROR: NO_LUT_PHOTOION is off, but there are no corrphotoioncoeff values in ratecoeff file\n");
+                    abort();
+                  }
                 }
-#endif
-#if (!NO_LUT_BFHEATING)
-                if (bfheating_coeff >= 0) {
-                  globals::elements[element]
-                      .ions[ion]
-                      .levels[level]
-                      .phixstargets[phixstargetindex]
-                      .bfheating_coeff[iter] = bfheating_coeff;
-                } else {
-                  printout(
-                      "ERROR: NO_LUT_BFHEATING is off, but there are no bfheating_coeff values in the ratecoeff "
-                      "file\n");
-                  abort();
+                if constexpr (!NO_LUT_BFHEATING) {
+                  if (bfheating_coeff >= 0) {
+                    globals::elements[element]
+                        .ions[ion]
+                        .levels[level]
+                        .phixstargets[phixstargetindex]
+                        .bfheating_coeff[iter] = bfheating_coeff;
+                  } else {
+                    printout(
+                        "ERROR: NO_LUT_BFHEATING is off, but there are no bfheating_coeff values in the ratecoeff "
+                        "file\n");
+                    abort();
+                  }
                 }
-#endif
               }
             }
           }
@@ -238,21 +238,18 @@ static void write_ratecoeff_dat(void) {
                 globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[iter];
             fprintf(ratecoeff_file, "%g %g", alpha_sp, bfcooling_coeff);
 
-#if (!NO_LUT_PHOTOION)
-            const double corrphotoioncoeff = globals::elements[element]
-                                                 .ions[ion]
-                                                 .levels[level]
-                                                 .phixstargets[phixstargetindex]
-                                                 .corrphotoioncoeff[iter];
-#else
-            const double corrphotoioncoeff = -1.0;
-#endif
-#if (!NO_LUT_BFHEATING)
-            const double bfheating_coeff =
-                globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[iter];
-#else
-            const double bfheating_coeff = -1.0;
-#endif
+            const double corrphotoioncoeff = NO_LUT_PHOTOION ? -1
+                                                             : globals::elements[element]
+                                                                   .ions[ion]
+                                                                   .levels[level]
+                                                                   .phixstargets[phixstargetindex]
+                                                                   .corrphotoioncoeff[iter];
+            const double bfheating_coeff = NO_LUT_BFHEATING ? -1
+                                                            : globals::elements[element]
+                                                                  .ions[ion]
+                                                                  .levels[level]
+                                                                  .phixstargets[phixstargetindex]
+                                                                  .bfheating_coeff[iter];
             fprintf(ratecoeff_file, " %g %g\n", corrphotoioncoeff, bfheating_coeff);
           }
         }
@@ -1341,20 +1338,20 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
     }
 #else
     {
-#if (NO_LUT_PHOTOION)
-      gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
-#else
-      const double W = grid::get_W(modelgridindex);
-      const double T_R = grid::get_TR(modelgridindex);
+      if constexpr (NO_LUT_PHOTOION) {
+        gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
+      } else {
+        const double W = grid::get_W(modelgridindex);
+        const double T_R = grid::get_TR(modelgridindex);
 
-      gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
-      const int index_in_groundlevelcontestimator =
-          globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
-      if (index_in_groundlevelcontestimator >= 0) {
-        gammacorr *= globals::corrphotoionrenorm[modelgridindex * get_nelements() * get_max_nions() +
-                                                 index_in_groundlevelcontestimator];
+        gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
+        const int index_in_groundlevelcontestimator =
+            globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
+        if (index_in_groundlevelcontestimator >= 0) {
+          gammacorr *= globals::corrphotoionrenorm[modelgridindex * get_nelements() * get_max_nions() +
+                                                   index_in_groundlevelcontestimator];
+        }
       }
-#endif
     }
 #endif
     if (use_cellhist) {

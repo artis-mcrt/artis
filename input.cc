@@ -2024,22 +2024,22 @@ void read_parameterfile(int rank)
   } else
     printout("input: No non-thermal ionisation is used in this run.\n");
 
-#if (NO_LUT_PHOTOION)
-  printout(
-      "Corrphotoioncoeff is calculated from the radiation field at each timestep in each modelgrid cell (no "
-      "LUT).\n");
-#else
-  printout(
-      "Corrphotoioncoeff is calculated from LTE lookup tables (ratecoeff.dat) and corrphotoionrenorm estimator.\n");
-#endif
+  if (NO_LUT_PHOTOION) {
+    printout(
+        "Corrphotoioncoeff is calculated from the radiation field at each timestep in each modelgrid cell (no "
+        "LUT).\n");
+  } else {
+    printout(
+        "Corrphotoioncoeff is calculated from LTE lookup tables (ratecoeff.dat) and corrphotoionrenorm estimator.\n");
+  }
 
-#if (NO_LUT_BFHEATING)
-  printout(
-      "bfheating coefficients are calculated from the radiation field at each timestep in each modelgrid cell (no "
-      "LUT).\n");
-#else
-  printout("bfheating coefficients are calculated from LTE lookup tables (ratecoeff.dat) and bfheatingestimator.\n");
-#endif
+  if (NO_LUT_BFHEATING) {
+    printout(
+        "bfheating coefficients are calculated from the radiation field at each timestep in each modelgrid cell (no "
+        "LUT).\n");
+  } else {
+    printout("bfheating coefficients are calculated from LTE lookup tables (ratecoeff.dat) and bfheatingestimator.\n");
+  }
 
   /// Set up initial grey approximation?
   assert_always(get_noncommentline(file, line));
