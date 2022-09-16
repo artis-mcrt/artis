@@ -138,7 +138,7 @@ __host__ __device__ void move_pkt_withtime(struct packet *pkt_ptr, const double 
 /// dir vector). The distance moved is in the rest frame.
 {
   const double nu_cmf_old = pkt_ptr->nu_cmf;
-  pkt_ptr->prop_time += distance / globals::CLIGHT_PROP;
+  pkt_ptr->prop_time += distance / CLIGHT_PROP;
   move_pkt(pkt_ptr, distance);
 
   // frequency should only over decrease due to packet movement
