@@ -673,8 +673,8 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
         const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
         set_ndowntrans(element, ion, level, nupperdowntrans);
         if ((globals::elements[element].ions[ion].levels[level].downtrans_lineindicies =
-                 (int *)realloc(globals::elements[element].ions[ion].levels[level].downtrans_lineindicies,
-                                nupperdowntrans * sizeof(int))) == NULL) {
+                 static_cast<int *>(realloc(globals::elements[element].ions[ion].levels[level].downtrans_lineindicies,
+                                            nupperdowntrans * sizeof(int)))) == NULL) {
           printout("[fatal] input: not enough memory to reallocate downtranslist ... abort\n");
           abort();
         }
