@@ -15,7 +15,7 @@ __host__ __device__ void get_rand_isotropic_unitvec(double vecout[3]);
 __host__ __device__ void move_pkt(struct packet *pkt_ptr, double distance);
 __host__ __device__ void move_pkt_withtime(struct packet *pkt_ptr, double distance);
 
-__host__ __device__ inline double vec_len(const double x[3])
+__host__ __device__ static inline double vec_len(const double x[3])
 // return the the magnitude of a vector
 {
 #ifdef __CUDA_ARCH__
