@@ -180,16 +180,16 @@ constexpr int MAX_NT_EXCITATIONS_STORED = 25000;
 #define NT_EXCITATION_ON false
 
 // increase the excitation and ionization lists by this blocksize when reallocating
-#define NT_BLOCKSIZEEXCITATION 5192
+constexpr int NT_BLOCKSIZEEXCITATION = 5192;
 
 // calculate eff_ionpot and ionisation rates by always dividing by the valence shell potential for the ion
 // instead of the specific shell potentials
-#define NT_USE_VALENCE_IONPOTENTIAL false
+constexpr bool NT_USE_VALENCE_IONPOTENTIAL = false;
 
 // allow ions to lose more than one electron per impact ionisation using Auger effect probabilities
 // associate with electron shells
 // if this is greater than zero, make sure NT_USE_VALENCE_IONPOTENTIAL is false!
-#define NT_MAX_AUGER_ELECTRONS 2
+constexpr int NT_MAX_AUGER_ELECTRONS = 2;
 
 // add the Auger electron term to the Spencer-Fano equation
 #define SF_AUGER_CONTRIBUTION_ON true
