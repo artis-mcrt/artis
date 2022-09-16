@@ -8,6 +8,7 @@
 #include "grid.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "radfield.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
 #include "sn3d.h"
@@ -437,7 +438,7 @@ __host__ __device__ static double sample_planck(const double T)
   if (nu_peak > globals::nu_max_r || nu_peak < globals::nu_min_r)
     printout("[warning] sample_planck: intensity peaks outside frequency range\n");
 
-  const double B_peak = planck(nu_peak, T);
+  const double B_peak = radfield::dbb(nu_peak, T, 1);
 
   double nu;
   bool endloop = false;
