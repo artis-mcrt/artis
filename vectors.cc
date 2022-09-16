@@ -5,7 +5,6 @@
 #include "artisoptions.h"
 #include "sn3d.h"
 
-extern __host__ __device__ constexpr void vec_norm(const double vec_in[3], double vec_out[3]);
 // extern __host__ __device__ constexpr double dot(const double x[3], const double y[3]);
 // extern __host__ __device__ constexpr void get_velocity(const double x[3], double y[3], const double t);
 // extern __host__ __device__ constexpr void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);

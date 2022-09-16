@@ -10,7 +10,7 @@ ifeq ($(SYSNAME),Darwin)
 	# macOS
 
 	# -fmodules-ts -fimplicit-modules -fimplicit-module-maps
-	CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto -g
+	CXXFLAGS += -std=c++17 -fstrict-aliasing -ftree-vectorize -flto -g
 
 	ifeq ($(shell uname -m),arm64)
 		CXXFLAGS += -mcpu=apple-m1
