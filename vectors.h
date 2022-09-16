@@ -1,8 +1,6 @@
 #ifndef VECTORS_H
 #define VECTORS_H
 
-#include <gsl/gsl_blas.h>
-
 #include <cmath>
 
 #include "cuda.h"
