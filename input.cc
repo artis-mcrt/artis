@@ -291,10 +291,6 @@ static void read_phixs_data(void)
   long mem_usage_phixs = 0;
   long mem_usage_phixsderivedcoeffs = 0;
 
-  const bool phixs_v1_exists = std::ifstream(phixsdata_filenames[1]).good();
-  const bool phixs_v2_exists = std::ifstream(phixsdata_filenames[2]).good();
-  assert_always(phixs_v1_exists ^ phixs_v2_exists); // XOR: exactly one of the those files must exist
-  phixs_file_version = phixs_v2_exists ? 2 : 1;
   printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version]);
 
   FILE *phixsdata = fopen_required(phixsdata_filenames[phixs_file_version], "r");
@@ -1264,8 +1260,19 @@ static void read_atomicdata_files(void)
 
   /// Photoionisation cross-sections
   ///======================================================
-  ///finally read in photoionisation cross sections and store them to the atomic data structure
+  /// finally read in photoionisation cross sections and store them to the atomic data structure
+  const bool phixs_v1_exists = std::ifstream(phixsdata_filenames[1]).good();
+  const bool phixs_v2_exists = std::ifstream(phixsdata_filenames[2]).good();
+
+  // read exactly one of the two files
+  assert_always(phixs_v1_exists ^ phixs_v2_exists); // XOR: one of the the two files must exist but not both
+  phixs_file_version = phixs_v2_exists ? 2 : 1;
   read_phixs_data();
+
+  // read both files
+  // phixs_file_version = 1;
+  // read_phixs_data();
+  // read_phixs_data();
 
   int cont_index = -1;
   for (int element = 0; element < get_nelements(); element++)
