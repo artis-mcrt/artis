@@ -1272,6 +1272,7 @@ static void read_atomicdata_files(void)
   // read both files
   // phixs_file_version = 1;
   // read_phixs_data();
+  // phixs_file_version = 2;
   // read_phixs_data();
 
   int cont_index = -1;
