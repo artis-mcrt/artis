@@ -423,13 +423,6 @@ void setup_coolinglist(void) {
   printout("[info] read_atomicdata: number of coolingterms %d\n", globals::ncoolingterms);
 }
 
-__host__ __device__ static double planck(const double nu, const double T)
-/// returns intensity for frequency nu and temperature T according
-/// to the Planck distribution
-{
-  return TWOHOVERCLIGHTSQUARED * pow(nu, 3) / expm1(HOVERKB * nu / T);
-}
-
 __host__ __device__ static double sample_planck(const double T)
 /// returns a randomly chosen frequency according to the Planck
 /// distribution of temperature T
@@ -448,7 +441,7 @@ __host__ __device__ static double sample_planck(const double T)
     double zrand = gsl_rng_uniform(rng);
     double zrand2 = gsl_rng_uniform(rng);
     nu = globals::nu_min_r + zrand * (globals::nu_max_r - globals::nu_min_r);
-    if (zrand2 * B_peak <= planck(nu, T)) endloop = true;
+    if (zrand2 * B_peak <= radfield::dbb(nu, T, 1)) endloop = true;
     // printout("[debug] sample_planck: planck_sampling %d\n", i);
   }
 
