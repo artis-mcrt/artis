@@ -1323,7 +1323,7 @@ static void setup_cellhistory(void) {
 #endif
     long mem_usage_cellhistory = 0;
     mem_usage_cellhistory += sizeof(struct cellhistory);
-    ;
+
     printout("[info] input: initializing cellhistory for thread %d ...\n", tid);
 
     globals::cellhistory[tid].cellnumber = -99;
