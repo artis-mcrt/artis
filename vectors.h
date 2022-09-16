@@ -88,7 +88,7 @@ __host__ __device__ inline double doppler_packet_nucmf_on_nurf(const struct pack
   return doppler_nucmf_on_nurf(pkt_ptr->dir, flow_velocity);
 }
 
-__host__ __device__ constexpr void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
+__host__ __device__ static inline void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
 // aberation of angles in special relativity
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1
