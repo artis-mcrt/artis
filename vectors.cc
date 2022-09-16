@@ -5,58 +5,16 @@
 #include "artisoptions.h"
 #include "sn3d.h"
 
-extern __host__ __device__ inline double vec_len(const double x[3]);
-extern __host__ __device__ inline void vec_norm(const double vec_in[3], double vec_out[3]);
-extern __host__ __device__ inline double dot(const double x[3], const double y[3]);
-extern __host__ __device__ inline void get_velocity(const double x[3], double y[3], const double t);
-extern __host__ __device__ inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
-extern __host__ __device__ inline void vec_scale(double vec[3], const double scalefactor);
-extern __host__ __device__ inline void vec_copy(double dest[3], const double source[3]);
-extern __host__ __device__ inline double doppler_packet_nucmf_on_nurf(const struct packet *const pkt_ptr);
-
-__host__ __device__ void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
-// aberation of angles in special relativity
-//   dir1: direction unit vector in frame1
-//   vel: velocity of frame2 relative to frame1
-//   dir2: direction vector in frame2
-{
-  const double vsqr = dot(vel, vel) / CLIGHTSQUARED;
-  const double gamma_rel = 1. / (sqrt(1 - vsqr));
-
-  const double ndotv = dot(dir1, vel);
-  const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
-  const double fact2 = (gamma_rel - (gamma_rel * gamma_rel * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
-
-  for (int d = 0; d < 3; d++) {
-    dir2[d] = (dir1[d] - (vel[d] * fact2)) / fact1;
-  }
-}
-
-__host__ __device__ double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
-// Doppler factor
-// arguments:
-//   dir_rf: the rest frame direction (unit vector) of light propagation
-//   vel_rf: velocity of the comoving frame relative to the rest frame
-// returns: the ratio f = nu_cmf / nu_rf
-{
-  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
-  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
-
-  const double ndotv = dot(dir_rf, vel_rf);
-  double dopplerfactor = 1. - (ndotv / CLIGHT);
-
-  if (USE_RELATIVISTIC_DOPPLER_SHIFT) {
-    const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;
-    assert_always(betasq >= 0.);  // v < c
-    assert_always(betasq < 1.);   // v < c
-    dopplerfactor = dopplerfactor / sqrt(1 - betasq);
-  }
-
-  assert_testmodeonly(std::isfinite(dopplerfactor));
-  assert_testmodeonly(dopplerfactor > 0);
-
-  return dopplerfactor;
-}
+extern __host__ __device__ constexpr double vec_len(const double x[3]);
+extern __host__ __device__ constexpr void vec_norm(const double vec_in[3], double vec_out[3]);
+extern __host__ __device__ constexpr double dot(const double x[3], const double y[3]);
+extern __host__ __device__ constexpr void get_velocity(const double x[3], double y[3], const double t);
+extern __host__ __device__ constexpr void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
+extern __host__ __device__ constexpr void vec_scale(double vec[3], const double scalefactor);
+extern __host__ __device__ constexpr void vec_copy(double dest[3], const double source[3]);
+__host__ __device__ extern constexpr void angle_ab(const double dir1[3], const double vel[3], double dir2[3]);
+__host__ __device__ extern constexpr double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3]);
+__host__ __device__ extern constexpr void move_pkt(struct packet *pkt_ptr, double distance);
 
 __host__ __device__ void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[3])
 // Routine for scattering a direction through angle theta.
@@ -115,30 +73,12 @@ __host__ __device__ void get_rand_isotropic_unitvec(double vecout[3])
   vecout[2] = mu;
 }
 
-__host__ __device__ void move_pkt(struct packet *pkt_ptr, const double distance)
-/// Subroutine to move a packet along a straight line (specified by current
-/// dir vector). The distance moved is in the rest frame.
-{
-  /// First update pos.
-  assert_always(distance >= 0);
-
-  pkt_ptr->pos[0] += (pkt_ptr->dir[0] * distance);
-  pkt_ptr->pos[1] += (pkt_ptr->dir[1] * distance);
-  pkt_ptr->pos[2] += (pkt_ptr->dir[2] * distance);
-
-  /// During motion, rest frame energy and frequency are conserved.
-  /// But need to update the co-moving ones.
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
-  pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
-  pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
-}
-
 __host__ __device__ void move_pkt_withtime(struct packet *pkt_ptr, const double distance)
 /// Subroutine to move a packet along a straight line (specified by current
 /// dir vector). The distance moved is in the rest frame.
 {
   const double nu_cmf_old = pkt_ptr->nu_cmf;
-  pkt_ptr->prop_time += distance / globals::CLIGHT_PROP;
+  pkt_ptr->prop_time += distance / CLIGHT_PROP;
   move_pkt(pkt_ptr, distance);
 
   // frequency should only over decrease due to packet movement

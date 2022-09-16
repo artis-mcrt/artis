@@ -251,9 +251,8 @@ bool estim_switch(int nts) {
   const double tstart = globals::time_step[nts].start;
   const double tend = globals::time_step[nts].start + globals::time_step[nts].width;
 
-  const double ts_want = globals::time_syn[0] * ((1. - globals::rmax / globals::tmin / globals::CLIGHT_PROP));
-  const double te_want =
-      globals::time_syn[globals::nsyn_time - 1] * (1. + globals::rmax / globals::tmin / globals::CLIGHT_PROP);
+  const double ts_want = globals::time_syn[0] * ((1. - globals::rmax / globals::tmin / CLIGHT_PROP));
+  const double te_want = globals::time_syn[globals::nsyn_time - 1] * (1. + globals::rmax / globals::tmin / CLIGHT_PROP);
 
   return ((tstart > te_want) || (tend < ts_want));
 }

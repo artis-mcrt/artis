@@ -8,7 +8,7 @@
 1                        # model_type: number of dimensions (1, 2, or 3)
 4                        # compute r-light curve (1: no estimators, 2: thin cells, 3: thick cells, 4: gamma-ray heating)
 1                        # n_out_it: UNUSED number of iterations
-1.0                      # globals::CLIGHT_PROP/CLIGHT: change speed of light by some factor
+1.0                      # CLIGHT/CLIGHT: change speed of light by some factor
 -1                       # use grey opacity for gammas?
 0 0 1                    # syn_dir: x, y, and z components of unit vector (will be normalised after input or randomised if zero length)
 4                        # opacity_case: opacity choice

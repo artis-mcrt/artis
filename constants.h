@@ -3,6 +3,7 @@
 
 /// fundamental constants
 constexpr double CLIGHT = 2.99792458e+10;  /// Speed of light [cm/s]
+constexpr double CLIGHT_PROP = CLIGHT;     /// Speed of light in simulation [cm/s]
 constexpr double H = 6.6260755e-27;        /// Planck constant [erg s]
 constexpr double MSUN = 1.98855e+33;       /// Solar mass [g]
 constexpr double LSUN = 3.826e+33;         /// Solar luminosity [erg/s]

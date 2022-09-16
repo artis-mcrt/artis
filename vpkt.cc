@@ -290,7 +290,7 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
     // move it to cell boundary and go to next cell
     // printf("I'm changing cell. I'm going from nu_cmf = %.e ",dummy_ptr->nu_cmf);
 
-    t_future += (sdist / globals::CLIGHT_PROP);
+    t_future += (sdist / CLIGHT_PROP);
     dummy_ptr->prop_time = t_future;
     move_pkt(dummy_ptr, sdist);
 
@@ -337,7 +337,7 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
 
     /* bin on fly and produce file with spectrum */
 
-    t_arrive = t_current - (dot(pkt_ptr->pos, dummy_ptr->dir) / globals::CLIGHT_PROP);
+    t_arrive = t_current - (dot(pkt_ptr->pos, dummy_ptr->dir) / CLIGHT_PROP);
 
     add_to_vspecpol(dummy_ptr, bin, ind, t_arrive);
   }
@@ -863,7 +863,7 @@ __host__ __device__ int vpkt_call_estimators(struct packet *pkt_ptr, double t_cu
     obs[1] = sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * sin(phiobs[bin]);
     obs[2] = nz_obs_vpkt[bin];
 
-    const double t_arrive = t_current - (dot(pkt_ptr->pos, obs) / globals::CLIGHT_PROP);
+    const double t_arrive = t_current - (dot(pkt_ptr->pos, obs) / CLIGHT_PROP);
 
     if (t_arrive >= tmin_vspec_input && t_arrive <= tmax_vspec_input) {
       // time selection
