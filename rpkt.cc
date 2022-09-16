@@ -163,6 +163,22 @@ __host__ __device__ static double get_event(
 
       if (tau_rnd - tau > tau_cont) {
         // got past the continuum optical depth so propagate to the line, and check interaction
+
+        // if ((dist + ldist) > abort_dist) {
+        if (nu_trans < nu_cmf_abort) {
+          dummypkt_ptr->next_trans -= 1;  // back up one line, because we didn't reach it before the boundary/timelimit
+          pkt_ptr->next_trans = dummypkt_ptr->next_trans;
+
+          // const double nextline_nu = globals::linelist[pkt_ptr->next_trans].nu;
+
+          // printout("[debug] get_event:         leave propagation loop (dist %g > abort_dist %g) ...
+          // dummypkt_ptr->next_trans %d\n", dist, abort_dist, dummypkt_ptr->next_trans);
+
+          // assert_always(nextline_nu <= nu_cmf_abort);
+
+          return abort_dist + 1e20;
+        }
+
         const double A_ul = einstein_spontaneous_emission(lineindex);
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
@@ -184,21 +200,6 @@ __host__ __device__ static double get_event(
 
         // printout("[debug] get_event:     tau_line %g\n", tau_line);
         // printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
-
-        // if ((dist + ldist) > abort_dist) {
-        if (nu_trans < nu_cmf_abort) {
-          dummypkt_ptr->next_trans -= 1;  // back up one line, because we didn't reach it before the boundary/timelimit
-          pkt_ptr->next_trans = dummypkt_ptr->next_trans;
-
-          // const double nextline_nu = globals::linelist[pkt_ptr->next_trans].nu;
-
-          // printout("[debug] get_event:         leave propagation loop (dist %g > abort_dist %g) ...
-          // dummypkt_ptr->next_trans %d\n", dist, abort_dist, dummypkt_ptr->next_trans);
-
-          // assert_always(nextline_nu <= nu_cmf_abort);
-
-          return abort_dist + 1e20;
-        }
 
         if (tau_rnd - tau > tau_cont + tau_line) {
           // total optical depth still below tau_rnd: propagate to the line and continue
