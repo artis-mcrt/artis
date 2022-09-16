@@ -83,7 +83,7 @@ static void update_pellet(struct packet *pkt_ptr, const int nts, const double t2
     pkt_ptr->prop_time = t2;
 
     // That's all that needs to be done for the inactive pellet.
-  } else if (tdecay > ts) {
+  } else if (tdecay >= ts) {
     // The packet decays in the current timestep.
     safeincrement(globals::time_step[nts].pellet_decays);
 
