@@ -26,20 +26,17 @@ __host__ __device__ static inline double vec_len(const double x[3])
 }
 
 __host__ __device__ inline void vec_norm(const double vec_in[3], double vec_out[3])
-// Routine for normalizing a vector.
+// normalizing a copy of vec_in and save it to vec_out
 {
   const double magnitude = vec_len(vec_in);
 
   vec_out[0] = vec_in[0] / magnitude;
   vec_out[1] = vec_in[1] / magnitude;
   vec_out[2] = vec_in[2] / magnitude;
-
-  // vec_copy(vec_out, vec_in);
-  // cblas_dscal(3, 1 / magnitude, vec_out, 1)
 }
 
 __host__ __device__ inline double dot(const double x[3], const double y[3])
-// Routine for taking dot product.
+// vector dot product
 {
 #ifdef __CUDA_ARCH__
   return (x[0] * y[0]) + (x[1] * y[1]) + (x[2] * y[2]);
@@ -56,7 +53,7 @@ __host__ __device__ constexpr void get_velocity(const double x[3], double y[3], 
   y[2] = x[2] / t;
 }
 
-__host__ __device__ inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]) {
+__host__ __device__ constexpr void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]) {
   vecout[0] = (vec1[1] * vec2[2]) - (vec2[1] * vec1[2]);
   vecout[1] = (vec1[2] * vec2[0]) - (vec2[2] * vec1[0]);
   vecout[2] = (vec1[0] * vec2[1]) - (vec2[0] * vec1[1]);
@@ -68,14 +65,10 @@ __host__ __device__ constexpr void vec_scale(double vec[3], const double scalefa
   vec[2] *= scalefactor;
 }
 
-__host__ __device__ inline void vec_copy(double destination[3], const double source[3]) {
-#ifdef __CUDA_ARCH__
-  for (int d = 0; d < 3; d++) {
-    destination[d] = source[d];
-  }
-#else
-  cblas_dcopy(3, source, 1, destination, 1);
-#endif
+__host__ __device__ constexpr void vec_copy(double destination[3], const double source[3]) {
+  destination[0] = source[0];
+  destination[1] = source[1];
+  destination[2] = source[2];
 }
 
 __host__ __device__ inline double doppler_packet_nucmf_on_nurf(const struct packet *const pkt_ptr) {

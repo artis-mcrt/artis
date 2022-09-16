@@ -7,8 +7,6 @@
 
 extern __host__ __device__ inline void vec_norm(const double vec_in[3], double vec_out[3]);
 extern __host__ __device__ inline double dot(const double x[3], const double y[3]);
-extern __host__ __device__ inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
-extern __host__ __device__ inline void vec_copy(double dest[3], const double source[3]);
 extern __host__ __device__ inline double doppler_packet_nucmf_on_nurf(const struct packet *const pkt_ptr);
 
 __host__ __device__ void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
