@@ -14,7 +14,7 @@ __host__ __device__ void scatter_dir(const double dir_in[3], double cos_theta, d
 __host__ __device__ void get_rand_isotropic_unitvec(double vecout[3]);
 __host__ __device__ void move_pkt_withtime(struct packet *pkt_ptr, double distance);
 
-__host__ __device__ constexpr double vec_len(const double x[3])
+__host__ __device__ static inline double vec_len(const double x[3])
 // return the the magnitude of a vector
 {
   return sqrt((x[0] * x[0]) + (x[1] * x[1]) + (x[2] * x[2]));
@@ -64,7 +64,7 @@ __host__ __device__ constexpr void vec_copy(double destination[3], const double 
   destination[2] = source[2];
 }
 
-__host__ __device__ constexpr double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
+__host__ __device__ inline double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
 // Doppler factor
 // arguments:
 //   dir_rf: the rest frame direction (unit vector) of light propagation
@@ -106,7 +106,7 @@ __host__ __device__ constexpr void angle_ab(const double dir1[3], const double v
   }
 }
 
-__host__ __device__ constexpr void move_pkt(struct packet *pkt_ptr, const double distance)
+__host__ __device__ inline void move_pkt(struct packet *pkt_ptr, const double distance)
 /// Subroutine to move a packet along a straight line (specified by current
 /// dir vector). The distance moved is in the rest frame.
 {

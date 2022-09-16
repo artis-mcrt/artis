@@ -5,16 +5,15 @@
 #include "artisoptions.h"
 #include "sn3d.h"
 
-extern __host__ __device__ constexpr double vec_len(const double x[3]);
 extern __host__ __device__ constexpr void vec_norm(const double vec_in[3], double vec_out[3]);
-extern __host__ __device__ constexpr double dot(const double x[3], const double y[3]);
-extern __host__ __device__ constexpr void get_velocity(const double x[3], double y[3], const double t);
-extern __host__ __device__ constexpr void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
-extern __host__ __device__ constexpr void vec_scale(double vec[3], const double scalefactor);
-extern __host__ __device__ constexpr void vec_copy(double dest[3], const double source[3]);
-__host__ __device__ extern constexpr void angle_ab(const double dir1[3], const double vel[3], double dir2[3]);
-__host__ __device__ extern constexpr double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3]);
-__host__ __device__ extern constexpr void move_pkt(struct packet *pkt_ptr, double distance);
+// extern __host__ __device__ constexpr double dot(const double x[3], const double y[3]);
+// extern __host__ __device__ constexpr void get_velocity(const double x[3], double y[3], const double t);
+// extern __host__ __device__ constexpr void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
+// extern __host__ __device__ constexpr void vec_scale(double vec[3], const double scalefactor);
+// extern __host__ __device__ constexpr void vec_copy(double dest[3], const double source[3]);
+// __host__ __device__ extern constexpr void angle_ab(const double dir1[3], const double vel[3], double dir2[3]);
+__host__ __device__ extern inline double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3]);
+__host__ __device__ extern inline void move_pkt(struct packet *pkt_ptr, double distance);
 
 __host__ __device__ void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[3])
 // Routine for scattering a direction through angle theta.
