@@ -64,9 +64,6 @@ __managed__ int do_rlc_est;    // 1 = compute estimators for the r-pkt light cur
                                // 2 = compute estimators with opacity weights
                                // 3 = compute estimators, but use only for gamma-heating rate
 
-__managed__ double CLIGHT_PROP;  // Speed of light for ray travel. Physically = CLIGHT but
-                                 // can be changed for testing.
-
 __managed__ double gamma_grey;  // set to -ve for proper treatment. If possitive, then
                                 // gamma_rays are treated as grey with this opacity.
 

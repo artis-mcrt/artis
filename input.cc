@@ -47,7 +47,7 @@ std::string inputlinecomments[inputlinecommentcount] = {
     "model_type: number of dimensions (1, 2, or 3)",
     "compute r-light curve (1: no estimators, 2: thin cells, 3: thick cells, 4: gamma-ray heating)",
     "n_out_it: UNUSED number of iterations",
-    "globals::CLIGHT_PROP/CLIGHT: change speed of light by some factor",
+    "UNUSED: change speed of light by some factor. Change constants.h CLIGHT_PROP instead",
     "use grey opacity for gammas?",
     "syn_dir: x, y, and z components of unit vector (will be normalised after input or randomised if zero length)",
     "opacity_case: opacity choice",
@@ -1969,8 +1969,8 @@ void read_parameterfile(int rank)
   std::stringstream(line) >> n_out_it;  // UNUSED number of iterations
 
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> dum2;  // change speed of light?
-  globals::CLIGHT_PROP = dum2 * CLIGHT;
+  std::stringstream(line) >> dum2;        // change speed of light
+  assert_always(fabs(dum2 - 1.) < 1e-3);  // no longer in use. Change CLIGHT_PROP constant instead
 
   assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> globals::gamma_grey;  // use grey opacity for gammas?

@@ -257,8 +257,6 @@ extern __managed__ bool do_comp_est;
 extern __managed__ bool do_r_lc;
 extern __managed__ int do_rlc_est;
 
-extern __managed__ double CLIGHT_PROP;
-
 extern __managed__ double gamma_grey;
 
 #define GREY_OP 0.1
