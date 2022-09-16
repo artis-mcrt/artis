@@ -62,10 +62,10 @@ __host__ __device__ inline void cross_prod(const double vec1[3], const double ve
   vecout[2] = (vec1[0] * vec2[1]) - (vec2[0] * vec1[1]);
 }
 
-__host__ __device__ inline void vec_scale(double vec[3], const double scalefactor) {
-  for (int d = 0; d < 3; d++) {
-    vec[d] *= scalefactor;
-  }
+__host__ __device__ constexpr void vec_scale(double vec[3], const double scalefactor) {
+  vec[0] *= scalefactor;
+  vec[1] *= scalefactor;
+  vec[2] *= scalefactor;
 }
 
 __host__ __device__ inline void vec_copy(double destination[3], const double source[3]) {
