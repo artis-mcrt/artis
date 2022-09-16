@@ -549,15 +549,10 @@ static struct transitiontable_entry *read_ion_transitions(std::istream &ftransit
   return transitiontable;
 }
 
-static int compare_linelistentry_simple(const void *p1, const void *p2)
+static bool operator<(const linelist_entry &a, const linelist_entry &b)
 // sort the lineline in descending frequency
 {
-  auto *a1 = static_cast<const linelist_entry *>(p1);
-  auto *a2 = static_cast<const linelist_entry *>(p2);
-
-  if (a1->nu > a2->nu) return -1;
-  if (a1->nu < a2->nu) return 1;
-  return 0;
+  return a.nu > b.nu;
 }
 
 static int compare_linelistentry(const void *p1, const void *p2)
@@ -1086,6 +1081,7 @@ static void read_atomicdata_files(void) {
   /// then sort the linelist by decreasing frequency
   if (globals::rank_in_node == 0) {
     qsort(globals::linelist, globals::nlines, sizeof(linelist_entry), compare_linelistentry);
+    // std::sort(globals::linelist, globals::linelist + globals::nlines);
 
     // clamp close lines to exact overlaps
     // for (int i = 0; i < globals::nlines - 1; i++) {
@@ -1458,16 +1454,16 @@ static void write_bflist_file(int includedphotoiontransitions) {
   }
 }
 
-static bool operator<(const fullphixslist &a1, const fullphixslist &a2)
+static bool operator<(const fullphixslist &a, const fullphixslist &b)
 /// Helper function to sort the phixslist by ascending threshold frequency.
 {
-  return a1.nu_edge < a2.nu_edge;
+  return a.nu_edge < b.nu_edge;
 }
 
-static bool operator<(const groundphixslist &a1, const groundphixslist &a2)
+static bool operator<(const groundphixslist &a, const groundphixslist &b)
 /// Helper function to sort the groundphixslist by ascending threshold frequency.
 {
-  return a1.nu_edge < a2.nu_edge;
+  return a.nu_edge < b.nu_edge;
 }
 
 static void setup_phixs_list(void) {
