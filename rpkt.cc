@@ -718,9 +718,10 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
 
     return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
   } else {
-    const double maxsdist = (grid::grid_type == GRID_SPHERICAL1D)
-                                ? 2 * globals::rmax * (pkt_ptr->prop_time + sdist / CLIGHT_PROP) / globals::tmin
-                                : globals::rmax * pkt_ptr->prop_time / globals::tmin;
+    const double maxsdist =
+        (grid::grid_type == GRID_SPHERICAL1D)
+            ? 2 * globals::rmax * (pkt_ptr->prop_time + sdist / globals::CLIGHT_PROP) / globals::tmin
+            : globals::rmax * pkt_ptr->prop_time / globals::tmin;
     if (sdist > maxsdist) {
       printout("[fatal] do_rpkt: Unreasonably large sdist for packet %d. Rpkt. Abort. %g %g %g\n", pkt_ptr->number,
                globals::rmax, pkt_ptr->prop_time / globals::tmin, sdist);
@@ -756,7 +757,7 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
 
     // Find how far it can travel during the time inverval.
 
-    double tdist = (t2 - pkt_ptr->prop_time) * CLIGHT_PROP;
+    double tdist = (t2 - pkt_ptr->prop_time) * globals::CLIGHT_PROP;
 
     assert_always(tdist >= 0);
 
@@ -970,7 +971,7 @@ __host__ __device__ static double get_rpkt_escapeprob_fromdirection(const double
       break;
     }
 
-    t_future += (sdist / CLIGHT_PROP);
+    t_future += (sdist / globals::CLIGHT_PROP);
     vpkt.prop_time = t_future;
     move_pkt(&vpkt, sdist);
 

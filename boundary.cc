@@ -22,7 +22,7 @@ __host__ __device__ static double get_shellcrossdist(const double pos[3], const 
     printout("get_shellcrossdist isinnerboundary %d\n", isinnerboundary);
     printout("shellradius %g tstart %g len(pos) %g\n", shellradius, tstart, vec_len(pos));
   }
-  const double speed = vec_len(dir) * CLIGHT_PROP;
+  const double speed = vec_len(dir) * globals::CLIGHT_PROP;
   const double a = dot(dir, dir) - pow(shellradius / tstart / speed, 2);
   const double b = 2 * (dot(dir, pos) - pow(shellradius, 2) / tstart / speed);
   const double c = dot(pos, pos) - pow(shellradius, 2);
@@ -124,20 +124,20 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, int *sne
   assert_testmodeonly(ndim <= 3);
   double initpos[3] = {0};  // pkt_ptr->pos converted to grid coordinates
   double cellcoordmax[3] = {0};
-  double vel[3] = {0};  // pkt_ptr->dir * CLIGHT_PROP converted to grid coordinates
+  double vel[3] = {0};  // pkt_ptr->dir * globals::CLIGHT_PROP converted to grid coordinates
 
   if (grid::grid_type == GRID_UNIFORM) {
     // XYZ coordinates
     for (int d = 0; d < ndim; d++) {
       initpos[d] = pkt_ptr->pos[d];
       cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
-      vel[d] = pkt_ptr->dir[d] * CLIGHT_PROP;
+      vel[d] = pkt_ptr->dir[d] * globals::CLIGHT_PROP;
     }
   } else if (grid::grid_type == GRID_SPHERICAL1D) {
     // the only coordinate is radius from the origin
     initpos[0] = vec_len(pkt_ptr->pos);
     cellcoordmax[0] = grid::get_cellcoordmax(cellindex, 0);
-    vel[0] = dot(pkt_ptr->pos, pkt_ptr->dir) / vec_len(pkt_ptr->pos) * CLIGHT_PROP;  // radial velocity
+    vel[0] = dot(pkt_ptr->pos, pkt_ptr->dir) / vec_len(pkt_ptr->pos) * globals::CLIGHT_PROP;  // radial velocity
   } else {
     assert_always(false);
   }
@@ -236,11 +236,11 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, int *sne
     const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
 
     const double d_inner = (r_inner > 0.) ? get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_inner, true, tstart) : -1.;
-    t_coordminboundary[0] = d_inner / CLIGHT_PROP;
+    t_coordminboundary[0] = d_inner / globals::CLIGHT_PROP;
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
     const double d_outer = get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_outer, false, tstart);
-    t_coordmaxboundary[0] = d_outer / CLIGHT_PROP;
+    t_coordmaxboundary[0] = d_outer / globals::CLIGHT_PROP;
 
     // printout("cell %d\n", pkt_ptr->where);
     // printout("initradius %g: velrad %g\n", initpos[0], vel[0]);
@@ -322,7 +322,7 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, int *sne
   }
 
   // Now we know what happens. The distance to crossing is....
-  double distance = CLIGHT_PROP * time;
+  double distance = globals::CLIGHT_PROP * time;
   // printout("boundary_cross: time %g distance %g\n", time, distance);
   // closest = close;
 
