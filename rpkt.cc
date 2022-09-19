@@ -224,8 +224,8 @@ __host__ __device__ static double get_event(
           //          fabs(dummypkt_ptr->nu_cmf / nu_trans - 1.));
           // }
 
-          radfield::increment_lineestimator(
-              modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
+          radfield::update_lineestimator(modelgridindex, lineindex,
+                                         dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
 
           if (false) {
             const int next_trans = dummypkt_ptr->next_trans;
@@ -275,7 +275,7 @@ __host__ __device__ static double get_event(
 
           if (DETAILED_LINE_ESTIMATORS_ON) {
             move_pkt_withtime(dummypkt_ptr, ldist);
-            radfield::increment_lineestimator(
+            radfield::update_lineestimator(
                 modelgridindex, lineindex,
                 dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
           }
@@ -634,7 +634,7 @@ __host__ __device__ static void update_estimators(struct packet *pkt_ptr, const 
   const double distance_e_cmf = distance * pkt_ptr->e_cmf;
   const double nu = pkt_ptr->nu_cmf;
   // double bf = exp(-HOVERKB*nu/globals::cell[modelgridindex].T_e);
-  radfield::update_estimators(modelgridindex, distance_e_cmf, nu, pkt_ptr, pkt_ptr->prop_time);
+  radfield::update_estimators(modelgridindex, distance_e_cmf, nu, pkt_ptr);
 
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
   const int nelements = get_nelements();

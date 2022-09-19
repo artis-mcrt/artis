@@ -798,10 +798,8 @@ void zero_estimators(int modelgridindex)
 }
 
 #if (DETAILED_BF_ESTIMATORS_ON)
-__host__ __device__ static void increment_bfestimators(const int modelgridindex, const double distance_e_cmf,
-                                                       const double nu_cmf, const struct packet *const pkt_ptr,
-                                                       const double t_current) {
-  assert_always(pkt_ptr->prop_time == t_current);
+__host__ __device__ static void update_bfestimators(const int modelgridindex, const double distance_e_cmf,
+                                                    const double nu_cmf, const struct packet *const pkt_ptr) {
   if (distance_e_cmf == 0) return;
 
   const int nbfcontinua = globals::nbfcontinua;
@@ -866,9 +864,8 @@ __host__ __device__ static void increment_bfestimators(const int modelgridindex,
 }
 #endif
 
-__host__ __device__ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf,
-                                           const struct packet *const pkt_ptr, double t_current) {
-  assert_always(pkt_ptr->prop_time == t_current);
+__host__ __device__ void update_estimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
+                                           const struct packet *const pkt_ptr) {
   safeadd(J[modelgridindex], distance_e_cmf);
   if (!std::isfinite(J[modelgridindex])) {
     printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",
@@ -885,7 +882,7 @@ __host__ __device__ void update_estimators(int modelgridindex, double distance_e
   }
 
 #if (DETAILED_BF_ESTIMATORS_ON)
-  increment_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr, t_current);
+  update_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr);
 #endif
 
   if (MULTIBIN_RADFIELD_MODEL_ON) {
@@ -924,7 +921,7 @@ __host__ __device__ void update_estimators(int modelgridindex, double distance_e
 #endif
 }
 
-void increment_lineestimator(const int modelgridindex, const int lineindex, const double increment) {
+void update_lineestimator(const int modelgridindex, const int lineindex, const double increment) {
   if (!DETAILED_LINE_ESTIMATORS_ON) return;
 
   const int jblueindex = get_Jblueindex(lineindex);
