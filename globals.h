@@ -37,6 +37,13 @@ struct time {
   int pellet_decays;              // Number of pellets that decay in this time step.
 };
 
+struct bflist_t {
+  int elementindex;
+  int ionindex;
+  int levelindex;
+  int phixstargetindex;
+};
+
 struct fullphixslist {
   double nu_edge;
   int element;
@@ -142,13 +149,6 @@ struct linelist_entry {
   int upperlevelindex;  /// And the participating upper
   int lowerlevelindex;  /// and lower levels
   bool forbidden;
-};
-
-struct bflist_t {
-  int elementindex;
-  int ionindex;
-  int levelindex;
-  int phixstargetindex;
 };
 
 struct nne_solution_paras {

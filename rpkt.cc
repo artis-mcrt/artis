@@ -1180,14 +1180,16 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
       if (nu >= nu_edge && nu <= nu_max_phixs && nnlevel > 0) {
         // printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
         const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
-        // const double probability = get_phixsprobability(element, ion, level, phixstargetindex);
-        const int probability = globals::allcont[i].probability;
+        const double probability = get_phixsprobability(element, ion, level, phixstargetindex);
+        const int probability2 = globals::allcont[i].probability;
+        assert_always(probability == probability2);
 
 #if (SEPARATE_STIMRECOMB)
         const double corrfactor = 1.;  // no subtraction of stimulated recombination
 #else
-        // const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-        const int upper = globals::allcont[i].upperlevel;
+        const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+        const int upper2 = globals::allcont[i].upperlevel;
+        assert_always(upper == upper2);
         const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
         const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
         const double departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
