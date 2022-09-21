@@ -1482,10 +1482,10 @@ static void setup_phixs_list(void) {
   /// a serial loop which intializes the phixslist data structure for all threads in a loop. I'm still
   /// not sure why this causes a problem at all and on BlueGene architectures in particular. However,
   /// it seems to fix the problem.
-  //#ifdef _OPENMP
-  //  #pragma omp parallel private(i,element,ion,level,nions,nlevels,epsilon_upper,E_threshold,nu_edge)
-  //  {
-  //#endif
+  // #ifdef _OPENMP
+  //   #pragma omp parallel private(i,element,ion,level,nions,nlevels,epsilon_upper,E_threshold,nu_edge)
+  //   {
+  // #endif
   for (int itid = 0; itid < get_max_threads(); itid++) {
     /// Number of ground level bf-continua equals the total number of included ions minus the number
     /// of included elements, because the uppermost ionisation stages can't ionise.
@@ -1574,6 +1574,8 @@ static void setup_phixs_list(void) {
           globals::allcont[allcontindex].ion = ion;
           globals::allcont[allcontindex].level = level;
           globals::allcont[allcontindex].phixstargetindex = phixstargetindex;
+          globals::allcont[allcontindex].probability = get_phixsprobability(element, ion, level, phixstargetindex);
+          globals::allcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
           int index_in_groundlevelcontestimator;
@@ -1734,7 +1736,7 @@ void input(int rank)
   globals::do_r_lc = false;  /// default to no lc = gamma-ray spectrum
   globals::do_rlc_est = 0;   /// ^^
 
-  globals::nfake_gam = 1;  ///# of fake gamma ray lines for syn
+  globals::nfake_gam = 1;  /// # of fake gamma ray lines for syn
 
   /// Read in parameters from input.txt
   read_parameterfile(rank);

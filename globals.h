@@ -43,6 +43,8 @@ struct fullphixslist {
   int ion;
   int level;
   int phixstargetindex;
+  int upperlevel;
+  int probability;
   int index_in_groundphixslist;
 };
 
