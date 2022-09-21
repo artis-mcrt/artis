@@ -1251,9 +1251,19 @@ __host__ __device__ double col_recombination_ratecoeff(const int modelgridindex,
 
       const double sigma_bf = (globals::elements[element].ions[upperion - 1].levels[lower].photoion_xs[0] *
                                get_phixsprobability(element, upperion - 1, lower, phixstargetindex));
+      double sf;
+      if (use_cellhist) {
+        sf = globals::cellhistory[tid]
+                 .chelements[element]
+                 .chions[upperion - 1]
+                 .chlevels[lower]
+                 .chphixstargets[phixstargetindex]
+                 .sahafactor;
+      } else {
+        sf = calculate_sahafact(element, upperion - 1, lower, upper, T_e, epsilon_trans)
+      }
 
-      double C = nne * nne * calculate_sahafact(element, upperion - 1, lower, upper, T_e, epsilon_trans) * 1.55e13 *
-                 pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1;
+      double C = nne * nne * sf * 1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1;
 
       return C;
     }
