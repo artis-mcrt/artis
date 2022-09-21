@@ -683,8 +683,8 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
       globals::cellhistory[tid].cooling_contrib[kpkt::get_coolinglistoffset(element, ion)] = COOLING_UNDEFINED;
-      const int nlevels = get_nlevels(element, ion);
       if (modelgridindex >= 0) {
+        const int nlevels = get_nlevels(element, ion);
         for (int level = 0; level < nlevels; level++) {
           globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].population =
               calculate_levelpop(modelgridindex, element, ion, level);
