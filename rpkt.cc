@@ -1190,13 +1190,13 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
         // const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
         const int upper = globals::allcont[i].upperlevel;
         const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
-        // const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
-        const double sf = globals::cellhistory[tid]
-                              .chelements[element]
-                              .chions[ion]
-                              .chlevels[level]
-                              .chphixstargets[phixstargetindex]
-                              .sahafactor;
+        const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
+        // const double sf = globals::cellhistory[tid]
+        //                       .chelements[element]
+        //                       .chions[ion]
+        //                       .chlevels[level]
+        //                       .chphixstargets[phixstargetindex]
+        //                       .sahafactor;
         const double departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
 
         const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
