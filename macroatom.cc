@@ -1260,7 +1260,7 @@ __host__ __device__ double col_recombination_ratecoeff(const int modelgridindex,
                  .chphixstargets[phixstargetindex]
                  .sahafactor;
       } else {
-        sf = calculate_sahafact(element, upperion - 1, lower, upper, T_e, epsilon_trans)
+        sf = calculate_sahafact(element, upperion - 1, lower, upper, T_e, epsilon_trans);
       }
 
       double C = nne * nne * sf * 1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1;
