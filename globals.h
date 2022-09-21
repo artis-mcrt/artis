@@ -178,6 +178,7 @@ struct chphixstargets {
 #if (SEPARATE_STIMRECOMB)
   double stimrecombcoeff;
 #endif
+  double sahafactor;
 };
 
 struct chlevels {

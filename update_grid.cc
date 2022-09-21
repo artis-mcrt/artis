@@ -685,10 +685,14 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
       globals::cellhistory[tid].cooling_contrib[kpkt::get_coolinglistoffset(element, ion)] = COOLING_UNDEFINED;
       const int nlevels = get_nlevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
-        if (modelgridindex >= 0) {
-          globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].population =
-              calculate_levelpop(modelgridindex, element, ion, level);
-        }
+        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].population =
+            calculate_levelpop(modelgridindex, element, ion, level);
+      }
+    }
+
+    for (int ion = 0; ion < nions - 1; ion++) {
+      const int nbflevels = get_ionisinglevels(element, ion);
+      for (int level = 0; level < nbflevels; level++) {
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
           globals::cellhistory[tid]
               .chelements[element]
@@ -696,6 +700,17 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
               .chlevels[level]
               .chphixstargets[phixstargetindex]
               .corrphotoioncoeff = -99.;
+
+          const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+          const double nu_edge = H * get_phixs_threshold(element, ion, level, phixstargetindex);
+          const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
+          globals::cellhistory[tid]
+              .chelements[element]
+              .chions[ion]
+              .chlevels[level]
+              .chphixstargets[phixstargetindex]
+              .sahafactor = sf;
+
 #if (SEPARATE_STIMRECOMB)
           globals::cellhistory[tid]
               .chelements[element]
@@ -1297,6 +1312,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   {
     /// Do not use values which are saved in the cellhistory within update_grid
     /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
+    use_cellhist = false;
+    cellhistory_reset(-99, true);
 
 /// Updating cell information
 #ifdef _OPENMP
@@ -1307,8 +1324,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       /// Check if this task should work on the current model grid cell.
       /// If yes, update the cell and write out the estimators
       if (mgi >= nstart && mgi < nstart + ndo) {
-        use_cellhist = false;
-        cellhistory_reset(-99, true);
+        // use_cellhist = false;
+        // cellhistory_reset(-99, true);
 
         struct heatingcoolingrates heatingcoolingrates = {};
         update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, mps, &heatingcoolingrates);
@@ -1317,8 +1334,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
         const time_t sys_time_start_write_estimators = time(NULL);
         printout("writing to estimators file cell %d timestep %d...\n", mgi, nts);
 
-        use_cellhist = true;
-        cellhistory_reset(mgi, true);
+        // use_cellhist = true;
+        // cellhistory_reset(mgi, true);
 #ifdef _OPENMP
 #pragma omp critical(estimators_file)
 #endif
