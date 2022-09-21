@@ -764,11 +764,10 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
       }
     }
   }
-}
-// printout("nlevels_with_processrates %d\n", nlevels_with_processrates);
+  // printout("nlevels_with_processrates %d\n", nlevels_with_processrates);
 
-// globals::cellhistory[tid].totalcooling = COOLING_UNDEFINED;
-// globals::cellhistory[tid].phixsflag = PHIXS_UNDEFINED;
+  // globals::cellhistory[tid].totalcooling = COOLING_UNDEFINED;
+  // globals::cellhistory[tid].phixsflag = PHIXS_UNDEFINED;
 }
 
 static void solve_Te_nltepops(const int n, const int nts, const int titer,
