@@ -670,6 +670,9 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
   globals::kappa_rpkt_cont[tid].recalculate_required = true;
 
   globals::cellhistory[tid].cellnumber = modelgridindex;
+  if (modelgridindex < 0) {
+    return;  // invalidating the cell history but not setting up values from a real cell
+  }
   // globals::cellhistory[tid].totalcooling = COOLING_UNDEFINED;
   //  int nlevels_with_processrates = 0;
   //  int nlevels_with_photoioncoeffs = 0;
