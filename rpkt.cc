@@ -1182,6 +1182,7 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
         const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
         const double probability = get_phixsprobability(element, ion, level, phixstargetindex);
         const int probability2 = globals::allcont[i].probability;
+        printout("compare %g and %g\n", probability, probability2);
         assert_always(probability == probability2);
 
 #if (SEPARATE_STIMRECOMB)
