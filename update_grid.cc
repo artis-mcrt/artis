@@ -670,8 +670,8 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
   globals::kappa_rpkt_cont[tid].recalculate_required = true;
 
   globals::cellhistory[tid].cellnumber = modelgridindex;
-  if (modelgridindex < 0) {
-    return;  // invalidating the cell history but not setting up values from a real cell
+  if (modelgridindex < 0 || modelgridindex == grid::get_npts_model() || grid::modelgrid[modelgridindex].thick != 0) {
+    return;  // we only needed to invalidate the cell history but not setting up values from a real cell
   }
   // globals::cellhistory[tid].totalcooling = COOLING_UNDEFINED;
   //  int nlevels_with_processrates = 0;
@@ -739,13 +739,10 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
         //   globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i] =
         //   -99.;
         // }
-        // if (levelhasvalue)
-        //   nlevels_with_photoioncoeffs++;
       }
     }
   }
   // printout("nlevels_with_processrates %d\n", nlevels_with_processrates);
-  // printout("nlevels_with_photoioncoeffs %d\n", nlevels_with_photoioncoeffs);
 
   // globals::cellhistory[tid].totalcooling = COOLING_UNDEFINED;
   // globals::cellhistory[tid].phixsflag = PHIXS_UNDEFINED;
