@@ -1496,20 +1496,15 @@ double calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, 
         gamma_coeff_used +=
             col_ionization_ratecoeff(T_e, nne, element, lowerion, lower, phixstargetindex, epsilon_trans);
       } else {
-        gamma_coeff_used += get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex,
-                                                  modelgridindex);  // whatever ARTIS uses internally
-        gamma_coeff_bfest += radfield::get_bfrate_estimator(element, lowerion, lower, phixstargetindex, modelgridindex);
+        gamma_coeff_used = get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex,
+                                                 modelgridindex);  // whatever ARTIS uses internally
 
-        // use the cellhistory but not the detailed bf estimators
-        double gamma_coeff_integral_level_ch = globals::cellhistory[tid]
-                                                   .chelements[element]
-                                                   .chions[lowerion]
-                                                   .chlevels[lower]
-                                                   .chphixstargets[phixstargetindex]
-                                                   .corrphotoioncoeff;
-        if (gamma_coeff_integral_level_ch >= 0) {
-          gamma_coeff_integral += gamma_coeff_integral_level_ch;
-        } else {
+        if (force_bfest || printdebug) {
+          gamma_coeff_bfest =
+              radfield::get_bfrate_estimator(element, lowerion, lower, phixstargetindex, modelgridindex);
+        }
+
+        if (force_bfintegral || printdebug) {
           gamma_coeff_integral +=
               calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, modelgridindex);
         }
@@ -1527,7 +1522,7 @@ double calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, 
         gamma_ion += gamma_ion_contribution_used;
       }
 
-      if (printdebug && (gamma_ion_contribution_integral < 0. || gamma_ion_contribution_used > 0.) && lower < 20) {
+      if (printdebug && (gamma_ion_contribution_integral > 0. || gamma_ion_contribution_used > 0.) && lower < 20) {
         const double threshold_angstroms =
             1e8 * CLIGHT / (get_phixs_threshold(element, lowerion, lower, phixstargetindex) / H);
         printout(
