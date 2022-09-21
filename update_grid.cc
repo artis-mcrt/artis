@@ -670,12 +670,15 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
   globals::kappa_rpkt_cont[tid].recalculate_required = true;
 
   globals::cellhistory[tid].cellnumber = modelgridindex;
-  if (modelgridindex < 0 || modelgridindex == grid::get_npts_model() || grid::modelgrid[modelgridindex].thick != 0) {
+  // TODO: should we bother for thick cells? still might use it for estimator output
+  // grid::modelgrid[modelgridindex].thick != 0
+  if (modelgridindex < 0 || modelgridindex == grid::get_npts_model()) {
     return;  // we only needed to invalidate the cell history but not setting up values from a real cell
   }
+
   // globals::cellhistory[tid].totalcooling = COOLING_UNDEFINED;
   //  int nlevels_with_processrates = 0;
-  //  int nlevels_with_photoioncoeffs = 0;
+  const double T_e = grid::get_Te(modelgridindex);
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
@@ -687,13 +690,6 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
               calculate_levelpop(modelgridindex, element, ion, level);
         }
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
-          // bool levelhasvalue = false;
-          // if
-          // (globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff
-          // >= 0)
-          // {
-          //   levelhasvalue = true;
-          // }
           globals::cellhistory[tid]
               .chelements[element]
               .chions[ion]
@@ -1301,8 +1297,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   {
     /// Do not use values which are saved in the cellhistory within update_grid
     /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
-    use_cellhist = false;
-    cellhistory_reset(-99, true);
 
 /// Updating cell information
 #ifdef _OPENMP
@@ -1313,6 +1307,9 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       /// Check if this task should work on the current model grid cell.
       /// If yes, update the cell and write out the estimators
       if (mgi >= nstart && mgi < nstart + ndo) {
+        use_cellhist = false;
+        cellhistory_reset(-99, true);
+
         struct heatingcoolingrates heatingcoolingrates = {};
         update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, mps, &heatingcoolingrates);
 
@@ -1320,6 +1317,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
         const time_t sys_time_start_write_estimators = time(NULL);
         printout("writing to estimators file cell %d timestep %d...\n", mgi, nts);
 
+        use_cellhist = true;
+        cellhistory_reset(mgi, true);
 #ifdef _OPENMP
 #pragma omp critical(estimators_file)
 #endif

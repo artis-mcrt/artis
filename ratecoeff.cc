@@ -1505,8 +1505,19 @@ double calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, 
         }
 
         if (force_bfintegral || printdebug) {
-          gamma_coeff_integral +=
-              calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, modelgridindex);
+          // use the cellhistory but not the detailed bf estimators
+          double gamma_coeff_integral_level_ch = globals::cellhistory[tid]
+                                                     .chelements[element]
+                                                     .chions[lowerion]
+                                                     .chlevels[lower]
+                                                     .chphixstargets[phixstargetindex]
+                                                     .corrphotoioncoeff;
+          if (gamma_coeff_integral_level_ch >= 0) {
+            gamma_coeff_integral += gamma_coeff_integral_level_ch;
+          } else {
+            gamma_coeff_integral +=
+                calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, modelgridindex);
+          }
         }
       }
 
