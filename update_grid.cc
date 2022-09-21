@@ -683,6 +683,7 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
       globals::cellhistory[tid].cooling_contrib[kpkt::get_coolinglistoffset(element, ion)] = COOLING_UNDEFINED;
+
       if (modelgridindex >= 0) {
         const int nlevels = get_nlevels(element, ion);
         for (int level = 0; level < nlevels; level++) {
@@ -699,7 +700,7 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level);
                phixstargetindex++) {
             const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-            const double nu_edge = H * get_phixs_threshold(element, ion, level, phixstargetindex);
+            const double nu_edge = get_phixs_threshold(element, ion, level, phixstargetindex) / H;
             const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
             globals::cellhistory[tid]
                 .chelements[element]
