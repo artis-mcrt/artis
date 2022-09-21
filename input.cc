@@ -1519,11 +1519,12 @@ static void setup_phixs_list(void) {
   }
 
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-  globals::groundcont = (struct groundphixslist *)malloc(globals::nbfcontinua_ground * sizeof(struct groundphixslist));
-  assert_always(globals::groundcont != NULL)
+  globals::groundcont =
+      static_cast<struct groundphixslist *>(malloc(globals::nbfcontinua_ground * sizeof(struct groundphixslist)));
+  assert_always(globals::groundcont != NULL);
 #endif
 
-      globals::allcont = (struct fullphixslist *)malloc(globals::nbfcontinua * sizeof(struct fullphixslist));
+  globals::allcont = static_cast<struct fullphixslist *>(malloc(globals::nbfcontinua * sizeof(struct fullphixslist)));
   printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
            globals::nbfcontinua * (sizeof(fullphixslist)) / 1024. / 1024.);
 
