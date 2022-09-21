@@ -1331,8 +1331,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   {
     /// Do not use values which are saved in the cellhistory within update_grid
     /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
-    // use_cellhist = false;
-    // cellhistory_reset(-99, true);
+    use_cellhist = false;
+    cellhistory_reset(-99, true);
 
 /// Updating cell information
 #ifdef _OPENMP
@@ -1343,8 +1343,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       /// Check if this task should work on the current model grid cell.
       /// If yes, update the cell and write out the estimators
       if (mgi >= nstart && mgi < nstart + ndo) {
-        use_cellhist = false;
-        cellhistory_reset(-99, true);
+        // use_cellhist = false;
+        // cellhistory_reset(-99, true);
 
         struct heatingcoolingrates heatingcoolingrates = {};
         update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, mps, &heatingcoolingrates);
@@ -1353,8 +1353,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
         const time_t sys_time_start_write_estimators = time(NULL);
         printout("writing to estimators file cell %d timestep %d...\n", mgi, nts);
 
-        use_cellhist = true;
-        cellhistory_reset(mgi, true);
+        // use_cellhist = true;
+        // cellhistory_reset(mgi, true);
 #ifdef _OPENMP
 #pragma omp critical(estimators_file)
 #endif
