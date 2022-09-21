@@ -672,9 +672,9 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
   globals::cellhistory[tid].cellnumber = modelgridindex;
   // TODO: should we bother for thick cells? still might use it for estimator output
   // grid::modelgrid[modelgridindex].thick != 0
-  if (modelgridindex < 0 || modelgridindex == grid::get_npts_model()) {
-    return;  // we only needed to invalidate the cell history but not setting up values from a real cell
-  }
+  // if (modelgridindex < 0 || modelgridindex == grid::get_npts_model()) {
+  //   return;  // we only needed to invalidate the cell history but not setting up values from a real cell
+  // }
 
   // globals::cellhistory[tid].totalcooling = COOLING_UNDEFINED;
   //  int nlevels_with_processrates = 0;
@@ -684,9 +684,11 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
     for (int ion = 0; ion < nions; ion++) {
       globals::cellhistory[tid].cooling_contrib[kpkt::get_coolinglistoffset(element, ion)] = COOLING_UNDEFINED;
       const int nlevels = get_nlevels(element, ion);
-      for (int level = 0; level < nlevels; level++) {
-        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].population =
-            calculate_levelpop(modelgridindex, element, ion, level);
+      if (modelgridindex >= 0) {
+        for (int level = 0; level < nlevels; level++) {
+          globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].population =
+              calculate_levelpop(modelgridindex, element, ion, level);
+        }
       }
     }
 
@@ -701,15 +703,17 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
               .chphixstargets[phixstargetindex]
               .corrphotoioncoeff = -99.;
 
-          const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-          const double nu_edge = H * get_phixs_threshold(element, ion, level, phixstargetindex);
-          const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
-          globals::cellhistory[tid]
-              .chelements[element]
-              .chions[ion]
-              .chlevels[level]
-              .chphixstargets[phixstargetindex]
-              .sahafactor = sf;
+          if (modelgridindex >= 0) {
+            const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+            const double nu_edge = H * get_phixs_threshold(element, ion, level, phixstargetindex);
+            const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
+            globals::cellhistory[tid]
+                .chelements[element]
+                .chions[ion]
+                .chlevels[level]
+                .chphixstargets[phixstargetindex]
+                .sahafactor = sf;
+          }
 
 #if (SEPARATE_STIMRECOMB)
           globals::cellhistory[tid]
