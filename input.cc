@@ -1364,7 +1364,7 @@ static void setup_cellhistory(void) {
 
     struct chlevels *chlevelblock = static_cast<struct chlevels *>(malloc(chlevelblocksize));
     globals::cellhistory[tid].ch_all_levels = chlevelblock;
-    struct chphixstargets *chphixs = static_cast<struct chphixstargets *>(malloc(chphixsblocksize));
+    struct chphixstargets *chphixstargetsblock = static_cast<struct chphixstargets *>(malloc(chphixsblocksize));
     mem_usage_cellhistory += chlevelblocksize + chphixsblocksize;
     int alllevelindex = 0;
     int allphixstargetindex = 0;
@@ -1383,7 +1383,7 @@ static void setup_cellhistory(void) {
         for (int level = 0; level < nlevels; level++) {
           struct chlevels *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
           const int nphixstargets = get_nphixstargets(element, ion, level);
-          chlevel->chphixstargets = &chphixs[allphixstargetindex];
+          chlevel->chphixstargets = &chphixstargetsblock[allphixstargetindex];
           allphixstargetindex += nphixstargets;
 
           const int ndowntrans = get_ndowntrans(element, ion, level);
@@ -1405,6 +1405,11 @@ static void setup_cellhistory(void) {
         }
       }
     }
+
+    assert_always(globals::nbfcontinua >= 0);
+    globals::cellhistory[tid].ch_allcont =
+        static_cast<struct challcont *>(malloc(globals::nbfcontinua * sizeof(struct challcont)));
+    mem_usage_cellhistory += globals::nbfcontinua * sizeof(struct challcont);
 
     printout("[info] mem_usage: cellhistory for thread %d occupies %.3f MB\n", tid,
              mem_usage_cellhistory / 1024. / 1024.);
