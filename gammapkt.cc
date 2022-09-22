@@ -104,8 +104,8 @@ static void read_decaydata(void) {
     }
 
     const char *elname = decay::get_elname(z);
-    char elnamelower[sizeof(elname)] = "";
-    for (int i = 0; i < (int)sizeof(elname); i++) {
+    char elnamelower[strlen(elname) + 1] = "";
+    for (int i = 0; i <= (int)strlen(elname); i++) {
       elnamelower[i] = tolower(elname[i]);
     }
 
