@@ -1638,8 +1638,8 @@ static void setup_phixs_list(void) {
                globals::NPHIXSPOINTS * sizeof(float));
       }
 
-      free(globals::elements[element].ions[ion].levels[level].photoion_xs);
-      globals::elements[element].ions[ion].levels[level].photoion_xs = allphixsblock;
+      // free(globals::elements[element].ions[ion].levels[level].photoion_xs);
+      // globals::elements[element].ions[ion].levels[level].photoion_xs = allphixsblock;
 
       allphixsblock += globals::NPHIXSPOINTS;
       nbftableschanged++;
