@@ -53,7 +53,7 @@ struct fullphixslist {
   int upperlevel;
   double probability;
   int index_in_groundphixslist;
-  float *photoion_xs;
+  // float *photoion_xs = NULL;
 };
 
 struct groundphixslist {
