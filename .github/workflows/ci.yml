@@ -220,16 +220,16 @@ jobs:
               run: |
                   mkdir job1
                   ../../scripts/movefiles.sh job1
-                  time ./exspec
+                  time mpirun -np 1 ./exspec
+
+            - name: cat exspec log
+              if: always()
+              working-directory: tests/nebularonezone_testrun/
+              run: |
                   mkdir output
                   cp -r output_0-0.txt exspec.txt *.out output/
                   rsync -av job0 output/
                   rsync -av job1 output/
-
-            - name: cat exspec log
-              if: always()
-              working-directory: tests/nebularonezone_testrun/output/
-              run: |
                   cat exspec.txt
 
             - name: Checksum output files
@@ -390,16 +390,16 @@ jobs:
               run: |
                   mkdir job1
                   ../../scripts/movefiles.sh job1
-                  time ./exspec
+                  time mpirun -np 1 ./exspec
+
+            - name: cat exspec log
+              if: always()
+              working-directory: tests/classicmode_testrun/
+              run: |
                   mkdir output
                   cp -r output_0-0.txt exspec.txt *.out output/
                   rsync -av job0 output/
                   rsync -av job1 output/
-
-            - name: cat exspec log
-              if: always()
-              working-directory: tests/classicmode_testrun/output/
-              run: |
                   cat exspec.txt
 
             - name: Checksum output files
