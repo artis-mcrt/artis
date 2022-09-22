@@ -182,6 +182,7 @@ struct chphixstargets {
 
 struct challcont {
   double departure_ratio;
+  float *photoion_xs;
 };
 
 struct chlevels {

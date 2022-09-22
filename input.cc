@@ -1408,6 +1408,17 @@ static void setup_cellhistory(void) {
     assert_always(globals::nbfcontinua >= 0);
     globals::cellhistory[tid].ch_allcont =
         static_cast<struct challcont *>(malloc(globals::nbfcontinua * sizeof(struct challcont)));
+    for (int i = 0; i < globals::nbfcontinua; i++) {
+      globals::cellhistory[tid].ch_allcont[i].photoion_xs =
+          static_cast<float *>(malloc(globals::NPHIXSPOINTS * sizeof(float)));
+      for (int j = 0; j < globals::NPHIXSPOINTS; j++) {
+        const int element = globals::allcont[i].element;
+        const int ion = globals::allcont[i].ion;
+        const int level = globals::allcont[i].level;
+        globals::cellhistory[tid].ch_allcont[i].photoion_xs[j] =
+            globals::elements[element].ions[ion].levels[level].photoion_xs[j];
+      }
+    }
 
     printout("[info] mem_usage: cellhistory for thread %d occupies %.3f MB\n", tid,
              mem_usage_cellhistory / 1024. / 1024.);
