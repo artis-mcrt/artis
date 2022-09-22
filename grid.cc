@@ -792,7 +792,7 @@ static void allocate_composition_cooling(void)
       }
     }
 
-    modelgrid[modelgridindex].cooling_contrib_ion = static_cast<double **>(malloc(get_nelements() * sizeof(double **)));
+    modelgrid[modelgridindex].cooling_contrib_ion = static_cast<double **>(malloc(get_nelements() * sizeof(double *)));
 
     if (modelgrid[modelgridindex].cooling_contrib_ion == NULL) {
       printout("[fatal] input: not enough memory to initialize coolinglist for cell %d... abort\n", modelgridindex);
