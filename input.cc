@@ -1127,7 +1127,7 @@ static void read_atomicdata_files(void) {
   MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &sharedlinelist);
 
   if (globals::rank_in_node == 0) {
-    std::memcpy(sharedlinelist, globals::linelist, size);
+    memcpy(sharedlinelist, globals::linelist, size);
     free(globals::linelist);
   }
 
@@ -1607,7 +1607,21 @@ static void setup_phixs_list(void) {
 
   globals::allcont_nu_edge = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
 
+#ifdef MPI_ON
+  float *allphixsblock;
+  MPI_Win win_allphixsblock;
+  MPI_Aint size = (globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0;
+  int disp_unit = sizeof(linelist_entry);
+
+  MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &allphixsblock, &win_allphixsblock);
+  MPI_Win_shared_query(win_allphixsblock, MPI_PROC_NULL, &size, &disp_unit, &allphixsblock);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+#else
   float *allphixsblock = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
+#endif
+
+  assert_always(allphixsblock != NULL);
   int nbftableschanged = 0;
   for (int i = 0; i < globals::nbfcontinua; i++) {
     globals::allcont_nu_edge[i] = globals::allcont[i].nu_edge;
@@ -1619,8 +1633,10 @@ static void setup_phixs_list(void) {
 
     // different targets share the same cross section table, so don't repeat this process
     if (phixstargetindex == 0) {
-      std::memcpy(allphixsblock, globals::elements[element].ions[ion].levels[level].photoion_xs,
-                  globals::NPHIXSPOINTS * sizeof(float));
+      if (globals::rank_in_node == 0) {
+        memcpy(allphixsblock, globals::elements[element].ions[ion].levels[level].photoion_xs,
+               globals::NPHIXSPOINTS * sizeof(float));
+      }
 
       free(globals::elements[element].ions[ion].levels[level].photoion_xs);
       globals::elements[element].ions[ion].levels[level].photoion_xs = allphixsblock;
@@ -1630,14 +1646,9 @@ static void setup_phixs_list(void) {
     }
   }
   assert_always(nbftableschanged == nbftables);
-
-  for (int i = 0; i < globals::nbfcontinua; i++) {
-    const int element = globals::allcont[i].element;
-    const int ion = globals::allcont[i].ion;
-    const int level = globals::allcont[i].level;
-
-    globals::allcont[i].photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
-  }
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 }
 
 static void read_atomicdata(void)
