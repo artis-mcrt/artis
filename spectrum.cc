@@ -484,14 +484,19 @@ void init_spectra(struct spec *spectra, const double nu_min, const double nu_max
   spectra->nu_min = nu_min;
   spectra->nu_max = nu_max;
   spectra->do_emission_res = do_emission_res;
+  assert_always(spectra->lower_freq != NULL);
+  assert_always(spectra->delta_freq != NULL);
   for (int nnu = 0; nnu < globals::nnubins; nnu++) {
     spectra->lower_freq[nnu] = exp(log(nu_min) + (nnu * (dlognu)));
     spectra->delta_freq[nnu] = exp(log(nu_min) + ((nnu + 1) * (dlognu))) - spectra->lower_freq[nnu];
   }
 
+  assert_always(spectra->timesteps != NULL);
+
   const int proccount = get_proccount();
   const int ioncount = get_nelements() * get_max_nions();
   for (int nts = 0; nts < globals::ntstep; nts++) {
+    assert_always(spectra->timesteps[nts].flux != NULL);
     for (int nnu = 0; nnu < globals::nnubins; nnu++) {
       spectra->timesteps[nts].flux[nnu] = 0.0;
     }
@@ -527,7 +532,8 @@ static void alloc_emissionabsorption_spectra(spec *spectra) {
       static_cast<double *>(malloc(globals::ntstep * globals::nnubins * proccount * sizeof(double)));
   assert_always(spectra->emissionalltimesteps != NULL);
 
-  spectra->trueemissionalltimesteps = static_cast<double *>(malloc(globals::ntstep * globals::nnubins * proccount * sizeof(double));
+  spectra->trueemissionalltimesteps =
+      static_cast<double *>(malloc(globals::ntstep * globals::nnubins * proccount * sizeof(double)));
   assert_always(spectra->trueemissionalltimesteps != NULL);
 
   for (int nts = 0; nts < globals::ntstep; nts++) {
