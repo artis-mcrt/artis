@@ -302,6 +302,7 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
 
   assert_always(indexionstart == get_coolinglistoffset(element, ion));
   assert_always(i == indexionstart + get_ncoolingterms(element, ion));
+  // we just summed up every individual cooling process. make sure it matches the stored total for the ion
   assert_always(fabs((grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] + oldcoolingsum - contrib) /
                      contrib) < 1e-3);
 }
