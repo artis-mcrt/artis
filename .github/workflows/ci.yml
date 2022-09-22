@@ -288,10 +288,10 @@ jobs:
             matrix:
                 # os: ['ubuntu-latest', 'self-hosted']
                 os: [ubuntu-latest]
-                testmode: [OFF]
-                exclude:
-                    - os: self-hosted
-                      testmode: ON
+                testmode: [OFF, ON]
+                # exclude:
+                #     - os: self-hosted
+                #       testmode: ON
 
         runs-on: ${{ matrix.os }}
         name: test_classicmode testmode ${{ matrix.testmode }}
