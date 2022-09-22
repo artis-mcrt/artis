@@ -1563,6 +1563,7 @@ static void setup_phixs_list(void) {
   std::sort(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground);
 #endif
 
+  int nbftables = 0;
   int allcontindex = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
@@ -1570,6 +1571,9 @@ static void setup_phixs_list(void) {
       const int nlevels = get_ionisinglevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
         const int nphixstargets = get_nphixstargets(element, ion, level);
+
+        if (nphixstargets > 0) nbftables++;
+
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
           // const int upperlevel = get_phixsupperlevel(element, ion,level, 0);
           // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
@@ -1605,7 +1609,8 @@ static void setup_phixs_list(void) {
 
   globals::allcont_nu_edge = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
 
-  float *allphixsblock = static_cast<float *>(malloc(globals::nbfcontinua * globals::NPHIXSPOINTS * sizeof(float)));
+  float *allphixsblock = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
+  float *nextphixstable = allphixsblock;
   for (int i = 0; i < globals::nbfcontinua; i++) {
     globals::allcont_nu_edge[i] = globals::allcont[i].nu_edge;
 
@@ -1616,14 +1621,22 @@ static void setup_phixs_list(void) {
 
     // different targets share the same cross section table, so don't repeat this process
     if (phixstargetindex == 0) {
-      assert_always(globals::elements[element].ions[ion].levels[level].photoion_xs != NULL);
-      float *newphotoion_xs = &allphixsblock[i * globals::NPHIXSPOINTS];
-
-      memcpy(newphotoion_xs, globals::elements[element].ions[ion].levels[level].photoion_xs, globals::NPHIXSPOINTS);
+      std::memcpy(nextphixstable, globals::elements[element].ions[ion].levels[level].photoion_xs,
+                  globals::NPHIXSPOINTS);
 
       free(globals::elements[element].ions[ion].levels[level].photoion_xs);
-      globals::elements[element].ions[ion].levels[level].photoion_xs = newphotoion_xs;
+      globals::elements[element].ions[ion].levels[level].photoion_xs = nextphixstable;
+
+      nextphixstable += globals::NPHIXSPOINTS;
     }
+
+    globals::allcont[i].photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
+  }
+
+  for (int i = 0; i < globals::nbfcontinua; i++) {
+    const int element = globals::allcont[i].element;
+    const int ion = globals::allcont[i].ion;
+    const int level = globals::allcont[i].level;
 
     globals::allcont[i].photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
   }
