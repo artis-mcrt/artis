@@ -519,12 +519,12 @@ static void alloc_emissionabsorption_spectra(spec *spectra) {
 
   mem_usage += globals::ntstep * globals::nnubins * get_nelements() * get_max_nions() * sizeof(double);
   spectra->absorptionalltimesteps =
-      (double *)malloc(globals::ntstep * globals::nnubins * get_nelements() * get_max_nions() * sizeof(double));
+      (double *)calloc(globals::ntstep * globals::nnubins * get_nelements() * get_max_nions(), sizeof(double));
 
   mem_usage += 2 * globals::ntstep * globals::nnubins * proccount * sizeof(double);
-  spectra->emissionalltimesteps = (double *)malloc(globals::ntstep * globals::nnubins * proccount * sizeof(double));
+  spectra->emissionalltimesteps = (double *)calloc(globals::ntstep * globals::nnubins * proccount, sizeof(double));
 
-  spectra->trueemissionalltimesteps = (double *)malloc(globals::ntstep * globals::nnubins * proccount * sizeof(double));
+  spectra->trueemissionalltimesteps = (double *)calloc(globals::ntstep * globals::nnubins * proccount, sizeof(double));
 
   for (int nts = 0; nts < globals::ntstep; nts++) {
     assert_always(spectra->timesteps[nts].absorption == NULL);
