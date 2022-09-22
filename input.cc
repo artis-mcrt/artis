@@ -1624,28 +1624,28 @@ static void setup_phixs_list(void) {
 
   //   assert_always(allphixsblock != NULL);
   //   int nbftableschanged = 0;
-  //   for (int i = 0; i < globals::nbfcontinua; i++) {
-  //     globals::allcont_nu_edge[i] = globals::allcont[i].nu_edge;
+  for (int i = 0; i < globals::nbfcontinua; i++) {
+    globals::allcont_nu_edge[i] = globals::allcont[i].nu_edge;
 
-  //     const int element = globals::allcont[i].element;
-  //     const int ion = globals::allcont[i].ion;
-  //     const int level = globals::allcont[i].level;
-  //     const int phixstargetindex = globals::allcont[i].phixstargetindex;
+    //     const int element = globals::allcont[i].element;
+    //     const int ion = globals::allcont[i].ion;
+    //     const int level = globals::allcont[i].level;
+    //     const int phixstargetindex = globals::allcont[i].phixstargetindex;
 
-  //     // different targets share the same cross section table, so don't repeat this process
-  //     if (phixstargetindex == 0) {
-  //       if (globals::rank_in_node == 0) {
-  //         memcpy(allphixsblock, globals::elements[element].ions[ion].levels[level].photoion_xs,
-  //                globals::NPHIXSPOINTS * sizeof(float));
-  //       }
+    //     // different targets share the same cross section table, so don't repeat this process
+    //     if (phixstargetindex == 0) {
+    //       if (globals::rank_in_node == 0) {
+    //         memcpy(allphixsblock, globals::elements[element].ions[ion].levels[level].photoion_xs,
+    //                globals::NPHIXSPOINTS * sizeof(float));
+    //       }
 
-  //       free(globals::elements[element].ions[ion].levels[level].photoion_xs);
-  //       globals::elements[element].ions[ion].levels[level].photoion_xs = allphixsblock;
+    //       free(globals::elements[element].ions[ion].levels[level].photoion_xs);
+    //       globals::elements[element].ions[ion].levels[level].photoion_xs = allphixsblock;
 
-  //       allphixsblock += globals::NPHIXSPOINTS;
-  //       nbftableschanged++;
-  //     }
-  //   }
+    //       allphixsblock += globals::NPHIXSPOINTS;
+    //       nbftableschanged++;
+    //     }
+  }
   //   assert_always(nbftableschanged == nbftables);
   // #ifdef MPI_ON
   //   MPI_Barrier(MPI_COMM_WORLD);
