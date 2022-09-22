@@ -247,7 +247,7 @@ void write_specpol(
   FILE *emissionpol_file = NULL;
   FILE *absorptionpol_file = NULL;
 
-  bool do_emission_res = stokes_i[0].do_emission_res;
+  bool do_emission_res = stokes_i->do_emission_res;
 
   if (do_emission_res)
   {
