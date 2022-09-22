@@ -1,17 +1,17 @@
-#include "sn3d.h"
+#include "gamma.h"
 #include "boundary.h"
 #include "decay.h"
 #include "emissivities.h"
-#include "gamma.h"
 #include "grey_emissivities.h"
 #include "grid.h"
 #include "nonthermal.h"
 #include "photo_electric.h"
+#include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"
 
-#include <fstream>
 #include <cstring>
+#include <fstream>
 
 // Code for handing gamma rays - creation and propagation
 
@@ -24,17 +24,16 @@ struct gamma_spec
 
 static struct gamma_spec *gamma_spectra;
 
-static const int RED_OF_LIST = -956;  // must be negative
+static const int RED_OF_LIST = -956; // must be negative
 
 struct gamma_ll
 {
   int *nucindex; // is it a Ni56, Co56, a fake line, etc
-  int *index;               // which of the lines of that element is it
-  int total;                // the total number of lines in the list
+  int *index;    // which of the lines of that element is it
+  int total;     // the total number of lines in the list
 };
 
 static struct gamma_ll gam_line_list;
-
 
 static void read_gamma_spectrum(const int z, const int a, const char filename[50])
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
@@ -47,8 +46,8 @@ static void read_gamma_spectrum(const int z, const int a, const char filename[50
 
   gamma_spectra[nucindex].nlines = nlines;
 
-  gamma_spectra[nucindex].energy = (double *) malloc(nlines * sizeof(double));
-  gamma_spectra[nucindex].probability = (double *) malloc(nlines * sizeof(double));
+  gamma_spectra[nucindex].energy = (double *)malloc(nlines * sizeof(double));
+  gamma_spectra[nucindex].probability = (double *)malloc(nlines * sizeof(double));
 
   double E_gamma_avg = 0.;
   for (int n = 0; n < nlines; n++)
@@ -64,10 +63,9 @@ static void read_gamma_spectrum(const int z, const int a, const char filename[50
 
   decay::set_nucdecayenergygamma(z, a, E_gamma_avg);
 
-  printout("gamma spectrum for Z=%d A=%d read from %s: nlines %d avg_en_gamma %g MeV\n",
-           z, a, filename, nlines, E_gamma_avg / MEV);
+  printout("gamma spectrum for Z=%d A=%d read from %s: nlines %d avg_en_gamma %g MeV\n", z, a, filename, nlines,
+           E_gamma_avg / MEV);
 }
-
 
 static void set_trivial_gamma_spectrum(const int z, const int a)
 {
@@ -75,12 +73,11 @@ static void set_trivial_gamma_spectrum(const int z, const int a)
   const int nucindex = decay::get_nuc_index(z, a);
   const int nlines = 1;
   gamma_spectra[nucindex].nlines = nlines;
-  gamma_spectra[nucindex].energy = (double *) malloc(nlines * sizeof(double));
-  gamma_spectra[nucindex].probability = (double *) malloc(nlines * sizeof(double));
+  gamma_spectra[nucindex].energy = (double *)malloc(nlines * sizeof(double));
+  gamma_spectra[nucindex].probability = (double *)malloc(nlines * sizeof(double));
   gamma_spectra[nucindex].energy[0] = decay::nucdecayenergygamma(z, a);
   gamma_spectra[nucindex].probability[0] = 1.;
 }
-
 
 static void read_decaydata(void)
 {
@@ -98,7 +95,7 @@ static void read_decaydata(void)
     std::rename("co_lines.txt", "co56_lines.txt");
   }
 
-  gamma_spectra = (struct gamma_spec *) calloc(decay::get_num_nuclides(), sizeof(struct gamma_spec));
+  gamma_spectra = (struct gamma_spec *)calloc(decay::get_num_nuclides(), sizeof(struct gamma_spec));
 
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++)
   {
@@ -113,11 +110,13 @@ static void read_decaydata(void)
     }
 
     const char *elname = decay::get_elname(z);
-    char elnamelower[sizeof(elname)] = "";
-    for (int i = 0; i < (int) sizeof(elname); i++)
+    const int elnamelen = strlen(elname); // excluding the NULL terminator
+    char elnamelower[elnamelen + 1];
+    for (int i = 0; i < elnamelen; i++)
     {
       elnamelower[i] = tolower(elname[i]);
     }
+    elnamelower[elnamelen] = '\0';
 
     // look in the current folder
     char filename[128];
@@ -160,14 +159,13 @@ static void read_decaydata(void)
   // read_gamma_spectrum(27, 57, "co57_lines.txt");
   if (decay::nuc_exists(26, 52))
   {
-    decay::set_nucdecayenergygamma(26, 52, 0.86 * MEV);  // Fe52
+    decay::set_nucdecayenergygamma(26, 52, 0.86 * MEV); // Fe52
   }
   if (decay::nuc_exists(25, 52))
   {
-    decay::set_nucdecayenergygamma(25, 52, 3.415 * MEV);  // Mn52
+    decay::set_nucdecayenergygamma(25, 52, 3.415 * MEV); // Mn52
   }
 }
-
 
 // construct an energy ordered gamma ray line list.
 void init_gamma_linelist(void)
@@ -176,8 +174,8 @@ void init_gamma_linelist(void)
 
   /* Start by setting up the grid of fake lines and their energies. */
   gamma_spectra[FAKE_GAM_LINE_ID].nlines = globals::nfake_gam;
-  gamma_spectra[FAKE_GAM_LINE_ID].energy = (double *) malloc(globals::nfake_gam * sizeof(double));
-  gamma_spectra[FAKE_GAM_LINE_ID].probability = (double *) malloc(globals::nfake_gam * sizeof(double));
+  gamma_spectra[FAKE_GAM_LINE_ID].energy = (double *)malloc(globals::nfake_gam * sizeof(double));
+  gamma_spectra[FAKE_GAM_LINE_ID].probability = (double *)malloc(globals::nfake_gam * sizeof(double));
 
   const double deltanu = (globals::nusyn_max - globals::nusyn_min) / (gamma_spectra[FAKE_GAM_LINE_ID].nlines - 3);
   for (int i = 0; i < gamma_spectra[FAKE_GAM_LINE_ID].nlines; i++)
@@ -196,8 +194,8 @@ void init_gamma_linelist(void)
   printout("total gamma-ray lines %d\n", total_lines);
 
   gam_line_list.total = total_lines;
-  gam_line_list.nucindex = (int *) malloc(total_lines * sizeof(int));
-  gam_line_list.index = (int *) malloc(total_lines * sizeof(int));
+  gam_line_list.nucindex = (int *)malloc(total_lines * sizeof(int));
+  gam_line_list.index = (int *)malloc(total_lines * sizeof(int));
 
   double energy_last = 0.0;
   int next = -99;
@@ -235,15 +233,13 @@ void init_gamma_linelist(void)
   {
     const int nucindex = gam_line_list.nucindex[i];
     const int index = gam_line_list.index[i];
-    fprintf(line_list, "%d %d %d %d %d %g %g \n",
-            i, gam_line_list.nucindex[i],
+    fprintf(line_list, "%d %d %d %d %d %g %g \n", i, gam_line_list.nucindex[i],
             decay::get_nuc_z(gam_line_list.nucindex[i]), decay::get_nuc_a(gam_line_list.nucindex[i]),
-            gam_line_list.index[i],
-            gamma_spectra[nucindex].energy[index] / MEV, gamma_spectra[nucindex].probability[index]);
+            gam_line_list.index[i], gamma_spectra[nucindex].energy[index] / MEV,
+            gamma_spectra[nucindex].probability[index]);
   }
   fclose(line_list);
 }
-
 
 static void choose_gamma_ray(PKT *pkt_ptr)
 {
@@ -269,15 +265,14 @@ static void choose_gamma_ray(PKT *pkt_ptr)
 
   if (nselected < 0)
   {
-    printout("Failure to choose line (packet type %d pellet_nucindex %d). Abort. zrand %g runtot %g\n",
-             pkt_ptr->type, pkt_ptr->pellet_nucindex, zrand, runtot);
+    printout("Failure to choose line (packet type %d pellet_nucindex %d). Abort. zrand %g runtot %g\n", pkt_ptr->type,
+             pkt_ptr->pellet_nucindex, zrand, runtot);
     abort();
   }
 
   pkt_ptr->nu_cmf = gamma_spectra[nucindex].energy[nselected] / H;
   // printout("%s PELLET %g\n", gammaspec->filename, gammaspec->energy[nselected]);
 }
-
 
 void pellet_gamma_decay(const int nts, PKT *pkt_ptr)
 {
@@ -309,7 +304,7 @@ void pellet_gamma_decay(const int nts, PKT *pkt_ptr)
 
   double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, -1. * pkt_ptr->tdecay);
-  //negative time since we want the backwards transformation here
+  // negative time since we want the backwards transformation here
 
   angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
 
@@ -344,23 +339,22 @@ void pellet_gamma_decay(const int nts, PKT *pkt_ptr)
   }
 
   vec_norm(pkt_ptr->pol_dir, pkt_ptr->pol_dir);
-  //printout("initialise pol state of packet %g, %g, %g, %g, %g\n",pkt_ptr->stokes_qu[0],pkt_ptr->stokes_qu[1],pkt_ptr->pol_dir[0],pkt_ptr->pol_dir[1],pkt_ptr->pol_dir[2]);
-  //printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
+  // printout("initialise pol state of packet %g, %g, %g, %g,
+  // %g\n",pkt_ptr->stokes_qu[0],pkt_ptr->stokes_qu[1],pkt_ptr->pol_dir[0],pkt_ptr->pol_dir[1],pkt_ptr->pol_dir[2]);
+  // printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 }
-
 
 static double sigma_compton_partial(const double x, const double f)
 // Routine to compute the partial cross section for Compton scattering.
 //   xx is the photon energy (in units of electron mass) and f
 //  is the energy loss factor up to which we wish to integrate.
 {
-  const double term1 = ( (x * x) - (2 * x) - 2 ) * log(f) / x / x;
-  const double term2 = ( ((f * f) -1) / (f * f)) / 2;
-  const double term3 = ( (f - 1) / x) * ( (1 / x) + (2 / f) + (1 / (x * f)));
+  const double term1 = ((x * x) - (2 * x) - 2) * log(f) / x / x;
+  const double term2 = (((f * f) - 1) / (f * f)) / 2;
+  const double term3 = ((f - 1) / x) * ((1 / x) + (2 / f) + (1 / (x * f)));
 
   return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
 }
-
 
 static double sig_comp(const PKT *pkt_ptr)
 {
@@ -377,7 +371,7 @@ static double sig_comp(const PKT *pkt_ptr)
   }
   else
   {
-    double fmax = (1 + (2*xx));
+    double fmax = (1 + (2 * xx));
     sigma_cmf = sigma_compton_partial(xx, fmax);
   }
 
@@ -394,7 +388,6 @@ static double sig_comp(const PKT *pkt_ptr)
   return sigma_rf;
 }
 
-
 static double choose_f(double xx, double zrand)
 // To choose the value of f to integrate to - idea is we want
 //   sigma_compton_partial(xx,f) = zrand.
@@ -407,14 +400,14 @@ static double choose_f(double xx, double zrand)
   int count = 0;
   double err = 1e20;
 
-  //printout("new\n");
+  // printout("new\n");
 
   double ftry = (f_max + f_min) / 2;
   while ((err > 1.e-4) && (count < 1000))
   {
     ftry = (f_max + f_min) / 2;
     const double sigma_try = sigma_compton_partial(xx, ftry);
-    //printout("ftry %g %g %g %g %g\n",ftry, f_min, f_max, try, norm);
+    // printout("ftry %g %g %g %g %g\n",ftry, f_min, f_max, try, norm);
     if (sigma_try > norm)
     {
       f_max = ftry;
@@ -435,7 +428,6 @@ static double choose_f(double xx, double zrand)
 
   return ftry;
 }
-
 
 static double thomson_angle(void)
 {
@@ -460,7 +452,6 @@ static double thomson_angle(void)
 
   return mu;
 }
-
 
 static void compton_scatter(PKT *pkt_ptr)
 // Routine to deal with physical Compton scattering event.
@@ -530,7 +521,7 @@ static void compton_scatter(PKT *pkt_ptr)
     // Now change the direction through the scattering angle.
 
     double cos_theta;
-    if (xx <  THOMSON_LIMIT)
+    if (xx < THOMSON_LIMIT)
     {
       cos_theta = thomson_angle();
     }
@@ -586,7 +577,6 @@ static void compton_scatter(PKT *pkt_ptr)
   }
 }
 
-
 void do_gamma(PKT *pkt_ptr, double t2)
 // Now routine for moving a gamma packet. Idea is that we have as input
 // a gamma packet with known properties at time t1 and we want to follow it
@@ -605,10 +595,13 @@ void do_gamma(PKT *pkt_ptr, double t2)
   int snext;
   double sdist = boundary_cross(pkt_ptr, pkt_ptr->prop_time, &snext);
 
-  const double maxsdist = (grid::grid_type == GRID_SPHERICAL1D) ? 2 * globals::rmax * (pkt_ptr->prop_time + sdist / globals::CLIGHT_PROP) / globals::tmin : globals::rmax * pkt_ptr->prop_time / globals::tmin;
+  const double maxsdist = (grid::grid_type == GRID_SPHERICAL1D)
+                              ? 2 * globals::rmax * (pkt_ptr->prop_time + sdist / globals::CLIGHT_PROP) / globals::tmin
+                              : globals::rmax * pkt_ptr->prop_time / globals::tmin;
   if (sdist > maxsdist)
   {
-    printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", globals::rmax, pkt_ptr->prop_time/globals::tmin, sdist);
+    printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", globals::rmax, pkt_ptr->prop_time / globals::tmin,
+             sdist);
     abort();
   }
 
@@ -669,7 +662,7 @@ void do_gamma(PKT *pkt_ptr, double t2)
     abort();
   }
 
-  //printout("sdist, tdist, edist %g %g %g\n",sdist, tdist, edist);
+  // printout("sdist, tdist, edist %g %g %g\n",sdist, tdist, edist);
 
   if ((sdist < tdist) && (sdist < edist))
   {
@@ -750,12 +743,12 @@ void do_gamma(PKT *pkt_ptr, double t2)
       // Photo electric effect - makes it a k-packet for sure.
       pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -4;
-      #ifndef FORCE_LTE
-        //kgammadep[pkt_ptr->where] += pkt_ptr->e_cmf;
-      #endif
-      //pkt_ptr->type = TYPE_PRE_KPKT;
-      //pkt_ptr->type = TYPE_GAMMA_KPKT;
-      //if (tid == 0) nt_stat_from_gamma++;
+#ifndef FORCE_LTE
+      // kgammadep[pkt_ptr->where] += pkt_ptr->e_cmf;
+#endif
+      // pkt_ptr->type = TYPE_PRE_KPKT;
+      // pkt_ptr->type = TYPE_GAMMA_KPKT;
+      // if (tid == 0) nt_stat_from_gamma++;
       stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
     }
     else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand * kap_tot))
@@ -765,9 +758,14 @@ void do_gamma(PKT *pkt_ptr, double t2)
     }
     else
     {
-      printout("Failed to identify event. Gamma (1). kap_compton %g kap_photo_electric %g kap_tot %g zrand %g Abort.\n", kap_compton, kap_photo_electric, kap_tot, zrand);
+      printout("Failed to identify event. Gamma (1). kap_compton %g kap_photo_electric %g kap_tot %g zrand %g Abort.\n",
+               kap_compton, kap_photo_electric, kap_tot, zrand);
       const int cellindex = pkt_ptr->where;
-      printout(" /*globals::cell[*/pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g pkt_ptr->dir[2] %g pkt_ptr->pos[0] %g pkt_ptr->pos[1] %g pkt_ptr->pos[2] %g \n",grid::get_rho(grid::get_cell_modelgridindex(cellindex)), pkt_ptr->nu_cmf,pkt_ptr->dir[0],pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2],pkt_ptr->pos[1],pkt_ptr->pos[2]);
+      printout(
+          " /*globals::cell[*/pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g "
+          "pkt_ptr->dir[2] %g pkt_ptr->pos[0] %g pkt_ptr->pos[1] %g pkt_ptr->pos[2] %g \n",
+          grid::get_rho(grid::get_cell_modelgridindex(cellindex)), pkt_ptr->nu_cmf, pkt_ptr->dir[0], pkt_ptr->dir[0],
+          pkt_ptr->dir[1], pkt_ptr->dir[2], pkt_ptr->pos[1], pkt_ptr->pos[2]);
 
       abort();
     }
@@ -778,7 +776,6 @@ void do_gamma(PKT *pkt_ptr, double t2)
     abort();
   }
 }
-
 
 double get_gam_freq(const int n)
 {
@@ -801,7 +798,6 @@ double get_gam_freq(const int n)
   return gamma_spectra[nucindex].energy[lineid] / H;
 }
 
-
 int get_nul(double freq)
 {
   const double freq_max = get_gam_freq(gam_line_list.total - 1);
@@ -809,7 +805,7 @@ int get_nul(double freq)
 
   if (freq > freq_max)
   {
-    return (gam_line_list.total-1);
+    return (gam_line_list.total - 1);
   }
   else if (freq < freq_min)
   {
