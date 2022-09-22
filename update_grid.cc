@@ -748,7 +748,6 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
   }
 
   if (modelgridindex >= 0) {
-    const double nne = grid::get_nne(modelgridindex);
     const int nbfcont = globals::nbfcontinua;
     for (int i = 0; i < nbfcont; i++) {
       globals::cellhistory[tid].ch_allcont[i].departure_ratio = -1;
