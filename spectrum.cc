@@ -518,13 +518,17 @@ static void alloc_emissionabsorption_spectra(spec *spectra) {
   spectra->do_emission_res = true;
 
   mem_usage += globals::ntstep * globals::nnubins * get_nelements() * get_max_nions() * sizeof(double);
-  spectra->absorptionalltimesteps =
-      (double *)calloc(globals::ntstep * globals::nnubins * get_nelements() * get_max_nions(), sizeof(double));
+  spectra->absorptionalltimesteps = static_cast<double *>(
+      malloc(globals::ntstep * globals::nnubins * get_nelements() * get_max_nions() * sizeof(double)));
+  assert_always(spectra->absorptionalltimesteps != NULL);
 
   mem_usage += 2 * globals::ntstep * globals::nnubins * proccount * sizeof(double);
-  spectra->emissionalltimesteps = (double *)calloc(globals::ntstep * globals::nnubins * proccount, sizeof(double));
+  spectra->emissionalltimesteps =
+      static_cast<double *>(malloc(globals::ntstep * globals::nnubins * proccount * sizeof(double)));
+  assert_always(spectra->emissionalltimesteps != NULL);
 
-  spectra->trueemissionalltimesteps = (double *)calloc(globals::ntstep * globals::nnubins * proccount, sizeof(double));
+  spectra->trueemissionalltimesteps = static_cast<double *>(malloc(globals::ntstep * globals::nnubins * proccount * sizeof(double));
+  assert_always(spectra->trueemissionalltimesteps != NULL);
 
   for (int nts = 0; nts < globals::ntstep; nts++) {
     assert_always(spectra->timesteps[nts].absorption == NULL);
