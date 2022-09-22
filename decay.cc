@@ -1436,15 +1436,15 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
 void cleanup(void) {
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
     if (decaypaths[decaypathindex].z != NULL) {
-      delete decaypaths[decaypathindex].z;
+      delete[] decaypaths[decaypathindex].z;
       decaypaths[decaypathindex].z = NULL;
     }
     if (decaypaths[decaypathindex].a != NULL) {
-      delete decaypaths[decaypathindex].a;
+      delete[] decaypaths[decaypathindex].a;
       decaypaths[decaypathindex].a = NULL;
     }
     if (decaypaths[decaypathindex].decaytypes != NULL) {
-      delete decaypaths[decaypathindex].decaytypes;
+      delete[] decaypaths[decaypathindex].decaytypes;
       decaypaths[decaypathindex].decaytypes = NULL;
     }
   }
