@@ -1606,6 +1606,7 @@ static void setup_phixs_list(void) {
     const int level = globals::allcont[i].level;
     globals::allcont[allcontindex].photoion_xs = static_cast<float *>(malloc(globals::NPHIXSPOINTS * sizeof(float)));
     for (int j = 0; j < globals::NPHIXSPOINTS; j++) {
+      assert_always(globals::elements[element].ions[ion].levels[level].photoion_xs != NULL);
       globals::allcont[allcontindex].photoion_xs[j] = globals::elements[element].ions[ion].levels[level].photoion_xs[j];
     }
   }
