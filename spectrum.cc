@@ -424,16 +424,13 @@ static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, struct
       const int truenproc = columnindex_from_emissiontype(pkt_ptr->trueemissiontype);
       spectra->timesteps[nt].trueemission[nnu * proccount + truenproc] += deltaE;
 
-      if (stokes_i != NULL && stokes_i[nt].do_emission_res)
-      {
+      if (stokes_i != NULL && stokes_i->do_emission_res) {
         stokes_i->timesteps[nt].emission[nnu * proccount + nproc] += pkt_ptr->stokes[0] * deltaE;
       }
-      if (stokes_q != NULL && stokes_q[nt].do_emission_res)
-      {
+      if (stokes_q != NULL && stokes_q->do_emission_res) {
         stokes_q->timesteps[nt].emission[nnu * proccount + nproc] += pkt_ptr->stokes[1] * deltaE;
       }
-      if (stokes_u != NULL && stokes_u[nt].do_emission_res)
-      {
+      if (stokes_u != NULL && stokes_u->do_emission_res) {
         stokes_u->timesteps[nt].emission[nnu * proccount + nproc] += pkt_ptr->stokes[2] * deltaE;
       }
 
