@@ -373,9 +373,11 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
       const int proccount = get_proccount();
 
       const int nproc = columnindex_from_emissiontype(pkt_ptr->emissiontype);
+      assert_always(nproc < proccount);
       spectra->timesteps[nt].emission[nnu * proccount + nproc] += deltaE;
 
       const int truenproc = columnindex_from_emissiontype(pkt_ptr->trueemissiontype);
+      assert_always(truenproc < proccount);
       spectra->timesteps[nt].trueemission[nnu * proccount + truenproc] += deltaE;
 
       if (stokes_i != NULL && stokes_i[nt].do_emission_res) {
