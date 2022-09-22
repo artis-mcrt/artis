@@ -1607,20 +1607,20 @@ static void setup_phixs_list(void) {
 
   globals::allcont_nu_edge = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
 
-  // copy the photoionisation tables into one contiguous block of memory
-  // #ifdef MPI_ON
-  //   float *allphixsblock;
-  //   MPI_Win win_allphixsblock;
-  //   MPI_Aint size = (globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0;
-  //   int disp_unit = sizeof(linelist_entry);
+// copy the photoionisation tables into one contiguous block of memory
+#ifdef MPI_ON
+  float *allphixsblock;
+  MPI_Win win_allphixsblock;
+  MPI_Aint size = (globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0;
+  int disp_unit = sizeof(linelist_entry);
 
-  //   MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &allphixsblock,
-  //   &win_allphixsblock); MPI_Win_shared_query(win_allphixsblock, MPI_PROC_NULL, &size, &disp_unit, &allphixsblock);
+  MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &allphixsblock, &win_allphixsblock);
+  MPI_Win_shared_query(win_allphixsblock, MPI_PROC_NULL, &size, &disp_unit, &allphixsblock);
 
-  //   MPI_Barrier(MPI_COMM_WORLD);
-  // #else
+  MPI_Barrier(MPI_COMM_WORLD);
+#else
   float *allphixsblock = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
-  // #endif
+#endif
 
   assert_always(allphixsblock != NULL);
   int nbftableschanged = 0;
@@ -1634,10 +1634,10 @@ static void setup_phixs_list(void) {
 
     // different targets share the same cross section table, so don't repeat this process
     if (phixstargetindex == 0) {
-      // if (globals::rank_in_node == 0) {
-      memcpy(allphixsblock, globals::elements[element].ions[ion].levels[level].photoion_xs,
-             globals::NPHIXSPOINTS * sizeof(float));
-      // }
+      if (globals::rank_in_node == 0) {
+        memcpy(allphixsblock, globals::elements[element].ions[ion].levels[level].photoion_xs,
+               globals::NPHIXSPOINTS * sizeof(float));
+      }
 
       free(globals::elements[element].ions[ion].levels[level].photoion_xs);
       globals::elements[element].ions[ion].levels[level].photoion_xs = allphixsblock;
