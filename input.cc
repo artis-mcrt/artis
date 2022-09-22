@@ -378,16 +378,6 @@ static void read_phixs_data(int phixs_file_version) {
 
   fclose(phixsdata);
 
-  assert_always(globals::nbfcontinua >= 0);
-  for (int i = 0; i < globals::nbfcontinua; i++) {
-    globals::allcont[i].photoion_xs = static_cast<float *>(malloc(globals::NPHIXSPOINTS * sizeof(float)));
-    const int element = globals::allcont[i].element;
-    const int ion = globals::allcont[i].ion;
-    const int level = globals::allcont[i].level;
-    for (int j = 0; j < globals::NPHIXSPOINTS; j++) {
-      globals::allcont[i].photoion_xs[j] = globals::elements[element].ions[ion].levels[level].photoion_xs[j];
-    }
-  }
   printout("[info] mem_usage: photoionisation tables occupy %.3f MB\n", mem_usage_phixs / 1024. / 1024.);
   printout(
       "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
@@ -1589,6 +1579,13 @@ static void setup_phixs_list(void) {
           globals::allcont[allcontindex].phixstargetindex = phixstargetindex;
           globals::allcont[allcontindex].probability = get_phixsprobability(element, ion, level, phixstargetindex);
           globals::allcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+
+          globals::allcont[allcontindex].photoion_xs =
+              static_cast<float *>(malloc(globals::NPHIXSPOINTS * sizeof(float)));
+          for (int j = 0; j < globals::NPHIXSPOINTS; j++) {
+            globals::allcont[allcontindex].photoion_xs[j] =
+                globals::elements[element].ions[ion].levels[level].photoion_xs[j];
+          }
 
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
           int index_in_groundlevelcontestimator;
