@@ -1187,12 +1187,15 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
 #if (SEPARATE_STIMRECOMB)
         const double corrfactor = 1.;  // no subtraction of stimulated recombination
 #else
-        // const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-        // const int upper = globals::allcont[i].upperlevel;
-        // const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
-        // const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
-        const double departure_ratio = globals::cellhistory[tid].ch_allcont[i].departure_ratio;
-        // const double departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
+        double departure_ratio = globals::cellhistory[tid].ch_allcont[i].departure_ratio;
+        if (departure_ratio < 0) {
+          // const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+
+          const int upper = globals::allcont[i].upperlevel;
+          const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
+          const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
+          departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
+        }
 
         const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
         double corrfactor = 1 - stimfactor;  // photoionisation minus stimulated recombination
