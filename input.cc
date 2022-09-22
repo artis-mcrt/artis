@@ -199,11 +199,9 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
   }
 
   *mem_usage_phixs += globals::NPHIXSPOINTS * sizeof(float);
-  if ((globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs =
-           (float *)calloc(globals::NPHIXSPOINTS, sizeof(float))) == NULL) {
-    printout("[fatal] input: not enough memory to initialize photoion_xslist... abort\n");
-    abort();
-  }
+  globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs =
+      static_cast<float *>(calloc(globals::NPHIXSPOINTS, sizeof(float)));
+  assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs != NULL);
 
   if (phixs_threshold_ev > 0) {
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixs_threshold = phixs_threshold_ev * EV;
@@ -1129,7 +1127,7 @@ static void read_atomicdata_files(void) {
   MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &sharedlinelist);
 
   if (globals::rank_in_node == 0) {
-    memcpy(sharedlinelist, globals::linelist, size);
+    std::memcpy(sharedlinelist, globals::linelist, size);
     free(globals::linelist);
   }
 
@@ -1609,7 +1607,8 @@ static void setup_phixs_list(void) {
 
   globals::allcont_nu_edge = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
 
-  // float *allphixsblock = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
+  float *allphixsblock = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
+  int nbftableschanged = 0;
   for (int i = 0; i < globals::nbfcontinua; i++) {
     globals::allcont_nu_edge[i] = globals::allcont[i].nu_edge;
 
@@ -1618,19 +1617,19 @@ static void setup_phixs_list(void) {
     const int level = globals::allcont[i].level;
     const int phixstargetindex = globals::allcont[i].phixstargetindex;
 
-    // // different targets share the same cross section table, so don't repeat this process
+    // different targets share the same cross section table, so don't repeat this process
     if (phixstargetindex == 0) {
-      float *newtable = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
-      std::memcpy(newtable, globals::elements[element].ions[ion].levels[level].photoion_xs, globals::NPHIXSPOINTS);
-      // std::memcpy(allphixsblock, globals::elements[element].ions[ion].levels[level].photoion_xs,
-      // globals::NPHIXSPOINTS);
+      std::memcpy(allphixsblock, globals::elements[element].ions[ion].levels[level].photoion_xs,
+                  globals::NPHIXSPOINTS * sizeof(float));
 
-      // free(globals::elements[element].ions[ion].levels[level].photoion_xs);
-      // globals::elements[element].ions[ion].levels[level].photoion_xs = allphixsblock;
+      free(globals::elements[element].ions[ion].levels[level].photoion_xs);
+      globals::elements[element].ions[ion].levels[level].photoion_xs = allphixsblock;
 
-      // allphixsblock += globals::NPHIXSPOINTS;
+      allphixsblock += globals::NPHIXSPOINTS;
+      nbftableschanged++;
     }
   }
+  assert_always(nbftableschanged == nbftables);
 
   for (int i = 0; i < globals::nbfcontinua; i++) {
     const int element = globals::allcont[i].element;
