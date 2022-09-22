@@ -812,7 +812,8 @@ __host__ __device__ static void update_bfestimators(const int modelgridindex, co
   // estimator_normfactor_over_H = 1 / deltaV / deltat / nprocs / H;
 
   const int tid = get_thread_num();
-  const double distance_e_cmf_over_nu = distance_e_cmf / nu_cmf * dopplerfactor;
+  const double distance_e_cmf_over_nu =
+      distance_e_cmf / nu_cmf * dopplerfactor;  // TODO: Luke: why did I put a doppler factor here?
   for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++) {
     const double nu_edge = globals::allcont_nu_edge[allcontindex];
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table

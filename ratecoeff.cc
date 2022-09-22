@@ -868,6 +868,7 @@ static void scale_level_phixs(const int element, const int ion, const int level,
 // multiply the cross sections associated with a level by some factor and
 // also update the quantities integrated from (and proportional to) the cross sections
 {
+  // if we storing the cross sections in node shared memory, then only one rank should update it
   // if (globals::rank_in_node == 0) {
   for (int n = 0; n < globals::NPHIXSPOINTS; n++) {
     globals::elements[element].ions[ion].levels[level].photoion_xs[n] *= factor;
