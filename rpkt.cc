@@ -1172,7 +1172,7 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
         (!DETAILED_BF_ESTIMATORS_ON &&
          ((ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6) || (level == 0)))) {
       const double nu_edge = globals::allcont[i].nu_edge;
-      const int phixstargetindex = globals::allcont[i].phixstargetindex;
+      // const int phixstargetindex = globals::allcont[i].phixstargetindex;
       const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
       // printout("i %d, nu_edge %g\n",i,nu_edge);
       const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
@@ -1188,16 +1188,11 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
         const double corrfactor = 1.;  // no subtraction of stimulated recombination
 #else
         // const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-        const int upper = globals::allcont[i].upperlevel;
-        const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
+        // const int upper = globals::allcont[i].upperlevel;
+        // const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
         // const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
-        const double sf = globals::cellhistory[tid]
-                              .chelements[element]
-                              .chions[ion]
-                              .chlevels[level]
-                              .chphixstargets[phixstargetindex]
-                              .sahafactor;
-        const double departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
+        const double departure_ratio = globals::cellhistory[tid].ch_allcont[i].departure_ratio;
+        // const double departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
 
         const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
         double corrfactor = 1 - stimfactor;  // photoionisation minus stimulated recombination

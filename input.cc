@@ -1404,6 +1404,11 @@ static void setup_cellhistory(void) {
         }
       }
     }
+
+    assert_always(globals::nbfcontinua >= 0);
+    globals::cellhistory[tid].ch_allcont =
+        static_cast<struct challcont *>(malloc(globals::nbfcontinua * sizeof(struct challcont)));
+
     printout("[info] mem_usage: cellhistory for thread %d occupies %.3f MB\n", tid,
              mem_usage_cellhistory / 1024. / 1024.);
 #ifdef _OPENMP

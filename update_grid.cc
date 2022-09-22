@@ -693,25 +693,6 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
       }
     }
 
-    if (modelgridindex >= 0) {
-      for (int ion = 0; ion < nions - 1; ion++) {
-        const int nbflevels = get_ionisinglevels(element, ion);
-        for (int level = 0; level < nbflevels; level++) {
-          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level);
-               phixstargetindex++) {
-            const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-            const double nu_edge = get_phixs_threshold(element, ion, level, phixstargetindex) / H;
-            const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
-            globals::cellhistory[tid]
-                .chelements[element]
-                .chions[ion]
-                .chlevels[level]
-                .chphixstargets[phixstargetindex]
-                .sahafactor = sf;
-          }
-        }
-      }
-    }
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels = get_nlevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
@@ -763,6 +744,24 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
         //   -99.;
         // }
       }
+    }
+  }
+
+  if (modelgridindex >= 0) {
+    const double nne = grid::get_nne(modelgridindex);
+    const int nbfcont = globals::nbfcontinua;
+    for (int i = 0; i < nbfcont; i++) {
+      const int element = globals::allcont[i].element;
+      const int ion = globals::allcont[i].ion;
+      const int level = globals::allcont[i].level;
+      // const int phixstargetindex = globals::allcont[i].phixstargetindex;
+      const int upper = globals::allcont[i].upperlevel;
+      const double nu_edge = globals::allcont[i].nu_edge;
+      const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
+      const double nnlevel = globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].population;
+      const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
+      const double departure_ratio = nnupperionlevel / nnlevel * nne * sf;
+      globals::cellhistory[tid].ch_allcont[i].departure_ratio = departure_ratio;
     }
   }
   // printout("nlevels_with_processrates %d\n", nlevels_with_processrates);

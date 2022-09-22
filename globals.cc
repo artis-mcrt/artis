@@ -13,7 +13,7 @@ __managed__ curandState curandstates[MCUDATHREADS];
 
 __managed__ double syn_dir[3];  // vector pointing from origin to observer
 
-//#define NRAYS_SYN 1 // number of rays traced in a syn calculation
+// #define NRAYS_SYN 1 // number of rays traced in a syn calculation
 
 // RAY rays[NRAYS_SYN];
 __managed__ struct time *time_step = NULL;
@@ -94,10 +94,10 @@ __managed__ struct fullphixslist *allcont = NULL;
 __managed__ struct groundphixslist *groundcont = NULL;
 #endif
 __managed__ struct phixslist *phixslist = NULL;
-__managed__ int nbfcontinua;
-__managed__ int nbfcontinua_ground;  /// number of bf-continua
-__managed__ int NPHIXSPOINTS;
-__managed__ double NPHIXSNUINCREMENT;
+__managed__ int nbfcontinua = -1;
+__managed__ int nbfcontinua_ground = -1;  /// number of bf-continua
+__managed__ int NPHIXSPOINTS = -1;
+__managed__ double NPHIXSNUINCREMENT = -1;
 
 __managed__ struct cellhistory *cellhistory = NULL;
 
@@ -137,7 +137,7 @@ __managed__ double nu_max_r = -1.;  // limits on frequency range for r-pkt spect
 
 __managed__ double nusyn_min;
 __managed__ double nusyn_max;  // limits on range for syn
-__managed__ int nfake_gam;     //# of fake gamma ray lines for syn
+__managed__ int nfake_gam;     // # of fake gamma ray lines for syn
 
 /// New variables for other opacity cases, still grey.
 __managed__ double opcase3_normal;  /// MK: normalisation factor for opacity_case 3

@@ -178,7 +178,10 @@ struct chphixstargets {
 #if (SEPARATE_STIMRECOMB)
   double stimrecombcoeff;
 #endif
-  double sahafactor;
+};
+
+struct challcont {
+  double departure_ratio;
 };
 
 struct chlevels {
@@ -203,6 +206,7 @@ struct cellhistory {
   double *cooling_contrib;  /// Cooling contributions by the different processes.
   struct chelements *chelements;
   struct chlevels *ch_all_levels;
+  struct challcont *ch_allcont;
   int cellnumber;  /// Identifies the cell the data is valid for.
   int bfheating_mgi;
 };
