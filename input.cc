@@ -1612,21 +1612,20 @@ static void setup_phixs_list(void) {
     const int element = globals::allcont[i].element;
     const int ion = globals::allcont[i].ion;
     const int level = globals::allcont[i].level;
+    const int phixstargetindex = globals::allcont[i].phixstargetindex;
 
-    assert_always(globals::elements[element].ions[ion].levels[level].photoion_xs != NULL);
-    float *newphotoion_xs = &allphixsblock[i * globals::NPHIXSPOINTS];
-    for (int j = 0; j < globals::NPHIXSPOINTS; j++) {
-      newphotoion_xs[j] = globals::elements[element].ions[ion].levels[level].photoion_xs[j];
+    // different targets share the same cross section table, so don't repeat this process
+    if (phixstargetindex == 0) {
+      assert_always(globals::elements[element].ions[ion].levels[level].photoion_xs != NULL);
+      float *newphotoion_xs = &allphixsblock[i * globals::NPHIXSPOINTS];
+
+      memcpy(newphotoion_xs, globals::elements[element].ions[ion].levels[level].photoion_xs, globals::NPHIXSPOINTS);
+
+      free(globals::elements[element].ions[ion].levels[level].photoion_xs);
+      globals::elements[element].ions[ion].levels[level].photoion_xs = newphotoion_xs;
     }
-    free(globals::elements[element].ions[ion].levels[level].photoion_xs);
-    globals::elements[element].ions[ion].levels[level].photoion_xs = newphotoion_xs;
 
     globals::allcont[i].photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
-
-    // for (int j = 0; j < globals::NPHIXSPOINTS; j++) {
-    //   assert_always(globals::elements[element].ions[ion].levels[level].photoion_xs != NULL);
-    //   globals::allcont[i].photoion_xs[j] = globals::elements[element].ions[ion].levels[level].photoion_xs[j];
-    // }
   }
 }
 
