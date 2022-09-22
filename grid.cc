@@ -245,31 +245,31 @@ __host__ __device__ double get_elem_numberdens(int modelgridindex, int element)
 
 __host__ __device__ float get_kappagrey(int modelgridindex) {
   assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex <= get_npts_model);
+  assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].kappagrey;
 }
 
 __host__ __device__ float get_Te(int modelgridindex) {
   assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex <= get_npts_model);
+  assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].Te;
 }
 
 __host__ __device__ float get_TR(int modelgridindex) {
   assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex <= get_npts_model);
+  assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].TR;
 }
 
 __host__ __device__ float get_TJ(int modelgridindex) {
   assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex <= get_npts_model);
+  assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].TJ;
 }
 
 __host__ __device__ float get_W(int modelgridindex) {
   assert_testmodeonly(modelgridindex >= 0);
-  assert_testmodeonly(modelgridindex <= get_npts_model);
+  assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].W;
 }
 
