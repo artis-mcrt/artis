@@ -53,6 +53,7 @@ struct fullphixslist {
   int upperlevel;
   double probability;
   int index_in_groundphixslist;
+  float *photoion_xs;
 };
 
 struct groundphixslist {
@@ -182,7 +183,6 @@ struct chphixstargets {
 
 struct challcont {
   double departure_ratio;
-  float *photoion_xs;
 };
 
 struct chlevels {

@@ -377,6 +377,17 @@ static void read_phixs_data(int phixs_file_version) {
   }
 
   fclose(phixsdata);
+
+  assert_always(globals::nbfcontinua >= 0);
+  for (int i = 0; i < globals::nbfcontinua; i++) {
+    globals::allcont[i].photoion_xs = static_cast<float *>(malloc(globals::NPHIXSPOINTS * sizeof(float)));
+    const int element = globals::allcont[i].element;
+    const int ion = globals::allcont[i].ion;
+    const int level = globals::allcont[i].level;
+    for (int j = 0; j < globals::NPHIXSPOINTS; j++) {
+      globals::allcont[i].photoion_xs[j] = globals::elements[element].ions[ion].levels[level].photoion_xs[j];
+    }
+  }
   printout("[info] mem_usage: photoionisation tables occupy %.3f MB\n", mem_usage_phixs / 1024. / 1024.);
   printout(
       "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
@@ -1402,21 +1413,6 @@ static void setup_cellhistory(void) {
 
           mem_usage_cellhistory += (2 * (ndowntrans + 1) + (nuptrans + 1)) * sizeof(double);
         }
-      }
-    }
-
-    assert_always(globals::nbfcontinua >= 0);
-    globals::cellhistory[tid].ch_allcont =
-        static_cast<struct challcont *>(malloc(globals::nbfcontinua * sizeof(struct challcont)));
-    for (int i = 0; i < globals::nbfcontinua; i++) {
-      globals::cellhistory[tid].ch_allcont[i].photoion_xs =
-          static_cast<float *>(malloc(globals::NPHIXSPOINTS * sizeof(float)));
-      for (int j = 0; j < globals::NPHIXSPOINTS; j++) {
-        const int element = globals::allcont[i].element;
-        const int ion = globals::allcont[i].ion;
-        const int level = globals::allcont[i].level;
-        globals::cellhistory[tid].ch_allcont[i].photoion_xs[j] =
-            globals::elements[element].ions[ion].levels[level].photoion_xs[j];
       }
     }
 
