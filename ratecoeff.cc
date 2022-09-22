@@ -869,11 +869,11 @@ static void scale_level_phixs(const int element, const int ion, const int level,
 // also update the quantities integrated from (and proportional to) the cross sections
 {
   // if we storing the cross sections in node shared memory, then only one rank should update it
-  if (globals::rank_in_node == 0) {
-    for (int n = 0; n < globals::NPHIXSPOINTS; n++) {
-      globals::elements[element].ions[ion].levels[level].photoion_xs[n] *= factor;
-    }
+  // if (globals::rank_in_node == 0) {
+  for (int n = 0; n < globals::NPHIXSPOINTS; n++) {
+    globals::elements[element].ions[ion].levels[level].photoion_xs[n] *= factor;
   }
+  // }
 
   const int nphixstargets = get_nphixstargets(element, ion, level);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {

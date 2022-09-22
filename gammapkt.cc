@@ -104,11 +104,12 @@ static void read_decaydata(void) {
     }
 
     const char *elname = decay::get_elname(z);
-    char elnamelower[strlen(elname) + 1];
-    for (int i = 0; i < (int)strlen(elname); i++) {
+    const int elnamelen = strlen(elname);  // excluding the NULL terminator
+    char elnamelower[elnamelen + 1];
+    for (int i = 0; i < elnamelen; i++) {
       elnamelower[i] = tolower(elname[i]);
     }
-    elnamelower[strlen(elname)] = '\0';
+    elnamelower[elnamelen] = '\0';
 
     // look in the current folder
     char filename[128];
