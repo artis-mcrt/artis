@@ -678,7 +678,7 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
 
   // globals::cellhistory[tid].totalcooling = COOLING_UNDEFINED;
   //  int nlevels_with_processrates = 0;
-  const double T_e = grid::get_Te(modelgridindex);
+  const double T_e = modelgridindex >= 0 ? grid ::get_Te(modelgridindex) : 0.;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {

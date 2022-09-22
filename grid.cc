@@ -243,15 +243,35 @@ __host__ __device__ double get_elem_numberdens(int modelgridindex, int element)
   return get_elem_abundance(modelgridindex, element) / elem_meanweight * grid::get_rho(modelgridindex);
 }
 
-__host__ __device__ float get_kappagrey(int modelgridindex) { return modelgrid[modelgridindex].kappagrey; }
+__host__ __device__ float get_kappagrey(int modelgridindex) {
+  assert_testmodeonly(modelgridindex >= 0);
+  assert_testmodeonly(modelgridindex <= get_npts_model);
+  return modelgrid[modelgridindex].kappagrey;
+}
 
-__host__ __device__ float get_Te(int modelgridindex) { return modelgrid[modelgridindex].Te; }
+__host__ __device__ float get_Te(int modelgridindex) {
+  assert_testmodeonly(modelgridindex >= 0);
+  assert_testmodeonly(modelgridindex <= get_npts_model);
+  return modelgrid[modelgridindex].Te;
+}
 
-__host__ __device__ float get_TR(int modelgridindex) { return modelgrid[modelgridindex].TR; }
+__host__ __device__ float get_TR(int modelgridindex) {
+  assert_testmodeonly(modelgridindex >= 0);
+  assert_testmodeonly(modelgridindex <= get_npts_model);
+  return modelgrid[modelgridindex].TR;
+}
 
-__host__ __device__ float get_TJ(int modelgridindex) { return modelgrid[modelgridindex].TJ; }
+__host__ __device__ float get_TJ(int modelgridindex) {
+  assert_testmodeonly(modelgridindex >= 0);
+  assert_testmodeonly(modelgridindex <= get_npts_model);
+  return modelgrid[modelgridindex].TJ;
+}
 
-__host__ __device__ float get_W(int modelgridindex) { return modelgrid[modelgridindex].W; }
+__host__ __device__ float get_W(int modelgridindex) {
+  assert_testmodeonly(modelgridindex >= 0);
+  assert_testmodeonly(modelgridindex <= get_npts_model);
+  return modelgrid[modelgridindex].W;
+}
 
 __host__ __device__ static void set_rhoinit(int modelgridindex, float x) { modelgrid[modelgridindex].rhoinit = x; }
 
@@ -538,7 +558,7 @@ __host__ __device__ static void set_elem_stable_abund_from_total(const int mgi, 
   double massfracstable = elemabundance - isofracsum;
 
   if (massfracstable < 0.) {
-    if ((isofracsum / elemabundance - 1.) > 1e-4)  // allow some roundoff error
+    if ((isofracsum / elemabundance - 1.) > 1e-4)  //  allow some roundoff error
     {
       printout("WARNING: cell %d Z=%d element abundance is less than the sum of its radioisotope abundances \n", mgi,
                atomic_number);
