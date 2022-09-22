@@ -417,15 +417,15 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
           const int ion = globals::linelist[at].ionindex;
           spectra->timesteps[nt].absorption[nnu_abs * ioncount + element * get_max_nions() + ion] += deltaE_absorption;
 
-          if (stokes_i != NULL && stokes_i[nt].do_emission_res) {
+          if (stokes_i != NULL && stokes_i->do_emission_res) {
             stokes_i->timesteps[nt].absorption[nnu_abs * ioncount + element * get_max_nions() + ion] +=
                 pkt_ptr->stokes[0] * deltaE_absorption;
           }
-          if (stokes_q != NULL && stokes_q[nt].do_emission_res) {
+          if (stokes_q != NULL && stokes_q->do_emission_res) {
             stokes_q->timesteps[nt].absorption[nnu_abs * ioncount + element * get_max_nions() + ion] +=
                 pkt_ptr->stokes[1] * deltaE_absorption;
           }
-          if (stokes_u != NULL && stokes_u[nt].do_emission_res) {
+          if (stokes_u != NULL && stokes_u->do_emission_res) {
             stokes_u->timesteps[nt].absorption[nnu_abs * ioncount + element * get_max_nions() + ion] +=
                 pkt_ptr->stokes[2] * deltaE_absorption;
           }
@@ -453,7 +453,7 @@ void init_spectrum_trace(void) {
   if (TRACE_EMISSION_ABSORPTION_REGION_ON) {
     traceemission_totalenergy = 0.;
     traceemissionabsorption =
-        (struct emissionabsorptioncontrib *)malloc(globals::nlines * sizeof(emissionabsorptioncontrib));
+        static_cast<struct emissionabsorptioncontrib *>(malloc(globals::nlines * sizeof(emissionabsorptioncontrib)));
     traceabsorption_totalenergy = 0.;
     for (int i = 0; i < globals::nlines; i++) {
       traceemissionabsorption[i].energyemitted = 0.;
@@ -565,17 +565,17 @@ static void alloc_emissionabsorption_spectra(spec *spectra) {
 struct spec *alloc_spectra(const bool do_emission_res) {
   long mem_usage = 0;
   assert_always(globals::ntstep > 0);
-  struct spec *spectra = (struct spec *)malloc(sizeof(struct spec));
+  struct spec *spectra = static_cast<struct spec *>(malloc(sizeof(struct spec)));
   mem_usage += globals::ntstep * sizeof(struct spec);
 
   spectra->do_emission_res = false;  // might be set true later by alloc_emissionabsorption_spectra
-  spectra->lower_freq = (float *)malloc(globals::nnubins * sizeof(float));
-  spectra->delta_freq = (float *)malloc(globals::nnubins * sizeof(float));
+  spectra->lower_freq = static_cast<float *>(malloc(globals::nnubins * sizeof(float)));
+  spectra->delta_freq = static_cast<float *>(malloc(globals::nnubins * sizeof(float)));
 
-  spectra->timesteps = (struct timestepspec *)malloc(globals::ntstep * sizeof(struct timestepspec));
+  spectra->timesteps = static_cast<struct timestepspec *>(malloc(globals::ntstep * sizeof(struct timestepspec)));
   mem_usage += globals::ntstep * sizeof(struct timestepspec);
 
-  spectra->fluxalltimesteps = (double *)malloc(globals::ntstep * globals::nnubins * sizeof(double));
+  spectra->fluxalltimesteps = static_cast<double *>(malloc(globals::ntstep * globals::nnubins * sizeof(double)));
   mem_usage += globals::ntstep * globals::nnubins * sizeof(double);
 
   assert_always(globals::nnubins > 0);
