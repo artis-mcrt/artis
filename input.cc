@@ -1606,14 +1606,14 @@ static void setup_phixs_list(void) {
   for (int i = 0; i < globals::nbfcontinua; i++) {
     globals::allcont_nu_edge[i] = globals::allcont[i].nu_edge;
 
-    // const int element = globals::allcont[i].element;
-    // const int ion = globals::allcont[i].ion;
-    // const int level = globals::allcont[i].level;
-    // globals::allcont[i].photoion_xs = static_cast<float *>(malloc(globals::NPHIXSPOINTS * sizeof(float)));
-    // for (int j = 0; j < globals::NPHIXSPOINTS; j++) {
-    //   assert_always(globals::elements[element].ions[ion].levels[level].photoion_xs != NULL);
-    //   globals::allcont[i].photoion_xs[j] = globals::elements[element].ions[ion].levels[level].photoion_xs[j];
-    // }
+    const int element = globals::allcont[i].element;
+    const int ion = globals::allcont[i].ion;
+    const int level = globals::allcont[i].level;
+    globals::allcont[i].photoion_xs = static_cast<float *>(malloc(globals::NPHIXSPOINTS * sizeof(float)));
+    for (int j = 0; j < globals::NPHIXSPOINTS; j++) {
+      assert_always(globals::elements[element].ions[ion].levels[level].photoion_xs != NULL);
+      globals::allcont[i].photoion_xs[j] = globals::elements[element].ions[ion].levels[level].photoion_xs[j];
+    }
   }
 }
 

@@ -1179,8 +1179,8 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
 
       if (nu >= nu_edge && nu <= nu_max_phixs && nnlevel > 0) {
         // printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
-        const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
-        // const double sigma_bf = photoionization_crosssection_fromtable(globals::allcont[i].photoion_xs, nu_edge, nu);
+        // const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
+        const double sigma_bf = photoionization_crosssection_fromtable(globals::allcont[i].photoion_xs, nu_edge, nu);
         // const double probability = get_phixsprobability(element, ion, level, phixstargetindex);
         const double probability = globals::allcont[i].probability;
         // assert_always(probability == probability2);
