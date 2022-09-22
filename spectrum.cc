@@ -224,6 +224,9 @@ void write_specpol(char spec_filename[], char emission_filename[], char absorpti
   if (do_emission_res) {
     emissionpol_file = fopen_required(emission_filename, "w");
     absorptionpol_file = fopen_required(absorption_filename, "w");
+    printout("Writing %s, %s, and %s\n", spec_filename, emission_filename, absorption_filename);
+  } else {
+    printout("Writing %s\n", spec_filename);
   }
 
   fprintf(specpol_file, "%g ", 0.0);
