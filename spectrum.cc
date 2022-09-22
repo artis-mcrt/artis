@@ -352,6 +352,7 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
     const double dlognu = (log(nu_max) - log(nu_min)) / globals::nnubins;
 
     const int nnu = (log(pkt_ptr->nu_rf) - log(nu_min)) / dlognu;
+    assert_always(nnu < globals::nnubins);
 
     const double deltaE = pkt_ptr->e_rf / globals::time_step[nt].width / spectra->delta_freq[nnu] / 4.e12 / PI /
                           PARSEC / PARSEC / globals::nprocs * anglefactor;
