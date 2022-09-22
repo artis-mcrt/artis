@@ -1650,6 +1650,12 @@ static void setup_phixs_list(void) {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
+  for (int i = 0; i < globals::nbfcontinua; i++) {
+    const int element = globals::allcont[i].element;
+    const int ion = globals::allcont[i].ion;
+    const int level = globals::allcont[i].level;
+    globals::allcont[i].photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
+  }
 }
 
 static void read_atomicdata(void)

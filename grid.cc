@@ -775,7 +775,7 @@ static void allocate_composition_cooling(void)
 
       /// and allocate memory to store the ground level populations for each ionisation stage
       modelgrid[modelgridindex].composition[element].groundlevelpop =
-          (float *)calloc(get_nions(element), sizeof(float));
+          static_cast<float *>(calloc(get_nions(element), sizeof(float)));
       if (modelgrid[modelgridindex].composition[element].groundlevelpop == NULL) {
         printout(
             "[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",
