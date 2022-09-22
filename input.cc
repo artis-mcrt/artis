@@ -1580,13 +1580,6 @@ static void setup_phixs_list(void) {
           globals::allcont[allcontindex].probability = get_phixsprobability(element, ion, level, phixstargetindex);
           globals::allcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-          globals::allcont[allcontindex].photoion_xs =
-              static_cast<float *>(malloc(globals::NPHIXSPOINTS * sizeof(float)));
-          for (int j = 0; j < globals::NPHIXSPOINTS; j++) {
-            globals::allcont[allcontindex].photoion_xs[j] =
-                globals::elements[element].ions[ion].levels[level].photoion_xs[j];
-          }
-
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
           int index_in_groundlevelcontestimator;
           globals::allcont[allcontindex].index_in_groundphixslist =
@@ -1603,10 +1596,18 @@ static void setup_phixs_list(void) {
   assert_always(allcontindex == globals::nbfcontinua);
   std::sort(globals::allcont, globals::allcont + globals::nbfcontinua);
 
-  globals::allcont_nu_edge = (double *)malloc(globals::nbfcontinua * sizeof(double));
+  globals::allcont_nu_edge = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
 
   for (int i = 0; i < globals::nbfcontinua; i++) {
     globals::allcont_nu_edge[i] = globals::allcont[i].nu_edge;
+
+    const int element = globals::allcont[i].element;
+    const int ion = globals::allcont[i].ion;
+    const int level = globals::allcont[i].level;
+    globals::allcont[allcontindex].photoion_xs = static_cast<float *>(malloc(globals::NPHIXSPOINTS * sizeof(float)));
+    for (int j = 0; j < globals::NPHIXSPOINTS; j++) {
+      globals::allcont[allcontindex].photoion_xs[j] = globals::elements[element].ions[ion].levels[level].photoion_xs[j];
+    }
   }
 }
 
