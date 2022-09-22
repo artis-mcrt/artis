@@ -1610,27 +1610,26 @@ static void setup_phixs_list(void) {
   globals::allcont_nu_edge = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
 
   float *allphixsblock = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
-  float *nextphixstable = allphixsblock;
   for (int i = 0; i < globals::nbfcontinua; i++) {
     globals::allcont_nu_edge[i] = globals::allcont[i].nu_edge;
 
-    const int element = globals::allcont[i].element;
-    const int ion = globals::allcont[i].ion;
-    const int level = globals::allcont[i].level;
-    const int phixstargetindex = globals::allcont[i].phixstargetindex;
+    // const int element = globals::allcont[i].element;
+    // const int ion = globals::allcont[i].ion;
+    // const int level = globals::allcont[i].level;
+    // const int phixstargetindex = globals::allcont[i].phixstargetindex;
 
-    // different targets share the same cross section table, so don't repeat this process
-    if (phixstargetindex == 0) {
-      std::memcpy(nextphixstable, globals::elements[element].ions[ion].levels[level].photoion_xs,
-                  globals::NPHIXSPOINTS);
+    // // different targets share the same cross section table, so don't repeat this process
+    // if (phixstargetindex == 0) {
+    //   std::memcpy(allphixsblock, globals::elements[element].ions[ion].levels[level].photoion_xs,
+    //   globals::NPHIXSPOINTS);
 
-      free(globals::elements[element].ions[ion].levels[level].photoion_xs);
-      globals::elements[element].ions[ion].levels[level].photoion_xs = nextphixstable;
+    //   free(globals::elements[element].ions[ion].levels[level].photoion_xs);
+    //   globals::elements[element].ions[ion].levels[level].photoion_xs = allphixsblock;
 
-      nextphixstable += globals::NPHIXSPOINTS;
-    }
+    //   allphixsblock += globals::NPHIXSPOINTS;
+    // }
 
-    globals::allcont[i].photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
+    // globals::allcont[i].photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
   }
 
   for (int i = 0; i < globals::nbfcontinua; i++) {
