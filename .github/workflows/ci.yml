@@ -177,23 +177,23 @@ jobs:
                   cp input-newrun.txt input.txt
                   touch output_0-0.txt
                   time mpirun -np 2 ./sn3d
-                  mkdir job0
-                  ../../scripts/movefiles.sh job0
 
             - name: cat job0 estimators
               if: always()
-              working-directory: tests/nebularonezone_testrun/job0/
+              working-directory: tests/nebularonezone_testrun/
               run: cat estimators*.out
 
             - name: cat job0 output log
               if: always()
-              working-directory: tests/nebularonezone_testrun/job0/
+              working-directory: tests/nebularonezone_testrun/
               run: cat output_0-0.txt
 
             - name: Checksum job0 output files
               if: always() && matrix.os != 'selfhosted'
               working-directory: tests/nebularonezone_testrun
               run: |
+                  mkdir job0
+                  ../../scripts/movefiles.sh job0
                   md5sum *.out job0/*.out
                   md5sum -c results_md5_job0.txt
 
@@ -203,23 +203,23 @@ jobs:
               run: |
                   cp input-resume.txt input.txt
                   time mpirun -np 2 ./sn3d
-                  mkdir job1
-                  ../../scripts/movefiles.sh job1
 
             - name: cat job1 estimators
               if: always()
-              working-directory: tests/nebularonezone_testrun/job1/
+              working-directory: tests/nebularonezone_testrun/
               run: cat estimators*.out
 
             - name: cat job1 output log
               if: always()
-              working-directory: tests/nebularonezone_testrun/job1/
+              working-directory: tests/nebularonezone_testrun/
               run: cat output_0-0.txt
 
             - name: Run exspec
               if: always()
               working-directory: tests/nebularonezone_testrun/
               run: |
+                  mkdir job1
+                  ../../scripts/movefiles.sh job1
                   time ./exspec
                   mkdir output
                   cp -r output_0-0.txt exspec.txt *.out output/
@@ -347,23 +347,23 @@ jobs:
                   cp input-newrun.txt input.txt
                   touch output_0-0.txt
                   time mpirun -np 2 ./sn3d
-                  mkdir job0
-                  ../../scripts/movefiles.sh job0
 
             - name: cat job0 estimators
               if: always()
-              working-directory: tests/classicmode_testrun/job0/
+              working-directory: tests/classicmode_testrun/
               run: cat estimators*.out
 
             - name: cat job0 output log
               if: always()
-              working-directory: tests/classicmode_testrun/job0/
+              working-directory: tests/classicmode_testrun/
               run: cat output_0-0.txt
 
             - name: Checksum job0 output files
               if: always() && matrix.os != 'selfhosted'
               working-directory: tests/classicmode_testrun
               run: |
+                  mkdir job0
+                  ../../scripts/movefiles.sh job0
                   md5sum *.out job0/*.out
                   md5sum -c results_md5_job0.txt
 
@@ -373,23 +373,23 @@ jobs:
               run: |
                   cp input-resume.txt input.txt
                   time mpirun -np 2 ./sn3d
-                  mkdir job1
-                  ../../scripts/movefiles.sh job1
 
             - name: cat job1 estimators
               if: always()
-              working-directory: tests/classicmode_testrun/job1/
+              working-directory: tests/classicmode_testrun/
               run: cat estimators*.out
 
             - name: cat job1 output log
               if: always()
-              working-directory: tests/classicmode_testrun/job1/
+              working-directory: tests/classicmode_testrun/
               run: cat output_0-0.txt
 
             - name: Run exspec
               if: always()
               working-directory: tests/classicmode_testrun/
               run: |
+                  mkdir job1
+                  ../../scripts/movefiles.sh job1
                   time ./exspec
                   mkdir output
                   cp -r output_0-0.txt exspec.txt *.out output/
