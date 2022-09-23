@@ -1,6 +1,8 @@
 #ifndef LTEPOP_H
 #define LTEPOP_H
 
+#include <memory>
+
 #include "atomic.h"
 #include "sn3d.h"
 

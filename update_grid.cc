@@ -90,7 +90,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       // const bool printdebug = false;
 
       bool assume_lte = true;
-      bool per_gmpop = true;
+      // bool per_gmpop = true;
       // const bool lower_superlevel_only = false;
 
       // if (timestep % 10 == 0)
@@ -108,7 +108,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       //   fprintf(estimators_file, "\n");
       // }
 
-      per_gmpop = false;
+      // per_gmpop = false;
 
       // fprintf(estimators_file, "AlphaLTE_R*nne Z=%2d", get_element(element));
       // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)

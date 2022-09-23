@@ -8,6 +8,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <memory>
 
 #include "atomic.h"
 #include "grid.h"

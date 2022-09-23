@@ -1,6 +1,7 @@
 #include "ltepop.h"
 
 #include <cmath>
+#include <memory>
 
 #include "atomic.h"
 #include "grid.h"
