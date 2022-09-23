@@ -60,19 +60,6 @@ typedef struct cellhistorycoolinglist_t {
   HEATINGTYPE_COLLRECOMB = 887,
 };*/
 
-typedef struct heatingcoolingrates {
-  double cooling_collisional;
-  double cooling_fb;
-  double cooling_ff;
-  double cooling_adiabatic;
-  double heating_collisional;
-  double heating_bf;
-  double heating_ff;
-  double heating_dep;
-  double nt_frac_heating;  // = heatingrates.gamma / total_gamma_deposition, = get_nt_frac_heating(modelgridindex) when
-                           // T_e solver runs
-} heatingcoolingrates_t;
-
 /// PHIXSLIST
 
 typedef struct fullphixslist_t {

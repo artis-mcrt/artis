@@ -1,3 +1,4 @@
+
 #include "nonthermal.h"
 
 #include <gsl/gsl_blas.h>
@@ -11,6 +12,7 @@
 #include <cmath>
 
 #include "atomic.h"
+#include "cuda.h"
 #include "decay.h"
 #include "grid.h"
 #include "gsl_managed.h"

@@ -2,6 +2,7 @@
 #define NONTHERMAL_H
 
 // #include "sn3d.h"
+
 #include <cstdio>
 
 #include "cuda.h"

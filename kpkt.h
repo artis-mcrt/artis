@@ -2,6 +2,7 @@
 #define KPKT_H
 
 #include "sn3d.h"
+#include "thermalbalance.h"
 #include "types.h"
 
 void setup_coolinglist(void);

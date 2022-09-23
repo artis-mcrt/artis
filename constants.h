@@ -1,6 +1,8 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+#include <gsl/gsl_linalg.h>  // make sure this is defined before the 'H' macro
+
 /// fundamental constants
 #define CLIGHT 2.99792458e+10  /// Speed of light [cm/s]
 #define H 6.6260755e-27        /// Planck constant [erg s]

@@ -1,6 +1,6 @@
 #ifndef MACROATOM_H
 #define MACROATOM_H
-
+#include "cuda.h"
 #include "types.h"
 
 void macroatom_open_file(const int my_rank);
