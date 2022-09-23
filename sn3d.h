@@ -46,7 +46,7 @@ static inline int printout(const char *format, Args... args) {
     strftime(s, 32, "%FT%TZ", gmtime(&now_time));
     fprintf(output_file, "%s ", s);
   }
-  if (strcmp(format[strlen(format) - 1], "\n")) startofline = true;
+  if (format[strlen(format) - 1] == '\n') startofline = true;
   return fprintf(output_file, format, args...);
 }
 
