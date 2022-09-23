@@ -86,12 +86,12 @@ jobs:
                   CXX=mpicxx
 
             - name: Get compiler info
+              if: matrix.mpi == 'OFF'
               run: |
                   which ${{ matrix.compiler.cmd }}
                   ${{ matrix.compiler.cmd }} --version
 
             - name: Set compiler
-              if: matrix.mpi == 'OFF'
               run: |
                   export CXX=${{ matrix.compiler.cmd }}
 
@@ -100,7 +100,6 @@ jobs:
               run: |
                   which mpicxx
                   mpicxx --version
-                  export CXX=mpicxx
 
             - name: compile
               run: |
