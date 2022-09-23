@@ -1009,7 +1009,8 @@ static void set_all_corrphotoionrenorm(const int modelgridindex, const double va
 #endif
 
 static void update_grid_cell(const int mgi, const int nts, const int nts_prev, const int titer, const double tratmid,
-                             const double deltat, double *mps, struct heatingcoolingrates *heatingcoolingrates)
+                             const double deltat, std::unique_ptr<double[]> &mps,
+                             struct heatingcoolingrates *heatingcoolingrates)
 // n is the modelgrid index
 {
   const int assoc_cells = grid::get_numassociatedcells(mgi);
@@ -1292,8 +1293,10 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   // printout("[debug] update_grid: starting update for timestep %d...\n",m);
   const double tratmid = globals::time_step[nts].mid / globals::tmin;
 
-  double mps[get_max_threads()];  /// Thread private substitution of max_path_step. Its minimum is
-                                  /// assigned to max_path_step after the parallel update_grid finished.
+  /// Thread private substitution of max_path_step. Its minimum is
+  /// assigned to max_path_step after the parallel update_grid finished.
+  auto mps = std::make_unique<double[]>(get_max_threads());
+
   for (int i = 0; i < get_max_threads(); i++) {
     mps[i] = 1.e35;
   }
@@ -1614,7 +1617,7 @@ double calculate_populations(const int modelgridindex)
       nne_tot += nnelement * get_element(element);
 
       const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
-      double ionfractions[uppermost_ion + 1];
+      auto ionfractions = std::make_unique<double[]>(uppermost_ion + 1);
 
       if (nnelement > 0) {
         get_ionfractions(element, modelgridindex, nne, ionfractions, uppermost_ion);

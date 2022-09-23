@@ -1850,9 +1850,10 @@ void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo
   const int min_nonempty_perproc = npts_nonempty / nprocesses;  // integer division, minimum non-empty cells per process
   const int n_leftover = npts_nonempty - nprocesses * min_nonempty_perproc;
   *maxndo = 0;
-  int ranks_nstart[nprocesses];
-  int ranks_ndo[nprocesses];
-  int ranks_ndo_nonempty[nprocesses];
+
+  auto ranks_nstart = std::make_unique<int[]>(nprocesses);
+  auto ranks_ndo = std::make_unique<int[]>(nprocesses);
+  auto ranks_ndo_nonempty = std::make_unique<int[]>(nprocesses);
 
   // begin with no cell assignments
   for (int r = 0; r < nprocesses; r++) {

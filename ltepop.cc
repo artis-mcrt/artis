@@ -35,7 +35,7 @@ double nne_solution_f(double x, void *paras)
       // uppermost_ion = globals::elements[element].uppermost_ion;
       const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
 
-      double ionfractions[uppermost_ion + 1];
+      auto ionfractions = std::make_unique<double[]>(uppermost_ion + 1);
       get_ionfractions(element, modelgridindex, x, ionfractions, uppermost_ion);
 
       int ion;
@@ -57,7 +57,8 @@ double nne_solution_f(double x, void *paras)
   return rho * outersum - x;
 }
 
-void get_ionfractions(int element, int modelgridindex, double nne, double ionfractions[], int uppermost_ion)
+void get_ionfractions(int element, int modelgridindex, double nne, std::unique_ptr<double[]> &ionfractions,
+                      int uppermost_ion)
 // Calculate the fractions of an element's population in each ionization stage
 // size of ionfractions array must be >= uppermostion + 1
 {
@@ -65,7 +66,7 @@ void get_ionfractions(int element, int modelgridindex, double nne, double ionfra
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(uppermost_ion < get_nions(element));
 
-  double nnionfactor[uppermost_ion + 1];
+  auto nnionfactor = std::make_unique<double[]>(uppermost_ion + 1);
   nnionfactor[uppermost_ion] = 1;
 
   double denominator = 1.;

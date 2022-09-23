@@ -651,7 +651,8 @@ static void precalculate_rate_coefficient_integrals(void) {
   }
 }
 
-__host__ __device__ static int get_index_from_cumulativesums(double *partialsums, size_t listsize, double targetsum)
+__host__ __device__ static int get_index_from_cumulativesums(std::unique_ptr<double[]> &partialsums, size_t listsize,
+                                                             double targetsum)
 // e.g. given a list of [0.25, 0.75, 1.00],
 // returns 0 for targetsum [0., 0.25], 1 for (0.25, 0.75], 2 for (0.75, 1.00]
 {
@@ -678,7 +679,7 @@ static double get_x_at_integralfrac(gsl_function *F_integrand, double xmin, doub
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
-  double partialsums[npieces];
+  auto partialsums = std::make_unique<double[]>(npieces);
   for (int i = 0; i < npieces; i++) {
     const double xlow = xmin + i * deltax;
     const double xhigh = xmin + (i + 1) * deltax;

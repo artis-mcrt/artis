@@ -105,7 +105,8 @@ static void read_decaydata(void) {
 
     const char *elname = decay::get_elname(z);
     const int elnamelen = strlen(elname);  // excluding the NULL terminator
-    char elnamelower[elnamelen + 1];
+    assert_always(elnamelen < 7);
+    char elnamelower[8];
     for (int i = 0; i < elnamelen; i++) {
       elnamelower[i] = tolower(elname[i]);
     }

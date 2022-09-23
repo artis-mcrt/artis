@@ -724,9 +724,9 @@ __host__ __device__ static double sample_decaytime(const int decaypathindex, con
   return tdecay;
 }
 
-__host__ __device__ static double calculate_decaychain(const double firstinitabund, const double *meanlifetimes,
-                                                       const int num_nuclides, const double timediff,
-                                                       bool useexpansionfactor) {
+__host__ __device__ static double calculate_decaychain(const double firstinitabund,
+                                                       std::unique_ptr<double[]> &meanlifetimes, const int num_nuclides,
+                                                       const double timediff, bool useexpansionfactor) {
   // calculate final number abundance from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
   // the top nuclide initial abundance is set and the chain-end abundance is returned (all intermediates nuclides
   // are assumed to start with zero abundance)
@@ -744,7 +744,7 @@ __host__ __device__ static double calculate_decaychain(const double firstinitabu
   // if the meanlife is zero or negative, that indicates a stable nuclide
 
   // last nuclide might be stable (meanlife <= 0.)
-  double lambdas[num_nuclides];
+  auto lambdas = std::make_unique<double[]>(num_nuclides);
   for (int i = 0; i < num_nuclides; i++) {
     assert_always(meanlifetimes[i] > 0. || (i == num_nuclides - 1));  // only the last nuclide can be stable
     lambdas[i] = (meanlifetimes[i] > 0.) ? 1. / meanlifetimes[i] : 0.;
@@ -826,7 +826,7 @@ __host__ __device__ static double get_nuc_massfrac(const int modelgridindex, con
     assert_always(top_initabund >= 0.) if (top_initabund <= 0.) { continue; }
 
     int decaypathlength = get_decaypathlength(decaypathindex);
-    double meanlifetimes[decaypathlength + 1];  // mean lifetimes
+    auto meanlifetimes = std::make_unique<double[]>(decaypathlength + 1);
     for (int i = 0; i < decaypathlength; i++) {
       meanlifetimes[i] = get_meanlife(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i]);
     }
@@ -875,7 +875,8 @@ __host__ __device__ static double get_endecay_to_tinf_per_ejectamass_at_time(con
   // all ancestors
 
   const int decaypathlength = get_decaypathlength(decaypathindex);
-  double meanlifetimes[decaypathlength + 1];  // weighted by branchprob
+  auto meanlifetimes = std::make_unique<double[]>(decaypathlength + 1);
+
   for (int i = 0; i < decaypathlength; i++) {
     meanlifetimes[i] = get_meanlife(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i]);
   }
@@ -961,7 +962,7 @@ __host__ __device__ double get_endecay_per_ejectamass_t0_to_time_withexpansion(c
     // get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(modelgridindex, decaypathindex, tstart);
 
     const int decaypathlength = get_decaypathlength(decaypathindex);
-    double meanlifetimes[decaypathlength + 1];  // weighted by branchprob
+    auto meanlifetimes = std::make_unique<double[]>(decaypathlength + 1);
     for (int i = 0; i < decaypathlength; i++) {
       meanlifetimes[i] = get_meanlife(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i]);
     }
@@ -1045,7 +1046,7 @@ __host__ __device__ static double get_chain_decay_power_per_ejectamass(const int
   const double t_afterinit = time - grid::get_t_model();
 
   int decaypathlength = get_decaypathlength(decaypathindex);
-  double meanlifetimes[decaypathlength];  // weighted by branchprob
+  auto meanlifetimes = std::make_unique<double[]>(decaypathlength);
   for (int i = 0; i < decaypathlength; i++) {
     meanlifetimes[i] = get_meanlife(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i]);
   }
@@ -1346,7 +1347,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
 
 void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt_ptr) {
   const int num_decaypaths = get_num_decaypaths();
-  double cumulative_endecay[num_decaypaths];
+  auto cumulative_endecay = std::make_unique<double[]>(num_decaypaths);
   double endecaysum = 0.;
   for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
     endecaysum += get_simtime_endecay_per_ejectamass(mgi, decaypathindex);
