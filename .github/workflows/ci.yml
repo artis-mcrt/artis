@@ -5,10 +5,10 @@ on:
     push:
         branches-ignore:
             - classic*
-    # pull_request:
-    #   branches:
-    #   - nebular*
-    #   - main
+  # pull_request:
+  #   branches:
+  #   - nebular*
+  #   - main
 
 env:
     ASAN_OPTIONS: detect_stack_use_after_return=1:detect_leaks=0
@@ -50,7 +50,7 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                compiler: [{name: gcc, cmd: g++-11}, {name: clang, cmd: clang++}]     # {name: intel, cmd: icpc}
+                compiler: [{name: gcc, cmd: g++-11}, {name: clang, cmd: clang++}, {name: intel, cmd: icpx}]
                 mpi: [ON, OFF]
             fail-fast: false
 
@@ -78,14 +78,22 @@ jobs:
             - name: Install Intel oneAPI
               if: matrix.compiler.name == 'intel'
               run: |
-                  apt search intel-oneapi
-                  wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
-                  sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
-                  rm GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
-                  sudo echo "deb https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
-                  sudo apt-get install -y intel-oneapi-common-vars
-                  sudo apt-get install -y intel-oneapi-mpi
-                  sudo apt-get install -y intel-oneapi-mpi-devel
+                  # wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+                  # sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+                  # rm GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+                  # sudo echo "deb https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+
+                  # sudo apt-get install -y intel-oneapi-common-vars
+                  # sudo apt-get install -y intel-oneapi-mpi
+                  # sudo apt-get install -y intel-oneapi-mpi-devel
+
+                  wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+                  sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+                  echo "deb https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+                  sudo apt-get update -o Dir::Etc::sourcelist="sources.list.d/oneAPI.list" -o APT::Get::List-Cleanup="0"
+                  sudo apt-get install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
+                  source /opt/intel/oneapi/setvars.sh
+                  printenv >> $GITHUB_ENV
 
             - name: install openmpi
               if: matrix.mpi == 'ON' && matrix.compiler.name != 'intel'
@@ -124,7 +132,7 @@ jobs:
     testmodels:
         strategy:
             matrix:
-                # os: ['ubuntu-latest', 'self-hosted']
+        # os: ['ubuntu-latest', 'self-hosted']
                 os: [ubuntu-latest]
                 testmode: [OFF, ON]
                 testname: [classicmode, nebularonezone]
@@ -153,11 +161,11 @@ jobs:
               id: cpu-count
               run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
 
-            # we can cache this, but then we don't test the code that generates ratecoeff.dat
+      # we can cache this, but then we don't test the code that generates ratecoeff.dat
             - name: Cache ratecoeff.dat
               if: matrix.testname == 'classicmode'
               uses: actions/cache@v3
-              # if: matrix.testmode != 'ON'
+        # if: matrix.testmode != 'ON'
               with:
                   path: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
                   key: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
