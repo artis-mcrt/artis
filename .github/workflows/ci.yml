@@ -65,7 +65,7 @@ jobs:
                   echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
 
             - name: Install gcc
-              if: matrix.compiler.name == 'clang'
+              if: matrix.compiler.name == 'gcc'
               run: sudo apt-get install -y gcc-11 g++-11
 
             - name: Install clang
