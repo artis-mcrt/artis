@@ -67,15 +67,20 @@ jobs:
 
             - name: Install gcc
               if: matrix.compiler.name == 'gcc'
-              run: sudo apt-get install -y gcc-11 g++-11
+              run: |
+                  apt search gcc
+                  sudo apt-get install -y gcc-11 g++-11
 
             - name: Install clang
               if: matrix.compiler.name == 'clang'
-              run: sudo apt-get install -y clang-14 --install-suggests
+              run: |
+                  apt search clang
+                  sudo apt-get install -y clang-12 --install-suggests
 
             - name: Install Intel oneAPI
               if: matrix.compiler.name == 'intel'
               run: |
+                  apt search intel-oneapi
                   wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
                   sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
                   rm GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
