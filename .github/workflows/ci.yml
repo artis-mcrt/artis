@@ -148,12 +148,13 @@ jobs:
               run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
 
             # we can cache this, but then we don't test the code that generates ratecoeff.dat
-            # - name: Cache ratecoeff.dat
-            #   uses: actions/cache@v3
-            #   # if: matrix.testmode != 'ON'
-            #   with:
-            #     path: "tests/${{ matrix.testname }}_testrun/ratecoeff.dat"
-            #     key: "tests/${{ matrix.testname }}_testrun/ratecoeff.dat"
+            - name: Cache ratecoeff.dat
+              if: matrix.testname == 'classicmode'
+              uses: actions/cache@v3
+              # if: matrix.testmode != 'ON'
+              with:
+                  path: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
+                  key: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
 
             - name: Cache test atomic data
               uses: actions/cache@v3
