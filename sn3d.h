@@ -36,14 +36,18 @@ extern FILE *output_file;
 
 // #define printout(...) fprintf(output_file, __VA_ARGS__)
 
-template <typename... Args>
-static inline int printout(Args... args) {
-  time_t now_time = time(NULL);
+static bool startofline = true;
 
-  char s[32] = "";
-  strftime(s, 32, "%FT%TZ", gmtime(&now_time));
-  fprintf(output_file, "%s ", s);
-  return fprintf(output_file, args...);
+template <typename... Args>
+static inline int printout(const char *format, Args... args) {
+  if (startofline) {
+    time_t now_time = time(NULL);
+    char s[32] = "";
+    strftime(s, 32, "%FT%TZ", gmtime(&now_time));
+    fprintf(output_file, "%s ", s);
+  }
+  if (strcmp(format[strlen(format) - 1], "\n")) startofline = true;
+  return fprintf(output_file, format, args...);
 }
 
 static inline int printout(const char *format) { return printout("%s", format); }
