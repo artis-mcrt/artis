@@ -2,9 +2,15 @@
 #define SN3D_H
 
 #include <cassert>
+#include <chrono>
+#include <cstdio>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 
 #include "artisoptions.h"
 
+extern FILE *output_file;
 #ifndef __CUDA_ARCH__
 // host code
 
@@ -28,7 +34,19 @@
 #define assert_testmodeonly(e) ((void)0)
 #endif
 
-#define printout(...) fprintf(output_file, __VA_ARGS__)
+// #define printout(...) fprintf(output_file, __VA_ARGS__)
+
+template <typename... Args>
+static inline int printout(Args... args) {
+  time_t now_time = time(NULL);
+
+  char s[32] = "";
+  strftime(s, 32, "%FT%TZ", gmtime(&now_time));
+  fprintf(output_file, "%s ", s);
+  return fprintf(output_file, args...);
+}
+
+static inline int printout(const char *format) { return printout("%s", format); }
 
 #ifdef _OPENMP
 #ifndef __CUDACC__
@@ -80,7 +98,7 @@
 #include "mpi.h"
 #endif
 
-//#define _OPENMP
+// #define _OPENMP
 #ifdef _OPENMP
 #include "omp.h"
 #endif
@@ -101,7 +119,6 @@ extern gsl_rng *rng;  // pointer for random number generator
 extern __device__ void *rng;
 #endif
 extern gsl_integration_workspace *gslworkspace;
-extern FILE *output_file;
 extern __managed__ int myGpuId;
 
 #ifdef _OPENMP
