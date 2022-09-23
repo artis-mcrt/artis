@@ -85,30 +85,27 @@ jobs:
                   sudo apt install -y openmpi-bin libopenmpi-dev
                   CXX=mpicxx
 
-            - name: Get compiler info
+            - name: Set compiler
               if: matrix.mpi == 'OFF'
               run: |
                   which ${{ matrix.compiler.cmd }}
                   ${{ matrix.compiler.cmd }} --version
-
-            - name: Set compiler
-              run: |
                   export CXX=${{ matrix.compiler.cmd }}
 
-            - name: Get MPI compiler info
+            - name: Set MPI compiler
               if: matrix.mpi == 'ON'
               run: |
                   which mpicxx
                   mpicxx --version
+                  export OMPI_CXX=${{ matrix.compiler.cmd }}
 
             - name: compile
               run: |
-                  cp artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
-                  make clean
-                  cp artisoptions_classic.h artisoptions.h
-                  make MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  for aofile in artisoptions_*.h; do
+                    cp $aofile artisoptions.h
+                    make clean
+                    make MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  done
 
     testmodels:
         strategy:
