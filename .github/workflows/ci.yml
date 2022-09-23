@@ -112,6 +112,49 @@ jobs:
                   make clean
                   make -j${{ steps.cpu-count.outputs.count }} sn3d exspec
 
+    compile_intel:
+        name: Compile with GCC and OpenMPI
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: install dependencies
+              run: |
+                  wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+                  sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+                  rm GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+                  sudo echo "deb https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+                  sudo apt-get update
+                  sudo apt-get install -y intel-oneapi-common-vars
+                  sudo apt-get install -y intel-oneapi-mpi
+                  sudo apt-get install -y intel-oneapi-mpi-devel
+                  sudo apt-get install -y libgsl-dev
+                  sudo apt install -y openmpi-bin libopenmpi-dev
+
+            - name: CPU count
+              id: cpu-count
+              run: |
+                  # echo "::set-output name=count::$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')"
+                  echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
+
+            # - name: "compile with gcc"
+            #   run: |
+            #     which g++
+            #     g++ --version
+            #     make CXX=g++ clean sn3d exspec
+
+            - name: compile with Intel oneAPI
+              run: |
+                  which mpicxx
+                  mpicxx --version
+                  cp artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  make -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+                  cp artisoptions_classic.h artisoptions.h
+                  make clean
+                  make -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+
     test_nebularonezone:
         strategy:
             matrix:
