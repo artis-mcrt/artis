@@ -61,6 +61,7 @@ jobs:
             - name: CPU count
               id: cpu-count
               run: |
+                  sudo apt-get update
                   # echo "::set-output name=count::$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')"
                   echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
 
@@ -70,7 +71,7 @@ jobs:
 
             - name: Install clang
               if: matrix.compiler.name == 'clang'
-              run: sudo apt-get install -y clang --install-suggests
+              run: sudo apt-get install -y clang-14 --install-suggests
 
             - name: Install Intel oneAPI
               if: matrix.compiler.name == 'intel'
@@ -79,7 +80,6 @@ jobs:
                   sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
                   rm GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
                   sudo echo "deb https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
-                  sudo apt-get update
                   sudo apt-get install -y intel-oneapi-common-vars
                   sudo apt-get install -y intel-oneapi-mpi
                   sudo apt-get install -y intel-oneapi-mpi-devel
