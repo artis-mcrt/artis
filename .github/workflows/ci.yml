@@ -50,7 +50,7 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                compiler: [{name: gcc, cmd: g++-11}, {name: clang, cmd: clang++}, {name: intel, cmd: icpx}]
+                compiler: [{name: gcc, cmd: g++-11}, {name: clang, cmd: clang++}, {name: intel, cmd: icpc}]
                 mpi: [ON, OFF]
             fail-fast: false
 
@@ -115,7 +115,9 @@ jobs:
 
             - name: Set compiler environment variables (MPI on)
               if: matrix.mpi == 'ON'
-              run: echo "OMPI_CXX=${{ matrix.compiler.cmd }}" >> $GITHUB_ENV echo "CXX=mpicxx" >> $GITHUB_ENV
+              run: |
+                  echo "OMPI_CXX=${{ matrix.compiler.cmd }}" >> $GITHUB_ENV
+                  echo "CXX=mpicxx" >> $GITHUB_ENV
 
             - name: Show compiler version
               run: |
