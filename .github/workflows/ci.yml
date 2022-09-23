@@ -50,7 +50,7 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                compiler: [{name: gcc, cmd: g++}, {name: clang, cmd: clang++}]     # {name: intel, cmd: icpc}
+                compiler: [{name: gcc, cmd: g++-12}, {name: clang, cmd: clang++}]     # {name: intel, cmd: icpc}
                 mpi: [ON, OFF]
             fail-fast: false
 
@@ -64,8 +64,13 @@ jobs:
                   # echo "::set-output name=count::$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')"
                   echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
 
+            - name: Install gcc
+              if: matrix.compiler.name == 'clang'
+              run: sudo apt-get install -y gcc-12
+
             - name: Install clang
-              if: matrix.compiler.name == 'clang' sudo apt-get install -t clang-15 --install-suggests
+              if: matrix.compiler.name == 'clang'
+              run: apt-get install -t clang-15 --install-suggests
 
             - name: Install Intel oneAPI
               if: matrix.compiler.name == 'intel'
