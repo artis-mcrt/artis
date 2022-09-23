@@ -1,9 +1,10 @@
+---
 name: CI
 
 on:
     push:
         branches-ignore:
-            - 'classic*'
+            - classic*
     # pull_request:
     #   branches:
     #   - nebular*
@@ -19,7 +20,7 @@ jobs:
         steps:
             - uses: actions/checkout@v3
 
-            - name: 'install dependencies'
+            - name: install dependencies
               run: |
                   # git status
                   # sudo apt-get update
@@ -28,30 +29,30 @@ jobs:
                   # sudo apt install -y openmpi-bin libopenmpi-dev
                   sudo apt-get -y install cppcheck
 
-            - name: 'run cppcheck'
+            - name: run cppcheck
               run: |
                   cp artisoptions_nltenebular.h artisoptions.h
                   cppcheck --force --language=c++ --std=c++17 .
 
     compile_clang:
-        name: 'Compile with Clang'
+        name: Compile with Clang
         runs-on: ubuntu-latest
 
         steps:
             - uses: actions/checkout@v3
 
-            - name: 'install dependencies'
+            - name: install dependencies
               run: |
                   git status
                   sudo apt-get install libgsl-dev
 
-            - name: 'CPU count'
+            - name: CPU count
               id: cpu-count
               run: |
                   # echo "::set-output name=count::$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')"
                   echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
 
-            - name: 'compile with clang (no MPI)'
+            - name: compile with clang (no MPI)
               run: |
                   which clang++
                   clang++ --version
@@ -64,19 +65,19 @@ jobs:
                   make CXX=clang++ MPI=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
 
     compile_gcc_openmpi:
-        name: 'Compile with GCC and OpenMPI'
+        name: Compile with GCC and OpenMPI
         runs-on: ubuntu-latest
 
         steps:
             - uses: actions/checkout@v3
 
-            - name: 'install dependencies'
+            - name: install dependencies
               run: |
                   git status
                   sudo apt-get install libgsl-dev
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
-            - name: 'CPU count'
+            - name: CPU count
               id: cpu-count
               run: |
                   # echo "::set-output name=count::$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')"
@@ -88,7 +89,7 @@ jobs:
             #     g++ --version
             #     make CXX=g++ clean sn3d exspec
 
-            - name: 'compile with GCC (OpenMPI)'
+            - name: compile with GCC (OpenMPI)
               run: |
                   which mpicxx
                   mpicxx --version
@@ -103,11 +104,11 @@ jobs:
         strategy:
             matrix:
                 # os: ['ubuntu-latest', 'self-hosted']
-                os: ['ubuntu-latest']
-                testmode: ['OFF', 'ON']
+                os: [ubuntu-latest]
+                testmode: [OFF, ON]
                 exclude:
                     - os: self-hosted
-                      testmode: 'ON'
+                      testmode: ON
 
         runs-on: ${{ matrix.os }}
         name: test_nebularonezone testmode ${{ matrix.testmode }}
@@ -115,7 +116,7 @@ jobs:
         steps:
             - uses: actions/checkout@v3
 
-            - name: 'install dependencies'
+            - name: install dependencies
               if: matrix.os != 'selfhosted'
               run: |
                   git status
@@ -124,7 +125,7 @@ jobs:
                   # sudo apt-get install clang
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
-            - name: 'CPU count'
+            - name: CPU count
               id: cpu-count
               run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
 
@@ -140,7 +141,7 @@ jobs:
               uses: actions/cache@v3
               id: cache-testatomicdata
               with:
-                  path: 'tests/atomicdata_feconi.tar.xz'
+                  path: tests/atomicdata_feconi.tar.xz
                   key: tests/atomicdata_feconi.tar.xz
 
             - name: Download/extract test data
@@ -148,7 +149,7 @@ jobs:
               run: |
                   source ./setup_nebularonezone.sh
 
-            - name: 'Setup test nebularonezone'
+            - name: Setup test nebularonezone
               run: |
                   cp tests/nebularonezone_testrun/artisoptions.h .
                   cat artisoptions.h
@@ -157,7 +158,7 @@ jobs:
                   cp sn3d tests/nebularonezone_testrun/
                   cp exspec tests/nebularonezone_testrun/
 
-            - name: 'Run nebularonezone test job0 start'
+            - name: Run nebularonezone test job0 start
               if: always()
               working-directory: tests/nebularonezone_testrun/
               run: |
@@ -167,12 +168,12 @@ jobs:
                   mkdir job0
                   ../../scripts/movefiles.sh job0
 
-            - name: 'cat job0 estimators'
+            - name: cat job0 estimators
               if: always()
               working-directory: tests/nebularonezone_testrun/job0/
               run: cat estimators*.out
 
-            - name: 'cat job0 output log'
+            - name: cat job0 output log
               if: always()
               working-directory: tests/nebularonezone_testrun/job0/
               run: cat output_0-0.txt
@@ -184,7 +185,7 @@ jobs:
                   md5sum *.out job0/*.out
                   md5sum -c results_md5_job0.txt
 
-            - name: 'Run nebularonezone test job1 resume'
+            - name: Run nebularonezone test job1 resume
               if: always()
               working-directory: tests/nebularonezone_testrun/
               run: |
@@ -193,17 +194,17 @@ jobs:
                   mkdir job1
                   ../../scripts/movefiles.sh job1
 
-            - name: 'cat job1 estimators'
+            - name: cat job1 estimators
               if: always()
               working-directory: tests/nebularonezone_testrun/job1/
               run: cat estimators*.out
 
-            - name: 'cat job1 output log'
+            - name: cat job1 output log
               if: always()
               working-directory: tests/nebularonezone_testrun/job1/
               run: cat output_0-0.txt
 
-            - name: 'Run exspec'
+            - name: Run exspec
               if: always()
               working-directory: tests/nebularonezone_testrun/
               run: |
@@ -213,7 +214,7 @@ jobs:
                   rsync -av job0 output/
                   rsync -av job1 output/
 
-            - name: 'cat exspec log'
+            - name: cat exspec log
               if: always()
               working-directory: tests/nebularonezone_testrun/output/
               run: |
@@ -245,7 +246,7 @@ jobs:
               uses: actions/setup-python@v3
               with:
                   python-version: '3.10'
-                  cache: 'pip'
+                  cache: pip
 
             - name: Install artistools
               if: always()
@@ -274,11 +275,11 @@ jobs:
         strategy:
             matrix:
                 # os: ['ubuntu-latest', 'self-hosted']
-                os: ['ubuntu-latest']
-                testmode: ['OFF', 'ON']
+                os: [ubuntu-latest]
+                testmode: [OFF, ON]
                 exclude:
                     - os: self-hosted
-                      testmode: 'ON'
+                      testmode: ON
 
         runs-on: ${{ matrix.os }}
         name: test_classicmode testmode ${{ matrix.testmode }}
@@ -286,7 +287,7 @@ jobs:
         steps:
             - uses: actions/checkout@v3
 
-            - name: 'install dependencies'
+            - name: install dependencies
               if: matrix.os != 'selfhosted'
               run: |
                   git status
@@ -295,7 +296,7 @@ jobs:
                   # sudo apt-get install clang
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
-            - name: 'CPU count'
+            - name: CPU count
               id: cpu-count
               run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
 
@@ -303,14 +304,14 @@ jobs:
             - name: Cache ratecoeff.dat
               uses: actions/cache@v3
               with:
-                  path: 'tests/classicmode_testrun/ratecoeff.dat'
-                  key: 'tests/classicmode_testrun/ratecoeff.dat'
+                  path: tests/classicmode_testrun/ratecoeff.dat
+                  key: tests/classicmode_testrun/ratecoeff.dat
 
             - name: Cache test atomic data
               uses: actions/cache@v3
               id: cache-testatomicdata
               with:
-                  path: 'tests/atomicdata_feconi.tar.xz'
+                  path: tests/atomicdata_feconi.tar.xz
                   key: tests/atomicdata_feconi.tar.xz
 
             - name: Download/extract test data
@@ -318,7 +319,7 @@ jobs:
               run: |
                   source ./setup_classicmode.sh
 
-            - name: 'Setup test classicmode'
+            - name: Setup test classicmode
               run: |
                   cp tests/classicmode_testrun/artisoptions.h .
                   cat artisoptions.h
@@ -327,7 +328,7 @@ jobs:
                   cp sn3d tests/classicmode_testrun/
                   cp exspec tests/classicmode_testrun/
 
-            - name: 'Run classicmode test job0 start'
+            - name: Run classicmode test job0 start
               if: always()
               working-directory: tests/classicmode_testrun/
               run: |
@@ -337,12 +338,12 @@ jobs:
                   mkdir job0
                   ../../scripts/movefiles.sh job0
 
-            - name: 'cat job0 estimators'
+            - name: cat job0 estimators
               if: always()
               working-directory: tests/classicmode_testrun/job0/
               run: cat estimators*.out
 
-            - name: 'cat job0 output log'
+            - name: cat job0 output log
               if: always()
               working-directory: tests/classicmode_testrun/job0/
               run: cat output_0-0.txt
@@ -354,7 +355,7 @@ jobs:
                   md5sum *.out job0/*.out
                   md5sum -c results_md5_job0.txt
 
-            - name: 'Run classicmode test job1 resume'
+            - name: Run classicmode test job1 resume
               if: always()
               working-directory: tests/classicmode_testrun/
               run: |
@@ -363,17 +364,17 @@ jobs:
                   mkdir job1
                   ../../scripts/movefiles.sh job1
 
-            - name: 'cat job1 estimators'
+            - name: cat job1 estimators
               if: always()
               working-directory: tests/classicmode_testrun/job1/
               run: cat estimators*.out
 
-            - name: 'cat job1 output log'
+            - name: cat job1 output log
               if: always()
               working-directory: tests/classicmode_testrun/job1/
               run: cat output_0-0.txt
 
-            - name: 'Run exspec'
+            - name: Run exspec
               if: always()
               working-directory: tests/classicmode_testrun/
               run: |
@@ -383,7 +384,7 @@ jobs:
                   rsync -av job0 output/
                   rsync -av job1 output/
 
-            - name: 'cat exspec log'
+            - name: cat exspec log
               if: always()
               working-directory: tests/classicmode_testrun/output/
               run: |
@@ -415,7 +416,7 @@ jobs:
               uses: actions/setup-python@v3
               with:
                   python-version: '3.10'
-                  cache: 'pip'
+                  cache: pip
 
             - name: Install artistools
               if: always()

@@ -5,4 +5,4 @@
 
 void escat_rpkt(PKT *pkt_ptr);
 
-#endif //POLARIZATION_H
+#endif  // POLARIZATION_H

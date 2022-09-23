@@ -9,4 +9,4 @@ void do_gamma(PKT *pkt_ptr, double t2);
 double get_gam_freq(int n);
 int get_nul(double freq);
 
-#endif //GAMMA_H
+#endif  // GAMMA_H
