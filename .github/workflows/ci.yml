@@ -141,10 +141,10 @@ jobs:
                   git status
                   # sudo apt-get update
                   sudo apt-get install -y gcc-11 g++-11
-                  # sudo apt-get install clang
                   sudo apt-get install -y libgsl-dev
                   sudo apt install -y openmpi-bin libopenmpi-dev
-                  export OMPI_CXX=g++-11
+                  sudo apt-get install -y clang-12 --install-suggests
+                  export OMPI_CXX=clang++
 
             - name: CPU count
               id: cpu-count
