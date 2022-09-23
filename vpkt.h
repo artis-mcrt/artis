@@ -18,7 +18,7 @@ void read_parameterfile_vpkt(void);
 void write_vspecpol(FILE *specpol_file);
 void read_vspecpol(int my_rank, int nts);
 void init_vpkt_grid(void);
-void add_to_vpkt_grid(struct packet *dummy_ptr, double *vel, int bin_range, int bin, double *obs);
+void add_to_vpkt_grid(struct packet *dummy_ptr, const double *vel, int bin_range, int bin, const double *obs);
 void write_vpkt_grid(FILE *vpkt_grid_file);
 void read_vpkt_grid(FILE *vpkt_grid_file);
 int check_tau(double *tau, double *tau_max);

@@ -512,29 +512,32 @@ void read_vspecpol(int my_rank, int nts) {
     }
 
     // Initialise I,Q,U fluxes (from temporary files)
-    fscanf(vspecpol_file, "%g ", &a);
+    assert_always(fscanf(vspecpol_file, "%g ", &a) == 1);
 
     for (int l = 0; l < 3; l++) {
       for (int p = 0; p < VMTBINS; p++) {
-        fscanf(vspecpol_file, "%g ", &b);
+        assert_always(fscanf(vspecpol_file, "%g ", &b) == 1);
       }
     }
 
-    fscanf(vspecpol_file, "\n");
+    assert_always(fscanf(vspecpol_file, "\n") == 0);
 
     for (int j = 0; j < VMNUBINS; j++) {
-      fscanf(vspecpol_file, "%g ", &c);
+      assert_always(fscanf(vspecpol_file, "%g ", &c) == 1);
 
       // Stokes I
-      for (int p = 0; p < VMTBINS; p++) fscanf(vspecpol_file, "%lg ", &vstokes_i[p][ind_comb].flux[j]);
+      for (int p = 0; p < VMTBINS; p++)
+        assert_always(fscanf(vspecpol_file, "%lg ", &vstokes_i[p][ind_comb].flux[j]) == 1);
 
       // Stokes Q
-      for (int p = 0; p < VMTBINS; p++) fscanf(vspecpol_file, "%lg ", &vstokes_q[p][ind_comb].flux[j]);
+      for (int p = 0; p < VMTBINS; p++)
+        assert_always(fscanf(vspecpol_file, "%lg ", &vstokes_q[p][ind_comb].flux[j]) == 1);
 
       // Stokes U
-      for (int p = 0; p < VMTBINS; p++) fscanf(vspecpol_file, "%lg ", &vstokes_u[p][ind_comb].flux[j]);
+      for (int p = 0; p < VMTBINS; p++)
+        assert_always(fscanf(vspecpol_file, "%lg ", &vstokes_u[p][ind_comb].flux[j]) == 1);
 
-      fscanf(vspecpol_file, "\n");
+      assert_always(fscanf(vspecpol_file, "\n") == 0);
     }
   }
 
@@ -548,19 +551,19 @@ void init_vpkt_grid(void) {
   for (int n = 0; n < NY_VGRID; n++) {
     for (int m = 0; m < NZ_VGRID; m++) {
       for (int bin_range = 0; bin_range < MRANGE_GRID; bin_range++) {
-        vgrid_i[n][m].flux[bin_range] = (double *)malloc(Nobs * sizeof(double));
-        vgrid_i[n][m].yvel[bin_range] = (double *)malloc(Nobs * sizeof(double));
-        vgrid_i[n][m].zvel[bin_range] = (double *)malloc(Nobs * sizeof(double));
+        vgrid_i[n][m].flux[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
+        vgrid_i[n][m].yvel[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
+        vgrid_i[n][m].zvel[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
 
-        vgrid_q[n][m].flux[bin_range] = (double *)malloc(Nobs * sizeof(double));
-        vgrid_q[n][m].yvel[bin_range] = (double *)malloc(Nobs * sizeof(double));
-        vgrid_q[n][m].zvel[bin_range] = (double *)malloc(Nobs * sizeof(double));
+        vgrid_q[n][m].flux[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
+        vgrid_q[n][m].yvel[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
+        vgrid_q[n][m].zvel[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
 
-        vgrid_u[n][m].flux[bin_range] = (double *)malloc(Nobs * sizeof(double));
-        vgrid_u[n][m].yvel[bin_range] = (double *)malloc(Nobs * sizeof(double));
-        vgrid_u[n][m].zvel[bin_range] = (double *)malloc(Nobs * sizeof(double));
+        vgrid_u[n][m].flux[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
+        vgrid_u[n][m].yvel[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
+        vgrid_u[n][m].zvel[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
 
-        vgrid_i[n][m].flux[bin_range] = (double *)malloc(Nobs * sizeof(double));
+        vgrid_i[n][m].flux[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
         for (int bin = 0; bin < Nobs; bin++) {
           vgrid_i[n][m].flux[bin_range][bin] = 0.0;
           vgrid_q[n][m].flux[bin_range][bin] = 0.0;
@@ -575,17 +578,14 @@ void init_vpkt_grid(void) {
 }
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vpkt_grid(struct packet *dummy_ptr, double *vel, int bin_range, int bin, double *obs) {
+void add_to_vpkt_grid(struct packet *dummy_ptr, const double *vel, int bin_range, int bin, const double *obs) {
   double vref1, vref2;
-  double ybin, zbin;
-  double nx, ny, nz;
-  int nt, mt;
 
   // Observer orientation
 
-  nx = obs[0];
-  ny = obs[1];
-  nz = obs[2];
+  const double nx = obs[0];
+  const double ny = obs[1];
+  const double nz = obs[2];
 
   // Packet velocity
 
@@ -611,12 +611,12 @@ void add_to_vpkt_grid(struct packet *dummy_ptr, double *vel, int bin_range, int 
   if (fabs(vref1) >= globals::vmax || fabs(vref2) >= globals::vmax) return;
 
   // Bin size
-  ybin = 2 * globals::vmax / NY_VGRID;
-  zbin = 2 * globals::vmax / NZ_VGRID;
+  const double ybin = 2 * globals::vmax / NY_VGRID;
+  const double zbin = 2 * globals::vmax / NZ_VGRID;
 
   // Grid cell
-  nt = (globals::vmax - vref1) / ybin;
-  mt = (globals::vmax - vref2) / zbin;
+  const int nt = (globals::vmax - vref1) / ybin;
+  const int mt = (globals::vmax - vref2) / zbin;
 
   // Add contribution
   if (dummy_ptr->nu_rf > nu_grid_min[bin_range] && dummy_ptr->nu_rf < nu_grid_max[bin_range]) {
@@ -650,14 +650,14 @@ void read_vpkt_grid(FILE *vpkt_grid_file) {
     for (int bin_range = 0; bin_range < Nrange_grid; bin_range++) {
       for (int n = 0; n < NY_VGRID; n++) {
         for (int m = 0; m < NZ_VGRID; m++) {
-          fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].yvel[bin_range][bin]);
-          fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].zvel[bin_range][bin]);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].yvel[bin_range][bin]) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].zvel[bin_range][bin]) == 1);
 
-          fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].flux[bin_range][bin]);
-          fscanf(vpkt_grid_file, "%lg ", &vgrid_q[n][m].flux[bin_range][bin]);
-          fscanf(vpkt_grid_file, "%lg ", &vgrid_u[n][m].flux[bin_range][bin]);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].flux[bin_range][bin]) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_q[n][m].flux[bin_range][bin]) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_u[n][m].flux[bin_range][bin]) == 1);
 
-          fscanf(vpkt_grid_file, "\n");
+          assert_always(fscanf(vpkt_grid_file, "\n") == 0);
         }
       }
     }
@@ -675,11 +675,11 @@ void read_parameterfile_vpkt(void) {
   // nz_obs_vpkt. Cos(theta) to the observer. A list in the case of many observers
   nz_obs_vpkt = static_cast<double *>(malloc(Nobs * sizeof(double)));
   for (int i = 0; i < Nobs; i++) {
-    fscanf(input_file, "%lg", &nz_obs_vpkt[i]);
+    assert_always(fscanf(input_file, "%lg", &nz_obs_vpkt[i]) == 1);
 
     if (fabs(nz_obs_vpkt[i]) > 1) {
-      printout("Wrong observer direction \n");
-      exit(0);
+      printout("Wrong observer direction\n");
+      abort();
     } else if (nz_obs_vpkt[i] == 1) {
       nz_obs_vpkt[i] = 0.9999;
     } else if (nz_obs_vpkt[i] == -1) {
