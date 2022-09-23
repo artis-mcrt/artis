@@ -111,7 +111,7 @@ jobs:
 
             - name: Set compiler environment variables (MPI off)
               if: matrix.mpi == 'OFF'
-              run: echo "CXX=${{ matrix.compiler.cmd }}"" >> $GITHUB_ENV
+              run: echo "CXX=${{ matrix.compiler.cmd }}" >> $GITHUB_ENV
 
             - name: Set compiler environment variables (MPI on)
               if: matrix.mpi == 'ON'
