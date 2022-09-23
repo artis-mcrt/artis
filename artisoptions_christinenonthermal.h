@@ -48,7 +48,7 @@ constexpr bool single_ground_level = false;  // if false, read from file or auto
 #define UNIFORM_PELLET_ENERGIES true
 
 #define DIRECT_COL_HEAT
-//#define NO_INITIAL_PACKETS
+// #define NO_INITIAL_PACKETS
 #define RECORD_LINESTAT
 
 // allows non-zero energy density at time t_model using q column in model.txt
