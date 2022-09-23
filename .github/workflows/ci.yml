@@ -271,14 +271,14 @@ jobs:
                   path: tests/${{ matrix.testname }}_testrun/output
 
             - name: Set up Python
-              if: always() && matrix.os != 'selfhosted'
+              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
               uses: actions/setup-python@v3
               with:
                   python-version: '3.10'
                   cache: pip
 
             - name: Install artistools
-              if: always()
+              if: always() && matrix.testmode == 'OFF'
               run: |
                   python3 -m pip install --upgrade pip
                   python3 -m pip install artistools
@@ -287,14 +287,14 @@ jobs:
                   python3 -m pip list --format=freeze --outdated | cut -d '=' -f1 | xargs -n1 python3 -m pip install --upgrade
 
             - name: Plot output
-              if: always() && matrix.testname == 'nebularonezone'
+              if: always() && matrix.testname == 'nebularonezone' && matrix.testmode == 'OFF'
               working-directory: tests/
               run: |
                   python3 -m artistools.lightcurve ${{ matrix.testname }}_testrun
                   python3 -m artistools.spectra -ts 8 ${{ matrix.testname }}_testrun
 
             - name: Plot output
-              if: always() && matrix.testname == 'classicmode'
+              if: always() && matrix.testname == 'classicmode' && matrix.testmode == 'OFF'
               working-directory: tests/
               run: |
                   python3 -m artistools.lightcurve ${{ matrix.testname }}_testrun
