@@ -20,8 +20,6 @@ ifeq ($(SYSNAME),Darwin)
 		CXXFLAGS += -march=native
 	endif
 
-	CXXFLAGS += -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing
-
 	# CXXFLAGS += -fopenmp-simd
 	# CXXFLAGS += -fvectorize
 
@@ -60,6 +58,7 @@ else
 
 	CXXFLAGS += -std=c++17 -march=native
 	# CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
+
 endif
 
 
@@ -86,6 +85,8 @@ else
 	# skip array range checking for better performance and use optimizations
 	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3 -flto
 endif
+
+CXXFLAGS += -Winline -Wall -Wextra -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing
 
 ifeq ($(MPI),ON)
 else ifeq ($(MPI),OFF)
