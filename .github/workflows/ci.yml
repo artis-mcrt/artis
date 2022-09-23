@@ -141,9 +141,9 @@ jobs:
                   git status
                   sudo apt-get update
                   # sudo apt-get install -y gcc-11 g++-11
+                  sudo apt-get install -y clang-12 --install-suggests
                   sudo apt-get install -y libgsl-dev
                   sudo apt install -y openmpi-bin libopenmpi-dev
-                  sudo apt-get install -y clang-12 --install-suggests
                   export OMPI_CXX=clang++
 
             - name: CPU count
@@ -178,6 +178,7 @@ jobs:
 
             - name: Compile
               run: |
+                  export OMPI_CXX=clang++
                   mpicxx --version
                   make clean
                   make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
