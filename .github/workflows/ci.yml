@@ -111,7 +111,8 @@ jobs:
             - name: compile
               run: |
                   for aofile in artisoptions_*.h; do
-                    cp $aofile artisoptions.h
+                    echo $aofile
+                    cp -v $aofile artisoptions.h
                     make clean
                     make MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
                   done
@@ -281,14 +282,14 @@ jobs:
                   python3 -m pip list --format=freeze --outdated | cut -d '=' -f1 | xargs -n1 python3 -m pip install --upgrade
 
             - name: Plot output
-              if: matrix.testname == 'nebularonezone'
+              if: always() && matrix.testname == 'nebularonezone'
               working-directory: tests/
               run: |
                   python3 -m artistools.lightcurve ${{ matrix.testname }}_testrun
                   python3 -m artistools.spectra -ts 8 ${{ matrix.testname }}_testrun
 
             - name: Plot output
-              if: matrix.testname == 'classicmode'
+              if: always() && matrix.testname == 'classicmode'
               working-directory: tests/
               run: |
                   python3 -m artistools.lightcurve ${{ matrix.testname }}_testrun
