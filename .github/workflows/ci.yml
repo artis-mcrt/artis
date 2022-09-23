@@ -80,7 +80,7 @@ jobs:
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
             - name: install openmpi
-              if: matrix.mpi == 'ON' and matrix.compiler != 'intel'
+              if: matrix.mpi == 'ON' && matrix.compiler != 'intel'
               run: |
                   sudo apt install -y openmpi-bin libopenmpi-dev
                   CXX=mpicxx
