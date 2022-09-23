@@ -64,8 +64,8 @@ jobs:
                   # echo "::set-output name=count::$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')"
                   echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
 
-            - name: install gsl
-              run: sudo apt-get install libgsl-dev
+            - name: Install clang
+              if: matrix.compiler.name == 'clang' sudo apt-get install -t clang-15 --install-suggests
 
             - name: Install Intel oneAPI
               if: matrix.compiler.name == 'intel'
@@ -85,19 +85,20 @@ jobs:
                   sudo apt install -y openmpi-bin libopenmpi-dev
                   CXX=mpicxx
 
+            - name: install gsl
+              run: sudo apt-get install libgsl-dev
+
             - name: Set compiler
               if: matrix.mpi == 'OFF'
               run: |
-                  which ${{ matrix.compiler.cmd }}
-                  ${{ matrix.compiler.cmd }} --version
                   export CXX=${{ matrix.compiler.cmd }}
+                  ${{ matrix.compiler.cmd }} --version
 
             - name: Set MPI compiler
               if: matrix.mpi == 'ON'
               run: |
-                  which mpicxx
-                  mpicxx --version
                   export OMPI_CXX=${{ matrix.compiler.cmd }}
+                  mpicxx --version
 
             - name: compile
               run: |
@@ -120,7 +121,7 @@ jobs:
             fail-fast: false
 
         runs-on: ${{ matrix.os }}
-        name: ${{ matrix.testname }} testmode ${{ matrix.testmode }}
+        name: ${{ matrix.testname }} MPI ON testmode ${{ matrix.testmode }}
 
         steps:
             - uses: actions/checkout@v3
