@@ -76,9 +76,14 @@ jobs:
               run: |
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
-            - name: compile cp artisoptions_nltenebular.h artisoptions.h make clean make CXX=clang++ MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count
-                  }} sn3d exspec make clean cp artisoptions_classic.h artisoptions.h make CXX=clang++ MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count
-                  }} sn3d exspec
+            - name: compile
+              run: |
+                  cp artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  make MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make clean
+                  cp artisoptions_classic.h artisoptions.h
+                  make CXX=clang++ MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
     compile_clang:
         name: Compile with Clang
