@@ -50,115 +50,23 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                compiler: [gcc, clang]
+                compiler: [{name: gcc, cmd: g++}, {name: clang, cmd: clang++}, {name: intel, cmd: icpc}]
                 mpi: [ON, OFF]
-        name: Compile ${{ matrix.compiler }} MPI ${{ matrix.mpi }}}
+
+        name: Compile ${{ matrix.compiler.name }} MPI ${{ matrix.mpi }}
         steps:
             - uses: actions/checkout@v3
+
+            - name: CPU count
+              id: cpu-count
+              run: |
+                  # echo "::set-output name=count::$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')"
+                  echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
+
             - name: install gsl
               run: sudo apt-get install libgsl-dev
-            - name: setup clang
-              if: matrix.compiler == 'clang'
-              run: |
-                  which clang++
-                  clang++ --version
-                  export CXX=clang++
 
-            - name: setup GCC
-              if: matrix.compiler == 'gcc'
-              run: |
-                  which g++
-                  g++ --version
-                  export CXX=g++
-
-            - name: install openmpi
-              if: matrix.mpi == 'ON'
-              run: |
-                  sudo apt install -y openmpi-bin libopenmpi-dev
-
-            - name: compile
-              run: |
-                  cp artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
-                  make clean
-                  cp artisoptions_classic.h artisoptions.h
-                  make CXX=clang++ MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
-
-    compile_clang:
-        name: Compile with Clang
-        runs-on: ubuntu-latest
-
-        steps:
-            - uses: actions/checkout@v3
-
-            - name: install dependencies
-              run: |
-                  git status
-                  sudo apt-get install libgsl-dev
-
-            - name: CPU count
-              id: cpu-count
-              run: |
-                  # echo "::set-output name=count::$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')"
-                  echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
-
-            - name: compile with clang (no MPI)
-              run: |
-                  which clang++
-                  clang++ --version
-                  export CXX=clang++
-                  cp artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make CXX=clang++ MPI=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
-                  make clean
-                  cp artisoptions_classic.h artisoptions.h
-                  make CXX=clang++ MPI=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
-
-    compile_gcc_openmpi:
-        name: Compile with GCC and OpenMPI
-        runs-on: ubuntu-latest
-
-        steps:
-            - uses: actions/checkout@v3
-
-            - name: install dependencies
-              run: |
-                  git status
-                  sudo apt-get install libgsl-dev
-                  sudo apt install -y openmpi-bin libopenmpi-dev
-
-            - name: CPU count
-              id: cpu-count
-              run: |
-                  # echo "::set-output name=count::$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')"
-                  echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
-
-            # - name: "compile with gcc"
-            #   run: |
-            #     which g++
-            #     g++ --version
-            #     make CXX=g++ clean sn3d exspec
-
-            - name: compile with GCC (OpenMPI)
-              run: |
-                  which mpicxx
-                  mpicxx --version
-                  cp artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make -j${{ steps.cpu-count.outputs.count }} sn3d exspec
-                  cp artisoptions_classic.h artisoptions.h
-                  make clean
-                  make -j${{ steps.cpu-count.outputs.count }} sn3d exspec
-
-    compile_intel:
-        name: Compile with Intel oneAPI
-        runs-on: ubuntu-latest
-
-        steps:
-            - uses: actions/checkout@v3
-
-            - name: install dependencies
+            - name: Install Intel oneAPI
               run: |
                   wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
                   sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
@@ -171,28 +79,36 @@ jobs:
                   sudo apt-get install -y libgsl-dev
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
-            - name: CPU count
-              id: cpu-count
+            - name: install openmpi
+              if: matrix.mpi == 'ON' and matrix.compiler != 'intel'
               run: |
-                  # echo "::set-output name=count::$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')"
-                  echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
+                  sudo apt install -y openmpi-bin libopenmpi-dev
+                  CXX=mpicxx
 
-            # - name: "compile with gcc"
-            #   run: |
-            #     which g++
-            #     g++ --version
-            #     make CXX=g++ clean sn3d exspec
+            - name: Get compiler info
+              run: |
+                  which ${{ matrix.compiler.cmd }}
+                  ${{ matrix.compiler.cmd }} --version
 
-            - name: compile with Intel oneAPI
+            - name: Set compiler
+              if: matrix.mpi == 'OFF'
+              run: |
+                  export CXX=${{ matrix.compiler.cmd }}
+
+            - name: Get MPI compiler info
               run: |
                   which mpicxx
                   mpicxx --version
+                  export CXX=mpicxx
+
+            - name: compile
+              run: |
                   cp artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make -j${{ steps.cpu-count.outputs.count }} sn3d exspec
-                  cp artisoptions_classic.h artisoptions.h
+                  make MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
                   make clean
-                  make -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+                  cp artisoptions_classic.h artisoptions.h
+                  make MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
     test_nebularonezone:
         strategy:
