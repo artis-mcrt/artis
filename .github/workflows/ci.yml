@@ -102,11 +102,11 @@ jobs:
                   CXX: ${{ matrix.compiler.cmd }}
 
             - name: Set compiler environment variables (MPI on)
-              if: matrix.mpi == 'OFF'
+              if: matrix.mpi == 'ON'
               uses: allenevans/set-env@v2.0.0
               with:
                   OMPI_CXX: ${{ matrix.compiler.cmd }}
-                  CXX: MPICXX
+                  CXX: mpicxx
 
             - name: Show compiler version
               run: |
