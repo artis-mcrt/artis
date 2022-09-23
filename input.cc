@@ -1601,60 +1601,63 @@ static void setup_phixs_list(void) {
   }
 
   assert_always(allcontindex == globals::nbfcontinua);
+  assert_always(globals::nbfcontinua >= 0);  // was initialised as -1 before startup
 
-  // indicies above were temporary only. continum index should be to the sorted list
-  std::sort(globals::allcont, globals::allcont + globals::nbfcontinua);
+  if (globals::nbfcontinua > 0) {
+    // indicies above were temporary only. continum index should be to the sorted list
+    std::sort(globals::allcont, globals::allcont + globals::nbfcontinua);
 
-  globals::allcont_nu_edge = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
+    globals::allcont_nu_edge = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
 
 // copy the photoionisation tables into one contiguous block of memory
 #ifdef MPI_ON
-  float *allphixsblock;
-  MPI_Win win_allphixsblock;
-  MPI_Aint size = (globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0;
-  int disp_unit = sizeof(linelist_entry);
+    float *allphixsblock;
+    MPI_Win win_allphixsblock;
+    MPI_Aint size = (globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0;
+    int disp_unit = sizeof(linelist_entry);
 
-  MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &allphixsblock, &win_allphixsblock);
-  MPI_Win_shared_query(win_allphixsblock, MPI_PROC_NULL, &size, &disp_unit, &allphixsblock);
+    MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &allphixsblock, &win_allphixsblock);
+    MPI_Win_shared_query(win_allphixsblock, MPI_PROC_NULL, &size, &disp_unit, &allphixsblock);
 
-  MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
 #else
-  float *allphixsblock = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
+    float *allphixsblock = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
 #endif
 
-  assert_always(allphixsblock != NULL);
-  int nbftableschanged = 0;
-  for (int i = 0; i < globals::nbfcontinua; i++) {
-    globals::allcont_nu_edge[i] = globals::allcont[i].nu_edge;
+    assert_always(allphixsblock != NULL);
+    int nbftableschanged = 0;
+    for (int i = 0; i < globals::nbfcontinua; i++) {
+      globals::allcont_nu_edge[i] = globals::allcont[i].nu_edge;
 
-    const int element = globals::allcont[i].element;
-    const int ion = globals::allcont[i].ion;
-    const int level = globals::allcont[i].level;
-    const int phixstargetindex = globals::allcont[i].phixstargetindex;
+      const int element = globals::allcont[i].element;
+      const int ion = globals::allcont[i].ion;
+      const int level = globals::allcont[i].level;
+      const int phixstargetindex = globals::allcont[i].phixstargetindex;
 
-    // different targets share the same cross section table, so don't repeat this process
-    if (phixstargetindex == 0) {
-      if (globals::rank_in_node == 0) {
-        memcpy(allphixsblock, globals::elements[element].ions[ion].levels[level].photoion_xs,
-               globals::NPHIXSPOINTS * sizeof(float));
+      // different targets share the same cross section table, so don't repeat this process
+      if (phixstargetindex == 0) {
+        if (globals::rank_in_node == 0) {
+          memcpy(allphixsblock, globals::elements[element].ions[ion].levels[level].photoion_xs,
+                 globals::NPHIXSPOINTS * sizeof(float));
+        }
+
+        free(globals::elements[element].ions[ion].levels[level].photoion_xs);
+        globals::elements[element].ions[ion].levels[level].photoion_xs = allphixsblock;
+
+        allphixsblock += globals::NPHIXSPOINTS;
+        nbftableschanged++;
       }
-
-      free(globals::elements[element].ions[ion].levels[level].photoion_xs);
-      globals::elements[element].ions[ion].levels[level].photoion_xs = allphixsblock;
-
-      allphixsblock += globals::NPHIXSPOINTS;
-      nbftableschanged++;
     }
-  }
-  assert_always(nbftableschanged == nbftables);
+    assert_always(nbftableschanged == nbftables);
 #ifdef MPI_ON
-  MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
 #endif
-  for (int i = 0; i < globals::nbfcontinua; i++) {
-    const int element = globals::allcont[i].element;
-    const int ion = globals::allcont[i].ion;
-    const int level = globals::allcont[i].level;
-    globals::allcont[i].photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
+    for (int i = 0; i < globals::nbfcontinua; i++) {
+      const int element = globals::allcont[i].element;
+      const int ion = globals::allcont[i].ion;
+      const int level = globals::allcont[i].level;
+      globals::allcont[i].photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
+    }
   }
 }
 

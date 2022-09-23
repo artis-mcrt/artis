@@ -76,7 +76,7 @@ __managed__ int opacity_case;  // 0 normally, 1 for Fe-grp dependence.
 
 /// ATOMIC DATA
 
-__managed__ int nlines;
+__managed__ int nlines = -1;
 __managed__ struct elementlist_entry *elements = NULL;
 __managed__ struct linelist_entry *linelist = NULL;
 __managed__ struct bflist_t *bflist = NULL;
