@@ -70,7 +70,7 @@ jobs:
 
             - name: Install clang
               if: matrix.compiler.name == 'clang'
-              run: apt-get install -t clang-15 --install-suggests
+              run: apt-get install -y clang-15 --install-suggests
 
             - name: Install Intel oneAPI
               if: matrix.compiler.name == 'intel'
