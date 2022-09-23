@@ -121,7 +121,7 @@ jobs:
                 exclude:
                     - os: self-hosted
                       testmode: ON
-                fail-fast: false
+            fail-fast: false
 
         runs-on: ${{ matrix.os }}
         name: ${{ matrix.testname }} testmode ${{ matrix.testmode }}
