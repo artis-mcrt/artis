@@ -229,7 +229,7 @@ __host__ __device__ static void do_macroatom_raddeexcitation(struct packet *pkt_
   double rate = 0.;
   int linelistindex = -99;
   const int ndowntrans = get_ndowntrans(element, ion, level);
-  const double epsilon_current = epsilon(element, ion, level);
+  // const double epsilon_current = epsilon(element, ion, level);
   for (int i = 0; i < ndowntrans; i++) {
     // rate += get_individ_rad_deexc(modelgridindex, element, ion, level, i, t_mid, epsilon_current);
     rate += globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i];

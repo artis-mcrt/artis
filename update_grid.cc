@@ -90,7 +90,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       // const bool printdebug = false;
 
       bool assume_lte = true;
-      // bool per_gmpop = true;
+      bool per_gmpop = true;
       // const bool lower_superlevel_only = false;
 
       // if (timestep % 10 == 0)
