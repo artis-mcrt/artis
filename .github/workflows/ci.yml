@@ -68,7 +68,7 @@ jobs:
               run: sudo apt-get install libgsl-dev
 
             - name: Install Intel oneAPI
-              if: matrix.compiler.name != 'intel'
+              if: matrix.compiler.name == 'intel'
               run: |
                   wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
                   sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
@@ -287,6 +287,7 @@ jobs:
                 # os: ['ubuntu-latest', 'self-hosted']
                 os: [ubuntu-latest]
                 testmode: [OFF, ON]
+                # testname: ['classicmode', 'nebularonezone']
                 # exclude:
                 #     - os: self-hosted
                 #       testmode: ON
