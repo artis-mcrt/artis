@@ -167,10 +167,14 @@ jobs:
               run: |
                   source ./setup_${{ matrix.testname }}.sh
 
-            - name: Setup test
+            - name: cat artisoptions.h
               run: |
                   cp tests/${{ matrix.testname }}_testrun/artisoptions.h .
                   cat artisoptions.h
+
+            - name: Compile
+              run: |
+                  mpicxx --version
                   make clean
                   make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
                   cp sn3d tests/${{ matrix.testname }}_testrun/
