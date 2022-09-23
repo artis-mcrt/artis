@@ -87,11 +87,11 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         continue;
       }
 
-      const bool printdebug = false;
+      // const bool printdebug = false;
 
       bool assume_lte = true;
-      bool per_gmpop = true;
-      const bool lower_superlevel_only = false;
+      // bool per_gmpop = true;
+      // const bool lower_superlevel_only = false;
 
       // if (timestep % 10 == 0)
       // {
@@ -676,9 +676,8 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
   //   return;  // we only needed to invalidate the cell history but not setting up values from a real cell
   // }
 
-  // globals::cellhistory[tid].totalcooling = COOLING_UNDEFINED;
   //  int nlevels_with_processrates = 0;
-  const double T_e = modelgridindex >= 0 ? grid ::get_Te(modelgridindex) : 0.;
+  // const double T_e = modelgridindex >= 0 ? grid ::get_Te(modelgridindex) : 0.;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {

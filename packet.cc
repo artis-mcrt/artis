@@ -79,7 +79,7 @@ void packet_init(int my_rank, struct packet *pkt)
   decay::setup_decaypath_energy_per_mass();
 
   // Need to get a normalisation factor.
-  double cont[grid::ngrid + 1];
+  auto cont = std::make_unique<double[]>(grid::ngrid + 1);
   double norm = 0.0;
   for (int m = 0; m < grid::ngrid; m++) {
     cont[m] = norm;
