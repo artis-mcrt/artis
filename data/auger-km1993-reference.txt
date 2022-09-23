@@ -43,7 +43,7 @@ Byte-by-byte Description of file: table2
                                     (neutral=1 etc.)
    6-  7  I2     ---     s        Shell number of primary vacancy
                                     (1-7 correspond to K L1 L2 L3 M1 M2 M3)
-   8- 14  F7.1   eV      I        Ionisation energy of the primary vacancy 
+   8- 14  F7.1   eV      I        Ionisation energy of the primary vacancy
                                     in eV (from Lotz)
   15- 21  F7.1   eV      EA       Energy that goes into Auger electrons, in eV
   22- 25  I4     10-3    epsilon  Correction factor defined in equation 6 of

@@ -12,4 +12,4 @@ void nltepop_close_file(void);
 void nltepop_write_restart_data(FILE *restart_file);
 void nltepop_read_restart_data(FILE *restart_file);
 
-#endif //NLTEPOP_H
+#endif  // NLTEPOP_H

@@ -10,4 +10,4 @@ __host__ __device__ double do_kpkt_bb(PKT *pkt_ptr);
 __host__ __device__ double do_kpkt(PKT *pkt_ptr, double t2, int nts);
 __host__ __device__ int get_coolinglistoffset(int element, int ion);
 
-#endif //KPKT_H
+#endif  // KPKT_H

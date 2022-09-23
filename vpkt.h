@@ -2,8 +2,9 @@
 #define VPKT_H
 
 #include <cstdio>
-#include "types.h"
+
 #include "cuda.h"
+#include "types.h"
 
 double rot_angle(double *n1, double *n2, double *ref1, double *ref2);
 void meridian(const double *n, double *ref1, double *ref2);
@@ -48,10 +49,10 @@ __host__ __device__ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int
 extern int vgrid_flag;
 
 extern int nvpkt;
-extern int nvpkt_esc1; // electron scattering event
-extern int nvpkt_esc2; // kpkt deactivation
-extern int nvpkt_esc3; // macroatom deactivation
+extern int nvpkt_esc1;  // electron scattering event
+extern int nvpkt_esc2;  // kpkt deactivation
+extern int nvpkt_esc3;  // macroatom deactivation
 
 extern double cell_is_optically_thick_vpkt;
 
-#endif //VPKT_H
+#endif  // VPKT_H

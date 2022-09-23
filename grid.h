@@ -1,11 +1,10 @@
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
-#include "types.h"
 #include "cuda.h"
+#include "types.h"
 
-namespace grid
-{
+namespace grid {
 
 enum model_types {
   RHO_UNIFORM = 1,  // Constant density. NOT IN USE
@@ -14,9 +13,7 @@ enum model_types {
   RHO_3D_READ = 3,  // Read model 3D
 };
 
-
-typedef struct modelgrid_t
-{
+typedef struct modelgrid_t {
   float Te;
   float TR;
   float TJ;
@@ -25,24 +22,24 @@ typedef struct modelgrid_t
   float initial_radial_pos_sum;
   float rhoinit;
   float rho;
-  //modelgrid nn_tot
-  float nnetot;           // total electron density (free + bound).
+  // modelgrid nn_tot
+  float nnetot;  // total electron density (free + bound).
   float *initradioabund;
   float *initmassfracstable;
   float *elem_meanweight;
   float initelectronfrac;  // Ye: electrons (or protons) per nucleon
   float ffegrp;
   float kappagrey;
-  float grey_depth;                      /// Grey optical depth to surface of the modelgridcell
-                                         /// This is only stored to print it outside the OpenMP loop in update_grid to the estimatorsfile
-                                         /// so there is no need to communicate it via MPI so far!
-  int *elements_uppermost_ion; /// Highest ionisation stage which has a decent population for a particular element
-                                                    /// in a given cell.
-  compositionlist_entry *composition;    /// Pointer to an array which contains the time dependent abundances
-                                        /// of all included elements and all the groundlevel
-                                         /// populations and partition functions for their ions
-  double *nlte_pops;                     /// Pointer to an array that contains the nlte-level
-                                         /// populations for this cell
+  float grey_depth;  /// Grey optical depth to surface of the modelgridcell
+                     /// This is only stored to print it outside the OpenMP loop in update_grid to the estimatorsfile
+                     /// so there is no need to communicate it via MPI so far!
+  int *elements_uppermost_ion;  /// Highest ionisation stage which has a decent population for a particular element
+                                /// in a given cell.
+  compositionlist_entry *composition;  /// Pointer to an array which contains the time dependent abundances
+                                       /// of all included elements and all the groundlevel
+                                       /// populations and partition functions for their ions
+  double *nlte_pops;                   /// Pointer to an array that contains the nlte-level
+                                       /// populations for this cell
 
   double totalcooling;
   mgicooling_t *cooling;
@@ -55,7 +52,6 @@ extern __managed__ int ncoordgrid[3];
 extern __managed__ int ngrid;
 extern __managed__ int grid_type;
 extern __managed__ char coordlabel[3];
-
 
 __host__ __device__ int get_elements_uppermost_ion(const int modelgridindex, const int element);
 __host__ __device__ void set_elements_uppermost_ion(const int modelgridindex, const int element, const int newvalue);
@@ -109,6 +105,6 @@ void write_grid_restart_data(const int timestep);
 void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo_nonempty, int *maxndo);
 double get_totmassradionuclide(const int z, const int a);
 
-}
+}  // namespace grid
 
-#endif //GRIDINIT_H
+#endif  // GRIDINIT_H
