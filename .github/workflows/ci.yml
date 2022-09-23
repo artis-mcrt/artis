@@ -91,22 +91,26 @@ jobs:
               if: matrix.mpi == 'ON' && matrix.compiler.name != 'intel'
               run: |
                   sudo apt install -y openmpi-bin libopenmpi-dev
-                  CXX=mpicxx
 
             - name: install gsl
               run: sudo apt-get install libgsl-dev
 
-            - name: Set compiler
+            - name: Set compiler environment variables (MPI off)
               if: matrix.mpi == 'OFF'
-              run: |
-                  export CXX=${{ matrix.compiler.cmd }}
-                  ${{ matrix.compiler.cmd }} --version
+              uses: allenevans/set-env@v2.0.0
+              with:
+                  CXX: ${{ matrix.compiler.cmd }}
 
-            - name: Set MPI compiler
-              if: matrix.mpi == 'ON'
+            - name: Set compiler environment variables (MPI on)
+              if: matrix.mpi == 'OFF'
+              uses: allenevans/set-env@v2.0.0
+              with:
+                  OMPI_CXX: ${{ matrix.compiler.cmd }}
+                  CXX: MPICXX
+
+            - name: Show compiler version
               run: |
-                  export OMPI_CXX=${{ matrix.compiler.cmd }}
-                  mpicxx --version
+                  ${{ env.CXX }} --version
 
             - name: compile
               run: |
@@ -141,10 +145,9 @@ jobs:
                   git status
                   sudo apt-get update
                   # sudo apt-get install -y gcc-11 g++-11
-                  sudo apt-get install -y clang-12 --install-suggests
+                  # sudo apt-get install -y clang-12 --install-suggests
                   sudo apt-get install -y libgsl-dev
                   sudo apt install -y openmpi-bin libopenmpi-dev
-                  export OMPI_CXX=clang++
 
             - name: CPU count
               id: cpu-count
@@ -178,7 +181,6 @@ jobs:
 
             - name: Compile
               run: |
-                  export OMPI_CXX=clang++
                   mpicxx --version
                   make clean
                   make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
