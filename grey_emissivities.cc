@@ -175,7 +175,7 @@ void write_grey(int nts) {
     // for (n=0; n < ngrid; n++)
     for (int n = 0; n < grid::get_npts_model(); n++) {
       float dum;
-      fscanf(est_file, "%g", &dum);
+      assert_always(fscanf(est_file, "%g", &dum) == 1);
       globals::rpkt_emiss[n] += dum;
     }
     fclose(est_file);

@@ -229,7 +229,7 @@ void write_compton_estimators(int nts) {
     for (int n = 0; n < grid::get_npts_model(); n++) {
       for (int m = 0; m < globals::emiss_max; m++) {
         float dum;
-        fread(&dum, sizeof(float), 1, est_file);
+        assert_always(fread(&dum, sizeof(float), 1, est_file) == 1);
         // fscanf(est_file, "%g", &dum);
         globals::compton_emiss[n * EMISS_MAX + m] += dum;
       }
