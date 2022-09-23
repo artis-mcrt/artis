@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <fstream>
+#include <memory>
 #include <sstream>
 #include <string>
 
