@@ -96,6 +96,7 @@ jobs:
                   export CXX=${{ matrix.compiler.cmd }}
 
             - name: Get MPI compiler info
+              if: matrix.mpi == 'ON'
               run: |
                   which mpicxx
                   mpicxx --version
@@ -110,18 +111,20 @@ jobs:
                   cp artisoptions_classic.h artisoptions.h
                   make MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
-    test_nebularonezone:
+    testmodels:
         strategy:
             matrix:
                 # os: ['ubuntu-latest', 'self-hosted']
                 os: [ubuntu-latest]
                 testmode: [OFF, ON]
+                testname: [classicmode, nebularonezone]
                 exclude:
                     - os: self-hosted
                       testmode: ON
+                fail-fast: false
 
         runs-on: ${{ matrix.os }}
-        name: test_nebularonezone testmode ${{ matrix.testmode }}
+        name: ${{ matrix.testname }} testmode ${{ matrix.testmode }}
 
         steps:
             - uses: actions/checkout@v3
@@ -144,8 +147,8 @@ jobs:
             #   uses: actions/cache@v3
             #   # if: matrix.testmode != 'ON'
             #   with:
-            #     path: "tests/nebularonezone_testrun/ratecoeff.dat"
-            #     key: "tests/nebularonezone_testrun/ratecoeff.dat"
+            #     path: "tests/${{ matrix.testname }}_testrun/ratecoeff.dat"
+            #     key: "tests/${{ matrix.testname }}_testrun/ratecoeff.dat"
 
             - name: Cache test atomic data
               uses: actions/cache@v3
@@ -157,20 +160,20 @@ jobs:
             - name: Download/extract test data
               working-directory: tests/
               run: |
-                  source ./setup_nebularonezone.sh
+                  source ./setup_${{ matrix.testname }}.sh
 
-            - name: Setup test nebularonezone
+            - name: Setup test
               run: |
-                  cp tests/nebularonezone_testrun/artisoptions.h .
+                  cp tests/${{ matrix.testname }}_testrun/artisoptions.h .
                   cat artisoptions.h
                   make clean
                   make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
-                  cp sn3d tests/nebularonezone_testrun/
-                  cp exspec tests/nebularonezone_testrun/
+                  cp sn3d tests/${{ matrix.testname }}_testrun/
+                  cp exspec tests/${{ matrix.testname }}_testrun/
 
-            - name: Run nebularonezone test job0 start
+            - name: Run test job0 start
               if: always()
-              working-directory: tests/nebularonezone_testrun/
+              working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
                   cp input-newrun.txt input.txt
                   touch output_0-0.txt
@@ -178,43 +181,43 @@ jobs:
 
             - name: cat job0 estimators
               if: always()
-              working-directory: tests/nebularonezone_testrun/
+              working-directory: tests/${{ matrix.testname }}_testrun/
               run: cat estimators*.out
 
             - name: cat job0 output log
               if: always()
-              working-directory: tests/nebularonezone_testrun/
+              working-directory: tests/${{ matrix.testname }}_testrun/
               run: cat output_0-0.txt
 
             - name: Checksum job0 output files
               if: always() && matrix.os != 'selfhosted'
-              working-directory: tests/nebularonezone_testrun
+              working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   mkdir job0
                   ../../scripts/movefiles.sh job0
                   md5sum *.out job0/*.out
                   md5sum -c results_md5_job0.txt
 
-            - name: Run nebularonezone test job1 resume
+            - name: Run test job1 resume
               if: always()
-              working-directory: tests/nebularonezone_testrun/
+              working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
                   cp input-resume.txt input.txt
                   time mpirun -np 2 ./sn3d
 
             - name: cat job1 estimators
               if: always()
-              working-directory: tests/nebularonezone_testrun/
+              working-directory: tests/${{ matrix.testname }}_testrun/
               run: cat estimators*.out
 
             - name: cat job1 output log
               if: always()
-              working-directory: tests/nebularonezone_testrun/
+              working-directory: tests/${{ matrix.testname }}_testrun/
               run: cat output_0-0.txt
 
             - name: Run exspec
               if: always()
-              working-directory: tests/nebularonezone_testrun/
+              working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
                   mkdir job1
                   ../../scripts/movefiles.sh job1
@@ -222,7 +225,7 @@ jobs:
 
             - name: cat exspec log
               if: always()
-              working-directory: tests/nebularonezone_testrun/
+              working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
                   mkdir output
                   cp -r output_0-0.txt exspec.txt *.out output/
@@ -232,14 +235,14 @@ jobs:
 
             - name: Checksum output files
               if: always() && matrix.os != 'selfhosted'
-              working-directory: tests/nebularonezone_testrun
+              working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   md5sum *.out job1/*.out
                   md5sum -c results_md5_final.txt
 
             - name: Prepare for next steps
               if: always() && matrix.os != 'selfhosted'
-              working-directory: tests/nebularonezone_testrun
+              working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   touch requirements.txt
                   rm output/packets*.*
@@ -248,8 +251,8 @@ jobs:
               uses: actions/upload-artifact@v3
               if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
               with:
-                  name: test-nebularonezone-output
-                  path: tests/nebularonezone_testrun/output
+                  name: test-${{ matrix.testname }}-output
+                  path: tests/${{ matrix.testname }}_testrun/output
 
             - name: Set up Python
               if: always() && matrix.os != 'selfhosted'
@@ -268,186 +271,22 @@ jobs:
                   python3 -m pip list --format=freeze --outdated | cut -d '=' -f1 | xargs -n1 python3 -m pip install --upgrade
 
             - name: Plot output
-              if: always()
+              if: matrix.testname == 'nebularonezone'
               working-directory: tests/
               run: |
-                  python3 -m artistools.lightcurve nebularonezone_testrun
-                  python3 -m artistools.spectra -ts 8 nebularonezone_testrun
+                  python3 -m artistools.lightcurve ${{ matrix.testname }}_testrun
+                  python3 -m artistools.spectra -ts 8 ${{ matrix.testname }}_testrun
+
+            - name: Plot output
+              if: matrix.testname == 'classicmode'
+              working-directory: tests/
+              run: |
+                  python3 -m artistools.lightcurve ${{ matrix.testname }}_testrun
+                  python3 -m artistools.spectra -t 18-22 ${{ matrix.testname }}_testrun
 
             - name: Upload plot files
               if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
               uses: actions/upload-artifact@v2
               with:
-                  name: test-nebularonezone-output-pdf
-                  path: tests/*.pdf
-
-    test_classicmode:
-        strategy:
-            matrix:
-                # os: ['ubuntu-latest', 'self-hosted']
-                os: [ubuntu-latest]
-                testmode: [OFF, ON]
-                # testname: ['classicmode', 'nebularonezone']
-                # exclude:
-                #     - os: self-hosted
-                #       testmode: ON
-
-        runs-on: ${{ matrix.os }}
-        name: test_classicmode testmode ${{ matrix.testmode }}
-
-        steps:
-            - uses: actions/checkout@v3
-
-            - name: install dependencies
-              if: matrix.os != 'selfhosted'
-              run: |
-                  git status
-                  # sudo apt-get update
-                  sudo apt-get install libgsl-dev
-                  # sudo apt-get install clang
-                  sudo apt install -y openmpi-bin libopenmpi-dev
-
-            - name: CPU count
-              id: cpu-count
-              run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
-
-            # we can cache this, but then we don't test the code that generates ratecoeff.dat
-            - name: Cache ratecoeff.dat
-              uses: actions/cache@v3
-              with:
-                  path: tests/classicmode_testrun/ratecoeff.dat
-                  key: tests/classicmode_testrun/ratecoeff.dat
-
-            - name: Cache test atomic data
-              uses: actions/cache@v3
-              id: cache-testatomicdata
-              with:
-                  path: tests/atomicdata_feconi.tar.xz
-                  key: tests/atomicdata_feconi.tar.xz
-
-            - name: Download/extract test data
-              working-directory: tests/
-              run: |
-                  source ./setup_classicmode.sh
-
-            - name: Setup test classicmode
-              run: |
-                  cp tests/classicmode_testrun/artisoptions.h .
-                  cat artisoptions.h
-                  make clean
-                  make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
-                  cp sn3d tests/classicmode_testrun/
-                  cp exspec tests/classicmode_testrun/
-
-            - name: Run classicmode test job0 start
-              if: always()
-              working-directory: tests/classicmode_testrun/
-              run: |
-                  cp input-newrun.txt input.txt
-                  touch output_0-0.txt
-                  time mpirun -np 2 ./sn3d
-
-            - name: cat job0 estimators
-              if: always()
-              working-directory: tests/classicmode_testrun/
-              run: cat estimators*.out
-
-            - name: cat job0 output log
-              if: always()
-              working-directory: tests/classicmode_testrun/
-              run: cat output_0-0.txt
-
-            - name: Checksum job0 output files
-              if: always() && matrix.os != 'selfhosted'
-              working-directory: tests/classicmode_testrun
-              run: |
-                  mkdir job0
-                  ../../scripts/movefiles.sh job0
-                  md5sum *.out job0/*.out
-                  md5sum -c results_md5_job0.txt
-
-            - name: Run classicmode test job1 resume
-              if: always()
-              working-directory: tests/classicmode_testrun/
-              run: |
-                  cp input-resume.txt input.txt
-                  time mpirun -np 2 ./sn3d
-
-            - name: cat job1 estimators
-              if: always()
-              working-directory: tests/classicmode_testrun/
-              run: cat estimators*.out
-
-            - name: cat job1 output log
-              if: always()
-              working-directory: tests/classicmode_testrun/
-              run: cat output_0-0.txt
-
-            - name: Run exspec
-              if: always()
-              working-directory: tests/classicmode_testrun/
-              run: |
-                  mkdir job1
-                  ../../scripts/movefiles.sh job1
-                  time mpirun -np 1 ./exspec
-
-            - name: cat exspec log
-              if: always()
-              working-directory: tests/classicmode_testrun/
-              run: |
-                  mkdir output
-                  cp -r output_0-0.txt exspec.txt *.out output/
-                  rsync -av job0 output/
-                  rsync -av job1 output/
-                  cat exspec.txt
-
-            - name: Checksum output files
-              if: always() && matrix.os != 'selfhosted'
-              working-directory: tests/classicmode_testrun
-              run: |
-                  md5sum *.out job1/*.out
-                  md5sum -c results_md5_final.txt
-
-            - name: Prepare for next steps
-              if: always() && matrix.os != 'selfhosted'
-              working-directory: tests/classicmode_testrun
-              run: |
-                  touch requirements.txt
-                  rm */packets*.*
-
-            - name: Upload output files
-              uses: actions/upload-artifact@v3
-              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
-              with:
-                  name: test-classicmode-output
-                  path: tests/classicmode_testrun/output
-
-            - name: Set up Python
-              if: always() && matrix.os != 'selfhosted'
-              uses: actions/setup-python@v3
-              with:
-                  python-version: '3.10'
-                  cache: pip
-
-            - name: Install artistools
-              if: always()
-              run: |
-                  python3 -m pip install --upgrade pip
-                  python3 -m pip install artistools
-
-                  # upgrade all installed packages to their latest versions
-                  python3 -m pip list --format=freeze --outdated | cut -d '=' -f1 | xargs -n1 python3 -m pip install --upgrade
-
-            - name: Plot output
-              if: always()
-              working-directory: tests/
-              run: |
-                  python3 -m artistools.lightcurve classicmode_testrun
-                  python3 -m artistools.spectra -t 18-22 classicmode_testrun
-
-            - name: Upload plot files
-              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
-              uses: actions/upload-artifact@v3
-              with:
-                  name: test-classicmode-output-pdf
+                  name: test-${{ matrix.testname }}-output-pdf
                   path: tests/*.pdf
