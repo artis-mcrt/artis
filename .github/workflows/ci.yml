@@ -50,7 +50,7 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                compiler: [{name: gcc, cmd: g++-11}, {name: clang, cmd: clang++}, {name: intel, cmd: icpc}]
+                compiler: [{name: gcc, cmd: g++-11}, {name: clang, cmd: clang++}] # {name: intel, cmd: icpc}
                 mpi: [ON, OFF]
             fail-fast: false
 
