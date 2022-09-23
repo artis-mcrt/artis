@@ -388,7 +388,7 @@ static void nltepop_reset_element(const int modelgridindex, const int element) {
 }
 
 static int get_element_nlte_dimension_and_slpartfunc(const int modelgridindex, const int element, const int nions,
-                                                     std::unique_ptr<double[]> &superlevel_partfunc) {
+                                                     double *superlevel_partfunc) {
   int nlte_dimension = 0;
   for (int ion = 0; ion < nions; ion++) {
     superlevel_partfunc[ion] = 0.;
@@ -418,9 +418,8 @@ static int get_element_nlte_dimension_and_slpartfunc(const int modelgridindex, c
 }
 
 static void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, const int ion,
-                                          const double t_mid, std::unique_ptr<double[]> &s_renorm,
-                                          gsl_matrix *rate_matrix_rad_bb, gsl_matrix *rate_matrix_coll_bb,
-                                          gsl_matrix *rate_matrix_ntcoll_bb) {
+                                          const double t_mid, const double *s_renorm, gsl_matrix *rate_matrix_rad_bb,
+                                          gsl_matrix *rate_matrix_coll_bb, gsl_matrix *rate_matrix_ntcoll_bb) {
   const float T_e = grid::get_Te(modelgridindex);
   const float nne = grid::get_nne(modelgridindex);
   const int nlevels = get_nlevels(element, ion);
@@ -499,7 +498,7 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
 }
 
 static void nltepop_matrix_add_ionisation(const int modelgridindex, const int element, const int ion,
-                                          std::unique_ptr<double[]> &s_renorm, gsl_matrix *rate_matrix_rad_bf,
+                                          const double *s_renorm, gsl_matrix *rate_matrix_rad_bf,
                                           gsl_matrix *rate_matrix_coll_bf) {
   assert_always(ion + 1 < get_nions(element));  // can't ionise the top ion
   const float T_e = grid::get_Te(modelgridindex);
@@ -556,7 +555,7 @@ static void nltepop_matrix_add_ionisation(const int modelgridindex, const int el
 }
 
 static void nltepop_matrix_add_nt_ionisation(const int modelgridindex, const int element, const int ion,
-                                             std::unique_ptr<double[]> &s_renorm, gsl_matrix *rate_matrix_ntcoll_bf) {
+                                             const double *s_renorm, gsl_matrix *rate_matrix_ntcoll_bf) {
   // collisional ionization by non-thermal electrons
 
   assert_always(ion + 1 < get_nions(element));  // can't ionise the top ion
@@ -823,8 +822,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   // grid::set_W(modelgridindex,1.0);
   // printout("T_E %g T_R was %g, setting to 3000 \n",grid::get_Te(modelgridindex),get_TR(modelgridindex));
 
-  auto superlevel_partfunc =
-      std::make_unique<double[]>(nions);  // space is allocated for every ion, even if it does not have a superlevel
+  double superlevel_partfunc[nions];  // space is allocated for every ion, even if it does not have a superlevel
   const int nlte_dimension =
       get_element_nlte_dimension_and_slpartfunc(modelgridindex, element, nions, superlevel_partfunc);
 
@@ -868,8 +866,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
     const int nlevels = get_nlevels(element, ion);
     const int nlevels_nlte = get_nlevels_nlte(element, ion);
-
-    auto s_renorm = std::make_unique<double[]>(nlevels);
+    double s_renorm[nlevels];
     for (int level = 0; level <= nlevels_nlte; level++) {
       s_renorm[level] = 1.0;
     }
@@ -1183,7 +1180,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
 
     const int nlevels = get_nlevels(element, ion);
     const int nlevels_nlte = get_nlevels_nlte(element, ion);
-    auto s_renorm = std::make_unique<double[]>(nlevels);
+    double s_renorm[nlevels];
 
     for (int level = 0; level < nlevels; level++) {
       if (level == 0 || (is_nlte(element, ion, level))) {
