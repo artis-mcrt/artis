@@ -5,6 +5,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <regex>
 #include <set>
 #include <sstream>
@@ -49,9 +50,9 @@ std::vector<struct nuclide> nuclides;
 // every different path within the network is considered, e.g. 56Ni -> 56Co -> 56Fe is separate to 56Ni -> 56Co
 struct decaypath {
   int pathlength;
-  int *z;  // atomic number
-  int *a;  // mass number
-  int *decaytypes;
+  std::unique_ptr<int[]> z;  // atomic number
+  std::unique_ptr<int[]> a;  // mass number
+  std::unique_ptr<int[]> decaytypes;
 };
 
 std::vector<struct decaypath> decaypaths;
@@ -381,9 +382,9 @@ static void extend_lastdecaypath(void)
       const int lastindex = decaypaths.size() - 1;
       const int pathlength = get_decaypathlength(startdecaypathindex) + 1;
       decaypaths[lastindex].pathlength = pathlength;
-      decaypaths[lastindex].z = new int[pathlength];
-      decaypaths[lastindex].a = new int[pathlength];
-      decaypaths[lastindex].decaytypes = new int[pathlength];
+      decaypaths[lastindex].z = std::make_unique<int[]>(pathlength);
+      decaypaths[lastindex].a = std::make_unique<int[]>(pathlength);
+      decaypaths[lastindex].decaytypes = std::make_unique<int[]>(pathlength);
 
       // check for repeated nuclides, which would indicate a loop in the decay chain
       for (int i = 0; i < get_decaypathlength(startdecaypathindex); i++) {
@@ -452,10 +453,11 @@ static void find_decaypaths(void) {
 
       decaypaths.push_back({0, NULL, NULL, NULL});
       const int lastindex = decaypaths.size() - 1;
-      decaypaths[lastindex].pathlength = 1;
-      decaypaths[lastindex].z = new int[1];
-      decaypaths[lastindex].a = new int[1];
-      decaypaths[lastindex].decaytypes = new int[1];
+      constexpr int pathlength = 1;
+      decaypaths[lastindex].pathlength = pathlength;
+      decaypaths[lastindex].z = std::make_unique<int[]>(pathlength);
+      decaypaths[lastindex].a = std::make_unique<int[]>(pathlength);
+      decaypaths[lastindex].decaytypes = std::make_unique<int[]>(pathlength);
 
       decaypaths[lastindex].z[0] = z;
       decaypaths[lastindex].a[0] = a;
@@ -1434,22 +1436,6 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
   pkt_ptr->nu_cmf = nucdecayenergyparticle(z, a, decaytype) / H;
 }
 
-void cleanup(void) {
-  for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
-    if (decaypaths[decaypathindex].z != NULL) {
-      delete[] decaypaths[decaypathindex].z;
-      decaypaths[decaypathindex].z = NULL;
-    }
-    if (decaypaths[decaypathindex].a != NULL) {
-      delete[] decaypaths[decaypathindex].a;
-      decaypaths[decaypathindex].a = NULL;
-    }
-    if (decaypaths[decaypathindex].decaytypes != NULL) {
-      delete[] decaypaths[decaypathindex].decaytypes;
-      decaypaths[decaypathindex].decaytypes = NULL;
-    }
-  }
-  free_decaypath_energy_per_mass();
-}
+void cleanup(void) { free_decaypath_energy_per_mass(); }
 
 }  // namespace decay
