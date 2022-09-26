@@ -139,7 +139,7 @@ static inline void gsl_error_handler_printout(const char *reason, const char *fi
   }
 }
 
-static inline FILE *fopen_required(const char *filename, const char *mode) {
+static FILE *fopen_required(const char *filename, const char *mode) {
   FILE *file = fopen(filename, mode);
   if (file == NULL) {
     printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename, mode);
