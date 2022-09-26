@@ -38,7 +38,7 @@ extern FILE *output_file;
 static bool startofline = true;
 
 template <typename... Args>
-static inline int printout(const char *format, Args... args) {
+static int printout(const char *format, Args... args) {
   if (startofline) {
     time_t now_time = time(NULL);
     char s[32] = "";
