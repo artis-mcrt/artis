@@ -926,8 +926,8 @@ static void read_recombrate_file(void)
   while (fscanf(recombrate_file, "%d %d %d\n", &atomicnumber, &upperionstage, &tablerows) > 0) {
     // printout("%d %d %d\n", atomicnumber, upperionstage, tablerows);
 
-    struct rrc_row T_highestbelow;
-    struct rrc_row T_lowestabove;
+    struct rrc_row T_highestbelow = {0};
+    struct rrc_row T_lowestabove = {0};
     T_highestbelow.log_Te = -1;
     T_lowestabove.log_Te = -1;
     for (int i = 0; i < tablerows; i++) {
