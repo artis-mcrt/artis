@@ -1,10 +1,13 @@
 #include "packet.h"
 
+#include <algorithm>
 #include <cmath>
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "decay.h"
 #include "grid.h"
@@ -81,6 +84,7 @@ void packet_init(int my_rank, struct packet *pkt)
 
   // Need to get a normalisation factor.
   auto cont = std::make_unique<double[]>(grid::ngrid + 1);
+
   double norm = 0.0;
   for (int m = 0; m < grid::ngrid; m++) {
     cont[m] = norm;
@@ -115,48 +119,12 @@ void packet_init(int my_rank, struct packet *pkt)
 
   printout("Placing pellets...\n");
   for (int n = 0; n < globals::npkts; n++) {
-    // Get random number.
-    int mabove = grid::ngrid;
-    int mbelow = 0;
-    double zrand = gsl_rng_uniform(rng);
+    const double zrand = gsl_rng_uniform(rng);
+    const double targetval = zrand * norm;
 
-    while (mabove != (mbelow + 1)) {
-      int m;
-
-      if (mabove != (mbelow + 2))
-        m = (mabove + mbelow) / 2;
-      else
-        m = mbelow + 1;
-
-      if (cont[m] > (zrand * norm))
-        mabove = m;
-      else
-        mbelow = m;
-    }
-
-    if (cont[mbelow] > (zrand * norm)) {
-      printout("mbelow %d cont[mbelow] %g zrand*norm %g\n", mbelow, cont[mbelow], zrand * norm);
-      abort();
-    }
-    if ((cont[mabove] < (zrand * norm)) && (mabove != grid::ngrid)) {
-      printout("mabove %d cont[mabove] %g zrand*norm %g\n", mabove, cont[mabove], zrand * norm);
-      abort();
-    }
-
-    const int cellindex = mbelow;
-    // printout("chosen cell %d (%d, %g, %g)\n", m, ngrid, zrand, norm);
-    // abort();
-    /*
-    m=0;
-    double runtot = 0.0;
-    while (runtot < (zrand))
-    {
-      grid_ptr = &globals::cell[m];
-      runtot += grid_ptr->rho_init * f56ni(grid_ptr) * vol_init() / norm;
-      m++;
-    }
-    m = m - 1;
-    */
+    // first cont[i] such that targetval < cont[i] is true
+    double *upperval = std::upper_bound(&cont[0], &cont[grid::ngrid], targetval);
+    const int cellindex = std::distance(&cont[0], upperval) - 1;
 
     assert_always(cellindex < grid::ngrid);
 
