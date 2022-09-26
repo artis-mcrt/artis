@@ -149,7 +149,7 @@ static FILE *fopen_required(const char *filename, const char *mode) {
   return file;
 }
 
-static inline int get_timestep(const double time) {
+static int get_timestep(const double time) {
   assert_always(time >= globals::tmin);
   assert_always(time < globals::tmax);
   for (int nts = 0; nts < globals::ntstep; nts++) {
