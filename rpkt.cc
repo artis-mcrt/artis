@@ -339,33 +339,6 @@ __host__ __device__ static double get_event(
   return edist;
 }
 
-// todo: place next to ratecoeff.cc get_index_from_cumulativesums()
-static int upper_bound(const double arr[], int arraylen, double searchval)
-// return the index of arr such that arr[index] >= searchval, or arraylen-1
-// if searchval > arr[arraylen-1]
-{
-  int low = 0;
-  int high = arraylen;
-
-  while (low < high) {
-    // Find the middle index
-    const int mid = low + (high - low) / 2;
-
-    if (searchval >= arr[mid]) {
-      low = mid + 1;
-    } else {
-      high = mid;
-    }
-  }
-
-  // if searchval is greater than arr[arraylen - 1]
-  if (low < arraylen && arr[low] <= searchval) {
-    low++;
-  }
-
-  return low;
-}
-
 __host__ __device__ static void rpkt_event_continuum(struct packet *pkt_ptr,
                                                      struct rpkt_cont_opacity kappa_rpkt_cont_thisthread,
                                                      int modelgridindex) {
@@ -432,13 +405,9 @@ __host__ __device__ static void rpkt_event_continuum(struct packet *pkt_ptr,
     const double zrand2 = gsl_rng_uniform(rng);
     const double kappa_bf_rand = zrand2 * kappa_bf_inrest;
 
-    const int allcontindex2 = upper_bound(globals::phixslist[tid].kappa_bf_sum, globals::nbfcontinua, kappa_bf_rand);
-
     double *upperval = std::lower_bound(&globals::phixslist[tid].kappa_bf_sum[0],
-                                        &globals::phixslist[tid].kappa_bf_sum[globals::nbfcontinua], kappa_bf_rand);
+                                        &globals::phixslist[tid].kappa_bf_sum[globals::nbfcontinua - 1], kappa_bf_rand);
     const int allcontindex = std::distance(&globals::phixslist[tid].kappa_bf_sum[0], upperval);
-    printout("compare %d and %d", allcontindex, allcontindex2);
-    assert_always(allcontindex == allcontindex2);
 
     assert_always(globals::phixslist[tid].kappa_bf_sum[globals::nbfcontinua - 1] == kappa_bf_inrest);
 
