@@ -83,11 +83,11 @@ void packet_init(int my_rank, struct packet *pkt)
   decay::setup_decaypath_energy_per_mass();
 
   // Need to get a normalisation factor.
-  auto cont = std::make_unique<double[]>(grid::ngrid + 1);
+  auto en_cumulative = std::make_unique<double[]>(grid::ngrid + 1);
 
   double norm = 0.0;
   for (int m = 0; m < grid::ngrid; m++) {
-    cont[m] = norm;
+    en_cumulative[m] = norm;
     const int mgi = grid::get_cell_modelgridindex(m);
     if (mgi < grid::get_npts_model())  // some grid cells are empty
     {
@@ -101,7 +101,7 @@ void packet_init(int my_rank, struct packet *pkt)
     }
   }
   assert_always(norm > 0);
-  cont[grid::ngrid] = norm;
+  en_cumulative[grid::ngrid] = norm;
 
   const double etot = norm;
   /// So energy per pellet is
@@ -123,8 +123,8 @@ void packet_init(int my_rank, struct packet *pkt)
     const double targetval = zrand * norm;
 
     // first cont[i] such that targetval < cont[i] is true
-    double *upperval = std::upper_bound(&cont[0], &cont[grid::ngrid], targetval);
-    const int cellindex = std::distance(&cont[0], upperval) - 1;
+    double *upperval = std::upper_bound(&en_cumulative[0], &en_cumulative[grid::ngrid], targetval);
+    const int cellindex = std::distance(&en_cumulative[0], upperval) - 1;
 
     assert_always(cellindex < grid::ngrid);
 
