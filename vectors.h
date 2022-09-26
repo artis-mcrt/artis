@@ -19,7 +19,7 @@ __host__ __device__ static inline double vec_len(const double x[3])
   return std::sqrt((x[0] * x[0]) + (x[1] * x[1]) + (x[2] * x[2]));
 }
 
-__host__ __device__ inline void vec_norm(const double vec_in[3], double vec_out[3])
+__host__ __device__ static inline void vec_norm(const double vec_in[3], double vec_out[3])
 // normalizing a copy of vec_in and save it to vec_out
 {
   const double magnitude = vec_len(vec_in);
@@ -61,7 +61,7 @@ __host__ __device__ constexpr void vec_copy(double destination[3], const double 
   destination[2] = source[2];
 }
 
-__host__ __device__ inline double doppler_packet_nucmf_on_nurf(const struct packet *const pkt_ptr) {
+__host__ __device__ static inline double doppler_packet_nucmf_on_nurf(const struct packet *const pkt_ptr) {
   double flow_velocity[3];  // homologous flow velocity
   get_velocity(pkt_ptr->pos, flow_velocity, pkt_ptr->prop_time);
   return doppler_nucmf_on_nurf(pkt_ptr->dir, flow_velocity);

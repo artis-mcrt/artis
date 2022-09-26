@@ -7,9 +7,6 @@
 #include "artisoptions.h"
 #include "sn3d.h"
 
-extern __host__ __device__ inline void vec_norm(const double vec_in[3], double vec_out[3]);
-extern __host__ __device__ inline double doppler_packet_nucmf_on_nurf(const struct packet *const pkt_ptr);
-
 __host__ __device__ void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
 // aberation of angles in special relativity
 //   dir1: direction unit vector in frame1
