@@ -50,9 +50,9 @@ std::vector<struct nuclide> nuclides;
 // every different path within the network is considered, e.g. 56Ni -> 56Co -> 56Fe is separate to 56Ni -> 56Co
 struct decaypath {
   int pathlength;
-  std::unique_ptr<int[]> z;  // atomic number
-  std::unique_ptr<int[]> a;  // mass number
-  std::unique_ptr<int[]> decaytypes;
+  std::unique_ptr<int[]> z = nullptr;  // atomic number
+  std::unique_ptr<int[]> a = nullptr;  // mass number
+  std::unique_ptr<int[]> decaytypes = nullptr;
 };
 
 std::vector<struct decaypath> decaypaths;
