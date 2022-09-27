@@ -72,7 +72,7 @@ jobs:
             - name: Install clang
               if: matrix.compiler.name == 'clang'
               run: |
-                  sudo apt-get install -y clang-15 --install-suggests
+                  sudo apt-get install -y clang-14 --install-suggests
 
             - name: install openmpi
               if: matrix.mpi == 'ON'
