@@ -2,6 +2,7 @@
 
 #include <gsl/gsl_integration.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 // #define  _XOPEN_SOURCE
@@ -651,22 +652,6 @@ static void precalculate_rate_coefficient_integrals(void) {
   }
 }
 
-__host__ __device__ static int get_index_from_cumulativesums(std::unique_ptr<double[]> &partialsums, size_t listsize,
-                                                             double targetsum)
-// e.g. given a list of [0.25, 0.75, 1.00],
-// returns 0 for targetsum [0., 0.25], 1 for (0.25, 0.75], 2 for (0.75, 1.00]
-{
-  for (size_t i = 0; i < listsize; i++) {
-    assert_always((i == 0) ||
-                  partialsums[i] >= partialsums[i - 1]);  // ensure cumulative probabilties are ordered ascending
-    if (partialsums[i] >= targetsum) {
-      return i;
-    }
-  }
-  assert_always(false);
-  return -1;
-}
-
 static double get_x_at_integralfrac(gsl_function *F_integrand, double xmin, double xmax, int npieces,
                                     double targetintegralfrac)
 // find the x such that that integral f(s) ds from xmin to x is the fraction targetintegralfrac
@@ -679,7 +664,7 @@ static double get_x_at_integralfrac(gsl_function *F_integrand, double xmin, doub
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
-  auto partialsums = std::make_unique<double[]>(npieces);
+  auto partialsums = new double[npieces];
   for (int i = 0; i < npieces; i++) {
     const double xlow = xmin + i * deltax;
     const double xhigh = xmin + (i + 1) * deltax;
@@ -699,12 +684,16 @@ static double get_x_at_integralfrac(gsl_function *F_integrand, double xmin, doub
 
   const double targetintegral = targetintegralfrac * total;
 
-  const int index = get_index_from_cumulativesums(partialsums, npieces, targetintegral);
+  const double *inthighptr = std::lower_bound(&partialsums[0], &partialsums[npieces], targetintegral);
+  const int index = inthighptr - partialsums;
+  assert_always(index < npieces);
 
   const double xlow = xmin + index * deltax;
   const double xhigh = xmin + (index + 1) * deltax;
   const double intlow = index == 0 ? 0. : partialsums[index - 1];
-  const double inthigh = partialsums[index];
+  const double inthigh = *inthighptr;
+
+  delete[] partialsums;
 
   return xlow + (targetintegral - intlow) / (inthigh - intlow) * (xhigh - xlow);
 }
@@ -735,7 +724,7 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
   //    get_element(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), upperionlevel,
   //    lower, 1e8 * CLIGHT / nu_selected, 1e8 * CLIGHT / nu_threshold, nu_selected / nu_threshold, zrand);
 
-  assert_always(std::isfinite(nu_selected));
+  assert_testmodeonly(std::isfinite(nu_selected));
   return nu_selected;
 }
 
