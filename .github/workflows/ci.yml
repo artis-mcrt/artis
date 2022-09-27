@@ -15,7 +15,7 @@ env:
 
 jobs:
     cppcheck:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04
 
         steps:
             - uses: actions/checkout@v3
@@ -35,7 +35,7 @@ jobs:
                   cppcheck --force --language=c++ --std=c++17 .
 
     clang-format:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04
 
         steps:
             - uses: actions/checkout@v3
@@ -47,7 +47,7 @@ jobs:
                   check-path: .
 
     compile:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04
         strategy:
             matrix:
                 compiler: [{name: gcc, cmd: g++-11}, {name: clang, cmd: clang++}]
@@ -68,7 +68,7 @@ jobs:
             - name: Install gcc
               if: matrix.compiler.name == 'gcc'
               run: |
-                  sudo apt-get install -y gcc-11 g++-11
+                  sudo apt-get install -y gcc-12 g++-12
 
             - name: Install clang
               if: matrix.compiler.name == 'clang'
@@ -110,7 +110,7 @@ jobs:
         strategy:
             matrix:
                 # os: ['ubuntu-latest', 'self-hosted']
-                os: [ubuntu-latest]
+                os: [ubuntu-22.04]
                 testmode: [OFF, ON]
                 testname: [classicmode, nebularonezone]
                 exclude:
