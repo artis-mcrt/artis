@@ -691,7 +691,7 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
   double alpha_sp_old = 0.;
   double alpha_sp = 0.;
   int i;
-  for (i = 0; i < npieces; i++) {
+  for (i = 1; i < npieces; i++) {
     alpha_sp_old = alpha_sp;
     const double xlow = nu_threshold + i * deltanu;
 
@@ -704,13 +704,8 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
 
   gsl_set_error_handler(previous_handler);
 
-  assert_always(i < npieces);
-
-  double nu_lower = nu_threshold;
-  if (i > 0) {
-    const double nuoffset = (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu;
-    nu_lower = nu_threshold + (i - 1) * deltanu + nuoffset;
-  }
+  const double nuoffset = (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu;
+  const double nu_lower = nu_threshold + (i - 1) * deltanu + nuoffset;
 
   assert_testmodeonly(std::isfinite(nu_lower));
 
