@@ -6,19 +6,21 @@ SYSNAME := $(shell uname -s)
 
 BUILD_DIR = build/$(shell uname -m)
 
+CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto
+
 ifeq ($(SYSNAME),Darwin)
 	# macOS
 
 	# -fmodules-ts -fimplicit-modules -fimplicit-module-maps
-	CXXFLAGS += -std=c++17 -fstrict-aliasing -ftree-vectorize -flto -g
+	CXXFLAGS += -g
 
-	ifeq ($(shell uname -m),arm64)
-		CXXFLAGS += -mcpu=apple-m1
-		# march=native will work on Apple Silicon in Clang 15
-		# CXXFLAGS += -march=native
-	else
-		CXXFLAGS += -march=native
-	endif
+	# ifeq ($(shell uname -m),arm64)
+	# 	# CXXFLAGS += -mcpu=apple-m1
+	# 	# march=native will work on Apple Silicon in Clang 15
+	# 	CXXFLAGS += -march=native
+	# else
+	# 	CXXFLAGS += -march=native
+	# endif
 
 	# CXXFLAGS += -fopenmp-simd
 	# CXXFLAGS += -fvectorize
@@ -33,18 +35,6 @@ ifeq ($(SYSNAME),Darwin)
 	LDFLAGS += $(LIB)
 	# LDFLAGS += -lprofiler
 
-else ifneq (,$(findstring kelvin,$(HOSTNAME)))
-	# QUB Kelvin cluster
-	# needs
-	#  mpi/openmpi/1.8.5/gcc-4.4.7
-	#  compilers/gcc/system(default)
-	#  libs/gsl/1.16/gcc-4.4.7
-
-	CXX = mpicxx
-	CXXFLAGS += -std=c++17 -mcmodel=medium #-fopenmp=libomp
-	CXXFLAGS += -DMPI_ON
-	BUILD_DIR := $(BUILD_DIR)_mpi
-
 else ifeq ($(USER),localadmin_ccollins)
 	# CXX = c++
 	LDFLAGS= -lgsl -lgslcblas -lm -I/home/localadmin_ccollins/gsl/include
@@ -55,9 +45,6 @@ else ifeq ($(USER),localadmin_ccollins)
 	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
 
 else
-
-	CXXFLAGS += -std=c++17 -march=native
-	# CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
 
 endif
 
