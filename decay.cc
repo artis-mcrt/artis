@@ -378,7 +378,7 @@ static void extend_lastdecaypath(void)
       if (get_nuc_decaybranchprob(daughter_z, daughter_a, dectypeindex2) == 0.) {
         continue;
       }
-      decaypaths.push_back({0, NULL, NULL, NULL});
+      decaypaths.push_back({0, nullptr, nullptr, nullptr});
       const int lastindex = decaypaths.size() - 1;
       const int pathlength = get_decaypathlength(startdecaypathindex) + 1;
       decaypaths[lastindex].pathlength = pathlength;
@@ -451,7 +451,7 @@ static void find_decaypaths(void) {
         continue;
       }
 
-      decaypaths.push_back({0, NULL, NULL, NULL});
+      decaypaths.push_back({0, nullptr, nullptr, nullptr});
       const int lastindex = decaypaths.size() - 1;
       constexpr int pathlength = 1;
       decaypaths[lastindex].pathlength = pathlength;
