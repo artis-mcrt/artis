@@ -73,7 +73,7 @@ else
 	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3 -flto
 endif
 
-CXXFLAGS += -Winline -Wall -Wextra -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing
+CXXFLAGS += -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing
 
 ifeq ($(MPI),ON)
 else ifeq ($(MPI),OFF)

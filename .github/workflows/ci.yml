@@ -91,6 +91,7 @@ jobs:
               run: |
                   echo "OMPI_CXX=${{ matrix.compiler.cmd }}" >> $GITHUB_ENV
                   echo "CXX=mpicxx" >> $GITHUB_ENV
+                  mpicxx --showme:version
 
             - name: Show compiler version
               run: |
@@ -165,6 +166,7 @@ jobs:
             - name: Compile
               run: |
                   mpicxx --version
+                  mpicxx --showme:version
                   make clean
                   make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
                   cp sn3d tests/${{ matrix.testname }}_testrun/
