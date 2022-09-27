@@ -1376,6 +1376,8 @@ static void setup_cellhistory(void) {
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
         globals::cellhistory[tid].chelements[element].chions[ion].chlevels = &chlevelblock[alllevelindex];
+
+        assert_always(alllevelindex == get_uniquelevelindex(element, ion, 0));
         alllevelindex += nlevels;
 
         for (int level = 0; level < nlevels; level++) {
