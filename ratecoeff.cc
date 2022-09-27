@@ -652,52 +652,6 @@ static void precalculate_rate_coefficient_integrals(void) {
   }
 }
 
-static double get_x_at_integralfrac(gsl_function *F_integrand, double xmin, double xmax, int npieces,
-                                    double targetintegralfrac)
-// find the x such that that integral f(s) ds from xmin to x is the fraction targetintegralfrac
-// of the total integral from xmin to xmax
-// this is done by breaking the integral into npieces intervals
-{
-  const double intaccuracy = CONTINUUM_NU_INTEGRAL_ACCURACY;  /// Fractional accuracy of the integrator
-
-  const double deltax = (xmax - xmin) / npieces;
-
-  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-
-  auto partialsums = new double[npieces];
-  for (int i = 0; i < npieces; i++) {
-    const double xlow = xmin + i * deltax;
-    const double xhigh = xmin + (i + 1) * deltax;
-    // Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-    double error;
-    double piece = 0.;
-    gsl_integration_qag(F_integrand, xlow, xhigh, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &piece,
-                        &error);
-    partialsums[i] = (i == 0 ? 0 : partialsums[i - 1]) + piece;
-  }
-
-  gsl_set_error_handler(previous_handler);
-
-  const double total = partialsums[npieces - 1];
-
-  assert_always(total > 0);
-
-  const double targetintegral = targetintegralfrac * total;
-
-  const double *inthighptr = std::lower_bound(&partialsums[0], &partialsums[npieces], targetintegral);
-  const int index = inthighptr - partialsums;
-  assert_always(index < npieces);
-
-  const double xlow = xmin + index * deltax;
-  const double xhigh = xmin + (index + 1) * deltax;
-  const double intlow = index == 0 ? 0. : partialsums[index - 1];
-  const double inthigh = *inthighptr;
-
-  delete[] partialsums;
-
-  return xlow + (targetintegral - intlow) / (inthigh - intlow) * (xhigh - xlow);
-}
-
 double select_continuum_nu(int element, int lowerion, int lower, int upperionlevel, float T_e) {
   const int phixstargetindex = get_phixtargetindex(element, lowerion, lower, upperionlevel);
   const double E_threshold = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
@@ -717,15 +671,50 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
   F_alpha_sp.params = &intparas;
 
   const double zrand = 1. - gsl_rng_uniform(rng);  // Make sure that 0 < zrand <= 1
-  double nu_selected = get_x_at_integralfrac(&F_alpha_sp, nu_threshold, nu_max_phixs, npieces, zrand);
 
   // printout("emitted bf photon Z=%2d ionstage %d->%d upper %4d lower %4d lambda %7.1f lambda_edge %7.1f ratio %g zrand
   // %g\n",
   //    get_element(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), upperionlevel,
   //    lower, 1e8 * CLIGHT / nu_selected, 1e8 * CLIGHT / nu_threshold, nu_selected / nu_threshold, zrand);
 
-  assert_testmodeonly(std::isfinite(nu_selected));
-  return nu_selected;
+  constexpr double intaccuracy = CONTINUUM_NU_INTEGRAL_ACCURACY;  /// Fractional accuracy of the integrator
+
+  const double deltanu = (nu_max_phixs - nu_threshold) / npieces;
+  double error;
+
+  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+
+  double total_alpha_sp = 0.;
+  gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61,
+                      gslworkspace, &total_alpha_sp, &error);
+
+  double alpha_sp_old = 0.;
+  double alpha_sp = 0.;
+  int i;
+  for (i = 0; i < npieces; i++) {
+    alpha_sp_old = alpha_sp;
+    const double xlow = nu_threshold + i * deltanu;
+
+    // Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
+    gsl_integration_qag(&F_alpha_sp, xlow, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace,
+                        &alpha_sp, &error);
+
+    if (zrand >= alpha_sp / total_alpha_sp) break;
+  }
+
+  gsl_set_error_handler(previous_handler);
+
+  assert_always(i < npieces);
+
+  double nu_lower = nu_threshold;
+  if (i > 0) {
+    const double nuoffset = (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu;
+    nu_lower = nu_threshold + (i - 1) * deltanu + nuoffset;
+  }
+
+  assert_testmodeonly(std::isfinite(nu_lower));
+
+  return nu_lower;
 }
 
 __host__ __device__ double get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, float T_e)
