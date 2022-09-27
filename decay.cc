@@ -408,17 +408,17 @@ static void extend_lastdecaypath(void)
 static bool compare_decaypaths(const struct decaypath &d1, const struct decaypath &d2)
 // true if d1 < d2
 // order the chains in the same way as when the search moved up from the descendant
-// instead of down from the ancestor, for ease of test comparsion
+// instead of down from the ancestor, for ease of test comparison
 {
   const int smallestpathlength = std::min(d1.pathlength, d2.pathlength);
   bool matchingoverlap = true;
   for (int i = 0; i < smallestpathlength; i++) {
     const int d1pos = d1.pathlength - 1 - i;
-    assert_always(d1pos >= 0);
-    assert_always(d1pos < d1.pathlength);
+    // assert_always(d1pos >= 0);
+    // assert_always(d1pos < d1.pathlength);
     const int d2pos = d2.pathlength - 1 - i;
-    assert_always(d2pos >= 0);
-    assert_always(d2pos < d2.pathlength);
+    // assert_always(d2pos >= 0);
+    // assert_always(d2pos < d2.pathlength);
     // if (get_nuc_index(d1.z[d1pos], d1.a[d1pos]) < get_nuc_index(d2.z[d2pos], d2.a[d2pos]))
     if (d1.a[d1pos] < d2.a[d2pos]) {
       return true;
