@@ -2247,7 +2247,7 @@ void time_init(void)
   /// t=globals::tmin is the start of the calcualtion. t=globals::tmax is the end of the calculation.
   /// globals::ntstep is the number of time steps wanted.
 
-  globals::time_step = (struct time *)malloc((globals::ntstep + 1) * sizeof(struct time));
+  globals::time_step = static_cast<struct time *>(malloc((globals::ntstep + 1) * sizeof(struct time)));
 
   /// Now set the individual time steps
   switch (TIMESTEP_SIZE_METHOD) {
@@ -2337,6 +2337,10 @@ void time_init(void)
       }
       break;
     }
+
+    default:
+      assert_always(false);
+      abort();
   }
 
   // to limit the timestep durations
@@ -2356,6 +2360,12 @@ void time_init(void)
   //   }
   // }
   // assert_always(globals::time_step[0].width <= maxt); // no solution is possible with these constraints!
+
+  /// and add a dummy timestep which contains the endtime
+  /// of the calculation
+  globals::time_step[globals::ntstep].start = globals::tmax;
+  globals::time_step[globals::ntstep].mid = globals::tmax;
+  globals::time_step[globals::ntstep].width = 0.;
 
   // check consistency of start + width = start_next
   for (int n = 1; n < globals::ntstep; n++) {
@@ -2386,11 +2396,6 @@ void time_init(void)
     globals::time_step[n].cmf_lum = 0.0;
     globals::time_step[n].pellet_decays = 0;
   }
-
-  /// and add a dummy timestep which contains the endtime
-  /// of the calculation
-  globals::time_step[globals::ntstep].start = globals::tmax;
-  globals::time_step[globals::ntstep].mid = globals::tmax;
 }
 
 void write_timestep_file(void) {
