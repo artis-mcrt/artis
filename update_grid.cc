@@ -1159,7 +1159,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       const double compton_optical_depth = SIGMA_T * nne * grid::wid_init(mgi) * tratmid;
 
       double radial_pos = grid::modelgrid[mgi].initial_radial_pos_sum * tratmid / assoc_cells;
-      if (grid::grid_type == GRID_SPHERICAL1D) {
+      if (GRID_TYPE == GRID_SPHERICAL1D) {
         const double r_inner = grid::get_cellcoordmin(mgi, 0) * tratmid;
         const double r_outer = r_inner + grid::wid_init(mgi) * tratmid;
         radial_pos = 3. / 4 * (pow(r_outer, 4.) - pow(r_inner, 4.)) /

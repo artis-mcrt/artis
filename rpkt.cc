@@ -697,7 +697,7 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
 
     return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
   } else {
-    const double maxsdist = (grid::grid_type == GRID_SPHERICAL1D)
+    const double maxsdist = (GRID_TYPE == GRID_SPHERICAL1D)
                                 ? 2 * globals::rmax * (pkt_ptr->prop_time + sdist / CLIGHT_PROP) / globals::tmin
                                 : globals::rmax * pkt_ptr->prop_time / globals::tmin;
     if (sdist > maxsdist) {

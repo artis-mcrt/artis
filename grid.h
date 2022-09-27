@@ -1,6 +1,8 @@
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
+#include "artisoptions.h"
+#include "constants.h"
 #include "cuda.h"
 
 namespace grid {
@@ -62,11 +64,12 @@ struct modelgrid_t {
   short thick;
 };
 
+__host__ __device__ constexpr int get_ngriddimensions(void) { return (GRID_TYPE == GRID_SPHERICAL1D) ? 1 : 3; }
+
 extern __managed__ struct modelgrid_t *modelgrid;
 
 extern __managed__ int ncoordgrid[3];
 extern __managed__ int ngrid;
-extern __managed__ int grid_type;
 extern __managed__ char coordlabel[3];
 
 __host__ __device__ int get_elements_uppermost_ion(const int modelgridindex, const int element);
@@ -78,7 +81,6 @@ __host__ __device__ double get_cellcoordmax(const int cellindex, const int axis)
 __host__ __device__ double get_cellcoordmin(int cellindex, int axis);
 __host__ __device__ int get_cellcoordpointnum(const int cellindex, const int axis);
 __host__ __device__ int get_coordcellindexincrement(int axis);
-__host__ __device__ int get_ngriddimensions(void);
 __host__ __device__ float get_rhoinit(int modelgridindex);
 __host__ __device__ float get_rho(int modelgridindex);
 __host__ __device__ float get_nne(int modelgridindex);

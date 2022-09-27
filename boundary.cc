@@ -126,14 +126,14 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, int *sne
   double cellcoordmax[3] = {0};
   double vel[3] = {0};  // pkt_ptr->dir * CLIGHT_PROP converted to grid coordinates
 
-  if (grid::grid_type == GRID_UNIFORM) {
+  if (GRID_TYPE == GRID_UNIFORM) {
     // XYZ coordinates
     for (int d = 0; d < ndim; d++) {
       initpos[d] = pkt_ptr->pos[d];
       cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
       vel[d] = pkt_ptr->dir[d] * CLIGHT_PROP;
     }
-  } else if (grid::grid_type == GRID_SPHERICAL1D) {
+  } else if (GRID_TYPE == GRID_SPHERICAL1D) {
     // the only coordinate is radius from the origin
     initpos[0] = vec_len(pkt_ptr->pos);
     cellcoordmax[0] = grid::get_cellcoordmax(cellindex, 0);
@@ -231,7 +231,7 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, int *sne
 
   double t_coordmaxboundary[3];  // time to reach the cell's upper boundary on each coordinate
   double t_coordminboundary[3];  // likewise, the lower boundaries (smallest x,y,z or radius value in the cell)
-  if (grid::grid_type == GRID_SPHERICAL1D) {
+  if (GRID_TYPE == GRID_SPHERICAL1D) {
     last_cross = NONE;  // we will handle this separately by setting d_inner and d_outer negative for invalid directions
     const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
 

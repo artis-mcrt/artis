@@ -542,7 +542,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   int snext;
   double sdist = boundary_cross(pkt_ptr, &snext);
 
-  const double maxsdist = (grid::grid_type == GRID_SPHERICAL1D)
+  const double maxsdist = (GRID_TYPE == GRID_SPHERICAL1D)
                               ? 2 * globals::rmax * (pkt_ptr->prop_time + sdist / CLIGHT_PROP) / globals::tmin
                               : globals::rmax * pkt_ptr->prop_time / globals::tmin;
   if (sdist > maxsdist) {

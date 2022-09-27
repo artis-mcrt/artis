@@ -27,7 +27,6 @@ __managed__ struct modelgrid_t *modelgrid = NULL;
 
 __managed__ int ncoordgrid[3];  /// propagration grid dimensions
 __managed__ int ngrid;
-__managed__ int grid_type;
 __managed__ char coordlabel[3];
 
 __managed__ enum model_types model_type = RHO_1D_READ;
@@ -74,7 +73,7 @@ __host__ __device__ double wid_init(const int cellindex)
 // for spherical grid this is the radial extent (r_outer - r_inner)
 // these values are for time globals::tmin
 {
-  switch (grid_type) {
+  switch (GRID_TYPE) {
     case GRID_SPHERICAL1D: {
       const int modelgridindex = get_cell_modelgridindex(cellindex);
       const double v_inner = modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.;
@@ -90,7 +89,7 @@ __host__ __device__ double vol_init_modelcell(const int modelgridindex)
 // return the model cell volume at globals::tmin
 // for a uniform cubic grid this is constant
 {
-  switch (grid_type) {
+  switch (GRID_TYPE) {
     case GRID_SPHERICAL1D:
       return 4. / 3. * PI *
              (pow(globals::tmin * vout_model[modelgridindex], 3) -
@@ -107,7 +106,7 @@ __host__ __device__ double vol_init_gridcell(const int cellindex)
 // return the propagation cell volume at globals::tmin
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
 {
-  switch (grid_type) {
+  switch (GRID_TYPE) {
     case GRID_SPHERICAL1D: {
       const int mgi = get_cell_modelgridindex(cellindex);
       return vol_init_modelcell(mgi);
@@ -122,9 +121,9 @@ __host__ __device__ double get_cellcoordmax(const int cellindex, const int axis)
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
 {
-  if (grid::grid_type == GRID_UNIFORM) {
+  if (GRID_TYPE == GRID_UNIFORM) {
     return grid::get_cellcoordmin(cellindex, axis) + grid::wid_init(0);
-  } else if (grid::grid_type == GRID_SPHERICAL1D) {
+  } else if (GRID_TYPE == GRID_SPHERICAL1D) {
     return grid::get_cellcoordmin(cellindex, 0) + grid::wid_init(cellindex);
   } else {
     assert_always(false);
@@ -142,7 +141,7 @@ __host__ __device__ double get_cellcoordmin(const int cellindex, const int axis)
 __host__ __device__ int get_coordcellindexincrement(const int axis)
 // how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r direction)
 {
-  switch (grid_type) {
+  switch (GRID_TYPE) {
     case GRID_SPHERICAL1D:
       return 1;
 
@@ -170,7 +169,7 @@ __host__ __device__ int get_cellcoordpointnum(const int cellindex, const int axi
 {
   // return cell[cellindex].nxyz[axis];
 
-  switch (grid_type) {
+  switch (GRID_TYPE) {
     case GRID_SPHERICAL1D:
       return cellindex;
 
@@ -193,8 +192,6 @@ __host__ __device__ int get_cellcoordpointnum(const int cellindex, const int axi
       }
   }
 }
-
-__host__ __device__ int get_ngriddimensions(void) { return (grid_type == GRID_SPHERICAL1D) ? 1 : 3; }
 
 __host__ __device__ float get_rhoinit(int modelgridindex) { return modelgrid[modelgridindex].rhoinit; }
 
@@ -581,7 +578,7 @@ __host__ __device__ double get_cellradialpos(const int cellindex)
 // get the radial distance from the origin to the centre of the cell
 {
   // spherical coordinate case is trivial
-  if (grid_type == GRID_SPHERICAL1D) {
+  if (GRID_TYPE == GRID_SPHERICAL1D) {
     return get_cellcoordmin(cellindex, 0) + (0.5 * wid_init(cellindex));
   }
 
@@ -900,7 +897,7 @@ static void map_1dmodeltogrid(void)
     const double vcell = radial_pos / globals::tmin;
     const double vmin = 0.;
     if (radial_pos < globals::rmax) {
-      if (grid_type == GRID_SPHERICAL1D) {
+      if (GRID_TYPE == GRID_SPHERICAL1D) {
         set_cell_modelgridindex(cellindex, cellindex);
       } else {
         int mgi = 0;
@@ -1397,7 +1394,6 @@ static void read_3d_model(void)
   ncoordgrid[1] = ncoord_model[1];
   ncoordgrid[2] = ncoord_model[2];
   ngrid = npts_model_in;
-  grid_type = GRID_UNIFORM;
 
   double t_model_days;
   assert_always(get_noncommentline(fmodel, line));
@@ -2020,20 +2016,13 @@ void grid_init(int my_rank)
     modelgrid[n].initial_radial_pos_sum = 0;
   }
 
-/// Select grid type
-#ifdef GRID_TYPE
-  grid_type = GRID_TYPE;
-#else
-  grid_type = GRID_UNIFORM;
-#endif
-
   /// The cells will be ordered by x then y, then z. Call a routine that
   /// sets up the initial positions and widths of the cells.
   char grid_type_name[256] = "";
-  if (grid_type == GRID_UNIFORM) {
+  if (GRID_TYPE == GRID_UNIFORM) {
     uniform_grid_setup();
     strcpy(grid_type_name, "uniform cuboidal");
-  } else if (grid_type == GRID_SPHERICAL1D) {
+  } else if (GRID_TYPE == GRID_SPHERICAL1D) {
     spherical1d_grid_setup();
     strcpy(grid_type_name, "spherical");
   } else {
@@ -2061,10 +2050,10 @@ void grid_init(int my_rank)
   if (get_model_type() == RHO_1D_READ) {
     map_1dmodeltogrid();
   } else if (get_model_type() == RHO_2D_READ) {
-    assert_always(grid_type == GRID_UNIFORM);
+    assert_always(GRID_TYPE == GRID_UNIFORM);
     map_2dmodeltogrid();
   } else if (get_model_type() == RHO_3D_READ) {
-    assert_always(grid_type == GRID_UNIFORM);
+    assert_always(GRID_TYPE == GRID_UNIFORM);
     map_3dmodeltogrid();
   } else {
     printout("[fatal] grid_init: Error: Unknown density type. Abort.");

@@ -26,7 +26,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   // pkt_ptr->last_cross = NONE;
   pkt_ptr->originated_from_particlenotgamma = false;
 
-  if (grid::grid_type == GRID_SPHERICAL1D) {
+  if (GRID_TYPE == GRID_SPHERICAL1D) {
     const double zrand3 = gsl_rng_uniform(rng);
     const double r_inner = grid::get_cellcoordmin(cellindex, 0);
     const double r_outer = grid::get_cellcoordmin(cellindex, 0) + grid::wid_init(cellindex);
