@@ -429,31 +429,26 @@ __host__ __device__ static double sample_planck(const double T)
 /// distribution of temperature T
 {
   const double nu_peak = 5.879e10 * T;
-  if (nu_peak > globals::nu_max_r || nu_peak < globals::nu_min_r)
+  if (nu_peak > globals::nu_max_r || nu_peak < globals::nu_min_r) {
     printout("[warning] sample_planck: intensity peaks outside frequency range\n");
+  }
 
   const double B_peak = radfield::dbb(nu_peak, T, 1);
 
-  double nu;
-  bool endloop = false;
-  // int i = 0;
-  while (!endloop) {
-    // i++;
-    double zrand = gsl_rng_uniform(rng);
-    double zrand2 = gsl_rng_uniform(rng);
-    nu = globals::nu_min_r + zrand * (globals::nu_max_r - globals::nu_min_r);
-    if (zrand2 * B_peak <= radfield::dbb(nu, T, 1)) endloop = true;
+  while (true) {
+    const double zrand = gsl_rng_uniform(rng);
+    const double zrand2 = gsl_rng_uniform(rng);
+    const double nu = globals::nu_min_r + zrand * (globals::nu_max_r - globals::nu_min_r);
+    if (zrand2 * B_peak <= radfield::dbb(nu, T, 1)) return nu;
     // printout("[debug] sample_planck: planck_sampling %d\n", i);
   }
-
-  return nu;
 }
 
 __host__ __device__ double do_kpkt_bb(struct packet *pkt_ptr)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 {
   // double nne = globals::cell[pkt_ptr->where].nne ;
-  int cellindex = pkt_ptr->where;
+  const int cellindex = pkt_ptr->where;
   const int modelgridindex = grid::get_cell_modelgridindex(cellindex);
   const float T_e = grid::get_Te(modelgridindex);
 
@@ -465,7 +460,6 @@ __host__ __device__ double do_kpkt_bb(struct packet *pkt_ptr)
   /// and then emitt the packet randomly in the comoving frame
   emitt_rpkt(pkt_ptr);
   // printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
-  cellindex = pkt_ptr->where;
   pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
   // if (tid == 0) k_stat_to_r_bb++;
   stats::increment(stats::COUNTER_K_STAT_TO_R_BB);
