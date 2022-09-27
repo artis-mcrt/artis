@@ -688,8 +688,8 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
   gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61,
                       gslworkspace, &total_alpha_sp, &error);
 
-  double alpha_sp_old = 0.;
-  double alpha_sp = 0.;
+  double alpha_sp_old = total_alpha_sp;
+  double alpha_sp = total_alpha_sp;
 
   int i;
   for (i = 0; i < npieces; i++) {
