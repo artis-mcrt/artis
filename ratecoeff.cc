@@ -690,7 +690,7 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
 
    double alpha_sp_old = 0.;
    double alpha_sp = 0.;
-   assert_always(zrand < 1.);
+
    int i;
    for (i = 0; i < npieces; i++) {
     alpha_sp_old = alpha_sp;
