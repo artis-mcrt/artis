@@ -1065,31 +1065,34 @@ static void read_atomicdata_files(void) {
 
   printout("[info] mem_usage: transitions occupy %.3f MB\n",
            (totaluptrans + totaldowntrans) * (sizeof(int)) / 1024. / 1024.);
-  /// debug output
-  /*
-  FILE *linelist_file = fopen_required("linelist_unsorted.out", "w");
-  for (i = 0; i < nlines; i++)
-    fprintf(linelist_file,"element %d, ion %d, ionstage %d, upperindex %d, lowerindex %d, nu
-  %g\n",linelist[i].elementindex, globals::linelist[i].ionindex,
-  globals::elements[linelist[i].elementindex].ions[linelist[i].ionindex].ionstage,
-  globals::linelist[i].upperlevelindex, globals::linelist[i].lowerlevelindex, globals::linelist[i].nu);
-  fclose(linelist_file);
-  //abort();
-  */
 
   /// then sort the linelist by decreasing frequency
   if (globals::rank_in_node == 0) {
     // qsort(globals::linelist, globals::nlines, sizeof(linelist_entry), compare_linelistentry);
     std::sort(globals::linelist, globals::linelist + globals::nlines);
 
-    // clamp close lines to exact overlaps
-    // for (int i = 0; i < globals::nlines - 1; i++) {
-    //   const double nu = globals::linelist[i].nu;
-    //   const double nu_next = globals::linelist[i + 1].nu;
-    //   if (fabs(nu_next - nu) < (1.e-10 * nu)) {
-    //     globals::linelist[i + 1].nu = globals::linelist[i].nu;
-    //   }
-    // }
+    for (int i = 0; i < globals::nlines - 1; i++) {
+      const double nu = globals::linelist[i].nu;
+      const double nu_next = globals::linelist[i + 1].nu;
+      if (fabs(nu_next - nu) < (1.e-10 * nu)) {
+        auto a1 = &globals::linelist[i];
+        auto a2 = &globals::linelist[i + 1];
+
+        if ((a1->elementindex == a2->elementindex) && (a1->ionindex == a2->ionindex) &&
+            (a1->lowerlevelindex == a2->lowerlevelindex) && (a1->upperlevelindex == a2->upperlevelindex)) {
+          printout("Duplicate transition line? %s\n", a1->nu == a2->nu ? "nu match exact" : "close to nu match");
+          printout("a: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_element(a1->elementindex),
+                   get_ionstage(a1->elementindex, a1->ionindex), a1->lowerlevelindex, a1->upperlevelindex, a1->nu,
+                   1e8 * CLIGHT / a1->nu);
+          printout("b: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_element(a2->elementindex),
+                   get_ionstage(a2->elementindex, a2->ionindex), a2->lowerlevelindex, a2->upperlevelindex, a2->nu,
+                   1e8 * CLIGHT / a2->nu);
+        }
+
+        // clamp close lines to exact overlaps
+        // globals::linelist[i + 1].nu = globals::linelist[i].nu;
+      }
+    }
 
     // printout("Preventing duplicate transition lines...\n");
     // int pass = 0;
