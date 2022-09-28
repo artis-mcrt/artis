@@ -50,7 +50,7 @@ static int printout(const char *format, Args... args) {
   return fprintf(output_file, format, args...);
 }
 
-static inline int printout(const char *format) {
+static int printout(const char *format) {
   if (globals::startofline[tid]) {
     time_t now_time = time(NULL);
     char s[32] = "";
