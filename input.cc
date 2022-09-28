@@ -548,7 +548,7 @@ static struct transitiontable_entry *read_ion_transitions(std::istream &ftransit
   return transitiontable;
 }
 
-static bool operator<(const linelist_entry &a, const linelist_entry &b)
+constexpr bool operator<(const linelist_entry &a, const linelist_entry &b)
 // sort the lineline in descending frequency
 {
   return a.nu > b.nu;
