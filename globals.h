@@ -160,7 +160,7 @@ struct nne_solution_paras {
 
 struct gslintegration_paras {
   double nu_edge;
-  float T;
+  double T;
   float *photoion_xs;
 };
 

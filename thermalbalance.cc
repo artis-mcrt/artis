@@ -68,7 +68,7 @@ static double integrand_bfheatingcoeff_custom_radfield(double nu, void *voidpara
 
   const int modelgridindex = params->modelgridindex;
   const double nu_edge = params->nu_edge;
-  const float T_R = params->T_R;
+  const double T_R = params->T_R;
   // const double Te_TR_factor = params->Te_TR_factor; // = sqrt(T_e/T_R) * sahafac(Te) / sahafac(TR)
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
