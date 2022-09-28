@@ -24,11 +24,8 @@ __host__ __device__ int closest_transition(const double nu_cmf, const int next_t
 // find the next transition lineindex redder than nu_cmf
 // return -1 if no transition can be reached
 {
-  int match;
-
-  int left = next_trans;
-  int right = globals::nlines - 1;
-  int middle = 1;
+  const int left = next_trans;
+  const int right = globals::nlines - 1;
 
   /// if nu_cmf is smaller than the lowest frequency in the linelist,
   /// no line interaction is possible: return negative value as a flag
@@ -43,36 +40,25 @@ __host__ __device__ int closest_transition(const double nu_cmf, const int next_t
   if (left > 0) {
     /// if left = pkt_ptr->next_trans > 0 we know the next line we should interact with, independent of the packets
     /// current nu_cmf which might be smaller than globals::linelist[left].nu due to propagation errors
-    match = left;
+    return left;
   } else if (nu_cmf >= globals::linelist[0].nu) {
     /// if nu_cmf is larger than the highest frequency in the the linelist,
     /// interaction with the first line occurs - no search
-    match = 0;
+    return 0;
   } else {
     /// otherwise go through the list until nu_cmf is located between two
     /// entries in the line list and get the index of the closest line
     /// to lower frequencies
-    while (left <= right)  /// must be a "<=" to obtain proper search results!!!
-                           /// access to negative array indices is prevented by the upper check
-    {
-      middle = left + ((right - left) / 2);
 
-      // printout("[debug] middle %d, left %d, right %d, nlines %d\n",middle,left,right,nlines);
-      // printout("[debug] globals::linelist[middle].nu %g, globals::linelist[middle-1].nu
-      // %g\n",linelist[middle].nu,linelist[middle-1].nu);
-      if (nu_cmf >= globals::linelist[middle].nu && nu_cmf < globals::linelist[middle - 1].nu) {
-        break;
-      } else if (nu_cmf >= globals::linelist[middle].nu) {
-        right = middle - 1;
-      } else {
-        left = middle + 1;
-      }
-    }
-    match = middle;
+    // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
+    // lower_bound matches the first element where the comparison function is false
+    const linelist_entry *match =
+        std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf,
+                         [](const linelist_entry &line, const double nu_cmf) { return !(line.nu <= nu_cmf); });
+    const int matchindex = match - globals::linelist;
+
+    return matchindex;
   }
-
-  /// return the transitions frequency
-  return match;
 }
 
 __host__ __device__ static double get_event(
