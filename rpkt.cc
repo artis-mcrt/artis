@@ -19,6 +19,8 @@
 
 // Material for handing r-packet propagation.
 
+constexpr bool operator<(const linelist_entry &line, const double &nu_cmf) { return !(line.nu <= nu_cmf); }
+
 __host__ __device__ int closest_transition(const double nu_cmf, const int next_trans)
 /// for the propagation through non empty cells
 // find the next transition lineindex redder than nu_cmf
@@ -53,8 +55,7 @@ __host__ __device__ int closest_transition(const double nu_cmf, const int next_t
     // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
     // lower_bound matches the first element where the comparison function is false
     const linelist_entry *match =
-        std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf,
-                         [](const linelist_entry &line, const double nu_cmf) { return !(line.nu <= nu_cmf); });
+        std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf);
     const int matchindex = match - globals::linelist;
 
     return matchindex;
