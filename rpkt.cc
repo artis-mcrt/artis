@@ -54,9 +54,9 @@ __host__ __device__ int closest_transition(const double nu_cmf, const int next_t
 
     // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
     // lower_bound matches the first element where the comparison function is false
-    const linelist_entry *match =
+    const linelist_entry *matchline =
         std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf);
-    const int matchindex = match - globals::linelist;
+    const int matchindex = matchline - globals::linelist;
 
     return matchindex;
   }
@@ -507,7 +507,7 @@ __host__ __device__ static void rpkt_event_thickcell(struct packet *pkt_ptr)
   pkt_ptr->em_time = pkt_ptr->prop_time;
 }
 
-__host__ __device__ static double closest_transition_empty(struct packet *pkt_ptr)
+__host__ __device__ static void closest_transition_empty(struct packet *pkt_ptr)
 /// for the propagation through empty cells
 /// here its possible that the packet jumps over several lines
 {
@@ -522,64 +522,35 @@ __host__ __device__ static double closest_transition_empty(struct packet *pkt_pt
   /// no line interaction is possible: return negative value as a flag
   if (pkt_ptr->nu_cmf < globals::linelist[right].nu) {
     pkt_ptr->next_trans = globals::nlines + 1;  /// helper variable to overcome numerical problems after line scattering
-    return -1;
   }
   if (left > right) {
     // printout("[debug] pp should have no line interaction anymore\n");
     pkt_ptr->next_trans = globals::nlines + 1;  /// helper variable to overcome numerical problems after line scattering
-    return -1;
   }
 
-  int match;
+  int matchindex;
   /// no check for left > 0 in the empty case as it is possible that the packet is moved over
   /// several lines through the empty cell
   if (pkt_ptr->nu_cmf >= globals::linelist[left].nu) {
     /// if nu_cmf is larger than the highest frequency in the allowed part of the linelist,
     /// interaction with the first line of this part of the list occurs
-    match = left;
+    matchindex = left;
   } else {
     /// otherwise go through the list until nu_cmf is located between two
     /// entries in the line list and get the index of the closest line
     /// to lower frequencies
 
-    int middle = 1;
-    while (left <= right)  // must be a "<=" to obtain proper search results!!!
-                           // access to negative array indices is prevented by the upper check
-    {
-      middle = left + ((right - left) / 2);
-
-      // printout("[debug] middle %d, left %d, right %d, nlines %d\n",middle,left,right,nlines);
-      // printout("[debug] globals::linelist[middle].nu %g, globals::linelist[middle-1].nu
-      // %g\n",linelist[middle].nu,linelist[middle-1].nu);
-      if (pkt_ptr->nu_cmf >= globals::linelist[middle].nu && pkt_ptr->nu_cmf < globals::linelist[middle - 1].nu) break;
-
-      if (pkt_ptr->nu_cmf >= globals::linelist[middle].nu)
-        right = middle - 1;
-      else
-        left = middle + 1;
-    }
-    match = middle;
+    const linelist_entry *matchline =
+        std::lower_bound(&globals::linelist[pkt_ptr->next_trans], &globals::linelist[globals::nlines], nu_cmf);
+    matchindex = matchline - globals::linelist;
   }
 
-  /// read transition data out of the linelist and store it as the
-  /// next transition for this packet. To save memory it is stored
-  /// to the macro atoms state variables. This has no influence until
-  /// the macro atom becomes activated by rpkt_event.
-  const double nu_trans = globals::linelist[match].nu;
-  // pkt_ptr->mastate.element = globals::linelist[match].elementindex;
-  // pkt_ptr->mastate.ion     = globals::linelist[match].ionindex;
-  // pkt_ptr->mastate.level   = globals::linelist[match].upperlevelindex;  ///if the MA will be activated it must be
-  // in the transitions upper level pkt_ptr->mastate.activatedfromlevel   = globals::linelist[match].lowerlevelindex;
-  // ///helper variable for the transitions lower level
   /// For the empty case it's match not match+1: a line interaction is only possible in the next iteration
   /// of the propagation loop. We just have to make sure that the next "normal" line search knows about the
   /// current position of the photon in the frequency list.
-  pkt_ptr->next_trans = match;  /// helper variable to overcome numerical problems after line scattering
-                                /// further scattering events should be located at lower frequencies to prevent
-                                /// multiple scattering events of one pp in a single line
-
-  /// return the transitions frequency
-  return nu_trans;
+  pkt_ptr->next_trans = matchindex;  /// helper variable to overcome numerical problems after line scattering
+                                     /// further scattering events should be located at lower frequencies to prevent
+                                     /// multiple scattering events of one pp in a single line
 }
 
 __host__ __device__ static void update_estimators(struct packet *pkt_ptr, const double distance)
