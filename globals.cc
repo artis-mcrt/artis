@@ -57,7 +57,7 @@ __managed__ int nprocs_exspec = 1;
 __managed__ bool do_emission_res = 1;
 
 __managed__ bool file_set;  // 1 if the output files already exist. 0 otherwise.
-
+__managed__ std::unique_ptr<bool[]> startofline;
 __managed__ bool do_comp_est;  // 1 = compute compton emissivity estimators. 0 = don't
 __managed__ bool do_r_lc;      // If not set to 1 then the opacity for r-packets is 0.
 __managed__ int do_rlc_est;    // 1 = compute estimators for the r-pkt light curve.

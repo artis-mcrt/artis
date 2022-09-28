@@ -1,6 +1,8 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#include <memory>
+
 #include "cuda.h"
 
 #if CUDA_ENABLED
@@ -260,6 +262,7 @@ extern __managed__ int nprocs_exspec;
 extern __managed__ bool do_emission_res;
 
 extern __managed__ bool file_set;
+extern std::unique_ptr<bool[]> startofline;
 
 extern __managed__ bool do_comp_est;
 extern __managed__ bool do_r_lc;

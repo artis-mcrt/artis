@@ -8,6 +8,7 @@
 #include <ctime>
 
 #include "artisoptions.h"
+#include "globals.h"
 
 extern FILE *output_file;
 #ifndef __CUDA_ARCH__
@@ -35,21 +36,30 @@ extern FILE *output_file;
 
 // #define printout(...) fprintf(output_file, __VA_ARGS__)
 
-static bool startofline = true;
+extern int tid;
 
 template <typename... Args>
 static int printout(const char *format, Args... args) {
-  if (startofline) {
+  if (globals::startofline[tid]) {
     time_t now_time = time(NULL);
     char s[32] = "";
     strftime(s, 32, "%FT%TZ", gmtime(&now_time));
     fprintf(output_file, "%s ", s);
   }
-  if (format[strlen(format) - 1] == '\n') startofline = true;
+  globals::startofline[tid] = (format[strlen(format) - 1] == '\n');
   return fprintf(output_file, format, args...);
 }
 
-static inline int printout(const char *format) { return printout("%s", format); }
+static inline int printout(const char *format) {
+  if (globals::startofline[tid]) {
+    time_t now_time = time(NULL);
+    char s[32] = "";
+    strftime(s, 32, "%FT%TZ", gmtime(&now_time));
+    fprintf(output_file, "%s ", s);
+  }
+  globals::startofline[tid] = (format[strlen(format) - 1] == '\n');
+  return fprintf(output_file, "%s", format);
+}
 
 #ifdef _OPENMP
 #ifndef __CUDACC__

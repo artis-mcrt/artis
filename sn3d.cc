@@ -746,6 +746,8 @@ int main(int argc, char **argv)
 
   const int my_rank = globals::rank_global;
 
+  globals::startofline = std::make_unique<bool[]>(get_max_threads());
+
 #ifdef _OPENMP
   /// Explicitly turn off dynamic threads because we use the threadprivate directive!!!
   omp_set_dynamic(0);
@@ -760,6 +762,7 @@ int main(int argc, char **argv)
     output_file = fopen_required(filename, "w");
     /// Makes sure that the output_file is written line-by-line
     setvbuf(output_file, NULL, _IOLBF, 1);
+    globals::startofline[tid] = true;
 
 #ifdef _OPENMP
     printout("OpenMP parallelisation active with %d threads (max %d)\n", get_num_threads(), get_max_threads());
