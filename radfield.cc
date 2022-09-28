@@ -614,33 +614,11 @@ __host__ __device__ static inline int select_bin(double nu) {
   else if (nu < get_bin_nu_lower(0))
     return -2;  // out of range, nu lower than lowest bin
   else {
-    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      if (radfieldbin_nu_upper[binindex] > nu) {
-        return binindex;
-      }
-    }
+    // find the lowest frequency bin with radfieldbin_nu_upper > nu
+    auto bin = std::upper_bound(&radfieldbin_nu_upper[0], &radfieldbin_nu_upper[RADFIELDBINCOUNT], nu);
+    const int binindex = bin - &radfieldbin_nu_upper[0];
 
-    // binary search for bin with nu_lower <= nu > nu_upper
-    // int low = 0;
-    // int high = RADFIELDBINCOUNT - 1;
-    // while (low <= high)
-    // {
-    //   int mid = low + ((high - low) / 2);
-    //   if (radfieldbin_nu_upper[mid] <= nu)
-    //   {
-    //     low = mid + 1;
-    //   }
-    //   else if (get_bin_nu_lower(mid) > nu)
-    //   {
-    //     high = mid - 1;
-    //   }
-    //   else
-    //   {
-    //     return mid;
-    //   }
-    //  }
-    assert_always(false);
-    return -3;
+    return binindex;
   }
 }
 
