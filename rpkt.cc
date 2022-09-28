@@ -541,7 +541,7 @@ __host__ __device__ static void closest_transition_empty(struct packet *pkt_ptr)
     /// to lower frequencies
 
     const linelist_entry *matchline =
-        std::lower_bound(&globals::linelist[pkt_ptr->next_trans], &globals::linelist[globals::nlines], nu_cmf);
+        std::lower_bound(&globals::linelist[pkt_ptr->next_trans], &globals::linelist[globals::nlines], pkt_ptr->nu_cmf);
     matchindex = matchline - globals::linelist;
   }
 
