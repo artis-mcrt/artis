@@ -1,17 +1,11 @@
 #include "vectors.h"
 
-#include <gsl/gsl_randist.h>
+// #include <gsl/gsl_randist.h>
 
+#include <cmath>
+
+#include "artisoptions.h"
 #include "sn3d.h"
-
-extern __host__ __device__ inline double vec_len(const double x[3]);
-extern __host__ __device__ inline void vec_norm(const double vec_in[3], double vec_out[3]);
-extern __host__ __device__ inline double dot(const double x[3], const double y[3]);
-extern __host__ __device__ inline void get_velocity(const double x[3], double y[3], const double t);
-extern __host__ __device__ inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
-extern __host__ __device__ inline void vec_scale(double vec[3], const double scalefactor);
-extern __host__ __device__ inline void vec_copy(double dest[3], const double source[3]);
-extern __host__ __device__ inline double doppler_packet_nucmf_on_nurf(const PKT *const pkt_ptr);
 
 __host__ __device__ void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
 // aberation of angles in special relativity
@@ -20,7 +14,7 @@ __host__ __device__ void angle_ab(const double dir1[3], const double vel[3], dou
 //   dir2: direction vector in frame2
 {
   const double vsqr = dot(vel, vel) / CLIGHTSQUARED;
-  const double gamma_rel = 1. / (sqrt(1 - vsqr));
+  const double gamma_rel = 1. / std::sqrt(1 - vsqr);
 
   const double ndotv = dot(dir1, vel);
   const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
@@ -34,24 +28,22 @@ __host__ __device__ void angle_ab(const double dir1[3], const double vel[3], dou
 __host__ __device__ double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
 // Doppler factor
 // arguments:
-//   dir_rf: the rest frame direction (unit vector) of emission
-//   vel_rf: rest frame velocity of the comoving frame
-// returns: the ratio f = nu_rf / nu_cmf
+//   dir_rf: the rest frame direction (unit vector) of light propagation
+//   vel_rf: velocity of the comoving frame relative to the rest frame
+// returns: the ratio f = nu_cmf / nu_rf
 {
-  double gamma_rel = 1.;
-
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
+
+  const double ndotv = dot(dir_rf, vel_rf);
+  double dopplerfactor = 1. - (ndotv / CLIGHT);
 
   if (USE_RELATIVISTIC_CORRECTIONS) {
     const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;
     assert_always(betasq >= 0.);  // v < c
     assert_always(betasq < 1.);   // v < c
-    gamma_rel = 1. / sqrt(1 - betasq);
+    dopplerfactor = dopplerfactor / sqrt(1 - betasq);
   }
-
-  const double ndotv = dot(dir_rf, vel_rf);
-  const double dopplerfactor = gamma_rel * (1. - (ndotv / CLIGHT));
 
   assert_testmodeonly(std::isfinite(dopplerfactor));
   assert_testmodeonly(dopplerfactor > 0);
@@ -69,7 +61,7 @@ __host__ __device__ void scatter_dir(const double dir_in[3], const double cos_th
   const double phi = zrand * 2 * PI;
 
   const double sin_theta_sq = 1. - (cos_theta * cos_theta);
-  const double sin_theta = sqrt(sin_theta_sq);
+  const double sin_theta = std::sqrt(sin_theta_sq);
   const double zprime = cos_theta;
   const double xprime = sin_theta * cos(phi);
   const double yprime = sin_theta * sin(phi);
@@ -77,8 +69,8 @@ __host__ __device__ void scatter_dir(const double dir_in[3], const double cos_th
   // Now need to derotate the coordinates back to real x,y,z.
   // Rotation matrix is determined by dir_in.
 
-  const double norm1 = 1. / (sqrt((dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1])));
-  const double norm2 = 1. / (sqrt((dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1]) + (dir_in[2] * dir_in[2])));
+  const double norm1 = 1. / std::sqrt((dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1]));
+  const double norm2 = 1. / std::sqrt((dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1]) + (dir_in[2] * dir_in[2]));
 
   const double r11 = dir_in[1] * norm1;
   const double r12 = -1 * dir_in[0] * norm1;
@@ -109,14 +101,14 @@ __host__ __device__ void get_rand_isotropic_unitvec(double vecout[3])
 
   const double mu = -1 + (2. * zrand);
   const double phi = zrand2 * 2 * PI;
-  const double sintheta = sqrt(1. - (mu * mu));
+  const double sintheta = std::sqrt(1. - (mu * mu));
 
-  vecout[0] = sintheta * cos(phi);
-  vecout[1] = sintheta * sin(phi);
+  vecout[0] = sintheta * std::cos(phi);
+  vecout[1] = sintheta * std::sin(phi);
   vecout[2] = mu;
 }
 
-__host__ __device__ void move_pkt(PKT *pkt_ptr, const double distance, const double time)
+__host__ __device__ void move_pkt(struct packet *pkt_ptr, const double distance, const double time)
 /// Subroutine to move a packet along a straight line (specified by current
 /// dir vector). The distance moved is in the rest frame.
 {
