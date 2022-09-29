@@ -2,7 +2,7 @@
 
 #include "sn3d.h"
 #ifdef MPI_ON
-#include "mpi.h"
+#include <mpi.h>
 #endif
 
 namespace globals {

@@ -84,7 +84,8 @@ __host__ __device__ bool level_isinsuperlevel(int element, int ion, int level)
   return (NLTE_POPS_ON && !is_nlte(element, ion, level) && level != 0 && (get_nlevels_nlte(element, ion) > 0));
 }
 
-__host__ __device__ double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge, double nu)
+__host__ __device__ double photoionization_crosssection_fromtable(const float *const photoion_xs, const double nu_edge,
+                                                                  const double nu)
 /// Calculates the photoionisation cross-section at frequency nu out of the atomic data.
 /// Input: - edge frequency nu_edge of the desired bf-continuum
 ///        - nu
@@ -501,7 +502,8 @@ __host__ __device__ double statw_lower(int lineindex) {
   return globals::elements[element].ions[ion].levels[lower].stat_weight;
 }
 
-__host__ __device__ double photoionization_crosssection(int element, int ion, int level, double nu_edge, double nu) {
+__host__ __device__ double photoionization_crosssection(const int element, const int ion, const int level,
+                                                        const double nu_edge, const double nu) {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));

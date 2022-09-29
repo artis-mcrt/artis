@@ -554,7 +554,7 @@ constexpr bool operator<(const linelist_entry &a, const linelist_entry &b)
   return a.nu > b.nu;
 }
 
-static int compare_linelistentry(const void *p1, const void *p2)
+constexpr int compare_linelistentry(const void *p1, const void *p2)
 /// Helper function to sort the linelist by frequency.
 {
   linelist_entry *a1 = (linelist_entry *)(p1);

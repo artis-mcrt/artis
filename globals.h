@@ -10,7 +10,7 @@
 #endif
 
 #ifdef MPI_ON
-#include "mpi.h"
+#include <mpi.h>
 #endif
 
 #include "artisoptions.h"
@@ -159,9 +159,9 @@ struct nne_solution_paras {
 };
 
 struct gslintegration_paras {
-  double nu_edge;
-  float T;
-  float *photoion_xs;
+  const double nu_edge;
+  const float T;
+  const float *const photoion_xs;
 };
 
 struct rpkt_cont_opacity {

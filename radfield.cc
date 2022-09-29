@@ -117,8 +117,8 @@ typedef enum {
 } enum_prefactor;
 
 typedef struct {
-  double T_R;
-  enum_prefactor prefactor;
+  const double T_R;
+  const enum_prefactor prefactor;
 } gsl_planck_integral_paras;
 
 typedef struct {
@@ -995,13 +995,9 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
   const double epsrel = 1e-10;
   const double epsabs = 0.;
 
-  gsl_planck_integral_paras intparas;
-  intparas.T_R = T_R;
-  intparas.prefactor = prefactor;
+  gsl_planck_integral_paras intparas = {.T_R = T_R, .prefactor = prefactor};
 
-  gsl_function F_planck;
-  F_planck.function = &gsl_integrand_planck;
-  F_planck.params = &intparas;
+  const gsl_function F_planck = {.function = &gsl_integrand_planck, .params = &intparas};
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
   int status = gsl_integration_qag(&F_planck, nu_lower, nu_upper, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61,

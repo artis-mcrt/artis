@@ -108,7 +108,7 @@ static int printout(const char *format) {
 #endif
 
 #ifdef MPI_ON
-#include "mpi.h"
+#include <mpi.h>
 #endif
 
 // #define _OPENMP

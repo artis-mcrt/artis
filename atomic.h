@@ -18,7 +18,8 @@ __host__ __device__ double get_tau_sobolev(int modelgridindex, int lineindex, do
 __host__ __device__ double get_nntot(int modelgridindex);
 __host__ __device__ bool is_nlte(int element, int ion, int level);
 __host__ __device__ bool level_isinsuperlevel(int element, int ion, int level);
-__host__ __device__ double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge, double nu);
+__host__ __device__ double photoionization_crosssection_fromtable(const float *const photoion_xs, const double nu_edge,
+                                                                  const double nu);
 __host__ __device__ void set_nelements(const int nelements_in);
 __host__ __device__ int get_nelements(void);
 __host__ __device__ int get_element(int element);
@@ -53,7 +54,8 @@ __host__ __device__ double osc_strength(int lineindex);
 __host__ __device__ double get_coll_str(int lineindex);
 __host__ __device__ double statw_upper(int lineindex);
 __host__ __device__ double statw_lower(int lineindex);
-__host__ __device__ double photoionization_crosssection(int element, int ion, int level, double nu_edge, double nu);
+__host__ __device__ double photoionization_crosssection(const int element, const int ion, const int level,
+                                                        const double nu_edge, const double nu);
 __host__ __device__ double get_phixs_threshold(int element, int ion, int level, int phixstargetindex);
 
 #endif  // ATOMIC_H

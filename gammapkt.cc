@@ -314,7 +314,7 @@ void pellet_gamma_decay(const int nts, struct packet *pkt_ptr) {
   // printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 }
 
-static double sigma_compton_partial(const double x, const double f)
+constexpr double sigma_compton_partial(const double x, const double f)
 // Routine to compute the partial cross section for Compton scattering.
 //   xx is the photon energy (in units of electron mass) and f
 //  is the energy loss factor up to which we wish to integrate.
