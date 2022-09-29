@@ -1068,8 +1068,8 @@ static void read_atomicdata_files(void) {
 
   /// then sort the linelist by decreasing frequency
   if (globals::rank_in_node == 0) {
-    // qsort(globals::linelist, globals::nlines, sizeof(linelist_entry), compare_linelistentry);
-    std::sort(globals::linelist, globals::linelist + globals::nlines);
+    qsort(globals::linelist, globals::nlines, sizeof(linelist_entry), compare_linelistentry);
+    // std::sort(globals::linelist, globals::linelist + globals::nlines);
 
     for (int i = 0; i < globals::nlines - 1; i++) {
       const double nu = globals::linelist[i].nu;
