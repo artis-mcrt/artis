@@ -18,16 +18,16 @@
 #include "update_grid.h"
 
 struct Te_solution_paras {
-  double t_current;
-  int modelgridindex;
-  struct heatingcoolingrates *heatingcoolingrates;
+  const double t_current;
+  const int modelgridindex;
+  struct heatingcoolingrates *const heatingcoolingrates;
 };
 
 struct gsl_integral_paras_bfheating {
-  double nu_edge;
-  int modelgridindex;
-  float T_R;
-  float *photoion_xs;
+  const double nu_edge;
+  const int modelgridindex;
+  const float T_R;
+  const float *photoion_xs;
 };
 
 #if (!NO_LUT_BFHEATING)
@@ -98,17 +98,16 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
   // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
 
-  struct gsl_integral_paras_bfheating intparas;
-  intparas.nu_edge = nu_threshold;
-  intparas.modelgridindex = modelgridindex;
-  intparas.T_R = grid::get_TR(modelgridindex);
-  intparas.photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
+  struct gsl_integral_paras_bfheating intparas = {
+      .nu_edge = nu_threshold,
+      .modelgridindex = modelgridindex,
+      .T_R = grid::get_TR(modelgridindex),
+      .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs};
+
   // intparas.Te_TR_factor = sqrt(T_e/T_R) * sf_Te / sf_TR;
 
   double bfheating = 0.0;
-  gsl_function F_bfheating;
-  F_bfheating.function = &integrand_bfheatingcoeff_custom_radfield;
-  F_bfheating.params = &intparas;
+  const gsl_function F_bfheating = {.function = &integrand_bfheatingcoeff_custom_radfield, .params = &intparas};
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
@@ -408,14 +407,10 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
   // mintemp_f.function = &mintemp_solution_f;
   // maxtemp_f.function = &maxtemp_solution_f;
 
-  struct Te_solution_paras paras;
-  paras.modelgridindex = modelgridindex;
-  paras.t_current = t_current;
-  paras.heatingcoolingrates = heatingcoolingrates;
+  struct Te_solution_paras paras = {
+      .t_current = t_current, .modelgridindex = modelgridindex, .heatingcoolingrates = heatingcoolingrates};
 
-  gsl_function find_T_e_f;
-  find_T_e_f.function = &T_e_eqn_heating_minus_cooling;
-  find_T_e_f.params = &paras;
+  gsl_function find_T_e_f = {.function = &T_e_eqn_heating_minus_cooling, .params = &paras};
 
   double thermalmin = T_e_eqn_heating_minus_cooling(T_min, find_T_e_f.params);
   double thermalmax = T_e_eqn_heating_minus_cooling(T_max, find_T_e_f.params);

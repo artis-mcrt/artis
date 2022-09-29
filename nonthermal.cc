@@ -58,19 +58,19 @@ namespace nonthermal {
          // many more transitions to store than there are NT spectrum samples
 
 // minimum number fraction of the total population to include in SF solution
-static const double minionfraction = 1.e-8;
+constexpr double minionfraction = 1.e-8;
 
 // minimum deposition rate density (eV/s/cm^3) to solve SF equation
-static const double MINDEPRATE = 0.;
+constexpr double MINDEPRATE = 0.;
 
 // Bohr radius squared in cm^2
-static const double A_naught_squared = 2.800285203e-17;
+constexpr double A_naught_squared = 2.800285203e-17;
 
 // specifies max number of shells for which data is known for computing mean binding energies
-#define M_NT_SHELLS 10
+constexpr int M_NT_SHELLS = 10;
 
 // maximum number of elements for which binding energy tables are to be used
-#define MAX_Z_BINDING 30
+constexpr int MAX_Z_BINDING = 30;
 
 __managed__ static double electron_binding[MAX_Z_BINDING][M_NT_SHELLS];
 
@@ -108,7 +108,7 @@ __managed__ static double E_init_ev =
 __managed__ static gsl_vector *delta_envec;
 __managed__ static double delta_log_e = 0.;
 #else
-__managed__ static const double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
+constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 #endif
 
 // Monte Carlo result - compare to analytical expectation

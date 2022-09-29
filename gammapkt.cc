@@ -26,7 +26,7 @@ struct gamma_spec {
 
 static struct gamma_spec *gamma_spectra;
 
-static const int RED_OF_LIST = -956;  // must be negative
+constexpr int RED_OF_LIST = -956;  // must be negative
 
 struct gamma_ll {
   int *nucindex;  // is it a Ni56, Co56, a fake line, etc

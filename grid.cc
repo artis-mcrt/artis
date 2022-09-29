@@ -215,12 +215,7 @@ __host__ __device__ float get_nnetot(int modelgridindex) {
   return nnetot;
 }
 
-__host__ __device__
-    // the abundances referred to below are initial abundances
-    float
-    get_ffegrp(int modelgridindex) {
-  return modelgrid[modelgridindex].ffegrp;
-}
+__host__ __device__ float get_ffegrp(int modelgridindex) { return modelgrid[modelgridindex].ffegrp; }
 
 __host__ __device__ float get_elem_abundance(int modelgridindex, int element)
 // mass fraction of an element (all isotopes combined)
@@ -415,6 +410,8 @@ __host__ __device__ int get_mgi_of_nonemptymgi(int nonemptymgi)
   assert_always(mgi >= 0);
   return mgi;
 }
+
+// the abundances below are initial abundances at t_model
 
 __host__ __device__ float get_modelinitradioabund(const int modelgridindex, const int z, const int a) {
   // this function replaces get_f56ni(mgi), get_fco56(mgi), etc.

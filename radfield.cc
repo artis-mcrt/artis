@@ -58,7 +58,7 @@ struct Jb_lu_estimator {
 };
 
 // reallocate the detailed line arrays in units of BLOCKSIZEJBLUE
-static const int BLOCKSIZEJBLUE = 128;
+constexpr int BLOCKSIZEJBLUE = 128;
 __managed__ static int detailed_linecount = 0;
 
 // array of indicies into the linelist[] array for selected lines
