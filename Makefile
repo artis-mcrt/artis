@@ -65,7 +65,7 @@ CXXFLAGS += $(shell pkg-config --cflags gsl)
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true -O3 -g
+	CXXFLAGS += -DTESTMODE=true -O3 -g -flto=auto
 	CXXFLAGS += -fsanitize=address -fno-omit-frame-pointer -fno-common
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
