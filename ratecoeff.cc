@@ -287,7 +287,7 @@ static double alpha_sp_E_integrand_gsl(double nu, void *voidparas)
 {
   const gslintegration_paras *const params = (gslintegration_paras *)voidparas;
 
-  const double T = params->T;
+  const float T = params->T;
   const double nu_edge = params->nu_edge;
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
@@ -329,7 +329,7 @@ static double gammacorr_integrand_gsl(double nu, void *voidparas)
 {
   const gslintegration_paras *const params = (gslintegration_paras *)voidparas;
 
-  const double T = params->T;
+  const float T = params->T;
   const double nu_edge = params->nu_edge;
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
@@ -350,7 +350,7 @@ static double approx_bfheating_integrand_gsl(double nu, void *voidparas)
 {
   const gslintegration_paras *const params = (gslintegration_paras *)voidparas;
 
-  const double T = params->T;
+  const float T = params->T;
   const double nu_edge = params->nu_edge;
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
@@ -404,7 +404,7 @@ static double bfcooling_integrand_gsl(double nu, void *voidparas)
 {
   const gslintegration_paras *const params = (gslintegration_paras *)voidparas;
 
-  const double T = params->T;
+  const float T = params->T;
   const double nu_edge = params->nu_edge;
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
@@ -685,7 +685,7 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
   double total_alpha_sp = 0.;
-  gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61,
+  gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS31,
                       gslworkspace, &total_alpha_sp, &error);
 
   double alpha_sp_old = total_alpha_sp;
@@ -697,7 +697,7 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
     const double xlow = nu_threshold + i * deltanu;
 
     // Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-    gsl_integration_qag(&F_alpha_sp, xlow, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace,
+    gsl_integration_qag(&F_alpha_sp, xlow, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS31, gslworkspace,
                         &alpha_sp, &error);
 
     if (zrand >= alpha_sp / total_alpha_sp) break;
