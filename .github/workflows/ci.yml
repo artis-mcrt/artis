@@ -129,10 +129,10 @@ jobs:
               run: |
                   git status
                   sudo apt-get update
-                  #sudo apt-get install -y gcc-12 g++-12
+                  sudo apt-get install -y gcc-12 g++-12
                   sudo apt-get install -y libgsl-dev
                   sudo apt install -y openmpi-bin libopenmpi-dev
-                  #echo "OMPI_CXX=g++-12" >> $GITHUB_ENV
+                  echo "OMPI_CXX=g++-12" >> $GITHUB_ENV
 
             - name: CPU count
               id: cpu-count
@@ -189,14 +189,15 @@ jobs:
             - name: cat job0 output log
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat output_0-0.txt
-
-            - name: Checksum job0 output files
-              if: always() && matrix.os != 'selfhosted'
-              working-directory: tests/${{ matrix.testname }}_testrun
               run: |
+                  cat output_0-0.txt
                   mkdir job0
                   ../../scripts/movefiles.sh job0
+
+            - name: Checksum job0 output files
+              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
+              working-directory: tests/${{ matrix.testname }}_testrun
+              run: |
                   md5sum *.out job0/*.out
                   md5sum -c results_md5_job0.txt
 
@@ -236,7 +237,7 @@ jobs:
                   cat exspec.txt
 
             - name: Checksum output files
-              if: always() && matrix.os != 'selfhosted'
+              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   md5sum *.out job1/*.out
