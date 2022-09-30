@@ -458,6 +458,7 @@ __host__ __device__ static void set_modelinitradioabund_bynucindex(const int mod
   // {
   //   return;
   // }
+  assert_always(nucindex >= 0);
   assert_always(abund >= 0.);
   assert_always(abund <= 1.);
 
@@ -1050,7 +1051,7 @@ static void abundances_read(void) {
 }
 
 static void read_model_headerline(std::string line, std::vector<int> &zlist, std::vector<int> &alist,
-                                  std::vector<std::string> &columnname) {
+                                  std::vector<int> &nucindexlist, std::vector<std::string> &columnname) {
   // custom header line
   std::istringstream iss(line);
   std::string token;
@@ -1069,18 +1070,27 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
     if (token == "X_Cr48") continue;
     if (token == "X_Ni57") continue;
     if (token == "X_Co57") continue;
+    if (token.starts_with("pos_")) continue;
 
     columnname.push_back(token);
 
-    if (token.rfind("X_", 0) == 0) {                            // if starts with 'X_'
+    if (token.starts_with("X_")) {                              // if starts with 'X_'
       const int z = decay::get_nucstring_z(token.c_str() + 2);  // + 2 skips the 'X_'
       const int a = decay::get_nucstring_a(token.c_str() + 2);
-      // printout("Custom nuclide column: '%s' Z %d A %d\n", token.c_str(), z, a);
+      assert_always(z >= 0);
+      assert_always(a >= 0);
+      // printout("Custom column: '%s' Z %d A %d\n", token.c_str(), z, a);
       zlist.push_back(z);
       alist.push_back(a);
+
+      const int nucindex = decay::get_nuc_index(z, a);
+      assert_always(nucindex >= 0);
+      nucindexlist.push_back(nucindex);
     } else {
+      // printout("Custom column: '%s' Z %d A %d\n", token.c_str(), -1, -1);
       zlist.push_back(-1);
       alist.push_back(-1);
+      nucindexlist.push_back(-1);
     }
   }
 
@@ -1098,8 +1108,8 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
 }
 
 static void read_2d3d_modelradioabundanceline(std::ifstream &fmodel, const int mgi, const bool keepcell,
-                                              std::vector<int> zlist, std::vector<int> alist,
-                                              std::vector<std::string> colnames, std::vector<int> nucindexlist) {
+                                              std::vector<int> &zlist, std::vector<int> &alist,
+                                              std::vector<std::string> &colnames, std::vector<int> &nucindexlist) {
   std::string line;
   assert_always(std::getline(fmodel, line));
   std::istringstream ssline(line);
@@ -1135,17 +1145,26 @@ static void read_2d3d_modelradioabundanceline(std::ifstream &fmodel, const int m
       if (items_read == 7) {
         for (int i = 0; i < items_read; i++) {
           double abundin = 0.;
-          ssline >> abundin;  // ignore
+          assert_always(ssline >> abundin);  // ignore
         }
+
         for (int i = 0; i < (int)colnames.size(); i++) {
           double valuein = 0.;
-          ssline >> valuein;  // usually a mass fraction, but now can be anthing
-          if (colnames[i].substr(0, 2) == "X_") {
-            set_modelinitradioabund(mgi, zlist[i], alist[i], valuein);
+          assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
+          if (nucindexlist[i] >= 0) {
+            set_modelinitradioabund_bynucindex(mgi, nucindexlist[i], valuein);
           } else if (colnames[i] == "cellYe") {
             set_initelectronfrac(mgi, valuein);
+          } else if (colnames[i] == "q") {
+            set_initenergyq(mgi, valuein);
+          } else {
+            printout("Not sure what to do with column %s nucindex %d valuein %lg\n", colnames[i].c_str(),
+                     nucindexlist[i], valuein);
+            assert_always(false);
           }
         }
+        double valuein = 0.;
+        assert_always(!(ssline >> valuein));  // should be no tokens left!
       }
     }
   } else {
@@ -1188,11 +1207,12 @@ static void read_1d_model(void)
 
   std::vector<int> zlist;
   std::vector<int> alist;
+  std::vector<int> nucindexlist;
   std::vector<std::string> colnames;
   std::streampos oldpos = fmodel.tellg();  // get position in case we need to undo getline
   std::getline(fmodel, line);
   if (lineiscommentonly(line)) {
-    read_model_headerline(line, zlist, alist, colnames);
+    read_model_headerline(line, zlist, alist, nucindexlist, colnames);
   } else {
     fmodel.seekg(oldpos);  // undo getline because it was data, not a header line
   }
@@ -1253,19 +1273,26 @@ static void read_1d_model(void)
     if (items_read == 10) {
       for (int i = 0; i < 10; i++) {
         double abundin = 0.;
-        ssline >> abundin;  // ignore
+        assert_always(ssline >> abundin);  // ignore
       }
       for (int i = 0; i < (int)colnames.size(); i++) {
         double valuein = 0.;
-        ssline >> valuein;  // usually a mass fraction, but now can be anthing
-        if (colnames[i].substr(0, 2) == "X_") {
-          set_modelinitradioabund(mgi, zlist[i], alist[i], valuein);
+        assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
+
+        if (nucindexlist[i] >= 0) {
+          set_modelinitradioabund_bynucindex(mgi, nucindexlist[i], valuein);
         } else if (colnames[i] == "cellYe") {
           set_initelectronfrac(mgi, valuein);
         } else if (colnames[i] == "q") {
           set_initenergyq(mgi, valuein);
+        } else {
+          printout("Not sure what to do with column %s nucindex %d valuein %lg\n", colnames[i].c_str(), nucindexlist[i],
+                   valuein);
+          assert_always(false);
         }
       }
+      double valuein = 0.;
+      assert_always(!(ssline >> valuein));  // should be no more tokens
     }
 
     mgi += 1;
@@ -1313,11 +1340,12 @@ static void read_2d_model(void)
 
   std::vector<int> zlist;
   std::vector<int> alist;
+  std::vector<int> nucindexlist;
   std::vector<std::string> colnames;
   std::streampos oldpos = fmodel.tellg();  // get position in case we need to undo getline
   std::getline(fmodel, line);
   if (lineiscommentonly(line)) {
-    read_model_headerline(line, zlist, alist, colnames);
+    read_model_headerline(line, zlist, alist, nucindexlist, colnames);
   } else {
     fmodel.seekg(oldpos);  // undo getline because it was data, not a header line
   }
@@ -1353,8 +1381,7 @@ static void read_2d_model(void)
     set_rhoinit(mgi, rho_tmin);
     set_rho(mgi, rho_tmin);
 
-    read_2d3d_modelradioabundanceline(fmodel, mgi, true, std::vector<int>(), std::vector<int>(),
-                                      std::vector<std::string>(), std::vector<int>());
+    read_2d3d_modelradioabundanceline(fmodel, mgi, true, zlist, alist, colnames, nucindexlist);
 
     mgi++;
   }
@@ -1413,22 +1440,18 @@ static void read_3d_model(void)
 
   std::vector<int> zlist;
   std::vector<int> alist;
+  std::vector<int> nucindexlist;
   std::vector<std::string> colnames;
   std::streampos oldpos = fmodel.tellg();  // get position in case we need to undo getline
   std::getline(fmodel, line);
   if (lineiscommentonly(line)) {
-    read_model_headerline(line, zlist, alist, colnames);
+    read_model_headerline(line, zlist, alist, nucindexlist, colnames);
   } else {
     fmodel.seekg(oldpos);  // undo getline because it was data, not a header line
   }
 
   decay::init_nuclides(zlist, alist);
   allocate_initradiobund();
-
-  std::vector<int> nucindexlist(zlist.size());
-  for (int i = 0; i < (int)zlist.size(); i++) {
-    nucindexlist[i] = decay::get_nuc_index(zlist[i], alist[i]);
-  }
 
   // mgi is the index to the model grid - empty cells are sent to special value get_npts_model(),
   // otherwise each input cell is one modelgrid cell
