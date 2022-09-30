@@ -1152,6 +1152,8 @@ static void read_2d3d_modelradioabundanceline(std::ifstream &fmodel, const int m
             set_initelectronfrac(mgi, valuein);
           } else if (colnames[i] == "q") {
             set_initenergyq(mgi, valuein);
+          } else if (colnames[i] == "tracercount") {
+            ;
           } else {
             printout("Not sure what to do with column %s nucindex %d valuein %lg\n", colnames[i].c_str(),
                      nucindexlist[i], valuein);
@@ -1284,6 +1286,8 @@ static void read_1d_model(void)
           set_initelectronfrac(mgi, valuein);
         } else if (colnames[i] == "q") {
           set_initenergyq(mgi, valuein);
+        } else if (colnames[i] == "tracercount") {
+          ;
         } else {
           printout("Not sure what to do with column %s nucindex %d valuein %lg\n", colnames[i].c_str(), nucindexlist[i],
                    valuein);
