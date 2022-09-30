@@ -1213,8 +1213,6 @@ __host__ __device__ double col_excitation_ratecoeff(const float T_e, const float
   } else {
     // from Osterbrock and Ferland, p51
     C = nne * 8.629e-6 * coll_strength * exp(-eoverkt) / statw_lower(lineindex) / sqrt(T_e);
-    // test test
-    // C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_upper(lineindex);
   }
 
   assert_testmodeonly(std::isfinite(C));

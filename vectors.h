@@ -3,11 +3,12 @@
 
 #include <cmath>
 
+#include "constants.h"
 #include "cuda.h"
 #include "packet.h"
+#include "sn3d.h"
 
 __host__ __device__ void angle_ab(const double dir1[3], const double vel[3], double dir2[3]);
-__host__ __device__ double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3]);
 __host__ __device__ void scatter_dir(const double dir_in[3], double cos_theta, double dir_out[3]);
 __host__ __device__ void get_rand_isotropic_unitvec(double vecout[3]);
 __host__ __device__ void move_pkt(struct packet *pkt_ptr, double distance);
@@ -61,10 +62,48 @@ __host__ __device__ constexpr void vec_copy(double destination[3], const double 
   destination[2] = source[2];
 }
 
+__host__ __device__ constexpr double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
+// Doppler factor
+// arguments:
+//   dir_rf: the rest frame direction (unit vector) of light propagation
+//   vel_rf: velocity of the comoving frame relative to the rest frame
+// returns: the ratio f = nu_cmf / nu_rf
+{
+  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
+  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
+
+  const double ndotv = dot(dir_rf, vel_rf);
+  double dopplerfactor = 1. - (ndotv / CLIGHT);
+
+  if (USE_RELATIVISTIC_DOPPLER_SHIFT) {
+    const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;
+    assert_always(betasq >= 0.);  // v < c
+    assert_always(betasq < 1.);   // v < c
+    dopplerfactor = dopplerfactor / sqrt(1 - betasq);
+  }
+
+  assert_testmodeonly(std::isfinite(dopplerfactor));
+  assert_testmodeonly(dopplerfactor > 0);
+
+  return dopplerfactor;
+}
+
 __host__ __device__ static inline double doppler_packet_nucmf_on_nurf(const struct packet *const pkt_ptr) {
   double flow_velocity[3];  // homologous flow velocity
   get_velocity(pkt_ptr->pos, flow_velocity, pkt_ptr->prop_time);
   return doppler_nucmf_on_nurf(pkt_ptr->dir, flow_velocity);
+}
+
+constexpr double get_arrive_time(const struct packet *pkt_ptr)
+/// We know that a packet escaped at "escape_time". However, we have
+/// to allow for travel time. Use the formula in Leon's paper. The extra
+/// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
+{
+  return pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / CLIGHT_PROP);
+}
+
+inline double get_arrive_time_cmf(const struct packet *pkt_ptr) {
+  return pkt_ptr->escape_time * std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
 }
 
 #endif  // VECTORS_H
