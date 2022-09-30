@@ -17,10 +17,10 @@
 #include "vpkt.h"
 
 // constant for van-Regemorter approximation.
-#define C_0 (5.465e-11)
+constexpr double C_0 = 5.465e-11;
 
 // save to the macroatom_*.out file
-#define LOG_MACROATOM false
+constexpr bool LOG_MACROATOM = false;
 
 static FILE *macroatom_file = NULL;
 
