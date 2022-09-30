@@ -1051,7 +1051,7 @@ static void abundances_read(void) {
 }
 
 static void read_model_headerline(std::string line, std::vector<int> &zlist, std::vector<int> &alist,
-                                  std::vector<int> &nucindexlist, std::vector<std::string> &columnname) {
+                                  std::vector<std::string> &columnname) {
   // custom header line
   std::istringstream iss(line);
   std::string token;
@@ -1082,15 +1082,10 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
       // printout("Custom column: '%s' Z %d A %d\n", token.c_str(), z, a);
       zlist.push_back(z);
       alist.push_back(a);
-
-      const int nucindex = decay::get_nuc_index(z, a);
-      assert_always(nucindex >= 0);
-      nucindexlist.push_back(nucindex);
     } else {
       // printout("Custom column: '%s' Z %d A %d\n", token.c_str(), -1, -1);
       zlist.push_back(-1);
       alist.push_back(-1);
-      nucindexlist.push_back(-1);
     }
   }
 
@@ -1207,18 +1202,22 @@ static void read_1d_model(void)
 
   std::vector<int> zlist;
   std::vector<int> alist;
-  std::vector<int> nucindexlist;
   std::vector<std::string> colnames;
   std::streampos oldpos = fmodel.tellg();  // get position in case we need to undo getline
   std::getline(fmodel, line);
   if (lineiscommentonly(line)) {
-    read_model_headerline(line, zlist, alist, nucindexlist, colnames);
+    read_model_headerline(line, zlist, alist, colnames);
   } else {
     fmodel.seekg(oldpos);  // undo getline because it was data, not a header line
   }
 
   decay::init_nuclides(zlist, alist);
   allocate_initradiobund();
+
+  std::vector<int> nucindexlist(zlist.size());
+  for (int i = 0; i < (int)zlist.size(); i++) {
+    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nuc_index(zlist[i], alist[i]) : -1;
+  }
 
   int mgi = 0;
   while (std::getline(fmodel, line)) {
@@ -1340,18 +1339,22 @@ static void read_2d_model(void)
 
   std::vector<int> zlist;
   std::vector<int> alist;
-  std::vector<int> nucindexlist;
   std::vector<std::string> colnames;
   std::streampos oldpos = fmodel.tellg();  // get position in case we need to undo getline
   std::getline(fmodel, line);
   if (lineiscommentonly(line)) {
-    read_model_headerline(line, zlist, alist, nucindexlist, colnames);
+    read_model_headerline(line, zlist, alist, colnames);
   } else {
     fmodel.seekg(oldpos);  // undo getline because it was data, not a header line
   }
 
   decay::init_nuclides(zlist, alist);
   allocate_initradiobund();
+
+  std::vector<int> nucindexlist(zlist.size());
+  for (int i = 0; i < (int)zlist.size(); i++) {
+    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nuc_index(zlist[i], alist[i]) : -1;
+  }
 
   // Now read in the model. Each point in the model has two lines of input.
   // First is an index for the cell then its r-mid point then its z-mid point
@@ -1440,18 +1443,22 @@ static void read_3d_model(void)
 
   std::vector<int> zlist;
   std::vector<int> alist;
-  std::vector<int> nucindexlist;
   std::vector<std::string> colnames;
   std::streampos oldpos = fmodel.tellg();  // get position in case we need to undo getline
   std::getline(fmodel, line);
   if (lineiscommentonly(line)) {
-    read_model_headerline(line, zlist, alist, nucindexlist, colnames);
+    read_model_headerline(line, zlist, alist, colnames);
   } else {
     fmodel.seekg(oldpos);  // undo getline because it was data, not a header line
   }
 
   decay::init_nuclides(zlist, alist);
   allocate_initradiobund();
+
+  std::vector<int> nucindexlist(zlist.size());
+  for (int i = 0; i < (int)zlist.size(); i++) {
+    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nuc_index(zlist[i], alist[i]) : -1;
+  }
 
   // mgi is the index to the model grid - empty cells are sent to special value get_npts_model(),
   // otherwise each input cell is one modelgrid cell
