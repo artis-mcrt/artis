@@ -39,6 +39,7 @@ static struct gamma_ll gam_line_list;
 static void read_gamma_spectrum(const int z, const int a, const char filename[50])
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
 {
+  printout("reading gamma spectrum for Z=%d A=%d from %s...\n", z, a, filename);
   const int nucindex = decay::get_nuc_index(z, a);
 
   FILE *filein = fopen_required(filename, "r");
@@ -63,8 +64,7 @@ static void read_gamma_spectrum(const int z, const int a, const char filename[50
 
   decay::set_nucdecayenergygamma(z, a, E_gamma_avg);
 
-  printout("gamma spectrum for Z=%d A=%d read from %s: nlines %d avg_en_gamma %g MeV\n", z, a, filename, nlines,
-           E_gamma_avg / MEV);
+  printout("nlines %d avg_en_gamma %g MeV\n", nlines, E_gamma_avg / MEV);
 }
 
 static void set_trivial_gamma_spectrum(const int z, const int a) {
