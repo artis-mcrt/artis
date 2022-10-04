@@ -351,7 +351,7 @@ static void allocate_initradiobund(void) {
 #else
   initradioabund_allcells = static_cast<float *>(malloc(totalradioabundsize));
 #endif
-  printout("mem_usage: radioabundance data for %d nuclides for %d cells occupies %.3f MB (node shared memory)\n",
+  printout("[info] mem_usage: radioabundance data for %d nuclides for %d cells occupies %.3f MB (node shared memory)\n",
            num_nuclides, npts_model, totalradioabundsize / 1024 / 1024);
 
 #ifdef MPI_ON

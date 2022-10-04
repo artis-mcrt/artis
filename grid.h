@@ -41,9 +41,9 @@ struct modelgrid_t {
   float rho;
   // modelgrid nn_tot
   float nnetot;  // total electron density (free + bound).
-  float *initradioabund;
-  float *initmassfracstable;
-  float *elem_meanweight;
+  float *initradioabund = nullptr;
+  float *initmassfracstable = nullptr;
+  float *elem_meanweight = nullptr;
   float initelectronfrac;  // Ye: electrons (or protons) per nucleon
   float initenergyq;       // q: energy in the model at t_model to use with USE_MODEL_INITIAL_ENERGY [erg/g]
   float ffegrp;
@@ -56,7 +56,7 @@ struct modelgrid_t {
   compositionlist_entry *composition;  /// Pointer to an array which contains the time dependent abundances
                                        /// of all included elements and all the groundlevel
                                        /// populations and partition functions for their ions
-  double *nlte_pops;                   /// Pointer to an array that contains the nlte-level
+  double *nlte_pops = nullptr;         /// Pointer to an array that contains the nlte-level
                                        /// populations for this cell
 
   double totalcooling;
