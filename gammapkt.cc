@@ -128,6 +128,12 @@ static void read_decaydata(void) {
       // printout("%s does not exist. Setting 100%% chance of single gamma-line with energy %g MeV\n",
       //   filename, decay::nucdecayenergygamma(z, a) / EV / 1e6);
       set_trivial_gamma_spectrum(z, a);
+      assert_always(z != 28 || a != 56);  // Ni-56 must have a gamma spectrum
+      assert_always(z != 27 || a != 56);  // Co-56 must have a gamma spectrum
+      assert_always(z != 23 || a != 48);  // V-48 must have a gamma spectrum
+      assert_always(z != 24 || a != 48);  // Cr-48 must have a gamma spectrum
+      assert_always(z != 28 || a != 57);  // Ni-57 must have a gamma spectrum if present in list of nuclides
+      assert_always(z != 26 || a != 57);  // Co-57 must have a gamma spectrum if present in list of nuclides
     } else {
       // printout("%s does not exist. No gamma decay from this nuclide.\n", filename);
     }
