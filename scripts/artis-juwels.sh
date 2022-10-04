@@ -7,7 +7,7 @@
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=luke.shingles@gmail.com
 
-module load Stages/2022 GCC OpenMPI
+module load Stages/2022 GCC/11.2.0 ParaStationMPI/5.5.0-1
 module load GSL
 
 cd $SLURM_SUBMIT_DIR
