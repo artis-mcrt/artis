@@ -873,7 +873,7 @@ static void read_recombrate_file(void)
     return;
   }
 
-  printout("Reading recombination rate file...\n");
+  printout("Reading recombination rate file (recombrates.txt)...\n");
 
   const double Te_estimate = RECOMBCALIBRATION_T_ELEC;
   const double log_Te_estimate = log10(Te_estimate);
