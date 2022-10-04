@@ -720,9 +720,7 @@ static void allocate_composition_cooling(void)
     int disp_unit = sizeof(double);
     MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nltepops_allcells,
                             &win_nltepops_allcells);
-    MPI_Aint size_query = 0;
-    MPI_Win_shared_query(win_nltepops_allcells, MPI_PROC_NULL, &size_query, &disp_unit, &nltepops_allcells);
-    assert_always(size_query == (npts_nonempty * globals::total_nlte_levels * sizeof(double)));
+    MPI_Win_shared_query(win_nltepops_allcells, 0, &size, &disp_unit, &nltepops_allcells);
 #else
     nltepops_allcells = static_cast<double *>(malloc(npts_nonempty * globals::total_nlte_levels * sizeof(double)));
 #endif
