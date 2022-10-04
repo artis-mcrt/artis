@@ -531,8 +531,11 @@ __host__ __device__ void init_nuclides(std::vector<int> custom_zlist, std::vecto
   nuclides.back().z = 27;  // Co56
   nuclides.back().a = 56;
   nuclides.back().meanlife = 113.7 * DAY;
+  // old method: move BETAPLUS branching factor into average positron energy
   nuclides.back().endecay_positron = 0.63 * MEV * 0.19;
   nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 1.;
+  // should produce the same results if everything is done correctly
+  // nuclides.back().endecay_positron = 0.63 * MEV;
   // nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.19;
   // nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 0.81;
 
