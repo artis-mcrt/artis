@@ -1123,14 +1123,21 @@ static void read_atomicdata_files(void) {
 #ifdef MPI_ON
   linelist_entry *sharedlinelist;
   MPI_Win win;
-  MPI_Aint size = (globals::rank_in_node == 0) ? globals::nlines * sizeof(linelist_entry) : 0;
-  int disp_unit = sizeof(linelist_entry);
 
+  int my_rank_lines = globals::nlines / globals::nprocs;
+  // rank_in_node 0 gets any remainder
+  if (globals::rank_in_node == 0) {
+    my_rank_lines += globals::nlines - (my_rank_lines * globals::nprocs);
+  }
+
+  MPI_Aint size = my_rank_lines * sizeof(linelist_entry);
+  int disp_unit = sizeof(linelist_entry);
   MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &sharedlinelist, &win);
+
   MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &sharedlinelist);
 
   if (globals::rank_in_node == 0) {
-    memcpy(sharedlinelist, globals::linelist, size);
+    memcpy(sharedlinelist, globals::linelist, globals::nlines * sizeof(linelist_entry));
     free(globals::linelist);
   }
 
