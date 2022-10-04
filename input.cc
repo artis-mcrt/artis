@@ -1134,7 +1134,7 @@ static void read_atomicdata_files(void) {
   int disp_unit = sizeof(linelist_entry);
   MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &sharedlinelist, &win);
 
-  MPI_Win_shared_query(win, MPI_PROC_NULL, &size, &disp_unit, &sharedlinelist);
+  MPI_Win_shared_query(win, 0, &size, &disp_unit, &sharedlinelist);
 
   if (globals::rank_in_node == 0) {
     memcpy(sharedlinelist, globals::linelist, globals::nlines * sizeof(linelist_entry));

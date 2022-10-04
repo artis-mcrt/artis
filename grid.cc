@@ -328,16 +328,31 @@ __host__ __device__ static void set_npts_model(int new_npts_model) {
 
 static void allocate_initradiobund(void) {
   assert_always(npts_model > 0);
+
   const int num_nuclides = decay::get_num_nuclides();
+
+  // TODO: don't allocate radioabundance memory for empty cells
+  // (because kilonova models have many nuclides and lots of empty cells)
+
+  const size_t totalradioabundsize = (npts_model + 1) * num_nuclides * sizeof(float);
 #ifdef MPI_ON
-  MPI_Aint size = (globals::rank_in_node == 0) ? (npts_model + 1) * num_nuclides * sizeof(float) : 0;
+  int my_rank_cells = (npts_model + 1) / globals::node_nprocs;
+  // rank_in_node 0 gets any remainder
+  if (globals::rank_in_node == 0) {
+    my_rank_cells += (npts_model + 1) - (my_rank_cells * globals::node_nprocs);
+  }
+
+  MPI_Aint size = my_rank_cells * num_nuclides * sizeof(float);
+
   int disp_unit = sizeof(float);
   MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &initradioabund_allcells,
                           &win_initradioabund_allcells);
-  MPI_Win_shared_query(win_initradioabund_allcells, MPI_PROC_NULL, &size, &disp_unit, &initradioabund_allcells);
+  MPI_Win_shared_query(win_initradioabund_allcells, 0, &size, &disp_unit, &initradioabund_allcells);
 #else
-  initradioabund_allcells = (float *)malloc((npts_model + 1) * num_nuclides * sizeof(float));
+  initradioabund_allcells = static_cast<float *>(malloc(totalradioabundsize));
 #endif
+  printout("mem_usage: radioabundance data for %d nuclides for %d cells occupies %.3f MB (node shared memory)\n",
+           num_nuclides, npts_model, totalradioabundsize / 1024 / 1024);
 
   assert_always(initradioabund_allcells != NULL);
 
