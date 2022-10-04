@@ -327,9 +327,11 @@ void init(int my_rank, int ndo, int ndo_nonempty)
 
   printout("There are %d lines with detailed Jblue_lu estimators.\n", detailed_linecount);
 
-  printout("DETAILED_BF_ESTIMATORS %s", DETAILED_BF_ESTIMATORS_ON ? "ON" : "OFF\n");
+  printout("DETAILED_BF_ESTIMATORS %s", DETAILED_BF_ESTIMATORS_ON ? "ON" : "OFF");
   if (DETAILED_BF_ESTIMATORS_ON) {
     printout(" from timestep %d\n", DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP);
+  } else {
+    printout("\n");
   }
 
   if (MULTIBIN_RADFIELD_MODEL_ON) {
