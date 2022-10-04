@@ -705,8 +705,8 @@ static void allocate_composition_cooling(void)
 {
   const int npts_nonempty = get_nonempty_npts_model() + 1;  // add one for the combined empty cell at the end
 
-  float *initmassfracstable_allcells = (float *)malloc(npts_nonempty * get_nelements() * sizeof(float));
-  float *elem_meanweight_allcells = (float *)malloc(npts_nonempty * get_nelements() * sizeof(float));
+  float *initmassfracstable_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
+  float *elem_meanweight_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
 
   double *nltepops_allcells = NULL;
   if (globals::total_nlte_levels > 0) {
@@ -1907,7 +1907,7 @@ void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo
     int rank = 0;
     for (int mgi = 0; mgi < get_npts_model(); mgi++) {
       const int target_nonempty_thisrank = (rank < n_leftover) ? min_nonempty_perproc + 1 : min_nonempty_perproc;
-      if ((ranks_ndo_nonempty[rank] >= target_nonempty_thisrank) && (rank < (nprocesses - 1))) {
+      if ((rank < (nprocesses - 1)) && (ranks_ndo_nonempty[rank] >= target_nonempty_thisrank)) {
         // current rank has enough non-empty cells, so start assigning cells to the next rank
         rank++;
         ranks_nstart[rank] = mgi;
