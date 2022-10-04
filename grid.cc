@@ -331,9 +331,6 @@ static void allocate_initradiobund(void) {
 
   const int num_nuclides = decay::get_num_nuclides();
 
-  // TODO: don't allocate radioabundance memory for empty cells
-  // (because kilonova models have many nuclides and lots of empty cells)
-
   const size_t totalradioabundsize = (npts_model + 1) * num_nuclides * sizeof(float);
 #ifdef MPI_ON
   int my_rank_cells = (npts_model + 1) / globals::node_nprocs;
