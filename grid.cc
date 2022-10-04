@@ -711,13 +711,20 @@ static void allocate_composition_cooling(void)
   double *nltepops_allcells = NULL;
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
-    MPI_Aint size = (globals::rank_in_node == 0) ? (npts_nonempty * globals::total_nlte_levels * sizeof(double)) : 0;
+    int my_rank_cells = (npts_nonempty / globals::nprocs);
+    // rank_in_node 0 gets any remainder cells. equivalent to npts_nonempty % globals::nprocs
+    if (globals::rank_in_node == 0) {
+      my_rank_cells = npts_nonempty - (my_rank_cells * globals::nprocs);
+    }
+    MPI_Aint size = my_rank_cells * globals::total_nlte_levels * sizeof(double);
     int disp_unit = sizeof(double);
     MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nltepops_allcells,
                             &win_nltepops_allcells);
-    MPI_Win_shared_query(win_nltepops_allcells, MPI_PROC_NULL, &size, &disp_unit, &nltepops_allcells);
+    MPI_Aint size_query = 0;
+    MPI_Win_shared_query(win_nltepops_allcells, MPI_PROC_NULL, &size_query, &disp_unit, &nltepops_allcells);
+    assert_always(size_query == (npts_nonempty * globals::total_nlte_levels * sizeof(double)));
 #else
-    nltepops_allcells = (double *)malloc(npts_nonempty * globals::total_nlte_levels * sizeof(double));
+    nltepops_allcells = static_cast<double *>(malloc(npts_nonempty * globals::total_nlte_levels * sizeof(double)));
 #endif
 
     assert_always(nltepops_allcells != NULL);
