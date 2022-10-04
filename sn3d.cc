@@ -972,11 +972,12 @@ int main(int argc, char **argv)
   mpi_grid_buffer_size = 4 * ((12 + 4 * get_includedions()) * (maxndo) + 1);
   printout("reserve mpi_grid_buffer_size %d space for MPI communication buffer\n", mpi_grid_buffer_size);
   // char buffer[mpi_grid_buffer_size];
-  mpi_grid_buffer = (char *)malloc(mpi_grid_buffer_size * sizeof(char));
+  mpi_grid_buffer = static_cast<char *>(malloc(mpi_grid_buffer_size * sizeof(char)));
   if (mpi_grid_buffer == NULL) {
     printout("[fatal] input: not enough memory to initialize MPI grid buffer ... abort.\n");
     abort();
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
   /** That's the end of the initialisation. */
