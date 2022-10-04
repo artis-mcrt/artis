@@ -104,8 +104,8 @@ __managed__ struct cellhistory *cellhistory = NULL;
 __managed__ int debuglevel;
 
 #ifdef MPI_ON
-MPI_Comm mpi_comm_node = NULL;
-MPI_Comm mpi_comm_internode = NULL;
+MPI_Comm mpi_comm_node = MPI_COMM_NULL;
+MPI_Comm mpi_comm_internode = MPI_COMM_NULL;
 #endif
 
 __managed__ int nprocs = -1;       // number of MPI processes
