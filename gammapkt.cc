@@ -133,7 +133,7 @@ static void read_decaydata(void) {
       assert_always(z != 23 || a != 48);  // V-48 must have a gamma spectrum
       assert_always(z != 24 || a != 48);  // Cr-48 must have a gamma spectrum
       assert_always(z != 28 || a != 57);  // Ni-57 must have a gamma spectrum if present in list of nuclides
-      assert_always(z != 26 || a != 57);  // Co-57 must have a gamma spectrum if present in list of nuclides
+      assert_always(z != 28 || a != 57);  // Co-57 must have a gamma spectrum if present in list of nuclides
     } else {
       // printout("%s does not exist. No gamma decay from this nuclide.\n", filename);
     }
