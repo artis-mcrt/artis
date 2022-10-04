@@ -1124,10 +1124,10 @@ static void read_atomicdata_files(void) {
   linelist_entry *sharedlinelist;
   MPI_Win win;
 
-  int my_rank_lines = globals::nlines / globals::nprocs;
+  int my_rank_lines = globals::nlines / globals::node_nprocs;
   // rank_in_node 0 gets any remainder
   if (globals::rank_in_node == 0) {
-    my_rank_lines += globals::nlines - (my_rank_lines * globals::nprocs);
+    my_rank_lines += globals::nlines - (my_rank_lines * globals::node_nprocs);
   }
 
   MPI_Aint size = my_rank_lines * sizeof(linelist_entry);

@@ -711,10 +711,10 @@ static void allocate_composition_cooling(void)
   double *nltepops_allcells = NULL;
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
-    int my_rank_cells = (npts_nonempty / globals::nprocs);
-    // rank_in_node 0 gets any remainder cells. equivalent to npts_nonempty % globals::nprocs
+    int my_rank_cells = (npts_nonempty / globals::node_nprocs);
+    // rank_in_node 0 gets any remainder cells. equivalent to npts_nonempty % globals::node_nprocs
     if (globals::rank_in_node == 0) {
-      my_rank_cells += npts_nonempty - (my_rank_cells * globals::nprocs);
+      my_rank_cells += npts_nonempty - (my_rank_cells * globals::node_nprocs);
     }
     MPI_Aint size = my_rank_cells * globals::total_nlte_levels * sizeof(double);
     int disp_unit = sizeof(double);
