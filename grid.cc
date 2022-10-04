@@ -25,7 +25,7 @@ namespace grid {
 
 __managed__ struct modelgrid_t *modelgrid = NULL;
 
-__managed__ int ncoordgrid[3];  /// propagration grid dimensions
+__managed__ int ncoordgrid[3];  /// propagation grid dimensions
 __managed__ int ngrid;
 __managed__ char coordlabel[3];
 
@@ -2066,7 +2066,7 @@ void grid_init(int my_rank)
   for (int d = 0; d < get_ngriddimensions(); d++) {
     printout("    coordinate %d '%c': cells have %d position values\n", d, coordlabel[d], ncoordgrid[d]);
   }
-  printout("    total propagration cells: %d\n", ngrid);
+  printout("    total propagation cells: %d\n", ngrid);
 
   /// Now set up the density in each cell.
 
