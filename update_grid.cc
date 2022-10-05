@@ -1351,8 +1351,10 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 #endif
         { write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates); }
 
-        printout("writing estimators for cell %d timestep %d took %ld seconds\n", mgi, nts,
-                 time(NULL) - sys_time_start_write_estimators);
+        const int write_estim_duration = time(NULL) - sys_time_start_write_estimators;
+        if (write_estim_duration > 1) {
+          printout("writing estimators for cell %d timestep %d took %d seconds\n", mgi, nts, write_estim_duration);
+        }
       } else {
 /// else, only reset gammaestimator to zero. This allows us to do a global MPI
 /// communication after update_grid to synchronize gammaestimator
