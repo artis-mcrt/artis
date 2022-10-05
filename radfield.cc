@@ -378,7 +378,7 @@ void init(int my_rank, int ndo, int ndo_nonempty)
     printout("[info] mem_usage: radiation field bin accumulators for non-empty cells occupy %.3f MB\n",
              mem_usage_bins / 1024. / 1024.);
     printout(
-        "[info] mem_usage: radiation field bin solutions for non-empty cells occupy %.3f MB (shared node memory)\n",
+        "[info] mem_usage: radiation field bin solutions for non-empty cells occupy %.3f MB (node shared memory)\n",
         mem_usage_bin_solutions / 1024. / 1024.);
   } else {
     printout("The radiation field model is a full-spectrum fit to a single dilute blackbody TR & W.\n");
@@ -399,7 +399,7 @@ void init(int my_rank, int ndo, int ndo_nonempty)
 #else
     { prev_bfrate_normed = (float *)malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(float)); }
 #endif
-    printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (shared node memory)\n",
+    printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (node shared memory)\n",
              nonempty_npts_model * globals::nbfcontinua * sizeof(float) / 1024. / 1024.);
 
     bfrate_raw = (double *)malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(double));

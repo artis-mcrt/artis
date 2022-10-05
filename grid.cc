@@ -452,7 +452,7 @@ __host__ __device__ float get_modelinitradioabund_bynucindex(const int modelgrid
 
 __host__ __device__ static void set_modelinitradioabund(const int modelgridindex, const int z, const int a,
                                                         const float abund) {
-  // // initradioabund is in shared node memory. only first rank in the node sets the values
+  // // initradioabund is in node shared memory. only first rank in the node sets the values
   // if (globals::rank_in_node != 0)
   // {
   //   return;
@@ -469,7 +469,7 @@ __host__ __device__ static void set_modelinitradioabund(const int modelgridindex
 
 __host__ __device__ static void set_modelinitradioabund_bynucindex(const int modelgridindex, const int nucindex,
                                                                    const float abund) {
-  // // initradioabund is in shared node memory. only first rank in the node sets the values
+  // // initradioabund is in node shared memory. only first rank in the node sets the values
   // if (globals::rank_in_node != 0)
   // {
   //   return;
@@ -894,7 +894,7 @@ static void allocate_nonemptymodelcells(void) {
   allocate_composition_cooling();
 
 #ifdef MPI_ON
-  // barrier to make sure node master has set abundance values to shared node memory
+  // barrier to make sure node master has set abundance values to node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
@@ -904,7 +904,7 @@ static void allocate_nonemptymodelcells(void) {
   printout("There are %d modelgrid cells with associated propagation cells\n", nonempty_npts_model);
 
   printout(
-      "[info] mem_usage: NLTE populations for all allocated cells occupy a total of %.3f MB (shared node memory)\n",
+      "[info] mem_usage: NLTE populations for all allocated cells occupy a total of %.3f MB (node shared memory)\n",
       mem_usage_nltepops / 1024. / 1024.);
 }
 
@@ -1007,7 +1007,7 @@ static void map_3dmodeltogrid(void) {
 
 static void abundances_read(void) {
 #ifdef MPI_ON
-  // barrier to make sure node master has set values in shared node memory
+  // barrier to make sure node master has set values in node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
   const bool threedimensional = (get_model_type() == RHO_3D_READ);
@@ -1066,7 +1066,7 @@ static void abundances_read(void) {
 
   abundance_file.close();
 #ifdef MPI_ON
-  // barrier to make sure node master has set values in shared node memory
+  // barrier to make sure node master has set values in node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 }

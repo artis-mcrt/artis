@@ -23,10 +23,10 @@
 const int groundstate_index_in = 1;  // starting level index in the input files
 
 struct transitions {
-  int *to;
+  int *to = nullptr;
 };
 
-static struct transitions *transitions;
+static struct transitions *transitions = nullptr;
 
 struct transitiontable_entry {
   int lower;
@@ -242,7 +242,7 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
     gsl_interp_accel *acc = gsl_interp_accel_alloc();
     gsl_spline *spline = gsl_spline_alloc(gsl_interp_linear, nphixspoints_inputtable);
     gsl_spline_init(spline, nutable, phixstable, nphixspoints_inputtable);
-    double nu = nu_edge;
+    double nu;
     for (int i = 1; i < globals::NPHIXSPOINTS; i++) {
       nu = nu_edge * (1. + i * globals::NPHIXSNUINCREMENT);
       if (nu > nu_max) {
@@ -424,20 +424,18 @@ static void read_ion_levels(FILE *adata, const int element, const int ion, const
       /// store the possible downward transitions from the current level in following order to memory
       ///     A_level,level-1; A_level,level-2; ... A_level,1
       /// entries which are not explicitly set are zero (the zero is set/initialized by calloc!)
-      if ((transitions[level].to = (int *)calloc(level, sizeof(int))) == NULL) {
-        printout("[fatal] input: not enough memory to initialize transitionlist ... abort\n");
-        abort();
-      }
+      transitions[level].to = static_cast<int *>(malloc(level * sizeof(int)));
+      assert_always(transitions[level].to != nullptr);
       for (int i = 0; i < level; i++) {
         transitions[level].to[i] = -99.;
       }
 
-      globals::elements[element].ions[ion].levels[level].downtrans_lineindicies = NULL;
+      globals::elements[element].ions[ion].levels[level].downtrans_lineindicies = nullptr;
 
       /// initialize number of downward transitions to zero
       set_ndowntrans(element, ion, level, 0);
 
-      globals::elements[element].ions[ion].levels[level].uptrans_lineindicies = NULL;
+      globals::elements[element].ions[ion].levels[level].uptrans_lineindicies = nullptr;
 
       /// initialize number of upward transitions to zero
       set_nuptrans(element, ion, level, 0);
@@ -963,7 +961,7 @@ static void read_atomicdata_files(void) {
       assert_always(transdata_ionstage_in == ionstage);
 
       /// read in the level and transition data for this ion
-      struct transitiontable_entry *transitiontable = NULL;
+      struct transitiontable_entry *transitiontable = nullptr;
       if (tottransitions > 0) {
         transitiontable = (struct transitiontable_entry *)calloc(tottransitions, sizeof(struct transitiontable_entry));
       }
@@ -1030,9 +1028,12 @@ static void read_atomicdata_files(void) {
         totaldowntrans += get_ndowntrans(element, ion, level);
         totaluptrans += get_nuptrans(element, ion, level);
         free(transitions[level].to);
+        transitions[level].to = nullptr;
       }
       free(transitiontable);
+      transitiontable = nullptr;
       free(transitions);
+      transitions = nullptr;
 
       if (ion < nions - 1) {
         nbfcheck += globals::elements[element].ions[ion].ionisinglevels;  // nlevelsmax;
@@ -1064,7 +1065,7 @@ static void read_atomicdata_files(void) {
   printout("total downtrans %d\n", totaldowntrans);
 
   printout("[info] mem_usage: transitions occupy %.3f MB\n",
-           (totaluptrans + totaldowntrans) * (sizeof(int)) / 1024. / 1024.);
+           (totaluptrans + totaldowntrans) * sizeof(int *) / 1024. / 1024.);
 
   /// then sort the linelist by decreasing frequency
   if (globals::rank_in_node == 0) {
@@ -1144,7 +1145,7 @@ static void read_atomicdata_files(void) {
   MPI_Barrier(MPI_COMM_WORLD);
   globals::linelist = sharedlinelist;
 #endif
-  printout("[info] mem_usage: linelist occupies %.3f MB (shared on node)\n",
+  printout("[info] mem_usage: linelist occupies %.3f MB (node shared memory)\n",
            globals::nlines * (sizeof(globals::linelist[0]) + sizeof(&globals::linelist[0])) / 1024. / 1024);
 
   /// Save sorted linelist into a file
