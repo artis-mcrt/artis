@@ -378,13 +378,12 @@ static void extend_lastdecaypath(void)
       if (get_nuc_decaybranchprob(daughter_z, daughter_a, dectypeindex2) == 0.) {
         continue;
       }
-      decaypaths.push_back({0, nullptr, nullptr, nullptr});
       const int lastindex = decaypaths.size() - 1;
       const int pathlength = get_decaypathlength(startdecaypathindex) + 1;
-      decaypaths[lastindex].pathlength = pathlength;
-      decaypaths[lastindex].z = std::make_unique<int[]>(pathlength);
-      decaypaths[lastindex].a = std::make_unique<int[]>(pathlength);
-      decaypaths[lastindex].decaytypes = std::make_unique<int[]>(pathlength);
+      decaypaths.push_back({.pathlength = pathlength,
+                            .z = std::make_unique<int[]>(pathlength),
+                            .a = std::make_unique<int[]>(pathlength),
+                            .decaytypes = std::make_unique<int[]>(pathlength)});
 
       // check for repeated nuclides, which would indicate a loop in the decay chain
       for (int i = 0; i < get_decaypathlength(startdecaypathindex); i++) {
@@ -405,10 +404,11 @@ static void extend_lastdecaypath(void)
   }
 }
 
-static bool compare_decaypaths(const struct decaypath &d1, const struct decaypath &d2)
+static bool operator<(const struct decaypath &d1, const struct decaypath &d2)
 // true if d1 < d2
 // order the chains in the same way as when the search moved up from the descendant
 // instead of down from the ancestor, for ease of test comparison
+// chains are sorted by mass number of first, second, third, etc position in chain
 {
   const int smallestpathlength = std::min(d1.pathlength, d2.pathlength);
   bool matchingoverlap = true;
@@ -451,13 +451,12 @@ static void find_decaypaths(void) {
         continue;
       }
 
-      decaypaths.push_back({0, nullptr, nullptr, nullptr});
       const int lastindex = decaypaths.size() - 1;
       constexpr int pathlength = 1;
-      decaypaths[lastindex].pathlength = pathlength;
-      decaypaths[lastindex].z = std::make_unique<int[]>(pathlength);
-      decaypaths[lastindex].a = std::make_unique<int[]>(pathlength);
-      decaypaths[lastindex].decaytypes = std::make_unique<int[]>(pathlength);
+      decaypaths.push_back({.pathlength = pathlength,
+                            .z = std::make_unique<int[]>(pathlength),
+                            .a = std::make_unique<int[]>(pathlength),
+                            .decaytypes = std::make_unique<int[]>(pathlength)});
 
       decaypaths[lastindex].z[0] = z;
       decaypaths[lastindex].a[0] = a;
@@ -467,7 +466,7 @@ static void find_decaypaths(void) {
     }
   }
 
-  std::sort(decaypaths.begin(), decaypaths.end(), compare_decaypaths);
+  std::sort(decaypaths.begin(), decaypaths.end());
 }
 
 int get_nucstring_z(const char *strnuc)
