@@ -1107,6 +1107,10 @@ void setup_decaypath_energy_per_mass(void) {
 #endif
   printout("done.\n");
 
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
   printout("Calculating for decaypath_energy_per_mass for all cells...");
   const int num_decaypaths = get_num_decaypaths();
   for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
