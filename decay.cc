@@ -405,10 +405,11 @@ static void extend_lastdecaypath(void)
   }
 }
 
-static bool compare_decaypaths(const struct decaypath &d1, const struct decaypath &d2)
+static bool operator<(const struct decaypath &d1, const struct decaypath &d2)
 // true if d1 < d2
 // order the chains in the same way as when the search moved up from the descendant
 // instead of down from the ancestor, for ease of test comparison
+// chains are sorted by mass number of first, second, third, etc position in chain
 {
   const int smallestpathlength = std::min(d1.pathlength, d2.pathlength);
   bool matchingoverlap = true;
@@ -467,7 +468,7 @@ static void find_decaypaths(void) {
     }
   }
 
-  std::sort(decaypaths.begin(), decaypaths.end(), compare_decaypaths);
+  std::sort(decaypaths.begin(), decaypaths.end());
 }
 
 int get_nucstring_z(const char *strnuc)
