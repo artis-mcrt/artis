@@ -1009,9 +1009,10 @@ __host__ __device__ static double get_endecay_per_ejectamass_between_times(const
   return endiff;
 }
 
-static void calculate_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex)
+static double calculate_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex)
 // calculate the decay energy released during the simulation time per unit mass [erg/g]
 {
+  assert_testmodeonly(mgi < grid::get_npts_model());
 #ifdef NO_INITIAL_PACKETS
   // get decay energy released from t=tmin to tmax
   const double simtime_endecay =
@@ -1021,7 +1022,7 @@ static void calculate_simtime_endecay_per_ejectamass(const int mgi, const int de
   const double simtime_endecay =
       get_endecay_per_ejectamass_between_times(mgi, decaypathindex, grid::get_t_model(), globals::tmax);
 #endif
-  decaypath_energy_per_mass[mgi * get_num_decaypaths() + decaypathindex] = simtime_endecay;
+  return simtime_endecay;
 }
 
 __host__ __device__ static double get_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex)
@@ -1084,26 +1085,33 @@ __host__ __device__ double get_modelcell_simtime_endecay_per_mass(const int mgi)
 }
 
 void setup_decaypath_energy_per_mass(void) {
+  const int npts_model = grid::get_npts_model();
   printout("[info] mem_usage: allocating %.1f MB for decaypath_energy_per_mass...",
-           (grid::get_npts_model() + 1) * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
+           npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
 #ifdef MPI_ON
-  MPI_Aint size =
-      (globals::rank_in_node == 0) ? (grid::get_npts_model() + 1) * get_num_decaypaths() * sizeof(double) : 0;
+  int my_rank_cells = npts_model / globals::node_nprocs;
+  // rank_in_node 0 gets any remainder
+  if (globals::rank_in_node == 0) {
+    my_rank_cells += npts_model - (my_rank_cells * globals::node_nprocs);
+  }
+  MPI_Aint size = my_rank_cells * get_num_decaypaths() * sizeof(double);
+
   int disp_unit = sizeof(double);
   MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &decaypath_energy_per_mass,
                           &win_decaypath_energy_per_mass);
-  MPI_Win_shared_query(win_decaypath_energy_per_mass, MPI_PROC_NULL, &size, &disp_unit, &decaypath_energy_per_mass);
+  MPI_Win_shared_query(win_decaypath_energy_per_mass, 0, &size, &disp_unit, &decaypath_energy_per_mass);
 #else
-  decaypath_energy_per_mass =
-      static_cast<double *>(malloc((grid::get_npts_model() + 1) * get_num_decaypaths() * sizeof(double)));
+  decaypath_energy_per_mass = static_cast<double *>(malloc((npts_model + 1) * get_num_decaypaths() * sizeof(double)));
 #endif
   printout("done.\n");
 
   printout("Calculating for decaypath_energy_per_mass for all cells...");
-  for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
+  const int num_decaypaths = get_num_decaypaths();
+  for (int mgi = 0; mgi < npts_model; mgi++) {
     if (mgi % globals::node_nprocs == globals::rank_in_node) {
-      for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
-        calculate_simtime_endecay_per_ejectamass(mgi, decaypathindex);
+      for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
+        decaypath_energy_per_mass[mgi * num_decaypaths + decaypathindex] =
+            calculate_simtime_endecay_per_ejectamass(mgi, decaypathindex);
       }
     }
   }
