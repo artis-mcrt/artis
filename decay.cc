@@ -1028,7 +1028,8 @@ static double calculate_simtime_endecay_per_ejectamass(const int mgi, const int 
 __host__ __device__ static double get_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex)
 // get the decay energy released during the simulation time per unit mass [erg/g]
 {
-  const double chainendecay = decaypath_energy_per_mass[mgi * get_num_decaypaths() + decaypathindex];
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+  const double chainendecay = decaypath_energy_per_mass[nonemptymgi * get_num_decaypaths() + decaypathindex];
   assert_testmodeonly(chainendecay >= 0.);
   assert_testmodeonly(std::isfinite(chainendecay));
   return chainendecay;
@@ -1086,13 +1087,14 @@ __host__ __device__ double get_modelcell_simtime_endecay_per_mass(const int mgi)
 
 void setup_decaypath_energy_per_mass(void) {
   const int npts_model = grid::get_npts_model();
+  const int nonempty_npts_model = grid::get_nonempty_npts_model();
   printout("[info] mem_usage: allocating %.1f MB for decaypath_energy_per_mass...",
-           npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
+           nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
 #ifdef MPI_ON
-  int my_rank_cells = npts_model / globals::node_nprocs;
+  int my_rank_cells = nonempty_npts_model / globals::node_nprocs;
   // rank_in_node 0 gets any remainder
   if (globals::rank_in_node == 0) {
-    my_rank_cells += npts_model - (my_rank_cells * globals::node_nprocs);
+    my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
   }
   MPI_Aint size = my_rank_cells * get_num_decaypaths() * sizeof(double);
 
@@ -1107,10 +1109,11 @@ void setup_decaypath_energy_per_mass(void) {
 
   printout("Calculating for decaypath_energy_per_mass for all cells...");
   const int num_decaypaths = get_num_decaypaths();
-  for (int mgi = 0; mgi < npts_model; mgi++) {
-    if (mgi % globals::node_nprocs == globals::rank_in_node) {
+  for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
+    if (nonemptymgi % globals::node_nprocs == globals::rank_in_node) {
+      const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
       for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
-        decaypath_energy_per_mass[mgi * num_decaypaths + decaypathindex] =
+        decaypath_energy_per_mass[nonemptymgi * num_decaypaths + decaypathindex] =
             calculate_simtime_endecay_per_ejectamass(mgi, decaypathindex);
       }
     }
