@@ -24,10 +24,8 @@
 const int groundstate_index_in = 1;  // starting level index in the input files
 
 struct transitions {
-  int *to = nullptr;
+  int *to;
 };
-
-static struct transitions *transitions = nullptr;
 
 struct transitiontable_entry {
   int lower;
@@ -385,7 +383,8 @@ static void read_phixs_data(int phixs_file_version) {
 }
 
 static void read_ion_levels(FILE *adata, const int element, const int ion, const int nions, const int nlevels,
-                            int nlevelsmax, const double energyoffset, const double ionpot) {
+                            int nlevelsmax, const double energyoffset, const double ionpot,
+                            struct transitions *transitions) {
   for (int level = 0; level < nlevels; level++) {
     int levelindex_in;
     double levelenergy;
@@ -584,7 +583,8 @@ constexpr int compare_linelistentry(const void *p1, const void *p2)
 
 static void add_transitions_to_linelist(const int element, const int ion, const int nlevelsmax,
                                         const int tottransitions,
-                                        std::vector<struct transitiontable_entry> &transitiontable, int *lineindex) {
+                                        std::vector<struct transitiontable_entry> &transitiontable,
+                                        struct transitions *transitions, int *lineindex) {
   for (int ii = 0; ii < tottransitions; ii++) {
     // if (get_element(element) == 28 && get_ionstage(element, ion) == 2)
     // {
@@ -984,12 +984,13 @@ static void read_atomicdata_files(void) {
 
       /// now we need to readout the data for all those levels, write them to memory
       /// and set up the list of possible transitions for each level
-      transitions = static_cast<struct transitions *>(calloc(nlevelsmax, sizeof(struct transitions)));
+      struct transitions *transitions =
+          static_cast<struct transitions *>(calloc(nlevelsmax, sizeof(struct transitions)));
       assert_always(transitions != NULL);
 
-      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot);
+      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, transitions);
 
-      add_transitions_to_linelist(element, ion, nlevelsmax, tottransitions, transitiontable, &lineindex);
+      add_transitions_to_linelist(element, ion, nlevelsmax, tottransitions, transitiontable, transitions, &lineindex);
 
       for (int level = 0; level < nlevelsmax; level++) {
         globals::elements[element].ions[ion].levels[level].uniquelevelindex = uniquelevelindex;
