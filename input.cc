@@ -445,12 +445,10 @@ static void read_ion_levels(FILE *adata, const int element, const int ion, const
   }
 }
 
-static struct transitiontable_entry *read_ion_transitions(std::istream &ftransitiondata, const int tottransitions_in,
-                                                          int *tottransitions,
-                                                          struct transitiontable_entry *transitiontable,
-                                                          const int nlevels_requiretransitions,
-                                                          const int nlevels_requiretransitions_upperlevels, const int Z,
-                                                          const int ionstage) {
+static void read_ion_transitions(std::istream &ftransitiondata, const int tottransitions_in, int *tottransitions,
+                                 std::vector<struct transitiontable_entry> &transitiontable,
+                                 const int nlevels_requiretransitions, const int nlevels_requiretransitions_upperlevels,
+                                 const int Z, const int ionstage) {
   std::string line;
 
   // will be autodetected from first table row. old format had an index column and no collstr or forbidden columns
@@ -516,25 +514,16 @@ static struct transitiontable_entry *read_ion_transitions(std::istream &ftransit
           // printout("+adding transition index %d Z=%02d ionstage %d lower %d upper %d\n", i, Z, ionstage, prev_lower,
           // tmplevel);
           (*tottransitions)++;
-          transitiontable = (struct transitiontable_entry *)realloc(
-              transitiontable, *tottransitions * sizeof(struct transitiontable_entry));
-          assert_always(transitiontable != NULL);
           assert_always(prev_lower >= 0);
           assert_always(tmplevel >= 0);
-          transitiontable[i].lower = prev_lower;
-          transitiontable[i].upper = tmplevel;
-          transitiontable[i].A = 0.;
-          transitiontable[i].coll_str = -2.;
-          transitiontable[i].forbidden = true;
+          transitiontable.push_back(
+              {.lower = prev_lower, .upper = tmplevel, .A = 0., .coll_str = -2., .forbidden = true});
           i++;
         }
       }
 
-      transitiontable[i].lower = lower;
-      transitiontable[i].upper = upper;
-      transitiontable[i].A = A;
-      transitiontable[i].coll_str = coll_str;
-      transitiontable[i].forbidden = (intforbidden == 1);
+      transitiontable.push_back(
+          {.lower = lower, .upper = upper, .A = A, .coll_str = coll_str, .forbidden = (intforbidden == 1)});
       // printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
       //  printout("reading transition index %d lower %d upper %d\n", i, transitiontable[i].lower,
       //  transitiontable[i].upper);
@@ -542,8 +531,6 @@ static struct transitiontable_entry *read_ion_transitions(std::istream &ftransit
       prev_upper = upper;
     }
   }
-
-  return transitiontable;
 }
 
 constexpr bool operator<(const linelist_entry &a, const linelist_entry &b)
@@ -595,8 +582,8 @@ constexpr int compare_linelistentry(const void *p1, const void *p2)
 }
 
 static void add_transitions_to_linelist(const int element, const int ion, const int nlevelsmax,
-                                        const int tottransitions, struct transitiontable_entry *transitiontable,
-                                        int *lineindex) {
+                                        const int tottransitions,
+                                        std::vector<struct transitiontable_entry> &transitiontable, int *lineindex) {
   for (int ii = 0; ii < tottransitions; ii++) {
     // if (get_element(element) == 28 && get_ionstage(element, ion) == 2)
     // {
@@ -961,18 +948,11 @@ static void read_atomicdata_files(void) {
       assert_always(transdata_ionstage_in == ionstage);
 
       /// read in the level and transition data for this ion
-      struct transitiontable_entry *transitiontable = nullptr;
-      if (tottransitions > 0) {
-        transitiontable = (struct transitiontable_entry *)calloc(tottransitions, sizeof(struct transitiontable_entry));
-      }
+      std::vector<struct transitiontable_entry> transitiontable;
+      transitiontable.reserve(tottransitions);
 
       /// load transition table for the CURRENT ion to temporary memory
-      if (transitiontable == NULL) {
-        if (tottransitions > 0) {
-          printout("[fatal] input: not enough memory to initialize transitiontable ... abort\n");
-          abort();
-        }
-      }
+
       // first <nlevels_requiretransitions> levels will be collisionally
       // coupled to the first <nlevels_requiretransitions_upperlevels> levels (assumed forbidden)
       // use 0 to disable adding extra transitions
@@ -983,9 +963,8 @@ static void read_atomicdata_files(void) {
       nlevels_requiretransitions = std::min(nlevelsmax, nlevels_requiretransitions);
       nlevels_requiretransitions_upperlevels = std::min(nlevelsmax, nlevels_requiretransitions_upperlevels);
 
-      transitiontable =
-          read_ion_transitions(ftransitiondata, tottransitions_in, &tottransitions, transitiontable,
-                               nlevels_requiretransitions, nlevels_requiretransitions_upperlevels, Z, ionstage);
+      read_ion_transitions(ftransitiondata, tottransitions_in, &tottransitions, transitiontable,
+                           nlevels_requiretransitions, nlevels_requiretransitions_upperlevels, Z, ionstage);
 
       /// store the ions data to memory and set up the ions zeta and levellist
       globals::elements[element].ions[ion].ionstage = ionstage;
@@ -1010,7 +989,7 @@ static void read_atomicdata_files(void) {
 
       /// now we need to readout the data for all those levels, write them to memory
       /// and set up the list of possible transitions for each level
-      if ((transitions = (struct transitions *)calloc(nlevelsmax, sizeof(struct transitions))) == NULL) {
+      if ((transitions = static_cast<struct transitions *>(calloc(nlevelsmax, sizeof(struct transitions)))) == NULL) {
         printout("[fatal] input: not enough memory to allocate transitions ... abort\n");
         abort();
       }
@@ -1030,8 +1009,6 @@ static void read_atomicdata_files(void) {
         free(transitions[level].to);
         transitions[level].to = nullptr;
       }
-      free(transitiontable);
-      transitiontable = nullptr;
       free(transitions);
       transitions = nullptr;
 
