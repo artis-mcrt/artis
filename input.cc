@@ -584,7 +584,8 @@ constexpr int compare_linelistentry(const void *p1, const void *p2)
 
 static void add_transitions_to_linelist(const int element, const int ion, const int nlevelsmax,
                                         const std::vector<struct transitiontable_entry> &transitiontable,
-                                        struct transitions *transitions, int *lineindex) {
+                                        struct transitions *transitions, int *lineindex,
+                                        std::vector<struct linelist_entry> &temp_linelist) {
   const int tottransitions = transitiontable.size();
   for (int ii = 0; ii < tottransitions; ii++) {
     // if (get_element(element) == 28 && get_ionstage(element, ion) == 2)
@@ -631,27 +632,19 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
         // %g\n",*lineindex,element,ion,level-i-1,level,nu_trans);
 
         if (globals::rank_in_node == 0) {
-          globals::linelist[*lineindex].elementindex = element;
-          globals::linelist[*lineindex].ionindex = ion;
-          globals::linelist[*lineindex].lowerlevelindex = targetlevel;
-          globals::linelist[*lineindex].upperlevelindex = level;
-          globals::linelist[*lineindex].nu = nu_trans;
-          globals::linelist[*lineindex].einstein_A = A_ul;
-          globals::linelist[*lineindex].osc_strength = f_ul;
-          globals::linelist[*lineindex].coll_str = coll_str;
-          globals::linelist[*lineindex].forbidden = transitiontable[ii].forbidden;
+          temp_linelist.push_back({
+              .nu = nu_trans,
+              .einstein_A = static_cast<float>(A_ul),
+              .osc_strength = static_cast<float>(f_ul),
+              .coll_str = static_cast<float>(coll_str),
+              .elementindex = element,
+              .ionindex = ion,
+              .upperlevelindex = level,
+              .lowerlevelindex = targetlevel,
+              .forbidden = transitiontable[ii].forbidden,
+          });
         }
         (*lineindex)++;
-        if (globals::rank_in_node == 0) {
-          if (*lineindex % MLINES == 0) {
-            printout("[info] read_atomicdata: increase linelistsize from %d to %d\n", *lineindex, *lineindex + MLINES);
-            if ((globals::linelist = (linelist_entry *)realloc(
-                     globals::linelist, (*lineindex + MLINES) * sizeof(linelist_entry))) == NULL) {
-              printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
-              abort();
-            }
-          }
-        }
 
         /// This is not a metastable level.
         globals::elements[element].ions[ion].levels[level].metastable = false;
@@ -680,10 +673,10 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
         // g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
 
         if (globals::rank_in_node == 0) {
-          if ((globals::linelist[linelistindex].elementindex != element) ||
-              (globals::linelist[linelistindex].ionindex != ion) ||
-              (globals::linelist[linelistindex].upperlevelindex != level) ||
-              (globals::linelist[linelistindex].lowerlevelindex != targetlevel)) {
+          if ((temp_linelist[linelistindex].elementindex != element) ||
+              (temp_linelist[linelistindex].ionindex != ion) ||
+              (temp_linelist[linelistindex].upperlevelindex != level) ||
+              (temp_linelist[linelistindex].lowerlevelindex != targetlevel)) {
             printout("[input.c] Failure to identify level pair for duplicate bb-transition ... going to abort now\n");
             printout("[input.c]   element %d ion %d targetlevel %d level %d\n", element, ion, targetlevel, level);
             printout("[input.c]   transitions[level].to[level-targetlevel-1]=linelistindex %d\n",
@@ -693,14 +686,14 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
                 "[input.c]   globals::linelist[linelistindex].elementindex %d, "
                 "globals::linelist[linelistindex].ionindex %d, globals::linelist[linelistindex].upperlevelindex "
                 "%d, globals::linelist[linelistindex].lowerlevelindex %d\n",
-                globals::linelist[linelistindex].elementindex, globals::linelist[linelistindex].ionindex,
-                globals::linelist[linelistindex].upperlevelindex, globals::linelist[linelistindex].lowerlevelindex);
+                temp_linelist[linelistindex].elementindex, temp_linelist[linelistindex].ionindex,
+                temp_linelist[linelistindex].upperlevelindex, temp_linelist[linelistindex].lowerlevelindex);
             abort();
           }
-          globals::linelist[linelistindex].einstein_A += A_ul;
-          globals::linelist[linelistindex].osc_strength += f_ul;
+          temp_linelist[linelistindex].einstein_A += A_ul;
+          temp_linelist[linelistindex].osc_strength += f_ul;
           if (coll_str > globals::linelist[linelistindex].coll_str) {
-            globals::linelist[linelistindex].coll_str = coll_str;
+            temp_linelist[linelistindex].coll_str = coll_str;
           }
         }
       }
@@ -782,11 +775,7 @@ static void read_atomicdata_files(void) {
   assert_always(globals::elements != NULL);
 
   /// Initialize the linelist
-
-  if (globals::rank_in_node == 0) {
-    globals::linelist = (linelist_entry *)calloc(MLINES, sizeof(linelist_entry));
-    assert_always(globals::linelist != NULL);
-  }
+  std::vector<struct linelist_entry> temp_linelist;
 
   /// temperature to determine relevant ionstages
   int T_preset;
@@ -977,7 +966,7 @@ static void read_atomicdata_files(void) {
 
       read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, transitions);
 
-      add_transitions_to_linelist(element, ion, nlevelsmax, transitiontable, transitions, &lineindex);
+      add_transitions_to_linelist(element, ion, nlevelsmax, transitiontable, transitions, &lineindex, temp_linelist);
 
       for (int level = 0; level < nlevelsmax; level++) {
         globals::elements[element].ions[ion].levels[level].uniquelevelindex = uniquelevelindex;
@@ -1009,13 +998,8 @@ static void read_atomicdata_files(void) {
   /// Save the linecounters value to the global variable containing the number of lines
   globals::nlines = lineindex;
   printout("nlines %d\n", globals::nlines);
-  if (globals::nlines > 0 && globals::rank_in_node == 0) {
-    /// and release empty memory from the linelist
-    if ((globals::linelist = static_cast<linelist_entry *>(
-             realloc(globals::linelist, globals::nlines * sizeof(linelist_entry)))) == NULL) {
-      printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
-      abort();
-    }
+  if (globals::rank_in_node == 0) {
+    assert_always(globals::nlines == temp_linelist.size());
   }
 
   if (T_preset > 0) abort();
@@ -1029,15 +1013,15 @@ static void read_atomicdata_files(void) {
 
   /// then sort the linelist by decreasing frequency
   if (globals::rank_in_node == 0) {
-    qsort(globals::linelist, globals::nlines, sizeof(linelist_entry), compare_linelistentry);
+    qsort(temp_linelist.data(), globals::nlines, sizeof(linelist_entry), compare_linelistentry);
     // std::sort(globals::linelist, globals::linelist + globals::nlines);
 
     for (int i = 0; i < globals::nlines - 1; i++) {
-      const double nu = globals::linelist[i].nu;
-      const double nu_next = globals::linelist[i + 1].nu;
+      const double nu = temp_linelist[i].nu;
+      const double nu_next = temp_linelist[i + 1].nu;
       if (fabs(nu_next - nu) < (1.e-10 * nu)) {
-        auto a1 = &globals::linelist[i];
-        auto a2 = &globals::linelist[i + 1];
+        auto a1 = &temp_linelist[i];
+        auto a2 = &temp_linelist[i + 1];
 
         if ((a1->elementindex == a2->elementindex) && (a1->ionindex == a2->ionindex) &&
             (a1->lowerlevelindex == a2->lowerlevelindex) && (a1->upperlevelindex == a2->upperlevelindex)) {
@@ -1051,7 +1035,7 @@ static void read_atomicdata_files(void) {
         }
 
         // clamp close lines to exact overlaps
-        // globals::linelist[i + 1].nu = globals::linelist[i].nu;
+        // temp_linelist[i + 1].nu = temp_linelist[i].nu;
       }
     }
 
@@ -1061,18 +1045,18 @@ static void read_atomicdata_files(void) {
     // do {
     //   pass++;
 
-    //   qsort(globals::linelist, globals::nlines, sizeof(linelist_entry), compare_linelistentry_simple);
+    //   qsort(temp_linelist, globals::nlines, sizeof(linelist_entry), compare_linelistentry_simple);
 
     //   numduplicates = 0;
     //   for (int i = 0; i < globals::nlines - 1; i++) {
-    //     const double nu = globals::linelist[i].nu;
-    //     const double nu_next = globals::linelist[i + 1].nu;
+    //     const double nu = temp_linelist[i].nu;
+    //     const double nu_next = temp_linelist[i + 1].nu;
 
     //     if (nu == nu_next) {
     //       numduplicates++;
-    //       const double lambda_prev = 1e8 * CLIGHT / globals::linelist[i].nu;
+    //       const double lambda_prev = 1e8 * CLIGHT / temp_linelist[i].nu;
     //       const double lambda_new = lambda_prev + 0.01 * ((i % 10) + 1);
-    //       globals::linelist[i].nu = 1e8 * CLIGHT / lambda_new;
+    //       temp_linelist[i].nu = 1e8 * CLIGHT / lambda_new;
     //     }
     //   }
 
@@ -1082,7 +1066,6 @@ static void read_atomicdata_files(void) {
 
 // create a linelist shared on node and then copy data across, freeing the local copy
 #ifdef MPI_ON
-  linelist_entry *sharedlinelist;
   MPI_Win win;
 
   int my_rank_lines = globals::nlines / globals::node_nprocs;
@@ -1093,20 +1076,23 @@ static void read_atomicdata_files(void) {
 
   MPI_Aint size = my_rank_lines * sizeof(linelist_entry);
   int disp_unit = sizeof(linelist_entry);
-  MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &sharedlinelist, &win);
+  MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &globals::linelist, &win);
 
-  MPI_Win_shared_query(win, 0, &size, &disp_unit, &sharedlinelist);
+  MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::linelist);
+#else
+  globals::linelist = static_cast<struct lineline_entry *>(malloc(globals::nlines * sizeof(linelist_entry)));
+#endif
 
   if (globals::rank_in_node == 0) {
-    memcpy(sharedlinelist, globals::linelist, globals::nlines * sizeof(linelist_entry));
-    free(globals::linelist);
+    memcpy(globals::linelist, temp_linelist.data(), globals::nlines * sizeof(linelist_entry));
+    temp_linelist.clear();
   }
 
+#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-  globals::linelist = sharedlinelist;
 #endif
   printout("[info] mem_usage: linelist occupies %.3f MB (node shared memory)\n",
-           globals::nlines * (sizeof(globals::linelist[0]) + sizeof(&globals::linelist[0])) / 1024. / 1024);
+           globals::nlines * sizeof(struct lineline_entry) / 1024. / 1024);
 
   /// Save sorted linelist into a file
   // if (rank_global == 0)
