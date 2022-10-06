@@ -976,24 +976,16 @@ static void read_atomicdata_files(void) {
       globals::elements[element].ions[ion].nlevels_groundterm = -1;
       globals::elements[element].ions[ion].uniqueionindex = uniqueionindex;
 
-      if ((globals::elements[element].ions[ion].Alpha_sp = (float *)calloc(TABLESIZE, sizeof(float))) == NULL) {
-        printout("[fatal] input: not enough memory to initialize Alpha_sp list for element %d, ion %d ... abort\n",
-                 element, ion);
-        abort();
-      }
-      if ((globals::elements[element].ions[ion].levels =
-               (struct levellist_entry *)calloc(nlevelsmax, sizeof(struct levellist_entry))) == NULL) {
-        printout("[fatal] input: not enough memory to initialize level list of element %d, ion %d ... abort\n", element,
-                 ion);
-        abort();
-      }
+      globals::elements[element].ions[ion].Alpha_sp = static_cast<float *>(calloc(TABLESIZE, sizeof(float)));
+      assert_always(globals::elements[element].ions[ion].Alpha_sp != NULL);
+      globals::elements[element].ions[ion].levels =
+          static_cast<struct levellist_entry *>(calloc(nlevelsmax, sizeof(struct levellist_entry)));
+      assert_always(globals::elements[element].ions[ion].levels != NULL);
 
       /// now we need to readout the data for all those levels, write them to memory
       /// and set up the list of possible transitions for each level
-      if ((transitions = static_cast<struct transitions *>(calloc(nlevelsmax, sizeof(struct transitions)))) == NULL) {
-        printout("[fatal] input: not enough memory to allocate transitions ... abort\n");
-        abort();
-      }
+      transitions = static_cast<struct transitions *>(calloc(nlevelsmax, sizeof(struct transitions)));
+      assert_always(transitions != NULL);
 
       read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot);
 
@@ -1029,8 +1021,8 @@ static void read_atomicdata_files(void) {
   printout("nlines %d\n", globals::nlines);
   if (globals::nlines > 0 && globals::rank_in_node == 0) {
     /// and release empty memory from the linelist
-    if ((globals::linelist = (linelist_entry *)realloc(globals::linelist, globals::nlines * sizeof(linelist_entry))) ==
-        NULL) {
+    if ((globals::linelist = static_cast<linelist_entry *>(
+             realloc(globals::linelist, globals::nlines * sizeof(linelist_entry)))) == NULL) {
       printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
       abort();
     }
@@ -1825,7 +1817,7 @@ void input(int rank)
   }
 }
 
-bool lineiscommentonly(std::string &line)
+bool lineiscommentonly(const std::string &line)
 // return true for whitepace-only lines, and lines that are exclusively whitepace up to a '#' character
 {
   int searchlength = line.find('#');  // ignore anything to the right of a # character
