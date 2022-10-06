@@ -436,12 +436,8 @@ static void read_ion_levels(FILE *adata, const int element, const int ion, const
       transitionblockindex += level;
       assert_always((transitionblockindex + level) < transitblocksize);
 
-      globals::elements[element].ions[ion].levels[level].downtrans_lineindicies = nullptr;
-
       /// initialize number of downward transitions to zero
       set_ndowntrans(element, ion, level, 0);
-
-      globals::elements[element].ions[ion].levels[level].uptrans_lineindicies = nullptr;
 
       /// initialize number of upward transitions to zero
       set_nuptrans(element, ion, level, 0);
@@ -663,25 +659,13 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
 
         const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
         set_ndowntrans(element, ion, level, nupperdowntrans);
-        if ((globals::elements[element].ions[ion].levels[level].downtrans_lineindicies =
-                 static_cast<int *>(realloc(globals::elements[element].ions[ion].levels[level].downtrans_lineindicies,
-                                            nupperdowntrans * sizeof(int)))) == NULL) {
-          printout("[fatal] input: not enough memory to reallocate downtranslist ... abort\n");
-          abort();
-        }
         // the line list has not been sorted yet, so the store the negative level index for now and
         // this will be replaced with the index into the sorted line list later
-        globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[nupperdowntrans - 1] = -targetlevel;
+        globals::elements[element].ions[ion].levels[level].downtrans_lineindicies.push_back(-targetlevel);
 
         const int nloweruptrans = get_nuptrans(element, ion, targetlevel) + 1;
         set_nuptrans(element, ion, targetlevel, nloweruptrans);
-        if ((globals::elements[element].ions[ion].levels[targetlevel].uptrans_lineindicies =
-                 (int *)realloc(globals::elements[element].ions[ion].levels[targetlevel].uptrans_lineindicies,
-                                nloweruptrans * sizeof(int))) == NULL) {
-          printout("[fatal] input: not enough memory to reallocate uptranslist ... abort\n");
-          abort();
-        }
-        globals::elements[element].ions[ion].levels[targetlevel].uptrans_lineindicies[nloweruptrans - 1] = -level;
+        globals::elements[element].ions[ion].levels[targetlevel].uptrans_lineindicies.push_back(-level);
       } else {
         // This is a new branch to deal with lines that have different types of transition. It should trip after a
         // transition is already known.
@@ -1006,6 +990,8 @@ static void read_atomicdata_files(void) {
         uniquelevelindex++;
         totaldowntrans += get_ndowntrans(element, ion, level);
         totaluptrans += get_nuptrans(element, ion, level);
+        globals::elements[element].ions[ion].levels[level].downtrans_lineindicies.shrink_to_fit();
+        globals::elements[element].ions[ion].levels[level].uptrans_lineindicies.shrink_to_fit();
       }
       free(transitions[0].to);
       transitions[0].to = nullptr;
@@ -1143,7 +1129,8 @@ static void read_atomicdata_files(void) {
 
   /// Establish connection between transitions and sorted linelist
   // printout("[debug] init line counter list\n");
-  printout("establish connection between transitions and sorted linelist\n");
+  printout("establish connection between transitions and sorted linelist...");
+  time_t time_start_establish_linelist_connections = time(NULL);
   for (int lineindex = 0; lineindex < globals::nlines; lineindex++) {
     const int element = globals::linelist[lineindex].elementindex;
     const int ion = globals::linelist[lineindex].ionindex;
@@ -1168,6 +1155,7 @@ static void read_atomicdata_files(void) {
       }
     }
   }
+  printout("took %ds\n", time(NULL) - time_start_establish_linelist_connections);
 
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
@@ -1344,8 +1332,6 @@ static void setup_cellhistory(void) {
         for (int level = 0; level < nlevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
           chphixsblocksize += nphixstargets * sizeof(struct chphixstargets);
-          const int ndowntrans = get_ndowntrans(element, ion, level);
-          const int nuptrans = get_nuptrans(element, ion, level);
         }
       }
     }
