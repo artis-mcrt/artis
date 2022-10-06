@@ -1000,7 +1000,7 @@ static void read_atomicdata_files(void) {
   globals::nlines = lineindex;
   printout("nlines %d\n", globals::nlines);
   if (globals::rank_in_node == 0) {
-    assert_always(globals::nlines == temp_linelist.size());
+    assert_always(globals::nlines == static_cast<int>(temp_linelist.size()));
   }
 
   if (T_preset > 0) abort();
@@ -1081,7 +1081,7 @@ static void read_atomicdata_files(void) {
 
   MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::linelist);
 #else
-  globals::linelist = static_cast<struct lineline_entry *>(malloc(globals::nlines * sizeof(linelist_entry)));
+  globals::linelist = static_cast<struct linelist_entry *>(malloc(globals::nlines * sizeof(linelist_entry)));
 #endif
 
   if (globals::rank_in_node == 0) {
