@@ -77,9 +77,6 @@ constexpr size_t GSLWSIZE = 16384;
 #define TRACK_ION_STATS false
 #define TRACK_ION_MASTATS false
 
-// Increase linelist by this blocksize
-#define MLINES 500000
-
 // Minimum cell density. Below cells are treated as empty.
 #define MINDENSITY 1e-40
 #define MINPOP 1e-40

@@ -968,6 +968,11 @@ static void read_atomicdata_files(void) {
 
       add_transitions_to_linelist(element, ion, nlevelsmax, transitiontable, transitions, &lineindex, temp_linelist);
 
+      free(transitions[0].to);
+      free(transitions);
+      transitions = nullptr;
+      transitiontable.clear();
+
       for (int level = 0; level < nlevelsmax; level++) {
         globals::elements[element].ions[ion].levels[level].uniquelevelindex = uniquelevelindex;
         globals::elements[element].ions[ion].levels[level].nphixstargets = 0;
@@ -979,10 +984,6 @@ static void read_atomicdata_files(void) {
         globals::elements[element].ions[ion].levels[level].downtrans_lineindicies.shrink_to_fit();
         globals::elements[element].ions[ion].levels[level].uptrans_lineindicies.shrink_to_fit();
       }
-      free(transitions[0].to);
-      transitions[0].to = nullptr;
-      free(transitions);
-      transitions = nullptr;
 
       if (ion < nions - 1) {
         nbfcheck += globals::elements[element].ions[ion].ionisinglevels;  // nlevelsmax;
@@ -1092,7 +1093,7 @@ static void read_atomicdata_files(void) {
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
   printout("[info] mem_usage: linelist occupies %.3f MB (node shared memory)\n",
-           globals::nlines * sizeof(struct lineline_entry) / 1024. / 1024);
+           globals::nlines * sizeof(struct linelist_entry) / 1024. / 1024);
 
   /// Save sorted linelist into a file
   // if (rank_global == 0)
