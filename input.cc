@@ -385,6 +385,14 @@ static void read_phixs_data(int phixs_file_version) {
 static void read_ion_levels(FILE *adata, const int element, const int ion, const int nions, const int nlevels,
                             int nlevelsmax, const double energyoffset, const double ionpot,
                             struct transitions *transitions) {
+  const int transitblocksize = std::min(nlevels, nlevelsmax) * (std::min(nlevels, nlevelsmax) + 1) /
+                               2;  // each level contains 0..level positions. sum of 1 + 2 + 3 + 4 + ... + nlevelsmax
+  int *transitionblock = static_cast<int *>(malloc(transitblocksize * sizeof(int)));
+  for (int i = 0; i < transitblocksize; i++) {
+    transitionblock[i] = -99.;
+  }
+
+  int transitionblockindex = 0;
   for (int level = 0; level < nlevels; level++) {
     int levelindex_in;
     double levelenergy;
@@ -424,11 +432,9 @@ static void read_ion_levels(FILE *adata, const int element, const int ion, const
       /// store the possible downward transitions from the current level in following order to memory
       ///     A_level,level-1; A_level,level-2; ... A_level,1
       /// entries which are not explicitly set are zero (the zero is set/initialized by calloc!)
-      transitions[level].to = static_cast<int *>(malloc(level * sizeof(int)));
-      assert_always(transitions[level].to != nullptr);
-      for (int i = 0; i < level; i++) {
-        transitions[level].to[i] = -99.;
-      }
+      transitions[level].to = &transitionblock[transitionblockindex];
+      transitionblockindex += level;
+      assert_always((transitionblockindex + level) < transitblocksize);
 
       globals::elements[element].ions[ion].levels[level].downtrans_lineindicies = nullptr;
 
@@ -1000,9 +1006,9 @@ static void read_atomicdata_files(void) {
         uniquelevelindex++;
         totaldowntrans += get_ndowntrans(element, ion, level);
         totaluptrans += get_nuptrans(element, ion, level);
-        free(transitions[level].to);
-        transitions[level].to = nullptr;
       }
+      free(transitions[0].to);
+      transitions[0].to = nullptr;
       free(transitions);
       transitions = nullptr;
 
@@ -1035,8 +1041,8 @@ static void read_atomicdata_files(void) {
   printout("total uptrans %d\n", totaluptrans);
   printout("total downtrans %d\n", totaldowntrans);
 
-  printout("[info] mem_usage: transitions occupy %.3f MB\n",
-           (totaluptrans + totaldowntrans) * sizeof(int *) / 1024. / 1024.);
+  printout("[info] mem_usage: transition lists occupy %.3f MB\n",
+           (uniquelevelindex * sizeof(int *) + (totaluptrans + totaldowntrans) * sizeof(int)) / 1024. / 1024.);
 
   /// then sort the linelist by decreasing frequency
   if (globals::rank_in_node == 0) {
