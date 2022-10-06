@@ -1662,36 +1662,36 @@ void read_ejecta_model(void) {
 
   globals::coordmax[0] = globals::coordmax[1] = globals::coordmax[2] = globals::rmax;
 
-  globals::compton_emiss = (float *)malloc((get_npts_model() + 1) * EMISS_MAX * sizeof(float));
-  globals::rpkt_emiss = (double *)malloc((get_npts_model() + 1) * sizeof(double));
+  globals::compton_emiss = static_cast<float *>(malloc((get_npts_model() + 1) * EMISS_MAX * sizeof(float)));
+  globals::rpkt_emiss = static_cast<double *>(calloc((get_npts_model() + 1), sizeof(double)));
 
 #if (!NO_LUT_PHOTOION)
   globals::corrphotoionrenorm =
-      (double *)malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double));
+      static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
   globals::gammaestimator =
-      (double *)malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double));
+      static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
 
 #ifdef DO_TITER
   globals::gammaestimator_save =
-      (double *)malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double));
+      static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
 #endif
 #endif
 
 #if (!NO_LUT_BFHEATING)
   globals::bfheatingestimator =
-      (double *)malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double));
+      static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
 #ifdef DO_TITER
   globals::bfheatingestimator_save =
-      (double *)malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double));
+      static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
 #endif
 #endif
 
 #ifndef FORCE_LTE
-  globals::ffheatingestimator = (double *)malloc((get_npts_model() + 1) * sizeof(double));
-  globals::colheatingestimator = (double *)malloc((get_npts_model() + 1) * sizeof(double));
+  globals::ffheatingestimator = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
+  globals::colheatingestimator = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
 #ifdef DO_TITER
-  globals::ffheatingestimator_save = (double *)malloc((get_npts_model() + 1) * sizeof(double));
-  globals::colheatingestimator_save = (double *)malloc((get_npts_model() + 1) * sizeof(double));
+  globals::ffheatingestimator_save = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
+  globals::colheatingestimator_save = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
 #endif
 #endif
 
