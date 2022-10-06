@@ -387,9 +387,9 @@ static void read_ion_levels(FILE *adata, const int element, const int ion, const
                             struct transitions *transitions) {
   const int transitblocksize = std::min(nlevels, nlevelsmax) * (std::min(nlevels, nlevelsmax) + 1) /
                                2;  // each level contains 0..level positions. sum of 1 + 2 + 3 + 4 + ... + nlevelsmax
-  int *transitionblock = static_cast<int *>(malloc(transitblocksize * sizeof(int)));
+  transitions[0].to = static_cast<int *>(malloc(transitblocksize * sizeof(int)));
   for (int i = 0; i < transitblocksize; i++) {
-    transitionblock[i] = -99.;
+    transitions[0].to[i] = -99.;
   }
 
   int transitionblockindex = 0;
@@ -432,7 +432,7 @@ static void read_ion_levels(FILE *adata, const int element, const int ion, const
       /// store the possible downward transitions from the current level in following order to memory
       ///     A_level,level-1; A_level,level-2; ... A_level,1
       /// entries which are not explicitly set are zero (the zero is set/initialized by calloc!)
-      transitions[level].to = &transitionblock[transitionblockindex];
+      transitions[level].to = &transitions[0].to[transitionblockindex];
       transitionblockindex += level;
       assert_always((transitionblockindex + level) < transitblocksize);
 
@@ -1344,13 +1344,15 @@ static void setup_cellhistory(void) {
         for (int level = 0; level < nlevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
           chphixsblocksize += nphixstargets * sizeof(struct chphixstargets);
+          const int ndowntrans = get_ndowntrans(element, ion, level);
+          const int nuptrans = get_nuptrans(element, ion, level);
         }
       }
     }
-
-    struct chlevels *chlevelblock = static_cast<struct chlevels *>(malloc(chlevelblocksize));
-    globals::cellhistory[tid].ch_all_levels = chlevelblock;
-    struct chphixstargets *chphixstargetsblock = static_cast<struct chphixstargets *>(malloc(chphixsblocksize));
+    assert_always(chlevelblocksize > 0);
+    globals::cellhistory[tid].ch_all_levels = static_cast<struct chlevels *>(malloc(chlevelblocksize));
+    struct chphixstargets *chphixstargetsblock =
+        chphixsblocksize == 0 ? nullptr : static_cast<struct chphixstargets *>(malloc(chphixsblocksize));
     mem_usage_cellhistory += chlevelblocksize + chphixsblocksize;
     int alllevelindex = 0;
     int allphixstargetindex = 0;
@@ -1363,7 +1365,8 @@ static void setup_cellhistory(void) {
 
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
-        globals::cellhistory[tid].chelements[element].chions[ion].chlevels = &chlevelblock[alllevelindex];
+        globals::cellhistory[tid].chelements[element].chions[ion].chlevels =
+            &globals::cellhistory[tid].ch_all_levels[alllevelindex];
 
         assert_always(alllevelindex == get_uniquelevelindex(element, ion, 0));
         alllevelindex += nlevels;
@@ -1371,7 +1374,11 @@ static void setup_cellhistory(void) {
         for (int level = 0; level < nlevels; level++) {
           struct chlevels *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
           const int nphixstargets = get_nphixstargets(element, ion, level);
-          chlevel->chphixstargets = &chphixstargetsblock[allphixstargetindex];
+          if (chphixsblocksize > 0) {
+            chlevel->chphixstargets = &chphixstargetsblock[allphixstargetindex];
+          } else {
+            chlevel->chphixstargets = nullptr;
+          }
           allphixstargetindex += nphixstargets;
 
           const int ndowntrans = get_ndowntrans(element, ion, level);
