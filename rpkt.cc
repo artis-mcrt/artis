@@ -1,6 +1,7 @@
 #include "rpkt.h"
 
 #include <cmath>
+#include <limits>
 
 #include "atomic.h"
 #include "boundary.h"
@@ -165,7 +166,7 @@ __host__ __device__ static double get_event(
 
           // assert_always(nextline_nu <= nu_cmf_abort);
 
-          return abort_dist + 1e20;
+          return std::numeric_limits<double>::max();
         }
 
         const double A_ul = einstein_spontaneous_emission(lineindex);
@@ -305,7 +306,7 @@ __host__ __device__ static double get_event(
         /// travel out of cell or time step
         // printout("[debug] get_event:       travel out of cell or time step\n");
 
-        edist = abort_dist + 1e20;
+        edist = std::numeric_limits<double>::max();
       } else {
         /// continuum process occurs at edist
         edist = dist + (tau_rnd - tau) / kap_cont;
@@ -702,7 +703,7 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
     bool find_nextline = false;
     if (mgi == grid::get_npts_model()) {
       /// for empty cells no physical event occurs. The packets just propagate.
-      edist = 1e99;
+      edist = std::numeric_limits<double>::max();
       find_nextline = true;
       // printout("[debug] do_rpkt: propagating through empty cell, set edist=1e99\n");
     } else if (grid::modelgrid[mgi].thick == 1) {
