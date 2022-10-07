@@ -234,13 +234,6 @@ static void add_detailed_line(const int lineindex)
   // printout("Added Jblue estimator for lineindex %d count %d\n", lineindex, detailed_linecount);
 }
 
-static int compare_integers(const void *a, const void *b) {
-  int int_a = *((int *)a);
-  int int_b = *((int *)b);
-
-  return (int_a > int_b) - (int_a < int_b);
-}
-
 void init(int my_rank, int ndo, int ndo_nonempty)
 // this should be called only after the atomic data is in memory
 {
@@ -322,7 +315,7 @@ void init(int my_rank, int ndo, int ndo_nonempty)
     // these are probably sorted anyway because the previous loop goes in ascending
     // lineindex. But this sorting step is quick and makes sure that the
     // binary searching later will work correctly
-    qsort(detailed_lineindicies, detailed_linecount, sizeof(int), compare_integers);
+    std::sort(detailed_lineindicies, detailed_lineindicies + detailed_linecount);
   }
 
   printout("There are %d lines with detailed Jblue_lu estimators.\n", detailed_linecount);
