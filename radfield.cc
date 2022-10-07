@@ -1595,8 +1595,8 @@ void do_MPI_Bcast(const int modelgridindex, const int root, int root_node_id)
 {
   MPI_Bcast(&J_normfactor[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
   if (grid::get_numassociatedcells(modelgridindex) > 0) {
+    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
     if (MULTIBIN_RADFIELD_MODEL_ON) {
-      const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
         const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
         if (globals::rank_in_node == 0) {
