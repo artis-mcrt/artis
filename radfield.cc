@@ -366,7 +366,6 @@ void init(int my_rank, int ndo, int ndo_nonempty)
                               &win_radfieldbin_solutions);
 
       MPI_Win_shared_query(win_radfieldbin_solutions, 0, &size, &disp_unit, &radfieldbin_solutions);
-      assert_always(size == (nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution)));
     }
 #else
     {
@@ -388,21 +387,19 @@ void init(int my_rank, int ndo, int ndo_nonempty)
   {
 #ifdef MPI_ON
     {
-      MPI_Aint size = (rank_in_node == 0) ? nonempty_npts_model * globals::nbfcontinua * sizeof(float) : 0;
-      MPI_Win_allocate_shared(size, sizeof(float), MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed,
+      MPI_Aint size = grid::get_ndo_nonempty(my_rank) * globals::nbfcontinua * sizeof(float);
+      int disp_unit = sizeof(float);
+      MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed,
                               &win_prev_bfrate_normed);
-      if (rank_in_node != 0) {
-        int disp_unit;
-        MPI_Win_shared_query(win_prev_bfrate_normed, MPI_PROC_NULL, &size, &disp_unit, &prev_bfrate_normed);
-      }
+      MPI_Win_shared_query(win_prev_bfrate_normed, 0, &size, &disp_unit, &prev_bfrate_normed);
     }
 #else
-    { prev_bfrate_normed = (float *)malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(float)); }
+    { prev_bfrate_normed = static_cast<float *>(malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(float))); }
 #endif
     printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (node shared memory)\n",
              nonempty_npts_model * globals::nbfcontinua * sizeof(float) / 1024. / 1024.);
 
-    bfrate_raw = (double *)malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(double));
+    bfrate_raw = static_cast<double *>(malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(double)));
 
     printout("[info] mem_usage: detailed bf estimator acculumators for non-empty cells occupy %.3f MB\n",
              nonempty_npts_model * globals::nbfcontinua * sizeof(double) / 1024. / 1024.);
