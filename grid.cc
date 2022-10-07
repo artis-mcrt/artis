@@ -1969,25 +1969,28 @@ int get_maxndo(void) {
     setup_nstart_ndo();
   }
   return maxndo;
-};
+}
+
 int get_nstart(const int rank) {
   if (ranks_ndo.size() == 0) {
     setup_nstart_ndo();
   }
   return ranks_nstart[rank];
 }
+
 int get_ndo(const int rank) {
   if (ranks_ndo.size() == 0) {
     setup_nstart_ndo();
   }
   return ranks_ndo[rank];
 }
+
 int get_ndo_nonempty(const int rank) {
   if (ranks_ndo.size() == 0) {
     setup_nstart_ndo();
   }
   return ranks_ndo_nonempty[rank];
-};
+}
 
 static void uniform_grid_setup(void)
 /// Routine for doing a uniform cuboidal grid.
