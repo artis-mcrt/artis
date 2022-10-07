@@ -53,7 +53,7 @@ jobs:
                 mpi: [ON, OFF]
             fail-fast: false
 
-        name: Compile ${{ matrix.compiler.name }}${{ matrix.mpi && ' MPI' || ''}}
+        name: Compile ${{ matrix.compiler.name }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}
         steps:
             - uses: actions/checkout@v3
 
