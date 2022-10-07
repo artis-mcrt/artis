@@ -2,6 +2,8 @@
 
 #include <cstring>
 #include <fstream>
+#include <limits>
+#include <memory>
 
 #include "boundary.h"
 #include "decay.h"
@@ -19,8 +21,8 @@ namespace gammapkt {
 // Code for handing gamma rays - creation and propagation
 
 struct gamma_spec {
-  double *energy;
-  double *probability;
+  std::unique_ptr<double[]> energy;
+  std::unique_ptr<double[]> probability;
   int nlines;
 };
 
@@ -48,8 +50,8 @@ static void read_gamma_spectrum(const int z, const int a, const char filename[50
 
   gamma_spectra[nucindex].nlines = nlines;
 
-  gamma_spectra[nucindex].energy = (double *)malloc(nlines * sizeof(double));
-  gamma_spectra[nucindex].probability = (double *)malloc(nlines * sizeof(double));
+  gamma_spectra[nucindex].energy = std::make_unique<double[]>(nlines);
+  gamma_spectra[nucindex].probability = std::make_unique<double[]>(nlines);
 
   double E_gamma_avg = 0.;
   for (int n = 0; n < nlines; n++) {
@@ -72,8 +74,8 @@ static void set_trivial_gamma_spectrum(const int z, const int a) {
   const int nucindex = decay::get_nuc_index(z, a);
   const int nlines = 1;
   gamma_spectra[nucindex].nlines = nlines;
-  gamma_spectra[nucindex].energy = static_cast<double *>(malloc(nlines * sizeof(double)));
-  gamma_spectra[nucindex].probability = static_cast<double *>(malloc(nlines * sizeof(double)));
+  gamma_spectra[nucindex].energy = std::make_unique<double[]>(nlines);
+  gamma_spectra[nucindex].probability = std::make_unique<double[]>(nlines);
   gamma_spectra[nucindex].energy[0] = decay::nucdecayenergygamma(z, a);
   gamma_spectra[nucindex].probability[0] = 1.;
 }
@@ -164,8 +166,8 @@ void init_gamma_linelist(void) {
 
   /* Start by setting up the grid of fake lines and their energies. */
   gamma_spectra[FAKE_GAM_LINE_ID].nlines = globals::nfake_gam;
-  gamma_spectra[FAKE_GAM_LINE_ID].energy = static_cast<double *>(malloc(globals::nfake_gam * sizeof(double)));
-  gamma_spectra[FAKE_GAM_LINE_ID].probability = static_cast<double *>(malloc(globals::nfake_gam * sizeof(double)));
+  gamma_spectra[FAKE_GAM_LINE_ID].energy = std::make_unique<double[]>(globals::nfake_gam);
+  gamma_spectra[FAKE_GAM_LINE_ID].probability = std::make_unique<double[]>(globals::nfake_gam);
 
   const double deltanu = (globals::nusyn_max - globals::nusyn_min) / (gamma_spectra[FAKE_GAM_LINE_ID].nlines - 3);
   for (int i = 0; i < gamma_spectra[FAKE_GAM_LINE_ID].nlines; i++) {
@@ -182,15 +184,15 @@ void init_gamma_linelist(void) {
   printout("total gamma-ray lines %d\n", total_lines);
 
   gam_line_list.total = total_lines;
-  gam_line_list.nucindex = (int *)malloc(total_lines * sizeof(int));
-  gam_line_list.index = (int *)malloc(total_lines * sizeof(int));
+  gam_line_list.nucindex = static_cast<int *>(malloc(total_lines * sizeof(int)));
+  gam_line_list.index = static_cast<int *>(malloc(total_lines * sizeof(int)));
 
   double energy_last = 0.0;
   int next = -99;
   int next_type;
 
   for (int i = 0; i < total_lines; i++) {
-    double energy_try = 1.e50;
+    double energy_try = std::numeric_limits<double>::max();
 
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
       // printout("nucindex %d nlines %d\n", nucindex, gamma_spectra[nucindex].nlines);
