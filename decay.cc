@@ -1093,11 +1093,13 @@ void setup_decaypath_energy_per_mass(void) {
   MPI_Aint size = grid::get_ndo_nonempty(globals::rank_global) * get_num_decaypaths() * sizeof(double);
 
   int disp_unit = sizeof(double);
-  MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &decaypath_energy_per_mass,
-                          &win_decaypath_energy_per_mass);
-  MPI_Win_shared_query(win_decaypath_energy_per_mass, 0, &size, &disp_unit, &decaypath_energy_per_mass);
+  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                        &decaypath_energy_per_mass, &win_decaypath_energy_per_mass) == MPI_SUCCESS);
+  assert_always(MPI_Win_shared_query(win_decaypath_energy_per_mass, 0, &size, &disp_unit, &decaypath_energy_per_mass) ==
+                MPI_SUCCESS);
 #else
-  decaypath_energy_per_mass = static_cast<double *>(malloc((npts_model + 1) * get_num_decaypaths() * sizeof(double)));
+  decaypath_energy_per_mass =
+      static_cast<double *>(malloc(nonempty_npts_model * get_num_decaypaths() * sizeof(double)));
 #endif
   printout("done.\n");
 

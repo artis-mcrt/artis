@@ -347,9 +347,10 @@ static void allocate_initradiobund(void) {
   MPI_Aint size = my_rank_cells * num_nuclides * sizeof(float);
 
   int disp_unit = sizeof(float);
-  MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &initradioabund_allcells,
-                          &win_initradioabund_allcells);
-  MPI_Win_shared_query(win_initradioabund_allcells, 0, &size, &disp_unit, &initradioabund_allcells);
+  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                        &initradioabund_allcells, &win_initradioabund_allcells) == MPI_SUCCESS);
+  assert_always(MPI_Win_shared_query(win_initradioabund_allcells, 0, &size, &disp_unit, &initradioabund_allcells) ==
+                MPI_SUCCESS);
 #else
   initradioabund_allcells = static_cast<float *>(malloc(totalradioabundsize));
 #endif
@@ -734,9 +735,9 @@ static void allocate_composition_cooling(void)
 #ifdef MPI_ON
     MPI_Aint size = grid::get_ndo_nonempty(globals::rank_global) * globals::total_nlte_levels * sizeof(double);
     int disp_unit = sizeof(double);
-    MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nltepops_allcells,
-                            &win_nltepops_allcells);
-    MPI_Win_shared_query(win_nltepops_allcells, 0, &size, &disp_unit, &nltepops_allcells);
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nltepops_allcells,
+                                          &win_nltepops_allcells) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(win_nltepops_allcells, 0, &size, &disp_unit, &nltepops_allcells) == MPI_SUCCESS);
 #else
     nltepops_allcells = static_cast<double *>(malloc(npts_nonempty * globals::total_nlte_levels * sizeof(double)));
 #endif
