@@ -951,11 +951,10 @@ int main(int argc, char **argv)
   /// The next loop is over all grid cells. For parallelisation, we want to split this loop between
   /// processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
   /// cells are sent to processes 0 ... process n_leftover -1.
-  int nstart = 0;
-  int ndo = 0;
-  int ndo_nonempty = 0;
-  int maxndo = 0;
-  grid::get_nstart_ndo(my_rank, globals::nprocs, &nstart, &ndo, &ndo_nonempty, &maxndo);
+  int nstart = grid::get_nstart(my_rank);
+  int ndo = grid::get_ndo(my_rank);
+  int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
+  int maxndo = grid::get_maxndo();
   printout("process rank %d (global max rank %d) assigned %d modelgrid cells (%d nonempty)", my_rank,
            globals::nprocs - 1, ndo, ndo_nonempty);
   if (ndo > 0) {

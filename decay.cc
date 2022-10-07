@@ -1086,17 +1086,11 @@ __host__ __device__ double get_modelcell_simtime_endecay_per_mass(const int mgi)
 }
 
 void setup_decaypath_energy_per_mass(void) {
-  const int npts_model = grid::get_npts_model();
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
   printout("[info] mem_usage: allocating %.1f MB for decaypath_energy_per_mass...",
            nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
 #ifdef MPI_ON
-  int my_rank_cells = nonempty_npts_model / globals::node_nprocs;
-  // rank_in_node 0 gets any remainder
-  if (globals::rank_in_node == 0) {
-    my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
-  }
-  MPI_Aint size = my_rank_cells * get_num_decaypaths() * sizeof(double);
+  MPI_Aint size = grid::get_ndo_nonempty(globals::rank_global) * get_num_decaypaths() * sizeof(double);
 
   int disp_unit = sizeof(double);
   MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &decaypath_energy_per_mass,

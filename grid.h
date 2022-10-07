@@ -121,7 +121,10 @@ __host__ __device__ int get_t_model(void);
 __host__ __device__ int get_cell_modelgridindex(int cellindex);
 void read_ejecta_model(void);
 void write_grid_restart_data(const int timestep);
-void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo_nonempty, int *maxndo);
+int get_maxndo(void);
+int get_nstart(const int rank);
+int get_ndo(const int rank);
+int get_ndo_nonempty(const int rank);
 double get_totmassradionuclide(const int z, const int a);
 
 }  // namespace grid

@@ -61,6 +61,11 @@ MPI_Win win_initradioabund_allcells = MPI_WIN_NULL;
 
 float *initradioabund_allcells = NULL;
 
+std::vector<int> ranks_nstart;
+std::vector<int> ranks_ndo;
+std::vector<int> ranks_ndo_nonempty;
+int maxndo = -1;
+
 double get_mtot_input(void)
 // mass of the input model, which can be slightly different to the simulation mass
 // e.g. spherical shells mapped to cartesian grid
@@ -727,12 +732,7 @@ static void allocate_composition_cooling(void)
   double *nltepops_allcells = NULL;
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
-    int my_rank_cells = (npts_nonempty / globals::node_nprocs);
-    // rank_in_node 0 gets any remainder cells. equivalent to npts_nonempty % globals::node_nprocs
-    if (globals::rank_in_node == 0) {
-      my_rank_cells += npts_nonempty - (my_rank_cells * globals::node_nprocs);
-    }
-    MPI_Aint size = my_rank_cells * globals::total_nlte_levels * sizeof(double);
+    MPI_Aint size = grid::get_ndo_nonempty(globals::rank_global) * globals::total_nlte_levels * sizeof(double);
     int disp_unit = sizeof(double);
     MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nltepops_allcells,
                             &win_nltepops_allcells);
@@ -1894,15 +1894,16 @@ static void assign_initial_temperatures(void)
   }
 }
 
-void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo_nonempty, int *maxndo) {
+static void setup_nstart_ndo(void) {
+  const int nprocesses = globals::nprocs;
   const int npts_nonempty = get_nonempty_npts_model();
   const int min_nonempty_perproc = npts_nonempty / nprocesses;  // integer division, minimum non-empty cells per process
   const int n_leftover = npts_nonempty - nprocesses * min_nonempty_perproc;
-  *maxndo = 0;
+  maxndo = 0;
 
-  auto ranks_nstart = std::make_unique<int[]>(nprocesses);
-  auto ranks_ndo = std::make_unique<int[]>(nprocesses);
-  auto ranks_ndo_nonempty = std::make_unique<int[]>(nprocesses);
+  ranks_nstart = std::vector<int>(nprocesses);
+  ranks_ndo = std::vector<int>(nprocesses);
+  ranks_ndo_nonempty = std::vector<int>(nprocesses);
 
   // begin with no cell assignments
   for (int r = 0; r < nprocesses; r++) {
@@ -1913,7 +1914,7 @@ void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo
 
   if (nprocesses >= get_npts_model()) {
     // for convenience, rank == mgi when there is at least one rank per cell
-    *maxndo = 1;
+    maxndo = 1;
     for (int r = 0; r < nprocesses; r++) {
       if (r < get_npts_model()) {
         const int mgi = r;
@@ -1935,14 +1936,23 @@ void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo
       }
 
       ranks_ndo[rank]++;
-      *maxndo = std::max(*maxndo, ranks_ndo[rank]);
+      maxndo = std::max(maxndo, ranks_ndo[rank]);
       if (get_numassociatedcells(mgi) > 0) {
         ranks_ndo_nonempty[rank]++;
       }
     }
   }
 
-  if (my_rank == 0) {
+  int npts_assigned = 0;
+  int npts_nonempty_assigned = 0;
+  for (int r = 0; r < nprocesses; r++) {
+    npts_assigned += ranks_ndo[r];
+    npts_nonempty_assigned += ranks_ndo_nonempty[r];
+  }
+  assert_always(npts_assigned == get_npts_model());
+  assert_always(npts_nonempty_assigned == get_nonempty_npts_model());
+
+  if (globals::rank_global == 0) {
     std::ofstream fileout("modelgridrankassignments.out");
     assert_always(fileout.is_open());
     fileout << "#rank nstart ndo ndo_nonempty\n";
@@ -1951,11 +1961,32 @@ void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *ndo
     }
     fileout.close();
   }
-
-  *nstart = ranks_nstart[my_rank];
-  *ndo = ranks_ndo[my_rank];
-  *ndo_nonempty = ranks_ndo_nonempty[my_rank];
 }
+
+int get_maxndo(void) {
+  if (ranks_ndo.size() == 0) {
+    setup_nstart_ndo();
+  }
+  return maxndo;
+};
+int get_nstart(const int rank) {
+  if (ranks_ndo.size() == 0) {
+    setup_nstart_ndo();
+  }
+  return ranks_ndo[rank];
+}
+int get_ndo(const int rank) {
+  if (ranks_ndo.size() == 0) {
+    setup_nstart_ndo();
+  }
+  return ranks_nstart[rank];
+}
+int get_ndo_nonempty(const int rank) {
+  if (ranks_ndo.size() == 0) {
+    setup_nstart_ndo();
+  }
+  return ranks_ndo_nonempty[rank];
+};
 
 static void uniform_grid_setup(void)
 /// Routine for doing a uniform cuboidal grid.
@@ -2116,11 +2147,8 @@ void grid_init(int my_rank)
   calculate_kappagrey();
   abundances_read();
 
-  int nstart = 0;
-  int ndo = 0;
-  int ndo_nonempty = 0;
-  int maxndo = 0;
-  get_nstart_ndo(my_rank, globals::nprocs, &nstart, &ndo, &ndo_nonempty, &maxndo);
+  int ndo = grid::get_ndo(my_rank);
+  int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
 
   radfield::init(my_rank, ndo, ndo_nonempty);
   nonthermal::init(my_rank, ndo, ndo_nonempty);
