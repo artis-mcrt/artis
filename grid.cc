@@ -725,7 +725,7 @@ static void calculate_kappagrey(void) {
 static void allocate_composition_cooling(void)
 /// Initialise composition dependent cell data for the given cell
 {
-  const int npts_nonempty = get_nonempty_npts_model() + 1;  // add one for the combined empty cell at the end
+  const int npts_nonempty = get_nonempty_npts_model();  // add one for the combined empty cell at the end
 
   float *initmassfracstable_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
   float *elem_meanweight_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
@@ -733,7 +733,9 @@ static void allocate_composition_cooling(void)
   double *nltepops_allcells = NULL;
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
-    MPI_Aint size = grid::get_ndo_nonempty(globals::rank_global) * globals::total_nlte_levels * sizeof(double);
+    const int ndo_nonempty = grid::get_ndo_nonempty(globals::rank_global);
+
+    MPI_Aint size = ndo_nonempty * globals::total_nlte_levels * sizeof(double);
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nltepops_allcells,
                                           &win_nltepops_allcells) == MPI_SUCCESS);
@@ -747,14 +749,12 @@ static void allocate_composition_cooling(void)
 
   mem_usage_nltepops += npts_nonempty * globals::total_nlte_levels * sizeof(double);
 
-  for (int modelgridindex = 0; modelgridindex <= get_npts_model(); modelgridindex++) {
+  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++) {
     if (get_numassociatedcells(modelgridindex) <= 0) {
       continue;
     }
 
-    const int nonemptymgi = (modelgridindex < get_npts_model())
-                                ? grid::get_modelcell_nonemptymgi(modelgridindex)
-                                : grid::get_modelcell_nonemptymgi(get_npts_model() - 1) + 1;
+    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
     modelgrid[modelgridindex].elements_uppermost_ion = (int *)malloc(get_nelements() * sizeof(int));
 
