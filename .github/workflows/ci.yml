@@ -119,7 +119,7 @@ jobs:
             fail-fast: false
 
         runs-on: ${{ matrix.os }}
-        name: ${{ matrix.testname }} MPI ON testmode ${{ matrix.testmode }}
+        name: ${{ matrix.testname }} MPI ${{ matrix.testmode == 'ON' && 'testmode'}}
 
         steps:
             - uses: actions/checkout@v3
