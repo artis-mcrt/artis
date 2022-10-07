@@ -749,19 +749,15 @@ static void allocate_composition_cooling(void)
 
   mem_usage_nltepops += npts_nonempty * globals::total_nlte_levels * sizeof(double);
 
-  for (int modelgridindex = 0; modelgridindex < get_npts_model(); modelgridindex++) {
-    if (get_numassociatedcells(modelgridindex) <= 0) {
-      continue;
-    }
+  for (int nonemptymgi = 0; nonemptymgi < npts_nonempty; nonemptymgi++) {
+    const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
-    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-
-    modelgrid[modelgridindex].elements_uppermost_ion = (int *)malloc(get_nelements() * sizeof(int));
+    modelgrid[modelgridindex].elements_uppermost_ion = static_cast<int *>(malloc(get_nelements() * sizeof(int)));
 
     assert_always(modelgrid[modelgridindex].elements_uppermost_ion != NULL);
 
     modelgrid[modelgridindex].composition =
-        (struct compositionlist_entry *)malloc(get_nelements() * sizeof(struct compositionlist_entry));
+        static_cast<struct compositionlist_entry *>(malloc(get_nelements() * sizeof(struct compositionlist_entry)));
 
     if (modelgrid[modelgridindex].composition == NULL) {
       printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n", modelgridindex);
@@ -801,7 +797,8 @@ static void allocate_composition_cooling(void)
         abort();
       }
 
-      modelgrid[modelgridindex].composition[element].partfunct = (float *)calloc(get_nions(element), sizeof(float));
+      modelgrid[modelgridindex].composition[element].partfunct =
+          static_cast<float *>(calloc(get_nions(element), sizeof(float)));
 
       if (modelgrid[modelgridindex].composition[element].partfunct == NULL) {
         printout("[fatal] input: not enough memory to initialize partfunctlist for element %d in cell %d... abort\n",
