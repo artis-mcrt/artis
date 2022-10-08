@@ -601,18 +601,17 @@ static inline float get_bin_T_R(int modelgridindex, int binindex) {
 }
 
 __host__ __device__ static inline int select_bin(double nu) {
-  // linear search one by one until found
-  if (nu >= radfieldbin_nu_upper[RADFIELDBINCOUNT - 1])
-    return -1;  // out of range, nu higher than highest bin
-  else if (nu < get_bin_nu_lower(0))
-    return -2;  // out of range, nu lower than lowest bin
-  else {
-    // find the lowest frequency bin with radfieldbin_nu_upper > nu
-    auto bin = std::upper_bound(&radfieldbin_nu_upper[0], &radfieldbin_nu_upper[RADFIELDBINCOUNT], nu);
-    const int binindex = bin - &radfieldbin_nu_upper[0];
+  if (nu < get_bin_nu_lower(0)) return -2;  // out of range, nu lower than lowest bin's lower boundary
 
-    return binindex;
+  // find the lowest frequency bin with radfieldbin_nu_upper > nu
+  const auto bin = std::upper_bound(&radfieldbin_nu_upper[0], &radfieldbin_nu_upper[RADFIELDBINCOUNT], nu);
+  const int binindex = bin - &radfieldbin_nu_upper[0];
+  if (binindex >= RADFIELDBINCOUNT) {
+    // out of range, nu higher than highest bin's upper boundary
+    return -1;
   }
+
+  return binindex;
 }
 
 #ifndef FORCE_LTE
