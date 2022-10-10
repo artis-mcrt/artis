@@ -1,5 +1,6 @@
 #include "gammapkt.h"
 
+#include <algorithm>
 #include <cstring>
 #include <fstream>
 #include <limits>
