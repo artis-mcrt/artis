@@ -618,7 +618,7 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
 
       if (transitioncheck == -99) {
         transitions[level].to[level - targetlevel - 1] = *lineindex;
-        const float A_ul = transitiontable[ii].A;
+        const double A_ul = transitiontable[ii].A;
         const float coll_str = transitiontable[ii].coll_str;
         // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
 
@@ -635,7 +635,7 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
         if (globals::rank_in_node == 0) {
           temp_linelist.push_back({
               .nu = nu_trans,
-              .einstein_A = A_ul,
+              .einstein_A = static_cast<float>(A_ul),
               .osc_strength = f_ul,
               .coll_str = coll_str,
               .elementindex = element,
