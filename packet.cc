@@ -124,7 +124,7 @@ void packet_init(int my_rank, struct packet *pkt)
 
     // first cont[i] such that targetval < cont[i] is true
     double *upperval = std::upper_bound(&en_cumulative[0], &en_cumulative[grid::ngrid], targetval);
-    const int cellindex = upperval - &en_cumulative[0];
+    const int cellindex = std::distance(&en_cumulative[0], upperval) - 1;
 
     assert_always(cellindex < grid::ngrid);
 
