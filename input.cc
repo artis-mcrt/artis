@@ -78,7 +78,7 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
 
     assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets == NULL);
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
-        (phixstarget_entry *)calloc(1, sizeof(phixstarget_entry));
+        static_cast<phixstarget_entry *>(calloc(1, sizeof(phixstarget_entry)));
     assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != NULL);
 
     if (single_level_top_ion &&
@@ -1297,7 +1297,7 @@ static void setup_cellhistory(void) {
       }
     }
 
-    printout("[info] mem_usage: coolinglist contribs (part of cellhistory) for thread %d occupies %.3f MB\n", tid,
+    printout("[info] mem_usage: cellhistory coolinglist contribs for thread %d occupies %.3f MB\n", tid,
              globals::ncoolingterms * sizeof(double) / 1024. / 1024.);
 
     mem_usage_cellhistory += get_nelements() * sizeof(struct chelements);
