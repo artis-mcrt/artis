@@ -774,6 +774,7 @@ static void allocate_composition_cooling(void)
 
     if (globals::total_nlte_levels > 0) {
       modelgrid[modelgridindex].nlte_pops = &nltepops_allcells[nonemptymgi * globals::total_nlte_levels];
+      assert_always(modelgrid[modelgridindex].nlte_pops != NULL);
 
       for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
         modelgrid[modelgridindex].nlte_pops[nlteindex] = -1.0;  /// flag to indicate that there is
@@ -814,13 +815,15 @@ static void allocate_composition_cooling(void)
       abort();
     }
 
-    double *elemcontrib = static_cast<double *>(malloc(get_includedions() * sizeof(double)));
+    modelgrid[modelgridindex].cooling_contrib_ion[0] =
+        static_cast<double *>(malloc(get_includedions() * sizeof(double)));
 
     int allionindex = 0;
     for (int element = 0; element < get_nelements(); element++) {
       /// and allocate memory to store the ground level populations for each ionisation stage
 
-      modelgrid[modelgridindex].cooling_contrib_ion[element] = &elemcontrib[allionindex];
+      modelgrid[modelgridindex].cooling_contrib_ion[element] =
+          &modelgrid[modelgridindex].cooling_contrib_ion[0][allionindex];
 
       assert_always(modelgrid[modelgridindex].cooling_contrib_ion[element] != NULL);
 
@@ -862,9 +865,10 @@ static void allocate_nonemptymodelcells(void) {
       nonempty_npts_model++;
     }
   }
+  assert_always(nonempty_npts_model > 0);
 
   assert_always(mgi_of_nonemptymgi == NULL);
-  mgi_of_nonemptymgi = (int *)malloc((nonempty_npts_model) * sizeof(int));
+  mgi_of_nonemptymgi = static_cast<int *>(malloc((nonempty_npts_model) * sizeof(int)));
 
   int nonemptymgi = 0;  // index within list of non-empty modelgrid cells
 
@@ -1568,7 +1572,7 @@ static void calc_totmassradionuclides(void) {
   mfeg = 0.;
 
   assert_always(totmassradionuclide == NULL);
-  totmassradionuclide = (double *)malloc(decay::get_num_nuclides() * sizeof(double));
+  totmassradionuclide = static_cast<double *>(malloc(decay::get_num_nuclides() * sizeof(double)));
   assert_always(totmassradionuclide != NULL);
 
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
@@ -2038,7 +2042,7 @@ static void uniform_grid_setup(void)
   assert_always(ncoordgrid[0] == ncoordgrid[2]);
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  cell = (struct gridcell *)malloc(ngrid * sizeof(struct gridcell));
+  cell = static_cast<struct gridcell *>(malloc(ngrid * sizeof(struct gridcell)));
 
   coordlabel[0] = 'X';
   coordlabel[1] = 'Y';
@@ -2076,7 +2080,7 @@ static void spherical1d_grid_setup(void) {
   ncoordgrid[2] = 1;
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  cell = (struct gridcell *)malloc(ngrid * sizeof(struct gridcell));
+  cell = static_cast<struct gridcell *>(malloc(ngrid * sizeof(struct gridcell)));
 
   globals::coordmax[0] = globals::rmax;
   globals::coordmax[1] = 0.;
