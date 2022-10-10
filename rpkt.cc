@@ -1,5 +1,6 @@
 #include "rpkt.h"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 
