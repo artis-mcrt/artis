@@ -168,16 +168,15 @@ __host__ __device__ static double get_event(
         const int element = globals::linelist[lineindex].elementindex;
         const int ion = globals::linelist[lineindex].ionindex;
         const int upper = globals::linelist[lineindex].upperlevelindex;
-        // const int lower = globals::linelist[lineindex].lowerlevelindex;
-        // const double A_ul = einstein_spontaneous_emission(lineindex);
-        // const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
-        // const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
+        const int lower = globals::linelist[lineindex].lowerlevelindex;
+        const double A_ul = einstein_spontaneous_emission(lineindex);
+        const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
+        const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
-        // const double n_u = get_levelpop(modelgridindex, element, ion, upper);
-        // const double n_l = get_levelpop(modelgridindex, element, ion, lower);
+        const double n_u = get_levelpop(modelgridindex, element, ion, upper);
+        const double n_l = get_levelpop(modelgridindex, element, ion, lower);
 
-        // double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * dummypkt_ptr->prop_time;
-        double tau_line = get_tau_sobolev(modelgridindex, lineindex, dummypkt_ptr->prop_time);
+        double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * dummypkt_ptr->prop_time;
 
         if (tau_line < 0) {
           // printout("[warning] get_event: tau_line %g < 0, n_l %g, n_u %g, B_lu %g, B_ul %g, W %g, T_R %g, element

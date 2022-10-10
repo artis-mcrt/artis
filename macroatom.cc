@@ -924,21 +924,20 @@ __host__ __device__ double rad_deexcitation_ratecoeff(const int modelgridindex, 
 {
   assert_always(upper > lower);
 
-  // const double n_u = get_levelpop(modelgridindex, element, ion, upper);
-  // const double n_l = get_levelpop(modelgridindex, element, ion, lower);
+  const double n_u = get_levelpop(modelgridindex, element, ion, upper);
+  const double n_l = get_levelpop(modelgridindex, element, ion, lower);
 
   double R = 0.0;
 
   // if ((n_u > 1.1 * MINPOP) && (n_l > 1.1 * MINPOP))
   {
-    // const double nu_trans = epsilon_trans / H;
+    const double nu_trans = epsilon_trans / H;
 
     const double A_ul = einstein_spontaneous_emission(lineindex);
-    // const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
-    // const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
+    const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
+    const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
-    // const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
-    const double tau_sobolev = get_tau_sobolev(modelgridindex, lineindex, t_current);
+    const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
     if (tau_sobolev > 1e-100) {
       const double beta = 1.0 / tau_sobolev * (-expm1(-tau_sobolev));
