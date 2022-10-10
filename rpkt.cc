@@ -1103,11 +1103,12 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
   // break the list into nu >= nu_edge and the remainder (nu < nu_edge)
 
   // first element i such that nu < nu_edge[i]
-  const int lastindex = std::upper_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + globals::nbfcontinua, nu,
-                                         [](const double &nu, const double &nu_edge) { return nu < nu_edge; }) -
-                        &globals::allcont_nu_edge[0];
-
-  for (int i = 0; i < lastindex; i++) {
+  // const int lastindex = std::upper_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + globals::nbfcontinua,
+  // nu,
+  //                                        [](const double &nu, const double &nu_edge) { return nu < nu_edge; }) -
+  //                       &globals::allcont_nu_edge[0];
+  int i = 0;
+  for (i = 0; i < globals::nbfcontinua; i++) {
     const int element = globals::allcont[i].element;
     const int ion = globals::allcont[i].ion;
     const int level = globals::allcont[i].level;
@@ -1122,6 +1123,9 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
       const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
       // printout("i %d, nu_edge %g\n",i,nu_edge);
       const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
+      if (nu < nu_edge) {
+        break;
+      }
 
       if (nu <= nu_max_phixs && nnlevel > 0) {
         // printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
@@ -1201,10 +1205,10 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
     }
   }
 
-  for (int j = lastindex; j < globals::nbfcontinua; j++) {
-    globals::phixslist[tid].kappa_bf_sum[j] = kappa_bf_sum;
+  for (; i < globals::nbfcontinua; i++) {
+    globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
 #if (DETAILED_BF_ESTIMATORS_ON)
-    globals::phixslist[tid].gamma_contr[j] = 0.;
+    globals::phixslist[tid].gamma_contr[i] = 0.;
 #endif
   }
   return kappa_bf_sum;
