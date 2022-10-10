@@ -164,9 +164,9 @@ __host__ __device__ static double get_event(
           return std::numeric_limits<double>::max();
         }
 
-        // const int element = globals::linelist[lineindex].elementindex;
-        // const int ion = globals::linelist[lineindex].ionindex;
-        // const int upper = globals::linelist[lineindex].upperlevelindex;
+        const int element = globals::linelist[lineindex].elementindex;
+        const int ion = globals::linelist[lineindex].ionindex;
+        const int upper = globals::linelist[lineindex].upperlevelindex;
         // const int lower = globals::linelist[lineindex].lowerlevelindex;
         // const double A_ul = einstein_spontaneous_emission(lineindex);
         // const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
