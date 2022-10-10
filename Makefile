@@ -14,13 +14,13 @@ ifeq ($(SYSNAME),Darwin)
 	# -fmodules-ts -fimplicit-modules -fimplicit-module-maps
 	CXXFLAGS += -g
 
-	# ifeq ($(shell uname -m),arm64)
-	# 	# CXXFLAGS += -mcpu=apple-m1
-	# 	# march=native will work on Apple Silicon in Clang 15
-	# 	CXXFLAGS += -march=native
-	# else
-	# 	CXXFLAGS += -march=native
-	# endif
+	ifeq ($(shell uname -m),arm64)
+		CXXFLAGS += -mcpu=apple-m1
+		# march=native works on Apple Silicon with Clang >=15
+		# CXXFLAGS += -march=native
+	else
+		CXXFLAGS += -march=native
+	endif
 
 	# CXXFLAGS += -fopenmp-simd
 	# CXXFLAGS += -fvectorize
