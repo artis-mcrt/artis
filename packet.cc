@@ -87,7 +87,6 @@ void packet_init(int my_rank, struct packet *pkt)
 
   double norm = 0.0;
   for (int m = 0; m < grid::ngrid; m++) {
-    en_cumulative[m] = norm;
     const int mgi = grid::get_cell_modelgridindex(m);
     if (mgi < grid::get_npts_model())  // some grid cells are empty
     {
@@ -99,6 +98,7 @@ void packet_init(int my_rank, struct packet *pkt)
 #endif
       norm += grid::vol_init_gridcell(m) * grid::get_rhoinit(mgi) * q;
     }
+    en_cumulative[m] = norm;
   }
   assert_always(norm > 0);
   en_cumulative[grid::ngrid] = norm;
@@ -123,8 +123,8 @@ void packet_init(int my_rank, struct packet *pkt)
     const double targetval = zrand * norm;
 
     // first cont[i] such that targetval < cont[i] is true
-    double *upperval = std::upper_bound(&en_cumulative[0], &en_cumulative[grid::ngrid], targetval);
-    const int cellindex = std::distance(&en_cumulative[0], upperval) - 1;
+    double *upperval = std::lower_bound(&en_cumulative[0], &en_cumulative[grid::ngrid], targetval);
+    const int cellindex = upperval - &en_cumulative[0];
 
     assert_always(cellindex < grid::ngrid);
 
