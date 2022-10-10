@@ -958,7 +958,7 @@ __host__ __device__ double rad_deexcitation_ratecoeff(const int modelgridindex, 
     // printout("[debug] rad_rates_down: Z=%d, ionstage %d, upper %d, lower %d\n", get_element(element),
     // get_ionstage(element, ion), upper, lower); printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n", A_ul,
     // tau_sobolev, n_u);
-    assert_always(std::isfinite(R));
+    assert_testmodeonly(std::isfinite(R));
   }
 
   return R;
@@ -1089,7 +1089,7 @@ __host__ __device__ double rad_recombination_ratecoeff(const float T_e, const fl
     }
   }
 
-  assert_always(std::isfinite(R));
+  assert_testmodeonly(std::isfinite(R));
 
   return R;
 }
@@ -1171,7 +1171,7 @@ __host__ __device__ double col_deexcitation_ratecoeff(const float T_e, const flo
     // C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
   }
 
-  assert_always(std::isfinite(C));
+  assert_testmodeonly(std::isfinite(C));
 
   return C;
 }
@@ -1290,7 +1290,7 @@ __host__ __device__ double col_ionization_ratecoeff(const float T_e, const float
 
   // printout("[debug] col_ion: nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n",
   // nne,T_e,g,epsilon_trans,sigma_bf);
-  assert_always(std::isfinite(C));
+  assert_testmodeonly(std::isfinite(C));
 
   return C;
 }
