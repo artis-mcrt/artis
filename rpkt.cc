@@ -389,6 +389,7 @@ __host__ __device__ static void rpkt_event_continuum(struct packet *pkt_ptr,
     pkt_ptr->absorptiontype = -2;
 
     const double kappa_bf_inrest = kappa_rpkt_cont_thisthread.bf;
+    assert_always(globals::phixslist[tid].kappa_bf_sum[globals::nbfcontinua - 1] == kappa_bf_inrest);
 
     /// Determine in which continuum the bf-absorption occurs
     const double zrand2 = gsl_rng_uniform(rng);
@@ -397,8 +398,7 @@ __host__ __device__ static void rpkt_event_continuum(struct packet *pkt_ptr,
     double *upperval = std::lower_bound(&globals::phixslist[tid].kappa_bf_sum[0],
                                         &globals::phixslist[tid].kappa_bf_sum[globals::nbfcontinua - 1], kappa_bf_rand);
     const int allcontindex = std::distance(&globals::phixslist[tid].kappa_bf_sum[0], upperval);
-
-    assert_always(globals::phixslist[tid].kappa_bf_sum[globals::nbfcontinua - 1] == kappa_bf_inrest);
+    assert_always(allcontindex < globals::nbfcontinua);
 
     const double nu_edge = globals::allcont[allcontindex].nu_edge;
     const int element = globals::allcont[allcontindex].element;
@@ -1097,10 +1097,17 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
   const double nne = grid::get_nne(modelgridindex);
 #endif
   const double nnetot = grid::get_nnetot(modelgridindex);
+
+  /// The phixslist is sorted by nu_edge in ascending order (longest to shortest wavelength)
+  /// If nu < allcont[i].nu_edge no absorption in any of the following continua
+  /// is possible, so set their kappas to zero
+  // break the list into nu >= nu_edge and the remainder (nu < nu_edge)
+
   // first element i such that nu < nu_edge[i]
   const int lastindex = std::upper_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + globals::nbfcontinua, nu,
                                          [](const double &nu, const double &nu_edge) { return nu < nu_edge; }) -
                         &globals::allcont_nu_edge[0];
+
   for (int i = 0; i < lastindex; i++) {
     const int element = globals::allcont[i].element;
     const int ion = globals::allcont[i].ion;
@@ -1117,7 +1124,7 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
       // printout("i %d, nu_edge %g\n",i,nu_edge);
       const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
-      if (nu >= nu_edge && nu <= nu_max_phixs && nnlevel > 0) {
+      if (nu <= nu_max_phixs && nnlevel > 0) {
         // printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
         // const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
         // const double sigma_bf = photoionization_crosssection_fromtable(
@@ -1179,25 +1186,8 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
 
         kappa_bf_sum += kappa_bf_contr;
         globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
-      } else if (nu < nu_edge)  // nu < nu_edge
-      {
-        /// The phixslist is sorted by nu_edge in ascending order (longest to shortest wavelength)
-        /// If nu < allcont[i].nu_edge no absorption in any of the following continua
-        /// is possible, therefore leave the loop.
-
-        // the rest of the list shouldn't be accessed
-        // but set them to zero to be safe. This is a fast operation anyway.
-        // if the packet's nu increases, this function must re-run to re-calculate kappa_bf_contr
-        // a slight red-shifting is ignored
-        for (int j = i; j < globals::nbfcontinua; j++) {
-          globals::phixslist[tid].kappa_bf_sum[j] = kappa_bf_sum;
-#if (DETAILED_BF_ESTIMATORS_ON)
-          globals::phixslist[tid].gamma_contr[j] = 0.;
-#endif
-        }
-        break;  // all further processes in the list will have larger nu_edge, so stop here
       } else {
-        // ignore this particular process but continue through the list
+        // ignore this particular process
         globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
 #if (DETAILED_BF_ESTIMATORS_ON)
         globals::phixslist[tid].gamma_contr[i] = 0.;
