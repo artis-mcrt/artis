@@ -4,6 +4,7 @@
 #include <fstream>
 #include <limits>
 #include <memory>
+#include <vector>
 
 #include "boundary.h"
 #include "decay.h"
@@ -21,7 +22,7 @@ namespace gammapkt {
 // Code for handing gamma rays - creation and propagation
 
 struct gamma_spec {
-  std::unique_ptr<double[]> energy;
+  std::unique_ptr<double[]> energy;  // in erg
   std::unique_ptr<double[]> probability;
   int nlines;
 };
@@ -30,13 +31,25 @@ static struct gamma_spec *gamma_spectra;
 
 constexpr int RED_OF_LIST = -956;  // must be negative
 
-struct gamma_ll {
-  int *nucindex;  // is it a Ni56, Co56, a fake line, etc
-  int *index;     // which of the lines of that element is it
-  int total;      // the total number of lines in the list
+struct gammaline {
+  int nucindex;       // is it a Ni56, Co56, a fake line, etc
+  int nucgammaindex;  // which of the lines of that nuclide is it
+  double energy;      // in erg
 };
 
-static struct gamma_ll gam_line_list;
+static std::vector<struct gammaline> gam_line_list;
+
+constexpr bool operator<(const struct gammaline &g1, const struct gammaline &g2) {
+  // true if d1 < d2
+  if (g1.energy < g2.energy) {
+    return true;
+  } else if (g1.nucindex < g2.nucindex) {
+    return true;
+  } else if (g1.nucgammaindex < g2.nucgammaindex) {
+    return true;
+  }
+  return false;
+}
 
 static void read_gamma_spectrum(const int z, const int a, const char filename[50])
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
@@ -175,7 +188,7 @@ void init_gamma_linelist(void) {
     gamma_spectra[FAKE_GAM_LINE_ID].probability[i] = 0.0;
   }
 
-  /* Now do the sorting. */
+  // /Now do the sorting.
 
   int total_lines = 0;
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
@@ -183,44 +196,25 @@ void init_gamma_linelist(void) {
   }
   printout("total gamma-ray lines %d\n", total_lines);
 
-  gam_line_list.total = total_lines;
-  gam_line_list.nucindex = static_cast<int *>(malloc(total_lines * sizeof(int)));
-  gam_line_list.index = static_cast<int *>(malloc(total_lines * sizeof(int)));
+  gam_line_list.reserve(total_lines);
 
-  double energy_last = 0.0;
-  int next = -99;
-  int next_type;
-
-  for (int i = 0; i < total_lines; i++) {
-    double energy_try = std::numeric_limits<double>::max();
-
-    for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-      // printout("nucindex %d nlines %d\n", nucindex, gamma_spectra[nucindex].nlines);
-      for (int j = 0; j < gamma_spectra[nucindex].nlines; j++) {
-        if (gamma_spectra[nucindex].energy[j] > energy_last && gamma_spectra[nucindex].energy[j] < energy_try) {
-          // next_type = spec_type[iso];
-          next_type = nucindex;
-          next = j;
-          energy_try = gamma_spectra[nucindex].energy[j];
-        }
-      }
+  for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
+    for (int j = 0; j < gamma_spectra[nucindex].nlines; j++) {
+      gam_line_list.push_back({.nucindex = nucindex, .nucgammaindex = j, .energy = gamma_spectra[nucindex].energy[j]});
     }
-
-    assert_always(next >= 0);
-    gam_line_list.nucindex[i] = next_type;
-    gam_line_list.index[i] = next;
-    energy_last = energy_try;
   }
+  gam_line_list.shrink_to_fit();
+  std::sort(gam_line_list.begin(), gam_line_list.end());
 
   FILE *const line_list = fopen_required("gammalinelist.out", "w+");
 
   fprintf(line_list, "#index nucindex Z A nucgammmaindex en_gamma_mev gammaline_probability\n");
   for (int i = 0; i < total_lines; i++) {
-    const int nucindex = gam_line_list.nucindex[i];
-    const int index = gam_line_list.index[i];
-    fprintf(line_list, "%d %d %d %d %d %g %g \n", i, gam_line_list.nucindex[i],
-            decay::get_nuc_z(gam_line_list.nucindex[i]), decay::get_nuc_a(gam_line_list.nucindex[i]),
-            gam_line_list.index[i], gamma_spectra[nucindex].energy[index] / MEV,
+    const int nucindex = gam_line_list[i].nucindex;
+    const int index = gam_line_list[i].nucgammaindex;
+    fprintf(line_list, "%d %d %d %d %d %g %g \n", i, gam_line_list[i].nucindex,
+            decay::get_nuc_z(gam_line_list[i].nucindex), decay::get_nuc_a(gam_line_list[i].nucindex),
+            gam_line_list[i].nucgammaindex, gamma_spectra[nucindex].energy[index] / MEV,
             gamma_spectra[nucindex].probability[index]);
   }
   fclose(line_list);
@@ -707,12 +701,12 @@ double get_gam_freq(const int n) {
   }
 
   // returns the frequency of line n
-  const int nucindex = gam_line_list.nucindex[n];
-  const int lineid = gam_line_list.index[n];
+  const int nucindex = gam_line_list[n].nucindex;
+  const int lineid = gam_line_list[n].nucgammaindex;
 
   if (nucindex >= decay::get_num_nuclides() || lineid >= gamma_spectra[nucindex].nlines) {
     printout("Unknown line. %d Abort.\n", n);
-    printout("line_list->nucindex[n] %d line_list->index[n] %d\n", gam_line_list.nucindex[n], gam_line_list.index[n]);
+    printout("line_list->nucindex[n] %d line_list->index[n] %d\n", nucindex, lineid);
     abort();
   }
 
@@ -720,15 +714,15 @@ double get_gam_freq(const int n) {
 }
 
 int get_nul(double freq) {
-  const double freq_max = get_gam_freq(gam_line_list.total - 1);
+  const double freq_max = get_gam_freq(gam_line_list.size() - 1);
   const double freq_min = get_gam_freq(0);
 
   if (freq > freq_max) {
-    return (gam_line_list.total - 1);
+    return (gam_line_list.size() - 1);
   } else if (freq < freq_min) {
     return RED_OF_LIST;
   } else {
-    int too_high = gam_line_list.total - 1;
+    int too_high = gam_line_list.size() - 1;
     int too_low = 0;
 
     while (too_high != too_low + 1) {
