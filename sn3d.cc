@@ -836,6 +836,7 @@ int main(int argc, char **argv)
 #endif
 
 #ifdef MPI_ON
+  printout("process id (pid): %d\n", getpid());
   printout("MPI enabled:\n");
   printout("  rank %d of [0..%d] in MPI_COMM_WORLD\n", globals::rank_global, globals::nprocs - 1);
   printout("  node %d of [0..%d]\n", globals::node_id, globals::node_count - 1);
