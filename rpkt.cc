@@ -109,11 +109,6 @@ __host__ __device__ static double get_event(
       // multiple scattering events of one pp in a single line
       dummypkt_ptr->next_trans = lineindex + 1;
 
-      const int element = globals::linelist[lineindex].elementindex;
-      const int ion = globals::linelist[lineindex].ionindex;
-      const int upper = globals::linelist[lineindex].upperlevelindex;
-      const int lower = globals::linelist[lineindex].lowerlevelindex;
-
       double ldist;  // distance from current position to the line interaction
       if (dummypkt_ptr->nu_cmf <= nu_trans) {
         // printout(
@@ -169,6 +164,10 @@ __host__ __device__ static double get_event(
           return std::numeric_limits<double>::max();
         }
 
+        const int element = globals::linelist[lineindex].elementindex;
+        const int ion = globals::linelist[lineindex].ionindex;
+        const int upper = globals::linelist[lineindex].upperlevelindex;
+        const int lower = globals::linelist[lineindex].lowerlevelindex;
         const double A_ul = einstein_spontaneous_emission(lineindex);
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
