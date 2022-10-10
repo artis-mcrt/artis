@@ -1098,9 +1098,9 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
 #endif
   const double nnetot = grid::get_nnetot(modelgridindex);
   // first element i such that nu < nu_edge[i]
-  const int lastindex =
-      std::upper_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + globals::nbfcontinua, nu) -
-      &globals::allcont_nu_edge[0];
+  const int lastindex = std::upper_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + globals::nbfcontinua, nu,
+                                         [](const double nu, const double nu_edge) { return nu_edge < nu; }) -
+                        &globals::allcont_nu_edge[0];
   for (int i = 0; i < lastindex; i++) {
     const int element = globals::allcont[i].element;
     const int ion = globals::allcont[i].ion;
