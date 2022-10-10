@@ -1355,7 +1355,7 @@ static int get_bfcontindex(const int element, const int lowerion, const int lowe
   const double nu_edge = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
 
   // simple linear search seems to be faster than the binary search
-  // possibly because lower frequency transitions near start of list are more likely to be called?
+  // possibly because transitions near start of list are more likely to be called?
   for (int i = 0; i < globals::nbfcontinua; i++) {
     if ((globals::allcont[i].element == element) && (globals::allcont[i].ion == lowerion) &&
         (globals::allcont[i].level == lower) && (globals::allcont[i].phixstargetindex == phixstargetindex)) {
