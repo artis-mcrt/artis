@@ -614,12 +614,12 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
 
       if (transitioncheck == -99) {
         transitions[level].to[level - targetlevel - 1] = *lineindex;
-        const double A_ul = transitiontable[ii].A;
-        const double coll_str = transitiontable[ii].coll_str;
+        const float A_ul = transitiontable[ii].A;
+        const float coll_str = transitiontable[ii].coll_str;
         // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
 
         const double g = stat_weight(element, ion, level) / stat_weight(element, ion, targetlevel);
-        const double f_ul = g * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
+        const float f_ul = g * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
         assert_always(std::isfinite(f_ul));
         // f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
         // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength =
@@ -631,9 +631,9 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
         if (globals::rank_in_node == 0) {
           temp_linelist.push_back({
               .nu = nu_trans,
-              .einstein_A = static_cast<float>(A_ul),
-              .osc_strength = static_cast<float>(f_ul),
-              .coll_str = static_cast<float>(coll_str),
+              .einstein_A = A_ul,
+              .osc_strength = f_ul,
+              .coll_str = coll_str,
               .elementindex = element,
               .ionindex = ion,
               .upperlevelindex = level,
