@@ -1099,7 +1099,7 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
   const double nnetot = grid::get_nnetot(modelgridindex);
   // first element i such that nu < nu_edge[i]
   const int lastindex = std::upper_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + globals::nbfcontinua, nu,
-                                         [](const double nu, const double nu_edge) { return nu < nu_edge; }) -
+                                         [](const double &nu, const double &nu_edge) { return nu < nu_edge; }) -
                         &globals::allcont_nu_edge[0];
   for (int i = 0; i < lastindex; i++) {
     const int element = globals::allcont[i].element;
@@ -1210,6 +1210,13 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
       globals::phixslist[tid].gamma_contr[i] = 0.;
 #endif
     }
+  }
+
+  for (int j = lastindex; j < globals::nbfcontinua; j++) {
+    globals::phixslist[tid].kappa_bf_sum[j] = kappa_bf_sum;
+#if (DETAILED_BF_ESTIMATORS_ON)
+    globals::phixslist[tid].gamma_contr[j] = 0.;
+#endif
   }
   return kappa_bf_sum;
 }
