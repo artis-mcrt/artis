@@ -13,13 +13,13 @@ __managed__ constexpr std::array<const char *, 3> phixsdata_filenames = {"versio
                                                                          "phixsdata_v2.txt"};
 
 __host__ __device__ int get_continuumindex(int element, int ion, int level, int upperionlevel);
-__host__ __device__ int get_phixtargetindex(const int element, const int ion, const int level, const int upperionlevel);
+__host__ __device__ int get_phixtargetindex(int element, int ion, int level, int upperionlevel);
 __host__ __device__ double get_tau_sobolev(int modelgridindex, int lineindex, double t_current);
 __host__ __device__ double get_nntot(int modelgridindex);
 __host__ __device__ bool is_nlte(int element, int ion, int level);
 __host__ __device__ bool level_isinsuperlevel(int element, int ion, int level);
-__host__ __device__ double photoionization_crosssection_fromtable(const float *const photoion_xs, const double nu_edge,
-                                                                  const double nu);
+__host__ __device__ double photoionization_crosssection_fromtable(const float *const photoion_xs, double nu_edge,
+                                                                  double nu);
 __host__ __device__ void set_nelements(const int nelements_in);
 __host__ __device__ int get_nelements(void);
 __host__ __device__ int get_element(int element);
@@ -56,8 +56,8 @@ __host__ __device__ double statw_upper(int lineindex);
 __host__ __device__ double statw_lower(int lineindex);
 __host__ __device__ double statw_upper(const struct linelist_entry *line);
 __host__ __device__ double statw_lower(const struct linelist_entry *line);
-__host__ __device__ double photoionization_crosssection(const int element, const int ion, const int level,
-                                                        const double nu_edge, const double nu);
+__host__ __device__ double photoionization_crosssection(int element, int ion, int level, double nu_edge,
+                                                        const double nu);
 __host__ __device__ double get_phixs_threshold(int element, int ion, int level, int phixstargetindex);
 
 #endif  // ATOMIC_H
