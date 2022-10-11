@@ -26,7 +26,7 @@ static FILE *macroatom_file = NULL;
 
 __host__ __device__ static inline double get_individ_rad_deexc(int modelgridindex, int element, int ion, int level,
                                                                int i, double t_mid, const double epsilon_current) {
-  const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+  const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
   const int lower = globals::linelist[lineindex].lowerlevelindex;
   const double epsilon_target = epsilon(element, ion, lower);
   const double epsilon_trans = epsilon_current - epsilon_target;
@@ -42,7 +42,7 @@ __host__ __device__ static inline double get_individ_internal_up_same(int modelg
                                                                       int level, int i, const double epsilon_current,
                                                                       const double t_mid, const float T_e,
                                                                       const float nne) {
-  const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
+  const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
   const int upper = globals::linelist[lineindex].upperlevelindex;
   const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
 
@@ -71,7 +71,7 @@ __host__ __device__ static void calculate_macroatom_transitionrates(const int mo
   processrates[MA_ACTION_INTERNALDOWNSAME] = 0.;
   const int ndowntrans = get_ndowntrans(element, ion, level);
   for (int i = 0; i < ndowntrans; i++) {
-    const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+    const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
     const int lower = globals::linelist[lineindex].lowerlevelindex;
     const double epsilon_target = epsilon(element, ion, lower);
     const double epsilon_trans = epsilon_current - epsilon_target;
@@ -185,7 +185,7 @@ __host__ __device__ static int do_macroatom_internal_down_same(int modelgridinde
   int lower = -99;
   double rate = 0.;
   for (int i = 0; i < ndowntrans; i++) {
-    // const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+    // const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
     // const int tmp_lower = globals::linelist[lineindex].lowerlevelindex;
     // const double epsilon_target = epsilon(element, ion, tmp_lower);
     // const double epsilon_trans = epsilon_current - epsilon_target;
@@ -198,7 +198,7 @@ __host__ __device__ static int do_macroatom_internal_down_same(int modelgridinde
         globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i];
     rate += individ_internal_down_same;
     if (zrand * total_internal_down_same < rate) {
-      const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+      const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
       lower = globals::linelist[lineindex].lowerlevelindex;
       break;
     }
@@ -234,7 +234,7 @@ __host__ __device__ static void do_macroatom_raddeexcitation(struct packet *pkt_
     // rate += get_individ_rad_deexc(modelgridindex, element, ion, level, i, t_mid, epsilon_current);
     rate += globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i];
     if (zrand * rad_deexc < rate) {
-      linelistindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+      linelistindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
       break;
     }
   }
@@ -562,7 +562,7 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
       printout("[debug]    check deexcitation\n");
       printout("[debug]    ndowntrans %d %d\n", ndowntrans, get_ndowntrans(element, ion, level));
       for (int i = 0; i < ndowntrans; i++) {
-        const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+        const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
         const int lower = globals::linelist[lineindex].lowerlevelindex;
         const double epsilon_trans = epsilon_current - epsilon(element, ion, lower);
         const double R =
@@ -575,7 +575,7 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
       printout("[debug]    check excitation\n");
       printout("[debug]    nuptrans %d %d\n", nuptrans, get_nuptrans(element, ion, level));
       for (int i = 0; i < nuptrans; i++) {
-        const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
+        const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
         const int upper = globals::linelist[lineindex].upperlevelindex;
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
         const double R =
@@ -825,7 +825,7 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
           // rate += get_individ_internal_up_same(modelgridindex, element, ion, level, i, epsilon_current, t_mid, T_e,
           // nne);
           if (zrand * processrates[MA_ACTION_INTERNALUPSAME] < rate) {
-            const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
+            const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
             upper = globals::linelist[lineindex].upperlevelindex;
             break;
           }
@@ -1000,7 +1000,7 @@ __host__ __device__ double rad_excitation_ratecoeff(const int modelgridindex, co
         // R = R_over_J_nu * radfield_dbb_mgi(nu_trans, modelgridindex);
         // R = 0.;
       }
-      if (!globals::initial_iteration) {
+      if (DETAILED_LINE_ESTIMATORS_ON && !globals::initial_iteration) {
         // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
         const int jblueindex = radfield::get_Jblueindex(lineindex);
         if (jblueindex >= 0) {

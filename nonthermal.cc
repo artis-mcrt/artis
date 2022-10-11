@@ -1035,7 +1035,7 @@ static double N_e(const int modelgridindex, const double energy)
         const double nnlevel = get_levelpop(modelgridindex, element, ion, lower);
         const double epsilon_lower = epsilon(element, ion, lower);
         for (int t = 0; t < nuptrans; t++) {
-          const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans_lineindicies[t];
+          const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
           const int upper = globals::linelist[lineindex].upperlevelindex;
           if (upper >= NTEXCITATION_MAXNLEVELS_UPPER) {
             continue;
@@ -2067,7 +2067,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
         const double epsilon_lower = epsilon(element, ion, lower);
 
         for (int t = 0; t < nuptrans; t++) {
-          const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans_lineindicies[t];
+          const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
           const int upper = globals::linelist[lineindex].upperlevelindex;
           if (upper >= NTEXCITATION_MAXNLEVELS_UPPER) {
             continue;
@@ -2288,7 +2288,7 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
     const double epsilon_lower = epsilon(element, ion, lower);
     const int nuptrans = get_nuptrans(element, ion, lower);
     for (int t = 0; t < nuptrans; t++) {
-      const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans_lineindicies[t];
+      const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
       const int upper = globals::linelist[lineindex].upperlevelindex;
       if (upper >= NTEXCITATION_MAXNLEVELS_UPPER) {
         continue;

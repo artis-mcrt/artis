@@ -91,10 +91,14 @@ struct phixstarget_entry {
   int levelindex;      // index of upper ion level after photoionisation
 };
 
+struct level_transition {
+  int lineindex;
+};
+
 struct levellist_entry {
-  double epsilon;                           /// Excitation energy of this level relative to the neutral ground level.
-  std::vector<int> uptrans_lineindicies;    /// Allowed upward transitions from this level
-  std::vector<int> downtrans_lineindicies;  /// Allowed downward transitions from this level
+  double epsilon;  /// Excitation energy of this level relative to the neutral ground level.
+  std::vector<struct level_transition> uptrans;    /// Allowed upward transitions from this level
+  std::vector<struct level_transition> downtrans;  /// Allowed downward transitions from this level
   int nuptrans;
   int ndowntrans;
   double phixs_threshold;                         /// Energy of first point in the photion_xs table
