@@ -64,7 +64,8 @@ double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetin
 static double integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas)
 /// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
 {
-  const struct gsl_integral_paras_bfheating *const params = (struct gsl_integral_paras_bfheating *)voidparas;
+  const struct gsl_integral_paras_bfheating *const params =
+      static_cast<struct gsl_integral_paras_bfheating *>(voidparas);
 
   const int modelgridindex = params->modelgridindex;
   const double nu_edge = params->nu_edge;
@@ -347,9 +348,11 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
 static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
 /// Thermal balance equation on which we have to iterate to get T_e
 {
-  const int modelgridindex = ((struct Te_solution_paras *)paras)->modelgridindex;
-  const double t_current = ((struct Te_solution_paras *)paras)->t_current;
-  struct heatingcoolingrates *heatingcoolingrates = ((struct Te_solution_paras *)paras)->heatingcoolingrates;
+  const struct Te_solution_paras *const params = static_cast<struct Te_solution_paras *>(paras);
+
+  const int modelgridindex = params->modelgridindex;
+  const double t_current = params->t_current;
+  struct heatingcoolingrates *heatingcoolingrates = params->heatingcoolingrates;
 
   /// Set new T_e guess for the current cell and update populations
   // globals::cell[cellnumber].T_e = T_e;

@@ -219,8 +219,8 @@ void write_compton_estimators(int nts) {
   junk[i] = '\0';
   fclose(dummy);
 
-  strcat(filename, junk);
-  strcat(filename, ".out");
+  strncat(filename, junk, 128);
+  strncat(filename, ".out", 128);
 
   if (globals::file_set) {
     est_file = fopen_required(filename, "rb");

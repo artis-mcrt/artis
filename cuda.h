@@ -31,7 +31,7 @@
 // copied from https://www.micc.unifi.it/bertini/download/gpu-programming-basics/2017/gpu_cuda_5.pdf
 #if defined __CUDA_ARCH__ && __CUDA_ARCH__ < 600
 __device__ double static inline atomicAdd(double *address, double val) {
-  unsigned long long int *address_as_ull = (unsigned long long int *)address;
+  unsigned long long int *address_as_ull = static_cast<unsigned long long int *>(address);
   unsigned long long int old = *address_as_ull;
   unsigned long long int assumed;
   do {
