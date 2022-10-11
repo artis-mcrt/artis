@@ -1129,7 +1129,7 @@ static void read_atomicdata_files(void) {
       // negative indicates a level instead of a lineindex
       if (globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].lineindex == -lowerlevel) {
         globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].lineindex = lineindex;
-        // break; // should be safe to end here if there is max. one transition per pair of levels
+        break;  // should be safe to end here if there is max. one transition per pair of levels
       }
     }
 
@@ -1138,7 +1138,7 @@ static void read_atomicdata_files(void) {
       // negative indicates a level instead of a lineindex
       if (globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].lineindex == -upperlevel) {
         globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].lineindex = lineindex;
-        // break; // should be safe to end here if there is max. one transition per pair of levels
+        break;  // should be safe to end here if there is max. one transition per pair of levels
       }
     }
   }
