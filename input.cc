@@ -1011,7 +1011,9 @@ static void read_atomicdata_files(void) {
   printout("total downtrans %d\n", totaldowntrans);
 
   printout("[info] mem_usage: transition lists occupy %.3f MB\n",
-           (uniquelevelindex * sizeof(int *) + (totaluptrans + totaldowntrans) * sizeof(int)) / 1024. / 1024.);
+           (uniquelevelindex * sizeof(struct level_transition *) +
+            (totaluptrans + totaldowntrans) * sizeof(struct level_transition)) /
+               1024. / 1024.);
 
   /// then sort the linelist by decreasing frequency
   if (globals::rank_in_node == 0) {
