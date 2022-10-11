@@ -1012,6 +1012,7 @@ static void abundances_read(void) {
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
+  printout("reading abundances.txt...");
   const bool threedimensional = (get_model_type() == RHO_3D_READ);
 
   /// Open the abundances file
@@ -1071,6 +1072,7 @@ static void abundances_read(void) {
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
+  printout("done.\n");
 }
 
 static void read_model_headerline(std::string line, std::vector<int> &zlist, std::vector<int> &alist,
