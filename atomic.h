@@ -54,6 +54,8 @@ __host__ __device__ double osc_strength(int lineindex);
 __host__ __device__ double get_coll_str(int lineindex);
 __host__ __device__ double statw_upper(int lineindex);
 __host__ __device__ double statw_lower(int lineindex);
+__host__ __device__ double statw_upper(const struct linelist_entry *line);
+__host__ __device__ double statw_lower(const struct linelist_entry *line);
 __host__ __device__ double photoionization_crosssection(const int element, const int ion, const int level,
                                                         const double nu_edge, const double nu);
 __host__ __device__ double get_phixs_threshold(int element, int ion, int level, int phixstargetindex);
