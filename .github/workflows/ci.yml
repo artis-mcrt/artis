@@ -288,7 +288,7 @@ jobs:
 
             - name: Upload plot files
               if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
-              uses: actions/upload-artifact@v2
+              uses: actions/upload-artifact@v3
               with:
                   name: test-${{ matrix.testname }}-output-pdf
                   path: tests/*.pdf
