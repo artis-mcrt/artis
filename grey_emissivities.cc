@@ -163,8 +163,8 @@ void write_grey(int nts) {
   junk[i] = '\0';
   fclose(dummy);
 
-  strncat(filename, junk, 128);
-  strncat(filename, ".out", 128);
+  strncat(filename, junk, 127);
+  strncat(filename, ".out", 127);
 
   if (globals::file_set) {
     if ((est_file = fopen(filename, "r")) == NULL) {
