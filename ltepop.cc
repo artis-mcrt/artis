@@ -190,7 +190,7 @@ double phi(const int element, const int ion, const int modelgridindex)
     double Alpha_st = 0.;  /// approximate treatment neglects stimulated recombination
 
     double Alpha_sp = 0.;
-    if (NLTE_POPS_ON) {
+    if constexpr (NLTE_POPS_ON) {
       Alpha_sp =
           calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, false, false, false, false, false);
     } else {
@@ -203,7 +203,7 @@ double phi(const int element, const int ion, const int modelgridindex)
 
     double Y_nt = 0.0;
 
-    if (NT_ON) {
+    if constexpr (NT_ON) {
       Y_nt = nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion);
     }
 
@@ -359,7 +359,7 @@ __host__ __device__ static double calculate_levelpop_nominpop(int modelgridindex
 
   if (level == 0) {
     nn = get_groundlevelpop(modelgridindex, element, ion);
-  } else if (NLTE_POPS_ON) {
+  } else if constexpr (NLTE_POPS_ON) {
     if (is_nlte(element, ion, level)) {
       // printout("Using an nlte population!\n");
       const double nltepop_over_rho =
