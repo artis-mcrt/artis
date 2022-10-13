@@ -1095,7 +1095,8 @@ static void read_atomicdata_files(void) {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
-  globals::linelist = const_cast<struct linelist_entry *>(nonconstlinelist);
+  globals::linelist = nonconstlinelist;
+  nonconstlinelist = nullptr;
   printout("[info] mem_usage: linelist occupies %.3f MB (node shared memory)\n",
            globals::nlines * sizeof(struct linelist_entry) / 1024. / 1024);
 
