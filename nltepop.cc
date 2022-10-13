@@ -430,19 +430,22 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
   for (int level = 0; level < nlevels; level++) {
     const int level_index = get_nlte_vector_index(element, ion, level);
     const double epsilon_level = epsilon(element, ion, level);
+    const double statweight = stat_weight(element, ion, level);
 
     // de-excitation
     const int ndowntrans = get_ndowntrans(element, ion, level);
     for (int i = 0; i < ndowntrans; i++) {
       const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-      const int lower = globals::linelist[lineindex].lowerlevelindex;
+      struct linelist_entry *line = &globals::linelist[lineindex];
+      const int lower = line->lowerlevelindex;
 
       const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
 
       const double R =
           rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid) *
           s_renorm[level];
-      const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex) * s_renorm[level];
+      const double C =
+          col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, line, statw_lower(line), statweight) * s_renorm[level];
 
       const int upper_index = level_index;
       const int lower_index = get_nlte_vector_index(element, ion, lower);
@@ -457,7 +460,6 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
     }
 
     // excitation
-    const double statweight = stat_weight(element, ion, level);
     const int nuptrans = get_nuptrans(element, ion, level);
     for (int i = 0; i < nuptrans; i++) {
       const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
@@ -1205,13 +1207,15 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
       const int ndowntrans = get_ndowntrans(element, ion, level);
       for (int i = 0; i < ndowntrans; i++) {
         const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-        const int lower = globals::linelist[lineindex].lowerlevelindex;
+        struct linelist_entry *line = &globals::linelist[lineindex];
+        const int lower = line->lowerlevelindex;
         const double epsilon_trans = epsilon_current - epsilon(element, ion, lower);
+        const double statweight = stat_weight(element, ion, level);
 
         const double R =
             rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
         assert_always(std::isfinite(R));
-        const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
+        const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, line, statw_lower(line), statweight);
         assert_always(std::isfinite(C));
 
         int level_use;

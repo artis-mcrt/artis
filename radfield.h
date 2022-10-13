@@ -13,7 +13,7 @@ void init(int my_rank, int ndo, int ndo_nonempty);
 void initialise_prev_titer_photoionestimators(void);
 void write_to_file(int modelgridindex, int timestep);
 void close_file(void);
-__host__ __device__ void update_estimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
+__host__ __device__ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf,
                                            const struct packet *pkt_ptr);
 void update_lineestimator(int modelgridindex, int lineindex, double increment);
 __host__ __device__ double radfield(double nu, int modelgridindex);

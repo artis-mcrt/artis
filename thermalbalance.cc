@@ -203,9 +203,13 @@ static double get_heating_ion_coll_deexc(const int modelgridindex, const int ele
     const int ndowntrans = get_ndowntrans(element, ion, level);
     for (int i = 0; i < ndowntrans; i++) {
       const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-      const int lower = globals::linelist[lineindex].lowerlevelindex;
+      struct linelist_entry *line = &globals::linelist[lineindex];
+      const int lower = line->lowerlevelindex;
       const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
-      const double C = nnlevel * col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex) * epsilon_trans;
+      const double statweight = stat_weight(element, ion, level);
+      const double C = nnlevel *
+                       col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, line, statw_lower(line), statweight) *
+                       epsilon_trans;
       C_deexc += C;
     }
   }

@@ -61,6 +61,7 @@ __host__ __device__ static void calculate_macroatom_transitionrates(const int mo
   const float T_e = grid::get_Te(modelgridindex);
   const float nne = grid::get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, ion, level);
+  const double statweight = stat_weight(element, ion, level);
 
   /// Downward transitions within the current ionisation stage:
   /// radiative/collisional deexcitation and internal downward jumps
@@ -70,13 +71,14 @@ __host__ __device__ static void calculate_macroatom_transitionrates(const int mo
   const int ndowntrans = get_ndowntrans(element, ion, level);
   for (int i = 0; i < ndowntrans; i++) {
     const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-    const int lower = globals::linelist[lineindex].lowerlevelindex;
+    struct linelist_entry *line = &globals::linelist[lineindex];
+    const int lower = line->lowerlevelindex;
     const double epsilon_target = epsilon(element, ion, lower);
     const double epsilon_trans = epsilon_current - epsilon_target;
 
     const double R =
         rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
-    const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
+    const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, line, statw_lower(line), statweight);
 
     const double individ_internal_down_same = (R + C) * epsilon_target;
 
@@ -122,7 +124,6 @@ __host__ __device__ static void calculate_macroatom_transitionrates(const int mo
   /// Calculate sum for upward internal transitions
   /// transitions within the current ionisation stage
   processrates[MA_ACTION_INTERNALUPSAME] = 0.;
-  const double statweight = stat_weight(element, ion, level);
   const int nuptrans = get_nuptrans(element, ion, level);
   for (int i = 0; i < nuptrans; i++) {
     const double individ_internal_up_same = get_individ_internal_up_same(modelgridindex, element, ion, level, i,
@@ -562,11 +563,13 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
       printout("[debug]    ndowntrans %d %d\n", ndowntrans, get_ndowntrans(element, ion, level));
       for (int i = 0; i < ndowntrans; i++) {
         const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-        const int lower = globals::linelist[lineindex].lowerlevelindex;
+        struct linelist_entry *line = &globals::linelist[lineindex];
+        const int lower = line->lowerlevelindex;
         const double epsilon_trans = epsilon_current - epsilon(element, ion, lower);
         const double R =
             rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
-        const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
+        const double C =
+            col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, line, statw_lower(line), statw_upper(line));
         printout("[debug]    deexcitation to level %d, epsilon_trans %g, epsilon_trans %g, R %g, C %g\n", lower,
                  epsilon_trans, epsilon_trans, R, C);
       }
@@ -1115,64 +1118,6 @@ __host__ __device__ double stim_recombination_ratecoeff(const float nne, const i
   assert_always(std::isfinite(R));
 
   return R;
-}
-
-/// Calculation of collisional rates /////////////////////////////////////////////////////
-
-__host__ __device__ double col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans,
-                                                      const int lineindex)
-// multiply by upper level population to get a rate per second
-{
-  double C;
-  const double coll_str_thisline = get_coll_str(lineindex);
-  const double upperstatweight = statw_upper(lineindex);
-  if (coll_str_thisline < 0) {
-    const double statweight_target = statw_lower(lineindex);
-    const bool forbidden = globals::linelist[lineindex].forbidden;
-    if (!forbidden)  // alternative: (coll_strength > -1.5) i.e. to catch -1
-    {
-      /// permitted E1 electric dipole transitions
-      /// collisional deexcitation: formula valid only for atoms!!!!!!!!!!!
-      /// Rutten script eq. 3.33. p.50
-      // f = osc_strength(element,ion,upper,lower);
-      // C = n_u * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) *
-      // stat_weight(element,ion,lower)/stat_weight(element,ion,upper)  * nne * f;
-
-      const double eoverkt = epsilon_trans / (KB * T_e);
-      /// Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
-      const double g_bar = 0.2;  /// this should be read in from transitions data: it is 0.2 for transitions nl -> n'l'
-                                 /// and 0.7 for transitions nl -> nl'
-      // test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
-      /// crude approximation to the already crude Van-Regemorter formula
-
-      // double test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
-      // double Gamma = (g_bar > test) ? g_bar : test;
-
-      // optimisation
-      const double gauntfac = (eoverkt > 0.33421) ? g_bar : 0.276 * exp(eoverkt) * (-0.5772156649 - log(eoverkt));
-
-      const double g_ratio = statweight_target / upperstatweight;
-
-      C = C_0 * 14.51039491 * nne * sqrt(T_e) * osc_strength(lineindex) * pow(H_ionpot / epsilon_trans, 2) * eoverkt *
-          g_ratio * gauntfac;
-    } else  // alterative: (coll_strength > -3.5) to catch -2 or -3
-    {
-      // forbidden transitions: magnetic dipole, electric quadropole...
-      // could be Axelrod? or Maurer
-      C = nne * 8.629e-6 * 0.01 * statweight_target / sqrt(T_e);
-    }
-  } else  // positive values are treated as effective collision strengths
-  {
-    // from Osterbrock and Ferland, p51
-    // statweight_target is LOWER LEVEL stat weight
-    C = nne * 8.629e-6 * coll_str_thisline / upperstatweight / sqrt(T_e);
-    // test test
-    // C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
-  }
-
-  assert_testmodeonly(std::isfinite(C));
-
-  return C;
 }
 
 __host__ __device__ double col_recombination_ratecoeff(const int modelgridindex, const int element, const int upperion,
