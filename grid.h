@@ -31,16 +31,16 @@ enum model_types {
 };
 
 struct modelgrid_t {
-  float Te;
-  float TR;
-  float TJ;
-  float W;
-  float nne;
-  float initial_radial_pos_sum;
-  float rhoinit;
-  float rho;
+  float Te = 0.;
+  float TR = 0.;
+  float TJ = 0.;
+  float W = 0.;
+  float nne = 0.;
+  float initial_radial_pos_sum = 0.;
+  float rhoinit = 0.;
+  float rho = 0.;
   // modelgrid nn_tot
-  float nnetot;  // total electron density (free + bound).
+  float nnetot = 0.;  // total electron density (free + bound).
   float *initradioabund = nullptr;
   float *initmassfracstable = nullptr;
   float *elem_meanweight = nullptr;
@@ -72,14 +72,14 @@ extern __managed__ int ncoordgrid[3];
 extern __managed__ int ngrid;
 extern __managed__ char coordlabel[3];
 
-__host__ __device__ int get_elements_uppermost_ion(const int modelgridindex, const int element);
-__host__ __device__ void set_elements_uppermost_ion(const int modelgridindex, const int element, const int newvalue);
+__host__ __device__ int get_elements_uppermost_ion(int modelgridindex, int element);
+__host__ __device__ void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);
 __host__ __device__ double wid_init(int cellindex);
 __host__ __device__ double vol_init_modelcell(int modelgridindex);
 __host__ __device__ double vol_init_gridcell(int cellindex);
-__host__ __device__ double get_cellcoordmax(const int cellindex, const int axis);
+__host__ __device__ double get_cellcoordmax(int cellindex, int axis);
 __host__ __device__ double get_cellcoordmin(int cellindex, int axis);
-__host__ __device__ int get_cellcoordpointnum(const int cellindex, const int axis);
+__host__ __device__ int get_cellcoordpointnum(int cellindex, int axis);
 __host__ __device__ int get_coordcellindexincrement(int axis);
 __host__ __device__ float get_rhoinit(int modelgridindex);
 __host__ __device__ float get_rho(int modelgridindex);
@@ -89,8 +89,8 @@ __host__ __device__ float get_ffegrp(int modelgridindex);
 __host__ __device__ float get_elem_abundance(int modelgridindex, int element);
 __host__ __device__ void set_elem_abundance(int modelgridindex, int element, float newabundance);
 __host__ __device__ double get_elem_numberdens(int modelgridindex, int element);
-__host__ __device__ double get_initelectronfrac(const int modelgridindex);
-__host__ __device__ double get_initenergyq(const int modelgridindex);
+__host__ __device__ double get_initelectronfrac(int modelgridindex);
+__host__ __device__ double get_initenergyq(int modelgridindex);
 __host__ __device__ float get_kappagrey(int modelgridindex);
 __host__ __device__ float get_Te(int modelgridindex);
 __host__ __device__ float get_TR(int modelgridindex);
@@ -107,9 +107,9 @@ void grid_init(int my_rank);
 __host__ __device__ double get_cellradialpos(int cellindex);
 __host__ __device__ float get_modelinitradioabund(int modelgridindex, int z, int a);
 __host__ __device__ float get_stable_initabund(int mgi, int anumber);
-__host__ __device__ float get_element_meanweight(const int mgi, const int element);
-__host__ __device__ void set_element_meanweight(const int mgi, const int element, float meanweight);
-__host__ __device__ double get_electronfrac(const int mgi);
+__host__ __device__ float get_element_meanweight(int mgi, int element);
+__host__ __device__ void set_element_meanweight(int mgi, int element, float meanweight);
+__host__ __device__ double get_electronfrac(int mgi);
 __host__ __device__ int get_numassociatedcells(int modelgridindex);
 __host__ __device__ int get_modelcell_nonemptymgi(int mgi);
 __host__ __device__ int get_mgi_of_nonemptymgi(int nonemptymgi);
@@ -120,12 +120,12 @@ __host__ __device__ int get_nonempty_npts_model(void);
 __host__ __device__ int get_t_model(void);
 __host__ __device__ int get_cell_modelgridindex(int cellindex);
 void read_ejecta_model(void);
-void write_grid_restart_data(const int timestep);
+void write_grid_restart_data(int timestep);
 int get_maxndo(void);
-int get_nstart(const int rank);
-int get_ndo(const int rank);
-int get_ndo_nonempty(const int rank);
-double get_totmassradionuclide(const int z, const int a);
+int get_nstart(int rank);
+int get_ndo(int rank);
+int get_ndo_nonempty(int rank);
+double get_totmassradionuclide(int z, int a);
 
 }  // namespace grid
 

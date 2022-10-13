@@ -17,7 +17,13 @@ enum packet_type {
 };
 
 #include "boundary.h"
-#include "macroatom.h"
+
+struct mastate {
+  int element;         /// macro atom of type element (this is an element index)
+  int ion;             /// in ionstage ion (this is an ion index)
+  int level;           /// and level=level (this is a level index)
+  int activatingline;  /// Linelistindex of the activating line for bb activated MAs, -99 else.
+};
 
 struct packet {
   int where;                      /// The grid cell that the packet is in.

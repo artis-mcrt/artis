@@ -1,6 +1,8 @@
 #ifndef MACROATOM_H
 #define MACROATOM_H
 
+#include <cmath>
+
 enum ma_action {
   /// Radiative deexcitation rate from this level.
   MA_ACTION_RADDEEXC = 0,
@@ -23,14 +25,10 @@ enum ma_action {
   MA_ACTION_COUNT = 9,
 };
 
-struct mastate {
-  int element;         /// macro atom of type element (this is an element index)
-  int ion;             /// in ionstage ion (this is an ion index)
-  int level;           /// and level=level (this is a level index)
-  int activatingline;  /// Linelistindex of the activating line for bb activated MAs, -99 else.
-};
-
-#include "cuda.h"
+#include "atomic.h"
+#include "constants.h"
+#include "globals.h"
+#include "packet.h"
 
 void macroatom_open_file(const int my_rank);
 void macroatom_close_file(void);
@@ -47,10 +45,53 @@ __host__ __device__ double stim_recombination_ratecoeff(float nne, int element, 
                                                         int modelgridindex);
 
 __host__ __device__ double col_deexcitation_ratecoeff(float T_e, float nne, double epsilon_trans, int lineindex);
-__host__ __device__ double col_excitation_ratecoeff(float T_e, float nne, int lineindex, double epsilon_trans);
 __host__ __device__ double col_recombination_ratecoeff(int modelgridindex, int element, int upperion, int upper,
                                                        int lower, double epsilon_trans);
 __host__ __device__ double col_ionization_ratecoeff(float T_e, float nne, int element, int ion, int lower,
                                                     int phixstargetindex, double epsilon_trans);
+
+__host__ __device__ constexpr double col_excitation_ratecoeff(const float T_e, const float nne,
+                                                              struct linelist_entry *const line,
+                                                              const double epsilon_trans)
+// multiply by lower level population to get a rate per second
+{
+  double C;
+  const double coll_strength = line->coll_str;
+  const double eoverkt = epsilon_trans / (KB * T_e);
+
+  if (coll_strength < 0) {
+    const bool forbidden = line->forbidden;
+    if (!forbidden)  // alternative: (coll_strength > -1.5) i.e. to catch -1
+    {
+      /// permitted E1 electric dipole transitions
+      /// collisional excitation: formula valid only for atoms!!!!!!!!!!!
+      /// Rutten script eq. 3.32. p.50
+      // C = n_l * 2.16 * pow(eoverkt,-1.68) * pow(T_e,-1.5) * exp(-eoverkt) * nne *
+      // osc_strength(element,ion,upper,lower);
+
+      // Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
+      const double g_bar = 0.2;  // this should be read in from transitions data: it is 0.2 for transitions nl -> n'l'
+                                 // and 0.7 for transitions nl -> nl'
+      // test = 0.276 * exp(eoverkt) * gsl_sf_expint_E1(eoverkt);
+      /// crude approximation to the already crude Van-Regemorter formula
+      const double exp_eoverkt = exp(eoverkt);
+
+      const double test = 0.276 * exp_eoverkt * (-0.5772156649 - std::log(eoverkt));
+      const double Gamma = g_bar > test ? g_bar : test;
+      C = C_0 * nne * std::sqrt(T_e) * 14.51039491 * line->osc_strength * pow(H_ionpot / epsilon_trans, 2) * eoverkt /
+          exp_eoverkt * Gamma;
+    } else  // alterative: (coll_strength > -3.5) to catch -2 or -3
+    {
+      // forbidden transitions: magnetic dipole, electric quadropole...
+      // Axelrod's approximation (thesis 1980)
+      C = nne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * statw_upper(line) / std::sqrt(T_e);
+    }
+  } else {
+    // from Osterbrock and Ferland, p51
+    C = nne * 8.629e-6 * coll_strength * std::exp(-eoverkt) / statw_lower(line) / std::sqrt(T_e);
+  }
+
+  return C;
+}
 
 #endif  // MACROATOM_H

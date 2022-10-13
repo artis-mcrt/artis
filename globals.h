@@ -16,7 +16,6 @@
 
 #include "artisoptions.h"
 #include "boundary.h"
-#include "macroatom.h"
 
 struct time {
   double start;                   // time at start of this timestep. [s]
@@ -191,6 +190,8 @@ struct chphixstargets {
 struct challcont {
   double departure_ratio;
 };
+
+#include "macroatom.h"
 
 struct chlevels {
   double processrates[MA_ACTION_COUNT];

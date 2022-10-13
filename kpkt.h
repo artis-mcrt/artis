@@ -1,7 +1,8 @@
 #ifndef KPKT_H
 #define KPKT_H
 
-#include "sn3d.h"
+#include "cuda.h"
+#include "packet.h"
 #include "thermalbalance.h"
 
 namespace kpkt {

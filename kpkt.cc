@@ -11,7 +11,6 @@
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
-#include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"
 #include "vpkt.h"
@@ -59,7 +58,8 @@ __host__ __device__ static double get_cooling_ion_coll_exc(const int modelgridin
       const int upper = globals::linelist[lineindex].upperlevelindex;
       // printout("    excitation to level %d possible\n",upper);
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
-      const double C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
+      const double C =
+          nnlevel * col_excitation_ratecoeff(T_e, nne, &globals::linelist[lineindex], epsilon_trans) * epsilon_trans;
       C_exc += C;
     }
   }
@@ -229,7 +229,8 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
         const int upper = globals::linelist[lineindex].upperlevelindex;
         // printout("    excitation to level %d possible\n",upper);
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
-        const double C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
+        const double C =
+            nnlevel * col_excitation_ratecoeff(T_e, nne, &globals::linelist[lineindex], epsilon_trans) * epsilon_trans;
         contrib += C;
       }
       globals::cellhistory[tid].cooling_contrib[i] = contrib;
@@ -727,7 +728,8 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
         const int tmpupper = globals::linelist[lineindex].upperlevelindex;
         // printout("    excitation to level %d possible\n",upper);
         const double epsilon_trans = epsilon(element, ion, tmpupper) - epsilon_current;
-        const double C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
+        const double C =
+            nnlevel * col_excitation_ratecoeff(T_e, nne, &globals::linelist[lineindex], epsilon_trans) * epsilon_trans;
         contrib += C;
         if (contrib >= rndcool) {
           upper = tmpupper;

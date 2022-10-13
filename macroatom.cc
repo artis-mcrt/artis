@@ -16,9 +16,6 @@
 #include "stats.h"
 #include "vpkt.h"
 
-// constant for van-Regemorter approximation.
-constexpr double C_0 = 5.465e-11;
-
 // save to the macroatom_*.out file
 constexpr bool LOG_MACROATOM = false;
 
@@ -48,7 +45,7 @@ __host__ __device__ static inline double get_individ_internal_up_same(int modelg
 
   const double R =
       rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
-  const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
+  const double C = col_excitation_ratecoeff(T_e, nne, &globals::linelist[lineindex], epsilon_trans);
   const double NT =
       nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
   // const double NT = 0.;
@@ -580,7 +577,7 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
         const double R =
             rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
-        const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
+        const double C = col_excitation_ratecoeff(T_e, nne, &globals::linelist[lineindex], epsilon_trans);
         printout("[debug]    excitation to level %d, epsilon_trans %g, R %g, C %g\n", upper, epsilon_trans, R, C);
       }
 
@@ -1168,51 +1165,6 @@ __host__ __device__ double col_deexcitation_ratecoeff(const float T_e, const flo
     C = nne * 8.629e-6 * coll_str_thisline / upperstatweight / sqrt(T_e);
     // test test
     // C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
-  }
-
-  assert_testmodeonly(std::isfinite(C));
-
-  return C;
-}
-
-__host__ __device__ double col_excitation_ratecoeff(const float T_e, const float nne, const int lineindex,
-                                                    const double epsilon_trans)
-// multiply by lower level population to get a rate per second
-{
-  double C;
-  const double coll_strength = get_coll_str(lineindex);
-  const double eoverkt = epsilon_trans / (KB * T_e);
-
-  if (coll_strength < 0) {
-    const bool forbidden = globals::linelist[lineindex].forbidden;
-    if (!forbidden)  // alternative: (coll_strength > -1.5) i.e. to catch -1
-    {
-      /// permitted E1 electric dipole transitions
-      /// collisional excitation: formula valid only for atoms!!!!!!!!!!!
-      /// Rutten script eq. 3.32. p.50
-      // C = n_l * 2.16 * pow(eoverkt,-1.68) * pow(T_e,-1.5) * exp(-eoverkt) * nne *
-      // osc_strength(element,ion,upper,lower);
-
-      // Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
-      const double g_bar = 0.2;  // this should be read in from transitions data: it is 0.2 for transitions nl -> n'l'
-                                 // and 0.7 for transitions nl -> nl'
-      // test = 0.276 * exp(eoverkt) * gsl_sf_expint_E1(eoverkt);
-      /// crude approximation to the already crude Van-Regemorter formula
-      const double exp_eoverkt = exp(eoverkt);
-
-      const double test = 0.276 * exp_eoverkt * (-0.5772156649 - log(eoverkt));
-      const double Gamma = g_bar > test ? g_bar : test;
-      C = C_0 * nne * sqrt(T_e) * 14.51039491 * osc_strength(lineindex) * pow(H_ionpot / epsilon_trans, 2) * eoverkt /
-          exp_eoverkt * Gamma;
-    } else  // alterative: (coll_strength > -3.5) to catch -2 or -3
-    {
-      // forbidden transitions: magnetic dipole, electric quadropole...
-      // Axelrod's approximation (thesis 1980)
-      C = nne * 8.629e-6 * 0.01 * exp(-eoverkt) * statw_upper(lineindex) / sqrt(T_e);
-    }
-  } else {
-    // from Osterbrock and Ferland, p51
-    C = nne * 8.629e-6 * coll_strength * exp(-eoverkt) / statw_lower(lineindex) / sqrt(T_e);
   }
 
   assert_testmodeonly(std::isfinite(C));

@@ -2204,7 +2204,8 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
         const double radexc_ratecoeff =
             rad_excitation_ratecoeff(modelgridindex, element, ion, lower, upper, epsilon_trans, lineindex, t_current);
 
-        const double collexc_ratecoeff = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
+        const double collexc_ratecoeff =
+            col_excitation_ratecoeff(T_e, nne, &globals::linelist[lineindex], epsilon_trans);
 
         const double exc_ratecoeff = radexc_ratecoeff + collexc_ratecoeff + ntcollexc_ratecoeff;
 
