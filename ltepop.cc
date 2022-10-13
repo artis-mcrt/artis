@@ -382,7 +382,7 @@ __host__ __device__ static double calculate_levelpop_nominpop(int modelgridindex
       }
     } else  // level is in the superlevel
     {
-      assert_always(level_isinsuperlevel(element, ion, level));
+      assert_testmodeonly(level_isinsuperlevel(element, ion, level));
 
       const int sl_nlte_index = globals::elements[element].ions[ion].first_nlte + get_nlevels_nlte(element, ion);
 
