@@ -3,6 +3,7 @@
 
 #include <array>
 
+#include "artisoptions.h"
 #include "cuda.h"
 
 extern __managed__ double
@@ -16,7 +17,6 @@ __host__ __device__ int get_continuumindex(int element, int ion, int level, int 
 __host__ __device__ int get_phixtargetindex(int element, int ion, int level, int upperionlevel);
 __host__ __device__ double get_tau_sobolev(int modelgridindex, int lineindex, double t_current);
 __host__ __device__ double get_nntot(int modelgridindex);
-__host__ __device__ bool is_nlte(int element, int ion, int level);
 __host__ __device__ bool level_isinsuperlevel(int element, int ion, int level);
 __host__ __device__ double photoionization_crosssection_fromtable(const float *const photoion_xs, double nu_edge,
                                                                   double nu);
@@ -59,5 +59,17 @@ __host__ __device__ double statw_lower(const struct linelist_entry *line);
 __host__ __device__ double photoionization_crosssection(int element, int ion, int level, double nu_edge,
                                                         const double nu);
 __host__ __device__ double get_phixs_threshold(int element, int ion, int level, int phixstargetindex);
+
+__host__ __device__ constexpr bool is_nlte(const int element, const int ion, const int level)
+// Returns true if (element,ion,level) is to be treated in nlte.
+// (note this function returns true for the ground state,
+//  although it is stored separately from the excited NLTE states)
+{
+  if (!NLTE_POPS_ON) {
+    return false;
+  } else {
+    LEVEL_IS_NLTE(element, ion, level);  // macro function defined in artisoptions.h
+  }
+}
 
 #endif  // ATOMIC_H
