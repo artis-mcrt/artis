@@ -937,13 +937,13 @@ __host__ __device__ double rad_deexcitation_ratecoeff(const int modelgridindex, 
     const double nu_trans = epsilon_trans / H;
 
     const double A_ul = einstein_spontaneous_emission(lineindex);
-    const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
+    const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
     const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
     const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
     if (tau_sobolev > 1e-100) {
-      const double beta = 1.0 / tau_sobolev * (-expm1(-tau_sobolev));
+      const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));
       // const double beta = 1.0;
       R = A_ul * beta;
     } else {
@@ -1223,23 +1223,24 @@ __host__ __device__ double col_deexcitation_ratecoeff(const float T_e, const flo
       // double Gamma = (g_bar > test) ? g_bar : test;
 
       // optimisation
-      const double gauntfac = (eoverkt > 0.33421) ? g_bar : 0.276 * exp(eoverkt) * (-0.5772156649 - log(eoverkt));
+      const double gauntfac =
+          (eoverkt > 0.33421) ? g_bar : 0.276 * std::exp(eoverkt) * (-0.5772156649 - std::log(eoverkt));
 
       const double g_ratio = lowerstatweight / upperstatweight;
 
-      C = C_0 * 14.51039491 * nne * sqrt(T_e) * line->osc_strength * pow(H_ionpot / epsilon_trans, 2) * eoverkt *
-          g_ratio * gauntfac;
+      C = C_0 * 14.51039491 * nne * std::sqrt(T_e) * line->osc_strength * std::pow(H_ionpot / epsilon_trans, 2) *
+          eoverkt * g_ratio * gauntfac;
     } else  // alterative: (coll_strength > -3.5) to catch -2 or -3
     {
       // forbidden transitions: magnetic dipole, electric quadropole...
       // could be Axelrod? or Maurer
-      C = nne * 8.629e-6 * 0.01 * lowerstatweight / sqrt(T_e);
+      C = nne * 8.629e-6 * 0.01 * lowerstatweight / std::sqrt(T_e);
     }
   } else  // positive values are treated as effective collision strengths
   {
     // from Osterbrock and Ferland, p51
     // statweight_target is LOWER LEVEL stat weight
-    C = nne * 8.629e-6 * coll_str_thisline / upperstatweight / sqrt(T_e);
+    C = nne * 8.629e-6 * coll_str_thisline / upperstatweight / std::sqrt(T_e);
     // test test
     // C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
   }
