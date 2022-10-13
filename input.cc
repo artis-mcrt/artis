@@ -1387,7 +1387,7 @@ static void setup_cellhistory(void) {
 
 static void write_bflist_file(int includedphotoiontransitions) {
   globals::bflist = static_cast<struct bflist_t *>(malloc(includedphotoiontransitions * sizeof(struct bflist_t)));
-  assert_always(globals::bflist == NULL);
+  assert_always(globals::bflist != NULL);
 
   FILE *bflist_file = NULL;
   if (globals::rank_global == 0) {
