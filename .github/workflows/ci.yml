@@ -300,6 +300,7 @@ jobs:
               run: |
                   git checkout HEAD~1
                   git log -n 1
+                  cp tests/${{ matrix.testname }}_testrun/artisoptions.h .
                   make clean
                   make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
                   cp sn3d tests/${{ matrix.testname }}_testrun/
