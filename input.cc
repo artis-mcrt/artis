@@ -241,9 +241,8 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
     gsl_interp_accel *acc = gsl_interp_accel_alloc();
     gsl_spline *spline = gsl_spline_alloc(gsl_interp_linear, nphixspoints_inputtable);
     gsl_spline_init(spline, nutable, phixstable, nphixspoints_inputtable);
-    double nu;
     for (int i = 1; i < globals::NPHIXSPOINTS; i++) {
-      nu = nu_edge * (1. + i * globals::NPHIXSNUINCREMENT);
+      const double nu = nu_edge * (1. + i * globals::NPHIXSNUINCREMENT);
       if (nu > nu_max) {
         const double phixs = phixstable[nphixspoints_inputtable - 1] * pow(nu_max / nu, 3);
         globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs[i] = phixs;
