@@ -179,7 +179,7 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
 #if (!NO_LUT_BFHEATING)
       *mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
       if ((globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfheating_coeff =
-               (double *)calloc(TABLESIZE, sizeof(double))) == NULL) {
+               static_cast<double *>(calloc(TABLESIZE, sizeof(double)))) == NULL) {
         printout(
             "[fatal] input: not enough memory to initialize modified_photoioncoeff table for element %d, ion %d, level "
             "%d\n",
