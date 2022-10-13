@@ -79,7 +79,7 @@ __host__ __device__ constexpr double doppler_nucmf_on_nurf(const double dir_rf[3
     const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;
     assert_always(betasq >= 0.);  // v < c
     assert_always(betasq < 1.);   // v < c
-    dopplerfactor = dopplerfactor / sqrt(1 - betasq);
+    dopplerfactor = dopplerfactor / std::sqrt(1 - betasq);
   }
 
   assert_testmodeonly(std::isfinite(dopplerfactor));
