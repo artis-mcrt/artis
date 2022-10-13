@@ -297,6 +297,7 @@ jobs:
 
             - name: Compile previous commit
               if: matrix.testmode == 'OFF'
+              continue-on-error: true
               run: |
                   git checkout HEAD~1
                   git log -n 1
@@ -308,6 +309,7 @@ jobs:
 
             - name: Run previous commit job0 start
               if: matrix.testmode == 'OFF'
+              continue-on-error: true
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
                   cp input-newrun.txt input.txt
