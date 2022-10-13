@@ -95,7 +95,6 @@ static int printout(const char *format) {
 
 #include "cuda.h"
 
-#define DEBUG_ON
 // #define DO_TITER
 // #define FORCE_LTE
 
