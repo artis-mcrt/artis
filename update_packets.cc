@@ -219,10 +219,8 @@ static bool std_compare_packets_bymodelgriddensity(const struct packet &p1, cons
   const int mgi1 = grid::get_cell_modelgridindex(p1.where);
   const int mgi2 = grid::get_cell_modelgridindex(p2.where);
   if (grid::get_rho(mgi1) > grid::get_rho(mgi2)) return true;
-  if (grid::get_rho(mgi1) < grid::get_rho(mgi2)) return false;
 
-  if (mgi1 < mgi2) return true;
-  if (mgi1 > mgi2) return false;
+  if (grid::get_rho(mgi1) == grid::get_rho(mgi2) && (mgi1 < mgi2)) return true;
 
   return false;
   // return (p1.type > p2.type);
