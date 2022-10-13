@@ -2190,10 +2190,11 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
       const double frac_deposition = nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition;
       if (frac_deposition > 0.) {
         const int lineindex = nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex;
-        const int element = globals::linelist[lineindex].elementindex;
-        const int ion = globals::linelist[lineindex].ionindex;
-        const int lower = globals::linelist[lineindex].lowerlevelindex;
-        const int upper = globals::linelist[lineindex].upperlevelindex;
+        struct linelist_entry *line = &globals::linelist[lineindex];
+        const int element = line->elementindex;
+        const int ion = line->ionindex;
+        const int lower = line->lowerlevelindex;
+        const int upper = line->upperlevelindex;
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon(element, ion, lower);
 
         const double ratecoeffperdeposition =
@@ -2205,7 +2206,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
             rad_excitation_ratecoeff(modelgridindex, element, ion, lower, upper, epsilon_trans, lineindex, t_current);
 
         const double collexc_ratecoeff =
-            col_excitation_ratecoeff(T_e, nne, &globals::linelist[lineindex], epsilon_trans);
+            col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statw_lower(line), statw_upper(line));
 
         const double exc_ratecoeff = radexc_ratecoeff + collexc_ratecoeff + ntcollexc_ratecoeff;
 

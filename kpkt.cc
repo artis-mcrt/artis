@@ -52,14 +52,17 @@ __host__ __device__ static double get_cooling_ion_coll_exc(const int modelgridin
   for (int level = 0; level < nlevels; level++) {
     const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
     const double epsilon_current = epsilon(element, ion, level);
+    const double statweight = stat_weight(element, ion, level);
     const int nuptrans = get_nuptrans(element, ion, level);
     for (int ii = 0; ii < nuptrans; ii++) {
-      const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
-      const int upper = globals::linelist[lineindex].upperlevelindex;
+      struct linelist_entry *line =
+          &globals::linelist[globals::elements[element].ions[ion].levels[level].uptrans[ii].lineindex];
+      const int upper = line->upperlevelindex;
       // printout("    excitation to level %d possible\n",upper);
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
-      const double C =
-          nnlevel * col_excitation_ratecoeff(T_e, nne, &globals::linelist[lineindex], epsilon_trans) * epsilon_trans;
+      const double C = nnlevel *
+                       col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statweight, statw_upper(line)) *
+                       epsilon_trans;
       C_exc += C;
     }
   }
@@ -219,18 +222,21 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
     // printout("[debug] do_kpkt: element %d, ion %d, level %d\n",element,ion,level);
     const double epsilon_current = epsilon(element, ion, level);
     const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+    const double statweight = stat_weight(element, ion, level);
 
     const int nuptrans = get_nuptrans(element, ion, level);
     if (nuptrans > 0) {
       /// excitation to same ionization stage
       /// -----------------------------------
       for (int ii = 0; ii < nuptrans; ii++) {
-        const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
-        const int upper = globals::linelist[lineindex].upperlevelindex;
+        struct linelist_entry *line =
+            &globals::linelist[globals::elements[element].ions[ion].levels[level].uptrans[ii].lineindex];
+        const int upper = line->upperlevelindex;
         // printout("    excitation to level %d possible\n",upper);
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
-        const double C =
-            nnlevel * col_excitation_ratecoeff(T_e, nne, &globals::linelist[lineindex], epsilon_trans) * epsilon_trans;
+        const double C = nnlevel *
+                         col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statweight, statw_upper(line)) *
+                         epsilon_trans;
         contrib += C;
       }
       globals::cellhistory[tid].cooling_contrib[i] = contrib;
@@ -720,16 +726,19 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       const int level = coolinglist[i].level;
       const double epsilon_current = epsilon(element, ion, level);
       const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+      const double statweight = stat_weight(element, ion, level);
       int upper = -1;
       // excitation to same ionization stage
       const int nuptrans = get_nuptrans(element, ion, level);
       for (int ii = 0; ii < nuptrans; ii++) {
         const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
+        struct linelist_entry *line = &globals::linelist[lineindex];
         const int tmpupper = globals::linelist[lineindex].upperlevelindex;
         // printout("    excitation to level %d possible\n",upper);
         const double epsilon_trans = epsilon(element, ion, tmpupper) - epsilon_current;
-        const double C =
-            nnlevel * col_excitation_ratecoeff(T_e, nne, &globals::linelist[lineindex], epsilon_trans) * epsilon_trans;
+        const double C = nnlevel *
+                         col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statweight, statw_upper(line)) *
+                         epsilon_trans;
         contrib += C;
         if (contrib >= rndcool) {
           upper = tmpupper;

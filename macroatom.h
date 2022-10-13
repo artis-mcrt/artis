@@ -50,9 +50,9 @@ __host__ __device__ double col_recombination_ratecoeff(int modelgridindex, int e
 __host__ __device__ double col_ionization_ratecoeff(float T_e, float nne, int element, int ion, int lower,
                                                     int phixstargetindex, double epsilon_trans);
 
-__host__ __device__ constexpr double col_excitation_ratecoeff(const float T_e, const float nne,
-                                                              struct linelist_entry *const line,
-                                                              const double epsilon_trans)
+__host__ __device__ constexpr double col_excitation_ratecoeff(float T_e, float nne, struct linelist_entry *const line,
+                                                              double epsilon_trans, double statw_lower,
+                                                              double statw_upper)
 // multiply by lower level population to get a rate per second
 {
   double C;
@@ -84,11 +84,11 @@ __host__ __device__ constexpr double col_excitation_ratecoeff(const float T_e, c
     {
       // forbidden transitions: magnetic dipole, electric quadropole...
       // Axelrod's approximation (thesis 1980)
-      C = nne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * statw_upper(line) / std::sqrt(T_e);
+      C = nne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * statw_upper / std::sqrt(T_e);
     }
   } else {
     // from Osterbrock and Ferland, p51
-    C = nne * 8.629e-6 * coll_strength * std::exp(-eoverkt) / statw_lower(line) / std::sqrt(T_e);
+    C = nne * 8.629e-6 * coll_strength * std::exp(-eoverkt) / statw_lower / std::sqrt(T_e);
   }
 
   return C;

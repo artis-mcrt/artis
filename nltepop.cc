@@ -457,6 +457,7 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
     }
 
     // excitation
+    const double statweight = stat_weight(element, ion, level);
     const int nuptrans = get_nuptrans(element, ion, level);
     for (int i = 0; i < nuptrans; i++) {
       const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
@@ -467,7 +468,8 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
       const double R =
           rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid) *
           s_renorm[level];
-      const double C = col_excitation_ratecoeff(T_e, nne, line, epsilon_trans) * s_renorm[level];
+      const double C =
+          col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statweight, statw_upper(line)) * s_renorm[level];
       const double NTC =
           nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex) *
           s_renorm[level];
@@ -1233,17 +1235,19 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
       }
 
       // excitation
+      const double statweight = stat_weight(element, ion, level);
       const int nuptrans = get_nuptrans(element, ion, level);
       for (int i = 0; i < nuptrans; i++) {
         // printout("  level %d excitation i %d\n", level, i);
         const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
-        const int upper = globals::linelist[lineindex].upperlevelindex;
+        struct linelist_entry *line = &globals::linelist[lineindex];
+        const int upper = line->upperlevelindex;
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
 
         const double R =
             rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
         assert_always(std::isfinite(R));
-        const double C = col_excitation_ratecoeff(T_e, nne, &globals::linelist[lineindex], epsilon_trans);
+        const double C = col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statweight, statw_upper(line));
         assert_always(std::isfinite(C));
 
         int level_use;
