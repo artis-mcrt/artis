@@ -452,14 +452,14 @@ static void read_ion_transitions(std::istream &ftransitiondata, const int tottra
                                  const int Z, const int ionstage) {
   std::string line;
 
-  // will be autodetected from first table row. old format had an index column and no collstr or forbidden columns
-  bool oldtransitionformat = false;
-
   if (*tottransitions == 0) {
     for (int i = 0; i < tottransitions_in_file; i++) {
       assert_always(getline(ftransitiondata, line));
     }
   } else {
+    // will be autodetected from first table row. old format had an index column and no collstr or forbidden columns
+    bool oldtransitionformat = false;
+
     int prev_upper = -1;
     int prev_lower = 0;
     for (int i = 0; i < tottransitions_in_file; i++) {
