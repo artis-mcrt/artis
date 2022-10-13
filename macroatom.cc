@@ -40,7 +40,7 @@ __host__ __device__ static inline double get_individ_internal_up_same(int modelg
                                                                       const double t_mid, const float T_e,
                                                                       const float nne, const double statweight) {
   const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
-  struct linelist_entry *line = &globals::linelist[lineindex];
+  const struct linelist_entry *line = &globals::linelist[lineindex];
   const int upper = line->upperlevelindex;
   const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
 
@@ -71,7 +71,7 @@ __host__ __device__ static void calculate_macroatom_transitionrates(const int mo
   const int ndowntrans = get_ndowntrans(element, ion, level);
   for (int i = 0; i < ndowntrans; i++) {
     const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-    struct linelist_entry *line = &globals::linelist[lineindex];
+    const struct linelist_entry *line = &globals::linelist[lineindex];
     const int lower = line->lowerlevelindex;
     const double epsilon_target = epsilon(element, ion, lower);
     const double epsilon_trans = epsilon_current - epsilon_target;
@@ -563,7 +563,7 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
       printout("[debug]    ndowntrans %d %d\n", ndowntrans, get_ndowntrans(element, ion, level));
       for (int i = 0; i < ndowntrans; i++) {
         const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-        struct linelist_entry *line = &globals::linelist[lineindex];
+        const struct linelist_entry *line = &globals::linelist[lineindex];
         const int lower = line->lowerlevelindex;
         const double epsilon_trans = epsilon_current - epsilon(element, ion, lower);
         const double R =
@@ -578,7 +578,7 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
       printout("[debug]    nuptrans %d %d\n", nuptrans, get_nuptrans(element, ion, level));
       for (int i = 0; i < nuptrans; i++) {
         const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
-        struct linelist_entry *line = &globals::linelist[lineindex];
+        const struct linelist_entry *line = &globals::linelist[lineindex];
         const int upper = line->upperlevelindex;
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
         const double R =
@@ -1195,7 +1195,7 @@ __host__ __device__ double col_ionization_ratecoeff(const float T_e, const float
 }
 
 __host__ __device__ double col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans,
-                                                      struct linelist_entry *const line, double lowerstatweight,
+                                                      const struct linelist_entry *const line, double lowerstatweight,
                                                       double upperstatweight)
 // multiply by upper level population to get a rate per second
 {

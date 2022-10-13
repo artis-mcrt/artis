@@ -150,12 +150,12 @@ struct linelist_entry {
   float einstein_A;
   float osc_strength;
   float coll_str;
-  int elementindex;     /// It's a transition of element (not its atomic number,
-                        /// but the (x-1)th element included in the simulation.
-  int ionindex;         /// The same for the elements ion
-  int upperlevelindex;  /// And the participating upper
-  int lowerlevelindex;  /// and lower levels
-  bool forbidden;
+  const int elementindex;     /// It's a transition of element (not its atomic number,
+                              /// but the (x-1)th element included in the simulation.
+  const int ionindex;         /// The same for the elements ion
+  const int upperlevelindex;  /// And the participating upper
+  const int lowerlevelindex;  /// and lower levels
+  const bool forbidden;
 };
 
 struct nne_solution_paras {
@@ -284,7 +284,7 @@ extern __managed__ int opacity_case;
 
 extern __managed__ int nlines;
 extern __managed__ struct elementlist_entry *elements;
-extern __managed__ struct linelist_entry *linelist;
+extern __managed__ const struct linelist_entry *linelist;
 extern __managed__ struct bflist_t *bflist;
 
 extern __managed__ struct rpkt_cont_opacity *kappa_rpkt_cont;

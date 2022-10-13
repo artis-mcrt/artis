@@ -1067,7 +1067,8 @@ static void read_atomicdata_files(void) {
     // } while (numduplicates > 0);
   }
 
-// create a linelist shared on node and then copy data across, freeing the local copy
+  // create a linelist shared on node and then copy data across, freeing the local copy
+  struct linelist_entry *nonconstlinelist;
 #ifdef MPI_ON
   MPI_Win win;
 
@@ -1079,21 +1080,22 @@ static void read_atomicdata_files(void) {
 
   MPI_Aint size = my_rank_lines * sizeof(linelist_entry);
   int disp_unit = sizeof(linelist_entry);
-  MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &globals::linelist, &win);
+  MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nonconstlinelist, &win);
 
-  MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::linelist);
+  MPI_Win_shared_query(win, 0, &size, &disp_unit, &nonconstlinelist);
 #else
-  globals::linelist = static_cast<struct linelist_entry *>(malloc(globals::nlines * sizeof(linelist_entry)));
+  nonconstlinelist = static_cast<struct linelist_entry *>(malloc(globals::nlines * sizeof(linelist_entry)));
 #endif
 
   if (globals::rank_in_node == 0) {
-    memcpy(globals::linelist, temp_linelist.data(), globals::nlines * sizeof(linelist_entry));
+    memcpy(nonconstlinelist, temp_linelist.data(), globals::nlines * sizeof(linelist_entry));
     temp_linelist.clear();
   }
 
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
+  globals::linelist = const_cast<struct linelist_entry *>(nonconstlinelist);
   printout("[info] mem_usage: linelist occupies %.3f MB (node shared memory)\n",
            globals::nlines * sizeof(struct linelist_entry) / 1024. / 1024);
 

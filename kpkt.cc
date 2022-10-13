@@ -55,7 +55,7 @@ __host__ __device__ static double get_cooling_ion_coll_exc(const int modelgridin
     const double statweight = stat_weight(element, ion, level);
     const int nuptrans = get_nuptrans(element, ion, level);
     for (int ii = 0; ii < nuptrans; ii++) {
-      struct linelist_entry *line =
+      const struct linelist_entry *line =
           &globals::linelist[globals::elements[element].ions[ion].levels[level].uptrans[ii].lineindex];
       const int upper = line->upperlevelindex;
       // printout("    excitation to level %d possible\n",upper);
@@ -229,7 +229,7 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
       /// excitation to same ionization stage
       /// -----------------------------------
       for (int ii = 0; ii < nuptrans; ii++) {
-        struct linelist_entry *line =
+        const struct linelist_entry *line =
             &globals::linelist[globals::elements[element].ions[ion].levels[level].uptrans[ii].lineindex];
         const int upper = line->upperlevelindex;
         // printout("    excitation to level %d possible\n",upper);
@@ -732,7 +732,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       const int nuptrans = get_nuptrans(element, ion, level);
       for (int ii = 0; ii < nuptrans; ii++) {
         const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
-        struct linelist_entry *line = &globals::linelist[lineindex];
+        const struct linelist_entry *line = &globals::linelist[lineindex];
         const int tmpupper = globals::linelist[lineindex].upperlevelindex;
         // printout("    excitation to level %d possible\n",upper);
         const double epsilon_trans = epsilon(element, ion, tmpupper) - epsilon_current;

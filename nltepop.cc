@@ -436,7 +436,7 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
     const int ndowntrans = get_ndowntrans(element, ion, level);
     for (int i = 0; i < ndowntrans; i++) {
       const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-      struct linelist_entry *line = &globals::linelist[lineindex];
+      const struct linelist_entry *line = &globals::linelist[lineindex];
       const int lower = line->lowerlevelindex;
 
       const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
@@ -463,7 +463,7 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
     const int nuptrans = get_nuptrans(element, ion, level);
     for (int i = 0; i < nuptrans; i++) {
       const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
-      struct linelist_entry *line = &globals::linelist[lineindex];
+      const struct linelist_entry *line = &globals::linelist[lineindex];
       const int upper = line->upperlevelindex;
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_level;
 
@@ -1207,7 +1207,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
       const int ndowntrans = get_ndowntrans(element, ion, level);
       for (int i = 0; i < ndowntrans; i++) {
         const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-        struct linelist_entry *line = &globals::linelist[lineindex];
+        const struct linelist_entry *line = &globals::linelist[lineindex];
         const int lower = line->lowerlevelindex;
         const double epsilon_trans = epsilon_current - epsilon(element, ion, lower);
         const double statweight = stat_weight(element, ion, level);
@@ -1244,7 +1244,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
       for (int i = 0; i < nuptrans; i++) {
         // printout("  level %d excitation i %d\n", level, i);
         const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
-        struct linelist_entry *line = &globals::linelist[lineindex];
+        const struct linelist_entry *line = &globals::linelist[lineindex];
         const int upper = line->upperlevelindex;
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
 
