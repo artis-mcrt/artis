@@ -1386,10 +1386,8 @@ static void setup_cellhistory(void) {
 }
 
 static void write_bflist_file(int includedphotoiontransitions) {
-  if ((globals::bflist = (struct bflist_t *)malloc(includedphotoiontransitions * sizeof(struct bflist_t))) == NULL) {
-    printout("[fatal] input: not enough memory to initialize bflist ... abort\n");
-    abort();
-  }
+  globals::bflist = static_cast<struct bflist_t *>(malloc(includedphotoiontransitions * sizeof(struct bflist_t)));
+  assert_always(globals::bflist == NULL);
 
   FILE *bflist_file = NULL;
   if (globals::rank_global == 0) {
@@ -1448,7 +1446,7 @@ static void setup_phixs_list(void) {
   printout("[info] read_atomicdata: number of bfcontinua %d\n", globals::nbfcontinua);
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n", globals::nbfcontinua_ground);
 
-  globals::phixslist = (struct phixslist *)malloc(get_max_threads() * sizeof(struct phixslist));
+  globals::phixslist = static_cast<struct phixslist *>(malloc(get_max_threads() * sizeof(struct phixslist)));
   assert_always(globals::phixslist != NULL);
 
   /// MK: 2012-01-19
@@ -1464,7 +1462,8 @@ static void setup_phixs_list(void) {
     /// Number of ground level bf-continua equals the total number of included ions minus the number
     /// of included elements, because the uppermost ionisation stages can't ionise.
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-    globals::phixslist[itid].groundcont_gamma_contr = (double *)malloc(globals::nbfcontinua_ground * sizeof(double));
+    globals::phixslist[itid].groundcont_gamma_contr =
+        static_cast<double *>(malloc(globals::nbfcontinua_ground * sizeof(double)));
     assert_always(globals::phixslist[itid].groundcont_gamma_contr != NULL)
 
         for (int groundcontindex = 0; groundcontindex < globals::nbfcontinua_ground; groundcontindex++) {
@@ -1472,11 +1471,11 @@ static void setup_phixs_list(void) {
     }
 #endif
 
-    globals::phixslist[itid].kappa_bf_sum = (double *)malloc(globals::nbfcontinua * sizeof(double));
+    globals::phixslist[itid].kappa_bf_sum = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
     assert_always(globals::phixslist[itid].kappa_bf_sum != NULL);
 
 #if (DETAILED_BF_ESTIMATORS_ON)
-    globals::phixslist[itid].gamma_contr = (double *)malloc(globals::nbfcontinua * sizeof(double));
+    globals::phixslist[itid].gamma_contr = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
     assert_always(globals::phixslist[itid].gamma_contr != NULL);
 #endif
 
