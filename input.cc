@@ -157,7 +157,7 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
                .ions[lowerion]
                .levels[lowerlevel]
                .phixstargets[phixstargetindex]
-               .spontrecombcoeff = (double *)calloc(TABLESIZE, sizeof(double))) == NULL) {
+               .spontrecombcoeff = static_cast<double *>(calloc(TABLESIZE, sizeof(double)))) == NULL) {
         printout(
             "[fatal] input: not enough memory to initialize spontrecombcoeff table for element %d, ion %d, level %d\n",
             element, lowerion, lowerlevel);
@@ -169,7 +169,7 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
                .ions[lowerion]
                .levels[lowerlevel]
                .phixstargets[phixstargetindex]
-               .corrphotoioncoeff = (double *)calloc(TABLESIZE, sizeof(double))) == NULL) {
+               .corrphotoioncoeff = static_cast<double *>(calloc(TABLESIZE, sizeof(double)))) == NULL) {
         printout(
             "[fatal] input: not enough memory to initialize photoioncoeff table for element %d, ion %d, level %d\n",
             element, lowerion, lowerlevel);
@@ -189,7 +189,7 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
 #endif
       *mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
       if ((globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfcooling_coeff =
-               (double *)calloc(TABLESIZE, sizeof(double))) == NULL) {
+               static_cast<double *>(calloc(TABLESIZE, sizeof(double)))) == NULL) {
         printout("[fatal] input: not enough memory to initialize bfcooling table for element %d, ion %d, level %d\n",
                  element, lowerion, lowerlevel);
         abort();
