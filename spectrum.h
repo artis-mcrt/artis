@@ -4,22 +4,22 @@
 #include <cstdio>
 
 struct timestepspec {
-  double *flux = NULL;
-  double *absorption = NULL;
-  double *emission = NULL;
-  double *trueemission = NULL;
+  double *flux = nullptr;
+  double *absorption = nullptr;
+  double *emission = nullptr;
+  double *trueemission = nullptr;
 };
 
 struct spec {
   double nu_min = -1.;
   double nu_max = -1.;
-  float *lower_freq = NULL;
-  float *delta_freq;
-  double *fluxalltimesteps = NULL;
-  double *absorptionalltimesteps = NULL;
-  double *emissionalltimesteps = NULL;
-  double *trueemissionalltimesteps = NULL;
-  struct timestepspec *timesteps = NULL;
+  float *lower_freq = nullptr;
+  float *delta_freq = nullptr;
+  double *fluxalltimesteps = nullptr;
+  double *absorptionalltimesteps = nullptr;
+  double *emissionalltimesteps = nullptr;
+  double *trueemissionalltimesteps = nullptr;
+  struct timestepspec *timesteps = nullptr;
   bool do_emission_res = true;
 };
 
