@@ -89,7 +89,7 @@ __managed__ int ncoolingterms;
 /// PHIXSLIST
 
 __managed__ double *allcont_nu_edge = NULL;
-__managed__ struct fullphixslist *allcont = NULL;
+__managed__ const struct fullphixslist *allcont = NULL;
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
 __managed__ struct groundphixslist *groundcont = NULL;
 #endif

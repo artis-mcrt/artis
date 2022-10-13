@@ -292,7 +292,7 @@ extern __managed__ struct rpkt_cont_opacity *kappa_rpkt_cont;
 extern __managed__ int ncoolingterms;
 
 extern __managed__ double *allcont_nu_edge;
-extern __managed__ struct fullphixslist *allcont;
+extern __managed__ const struct fullphixslist *allcont;
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
 extern __managed__ struct groundphixslist *groundcont;
 #endif

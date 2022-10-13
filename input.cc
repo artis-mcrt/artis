@@ -1500,10 +1500,6 @@ static void setup_phixs_list(void) {
   assert_always(globals::groundcont != NULL);
 #endif
 
-  globals::allcont = static_cast<struct fullphixslist *>(malloc(globals::nbfcontinua * sizeof(struct fullphixslist)));
-  printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
-           globals::nbfcontinua * (sizeof(fullphixslist)) / 1024. / 1024.);
-
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
   int groundcontindex = 0;
   for (int element = 0; element < get_nelements(); element++) {
@@ -1532,6 +1528,10 @@ static void setup_phixs_list(void) {
   std::sort(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground);
 #endif
 
+  struct fullphixslist *nonconstallcont =
+      static_cast<struct fullphixslist *>(malloc(globals::nbfcontinua * sizeof(struct fullphixslist)));
+  printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
+           globals::nbfcontinua * (sizeof(fullphixslist)) / 1024. / 1024.);
   int nbftables = 0;
   int allcontindex = 0;
   for (int element = 0; element < get_nelements(); element++) {
@@ -1550,17 +1550,17 @@ static void setup_phixs_list(void) {
           const double nu_edge = E_threshold / H;
 
           assert_always(allcontindex < globals::nbfcontinua);
-          globals::allcont[allcontindex].nu_edge = nu_edge;
-          globals::allcont[allcontindex].element = element;
-          globals::allcont[allcontindex].ion = ion;
-          globals::allcont[allcontindex].level = level;
-          globals::allcont[allcontindex].phixstargetindex = phixstargetindex;
-          globals::allcont[allcontindex].probability = get_phixsprobability(element, ion, level, phixstargetindex);
-          globals::allcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+          nonconstallcont[allcontindex].nu_edge = nu_edge;
+          nonconstallcont[allcontindex].element = element;
+          nonconstallcont[allcontindex].ion = ion;
+          nonconstallcont[allcontindex].level = level;
+          nonconstallcont[allcontindex].phixstargetindex = phixstargetindex;
+          nonconstallcont[allcontindex].probability = get_phixsprobability(element, ion, level, phixstargetindex);
+          nonconstallcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
           int index_in_groundlevelcontestimator;
-          globals::allcont[allcontindex].index_in_groundphixslist =
+          nonconstallcont[allcontindex].index_in_groundphixslist =
               search_groundphixslist(nu_edge, &index_in_groundlevelcontestimator, element, ion, level);
 
           globals::elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
@@ -1576,7 +1576,7 @@ static void setup_phixs_list(void) {
 
   if (globals::nbfcontinua > 0) {
     // indicies above were temporary only. continum index should be to the sorted list
-    std::sort(globals::allcont, globals::allcont + globals::nbfcontinua);
+    std::sort(nonconstallcont, nonconstallcont + globals::nbfcontinua);
 
     globals::allcont_nu_edge = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
 
@@ -1598,12 +1598,12 @@ static void setup_phixs_list(void) {
     assert_always(allphixsblock != NULL);
     int nbftableschanged = 0;
     for (int i = 0; i < globals::nbfcontinua; i++) {
-      globals::allcont_nu_edge[i] = globals::allcont[i].nu_edge;
+      globals::allcont_nu_edge[i] = nonconstallcont[i].nu_edge;
 
-      const int element = globals::allcont[i].element;
-      const int ion = globals::allcont[i].ion;
-      const int level = globals::allcont[i].level;
-      const int phixstargetindex = globals::allcont[i].phixstargetindex;
+      const int element = nonconstallcont[i].element;
+      const int ion = nonconstallcont[i].ion;
+      const int level = nonconstallcont[i].level;
+      const int phixstargetindex = nonconstallcont[i].phixstargetindex;
 
       // different targets share the same cross section table, so don't repeat this process
       if (phixstargetindex == 0) {
@@ -1627,9 +1627,11 @@ static void setup_phixs_list(void) {
       const int element = globals::allcont[i].element;
       const int ion = globals::allcont[i].ion;
       const int level = globals::allcont[i].level;
-      globals::allcont[i].photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
+      nonconstallcont[i].photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
     }
   }
+  globals::allcont = nonconstallcont;
+  nonconstallcont = nullptr;
 }
 
 static void read_atomicdata(void)
