@@ -123,6 +123,8 @@ jobs:
 
         steps:
             - uses: actions/checkout@v3
+              with:
+                  fetch-depth: 1
 
             - name: install dependencies
               if: matrix.os != 'selfhosted'
@@ -297,8 +299,6 @@ jobs:
               if: matrix.testmode == 'OFF'
               run: |
                   git checkout HEAD~1
-                  mpicxx --version
-                  mpicxx --showme:version
                   make clean
                   make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
                   cp sn3d tests/${{ matrix.testname }}_testrun/
