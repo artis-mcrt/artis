@@ -103,9 +103,10 @@ __host__ __device__ constexpr double col_deexcitation_ratecoeff(const float T_e,
   return C;
 }
 
-__host__ __device__ constexpr double col_excitation_ratecoeff(float T_e, float nne, struct linelist_entry *const line,
-                                                              double epsilon_trans, double lowerstatweight,
-                                                              double upperstatweight)
+__host__ __device__ constexpr double col_excitation_ratecoeff(const float T_e, const float nne,
+                                                              struct linelist_entry *const line,
+                                                              const double epsilon_trans, const double lowerstatweight,
+                                                              const double upperstatweight)
 // multiply by lower level population to get a rate per second
 {
   double C;
