@@ -34,10 +34,6 @@ struct cellhistorycoolinglist {
 
 static __managed__ struct cellhistorycoolinglist *coolinglist;
 
-__host__ __device__ int get_coolinglistoffset(int element, int ion) {
-  return globals::elements[element].ions[ion].coolingoffset;
-}
-
 __host__ __device__ static int get_ncoolingterms(int element, int ion) {
   return globals::elements[element].ions[ion].ncoolingterms;
 }
