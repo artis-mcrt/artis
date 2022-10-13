@@ -49,10 +49,10 @@ __host__ __device__ double col_recombination_ratecoeff(int modelgridindex, int e
 __host__ __device__ double col_ionization_ratecoeff(float T_e, float nne, int element, int ion, int lower,
                                                     int phixstargetindex, double epsilon_trans);
 
-__host__ __device__ static inline double col_deexcitation_ratecoeff(const float T_e, const float nne,
-                                                                    const double epsilon_trans,
-                                                                    const struct linelist_entry *const line,
-                                                                    double lowerstatweight, double upperstatweight)
+__host__ __device__ constexpr double col_deexcitation_ratecoeff(const float T_e, const float nne,
+                                                                const double epsilon_trans,
+                                                                const struct linelist_entry *const line,
+                                                                double lowerstatweight, double upperstatweight)
 // multiply by upper level population to get a rate per second
 {
   double C;
