@@ -568,7 +568,6 @@ __host__ __device__ static void update_estimators(struct packet *pkt_ptr, const 
   }
   const double distance_e_cmf = distance * pkt_ptr->e_cmf;
   const double nu = pkt_ptr->nu_cmf;
-  // double bf = exp(-HOVERKB*nu/globals::cell[modelgridindex].T_e);
   radfield::update_estimators(modelgridindex, distance_e_cmf, nu, pkt_ptr);
 
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
@@ -612,8 +611,9 @@ __host__ __device__ static void update_estimators(struct packet *pkt_ptr, const 
                 globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu));
 #endif
       }
-    } else
+    } else {
       break;  // because groundcont is sorted by nu_edge, nu < nu_edge for all remaining items
+    }
   }
 #endif
 
