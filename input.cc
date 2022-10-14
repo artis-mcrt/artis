@@ -403,7 +403,7 @@ static void read_ion_levels(FILE *adata, const int element, const int ion, const
 
     if (level < nlevelsmax) {
       // globals::elements[element].ions[ion].levels[level].epsilon = (energyoffset + levelenergy) * EV;
-      const double currentlevelenergy = (energyoffset + levelenergy) * EV;
+      const double currentlevelenergy = energyoffset * EV + levelenergy * EV;
       // printout("energy for level %d of ionstage %d of element %d is
       // %g\n",level,ionstage,element,currentlevelenergy/EV);
       globals::elements[element].ions[ion].levels[level].epsilon = currentlevelenergy;
