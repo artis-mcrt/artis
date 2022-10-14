@@ -61,7 +61,7 @@ constexpr bool USE_MODEL_INITIAL_ENERGY = true;
 #define MAXTEMP 140000.  // 1000000.
 
 // temperature for which total ion recombination rate are calibrated to input data (recombrates.txt)
-#define RECOMBCALIBRATION_T_ELEC 15000.
+constexpr double RECOMBCALIBRATION_T_ELEC = 15000.;
 
 // Polarisation for real packets
 // #define DIPOLE
