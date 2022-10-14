@@ -1055,7 +1055,7 @@ __host__ __device__ static double calculate_kappa_ff(const int modelgridindex, c
       const int Z = get_ionstage(element, ion) - 1;
       if (Z > 0) {
         // kappa_ff += 3.69255e8 * pow(Z,2) / sqrt(T_e) * pow(nu,-3) * g_ff * nne * nnion * (1-exp(-HOVERKB*nu/T_e));
-        kappa_ff += pow(Z, 2) * g_ff * nnion;
+        kappa_ff += Z * Z * g_ff * nnion;
         // kappa_ffheating += pow(Z,2) * g_ff * nnion;
         /// heating with level dependence
         // kappa_ffheating += 3.69255e8 * pow(Z,2) / sqrt(T_e) * pow(nu,-3) * g_ff * nne * nnion * (1 -
