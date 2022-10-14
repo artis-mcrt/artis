@@ -1311,20 +1311,20 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
     }
 #else
     {
-#if (NO_LUT_PHOTOION)
-      gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
-#else
-      const double W = grid::get_W(modelgridindex);
-      const double T_R = grid::get_TR(modelgridindex);
+      if constexpr (NO_LUT_PHOTOION) {
+        gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
+      } else {
+        const double W = grid::get_W(modelgridindex);
+        const double T_R = grid::get_TR(modelgridindex);
 
-      gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
-      const int index_in_groundlevelcontestimator =
-          globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
-      if (index_in_groundlevelcontestimator >= 0) {
-        gammacorr *= globals::corrphotoionrenorm[modelgridindex * get_nelements() * get_max_nions() +
-                                                 index_in_groundlevelcontestimator];
+        gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
+        const int index_in_groundlevelcontestimator =
+            globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
+        if (index_in_groundlevelcontestimator >= 0) {
+          gammacorr *= globals::corrphotoionrenorm[modelgridindex * get_nelements() * get_max_nions() +
+                                                   index_in_groundlevelcontestimator];
+        }
       }
-#endif
     }
 #endif
     if (use_cellhist) {
