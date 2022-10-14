@@ -1062,11 +1062,11 @@ __host__ __device__ static double calculate_kappa_ff(const int modelgridindex, c
         // exp(-HOVERKB*nu/T_e));
         /// heating without level dependence
         // kappa_ffheating += 3.69255e8 * pow(Z,2) * pow(nu,-3) * g_ff * (1-exp(-HOVERKB*nu/T_e));
-        if (!std::isfinite(kappa_ff)) {
-          printout("kappa_ff %g nne %g T_e %g mgi %d element %d ion %d nnion %g\n", kappa_ff, nne, T_e, modelgridindex,
-                   element, ion, nnion);
-        }
-        assert_always(std::isfinite(kappa_ff));
+        // if (!std::isfinite(kappa_ff)) {
+        //   printout("kappa_ff %g nne %g T_e %g mgi %d element %d ion %d nnion %g\n", kappa_ff, nne, T_e,
+        //   modelgridindex,
+        //            element, ion, nnion);
+        // }
       }
     }
   }
