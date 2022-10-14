@@ -243,10 +243,6 @@ void init(int my_rank, int ndo, int ndo_nonempty)
     abort();
   }
 
-#ifdef MPI_ON
-  const int rank_in_node = globals::rank_in_node;
-#endif
-
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
 
   J_normfactor = (double *)malloc((grid::get_npts_model() + 1) * sizeof(double));
@@ -433,9 +429,9 @@ void init(int my_rank, int ndo, int ndo_nonempty)
 
       zero_estimators(modelgridindex);
 
-      if (MULTIBIN_RADFIELD_MODEL_ON) {
+      if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
 #ifdef MPI_ON
-        if (rank_in_node == 0)
+        if (globals::rank_in_node == 0)
 #endif
         {
           const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
@@ -508,7 +504,7 @@ __host__ __device__ int get_Jblueindex(const int lineindex)
   //     return i;
   // }
 
-  if (!DETAILED_LINE_ESTIMATORS_ON) return -1;
+  if constexpr (!DETAILED_LINE_ESTIMATORS_ON) return -1;
 
   // use a binary search, assuming the list is sorted
 
@@ -550,15 +546,8 @@ __host__ __device__ int get_Jb_lu_contribcount(const int modelgridindex, const i
 static double get_bin_J(int modelgridindex, int binindex)
 // get the normalised J_nu
 {
-  if (J_normfactor[modelgridindex] <= 0.0) {
-    printout("radfield: Fatal error: get_bin_J called before J_normfactor set for modelgridindex %d, = %g",
-             modelgridindex, J_normfactor[modelgridindex]);
-    abort();
-  } else if (modelgridindex >= grid::get_npts_model()) {
-    printout("radfield: Fatal error: get_bin_J called before on modelgridindex %d >= grid::get_npts_model()",
-             modelgridindex);
-    abort();
-  }
+  assert_testmodeonly(J_normfactor[modelgridindex] > 0.0);
+  assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(binindex >= 0);
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);
   const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
@@ -566,14 +555,8 @@ static double get_bin_J(int modelgridindex, int binindex)
 }
 
 __host__ __device__ static double get_bin_nuJ(int modelgridindex, int binindex) {
-  if (J_normfactor[modelgridindex] <= 0.0) {
-    printout("radfield: Fatal error: get_bin_nuJ called before J_normfactor set for modelgridindex %d", modelgridindex);
-    abort();
-  } else if (modelgridindex >= grid::get_npts_model()) {
-    printout("radfield: Fatal error: get_bin_nuJ called before on modelgridindex %d >= grid::get_npts_model()",
-             modelgridindex);
-    abort();
-  }
+  assert_testmodeonly(J_normfactor[modelgridindex] > 0.0);
+  assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(binindex >= 0);
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);
   const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
@@ -925,51 +908,43 @@ __host__ __device__ double dbb_mgi(double nu, int modelgridindex) {
 __host__ __device__ double radfield(double nu, int modelgridindex)
 // returns mean intensity J_nu [ergs/s/sr/cm2/Hz]
 {
-  if (MULTIBIN_RADFIELD_MODEL_ON && (globals::nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP)) {
-    // const double lambda = 1e8 * CLIGHT / nu;
-    // if (lambda < 1085) // Fe II ground state edge
-    // {
-    //   return dbb(nu, grid::get_TR(modelgridindex), grid::get_W(modelgridindex));
-    // }
-    const int binindex = select_bin(nu);
-    if (binindex >= 0) {
-      const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
-      const struct radfieldbin_solution *const bin = &radfieldbin_solutions[mgibinindex];
-      if (bin->W >= 0.) {
-        // if (bin->fit_type == FIT_DILUTE_BLACKBODY)
-        {
-          const double J_nu = dbb(nu, bin->T_R, bin->W);
-          return J_nu;
-        }
-        // else
-        // {
-        //   return bin->W;
-        // }
-      } else  // W < 0
-      {
-        // printout("WARNING: Radfield modelgridindex %d binindex %d has W_bin=%g<0, using W %g T_R %g nu %g\n",
-        //          modelgridindex, binindex, W_bin, W_fullspec, T_R_fullspec, nu);
-      }
-    } else  // binindex < 0
-    {
-      // if (nu > get_bin_nu_upper(RADFIELDBINCOUNT - 1))
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+    if (globals::nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP) {
+      // const double lambda = 1e8 * CLIGHT / nu;
+      // if (lambda < 1085) // Fe II ground state edge
       // {
-      //   // undiluted LTE blueward of the bins
-      //   const double J_nu_LTE = dbb(nu, grid::get_Te(modelgridindex), 1.0);
-      //   return J_nu_LTE;
+      //   return dbb(nu, grid::get_TR(modelgridindex), grid::get_W(modelgridindex));
       // }
-      // else
-      //   return 0; // no radfield redwards of the bins
-      // printout("WARNING: Radfield modelgridindex %d binindex %d nu %g nu_lower_first %g nu_upper_last %g \n",
-      //         modelgridindex, binindex, nu, nu_lower_first, nu_upper_last);
+      const int binindex = select_bin(nu);
+      if (binindex >= 0) {
+        const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
+        const struct radfieldbin_solution *const bin = &radfieldbin_solutions[mgibinindex];
+        if (bin->W >= 0.) {
+          // if (bin->fit_type == FIT_DILUTE_BLACKBODY)
+          {
+            const double J_nu = dbb(nu, bin->T_R, bin->W);
+            return J_nu;
+          }
+          // else
+          // {
+          //   return bin->W;
+          // }
+        }
+      } else {  // binindex < 0
+        // if (nu > get_bin_nu_upper(RADFIELDBINCOUNT - 1))
+        // {
+        //   // undiluted LTE blueward of the bins
+        //   const double J_nu_LTE = dbb(nu, grid::get_Te(modelgridindex), 1.0);
+        //   return J_nu_LTE;
+        // }
+        // else
+        //   return 0; // no radfield redwards of the bins
+        // printout("WARNING: Radfield modelgridindex %d binindex %d nu %g nu_lower_first %g nu_upper_last %g \n",
+        //         modelgridindex, binindex, nu, nu_lower_first, nu_upper_last);
+      }
+      return 0.;
     }
-    return 0.;
   }
-  /*else
-  {
-    printout("radfield: WARNING: Radfield called before initialized. Using global T_R %g W %g nu %g modelgridindex
-  %d\n", W_fullspec, T_R_fullspec, nu, modelgridindex);
-  }*/
 
   const float T_R_fullspec = grid::get_TR(modelgridindex);
   const float W_fullspec = grid::get_W(modelgridindex);
@@ -1256,8 +1231,8 @@ void fit_parameters(int modelgridindex, int timestep)
           }
 
           double planck_integral_result = planck_integral(T_R_bin, nu_lower, nu_upper, ONE);
-          //          printout("planck_integral(T_R=%g, nu_lower=%g, nu_upper=%g) = %g\n", T_R_bin, nu_lower, nu_upper,
-          //          planck_integral_result);
+          //          printout("planck_integral(T_R=%g, nu_lower=%g, nu_upper=%g) = %g\n", T_R_bin, nu_lower,
+          //          nu_upper, planck_integral_result);
 
           W_bin = J_bin / planck_integral_result;
 
