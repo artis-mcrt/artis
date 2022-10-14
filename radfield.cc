@@ -831,25 +831,15 @@ __host__ __device__ static void update_bfestimators(const int modelgridindex, co
 __host__ __device__ void update_estimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
                                            const struct packet *const pkt_ptr) {
   safeadd(J[modelgridindex], distance_e_cmf);
-  if (!std::isfinite(J[modelgridindex])) {
-    printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",
-             distance_e_cmf, nu_cmf);
-    abort();
-  }
 
 #ifndef FORCE_LTE
   safeadd(nuJ[modelgridindex], distance_e_cmf * nu_cmf);
-  if (!std::isfinite(nuJ[modelgridindex])) {
-    printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",
-             distance_e_cmf, nu_cmf);
-    abort();
-  }
 
 #if (DETAILED_BF_ESTIMATORS_ON)
   update_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr);
 #endif
 
-  if (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     // int binindex = 0;
     // if (nu_cmf <= get_bin_nu_lower(modelgridindex,binindex))
     // {
