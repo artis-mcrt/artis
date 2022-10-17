@@ -272,7 +272,7 @@ jobs:
                   python3 -m pip install artistools
 
                   # upgrade all installed packages to their latest versions
-                  python3 -m pip list freeze --outdated | tail -n +3 | cut -w -f1 | xargs -n1 python3 -m pip install --upgrade
+                  # python3 -m pip list freeze --outdated | tail -n +3 | cut -w -f1 | xargs -n1 python3 -m pip install --upgrade
 
             - name: Plot output
               if: always() && matrix.testname == 'nebularonezone' && matrix.testmode == 'OFF'
