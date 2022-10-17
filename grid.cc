@@ -1179,7 +1179,8 @@ static void read_2d3d_modelradioabundanceline(std::ifstream &fmodel, const int m
           } else if (colnames[i] == "cellYe") {
             set_initelectronfrac(mgi, valuein);
           } else if (colnames[i] == "q") {
-            set_initenergyq(mgi, valuein);
+            // use value for t_model and adjust to tmin with expansion factor
+            set_initenergyq(mgi, valuein * t_model / globals::tmin);
           } else if (colnames[i] == "tracercount") {
             ;
           } else {
@@ -1313,7 +1314,8 @@ static void read_1d_model(void)
         } else if (colnames[i] == "cellYe") {
           set_initelectronfrac(mgi, valuein);
         } else if (colnames[i] == "q") {
-          set_initenergyq(mgi, valuein);
+          // use value for t_model and adjust to tmin with expansion factor
+          set_initenergyq(mgi, valuein * t_model / globals::tmin);
         } else if (colnames[i] == "tracercount") {
           ;
         } else {
