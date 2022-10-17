@@ -559,9 +559,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     // globals::debuglevel = 2;
     // printout("element %d, ion %d, coolingsum %g\n",element,ion,coolingsum);
     const int ilow = get_coolinglistoffset(element, ion);
-    int low = ilow;
     const int ihigh = ilow + get_ncoolingterms(element, ion) - 1;
-    int high = low + get_ncoolingterms(element, ion) - 1;
     // printout("element %d, ion %d, low %d, high %d\n",element,ion,low,high);
     if (globals::cellhistory[tid].cooling_contrib[ilow] < 0.) {
       // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d oldcoolingsum
@@ -570,30 +568,14 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       calculate_kpkt_rates_ion(modelgridindex, element, ion, ilow, oldcoolingsum, tid);
     }
 
-    int i = -1;
-    while (low <= high) {
-      i = (low + high) / 2;
-      if (globals::cellhistory[tid].cooling_contrib[i] >= rndcool) {
-        if ((i == ilow) || ((i > 0 ? globals::cellhistory[tid].cooling_contrib[i - 1] : 0.) < rndcool))
-          break;  /// found (1)
-        else
-          high = i - 1;
-      } else
-        low = i + 1;
-      // else if (globals::cellhistory[tid].cooling_contrib < rndcool)
-      //   low = i + 1;
-      // else
-      //   break; /// found (2)
-    }
-    auto selectedval = std::lower_bound(&globals::cellhistory[tid].cooling_contrib[ilow],
-                                        &globals::cellhistory[tid].cooling_contrib[ihigh + 1], rndcool);
-    const int i2 = selectedval - globals::cellhistory[tid].cooling_contrib;
-    assert_always(i2 == i);
-    assert_always(i2 <= ihigh);
-    // random value minus
-    if (low > high) {
-      printout("do_kpkt: error occured while selecting a cooling channel: low %d, high %d, i %d, rndcool %g\n", low,
-               high, i, rndcool);
+    const auto selectedvalue = std::lower_bound(&globals::cellhistory[tid].cooling_contrib[ilow],
+                                                &globals::cellhistory[tid].cooling_contrib[ihigh + 1], rndcool);
+    const int i = selectedvalue - globals::cellhistory[tid].cooling_contrib;
+    assert_always(i <= ihigh);
+
+    if (i > ihigh) {
+      printout("do_kpkt: error occured while selecting a cooling channel: low %d, high %d, i %d, rndcool %g\n", ilow,
+               ihigh, i, rndcool);
       printout("element %d, ion %d, offset %d, terms %d, coolingsum %g\n", element, ion,
                get_coolinglistoffset(element, ion), get_ncoolingterms(element, ion), coolingsum);
       printout("oldcoolingsum %g, coolingsum %g\n", oldcoolingsum, coolingsum);
