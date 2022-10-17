@@ -560,6 +560,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     // printout("element %d, ion %d, coolingsum %g\n",element,ion,coolingsum);
     const int ilow = get_coolinglistoffset(element, ion);
     int low = ilow;
+    const int ihigh = ilow + get_ncoolingterms(element, ion) - 1;
     int high = low + get_ncoolingterms(element, ion) - 1;
     // printout("element %d, ion %d, low %d, high %d\n",element,ion,low,high);
     if (globals::cellhistory[tid].cooling_contrib[ilow] < 0.) {
@@ -584,6 +585,11 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       // else
       //   break; /// found (2)
     }
+    auto selectedval = std::lower_bound(&globals::cellhistory[tid].cooling_contrib[ilow],
+                                        &globals::cellhistory[tid].cooling_contrib[ihigh + 1], rndcool);
+    const int i2 = selectedval - globals::cellhistory[tid].cooling_contrib;
+    assert_always(i2 == i);
+    assert_always(i2 <= ihigh);
     // random value minus
     if (low > high) {
       printout("do_kpkt: error occured while selecting a cooling channel: low %d, high %d, i %d, rndcool %g\n", low,
