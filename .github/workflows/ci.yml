@@ -61,8 +61,8 @@ jobs:
               id: cpu-count
               run: |
                   sudo apt-get update
-                  # echo "::set-output name=count::$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')"
-                  echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
+                  # echo "count=$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')" >> $GITHUB_OUTPUT
+                  echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
             - name: Install gcc
               if: matrix.compiler.name == 'gcc'
@@ -138,7 +138,9 @@ jobs:
 
             - name: CPU count
               id: cpu-count
-              run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
+              run: |
+                  sudo apt-get update
+                  echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
             # we can cache this, but then we don't test the code that generates ratecoeff.dat
             - name: Cache ratecoeff.dat
