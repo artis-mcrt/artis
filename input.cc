@@ -1088,7 +1088,7 @@ static void read_atomicdata_files(void) {
 #endif
 
   if (globals::rank_in_node == 0) {
-    memcpy(reinterpret_cast<void *>(nonconstlinelist), temp_linelist.data(), globals::nlines * sizeof(linelist_entry));
+    memcpy(static_cast<void *>(nonconstlinelist), temp_linelist.data(), globals::nlines * sizeof(linelist_entry));
     temp_linelist.clear();
   }
 
