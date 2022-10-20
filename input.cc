@@ -1352,24 +1352,36 @@ static void setup_cellhistory(void) {
 
     long chlevelblocksize = 0;
     long chphixsblocksize = 0;
+    int chtransblocksize = 0;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
         chlevelblocksize += nlevels * sizeof(struct chlevels);
+
         for (int level = 0; level < nlevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
           chphixsblocksize += nphixstargets * sizeof(struct chphixstargets);
+
+          const int ndowntrans = get_ndowntrans(element, ion, level);
+          const int nuptrans = get_nuptrans(element, ion, level);
+          chtransblocksize += (2 * ndowntrans + nuptrans);
         }
       }
     }
     assert_always(chlevelblocksize > 0);
     globals::cellhistory[tid].ch_all_levels = static_cast<struct chlevels *>(malloc(chlevelblocksize));
     struct chphixstargets *chphixstargetsblock =
-        chphixsblocksize == 0 ? nullptr : static_cast<struct chphixstargets *>(malloc(chphixsblocksize));
+        chphixsblocksize > 0 ? static_cast<struct chphixstargets *>(malloc(chphixsblocksize)) : nullptr;
     mem_usage_cellhistory += chlevelblocksize + chphixsblocksize;
+
+    mem_usage_cellhistory += chtransblocksize * sizeof(double);
+    double *const chtransblock =
+        chtransblocksize > 0 ? static_cast<double *>(malloc(chtransblocksize * sizeof(double))) : nullptr;
+
     int alllevelindex = 0;
     int allphixstargetindex = 0;
+    int chtransindex = 0;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       mem_usage_cellhistory += nions * sizeof(struct chions);
@@ -1385,45 +1397,37 @@ static void setup_cellhistory(void) {
         assert_always(alllevelindex == get_uniquelevelindex(element, ion, 0));
         alllevelindex += nlevels;
 
-        int chtransblocksize = 0;
-        for (int level = 0; level < nlevels; level++) {
-          const int ndowntrans = get_ndowntrans(element, ion, level);
-          const int nuptrans = get_nuptrans(element, ion, level);
-          chtransblocksize += (2 * (ndowntrans + 1) + (nuptrans + 1));
-        }
-
-        mem_usage_cellhistory += chtransblocksize * sizeof(double);
-        double *const chtransblock =
-            chtransblocksize > 0 ? static_cast<double *>(malloc(chtransblocksize * sizeof(double))) : nullptr;
-        int chtransindex = 0;
-
         for (int level = 0; level < nlevels; level++) {
           struct chlevels *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
           const int nphixstargets = get_nphixstargets(element, ion, level);
-          if (chphixsblocksize > 0) {
-            chlevel->chphixstargets = &chphixstargetsblock[allphixstargetindex];
-          } else {
-            chlevel->chphixstargets = nullptr;
-          }
+          chlevel->chphixstargets = chphixsblocksize > 0 ? &chphixstargetsblock[allphixstargetindex] : nullptr;
           allphixstargetindex += nphixstargets;
+        }
 
+        for (int level = 0; level < nlevels; level++) {
+          struct chlevels *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
           const int ndowntrans = get_ndowntrans(element, ion, level);
-          const int nuptrans = get_nuptrans(element, ion, level);
 
           chlevel->individ_rad_deexc = &chtransblock[chtransindex];
-          chtransindex += ndowntrans + 1;
-          assert_always(chlevel->individ_rad_deexc != NULL);
-
-          chlevel->individ_internal_down_same = &chtransblock[chtransindex];
-          chtransindex += ndowntrans + 1;
-          assert_always(chlevel->individ_internal_down_same != NULL);
-
-          chlevel->individ_internal_up_same = &chtransblock[chtransindex];
-          chtransindex += nuptrans + 1;
-          assert_always(chlevel->individ_internal_up_same != NULL);
+          chtransindex += ndowntrans;
         }
-        assert_always(chtransindex == chtransblocksize);
+
+        for (int level = 0; level < nlevels; level++) {
+          struct chlevels *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
+          const int ndowntrans = get_ndowntrans(element, ion, level);
+          chlevel->individ_internal_down_same = &chtransblock[chtransindex];
+          chtransindex += ndowntrans;
+        }
+
+        for (int level = 0; level < nlevels; level++) {
+          struct chlevels *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
+          const int nuptrans = get_nuptrans(element, ion, level);
+          chlevel->individ_internal_up_same = &chtransblock[chtransindex];
+          chtransindex += nuptrans;
+        }
       }
+
+      assert_always(chtransindex == chtransblocksize);
     }
 
     assert_always(globals::nbfcontinua >= 0);
