@@ -586,16 +586,16 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
                                         std::vector<struct linelist_entry> &temp_linelist) {
   const int lineindex_initial = *lineindex;
   const int tottransitions = transitiontable.size();
-  // pass 0 to get transition counts of each level for allocations
+  // pass 0 to get transition counts of each level
   // pass 1 to allocate and fill transition arrays
   for (int pass = 0; pass < 2; pass++) {
     *lineindex = lineindex_initial;
     if (pass == 1) {
       for (int level = 0; level < nlevelsmax; level++) {
         globals::elements[element].ions[ion].levels[level].downtrans = static_cast<struct level_transition *>(
-            malloc(get_ndowntrans(element, ion, level) * sizeof(struct level_transition)));
+            malloc((get_ndowntrans(element, ion, level) + 1) * sizeof(struct level_transition)));
         globals::elements[element].ions[ion].levels[level].uptrans = static_cast<struct level_transition *>(
-            malloc(get_nuptrans(element, ion, level) * sizeof(struct level_transition)));
+            malloc((get_nuptrans(element, ion, level) + 1) * sizeof(struct level_transition)));
 
         set_ndowntrans(element, ion, level, 0);
         set_nuptrans(element, ion, level, 0);
@@ -603,7 +603,7 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
     }
 
     for (int level = 0; level < nlevelsmax; level++) {
-      for (int t = 0; t < level; t++) {
+      for (int t = 0; t <= level; t++) {
         transitions[level].to[t] = -99.;
       }
     }
@@ -611,8 +611,10 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
     for (int ii = 0; ii < tottransitions; ii++) {
       const int level = transitiontable[ii].upper;
       const int targetlevel = transitiontable[ii].lower;
-      assert_always(targetlevel >= 0);
-      assert_always(level > targetlevel);
+      if (pass == 0) {
+        assert_always(targetlevel >= 0);
+        assert_always(level > targetlevel);
+      }
 
       double nu_trans = -1.;
       if (targetlevel < nlevelsmax && level < nlevelsmax) {
