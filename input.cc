@@ -1393,7 +1393,8 @@ static void setup_cellhistory(void) {
         }
 
         mem_usage_cellhistory += chtransblocksize * sizeof(double);
-        double *const chtransblock = static_cast<double *>(malloc(chtransblocksize * sizeof(double)));
+        double *const chtransblock =
+            chtransblocksize > 0 ? static_cast<double *>(malloc(chtransblocksize * sizeof(double))) : nullptr;
         int chtransindex = 0;
 
         for (int level = 0; level < nlevels; level++) {
@@ -1410,15 +1411,15 @@ static void setup_cellhistory(void) {
           const int nuptrans = get_nuptrans(element, ion, level);
 
           chlevel->individ_rad_deexc = &chtransblock[chtransindex];
-          chtransindex += ndowntrans;
+          chtransindex += ndowntrans + 1;
           assert_always(chlevel->individ_rad_deexc != NULL);
 
           chlevel->individ_internal_down_same = &chtransblock[chtransindex];
-          chtransindex += ndowntrans;
+          chtransindex += ndowntrans + 1;
           assert_always(chlevel->individ_internal_down_same != NULL);
 
           chlevel->individ_internal_up_same = &chtransblock[chtransindex];
-          chtransindex += nuptrans;
+          chtransindex += nuptrans + 1;
           assert_always(chlevel->individ_internal_up_same != NULL);
         }
         assert_always(chtransindex == chtransblocksize);
