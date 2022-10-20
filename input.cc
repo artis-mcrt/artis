@@ -1049,10 +1049,9 @@ static void read_atomicdata_files(void) {
   printout("total uptrans %d\n", totaluptrans);
   printout("total downtrans %d\n", totaldowntrans);
 
-  printout("[info] mem_usage: transition lists occupy %.3f MB\n",
-           (uniquelevelindex * sizeof(struct level_transition *) +
-            (totaluptrans + totaldowntrans) * sizeof(struct level_transition)) /
-               1024. / 1024.);
+  printout("[info] mem_usage: transition lists occupy %.3f MB (this rank) and %.3f MB (shared on node)\n",
+           2 * uniquelevelindex * sizeof(struct level_transition *) / 1024. / 1024.,
+           (totaluptrans + totaldowntrans) * sizeof(struct level_transition) / 1024. / 1024.);
 
   /// then sort the linelist by decreasing frequency
   if (globals::rank_in_node == 0) {
@@ -1386,6 +1385,17 @@ static void setup_cellhistory(void) {
         assert_always(alllevelindex == get_uniquelevelindex(element, ion, 0));
         alllevelindex += nlevels;
 
+        int chtransblocksize = 0;
+        for (int level = 0; level < nlevels; level++) {
+          const int ndowntrans = get_ndowntrans(element, ion, level);
+          const int nuptrans = get_nuptrans(element, ion, level);
+          chtransblocksize += (2 * (ndowntrans + 1) + (nuptrans + 1));
+        }
+
+        mem_usage_cellhistory += chtransblocksize * sizeof(double);
+        double *const chtransblock = static_cast<double *>(malloc(chtransblocksize * sizeof(double)));
+        int chtransindex = 0;
+
         for (int level = 0; level < nlevels; level++) {
           struct chlevels *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
           const int nphixstargets = get_nphixstargets(element, ion, level);
@@ -1399,20 +1409,19 @@ static void setup_cellhistory(void) {
           const int ndowntrans = get_ndowntrans(element, ion, level);
           const int nuptrans = get_nuptrans(element, ion, level);
 
-          chlevel->individ_rad_deexc = static_cast<double *>(malloc((ndowntrans + 1) * sizeof(double)));
+          chlevel->individ_rad_deexc = &chtransblock[chtransindex];
+          chtransindex += ndowntrans;
           assert_always(chlevel->individ_rad_deexc != NULL);
-          chlevel->individ_rad_deexc[0] = ndowntrans;
 
-          chlevel->individ_internal_down_same = static_cast<double *>(malloc((ndowntrans + 1) * sizeof(double)));
+          chlevel->individ_internal_down_same = &chtransblock[chtransindex];
+          chtransindex += ndowntrans;
           assert_always(chlevel->individ_internal_down_same != NULL);
-          chlevel->individ_internal_down_same[0] = ndowntrans;
 
-          chlevel->individ_internal_up_same = static_cast<double *>(malloc((nuptrans + 1) * sizeof(double)));
+          chlevel->individ_internal_up_same = &chtransblock[chtransindex];
+          chtransindex += nuptrans;
           assert_always(chlevel->individ_internal_up_same != NULL);
-          chlevel->individ_internal_up_same[0] = nuptrans;
-
-          mem_usage_cellhistory += (2 * (ndowntrans + 1) + (nuptrans + 1)) * sizeof(double);
         }
+        assert_always(chtransindex == chtransblocksize);
       }
     }
 
