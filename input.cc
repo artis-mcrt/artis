@@ -593,9 +593,9 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
     if (pass == 1) {
       for (int level = 0; level < nlevelsmax; level++) {
         globals::elements[element].ions[ion].levels[level].downtrans = static_cast<struct level_transition *>(
-            malloc((get_ndowntrans(element, ion, level) + 1) * sizeof(struct level_transition)));
+            malloc(get_ndowntrans(element, ion, level) * sizeof(struct level_transition)));
         globals::elements[element].ions[ion].levels[level].uptrans = static_cast<struct level_transition *>(
-            malloc((get_nuptrans(element, ion, level) + 1) * sizeof(struct level_transition)));
+            malloc(get_nuptrans(element, ion, level) * sizeof(struct level_transition)));
 
         set_ndowntrans(element, ion, level, 0);
         set_nuptrans(element, ion, level, 0);
@@ -671,43 +671,43 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
             globals::elements[element].ions[ion].levels[targetlevel].uptrans[nloweruptrans - 1].lineindex = -level;
           }
           (*lineindex)++;
-        }
-      } else if (pass == 1) {
-        // This is a new branch to deal with lines that have different types of transition. It should trip after a
-        // transition is already known.
-        const int linelistindex = transitions[level].to[level - targetlevel - 1];
-        const double A_ul = transitiontable[ii].A;
-        const double coll_str = transitiontable[ii].coll_str;
-        // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
+        } else if (pass == 1) {
+          // This is a new branch to deal with lines that have different types of transition. It should trip after a
+          // transition is already known.
+          const int linelistindex = transitions[level].to[level - targetlevel - 1];
+          const double A_ul = transitiontable[ii].A;
+          const double coll_str = transitiontable[ii].coll_str;
+          // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
 
-        const double g = stat_weight(element, ion, level) / stat_weight(element, ion, targetlevel);
-        const double f_ul = g * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
-        // f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
-        // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength =
-        // g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
+          const double g = stat_weight(element, ion, level) / stat_weight(element, ion, targetlevel);
+          const double f_ul = g * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
+          // f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
+          // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength =
+          // g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
 
-        if (globals::rank_in_node == 0) {
-          if ((temp_linelist[linelistindex].elementindex != element) ||
-              (temp_linelist[linelistindex].ionindex != ion) ||
-              (temp_linelist[linelistindex].upperlevelindex != level) ||
-              (temp_linelist[linelistindex].lowerlevelindex != targetlevel)) {
-            printout("[input.c] Failure to identify level pair for duplicate bb-transition ... going to abort now\n");
-            printout("[input.c]   element %d ion %d targetlevel %d level %d\n", element, ion, targetlevel, level);
-            printout("[input.c]   transitions[level].to[level-targetlevel-1]=linelistindex %d\n",
-                     transitions[level].to[level - targetlevel - 1]);
-            printout("[input.c]   A_ul %g, coll_str %g\n", A_ul, coll_str);
-            printout(
-                "[input.c]   globals::linelist[linelistindex].elementindex %d, "
-                "globals::linelist[linelistindex].ionindex %d, globals::linelist[linelistindex].upperlevelindex "
-                "%d, globals::linelist[linelistindex].lowerlevelindex %d\n",
-                temp_linelist[linelistindex].elementindex, temp_linelist[linelistindex].ionindex,
-                temp_linelist[linelistindex].upperlevelindex, temp_linelist[linelistindex].lowerlevelindex);
-            abort();
-          }
-          temp_linelist[linelistindex].einstein_A += A_ul;
-          temp_linelist[linelistindex].osc_strength += f_ul;
-          if (coll_str > globals::linelist[linelistindex].coll_str) {
-            temp_linelist[linelistindex].coll_str = coll_str;
+          if (globals::rank_in_node == 0) {
+            if ((temp_linelist[linelistindex].elementindex != element) ||
+                (temp_linelist[linelistindex].ionindex != ion) ||
+                (temp_linelist[linelistindex].upperlevelindex != level) ||
+                (temp_linelist[linelistindex].lowerlevelindex != targetlevel)) {
+              printout("[input.c] Failure to identify level pair for duplicate bb-transition ... going to abort now\n");
+              printout("[input.c]   element %d ion %d targetlevel %d level %d\n", element, ion, targetlevel, level);
+              printout("[input.c]   transitions[level].to[level-targetlevel-1]=linelistindex %d\n",
+                       transitions[level].to[level - targetlevel - 1]);
+              printout("[input.c]   A_ul %g, coll_str %g\n", A_ul, coll_str);
+              printout(
+                  "[input.c]   globals::linelist[linelistindex].elementindex %d, "
+                  "globals::linelist[linelistindex].ionindex %d, globals::linelist[linelistindex].upperlevelindex "
+                  "%d, globals::linelist[linelistindex].lowerlevelindex %d\n",
+                  temp_linelist[linelistindex].elementindex, temp_linelist[linelistindex].ionindex,
+                  temp_linelist[linelistindex].upperlevelindex, temp_linelist[linelistindex].lowerlevelindex);
+              abort();
+            }
+            temp_linelist[linelistindex].einstein_A += A_ul;
+            temp_linelist[linelistindex].osc_strength += f_ul;
+            if (coll_str > globals::linelist[linelistindex].coll_str) {
+              temp_linelist[linelistindex].coll_str = coll_str;
+            }
           }
         }
       }
