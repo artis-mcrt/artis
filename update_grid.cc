@@ -748,9 +748,7 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
 
   if (modelgridindex >= 0) {
     const int nbfcont = globals::nbfcontinua;
-    for (int i = 0; i < nbfcont; i++) {
-      globals::cellhistory[tid].ch_allcont[i].departure_ratio = -1;
-    }
+    std::fill_n(globals::cellhistory[tid].ch_allcont_departureratios, nbfcont, -1);
   }
   // printout("nlevels_with_processrates %d\n", nlevels_with_processrates);
 

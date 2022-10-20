@@ -627,9 +627,7 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
     }
 
     for (int level = 0; level < nlevelsmax; level++) {
-      for (int t = 0; t < level; t++) {
-        transitions[level].to[t] = -99.;
-      }
+      std::fill_n(transitions[level].to, level, -99);
     }
 
     totupdowntrans = 0;
@@ -1430,9 +1428,9 @@ static void setup_cellhistory(void) {
     assert_always(chtransindex == chtransblocksize);
 
     assert_always(globals::nbfcontinua >= 0);
-    globals::cellhistory[tid].ch_allcont =
-        static_cast<struct challcont *>(malloc(globals::nbfcontinua * sizeof(struct challcont)));
-    mem_usage_cellhistory += globals::nbfcontinua * sizeof(struct challcont);
+    globals::cellhistory[tid].ch_allcont_departureratios =
+        static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
+    mem_usage_cellhistory += globals::nbfcontinua * sizeof(double);
 
     printout("[info] mem_usage: cellhistory for thread %d occupies %.3f MB\n", tid,
              mem_usage_cellhistory / 1024. / 1024.);

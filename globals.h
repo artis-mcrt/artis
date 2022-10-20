@@ -187,10 +187,6 @@ struct chphixstargets {
 #endif
 };
 
-struct challcont {
-  double departure_ratio;
-};
-
 #include "macroatom.h"
 
 struct chlevels {
@@ -215,7 +211,7 @@ struct cellhistory {
   double *cooling_contrib;  /// Cooling contributions by the different processes.
   struct chelements *chelements;
   struct chlevels *ch_all_levels;
-  struct challcont *ch_allcont;
+  double *ch_allcont_departureratios;
   int cellnumber;  /// Identifies the cell the data is valid for.
   int bfheating_mgi;
 };
