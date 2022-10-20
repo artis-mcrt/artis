@@ -1426,9 +1426,8 @@ static void setup_cellhistory(void) {
           chtransindex += nuptrans;
         }
       }
-
-      assert_always(chtransindex == chtransblocksize);
     }
+    assert_always(chtransindex == chtransblocksize);
 
     assert_always(globals::nbfcontinua >= 0);
     globals::cellhistory[tid].ch_allcont =
