@@ -586,7 +586,7 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
                                         std::vector<struct linelist_entry> &temp_linelist) {
   const int tottransitions = transitiontable.size();
   for (int level = 0; level < nlevelsmax; level++) {
-    for (int t = 0; t < (level - 1); level++) {
+    for (int t = 0; t < level; t++) {
       transitions[level].to[t] = -99.;
     }
   }
