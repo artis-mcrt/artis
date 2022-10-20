@@ -388,9 +388,6 @@ static void read_ion_levels(FILE *adata, const int element, const int ion, const
   // each level contains 0..level elements. seriess sum of 1 + 2 + 3 + 4 + ... + nlevels_used is used here
   const int transitblocksize = nlevels_used * (nlevels_used + 1) / 2;
   transitions[0].to = static_cast<int *>(malloc(transitblocksize * sizeof(int)));
-  for (int i = 0; i < transitblocksize; i++) {
-    transitions[0].to[i] = -99.;
-  }
 
   int transitionblockindex = 0;
   for (int level = 0; level < nlevels; level++) {
@@ -588,16 +585,13 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
                                         struct transitions *transitions, int *lineindex,
                                         std::vector<struct linelist_entry> &temp_linelist) {
   const int tottransitions = transitiontable.size();
-  for (int ii = 0; ii < tottransitions; ii++) {
-    // if (get_element(element) == 28 && get_ionstage(element, ion) == 2)
-    // {
-    //   printout("Disabling coll_str value of %g\n", transitiontable[ii].coll_str);
-    //   if (transitiontable[ii].forbidden)
-    //     transitiontable[ii].coll_str = -2.;
-    //   else
-    //     transitiontable[ii].coll_str = -1.;
-    // }
+  for (int level = 0; level < nlevelsmax; level++) {
+    for (int t = 0; t < level; level++) {
+      transitions[level].to[t] = -99.;
+    }
+  }
 
+  for (int ii = 0; ii < tottransitions; ii++) {
     const int level = transitiontable[ii].upper;
     const int targetlevel = transitiontable[ii].lower;
     assert_always(targetlevel >= 0);
@@ -608,11 +602,6 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
       nu_trans = (epsilon(element, ion, level) - epsilon(element, ion, targetlevel)) / H;
     }
     if (nu_trans > 0) {
-      // if (level == transitiontable[ii].upper && level-i-1 == transitiontable[ii].lower)
-      //{
-      // printout("ii %d\n",ii);
-      // printout("transtable upper %d, lower %d, A %g, iii
-      // %d\n",transitiontable[ii].upper,transitiontable[ii].lower, transitiontable[ii].A,iii);
       /// Make sure that we don't allow duplicate. In that case take only the lines
       /// first occurrence
       const int transitioncheck = transitions[level].to[(level - targetlevel) - 1];
