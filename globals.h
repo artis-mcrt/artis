@@ -95,9 +95,9 @@ struct level_transition {
 };
 
 struct levellist_entry {
-  double epsilon;  /// Excitation energy of this level relative to the neutral ground level.
-  std::vector<struct level_transition> uptrans;    /// Allowed upward transitions from this level
-  std::vector<struct level_transition> downtrans;  /// Allowed downward transitions from this level
+  double epsilon;                      /// Excitation energy of this level relative to the neutral ground level.
+  struct level_transition *uptrans;    /// Allowed upward transitions from this level
+  struct level_transition *downtrans;  /// Allowed downward transitions from this level
   int nuptrans;
   int ndowntrans;
   double phixs_threshold;                         /// Energy of first point in the photion_xs table

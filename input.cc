@@ -585,71 +585,91 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
                                         struct transitions *transitions, int *lineindex,
                                         std::vector<struct linelist_entry> &temp_linelist) {
   const int tottransitions = transitiontable.size();
-  for (int level = 0; level < nlevelsmax; level++) {
-    for (int t = 0; t < level; t++) {
-      transitions[level].to[t] = -99.;
+  // pass 0 to get transition counts of each level for allocations
+  // pass 1 to allocate and fill transition arrays
+  for (int pass = 0; pass < 2; pass++) {
+    if (pass == 1) {
+      for (int level = 0; level < nlevelsmax; level++) {
+        globals::elements[element].ions[ion].levels[level].downtrans = static_cast<struct level_transition *>(
+            malloc(get_ndowntrans(element, ion, level) * sizeof(struct level_transition)));
+        globals::elements[element].ions[ion].levels[level].uptrans = static_cast<struct level_transition *>(
+            malloc(get_nuptrans(element, ion, level) * sizeof(struct level_transition)));
+
+        set_ndowntrans(element, ion, level, 0);
+        set_nuptrans(element, ion, level, 0);
+      }
     }
-  }
 
-  for (int ii = 0; ii < tottransitions; ii++) {
-    const int level = transitiontable[ii].upper;
-    const int targetlevel = transitiontable[ii].lower;
-    assert_always(targetlevel >= 0);
-    assert_always(level > targetlevel);
-
-    double nu_trans = -1.;
-    if (targetlevel < nlevelsmax && level < nlevelsmax) {
-      nu_trans = (epsilon(element, ion, level) - epsilon(element, ion, targetlevel)) / H;
+    for (int level = 0; level < nlevelsmax; level++) {
+      for (int t = 0; t < level; t++) {
+        transitions[level].to[t] = -99.;
+      }
     }
-    if (nu_trans > 0) {
-      /// Make sure that we don't allow duplicate. In that case take only the lines
-      /// first occurrence
-      const int transitioncheck = transitions[level].to[(level - targetlevel) - 1];
 
-      if (transitioncheck == -99) {
-        transitions[level].to[level - targetlevel - 1] = *lineindex;
-        const double A_ul = transitiontable[ii].A;
-        const float coll_str = transitiontable[ii].coll_str;
-        // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
+    for (int ii = 0; ii < tottransitions; ii++) {
+      const int level = transitiontable[ii].upper;
+      const int targetlevel = transitiontable[ii].lower;
+      assert_always(targetlevel >= 0);
+      assert_always(level > targetlevel);
 
-        const double g = stat_weight(element, ion, level) / stat_weight(element, ion, targetlevel);
-        const float f_ul = g * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
-        assert_always(std::isfinite(f_ul));
-        // f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
-        // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength =
-        // g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
+      double nu_trans = -1.;
+      if (targetlevel < nlevelsmax && level < nlevelsmax) {
+        nu_trans = (epsilon(element, ion, level) - epsilon(element, ion, targetlevel)) / H;
+      }
+      if (nu_trans > 0) {
+        /// Make sure that we don't allow duplicate. In that case take only the lines
+        /// first occurrence
+        const int transitioncheck = transitions[level].to[(level - targetlevel) - 1];
 
-        // printout("lineindex %d, element %d, ion %d, lower %d, upper %d, nu
-        // %g\n",*lineindex,element,ion,level-i-1,level,nu_trans);
+        if (transitioncheck == -99) {
+          transitions[level].to[level - targetlevel - 1] = *lineindex;
+          if (pass == 1) {
+            const double A_ul = transitiontable[ii].A;
+            const float coll_str = transitiontable[ii].coll_str;
+            // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
 
-        if (globals::rank_in_node == 0) {
-          temp_linelist.push_back({
-              .nu = nu_trans,
-              .einstein_A = static_cast<float>(A_ul),
-              .osc_strength = f_ul,
-              .coll_str = coll_str,
-              .elementindex = element,
-              .ionindex = ion,
-              .upperlevelindex = level,
-              .lowerlevelindex = targetlevel,
-              .forbidden = transitiontable[ii].forbidden,
-          });
+            const double g = stat_weight(element, ion, level) / stat_weight(element, ion, targetlevel);
+            const float f_ul = g * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
+            assert_always(std::isfinite(f_ul));
+            // f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
+            // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength =
+            // g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
+
+            // printout("lineindex %d, element %d, ion %d, lower %d, upper %d, nu
+            // %g\n",*lineindex,element,ion,level-i-1,level,nu_trans);
+
+            if (globals::rank_in_node == 0) {
+              temp_linelist.push_back({
+                  .nu = nu_trans,
+                  .einstein_A = static_cast<float>(A_ul),
+                  .osc_strength = f_ul,
+                  .coll_str = coll_str,
+                  .elementindex = element,
+                  .ionindex = ion,
+                  .upperlevelindex = level,
+                  .lowerlevelindex = targetlevel,
+                  .forbidden = transitiontable[ii].forbidden,
+              });
+            }
+            /// This is not a metastable level.
+            globals::elements[element].ions[ion].levels[level].metastable = false;
+          }
+          (*lineindex)++;
+
+          const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
+          set_ndowntrans(element, ion, level, nupperdowntrans);
+
+          const int nloweruptrans = get_nuptrans(element, ion, targetlevel) + 1;
+          set_nuptrans(element, ion, targetlevel, nloweruptrans);
+
+          if (pass == 1) {
+            // the line list has not been sorted yet, so the store the negative level index for now and
+            // this will be replaced with the index into the sorted line list later
+            globals::elements[element].ions[ion].levels[level].downtrans[nupperdowntrans - 1].lineindex = -targetlevel;
+            globals::elements[element].ions[ion].levels[targetlevel].uptrans[nloweruptrans - 1].lineindex = -level;
+          }
         }
-        (*lineindex)++;
-
-        /// This is not a metastable level.
-        globals::elements[element].ions[ion].levels[level].metastable = false;
-
-        const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
-        set_ndowntrans(element, ion, level, nupperdowntrans);
-        // the line list has not been sorted yet, so the store the negative level index for now and
-        // this will be replaced with the index into the sorted line list later
-        globals::elements[element].ions[ion].levels[level].downtrans.push_back({.lineindex = -targetlevel});
-
-        const int nloweruptrans = get_nuptrans(element, ion, targetlevel) + 1;
-        set_nuptrans(element, ion, targetlevel, nloweruptrans);
-        globals::elements[element].ions[ion].levels[targetlevel].uptrans.push_back({.lineindex = -level});
-      } else {
+      } else if (pass == 1) {
         // This is a new branch to deal with lines that have different types of transition. It should trip after a
         // transition is already known.
         const int linelistindex = transitions[level].to[level - targetlevel - 1];
@@ -972,8 +992,6 @@ static void read_atomicdata_files(void) {
         uniquelevelindex++;
         totaldowntrans += get_ndowntrans(element, ion, level);
         totaluptrans += get_nuptrans(element, ion, level);
-        globals::elements[element].ions[ion].levels[level].downtrans.shrink_to_fit();
-        globals::elements[element].ions[ion].levels[level].uptrans.shrink_to_fit();
       }
 
       if (ion < nions - 1) {
