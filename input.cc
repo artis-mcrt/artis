@@ -584,10 +584,12 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
                                         const std::vector<struct transitiontable_entry> &transitiontable,
                                         struct transitions *transitions, int *lineindex,
                                         std::vector<struct linelist_entry> &temp_linelist) {
+  const int lineindex_initial = *lineindex;
   const int tottransitions = transitiontable.size();
   // pass 0 to get transition counts of each level for allocations
   // pass 1 to allocate and fill transition arrays
   for (int pass = 0; pass < 2; pass++) {
+    *lineindex = lineindex_initial;
     if (pass == 1) {
       for (int level = 0; level < nlevelsmax; level++) {
         globals::elements[element].ions[ion].levels[level].downtrans = static_cast<struct level_transition *>(
@@ -623,6 +625,13 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
 
         if (transitioncheck == -99) {
           transitions[level].to[level - targetlevel - 1] = *lineindex;
+
+          const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
+          set_ndowntrans(element, ion, level, nupperdowntrans);
+
+          const int nloweruptrans = get_nuptrans(element, ion, targetlevel) + 1;
+          set_nuptrans(element, ion, targetlevel, nloweruptrans);
+
           if (pass == 1) {
             const double A_ul = transitiontable[ii].A;
             const float coll_str = transitiontable[ii].coll_str;
@@ -653,21 +662,13 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
             }
             /// This is not a metastable level.
             globals::elements[element].ions[ion].levels[level].metastable = false;
-          }
-          (*lineindex)++;
 
-          const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
-          set_ndowntrans(element, ion, level, nupperdowntrans);
-
-          const int nloweruptrans = get_nuptrans(element, ion, targetlevel) + 1;
-          set_nuptrans(element, ion, targetlevel, nloweruptrans);
-
-          if (pass == 1) {
             // the line list has not been sorted yet, so the store the negative level index for now and
             // this will be replaced with the index into the sorted line list later
             globals::elements[element].ions[ion].levels[level].downtrans[nupperdowntrans - 1].lineindex = -targetlevel;
             globals::elements[element].ions[ion].levels[targetlevel].uptrans[nloweruptrans - 1].lineindex = -level;
           }
+          (*lineindex)++;
         }
       } else if (pass == 1) {
         // This is a new branch to deal with lines that have different types of transition. It should trip after a
