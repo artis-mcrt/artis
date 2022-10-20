@@ -454,6 +454,7 @@ static void read_ion_transitions(std::istream &ftransitiondata, const int tottra
   std::string line;
 
   if (*tottransitions == 0) {
+    // we will not read in any transitions, just skip past these lines in the file
     for (int i = 0; i < tottransitions_in_file; i++) {
       assert_always(getline(ftransitiondata, line));
     }
