@@ -384,8 +384,9 @@ static void read_phixs_data(int phixs_file_version) {
 static void read_ion_levels(FILE *adata, const int element, const int ion, const int nions, const int nlevels,
                             int nlevelsmax, const double energyoffset, const double ionpot,
                             struct transitions *transitions) {
-  const int transitblocksize = std::min(nlevels, nlevelsmax) * (std::min(nlevels, nlevelsmax) + 1) /
-                               2;  // each level contains 0..level positions. sum of 1 + 2 + 3 + 4 + ... + nlevelsmax
+  const int nlevels_used = std::min(nlevels, nlevelsmax);
+  // each level contains 0..level elements. seriess sum of 1 + 2 + 3 + 4 + ... + nlevels_used is used here
+  const int transitblocksize = nlevels_used * (nlevels_used + 1) / 2;
   transitions[0].to = static_cast<int *>(malloc(transitblocksize * sizeof(int)));
   for (int i = 0; i < transitblocksize; i++) {
     transitions[0].to[i] = -99.;
