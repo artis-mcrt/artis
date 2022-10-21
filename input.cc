@@ -152,48 +152,12 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
         globals::elements[element].ions[lowerion + 1].maxrecombininglevel = upperlevel;
       }
 
-      *mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
-      if ((globals::elements[element]
-               .ions[lowerion]
-               .levels[lowerlevel]
-               .phixstargets[phixstargetindex]
-               .spontrecombcoeff = static_cast<double *>(calloc(TABLESIZE, sizeof(double)))) == NULL) {
-        printout(
-            "[fatal] input: not enough memory to initialize spontrecombcoeff table for element %d, ion %d, level %d\n",
-            element, lowerion, lowerlevel);
-        abort();
-      }
-#if (!NO_LUT_PHOTOION)
-      *mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
-      if ((globals::elements[element]
-               .ions[lowerion]
-               .levels[lowerlevel]
-               .phixstargets[phixstargetindex]
-               .corrphotoioncoeff = static_cast<double *>(calloc(TABLESIZE, sizeof(double)))) == NULL) {
-        printout(
-            "[fatal] input: not enough memory to initialize photoioncoeff table for element %d, ion %d, level %d\n",
-            element, lowerion, lowerlevel);
-        abort();
-      }
-#endif
-#if (!NO_LUT_BFHEATING)
-      *mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
-      if ((globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfheating_coeff =
-               static_cast<double *>(calloc(TABLESIZE, sizeof(double)))) == NULL) {
-        printout(
-            "[fatal] input: not enough memory to initialize modified_photoioncoeff table for element %d, ion %d, level "
-            "%d\n",
-            element, lowerion, lowerlevel);
-        abort();
-      }
-#endif
-      *mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
-      if ((globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfcooling_coeff =
-               static_cast<double *>(calloc(TABLESIZE, sizeof(double)))) == NULL) {
-        printout("[fatal] input: not enough memory to initialize bfcooling table for element %d, ion %d, level %d\n",
-                 element, lowerion, lowerlevel);
-        abort();
-      }
+      *mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(struct tempcoeffs);
+      globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].temps =
+          static_cast<struct tempcoeffs *>(calloc(TABLESIZE, sizeof(struct tempcoeffs)));
+
+      assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].temps !=
+                    NULL);
     }
   }
 

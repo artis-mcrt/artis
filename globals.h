@@ -76,16 +76,19 @@ struct phixslist {
 #endif
 };
 
-struct phixstarget_entry {
-  double *spontrecombcoeff;
+struct tempcoeffs {
+  double spontrecombcoeff;
 #if (!NO_LUT_PHOTOION)
-  double *corrphotoioncoeff;
+  double corrphotoioncoeff;
 #endif
 #if (!NO_LUT_BFHEATING)
-  double *bfheating_coeff;
+  double bfheating_coeff;
 #endif
-  double *bfcooling_coeff;
+  double bfcooling_coeff;
+};
 
+struct phixstarget_entry {
+  struct tempcoeffs *temps;
   double probability;  // fraction of phixs cross section leading to this final level
   int levelindex;      // index of upper ion level after photoionisation
 };
