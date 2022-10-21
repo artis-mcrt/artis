@@ -378,13 +378,12 @@ static void extend_lastdecaypath(void)
       if (get_nuc_decaybranchprob(daughter_z, daughter_a, dectypeindex2) == 0.) {
         continue;
       }
-      decaypaths.push_back({0, nullptr, nullptr, nullptr});
-      const int lastindex = decaypaths.size() - 1;
       const int pathlength = get_decaypathlength(startdecaypathindex) + 1;
-      decaypaths[lastindex].pathlength = pathlength;
-      decaypaths[lastindex].z = std::make_unique<int[]>(pathlength);
-      decaypaths[lastindex].a = std::make_unique<int[]>(pathlength);
-      decaypaths[lastindex].decaytypes = std::make_unique<int[]>(pathlength);
+      decaypaths.push_back({.pathlength = pathlength,
+                            .z = std::make_unique<int[]>(pathlength),
+                            .a = std::make_unique<int[]>(pathlength),
+                            .decaytypes = std::make_unique<int[]>(pathlength)});
+      const int lastindex = decaypaths.size() - 1;
 
       // check for repeated nuclides, which would indicate a loop in the decay chain
       for (int i = 0; i < get_decaypathlength(startdecaypathindex); i++) {
