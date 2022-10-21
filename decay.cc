@@ -452,13 +452,12 @@ static void find_decaypaths(void) {
         continue;
       }
 
-      decaypaths.push_back({0, nullptr, nullptr, nullptr});
-      const int lastindex = decaypaths.size() - 1;
       constexpr int pathlength = 1;
-      decaypaths[lastindex].pathlength = pathlength;
-      decaypaths[lastindex].z = std::make_unique<int[]>(pathlength);
-      decaypaths[lastindex].a = std::make_unique<int[]>(pathlength);
-      decaypaths[lastindex].decaytypes = std::make_unique<int[]>(pathlength);
+      decaypaths.push_back({.pathlength = pathlength,
+                            .z = std::make_unique<int[]>(pathlength),
+                            .a = std::make_unique<int[]>(pathlength),
+                            .decaytypes = std::make_unique<int[]>(pathlength)});
+      const int lastindex = decaypaths.size() - 1;
 
       decaypaths[lastindex].z[0] = z;
       decaypaths[lastindex].a[0] = a;
