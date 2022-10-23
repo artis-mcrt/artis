@@ -1631,14 +1631,14 @@ static void setup_phixs_list(void) {
   globals::allcont = nonconstallcont;
   nonconstallcont = nullptr;
 
-  globals::bflookuptables =
-      static_cast<struct tempcoeffs *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(struct tempcoeffs)));
+  globals::bflookuptables = static_cast<struct bflookuptablecoeffs *>(
+      malloc(TABLESIZE * globals::nbfcontinua * sizeof(struct bflookuptablecoeffs)));
   assert_always(globals::bflookuptables != NULL);
 
   printout(
       "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
       "corrphotoioncoeff/bfheating if enabled) occupy %.3f MB\n",
-      TABLESIZE * globals::nbfcontinua * sizeof(struct tempcoeffs) / 1024. / 1024.);
+      TABLESIZE * globals::nbfcontinua * sizeof(struct bflookuptablecoeffs) / 1024. / 1024.);
 }
 
 static void read_atomicdata(void)
