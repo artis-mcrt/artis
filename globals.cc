@@ -80,7 +80,16 @@ __managed__ int nlines = -1;
 __managed__ struct elementlist_entry *elements = nullptr;
 __managed__ const struct linelist_entry *linelist = nullptr;
 __managed__ struct bflist_t *bflist = nullptr;
-__managed__ struct bflookuptablecoeffs *bflookuptables = nullptr;
+__managed__ double *spontrecombcoeff = nullptr;
+#if (!NO_LUT_PHOTOION)
+__managed__ double *corrphotoioncoeff = nullptr;
+#endif
+#if (!NO_LUT_BFHEATING)
+__managed__ double *bfheating_coeff = nullptr;
+#endif
+__managed__ double *bfcooling_coeff = nullptr;
+;
+
 __managed__ struct rpkt_cont_opacity *kappa_rpkt_cont = nullptr;
 
 /// Coolinglist

@@ -76,17 +76,6 @@ struct phixslist {
 #endif
 };
 
-struct bflookuptablecoeffs {
-  double spontrecombcoeff;
-#if (!NO_LUT_PHOTOION)
-  double corrphotoioncoeff;
-#endif
-#if (!NO_LUT_BFHEATING)
-  double bfheating_coeff;
-#endif
-  double bfcooling_coeff;
-};
-
 struct phixstarget_entry {
   double probability;  // fraction of phixs cross section leading to this final level
   int levelindex;      // index of upper ion level after photoionisation
@@ -284,7 +273,15 @@ extern __managed__ int nlines;
 extern __managed__ struct elementlist_entry *elements;
 extern __managed__ const struct linelist_entry *linelist;
 extern __managed__ struct bflist_t *bflist;
-extern __managed__ struct bflookuptablecoeffs *bflookuptables;
+
+extern __managed__ double *spontrecombcoeff;
+#if (!NO_LUT_PHOTOION)
+extern __managed__ double *corrphotoioncoeff;
+#endif
+#if (!NO_LUT_BFHEATING)
+extern __managed__ double *bfheating_coeff;
+#endif
+extern __managed__ double *bfcooling_coeff;
 
 extern __managed__ struct rpkt_cont_opacity *kappa_rpkt_cont;
 

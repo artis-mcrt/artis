@@ -73,15 +73,12 @@ __host__ __device__ static double get_bfcoolingcoeff(int element, int ion, int l
     const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
     const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
-    const double f_upper =
-        globals::bflookuptables[get_bflutindex(upperindex, element, ion, level, phixstargetindex)].bfcooling_coeff;
-    const double f_lower =
-        globals::bflookuptables[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)].bfcooling_coeff;
+    const double f_upper = globals::bfcooling_coeff[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
+    const double f_lower = globals::bfcooling_coeff[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
 
     return (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
   } else
-    return globals::bflookuptables[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)]
-        .bfcooling_coeff;
+    return globals::bfcooling_coeff[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
 }
 
 __host__ __device__ void calculate_cooling_rates(const int modelgridindex,

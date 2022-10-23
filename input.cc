@@ -1631,14 +1631,28 @@ static void setup_phixs_list(void) {
   globals::allcont = nonconstallcont;
   nonconstallcont = nullptr;
 
-  globals::bflookuptables = static_cast<struct bflookuptablecoeffs *>(
-      malloc(TABLESIZE * globals::nbfcontinua * sizeof(struct bflookuptablecoeffs)));
-  assert_always(globals::bflookuptables != NULL);
+  long mem_usage_photoionluts = 2 * TABLESIZE * globals::nbfcontinua * sizeof(double);
+  globals::spontrecombcoeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+  assert_always(globals::spontrecombcoeff != NULL);
+
+#if (!NO_LUT_PHOTOION)
+  globals::corrphotoioncoeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+  assert_always(globals::corrphotoioncoeff != NULL);
+  mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
+#endif
+#if (!NO_LUT_BFHEATING)
+  globals::bfheating_coeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+  assert_always(globals::bfheating_coeff != NULL);
+  mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
+#endif
+
+  globals::bfcooling_coeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+  assert_always(globals::bfcooling_coeff != NULL);
 
   printout(
       "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
       "corrphotoioncoeff/bfheating if enabled) occupy %.3f MB\n",
-      TABLESIZE * globals::nbfcontinua * sizeof(struct bflookuptablecoeffs) / 1024. / 1024.);
+      mem_usage_photoionluts / 1024. / 1024.);
 }
 
 static void read_atomicdata(void)
