@@ -677,7 +677,7 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
         }
         temp_linelist[linelistindex].einstein_A += A_ul;
         temp_linelist[linelistindex].osc_strength += f_ul;
-        if (coll_str > globals::linelist[linelistindex].coll_str) {
+        if (coll_str > temp_linelist[linelistindex].coll_str) {
           temp_linelist[linelistindex].coll_str = coll_str;
         }
       }
