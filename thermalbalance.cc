@@ -45,27 +45,15 @@ double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetin
     const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
     const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
-    const double f_upper = globals::elements[element]
-                               .ions[ion]
-                               .levels[level]
-                               .phixstargets[phixstargetindex]
-                               .temps[upperindex]
-                               .bfheating_coeff;
-    const double f_lower = globals::elements[element]
-                               .ions[ion]
-                               .levels[level]
-                               .phixstargets[phixstargetindex]
-                               .temps[lowerindex]
-                               .bfheating_coeff;
+    const double f_upper =
+        globals::bflookuptables[get_bflutindex(upperindex, element, ion, level, phixstargetindex)].bfheating_coeff;
+    const double f_lower =
+        globals::bflookuptables[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)].bfheating_coeff;
 
     bfheatingcoeff = (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower));
   } else {
-    bfheatingcoeff = globals::elements[element]
-                         .ions[ion]
-                         .levels[level]
-                         .phixstargets[phixstargetindex]
-                         .temps[TABLESIZE - 1]
-                         .bfheating_coeff;
+    bfheatingcoeff =
+        globals::bflookuptables[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)].bfheating_coeff;
   }
 
   return W * bfheatingcoeff;

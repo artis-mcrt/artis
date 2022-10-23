@@ -88,7 +88,6 @@ struct tempcoeffs {
 };
 
 struct phixstarget_entry {
-  struct tempcoeffs *temps;
   double probability;  // fraction of phixs cross section leading to this final level
   int levelindex;      // index of upper ion level after photoionisation
 };
@@ -285,6 +284,7 @@ extern __managed__ int nlines;
 extern __managed__ struct elementlist_entry *elements;
 extern __managed__ const struct linelist_entry *linelist;
 extern __managed__ struct bflist_t *bflist;
+extern __managed__ struct tempcoeffs *bflookuptables;
 
 extern __managed__ struct rpkt_cont_opacity *kappa_rpkt_cont;
 

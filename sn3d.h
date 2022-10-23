@@ -61,6 +61,13 @@ static int printout(const char *format) {
   return fprintf(output_file, "%s", format);
 }
 
+static inline int get_bflutindex(const int tempindex, const int element, const int ion, const int level,
+                                 const int phixstargetindex) {
+  const int contindex = 1 - globals::elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
+
+  return tempindex * globals::nbfcontinua + contindex;
+}
+
 #ifdef _OPENMP
 #ifndef __CUDACC__
 #define safeadd(var, val) _Pragma("omp atomic update") var += val

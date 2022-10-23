@@ -148,28 +148,16 @@ static bool read_ratecoeff_dat(void)
                                      &corrphotoioncoeff, &bfheating_coeff) == 4);
 
                 // assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0);
-                globals::elements[element]
-                    .ions[ion]
-                    .levels[level]
-                    .phixstargets[phixstargetindex]
-                    .temps[iter]
-                    .spontrecombcoeff = alpha_sp;
+                globals::bflookuptables[get_bflutindex(iter, element, ion, level, phixstargetindex)].spontrecombcoeff =
+                    alpha_sp;
 
                 // assert_always(std::isfinite(bfcooling_coeff) && bfcooling_coeff >= 0);
-                globals::elements[element]
-                    .ions[ion]
-                    .levels[level]
-                    .phixstargets[phixstargetindex]
-                    .temps[iter]
-                    .bfcooling_coeff = bfcooling_coeff;
+                globals::bflookuptables[get_bflutindex(iter, element, ion, level, phixstargetindex)].bfcooling_coeff =
+                    bfcooling_coeff;
 
 #if (!NO_LUT_PHOTOION)
                 if (corrphotoioncoeff >= 0) {
-                  globals::elements[element]
-                      .ions[ion]
-                      .levels[level]
-                      .phixstargets[phixstargetindex]
-                      .temps[iter]
+                  globals::bflookuptables[get_bflutindex(iter, element, ion, level, phixstargetindex)]
                       .corrphotoioncoeff = corrphotoioncoeff;
                 } else {
                   printout(
@@ -179,12 +167,8 @@ static bool read_ratecoeff_dat(void)
 #endif
 #if (!NO_LUT_BFHEATING)
                 if (bfheating_coeff >= 0) {
-                  globals::elements[element]
-                      .ions[ion]
-                      .levels[level]
-                      .phixstargets[phixstargetindex]
-                      .temps[iter]
-                      .bfheating_coeff = bfheating_coeff;
+                  globals::bflookuptables[get_bflutindex(iter, element, ion, level, phixstargetindex)].bfheating_coeff =
+                      bfheating_coeff;
                 } else {
                   printout(
                       "ERROR: NO_LUT_BFHEATING is off, but there are no bfheating_coeff values in the ratecoeff "
@@ -234,37 +218,21 @@ static void write_ratecoeff_dat(void) {
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
           /// Loop over the temperature grid
           for (int iter = 0; iter < TABLESIZE; iter++) {
-            const double alpha_sp = globals::elements[element]
-                                        .ions[ion]
-                                        .levels[level]
-                                        .phixstargets[phixstargetindex]
-                                        .temps[iter]
-                                        .spontrecombcoeff;
-            const double bfcooling_coeff = globals::elements[element]
-                                               .ions[ion]
-                                               .levels[level]
-                                               .phixstargets[phixstargetindex]
-                                               .temps[iter]
-                                               .bfcooling_coeff;
+            const double alpha_sp =
+                globals::bflookuptables[get_bflutindex(iter, element, ion, level, phixstargetindex)].spontrecombcoeff;
+            const double bfcooling_coeff =
+                globals::bflookuptables[get_bflutindex(iter, element, ion, level, phixstargetindex)].bfcooling_coeff;
             fprintf(ratecoeff_file, "%g %g", alpha_sp, bfcooling_coeff);
 
 #if (!NO_LUT_PHOTOION)
-            const double corrphotoioncoeff = globals::elements[element]
-                                                 .ions[ion]
-                                                 .levels[level]
-                                                 .phixstargets[phixstargetindex]
-                                                 .temps[iter]
-                                                 .corrphotoioncoeff;
+            const double corrphotoioncoeff =
+                globals::bflookuptables[get_bflutindex(iter, element, ion, level, phixstargetindex)].corrphotoioncoeff;
 #else
             const double corrphotoioncoeff = -1.0;
 #endif
 #if (!NO_LUT_BFHEATING)
-            const double bfheating_coeff = globals::elements[element]
-                                               .ions[ion]
-                                               .levels[level]
-                                               .phixstargets[phixstargetindex]
-                                               .temps[iter]
-                                               .bfheating_coeff;
+            const double bfheating_coeff =
+                globals::bflookuptables[get_bflutindex(iter, element, ion, level, phixstargetindex)].bfheating_coeff;
 #else
             const double bfheating_coeff = -1.0;
 #endif
@@ -565,12 +533,8 @@ static void precalculate_rate_coefficient_integrals(void) {
               alpha_sp = 0;
             }
             // assert_always(alpha_sp >= 0);
-            globals::elements[element]
-                .ions[ion]
-                .levels[level]
-                .phixstargets[phixstargetindex]
-                .temps[iter]
-                .spontrecombcoeff = alpha_sp;
+            globals::bflookuptables[get_bflutindex(iter, element, ion, level, phixstargetindex)].spontrecombcoeff =
+                alpha_sp;
 
             // if (atomic_number == 26 && ionstage == 3 && level < 5)
             // {
@@ -615,12 +579,8 @@ static void precalculate_rate_coefficient_integrals(void) {
               printout("WARNING: gammacorr was negative for level %d\n", level);
               gammacorr = 0;
             }
-            globals::elements[element]
-                .ions[ion]
-                .levels[level]
-                .phixstargets[phixstargetindex]
-                .temps[iter]
-                .corrphotoioncoeff = gammacorr;
+            globals::bflookuptables[get_bflutindex(iter, element, ion, level, phixstargetindex)].corrphotoioncoeff =
+                gammacorr;
 #endif
 
 #if (!NO_LUT_BFHEATING)
@@ -639,12 +599,8 @@ static void precalculate_rate_coefficient_integrals(void) {
               printout("WARNING: bfheating_coeff was negative for level %d\n", level);
               bfheating_coeff = 0;
             }
-            globals::elements[element]
-                .ions[ion]
-                .levels[level]
-                .phixstargets[phixstargetindex]
-                .temps[iter]
-                .bfheating_coeff = bfheating_coeff;
+            globals::bflookuptables[get_bflutindex(iter, element, ion, level, phixstargetindex)].bfheating_coeff =
+                bfheating_coeff;
 #endif
 
             double bfcooling_coeff = 0.0;
@@ -664,12 +620,8 @@ static void precalculate_rate_coefficient_integrals(void) {
                   level, bfcooling_coeff, sfac, phixstargetindex, phixstargetprobability);
               bfcooling_coeff = 0;
             }
-            globals::elements[element]
-                .ions[ion]
-                .levels[level]
-                .phixstargets[phixstargetindex]
-                .temps[iter]
-                .bfcooling_coeff = bfcooling_coeff;
+            globals::bflookuptables[get_bflutindex(iter, element, ion, level, phixstargetindex)].bfcooling_coeff =
+                bfcooling_coeff;
           }
         }
       }
@@ -751,28 +703,16 @@ __host__ __device__ double get_spontrecombcoeff(int element, int ion, int level,
     const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
     const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
-    const double f_upper = globals::elements[element]
-                               .ions[ion]
-                               .levels[level]
-                               .phixstargets[phixstargetindex]
-                               .temps[upperindex]
-                               .spontrecombcoeff;
-    const double f_lower = globals::elements[element]
-                               .ions[ion]
-                               .levels[level]
-                               .phixstargets[phixstargetindex]
-                               .temps[lowerindex]
-                               .spontrecombcoeff;
+    const double f_upper =
+        globals::bflookuptables[get_bflutindex(upperindex, element, ion, level, phixstargetindex)].spontrecombcoeff;
+    const double f_lower =
+        globals::bflookuptables[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)].spontrecombcoeff;
     // printout("interpolate_spontrecombcoeff element %d, ion %d, level %d, upper %g, lower %g\n",
     //          element,ion,level,f_upper,f_lower);
     Alpha_sp = (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
   } else {
-    Alpha_sp = globals::elements[element]
-                   .ions[ion]
-                   .levels[level]
-                   .phixstargets[phixstargetindex]
-                   .temps[TABLESIZE - 1]
-                   .spontrecombcoeff;
+    Alpha_sp =
+        globals::bflookuptables[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)].spontrecombcoeff;
   }
   return Alpha_sp;
 }
@@ -887,21 +827,17 @@ static void scale_level_phixs(const int element, const int ion, const int level,
   const int nphixstargets = get_nphixstargets(element, ion, level);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     for (int iter = 0; iter < TABLESIZE; iter++) {
-      globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].temps[iter].spontrecombcoeff *=
-          factor;
+      globals::bflookuptables[get_bflutindex(iter, element, ion, level, phixstargetindex)].spontrecombcoeff *= factor;
 
 #if (!NO_LUT_PHOTOION)
-      globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].temps[iter].corrphotoioncoeff *=
-          factor;
+      globals::bflookuptables[get_bflutindex(iter, element, ion, level, phixstargetindex)].corrphotoioncoeff *= factor;
 #endif
 
 #if (!NO_LUT_BFHEATING)
-      globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].temps[iter].bfheating_coeff *=
-          factor;
+      globals::bflookuptables[get_bflutindex(iter, element, ion, level, phixstargetindex)].bfheating_coeff *= factor;
 #endif
 
-      globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].temps[iter].bfcooling_coeff *=
-          factor;
+      globals::bflookuptables[get_bflutindex(iter, element, ion, level, phixstargetindex)].bfcooling_coeff *= factor;
     }
   }
 }
@@ -1102,26 +1038,14 @@ double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixst
     const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
     const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
-    const double f_upper = globals::elements[element]
-                               .ions[ion]
-                               .levels[level]
-                               .phixstargets[phixstargetindex]
-                               .temps[upperindex]
-                               .corrphotoioncoeff;
-    const double f_lower = globals::elements[element]
-                               .ions[ion]
-                               .levels[level]
-                               .phixstargets[phixstargetindex]
-                               .temps[lowerindex]
-                               .corrphotoioncoeff;
+    const double f_upper =
+        globals::bflookuptables[get_bflutindex(upperindex, element, ion, level, phixstargetindex)].corrphotoioncoeff;
+    const double f_lower =
+        globals::bflookuptables[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)].corrphotoioncoeff;
 
     return (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower));
   } else
-    return globals::elements[element]
-        .ions[ion]
-        .levels[level]
-        .phixstargets[phixstargetindex]
-        .temps[TABLESIZE - 1]
+    return globals::bflookuptables[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)]
         .corrphotoioncoeff;
 }
 

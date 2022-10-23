@@ -66,8 +66,7 @@ std::string inputlinecomments[inputlinecommentcount] = {
 
 static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputtable, const int element,
                                   const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
-                                  const double phixs_threshold_ev, long *mem_usage_phixs,
-                                  long *mem_usage_phixsderivedcoeffs) {
+                                  const double phixs_threshold_ev, long *mem_usage_phixs) {
   if (upperlevel_in >= 0)  // file gives photoionisation to a single target state only
   {
     int upperlevel = upperlevel_in - groundstate_index_in;
@@ -151,13 +150,6 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
       if (upperlevel > get_maxrecombininglevel(element, lowerion + 1)) {
         globals::elements[element].ions[lowerion + 1].maxrecombininglevel = upperlevel;
       }
-
-      *mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(struct tempcoeffs);
-      globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].temps =
-          static_cast<struct tempcoeffs *>(calloc(TABLESIZE, sizeof(struct tempcoeffs)));
-
-      assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].temps !=
-                    NULL);
     }
   }
 
@@ -244,7 +236,6 @@ static void read_phixs_data(int phixs_file_version) {
   globals::nbfcontinua_ground = 0;
   globals::nbfcontinua = 0;
   long mem_usage_phixs = 0;
-  long mem_usage_phixsderivedcoeffs = 0;
 
   printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version]);
 
@@ -305,7 +296,7 @@ static void read_phixs_data(int phixs_file_version) {
       /// store only photoionization crosssections for ions that are part of the current model atom
       if (lowerion >= 0 && lowerlevel < get_nlevels(element, lowerion) && upperion < get_nions(element)) {
         read_phixs_data_table(phixsdata, nphixspoints_inputtable, element, lowerion, lowerlevel, upperion,
-                              upperlevel_in, phixs_threshold_ev, &mem_usage_phixs, &mem_usage_phixsderivedcoeffs);
+                              upperlevel_in, phixs_threshold_ev, &mem_usage_phixs);
 
         skip_this_phixs_table = false;
       }
@@ -339,10 +330,6 @@ static void read_phixs_data(int phixs_file_version) {
   fclose(phixsdata);
 
   printout("[info] mem_usage: photoionisation tables occupy %.3f MB\n", mem_usage_phixs / 1024. / 1024.);
-  printout(
-      "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
-      "corrphotoioncoeff/bfheating if enabled) occupy %.3f MB\n",
-      mem_usage_phixsderivedcoeffs / 1024. / 1024.);
 }
 
 static void read_ion_levels(FILE *adata, const int element, const int ion, const int nions, const int nlevels,
@@ -1643,6 +1630,15 @@ static void setup_phixs_list(void) {
   }
   globals::allcont = nonconstallcont;
   nonconstallcont = nullptr;
+
+  globals::bflookuptables =
+      static_cast<struct tempcoeffs *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(struct tempcoeffs)));
+  assert_always(globals::bflookuptables != NULL);
+
+  printout(
+      "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
+      "corrphotoioncoeff/bfheating if enabled) occupy %.3f MB\n",
+      TABLESIZE * globals::nbfcontinua * sizeof(struct tempcoeffs) / 1024. / 1024.);
 }
 
 static void read_atomicdata(void)

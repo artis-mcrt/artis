@@ -77,11 +77,11 @@ __managed__ int opacity_case;  // 0 normally, 1 for Fe-grp dependence.
 /// ATOMIC DATA
 
 __managed__ int nlines = -1;
-__managed__ struct elementlist_entry *elements = NULL;
-__managed__ const struct linelist_entry *linelist = NULL;
-__managed__ struct bflist_t *bflist = NULL;
-
-__managed__ struct rpkt_cont_opacity *kappa_rpkt_cont = NULL;
+__managed__ struct elementlist_entry *elements = nullptr;
+__managed__ const struct linelist_entry *linelist = nullptr;
+__managed__ struct bflist_t *bflist = nullptr;
+__managed__ struct tempcoeffs *bflookuptables = nullptr;
+__managed__ struct rpkt_cont_opacity *kappa_rpkt_cont = nullptr;
 
 /// Coolinglist
 __managed__ int ncoolingterms;
