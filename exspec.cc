@@ -178,17 +178,14 @@ int main(int argc, char **argv) {
 
     if (a == -1) {
       /// Extract angle-averaged spectra and light curves
-      write_light_curve((char *)"light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntstep);
-      write_light_curve((char *)"gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf,
-                        globals::ntstep);
+      write_light_curve("light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntstep);
+      write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf, globals::ntstep);
 
-      write_spectrum((char *)"spec.out", (char *)"emission.out", (char *)"emissiontrue.out", (char *)"absorption.out",
-                     rpkt_spectra, globals::ntstep);
+      write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, globals::ntstep);
 #ifdef POL_ON
-      write_specpol((char *)"specpol.out", (char *)"emissionpol.out", (char *)"absorptionpol.out", stokes_i, stokes_q,
-                    stokes_u);
+      write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", stokes_i, stokes_q, stokes_u);
 #endif
-      write_spectrum((char *)"gamma_spec.out", NULL, NULL, NULL, gamma_spectra, globals::ntstep);
+      write_spectrum("gamma_spec.out", NULL, NULL, NULL, gamma_spectra, globals::ntstep);
     } else {
       /// Extract LOS dependent spectra and light curves
       char lc_filename[128] = "";

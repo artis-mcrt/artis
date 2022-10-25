@@ -141,8 +141,8 @@ static int get_proccount(void)
   return 2 * get_nelements() * get_max_nions() + 1;
 }
 
-void write_spectrum(char spec_filename[], char emission_filename[], char trueemission_filename[],
-                    char absorption_filename[], struct spec *spectra, int numtimesteps) {
+void write_spectrum(const char *spec_filename, const char *emission_filename, const char *trueemission_filename,
+                    const char *absorption_filename, struct spec *spectra, int numtimesteps) {
   FILE *spec_file = fopen_required(spec_filename, "w");
 
   FILE *emission_file = NULL;
@@ -213,9 +213,9 @@ void write_spectrum(char spec_filename[], char emission_filename[], char trueemi
   }
 }
 
-void write_specpol(char spec_filename[], char emission_filename[], char absorption_filename[], struct spec *stokes_i,
-                   struct spec *stokes_q, struct spec *stokes_u) {
-  FILE *specpol_file = fopen_required(spec_filename, "w");
+void write_specpol(const char *specpol_filename, const char *emission_filename, const char *absorption_filename,
+                   struct spec *stokes_i, struct spec *stokes_q, struct spec *stokes_u) {
+  FILE *specpol_file = fopen_required(specpol_filename, "w");
   FILE *emissionpol_file = NULL;
   FILE *absorptionpol_file = NULL;
 
@@ -224,9 +224,9 @@ void write_specpol(char spec_filename[], char emission_filename[], char absorpti
   if (do_emission_res) {
     emissionpol_file = fopen_required(emission_filename, "w");
     absorptionpol_file = fopen_required(absorption_filename, "w");
-    printout("Writing %s, %s, and %s\n", spec_filename, emission_filename, absorption_filename);
+    printout("Writing %s, %s, and %s\n", specpol_filename, emission_filename, absorption_filename);
   } else {
-    printout("Writing %s\n", spec_filename);
+    printout("Writing %s\n", specpol_filename);
   }
 
   fprintf(specpol_file, "%g ", 0.0);
@@ -664,10 +664,10 @@ static void mpi_reduce_spectra(int my_rank, struct spec *spectra, int numtimeste
 void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts) {
   const time_t time_func_start = time(NULL);
 
-  double *rpkt_light_curve_lum = (double *)calloc(globals::ntstep, sizeof(double));
-  double *rpkt_light_curve_lumcmf = (double *)calloc(globals::ntstep, sizeof(double));
-  double *gamma_light_curve_lum = (double *)calloc(globals::ntstep, sizeof(double));
-  double *gamma_light_curve_lumcmf = (double *)calloc(globals::ntstep, sizeof(double));
+  double *rpkt_light_curve_lum = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
+  double *rpkt_light_curve_lumcmf = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
+  double *gamma_light_curve_lum = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
+  double *gamma_light_curve_lumcmf = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
 
   TRACE_EMISSION_ABSORPTION_REGION_ON = false;
   globals::nnubins = MNUBINS;  // 1000;  /// frequency bins for spectrum
@@ -724,11 +724,9 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
   const time_t time_mpireduction_end = time(NULL);
 
   if (my_rank == 0) {
-    write_light_curve((char *)"light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, numtimesteps);
-    write_light_curve((char *)"gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf,
-                      numtimesteps);
-    write_spectrum((char *)"spec.out", (char *)"emission.out", (char *)"emissiontrue.out", (char *)"absorption.out",
-                   rpkt_spectra, numtimesteps);
+    write_light_curve("light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, numtimesteps);
+    write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf, numtimesteps);
+    write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, numtimesteps);
   }
 
   free(rpkt_light_curve_lum);

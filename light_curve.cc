@@ -9,8 +9,8 @@
 /// Light curve data structure
 const int MALCBINS = 100;
 
-void write_light_curve(char lc_filename[], int current_abin, const double *light_curve_lum,
-                       const double *light_curve_lumcmf, int numtimesteps) {
+void write_light_curve(const char *lc_filename, const int current_abin, const double *light_curve_lum,
+                       const double *light_curve_lumcmf, const int numtimesteps) {
   FILE *lc_file = fopen_required(lc_filename, "w");
   assert_always(numtimesteps <= globals::ntstep);
 
