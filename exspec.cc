@@ -33,23 +33,6 @@ bool neutral_flag = false;
 gsl_rng *rng = NULL;
 gsl_integration_workspace *gslworkspace = NULL;
 
-static void get_final_packets(int rank, int nprocs, struct packet pkt[]) {
-  // Read in the final packets*.out (text format) files
-
-  char filename[128];
-
-  snprintf(filename, 128, "packets%.2d_%.4d.out", 0, rank);
-  printout("reading %s (file %d of %d)\n", filename, rank + 1, nprocs);
-
-  if (!access(filename, F_OK)) {
-    read_packets(filename, pkt);
-  } else {
-    printout("   WARNING %s does not exist - trying temp packets file at beginning of timestep %d...\n   ", filename,
-             globals::itstep);
-    read_temp_packetsfile(globals::itstep, rank, pkt);
-  }
-}
-
 int main(int argc, char **argv) {
 #ifdef MPI_ON
   MPI_Init(&argc, &argv);
@@ -105,10 +88,11 @@ int main(int argc, char **argv) {
   printout("time before input %ld\n", time(NULL));
   input(globals::rank_global);
   printout("time after input %ld\n", time(NULL));
+  // nprocs_exspec is the number of rank output files to process with expec
+  // however, we might be running exspec with 1 or just a few ranks
   globals::nprocs = globals::nprocs_exspec;
 
-  struct packet *pkts = (struct packet *)malloc(globals::npkts * sizeof(struct packet));
-
+  struct packet *pkts = static_cast<struct packet *>(malloc(globals::npkts * sizeof(struct packet)));
   globals::nnubins = MNUBINS;  // 1000;  /// frequency bins for spectrum
 
   init_spectrum_trace();  // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
@@ -154,8 +138,20 @@ int main(int argc, char **argv) {
     const double nu_max_gamma = 4. * MEV / H;
     init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
 
-    for (int p = 0; p < globals::nprocs; p++) {
-      get_final_packets(p, globals::nprocs, pkts);
+    for (int p = 0; p < globals::nprocs_exspec; p++) {
+      char pktfilename[128];
+
+      snprintf(pktfilename, 128, "packets%.2d_%.4d.out", 0, p);
+      printout("reading %s (file %d of %d)\n", pktfilename, p + 1, globals::nprocs_exspec);
+
+      if (!access(pktfilename, F_OK)) {
+        read_packets(pktfilename, pkts);
+      } else {
+        printout("   WARNING %s does not exist - trying temp packets file at beginning of timestep %d...\n   ",
+                 pktfilename, globals::itstep);
+        read_temp_packetsfile(globals::itstep, p, pkts);
+      }
+
       int nesc_tot = 0;
       int nesc_gamma = 0;
       int nesc_rpkt = 0;
@@ -167,10 +163,12 @@ int main(int argc, char **argv) {
             nesc_rpkt++;
             add_to_lc_res(&pkts[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
             add_to_spec_res(&pkts[ii], a, rpkt_spectra, stokes_i, stokes_q, stokes_u);
-          } else if (pkts[ii].escape_type == TYPE_GAMMA && a == -1) {
+          } else if (pkts[ii].escape_type == TYPE_GAMMA) {
             nesc_gamma++;
-            add_to_lc_res(&pkts[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-            add_to_spec_res(&pkts[ii], a, gamma_spectra, NULL, NULL, NULL);
+            if (a == -1) {
+              add_to_lc_res(&pkts[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+              add_to_spec_res(&pkts[ii], a, gamma_spectra, NULL, NULL, NULL);
+            }
           }
         }
       }
