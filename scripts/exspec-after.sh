@@ -1,4 +1,11 @@
 if [ -f spec.out ]; then
+
+  # join 3D direction files, if they exist
+  if [ -f light_curve_res_00.out ]; then cat light_curve_res_*.out > light_curve_res.out; fi
+  if [ -f spec_res_*.out ]; then cat spec_res_*.out > spec_res.out; fi
+  if [ -f specpol_res_*.out ]; then cat specpol_res_*.out > specpol_res.out; fi
+
+
   xz -v absorption.out emission*.out || true
   xz -v phixsdata*.txt transitiondata.txt ratecoeff.dat linestat.out || true
   mkdir packets || true
