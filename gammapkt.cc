@@ -325,7 +325,7 @@ constexpr double sigma_compton_partial(const double x, const double f)
 //   xx is the photon energy (in units of electron mass) and f
 //  is the energy loss factor up to which we wish to integrate.
 {
-  const double term1 = ((x * x) - (2 * x) - 2) * log(f) / x / x;
+  const double term1 = ((x * x) - (2 * x) - 2) * std::log(f) / x / x;
   const double term2 = (((f * f) - 1) / (f * f)) / 2;
   const double term3 = ((f - 1) / x) * ((1 / x) + (2 / f) + (1 / (x * f)));
 
