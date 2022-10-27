@@ -92,7 +92,10 @@ int main(int argc, char **argv) {
   // however, we might be running exspec with 1 or just a few ranks
   globals::nprocs = globals::nprocs_exspec;
 
-  struct packet *pkts = static_cast<struct packet *>(malloc(globals::npkts * sizeof(struct packet)));
+  constexpr bool EXSPEC_KEEPALLPACKETSINMEMORY = true;
+  const int npkts_loaded = EXSPEC_KEEPALLPACKETSINMEMORY ? globals::nprocs_exspec * globals::npkts : globals::npkts;
+
+  struct packet *pkts = static_cast<struct packet *>(malloc(npkts_loaded * sizeof(struct packet)));
   globals::nnubins = MNUBINS;  // 1000;  /// frequency bins for spectrum
 
   init_spectrum_trace();  // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
@@ -139,35 +142,38 @@ int main(int argc, char **argv) {
     init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
 
     for (int p = 0; p < globals::nprocs_exspec; p++) {
-      char pktfilename[128];
+      struct packet *pkts_start = EXSPEC_KEEPALLPACKETSINMEMORY ? &pkts[p * globals::npkts] : pkts;
 
-      snprintf(pktfilename, 128, "packets%.2d_%.4d.out", 0, p);
-      printout("reading %s (file %d of %d)\n", pktfilename, p + 1, globals::nprocs_exspec);
+      if (a == -1 || !EXSPEC_KEEPALLPACKETSINMEMORY) {
+        char pktfilename[128];
+        snprintf(pktfilename, 128, "packets%.2d_%.4d.out", 0, p);
+        printout("reading %s (file %d of %d)\n", pktfilename, p + 1, globals::nprocs_exspec);
 
-      if (!access(pktfilename, F_OK)) {
-        read_packets(pktfilename, pkts);
-      } else {
-        printout("   WARNING %s does not exist - trying temp packets file at beginning of timestep %d...\n   ",
-                 pktfilename, globals::itstep);
-        read_temp_packetsfile(globals::itstep, p, pkts);
+        if (!access(pktfilename, F_OK)) {
+          read_packets(pktfilename, pkts_start);
+        } else {
+          printout("   WARNING %s does not exist - trying temp packets file at beginning of timestep %d...\n   ",
+                   pktfilename, globals::itstep);
+          read_temp_packetsfile(globals::itstep, p, pkts_start);
+        }
       }
 
       int nesc_tot = 0;
       int nesc_gamma = 0;
       int nesc_rpkt = 0;
-      for (int ii = 0; ii < globals::npkts; ii++) {
+      for (int ii = 0; ii < npkts_loaded; ii++) {
         // printout("packet %d escape_type %d type %d", ii, pkts[ii].escape_type, pkts[ii].type);
-        if (pkts[ii].type == TYPE_ESCAPE) {
+        if (pkts_start[ii].type == TYPE_ESCAPE) {
           nesc_tot++;
-          if (pkts[ii].escape_type == TYPE_RPKT) {
+          if (pkts_start[ii].escape_type == TYPE_RPKT) {
             nesc_rpkt++;
-            add_to_lc_res(&pkts[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-            add_to_spec_res(&pkts[ii], a, rpkt_spectra, stokes_i, stokes_q, stokes_u);
-          } else if (pkts[ii].escape_type == TYPE_GAMMA) {
+            add_to_lc_res(&pkts_start[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+            add_to_spec_res(&pkts_start[ii], a, rpkt_spectra, stokes_i, stokes_q, stokes_u);
+          } else if (pkts_start[ii].escape_type == TYPE_GAMMA) {
             nesc_gamma++;
             if (a == -1) {
-              add_to_lc_res(&pkts[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-              add_to_spec_res(&pkts[ii], a, gamma_spectra, NULL, NULL, NULL);
+              add_to_lc_res(&pkts_start[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+              add_to_spec_res(&pkts_start[ii], a, gamma_spectra, NULL, NULL, NULL);
             }
           }
         }
