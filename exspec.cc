@@ -161,7 +161,7 @@ int main(int argc, char **argv) {
       int nesc_tot = 0;
       int nesc_gamma = 0;
       int nesc_rpkt = 0;
-      for (int ii = 0; ii < npkts_loaded; ii++) {
+      for (int ii = 0; ii < globals::npkts; ii++) {
         // printout("packet %d escape_type %d type %d", ii, pkts[ii].escape_type, pkts[ii].type);
         if (pkts_start[ii].type == TYPE_ESCAPE) {
           nesc_tot++;
@@ -178,8 +178,10 @@ int main(int argc, char **argv) {
           }
         }
       }
-      printout("  %d of %d packets escaped (%d gamma-pkts and %d r-pkts)\n", nesc_tot, globals::npkts, nesc_gamma,
-               nesc_rpkt);
+      if (a == -1 || !EXSPEC_KEEPALLPACKETSINMEMORY) {
+        printout("  %d of %d packets escaped (%d gamma-pkts and %d r-pkts)\n", nesc_tot, globals::npkts, nesc_gamma,
+                 nesc_rpkt);
+      }
     }
 
     if (a == -1) {
