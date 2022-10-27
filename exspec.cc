@@ -91,10 +91,24 @@ int main(int argc, char **argv) {
   // nprocs_exspec is the number of rank output files to process with expec
   // however, we might be running exspec with 1 or just a few ranks
   globals::nprocs = globals::nprocs_exspec;
+  constexpr double maxpktmem_mb = 3000;
+  const bool load_allrank_packets =
+      ((globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024.) < maxpktmem_mb);
+  const int npkts_loaded = load_allrank_packets ? globals::nprocs_exspec * globals::npkts : globals::npkts;
 
-  constexpr bool EXSPEC_KEEPALLPACKETSINMEMORY = true;
-  const int npkts_loaded = EXSPEC_KEEPALLPACKETSINMEMORY ? globals::nprocs_exspec * globals::npkts : globals::npkts;
-
+  if (load_allrank_packets) {
+    printout(
+        "mem_usage: loading packets from all %d processes simultaneously (total %d packets, %.1f MB memory below "
+        "limit of %.1f MB)\n",
+        globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
+        globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024., maxpktmem_mb);
+  } else {
+    printout(
+        "mem_usage: loading packets from each of %d processes sequentially (total %d packets, %.1f MB memory above "
+        "limit of %.1f MB)\n",
+        globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
+        globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024., maxpktmem_mb);
+  }
   struct packet *pkts = static_cast<struct packet *>(malloc(npkts_loaded * sizeof(struct packet)));
   globals::nnubins = MNUBINS;  // 1000;  /// frequency bins for spectrum
 
@@ -142,9 +156,9 @@ int main(int argc, char **argv) {
     init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
 
     for (int p = 0; p < globals::nprocs_exspec; p++) {
-      struct packet *pkts_start = EXSPEC_KEEPALLPACKETSINMEMORY ? &pkts[p * globals::npkts] : pkts;
+      struct packet *pkts_start = load_allrank_packets ? &pkts[p * globals::npkts] : pkts;
 
-      if (a == -1 || !EXSPEC_KEEPALLPACKETSINMEMORY) {
+      if (a == -1 || !load_allrank_packets) {
         char pktfilename[128];
         snprintf(pktfilename, 128, "packets%.2d_%.4d.out", 0, p);
         printout("reading %s (file %d of %d)\n", pktfilename, p + 1, globals::nprocs_exspec);
@@ -178,7 +192,7 @@ int main(int argc, char **argv) {
           }
         }
       }
-      if (a == -1 || !EXSPEC_KEEPALLPACKETSINMEMORY) {
+      if (a == -1 || !load_allrank_packets) {
         printout("  %d of %d packets escaped (%d gamma-pkts and %d r-pkts)\n", nesc_tot, globals::npkts, nesc_gamma,
                  nesc_rpkt);
       }
