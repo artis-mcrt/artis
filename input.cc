@@ -2119,11 +2119,12 @@ void read_parameterfile(int rank)
   /// The following parameters affect the do_exspec mode only /////////////////
   /// Read number of MPI tasks for exspec
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> dum1;
+  std::stringstream(line) >> globals::nprocs_exspec;
   if (do_exspec) {
-    globals::nprocs_exspec = dum1;
     printout("input: do_exspec ... extract spectra for %d MPI tasks\n", globals::nprocs_exspec);
     printout("input: do_exspec ... and %d packets per task\n", globals::npkts);
+  } else {
+    assert_always(globals::nprocs_exspec == globals::nprocs);
   }
 
   /// Extract line-of-sight dependent information of last emission for spectrum_res
