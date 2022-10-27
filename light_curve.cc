@@ -35,8 +35,7 @@ void write_light_curve(const char *lc_filename, const int current_abin, const do
 }
 
 void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, double *light_curve_lum, double *light_curve_lumcmf)
-/**Routine to add a packet to the outcoming light-curve.*/
-/**See add_to_spec.*/
+// add a packet to the outgoing light-curve.
 {
   if (current_abin == -1) {
     /// Put this into the time grid
@@ -80,7 +79,7 @@ void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, double *light
   } else {
     phibin = ((acos(cosphi) + PI) / 2. / PI * sqrt(MALCBINS));
   }
-  int na = (thetabin * sqrt(MALCBINS)) + phibin;
+  const int na = (thetabin * sqrt(MALCBINS)) + phibin;
 
   /// Add only packets which escape to the current angle bin
   if (na == current_abin) {
