@@ -91,25 +91,29 @@ int main(int argc, char **argv) {
   // nprocs_exspec is the number of rank output files to process with expec
   // however, we might be running exspec with 1 or just a few ranks
   globals::nprocs = globals::nprocs_exspec;
-  constexpr double maxpktmem_mb = 3000;
-  const bool load_allrank_packets =
-      ((globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024.) < maxpktmem_mb);
-  const int npkts_loaded = load_allrank_packets ? globals::nprocs_exspec * globals::npkts : globals::npkts;
 
-  if (load_allrank_packets) {
+  constexpr double maxpktmem_mb = 3000;
+  bool load_allrank_packets = false;
+
+  if ((globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024.) < maxpktmem_mb) {
     printout(
         "mem_usage: loading packets from all %d processes simultaneously (total %d packets, %.1f MB memory below "
         "limit of %.1f MB)\n",
         globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
         globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024., maxpktmem_mb);
+    load_allrank_packets = true;
   } else {
     printout(
-        "mem_usage: loading packets from each of %d processes sequentially (total %d packets, %.1f MB memory above "
-        "limit of %.1f MB)\n",
+        "mem_usage: loading packets from each of %d processes sequentially (total %d packets, %.1f MB memory would be "
+        "above limit of %.1f MB)\n",
         globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
         globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024., maxpktmem_mb);
+    load_allrank_packets = false;
   }
+
+  const int npkts_loaded = load_allrank_packets ? globals::nprocs_exspec * globals::npkts : globals::npkts;
   struct packet *pkts = static_cast<struct packet *>(malloc(npkts_loaded * sizeof(struct packet)));
+
   globals::nnubins = MNUBINS;  // 1000;  /// frequency bins for spectrum
 
   init_spectrum_trace();  // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
