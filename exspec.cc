@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
   // however, we might be running exspec with 1 or just a few ranks
   globals::nprocs = globals::nprocs_exspec;
 
-  constexpr double maxpktmem_mb = 0;
+  constexpr double maxpktmem_mb = 3000;
   bool load_allrank_packets = false;
 
   if ((globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024.) < maxpktmem_mb) {
