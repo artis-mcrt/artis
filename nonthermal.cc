@@ -2526,7 +2526,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
              timestep);
 
     return;
-  } else if (timestep < globals::n_lte_timesteps + 1) {
+  } else if (timestep < globals::num_lte_timesteps + 1) {
     printout("Skipping Spencer-Fano solution for first NLTE timestep\n");
     skip_solution = true;
   } else if (get_deposition_rate_density(modelgridindex) / EV < MINDEPRATE) {
@@ -2567,7 +2567,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   if ((nne_per_ion_fracdiff < NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS) &&
       (timestep - timestep_last_solved <= SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS) &&
-      timestep_last_solved > globals::n_lte_timesteps) {
+      timestep_last_solved > globals::num_lte_timesteps) {
     printout(
         "Keeping Spencer-Fano solution from timestep %d because x_e fracdiff %g < %g and because timestep %d - %d < "
         "%d\n",
@@ -2589,7 +2589,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   bool enable_sfexcitation = true;
   bool enable_sfionization = true;
-  // if (timestep <= globals::n_lte_timesteps)
+  // if (timestep <= globals::num_lte_timesteps)
   // {
   //   // for the first run of the solver at the first NLTE timestep (which usually requires many iterations),
   //   // do a fast initial solution but mark it has an invalid nne per ion so it gets replaced at the next timestep
@@ -2600,7 +2600,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   //   printout("Doing a fast initial solution without ionization or excitation in the SF equation for the first NLTE
   //   timestep.\n");
   // }
-  // if (timestep <= globals::n_lte_timesteps + 2)
+  // if (timestep <= globals::num_lte_timesteps + 2)
   // {
   //   // run the solver in a faster mode for the first couple of NLTE timesteps
   //   // nt_solution[modelgridindex].nneperion_when_solved = -1.;

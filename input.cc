@@ -56,8 +56,8 @@ std::string inputlinecomments[inputlinecommentcount] = {
     "simulation_continued_from_saved: (0: start new simulation, 1: continue from gridsave and packets files)",
     "UNUSED rfcut_angstroms: wavelength (in Angstroms) at which the parameterisation of the radiation field switches "
     "from the nebular approximation to LTE.",
-    "n_lte_timesteps",
-    "cell_is_optically_thick n_grey_timesteps",
+    "num_lte_timesteps",
+    "cell_is_optically_thick num_grey_timesteps",
     "UNUSED max_bf_continua: (>0: max bound-free continua per ion, <0 unlimited)",
     "nprocs_exspec: extract spectra for n MPI tasks",
     "do_emission_res: Extract line-of-sight dependent information of last emission for spectrum_res (1: yes, 2: no)",
@@ -2060,12 +2060,12 @@ void read_parameterfile(int rank)
 
   /// Sets the number of initial LTE timesteps for NLTE runs
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> globals::n_lte_timesteps;
+  std::stringstream(line) >> globals::num_lte_timesteps;
 #ifdef FORCE_LTE
   printout("input: this is a pure LTE run\n");
 #else
   printout("input: this is a NLTE run\n");
-  printout("input: do the first %d timesteps in LTE\n", globals::n_lte_timesteps);
+  printout("input: do the first %d timesteps in LTE\n", globals::num_lte_timesteps);
 #endif
 
   if (NT_ON) {
@@ -2101,10 +2101,10 @@ void read_parameterfile(int rank)
 
   /// Set up initial grey approximation?
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> globals::cell_is_optically_thick >> globals::n_grey_timesteps;
+  std::stringstream(line) >> globals::cell_is_optically_thick >> globals::num_grey_timesteps;
   printout(
       "input: cells with Thomson optical depth > %g are treated in grey approximation for the first %d timesteps\n",
-      globals::cell_is_optically_thick, globals::n_grey_timesteps);
+      globals::cell_is_optically_thick, globals::num_grey_timesteps);
 
   /// Limit the number of bf-continua
   assert_always(get_noncommentline(file, line));

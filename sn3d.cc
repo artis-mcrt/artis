@@ -1065,7 +1065,7 @@ int main(int argc, char **argv)
       initial_iteration = false;
     }*/
     globals::n_titer = 1;
-    globals::initial_iteration = (nts < globals::n_lte_timesteps);
+    globals::initial_iteration = (nts < globals::num_lte_timesteps);
 #endif
 
     for (int titer = 0; titer < globals::n_titer; titer++) {

@@ -349,9 +349,9 @@ extern __managed__ bool homogeneous_abundances;
 
 extern __managed__ bool simulation_continued_from_saved;
 extern __managed__ double nu_rfcut;
-extern __managed__ int n_lte_timesteps;
+extern __managed__ int num_lte_timesteps;
 extern __managed__ double cell_is_optically_thick;
-extern __managed__ int n_grey_timesteps;
+extern __managed__ int num_grey_timesteps;
 extern __managed__ int n_titer;
 extern __managed__ bool initial_iteration;
 extern __managed__ int max_bf_continua;

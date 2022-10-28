@@ -162,9 +162,9 @@ __managed__ bool homogeneous_abundances;
 
 __managed__ bool simulation_continued_from_saved;
 __managed__ double nu_rfcut;
-__managed__ int n_lte_timesteps;
+__managed__ int num_lte_timesteps;
 __managed__ double cell_is_optically_thick;
-__managed__ int n_grey_timesteps;
+__managed__ int num_grey_timesteps;
 __managed__ int n_titer;
 __managed__ bool initial_iteration;
 __managed__ int max_bf_continua;

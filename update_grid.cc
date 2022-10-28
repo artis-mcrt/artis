@@ -1098,7 +1098,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         }
 
 #ifndef FORCE_LTE
-        // initial_iteration really means either ts 0 or nts < globals::n_lte_timesteps
+        // initial_iteration really means either ts 0 or nts < globals::num_lte_timesteps
         if (globals::initial_iteration || grid::modelgrid[mgi].thick == 1)
 #endif
         {
@@ -1178,7 +1178,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
       // grey_optical_depth = compton_optical_depth;
 
-      if ((grey_optical_depth > globals::cell_is_optically_thick) && (nts < globals::n_grey_timesteps)) {
+      if ((grey_optical_depth > globals::cell_is_optically_thick) && (nts < globals::num_grey_timesteps)) {
         printout("cell %d is treated in grey approximation (kappa_grey %g [cm2/g], tau %g)\n", mgi,
                  grid::get_kappagrey(mgi), grey_optical_depth);
         grid::modelgrid[mgi].thick = 1;
