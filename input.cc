@@ -2205,8 +2205,9 @@ void update_parameterfile(int nts)
       }
 
       if (noncomment_linenum == 22) {
-        /// set nprocs_exspec to nprocs
-        snprintf(c_line, 1024, "%d", globals::nprocs);
+        /// by default, exspec should use all available packet files
+        globals::nprocs_exspec = globals::nprocs;
+        snprintf(c_line, 1024, "%d", globals::nprocs_exspec);
         line.assign(c_line);
       }
 
