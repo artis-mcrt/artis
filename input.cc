@@ -2206,6 +2206,12 @@ void update_parameterfile(int nts)
         }
       }
 
+      if (noncomment_linenum == 22) {
+        /// set nprocs_exspec to nprocs
+        snprintf(c_line, 1024, "%d", globals::nprocs);
+        line.assign(c_line);
+      }
+
       if (noncomment_linenum < inputlinecommentcount) {
         const int commentstart = 25;
 
