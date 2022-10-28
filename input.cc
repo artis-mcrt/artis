@@ -2193,15 +2193,17 @@ void update_parameterfile(int nts)
       // }
 
       // overwrite particular lines to enable restarting from the current timestep
-      if (noncomment_linenum == 2 && nts >= 0) {
-        /// Number of start and end time step
-        snprintf(c_line, 1024, "%d %d", nts, globals::ftstep);
-        // line.assign(c_line);
-        line.replace(line.begin(), line.end(), c_line);
-      } else if (noncomment_linenum == 16 && nts >= 0) {
-        /// resume from gridsave file
-        snprintf(c_line, 1024, "%d", 1);  /// Force continuation
-        line.assign(c_line);
+      if (nts >= 0) {
+        if (noncomment_linenum == 2) {
+          /// Number of start and end time step
+          snprintf(c_line, 1024, "%d %d", nts, globals::ftstep);
+          // line.assign(c_line);
+          line.replace(line.begin(), line.end(), c_line);
+        } else if (noncomment_linenum == 16) {
+          /// resume from gridsave file
+          snprintf(c_line, 1024, "%d", 1);  /// Force continuation
+          line.assign(c_line);
+        }
       }
 
       if (noncomment_linenum < inputlinecommentcount) {
