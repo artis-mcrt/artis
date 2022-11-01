@@ -63,7 +63,7 @@ void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, double *light
   xhat[1] = 0;
   xhat[2] = 0;
 
-  /// Angle resolved case: need to work out the correct angle bin too. */
+  /// Angle resolved case: need to work out the correct angle bin too.
   double costheta = dot(pkt_ptr->dir, globals::syn_dir);
   int thetabin = ((costheta + 1.0) * sqrt(MALCBINS) / 2.0);
   cross_prod(pkt_ptr->dir, globals::syn_dir, vec1);
