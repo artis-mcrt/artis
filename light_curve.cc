@@ -6,9 +6,6 @@
 
 // Routine to make a MC light curve from the r-packets.
 
-/// Light curve data structure
-const int MALCBINS = 100;
-
 void write_light_curve(const char *lc_filename, const int current_abin, const double *light_curve_lum,
                        const double *light_curve_lumcmf, const int numtimesteps) {
   FILE *lc_file = fopen_required(lc_filename, "w");
@@ -55,39 +52,12 @@ void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, double *light
     }
 
     return;
-  }
-
-  double vec1[3], vec2[3], xhat[3], vec3[3];
-
-  xhat[0] = 1.0;
-  xhat[1] = 0;
-  xhat[2] = 0;
-
-  /// Angle resolved case: need to work out the correct angle bin too.
-  double costheta = dot(pkt_ptr->dir, globals::syn_dir);
-  int thetabin = ((costheta + 1.0) * sqrt(MALCBINS) / 2.0);
-  cross_prod(pkt_ptr->dir, globals::syn_dir, vec1);
-  cross_prod(xhat, globals::syn_dir, vec2);
-  double cosphi = dot(vec1, vec2) / vec_len(vec1) / vec_len(vec2);
-
-  cross_prod(vec2, globals::syn_dir, vec3);
-  double testphi = dot(vec1, vec3);
-
-  int phibin;
-  if (testphi > 0) {
-    phibin = (acos(cosphi) / 2. / PI * sqrt(MALCBINS));
-  } else {
-    phibin = ((acos(cosphi) + PI) / 2. / PI * sqrt(MALCBINS));
-  }
-  const int na = (thetabin * sqrt(MALCBINS)) + phibin;
-
-  /// Add only packets which escape to the current angle bin
-  if (na == current_abin) {
-    /// Put this into the time grid.
+  } else if (get_escapedirectionbin(pkt_ptr) == current_abin) {
+    // Add only packets which escape to the current angle bin
     double t_arrive = get_arrive_time(pkt_ptr);
     if (t_arrive > globals::tmin && t_arrive < globals::tmax) {
       int nt = get_timestep(t_arrive);
-      safeadd(light_curve_lum[nt], pkt_ptr->e_rf / globals::time_step[nt].width * MALCBINS / globals::nprocs);
+      safeadd(light_curve_lum[nt], pkt_ptr->e_rf / globals::time_step[nt].width * MABINS / globals::nprocs);
     }
   }
 }

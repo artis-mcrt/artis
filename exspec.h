@@ -2,8 +2,8 @@
 #define EXSPEC_H
 
 /// Spectrum data structure
-#define MNUBINS 1000
-#define MABINS 100
+constexpr int MNUBINS = 1000;
+constexpr int MABINS = 100;
 
 extern const bool do_exspec;
 

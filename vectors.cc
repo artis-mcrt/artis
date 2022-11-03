@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "artisoptions.h"
+#include "exspec.h"
 #include "sn3d.h"
 
 __host__ __device__ void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
@@ -113,4 +114,30 @@ __host__ __device__ void move_pkt_withtime(struct packet *pkt_ptr, const double 
   if (pkt_ptr->nu_cmf > nu_cmf_old) {
     pkt_ptr->nu_cmf = nu_cmf_old;
   }
+}
+
+int get_escapedirectionbin(const struct packet *pkt_ptr) {
+  constexpr double xhat[3] = {1.0, 0.0, 0.0};
+  double vec1[3];
+  double vec2[3];
+  double vec3[3];
+
+  /// Angle resolved case: need to work out the correct angle bin
+  const double costheta = dot(pkt_ptr->dir, globals::syn_dir);
+  const int thetabin = ((costheta + 1.0) * std::sqrt(MABINS) / 2.0);
+  cross_prod(pkt_ptr->dir, globals::syn_dir, vec1);
+  cross_prod(xhat, globals::syn_dir, vec2);
+  const double cosphi = dot(vec1, vec2) / vec_len(vec1) / vec_len(vec2);
+
+  cross_prod(vec2, globals::syn_dir, vec3);
+  const double testphi = dot(vec1, vec3);
+
+  int phibin;
+  if (testphi > 0) {
+    phibin = (acos(cosphi) / 2. / PI * std::sqrt(MABINS));
+  } else {
+    phibin = ((acos(cosphi) + PI) / 2. / PI * std::sqrt(MABINS));
+  }
+  const int na = (thetabin * sqrt(MABINS)) + phibin;
+  return na;
 }

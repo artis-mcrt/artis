@@ -611,34 +611,9 @@ void add_to_spec_res(const struct packet *const pkt_ptr, int current_abin, struc
   if (current_abin == -1) {
     // angle averaged spectrum
     add_to_spec(pkt_ptr, current_abin, spectra, stokes_i, stokes_q, stokes_u);
-  } else {
-    double xhat[3] = {1.0, 0.0, 0.0};
-
-    /// Angle resolved case: need to work out the correct angle bin
-    const double costheta = dot(pkt_ptr->dir, globals::syn_dir);
-    const double thetabin = ((costheta + 1.0) * sqrt(MABINS) / 2.0);
-    double vec1[3];
-    cross_prod(pkt_ptr->dir, globals::syn_dir, vec1);
-    double vec2[3];
-    cross_prod(xhat, globals::syn_dir, vec2);
-    const double cosphi = dot(vec1, vec2) / vec_len(vec1) / vec_len(vec2);
-
-    double vec3[3];
-    cross_prod(vec2, globals::syn_dir, vec3);
-    const double testphi = dot(vec1, vec3);
-
-    int phibin;
-    if (testphi > 0) {
-      phibin = (acos(cosphi) / 2. / PI * sqrt(MABINS));
-    } else {
-      phibin = ((acos(cosphi) + PI) / 2. / PI * sqrt(MABINS));
-    }
-    const int na = (thetabin * sqrt(MABINS)) + phibin;
-
-    /// Add only packets which escape to the current angle bin
-    if (na == current_abin) {
-      add_to_spec(pkt_ptr, current_abin, spectra, stokes_i, stokes_q, stokes_u);
-    }
+  } else if (get_escapedirectionbin(pkt_ptr) == current_abin) {
+    // Add only packets which escape to the current angle bin
+    add_to_spec(pkt_ptr, current_abin, spectra, stokes_i, stokes_q, stokes_u);
   }
 }
 
