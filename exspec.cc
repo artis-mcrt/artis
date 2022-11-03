@@ -92,12 +92,12 @@ int main(int argc, char **argv) {
   // however, we might be running exspec with 1 or just a few ranks
   globals::nprocs = globals::nprocs_exspec;
 
-  constexpr double maxpktmem_mb = 3000;
+  constexpr double maxpktmem_mb = 6000;
   bool load_allrank_packets = false;
 
   if ((globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024.) < maxpktmem_mb) {
     printout(
-        "mem_usage: loading packets from all %d processes simultaneously (total %d packets, %.1f MB memory below "
+        "mem_usage: loading packets from all %d processes simultaneously (total %d packets, %.1f MB memory is within "
         "limit of %.1f MB)\n",
         globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
         globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024., maxpktmem_mb);
