@@ -112,7 +112,7 @@ jobs:
                 # os: ['ubuntu-latest', 'self-hosted']
                 os: [ubuntu-22.04]
                 testmode: [OFF, ON]
-                testname: [classicmode, nebularonezone]
+                testname: [classicmode, nebularonezone, kilonova]
                 exclude:
                     - os: self-hosted
                       testmode: ON
@@ -202,7 +202,8 @@ jobs:
                   mkdir job0
                   ../../scripts/movefiles.sh job0
                   md5sum *.out job0/*.out
-                  md5sum -c results_md5_job0.txt
+
+                  if [ -f results_md5_job0.txt ]; then md5sum -c results_md5_job0.txt; else echo "results_md5_job0.txt not found"; fi
 
             - name: Run test job1 resume
               if: always()
@@ -244,7 +245,7 @@ jobs:
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   md5sum *.out job1/*.out
-                  md5sum -c results_md5_final.txt
+                  if [ -f results_md5_final.txt ]; then md5sum -c results_md5_final.txt; else echo "results_md5_final.txt not found"; fi
 
             - name: Prepare for next steps
               if: always() && matrix.os != 'selfhosted'
