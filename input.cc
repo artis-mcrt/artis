@@ -39,7 +39,7 @@ const int inputlinecommentcount = 24;
 std::string inputlinecomments[inputlinecommentcount] = {
     "pre_zseed: specific random number seed if > 0 or random if negative",
     "globals::ntstep: number of timesteps",
-    "itstep ftstep: number of start and end time step",
+    "itstep ftstep: timestep number range start (inclusive) and stop (not inclusive)",
     "tmin_days tmax_days: start and end times [day]",
     "nusyn_min_mev nusyn_max_mev: lowest and highest frequency to synthesise [MeV]",
     "nsyn_time: number of times for synthesis",
