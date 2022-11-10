@@ -55,7 +55,7 @@ __host__ __device__ constexpr double col_deexcitation_ratecoeff(const float T_e,
                                                                 double lowerstatweight, double upperstatweight)
 // multiply by upper level population to get a rate per second
 {
-  double C;
+  double C = 0.;
   const double coll_str_thisline = line->coll_str;
   if (coll_str_thisline < 0) {
     const bool forbidden = line->forbidden;
@@ -110,7 +110,7 @@ __host__ __device__ constexpr double col_excitation_ratecoeff(const float T_e, c
                                                               const double upperstatweight)
 // multiply by lower level population to get a rate per second
 {
-  double C;
+  double C = 0.;
   const double coll_strength = line->coll_str;
   const double eoverkt = epsilon_trans / (KB * T_e);
 

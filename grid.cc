@@ -1078,6 +1078,11 @@ static void abundances_read(void) {
   printout("done.\n");
 }
 
+static bool str_starts_with(const std::string &str, const std::string &strprefix) {
+  // return true if str starts with strprefix
+  return (str.rfind(strprefix, 0) == 0);
+}
+
 static void read_model_headerline(std::string line, std::vector<int> &zlist, std::vector<int> &alist,
                                   std::vector<std::string> &columnname) {
   // custom header line
@@ -1098,11 +1103,11 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
     if (token == "X_Cr48") continue;
     if (token == "X_Ni57") continue;
     if (token == "X_Co57") continue;
-    if (token.starts_with("pos_")) continue;
+    if (str_starts_with(token, "pos_")) continue;
 
     columnname.push_back(token);
 
-    if (token.starts_with("X_")) {                            // if starts with 'X_'
+    if (str_starts_with(token, "X_")) {                       // if starts with 'X_'
       const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
       const int a = decay::get_nucstring_a(token.substr(2));
       assert_always(z >= 0);
