@@ -5,10 +5,10 @@ on:
     push:
         branches-ignore:
             - classic*
-    # pull_request:
-    #   branches:
-    #   - nebular*
-    #   - main
+  # pull_request:
+  #   branches:
+  #   - nebular*
+  #   - main
 
 env:
     ASAN_OPTIONS: detect_stack_use_after_return=1:detect_leaks=0
@@ -109,7 +109,7 @@ jobs:
     testmodels:
         strategy:
             matrix:
-                # os: ['ubuntu-latest', 'self-hosted']
+        # os: ['ubuntu-latest', 'self-hosted']
                 os: [ubuntu-22.04]
                 testmode: [OFF, ON]
                 testname: [classicmode, nebularonezone, kilonova]
@@ -142,11 +142,11 @@ jobs:
                   sudo apt-get update
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
-            # we can cache this, but then we don't test the code that generates ratecoeff.dat
+      # we can cache this, but then we don't test the code that generates ratecoeff.dat
             - name: Cache ratecoeff.dat
               if: matrix.testname == 'classicmode'
               uses: actions/cache@v3
-              # if: matrix.testmode != 'ON'
+        # if: matrix.testmode != 'ON'
               with:
                   path: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
                   key: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
@@ -240,7 +240,7 @@ jobs:
                   rsync -av job1 output/
                   cat exspec.txt
 
-            - name: Checksum output files
+            - name: Checksum job1 output files
               if: always() && matrix.os != 'selfhosted'
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
@@ -298,23 +298,23 @@ jobs:
                   name: test-${{ matrix.testname }}-output-pdf
                   path: tests/*.pdf
 
-            # - name: Compile previous commit
-            #   if: matrix.testmode == 'OFF'
-            #   continue-on-error: true
-            #   run: |
-            #       git checkout HEAD~1
-            #       git log -n 1
-            #       cp tests/${{ matrix.testname }}_testrun/artisoptions.h .
-            #       make clean
-            #       make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
-            #       cp sn3d tests/${{ matrix.testname }}_testrun/
-            #       cp exspec tests/${{ matrix.testname }}_testrun/
+      # - name: Compile previous commit
+      #   if: matrix.testmode == 'OFF'
+      #   continue-on-error: true
+      #   run: |
+      #       git checkout HEAD~1
+      #       git log -n 1
+      #       cp tests/${{ matrix.testname }}_testrun/artisoptions.h .
+      #       make clean
+      #       make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+      #       cp sn3d tests/${{ matrix.testname }}_testrun/
+      #       cp exspec tests/${{ matrix.testname }}_testrun/
 
-            # - name: Run previous commit job0 start
-            #   if: matrix.testmode == 'OFF'
-            #   continue-on-error: true
-            #   working-directory: tests/${{ matrix.testname }}_testrun/
-            #   run: |
-            #       cp input-newrun.txt input.txt
-            #       touch output_0-0.txt
-            #       time mpirun -np 2 ./sn3d
+      # - name: Run previous commit job0 start
+      #   if: matrix.testmode == 'OFF'
+      #   continue-on-error: true
+      #   working-directory: tests/${{ matrix.testname }}_testrun/
+      #   run: |
+      #       cp input-newrun.txt input.txt
+      #       touch output_0-0.txt
+      #       time mpirun -np 2 ./sn3d
