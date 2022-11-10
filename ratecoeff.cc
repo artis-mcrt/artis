@@ -525,9 +525,10 @@ static void precalculate_rate_coefficient_integrals(void) {
 
             if (!std::isfinite(alpha_sp) || alpha_sp < 0) {
               printout(
-                  "WARNING: alpha_sp was negative or non-finite for level %d. alpha_sp %g sfac %g phixstargetindex %d "
+                  "WARNING: alpha_sp was negative or non-finite for level %d Te %g. alpha_sp %g sfac %g "
+                  "phixstargetindex %d "
                   "phixstargetprobability %g\n",
-                  level, alpha_sp, sfac, phixstargetindex, phixstargetprobability);
+                  level, T_e, alpha_sp, sfac, phixstargetindex, phixstargetprobability);
               alpha_sp = 0;
             }
             // assert_always(alpha_sp >= 0);
@@ -610,9 +611,9 @@ static void precalculate_rate_coefficient_integrals(void) {
             bfcooling_coeff *= FOURPI * sfac * phixstargetprobability;
             if (!std::isfinite(bfcooling_coeff) || bfcooling_coeff < 0) {
               printout(
-                  "WARNING: bfcooling_coeff was negative or non-finite for level %d. bfcooling_coeff %g sfac %g "
+                  "WARNING: bfcooling_coeff was negative or non-finite for level %d Te %g. bfcooling_coeff %g sfac %g "
                   "phixstargetindex %d phixstargetprobability %g\n",
-                  level, bfcooling_coeff, sfac, phixstargetindex, phixstargetprobability);
+                  level, T_e, bfcooling_coeff, sfac, phixstargetindex, phixstargetprobability);
               bfcooling_coeff = 0;
             }
             globals::bfcooling_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = bfcooling_coeff;
