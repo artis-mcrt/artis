@@ -277,18 +277,22 @@ jobs:
                   # upgrade all installed packages to their latest versions
                   # python3 -m pip list freeze --outdated | tail -n +3 | cut -w -f1 | xargs -n1 python3 -m pip install --upgrade
 
-            - name: Plot output
+            - name: Plot light curve
+              if: always() matrix.testmode == 'OFF'
+              working-directory: tests/
+              run: |
+                  python3 -m artistools.lightcurve ${{ matrix.testname }}_testrun
+
+            - name: Plot spectrum nebularonezone
               if: always() && matrix.testname == 'nebularonezone' && matrix.testmode == 'OFF'
               working-directory: tests/
               run: |
-                  python3 -m artistools.lightcurve ${{ matrix.testname }}_testrun
                   python3 -m artistools.spectra -ts 8 ${{ matrix.testname }}_testrun
 
-            - name: Plot output
+            - name: Plot spectrum classicmode
               if: always() && matrix.testname == 'classicmode' && matrix.testmode == 'OFF'
               working-directory: tests/
               run: |
-                  python3 -m artistools.lightcurve ${{ matrix.testname }}_testrun
                   python3 -m artistools.spectra -t 18-22 ${{ matrix.testname }}_testrun
 
             - name: Upload plot files
@@ -298,23 +302,23 @@ jobs:
                   name: test-${{ matrix.testname }}-output-pdf
                   path: tests/*.pdf
 
-      # - name: Compile previous commit
-      #   if: matrix.testmode == 'OFF'
-      #   continue-on-error: true
-      #   run: |
-      #       git checkout HEAD~1
-      #       git log -n 1
-      #       cp tests/${{ matrix.testname }}_testrun/artisoptions.h .
-      #       make clean
-      #       make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
-      #       cp sn3d tests/${{ matrix.testname }}_testrun/
-      #       cp exspec tests/${{ matrix.testname }}_testrun/
+    # - name: Compile previous commit
+    #   if: matrix.testmode == 'OFF'
+    #   continue-on-error: true
+    #   run: |
+    #       git checkout HEAD~1
+    #       git log -n 1
+    #       cp tests/${{ matrix.testname }}_testrun/artisoptions.h .
+    #       make clean
+    #       make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+    #       cp sn3d tests/${{ matrix.testname }}_testrun/
+    #       cp exspec tests/${{ matrix.testname }}_testrun/
 
-      # - name: Run previous commit job0 start
-      #   if: matrix.testmode == 'OFF'
-      #   continue-on-error: true
-      #   working-directory: tests/${{ matrix.testname }}_testrun/
-      #   run: |
-      #       cp input-newrun.txt input.txt
-      #       touch output_0-0.txt
-      #       time mpirun -np 2 ./sn3d
+    # - name: Run previous commit job0 start
+    #   if: matrix.testmode == 'OFF'
+    #   continue-on-error: true
+    #   working-directory: tests/${{ matrix.testname }}_testrun/
+    #   run: |
+    #       cp input-newrun.txt input.txt
+    #       touch output_0-0.txt
+    #       time mpirun -np 2 ./sn3d
