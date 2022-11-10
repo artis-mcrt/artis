@@ -14,11 +14,11 @@ cp ../artisoptions_kilonova_lte.h kilonova_testrun/artisoptions.h
 
 cd kilonova_testrun
 
-xz -dv -T0 *.xz
+xz -dvk -T0 *.xz
 
-sed -i 's/#define MPKTS.*/#define MPKTS 10000/g' artisoptions.h
+sed -i'' -e 's/#define MPKTS.*/#define MPKTS 5000/g' artisoptions.h
 
-sed -i 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' artisoptions.h
+sed -i'' -e 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' artisoptions.h
 
 cd -
 
