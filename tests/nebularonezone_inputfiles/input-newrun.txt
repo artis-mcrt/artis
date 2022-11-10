@@ -1,6 +1,6 @@
 1281360349               # pre_zseed: specific random number seed if > 0 or random if negative
 10                       # globals::ntstep: number of timesteps
-000 005                  # itstep ftstep: number of start and end time step
+000 008                  # itstep ftstep: number of start and end time step
 170 230                  # tmin_days tmax_days: start and end times [day]
 1.33  1.330000001        # nusyn_min_mev nusyn_max_mev: lowest and highest frequency to synthesise [MeV]
 80                       # nsyn_time: number of times for synthesis
