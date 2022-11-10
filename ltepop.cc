@@ -65,7 +65,7 @@ void get_ionfractions(int element, int modelgridindex, double nne, std::unique_p
 {
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(uppermost_ion < get_nions(element));
+  assert_testmodeonly(uppermost_ion < get_nions(element) || get_nions(element) == 0);
 
   auto nnionfactor = std::make_unique<double[]>(uppermost_ion + 1);
   nnionfactor[uppermost_ion] = 1;
