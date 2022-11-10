@@ -1102,16 +1102,16 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
 
     columnname.push_back(token);
 
-    if (token.starts_with("X_")) {                              // if starts with 'X_'
-      const int z = decay::get_nucstring_z(token.c_str() + 2);  // + 2 skips the 'X_'
-      const int a = decay::get_nucstring_a(token.c_str() + 2);
+    if (token.starts_with("X_")) {                            // if starts with 'X_'
+      const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
+      const int a = decay::get_nucstring_a(token.substr(2));
       assert_always(z >= 0);
       assert_always(a >= 0);
-      // printout("Custom column: '%s' Z %d A %d\n", token.c_str(), z, a);
+      //   printout("Custom column: '%s' Z %d A %d\n", token.c_str(), z, a);
       zlist.push_back(z);
       alist.push_back(a);
     } else {
-      // printout("Custom column: '%s' Z %d A %d\n", token.c_str(), -1, -1);
+      //   printout("Custom column: '%s' Z %d A %d\n", token.c_str(), -1, -1);
       zlist.push_back(-1);
       alist.push_back(-1);
     }

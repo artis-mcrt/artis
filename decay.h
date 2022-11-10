@@ -5,6 +5,7 @@
 
 const int FAKE_GAM_LINE_ID = 3;
 
+#include <string>
 #include <vector>
 
 #include "cuda.h"
@@ -21,8 +22,8 @@ enum decaytypes {
 };
 
 __host__ __device__ void init_nuclides(std::vector<int> zlist, std::vector<int> alist);
-__host__ __device__ int get_nucstring_z(const char *strnuc);
-__host__ __device__ int get_nucstring_a(const char *strnuc);
+__host__ __device__ int get_nucstring_z(const std::string &strnuc);
+__host__ __device__ int get_nucstring_a(const std::string &strnuc);
 __host__ __device__ int get_num_nuclides(void);
 const char *get_elname(int z);
 __host__ __device__ int get_nuc_z(int nucindex);

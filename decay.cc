@@ -469,7 +469,7 @@ static void find_decaypaths(void) {
   std::sort(decaypaths.begin(), decaypaths.end());
 }
 
-int get_nucstring_z(const char *strnuc)
+int get_nucstring_z(const std::string &strnuc)
 // convert something like Ni56 to integer 28
 {
   std::string elcode = strnuc;
@@ -481,16 +481,24 @@ int get_nucstring_z(const char *strnuc)
       return z;
     }
   }
-  printout("Could not get atomic number of '%s' '%s'\n", strnuc, elcode.c_str());
+  printout("Could not get atomic number of '%s' '%s'\n", strnuc.c_str(), elcode.c_str());
   assert_always(false);  // could not match to an element
   return -1;
 }
 
-int get_nucstring_a(const char *strnuc)
+int get_nucstring_a(const std::string &strnuc)
 // convert something like Ni56 to integer 56
 {
-  std::string strmassnum = std::regex_replace(std::string(strnuc), std::regex("[^0-9]*([0-9]+).*"), std::string("$1"));
-  const int a = std::stoi(strmassnum);
+  // find first digit character
+  size_t i = 0;
+  for (; i < strnuc.length(); i++) {
+    if (isdigit(strnuc[i])) break;
+  }
+
+  // remove the non-digit charts
+  const std::string strmassnum = strnuc.substr(i);
+
+  const int a = std::atoi(strmassnum.c_str());
   assert_always(a > 0);
   return a;
 }
