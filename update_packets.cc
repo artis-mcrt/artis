@@ -222,17 +222,22 @@ static bool std_compare_packets_bymodelgriddensity(const struct packet &p1, cons
 
   if (grid::get_rho(mgi1) == grid::get_rho(mgi2) && (mgi1 < mgi2)) return true;
 
+  // same cell, order by type
+  if ((mgi1 == mgi2) && (p1.type < p2.type)) return true;
+
+  // same cell and type, order by decreasing frequency
+  if ((mgi1 == mgi2) && (p1.type == p2.type) && (p1.nu_cmf > p2.nu_cmf)) return true;
+
   return false;
-  // return (p1.type > p2.type);
 }
 
 void update_packets(const int my_rank, const int nts, struct packet *packets)
 // Subroutine to move and update packets during the current timestep (nts)
 {
-  /** At the start, the packets have all either just been initialised or have already been
-  processed for one or more timesteps. Those that are pellets will just be sitting in the
-  matter. Those that are photons (or one sort or another) will already have a position and
-  a direction.*/
+  // At the start, the packets have all either just been initialised or have already been
+  // processed for one or more timesteps. Those that are pellets will just be sitting in the
+  // matter. Those that are photons (or one sort or another) will already have a position and
+  // a direction.
 
   const double ts = globals::time_step[nts].start;
   const double tw = globals::time_step[nts].width;
