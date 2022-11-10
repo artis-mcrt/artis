@@ -68,8 +68,11 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
       fprintf(estimators_file, "populations        Z=%2d", get_element(element));
       const int nions = get_nions(element);
-      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-        fprintf(estimators_file, "              ");
+      if (nions > 0) {
+        // add spaces for missing lowest ion stages to match other elements
+        for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+          fprintf(estimators_file, "              ");
+      }
       double elpop = 0.;
       for (int ion = 0; ion < nions; ion++) {
         elpop += ionstagepop(mgi, element, ion);
