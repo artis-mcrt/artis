@@ -1097,7 +1097,7 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
     if (token == "logrho") continue;
     if (token == "rho") continue;
     if (token == "X_Fegroup") continue;
-    if (token == "X_Ni56") continue;
+    // if (token == "X_Ni56") continue;
     if (token == "X_Co56") continue;
     if (token == "X_Fe52") continue;
     if (token == "X_Cr48") continue;
