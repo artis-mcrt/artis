@@ -1104,9 +1104,11 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
     } else if (token == "logrho") {
       // 1D models have log10(rho [g/cm3])
       assert_always(columnindex == 2);
+      assert_always(get_model_type() == RHO_1D_READ);
     } else if (token == "rho") {
-      // 3D models have rho [g/cm3]
+      // 2D amd 3D models have rho [g/cm3]
       assert_always(columnindex == 4);
+      assert_always(get_model_type() != RHO_1D_READ);
       continue;
     } else if (token == "X_Fegroup") {
       continue;
@@ -1566,7 +1568,7 @@ static void read_3d_model(void)
 
     // in 3D cartesian, cellindex and modelgridindex are interchangeable
     const bool keepcell = (rho_model > 0);
-    const double rho_tmin = rho_model * pow((t_model / globals::tmin), 3.);
+    const double rho_tmin = rho_model * pow(t_model / globals::tmin, 3);
     set_rhoinit(mgi, rho_tmin);
     set_rho(mgi, rho_tmin);
 
