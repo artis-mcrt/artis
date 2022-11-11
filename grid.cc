@@ -1088,20 +1088,25 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
   // custom header line
   std::istringstream iss(line);
   std::string token;
+
+  int columnindex = -1;
+
   while (std::getline(iss, token, ' ')) {
     if (std::all_of(token.begin(), token.end(), isspace))  // skip whitespace tokens
       continue;
 
+    columnindex++;
+
     if (token == "#inputcellid") {
-      assert_always(columnname.size() == 0);
+      assert_always(columnindex == 0);
     } else if (token == "velocity_outer") {
-      assert_always(columnname.size() == 1);
+      assert_always(columnindex == 1);
     } else if (token == "logrho") {
       // 1D models have log10(rho [g/cm3])
-      assert_always(columnname.size() == 2);
+      assert_always(columnindex == 2);
     } else if (token == "rho") {
       // 3D models have rho [g/cm3]
-      assert_always(columnname.size() == 4);
+      assert_always(columnindex == 4);
       continue;
     } else if (token == "X_Fegroup") {
       continue;
@@ -1120,8 +1125,8 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
     } else if (str_starts_with(token, "pos_")) {
       continue;
     } else {
-      assert_always(get_model_type() != RHO_1D_READ || columnname.size() >= 10);
-      assert_always(get_model_type() != RHO_3D_READ || columnname.size() >= 12);
+      assert_always(get_model_type() != RHO_1D_READ || columnindex >= 10);
+      assert_always(get_model_type() != RHO_3D_READ || columnindex >= 12);
 
       columnname.push_back(token);
 
