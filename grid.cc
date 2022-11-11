@@ -1092,33 +1092,52 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
     if (std::all_of(token.begin(), token.end(), isspace))  // skip whitespace tokens
       continue;
 
-    if (token == "#inputcellid") continue;
-    if (token == "velocity_outer") continue;
-    if (token == "logrho") continue;
-    if (token == "rho") continue;
-    if (token == "X_Fegroup") continue;
-    if (token == "X_Ni56") continue;
-    if (token == "X_Co56") continue;
-    if (token == "X_Fe52") continue;
-    if (token == "X_Cr48") continue;
-    if (token == "X_Ni57") continue;
-    if (token == "X_Co57") continue;
-    if (str_starts_with(token, "pos_")) continue;
-
-    columnname.push_back(token);
-
-    if (str_starts_with(token, "X_")) {                       // if starts with 'X_'
-      const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
-      const int a = decay::get_nucstring_a(token.substr(2));
-      assert_always(z >= 0);
-      assert_always(a >= 0);
-      //   printout("Custom column: '%s' Z %d A %d\n", token.c_str(), z, a);
-      zlist.push_back(z);
-      alist.push_back(a);
+    if (token == "#inputcellid") {
+      assert_always(columnname.size() == 0);
+    } else if (token == "velocity_outer") {
+      assert_always(columnname.size() == 1);
+    } else if (token == "logrho") {
+      // 1D models have log10(rho [g/cm3])
+      assert_always(columnname.size() == 2);
+    } else if (token == "rho") {
+      // 3D models have rho [g/cm3]
+      assert_always(columnname.size() == 4);
+      continue;
+    } else if (token == "X_Fegroup") {
+      continue;
+    } else if (token == "X_Ni56") {
+      continue;
+    } else if (token == "X_Co56") {
+      continue;
+    } else if (token == "X_Fe52") {
+      continue;
+    } else if (token == "X_Cr48") {
+      continue;
+    } else if (token == "X_Ni57") {
+      continue;
+    } else if (token == "X_Co57") {
+      continue;
+    } else if (str_starts_with(token, "pos_")) {
+      continue;
     } else {
-      //   printout("Custom column: '%s' Z %d A %d\n", token.c_str(), -1, -1);
-      zlist.push_back(-1);
-      alist.push_back(-1);
+      assert_always(get_model_type() != RHO_1D_READ || columnname.size() >= 10);
+      assert_always(get_model_type() != RHO_3D_READ || columnname.size() >= 12);
+
+      columnname.push_back(token);
+
+      if (str_starts_with(token, "X_")) {                       // if starts with 'X_'
+        const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
+        const int a = decay::get_nucstring_a(token.substr(2));
+        assert_always(z >= 0);
+        assert_always(a >= 0);
+        //   printout("Custom column: '%s' Z %d A %d\n", token.c_str(), z, a);
+        zlist.push_back(z);
+        alist.push_back(a);
+      } else {
+        //   printout("Custom column: '%s' Z %d A %d\n", token.c_str(), -1, -1);
+        zlist.push_back(-1);
+        alist.push_back(-1);
+      }
     }
   }
 
