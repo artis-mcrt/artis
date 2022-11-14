@@ -839,19 +839,21 @@ constexpr double electron_loss_rate(const double energy, const double nne)
   }
 }
 
-__host__ __device__ static double xs_excitation(const int lineindex, const double epsilon_trans, const double energy)
+__host__ __device__ constexpr double xs_excitation(const struct linelist_entry *line, const double epsilon_trans,
+                                                   const double energy)
 // collisional excitation cross section in cm^2
 // energies are in erg
 {
   if (energy < epsilon_trans) return 0.;
-  const double coll_str = get_coll_str(lineindex);
+
+  const double coll_str = line->coll_str;
 
   if (coll_str >= 0) {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11
-    return pow(H_ionpot / energy, 2) / statw_lower(lineindex) * coll_str * PI * A_naught_squared;
-  } else if (!globals::linelist[lineindex].forbidden) {
-    const double fij = osc_strength(lineindex);
+    return pow(H_ionpot / energy, 2) / statw_lower(line) * coll_str * PI * A_naught_squared;
+  } else if (!line->forbidden) {
+    const double fij = line->osc_strength;
     // permitted E1 electric dipole transitions
     const double U = energy / epsilon_trans;
 
@@ -926,31 +928,31 @@ static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const i
   }
 }
 
-__host__ __device__ static double xs_impactionization(const double energy_ev, const int collionindex)
+__host__ __device__ constexpr double xs_impactionization(const double energy_ev, const struct collionrow &colliondata)
 // impact ionization cross section in cm^2
 // energy and ionization_potential should be in eV
 // fitting forumula of Younger 1981
 // called Q_i(E) in KF92 equation 7
 {
-  const double ionpot_ev = colliondata[collionindex].ionpot_ev;
+  const double ionpot_ev = colliondata.ionpot_ev;
   const double u = energy_ev / ionpot_ev;
 
   if (u <= 1.) {
     return 0;
   } else {
-    const double A = colliondata[collionindex].A;
-    const double B = colliondata[collionindex].B;
-    const double C = colliondata[collionindex].C;
-    const double D = colliondata[collionindex].D;
+    const double A = colliondata.A;
+    const double B = colliondata.B;
+    const double C = colliondata.C;
+    const double D = colliondata.D;
 
     return 1e-14 * (A * (1 - 1 / u) + B * pow((1 - 1 / u), 2) + C * log(u) + D * log(u) / u) / (u * pow(ionpot_ev, 2));
   }
 }
 
-static int get_xs_ionization_vector(gsl_vector *const xs_vec, const int collionindex)
+static int get_xs_ionization_vector(gsl_vector *const xs_vec, const struct collionrow &colliondata)
 // xs_vec will be set with impact ionization cross sections for E > ionpot_ev (and zeros below this energy)
 {
-  const double ionpot_ev = colliondata[collionindex].ionpot_ev;
+  const double ionpot_ev = colliondata.ionpot_ev;
   const int startindex = get_energyindex_ev_gteq(ionpot_ev);
 
   // en points for which en < ionpot
@@ -958,10 +960,10 @@ static int get_xs_ionization_vector(gsl_vector *const xs_vec, const int collioni
     gsl_vector_set(xs_vec, i, 0.);
   }
 
-  const double A = colliondata[collionindex].A;
-  const double B = colliondata[collionindex].B;
-  const double C = colliondata[collionindex].C;
-  const double D = colliondata[collionindex].D;
+  const double A = colliondata.A;
+  const double B = colliondata.B;
+  const double C = colliondata.C;
+  const double D = colliondata.D;
 
   for (int i = startindex; i < SFPTS; i++) {
     const double u = gsl_vector_get(envec, i) / ionpot_ev;
@@ -1043,7 +1045,7 @@ static double N_e(const int modelgridindex, const double energy)
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           const double epsilon_trans_ev = epsilon_trans / EV;
           N_e_ion += (nnlevel / nnion) * get_y(modelgridindex, energy_ev + epsilon_trans_ev) *
-                     xs_excitation(lineindex, epsilon_trans, energy + epsilon_trans);
+                     xs_excitation(&globals::linelist[lineindex], epsilon_trans, energy + epsilon_trans);
         }
       }
 
@@ -1066,7 +1068,8 @@ static double N_e(const int modelgridindex, const double energy)
             const double delta_endash = DELTA_E;
 #endif
 
-            N_e_ion += get_y(modelgridindex, energy_ev + endash) * xs_impactionization(energy_ev + endash, n) *
+            N_e_ion += get_y(modelgridindex, energy_ev + endash) *
+                       xs_impactionization(energy_ev + endash, colliondata[n]) *
                        Psecondary(energy_ev + endash, endash, ionpot_ev, J) * delta_endash;
           }
 
@@ -1079,7 +1082,7 @@ static double N_e(const int modelgridindex, const double energy)
 #else
             const double delta_endash = DELTA_E;
 #endif
-            N_e_ion += get_y_sample(modelgridindex, i) * xs_impactionization(endash, n) *
+            N_e_ion += get_y_sample(modelgridindex, i) * xs_impactionization(endash, colliondata[n]) *
                        Psecondary(endash, energy_ev + ionpot_ev, ionpot_ev, J) * delta_endash;
           }
         }
