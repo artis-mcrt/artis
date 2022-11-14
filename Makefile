@@ -6,7 +6,7 @@ SYSNAME := $(shell uname -s)
 
 BUILD_DIR = build/$(shell uname -m)
 
-CXXFLAGS += -std=c++17 -fstrict-aliasing -ftree-vectorize
+CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize
 
 ifeq ($(SYSNAME),Darwin)
 	# macOS
