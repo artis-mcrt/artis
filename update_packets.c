@@ -62,7 +62,7 @@ int update_packets(int nts)
         if (n % 500 == 0) printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
         //if (n == 5000) exit(0);
         
-	pkt_ptr = &pkt[n];
+	      pkt_ptr = &pkt[n];
         pkt_ptr->interactions = 0;
         //pkt_ptr->timestep = nts;
         
@@ -113,7 +113,10 @@ int update_packets(int nts)
         //printout("[debug] update_packets: current direction of packet %d (%g, %g, %g)\n",n,pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
         
         
-        if ((pkt_ptr->type == TYPE_NICKEL_PELLET) || (pkt_ptr->type == TYPE_COBALT_PELLET) || (pkt_ptr->type == TYPE_48CR_PELLET) || (pkt_ptr->type == TYPE_48V_PELLET)|| (pkt_ptr->type == TYPE_52FE_PELLET) || (pkt_ptr->type == TYPE_52MN_PELLET) || (pkt_ptr->type == TYPE_COBALT_POSITRON_PELLET))
+        if ((pkt_ptr->type == TYPE_NICKEL_PELLET) || (pkt_ptr->type == TYPE_COBALT_PELLET)
+            || (pkt_ptr->type == TYPE_48CR_PELLET) || (pkt_ptr->type == TYPE_48V_PELLET)
+            || (pkt_ptr->type == TYPE_52FE_PELLET) || (pkt_ptr->type == TYPE_52MN_PELLET)
+            || (pkt_ptr->type == TYPE_COBALT_POSITRON_PELLET) || (pkt_ptr->type == TYPE_GENERIC_ENERGY_PELLET))
         {
           //printout("inactive pellet\n");
           /**It's still an inactive pellet. Need to do two things (a) check if it
@@ -173,7 +176,7 @@ int update_packets(int nts)
 	      }
 	    else
 	      {
-		pellet_decay(nts,pkt_ptr);
+		pellet_decay(nts,pkt_ptr);  ///decay to gamma
 		//printout("pellet to photon packet and propagation by packet_prop\n");
 		packet_prop(pkt_ptr,pkt_ptr->tdecay,ts+tw,nts);
 	      }

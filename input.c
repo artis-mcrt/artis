@@ -21,6 +21,7 @@ int input(rank)
   int read_1d_model();
   int read_2d_model();
   int read_3d_model();
+  int energy_init();
   int get_gam_ll();
   int get_nul();
 
@@ -163,6 +164,10 @@ int input(rank)
     }
   //#endif
 
+  #ifdef USE_ENERGYINPUTFILE
+    /// If using energy input files get cell energies
+    energy_init();
+  #endif
 
   /// Read in data for gamma ray lines.
   ///======================================================

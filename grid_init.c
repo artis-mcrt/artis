@@ -68,6 +68,33 @@ int grid_init ()
     exit(0);
   }
 
+#ifdef USE_ENERGYINPUTFILE
+  int assoc_cells;
+  int mgi;
+  double vol_init = wid_init * wid_init * wid_init;
+
+  for (mgi = 0; mgi < MMODELGRID; mgi++)
+  {
+    assoc_cells = modelgrid[mgi].associated_cells;
+    if (assoc_cells > 0)
+    {
+      set_modelcell_energydensity_init(mgi, (modelcell_energy[mgi] / (vol_init * assoc_cells))); //TODO: modelcell_energy/cell volume ==> vol_init*associated cells
+//      set_modelcell_energydensity_init(mgi, modelcell_energy[mgi]); //TODO: modelcell_energy/cell volume ==> vol_init*associated cells
+
+//      printout("cell volume init %g associated cells %d volume %g energy %g energydensity %g mgi %d get_energydensity %g\n",
+//               vol_init, assoc_cells, vol_init*assoc_cells, modelcell_energy[mgi],
+//               modelcell_energy[mgi] / (vol_init * assoc_cells), mgi, get_modelcell_energydensity_init(mgi));
+    }
+    else
+    {
+      set_modelcell_energydensity_init(mgi, 0.);
+    }
+//    printout("cell volume init %g associated cells %d volume %g energydensity %g mgi %d get_energydensity %g\n",
+//             vol_init, assoc_cells, vol_init*assoc_cells, modelcell_energy[mgi] / (vol_init * assoc_cells), mgi, get_modelcell_energydensity_init(mgi));
+  }
+  set_modelcell_energydensity_init(MMODELGRID,0.);
+#endif
+
   /// and assign a temperature to the cells
   assign_temperature();
   
@@ -1693,7 +1720,8 @@ void assign_temperature()
     /// means furthermore LTE, so that both temperatures can be evaluated 
     /// according to the local energy density resulting from the 56Ni decay. 
     /// The dilution factor is W=1 in LTE.
-    
+
+//    #ifndef USE_ENERGYINPUTFILE   CC: I had this in for only using energy from file
     tstart = time_step[0].mid;
     factor = CLIGHT/4/STEBO * 1./56/MH * pow(tmin/tstart,3);
     factor *= -1./(tstart*(-TCOBALT+TNICKEL));
@@ -1706,6 +1734,7 @@ void assign_temperature()
     factor48cr = CLIGHT/4/STEBO * 1./48/MH * pow(tmin/tstart,3);
     factor48cr *= -1./(tstart*(-T48V+T48CR));
     factor48cr *= (-E48CR*exp(-tstart/T48CR)*tstart*T48V - E48CR*exp(-tstart/T48CR)*T48CR*T48V + E48CR*exp(-tstart/T48CR)*tstart*T48CR + pow(T48CR,2)*E48CR*exp(-tstart/T48CR) - T48V*tstart*E48V*exp(-tstart/T48V) - pow(T48V,2)*E48V*exp(-tstart/T48V) + E48V*tstart*T48CR*exp(-tstart/T48CR) + pow(T48CR,2)*E48V*exp(-tstart/T48CR) + E48CR*T48V*T48CR - E48CR*pow(T48CR,2) - pow(T48CR,2)*E48V + E48V*pow(T48V,2));
+//    #endif
 
     //factor = CLIGHT/4/STEBO * ENICKEL/56/MH;
     /// This works only for the inbuilt Lucy model
@@ -1713,6 +1742,13 @@ void assign_temperature()
     //for (n = 0; n < ngrid; n++)
     for (n = 0; n < npts_model; n++)
     {
+    #ifdef USE_ENERGYINPUTFILE
+//      CC: This might not be right... not tested.
+//      Would need both of these if using energyinputfile and radioactive decays
+      T_initial = pow((CLIGHT/4/STEBO * modelcell_energy[n]), 1./4.);
+//      todo: FIX -- modelcell energy should be mgi?
+//      printout("T_initial %g", T_initial);
+    #else
       //mgi = cell[n].modelgridindex;
       T_initial = pow(((factor * get_fni(n) * get_rhoinit(n))
 		       + (factor52fe * get_f52fe(n) * get_rhoinit(n))
@@ -1720,6 +1756,7 @@ void assign_temperature()
       //T_initial = pow(factor * cell[n].f_ni * cell[n].rho_init * (1.-exp(-tmin/TNICKEL)), 1./4.);
       //T_initial = pow(factor * cell[n].f_ni * (1.-exp(-tmin/TNICKEL))/pow(tmin,3), 1./4.);
       //T_initial = 30615.5;
+    #endif
       if (T_initial < MINTEMP)
       {
         set_Te(n, MINTEMP);
@@ -1927,7 +1964,12 @@ float get_W(int modelgridindex)
   return modelgrid[modelgridindex].W;
 }
 
-
+#ifdef USE_ENERGYINPUTFILE
+  double get_modelcell_energydensity_init(int modelgridindex)
+  {
+    return modelgrid[modelgridindex].modelcell_energydensity_init;
+  }
+#endif
 
 void set_rhoinit(int modelgridindex, float x)
 {
@@ -2090,9 +2132,12 @@ void set_W(int modelgridindex, float x)
   modelgrid[modelgridindex].W = x;
 }
 
-
-
-
+#ifdef USE_ENERGYINPUTFILE
+  void set_modelcell_energydensity_init(int modelgridindex, double x)
+  {
+    modelgrid[modelgridindex].modelcell_energydensity_init = x;
+  }
+#endif
 
 
 

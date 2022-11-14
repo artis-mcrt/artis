@@ -75,16 +75,21 @@ int setup_packets (int pktnumberoffset)
   int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberoffset);
   double etot;
   double e0;
-  int n,m;
+  int n,m; // n is packet index, m is grid index
   double zrand,runtot;
   CELL *grid_ptr;
   double fni(CELL *grid_ptr),fco(CELL *grid_ptr),f48cr(CELL *grid_ptr),f52fe(CELL *grid_ptr);
   double vol_init(CELL *grid_ptr);
-  float norm;
-  // float cont[MGRID+1];
+  double norm;
+  double cont[MGRID+1];
   int mabove, mbelow;
   int packet_reset;
+  double modelcell_energydensity_init;
 
+#ifdef USE_ENERGYINPUTFILE
+//  CC: for energyinput and radioactive decays etot should be both this and next
+  etot = etot_fromenergyfile;
+#else
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
   etot = (ENICKEL + ECOBALT) * mni56 / MNI56;
@@ -100,6 +105,9 @@ int setup_packets (int pktnumberoffset)
   e0 = etot / npkts / n_out_it / n_middle_it;
   printout("e0 %g\n", e0);
 
+#endif
+  printout("etot %g\n", etot);
+
   /* Now place the pellets in the ejecta and decide at what time
   they will decay. */
  
@@ -109,14 +117,30 @@ int setup_packets (int pktnumberoffset)
   {
     grid_ptr = &cell[m];
     cont[m] = norm;
+
+  #ifdef USE_ENERGYINPUTFILE
+//    norm += vol_init(grid_ptr) * get_modelcell_energydensity_init(grid_ptr->modelgridindex);
+
+    modelcell_energydensity_init = get_modelcell_energydensity_init(grid_ptr->modelgridindex);
+    if (modelcell_energydensity_init > 0)
+    {
+      norm += vol_init(grid_ptr) * modelcell_energydensity_init;
+    }
+
+//    if(grid_ptr->modelgridindex != MMODELGRID)
+//    {
+//      printout("get_modelcell_energydensity_init %g vol_init %g norm %g m %d mgi %d rho %g\n",
+//               get_modelcell_energydensity_init(grid_ptr->modelgridindex),
+//               vol_init(grid_ptr), norm, m, grid_ptr->modelgridindex, get_rhoinit(grid_ptr->modelgridindex));
+//    }
+    #else
     //printf("%g %g %g\n", (fni(grid_ptr)*(ENICKEL + ECOBALT)/MNI56),(f52fe(grid_ptr)*(E52FE + E52MN)/MFE52),(f48cr(grid_ptr)*(E48V + E48CR)/MCR48));
     norm += get_rhoinit(grid_ptr->modelgridindex) * vol_init(grid_ptr) *
       ((fni(grid_ptr)*(ENICKEL + ECOBALT)/56.)
        +(fco(grid_ptr)*(ECOBALT)/56.)
        +(f52fe(grid_ptr)*(E52FE + E52MN)/52.)
        +(f48cr(grid_ptr)*(E48V + E48CR)/48.));
-
-
+    #endif
   }
   cont[ngrid] = norm;
 
@@ -416,7 +440,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 
   /// First choose a position for the pellet. In the cell.
   /// n is the index of the packet. m is the index for the grid cell.
-  pkt[n].where = m;
+  pkt[n].where = m; //where variable on cartesian grid
   pkt[n].number = n + pktnumberoffset;  ///record the packets number for debugging
 
   zrand = gsl_rng_uniform_pos(rng);
@@ -426,124 +450,159 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
   zrand = gsl_rng_uniform_pos(rng);
   pkt[n].pos[2] = grid_ptr->pos_init[2] + (zrand * wid_init);
 
+  #ifdef USE_ENERGYINPUTFILE
+  /// Only one pellet type for now
 
-  /*first choose which of the decay chains to sample*/
-  prob_chain[0]=fni(grid_ptr)*(ENICKEL + ECOBALT)/MNI56;
-  prob_chain[1]=f52fe(grid_ptr)*(E52FE + E52MN)/MFE52;
-  prob_chain[2]=f48cr(grid_ptr)*(E48V + E48CR)/MCR48;
-  prob_chain[3]=fco(grid_ptr)*ECOBALT/MCO56;
-  
+  prob_chain[0] = 1.; // thermal CC: all thermal for now. Change these if gamma pellets needed
+  prob_chain[1] = 0.; // Could be gamma...
+  prob_chain[2] = 0.; //placeholders...
+  prob_chain[3] = 0.;
 
-  zrand3=gsl_rng_uniform(rng)*(prob_chain[0]+prob_chain[1]+prob_chain[2]+prob_chain[3]);
+    /// Choose if going to be gamma or thermal energy -- only thermal for now
+  zrand3=gsl_rng_uniform(rng)*(prob_chain[0]+prob_chain[1]);
   if (zrand3 <= prob_chain[0])
+  {
+    /// Pellet of thermal energy
+    pkt[n].type = TYPE_GENERIC_ENERGY_PELLET;
+  }
+//  else if (zrand3 <= (prob_chain[0]+prob_chain[1]))
+//  {
+//    pkt[n].type = TYPE_COBALT_PELLET; /// CC: I just added Co for testing
+////    pkt[n].type = TYPE_GENERIC_GAMMA_PELLET;
+//  }
+
+  /// Choose decay time
+  zrand = gsl_rng_uniform(rng);
+  // randomly sample what fraction of energy has been deposited
+  // then find time by which that fraction has been deposited
+  int ii = 0;
+  while (energy_fraction_deposited[ii] < zrand){
+    ii++; // get index of time by which rand energy fraction is deposited
+  }
+  pkt[n].tdecay = time_energydep[ii];
+//  printout("tdecay pellet %g pkt number %d\n", pkt[n].tdecay/DAY, n);
+//  printout("ii %d zrand %g energy_fraction_deposited %g time_energydep %g \n",
+//           ii, zrand, energy_fraction_deposited[ii], time_energydep[ii]/DAY);
+
+  #else
+    /*first choose which of the decay chains to sample*/
+    prob_chain[0]=fni(grid_ptr)*(ENICKEL + ECOBALT)/MNI56;
+    prob_chain[1]=f52fe(grid_ptr)*(E52FE + E52MN)/MFE52;
+    prob_chain[2]=f48cr(grid_ptr)*(E48V + E48CR)/MCR48;
+    prob_chain[3]=fco(grid_ptr)*ECOBALT/MCO56;
+
+
+    zrand3=gsl_rng_uniform(rng)*(prob_chain[0]+prob_chain[1]+prob_chain[2]+prob_chain[3]);
+    if (zrand3 <= prob_chain[0])
+      {
+
+        /// Now choose whether it's going to be a nickel or cobalt pellet and
+        /// mark it as such.
+        zrand = gsl_rng_uniform(rng);
+        if (zrand < (ENICKEL / (ENICKEL + ECOBALT)))
     {
-      
-      /// Now choose whether it's going to be a nickel or cobalt pellet and
-      /// mark it as such.
-      zrand = gsl_rng_uniform(rng);
-      if (zrand < (ENICKEL / (ENICKEL + ECOBALT)))
-	{
-	  pkt[n].type = TYPE_NICKEL_PELLET;
-	}
-      else
-	{
-	  zrand = gsl_rng_uniform(rng);
-	  
-	  if (zrand < ECOBALT_GAMMA/ECOBALT)
-	    {
-	      pkt[n].type = TYPE_COBALT_PELLET;
-	    }
-	  else
-	    {
-	      pkt[n].type = TYPE_COBALT_POSITRON_PELLET;
-	    }
-	}
-      
-      /// Now choose the decay time.
-      if (pkt[n].type == TYPE_NICKEL_PELLET)
-	{
-	  zrand = gsl_rng_uniform(rng);
-	  pkt[n].tdecay = -TNICKEL * log(zrand);
-	}
-      else if (pkt[n].type == TYPE_COBALT_PELLET || pkt[n].type == TYPE_COBALT_POSITRON_PELLET)
-	{
-	  zrand = gsl_rng_uniform(rng);
-	  zrand2 = gsl_rng_uniform(rng);
-	  pkt[n].tdecay = (-TNICKEL * log(zrand)) + (-TCOBALT * log(zrand2));
-	}
+      pkt[n].type = TYPE_NICKEL_PELLET;
     }
-  else if (zrand3 <= (prob_chain[0]+prob_chain[1]))
+        else
     {
-      /// Now choose whether it's going to be a 52Fe or 52Mn pellet and
-      /// mark it as such.
       zrand = gsl_rng_uniform(rng);
-      if (zrand < (E52FE / (E52FE + E52MN)))
-	{
-	  pkt[n].type = TYPE_52FE_PELLET;
-	}
-      else
-	{
-	  pkt[n].type = TYPE_52MN_PELLET;
-	}
-      
-      /// Now choose the decay time.
-      if (pkt[n].type == TYPE_52FE_PELLET)
-	{
-	  zrand = gsl_rng_uniform(rng);
-	  pkt[n].tdecay = -T52FE * log(zrand);
-	}
-      else if (pkt[n].type == TYPE_52MN_PELLET)
-	{
-	  zrand = gsl_rng_uniform(rng);
-	  zrand2 = gsl_rng_uniform(rng);
-	  pkt[n].tdecay = (-T52FE * log(zrand)) + (-T52MN * log(zrand2));
-	}
-    }
-  else if (zrand3 <= (prob_chain[0]+prob_chain[1]+prob_chain[2]))
-    {  
-      /// Now choose whether it's going to be a 48Cr or 48V pellet and
-      /// mark it as such.
-      zrand = gsl_rng_uniform(rng);
-      if (zrand < (E48CR / (E48CR + E48V)))
-	{
-	  pkt[n].type = TYPE_48CR_PELLET;
-	}
-      else
-	{
-	  pkt[n].type = TYPE_48V_PELLET;
-	}
-      
-      /// Now choose the decay time.
-      if (pkt[n].type == TYPE_48CR_PELLET)
-	{
-	  zrand = gsl_rng_uniform(rng);
-	  pkt[n].tdecay = -T48CR * log(zrand);
-	}
-      else if (pkt[n].type == TYPE_48V_PELLET)
-	{
-	  zrand = gsl_rng_uniform(rng);
-	  zrand2 = gsl_rng_uniform(rng);
-	  pkt[n].tdecay = (-T48CR * log(zrand)) + (-T48V * log(zrand2));
-	}
-    }
-  else
-    {
-      /// Now it is a 56Co pellet, choose whether it becomes a positron
-      zrand = gsl_rng_uniform(rng);
-	  
+
       if (zrand < ECOBALT_GAMMA/ECOBALT)
-	{
-	  pkt[n].type = TYPE_COBALT_PELLET;
-	}
+        {
+          pkt[n].type = TYPE_COBALT_PELLET;
+        }
       else
-	{
-	  pkt[n].type = TYPE_COBALT_POSITRON_PELLET;
-	}
-      
-      /// Now choose the decay time.
-      zrand = gsl_rng_uniform(rng);
-      pkt[n].tdecay = -TCOBALT * log(zrand);
+        {
+          pkt[n].type = TYPE_COBALT_POSITRON_PELLET;
+        }
     }
+
+        /// Now choose the decay time.
+        if (pkt[n].type == TYPE_NICKEL_PELLET)
+    {
+      zrand = gsl_rng_uniform(rng);
+      pkt[n].tdecay = -TNICKEL * log(zrand);
+    }
+        else if (pkt[n].type == TYPE_COBALT_PELLET || pkt[n].type == TYPE_COBALT_POSITRON_PELLET)
+    {
+      zrand = gsl_rng_uniform(rng);
+      zrand2 = gsl_rng_uniform(rng);
+      pkt[n].tdecay = (-TNICKEL * log(zrand)) + (-TCOBALT * log(zrand2));
+    }
+      }
+    else if (zrand3 <= (prob_chain[0]+prob_chain[1]))
+      {
+        /// Now choose whether it's going to be a 52Fe or 52Mn pellet and
+        /// mark it as such.
+        zrand = gsl_rng_uniform(rng);
+        if (zrand < (E52FE / (E52FE + E52MN)))
+    {
+      pkt[n].type = TYPE_52FE_PELLET;
+    }
+        else
+    {
+      pkt[n].type = TYPE_52MN_PELLET;
+    }
+
+        /// Now choose the decay time.
+        if (pkt[n].type == TYPE_52FE_PELLET)
+    {
+      zrand = gsl_rng_uniform(rng);
+      pkt[n].tdecay = -T52FE * log(zrand);
+    }
+        else if (pkt[n].type == TYPE_52MN_PELLET)
+    {
+      zrand = gsl_rng_uniform(rng);
+      zrand2 = gsl_rng_uniform(rng);
+      pkt[n].tdecay = (-T52FE * log(zrand)) + (-T52MN * log(zrand2));
+    }
+      }
+    else if (zrand3 <= (prob_chain[0]+prob_chain[1]+prob_chain[2]))
+      {
+        /// Now choose whether it's going to be a 48Cr or 48V pellet and
+        /// mark it as such.
+        zrand = gsl_rng_uniform(rng);
+        if (zrand < (E48CR / (E48CR + E48V)))
+    {
+      pkt[n].type = TYPE_48CR_PELLET;
+    }
+        else
+    {
+      pkt[n].type = TYPE_48V_PELLET;
+    }
+
+        /// Now choose the decay time.
+        if (pkt[n].type == TYPE_48CR_PELLET)
+    {
+      zrand = gsl_rng_uniform(rng);
+      pkt[n].tdecay = -T48CR * log(zrand);
+    }
+        else if (pkt[n].type == TYPE_48V_PELLET)
+    {
+      zrand = gsl_rng_uniform(rng);
+      zrand2 = gsl_rng_uniform(rng);
+      pkt[n].tdecay = (-T48CR * log(zrand)) + (-T48V * log(zrand2));
+    }
+      }
+    else
+      {
+        /// Now it is a 56Co pellet, choose whether it becomes a positron
+        zrand = gsl_rng_uniform(rng);
+
+        if (zrand < ECOBALT_GAMMA/ECOBALT)
+    {
+      pkt[n].type = TYPE_COBALT_PELLET;
+    }
+        else
+    {
+      pkt[n].type = TYPE_COBALT_POSITRON_PELLET;
+    }
+
+        /// Now choose the decay time.
+        zrand = gsl_rng_uniform(rng);
+        pkt[n].tdecay = -TCOBALT * log(zrand);
+      }
+  #endif
 
 
   /// Now assign the energy to the pellet.
