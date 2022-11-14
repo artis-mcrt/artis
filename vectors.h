@@ -105,7 +105,7 @@ constexpr double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_
 }
 
 constexpr double doppler_packet_nucmf_on_nurf(const struct packet *const pkt_ptr) {
-  double flow_velocity[3];  // homologous flow velocity
+  double flow_velocity[3] = {0, 0, 0};  // homologous flow velocity
   get_velocity(pkt_ptr->pos, flow_velocity, pkt_ptr->prop_time);
   return doppler_nucmf_on_nurf(pkt_ptr->dir, flow_velocity);
 }

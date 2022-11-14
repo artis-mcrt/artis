@@ -1338,7 +1338,7 @@ static double calculate_nt_frac_ionization_shell(const int modelgridindex, const
   const double ionpot_ev = colliondata[collionindex].ionpot_ev;
 
   gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
-  get_xs_ionization_vector(cross_section_vec, collionindex);
+  get_xs_ionization_vector(cross_section_vec, colliondata[collionindex]);
 
 // either multiply by the variable delta_e for LOG_E spacing...
 #if (SF_USE_LOG_E_INCREMENT)
@@ -1387,7 +1387,7 @@ static double calculate_nt_ionization_ratecoeff(const int modelgridindex, const 
 
   for (int collionindex = 0; collionindex < colliondatacount; collionindex++) {
     if (colliondata[collionindex].Z == Z && colliondata[collionindex].nelec == Z - ionstage + 1) {
-      get_xs_ionization_vector(cross_section_vec, collionindex);
+      get_xs_ionization_vector(cross_section_vec, colliondata[collionindex]);
 
       if (assumeshellpotentialisvalence) {
         const double ionpot_shell = colliondata[collionindex].ionpot_ev * EV;
@@ -2356,7 +2356,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
       // printout("Z=%2d ion_stage %d n %d l %d ionpot %g eV\n",
       //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
 
-      const int xsstartindex = get_xs_ionization_vector(vec_xs_ionization, collionindex);
+      const int xsstartindex = get_xs_ionization_vector(vec_xs_ionization, colliondata[collionindex]);
       // Luke Shingles: the use of min and max on the epsilon limits keeps energies
       // from becoming unphysical. This insight came from reading the
       // CMFGEN Fortran source code (Li, Dessart, Hillier 2012, doi:10.1111/j.1365-2966.2012.21198.x)
