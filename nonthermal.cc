@@ -817,7 +817,7 @@ __host__ __device__ static double get_y(const int modelgridindex, const double e
   }
 }
 
-static double electron_loss_rate(const double energy, const double nne)
+constexpr double electron_loss_rate(const double energy, const double nne)
 // -dE / dx for fast electrons
 // energy is in ergs
 // nne is the thermal electron density [cm^-3]
