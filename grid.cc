@@ -1078,11 +1078,6 @@ static void abundances_read(void) {
   printout("done.\n");
 }
 
-static bool str_starts_with(const std::string &str, const std::string &strprefix) {
-  // return true if str starts with strprefix
-  return (str.rfind(strprefix, 0) == 0);
-}
-
 static void read_model_headerline(std::string line, std::vector<int> &zlist, std::vector<int> &alist,
                                   std::vector<std::string> &columnname) {
   // custom header line
@@ -1124,7 +1119,7 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
       continue;
     } else if (token == "X_Co57") {
       continue;
-    } else if (str_starts_with(token, "pos_")) {
+    } else if (token.starts_with("pos_")) {
       continue;
     } else {
       assert_always(get_model_type() != RHO_1D_READ || columnindex >= 10);
@@ -1132,7 +1127,7 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
 
       columnname.push_back(token);
 
-      if (str_starts_with(token, "X_")) {                       // if starts with 'X_'
+      if (token.starts_with("X_")) {                            // if starts with 'X_'
         const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
         const int a = decay::get_nucstring_a(token.substr(2));
         assert_always(z >= 0);
