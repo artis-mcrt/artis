@@ -129,10 +129,9 @@ __host__ __device__ static double get_nuc_decaybranchprob(const int z_parent, co
   return nuclides[get_nuc_index(z_parent, a_parent)].branchprobs[decaytype];
 }
 
-static int decay_daughter_z(const int z_parent, const int a_parent, int decaytype)
+constexpr int decay_daughter_z(const int z_parent, const int a_parent, int decaytype)
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
-  assert_testmodeonly(nuc_exists(z_parent, a_parent));
   assert_always(decaytype >= 0);
   assert_always(decaytype < DECAYTYPE_COUNT);
 
@@ -154,14 +153,11 @@ static int decay_daughter_z(const int z_parent, const int a_parent, int decaytyp
       assert_always(false);
     }
   }
-  return -1;  // no daughter
 }
 
-static int decay_daughter_a(const int z_parent, const int a_parent, int decaytype)
+constexpr int decay_daughter_a(const int z_parent, const int a_parent, int decaytype)
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
-  assert_testmodeonly(nuc_exists(z_parent, a_parent));
-
   switch ((enum decaytypes)decaytype) {
     case DECAYTYPE_ALPHA: {
       return a_parent - 4;  // lose two protons and two neutrons
@@ -176,11 +172,9 @@ static int decay_daughter_a(const int z_parent, const int a_parent, int decaytyp
     }
     case DECAYTYPE_COUNT: {
       assert_always(false);
+      return -1;  // no daughter
     }
   }
-  return -1;  // no daughter
-
-  return a_parent;
 }
 
 static bool nuc_is_parent(const int z_parent, const int a_parent, const int z, const int a)
