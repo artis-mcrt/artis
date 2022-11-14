@@ -611,7 +611,7 @@ void add_to_spec_res(const struct packet *const pkt_ptr, int current_abin, struc
   if (current_abin == -1) {
     // angle averaged spectrum
     add_to_spec(pkt_ptr, current_abin, spectra, stokes_i, stokes_q, stokes_u);
-  } else if (get_escapedirectionbin(pkt_ptr) == current_abin) {
+  } else if (get_escapedirectionbin(pkt_ptr->dir, globals::syn_dir) == current_abin) {
     // Add only packets which escape to the current angle bin
     add_to_spec(pkt_ptr, current_abin, spectra, stokes_i, stokes_q, stokes_u);
   }

@@ -52,7 +52,7 @@ void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, double *light
     }
 
     return;
-  } else if (get_escapedirectionbin(pkt_ptr) == current_abin) {
+  } else if (get_escapedirectionbin(pkt_ptr->dir, globals::syn_dir) == current_abin) {
     // Add only packets which escape to the current angle bin
     double t_arrive = get_arrive_time(pkt_ptr);
     if (t_arrive > globals::tmin && t_arrive < globals::tmax) {

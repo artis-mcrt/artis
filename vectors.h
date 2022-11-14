@@ -5,6 +5,7 @@
 
 #include "constants.h"
 #include "cuda.h"
+#include "exspec.h"
 #include "packet.h"
 #include "sn3d.h"
 
@@ -13,15 +14,14 @@ __host__ __device__ void scatter_dir(const double dir_in[3], double cos_theta, d
 __host__ __device__ void get_rand_isotropic_unitvec(double vecout[3]);
 __host__ __device__ void move_pkt(struct packet *pkt_ptr, double distance);
 __host__ __device__ void move_pkt_withtime(struct packet *pkt_ptr, double distance);
-__host__ __device__ int get_escapedirectionbin(const struct packet *pkt_ptr);
 
-__host__ __device__ static inline double vec_len(const double x[3])
+constexpr double vec_len(const double x[3])
 // return the the magnitude of a vector
 {
   return std::sqrt((x[0] * x[0]) + (x[1] * x[1]) + (x[2] * x[2]));
 }
 
-__host__ __device__ static inline void vec_norm(const double vec_in[3], double vec_out[3])
+constexpr void vec_norm(const double vec_in[3], double vec_out[3])
 // normalizing a copy of vec_in and save it to vec_out
 {
   const double magnitude = vec_len(vec_in);
@@ -31,13 +31,13 @@ __host__ __device__ static inline void vec_norm(const double vec_in[3], double v
   vec_out[2] = vec_in[2] / magnitude;
 }
 
-__host__ __device__ constexpr double dot(const double x[3], const double y[3])
+constexpr double dot(const double x[3], const double y[3])
 // vector dot product
 {
   return (x[0] * y[0]) + (x[1] * y[1]) + (x[2] * y[2]);
 }
 
-__host__ __device__ constexpr void get_velocity(const double x[3], double y[3], const double t)
+constexpr void get_velocity(const double x[3], double y[3], const double t)
 // Routine for getting velocity vector of the flow at a position with homologous expansion.
 {
   y[0] = x[0] / t;
@@ -45,25 +45,25 @@ __host__ __device__ constexpr void get_velocity(const double x[3], double y[3], 
   y[2] = x[2] / t;
 }
 
-__host__ __device__ constexpr void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]) {
+constexpr void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]) {
   vecout[0] = (vec1[1] * vec2[2]) - (vec2[1] * vec1[2]);
   vecout[1] = (vec1[2] * vec2[0]) - (vec2[2] * vec1[0]);
   vecout[2] = (vec1[0] * vec2[1]) - (vec2[0] * vec1[1]);
 }
 
-__host__ __device__ constexpr void vec_scale(double vec[3], const double scalefactor) {
+constexpr void vec_scale(double vec[3], const double scalefactor) {
   vec[0] *= scalefactor;
   vec[1] *= scalefactor;
   vec[2] *= scalefactor;
 }
 
-__host__ __device__ constexpr void vec_copy(double destination[3], const double source[3]) {
+constexpr void vec_copy(double destination[3], const double source[3]) {
   destination[0] = source[0];
   destination[1] = source[1];
   destination[2] = source[2];
 }
 
-__host__ __device__ constexpr double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
+constexpr double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
 // Doppler factor
 // arguments:
 //   dir_rf: the rest frame direction (unit vector) of light propagation
@@ -89,7 +89,7 @@ __host__ __device__ constexpr double doppler_nucmf_on_nurf(const double dir_rf[3
   return dopplerfactor;
 }
 
-__host__ __device__ static inline double doppler_packet_nucmf_on_nurf(const struct packet *const pkt_ptr) {
+constexpr double doppler_packet_nucmf_on_nurf(const struct packet *const pkt_ptr) {
   double flow_velocity[3];  // homologous flow velocity
   get_velocity(pkt_ptr->pos, flow_velocity, pkt_ptr->prop_time);
   return doppler_nucmf_on_nurf(pkt_ptr->dir, flow_velocity);
@@ -105,6 +105,40 @@ constexpr double get_arrive_time(const struct packet *pkt_ptr)
 
 inline double get_arrive_time_cmf(const struct packet *pkt_ptr) {
   return pkt_ptr->escape_time * std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
+}
+
+constexpr int get_escapedirectionbin(const double dir_in[3], const double syn_dir[3]) {
+  constexpr double xhat[3] = {1.0, 0.0, 0.0};
+
+  // sometimes dir vectors aren't accurately normalised
+  const double dirmag = vec_len(dir_in);
+  const double dir[3] = {dir_in[0] / dirmag, dir_in[1] / dirmag, dir_in[2] / dirmag};
+
+  /// Angle resolved case: need to work out the correct angle bin
+  const double costheta = dot(dir, syn_dir);
+  const int thetabin = ((costheta + 1.0) * NPHIBINS / 2.0);
+
+  double vec1[3];
+  cross_prod(dir, syn_dir, vec1);
+
+  double vec2[3];
+  cross_prod(xhat, syn_dir, vec2);
+  const double cosphi = dot(vec1, vec2) / vec_len(vec1) / vec_len(vec2);
+
+  double vec3[3];
+  cross_prod(vec2, syn_dir, vec3);
+  const double testphi = dot(vec1, vec3);
+
+  int phibin;
+  if (testphi > 0) {
+    phibin = (acos(cosphi) / 2. / PI * NPHIBINS);
+  } else {
+    phibin = ((acos(cosphi) + PI) / 2. / PI * NPHIBINS);
+  }
+  const int na = (thetabin * NPHIBINS) + phibin;
+  assert_always(na < MABINS);
+
+  return na;
 }
 
 #endif  // VECTORS_H
