@@ -218,7 +218,7 @@ pair_prod(pkt_ptr,t_current)
 	  exit(0);
 	}
       
-      get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->tdecay);
+      get_velocity(pkt_ptr->pos, vel_vec, t_current);
       pkt_ptr->nu_rf = pkt_ptr->nu_cmf / doppler(pkt_ptr->dir, vel_vec);
       pkt_ptr->e_rf = pkt_ptr->e_cmf * pkt_ptr->nu_rf /pkt_ptr->nu_cmf; 
       
