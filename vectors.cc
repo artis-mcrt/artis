@@ -118,26 +118,36 @@ __host__ __device__ void move_pkt_withtime(struct packet *pkt_ptr, const double 
 
 int get_escapedirectionbin(const struct packet *pkt_ptr) {
   constexpr double xhat[3] = {1.0, 0.0, 0.0};
-  double vec1[3];
-  double vec2[3];
-  double vec3[3];
+
+  // sometimes dir vectors aren't accurately normalised
+  const double dirmag = vec_len(pkt_ptr->dir);
+  double dir[3] = {pkt_ptr->dir[0] / dirmag, pkt_ptr->dir[1] / dirmag, pkt_ptr->dir[2] / dirmag};
+
+  constexpr int NPHIBINS = std::sqrt(MABINS);
 
   /// Angle resolved case: need to work out the correct angle bin
-  const double costheta = dot(pkt_ptr->dir, globals::syn_dir);
-  const int thetabin = ((costheta + 1.0) * std::sqrt(MABINS) / 2.0);
-  cross_prod(pkt_ptr->dir, globals::syn_dir, vec1);
+  const double costheta = dot(dir, globals::syn_dir);
+  const int thetabin = ((costheta + 1.0) * NPHIBINS / 2.0);
+
+  double vec1[3];
+  cross_prod(dir, globals::syn_dir, vec1);
+
+  double vec2[3];
   cross_prod(xhat, globals::syn_dir, vec2);
   const double cosphi = dot(vec1, vec2) / vec_len(vec1) / vec_len(vec2);
 
+  double vec3[3];
   cross_prod(vec2, globals::syn_dir, vec3);
   const double testphi = dot(vec1, vec3);
 
   int phibin;
   if (testphi > 0) {
-    phibin = (acos(cosphi) / 2. / PI * std::sqrt(MABINS));
+    phibin = (acos(cosphi) / 2. / PI * NPHIBINS);
   } else {
-    phibin = ((acos(cosphi) + PI) / 2. / PI * std::sqrt(MABINS));
+    phibin = ((acos(cosphi) + PI) / 2. / PI * NPHIBINS);
   }
-  const int na = (thetabin * sqrt(MABINS)) + phibin;
+  const int na = (thetabin * NPHIBINS) + phibin;
+  assert_always(na < MABINS);
+
   return na;
 }
