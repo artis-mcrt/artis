@@ -153,6 +153,7 @@ constexpr int decay_daughter_z(const int z_parent, const int a_parent, int decay
       assert_always(false);
     }
   }
+  return -1;  // no daughter
 }
 
 constexpr int decay_daughter_a(const int z_parent, const int a_parent, int decaytype)
@@ -172,9 +173,9 @@ constexpr int decay_daughter_a(const int z_parent, const int a_parent, int decay
     }
     case DECAYTYPE_COUNT: {
       assert_always(false);
-      return -1;  // no daughter
     }
   }
+  return -1;  // no daughter
 }
 
 static bool nuc_is_parent(const int z_parent, const int a_parent, const int z, const int a)
