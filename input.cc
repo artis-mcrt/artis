@@ -823,6 +823,7 @@ static void read_atomicdata_files(void) {
       int nlevelsmax = nlevelsmax_readin;
       // printout("element %d ion %d\n", element, ion);
       /// calculate the current levels ground level energy
+      assert_always(ionpot >= 0);
       energyoffset += ionpot;
 
       /// read information for the elements next ionstage
@@ -845,12 +846,7 @@ static void read_atomicdata_files(void) {
               fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex, &levelenergy, &statweight, &ntransitions) == 4);
         }
 
-        const int fscanfadata = fscanf(adata, "%d %d %d %lg\n", &adata_Z_in, &ionstage, &nlevels, &ionpot);
-
-        if (fscanfadata == EOF) {
-          printout("End of file in adata not expected");
-          abort();
-        }
+        assert_always(fscanf(adata, "%d %d %d %lg\n", &adata_Z_in, &ionstage, &nlevels, &ionpot) == 4);
       }
 
       printout("adata header matched: Z %d, ionstage %d, nlevels %d\n", adata_Z_in, ionstage, nlevels);
