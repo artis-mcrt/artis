@@ -1035,10 +1035,9 @@ __host__ __device__ static double calculate_kappa_ff(const int modelgridindex, c
 
   double kappa_ff = 0.;
   // kappa_ffheating = 0.;
-
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
+  const int nelements = get_nelements();
+  for (int element = 0; element < nelements; element++) {
+    for (int ion = 0; ion < get_nions(element); ion++) {
       /// calculate population of ionstage ...
       const double nnion = ionstagepop(modelgridindex, element, ion);
       // Z = get_element(element);  ///atomic number
