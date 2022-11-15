@@ -993,18 +993,10 @@ __host__ __device__ void emitt_rpkt(struct packet *pkt_ptr) {
   // printout("[debug] pkt_ptr->dir in RF: %g %g %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 
   /// Check unit vector.
-  if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-8) {
-    printout("[fatal] emitt_rpkt: Not a unit vector. Abort.\n");
-    abort();
-  }
+  assert_always(fabs(vec_len(pkt_ptr->dir) - 1.) < 1.e-8);
 
   /// Finally we want to put in the rest frame energy and frequency. And record
   /// that it's now a r-pkt.
-
-  if (pkt_ptr->e_cmf > 1e52) {
-    printout("[fatal] emitt_rpkt: here %g\n", pkt_ptr->e_cmf);
-    abort();
-  }
 
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
