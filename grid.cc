@@ -222,12 +222,6 @@ __host__ __device__ float get_nnetot(int modelgridindex) {
 
 __host__ __device__ float get_ffegrp(int modelgridindex) { return modelgrid[modelgridindex].ffegrp; }
 
-__host__ __device__ float get_elem_abundance(int modelgridindex, int element)
-// mass fraction of an element (all isotopes combined)
-{
-  return modelgrid[modelgridindex].composition[element].abundance;
-}
-
 __host__ __device__ void set_elem_abundance(int modelgridindex, int element, float newabundance)
 // mass fraction of an element (all isotopes combined)
 {

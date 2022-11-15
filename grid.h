@@ -86,7 +86,6 @@ __host__ __device__ float get_rho(int modelgridindex);
 __host__ __device__ float get_nne(int modelgridindex);
 __host__ __device__ float get_nnetot(int modelgridindex);
 __host__ __device__ float get_ffegrp(int modelgridindex);
-__host__ __device__ float get_elem_abundance(int modelgridindex, int element);
 __host__ __device__ void set_elem_abundance(int modelgridindex, int element, float newabundance);
 __host__ __device__ double get_elem_numberdens(int modelgridindex, int element);
 __host__ __device__ double get_initelectronfrac(int modelgridindex);
@@ -126,6 +125,12 @@ int get_nstart(int rank);
 int get_ndo(int rank);
 int get_ndo_nonempty(int rank);
 double get_totmassradionuclide(int z, int a);
+
+__host__ __device__ static inline float get_elem_abundance(int modelgridindex, int element)
+// mass fraction of an element (all isotopes combined)
+{
+  return modelgrid[modelgridindex].composition[element].abundance;
+}
 
 }  // namespace grid
 

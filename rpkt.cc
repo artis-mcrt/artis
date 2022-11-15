@@ -1099,7 +1099,8 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
   //                                        [](const double &nu, const double &nu_edge) { return nu < nu_edge; }) -
   //                       &globals::allcont_nu_edge[0];
   int i = 0;
-  for (i = 0; i < globals::nbfcontinua; i++) {
+  const int nbfcontinua = globals::nbfcontinua;
+  for (i = 0; i < nbfcontinua; i++) {
     const int element = globals::allcont[i].element;
     const int ion = globals::allcont[i].ion;
     const int level = globals::allcont[i].level;
