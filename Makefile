@@ -6,21 +6,20 @@ SYSNAME := $(shell uname -s)
 
 BUILD_DIR = build/$(shell uname -m)
 
-CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize
+CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -g -flto=auto
 
 ifeq ($(SYSNAME),Darwin)
 	# macOS
 
-	# -fmodules-ts -fimplicit-modules -fimplicit-module-maps
-	CXXFLAGS += -g
+	# march=native also works on Apple Silicon with Clang >=15
+	CXXFLAGS += -march=native
 
-	ifeq ($(shell uname -m),arm64)
-		CXXFLAGS += -mcpu=apple-m1
-		# march=native works on Apple Silicon with Clang >=15
-		# CXXFLAGS += -march=native
-	else
-		CXXFLAGS += -march=native
-	endif
+	# ifeq ($(shell uname -m),arm64)
+	# 	CXXFLAGS += -mcpu=apple-m1
+	# else
+	# 	CXXFLAGS += -march=native
+	# endif
+
 
 	# CXXFLAGS += -fopenmp-simd
 	# CXXFLAGS += -fvectorize
@@ -28,11 +27,8 @@ ifeq ($(SYSNAME),Darwin)
 	# enable OpenMP for Clang
 	# CXXFLAGS += -Xpreprocessor -fopenmp -lomp
 
-	# also -fopenmp after -I$(INCLUDE)
-	# maybe  -fopt-info-vec-missed
-	#  -fwhole-program
 	# add -lprofiler for gperftools
-	LDFLAGS += $(LIB)
+	#LDFLAGS += $(LIB)
 	# LDFLAGS += -lprofiler
 
 else ifeq ($(USER),localadmin_ccollins)
@@ -43,8 +39,6 @@ else ifeq ($(USER),localadmin_ccollins)
 	CXXFLAGS += -g -I$(INCLUDE)
 	LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
 	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
-
-else
 
 endif
 
@@ -65,12 +59,12 @@ CXXFLAGS += $(shell pkg-config --cflags gsl)
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true -O3 -g -flto=auto
+	CXXFLAGS += -DTESTMODE=true -O3
 	CXXFLAGS += -fsanitize=address -fno-omit-frame-pointer -fno-common
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
 	# skip array range checking for better performance and use optimizations
-	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3 -flto=auto
+	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3
 endif
 
 CXXFLAGS += -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -Wno-inline
