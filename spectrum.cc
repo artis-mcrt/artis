@@ -313,12 +313,16 @@ static int columnindex_from_emissiontype(const int et) {
     return element * get_max_nions() + ion;
   } else if (et == -9999999) {
     /// ff-emission
+
+    const int et_new = -1 - et;
+    assert_always(et_new >= globals::nbfcontinua);  // make sure the special value didn't collide with a real process
+
     return 2 * get_nelements() * get_max_nions();
   } else {
     /// bf-emission
     const int et_new = -1 - et;
     if (globals::nbfcontinua == 0) {
-      // TODO: remove. testing only
+      assert_always(false);  // if there are no bf processes, we should not get here
       return 2 * get_nelements() * get_max_nions();
     }
     assert_always(et_new < globals::nbfcontinua);
