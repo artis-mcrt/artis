@@ -13,6 +13,9 @@ ifeq ($(SYSNAME),Darwin)
 
 	# march=native also works on Apple Silicon with Clang >=15
 	CXXFLAGS += -march=native
+#	CXXFLAGS += -Rpass=loop-vectorize
+#	CXXFLAGS += -Rpass-missed=loop-vectorize
+#	CXXFLAGS += -Rpass-analysis=loop-vectorize
 
 	# ifeq ($(shell uname -m),arm64)
 	# 	CXXFLAGS += -mcpu=apple-m1
@@ -20,15 +23,13 @@ ifeq ($(SYSNAME),Darwin)
 	# 	CXXFLAGS += -march=native
 	# endif
 
-
 	# CXXFLAGS += -fopenmp-simd
-	# CXXFLAGS += -fvectorize
 
 	# enable OpenMP for Clang
 	# CXXFLAGS += -Xpreprocessor -fopenmp -lomp
 
 	# add -lprofiler for gperftools
-	#LDFLAGS += $(LIB)
+	# LDFLAGS += $(LIB)
 	# LDFLAGS += -lprofiler
 
 else ifeq ($(USER),localadmin_ccollins)
