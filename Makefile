@@ -44,16 +44,12 @@ endif
 
 
 # GSL (GNU Scientific Library)
-# GSL option 1: Use pkg-config to find GSL and use dynamic linking
+# GSL option 1: Use pkg-config to find GSL
 LDFLAGS += $(shell pkg-config --libs gsl)
 CXXFLAGS += $(shell pkg-config --cflags gsl)
 #
-# GSL option 2: Use compiler default search paths to find GSL and use dynamic linking
+# GSL option 2: Use default search paths to find GSL
 # LDFLAGS += -lgsl -lgslcblas -lm
-#
-# GSL option 3: Specify the path to libgsl.a and libgslclas.a and use static linking (GSL needed to compile but not to run)
-# CXXFLAGS += /usr/local/Cellar/gsl/2.6/lib/libgsl.a
-# CXXFLAGS += /usr/local/Cellar/gsl/2.6/lib/libgslcblas.a
 
 # Use GSL inline functions
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
@@ -75,7 +71,14 @@ else ifeq ($(MPI),)
 	# MPI option not specified. set to true by default
 	MPI := ON
 else
-$(error bad value of MPI. Should be ON or OFF)
+$(error bad value for MPI option. Should be ON or OFF)
+endif
+
+ifeq ($(TESTMODE),ON)
+else ifeq ($(TESTMODE),OFF)
+else ifeq ($(TESTMODE),)
+else
+$(error bad value for testmode option. Should be ON or OFF)
 endif
 
 ifeq ($(MPI),ON)
