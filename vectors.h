@@ -167,18 +167,18 @@ constexpr int get_escapedirectionbin(const double dir_in[3], const double syn_di
   const int costhetabin = ((costheta + 1.0) * NPHIBINS / 2.0);
   assert_testmodeonly(costhetabin < NCOSTHETABINS);
 
-  double vec1[3];
+  double vec1[3] = {0};
   cross_prod(dir, syn_dir, vec1);
 
-  double vec2[3];
+  double vec2[3] = {0};
   cross_prod(xhat, syn_dir, vec2);
   const double cosphi = dot(vec1, vec2) / vec_len(vec1) / vec_len(vec2);
 
-  double vec3[3];
+  double vec3[3] = {0};
   cross_prod(vec2, syn_dir, vec3);
   const double testphi = dot(vec1, vec3);
 
-  int phibin;
+  int phibin = 0;
   if (testphi > 0) {
     phibin = (acos(cosphi) / 2. / PI * NPHIBINS);
   } else {
