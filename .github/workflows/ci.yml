@@ -48,7 +48,7 @@ jobs:
         runs-on: ubuntu-22.04
         strategy:
             matrix:
-                compiler: [{name: gcc, cmd: g++-12}, {name: clang, cmd: clang++}]
+                compiler: [{name: gcc-11, cmd: g++-11}, {name: gcc-12, cmd: g++-12}, {name: clang 14, cmd: clang++}]
                 mpi: [ON, OFF]
             fail-fast: false
 
@@ -63,13 +63,18 @@ jobs:
                   # echo "count=$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')" >> $GITHUB_OUTPUT
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
-            - name: Install gcc
-              if: matrix.compiler.name == 'gcc'
+            - name: Install gcc-11
+              if: matrix.compiler.name == 'gcc-11'
+              run: |
+                  sudo apt-get install -y gcc-11 g++-11
+
+            - name: Install gcc-12
+              if: matrix.compiler.name == 'gcc-12'
               run: |
                   sudo apt-get install -y gcc-12 g++-12
 
-            - name: Install clang
-              if: matrix.compiler.name == 'clang'
+            - name: Install clang 14
+              if: matrix.compiler.name == 'clang 14'
               run: |
                   sudo apt-get install -y clang-14 --install-suggests
 
