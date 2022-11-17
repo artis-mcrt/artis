@@ -1126,7 +1126,7 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
 
       columnname.push_back(token);
 
-      if (str_starts_with(token, "X_")) {                       // if starts with 'X_'
+      if (str_starts_with(token, "X_")) {
         const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
         const int a = decay::get_nucstring_a(token.substr(2));
         assert_always(z >= 0);
