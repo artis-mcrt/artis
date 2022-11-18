@@ -172,7 +172,7 @@ void write_spectrum(const char *spec_filename, const char *emission_filename, co
 
   fprintf(spec_file, "%g ", 0.0);
   for (int p = 0; p < numtimesteps; p++) {
-    fprintf(spec_file, " %g", globals::time_step[p].mid / DAY);
+    fprintf(spec_file, "%g ", globals::time_step[p].mid / DAY);
   }
   fprintf(spec_file, "\n");
 
