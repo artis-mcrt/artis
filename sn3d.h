@@ -2,7 +2,15 @@
 #define SN3D_H
 
 #include <cassert>
+#include <chrono>
+#include <cstdio>
+#include <cstring>
+#include <ctime>
 
+#include "artisoptions.h"
+#include "globals.h"
+
+extern FILE *output_file;
 #ifndef __CUDA_ARCH__
 // host code
 
@@ -26,7 +34,39 @@
 #define assert_testmodeonly(e) ((void)0)
 #endif
 
-#define printout(...) fprintf(output_file, __VA_ARGS__)
+// #define printout(...) fprintf(output_file, __VA_ARGS__)
+
+extern int tid;
+
+template <typename... Args>
+static int printout(const char *format, Args... args) {
+  if (globals::startofline[tid]) {
+    time_t now_time = time(NULL);
+    char s[32] = "";
+    strftime(s, 32, "%FT%TZ", gmtime(&now_time));
+    fprintf(output_file, "%s ", s);
+  }
+  globals::startofline[tid] = (format[strlen(format) - 1] == '\n');
+  return fprintf(output_file, format, args...);
+}
+
+static int printout(const char *format) {
+  if (globals::startofline[tid]) {
+    time_t now_time = time(NULL);
+    char s[32] = "";
+    strftime(s, 32, "%FT%TZ", gmtime(&now_time));
+    fprintf(output_file, "%s ", s);
+  }
+  globals::startofline[tid] = (format[strlen(format) - 1] == '\n');
+  return fprintf(output_file, "%s", format);
+}
+
+static inline int get_bflutindex(const int tempindex, const int element, const int ion, const int level,
+                                 const int phixstargetindex) {
+  const int contindex = -1 - globals::elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
+
+  return tempindex * globals::nbfcontinua + contindex;
+}
 
 #ifdef _OPENMP
 #ifndef __CUDACC__
@@ -62,13 +102,8 @@
 
 #include "cuda.h"
 
-#define DEBUG_ON
 // #define DO_TITER
 // #define FORCE_LTE
-
-#include "globals.h"
-#include "types.h"
-#include "vectors.h"
 
 #if (DETAILED_BF_ESTIMATORS_ON && !NO_LUT_PHOTOION)
 #error Must use NO_LUT_PHOTOION with DETAILED_BF_ESTIMATORS_ON
@@ -79,7 +114,7 @@
 #endif
 
 #ifdef MPI_ON
-#include "mpi.h"
+#include <mpi.h>
 #endif
 
 // #define _OPENMP
@@ -96,19 +131,23 @@ extern int tid;
 extern __managed__ bool use_cellhist;
 extern __managed__ bool neutral_flag;
 #ifndef __CUDA_ARCH__
+
+#include <gsl/gsl_rng.h>
 extern gsl_rng *rng;  // pointer for random number generator
 #else
 extern __device__ void *rng;
 #endif
 extern gsl_integration_workspace *gslworkspace;
-extern FILE *output_file;
 extern __managed__ int myGpuId;
 
 #ifdef _OPENMP
 #pragma omp threadprivate(tid, myGpuId, use_cellhist, neutral_flag, rng, gslworkspace, output_file)
 #endif
 
-inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno) {
+#include "globals.h"
+#include "vectors.h"
+
+static inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno) {
   if (gsl_errno != 18)  // roundoff error
   {
     printout("WARNING: gsl (%s:%d): %s (Error code %d)\n", file, line, reason, gsl_errno);
@@ -116,7 +155,7 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
   }
 }
 
-inline FILE *fopen_required(const char *filename, const char *mode) {
+static FILE *fopen_required(const char *filename, const char *mode) {
   FILE *file = fopen(filename, mode);
   if (file == NULL) {
     printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename, mode);
@@ -126,7 +165,7 @@ inline FILE *fopen_required(const char *filename, const char *mode) {
   return file;
 }
 
-inline int get_timestep(const double time) {
+static int get_timestep(const double time) {
   assert_always(time >= globals::tmin);
   assert_always(time < globals::tmax);
   for (int nts = 0; nts < globals::ntstep; nts++) {
@@ -138,18 +177,6 @@ inline int get_timestep(const double time) {
   assert_always(false);  // could not find matching timestep
 
   return -1;
-}
-
-inline double get_arrive_time(const PKT *pkt_ptr)
-/// We know that a packet escaped at "escape_time". However, we have
-/// to allow for travel time. Use the formula in Leon's paper. The extra
-/// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
-{
-  return pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / globals::CLIGHT_PROP);
-}
-
-inline double get_arrive_time_cmf(const PKT *pkt_ptr) {
-  return pkt_ptr->escape_time * sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
 }
 
 __host__ __device__ inline int get_max_threads(void) {

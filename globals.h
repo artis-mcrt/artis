@@ -1,16 +1,211 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#include <memory>
+#include <vector>
+
+#include "cuda.h"
+
 #if CUDA_ENABLED
 #include <curand_kernel.h>
 #endif
 
-#include "cuda.h"
-#include "grid.h"
-#include "types.h"
 #ifdef MPI_ON
-#include "mpi.h"
+#include <mpi.h>
 #endif
+
+#include "artisoptions.h"
+#include "boundary.h"
+
+struct time {
+  double start;                   // time at start of this timestep. [s]
+  double width;                   // Width of timestep. [s]
+  double mid;                     // Mid time in step - computed logarithmically. [s]
+  double gamma_dep;               // cmf gamma ray energy deposition from absorption events [erg]
+  double gamma_dep_pathint;       // cmf gamma ray energy deposition from packet trajectories [erg]
+  double positron_dep;            // cmf positron energy deposition [erg]
+  double eps_positron_ana_power;  // cmf positron KE energy generation rate analytical [erg/s]
+  double electron_dep;            // cmf electron energy deposition [erg]
+  double electron_emission;       // cmf electron KE energy generation [erg]
+  double eps_electron_ana_power;  // cmf electron KE energy generation rate analytical [erg/s]
+  double alpha_dep;               // cmf alpha energy deposition [erg]
+  double alpha_emission;          // cmf alpha KE energy generation [erg]
+  double eps_alpha_ana_power;     // cmf alpha KE energy generation rate analytical [erg/s]
+  double gamma_emission;          // gamma decay energy generation in this timestep [erg]
+  double qdot_betaminus;          // energy generation from beta-minus decays (including neutrinos) [erg/s/g]
+  double qdot_alpha;              // energy generation from alpha decays (including neutrinos) [erg/s/g]
+  double qdot_total;              // energy generation from all decays (including neutrinos) [erg/s/g]
+  double cmf_lum;                 // cmf luminosity light curve [erg]
+  int pellet_decays;              // Number of pellets that decay in this time step.
+};
+
+struct bflist_t {
+  int elementindex;
+  int ionindex;
+  int levelindex;
+  int phixstargetindex;
+};
+
+struct fullphixslist {
+  double nu_edge;
+  int element;
+  int ion;
+  int level;
+  int phixstargetindex;
+  int upperlevel;
+  float *photoion_xs;
+  double probability;
+  int index_in_groundphixslist;
+};
+
+struct groundphixslist {
+  double nu_edge;
+  int element;
+  int ion;
+  int level;
+  int phixstargetindex;
+};
+
+struct phixslist {
+#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
+  double *groundcont_gamma_contr;
+#endif
+  double *kappa_bf_sum;
+#if (DETAILED_BF_ESTIMATORS_ON)
+  double *gamma_contr;
+#endif
+};
+
+struct phixstarget_entry {
+  double probability;  // fraction of phixs cross section leading to this final level
+  int levelindex;      // index of upper ion level after photoionisation
+};
+
+struct level_transition {
+  int lineindex;
+};
+
+struct levellist_entry {
+  double epsilon;                      /// Excitation energy of this level relative to the neutral ground level.
+  struct level_transition *uptrans;    /// Allowed upward transitions from this level
+  struct level_transition *downtrans;  /// Allowed downward transitions from this level
+  int nuptrans;
+  int ndowntrans;
+  double phixs_threshold;                         /// Energy of first point in the photion_xs table
+  struct phixstarget_entry *phixstargets = NULL;  /// pointer to table of target states and probabilities
+  float *photoion_xs = NULL;  /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
+  int nphixstargets;          /// length of phixstargets array:
+  float stat_weight;          /// Statistical weight of this level.
+
+  int cont_index;  /// Index of the continuum associated to this level. Negative number.
+#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
+  int closestgroundlevelcont;
+#endif
+
+  int uniquelevelindex;
+  bool metastable;  ///
+};
+
+struct ionlist_entry {
+  struct levellist_entry *levels;  /// Carries information for each level: 0,1,...,nlevels-1
+  int ionstage;                    /// Which ionisation stage: XI=0, XII=1, XIII=2, ...
+  int nlevels;                     /// Number of levels for this ionisation stage
+  int nlevels_nlte;                /// number of nlte levels for this ion
+  int first_nlte;                  /// index into nlte_pops array of a grid cell
+  int ionisinglevels;              /// Number of levels which have a bf-continuum
+  int maxrecombininglevel;         /// level index of the highest level with a non-zero recombination rate
+  int nlevels_groundterm;
+  int coolingoffset;
+  int ncoolingterms;
+  int uniqueionindex;
+  float *Alpha_sp;
+  double ionpot;  /// Ionisation threshold to the next ionstage
+  // int nbfcontinua;
+  // ionsphixslist *phixslist;
+};
+
+struct elementlist_entry {
+  ionlist_entry *ions;  /// Carries information for each ion: 0,1,...,nions-1
+  int nions;            /// Number of ions for the current element
+  int anumber;          /// Atomic number
+  //  int uppermost_ion;                       /// Highest ionisation stage which has a decent population for a given
+  //  cell
+  /// Be aware that this must not be used outside of the update_grid routine
+  /// and their daughters. Neither it will work with OpenMP threads.
+  float abundance;              ///
+  float initstablemeannucmass;  /// Atomic mass number in multiple of MH
+};
+
+struct linelist_entry {
+  double nu;  /// Frequency of the line transition
+  float einstein_A;
+  float osc_strength;
+  float coll_str;
+  const int elementindex;     /// It's a transition of element (not its atomic number,
+                              /// but the (x-1)th element included in the simulation.
+  const int ionindex;         /// The same for the elements ion
+  const int upperlevelindex;  /// And the participating upper
+  const int lowerlevelindex;  /// and lower levels
+  const bool forbidden;
+};
+
+struct nne_solution_paras {
+  int cellnumber;
+};
+
+struct gslintegration_paras {
+  const double nu_edge;
+  const float T;
+  const float *const photoion_xs;
+};
+
+struct rpkt_cont_opacity {
+  double nu;  // frequency at which opacity was calculated
+  double total;
+  double es;
+  double ff;
+  double bf;
+  double ffheating;
+  // double bfheating;
+  int modelgridindex;
+  bool recalculate_required;  // e.g. when cell or timestep has changed
+};
+
+struct chphixstargets {
+  double corrphotoioncoeff;
+#if (SEPARATE_STIMRECOMB)
+  double stimrecombcoeff;
+#endif
+};
+
+#include "macroatom.h"
+
+struct chlevels {
+  double processrates[MA_ACTION_COUNT];
+  struct chphixstargets *chphixstargets;
+  double bfheatingcoeff;
+  double population;
+  double *individ_rad_deexc;
+  double *individ_internal_down_same;
+  double *individ_internal_up_same;
+};
+
+struct chions {
+  struct chlevels *chlevels;  /// Pointer to the ions levellist.
+};
+
+struct chelements {
+  struct chions *chions;  /// Pointer to the elements ionlist.
+};
+
+struct cellhistory {
+  double *cooling_contrib;  /// Cooling contributions by the different processes.
+  struct chelements *chelements;
+  struct chlevels *ch_all_levels;
+  double *ch_allcont_departureratios;
+  int cellnumber;  /// Identifies the cell the data is valid for.
+  int bfheating_mgi;
+};
 
 namespace globals {
 #if CUDA_ENABLED
@@ -60,12 +255,11 @@ extern __managed__ int nprocs_exspec;
 extern __managed__ bool do_emission_res;
 
 extern __managed__ bool file_set;
+extern std::unique_ptr<bool[]> startofline;
 
 extern __managed__ bool do_comp_est;
 extern __managed__ bool do_r_lc;
 extern __managed__ int do_rlc_est;
-
-extern __managed__ double CLIGHT_PROP;
 
 extern __managed__ double gamma_grey;
 
@@ -76,26 +270,35 @@ extern __managed__ double max_path_step;
 extern __managed__ int opacity_case;
 
 extern __managed__ int nlines;
-extern __managed__ elementlist_entry *elements;
-extern __managed__ linelist_entry *linelist;
-extern __managed__ bflist_t *bflist;
+extern __managed__ struct elementlist_entry *elements;
+extern __managed__ const struct linelist_entry *linelist;
+extern __managed__ struct bflist_t *bflist;
 
-extern __managed__ rpkt_cont_opacity_struct *kappa_rpkt_cont;
+extern __managed__ double *spontrecombcoeff;
+#if (!NO_LUT_PHOTOION)
+extern __managed__ double *corrphotoioncoeff;
+#endif
+#if (!NO_LUT_BFHEATING)
+extern __managed__ double *bfheating_coeff;
+#endif
+extern __managed__ double *bfcooling_coeff;
+
+extern __managed__ struct rpkt_cont_opacity *kappa_rpkt_cont;
 
 extern __managed__ int ncoolingterms;
 
 extern __managed__ double *allcont_nu_edge;
-extern __managed__ fullphixslist_t *allcont;
+extern __managed__ const struct fullphixslist *allcont;
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-extern __managed__ groundphixslist_t *groundcont;
+extern __managed__ struct groundphixslist *groundcont;
 #endif
-extern __managed__ phixslist_t *phixslist;
+extern __managed__ struct phixslist *phixslist;
 extern __managed__ int nbfcontinua;
 extern __managed__ int nbfcontinua_ground;
 extern __managed__ int NPHIXSPOINTS;
 extern __managed__ double NPHIXSNUINCREMENT;
 
-extern __managed__ cellhistory_struct *cellhistory;
+extern __managed__ struct cellhistory *cellhistory;
 
 extern __managed__ int debuglevel;
 
@@ -146,9 +349,9 @@ extern __managed__ bool homogeneous_abundances;
 
 extern __managed__ bool simulation_continued_from_saved;
 extern __managed__ double nu_rfcut;
-extern __managed__ int n_lte_timesteps;
+extern __managed__ int num_lte_timesteps;
 extern __managed__ double cell_is_optically_thick;
-extern __managed__ int n_grey_timesteps;
+extern __managed__ int num_grey_timesteps;
 extern __managed__ int n_titer;
 extern __managed__ bool initial_iteration;
 extern __managed__ int max_bf_continua;

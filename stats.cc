@@ -40,8 +40,9 @@ __host__ __device__ void increment_ion_stats(const int modelgridindex, const int
       increment);
 }
 
-__host__ __device__ void increment_ion_stats_contabsorption(const PKT *const pkt_ptr, const int modelgridindex,
-                                                            const int element, const int ion) {
+__host__ __device__ void increment_ion_stats_contabsorption(const struct packet *const pkt_ptr,
+                                                            const int modelgridindex, const int element,
+                                                            const int ion) {
   const double n_photons_absorbed = pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
 
   stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION, n_photons_absorbed);
@@ -167,7 +168,7 @@ int get_counter(enum eventcounters i) {
   return eventstats[i];
 }
 
-void pkt_action_counters_printout(const PKT *const pkt, const int nts) {
+void pkt_action_counters_printout(const struct packet *const pkt, const int nts) {
   long allpktinteractions = 0;
   for (int i = 0; i < globals::npkts; i++) {
     assert_always(pkt[i].interactions >= 0);

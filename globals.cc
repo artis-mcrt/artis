@@ -1,9 +1,8 @@
 #include "globals.h"
 
 #include "sn3d.h"
-#include "types.h"
 #ifdef MPI_ON
-#include "mpi.h"
+#include <mpi.h>
 #endif
 
 namespace globals {
@@ -58,15 +57,12 @@ __managed__ int nprocs_exspec = 1;
 __managed__ bool do_emission_res = 1;
 
 __managed__ bool file_set;  // 1 if the output files already exist. 0 otherwise.
-
+__managed__ std::unique_ptr<bool[]> startofline;
 __managed__ bool do_comp_est;  // 1 = compute compton emissivity estimators. 0 = don't
 __managed__ bool do_r_lc;      // If not set to 1 then the opacity for r-packets is 0.
 __managed__ int do_rlc_est;    // 1 = compute estimators for the r-pkt light curve.
                                // 2 = compute estimators with opacity weights
                                // 3 = compute estimators, but use only for gamma-heating rate
-
-__managed__ double CLIGHT_PROP;  // Speed of light for ray travel. Physically = CLIGHT but
-                                 // can be changed for testing.
 
 __managed__ double gamma_grey;  // set to -ve for proper treatment. If possitive, then
                                 // gamma_rays are treated as grey with this opacity.
@@ -80,12 +76,21 @@ __managed__ int opacity_case;  // 0 normally, 1 for Fe-grp dependence.
 
 /// ATOMIC DATA
 
-__managed__ int nlines;
-__managed__ elementlist_entry *elements = NULL;
-__managed__ linelist_entry *linelist = NULL;
-__managed__ bflist_t *bflist = NULL;
+__managed__ int nlines = -1;
+__managed__ struct elementlist_entry *elements = nullptr;
+__managed__ const struct linelist_entry *linelist = nullptr;
+__managed__ struct bflist_t *bflist = nullptr;
+__managed__ double *spontrecombcoeff = nullptr;
+#if (!NO_LUT_PHOTOION)
+__managed__ double *corrphotoioncoeff = nullptr;
+#endif
+#if (!NO_LUT_BFHEATING)
+__managed__ double *bfheating_coeff = nullptr;
+#endif
+__managed__ double *bfcooling_coeff = nullptr;
+;
 
-__managed__ rpkt_cont_opacity_struct *kappa_rpkt_cont = NULL;
+__managed__ struct rpkt_cont_opacity *kappa_rpkt_cont = nullptr;
 
 /// Coolinglist
 __managed__ int ncoolingterms;
@@ -93,23 +98,23 @@ __managed__ int ncoolingterms;
 /// PHIXSLIST
 
 __managed__ double *allcont_nu_edge = NULL;
-__managed__ fullphixslist_t *allcont = NULL;
+__managed__ const struct fullphixslist *allcont = NULL;
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-__managed__ groundphixslist_t *groundcont = NULL;
+__managed__ struct groundphixslist *groundcont = NULL;
 #endif
-__managed__ phixslist_t *phixslist = NULL;
-__managed__ int nbfcontinua;
-__managed__ int nbfcontinua_ground;  /// number of bf-continua
-__managed__ int NPHIXSPOINTS;
-__managed__ double NPHIXSNUINCREMENT;
+__managed__ struct phixslist *phixslist = NULL;
+__managed__ int nbfcontinua = -1;
+__managed__ int nbfcontinua_ground = -1;  /// number of bf-continua
+__managed__ int NPHIXSPOINTS = -1;
+__managed__ double NPHIXSNUINCREMENT = -1;
 
-__managed__ cellhistory_struct *cellhistory = NULL;
+__managed__ struct cellhistory *cellhistory = NULL;
 
 __managed__ int debuglevel;
 
 #ifdef MPI_ON
-MPI_Comm mpi_comm_node = NULL;
-MPI_Comm mpi_comm_internode = NULL;
+MPI_Comm mpi_comm_node = MPI_COMM_NULL;
+MPI_Comm mpi_comm_internode = MPI_COMM_NULL;
 #endif
 
 __managed__ int nprocs = -1;       // number of MPI processes
@@ -157,9 +162,9 @@ __managed__ bool homogeneous_abundances;
 
 __managed__ bool simulation_continued_from_saved;
 __managed__ double nu_rfcut;
-__managed__ int n_lte_timesteps;
+__managed__ int num_lte_timesteps;
 __managed__ double cell_is_optically_thick;
-__managed__ int n_grey_timesteps;
+__managed__ int num_grey_timesteps;
 __managed__ int n_titer;
 __managed__ bool initial_iteration;
 __managed__ int max_bf_continua;

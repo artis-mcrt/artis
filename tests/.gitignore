@@ -3,7 +3,6 @@ output_*.txt
 *.out
 adata.txt
 bflist.dat
-compositiondata.txt
 *.tmp
 ratecoeff.dat
 phixsdata_v2.txt
@@ -18,4 +17,5 @@ exspec.txt
 binding_energies.txt
 *_reference
 *_testrun
+atomicdata_feconi
 *.pdf

@@ -18,12 +18,17 @@ if [ ! -d "$1" ]; then
   exit 3
 fi
 
-#cp gridsave.dat $1
-mv estimators* $1
+mkdir -p $1
+
+#if you want to be able to resume from the end of this run
+#cp gridsave.dat packets*.tmp $1
+
+#mv -n will trigger an error if the destination exists
+mv -n estimators* $1
 # move the files below if the exist, but don't cause an error if they don't exist!
-find . -maxdepth 1 -name 'macroatom*' -exec mv {} $1 \;
-find . -maxdepth 1 -name 'nonthermal*' -exec mv {} $1 \;
-find . -maxdepth 1 -name 'radfield*' -exec mv {} $1 \;
-find . -maxdepth 1 -name 'nlte*' -exec mv {} $1 \;
-mv output_*.txt $1
+find . -maxdepth 1 -name 'macroatom*' -exec mv -n {} $1 \;
+find . -maxdepth 1 -name 'nonthermal*' -exec mv -n {} $1 \;
+find . -maxdepth 1 -name 'radfield*' -exec mv -n {} $1 \;
+find . -maxdepth 1 -name 'nlte*' -exec mv -n {} $1 \;
+mv -n output_*.txt $1
 cp $1/output_0-0.txt .

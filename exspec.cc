@@ -20,10 +20,8 @@
 #include "grid.h"
 #include "input.h"
 #include "light_curve.h"
-#include "packet_init.h"
 #include "sn3d.h"
 #include "spectrum.h"
-#include "vectors.h"
 
 const bool do_exspec = true;
 
@@ -34,23 +32,6 @@ bool use_cellhist = false;
 bool neutral_flag = false;
 gsl_rng *rng = NULL;
 gsl_integration_workspace *gslworkspace = NULL;
-
-static void get_final_packets(int rank, int nprocs, PKT pkt[]) {
-  // Read in the final packets*.out (text format) files
-
-  char filename[128];
-
-  snprintf(filename, 128, "packets%.2d_%.4d.out", 0, rank);
-  printout("reading %s (file %d of %d)\n", filename, rank + 1, nprocs);
-
-  if (!access(filename, F_OK)) {
-    read_packets(filename, pkt);
-  } else {
-    printout("   WARNING %s does not exist - trying temp packets file at beginning of timestep %d...\n   ", filename,
-             globals::itstep);
-    read_temp_packetsfile(globals::itstep, rank, pkt);
-  }
-}
 
 int main(int argc, char **argv) {
 #ifdef MPI_ON
@@ -88,6 +69,7 @@ int main(int argc, char **argv) {
 #endif
   char filename[128];
 
+  globals::startofline = std::make_unique<bool[]>(get_max_threads());
   if (globals::rank_global == 0) {
     snprintf(filename, 128, "exspec.txt");
     output_file = fopen_required(filename, "w");
@@ -106,9 +88,31 @@ int main(int argc, char **argv) {
   printout("time before input %ld\n", time(NULL));
   input(globals::rank_global);
   printout("time after input %ld\n", time(NULL));
+  // nprocs_exspec is the number of rank output files to process with expec
+  // however, we might be running exspec with 1 or just a few ranks
   globals::nprocs = globals::nprocs_exspec;
 
-  PKT *pkts = (PKT *)malloc(globals::npkts * sizeof(PKT));
+  constexpr double maxpktmem_mb = 6000;
+  bool load_allrank_packets = false;
+
+  if ((globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024.) < maxpktmem_mb) {
+    printout(
+        "mem_usage: loading packets from all %d processes simultaneously (total %d packets, %.1f MB memory is within "
+        "limit of %.1f MB)\n",
+        globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
+        globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024., maxpktmem_mb);
+    load_allrank_packets = true;
+  } else {
+    printout(
+        "mem_usage: loading packets from each of %d processes sequentially (total %d packets, %.1f MB memory would be "
+        "above limit of %.1f MB)\n",
+        globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
+        globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024., maxpktmem_mb);
+    load_allrank_packets = false;
+  }
+
+  const int npkts_loaded = load_allrank_packets ? globals::nprocs_exspec * globals::npkts : globals::npkts;
+  struct packet *pkts = static_cast<struct packet *>(malloc(npkts_loaded * sizeof(struct packet)));
 
   globals::nnubins = MNUBINS;  // 1000;  /// frequency bins for spectrum
 
@@ -137,10 +141,10 @@ int main(int argc, char **argv) {
   // a is the escape direction angle bin
   for (int a = -1; a < amax; a++) {
     /// Set up the light curve grid and initialise the bins to zero.
-    double *rpkt_light_curve_lum = (double *)calloc(globals::ntstep, sizeof(double));
-    double *rpkt_light_curve_lumcmf = (double *)calloc(globals::ntstep, sizeof(double));
-    double *gamma_light_curve_lum = (double *)calloc(globals::ntstep, sizeof(double));
-    double *gamma_light_curve_lumcmf = (double *)calloc(globals::ntstep, sizeof(double));
+    double *rpkt_light_curve_lum = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
+    double *rpkt_light_curve_lumcmf = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
+    double *gamma_light_curve_lum = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
+    double *gamma_light_curve_lumcmf = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
     /// Set up the spectrum grid and initialise the bins to zero.
 
     init_spectra(rpkt_spectra, globals::nu_min_r, globals::nu_max_r, globals::do_emission_res);
@@ -155,43 +159,59 @@ int main(int argc, char **argv) {
     const double nu_max_gamma = 4. * MEV / H;
     init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
 
-    for (int p = 0; p < globals::nprocs; p++) {
-      get_final_packets(p, globals::nprocs, pkts);
+    for (int p = 0; p < globals::nprocs_exspec; p++) {
+      struct packet *pkts_start = load_allrank_packets ? &pkts[p * globals::npkts] : pkts;
+
+      if (a == -1 || !load_allrank_packets) {
+        char pktfilename[128];
+        snprintf(pktfilename, 128, "packets%.2d_%.4d.out", 0, p);
+        printout("reading %s (file %d of %d)\n", pktfilename, p + 1, globals::nprocs_exspec);
+
+        if (!access(pktfilename, F_OK)) {
+          read_packets(pktfilename, pkts_start);
+        } else {
+          printout("   WARNING %s does not exist - trying temp packets file at beginning of timestep %d...\n   ",
+                   pktfilename, globals::itstep);
+          read_temp_packetsfile(globals::itstep, p, pkts_start);
+        }
+      }
+
       int nesc_tot = 0;
       int nesc_gamma = 0;
       int nesc_rpkt = 0;
       for (int ii = 0; ii < globals::npkts; ii++) {
         // printout("packet %d escape_type %d type %d", ii, pkts[ii].escape_type, pkts[ii].type);
-        if (pkts[ii].type == TYPE_ESCAPE) {
+        if (pkts_start[ii].type == TYPE_ESCAPE) {
           nesc_tot++;
-          if (pkts[ii].escape_type == TYPE_RPKT) {
+          if (pkts_start[ii].escape_type == TYPE_RPKT) {
             nesc_rpkt++;
-            add_to_lc_res(&pkts[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-            add_to_spec_res(&pkts[ii], a, rpkt_spectra, stokes_i, stokes_q, stokes_u);
-          } else if (pkts[ii].escape_type == TYPE_GAMMA && a == -1) {
+            add_to_lc_res(&pkts_start[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+            add_to_spec_res(&pkts_start[ii], a, rpkt_spectra, stokes_i, stokes_q, stokes_u);
+          } else if (pkts_start[ii].escape_type == TYPE_GAMMA) {
             nesc_gamma++;
-            add_to_lc_res(&pkts[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-            add_to_spec_res(&pkts[ii], a, gamma_spectra, NULL, NULL, NULL);
+            if (a == -1) {
+              add_to_lc_res(&pkts_start[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+              add_to_spec_res(&pkts_start[ii], a, gamma_spectra, NULL, NULL, NULL);
+            }
           }
         }
       }
-      printout("  %d of %d packets escaped (%d gamma-pkts and %d r-pkts)\n", nesc_tot, globals::npkts, nesc_gamma,
-               nesc_rpkt);
+      if (a == -1 || !load_allrank_packets) {
+        printout("  %d of %d packets escaped (%d gamma-pkts and %d r-pkts)\n", nesc_tot, globals::npkts, nesc_gamma,
+                 nesc_rpkt);
+      }
     }
 
     if (a == -1) {
       /// Extract angle-averaged spectra and light curves
-      write_light_curve((char *)"light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntstep);
-      write_light_curve((char *)"gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf,
-                        globals::ntstep);
+      write_light_curve("light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntstep);
+      write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf, globals::ntstep);
 
-      write_spectrum((char *)"spec.out", (char *)"emission.out", (char *)"emissiontrue.out", (char *)"absorption.out",
-                     rpkt_spectra, globals::ntstep);
+      write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, globals::ntstep);
 #ifdef POL_ON
-      write_specpol((char *)"specpol.out", (char *)"emissionpol.out", (char *)"absorptionpol.out", stokes_i, stokes_q,
-                    stokes_u);
+      write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", stokes_i, stokes_q, stokes_u);
 #endif
-      write_spectrum((char *)"gamma_spec.out", NULL, NULL, NULL, gamma_spectra, globals::ntstep);
+      write_spectrum("gamma_spec.out", NULL, NULL, NULL, gamma_spectra, globals::ntstep);
     } else {
       /// Extract LOS dependent spectra and light curves
       char lc_filename[128] = "";
@@ -276,6 +296,3 @@ int main(int argc, char **argv) {
 
   return 0;
 }
-
-extern inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno);
-extern inline FILE *fopen_required(const char *filename, const char *mode);

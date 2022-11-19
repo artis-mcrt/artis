@@ -2,6 +2,8 @@
 
 #include <gsl/gsl_roots.h>
 
+#include <cmath>
+
 #include "atomic.h"
 #include "decay.h"
 #include "grid.h"
@@ -37,7 +39,7 @@ void precalculate_partfuncts(int modelgridindex)
 }
 
 static void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer,
-                                     const heatingcoolingrates_t *heatingcoolingrates) {
+                                     const struct heatingcoolingrates *heatingcoolingrates) {
   // return; disable for better performance (if estimators files are not needed)
   if (grid::get_numassociatedcells(mgi) > 0) {
     const float T_e = grid::get_Te(mgi);
@@ -66,8 +68,11 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
       fprintf(estimators_file, "populations        Z=%2d", get_element(element));
       const int nions = get_nions(element);
-      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-        fprintf(estimators_file, "              ");
+      if (nions > 0) {
+        // add spaces for missing lowest ion stages to match other elements
+        for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+          fprintf(estimators_file, "              ");
+      }
       double elpop = 0.;
       for (int ion = 0; ion < nions; ion++) {
         elpop += ionstagepop(mgi, element, ion);
@@ -85,11 +90,11 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         continue;
       }
 
-      const bool printdebug = false;
+      // const bool printdebug = false;
 
       bool assume_lte = true;
-      bool per_gmpop = true;
-      const bool lower_superlevel_only = false;
+      // bool per_gmpop = true;
+      // const bool lower_superlevel_only = false;
 
       // if (timestep % 10 == 0)
       // {
@@ -106,7 +111,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       //   fprintf(estimators_file, "\n");
       // }
 
-      per_gmpop = false;
+      // per_gmpop = false;
 
       // fprintf(estimators_file, "AlphaLTE_R*nne Z=%2d", get_element(element));
       // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
@@ -668,33 +673,40 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
   globals::kappa_rpkt_cont[tid].recalculate_required = true;
 
   globals::cellhistory[tid].cellnumber = modelgridindex;
-  // globals::cellhistory[tid].totalcooling = COOLING_UNDEFINED;
+  // TODO: should we bother for thick cells? still might use it for estimator output
+  // grid::modelgrid[modelgridindex].thick != 0
+  // if (modelgridindex < 0 || modelgridindex == grid::get_npts_model()) {
+  //   return;  // we only needed to invalidate the cell history but not setting up values from a real cell
+  // }
+
   //  int nlevels_with_processrates = 0;
-  //  int nlevels_with_photoioncoeffs = 0;
-  for (int element = 0; element < get_nelements(); element++) {
+  // const double T_e = modelgridindex >= 0 ? grid ::get_Te(modelgridindex) : 0.;
+  const int nelements = get_nelements();
+  for (int element = 0; element < nelements; element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      globals::cellhistory[tid].cooling_contrib[get_coolinglistoffset(element, ion)] = COOLING_UNDEFINED;
-      const int nlevels = get_nlevels(element, ion);
-      for (int level = 0; level < nlevels; level++) {
-        if (modelgridindex >= 0) {
+      globals::cellhistory[tid].cooling_contrib[kpkt::get_coolinglistoffset(element, ion)] = COOLING_UNDEFINED;
+
+      if (modelgridindex >= 0) {
+        const int nlevels = get_nlevels(element, ion);
+        for (int level = 0; level < nlevels; level++) {
           globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].population =
               calculate_levelpop(modelgridindex, element, ion, level);
         }
+      }
+    }
+
+    for (int ion = 0; ion < nions; ion++) {
+      const int nlevels = get_nlevels(element, ion);
+      for (int level = 0; level < nlevels; level++) {
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
-          // bool levelhasvalue = false;
-          // if
-          // (globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff
-          // >= 0)
-          // {
-          //   levelhasvalue = true;
-          // }
           globals::cellhistory[tid]
               .chelements[element]
               .chions[ion]
               .chlevels[level]
               .chphixstargets[phixstargetindex]
               .corrphotoioncoeff = -99.;
+
 #if (SEPARATE_STIMRECOMB)
           globals::cellhistory[tid]
               .chelements[element]
@@ -726,34 +738,30 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
         // for (i = 0; i < ndowntrans; i++)
         // {
         //   globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i] = -99.;
-        //   globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i] =
-        //   -99.;
+        //   globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i]
+        //   = -99.;
         // }
         // for (i = 0; i < nuptrans; i++)
         // {
         //   globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i] =
         //   -99.;
         // }
-        // if (levelhasvalue)
-        //   nlevels_with_photoioncoeffs++;
       }
     }
   }
 
   if (modelgridindex >= 0) {
     const int nbfcont = globals::nbfcontinua;
-    for (int i = 0; i < nbfcont; i++) {
-      globals::cellhistory[tid].ch_allcont[i].departure_ratio = -1;
-    }
+    std::fill_n(globals::cellhistory[tid].ch_allcont_departureratios, nbfcont, -1);
   }
   // printout("nlevels_with_processrates %d\n", nlevels_with_processrates);
-  // printout("nlevels_with_photoioncoeffs %d\n", nlevels_with_photoioncoeffs);
 
   // globals::cellhistory[tid].totalcooling = COOLING_UNDEFINED;
   // globals::cellhistory[tid].phixsflag = PHIXS_UNDEFINED;
 }
 
-static void solve_Te_nltepops(const int n, const int nts, const int titer, heatingcoolingrates_t *heatingcoolingrates)
+static void solve_Te_nltepops(const int n, const int nts, const int titer,
+                              struct heatingcoolingrates *heatingcoolingrates)
 // n is the modelgridindex (TODO: rename to mgi)
 // nts is the timestep number
 {
@@ -809,7 +817,8 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
       // calculate_cooling_rates(n);
       // calculate_heating_rates(n);
       printout(
-          "Grid solver cell %d timestep %d: time spent on: Spencer-Fano %ds, partfuncs/gamma %ds, T_e %ds, populations "
+          "Grid solver cell %d timestep %d: time spent on: Spencer-Fano %ds, partfuncs/gamma %ds, T_e %ds, "
+          "populations "
           "%ds\n",
           n, nts, duration_solve_spencerfano, duration_solve_partfuncs_or_gamma, duration_solve_T_e,
           duration_solve_pops);
@@ -846,7 +855,8 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
         const double fracdiff_nne = fabs((grid::get_nne(n) / nne_prev) - 1);
         nlte_test = fracdiff_nne;
         printout(
-            "NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e %ds, NLTE populations "
+            "NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e %ds, NLTE "
+            "populations "
             "%ds\n",
             n, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
         printout(
@@ -954,7 +964,8 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
         abort();
       }
 
-      // printout("cell %d element %d ion %d bfheatingestimator %g\n",n,element,ion,bfheatingestimator[ionestimindex]);
+      // printout("cell %d element %d ion %d bfheatingestimator
+      // %g\n",n,element,ion,bfheatingestimator[ionestimindex]);
 #endif
     }
   }
@@ -999,12 +1010,14 @@ static void set_all_corrphotoionrenorm(const int modelgridindex, const double va
 #endif
 
 static void update_grid_cell(const int mgi, const int nts, const int nts_prev, const int titer, const double tratmid,
-                             const double deltat, double *mps, heatingcoolingrates_t *heatingcoolingrates)
+                             const double deltat, std::unique_ptr<double[]> &mps,
+                             struct heatingcoolingrates *heatingcoolingrates)
 // n is the modelgrid index
 {
   const int assoc_cells = grid::get_numassociatedcells(mgi);
   if (assoc_cells > 0) {
-    // estimators were accumulated in nts_prev, but radiation density, etc should be scaled to the cell volume at nts
+    // estimators were accumulated in nts_prev, but radiation density, etc should be scaled to the cell volume at
+    // nts
     const double deltaV = grid::vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
     const time_t sys_time_start_update_cell = time(NULL);
     // const bool log_this_cell = ((n % 50 == 0) || (npts_model < 50));
@@ -1028,7 +1041,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
     const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
 
-    if (globals::opacity_case == 4) {
+    if (globals::opacity_case >= 4) {
       /// For timestep 0 we calculate the level populations straight forward wihout
       /// applying any temperature correction
       if ((nts - globals::itstep) == 0 && titer == 0) {
@@ -1075,9 +1088,10 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
         const time_t sys_time_start_temperature_corrections = time(NULL);
 
-        radfield::normalise_J(mgi, estimator_normfactor_over4pi);       // this applies normalisation to the fullspec J
-        radfield::set_J_normfactor(mgi, estimator_normfactor_over4pi);  // this stores the factor that will be applied
-                                                                        // later for the J bins but not fullspec J
+        radfield::normalise_J(mgi, estimator_normfactor_over4pi);  // this applies normalisation to the fullspec J
+        radfield::set_J_normfactor(mgi,
+                                   estimator_normfactor_over4pi);  // this stores the factor that will be applied
+                                                                   // later for the J bins but not fullspec J
 
 #ifdef DO_TITER
         radfield::titer_J(mgi);
@@ -1088,7 +1102,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         }
 
 #ifndef FORCE_LTE
-        // initial_iteration really means either ts 0 or nts < globals::n_lte_timesteps
+        // initial_iteration really means either ts 0 or nts < globals::num_lte_timesteps
         if (globals::initial_iteration || grid::modelgrid[mgi].thick == 1)
 #endif
         {
@@ -1128,8 +1142,8 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
           update_gamma_corrphotoionrenorm_bfheating_estimators(mgi, estimator_normfactor);
 #endif
 
-          // Get radiation field parameters (T_J, T_R, W, and bins if enabled) out of the full-spectrum and binned J and
-          // nuJ estimators
+          // Get radiation field parameters (T_J, T_R, W, and bins if enabled) out of the full-spectrum and binned J
+          // and nuJ estimators
           radfield::fit_parameters(mgi, nts);
 
 #if (DETAILED_BF_ESTIMATORS_ON)
@@ -1147,7 +1161,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       const double compton_optical_depth = SIGMA_T * nne * grid::wid_init(mgi) * tratmid;
 
       double radial_pos = grid::modelgrid[mgi].initial_radial_pos_sum * tratmid / assoc_cells;
-      if (grid::grid_type == GRID_SPHERICAL1D) {
+      if (GRID_TYPE == GRID_SPHERICAL1D) {
         const double r_inner = grid::get_cellcoordmin(mgi, 0) * tratmid;
         const double r_outer = r_inner + grid::wid_init(mgi) * tratmid;
         radial_pos = 3. / 4 * (pow(r_outer, 4.) - pow(r_inner, 4.)) /
@@ -1168,7 +1182,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
       // grey_optical_depth = compton_optical_depth;
 
-      if ((grey_optical_depth > globals::cell_is_optically_thick) && (nts < globals::n_grey_timesteps)) {
+      if ((grey_optical_depth > globals::cell_is_optically_thick) && (nts < globals::num_grey_timesteps)) {
         printout("cell %d is treated in grey approximation (kappa_grey %g [cm2/g], tau %g)\n", mgi,
                  grid::get_kappagrey(mgi), grey_optical_depth);
         grid::modelgrid[mgi].thick = 1;
@@ -1186,8 +1200,9 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       /// and ion contributions inside update grid and communicate between MPI tasks
       const time_t sys_time_start_calc_kpkt_rates = time(NULL);
 
-      // don't pass pointer to heatingcoolingrates because current populations and rates weren't used to determine T_e
-      calculate_cooling_rates(mgi, NULL);
+      // don't pass pointer to heatingcoolingrates because current populations and rates weren't used to determine
+      // T_e
+      kpkt::calculate_cooling_rates(mgi, NULL);
 
       printout("calculate_kpkt_rates for cell %d timestep %d took %ld seconds\n", mgi, nts,
                time(NULL) - sys_time_start_calc_kpkt_rates);
@@ -1200,9 +1215,10 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       calculate_electron_densities(mgi);  // if this causes problems, disable the nne calculation (only need nne_tot)
 
       if (!((nts - globals::itstep) == 0 && titer == 0)) {
-        radfield::normalise_J(mgi, estimator_normfactor_over4pi);       // this applies normalisation to the fullspec J
-        radfield::set_J_normfactor(mgi, estimator_normfactor_over4pi);  // this stores the factor that will be applied
-                                                                        // later for the J bins but not fullspec J
+        radfield::normalise_J(mgi, estimator_normfactor_over4pi);  // this applies normalisation to the fullspec J
+        radfield::set_J_normfactor(mgi,
+                                   estimator_normfactor_over4pi);  // this stores the factor that will be applied
+                                                                   // later for the J bins but not fullspec J
 
         const double T_J = radfield::get_T_J_from_J(mgi);
         grid::set_TR(mgi, T_J);
@@ -1258,7 +1274,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 /// nts timestep
 {
   const time_t sys_time_start_update_grid = time(NULL);
-  printout("\ntimestep %d: time before update grid %ld (tstart + %ld) simtime ts_mid %g days\n", nts,
+  printout("\n");
+  printout("timestep %d: time before update grid %ld (tstart + %ld) simtime ts_mid %g days\n", nts,
            sys_time_start_update_grid, sys_time_start_update_grid - real_time_start, globals::time_step[nts].mid / DAY);
 
 #ifndef FORCE_LTE
@@ -1278,8 +1295,10 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   // printout("[debug] update_grid: starting update for timestep %d...\n",m);
   const double tratmid = globals::time_step[nts].mid / globals::tmin;
 
-  double mps[get_max_threads()];  /// Thread private substitution of max_path_step. Its minimum is
-                                  /// assigned to max_path_step after the parallel update_grid finished.
+  /// Thread private substitution of max_path_step. Its minimum is
+  /// assigned to max_path_step after the parallel update_grid finished.
+  auto mps = std::make_unique<double[]>(get_max_threads());
+
   for (int i = 0; i < get_max_threads(); i++) {
     mps[i] = 1.e35;
   }
@@ -1317,20 +1336,27 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       /// Check if this task should work on the current model grid cell.
       /// If yes, update the cell and write out the estimators
       if (mgi >= nstart && mgi < nstart + ndo) {
-        heatingcoolingrates_t heatingcoolingrates = {};
+        // use_cellhist = false;
+        // cellhistory_reset(-99, true);
+
+        struct heatingcoolingrates heatingcoolingrates = {};
         update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, mps, &heatingcoolingrates);
 
         // maybe want to add omp ordered here if the modelgrid cells should be output in order
         const time_t sys_time_start_write_estimators = time(NULL);
         printout("writing to estimators file cell %d timestep %d...\n", mgi, nts);
 
+        // use_cellhist = true;
+        // cellhistory_reset(mgi, true);
 #ifdef _OPENMP
 #pragma omp critical(estimators_file)
 #endif
         { write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates); }
 
-        printout("writing estimators for cell %d timestep %d took %ld seconds\n", mgi, nts,
-                 time(NULL) - sys_time_start_write_estimators);
+        const int write_estim_duration = time(NULL) - sys_time_start_write_estimators;
+        if (write_estim_duration > 1) {
+          printout("writing estimators for cell %d timestep %d took %d seconds\n", mgi, nts, write_estim_duration);
+        }
       } else {
 /// else, only reset gammaestimator to zero. This allows us to do a global MPI
 /// communication after update_grid to synchronize gammaestimator
@@ -1404,7 +1430,7 @@ double calculate_populations(const int modelgridindex)
 {
   /// and the solution function
   gsl_function f;
-  nne_solution_paras paras;
+  struct nne_solution_paras paras;
   paras.cellnumber = modelgridindex;
   f.function = &nne_solution_f;
   f.params = &paras;
@@ -1595,7 +1621,7 @@ double calculate_populations(const int modelgridindex)
       nne_tot += nnelement * get_element(element);
 
       const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
-      double ionfractions[uppermost_ion + 1];
+      auto ionfractions = std::make_unique<double[]>(uppermost_ion + 1);
 
       if (nnelement > 0) {
         get_ionfractions(element, modelgridindex, nne, ionfractions, uppermost_ion);

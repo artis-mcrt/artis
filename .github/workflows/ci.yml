@@ -5,10 +5,9 @@ on:
     push:
         branches-ignore:
             - classic*
-    # pull_request:
-    #   branches:
-    #   - nebular*
-    #   - main
+    pull_request:
+        branches-ignore:
+            - classic*
 
 env:
     ASAN_OPTIONS: detect_stack_use_after_return=1:detect_leaks=0
@@ -40,20 +39,20 @@ jobs:
             - uses: actions/checkout@v3
 
             - name: Run clang-format style check
-              uses: jidicula/clang-format-action@v4.8.0
+              uses: jidicula/clang-format-action@v4.9.0
               with:
-                  clang-format-version: '14'
+                  clang-format-version: '15'
                   check-path: .
 
     compile:
         runs-on: ubuntu-22.04
         strategy:
             matrix:
-                compiler: [{name: gcc, cmd: g++-12}, {name: clang, cmd: clang++}]
+                compiler: [{name: gcc-11, cmd: g++-11}, {name: gcc-12, cmd: g++-12}, {name: clang 14, cmd: clang++}]
                 mpi: [ON, OFF]
             fail-fast: false
 
-        name: Compile with ${{ matrix.compiler.name }} MPI ${{ matrix.mpi }}
+        name: compile ${{ matrix.compiler.name }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}
         steps:
             - uses: actions/checkout@v3
 
@@ -61,16 +60,21 @@ jobs:
               id: cpu-count
               run: |
                   sudo apt-get update
-                  # echo "::set-output name=count::$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')"
-                  echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
+                  # echo "count=$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')" >> $GITHUB_OUTPUT
+                  echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
-            - name: Install gcc
-              if: matrix.compiler.name == 'gcc'
+            - name: Install gcc-11
+              if: matrix.compiler.name == 'gcc-11'
+              run: |
+                  sudo apt-get install -y gcc-11 g++-11
+
+            - name: Install gcc-12
+              if: matrix.compiler.name == 'gcc-12'
               run: |
                   sudo apt-get install -y gcc-12 g++-12
 
-            - name: Install clang
-              if: matrix.compiler.name == 'clang'
+            - name: Install clang 14
+              if: matrix.compiler.name == 'clang 14'
               run: |
                   sudo apt-get install -y clang-14 --install-suggests
 
@@ -109,20 +113,22 @@ jobs:
     testmodels:
         strategy:
             matrix:
-                # os: ['ubuntu-latest', 'self-hosted']
+        # os: ['ubuntu-latest', 'self-hosted']
                 os: [ubuntu-22.04]
                 testmode: [OFF, ON]
-                testname: [classicmode, nebularonezone]
+                testname: [classicmode, nebularonezone, kilonova]
                 exclude:
                     - os: self-hosted
                       testmode: ON
             fail-fast: false
 
         runs-on: ${{ matrix.os }}
-        name: ${{ matrix.testname }} MPI ON testmode ${{ matrix.testmode }}
+        name: ${{ matrix.testname }} MPI${{ matrix.testmode == 'ON' && ' testmode ON' || ''}}
 
         steps:
             - uses: actions/checkout@v3
+              with:
+                  fetch-depth: 0
 
             - name: install dependencies
               if: matrix.os != 'selfhosted'
@@ -136,13 +142,15 @@ jobs:
 
             - name: CPU count
               id: cpu-count
-              run: echo "::set-output name=count::$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')"
+              run: |
+                  sudo apt-get update
+                  echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
-            # we can cache this, but then we don't test the code that generates ratecoeff.dat
+      # we can cache this, but then we don't test the code that generates ratecoeff.dat
             - name: Cache ratecoeff.dat
               if: matrix.testname == 'classicmode'
               uses: actions/cache@v3
-              # if: matrix.testmode != 'ON'
+        # if: matrix.testmode != 'ON'
               with:
                   path: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
                   key: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
@@ -189,17 +197,17 @@ jobs:
             - name: cat job0 output log
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: |
-                  cat output_0-0.txt
-                  mkdir job0
-                  ../../scripts/movefiles.sh job0
+              run: cat output_0-0.txt
 
             - name: Checksum job0 output files
-              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
+              if: always() && matrix.os != 'selfhosted'
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
+                  mkdir job0
+                  ../../scripts/movefiles.sh job0
                   md5sum *.out job0/*.out
-                  md5sum -c results_md5_job0.txt
+
+                  if [ -f results_md5_job0.txt ]; then md5sum -c results_md5_job0.txt; else echo "results_md5_job0.txt not found"; fi
 
             - name: Run test job1 resume
               if: always()
@@ -236,12 +244,12 @@ jobs:
                   rsync -av job1 output/
                   cat exspec.txt
 
-            - name: Checksum output files
-              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
+            - name: Checksum job1 output files
+              if: always() && matrix.os != 'selfhosted'
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   md5sum *.out job1/*.out
-                  md5sum -c results_md5_final.txt
+                  if [ -f results_md5_final.txt ]; then md5sum -c results_md5_final.txt; else echo "results_md5_final.txt not found"; fi
 
             - name: Prepare for next steps
               if: always() && matrix.os != 'selfhosted'
@@ -259,7 +267,7 @@ jobs:
 
             - name: Set up Python
               if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
-              uses: actions/setup-python@v3
+              uses: actions/setup-python@v4
               with:
                   python-version: '3.10'
                   cache: pip
@@ -271,25 +279,50 @@ jobs:
                   python3 -m pip install artistools
 
                   # upgrade all installed packages to their latest versions
-              #   python3 -m pip list --format=freeze --outdated | cut -d '=' -f1 | xargs -n1 python3 -m pip install --upgrade
+                  # python3 -m pip list freeze --outdated | tail -n +3 | cut -w -f1 | xargs -n1 python3 -m pip install --upgrade
 
-            - name: Plot output
+            - name: Plot light curve
+              if: always() && matrix.testmode == 'OFF'
+              working-directory: tests/
+              run: |
+                  python3 -m artistools.lightcurve ${{ matrix.testname }}_testrun
+
+            - name: Plot spectrum nebularonezone
               if: always() && matrix.testname == 'nebularonezone' && matrix.testmode == 'OFF'
               working-directory: tests/
               run: |
-                  python3 -m artistools.lightcurve ${{ matrix.testname }}_testrun
                   python3 -m artistools.spectra -ts 8 ${{ matrix.testname }}_testrun
 
-            - name: Plot output
+            - name: Plot spectrum classicmode
               if: always() && matrix.testname == 'classicmode' && matrix.testmode == 'OFF'
               working-directory: tests/
               run: |
-                  python3 -m artistools.lightcurve ${{ matrix.testname }}_testrun
                   python3 -m artistools.spectra -t 18-22 ${{ matrix.testname }}_testrun
 
             - name: Upload plot files
               if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
-              uses: actions/upload-artifact@v2
+              uses: actions/upload-artifact@v3
               with:
                   name: test-${{ matrix.testname }}-output-pdf
                   path: tests/*.pdf
+
+  # - name: Compile previous commit
+  #   if: matrix.testmode == 'OFF'
+  #   continue-on-error: true
+  #   run: |
+  #       git checkout HEAD~1
+  #       git log -n 1
+  #       cp tests/${{ matrix.testname }}_testrun/artisoptions.h .
+  #       make clean
+  #       make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+  #       cp sn3d tests/${{ matrix.testname }}_testrun/
+  #       cp exspec tests/${{ matrix.testname }}_testrun/
+
+  # - name: Run previous commit job0 start
+  #   if: matrix.testmode == 'OFF'
+  #   continue-on-error: true
+  #   working-directory: tests/${{ matrix.testname }}_testrun/
+  #   run: |
+  #       cp input-newrun.txt input.txt
+  #       touch output_0-0.txt
+  #       time mpirun -np 2 ./sn3d

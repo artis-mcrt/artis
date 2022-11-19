@@ -5,52 +5,7 @@
 #include <cmath>
 
 #include "artisoptions.h"
-#include "exspec.h"
 #include "sn3d.h"
-
-__host__ __device__ void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
-// aberation of angles in special relativity
-//   dir1: direction unit vector in frame1
-//   vel: velocity of frame2 relative to frame1
-//   dir2: direction vector in frame2
-{
-  const double vsqr = dot(vel, vel) / CLIGHTSQUARED;
-  const double gamma_rel = 1. / std::sqrt(1 - vsqr);
-
-  const double ndotv = dot(dir1, vel);
-  const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
-  const double fact2 = (gamma_rel - (gamma_rel * gamma_rel * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
-
-  for (int d = 0; d < 3; d++) {
-    dir2[d] = (dir1[d] - (vel[d] * fact2)) / fact1;
-  }
-}
-
-__host__ __device__ double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
-// Doppler factor
-// arguments:
-//   dir_rf: the rest frame direction (unit vector) of light propagation
-//   vel_rf: velocity of the comoving frame relative to the rest frame
-// returns: the ratio f = nu_cmf / nu_rf
-{
-  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
-  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
-
-  const double ndotv = dot(dir_rf, vel_rf);
-  double dopplerfactor = 1. - (ndotv / CLIGHT);
-
-  if (USE_RELATIVISTIC_CORRECTIONS) {
-    const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;
-    assert_always(betasq >= 0.);  // v < c
-    assert_always(betasq < 1.);   // v < c
-    dopplerfactor = dopplerfactor / sqrt(1 - betasq);
-  }
-
-  assert_testmodeonly(std::isfinite(dopplerfactor));
-  assert_testmodeonly(dopplerfactor > 0);
-
-  return dopplerfactor;
-}
 
 __host__ __device__ void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[3])
 // Routine for scattering a direction through angle theta.
@@ -107,48 +62,4 @@ __host__ __device__ void get_rand_isotropic_unitvec(double vecout[3])
   vecout[0] = sintheta * std::cos(phi);
   vecout[1] = sintheta * std::sin(phi);
   vecout[2] = mu;
-}
-
-__host__ __device__ void move_pkt(struct packet *pkt_ptr, const double distance, const double time)
-/// Subroutine to move a packet along a straight line (specified by current
-/// dir vector). The distance moved is in the rest frame.
-{
-  /// First update pos.
-  assert_always(distance >= 0);
-
-  pkt_ptr->pos[0] += (pkt_ptr->dir[0] * distance);
-  pkt_ptr->pos[1] += (pkt_ptr->dir[1] * distance);
-  pkt_ptr->pos[2] += (pkt_ptr->dir[2] * distance);
-
-  /// During motion, rest frame energy and frequency are conserved.
-  /// But need to update the co-moving ones.
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
-  pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
-  pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
-}
-
-int get_escapedirectionbin(const struct packet *pkt_ptr) {
-  constexpr double xhat[3] = {1.0, 0.0, 0.0};
-  double vec1[3];
-  double vec2[3];
-  double vec3[3];
-
-  /// Angle resolved case: need to work out the correct angle bin
-  const double costheta = dot(pkt_ptr->dir, globals::syn_dir);
-  const int thetabin = ((costheta + 1.0) * std::sqrt(MABINS) / 2.0);
-  cross_prod(pkt_ptr->dir, globals::syn_dir, vec1);
-  cross_prod(xhat, globals::syn_dir, vec2);
-  const double cosphi = dot(vec1, vec2) / vec_len(vec1) / vec_len(vec2);
-
-  cross_prod(vec2, globals::syn_dir, vec3);
-  const double testphi = dot(vec1, vec3);
-
-  int phibin;
-  if (testphi > 0) {
-    phibin = (acos(cosphi) / 2. / PI * std::sqrt(MABINS));
-  } else {
-    phibin = ((acos(cosphi) + PI) / 2. / PI * std::sqrt(MABINS));
-  }
-  const int na = (thetabin * sqrt(MABINS)) + phibin;
-  return na;
 }

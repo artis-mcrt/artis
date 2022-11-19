@@ -1,5 +1,9 @@
+#include "ratecoeff.h"
+
 #include <gsl/gsl_integration.h>
 
+#include <algorithm>
+#include <cmath>
 #include <cstring>
 // #define  _XOPEN_SOURCE
 #define D_POSIX_SOURCE
@@ -13,7 +17,6 @@
 #include "macroatom.h"
 #include "md5.h"
 #include "radfield.h"
-#include "ratecoeff.h"
 #include "sn3d.h"
 
 // typedef struct gslintegration_ffheatingparas
@@ -32,11 +35,11 @@ static __managed__ double T_step;
 __managed__ double T_step_log;
 
 typedef struct {
-  double nu_edge;
-  double departure_ratio;
-  float *photoion_xs;
-  float T_e;
-  int modelgridindex;
+  const double nu_edge;
+  const double departure_ratio;
+  const float *const photoion_xs;
+  const float T_e;
+  const int modelgridindex;
 } gsl_integral_paras_gammacorr;
 
 static char adatafile_hash[33];
@@ -145,26 +148,15 @@ static bool read_ratecoeff_dat(void)
                                      &corrphotoioncoeff, &bfheating_coeff) == 4);
 
                 // assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0);
-                globals::elements[element]
-                    .ions[ion]
-                    .levels[level]
-                    .phixstargets[phixstargetindex]
-                    .spontrecombcoeff[iter] = alpha_sp;
+                globals::spontrecombcoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = alpha_sp;
 
                 // assert_always(std::isfinite(bfcooling_coeff) && bfcooling_coeff >= 0);
-                globals::elements[element]
-                    .ions[ion]
-                    .levels[level]
-                    .phixstargets[phixstargetindex]
-                    .bfcooling_coeff[iter] = bfcooling_coeff;
+                globals::bfcooling_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = bfcooling_coeff;
 
 #if (!NO_LUT_PHOTOION)
                 if (corrphotoioncoeff >= 0) {
-                  globals::elements[element]
-                      .ions[ion]
-                      .levels[level]
-                      .phixstargets[phixstargetindex]
-                      .corrphotoioncoeff[iter] = corrphotoioncoeff;
+                  globals::corrphotoioncoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] =
+                      corrphotoioncoeff;
                 } else {
                   printout(
                       "ERROR: NO_LUT_PHOTOION is off, but there are no corrphotoioncoeff values in ratecoeff file\n");
@@ -173,11 +165,8 @@ static bool read_ratecoeff_dat(void)
 #endif
 #if (!NO_LUT_BFHEATING)
                 if (bfheating_coeff >= 0) {
-                  globals::elements[element]
-                      .ions[ion]
-                      .levels[level]
-                      .phixstargets[phixstargetindex]
-                      .bfheating_coeff[iter] = bfheating_coeff;
+                  globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] =
+                      bfheating_coeff;
                 } else {
                   printout(
                       "ERROR: NO_LUT_BFHEATING is off, but there are no bfheating_coeff values in the ratecoeff "
@@ -227,27 +216,21 @@ static void write_ratecoeff_dat(void) {
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
           /// Loop over the temperature grid
           for (int iter = 0; iter < TABLESIZE; iter++) {
-            const double alpha_sp = globals::elements[element]
-                                        .ions[ion]
-                                        .levels[level]
-                                        .phixstargets[phixstargetindex]
-                                        .spontrecombcoeff[iter];
+            const double alpha_sp =
+                globals::spontrecombcoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)];
             const double bfcooling_coeff =
-                globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[iter];
+                globals::bfcooling_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)];
             fprintf(ratecoeff_file, "%g %g", alpha_sp, bfcooling_coeff);
 
 #if (!NO_LUT_PHOTOION)
-            const double corrphotoioncoeff = globals::elements[element]
-                                                 .ions[ion]
-                                                 .levels[level]
-                                                 .phixstargets[phixstargetindex]
-                                                 .corrphotoioncoeff[iter];
+            const double corrphotoioncoeff =
+                globals::corrphotoioncoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)];
 #else
             const double corrphotoioncoeff = -1.0;
 #endif
 #if (!NO_LUT_BFHEATING)
             const double bfheating_coeff =
-                globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[iter];
+                globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)];
 #else
             const double bfheating_coeff = -1.0;
 #endif
@@ -263,11 +246,11 @@ static void write_ratecoeff_dat(void) {
 ///****************************************************************************
 /// The following functions define the integrands for these rate coefficients
 /// for use with libgsl integrators.
-static double alpha_sp_integrand_gsl(double nu, void *voidparas)
+static double alpha_sp_integrand_gsl(const double nu, void *const voidparas)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
-  const gslintegration_paras *const params = (gslintegration_paras *)voidparas;
+  const gslintegration_paras *const params = static_cast<gslintegration_paras *>(voidparas);
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
   const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu, 2) * exp(-HOVERKB * nu / params->T);
@@ -278,13 +261,13 @@ static double alpha_sp_integrand_gsl(double nu, void *voidparas)
   return x;
 }
 
-static double alpha_sp_E_integrand_gsl(double nu, void *voidparas)
+static double alpha_sp_E_integrand_gsl(const double nu, void *const voidparas)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
   const gslintegration_paras *const params = (gslintegration_paras *)voidparas;
 
-  const double T = params->T;
+  const float T = params->T;
   const double nu_edge = params->nu_edge;
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
@@ -320,13 +303,13 @@ static double alpha_sp_E_integrand_gsl(double nu, void *voidparas)
 }*/
 
 #if (!NO_LUT_PHOTOION)
-static double gammacorr_integrand_gsl(double nu, void *voidparas)
+static double gammacorr_integrand_gsl(const double nu, void *const voidparas)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
   const gslintegration_paras *const params = (gslintegration_paras *)voidparas;
 
-  const double T = params->T;
+  const float T = params->T;
   const double nu_edge = params->nu_edge;
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
@@ -339,7 +322,7 @@ static double gammacorr_integrand_gsl(double nu, void *voidparas)
 #endif
 
 #if (!NO_LUT_BFHEATING)
-static double approx_bfheating_integrand_gsl(double nu, void *voidparas)
+static double approx_bfheating_integrand_gsl(const double nu, void *const voidparas)
 /// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
 /// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
 /// formula. The radiation fields dependence on W is taken into account by multiplying
@@ -347,7 +330,7 @@ static double approx_bfheating_integrand_gsl(double nu, void *voidparas)
 {
   const gslintegration_paras *const params = (gslintegration_paras *)voidparas;
 
-  const double T = params->T;
+  const float T = params->T;
   const double nu_edge = params->nu_edge;
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
@@ -393,7 +376,7 @@ static double approx_bfheating_integrand_gsl(double nu, void *voidparas)
   return x;
 }*/
 
-static double bfcooling_integrand_gsl(double nu, void *voidparas)
+static double bfcooling_integrand_gsl(const double nu, void *const voidparas)
 /// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
 /// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
 /// formula. The radiation fields dependence on W is taken into account by multiplying
@@ -401,7 +384,7 @@ static double bfcooling_integrand_gsl(double nu, void *voidparas)
 {
   const gslintegration_paras *const params = (gslintegration_paras *)voidparas;
 
-  const double T = params->T;
+  const float T = params->T;
   const double nu_edge = params->nu_edge;
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
@@ -502,9 +485,6 @@ static void precalculate_rate_coefficient_integrals(void) {
           const double nu_threshold = E_threshold / H;
           const double nu_max_phixs =
               nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
-          gslintegration_paras intparas;
-          intparas.nu_edge = nu_threshold;  // Global variable which passes the threshold to the integrator
-                                            // the threshold of the first target gives nu of the first phixstable point
           // Loop over the temperature grid
           for (int iter = 0; iter < TABLESIZE; iter++) {
             double error;
@@ -514,9 +494,12 @@ static void precalculate_rate_coefficient_integrals(void) {
             const double sfac = calculate_sahafact(element, ion, level, upperlevel, T_e, E_threshold);
             // printout("%d %g\n",iter,T_e);
 
-            intparas.T = T_e;
             assert_always(globals::elements[element].ions[ion].levels[level].photoion_xs != NULL);
-            intparas.photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
+            // the threshold of the first target gives nu of the first phixstable point
+            gslintegration_paras intparas = {
+                .nu_edge = nu_threshold,
+                .T = T_e,
+                .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs};
 
             // gsl_function F_gamma;
             // F_gamma.function = &gamma_integrand_gsl;
@@ -531,9 +514,8 @@ static void precalculate_rate_coefficient_integrals(void) {
 
             /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
             double alpha_sp = 0.0;
-            gsl_function F_alpha_sp;
-            F_alpha_sp.function = &alpha_sp_integrand_gsl;
-            F_alpha_sp.params = &intparas;
+            const gsl_function F_alpha_sp = {.function = &alpha_sp_integrand_gsl, .params = &intparas};
+
             status = gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE,
                                          GSL_INTEG_GAUSS61, gslworkspace, &alpha_sp, &error);
             if (status != 0 && (status != 18 || (error / alpha_sp) > epsrelwarning)) {
@@ -543,14 +525,14 @@ static void precalculate_rate_coefficient_integrals(void) {
 
             if (!std::isfinite(alpha_sp) || alpha_sp < 0) {
               printout(
-                  "WARNING: alpha_sp was negative or non-finite for level %d. alpha_sp %g sfac %g phixstargetindex %d "
+                  "WARNING: alpha_sp was negative or non-finite for level %d Te %g. alpha_sp %g sfac %g "
+                  "phixstargetindex %d "
                   "phixstargetprobability %g\n",
-                  level, alpha_sp, sfac, phixstargetindex, phixstargetprobability);
+                  level, T_e, alpha_sp, sfac, phixstargetindex, phixstargetprobability);
               alpha_sp = 0;
             }
             // assert_always(alpha_sp >= 0);
-            globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[iter] =
-                alpha_sp;
+            globals::spontrecombcoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = alpha_sp;
 
             // if (atomic_number == 26 && ionstage == 3 && level < 5)
             // {
@@ -582,13 +564,12 @@ static void precalculate_rate_coefficient_integrals(void) {
 
 #if (!NO_LUT_PHOTOION)
             double gammacorr = 0.0;
-            gsl_function F_gammacorr;
-            F_gammacorr.function = &gammacorr_integrand_gsl;
-            F_gammacorr.params = &intparas;
+            const gsl_function F_gammacorr = {.function = &gammacorr_integrand_gsl, .params = &intparas};
+
             status = gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE,
                                          GSL_INTEG_GAUSS61, gslworkspace, &gammacorr, &error);
             if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
-              printout("gammcorr integrator status %d. Integral value %9.3e +/- %9.3e\n", status, gammacorr, error);
+              printout("gammacorr integrator status %d. Integral value %9.3e +/- %9.3e\n", status, gammacorr, error);
             }
             gammacorr *= FOURPI * phixstargetprobability;
             assert_always(gammacorr >= 0);
@@ -596,15 +577,13 @@ static void precalculate_rate_coefficient_integrals(void) {
               printout("WARNING: gammacorr was negative for level %d\n", level);
               gammacorr = 0;
             }
-            globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[iter] =
-                gammacorr;
+            globals::corrphotoioncoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = gammacorr;
 #endif
 
 #if (!NO_LUT_BFHEATING)
             double bfheating_coeff = 0.0;
-            gsl_function F_bfheating;
-            F_bfheating.function = &approx_bfheating_integrand_gsl;
-            F_bfheating.params = &intparas;
+            const gsl_function F_bfheating = {.function = &approx_bfheating_integrand_gsl, .params = &intparas};
+
             status = gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE,
                                          GSL_INTEG_GAUSS61, gslworkspace, &bfheating_coeff, &error);
 
@@ -617,14 +596,12 @@ static void precalculate_rate_coefficient_integrals(void) {
               printout("WARNING: bfheating_coeff was negative for level %d\n", level);
               bfheating_coeff = 0;
             }
-            globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[iter] =
-                bfheating_coeff;
+            globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = bfheating_coeff;
 #endif
 
             double bfcooling_coeff = 0.0;
-            gsl_function F_bfcooling;
-            F_bfcooling.function = &bfcooling_integrand_gsl;
-            F_bfcooling.params = &intparas;
+            const gsl_function F_bfcooling = {.function = &bfcooling_integrand_gsl, .params = &intparas};
+
             status = gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE,
                                          GSL_INTEG_GAUSS61, gslworkspace, &bfcooling_coeff, &error);
             if (status != 0 && (status != 18 || (error / bfcooling_coeff) > epsrelwarning)) {
@@ -634,13 +611,12 @@ static void precalculate_rate_coefficient_integrals(void) {
             bfcooling_coeff *= FOURPI * sfac * phixstargetprobability;
             if (!std::isfinite(bfcooling_coeff) || bfcooling_coeff < 0) {
               printout(
-                  "WARNING: bfcooling_coeff was negative or non-finite for level %d. bfcooling_coeff %g sfac %g "
+                  "WARNING: bfcooling_coeff was negative or non-finite for level %d Te %g. bfcooling_coeff %g sfac %g "
                   "phixstargetindex %d phixstargetprobability %g\n",
-                  level, bfcooling_coeff, sfac, phixstargetindex, phixstargetprobability);
+                  level, T_e, bfcooling_coeff, sfac, phixstargetindex, phixstargetprobability);
               bfcooling_coeff = 0;
             }
-            globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[iter] =
-                bfcooling_coeff;
+            globals::bfcooling_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = bfcooling_coeff;
           }
         }
       }
@@ -722,17 +698,13 @@ __host__ __device__ double get_spontrecombcoeff(int element, int ion, int level,
     const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
     const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
-    const double f_upper =
-        globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[upperindex];
-    const double f_lower =
-        globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[lowerindex];
+    const double f_upper = globals::spontrecombcoeff[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
+    const double f_lower = globals::spontrecombcoeff[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
     // printout("interpolate_spontrecombcoeff element %d, ion %d, level %d, upper %g, lower %g\n",
     //          element,ion,level,f_upper,f_lower);
     Alpha_sp = (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
   } else {
-    Alpha_sp =
-        globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[TABLESIZE -
-                                                                                                           1];
+    Alpha_sp = globals::spontrecombcoeff[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
   }
   return Alpha_sp;
 }
@@ -837,26 +809,27 @@ static void scale_level_phixs(const int element, const int ion, const int level,
 // multiply the cross sections associated with a level by some factor and
 // also update the quantities integrated from (and proportional to) the cross sections
 {
-  for (int n = 0; n < globals::NPHIXSPOINTS; n++) {
-    globals::elements[element].ions[ion].levels[level].photoion_xs[n] *= factor;
+  // if we store the cross sections in node shared memory, then only one rank should update it
+  if (globals::rank_in_node == 0) {
+    for (int n = 0; n < globals::NPHIXSPOINTS; n++) {
+      globals::elements[element].ions[ion].levels[level].photoion_xs[n] *= factor;
+    }
   }
 
   const int nphixstargets = get_nphixstargets(element, ion, level);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     for (int iter = 0; iter < TABLESIZE; iter++) {
-      globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[iter] *=
-          factor;
+      globals::spontrecombcoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
 
 #if (!NO_LUT_PHOTOION)
-      globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[iter] *=
-          factor;
+      globals::corrphotoioncoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
 #endif
 
 #if (!NO_LUT_BFHEATING)
-      globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[iter] *= factor;
+      globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
 #endif
 
-      globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[iter] *= factor;
+      globals::bfcooling_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
     }
   }
 }
@@ -871,7 +844,7 @@ static void read_recombrate_file(void)
     return;
   }
 
-  printout("Reading recombination rate file...\n");
+  printout("Reading recombination rate file (recombrates.txt)...\n");
 
   const double Te_estimate = RECOMBCALIBRATION_T_ELEC;
   const double log_Te_estimate = log10(Te_estimate);
@@ -891,8 +864,8 @@ static void read_recombrate_file(void)
   while (fscanf(recombrate_file, "%d %d %d\n", &atomicnumber, &upperionstage, &tablerows) > 0) {
     // printout("%d %d %d\n", atomicnumber, upperionstage, tablerows);
 
-    struct rrc_row T_highestbelow;
-    struct rrc_row T_lowestabove;
+    struct rrc_row T_highestbelow = {0, 0, 0};
+    struct rrc_row T_lowestabove = {0, 0, 0};
     T_highestbelow.log_Te = -1;
     T_lowestabove.log_Te = -1;
     for (int i = 0; i < tablerows; i++) {
@@ -1058,17 +1031,13 @@ double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixst
     const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
     const double f_upper =
-        globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[upperindex];
+        globals::corrphotoioncoeff[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
     const double f_lower =
-        globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[lowerindex];
+        globals::corrphotoioncoeff[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
 
     return (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower));
   } else
-    return globals::elements[element]
-        .ions[ion]
-        .levels[level]
-        .phixstargets[phixstargetindex]
-        .corrphotoioncoeff[TABLESIZE - 1];
+    return globals::corrphotoioncoeff[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
 }
 
 double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex)
@@ -1113,18 +1082,18 @@ static double calculate_stimrecombcoeff_integral(int element, int lowerion, int 
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
-  gsl_integral_paras_gammacorr intparas;
-  intparas.nu_edge = nu_threshold;
-  intparas.modelgridindex = modelgridindex;
-  intparas.photoion_xs = globals::elements[element].ions[lowerion].levels[level].photoion_xs;
   const float T_e = grid::get_Te(modelgridindex);
-  intparas.T_e = T_e;
+  gsl_integral_paras_gammacorr intparas = {
+      .nu_edge = nu_threshold,
+      .photoion_xs = globals::elements[element].ions[lowerion].levels[level].photoion_xs,
+      .T_e = T_e,
+      .modelgridindex = modelgridindex,
+  };
+
   const int upperionlevel = get_phixsupperlevel(element, lowerion, level, phixstargetindex);
   const double sf = calculate_sahafact(element, lowerion, level, upperionlevel, T_e, H * nu_threshold);
 
-  gsl_function F_stimrecomb;
-  F_stimrecomb.function = &integrand_stimrecombination_custom_radfield;
-  F_stimrecomb.params = &intparas;
+  const gsl_function F_stimrecomb = {.function = &integrand_stimrecombination_custom_radfield, .params = &intparas};
   double error = 0.0;
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
@@ -1188,7 +1157,7 @@ double get_stimrecombcoeff(int element, int lowerion, int level, int phixstarget
   return stimrecombcoeff;
 }
 
-static double integrand_corrphotoioncoeff_custom_radfield(const double nu, void *voidparas)
+static double integrand_corrphotoioncoeff_custom_radfield(const double nu, void *const voidparas)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
@@ -1214,23 +1183,18 @@ static double integrand_corrphotoioncoeff_custom_radfield(const double nu, void 
 
 static double calculate_corrphotoioncoeff_integral(int element, int ion, int level, int phixstargetindex,
                                                    int modelgridindex) {
-  const double epsrel = 1e-3;
-  const double epsrelwarning = 1e-1;
-  const double epsabs = 0.;
+  constexpr double epsrel = 1e-3;
+  constexpr double epsrelwarning = 1e-1;
+  constexpr double epsabs = 0.;
 
   const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
-  gsl_integral_paras_gammacorr intparas;
-  intparas.nu_edge = nu_threshold;
-  intparas.modelgridindex = modelgridindex;
-  intparas.photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
   const float T_e = grid::get_Te(modelgridindex);
-  intparas.T_e = T_e;
 
 #if SEPARATE_STIMRECOMB
-  intparas.departure_ratio = 0.;  // zero the stimulated recomb contribution
+  const double departure_ratio = 0.;  // zero the stimulated recomb contribution
 #else
   // stimulated recombination is negative photoionisation
   const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
@@ -1246,12 +1210,16 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   if (!std::isfinite(departure_ratio)) {
     departure_ratio = 0.;
   }
-  intparas.departure_ratio = departure_ratio;
 #endif
+  gsl_integral_paras_gammacorr intparas = {
+      .nu_edge = nu_threshold,
+      .departure_ratio = departure_ratio,
+      .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs,
+      .T_e = T_e,
+      .modelgridindex = modelgridindex,
+  };
 
-  gsl_function F_gammacorr;
-  F_gammacorr.function = &integrand_corrphotoioncoeff_custom_radfield;
-  F_gammacorr.params = &intparas;
+  const gsl_function F_gammacorr = {.function = &integrand_corrphotoioncoeff_custom_radfield, .params = &intparas};
   double error = 0.0;
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
@@ -1465,22 +1433,31 @@ double calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, 
         gamma_coeff_used +=
             col_ionization_ratecoeff(T_e, nne, element, lowerion, lower, phixstargetindex, epsilon_trans);
       } else {
-        gamma_coeff_used += get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex,
-                                                  modelgridindex);  // whatever ARTIS uses internally
-        gamma_coeff_bfest += radfield::get_bfrate_estimator(element, lowerion, lower, phixstargetindex, modelgridindex);
+        gamma_coeff_used = get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex,
+                                                 modelgridindex);  // whatever ARTIS uses internally
 
-        // use the cellhistory but not the detailed bf estimators
-        double gamma_coeff_integral_level_ch = globals::cellhistory[tid]
-                                                   .chelements[element]
-                                                   .chions[lowerion]
-                                                   .chlevels[lower]
-                                                   .chphixstargets[phixstargetindex]
-                                                   .corrphotoioncoeff;
-        if (gamma_coeff_integral_level_ch >= 0) {
-          gamma_coeff_integral += gamma_coeff_integral_level_ch;
-        } else {
+        if (force_bfest || printdebug) {
+          gamma_coeff_bfest =
+              radfield::get_bfrate_estimator(element, lowerion, lower, phixstargetindex, modelgridindex);
+        }
+
+        if (force_bfintegral || printdebug) {
+          // use the cellhistory but not the detailed bf estimators
+          // TODO: restore cell history part
           gamma_coeff_integral +=
               calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, modelgridindex);
+          // double gamma_coeff_integral_level_ch = globals::cellhistory[tid]
+          //                                            .chelements[element]
+          //                                            .chions[lowerion]
+          //                                            .chlevels[lower]
+          //                                            .chphixstargets[phixstargetindex]
+          //                                            .corrphotoioncoeff;
+          // if (gamma_coeff_integral_level_ch >= 0) {
+          //   gamma_coeff_integral += gamma_coeff_integral_level_ch;
+          // } else {
+          //   gamma_coeff_integral +=
+          //       calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, modelgridindex);
+          // }
         }
       }
 
@@ -1496,7 +1473,7 @@ double calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, 
         gamma_ion += gamma_ion_contribution_used;
       }
 
-      if (printdebug && (gamma_ion_contribution_integral < 0. || gamma_ion_contribution_used > 0.) && lower < 20) {
+      if (printdebug && (gamma_ion_contribution_integral > 0. || gamma_ion_contribution_used > 0.) && lower < 20) {
         const double threshold_angstroms =
             1e8 * CLIGHT / (get_phixs_threshold(element, lowerion, lower, phixstargetindex) / H);
         printout(

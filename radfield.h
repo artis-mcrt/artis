@@ -6,7 +6,6 @@
 #include <cstdio>
 
 #include "sn3d.h"
-#include "types.h"
 
 namespace radfield {
 void zero_estimators(int modelgridindex);
@@ -14,9 +13,9 @@ void init(int my_rank, int ndo, int ndo_nonempty);
 void initialise_prev_titer_photoionestimators(void);
 void write_to_file(int modelgridindex, int timestep);
 void close_file(void);
-__host__ __device__ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *pkt_ptr,
-                                           double t_current);
-void increment_lineestimator(int modelgridindex, int lineindex, double increment);
+__host__ __device__ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf,
+                                           const struct packet *pkt_ptr);
+void update_lineestimator(int modelgridindex, int lineindex, double increment);
 __host__ __device__ double radfield(double nu, int modelgridindex);
 __host__ __device__ double dbb_mgi(double nu, int modelgridindex);
 void fit_parameters(int modelgridindex, int timestep);
@@ -41,11 +40,13 @@ void reset_bfrate_contributions(const int modelgridindex);
 int integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel, size_t limit, int key,
               gsl_integration_workspace *workspace, double *result, double *abserr);
 
-__host__ __device__ inline double dbb(double nu, float T, float W)
+template <typename T_t, typename W_t>
+__host__ __device__ constexpr double dbb(double nu, T_t T, W_t W)
 // returns J_nu for a dilute black body [ergs/s/sr/cm2/Hz]
 {
   return W * TWOHOVERCLIGHTSQUARED * pow(nu, 3) / expm1(HOVERKB * nu / T);
 }
+
 }  // namespace radfield
 
 #endif  // RADFIELD_H

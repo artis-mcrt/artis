@@ -8,7 +8,7 @@
 #include "sn3d.h"
 #include "vectors.h"
 
-static double meanf_sigma(const double x)
+constexpr double meanf_sigma(const double x)
 // Routine to compute the mean energy converted to non-thermal electrons times
 // the Klein-Nishina cross section.
 {
@@ -25,7 +25,7 @@ static double meanf_sigma(const double x)
   return tot;
 }
 
-void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist) {
+void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist) {
   // Subroutine to record the heating rate in a cell due to gamma rays.
   // By heating rate I mean, for now, really the rate at which the code is making
   // k-packets in that cell which will then convert into r-packets. This is (going
@@ -39,7 +39,7 @@ void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist) {
   // Called with a packet that is about to travel a
   // distance dist in the lab frame.
 
-  // PKT dummy;
+  // struct packet dummy;
   // dummy.pos[0] = pkt_ptr->pos[0];
   // dummy.pos[1] = pkt_ptr->pos[1];
   // dummy.pos[2] = pkt_ptr->pos[2];
@@ -76,7 +76,7 @@ void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist) {
   }
 }
 
-void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist) {
+void rlc_emiss_rpkt(const struct packet *pkt_ptr, double dist) {
   // Subroutine to record the rate of destruction (and re-creation) of
   // r-packets by the grey opacity.
 
@@ -85,7 +85,7 @@ void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist) {
   // Called with a packet that is about to travel a
   //    distance dist in the lab frame.
 
-  /*PKT dummy;
+  /*struct packet dummy;
 
   dummy.pos[0] = pkt_ptr->pos[0];
   dummy.pos[1] = pkt_ptr->pos[1];
@@ -163,8 +163,8 @@ void write_grey(int nts) {
   junk[i] = '\0';
   fclose(dummy);
 
-  strcat(filename, junk);
-  strcat(filename, ".out");
+  strncat(filename, junk, 127);
+  strncat(filename, ".out", 127);
 
   if (globals::file_set) {
     if ((est_file = fopen(filename, "r")) == NULL) {
@@ -175,7 +175,7 @@ void write_grey(int nts) {
     // for (n=0; n < ngrid; n++)
     for (int n = 0; n < grid::get_npts_model(); n++) {
       float dum;
-      fscanf(est_file, "%g", &dum);
+      assert_always(fscanf(est_file, "%g", &dum) == 1);
       globals::rpkt_emiss[n] += dum;
     }
     fclose(est_file);

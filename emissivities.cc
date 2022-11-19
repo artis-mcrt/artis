@@ -3,16 +3,15 @@
 #include <cstring>
 
 #include "atomic.h"
-#include "gamma.h"
+#include "gammapkt.h"
 #include "grid.h"
-#include "packet_init.h"
 #include "photo_electric.h"
 #include "radfield.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"
 
-void compton_emiss_cont(const PKT *pkt_ptr, double dist) {
+void compton_emiss_cont(const struct packet *pkt_ptr, double dist) {
   // Subroutine to add contribution to the MC estimator for the
   // compton emissivity. Called with a packet that is about to travel a
   // distance dist in the lab frame.
@@ -58,11 +57,11 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist) {
   const double freq_out = pkt_ptr->nu_cmf / f;  /// doppler_nurf_over_nucmf(syn_dir, vel_vec);
   // do we want ?/ doppler_nurf_over_nucmf(syn_dir, vel_vec)
 
-  const int lindex = get_nul(freq_out);  // This is the index of the next line to
-                                         // the red. The emissivity will go in this
-                                         // bin. However, since there's an offset
-                                         // in the emissivities, we shift the
-                                         // index by that
+  const int lindex = gammapkt::get_nul(freq_out);  // This is the index of the next line to
+                                                   // the red. The emissivity will go in this
+                                                   // bin. However, since there's an offset
+                                                   // in the emissivities, we shift the
+                                                   // index by that
 
   // If it's gonna be in a bin of interest, carry on - otherwise leave it.
 
@@ -110,7 +109,7 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist) {
   }
 }
 
-void pp_emiss_cont(const PKT *pkt_ptr, double dist) {
+void pp_emiss_cont(const struct packet *pkt_ptr, double dist) {
   // New routine for getting a pair production emissivity. Closely based on compton_emiss but simpler. The
   // emissivity itself is stored in the last row of the compton emissivity structure. Idea here is to get something
   // which, when normalised by the volume and time step, will give the energy going into the .511 MeV
@@ -176,7 +175,8 @@ void normalise_compton_estimators(const int nts) {
   const double time_factor = 1. / pow(globals::time_step[nts].mid / globals::tmin, 3.0) / globals::time_step[nts].width;
 
   for (int m = 0; m < globals::emiss_max; m++) {
-    dfreq[m] = get_gam_freq(m + globals::emiss_offset + 1) - get_gam_freq(m + globals::emiss_offset);
+    dfreq[m] =
+        gammapkt::get_gam_freq(m + globals::emiss_offset + 1) - gammapkt::get_gam_freq(m + globals::emiss_offset);
     if (dfreq[m] < 0) {
       printout("Problem with normalisation of estimators. Abort.\n");
       abort();
@@ -219,8 +219,8 @@ void write_compton_estimators(int nts) {
   junk[i] = '\0';
   fclose(dummy);
 
-  strcat(filename, junk);
-  strcat(filename, ".out");
+  strncat(filename, junk, 127);
+  strncat(filename, ".out", 127);
 
   if (globals::file_set) {
     est_file = fopen_required(filename, "rb");
@@ -229,7 +229,7 @@ void write_compton_estimators(int nts) {
     for (int n = 0; n < grid::get_npts_model(); n++) {
       for (int m = 0; m < globals::emiss_max; m++) {
         float dum;
-        fread(&dum, sizeof(float), 1, est_file);
+        assert_always(fread(&dum, sizeof(float), 1, est_file) == 1);
         // fscanf(est_file, "%g", &dum);
         globals::compton_emiss[n * EMISS_MAX + m] += dum;
       }
@@ -251,9 +251,8 @@ bool estim_switch(int nts) {
   const double tstart = globals::time_step[nts].start;
   const double tend = globals::time_step[nts].start + globals::time_step[nts].width;
 
-  const double ts_want = globals::time_syn[0] * ((1. - globals::rmax / globals::tmin / globals::CLIGHT_PROP));
-  const double te_want =
-      globals::time_syn[globals::nsyn_time - 1] * (1. + globals::rmax / globals::tmin / globals::CLIGHT_PROP);
+  const double ts_want = globals::time_syn[0] * ((1. - globals::rmax / globals::tmin / CLIGHT_PROP));
+  const double te_want = globals::time_syn[globals::nsyn_time - 1] * (1. + globals::rmax / globals::tmin / CLIGHT_PROP);
 
   return ((tstart > te_want) || (tend < ts_want));
 }

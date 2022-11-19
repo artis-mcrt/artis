@@ -4,6 +4,7 @@
 #include <cstdio>
 
 #include "cuda.h"
+
 void solve_nlte_pops_element(int element, int modelgridindex, int timestep, int nlte_iter);
 double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timestep);
 __host__ __device__ double superlevel_boltzmann(int modelgridindex, int element, int ion, int level);

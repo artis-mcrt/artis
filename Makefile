@@ -6,54 +6,31 @@ SYSNAME := $(shell uname -s)
 
 BUILD_DIR = build/$(shell uname -m)
 
+CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -g -flto=auto
+
 ifeq ($(SYSNAME),Darwin)
 	# macOS
 
-	# CXX = c++
-	CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto
+	# march=native also works on Apple Silicon with Clang >=15
+	CXXFLAGS += -march=native
+#	CXXFLAGS += -Rpass=loop-vectorize
+#	CXXFLAGS += -Rpass-missed=loop-vectorize
+#	CXXFLAGS += -Rpass-analysis=loop-vectorize
 
-	ifeq ($(shell uname -m),arm64)
-		CXXFLAGS += -mcpu=apple-m1
-		# march=native will work on Apple Silicon in Clang 15
-		# CXXFLAGS += -march=native
-	else
-		CXXFLAGS += -march=native
-	endif
+	# ifeq ($(shell uname -m),arm64)
+	# 	CXXFLAGS += -mcpu=apple-m1
+	# else
+	# 	CXXFLAGS += -march=native
+	# endif
 
-	CXXFLAGS += -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing
-
-	MPI := OFF
 	# CXXFLAGS += -fopenmp-simd
-	# CXXFLAGS += -fvectorize
 
 	# enable OpenMP for Clang
 	# CXXFLAGS += -Xpreprocessor -fopenmp -lomp
 
-	# in GCC, -Wmisleading-indentation will be useful
-	# also -fopenmp after -I$(INCLUDE)
-	# maybe  -fopt-info-vec-missed
-	#  -fwhole-program
 	# add -lprofiler for gperftools
-	LDFLAGS += $(LIB)
+	# LDFLAGS += $(LIB)
 	# LDFLAGS += -lprofiler
-
-else ifneq (,$(findstring kelvin,$(HOSTNAME)))
-	# QUB Kelvin cluster
-	# needs
-	#  mpi/openmpi/1.8.5/gcc-4.4.7
-	#  compilers/gcc/system(default)
-	#  libs/gsl/1.16/gcc-4.4.7
-
-	CXX = mpicxx
-	CXXFLAGS += -std=c++17 -mcmodel=medium #-fopenmp=libomp
-	CXXFLAGS += -DMPI_ON
-	BUILD_DIR := $(BUILD_DIR)_mpi
-
-else ifneq (, $(shell which mpicxx))
-	# any other system that has mpicxx available (Juwels, Cambridge, Gadi, etc)
-
-	CXXFLAGS += -std=c++17 -march=native #-fopenmp=libomp
-	MPI := ON
 
 else ifeq ($(USER),localadmin_ccollins)
 	# CXX = c++
@@ -64,48 +41,45 @@ else ifeq ($(USER),localadmin_ccollins)
 	LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
 	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
 
-else
-	# CXX = c++
-	# CXX = icpc
-	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
 endif
 
 
 # GSL (GNU Scientific Library)
-# GSL option 1: Use pkg-config to find GSL and use dynamic linking
+# GSL option 1: Use pkg-config to find GSL
 LDFLAGS += $(shell pkg-config --libs gsl)
 CXXFLAGS += $(shell pkg-config --cflags gsl)
 #
-# GSL option 2: Use compiler default search paths to find GSL and use dynamic linking
+# GSL option 2: Use default search paths to find GSL
 # LDFLAGS += -lgsl -lgslcblas -lm
-#
-# GSL option 3: Specify the path to libgsl.a and libgslclas.a and use static linking (GSL needed to compile but not to run)
-# CXXFLAGS += /usr/local/Cellar/gsl/2.6/lib/libgsl.a
-# CXXFLAGS += /usr/local/Cellar/gsl/2.6/lib/libgslcblas.a
 
 # Use GSL inline functions
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true -O3 -g -flto
+	CXXFLAGS += -DTESTMODE=true -O3
 	CXXFLAGS += -fsanitize=address -fno-omit-frame-pointer -fno-common
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
 	# skip array range checking for better performance and use optimizations
-	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3 -flto
+	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3
 endif
+
+CXXFLAGS += -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -Wno-inline
 
 ifeq ($(MPI),ON)
 else ifeq ($(MPI),OFF)
 else ifeq ($(MPI),)
-	# MPI option not specified. set to true if mpicxx is found
-	ifneq (, $(shell which mpicxx))
-		MPI := ON
-	else
-		MPI := OFF
-	endif
+	# MPI option not specified. set to true by default
+	MPI := ON
 else
-$(error bad value of MPI. Should be ON or OFF)
+$(error bad value for MPI option. Should be ON or OFF)
+endif
+
+ifeq ($(TESTMODE),ON)
+else ifeq ($(TESTMODE),OFF)
+else ifeq ($(TESTMODE),)
+else
+$(error bad value for testmode option. Should be ON or OFF)
 endif
 
 ifeq ($(MPI),ON)
@@ -190,5 +164,5 @@ version.h:
 	@echo "#define GIT_BRANCH \"$(GIT_BRANCH)\"" >> version.h
 
 clean:
-	rm -rf sn3d exspec build version.h
+	rm -rf sn3d exspec build version.h *.o *.d
 

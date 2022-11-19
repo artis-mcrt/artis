@@ -1,8 +1,13 @@
-#include "packet_init.h"
+#include "packet.h"
 
+#include <algorithm>
+#include <cmath>
 #include <fstream>
+#include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "decay.h"
 #include "grid.h"
@@ -10,7 +15,7 @@
 #include "sn3d.h"
 #include "vectors.h"
 
-static void place_pellet(const double e0, const int cellindex, const int pktnumber, PKT *pkt_ptr)
+static void place_pellet(const double e0, const int cellindex, const int pktnumber, struct packet *pkt_ptr)
 /// This subroutine places pellet n with energy e0 in cell m
 {
   /// First choose a position for the pellet. In the cell.
@@ -21,7 +26,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   // pkt_ptr->last_cross = NONE;
   pkt_ptr->originated_from_particlenotgamma = false;
 
-  if (grid::grid_type == GRID_SPHERICAL1D) {
+  if (GRID_TYPE == GRID_SPHERICAL1D) {
     const double zrand3 = gsl_rng_uniform(rng);
     const double r_inner = grid::get_cellcoordmin(cellindex, 0);
     const double r_outer = grid::get_cellcoordmin(cellindex, 0) + grid::wid_init(cellindex);
@@ -50,11 +55,10 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
-  pkt_ptr->prop_time = globals::tmin;
   pkt_ptr->trueemissiontype = -1;
 }
 
-void packet_init(int my_rank, PKT *pkt)
+void packet_init(int my_rank, struct packet *pkt)
 /// Subroutine that initialises the packets if we start a new simulation.
 {
 #ifdef MPI_ON
@@ -79,18 +83,25 @@ void packet_init(int my_rank, PKT *pkt)
   decay::setup_decaypath_energy_per_mass();
 
   // Need to get a normalisation factor.
-  double cont[grid::ngrid + 1];
+  auto en_cumulative = std::make_unique<double[]>(grid::ngrid + 1);
+
   double norm = 0.0;
   for (int m = 0; m < grid::ngrid; m++) {
-    cont[m] = norm;
     const int mgi = grid::get_cell_modelgridindex(m);
     if (mgi < grid::get_npts_model())  // some grid cells are empty
     {
-      norm += grid::vol_init_gridcell(m) * grid::get_rhoinit(mgi) * decay::get_modelcell_simtime_endecay_per_mass(mgi);
+      double q = decay::get_modelcell_simtime_endecay_per_mass(mgi);
+#ifndef NO_INITIAL_PACKETS
+      if (USE_MODEL_INITIAL_ENERGY) {
+        q += grid::get_initenergyq(mgi);
+      }
+#endif
+      norm += grid::vol_init_gridcell(m) * grid::get_rhoinit(mgi) * q;
     }
+    en_cumulative[m] = norm;
   }
   assert_always(norm > 0);
-  cont[grid::ngrid] = norm;
+  en_cumulative[grid::ngrid] = norm;
 
   const double etot = norm;
   /// So energy per pellet is
@@ -108,48 +119,12 @@ void packet_init(int my_rank, PKT *pkt)
 
   printout("Placing pellets...\n");
   for (int n = 0; n < globals::npkts; n++) {
-    // Get random number.
-    int mabove = grid::ngrid;
-    int mbelow = 0;
-    double zrand = gsl_rng_uniform(rng);
+    const double zrand = gsl_rng_uniform(rng);
+    const double targetval = zrand * norm;
 
-    while (mabove != (mbelow + 1)) {
-      int m;
-
-      if (mabove != (mbelow + 2))
-        m = (mabove + mbelow) / 2;
-      else
-        m = mbelow + 1;
-
-      if (cont[m] > (zrand * norm))
-        mabove = m;
-      else
-        mbelow = m;
-    }
-
-    if (cont[mbelow] > (zrand * norm)) {
-      printout("mbelow %d cont[mbelow] %g zrand*norm %g\n", mbelow, cont[mbelow], zrand * norm);
-      abort();
-    }
-    if ((cont[mabove] < (zrand * norm)) && (mabove != grid::ngrid)) {
-      printout("mabove %d cont[mabove] %g zrand*norm %g\n", mabove, cont[mabove], zrand * norm);
-      abort();
-    }
-
-    const int cellindex = mbelow;
-    // printout("chosen cell %d (%d, %g, %g)\n", m, ngrid, zrand, norm);
-    // abort();
-    /*
-    m=0;
-    double runtot = 0.0;
-    while (runtot < (zrand))
-    {
-      grid_ptr = &globals::cell[m];
-      runtot += grid_ptr->rho_init * f56ni(grid_ptr) * vol_init() / norm;
-      m++;
-    }
-    m = m - 1;
-    */
+    // first cont[i] such that targetval < cont[i] is true
+    double *upperval = std::lower_bound(&en_cumulative[0], &en_cumulative[grid::ngrid], targetval);
+    const int cellindex = upperval - &en_cumulative[0];
 
     assert_always(cellindex < grid::ngrid);
 
@@ -174,7 +149,7 @@ void packet_init(int my_rank, PKT *pkt)
   printout("radioactive energy that will be freed during simulation time: %g erg\n", e_cmf_total);
 }
 
-void write_packets(char filename[], PKT *pkt) {
+void write_packets(char filename[], struct packet *pkt) {
   // write packets text file
   FILE *packets_file = fopen_required(filename, "w");
   fprintf(packets_file,
@@ -220,20 +195,20 @@ void write_packets(char filename[], PKT *pkt) {
   fclose(packets_file);
 }
 
-void read_temp_packetsfile(const int timestep, const int my_rank, PKT *const pkt) {
+void read_temp_packetsfile(const int timestep, const int my_rank, struct packet *const pkt) {
   // read packets binary file
   char filename[128];
   snprintf(filename, 128, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   printout("Reading %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");
-  assert_always(fread(pkt, sizeof(PKT), globals::npkts, packets_file) == (size_t)globals::npkts);
+  assert_always(fread(pkt, sizeof(struct packet), globals::npkts, packets_file) == (size_t)globals::npkts);
   // read_packets(packets_file);
   fclose(packets_file);
   printout("done\n");
 }
 
-void read_packets(char filename[], PKT *pkt) {
+void read_packets(char filename[], struct packet *pkt) {
   // read packets*.out text format file
   std::ifstream packets_file(filename);
   assert_always(packets_file.is_open());

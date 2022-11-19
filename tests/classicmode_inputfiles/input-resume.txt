@@ -8,7 +8,7 @@
 1                        # model_type: number of dimensions (1, 2, or 3)
 4                        # compute r-light curve (1: no estimators, 2: thin cells, 3: thick cells, 4: gamma-ray heating)
 1                        # n_out_it: UNUSED number of iterations
-1.0                      # globals::CLIGHT_PROP/CLIGHT: change speed of light by some factor
+1.0                      # CLIGHT/CLIGHT: change speed of light by some factor
 -1                       # use grey opacity for gammas?
 0 0 1                    # syn_dir: x, y, and z components of unit vector (will be normalised after input or randomised if zero length)
 4                        # opacity_case: opacity choice
@@ -16,8 +16,8 @@
 -1                       # UNUSED debug_packet: (>=0: activate debug output for packet id, <0: ignore)
 1                        # simulation_continued_from_saved: (0: start new simulation, 1: continue from gridsave and packets files)
 1e-6                     # UNUSED rfcut_angstroms: wavelength (in Angstroms) at which the parameterisation of the radiation field switches from the nebular approximation to LTE.
-5                        # n_lte_timesteps
-8.0 999                  # cell_is_optically_thick n_grey_timesteps
+5                        # num_lte_timesteps
+8.0 999                  # cell_is_optically_thick num_grey_timesteps
 -1                       # UNUSED max_bf_continua: (>0: max bound-free continua per ion, <0 unlimited)
 2                        # nprocs_exspec: extract spectra for n MPI tasks
 1                        # do_emission_res: Extract line-of-sight dependent information of last emission for spectrum_res (1: yes, 2: no)

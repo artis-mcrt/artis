@@ -1,7 +1,7 @@
 #ifndef THERMALBALANCE_H
 #define THERMALBALANCE_H
 
-typedef struct heatingcoolingrates {
+struct heatingcoolingrates {
   double cooling_collisional;
   double cooling_fb;
   double cooling_ff;
@@ -11,10 +11,10 @@ typedef struct heatingcoolingrates {
   double heating_ff;
   double heating_dep;
   double nt_frac_heating;
-} heatingcoolingrates_t;
+};
 
 void call_T_e_finder(int modelgridindex, int timestep, double t_current, double T_min, double T_max,
-                     heatingcoolingrates_t *heatingcoolingrates);
+                     struct heatingcoolingrates *heatingcoolingrates);
 double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T, double W);
 void calculate_bfheatingcoeffs(int modelgridindex);
 

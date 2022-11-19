@@ -59,6 +59,7 @@ module load rhel7/default-peta4            # REQUIRED - loads the basic environm
 #! Insert additional module load commands after this line if needed:
 # module load intel/bundles/complib/2020.4
 module load openmpi/gcc/9.3/4.0.4
+module load gcc/11
 module load gsl/2.7
 
 

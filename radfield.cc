@@ -4,7 +4,9 @@
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_sf_debye.h>
 
+#include <algorithm>
 #include <cmath>
+#include <ctime>
 
 #include "atomic.h"
 #include "grid.h"
@@ -56,7 +58,7 @@ struct Jb_lu_estimator {
 };
 
 // reallocate the detailed line arrays in units of BLOCKSIZEJBLUE
-static const int BLOCKSIZEJBLUE = 128;
+constexpr int BLOCKSIZEJBLUE = 128;
 __managed__ static int detailed_linecount = 0;
 
 // array of indicies into the linelist[] array for selected lines
@@ -115,8 +117,8 @@ typedef enum {
 } enum_prefactor;
 
 typedef struct {
-  double T_R;
-  enum_prefactor prefactor;
+  const double T_R;
+  const enum_prefactor prefactor;
 } gsl_planck_integral_paras;
 
 typedef struct {
@@ -125,8 +127,6 @@ typedef struct {
 } gsl_T_R_solver_paras;
 
 static FILE *radfieldfile = NULL;
-
-__host__ __device__ extern inline double dbb(double nu, float T, float W);
 
 static inline double get_bin_nu_upper(int binindex) { return radfieldbin_nu_upper[binindex]; }
 
@@ -234,13 +234,6 @@ static void add_detailed_line(const int lineindex)
   // printout("Added Jblue estimator for lineindex %d count %d\n", lineindex, detailed_linecount);
 }
 
-static int compare_integers(const void *a, const void *b) {
-  int int_a = *((int *)a);
-  int int_b = *((int *)b);
-
-  return (int_a > int_b) - (int_a < int_b);
-}
-
 void init(int my_rank, int ndo, int ndo_nonempty)
 // this should be called only after the atomic data is in memory
 {
@@ -249,10 +242,6 @@ void init(int my_rank, int ndo, int ndo_nonempty)
     printout("ERROR: Tried to initialize radfield twice!\n");
     abort();
   }
-
-#ifdef MPI_ON
-  const int rank_in_node = globals::rank_in_node;
-#endif
 
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
 
@@ -322,14 +311,16 @@ void init(int my_rank, int ndo, int ndo_nonempty)
     // these are probably sorted anyway because the previous loop goes in ascending
     // lineindex. But this sorting step is quick and makes sure that the
     // binary searching later will work correctly
-    qsort(detailed_lineindicies, detailed_linecount, sizeof(int), compare_integers);
+    std::sort(detailed_lineindicies, detailed_lineindicies + detailed_linecount);
   }
 
   printout("There are %d lines with detailed Jblue_lu estimators.\n", detailed_linecount);
 
-  printout("DETAILED_BF_ESTIMATORS %s", DETAILED_BF_ESTIMATORS_ON ? "ON" : "OFF\n");
+  printout("DETAILED_BF_ESTIMATORS %s", DETAILED_BF_ESTIMATORS_ON ? "ON" : "OFF");
   if (DETAILED_BF_ESTIMATORS_ON) {
     printout(" from timestep %d\n", DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP);
+  } else {
+    printout("\n");
   }
 
   if (MULTIBIN_RADFIELD_MODEL_ON) {
@@ -351,32 +342,36 @@ void init(int my_rank, int ndo, int ndo_nonempty)
     setup_bin_boundaries();
 
     const long mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin);
-    radfieldbins = (struct radfieldbin *)malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin));
+    radfieldbins =
+        static_cast<struct radfieldbin *>(malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin)));
 
     const long mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution);
 
 #ifdef MPI_ON
     {
-      MPI_Aint size =
-          (rank_in_node == 0) ? nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution) : 0;
-      MPI_Win_allocate_shared(size, sizeof(struct radfieldbin_solution), MPI_INFO_NULL, globals::mpi_comm_node,
-                              &radfieldbin_solutions, &win_radfieldbin_solutions);
-      if (rank_in_node != 0) {
-        int disp_unit;
-        MPI_Win_shared_query(win_radfieldbin_solutions, MPI_PROC_NULL, &size, &disp_unit, &radfieldbin_solutions);
+      int my_rank_cells = nonempty_npts_model / globals::node_nprocs;
+      // rank_in_node 0 gets any remainder
+      if (globals::rank_in_node == 0) {
+        my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
       }
+      MPI_Aint size = my_rank_cells * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution);
+      int disp_unit = sizeof(struct radfieldbin_solution);
+      MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &radfieldbin_solutions,
+                              &win_radfieldbin_solutions);
+
+      MPI_Win_shared_query(win_radfieldbin_solutions, 0, &size, &disp_unit, &radfieldbin_solutions);
     }
 #else
     {
-      radfieldbin_solutions = (struct radfieldbin_solution *)malloc(nonempty_npts_model * RADFIELDBINCOUNT *
-                                                                    sizeof(struct radfieldbin_solution));
+      radfieldbin_solutions = static_cast<struct radfieldbin_solution *>(
+          malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution)));
     }
 #endif
 
     printout("[info] mem_usage: radiation field bin accumulators for non-empty cells occupy %.3f MB\n",
              mem_usage_bins / 1024. / 1024.);
     printout(
-        "[info] mem_usage: radiation field bin solutions for non-empty cells occupy %.3f MB (shared node memory)\n",
+        "[info] mem_usage: radiation field bin solutions for non-empty cells occupy %.3f MB (node shared memory)\n",
         mem_usage_bin_solutions / 1024. / 1024.);
   } else {
     printout("The radiation field model is a full-spectrum fit to a single dilute blackbody TR & W.\n");
@@ -386,21 +381,24 @@ void init(int my_rank, int ndo, int ndo_nonempty)
   {
 #ifdef MPI_ON
     {
-      MPI_Aint size = (rank_in_node == 0) ? nonempty_npts_model * globals::nbfcontinua * sizeof(float) : 0;
-      MPI_Win_allocate_shared(size, sizeof(float), MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed,
-                              &win_prev_bfrate_normed);
-      if (rank_in_node != 0) {
-        int disp_unit;
-        MPI_Win_shared_query(win_prev_bfrate_normed, MPI_PROC_NULL, &size, &disp_unit, &prev_bfrate_normed);
+      int my_rank_cells = nonempty_npts_model / globals::node_nprocs;
+      // rank_in_node 0 gets any remainder
+      if (globals::rank_in_node == 0) {
+        my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
       }
+      MPI_Aint size = my_rank_cells * globals::nbfcontinua * sizeof(float);
+      int disp_unit = sizeof(float);
+      MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed,
+                              &win_prev_bfrate_normed);
+      MPI_Win_shared_query(win_prev_bfrate_normed, 0, &size, &disp_unit, &prev_bfrate_normed);
     }
 #else
-    { prev_bfrate_normed = (float *)malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(float)); }
+    { prev_bfrate_normed = static_cast<float *>(malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(float))); }
 #endif
-    printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (shared node memory)\n",
+    printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (node shared memory)\n",
              nonempty_npts_model * globals::nbfcontinua * sizeof(float) / 1024. / 1024.);
 
-    bfrate_raw = (double *)malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(double));
+    bfrate_raw = static_cast<double *>(malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(double)));
 
     printout("[info] mem_usage: detailed bf estimator acculumators for non-empty cells occupy %.3f MB\n",
              nonempty_npts_model * globals::nbfcontinua * sizeof(double) / 1024. / 1024.);
@@ -417,7 +415,6 @@ void init(int my_rank, int ndo, int ndo_nonempty)
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 #if (DETAILED_BF_ESTIMATORS_ON && DETAILED_BF_ESTIMATORS_BYTYPE)
       {
         bfrate_raw_bytype[modelgridindex] =
@@ -432,11 +429,12 @@ void init(int my_rank, int ndo, int ndo_nonempty)
 
       zero_estimators(modelgridindex);
 
-      if (MULTIBIN_RADFIELD_MODEL_ON) {
+      if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
 #ifdef MPI_ON
-        if (rank_in_node == 0)
+        if (globals::rank_in_node == 0)
 #endif
         {
+          const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
           for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
             const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
             radfieldbin_solutions[mgibinindex].W = -1.;
@@ -506,7 +504,7 @@ __host__ __device__ int get_Jblueindex(const int lineindex)
   //     return i;
   // }
 
-  if (!DETAILED_LINE_ESTIMATORS_ON) return -1;
+  if constexpr (!DETAILED_LINE_ESTIMATORS_ON) return -1;
 
   // use a binary search, assuming the list is sorted
 
@@ -548,15 +546,8 @@ __host__ __device__ int get_Jb_lu_contribcount(const int modelgridindex, const i
 static double get_bin_J(int modelgridindex, int binindex)
 // get the normalised J_nu
 {
-  if (J_normfactor[modelgridindex] <= 0.0) {
-    printout("radfield: Fatal error: get_bin_J called before J_normfactor set for modelgridindex %d, = %g",
-             modelgridindex, J_normfactor[modelgridindex]);
-    abort();
-  } else if (modelgridindex >= grid::get_npts_model()) {
-    printout("radfield: Fatal error: get_bin_J called before on modelgridindex %d >= grid::get_npts_model()",
-             modelgridindex);
-    abort();
-  }
+  assert_testmodeonly(J_normfactor[modelgridindex] > 0.0);
+  assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(binindex >= 0);
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);
   const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
@@ -564,14 +555,8 @@ static double get_bin_J(int modelgridindex, int binindex)
 }
 
 __host__ __device__ static double get_bin_nuJ(int modelgridindex, int binindex) {
-  if (J_normfactor[modelgridindex] <= 0.0) {
-    printout("radfield: Fatal error: get_bin_nuJ called before J_normfactor set for modelgridindex %d", modelgridindex);
-    abort();
-  } else if (modelgridindex >= grid::get_npts_model()) {
-    printout("radfield: Fatal error: get_bin_nuJ called before on modelgridindex %d >= grid::get_npts_model()",
-             modelgridindex);
-    abort();
-  }
+  assert_testmodeonly(J_normfactor[modelgridindex] > 0.0);
+  assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(binindex >= 0);
   assert_testmodeonly(binindex < RADFIELDBINCOUNT);
   const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
@@ -609,40 +594,17 @@ static inline float get_bin_T_R(int modelgridindex, int binindex) {
 }
 
 __host__ __device__ static inline int select_bin(double nu) {
-  // linear search one by one until found
-  if (nu >= radfieldbin_nu_upper[RADFIELDBINCOUNT - 1])
-    return -1;  // out of range, nu higher than highest bin
-  else if (nu < get_bin_nu_lower(0))
-    return -2;  // out of range, nu lower than lowest bin
-  else {
-    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      if (radfieldbin_nu_upper[binindex] > nu) {
-        return binindex;
-      }
-    }
+  if (nu < get_bin_nu_lower(0)) return -2;  // out of range, nu lower than lowest bin's lower boundary
 
-    // binary search for bin with nu_lower <= nu > nu_upper
-    // int low = 0;
-    // int high = RADFIELDBINCOUNT - 1;
-    // while (low <= high)
-    // {
-    //   int mid = low + ((high - low) / 2);
-    //   if (radfieldbin_nu_upper[mid] <= nu)
-    //   {
-    //     low = mid + 1;
-    //   }
-    //   else if (get_bin_nu_lower(mid) > nu)
-    //   {
-    //     high = mid - 1;
-    //   }
-    //   else
-    //   {
-    //     return mid;
-    //   }
-    //  }
-    assert_always(false);
-    return -3;
+  // find the lowest frequency bin with radfieldbin_nu_upper > nu
+  const auto bin = std::upper_bound(&radfieldbin_nu_upper[0], &radfieldbin_nu_upper[RADFIELDBINCOUNT], nu);
+  const int binindex = bin - &radfieldbin_nu_upper[0];
+  if (binindex >= RADFIELDBINCOUNT) {
+    // out of range, nu higher than highest bin's upper boundary
+    return -1;
   }
+
+  return binindex;
 }
 
 #ifndef FORCE_LTE
@@ -799,10 +761,8 @@ void zero_estimators(int modelgridindex)
 }
 
 #if (DETAILED_BF_ESTIMATORS_ON)
-__host__ __device__ static void increment_bfestimators(const int modelgridindex, const double distance_e_cmf,
-                                                       const double nu_cmf, const PKT *const pkt_ptr,
-                                                       const double t_current) {
-  assert_always(pkt_ptr->prop_time == t_current);
+__host__ __device__ static void update_bfestimators(const int modelgridindex, const double distance_e_cmf,
+                                                    const double nu_cmf, const struct packet *const pkt_ptr) {
   if (distance_e_cmf == 0) return;
 
   const int nbfcontinua = globals::nbfcontinua;
@@ -815,7 +775,8 @@ __host__ __device__ static void increment_bfestimators(const int modelgridindex,
   // estimator_normfactor_over_H = 1 / deltaV / deltat / nprocs / H;
 
   const int tid = get_thread_num();
-  const double distance_e_cmf_over_nu = distance_e_cmf / nu_cmf * dopplerfactor;
+  const double distance_e_cmf_over_nu =
+      distance_e_cmf / nu_cmf * dopplerfactor;  // TODO: Luke: why did I put a doppler factor here?
   for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++) {
     const double nu_edge = globals::allcont_nu_edge[allcontindex];
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
@@ -867,29 +828,18 @@ __host__ __device__ static void increment_bfestimators(const int modelgridindex,
 }
 #endif
 
-__host__ __device__ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf,
-                                           const PKT *const pkt_ptr, double t_current) {
-  assert_always(pkt_ptr->prop_time == t_current);
+__host__ __device__ void update_estimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
+                                           const struct packet *const pkt_ptr) {
   safeadd(J[modelgridindex], distance_e_cmf);
-  if (!std::isfinite(J[modelgridindex])) {
-    printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",
-             distance_e_cmf, nu_cmf);
-    abort();
-  }
 
 #ifndef FORCE_LTE
   safeadd(nuJ[modelgridindex], distance_e_cmf * nu_cmf);
-  if (!std::isfinite(nuJ[modelgridindex])) {
-    printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",
-             distance_e_cmf, nu_cmf);
-    abort();
-  }
 
 #if (DETAILED_BF_ESTIMATORS_ON)
-  increment_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr, t_current);
+  update_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr);
 #endif
 
-  if (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     // int binindex = 0;
     // if (nu_cmf <= get_bin_nu_lower(modelgridindex,binindex))
     // {
@@ -925,7 +875,7 @@ __host__ __device__ void update_estimators(int modelgridindex, double distance_e
 #endif
 }
 
-void increment_lineestimator(const int modelgridindex, const int lineindex, const double increment) {
+void update_lineestimator(const int modelgridindex, const int lineindex, const double increment) {
   if (!DETAILED_LINE_ESTIMATORS_ON) return;
 
   const int jblueindex = get_Jblueindex(lineindex);
@@ -948,51 +898,43 @@ __host__ __device__ double dbb_mgi(double nu, int modelgridindex) {
 __host__ __device__ double radfield(double nu, int modelgridindex)
 // returns mean intensity J_nu [ergs/s/sr/cm2/Hz]
 {
-  if (MULTIBIN_RADFIELD_MODEL_ON && (globals::nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP)) {
-    // const double lambda = 1e8 * CLIGHT / nu;
-    // if (lambda < 1085) // Fe II ground state edge
-    // {
-    //   return dbb(nu, grid::get_TR(modelgridindex), grid::get_W(modelgridindex));
-    // }
-    const int binindex = select_bin(nu);
-    if (binindex >= 0) {
-      const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
-      const struct radfieldbin_solution *const bin = &radfieldbin_solutions[mgibinindex];
-      if (bin->W >= 0.) {
-        // if (bin->fit_type == FIT_DILUTE_BLACKBODY)
-        {
-          const double J_nu = dbb(nu, bin->T_R, bin->W);
-          return J_nu;
-        }
-        // else
-        // {
-        //   return bin->W;
-        // }
-      } else  // W < 0
-      {
-        // printout("WARNING: Radfield modelgridindex %d binindex %d has W_bin=%g<0, using W %g T_R %g nu %g\n",
-        //          modelgridindex, binindex, W_bin, W_fullspec, T_R_fullspec, nu);
-      }
-    } else  // binindex < 0
-    {
-      // if (nu > get_bin_nu_upper(RADFIELDBINCOUNT - 1))
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+    if (globals::nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP) {
+      // const double lambda = 1e8 * CLIGHT / nu;
+      // if (lambda < 1085) // Fe II ground state edge
       // {
-      //   // undiluted LTE blueward of the bins
-      //   const double J_nu_LTE = dbb(nu, grid::get_Te(modelgridindex), 1.0);
-      //   return J_nu_LTE;
+      //   return dbb(nu, grid::get_TR(modelgridindex), grid::get_W(modelgridindex));
       // }
-      // else
-      //   return 0; // no radfield redwards of the bins
-      // printout("WARNING: Radfield modelgridindex %d binindex %d nu %g nu_lower_first %g nu_upper_last %g \n",
-      //         modelgridindex, binindex, nu, nu_lower_first, nu_upper_last);
+      const int binindex = select_bin(nu);
+      if (binindex >= 0) {
+        const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
+        const struct radfieldbin_solution *const bin = &radfieldbin_solutions[mgibinindex];
+        if (bin->W >= 0.) {
+          // if (bin->fit_type == FIT_DILUTE_BLACKBODY)
+          {
+            const double J_nu = dbb(nu, bin->T_R, bin->W);
+            return J_nu;
+          }
+          // else
+          // {
+          //   return bin->W;
+          // }
+        }
+      } else {  // binindex < 0
+        // if (nu > get_bin_nu_upper(RADFIELDBINCOUNT - 1))
+        // {
+        //   // undiluted LTE blueward of the bins
+        //   const double J_nu_LTE = dbb(nu, grid::get_Te(modelgridindex), 1.0);
+        //   return J_nu_LTE;
+        // }
+        // else
+        //   return 0; // no radfield redwards of the bins
+        // printout("WARNING: Radfield modelgridindex %d binindex %d nu %g nu_lower_first %g nu_upper_last %g \n",
+        //         modelgridindex, binindex, nu, nu_lower_first, nu_upper_last);
+      }
+      return 0.;
     }
-    return 0.;
   }
-  /*else
-  {
-    printout("radfield: WARNING: Radfield called before initialized. Using global T_R %g W %g nu %g modelgridindex
-  %d\n", W_fullspec, T_R_fullspec, nu, modelgridindex);
-  }*/
 
   const float T_R_fullspec = grid::get_TR(modelgridindex);
   const float W_fullspec = grid::get_W(modelgridindex);
@@ -1019,13 +961,9 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
   const double epsrel = 1e-10;
   const double epsabs = 0.;
 
-  gsl_planck_integral_paras intparas;
-  intparas.T_R = T_R;
-  intparas.prefactor = prefactor;
+  gsl_planck_integral_paras intparas = {.T_R = T_R, .prefactor = prefactor};
 
-  gsl_function F_planck;
-  F_planck.function = &gsl_integrand_planck;
-  F_planck.params = &intparas;
+  const gsl_function F_planck = {.function = &gsl_integrand_planck, .params = &intparas};
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
   int status = gsl_integration_qag(&F_planck, nu_lower, nu_upper, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61,
@@ -1283,8 +1221,8 @@ void fit_parameters(int modelgridindex, int timestep)
           }
 
           double planck_integral_result = planck_integral(T_R_bin, nu_lower, nu_upper, ONE);
-          //          printout("planck_integral(T_R=%g, nu_lower=%g, nu_upper=%g) = %g\n", T_R_bin, nu_lower, nu_upper,
-          //          planck_integral_result);
+          //          printout("planck_integral(T_R=%g, nu_lower=%g, nu_upper=%g) = %g\n", T_R_bin, nu_lower,
+          //          nu_upper, planck_integral_result);
 
           W_bin = J_bin / planck_integral_result;
 

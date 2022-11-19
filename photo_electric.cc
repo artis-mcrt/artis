@@ -7,7 +7,7 @@
 
 // Stuff for photo electric effect scattering.
 
-__host__ __device__ double sig_photo_electric(const PKT *pkt_ptr) {
+__host__ __device__ double sig_photo_electric(const struct packet *pkt_ptr) {
   double sigma_cmf;
   // Start by working out the x-section in the co-moving frame.
 
@@ -48,7 +48,7 @@ __host__ __device__ double sig_photo_electric(const PKT *pkt_ptr) {
   return sigma_rf;
 }
 
-__host__ __device__ double sig_pair_prod(const PKT *pkt_ptr) {
+__host__ __device__ double sig_pair_prod(const struct packet *pkt_ptr) {
   // Cross section for pair production.
 
   double sigma_cmf;
@@ -113,7 +113,7 @@ __host__ __device__ double sig_pair_prod(const PKT *pkt_ptr) {
   return sigma_rf;
 }
 
-__host__ __device__ void pair_prod(PKT *pkt_ptr) {
+__host__ __device__ void pair_prod(struct packet *pkt_ptr) {
   // Routine to deal with pair production.
 
   //  In pair production, the original gamma makes an electron positron pair - kinetic energy equal to

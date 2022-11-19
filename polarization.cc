@@ -3,7 +3,7 @@
 #include "sn3d.h"
 #include "vpkt.h"
 
-void escat_rpkt(PKT *pkt_ptr) {
+void escat_rpkt(struct packet *pkt_ptr) {
   /// now make the packet a r-pkt and set further flags
   pkt_ptr->type = TYPE_RPKT;
   pkt_ptr->last_cross = NONE;  /// allow all further cell crossings
@@ -145,33 +145,11 @@ void escat_rpkt(PKT *pkt_ptr) {
   pkt_ptr->dir[1] = dummy_dir[1];
   pkt_ptr->dir[2] = dummy_dir[2];
 
-// Check unit vector.
-#ifdef DEBUG_ON
-  if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-6) {
-    printout(
-        "WARNING: escat_rpkt: pkt_ptr->dir is not a unit vector. x %g y %g z %g length %.10f. Normalising to unit "
-        "length...\n",
-        pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2], vec_len(pkt_ptr->dir));
-    vec_norm(pkt_ptr->dir, pkt_ptr->dir);
-    if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-6) {
-      printout(
-          "[fatal] escat_rpkt: After normalising: pkt_ptr->dir is still not a unit vector. x %g y %g z %g length "
-          "%.10f\n",
-          pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2], vec_len(pkt_ptr->dir));
-      abort();
-    }
-  }
-#endif
+  // Check unit vector.
+  assert_testmodeonly(fabs(vec_len(pkt_ptr->dir) - 1.) < 1.e-6);
 
   // Finally we want to put in the rest frame energy and frequency.
   // And record that it's now a r-pkt.
-
-#ifdef DEBUG_ON
-  if (pkt_ptr->e_cmf > 1e52) {
-    printout("[fatal] emitt_rpkt: here %g\n", pkt_ptr->e_cmf);
-    abort();
-  }
-#endif
 
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;

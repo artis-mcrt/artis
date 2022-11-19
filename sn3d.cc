@@ -15,17 +15,16 @@
 #include <getopt.h>
 #include <unistd.h>
 
+#include "atomic.h"
 #include "decay.h"
 #include "emissivities.h"
 #include "globals.h"
 #include "grey_emissivities.h"
 #include "grid.h"
 #include "input.h"
-#include "ltepop.h"
-#include "macroatom.h"
+// #include "ltepop.h"
 #include "nltepop.h"
 #include "nonthermal.h"
-#include "packet_init.h"
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "spectrum.h"
@@ -256,7 +255,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
                      mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
             MPI_Pack(grid::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT,
                      mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-            MPI_Pack(grid::modelgrid[mgi].cooling[element].contrib, get_nions(element), MPI_DOUBLE, mpi_grid_buffer,
+            MPI_Pack(grid::modelgrid[mgi].cooling_contrib_ion[element], get_nions(element), MPI_DOUBLE, mpi_grid_buffer,
                      mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
           }
         }
@@ -305,8 +304,8 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
           MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
                      grid::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT,
                      MPI_COMM_WORLD);
-          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, grid::modelgrid[mgi].cooling[element].contrib,
-                     get_nions(element), MPI_DOUBLE, MPI_COMM_WORLD);
+          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                     grid::modelgrid[mgi].cooling_contrib_ion[element], get_nions(element), MPI_DOUBLE, MPI_COMM_WORLD);
         }
       }
     }
@@ -385,7 +384,7 @@ static void mpi_reduce_estimators(int my_rank, int nts) {
 }
 #endif
 
-static void write_temp_packetsfile(const int timestep, const int my_rank, const PKT *const pkt) {
+static void write_temp_packetsfile(const int timestep, const int my_rank, const struct packet *const pkt) {
   // write packets binary file
   char filename[128];
   snprintf(filename, 128, "packets_%.4d_ts%d.tmp", my_rank, timestep);
@@ -393,7 +392,7 @@ static void write_temp_packetsfile(const int timestep, const int my_rank, const 
   printout("Writing %s...", filename);
   FILE *packets_file = fopen_required(filename, "wb");
 
-  fwrite(pkt, sizeof(PKT), globals::npkts, packets_file);
+  fwrite(pkt, sizeof(struct packet), globals::npkts, packets_file);
   fclose(packets_file);
   printout("done\n");
 }
@@ -464,7 +463,7 @@ void *makemanaged(void *ptr, size_t curSize) {
 }
 #endif
 
-static void save_grid_and_packets(const int nts, const int my_rank, PKT *packets) {
+static void save_grid_and_packets(const int nts, const int my_rank, struct packet *packets) {
   const time_t time_write_packets_file_start = time(NULL);
   printout("time before write temporary packets file %ld\n", time_write_packets_file_start);
 
@@ -513,7 +512,7 @@ static void save_grid_and_packets(const int nts, const int my_rank, PKT *packets
 }
 
 static bool do_timestep(const int nts, const int titer, const int my_rank, const int nstart, const int ndo,
-                        PKT *packets, const int walltimelimitseconds) {
+                        struct packet *packets, const int walltimelimitseconds) {
   bool do_this_full_loop = true;
 
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
@@ -747,6 +746,8 @@ int main(int argc, char **argv)
 
   const int my_rank = globals::rank_global;
 
+  globals::startofline = std::make_unique<bool[]>(get_max_threads());
+
 #ifdef _OPENMP
   /// Explicitly turn off dynamic threads because we use the threadprivate directive!!!
   omp_set_dynamic(0);
@@ -761,6 +762,7 @@ int main(int argc, char **argv)
     output_file = fopen_required(filename, "w");
     /// Makes sure that the output_file is written line-by-line
     setvbuf(output_file, NULL, _IOLBF, 1);
+    globals::startofline[tid] = true;
 
 #ifdef _OPENMP
     printout("OpenMP parallelisation active with %d threads (max %d)\n", get_num_threads(), get_max_threads());
@@ -805,13 +807,13 @@ int main(int argc, char **argv)
   }
 
 #if CUDA_ENABLED
-  PKT *packets;
-  cudaMallocManaged(&packets, MPKTS * sizeof(PKT));
+  struct packet *packets;
+  cudaMallocManaged(&packets, MPKTS * sizeof(struct packet));
 #if USECUDA_UPDATEPACKETS
-  cudaMemAdvise(packets, MPKTS * sizeof(PKT), cudaMemAdviseSetPreferredLocation, myGpuId);
+  cudaMemAdvise(packets, MPKTS * sizeof(struct packet), cudaMemAdviseSetPreferredLocation, myGpuId);
 #endif
 #else
-  PKT *const packets = (PKT *)calloc(MPKTS, sizeof(PKT));
+  struct packet *const packets = (struct packet *)calloc(MPKTS, sizeof(struct packet));
 #endif
 
   assert_always(packets != NULL);
@@ -834,6 +836,7 @@ int main(int argc, char **argv)
 #endif
 
 #ifdef MPI_ON
+  printout("process id (pid): %d\n", getpid());
   printout("MPI enabled:\n");
   printout("  rank %d of [0..%d] in MPI_COMM_WORLD\n", globals::rank_global, globals::nprocs - 1);
   printout("  node %d of [0..%d]\n", globals::node_id, globals::node_count - 1);
@@ -860,7 +863,7 @@ int main(int argc, char **argv)
   printout("[CUDA] warpSize %d\n", deviceProp.warpSize);
 #endif
 
-  globals::kappa_rpkt_cont = (rpkt_cont_opacity_struct *)calloc(get_max_threads(), sizeof(rpkt_cont_opacity_struct));
+  globals::kappa_rpkt_cont = (struct rpkt_cont_opacity *)calloc(get_max_threads(), sizeof(struct rpkt_cont_opacity));
   assert_always(globals::kappa_rpkt_cont != NULL);
 
   /// Using this and the global variable output_file opens and closes the output_file
@@ -934,7 +937,7 @@ int main(int argc, char **argv)
   printout("Simulation propagates %g packets per process (total %g with nprocs %d)\n", 1. * globals::npkts,
            1. * globals::npkts * globals::nprocs, globals::nprocs);
 
-  printout("[info] mem_usage: packets occupy %.3f MB\n", MPKTS * sizeof(PKT) / 1024. / 1024.);
+  printout("[info] mem_usage: packets occupy %.3f MB\n", MPKTS * sizeof(struct packet) / 1024. / 1024.);
 
   if (!globals::simulation_continued_from_saved) {
     std::remove("deposition.out");
@@ -949,11 +952,9 @@ int main(int argc, char **argv)
   /// The next loop is over all grid cells. For parallelisation, we want to split this loop between
   /// processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
   /// cells are sent to processes 0 ... process n_leftover -1.
-  int nstart = 0;
-  int ndo = 0;
-  int ndo_nonempty = 0;
-  int maxndo = 0;
-  grid::get_nstart_ndo(my_rank, globals::nprocs, &nstart, &ndo, &ndo_nonempty, &maxndo);
+  int nstart = grid::get_nstart(my_rank);
+  int ndo = grid::get_ndo(my_rank);
+  int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
   printout("process rank %d (global max rank %d) assigned %d modelgrid cells (%d nonempty)", my_rank,
            globals::nprocs - 1, ndo, ndo_nonempty);
   if (ndo > 0) {
@@ -964,17 +965,19 @@ int main(int argc, char **argv)
 
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
+  int maxndo = grid::get_maxndo();
   /// Initialise the exchange buffer
   /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
   /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
   mpi_grid_buffer_size = 4 * ((12 + 4 * get_includedions()) * (maxndo) + 1);
   printout("reserve mpi_grid_buffer_size %d space for MPI communication buffer\n", mpi_grid_buffer_size);
   // char buffer[mpi_grid_buffer_size];
-  mpi_grid_buffer = (char *)malloc(mpi_grid_buffer_size * sizeof(char));
+  mpi_grid_buffer = static_cast<char *>(malloc(mpi_grid_buffer_size * sizeof(char)));
   if (mpi_grid_buffer == NULL) {
     printout("[fatal] input: not enough memory to initialize MPI grid buffer ... abort.\n");
     abort();
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
   /** That's the end of the initialisation. */
@@ -994,7 +997,8 @@ int main(int argc, char **argv)
 
   macroatom_open_file(my_rank);
   if (ndo > 0) {
-    assert_always(estimators_file == NULL) snprintf(filename, 128, "estimators_%.4d.out", my_rank);
+    assert_always(estimators_file == NULL);
+    snprintf(filename, 128, "estimators_%.4d.out", my_rank);
     estimators_file = fopen_required(filename, "w");
 
     if (NLTE_POPS_ON && ndo_nonempty > 0) {
@@ -1061,7 +1065,7 @@ int main(int argc, char **argv)
       initial_iteration = false;
     }*/
     globals::n_titer = 1;
-    globals::initial_iteration = (nts < globals::n_lte_timesteps);
+    globals::initial_iteration = (nts < globals::num_lte_timesteps);
 #endif
 
     for (int titer = 0; titer < globals::n_titer; titer++) {
@@ -1148,7 +1152,3 @@ int main(int argc, char **argv)
 
   return 0;
 }
-
-// printout should be used instead of printf throughout the whole code for output messages
-extern inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno);
-extern inline FILE *fopen_required(const char *filename, const char *mode);

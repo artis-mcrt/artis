@@ -2,22 +2,37 @@
 
 #include <gsl/gsl_integration.h>
 
+#include <cmath>
+
 #include "atomic.h"
 #include "grid.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "radfield.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
-#include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"
 #include "vpkt.h"
 
-static __managed__ cellhistorycoolinglist_t *coolinglist;
+namespace kpkt {
 
-__host__ __device__ int get_coolinglistoffset(int element, int ion) {
-  return globals::elements[element].ions[ion].coolingoffset;
-}
+enum coolingtype {
+  COOLINGTYPE_FF = 880,
+  COOLINGTYPE_FB = 881,
+  COOLINGTYPE_COLLEXC = 882,
+  COOLINGTYPE_COLLION = 883,
+};
+
+struct cellhistorycoolinglist {
+  enum coolingtype type;
+  int element;
+  int ion;
+  int level;
+  int upperlevel;
+};
+
+static __managed__ struct cellhistorycoolinglist *coolinglist;
 
 __host__ __device__ static int get_ncoolingterms(int element, int ion) {
   return globals::elements[element].ions[ion].ncoolingterms;
@@ -33,13 +48,17 @@ __host__ __device__ static double get_cooling_ion_coll_exc(const int modelgridin
   for (int level = 0; level < nlevels; level++) {
     const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
     const double epsilon_current = epsilon(element, ion, level);
+    const double statweight = stat_weight(element, ion, level);
     const int nuptrans = get_nuptrans(element, ion, level);
     for (int ii = 0; ii < nuptrans; ii++) {
-      const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans_lineindicies[ii];
-      const int upper = globals::linelist[lineindex].upperlevelindex;
+      const struct linelist_entry *line =
+          &globals::linelist[globals::elements[element].ions[ion].levels[level].uptrans[ii].lineindex];
+      const int upper = line->upperlevelindex;
       // printout("    excitation to level %d possible\n",upper);
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
-      const double C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
+      const double C = nnlevel *
+                       col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statweight, statw_upper(line)) *
+                       epsilon_trans;
       C_exc += C;
     }
   }
@@ -54,18 +73,16 @@ __host__ __device__ static double get_bfcoolingcoeff(int element, int ion, int l
     const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
     const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
-    const double f_upper =
-        globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[upperindex];
-    const double f_lower =
-        globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[lowerindex];
+    const double f_upper = globals::bfcooling_coeff[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
+    const double f_lower = globals::bfcooling_coeff[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
 
     return (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
   } else
-    return globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[TABLESIZE -
-                                                                                                             1];
+    return globals::bfcooling_coeff[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
 }
 
-__host__ __device__ void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates_t *heatingcoolingrates)
+__host__ __device__ void calculate_cooling_rates(const int modelgridindex,
+                                                 struct heatingcoolingrates *heatingcoolingrates)
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
 {
@@ -134,7 +151,7 @@ __host__ __device__ void calculate_cooling_rates(const int modelgridindex, heati
       }
 
       C_total += C_ion;
-      grid::modelgrid[modelgridindex].cooling[element].contrib[ion] = C_ion;
+      grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] = C_ion;
     }
   }
   grid::modelgrid[modelgridindex].totalcooling = C_total;
@@ -198,17 +215,21 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
     // printout("[debug] do_kpkt: element %d, ion %d, level %d\n",element,ion,level);
     const double epsilon_current = epsilon(element, ion, level);
     const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+    const double statweight = stat_weight(element, ion, level);
 
     const int nuptrans = get_nuptrans(element, ion, level);
     if (nuptrans > 0) {
       /// excitation to same ionization stage
       /// -----------------------------------
       for (int ii = 0; ii < nuptrans; ii++) {
-        const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans_lineindicies[ii];
-        const int upper = globals::linelist[lineindex].upperlevelindex;
+        const struct linelist_entry *line =
+            &globals::linelist[globals::elements[element].ions[ion].levels[level].uptrans[ii].lineindex];
+        const int upper = line->upperlevelindex;
         // printout("    excitation to level %d possible\n",upper);
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
-        const double C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
+        const double C = nnlevel *
+                         col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statweight, statw_upper(line)) *
+                         epsilon_trans;
         contrib += C;
       }
       globals::cellhistory[tid].cooling_contrib[i] = contrib;
@@ -281,8 +302,9 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
 
   assert_always(indexionstart == get_coolinglistoffset(element, ion));
   assert_always(i == indexionstart + get_ncoolingterms(element, ion));
-  assert_always(
-      fabs((grid::modelgrid[modelgridindex].cooling[element].contrib[ion] + oldcoolingsum - contrib) / contrib) < 1e-3);
+  // we just summed up every individual cooling process. make sure it matches the stored total for the ion
+  assert_always(fabs((grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] + oldcoolingsum - contrib) /
+                     contrib) < 1e-3);
 }
 
 __host__ __device__ static void set_ncoolingterms(void) {
@@ -324,8 +346,9 @@ void setup_coolinglist(void) {
   /// \sum_{elements,ions}get_nlevels(element,ion) and free-free which is \sum_{elements} get_nions(element)-1
 
   set_ncoolingterms();
-  const long mem_usage_coolinglist = globals::ncoolingterms * sizeof(cellhistorycoolinglist_t);
-  coolinglist = (cellhistorycoolinglist_t *)malloc(globals::ncoolingterms * sizeof(cellhistorycoolinglist_t));
+  const long mem_usage_coolinglist = globals::ncoolingterms * sizeof(struct cellhistorycoolinglist);
+  coolinglist = static_cast<struct cellhistorycoolinglist *>(
+      malloc(globals::ncoolingterms * sizeof(struct cellhistorycoolinglist)));
   printout("[info] mem_usage: coolinglist occupies %.3f MB\n", mem_usage_coolinglist / 1024. / 1024.);
 
   int i = 0;  // cooling list index
@@ -402,43 +425,31 @@ void setup_coolinglist(void) {
   printout("[info] read_atomicdata: number of coolingterms %d\n", globals::ncoolingterms);
 }
 
-__host__ __device__ static double planck(const double nu, const double T)
-/// returns intensity for frequency nu and temperature T according
-/// to the Planck distribution
-{
-  return TWOHOVERCLIGHTSQUARED * pow(nu, 3) / expm1(HOVERKB * nu / T);
-}
-
 __host__ __device__ static double sample_planck(const double T)
 /// returns a randomly chosen frequency according to the Planck
 /// distribution of temperature T
 {
   const double nu_peak = 5.879e10 * T;
-  if (nu_peak > globals::nu_max_r || nu_peak < globals::nu_min_r)
+  if (nu_peak > globals::nu_max_r || nu_peak < globals::nu_min_r) {
     printout("[warning] sample_planck: intensity peaks outside frequency range\n");
-
-  const double B_peak = planck(nu_peak, T);
-
-  double nu;
-  bool endloop = false;
-  // int i = 0;
-  while (!endloop) {
-    // i++;
-    double zrand = gsl_rng_uniform(rng);
-    double zrand2 = gsl_rng_uniform(rng);
-    nu = globals::nu_min_r + zrand * (globals::nu_max_r - globals::nu_min_r);
-    if (zrand2 * B_peak <= planck(nu, T)) endloop = true;
-    // printout("[debug] sample_planck: planck_sampling %d\n", i);
   }
 
-  return nu;
+  const double B_peak = radfield::dbb(nu_peak, T, 1);
+
+  while (true) {
+    const double zrand = gsl_rng_uniform(rng);
+    const double zrand2 = gsl_rng_uniform(rng);
+    const double nu = globals::nu_min_r + zrand * (globals::nu_max_r - globals::nu_min_r);
+    if (zrand2 * B_peak <= radfield::dbb(nu, T, 1)) return nu;
+    // printout("[debug] sample_planck: planck_sampling %d\n", i);
+  }
 }
 
-__host__ __device__ double do_kpkt_bb(PKT *pkt_ptr)
+__host__ __device__ double do_kpkt_bb(struct packet *pkt_ptr)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 {
   // double nne = globals::cell[pkt_ptr->where].nne ;
-  int cellindex = pkt_ptr->where;
+  const int cellindex = pkt_ptr->where;
   const int modelgridindex = grid::get_cell_modelgridindex(cellindex);
   const float T_e = grid::get_Te(modelgridindex);
 
@@ -450,7 +461,6 @@ __host__ __device__ double do_kpkt_bb(PKT *pkt_ptr)
   /// and then emitt the packet randomly in the comoving frame
   emitt_rpkt(pkt_ptr);
   // printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
-  cellindex = pkt_ptr->where;
   pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
   // if (tid == 0) k_stat_to_r_bb++;
   stats::increment(stats::COUNTER_K_STAT_TO_R_BB);
@@ -464,10 +474,10 @@ __host__ __device__ double do_kpkt_bb(PKT *pkt_ptr)
   return pkt_ptr->prop_time;
 }
 
-__host__ __device__ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
+__host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 //{
-//  double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2);
+//  double do_kpkt_bb(struct packet *pkt_ptr, double t1, double t2);
 //  return do_kpkt_bb(pkt_ptr, t1, t2);
 //}
 {
@@ -518,7 +528,7 @@ __host__ __device__ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       const int nions = get_nions(element);
       for (ion = 0; ion < nions; ion++) {
         oldcoolingsum = coolingsum;
-        coolingsum += grid::modelgrid[modelgridindex].cooling[element].contrib[ion];
+        coolingsum += grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion];
         // printout("Z=%d, ionstage %d, coolingsum %g\n", get_element(element), get_ionstage(element, ion), coolingsum);
         if (coolingsum > rndcool) break;
       }
@@ -537,7 +547,7 @@ __host__ __device__ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
         const int nions = get_nions(element);
         for (ion = 0; ion < nions; ion++) {
           printout("do_kpkt: element %d, ion %d, coolingcontr %g\n", element, ion,
-                   grid::modelgrid[modelgridindex].cooling[element].contrib[ion]);
+                   grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]);
         }
       }
       abort();
@@ -546,8 +556,7 @@ __host__ __device__ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     // globals::debuglevel = 2;
     // printout("element %d, ion %d, coolingsum %g\n",element,ion,coolingsum);
     const int ilow = get_coolinglistoffset(element, ion);
-    int low = ilow;
-    int high = low + get_ncoolingterms(element, ion) - 1;
+    const int ihigh = ilow + get_ncoolingterms(element, ion) - 1;
     // printout("element %d, ion %d, low %d, high %d\n",element,ion,low,high);
     if (globals::cellhistory[tid].cooling_contrib[ilow] < 0.) {
       // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d oldcoolingsum
@@ -556,25 +565,14 @@ __host__ __device__ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       calculate_kpkt_rates_ion(modelgridindex, element, ion, ilow, oldcoolingsum, tid);
     }
 
-    int i = -1;
-    while (low <= high) {
-      i = (low + high) / 2;
-      if (globals::cellhistory[tid].cooling_contrib[i] >= rndcool) {
-        if ((i == ilow) || ((i > 0 ? globals::cellhistory[tid].cooling_contrib[i - 1] : 0.) < rndcool))
-          break;  /// found (1)
-        else
-          high = i - 1;
-      } else
-        low = i + 1;
-      // else if (globals::cellhistory[tid].cooling_contrib < rndcool)
-      //   low = i + 1;
-      // else
-      //   break; /// found (2)
-    }
-    // random value minus
-    if (low > high) {
-      printout("do_kpkt: error occured while selecting a cooling channel: low %d, high %d, i %d, rndcool %g\n", low,
-               high, i, rndcool);
+    const auto selectedvalue = std::lower_bound(&globals::cellhistory[tid].cooling_contrib[ilow],
+                                                &globals::cellhistory[tid].cooling_contrib[ihigh + 1], rndcool);
+    const int i = selectedvalue - globals::cellhistory[tid].cooling_contrib;
+    assert_always(i <= ihigh);
+
+    if (i > ihigh) {
+      printout("do_kpkt: error occured while selecting a cooling channel: low %d, high %d, i %d, rndcool %g\n", ilow,
+               ihigh, i, rndcool);
       printout("element %d, ion %d, offset %d, terms %d, coolingsum %g\n", element, ion,
                get_coolinglistoffset(element, ion), get_ncoolingterms(element, ion), coolingsum);
       printout("oldcoolingsum %g, coolingsum %g\n", oldcoolingsum, coolingsum);
@@ -709,15 +707,19 @@ __host__ __device__ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       const int level = coolinglist[i].level;
       const double epsilon_current = epsilon(element, ion, level);
       const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+      const double statweight = stat_weight(element, ion, level);
       int upper = -1;
       // excitation to same ionization stage
       const int nuptrans = get_nuptrans(element, ion, level);
       for (int ii = 0; ii < nuptrans; ii++) {
-        const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans_lineindicies[ii];
+        const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
+        const struct linelist_entry *line = &globals::linelist[lineindex];
         const int tmpupper = globals::linelist[lineindex].upperlevelindex;
         // printout("    excitation to level %d possible\n",upper);
         const double epsilon_trans = epsilon(element, ion, tmpupper) - epsilon_current;
-        const double C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
+        const double C = nnlevel *
+                         col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statweight, statw_upper(line)) *
+                         epsilon_trans;
         contrib += C;
         if (contrib >= rndcool) {
           upper = tmpupper;
@@ -846,3 +848,5 @@ __host__ __device__ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
 
   return bfcooling;
 }*/
+
+}  // namespace kpkt

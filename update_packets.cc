@@ -3,18 +3,17 @@
 #include <algorithm>
 
 #include "decay.h"
-#include "gamma.h"
+#include "gammapkt.h"
 #include "grid.h"
 #include "kpkt.h"
-#include "ltepop.h"
-#include "macroatom.h"
 #include "nonthermal.h"
+#include "packet.h"
 #include "rpkt.h"
 #include "sn3d.h"
 #include "stats.h"
-#include "vectors.h"
+#include "update_grid.h"
 
-static void do_nonthermal_predeposit(PKT *pkt_ptr, const int nts, const double t2) {
+static void do_nonthermal_predeposit(struct packet *pkt_ptr, const int nts, const double t2) {
   const double ts = pkt_ptr->prop_time;
 
   const double particle_en = H * pkt_ptr->nu_cmf;
@@ -69,7 +68,7 @@ static void do_nonthermal_predeposit(PKT *pkt_ptr, const int nts, const double t
   }
 }
 
-static void update_pellet(PKT *pkt_ptr, const int nts, const double t2) {
+static void update_pellet(struct packet *pkt_ptr, const int nts, const double t2) {
   // Handle inactive pellets. Need to do two things (a) check if it
   // decays in this time step and if it does handle that. (b) if it doesn't decay in
   // this time step then just move the packet along with the matter for the
@@ -113,7 +112,7 @@ static void update_pellet(PKT *pkt_ptr, const int nts, const double t2) {
     } else {
       safeadd(globals::time_step[nts].gamma_emission, pkt_ptr->e_cmf);
       // decay to gamma-ray, kpkt, or ntlepton
-      pellet_gamma_decay(nts, pkt_ptr);
+      gammapkt::pellet_gamma_decay(nts, pkt_ptr);
     }
   } else if ((tdecay > 0) && (nts == 0)) {
     // These are pellets whose decay times were before the first time step
@@ -123,7 +122,6 @@ static void update_pellet(PKT *pkt_ptr, const int nts, const double t2) {
     // that it is fixed in place from decay to globals::tmin - i.e. short mfp.
 
     pkt_ptr->e_cmf *= tdecay / globals::tmin;
-    // pkt_ptr->type = TYPE_KPKT;
     pkt_ptr->type = TYPE_PRE_KPKT;
     pkt_ptr->absorptiontype = -7;
     stats::increment(stats::COUNTER_K_STAT_FROM_EARLIERDECAY);
@@ -136,7 +134,7 @@ static void update_pellet(PKT *pkt_ptr, const int nts, const double t2) {
   }
 }
 
-static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
+static void do_packet(struct packet *const pkt_ptr, const double t2, const int nts)
 // update a packet no further than time t2
 {
   const int pkt_type = pkt_ptr->type;  // avoid dereferencing multiple times
@@ -148,11 +146,8 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
     }
 
     case TYPE_GAMMA: {
-      do_gamma(pkt_ptr, t2);
-      /* This returns a flag if the packet gets to t2 without
-changing to something else. If the packet does change it
-returns the time of change and sets everything for the
-new packet.*/
+      gammapkt::do_gamma(pkt_ptr, t2);
+
       if (pkt_ptr->type != TYPE_GAMMA && pkt_ptr->type != TYPE_ESCAPE) {
         safeadd(globals::time_step[nts].gamma_dep, pkt_ptr->e_cmf);
       }
@@ -186,9 +181,9 @@ new packet.*/
 
       // t_change_type = do_kpkt(pkt_ptr, t_current, t2);
       if (pkt_type == TYPE_PRE_KPKT || grid::modelgrid[grid::get_cell_modelgridindex(pkt_ptr->where)].thick == 1) {
-        do_kpkt_bb(pkt_ptr);
+        kpkt::do_kpkt_bb(pkt_ptr);
       } else if (pkt_type == TYPE_KPKT) {
-        do_kpkt(pkt_ptr, t2, nts);
+        kpkt::do_kpkt(pkt_ptr, t2, nts);
       } else {
         printout("kpkt not of type TYPE_KPKT or TYPE_PRE_KPKT\n");
         abort();
@@ -206,7 +201,7 @@ new packet.*/
   }
 }
 
-static bool std_compare_packets_bymodelgriddensity(const PKT &p1, const PKT &p2) {
+static bool std_compare_packets_bymodelgriddensity(const struct packet &p1, const struct packet &p2) {
   // return true if packet p1 goes before p2
 
   // move escaped packets to the end of the list for better performance
@@ -221,26 +216,28 @@ static bool std_compare_packets_bymodelgriddensity(const PKT &p1, const PKT &p2)
     return false;
 
   // for both non-escaped packets, order by descending cell density
-  const int a1_where = p1.where;
-  const int a2_where = p2.where;
-
-  const int mgi1 = grid::get_cell_modelgridindex(a1_where);
-  const int mgi2 = grid::get_cell_modelgridindex(a2_where);
+  const int mgi1 = grid::get_cell_modelgridindex(p1.where);
+  const int mgi2 = grid::get_cell_modelgridindex(p2.where);
   if (grid::get_rho(mgi1) > grid::get_rho(mgi2)) return true;
 
   if (grid::get_rho(mgi1) == grid::get_rho(mgi2) && (mgi1 < mgi2)) return true;
 
+  // same cell, order by type
+  if ((mgi1 == mgi2) && (p1.type < p2.type)) return true;
+
+  // same cell and type, order by decreasing frequency
+  if ((mgi1 == mgi2) && (p1.type == p2.type) && (p1.nu_cmf > p2.nu_cmf)) return true;
+
   return false;
-  // return (p1.type > p2.type);
 }
 
-void update_packets(const int my_rank, const int nts, PKT *packets)
+void update_packets(const int my_rank, const int nts, struct packet *packets)
 // Subroutine to move and update packets during the current timestep (nts)
 {
-  /** At the start, the packets have all either just been initialised or have already been
-  processed for one or more timesteps. Those that are pellets will just be sitting in the
-  matter. Those that are photons (or one sort or another) will already have a position and
-  a direction.*/
+  // At the start, the packets have all either just been initialised or have already been
+  // processed for one or more timesteps. Those that are pellets will just be sitting in the
+  // matter. Those that are photons (or one sort or another) will already have a position and
+  // a direction.
 
   const double ts = globals::time_step[nts].start;
   const double tw = globals::time_step[nts].width;
@@ -269,7 +266,7 @@ void update_packets(const int my_rank, const int nts, PKT *packets)
 #pragma omp parallel for schedule(dynamic)
 #endif
     for (int n = 0; n < globals::npkts; n++) {
-      PKT *pkt_ptr = &packets[n];
+      struct packet *pkt_ptr = &packets[n];
 
       // if (pkt_ptr->type == TYPE_ESCAPE)
       // {

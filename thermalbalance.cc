@@ -3,6 +3,8 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_roots.h>
 
+#include <cmath>
+
 #include "artisoptions.h"
 #include "atomic.h"
 #include "grid.h"
@@ -15,18 +17,18 @@
 #include "sn3d.h"
 #include "update_grid.h"
 
-typedef struct Te_solution_paras {
-  double t_current;
-  int modelgridindex;
-  heatingcoolingrates_t *heatingcoolingrates;
-} Te_solution_paras;
+struct Te_solution_paras {
+  const double t_current;
+  const int modelgridindex;
+  struct heatingcoolingrates *const heatingcoolingrates;
+};
 
-typedef struct {
-  double nu_edge;
-  int modelgridindex;
-  float T_R;
-  float *photoion_xs;
-} gsl_integral_paras_bfheating;
+struct gsl_integral_paras_bfheating {
+  const double nu_edge;
+  const int modelgridindex;
+  const float T_R;
+  const float *photoion_xs;
+};
 
 #if (!NO_LUT_BFHEATING)
 double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T, double W) {
@@ -43,16 +45,12 @@ double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetin
     const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
     const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
-    const double f_upper =
-        globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[upperindex];
-    const double f_lower =
-        globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[lowerindex];
+    const double f_upper = globals::bfheating_coeff[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
+    const double f_lower = globals::bfheating_coeff[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
 
     bfheatingcoeff = (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower));
   } else {
-    bfheatingcoeff =
-        globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[TABLESIZE -
-                                                                                                          1];
+    bfheatingcoeff = globals::bfheating_coeff[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
   }
 
   return W * bfheatingcoeff;
@@ -62,11 +60,12 @@ double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetin
 static double integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas)
 /// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
 {
-  const gsl_integral_paras_bfheating *const params = (gsl_integral_paras_bfheating *)voidparas;
+  const struct gsl_integral_paras_bfheating *const params =
+      static_cast<struct gsl_integral_paras_bfheating *>(voidparas);
 
   const int modelgridindex = params->modelgridindex;
   const double nu_edge = params->nu_edge;
-  const double T_R = params->T_R;
+  const float T_R = params->T_R;
   // const double Te_TR_factor = params->Te_TR_factor; // = sqrt(T_e/T_R) * sahafac(Te) / sahafac(TR)
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
@@ -96,17 +95,16 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
   // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
 
-  gsl_integral_paras_bfheating intparas;
-  intparas.nu_edge = nu_threshold;
-  intparas.modelgridindex = modelgridindex;
-  intparas.T_R = grid::get_TR(modelgridindex);
-  intparas.photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
+  struct gsl_integral_paras_bfheating intparas = {
+      .nu_edge = nu_threshold,
+      .modelgridindex = modelgridindex,
+      .T_R = grid::get_TR(modelgridindex),
+      .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs};
+
   // intparas.Te_TR_factor = sqrt(T_e/T_R) * sf_Te / sf_TR;
 
   double bfheating = 0.0;
-  gsl_function F_bfheating;
-  F_bfheating.function = &integrand_bfheatingcoeff_custom_radfield;
-  F_bfheating.params = &intparas;
+  const gsl_function F_bfheating = {.function = &integrand_bfheatingcoeff_custom_radfield, .params = &intparas};
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
@@ -199,11 +197,15 @@ static double get_heating_ion_coll_deexc(const int modelgridindex, const int ele
     // Collisional heating: deexcitation to same ionization stage
     // ----------------------------------------------------------
     const int ndowntrans = get_ndowntrans(element, ion, level);
-    for (int ii = 0; ii < ndowntrans; ii++) {
-      const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[ii];
-      const int lower = globals::linelist[lineindex].lowerlevelindex;
+    for (int i = 0; i < ndowntrans; i++) {
+      const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
+      const struct linelist_entry *line = &globals::linelist[lineindex];
+      const int lower = line->lowerlevelindex;
       const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
-      const double C = nnlevel * col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex) * epsilon_trans;
+      const double statweight = stat_weight(element, ion, level);
+      const double C = nnlevel *
+                       col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, line, statw_lower(line), statweight) *
+                       epsilon_trans;
       C_deexc += C;
     }
   }
@@ -214,7 +216,7 @@ static double get_heating_ion_coll_deexc(const int modelgridindex, const int ele
 }
 
 static void calculate_heating_rates(const int modelgridindex, const double T_e, const double nne,
-                                    heatingcoolingrates_t *heatingcoolingrates)
+                                    struct heatingcoolingrates *heatingcoolingrates)
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the heatingrates data structure.
 {
@@ -346,9 +348,11 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
 static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
 /// Thermal balance equation on which we have to iterate to get T_e
 {
-  const int modelgridindex = ((Te_solution_paras *)paras)->modelgridindex;
-  const double t_current = ((Te_solution_paras *)paras)->t_current;
-  heatingcoolingrates_t *heatingcoolingrates = ((Te_solution_paras *)paras)->heatingcoolingrates;
+  const struct Te_solution_paras *const params = static_cast<struct Te_solution_paras *>(paras);
+
+  const int modelgridindex = params->modelgridindex;
+  const double t_current = params->t_current;
+  struct heatingcoolingrates *heatingcoolingrates = params->heatingcoolingrates;
 
   /// Set new T_e guess for the current cell and update populations
   // globals::cell[cellnumber].T_e = T_e;
@@ -362,7 +366,7 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
 
   /// Then calculate heating and cooling rates
   const float nne = grid::get_nne(modelgridindex);
-  calculate_cooling_rates(modelgridindex, heatingcoolingrates);
+  kpkt::calculate_cooling_rates(modelgridindex, heatingcoolingrates);
   calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates);
 
   /// If selected take direct gamma heating into account
@@ -391,7 +395,7 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
 }
 
 void call_T_e_finder(const int modelgridindex, const int timestep, const double t_current, const double T_min,
-                     const double T_max, heatingcoolingrates_t *heatingcoolingrates) {
+                     const double T_max, struct heatingcoolingrates *heatingcoolingrates) {
   const double T_e_old = grid::get_Te(modelgridindex);
   printout("Finding T_e in cell %d at timestep %d...", modelgridindex, timestep);
 
@@ -406,14 +410,10 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
   // mintemp_f.function = &mintemp_solution_f;
   // maxtemp_f.function = &maxtemp_solution_f;
 
-  Te_solution_paras paras;
-  paras.modelgridindex = modelgridindex;
-  paras.t_current = t_current;
-  paras.heatingcoolingrates = heatingcoolingrates;
+  struct Te_solution_paras paras = {
+      .t_current = t_current, .modelgridindex = modelgridindex, .heatingcoolingrates = heatingcoolingrates};
 
-  gsl_function find_T_e_f;
-  find_T_e_f.function = &T_e_eqn_heating_minus_cooling;
-  find_T_e_f.params = &paras;
+  gsl_function find_T_e_f = {.function = &T_e_eqn_heating_minus_cooling, .params = &paras};
 
   double thermalmin = T_e_eqn_heating_minus_cooling(T_min, find_T_e_f.params);
   double thermalmax = T_e_eqn_heating_minus_cooling(T_max, find_T_e_f.params);

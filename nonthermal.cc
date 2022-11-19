@@ -1,4 +1,3 @@
-
 #include "nonthermal.h"
 
 #include <gsl/gsl_blas.h>
@@ -12,7 +11,6 @@
 #include <cmath>
 
 #include "atomic.h"
-#include "cuda.h"
 #include "decay.h"
 #include "grid.h"
 #include "gsl_managed.h"
@@ -60,19 +58,19 @@ namespace nonthermal {
          // many more transitions to store than there are NT spectrum samples
 
 // minimum number fraction of the total population to include in SF solution
-static const double minionfraction = 1.e-8;
+constexpr double minionfraction = 1.e-8;
 
 // minimum deposition rate density (eV/s/cm^3) to solve SF equation
-static const double MINDEPRATE = 0.;
+constexpr double MINDEPRATE = 0.;
 
 // Bohr radius squared in cm^2
-static const double A_naught_squared = 2.800285203e-17;
+constexpr double A_naught_squared = 2.800285203e-17;
 
 // specifies max number of shells for which data is known for computing mean binding energies
-#define M_NT_SHELLS 10
+constexpr int M_NT_SHELLS = 10;
 
 // maximum number of elements for which binding energy tables are to be used
-#define MAX_Z_BINDING 30
+constexpr int MAX_Z_BINDING = 30;
 
 __managed__ static double electron_binding[MAX_Z_BINDING][M_NT_SHELLS];
 
@@ -110,7 +108,7 @@ __managed__ static double E_init_ev =
 __managed__ static gsl_vector *delta_envec;
 __managed__ static double delta_log_e = 0.;
 #else
-__managed__ static const double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
+constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 #endif
 
 // Monte Carlo result - compare to analytical expectation
@@ -819,7 +817,7 @@ __host__ __device__ static double get_y(const int modelgridindex, const double e
   }
 }
 
-static double electron_loss_rate(const double energy, const double nne)
+constexpr double electron_loss_rate(const double energy, const double nne)
 // -dE / dx for fast electrons
 // energy is in ergs
 // nne is the thermal electron density [cm^-3]
@@ -841,19 +839,21 @@ static double electron_loss_rate(const double energy, const double nne)
   }
 }
 
-__host__ __device__ static double xs_excitation(const int lineindex, const double epsilon_trans, const double energy)
+__host__ __device__ constexpr double xs_excitation(const struct linelist_entry *line, const double epsilon_trans,
+                                                   const double energy)
 // collisional excitation cross section in cm^2
 // energies are in erg
 {
   if (energy < epsilon_trans) return 0.;
-  const double coll_str = get_coll_str(lineindex);
+
+  const double coll_str = line->coll_str;
 
   if (coll_str >= 0) {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11
-    return pow(H_ionpot / energy, 2) / statw_lower(lineindex) * coll_str * PI * A_naught_squared;
-  } else if (!globals::linelist[lineindex].forbidden) {
-    const double fij = osc_strength(lineindex);
+    return pow(H_ionpot / energy, 2) / statw_lower(line) * coll_str * PI * A_naught_squared;
+  } else if (!line->forbidden) {
+    const double fij = line->osc_strength;
     // permitted E1 electric dipole transitions
     const double U = energy / epsilon_trans;
 
@@ -928,31 +928,31 @@ static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const i
   }
 }
 
-__host__ __device__ static double xs_impactionization(const double energy_ev, const int collionindex)
+__host__ __device__ constexpr double xs_impactionization(const double energy_ev, const struct collionrow &colliondata)
 // impact ionization cross section in cm^2
 // energy and ionization_potential should be in eV
 // fitting forumula of Younger 1981
 // called Q_i(E) in KF92 equation 7
 {
-  const double ionpot_ev = colliondata[collionindex].ionpot_ev;
+  const double ionpot_ev = colliondata.ionpot_ev;
   const double u = energy_ev / ionpot_ev;
 
   if (u <= 1.) {
     return 0;
   } else {
-    const double A = colliondata[collionindex].A;
-    const double B = colliondata[collionindex].B;
-    const double C = colliondata[collionindex].C;
-    const double D = colliondata[collionindex].D;
+    const double A = colliondata.A;
+    const double B = colliondata.B;
+    const double C = colliondata.C;
+    const double D = colliondata.D;
 
     return 1e-14 * (A * (1 - 1 / u) + B * pow((1 - 1 / u), 2) + C * log(u) + D * log(u) / u) / (u * pow(ionpot_ev, 2));
   }
 }
 
-static int get_xs_ionization_vector(gsl_vector *const xs_vec, const int collionindex)
+static int get_xs_ionization_vector(gsl_vector *const xs_vec, const struct collionrow &colliondata)
 // xs_vec will be set with impact ionization cross sections for E > ionpot_ev (and zeros below this energy)
 {
-  const double ionpot_ev = colliondata[collionindex].ionpot_ev;
+  const double ionpot_ev = colliondata.ionpot_ev;
   const int startindex = get_energyindex_ev_gteq(ionpot_ev);
 
   // en points for which en < ionpot
@@ -960,10 +960,10 @@ static int get_xs_ionization_vector(gsl_vector *const xs_vec, const int collioni
     gsl_vector_set(xs_vec, i, 0.);
   }
 
-  const double A = colliondata[collionindex].A;
-  const double B = colliondata[collionindex].B;
-  const double C = colliondata[collionindex].C;
-  const double D = colliondata[collionindex].D;
+  const double A = colliondata.A;
+  const double B = colliondata.B;
+  const double C = colliondata.C;
+  const double D = colliondata.D;
 
   for (int i = startindex; i < SFPTS; i++) {
     const double u = gsl_vector_get(envec, i) / ionpot_ev;
@@ -1037,7 +1037,7 @@ static double N_e(const int modelgridindex, const double energy)
         const double nnlevel = get_levelpop(modelgridindex, element, ion, lower);
         const double epsilon_lower = epsilon(element, ion, lower);
         for (int t = 0; t < nuptrans; t++) {
-          const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans_lineindicies[t];
+          const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
           const int upper = globals::linelist[lineindex].upperlevelindex;
           if (upper >= NTEXCITATION_MAXNLEVELS_UPPER) {
             continue;
@@ -1045,7 +1045,7 @@ static double N_e(const int modelgridindex, const double energy)
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           const double epsilon_trans_ev = epsilon_trans / EV;
           N_e_ion += (nnlevel / nnion) * get_y(modelgridindex, energy_ev + epsilon_trans_ev) *
-                     xs_excitation(lineindex, epsilon_trans, energy + epsilon_trans);
+                     xs_excitation(&globals::linelist[lineindex], epsilon_trans, energy + epsilon_trans);
         }
       }
 
@@ -1068,7 +1068,8 @@ static double N_e(const int modelgridindex, const double energy)
             const double delta_endash = DELTA_E;
 #endif
 
-            N_e_ion += get_y(modelgridindex, energy_ev + endash) * xs_impactionization(energy_ev + endash, n) *
+            N_e_ion += get_y(modelgridindex, energy_ev + endash) *
+                       xs_impactionization(energy_ev + endash, colliondata[n]) *
                        Psecondary(energy_ev + endash, endash, ionpot_ev, J) * delta_endash;
           }
 
@@ -1081,7 +1082,7 @@ static double N_e(const int modelgridindex, const double energy)
 #else
             const double delta_endash = DELTA_E;
 #endif
-            N_e_ion += get_y_sample(modelgridindex, i) * xs_impactionization(endash, n) *
+            N_e_ion += get_y_sample(modelgridindex, i) * xs_impactionization(endash, colliondata[n]) *
                        Psecondary(endash, energy_ev + ionpot_ev, ionpot_ev, J) * delta_endash;
           }
         }
@@ -1337,7 +1338,7 @@ static double calculate_nt_frac_ionization_shell(const int modelgridindex, const
   const double ionpot_ev = colliondata[collionindex].ionpot_ev;
 
   gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
-  get_xs_ionization_vector(cross_section_vec, collionindex);
+  get_xs_ionization_vector(cross_section_vec, colliondata[collionindex]);
 
 // either multiply by the variable delta_e for LOG_E spacing...
 #if (SF_USE_LOG_E_INCREMENT)
@@ -1386,7 +1387,7 @@ static double calculate_nt_ionization_ratecoeff(const int modelgridindex, const 
 
   for (int collionindex = 0; collionindex < colliondatacount; collionindex++) {
     if (colliondata[collionindex].Z == Z && colliondata[collionindex].nelec == Z - ionstage + 1) {
-      get_xs_ionization_vector(cross_section_vec, collionindex);
+      get_xs_ionization_vector(cross_section_vec, colliondata[collionindex]);
 
       if (assumeshellpotentialisvalence) {
         const double ionpot_shell = colliondata[collionindex].ionpot_ev * EV;
@@ -1873,7 +1874,7 @@ __host__ __device__ static void select_nt_ionization2(int modelgridindex, int *e
   assert_always(false);
 }
 
-__host__ __device__ void do_ntlepton(PKT *pkt_ptr) {
+__host__ __device__ void do_ntlepton(struct packet *pkt_ptr) {
   safeadd(nt_energy_deposited, pkt_ptr->e_cmf);
 
   const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
@@ -2069,7 +2070,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
         const double epsilon_lower = epsilon(element, ion, lower);
 
         for (int t = 0; t < nuptrans; t++) {
-          const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans_lineindicies[t];
+          const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
           const int upper = globals::linelist[lineindex].upperlevelindex;
           if (upper >= NTEXCITATION_MAXNLEVELS_UPPER) {
             continue;
@@ -2192,10 +2193,11 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
       const double frac_deposition = nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition;
       if (frac_deposition > 0.) {
         const int lineindex = nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex;
-        const int element = globals::linelist[lineindex].elementindex;
-        const int ion = globals::linelist[lineindex].ionindex;
-        const int lower = globals::linelist[lineindex].lowerlevelindex;
-        const int upper = globals::linelist[lineindex].upperlevelindex;
+        const struct linelist_entry *line = &globals::linelist[lineindex];
+        const int element = line->elementindex;
+        const int ion = line->ionindex;
+        const int lower = line->lowerlevelindex;
+        const int upper = line->upperlevelindex;
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon(element, ion, lower);
 
         const double ratecoeffperdeposition =
@@ -2206,7 +2208,8 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
         const double radexc_ratecoeff =
             rad_excitation_ratecoeff(modelgridindex, element, ion, lower, upper, epsilon_trans, lineindex, t_current);
 
-        const double collexc_ratecoeff = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
+        const double collexc_ratecoeff =
+            col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statw_lower(line), statw_upper(line));
 
         const double exc_ratecoeff = radexc_ratecoeff + collexc_ratecoeff + ntcollexc_ratecoeff;
 
@@ -2290,7 +2293,7 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
     const double epsilon_lower = epsilon(element, ion, lower);
     const int nuptrans = get_nuptrans(element, ion, lower);
     for (int t = 0; t < nuptrans; t++) {
-      const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans_lineindicies[t];
+      const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
       const int upper = globals::linelist[lineindex].upperlevelindex;
       if (upper >= NTEXCITATION_MAXNLEVELS_UPPER) {
         continue;
@@ -2353,7 +2356,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
       // printout("Z=%2d ion_stage %d n %d l %d ionpot %g eV\n",
       //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
 
-      const int xsstartindex = get_xs_ionization_vector(vec_xs_ionization, collionindex);
+      const int xsstartindex = get_xs_ionization_vector(vec_xs_ionization, colliondata[collionindex]);
       // Luke Shingles: the use of min and max on the epsilon limits keeps energies
       // from becoming unphysical. This insight came from reading the
       // CMFGEN Fortran source code (Li, Dessart, Hillier 2012, doi:10.1111/j.1365-2966.2012.21198.x)
@@ -2526,7 +2529,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
              timestep);
 
     return;
-  } else if (timestep < globals::n_lte_timesteps + 1) {
+  } else if (timestep < globals::num_lte_timesteps + 1) {
     printout("Skipping Spencer-Fano solution for first NLTE timestep\n");
     skip_solution = true;
   } else if (get_deposition_rate_density(modelgridindex) / EV < MINDEPRATE) {
@@ -2567,7 +2570,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   if ((nne_per_ion_fracdiff < NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS) &&
       (timestep - timestep_last_solved <= SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS) &&
-      timestep_last_solved > globals::n_lte_timesteps) {
+      timestep_last_solved > globals::num_lte_timesteps) {
     printout(
         "Keeping Spencer-Fano solution from timestep %d because x_e fracdiff %g < %g and because timestep %d - %d < "
         "%d\n",
@@ -2589,7 +2592,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   bool enable_sfexcitation = true;
   bool enable_sfionization = true;
-  // if (timestep <= globals::n_lte_timesteps)
+  // if (timestep <= globals::num_lte_timesteps)
   // {
   //   // for the first run of the solver at the first NLTE timestep (which usually requires many iterations),
   //   // do a fast initial solution but mark it has an invalid nne per ion so it gets replaced at the next timestep
@@ -2600,7 +2603,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   //   printout("Doing a fast initial solution without ionization or excitation in the SF equation for the first NLTE
   //   timestep.\n");
   // }
-  // if (timestep <= globals::n_lte_timesteps + 2)
+  // if (timestep <= globals::num_lte_timesteps + 2)
   // {
   //   // run the solver in a faster mode for the first couple of NLTE timesteps
   //   // nt_solution[modelgridindex].nneperion_when_solved = -1.;
