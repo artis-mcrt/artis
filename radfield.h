@@ -44,7 +44,7 @@ template <typename T_t, typename W_t>
 __host__ __device__ constexpr double dbb(double nu, T_t T, W_t W)
 // returns J_nu for a dilute black body [ergs/s/sr/cm2/Hz]
 {
-  return W * TWOHOVERCLIGHTSQUARED * pow(nu, 3) / expm1(HOVERKB * nu / T);
+  return W * TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / std::expm1(HOVERKB * nu / T);
 }
 
 }  // namespace radfield

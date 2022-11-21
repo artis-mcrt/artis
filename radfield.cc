@@ -946,7 +946,7 @@ constexpr double gsl_integrand_planck(const double nu, void *paras) {
   const double T_R = ((gsl_planck_integral_paras *)paras)->T_R;
   const enum_prefactor prefactor = ((gsl_planck_integral_paras *)paras)->prefactor;
 
-  double integrand = TWOHOVERCLIGHTSQUARED * pow(nu, 3) / (expm1(HOVERKB * nu / T_R));
+  double integrand = TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / (std::expm1(HOVERKB * nu / T_R));
 
   if (prefactor == TIMES_NU) integrand *= nu;
 
