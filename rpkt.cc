@@ -81,6 +81,7 @@ __host__ __device__ static double get_event(
   double edist = 0.;
 
   struct packet dummypkt_abort = *pkt_ptr;
+  // this is done is two parts to get identical results to do_rpkt_step()
   move_pkt_withtime(&dummypkt_abort, abort_dist / 2.);
   move_pkt_withtime(&dummypkt_abort, abort_dist / 2.);
   const double nu_cmf_abort = dummypkt_abort.nu_cmf;

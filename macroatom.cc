@@ -49,7 +49,6 @@ __host__ __device__ static inline double get_individ_internal_up_same(int modelg
   const double C = col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statweight, statw_upper(line));
   const double NT =
       nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
-  // const double NT = 0.;
 
   return (R + C + NT) * epsilon_current;
 }
@@ -972,7 +971,7 @@ __host__ __device__ double rad_excitation_ratecoeff(const int modelgridindex, co
 /// radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
 {
-  assert_always(upper > lower);
+  assert_testmodeonly(upper > lower);
 
   const double n_u = get_levelpop(modelgridindex, element, ion, upper);
   const double n_l = get_levelpop(modelgridindex, element, ion, lower);
@@ -988,21 +987,11 @@ __host__ __device__ double rad_excitation_ratecoeff(const int modelgridindex, co
 
     if (tau_sobolev > 1e-100) {
       double beta = 1.0 / tau_sobolev * (-expm1(-tau_sobolev));
-      // printout("[check] rad_excitation: %g, %g, %g\n",1.0/tau_sobolev,exp(-tau_sobolev),1.0/tau_sobolev * (1. -
-      // exp(-tau_sobolev))); n_u2 =
-      // calculate_levelpop_fromreflevel(pkt_ptr->where,element,ion,upper,lower,pkt_ptr->mastate.nnlevel); R =
-      // (B_lu*pkt_ptr->mastate.nnlevel - B_ul * n_u2) * beta * radfield::radfield::radfield(nu_trans,pkt_ptr->where);
 
       const double R_over_J_nu = n_l > 0. ? (B_lu - B_ul * n_u / n_l) * beta : B_lu * beta;
 
-      // const double linelambda = 1e8 * CLIGHT / nu_trans;
-      // if (use_cellhist && false) //  || (linelambda > 7000)
-      { R = R_over_J_nu * radfield::radfield(nu_trans, modelgridindex); }
-      // else
-      {
-        // R = R_over_J_nu * radfield_dbb_mgi(nu_trans, modelgridindex);
-        // R = 0.;
-      }
+      R = R_over_J_nu * radfield::radfield(nu_trans, modelgridindex);
+
       if (DETAILED_LINE_ESTIMATORS_ON && !globals::initial_iteration) {
         // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
         const int jblueindex = radfield::get_Jblueindex(lineindex);
@@ -1027,9 +1016,6 @@ __host__ __device__ double rad_excitation_ratecoeff(const int modelgridindex, co
       // printout("[warning] rad_excitation: T_e %g, T_R %g, W
       // %g\n",grid::get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex));
       R = 0.;
-
-      // printout("[fatal] rad_excitation: tau_sobolev <= 0 ... %g abort",tau_sobolev);
-      // abort();
     }
 
     if (R < 0) {

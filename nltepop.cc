@@ -475,7 +475,6 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
       const double NTC =
           nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex) *
           s_renorm[level];
-      // const double NTC = 0.;
 
       // if ((Z == 26) && (ionstage == 1) && (level == 0) && (upper <= 5))
       // {

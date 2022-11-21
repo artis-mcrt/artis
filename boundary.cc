@@ -347,24 +347,28 @@ __host__ __device__ void change_cell(struct packet *pkt_ptr, int snext)
     safeincrement(globals::nesc);
   } else {
     // Just need to update "where".
-    // const int cellnum = pkt_ptr->where;
-    // const int old_mgi = grid::get_cell_modelgridindex(cellnum);
     pkt_ptr->where = snext;
-    // const int mgi = grid::get_cell_modelgridindex(snext);
 
     stats::increment(stats::COUNTER_CELLCROSSINGS);
   }
 }
 
-// static int locate(const struct packet *pkt_ptr, double t_current)
-// /// Routine to return which grid cell the packet is in.
-// {
-//   // Cheap and nasty version for now - assume a uniform grid.
-//   int xx = (pkt_ptr->pos[0] - (globals::cell[0].pos_min[0]*t_current/globals::tmin)) /
-//   (grid::wid_init*t_current/globals::tmin); int yy = (pkt_ptr->pos[1] -
-//   (globals::cell[0].pos_min[1]*t_current/globals::tmin)) / (grid::wid_init*t_current/globals::tmin); int zz =
-//   (pkt_ptr->pos[2] - (globals::cell[0].pos_min[2]*t_current/globals::tmin)) /
-//   (grid::wid_init*t_current/globals::tmin);
-//
-//   return xx + (grid::ncoordgrid[0] * yy) + (grid::ncoordgrid[0] * grid::ncoordgrid[1] * zz);
-// }
+static int get_cell(double pos[3], double t)
+/// identify the cell index from a position and a time.
+{
+  assert_always(GRID_TYPE == GRID_UNIFORM);  // other grid types not implemented yet
+
+  const double trat = t / globals::tmin;
+  const int nx = (pos[0] - (globals::cell[0].pos_min[0] * trat)) / (grid::wid_init * trat);
+  const int ny = (pos[1] - (globals::cell[0].pos_min[1] * trat)) / (grid::wid_init * trat);
+  const int nz = (pos[2] - (globals::cell[0].pos_min[2] * trat)) / (grid::wid_init * trat);
+
+  const int cellindex = nx + (grid::ncoordgrid[0] * ny) + (grid::ncoordgrid[0] * grid::ncoordgrid[1] * nz);
+
+  // do a check
+  for (int n = 0; n < grid::get_ngriddimensions(); n++) {
+    assert_always(pos[n] >= globals::cell[n].pos_min[n]);
+    assert_always(pos[n] <= globals::cell[n].pos_min[n] + grid::wid_init(cellindex));
+  }
+  return cellindex;
+}
