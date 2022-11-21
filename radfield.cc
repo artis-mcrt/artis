@@ -942,7 +942,7 @@ __host__ __device__ double radfield(double nu, int modelgridindex)
   return J_nu_fullspec;
 }
 
-static double gsl_integrand_planck(double nu, void *paras) {
+constexpr double gsl_integrand_planck(const double nu, void *paras) {
   const double T_R = ((gsl_planck_integral_paras *)paras)->T_R;
   const enum_prefactor prefactor = ((gsl_planck_integral_paras *)paras)->prefactor;
 
