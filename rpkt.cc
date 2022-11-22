@@ -207,10 +207,10 @@ __host__ __device__ static double get_event(
 
           tau += tau_cont + tau_line;
           move_pkt_withtime(dummypkt_ptr, ldist);
-          //   if (fabs(dummypkt_ptr->nu_cmf / nu_trans - 1.) > 1e-5) {
-          // printout("dopplercheck: packet %d nu_cmf %g nu_line %g ratio-1 %g errorfrac %g\n", pkt_ptr->number,
-          //          dummypkt_ptr->nu_cmf, nu_trans, (dummypkt_ptr->nu_cmf - nu_trans) / nu_trans,
-          //          fabs(dummypkt_ptr->nu_cmf / nu_trans - 1.));
+          // if (fabs(dummypkt_ptr->nu_cmf / nu_trans - 1.) > 1e-5) {
+          //   printout("dopplercheck: packet %d nu_cmf %g nu_line %g ratio-1 %g errorfrac %g\n", pkt_ptr->number,
+          //            dummypkt_ptr->nu_cmf, nu_trans, (dummypkt_ptr->nu_cmf - nu_trans) / nu_trans,
+          //            fabs(dummypkt_ptr->nu_cmf / nu_trans - 1.));
           // }
 
           radfield::update_lineestimator(modelgridindex, lineindex,
