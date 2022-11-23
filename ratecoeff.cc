@@ -469,6 +469,11 @@ static void precalculate_rate_coefficient_integrals(void) {
       for (int level = 0; level < nlevels; level++) {
         if ((level > 0) && (level % 50 == 0)) printout("  completed up to level %d of %d\n", level, nlevels);
 
+        // all coefficients are stored in node shared memory, so divide up the work
+        if ((level % globals::node_nprocs) != globals::rank_in_node) {
+          continue;
+        }
+
         const int nphixstargets = get_nphixstargets(element, ion, level);
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
           const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
@@ -621,6 +626,9 @@ static void precalculate_rate_coefficient_integrals(void) {
       gsl_set_error_handler(previous_handler);
     }
   }
+#if MPI_ON
+  MPI_Barrier(globals::mpi_comm_node);
+#endif
 }
 
 double select_continuum_nu(int element, int lowerion, int lower, int upperionlevel, float T_e) {
@@ -1019,7 +1027,11 @@ void ratecoefficients_init(void)
 
   if (!ratecoeff_match) {
     precalculate_rate_coefficient_integrals();
-    /// And the master process writes them to file in a serial operation
+
+/// And the master process writes them to file in a serial operation
+#if MPI_ON
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
     if (globals::rank_global == 0) {
       write_ratecoeff_dat();
     }
