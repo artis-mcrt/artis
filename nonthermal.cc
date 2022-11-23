@@ -2204,9 +2204,9 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
             nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition;
         const double ntcollexc_ratecoeff = ratecoeffperdeposition * deposition_rate_density;
 
-        const double t_current = globals::time_step[timestep].start;
+        const double t_mid = globals::time_step[timestep].mid;
         const double radexc_ratecoeff =
-            rad_excitation_ratecoeff(modelgridindex, element, ion, lower, upper, epsilon_trans, lineindex, t_current);
+            rad_excitation_ratecoeff(modelgridindex, element, ion, lower, upper, epsilon_trans, lineindex, t_mid);
 
         const double collexc_ratecoeff =
             col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statw_lower(line), statw_upper(line));
