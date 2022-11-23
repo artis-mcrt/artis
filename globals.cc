@@ -16,7 +16,7 @@ __managed__ double syn_dir[3];  // vector pointing from origin to observer
 // #define NRAYS_SYN 1 // number of rays traced in a syn calculation
 
 // RAY rays[NRAYS_SYN];
-__managed__ struct time *time_step = NULL;
+__managed__ struct time *time_step = nullptr;
 
 __managed__ int nsyn_time;
 __managed__ double time_syn[MSYN_TIME];
@@ -26,31 +26,31 @@ __managed__ int emiss_offset;  // the index in the line list of the 1st line for
 __managed__ int emiss_max;     // actual number of frequency points in emissivity grid
 
 /// THESE ARE THE GRID BASED ESTIMATORS
-__managed__ float *compton_emiss = NULL;  /// Volume estimator for the compton emissivity
-__managed__ double *rpkt_emiss = NULL;    /// Volume estimator for the rpkt emissivity
+__managed__ float *compton_emiss = nullptr;  /// Volume estimator for the compton emissivity
+__managed__ double *rpkt_emiss = nullptr;    /// Volume estimator for the rpkt emissivity
 
 #if (!NO_LUT_PHOTOION)
-__managed__ double *corrphotoionrenorm = NULL;
-__managed__ double *gammaestimator = NULL;
+__managed__ double *corrphotoionrenorm = nullptr;
+__managed__ double *gammaestimator = nullptr;
 #endif
 #if (!NO_LUT_BFHEATING)
-__managed__ double *bfheatingestimator = NULL;
+__managed__ double *bfheatingestimator = nullptr;
 #endif
-__managed__ double *ffheatingestimator = NULL;
-__managed__ double *colheatingestimator = NULL;
+__managed__ double *ffheatingestimator = nullptr;
+__managed__ double *colheatingestimator = nullptr;
 #ifndef FORCE_LTE
 #ifdef DO_TITER
-__managed__ double *gammaestimator_save = NULL;
-__managed__ double *bfheatingestimator_save = NULL;
-__managed__ double *ffheatingestimator_save = NULL;
-__managed__ double *colheatingestimator_save = NULL;
+__managed__ double *gammaestimator_save = nullptr;
+__managed__ double *bfheatingestimator_save = nullptr;
+__managed__ double *ffheatingestimator_save = nullptr;
+__managed__ double *colheatingestimator_save = nullptr;
 #endif
 #endif
 
 #ifdef RECORD_LINESTAT
-__managed__ int *ecounter = NULL;
-__managed__ int *acounter = NULL;
-__managed__ int *linestat_reduced = NULL;
+__managed__ int *ecounter = nullptr;
+__managed__ int *acounter = nullptr;
+__managed__ int *linestat_reduced = nullptr;
 #endif
 
 __managed__ int nprocs_exspec = 1;
@@ -97,18 +97,18 @@ __managed__ int ncoolingterms;
 
 /// PHIXSLIST
 
-__managed__ double *allcont_nu_edge = NULL;
-__managed__ const struct fullphixslist *allcont = NULL;
+__managed__ double *allcont_nu_edge = nullptr;
+__managed__ const struct fullphixslist *allcont = nullptr;
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-__managed__ struct groundphixslist *groundcont = NULL;
+__managed__ struct groundphixslist *groundcont = nullptr;
 #endif
-__managed__ struct phixslist *phixslist = NULL;
+__managed__ struct phixslist *phixslist = nullptr;
 __managed__ int nbfcontinua = -1;
 __managed__ int nbfcontinua_ground = -1;  /// number of bf-continua
 __managed__ int NPHIXSPOINTS = -1;
 __managed__ double NPHIXSNUINCREMENT = -1;
 
-__managed__ struct cellhistory *cellhistory = NULL;
+__managed__ struct cellhistory *cellhistory = nullptr;
 
 __managed__ int debuglevel;
 
