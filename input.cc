@@ -1615,7 +1615,7 @@ static void setup_phixs_list(void) {
   long mem_usage_photoionluts = 2 * TABLESIZE * globals::nbfcontinua * sizeof(double);
 
 #ifdef MPI_ON
-  MPI_Win win;
+  MPI_Win win = MPI_WIN_NULL;
   MPI_Aint size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * sizeof(double) : 0;
   int disp_unit = sizeof(double);
   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,

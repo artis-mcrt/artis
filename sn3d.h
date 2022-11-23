@@ -65,7 +65,9 @@ static inline int get_bflutindex(const int tempindex, const int element, const i
                                  const int phixstargetindex) {
   const int contindex = -1 - globals::elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
 
-  return tempindex * globals::nbfcontinua + contindex;
+  const int bflutindex = tempindex * globals::nbfcontinua + contindex;
+  assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
+  return bflutindex;
 }
 
 #ifdef _OPENMP

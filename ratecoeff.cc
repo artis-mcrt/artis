@@ -469,7 +469,7 @@ static void precalculate_rate_coefficient_integrals(void) {
       for (int level = 0; level < nlevels; level++) {
         if ((level > 0) && (level % 50 == 0)) printout("  completed up to level %d of %d\n", level, nlevels);
 
-        // all coefficients are stored in node shared memory, so divide up the work
+        // coefficients are stored in node shared memory, so divide up the work
         if ((level % globals::node_nprocs) != globals::rank_in_node) {
           continue;
         }
@@ -626,9 +626,6 @@ static void precalculate_rate_coefficient_integrals(void) {
       gsl_set_error_handler(previous_handler);
     }
   }
-#if MPI_ON
-  MPI_Barrier(globals::mpi_comm_node);
-#endif
 }
 
 double select_continuum_nu(int element, int lowerion, int lower, int upperionlevel, float T_e) {
@@ -815,27 +812,27 @@ static void scale_level_phixs(const int element, const int ion, const int level,
 // multiply the cross sections associated with a level by some factor and
 // also update the quantities integrated from (and proportional to) the cross sections
 {
-  // if we store the cross sections in node shared memory, then only one rank should update it
+  // if we store the data in node shared memory, then only one rank should update it
   if (globals::rank_in_node == 0) {
     for (int n = 0; n < globals::NPHIXSPOINTS; n++) {
       globals::elements[element].ions[ion].levels[level].photoion_xs[n] *= factor;
     }
-  }
 
-  const int nphixstargets = get_nphixstargets(element, ion, level);
-  for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-    for (int iter = 0; iter < TABLESIZE; iter++) {
-      globals::spontrecombcoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
+    const int nphixstargets = get_nphixstargets(element, ion, level);
+    for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+      for (int iter = 0; iter < TABLESIZE; iter++) {
+        globals::spontrecombcoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
 
 #if (!NO_LUT_PHOTOION)
-      globals::corrphotoioncoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
+        globals::corrphotoioncoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
 #endif
 
 #if (!NO_LUT_BFHEATING)
-      globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
+        globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
 #endif
 
-      globals::bfcooling_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
+        globals::bfcooling_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
+      }
     }
   }
 }
@@ -1017,8 +1014,9 @@ void ratecoefficients_init(void)
   /// Check if we need to calculate the ratecoefficients or if we were able to read them from file
   bool ratecoeff_match = false;
   if (globals::rank_in_node == 0) {
-    read_ratecoeff_dat();
+    ratecoeff_match = read_ratecoeff_dat();
   }
+  ratecoeff_match = false;
 #if MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
   // rank 0 will decide if we need to regenerate rate coefficient tables
@@ -1028,7 +1026,7 @@ void ratecoefficients_init(void)
   if (!ratecoeff_match) {
     precalculate_rate_coefficient_integrals();
 
-/// And the master process writes them to file in a serial operation
+    // And the master process writes them to file in a serial operation
 #if MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
