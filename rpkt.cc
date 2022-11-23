@@ -86,6 +86,9 @@ __host__ __device__ static double get_event(
   move_pkt_withtime(&dummypkt_abort, abort_dist / 2.);
   const double nu_cmf_abort = dummypkt_abort.nu_cmf;
   assert_testmodeonly(nu_cmf_abort <= pkt_ptr->nu_cmf);
+  // for USE_RELATIVISTIC_DOPPLER_SHIFT, we will use a linear approximation for
+  // the frequency change from start to abort (cell boundary/timestep end)
+  const double d_nu_on_d_l = (nu_cmf_abort - pkt_ptr->nu_cmf) / abort_dist;
 
   struct packet dummypkt = *pkt_ptr;
   struct packet *const dummypkt_ptr = &dummypkt;
@@ -128,12 +131,15 @@ __host__ __device__ static double get_event(
 
         // relativistic distance formula from tardis-sn project
         // (committed by Christian Vogl, https://github.com/tardis-sn/tardis/pull/697)
-        const double nu_r = nu_trans / dummypkt_ptr->nu_rf;
-        const double ct = CLIGHT * dummypkt_ptr->prop_time;
-        const double r = vec_len(dummypkt_ptr->pos);  // radius
-        const double mu = dot(dummypkt_ptr->dir, dummypkt_ptr->pos) / r;
-        ldist = -mu * r + (ct - nu_r * nu_r * sqrt(ct * ct - (1 + r * r * (1 - mu * mu) * (1 + pow(nu_r, -2))))) /
-                              (1 + nu_r * nu_r);
+        // const double nu_r = nu_trans / dummypkt_ptr->nu_rf;
+        // const double ct = CLIGHT * dummypkt_ptr->prop_time;
+        // const double r = vec_len(dummypkt_ptr->pos);  // radius
+        // const double mu = dot(dummypkt_ptr->dir, dummypkt_ptr->pos) / r;
+        // ldist = -mu * r + (ct - nu_r * nu_r * sqrt(ct * ct - (1 + r * r * (1 - mu * mu) * (1 + pow(nu_r, -2))))) /
+        //                       (1 + nu_r * nu_r);
+
+        // use linear interpolation of frequency along the path
+        ldist = (nu_trans - dummypkt_ptr->nu_cmf) / (nu_cmf_abort - pkt_ptr->nu_cmf) * abort_dist;
       }
 
       if (ldist < 0.) {
@@ -206,7 +212,20 @@ __host__ __device__ static double get_event(
           dist = dist + ldist;
 
           tau += tau_cont + tau_line;
-          move_pkt_withtime(dummypkt_ptr, ldist);
+          if (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
+            move_pkt_withtime(dummypkt_ptr, ldist);
+          } else {
+            // avoid move_pkt_withtime() to skip the standard Doppler shift calculation
+            // and use the linear approx instead
+            dummypkt_ptr->pos[0] += (dummypkt_ptr->dir[0] * ldist);
+            dummypkt_ptr->pos[1] += (dummypkt_ptr->dir[1] * ldist);
+            dummypkt_ptr->pos[2] += (dummypkt_ptr->dir[2] * ldist);
+            dummypkt_ptr->prop_time += ldist / CLIGHT_PROP;
+            // dummypkt_ptr->nu_cmf = nu_trans;
+            dummypkt_ptr->nu_cmf = pkt_ptr->nu_cmf + d_nu_on_d_l * dist;
+            assert_testmodeonly(dummypkt_ptr->nu_cmf <= pkt_ptr->nu_cmf);
+          }
+
           // if (fabs(dummypkt_ptr->nu_cmf / nu_trans - 1.) > 1e-5) {
           //   printout("dopplercheck: packet %d nu_cmf %g nu_line %g ratio-1 %g errorfrac %g\n", pkt_ptr->number,
           //            dummypkt_ptr->nu_cmf, nu_trans, (dummypkt_ptr->nu_cmf - nu_trans) / nu_trans,
