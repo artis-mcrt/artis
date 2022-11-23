@@ -687,21 +687,6 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
 #endif
 }
 
-static int get_lineindex(const int lelement, const int lion, const int llowerlevel, const int lupperlevel) {
-  for (int lineindex = 0; lineindex < globals::nlines; lineindex++) {
-    const int element = globals::linelist[lineindex].elementindex;
-    const int ion = globals::linelist[lineindex].ionindex;
-    const int lowerlevel = globals::linelist[lineindex].lowerlevelindex;
-    const int upperlevel = globals::linelist[lineindex].upperlevelindex;
-
-    if (lelement == element && lion == ion && llowerlevel == lowerlevel && lupperlevel == upperlevel) {
-      return lineindex;
-    }
-  }
-  assert_always(false);
-  return -1;
-}
-
 static int calculate_nlevels_groundterm(int element, int ion) {
   const int nlevels = get_nlevels(element, ion);
   if (nlevels == 1) {
