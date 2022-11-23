@@ -216,21 +216,18 @@ static void write_ratecoeff_dat(void) {
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
           /// Loop over the temperature grid
           for (int iter = 0; iter < TABLESIZE; iter++) {
-            const double alpha_sp =
-                globals::spontrecombcoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)];
-            const double bfcooling_coeff =
-                globals::bfcooling_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)];
+            const int bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
+            const double alpha_sp = globals::spontrecombcoeff[bflutindex];
+            const double bfcooling_coeff = globals::bfcooling_coeff[bflutindex];
             fprintf(ratecoeff_file, "%g %g", alpha_sp, bfcooling_coeff);
 
 #if (!NO_LUT_PHOTOION)
-            const double corrphotoioncoeff =
-                globals::corrphotoioncoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)];
+            const double corrphotoioncoeff = globals::corrphotoioncoeff[bflutindex];
 #else
             const double corrphotoioncoeff = -1.0;
 #endif
 #if (!NO_LUT_BFHEATING)
-            const double bfheating_coeff =
-                globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)];
+            const double bfheating_coeff = globals::bfheating_coeff[bflutindex];
 #else
             const double bfheating_coeff = -1.0;
 #endif
@@ -487,6 +484,7 @@ static void precalculate_rate_coefficient_integrals(void) {
               nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
           // Loop over the temperature grid
           for (int iter = 0; iter < TABLESIZE; iter++) {
+            const int bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
             double error;
             int status = 0;
             const float T_e = MINTEMP * exp(iter * T_step_log);
@@ -532,7 +530,7 @@ static void precalculate_rate_coefficient_integrals(void) {
               alpha_sp = 0;
             }
             // assert_always(alpha_sp >= 0);
-            globals::spontrecombcoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = alpha_sp;
+            globals::spontrecombcoeff[bflutindex] = alpha_sp;
 
             // if (atomic_number == 26 && ionstage == 3 && level < 5)
             // {
@@ -577,7 +575,7 @@ static void precalculate_rate_coefficient_integrals(void) {
               printout("WARNING: gammacorr was negative for level %d\n", level);
               gammacorr = 0;
             }
-            globals::corrphotoioncoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = gammacorr;
+            globals::corrphotoioncoeff[bflutindex] = gammacorr;
 #endif
 
 #if (!NO_LUT_BFHEATING)
@@ -596,7 +594,7 @@ static void precalculate_rate_coefficient_integrals(void) {
               printout("WARNING: bfheating_coeff was negative for level %d\n", level);
               bfheating_coeff = 0;
             }
-            globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = bfheating_coeff;
+            globals::bfheating_coeff[bflutindex] = bfheating_coeff;
 #endif
 
             double bfcooling_coeff = 0.0;
@@ -616,7 +614,7 @@ static void precalculate_rate_coefficient_integrals(void) {
                   level, T_e, bfcooling_coeff, sfac, phixstargetindex, phixstargetprobability);
               bfcooling_coeff = 0;
             }
-            globals::bfcooling_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = bfcooling_coeff;
+            globals::bfcooling_coeff[bflutindex] = bfcooling_coeff;
           }
         }
       }
