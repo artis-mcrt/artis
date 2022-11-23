@@ -1695,7 +1695,7 @@ static void read_atomicdata(void)
   assert_always(includedphotoiontransitions == globals::nbfcontinua);
   assert_always(globals::nlines == includedboundboundtransitions);
 
-  printout("[input]   in total %d ions, %d levels (%d ionising), %d lines, %d photoionisation transitions\n",
+  printout("[input]  in total %d ions, %d levels (%d ionising), %d lines, %d photoionisation transitions\n",
            get_includedions(), includedlevels, includedionisinglevels, globals::nlines, globals::nbfcontinua);
 
   write_bflist_file(globals::nbfcontinua);
