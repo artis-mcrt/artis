@@ -1616,7 +1616,7 @@ static void setup_phixs_list(void) {
 
 #ifdef MPI_ON
   MPI_Win win;
-  MPI_Aint size = TABLESIZE * globals::nbfcontinua * sizeof(double);
+  MPI_Aint size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * sizeof(double) : 0;
   int disp_unit = sizeof(double);
   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
                                         &globals::spontrecombcoeff, &win) == MPI_SUCCESS);
@@ -1628,6 +1628,7 @@ static void setup_phixs_list(void) {
 
 #if (!NO_LUT_PHOTOION)
 #ifdef MPI_ON
+  size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * sizeof(double) : 0;
   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
                                         &globals::corrphotoioncoeff, &win) == MPI_SUCCESS);
   assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::corrphotoioncoeff) == MPI_SUCCESS);
@@ -1640,6 +1641,7 @@ static void setup_phixs_list(void) {
 
 #if (!NO_LUT_BFHEATING)
 #ifdef MPI_ON
+  size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * sizeof(double) : 0;
   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
                                         &globals::bfheating_coeff, &win) == MPI_SUCCESS);
   assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::bfheating_coeff) == MPI_SUCCESS);
@@ -1651,6 +1653,7 @@ static void setup_phixs_list(void) {
 #endif
 
 #ifdef MPI_ON
+  size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * sizeof(double) : 0;
   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
                                         &globals::bfcooling_coeff, &win) == MPI_SUCCESS);
   assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::bfcooling_coeff) == MPI_SUCCESS);
