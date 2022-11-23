@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "atomic.h"
+#include "decay.h"
 #include "exspec.h"
 #include "gammapkt.h"
 #include "grid.h"
@@ -661,13 +662,13 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
         if ((temp_linelist[linelistindex].elementindex != element) || (temp_linelist[linelistindex].ionindex != ion) ||
             (temp_linelist[linelistindex].upperlevelindex != level) ||
             (temp_linelist[linelistindex].lowerlevelindex != targetlevel)) {
-          printout("[input.c] Failure to identify level pair for duplicate bb-transition ... going to abort now\n");
-          printout("[input.c]   element %d ion %d targetlevel %d level %d\n", element, ion, targetlevel, level);
-          printout("[input.c]   transitions[level].to[level-targetlevel-1]=linelistindex %d\n",
+          printout("[input] Failure to identify level pair for duplicate bb-transition ... going to abort now\n");
+          printout("[input]   element %d ion %d targetlevel %d level %d\n", element, ion, targetlevel, level);
+          printout("[input]   transitions[level].to[level-targetlevel-1]=linelistindex %d\n",
                    transitions[level].to[level - targetlevel - 1]);
-          printout("[input.c]   A_ul %g, coll_str %g\n", A_ul, coll_str);
+          printout("[input]   A_ul %g, coll_str %g\n", A_ul, coll_str);
           printout(
-              "[input.c]   globals::linelist[linelistindex].elementindex %d, "
+              "[input]   globals::linelist[linelistindex].elementindex %d, "
               "globals::linelist[linelistindex].ionindex %d, globals::linelist[linelistindex].upperlevelindex "
               "%d, globals::linelist[linelistindex].lowerlevelindex %d\n",
               temp_linelist[linelistindex].elementindex, temp_linelist[linelistindex].ionindex,
@@ -1663,29 +1664,38 @@ static void read_atomicdata(void)
 
   int includedlevels = 0;
   int includedionisinglevels = 0;
+  int includedboundboundtransitions = 0;
   int includedphotoiontransitions = 0;
-  printout("[input.c] this simulation contains\n");
+  printout("[input] this simulation contains\n");
   printout("----------------------------------\n");
   for (int element = 0; element < get_nelements(); element++) {
-    printout("[input.c]   element %d (Z=%2d)\n", element, get_element(element));
+    printout("[input]  element %d (Z=%2d %s)\n", element, get_element(element),
+             decay::get_elname(get_element(element)));
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      int photoiontransitions = 0;
-      for (int level = 0; level < get_nlevels(element, ion); level++)
-        photoiontransitions += get_nphixstargets(element, ion, level);
+      int ion_photoiontransitions = 0;
+      int ion_bbtransitions = 0;
+      for (int level = 0; level < get_nlevels(element, ion); level++) {
+        ion_photoiontransitions += get_nphixstargets(element, ion, level);
+        ion_bbtransitions += get_nuptrans(element, ion, level);
+      }
+
       printout(
-          "[input.c]     ion_stage %d with %4d levels (%d in groundterm, %4d ionising) and %6d photoionisation "
-          "transitions (epsilon_ground %7.2f eV)\n",
+          "[input]    ion_stage %d with %4d levels (%d in groundterm, %4d ionising) transitions: bb %6d bf %6d "
+          "(epsilon_ground: %7.2f eV)\n",
           get_ionstage(element, ion), get_nlevels(element, ion), get_nlevels_groundterm(element, ion),
-          get_ionisinglevels(element, ion), photoiontransitions, epsilon(element, ion, 0) / EV);
+          get_ionisinglevels(element, ion), ion_bbtransitions, ion_photoiontransitions, epsilon(element, ion, 0) / EV);
+
       includedlevels += get_nlevels(element, ion);
       includedionisinglevels += get_ionisinglevels(element, ion);
-      includedphotoiontransitions += photoiontransitions;
+      includedphotoiontransitions += ion_photoiontransitions;
+      includedboundboundtransitions += ion_bbtransitions;
     }
   }
   assert_always(includedphotoiontransitions == globals::nbfcontinua);
+  assert_always(globals::nlines == includedboundboundtransitions);
 
-  printout("[input.c]   in total %d ions, %d levels (%d ionising), %d lines, %d photoionisation transitions\n",
+  printout("[input]   in total %d ions, %d levels (%d ionising), %d lines, %d photoionisation transitions\n",
            get_includedions(), includedlevels, includedionisinglevels, globals::nlines, globals::nbfcontinua);
 
   write_bflist_file(globals::nbfcontinua);
@@ -1724,15 +1734,14 @@ static void read_atomicdata(void)
 
         assert_always(has_superlevel == ion_has_superlevel(element, ion));
 
-        printout("[input.c]  element %2d Z=%2d ion_stage %2d has %5d NLTE excited levels%s. Starting at %d\n", element,
+        printout("[input]  element %2d Z=%2d ion_stage %2d has %5d NLTE excited levels%s. Starting at %d\n", element,
                  get_element(element), get_ionstage(element, ion), fullnlteexcitedlevelcount,
                  has_superlevel ? " plus a superlevel" : "", globals::elements[element].ions[ion].first_nlte);
       }
     }
   }
 
-  printout("[input.c] Total NLTE levels: %d, of which %d are superlevels\n", globals::total_nlte_levels,
-           n_super_levels);
+  printout("[input] Total NLTE levels: %d, of which %d are superlevels\n", globals::total_nlte_levels, n_super_levels);
 }
 
 void input(int rank)
