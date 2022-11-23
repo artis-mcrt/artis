@@ -1613,21 +1613,50 @@ static void setup_phixs_list(void) {
   nonconstallcont = nullptr;
 
   long mem_usage_photoionluts = 2 * TABLESIZE * globals::nbfcontinua * sizeof(double);
+
+#ifdef MPI_ON
+  MPI_Win win;
+  MPI_Aint size = TABLESIZE * globals::nbfcontinua * sizeof(double);
+  int disp_unit = sizeof(double);
+  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                        &globals::spontrecombcoeff, &win) == MPI_SUCCESS);
+  assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::spontrecombcoeff) == MPI_SUCCESS);
+#else
   globals::spontrecombcoeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+#endif
   assert_always(globals::spontrecombcoeff != NULL);
 
 #if (!NO_LUT_PHOTOION)
+#ifdef MPI_ON
+  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                        &globals::corrphotoioncoeff, &win) == MPI_SUCCESS);
+  assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::corrphotoioncoeff) == MPI_SUCCESS);
+#else
   globals::corrphotoioncoeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+#endif
   assert_always(globals::corrphotoioncoeff != NULL);
   mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
 #endif
+
 #if (!NO_LUT_BFHEATING)
+#ifdef MPI_ON
+  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                        &globals::bfheating_coeff, &win) == MPI_SUCCESS);
+  assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::bfheating_coeff) == MPI_SUCCESS);
+#else
   globals::bfheating_coeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+#endif
   assert_always(globals::bfheating_coeff != NULL);
   mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
 #endif
 
+#ifdef MPI_ON
+  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                        &globals::bfcooling_coeff, &win) == MPI_SUCCESS);
+  assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::bfcooling_coeff) == MPI_SUCCESS);
+#else
   globals::bfcooling_coeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+#endif
   assert_always(globals::bfcooling_coeff != NULL);
 
   printout(
