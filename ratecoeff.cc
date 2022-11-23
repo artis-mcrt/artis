@@ -1007,7 +1007,17 @@ void ratecoefficients_init(void)
   md5_file(phixsdata_filenames[phixs_file_version], phixsfile_hash);
 
   /// Check if we need to calculate the ratecoefficients or if we were able to read them from file
-  if (!read_ratecoeff_dat()) {
+  bool ratecoeff_match = false;
+  if (globals::rank_in_node == 0) {
+    read_ratecoeff_dat();
+  }
+#if MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+  // rank 0 will decide if we need to regenerate rate coefficient tables
+  MPI_Bcast(&ratecoeff_match, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
+#endif
+
+  if (!ratecoeff_match) {
     precalculate_rate_coefficient_integrals();
     /// And the master process writes them to file in a serial operation
     if (globals::rank_global == 0) {
