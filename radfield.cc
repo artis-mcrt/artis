@@ -1608,7 +1608,7 @@ void write_restart_data(FILE *gridsave_file) {
 
   fprintf(gridsave_file, "%d\n", 30490824);  // special number marking the beginning of radfield data
 
-  if (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     fprintf(gridsave_file, "%d %la %la %la %la\n", RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial,
             T_R_min, T_R_max);
 
@@ -1684,7 +1684,7 @@ void read_restart_data(FILE *gridsave_file) {
     abort();
   }
 
-  if (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     int bincount_in;
     double T_R_min_in, T_R_max_in, nu_lower_first_initial_in, nu_upper_last_initial_in;
     assert_always(fscanf(gridsave_file, "%d %la %la %la %la\n", &bincount_in, &nu_lower_first_initial_in,

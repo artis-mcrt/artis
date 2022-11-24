@@ -89,7 +89,7 @@ constexpr double NU_MAX_R = 5e16;  /// upper frequency boundary for UVOIR spectr
 // (since LUTs created with Planck function J_nu)
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON = false;
 
-#define RADFIELDBINCOUNT 256
+constexpr int RADFIELDBINCOUNT = 256;
 
 constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
 

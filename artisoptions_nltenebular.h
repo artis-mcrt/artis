@@ -95,7 +95,7 @@ constexpr double NU_MAX_R = 5e15;
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON = true;
 
 // number of bins (including the T=T_e superbin)
-#define RADFIELDBINCOUNT 256
+constexpr int RADFIELDBINCOUNT = 256;
 
 // from this timestep number (0-indexed), radfield switches from T_R,W dilute blackbody to binned radfield
 constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
