@@ -1699,26 +1699,26 @@ void read_ejecta_model(void) {
   globals::compton_emiss = static_cast<float *>(malloc((get_npts_model() + 1) * globals::EMISS_MAX * sizeof(float)));
   globals::rpkt_emiss = static_cast<double *>(calloc((get_npts_model() + 1), sizeof(double)));
 
-#if (!NO_LUT_PHOTOION)
-  globals::corrphotoionrenorm =
-      static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
-  globals::gammaestimator =
-      static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
+  if constexpr (!NO_LUT_PHOTOION) {
+    globals::corrphotoionrenorm =
+        static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
+    globals::gammaestimator =
+        static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
 
 #ifdef DO_TITER
-  globals::gammaestimator_save =
-      static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
+    globals::gammaestimator_save =
+        static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
 #endif
-#endif
+  }
 
-#if (!NO_LUT_BFHEATING)
-  globals::bfheatingestimator =
-      static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
+  if constexpr (!NO_LUT_BFHEATING) {
+    globals::bfheatingestimator =
+        static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
 #ifdef DO_TITER
-  globals::bfheatingestimator_save =
-      static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
+    globals::bfheatingestimator_save =
+        static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
 #endif
-#endif
+  }
 
 #ifndef FORCE_LTE
   globals::ffheatingestimator = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
@@ -1796,16 +1796,16 @@ static void read_grid_restart_data(const int timestep) {
     set_TJ(mgi, T_J);
 
 #ifndef FORCE_LTE
-#if (!NO_LUT_PHOTOION)
-    for (int element = 0; element < get_nelements(); element++) {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions; ion++) {
-        const int estimindex = mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
-        assert_always(fscanf(gridsave_file, " %la %la", &globals::corrphotoionrenorm[estimindex],
-                             &globals::gammaestimator[estimindex]) == 2);
+    if constexpr (!NO_LUT_PHOTOION) {
+      for (int element = 0; element < get_nelements(); element++) {
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions; ion++) {
+          const int estimindex = mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
+          assert_always(fscanf(gridsave_file, " %la %la", &globals::corrphotoionrenorm[estimindex],
+                               &globals::gammaestimator[estimindex]) == 2);
+        }
       }
     }
-#endif
 #endif
   }
 
@@ -1854,16 +1854,16 @@ void write_grid_restart_data(const int timestep) {
     }
 
 #ifndef FORCE_LTE
-#if (!NO_LUT_PHOTOION)
-    for (int element = 0; element < get_nelements(); element++) {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions; ion++) {
-        const int estimindex = mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
-        fprintf(gridsave_file, " %la %la", (nonemptycell ? globals::corrphotoionrenorm[estimindex] : 0.),
-                (nonemptycell ? globals::gammaestimator[estimindex] : 0.));
+    if constexpr (!NO_LUT_PHOTOION) {
+      for (int element = 0; element < get_nelements(); element++) {
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions; ion++) {
+          const int estimindex = mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
+          fprintf(gridsave_file, " %la %la", (nonemptycell ? globals::corrphotoionrenorm[estimindex] : 0.),
+                  (nonemptycell ? globals::gammaestimator[estimindex] : 0.));
+        }
       }
     }
-#endif
 #endif
     fprintf(gridsave_file, "\n");
   }
