@@ -1773,12 +1773,6 @@ void input(int rank)
 {
   globals::homogeneous_abundances = false;
 
-  globals::npkts = MPKTS;
-  /*  #ifdef FORCE_LTE
-      n_titer = 1;
-    #else
-      n_titer = 6;
-    #endif*/
   globals::n_titer = 1;
   globals::initial_iteration = false;
 

@@ -121,7 +121,7 @@ __managed__ int rank_in_node = -1;  // local rank within this node
 __managed__ int node_count = -1;  // number of MPI nodes
 __managed__ int node_id = -1;     // unique number for each node
 
-__managed__ int npkts = -1;
+__managed__ constexpr int npkts = MPKTS;
 __managed__ int nesc = 0;  // number of packets that escape during current timestep
 
 __managed__ double coordmax[3];

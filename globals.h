@@ -311,7 +311,7 @@ extern __managed__ int rank_in_node;
 extern __managed__ int node_count;
 extern __managed__ int node_id;
 
-extern __managed__ int npkts;
+extern __managed__ const int npkts;
 extern __managed__ int nesc;
 
 extern __managed__ double coordmax[3];
