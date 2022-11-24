@@ -24,7 +24,7 @@ sed -i'' -e 's/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*/constexpr int FIRST_
 
 sed -i'' -e 's/#define DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*/#define DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP 7/g' artisoptions.h
 
-sed -i'' -e 's/#define SF_AUGER_CONTRIBUTION_ON.*/#define SF_AUGER_CONTRIBUTION_ON false/g' artisoptions.h
+sed -i'' -e 's/constexpr bool SF_AUGER_CONTRIBUTION_ON.*/constexpr bool SF_AUGER_CONTRIBUTION_ON = false;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' artisoptions.h
 

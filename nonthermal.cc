@@ -2420,7 +2420,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
         }
       }
 
-      if (SF_AUGER_CONTRIBUTION_ON) {
+      if constexpr (SF_AUGER_CONTRIBUTION_ON) {
         int augerstopindex = 0;
         if (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
           // en_auger_ev is (if LJS understands it correctly) averaged to include some probability of zero Auger

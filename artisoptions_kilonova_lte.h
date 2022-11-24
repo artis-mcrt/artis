@@ -180,7 +180,7 @@ constexpr bool NT_USE_VALENCE_IONPOTENTIAL = false;
 constexpr int NT_MAX_AUGER_ELECTRONS = 2;
 
 // add the Auger electron term to the Spencer-Fano equation
-#define SF_AUGER_CONTRIBUTION_ON true
+constexpr bool SF_AUGER_CONTRIBUTION_ON = true;
 
 // set true to divide up the mean Auger energy by the number of electrons that come out
 constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN = false;
