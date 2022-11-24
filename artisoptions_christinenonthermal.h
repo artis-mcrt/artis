@@ -26,10 +26,10 @@ constexpr int NLTEITER = 30;
 // this macro function determines which levels of which ions will be treated in full NLTE (if NLTE_POPS_ON is true)
 // for now, all NLTE levels should be contiguous and include the ground state
 // (i.e. level indices < X should return true for some X)
-#define LEVEL_IS_NLTE(element, ion, level) \
-  if (get_element(element) < 22)           \
-    return (level <= 200);                 \
-  else                                     \
+#define LEVEL_IS_NLTE(element_z, ionstage, level) \
+  if (element_z < 22)                             \
+    return (level <= 200);                        \
+  else                                            \
     return (level <= 300);
 
 // atomic data and LTE

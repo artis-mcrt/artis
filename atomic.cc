@@ -74,7 +74,7 @@ __host__ __device__ bool is_nlte(const int element, const int ion, const int lev
   if (!NLTE_POPS_ON) {
     return false;
   } else {
-    LEVEL_IS_NLTE(element, ion, level);  // macro function defined in artisoptions.h
+    LEVEL_IS_NLTE(get_element(element), get_ionstage(element, ion), level);  // macro function defined in artisoptions.h
   }
 }
 
