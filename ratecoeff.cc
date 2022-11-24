@@ -219,12 +219,11 @@ static void write_ratecoeff_dat(void) {
             const int bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
             const double alpha_sp = globals::spontrecombcoeff[bflutindex];
             const double bfcooling_coeff = globals::bfcooling_coeff[bflutindex];
-            fprintf(ratecoeff_file, "%g %g", alpha_sp, bfcooling_coeff);
 
             const double corrphotoioncoeff = NO_LUT_PHOTOION ? -1 : globals::corrphotoioncoeff[bflutindex];
             const double bfheating_coeff = NO_LUT_BFHEATING ? -1 : globals::bfheating_coeff[bflutindex];
 
-            fprintf(ratecoeff_file, " %g %g\n", corrphotoioncoeff, bfheating_coeff);
+            fprintf(ratecoeff_file, "%la %la %la %la\n", alpha_sp, bfcooling_coeff, corrphotoioncoeff, bfheating_coeff);
           }
         }
       }

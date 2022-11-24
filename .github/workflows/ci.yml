@@ -153,13 +153,7 @@ jobs:
               uses: actions/cache@v3
               with:
                   path: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
-                  key: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
-
-            - name: check ratecoeff.dat
-              if: matrix.testname == 'classicmode'
-              working-directory: tests/${{ matrix.testname }}_testrun/
-              run: |
-                  mv ratecoeff.dat ratecoeff_cached.dat
+                  key: tests/${{ matrix.testname }}_testrun/ratecoeff.dat-gcc12-binarydoubles
 
             - name: Cache test atomic data
               uses: actions/cache@v3
