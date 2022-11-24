@@ -211,14 +211,14 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
                     globals::mpi_comm_internode);
         }
 
-#if (!NO_LUT_PHOTOION)
-        assert_always(globals::corrphotoionrenorm != nullptr);
-        MPI_Bcast(&globals::corrphotoionrenorm[modelgridindex * get_nelements() * get_max_nions()],
-                  get_nelements() * get_max_nions(), MPI_DOUBLE, root, MPI_COMM_WORLD);
-        assert_always(globals::gammaestimator != nullptr);
-        MPI_Bcast(&globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions()],
-                  get_nelements() * get_max_nions(), MPI_DOUBLE, root, MPI_COMM_WORLD);
-#endif
+        if constexpr (!NO_LUT_PHOTOION) {
+          assert_always(globals::corrphotoionrenorm != nullptr);
+          MPI_Bcast(&globals::corrphotoionrenorm[modelgridindex * get_nelements() * get_max_nions()],
+                    get_nelements() * get_max_nions(), MPI_DOUBLE, root, MPI_COMM_WORLD);
+          assert_always(globals::gammaestimator != nullptr);
+          MPI_Bcast(&globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions()],
+                    get_nelements() * get_max_nions(), MPI_DOUBLE, root, MPI_COMM_WORLD);
+        }
       }
     }
 
@@ -321,18 +321,17 @@ static void mpi_reduce_estimators(int my_rank, int nts) {
   MPI_Allreduce(MPI_IN_PLACE, globals::colheatingestimator, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM,
                 MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
-#if (!NO_LUT_PHOTOION) || (!NO_LUT_BFHEATING)
+
   const int arraylen = grid::get_npts_model() * get_nelements() * get_max_nions();
-#endif
-#if (!NO_LUT_PHOTOION)
-  MPI_Barrier(MPI_COMM_WORLD);
-  assert_always(globals::gammaestimator != nullptr);
-  MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-#endif
-#if (!NO_LUT_BFHEATING)
-  MPI_Barrier(MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-#endif
+  if constexpr (!NO_LUT_PHOTOION) {
+    MPI_Barrier(MPI_COMM_WORLD);
+    assert_always(globals::gammaestimator != nullptr);
+    MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  }
+  if constexpr (!NO_LUT_BFHEATING) {
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  }
 #endif
 
   if constexpr (RECORD_LINESTAT) {
