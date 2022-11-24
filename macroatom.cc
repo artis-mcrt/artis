@@ -674,7 +674,7 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
         }
 
 #ifndef __CUDA_ARCH__
-        if (LOG_MACROATOM) {
+        if constexpr (LOG_MACROATOM) {
           fprintf(macroatom_file, "%8d %14d %2d %12d %12d %9d %9d %9d %11.5e %11.5e %11.5e %11.5e %9d\n", timestep,
                   modelgridindex, get_element(element), get_ionstage(element, ion_in), get_ionstage(element, ion),
                   level_in, level, activatingline, nu_cmf_in, pkt_ptr->nu_cmf, nu_rf_in, pkt_ptr->nu_rf, jumps);
@@ -905,7 +905,7 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
 /// Calculation of radiative rates ///////////////////////////////////////////////////////
 
 void macroatom_open_file(const int my_rank) {
-  if (!LOG_MACROATOM) return;
+  if constexpr (!LOG_MACROATOM) return;
   char filename[128];
   snprintf(filename, 128, "macroatom_%.4d.out", my_rank);
   assert_always(macroatom_file == NULL);
