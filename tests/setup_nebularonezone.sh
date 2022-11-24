@@ -17,8 +17,8 @@ cd nebularonezone_testrun
 # sed -i'' -e 's/#define MPKTS.*/#define MPKTS 15000/g' artisoptions.h
 
 sed -i'' -e 's/constexpr int TABLESIZE.*/constexpr int TABLESIZE = 20;/g' artisoptions.h
-sed -i'' -e 's/#define MINTEMP.*/#define MINTEMP 2000./g' artisoptions.h
-sed -i'' -e 's/#define MAXTEMP.*/#define MAXTEMP 10000./g' artisoptions.h
+sed -i'' -e 's/constexpr double MINTEMP.*/constexpr double MINTEMP = 2000./g' artisoptions.h
+sed -i'' -e 's/constexpr double MAXTEMP.*/constexpr double MAXTEMP = 10000./g' artisoptions.h
 
 sed -i'' -e 's/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 7;/g' artisoptions.h
 

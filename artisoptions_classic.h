@@ -54,8 +54,8 @@ constexpr bool USE_MODEL_INITIAL_ENERGY = true;
 
 /// Rate coefficients
 constexpr int TABLESIZE = 100;  // 200 //100
-#define MINTEMP 3500.
-#define MAXTEMP 140000.  // 1000000.
+constexpr double MINTEMP = 3500.;
+constexpr double MAXTEMP = 140000.;  // 1000000.
 
 // temperature for which total ion recombination rate are calibrated to input data (recombrates.txt)
 constexpr double RECOMBCALIBRATION_T_ELEC = 6000.;
