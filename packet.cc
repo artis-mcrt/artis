@@ -88,7 +88,7 @@ void packet_init(int my_rank, struct packet *pkt)
     if (mgi < grid::get_npts_model())  // some grid cells are empty
     {
       double q = decay::get_modelcell_simtime_endecay_per_mass(mgi);
-      if constexpr (NO_INITIAL_PACKETS && USE_MODEL_INITIAL_ENERGY) {
+      if constexpr (!NO_INITIAL_PACKETS && USE_MODEL_INITIAL_ENERGY) {
         q += grid::get_initenergyq(mgi);
       }
 
