@@ -1016,7 +1016,6 @@ void ratecoefficients_init(void)
   if (globals::rank_in_node == 0) {
     ratecoeff_match = read_ratecoeff_dat();
   }
-  ratecoeff_match = false;
 #if MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
   // rank 0 will decide if we need to regenerate rate coefficient tables
