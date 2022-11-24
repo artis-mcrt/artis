@@ -120,10 +120,10 @@ constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 // dynamically calculate photoionization rates for the current radiation field
 // instead of interpolating values from a lookup table for a blackbody radiation field
-#define NO_LUT_PHOTOION true
+constexpr bool NO_LUT_PHOTOION = true;
 
 // as above for bound-free heating
-#define NO_LUT_BFHEATING true
+constexpr bool NO_LUT_BFHEATING = true;
 
 // if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
 #define SEPARATE_STIMRECOMB false
