@@ -1021,7 +1021,7 @@ __host__ __device__ double rad_excitation_ratecoeff(const int modelgridindex, co
     }
 
     assert_testmodeonly(R >= 0.);
-    assert_testmodeonly(R >= std::isfinite(R));
+    assert_testmodeonly(std::isfinite(R));
   }
 
   return R;
