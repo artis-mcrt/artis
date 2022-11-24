@@ -8,11 +8,11 @@
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
 #define MPKTS 1000000
 
-constexpr int GRID_TYPE = GRID_UNIFORM;
-constexpr int CUBOID_NCOORDGRID_X = 50;
-constexpr int CUBOID_NCOORDGRID_Y = 50;
-constexpr int CUBOID_NCOORDGRID_Z = 50;
-// constexpr int GRID_TYPE = GRID_SPHERICAL1D;
+#define GRID_TYPE GRID_UNIFORM
+#define CUBOID_NCOORDGRID_X 50
+#define CUBOID_NCOORDGRID_Y 50
+#define CUBOID_NCOORDGRID_Z 50
+// #define GRID_TYPE GRID_SPHERICAL1D
 
 // non-LTE population solver
 constexpr bool NLTE_POPS_ON = true;
