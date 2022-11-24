@@ -2031,7 +2031,9 @@ void read_parameterfile(int rank)
   /// he calculation of rho_crit itself depends on the time, therfore it happens in grid_init and update_grid
 
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> globals::debug_packet;  // activate debug output for packet
+  int debug_packet;
+  std::stringstream(line) >> debug_packet;  // activate debug output for packet
+  assert_always(debug_packet == -1);
   // select a negative value to deactivate
 
   // Do we start a new simulation or, continue another one?

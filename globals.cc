@@ -144,9 +144,6 @@ __managed__ double opcase3_normal;  /// MK: normalisation factor for opacity_cas
 __managed__ double rho_crit_para;   /// MK: free parameter for the selection of the critical opacity in opacity_case 3
 __managed__ double rho_crit;        /// MK: critical opacity in opacity_case 3 (could now be declared locally)
 
-/// New variables for the non-grey case
-__managed__ int debug_packet;  /// activate debug output for this packet if non negative
-
 __managed__ int total_nlte_levels;  /// total number of nlte levels
 
 __managed__ bool homogeneous_abundances;

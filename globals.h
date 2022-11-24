@@ -333,8 +333,6 @@ extern __managed__ double opcase3_normal;
 extern __managed__ double rho_crit_para;
 extern __managed__ double rho_crit;
 
-extern __managed__ int debug_packet;
-
 extern __managed__ int total_nlte_levels;
 
 extern __managed__ bool homogeneous_abundances;
