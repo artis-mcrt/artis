@@ -74,14 +74,14 @@ constexpr double RECOMBCALIBRATION_T_ELEC = 15000.;
 // GSL integration workspace size
 constexpr size_t GSLWSIZE = 16384;
 
-#define TRACK_ION_STATS false
-#define TRACK_ION_MASTATS false
+constexpr bool TRACK_ION_STATS = false;
+constexpr bool TRACK_ION_MASTATS = false;
 
 #define MINDENSITY 1e-40  /// Minimum cell density. Below cells are treated as empty.
 #define MINPOP 1e-40
 
-#define NU_MIN_R 1e13  /// lower frequency boundary for UVOIR spectra and BB sampling
-#define NU_MAX_R 5e16  /// upper frequency boundary for UVOIR spectra and BB sampling
+constexpr double NU_MIN_R = 1e13;  /// lower frequency boundary for UVOIR spectra and BB sampling
+constexpr double NU_MAX_R = 5e16;  /// upper frequency boundary for UVOIR spectra and BB sampling
 
 // ****
 // Start of radiation field model options
