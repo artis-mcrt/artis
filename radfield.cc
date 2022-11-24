@@ -1768,7 +1768,7 @@ void read_restart_data(FILE *gridsave_file) {
         abort();
       }
 
-      if (MULTIBIN_RADFIELD_MODEL_ON) {
+      if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
           const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
           float W = 0;
@@ -1786,7 +1786,7 @@ void read_restart_data(FILE *gridsave_file) {
         }
       }
 
-      if (DETAILED_LINE_ESTIMATORS_ON) {
+      if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
         for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
           assert_always(fscanf(gridsave_file, "%la %d\n", &Jb_lu_raw[modelgridindex][jblueindex].value,
                                &Jb_lu_raw[modelgridindex][jblueindex].contribcount) == 2);
