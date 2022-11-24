@@ -50,7 +50,7 @@ static bool read_ratecoeff_dat(void)
 /// Try to read in the precalculated rate coefficients from file
 /// return true if successful or false otherwise
 {
-  FILE *ratecoeff_file = fopen("ratecoeff.dat", "r");
+  FILE *ratecoeff_file = fopen("ratecoeff_v2.dat", "r");
   if (ratecoeff_file != nullptr) {
     /// Check whether current atomic data and temperature range match
     /// the precalculated rate coefficients
@@ -58,7 +58,7 @@ static bool read_ratecoeff_dat(void)
 
     char adatafile_hash_in[33];
     assert_always(fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in) == 1);
-    printout("ratecoeff.dat: MD5 adata.txt = %s ", adatafile_hash_in);
+    printout("ratecoeff_v2.dat: MD5 adata.txt = %s ", adatafile_hash_in);
     if (strcmp(adatafile_hash, adatafile_hash_in) == 0)
       printout("(pass)\n");
     else {
@@ -68,7 +68,7 @@ static bool read_ratecoeff_dat(void)
 
     char compositionfile_hash_in[33];
     assert_always(fscanf(ratecoeff_file, "%32s\n", compositionfile_hash_in) == 1);
-    printout("ratecoeff.dat: MD5 compositiondata.txt %s ", compositionfile_hash_in);
+    printout("ratecoeff_v2.dat: MD5 compositiondata.txt %s ", compositionfile_hash_in);
     if (strcmp(compositionfile_hash, compositionfile_hash_in) == 0)
       printout("(pass)\n");
     else {
@@ -78,7 +78,7 @@ static bool read_ratecoeff_dat(void)
 
     char phixsfile_hash_in[33];
     assert_always(fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in) == 1);
-    printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixs_file_version], phixsfile_hash_in);
+    printout("ratecoeff_v2.dat: MD5 %s = %s ", phixsdata_filenames[phixs_file_version], phixsfile_hash_in);
     if (strcmp(phixsfile_hash, phixsfile_hash_in) == 0)
       printout("(pass)\n");
     else {
@@ -91,7 +91,7 @@ static bool read_ratecoeff_dat(void)
       int in_tablesize;
       int in_nlines;
       assert_always(fscanf(ratecoeff_file, "%g %g %d %d\n", &T_min, &T_max, &in_tablesize, &in_nlines) == 4);
-      printout("ratecoeff.dat: Tmin %g Tmax %g TABLESIZE %d nlines %d ", T_min, T_max, in_tablesize, in_nlines);
+      printout("ratecoeff_v2.dat: Tmin %g Tmax %g TABLESIZE %d nlines %d ", T_min, T_max, in_tablesize, in_nlines);
 
       if (T_min == MINTEMP && T_max == MAXTEMP && in_tablesize == TABLESIZE && in_nlines == globals::nlines) {
         printout("(pass)\n");
@@ -128,7 +128,7 @@ static bool read_ratecoeff_dat(void)
     }
 
     if (fileisamatch) {
-      printout("Matching ratecoeff.dat file found. Readin this file ...\n");
+      printout("Matching ratecoeff_v2.dat file found. Readin this file ...\n");
       for (int element = 0; element < get_nelements(); element++) {
         int nions = get_nions(element) - 1;
         for (int ion = 0; ion < nions; ion++) {
@@ -144,7 +144,7 @@ static bool read_ratecoeff_dat(void)
               /// Loop over the temperature grid
               for (int iter = 0; iter < TABLESIZE; iter++) {
                 double alpha_sp, bfcooling_coeff, corrphotoioncoeff, bfheating_coeff;
-                assert_always(fscanf(ratecoeff_file, "%lg %lg %lg %lg\n", &alpha_sp, &bfcooling_coeff,
+                assert_always(fscanf(ratecoeff_file, "%la %la %la %la\n", &alpha_sp, &bfcooling_coeff,
                                      &corrphotoioncoeff, &bfheating_coeff) == 4);
 
                 // assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0);
@@ -182,18 +182,18 @@ static bool read_ratecoeff_dat(void)
       fclose(ratecoeff_file);
       return true;
     } else {
-      printout("[info] ratecoefficients_init: ratecoeff.dat does not match current simulation. Recalculating...\n");
+      printout("[info] ratecoefficients_init: ratecoeff_v2.dat does not match current simulation. Recalculating...\n");
       fclose(ratecoeff_file);
       return false;
     }
   } else {
-    printout("[info] ratecoefficients_init:  No ratecoeff.dat file available. Creating a new one...\n");
+    printout("[info] ratecoefficients_init:  No ratecoeff_v2.dat file available. Creating a new one...\n");
     return false;
   }
 }
 
 static void write_ratecoeff_dat(void) {
-  FILE *ratecoeff_file = fopen_required("ratecoeff.dat", "w");
+  FILE *ratecoeff_file = fopen_required("ratecoeff_v2.dat", "w");
   fprintf(ratecoeff_file, "%32s\n", adatafile_hash);
   fprintf(ratecoeff_file, "%32s\n", compositionfile_hash);
   fprintf(ratecoeff_file, "%32s\n", phixsfile_hash);

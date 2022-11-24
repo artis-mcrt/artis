@@ -4,7 +4,7 @@ output_*.txt
 adata.txt
 bflist.dat
 *.tmp
-ratecoeff.dat
+ratecoeff_v2.dat
 phixsdata_v2.txt
 transitiondata.txt
 *.tar.*

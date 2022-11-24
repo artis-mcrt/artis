@@ -2081,7 +2081,8 @@ void read_parameterfile(int rank)
         "LUT).\n");
   } else {
     printout(
-        "Corrphotoioncoeff is calculated from LTE lookup tables (ratecoeff.dat) and corrphotoionrenorm estimator.\n");
+        "Corrphotoioncoeff is calculated from LTE lookup tables (ratecoeff_v2.dat) and corrphotoionrenorm "
+        "estimator.\n");
   }
 
   if (NO_LUT_BFHEATING) {
@@ -2089,7 +2090,8 @@ void read_parameterfile(int rank)
         "bfheating coefficients are calculated from the radiation field at each timestep in each modelgrid cell (no "
         "LUT).\n");
   } else {
-    printout("bfheating coefficients are calculated from LTE lookup tables (ratecoeff.dat) and bfheatingestimator.\n");
+    printout(
+        "bfheating coefficients are calculated from LTE lookup tables (ratecoeff_v2.dat) and bfheatingestimator.\n");
   }
 
   /// Set up initial grey approximation?

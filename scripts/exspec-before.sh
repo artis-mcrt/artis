@@ -8,5 +8,5 @@ fi
 gzip -d packets*.out.gz || true
 xz -d -T 0 packets*.out.xz || true
 
-gzip -d -v phixsdata_v2.txt.gz transitiondata.txt.gz ratecoeff.dat.gz || true
-xz -d -v -T 0 phixsdata_v2.txt.xz transitiondata.txt.xz ratecoeff.dat.xz || true
+gzip -d -v phixsdata_v2.txt.gz transitiondata.txt.gz ratecoeff_v2.dat.gz || true
+xz -d -v -T 0 phixsdata_v2.txt.xz transitiondata.txt.xz ratecoeff_v2.dat.xz || true

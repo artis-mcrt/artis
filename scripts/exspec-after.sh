@@ -6,7 +6,7 @@ if [ -f emission.out ]; then
   ./artis/scripts/mergeangleres.py
 
   xz -v absorption.out emission*.out || true
-  xz -v phixsdata*.txt transitiondata.txt ratecoeff.dat linestat.out || true
+  xz -v phixsdata*.txt transitiondata.txt ratecoeff_v2.dat linestat.out || true
   mkdir packets || true
   mv packets*.out* packets/
 
