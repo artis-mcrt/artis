@@ -45,19 +45,19 @@ __managed__ int myGpuId = 0;
 __managed__ bool use_cellhist;
 __managed__ bool neutral_flag;
 #ifndef __CUDA_ARCH__
-gsl_rng *rng = NULL;
+gsl_rng *rng = nullptr;
 #else
-__device__ void *rng = NULL;
+__device__ void *rng = nullptr;
 #endif
-gsl_integration_workspace *gslworkspace = NULL;
+gsl_integration_workspace *gslworkspace = nullptr;
 FILE *output_file = NULL;
-static FILE *linestat_file = NULL;
+static FILE *linestat_file = nullptr;
 static time_t real_time_start = -1;
 static time_t time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
-static FILE *estimators_file = NULL;
+static FILE *estimators_file = nullptr;
 
 int mpi_grid_buffer_size = 0;
-char *mpi_grid_buffer = NULL;
+char *mpi_grid_buffer = nullptr;
 
 static void initialise_linestat_file(void) {
   linestat_file = fopen_required("linestat.out", "w");
@@ -889,11 +889,9 @@ int main(int argc, char **argv)
 
   input(my_rank);
 
-#ifdef RECORD_LINESTAT
   if (my_rank == 0) {
     initialise_linestat_file();
   }
-#endif
 
   printout("time after input %ld\n", time(NULL));
   printout("timesteps %d\n", globals::ntstep);
@@ -1089,7 +1087,7 @@ int main(int argc, char **argv)
   free(mpi_grid_buffer);
 #endif
 
-  if (my_rank == 0) {
+  if (linestat_file != nullptr) {
     fclose(linestat_file);
   }
   // fclose(ldist_file);

@@ -245,11 +245,9 @@ extern __managed__ double *colheatingestimator_save;
 #endif
 #endif
 
-#ifdef RECORD_LINESTAT
 extern __managed__ int *ecounter;
 extern __managed__ int *acounter;
 extern __managed__ int *linestat_reduced;
-#endif
 
 extern __managed__ int nprocs_exspec;
 extern __managed__ bool do_emission_res;
