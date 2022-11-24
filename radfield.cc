@@ -479,14 +479,10 @@ void initialise_prev_titer_photoionestimators(void) {
 
 #ifdef DO_TITER
         globals::gammaestimator_save[n * get_nelements() * get_max_nions() + element * get_max_nions() + ion] = -1.;
-        if (!NO_LUT_BFHEATING)
+        if constexpr (!NO_LUT_BFHEATING) {
           globals::bfheatingestimator_save[n * get_nelements() * get_max_nions() + element * get_max_nions() + ion] =
               -1.;
-          /*
-          photoionestimator_save[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = -1.;
-          stimrecombestimator_save[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = -1.;
-          ionfluxestimator_save[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = -1.;
-          */
+        }
 #endif
       }
     }

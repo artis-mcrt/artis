@@ -97,9 +97,7 @@ struct levellist_entry {
   float stat_weight;             /// Statistical weight of this level.
 
   int cont_index;  /// Index of the continuum associated to this level. Negative number.
-#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
   int closestgroundlevelcont;
-#endif
 
   int uniquelevelindex;
   bool metastable;  ///
