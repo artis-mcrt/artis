@@ -210,7 +210,7 @@ constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-3;
 
 // when calculating ion ionisation rate coefficient (for estimator files only, not the simulation), contribute the
 // lowest n levels that make up at least IONGAMMA_POPFRAC_LEVELS_INCLUDED fraction of the ion population
-#define IONGAMMA_POPFRAC_LEVELS_INCLUDED 0.999
+constexpr double IONGAMMA_POPFRAC_LEVELS_INCLUDED = 0.999;
 
 // incomplete work in progress
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = false;
