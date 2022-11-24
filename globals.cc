@@ -163,7 +163,6 @@ __managed__ double cell_is_optically_thick;
 __managed__ int num_grey_timesteps;
 __managed__ int n_titer;
 __managed__ bool initial_iteration;
-__managed__ int max_bf_continua;
 __managed__ int n_kpktdiffusion_timesteps;
 __managed__ float kpktdiffusion_timescale;
 

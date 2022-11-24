@@ -2109,13 +2109,9 @@ void read_parameterfile(int rank)
 
   /// Limit the number of bf-continua
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> globals::max_bf_continua;
-  if (globals::max_bf_continua == -1) {
-    printout("input: use all bf-continua\n");
-    globals::max_bf_continua = 1e6;
-  } else {
-    printout("input: use only %d bf-continua per ion\n", globals::max_bf_continua);
-  }
+  int max_bf_continua = 0;
+  std::stringstream(line) >> max_bf_continua;
+  assert_always(max_bf_continua == -1);
 
   /// The following parameters affect the do_exspec mode only /////////////////
   /// Read number of MPI tasks for exspec
