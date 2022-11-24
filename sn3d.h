@@ -107,10 +107,6 @@ static inline int get_bflutindex(const int tempindex, const int element, const i
 // #define DO_TITER
 // #define FORCE_LTE
 
-#if (DETAILED_BF_ESTIMATORS_ON && !NO_LUT_PHOTOION)
-#error Must use NO_LUT_PHOTOION with DETAILED_BF_ESTIMATORS_ON
-#endif
-
 #if !defined MPI_ON
 // #define MPI_ON //only needed for debugging MPI, the makefile will switch this on
 #endif
