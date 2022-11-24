@@ -618,19 +618,22 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
       }
 
-#if (!defined FORCE_LTE && !NO_LUT_PHOTOION)
-      fprintf(estimators_file, "corrphotoionrenorm Z=%2d", get_element(element));
-      for (int ion = 0; ion < nions; ion++) {
-        fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                globals::corrphotoionrenorm[mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion]);
+#ifndef FORCE_LTE
+      if (!NO_LUT_PHOTOION) {
+        fprintf(estimators_file, "corrphotoionrenorm Z=%2d", get_element(element));
+        for (int ion = 0; ion < nions; ion++) {
+          fprintf(
+              estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
+              globals::corrphotoionrenorm[mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion]);
+        }
+        fprintf(estimators_file, "\n");
+        fprintf(estimators_file, "gammaestimator     Z=%2d", get_element(element));
+        for (int ion = 0; ion < nions; ion++) {
+          fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
+                  globals::gammaestimator[mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion]);
+        }
+        fprintf(estimators_file, "\n");
       }
-      fprintf(estimators_file, "\n");
-      fprintf(estimators_file, "gammaestimator     Z=%2d", get_element(element));
-      for (int ion = 0; ion < nions; ion++) {
-        fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                globals::gammaestimator[mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion]);
-      }
-      fprintf(estimators_file, "\n");
 #endif
     }
 
@@ -788,9 +791,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
     const time_t sys_time_start_partfuncs_or_gamma = time(NULL);
     if (!NLTE_POPS_ON) {
       precalculate_partfuncts(n);
-    }
-#if (!NO_LUT_PHOTOION)
-    else if ((nlte_iter != 0)) {
+    } else if (!NO_LUT_PHOTOION && (nlte_iter != 0)) {
       // recalculate the Gammas using the current population estimates
       for (int element = 0; element < get_nelements(); element++) {
         const int nions = get_nions(element);
@@ -800,7 +801,6 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
         }
       }
     }
-#endif
     const int duration_solve_partfuncs_or_gamma = time(NULL) - sys_time_start_partfuncs_or_gamma;
 
     /// Find T_e as solution for thermal balance
@@ -900,94 +900,92 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
   }
 }
 
-#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
 static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, const double estimator_normfactor) {
-#if (!NO_LUT_PHOTOION)
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions - 1; ion++) {
-      const int ionestimindex = n * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
-      // printout("mgi %d, element %d, ion %d, gammaest
-      // %g\n",n,element,ion,globals::gammaestimator[ionestimindex]);
-      globals::gammaestimator[ionestimindex] *= estimator_normfactor / H;
+  if constexpr (!NO_LUT_PHOTOION) {
+    for (int element = 0; element < get_nelements(); element++) {
+      const int nions = get_nions(element);
+      for (int ion = 0; ion < nions - 1; ion++) {
+        const int ionestimindex = n * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
+        // printout("mgi %d, element %d, ion %d, gammaest
+        // %g\n",n,element,ion,globals::gammaestimator[ionestimindex]);
+        globals::gammaestimator[ionestimindex] *= estimator_normfactor / H;
 // printout("mgi %d, element %d, ion %d, gammaest %g\n",n,element,ion,globals::gammaestimator[ionestimindex]);
 #ifdef DO_TITER
-      if (globals::gammaestimator_save[ionestimindex] >= 0) {
-        globals::gammaestimator[ionestimindex] =
-            (globals::gammaestimator[ionestimindex] + globals::gammaestimator_save[ionestimindex]) / 2;
-      }
-      globals::gammaestimator_save[ionestimindex] = globals::gammaestimator[ionestimindex];
+        if (globals::gammaestimator_save[ionestimindex] >= 0) {
+          globals::gammaestimator[ionestimindex] =
+              (globals::gammaestimator[ionestimindex] + globals::gammaestimator_save[ionestimindex]) / 2;
+        }
+        globals::gammaestimator_save[ionestimindex] = globals::gammaestimator[ionestimindex];
 #endif
 
-      globals::corrphotoionrenorm[ionestimindex] =
-          globals::gammaestimator[ionestimindex] / get_corrphotoioncoeff_ana(element, ion, 0, 0, n);
+        globals::corrphotoionrenorm[ionestimindex] =
+            globals::gammaestimator[ionestimindex] / get_corrphotoioncoeff_ana(element, ion, 0, 0, n);
 
-      if (!std::isfinite(globals::corrphotoionrenorm[ionestimindex])) {
-        printout(
-            "[fatal] about to set corrphotoionrenorm = NaN = gammaestimator / "
-            "get_corrphotoioncoeff_ana(%d,%d,%d,%d,%d)=%g/%g",
-            element, ion, 0, 0, n, globals::gammaestimator[ionestimindex],
-            get_corrphotoioncoeff_ana(element, ion, 0, 0, n));
-        abort();
+        if (!std::isfinite(globals::corrphotoionrenorm[ionestimindex])) {
+          printout(
+              "[fatal] about to set corrphotoionrenorm = NaN = gammaestimator / "
+              "get_corrphotoioncoeff_ana(%d,%d,%d,%d,%d)=%g/%g",
+              element, ion, 0, 0, n, globals::gammaestimator[ionestimindex],
+              get_corrphotoioncoeff_ana(element, ion, 0, 0, n));
+          abort();
+        }
       }
+
+      /// 2012-01-11. These loops should terminate here to precalculate *ALL* corrphotoionrenorm
+      /// values so that the values are known when required by the call to get_corrphotoioncoeff in
+      /// the following loops. Otherwise get_corrphotoioncoeff tries to renormalize by the closest
+      /// corrphotoionrenorm in frequency space which can lead to zero contributions to the total
+      /// photoionsation rate!
     }
-
-    /// 2012-01-11. These loops should terminate here to precalculate *ALL* corrphotoionrenorm
-    /// values so that the values are known when required by the call to get_corrphotoioncoeff in
-    /// the following loops. Otherwise get_corrphotoioncoeff tries to renormalize by the closest
-    /// corrphotoionrenorm in frequency space which can lead to zero contributions to the total
-    /// photoionsation rate!
   }
-#endif
-#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-  /// Then reopen the same loops again.
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions - 1; ion++) {
-      /// Reuse the gammaestimator array as temporary storage of the Gamma values during
-      /// the remaining part of the update_grid phase. Afterwards it is reset to record
-      /// the next timesteps gamma estimators.
-      // nlevels = get_nlevels(element,ion);
-      // nlevels = get_ionisinglevels(element,ion);
-      const int ionestimindex = n * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
+  if constexpr (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING) {
+    /// Then reopen the same loops again.
+    for (int element = 0; element < get_nelements(); element++) {
+      const int nions = get_nions(element);
+      for (int ion = 0; ion < nions - 1; ion++) {
+        /// Reuse the gammaestimator array as temporary storage of the Gamma values during
+        /// the remaining part of the update_grid phase. Afterwards it is reset to record
+        /// the next timesteps gamma estimators.
+        // nlevels = get_nlevels(element,ion);
+        // nlevels = get_ionisinglevels(element,ion);
+        const int ionestimindex = n * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
 
-#if (!NO_LUT_PHOTOION)
-      globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(n, element, ion);
-      // printout("mgi %d, element %d, ion %d, Gamma %g\n",n,element,ion,Gamma);
-#endif
+        if constexpr (!NO_LUT_PHOTOION) {
+          globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(n, element, ion);
+          // printout("mgi %d, element %d, ion %d, Gamma %g\n",n,element,ion,Gamma);
+        }
 
-#if (!NO_LUT_BFHEATING)
-      globals::bfheatingestimator[ionestimindex] *= estimator_normfactor;
+        if constexpr (!NO_LUT_BFHEATING) {
+          globals::bfheatingestimator[ionestimindex] *= estimator_normfactor;
 #ifdef DO_TITER
-      if (bfheatingestimator_save[ionestimindex] >= 0) {
-        globals::bfheatingestimator[ionestimindex] =
-            (globals::bfheatingestimator[ionestimindex] + bfheatingestimator_save[ionestimindex]) / 2;
-      }
-      bfheatingestimator_save[ionestimindex] = globals::bfheatingestimator[ionestimindex];
+          if (bfheatingestimator_save[ionestimindex] >= 0) {
+            globals::bfheatingestimator[ionestimindex] =
+                (globals::bfheatingestimator[ionestimindex] + bfheatingestimator_save[ionestimindex]) / 2;
+          }
+          bfheatingestimator_save[ionestimindex] = globals::bfheatingestimator[ionestimindex];
 #endif
-      /// Now convert bfheatingestimator into the bfheating renormalisation coefficient used in
-      /// get_bfheating in the remaining part of update_grid. Later on it's reset and new
-      /// contributions are added up.
+          /// Now convert bfheatingestimator into the bfheating renormalisation coefficient used in
+          /// get_bfheating in the remaining part of update_grid. Later on it's reset and new
+          /// contributions are added up.
 
-      const double bfheatingcoeff_ana = get_bfheatingcoeff_ana(element, ion, 0, 0, grid::get_TR(n), grid::get_W(n));
-      globals::bfheatingestimator[ionestimindex] = globals::bfheatingestimator[ionestimindex] / bfheatingcoeff_ana;
+          const double bfheatingcoeff_ana = get_bfheatingcoeff_ana(element, ion, 0, 0, grid::get_TR(n), grid::get_W(n));
+          globals::bfheatingestimator[ionestimindex] = globals::bfheatingestimator[ionestimindex] / bfheatingcoeff_ana;
 
-      if (!std::isfinite(globals::bfheatingestimator[ionestimindex])) {
-        printout(
-            "[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / "
-            "get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",
-            element, ion, 0, 0, n, globals::bfheatingestimator[ionestimindex], bfheatingcoeff_ana);
-        abort();
+          if (!std::isfinite(globals::bfheatingestimator[ionestimindex])) {
+            printout(
+                "[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / "
+                "get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",
+                element, ion, 0, 0, n, globals::bfheatingestimator[ionestimindex], bfheatingcoeff_ana);
+            abort();
+          }
+
+          // printout("cell %d element %d ion %d bfheatingestimator
+          // %g\n",n,element,ion,bfheatingestimator[ionestimindex]);
+        }
       }
-
-      // printout("cell %d element %d ion %d bfheatingestimator
-      // %g\n",n,element,ion,bfheatingestimator[ionestimindex]);
-#endif
     }
   }
-#endif
 }
-#endif
 
 #ifdef DO_TITER
 #ifndef FORCE_LTE
@@ -1004,8 +1002,8 @@ static void titer_average_estimators(const int n) {
 #endif
 #endif
 
-#if (!NO_LUT_PHOTOION)
 static void zero_gammaestimator(const int modelgridindex) {
+  assert_always(!NO_LUT_PHOTOION);
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
@@ -1015,6 +1013,7 @@ static void zero_gammaestimator(const int modelgridindex) {
 }
 
 static void set_all_corrphotoionrenorm(const int modelgridindex, const double value) {
+  assert_always(!NO_LUT_PHOTOION);
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
@@ -1023,7 +1022,6 @@ static void set_all_corrphotoionrenorm(const int modelgridindex, const double va
     }
   }
 }
-#endif
 
 static void update_grid_cell(const int mgi, const int nts, const int nts_prev, const int titer, const double tratmid,
                              const double deltat, std::unique_ptr<double[]> &mps,
@@ -1063,11 +1061,11 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       if ((nts - globals::itstep) == 0 && titer == 0) {
 /// Determine renormalisation factor for corrected photoionization cross-sections
 #ifndef FORCE_LTE
-#if (!NO_LUT_PHOTOION)
-        if (!globals::simulation_continued_from_saved) {
-          set_all_corrphotoionrenorm(mgi, 1.);
+        if constexpr (!NO_LUT_PHOTOION) {
+          if (!globals::simulation_continued_from_saved) {
+            set_all_corrphotoionrenorm(mgi, 1.);
+          }
         }
-#endif
 #endif
 
         /// W == 1 indicates that this modelgrid cell was treated grey in the
@@ -1131,9 +1129,9 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
           grid::set_W(mgi, 1);
 
 #ifndef FORCE_LTE
-#if (!NO_LUT_PHOTOION)
-          set_all_corrphotoionrenorm(mgi, 1.);
-#endif
+          if constexpr (!NO_LUT_PHOTOION) {
+            set_all_corrphotoionrenorm(mgi, 1.);
+          }
 #endif
 
           precalculate_partfuncts(mgi);
@@ -1154,9 +1152,9 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
           titer_average_estimators(mgi);
 #endif
 
-#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-          update_gamma_corrphotoionrenorm_bfheating_estimators(mgi, estimator_normfactor);
-#endif
+          if constexpr (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING) {
+            update_gamma_corrphotoionrenorm_bfheating_estimators(mgi, estimator_normfactor);
+          }
 
           // Get radiation field parameters (T_J, T_R, W, and bins if enabled) out of the
           // full-spectrum and binned J and nuJ estimators
@@ -1278,10 +1276,10 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     grid::set_W(mgi, 0.);
 
 #ifndef FORCE_LTE
-#if (!NO_LUT_PHOTOION)
-    zero_gammaestimator(mgi);
-    set_all_corrphotoionrenorm(mgi, 0.);
-#endif
+    if constexpr (!NO_LUT_PHOTOION) {
+      zero_gammaestimator(mgi);
+      set_all_corrphotoionrenorm(mgi, 0.);
+    }
 #endif
   }
 }
@@ -1298,17 +1296,17 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
            sys_time_start_update_grid, sys_time_start_update_grid - real_time_start, globals::time_step[nts].mid / DAY);
 
 #ifndef FORCE_LTE
-#if (!NO_LUT_PHOTOION)
-  /// Initialise globals::corrphotoionrenorm[i] to zero before update_grid is called
-  /// unless they have been read from file
-  if ((!globals::simulation_continued_from_saved) || (nts - globals::itstep != 0) || (titer != 0)) {
-    printout("nts %d, titer %d: reset corr photoionrenorm\n", nts, titer);
-    for (int i = 0; i < grid::get_npts_model() * get_nelements() * get_max_nions(); i++) {
-      globals::corrphotoionrenorm[i] = 0.;
+  if constexpr (!NO_LUT_PHOTOION) {
+    /// Initialise globals::corrphotoionrenorm[i] to zero before update_grid is called
+    /// unless they have been read from file
+    if ((!globals::simulation_continued_from_saved) || (nts - globals::itstep != 0) || (titer != 0)) {
+      printout("nts %d, titer %d: reset corr photoionrenorm\n", nts, titer);
+      for (int i = 0; i < grid::get_npts_model() * get_nelements() * get_max_nions(); i++) {
+        globals::corrphotoionrenorm[i] = 0.;
+      }
+      printout("after nts %d, titer %d: reset corr photoionrenorm\n", nts, titer);
     }
-    printout("after nts %d, titer %d: reset corr photoionrenorm\n", nts, titer);
   }
-#endif
 #endif
 
   // printout("[debug] update_grid: starting update for timestep %d...\n",m);
@@ -1378,12 +1376,12 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
           printout("writing estimators for cell %d timestep %d took %d seconds\n", mgi, nts, write_estim_duration);
         }
       } else {
-/// else, only reset gammaestimator to zero. This allows us to do a global MPI
-/// communication after update_grid to synchronize gammaestimator
-/// and write a contiguous restart file with grid properties
-#if (!NO_LUT_PHOTOION)
-        zero_gammaestimator(mgi);
-#endif
+        /// else, only reset gammaestimator to zero. This allows us to do a global MPI
+        /// communication after update_grid to synchronize gammaestimator
+        /// and write a contiguous restart file with grid properties
+        if constexpr (!NO_LUT_PHOTOION) {
+          zero_gammaestimator(mgi);
+        }
       }
     }  /// end parallel for loop over all modelgrid cells
 
@@ -1483,15 +1481,17 @@ double calculate_populations(const int modelgridindex)
       } else {
         int ion;
         for (ion = 0; ion < nions - 1; ion++) {
-// printout("element %d, ion %d, photoionest
-// %g\n",element,ion,photoionestimator[modelgridindex*get_nelements()*get_max_nions()+element*get_max_nions()+ion]); if
-// (photoionestimator[modelgridindex*get_nelements()*get_max_nions()+element*get_max_nions()+ion] == 0) break;
-#if NO_LUT_PHOTOION
-          const double Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
-#else
-          const double Gamma = globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() +
-                                                       element * get_max_nions() + ion];
-#endif
+          // printout("element %d, ion %d, photoionest
+          // %g\n",element,ion,photoionestimator[modelgridindex*get_nelements()*get_max_nions()+element*get_max_nions()+ion]);
+          // if (photoionestimator[modelgridindex*get_nelements()*get_max_nions()+element*get_max_nions()+ion] == 0)
+          // break;
+          double Gamma = 0.;
+          if constexpr (NO_LUT_PHOTOION) {
+            Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
+          } else {
+            Gamma = globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() +
+                                            element * get_max_nions() + ion];
+          }
 
           if ((Gamma == 0) && (!NT_ON || ((globals::rpkt_emiss[modelgridindex] == 0.) &&
                                           (grid::get_modelinitradioabund(modelgridindex, 24, 48) == 0.) &&
@@ -1595,15 +1595,15 @@ double calculate_populations(const int modelgridindex)
         printout("cell %d, element %d, uppermost_ion is %d\n", modelgridindex, element,
                  grid::get_elements_uppermost_ion(modelgridindex, element));
 
-#if (!NO_LUT_PHOTOION)
-        for (int ion = 0; ion <= grid::get_elements_uppermost_ion(modelgridindex, element); ion++) {
-          // printout("element %d, ion %d, photoionest
-          // %g\n",element,ion,photoionestimator[modelgridindex*get_nelements()*get_max_nions()+element*get_max_nions()+ion]);
-          printout("element %d, ion %d, gammaionest %g\n", element, ion,
-                   globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() +
-                                           element * get_max_nions() + ion]);
+        if constexpr (!NO_LUT_PHOTOION) {
+          for (int ion = 0; ion <= grid::get_elements_uppermost_ion(modelgridindex, element); ion++) {
+            // printout("element %d, ion %d, photoionest
+            // %g\n",element,ion,photoionestimator[modelgridindex*get_nelements()*get_max_nions()+element*get_max_nions()+ion]);
+            printout("element %d, ion %d, gammaionest %g\n", element, ion,
+                     globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() +
+                                             element * get_max_nions() + ion]);
+          }
         }
-#endif
       }
 #endif
     }
