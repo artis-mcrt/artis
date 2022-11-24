@@ -2039,32 +2039,14 @@ static void uniform_grid_setup(void)
     ncoordgrid[1] = ncoord_model[1];
     ncoordgrid[2] = ncoord_model[2];
 
-// in case the user specified a grid size, we should ensure that it matches
-#ifdef CUBOID_NCOORDGRID_X
-    assert_always(ncoordgrid[0] == CUBOID_NCOORDGRID_X);
-#endif
-#ifdef CUBOID_NCOORDGRID_Y
-    assert_always(ncoordgrid[1] == CUBOID_NCOORDGRID_Y);
-#endif
-#ifdef CUBOID_NCOORDGRID_Z
-    assert_always(ncoordgrid[2] == CUBOID_NCOORDGRID_Z);
-#endif
+    // in case the user specified a grid size, we should ensure that it matches
+    assert_always(ncoordgrid[0] == CUBOID_NCOORDGRID_X || CUBOID_NCOORDGRID_X < 0);
+    assert_always(ncoordgrid[1] == CUBOID_NCOORDGRID_Y || CUBOID_NCOORDGRID_Y < 0);
+    assert_always(ncoordgrid[2] == CUBOID_NCOORDGRID_Z || CUBOID_NCOORDGRID_Z < 0);
   } else {
-#ifdef CUBOID_NCOORDGRID_X
     ncoordgrid[0] = CUBOID_NCOORDGRID_X;
-#else
-    ncoordgrid[0] = 50;
-#endif
-#ifdef CUBOID_NCOORDGRID_Y
     ncoordgrid[1] = CUBOID_NCOORDGRID_Y;
-#else
-    ncoordgrid[1] = 50;
-#endif
-#ifdef CUBOID_NCOORDGRID_Z
     ncoordgrid[2] = CUBOID_NCOORDGRID_Z;
-#else
-    ncoordgrid[2] = 50;
-#endif
   }
 
   // artis assumes in some places that the cells are cubes, not cubioids
