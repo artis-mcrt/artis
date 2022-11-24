@@ -215,6 +215,7 @@ int main(int argc, char **argv) {
 
       write_spectrum("gamma_spec.out", NULL, NULL, NULL, gamma_spectra, globals::ntstep);
 
+      printout("finished angle-averaged stuff\n");
     } else {
       // direction bin a
       // line-of-sight dependent spectra and light curves
@@ -250,11 +251,7 @@ int main(int argc, char **argv) {
 
         write_specpol(specpol_filename, emissionpol_filename, absorptionpol_filename, stokes_i, stokes_q, stokes_u);
       }
-    }
 
-    if (a == -1) {
-      printout("finished angle-averaged stuff\n");
-    } else {
       printout("Did %d of %d angle bins.\n", a + 1, MABINS);
     }
 
