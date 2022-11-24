@@ -147,13 +147,13 @@ jobs:
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
             # we can cache this, but then we don't test the code that generates ratecoeff.dat
-            # - name: Cache ratecoeff.dat
-            #   if: matrix.testname == 'classicmode'
-            #   # if: matrix.testname == 'classicmode' && matrix.testmode != 'ON'
-            #   uses: actions/cache@v3
-            #   with:
-            #       path: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
-            #       key: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
+            - name: Cache ratecoeff.dat
+              if: matrix.testname == 'classicmode'
+              # if: matrix.testname == 'classicmode' && matrix.testmode != 'ON'
+              uses: actions/cache@v3
+              with:
+                  path: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
+                  key: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
 
             - name: Cache test atomic data
               uses: actions/cache@v3
@@ -205,7 +205,7 @@ jobs:
               run: |
                   mkdir job0
                   ../../scripts/movefiles.sh job0
-                  md5sum *.out job0/*.out
+                  md5sum *.out ratecoeff.dat job0/*.out
 
                   if [ -f results_md5_job0.txt ]; then md5sum -c results_md5_job0.txt; else echo "results_md5_job0.txt not found"; fi
 
