@@ -335,13 +335,13 @@ static void mpi_reduce_estimators(int my_rank, int nts) {
 #endif
 #endif
 
-#ifdef RECORD_LINESTAT
-  MPI_Barrier(MPI_COMM_WORLD);
-  assert_always(globals::ecounter != NULL);
-  MPI_Allreduce(MPI_IN_PLACE, globals::ecounter, globals::nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-  assert_always(globals::acounter != NULL);
-  MPI_Allreduce(MPI_IN_PLACE, globals::acounter, globals::nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-#endif
+  if constexpr (RECORD_LINESTAT) {
+    MPI_Barrier(MPI_COMM_WORLD);
+    assert_always(globals::ecounter != NULL);
+    MPI_Allreduce(MPI_IN_PLACE, globals::ecounter, globals::nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    assert_always(globals::acounter != NULL);
+    MPI_Allreduce(MPI_IN_PLACE, globals::acounter, globals::nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  }
 
   // double deltaV = pow(grid::wid_init * globals::time_step[nts].mid/globals::tmin, 3.0);
   // double deltat = globals::time_step[nts].width;
@@ -528,13 +528,13 @@ static bool do_timestep(const int nts, const int titer, const int my_rank, const
     radfield::initialise_prev_titer_photoionestimators();
   }
 
-#ifdef RECORD_LINESTAT
-  // The same for absorption/emission of r-pkts in lines
-  for (int i = 0; i < globals::nlines; i++) {
-    globals::acounter[i] = 0;
-    globals::ecounter[i] = 0;
+  if constexpr (RECORD_LINESTAT) {
+    // The same for absorption/emission of r-pkts in lines
+    for (int i = 0; i < globals::nlines; i++) {
+      globals::acounter[i] = 0;
+      globals::ecounter[i] = 0;
+    }
   }
-#endif
 
   globals::do_comp_est = globals::do_r_lc ? false : estim_switch(nts);
 
@@ -624,18 +624,18 @@ static bool do_timestep(const int nts, const int titer, const int my_rank, const
     nvpkt_esc3 = 0;
 #endif
 
-#ifdef RECORD_LINESTAT
-    if (my_rank == 0) {
-      /// Print net absorption/emission in lines to the linestat_file
-      /// Currently linestat information is only properly implemented for MPI only runs
-      /// For hybrid runs only data from thread 0 is recorded
-      for (int i = 0; i < globals::nlines; i++) fprintf(linestat_file, "%d ", globals::ecounter[i]);
-      fprintf(linestat_file, "\n");
-      for (int i = 0; i < globals::nlines; i++) fprintf(linestat_file, "%d ", globals::acounter[i]);
-      fprintf(linestat_file, "\n");
-      fflush(linestat_file);
+    if constexpr (RECORD_LINESTAT) {
+      if (my_rank == 0) {
+        /// Print net absorption/emission in lines to the linestat_file
+        /// Currently linestat information is only properly implemented for MPI only runs
+        /// For hybrid runs only data from thread 0 is recorded
+        for (int i = 0; i < globals::nlines; i++) fprintf(linestat_file, "%d ", globals::ecounter[i]);
+        fprintf(linestat_file, "\n");
+        for (int i = 0; i < globals::nlines; i++) fprintf(linestat_file, "%d ", globals::acounter[i]);
+        fprintf(linestat_file, "\n");
+        fflush(linestat_file);
+      }
     }
-#endif
 
     if (nts == globals::ftstep - 1) {
       char filename[128];

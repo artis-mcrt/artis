@@ -253,9 +253,9 @@ __host__ __device__ static void do_macroatom_raddeexcitation(struct packet *pkt_
     stats::increment(stats::COUNTER_RESONANCESCATTERINGS);
   }
 
-#ifdef RECORD_LINESTAT
-  safeincrement(globals::ecounter[linelistindex]);
-#endif
+  if constexpr (RECORD_LINESTAT) {
+    safeincrement(globals::ecounter[linelistindex]);
+  }
   const int lower = globals::linelist[linelistindex].lowerlevelindex;
 
   // printout("[debug] do_ma:   jump to level %d\n", lower);

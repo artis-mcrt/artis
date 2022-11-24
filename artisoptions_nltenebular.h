@@ -52,7 +52,7 @@ constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
 #define DIRECT_COL_HEAT
 constexpr bool NO_INITIAL_PACKETS = true;
-#define RECORD_LINESTAT
+constexpr bool RECORD_LINESTAT = true;
 
 // allows non-zero energy density at time t_model using q column in model.txt
 // NO_INITIAL_PACKETS must be disabled to make use of this

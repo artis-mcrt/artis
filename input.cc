@@ -1081,9 +1081,8 @@ static void read_atomicdata_files(void) {
   //   fclose(linelist_file);
   // }
 
-  /// Establish connection between transitions and sorted linelist
-  // printout("[debug] init line counter list\n");
   printout("establish connection between transitions and sorted linelist...");
+
   time_t time_start_establish_linelist_connections = time(NULL);
   for (int lineindex = 0; lineindex < globals::nlines; lineindex++) {
     const int element = globals::linelist[lineindex].elementindex;
@@ -1124,9 +1123,8 @@ static void read_atomicdata_files(void) {
     }
   }
 
-  /// Photoionisation cross-sections
-  ///======================================================
   /// finally read in photoionisation cross sections and store them to the atomic data structure
+
   const bool phixs_v1_exists = std::ifstream(phixsdata_filenames[1]).good();
   const bool phixs_v2_exists = std::ifstream(phixsdata_filenames[2]).good();
   assert_always(phixs_v1_exists ^ phixs_v2_exists);  // XOR: one of the the two files must exist but not both
@@ -1668,25 +1666,22 @@ static void setup_phixs_list(void) {
       mem_usage_photoionluts / 1024. / 1024.);
 }
 
-static void read_atomicdata(void)
-/// Subroutine to read in input parameters.
-{
+static void read_atomicdata(void) {
   read_atomicdata_files();
 
   printout("included ions %d\n", get_includedions());
 
-/// INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
-///======================================================
-#ifdef RECORD_LINESTAT
-  globals::ecounter = static_cast<int *>(malloc(globals::nlines * sizeof(int)));
-  assert_always(globals::ecounter != NULL);
+  /// INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
+  if constexpr (RECORD_LINESTAT) {
+    globals::ecounter = static_cast<int *>(malloc(globals::nlines * sizeof(int)));
+    assert_always(globals::ecounter != NULL);
 
-  globals::acounter = static_cast<int *>(malloc(globals::nlines * sizeof(int)));
-  assert_always(globals::acounter != NULL);
+    globals::acounter = static_cast<int *>(malloc(globals::nlines * sizeof(int)));
+    assert_always(globals::acounter != NULL);
 
-  globals::linestat_reduced = static_cast<int *>(malloc(globals::nlines * sizeof(int)));
-  assert_always(globals::linestat_reduced != NULL);
-#endif
+    globals::linestat_reduced = static_cast<int *>(malloc(globals::nlines * sizeof(int)));
+    assert_always(globals::linestat_reduced != NULL);
+  }
 
   kpkt::setup_coolinglist();
 
@@ -1834,7 +1829,6 @@ void input(int rank)
   grid::read_ejecta_model();
 
   /// Now that the list exists use it to find values for spectral synthesis
-  /// stuff.
   const int lindex_max = gammapkt::get_nul(globals::nusyn_max);
   const int lindex_min = gammapkt::get_nul(globals::nusyn_min);
   printout("lindex_max %d, lindex_min %d\n", lindex_max, lindex_min);
