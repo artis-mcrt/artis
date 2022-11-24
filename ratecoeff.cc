@@ -204,7 +204,8 @@ static void write_ratecoeff_dat(void) {
   fprintf(ratecoeff_file, "%32s\n", adatafile_hash);
   fprintf(ratecoeff_file, "%32s\n", compositionfile_hash);
   fprintf(ratecoeff_file, "%32s\n", phixsfile_hash);
-  fprintf(ratecoeff_file, "%la %la %d %d %la\n", MINTEMP, MAXTEMP, TABLESIZE, globals::nlines, RATECOEFF_INTEGRAL_ACCURACY;
+  fprintf(ratecoeff_file, "%la %la %d %d %la\n", MINTEMP, MAXTEMP, TABLESIZE, globals::nlines,
+          RATECOEFF_INTEGRAL_ACCURACY);
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
