@@ -49,7 +49,7 @@ constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {
 constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
 #define DIRECT_COL_HEAT
-// #define NO_INITIAL_PACKETS
+constexpr bool NO_INITIAL_PACKETS = false;
 #define RECORD_LINESTAT
 
 // allows non-zero energy density at time t_model using q column in model.txt

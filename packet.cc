@@ -65,11 +65,8 @@ void packet_init(int my_rank, struct packet *pkt)
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
   printout("UNIFORM_PELLET_ENERGIES is %s\n", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
-#ifdef NO_INITIAL_PACKETS
-  printout("INITIAL_PACKETS is off\n");
-#else
-  printout("INITIAL_PACKETS is on\n");
-#endif
+
+  printout("INITIAL_PACKETS is %s\n", (NO_INITIAL_PACKETS ? "off" : "on"));
 
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
@@ -91,11 +88,10 @@ void packet_init(int my_rank, struct packet *pkt)
     if (mgi < grid::get_npts_model())  // some grid cells are empty
     {
       double q = decay::get_modelcell_simtime_endecay_per_mass(mgi);
-#ifndef NO_INITIAL_PACKETS
-      if (USE_MODEL_INITIAL_ENERGY) {
+      if constexpr (NO_INITIAL_PACKETS && USE_MODEL_INITIAL_ENERGY) {
         q += grid::get_initenergyq(mgi);
       }
-#endif
+
       norm += grid::vol_init_gridcell(m) * grid::get_rhoinit(mgi) * q;
     }
     en_cumulative[m] = norm;

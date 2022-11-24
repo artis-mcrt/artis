@@ -1014,16 +1014,14 @@ static double calculate_simtime_endecay_per_ejectamass(const int mgi, const int 
 // calculate the decay energy released during the simulation time per unit mass [erg/g]
 {
   assert_testmodeonly(mgi < grid::get_npts_model());
-#ifdef NO_INITIAL_PACKETS
-  // get decay energy released from t=tmin to tmax
-  const double simtime_endecay =
-      get_endecay_per_ejectamass_between_times(mgi, decaypathindex, globals::tmin, globals::tmax);
-#else
-  // get decay energy released from t=0 to tmax
-  const double simtime_endecay =
-      get_endecay_per_ejectamass_between_times(mgi, decaypathindex, grid::get_t_model(), globals::tmax);
-#endif
-  return simtime_endecay;
+
+  if constexpr (NO_INITIAL_PACKETS) {
+    // get decay energy released from t=tmin to tmax
+    return get_endecay_per_ejectamass_between_times(mgi, decaypathindex, globals::tmin, globals::tmax);
+  } else {
+    // get decay energy released from t=0 to tmax
+    return get_endecay_per_ejectamass_between_times(mgi, decaypathindex, grid::get_t_model(), globals::tmax);
+  }
 }
 
 __host__ __device__ static double get_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex)
@@ -1379,11 +1377,9 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
   assert_testmodeonly(cumulative_endecay[num_decaypaths - 1] > 0.);
 
   double total_endecay_per_ejectamass = cumulative_endecay[num_decaypaths - 1];
-#ifndef NO_INITIAL_PACKETS
-  if (USE_MODEL_INITIAL_ENERGY) {
+  if constexpr (!NO_INITIAL_PACKETS && USE_MODEL_INITIAL_ENERGY) {
     total_endecay_per_ejectamass += grid::get_initenergyq(mgi);
   }
-#endif
 
   const double zrand_chain = gsl_rng_uniform(rng) * total_endecay_per_ejectamass;
 
@@ -1412,19 +1408,18 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
 
   assert_always(decaypathindex >= 0);  // Failed to select chain
 
-#ifdef NO_INITIAL_PACKETS
-  const double tdecaymin = globals::tmin;
-#else
-  const double tdecaymin = grid::get_t_model();  // allow decays before the first timestep
-#endif
+  // possibly allow decays before the first timestep
+  const double tdecaymin = NO_INITIAL_PACKETS ? globals::tmin : grid::get_t_model();
 
   if constexpr (UNIFORM_PELLET_ENERGIES) {
     pkt_ptr->tdecay = sample_decaytime(decaypathindex, tdecaymin, globals::tmax);
     pkt_ptr->e_cmf = e0;
   } else {
-#ifndef NO_INITIAL_PACKETS
-    assert_always(!USE_MODEL_INITIAL_ENERGY);  // not implemented
-#endif
+    if constexpr (!NO_INITIAL_PACKETS) {
+      // non-uniform pellet energies with initial packets and initial model energy not implemented
+      assert_always(!USE_MODEL_INITIAL_ENERGY);
+    }
+
     // use uniform decay time distribution (scale the packet energies instead)
     // keeping the pellet decay rate constant will give better statistics at very late times when very little
     // energy is released
