@@ -124,11 +124,11 @@ int main(int argc, char **argv) {
   struct spec *stokes_q = NULL;
   struct spec *stokes_u = NULL;
 
-#ifdef POL_ON
-  stokes_i = alloc_spectra(globals::do_emission_res);
-  stokes_q = alloc_spectra(globals::do_emission_res);
-  stokes_u = alloc_spectra(globals::do_emission_res);
-#endif
+  if constexpr (POL_ON) {
+    stokes_i = alloc_spectra(globals::do_emission_res);
+    stokes_q = alloc_spectra(globals::do_emission_res);
+    stokes_u = alloc_spectra(globals::do_emission_res);
+  }
 
   struct spec *gamma_spectra = alloc_spectra(false);
 
@@ -149,11 +149,11 @@ int main(int argc, char **argv) {
 
     init_spectra(rpkt_spectra, globals::nu_min_r, globals::nu_max_r, globals::do_emission_res);
 
-#ifdef POL_ON
-    init_spectra(stokes_i, globals::nu_min_r, globals::nu_max_r, globals::do_emission_res);
-    init_spectra(stokes_q, globals::nu_min_r, globals::nu_max_r, globals::do_emission_res);
-    init_spectra(stokes_u, globals::nu_min_r, globals::nu_max_r, globals::do_emission_res);
-#endif
+    if constexpr (POL_ON) {
+      init_spectra(stokes_i, globals::nu_min_r, globals::nu_max_r, globals::do_emission_res);
+      init_spectra(stokes_q, globals::nu_min_r, globals::nu_max_r, globals::do_emission_res);
+      init_spectra(stokes_u, globals::nu_min_r, globals::nu_max_r, globals::do_emission_res);
+    }
 
     const double nu_min_gamma = 0.05 * MEV / H;
     const double nu_max_gamma = 4. * MEV / H;
@@ -203,50 +203,53 @@ int main(int argc, char **argv) {
     }
 
     if (a == -1) {
-      /// Extract angle-averaged spectra and light curves
+      // angle-averaged spectra and light curves
       write_light_curve("light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntstep);
       write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf, globals::ntstep);
 
       write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, globals::ntstep);
-#ifdef POL_ON
-      write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", stokes_i, stokes_q, stokes_u);
-#endif
+
+      if constexpr (POL_ON) {
+        write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", stokes_i, stokes_q, stokes_u);
+      }
+
       write_spectrum("gamma_spec.out", NULL, NULL, NULL, gamma_spectra, globals::ntstep);
+
     } else {
-      /// Extract LOS dependent spectra and light curves
+      // direction bin a
+      // line-of-sight dependent spectra and light curves
+
       char lc_filename[128] = "";
-      char spec_filename[128] = "";
-      char emission_filename[128] = "";
-      char trueemission_filename[128] = "";
-      char absorption_filename[128] = "";
-
-#ifdef POL_ON
-      char specpol_filename[128] = "";
-      snprintf(specpol_filename, 128, "specpol_res_%.2d.out", a);
-      char emissionpol_filename[128] = "";
-      char absorptionpol_filename[128] = "";
-#endif
-
       snprintf(lc_filename, 128, "light_curve_res_%.2d.out", a);
+
+      char spec_filename[128] = "";
       snprintf(spec_filename, 128, "spec_res_%.2d.out", a);
 
-      if (globals::do_emission_res) {
-        snprintf(emission_filename, 128, "emission_res_%.2d.out", a);
-        snprintf(trueemission_filename, 128, "emissiontrue_res_%.2d.out", a);
-        snprintf(absorption_filename, 128, "absorption_res_%.2d.out", a);
-#ifdef POL_ON
-        snprintf(emissionpol_filename, 128, "emissionpol_res_%.2d.out", a);
-        snprintf(absorptionpol_filename, 128, "absorptionpol_res_%.2d.out", a);
-#endif
-      }
+      char emission_filename[128] = "";
+      snprintf(emission_filename, 128, "emission_res_%.2d.out", a);
+
+      char trueemission_filename[128] = "";
+      snprintf(trueemission_filename, 128, "emissiontrue_res_%.2d.out", a);
+
+      char absorption_filename[128] = "";
+      snprintf(absorption_filename, 128, "absorption_res_%.2d.out", a);
 
       write_light_curve(lc_filename, a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntstep);
       write_spectrum(spec_filename, emission_filename, trueemission_filename, absorption_filename, rpkt_spectra,
                      globals::ntstep);
 
-#ifdef POL_ON
-      write_specpol(specpol_filename, emissionpol_filename, absorptionpol_filename, stokes_i, stokes_q, stokes_u);
-#endif
+      if constexpr (POL_ON) {
+        char specpol_filename[128] = "";
+        snprintf(specpol_filename, 128, "specpol_res_%.2d.out", a);
+
+        char emissionpol_filename[128] = "";
+        snprintf(emissionpol_filename, 128, "emissionpol_res_%.2d.out", a);
+
+        char absorptionpol_filename[128] = "";
+        snprintf(absorptionpol_filename, 128, "absorptionpol_res_%.2d.out", a);
+
+        write_specpol(specpol_filename, emissionpol_filename, absorptionpol_filename, stokes_i, stokes_q, stokes_u);
+      }
     }
 
     if (a == -1) {
@@ -278,12 +281,6 @@ int main(int argc, char **argv) {
 
   free_spectra(gamma_spectra);
 
-  // fclose(ldist_file);
-  // fclose(output_file);
-
-  /* Spec syn. */
-  // grid_init();
-  // syn_gamma();
   free(pkts);
   decay::cleanup();
 

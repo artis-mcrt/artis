@@ -62,7 +62,7 @@ constexpr double RECOMBCALIBRATION_T_ELEC = 6000.;
 
 // Polarisation for real packets
 #define DIPOLE
-#define POL_ON
+constexpr bool POL_ON = true;
 
 // Polarisation for virtual packets
 // #define VPKT_ON
