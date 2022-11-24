@@ -59,7 +59,7 @@ constexpr bool UNIFORM_PELLET_ENERGIES = true;
 constexpr bool USE_MODEL_INITIAL_ENERGY = true;
 
 /// Rate coefficients
-#define TABLESIZE 100  // 200 //100
+constexpr int TABLESIZE = 100;  // 200 //100
 #define MINTEMP 1000.
 #define MAXTEMP 30000.  // 1000000.
 

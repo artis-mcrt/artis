@@ -20,7 +20,7 @@ xz -dvk -T0 *.xz
 
 sed -i'' -e 's/#define MPKTS.*/#define MPKTS 40000/g' artisoptions.h
 
-sed -i'' -e 's/#define TABLESIZE.*/#define TABLESIZE 20/g' artisoptions.h
+sed -i'' -e 's/constexpr int TABLESIZE.*/constexpr int TABLESIZE = 20;/g' artisoptions.h
 sed -i'' -e 's/#define MINTEMP.*/#define MINTEMP 1000./g' artisoptions.h
 sed -i'' -e 's/#define MAXTEMP.*/#define MAXTEMP 20000./g' artisoptions.h
 

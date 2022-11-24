@@ -16,7 +16,7 @@ cd nebularonezone_testrun
 
 # sed -i'' -e 's/#define MPKTS.*/#define MPKTS 15000/g' artisoptions.h
 
-sed -i'' -e 's/#define TABLESIZE.*/#define TABLESIZE 20/g' artisoptions.h
+sed -i'' -e 's/constexpr int TABLESIZE.*/constexpr int TABLESIZE = 20;/g' artisoptions.h
 sed -i'' -e 's/#define MINTEMP.*/#define MINTEMP 2000./g' artisoptions.h
 sed -i'' -e 's/#define MAXTEMP.*/#define MAXTEMP 10000./g' artisoptions.h
 
