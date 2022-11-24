@@ -25,42 +25,39 @@ void escat_rpkt(struct packet *pkt_ptr) {
   double mu = 0.;
   double phisc = 0.;
 
-#ifdef DIPOLE
-  // Assume dipole function (rejecton method, see Code & Whitney 1995)
-  double p = 0.;
-  double x = 0.;
-  do {
+  if constexpr (DIPOLE) {
+    // Assume dipole function (rejecton method, see Code & Whitney 1995)
+    double p = 0.;
+    double x = 0.;
+    do {
+      const double zrand = gsl_rng_uniform(rng);
+      const double zrand2 = gsl_rng_uniform(rng);
+      const double zrand3 = gsl_rng_uniform(rng);
+
+      M = 2 * zrand - 1;
+      mu = pow(M, 2.);
+      phisc = 2 * PI * zrand2;
+
+      // NB: the rotational matrix R here is chosen in the clockwise direction ("+").
+      // In Bulla+2015 equation (10) and (12) refer to the specific case shown in Fig.2 where the angle i2
+      // is measured in the counter-clockwise direction. Therefore we use the clockwise rotation matrix but
+      // with -i1. Here, instead, we calculate the angle in the clockwise direction from 0 to 2PI.
+      // For instance, the i1 angle in Fig.2 of Bulla+2015 corresponds to 2PI-i1 here.
+      // NB2: the i1 and i2 angles computed in the code (before and after scattering) are instead as in Bulla+2015
+      p = (mu + 1) + (mu - 1) * (cos(2 * phisc) * Qi + sin(2 * phisc) * Ui);
+
+      // generate a number between 0 and the maximum of the previous function (2)
+      x = 2 * zrand3;
+    } while (x > p);
+  } else {
+    // Assume isotropic scattering
     const double zrand = gsl_rng_uniform(rng);
     const double zrand2 = gsl_rng_uniform(rng);
-    const double zrand3 = gsl_rng_uniform(rng);
 
-    M = 2 * zrand - 1;
+    M = 2. * zrand - 1;
     mu = pow(M, 2.);
     phisc = 2 * PI * zrand2;
-
-    // NB: the rotational matrix R here is chosen in the clockwise direction ("+").
-    // In Bulla+2015 equation (10) and (12) refer to the specific case shown in Fig.2 where the angle i2
-    // is measured in the counter-clockwise direction. Therefore we use the clockwise rotation matrix but
-    // with -i1. Here, instead, we calculate the angle in the clockwise direction from 0 to 2PI.
-    // For instance, the i1 angle in Fig.2 of Bulla+2015 corresponds to 2PI-i1 here.
-    // NB2: the i1 and i2 angles computed in the code (before and after scattering) are instead as in Bulla+2015
-    p = (mu + 1) + (mu - 1) * (cos(2 * phisc) * Qi + sin(2 * phisc) * Ui);
-
-    // generate a number between 0 and the maximum of the previous function (2)
-    x = 2 * zrand3;
-  } while (x > p);
-
-#else
-
-  // Assume isotropic scattering
-  const double zrand = gsl_rng_uniform(rng);
-  const double zrand2 = gsl_rng_uniform(rng);
-
-  M = 2. * zrand - 1;
-  mu = pow(M, 2.);
-  phisc = 2 * PI * zrand2;
-
-#endif
+  }
 
   const double tsc = acos(M);
   double new_dir_cmf[3];

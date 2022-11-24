@@ -65,7 +65,7 @@ constexpr int TABLESIZE = 100;  // 200 //100
 constexpr double RECOMBCALIBRATION_T_ELEC = 15000.;
 
 // Polarisation for real packets
-// #define DIPOLE
+constexpr bool DIPOLE = false;
 constexpr bool POL_ON = false;
 
 // Polarisation for virtual packets
