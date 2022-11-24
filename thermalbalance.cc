@@ -30,11 +30,11 @@ struct gsl_integral_paras_bfheating {
   const float *photoion_xs;
 };
 
-#if (!NO_LUT_BFHEATING)
 double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T, double W) {
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
   /// correction may be evaluated at T_R!
+  assert_always(!NO_LUT_BFHEATING);
   double bfheatingcoeff = 0.;
 
   /*double nnlevel = get_levelpop(cellnumber,element,ion,level);
@@ -55,7 +55,6 @@ double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetin
 
   return W * bfheatingcoeff;
 }
-#endif
 
 static double integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas)
 /// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
@@ -153,31 +152,27 @@ void calculate_bfheatingcoeffs(int modelgridindex) {
         if (grid::get_elem_abundance(modelgridindex, element) > minelfrac || !NO_LUT_BFHEATING) {
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level);
                phixstargetindex++) {
-#if NO_LUT_BFHEATING
-
-            bfheatingcoeff += calculate_bfheatingcoeff(element, ion, level, phixstargetindex, modelgridindex);
-
-#else
-
-            /// The correction factor for stimulated emission in gammacorr is set to its
-            /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
-            /// correction may be evaluated at T_R!
-            const double T_R = grid::get_TR(modelgridindex);
-            const double W = grid::get_W(modelgridindex);
-            bfheatingcoeff += get_bfheatingcoeff_ana(element, ion, level, phixstargetindex, T_R, W);
-
-#endif
+            if constexpr (NO_LUT_BFHEATING) {
+              bfheatingcoeff += calculate_bfheatingcoeff(element, ion, level, phixstargetindex, modelgridindex);
+            } else {
+              /// The correction factor for stimulated emission in gammacorr is set to its
+              /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
+              /// correction may be evaluated at T_R!
+              const double T_R = grid::get_TR(modelgridindex);
+              const double W = grid::get_W(modelgridindex);
+              bfheatingcoeff += get_bfheatingcoeff_ana(element, ion, level, phixstargetindex, T_R, W);
+            }
           }
           assert_always(std::isfinite(bfheatingcoeff));
 
-#if !NO_LUT_BFHEATING
-          const int index_in_groundlevelcontestimator =
-              globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
-          if (index_in_groundlevelcontestimator >= 0) {
-            bfheatingcoeff *= globals::bfheatingestimator[modelgridindex * get_nelements() * get_max_nions() +
-                                                          index_in_groundlevelcontestimator];
+          if constexpr (!NO_LUT_BFHEATING) {
+            const int index_in_groundlevelcontestimator =
+                globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
+            if (index_in_groundlevelcontestimator >= 0) {
+              bfheatingcoeff *= globals::bfheatingestimator[modelgridindex * get_nelements() * get_max_nions() +
+                                                            index_in_groundlevelcontestimator];
+            }
           }
-#endif
         }
         globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].bfheatingcoeff = bfheatingcoeff;
       }
