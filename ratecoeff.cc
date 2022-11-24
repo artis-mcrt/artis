@@ -446,7 +446,6 @@ static double bfcooling_integrand_gsl(const double nu, void *const voidparas)
 
 static void precalculate_rate_coefficient_integrals(void) {
   // target fractional accuracy of the integrator //=1e-5 took 8 hours with Fe I to V!
-  const double intaccuracy = RATECOEFF_INTEGRAL_ACCURACY;
   const double epsrelwarning = 1e-2;  // fractional error to emit a warning
 
   /// Calculate the rate coefficients for each level of each ion of each element
@@ -519,8 +518,8 @@ static void precalculate_rate_coefficient_integrals(void) {
             double alpha_sp = 0.0;
             const gsl_function F_alpha_sp = {.function = &alpha_sp_integrand_gsl, .params = &intparas};
 
-            status = gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE,
-                                         GSL_INTEG_GAUSS61, gslworkspace, &alpha_sp, &error);
+            status = gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY,
+                                         GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &alpha_sp, &error);
             if (status != 0 && (status != 18 || (error / alpha_sp) > epsrelwarning)) {
               printout("alpha_sp integrator status %d. Integral value %9.3e +/- %9.3e\n", status, alpha_sp, error);
             }
@@ -569,8 +568,8 @@ static void precalculate_rate_coefficient_integrals(void) {
             double gammacorr = 0.0;
             const gsl_function F_gammacorr = {.function = &gammacorr_integrand_gsl, .params = &intparas};
 
-            status = gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE,
-                                         GSL_INTEG_GAUSS61, gslworkspace, &gammacorr, &error);
+            status = gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY,
+                                         GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &gammacorr, &error);
             if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
               printout("gammacorr integrator status %d. Integral value %9.3e +/- %9.3e\n", status, gammacorr, error);
             }
@@ -587,8 +586,8 @@ static void precalculate_rate_coefficient_integrals(void) {
             double bfheating_coeff = 0.0;
             const gsl_function F_bfheating = {.function = &approx_bfheating_integrand_gsl, .params = &intparas};
 
-            status = gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE,
-                                         GSL_INTEG_GAUSS61, gslworkspace, &bfheating_coeff, &error);
+            status = gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY,
+                                         GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &bfheating_coeff, &error);
 
             if (status != 0 && (status != 18 || (error / bfheating_coeff) > epsrelwarning)) {
               printout("bfheating_coeff integrator status %d. Integral value %9.3e +/- %9.3e\n", status,
@@ -605,8 +604,8 @@ static void precalculate_rate_coefficient_integrals(void) {
             double bfcooling_coeff = 0.0;
             const gsl_function F_bfcooling = {.function = &bfcooling_integrand_gsl, .params = &intparas};
 
-            status = gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE,
-                                         GSL_INTEG_GAUSS61, gslworkspace, &bfcooling_coeff, &error);
+            status = gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY,
+                                         GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &bfcooling_coeff, &error);
             if (status != 0 && (status != 18 || (error / bfcooling_coeff) > epsrelwarning)) {
               printout("bfcooling_coeff integrator status %d. Integral value %9.3e +/- %9.3e\n", status,
                        bfcooling_coeff, error);

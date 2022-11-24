@@ -459,7 +459,6 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
     gsl_root_fsolver *T_e_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
 
     gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
-    const double fractional_accuracy = TEMPERATURE_SOLVER_ACCURACY;
     const int maxit = 100;
     int status;
     for (int iternum = 0; iternum < maxit; iternum++) {
@@ -467,7 +466,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
       T_e = gsl_root_fsolver_root(T_e_solver);
       const double T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
       const double T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
-      status = gsl_root_test_interval(T_e_min, T_e_max, 0, fractional_accuracy);
+      status = gsl_root_test_interval(T_e_min, T_e_max, 0, TEMPERATURE_SOLVER_ACCURACY);
       // printout("iter %d, T_e interval [%g, %g], guess %g, status %d\n", iternum, T_e_min, T_e_max, T_e, status);
       if (status != GSL_CONTINUE) {
         printout("after %d iterations, T_e = %g K, interval [%g, %g]\n", iternum + 1, T_e, T_e_min, T_e_max);

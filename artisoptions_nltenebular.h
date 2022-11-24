@@ -202,7 +202,7 @@ constexpr int NT_MAX_AUGER_ELECTRONS = 2;
 
 // ** End of non-thermal solution options **
 
-#define TEMPERATURE_SOLVER_ACCURACY 1e-3
+constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-3;
 
 #define CONTINUUM_NU_INTEGRAL_ACCURACY 1e-3
 
