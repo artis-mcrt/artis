@@ -237,7 +237,22 @@ __host__ __device__ static void do_macroatom_raddeexcitation(struct packet *pkt_
       break;
     }
   }
-  assert_always(linelistindex >= 0);
+
+  // assert_always(linelistindex >= 0);
+
+  if (linelistindex < 0) {
+    printout(
+        "[fatal] problem in selecting radiative downward transition of MA zrand %g, rate %g, rad_deexc %g, ndowntrans "
+        "%d\n",
+        zrand, rate, rad_deexc, ndowntrans);
+    printout("[fatal] total_transitions %g, element %d, ion %d, level %d\n", total_transitions, element, ion, level);
+    abort();
+  }
+
+  if (linelistindex == activatingline) {
+    stats::increment(stats::COUNTER_RESONANCESCATTERINGS);
+  }
+
 #ifdef RECORD_LINESTAT
   safeincrement(globals::ecounter[linelistindex]);
 #endif
@@ -260,25 +275,12 @@ __host__ __device__ static void do_macroatom_raddeexcitation(struct packet *pkt_
 
   assert_always(std::isfinite(pkt_ptr->nu_cmf));
 
-  if (linelistindex < 0) {
-    printout(
-        "[fatal] problem in selecting radiative downward transition of MA zrand %g, rate %g, rad_deexc %g, ndowntrans "
-        "%d\n",
-        zrand, rate, rad_deexc, ndowntrans);
-    printout("[fatal] total_transitions %g, element %d, ion %d, level %d\n", total_transitions, element, ion, level);
-    abort();
-  }
-
   stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_BB);
   pkt_ptr->interactions += 1;
   pkt_ptr->last_event = 0;
 
   // Emit the rpkt in a random direction
   emitt_rpkt(pkt_ptr);
-
-  if (linelistindex == activatingline) {
-    stats::increment(stats::COUNTER_RESONANCESCATTERINGS);
-  }
 
   // NB: the r-pkt can only interact with lines redder than the current one
   pkt_ptr->next_trans = linelistindex + 1;
