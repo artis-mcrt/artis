@@ -205,7 +205,7 @@ jobs:
               run: |
                   mkdir job0
                   ../../scripts/movefiles.sh job0
-                  md5sum *.out job0/*.out
+                  md5sum *.out ratecoeff.dat job0/*.out
 
                   if [ -f results_md5_job0.txt ]; then md5sum -c results_md5_job0.txt; else echo "results_md5_job0.txt not found"; fi
 
