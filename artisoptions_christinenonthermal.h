@@ -26,11 +26,12 @@ constexpr int NLTEITER = 30;
 // this macro function determines which levels of which ions will be treated in full NLTE (if NLTE_POPS_ON is true)
 // for now, all NLTE levels should be contiguous and include the ground state
 // (i.e. level indices < X should return true for some X)
-#define LEVEL_IS_NLTE(element_z, ionstage, level) \
-  if (element_z < 22)                             \
-    return (level <= 200);                        \
-  else                                            \
+constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) {
+  if (element_z < 22)
+    return (level <= 200);
+  else
     return (level <= 300);
+}
 
 // atomic data and LTE
 #define LTEPOP_EXCITATIONTEMPERATURE grid::get_Te(modelgridindex)
@@ -158,7 +159,8 @@ constexpr double SF_EMIN = 0.1;
 // <=-1 will always solve the SF equation for every iteration of every timestep
 constexpr int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 0;
 
-// a change in the electron fraction (e.g. 0.5 is a 50% change) since the previous solution will also trigger a solution
+// a change in the electron fraction (e.g. 0.5 is a 50% change) since the previous solution will also trigger a
+// solution
 constexpr double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS = 0.05;
 
 // just consider excitation from the first N levels and to the first M upper levels,

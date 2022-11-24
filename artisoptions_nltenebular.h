@@ -26,11 +26,12 @@ constexpr int NLTEITER = 30;
 // this macro function determines which levels of which ions will be treated in full NLTE (if NLTE_POPS_ON is true)
 // for now, all NLTE levels should be contiguous and include the ground state
 // (i.e. level indices < X should return true for some X)
-#define LEVEL_IS_NLTE(element_z, ionstage, level) \
-  if (element_z == 26 && ionstage == 2)           \
-    return (level <= 197);                        \
-  else                                            \
+constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) {
+  if (element_z == 26 && ionstage == 2)
+    return (level <= 197);
+  else
     return (level <= 80);
+}
 
 // atomic data and LTE
 #define LTEPOP_EXCITATIONTEMPERATURE grid::get_Te(modelgridindex)
