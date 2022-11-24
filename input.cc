@@ -1168,13 +1168,13 @@ static void read_atomicdata_files(void) {
   printout("cont_index %d\n", cont_index);
 }
 
-#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
 static int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimator, int el, int in, int ll)
 /// Return the closest ground level continuum index to the given edge
 /// frequency. If the given edge frequency is redder than the reddest
 /// continuum return -1.
 /// NB: groundphixslist must be in ascending order.
 {
+  assert_always((!NO_LUT_PHOTOION || !NO_LUT_BFHEATING));
   int index;
 
   if (nu_edge < globals::groundcont[0].nu_edge) {
@@ -1234,7 +1234,6 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
 
   return index;
 }
-#endif
 
 static void setup_cellhistory(void) {
   /// SET UP THE CELL HISTORY
@@ -1441,15 +1440,15 @@ static void setup_phixs_list(void) {
   for (int itid = 0; itid < get_max_threads(); itid++) {
     /// Number of ground level bf-continua equals the total number of included ions minus the number
     /// of included elements, because the uppermost ionisation stages can't ionise.
-#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-    globals::phixslist[itid].groundcont_gamma_contr =
-        static_cast<double *>(malloc(globals::nbfcontinua_ground * sizeof(double)));
-    assert_always(globals::phixslist[itid].groundcont_gamma_contr != nullptr)
+    if constexpr (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING) {
+      globals::phixslist[itid].groundcont_gamma_contr =
+          static_cast<double *>(malloc(globals::nbfcontinua_ground * sizeof(double)));
+      assert_always(globals::phixslist[itid].groundcont_gamma_contr != nullptr)
 
-        for (int groundcontindex = 0; groundcontindex < globals::nbfcontinua_ground; groundcontindex++) {
-      globals::phixslist[tid].groundcont_gamma_contr[groundcontindex] = 0.;
+          for (int groundcontindex = 0; groundcontindex < globals::nbfcontinua_ground; groundcontindex++) {
+        globals::phixslist[tid].groundcont_gamma_contr[groundcontindex] = 0.;
+      }
     }
-#endif
 
     globals::phixslist[itid].kappa_bf_sum = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
     assert_always(globals::phixslist[itid].kappa_bf_sum != nullptr);
@@ -1471,39 +1470,39 @@ static void setup_phixs_list(void) {
              globals::nbfcontinua * sizeof(double) / 1024. / 1024.);
   }
 
-#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-  globals::groundcont =
-      static_cast<struct groundphixslist *>(malloc(globals::nbfcontinua_ground * sizeof(struct groundphixslist)));
-  assert_always(globals::groundcont != nullptr);
-#endif
+  if constexpr (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING) {
+    globals::groundcont =
+        static_cast<struct groundphixslist *>(malloc(globals::nbfcontinua_ground * sizeof(struct groundphixslist)));
+    assert_always(globals::groundcont != nullptr);
+  }
 
-#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-  int groundcontindex = 0;
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions - 1; ion++) {
-      const int nlevels_groundterm = get_nlevels_groundterm(element, ion);
-      for (int level = 0; level < nlevels_groundterm; level++) {
-        const int nphixstargets = get_nphixstargets(element, ion, level);
-        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-          // const int upperlevel = get_phixsupperlevel(element, ion,level, 0);
-          // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
-          const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
-          const double nu_edge = E_threshold / H;
-          assert_always(groundcontindex < globals::nbfcontinua_ground);
-          globals::groundcont[groundcontindex].element = element;
-          globals::groundcont[groundcontindex].ion = ion;
-          globals::groundcont[groundcontindex].level = level;
-          globals::groundcont[groundcontindex].nu_edge = nu_edge;
-          globals::groundcont[groundcontindex].phixstargetindex = phixstargetindex;
-          groundcontindex++;
+  if constexpr (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING) {
+    int groundcontindex = 0;
+    for (int element = 0; element < get_nelements(); element++) {
+      const int nions = get_nions(element);
+      for (int ion = 0; ion < nions - 1; ion++) {
+        const int nlevels_groundterm = get_nlevels_groundterm(element, ion);
+        for (int level = 0; level < nlevels_groundterm; level++) {
+          const int nphixstargets = get_nphixstargets(element, ion, level);
+          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+            // const int upperlevel = get_phixsupperlevel(element, ion,level, 0);
+            // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
+            const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
+            const double nu_edge = E_threshold / H;
+            assert_always(groundcontindex < globals::nbfcontinua_ground);
+            globals::groundcont[groundcontindex].element = element;
+            globals::groundcont[groundcontindex].ion = ion;
+            globals::groundcont[groundcontindex].level = level;
+            globals::groundcont[groundcontindex].nu_edge = nu_edge;
+            globals::groundcont[groundcontindex].phixstargetindex = phixstargetindex;
+            groundcontindex++;
+          }
         }
       }
     }
+    assert_always(groundcontindex == globals::nbfcontinua_ground);
+    std::sort(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground);
   }
-  assert_always(groundcontindex == globals::nbfcontinua_ground);
-  std::sort(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground);
-#endif
 
   struct fullphixslist *nonconstallcont =
       static_cast<struct fullphixslist *>(malloc(globals::nbfcontinua * sizeof(struct fullphixslist)));
@@ -1535,13 +1534,14 @@ static void setup_phixs_list(void) {
           nonconstallcont[allcontindex].probability = get_phixsprobability(element, ion, level, phixstargetindex);
           nonconstallcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-          int index_in_groundlevelcontestimator;
-          nonconstallcont[allcontindex].index_in_groundphixslist =
-              search_groundphixslist(nu_edge, &index_in_groundlevelcontestimator, element, ion, level);
+          if constexpr (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING) {
+            int index_in_groundlevelcontestimator;
+            nonconstallcont[allcontindex].index_in_groundphixslist =
+                search_groundphixslist(nu_edge, &index_in_groundlevelcontestimator, element, ion, level);
 
-          globals::elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
-#endif
+            globals::elements[element].ions[ion].levels[level].closestgroundlevelcont =
+                index_in_groundlevelcontestimator;
+          }
           allcontindex++;
         }
       }
@@ -1624,31 +1624,31 @@ static void setup_phixs_list(void) {
 #endif
   assert_always(globals::spontrecombcoeff != nullptr);
 
-#if (!NO_LUT_PHOTOION)
+  if constexpr (!NO_LUT_PHOTOION) {
 #ifdef MPI_ON
-  size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * sizeof(double) : 0;
-  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                        &globals::corrphotoioncoeff, &win) == MPI_SUCCESS);
-  assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::corrphotoioncoeff) == MPI_SUCCESS);
+    size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * sizeof(double) : 0;
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                          &globals::corrphotoioncoeff, &win) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::corrphotoioncoeff) == MPI_SUCCESS);
 #else
-  globals::corrphotoioncoeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+    globals::corrphotoioncoeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
 #endif
-  assert_always(globals::corrphotoioncoeff != nullptr);
-  mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
-#endif
+    assert_always(globals::corrphotoioncoeff != nullptr);
+    mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
+  }
 
-#if (!NO_LUT_BFHEATING)
+  if constexpr (!NO_LUT_BFHEATING) {
 #ifdef MPI_ON
-  size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * sizeof(double) : 0;
-  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                        &globals::bfheating_coeff, &win) == MPI_SUCCESS);
-  assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::bfheating_coeff) == MPI_SUCCESS);
+    size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * sizeof(double) : 0;
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                          &globals::bfheating_coeff, &win) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::bfheating_coeff) == MPI_SUCCESS);
 #else
-  globals::bfheating_coeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+    globals::bfheating_coeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
 #endif
-  assert_always(globals::bfheating_coeff != nullptr);
-  mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
-#endif
+    assert_always(globals::bfheating_coeff != nullptr);
+    mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
+  }
 
 #ifdef MPI_ON
   size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * sizeof(double) : 0;
