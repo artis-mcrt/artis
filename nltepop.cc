@@ -1550,8 +1550,6 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
 __host__ __device__ double superlevel_boltzmann(const int modelgridindex, const int element, const int ion,
                                                 const int level) {
   const int superlevel_index = get_nlevels_nlte(element, ion) + 1;
-  // const double T_exc = grid::get_TJ(modelgridindex);
-  // const double T_exc = grid::get_Te(modelgridindex);
   const double T_exc = LTEPOP_EXCITATIONTEMPERATURE;
   const double E_level = epsilon(element, ion, level);
   const double E_superlevel = epsilon(element, ion, superlevel_index);
