@@ -272,7 +272,7 @@ void init(int my_rank, int ndo, int ndo_nonempty)
     Jb_lu_raw[modelgridindex] = NULL;
   }
 
-  if (DETAILED_LINE_ESTIMATORS_ON) {
+  if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
     for (int i = 0; i < globals::nlines; i++) {
       const int element = globals::linelist[i].elementindex;
       const int Z = get_element(element);
