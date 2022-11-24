@@ -108,8 +108,6 @@ __managed__ double NPHIXSNUINCREMENT = -1;
 
 __managed__ struct cellhistory *cellhistory = nullptr;
 
-__managed__ int debuglevel;
-
 #ifdef MPI_ON
 MPI_Comm mpi_comm_node = MPI_COMM_NULL;
 MPI_Comm mpi_comm_internode = MPI_COMM_NULL;

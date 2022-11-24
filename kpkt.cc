@@ -553,7 +553,6 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       abort();
     }
 
-    // globals::debuglevel = 2;
     // printout("element %d, ion %d, coolingsum %g\n",element,ion,coolingsum);
     const int ilow = get_coolinglistoffset(element, ion);
     const int ihigh = ilow + get_ncoolingterms(element, ion) - 1;
@@ -586,9 +585,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
                globals::cellhistory[tid].cooling_contrib[finalpos + 1]);
     }
 
-    // if (globals::debuglevel == 2) printout("do_kpkt: selected process %d, coolingsum %g\n",i,coolingsum);
-    // printout("do_kpkt: selected process %d, coolingsum %g, importantcoolingterms %d, type
-    // %d\n",i,coolingsum,importantcoolingterms,globals::cellhistory[tid].coolinglist[i].type);
+    // printout("do_kpkt: selected process %d, coolingsum %g\n", i, coolingsum);
 
     // printout("element Z=%d, ion_stage %d, leve %d upper %d offset %d, terms %d, coolingsum %g\n",
     //   get_element(globals::cellhistory[tid].coolinglist[i].element),
@@ -759,7 +756,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       pkt_ptr->trueemissionvelocity = -1;
     } else if (coolinglist[i].type == COOLINGTYPE_COLLION) {
       /// the k-packet activates a macro-atom due to collisional ionisation
-      if (globals::debuglevel == 2) printout("[debug] do_kpkt: k-pkt -> collisional ionisation of MA\n");
+      // printout("[debug] do_kpkt: k-pkt -> collisional ionisation of MA\n");
       const int element = coolinglist[i].element;
       const int ion = coolinglist[i].ion + 1;
       const int upper = coolinglist[i].upperlevel;

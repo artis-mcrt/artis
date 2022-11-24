@@ -921,7 +921,6 @@ int main(int argc, char **argv)
 
   bool terminate_early = false;
   globals::file_set = false;  // LJS: deprecate this switch?
-  globals::debuglevel = 4;    /// Selects detail level of debug output, needs still some work.
 
   /// Initialise the grid. Call routine that sets up the initial positions
   /// and sizes of the grid cells.

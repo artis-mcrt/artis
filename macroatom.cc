@@ -457,7 +457,6 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
   /// dummy-initialize these to nonsense values, if something goes wrong with the real
   /// initialization we should see errors
 
-  // globals::debuglevel = 2;
   // printout("[debug] =============entering do_ma\n");
   int jumps = 0;
   int jump = -99;
@@ -541,8 +540,6 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
       printout("[debug]    zrand %g\n", zrand);
       printout("[debug]    jumps %d\n", jumps);
       printout("[debug]    pkt_ptr->number %d\n", pkt_ptr->number);
-
-      globals::debuglevel = 777;
 
       if (ion > 0)  /// checks only if there is a lower ion, doesn't make sure that Z(ion)=Z(ion-1)+1
       {

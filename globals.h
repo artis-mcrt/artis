@@ -298,8 +298,6 @@ extern __managed__ double NPHIXSNUINCREMENT;
 
 extern __managed__ struct cellhistory *cellhistory;
 
-extern __managed__ int debuglevel;
-
 #ifdef MPI_ON
 extern MPI_Comm mpi_comm_node;
 extern MPI_Comm mpi_comm_internode;

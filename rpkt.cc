@@ -647,15 +647,12 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
   int mgi = grid::get_cell_modelgridindex(cellindex);
   const int oldmgi = mgi;
 
-  if (pkt_ptr->next_trans > 0) {
-    // if (globals::debuglevel == 2) printout("[debug] do_rpkt: init: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d)
-    // %g, nu(pkt_ptr->next_trans-1=%d) %g, pkt_ptr->where %d\n", pkt_ptr->nu_cmf, pkt_ptr->next_trans,
-    // globals::linelist[pkt_ptr->next_trans].nu, pkt_ptr->next_trans-1, globals::linelist[pkt_ptr->next_trans-1].nu,
-    // pkt_ptr->where );
-    if (globals::debuglevel == 2)
-      printout("[debug] do_rpkt: init: (pkt_ptr->nu_cmf - nu(pkt_ptr->next_trans-1))/pkt_ptr->nu_cmf %g\n",
-               (pkt_ptr->nu_cmf - globals::linelist[pkt_ptr->next_trans - 1].nu) / pkt_ptr->nu_cmf);
-  }
+  // if (pkt_ptr->next_trans > 0) {
+  //   printout("[debug] do_rpkt: init: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d)
+  //   %g, nu(pkt_ptr->next_trans-1=%d) %g, pkt_ptr->where %d\n", pkt_ptr->nu_cmf, pkt_ptr->next_trans,
+  //   globals::linelist[pkt_ptr->next_trans].nu, pkt_ptr->next_trans-1, globals::linelist[pkt_ptr->next_trans-1].nu,
+  //   pkt_ptr->where );
+  // }
 
   // Assign optical depth to next physical event. And start counter of
   // optical depth for this path.
