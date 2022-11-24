@@ -198,9 +198,9 @@ constexpr int NT_MAX_AUGER_ELECTRONS = 2;
 
 constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-2;
 
-#define CONTINUUM_NU_INTEGRAL_ACCURACY 1e-2
+constexpr double CONTINUUM_NU_INTEGRAL_ACCURACY = 1e-2;
 
-#define RATECOEFF_INTEGRAL_ACCURACY 1e-2
+constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-2;
 
 // when calculating ion ionisation rate coefficient (for estimator files only, not the simulation), contribute the
 // lowest n levels that make up at least IONGAMMA_POPFRAC_LEVELS_INCLUDED fraction of the ion population
