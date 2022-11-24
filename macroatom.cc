@@ -992,21 +992,23 @@ __host__ __device__ double rad_excitation_ratecoeff(const int modelgridindex, co
 
       R = R_over_J_nu * radfield::radfield(nu_trans, modelgridindex);
 
-      if (DETAILED_LINE_ESTIMATORS_ON && !globals::initial_iteration) {
-        // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
-        const int jblueindex = radfield::get_Jblueindex(lineindex);
-        if (jblueindex >= 0) {
-          const double Jb_lu = radfield::get_Jb_lu(modelgridindex, jblueindex);
-          const double R_Jb = R_over_J_nu * Jb_lu;
-          // const int contribcount = radfield_get_Jb_lu_contribcount(modelgridindex, jblueindex);
-          // const double R_radfield = R_over_J_nu * radfield::radfield(nu_trans, modelgridindex);
-          // const double linelambda = 1e8 * CLIGHT / nu_trans;
-          // printout("Using detailed rad excitation lambda %5.1f contribcont %d R(Jblue) %g R(radfield) %g R_Jb/R
-          // %g\n",
-          //          linelambda, contribcount, R_Jb, R_radfield, R_Jb / R_radfield);
-          // printout("  (for transition Z=%02d ionstage %d lower %d upper %d)\n",
-          //          get_element(element), get_ionstage(element, ion), lower, upper);
-          R = R_Jb;
+      if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
+        if (!globals::initial_iteration) {
+          // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
+          const int jblueindex = radfield::get_Jblueindex(lineindex);
+          if (jblueindex >= 0) {
+            const double Jb_lu = radfield::get_Jb_lu(modelgridindex, jblueindex);
+            const double R_Jb = R_over_J_nu * Jb_lu;
+            // const int contribcount = radfield_get_Jb_lu_contribcount(modelgridindex, jblueindex);
+            // const double R_radfield = R_over_J_nu * radfield::radfield(nu_trans, modelgridindex);
+            // const double linelambda = 1e8 * CLIGHT / nu_trans;
+            // printout("Using detailed rad excitation lambda %5.1f contribcont %d R(Jblue) %g R(radfield) %g R_Jb/R
+            // %g\n",
+            //          linelambda, contribcount, R_Jb, R_radfield, R_Jb / R_radfield);
+            // printout("  (for transition Z=%02d ionstage %d lower %d upper %d)\n",
+            //          get_element(element), get_ionstage(element, ion), lower, upper);
+            R = R_Jb;
+          }
         }
       }
     } else {
