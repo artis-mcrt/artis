@@ -1020,30 +1020,8 @@ __host__ __device__ double rad_excitation_ratecoeff(const int modelgridindex, co
       R = 0.;
     }
 
-    if (R < 0) {
-      const double g_u = statw_upper(lineindex);
-      const double g_u2 = stat_weight(element, ion, upper);
-      const double g_l = statw_lower(lineindex);
-      const double g_l2 = stat_weight(element, ion, lower);
-      printout("Negative excitation rate from level %d to %d\n", lower, upper);
-      printout("n_l %g, n_u %g, g_l %g (?=%g), g_u %g (?=%g)\n", n_l, n_u, g_l, g_l2, g_u, g_u2);
-      printout("n_u/n_l %g, g_u/g_l %g\n", n_u / n_l, g_u / g_l);
-      printout("radfield::radfield(nutrans=%g) = %g\n", nu_trans, radfield::radfield(nu_trans, modelgridindex));
-      abort();
-    }
-
-    // printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n", A_ul, tau_sobolev, n_u, n_l,
-    // radfield::radfield(nu_trans, modelgridindex));
-
-    if (!std::isfinite(R)) {
-      printout("[fatal] rad_excitation: abort\n");
-      printout(
-          "[fatal] rad_excitation: R %g, B_lu %g, B_ul %g, n_u %g, n_l %g, radfield %g,tau_sobolev %g, t_current %g\n",
-          R, B_lu, B_ul, n_u, n_l, radfield::radfield(nu_trans, modelgridindex), tau_sobolev, t_current);
-      printout("[fatal] rad_excitation: %g, %g, %g\n", 1.0 / tau_sobolev, exp(-tau_sobolev),
-               1.0 / tau_sobolev * (1. - exp(-tau_sobolev)));
-      abort();
-    }
+    assert_testmodeonly(R >= 0.);
+    assert_testmodeonly(R >= std::isfinite(R));
   }
 
   return R;
