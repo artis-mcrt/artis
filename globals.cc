@@ -29,13 +29,13 @@ __managed__ int emiss_max;     // actual number of frequency points in emissivit
 __managed__ float *compton_emiss = nullptr;  /// Volume estimator for the compton emissivity
 __managed__ double *rpkt_emiss = nullptr;    /// Volume estimator for the rpkt emissivity
 
-#if (!NO_LUT_PHOTOION)
+// for NO_LUT_PHOTOION = false
 __managed__ double *corrphotoionrenorm = nullptr;
 __managed__ double *gammaestimator = nullptr;
-#endif
-#if (!NO_LUT_BFHEATING)
+
+// for NO_LUT_BFHEATING = false
 __managed__ double *bfheatingestimator = nullptr;
-#endif
+
 __managed__ double *ffheatingestimator = nullptr;
 __managed__ double *colheatingestimator = nullptr;
 #ifndef FORCE_LTE
@@ -78,14 +78,14 @@ __managed__ struct elementlist_entry *elements = nullptr;
 __managed__ const struct linelist_entry *linelist = nullptr;
 __managed__ struct bflist_t *bflist = nullptr;
 __managed__ double *spontrecombcoeff = nullptr;
-#if (!NO_LUT_PHOTOION)
+
+// for NO_LUT_PHOTOION = false
 __managed__ double *corrphotoioncoeff = nullptr;
-#endif
-#if (!NO_LUT_BFHEATING)
+
+// for NO_LUT_BFHEATING = false
 __managed__ double *bfheating_coeff = nullptr;
-#endif
+
 __managed__ double *bfcooling_coeff = nullptr;
-;
 
 __managed__ struct rpkt_cont_opacity *kappa_rpkt_cont = nullptr;
 
@@ -96,9 +96,10 @@ __managed__ int ncoolingterms;
 
 __managed__ double *allcont_nu_edge = nullptr;
 __managed__ const struct fullphixslist *allcont = nullptr;
-#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
+
+// for either NO_LUT_PHOTOION = false or NO_LUT_BFHEATING = false
 __managed__ struct groundphixslist *groundcont = nullptr;
-#endif
+
 __managed__ struct phixslist *phixslist = nullptr;
 __managed__ int nbfcontinua = -1;
 __managed__ int nbfcontinua_ground = -1;  /// number of bf-continua

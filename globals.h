@@ -227,13 +227,13 @@ extern __managed__ int emiss_max;
 extern __managed__ float *compton_emiss;
 extern __managed__ double *rpkt_emiss;
 
-#if (!NO_LUT_PHOTOION)
+// for NO_LUT_PHOTOION = false
 extern __managed__ double *corrphotoionrenorm;
 extern __managed__ double *gammaestimator;
-#endif
-#if (!NO_LUT_BFHEATING)
+
+// for NO_LUT_BFHEATING = false
 extern __managed__ double *bfheatingestimator;
-#endif
+
 extern __managed__ double *ffheatingestimator;
 extern __managed__ double *colheatingestimator;
 #ifndef FORCE_LTE
@@ -272,12 +272,13 @@ extern __managed__ const struct linelist_entry *linelist;
 extern __managed__ struct bflist_t *bflist;
 
 extern __managed__ double *spontrecombcoeff;
-#if (!NO_LUT_PHOTOION)
+
+// for NO_LUT_PHOTOION = false
 extern __managed__ double *corrphotoioncoeff;
-#endif
-#if (!NO_LUT_BFHEATING)
+
+// for NO_LUT_BFHEATING = false
 extern __managed__ double *bfheating_coeff;
-#endif
+
 extern __managed__ double *bfcooling_coeff;
 
 extern __managed__ struct rpkt_cont_opacity *kappa_rpkt_cont;
@@ -286,9 +287,10 @@ extern __managed__ int ncoolingterms;
 
 extern __managed__ double *allcont_nu_edge;
 extern __managed__ const struct fullphixslist *allcont;
-#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
+
+// for either NO_LUT_PHOTOION = false or NO_LUT_BFHEATING = false
 extern __managed__ struct groundphixslist *groundcont;
-#endif
+
 extern __managed__ struct phixslist *phixslist;
 extern __managed__ int nbfcontinua;
 extern __managed__ int nbfcontinua_ground;
