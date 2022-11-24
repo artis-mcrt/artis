@@ -220,9 +220,8 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the heatingrates data structure.
 {
-#ifdef DIRECT_COL_HEAT
   double C_deexc = 0.;
-#endif
+
   // double C_recomb = 0.;
   double bfheating = 0.;
   double ffheating = 0.;
@@ -231,11 +230,11 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
 
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
-#ifdef DIRECT_COL_HEAT
-    for (int ion = 0; ion < nions; ion++) {
-      C_deexc += get_heating_ion_coll_deexc(modelgridindex, element, ion, T_e, nne);
+    if constexpr (DIRECT_COL_HEAT) {
+      for (int ion = 0; ion < nions; ion++) {
+        C_deexc += get_heating_ion_coll_deexc(modelgridindex, element, ion, T_e, nne);
+      }
     }
-#endif
     //
     //         /// Collisional heating: recombination to lower ionization stage
     //         /// ------------------------------------------------------------
@@ -334,12 +333,12 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
   ffheating *= FOURPI;
   */
 
-#ifdef DIRECT_COL_HEAT
-  heatingcoolingrates->heating_collisional = C_deexc;
-#else
-  /// Collisional heating (from estimators)
-  heatingcoolingrates->heating_collisional = globals::colheatingestimator[modelgridindex];  // C_deexc + C_recomb;
-#endif
+  if constexpr (DIRECT_COL_HEAT) {
+    heatingcoolingrates->heating_collisional = C_deexc;
+  } else {
+    /// Collisional heating (from estimators)
+    heatingcoolingrates->heating_collisional = globals::colheatingestimator[modelgridindex];  // C_deexc + C_recomb;
+  }
 
   heatingcoolingrates->heating_bf = bfheating;
   heatingcoolingrates->heating_ff = ffheating;

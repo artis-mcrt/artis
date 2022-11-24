@@ -44,7 +44,7 @@ constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) { return 0; }
 // if uniform pellet energies are not used, a uniform decay time distribution is used with scaled packet energies
 constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
-// #define DIRECT_COL_HEAT
+constexpr bool DIRECT_COL_HEAT = false;
 constexpr bool NO_INITIAL_PACKETS = false;
 constexpr bool RECORD_LINESTAT = true;
 
