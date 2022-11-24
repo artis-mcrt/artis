@@ -41,10 +41,12 @@ constexpr bool single_ground_level = false;  // if false, read from file or auto
 
 // option to enforce connecting the lower n levels to all other levels with collisions
 // disable by returning zero
-#define NLEVELS_REQUIRETRANSITIONS(Z, ionstage) ((Z == 26 || Z == 28) && ionstage >= 1) ? 80 : 0
+constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {
+  return ((Z == 26 || Z == 28) && ionstage >= 1) ? 80 : 0;
+}
 
 // if uniform pellet energies are not used, a uniform decay time distribution is used with scaled packet energies
-#define UNIFORM_PELLET_ENERGIES true
+constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
 #define DIRECT_COL_HEAT
 // #define NO_INITIAL_PACKETS

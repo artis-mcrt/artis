@@ -1418,7 +1418,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
   const double tdecaymin = grid::get_t_model();  // allow decays before the first timestep
 #endif
 
-  if (UNIFORM_PELLET_ENERGIES) {
+  if constexpr (UNIFORM_PELLET_ENERGIES) {
     pkt_ptr->tdecay = sample_decaytime(decaypathindex, tdecaymin, globals::tmax);
     pkt_ptr->e_cmf = e0;
   } else {
