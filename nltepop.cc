@@ -470,11 +470,19 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
       const double R =
           rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid) *
           s_renorm[level];
+      assert_always(R >= 0);
+      assert_always(std::isfinite(R));
+
       const double C =
           col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statweight, statw_upper(line)) * s_renorm[level];
+      assert_always(C >= 0);
+      assert_always(std::isfinite(C));
+
       const double NTC =
           nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex) *
           s_renorm[level];
+      assert_always(NTC >= 0);
+      assert_always(std::isfinite(NTC));
 
       // if ((Z == 26) && (ionstage == 1) && (level == 0) && (upper <= 5))
       // {
