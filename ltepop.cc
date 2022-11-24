@@ -163,13 +163,14 @@ double phi(const int element, const int ion, const int modelgridindex)
   //     }
   // else
   {
-// Gamma = photoionestimator[cellnumber*get_nelements()*get_max_nions()+element*get_max_nions()+ion];
-#if NO_LUT_PHOTOION
-    const double Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
-#else
-    const double Gamma =
-        globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() + ion];
-#endif
+    // Gamma = photoionestimator[cellnumber*get_nelements()*get_max_nions()+element*get_max_nions()+ion];
+    double Gamma = 0.;
+    if constexpr (NO_LUT_PHOTOION) {
+      Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
+    } else {
+      Gamma =
+          globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() + ion];
+    }
     // printout("phicompare element %d ion %d T_e = %g gammaestimator %g calculate_iongamma_per_gspop %g\n",
     //          element, ion, T_e,
     //          globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() +
