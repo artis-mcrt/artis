@@ -198,7 +198,7 @@ constexpr int NT_MAX_AUGER_ELECTRONS = 2;
 #define SF_AUGER_CONTRIBUTION_ON true
 
 // set true to divide up the mean Auger energy by the number of electrons that come out
-#define SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN false
+constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN = false;
 
 // ** End of non-thermal solution options **
 
