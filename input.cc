@@ -1678,9 +1678,6 @@ static void read_atomicdata(void) {
 
     globals::acounter = static_cast<int *>(malloc(globals::nlines * sizeof(int)));
     assert_always(globals::acounter != NULL);
-
-    globals::linestat_reduced = static_cast<int *>(malloc(globals::nlines * sizeof(int)));
-    assert_always(globals::linestat_reduced != NULL);
   }
 
   kpkt::setup_coolinglist();

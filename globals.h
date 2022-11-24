@@ -247,7 +247,6 @@ extern __managed__ double *colheatingestimator_save;
 
 extern __managed__ int *ecounter;
 extern __managed__ int *acounter;
-extern __managed__ int *linestat_reduced;
 
 extern __managed__ int nprocs_exspec;
 extern __managed__ bool do_emission_res;

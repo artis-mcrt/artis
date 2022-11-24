@@ -49,7 +49,6 @@ __managed__ double *colheatingestimator_save = nullptr;
 
 __managed__ int *ecounter = nullptr;
 __managed__ int *acounter = nullptr;
-__managed__ int *linestat_reduced = nullptr;
 
 __managed__ int nprocs_exspec = 1;
 __managed__ bool do_emission_res = 1;
