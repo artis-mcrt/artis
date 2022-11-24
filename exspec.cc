@@ -145,12 +145,12 @@ int main(int argc, char **argv) {
     double *gamma_light_curve_lumcmf = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
     /// Set up the spectrum grid and initialise the bins to zero.
 
-    init_spectra(rpkt_spectra, globals::nu_min_r, globals::nu_max_r, globals::do_emission_res);
+    init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
 
     if constexpr (POL_ON) {
-      init_spectra(stokes_i, globals::nu_min_r, globals::nu_max_r, globals::do_emission_res);
-      init_spectra(stokes_q, globals::nu_min_r, globals::nu_max_r, globals::do_emission_res);
-      init_spectra(stokes_u, globals::nu_min_r, globals::nu_max_r, globals::do_emission_res);
+      init_spectra(stokes_i, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
+      init_spectra(stokes_q, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
+      init_spectra(stokes_u, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
     }
 
     const double nu_min_gamma = 0.05 * MEV / H;

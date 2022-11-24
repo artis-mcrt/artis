@@ -1797,9 +1797,6 @@ void input(int rank)
     abort();
   }
 
-  globals::nu_min_r = NU_MIN_R;  /// lower frequency boundary for UVOIR spectra and BB sampling
-  globals::nu_max_r = NU_MAX_R;  /// upper frequency boundary for UVOIR spectra and BB sampling
-
   /// Lightcurve setting
   globals::do_r_lc = false;  /// default to no lc = gamma-ray spectrum
   globals::do_rlc_est = 0;   /// ^^

@@ -346,8 +346,7 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
   const double anglefactor = (current_abin >= 0) ? MABINS : 1.;
 
   const double t_arrive = get_arrive_time(pkt_ptr);
-  if (t_arrive > globals::tmin && t_arrive < globals::tmax && pkt_ptr->nu_rf > globals::nu_min_r &&
-      pkt_ptr->nu_rf < globals::nu_max_r) {
+  if (t_arrive > globals::tmin && t_arrive < globals::tmax && pkt_ptr->nu_rf > NU_MIN_R && pkt_ptr->nu_rf < NU_MAX_R) {
     const int nt = get_timestep(t_arrive);
     const double nu_min = spectra->nu_min;
     const double nu_max = spectra->nu_max;
@@ -665,7 +664,7 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
     }
   }
 
-  init_spectra(rpkt_spectra, globals::nu_min_r, globals::nu_max_r, do_emission_res);
+  init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, do_emission_res);
 
   for (int ii = 0; ii < globals::npkts; ii++) {
     if (pkts[ii].type == TYPE_ESCAPE) {

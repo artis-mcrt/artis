@@ -430,7 +430,7 @@ __host__ __device__ static double sample_planck(const double T)
 /// distribution of temperature T
 {
   const double nu_peak = 5.879e10 * T;
-  if (nu_peak > globals::nu_max_r || nu_peak < globals::nu_min_r) {
+  if (nu_peak > NU_MAX_R || nu_peak < NU_MIN_R) {
     printout("[warning] sample_planck: intensity peaks outside frequency range\n");
   }
 
@@ -439,7 +439,7 @@ __host__ __device__ static double sample_planck(const double T)
   while (true) {
     const double zrand = gsl_rng_uniform(rng);
     const double zrand2 = gsl_rng_uniform(rng);
-    const double nu = globals::nu_min_r + zrand * (globals::nu_max_r - globals::nu_min_r);
+    const double nu = NU_MIN_R + zrand * (NU_MAX_R - NU_MIN_R);
     if (zrand2 * B_peak <= radfield::dbb(nu, T, 1)) return nu;
     // printout("[debug] sample_planck: planck_sampling %d\n", i);
   }

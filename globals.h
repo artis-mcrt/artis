@@ -325,9 +325,6 @@ extern __managed__ int itstep;
 extern __managed__ int ftstep;
 extern __managed__ int nts_global;
 
-extern __managed__ double nu_min_r;
-extern __managed__ double nu_max_r;
-
 extern __managed__ double nusyn_min;
 extern __managed__ double nusyn_max;
 extern __managed__ int nfake_gam;
