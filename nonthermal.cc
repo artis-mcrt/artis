@@ -92,10 +92,10 @@ struct collionrow {
   float n_auger_elec_avg;
 };
 
-__managed__ static struct collionrow *colliondata = NULL;
+__managed__ static struct collionrow *colliondata = nullptr;
 __managed__ static int colliondatacount = 0;
 
-static FILE *nonthermalfile = NULL;
+static FILE *nonthermalfile = nullptr;
 static bool nonthermal_initialized = false;
 
 __managed__ static gsl_vector *envec;      // energy grid on which solution is sampled
@@ -424,7 +424,7 @@ static void read_collion_data(void) {
   printout("Stored %d of %d input shell cross sections\n", n, colliondatacount);
   colliondatacount = n;
   colliondata = (struct collionrow *)realloc(colliondata, colliondatacount * sizeof(struct collionrow));
-  if (colliondata == NULL) {
+  if (colliondata == nullptr) {
     printout("Could not reallocate colliondata.\n");
     abort();
   }
@@ -528,22 +528,22 @@ void init(const int my_rank, const int ndo, const int ndo_nonempty) {
 
       if (STORE_NT_SPECTRUM) {
         nt_solution[modelgridindex].yfunc = (double *)calloc(SFPTS, sizeof(double));
-        assert_always(nt_solution[modelgridindex].yfunc != NULL);
+        assert_always(nt_solution[modelgridindex].yfunc != nullptr);
         mem_usage_yfunc += SFPTS * sizeof(double);
       }
 
       zero_all_effionpot(modelgridindex);
     } else {
-      nt_solution[modelgridindex].eff_ionpot = NULL;
-      nt_solution[modelgridindex].fracdep_ionization_ion = NULL;
+      nt_solution[modelgridindex].eff_ionpot = nullptr;
+      nt_solution[modelgridindex].fracdep_ionization_ion = nullptr;
 
-      nt_solution[modelgridindex].prob_num_auger = NULL;
-      nt_solution[modelgridindex].ionenfrac_num_auger = NULL;
+      nt_solution[modelgridindex].prob_num_auger = nullptr;
+      nt_solution[modelgridindex].ionenfrac_num_auger = nullptr;
 
-      nt_solution[modelgridindex].yfunc = NULL;
+      nt_solution[modelgridindex].yfunc = nullptr;
     }
 
-    nt_solution[modelgridindex].frac_excitations_list = NULL;
+    nt_solution[modelgridindex].frac_excitations_list = nullptr;
     nt_solution[modelgridindex].frac_excitations_list_size = 0;
   }
 
@@ -671,7 +671,7 @@ double get_deposition_rate_density(const int modelgridindex)
 }
 
 __host__ __device__ static double get_y_sample(const int modelgridindex, const int index) {
-  if (nt_solution[modelgridindex].yfunc != NULL) {
+  if (nt_solution[modelgridindex].yfunc != nullptr) {
     if (!std::isfinite(nt_solution[modelgridindex].yfunc[index])) {
       printout("get_y_sample index %d %g\n", index, nt_solution[modelgridindex].yfunc[index]);
     }
@@ -731,9 +731,9 @@ void close_file(void) {
 
   if (!NT_ON || !NT_SOLVE_SPENCERFANO) return;
 
-  if (nonthermalfile != NULL) {
+  if (nonthermalfile != nullptr) {
     fclose(nonthermalfile);
-    nonthermalfile = NULL;
+    nonthermalfile = nullptr;
   }
   gsl_vector_free(envec);
   gsl_vector_free(sourcevec);
@@ -1410,7 +1410,7 @@ static double calculate_nt_ionization_ratecoeff(const int modelgridindex, const 
   gsl_vector_mul(cross_section_vec_allshells, delta_envec);
 #endif
 
-  assert_always(nt_solution[modelgridindex].yfunc != NULL);
+  assert_always(nt_solution[modelgridindex].yfunc != nullptr);
 
   double y_dot_crosssection_de = 0.;
   gsl_vector_view yvecview_thismgi = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
@@ -1715,7 +1715,7 @@ static double calculate_nt_excitation_ratecoeff_perdeposition(const int modelgri
                                                               const double statweight_lower, const double epsilon_trans)
 // Kozma & Fransson equation 9 divided by level population and epsilon_trans
 {
-  if (nt_solution[modelgridindex].yfunc == NULL) {
+  if (nt_solution[modelgridindex].yfunc == nullptr) {
     printout("ERROR: Call to nt_excitation_ratecoeff with no y vector in memory.");
     abort();
   }
@@ -1981,7 +1981,7 @@ static bool realloc_frac_excitations_list(const int modelgridindex, const int ne
   struct nt_excitation_struct *newptr = (struct nt_excitation_struct *)realloc(
       nt_solution[modelgridindex].frac_excitations_list, newsize * sizeof(struct nt_excitation_struct));
 
-  if (newptr == NULL && newsize > 0) {
+  if (newptr == nullptr && newsize > 0) {
     printout("ERROR: Not enough memory to reallocate NT excitation list for cell %d from size %d to %d.\n",
              modelgridindex, nt_solution[modelgridindex].frac_excitations_list_size, newsize);
     // abort();
@@ -2892,7 +2892,7 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
     }
 
     if (STORE_NT_SPECTRUM) {
-      assert_always(nt_solution[modelgridindex].yfunc != NULL);
+      assert_always(nt_solution[modelgridindex].yfunc != nullptr);
       MPI_Bcast(nt_solution[modelgridindex].yfunc, SFPTS, MPI_DOUBLE, root, MPI_COMM_WORLD);
     }
 

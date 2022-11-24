@@ -91,11 +91,11 @@ struct levellist_entry {
   struct level_transition *downtrans;  /// Allowed downward transitions from this level
   int nuptrans;
   int ndowntrans;
-  double phixs_threshold;                         /// Energy of first point in the photion_xs table
-  struct phixstarget_entry *phixstargets = NULL;  /// pointer to table of target states and probabilities
-  float *photoion_xs = NULL;  /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
-  int nphixstargets;          /// length of phixstargets array:
-  float stat_weight;          /// Statistical weight of this level.
+  double phixs_threshold;                            /// Energy of first point in the photion_xs table
+  struct phixstarget_entry *phixstargets = nullptr;  /// pointer to table of target states and probabilities
+  float *photoion_xs = nullptr;  /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
+  int nphixstargets;             /// length of phixstargets array:
+  float stat_weight;             /// Statistical weight of this level.
 
   int cont_index;  /// Index of the continuum associated to this level. Negative number.
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)

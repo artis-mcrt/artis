@@ -19,7 +19,7 @@
 // save to the macroatom_*.out file
 constexpr bool LOG_MACROATOM = false;
 
-static FILE *macroatom_file = NULL;
+static FILE *macroatom_file = nullptr;
 
 __host__ __device__ static inline double get_individ_rad_deexc(int modelgridindex, int element, int ion, int level,
                                                                int i, double t_mid, const double epsilon_current) {
@@ -908,7 +908,7 @@ void macroatom_open_file(const int my_rank) {
   if constexpr (!LOG_MACROATOM) return;
   char filename[128];
   snprintf(filename, 128, "macroatom_%.4d.out", my_rank);
-  assert_always(macroatom_file == NULL);
+  assert_always(macroatom_file == nullptr);
   macroatom_file = fopen_required(filename, "w");
   fprintf(macroatom_file, "%8s %14s %2s %12s %12s %9s %9s %9s %11s %11s %11s %11s %9s\n", "timestep", "modelgridindex",
           "Z", "ionstage_in", "ionstage_out", "level_in", "level_out", "activline", "nu_cmf_in", "nu_cmf_out",
@@ -916,7 +916,7 @@ void macroatom_open_file(const int my_rank) {
 }
 
 void macroatom_close_file(void) {
-  if (macroatom_file != NULL) {
+  if (macroatom_file != nullptr) {
     fclose(macroatom_file);
   }
 }

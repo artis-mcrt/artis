@@ -139,19 +139,19 @@ void normalise_grey(int nts) {
 }
 
 void write_grey(int nts) {
-  FILE *est_file = NULL;
-  FILE *dummy = NULL;
+  FILE *est_file = nullptr;
+  FILE *dummy = nullptr;
   char chch;
   char filename[128] = "grey_est_";
   char junk[128];
 
-  if ((dummy = fopen("dummy", "w+")) == NULL) {
+  if ((dummy = fopen("dummy", "w+")) == nullptr) {
     printout("Cannot open dummy.\n");
     abort();
   }
   fprintf(dummy, "%d", nts);
   fclose(dummy);
-  if ((dummy = fopen("dummy", "r")) == NULL) {
+  if ((dummy = fopen("dummy", "r")) == nullptr) {
     printout("Cannot open dummy.\n");
     abort();
   }
@@ -167,7 +167,7 @@ void write_grey(int nts) {
   strncat(filename, ".out", 127);
 
   if (globals::file_set) {
-    if ((est_file = fopen(filename, "r")) == NULL) {
+    if ((est_file = fopen(filename, "r")) == nullptr) {
       printout("Cannot open grey_est_file.txt.\n");
       abort();
     }
@@ -181,7 +181,7 @@ void write_grey(int nts) {
     fclose(est_file);
   }
 
-  if ((est_file = fopen(filename, "w+")) == NULL) {
+  if ((est_file = fopen(filename, "w+")) == nullptr) {
     printout("Cannot open grey_est_file.txt.\n");
     abort();
   }

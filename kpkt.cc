@@ -157,7 +157,7 @@ __host__ __device__ void calculate_cooling_rates(const int modelgridindex,
   grid::modelgrid[modelgridindex].totalcooling = C_total;
 
   // only used in the T_e solver and write_to_estimators file
-  if (heatingcoolingrates != NULL) {
+  if (heatingcoolingrates != nullptr) {
     heatingcoolingrates->cooling_collisional = C_exc_all + C_ionization_all;
     heatingcoolingrates->cooling_fb = C_fb_all;
     heatingcoolingrates->cooling_ff = C_ff_all;

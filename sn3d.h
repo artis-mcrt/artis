@@ -16,7 +16,7 @@ extern FILE *output_file;
 
 #define __artis_assert(e)                                                                                            \
   if (!(e)) {                                                                                                        \
-    if (output_file != NULL) {                                                                                       \
+    if (output_file != nullptr) {                                                                                    \
       (void)fprintf(output_file, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global,    \
                     __FILE__, __LINE__, #e, __PRETTY_FUNCTION__);                                                    \
     }                                                                                                                \
@@ -159,7 +159,7 @@ static inline void gsl_error_handler_printout(const char *reason, const char *fi
 
 static FILE *fopen_required(const char *filename, const char *mode) {
   FILE *file = fopen(filename, mode);
-  if (file == NULL) {
+  if (file == nullptr) {
     printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename, mode);
     abort();
   }

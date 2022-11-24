@@ -75,10 +75,10 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
     globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
     *mem_usage_phixs += sizeof(phixstarget_entry);
 
-    assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets == NULL);
+    assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets == nullptr);
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
         static_cast<phixstarget_entry *>(calloc(1, sizeof(phixstarget_entry)));
-    assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != NULL);
+    assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != nullptr);
 
     if (single_level_top_ion &&
         (upperion == get_nions(element) - 1))  // top ion has only one level, so send it to that level
@@ -100,7 +100,7 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
 
       globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
           static_cast<phixstarget_entry *>(calloc(in_nphixstargets, sizeof(phixstarget_entry)));
-      assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != NULL);
+      assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != nullptr);
 
       double probability_sum = 0.;
       for (int i = 0; i < in_nphixstargets; i++) {
@@ -124,7 +124,7 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
       *mem_usage_phixs += sizeof(phixstarget_entry);
       globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
           static_cast<phixstarget_entry *>(calloc(1, sizeof(phixstarget_entry)));
-      assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != NULL);
+      assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != nullptr);
 
       for (int i = 0; i < in_nphixstargets; i++) {
         double phixstargetprobability;
@@ -156,7 +156,7 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
   *mem_usage_phixs += globals::NPHIXSPOINTS * sizeof(float);
   globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs =
       static_cast<float *>(calloc(globals::NPHIXSPOINTS, sizeof(float)));
-  assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs != NULL);
+  assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs != nullptr);
 
   if (phixs_threshold_ev > 0) {
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixs_threshold = phixs_threshold_ev * EV;
@@ -176,9 +176,9 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
     double nu_edge = (epsilon(element, upperion, 0) - epsilon(element, lowerion, lowerlevel)) / H;
 
     double *nutable = static_cast<double *>(calloc(nphixspoints_inputtable, sizeof(double)));
-    assert_always(nutable != NULL);
+    assert_always(nutable != nullptr);
     double *phixstable = static_cast<double *>(calloc(nphixspoints_inputtable, sizeof(double)));
-    assert_always(phixstable != NULL);
+    assert_always(phixstable != nullptr);
 
     for (int i = 0; i < nphixspoints_inputtable; i++) {
       double energy = -1.;
@@ -744,7 +744,7 @@ static void read_atomicdata_files(void) {
   assert_always(fscanf(compositiondata, "%d", &nelements_in) == 1);
   set_nelements(nelements_in);
   globals::elements = static_cast<elementlist_entry *>(calloc(get_nelements(), sizeof(elementlist_entry)));
-  assert_always(globals::elements != NULL);
+  assert_always(globals::elements != nullptr);
 
   /// Initialize the linelist
   std::vector<struct linelist_entry> temp_linelist;
@@ -797,7 +797,7 @@ static void read_atomicdata_files(void) {
 
     /// Initialize the elements ionlist
     globals::elements[element].ions = static_cast<ionlist_entry *>(calloc(nions, sizeof(ionlist_entry)));
-    assert_always(globals::elements[element].ions != NULL);
+    assert_always(globals::elements[element].ions != nullptr);
 
     /// now read in data for all ions of the current element. before doing so initialize
     /// energy scale for the current element (all level energies are stored relative to
@@ -921,16 +921,16 @@ static void read_atomicdata_files(void) {
       globals::elements[element].ions[ion].uniqueionindex = uniqueionindex;
 
       globals::elements[element].ions[ion].Alpha_sp = static_cast<float *>(calloc(TABLESIZE, sizeof(float)));
-      assert_always(globals::elements[element].ions[ion].Alpha_sp != NULL);
+      assert_always(globals::elements[element].ions[ion].Alpha_sp != nullptr);
       globals::elements[element].ions[ion].levels =
           static_cast<struct levellist_entry *>(calloc(nlevelsmax, sizeof(struct levellist_entry)));
-      assert_always(globals::elements[element].ions[ion].levels != NULL);
+      assert_always(globals::elements[element].ions[ion].levels != nullptr);
 
       /// now we need to readout the data for all those levels, write them to memory
       /// and set up the list of possible transitions for each level
       struct transitions *transitions =
           static_cast<struct transitions *>(calloc(nlevelsmax, sizeof(struct transitions)));
-      assert_always(transitions != NULL);
+      assert_always(transitions != nullptr);
 
       read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, transitions);
 
@@ -944,8 +944,8 @@ static void read_atomicdata_files(void) {
       for (int level = 0; level < nlevelsmax; level++) {
         globals::elements[element].ions[ion].levels[level].uniquelevelindex = uniquelevelindex;
         globals::elements[element].ions[ion].levels[level].nphixstargets = 0;
-        globals::elements[element].ions[ion].levels[level].phixstargets = NULL;
-        globals::elements[element].ions[ion].levels[level].photoion_xs = NULL;
+        globals::elements[element].ions[ion].levels[level].phixstargets = nullptr;
+        globals::elements[element].ions[ion].levels[level].photoion_xs = nullptr;
         uniquelevelindex++;
         totaldowntrans += get_ndowntrans(element, ion, level);
         totaluptrans += get_nuptrans(element, ion, level);
@@ -1242,7 +1242,7 @@ static void setup_cellhistory(void) {
   /// Stack which holds information about population and other cell specific data
   /// ===> move to update_packets
   globals::cellhistory = static_cast<struct cellhistory *>(malloc(get_max_threads() * sizeof(struct cellhistory)));
-  assert_always(globals::cellhistory != NULL);
+  assert_always(globals::cellhistory != nullptr);
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -1269,7 +1269,7 @@ static void setup_cellhistory(void) {
 
     mem_usage_cellhistory += get_nelements() * sizeof(struct chelements);
     if ((globals::cellhistory[tid].chelements =
-             static_cast<struct chelements *>(malloc(get_nelements() * sizeof(struct chelements)))) == NULL) {
+             static_cast<struct chelements *>(malloc(get_nelements() * sizeof(struct chelements)))) == nullptr) {
       printout("[fatal] input: not enough memory to initialize cellhistory's elementlist ... abort\n");
       abort();
     }
@@ -1311,7 +1311,7 @@ static void setup_cellhistory(void) {
       mem_usage_cellhistory += nions * sizeof(struct chions);
       globals::cellhistory[tid].chelements[element].chions =
           static_cast<struct chions *>(malloc(nions * sizeof(struct chions)));
-      assert_always(globals::cellhistory[tid].chelements[element].chions != NULL);
+      assert_always(globals::cellhistory[tid].chelements[element].chions != nullptr);
 
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
@@ -1367,9 +1367,9 @@ static void setup_cellhistory(void) {
 
 static void write_bflist_file(int includedphotoiontransitions) {
   globals::bflist = static_cast<struct bflist_t *>(malloc(includedphotoiontransitions * sizeof(struct bflist_t)));
-  assert_always(globals::bflist != NULL);
+  assert_always(globals::bflist != nullptr);
 
-  FILE *bflist_file = NULL;
+  FILE *bflist_file = nullptr;
   if (globals::rank_global == 0) {
     bflist_file = fopen_required("bflist.dat", "w");
     fprintf(bflist_file, "%d\n", includedphotoiontransitions);
@@ -1427,7 +1427,7 @@ static void setup_phixs_list(void) {
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n", globals::nbfcontinua_ground);
 
   globals::phixslist = static_cast<struct phixslist *>(malloc(get_max_threads() * sizeof(struct phixslist)));
-  assert_always(globals::phixslist != NULL);
+  assert_always(globals::phixslist != nullptr);
 
   /// MK: 2012-01-19
   /// To fix the OpenMP problem on BlueGene machines this parallel section was removed and replaced by
@@ -1444,7 +1444,7 @@ static void setup_phixs_list(void) {
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
     globals::phixslist[itid].groundcont_gamma_contr =
         static_cast<double *>(malloc(globals::nbfcontinua_ground * sizeof(double)));
-    assert_always(globals::phixslist[itid].groundcont_gamma_contr != NULL)
+    assert_always(globals::phixslist[itid].groundcont_gamma_contr != nullptr)
 
         for (int groundcontindex = 0; groundcontindex < globals::nbfcontinua_ground; groundcontindex++) {
       globals::phixslist[tid].groundcont_gamma_contr[groundcontindex] = 0.;
@@ -1452,11 +1452,11 @@ static void setup_phixs_list(void) {
 #endif
 
     globals::phixslist[itid].kappa_bf_sum = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
-    assert_always(globals::phixslist[itid].kappa_bf_sum != NULL);
+    assert_always(globals::phixslist[itid].kappa_bf_sum != nullptr);
 
 #if (DETAILED_BF_ESTIMATORS_ON)
     globals::phixslist[itid].gamma_contr = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
-    assert_always(globals::phixslist[itid].gamma_contr != NULL);
+    assert_always(globals::phixslist[itid].gamma_contr != nullptr);
 #endif
 
     for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++) {
@@ -1474,7 +1474,7 @@ static void setup_phixs_list(void) {
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
   globals::groundcont =
       static_cast<struct groundphixslist *>(malloc(globals::nbfcontinua_ground * sizeof(struct groundphixslist)));
-  assert_always(globals::groundcont != NULL);
+  assert_always(globals::groundcont != nullptr);
 #endif
 
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
@@ -1572,7 +1572,7 @@ static void setup_phixs_list(void) {
     float *allphixsblock = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
 #endif
 
-    assert_always(allphixsblock != NULL);
+    assert_always(allphixsblock != nullptr);
     int nbftableschanged = 0;
     for (int i = 0; i < globals::nbfcontinua; i++) {
       globals::allcont_nu_edge[i] = nonconstallcont[i].nu_edge;
@@ -1622,7 +1622,7 @@ static void setup_phixs_list(void) {
 #else
   globals::spontrecombcoeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
 #endif
-  assert_always(globals::spontrecombcoeff != NULL);
+  assert_always(globals::spontrecombcoeff != nullptr);
 
 #if (!NO_LUT_PHOTOION)
 #ifdef MPI_ON
@@ -1633,7 +1633,7 @@ static void setup_phixs_list(void) {
 #else
   globals::corrphotoioncoeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
 #endif
-  assert_always(globals::corrphotoioncoeff != NULL);
+  assert_always(globals::corrphotoioncoeff != nullptr);
   mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
 #endif
 
@@ -1646,7 +1646,7 @@ static void setup_phixs_list(void) {
 #else
   globals::bfheating_coeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
 #endif
-  assert_always(globals::bfheating_coeff != NULL);
+  assert_always(globals::bfheating_coeff != nullptr);
   mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
 #endif
 
@@ -1658,7 +1658,7 @@ static void setup_phixs_list(void) {
 #else
   globals::bfcooling_coeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
 #endif
-  assert_always(globals::bfcooling_coeff != NULL);
+  assert_always(globals::bfcooling_coeff != nullptr);
 
   printout(
       "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
@@ -1674,10 +1674,10 @@ static void read_atomicdata(void) {
   /// INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
   if constexpr (RECORD_LINESTAT) {
     globals::ecounter = static_cast<int *>(malloc(globals::nlines * sizeof(int)));
-    assert_always(globals::ecounter != NULL);
+    assert_always(globals::ecounter != nullptr);
 
     globals::acounter = static_cast<int *>(malloc(globals::nlines * sizeof(int)));
-    assert_always(globals::acounter != NULL);
+    assert_always(globals::acounter != nullptr);
   }
 
   kpkt::setup_coolinglist();

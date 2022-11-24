@@ -205,7 +205,7 @@ void md5_file(const char filename[], char hashout[2 * MD5_BLOCK_SIZE + 1]) {
 
   FILE *infile = fopen(filename, "r");
 
-  assert_always(infile != NULL);
+  assert_always(infile != nullptr);
 
   BYTE buffer[1024];
 

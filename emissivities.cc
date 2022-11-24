@@ -202,8 +202,8 @@ void normalise_compton_estimators(const int nts) {
 }
 
 void write_compton_estimators(int nts) {
-  FILE *est_file = NULL;
-  FILE *dummy = NULL;
+  FILE *est_file = nullptr;
+  FILE *dummy = nullptr;
   char chch;
   char filename[128] = "est_";
   char junk[128];

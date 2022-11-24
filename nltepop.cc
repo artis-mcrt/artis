@@ -19,7 +19,7 @@
 #include "sn3d.h"
 #include "update_grid.h"
 
-static FILE *nlte_file = NULL;
+static FILE *nlte_file = nullptr;
 
 static inline int get_nlte_vector_index(const int element, const int ion, const int level)
 // this is the index for the NLTE solver that is handling all ions of a single element
@@ -1162,10 +1162,10 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
   //      if (get_groundlevelpop(modelgridindex,element,ion) > (1.2*MINPOP))
   if (grid::get_elem_abundance(modelgridindex, element) > 0.0) {
     rate_matrix = static_cast<double *>(calloc(nlte_size * nlte_size, sizeof(double)));
-    assert_always(rate_matrix != NULL);
+    assert_always(rate_matrix != nullptr);
 
     balance_vector = static_cast<double *>(calloc(nlte_size, sizeof(double)));
-    assert_always(balance_vector != NULL);
+    assert_always(balance_vector != nullptr);
 
     // printf("rate %p balance %p NULL %p\n", rate_matrix, balance_vector, NULL);
     // printout("I think there are %d levels to deal with and managed to allocate memory.\n", nlte_size);
@@ -1561,16 +1561,16 @@ __host__ __device__ double superlevel_boltzmann(const int modelgridindex, const 
 void nltepop_open_file(const int my_rank) {
   char filename[128];
   snprintf(filename, 128, "nlte_%.4d.out", my_rank);
-  assert_always(nlte_file == NULL);
+  assert_always(nlte_file == nullptr);
   nlte_file = fopen_required(filename, "w");
   fprintf(nlte_file, "%8s %14s %2s %9s %5s %11s %11s %11s\n", "timestep", "modelgridindex", "Z", "ion_stage", "level",
           "n_LTE", "n_NLTE", "ion_popfrac");
 }
 
 void nltepop_close_file(void) {
-  if (nlte_file != NULL) {
+  if (nlte_file != nullptr) {
     fclose(nlte_file);
-    nlte_file = NULL;
+    nlte_file = nullptr;
   }
 }
 
@@ -1578,7 +1578,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
   if (globals::initial_iteration)  // NLTE solver hasn't been run yet
     return;
 
-  assert_always(nlte_file != NULL);
+  assert_always(nlte_file != nullptr);
   // fprintf(nlte_file,"#timestep %d modelgridindex %d T_R %g T_e %g W %g T_J %g nne %g\n",
   //         timestep, n, grid::get_TR(n), grid::get_Te(n), grid::get_W(n), grid::get_TJ(n), grid::get_nne(n));
 

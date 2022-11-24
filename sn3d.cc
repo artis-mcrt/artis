@@ -50,7 +50,7 @@ gsl_rng *rng = nullptr;
 __device__ void *rng = nullptr;
 #endif
 gsl_integration_workspace *gslworkspace = nullptr;
-FILE *output_file = NULL;
+FILE *output_file = nullptr;
 static FILE *linestat_file = nullptr;
 static time_t real_time_start = -1;
 static time_t time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
@@ -212,10 +212,10 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
         }
 
 #if (!NO_LUT_PHOTOION)
-        assert_always(globals::corrphotoionrenorm != NULL);
+        assert_always(globals::corrphotoionrenorm != nullptr);
         MPI_Bcast(&globals::corrphotoionrenorm[modelgridindex * get_nelements() * get_max_nions()],
                   get_nelements() * get_max_nions(), MPI_DOUBLE, root, MPI_COMM_WORLD);
-        assert_always(globals::gammaestimator != NULL);
+        assert_always(globals::gammaestimator != nullptr);
         MPI_Bcast(&globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions()],
                   get_nelements() * get_max_nions(), MPI_DOUBLE, root, MPI_COMM_WORLD);
 #endif
@@ -326,7 +326,7 @@ static void mpi_reduce_estimators(int my_rank, int nts) {
 #endif
 #if (!NO_LUT_PHOTOION)
   MPI_Barrier(MPI_COMM_WORLD);
-  assert_always(globals::gammaestimator != NULL);
+  assert_always(globals::gammaestimator != nullptr);
   MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #endif
 #if (!NO_LUT_BFHEATING)
@@ -337,20 +337,20 @@ static void mpi_reduce_estimators(int my_rank, int nts) {
 
   if constexpr (RECORD_LINESTAT) {
     MPI_Barrier(MPI_COMM_WORLD);
-    assert_always(globals::ecounter != NULL);
+    assert_always(globals::ecounter != nullptr);
     MPI_Allreduce(MPI_IN_PLACE, globals::ecounter, globals::nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-    assert_always(globals::acounter != NULL);
+    assert_always(globals::acounter != nullptr);
     MPI_Allreduce(MPI_IN_PLACE, globals::acounter, globals::nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   }
 
   // double deltaV = pow(grid::wid_init * globals::time_step[nts].mid/globals::tmin, 3.0);
   // double deltat = globals::time_step[nts].width;
   if (globals::do_rlc_est != 0) {
-    assert_always(globals::rpkt_emiss != NULL);
+    assert_always(globals::rpkt_emiss != nullptr);
     MPI_Allreduce(MPI_IN_PLACE, globals::rpkt_emiss, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
   if (globals::do_comp_est) {
-    assert_always(globals::compton_emiss != NULL);
+    assert_always(globals::compton_emiss != nullptr);
     MPI_Allreduce(MPI_IN_PLACE, globals::compton_emiss, grid::get_npts_model() * globals::EMISS_MAX, MPI_FLOAT, MPI_SUM,
                   MPI_COMM_WORLD);
   }
@@ -452,7 +452,7 @@ static bool walltime_sufficient_to_continue(const int nts, const int nts_prev, c
 
 #if CUDA_ENABLED
 void *makemanaged(void *ptr, size_t curSize) {
-  if (ptr == NULL) {
+  if (ptr == nullptr) {
     return NULL;
   }
   void *newptr;
@@ -816,7 +816,7 @@ int main(int argc, char **argv)
   struct packet *const packets = (struct packet *)calloc(MPKTS, sizeof(struct packet));
 #endif
 
-  assert_always(packets != NULL);
+  assert_always(packets != nullptr);
 
 #ifndef GIT_BRANCH
 #define GIT_BRANCH "UNKNOWN"
@@ -864,7 +864,7 @@ int main(int argc, char **argv)
 #endif
 
   globals::kappa_rpkt_cont = (struct rpkt_cont_opacity *)calloc(get_max_threads(), sizeof(struct rpkt_cont_opacity));
-  assert_always(globals::kappa_rpkt_cont != NULL);
+  assert_always(globals::kappa_rpkt_cont != nullptr);
 
   /// Using this and the global variable output_file opens and closes the output_file
   /// only once, which speeds up the simulation with a lots of output switched on (debugging).
@@ -970,7 +970,7 @@ int main(int argc, char **argv)
   printout("reserve mpi_grid_buffer_size %d space for MPI communication buffer\n", mpi_grid_buffer_size);
   // char buffer[mpi_grid_buffer_size];
   mpi_grid_buffer = static_cast<char *>(malloc(mpi_grid_buffer_size * sizeof(char)));
-  if (mpi_grid_buffer == NULL) {
+  if (mpi_grid_buffer == nullptr) {
     printout("[fatal] input: not enough memory to initialize MPI grid buffer ... abort.\n");
     abort();
   }
@@ -994,7 +994,7 @@ int main(int argc, char **argv)
 
   macroatom_open_file(my_rank);
   if (ndo > 0) {
-    assert_always(estimators_file == NULL);
+    assert_always(estimators_file == nullptr);
     snprintf(filename, 128, "estimators_%.4d.out", my_rank);
     estimators_file = fopen_required(filename, "w");
 
@@ -1111,7 +1111,7 @@ int main(int argc, char **argv)
   cudaDeviceReset();
 #endif
   // fclose(tb_file);
-  if (estimators_file != NULL) {
+  if (estimators_file != nullptr) {
     fclose(estimators_file);
   }
 

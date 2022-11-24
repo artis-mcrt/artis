@@ -8,8 +8,8 @@
 
 namespace stats {
 
-static __managed__ double *ionstats = NULL;
-static __managed__ int *eventstats = NULL;
+static __managed__ double *ionstats = nullptr;
+static __managed__ int *eventstats = nullptr;
 
 void init(void) {
   if constexpr (TRACK_ION_STATS) {

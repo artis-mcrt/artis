@@ -26,12 +26,12 @@
 const bool do_exspec = true;
 
 // threadprivate variables
-FILE *output_file = NULL;
+FILE *output_file = nullptr;
 int tid = 0;
 bool use_cellhist = false;
 bool neutral_flag = false;
-gsl_rng *rng = NULL;
-gsl_integration_workspace *gslworkspace = NULL;
+gsl_rng *rng = nullptr;
+gsl_integration_workspace *gslworkspace = nullptr;
 
 int main(int argc, char **argv) {
 #ifdef MPI_ON
@@ -118,9 +118,9 @@ int main(int argc, char **argv) {
 
   struct spec *rpkt_spectra = alloc_spectra(globals::do_emission_res);
 
-  struct spec *stokes_i = NULL;
-  struct spec *stokes_q = NULL;
-  struct spec *stokes_u = NULL;
+  struct spec *stokes_i = nullptr;
+  struct spec *stokes_q = nullptr;
+  struct spec *stokes_u = nullptr;
 
   if constexpr (POL_ON) {
     stokes_i = alloc_spectra(globals::do_emission_res);
@@ -262,15 +262,15 @@ int main(int argc, char **argv) {
 
   free_spectra(rpkt_spectra);
 
-  if (stokes_i != NULL) {
+  if (stokes_i != nullptr) {
     free_spectra(stokes_i);
   }
 
-  if (stokes_q != NULL) {
+  if (stokes_q != nullptr) {
     free_spectra(stokes_q);
   }
 
-  if (stokes_u != NULL) {
+  if (stokes_u != nullptr) {
     free_spectra(stokes_u);
   }
 

@@ -111,8 +111,8 @@ static void read_decaydata(void) {
 
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     gamma_spectra[nucindex].nlines = 0;
-    gamma_spectra[nucindex].energy = NULL;
-    gamma_spectra[nucindex].probability = NULL;
+    gamma_spectra[nucindex].energy = nullptr;
+    gamma_spectra[nucindex].probability = nullptr;
     const int z = decay::get_nuc_z(nucindex);
     const int a = decay::get_nuc_a(nucindex);
     if (z < 1) {

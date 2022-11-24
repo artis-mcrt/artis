@@ -51,7 +51,7 @@ static bool read_ratecoeff_dat(void)
 /// return true if successful or false otherwise
 {
   FILE *ratecoeff_file = fopen("ratecoeff.dat", "r");
-  if (ratecoeff_file != NULL) {
+  if (ratecoeff_file != nullptr) {
     /// Check whether current atomic data and temperature range match
     /// the precalculated rate coefficients
     bool fileisamatch = true;  // assume true until a mismatch is detected
@@ -496,7 +496,7 @@ static void precalculate_rate_coefficient_integrals(void) {
             const double sfac = calculate_sahafact(element, ion, level, upperlevel, T_e, E_threshold);
             // printout("%d %g\n",iter,T_e);
 
-            assert_always(globals::elements[element].ions[ion].levels[level].photoion_xs != NULL);
+            assert_always(globals::elements[element].ions[ion].levels[level].photoion_xs != nullptr);
             // the threshold of the first target gives nu of the first phixstable point
             gslintegration_paras intparas = {
                 .nu_edge = nu_threshold,
@@ -839,7 +839,7 @@ static void read_recombrate_file(void)
 {
   use_cellhist = false;
   FILE *recombrate_file = fopen("recombrates.txt", "r");
-  if (recombrate_file == NULL) {
+  if (recombrate_file == nullptr) {
     printout("No recombrates.txt file found. Skipping recombination rate scaling...\n");
     return;
   }

@@ -17,7 +17,7 @@
 
 namespace radfield {
 
-__managed__ static double *J_normfactor = NULL;
+__managed__ static double *J_normfactor = nullptr;
 
 __managed__ static bool initialized = false;
 
@@ -42,8 +42,8 @@ struct radfieldbin {
 };
 
 __managed__ static double radfieldbin_nu_upper[RADFIELDBINCOUNT];  // array of upper frequency boundaries of bins
-__managed__ static struct radfieldbin *radfieldbins = NULL;
-__managed__ static struct radfieldbin_solution *radfieldbin_solutions = NULL;
+__managed__ static struct radfieldbin *radfieldbins = nullptr;
+__managed__ static struct radfieldbin_solution *radfieldbin_solutions = nullptr;
 
 #ifdef MPI_ON
 MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
@@ -64,14 +64,14 @@ __managed__ static int detailed_linecount = 0;
 // array of indicies into the linelist[] array for selected lines
 __managed__ static int *detailed_lineindicies;
 
-__managed__ static struct Jb_lu_estimator **prev_Jb_lu_normed = NULL;  // value from the previous timestep
-__managed__ static struct Jb_lu_estimator **Jb_lu_raw = NULL;  // unnormalised estimator for the current timestep
+__managed__ static struct Jb_lu_estimator **prev_Jb_lu_normed = nullptr;  // value from the previous timestep
+__managed__ static struct Jb_lu_estimator **Jb_lu_raw = nullptr;  // unnormalised estimator for the current timestep
 
 // ** end detailed lines
 
 #if (DETAILED_BF_ESTIMATORS_ON)
-__managed__ static float *prev_bfrate_normed = NULL;  // values from the previous timestep
-__managed__ static double *bfrate_raw = NULL;         // unnormalised estimators for the current timestep
+__managed__ static float *prev_bfrate_normed = nullptr;  // values from the previous timestep
+__managed__ static double *bfrate_raw = nullptr;         // unnormalised estimators for the current timestep
 
 // expensive debugging mode to track the contributions to each bound-free rate estimator
 #if (DETAILED_BF_ESTIMATORS_BYTYPE)
@@ -97,17 +97,17 @@ static int compare_bfrate_raw_bytype(const void *p1, const void *p2) {
 #endif
 #endif
 
-__managed__ static double *J = NULL;  // after normalisation: [ergs/s/sr/cm2/Hz]
+__managed__ static double *J = nullptr;  // after normalisation: [ergs/s/sr/cm2/Hz]
 #ifdef DO_TITER
-__managed__ static double *J_reduced_save = NULL;
+__managed__ static double *J_reduced_save = nullptr;
 #endif
 
 // J and nuJ are accumulated and then normalised in-place
 // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
 #ifndef FORCE_LTE
-__managed__ static double *nuJ = NULL;
+__managed__ static double *nuJ = nullptr;
 #ifdef DO_TITER
-__managed__ static double *nuJ_reduced_save = NULL;
+__managed__ static double *nuJ_reduced_save = nullptr;
 #endif
 #endif
 
@@ -126,7 +126,7 @@ typedef struct {
   int binindex;
 } gsl_T_R_solver_paras;
 
-static FILE *radfieldfile = NULL;
+static FILE *radfieldfile = nullptr;
 
 static inline double get_bin_nu_upper(int binindex) { return radfieldbin_nu_upper[binindex]; }
 
@@ -189,7 +189,7 @@ static void setup_bin_boundaries(void) {
 
 static void realloc_detailed_lines(const int new_size) {
   detailed_lineindicies = (int *)realloc(detailed_lineindicies, new_size * sizeof(int));
-  if (detailed_lineindicies == NULL) {
+  if (detailed_lineindicies == nullptr) {
     printout("ERROR: Not enough memory to reallocate detailed Jblue estimator line list\n");
     abort();
   }
@@ -202,7 +202,7 @@ static void realloc_detailed_lines(const int new_size) {
       Jb_lu_raw[modelgridindex] =
           (struct Jb_lu_estimator *)realloc(Jb_lu_raw[modelgridindex], new_size * sizeof(struct Jb_lu_estimator));
 
-      if (prev_Jb_lu_normed[modelgridindex] == NULL || Jb_lu_raw[modelgridindex] == NULL) {
+      if (prev_Jb_lu_normed[modelgridindex] == nullptr || Jb_lu_raw[modelgridindex] == nullptr) {
         printout("ERROR: Not enough memory to reallocate detailed Jblue estimator list for cell %d.\n", modelgridindex);
         abort();
       }
@@ -266,10 +266,10 @@ void init(int my_rank, int ndo, int ndo_nonempty)
 
   detailed_linecount = 0;
 
-  detailed_lineindicies = NULL;
+  detailed_lineindicies = nullptr;
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-    prev_Jb_lu_normed[modelgridindex] = NULL;
-    Jb_lu_raw[modelgridindex] = NULL;
+    prev_Jb_lu_normed[modelgridindex] = nullptr;
+    Jb_lu_raw[modelgridindex] = nullptr;
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
@@ -332,7 +332,7 @@ void init(int my_rank, int ndo, int ndo_nonempty)
     if (ndo_nonempty > 0) {
       char filename[128];
       snprintf(filename, 128, "radfield_%.4d.out", my_rank);
-      assert_always(radfieldfile == NULL);
+      assert_always(radfieldfile == nullptr);
       radfieldfile = fopen_required(filename, "w");
       fprintf(radfieldfile, "%8s %15s %8s %11s %11s %9s %9s %9s %9s %9s %12s\n", "timestep", "modelgridindex",
               "bin_num", "nu_lower", "nu_upper", "nuJ", "J", "J_nu_avg", "ncontrib", "T_R", "W");
@@ -421,7 +421,7 @@ void init(int my_rank, int ndo, int ndo_nonempty)
             (struct bfratecontrib **)malloc(globals::nbfcontinua * sizeof(struct bfratecontrib *));
         bfrate_raw_bytype_size[modelgridindex] = (int *)malloc(globals::nbfcontinua * sizeof(int));
         for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++) {
-          bfrate_raw_bytype[modelgridindex][allcontindex] = NULL;
+          bfrate_raw_bytype[modelgridindex][allcontindex] = nullptr;
           bfrate_raw_bytype_size[modelgridindex][allcontindex] = 0.;
         }
       }
@@ -684,9 +684,9 @@ void write_to_file(int modelgridindex, int timestep) {
 #endif
 
 void close_file(void) {
-  if (radfieldfile != NULL) {
+  if (radfieldfile != nullptr) {
     fclose(radfieldfile);
-    radfieldfile = NULL;
+    radfieldfile = nullptr;
   }
 
   if (MULTIBIN_RADFIELD_MODEL_ON) {
@@ -696,7 +696,7 @@ void close_file(void) {
       MPI_Win_free(&win_radfieldbin_solutions);
     }
 #else
-    if (radfieldbin_solutions != NULL) {
+    if (radfieldbin_solutions != nullptr) {
       free(radfieldbin_solutions);
     }
 #endif
@@ -709,7 +709,7 @@ void close_file(void) {
     MPI_Win_free(&win_prev_bfrate_normed);
   }
 #else
-  if (prev_bfrate_normed != NULL) {
+  if (prev_bfrate_normed != nullptr) {
     free(prev_bfrate_normed);
   }
 #endif
@@ -721,7 +721,7 @@ void zero_estimators(int modelgridindex)
 // for a timestep
 {
 #if (DETAILED_BF_ESTIMATORS_ON)
-  assert_always(bfrate_raw != NULL);
+  assert_always(bfrate_raw != nullptr);
   if (initialized && (grid::get_numassociatedcells(modelgridindex) > 0)) {
     const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
     for (int i = 0; i < globals::nbfcontinua; i++) {
@@ -731,24 +731,24 @@ void zero_estimators(int modelgridindex)
 #endif
 
   if (DETAILED_LINE_ESTIMATORS_ON) {
-    assert_always(Jb_lu_raw != NULL);
-    assert_always(Jb_lu_raw[modelgridindex] != NULL);
+    assert_always(Jb_lu_raw != nullptr);
+    assert_always(Jb_lu_raw[modelgridindex] != nullptr);
     for (int i = 0; i < detailed_linecount; i++) {
       Jb_lu_raw[modelgridindex][i].value = 0.;
       Jb_lu_raw[modelgridindex][i].contribcount = 0.;
     }
   }
 
-  assert_always(J != NULL);
+  assert_always(J != nullptr);
   J[modelgridindex] = 0.;  // this is required even if FORCE_LTE is on
 #ifndef FORCE_LTE
-  assert_always(nuJ != NULL);
+  assert_always(nuJ != nullptr);
   nuJ[modelgridindex] = 0.;
 
   if (MULTIBIN_RADFIELD_MODEL_ON && initialized && (grid::get_numassociatedcells(modelgridindex) > 0)) {
     // printout("radfield: zeroing estimators in %d bins in cell %d\n",RADFIELDBINCOUNT,modelgridindex);
 
-    assert_always(radfieldbins != NULL);
+    assert_always(radfieldbins != nullptr);
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
       const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
       radfieldbins[mgibinindex].J_raw = 0.0;
@@ -797,7 +797,7 @@ __host__ __device__ static void update_bfestimators(const int modelgridindex, co
           bfrate_raw_bytype[modelgridindex][allcontindex] = (struct bfratecontrib *)realloc(
               bfrate_raw_bytype[modelgridindex][allcontindex], (oldlistsize + 16) * sizeof(struct bfratecontrib));
 
-          assert_always(bfrate_raw_bytype[modelgridindex][allcontindex] != NULL);
+          assert_always(bfrate_raw_bytype[modelgridindex][allcontindex] != nullptr);
         }
 
         int listindex = oldlistsize;
@@ -1375,7 +1375,7 @@ static int get_bfcontindex(const int element, const int lowerion, const int lowe
 void reset_bfrate_contributions(const int modelgridindex) {
   for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++) {
     free(bfrate_raw_bytype[modelgridindex][allcontindex]);
-    bfrate_raw_bytype[modelgridindex][allcontindex] = NULL;
+    bfrate_raw_bytype[modelgridindex][allcontindex] = nullptr;
     bfrate_raw_bytype_size[modelgridindex][allcontindex] = 0;
   }
 }
@@ -1428,7 +1428,7 @@ void print_bfrate_contributions(const int element, const int lowerion, const int
 
     // reset the list for the next timestep
     free(bfrate_raw_bytype[modelgridindex][allcontindex]);
-    bfrate_raw_bytype[modelgridindex][allcontindex] = NULL;
+    bfrate_raw_bytype[modelgridindex][allcontindex] = nullptr;
     bfrate_raw_bytype_size[modelgridindex][allcontindex] = 0;
   } else {
     printout("  no continuum index found for this bf transition\n");
@@ -1517,7 +1517,7 @@ void reduce_estimators(void)
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     const time_t sys_time_start_reduction = time(NULL);
     printout("Reducing binned radiation field estimators");
-    assert_always(radfieldbins != NULL);
+    assert_always(radfieldbins != nullptr);
 
     for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
       // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex,
