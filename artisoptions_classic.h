@@ -144,10 +144,10 @@ constexpr bool NT_SOLVE_SPENCERFANO = false;
 #define SFPTS 4096
 
 // eV
-#define SF_EMAX 16000.
+constexpr double SF_EMAX = 16000;
 
 // eV
-#define SF_EMIN 0.1
+constexpr double SF_EMIN = 0.1;
 
 // use a grid of energy points with constant spacing in log energy
 #define SF_USE_LOG_E_INCREMENT false
