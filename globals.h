@@ -329,7 +329,8 @@ extern __managed__ int nnubins;
 extern __managed__ double nu_min_r;
 extern __managed__ double nu_max_r;
 
-extern __managed__ double nusyn_min, nusyn_max;
+extern __managed__ double nusyn_min;
+extern __managed__ double nusyn_max;
 extern __managed__ int nfake_gam;
 
 extern __managed__ double opcase3_normal;
