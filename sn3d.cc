@@ -678,7 +678,7 @@ int main(int argc, char **argv)
   char filename[128];
 
   // if DETAILED_BF_ESTIMATORS_ON is true, NO_LUT_PHOTOION must be true
-  assert_always(!DETAILED_BF_ESTIMATORS_ON || !NO_LUT_PHOTOION);
+  assert_always(!DETAILED_BF_ESTIMATORS_ON || NO_LUT_PHOTOION);
 
 #ifdef VPKT_ON
   nvpkt = 0;
