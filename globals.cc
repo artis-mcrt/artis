@@ -135,7 +135,6 @@ __managed__ int itstep = -1;      /// Initial timestep's number
 __managed__ int ftstep = -1;      /// Final timestep's number
 __managed__ int nts_global = -1;  /// Current time step
 
-__managed__ int nnubins = -1;  // number of bins for spectrum
 __managed__ double nu_min_r = -1.;
 __managed__ double nu_max_r = -1.;  // limits on frequency range for r-pkt spectrum
 

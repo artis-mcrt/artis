@@ -178,7 +178,7 @@ void write_spectrum(const char *spec_filename, const char *emission_filename, co
 
   const int proccount = get_proccount();
   const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
-  for (int nnu = 0; nnu < globals::nnubins; nnu++) {
+  for (int nnu = 0; nnu < MNUBINS; nnu++) {
     fprintf(spec_file, "%g ", ((spectra->lower_freq[nnu] + (spectra->delta_freq[nnu] / 2))));
 
     for (int nts = 0; nts < numtimesteps; nts++) {
@@ -239,7 +239,7 @@ void write_specpol(const char *specpol_filename, const char *emission_filename, 
 
   const int proccount = get_proccount();
   const int ioncount = get_nelements() * get_max_nions();
-  for (int m = 0; m < globals::nnubins; m++) {
+  for (int m = 0; m < MNUBINS; m++) {
     fprintf(specpol_file, "%g ", ((stokes_i[0].lower_freq[m] + (stokes_i[0].delta_freq[m] / 2))));
 
     // Stokes I
@@ -351,10 +351,10 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
     const int nt = get_timestep(t_arrive);
     const double nu_min = spectra->nu_min;
     const double nu_max = spectra->nu_max;
-    const double dlognu = (log(nu_max) - log(nu_min)) / globals::nnubins;
+    const double dlognu = (log(nu_max) - log(nu_min)) / MNUBINS;
 
     const int nnu = (log(pkt_ptr->nu_rf) - log(nu_min)) / dlognu;
-    assert_always(nnu < globals::nnubins);
+    assert_always(nnu < MNUBINS);
 
     const double deltaE = pkt_ptr->e_rf / globals::time_step[nt].width / spectra->delta_freq[nnu] / 4.e12 / PI /
                           PARSEC / PARSEC / globals::nprocs * anglefactor;
@@ -408,7 +408,7 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
       }
 
       const int nnu_abs = (log(pkt_ptr->absorptionfreq) - log(nu_min)) / dlognu;
-      if (nnu_abs >= 0 && nnu_abs < globals::nnubins) {
+      if (nnu_abs >= 0 && nnu_abs < MNUBINS) {
         const int ioncount = get_nelements() * get_max_nions();
         const double deltaE_absorption = pkt_ptr->e_rf / globals::time_step[nt].width / spectra->delta_freq[nnu_abs] /
                                          4.e12 / PI / PARSEC / PARSEC / globals::nprocs * anglefactor;
@@ -485,16 +485,16 @@ void init_spectra(struct spec *spectra, const double nu_min, const double nu_max
   // it is all done interms of a logarithmic spacing in both t and nu - get the
   // step sizes first.
 
-  assert_always(globals::nnubins > 0);
+  assert_always(MNUBINS > 0);
 
-  const double dlognu = (log(nu_max) - log(nu_min)) / globals::nnubins;
+  const double dlognu = (log(nu_max) - log(nu_min)) / MNUBINS;
 
   spectra->nu_min = nu_min;
   spectra->nu_max = nu_max;
   spectra->do_emission_res = do_emission_res;
   assert_always(spectra->lower_freq != NULL);
   assert_always(spectra->delta_freq != NULL);
-  for (int nnu = 0; nnu < globals::nnubins; nnu++) {
+  for (int nnu = 0; nnu < MNUBINS; nnu++) {
     spectra->lower_freq[nnu] = exp(log(nu_min) + (nnu * (dlognu)));
     spectra->delta_freq[nnu] = exp(log(nu_min) + ((nnu + 1) * (dlognu))) - spectra->lower_freq[nnu];
   }
@@ -505,20 +505,20 @@ void init_spectra(struct spec *spectra, const double nu_min, const double nu_max
   const int ioncount = get_nelements() * get_max_nions();
   for (int nts = 0; nts < globals::ntstep; nts++) {
     assert_always(spectra->timesteps[nts].flux != NULL);
-    for (int nnu = 0; nnu < globals::nnubins; nnu++) {
+    for (int nnu = 0; nnu < MNUBINS; nnu++) {
       spectra->timesteps[nts].flux[nnu] = 0.0;
     }
 
     if (do_emission_res) {
       assert_always(spectra->timesteps[nts].emission != NULL);
       assert_always(spectra->timesteps[nts].trueemission != NULL);
-      for (int i = 0; i < globals::nnubins * proccount; i++) {
+      for (int i = 0; i < MNUBINS * proccount; i++) {
         spectra->timesteps[nts].emission[i] = 0;
         spectra->timesteps[nts].trueemission[i] = 0;
       }
 
       assert_always(spectra->timesteps[nts].absorption != NULL);
-      for (int i = 0; i < globals::nnubins * ioncount; i++) {
+      for (int i = 0; i < MNUBINS * ioncount; i++) {
         spectra->timesteps[nts].absorption[i] = 0;
       }
     }
@@ -530,18 +530,17 @@ static void alloc_emissionabsorption_spectra(spec *spectra) {
   const int proccount = get_proccount();
   spectra->do_emission_res = true;
 
-  mem_usage += globals::ntstep * globals::nnubins * get_nelements() * get_max_nions() * sizeof(double);
-  spectra->absorptionalltimesteps = static_cast<double *>(
-      malloc(globals::ntstep * globals::nnubins * get_nelements() * get_max_nions() * sizeof(double)));
+  mem_usage += globals::ntstep * MNUBINS * get_nelements() * get_max_nions() * sizeof(double);
+  spectra->absorptionalltimesteps =
+      static_cast<double *>(malloc(globals::ntstep * MNUBINS * get_nelements() * get_max_nions() * sizeof(double)));
   assert_always(spectra->absorptionalltimesteps != NULL);
 
-  mem_usage += 2 * globals::ntstep * globals::nnubins * proccount * sizeof(double);
-  spectra->emissionalltimesteps =
-      static_cast<double *>(malloc(globals::ntstep * globals::nnubins * proccount * sizeof(double)));
+  mem_usage += 2 * globals::ntstep * MNUBINS * proccount * sizeof(double);
+  spectra->emissionalltimesteps = static_cast<double *>(malloc(globals::ntstep * MNUBINS * proccount * sizeof(double)));
   assert_always(spectra->emissionalltimesteps != NULL);
 
   spectra->trueemissionalltimesteps =
-      static_cast<double *>(malloc(globals::ntstep * globals::nnubins * proccount * sizeof(double)));
+      static_cast<double *>(malloc(globals::ntstep * MNUBINS * proccount * sizeof(double)));
   assert_always(spectra->trueemissionalltimesteps != NULL);
 
   for (int nts = 0; nts < globals::ntstep; nts++) {
@@ -550,18 +549,18 @@ static void alloc_emissionabsorption_spectra(spec *spectra) {
     assert_always(spectra->timesteps[nts].trueemission == NULL);
 
     spectra->timesteps[nts].absorption =
-        &spectra->absorptionalltimesteps[nts * globals::nnubins * get_nelements() * get_max_nions()];
+        &spectra->absorptionalltimesteps[nts * MNUBINS * get_nelements() * get_max_nions()];
 
-    spectra->timesteps[nts].emission = &spectra->emissionalltimesteps[nts * globals::nnubins * proccount];
+    spectra->timesteps[nts].emission = &spectra->emissionalltimesteps[nts * MNUBINS * proccount];
 
-    spectra->timesteps[nts].trueemission = &spectra->trueemissionalltimesteps[nts * globals::nnubins * proccount];
+    spectra->timesteps[nts].trueemission = &spectra->trueemissionalltimesteps[nts * MNUBINS * proccount];
 
     assert_always(spectra->timesteps[nts].absorption != NULL);
     assert_always(spectra->timesteps[nts].emission != NULL);
     assert_always(spectra->timesteps[nts].trueemission != NULL);
   }
   printout("[info] mem_usage: allocated set of emission/absorption spectra occupying total of %.3f MB (nnubins %d)\n",
-           mem_usage / 1024. / 1024., globals::nnubins);
+           mem_usage / 1024. / 1024., MNUBINS);
 }
 
 struct spec *alloc_spectra(const bool do_emission_res) {
@@ -571,18 +570,18 @@ struct spec *alloc_spectra(const bool do_emission_res) {
   mem_usage += globals::ntstep * sizeof(struct spec);
 
   spectra->do_emission_res = false;  // might be set true later by alloc_emissionabsorption_spectra
-  spectra->lower_freq = static_cast<float *>(malloc(globals::nnubins * sizeof(float)));
-  spectra->delta_freq = static_cast<float *>(malloc(globals::nnubins * sizeof(float)));
+  spectra->lower_freq = static_cast<float *>(malloc(MNUBINS * sizeof(float)));
+  spectra->delta_freq = static_cast<float *>(malloc(MNUBINS * sizeof(float)));
 
   spectra->timesteps = static_cast<struct timestepspec *>(malloc(globals::ntstep * sizeof(struct timestepspec)));
   mem_usage += globals::ntstep * sizeof(struct timestepspec);
 
-  spectra->fluxalltimesteps = static_cast<double *>(malloc(globals::ntstep * globals::nnubins * sizeof(double)));
-  mem_usage += globals::ntstep * globals::nnubins * sizeof(double);
+  spectra->fluxalltimesteps = static_cast<double *>(malloc(globals::ntstep * MNUBINS * sizeof(double)));
+  mem_usage += globals::ntstep * MNUBINS * sizeof(double);
 
-  assert_always(globals::nnubins > 0);
+  assert_always(MNUBINS > 0);
   for (int nts = 0; nts < globals::ntstep; nts++) {
-    spectra->timesteps[nts].flux = &spectra->fluxalltimesteps[nts * globals::nnubins];
+    spectra->timesteps[nts].flux = &spectra->fluxalltimesteps[nts * MNUBINS];
 
     spectra->timesteps[nts].absorption = NULL;
     spectra->timesteps[nts].emission = NULL;
@@ -590,7 +589,7 @@ struct spec *alloc_spectra(const bool do_emission_res) {
   }
 
   printout("[info] mem_usage: allocated set of spectra occupying total of %.3f MB (nnubins %d)\n",
-           mem_usage / 1024. / 1024., globals::nnubins);
+           mem_usage / 1024. / 1024., MNUBINS);
 
   if (do_emission_res) {
     alloc_emissionabsorption_spectra(spectra);
@@ -622,17 +621,17 @@ void add_to_spec_res(const struct packet *const pkt_ptr, int current_abin, struc
 #ifdef MPI_ON
 static void mpi_reduce_spectra(int my_rank, struct spec *spectra, int numtimesteps) {
   for (int n = 0; n < numtimesteps; n++) {
-    MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra->timesteps[n].flux, spectra->timesteps[n].flux, globals::nnubins,
+    MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra->timesteps[n].flux, spectra->timesteps[n].flux, MNUBINS,
                MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
     if (spectra->do_emission_res) {
       const int proccount = get_proccount();
       MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra->timesteps[n].absorption, spectra->timesteps[n].absorption,
-                 globals::nnubins * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+                 MNUBINS * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
       MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra->timesteps[n].emission, spectra->timesteps[n].emission,
-                 globals::nnubins * proccount, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+                 MNUBINS * proccount, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
       MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra->timesteps[n].trueemission, spectra->timesteps[n].trueemission,
-                 globals::nnubins * proccount, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+                 MNUBINS * proccount, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     }
   }
 }
@@ -647,7 +646,6 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
   double *gamma_light_curve_lumcmf = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
 
   TRACE_EMISSION_ABSORPTION_REGION_ON = false;
-  globals::nnubins = MNUBINS;  // 1000;  /// frequency bins for spectrum
 
   bool do_emission_res = WRITE_PARTIAL_EMISSIONABSORPTIONSPEC ? globals::do_emission_res : false;
 

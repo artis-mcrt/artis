@@ -114,8 +114,6 @@ int main(int argc, char **argv) {
   const int npkts_loaded = load_allrank_packets ? globals::nprocs_exspec * globals::npkts : globals::npkts;
   struct packet *pkts = static_cast<struct packet *>(malloc(npkts_loaded * sizeof(struct packet)));
 
-  globals::nnubins = MNUBINS;  // 1000;  /// frequency bins for spectrum
-
   init_spectrum_trace();  // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
 
   struct spec *rpkt_spectra = alloc_spectra(globals::do_emission_res);
