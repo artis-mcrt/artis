@@ -351,7 +351,7 @@ static void mpi_reduce_estimators(int my_rank, int nts) {
   }
   if (globals::do_comp_est) {
     assert_always(globals::compton_emiss != NULL);
-    MPI_Allreduce(MPI_IN_PLACE, globals::compton_emiss, grid::get_npts_model() * EMISS_MAX, MPI_FLOAT, MPI_SUM,
+    MPI_Allreduce(MPI_IN_PLACE, globals::compton_emiss, grid::get_npts_model() * globals::EMISS_MAX, MPI_FLOAT, MPI_SUM,
                   MPI_COMM_WORLD);
   }
 

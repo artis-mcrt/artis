@@ -1823,10 +1823,12 @@ void input(int rank)
 
   globals::emiss_offset = lindex_min;
   globals::emiss_max = lindex_max - lindex_min + 1;
-  printout("emiss_max using %d of a possible %d\n", globals::emiss_max, EMISS_MAX);
+  printout("emiss_max using %d of a possible %d\n", globals::emiss_max, globals::EMISS_MAX);
 
-  if (globals::emiss_max > EMISS_MAX) {
-    printout("Too many points needed for emissivities. Use smaller frequency range or increase EMISS_MAX. Abort.\n");
+  if (globals::emiss_max > globals::EMISS_MAX) {
+    printout(
+        "Too many points needed for emissivities. Use smaller frequency range or increase globals::EMISS_MAX. "
+        "Abort.\n");
     abort();
   }
 }

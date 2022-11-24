@@ -1262,7 +1262,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       if (cell_len_scale_a < mps[tid]) {
         mps[tid] = cell_len_scale_a;
       }
-      const double cell_len_scale_b = 0.1 / grid::get_rho(mgi) / GREY_OP;
+      const double cell_len_scale_b = 0.1 / grid::get_rho(mgi) / globals::GREY_OP;
       if (cell_len_scale_b < mps[tid]) {
         mps[tid] = cell_len_scale_b;
       }

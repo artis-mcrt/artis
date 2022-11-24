@@ -102,9 +102,9 @@ void compton_emiss_cont(const struct packet *pkt_ptr, double dist) {
       printout("scarily bad error here! %d %d\n", lindex, globals::emiss_offset);
     } else {
       const int cellindex = pkt_ptr->where;
-      safeadd(
-          globals::compton_emiss[grid::get_cell_modelgridindex(cellindex) * EMISS_MAX + lindex - globals::emiss_offset],
-          emiss_cont);
+      safeadd(globals::compton_emiss[grid::get_cell_modelgridindex(cellindex) * globals::EMISS_MAX + lindex -
+                                     globals::emiss_offset],
+              emiss_cont);
     }
   }
 }
@@ -126,8 +126,9 @@ void pp_emiss_cont(const struct packet *pkt_ptr, double dist) {
   //  This will all be done later
 
   const int cellindex = pkt_ptr->where;
-  safeadd(globals::compton_emiss[grid::get_cell_modelgridindex(cellindex) * EMISS_MAX + globals::emiss_max - 1],
-          1.e-20 * emiss_cont);
+  safeadd(
+      globals::compton_emiss[grid::get_cell_modelgridindex(cellindex) * globals::EMISS_MAX + globals::emiss_max - 1],
+      1.e-20 * emiss_cont);
 
   //  printf("emiss_cont %g\n", emiss_cont);
 
@@ -161,7 +162,7 @@ void zero_estimators(void) {
       }
 #endif
       for (int m = 0; m < globals::emiss_max; m++) {
-        globals::compton_emiss[n * EMISS_MAX + m] = 0.0;
+        globals::compton_emiss[n * globals::EMISS_MAX + m] = 0.0;
       }
 
       globals::rpkt_emiss[n] = 0.0;
@@ -170,7 +171,7 @@ void zero_estimators(void) {
 }
 
 void normalise_compton_estimators(const int nts) {
-  double dfreq[EMISS_MAX];
+  double dfreq[globals::EMISS_MAX];
 
   const double time_factor = 1. / pow(globals::time_step[nts].mid / globals::tmin, 3.0) / globals::time_step[nts].width;
 
@@ -187,14 +188,14 @@ void normalise_compton_estimators(const int nts) {
   for (int n = 0; n < grid::get_npts_model(); n++) {
     const double volume = grid::vol_init_modelcell(n);
     for (int m = 0; m < globals::emiss_max; m++) {
-      globals::compton_emiss[n * EMISS_MAX + m] =
-          globals::compton_emiss[n * EMISS_MAX + m] * time_factor / volume / globals::nprocs;
+      globals::compton_emiss[n * globals::EMISS_MAX + m] =
+          globals::compton_emiss[n * globals::EMISS_MAX + m] * time_factor / volume / globals::nprocs;
 
       if (m < globals::emiss_max - 1)
       // (emiss_max - 1) contains the pair production case so it doesn't need the nne nor the dfreq
       {
-        globals::compton_emiss[n * EMISS_MAX + m] =
-            globals::compton_emiss[n * EMISS_MAX + m] * grid::get_nne(n) * dfreq[m];
+        globals::compton_emiss[n * globals::EMISS_MAX + m] =
+            globals::compton_emiss[n * globals::EMISS_MAX + m] * grid::get_nne(n) * dfreq[m];
       }
     }
   }
@@ -231,7 +232,7 @@ void write_compton_estimators(int nts) {
         float dum;
         assert_always(fread(&dum, sizeof(float), 1, est_file) == 1);
         // fscanf(est_file, "%g", &dum);
-        globals::compton_emiss[n * EMISS_MAX + m] += dum;
+        globals::compton_emiss[n * globals::EMISS_MAX + m] += dum;
       }
     }
     fclose(est_file);
@@ -241,7 +242,7 @@ void write_compton_estimators(int nts) {
 
   for (int n = 0; n < grid::get_npts_model(); n++) {
     for (int m = 0; m < globals::emiss_max; m++) {
-      fwrite(&globals::compton_emiss[n * EMISS_MAX + m], sizeof(float), 1, est_file);
+      fwrite(&globals::compton_emiss[n * globals::EMISS_MAX + m], sizeof(float), 1, est_file);
     }
   }
   fclose(est_file);

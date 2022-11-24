@@ -658,18 +658,18 @@ static void calculate_kappagrey(void) {
     if (get_rhoinit(mgi) > 0) {
       double kappa = 0.;
       if (globals::opacity_case == 0) {
-        kappa = GREY_OP;
+        kappa = globals::GREY_OP;
       } else if (globals::opacity_case == 1) {
-        kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 * mfeg / mtot_input) + 0.1);
+        kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * globals::GREY_OP / ((0.9 * mfeg / mtot_input) + 0.1);
       } else if (globals::opacity_case == 2) {
-        const double opcase2_normal = GREY_OP * rho_sum / ((0.9 * fe_sum) + (0.1 * (ngrid - empty_cells)));
+        const double opcase2_normal = globals::GREY_OP * rho_sum / ((0.9 * fe_sum) + (0.1 * (ngrid - empty_cells)));
         kappa = opcase2_normal / get_rhoinit(mgi) * ((0.9 * get_ffegrp(mgi)) + 0.1);
       } else if (globals::opacity_case == 3) {
-        globals::opcase3_normal = GREY_OP * rho_sum / opcase3_sum;
+        globals::opcase3_normal = globals::GREY_OP * rho_sum / opcase3_sum;
         kappa = get_kappagrey(mgi) * globals::opcase3_normal;
       } else if (globals::opacity_case == 4) {
         /// kappagrey used for initial grey approximation in this case
-        kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 * mfeg / mtot_input) + 0.1);
+        kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * globals::GREY_OP / ((0.9 * mfeg / mtot_input) + 0.1);
         // kappa = SIGMA_T;
       } else if (globals::opacity_case == 5) {
         // electron-fraction-dependent opacities
@@ -1696,7 +1696,7 @@ void read_ejecta_model(void) {
 
   globals::coordmax[0] = globals::coordmax[1] = globals::coordmax[2] = globals::rmax;
 
-  globals::compton_emiss = static_cast<float *>(malloc((get_npts_model() + 1) * EMISS_MAX * sizeof(float)));
+  globals::compton_emiss = static_cast<float *>(malloc((get_npts_model() + 1) * globals::EMISS_MAX * sizeof(float)));
   globals::rpkt_emiss = static_cast<double *>(calloc((get_npts_model() + 1), sizeof(double)));
 
 #if (!NO_LUT_PHOTOION)
