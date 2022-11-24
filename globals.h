@@ -67,10 +67,9 @@ struct groundphixslist {
 };
 
 struct phixslist {
-#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-  double *groundcont_gamma_contr;
-#endif
-  double *kappa_bf_sum;
+  double *groundcont_gamma_contr = nullptr;  // for either NO_LUT_PHOTOION = false or NO_LUT_BFHEATING = false
+  double *kappa_bf_sum = nullptr;
+
 #if (DETAILED_BF_ESTIMATORS_ON)
   double *gamma_contr;
 #endif
