@@ -901,6 +901,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
 }
 
 static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, const double estimator_normfactor) {
+  assert_always(!NO_LUT_PHOTOION || !NO_LUT_BFHEATING);
   if constexpr (!NO_LUT_PHOTOION) {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
