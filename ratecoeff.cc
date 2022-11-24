@@ -649,16 +649,14 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
   //    get_element(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), upperionlevel,
   //    lower, 1e8 * CLIGHT / nu_selected, 1e8 * CLIGHT / nu_threshold, nu_selected / nu_threshold, zrand);
 
-  constexpr double intaccuracy = CONTINUUM_NU_INTEGRAL_ACCURACY;  /// Fractional accuracy of the integrator
-
   const double deltanu = (nu_max_phixs - nu_threshold) / npieces;
   double error;
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
   double total_alpha_sp = 0.;
-  gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS31,
-                      gslworkspace, &total_alpha_sp, &error);
+  gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY, GSLWSIZE,
+                      GSL_INTEG_GAUSS31, gslworkspace, &total_alpha_sp, &error);
 
   double alpha_sp_old = total_alpha_sp;
   double alpha_sp = total_alpha_sp;
@@ -669,8 +667,8 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
     const double xlow = nu_threshold + i * deltanu;
 
     // Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-    gsl_integration_qag(&F_alpha_sp, xlow, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS31, gslworkspace,
-                        &alpha_sp, &error);
+    gsl_integration_qag(&F_alpha_sp, xlow, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY, GSLWSIZE, GSL_INTEG_GAUSS31,
+                        gslworkspace, &alpha_sp, &error);
 
     if (zrand >= alpha_sp / total_alpha_sp) break;
   }
