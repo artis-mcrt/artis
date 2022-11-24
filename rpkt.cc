@@ -428,7 +428,7 @@ __host__ __device__ static void rpkt_event_continuum(struct packet *pkt_ptr,
     // printout("[debug] rpkt_event:   bound-free: element %d, ion+1 %d, upper %d, ion %d, lower %d\n", element, ion +
     // 1, 0, ion, level); printout("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n", nu_edge, nu);
 
-    if (TRACK_ION_STATS) {
+    if constexpr (TRACK_ION_STATS) {
       stats::increment_ion_stats_contabsorption(pkt_ptr, modelgridindex, element, ion);
     }
 
@@ -439,7 +439,7 @@ __host__ __device__ static void rpkt_event_continuum(struct packet *pkt_ptr,
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 3;
 
-      if (TRACK_ION_STATS) {
+      if constexpr (TRACK_ION_STATS) {
         stats::increment_ion_stats(modelgridindex, element, ion + 1, stats::ION_MACROATOM_ENERGYIN_PHOTOION,
                                    pkt_ptr->e_cmf);
       }
@@ -484,19 +484,19 @@ __host__ __device__ static void rpkt_event_boundbound(struct packet *pkt_ptr, co
   pkt_ptr->absorptiondir[2] = pkt_ptr->dir[2];
   pkt_ptr->type = TYPE_MA;
 
-#if (TRACK_ION_STATS)
-  const int element = pkt_ptr->mastate.element;
-  const int ion = pkt_ptr->mastate.ion;
-  stats::increment_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_RADEXC, pkt_ptr->e_cmf);
+  if constexpr (TRACK_ION_STATS) {
+    const int element = pkt_ptr->mastate.element;
+    const int ion = pkt_ptr->mastate.ion;
+    stats::increment_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_RADEXC, pkt_ptr->e_cmf);
 
-  const int et = pkt_ptr->emissiontype;
-  if (et >= 0) {
-    const int emissionelement = globals::linelist[et].elementindex;
-    const int emissionion = globals::linelist[et].ionindex;
-    stats::increment_ion_stats(mgi, emissionelement, emissionion, stats::ION_BOUNDBOUND_ABSORBED,
-                               pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
+    const int et = pkt_ptr->emissiontype;
+    if (et >= 0) {
+      const int emissionelement = globals::linelist[et].elementindex;
+      const int emissionion = globals::linelist[et].ionindex;
+      stats::increment_ion_stats(mgi, emissionelement, emissionion, stats::ION_BOUNDBOUND_ABSORBED,
+                                 pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
+    }
   }
-#endif
 
 #ifdef RECORD_LINESTAT
   if (tid == 0)

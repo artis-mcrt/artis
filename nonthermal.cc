@@ -1918,14 +1918,14 @@ __host__ __device__ void do_ntlepton(struct packet *pkt_ptr) {
 
       stats::increment(stats::COUNTER_NT_STAT_TO_IONIZATION);
 
-#if (TRACK_ION_STATS)
-      assert_always(upperion < get_nions(element));
-      assert_always(lowerion >= 0);
-      const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);
-      stats::increment_ion_stats(modelgridindex, element, lowerion, stats::ION_NTION, pkt_ptr->e_cmf / epsilon_trans);
-      stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_MACROATOM_ENERGYIN_NTCOLLION,
-                                 pkt_ptr->e_cmf);
-#endif
+      if constexpr (TRACK_ION_STATS) {
+        assert_always(upperion < get_nions(element));
+        assert_always(lowerion >= 0);
+        const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);
+        stats::increment_ion_stats(modelgridindex, element, lowerion, stats::ION_NTION, pkt_ptr->e_cmf / epsilon_trans);
+        stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_MACROATOM_ENERGYIN_NTCOLLION,
+                                   pkt_ptr->e_cmf);
+      }
 
       // printout("NTLEPTON packet in cell %d selected ionization of Z=%d ionstage %d to %d\n",
       //          modelgridindex, get_element(element), get_ionstage(element, lowerion), get_ionstage(element,

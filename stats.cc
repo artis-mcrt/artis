@@ -12,14 +12,14 @@ static __managed__ double *ionstats = NULL;
 static __managed__ int *eventstats = NULL;
 
 void init(void) {
-  if (TRACK_ION_STATS) {
+  if constexpr (TRACK_ION_STATS) {
     ionstats = (double *)malloc(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT * sizeof(double));
   }
   eventstats = (int *)malloc(COUNTER_COUNT * sizeof(int));
 }
 
 void cleanup(void) {
-  if (TRACK_ION_STATS) {
+  if constexpr (TRACK_ION_STATS) {
     free(ionstats);
   }
   free(eventstats);
@@ -27,7 +27,10 @@ void cleanup(void) {
 
 __host__ __device__ void increment_ion_stats(const int modelgridindex, const int element, const int ion,
                                              enum ionstattypes ionstattype, const double increment) {
-  if (!TRACK_ION_MASTATS && (ionstattype >= 18)) {
+  if constexpr (!TRACK_ION_MASTATS) {
+    return;
+  }
+  if (ionstattype >= 18) {
     return;
   }
 

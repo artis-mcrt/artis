@@ -669,13 +669,13 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       // and then emitt the packet randomly in the comoving frame
       emitt_rpkt(pkt_ptr);
 
-#if (TRACK_ION_STATS)
-      stats::increment_ion_stats(modelgridindex, element, lowerion + 1, stats::ION_RADRECOMB_KPKT,
-                                 pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
-      const double escape_prob = get_rpkt_escape_prob(pkt_ptr, pkt_ptr->prop_time);
-      stats::increment_ion_stats(modelgridindex, element, lowerion + 1, stats::ION_RADRECOMB_ESCAPED,
-                                 pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
-#endif
+      if constexpr (TRACK_ION_STATS) {
+        stats::increment_ion_stats(modelgridindex, element, lowerion + 1, stats::ION_RADRECOMB_KPKT,
+                                   pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
+        const double escape_prob = get_rpkt_escape_prob(pkt_ptr, pkt_ptr->prop_time);
+        stats::increment_ion_stats(modelgridindex, element, lowerion + 1, stats::ION_RADRECOMB_ESCAPED,
+                                   pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
+      }
 
       pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
       stats::increment(stats::COUNTER_K_STAT_TO_R_FB);
@@ -745,7 +745,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       pkt_ptr->mastate.level = upper;
       pkt_ptr->mastate.activatingline = -99;
 
-      if (TRACK_ION_STATS) {
+      if constexpr (TRACK_ION_STATS) {
         stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLEXC, pkt_ptr->e_cmf);
       }
 
@@ -768,7 +768,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       pkt_ptr->mastate.level = upper;
       pkt_ptr->mastate.activatingline = -99;
 
-      if (TRACK_ION_STATS) {
+      if constexpr (TRACK_ION_STATS) {
         stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLION, pkt_ptr->e_cmf);
       }
 

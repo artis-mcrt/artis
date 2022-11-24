@@ -145,7 +145,7 @@ void zero_estimators(void) {
       globals::ffheatingestimator[n] = 0.;
       globals::colheatingestimator[n] = 0.;
 
-      if (TRACK_ION_STATS) {
+      if constexpr (TRACK_ION_STATS) {
         stats::reset_ion_stats(n);
       }
 

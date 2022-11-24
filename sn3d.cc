@@ -376,9 +376,9 @@ static void mpi_reduce_estimators(int my_rank, int nts) {
   globals::time_step[nts].alpha_emission /= globals::nprocs;
   globals::time_step[nts].gamma_emission /= globals::nprocs;
 
-#if TRACK_ION_STATS
-  stats::reduce_estimators();
-#endif
+  if constexpr (TRACK_ION_STATS) {
+    stats::reduce_estimators();
+  }
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -1140,7 +1140,7 @@ int main(int argc, char **argv)
   }
 
   free(packets);
-  if (TRACK_ION_STATS) {
+  if constexpr (TRACK_ION_STATS) {
     stats::cleanup();
   }
 

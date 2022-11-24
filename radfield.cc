@@ -1180,7 +1180,7 @@ void fit_parameters(int modelgridindex, int timestep)
 {
   set_params_fullspec(modelgridindex, timestep);
 
-  if (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     if (J_normfactor[modelgridindex] <= 0) {
       printout("radfield: FATAL J_normfactor = %g in cell %d at call to fit_parameters", J_normfactor[modelgridindex],
                modelgridindex);
@@ -1514,7 +1514,7 @@ void reduce_estimators(void)
   }
 #endif
 
-  if (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     const time_t sys_time_start_reduction = time(NULL);
     printout("Reducing binned radiation field estimators");
     assert_always(radfieldbins != NULL);
@@ -1541,7 +1541,7 @@ void reduce_estimators(void)
     printout(" (took %d s)\n", duration_reduction);
   }
 
-  if (DETAILED_LINE_ESTIMATORS_ON) {
+  if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
     const time_t sys_time_start_reduction = time(NULL);
     printout("Reducing detailed line estimators");
 
@@ -1570,7 +1570,7 @@ void do_MPI_Bcast(const int modelgridindex, const int root, int root_node_id)
   MPI_Bcast(&J_normfactor[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
   if (grid::get_numassociatedcells(modelgridindex) > 0) {
     const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-    if (MULTIBIN_RADFIELD_MODEL_ON) {
+    if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
         const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
         if (globals::rank_in_node == 0) {
@@ -1634,7 +1634,7 @@ void write_restart_data(FILE *gridsave_file) {
   }
 #endif
 
-  if (DETAILED_LINE_ESTIMATORS_ON) {
+  if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
     fprintf(gridsave_file, "%d\n", detailed_linecount);
 
     for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
@@ -1648,7 +1648,7 @@ void write_restart_data(FILE *gridsave_file) {
       assert_testmodeonly(nonemptymgi >= 0);
       fprintf(gridsave_file, "%d %la\n", modelgridindex, J_normfactor[modelgridindex]);
 
-      if (MULTIBIN_RADFIELD_MODEL_ON) {
+      if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
           const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
           fprintf(gridsave_file, "%la %la %a %a %d\n", radfieldbins[mgibinindex].J_raw,
@@ -1658,7 +1658,7 @@ void write_restart_data(FILE *gridsave_file) {
         }
       }
 
-      if (DETAILED_LINE_ESTIMATORS_ON) {
+      if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
         for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
           fprintf(gridsave_file, "%la %d\n", Jb_lu_raw[modelgridindex][jblueindex].value,
                   Jb_lu_raw[modelgridindex][jblueindex].contribcount);
