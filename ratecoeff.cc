@@ -93,7 +93,7 @@ static bool read_ratecoeff_dat(void)
       int in_nlines;
       double in_ratecoeff_integral_accuracy;
       assert_always(fscanf(ratecoeff_file, "%la %la %d %d %la\n", &T_min, &T_max, &in_tablesize, &in_nlines,
-                           &in_ratecoeff_integral_accuracy) == 4);
+                           &in_ratecoeff_integral_accuracy) == 5);
       printout("ratecoeff_v2.dat: Tmin %g Tmax %g TABLESIZE %d nlines %d in_ratecoeff_integral_accuracy %g ", T_min,
                T_max, in_tablesize, in_nlines, in_ratecoeff_integral_accuracy);
 
