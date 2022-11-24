@@ -153,27 +153,27 @@ static bool read_ratecoeff_dat(void)
                 // assert_always(std::isfinite(bfcooling_coeff) && bfcooling_coeff >= 0);
                 globals::bfcooling_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = bfcooling_coeff;
 
-#if (!NO_LUT_PHOTOION)
-                if (corrphotoioncoeff >= 0) {
-                  globals::corrphotoioncoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] =
-                      corrphotoioncoeff;
-                } else {
-                  printout(
-                      "ERROR: NO_LUT_PHOTOION is off, but there are no corrphotoioncoeff values in ratecoeff file\n");
-                  abort();
+                if constexpr (!NO_LUT_PHOTOION) {
+                  if (corrphotoioncoeff >= 0) {
+                    globals::corrphotoioncoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] =
+                        corrphotoioncoeff;
+                  } else {
+                    printout(
+                        "ERROR: NO_LUT_PHOTOION is off, but there are no corrphotoioncoeff values in ratecoeff file\n");
+                    abort();
+                  }
                 }
-#endif
-#if (!NO_LUT_BFHEATING)
-                if (bfheating_coeff >= 0) {
-                  globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] =
-                      bfheating_coeff;
-                } else {
-                  printout(
-                      "ERROR: NO_LUT_BFHEATING is off, but there are no bfheating_coeff values in the ratecoeff "
-                      "file\n");
-                  abort();
+                if constexpr (!NO_LUT_BFHEATING) {
+                  if (bfheating_coeff >= 0) {
+                    globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] =
+                        bfheating_coeff;
+                  } else {
+                    printout(
+                        "ERROR: NO_LUT_BFHEATING is off, but there are no bfheating_coeff values in the ratecoeff "
+                        "file\n");
+                    abort();
+                  }
                 }
-#endif
               }
             }
           }
@@ -221,16 +221,9 @@ static void write_ratecoeff_dat(void) {
             const double bfcooling_coeff = globals::bfcooling_coeff[bflutindex];
             fprintf(ratecoeff_file, "%g %g", alpha_sp, bfcooling_coeff);
 
-#if (!NO_LUT_PHOTOION)
-            const double corrphotoioncoeff = globals::corrphotoioncoeff[bflutindex];
-#else
-            const double corrphotoioncoeff = -1.0;
-#endif
-#if (!NO_LUT_BFHEATING)
-            const double bfheating_coeff = globals::bfheating_coeff[bflutindex];
-#else
-            const double bfheating_coeff = -1.0;
-#endif
+            const double corrphotoioncoeff = NO_LUT_PHOTOION ? -1 : globals::corrphotoioncoeff[bflutindex];
+            const double bfheating_coeff = NO_LUT_BFHEATING ? -1 : globals::bfheating_coeff[bflutindex];
+
             fprintf(ratecoeff_file, " %g %g\n", corrphotoioncoeff, bfheating_coeff);
           }
         }
@@ -299,11 +292,11 @@ static double alpha_sp_E_integrand_gsl(const double nu, void *const voidparas)
   return x;
 }*/
 
-#if (!NO_LUT_PHOTOION)
 static double gammacorr_integrand_gsl(const double nu, void *const voidparas)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
+  assert_testmodeonly(!NO_LUT_PHOTOION);
   const gslintegration_paras *const params = (gslintegration_paras *)voidparas;
 
   const float T = params->T;
@@ -316,15 +309,15 @@ static double gammacorr_integrand_gsl(const double nu, void *const voidparas)
   /// Assumption T_e = T_R makes n_kappa/n_i * (n_i/n_kappa)* = 1
   return sigma_bf * ONEOVERH / nu * radfield::dbb(nu, T, 1) * (1 - exp(-HOVERKB * nu / T));
 }
-#endif
 
-#if (!NO_LUT_BFHEATING)
 static double approx_bfheating_integrand_gsl(const double nu, void *const voidparas)
 /// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
 /// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
+  assert_testmodeonly(!NO_LUT_BFHEATING);
+
   const gslintegration_paras *const params = (gslintegration_paras *)voidparas;
 
   const float T = params->T;
@@ -347,7 +340,6 @@ static double approx_bfheating_integrand_gsl(const double nu, void *const voidpa
 
   return x;
 }
-#endif
 
 /*double bfheating_integrand_gsl(double nu, void *paras)
 /// Integrand to calculate the modified rate coefficient for photoionization
@@ -564,42 +556,42 @@ static void precalculate_rate_coefficient_integrals(void) {
             //   (integral %g, sahafac %g)\n", element, ion, level, upperlevel, T_e, alpha_sp, alpha_sp/(FOURPI * sfac *
             //   phixstargetprobability),sfac);
 
-#if (!NO_LUT_PHOTOION)
-            double gammacorr = 0.0;
-            const gsl_function F_gammacorr = {.function = &gammacorr_integrand_gsl, .params = &intparas};
+            if constexpr (!NO_LUT_PHOTOION) {
+              double gammacorr = 0.0;
+              const gsl_function F_gammacorr = {.function = &gammacorr_integrand_gsl, .params = &intparas};
 
-            status = gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY,
-                                         GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &gammacorr, &error);
-            if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
-              printout("gammacorr integrator status %d. Integral value %9.3e +/- %9.3e\n", status, gammacorr, error);
+              status = gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY,
+                                           GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &gammacorr, &error);
+              if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning)) {
+                printout("gammacorr integrator status %d. Integral value %9.3e +/- %9.3e\n", status, gammacorr, error);
+              }
+              gammacorr *= FOURPI * phixstargetprobability;
+              assert_always(gammacorr >= 0);
+              if (gammacorr < 0) {
+                printout("WARNING: gammacorr was negative for level %d\n", level);
+                gammacorr = 0;
+              }
+              globals::corrphotoioncoeff[bflutindex] = gammacorr;
             }
-            gammacorr *= FOURPI * phixstargetprobability;
-            assert_always(gammacorr >= 0);
-            if (gammacorr < 0) {
-              printout("WARNING: gammacorr was negative for level %d\n", level);
-              gammacorr = 0;
-            }
-            globals::corrphotoioncoeff[bflutindex] = gammacorr;
-#endif
 
-#if (!NO_LUT_BFHEATING)
-            double bfheating_coeff = 0.0;
-            const gsl_function F_bfheating = {.function = &approx_bfheating_integrand_gsl, .params = &intparas};
+            if constexpr (!NO_LUT_BFHEATING) {
+              double bfheating_coeff = 0.0;
+              const gsl_function F_bfheating = {.function = &approx_bfheating_integrand_gsl, .params = &intparas};
 
-            status = gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY,
-                                         GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &bfheating_coeff, &error);
+              status = gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY,
+                                           GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &bfheating_coeff, &error);
 
-            if (status != 0 && (status != 18 || (error / bfheating_coeff) > epsrelwarning)) {
-              printout("bfheating_coeff integrator status %d. Integral value %9.3e +/- %9.3e\n", status,
-                       bfheating_coeff, error);
+              if (status != 0 && (status != 18 || (error / bfheating_coeff) > epsrelwarning)) {
+                printout("bfheating_coeff integrator status %d. Integral value %9.3e +/- %9.3e\n", status,
+                         bfheating_coeff, error);
+              }
+              bfheating_coeff *= FOURPI * phixstargetprobability;
+              if (bfheating_coeff < 0) {
+                printout("WARNING: bfheating_coeff was negative for level %d\n", level);
+                bfheating_coeff = 0;
+              }
+              globals::bfheating_coeff[bflutindex] = bfheating_coeff;
             }
-            bfheating_coeff *= FOURPI * phixstargetprobability;
-            if (bfheating_coeff < 0) {
-              printout("WARNING: bfheating_coeff was negative for level %d\n", level);
-              bfheating_coeff = 0;
-            }
-            globals::bfheating_coeff[bflutindex] = bfheating_coeff;
-#endif
 
             double bfcooling_coeff = 0.0;
             const gsl_function F_bfcooling = {.function = &bfcooling_integrand_gsl, .params = &intparas};
@@ -820,13 +812,13 @@ static void scale_level_phixs(const int element, const int ion, const int level,
       for (int iter = 0; iter < TABLESIZE; iter++) {
         globals::spontrecombcoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
 
-#if (!NO_LUT_PHOTOION)
-        globals::corrphotoioncoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
-#endif
+        if constexpr (!NO_LUT_PHOTOION) {
+          globals::corrphotoioncoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
+        }
 
-#if (!NO_LUT_BFHEATING)
-        globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
-#endif
+        if constexpr (!NO_LUT_BFHEATING) {
+          globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
+        }
 
         globals::bfcooling_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
       }
@@ -1036,8 +1028,8 @@ void ratecoefficients_init(void)
   precalculate_ion_alpha_sp();
 }
 
-#if (!NO_LUT_PHOTOION)
 double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T) {
+  assert_always(!NO_LUT_PHOTOION);
   const int lowerindex = floor(log(T / MINTEMP) / T_step_log);
   if (lowerindex < TABLESIZE - 1) {
     const int upperindex = lowerindex + 1;
@@ -1057,6 +1049,7 @@ double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixst
 double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 /// Returns the for stimulated emission corrected photoionisation rate coefficient.
 {
+  assert_always(!NO_LUT_PHOTOION);
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
   /// correction may be evaluated at T_R!
@@ -1065,7 +1058,6 @@ double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstarge
 
   return W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
 }
-#endif
 
 static double integrand_stimrecombination_custom_radfield(const double nu, void *voidparas) {
   {
@@ -1292,20 +1284,20 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
     }
 #else
     {
-#if (NO_LUT_PHOTOION)
-      gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
-#else
-      const double W = grid::get_W(modelgridindex);
-      const double T_R = grid::get_TR(modelgridindex);
+      if constexpr (NO_LUT_PHOTOION) {
+        gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
+      } else {
+        const double W = grid::get_W(modelgridindex);
+        const double T_R = grid::get_TR(modelgridindex);
 
-      gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
-      const int index_in_groundlevelcontestimator =
-          globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
-      if (index_in_groundlevelcontestimator >= 0) {
-        gammacorr *= globals::corrphotoionrenorm[modelgridindex * get_nelements() * get_max_nions() +
-                                                 index_in_groundlevelcontestimator];
+        gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
+        const int index_in_groundlevelcontestimator =
+            globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
+        if (index_in_groundlevelcontestimator >= 0) {
+          gammacorr *= globals::corrphotoionrenorm[modelgridindex * get_nelements() * get_max_nions() +
+                                                   index_in_groundlevelcontestimator];
+        }
       }
-#endif
     }
 #endif
     if (use_cellhist) {
