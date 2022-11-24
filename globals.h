@@ -216,11 +216,11 @@ extern __managed__ double syn_dir[3];  // vector pointing from origin to observe
 
 extern __managed__ struct time *time_step;
 
-#define MSYN_TIME 100
+constexpr int MSYN_TIME = 100;
 extern __managed__ int nsyn_time;
 extern __managed__ double time_syn[MSYN_TIME];
 
-#define EMISS_MAX 2
+constexpr int EMISS_MAX = 2;
 extern __managed__ int emiss_offset;
 extern __managed__ int emiss_max;
 
@@ -260,7 +260,7 @@ extern __managed__ int do_rlc_est;
 
 extern __managed__ double gamma_grey;
 
-#define GREY_OP 0.1
+constexpr double GREY_OP = 0.1;
 
 extern __managed__ double max_path_step;
 

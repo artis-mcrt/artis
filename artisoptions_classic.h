@@ -74,8 +74,8 @@ constexpr bool TRACK_ION_STATS = false;
 constexpr bool TRACK_ION_MASTATS = false;
 
 // Minimum cell density. Below cells are treated as empty.
-#define MINDENSITY 1e-40
-#define MINPOP 1e-30
+constexpr double MINDENSITY = 1e-40;
+constexpr double MINPOP = 1e-30;
 
 // lower frequency boundary for UVOIR spectra and BB sampling
 constexpr double NU_MIN_R = 1e14;
@@ -141,7 +141,7 @@ constexpr bool NT_ON = false;
 constexpr bool NT_SOLVE_SPENCERFANO = false;
 
 // number of energy points in the Spencer-Fano solution vector
-#define SFPTS 4096
+constexpr int SFPTS = 4096;
 
 // eV
 constexpr double SF_EMAX = 16000;
