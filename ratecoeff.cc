@@ -87,13 +87,18 @@ static bool read_ratecoeff_dat(void)
     }
 
     if (fileisamatch) {
-      float T_min, T_max;
+      double T_min;
+      double T_max;
       int in_tablesize;
       int in_nlines;
-      assert_always(fscanf(ratecoeff_file, "%g %g %d %d\n", &T_min, &T_max, &in_tablesize, &in_nlines) == 4);
-      printout("ratecoeff_v2.dat: Tmin %g Tmax %g TABLESIZE %d nlines %d ", T_min, T_max, in_tablesize, in_nlines);
+      double in_ratecoeff_integral_accuracy;
+      assert_always(fscanf(ratecoeff_file, "%la %la %d %d %la\n", &T_min, &T_max, &in_tablesize, &in_nlines,
+                           &in_ratecoeff_integral_accuracy) == 4);
+      printout("ratecoeff_v2.dat: Tmin %g Tmax %g TABLESIZE %d nlines %d in_ratecoeff_integral_accuracy %g ", T_min,
+               T_max, in_tablesize, in_nlines, in_ratecoeff_integral_accuracy);
 
-      if (T_min == MINTEMP && T_max == MAXTEMP && in_tablesize == TABLESIZE && in_nlines == globals::nlines) {
+      if (T_min == MINTEMP && T_max == MAXTEMP && in_tablesize == TABLESIZE && in_nlines == globals::nlines &&
+          in_ratecoeff_integral_accuracy == RATECOEFF_INTEGRAL_ACCURACY) {
         printout("(pass)\n");
         // this is redundant if the adata and composition data matches, but have
         // to read through to maintain consistency with older files
@@ -121,8 +126,10 @@ static bool read_ratecoeff_dat(void)
           }
         }
       } else {
-        printout("\nMISMATCH: this simulation has MINTEMP %g MAXTEMP %g TABLESIZE %d nlines %d\n", MINTEMP, MAXTEMP,
-                 TABLESIZE, globals::nlines);
+        printout(
+            "\nMISMATCH: this simulation has MINTEMP %g MAXTEMP %g TABLESIZE %d nlines %d "
+            "RATECOEFF_INTEGRAL_ACCURACY %g\n",
+            MINTEMP, MAXTEMP, TABLESIZE, globals::nlines, RATECOEFF_INTEGRAL_ACCURACY);
         fileisamatch = false;
       }
     }
@@ -197,7 +204,7 @@ static void write_ratecoeff_dat(void) {
   fprintf(ratecoeff_file, "%32s\n", adatafile_hash);
   fprintf(ratecoeff_file, "%32s\n", compositionfile_hash);
   fprintf(ratecoeff_file, "%32s\n", phixsfile_hash);
-  fprintf(ratecoeff_file, "%g %g %d %d\n", MINTEMP, MAXTEMP, TABLESIZE, globals::nlines);
+  fprintf(ratecoeff_file, "%la %la %d %d %la\n", MINTEMP, MAXTEMP, TABLESIZE, globals::nlines, RATECOEFF_INTEGRAL_ACCURACY;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {

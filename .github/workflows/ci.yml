@@ -152,8 +152,8 @@ jobs:
               # if: matrix.testname == 'classicmode' && matrix.testmode != 'ON'
               uses: actions/cache@v3
               with:
-                  path: tests/${{ matrix.testname }}_testrun/ratecoeff_v2.dat
-                  key: tests/${{ matrix.testname }}_testrun/ratecoeff_v2.dat
+                  path: tests/${{ matrix.testname }}_testrun/ratecoeff_v2.dat-exact
+                  key: tests/${{ matrix.testname }}_testrun/ratecoeff_v2.dat-exact
 
             - name: Cache test atomic data
               uses: actions/cache@v3
