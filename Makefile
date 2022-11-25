@@ -1,14 +1,9 @@
-GIT_VERSION := $(shell git describe --dirty --always --tags)
-GIT_HASH := $(shell git rev-parse HEAD)
-GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 .DEFAULT_GOAL := all
-SYSNAME := $(shell uname -s)
-
 BUILD_DIR = build/$(shell uname -m)
 
 CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -g -flto=auto
 
-ifeq ($(SYSNAME),Darwin)
+ifeq ($(shell uname -s),Darwin)
 	# macOS
 
 	# march=native also works on Apple Silicon with Clang >=15
@@ -159,9 +154,10 @@ exspec: version.h artisoptions.h $(exspec_objects) Makefile
 .PHONY: clean version.h TESTMODE TESTMODEON
 
 version.h:
-	@echo "constexpr const char* GIT_VERSION = \"$(GIT_VERSION)\";" > version.h
-	@echo "constexpr const char* GIT_HASH = \"$(GIT_HASH)\";" >> version.h
-	@echo "constexpr const char* GIT_BRANCH = \"$(GIT_BRANCH)\";" >> version.h
+	@echo "constexpr const char* GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";" > version.h
+	@echo "constexpr const char* GIT_HASH = \"$(shell git rev-parse HEAD)\";" >> version.h
+	@echo "constexpr const char* GIT_BRANCH = \"$(shell git branch --show-current)\";" >> version.h
+	@echo "constexpr const char* GIT_STATUS = \"$(shell git status --short)\";" >> version.h
 
 clean:
 	rm -rf sn3d exspec build version.h *.o *.d
