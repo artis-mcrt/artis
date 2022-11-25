@@ -1453,17 +1453,17 @@ static void setup_phixs_list(void) {
     globals::phixslist[itid].kappa_bf_sum = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
     assert_always(globals::phixslist[itid].kappa_bf_sum != nullptr);
 
-#if (DETAILED_BF_ESTIMATORS_ON)
-    globals::phixslist[itid].gamma_contr = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
-    assert_always(globals::phixslist[itid].gamma_contr != nullptr);
-#endif
+    if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+      globals::phixslist[itid].gamma_contr = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
+      assert_always(globals::phixslist[itid].gamma_contr != nullptr);
+    }
 
     for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++) {
       globals::phixslist[itid].kappa_bf_sum[allcontindex] = 0.;
 
-#if (DETAILED_BF_ESTIMATORS_ON)
-      globals::phixslist[itid].gamma_contr[allcontindex] = 0.;
-#endif
+      if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+        globals::phixslist[itid].gamma_contr[allcontindex] = 0.;
+      }
     }
 
     printout("[info] mem_usage: phixslist[tid].kappa_bf_contr for thread %d occupies %.3f MB\n", itid,
