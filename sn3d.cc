@@ -60,7 +60,11 @@ int mpi_grid_buffer_size = 0;
 char *mpi_grid_buffer = nullptr;
 
 static void initialise_linestat_file(void) {
-  // transition line list is now always written, but statistics parts only if RECORD_LINESTAT == true
+  if (globals::simulation_continued_from_saved && !RECORD_LINESTAT) {
+    // only write linestat.out on the first run, unless it contains statistics for each timestep
+    return;
+  }
+
   linestat_file = fopen_required("linestat.out", "w");
 
   for (int i = 0; i < globals::nlines; i++) fprintf(linestat_file, "%g ", CLIGHT / globals::linelist[i].nu);
