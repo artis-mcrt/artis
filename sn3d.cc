@@ -60,6 +60,7 @@ int mpi_grid_buffer_size = 0;
 char *mpi_grid_buffer = nullptr;
 
 static void initialise_linestat_file(void) {
+  // transition line list is now always written, but statistics parts only if RECORD_LINESTAT == true
   linestat_file = fopen_required("linestat.out", "w");
 
   for (int i = 0; i < globals::nlines; i++) fprintf(linestat_file, "%g ", CLIGHT / globals::linelist[i].nu);
@@ -342,8 +343,6 @@ static void mpi_reduce_estimators(int my_rank, int nts) {
     MPI_Allreduce(MPI_IN_PLACE, globals::acounter, globals::nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   }
 
-  // double deltaV = pow(grid::wid_init * globals::time_step[nts].mid/globals::tmin, 3.0);
-  // double deltat = globals::time_step[nts].width;
   if (globals::do_rlc_est != 0) {
     assert_always(globals::rpkt_emiss != nullptr);
     MPI_Allreduce(MPI_IN_PLACE, globals::rpkt_emiss, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);

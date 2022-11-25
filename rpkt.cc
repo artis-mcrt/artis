@@ -648,11 +648,7 @@ __host__ __device__ static void rpkt_event_boundbound(struct packet *pkt_ptr, co
   }
 
   if constexpr (RECORD_LINESTAT) {
-    if (tid == 0) globals::acounter[pkt_ptr->next_trans - 1] += 1;
-    /// This way we will only record line statistics from OMP-thread 0
-    /// With an atomic pragma or a thread-private structure with subsequent
-    /// reduction this could be extended to all threads. However, I'm not
-    /// sure if this is worth the additional computational expenses.
+    safeincrement(globals::acounter[pkt_ptr->next_trans - 1]);
   }
 }
 
