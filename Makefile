@@ -159,9 +159,9 @@ exspec: version.h artisoptions.h $(exspec_objects) Makefile
 .PHONY: clean version.h TESTMODE TESTMODEON
 
 version.h:
-	@echo "#define GIT_VERSION \"$(GIT_VERSION)\"" > version.h
-	@echo "#define GIT_HASH \"$(GIT_HASH)\"" >> version.h
-	@echo "#define GIT_BRANCH \"$(GIT_BRANCH)\"" >> version.h
+	@echo "constexpr const char* GIT_VERSION = \"$(GIT_VERSION)\";" > version.h
+	@echo "constexpr const char* GIT_HASH = \"$(GIT_HASH)\";" >> version.h
+	@echo "constexpr const char* GIT_BRANCH = \"$(GIT_BRANCH)\";" >> version.h
 
 clean:
 	rm -rf sn3d exspec build version.h *.o *.d
