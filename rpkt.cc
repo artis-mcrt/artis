@@ -1321,9 +1321,9 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
           }
         }
 
-#if (DETAILED_BF_ESTIMATORS_ON)
-        globals::phixslist[tid].gamma_contr[i] = sigma_bf * probability * corrfactor;
-#endif
+        if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+          globals::phixslist[tid].gamma_contr[i] = sigma_bf * probability * corrfactor;
+        }
 
         if (!std::isfinite(kappa_bf_contr)) {
           printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf_contr %g ... abort\n",
@@ -1344,24 +1344,24 @@ __host__ __device__ double calculate_kappa_bf_gammacontr(const int modelgridinde
       } else {
         // ignore this particular process
         globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
-#if (DETAILED_BF_ESTIMATORS_ON)
-        globals::phixslist[tid].gamma_contr[i] = 0.;
-#endif
+        if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+          globals::phixslist[tid].gamma_contr[i] = 0.;
+        }
       }
     } else  // no element present or not an important level
     {
       globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
-#if (DETAILED_BF_ESTIMATORS_ON)
-      globals::phixslist[tid].gamma_contr[i] = 0.;
-#endif
+      if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+        globals::phixslist[tid].gamma_contr[i] = 0.;
+      }
     }
   }
 
   for (; i < globals::nbfcontinua; i++) {
     globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
-#if (DETAILED_BF_ESTIMATORS_ON)
-    globals::phixslist[tid].gamma_contr[i] = 0.;
-#endif
+    if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+      globals::phixslist[tid].gamma_contr[i] = 0.;
+    }
   }
   return kappa_bf_sum;
 }
