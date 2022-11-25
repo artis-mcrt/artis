@@ -820,14 +820,8 @@ int main(int argc, char **argv)
 
   assert_always(packets != nullptr);
 
-#ifndef GIT_BRANCH
-#define GIT_BRANCH "UNKNOWN"
-#endif
   printout("ARTIS git branch %s\n", GIT_BRANCH);
 
-#ifndef GIT_VERSION
-#define GIT_VERSION "UNKNOWN"
-#endif
   printout("Current version: %s\n", GIT_VERSION);
 
   // printout("Hash of most recent commit: %s\n",GIT_HASH);

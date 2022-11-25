@@ -12,11 +12,6 @@
 #include "sn3d.h"
 #include "update_grid.h"
 
-// default option if not specified
-#ifndef LTEPOP_EXCITATIONTEMPERATURE
-#define LTEPOP_EXCITATIONTEMPERATURE grid::get_Te(modelgridindex)
-#endif
-
 double nne_solution_f(double x, void *paras)
 /// For libgsl bracketing type solver
 /// provides the equation which has to be solved to obtain the electron number
