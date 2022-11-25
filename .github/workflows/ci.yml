@@ -123,7 +123,7 @@ jobs:
             fail-fast: false
 
         runs-on: ${{ matrix.os }}
-        name: ${{ matrix.testname }} MPI${{ matrix.testmode == 'ON' && ' testmode ON' || ''}}
+        name: ${{ matrix.testname }} ${{ matrix.testmode == 'ON' && ' testmode ON' || ''}}
 
         steps:
             - uses: actions/checkout@v3
@@ -152,7 +152,7 @@ jobs:
               # if: matrix.testname == 'classicmode' && matrix.testmode != 'ON'
               uses: actions/cache@v3
               with:
-                  path: tests/${{ matrix.testname }}_testrun/ratecoeff_v2.dat-exact
+                  path: tests/${{ matrix.testname }}_testrun/ratecoeff_v2.dat
                   key: tests/${{ matrix.testname }}_testrun/ratecoeff_v2.dat-exact
 
             - name: Cache test atomic data
