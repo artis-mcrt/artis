@@ -12,6 +12,7 @@ fac4b146b6c893e34959dc14d6f81c5a  packets00_0000.out
 5c1a73c92f1e586977c51097aa68341c  packets00_0001.out
 768ae409f333fa59415a6a9c9d86c2d4  spec.out
 8e7163982f1aa938dc1505478b8c60d1  timesteps.out
+f971dfa7783cba5e435378dc097611fa  ratecoeff_v2.dat
 e86f0d099235227ccfc4db6ea3d6b384  job0/estimators_0000.out
 8fe9b3e562393e386d5e61c7993eaad1  job0/nlte_0000.out
 1c4b1ccb2ea3bd56f3ef976e4dce870e  job0/nonthermalspec_0000.out
