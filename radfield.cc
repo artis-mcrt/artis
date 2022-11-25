@@ -375,8 +375,7 @@ void init(int my_rank, int ndo, int ndo_nonempty)
     printout("The radiation field model is a full-spectrum fit to a single dilute blackbody TR & W.\n");
   }
 
-#if (DETAILED_BF_ESTIMATORS_ON)
-  {
+  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
 #ifdef MPI_ON
     {
       int my_rank_cells = nonempty_npts_model / globals::node_nprocs;
@@ -409,12 +408,11 @@ void init(int my_rank, int ndo, int ndo_nonempty)
     }
 #endif
   }
-#endif
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
-#if (DETAILED_BF_ESTIMATORS_ON && DETAILED_BF_ESTIMATORS_BYTYPE)
-      {
+#if (DETAILED_BF_ESTIMATORS_BYTYPE)
+      if constexpr (DETAILED_BF_ESTIMATORS_ON) {
         bfrate_raw_bytype[modelgridindex] =
             (struct bfratecontrib **)malloc(globals::nbfcontinua * sizeof(struct bfratecontrib *));
         bfrate_raw_bytype_size[modelgridindex] = (int *)malloc(globals::nbfcontinua * sizeof(int));
@@ -428,10 +426,7 @@ void init(int my_rank, int ndo, int ndo_nonempty)
       zero_estimators(modelgridindex);
 
       if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-#ifdef MPI_ON
-        if (globals::rank_in_node == 0)
-#endif
-        {
+        if (globals::rank_in_node == 0) {
           const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
           for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
             const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
@@ -464,17 +459,6 @@ void initialise_prev_titer_photoionestimators(void) {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++) {
-        //  double ionpot,Alpha_sp,sw_ratio,Gamma;
-        // ionpot = epsilon(element,ion+1,0) - epsilon(element,ion,0);
-        // Alpha_sp = interpolate_ions_spontrecombcoeff(element,ion,T_e);
-        // sw_ratio = stat_weight(element,ion+1,0)/stat_weight(element,ion,0);
-        // Gamma = Alpha_sp * sw_ratio / SAHACONST * pow(T_e,1.5) * exp(-ionpot/KB/T_e);
-        ////gamma_lte = interpolate_photoioncoeff_below(element,ion,0,T_e) +
-        /// interpolate_photoioncoeff_above(element,ion,0,T_e); /zeta = interpolate_zeta(element,ion,T_e);
-        // gammaestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = Gamma; //gamma_lte/zeta;
-        ////globals::corrphotoionrenorm[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = 1.;
-        ////photoionestimator[n*get_nelements()*get_max_nions()+element*get_max_nions()+ion] = Gamma; //gamma_lte/zeta;
-
 #ifdef DO_TITER
         globals::gammaestimator_save[n * get_nelements() * get_max_nions() + element * get_max_nions() + ion] = -1.;
         if constexpr (!NO_LUT_BFHEATING) {
@@ -696,35 +680,35 @@ void close_file(void) {
 #endif
   }
 
-#if (DETAILED_BF_ESTIMATORS_ON)
-  free(bfrate_raw);
+  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+    free(bfrate_raw);
 #ifdef MPI_ON
-  if (win_radfieldbin_solutions != MPI_WIN_NULL) {
-    MPI_Win_free(&win_prev_bfrate_normed);
-  }
+    if (win_radfieldbin_solutions != MPI_WIN_NULL) {
+      MPI_Win_free(&win_prev_bfrate_normed);
+    }
 #else
-  if (prev_bfrate_normed != nullptr) {
-    free(prev_bfrate_normed);
+    if (prev_bfrate_normed != nullptr) {
+      free(prev_bfrate_normed);
+    }
+#endif
   }
-#endif
-#endif
 }
 
 void zero_estimators(int modelgridindex)
 // set up the new bins and clear the estimators in preparation
 // for a timestep
 {
-#if (DETAILED_BF_ESTIMATORS_ON)
-  assert_always(bfrate_raw != nullptr);
-  if (initialized && (grid::get_numassociatedcells(modelgridindex) > 0)) {
-    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-    for (int i = 0; i < globals::nbfcontinua; i++) {
-      bfrate_raw[nonemptymgi * globals::nbfcontinua + i] = 0.;
+  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+    assert_always(bfrate_raw != nullptr);
+    if (initialized && (grid::get_numassociatedcells(modelgridindex) > 0)) {
+      const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+      for (int i = 0; i < globals::nbfcontinua; i++) {
+        bfrate_raw[nonemptymgi * globals::nbfcontinua + i] = 0.;
+      }
     }
   }
-#endif
 
-  if (DETAILED_LINE_ESTIMATORS_ON) {
+  if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
     assert_always(Jb_lu_raw != nullptr);
     assert_always(Jb_lu_raw[modelgridindex] != nullptr);
     for (int i = 0; i < detailed_linecount; i++) {
@@ -754,9 +738,9 @@ void zero_estimators(int modelgridindex)
 #endif
 }
 
-#if (DETAILED_BF_ESTIMATORS_ON)
 __host__ __device__ static void update_bfestimators(const int modelgridindex, const double distance_e_cmf,
                                                     const double nu_cmf, const struct packet *const pkt_ptr) {
+  assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
   if (distance_e_cmf == 0) return;
 
   const int nbfcontinua = globals::nbfcontinua;
@@ -820,7 +804,6 @@ __host__ __device__ static void update_bfestimators(const int modelgridindex, co
     }
   }
 }
-#endif
 
 __host__ __device__ void update_estimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
                                            const struct packet *const pkt_ptr) {
@@ -829,9 +812,9 @@ __host__ __device__ void update_estimators(const int modelgridindex, const doubl
 #ifndef FORCE_LTE
   safeadd(nuJ[modelgridindex], distance_e_cmf * nu_cmf);
 
-#if (DETAILED_BF_ESTIMATORS_ON)
-  update_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr);
-#endif
+  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+    update_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr);
+  }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     // int binindex = 0;
@@ -1298,26 +1281,26 @@ __host__ __device__ void normalise_J(const int modelgridindex, const double esti
 }
 
 __host__ __device__ void normalise_bf_estimators(const int modelgridindex, const double estimator_normfactor_over_H) {
-#if (DETAILED_BF_ESTIMATORS_ON)
-  printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  assert_always(nonemptymgi >= 0);
-  for (int i = 0; i < globals::nbfcontinua; i++) {
-    const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
-    prev_bfrate_normed[mgibfindex] = bfrate_raw[mgibfindex] * estimator_normfactor_over_H;
+  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+    printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
+    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+    assert_always(nonemptymgi >= 0);
+    for (int i = 0; i < globals::nbfcontinua; i++) {
+      const int mgibfindex = nonemptymgi * globals::nbfcontinua + i;
+      prev_bfrate_normed[mgibfindex] = bfrate_raw[mgibfindex] * estimator_normfactor_over_H;
 
 #if (DETAILED_BF_ESTIMATORS_BYTYPE)
-    const int listsize = bfrate_raw_bytype_size[modelgridindex][i];
+      const int listsize = bfrate_raw_bytype_size[modelgridindex][i];
 
-    for (int j = 0; j < listsize; j++) {
-      bfrate_raw_bytype[modelgridindex][i][j].ratecontrib =
-          bfrate_raw_bytype[modelgridindex][i][j].ratecontrib * estimator_normfactor_over_H;
+      for (int j = 0; j < listsize; j++) {
+        bfrate_raw_bytype[modelgridindex][i][j].ratecontrib =
+            bfrate_raw_bytype[modelgridindex][i][j].ratecontrib * estimator_normfactor_over_H;
+      }
+
+      qsort(bfrate_raw_bytype[modelgridindex][i], listsize, sizeof(struct bfratecontrib), compare_bfrate_raw_bytype);
+#endif
     }
-
-    qsort(bfrate_raw_bytype[modelgridindex][i], listsize, sizeof(struct bfratecontrib), compare_bfrate_raw_bytype);
-#endif
   }
-#endif
 }
 
 static int get_bfcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) {
@@ -1433,19 +1416,19 @@ void print_bfrate_contributions(const int element, const int lowerion, const int
 
 double get_bfrate_estimator(const int element, const int lowerion, const int lower, const int phixstargetindex,
                             const int modelgridindex) {
-#if (!DETAILED_BF_ESTIMATORS_ON)
-  return -1;
-#else
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
-  if (allcontindex >= 0) {
-    return prev_bfrate_normed[nonemptymgi * globals::nbfcontinua + allcontindex];
-  }
+  if constexpr (!DETAILED_BF_ESTIMATORS_ON) {
+    return -1;
+  } else {
+    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+    const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
+    if (allcontindex >= 0) {
+      return prev_bfrate_normed[nonemptymgi * globals::nbfcontinua + allcontindex];
+    }
 
-  printout("no bf rate for element Z=%d ion_stage %d lower %d phixstargetindex %d\n", get_element(element),
-           get_ionstage(element, lowerion), lower, phixstargetindex);
-  return -1.;
-#endif
+    printout("no bf rate for element Z=%d ion_stage %d lower %d phixstargetindex %d\n", get_element(element),
+             get_ionstage(element, lowerion), lower, phixstargetindex);
+    return -1.;
+  }
 }
 
 #ifndef FORCE_LTE
@@ -1501,12 +1484,10 @@ void reduce_estimators(void)
   MPI_Allreduce(MPI_IN_PLACE, nuJ, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #endif
 
-#if (DETAILED_BF_ESTIMATORS_ON)
-  {
+  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     MPI_Allreduce(MPI_IN_PLACE, bfrate_raw, grid::get_nonempty_npts_model() * globals::nbfcontinua, MPI_DOUBLE, MPI_SUM,
                   MPI_COMM_WORLD);
   }
-#endif
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     const time_t sys_time_start_reduction = time(NULL);
@@ -1577,14 +1558,12 @@ void do_MPI_Bcast(const int modelgridindex, const int root, int root_node_id)
       }
     }
 
-#if (DETAILED_BF_ESTIMATORS_ON)
-    {
+    if constexpr (DETAILED_BF_ESTIMATORS_ON) {
       if (globals::rank_in_node == 0) {
         MPI_Bcast(&prev_bfrate_normed[nonemptymgi * globals::nbfcontinua], globals::nbfcontinua, MPI_FLOAT,
                   root_node_id, globals::mpi_comm_internode);
       }
     }
-#endif
 
     if (DETAILED_LINE_ESTIMATORS_ON) {
       for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
@@ -1611,8 +1590,7 @@ void write_restart_data(FILE *gridsave_file) {
     }
   }
 
-#if (DETAILED_BF_ESTIMATORS_ON)
-  {
+  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     const int nbfcontinua = globals::nbfcontinua;
     fprintf(gridsave_file, "%d\n", nbfcontinua);
 
@@ -1626,7 +1604,6 @@ void write_restart_data(FILE *gridsave_file) {
       }
     }
   }
-#endif
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
     fprintf(gridsave_file, "%d\n", detailed_linecount);
@@ -1708,8 +1685,7 @@ void read_restart_data(FILE *gridsave_file) {
     }
   }
 
-#if (DETAILED_BF_ESTIMATORS_ON)
-  {
+  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     int gridsave_nbf_in;
     assert_always(fscanf(gridsave_file, "%d\n", &gridsave_nbf_in) == 1);
     assert_always(gridsave_nbf_in == globals::nbfcontinua);
@@ -1735,7 +1711,6 @@ void read_restart_data(FILE *gridsave_file) {
       }
     }
   }
-#endif
 
   if (DETAILED_LINE_ESTIMATORS_ON) {
     int detailed_linecount_in;
