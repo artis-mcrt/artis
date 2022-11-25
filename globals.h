@@ -69,10 +69,7 @@ struct groundphixslist {
 struct phixslist {
   double *groundcont_gamma_contr = nullptr;  // for either NO_LUT_PHOTOION = false or NO_LUT_BFHEATING = false
   double *kappa_bf_sum = nullptr;
-
-#if (DETAILED_BF_ESTIMATORS_ON)
-  double *gamma_contr;
-#endif
+  double *gamma_contr = nullptr;  // needed for DETAILED_BF_ESTIMATORS_ON
 };
 
 struct phixstarget_entry {
