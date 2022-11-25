@@ -69,7 +69,6 @@ __managed__ static struct Jb_lu_estimator **Jb_lu_raw = nullptr;  // unnormalise
 
 // ** end detailed lines
 
-#if (DETAILED_BF_ESTIMATORS_ON)
 __managed__ static float *prev_bfrate_normed = nullptr;  // values from the previous timestep
 __managed__ static double *bfrate_raw = nullptr;         // unnormalised estimators for the current timestep
 
@@ -94,7 +93,6 @@ static int compare_bfrate_raw_bytype(const void *p1, const void *p2) {
   else
     return 0;
 }
-#endif
 #endif
 
 __managed__ static double *J = nullptr;  // after normalisation: [ergs/s/sr/cm2/Hz]
