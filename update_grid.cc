@@ -1482,10 +1482,6 @@ double calculate_populations(const int modelgridindex)
       } else {
         int ion;
         for (ion = 0; ion < nions - 1; ion++) {
-          // printout("element %d, ion %d, photoionest
-          // %g\n",element,ion,photoionestimator[modelgridindex*get_nelements()*get_max_nions()+element*get_max_nions()+ion]);
-          // if (photoionestimator[modelgridindex*get_nelements()*get_max_nions()+element*get_max_nions()+ion] == 0)
-          // break;
           double Gamma = 0.;
           if constexpr (NO_LUT_PHOTOION) {
             Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
@@ -1502,8 +1498,6 @@ double calculate_populations(const int modelgridindex)
         uppermost_ion = ion;
       }
 #endif
-      // printout("cell %d, element %d, uppermost_ion by Gamma is
-      // %d\n",cellnumber,element,uppermost_ion);
 
       double factor = 1.;
       int ion;
@@ -1598,8 +1592,6 @@ double calculate_populations(const int modelgridindex)
 
         if constexpr (!NO_LUT_PHOTOION) {
           for (int ion = 0; ion <= grid::get_elements_uppermost_ion(modelgridindex, element); ion++) {
-            // printout("element %d, ion %d, photoionest
-            // %g\n",element,ion,photoionestimator[modelgridindex*get_nelements()*get_max_nions()+element*get_max_nions()+ion]);
             printout("element %d, ion %d, gammaionest %g\n", element, ion,
                      globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() +
                                              element * get_max_nions() + ion]);
