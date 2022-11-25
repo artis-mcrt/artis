@@ -103,7 +103,7 @@ constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 #define DETAILED_BF_ESTIMATORS_ON false
 
 // if DETAILED_BF_ESTIMATORS_ON, then use BF estimators at the following timestep and later
-#define DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP 13
+constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 13;
 
 // extremely slow and memory consuming - for debugging only
 // not safe for MPI or OpenMP - single process and single thread only!
