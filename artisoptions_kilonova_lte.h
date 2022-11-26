@@ -100,7 +100,7 @@ constexpr double T_R_max = 250000;
 constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 // store detailed bound-free rate estimators
-#define DETAILED_BF_ESTIMATORS_ON false
+constexpr bool DETAILED_BF_ESTIMATORS_ON = false;
 
 // if DETAILED_BF_ESTIMATORS_ON, then use BF estimators at the following timestep and later
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 13;
