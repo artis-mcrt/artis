@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
   if (globals::rank_global == 0) {
     snprintf(filename, 128, "exspec.txt");
     output_file = fopen_required(filename, "w");
-    setvbuf(output_file, NULL, _IOLBF, 1);
+    setvbuf(output_file, nullptr, _IOLBF, 1);
   }
 
   // single rank only for now
@@ -189,7 +189,7 @@ int main(int argc, char **argv) {
             nesc_gamma++;
             if (a == -1) {
               add_to_lc_res(&pkts_start[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-              add_to_spec_res(&pkts_start[ii], a, gamma_spectra, NULL, NULL, NULL);
+              add_to_spec_res(&pkts_start[ii], a, gamma_spectra, nullptr, nullptr, nullptr);
             }
           }
         }
@@ -211,7 +211,7 @@ int main(int argc, char **argv) {
         write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", stokes_i, stokes_q, stokes_u);
       }
 
-      write_spectrum("gamma_spec.out", NULL, NULL, NULL, gamma_spectra, globals::ntstep);
+      write_spectrum("gamma_spec.out", nullptr, nullptr, nullptr, gamma_spectra, globals::ntstep);
 
       printout("finished angle-averaged stuff\n");
     } else {

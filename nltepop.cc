@@ -1167,7 +1167,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
     balance_vector = static_cast<double *>(calloc(nlte_size, sizeof(double)));
     assert_always(balance_vector != nullptr);
 
-    // printf("rate %p balance %p NULL %p\n", rate_matrix, balance_vector, NULL);
+    // printf("rate %p balance %p NULL %p\n", rate_matrix, balance_vector,nullptr);
     // printout("I think there are %d levels to deal with and managed to allocate memory.\n", nlte_size);
 
     double superlevel_partition = 0.0;
@@ -1399,7 +1399,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
     }
     // printout("\n");
 
-    // printout("rate %p balance %p NULL %p\n", rate_matrix, balance_vector, (void *) NULL);
+    // printout("rate %p balance %p NULL %p\n", rate_matrix, balance_vector, (void *)nullptr);
 
     gsl_matrix_view m = gsl_matrix_view_array(rate_matrix, nlte_size, nlte_size);
     gsl_permutation *p = gsl_permutation_alloc(nlte_size);
@@ -1412,7 +1412,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
     gsl_linalg_LU_solve(&m.matrix, p, &b.vector, x);  // solve matrix equation m * x = b for x (populations)
     // gsl_linalg_HH_solve (&m.matrix, &b.vector, x);
 
-    // printf("after solving: rate %p balance %p NULL %p\n", rate_matrix, balance_vector, (void *) NULL);
+    // printf("after solving: rate %p balance %p NULL %p\n", rate_matrix, balance_vector, (void *)nullptr);
 
     printout("The ground state populations were %g, %g, %g and %g\n", get_groundlevelpop(modelgridindex, element, ion),
              gsl_vector_get(x, 0), get_groundlevelpop(modelgridindex, element, ion + 1),
@@ -1531,7 +1531,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
     // printout("I freed up p\n");
     gsl_vector_free(x);
     // printout("I freed up x\n");
-    // printf("rate %p balane %p NULL %p\n", rate_matrix, balance_vector, NULL);
+    // printf("rate %p balane %p NULL %p\n", rate_matrix, balance_vector,nullptr);
 
     free(rate_matrix);
     // printout("I freed up rate_matrix\n");

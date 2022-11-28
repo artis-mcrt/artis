@@ -85,7 +85,7 @@ static void initialise_linestat_file(void) {
   fprintf(linestat_file, "\n");
 
   fflush(linestat_file);
-  // setvbuf(linestat_file, NULL, _IOLBF, 1); // flush after every line makes it slow!
+  // setvbuf(linestat_file,nullptr, _IOLBF, 1); // flush after every line makes it slow!
 }
 
 static void write_deposition_file(const int nts, const int my_rank, const int nstart, const int ndo) {
@@ -767,7 +767,7 @@ int main(int argc, char **argv)
     snprintf(filename, 128, "output_%d-%d.txt", my_rank, tid);
     output_file = fopen_required(filename, "w");
     /// Makes sure that the output_file is written line-by-line
-    setvbuf(output_file, NULL, _IOLBF, 1);
+    setvbuf(output_file, nullptr, _IOLBF, 1);
     globals::startofline[tid] = true;
 
 #ifdef _OPENMP
@@ -793,7 +793,7 @@ int main(int argc, char **argv)
     switch (opt) {
       case 'w': {
         printout("Command line argument specifies wall time hours '%s', setting ", optarg);
-        const float walltimehours = strtof(optarg, NULL);
+        const float walltimehours = strtof(optarg, nullptr);
         walltimelimitseconds = walltimehours * 3600;
         printout("walltimelimitseconds = %d\n", walltimelimitseconds);
         break;
@@ -801,7 +801,7 @@ int main(int argc, char **argv)
 
         // case 'p':
         //   printout("Command line argument specifies number of packets '%s', setting ", optarg);
-        //   npkts = (int) strtol(optarg, NULL, 10);
+        //   npkts = (int) strtol(optarg,nullptr, 10);
         //   printout("npkts = %d\n", npkts);
         //   break;
 
@@ -874,7 +874,7 @@ int main(int argc, char **argv)
   /*
   output_file = fopen_required("output.txt", "w");
   /// Makes sure that the output_file is written line-by-line
-  setvbuf(output_file, NULL, _IOLBF, 1);
+  setvbuf(output_file,nullptr, _IOLBF, 1);
   */
 
   /*
@@ -883,7 +883,7 @@ int main(int argc, char **argv)
 
   // snprintf(filename, 128, "tb%.4d.txt", my_rank);
   //(tb_file = fopen_required(filename, "w");
-  // setvbuf(tb_file, NULL, _IOLBF, 1);
+  // setvbuf(tb_file,nullptr, _IOLBF, 1);
 
   // printout("CELLHISTORYSIZE %d\n",CELLHISTORYSIZE);
 

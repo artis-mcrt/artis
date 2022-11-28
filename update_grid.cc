@@ -1220,7 +1220,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
       // don't pass pointer to heatingcoolingrates because current populations and rates weren't
       // used to determine T_e
-      kpkt::calculate_cooling_rates(mgi, NULL);
+      kpkt::calculate_cooling_rates(mgi, nullptr);
 
       printout("calculate_kpkt_rates for cell %d timestep %d took %ld seconds\n", mgi, nts,
                time(nullptr) - sys_time_start_calc_kpkt_rates);

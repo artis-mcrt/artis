@@ -2169,7 +2169,7 @@ void update_parameterfile(int nts)
   std::string line;
 
   // FILE *input_file = fopen_required("input.txt", "r+");
-  // setvbuf(input_file, NULL, _IOLBF, 0);
+  // setvbuf(input_file,nullptr, _IOLBF, 0);
 
   char c_line[1024];
   int noncomment_linenum = -1;
