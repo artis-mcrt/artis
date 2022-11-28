@@ -488,19 +488,8 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
   /// don't calculate cooling rates after each cell crossings anylonger
   /// but only if we really get a kpkt and they hadn't been calculated already
-  // if (globals::cellhistory[tid].totalcooling == COOLING_UNDEFINED)
-  /*  int ondemand = 1;
-    if (grid::modelgrid[modelgridindex].totalcooling == COOLING_UNDEFINED)
-    {
-      //printout("initial calculation of all cooling rates\n");
-      coolingratecalccounter++;
-      ondemand = 0;
-      calculate_kpkt_rates(modelgridindex);
-    }*/
-  // printout("totalcooling %g\n",grid::modelgrid[modelgridindex].totalcooling );
 
   // printout("[debug] do_kpkt: propagate k-pkt\n");
-  // double cut = 0.99; //1.;
 
   const float T_e = grid::get_Te(modelgridindex);
   double deltat = 0.;
