@@ -978,12 +978,12 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
       // store the NLTE level populations
       const int nlte_start = globals::elements[element].ions[ion].first_nlte;
-      double solution_ion_pop = 0.0;
+      // double solution_ion_pop = 0.0;
       for (int level = 1; level <= nlevels_nlte; level++) {
         const int index = get_nlte_vector_index(element, ion, level);
         grid::modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] =
             gsl_vector_get(popvec, index) / grid::get_rho(modelgridindex);
-        solution_ion_pop += gsl_vector_get(popvec, index);
+        // solution_ion_pop += gsl_vector_get(popvec, index);
       }
 
       // store the superlevel population if there is one
@@ -1000,7 +1000,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
         // stored population is already divided by the partfunc, so just multiply it by the superlevel_boltzmann to get
         // the population of a level in the SL
 
-        solution_ion_pop += gsl_vector_get(popvec, index_sl);
+        // solution_ion_pop += gsl_vector_get(popvec, index_sl);
       }
       // printout("    I had a ground level pop of %g, a part fn of %g and therefore an ion pop of %g\n",
       //          grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
@@ -1015,7 +1015,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
       // store the ground level population
       grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = gsl_vector_get(popvec, index_gs);
-      solution_ion_pop += gsl_vector_get(popvec, index_gs);
+      // solution_ion_pop += gsl_vector_get(popvec, index_gs);
 
       precalculate_partfuncts(modelgridindex);
 
