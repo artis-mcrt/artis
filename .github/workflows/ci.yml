@@ -65,7 +65,7 @@ jobs:
               id: cache-testatomicdata
               with:
                   path: tests/atomicdata_feconi.tar.xz
-                  key: tests/atomicdata_feconi.tar.xz-${{ hashFiles('tests/atomicdata_feconi.tar.xz') }}
+                  key: tests/atomicdata_feconi.tar.xz-${{ github.sha }}
                   restore-keys: |
                       tests/atomicdata_feconi.tar.xz-
 
