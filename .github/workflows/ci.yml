@@ -65,9 +65,7 @@ jobs:
               id: cache-testatomicdata
               with:
                   path: tests/atomicdata_feconi.tar.xz
-                  key: tests/atomicdata_feconi.tar.xz-${{ github.sha }}
-                  restore-keys: |
-                      tests/atomicdata_feconi.tar.xz-
+                  key: tests/atomicdata_feconi.tar.xz
 
             - name: Download/extract test data
               working-directory: tests/
