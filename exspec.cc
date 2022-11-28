@@ -80,14 +80,14 @@ int main(int argc, char **argv) {
   assert_always(globals::rank_global == 0);
   assert_always(globals::nprocs == 1);
 
-  const time_t sys_time_start = time(NULL);
+  const time_t sys_time_start = time(nullptr);
 
   printout("Begining do_exspec.\n");
 
   /// Get input stuff
-  printout("time before input %ld\n", time(NULL));
+  printout("time before input %ld\n", time(nullptr));
   input(globals::rank_global);
-  printout("time after input %ld\n", time(NULL));
+  printout("time after input %ld\n", time(nullptr));
   // nprocs_exspec is the number of rank output files to process with expec
   // however, we might be running exspec with 1 or just a few ranks
   globals::nprocs = globals::nprocs_exspec;
@@ -279,7 +279,7 @@ int main(int argc, char **argv) {
   free(pkts);
   decay::cleanup();
 
-  printout("exspec finished at %ld (tstart + %ld seconds)\n", time(NULL), time(NULL) - sys_time_start);
+  printout("exspec finished at %ld (tstart + %ld seconds)\n", time(nullptr), time(nullptr) - sys_time_start);
   fclose(output_file);
 
 #ifdef MPI_ON

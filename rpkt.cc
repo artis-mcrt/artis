@@ -1099,7 +1099,7 @@ __host__ __device__ double get_rpkt_escape_prob(struct packet *pkt_ptr, const do
     // escape prob in thick cell is zero
     return 0.;
   }
-  const time_t sys_time_start_escape_prob = time(NULL);
+  const time_t sys_time_start_escape_prob = time(nullptr);
 
   const double pkt_radius = vec_len(startpos);
   const double rmaxnow = globals::rmax * tstart / globals::tmin;
@@ -1124,7 +1124,7 @@ __host__ __device__ double get_rpkt_escape_prob(struct packet *pkt_ptr, const do
   }
   const double escape_prob_avg = escape_prob_sum / ndirs;
   printout("from %d random directions, average escape probability is %g (took %ld s)\n", ndirs, escape_prob_avg,
-           time(NULL) - sys_time_start_escape_prob);
+           time(nullptr) - sys_time_start_escape_prob);
 
   // reset the cell history and rpkt opacities back to values for the start point
   cellhistory_reset(mgi, false);

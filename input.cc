@@ -1083,7 +1083,7 @@ static void read_atomicdata_files(void) {
 
   printout("establish connection between transitions and sorted linelist...");
 
-  time_t time_start_establish_linelist_connections = time(NULL);
+  time_t time_start_establish_linelist_connections = time(nullptr);
   for (int lineindex = 0; lineindex < globals::nlines; lineindex++) {
     const int element = globals::linelist[lineindex].elementindex;
     const int ion = globals::linelist[lineindex].ionindex;
@@ -1108,7 +1108,7 @@ static void read_atomicdata_files(void) {
       }
     }
   }
-  printout("took %ds\n", time(NULL) - time_start_establish_linelist_connections);
+  printout("took %ds\n", time(nullptr) - time_start_establish_linelist_connections);
 
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
@@ -1808,10 +1808,11 @@ void input(int rank)
   read_atomicdata();
 
 #ifdef MPI_ON
-  const time_t time_before_barrier = time(NULL);
+  const time_t time_before_barrier = time(nullptr);
   printout("barrier after read_atomicdata(): time before barrier %d, ", (int)time_before_barrier);
   MPI_Barrier(MPI_COMM_WORLD);
-  printout("time after barrier %d (waited %d seconds)\n", (int)time(NULL), (int)(time(NULL) - time_before_barrier));
+  printout("time after barrier %d (waited %d seconds)\n", (int)time(nullptr),
+           (int)(time(nullptr) - time_before_barrier));
 #endif
 
   grid::read_ejecta_model();
@@ -1899,7 +1900,7 @@ void read_parameterfile(int rank)
     pre_zseed = dum1;  // random number seed
     printout("[debug] using specified random number seed of %lu\n", pre_zseed);
   } else {
-    pre_zseed = time(NULL);
+    pre_zseed = time(nullptr);
     printout("[debug] randomly-generated random number seed is %lu\n", pre_zseed);
   }
 

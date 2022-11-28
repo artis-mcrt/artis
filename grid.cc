@@ -1820,7 +1820,7 @@ void write_grid_restart_data(const int timestep) {
   char filename[128];
   snprintf(filename, 128, "gridsave_ts%d.tmp", timestep);
 
-  const time_t sys_time_start_write_restart = time(NULL);
+  const time_t sys_time_start_write_restart = time(nullptr);
   printout("Write grid restart data to %s...", filename);
 
   FILE *gridsave_file = fopen_required(filename, "w");
@@ -1873,7 +1873,7 @@ void write_grid_restart_data(const int timestep) {
   nonthermal::write_restart_data(gridsave_file);
   nltepop_write_restart_data(gridsave_file);
   fclose(gridsave_file);
-  printout("done in %ld seconds.\n", time(NULL) - sys_time_start_write_restart);
+  printout("done in %ld seconds.\n", time(nullptr) - sys_time_start_write_restart);
 }
 
 static void assign_initial_temperatures(void)

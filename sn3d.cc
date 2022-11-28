@@ -90,7 +90,7 @@ static void initialise_linestat_file(void) {
 
 static void write_deposition_file(const int nts, const int my_rank, const int nstart, const int ndo) {
   printout("Calculating deposition rates...\n");
-  time_t time_write_deposition_file_start = time(NULL);
+  time_t time_write_deposition_file_start = time(nullptr);
   double mtot = 0.;
 
   // calculate analytical decay rates
@@ -189,7 +189,8 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
     std::rename("deposition.out.tmp", "deposition.out");
   }
 
-  printout("calculating and writing deposition.out took %ld seconds\n", time(NULL) - time_write_deposition_file_start);
+  printout("calculating and writing deposition.out took %ld seconds\n",
+           time(nullptr) - time_write_deposition_file_start);
 }
 
 #ifdef MPI_ON
@@ -425,13 +426,13 @@ static bool walltime_sufficient_to_continue(const int nts, const int nts_prev, c
 #endif
 
   // time is measured from just before packet propagation from one timestep to the next
-  const int estimated_time_per_timestep = time(NULL) - time_timestep_start;
+  const int estimated_time_per_timestep = time(nullptr) - time_timestep_start;
   printout("TIME: time between timesteps is %d seconds (measured packet prop of ts %d and update grid of ts %d)\n",
            estimated_time_per_timestep, nts_prev, nts);
 
   bool do_this_full_loop = true;
   if (walltimelimitseconds > 0) {
-    const int wallclock_used_seconds = time(NULL) - real_time_start;
+    const int wallclock_used_seconds = time(nullptr) - real_time_start;
     const int wallclock_remaining_seconds = walltimelimitseconds - wallclock_used_seconds;
     printout("TIMED_RESTARTS: Used %d of %d seconds of wall time.\n", wallclock_used_seconds, walltimelimitseconds);
 
@@ -466,7 +467,7 @@ void *makemanaged(void *ptr, size_t curSize) {
 #endif
 
 static void save_grid_and_packets(const int nts, const int my_rank, struct packet *packets) {
-  const time_t time_write_packets_file_start = time(NULL);
+  const time_t time_write_packets_file_start = time(nullptr);
   printout("time before write temporary packets file %ld\n", time_write_packets_file_start);
 
   // save packet state at start of current timestep (before propagation)
@@ -492,8 +493,8 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
   }
 #endif
 
-  printout("time after write temporary packets file %ld (took %ld seconds)\n", time(NULL),
-           time(NULL) - time_write_packets_file_start);
+  printout("time after write temporary packets file %ld (took %ld seconds)\n", time(nullptr),
+           time(nullptr) - time_write_packets_file_start);
 
   if (my_rank == 0) {
     grid::write_grid_restart_data(nts);
@@ -544,7 +545,7 @@ static bool do_timestep(const int nts, const int titer, const int my_rank, const
 
   update_grid(estimators_file, nts, nts_prev, my_rank, nstart, ndo, titer, real_time_start);
 
-  const time_t sys_time_start_communicate_grid = time(NULL);
+  const time_t sys_time_start_communicate_grid = time(nullptr);
 
 /// Each process has now updated its own set of cells. The results now need to be communicated between processes.
 #ifdef MPI_ON
@@ -552,8 +553,8 @@ static bool do_timestep(const int nts, const int titer, const int my_rank, const
                                   mpi_grid_buffer_size);
 #endif
 
-  printout("timestep %d: time after grid properties have been communicated %ld (took %ld seconds)\n", nts, time(NULL),
-           time(NULL) - sys_time_start_communicate_grid);
+  printout("timestep %d: time after grid properties have been communicated %ld (took %ld seconds)\n", nts,
+           time(nullptr), time(nullptr) - sys_time_start_communicate_grid);
 
   /// If this is not the 0th time step of the current job step,
   /// write out a snapshot of the grid properties for further restarts
@@ -562,7 +563,7 @@ static bool do_timestep(const int nts, const int titer, const int my_rank, const
     save_grid_and_packets(nts, my_rank, packets);
     do_this_full_loop = walltime_sufficient_to_continue(nts, nts_prev, walltimelimitseconds);
   }
-  time_timestep_start = time(NULL);
+  time_timestep_start = time(nullptr);
 
   // set all the estimators to zero before moving packets. This is now done
   // after update_grid so that, if requires, the gamma-ray heating estimator is known there
@@ -580,7 +581,7 @@ static bool do_timestep(const int nts, const int titer, const int my_rank, const
     // Since these are going to be needed in the next time step, we will gather all the
     // estimators together now, sum them, and distribute the results
 
-    const time_t time_communicate_estimators_start = time(NULL);
+    const time_t time_communicate_estimators_start = time(nullptr);
     mpi_reduce_estimators(my_rank, nts);
 #endif
 
@@ -605,8 +606,8 @@ static bool do_timestep(const int nts, const int titer, const int my_rank, const
     write_partial_lightcurve_spectra(my_rank, nts, packets);
 
 #ifdef MPI_ON
-    printout("timestep %d: time after estimators have been communicated %ld (took %ld seconds)\n", nts, time(NULL),
-             time(NULL) - time_communicate_estimators_start);
+    printout("timestep %d: time after estimators have been communicated %ld (took %ld seconds)\n", nts, time(nullptr),
+             time(nullptr) - time_communicate_estimators_start);
 #endif
 
     printout("During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (t=%gd)\n", nts, my_rank,
@@ -661,7 +662,7 @@ static bool do_timestep(const int nts, const int titer, const int my_rank, const
       }
 #endif
 
-      printout("time after write final packets file %ld\n", time(NULL));
+      printout("time after write final packets file %ld\n", time(nullptr));
 
       // final packets*.out have been written, so remove the temporary packets files
       // commented out because you might still want to resume the simulation
@@ -778,7 +779,7 @@ int main(int argc, char **argv)
     gslworkspace = gsl_integration_workspace_alloc(GSLWSIZE);
   }
 
-  real_time_start = time(NULL);
+  real_time_start = time(nullptr);
   printout("time at start %ld\n", real_time_start);
 
 #ifdef WALLTIMELIMITSECONDS
@@ -892,7 +893,7 @@ int main(int argc, char **argv)
     initialise_linestat_file();
   }
 
-  printout("time after input %ld\n", time(NULL));
+  printout("time after input %ld\n", time(nullptr));
   printout("timesteps %d\n", globals::ntstep);
 
   /// Precalculate the rate coefficients for spontaneous and stimulated recombination
@@ -900,14 +901,14 @@ int main(int argc, char **argv)
   /// T_R and W. W is easily factored out. For stimulated recombination we must assume
   /// T_e = T_R for this precalculation.
   /// Make this parallel ?
-  printout("time before tabulation of rate coefficients %ld\n", time(NULL));
+  printout("time before tabulation of rate coefficients %ld\n", time(nullptr));
   ratecoefficients_init();
-  printout("time after tabulation of rate coefficients %ld\n", time(NULL));
+  printout("time after tabulation of rate coefficients %ld\n", time(nullptr));
   //  abort();
 #ifdef MPI_ON
-  printout("barrier after tabulation of rate coefficients: time before barrier %ld, ", time(NULL));
+  printout("barrier after tabulation of rate coefficients: time before barrier %ld, ", time(nullptr));
   MPI_Barrier(MPI_COMM_WORLD);
-  printout("time after barrier %ld\n", time(NULL));
+  printout("time after barrier %ld\n", time(nullptr));
 #endif
 
   stats::init();
@@ -916,7 +917,7 @@ int main(int argc, char **argv)
   FILE *syn_file = fopen_required("syn_dir.txt", "w");
   fprintf(syn_file, "%g %g %g", globals::syn_dir[0], globals::syn_dir[1], globals::syn_dir[2]);
   fclose(syn_file);
-  printout("time read syn file %ld\n", time(NULL));
+  printout("time read syn file %ld\n", time(nullptr));
 
   bool terminate_early = false;
   globals::file_set = false;  // LJS: deprecate this switch?
@@ -927,7 +928,7 @@ int main(int argc, char **argv)
   if (my_rank == 0) {
     write_timestep_file();
   }
-  printout("time grid_init %ld\n", time(NULL));
+  printout("time grid_init %ld\n", time(nullptr));
   grid::grid_init(my_rank);
 
   printout("Simulation propagates %g packets per process (total %g with nprocs %d)\n", 1. * globals::npkts,
@@ -1033,9 +1034,9 @@ int main(int argc, char **argv)
   while (nts < last_loop && !terminate_early) {
     globals::nts_global = nts;
 #ifdef MPI_ON
-    //        const time_t time_before_barrier = time(NULL);
+    //        const time_t time_before_barrier = time(nullptr);
     MPI_Barrier(MPI_COMM_WORLD);
-    //        const time_t time_after_barrier = time(NULL);
+    //        const time_t time_after_barrier = time(nullptr);
     //        printout("timestep %d: time before barrier %d, time after barrier %d\n", nts, time_before_barrier,
     //        time_after_barrier);
 #endif
@@ -1105,7 +1106,7 @@ int main(int argc, char **argv)
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  printout("simulation finished at %ld\n", time(NULL));
+  printout("simulation finished at %ld\n", time(nullptr));
 #if CUDA_ENABLED
   cudaDeviceReset();
 #endif

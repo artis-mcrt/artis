@@ -817,7 +817,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     return;
   }
 
-  const time_t sys_time_start_nltesolver = time(NULL);
+  const time_t sys_time_start_nltesolver = time(nullptr);
 
   // can save memory by using a combined rate matrix at the cost of diagnostic information
   const bool individual_process_matricies = true;
@@ -1113,7 +1113,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_matrix_free(rate_matrix);
   gsl_vector_free(balance_vector);
   gsl_vector_free(pop_norm_factor_vec);
-  const int duration_nltesolver = time(NULL) - sys_time_start_nltesolver;
+  const int duration_nltesolver = time(nullptr) - sys_time_start_nltesolver;
   if (duration_nltesolver > 2) {
     printout("NLTE solver call took %d seconds\n", duration_nltesolver);
   }

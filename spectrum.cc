@@ -637,7 +637,7 @@ static void mpi_reduce_spectra(int my_rank, struct spec *spectra, int numtimeste
 #endif
 
 void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts) {
-  const time_t time_func_start = time(NULL);
+  const time_t time_func_start = time(nullptr);
 
   double *rpkt_light_curve_lum = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
   double *rpkt_light_curve_lumcmf = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
@@ -681,7 +681,7 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
   const int numtimesteps = nts + 1;  // only produce spectra and light curves up to one past nts
   assert_always(numtimesteps <= globals::ntstep);
 
-  const time_t time_mpireduction_start = time(NULL);
+  const time_t time_mpireduction_start = time(nullptr);
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
   mpi_reduce_spectra(my_rank, rpkt_spectra, numtimesteps);
@@ -695,7 +695,7 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
              MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
-  const time_t time_mpireduction_end = time(NULL);
+  const time_t time_mpireduction_end = time(nullptr);
 
   if (my_rank == 0) {
     write_light_curve("light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, numtimesteps);
@@ -713,6 +713,6 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
 #endif
 
   printout("timestep %d: Saving partial light curves and %sspectra took %lds (%lds for MPI reduction)\n", nts,
-           do_emission_res ? "emission/absorption " : "", time(NULL) - time_func_start,
+           do_emission_res ? "emission/absorption " : "", time(nullptr) - time_func_start,
            time_mpireduction_end - time_mpireduction_start);
 }

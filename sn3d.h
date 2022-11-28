@@ -41,7 +41,7 @@ extern int tid;
 template <typename... Args>
 static int printout(const char *format, Args... args) {
   if (globals::startofline[tid]) {
-    time_t now_time = time(NULL);
+    time_t now_time = time(nullptr);
     char s[32] = "";
     strftime(s, 32, "%FT%TZ", gmtime(&now_time));
     fprintf(output_file, "%s ", s);
@@ -52,7 +52,7 @@ static int printout(const char *format, Args... args) {
 
 static int printout(const char *format) {
   if (globals::startofline[tid]) {
-    time_t now_time = time(NULL);
+    time_t now_time = time(nullptr);
     char s[32] = "";
     strftime(s, 32, "%FT%TZ", gmtime(&now_time));
     fprintf(output_file, "%s ", s);
