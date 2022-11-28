@@ -56,7 +56,7 @@ jobs:
               uses: actions/cache@v3
               with:
                   path: tests/${{ matrix.testname }}_testrun/ratecoeff_v2.dat
-                  key: tests/${{ matrix.testname }}_testrun/ratecoeff_v2.dat-{{ github.sha }}
+                  key: tests/${{ matrix.testname }}_testrun/ratecoeff_v2.dat-${{ github.sha }}
                   restore-keys: |
                       tests/${{ matrix.testname }}_testrun/ratecoeff_v2.dat-
 
@@ -66,7 +66,8 @@ jobs:
               with:
                   path: tests/atomicdata_feconi.tar.xz
                   key: tests/atomicdata_feconi.tar.xz-${{ hashFiles('tests/atomicdata_feconi.tar.xz') }}
-                  restore-keys: tests/atomicdata_feconi.tar.xz-
+                  restore-keys: |
+                      tests/atomicdata_feconi.tar.xz-
 
             - name: Download/extract test data
               working-directory: tests/
