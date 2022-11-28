@@ -53,7 +53,7 @@ jobs:
                 artisoptionsfile: [artisoptions_christinenonthermal.h, artisoptions_classic.h, artisoptions_kilonova_lte.h, artisoptions_nltenebular.h]
             fail-fast: false
 
-        name: compile ${{ matrix.compiler.name }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}
+        name: compile ${{ matrix.compiler.name }}${{ matrix.mpi == 'ON' && ' MPI' || ''}} ${{ matrix.artisoptionsfile }}
         steps:
             - uses: actions/checkout@v3
 
@@ -110,7 +110,7 @@ jobs:
 
             - name: Compile
               run: |
-                  cp -v artisoptionsfile artisoptions.h
+                  cp -v ${{ matrix.artisoptionsfile }} artisoptions.h
                   make clean
                   make MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
