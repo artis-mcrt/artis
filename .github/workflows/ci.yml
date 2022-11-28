@@ -50,11 +50,18 @@ jobs:
             matrix:
                 compiler: [{name: gcc-11, cmd: g++-11}, {name: gcc-12, cmd: g++-12}, {name: clang 14, cmd: clang++}]
                 mpi: [ON, OFF]
+                artisoptionsfile: [artisoptions_christinenonthermal.h, artisoptions_classic.h, artisoptions_kilonova_lte.h, artisoptions_nltenebular.h]
             fail-fast: false
 
         name: compile ${{ matrix.compiler.name }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}
         steps:
             - uses: actions/checkout@v3
+
+            - name: Cache build output for incremental compilation
+              uses: actions/cache@v3
+              with:
+                  path: build*
+                  key: build-${{ matrix.compiler.name }}-${{ matrix.mpi-}}-${{ matrix.artisoptionsfile }}
 
             - name: CPU count
               id: cpu-count
@@ -103,12 +110,9 @@ jobs:
 
             - name: Compile
               run: |
-                  for aofile in artisoptions_*.h; do
-                    echo $aofile
-                    cp -v $aofile artisoptions.h
-                    make clean
-                    make MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
-                  done
+                  cp -v artisoptionsfile artisoptions.h
+                  make clean
+                  make MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
     testmodels:
         strategy:
