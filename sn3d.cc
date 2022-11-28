@@ -704,7 +704,7 @@ int main(int argc, char **argv)
     myGpuId = omp_tid % deviceCount;
     printf("OMP thread id %d\n", omp_tid);
 #else
-#if MPI_ON
+#ifdef MPI_ON
     const int local_rank = atoi(getenv("OMPI_COMM_WORLD_LOCAL_RANK"));
     myGpuId = local_rank % deviceCount;
     printf("local_rank %d\n", local_rank);

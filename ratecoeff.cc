@@ -1012,7 +1012,7 @@ void ratecoefficients_init(void)
   if (globals::rank_in_node == 0) {
     ratecoeff_match = read_ratecoeff_dat();
   }
-#if MPI_ON
+#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
   // rank 0 will decide if we need to regenerate rate coefficient tables
   MPI_Bcast(&ratecoeff_match, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
@@ -1022,7 +1022,7 @@ void ratecoefficients_init(void)
     precalculate_rate_coefficient_integrals();
 
     // And the master process writes them to file in a serial operation
-#if MPI_ON
+#ifdef MPI_ON
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
     if (globals::rank_global == 0) {

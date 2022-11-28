@@ -81,7 +81,7 @@ endif
 
 ifeq ($(MPI),ON)
 	CXX = mpicxx
-	CXXFLAGS += -DMPI_ON
+	CXXFLAGS += -DMPI_ON=true
 	BUILD_DIR := $(BUILD_DIR)_mpi
 endif
 
