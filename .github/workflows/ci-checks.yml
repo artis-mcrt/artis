@@ -1,0 +1,112 @@
+---
+name: Compile and lint
+
+on:
+    push:
+        branches-ignore:
+            - classic*
+    pull_request:
+        branches-ignore:
+            - classic*
+
+jobs:
+    cppcheck:
+        runs-on: ubuntu-22.04
+
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: install dependencies
+              run: |
+                  # git status
+                  # sudo apt-get update
+                  # sudo apt-get install libgsl-dev
+                  # sudo apt install -y openmpi-bin libopenmpi-dev
+                  sudo apt-get -y install cppcheck
+
+            - name: run cppcheck
+              run: |
+                  cp artisoptions_nltenebular.h artisoptions.h
+                  cppcheck --force --language=c++ --std=c++20 .
+
+    clang-format:
+        runs-on: ubuntu-22.04
+
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Run clang-format style check
+              uses: jidicula/clang-format-action@v4.9.0
+              with:
+                  clang-format-version: '15'
+                  check-path: .
+
+    compile:
+        runs-on: ubuntu-22.04
+        strategy:
+            matrix:
+                compiler: [{name: gcc-11, cmd: g++-11}, {name: gcc-12, cmd: g++-12}, {name: clang 14, cmd: clang++}]
+                mpi: [ON, OFF]
+                artisoptionsfile: [artisoptions_christinenonthermal.h, artisoptions_classic.h, artisoptions_kilonova_lte.h, artisoptions_nltenebular.h]
+            fail-fast: false
+
+        name: compile ${{ matrix.compiler.name }}${{ matrix.mpi == 'ON' && ' MPI' || ''}} ${{ matrix.artisoptionsfile }}
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Cache build output for incremental compilation
+              uses: actions/cache@v3
+              with:
+                  path: build*
+                  key: build-${{ matrix.compiler.name }}-${{ matrix.mpi-}}-${{ matrix.artisoptionsfile }}
+
+            - name: CPU count
+              id: cpu-count
+              run: |
+                  sudo apt-get update
+                  # echo "count=$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')" >> $GITHUB_OUTPUT
+                  echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
+
+            - name: Install gcc-11
+              if: matrix.compiler.name == 'gcc-11'
+              run: |
+                  sudo apt-get install -y gcc-11 g++-11
+
+            - name: Install gcc-12
+              if: matrix.compiler.name == 'gcc-12'
+              run: |
+                  sudo apt-get install -y gcc-12 g++-12
+
+            - name: Install clang 14
+              if: matrix.compiler.name == 'clang 14'
+              run: |
+                  sudo apt-get install -y clang-14 --install-suggests
+
+            - name: install openmpi
+              if: matrix.mpi == 'ON'
+              run: |
+                  sudo apt install -y openmpi-bin libopenmpi-dev
+
+            - name: install gsl
+              run: sudo apt-get install libgsl-dev
+
+            - name: Set compiler environment variables (MPI off)
+              if: matrix.mpi == 'OFF'
+              run: echo "CXX=${{ matrix.compiler.cmd }}" >> $GITHUB_ENV
+
+            - name: Set compiler environment variables (MPI on)
+              if: matrix.mpi == 'ON'
+              run: |
+                  echo "OMPI_CXX=${{ matrix.compiler.cmd }}" >> $GITHUB_ENV
+                  echo "CXX=mpicxx" >> $GITHUB_ENV
+                  mpicxx --showme:version
+
+            - name: Show compiler version
+              run: |
+                  ${{ env.CXX }} --version
+
+            - name: Compile
+              run: |
+                  cp -v ${{ matrix.artisoptionsfile }} artisoptions.h
+                  make clean
+                  make MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
