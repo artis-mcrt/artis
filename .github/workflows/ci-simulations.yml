@@ -1,5 +1,5 @@
 ---
-name: Test Simulations
+name: CI
 
 on:
     push:

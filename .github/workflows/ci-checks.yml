@@ -58,7 +58,7 @@ jobs:
               uses: actions/cache@v3
               with:
                   path: build*
-                  key: build-${{ matrix.compiler.name }}-${{ matrix.mpi-}}-${{ matrix.artisoptionsfile }}
+                  key: build-${{ matrix.compiler.name }}-MPI${{ matrix.mpi}}-${{ matrix.artisoptionsfile }}
 
             - name: CPU count
               id: cpu-count
