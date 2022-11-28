@@ -50,7 +50,7 @@ jobs:
                 artisoptionsfile: [artisoptions_christinenonthermal.h, artisoptions_classic.h, artisoptions_kilonova_lte.h, artisoptions_nltenebular.h]
             fail-fast: false
 
-        name: compile ${{ matrix.compiler.name }}${{ matrix.mpi == 'ON' && ' MPI' || ''}} ${{ matrix.artisoptionsfile }}
+        name: ${{ matrix.compiler.name }}${{ matrix.mpi == 'ON' && ' MPI' || ''}} ${{ matrix.artisoptionsfile }}
         steps:
             - uses: actions/checkout@v3
 
