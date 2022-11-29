@@ -17,8 +17,8 @@ __host__ __device__ static double get_shellcrossdist(const double pos[3], const 
 // return -1 if there are no forward intersections (or if the intersection is tangential to the shell)
 {
   assert_always(shellradius > 0);
-  const bool debug = false;
-  if (debug) {
+  constexpr bool debug = false;
+  if constexpr (debug) {
     printout("get_shellcrossdist isinnerboundary %d\n", isinnerboundary);
     printout("shellradius %g tstart %g len(pos) %g\n", shellradius, tstart, vec_len(pos));
   }
@@ -32,7 +32,7 @@ __host__ __device__ static double get_shellcrossdist(const double pos[3], const 
   if (discriminant < 0) {
     // no intersection
     assert_always(shellradius < vec_len(pos));
-    if (debug) printout("no intersection\n");
+    if constexpr (debug) printout("no intersection\n");
     return -1;
   } else if (discriminant > 0) {
     // two intersections
