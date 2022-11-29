@@ -1980,6 +1980,7 @@ void read_parameterfile(int rank)
   }
 
   assert_always(get_noncommentline(file, line));
+  int dum1;
   std::stringstream(line) >> dum1;  // model type
   if (dum1 == 1) {
     set_model_type(grid::RHO_1D_READ);
