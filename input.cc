@@ -1893,7 +1893,7 @@ void read_parameterfile(int rank)
 
   assert_always(get_noncommentline(file, line));
 
-  int dum1;
+  long int dum1;
   std::stringstream(line) >> dum1;
 
   if (dum1 > 0) {
