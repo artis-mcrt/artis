@@ -69,7 +69,7 @@ static double integrand_bfheatingcoeff_custom_radfield(double nu, void *voidpara
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
-  // const float T_e = grid::get_Te(modelgridindex);
+  // const auto T_e = grid::get_Te(modelgridindex);
   // return sigma_bf * (1 - nu_edge/nu) * radfield::radfield(nu,modelgridindex) * (1 - Te_TR_factor * exp(-HOVERKB * nu
   // / T_e));
 
@@ -89,7 +89,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
-  // const float T_e = grid::get_Te(modelgridindex);
+  // const auto T_e = grid::get_Te(modelgridindex);
   // const double T_R = grid::get_TR(modelgridindex);
   // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
   // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);

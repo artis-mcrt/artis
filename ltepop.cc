@@ -121,7 +121,7 @@ double phi(const int element, const int ion, const int modelgridindex)
   // int element_in, ion_in, nions_in;
   // double rate_use;
 
-  const float T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
   // double T_R = grid::get_TR(modelgridindex);
 
   // double W = globals::cell[cellnumber].W;

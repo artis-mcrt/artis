@@ -1191,7 +1191,7 @@ __host__ __device__ static double calculate_kappa_ff(const int modelgridindex, c
   const double g_ff = 1;
 
   const float nne = grid::get_nne(modelgridindex);
-  const float T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
 
   double kappa_ff = 0.;
   // kappa_ffheating = 0.;

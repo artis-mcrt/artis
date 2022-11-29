@@ -422,7 +422,7 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
                                           const double t_mid, std::unique_ptr<double[]> &s_renorm,
                                           gsl_matrix *rate_matrix_rad_bb, gsl_matrix *rate_matrix_coll_bb,
                                           gsl_matrix *rate_matrix_ntcoll_bb) {
-  const float T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
   const float nne = grid::get_nne(modelgridindex);
   const int nlevels = get_nlevels(element, ion);
   // const int Z = get_element(element);
@@ -515,7 +515,7 @@ static void nltepop_matrix_add_ionisation(const int modelgridindex, const int el
                                           std::unique_ptr<double[]> &s_renorm, gsl_matrix *rate_matrix_rad_bf,
                                           gsl_matrix *rate_matrix_coll_bf) {
   assert_always(ion + 1 < get_nions(element));  // can't ionise the top ion
-  const float T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
   const float nne = grid::get_nne(modelgridindex);
   const int nionisinglevels = get_ionisinglevels(element, ion);
   const int maxrecombininglevel = get_maxrecombininglevel(element, ion + 1);
@@ -1026,7 +1026,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       //   grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
       //
       //   const double ionpot = epsilon(element,ion,0) - epsilon(element,ion-1,0);
-      //   const float T_e = grid::get_Te(modelgridindex);
+      //   const auto T_e = grid::get_Te(modelgridindex);
       //   const double partfunct_ratio = grid::modelgrid[modelgridindex].composition[element].partfunct[ion-1] /
       //   grid::modelgrid[modelgridindex].composition[element].partfunct[ion]; const double gs_g_ratio =
       //   stat_weight(element,ion-1,0) / stat_weight(element,ion,0); const double sbphi_gs = gs_g_ratio * SAHACONST *
@@ -1132,7 +1132,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
 
   double test_ratio = 0.;
 
-  const float T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
   const float nne = grid::get_nne(modelgridindex);
 
   printout(

@@ -1095,7 +1095,7 @@ static double calculate_stimrecombcoeff_integral(int element, int lowerion, int 
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
-  const float T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
   gsl_integral_paras_gammacorr intparas = {
       .nu_edge = nu_threshold,
       .photoion_xs = globals::elements[element].ions[lowerion].levels[level].photoion_xs,
@@ -1204,7 +1204,7 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
-  const float T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
 
 #if SEPARATE_STIMRECOMB
   const double departure_ratio = 0.;  // zero the stimulated recomb contribution
@@ -1372,7 +1372,7 @@ double calculate_iongamma_per_gspop(const int modelgridindex, const int element,
     return 0.;
   }
 
-  const float T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
   const float nne = grid::get_nne(modelgridindex);
 
   // double nnlowerion = 0.;

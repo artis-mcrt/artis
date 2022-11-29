@@ -57,7 +57,7 @@ __host__ __device__ static void calculate_macroatom_transitionrates(const int mo
                                                                     const int ion, const int level, const double t_mid,
                                                                     struct chlevels *const chlevel) {
   double *processrates = chlevel->processrates;
-  const float T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
   const float nne = grid::get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, ion, level);
   const double statweight = stat_weight(element, ion, level);
@@ -172,7 +172,7 @@ __host__ __device__ static double *get_transitionrates(int modelgridindex, int e
 
 __host__ __device__ static int do_macroatom_internal_down_same(int modelgridindex, int element, int ion, int level,
                                                                double t_mid, double total_internal_down_same) {
-  // const float T_e = grid::get_Te(modelgridindex);
+  // const auto T_e = grid::get_Te(modelgridindex);
   // const float nne = grid::get_nne(modelgridindex);
   // const double epsilon_current = epsilon(element, ion, level);
   const int ndowntrans = get_ndowntrans(element, ion, level);
@@ -299,7 +299,7 @@ __host__ __device__ static void do_macroatom_raddeexcitation(struct packet *pkt_
 __host__ __device__ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridindex,
                                                        const int element, int *ion, int *level,
                                                        const double rad_recomb) {
-  const float T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
   const float nne = grid::get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, *ion, *level);
   const int upperion = *ion;
@@ -383,7 +383,7 @@ __host__ __device__ static void do_macroatom_radrecomb(struct packet *pkt_ptr, c
 __host__ __device__ static void do_macroatom_ionisation(const int modelgridindex, const int element, int *ion,
                                                         int *level, const double epsilon_current,
                                                         const double internal_up_higher) {
-  const float T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
   const float nne = grid::get_nne(modelgridindex);
 
   int upper = -1;
@@ -424,7 +424,7 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
 
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = grid::get_cell_modelgridindex(cellindex);
-  const float T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
   const float nne = grid::get_nne(modelgridindex);
 
   assert_always(grid::modelgrid[modelgridindex].thick != 1);  // macroatom should not be used in thick cells
@@ -1103,7 +1103,7 @@ __host__ __device__ double col_recombination_ratecoeff(const int modelgridindex,
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     if (get_phixsupperlevel(element, upperion - 1, lower, phixstargetindex) == upper) {
       const float nne = grid::get_nne(modelgridindex);
-      const float T_e = grid::get_Te(modelgridindex);
+      const auto T_e = grid::get_Te(modelgridindex);
       const double fac1 = epsilon_trans / KB / T_e;
       const int ionstage = get_ionstage(element, upperion);
 

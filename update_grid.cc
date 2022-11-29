@@ -42,7 +42,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
                                      const struct heatingcoolingrates *heatingcoolingrates) {
   // return; disable for better performance (if estimators files are not needed)
   if (grid::get_numassociatedcells(mgi) > 0) {
-    const float T_e = grid::get_Te(mgi);
+    const auto T_e = grid::get_Te(mgi);
     const float nne = grid::get_nne(mgi);
     const double Y_e = grid::get_electronfrac(mgi);
     // fprintf(estimators_file,"%d %g %g %g %g %d
@@ -1459,7 +1459,7 @@ double calculate_populations(const int modelgridindex)
 
   /// Get temperatures
   const double T_R = grid::get_TR(modelgridindex);
-  const float T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
   const double W = grid::get_W(modelgridindex);
 
   double nne_hi = grid::get_rho(modelgridindex) / MH;

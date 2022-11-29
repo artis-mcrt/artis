@@ -87,7 +87,7 @@ __host__ __device__ void calculate_cooling_rates(const int modelgridindex,
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
 {
   const float nne = grid::get_nne(modelgridindex);
-  const float T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
 
   double C_total = 0.;
   double C_ff_all = 0.;          /// free-free creation of rpkts
@@ -171,7 +171,7 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
 /// cooling list by the strength of the individual process contribution.
 {
   const float nne = grid::get_nne(modelgridindex);
-  const float T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
   // double T_R = grid::get_TR(modelgridindex);
   // double W = grid::get_W(modelgridindex);
 
@@ -451,7 +451,7 @@ __host__ __device__ double do_kpkt_bb(struct packet *pkt_ptr)
   // double nne = globals::cell[pkt_ptr->where].nne ;
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = grid::get_cell_modelgridindex(cellindex);
-  const float T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
 
   pkt_ptr->nu_cmf = sample_planck(T_e);
   if (!std::isfinite(pkt_ptr->nu_cmf)) {
@@ -491,7 +491,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
   // printout("[debug] do_kpkt: propagate k-pkt\n");
 
-  const float T_e = grid::get_Te(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
   double deltat = 0.;
   if (nts < globals::n_kpktdiffusion_timesteps) {
     deltat = globals::kpktdiffusion_timescale * globals::time_step[nts].width;
