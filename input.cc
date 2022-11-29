@@ -815,7 +815,7 @@ static void read_atomicdata_files(void) {
       int adata_Z_in = -1;
       int ionstage = -1;
       int nlevels = 0;
-      // fscanf(adata,"%d %d %d %lg\n",&adata_Z_in,&ionstage,&nlevels,&ionpot);
+
       while (adata_Z_in != Z || ionstage != lowermost_ionstage + ion)  // skip over this ion block
       {
         if (adata_Z_in == Z) {
@@ -845,10 +845,6 @@ static void read_atomicdata_files(void) {
       // {
       //   nlevelsmax = 5;
       // }
-      // else if (adata_Z_in == 26 && ionstage == 2)
-      // {
-      //   nlevelsmax = 5;
-      // }
 
       if (nlevelsmax < 0) {
         nlevelsmax = nlevels;
@@ -862,6 +858,13 @@ static void read_atomicdata_files(void) {
             nlevelsmax, nlevels, ion, element);
         nlevelsmax = nlevels;
       }
+
+      // read the data for the levels and set up the list of possible transitions for each level
+      struct transitions *transitions =
+          static_cast<struct transitions *>(calloc(nlevelsmax, sizeof(struct transitions)));
+      assert_always(transitions != nullptr);
+
+      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, transitions);
 
       /// and proceed through the transitionlist till we match this ionstage (if it was not the neutral one)
       int transdata_Z_in = -1;
@@ -925,14 +928,6 @@ static void read_atomicdata_files(void) {
       globals::elements[element].ions[ion].levels =
           static_cast<struct levellist_entry *>(calloc(nlevelsmax, sizeof(struct levellist_entry)));
       assert_always(globals::elements[element].ions[ion].levels != nullptr);
-
-      /// now we need to readout the data for all those levels, write them to memory
-      /// and set up the list of possible transitions for each level
-      struct transitions *transitions =
-          static_cast<struct transitions *>(calloc(nlevelsmax, sizeof(struct transitions)));
-      assert_always(transitions != nullptr);
-
-      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, transitions);
 
       add_transitions_to_linelist(element, ion, nlevelsmax, transitiontable, transitions, &lineindex, temp_linelist);
 
