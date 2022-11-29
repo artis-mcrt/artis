@@ -52,15 +52,6 @@ jobs:
 
         name: ${{ matrix.compiler.name }}${{ matrix.mpi == 'ON' && ' MPI' || ''}} ${{ matrix.artisoptionsfile }}
         steps:
-            - name: Cache build output for incremental compilation
-              uses: actions/cache@v3
-              with:
-                  path: '**'
-                  key: build-${{ matrix.compiler.name }}-MPI${{ matrix.mpi}}-${{ matrix.artisoptionsfile }}-${{ github.sha }}
-                  restore-keys: |
-                      build-${{ matrix.compiler.name }}-MPI${{ matrix.mpi}}-${{ matrix.artisoptionsfile }}-
-                      build-${{ matrix.compiler.name }}-MPI${{ matrix.mpi}}-
-
             - uses: actions/checkout@v3
 
             - name: CPU count
