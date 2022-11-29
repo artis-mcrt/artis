@@ -21,7 +21,7 @@
 #include "sn3d.h"
 #include "vpkt.h"
 
-int groundstate_index_in = -1;  // starting level index in the input files
+const int groundstate_index_in = 1;  // starting level index in the input files
 
 struct transitions {
   int *to;
@@ -348,9 +348,6 @@ static void read_ion_levels(FILE *adata, const int element, const int ion, const
     int ntransitions;
     assert_always(fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex_in, &levelenergy, &statweight, &ntransitions) ==
                   4);
-    if (element == 0 && ion == 0 && level == 0) {
-      groundstate_index_in = levelindex_in;
-    }
     assert_always(levelindex_in == level + groundstate_index_in);
 
     if (level < nlevelsmax) {
