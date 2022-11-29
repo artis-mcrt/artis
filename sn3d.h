@@ -231,4 +231,15 @@ inline double rng_uniform_pos(void) {
   }
 }
 
+inline void rng_init(long int zseed) {
+  if constexpr (USE_GSL_RANDOM) {
+    rng = gsl_rng_alloc(gsl_rng_ran3);
+    gsl_rng_set(rng, zseed);
+    printout("rng is a '%s' generator\n", gsl_rng_name(rng));
+  } else {
+    printout("rng is a std::mt19937_64 generator\n");
+    stdrng = new std::mt19937_64(zseed);
+  }
+}
+
 #endif  // SN3D_H
