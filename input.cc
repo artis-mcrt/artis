@@ -859,13 +859,6 @@ static void read_atomicdata_files(void) {
         nlevelsmax = nlevels;
       }
 
-      // read the data for the levels and set up the list of possible transitions for each level
-      struct transitions *transitions =
-          static_cast<struct transitions *>(calloc(nlevelsmax, sizeof(struct transitions)));
-      assert_always(transitions != nullptr);
-
-      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, transitions);
-
       /// and proceed through the transitionlist till we match this ionstage (if it was not the neutral one)
       int transdata_Z_in = -1;
       int transdata_ionstage_in = -1;
@@ -884,6 +877,29 @@ static void read_atomicdata_files(void) {
       printout("transdata header matched: transdata_Z_in %d, transdata_ionstage_in %d, tottransitions %d\n",
                transdata_Z_in, transdata_ionstage_in, tottransitions_in_file);
       assert_always(tottransitions_in_file >= 0);
+
+      // read the data for the levels and set up the list of possible transitions for each level
+      /// store the ions data to memory and set up the ions zeta and levellist
+      globals::elements[element].ions[ion].ionstage = ionstage;
+      globals::elements[element].ions[ion].nlevels = nlevelsmax;
+      globals::elements[element].ions[ion].ionisinglevels = 0;
+      globals::elements[element].ions[ion].maxrecombininglevel = 0;
+      globals::elements[element].ions[ion].ionpot = ionpot * EV;
+      globals::elements[element].ions[ion].nlevels_groundterm = -1;
+      globals::elements[element].ions[ion].uniqueionindex = uniqueionindex;
+
+      globals::elements[element].ions[ion].Alpha_sp = static_cast<float *>(calloc(TABLESIZE, sizeof(float)));
+      assert_always(globals::elements[element].ions[ion].Alpha_sp != nullptr);
+
+      globals::elements[element].ions[ion].levels =
+          static_cast<struct levellist_entry *>(calloc(nlevelsmax, sizeof(struct levellist_entry)));
+      assert_always(globals::elements[element].ions[ion].levels != nullptr);
+
+      struct transitions *transitions =
+          static_cast<struct transitions *>(calloc(nlevelsmax, sizeof(struct transitions)));
+      assert_always(transitions != nullptr);
+
+      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, transitions);
 
       int tottransitions = tottransitions_in_file;
 
@@ -913,21 +929,6 @@ static void read_atomicdata_files(void) {
 
       read_ion_transitions(ftransitiondata, tottransitions_in_file, &tottransitions, transitiontable,
                            nlevels_requiretransitions, nlevels_requiretransitions_upperlevels, Z, ionstage);
-
-      /// store the ions data to memory and set up the ions zeta and levellist
-      globals::elements[element].ions[ion].ionstage = ionstage;
-      globals::elements[element].ions[ion].nlevels = nlevelsmax;
-      globals::elements[element].ions[ion].ionisinglevels = 0;
-      globals::elements[element].ions[ion].maxrecombininglevel = 0;
-      globals::elements[element].ions[ion].ionpot = ionpot * EV;
-      globals::elements[element].ions[ion].nlevels_groundterm = -1;
-      globals::elements[element].ions[ion].uniqueionindex = uniqueionindex;
-
-      globals::elements[element].ions[ion].Alpha_sp = static_cast<float *>(calloc(TABLESIZE, sizeof(float)));
-      assert_always(globals::elements[element].ions[ion].Alpha_sp != nullptr);
-      globals::elements[element].ions[ion].levels =
-          static_cast<struct levellist_entry *>(calloc(nlevelsmax, sizeof(struct levellist_entry)));
-      assert_always(globals::elements[element].ions[ion].levels != nullptr);
 
       add_transitions_to_linelist(element, ion, nlevelsmax, transitiontable, transitions, &lineindex, temp_linelist);
 
