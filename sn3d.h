@@ -135,6 +135,7 @@ extern __managed__ bool neutral_flag;
 extern gsl_rng *rng;  // pointer for random number generator
 extern std::mt19937_64 *stdrng;
 static std::uniform_real_distribution<double> stdrngdis(0.0, 1.0);
+
 #else
 extern __device__ void *rng;
 #endif
@@ -231,7 +232,7 @@ inline double rng_uniform_pos(void) {
   }
 }
 
-inline void rng_init(long int zseed) {
+inline void rng_init(auto zseed) {
   if constexpr (USE_GSL_RANDOM) {
     rng = gsl_rng_alloc(gsl_rng_ran3);
     gsl_rng_set(rng, zseed);
