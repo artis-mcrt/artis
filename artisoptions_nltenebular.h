@@ -228,7 +228,7 @@ constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = false;
 // setting to false is highly experimental
 constexpr bool INSTANT_PARTICLE_DEPOSITION = true;
 
-// Options for different types of timestep set_ups, only one of these can be true at one time. The hybrid timestep
+// Options for different types of timestep set-ups, only one of these can be true at one time. The hybrid timestep
 // schemes that switch between log and fixed require a transition time from one scheme to the other as well as the
 // fixed timestep width to be set. These values need to be consistent with the number of timesteps i.e. don't give
 // values that would give the same number or more more fixed timesteps than the total number of timesteps in the
@@ -247,6 +247,9 @@ constexpr double FIXED_TIMESTEP_WIDTH = 0.1;
 
 constexpr double TIMESTEP_TRANSITION_TIME = 5;
 
-constexpr bool USE_GSL_RANDOM = false;
+constexpr bool USE_GSL_RANDOM = true;
+
+// once a new gridsave and packets*.tmp have been written, don't delete the previous set
+constexpr bool KEEP_ALL_RESTART_FILES = false;
 
 #endif  // ARTISOPTIONS_H

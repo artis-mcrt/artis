@@ -22,7 +22,6 @@
 #include "grey_emissivities.h"
 #include "grid.h"
 #include "input.h"
-// #include "ltepop.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "radfield.h"
@@ -33,9 +32,6 @@
 #include "update_packets.h"
 #include "version.h"
 #include "vpkt.h"
-
-const bool KEEP_ALL_RESTART_FILES =
-    false;  // once a new gridsave and packets*.tmp have been written, don't delete the previous set
 
 const bool do_exspec = false;
 
