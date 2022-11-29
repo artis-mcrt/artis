@@ -1906,8 +1906,7 @@ void read_parameterfile(int rank)
     if constexpr (USE_GSL_RANDOM) {
       pre_zseed = time(nullptr);
     } else {
-      std::random_device rd;
-      pre_zseed = rd();
+      pre_zseed = std::random_device{}();
     }
     printout("randomly-generated random number seed is %lu\n", pre_zseed);
   }
