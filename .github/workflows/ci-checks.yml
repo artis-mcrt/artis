@@ -111,4 +111,5 @@ jobs:
             - name: Compile
               run: |
                   cp -v ${{ matrix.artisoptionsfile }} artisoptions.h
+                  find build
                   make MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
