@@ -44,6 +44,8 @@ __managed__ double min_den;  // minimum model density
 __managed__ double mtot_input;
 __managed__ double mfeg;  /// Total mass of Fe group elements in ejecta
 
+int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usually 1 or 0)
+
 __managed__ struct gridcell *cell = nullptr;
 
 static long mem_usage_nltepops = 0;
@@ -1295,7 +1297,10 @@ static void read_1d_model(void)
                &ffegrp_model, &f56ni_model, &f56co_model, &f52fe_model, &f48cr_model, &f57ni_model, &f57co_model);
 
     if (items_read == 8 || items_read == 10) {
-      assert_always(cellnumberin == mgi + 1);
+      if (mgi == 0) {
+        first_cellindex = cellnumberin;
+      }
+      assert_always(cellnumberin == mgi + first_cellindex);
 
       vout_model[mgi] = vout_kmps * 1.e5;
 
@@ -1422,22 +1427,24 @@ static void read_2d_model(void)
 
   int mgi = 0;
   while (std::getline(fmodel, line)) {
-    int cellnumin;
+    int cellnumberin;
     float cell_r_in;
     float cell_z_in;
     double rho_tmodel;
 
-    int items_read = sscanf(line.c_str(), "%d %g %g %lg", &cellnumin, &cell_r_in, &cell_z_in, &rho_tmodel);
-    assert_always(items_read == 4);
+    assert_always(sscanf(line.c_str(), "%d %g %g %lg", &cellnumberin, &cell_r_in, &cell_z_in, &rho_tmodel) == 4);
 
-    const int ncoord1 = ((cellnumin - 1) % ncoord_model[0]);
+    if (mgi == 0) {
+      first_cellindex = cellnumberin;
+    }
+    assert_always(cellnumberin == mgi + first_cellindex);
+
+    const int ncoord1 = (mgi % ncoord_model[0]);
     const double r_cylindrical = (ncoord1 + 0.5) * dcoord1;
     assert_always(fabs(cell_r_in / r_cylindrical - 1) < 1e-3);
-    const int ncoord2 = ((cellnumin - 1) / ncoord_model[0]);
+    const int ncoord2 = (mgi / ncoord_model[0]);
     const double z = -globals::vmax * t_model + ((ncoord2 + 0.5) * dcoord2);
     assert_always(fabs(cell_z_in / z - 1) < 1e-3);
-
-    assert_always(cellnumin == mgi + 1);
 
     const double rho_tmin = rho_tmodel * pow(t_model / globals::tmin, 3);
     set_rhoinit(mgi, rho_tmin);
@@ -1524,16 +1531,19 @@ static void read_3d_model(void)
   int mgi = 0;  // corresponds to model.txt index column, but zero indexed! (model.txt might be 1-indexed)
   int nonemptymgi = 0;
   while (std::getline(fmodel, line)) {
-    int mgi_in;
+    int cellnumberin;
     float cellpos_in[3];
     float rho_model;
-    int items_read =
-        sscanf(line.c_str(), "%d %g %g %g %g", &mgi_in, &cellpos_in[0], &cellpos_in[1], &cellpos_in[2], &rho_model);
+    int items_read = sscanf(line.c_str(), "%d %g %g %g %g", &cellnumberin, &cellpos_in[0], &cellpos_in[1],
+                            &cellpos_in[2], &rho_model);
     assert_always(items_read == 5);
     // printout("cell %d, posz %g, posy %g, posx %g, rho %g, rho_init %g\n",dum1,dum3,dum4,dum5,rho_model,rho_model*
     // pow( (t_model/globals::tmin), 3.));
 
-    assert_always(mgi_in == mgi + 1);
+    if (mgi == 0) {
+      first_cellindex = cellnumberin;
+    }
+    assert_always(cellnumberin == mgi + first_cellindex);
 
     if (mgi % (ncoord_model[1] * ncoord_model[2]) == 0) {
       printout("read up to cell mgi %d\n", mgi);
