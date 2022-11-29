@@ -46,6 +46,7 @@ __managed__ bool use_cellhist;
 __managed__ bool neutral_flag;
 #ifndef __CUDA_ARCH__
 gsl_rng *rng = nullptr;
+std::mt19937_64 *stdrng = nullptr;
 #else
 __device__ void *rng = nullptr;
 #endif

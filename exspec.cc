@@ -31,6 +31,7 @@ int tid = 0;
 bool use_cellhist = false;
 bool neutral_flag = false;
 gsl_rng *rng = nullptr;
+std::mt19937_64 *stdrng = nullptr;
 gsl_integration_workspace *gslworkspace = nullptr;
 
 int main(int argc, char **argv) {

@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <random>
 
 #include "artisoptions.h"
 #include "globals.h"
@@ -132,6 +133,8 @@ extern __managed__ bool neutral_flag;
 
 #include <gsl/gsl_rng.h>
 extern gsl_rng *rng;  // pointer for random number generator
+extern std::mt19937_64 *stdrng;
+static std::uniform_real_distribution<double> stdrngdis(0.0, 1.0);
 #else
 extern __device__ void *rng;
 #endif
@@ -208,7 +211,24 @@ __host__ __device__ inline int get_thread_num(void) {
 #endif
 }
 
-inline double rng_uniform(void) { return gsl_rng_uniform(rng); }
-inline double rng_uniform_pos(void) { return gsl_rng_uniform_pos(rng); }
+inline double rng_uniform(void) {
+  if constexpr (USE_GSL_RANDOM) {
+    return gsl_rng_uniform(rng);
+  } else {
+    return stdrngdis(*stdrng);
+  }
+}
+
+inline double rng_uniform_pos(void) {
+  if constexpr (USE_GSL_RANDOM) {
+    return gsl_rng_uniform_pos(rng);
+  } else {
+    double zrand = 0.;
+    do {
+      zrand = rng_uniform();
+    } while (zrand <= 0.);
+    return zrand;
+  }
+}
 
 #endif  // SN3D_H

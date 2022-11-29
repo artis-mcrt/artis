@@ -238,4 +238,6 @@ constexpr double FIXED_TIMESTEP_WIDTH = 0.1;
 
 constexpr double TIMESTEP_TRANSITION_TIME = 5;
 
+constexpr bool USE_GSL_RANDOM = false;
+
 #endif  // ARTISOPTIONS_H

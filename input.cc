@@ -1898,10 +1898,15 @@ void read_parameterfile(int rank)
 
   if (dum1 > 0) {
     pre_zseed = dum1;  // random number seed
-    printout("[debug] using specified random number seed of %lu\n", pre_zseed);
+    printout("using input.txt specified random number seed of %lu\n", pre_zseed);
   } else {
-    pre_zseed = time(nullptr);
-    printout("[debug] randomly-generated random number seed is %lu\n", pre_zseed);
+    if constexpr (USE_GSL_RANDOM) {
+      pre_zseed = time(nullptr);
+    } else {
+      std::random_device rd;
+      pre_zseed = rd();
+    }
+    printout("randomly-generated random number seed is %lu\n", pre_zseed);
   }
 
 #if CUDA_ENABLED
@@ -1918,13 +1923,18 @@ void read_parameterfile(int rank)
     unsigned long int zseed = pre_zseed + (13 * rank) + (17 * tid); /* rnum generator seed */
     printout("rank %d: thread %d has zseed %lu\n", rank, tid, zseed);
     /// start by setting up the randon number generator
-    rng = gsl_rng_alloc(gsl_rng_ran3);
-    gsl_rng_set(rng, zseed);
+    if constexpr (USE_GSL_RANDOM) {
+      rng = gsl_rng_alloc(gsl_rng_ran3);
+      gsl_rng_set(rng, zseed);
+      printout("rng is a '%s' generator\n", gsl_rng_name(rng));
+    } else {
+      printout("rng is a std::mt19937_64 generator\n");
+      stdrng = new std::mt19937_64(zseed);
+    }
     /// call it a few times to get it in motion.
     for (int n = 0; n < 100; n++) {
       rng_uniform();
     }
-    printout("rng is a '%s' generator\n", gsl_rng_name(rng));
 #ifdef _OPENMP
   }
 #endif
