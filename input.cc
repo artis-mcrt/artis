@@ -1893,11 +1893,11 @@ void read_parameterfile(int rank)
 
   assert_always(get_noncommentline(file, line));
 
-  long int dum1;
-  std::stringstream(line) >> dum1;
+  long int zseed_input;
+  std::stringstream(line) >> zseed_input;
 
-  if (dum1 > 0) {
-    pre_zseed = dum1;  // random number seed
+  if (zseed_input > 0) {
+    pre_zseed = zseed_input;  // random number seed
     printout("using input.txt specified random number seed of %lu\n", pre_zseed);
   } else {
     if constexpr (USE_GSL_RANDOM) {
