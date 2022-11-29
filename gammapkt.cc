@@ -232,7 +232,7 @@ static void choose_gamma_ray(struct packet *pkt_ptr) {
   const int a = decay::get_nuc_a(nucindex);
   double E_gamma = decay::nucdecayenergygamma(z, a);  // Average energy per gamma line of a decay
 
-  const double zrand = gsl_rng_uniform(rng);
+  const double zrand = rng_uniform();
   int nselected = -1;
   double runtot = 0.;
   for (int n = 0; n < gamma_spectra[nucindex].nlines; n++) {
@@ -399,7 +399,7 @@ static double choose_f(double xx, double zrand)
 static double thomson_angle(void) {
   // For Thomson scattering we can get the new angle from a random number very easily.
 
-  const double zrand = gsl_rng_uniform(rng);
+  const double zrand = rng_uniform();
 
   const double B_coeff = (8. * zrand) - 4.;
 
@@ -445,7 +445,7 @@ static void compton_scatter(struct packet *pkt_ptr)
     f = 1.0;  // no energy loss
     stay_gamma = true;
   } else {
-    const double zrand = gsl_rng_uniform(rng);
+    const double zrand = rng_uniform();
     f = choose_f(xx, zrand);
 
     // Check that f lies between 1.0 and (2xx  + 1)
@@ -459,7 +459,7 @@ static void compton_scatter(struct packet *pkt_ptr)
 
     const double prob_gamma = 1. / f;
 
-    const double zrand2 = gsl_rng_uniform(rng);
+    const double zrand2 = rng_uniform();
     stay_gamma = (zrand2 < prob_gamma);
   }
 
@@ -663,7 +663,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     move_pkt(pkt_ptr, edist / 2.);
 
     // event occurs. Choose which event and call the appropriate subroutine.
-    zrand = gsl_rng_uniform(rng);
+    zrand = rng_uniform();
     if (kap_compton > (zrand * kap_tot)) {
       // Compton scattering.
       compton_scatter(pkt_ptr);

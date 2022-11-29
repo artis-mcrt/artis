@@ -129,7 +129,7 @@ __host__ __device__ void pair_prod(struct packet *pkt_ptr) {
     abort();
   }
 
-  const double zrand = gsl_rng_uniform(rng);
+  const double zrand = rng_uniform();
 
   if (zrand > prob_gamma) {
     // Convert it to an e-minus packet - actually it could be positron EK too, but this works

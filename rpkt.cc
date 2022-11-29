@@ -373,9 +373,9 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
     double p = 0.;
     double x = 0.;
     do {
-      const double zrand = gsl_rng_uniform(rng);
-      const double zrand2 = gsl_rng_uniform(rng);
-      const double zrand3 = gsl_rng_uniform(rng);
+      const double zrand = rng_uniform();
+      const double zrand2 = rng_uniform();
+      const double zrand3 = rng_uniform();
 
       M = 2 * zrand - 1;
       mu = pow(M, 2.);
@@ -394,8 +394,8 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
     } while (x > p);
   } else {
     // Assume isotropic scattering
-    const double zrand = gsl_rng_uniform(rng);
-    const double zrand2 = gsl_rng_uniform(rng);
+    const double zrand = rng_uniform();
+    const double zrand2 = rng_uniform();
 
     M = 2. * zrand - 1;
     mu = pow(M, 2.);
@@ -509,7 +509,7 @@ __host__ __device__ static void rpkt_event_continuum(struct packet *pkt_ptr,
 
   /// continuum process happens. select due to its probabilities sigma/kappa_cont, kappa_ff/kappa_cont,
   /// kappa_bf/kappa_cont
-  const double zrand = gsl_rng_uniform(rng);
+  const double zrand = rng_uniform();
   // printout("[debug] rpkt_event:   r-pkt undergoes a continuum transition\n");
   // printout("[debug] rpkt_event:   zrand*kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n", zrand * kappa_cont,
   // sigma, kappa_ff, kappa_bf);
@@ -560,7 +560,7 @@ __host__ __device__ static void rpkt_event_continuum(struct packet *pkt_ptr,
     assert_always(globals::phixslist[tid].kappa_bf_sum[globals::nbfcontinua - 1] == kappa_bf_inrest);
 
     /// Determine in which continuum the bf-absorption occurs
-    const double zrand2 = gsl_rng_uniform(rng);
+    const double zrand2 = rng_uniform();
     const double kappa_bf_rand = zrand2 * kappa_bf_inrest;
 
     double *upperval = std::lower_bound(&globals::phixslist[tid].kappa_bf_sum[0],
@@ -582,7 +582,7 @@ __host__ __device__ static void rpkt_event_continuum(struct packet *pkt_ptr,
     }
 
     /// and decide whether we go to ionisation energy
-    const double zrand3 = gsl_rng_uniform(rng);
+    const double zrand3 = rng_uniform();
     if (zrand3 < nu_edge / nu) {
       stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_BF);
       pkt_ptr->interactions += 1;

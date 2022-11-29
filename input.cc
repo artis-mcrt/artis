@@ -1922,7 +1922,7 @@ void read_parameterfile(int rank)
     gsl_rng_set(rng, zseed);
     /// call it a few times to get it in motion.
     for (int n = 0; n < 100; n++) {
-      gsl_rng_uniform(rng);
+      rng_uniform();
     }
     printout("rng is a '%s' generator\n", gsl_rng_name(rng));
 #ifdef _OPENMP
@@ -2012,8 +2012,8 @@ void read_parameterfile(int rank)
     globals::syn_dir[1] = syn_dir_in[1] / sqrt(rr);
     globals::syn_dir[2] = syn_dir_in[2] / sqrt(rr);
   } else {
-    const double z1 = 1. - (2 * gsl_rng_uniform(rng));
-    const double z2 = gsl_rng_uniform(rng) * 2.0 * PI;
+    const double z1 = 1. - (2 * rng_uniform());
+    const double z2 = rng_uniform() * 2.0 * PI;
     globals::syn_dir[2] = z1;
     globals::syn_dir[0] = sqrt((1. - (z1 * z1))) * cos(z2);
     globals::syn_dir[1] = sqrt((1. - (z1 * z1))) * sin(z2);

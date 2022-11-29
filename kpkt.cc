@@ -437,8 +437,8 @@ __host__ __device__ static double sample_planck(const double T)
   const double B_peak = radfield::dbb(nu_peak, T, 1);
 
   while (true) {
-    const double zrand = gsl_rng_uniform(rng);
-    const double zrand2 = gsl_rng_uniform(rng);
+    const double zrand = rng_uniform();
+    const double zrand2 = rng_uniform();
     const double nu = NU_MIN_R + zrand * (NU_MAX_R - NU_MIN_R);
     if (zrand2 * B_peak <= radfield::dbb(nu, T, 1)) return nu;
     // printout("[debug] sample_planck: planck_sampling %d\n", i);
@@ -506,7 +506,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
     /// Randomly select the occuring cooling process out of the important ones
     double coolingsum = 0.;
-    double zrand = gsl_rng_uniform(rng);
+    double zrand = rng_uniform();
 
     const double rndcool = zrand * grid::modelgrid[modelgridindex].totalcooling;
     // printout("rndcool %g totalcooling %g\n",rndcool, grid::modelgrid[modelgridindex].totalcooling);
@@ -591,7 +591,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       // kdecay.to_r++;
 
       /// Sample the packets comoving frame frequency according to paperII 5.4.3 eq.41
-      // zrand = gsl_rng_uniform(rng);   /// delivers zrand in [0,1[
+      // zrand = rng_uniform();   /// delivers zrand in [0,1[
       // zrand = 1. - zrand;             /// make sure that log gets a zrand in ]0,1]
       zrand = gsl_rng_uniform_pos(rng);  /// delivers zrand in ]0,1[
       pkt_ptr->nu_cmf = -KB * T_e / H * log(zrand);
@@ -634,14 +634,14 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
       /// then randomly sample the packets frequency according to the continuums
       /// energy distribution and set some flags
-      // zrand = gsl_rng_uniform(rng);   /// delivers zrand in [0,1[
+      // zrand = rng_uniform();   /// delivers zrand in [0,1[
       // zrand = 1. - zrand;   /// convert it to ]0,1]
       // pkt_ptr->nu_cmf = nu_threshold * (1 - KB*T_e/H/nu_threshold*log(zrand));
       // pkt_ptr->nu_cmf = nu_threshold * (1+sqrt(1+(4*KB*T_e/H/nu_threshold)))/2 * (1 -
       // KB*T_e/H/nu_threshold*log(zrand)); pkt_ptr->nu_cmf = nu_threshold;
 
       // Sample the packets comoving frame frequency according to paperII 4.2.2
-      // zrand = gsl_rng_uniform(rng);
+      // zrand = rng_uniform();
       // if (zrand < 0.5)
       { pkt_ptr->nu_cmf = select_continuum_nu(element, lowerion, level, upper, T_e); }
       // else

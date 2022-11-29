@@ -13,7 +13,7 @@ __host__ __device__ void scatter_dir(const double dir_in[3], const double cos_th
   // begin with setting the direction in coordinates where original direction
   // is parallel to z-hat.
 
-  const double zrand = gsl_rng_uniform(rng);
+  const double zrand = rng_uniform();
   const double phi = zrand * 2 * PI;
 
   const double sin_theta_sq = 1. - (cos_theta * cos_theta);
@@ -52,8 +52,8 @@ __host__ __device__ void get_rand_isotropic_unitvec(double vecout[3])
   // gsl_ran_dir_nd(rng, 3, vecout);
   // but check validity first
 
-  const double zrand = gsl_rng_uniform(rng);
-  const double zrand2 = gsl_rng_uniform(rng);
+  const double zrand = rng_uniform();
+  const double zrand2 = rng_uniform();
 
   const double mu = -1 + (2. * zrand);
   const double phi = zrand2 * 2 * PI;

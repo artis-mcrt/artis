@@ -641,7 +641,7 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
 
   const gsl_function F_alpha_sp = {.function = &alpha_sp_E_integrand_gsl, .params = &intparas};
 
-  const double zrand = 1. - gsl_rng_uniform(rng);  // Make sure that 0 < zrand <= 1
+  const double zrand = 1. - rng_uniform();  // Make sure that 0 < zrand <= 1
 
   // printout("emitted bf photon Z=%2d ionstage %d->%d upper %4d lower %4d lambda %7.1f lambda_edge %7.1f ratio %g zrand
   // %g\n",

@@ -1381,7 +1381,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
     total_endecay_per_ejectamass += grid::get_initenergyq(mgi);
   }
 
-  const double zrand_chain = gsl_rng_uniform(rng) * total_endecay_per_ejectamass;
+  const double zrand_chain = rng_uniform() * total_endecay_per_ejectamass;
 
   if (zrand_chain >= cumulative_endecay[num_decaypaths - 1]) {
     assert_always(USE_MODEL_INITIAL_ENERGY);
@@ -1423,7 +1423,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
     // use uniform decay time distribution (scale the packet energies instead)
     // keeping the pellet decay rate constant will give better statistics at very late times when very little
     // energy is released
-    const double zrand = gsl_rng_uniform(rng);
+    const double zrand = rng_uniform();
     pkt_ptr->tdecay = zrand * tdecaymin + (1. - zrand) * globals::tmax;
 
     // we need to scale the packet energy up or down according to decay rate at the randomly selected time.
@@ -1446,7 +1446,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
   pkt_ptr->pellet_nucindex = get_nuc_index(z, a);
   pkt_ptr->pellet_decaytype = decaytype;
 
-  const double zrand = gsl_rng_uniform(rng);
+  const double zrand = rng_uniform();
   pkt_ptr->originated_from_particlenotgamma =
       (zrand >= nucdecayenergygamma(z, a) / (nucdecayenergygamma(z, a) + nucdecayenergyparticle(z, a, decaytype)));
   pkt_ptr->nu_cmf = nucdecayenergyparticle(z, a, decaytype) / H;

@@ -1659,7 +1659,7 @@ __host__ __device__ int nt_random_upperion(const int modelgridindex, const int e
   assert_testmodeonly(lowerion < get_nions(element) - 1);
   if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
     while (true) {
-      const double zrand = gsl_rng_uniform(rng);
+      const double zrand = rng_uniform();
 
       double prob_sum = 0.;
       for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++) {
@@ -1807,7 +1807,7 @@ double nt_excitation_ratecoeff(const int modelgridindex, const int element, cons
 static void select_nt_ionization(int modelgridindex, int *element, int *lowerion)
 // select based on stored frac_deposition for each ion
 {
-  const double zrand = gsl_rng_uniform(rng);
+  const double zrand = rng_uniform();
   double frac_deposition_ion_sum = 0.;
   // zrand is between zero and frac_ionization
   // keep subtracting off deposition fractions of ionizations transitions until we hit the right one
@@ -1858,7 +1858,7 @@ __host__ __device__ static double get_ntion_energyrate(int modelgridindex) {
 __host__ __device__ static void select_nt_ionization2(int modelgridindex, int *element, int *lowerion) {
   const double ratetotal = get_ntion_energyrate(modelgridindex);
 
-  const double zrand = gsl_rng_uniform(rng);
+  const double zrand = rng_uniform();
   double ratesum = 0.;
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
     const int nions = get_nions(ielement);
@@ -1884,7 +1884,7 @@ __host__ __device__ void do_ntlepton(struct packet *pkt_ptr) {
     // here there is some probability to cause ionisation or excitation to a macroatom packet
     // instead of converting directly to k-packet (unless the heating channel is selected)
 
-    double zrand = gsl_rng_uniform(rng);
+    double zrand = rng_uniform();
     // zrand is initially between [0, 1), but we will subtract off each
     // component of the deposition fractions
     // until we end and select transition_ij when zrand < dep_frac_transition_ij

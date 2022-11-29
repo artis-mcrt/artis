@@ -27,7 +27,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   pkt_ptr->originated_from_particlenotgamma = false;
 
   if (GRID_TYPE == GRID_SPHERICAL1D) {
-    const double zrand3 = gsl_rng_uniform(rng);
+    const double zrand3 = rng_uniform();
     const double r_inner = grid::get_cellcoordmin(cellindex, 0);
     const double r_outer = grid::get_cellcoordmin(cellindex, 0) + grid::wid_init(cellindex);
     const double radius = pow(zrand3 * pow(r_inner, 3) + (1. - zrand3) * pow(r_outer, 3), 1 / 3.);
@@ -115,7 +115,7 @@ void packet_init(int my_rank, struct packet *pkt)
 
   printout("Placing pellets...\n");
   for (int n = 0; n < globals::npkts; n++) {
-    const double zrand = gsl_rng_uniform(rng);
+    const double zrand = rng_uniform();
     const double targetval = zrand * norm;
 
     // first cont[i] such that targetval < cont[i] is true

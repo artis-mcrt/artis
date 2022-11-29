@@ -208,4 +208,6 @@ __host__ __device__ inline int get_thread_num(void) {
 #endif
 }
 
+inline double rng_uniform(void) { return gsl_rng_uniform(rng); }
+
 #endif  // SN3D_H

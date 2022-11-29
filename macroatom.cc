@@ -180,7 +180,7 @@ __host__ __device__ static int do_macroatom_internal_down_same(int modelgridinde
   // printout("[debug] do_ma:   internal downward jump within current ionstage\n");
 
   /// Randomly select the occuring transition
-  const double zrand = gsl_rng_uniform(rng);
+  const double zrand = rng_uniform();
   int lower = -99;
   double rate = 0.;
   for (int i = 0; i < ndowntrans; i++) {
@@ -224,7 +224,7 @@ __host__ __device__ static void do_macroatom_raddeexcitation(struct packet *pkt_
                                                              const int activatingline, const double t_mid) {
   /// radiative deexcitation of MA: emitt rpkt
   /// randomly select which line transitions occurs
-  const double zrand = gsl_rng_uniform(rng);
+  const double zrand = rng_uniform();
   double rate = 0.;
   int linelistindex = -99;
   const int ndowntrans = get_ndowntrans(element, ion, level);
@@ -305,7 +305,7 @@ __host__ __device__ static void do_macroatom_radrecomb(struct packet *pkt_ptr, c
   const int upperion = *ion;
   const int upperionlevel = *level;
   /// Randomly select a continuum
-  double zrand = gsl_rng_uniform(rng);
+  double zrand = rng_uniform();
   double rate = 0;
   const int nlevels = get_ionisinglevels(element, upperion - 1);
   int lower = 0;
@@ -388,7 +388,7 @@ __host__ __device__ static void do_macroatom_ionisation(const int modelgridindex
 
   int upper = -1;
   /// Randomly select the occuring transition
-  const double zrand = gsl_rng_uniform(rng);
+  const double zrand = rng_uniform();
   double rate = 0.;
   for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, *ion, *level); phixstargetindex++) {
     upper = get_phixsupperlevel(element, *ion, *level, phixstargetindex);
@@ -512,7 +512,7 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
     }
 
     enum ma_action selected_action = MA_ACTION_COUNT;
-    double zrand = gsl_rng_uniform(rng);
+    double zrand = rng_uniform();
     // printout("zrand %g\n",zrand);
     const double randomrate = zrand * total_transitions;
     double rate = 0.;
@@ -769,7 +769,7 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
         stats::increment(stats::COUNTER_MA_STAT_INTERNALDOWNLOWER);
 
         /// Randomly select the occuring transition
-        zrand = gsl_rng_uniform(rng);
+        zrand = rng_uniform();
         // zrand = 1. - 1e-14;
         rate = 0.;
         // nlevels = get_nlevels(element,ion-1);
@@ -823,7 +823,7 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
         jump = 2;
 
         /// randomly select the occuring transition
-        zrand = gsl_rng_uniform(rng);
+        zrand = rng_uniform();
         int upper = -99;
         rate = 0.;
         for (int i = 0; i < nuptrans; i++) {
