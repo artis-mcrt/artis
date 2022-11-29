@@ -38,7 +38,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     vec_scale(pkt_ptr->pos, radius);
   } else {
     for (int axis = 0; axis < 3; axis++) {
-      const double zrand = gsl_rng_uniform_pos(rng);
+      const double zrand = rng_uniform_pos();
       pkt_ptr->pos[axis] = grid::get_cellcoordmin(cellindex, axis) + (zrand * grid::wid_init(0));
     }
   }

@@ -800,7 +800,7 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
 
   // Assign optical depth to next physical event. And start counter of
   // optical depth for this path.
-  const double zrand = gsl_rng_uniform_pos(rng);
+  const double zrand = rng_uniform_pos();
   const double tau_next = -1. * log(zrand);
 
   // Start by finding the distance to the crossing of the grid cell

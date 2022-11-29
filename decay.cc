@@ -724,7 +724,7 @@ __host__ __device__ static double sample_decaytime(const int decaypathindex, con
     for (int i = 0; i < get_decaypathlength(decaypathindex); i++) {
       const int z = decaypaths[decaypathindex].z[i];
       const int a = decaypaths[decaypathindex].a[i];
-      const double zrand = gsl_rng_uniform_pos(rng);
+      const double zrand = rng_uniform_pos();
       tdecay += -get_meanlife(z, a) * log(zrand);
     }
   }

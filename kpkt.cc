@@ -593,7 +593,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       /// Sample the packets comoving frame frequency according to paperII 5.4.3 eq.41
       // zrand = rng_uniform();   /// delivers zrand in [0,1[
       // zrand = 1. - zrand;             /// make sure that log gets a zrand in ]0,1]
-      zrand = gsl_rng_uniform_pos(rng);  /// delivers zrand in ]0,1[
+      zrand = rng_uniform_pos();  /// delivers zrand in ]0,1[
       pkt_ptr->nu_cmf = -KB * T_e / H * log(zrand);
 
       if (!std::isfinite(pkt_ptr->nu_cmf)) {
