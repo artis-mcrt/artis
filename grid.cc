@@ -1032,7 +1032,7 @@ static void abundances_read(void) {
 
     int cellnumberinput = -1;
     assert_always(ssline >> cellnumberinput);
-    assert_always(cellnumberinput == mgi + 1)
+    assert_always(cellnumberinput == mgi + first_cellindex)
 
         // the abundances.txt file specifies the elemental mass fractions for each model cell
         // (or proportial to mass frac, e.g. element densities because they will be normalised anyway)
