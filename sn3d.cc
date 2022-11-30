@@ -821,12 +821,14 @@ int main(int argc, char **argv)
 
   assert_always(packets != nullptr);
 
-  printout("ARTIS git branch %s\n", GIT_BRANCH);
+  printout("git branch %s\n", GIT_BRANCH);
 
-  printout("Current version: %s\n", GIT_VERSION);
+  printout("git version: %s\n", GIT_VERSION);
+
+  printout("git status %s\n", GIT_STATUS);
 
   // printout("Hash of most recent commit: %s\n",GIT_HASH);
-  printout("sn3d.cc compiled at %s on %s\n", __TIME__, __DATE__);
+  printout("sn3d compiled at %s on %s\n", __TIME__, __DATE__);
 
 #if defined TESTMODE && TESTMODE
   printout("TESTMODE is ON");
