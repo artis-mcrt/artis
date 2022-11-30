@@ -2188,9 +2188,10 @@ void grid_init(int my_rank)
     assign_initial_temperatures();
   }
 
-  // scale up the radioactive abundances to account for the missing masses in
+  // when mapping 1D spherical model onto cubic grid, scale up the
+  // radioactive abundances to account for the missing masses in
   // the model cells that are not associated with any propagation cells
-  if (globals::rank_in_node == 0) {
+  if (GRID_TYPE == GRID_UNIFORM && get_model_type() == RHO_1D_READ && globals::rank_in_node == 0) {
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
       const int z = decay::get_nuc_z(nucindex);
       const int a = decay::get_nuc_a(nucindex);
