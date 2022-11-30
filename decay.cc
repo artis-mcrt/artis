@@ -873,13 +873,19 @@ __host__ __device__ static double get_endecay_to_tinf_per_ejectamass_at_time(con
   // Decays from Co56 due to the initial abundance of Co56 are not counted here,
   // nor is the energy from Ni56 decays
 
-  assert_always(decaypathindex >= 0);
-  assert_always(decaypathindex < get_num_decaypaths());
+  assert_testmodeonly(decaypathindex >= 0);
+  assert_testmodeonly(decaypathindex < get_num_decaypaths());
 
   const int z_top = decaypaths[decaypathindex].z[0];
   const int a_top = decaypaths[decaypathindex].a[0];
   // if it's a single-nuclide decay chain, then contribute the initial abundance, otherwise contribute
   // all ancestors
+
+  const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
+  if (top_initabund <= 0.) {
+    return 0.;
+  }
+  assert_testmodeonly(top_initabund >= 0.);
 
   const int decaypathlength = get_decaypathlength(decaypathindex);
   auto meanlifetimes = std::make_unique<double[]>(decaypathlength + 1);
@@ -890,8 +896,6 @@ __host__ __device__ static double get_endecay_to_tinf_per_ejectamass_at_time(con
   // the nuclide past the end of the chain radionuclide
   meanlifetimes[decaypathlength] = -1.;  // nuclide at the end is a sink, so treat it as stable (even if it's not)
 
-  const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
-  assert_always(top_initabund >= 0.) if (top_initabund <= 0.) { return 0.; }
   const double t_afterinit = time - grid::get_t_model();
 
   // count the number of chain-top nuclei that haven't decayed past the end of the chain
