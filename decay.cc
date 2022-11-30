@@ -50,8 +50,9 @@ std::vector<struct nuclide> nuclides;
 // every different path within the network is considered, e.g. 56Ni -> 56Co -> 56Fe is separate to 56Ni -> 56Co
 struct decaypath {
   int pathlength;
-  std::unique_ptr<int[]> z = nullptr;  // atomic number
-  std::unique_ptr<int[]> a = nullptr;  // mass number
+  std::unique_ptr<int[]> z = nullptr;         // atomic number
+  std::unique_ptr<int[]> a = nullptr;         // mass number
+  std::unique_ptr<int[]> nucindex = nullptr;  // index into nuclides list
   std::unique_ptr<int[]> decaytypes = nullptr;
 };
 
@@ -373,26 +374,29 @@ static void extend_lastdecaypath(void)
       if (get_nuc_decaybranchprob(daughter_z, daughter_a, dectypeindex2) == 0.) {
         continue;
       }
-      const int pathlength = get_decaypathlength(startdecaypathindex) + 1;
-      decaypaths.push_back({.pathlength = pathlength,
-                            .z = std::make_unique<int[]>(pathlength),
-                            .a = std::make_unique<int[]>(pathlength),
-                            .decaytypes = std::make_unique<int[]>(pathlength)});
+      const int newpathlength = get_decaypathlength(startdecaypathindex) + 1;
+      decaypaths.push_back({.pathlength = newpathlength,
+                            .z = std::make_unique<int[]>(newpathlength),
+                            .a = std::make_unique<int[]>(newpathlength),
+                            .nucindex = std::make_unique<int[]>(newpathlength),
+                            .decaytypes = std::make_unique<int[]>(newpathlength)});
       const int lastindex = decaypaths.size() - 1;
 
       // check for repeated nuclides, which would indicate a loop in the decay chain
       for (int i = 0; i < get_decaypathlength(startdecaypathindex); i++) {
         decaypaths[lastindex].z[i] = decaypaths[startdecaypathindex].z[i];
         decaypaths[lastindex].a[i] = decaypaths[startdecaypathindex].a[i];
+        decaypaths[lastindex].nucindex[i] = decaypaths[startdecaypathindex].nucindex[i];
         decaypaths[lastindex].decaytypes[i] = decaypaths[startdecaypathindex].decaytypes[i];
         if (decaypaths[lastindex].z[i] == daughter_z && decaypaths[lastindex].a[i] == daughter_a) {
           printout("\nERROR: Loop found in nuclear decay chain.\n");
           abort();
         }
       }
-      decaypaths[lastindex].z[decaypaths[lastindex].pathlength - 1] = daughter_z;
-      decaypaths[lastindex].a[decaypaths[lastindex].pathlength - 1] = daughter_a;
-      decaypaths[lastindex].decaytypes[decaypaths[lastindex].pathlength - 1] = dectypeindex2;
+      decaypaths[lastindex].z[newpathlength - 1] = daughter_z;
+      decaypaths[lastindex].a[newpathlength - 1] = daughter_a;
+      decaypaths[lastindex].nucindex[newpathlength - 1] = get_nuc_index(daughter_z, daughter_a);
+      decaypaths[lastindex].decaytypes[newpathlength - 1] = dectypeindex2;
 
       extend_lastdecaypath();
     }
@@ -450,11 +454,13 @@ static void find_decaypaths(void) {
       decaypaths.push_back({.pathlength = pathlength,
                             .z = std::make_unique<int[]>(pathlength),
                             .a = std::make_unique<int[]>(pathlength),
+                            .nucindex = std::make_unique<int[]>(pathlength),
                             .decaytypes = std::make_unique<int[]>(pathlength)});
       const int lastindex = decaypaths.size() - 1;
 
       decaypaths[lastindex].z[0] = z;
       decaypaths[lastindex].a[0] = a;
+      decaypaths[lastindex].nucindex[0] = startnucindex;
       decaypaths[lastindex].decaytypes[0] = dectypeindex;
 
       extend_lastdecaypath();  // take this single step chain and find all descendants
