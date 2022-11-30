@@ -105,6 +105,7 @@ __host__ __device__ void set_W(int modelgridindex, float x);
 void grid_init(int my_rank);
 __host__ __device__ double get_cellradialpos(int cellindex);
 __host__ __device__ float get_modelinitradioabund(int modelgridindex, int z, int a);
+__host__ __device__ float get_modelinitradioabund_bynucindex(const int modelgridindex, const int nucindex);
 __host__ __device__ float get_stable_initabund(int mgi, int anumber);
 __host__ __device__ float get_element_meanweight(int mgi, int element);
 __host__ __device__ void set_element_meanweight(int mgi, int element, float meanweight);

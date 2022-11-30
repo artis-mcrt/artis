@@ -262,6 +262,12 @@ static double nucdecayenergyqval(int z, int a, int decaytype) {
   return nuclides[get_nuc_index(z, a)].endecay_q[decaytype];
 }
 
+static double get_meanlife_bynucindex(int nucindex) {
+  assert_testmodeonly(nucindex >= 0);
+  assert_testmodeonly(nucindex < get_num_nuclides());
+  return nuclides[nucindex].meanlife;
+}
+
 __host__ __device__ double get_meanlife(int z, int a) {
   assert_always(z > 0);
   assert_always(a >= z);
@@ -884,10 +890,12 @@ __host__ __device__ static double get_endecay_to_tinf_per_ejectamass_at_time(con
 
   const int z_top = decaypaths[decaypathindex].z[0];
   const int a_top = decaypaths[decaypathindex].a[0];
+  const int nucindex_top = decaypaths[decaypathindex].nucindex[0];
   // if it's a single-nuclide decay chain, then contribute the initial abundance, otherwise contribute
   // all ancestors
 
-  const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
+  const double top_initabund =
+      grid::get_modelinitradioabund_bynucindex(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
   if (top_initabund <= 0.) {
     return 0.;
   }
@@ -897,7 +905,7 @@ __host__ __device__ static double get_endecay_to_tinf_per_ejectamass_at_time(con
   auto meanlifetimes = std::make_unique<double[]>(decaypathlength + 1);
 
   for (int i = 0; i < decaypathlength; i++) {
-    meanlifetimes[i] = get_meanlife(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i]);
+    meanlifetimes[i] = get_meanlife_bynucindex(decaypaths[decaypathindex].nucindex[i]);
   }
   // the nuclide past the end of the chain radionuclide
   meanlifetimes[decaypathlength] = -1.;  // nuclide at the end is a sink, so treat it as stable (even if it's not)
