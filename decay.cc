@@ -74,21 +74,21 @@ const char *get_elname(const int z) {
 }
 
 __host__ __device__ int get_nuc_z(int nucindex) {
-  assert_always(nucindex >= 0);
-  assert_always(nucindex < get_num_nuclides());
+  assert_testmodeonly(nucindex >= 0);
+  assert_testmodeonly(nucindex < get_num_nuclides());
   return nuclides[nucindex].z;
 }
 
 __host__ __device__ int get_nuc_a(int nucindex) {
-  assert_always(nucindex >= 0);
-  assert_always(nucindex < get_num_nuclides());
+  assert_testmodeonly(nucindex >= 0);
+  assert_testmodeonly(nucindex < get_num_nuclides());
   return nuclides[nucindex].a;
 }
 
 __host__ __device__ int get_nuc_index(int z, int a)
 // get the nuclide array index from the atomic number and mass number
 {
-  assert_always(get_num_nuclides() > 0);
+  assert_testmodeonly(get_num_nuclides() > 0);
 
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
     if (nuclides[nucindex].z == z && nuclides[nucindex].a == a) {
@@ -124,9 +124,9 @@ static void printout_nuclidemeanlife(const int z, const int a) {
 }
 
 __host__ __device__ static double get_nuc_decaybranchprob(const int z_parent, const int a_parent, int decaytype) {
-  assert_always(nuc_exists(z_parent, a_parent));
-  assert_always(decaytype >= 0);
-  assert_always(decaytype < DECAYTYPE_COUNT);
+  assert_testmodeonly(nuc_exists(z_parent, a_parent));
+  assert_testmodeonly(decaytype >= 0);
+  assert_testmodeonly(decaytype < DECAYTYPE_COUNT);
   return nuclides[get_nuc_index(z_parent, a_parent)].branchprobs[decaytype];
 }
 
@@ -212,9 +212,9 @@ double nucdecayenergyparticle(const int z_parent, const int a_parent, const int 
 // important: the branching factor has been applied. so, e.g. energy in positrons is
 // the average energy per all decays (including electron captures)
 {
-  assert_always(nuc_exists(z_parent, a_parent));
-  assert_always(decaytype >= 0);
-  assert_always(decaytype < DECAYTYPE_COUNT);
+  assert_testmodeonly(nuc_exists(z_parent, a_parent));
+  assert_testmodeonly(decaytype >= 0);
+  assert_testmodeonly(decaytype < DECAYTYPE_COUNT);
 
   switch (decaytype) {
     case DECAYTYPE_ALPHA: {
@@ -252,7 +252,7 @@ double nucdecayenergy(int z, int a, int decaytype)
 // contributed energy release per decay [erg] for decaytype (e.g. DECAYTYPE_BETAPLUS)
 // (excludes neutrinos!)
 {
-  assert_always(nuc_exists(z, a));
+  assert_testmodeonly(nuc_exists(z, a));
   const double endecay = nucdecayenergygamma(z, a) + nucdecayenergyparticle(z, a, decaytype);
 
   return endecay;
@@ -279,8 +279,8 @@ __host__ __device__ double get_meanlife(int z, int a) {
 }
 
 __host__ __device__ double nucmass(int z, int a) {
-  assert_always(z > 0);
-  assert_always(a >= z);
+  assert_testmodeonly(z > 0);
+  assert_testmodeonly(a >= z);
 
   return a * MH;
 
