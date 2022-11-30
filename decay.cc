@@ -195,13 +195,13 @@ static bool nuc_is_parent(const int z_parent, const int a_parent, const int z, c
 }
 
 __host__ __device__ double nucdecayenergygamma(int z, int a)
-// average energy (erg) per decay in the form of gamma rays
+// average energy per decay in the form of gamma rays [erg]
 {
   return nuclides[get_nuc_index(z, a)].endecay_gamma;
 }
 
 __host__ __device__ void set_nucdecayenergygamma(int z, int a, double value)
-// average energy per decay in the form of gamma rays [erg]
+// set average energy per decay in the form of gamma rays [erg]
 {
   nuclides[get_nuc_index(z, a)].endecay_gamma = value;
 }
@@ -209,8 +209,6 @@ __host__ __device__ void set_nucdecayenergygamma(int z, int a, double value)
 double nucdecayenergyparticle(const int z_parent, const int a_parent, const int decaytype)
 // decay energy in the form of kinetic energy of electrons, positrons, or alpha particles,
 // depending on the relevant decay type (but not including neutrinos)
-// important: the branching factor has been applied. so, e.g. energy in positrons is
-// the average energy per all decays (including electron captures)
 {
   assert_testmodeonly(nuc_exists(z_parent, a_parent));
   assert_testmodeonly(decaytype >= 0);
