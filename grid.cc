@@ -562,10 +562,9 @@ __host__ __device__ static void set_elem_stable_abund_from_total(const int mgi, 
 
   double isofracsum = 0.;  // mass fraction sum of radioactive isotopes
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-    const int a = decay::get_nuc_a(nucindex);
     if (decay::get_nuc_z(nucindex) == atomic_number) {
       // radioactive isotope of this element
-      isofracsum += get_modelinitradioabund(mgi, atomic_number, a);
+      isofracsum += get_modelinitradioabund_bynucindex(mgi, nucindex);
     }
   }
 
@@ -2198,14 +2197,15 @@ void grid_init(int my_rank)
       if (totmassradionuclide[nucindex] <= 0) continue;
       double totmassradionuclide_actual = 0.;
       for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-        totmassradionuclide_actual += get_modelinitradioabund(mgi, z, a) * get_rhoinit(mgi) * vol_init_modelcell(mgi);
+        totmassradionuclide_actual +=
+            get_modelinitradioabund_bynucindex(mgi, nucindex) * get_rhoinit(mgi) * vol_init_modelcell(mgi);
       }
       if (totmassradionuclide_actual > 0.) {
         const double ratio = totmassradionuclide[nucindex] / totmassradionuclide_actual;
         // printout("nuclide %d ratio %g\n", nucindex, ratio);
         for (int mgi = 0; mgi < get_npts_model(); mgi++) {
           if (get_numassociatedcells(mgi) > 0) {
-            const double prev_abund = get_modelinitradioabund(mgi, z, a);
+            const double prev_abund = get_modelinitradioabund_bynucindex(mgi, nucindex);
             const double new_abund = prev_abund * ratio;
             set_modelinitradioabund(mgi, z, a, new_abund);
           }
