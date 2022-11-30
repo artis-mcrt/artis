@@ -1439,10 +1439,10 @@ static void setup_phixs_list(void) {
     if constexpr (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING) {
       globals::phixslist[itid].groundcont_gamma_contr =
           static_cast<double *>(malloc(globals::nbfcontinua_ground * sizeof(double)));
-      assert_always(globals::phixslist[itid].groundcont_gamma_contr != nullptr)
+      assert_always(globals::phixslist[itid].groundcont_gamma_contr != nullptr);
 
-          for (int groundcontindex = 0; groundcontindex < globals::nbfcontinua_ground; groundcontindex++) {
-        globals::phixslist[tid].groundcont_gamma_contr[groundcontindex] = 0.;
+      for (int groundcontindex = 0; groundcontindex < globals::nbfcontinua_ground; groundcontindex++) {
+        globals::phixslist[itid].groundcont_gamma_contr[groundcontindex] = 0.;
       }
     }
 
