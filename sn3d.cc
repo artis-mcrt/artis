@@ -747,6 +747,11 @@ int main(int argc, char **argv) {
     check_already_running();
   }
 
+// make sure rank 0 checked for a pid file before we proceed
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
   globals::startofline = std::make_unique<bool[]>(get_max_threads());
 
 #ifdef _OPENMP

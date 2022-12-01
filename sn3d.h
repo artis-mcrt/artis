@@ -269,7 +269,11 @@ inline void check_already_running(void) {
     pidfile >> artispid_in;
     pidfile.close();
     if (is_pid_running(artispid_in)) {
-      fprintf(stderr, "\nERROR: artis or exspec is already running with pid %d. Refusing to start.\n", artispid_in);
+      fprintf(
+          stderr,
+          "\nERROR: artis or exspec is already running in this folder with existing pid %d. Refusing to start. (delete "
+          "artis.pid if you are sure this is incorrect)\n",
+          artispid_in);
       abort();
     }
   }

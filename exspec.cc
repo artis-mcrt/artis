@@ -74,7 +74,13 @@ int main(int argc, char **argv) {
   globals::startofline = std::make_unique<bool[]>(get_max_threads());
   if (globals::rank_global == 0) {
     check_already_running();
+  }
+  // make sure rank 0 checked for a pid file before we proceed
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
+  if (globals::rank_global == 0) {
     snprintf(filename, 128, "exspec.txt");
     output_file = fopen_required(filename, "w");
     setvbuf(output_file, nullptr, _IOLBF, 1);
