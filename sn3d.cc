@@ -1147,7 +1147,7 @@ int main(int argc, char **argv) {
   MPI_Finalize();
 #endif
 
-  if (!access("artis.pid", F_OK)) {
+  if (std::filesystem::exists("artis.pid")) {
     remove("artis.pid");
   }
 
