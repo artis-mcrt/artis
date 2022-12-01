@@ -1147,5 +1147,9 @@ int main(int argc, char **argv) {
   MPI_Finalize();
 #endif
 
+  if (!access("artis.pid", F_OK)) {
+    remove("artis.pid");
+  }
+
   return 0;
 }
