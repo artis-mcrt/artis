@@ -12,9 +12,6 @@
 
 #include "sn3d.h"
 
-#include <getopt.h>
-#include <unistd.h>
-
 #include "atomic.h"
 #include "decay.h"
 #include "emissivities.h"
@@ -1148,7 +1145,7 @@ int main(int argc, char **argv) {
 #endif
 
   if (std::filesystem::exists("artis.pid")) {
-    remove("artis.pid");
+    std::filesystem::remove("artis.pid");
   }
 
   return 0;
