@@ -672,10 +672,7 @@ static bool do_timestep(const int nts, const int titer, const int my_rank, const
   return !do_this_full_loop;
 }
 
-int main(int argc, char **argv)
-// Main - top level routine.
-{
-  // FILE *temperature_file;
+int main(int argc, char **argv) {
   char filename[128];
 
   // if DETAILED_BF_ESTIMATORS_ON is true, NO_LUT_PHOTOION must be true
@@ -748,6 +745,10 @@ int main(int argc, char **argv)
 #endif
 
   const int my_rank = globals::rank_global;
+
+  if (my_rank == 0) {
+    check_already_running();
+  }
 
   globals::startofline = std::make_unique<bool[]>(get_max_threads());
 
@@ -916,7 +917,7 @@ int main(int argc, char **argv)
   FILE *syn_file = fopen_required("syn_dir.txt", "w");
   fprintf(syn_file, "%g %g %g", globals::syn_dir[0], globals::syn_dir[1], globals::syn_dir[2]);
   fclose(syn_file);
-  printout("time read syn file %ld\n", time(nullptr));
+  printout("time write syn_dir.txt file %ld\n", time(nullptr));
 
   bool terminate_early = false;
   globals::file_set = false;  // LJS: deprecate this switch?

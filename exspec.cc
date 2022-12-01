@@ -72,6 +72,8 @@ int main(int argc, char **argv) {
 
   globals::startofline = std::make_unique<bool[]>(get_max_threads());
   if (globals::rank_global == 0) {
+    check_already_running();
+
     snprintf(filename, 128, "exspec.txt");
     output_file = fopen_required(filename, "w");
     setvbuf(output_file, nullptr, _IOLBF, 1);

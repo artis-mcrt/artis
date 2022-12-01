@@ -613,8 +613,8 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       pkt_ptr->em_time = pkt_ptr->prop_time;
       pkt_ptr->nscatterings = 0;
 
-/* call the estimator routine - generate a virtual packet */
 #ifdef VPKT_ON
+      // generate a virtual packet
       int realtype = 2;
       vpkt_call_estimators(pkt_ptr, t_current, realtype);
 #endif

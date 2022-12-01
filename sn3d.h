@@ -1,11 +1,16 @@
 #ifndef SN3D_H
 #define SN3D_H
 
+#include <getopt.h>
+#include <signal.h>
+
 #include <cassert>
 #include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <fstream>
+#include <iostream>
 #include <random>
 
 #include "artisoptions.h"
@@ -241,6 +246,35 @@ inline void rng_init(auto zseed) {
     printout("rng is a std::mt19937_64 generator\n");
     stdrng = new std::mt19937_64(zseed);
   }
+}
+
+inline bool is_pid_running(pid_t pid) {
+  while (waitpid(-1, 0, WNOHANG) > 0) {
+    // Wait for defunct....
+  }
+
+  if (0 == kill(pid, 0)) return true;  // Process exists
+
+  return false;
+}
+
+inline void check_already_running(void) {
+  pid_t artispid = getpid();
+
+  if (std::filesystem::exists("artis.pid")) {
+    std::ifstream pidfile("artis.pid", std::ifstream::in);
+    pid_t artispid_in;
+    pidfile >> artispid_in;
+    pidfile.close();
+    if (is_pid_running(artispid_in)) {
+      fprintf(stderr, "\nERROR: artis or exspec is already running with pid %d. Refusing to start.\n", artispid_in);
+      abort();
+    }
+  }
+
+  std::ofstream pidfile("artis.pid", std::ofstream::out | std::ofstream::trunc);
+  pidfile << artispid;
+  pidfile.close();
 }
 
 #endif  // SN3D_H
