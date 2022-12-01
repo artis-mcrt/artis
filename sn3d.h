@@ -3,6 +3,7 @@
 
 #include <getopt.h>
 #include <signal.h>
+#include <sys/wait.h>
 
 #include <cassert>
 #include <chrono>
