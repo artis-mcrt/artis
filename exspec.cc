@@ -15,6 +15,7 @@
 #include <unistd.h>
 
 #include <cstdio>
+#include <filesystem>
 
 #include "decay.h"
 #include "grid.h"
@@ -290,7 +291,7 @@ int main(int argc, char **argv) {
 #endif
 
   if (std::filesystem::exists("artis.pid")) {
-    remove("artis.pid");
+    std::filesystem::remove("artis.pid");
   }
 
   return 0;
