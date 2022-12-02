@@ -50,10 +50,10 @@ std::vector<struct nuclide> nuclides;
 // every different path within the network is considered, e.g. 56Ni -> 56Co -> 56Fe is separate to 56Ni -> 56Co
 struct decaypath {
   int pathlength;
-  std::unique_ptr<int[]> z = nullptr;         // atomic number
-  std::unique_ptr<int[]> a = nullptr;         // mass number
-  std::unique_ptr<int[]> nucindex = nullptr;  // index into nuclides list
-  std::unique_ptr<int[]> decaytypes = nullptr;
+  std::vector<int> z;         // atomic number
+  std::vector<int> a;         // mass number
+  std::vector<int> nucindex;  // index into nuclides list
+  std::vector<int> decaytypes;
 };
 
 std::vector<struct decaypath> decaypaths;
@@ -380,10 +380,10 @@ static void extend_lastdecaypath(void)
       }
       const int newpathlength = get_decaypathlength(startdecaypathindex) + 1;
       decaypaths.push_back({.pathlength = newpathlength,
-                            .z = std::make_unique<int[]>(newpathlength),
-                            .a = std::make_unique<int[]>(newpathlength),
-                            .nucindex = std::make_unique<int[]>(newpathlength),
-                            .decaytypes = std::make_unique<int[]>(newpathlength)});
+                            .z = std::vector<int>(newpathlength),
+                            .a = std::vector<int>(newpathlength),
+                            .nucindex = std::vector<int>(newpathlength),
+                            .decaytypes = std::vector<int>(newpathlength)});
       const int lastindex = decaypaths.size() - 1;
 
       // check for repeated nuclides, which would indicate a loop in the decay chain
@@ -456,10 +456,10 @@ static void find_decaypaths(void) {
 
       constexpr int pathlength = 1;
       decaypaths.push_back({.pathlength = pathlength,
-                            .z = std::make_unique<int[]>(pathlength),
-                            .a = std::make_unique<int[]>(pathlength),
-                            .nucindex = std::make_unique<int[]>(pathlength),
-                            .decaytypes = std::make_unique<int[]>(pathlength)});
+                            .z = std::vector<int>(pathlength),
+                            .a = std::vector<int>(pathlength),
+                            .nucindex = std::vector<int>(pathlength),
+                            .decaytypes = std::vector<int>(pathlength)});
       const int lastindex = decaypaths.size() - 1;
 
       decaypaths[lastindex].z[0] = z;
