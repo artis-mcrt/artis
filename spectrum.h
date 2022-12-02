@@ -2,7 +2,6 @@
 #define SPECTRUM_H
 
 #include <string>
-#include <vector>
 
 struct timestepspec {
   double *flux = nullptr;
@@ -14,8 +13,8 @@ struct timestepspec {
 struct spec {
   double nu_min = -1.;
   double nu_max = -1.;
-  std::vector<float> lower_freq;
-  std::vector<float> delta_freq;
+  float *lower_freq = nullptr;
+  float *delta_freq = nullptr;
   double *fluxalltimesteps = nullptr;
   double *absorptionalltimesteps = nullptr;
   double *emissionalltimesteps = nullptr;
