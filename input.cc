@@ -912,8 +912,7 @@ static void read_atomicdata_files(void) {
       assert_always(transdata_ionstage_in == ionstage);
 
       /// read in the level and transition data for this ion
-      std::vector<struct transitiontable_entry> transitiontable;
-      transitiontable.reserve(tottransitions);
+      std::vector<struct transitiontable_entry> transitiontable(tottransitions);
 
       /// load transition table for the CURRENT ion to temporary memory
 
