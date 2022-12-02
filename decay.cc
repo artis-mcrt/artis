@@ -454,18 +454,11 @@ static void find_decaypaths(void) {
         continue;
       }
 
-      constexpr int pathlength = 1;
-      decaypaths.push_back({.pathlength = pathlength,
-                            .z = std::vector<int>(pathlength),
-                            .a = std::vector<int>(pathlength),
-                            .nucindex = std::vector<int>(pathlength),
-                            .decaytypes = std::vector<int>(pathlength)});
-      const int lastindex = decaypaths.size() - 1;
-
-      decaypaths[lastindex].z[0] = z;
-      decaypaths[lastindex].a[0] = a;
-      decaypaths[lastindex].nucindex[0] = startnucindex;
-      decaypaths[lastindex].decaytypes[0] = dectypeindex;
+      decaypaths.push_back({.pathlength = 1,
+                            .z = std::vector<int>(1, z),
+                            .a = std::vector<int>(1, a),
+                            .nucindex = std::vector<int>(1, startnucindex),
+                            .decaytypes = std::vector<int>(1, dectypeindex)});
 
       extend_lastdecaypath();  // take this single step chain and find all descendants
     }
