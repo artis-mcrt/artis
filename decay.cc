@@ -378,29 +378,27 @@ static void extend_lastdecaypath(void)
       if (get_nuc_decaybranchprob(daughter_z, daughter_a, dectypeindex2) == 0.) {
         continue;
       }
-      const int newpathlength = get_decaypathlength(startdecaypathindex) + 1;
-      decaypaths.push_back({.pathlength = newpathlength,
-                            .z = std::vector<int>(newpathlength),
-                            .a = std::vector<int>(newpathlength),
-                            .nucindex = std::vector<int>(newpathlength),
-                            .decaytypes = std::vector<int>(newpathlength)});
-      const int lastindex = decaypaths.size() - 1;
 
-      // check for repeated nuclides, which would indicate a loop in the decay chain
+      // check for nuclide in existing path, which would indicate a loop
       for (int i = 0; i < get_decaypathlength(startdecaypathindex); i++) {
-        decaypaths[lastindex].z[i] = decaypaths[startdecaypathindex].z[i];
-        decaypaths[lastindex].a[i] = decaypaths[startdecaypathindex].a[i];
-        decaypaths[lastindex].nucindex[i] = decaypaths[startdecaypathindex].nucindex[i];
-        decaypaths[lastindex].decaytypes[i] = decaypaths[startdecaypathindex].decaytypes[i];
-        if (decaypaths[lastindex].z[i] == daughter_z && decaypaths[lastindex].a[i] == daughter_a) {
+        if (decaypaths[startdecaypathindex].z[i] == daughter_z && decaypaths[startdecaypathindex].a[i] == daughter_a) {
           printout("\nERROR: Loop found in nuclear decay chain.\n");
           abort();
         }
       }
-      decaypaths[lastindex].z[newpathlength - 1] = daughter_z;
-      decaypaths[lastindex].a[newpathlength - 1] = daughter_a;
-      decaypaths[lastindex].nucindex[newpathlength - 1] = get_nuc_index(daughter_z, daughter_a);
-      decaypaths[lastindex].decaytypes[newpathlength - 1] = dectypeindex2;
+
+      const int newpathlength = get_decaypathlength(startdecaypathindex) + 1;
+      decaypaths.push_back({.pathlength = newpathlength,
+                            .z = decaypaths[startdecaypathindex].z,
+                            .a = decaypaths[startdecaypathindex].a,
+                            .nucindex = decaypaths[startdecaypathindex].nucindex,
+                            .decaytypes = decaypaths[startdecaypathindex].decaytypes});
+      const int lastindex = decaypaths.size() - 1;
+
+      decaypaths[lastindex].z.push_back(daughter_z);
+      decaypaths[lastindex].a.push_back(daughter_a);
+      decaypaths[lastindex].nucindex.push_back(get_nuc_index(daughter_z, daughter_a));
+      decaypaths[lastindex].decaytypes.push_back(dectypeindex2);
 
       extend_lastdecaypath();
     }
