@@ -470,8 +470,6 @@ void init_spectrum_trace(void) {
 }
 
 void free_spectra(struct spec *spectra) {
-  free(spectra->lower_freq);
-  free(spectra->delta_freq);
   free(spectra->fluxalltimesteps);
   if (spectra->do_emission_res) {
     free(spectra->absorptionalltimesteps);
@@ -494,8 +492,9 @@ void init_spectra(struct spec *spectra, const double nu_min, const double nu_max
   spectra->nu_min = nu_min;
   spectra->nu_max = nu_max;
   spectra->do_emission_res = do_emission_res;
-  assert_always(spectra->lower_freq != nullptr);
-  assert_always(spectra->delta_freq != nullptr);
+  assert_always(spectra->lower_freq.size() == MNUBINS);
+  assert_always(spectra->delta_freq.size() == MNUBINS);
+
   for (int nnu = 0; nnu < MNUBINS; nnu++) {
     spectra->lower_freq[nnu] = exp(log(nu_min) + (nnu * (dlognu)));
     spectra->delta_freq[nnu] = exp(log(nu_min) + ((nnu + 1) * (dlognu))) - spectra->lower_freq[nnu];
@@ -572,8 +571,8 @@ struct spec *alloc_spectra(const bool do_emission_res) {
   mem_usage += globals::ntstep * sizeof(struct spec);
 
   spectra->do_emission_res = false;  // might be set true later by alloc_emissionabsorption_spectra
-  spectra->lower_freq = static_cast<float *>(malloc(MNUBINS * sizeof(float)));
-  spectra->delta_freq = static_cast<float *>(malloc(MNUBINS * sizeof(float)));
+  spectra->lower_freq = std::vector<float>(MNUBINS);
+  spectra->delta_freq = std::vector<float>(MNUBINS);
 
   spectra->timesteps = static_cast<struct timestepspec *>(malloc(globals::ntstep * sizeof(struct timestepspec)));
   mem_usage += globals::ntstep * sizeof(struct timestepspec);
