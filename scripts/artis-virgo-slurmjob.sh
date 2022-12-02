@@ -6,6 +6,9 @@ cd $SLURM_SUBMIT_DIR
 
 spack load gsl target=$(spack arch -t)
 
+# decompress any zipped input files
+source ./artis/scripts/exspec-before.sh
+
 echo "$(date): time before srun sn3d"
 time srun -- ./sn3d -w 24 > out.txt
 echo "$(date): time after srun sn3d finished"
