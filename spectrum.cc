@@ -639,10 +639,10 @@ static void mpi_reduce_spectra(int my_rank, struct spec *spectra, int numtimeste
 void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts) {
   const time_t time_func_start = time(nullptr);
 
-  double *rpkt_light_curve_lum = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
-  double *rpkt_light_curve_lumcmf = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
-  double *gamma_light_curve_lum = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
-  double *gamma_light_curve_lumcmf = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
+  auto rpkt_light_curve_lum = std::make_unique<double[]>(globals::ntstep);
+  auto rpkt_light_curve_lumcmf = std::make_unique<double[]>(globals::ntstep);
+  auto gamma_light_curve_lum = std::make_unique<double[]>(globals::ntstep);
+  auto gamma_light_curve_lumcmf = std::make_unique<double[]>(globals::ntstep);
 
   TRACE_EMISSION_ABSORPTION_REGION_ON = false;
 
@@ -670,10 +670,10 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
     if (pkts[ii].type == TYPE_ESCAPE) {
       const int abin = -1;  // all angles
       if (pkts[ii].escape_type == TYPE_RPKT) {
-        add_to_lc_res(&pkts[ii], abin, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+        add_to_lc_res(&pkts[ii], abin, rpkt_light_curve_lum.get(), rpkt_light_curve_lumcmf.get());
         add_to_spec_res(&pkts[ii], abin, rpkt_spectra, stokes_i, stokes_q, stokes_u);
       } else if (abin == -1 && pkts[ii].escape_type == TYPE_GAMMA) {
-        add_to_lc_res(&pkts[ii], abin, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+        add_to_lc_res(&pkts[ii], abin, gamma_light_curve_lum.get(), gamma_light_curve_lumcmf.get());
       }
     }
   }
@@ -685,28 +685,24 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
   mpi_reduce_spectra(my_rank, rpkt_spectra, numtimesteps);
-  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lum, rpkt_light_curve_lum, numtimesteps, MPI_DOUBLE,
-             MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lumcmf, rpkt_light_curve_lumcmf, numtimesteps, MPI_DOUBLE,
-             MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : gamma_light_curve_lum, gamma_light_curve_lum, numtimesteps, MPI_DOUBLE,
-             MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : gamma_light_curve_lumcmf, gamma_light_curve_lumcmf, numtimesteps, MPI_DOUBLE,
-             MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lum.get(), rpkt_light_curve_lum.get(), numtimesteps,
+             MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lumcmf.get(), rpkt_light_curve_lumcmf.get(), numtimesteps,
+             MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : gamma_light_curve_lum.get(), gamma_light_curve_lum.get(), numtimesteps,
+             MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : gamma_light_curve_lumcmf.get(), gamma_light_curve_lumcmf.get(), numtimesteps,
+             MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
   const time_t time_mpireduction_end = time(nullptr);
 
   if (my_rank == 0) {
-    write_light_curve("light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, numtimesteps);
-    write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf, numtimesteps);
+    write_light_curve("light_curve.out", -1, rpkt_light_curve_lum.get(), rpkt_light_curve_lumcmf.get(), numtimesteps);
+    write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum.get(), gamma_light_curve_lumcmf.get(),
+                      numtimesteps);
     write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, numtimesteps);
   }
-
-  free(rpkt_light_curve_lum);
-  free(rpkt_light_curve_lumcmf);
-  free(gamma_light_curve_lum);
-  free(gamma_light_curve_lumcmf);
 
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
