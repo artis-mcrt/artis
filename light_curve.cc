@@ -8,27 +8,32 @@
 
 void write_light_curve(const std::string &lc_filename, const int current_abin, const double *light_curve_lum,
                        const double *light_curve_lumcmf, const int numtimesteps) {
-  FILE *lc_file = fopen_required(lc_filename.c_str(), "w");
   assert_always(numtimesteps <= globals::ntstep);
+
+  std::ofstream lc_file(lc_filename);
+  if (!lc_file) throw std::system_error(errno, std::system_category(), "failed to open " + lc_filename);
 
   printout("Writing %s\n", lc_filename.c_str());
 
+  constexpr int maxlen = 1024;
+  char linebuffer[maxlen];
+
   /// Print out the UVOIR bolometric light curve.
   for (int nts = 0; nts < numtimesteps; nts++) {
-    fprintf(lc_file, "%g %g %g\n", globals::time_step[nts].mid / DAY, (light_curve_lum[nts] / LSUN),
-            (light_curve_lumcmf[nts] / LSUN));
+    assert_always(snprintf(linebuffer, maxlen, "%g %g %g\n", globals::time_step[nts].mid / DAY,
+                           (light_curve_lum[nts] / LSUN), (light_curve_lumcmf[nts] / LSUN)) < maxlen);
+    lc_file << linebuffer << '\n';
   }
 
   if (current_abin == -1) {
     /// Now print out the gamma ray deposition rate in the same file.
     for (int m = 0; m < numtimesteps; m++) {
-      fprintf(lc_file, "%g %g %g\n", globals::time_step[m].mid / DAY,
-              (globals::time_step[m].gamma_dep / LSUN / globals::time_step[m].width),
-              (globals::time_step[m].cmf_lum / globals::time_step[m].width / LSUN));
+      assert_always(snprintf(linebuffer, maxlen, "%g %g %g\n", globals::time_step[m].mid / DAY,
+                             (globals::time_step[m].gamma_dep / LSUN / globals::time_step[m].width),
+                             (globals::time_step[m].cmf_lum / globals::time_step[m].width / LSUN)) < maxlen);
+      lc_file << linebuffer << '\n';
     }
   }
-
-  fclose(lc_file);
 }
 
 void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, double *light_curve_lum, double *light_curve_lumcmf)
