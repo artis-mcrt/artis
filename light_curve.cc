@@ -20,7 +20,7 @@ void write_light_curve(const std::string &lc_filename, const int current_abin, c
 
   /// Print out the UVOIR bolometric light curve.
   for (int nts = 0; nts < numtimesteps; nts++) {
-    assert_always(snprintf(linebuffer, maxlen, "%g %g %g\n", globals::time_step[nts].mid / DAY,
+    assert_always(snprintf(linebuffer, maxlen, "%g %g %g", globals::time_step[nts].mid / DAY,
                            (light_curve_lum[nts] / LSUN), (light_curve_lumcmf[nts] / LSUN)) < maxlen);
     lc_file << linebuffer << '\n';
   }
@@ -28,7 +28,7 @@ void write_light_curve(const std::string &lc_filename, const int current_abin, c
   if (current_abin == -1) {
     /// Now print out the gamma ray deposition rate in the same file.
     for (int m = 0; m < numtimesteps; m++) {
-      assert_always(snprintf(linebuffer, maxlen, "%g %g %g\n", globals::time_step[m].mid / DAY,
+      assert_always(snprintf(linebuffer, maxlen, "%g %g %g", globals::time_step[m].mid / DAY,
                              (globals::time_step[m].gamma_dep / LSUN / globals::time_step[m].width),
                              (globals::time_step[m].cmf_lum / globals::time_step[m].width / LSUN)) < maxlen);
       lc_file << linebuffer << '\n';
