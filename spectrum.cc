@@ -1,6 +1,7 @@
 #include "spectrum.h"
 
 #include <ctime>
+#include <memory>
 
 #include "atomic.h"
 #include "exspec.h"
@@ -141,9 +142,9 @@ static int get_proccount(void)
   return 2 * get_nelements() * get_max_nions() + 1;
 }
 
-void write_spectrum(const char *spec_filename, const char *emission_filename, const char *trueemission_filename,
+void write_spectrum(const std::string &spec_filename, const char *emission_filename, const char *trueemission_filename,
                     const char *absorption_filename, struct spec *spectra, int numtimesteps) {
-  FILE *spec_file = fopen_required(spec_filename, "w");
+  FILE *spec_file = fopen_required(spec_filename.c_str(), "w");
 
   FILE *emission_file = nullptr;
   FILE *trueemission_file = nullptr;
@@ -158,10 +159,10 @@ void write_spectrum(const char *spec_filename, const char *emission_filename, co
     assert_always(trueemission_file != nullptr);
     absorption_file = fopen_required(absorption_filename, "w");
     assert_always(absorption_file != nullptr);
-    printout("Writing %s, %s, %s, and %s\n", spec_filename, emission_filename, trueemission_filename,
+    printout("Writing %s, %s, %s, and %s\n", spec_filename.c_str(), emission_filename, trueemission_filename,
              absorption_filename);
   } else {
-    printout("Writing %s\n", spec_filename);
+    printout("Writing %s\n", spec_filename.c_str());
   }
 
   if (TRACE_EMISSION_ABSORPTION_REGION_ON && do_emission_res && traceemissionabsorption != nullptr) {
@@ -211,20 +212,22 @@ void write_spectrum(const char *spec_filename, const char *emission_filename, co
   }
 }
 
-void write_specpol(const char *specpol_filename, const char *emission_filename, const char *absorption_filename,
-                   struct spec *stokes_i, struct spec *stokes_q, struct spec *stokes_u) {
-  FILE *specpol_file = fopen_required(specpol_filename, "w");
+void write_specpol(const std::string &specpol_filename, const std::string &emission_filename,
+                   const std::string &absorption_filename, struct spec *stokes_i, struct spec *stokes_q,
+                   struct spec *stokes_u) {
+  FILE *specpol_file = fopen_required(specpol_filename.c_str(), "w");
   FILE *emissionpol_file = nullptr;
   FILE *absorptionpol_file = nullptr;
 
-  bool do_emission_res = stokes_i->do_emission_res;
+  const bool do_emission_res = stokes_i->do_emission_res;
 
   if (do_emission_res) {
-    emissionpol_file = fopen_required(emission_filename, "w");
-    absorptionpol_file = fopen_required(absorption_filename, "w");
-    printout("Writing %s, %s, and %s\n", specpol_filename, emission_filename, absorption_filename);
+    emissionpol_file = fopen_required(emission_filename.c_str(), "w");
+    absorptionpol_file = fopen_required(absorption_filename.c_str(), "w");
+    printout("Writing %s, %s, and %s\n", specpol_filename.c_str(), emission_filename.c_str(),
+             absorption_filename.c_str());
   } else {
-    printout("Writing %s\n", specpol_filename);
+    printout("Writing %s\n", specpol_filename.c_str());
   }
 
   fprintf(specpol_file, "%g ", 0.0);
@@ -639,10 +642,10 @@ static void mpi_reduce_spectra(int my_rank, struct spec *spectra, int numtimeste
 void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts) {
   const time_t time_func_start = time(nullptr);
 
-  auto rpkt_light_curve_lum = std::make_unique<double[]>(globals::ntstep);
-  auto rpkt_light_curve_lumcmf = std::make_unique<double[]>(globals::ntstep);
-  auto gamma_light_curve_lum = std::make_unique<double[]>(globals::ntstep);
-  auto gamma_light_curve_lumcmf = std::make_unique<double[]>(globals::ntstep);
+  std::vector<double> rpkt_light_curve_lum(globals::ntstep, 0.);
+  std::vector<double> rpkt_light_curve_lumcmf(globals::ntstep, 0.);
+  std::vector<double> gamma_light_curve_lum(globals::ntstep, 0.);
+  std::vector<double> gamma_light_curve_lumcmf(globals::ntstep, 0.);
 
   TRACE_EMISSION_ABSORPTION_REGION_ON = false;
 
@@ -670,10 +673,10 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
     if (pkts[ii].type == TYPE_ESCAPE) {
       const int abin = -1;  // all angles
       if (pkts[ii].escape_type == TYPE_RPKT) {
-        add_to_lc_res(&pkts[ii], abin, rpkt_light_curve_lum.get(), rpkt_light_curve_lumcmf.get());
+        add_to_lc_res(&pkts[ii], abin, rpkt_light_curve_lum.data(), rpkt_light_curve_lumcmf.data());
         add_to_spec_res(&pkts[ii], abin, rpkt_spectra, stokes_i, stokes_q, stokes_u);
       } else if (abin == -1 && pkts[ii].escape_type == TYPE_GAMMA) {
-        add_to_lc_res(&pkts[ii], abin, gamma_light_curve_lum.get(), gamma_light_curve_lumcmf.get());
+        add_to_lc_res(&pkts[ii], abin, gamma_light_curve_lum.data(), gamma_light_curve_lumcmf.data());
       }
     }
   }
@@ -685,21 +688,21 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
   mpi_reduce_spectra(my_rank, rpkt_spectra, numtimesteps);
-  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lum.get(), rpkt_light_curve_lum.get(), numtimesteps,
+  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lum.data(), rpkt_light_curve_lum.data(), numtimesteps,
              MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lumcmf.get(), rpkt_light_curve_lumcmf.get(), numtimesteps,
+  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lumcmf.data(), rpkt_light_curve_lumcmf.data(), numtimesteps,
              MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : gamma_light_curve_lum.get(), gamma_light_curve_lum.get(), numtimesteps,
+  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : gamma_light_curve_lum.data(), gamma_light_curve_lum.data(), numtimesteps,
              MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : gamma_light_curve_lumcmf.get(), gamma_light_curve_lumcmf.get(), numtimesteps,
-             MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : gamma_light_curve_lumcmf.data(), gamma_light_curve_lumcmf.data(),
+             numtimesteps, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
   const time_t time_mpireduction_end = time(nullptr);
 
   if (my_rank == 0) {
-    write_light_curve("light_curve.out", -1, rpkt_light_curve_lum.get(), rpkt_light_curve_lumcmf.get(), numtimesteps);
-    write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum.get(), gamma_light_curve_lumcmf.get(),
+    write_light_curve("light_curve.out", -1, rpkt_light_curve_lum.data(), rpkt_light_curve_lumcmf.data(), numtimesteps);
+    write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum.data(), gamma_light_curve_lumcmf.data(),
                       numtimesteps);
     write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, numtimesteps);
   }

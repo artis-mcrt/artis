@@ -1,7 +1,7 @@
 #ifndef SPECTRUM_H
 #define SPECTRUM_H
 
-#include <cstdio>
+#include <string>
 
 struct timestepspec {
   double *flux = nullptr;
@@ -23,11 +23,12 @@ struct spec {
   bool do_emission_res = true;
 };
 
-void write_spectrum(const char *spec_filename, const char *emission_filename, const char *trueemission_filename,
+void write_spectrum(const std::string &spec_filename, const char *emission_filename, const char *trueemission_filename,
                     const char *absorption_filename, struct spec *spectra, int num_timesteps);
 
-void write_specpol(const char *specpol_filename, const char *emission_filename, const char *absorption_filename,
-                   struct spec *stokes_i, struct spec *stokes_q, struct spec *stokes_u);
+void write_specpol(const std::string &specpol_filename, const std::string &emission_filename,
+                   const std::string &absorption_filename, struct spec *stokes_i, struct spec *stokes_q,
+                   struct spec *stokes_u);
 
 void add_to_spec_res(const struct packet *const pkt_ptr, int current_abin, struct spec *spectra, struct spec *stokes_i,
                      struct spec *stokes_q, struct spec *stokes_u);

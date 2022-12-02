@@ -6,12 +6,12 @@
 
 // Routine to make a MC light curve from the r-packets.
 
-void write_light_curve(const char *lc_filename, const int current_abin, const double *light_curve_lum,
+void write_light_curve(const std::string &lc_filename, const int current_abin, const double *light_curve_lum,
                        const double *light_curve_lumcmf, const int numtimesteps) {
-  FILE *lc_file = fopen_required(lc_filename, "w");
+  FILE *lc_file = fopen_required(lc_filename.c_str(), "w");
   assert_always(numtimesteps <= globals::ntstep);
 
-  printout("Writing %s\n", lc_filename);
+  printout("Writing %s\n", lc_filename.c_str());
 
   /// Print out the UVOIR bolometric light curve.
   for (int nts = 0; nts < numtimesteps; nts++) {

@@ -16,6 +16,7 @@
 
 #include <cstdio>
 #include <filesystem>
+#include <memory>
 
 #include "decay.h"
 #include "grid.h"
@@ -150,10 +151,10 @@ int main(int argc, char **argv) {
   // a is the escape direction angle bin
   for (int a = -1; a < amax; a++) {
     /// Set up the light curve grid and initialise the bins to zero.
-    double *rpkt_light_curve_lum = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
-    double *rpkt_light_curve_lumcmf = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
-    double *gamma_light_curve_lum = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
-    double *gamma_light_curve_lumcmf = static_cast<double *>(calloc(globals::ntstep, sizeof(double)));
+    std::vector<double> rpkt_light_curve_lum(globals::ntstep, 0.);
+    std::vector<double> rpkt_light_curve_lumcmf(globals::ntstep, 0.);
+    std::vector<double> gamma_light_curve_lum(globals::ntstep, 0.);
+    std::vector<double> gamma_light_curve_lumcmf(globals::ntstep, 0.);
     /// Set up the spectrum grid and initialise the bins to zero.
 
     init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
@@ -194,12 +195,12 @@ int main(int argc, char **argv) {
           nesc_tot++;
           if (pkts_start[ii].escape_type == TYPE_RPKT) {
             nesc_rpkt++;
-            add_to_lc_res(&pkts_start[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+            add_to_lc_res(&pkts_start[ii], a, rpkt_light_curve_lum.data(), rpkt_light_curve_lumcmf.data());
             add_to_spec_res(&pkts_start[ii], a, rpkt_spectra, stokes_i, stokes_q, stokes_u);
           } else if (pkts_start[ii].escape_type == TYPE_GAMMA) {
             nesc_gamma++;
             if (a == -1) {
-              add_to_lc_res(&pkts_start[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+              add_to_lc_res(&pkts_start[ii], a, gamma_light_curve_lum.data(), gamma_light_curve_lumcmf.data());
               add_to_spec_res(&pkts_start[ii], a, gamma_spectra, nullptr, nullptr, nullptr);
             }
           }
@@ -213,8 +214,10 @@ int main(int argc, char **argv) {
 
     if (a == -1) {
       // angle-averaged spectra and light curves
-      write_light_curve("light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntstep);
-      write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf, globals::ntstep);
+      write_light_curve("light_curve.out", -1, rpkt_light_curve_lum.data(), rpkt_light_curve_lumcmf.data(),
+                        globals::ntstep);
+      write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum.data(), gamma_light_curve_lumcmf.data(),
+                        globals::ntstep);
 
       write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, globals::ntstep);
 
@@ -244,7 +247,7 @@ int main(int argc, char **argv) {
       char absorption_filename[128] = "";
       snprintf(absorption_filename, 128, "absorption_res_%.2d.out", a);
 
-      write_light_curve(lc_filename, a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntstep);
+      write_light_curve(lc_filename, a, rpkt_light_curve_lum.data(), rpkt_light_curve_lumcmf.data(), globals::ntstep);
       write_spectrum(spec_filename, emission_filename, trueemission_filename, absorption_filename, rpkt_spectra,
                      globals::ntstep);
 
@@ -263,12 +266,6 @@ int main(int argc, char **argv) {
 
       printout("Did %d of %d angle bins.\n", a + 1, MABINS);
     }
-
-    free(rpkt_light_curve_lum);
-    free(rpkt_light_curve_lumcmf);
-
-    free(gamma_light_curve_lum);
-    free(gamma_light_curve_lumcmf);
   }
 
   free_spectra(rpkt_spectra);
