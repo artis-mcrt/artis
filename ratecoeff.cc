@@ -467,7 +467,7 @@ static void precalculate_rate_coefficient_integrals(void) {
       for (int level = 0; level < nlevels; level++) {
         if ((level > 0) && (level % 50 == 0)) printout("  completed up to level %d of %d\n", level, nlevels);
 
-        // coefficients are stored in node shared memory, so divide up the work
+        // coefficients are stored in node shared memory, so divide up the work on the node
         if ((level % globals::node_nprocs) != globals::rank_in_node) {
           continue;
         }
@@ -1014,7 +1014,8 @@ void ratecoefficients_init(void)
   }
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-  // rank 0 will decide if we need to regenerate rate coefficient tables
+  // all node-rank 0 should agree, but to be sure,
+  // world rank 0 will decide if we need to regenerate rate coefficient tables
   MPI_Bcast(&ratecoeff_match, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
 #endif
 
