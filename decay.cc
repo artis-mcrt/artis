@@ -814,7 +814,7 @@ __host__ __device__ static double get_nuc_massfrac(const int modelgridindex, con
     const int z_end = decaypaths[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
     const int a_end = decaypaths[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
 
-    // match 4He contribution from alpha decay of any nucleus
+    // match 4He abundance to alpha decay of any nucleus (no continues), otherwise check daughter nuclide matches
     if (z != 2 || a != 4 ||
         decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1] != DECAYTYPE_ALPHA) {
       if (nuc_exists_z_a && !(z_end == z && a_end == a))  // requested nuclide is in network, so match last nuc in chain
@@ -836,7 +836,7 @@ __host__ __device__ static double get_nuc_massfrac(const int modelgridindex, con
     int decaypathlength = get_decaypathlength(decaypathindex);
     auto meanlifetimes = std::make_unique<double[]>(decaypathlength + 1);
     for (int i = 0; i < decaypathlength; i++) {
-      meanlifetimes[i] = get_meanlife(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i]);
+      meanlifetimes[i] = get_meanlife_bynucindex(decaypaths[decaypathindex].nucindex[i]);
     }
 
     int fulldecaypathlength = decaypathlength;
@@ -978,7 +978,7 @@ __host__ __device__ double get_endecay_per_ejectamass_t0_to_time_withexpansion(c
     const int decaypathlength = get_decaypathlength(decaypathindex);
     auto meanlifetimes = std::make_unique<double[]>(decaypathlength + 1);
     for (int i = 0; i < decaypathlength; i++) {
-      meanlifetimes[i] = get_meanlife(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i]);
+      meanlifetimes[i] = get_meanlife_bynucindex(decaypaths[decaypathindex].nucindex[i]);
     }
     // the nuclide past the end of the chain radionuclide
     meanlifetimes[decaypathlength] = -1.;  // nuclide at the end is a sink, so treat it as stable (even if it's not)
