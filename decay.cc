@@ -1062,7 +1062,7 @@ __host__ __device__ static double get_chain_decay_power_per_ejectamass(const int
   int decaypathlength = get_decaypathlength(decaypathindex);
   auto meanlifetimes = std::make_unique<double[]>(decaypathlength);
   for (int i = 0; i < decaypathlength; i++) {
-    meanlifetimes[i] = get_meanlife(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i]);
+    meanlifetimes[i] = get_meanlife_bynucindex(decaypaths[decaypathindex].nucindex[i]);
   }
 
   // contribution to the end nuclide abundance from the top of chain (could be a length-one chain Z,A_top = Z,A_end
