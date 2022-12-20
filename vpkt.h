@@ -44,7 +44,7 @@ __host__ __device__ int vpkt_call_estimators(struct packet *pkt_ptr, double t_cu
 #define VMTBINS 30
 
 // Total number of frequency ranges
-#define MRANGE 1
+#define MRANGE 2
 
 extern int vgrid_flag;
 
