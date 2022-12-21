@@ -811,6 +811,7 @@ __host__ __device__ static double get_nuc_massfrac(const int modelgridindex, con
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
     const int z_top = decaypaths[decaypathindex].z[0];
     const int a_top = decaypaths[decaypathindex].a[0];
+    const int nucindex_top = decaypaths[decaypathindex].nucindex[0];
     const int z_end = decaypaths[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
     const int a_end = decaypaths[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
 
@@ -830,7 +831,8 @@ __host__ __device__ static double get_nuc_massfrac(const int modelgridindex, con
       }
     }
 
-    const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
+    const double top_initabund =
+        grid::get_modelinitradioabund_bynucindex(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
     assert_always(top_initabund >= 0.) if (top_initabund <= 0.) { continue; }
 
     int decaypathlength = get_decaypathlength(decaypathindex);
