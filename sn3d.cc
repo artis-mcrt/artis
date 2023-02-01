@@ -498,7 +498,7 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  printout("time after write temporary packets file %ld (took %ld seconds, waited %lf s for other ranks)\n",
+  printout("time after write temporary packets file %ld (took %ld seconds, waited %ld s for other ranks)\n",
            time(nullptr), time_write_packets_file_finished - time_write_packets_file_start,
            time(nullptr) - time_write_packets_file_finished);
 
@@ -517,7 +517,7 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  printout("read back packets files took %ld seconds.\n", time(nullptr) - time_readback_packets_start);
+  printout("Reading back packets files for all ranks took %ld seconds.\n", time(nullptr) - time_readback_packets_start);
 
   if (my_rank == 0) {
     grid::write_grid_restart_data(nts);
