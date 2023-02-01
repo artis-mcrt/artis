@@ -389,7 +389,8 @@ static void write_temp_packetsfile(const int timestep, const int my_rank, const 
   printout("Writing %s...", filename);
   FILE *packets_file = fopen_required(filename, "wb");
 
-  fwrite(pkt, sizeof(struct packet), globals::npkts, packets_file);
+  assert_always(fwrite(pkt, sizeof(struct packet), globals::npkts, packets_file) == (size_t)globals::npkts);
+
   fclose(packets_file);
   printout("done\n");
 }
@@ -461,6 +462,10 @@ void *makemanaged(void *ptr, size_t curSize) {
 #endif
 
 static void save_grid_and_packets(const int nts, const int my_rank, struct packet *packets) {
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
   const time_t time_write_packets_file_start = time(nullptr);
   printout("time before write temporary packets file %ld\n", time_write_packets_file_start);
 
@@ -487,8 +492,32 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
   }
 #endif
 
-  printout("time after write temporary packets file %ld (took %ld seconds)\n", time(nullptr),
-           time(nullptr) - time_write_packets_file_start);
+  const time_t time_write_packets_file_finished = time(nullptr);
+
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
+  printout("time after write temporary packets file %ld (took %ld seconds, waited %lf s for other ranks)\n",
+           time(nullptr), time_write_packets_file_finished - time_write_packets_file_start,
+           time(nullptr) - time_write_packets_file_finished);
+
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
+  const time_t time_readback_packets_start = time(nullptr);
+
+  printout("reading back temporary packets file to check validity...\n");
+
+  // read packets file back to check that the disk write didn't fail
+  read_temp_packetsfile(nts, my_rank, packets);
+
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
+  printout("read back packets files took %ld seconds.\n", time(nullptr) - time_readback_packets_start);
 
   if (my_rank == 0) {
     grid::write_grid_restart_data(nts);
