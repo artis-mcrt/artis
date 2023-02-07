@@ -198,7 +198,7 @@ void read_temp_packetsfile(const int timestep, const int my_rank, struct packet 
 
   printout("Reading %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");
-  assert_always(fread(pkt, sizeof(struct packet), globals::npkts, packets_file) == (size_t)globals::npkts);
+  assert_always(std::fread(pkt, sizeof(struct packet), globals::npkts, packets_file) == (size_t)globals::npkts);
   // read_packets(packets_file);
   fclose(packets_file);
   printout("done\n");
@@ -214,8 +214,8 @@ void verify_temp_packetsfile(const int timestep, const int my_rank, const struct
   struct packet pkt_in;
   bool failed = false;
   for (int n = 0; n < globals::npkts; n++) {
-    fseek(packets_file, n * sizeof(struct packet), SEEK_SET);
-    assert_always(fread(&pkt_in, sizeof(struct packet), 1, packets_file) == 1);
+    std::fseek(packets_file, n * sizeof(struct packet), SEEK_SET);
+    assert_always(std::fread(&pkt_in, sizeof(struct packet), 1, packets_file) == 1);
     if (pkt_in != pkt[n]) {
       printout("failed on packet %d\n", n);
       failed = true;

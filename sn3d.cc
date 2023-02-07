@@ -389,7 +389,7 @@ static void write_temp_packetsfile(const int timestep, const int my_rank, const 
   printout("Writing %s...", filename);
   FILE *packets_file = fopen_required(filename, "wb");
 
-  assert_always(fwrite(pkt, sizeof(struct packet), globals::npkts, packets_file) == (size_t)globals::npkts);
+  assert_always(std::fwrite(pkt, sizeof(struct packet), globals::npkts, packets_file) == (size_t)globals::npkts);
 
   fclose(packets_file);
   printout("done\n");
