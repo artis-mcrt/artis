@@ -218,6 +218,9 @@ void verify_temp_packetsfile(const int timestep, const int my_rank, const struct
     assert_always(std::fread(&pkt_in, sizeof(struct packet), 1, packets_file) == 1);
     if (pkt_in != pkt[n]) {
       printout("failed on packet %d\n", n);
+      printout(" compare number %ld %ld\n", pkt_in.number, pkt[n].number);
+      printout(" compare nu_cmf %lg %lg\n", pkt_in.nu_cmf, pkt[n].nu_cmf);
+      printout(" compare e_rf %lg %lg\n", pkt_in.e_rf, pkt[n].e_rf);
       failed = true;
     }
   }
