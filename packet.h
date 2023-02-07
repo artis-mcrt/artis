@@ -1,6 +1,7 @@
 #ifndef PACKET_H
 #define PACKET_H
 
+#include <compare>
 #include <cstdio>
 
 enum packet_type {
@@ -23,6 +24,8 @@ struct mastate {
   int ion;             /// in ionstage ion (this is an ion index)
   int level;           /// and level=level (this is a level index)
   int activatingline;  /// Linelistindex of the activating line for bb activated MAs, -99 else.
+
+  auto operator<=>(const mastate &) const = default;
 };
 
 struct packet {
@@ -70,11 +73,14 @@ struct packet {
   int pellet_nucindex;                    // nuclide index of the decaying species
   float trueemissionvelocity;
   struct mastate mastate;
+
+  auto operator<=>(const packet &) const = default;
 };
 
 void packet_init(int my_rank, struct packet *pkt);
-void write_packets(char filename[], struct packet *pkt);
+void write_packets(char filename[], const struct packet *const pkt);
 void read_packets(char filename[], struct packet *pkt);
-void read_temp_packetsfile(const int timestep, const int my_rank, struct packet *const pkt);
+void read_temp_packetsfile(int timestep, int my_rank, struct packet *const pkt);
+void verify_temp_packetsfile(int timestep, int my_rank, const struct packet *const pkt);
 
 #endif  // PACKET_H

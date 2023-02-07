@@ -145,7 +145,7 @@ void packet_init(int my_rank, struct packet *pkt)
   printout("radioactive energy that will be freed during simulation time: %g erg\n", e_cmf_total);
 }
 
-void write_packets(char filename[], struct packet *pkt) {
+void write_packets(char filename[], const struct packet *const pkt) {
   // write packets text file
   FILE *packets_file = fopen_required(filename, "w");
   fprintf(packets_file,
@@ -204,6 +204,22 @@ void read_temp_packetsfile(const int timestep, const int my_rank, struct packet 
   printout("done\n");
 }
 
+void verify_temp_packetsfile(const int timestep, const int my_rank, const struct packet *const pkt) {
+  // read packets binary file
+  char filename[128];
+  snprintf(filename, 128, "packets_%.4d_ts%d.tmp", my_rank, timestep);
+
+  printout("Verifying file %s...\n", filename);
+  FILE *packets_file = fopen_required(filename, "rb");
+  struct packet pkt_in;
+  for (int n = 0; n < globals::npkts; n++) {
+    assert_always(fread(&pkt_in, sizeof(struct packet), 1, packets_file) == 1);
+    assert_always(pkt_in == pkt[n]);
+  }
+  fclose(packets_file);
+  printout("  verification passed\n");
+}
+
 void read_packets(char filename[], struct packet *pkt) {
   // read packets*.out text format file
   std::ifstream packets_file(filename);
@@ -222,7 +238,8 @@ void read_packets(char filename[], struct packet *pkt) {
 
     if (i > globals::npkts - 1) {
       printout(
-          "ERROR: More data found beyond packet %d (expecting %d packets). Recompile exspec with the correct number of "
+          "ERROR: More data found beyond packet %d (expecting %d packets). Recompile exspec with the correct number "
+          "of "
           "packets. Run (wc -l < packets00_0000.out) to count them.\n",
           packets_read, globals::npkts);
       abort();

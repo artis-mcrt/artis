@@ -511,7 +511,7 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
   printout("reading back temporary packets file to check validity...\n");
 
   // read packets file back to check that the disk write didn't fail
-  read_temp_packetsfile(nts, my_rank, packets);
+  verify_temp_packetsfile(nts, my_rank, packets);
 
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
