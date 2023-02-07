@@ -212,10 +212,15 @@ void verify_temp_packetsfile(const int timestep, const int my_rank, const struct
   printout("Verifying file %s...\n", filename);
   FILE *packets_file = fopen_required(filename, "rb");
   struct packet pkt_in;
+  bool failed = false;
   for (int n = 0; n < globals::npkts; n++) {
     assert_always(fread(&pkt_in, sizeof(struct packet), 1, packets_file) == 1);
-    assert_always(pkt_in == pkt[n]);
+    if (pkt_in != pkt[n]) {
+      printout("failed on packet %d\n", n);
+      failed = true;
+    }
   }
+  assert_always(!failed);
   fclose(packets_file);
   printout("  verification passed\n");
 }
