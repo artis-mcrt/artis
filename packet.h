@@ -74,7 +74,12 @@ struct packet {
   float trueemissionvelocity;
   struct mastate mastate;
 
-  auto operator<=>(const packet &) const = default;
+  inline bool operator==(const packet &rhs) {
+    return (type == rhs.type &&
+            (em_pos[0] == rhs.em_pos[0] && em_pos[1] == rhs.em_pos[1] && em_pos[2] == rhs.em_pos[2]) &&
+            nu_cmf == rhs.nu_cmf && number == rhs.number && where == rhs.where && prop_time == rhs.prop_time &&
+            scat_count == rhs.scat_count);
+  }
 };
 
 void packet_init(int my_rank, struct packet *pkt);
