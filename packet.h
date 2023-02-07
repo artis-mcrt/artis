@@ -24,8 +24,6 @@ struct mastate {
   int ion;             /// in ionstage ion (this is an ion index)
   int level;           /// and level=level (this is a level index)
   int activatingline;  /// Linelistindex of the activating line for bb activated MAs, -99 else.
-
-  auto operator<=>(const mastate &) const = default;
 };
 
 struct packet {
@@ -75,10 +73,11 @@ struct packet {
   struct mastate mastate;
 
   inline bool operator==(const packet &rhs) {
-    return (type == rhs.type &&
+    return (number == rhs.number && type == rhs.type &&
             (em_pos[0] == rhs.em_pos[0] && em_pos[1] == rhs.em_pos[1] && em_pos[2] == rhs.em_pos[2]) &&
-            nu_cmf == rhs.nu_cmf && number == rhs.number && where == rhs.where && prop_time == rhs.prop_time &&
-            scat_count == rhs.scat_count);
+            nu_cmf == rhs.nu_cmf && where == rhs.where && prop_time == rhs.prop_time && scat_count == rhs.scat_count &&
+            mastate.activatingline == rhs.mastate.activatingline && tdecay == rhs.tdecay &&
+            pellet_nucindex == rhs.pellet_nucindex);
   }
 };
 
