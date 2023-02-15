@@ -16,4 +16,4 @@ f971dfa7783cba5e435378dc097611fa  ratecoeff_v2.dat
 e86f0d099235227ccfc4db6ea3d6b384  job0/estimators_0000.out
 8fe9b3e562393e386d5e61c7993eaad1  job0/nlte_0000.out
 1c4b1ccb2ea3bd56f3ef976e4dce870e  job0/nonthermalspec_0000.out
-0f916c2e6822937e595096e8e45f915f  job0/radfield_0000.out
+ffb23546ce30bad8293eb9f18a8d911d  job0/radfield_0000.out
