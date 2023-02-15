@@ -204,7 +204,9 @@ void read_temp_packetsfile(const int timestep, const int my_rank, struct packet 
   printout("done\n");
 }
 
-void verify_temp_packetsfile(const int timestep, const int my_rank, const struct packet *const pkt) {
+bool verify_temp_packetsfile(const int timestep, const int my_rank, const struct packet *const pkt) {
+  // return true if verification is good, otherwise return false
+
   // read packets binary file
   char filename[128];
   snprintf(filename, 128, "packets_%.4d_ts%d.tmp", my_rank, timestep);
@@ -212,7 +214,7 @@ void verify_temp_packetsfile(const int timestep, const int my_rank, const struct
   printout("Verifying file %s...\n", filename);
   FILE *packets_file = fopen_required(filename, "rb");
   struct packet pkt_in;
-  bool failed = false;
+  bool readback_passed = true;
   for (int n = 0; n < globals::npkts; n++) {
     assert_always(std::fread(&pkt_in, sizeof(struct packet), 1, packets_file) == 1);
     if (pkt_in != pkt[n]) {
@@ -220,12 +222,16 @@ void verify_temp_packetsfile(const int timestep, const int my_rank, const struct
       printout(" compare number %ld %ld\n", pkt_in.number, pkt[n].number);
       printout(" compare nu_cmf %lg %lg\n", pkt_in.nu_cmf, pkt[n].nu_cmf);
       printout(" compare e_rf %lg %lg\n", pkt_in.e_rf, pkt[n].e_rf);
-      failed = true;
+      readback_passed = false;
     }
   }
-  assert_always(!failed);
   fclose(packets_file);
-  printout("  verification passed\n");
+  if (readback_passed) {
+    printout("  verification passed\n");
+  } else {
+    printout("  verification FAILED\n");
+  }
+  return readback_passed;
 }
 
 void read_packets(char filename[], struct packet *pkt) {

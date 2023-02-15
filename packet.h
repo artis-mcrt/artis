@@ -85,6 +85,6 @@ void packet_init(int my_rank, struct packet *pkt);
 void write_packets(char filename[], const struct packet *const pkt);
 void read_packets(char filename[], struct packet *pkt);
 void read_temp_packetsfile(int timestep, int my_rank, struct packet *const pkt);
-void verify_temp_packetsfile(int timestep, int my_rank, const struct packet *const pkt);
+bool verify_temp_packetsfile(int timestep, int my_rank, const struct packet *const pkt);
 
 #endif  // PACKET_H
