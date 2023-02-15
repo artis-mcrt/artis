@@ -515,6 +515,8 @@ static void compton_scatter(struct packet *pkt_ptr)
 
     vec_copy(pkt_ptr->dir, final_dir);
 
+    assert_testmodeonly(std::fabs(vec_len(pkt_ptr->dir) - 1.) < 1e-10);
+
     // It now has a rest frame direction and a co-moving frequency.
     //  Just need to set the rest frame energy.
     const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);

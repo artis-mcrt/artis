@@ -41,6 +41,8 @@ __host__ __device__ void scatter_dir(const double dir_in[3], const double cos_th
   dir_out[0] = (r11 * xprime) + (r21 * yprime) + (r31 * zprime);
   dir_out[1] = (r12 * xprime) + (r22 * yprime) + (r32 * zprime);
   dir_out[2] = (r13 * xprime) + (r23 * yprime) + (r33 * zprime);
+
+  assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
 }
 
 __host__ __device__ void get_rand_isotropic_unitvec(double vecout[3])
@@ -62,4 +64,6 @@ __host__ __device__ void get_rand_isotropic_unitvec(double vecout[3])
   vecout[0] = sintheta * std::cos(phi);
   vecout[1] = sintheta * std::sin(phi);
   vecout[2] = mu;
+
+  assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
 }
