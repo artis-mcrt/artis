@@ -1859,7 +1859,7 @@ void write_grid_restart_data(const int timestep) {
       fprintf(gridsave_file, "%d %a %a %a %a %hd %la", mgi, get_TR(mgi), get_Te(mgi), get_W(mgi), get_TJ(mgi),
               modelgrid[mgi].thick, globals::rpkt_emiss[mgi]);
     } else {
-      fprintf(gridsave_file, "%d %a %a %a %a %d %la", mgi, 0., 0., 0., 0., 0, 0.);
+      fprintf(gridsave_file, "%d %a %a %a %a %hd %la", mgi, 0., 0., 0., 0., 0, 0.);
     }
 
 #ifndef FORCE_LTE
