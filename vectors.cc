@@ -65,5 +65,5 @@ __host__ __device__ void get_rand_isotropic_unitvec(double vecout[3])
   vecout[1] = sintheta * std::sin(phi);
   vecout[2] = mu;
 
-  assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
+  assert_testmodeonly(std::fabs(vec_len(vecout) - 1.) < 1e-10);
 }
