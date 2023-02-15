@@ -41,7 +41,11 @@ void precalculate_partfuncts(int modelgridindex)
 static void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer,
                                      const struct heatingcoolingrates *heatingcoolingrates) {
   // return; disable for better performance (if estimators files are not needed)
+  const time_t sys_time_start_write_estimators = time(nullptr);
+
   if (grid::get_numassociatedcells(mgi) > 0) {
+    printout("writing to estimators file timestep %d cell %d...\n", timestep, mgi);
+
     const auto T_e = grid::get_Te(mgi);
     const float nne = grid::get_nne(mgi);
     const double Y_e = grid::get_electronfrac(mgi);
@@ -645,6 +649,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
             heatingcoolingrates->cooling_ff, heatingcoolingrates->cooling_fb, heatingcoolingrates->cooling_collisional,
             heatingcoolingrates->cooling_adiabatic);
 #endif
+
   } else {
     // modelgrid cells which are not represented in the simulation grid
     fprintf(estimators_file, "timestep %d modelgridindex %d EMPTYCELL\n", timestep, mgi);
@@ -652,6 +657,11 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
   fprintf(estimators_file, "\n");
 
   fflush(estimators_file);
+
+  const int write_estim_duration = time(nullptr) - sys_time_start_write_estimators;
+  if (write_estim_duration > 1) {
+    printout("writing estimators for timestep %d cell %d took %d seconds\n", timestep, mgi, write_estim_duration);
+  }
 }
 
 __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool new_timestep) {
@@ -1362,9 +1372,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
         update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, mps, &heatingcoolingrates);
 
         // maybe want to add omp ordered here if the modelgrid cells should be output in order
-        const time_t sys_time_start_write_estimators = time(nullptr);
-        printout("writing to estimators file cell %d timestep %d...\n", mgi, nts);
-
         // use_cellhist = true;
         // cellhistory_reset(mgi, true);
 #ifdef _OPENMP
@@ -1372,10 +1379,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 #endif
         { write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates); }
 
-        const int write_estim_duration = time(nullptr) - sys_time_start_write_estimators;
-        if (write_estim_duration > 1) {
-          printout("writing estimators for cell %d timestep %d took %d seconds\n", mgi, nts, write_estim_duration);
-        }
       } else {
         /// else, only reset gammaestimator to zero. This allows us to do a global MPI
         /// communication after update_grid to synchronize gammaestimator
