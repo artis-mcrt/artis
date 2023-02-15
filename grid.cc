@@ -1779,30 +1779,37 @@ static void read_grid_restart_data(const int timestep) {
   assert_always(timestep_in == timestep);
 
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-    int mgi_in;
-    float T_R;
-    float T_e;
-    float W;
-    float T_J;
-    assert_always(fscanf(gridsave_file, "%d %a %a %a %a %hd %la", &mgi_in, &T_R, &T_e, &W, &T_J, &modelgrid[mgi].thick,
-                         &globals::rpkt_emiss[mgi]) == 7);
+    int mgi_in = -1;
+    float T_R = 0.;
+    float T_e = 0.;
+    float W = 0.;
+    float T_J = 0.;
+    short int thick = 0;
+    double rpkt_emiss = 0.;
 
-    if (mgi_in != mgi) {
-      printout("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort\n");
-      printout("[fatal] read_grid_restart_data: read cellnumber %d, expected cellnumber %d\n", mgi_in, mgi);
-      abort();
+    if (get_numassociatedcells(mgi) > 0) {
+      assert_always(
+          fscanf(gridsave_file, "%d %a %a %a %a %hd %la", &mgi_in, &T_R, &T_e, &W, &T_J, &thick, &rpkt_emiss) == 7);
+
+      if (mgi_in != mgi) {
+        printout("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort\n");
+        printout("[fatal] read_grid_restart_data: read cellnumber %d, expected cellnumber %d\n", mgi_in, mgi);
+        assert_always(mgi_in == mgi);
+      }
     }
 
-    assert_always(T_R >= 0);
-    assert_always(T_e >= 0);
-    assert_always(W >= 0);
-    assert_always(T_J >= 0);
-    assert_always(globals::rpkt_emiss[mgi] >= 0);
+    assert_always(T_R >= 0.);
+    assert_always(T_e >= 0.);
+    assert_always(W >= 0.);
+    assert_always(T_J >= 0.);
+    assert_always(rpkt_emiss >= 0.);
 
     set_TR(mgi, T_R);
     set_Te(mgi, T_e);
     set_W(mgi, W);
     set_TJ(mgi, T_J);
+    modelgrid[mgi].thick = thick;
+    globals::rpkt_emiss[mgi] = rpkt_emiss;
 
 #ifndef FORCE_LTE
     if constexpr (!NO_LUT_PHOTOION) {
@@ -1856,10 +1863,9 @@ void write_grid_restart_data(const int timestep) {
     const bool nonemptycell = (get_numassociatedcells(mgi) > 0);
 
     if (nonemptycell) {
+      assert_always(globals::rpkt_emiss[mgi] >= 0.);
       fprintf(gridsave_file, "%d %a %a %a %a %hd %la", mgi, get_TR(mgi), get_Te(mgi), get_W(mgi), get_TJ(mgi),
               modelgrid[mgi].thick, globals::rpkt_emiss[mgi]);
-    } else {
-      fprintf(gridsave_file, "%d %a %a %a %a %hd %la", mgi, 0., 0., 0., 0., (short int)0, 0.);
     }
 
 #ifndef FORCE_LTE
