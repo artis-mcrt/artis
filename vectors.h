@@ -26,6 +26,8 @@ constexpr void vec_norm(const double vec_in[3], double vec_out[3])
   vec_out[0] = vec_in[0] / magnitude;
   vec_out[1] = vec_in[1] / magnitude;
   vec_out[2] = vec_in[2] / magnitude;
+
+  assert_testmodeonly(fabs(vec_len(vec_out) - 1.) < 1.e-10);
 }
 
 constexpr double dot(const double x[3], const double y[3])

@@ -1152,9 +1152,6 @@ __host__ __device__ void emitt_rpkt(struct packet *pkt_ptr) {
   angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
   // printout("[debug] pkt_ptr->dir in RF: %g %g %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 
-  /// Check unit vector.
-  assert_always(fabs(vec_len(pkt_ptr->dir) - 1.) < 1.e-8);
-
   /// Finally we want to put in the rest frame energy and frequency. And record
   /// that it's now a r-pkt.
 
