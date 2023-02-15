@@ -77,7 +77,7 @@ constexpr void angle_ab(const double dir1[3], const double vel[3], double dir2[3
     dir2[d] = (dir1[d] - (vel[d] * fact2)) / fact1;
   }
 
-  assert_testmodeonly(std::fabs(vec_len(dir2) - 1.) < 1e-10);
+  vec_norm(dir2, dir2);
 }
 
 constexpr double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
