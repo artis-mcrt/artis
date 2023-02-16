@@ -1234,7 +1234,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       // used to determine T_e
       kpkt::calculate_cooling_rates(mgi, nullptr);
 
-      printout("took %ld seconds\n", mtime(nullptr) - sys_time_start_calc_kpkt_rates);
+      printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc_kpkt_rates);
     } else {
       // For opacity_case != 4 the opacity treatment is grey. Enforce
       // optically thick treatment in this case (should be equivalent to grey)
