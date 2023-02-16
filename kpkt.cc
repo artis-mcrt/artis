@@ -129,11 +129,14 @@ __host__ __device__ void calculate_cooling_rates(const int modelgridindex,
 
           /// fb creation of r-pkt
           /// free bound rates are calculated from the lower ion, but associated to the higher ion
-          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-            const double C_fb_ion_thistarget =
-                get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperion * nne;
-            C_fb_all += C_fb_ion_thistarget;
-            C_ion += C_fb_ion_thistarget;
+          for (int level = 0; level < nionisinglevels; level++) {
+            const int nphixstargets = get_nphixstargets(element, ion, level);
+            for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+              const double C_fb_ion_thistarget =
+                  get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperion * nne;
+              C_fb_all += C_fb_ion_thistarget;
+              C_ion += C_fb_ion_thistarget;
+            }
           }
         }
       }
@@ -322,7 +325,7 @@ void setup_coolinglist(void) {
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels_currention = get_nlevels(element, ion);
 
-      const int ionisinglevels = get_ionisinglevels(element, ion);
+      const int nionisinglevels = get_ionisinglevels(element, ion);
 
       /// ff creation of rpkt
       /// -------------------
@@ -343,14 +346,16 @@ void setup_coolinglist(void) {
           coolinglist[i].element = element;
           coolinglist[i].ion = ion;
           coolinglist[i].level = level;
-          // upper level is not valid because this is the contribution of all upper levels combined - have to calculate
-          // individually when selecting a random process
+          // upper level is not valid because this is the contribution of all upper levels combined - have to
+          // calculate individually when selecting a random process
           coolinglist[i].upperlevel = -1;
           i++;
         }
+      }
 
-        if (ion < (nions - 1) && level < ionisinglevels)  /// check whether further ionisation stage available
-        {
+      if (ion < (nions - 1))  /// check whether further ionisation stage available
+      {
+        for (int level = 0; level < nionisinglevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
@@ -361,11 +366,13 @@ void setup_coolinglist(void) {
             coolinglist[i].upperlevel = upper;
             i++;
           }
+        }
 
-          /// fb creation of r-pkt
-          /// free bound rates are calculated from the lower ion, but associated to the higher ion
-          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level);
-               phixstargetindex++) {
+        /// fb creation of r-pkt
+        /// free bound rates are calculated from the lower ion, but associated to the higher ion
+        for (int level = 0; level < nionisinglevels; level++) {
+          const int nphixstargets = get_nphixstargets(element, ion, level);
+          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
             coolinglist[i].type = COOLINGTYPE_FB;
             coolinglist[i].element = element;
@@ -413,10 +420,7 @@ __host__ __device__ double do_kpkt_bb(struct packet *pkt_ptr)
   const auto T_e = grid::get_Te(modelgridindex);
 
   pkt_ptr->nu_cmf = sample_planck(T_e);
-  if (!std::isfinite(pkt_ptr->nu_cmf)) {
-    printout("[fatal] do_kpkt_bb: selected frequency not finite ... abort\n");
-    abort();
-  }
+  assert_always(std::isfinite(pkt_ptr->nu_cmf));
   /// and then emitt the packet randomly in the comoving frame
   emitt_rpkt(pkt_ptr);
   // printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
@@ -435,17 +439,13 @@ __host__ __device__ double do_kpkt_bb(struct packet *pkt_ptr)
 
 __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
-//{
-//  double do_kpkt_bb(struct packet *pkt_ptr, double t1, double t2);
-//  return do_kpkt_bb(pkt_ptr, t1, t2);
-//}
 {
   const int tid = get_thread_num();
   const double t1 = pkt_ptr->prop_time;
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = grid::get_cell_modelgridindex(cellindex);
 
-  /// don't calculate cooling rates after each cell crossings anylonger
+  /// don't calculate cooling rates after each cell crossings any longer
   /// but only if we really get a kpkt and they hadn't been calculated already
 
   // printout("[debug] do_kpkt: propagate k-pkt\n");
@@ -455,20 +455,21 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
   if (nts < globals::n_kpktdiffusion_timesteps) {
     deltat = globals::kpktdiffusion_timescale * globals::time_step[nts].width;
   }
-  // double deltat = 1./(nne*1.02e-12*pow(T_e/1e4,0.843));
-  // printout("kpkt diffusion time simple %g, advanced %g\n",deltat,1/(nne*1.02e-12*pow(T_e/1e4,0.843)));
+  // double deltat = 1. / (nne * 1.02e-12 * pow(T_e / 1e4, 0.843));
+  // printout("kpkt diffusion time simple %g, advanced %g\n", deltat, 1 / (nne * 1.02e-12 * pow(T_e / 1e4, 0.843)));
   double t_current = t1 + deltat;
 
   if (t_current <= t2) {
     vec_scale(pkt_ptr->pos, t_current / t1);
     pkt_ptr->prop_time = t_current;
 
-    /// Randomly select the occuring cooling process out of the important ones
+    /// Randomly select the occuring cooling process
     double coolingsum = 0.;
     double zrand = rng_uniform();
 
     const double rndcool = zrand * grid::modelgrid[modelgridindex].totalcooling;
-    // printout("rndcool %g totalcooling %g\n",rndcool, grid::modelgrid[modelgridindex].totalcooling);
+    // printout("rndcool %g totalcooling %g\n", rndcool, grid::modelgrid[modelgridindex].totalcooling);
+
     double oldcoolingsum = 0.;
     int element = -1;
     int ion = -1;
@@ -477,10 +478,11 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       for (ion = 0; ion < nions; ion++) {
         oldcoolingsum = coolingsum;
         coolingsum += grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion];
-        // printout("Z=%d, ionstage %d, coolingsum %g\n", get_element(element), get_ionstage(element, ion), coolingsum);
-        if (coolingsum > rndcool) break;
+        // printout("Z=%d, ionstage %d, coolingsum %g\n", get_element(element), get_ionstage(element, ion),
+        // coolingsum);
+        if (coolingsum >= rndcool) break;
       }
-      if (coolingsum > rndcool) break;
+      if (coolingsum >= rndcool) break;
     }
     // printout("kpkt selected Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
 
@@ -506,8 +508,8 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     const int ihigh = ilow + get_ncoolingterms(element, ion) - 1;
     // printout("element %d, ion %d, low %d, high %d\n",element,ion,low,high);
     if (globals::cellhistory[tid].cooling_contrib[ilow] < 0.) {
-      // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d oldcoolingsum
-      // %g\n",
+      // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d
+      // oldcoolingsum %g\n",
       //          modelgridindex, element, ion, ilow, high, oldcoolingsum);
       calculate_kpkt_rates_ion(modelgridindex, element, ion, ilow, oldcoolingsum, tid);
     }
@@ -535,19 +537,11 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
     // printout("do_kpkt: selected process %d, coolingsum %g\n", i, coolingsum);
 
-    // printout("element Z=%d, ion_stage %d, leve %d upper %d offset %d, terms %d, coolingsum %g\n",
-    //   get_element(globals::cellhistory[tid].coolinglist[i].element),
-    //   get_ionstage(globals::cellhistory[tid].coolinglist[i].element, globals::cellhistory[tid].coolinglist[i].ion),
-    //   globals::cellhistory[tid].coolinglist[i].level,
-    //   globals::cellhistory[tid].coolinglist[i].upperlevel,
-    //   get_coolinglistoffset(element,ion), get_ncoolingterms(element,ion), coolingsum);
-
     if (coolinglist[i].type == COOLINGTYPE_FF) {
       /// The k-packet converts directly into a r-packet by free-free-emission.
       /// Need to select the r-packets frequency and a random direction in the
       /// co-moving frame.
       // printout("[debug] do_kpkt: k-pkt -> free-free\n");
-      // kdecay.to_r++;
 
       /// Sample the packets comoving frame frequency according to paperII 5.4.3 eq.41
       // zrand = rng_uniform();   /// delivers zrand in [0,1[
@@ -555,14 +549,10 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       zrand = rng_uniform_pos();  /// delivers zrand in ]0,1[
       pkt_ptr->nu_cmf = -KB * T_e / H * log(zrand);
 
-      if (!std::isfinite(pkt_ptr->nu_cmf)) {
-        printout("[fatal] ff cooling: selected frequency not finite ... abort\n");
-        abort();
-      }
+      assert_always(std::isfinite(pkt_ptr->nu_cmf));
       /// and then emitt the packet randomly in the comoving frame
       emitt_rpkt(pkt_ptr);
       pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
-      // if (tid == 0) k_stat_to_r_ff++;
       stats::increment(stats::COUNTER_K_STAT_TO_R_FF);
 
       pkt_ptr->interactions += 1;
@@ -674,7 +664,8 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
       if (upper < 0) {
         printout(
-            "WARNING: Could not select an upper level. modelgridindex %d i %d element %d ion %d level %d rndcool %g "
+            "WARNING: Could not select an upper level. modelgridindex %d i %d element %d ion %d level %d rndcool "
+            "%g "
             "contrib_low %g contrib %g (should match %g) upper %d nuptrans %d\n",
             modelgridindex, i, element, ion, level, rndcool, contrib_low, contrib,
             globals::cellhistory[tid].cooling_contrib[i], upper, nuptrans);
