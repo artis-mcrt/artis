@@ -108,6 +108,7 @@ __host__ __device__ void calculate_cooling_rates(const int modelgridindex,
 
       if (ion < nions - 1) {
         const double nnupperion = ionstagepop(modelgridindex, element, ion + 1);
+
         for (int level = 0; level < nionisinglevels; level++) {
           // printout("[debug] do_kpkt: element %d, ion %d, level %d\n", element, ion, level);
           const double epsilon_current = epsilon(element, ion, level);
@@ -126,17 +127,17 @@ __host__ __device__ void calculate_cooling_rates(const int modelgridindex,
             C_ionization_all += C_ionization_ion_thistarget;
             C_ion += C_ionization_ion_thistarget;
           }
+        }
 
-          /// fb creation of r-pkt
-          /// free bound rates are calculated from the lower ion, but associated to the higher ion
-          for (int level = 0; level < nionisinglevels; level++) {
-            const int nphixstargets = get_nphixstargets(element, ion, level);
-            for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-              const double C_fb_ion_thistarget =
-                  get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperion * nne;
-              C_fb_all += C_fb_ion_thistarget;
-              C_ion += C_fb_ion_thistarget;
-            }
+        /// fb creation of r-pkt
+        /// free bound rates are calculated from the lower ion, but associated to the higher ion
+        for (int level = 0; level < nionisinglevels; level++) {
+          const int nphixstargets = get_nphixstargets(element, ion, level);
+          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+            const double C_fb_ion_thistarget =
+                get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperion * nne;
+            C_fb_all += C_fb_ion_thistarget;
+            C_ion += C_fb_ion_thistarget;
           }
         }
       }
@@ -222,11 +223,11 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
   if (ion < nions - 1) {
     const double nnupperion = ionstagepop(modelgridindex, element, ion + 1);
 
+    // ionization to higher ionization stage
     for (int level = 0; level < nionisinglevels; level++) {
       const double epsilon_current = epsilon(element, ion, level);
       const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
       const int nphixstargets = get_nphixstargets(element, ion, level);
-      // ionization to higher ionization stage
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
         const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
         const double epsilon_upper = epsilon(element, ion + 1, upper);
@@ -244,9 +245,12 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
 
         i++;
       }
+    }
 
-      /// fb creation of r-pkt
-      /// free bound rates are calculated from the lower ion, but associated to the higher ion
+    /// fb creation of r-pkt
+    /// free bound rates are calculated from the lower ion, but associated to the higher ion
+    for (int level = 0; level < nionisinglevels; level++) {
+      const int nphixstargets = get_nphixstargets(element, ion, level);
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
         const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperion * nne;
         C_ion += C;
