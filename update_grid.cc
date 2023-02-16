@@ -1051,7 +1051,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     /// Update current mass density of cell
     // n = nonemptycells[my_rank+ncl*nprocs];
     if (log_this_cell)
-      printout("[info] update_grid: working on cell %d before timestep %d titeration %d...\n", mgi, nts, titer);
+      printout("[info] update_grid_cell: working on cell %d before timestep %d titeration %d...\n", mgi, nts, titer);
     // n = nonemptycells[ncl];
     // printout("[debug] update_grid: ncl %d is %d non-empty cell updating grid cell %d ... T_e
     // %g, rho %g\n",ncl,my_rank+ncl*nprocs,n,globals::cell[n].T_e,globals::cell[n].rho);
@@ -1228,12 +1228,13 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       /// and ion contributions inside update grid and communicate between MPI tasks
       const time_t sys_time_start_calc_kpkt_rates = time(nullptr);
 
+      printout("calculate_cooling_rates for timestep %d cell %d...", nts, mgi);
+
       // don't pass pointer to heatingcoolingrates because current populations and rates weren't
       // used to determine T_e
       kpkt::calculate_cooling_rates(mgi, nullptr);
 
-      printout("calculate_kpkt_rates for cell %d timestep %d took %ld seconds\n", mgi, nts,
-               time(nullptr) - sys_time_start_calc_kpkt_rates);
+      printout("took %ld seconds\n", mtime(nullptr) - sys_time_start_calc_kpkt_rates);
     } else {
       // For opacity_case != 4 the opacity treatment is grey. Enforce
       // optically thick treatment in this case (should be equivalent to grey)
