@@ -36,6 +36,10 @@ extern FILE *output_file;
 
 #define assert_always(e) __artis_assert(e)
 
+#ifndef TESTMODE
+#define TESTMODE false
+#endif
+
 #if defined TESTMODE && TESTMODE
 #define assert_testmodeonly(e) __artis_assert(e)
 #else
