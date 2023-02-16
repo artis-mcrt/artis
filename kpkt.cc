@@ -242,6 +242,8 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
         assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_COLLION);
         assert_testmodeonly(coolinglist[i].element == element);
         assert_testmodeonly(coolinglist[i].ion == ion);
+        assert_testmodeonly(coolinglist[i].level == level);
+        assert_testmodeonly(coolinglist[i].upperlevel = upper);
 
         i++;
       }
@@ -260,6 +262,7 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
         assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_FB);
         assert_testmodeonly(coolinglist[i].element == element);
         assert_testmodeonly(coolinglist[i].ion == ion);
+        assert_testmodeonly(coolinglist[i].level == level);
         assert_testmodeonly(coolinglist[i].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex));
 
         i++;
