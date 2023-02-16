@@ -12,6 +12,7 @@
 #include "ratecoeff.h"
 #include "rpkt.h"
 #include "stats.h"
+#include "thermalbalance.h"
 #include "vectors.h"
 #include "vpkt.h"
 
@@ -36,34 +37,6 @@ static __managed__ struct cellhistorycoolinglist *coolinglist;
 
 __host__ __device__ static int get_ncoolingterms(int element, int ion) {
   return globals::elements[element].ions[ion].ncoolingterms;
-}
-
-__host__ __device__ static double get_cooling_ion_coll_exc(const int modelgridindex, const int element, const int ion,
-                                                           const double T_e, const double nne) {
-  double C_exc = 0.;
-  const int nlevels = get_nlevels(element, ion);
-
-  /// excitation to same ionization stage
-  /// -----------------------------------
-  for (int level = 0; level < nlevels; level++) {
-    const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
-    const double epsilon_current = epsilon(element, ion, level);
-    const double statweight = stat_weight(element, ion, level);
-    const int nuptrans = get_nuptrans(element, ion, level);
-    for (int ii = 0; ii < nuptrans; ii++) {
-      const struct linelist_entry *line =
-          &globals::linelist[globals::elements[element].ions[ion].levels[level].uptrans[ii].lineindex];
-      const int upper = line->upperlevelindex;
-      // printout("    excitation to level %d possible\n",upper);
-      const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
-      const double C = nnlevel *
-                       col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statweight, statw_upper(line)) *
-                       epsilon_trans;
-      C_exc += C;
-    }
-  }
-
-  return C_exc;
 }
 
 __host__ __device__ static double get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, float T_e) {
@@ -109,22 +82,43 @@ __host__ __device__ void calculate_cooling_rates(const int modelgridindex,
         C_ion += C_ff_ion;
       }
 
-      const double C_exc_ion = get_cooling_ion_coll_exc(modelgridindex, element, ion, T_e, nne);
-      C_exc_all += C_exc_ion;
-      C_ion += C_exc_ion;
+      const int nlevels = get_nlevels(element, ion);
+
+      /// excitation to same ionization stage
+      /// -----------------------------------
+      for (int level = 0; level < nlevels; level++) {
+        const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+        const double epsilon_current = epsilon(element, ion, level);
+        const double statweight = stat_weight(element, ion, level);
+
+        const int nuptrans = get_nuptrans(element, ion, level);
+        for (int ii = 0; ii < nuptrans; ii++) {
+          const struct linelist_entry *line =
+              &globals::linelist[globals::elements[element].ions[ion].levels[level].uptrans[ii].lineindex];
+          const int upper = line->upperlevelindex;
+          // printout("    excitation to level %d possible\n",upper);
+          const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
+          const double C = nnlevel *
+                           col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statweight, statw_upper(line)) *
+                           epsilon_trans;
+          C_exc_all += C;
+          C_ion += C;
+        }
+      }
 
       if (ion < nions - 1) {
+        const double nnupperion = ionstagepop(modelgridindex, element, ion + 1);
         for (int level = 0; level < nionisinglevels; level++) {
-          // printout("[debug] do_kpkt: element %d, ion %d, level %d\n",element,ion,level);
+          // printout("[debug] do_kpkt: element %d, ion %d, level %d\n", element, ion, level);
           const double epsilon_current = epsilon(element, ion, level);
           const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
-          // printout("    ionisation possible\n");
+
           /// ionization to higher ionization stage
-          /// -------------------------------------
-          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level);
-               phixstargetindex++) {
+          const int nphixstargets = get_nphixstargets(element, ion, level);
+          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-            const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
+            const double epsilon_upper = epsilon(element, ion + 1, upper);
+            const double epsilon_trans = epsilon_upper - epsilon_current;
             // printout("cooling list: col_ionization\n");
             const double C_ionization_ion_thistarget =
                 nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans) *
@@ -135,13 +129,7 @@ __host__ __device__ void calculate_cooling_rates(const int modelgridindex,
 
           /// fb creation of r-pkt
           /// free bound rates are calculated from the lower ion, but associated to the higher ion
-          /// --------------------
-          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level);
-               phixstargetindex++) {
-            // const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-            // const double nnupperlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
-            const double nnupperion = ionstagepop(modelgridindex, element, ion + 1);
-
+          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             const double C_fb_ion_thistarget =
                 get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperion * nne;
             C_fb_all += C_fb_ion_thistarget;
@@ -166,40 +154,27 @@ __host__ __device__ void calculate_cooling_rates(const int modelgridindex,
 
 __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int indexionstart,
                                                          double oldcoolingsum, int tid)
-/// Set up the global cooling list and determine the important entries
-/// by applying a cut to the total cooling rate. Then sort the global
-/// cooling list by the strength of the individual process contribution.
+// calculate the cooling contribution list of individual levels/processes for an ion
+// oldcoolingsum is the sum of lower ion (of same element or all ions of lower elements) cooling contributions
 {
   const float nne = grid::get_nne(modelgridindex);
   const auto T_e = grid::get_Te(modelgridindex);
-  // double T_R = grid::get_TR(modelgridindex);
-  // double W = grid::get_W(modelgridindex);
 
-  /// calculate rates for
-  // C_ff = 0.;   /// free-free creation of rpkts
-  // C_fb = 0.;   /// free-bound creation of rpkt
-  // C_exc = 0.;  /// collisional excitation of macroatoms
-  // C_ion = 0.;  /// collisional ionisation of macroatoms
-  double contrib = oldcoolingsum;
+  double C_ion = 0.;
   int i = indexionstart;
 
-  // printout("[debug] do_kpkt: element %d\n",element);
   const int nions = get_nions(element);
-  const int nlevels_currention = get_nlevels(element, ion);
 
-  const int ionisinglevels = get_ionisinglevels(element, ion);
+  const int nionisinglevels = get_ionisinglevels(element, ion);
   const double nncurrention = ionstagepop(modelgridindex, element, ion);
 
   /// ff creation of rpkt
-  /// -------------------
   const int ioncharge = get_ionstage(element, ion) - 1;
   // printout("[debug] ioncharge %d, nncurrention %g, nne %g\n",ion,nncurrention,nne);
   if (ioncharge > 0) {
     const double C = 1.426e-27 * sqrt(T_e) * pow(ioncharge, 2) * nncurrention * nne;
-    // C_ff += C;
-    // C_ion += C;
-    contrib += C;
-    globals::cellhistory[tid].cooling_contrib[i] = contrib;
+    C_ion += C;
+    globals::cellhistory[tid].cooling_contrib[i] = oldcoolingsum + C_ion;
 
     assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_FF);
     assert_testmodeonly(coolinglist[i].element == element);
@@ -211,100 +186,90 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
     i++;
   }
 
-  for (int level = 0; level < nlevels_currention; level++) {
-    // printout("[debug] do_kpkt: element %d, ion %d, level %d\n",element,ion,level);
-    const double epsilon_current = epsilon(element, ion, level);
+  /// excitation to same ionization stage
+  const int nlevels = get_nlevels(element, ion);
+  for (int level = 0; level < nlevels; level++) {
+    // printout("[debug] do_kpkt: element %d, ion %d, level %d\n", element, ion, level);
     const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+    const double epsilon_current = epsilon(element, ion, level);
     const double statweight = stat_weight(element, ion, level);
 
     const int nuptrans = get_nuptrans(element, ion, level);
     if (nuptrans > 0) {
-      /// excitation to same ionization stage
-      /// -----------------------------------
       for (int ii = 0; ii < nuptrans; ii++) {
         const struct linelist_entry *line =
             &globals::linelist[globals::elements[element].ions[ion].levels[level].uptrans[ii].lineindex];
         const int upper = line->upperlevelindex;
-        // printout("    excitation to level %d possible\n",upper);
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
         const double C = nnlevel *
                          col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statweight, statw_upper(line)) *
                          epsilon_trans;
-        contrib += C;
+        C_ion += C;
       }
-      globals::cellhistory[tid].cooling_contrib[i] = contrib;
+      globals::cellhistory[tid].cooling_contrib[i] = oldcoolingsum + C_ion;
 
       assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_COLLEXC);
       assert_testmodeonly(coolinglist[i].element == element);
       assert_testmodeonly(coolinglist[i].ion == ion);
 
-      // if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d,
-      // coolingtype %d, i %d, low
-      // %d\n",contrib,oldcoolingsum,C,element,ion,level,globals::cellhistory[tid].coolinglist[i].type,i,low);
       i++;
     }
+  }
 
-    if (ion < (nions - 1) && level < ionisinglevels)  /// check whether further ionisation stage available
-    {
-      // printout("    ionisation possible\n");
-      /// ionization to higher ionization stage
-      /// -------------------------------------
-      /// for the moment we deal only with ionisations to the next ions groundlevel
-      /// to allow an easy generalisation this was only made sure by col_ionization
-      /// for speed issues (reduced number of calls to epsilon) it is now done also
-      /// here explicitly
+  if (ion < nions - 1) {
+    const double nnupperion = ionstagepop(modelgridindex, element, ion + 1);
+
+    for (int level = 0; level < nionisinglevels; level++) {
+      const double epsilon_current = epsilon(element, ion, level);
+      const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
       const int nphixstargets = get_nphixstargets(element, ion, level);
+      // ionization to higher ionization stage
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
         const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
         const double epsilon_upper = epsilon(element, ion + 1, upper);
         const double epsilon_trans = epsilon_upper - epsilon_current;
-        // printout("cooling list: col_ionization\n");
         const double C = nnlevel *
                          col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans) *
                          epsilon_trans;
 
-        contrib += C;
-        globals::cellhistory[tid].cooling_contrib[i] = contrib;
+        C_ion += C;
+        globals::cellhistory[tid].cooling_contrib[i] = oldcoolingsum + C_ion;
 
         assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_COLLION);
         assert_testmodeonly(coolinglist[i].element == element);
         assert_testmodeonly(coolinglist[i].ion == ion);
-        // if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d,
-        // coolingtype %d, i %d, low
-        // %d\n",contrib,oldcoolingsum,C,element,ion,level,globals::cellhistory[tid].coolinglist[i].type,i,low);
+
         i++;
       }
-      // C_ion += C;
-      // C = 0.;
-      // globals::cellhistory[tid].coolinglist[i].contribution = C;
-      // }
 
       /// fb creation of r-pkt
       /// free bound rates are calculated from the lower ion, but associated to the higher ion
-      /// --------------------
-      for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
-        // const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-        // const double nnupperlevel = get_levelpop(modelgridindex,element,ion + 1, upper);
-        const double nnupperion = ionstagepop(modelgridindex, element, ion + 1);
-
+      for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
         const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperion * nne;
-        contrib += C;
-        globals::cellhistory[tid].cooling_contrib[i] = contrib;
+        C_ion += C;
+
+        globals::cellhistory[tid].cooling_contrib[i] = oldcoolingsum + C_ion;
 
         assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_FB);
         assert_testmodeonly(coolinglist[i].element == element);
         assert_testmodeonly(coolinglist[i].ion == ion);
+        assert_testmodeonly(coolinglist[i].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex));
 
         i++;
       }
     }
   }
 
-  assert_always(indexionstart == get_coolinglistoffset(element, ion));
+  assert_testmodeonly(indexionstart == get_coolinglistoffset(element, ion));
   assert_always(i == indexionstart + get_ncoolingterms(element, ion));
+
   // we just summed up every individual cooling process. make sure it matches the stored total for the ion
-  assert_always(fabs((grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] + oldcoolingsum - contrib) /
-                     contrib) < 1e-3);
+  assert_always(grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] == C_ion);
+
+  // if we're on the top ion of the top element, then we should reach exactly the totalcooling value
+  if ((element == (get_nelements() - 1)) && (ion == (get_nions(element) - 1))) {
+    assert_always((oldcoolingsum + C_ion) == grid::modelgrid[modelgridindex].totalcooling);
+  }
 }
 
 __host__ __device__ static void set_ncoolingterms(void) {
@@ -355,13 +320,6 @@ void setup_coolinglist(void) {
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      /// calculate rates for
-      // C_ff = 0.;   /// free-free creation of rpkts
-      // C_fb = 0.;   /// free-bound creation of rpkt
-      // C_exc = 0.;  /// collisional excitation of macroatoms
-      // C_ion = 0.;  /// collisional ionisation of macroatoms
-
-      // printout("[debug] do_kpkt: element %d\n",element);
       const int nlevels_currention = get_nlevels(element, ion);
 
       const int ionisinglevels = get_ionisinglevels(element, ion);
@@ -421,6 +379,7 @@ void setup_coolinglist(void) {
       assert_always(i == get_coolinglistoffset(element, ion) + get_ncoolingterms(element, ion));
     }
   }
+
   assert_always(globals::ncoolingterms == i);  // if this doesn't match, we miscalculated the number of cooling terms
   printout("[info] read_atomicdata: number of coolingterms %d\n", globals::ncoolingterms);
 }
