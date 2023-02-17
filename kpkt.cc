@@ -127,12 +127,9 @@ __host__ __device__ void calculate_cooling_rates(const int modelgridindex,
             C_ionization_all += C_ionization_ion_thistarget;
             C_ion += C_ionization_ion_thistarget;
           }
-        }
 
-        /// fb creation of r-pkt
-        /// free bound rates are calculated from the lower ion, but associated to the higher ion
-        for (int level = 0; level < nionisinglevels; level++) {
-          const int nphixstargets = get_nphixstargets(element, ion, level);
+          /// fb creation of r-pkt
+          /// free bound rates are calculated from the lower ion, but associated to the higher ion
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             const double C_fb_ion_thistarget =
                 get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperion * nne;
@@ -247,12 +244,9 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
 
         i++;
       }
-    }
 
-    /// fb creation of r-pkt
-    /// free bound rates are calculated from the lower ion, but associated to the higher ion
-    for (int level = 0; level < nionisinglevels; level++) {
-      const int nphixstargets = get_nphixstargets(element, ion, level);
+      /// fb creation of r-pkt
+      /// free bound rates are calculated from the lower ion, but associated to the higher ion
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
         const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperion * nne;
         C_ion += C;
@@ -373,12 +367,9 @@ void setup_coolinglist(void) {
             coolinglist[i].upperlevel = upper;
             i++;
           }
-        }
 
-        /// fb creation of r-pkt
-        /// free bound rates are calculated from the lower ion, but associated to the higher ion
-        for (int level = 0; level < nionisinglevels; level++) {
-          const int nphixstargets = get_nphixstargets(element, ion, level);
+          /// fb creation of r-pkt
+          /// free bound rates are calculated from the lower ion, but associated to the higher ion
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
             coolinglist[i].type = COOLINGTYPE_FB;
