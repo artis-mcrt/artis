@@ -211,7 +211,7 @@ bool verify_temp_packetsfile(const int timestep, const int my_rank, const struct
   char filename[128];
   snprintf(filename, 128, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
-  printout("Verifying file %s...\n", filename);
+  printout("Verifying file %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");
   struct packet pkt_in;
   bool readback_passed = true;

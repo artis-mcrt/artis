@@ -526,8 +526,7 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-    printout("Reading back packets files for all ranks took %ld seconds.\n",
-             time(nullptr) - time_readback_packets_start);
+    printout("Verifying packets files for all ranks took %ld seconds.\n", time(nullptr) - time_readback_packets_start);
   }
 
   if (my_rank == 0) {
