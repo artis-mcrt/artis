@@ -24,6 +24,7 @@
 #include "light_curve.h"
 #include "sn3d.h"
 #include "spectrum.h"
+#include "version.h"
 
 const bool do_exspec = true;
 
@@ -37,6 +38,8 @@ std::mt19937_64 *stdrng = nullptr;
 gsl_integration_workspace *gslworkspace = nullptr;
 
 int main(int argc, char **argv) {
+  const time_t sys_time_start = time(nullptr);
+
 #ifdef MPI_ON
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &globals::rank_global);
@@ -88,11 +91,33 @@ int main(int argc, char **argv) {
     setvbuf(output_file, nullptr, _IOLBF, 1);
   }
 
+  printout("git branch %s\n", GIT_BRANCH);
+
+  printout("git version: %s\n", GIT_VERSION);
+
+  printout("git status %s\n", GIT_STATUS);
+
+  // printout("Hash of most recent commit: %s\n",GIT_HASH);
+  printout("sn3d compiled at %s on %s\n", __TIME__, __DATE__);
+
+#if defined TESTMODE && TESTMODE
+  printout("TESTMODE is ON");
+#endif
+
+#ifdef MPI_ON
+  printout("process id (pid): %d\n", getpid());
+  printout("MPI enabled:\n");
+  printout("  rank %d of [0..%d] in MPI_COMM_WORLD\n", globals::rank_global, globals::nprocs - 1);
+  printout("  node %d of [0..%d]\n", globals::node_id, globals::node_count - 1);
+  printout("  rank %d of [0..%d] within this node (MPI_COMM_WORLD_SHARED)\n", globals::rank_in_node,
+           globals::node_nprocs - 1);
+#else
+  printout("MPI is disabled in this build\n");
+#endif
+
   // single rank only for now
   assert_always(globals::rank_global == 0);
   assert_always(globals::nprocs == 1);
-
-  const time_t sys_time_start = time(nullptr);
 
   printout("Begining do_exspec.\n");
 
