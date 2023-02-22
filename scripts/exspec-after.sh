@@ -15,4 +15,7 @@ if [ -f emission.out ]; then
 
   find . -name '*.out' -size +1M -exec xz -v -T0 {} \;
   find . -mindepth 2 -name 'output_*.txt' ! -name "output_0-0.txt" -size +1M -exec xz -v -T0 {} \;
+
+  # 3D kilonova model.txt and abundances.txt can be huge
+  find . -maxdepth 1 -name '*.txt' -size +10M -exec xz -v -T0 {} \;
 fi
