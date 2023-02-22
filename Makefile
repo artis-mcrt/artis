@@ -14,12 +14,6 @@ ifeq ($(shell uname -s),Darwin)
 #	CXXFLAGS += -Rpass-missed=loop-vectorize
 #	CXXFLAGS += -Rpass-analysis=loop-vectorize
 
-	# ifeq ($(shell uname -m),arm64)
-	# 	CXXFLAGS += -mcpu=apple-m1
-	# else
-	# 	CXXFLAGS += -march=native
-	# endif
-
 	# CXXFLAGS += -fopenmp-simd
 
 	# enable OpenMP for Clang
