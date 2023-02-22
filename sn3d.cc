@@ -389,15 +389,22 @@ static void write_temp_packetsfile(const int timestep, const int my_rank, const 
   bool write_success = false;
   while (!write_success) {
     printout("Writing %s...", filename);
-    FILE *packets_file = fopen_required(filename, "wb");
+    FILE *packets_file = fopen(filename, "wb");
+    if (packets_file == nullptr) {
+      printout("ERROR: Could not open file '%s' for mode 'wb'. \n", filename);
+      abort();
+      write_success = false;
+    } else {
+      write_success = (std::fwrite(pkt, sizeof(struct packet), globals::npkts, packets_file) == (size_t)globals::npkts);
+      if (!write_success) {
+        printout("fwrite() FAILED! will retry...\n");
+      }
 
-    write_success = (std::fwrite(pkt, sizeof(struct packet), globals::npkts, packets_file) == (size_t)globals::npkts);
+      fclose(packets_file);
+    }
 
-    fclose(packets_file);
     if (write_success) {
       printout("done\n");
-    } else {
-      printout("FAILED! will retry...\n");
     }
   }
 }
