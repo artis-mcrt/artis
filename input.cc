@@ -37,32 +37,33 @@ struct transitiontable_entry {
 
 const int inputlinecommentcount = 24;
 std::string inputlinecomments[inputlinecommentcount] = {
-    "pre_zseed: specific random number seed if > 0 or random if negative",
-    "globals::ntstep: number of timesteps",
-    "itstep ftstep: timestep number range start (inclusive) and stop (not inclusive)",
-    "tmin_days tmax_days: start and end times [day]",
-    "nusyn_min_mev nusyn_max_mev: lowest and highest frequency to synthesise [MeV]",
-    "nsyn_time: number of times for synthesis",
-    "start and end times for synthesis",
-    "model_type: number of dimensions (1, 2, or 3)",
-    "compute r-light curve (1: no estimators, 2: thin cells, 3: thick cells, 4: gamma-ray heating)",
-    "n_out_it: UNUSED number of iterations",
-    "UNUSED: change speed of light by some factor. Change constants.h CLIGHT_PROP instead",
-    "use grey opacity for gammas?",
-    "syn_dir: x, y, and z components of unit vector (will be normalised after input or randomised if zero length)",
-    "opacity_case: opacity choice",
-    "rho_crit_para: free parameter for calculation of rho_crit",
-    "UNUSED debug_packet: (>=0: activate debug output for packet id, <0: ignore)",
-    "simulation_continued_from_saved: (0: start new simulation, 1: continue from gridsave and packets files)",
-    "UNUSED rfcut_angstroms: wavelength (in Angstroms) at which the parameterisation of the radiation field switches "
-    "from the nebular approximation to LTE.",
-    "num_lte_timesteps",
-    "cell_is_optically_thick num_grey_timesteps",
-    "UNUSED max_bf_continua: (>0: max bound-free continua per ion, <0 unlimited)",
-    "nprocs_exspec: extract spectra for n MPI tasks",
-    "do_emission_res: Extract line-of-sight dependent information of last emission for spectrum_res (1: yes, 2: no)",
-    "kpktdiffusion_timescale n_kpktdiffusion_timesteps: kpkts diffuse x of a time step's length for the first y time "
-    "steps"};
+    " 0: pre_zseed: specific random number seed if > 0 or random if negative",
+    " 1: globals::ntstep: number of timesteps",
+    " 2: itstep ftstep: timestep number range start (inclusive) and stop (not inclusive)",
+    " 3: tmin_days tmax_days: start and end times [day]",
+    " 4: nusyn_min_mev nusyn_max_mev: lowest and highest frequency to synthesise [MeV]",
+    " 5: nsyn_time: number of times for synthesis",
+    " 6: start and end times for synthesis",
+    " 7: model_type: number of dimensions (1, 2, or 3)",
+    " 8: compute r-light curve (1: no estimators, 2: thin cells, 3: thick cells, 4: gamma-ray heating)",
+    " 9: n_out_it: UNUSED number of iterations",
+    "10: UNUSED: change speed of light by some factor. Change constants.h CLIGHT_PROP instead",
+    "11: use grey opacity for gammas?",
+    "12: syn_dir: x, y, and z components of unit vector (will be normalised after input or randomised if zero length)",
+    "13: opacity_case: opacity choice",
+    "14: rho_crit_para: free parameter for calculation of rho_crit",
+    "15: UNUSED debug_packet: (>=0: activate debug output for packet id, <0: ignore)",
+    "16: simulation_continued_from_saved: (0: start new simulation, 1: continue from gridsave and packets files)",
+    "17: UNUSED rfcut_angstroms: wavelength (in Angstroms) at which the parameterisation of the radiation field "
+    "switches from the nebular approximation to LTE.",
+    "18: num_lte_timesteps",
+    "19: cell_is_optically_thick num_grey_timesteps",
+    "20: UNUSED max_bf_continua: (>0: max bound-free continua per ion, <0 unlimited)",
+    "21: nprocs_exspec: extract spectra for n MPI tasks",
+    "22: do_emission_res: Extract line-of-sight dependent information of last emission for spectrum_res (1: yes, 2: "
+    "no)",
+    "23: kpktdiffusion_timescale n_kpktdiffusion_timesteps: kpkts diffuse x of a time step's length for the first y "
+    "time steps"};
 
 static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputtable, const int element,
                                   const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
