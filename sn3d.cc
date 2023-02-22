@@ -392,7 +392,6 @@ static void write_temp_packetsfile(const int timestep, const int my_rank, const 
     FILE *packets_file = fopen(filename, "wb");
     if (packets_file == nullptr) {
       printout("ERROR: Could not open file '%s' for mode 'wb'. \n", filename);
-      abort();
       write_success = false;
     } else {
       write_success = (std::fwrite(pkt, sizeof(struct packet), globals::npkts, packets_file) == (size_t)globals::npkts);
