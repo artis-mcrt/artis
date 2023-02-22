@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if [ -f emission.out ]; then
+if [[ -f emission.out || -f emission.out.xz ]]; then
 
   # join 3D direction files, if they exist
   ./artis/scripts/mergeangleres.py
