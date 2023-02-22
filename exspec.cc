@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
   printout("git status %s\n", GIT_STATUS);
 
   // printout("Hash of most recent commit: %s\n",GIT_HASH);
-  printout("sn3d compiled at %s on %s\n", __TIME__, __DATE__);
+  printout("exspec compiled at %s on %s\n", __TIME__, __DATE__);
 
 #if defined TESTMODE && TESTMODE
   printout("TESTMODE is ON");
