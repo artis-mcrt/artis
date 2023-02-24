@@ -521,7 +521,11 @@ __host__ __device__ static void set_initelectronfrac(const int modelgridindex, c
   modelgrid[modelgridindex].initelectronfrac = electronfrac;
 }
 
-__host__ __device__ double get_initenergyq(const int modelgridindex) { return modelgrid[modelgridindex].initenergyq; }
+__host__ __device__ double get_initenergyq(const int modelgridindex) {
+  // q: energy in the model at tmin per gram to use with USE_MODEL_INITIAL_ENERGY option [erg/g]
+
+  return modelgrid[modelgridindex].initenergyq;
+}
 
 __host__ __device__ static void set_initenergyq(const int modelgridindex, const double initenergyq) {
   modelgrid[modelgridindex].initenergyq = initenergyq;

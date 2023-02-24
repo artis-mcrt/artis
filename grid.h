@@ -45,7 +45,7 @@ struct modelgrid_t {
   float *initmassfracstable = nullptr;
   float *elem_meanweight = nullptr;
   float initelectronfrac;  // Ye: electrons (or protons) per nucleon
-  float initenergyq;       // q: energy in the model at t_model to use with USE_MODEL_INITIAL_ENERGY [erg/g]
+  float initenergyq;       // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
   float ffegrp;
   float kappagrey;
   float grey_depth;  /// Grey optical depth to surface of the modelgridcell
