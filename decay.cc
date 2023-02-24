@@ -1387,6 +1387,8 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
 
   double total_endecay_per_ejectamass = cumulative_endecay[num_decaypaths - 1];
   if constexpr (!NO_INITIAL_PACKETS && USE_MODEL_INITIAL_ENERGY) {
+    // grid::get_t_model() / globals::tmin factor was already applied at model read in
+    // so "init" here means at tmin
     total_endecay_per_ejectamass += grid::get_initenergyq(mgi);
   }
 
