@@ -21,6 +21,9 @@
 
 static FILE *nlte_file = nullptr;
 
+// can save memory by using a combined rate matrix at the cost of diagnostic information
+constexpr bool individual_process_matricies = true;
+
 static inline int get_nlte_vector_index(const int element, const int ion, const int level)
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into grid::modelgrid[modelgridindex].nlte_pops that contains all elements
@@ -819,9 +822,6 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   const time_t sys_time_start_nltesolver = time(nullptr);
 
-  // can save memory by using a combined rate matrix at the cost of diagnostic information
-  const bool individual_process_matricies = true;
-
   const double t_mid = globals::time_step[timestep].mid;
   const int nions = get_nions(element);
   const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
@@ -1115,7 +1115,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_vector_free(pop_norm_factor_vec);
   const int duration_nltesolver = time(nullptr) - sys_time_start_nltesolver;
   if (duration_nltesolver > 2) {
-    printout("NLTE solver call took %d seconds\n", duration_nltesolver);
+    printout("NLTE population solver call for Z=%d took %d seconds\n", get_element(element), duration_nltesolver);
   }
 }
 
