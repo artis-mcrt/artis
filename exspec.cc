@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
   printout("exspec compiled at %s on %s\n", __TIME__, __DATE__);
 
 #if defined TESTMODE && TESTMODE
-  printout("TESTMODE is ON");
+  printout("TESTMODE is ON\n");
 #endif
 
 #ifdef MPI_ON
