@@ -37,7 +37,7 @@ gsl_rng *rng = nullptr;
 std::mt19937_64 *stdrng = nullptr;
 gsl_integration_workspace *gslworkspace = nullptr;
 
-int main(int argc, char **argv) {
+int main(int argc, char *argv[]) {
   const time_t sys_time_start = time(nullptr);
 
 #ifdef MPI_ON

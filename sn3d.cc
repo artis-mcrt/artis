@@ -714,7 +714,7 @@ static bool do_timestep(const int nts, const int titer, const int my_rank, const
   return !do_this_full_loop;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char *argv[]) {
   char filename[128];
 
   // if DETAILED_BF_ESTIMATORS_ON is true, NO_LUT_PHOTOION must be true
