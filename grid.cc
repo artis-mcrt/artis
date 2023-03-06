@@ -1704,7 +1704,7 @@ void read_ejecta_model(void) {
   globals::rmax = globals::vmax * globals::tmin;
   printout("vmax %g [cm/s] (%.2fc)\n", globals::vmax, globals::vmax / CLIGHT);
   assert_always(globals::vmax < CLIGHT);
-  printout("tmin %g [s]\n", globals::tmin);
+  printout("tmin %g [s] = %.2f [d]\n", globals::tmin, globals::tmin / 86400.);
   printout("rmax %g [cm] (at t=tmin)\n", globals::rmax);
 
   globals::coordmax[0] = globals::coordmax[1] = globals::coordmax[2] = globals::rmax;
