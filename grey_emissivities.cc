@@ -39,16 +39,6 @@ void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist) {
   // Called with a packet that is about to travel a
   // distance dist in the lab frame.
 
-  // struct packet dummy;
-  // dummy.pos[0] = pkt_ptr->pos[0];
-  // dummy.pos[1] = pkt_ptr->pos[1];
-  // dummy.pos[2] = pkt_ptr->pos[2];
-  // dummy.dir[0] = syn_dir[0];
-  // dummy.dir[1] = syn_dir[1];
-  // dummy.dir[2] = syn_dir[2];
-  // dummy.where = pkt_ptr->where;
-  // dummy.last_cross = NONE;
-
   const int cellindex = pkt_ptr->where;
   const int mgi = grid::get_cell_modelgridindex(cellindex);
 
