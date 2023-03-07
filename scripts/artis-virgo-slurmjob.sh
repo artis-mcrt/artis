@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 ## SLURM META DIRECTIVES HERE DON'T WORK UNDER CENTOS VIRTUAL APPLICATION ENVIRONMENT
 ## So they are located in artis-virgo-submit.sh as cmd-line parameters to sbatch
 
@@ -12,8 +12,12 @@ source ./artis/scripts/exspec-before.sh
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): before srun sn3d. hours left: $hoursleft"
 time srun -- ./sn3d -w $hoursleft > out.txt
-echo "$(date): after srun sn3d finished. hours left: $(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})"
-echo "seconds elapsed: $SECONDS"
+hoursleftafter=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
+echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
+hourselapsed=$(bc <<< "$hoursleftafter - $hoursleft")
+echo "hours of runtime: $hourselapsed"
+cpuhrs=$(bc <<< "$SLURM_NTASKS * $hourselapsed")
+echo "ntasks: $SLURM_NTASKS -> CPU core hrs: $cpuhrs"
 
 mkdir ${SLURM_JOB_ID}.slurm
 source ./artis/scripts/movefiles.sh ${SLURM_JOB_ID}.slurm
