@@ -108,6 +108,36 @@ constexpr double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_
   return dopplerfactor;
 }
 
+constexpr double doppler_squared_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
+// Doppler factor squared, either to first order v/c or fully relativisitic
+// depending on USE_RELATIVISTIC_DOPPLER_SHIFT
+//
+// arguments:
+//   dir_rf: the rest frame direction (unit vector) of light propagation
+//   vel_rf: velocity of the comoving frame relative to the rest frame
+// returns: the ratio f = (nu_cmf / nu_rf) ^ 2
+{
+  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
+  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
+
+  const double ndotv = dot(dir_rf, vel_rf);
+  double dopplerfactorsq;
+
+  if (USE_RELATIVISTIC_DOPPLER_SHIFT) {
+    const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;
+    assert_testmodeonly(betasq >= 0.);  // v < c
+    assert_testmodeonly(betasq < 1.);   // v < c
+    dopplerfactorsq = std::pow(1. - (ndotv / CLIGHT), 2) / (1 - betasq);
+  } else {
+    dopplerfactorsq = 1. - 2 * (ndotv / CLIGHT);
+  }
+
+  assert_testmodeonly(std::isfinite(dopplerfactorsq));
+  assert_testmodeonly(dopplerfactorsq > 0);
+
+  return dopplerfactorsq;
+}
+
 constexpr double doppler_packet_nucmf_on_nurf(const struct packet *const pkt_ptr) {
   double flow_velocity[3] = {0, 0, 0};  // homologous flow velocity
   get_velocity(pkt_ptr->pos, flow_velocity, pkt_ptr->prop_time);
