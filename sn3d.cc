@@ -715,6 +715,7 @@ static bool do_timestep(const int nts, const int titer, const int my_rank, const
 }
 
 int main(int argc, char *argv[]) {
+  real_time_start = time(nullptr);
   char filename[128];
 
   // if DETAILED_BF_ESTIMATORS_ON is true, NO_LUT_PHOTOION must be true
@@ -824,7 +825,6 @@ int main(int argc, char *argv[]) {
     gslworkspace = gsl_integration_workspace_alloc(GSLWSIZE);
   }
 
-  real_time_start = time(nullptr);
   printout("time at start %ld\n", real_time_start);
 
 #ifdef WALLTIMELIMITSECONDS
@@ -1153,7 +1153,10 @@ int main(int argc, char *argv[]) {
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  printout("simulation finished at %ld\n", time(nullptr));
+  const time_t real_time_end = time(nullptr);
+  printout("simulation finished at %ld (wallclock hours %.2f * %d CPUs = %.1f CPU hours)\n", real_time_end,
+           (real_time_end - real_time_start) / 3600., globals::nprocs,
+           (real_time_end - real_time_start) / 3600. * globals::nprocs);
 #if CUDA_ENABLED
   cudaDeviceReset();
 #endif
