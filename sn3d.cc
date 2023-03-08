@@ -1154,7 +1154,7 @@ int main(int argc, char *argv[]) {
 #endif
 
   const time_t real_time_end = time(nullptr);
-  printout("simulation finished at %ld (wallclock hours %.2f * %d CPUs = %.1f CPU hours)\n", real_time_end,
+  printout("simulation finished at %ld (this job wallclock hours %.2f * %d CPUs = %.1f CPU hours)\n", real_time_end,
            (real_time_end - real_time_start) / 3600., globals::nprocs,
            (real_time_end - real_time_start) / 3600. * globals::nprocs);
 #if CUDA_ENABLED
