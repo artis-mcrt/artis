@@ -2914,7 +2914,7 @@ void nt_print_stats(const int timestep, const double modelvolume, const double d
   // {
   //   total_deposition_rate_density += get_deposition_rate_density(mgi) / EV;
   // }
-  printout("nt_energy_deposited = %9.2f eV/s/cm^3\n", deposition_rate_density_montecarlo);
+  printout("nt_energy_deposited = %g [eV/s/cm^3]\n", deposition_rate_density_montecarlo);
 }
 
 }  // namespace nonthermal
