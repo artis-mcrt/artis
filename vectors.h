@@ -97,8 +97,8 @@ constexpr double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_
 
   if (USE_RELATIVISTIC_DOPPLER_SHIFT) {
     const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;
-    assert_always(betasq >= 0.);  // v < c
-    assert_always(betasq < 1.);   // v < c
+    assert_testmodeonly(betasq >= 0.);  // v < c
+    assert_testmodeonly(betasq < 1.);   // v < c
     dopplerfactor = dopplerfactor / std::sqrt(1 - betasq);
   }
 
