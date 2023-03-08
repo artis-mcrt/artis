@@ -1224,17 +1224,20 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         grid::modelgrid[mgi].thick = 0;
       }
 
-      /// Cooling rates depend only on cell properties, precalculate total cooling
-      /// and ion contributions inside update grid and communicate between MPI tasks
-      const time_t sys_time_start_calc_kpkt_rates = time(nullptr);
+      // cooling rates calculation can be skipped for thick cells or if they were read from the gridsave file on startup
+      if (grid::modelgrid[mgi].thick != 1 && !(globals::simulation_continued_from_saved && nts == globals::itstep)) {
+        /// Cooling rates depend only on cell properties, precalculate total cooling
+        /// and ion contributions inside update grid and communicate between MPI tasks
+        const time_t sys_time_start_calc_kpkt_rates = time(nullptr);
 
-      printout("calculate_cooling_rates for timestep %d cell %d...", nts, mgi);
+        printout("calculate_cooling_rates for timestep %d cell %d...", nts, mgi);
 
-      // don't pass pointer to heatingcoolingrates because current populations and rates weren't
-      // used to determine T_e
-      kpkt::calculate_cooling_rates(mgi, nullptr);
+        // don't pass pointer to heatingcoolingrates because current populations and rates weren't
+        // used to determine T_e
+        kpkt::calculate_cooling_rates(mgi, nullptr);
 
-      printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc_kpkt_rates);
+        printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc_kpkt_rates);
+      }
     } else {
       // For opacity_case != 4 the opacity treatment is grey. Enforce
       // optically thick treatment in this case (should be equivalent to grey)
