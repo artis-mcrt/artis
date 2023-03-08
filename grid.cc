@@ -820,6 +820,10 @@ static void allocate_composition_cooling(void)
     modelgrid[modelgridindex].cooling_contrib_ion[0] =
         static_cast<double *>(malloc(get_includedions() * sizeof(double)));
 
+    for (int allionindex = 0; allionindex < get_includedions(); allionindex++) {
+      modelgrid[modelgridindex].cooling_contrib_ion[0][allionindex] = -1.;  // flag as invalid
+    }
+
     int allionindex = 0;
     for (int element = 0; element < get_nelements(); element++) {
       /// and allocate memory to store the ground level populations for each ionisation stage

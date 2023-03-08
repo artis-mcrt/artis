@@ -1647,7 +1647,7 @@ void nltepop_write_restart_data(FILE *restart_file) {
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      fprintf(restart_file, "%d\n", modelgridindex);
+      fprintf(restart_file, "%d %la\n", modelgridindex, grid::modelgrid[modelgridindex].totalcooling);
       for (int element = 0; element < get_nelements(); element++) {
         const int nions = get_nions(element);
         for (int ion = 0; ion < nions; ion++) {
@@ -1687,7 +1687,7 @@ void nltepop_read_restart_data(FILE *restart_file) {
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
       int mgi_in;
-      assert_always(fscanf(restart_file, "%d\n", &mgi_in) == 1);
+      assert_always(fscanf(restart_file, "%d %la\n", &mgi_in, &grid::modelgrid[modelgridindex].totalcooling) == 2);
       if (mgi_in != modelgridindex) {
         printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
         abort();
