@@ -118,7 +118,7 @@ void packet_init(int my_rank, struct packet *pkt)
     const double zrand = rng_uniform();
     const double targetval = zrand * norm;
 
-    // first cont[i] such that targetval < cont[i] is true
+    // first cont[i] such that targetval <= cont[i]
     double *upperval = std::lower_bound(&en_cumulative[0], &en_cumulative[grid::ngrid], targetval);
     const int cellindex = upperval - &en_cumulative[0];
 
