@@ -1069,7 +1069,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     if (globals::opacity_case >= 4) {
       /// For timestep 0 we calculate the level populations straight forward wihout
       /// applying any temperature correction
-      if ((nts - globals::itstep) == 0 && titer == 0) {
+      if (nts == globals::itstep && titer == 0) {
 /// Determine renormalisation factor for corrected photoionization cross-sections
 #ifndef FORCE_LTE
         if constexpr (!NO_LUT_PHOTOION) {
@@ -1102,9 +1102,9 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
           calculate_electron_densities(mgi);
           // printout("nne: %g\n", grid::get_nne(n));
         }
-      } else
-      /// For all other timesteps temperature corrections have to be applied
-      {
+      } else {
+        /// For all other timesteps temperature corrections have to be applied
+
         /// we have to calculate the electron density
         /// and all the level populations
         /// Normalise estimators and make sure that they are finite.
