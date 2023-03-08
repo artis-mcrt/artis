@@ -14,9 +14,9 @@ echo "$(date): before srun sn3d. hours left: $hoursleft"
 time srun -- ./sn3d -w $hoursleft > out.txt
 hoursleftafter=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
-hourselapsed=$(bc <<< "$hoursleftafter - $hoursleft")
+hourselapsed=$(python3 -c "print($hoursleftafter - $hoursleft)")
 echo "hours of runtime: $hourselapsed"
-cpuhrs=$(bc <<< "$SLURM_NTASKS * $hourselapsed")
+cpuhrs=$(python3 -c "print($SLURM_NTASKS * $hourselapsed)")
 echo "ntasks: $SLURM_NTASKS -> CPU core hrs: $cpuhrs"
 
 mkdir ${SLURM_JOB_ID}.slurm
