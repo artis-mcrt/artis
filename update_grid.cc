@@ -1224,8 +1224,21 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         grid::modelgrid[mgi].thick = 0;
       }
 
-      // cooling rates calculation can be skipped for thick cells or if they were read from the gridsave file on startup
-      if (grid::modelgrid[mgi].thick != 1 && !(globals::simulation_continued_from_saved && nts == globals::itstep)) {
+      if (grid::modelgrid[mgi].thick == 1) {
+        // cooling rates calculation can be skipped for thick cells
+        // flag with negative numbers to indicate that the rates are invalid
+        grid::modelgrid[mgi].totalcooling = -1.;
+        const int element = 0;
+        const int ion = 0;
+        grid::modelgrid[mgi].cooling_contrib_ion[element][ion] = -1.;
+      } else if (globals::simulation_continued_from_saved && nts == globals::itstep) {
+        // cooling rates were read from the gridsave file for this timestep
+        // make sure they are valid
+        assert_always(grid::modelgrid[mgi].totalcooling >= 0.);
+        const int element = 0;
+        const int ion = 0;
+        assert_always(grid::modelgrid[mgi].cooling_contrib_ion[element][ion] >= 0.);
+      } else {
         /// Cooling rates depend only on cell properties, precalculate total cooling
         /// and ion contributions inside update grid and communicate between MPI tasks
         const time_t sys_time_start_calc_kpkt_rates = time(nullptr);

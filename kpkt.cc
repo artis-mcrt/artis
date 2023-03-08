@@ -474,6 +474,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     double coolingsum = 0.;
     double zrand = rng_uniform();
 
+    assert_always(grid::modelgrid[modelgridindex].totalcooling > 0.);
     const double rndcool = zrand * grid::modelgrid[modelgridindex].totalcooling;
     // printout("rndcool %g totalcooling %g\n", rndcool, grid::modelgrid[modelgridindex].totalcooling);
 

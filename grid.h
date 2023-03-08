@@ -31,37 +31,37 @@ enum model_types {
 };
 
 struct modelgrid_t {
-  float Te = 0.;
-  float TR = 0.;
-  float TJ = 0.;
-  float W = 0.;
-  float nne = 0.;
+  float Te = -1.;
+  float TR = -1.;
+  float TJ = -1.;
+  float W = -1.;
+  float nne = -1.;
   float initial_radial_pos_sum = 0.;
-  float rhoinit = 0.;
-  float rho = 0.;
+  float rhoinit = -1.;
+  float rho = -1.;
   // modelgrid nn_tot
-  float nnetot = 0.;  // total electron density (free + bound).
+  float nnetot = -1.;  // total electron density (free + bound).
   float *initradioabund = nullptr;
   float *initmassfracstable = nullptr;
   float *elem_meanweight = nullptr;
-  float initelectronfrac;  // Ye: electrons (or protons) per nucleon
-  float initenergyq;       // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
-  float ffegrp;
-  float kappagrey;
-  float grey_depth;  /// Grey optical depth to surface of the modelgridcell
-                     /// This is only stored to print it outside the OpenMP loop in update_grid to the estimatorsfile
-                     /// so there is no need to communicate it via MPI so far!
-  int *elements_uppermost_ion;  /// Highest ionisation stage which has a decent population for a particular element
-                                /// in a given cell.
-  compositionlist_entry *composition;  /// Pointer to an array which contains the time dependent abundances
-                                       /// of all included elements and all the groundlevel
-                                       /// populations and partition functions for their ions
-  double *nlte_pops = nullptr;         /// Pointer to an array that contains the nlte-level
-                                       /// populations for this cell
+  float initelectronfrac = -1;  // Ye: electrons (or protons) per nucleon
+  float initenergyq = 0.;       // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
+  float ffegrp = 0.;
+  float kappagrey = 0.;
+  float grey_depth = 0.;  /// Grey optical depth to surface of the modelgridcell
+                          /// This is only stored to print it outside the OpenMP loop in update_grid to the
+                          /// estimatorsfile so there is no need to communicate it via MPI so far!
+  int *elements_uppermost_ion = nullptr;  /// Highest ionisation stage which has a decent population for a particular
+                                          /// element in a given cell.
+  compositionlist_entry *composition = nullptr;  /// Pointer to an array which contains the time dependent abundances
+                                                 /// of all included elements and all the groundlevel
+                                                 /// populations and partition functions for their ions
+  double *nlte_pops = nullptr;                   /// Pointer to an array that contains the nlte-level
+                                                 /// populations for this cell
 
-  double totalcooling;
-  double **cooling_contrib_ion;
-  short thick;
+  double totalcooling = -1;
+  double **cooling_contrib_ion = nullptr;
+  short thick = 0;
 };
 
 __host__ __device__ constexpr int get_ngriddimensions(void) { return (GRID_TYPE == GRID_SPHERICAL1D) ? 1 : 3; }
