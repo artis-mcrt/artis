@@ -1043,8 +1043,8 @@ __host__ __device__ static double get_simtime_endecay_per_ejectamass(const int m
   return chainendecay;
 }
 
-__host__ __device__ static double get_chain_decay_power_per_ejectamass(const int decaypathindex,
-                                                                       const int modelgridindex, const double time)
+__host__ __device__ static double get_decaypath_power_per_ejectamass(const int decaypathindex, const int modelgridindex,
+                                                                     const double time)
 // total decay power per mass [erg/s/g] for a given decaypath
 {
   // only decays at the end of the chain contributed from the initial abundance of the top of the chain are counted
@@ -1377,29 +1377,52 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
 
 void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt_ptr) {
   const int num_decaypaths = get_num_decaypaths();
-  auto cumulative_endecay = std::make_unique<double[]>(num_decaypaths);
-  double endecaysum = 0.;
+
+  // decay channels include all radioactive decay paths, and possibly also an initial cell energy channel
+  const int num_decaychannels = num_decaypaths + ((!NO_INITIAL_PACKETS && USE_MODEL_INITIAL_ENERGY) ? 1 : 0);
+
+  auto cumulative_en_sum = std::make_unique<double[]>(num_decaychannels);
+  double energysum = 0.;
+
+  // add the radioactive decay paths
   for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
-    endecaysum += get_simtime_endecay_per_ejectamass(mgi, decaypathindex);
-    cumulative_endecay[decaypathindex] = endecaysum;
+    energysum += get_simtime_endecay_per_ejectamass(mgi, decaypathindex);
+    cumulative_en_sum[decaypathindex] = energysum;
   }
-  assert_testmodeonly(cumulative_endecay[num_decaypaths - 1] > 0.);
 
-  double total_endecay_per_ejectamass = cumulative_endecay[num_decaypaths - 1];
-  if constexpr (!NO_INITIAL_PACKETS && USE_MODEL_INITIAL_ENERGY) {
-    // grid::get_t_model() / globals::tmin factor was already applied at model read in
+  if (num_decaychannels > num_decaypaths) {
+    // the t_model / tmin expansion factor was already applied at model read in
     // so "init" here means at tmin
-    total_endecay_per_ejectamass += grid::get_initenergyq(mgi);
+    energysum += grid::get_initenergyq(mgi);
+    cumulative_en_sum[num_decaychannels - 1] = energysum;
   }
 
-  const double zrand_chain = rng_uniform() * total_endecay_per_ejectamass;
+  assert_testmodeonly(cumulative_endecay[num_decaychannels - 1] > 0.);
 
-  if (zrand_chain >= cumulative_endecay[num_decaypaths - 1]) {
+  const double zrand_en = rng_uniform() * cumulative_en_sum[num_decaychannels - 1];
+
+  // const double *const upperval = std::lower_bound(&cumulative_en_sum[0], &cumulative_en_sum[num_decaychannels],
+  // zrand_en); const int decaychannelindex = upperval - &cumulative_en_sum[0];
+
+  int decaychannelindex = -1;
+  for (int i = 0; i < num_decaychannels; i++) {
+    if (cumulative_en_sum[i] > zrand_en) {
+      decaychannelindex = i;
+      break;
+    }
+  }
+
+  assert_always(decaychannelindex >= 0);
+  assert_always(decaychannelindex < num_decaychannels);
+
+  // initial cell energy selected
+  if (decaychannelindex >= num_decaypaths) {
+    assert_always(decaychannelindex == num_decaypaths);  // only one non-radioactive channel for now
     assert_always(USE_MODEL_INITIAL_ENERGY);
+    assert_always(!NO_INITIAL_PACKETS);
 
     pkt_ptr->prop_time = globals::tmin;
     pkt_ptr->tdecay = globals::tmin;
-    // pkt_ptr->type = TYPE_PRE_KPKT;
     pkt_ptr->type = TYPE_RADIOACTIVE_PELLET;
     pkt_ptr->e_cmf = e0;
     pkt_ptr->nu_cmf = e0 / H;
@@ -1408,16 +1431,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
     return;
   }
 
-  int decaypathindex = -1;
-
-  for (int i = 0; i < num_decaypaths; i++) {
-    if (cumulative_endecay[i] > zrand_chain) {
-      decaypathindex = i;
-      break;
-    }
-  }
-
-  assert_always(decaypathindex >= 0);  // Failed to select chain
+  const int decaypathindex = decaychannelindex;
 
   // possibly allow decays before the first timestep
   const double tdecaymin = NO_INITIAL_PACKETS ? globals::tmin : grid::get_t_model();
@@ -1426,14 +1440,9 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
     pkt_ptr->tdecay = sample_decaytime(decaypathindex, tdecaymin, globals::tmax);
     pkt_ptr->e_cmf = e0;
   } else {
-    if constexpr (!NO_INITIAL_PACKETS) {
-      // non-uniform pellet energies with initial packets and initial model energy not implemented
-      assert_always(!USE_MODEL_INITIAL_ENERGY);
-    }
-
-    // use uniform decay time distribution (scale the packet energies instead)
-    // keeping the pellet decay rate constant will give better statistics at very late times when very little
-    // energy is released
+    // use uniform decay time distribution and scale the packet energies instead.
+    // keeping the pellet decay rate constant will give better statistics at late times
+    // when very little energy and few packets are released
     const double zrand = rng_uniform();
     pkt_ptr->tdecay = zrand * tdecaymin + (1. - zrand) * globals::tmax;
 
@@ -1443,15 +1452,16 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
     const double avgpower = get_simtime_endecay_per_ejectamass(mgi, decaypathindex) / (globals::tmax - tdecaymin);
     assert_always(avgpower > 0.);
     assert_always(std::isfinite(avgpower));
-    pkt_ptr->e_cmf = e0 * get_chain_decay_power_per_ejectamass(decaypathindex, mgi, pkt_ptr->tdecay) / avgpower;
+    pkt_ptr->e_cmf = e0 * get_decaypath_power_per_ejectamass(decaypathindex, mgi, pkt_ptr->tdecay) / avgpower;
     assert_always(pkt_ptr->e_cmf >= 0);
     assert_always(std::isfinite(pkt_ptr->e_cmf));
   }
 
   // final decaying nuclide at the end of the chain
-  const int z = decaypaths[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
-  const int a = decaypaths[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
-  const int decaytype = decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1];
+  const int pathlength = get_decaypathlength(decaypathindex);
+  const int z = decaypaths[decaypathindex].z[pathlength - 1];
+  const int a = decaypaths[decaypathindex].a[pathlength - 1];
+  const int decaytype = decaypaths[decaypathindex].decaytypes[pathlength - 1];
 
   pkt_ptr->type = TYPE_RADIOACTIVE_PELLET;
   pkt_ptr->pellet_nucindex = get_nuc_index(z, a);
