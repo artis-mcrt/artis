@@ -760,7 +760,7 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
         // }
         // for (i = 0; i < nuptrans; i++)
         // {
-        //   globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i]
+        //   globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].sum_internal_up_same[i]
         //   = -99.;
         // }
       }

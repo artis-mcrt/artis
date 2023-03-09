@@ -110,10 +110,10 @@ __host__ __device__ static void calculate_macroatom_transitionrates(const int mo
                                                                          epsilon_current, t_mid, T_e, nne, statweight);
 
     processrates[MA_ACTION_INTERNALUPSAME] += individ_internal_up_same;
-    chlevel->individ_internal_up_same[i] = individ_internal_up_same;
+    chlevel->sum_internal_up_same[i] = processrates[MA_ACTION_INTERNALUPSAME];
   }
-  if (!std::isfinite(processrates[MA_ACTION_INTERNALUPSAME]))
-    printout("fatal: internal_up_same has nan contribution\n");
+
+  assert_always(std::isfinite(processrates[MA_ACTION_INTERNALUPSAME]));
 
   /// Transitions to higher ionisation stages
   processrates[MA_ACTION_INTERNALUPHIGHERNT] = 0.;
@@ -788,20 +788,19 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
 
         /// randomly select the occuring transition
         zrand = rng_uniform();
-        int upper = -99;
-        rate = 0.;
-        for (int i = 0; i < nuptrans; i++) {
-          rate += globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i];
-          // rate += get_individ_internal_up_same(modelgridindex, element, ion, level, i, epsilon_current, t_mid, T_e,
-          // nne);
-          if (zrand * processrates[MA_ACTION_INTERNALUPSAME] < rate) {
-            const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
-            upper = globals::linelist[lineindex].upperlevelindex;
-            break;
-          }
-        }
-        /// and set the macroatom's new state
-        assert_testmodeonly(upper >= 0);
+        const double *sum_internal_up_same =
+            globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].sum_internal_up_same;
+
+        const double targetval = zrand * processrates[MA_ACTION_INTERNALUPSAME];
+
+        // first sum_internal_up_same[i] such that sum_internal_up_same[i] >= targetval
+        const double *const upperval =
+            std::lower_bound(&sum_internal_up_same[0], &sum_internal_up_same[nuptrans], targetval);
+        const int uptransindex = upperval - &sum_internal_up_same[0];
+
+        assert_always(uptransindex < nuptrans);
+        const int upper = globals::elements[element].ions[ion].levels[level].uptrans[uptransindex].targetlevelindex;
+
         level = upper;
         break;
       }

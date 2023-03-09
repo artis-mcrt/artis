@@ -186,7 +186,7 @@ struct chlevels {
   double population;
   double *sum_epstrans_rad_deexc;
   double *individ_internal_down_same;
-  double *individ_internal_up_same;
+  double *sum_internal_up_same;
 };
 
 struct chions {

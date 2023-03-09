@@ -1360,7 +1360,7 @@ static void setup_cellhistory(void) {
         for (int level = 0; level < nlevels; level++) {
           struct chlevels *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
           const int nuptrans = get_nuptrans(element, ion, level);
-          chlevel->individ_internal_up_same = &chtransblock[chtransindex];
+          chlevel->sum_internal_up_same = &chtransblock[chtransindex];
           chtransindex += nuptrans;
         }
       }
