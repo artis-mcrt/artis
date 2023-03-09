@@ -79,6 +79,11 @@ struct phixstarget_entry {
 
 struct level_transition {
   int lineindex;
+  int targetlevelindex;
+  float einstein_A;
+  float coll_str;
+  float osc_strength;
+  bool forbidden;
 };
 
 struct levellist_entry {

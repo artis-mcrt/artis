@@ -23,13 +23,13 @@ static FILE *macroatom_file = nullptr;
 
 __host__ __device__ static inline double get_individ_rad_deexc(int modelgridindex, int element, int ion, int level,
                                                                int i, double t_mid, const double epsilon_current) {
-  const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-  const int lower = globals::linelist[lineindex].lowerlevelindex;
+  // const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
+  const int lower = globals::elements[element].ions[ion].levels[level].downtrans[i].targetlevelindex;
+  const double A_ul = globals::elements[element].ions[ion].levels[level].downtrans[i].einstein_A;
   const double epsilon_target = epsilon(element, ion, lower);
   const double epsilon_trans = epsilon_current - epsilon_target;
 
-  const double R =
-      rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
+  const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, A_ul, t_mid);
   const double individ_rad_deexc = R * epsilon_trans;
 
   return individ_rad_deexc;
@@ -39,14 +39,12 @@ __host__ __device__ static inline double get_individ_internal_up_same(int modelg
                                                                       int level, int i, const double epsilon_current,
                                                                       const double t_mid, const float T_e,
                                                                       const float nne, const double statweight) {
+  const int upper = globals::elements[element].ions[ion].levels[level].uptrans[i].targetlevelindex;
   const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
-  const struct linelist_entry *line = &globals::linelist[lineindex];
-  const int upper = line->upperlevelindex;
   const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
 
-  const double R =
-      rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
-  const double C = col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statweight, statw_upper(line));
+  const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, lineindex, t_mid);
+  const double C = col_excitation_ratecoeff(T_e, nne, element, ion, level, i, epsilon_trans, statweight);
   const double NT =
       nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
 
@@ -70,15 +68,13 @@ __host__ __device__ static void calculate_macroatom_transitionrates(const int mo
   processrates[MA_ACTION_INTERNALDOWNSAME] = 0.;
   const int ndowntrans = get_ndowntrans(element, ion, level);
   for (int i = 0; i < ndowntrans; i++) {
-    const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-    const struct linelist_entry *line = &globals::linelist[lineindex];
-    const int lower = line->lowerlevelindex;
+    const int lower = globals::elements[element].ions[ion].levels[level].downtrans[i].targetlevelindex;
+    const double A_ul = globals::elements[element].ions[ion].levels[level].downtrans[i].einstein_A;
     const double epsilon_target = epsilon(element, ion, lower);
     const double epsilon_trans = epsilon_current - epsilon_target;
 
-    const double R =
-        rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
-    const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, line, statw_lower(line), statweight);
+    const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, A_ul, t_mid);
+    const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, i);
 
     const double individ_internal_down_same = (R + C) * epsilon_target;
 
@@ -161,8 +157,8 @@ __host__ __device__ static void calculate_macroatom_transitionrates(const int mo
 __host__ __device__ static int do_macroatom_internal_down_same(int modelgridindex, int element, int ion, int level,
                                                                double t_mid, double total_internal_down_same) {
   // const auto T_e = grid::get_Te(modelgridindex);
-  // const float nne = grid::get_nne(modelgridindex);
-  // const double epsilon_current = epsilon(element, ion, level);
+  // const auto nne = grid::get_nne(modelgridindex);
+  // const auto epsilon_current = epsilon(element, ion, level);
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
   // printout("[debug] do_ma:   internal downward jump within current ionstage\n");
@@ -172,21 +168,20 @@ __host__ __device__ static int do_macroatom_internal_down_same(int modelgridinde
   int lower = -99;
   double rate = 0.;
   for (int i = 0; i < ndowntrans; i++) {
-    // const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-    // const int tmp_lower = globals::linelist[lineindex].lowerlevelindex;
+    // const double A_ul = globals::elements[element].ions[ion].levels[level].downtrans[i].einstein_A;
     // const double epsilon_target = epsilon(element, ion, tmp_lower);
     // const double epsilon_trans = epsilon_current - epsilon_target;
 
-    // const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, tmp_lower, epsilon_trans,
-    // lineindex, t_mid); const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
+    // const double R =
+    //     rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, tmp_lower, epsilon_trans, A_ul, t_mid);
+    // const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, i);
 
     // const double individ_internal_down_same = (R + C) * epsilon_target;
     const double individ_internal_down_same =
         globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i];
     rate += individ_internal_down_same;
     if (zrand * total_internal_down_same < rate) {
-      const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-      lower = globals::linelist[lineindex].lowerlevelindex;
+      lower = globals::elements[element].ions[ion].levels[level].downtrans[i].targetlevelindex;
       break;
     }
   }
@@ -553,14 +548,12 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
       printout("[debug]    check deexcitation\n");
       printout("[debug]    ndowntrans %d %d\n", ndowntrans, get_ndowntrans(element, ion, level));
       for (int i = 0; i < ndowntrans; i++) {
-        const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-        const struct linelist_entry *line = &globals::linelist[lineindex];
-        const int lower = line->lowerlevelindex;
+        const int lower = globals::elements[element].ions[ion].levels[level].downtrans[i].targetlevelindex;
         const double epsilon_trans = epsilon_current - epsilon(element, ion, lower);
+        const double A_ul = globals::elements[element].ions[ion].levels[level].downtrans[i].einstein_A;
         const double R =
-            rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
-        const double C =
-            col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, line, statw_lower(line), statw_upper(line));
+            rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, A_ul, t_mid);
+        const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, i);
         printout("[debug]    deexcitation to level %d, epsilon_trans %g, epsilon_trans %g, R %g, C %g\n", lower,
                  epsilon_trans, epsilon_trans, R, C);
       }
@@ -569,12 +562,12 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
       printout("[debug]    nuptrans %d %d\n", nuptrans, get_nuptrans(element, ion, level));
       for (int i = 0; i < nuptrans; i++) {
         const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
-        const struct linelist_entry *line = &globals::linelist[lineindex];
-        const int upper = line->upperlevelindex;
+        const int upper = globals::elements[element].ions[ion].levels[level].uptrans[i].targetlevelindex;
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
         const double R =
-            rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
-        const double C = col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statw_lower(line), statw_upper(line));
+            rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, lineindex, t_mid);
+        const double C =
+            col_excitation_ratecoeff(T_e, nne, element, ion, level, i, epsilon_trans, stat_weight(element, ion, level));
         printout("[debug]    excitation to level %d, epsilon_trans %g, R %g, C %g\n", upper, epsilon_trans, R, C);
       }
 
@@ -917,7 +910,7 @@ void macroatom_close_file(void) {
 
 __host__ __device__ double rad_deexcitation_ratecoeff(const int modelgridindex, const int element, const int ion,
                                                       const int upper, const int lower, const double epsilon_trans,
-                                                      const int lineindex, const double t_current)
+                                                      const float A_ul, const double t_current)
 /// radiative deexcitation rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
 {
@@ -932,7 +925,7 @@ __host__ __device__ double rad_deexcitation_ratecoeff(const int modelgridindex, 
   {
     const double nu_trans = epsilon_trans / H;
 
-    const double A_ul = einstein_spontaneous_emission(lineindex);
+    // const double A_ul = einstein_spontaneous_emission(lineindex);
     const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
     const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
@@ -963,12 +956,12 @@ __host__ __device__ double rad_deexcitation_ratecoeff(const int modelgridindex, 
 }
 
 __host__ __device__ double rad_excitation_ratecoeff(const int modelgridindex, const int element, const int ion,
-                                                    const int lower, const int upper, const double epsilon_trans,
-                                                    const int lineindex, const double t_current)
+                                                    const int lower, const int i, const double epsilon_trans,
+                                                    int lineindex, const double t_current)
 /// radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
 {
-  assert_testmodeonly(upper > lower);
+  const int upper = globals::elements[element].ions[ion].levels[lower].uptrans[i].targetlevelindex;
 
   const double n_u = get_levelpop(modelgridindex, element, ion, upper);
   const double n_l = get_levelpop(modelgridindex, element, ion, lower);
@@ -976,7 +969,7 @@ __host__ __device__ double rad_excitation_ratecoeff(const int modelgridindex, co
   // if ((n_u >= 1.1 * MINPOP) && (n_l >= 1.1 * MINPOP))
   {
     const double nu_trans = epsilon_trans / H;
-    const double A_ul = einstein_spontaneous_emission(lineindex);
+    const double A_ul = globals::elements[element].ions[ion].levels[lower].uptrans[i].einstein_A;
     const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
     const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
@@ -1153,6 +1146,110 @@ __host__ __device__ double col_ionization_ratecoeff(const float T_e, const float
   // printout("[debug] col_ion: nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n",
   // nne,T_e,g,epsilon_trans,sigma_bf);
   assert_testmodeonly(std::isfinite(C));
+
+  return C;
+}
+
+__host__ __device__ double col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans,
+                                                      int element, int ion, int upper, int i)
+// multiply by upper level population to get a rate per second
+{
+  const int lower = globals::elements[element].ions[ion].levels[upper].downtrans[i].targetlevelindex;
+  const double upperstatweight = stat_weight(element, ion, upper);
+  const double lowerstatweight = stat_weight(element, ion, lower);
+  const double coll_str_thisline = globals::elements[element].ions[ion].levels[upper].downtrans[i].coll_str;
+  double C = 0.;
+  if (coll_str_thisline < 0) {
+    const double forbidden = globals::elements[element].ions[ion].levels[upper].downtrans[i].forbidden;
+    if (!forbidden)  // alternative: (coll_strength > -1.5) i.e. to catch -1
+    {
+      /// permitted E1 electric dipole transitions
+      /// collisional deexcitation: formula valid only for atoms!!!!!!!!!!!
+      /// Rutten script eq. 3.33. p.50
+      // f = osc_strength(element,ion,upper,lower);
+      // C = n_u * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) *
+      // stat_weight(element,ion,lower)/stat_weight(element,ion,upper)  * nne * f;
+      const double trans_osc_strength = globals::elements[element].ions[ion].levels[upper].downtrans[i].osc_strength;
+
+      const double eoverkt = epsilon_trans / (KB * T_e);
+      /// Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
+      const double g_bar = 0.2;  /// this should be read in from transitions data: it is 0.2 for transitions nl -> n'l'
+                                 /// and 0.7 for transitions nl -> nl'
+      // test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
+      /// crude approximation to the already crude Van-Regemorter formula
+
+      // double test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
+      // double Gamma = (g_bar > test) ? g_bar : test;
+
+      // optimisation
+      const double gauntfac =
+          (eoverkt > 0.33421) ? g_bar : 0.276 * std::exp(eoverkt) * (-0.5772156649 - std::log(eoverkt));
+
+      const double g_ratio = lowerstatweight / upperstatweight;
+
+      C = C_0 * 14.51039491 * nne * std::sqrt(T_e) * trans_osc_strength * std::pow(H_ionpot / epsilon_trans, 2) *
+          eoverkt * g_ratio * gauntfac;
+    } else  // alterative: (coll_strength > -3.5) to catch -2 or -3
+    {
+      // forbidden transitions: magnetic dipole, electric quadropole...
+      // could be Axelrod? or Maurer
+      C = nne * 8.629e-6 * 0.01 * lowerstatweight / std::sqrt(T_e);
+    }
+  } else  // positive values are treated as effective collision strengths
+  {
+    // from Osterbrock and Ferland, p51
+    // statweight_target is LOWER LEVEL stat weight
+    C = nne * 8.629e-6 * coll_str_thisline / upperstatweight / std::sqrt(T_e);
+    // test test
+    // C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
+  }
+
+  return C;
+}
+
+__host__ __device__ double col_excitation_ratecoeff(const float T_e, const float nne, int element, int ion, int lower,
+                                                    int i, const double epsilon_trans, const double lowerstatweight)
+// multiply by lower level population to get a rate per second
+{
+  // assert_testmodeonly(i < get_nuptrans(element, ion, lower));
+  double C = 0.;
+  const double coll_strength = globals::elements[element].ions[ion].levels[lower].uptrans[i].coll_str;
+  const double eoverkt = epsilon_trans / (KB * T_e);
+
+  if (coll_strength < 0) {
+    const bool forbidden = globals::elements[element].ions[ion].levels[lower].uptrans[i].forbidden;
+    if (!forbidden)  // alternative: (coll_strength > -1.5) i.e. to catch -1
+    {
+      const double trans_osc_strength = globals::elements[element].ions[ion].levels[lower].uptrans[i].osc_strength;
+      /// permitted E1 electric dipole transitions
+      /// collisional excitation: formula valid only for atoms!!!!!!!!!!!
+      /// Rutten script eq. 3.32. p.50
+      // C = n_l * 2.16 * pow(eoverkt,-1.68) * pow(T_e,-1.5) * exp(-eoverkt) * nne *
+      // osc_strength(element,ion,upper,lower);
+
+      // Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
+      const double g_bar = 0.2;  // this should be read in from transitions data: it is 0.2 for transitions nl -> n'l'
+                                 // and 0.7 for transitions nl -> nl'
+      // test = 0.276 * exp(eoverkt) * gsl_sf_expint_E1(eoverkt);
+      /// crude approximation to the already crude Van-Regemorter formula
+      const double exp_eoverkt = exp(eoverkt);
+
+      const double test = 0.276 * exp_eoverkt * (-0.5772156649 - std::log(eoverkt));
+      const double Gamma = g_bar > test ? g_bar : test;
+      C = C_0 * nne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow(H_ionpot / epsilon_trans, 2) * eoverkt /
+          exp_eoverkt * Gamma;
+    } else  // alterative: (coll_strength > -3.5) to catch -2 or -3
+    {
+      // forbidden transitions: magnetic dipole, electric quadropole...
+      // Axelrod's approximation (thesis 1980)
+      const int upper = globals::elements[element].ions[ion].levels[lower].uptrans[i].targetlevelindex;
+      const double upperstatweight = stat_weight(element, ion, upper);
+      C = nne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * upperstatweight / std::sqrt(T_e);
+    }
+  } else {
+    // from Osterbrock and Ferland, p51
+    C = nne * 8.629e-6 * coll_strength * std::exp(-eoverkt) / lowerstatweight / std::sqrt(T_e);
+  }
 
   return C;
 }

@@ -637,8 +637,9 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
 
           // the line list has not been sorted yet, so the store the negative level index for now and
           // this will be replaced with the index into the sorted line list later
-          globals::elements[element].ions[ion].levels[level].downtrans[nupperdowntrans - 1].lineindex = -targetlevel;
-          globals::elements[element].ions[ion].levels[targetlevel].uptrans[nloweruptrans - 1].lineindex = -level;
+          globals::elements[element].ions[ion].levels[level].downtrans[nupperdowntrans - 1].targetlevelindex =
+              targetlevel;
+          globals::elements[element].ions[ion].levels[targetlevel].uptrans[nloweruptrans - 1].targetlevelindex = level;
         }
 
         /// This is not a metastable level.
@@ -1090,8 +1091,17 @@ static void read_atomicdata_files(void) {
     const int nupperdowntrans = get_ndowntrans(element, ion, upperlevel);
     for (int ii = 0; ii < nupperdowntrans; ii++) {
       // negative indicates a level instead of a lineindex
-      if (globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].lineindex == -lowerlevel) {
+      if (globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].targetlevelindex == lowerlevel) {
         globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].lineindex = lineindex;
+        globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].einstein_A =
+            globals::linelist[lineindex].einstein_A;
+        globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].coll_str =
+            globals::linelist[lineindex].coll_str;
+        globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].osc_strength =
+            globals::linelist[lineindex].osc_strength;
+
+        globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].forbidden =
+            globals::linelist[lineindex].forbidden;
         break;  // should be safe to end here if there is max. one transition per pair of levels
       }
     }
@@ -1099,8 +1109,16 @@ static void read_atomicdata_files(void) {
     const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
     for (int ii = 0; ii < nloweruptrans; ii++) {
       // negative indicates a level instead of a lineindex
-      if (globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].lineindex == -upperlevel) {
+      if (globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].targetlevelindex == upperlevel) {
         globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].lineindex = lineindex;
+        globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].einstein_A =
+            globals::linelist[lineindex].einstein_A;
+        globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].coll_str =
+            globals::linelist[lineindex].coll_str;
+        globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].osc_strength =
+            globals::linelist[lineindex].osc_strength;
+        globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].forbidden =
+            globals::linelist[lineindex].forbidden;
         break;  // should be safe to end here if there is max. one transition per pair of levels
       }
     }

@@ -93,13 +93,11 @@ __host__ __device__ void calculate_cooling_rates(const int modelgridindex,
 
         const int nuptrans = get_nuptrans(element, ion, level);
         for (int ii = 0; ii < nuptrans; ii++) {
-          const struct linelist_entry *line =
-              &globals::linelist[globals::elements[element].ions[ion].levels[level].uptrans[ii].lineindex];
-          const int upper = line->upperlevelindex;
+          const int upper = globals::elements[element].ions[ion].levels[level].uptrans[ii].targetlevelindex;
           // printout("    excitation to level %d possible\n",upper);
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
           const double C = nnlevel *
-                           col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statweight, statw_upper(line)) *
+                           col_excitation_ratecoeff(T_e, nne, element, ion, level, ii, epsilon_trans, statweight) *
                            epsilon_trans;
           C_exc_all += C;
           C_ion += C;
@@ -201,12 +199,10 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
     const int nuptrans = get_nuptrans(element, ion, level);
     if (nuptrans > 0) {
       for (int ii = 0; ii < nuptrans; ii++) {
-        const struct linelist_entry *line =
-            &globals::linelist[globals::elements[element].ions[ion].levels[level].uptrans[ii].lineindex];
-        const int upper = line->upperlevelindex;
+        const int upper = globals::elements[element].ions[ion].levels[level].uptrans[ii].targetlevelindex;
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
         const double C = nnlevel *
-                         col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statweight, statw_upper(line)) *
+                         col_excitation_ratecoeff(T_e, nne, element, ion, level, ii, epsilon_trans, statweight) *
                          epsilon_trans;
         C_ion += C;
       }
@@ -655,13 +651,11 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       // excitation to same ionization stage
       const int nuptrans = get_nuptrans(element, ion, level);
       for (int ii = 0; ii < nuptrans; ii++) {
-        const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
-        const struct linelist_entry *line = &globals::linelist[lineindex];
-        const int tmpupper = globals::linelist[lineindex].upperlevelindex;
+        const int tmpupper = globals::elements[element].ions[ion].levels[level].uptrans[ii].targetlevelindex;
         // printout("    excitation to level %d possible\n",upper);
         const double epsilon_trans = epsilon(element, ion, tmpupper) - epsilon_current;
         const double C = nnlevel *
-                         col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statweight, statw_upper(line)) *
+                         col_excitation_ratecoeff(T_e, nne, element, ion, level, ii, epsilon_trans, statweight) *
                          epsilon_trans;
         contrib += C;
         if (contrib >= rndcool) {

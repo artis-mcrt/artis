@@ -118,6 +118,7 @@ struct nt_excitation_struct {
   double frac_deposition;  // the fraction of the non-thermal deposition energy going to the excitation transition
   double ratecoeffperdeposition;  // the excitation rate coefficient divided by the deposition rate density
   int lineindex;
+  int loweruptransindex;
 };
 
 struct nt_solution_struct {
@@ -2198,6 +2199,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
         const int ion = line->ionindex;
         const int lower = line->lowerlevelindex;
         const int upper = line->upperlevelindex;
+        const int uptransindex = nt_solution[modelgridindex].frac_excitations_list[excitationindex].loweruptransindex;
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon(element, ion, lower);
 
         const double ratecoeffperdeposition =
@@ -2205,11 +2207,11 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
         const double ntcollexc_ratecoeff = ratecoeffperdeposition * deposition_rate_density;
 
         const double t_mid = globals::time_step[timestep].mid;
-        const double radexc_ratecoeff =
-            rad_excitation_ratecoeff(modelgridindex, element, ion, lower, upper, epsilon_trans, lineindex, t_mid);
+        const double radexc_ratecoeff = rad_excitation_ratecoeff(modelgridindex, element, ion, lower, uptransindex,
+                                                                 epsilon_trans, lineindex, t_mid);
 
-        const double collexc_ratecoeff =
-            col_excitation_ratecoeff(T_e, nne, line, epsilon_trans, statw_lower(line), statw_upper(line));
+        const double collexc_ratecoeff = col_excitation_ratecoeff(T_e, nne, element, ion, lower, uptransindex,
+                                                                  epsilon_trans, stat_weight(element, ion, lower));
 
         const double exc_ratecoeff = radexc_ratecoeff + collexc_ratecoeff + ntcollexc_ratecoeff;
 
