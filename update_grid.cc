@@ -1295,7 +1295,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       }
     }
     const int update_grid_cell_seconds = time(nullptr) - sys_time_start_update_cell;
-    if (update_grid_cell_seconds > 0 {
+    if (update_grid_cell_seconds > 0) {
       printout("update_grid_cell for cell %d timestep %d took %ld seconds\n", mgi, nts, update_grid_cell_seconds);
     }
   } else {
