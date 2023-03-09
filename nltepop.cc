@@ -1645,22 +1645,21 @@ void nltepop_write_restart_data(FILE *restart_file) {
 
   fprintf(restart_file, "%d\n", globals::total_nlte_levels);
 
-  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-    if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      fprintf(restart_file, "%d %la\n", modelgridindex, grid::modelgrid[modelgridindex].totalcooling);
-      for (int element = 0; element < get_nelements(); element++) {
-        const int nions = get_nions(element);
-        for (int ion = 0; ion < nions; ion++) {
-          fprintf(restart_file, "%d %a %a %la\n", ion,
-                  grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
-                  grid::modelgrid[modelgridindex].composition[element].partfunct[ion],
-                  grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]);
-        }
+  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+    fprintf(restart_file, "%d %la\n", modelgridindex, grid::modelgrid[modelgridindex].totalcooling);
+    for (int element = 0; element < get_nelements(); element++) {
+      const int nions = get_nions(element);
+      for (int ion = 0; ion < nions; ion++) {
+        fprintf(restart_file, "%d %a %a %la\n", ion,
+                grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
+                grid::modelgrid[modelgridindex].composition[element].partfunct[ion],
+                grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]);
       }
-      if (NLTE_POPS_ON) {
-        for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
-          fprintf(restart_file, "%la ", grid::modelgrid[modelgridindex].nlte_pops[nlteindex]);
-        }
+    }
+    if (NLTE_POPS_ON) {
+      for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
+        fprintf(restart_file, "%la ", grid::modelgrid[modelgridindex].nlte_pops[nlteindex]);
       }
     }
   }
@@ -1684,38 +1683,37 @@ void nltepop_read_restart_data(FILE *restart_file) {
     abort();
   }
 
-  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-    if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      int mgi_in;
-      assert_always(fscanf(restart_file, "%d %la\n", &mgi_in, &grid::modelgrid[modelgridindex].totalcooling) == 2);
-      if (mgi_in != modelgridindex) {
-        printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
-        abort();
-      }
+  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+    int mgi_in;
+    assert_always(fscanf(restart_file, "%d %la\n", &mgi_in, &grid::modelgrid[modelgridindex].totalcooling) == 2);
+    if (mgi_in != modelgridindex) {
+      printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
+      abort();
+    }
 
-      for (int element = 0; element < get_nelements(); element++) {
-        const int nions = get_nions(element);
-        for (int ion = 0; ion < nions; ion++) {
-          int ion_in;
-          assert_always(fscanf(restart_file, "%d %a %a %la\n", &ion_in,
-                               &grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
-                               &grid::modelgrid[modelgridindex].composition[element].partfunct[ion],
-                               &grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]) == 4);
-          if (ion_in != ion) {
-            printout("ERROR: expected data for ion %d but found ion %d\n", ion, ion_in);
-            abort();
-          }
+    for (int element = 0; element < get_nelements(); element++) {
+      const int nions = get_nions(element);
+      for (int ion = 0; ion < nions; ion++) {
+        int ion_in;
+        assert_always(fscanf(restart_file, "%d %a %a %la\n", &ion_in,
+                             &grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
+                             &grid::modelgrid[modelgridindex].composition[element].partfunct[ion],
+                             &grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]) == 4);
+        if (ion_in != ion) {
+          printout("ERROR: expected data for ion %d but found ion %d\n", ion, ion_in);
+          abort();
         }
       }
-      if (NLTE_POPS_ON) {
-        for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
+    }
+    if (NLTE_POPS_ON) {
+      for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
 #ifdef MPI_ON
-          if (globals::rank_in_node != 0) {
-            assert_always(fscanf(restart_file, "%*a ") == 0);  // discard value (master rank of this node will set it)
-          } else
+        if (globals::rank_in_node != 0) {
+          assert_always(fscanf(restart_file, "%*a ") == 0);  // discard value (master rank of this node will set it)
+        } else
 #endif
-            assert_always(fscanf(restart_file, "%la ", &grid::modelgrid[modelgridindex].nlte_pops[nlteindex]) == 1);
-        }
+          assert_always(fscanf(restart_file, "%la ", &grid::modelgrid[modelgridindex].nlte_pops[nlteindex]) == 1);
       }
     }
   }
