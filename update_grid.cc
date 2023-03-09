@@ -1052,7 +1052,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     /// Update current mass density of cell
     // n = nonemptycells[my_rank+ncl*nprocs];
     if (log_this_cell)
-      printout("[info] update_grid_cell: working on cell %d before timestep %d titeration %d...\n", mgi, nts, titer);
+      printout("update_grid_cell: working on cell %d before timestep %d titeration %d...\n", mgi, nts, titer);
     // n = nonemptycells[ncl];
     // printout("[debug] update_grid: ncl %d is %d non-empty cell updating grid cell %d ... T_e
     // %g, rho %g\n",ncl,my_rank+ncl*nprocs,n,globals::cell[n].T_e,globals::cell[n].rho);
@@ -1294,8 +1294,10 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         mps[tid] = cell_len_scale_b;
       }
     }
-    printout("update_grid_cell for cell %d timestep %d took %ld seconds\n", mgi, nts,
-             time(nullptr) - sys_time_start_update_cell);
+    const int update_grid_cell_seconds = time(nullptr) - sys_time_start_update_cell;
+    if (update_grid_cell_seconds > 0 {
+      printout("update_grid_cell for cell %d timestep %d took %ld seconds\n", mgi, nts, update_grid_cell_seconds);
+    }
   } else {
     /// For modelgrid cells that are not represented in the simulation grid,
     /// Set grid properties to zero
