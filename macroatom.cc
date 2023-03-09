@@ -72,7 +72,7 @@ __host__ __device__ static void calculate_macroatom_transitionrates(const int mo
     processrates[MA_ACTION_INTERNALDOWNSAME] += individ_internal_down_same;
 
     chlevel->sum_epstrans_rad_deexc[i] = processrates[MA_ACTION_RADDEEXC];
-    chlevel->individ_internal_down_same[i] = individ_internal_down_same;
+    chlevel->sum_internal_down_same[i] = processrates[MA_ACTION_INTERNALDOWNSAME];
 
     // printout("checking downtrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,lower,R,C,epsilon_trans);
   }
@@ -140,47 +140,24 @@ __host__ __device__ static void calculate_macroatom_transitionrates(const int mo
 
 __host__ __device__ static int do_macroatom_internal_down_same(int modelgridindex, int element, int ion, int level,
                                                                double t_mid, double total_internal_down_same) {
-  // const auto T_e = grid::get_Te(modelgridindex);
-  // const auto nne = grid::get_nne(modelgridindex);
-  // const auto epsilon_current = epsilon(element, ion, level);
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
   // printout("[debug] do_ma:   internal downward jump within current ionstage\n");
 
   /// Randomly select the occuring transition
   const double zrand = rng_uniform();
-  int lower = -99;
-  double rate = 0.;
-  for (int i = 0; i < ndowntrans; i++) {
-    // const double A_ul = globals::elements[element].ions[ion].levels[level].downtrans[i].einstein_A;
-    // const double epsilon_target = epsilon(element, ion, tmp_lower);
-    // const double epsilon_trans = epsilon_current - epsilon_target;
+  const double targetval = zrand * total_internal_down_same;
 
-    // const double R =
-    //     rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, tmp_lower, epsilon_trans, A_ul, t_mid);
-    // const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, i);
+  const double *sum_internal_down_same =
+      globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].sum_internal_down_same;
 
-    // const double individ_internal_down_same = (R + C) * epsilon_target;
-    const double individ_internal_down_same =
-        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i];
-    rate += individ_internal_down_same;
-    if (zrand * total_internal_down_same < rate) {
-      lower = globals::elements[element].ions[ion].levels[level].downtrans[i].targetlevelindex;
-      break;
-    }
-  }
+  // first sum_internal_down_same[i] such that sum_internal_down_same[i] >= targetval
+  const double *const upperval =
+      std::lower_bound(&sum_internal_down_same[0], &sum_internal_down_same[ndowntrans], targetval);
+  const int downtransindex = upperval - &sum_internal_down_same[0];
 
-  // printout("[debug] do_ma:   to level %d\n", lower);
-  // if (get_ionstage(element,ion) == 0 && lower == 0)
-  // {
-  //   printout("internal downward transition to ground level occured ... abort\n");
-  //   printout("element %d, ion %d, level %d, lower %d\n", element, ion, level, lower);
-  //   printout("Z %d, ionstage %d, energy %g\n",
-  //            get_element(element), get_ionstage(element,ion),
-  //            globals::elements[element].ions[ion].levels[lower].epsilon);
-  //   printout("[debug] do_ma:   internal downward jump within current ionstage\n");
-  //   abort();
-  // }
+  assert_always(downtransindex < ndowntrans);
+  const int lower = globals::elements[element].ions[ion].levels[level].downtrans[downtransindex].targetlevelindex;
 
   return lower;
 }

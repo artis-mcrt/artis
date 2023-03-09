@@ -185,7 +185,7 @@ struct chlevels {
   double bfheatingcoeff;
   double population;
   double *sum_epstrans_rad_deexc;
-  double *individ_internal_down_same;
+  double *sum_internal_down_same;
   double *sum_internal_up_same;
 };
 
