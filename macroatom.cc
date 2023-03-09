@@ -64,14 +64,14 @@ __host__ __device__ static void calculate_macroatom_transitionrates(const int mo
 
     const double individ_internal_down_same = (R + C) * epsilon_target;
 
-    const double individ_rad_deexc = R * epsilon_trans;
+    const double sum_epstrans_rad_deexc = R * epsilon_trans;
     const double individ_col_deexc = C * epsilon_trans;
 
-    processrates[MA_ACTION_RADDEEXC] += individ_rad_deexc;
+    processrates[MA_ACTION_RADDEEXC] += sum_epstrans_rad_deexc;
     processrates[MA_ACTION_COLDEEXC] += individ_col_deexc;
     processrates[MA_ACTION_INTERNALDOWNSAME] += individ_internal_down_same;
 
-    chlevel->individ_rad_deexc[i] = individ_rad_deexc;
+    chlevel->sum_epstrans_rad_deexc[i] = processrates[MA_ACTION_RADDEEXC];
     chlevel->individ_internal_down_same[i] = individ_internal_down_same;
 
     // printout("checking downtrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,lower,R,C,epsilon_trans);
@@ -82,10 +82,8 @@ __host__ __device__ static void calculate_macroatom_transitionrates(const int mo
   processrates[MA_ACTION_RADRECOMB] = 0.;
   processrates[MA_ACTION_COLRECOMB] = 0.;
   processrates[MA_ACTION_INTERNALDOWNLOWER] = 0.;
-  if (ion > 0 &&
-      level <= get_maxrecombininglevel(
-                   element, ion))  /// checks only if there is a lower ion, doesn't make sure that Z(ion)=Z(ion-1)+1
-  {
+  // checks only if there is a lower ion, doesn't make sure that Z(ion)=Z(ion-1)+1
+  if (ion > 0 && level <= get_maxrecombininglevel(element, ion)) {
     // nlevels = get_nlevels(element,ion-1);
     const int nlevels = get_ionisinglevels(element, ion - 1);
     // nlevels = get_ionisinglevels(element,ion-1);
@@ -193,29 +191,22 @@ __host__ __device__ static void do_macroatom_raddeexcitation(struct packet *pkt_
                                                              const int activatingline, const double t_mid) {
   /// radiative deexcitation of MA: emitt rpkt
   /// randomly select which line transitions occurs
-  const double zrand = rng_uniform();
-  double rate = 0.;
   int linelistindex = -99;
   const int ndowntrans = get_ndowntrans(element, ion, level);
-  // const double epsilon_current = epsilon(element, ion, level);
-  for (int i = 0; i < ndowntrans; i++) {
-    rate += globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i];
-    if (zrand * rad_deexc < rate) {
-      linelistindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-      break;
-    }
-  }
 
-  // assert_always(linelistindex >= 0);
+  double *sum_epstrans_rad_deexc =
+      globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].sum_epstrans_rad_deexc;
 
-  if (linelistindex < 0) {
-    printout(
-        "[fatal] problem in selecting radiative downward transition of MA zrand %g, rate %g, rad_deexc %g, ndowntrans "
-        "%d\n",
-        zrand, rate, rad_deexc, ndowntrans);
-    printout("[fatal] total_transitions %g, element %d, ion %d, level %d\n", total_transitions, element, ion, level);
-    abort();
-  }
+  const double zrand = rng_uniform();
+  const double targetval = zrand * rad_deexc;
+
+  // first sum_epstrans_rad_deexc[i] such that sum_epstrans_rad_deexc[i] >= targetval
+  const double *const upperval =
+      std::lower_bound(&sum_epstrans_rad_deexc[0], &sum_epstrans_rad_deexc[ndowntrans], targetval);
+  const int downtransindex = upperval - &sum_epstrans_rad_deexc[0];
+
+  assert_always(downtransindex < ndowntrans);
+  linelistindex = globals::elements[element].ions[ion].levels[level].downtrans[downtransindex].lineindex;
 
   if (linelistindex == activatingline) {
     stats::increment(stats::COUNTER_RESONANCESCATTERINGS);
@@ -224,7 +215,8 @@ __host__ __device__ static void do_macroatom_raddeexcitation(struct packet *pkt_
   if constexpr (RECORD_LINESTAT) {
     safeincrement(globals::ecounter[linelistindex]);
   }
-  const int lower = globals::linelist[linelistindex].lowerlevelindex;
+
+  const int lower = globals::elements[element].ions[ion].levels[level].downtrans[downtransindex].targetlevelindex;
 
   // printout("[debug] do_ma:   jump to level %d\n", lower);
 
@@ -235,10 +227,11 @@ __host__ __device__ static void do_macroatom_raddeexcitation(struct packet *pkt_
   pkt_ptr->nu_cmf = epsilon_trans / H;
 
   if (pkt_ptr->last_event == 1) {
-    if (oldnucmf < pkt_ptr->nu_cmf)
+    if (oldnucmf < pkt_ptr->nu_cmf) {
       stats::increment(stats::COUNTER_UPSCATTER);
-    else
+    } else {
       stats::increment(stats::COUNTER_DOWNSCATTER);
+    }
   }
 
   assert_always(std::isfinite(pkt_ptr->nu_cmf));

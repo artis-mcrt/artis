@@ -184,7 +184,7 @@ struct chlevels {
   struct chphixstargets *chphixstargets;
   double bfheatingcoeff;
   double population;
-  double *individ_rad_deexc;
+  double *sum_epstrans_rad_deexc;
   double *individ_internal_down_same;
   double *individ_internal_up_same;
 };

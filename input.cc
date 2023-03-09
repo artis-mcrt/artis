@@ -1346,7 +1346,7 @@ static void setup_cellhistory(void) {
           struct chlevels *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
           const int ndowntrans = get_ndowntrans(element, ion, level);
 
-          chlevel->individ_rad_deexc = &chtransblock[chtransindex];
+          chlevel->sum_epstrans_rad_deexc = &chtransblock[chtransindex];
           chtransindex += ndowntrans;
         }
 

@@ -753,7 +753,7 @@ __host__ __device__ void cellhistory_reset(const int modelgridindex, const bool 
         // nuptrans = get_nuptrans(element, ion, level);
         // for (i = 0; i < ndowntrans; i++)
         // {
-        //   globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i]
+        //   globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].sum_epstrans_rad_deexc[i]
         //   = -99.;
         //   globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i]
         //   = -99.;
