@@ -211,22 +211,19 @@ __host__ __device__ static void do_macroatom_raddeexcitation(struct packet *pkt_
     }
   }
 
-  assert_always(std::isfinite(pkt_ptr->nu_cmf));
-
   stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_BB);
   pkt_ptr->interactions += 1;
   pkt_ptr->last_event = 0;
 
-  // Emit the rpkt in a random direction
+  // emit the rpkt in a random direction
   emitt_rpkt(pkt_ptr);
 
-  // NB: the r-pkt can only interact with lines redder than the current one
+  // the r-pkt can only interact with lines redder than the current one
   pkt_ptr->next_trans = linelistindex + 1;
   pkt_ptr->emissiontype = linelistindex;
   vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
   pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
-  // printout("next possible line encounter %d\n",pkt_ptr->next_trans);
 
 #ifdef VPKT_ON
   const int realtype = 3;
