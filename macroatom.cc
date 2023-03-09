@@ -21,20 +21,6 @@ constexpr bool LOG_MACROATOM = false;
 
 static FILE *macroatom_file = nullptr;
 
-__host__ __device__ static inline double get_individ_rad_deexc(int modelgridindex, int element, int ion, int level,
-                                                               int i, double t_mid, const double epsilon_current) {
-  // const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-  const int lower = globals::elements[element].ions[ion].levels[level].downtrans[i].targetlevelindex;
-  const double A_ul = globals::elements[element].ions[ion].levels[level].downtrans[i].einstein_A;
-  const double epsilon_target = epsilon(element, ion, lower);
-  const double epsilon_trans = epsilon_current - epsilon_target;
-
-  const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, A_ul, t_mid);
-  const double individ_rad_deexc = R * epsilon_trans;
-
-  return individ_rad_deexc;
-}
-
 __host__ __device__ static inline double get_individ_internal_up_same(int modelgridindex, int element, int ion,
                                                                       int level, int i, const double epsilon_current,
                                                                       const double t_mid, const float T_e,
@@ -213,7 +199,6 @@ __host__ __device__ static void do_macroatom_raddeexcitation(struct packet *pkt_
   const int ndowntrans = get_ndowntrans(element, ion, level);
   // const double epsilon_current = epsilon(element, ion, level);
   for (int i = 0; i < ndowntrans; i++) {
-    // rate += get_individ_rad_deexc(modelgridindex, element, ion, level, i, t_mid, epsilon_current);
     rate += globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i];
     if (zrand * rad_deexc < rate) {
       linelistindex = globals::elements[element].ions[ion].levels[level].downtrans[i].lineindex;
