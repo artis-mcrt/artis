@@ -186,7 +186,7 @@ void normalise_compton_estimators(const int nts) {
   }
 
   for (int n = 0; n < grid::get_npts_model(); n++) {
-    const double volume = grid::vol_init_modelcell(n);
+    const double volume = grid::get_modelcell_assocvolume_tmin(n);
     for (int m = 0; m < globals::emiss_max; m++) {
       globals::compton_emiss[n * globals::EMISS_MAX + m] =
           globals::compton_emiss[n * globals::EMISS_MAX + m] * time_factor / volume / globals::nprocs;

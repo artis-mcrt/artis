@@ -118,7 +118,7 @@ void normalise_grey(int nts) {
   globals::time_step[nts].gamma_dep_pathint = 0.;
   for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
     if (grid::get_numassociatedcells(mgi) > 0) {
-      const double dV = grid::vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
+      const double dV = grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
 
       globals::time_step[nts].gamma_dep_pathint += globals::rpkt_emiss[mgi] * 1.e20 / globals::nprocs;
 

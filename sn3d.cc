@@ -105,7 +105,7 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
     // for (int mgi = 0; mgi < grid::get_npts_model(); mgi++)
     {
       if (grid::get_numassociatedcells(mgi) > 0) {
-        const double cellmass = grid::get_rhoinit(mgi) * grid::vol_init_modelcell(mgi);
+        const double cellmass = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
 
         globals::time_step[i].eps_positron_ana_power +=
             cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAPLUS);

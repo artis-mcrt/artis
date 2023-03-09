@@ -1043,7 +1043,8 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
   if (assoc_cells > 0) {
     // estimators were accumulated in nts_prev, but radiation density, etc should be scaled to the
     // cell volume at nts
-    const double deltaV = grid::vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
+    const double deltaV =
+        grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
     const time_t sys_time_start_update_cell = time(nullptr);
     // const bool log_this_cell = ((n % 50 == 0) || (npts_model < 50));
     const bool log_this_cell = true;
@@ -1055,7 +1056,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     // n = nonemptycells[ncl];
     // printout("[debug] update_grid: ncl %d is %d non-empty cell updating grid cell %d ... T_e
     // %g, rho %g\n",ncl,my_rank+ncl*nprocs,n,globals::cell[n].T_e,globals::cell[n].rho);
-    grid::modelgrid[mgi].rho = grid::get_rhoinit(mgi) / pow(tratmid, 3);
+    grid::modelgrid[mgi].rho = grid::get_rho_tmin(mgi) / pow(tratmid, 3);
     // globals::cell[n].rho = globals::cell[n].rho_init / pow(tratmid,3);
     // rho = globals::cell[n].rho;
     /// This is done outside update grid now

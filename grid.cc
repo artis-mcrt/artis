@@ -92,8 +92,8 @@ __host__ __device__ double wid_init(const int cellindex)
   }
 }
 
-__host__ __device__ double vol_init_modelcell(const int modelgridindex)
-// return the model cell volume at globals::tmin
+__host__ __device__ double get_modelcell_assocvolume_tmin(const int modelgridindex)
+// return the model cell volume (when mapped to the propagation cells) at globals::tmin
 // for a uniform cubic grid this is constant
 {
   switch (GRID_TYPE) {
@@ -103,20 +103,19 @@ __host__ __device__ double vol_init_modelcell(const int modelgridindex)
               pow(globals::tmin * (modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.), 3));
 
     default: {
-      const int assoc_cells = get_numassociatedcells(modelgridindex);
-      return (wid_init(0) * wid_init(0) * wid_init(0)) * assoc_cells;
+      return (wid_init(0) * wid_init(0) * wid_init(0)) * get_numassociatedcells(modelgridindex);
     }
   }
 }
 
-__host__ __device__ double vol_init_gridcell(const int cellindex)
+__host__ __device__ double get_gridcell_volume_tmin(const int cellindex)
 // return the propagation cell volume at globals::tmin
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
 {
   switch (GRID_TYPE) {
     case GRID_SPHERICAL1D: {
       const int mgi = get_cell_modelgridindex(cellindex);
-      return vol_init_modelcell(mgi);
+      return get_modelcell_assocvolume_tmin(mgi);
     }
 
     default:
@@ -200,7 +199,7 @@ __host__ __device__ int get_cellcoordpointnum(const int cellindex, const int axi
   }
 }
 
-__host__ __device__ float get_rhoinit(int modelgridindex) { return modelgrid[modelgridindex].rhoinit; }
+__host__ __device__ float get_rho_tmin(int modelgridindex) { return modelgrid[modelgridindex].rhoinit; }
 
 __host__ __device__ float get_rho(int modelgridindex) { return modelgrid[modelgridindex].rho; }
 
@@ -267,7 +266,7 @@ __host__ __device__ float get_W(int modelgridindex) {
   return modelgrid[modelgridindex].W;
 }
 
-__host__ __device__ static void set_rhoinit(int modelgridindex, float x) { modelgrid[modelgridindex].rhoinit = x; }
+__host__ __device__ static void set_rho_tmin(int modelgridindex, float x) { modelgrid[modelgridindex].rhoinit = x; }
 
 __host__ __device__ static void set_rho(int modelgridindex, float x) { modelgrid[modelgridindex].rho = x; }
 
@@ -432,7 +431,7 @@ __host__ __device__ int get_mgi_of_nonemptymgi(int nonemptymgi)
 // the abundances below are initial abundances at t_model
 
 __host__ __device__ float get_modelinitradioabund(const int modelgridindex, const int z, const int a) {
-  // this function replaces get_f56ni(mgi), get_fco56(mgi), etc.
+  // get the mass fraction of a nuclide in a model grid cell at t=t_model by atomic number and mass number
 
   const int nucindex = decay::get_nuc_index(z, a);
   assert_always(decay::get_nuc_z(nucindex) >= 0);  // check not FAKE_GAM_LINE_ID nuclide
@@ -444,7 +443,7 @@ __host__ __device__ float get_modelinitradioabund(const int modelgridindex, cons
 }
 
 __host__ __device__ float get_modelinitradioabund_bynucindex(const int modelgridindex, const int nucindex) {
-  // this function replaces get_f56ni(mgi), get_fco56(mgi), etc.
+  // get the mass fraction of a nuclide in a model grid cell at t=t_model by nuclide index
 
   if (modelgrid[modelgridindex].initradioabund == nullptr) {
     return 0.;
@@ -454,11 +453,8 @@ __host__ __device__ float get_modelinitradioabund_bynucindex(const int modelgrid
 
 __host__ __device__ static void set_modelinitradioabund(const int modelgridindex, const int z, const int a,
                                                         const float abund) {
-  // // initradioabund is in node shared memory. only first rank in the node sets the values
-  // if (globals::rank_in_node != 0)
-  // {
-  //   return;
-  // }
+  // set the mass fraction of a nuclide in a model grid cell at t=t_model by atomic number and mass number
+  // initradioabund array is in node shared memory
   assert_always(abund >= 0.);
   assert_always(abund <= 1.);
 
@@ -471,11 +467,8 @@ __host__ __device__ static void set_modelinitradioabund(const int modelgridindex
 
 __host__ __device__ static void set_modelinitradioabund_bynucindex(const int modelgridindex, const int nucindex,
                                                                    const float abund) {
-  // // initradioabund is in node shared memory. only first rank in the node sets the values
-  // if (globals::rank_in_node != 0)
-  // {
-  //   return;
-  // }
+  // set the mass fraction of a nuclide in a model grid cell at t=t_model by nuclide index
+  // initradioabund array is in node shared memory
   assert_always(nucindex >= 0);
   assert_always(abund >= 0.);
   assert_always(abund <= 1.);
@@ -626,23 +619,23 @@ static void calculate_kappagrey(void) {
 
   for (int n = 0; n < ngrid; n++) {
     const int mgi = get_cell_modelgridindex(n);
-    rho_sum += get_rhoinit(mgi);
+    rho_sum += get_rho_tmin(mgi);
     fe_sum += get_ffegrp(mgi);
 
     if (globals::opacity_case == 3) {
-      if (get_rhoinit(mgi) > 0.) {
+      if (get_rho_tmin(mgi) > 0.) {
         double kappagrey = (0.9 * get_ffegrp(mgi) + 0.1);
 
-        if (get_rhoinit(mgi) > globals::rho_crit) kappagrey *= globals::rho_crit / get_rhoinit(mgi);
+        if (get_rho_tmin(mgi) > globals::rho_crit) kappagrey *= globals::rho_crit / get_rho_tmin(mgi);
 
         set_kappagrey(mgi, kappagrey);
-      } else if (get_rhoinit(mgi) == 0.) {
+      } else if (get_rho_tmin(mgi) == 0.) {
         set_kappagrey(mgi, 0.);
-      } else if (get_rhoinit(mgi) < 0.) {
+      } else if (get_rho_tmin(mgi) < 0.) {
         printout("Error: negative density. Abort.\n");
         abort();
       }
-      opcase3_sum += get_kappagrey(mgi) * get_rhoinit(mgi);
+      opcase3_sum += get_kappagrey(mgi) * get_rho_tmin(mgi);
     }
   }
 
@@ -660,7 +653,7 @@ static void calculate_kappagrey(void) {
       fprintf(grid_file, "%d %d\n", n, mgi);  /// write only non-empty cells to grid file
     }
 
-    if (get_rhoinit(mgi) > 0) {
+    if (get_rho_tmin(mgi) > 0) {
       double kappa = 0.;
       if (globals::opacity_case == 0) {
         kappa = globals::GREY_OP;
@@ -668,7 +661,7 @@ static void calculate_kappagrey(void) {
         kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * globals::GREY_OP / ((0.9 * mfeg / mtot_input) + 0.1);
       } else if (globals::opacity_case == 2) {
         const double opcase2_normal = globals::GREY_OP * rho_sum / ((0.9 * fe_sum) + (0.1 * (ngrid - empty_cells)));
-        kappa = opcase2_normal / get_rhoinit(mgi) * ((0.9 * get_ffegrp(mgi)) + 0.1);
+        kappa = opcase2_normal / get_rho_tmin(mgi) * ((0.9 * get_ffegrp(mgi)) + 0.1);
       } else if (globals::opacity_case == 3) {
         globals::opcase3_normal = globals::GREY_OP * rho_sum / opcase3_sum;
         kappa = get_kappagrey(mgi) * globals::opcase3_normal;
@@ -702,15 +695,15 @@ static void calculate_kappagrey(void) {
       }
 
       set_kappagrey(mgi, kappa);
-    } else if (get_rhoinit(mgi) == 0.) {
+    } else if (get_rho_tmin(mgi) == 0.) {
       set_kappagrey(mgi, 0.);
-    } else if (get_rhoinit(mgi) < 0.) {
+    } else if (get_rho_tmin(mgi) < 0.) {
       printout("Error: negative density. Abort.\n");
       abort();
     }
 
-    check1 = check1 + (get_kappagrey(mgi) * get_rhoinit(mgi));
-    check2 = check2 + get_rhoinit(mgi);
+    check1 = check1 + (get_kappagrey(mgi) * get_rho_tmin(mgi));
+    check2 = check2 + get_rho_tmin(mgi);
   }
 
   if (globals::rank_global == 0) {
@@ -842,7 +835,7 @@ static void allocate_nonemptymodelcells(void) {
   mem_usage_nltepops = 0;
   /// This is the placeholder for empty cells. Temperatures must be positive
   /// as long as ff opacities are calculated.
-  set_rhoinit(get_npts_model(), 0.);
+  set_rho_tmin(get_npts_model(), 0.);
   set_rho(get_npts_model(), 0.);
   set_nne(get_npts_model(), 0.);
   set_nnetot(get_npts_model(), 0.);
@@ -859,7 +852,7 @@ static void allocate_nonemptymodelcells(void) {
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = get_cell_modelgridindex(cellindex);
-    assert_always(!(get_model_type() == RHO_3D_READ) || (get_rhoinit(mgi) > 0) || (mgi == get_npts_model()));
+    assert_always(!(get_model_type() == RHO_3D_READ) || (get_rho_tmin(mgi) > 0) || (mgi == get_npts_model()));
     mg_associated_cells[mgi] += 1;
     assert_always(!(get_model_type() == RHO_3D_READ) || (mg_associated_cells[mgi] == 1) || (mgi == get_npts_model()));
   }
@@ -880,7 +873,7 @@ static void allocate_nonemptymodelcells(void) {
 
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
     if (get_numassociatedcells(mgi) > 0) {
-      if (get_rhoinit(mgi) <= 0) {
+      if (get_rho_tmin(mgi) <= 0) {
         printout("Error: negative or zero density. Abort.\n");
         abort();
       }
@@ -889,7 +882,7 @@ static void allocate_nonemptymodelcells(void) {
       nonemptymgi++;
     } else {
       nonemptymgi_of_mgi[mgi] = -1;
-      set_rhoinit(mgi, 0.);
+      set_rho_tmin(mgi, 0.);
       set_rho(mgi, 0.);
       if (modelgrid[mgi].initradioabund != nullptr) {
         for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
@@ -937,7 +930,7 @@ static void map_1dmodeltogrid(void)
         set_cell_modelgridindex(cellindex, mgi);
       }
       const int mgi = get_cell_modelgridindex(cellindex);
-      if ((vout_model[mgi] >= vmin) && (get_rhoinit(mgi) > 0)) {
+      if ((vout_model[mgi] >= vmin) && (get_rho_tmin(mgi) > 0)) {
         modelgrid[mgi].initial_radial_pos_sum += radial_pos;
       } else {
         set_cell_modelgridindex(cellindex, get_npts_model());
@@ -1004,7 +997,7 @@ static void map_3dmodeltogrid(void) {
     // mgi and cellindex are interchangeable in this mode
     const int mgi = cellindex;
     modelgrid[mgi].initial_radial_pos_sum = get_cellradialpos(cellindex);
-    const bool keepcell = (get_rhoinit(mgi) > 0);
+    const bool keepcell = (get_rho_tmin(mgi) > 0);
     if (keepcell) {
       set_cell_modelgridindex(cellindex, mgi);
     } else {
@@ -1312,7 +1305,7 @@ static void read_1d_model(void)
       vout_model[mgi] = vout_kmps * 1.e5;
 
       const double rho_tmin = pow(10., log_rho) * pow(t_model / globals::tmin, 3);
-      set_rhoinit(mgi, rho_tmin);
+      set_rho_tmin(mgi, rho_tmin);
       set_rho(mgi, rho_tmin);
 
       if (items_read == 10 && mgi == 0) {
@@ -1454,7 +1447,7 @@ static void read_2d_model(void)
     assert_always(fabs(cell_z_in / z - 1) < 1e-3);
 
     const double rho_tmin = rho_tmodel * pow(t_model / globals::tmin, 3);
-    set_rhoinit(mgi, rho_tmin);
+    set_rho_tmin(mgi, rho_tmin);
     set_rho(mgi, rho_tmin);
 
     read_2d3d_modelradioabundanceline(fmodel, mgi, true, zlist, alist, colnames, nucindexlist);
@@ -1580,7 +1573,7 @@ static void read_3d_model(void)
     // in 3D cartesian, cellindex and modelgridindex are interchangeable
     const bool keepcell = (rho_model > 0);
     const double rho_tmin = rho_model * pow(t_model / globals::tmin, 3);
-    set_rhoinit(mgi, rho_tmin);
+    set_rho_tmin(mgi, rho_tmin);
     set_rho(mgi, rho_tmin);
 
     if (min_den < 0. || min_den > rho_model) {
@@ -1616,7 +1609,7 @@ static void read_3d_model(void)
   fmodel.close();
 }
 
-static void calc_totmassradionuclides(void) {
+static void calc_modelinit_totmassradionuclides(void) {
   mtot_input = 0.;
   mfeg = 0.;
 
@@ -1630,7 +1623,7 @@ static void calc_totmassradionuclides(void) {
 
   int n1 = 0;
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-    if (get_rhoinit(mgi) <= 0.) {
+    if (get_rho_tmin(mgi) <= 0.) {
       continue;
     }
     double cellvolume = 0.;
@@ -1651,9 +1644,9 @@ static void calc_totmassradionuclides(void) {
       printout("Unknown model type %d in function %s\n", get_model_type(), __func__);
       abort();
     }
-    // can use grid::vol_init_modelcell(mgi) to get actual simulated volume (with slight error versus input)
+    // can use grid::get_modelcell_assocvolume_tmin(mgi) to get actual simulated volume (with slight error versus input)
 
-    const double mass_in_shell = get_rhoinit(mgi) * cellvolume;
+    const double mass_in_shell = get_rho_tmin(mgi) * cellvolume;
 
     mtot_input += mass_in_shell;
 
@@ -1664,11 +1657,13 @@ static void calc_totmassradionuclides(void) {
     mfeg += mass_in_shell * get_ffegrp(mgi);
   }
 
-  printout("Masses / Msun:    Total: %9.3e  56Ni: %9.3e  56Co: %9.3e  52Fe: %9.3e  48Cr: %9.3e\n", mtot_input / MSUN,
-           get_totmassradionuclide(28, 56) / MSUN, get_totmassradionuclide(27, 56) / MSUN,
-           get_totmassradionuclide(26, 52) / MSUN, get_totmassradionuclide(24, 48) / MSUN);
-  printout("Masses / Msun: Fe-group: %9.3e  57Ni: %9.3e  57Co: %9.3e\n", mfeg / MSUN,
-           get_totmassradionuclide(28, 57) / MSUN, get_totmassradionuclide(27, 57) / MSUN);
+  printout("Total input model mass: %9.3e [Msun]\n", mtot_input / MSUN);
+  printout("Nuclide masses at t=t_model_init [Msun]:");
+  printout("  56Ni: %9.3e  56Co: %9.3e  52Fe: %9.3e  48Cr: %9.3e\n", get_totmassradionuclide(28, 56) / MSUN,
+           get_totmassradionuclide(27, 56) / MSUN, get_totmassradionuclide(26, 52) / MSUN,
+           get_totmassradionuclide(24, 48) / MSUN);
+  printout("  Fe-group: %9.3e  57Ni: %9.3e  57Co: %9.3e\n", mfeg / MSUN, get_totmassradionuclide(28, 57) / MSUN,
+           get_totmassradionuclide(27, 57) / MSUN);
 }
 
 void read_ejecta_model(void) {
@@ -1746,7 +1741,7 @@ void read_ejecta_model(void) {
 #endif
 #endif
 
-  calc_totmassradionuclides();
+  calc_modelinit_totmassradionuclides();
 
   read_possible_yefile();
 }
@@ -1925,12 +1920,12 @@ static void assign_initial_temperatures(void)
     }
 
     double T_initial =
-        pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) * get_rhoinit(mgi) * decayedenergy_per_mass, 1. / 4.);
+        pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.);
 
     // printout("T_initial %g T_initial_alt %g\n", T_initial, T_initial_alt);
 
     // printout("mgi %d: T_initial %g K tmin %g tstart %g rhoinit %g X_56Ni %g X_52Fe %g X_48cr %g\n",
-    //          mgi, T_initial, globals::tmin, tstart, get_rhoinit(mgi), get_modelinitradioabund(mgi, 28, 56),
+    //          mgi, T_initial, globals::tmin, tstart, get_rho_tmin(mgi), get_modelinitradioabund(mgi, 28, 56),
     //          get_modelinitradioabund(mgi, 26, 52), get_modelinitradioabund(mgi, 24, 48));
     if (T_initial < MINTEMP) {
       printout("mgi %d: T_initial of %g is below MINTEMP %g K, setting to MINTEMP.\n", mgi, T_initial, MINTEMP);
@@ -2209,12 +2204,17 @@ void grid_init(int my_rank)
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
       const int z = decay::get_nuc_z(nucindex);
       const int a = decay::get_nuc_a(nucindex);
+
       if (totmassradionuclide[nucindex] <= 0) continue;
+
       double totmassradionuclide_actual = 0.;
       for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-        totmassradionuclide_actual +=
-            get_modelinitradioabund_bynucindex(mgi, nucindex) * get_rhoinit(mgi) * vol_init_modelcell(mgi);
+        if (get_numassociatedcells(mgi) > 0) {
+          totmassradionuclide_actual += get_modelinitradioabund_bynucindex(mgi, nucindex) * get_rho_tmin(mgi) *
+                                        get_modelcell_assocvolume_tmin(mgi);
+        }
       }
+
       if (totmassradionuclide_actual > 0.) {
         const double ratio = totmassradionuclide[nucindex] / totmassradionuclide_actual;
         // printout("nuclide %d ratio %g\n", nucindex, ratio);

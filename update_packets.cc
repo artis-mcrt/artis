@@ -24,7 +24,7 @@ static void do_nonthermal_predeposit(struct packet *pkt_ptr, const int nts, cons
   if (!INSTANT_PARTICLE_DEPOSITION) {
     const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
     const double rho = grid::get_rho(mgi);
-    // const double rho2 = grid::get_rhoinit(mgi) / pow(t_sim_th / globals::tmin, 3);
+    // const double rho2 = grid::get_rho_tmin(mgi) / pow(t_sim_th / globals::tmin, 3);
 
     // endot [erg/s]
     endot = (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;

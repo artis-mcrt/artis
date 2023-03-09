@@ -92,7 +92,7 @@ void packet_init(int my_rank, struct packet *pkt)
         q += grid::get_initenergyq(mgi);
       }
 
-      norm += grid::vol_init_gridcell(m) * grid::get_rhoinit(mgi) * q;
+      norm += grid::get_gridcell_volume_tmin(m) * grid::get_rho_tmin(mgi) * q;
     }
     en_cumulative[m] = norm;
   }
