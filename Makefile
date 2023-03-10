@@ -41,10 +41,13 @@ else ifeq ($(USER),localadmin_ccollins)
 else
 
 	# sometimes the login nodes have slighty different CPUs
-	# to the job nodes. Try to find a lowest common denominator here
+	# to the job nodes. Try to find the lowest common denominator here
 	# to enable vector extensions
-	CXXFLAGS += -march=haswell
+	# CXXFLAGS += -march=haswell
+	# CXXFLAGS += -march=skylake-avx512
 
+	# to get the current CPU architecture, run this:
+	# g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
 endif
 
 
