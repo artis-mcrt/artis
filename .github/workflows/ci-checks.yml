@@ -54,10 +54,11 @@ jobs:
         steps:
             - uses: actions/checkout@v3
 
-            - name: CPU count
+            - name: CPU type and core count
               id: cpu-count
               run: |
                   sudo apt-get update
+                  g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
                   # echo "count=$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')" >> $GITHUB_OUTPUT
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
@@ -98,7 +99,6 @@ jobs:
             - name: Show compiler version and CPU type
               run: |
                   ${{ env.CXX }} --version
-                  ${{ env.CXX }} -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
 
             - name: Compile
               run: |
