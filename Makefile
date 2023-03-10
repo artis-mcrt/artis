@@ -6,9 +6,15 @@ BUILD_DIR = build/$(shell uname -m)
 CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -g -flto=auto -Werror -Werror=undef
 
 ifeq ($(shell uname -s),Darwin)
-	# macOS
+# 	macOS
 
-	CXXFLAGS += -mcpu=native
+	ifeq ($(shell uname -m),arm64)
+#	 	On Arm, -mcpu combines -march and -mtune
+		CXXFLAGS += -mcpu=native
+	else
+#		On x86, -march implies -mtune
+		CXXFLAGS += -march=native
+	endif
 
 #	CXXFLAGS += -Rpass=loop-vectorize
 #	CXXFLAGS += -Rpass-missed=loop-vectorize
@@ -30,7 +36,14 @@ else ifeq ($(USER),localadmin_ccollins)
 	LIB = /home/localadmin_ccollins/gsl/lib
 	CXXFLAGS += -g -I$(INCLUDE)
 	LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
-	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
+	CXXFLAGS += -std=c++17 -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
+
+else
+
+	# sometimes the login nodes have slighty different CPUs
+	# to the job nodes. Try to find a lowest common denominator here
+	# to enable vector extensions
+	CXXFLAGS += -march=haswell
 
 endif
 
