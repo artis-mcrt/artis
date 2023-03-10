@@ -143,6 +143,8 @@ $(BUILD_DIR)/%.o: %.cc Makefile artisoptions.h
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -MD -MP -c $< -o $@
 
+sn3d.o exspec.o: version.h
+
 exspec: version.h artisoptions.h $(exspec_objects) Makefile
 	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec
 -include $(exspec_dep)
