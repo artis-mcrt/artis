@@ -9,7 +9,11 @@ ifeq ($(shell uname -s),Darwin)
 	# macOS
 
 	# march=native also works on Apple Silicon with Clang >=15
-	CXXFLAGS += -march=native -mcpu=native -mtune=native
+	# CXXFLAGS += -march=native -mcpu=native -mtune=native
+
+	# for Apple Clang 14
+	CXXFLAGS += -mcpu=apple-m1 -mtune=apple-m1
+
 #	CXXFLAGS += -Rpass=loop-vectorize
 #	CXXFLAGS += -Rpass-missed=loop-vectorize
 #	CXXFLAGS += -Rpass-analysis=loop-vectorize
