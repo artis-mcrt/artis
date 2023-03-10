@@ -95,9 +95,10 @@ jobs:
                   echo "CXX=mpicxx" >> $GITHUB_ENV
                   mpicxx --showme:version
 
-            - name: Show compiler version
+            - name: Show compiler version and CPU type
               run: |
                   ${{ env.CXX }} --version
+                  ${{ env.CXX }} -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
 
             - name: Compile
               run: |
