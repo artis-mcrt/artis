@@ -125,7 +125,7 @@ exspec_dep = $(exspec_objects:%.o=%.d)
 
 all: sn3d exspec
 
-sn3d: version.h artisoptions.h $(sn3d_objects) Makefile
+sn3d: $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
 #	$(LINK.cpp) $(filter %.o,$^) -o $@
 -include $(sn3d_dep)
@@ -143,13 +143,11 @@ sn3dcuda: version.h $(sn3d_objects)
 # %.o: %.cc
 # 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c
 
-$(BUILD_DIR)/%.o: %.cc Makefile artisoptions.h
+$(BUILD_DIR)/%.o: %.cc version.h artisoptions.h Makefile artisoptions.h
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -MD -MP -c $< -o $@
 
-sn3d.o exspec.o: version.h
-
-exspec: version.h artisoptions.h $(exspec_objects) Makefile
+exspec: $(exspec_objects)
 	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec
 -include $(exspec_dep)
 
