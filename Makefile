@@ -8,7 +8,7 @@ CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -g -flto=auto -Werror 
 ifeq ($(shell uname -s),Darwin)
 	# macOS
 
-	CXXFLAGS += -mcpu=native -mtune=native
+	CXXFLAGS += -mcpu=native
 
 #	CXXFLAGS += -Rpass=loop-vectorize
 #	CXXFLAGS += -Rpass-missed=loop-vectorize
