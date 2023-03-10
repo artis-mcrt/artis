@@ -322,7 +322,7 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
   stats::pkt_action_counters_printout(packets, nts);
 
   const time_t time_update_packets_end_thisrank = time(nullptr);
-  printout("end of update_packets for this rank at time %ld\n", time_update_packets_end_thisrank);
+  printout("timestep %d: end of update_packets for this rank at time %ld\n", nts, time_update_packets_end_thisrank);
 
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);  // hold all processes once the packets are updated
