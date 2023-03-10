@@ -6,6 +6,8 @@ cd $SLURM_SUBMIT_DIR
 
 spack load gsl target=$(spack arch -t)
 
+echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
+
 # decompress any zipped input files
 source ./artis/scripts/exspec-before.sh
 
