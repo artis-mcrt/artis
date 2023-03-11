@@ -7,12 +7,22 @@
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=luke.shingles@gmail.com
 
-module load Stages/2022 GCC/11.2.0 ParaStationMPI/5.5.0-1
+module load Stages/2023 GCC ParaStationMPI
 module load GSL
 
 cd $SLURM_SUBMIT_DIR
 
-srun ./sn3d -w 24 > out.txt
+echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
+
+hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
+echo "$(date): before srun sn3d. hours left: $hoursleft"
+time srun -- ./sn3d -w $hoursleft > out.txt
+hoursleftafter=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
+echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
+hourselapsed=$(python3 -c "print($hoursleft - $hoursleftafter)")
+echo "hours of runtime: $hourselapsed"
+cpuhrs=$(python3 -c "print($SLURM_NTASKS * $hourselapsed)")
+echo "ntasks: $SLURM_NTASKS -> CPU core hrs: $cpuhrs"
 
 mkdir ${SLURM_JOB_ID}.slurm
 ./artis/scripts/movefiles.sh ${SLURM_JOB_ID}.slurm
