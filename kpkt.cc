@@ -2,6 +2,7 @@
 
 #include <gsl/gsl_integration.h>
 
+#include <algorithm>
 #include <cmath>
 
 #include "atomic.h"
