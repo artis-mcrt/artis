@@ -22,22 +22,6 @@ constexpr bool LOG_MACROATOM = false;
 
 static FILE *macroatom_file = nullptr;
 
-__host__ __device__ static inline double get_individ_internal_up_same(int modelgridindex, int element, int ion,
-                                                                      int level, int i, const double epsilon_current,
-                                                                      const double t_mid, const float T_e,
-                                                                      const float nne, const double statweight) {
-  const int upper = globals::elements[element].ions[ion].levels[level].uptrans[i].targetlevelindex;
-  const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
-  const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
-
-  const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, lineindex, t_mid);
-  const double C = col_excitation_ratecoeff(T_e, nne, element, ion, level, i, epsilon_trans, statweight);
-  const double NT =
-      nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
-
-  return (R + C + NT) * epsilon_current;
-}
-
 __host__ __device__ static void calculate_macroatom_transitionrates(const int modelgridindex, const int element,
                                                                     const int ion, const int level, const double t_mid,
                                                                     struct chlevels *const chlevel) {
@@ -107,8 +91,16 @@ __host__ __device__ static void calculate_macroatom_transitionrates(const int mo
   processrates[MA_ACTION_INTERNALUPSAME] = 0.;
   const int nuptrans = get_nuptrans(element, ion, level);
   for (int i = 0; i < nuptrans; i++) {
-    const double individ_internal_up_same = get_individ_internal_up_same(modelgridindex, element, ion, level, i,
-                                                                         epsilon_current, t_mid, T_e, nne, statweight);
+    const int upper = globals::elements[element].ions[ion].levels[level].uptrans[i].targetlevelindex;
+    const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
+    const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
+
+    const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, lineindex, t_mid);
+    const double C = col_excitation_ratecoeff(T_e, nne, element, ion, level, i, epsilon_trans, statweight);
+    const double NT =
+        nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
+
+    const double individ_internal_up_same = (R + C + NT) * epsilon_current;
 
     processrates[MA_ACTION_INTERNALUPSAME] += individ_internal_up_same;
     chlevel->sum_internal_up_same[i] = processrates[MA_ACTION_INTERNALUPSAME];
