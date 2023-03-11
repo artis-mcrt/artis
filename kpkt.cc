@@ -484,9 +484,9 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
         coolingsum += grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion];
         // printout("Z=%d, ionstage %d, coolingsum %g\n", get_element(element), get_ionstage(element, ion),
         // coolingsum);
-        if (coolingsum >= rndcool) break;
+        if (coolingsum > rndcool) break;
       }
-      if (coolingsum >= rndcool) break;
+      if (coolingsum > rndcool) break;
     }
     // printout("kpkt selected Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
 
@@ -658,7 +658,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
                          col_excitation_ratecoeff(T_e, nne, element, ion, level, ii, epsilon_trans, statweight) *
                          epsilon_trans;
         contrib += C;
-        if (contrib >= rndcool) {
+        if (contrib > rndcool) {
           upper = tmpupper;
           break;
         }
