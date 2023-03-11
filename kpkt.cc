@@ -518,7 +518,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       calculate_kpkt_rates_ion(modelgridindex, element, ion, ilow, oldcoolingsum, tid);
     }
 
-    const auto selectedvalue = std::lower_bound(&globals::cellhistory[tid].cooling_contrib[ilow],
+    const auto selectedvalue = std::upper_bound(&globals::cellhistory[tid].cooling_contrib[ilow],
                                                 &globals::cellhistory[tid].cooling_contrib[ihigh + 1], rndcool);
     const int i = selectedvalue - globals::cellhistory[tid].cooling_contrib;
     assert_always(i <= ihigh);
