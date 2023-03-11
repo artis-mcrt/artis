@@ -117,8 +117,8 @@ void packet_init(int my_rank, struct packet *pkt)
     const double zrand = rng_uniform();
     const double targetval = zrand * norm;
 
-    // first en_cumulative[i] such that en_cumulative[i] >= targetval
-    const double *const upperval = std::lower_bound(&en_cumulative[0], &en_cumulative[grid::ngrid], targetval);
+    // first en_cumulative[i] such that en_cumulative[i] > targetval
+    const double *const upperval = std::upper_bound(&en_cumulative[0], &en_cumulative[grid::ngrid], targetval);
     const int cellindex = upperval - &en_cumulative[0];
 
     assert_always(cellindex < grid::ngrid);

@@ -1401,8 +1401,9 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
 
   const double zrand_en = rng_uniform() * cumulative_en_sum[num_decaychannels - 1];
 
+  // first cumulative_en_sum[i] such that cumulative_en_sum[i] > zrand_en
   const double *const upperval =
-      std::lower_bound(&cumulative_en_sum[0], &cumulative_en_sum[num_decaychannels], zrand_en);
+      std::upper_bound(&cumulative_en_sum[0], &cumulative_en_sum[num_decaychannels], zrand_en);
   const int decaychannelindex = upperval - &cumulative_en_sum[0];
 
   assert_always(decaychannelindex >= 0);

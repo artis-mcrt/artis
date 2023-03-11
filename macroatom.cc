@@ -151,9 +151,9 @@ __host__ __device__ static int do_macroatom_internal_down_same(int modelgridinde
   const double *sum_internal_down_same =
       globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].sum_internal_down_same;
 
-  // first sum_internal_down_same[i] such that sum_internal_down_same[i] >= targetval
+  // first sum_internal_down_same[i] such that sum_internal_down_same[i] > targetval
   const double *const upperval =
-      std::lower_bound(&sum_internal_down_same[0], &sum_internal_down_same[ndowntrans], targetval);
+      std::upper_bound(&sum_internal_down_same[0], &sum_internal_down_same[ndowntrans], targetval);
   const int downtransindex = upperval - &sum_internal_down_same[0];
 
   assert_always(downtransindex < ndowntrans);
@@ -177,9 +177,9 @@ __host__ __device__ static void do_macroatom_raddeexcitation(struct packet *pkt_
   const double zrand = rng_uniform();
   const double targetval = zrand * rad_deexc;
 
-  // first sum_epstrans_rad_deexc[i] such that sum_epstrans_rad_deexc[i] >= targetval
+  // first sum_epstrans_rad_deexc[i] such that sum_epstrans_rad_deexc[i] > targetval
   const double *const upperval =
-      std::lower_bound(&sum_epstrans_rad_deexc[0], &sum_epstrans_rad_deexc[ndowntrans], targetval);
+      std::upper_bound(&sum_epstrans_rad_deexc[0], &sum_epstrans_rad_deexc[ndowntrans], targetval);
   const int downtransindex = upperval - &sum_epstrans_rad_deexc[0];
 
   assert_always(downtransindex < ndowntrans);
@@ -767,9 +767,9 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
 
         const double targetval = zrand * processrates[MA_ACTION_INTERNALUPSAME];
 
-        // first sum_internal_up_same[i] such that sum_internal_up_same[i] >= targetval
+        // first sum_internal_up_same[i] such that sum_internal_up_same[i] > targetval
         const double *const upperval =
-            std::lower_bound(&sum_internal_up_same[0], &sum_internal_up_same[nuptrans], targetval);
+            std::upper_bound(&sum_internal_up_same[0], &sum_internal_up_same[nuptrans], targetval);
         const int uptransindex = upperval - &sum_internal_up_same[0];
 
         assert_always(uptransindex < nuptrans);

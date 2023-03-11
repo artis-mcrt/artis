@@ -563,7 +563,8 @@ __host__ __device__ static void rpkt_event_continuum(struct packet *pkt_ptr,
     const double zrand2 = rng_uniform();
     const double kappa_bf_rand = zrand2 * kappa_bf_inrest;
 
-    double *upperval = std::lower_bound(&globals::phixslist[tid].kappa_bf_sum[0],
+    // first kappa_bf_sum[i] such that kappa_bf_sum[i] > kappa_bf_rand
+    double *upperval = std::upper_bound(&globals::phixslist[tid].kappa_bf_sum[0],
                                         &globals::phixslist[tid].kappa_bf_sum[globals::nbfcontinua - 1], kappa_bf_rand);
     const int allcontindex = std::distance(&globals::phixslist[tid].kappa_bf_sum[0], upperval);
     assert_always(allcontindex < globals::nbfcontinua);
