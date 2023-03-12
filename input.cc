@@ -1380,8 +1380,11 @@ static void setup_cellhistory(void) {
 }
 
 static void write_bflist_file(int includedphotoiontransitions) {
-  globals::bflist = static_cast<struct bflist_t *>(malloc(includedphotoiontransitions * sizeof(struct bflist_t)));
-  assert_always(globals::bflist != nullptr);
+  if (includedphotoiontransitions > 0) {
+    globals::bflist = static_cast<struct bflist_t *>(malloc(includedphotoiontransitions * sizeof(struct bflist_t)));
+  } else {
+    globals::bflist = nullptr;
+  }
 
   FILE *bflist_file = nullptr;
   if (globals::rank_global == 0) {
@@ -1455,7 +1458,7 @@ static void setup_phixs_list(void) {
   for (int itid = 0; itid < get_max_threads(); itid++) {
     /// Number of ground level bf-continua equals the total number of included ions minus the number
     /// of included elements, because the uppermost ionisation stages can't ionise.
-    if constexpr (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING) {
+    if ((!NO_LUT_PHOTOION || !NO_LUT_BFHEATING) && globals::nbfcontinua_ground > 0) {
       globals::phixslist[itid].groundcont_gamma_contr =
           static_cast<double *>(malloc(globals::nbfcontinua_ground * sizeof(double)));
       assert_always(globals::phixslist[itid].groundcont_gamma_contr != nullptr);
@@ -1463,22 +1466,29 @@ static void setup_phixs_list(void) {
       for (int groundcontindex = 0; groundcontindex < globals::nbfcontinua_ground; groundcontindex++) {
         globals::phixslist[itid].groundcont_gamma_contr[groundcontindex] = 0.;
       }
+    } else {
+      globals::phixslist[itid].groundcont_gamma_contr = nullptr;
     }
 
-    globals::phixslist[itid].kappa_bf_sum = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
-    assert_always(globals::phixslist[itid].kappa_bf_sum != nullptr);
-
-    if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-      globals::phixslist[itid].gamma_contr = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
-      assert_always(globals::phixslist[itid].gamma_contr != nullptr);
-    }
-
-    for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++) {
-      globals::phixslist[itid].kappa_bf_sum[allcontindex] = 0.;
+    if (globals::nbfcontinua > 0) {
+      globals::phixslist[itid].kappa_bf_sum = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
+      assert_always(globals::phixslist[itid].kappa_bf_sum != nullptr);
 
       if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-        globals::phixslist[itid].gamma_contr[allcontindex] = 0.;
+        globals::phixslist[itid].gamma_contr = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
+        assert_always(globals::phixslist[itid].gamma_contr != nullptr);
       }
+
+      for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++) {
+        globals::phixslist[itid].kappa_bf_sum[allcontindex] = 0.;
+
+        if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+          globals::phixslist[itid].gamma_contr[allcontindex] = 0.;
+        }
+      }
+    } else {
+      globals::phixslist[itid].kappa_bf_sum = nullptr;
+      globals::phixslist[itid].gamma_contr = nullptr;
     }
 
     printout("[info] mem_usage: phixslist[tid].kappa_bf_contr for thread %d occupies %.3f MB\n", itid,
