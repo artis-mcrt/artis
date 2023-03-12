@@ -1095,8 +1095,10 @@ __host__ __device__ double get_modelcell_simtime_endecay_per_mass(const int mgi)
 
 void setup_decaypath_energy_per_mass(void) {
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
-  printout("[info] mem_usage: allocating %.1f MB for decaypath_energy_per_mass...",
-           nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
+  printout(
+      "[info] mem_usage: decaypath_energy_per_mass[nonempty_npts_model*num_decaypaths] occupies %.1f MB (node "
+      "shared)...",
+      nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
 #ifdef MPI_ON
   int my_rank_cells = nonempty_npts_model / globals::node_nprocs;
   // rank_in_node 0 gets any remainder
@@ -1141,11 +1143,13 @@ void setup_decaypath_energy_per_mass(void) {
 void free_decaypath_energy_per_mass(void) {
 #ifdef MPI_ON
   if (win_decaypath_energy_per_mass != MPI_WIN_NULL) {
+    printout("[info] mem_usage: decaypath_energy_per_mass was freed\n");
     MPI_Win_free(&win_decaypath_energy_per_mass);
     win_decaypath_energy_per_mass = MPI_WIN_NULL;
   }
 #else
   if (decaypath_energy_per_mass != nullptr) {
+    printout("[info] mem_usage: decaypath_energy_per_mass was freed\n");
     free(decaypath_energy_per_mass);
     decaypath_energy_per_mass = nullptr;
   }
