@@ -1637,11 +1637,7 @@ static void setup_phixs_list(void) {
 
   long mem_usage_photoionluts = 2 * TABLESIZE * globals::nbfcontinua * sizeof(double);
 
-  if (globals::nbfcontinua == 0) {
-    globals::corrphotoioncoeff = nullptr;
-    globals::bfheating_coeff = nullptr;
-    globals::bfcooling_coeff = nullptr;
-  } else {
+  if (globals::nbfcontinua > 0) {
 #ifdef MPI_ON
     MPI_Win win = MPI_WIN_NULL;
     MPI_Aint size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * sizeof(double) : 0;
