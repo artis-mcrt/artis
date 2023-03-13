@@ -400,12 +400,8 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
     assert_always(ion < get_nions(element));
 
     const double epsilon_current = epsilon(element, ion, level);
-    const int ndowntrans = get_ndowntrans(element, ion, level);
+    // const int ndowntrans = get_ndowntrans(element, ion, level);
     const int nuptrans = get_nuptrans(element, ion, level);
-    // nlevels_nextion  ///not needed as long we only ionise to the ground state
-    // nlevels_lowerion ///only needed if level = 0, this won't happen too often
-
-    // printout("[debug] do_ma: ndowntrans %d, nuptrans %d\n",ndowntrans,nuptrans);
 
     assert_always(globals::cellhistory[tid].cellnumber == modelgridindex);
 
