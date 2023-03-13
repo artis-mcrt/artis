@@ -383,7 +383,6 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
   }
 
   int jumps = 0;
-  int jump = -99;
 
   bool end_packet = false;
   while (!end_packet) {
@@ -509,7 +508,6 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
       case MA_ACTION_INTERNALDOWNSAME: {
         pkt_ptr->interactions += 1;
         jumps++;
-        jump = 0;
         level = do_macroatom_internal_down_same(modelgridindex, element, ion, level, t_mid,
                                                 processrates[MA_ACTION_INTERNALDOWNSAME]);
 
@@ -560,7 +558,6 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
         // printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
         pkt_ptr->interactions += 1;
         jumps++;
-        jump = 1;
 
         stats::increment(stats::COUNTER_MA_STAT_INTERNALDOWNLOWER);
 
@@ -616,7 +613,6 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
         // printout("[debug] do_ma:   internal upward jump within current ionstage\n");
         pkt_ptr->interactions += 1;
         jumps++;
-        jump = 2;
 
         /// randomly select the occuring transition
         zrand = rng_uniform();
@@ -641,7 +637,6 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
         // printout("[debug] do_ma:   internal upward jump to next ionstage\n");
         pkt_ptr->interactions += 1;
         jumps++;
-        jump = 3;
 
         stats::increment(stats::COUNTER_MA_STAT_INTERNALUPHIGHER);
 
