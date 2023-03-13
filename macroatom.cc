@@ -157,8 +157,8 @@ __host__ __device__ static int do_macroatom_internal_down_same(int modelgridinde
 
 __host__ __device__ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int modelgridindex,
                                                              const int element, const int ion, const int level,
-                                                             const double rad_deexc, const double total_transitions,
-                                                             const int activatingline, const double t_mid) {
+                                                             const double rad_deexc, const int activatingline,
+                                                             const double t_mid) {
   /// radiative deexcitation of MA: emitt rpkt
   /// randomly select which line transitions occurs
   int linelistindex = -99;
@@ -382,10 +382,6 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
     stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_TOTAL, pkt_ptr->e_cmf);
   }
 
-  /// dummy-initialize these to nonsense values, if something goes wrong with the real
-  /// initialization we should see errors
-
-  // printout("[debug] =============entering do_ma\n");
   int jumps = 0;
   int jump = -99;
 
@@ -412,10 +408,6 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
 
     // printout("[debug] do_ma: ndowntrans %d, nuptrans %d\n",ndowntrans,nuptrans);
 
-    if (!(globals::cellhistory[tid].cellnumber == modelgridindex)) {
-      printout("globals::cellhistory[tid].cellnumber %d modelgridindex %d\n", globals::cellhistory[tid].cellnumber,
-               modelgridindex);
-    }
     assert_always(globals::cellhistory[tid].cellnumber == modelgridindex);
 
     struct chlevels *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
@@ -443,10 +435,10 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
     for (int action = 0; action < MA_ACTION_COUNT; action++) {
       total_transitions += processrates[action];
     }
+    assert_always(total_transitions > 0);
 
     enum ma_action selected_action = MA_ACTION_COUNT;
     double zrand = rng_uniform();
-    // printout("zrand %g\n",zrand);
     const double randomrate = zrand * total_transitions;
     double rate = 0.;
     for (int action = 0; action < MA_ACTION_COUNT; action++) {
@@ -457,134 +449,7 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
       }
     }
 
-    if (rate <= randomrate) {
-      printout("[fatal] do_ma: problem with random numbers .. abort\n");
-      // printout("[debug]    rad_down %g, col_down %g, internal_down %g, internal_up
-      // %g\n",rad_down,col_down,internal_down,internal_up);
-      printout("[debug] do_ma: element %d, ion %d, level %d, total_transitions %g\n", element, ion, level,
-               total_transitions);
-      printout("[debug]    col_deexc %g, col_recomb %g, rad_deexc %g, rad_recomb %g\n",
-               processrates[MA_ACTION_COLDEEXC], processrates[MA_ACTION_COLRECOMB], processrates[MA_ACTION_RADDEEXC],
-               processrates[MA_ACTION_RADRECOMB]);
-      printout("[debug]    internal_down_same %g, internal_down_lower %g\n", processrates[MA_ACTION_INTERNALDOWNSAME],
-               processrates[MA_ACTION_INTERNALDOWNLOWER]);
-      printout("[debug]    internal_up_same %g, internal_up_higher %g\n", processrates[MA_ACTION_INTERNALUPSAME],
-               processrates[MA_ACTION_INTERNALUPHIGHER]);
-      printout("[debug]    zrand %g\n", zrand);
-      printout("[debug]    jumps %d\n", jumps);
-      printout("[debug]    pkt_ptr->number %d\n", pkt_ptr->number);
-
-      if (ion > 0)  /// checks only if there is a lower ion, doesn't make sure that Z(ion)=Z(ion-1)+1
-      {
-        printout("[debug]    check recombination\n");
-        // nlevels = get_nlevels(element,ion-1);
-        const int nlevels = get_ionisinglevels(element, ion - 1);
-        // nlevels = get_ionisinglevels(element,ion-1);
-        for (int lower = 0; lower < nlevels; lower++) {
-          const double epsilon_target = epsilon(element, ion - 1, lower);
-          const double epsilon_trans = epsilon_current - epsilon_target;
-          const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, modelgridindex);
-          const double C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
-          printout("[debug]    recombination to ion %d, level %d, epsilon_target %g, epsilon_trans %g, R %g, C %g\n",
-                   ion - 1, lower, epsilon_target, epsilon_trans, R, C);
-        }
-      }
-
-      printout("[debug]    check deexcitation\n");
-      printout("[debug]    ndowntrans %d %d\n", ndowntrans, get_ndowntrans(element, ion, level));
-      for (int i = 0; i < ndowntrans; i++) {
-        const int lower = globals::elements[element].ions[ion].levels[level].downtrans[i].targetlevelindex;
-        const double epsilon_trans = epsilon_current - epsilon(element, ion, lower);
-        const double A_ul = globals::elements[element].ions[ion].levels[level].downtrans[i].einstein_A;
-        const double R =
-            rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, A_ul, t_mid);
-        const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, i);
-        printout("[debug]    deexcitation to level %d, epsilon_trans %g, epsilon_trans %g, R %g, C %g\n", lower,
-                 epsilon_trans, epsilon_trans, R, C);
-      }
-
-      printout("[debug]    check excitation\n");
-      printout("[debug]    nuptrans %d %d\n", nuptrans, get_nuptrans(element, ion, level));
-      for (int i = 0; i < nuptrans; i++) {
-        const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
-        const int upper = globals::elements[element].ions[ion].levels[level].uptrans[i].targetlevelindex;
-        const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
-        const double R =
-            rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, lineindex, t_mid);
-        const double C =
-            col_excitation_ratecoeff(T_e, nne, element, ion, level, i, epsilon_trans, stat_weight(element, ion, level));
-        printout("[debug]    excitation to level %d, epsilon_trans %g, R %g, C %g\n", upper, epsilon_trans, R, C);
-      }
-
-      if (ion < get_nions(element) - 1)  //&& get_ionstage(element,ion) < get_element(element)+1)
-      {
-        printout("[debug]    check ionisation\n");
-        for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
-          const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-          const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
-          const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
-          const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
-          printout("[debug]    ionisation to ion %d, level %d, epsilon_trans %g, R %g, C %g\n", ion + 1, upper,
-                   epsilon_trans, R, C);
-          break;
-        }
-      }
-
-      abort();
-    }
-
-    // printout("[debug] do_ma: element %d, ion %d, level %d\n",element,ion,level);
-    // printout(
-    //   "[debug] do_ma:   rad_deexc %g, col_deexc %g, internal_down_same %g, rad_recomb %g, col_recomb %g,
-    //   internal_down_lower %g, internal_up_same %g, internal_up_higher %g\n",
-    //   processrates[MA_ACTION_RADDEEXC],processrates[MA_ACTION_COLDEEXC],processrates[MA_ACTION_INTERNALDOWNSAME],processrates[MA_ACTION_RADRECOMB],processrates[MA_ACTION_COLRECOMB],
-    //   processrates[MA_ACTION_INTERNALDOWNLOWER],
-    //   processrates[MA_ACTION_INTERNALUPSAME],processrates[MA_ACTION_INTERNALUPHIGHER]);
-
-    if (total_transitions <= 0.) {
-      printout("[debug] do_ma: element %d, ion %d, level %d, total_transitions = %g\n", element, ion, level,
-               total_transitions);
-      printout("[debug]    col_deexc %g, col_recomb %g, rad_deexc %g, rad_recomb %g\n",
-               processrates[MA_ACTION_COLDEEXC], processrates[MA_ACTION_COLRECOMB], processrates[MA_ACTION_RADDEEXC],
-               processrates[MA_ACTION_RADRECOMB]);
-      printout("[debug]    internal_down_same %g, internal_down_lower %g\n", processrates[MA_ACTION_INTERNALDOWNSAME],
-               processrates[MA_ACTION_INTERNALDOWNLOWER]);
-      printout("[debug]    internal_up_same %g, internal_up_higher %g\n", processrates[MA_ACTION_INTERNALUPSAME],
-               processrates[MA_ACTION_INTERNALUPHIGHER]);
-      printout("[debug]    zrand %g\n", zrand);
-      printout("[debug]    jumps %d, jump %d\n", jumps, jump);
-      printout("[debug]    pkt_ptr->number %d, pkt_ptr->where %d\n", pkt_ptr->number, cellindex);
-      printout("[debug]    groundlevelpop of current ion in current cell %g\n",
-               grid::modelgrid[grid::get_cell_modelgridindex(cellindex)].composition[element].groundlevelpop[ion]);
-
-      double R = 0.0;
-      double C = 0.0;
-      for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
-        const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-        const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
-        R += get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
-        C += col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
-        printout("epsilon_current %g, epsilon_trans %g, photion %g, colion %g, internal_up_higher %g\n",
-                 epsilon_current, epsilon_trans, R, C, (R + C) * epsilon_current);
-      }
-
-      const float T_R = grid::get_TR(modelgridindex);
-      const float W = grid::get_W(modelgridindex);
-      printout("modelgridindex %d, T_R %g, T_e %g, W %g, T_J %g\n", modelgridindex, T_R, grid::get_Te(modelgridindex),
-               W, grid::get_TJ(modelgridindex));
-
-      if constexpr (!NO_LUT_PHOTOION) {
-        const double gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, 0, T_R);
-        const int index_in_groundlevelcontestimor =
-            globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
-        const double renorm = globals::corrphotoionrenorm[modelgridindex * get_nelements() * get_max_nions() +
-                                                          index_in_groundlevelcontestimor];
-        printout("gammacorr %g, index %d, renorm %g, total %g\n", gammacorr, index_in_groundlevelcontestimor, renorm,
-                 gammacorr * renorm);
-      }
-
-      // abort();
-    }
+    assert_always(rate > randomrate);
 
     switch (selected_action) {
       case MA_ACTION_RADDEEXC: {
@@ -592,7 +457,7 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
         // printout("[debug] do_ma:   jumps = %d\n", jumps);
 
         do_macroatom_raddeexcitation(pkt_ptr, modelgridindex, element, ion, level, processrates[MA_ACTION_RADDEEXC],
-                                     total_transitions, activatingline, t_mid);
+                                     activatingline, t_mid);
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC,
