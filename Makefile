@@ -48,16 +48,14 @@ else
 
 	# to get the current CPU architecture, run this:
 	# g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
-
 	ifneq (,$(findstring juwels,$(HOSTNAME)))
 		CXXFLAGS += -march=skylake-avx512
-	else ifneq (,$(findstring lxbk,$(HOSTNAME)))
+	else ifneq (,$(findstring lxbk,$(uname -n)))
 		# virgo has some AMD nodes (znver1 arch) and some Intel
 		CXXFLAGS += -march=haswell
 	endif
 
 endif
-
 
 # GSL (GNU Scientific Library)
 # GSL option 1: Use pkg-config to find GSL
