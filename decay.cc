@@ -89,8 +89,9 @@ __host__ __device__ int get_nuc_index(int z, int a)
 // get the nuclide array index from the atomic number and mass number
 {
   assert_testmodeonly(get_num_nuclides() > 0);
+  const int num_nuclides = get_num_nuclides();
 
-  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
+  for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     if (nuclides[nucindex].z == z && nuclides[nucindex].a == a) {
       return nucindex;
     }
