@@ -51,7 +51,7 @@ else
 
 	ifneq (,$(findstring juwels,$(HOSTNAME)))
 		CXXFLAGS += -march=skylake-avx512
-	else ifneq (,$(findstring gsi.de,$(HOSTNAME)))
+	else ifneq (,$(findstring lxbk,$(HOSTNAME)))
 		# virgo has some AMD nodes (znver1 arch) and some Intel
 		CXXFLAGS += -march=haswell
 	endif
