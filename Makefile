@@ -49,9 +49,9 @@ else
 	# to get the current CPU architecture, run this:
 	# g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
 
-	ifeq ($(findstring juwels,$(hostname)), juwels)
+	ifeq ($(findstring juwels,$(DOMAIN)), juwels)
 		CXXFLAGS += -march=skylake-avx512
-	else ifeq ($(findstring gsi.de,$(hostname)), gsi.de)
+	else ifeq ($(findstring gsi.de,$(DOMAIN)), gsi.de)
 		# virgo has some AMD nodes (znver1 arch) and some Intel
 		CXXFLAGS += -march=haswell
 	endif
