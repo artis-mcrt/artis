@@ -123,13 +123,6 @@ static void printout_nuclidemeanlife(const int z, const int a) {
   }
 }
 
-__host__ __device__ static double get_nuc_decaybranchprob(const int z_parent, const int a_parent, int decaytype) {
-  assert_testmodeonly(nuc_exists(z_parent, a_parent));
-  assert_testmodeonly(decaytype >= 0);
-  assert_testmodeonly(decaytype < DECAYTYPE_COUNT);
-  return nuclides[get_nuc_index(z_parent, a_parent)].branchprobs[decaytype];
-}
-
 constexpr int decay_daughter_z(const int z_parent, const int a_parent, int decaytype)
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
@@ -177,6 +170,21 @@ constexpr int decay_daughter_a(const int z_parent, const int a_parent, int decay
     }
   }
   return -1;  // no daughter
+}
+
+__host__ __device__ static double get_nuc_decaybranchprob_bynucindex(const int nucindex, const int decaytype) {
+  assert_testmodeonly(nucindex >= 0);
+  assert_testmodeonly(nucindex < get_num_nuclides());
+  assert_testmodeonly(decaytype >= 0);
+  assert_testmodeonly(decaytype < DECAYTYPE_COUNT);
+  return nuclides[nucindex].branchprobs[decaytype];
+}
+
+__host__ __device__ static double get_nuc_decaybranchprob(const int z_parent, const int a_parent, const int decaytype) {
+  assert_testmodeonly(nuc_exists(z_parent, a_parent));
+  assert_testmodeonly(decaytype >= 0);
+  assert_testmodeonly(decaytype < DECAYTYPE_COUNT);
+  return get_nuc_decaybranchprob_bynucindex(get_nuc_index(z_parent, a_parent), decaytype);
 }
 
 static bool nuc_is_parent(const int z_parent, const int a_parent, const int z, const int a)
@@ -295,8 +303,8 @@ static double get_decaypath_branchproduct(int decaypathindex)
 {
   double branchprod = 1.;
   for (int i = 0; i < get_decaypathlength(decaypathindex); i++) {
-    branchprod = branchprod * get_nuc_decaybranchprob(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i],
-                                                      decaypaths[decaypathindex].decaytypes[i]);
+    branchprod = branchprod * get_nuc_decaybranchprob_bynucindex(decaypaths[decaypathindex].nucindex[i],
+                                                                 decaypaths[decaypathindex].decaytypes[i]);
   }
   return branchprod;
 }
@@ -1172,8 +1180,8 @@ __host__ __device__ double get_particle_injection_rate(const int modelgridindex,
     }
     const double en_particles = nucdecayenergyparticle(z, a, decaytype);
     if (en_particles > 0.) {
-      const double nucdecayrate =
-          get_nuc_massfrac(modelgridindex, z, a, t) / meanlife * get_nuc_decaybranchprob(z, a, decaytype);
+      const double nucdecayrate = get_nuc_massfrac(modelgridindex, z, a, t) / meanlife *
+                                  get_nuc_decaybranchprob_bynucindex(nucindex, decaytype);
       assert_always(nucdecayrate >= 0);
       dep_sum += nucdecayrate * en_particles / nucmass(z, a);
     }
@@ -1198,7 +1206,8 @@ double get_qdot_modelcell(const int modelgridindex, const double t, const int de
     if (meanlife <= 0) {
       continue;
     }
-    const double q_decay = nucdecayenergyqval(z, a, decaytype) * get_nuc_decaybranchprob(z, a, decaytype);
+    const double q_decay =
+        nucdecayenergyqval(z, a, decaytype) * get_nuc_decaybranchprob_bynucindex(nucindex, decaytype);
     if (q_decay <= 0.) {
       continue;
     }
