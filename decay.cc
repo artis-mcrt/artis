@@ -215,32 +215,39 @@ __host__ __device__ void set_nucdecayenergygamma(int z, int a, double value)
   nuclides[get_nuc_index(z, a)].endecay_gamma = value;
 }
 
-double nucdecayenergyparticle(const int z_parent, const int a_parent, const int decaytype)
+double nucdecayenergyparticle_bynucindex(const int nucindex, const int decaytype)
 // decay energy in the form of kinetic energy of electrons, positrons, or alpha particles,
 // depending on the relevant decay type (but not including neutrinos)
 {
-  assert_testmodeonly(nuc_exists(z_parent, a_parent));
   assert_testmodeonly(decaytype >= 0);
   assert_testmodeonly(decaytype < DECAYTYPE_COUNT);
 
   switch (decaytype) {
     case DECAYTYPE_ALPHA: {
-      return nuclides[get_nuc_index(z_parent, a_parent)].endecay_alpha;
+      return nuclides[nucindex].endecay_alpha;
     }
     case DECAYTYPE_BETAPLUS: {
-      return nuclides[get_nuc_index(z_parent, a_parent)].endecay_positron;
+      return nuclides[nucindex].endecay_positron;
     }
     case DECAYTYPE_ELECTRONCAPTURE: {
       return 0.;
     }
     case DECAYTYPE_BETAMINUS: {
-      return nuclides[get_nuc_index(z_parent, a_parent)].endecay_electron;
+      return nuclides[nucindex].endecay_electron;
     }
     case DECAYTYPE_NONE: {
       return 0.;
     }
   }
   return 0.;
+}
+
+double nucdecayenergyparticle(const int z_parent, const int a_parent, const int decaytype)
+// decay energy in the form of kinetic energy of electrons, positrons, or alpha particles,
+// depending on the relevant decay type (but not including neutrinos)
+{
+  assert_testmodeonly(nuc_exists(z_parent, a_parent));
+  return nucdecayenergyparticle_bynucindex(get_nuc_index(z_parent, a_parent), decaytype);
 }
 
 __host__ __device__ static double nucdecayenergytotal(int z, int a)
@@ -255,12 +262,21 @@ __host__ __device__ static double nucdecayenergytotal(int z, int a)
   return endecay;
 }
 
+double nucdecayenergy_bynucindex(int nucindex, int decaytype)
+// contributed energy release per decay [erg] for decaytype (e.g. DECAYTYPE_BETAPLUS)
+// (excludes neutrinos!)
+{
+  const double endecay = nuclides[nucindex].endecay_gamma + nucdecayenergyparticle_bynucindex(nucindex, decaytype);
+
+  return endecay;
+}
+
 double nucdecayenergy(int z, int a, int decaytype)
 // contributed energy release per decay [erg] for decaytype (e.g. DECAYTYPE_BETAPLUS)
 // (excludes neutrinos!)
 {
   assert_testmodeonly(nuc_exists(z, a));
-  const double endecay = nucdecayenergygamma(z, a) + nucdecayenergyparticle(z, a, decaytype);
+  const double endecay = nucdecayenergy_bynucindex(get_nuc_index(z, a), decaytype);
 
   return endecay;
 }
@@ -313,10 +329,9 @@ static double get_decaypath_branchproduct(int decaypathindex)
 static double get_decaypath_lastnucdecayenergy(const int decaypathindex)
 // a decaypath's energy is the decay energy of the last nuclide and decaytype in the chain
 {
-  const int z_end = decaypaths[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
-  const int a_end = decaypaths[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
+  const int nucindex_end = decaypaths[decaypathindex].nucindex[get_decaypathlength(decaypathindex) - 1];
   const int decaytype_end = decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1];
-  return nucdecayenergy(z_end, a_end, decaytype_end);
+  return nucdecayenergy_bynucindex(nucindex_end, decaytype_end);
 }
 
 static void printout_decaytype(const int decaytype) {

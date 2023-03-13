@@ -33,7 +33,6 @@ __host__ __device__ bool nuc_exists(int z, int a);
 __host__ __device__ double nucdecayenergygamma(int z, int a);
 __host__ __device__ double nucdecayenergyparticle(int z_parent, int a_parent, int decaytype);
 __host__ __device__ void set_nucdecayenergygamma(int z, int a, double value);
-__host__ __device__ double nucdecayenergy(int z, int a);
 __host__ __device__ double get_meanlife(int z, int a);
 __host__ __device__ double nucmass(int z, int a);
 __host__ __device__ void update_abundances(int modelgridindex, int timestep, double t_current);
