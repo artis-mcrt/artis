@@ -829,7 +829,7 @@ __host__ __device__ static double get_nuc_massfrac(const int modelgridindex, con
     const int z_end = decaypaths[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
     const int a_end = decaypaths[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
 
-    // match 4He abundance to alpha decay of any nucleus (no continues), otherwise check daughter nuclide matches
+    // match 4He abundance to alpha decay of any nucleus (no continue), otherwise check daughter nuclide matches
     if (z != 2 || a != 4 ||
         decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1] != DECAYTYPE_ALPHA) {
       if (nuc_exists_z_a && !(z_end == z && a_end == a))  // requested nuclide is in network, so match last nuc in chain
@@ -837,10 +837,8 @@ __host__ __device__ static double get_nuc_massfrac(const int modelgridindex, con
         continue;
       }
 
-      if (!nuc_exists_z_a &&
-          !nuc_is_parent(z_end, a_end, z,
-                         a))  // requested nuclide not in network, so match daughter of last nucleus in chain
-      {
+      // if requested nuclide is not in network then match daughter of last nucleus in chain
+      if (!nuc_exists_z_a && !nuc_is_parent(z_end, a_end, z, a)) {
         continue;
       }
     }
@@ -856,10 +854,10 @@ __host__ __device__ static double get_nuc_massfrac(const int modelgridindex, con
     }
 
     int fulldecaypathlength = decaypathlength;
+    // if the nuclide is out of network, it's one past the end of the chain
     if (!nuc_exists_z_a ||
         (z == 2 && a == 4 &&
          decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1] == DECAYTYPE_ALPHA)) {
-      // the nuclide is past the end of the chain, in case requested (Z, A) is stable and not in the radionuclides
       meanlifetimes[decaypathlength] = -1.;
       fulldecaypathlength = decaypathlength + 1;
     }
