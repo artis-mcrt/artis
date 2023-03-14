@@ -63,7 +63,6 @@ __host__ __device__ void calculate_cooling_rates(const int modelgridindex,
   const auto nne = grid::get_nne(modelgridindex);
   const auto T_e = grid::get_Te(modelgridindex);
 
-  double C_total = 0.;
   double C_ff_all = 0.;          /// free-free creation of rpkts
   double C_fb_all = 0.;          /// free-bound creation of rpkt
   double C_exc_all = 0.;         /// collisional excitation of macroatoms
@@ -141,8 +140,17 @@ __host__ __device__ void calculate_cooling_rates(const int modelgridindex,
         }
       }
 
-      C_total += C_ion;
       grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] = C_ion;
+    }
+  }
+
+  // this loop is made separate for future parallelisation of upper loop.
+  // the ion contributions must be added in this exact order
+  double C_total = 0.;
+  for (int element = 0; element < get_nelements(); element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      C_total += grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion];
     }
   }
   grid::modelgrid[modelgridindex].totalcooling = C_total;
@@ -156,7 +164,7 @@ __host__ __device__ void calculate_cooling_rates(const int modelgridindex,
 }
 
 __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int indexionstart,
-                                                         double oldcoolingsum, int tid)
+                                                         int tid)
 // calculate the cooling contribution list of individual levels/processes for an ion
 // oldcoolingsum is the sum of lower ion (of same element or all ions of lower elements) cooling contributions
 {
@@ -177,7 +185,7 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
   if (ioncharge > 0) {
     const double C = 1.426e-27 * sqrt(T_e) * pow(ioncharge, 2) * nncurrention * nne;
     C_ion += C;
-    globals::cellhistory[tid].cooling_contrib[i] = oldcoolingsum + C_ion;
+    globals::cellhistory[tid].cooling_contrib[i] = C_ion;
 
     assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_FF);
     assert_testmodeonly(coolinglist[i].element == element);
@@ -207,7 +215,7 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
                          epsilon_trans;
         C_ion += C;
       }
-      globals::cellhistory[tid].cooling_contrib[i] = oldcoolingsum + C_ion;
+      globals::cellhistory[tid].cooling_contrib[i] = C_ion;
 
       assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_COLLEXC);
       assert_testmodeonly(coolinglist[i].element == element);
@@ -234,7 +242,7 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
                          epsilon_trans;
 
         C_ion += C;
-        globals::cellhistory[tid].cooling_contrib[i] = oldcoolingsum + C_ion;
+        globals::cellhistory[tid].cooling_contrib[i] = C_ion;
 
         assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_COLLION);
         assert_testmodeonly(coolinglist[i].element == element);
@@ -254,7 +262,7 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
         const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperion * nne;
         C_ion += C;
 
-        globals::cellhistory[tid].cooling_contrib[i] = oldcoolingsum + C_ion;
+        globals::cellhistory[tid].cooling_contrib[i] = C_ion;
 
         assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_FB);
         assert_testmodeonly(coolinglist[i].element == element);
@@ -272,11 +280,6 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
 
   // we just summed up every individual cooling process. make sure it matches the stored total for the ion
   assert_always(grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] == C_ion);
-
-  // if we're on the top ion of the top element, then we should reach exactly the totalcooling value
-  if ((element == (get_nelements() - 1)) && (ion == (get_nions(element) - 1))) {
-    assert_always((oldcoolingsum + C_ion) == grid::modelgrid[modelgridindex].totalcooling);
-  }
 }
 
 __host__ __device__ static void set_ncoolingterms(void) {
@@ -469,33 +472,30 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
     /// Randomly select the occuring cooling process
     double coolingsum = 0.;
-    double zrand = rng_uniform();
+    const double zrand = rng_uniform();
 
     assert_always(grid::modelgrid[modelgridindex].totalcooling > 0.);
-    const double rndcool = zrand * grid::modelgrid[modelgridindex].totalcooling;
-    // printout("rndcool %g totalcooling %g\n", rndcool, grid::modelgrid[modelgridindex].totalcooling);
+    const double rndcool_ion = zrand * grid::modelgrid[modelgridindex].totalcooling;
 
-    double oldcoolingsum = 0.;
     int element = -1;
     int ion = -1;
     for (element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (ion = 0; ion < nions; ion++) {
-        oldcoolingsum = coolingsum;
         coolingsum += grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion];
         // printout("Z=%d, ionstage %d, coolingsum %g\n", get_element(element), get_ionstage(element, ion),
         // coolingsum);
-        if (coolingsum > rndcool) break;
+        if (coolingsum > rndcool_ion) break;
       }
-      if (coolingsum > rndcool) break;
+      if (coolingsum > rndcool_ion) break;
     }
     // printout("kpkt selected Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
 
-    if (element >= get_nelements() || ion >= get_nions(element)) {
+    if (element >= get_nelements() || element < 0 || ion >= get_nions(element) || ion < 0) {
       printout("do_kpkt: problem selecting a cooling process ... abort\n");
       printout("do_kpkt: modelgridindex %d element %d ion %d\n", modelgridindex, element, ion);
-      printout("do_kpkt: totalcooling %g, coolingsum %g, rndcool %g\n", grid::modelgrid[modelgridindex].totalcooling,
-               coolingsum, rndcool);
+      printout("do_kpkt: totalcooling %g, coolingsum %g, rndcool_ion %g\n",
+               grid::modelgrid[modelgridindex].totalcooling, coolingsum, rndcool_ion);
       printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n", modelgridindex, pkt_ptr->where,
                grid::get_nne(modelgridindex));
       for (element = 0; element < get_nelements(); element++) {
@@ -516,19 +516,24 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d
       // oldcoolingsum %g\n",
       //          modelgridindex, element, ion, ilow, high, oldcoolingsum);
-      calculate_kpkt_rates_ion(modelgridindex, element, ion, ilow, oldcoolingsum, tid);
+      calculate_kpkt_rates_ion(modelgridindex, element, ion, ilow, tid);
     }
 
-    const auto selectedvalue = std::upper_bound(&globals::cellhistory[tid].cooling_contrib[ilow],
-                                                &globals::cellhistory[tid].cooling_contrib[ihigh + 1], rndcool);
+    // with the ion selected, we now select a level and transition type
+
+    const double zrand2 = rng_uniform();
+    const double rndcool_ion_process = zrand2 * globals::cellhistory[tid].cooling_contrib[ihigh];
+
+    const auto selectedvalue =
+        std::upper_bound(&globals::cellhistory[tid].cooling_contrib[ilow],
+                         &globals::cellhistory[tid].cooling_contrib[ihigh + 1], rndcool_ion_process);
     const int i = selectedvalue - globals::cellhistory[tid].cooling_contrib;
 
     if (i > ihigh) {
       printout("do_kpkt: error occured while selecting a cooling channel: low %d, high %d, i %d, rndcool %g\n", ilow,
-               ihigh, i, rndcool);
+               ihigh, i, rndcool_ion_process);
       printout("element %d, ion %d, offset %d, terms %d, coolingsum %g\n", element, ion,
                get_coolinglistoffset(element, ion), get_ncoolingterms(element, ion), coolingsum);
-      printout("oldcoolingsum %g, coolingsum %g\n", oldcoolingsum, coolingsum);
 
       printout("lower %g, %g, %g\n", globals::cellhistory[tid].cooling_contrib[get_coolinglistoffset(element, ion) - 1],
                globals::cellhistory[tid].cooling_contrib[get_coolinglistoffset(element, ion)],
@@ -552,7 +557,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       /// Sample the packets comoving frame frequency according to paperII 5.4.3 eq.41
       // zrand = rng_uniform();   /// delivers zrand in [0,1[
       // zrand = 1. - zrand;             /// make sure that log gets a zrand in ]0,1]
-      zrand = rng_uniform_pos();  /// delivers zrand in ]0,1[
+      const double zrand = rng_uniform_pos();  /// delivers zrand in ]0,1[
       pkt_ptr->nu_cmf = -KB * T_e / H * log(zrand);
 
       assert_always(std::isfinite(pkt_ptr->nu_cmf));
@@ -638,9 +643,9 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       // printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
       const float nne = grid::get_nne(modelgridindex);
 
-      // if the previous entry belongs to a different ion, it might have an invalid (uncalculated)
-      // cooling_contrib, so need to use oldcoolingsum (coolingsum up to the start of the current ion)
-      const double contrib_low = (i > ilow) ? globals::cellhistory[tid].cooling_contrib[i - 1] : oldcoolingsum;
+      // if the previous entry belongs to the same ion, then pick up the cumulative sum from
+      // the previous entry, otherwise start from zero
+      const double contrib_low = (i > ilow) ? globals::cellhistory[tid].cooling_contrib[i - 1] : 0.;
 
       double contrib = contrib_low;
       assert_testmodeonly(coolinglist[i].element == element);
@@ -660,7 +665,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
                          col_excitation_ratecoeff(T_e, nne, element, ion, level, ii, epsilon_trans, statweight) *
                          epsilon_trans;
         contrib += C;
-        if (contrib > rndcool) {
+        if (contrib > rndcool_ion_process) {
           upper = tmpupper;
           break;
         }
@@ -671,7 +676,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
             "WARNING: Could not select an upper level. modelgridindex %d i %d element %d ion %d level %d rndcool "
             "%g "
             "contrib_low %g contrib %g (should match %g) upper %d nuptrans %d\n",
-            modelgridindex, i, element, ion, level, rndcool, contrib_low, contrib,
+            modelgridindex, i, element, ion, level, rndcool_ion_process, contrib_low, contrib,
             globals::cellhistory[tid].cooling_contrib[i], upper, nuptrans);
         abort();
       }
