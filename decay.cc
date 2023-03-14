@@ -262,21 +262,11 @@ __host__ __device__ static double nucdecayenergytotal(int z, int a)
   return endecay;
 }
 
-double nucdecayenergy_bynucindex(int nucindex, int decaytype)
+static double nucdecayenergy_bynucindex(int nucindex, int decaytype)
 // contributed energy release per decay [erg] for decaytype (e.g. DECAYTYPE_BETAPLUS)
 // (excludes neutrinos!)
 {
   const double endecay = nuclides[nucindex].endecay_gamma + nucdecayenergyparticle_bynucindex(nucindex, decaytype);
-
-  return endecay;
-}
-
-double nucdecayenergy(int z, int a, int decaytype)
-// contributed energy release per decay [erg] for decaytype (e.g. DECAYTYPE_BETAPLUS)
-// (excludes neutrinos!)
-{
-  assert_testmodeonly(nuc_exists(z, a));
-  const double endecay = nucdecayenergy_bynucindex(get_nuc_index(z, a), decaytype);
 
   return endecay;
 }
