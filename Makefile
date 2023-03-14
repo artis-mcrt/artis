@@ -161,11 +161,11 @@ sn3dcuda: version.h $(sn3d_objects)
 # %.o: %.cc
 # 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c
 
-$(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile artisoptions.h
+$(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -MD -MP -c $< -o $@
 
-$(BUILD_DIR)/sn3d.o $(BUILD_DIR)/exspec.o: version.h
+$(BUILD_DIR)/sn3d.o $(BUILD_DIR)/exspec.o: version.h artisoptions.h Makefile
 
 exspec: $(exspec_objects)
 	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec
