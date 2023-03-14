@@ -1300,7 +1300,8 @@ __host__ __device__ void normalise_bf_estimators(const int modelgridindex, const
 }
 
 static int get_bfcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) {
-  // const double nu_edge = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
+  const double E_threshold = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
+  const double nu_edge = E_threshold / H;
 
   // simple linear search seems to be faster than the binary search
   // possibly because lower frequency transitions near start of list are more likely to be called?
@@ -1310,7 +1311,8 @@ static int get_bfcontindex(const int element, const int lowerion, const int lowe
       return i;
     }
 
-    // if (nu_edge > globals::allcont[i].nu_edge) break;
+    // nu_edge list is in ascending frequency, so break out of the loop if a match is not possible
+    if (nu_edge > globals::allcont[i].nu_edge) break;
   }
 
   // binary search
