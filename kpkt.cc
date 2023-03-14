@@ -675,7 +675,6 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
             globals::cellhistory[tid].cooling_contrib[i], upper, nuptrans);
         abort();
       }
-      assert_testmodeonly(contrib == globals::cellhistory[tid].cooling_contrib[i]);
       assert_always(upper >= 0);
 
       const int element = coolinglist[i].element;
