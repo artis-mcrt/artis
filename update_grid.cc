@@ -1046,13 +1046,10 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     const double deltaV =
         grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
     const time_t sys_time_start_update_cell = time(nullptr);
-    // const bool log_this_cell = ((n % 50 == 0) || (npts_model < 50));
-    const bool log_this_cell = true;
 
     /// Update current mass density of cell
     // n = nonemptycells[my_rank+ncl*nprocs];
-    if (log_this_cell)
-      printout("update_grid_cell: working on cell %d before timestep %d titeration %d...\n", mgi, nts, titer);
+    printout("update_grid_cell: working on cell %d before timestep %d titeration %d...\n", mgi, nts, titer);
     // n = nonemptycells[ncl];
     // printout("[debug] update_grid: ncl %d is %d non-empty cell updating grid cell %d ... T_e
     // %g, rho %g\n",ncl,my_rank+ncl*nprocs,n,globals::cell[n].T_e,globals::cell[n].rho);
@@ -1068,12 +1065,13 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
 
     if (globals::opacity_case >= 4) {
-      /// For timestep 0 we calculate the level populations straight forward wihout
-      /// applying any temperature correction
       if (nts == globals::itstep && titer == 0) {
-/// Determine renormalisation factor for corrected photoionization cross-sections
+        // For the initial timestep, temperatures have already been assigned
+        // either by trapped energy release calculation, or reading from gridsave file
+
 #ifndef FORCE_LTE
         if constexpr (!NO_LUT_PHOTOION) {
+          /// Determine renormalisation factor for corrected photoionization cross-sections
           if (!globals::simulation_continued_from_saved) {
             set_all_corrphotoionrenorm(mgi, 1.);
           }
@@ -1084,24 +1082,21 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         /// last timestep. Therefore it has no valid Gamma estimators and must
         /// be treated in LTE at restart.
         if (grid::modelgrid[mgi].thick == 0 && grid::get_W(mgi) == 1) {
-          if (log_this_cell) {
-            printout("force modelgrid cell %d to be grey at restart\n", mgi);
-          }
+          printout(
+              "force modelgrid cell %d to grey/LTE for update grid since existing W == 1. (will not have gamma "
+              "estimators)\n",
+              mgi);
           grid::modelgrid[mgi].thick = 1;
         }
-        if (log_this_cell) {
-          printout("initial_iteration %d\n", globals::initial_iteration);
-          printout("mgi %d modelgrid.thick: %d\n", mgi, grid::modelgrid[mgi].thick);
-        }
+        printout("initial_iteration %d\n", globals::initial_iteration);
+        printout("mgi %d modelgrid.thick: %d (for this grid update only)\n", mgi, grid::modelgrid[mgi].thick);
 
         precalculate_partfuncts(mgi);
-        // printout("abundance in cell %d is %g\n",n,globals::cell[n].composition[0].abundance);
 
         if (!globals::simulation_continued_from_saved || !NLTE_POPS_ON) {
           calculate_populations(mgi);  // these were not read from the gridsave file, so calculate them now
         } else {
           calculate_electron_densities(mgi);
-          // printout("nne: %g\n", grid::get_nne(n));
         }
       } else {
         /// For all other timesteps temperature corrections have to be applied
@@ -1198,15 +1193,13 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       const double grey_optical_deptha = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * grid::wid_init(mgi) * tratmid;
       const double grey_optical_depth =
           grid::get_kappagrey(mgi) * grid::get_rho(mgi) * (globals::rmax * tratmid - radial_pos);
-      if (log_this_cell) {
-        printout(
-            "modelgridcell %d, compton optical depth (/propgridcell) %g, grey optical depth "
-            "(/propgridcell) %g\n",
-            mgi, compton_optical_depth, grey_optical_deptha);
-        printout("radial_pos %g, distance_to_obs %g, tau_dist %g\n", radial_pos, globals::rmax * tratmid - radial_pos,
-                 grey_optical_depth);
-        // printout("rmax %g, tratmid %g\n",rmax,tratmid);
-      }
+      printout(
+          "modelgridcell %d, compton optical depth (/propgridcell) %g, grey optical depth "
+          "(/propgridcell) %g\n",
+          mgi, compton_optical_depth, grey_optical_deptha);
+      printout("radial_pos %g, distance_to_obs %g, tau_dist %g\n", radial_pos, globals::rmax * tratmid - radial_pos,
+               grey_optical_depth);
+
       grid::modelgrid[mgi].grey_depth = grey_optical_depth;
 
       // grey_optical_depth = compton_optical_depth;
