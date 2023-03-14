@@ -1305,17 +1305,26 @@ static int get_bfcontindex(const int element, const int lowerion, const int lowe
 
   // simple linear search seems to be faster than the binary search
   // possibly because lower frequency transitions near start of list are more likely to be called?
-  for (int i = 0; i < globals::nbfcontinua; i++) {
-    if ((globals::allcont[i].element == element) && (globals::allcont[i].ion == lowerion) &&
-        (globals::allcont[i].level == lower) && (globals::allcont[i].phixstargetindex == phixstargetindex)) {
-      return i;
-    }
+  // for (int i = 0; i < globals::nbfcontinua; i++) {
+  //   if ((globals::allcont[i].element == element) && (globals::allcont[i].ion == lowerion) &&
+  //       (globals::allcont[i].level == lower) && (globals::allcont[i].phixstargetindex == phixstargetindex)) {
+  //     return i;
+  //   }
 
-    // nu_edge list is in ascending frequency, so break out of the loop if a match is not possible
-    if (nu_edge > globals::allcont[i].nu_edge) break;
+  //   // nu_edge list is in ascending frequency, so break out of the loop if a match is not possible
+  //   if (nu_edge > globals::allcont[i].nu_edge) break;
+  // }
+
+  // binary search. find first allcont_nu_edge[i] such that allcont_nu_edge[i] >= nu_edge
+  double *nu_lb =
+      std::lower_bound(&globals::allcont_nu_edge[0], &globals::allcont_nu_edge[globals::nbfcontinua], nu_edge);
+  const int i = nu_lb - globals::allcont_nu_edge;
+
+  if ((i < globals::nbfcontinua) && (globals::allcont[i].element == element) && (globals::allcont[i].ion == lowerion) &&
+      (globals::allcont[i].level == lower) && (globals::allcont[i].phixstargetindex == phixstargetindex)) {
+    return i;
   }
 
-  // binary search
   // int low = 0;
   // int high = globals::nbfcontinua;
   // while (low <= high)
