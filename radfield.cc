@@ -748,10 +748,6 @@ __host__ __device__ static void update_bfestimators(const int modelgridindex, co
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   // const double dopplerfactor = 1.;
 
-  // const double deltaV = grid::get_modelcell_assocvolume_tmin(modelgridindex) * pow(globals::time_step[nts_global].mid
-  // / globals::tmin, 3); const double deltat = globals::time_step[nts_global].width; const double
-  // estimator_normfactor_over_H = 1 / deltaV / deltat / nprocs / H;
-
   const int tid = get_thread_num();
   const double distance_e_cmf_over_nu =
       distance_e_cmf / nu_cmf * dopplerfactor;  // TODO: Luke: why did I put a doppler factor here?
