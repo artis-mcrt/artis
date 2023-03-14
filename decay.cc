@@ -869,8 +869,7 @@ __host__ __device__ static double get_nuc_massfrac(const int modelgridindex, con
     nuctotal += massfraccontrib;
   }
 
-  // stable nuclei in the network will not have a size-one decay path associated with them,
-  // so we need to contribute the initial abundance as-is (no decay)
+  // for stable nuclei in the network, we need to contribute the initial abundance
   if (nuc_exists_z_a && get_meanlife(z, a) <= 0.) {
     nuctotal += grid::get_modelinitradioabund(modelgridindex, z, a);
   }
@@ -1064,12 +1063,12 @@ __host__ __device__ static double get_decaypath_power_per_ejectamass(const int d
 
   const int z_top = decaypaths[decaypathindex].z[0];
   const int a_top = decaypaths[decaypathindex].a[0];
-  const int z_end = decaypaths[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
-  const int a_end = decaypaths[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
-  ;
+  const int nucindex_top = decaypaths[decaypathindex].nucindex[0];
 
-  const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top);
+  const double top_initabund = grid::get_modelinitradioabund_bynucindex(modelgridindex, nucindex_top);
   assert_always(top_initabund >= 0.) if (top_initabund <= 0.) { return 0.; }
+
+  const int nucindex_end = decaypaths[decaypathindex].nucindex[get_decaypathlength(decaypathindex) - 1];
 
   const double t_afterinit = time - grid::get_t_model();
 
@@ -1086,7 +1085,7 @@ __host__ __device__ static double get_decaypath_power_per_ejectamass(const int d
 
   const double endecay = get_decaypath_lastnucdecayenergy(decaypathindex);
 
-  const double decaypower = endecay * endnucabund / get_meanlife(z_end, a_end) / nucmass(z_top, a_top);
+  const double decaypower = endecay * endnucabund / get_meanlife_bynucindex(nucindex_end) / nucmass(z_top, a_top);
 
   assert_always(decaypower >= 0.);
   assert_always(std::isfinite(decaypower));
