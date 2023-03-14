@@ -522,7 +522,6 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     const auto selectedvalue = std::upper_bound(&globals::cellhistory[tid].cooling_contrib[ilow],
                                                 &globals::cellhistory[tid].cooling_contrib[ihigh + 1], rndcool);
     const int i = selectedvalue - globals::cellhistory[tid].cooling_contrib;
-    assert_always(i <= ihigh);
 
     if (i > ihigh) {
       printout("do_kpkt: error occured while selecting a cooling channel: low %d, high %d, i %d, rndcool %g\n", ilow,
@@ -539,6 +538,8 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
                globals::cellhistory[tid].cooling_contrib[finalpos],
                globals::cellhistory[tid].cooling_contrib[finalpos + 1]);
     }
+
+    assert_always(i <= ihigh);
 
     // printout("do_kpkt: selected process %d, coolingsum %g\n", i, coolingsum);
 
@@ -672,6 +673,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
             "contrib_low %g contrib %g (should match %g) upper %d nuptrans %d\n",
             modelgridindex, i, element, ion, level, rndcool, contrib_low, contrib,
             globals::cellhistory[tid].cooling_contrib[i], upper, nuptrans);
+        assert_always(contrib == globals::cellhistory[tid].cooling_contrib[i]);
         abort();
       }
       assert_always(upper >= 0);
