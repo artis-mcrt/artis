@@ -236,9 +236,9 @@ enum timestepsizemethods {
 
 constexpr enum timestepsizemethods TIMESTEP_SIZE_METHOD = TIMESTEP_SIZES_LOGARITHMIC;
 
-constexpr double FIXED_TIMESTEP_WIDTH = 0.1;
+constexpr double FIXED_TIMESTEP_WIDTH = -1.;
 
-constexpr double TIMESTEP_TRANSITION_TIME = 5;
+constexpr double TIMESTEP_TRANSITION_TIME = -1.;
 
 constexpr bool USE_GSL_RANDOM = true;
 
