@@ -2088,8 +2088,7 @@ void read_parameterfile(int rank)
 #ifdef FORCE_LTE
   printout("input: this is a pure LTE run\n");
 #else
-  printout("input: this is a NLTE run\n");
-  printout("input: do the first %d timesteps in LTE\n", globals::num_lte_timesteps);
+  printout("input: doing the first %d timesteps in LTE\n", globals::num_lte_timesteps);
 #endif
 
   if (NT_ON) {
