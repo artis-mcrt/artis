@@ -60,7 +60,7 @@ __host__ __device__ void calculate_cooling_rates(const int modelgridindex,
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
 {
-  const float nne = grid::get_nne(modelgridindex);
+  const auto nne = grid::get_nne(modelgridindex);
   const auto T_e = grid::get_Te(modelgridindex);
 
   double C_total = 0.;
