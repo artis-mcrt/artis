@@ -673,9 +673,9 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
             "contrib_low %g contrib %g (should match %g) upper %d nuptrans %d\n",
             modelgridindex, i, element, ion, level, rndcool, contrib_low, contrib,
             globals::cellhistory[tid].cooling_contrib[i], upper, nuptrans);
-        assert_always(contrib == globals::cellhistory[tid].cooling_contrib[i]);
         abort();
       }
+      assert_testmodeonly(contrib == globals::cellhistory[tid].cooling_contrib[i]);
       assert_always(upper >= 0);
 
       const int element = coolinglist[i].element;
