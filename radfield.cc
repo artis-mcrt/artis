@@ -1314,7 +1314,7 @@ static int get_bfcontindex(const int element, const int lowerion, const int lowe
       return i;
     }
 
-    if (nu_edge > globals::allcont[i].nu_edge) break;
+    // if (nu_edge > globals::allcont[i].nu_edge) break;
   }
 
   // binary search
