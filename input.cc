@@ -1990,6 +1990,8 @@ void read_parameterfile(int rank)
   assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> globals::nsyn_time;  // number of times for synthesis
 
+  float dum2 = 0.;
+  float dum3 = 0.;
   assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> dum2 >> dum3;  // start and end times for synthesis
   for (int i = 0; i < globals::nsyn_time; i++) {
