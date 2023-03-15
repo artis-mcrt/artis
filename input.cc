@@ -59,7 +59,7 @@ std::string inputlinecomments[inputlinecommentcount] = {
     "18: num_lte_timesteps",
     "19: cell_is_optically_thick num_grey_timesteps",
     "20: UNUSED max_bf_continua: (>0: max bound-free continua per ion, <0 unlimited)",
-    "21: nprocs_exspec: extract spectra for n MPI tasks",
+    "21: nprocs_exspec: extract spectra for n MPI tasks. sn3d will set this on start of new sim.",
     "22: do_emission_res: Extract line-of-sight dependent information of last emission for spectrum_res (1: yes, 2: "
     "no)",
     "23: kpktdiffusion_timescale n_kpktdiffusion_timesteps: kpkts diffuse x of a time step's length for the first y "
@@ -1980,12 +1980,12 @@ void read_parameterfile(int rank)
   globals::tmin = tmin_days * DAY;
   globals::tmax = tmax_days * DAY;
 
-  float dum2 = 0.;
-  float dum3 = 0.;
+  float syn_min_mev = 0.;
+  float syn_max_mev = 0.;
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> dum2 >> dum3;
-  globals::nusyn_min = dum2 * MEV / H;  // lowest frequency to synthesise
-  globals::nusyn_max = dum3 * MEV / H;  // highest frequency to synthesise
+  std::stringstream(line) >> syn_min_mev >> syn_max_mev;
+  globals::nusyn_min = syn_min_mev * MEV / H;  // lowest frequency to synthesise
+  globals::nusyn_max = syn_max_mev * MEV / H;  // highest frequency to synthesise
 
   assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> globals::nsyn_time;  // number of times for synthesis
