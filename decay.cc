@@ -1002,8 +1002,10 @@ __host__ __device__ double get_endecay_per_ejectamass_t0_to_time_withexpansion(c
 
     const int z_top = decaypaths[decaypathindex].z[0];
     const int a_top = decaypaths[decaypathindex].a[0];
+    const int nucindex_top = decaypaths[decaypathindex].nucindex[0];
 
-    const double top_initabund = grid::get_modelinitradioabund(modelgridindex, z_top, a_top) / nucmass(z_top, a_top);
+    const double top_initabund =
+        grid::get_modelinitradioabund_bynucindex(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
 
     const double chain_endecay =
         (get_decaypath_branchproduct(decaypathindex) *
