@@ -1044,7 +1044,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     // estimators were accumulated in nts_prev, but radiation density, etc should be scaled to the
     // cell volume at nts
     const double deltaV =
-        grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
+        grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::time_step[nts_prev].mid / globals::tmin, 3);
     const time_t sys_time_start_update_cell = time(nullptr);
 
     /// Update current mass density of cell
