@@ -1388,7 +1388,7 @@ static void write_bflist_file(int includedphotoiontransitions) {
 
   FILE *bflist_file = nullptr;
   if (globals::rank_global == 0) {
-    bflist_file = fopen_required("bflist.dat", "w");
+    bflist_file = fopen_required("bflist.out", "w");
     fprintf(bflist_file, "%d\n", includedphotoiontransitions);
   }
   int i = 0;
