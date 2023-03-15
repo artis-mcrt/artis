@@ -430,18 +430,6 @@ __host__ __device__ int get_mgi_of_nonemptymgi(int nonemptymgi)
 
 // the abundances below are initial abundances at t_model
 
-__host__ __device__ float get_modelinitradioabund(const int modelgridindex, const int z, const int a) {
-  // get the mass fraction of a nuclide in a model grid cell at t=t_model by atomic number and mass number
-
-  const int nucindex = decay::get_nuc_index(z, a);
-  assert_always(decay::get_nuc_z(nucindex) >= 0);  // check not FAKE_GAM_LINE_ID nuclide
-
-  if (modelgrid[modelgridindex].initradioabund == nullptr) {
-    return 0.;
-  }
-  return modelgrid[modelgridindex].initradioabund[nucindex];
-}
-
 __host__ __device__ float get_modelinitradioabund_bynucindex(const int modelgridindex, const int nucindex) {
   // get the mass fraction of a nuclide in a model grid cell at t=t_model by nuclide index
 
@@ -449,6 +437,15 @@ __host__ __device__ float get_modelinitradioabund_bynucindex(const int modelgrid
     return 0.;
   }
   return modelgrid[modelgridindex].initradioabund[nucindex];
+}
+
+__host__ __device__ float get_modelinitradioabund(const int modelgridindex, const int z, const int a) {
+  // get the mass fraction of a nuclide in a model grid cell at t=t_model by atomic number and mass number
+
+  const int nucindex = decay::get_nuc_index(z, a);
+  assert_always(decay::get_nuc_z(nucindex) >= 0);  // check not FAKE_GAM_LINE_ID nuclide
+
+  return get_modelinitradioabund_bynucindex(modelgridindex, nucindex);
 }
 
 __host__ __device__ static void set_modelinitradioabund(const int modelgridindex, const int z, const int a,
