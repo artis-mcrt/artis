@@ -19,8 +19,6 @@ namespace radfield {
 
 __managed__ static double *J_normfactor = nullptr;
 
-__managed__ static bool initialized = false;
-
 // typedef enum
 // {
 //   FIT_DILUTE_BLACKBODY = 0,
@@ -235,16 +233,11 @@ static void add_detailed_line(const int lineindex)
 void init(int my_rank, int ndo, int ndo_nonempty)
 // this should be called only after the atomic data is in memory
 {
-  // printout("radfield::init()\n");
-  if (initialized) {
-    printout("ERROR: Tried to initialize radfield twice!\n");
-    abort();
-  }
-
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
 
-  J_normfactor = (double *)malloc((grid::get_npts_model() + 1) * sizeof(double));
-  J = (double *)malloc((grid::get_npts_model() + 1) * sizeof(double));
+  assert_always(J_normfactor == nullptr);
+  J_normfactor = static_cast<double *>(malloc((grid::get_npts_model() + 1) * sizeof(double)));
+  J = static_cast<double *>(malloc((grid::get_npts_model() + 1) * sizeof(double)));
 #ifdef DO_TITER
   J_reduced_save = (double *)malloc((grid::get_npts_model() + 1) * sizeof(double));
 #endif
@@ -252,9 +245,9 @@ void init(int my_rank, int ndo, int ndo_nonempty)
 // J and nuJ are accumulated and then normalised in-place
 // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
 #ifndef FORCE_LTE
-  nuJ = (double *)malloc((grid::get_npts_model() + 1) * sizeof(double));
+  nuJ = static_cast<double *>(malloc((grid::get_npts_model() + 1) * sizeof(double)));
 #ifdef DO_TITER
-  nuJ_reduced_save = (double *)malloc((grid::get_npts_model() + 1) * sizeof(double));
+  nuJ_reduced_save = static_cast<double *>(malloc((grid::get_npts_model() + 1) * sizeof(double)));
 #endif
 #endif
 
@@ -437,8 +430,6 @@ void init(int my_rank, int ndo, int ndo_nonempty)
       }
     }
   }
-
-  initialized = true;
 }
 
 /// Initialise estimator arrays which hold the last time steps values (used to damp out
@@ -593,10 +584,6 @@ void write_to_file(int modelgridindex, int timestep) {
 #pragma omp critical(out_file)
   {
 #endif
-    if (!initialized) {
-      printout("Call to radfield::write_to_file before radfield::init\n");
-      abort();
-    }
 
     int totalcontribs = 0;
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
@@ -623,7 +610,7 @@ void write_to_file(int modelgridindex, int timestep) {
         W = get_bin_W(modelgridindex, binindex);
         J_nu_bar = J_out / (nu_upper - nu_lower);
         contribcount = get_bin_contribcount(modelgridindex, binindex);
-      } else if (binindex == -1) {
+      } else if (binindex == -1) {  // bin -1 is the full spectrum fit
         nuJ_out = nuJ[modelgridindex];
         J_out = J[modelgridindex];
         T_R = grid::get_TR(modelgridindex);
@@ -700,7 +687,7 @@ void zero_estimators(int modelgridindex)
 {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     assert_always(bfrate_raw != nullptr);
-    if (initialized && (grid::get_numassociatedcells(modelgridindex) > 0)) {
+    if (grid::get_numassociatedcells(modelgridindex) > 0) {
       const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
       for (int i = 0; i < globals::nbfcontinua; i++) {
         bfrate_raw[nonemptymgi * globals::nbfcontinua + i] = 0.;
@@ -723,7 +710,7 @@ void zero_estimators(int modelgridindex)
   assert_always(nuJ != nullptr);
   nuJ[modelgridindex] = 0.;
 
-  if (MULTIBIN_RADFIELD_MODEL_ON && initialized && (grid::get_numassociatedcells(modelgridindex) > 0)) {
+  if (MULTIBIN_RADFIELD_MODEL_ON && (grid::get_numassociatedcells(modelgridindex) > 0)) {
     // printout("radfield: zeroing estimators in %d bins in cell %d\n",RADFIELDBINCOUNT,modelgridindex);
 
     assert_always(radfieldbins != nullptr);
@@ -741,6 +728,8 @@ void zero_estimators(int modelgridindex)
 __host__ __device__ static void update_bfestimators(const int modelgridindex, const double distance_e_cmf,
                                                     const double nu_cmf, const struct packet *const pkt_ptr) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
+  assert_always(bfrate_raw != nullptr);
+
   if (distance_e_cmf == 0) return;
 
   const int nbfcontinua = globals::nbfcontinua;
@@ -1607,11 +1596,6 @@ void write_restart_data(FILE *gridsave_file) {
 
 void read_restart_data(FILE *gridsave_file) {
   printout("Reading restart data for radiation field\n");
-
-  if (!initialized) {
-    printout("ERROR: Radiation field has not been initialised yet. Can't read saved state.\n");
-    abort();
-  }
 
   int code_check;
   assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
