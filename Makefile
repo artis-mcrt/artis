@@ -4,6 +4,7 @@
 BUILD_DIR = build/$(shell uname -m)
 
 CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -g -flto=auto -Werror -Werror=undef
+# CXXFLAGS += -Wunreachable-code
 
 ifeq ($(shell uname -s),Darwin)
 # 	macOS
