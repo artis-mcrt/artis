@@ -269,11 +269,12 @@ __host__ __device__ int get_uniqueionindex(const int element, const int ion)
   index += ion;
 
   assert_testmodeonly(index == globals::elements[element].ions[ion].uniqueionindex);
-  assert_testmodeonly(index < includedions);
+  assert_testmodeonly(index < get_includedions());
   return index;
 }
 
 __host__ __device__ void get_ionfromuniqueionindex(const int allionsindex, int *element, int *ion) {
+  assert_testmodeonly(allionsindex < get_includedions());
   int allionsindex_thiselementfirstion = 0;
   for (int e = 0; e < get_nelements(); e++) {
     if ((allionsindex - allionsindex_thiselementfirstion) >= get_nions(e)) {
@@ -286,8 +287,6 @@ __host__ __device__ void get_ionfromuniqueionindex(const int allionsindex, int *
     }
   }
   assert_always(false);  // allionsindex too high to be valid
-  *element = -1;
-  *ion = -1;
 }
 
 __host__ __device__ int get_uniquelevelindex(const int element, const int ion, const int level)
@@ -334,9 +333,6 @@ __host__ __device__ void get_levelfromuniquelevelindex(const int alllevelsindex,
     }
   }
   assert_always(false);  // alllevelsindex too high to be valid
-  *element = -1;
-  *ion = -1;
-  *level = -1;
 }
 
 __host__ __device__ double epsilon(const int element, const int ion, const int level)
