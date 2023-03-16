@@ -2363,7 +2363,6 @@ void time_init(void)
 
     default:
       assert_always(false);
-      abort();
   }
 
   // to limit the timestep durations

@@ -200,13 +200,11 @@ __host__ __device__ static double get_event(
         if (tau_rnd - tau > tau_cont + tau_line) {
           // total optical depth still below tau_rnd: propagate to the line and continue
 
-          if (false) {
-            printout(
-                "[debug] get_event: tau_rnd - tau > tau_cont + tau_line ... proceed this packets "
-                "propagation\n");
-            printout("[debug] get_event:         dist %g, abort_dist %g, dist-abort_dist %g\n", dist, abort_dist,
-                     dist - abort_dist);
-          }
+          printout(
+              "[debug] get_event: tau_rnd - tau > tau_cont + tau_line ... proceed this packets "
+              "propagation\n");
+          printout("[debug] get_event:         dist %g, abort_dist %g, dist-abort_dist %g\n", dist, abort_dist,
+                   dist - abort_dist);
 
           dist = dist + ldist;
 
@@ -234,27 +232,26 @@ __host__ __device__ static double get_event(
           radfield::update_lineestimator(modelgridindex, lineindex,
                                          dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
 
-          if (false) {
-            const int next_trans = dummypkt_ptr->next_trans;
-            printout(
-                "[debug] get_event:         dummypkt_ptr->nu_cmf %g, nu(dummypkt_ptr->next_trans=%d) %g, "
-                "nu(dummypkt_ptr->next_trans-1=%d) %g\n",
-                dummypkt_ptr->nu_cmf, next_trans, globals::linelist[next_trans].nu, next_trans - 1,
-                globals::linelist[next_trans - 1].nu);
-            printout(
-                "[debug] get_event:         (dummypkt_ptr->nu_cmf - "
-                "nu(dummypkt_ptr->next_trans-1))/dummypkt_ptr->nu_cmf %g\n",
-                (dummypkt_ptr->nu_cmf - globals::linelist[next_trans - 1].nu) / dummypkt_ptr->nu_cmf);
+          // const int next_trans = dummypkt_ptr->next_trans;
+          // printout(
+          //     "[debug] get_event:         dummypkt_ptr->nu_cmf %g, nu(dummypkt_ptr->next_trans=%d) %g, "
+          //     "nu(dummypkt_ptr->next_trans-1=%d) %g\n",
+          //     dummypkt_ptr->nu_cmf, next_trans, globals::linelist[next_trans].nu, next_trans - 1,
+          //     globals::linelist[next_trans - 1].nu);
+          // printout(
+          //     "[debug] get_event:         (dummypkt_ptr->nu_cmf - "
+          //     "nu(dummypkt_ptr->next_trans-1))/dummypkt_ptr->nu_cmf %g\n",
+          //     (dummypkt_ptr->nu_cmf - globals::linelist[next_trans - 1].nu) / dummypkt_ptr->nu_cmf);
 
-            if (dummypkt_ptr->nu_cmf >= globals::linelist[next_trans].nu &&
-                dummypkt_ptr->nu_cmf < globals::linelist[next_trans - 1].nu) {
-              printout("[debug] get_event:           nu(next_trans-1) > nu_cmf >= nu(next_trans)\n");
-            } else if (dummypkt_ptr->nu_cmf < globals::linelist[next_trans].nu) {
-              printout("[debug] get_event:           nu_cmf < nu(next_trans)\n");
-            } else {
-              printout("[debug] get_event:           nu_cmf >= nu(next_trans-1)\n");
-            }
-          }
+          // if (dummypkt_ptr->nu_cmf >= globals::linelist[next_trans].nu &&
+          //     dummypkt_ptr->nu_cmf < globals::linelist[next_trans - 1].nu) {
+          //   printout("[debug] get_event:           nu(next_trans-1) > nu_cmf >= nu(next_trans)\n");
+          // } else if (dummypkt_ptr->nu_cmf < globals::linelist[next_trans].nu) {
+          //   printout("[debug] get_event:           nu_cmf < nu(next_trans)\n");
+          // } else {
+          //   printout("[debug] get_event:           nu_cmf >= nu(next_trans-1)\n");
+          // }
+
         } else {
           /// bound-bound process occurs
           // printout("[debug] get_event: tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
@@ -880,11 +877,10 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
       // get distance to the next physical event (continuum or bound-bound)
       edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, tau_next,
                         fmin(tdist, sdist));  //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
-      if (false) {
-        const int next_trans = pkt_ptr->next_trans;
-        printout("[debug] do_rpkt: after edist: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g\n", pkt_ptr->nu_cmf,
-                 next_trans, globals::linelist[next_trans].nu);
-      }
+
+      // const int next_trans = pkt_ptr->next_trans;
+      // printout("[debug] do_rpkt: after edist: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g\n", pkt_ptr->nu_cmf,
+      //          next_trans, globals::linelist[next_trans].nu);
     }
     assert_always(edist >= 0);
 

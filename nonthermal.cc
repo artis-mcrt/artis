@@ -1746,11 +1746,13 @@ static double calculate_nt_excitation_ratecoeff_perdeposition(const int modelgri
 
 double nt_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower,
                                const int upper, const double epsilon_trans, const int lineindex) {
-#if !NT_EXCITATION_ON
-  return 0.;
-#endif
+  if constexpr (!NT_EXCITATION_ON) {
+    return 0.;
+  }
 
-  if ((lower >= NTEXCITATION_MAXNLEVELS_LOWER) || (upper >= NTEXCITATION_MAXNLEVELS_UPPER)) return 0.;
+  if ((lower >= NTEXCITATION_MAXNLEVELS_LOWER) || (upper >= NTEXCITATION_MAXNLEVELS_UPPER)) {
+    return 0.;
+  }
 
   if (grid::get_numassociatedcells(modelgridindex) <= 0) {
     printout("ERROR: nt_excitation_ratecoeff called on empty cell %d\n", modelgridindex);

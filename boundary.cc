@@ -332,11 +332,9 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, int *sne
 __host__ __device__ void change_cell(struct packet *pkt_ptr, int snext)
 /// Routine to take a packet across a boundary.
 {
-  if (false) {
-    const int cellindex = pkt_ptr->where;
-    printout("[debug] cellnumber %d nne %g\n", cellindex, grid::get_nne(grid::get_cell_modelgridindex(cellindex)));
-    printout("[debug] snext %d\n", snext);
-  }
+  // const int cellindex = pkt_ptr->where;
+  // printout("[debug] cellnumber %d nne %g\n", cellindex, grid::get_nne(grid::get_cell_modelgridindex(cellindex)));
+  // printout("[debug] snext %d\n", snext);
 
   if (snext == -99) {
     // Then the packet is exiting the grid. We need to record
