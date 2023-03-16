@@ -1157,7 +1157,7 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
 static void read_model_radioabundances(std::ifstream &fmodel, std::string &line, const int linepos, const int mgi,
                                        const bool keepcell, std::vector<int> &zlist, std::vector<int> &alist,
                                        std::vector<std::string> &colnames, std::vector<int> &nucindexlist) {
-  if (linepos < line.length()) {
+  if (linepos < (int)line.length()) {
     if (mgi == 0) {
       printout("model.txt has has single line per cell format\n");
     }
