@@ -200,11 +200,11 @@ __host__ __device__ static double get_event(
         if (tau_rnd - tau > tau_cont + tau_line) {
           // total optical depth still below tau_rnd: propagate to the line and continue
 
-          printout(
-              "[debug] get_event: tau_rnd - tau > tau_cont + tau_line ... proceed this packets "
-              "propagation\n");
-          printout("[debug] get_event:         dist %g, abort_dist %g, dist-abort_dist %g\n", dist, abort_dist,
-                   dist - abort_dist);
+          // printout(
+          //     "[debug] get_event: tau_rnd - tau > tau_cont + tau_line ... proceed this packets "
+          //     "propagation\n");
+          // printout("[debug] get_event:         dist %g, abort_dist %g, dist-abort_dist %g\n", dist, abort_dist,
+          //          dist - abort_dist);
 
           dist = dist + ldist;
 
