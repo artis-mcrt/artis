@@ -867,8 +867,8 @@ __host__ __device__ double stim_recombination_ratecoeff(const float nne, const i
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     if (get_phixsupperlevel(element, upperion - 1, lower, phixstargetindex) == upper) {
       R = nne * get_stimrecombcoeff(element, upperion - 1, lower, phixstargetindex, modelgridindex);
+      break;
     }
-    break;
   }
 
   assert_always(std::isfinite(R));
