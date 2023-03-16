@@ -1154,11 +1154,21 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
   // }
 }
 
-static void read_2d3d_modelradioabundanceline(std::ifstream &fmodel, const int mgi, const bool keepcell,
-                                              std::vector<int> &zlist, std::vector<int> &alist,
-                                              std::vector<std::string> &colnames, std::vector<int> &nucindexlist) {
-  std::string line;
-  assert_always(std::getline(fmodel, line));
+static void read_model_radioabundances(std::ifstream &fmodel, std::string &line, const int linepos, const int mgi,
+                                       const bool keepcell, std::vector<int> &zlist, std::vector<int> &alist,
+                                       std::vector<std::string> &colnames, std::vector<int> &nucindexlist) {
+  if (linepos < line.length()) {
+    if (mgi == 0) {
+      printout("model.txt has has single line per cell format\n");
+    }
+    line = line.substr(linepos);
+  } else {
+    if (mgi == 0) {
+      printout("model.txt has has two lines per cell format\n");
+    }
+    assert_always(std::getline(fmodel, line));
+  }
+
   std::istringstream ssline(line);
   double f56ni_model = 0.;
   double f56co_model = 0.;
@@ -1280,20 +1290,11 @@ static void read_1d_model(void)
     int cellnumberin;
     double vout_kmps;
     double log_rho;
-    double ffegrp_model = 0.;
+    int linepos = 0;
 
-    double f56ni_model = 0.;
-    double f56co_model = 0.;
-    double f48cr_model = 0.;
-    double f52fe_model = 0.;
-    double f57ni_model = 0.;
-    double f57co_model = 0.;
+    const int items_read = sscanf(line.c_str(), "%d %lg %lg%n", &cellnumberin, &vout_kmps, &log_rho, &linepos);
 
-    const int items_read =
-        sscanf(line.c_str(), "%d %lg %lg %lg %lg %lg %lg %lg %lg %lg", &cellnumberin, &vout_kmps, &log_rho,
-               &ffegrp_model, &f56ni_model, &f56co_model, &f52fe_model, &f48cr_model, &f57ni_model, &f57co_model);
-
-    if (items_read == 8 || items_read == 10) {
+    if (items_read == 3) {
       if (mgi == 0) {
         first_cellindex = cellnumberin;
       }
@@ -1304,56 +1305,13 @@ static void read_1d_model(void)
       const double rho_tmin = pow(10., log_rho) * pow(t_model / globals::tmin, 3);
       set_rho_tmin(mgi, rho_tmin);
       set_rho(mgi, rho_tmin);
-
-      if (items_read == 10 && mgi == 0) {
-        printout("Found Ni57 and Co57 abundance columns in model.txt\n");
-      }
     } else {
       printout("Unexpected number of values in model.txt. items_read = %d\n", items_read);
       printout("line: %s\n", line.c_str());
-      abort();
+      assert_always(false);
     }
 
-    // printout("%d %g %g %g %g %g %g %g\n",
-    //          cellnumin, vout_kmps, log_rho, ffegrp_model[n], f56ni_model[n],
-    //          f56co_model[n], f52fe_model[n], f48cr_model[n]);
-    // printout("   %lg %lg\n", f57ni_model[n], f57co_model[n]);
-
-    set_modelinitradioabund(mgi, 28, 56, f56ni_model);
-    set_modelinitradioabund(mgi, 27, 56, f56co_model);
-    set_modelinitradioabund(mgi, 28, 57, f57ni_model);
-    set_modelinitradioabund(mgi, 27, 57, f57co_model);
-    set_modelinitradioabund(mgi, 26, 52, f52fe_model);
-    set_modelinitradioabund(mgi, 24, 48, f48cr_model);
-    set_modelinitradioabund(mgi, 23, 48, 0.);
-    set_ffegrp(mgi, ffegrp_model);
-    if (items_read == 10) {
-      for (int i = 0; i < 10; i++) {
-        double abundin = 0.;
-        assert_always(ssline >> abundin);  // ignore
-      }
-      for (int i = 0; i < (int)colnames.size(); i++) {
-        double valuein = 0.;
-        assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
-
-        if (nucindexlist[i] >= 0) {
-          set_modelinitradioabund_bynucindex(mgi, nucindexlist[i], valuein);
-        } else if (colnames[i] == "cellYe") {
-          set_initelectronfrac(mgi, valuein);
-        } else if (colnames[i] == "q") {
-          // use value for t_model and adjust to tmin with expansion factor
-          set_initenergyq(mgi, valuein * t_model / globals::tmin);
-        } else if (colnames[i] == "tracercount") {
-          ;
-        } else {
-          printout("Not sure what to do with column %s nucindex %d valuein %lg\n", colnames[i].c_str(), nucindexlist[i],
-                   valuein);
-          assert_always(false);
-        }
-      }
-      double valuein = 0.;
-      assert_always(!(ssline >> valuein));  // should be no more tokens
-    }
+    read_model_radioabundances(fmodel, line, linepos, mgi, true, zlist, alist, colnames, nucindexlist);
 
     mgi += 1;
     if (mgi == get_npts_model()) {
@@ -1428,8 +1386,10 @@ static void read_2d_model(void)
     float cell_r_in;
     float cell_z_in;
     double rho_tmodel;
+    int linepos = 0;
 
-    assert_always(sscanf(line.c_str(), "%d %g %g %lg", &cellnumberin, &cell_r_in, &cell_z_in, &rho_tmodel) == 4);
+    assert_always(
+        sscanf(line.c_str(), "%d %g %g %lg%n", &cellnumberin, &cell_r_in, &cell_z_in, &rho_tmodel, &linepos) == 4);
 
     if (mgi == 0) {
       first_cellindex = cellnumberin;
@@ -1447,7 +1407,7 @@ static void read_2d_model(void)
     set_rho_tmin(mgi, rho_tmin);
     set_rho(mgi, rho_tmin);
 
-    read_2d3d_modelradioabundanceline(fmodel, mgi, true, zlist, alist, colnames, nucindexlist);
+    read_model_radioabundances(fmodel, line, linepos, mgi, true, zlist, alist, colnames, nucindexlist);
 
     mgi++;
   }
@@ -1531,8 +1491,9 @@ static void read_3d_model(void)
     int cellnumberin;
     float cellpos_in[3];
     float rho_model;
-    int items_read = sscanf(line.c_str(), "%d %g %g %g %g", &cellnumberin, &cellpos_in[0], &cellpos_in[1],
-                            &cellpos_in[2], &rho_model);
+    int linepos = 0;
+    int items_read = sscanf(line.c_str(), "%d %g %g %g %g%n", &cellnumberin, &cellpos_in[0], &cellpos_in[1],
+                            &cellpos_in[2], &rho_model, &linepos);
     assert_always(items_read == 5);
     // printout("cell %d, posz %g, posy %g, posx %g, rho %g, rho_init %g\n",dum1,dum3,dum4,dum5,rho_model,rho_model*
     // pow( (t_model/globals::tmin), 3.));
@@ -1577,7 +1538,7 @@ static void read_3d_model(void)
       min_den = rho_model;
     }
 
-    read_2d3d_modelradioabundanceline(fmodel, mgi, keepcell, zlist, alist, colnames, nucindexlist);
+    read_model_radioabundances(fmodel, line, linepos, mgi, keepcell, zlist, alist, colnames, nucindexlist);
 
     if (keepcell) {
       nonemptymgi++;
