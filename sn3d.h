@@ -43,10 +43,8 @@ extern FILE *output_file;
 #if defined TESTMODE && TESTMODE
 #define assert_testmodeonly(e) __artis_assert(e)
 #else
-#define assert_testmodeonly(e)         \
-  do {                                 \
-    if (!(e)) __builtin_unreachable(); \
-  } while (0)
+#define assert_testmodeonly(e) \
+  if (!(e)) __builtin_unreachable();
 #endif
 
 // #define printout(...) fprintf(output_file, __VA_ARGS__)
