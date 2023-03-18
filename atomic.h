@@ -12,6 +12,7 @@ extern __managed__ int phixs_file_version;
 __managed__ constexpr std::array<const char *, 3> phixsdata_filenames = {"version0ignore", "phixsdata.txt",
                                                                          "phixsdata_v2.txt"};
 
+__host__ __device__ int get_continuumindex_phixstargetindex(int element, int ion, int level, int phixstargetindex);
 __host__ __device__ int get_continuumindex(int element, int ion, int level, int upperionlevel);
 __host__ __device__ int get_phixtargetindex(int element, int ion, int level, int upperionlevel);
 __host__ __device__ double get_tau_sobolev(int modelgridindex, int lineindex, double t_current);
@@ -20,13 +21,13 @@ __host__ __device__ bool is_nlte(int element, int ion, int level);
 __host__ __device__ bool level_isinsuperlevel(int element, int ion, int level);
 __host__ __device__ double photoionization_crosssection_fromtable(const float *const photoion_xs, double nu_edge,
                                                                   double nu);
-__host__ __device__ void set_nelements(const int nelements_in);
+__host__ __device__ void set_nelements(int nelements_in);
 __host__ __device__ int get_nelements(void);
 __host__ __device__ int get_element(int element);
 __host__ __device__ int get_elementindex(int Z);
 __host__ __device__ void increase_includedions(int nions);
 __host__ __device__ int get_includedions(void);
-__host__ __device__ void update_max_nions(const int nions);
+__host__ __device__ void update_max_nions(int nions);
 __host__ __device__ int get_max_nions(void);
 __host__ __device__ int get_nions(int element);
 __host__ __device__ int get_ionstage(int element, int ion);
@@ -36,8 +37,8 @@ __host__ __device__ int get_nlevels_groundterm(int element, int ion);
 __host__ __device__ int get_ionisinglevels(int element, int ion);
 __host__ __device__ int get_uniqueionindex(int element, int ion);
 __host__ __device__ void get_ionfromuniqueionindex(int allionsindex, int *element, int *ion);
-__host__ __device__ int get_uniquelevelindex(const int element, const int ion, const int level);
-__host__ __device__ void get_levelfromuniquelevelindex(const int alllevelsindex, int *element, int *ion, int *level);
+__host__ __device__ int get_uniquelevelindex(int element, int ion, int level);
+__host__ __device__ void get_levelfromuniquelevelindex(int alllevelsindex, int *element, int *ion, int *level);
 __host__ __device__ double epsilon(int element, int ion, int level);
 __host__ __device__ double stat_weight(int element, int ion, int level);
 __host__ __device__ int get_maxrecombininglevel(int element, int ion);

@@ -13,8 +13,8 @@ __managed__ int maxnions = 0;      // highest number of ions for any element
 __managed__ int includedions = 0;  // number of ions of any element
 int phixs_file_version = -1;       // 1 for phixsdata.txt (classic) and 2 for phixsdata_v2.txt
 
-__host__ __device__ static int get_continuumindex_phixstargetindex(const int element, const int ion, const int level,
-                                                                   const int phixstargetindex)
+__host__ __device__ int get_continuumindex_phixstargetindex(const int element, const int ion, const int level,
+                                                            const int phixstargetindex)
 /// Returns the index of the continuum associated to the given level.
 {
   return globals::elements[element].ions[ion].levels[level].cont_index - phixstargetindex;
