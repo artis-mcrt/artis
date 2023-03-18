@@ -1152,9 +1152,12 @@ static void read_atomicdata_files(void) {
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      for (int level = 0; level < get_ionisinglevels(element, ion); level++) {
-        globals::elements[element].ions[ion].levels[level].cont_index = cont_index;
-        cont_index -= get_nphixstargets(element, ion, level);
+      const int nlevels = get_nlevels(element, ion);
+      for (int level = 0; level < nlevels; level++) {
+        const int nphixstargets = get_nphixstargets(element, ion, level);
+        globals::elements[element].ions[ion].levels[level].cont_index =
+            (nphixstargets > 0) ? cont_index : std::numeric_limits<int>::max();
+        cont_index -= nphixstargets;
       }
 
       // below is just an extra warning consistency check
