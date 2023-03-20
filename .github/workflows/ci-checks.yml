@@ -45,7 +45,7 @@ jobs:
         runs-on: ubuntu-22.04
         strategy:
             matrix:
-                compiler: [{name: gcc-11, cmd: g++-11}, {name: gcc-12, cmd: g++-12}, {name: clang 14, cmd: clang++}]
+                compiler: [{name: gcc-11, cmd: g++-11}, {name: gcc-12, cmd: g++-12}, {name: clang 14, cmd: clang++}, {name: clang 15, cmd: clang++}]
                 mpi: [ON, OFF]
                 artisoptionsfile: [artisoptions_christinenonthermal.h, artisoptions_classic.h, artisoptions_kilonova_lte.h, artisoptions_nltenebular.h]
             fail-fast: false
@@ -79,6 +79,11 @@ jobs:
               if: matrix.compiler.name == 'clang 14'
               run: |
                   sudo apt-get install -y clang-14 --install-suggests
+
+            - name: Install clang 15
+              if: matrix.compiler.name == 'clang 15'
+              run: |
+                  sudo apt-get install -y clang-15 --install-suggests
 
             - name: install openmpi
               if: matrix.mpi == 'ON'
