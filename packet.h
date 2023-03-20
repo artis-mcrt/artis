@@ -17,6 +17,7 @@ enum packet_type {
   TYPE_GAMMA_KPKT = 121,
 };
 
+constexpr int EMTYPE_FREEFREE = -9999999;
 #include "boundary.h"
 
 struct mastate {

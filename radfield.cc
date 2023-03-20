@@ -383,7 +383,9 @@ void init(int my_rank, int ndo, int ndo_nonempty)
       MPI_Win_shared_query(win_prev_bfrate_normed, 0, &size, &disp_unit, &prev_bfrate_normed);
     }
 #else
-    { prev_bfrate_normed = static_cast<float *>(malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(float))); }
+    {
+      prev_bfrate_normed = static_cast<float *>(malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(float)));
+    }
 #endif
     printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (node shared memory)\n",
              nonempty_npts_model * globals::nbfcontinua * sizeof(float) / 1024. / 1024.);
@@ -1336,7 +1338,7 @@ void print_bfrate_contributions(const int element, const int lowerion, const int
         const double lambda_trans = 1e8 * CLIGHT / globals::linelist[et].nu;
         printout("%7d bound-bound Z=%2d ion_stage %d upper+1 %4d lower+1 %4d lambda %5.1f\n", et, get_element(element),
                  get_ionstage(element, ion), upper + 1, lower + 1, lambda_trans);
-      } else if (et == -9999999) {
+      } else if (et == EMTYPE_FREEFREE) {
         /// ff-emission
         printout("%7d free-free scattering\n", et);
       } else {

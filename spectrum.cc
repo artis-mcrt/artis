@@ -312,7 +312,7 @@ static int columnindex_from_emissiontype(const int et) {
     const int element = globals::linelist[et].elementindex;
     const int ion = globals::linelist[et].ionindex;
     return element * get_max_nions() + ion;
-  } else if (et == -9999999) {
+  } else if (et == EMTYPE_FREEFREE) {
     /// ff-emission
 
     const int et_new = -1 - et;

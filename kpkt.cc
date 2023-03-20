@@ -436,7 +436,7 @@ __host__ __device__ double do_kpkt_bb(struct packet *pkt_ptr)
   stats::increment(stats::COUNTER_K_STAT_TO_R_BB);
   pkt_ptr->interactions++;
   pkt_ptr->last_event = 6;
-  pkt_ptr->emissiontype = -9999999;
+  pkt_ptr->emissiontype = EMTYPE_FREEFREE;
   vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
   pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
@@ -568,7 +568,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 6;
-      pkt_ptr->emissiontype = -9999999;
+      pkt_ptr->emissiontype = EMTYPE_FREEFREE;
       vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
       pkt_ptr->em_time = pkt_ptr->prop_time;
       pkt_ptr->nscatterings = 0;
