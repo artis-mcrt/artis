@@ -45,13 +45,12 @@ jobs:
         runs-on: ubuntu-22.04
         strategy:
             matrix:
-                compiler: [{name: gcc-11, cmd: g++-11}, {name: gcc-12, cmd: g++-12}, {name: clang-14, cmd: clang++-14}, {name: clang-15, cmd: clang++-15},
-                     {name: clang-16, cmd: clang++-16}]
+                compiler: [{name: gcc, ver: 11}, {name: gcc, ver: 12}, {name: clang, ver: 14}, {name: clang, ver: 15}]
                 mpi: [ON, OFF]
                 artisoptionsfile: [artisoptions_christinenonthermal.h, artisoptions_classic.h, artisoptions_kilonova_lte.h, artisoptions_nltenebular.h]
             fail-fast: false
 
-        name: ${{ matrix.compiler.name }}${{ matrix.mpi == 'ON' && ' MPI' || ''}} ${{ matrix.artisoptionsfile }}
+        name: ${{ matrix.compiler.name }}-${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}} ${{ matrix.artisoptionsfile }}
         steps:
             - uses: actions/checkout@v3
 
@@ -66,30 +65,17 @@ jobs:
               run: |
                   sudo apt-get update
 
-            - name: Install gcc-11
-              if: matrix.compiler.name == 'gcc-11'
+            - name: Install gcc-${{ matrix.compiler.ver }}
+              if: matrix.compiler.name == 'gcc'
               run: |
-                  sudo apt-get install -y gcc-11 g++-11
+                  sudo apt-get install -y gcc-${{ matrix.compiler.ver }} g++-${{ matrix.compiler.ver }}
+                  echo "CXX=g++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
 
-            - name: Install gcc-12
-              if: matrix.compiler.name == 'gcc-12'
+            - name: Install clang-${{ matrix.compiler.ver }}
+              if: matrix.compiler.name == 'clang'
               run: |
-                  sudo apt-get install -y gcc-12 g++-12
-
-            - name: Install clang 14
-              if: matrix.compiler.name == 'clang-14'
-              run: |
-                  sudo apt-get install -y clang-14 --install-suggests
-
-            - name: Install clang 15
-              if: matrix.compiler.name == 'clang-15'
-              run: |
-                  sudo apt-get install -y clang-15 --install-suggests
-
-            - name: Install clang 16
-              if: matrix.compiler.name == 'clang-16'
-              run: |
-                  sudo apt-get install -y clang-16 --install-suggests
+                  sudo apt-get install -y clang-${{ matrix.compiler.ver }} --install-suggests
+                  echo "CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
 
             - name: install openmpi
               if: matrix.mpi == 'ON'
@@ -99,14 +85,14 @@ jobs:
             - name: install gsl
               run: sudo apt-get install libgsl-dev
 
-            - name: Set compiler environment variables (MPI off)
-              if: matrix.mpi == 'OFF'
-              run: echo "CXX=${{ matrix.compiler.cmd }}" >> $GITHUB_ENV
+            # - name: Set compiler environment variables (MPI off)
+            #   if: matrix.mpi == 'OFF'
+            #   run: echo "CXX=${{ matrix.compiler.cmd }}" >> $GITHUB_ENV
 
             - name: Set compiler environment variables (MPI on)
               if: matrix.mpi == 'ON'
               run: |
-                  echo "OMPI_CXX=${{ matrix.compiler.cmd }}" >> $GITHUB_ENV
+                  echo "OMPI_CXX=$CXX" >> $GITHUB_ENV
                   echo "CXX=mpicxx" >> $GITHUB_ENV
                   mpicxx --showme:version
 
