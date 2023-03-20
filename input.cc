@@ -1412,11 +1412,12 @@ static void write_bflist_file(int includedphotoiontransitions) {
             fprintf(bflist_file, "%d %d %d %d %d\n", i, element, ion, level, upperionlevel);
           }
 
-          assert_always(-1 - i == get_continuumindex(element, ion, level, upperionlevel));
+          const int et = -1 - i;
 
-          assert_always(
-              i !=
-              9999999 - 1);  // would cause the same packet emission type as the special value for free-free scattering
+          assert_always(et == get_continuumindex(element, ion, level, upperionlevel));
+
+          // check the we don't overload the same packet emission type as the special value for free-free scattering
+          assert_always(et != -9999999);
           i++;
         }
       }
