@@ -31,7 +31,8 @@ extern FILE *output_file;
     (void)fprintf(stderr, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global, __FILE__, \
                   __LINE__, #e, __PRETTY_FUNCTION__);                                                                \
     abort();                                                                                                         \
-  }
+  }                                                                                                                  \
+  assert(e);  // helps static analyzers like clang-tidy know that e will be true
 //
 
 #define assert_always(e) __artis_assert(e)
@@ -44,7 +45,9 @@ extern FILE *output_file;
 #define assert_testmodeonly(e) __artis_assert(e)
 #else
 #define assert_testmodeonly(e) \
-  if (!(e)) __builtin_unreachable();
+  if (!(e)) {                  \
+    __builtin_unreachable();   \
+  }
 #endif
 
 // #define printout(...) fprintf(output_file, __VA_ARGS__)
