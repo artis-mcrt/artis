@@ -24,7 +24,8 @@ extern FILE *output_file;
 
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
-    if (!(e)) {                                                                                                        \
+    bool pass = e;                                                                                                     \
+    if (!pass) {                                                                                                       \
       if (output_file != nullptr) {                                                                                    \
         (void)fprintf(output_file, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global,    \
                       __FILE__, __LINE__, #e, __PRETTY_FUNCTION__);                                                    \
@@ -33,7 +34,7 @@ extern FILE *output_file;
                     __LINE__, #e, __PRETTY_FUNCTION__);                                                                \
       abort();                                                                                                         \
     }                                                                                                                  \
-    assert(e);                                                                                                         \
+    assert(pass);                                                                                                      \
   }
 
 #define assert_always(e) __artis_assert(e)
