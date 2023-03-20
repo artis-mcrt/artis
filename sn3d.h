@@ -24,7 +24,7 @@ extern FILE *output_file;
 
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
-    bool pass = e;                                                                                                     \
+    const bool pass = static_cast<bool>(e);                                                                            \
     if (!pass) {                                                                                                       \
       if (output_file != nullptr) {                                                                                    \
         (void)fprintf(output_file, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global,    \
