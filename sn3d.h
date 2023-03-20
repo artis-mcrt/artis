@@ -22,18 +22,19 @@ extern FILE *output_file;
 #ifndef __CUDA_ARCH__
 // host code
 
-#define __artis_assert(e)                                                                                            \
-  if (!(e)) {                                                                                                        \
-    if (output_file != nullptr) {                                                                                    \
-      (void)fprintf(output_file, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global,    \
-                    __FILE__, __LINE__, #e, __PRETTY_FUNCTION__);                                                    \
-    }                                                                                                                \
-    (void)fprintf(stderr, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global, __FILE__, \
-                  __LINE__, #e, __PRETTY_FUNCTION__);                                                                \
-    abort();                                                                                                         \
-  }                                                                                                                  \
-  assert(e);  // helps static analyzers like clang-tidy know that e will be true
-//
+#define __artis_assert(e)                                                                                              \
+  {                                                                                                                    \
+    if (!(e)) {                                                                                                        \
+      if (output_file != nullptr) {                                                                                    \
+        (void)fprintf(output_file, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global,    \
+                      __FILE__, __LINE__, #e, __PRETTY_FUNCTION__);                                                    \
+      }                                                                                                                \
+      (void)fprintf(stderr, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global, __FILE__, \
+                    __LINE__, #e, __PRETTY_FUNCTION__);                                                                \
+      abort();                                                                                                         \
+    }                                                                                                                  \
+    assert(e);                                                                                                         \
+  }
 
 #define assert_always(e) __artis_assert(e)
 
