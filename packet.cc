@@ -149,7 +149,7 @@ void write_packets(char filename[], const struct packet *const pkt) {
   FILE *packets_file = fopen_required(filename, "w");
   fprintf(packets_file,
           "#number where type_id posx posy posz dirx diry dirz last_cross tdecay e_cmf e_rf nu_cmf nu_rf "
-          "escape_type_id escape_time scat_count next_trans interactions last_event emissiontype trueemissiontype "
+          "escape_type_id escape_time next_trans interactions last_event emissiontype trueemissiontype "
           "em_posx em_posy em_posz absorption_type absorption_freq nscatterings em_time absorptiondirx absorptiondiry "
           "absorptiondirz stokes1 stokes2 stokes3 pol_dirx pol_diry pol_dirz originated_from_positron "
           "true_emission_velocity trueem_time pellet_nucindex\n");
@@ -167,7 +167,6 @@ void write_packets(char filename[], const struct packet *const pkt) {
     fprintf(packets_file, "%g ", pkt[i].nu_rf);
     fprintf(packets_file, "%d ", pkt[i].escape_type);
     fprintf(packets_file, "%d ", pkt[i].escape_time);
-    fprintf(packets_file, "%d ", pkt[i].scat_count);
     fprintf(packets_file, "%d ", pkt[i].next_trans);
     fprintf(packets_file, "%d ", pkt[i].interactions);
     fprintf(packets_file, "%d ", pkt[i].last_event);
@@ -277,7 +276,7 @@ void read_packets(char filename[], struct packet *pkt) {
     ssline >> pkt[i].e_cmf >> pkt[i].e_rf >> pkt[i].nu_cmf >> pkt[i].nu_rf;
 
     int escape_type;
-    ssline >> escape_type >> pkt[i].escape_time >> pkt[i].scat_count;
+    ssline >> escape_type >> pkt[i].escape_time;
     pkt[i].escape_type = (enum packet_type)escape_type;
 
     ssline >> pkt[i].next_trans >> pkt[i].interactions >> pkt[i].last_event;

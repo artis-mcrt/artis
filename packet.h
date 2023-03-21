@@ -30,22 +30,22 @@ struct mastate {
 };
 
 struct packet {
-  int where;                      /// The grid cell that the packet is in.
-  enum packet_type type;          /// Identifies the type of packet (k-, r-, etc.)
-  enum cell_boundary last_cross;  /// To avoid rounding errors on cell crossing.
-  int interactions;               /// debug: number of interactions the packet undergone
-  int nscatterings;               /// records number of electron scatterings a r-pkt undergone since it was emitted
-  int last_event;                 /// debug: stores information about the packets history
-  double pos[3];                  /// Position of the packet (x,y,z).
-  double dir[3];                  /// Direction of propagation. (x,y,z). Always a unit vector.
-  double e_cmf;                   /// The energy the packet carries in the co-moving frame.
-  double e_rf;                    /// The energy the packet carries in the rest frame.
-  double nu_cmf;                  /// The frequency in the co-moving frame.
-  double nu_rf;                   /// The frequency in the rest frame.
-  int next_trans;                 /// This keeps track of the next possible line interaction of a rpkt by storing
-                                  /// its linelist index (to overcome numerical problems in propagating the rpkts).
-  int emissiontype;               /// records how the packet was emitted if it is a r-pkt
-  double em_pos[3];               /// Position of the packet (x,y,z).
+  int where;                         /// The grid cell that the packet is in.
+  enum packet_type type;             /// Identifies the type of packet (k-, r-, etc.)
+  enum cell_boundary last_cross;     /// To avoid rounding errors on cell crossing.
+  int interactions;                  /// debug: number of interactions the packet undergone
+  int nscatterings;                  /// records number of electron scatterings a r-pkt undergone since it was emitted
+  int last_event;                    /// debug: stores information about the packets history
+  double pos[3];                     /// Position of the packet (x,y,z).
+  double dir[3];                     /// Direction of propagation. (x,y,z). Always a unit vector.
+  double e_cmf;                      /// The energy the packet carries in the co-moving frame.
+  double e_rf;                       /// The energy the packet carries in the rest frame.
+  double nu_cmf;                     /// The frequency in the co-moving frame.
+  double nu_rf;                      /// The frequency in the rest frame.
+  int next_trans;                    /// This keeps track of the next possible line interaction of a rpkt by storing
+                                     /// its linelist index (to overcome numerical problems in propagating the rpkts).
+  int emissiontype = EMTYPE_NOTSET;  /// records how the packet was emitted if it is a r-pkt
+  double em_pos[3];                  /// Position of the packet (x,y,z).
   int em_time;
   double prop_time;    // internal clock to track how far in time the packet has been propagated
   int absorptiontype;  /// records linelistindex of the last absorption
@@ -67,7 +67,6 @@ struct packet {
   enum packet_type escape_type;           /// Flag to tell us in which form it escaped from the grid.
   int escape_time;                        /// Time at which is passes out of the grid.
                                           /// Pos, dir, where, e_rf, nu_rf should all remain set at the exit point.
-  int scat_count;                         /// WHAT'S THAT???
   int number;                             /// A unique number to identify which packet caused potential troubles.
   bool originated_from_particlenotgamma;  // first-non-pellet packet type was gamma
   int pellet_decaytype;                   // index into decay::decaytypes
@@ -78,7 +77,7 @@ struct packet {
   inline bool operator==(const packet &rhs) {
     return (number == rhs.number && type == rhs.type &&
             (em_pos[0] == rhs.em_pos[0] && em_pos[1] == rhs.em_pos[1] && em_pos[2] == rhs.em_pos[2]) &&
-            nu_cmf == rhs.nu_cmf && where == rhs.where && prop_time == rhs.prop_time && scat_count == rhs.scat_count &&
+            nu_cmf == rhs.nu_cmf && where == rhs.where && prop_time == rhs.prop_time &&
             mastate.activatingline == rhs.mastate.activatingline && tdecay == rhs.tdecay &&
             pellet_nucindex == rhs.pellet_nucindex);
   }

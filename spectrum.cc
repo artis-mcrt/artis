@@ -315,24 +315,24 @@ static int columnindex_from_emissiontype(const int et) {
   } else if (et == EMTYPE_FREEFREE) {
     /// ff-emission
 
-    const int et_new = -1 - et;
-    assert_always(et_new >= globals::nbfcontinua);  // make sure the special value didn't collide with a real process
+    const int contindex = -1 - et;
+    assert_always(contindex >= globals::nbfcontinua);  // make sure the special value didn't collide with a real process
 
     return 2 * get_nelements() * get_max_nions();
   } else if (et == EMTYPE_NOTSET) {
     return -1;
   } else {
     /// bf-emission
-    const int et_new = -1 - et;
+    const int contindex = -1 - et;
     if (globals::nbfcontinua == 0) {
       // assert_always(false);  // if there are no bf processes, we should not get here
       return 2 * get_nelements() * get_max_nions();
     }
-    assert_always(et_new < globals::nbfcontinua);
-    const int element = globals::bflist[et_new].elementindex;
-    const int ion = globals::bflist[et_new].ionindex;
-    const int level = globals::bflist[et_new].levelindex;
-    const int phixstargetindex = globals::bflist[et_new].phixstargetindex;
+    assert_always(contindex < globals::nbfcontinua);
+    const int element = globals::bflist[contindex].elementindex;
+    const int ion = globals::bflist[contindex].ionindex;
+    const int level = globals::bflist[contindex].levelindex;
+    const int phixstargetindex = globals::bflist[contindex].phixstargetindex;
     const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
     assert_always(get_continuumindex(element, ion, level, upperionlevel) == et);

@@ -281,7 +281,6 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
 
       if (passnumber == 0) {
         pkt_ptr->interactions = 0;
-        pkt_ptr->scat_count = 0;
       }
 
       if (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < (ts + tw)) {

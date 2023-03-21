@@ -1416,7 +1416,9 @@ static void write_bflist_file(int includedphotoiontransitions) {
 
           assert_always(et == get_continuumindex(element, ion, level, upperionlevel));
 
-          // check the we don't overload the same packet emission type as the special value for free-free scattering
+          // check the we don't overload the same packet emission type numbers
+          // as the special values for free-free scattering and not set
+          assert_always(et != EMTYPE_NOTSET);
           assert_always(et != EMTYPE_FREEFREE);
           i++;
         }

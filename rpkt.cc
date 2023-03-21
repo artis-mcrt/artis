@@ -904,8 +904,6 @@ __host__ __device__ static bool do_rpkt_step(struct packet *pkt_ptr, const doubl
         mgi = grid::get_cell_modelgridindex(cellindexnew);
       }
 
-      // New cell so reset the scat_counter
-      pkt_ptr->scat_count = 0;
       pkt_ptr->last_event = pkt_ptr->last_event + 100;
 
       /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
