@@ -19,7 +19,7 @@ jobs:
         # os: ['ubuntu-latest', 'self-hosted']
                 os: [ubuntu-22.04]
                 testmode: [OFF, ON]
-                testname: [classicmode, nebularonezone, kilonova]
+                testname: [classicmode, kilonova, nebularonezone]
                 exclude:
                     - os: self-hosted
                       testmode: ON
