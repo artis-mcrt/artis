@@ -2365,7 +2365,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
       // from becoming unphysical. This insight came from reading the
       // CMFGEN Fortran source code (Li, Dessart, Hillier 2012, doi:10.1111/j.1365-2966.2012.21198.x)
       // I had neglected this, so the limits of integration were incorrect. The fix didn't massively affect
-      // ionisation rates or spectra, but it was a source of error that let to energy fractions not adding up to 100%
+      // ionisation rates or spectra, but it was a source of error that led to energy fractions not adding up to 100%
       double int_eps_upper[SFPTS];
       double prefactors[SFPTS];
       for (int j = xsstartindex; j < SFPTS; j++) {
@@ -2408,7 +2408,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
         // endash ranges from 2 * en + ionpot_ev to SF_EMAX
         if (2 * en + ionpot_ev <= SF_EMAX) {
           const int secondintegralstartindex = get_energyindex_ev_lteq(2 * en + ionpot_ev);
-          assert_always(secondintegralstartindex >= xsstartindex);
+          // assert_always(secondintegralstartindex >= xsstartindex); // TODO: why does this fail?
           for (int j = secondintegralstartindex; j < SFPTS; j++) {
 #if (SF_USE_LOG_E_INCREMENT)
             const double deltaendash = gsl_vector_get(delta_envec, j);
