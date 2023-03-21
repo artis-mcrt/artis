@@ -1191,22 +1191,22 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         // tratmid, assoc_cells);
       }
       const double grey_optical_deptha = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * grid::wid_init(mgi) * tratmid;
-      const double grey_optical_depth =
-          grid::get_kappagrey(mgi) * grid::get_rho(mgi) * (globals::rmax * tratmid - radial_pos);
+      // cube corners will have radial pos > rmax, so clamp to 0.
+      const double dist_to_obs = std::max(0., globals::rmax * tratmid - radial_pos);
+      const double grey_optical_depth = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * dist_to_obs;
       printout(
           "modelgridcell %d, compton optical depth (/propgridcell) %g, grey optical depth "
           "(/propgridcell) %g\n",
           mgi, compton_optical_depth, grey_optical_deptha);
-      printout("radial_pos %g, distance_to_obs %g, tau_dist %g\n", radial_pos, globals::rmax * tratmid - radial_pos,
-               grey_optical_depth);
+      printout("radial_pos %g, distance_to_obs %g, tau_dist %g\n", radial_pos, dist_to_obs, grey_optical_depth);
 
       grid::modelgrid[mgi].grey_depth = grey_optical_depth;
 
       // grey_optical_depth = compton_optical_depth;
 
-      if ((grey_optical_depth > globals::cell_is_optically_thick) && (nts < globals::num_grey_timesteps)) {
-        printout("cell %d is treated in grey approximation (kappa_grey %g [cm2/g], tau %g)\n", mgi,
-                 grid::get_kappagrey(mgi), grey_optical_depth);
+      if ((grey_optical_depth >= globals::cell_is_optically_thick) && (nts < globals::num_grey_timesteps)) {
+        printout("timestep %d cell %d is treated in grey approximation (kappa_grey %g [cm2/g], tau %g >= %g)\n", nts,
+                 mgi, grid::get_kappagrey(mgi), grey_optical_depth, globals::cell_is_optically_thick);
         grid::modelgrid[mgi].thick = 1;
       }
 #ifdef VPKT_ON
