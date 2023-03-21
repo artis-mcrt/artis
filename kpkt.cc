@@ -700,7 +700,7 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 8;
-      pkt_ptr->trueemissiontype = -1;  // since this is below zero, macroatom will set it
+      pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
       pkt_ptr->trueemissionvelocity = -1;
     } else if (coolinglist[i].type == COOLINGTYPE_COLLION) {
       /// the k-packet activates a macro-atom due to collisional ionisation
@@ -720,9 +720,10 @@ __host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       pkt_ptr->type = TYPE_MA;
       stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_COLLION);
       stats::increment(stats::COUNTER_K_STAT_TO_MA_COLLION);
+
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 9;
-      pkt_ptr->trueemissiontype = -1;  // since this is below zero, macroatom will set it
+      pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
       pkt_ptr->trueemissionvelocity = -1;
     } else {
       printout("[fatal] do_kpkt: coolinglist.type mismatch\n");

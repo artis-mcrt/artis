@@ -319,6 +319,8 @@ static int columnindex_from_emissiontype(const int et) {
     assert_always(et_new >= globals::nbfcontinua);  // make sure the special value didn't collide with a real process
 
     return 2 * get_nelements() * get_max_nions();
+  } else if (et == EMTYPE_NOTSET) {
+    return -1;
   } else {
     /// bf-emission
     const int et_new = -1 - et;
@@ -376,22 +378,26 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
     if (spectra->do_emission_res) {
       const int proccount = get_proccount();
 
-      const int nproc = columnindex_from_emissiontype(pkt_ptr->emissiontype);
-      assert_always(nproc < proccount);
-      spectra->timesteps[nt].emission[nnu * proccount + nproc] += deltaE;
-
       const int truenproc = columnindex_from_emissiontype(pkt_ptr->trueemissiontype);
       assert_always(truenproc < proccount);
-      spectra->timesteps[nt].trueemission[nnu * proccount + truenproc] += deltaE;
+      if (truenproc >= 0) {
+        spectra->timesteps[nt].trueemission[nnu * proccount + truenproc] += deltaE;
+      }
 
-      if (stokes_i != nullptr && stokes_i->do_emission_res) {
-        stokes_i->timesteps[nt].emission[nnu * proccount + nproc] += pkt_ptr->stokes[0] * deltaE;
-      }
-      if (stokes_q != nullptr && stokes_q->do_emission_res) {
-        stokes_q->timesteps[nt].emission[nnu * proccount + nproc] += pkt_ptr->stokes[1] * deltaE;
-      }
-      if (stokes_u != nullptr && stokes_u->do_emission_res) {
-        stokes_u->timesteps[nt].emission[nnu * proccount + nproc] += pkt_ptr->stokes[2] * deltaE;
+      const int nproc = columnindex_from_emissiontype(pkt_ptr->emissiontype);
+      assert_always(nproc < proccount);
+      if (nproc >= 0) {  // -1 means not set
+        spectra->timesteps[nt].emission[nnu * proccount + nproc] += deltaE;
+
+        if (stokes_i != nullptr && stokes_i->do_emission_res) {
+          stokes_i->timesteps[nt].emission[nnu * proccount + nproc] += pkt_ptr->stokes[0] * deltaE;
+        }
+        if (stokes_q != nullptr && stokes_q->do_emission_res) {
+          stokes_q->timesteps[nt].emission[nnu * proccount + nproc] += pkt_ptr->stokes[1] * deltaE;
+        }
+        if (stokes_u != nullptr && stokes_u->do_emission_res) {
+          stokes_u->timesteps[nt].emission[nnu * proccount + nproc] += pkt_ptr->stokes[2] * deltaE;
+        }
       }
 
       if (TRACE_EMISSION_ABSORPTION_REGION_ON && (current_abin == -1)) {

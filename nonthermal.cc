@@ -1645,7 +1645,7 @@ __host__ __device__ int nt_ionisation_maxupperion(const int element, const int l
   int maxupper = lowerion + 1;
 
   if (NT_SOLVE_SPENCERFANO) {
-    maxupper = lowerion + 1 + NT_MAX_AUGER_ELECTRONS;
+    maxupper += NT_MAX_AUGER_ELECTRONS;
   }
 
   if (maxupper > nions - 1) {
@@ -1916,7 +1916,7 @@ __host__ __device__ void do_ntlepton(struct packet *pkt_ptr) {
       stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLION);
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 20;
-      pkt_ptr->trueemissiontype = -1;  // since this is below zero, macroatom will set it
+      pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
       pkt_ptr->trueemissionvelocity = -1;
 
       stats::increment(stats::COUNTER_NT_STAT_TO_IONIZATION);
@@ -1958,7 +1958,7 @@ __host__ __device__ void do_ntlepton(struct packet *pkt_ptr) {
           stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC);
           pkt_ptr->interactions += 1;
           pkt_ptr->last_event = 21;
-          pkt_ptr->trueemissiontype = -1;  // since this is below zero, macroatom will set it
+          pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
           pkt_ptr->trueemissionvelocity = -1;
 
           stats::increment(stats::COUNTER_NT_STAT_TO_EXCITATION);
@@ -2408,6 +2408,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
         // endash ranges from 2 * en + ionpot_ev to SF_EMAX
         if (2 * en + ionpot_ev <= SF_EMAX) {
           const int secondintegralstartindex = get_energyindex_ev_lteq(2 * en + ionpot_ev);
+          assert_always(secondintegralstartindex <= xsstartindex);
           for (int j = secondintegralstartindex; j < SFPTS; j++) {
 #if (SF_USE_LOG_E_INCREMENT)
             const double deltaendash = gsl_vector_get(delta_envec, j);

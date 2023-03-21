@@ -71,7 +71,8 @@ __host__ __device__ void increment_ion_stats_contabsorption(const struct packet 
                                    n_photons_absorbed);
       }
     }
-  } else if (et != EMTYPE_FREEFREE)  // r-pkt is from bound-free emission (not free-free scattering)
+  } else if (et != EMTYPE_FREEFREE &&
+             et != EMTYPE_NOTSET)  // r-pkt is from bound-free emission (not free-free scattering)
   {
     stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION_FROMBOUNDFREE, n_photons_absorbed);
 

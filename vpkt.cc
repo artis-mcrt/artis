@@ -526,16 +526,19 @@ void read_vspecpol(int my_rank, int nts) {
       assert_always(fscanf(vspecpol_file, "%g ", &c) == 1);
 
       // Stokes I
-      for (int p = 0; p < VMTBINS; p++)
+      for (int p = 0; p < VMTBINS; p++) {
         assert_always(fscanf(vspecpol_file, "%lg ", &vstokes_i[p][ind_comb].flux[j]) == 1);
+      }
 
       // Stokes Q
-      for (int p = 0; p < VMTBINS; p++)
+      for (int p = 0; p < VMTBINS; p++) {
         assert_always(fscanf(vspecpol_file, "%lg ", &vstokes_q[p][ind_comb].flux[j]) == 1);
+      }
 
       // Stokes U
-      for (int p = 0; p < VMTBINS; p++)
+      for (int p = 0; p < VMTBINS; p++) {
         assert_always(fscanf(vspecpol_file, "%lg ", &vstokes_u[p][ind_comb].flux[j]) == 1);
+      }
 
       assert_always(fscanf(vspecpol_file, "\n") == 0);
     }

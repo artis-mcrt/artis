@@ -55,7 +55,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
-  pkt_ptr->trueemissiontype = -1;
+  pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
 }
 
 void packet_init(int my_rank, struct packet *pkt)

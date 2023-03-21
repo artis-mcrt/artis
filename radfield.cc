@@ -1341,6 +1341,9 @@ void print_bfrate_contributions(const int element, const int lowerion, const int
       } else if (et == EMTYPE_FREEFREE) {
         /// ff-emission
         printout("%7d free-free scattering\n", et);
+      } else if (et == EMTYPE_NOTSET) {
+        /// ff-emission
+        printout("%7d IGNORE\n", et);
       } else {
         /// bf-emission
         const int bfindex = -1 - et;

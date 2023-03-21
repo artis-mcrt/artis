@@ -17,7 +17,9 @@ enum packet_type {
   TYPE_GAMMA_KPKT = 121,
 };
 
+constexpr int EMTYPE_NOTSET = -9999000;
 constexpr int EMTYPE_FREEFREE = -9999999;
+
 #include "boundary.h"
 
 struct mastate {
@@ -45,14 +47,14 @@ struct packet {
   int emissiontype;               /// records how the packet was emitted if it is a r-pkt
   double em_pos[3];               /// Position of the packet (x,y,z).
   int em_time;
-  double prop_time;      // internal clock to track how far in time the packet has been propagated
-  int absorptiontype;    /// records linelistindex of the last absorption
-                         /// negative values give ff-abs (-1), bf-abs (-2), compton scattering of gammas (-3),
-                         /// photoelectric effect of gammas (-4), pair production of gammas (-5)
-                         /// decaying pellets of the 52Fe chain (-6) and pellets which decayed before the
-                         /// onset of the simulation (-7)
-                         /// decay of a positron pellet (-10)
-  int trueemissiontype;  // emission type coming from a kpkt to rpkt (last thermal emission)
+  double prop_time;    // internal clock to track how far in time the packet has been propagated
+  int absorptiontype;  /// records linelistindex of the last absorption
+                       /// negative values give ff-abs (-1), bf-abs (-2), compton scattering of gammas (-3),
+                       /// photoelectric effect of gammas (-4), pair production of gammas (-5)
+                       /// decaying pellets of the 52Fe chain (-6) and pellets which decayed before the
+                       /// onset of the simulation (-7)
+                       /// decay of a positron pellet (-10)
+  int trueemissiontype = EMTYPE_NOTSET;  // emission type coming from a kpkt to rpkt (last thermal emission)
   int trueem_time;
   double absorptionfreq;    /// records nu_cmf of packet at last absorption
   double absorptiondir[3];  /// Direction of propagation (x,y,z) when a packet was last absorbed in a line. Always a
