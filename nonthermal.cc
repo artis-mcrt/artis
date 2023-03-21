@@ -2407,8 +2407,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
 
         // endash ranges from 2 * en + ionpot_ev to SF_EMAX
         if (2 * en + ionpot_ev <= SF_EMAX) {
-          const int secondintegralstartindex = get_energyindex_ev_lteq(2 * en + ionpot_ev);
-          // assert_always(secondintegralstartindex >= xsstartindex); // TODO: why does this fail?
+          const int secondintegralstartindex = std::max(xsstartindex, get_energyindex_ev_lteq(2 * en + ionpot_ev));
           for (int j = secondintegralstartindex; j < SFPTS; j++) {
 #if (SF_USE_LOG_E_INCREMENT)
             const double deltaendash = gsl_vector_get(delta_envec, j);
