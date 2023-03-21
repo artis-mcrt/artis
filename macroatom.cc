@@ -680,7 +680,7 @@ __host__ __device__ void do_macroatom(struct packet *pkt_ptr, const int timestep
     }
   }  /// endwhile
 
-  if (pkt_ptr->trueemissiontype < 0) {
+  if (pkt_ptr->trueemissiontype == EMTYPE_NOTSET) {
     pkt_ptr->trueemissiontype = pkt_ptr->emissiontype;
     pkt_ptr->trueemissionvelocity = vec_len(pkt_ptr->em_pos) / pkt_ptr->em_time;
     pkt_ptr->trueem_time = pkt_ptr->em_time;
