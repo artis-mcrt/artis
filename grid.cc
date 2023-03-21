@@ -1158,11 +1158,13 @@ static void read_model_radioabundances(std::ifstream &fmodel, std::string &line,
                                        const bool keepcell, std::vector<int> &zlist, std::vector<int> &alist,
                                        std::vector<std::string> &colnames, std::vector<int> &nucindexlist) {
   if (linepos < (int)line.length()) {
+    // still more line is remaining, so the abundances must be on the same line
     if (mgi == 0) {
       printout("model.txt has has single line per cell format\n");
     }
     line = line.substr(linepos);
   } else {
+    // we reached the end of this line before abundances were read
     if (mgi == 0) {
       printout("model.txt has has two lines per cell format\n");
     }

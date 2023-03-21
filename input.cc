@@ -529,10 +529,10 @@ constexpr int compare_linelistentry(const void *p1, const void *p2)
     return 0;
 }
 
-static void add_transitions_to_linelist(const int element, const int ion, const int nlevelsmax,
-                                        const std::vector<struct transitiontable_entry> &transitiontable,
-                                        struct transitions *transitions, int *lineindex,
-                                        std::vector<struct linelist_entry> &temp_linelist) {
+static void add_transitions_to_unsorted_linelist(const int element, const int ion, const int nlevelsmax,
+                                                 const std::vector<struct transitiontable_entry> &transitiontable,
+                                                 struct transitions *transitions, int *lineindex,
+                                                 std::vector<struct linelist_entry> &temp_linelist) {
   const int lineindex_initial = *lineindex;
   const int tottransitions = transitiontable.size();
   int totupdowntrans;
@@ -598,6 +598,7 @@ static void add_transitions_to_linelist(const int element, const int ion, const 
       /// first occurrence
       const int transitioncheck = transitions[level].to[(level - targetlevel) - 1];
 
+      // -99 means that the transition hasn't been seen yet
       if (transitioncheck == -99) {
         transitions[level].to[level - targetlevel - 1] = *lineindex;
 
@@ -933,7 +934,8 @@ static void read_atomicdata_files(void) {
       read_ion_transitions(ftransitiondata, tottransitions_in_file, &tottransitions, transitiontable,
                            nlevels_requiretransitions, nlevels_requiretransitions_upperlevels, Z, ionstage);
 
-      add_transitions_to_linelist(element, ion, nlevelsmax, transitiontable, transitions, &lineindex, temp_linelist);
+      add_transitions_to_unsorted_linelist(element, ion, nlevelsmax, transitiontable, transitions, &lineindex,
+                                           temp_linelist);
 
       free(transitions[0].to);
       free(transitions);
