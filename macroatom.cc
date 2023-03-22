@@ -44,7 +44,8 @@ __host__ __device__ static void calculate_macroatom_transitionrates(const int mo
     const double epsilon_target = epsilon(element, ion, lower);
     const double epsilon_trans = epsilon_current - epsilon_target;
 
-    const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, A_ul, t_mid);
+    const double R =
+        rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, A_ul, statweight, t_mid);
     const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, i);
 
     const double individ_internal_down_same = (R + C) * epsilon_target;
@@ -710,7 +711,8 @@ void macroatom_close_file(void) {
 
 __host__ __device__ double rad_deexcitation_ratecoeff(const int modelgridindex, const int element, const int ion,
                                                       const int upper, const int lower, const double epsilon_trans,
-                                                      const float A_ul, const double t_current)
+                                                      const float A_ul, const auto upperstatweight,
+                                                      const double t_current)
 /// radiative deexcitation rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
 {
@@ -727,7 +729,7 @@ __host__ __device__ double rad_deexcitation_ratecoeff(const int modelgridindex, 
 
     // const double A_ul = einstein_spontaneous_emission(lineindex);
     const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
-    const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
+    const double B_lu = upperstatweight / stat_weight(element, ion, lower) * B_ul;
 
     const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 

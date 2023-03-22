@@ -443,9 +443,9 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
 
       const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
 
-      const double R =
-          rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, A_ul, t_mid) *
-          s_renorm[level];
+      const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, A_ul,
+                                                  statweight, t_mid) *
+                       s_renorm[level];
       const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, i) * s_renorm[level];
 
       const int upper_index = level_index;
@@ -1208,6 +1208,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
     for (int level = 0; level < get_nlevels(element, ion); level++) {
       // printout("level %d\n", level);
       const double epsilon_current = epsilon(element, ion, level);
+      const double statweight = stat_weight(element, ion, level);
 
       // deexcitation
       const int ndowntrans = get_ndowntrans(element, ion, level);
@@ -1216,8 +1217,8 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
         const int lower = globals::elements[element].ions[ion].levels[level].downtrans[i].targetlevelindex;
         const double epsilon_trans = epsilon_current - epsilon(element, ion, lower);
 
-        const double R =
-            rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, A_ul, t_mid);
+        const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, A_ul,
+                                                    statweight, t_mid);
         assert_always(std::isfinite(R));
         const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, i);
         assert_always(std::isfinite(C));
@@ -1243,7 +1244,6 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
       }
 
       // excitation
-      const double statweight = stat_weight(element, ion, level);
       const int nuptrans = get_nuptrans(element, ion, level);
       for (int i = 0; i < nuptrans; i++) {
         // printout("  level %d excitation i %d\n", level, i);
