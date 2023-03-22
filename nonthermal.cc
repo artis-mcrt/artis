@@ -13,7 +13,6 @@
 #include "atomic.h"
 #include "decay.h"
 #include "grid.h"
-#include "gsl_managed.h"
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
@@ -72,7 +71,7 @@ constexpr int M_NT_SHELLS = 10;
 // maximum number of elements for which binding energy tables are to be used
 constexpr int MAX_Z_BINDING = 30;
 
-__managed__ static double electron_binding[MAX_Z_BINDING][M_NT_SHELLS];
+static double electron_binding[MAX_Z_BINDING][M_NT_SHELLS];
 
 struct collionrow {
   int Z;
@@ -92,27 +91,27 @@ struct collionrow {
   float n_auger_elec_avg;
 };
 
-__managed__ static struct collionrow *colliondata = nullptr;
-__managed__ static int colliondatacount = 0;
+static struct collionrow *colliondata = nullptr;
+static int colliondatacount = 0;
 
 static FILE *nonthermalfile = nullptr;
 static bool nonthermal_initialized = false;
 
-__managed__ static gsl_vector *envec;      // energy grid on which solution is sampled
-__managed__ static gsl_vector *logenvec;   // log of envec
-__managed__ static gsl_vector *sourcevec;  // samples of the source function (energy distribution of deposited energy)
-__managed__ static double E_init_ev =
+static gsl_vector *envec;      // energy grid on which solution is sampled
+static gsl_vector *logenvec;   // log of envec
+static gsl_vector *sourcevec;  // samples of the source function (energy distribution of deposited energy)
+static double E_init_ev =
     0;  // the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV
 
 #if (SF_USE_LOG_E_INCREMENT)
-__managed__ static gsl_vector *delta_envec;
-__managed__ static double delta_log_e = 0.;
+static gsl_vector *delta_envec;
+static double delta_log_e = 0.;
 #else
 constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 #endif
 
 // Monte Carlo result - compare to analytical expectation
-__managed__ double nt_energy_deposited;
+double nt_energy_deposited;
 
 struct nt_excitation_struct {
   double frac_deposition;  // the fraction of the non-thermal deposition energy going to the excitation transition
@@ -146,10 +145,10 @@ struct nt_solution_struct {
   float nneperion_when_solved;  // the nne when the solver was last run
 };
 
-__managed__ static struct nt_solution_struct *nt_solution;
+static struct nt_solution_struct *nt_solution;
 
-__managed__ static double *deposition_rate_density;
-__managed__ static int *deposition_rate_density_timestep;
+static double *deposition_rate_density;
+static int *deposition_rate_density_timestep;
 
 // for descending sort
 static int compare_excitation_fractions(const void *p1, const void *p2) {
@@ -178,7 +177,7 @@ static int compare_excitation_lineindicies(const void *p1, const void *p2) {
 }
 
 #ifndef get_tot_nion
-__host__ __device__ static double get_tot_nion(const int modelgridindex) { return get_nntot(modelgridindex); }
+static double get_tot_nion(const int modelgridindex) { return get_nntot(modelgridindex); }
 #endif
 
 static void read_binding_energies(void) {
@@ -671,7 +670,7 @@ double get_deposition_rate_density(const int modelgridindex)
   return deposition_rate_density[modelgridindex];
 }
 
-__host__ __device__ static double get_y_sample(const int modelgridindex, const int index) {
+static double get_y_sample(const int modelgridindex, const int index) {
   if (nt_solution[modelgridindex].yfunc != nullptr) {
     if (!std::isfinite(nt_solution[modelgridindex].yfunc[index])) {
       printout("get_y_sample index %d %g\n", index, nt_solution[modelgridindex].yfunc[index]);
@@ -755,7 +754,7 @@ void close_file(void) {
   free(colliondata);
 }
 
-__host__ __device__ static int get_energyindex_ev_lteq(const double energy_ev)
+static int get_energyindex_ev_lteq(const double energy_ev)
 // finds the highest energy point <= energy_ev
 {
 #if (SF_USE_LOG_E_INCREMENT)
@@ -772,7 +771,7 @@ __host__ __device__ static int get_energyindex_ev_lteq(const double energy_ev)
     return index;
 }
 
-__host__ __device__ static int get_energyindex_ev_gteq(const double energy_ev)
+static int get_energyindex_ev_gteq(const double energy_ev)
 // finds the highest energy point <= energy_ev
 {
 #if (SF_USE_LOG_E_INCREMENT)
@@ -789,7 +788,7 @@ __host__ __device__ static int get_energyindex_ev_gteq(const double energy_ev)
     return index;
 }
 
-__host__ __device__ static double get_y(const int modelgridindex, const double energy_ev) {
+static double get_y(const int modelgridindex, const double energy_ev) {
   if (energy_ev <= 0) return 0.;
 
 #if (SF_USE_LOG_E_INCREMENT)
@@ -806,8 +805,8 @@ __host__ __device__ static double get_y(const int modelgridindex, const double e
   } else if (index > SFPTS - 1)
     return 0.;
   else {
-    const double enbelow = gsl_vector_get_managed(envec, index);
-    const double enabove = gsl_vector_get_managed(envec, index + 1);
+    const double enbelow = gsl_vector_get(envec, index);
+    const double enabove = gsl_vector_get(envec, index + 1);
     const double ybelow = get_y_sample(modelgridindex, index);
     const double yabove = get_y_sample(modelgridindex, index + 1);
     const double x = (energy_ev - enbelow) / (enabove - enbelow);
@@ -840,8 +839,7 @@ constexpr double electron_loss_rate(const double energy, const double nne)
   }
 }
 
-__host__ __device__ constexpr double xs_excitation(const struct linelist_entry *line, const double epsilon_trans,
-                                                   const double energy)
+constexpr double xs_excitation(const struct linelist_entry *line, const double epsilon_trans, const double energy)
 // collisional excitation cross section in cm^2
 // energies are in erg
 {
@@ -889,7 +887,7 @@ static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const i
     for (int j = 0; j < en_startindex; j++) gsl_vector_set(xs_excitation_vec, j, 0.);
 
     for (int j = en_startindex; j < SFPTS; j++) {
-      const double energy = gsl_vector_get_managed(envec, j) * EV;
+      const double energy = gsl_vector_get(envec, j) * EV;
       gsl_vector_set(xs_excitation_vec, j, constantfactor * pow(energy, -2));
     }
     return en_startindex;
@@ -917,9 +915,9 @@ static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const i
     // xs[j] = constantfactor * g_bar / envec[j]
 
     for (int j = en_startindex; j < SFPTS; j++) {
-      const double logU = gsl_vector_get_managed(logenvec, j) - log(epsilon_trans_ev);
+      const double logU = gsl_vector_get(logenvec, j) - log(epsilon_trans_ev);
       const double g_bar = A * logU + B;
-      gsl_vector_set(xs_excitation_vec, j, constantfactor * g_bar / gsl_vector_get_managed(envec, j));
+      gsl_vector_set(xs_excitation_vec, j, constantfactor * g_bar / gsl_vector_get(envec, j));
     }
 
     return en_startindex;
@@ -929,7 +927,7 @@ static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const i
   }
 }
 
-__host__ __device__ constexpr double xs_impactionization(const double energy_ev, const struct collionrow &colliondata)
+constexpr double xs_impactionization(const double energy_ev, const struct collionrow &colliondata)
 // impact ionization cross section in cm^2
 // energy and ionization_potential should be in eV
 // fitting forumula of Younger 1981
@@ -976,7 +974,7 @@ static int get_xs_ionization_vector(gsl_vector *const xs_vec, const struct colli
   return startindex;
 }
 
-__host__ __device__ static double Psecondary(const double e_p, const double epsilon, const double I, const double J)
+static double Psecondary(const double e_p, const double epsilon, const double I, const double J)
 // distribution of secondary electron energies for primary electron with energy e_p
 // Opal, Peterson, & Beaty (1971)
 {
@@ -992,7 +990,7 @@ __host__ __device__ static double Psecondary(const double e_p, const double epsi
   return 1 / (J * atan((e_p - I) / 2 / J) * (1 + pow(e_s / J, 2)));
 }
 
-__host__ __device__ static double get_J(const int Z, const int ionstage, const double ionpot_ev) {
+static double get_J(const int Z, const int ionstage, const double ionpot_ev) {
   // returns an energy in eV
   // values from Opal et al. 1971 as applied by Kozma & Fransson 1992
   if (ionstage == 1) {
@@ -1150,7 +1148,7 @@ static float calculate_frac_heating(const int modelgridindex)
   return frac_heating;
 }
 
-__host__ __device__ float get_nt_frac_heating(const int modelgridindex) {
+float get_nt_frac_heating(const int modelgridindex) {
   if (!NT_ON) {
     return 1.;
   } else if (!NT_SOLVE_SPENCERFANO) {
@@ -1162,7 +1160,7 @@ __host__ __device__ float get_nt_frac_heating(const int modelgridindex) {
   }
 }
 
-__host__ __device__ static float get_nt_frac_ionization(const int modelgridindex) {
+static float get_nt_frac_ionization(const int modelgridindex) {
   if (!NT_ON) return 0.;
   if (!NT_SOLVE_SPENCERFANO) return 0.02;
 
@@ -1177,7 +1175,7 @@ __host__ __device__ static float get_nt_frac_ionization(const int modelgridindex
   return frac_ionization;
 }
 
-__host__ __device__ static float get_nt_frac_excitation(const int modelgridindex) {
+static float get_nt_frac_excitation(const int modelgridindex) {
   if (!NT_ON || !NT_SOLVE_SPENCERFANO) return 0.;
 
   const float frac_excitation = nt_solution[modelgridindex].frac_excitation;
@@ -1191,7 +1189,7 @@ __host__ __device__ static float get_nt_frac_excitation(const int modelgridindex
   return frac_excitation;
 }
 
-__host__ __device__ static double get_mean_binding_energy(const int element, const int ion) {
+static double get_mean_binding_energy(const int element, const int ion) {
   int q[M_NT_SHELLS];
   double total;
 
@@ -1309,7 +1307,7 @@ __host__ __device__ static double get_mean_binding_energy(const int element, con
   return total;
 }
 
-__host__ __device__ static double get_oneoverw(const int element, const int ion, const int modelgridindex) {
+static double get_oneoverw(const int element, const int ion, const int modelgridindex) {
   // Routine to compute the work per ion pair for doing the NT ionization calculation.
   // Makes use of EXTREMELY SIMPLE approximations - high energy limits only
 
@@ -1360,8 +1358,7 @@ static double calculate_nt_frac_ionization_shell(const int modelgridindex, const
   return nnion * ionpot_ev * y_dot_crosssection_de / E_init_ev;
 }
 
-__host__ __device__ static double nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const int element,
-                                                                   const int ion)
+static double nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const int element, const int ion)
 // non-thermal ionization rate coefficient (multiply by population to get rate)
 {
   const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
@@ -1556,7 +1553,7 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
   }
 }
 
-__host__ __device__ static float get_eff_ionpot(const int modelgridindex, const int element, int const ion)
+static float get_eff_ionpot(const int modelgridindex, const int element, int const ion)
 // get the effective ion potential from the stored value
 // a value of 0. should be treated as invalid
 {
@@ -1565,7 +1562,7 @@ __host__ __device__ static float get_eff_ionpot(const int modelgridindex, const 
   // return calculate_eff_ionpot(modelgridindex, element, ion);
 }
 
-__host__ __device__ static double nt_ionization_ratecoeff_sf(const int modelgridindex, const int element, const int ion)
+static double nt_ionization_ratecoeff_sf(const int modelgridindex, const int element, const int ion)
 // Kozma & Fransson 1992 equation 13
 {
   if (grid::get_numassociatedcells(modelgridindex) <= 0) {
@@ -1582,9 +1579,8 @@ __host__ __device__ static double nt_ionization_ratecoeff_sf(const int modelgrid
     return 0.;
 }
 
-__host__ __device__ double nt_ionization_upperion_probability(const int modelgridindex, const int element,
-                                                              const int lowerion, const int upperion,
-                                                              const bool energyweighted) {
+double nt_ionization_upperion_probability(const int modelgridindex, const int element, const int lowerion,
+                                          const int upperion, const bool energyweighted) {
   assert_always(upperion > lowerion);
   assert_always(upperion < get_nions(element));
   assert_always(upperion <= nt_ionisation_maxupperion(element, lowerion));
@@ -1639,7 +1635,7 @@ __host__ __device__ double nt_ionization_upperion_probability(const int modelgri
   }
 }
 
-__host__ __device__ int nt_ionisation_maxupperion(const int element, const int lowerion) {
+int nt_ionisation_maxupperion(const int element, const int lowerion) {
   const int nions = get_nions(element);
   assert_always(lowerion < nions - 1);
   int maxupper = lowerion + 1;
@@ -1655,8 +1651,7 @@ __host__ __device__ int nt_ionisation_maxupperion(const int element, const int l
   return maxupper;
 }
 
-__host__ __device__ int nt_random_upperion(const int modelgridindex, const int element, const int lowerion,
-                                           const bool energyweighted) {
+int nt_random_upperion(const int modelgridindex, const int element, const int lowerion, const bool energyweighted) {
   assert_testmodeonly(lowerion < get_nions(element) - 1);
   if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
     while (true) {
@@ -1682,7 +1677,7 @@ __host__ __device__ int nt_random_upperion(const int modelgridindex, const int e
   }
 }
 
-__host__ __device__ double nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion) {
+double nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion) {
   assert_always(NT_ON);
   assert_always(grid::get_numassociatedcells(modelgridindex) > 0);
 
@@ -1827,7 +1822,7 @@ static void select_nt_ionization(int modelgridindex, int *element, int *lowerion
   assert_always(false);  // should not reach here
 }
 
-__host__ __device__ static double ion_ntion_energyrate(int modelgridindex, int element, int lowerion) {
+static double ion_ntion_energyrate(int modelgridindex, int element, int lowerion) {
   const double nnlowerion = ionstagepop(modelgridindex, element, lowerion);
   double enrate = 0.;
   for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++) {
@@ -1847,7 +1842,7 @@ __host__ __device__ static double ion_ntion_energyrate(int modelgridindex, int e
   return gamma_nt * enrate;
 }
 
-__host__ __device__ static double get_ntion_energyrate(int modelgridindex) {
+static double get_ntion_energyrate(int modelgridindex) {
   double ratetotal = 0.;
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
     const int nions = get_nions(ielement);
@@ -1858,7 +1853,7 @@ __host__ __device__ static double get_ntion_energyrate(int modelgridindex) {
   return ratetotal;
 }
 
-__host__ __device__ static void select_nt_ionization2(int modelgridindex, int *element, int *lowerion) {
+static void select_nt_ionization2(int modelgridindex, int *element, int *lowerion) {
   const double ratetotal = get_ntion_energyrate(modelgridindex);
 
   const double zrand = rng_uniform();
@@ -1877,7 +1872,7 @@ __host__ __device__ static void select_nt_ionization2(int modelgridindex, int *e
   assert_always(false);
 }
 
-__host__ __device__ void do_ntlepton(struct packet *pkt_ptr) {
+void do_ntlepton(struct packet *pkt_ptr) {
   safeadd(nt_energy_deposited, pkt_ptr->e_cmf);
 
   const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);

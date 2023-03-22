@@ -4,12 +4,6 @@
 #include <memory>
 #include <vector>
 
-#include "cuda.h"
-
-#if CUDA_ENABLED
-#include <curand_kernel.h>
-#endif
-
 #ifdef MPI_ON
 #include <mpi.h>
 #endif
@@ -207,146 +201,143 @@ struct cellhistory {
 };
 
 namespace globals {
-#if CUDA_ENABLED
-extern __managed__ curandState curandstates[MCUDATHREADS];
-#endif
 
-extern __managed__ double syn_dir[3];  // vector pointing from origin to observer
+extern double syn_dir[3];  // vector pointing from origin to observer
 
-extern __managed__ struct time *time_step;
+extern struct time *time_step;
 
 constexpr int MSYN_TIME = 100;
-extern __managed__ int nsyn_time;
-extern __managed__ double time_syn[MSYN_TIME];
+extern int nsyn_time;
+extern double time_syn[MSYN_TIME];
 
 constexpr int EMISS_MAX = 2;
-extern __managed__ int emiss_offset;
-extern __managed__ int emiss_max;
+extern int emiss_offset;
+extern int emiss_max;
 
-extern __managed__ float *compton_emiss;
-extern __managed__ double *rpkt_emiss;
+extern float *compton_emiss;
+extern double *rpkt_emiss;
 
 // for NO_LUT_PHOTOION = false
-extern __managed__ double *corrphotoionrenorm;
-extern __managed__ double *gammaestimator;
+extern double *corrphotoionrenorm;
+extern double *gammaestimator;
 
 // for NO_LUT_BFHEATING = false
-extern __managed__ double *bfheatingestimator;
+extern double *bfheatingestimator;
 
-extern __managed__ double *ffheatingestimator;
-extern __managed__ double *colheatingestimator;
+extern double *ffheatingestimator;
+extern double *colheatingestimator;
 #ifndef FORCE_LTE
 #ifdef DO_TITER
-extern __managed__ double *gammaestimator_save;
-extern __managed__ double *bfheatingestimator_save;
-extern __managed__ double *ffheatingestimator_save;
-extern __managed__ double *colheatingestimator_save;
+extern double *gammaestimator_save;
+extern double *bfheatingestimator_save;
+extern double *ffheatingestimator_save;
+extern double *colheatingestimator_save;
 #endif
 #endif
 
-extern __managed__ int *ecounter;
-extern __managed__ int *acounter;
+extern int *ecounter;
+extern int *acounter;
 
-extern __managed__ int nprocs_exspec;
-extern __managed__ bool do_emission_res;
+extern int nprocs_exspec;
+extern bool do_emission_res;
 
-extern __managed__ bool file_set;
+extern bool file_set;
 extern std::unique_ptr<bool[]> startofline;
 
-extern __managed__ bool do_comp_est;
-extern __managed__ bool do_r_lc;
-extern __managed__ int do_rlc_est;
+extern bool do_comp_est;
+extern bool do_r_lc;
+extern int do_rlc_est;
 
-extern __managed__ double gamma_grey;
+extern double gamma_grey;
 
 constexpr double GREY_OP = 0.1;
 
-extern __managed__ double max_path_step;
+extern double max_path_step;
 
-extern __managed__ int opacity_case;
+extern int opacity_case;
 
-extern __managed__ int nlines;
-extern __managed__ struct elementlist_entry *elements;
-extern __managed__ const struct linelist_entry *linelist;
-extern __managed__ struct bflist_t *bflist;
+extern int nlines;
+extern struct elementlist_entry *elements;
+extern const struct linelist_entry *linelist;
+extern struct bflist_t *bflist;
 
-extern __managed__ double *spontrecombcoeff;
+extern double *spontrecombcoeff;
 
 // for NO_LUT_PHOTOION = false
-extern __managed__ double *corrphotoioncoeff;
+extern double *corrphotoioncoeff;
 
 // for NO_LUT_BFHEATING = false
-extern __managed__ double *bfheating_coeff;
+extern double *bfheating_coeff;
 
-extern __managed__ double *bfcooling_coeff;
+extern double *bfcooling_coeff;
 
-extern __managed__ struct rpkt_cont_opacity *kappa_rpkt_cont;
+extern struct rpkt_cont_opacity *kappa_rpkt_cont;
 
-extern __managed__ int ncoolingterms;
+extern int ncoolingterms;
 
-extern __managed__ double *allcont_nu_edge;
-extern __managed__ const struct fullphixslist *allcont;
+extern double *allcont_nu_edge;
+extern const struct fullphixslist *allcont;
 
 // for either NO_LUT_PHOTOION = false or NO_LUT_BFHEATING = false
-extern __managed__ struct groundphixslist *groundcont;
+extern struct groundphixslist *groundcont;
 
-extern __managed__ struct phixslist *phixslist;
-extern __managed__ int nbfcontinua;
-extern __managed__ int nbfcontinua_ground;
-extern __managed__ int NPHIXSPOINTS;
-extern __managed__ double NPHIXSNUINCREMENT;
+extern struct phixslist *phixslist;
+extern int nbfcontinua;
+extern int nbfcontinua_ground;
+extern int NPHIXSPOINTS;
+extern double NPHIXSNUINCREMENT;
 
-extern __managed__ struct cellhistory *cellhistory;
+extern struct cellhistory *cellhistory;
 
 #ifdef MPI_ON
 extern MPI_Comm mpi_comm_node;
 extern MPI_Comm mpi_comm_internode;
 #endif
 
-extern __managed__ int nprocs;
-extern __managed__ int rank_global;
+extern int nprocs;
+extern int rank_global;
 
-extern __managed__ int node_nprocs;
-extern __managed__ int rank_in_node;
+extern int node_nprocs;
+extern int rank_in_node;
 
-extern __managed__ int node_count;
-extern __managed__ int node_id;
+extern int node_count;
+extern int node_id;
 
-extern __managed__ const int npkts;
-extern __managed__ int nesc;
+extern const int npkts;
+extern int nesc;
 
-extern __managed__ double coordmax[3];
-extern __managed__ double vmax;
-extern __managed__ double rmax;
-extern __managed__ double tmax;
-extern __managed__ double tmin;
+extern double coordmax[3];
+extern double vmax;
+extern double rmax;
+extern double tmax;
+extern double tmin;
 
-extern __managed__ int ntstep;
-extern __managed__ int itstep;
-extern __managed__ int ftstep;
-extern __managed__ int nts_global;
+extern int ntstep;
+extern int itstep;
+extern int ftstep;
+extern int nts_global;
 
-extern __managed__ double nusyn_min;
-extern __managed__ double nusyn_max;
-extern __managed__ int nfake_gam;
+extern double nusyn_min;
+extern double nusyn_max;
+extern int nfake_gam;
 
-extern __managed__ double opcase3_normal;
-extern __managed__ double rho_crit_para;
-extern __managed__ double rho_crit;
+extern double opcase3_normal;
+extern double rho_crit_para;
+extern double rho_crit;
 
-extern __managed__ int total_nlte_levels;
+extern int total_nlte_levels;
 
-extern __managed__ bool homogeneous_abundances;
+extern bool homogeneous_abundances;
 
-extern __managed__ bool simulation_continued_from_saved;
-extern __managed__ double nu_rfcut;
-extern __managed__ int num_lte_timesteps;
-extern __managed__ double cell_is_optically_thick;
-extern __managed__ int num_grey_timesteps;
-extern __managed__ int n_titer;
-extern __managed__ bool initial_iteration;
-extern __managed__ int n_kpktdiffusion_timesteps;
-extern __managed__ float kpktdiffusion_timescale;
+extern bool simulation_continued_from_saved;
+extern double nu_rfcut;
+extern int num_lte_timesteps;
+extern double cell_is_optically_thick;
+extern int num_grey_timesteps;
+extern int n_titer;
+extern bool initial_iteration;
+extern int n_kpktdiffusion_timesteps;
+extern float kpktdiffusion_timescale;
 
 }  // namespace globals
 

@@ -462,13 +462,11 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
                                      pkt_ptr->e_cmf);
         }
 
-#ifndef __CUDA_ARCH__
         if constexpr (LOG_MACROATOM) {
           fprintf(macroatom_file, "%8d %14d %2d %12d %12d %9d %9d %9d %11.5e %11.5e %11.5e %11.5e %9d\n", timestep,
                   modelgridindex, get_element(element), get_ionstage(element, ion_in), get_ionstage(element, ion),
                   level_in, level, activatingline, nu_cmf_in, pkt_ptr->nu_cmf, nu_rf_in, pkt_ptr->nu_rf, jumps);
         }
-#endif
 
         end_packet = true;
         break;
