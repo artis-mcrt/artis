@@ -4,7 +4,6 @@
 #include <cstdio>
 
 #include "artisoptions.h"
-#include "cuda.h"
 
 double rot_angle(double *n1, double *n2, double *ref1, double *ref2);
 void meridian(const double *n, double *ref1, double *ref2);
@@ -22,7 +21,7 @@ void add_to_vpkt_grid(struct packet *dummy_ptr, const double *vel, int bin_range
 void write_vpkt_grid(FILE *vpkt_grid_file);
 void read_vpkt_grid(FILE *vpkt_grid_file);
 int check_tau(double *tau, double *tau_max);
-__host__ __device__ int vpkt_call_estimators(struct packet *pkt_ptr, double t_current, int realtype);
+int vpkt_call_estimators(struct packet *pkt_ptr, double t_current, int realtype);
 
 // --------------------------------------------------------------------------------
 // ---------------------------  VIRTUAL PACKETS -----------------------------------

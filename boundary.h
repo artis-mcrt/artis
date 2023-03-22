@@ -11,9 +11,7 @@ enum cell_boundary {
   NONE = 107,
 };
 
-#include "cuda.h"
-
-__host__ __device__ double boundary_cross(struct packet *pkt_ptr, int *snext);
-__host__ __device__ void change_cell(struct packet *pkt_ptr, int snext);
+double boundary_cross(struct packet *pkt_ptr, int *snext);
+void change_cell(struct packet *pkt_ptr, int snext);
 
 #endif  // BOUNDARY_H

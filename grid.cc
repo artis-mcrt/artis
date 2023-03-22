@@ -23,38 +23,38 @@
 
 namespace grid {
 
-__managed__ struct modelgrid_t *modelgrid = nullptr;
+struct modelgrid_t *modelgrid = nullptr;
 
-__managed__ int ncoordgrid[3];  /// propagation grid dimensions
-__managed__ int ngrid;
-__managed__ char coordlabel[3];
+int ncoordgrid[3];  /// propagation grid dimensions
+int ngrid;
+char coordlabel[3];
 
-__managed__ enum model_types model_type = RHO_1D_READ;
-__managed__ int npts_model = 0;           // number of model grid cells
-__managed__ int nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
+enum model_types model_type = RHO_1D_READ;
+int npts_model = 0;           // number of model grid cells
+int nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
-__managed__ double t_model = -1.;  // time at which densities in input model are correct.
-__managed__ double *vout_model = nullptr;
-__managed__ int ncoord_model[3];  // the model.txt input grid dimensions
-__managed__ double dcoord1;
-__managed__ double dcoord2;  // spacings of a 2D model grid - must be uniform grid
+double t_model = -1.;  // time at which densities in input model are correct.
+double *vout_model = nullptr;
+int ncoord_model[3];  // the model.txt input grid dimensions
+double dcoord1;
+double dcoord2;  // spacings of a 2D model grid - must be uniform grid
 
-__managed__ double min_den;  // minimum model density
+double min_den;  // minimum model density
 
-__managed__ double mtot_input;
-__managed__ double mfeg;  /// Total mass of Fe group elements in ejecta
+double mtot_input;
+double mfeg;  /// Total mass of Fe group elements in ejecta
 
 int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usually 1 or 0)
 
-__managed__ struct gridcell *cell = nullptr;
+struct gridcell *cell = nullptr;
 
 static long mem_usage_nltepops = 0;
 
-static __managed__ int *mg_associated_cells = nullptr;
-static __managed__ int *nonemptymgi_of_mgi = nullptr;
-static __managed__ int *mgi_of_nonemptymgi = nullptr;
+static int *mg_associated_cells = nullptr;
+static int *nonemptymgi_of_mgi = nullptr;
+static int *mgi_of_nonemptymgi = nullptr;
 
-__managed__ double *totmassradionuclide = nullptr;  /// total mass of each radionuclide in the ejecta
+double *totmassradionuclide = nullptr;  /// total mass of each radionuclide in the ejecta
 
 #ifdef MPI_ON
 MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
@@ -75,7 +75,7 @@ double get_mtot_input(void)
   return mtot_input;
 }
 
-__host__ __device__ double wid_init(const int cellindex)
+double wid_init(const int cellindex)
 // for a uniform grid this is the extent along the x,y,z coordinate (x_2 - x_1, etc.)
 // for spherical grid this is the radial extent (r_outer - r_inner)
 // these values are for time globals::tmin
@@ -92,7 +92,7 @@ __host__ __device__ double wid_init(const int cellindex)
   }
 }
 
-__host__ __device__ double get_modelcell_assocvolume_tmin(const int modelgridindex)
+double get_modelcell_assocvolume_tmin(const int modelgridindex)
 // return the model cell volume (when mapped to the propagation cells) at globals::tmin
 // for a uniform cubic grid this is constant
 {
@@ -108,7 +108,7 @@ __host__ __device__ double get_modelcell_assocvolume_tmin(const int modelgridind
   }
 }
 
-__host__ __device__ double get_gridcell_volume_tmin(const int cellindex)
+double get_gridcell_volume_tmin(const int cellindex)
 // return the propagation cell volume at globals::tmin
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
 {
@@ -123,7 +123,7 @@ __host__ __device__ double get_gridcell_volume_tmin(const int cellindex)
   }
 }
 
-__host__ __device__ double get_cellcoordmax(const int cellindex, const int axis)
+double get_cellcoordmax(const int cellindex, const int axis)
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
 {
@@ -136,7 +136,7 @@ __host__ __device__ double get_cellcoordmax(const int cellindex, const int axis)
   }
 }
 
-__host__ __device__ double get_cellcoordmin(const int cellindex, const int axis)
+double get_cellcoordmin(const int cellindex, const int axis)
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
 {
@@ -144,7 +144,7 @@ __host__ __device__ double get_cellcoordmin(const int cellindex, const int axis)
   // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
 }
 
-__host__ __device__ int get_coordcellindexincrement(const int axis)
+int get_coordcellindexincrement(const int axis)
 // how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r direction)
 {
   switch (GRID_TYPE) {
@@ -170,7 +170,7 @@ __host__ __device__ int get_coordcellindexincrement(const int axis)
   }
 }
 
-__host__ __device__ int get_cellcoordpointnum(const int cellindex, const int axis)
+int get_cellcoordpointnum(const int cellindex, const int axis)
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
 {
   // return cell[cellindex].nxyz[axis];
@@ -199,11 +199,11 @@ __host__ __device__ int get_cellcoordpointnum(const int cellindex, const int axi
   }
 }
 
-__host__ __device__ float get_rho_tmin(int modelgridindex) { return modelgrid[modelgridindex].rhoinit; }
+float get_rho_tmin(int modelgridindex) { return modelgrid[modelgridindex].rhoinit; }
 
-__host__ __device__ float get_rho(int modelgridindex) { return modelgrid[modelgridindex].rho; }
+float get_rho(int modelgridindex) { return modelgrid[modelgridindex].rho; }
 
-__host__ __device__ float get_nne(int modelgridindex) {
+float get_nne(int modelgridindex) {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex < (get_npts_model() + 1));
 
@@ -212,7 +212,7 @@ __host__ __device__ float get_nne(int modelgridindex) {
   return nne;
 }
 
-__host__ __device__ float get_nnetot(int modelgridindex) {
+float get_nnetot(int modelgridindex) {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex < (get_npts_model() + 1));
 
@@ -221,100 +221,98 @@ __host__ __device__ float get_nnetot(int modelgridindex) {
   return nnetot;
 }
 
-__host__ __device__ float get_ffegrp(int modelgridindex) { return modelgrid[modelgridindex].ffegrp; }
+float get_ffegrp(int modelgridindex) { return modelgrid[modelgridindex].ffegrp; }
 
-__host__ __device__ void set_elem_abundance(int modelgridindex, int element, float newabundance)
+void set_elem_abundance(int modelgridindex, int element, float newabundance)
 // mass fraction of an element (all isotopes combined)
 {
   modelgrid[modelgridindex].composition[element].abundance = newabundance;
 }
 
-__host__ __device__ double get_elem_numberdens(int modelgridindex, int element)
+double get_elem_numberdens(int modelgridindex, int element)
 // mass fraction of an element (all isotopes combined)
 {
   const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
   return get_elem_abundance(modelgridindex, element) / elem_meanweight * grid::get_rho(modelgridindex);
 }
 
-__host__ __device__ float get_kappagrey(int modelgridindex) {
+float get_kappagrey(int modelgridindex) {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].kappagrey;
 }
 
-__host__ __device__ float get_Te(int modelgridindex) {
+float get_Te(int modelgridindex) {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].Te;
 }
 
-__host__ __device__ float get_TR(int modelgridindex) {
+float get_TR(int modelgridindex) {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].TR;
 }
 
-__host__ __device__ float get_TJ(int modelgridindex) {
+float get_TJ(int modelgridindex) {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].TJ;
 }
 
-__host__ __device__ float get_W(int modelgridindex) {
+float get_W(int modelgridindex) {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].W;
 }
 
-__host__ __device__ static void set_rho_tmin(int modelgridindex, float x) { modelgrid[modelgridindex].rhoinit = x; }
+static void set_rho_tmin(int modelgridindex, float x) { modelgrid[modelgridindex].rhoinit = x; }
 
-__host__ __device__ static void set_rho(int modelgridindex, float x) { modelgrid[modelgridindex].rho = x; }
+static void set_rho(int modelgridindex, float x) { modelgrid[modelgridindex].rho = x; }
 
-__host__ __device__ void set_nne(int modelgridindex, float x) { modelgrid[modelgridindex].nne = x; }
+void set_nne(int modelgridindex, float x) { modelgrid[modelgridindex].nne = x; }
 
-__host__ __device__ void set_nnetot(int modelgridindex, float x) {
+void set_nnetot(int modelgridindex, float x) {
   assert_always(x >= 0.);
   assert_always(std::isfinite(x));
   modelgrid[modelgridindex].nnetot = x;
 }
 
-__host__ __device__ static void set_ffegrp(int modelgridindex, float x) {
+static void set_ffegrp(int modelgridindex, float x) {
   assert_always(x >= 0);
   assert_always(x <= 1.001);
   modelgrid[modelgridindex].ffegrp = x;
 }
 
-__host__ __device__ void set_kappagrey(int modelgridindex, float kappagrey) {
-  modelgrid[modelgridindex].kappagrey = kappagrey;
-}
+void set_kappagrey(int modelgridindex, float kappagrey) { modelgrid[modelgridindex].kappagrey = kappagrey; }
 
-__host__ __device__ void set_Te(int modelgridindex, float Te) { modelgrid[modelgridindex].Te = Te; }
+void set_Te(int modelgridindex, float Te) { modelgrid[modelgridindex].Te = Te; }
 
-__host__ __device__ void set_TR(int modelgridindex, float TR) { modelgrid[modelgridindex].TR = TR; }
+void set_TR(int modelgridindex, float TR) { modelgrid[modelgridindex].TR = TR; }
 
-__host__ __device__ void set_TJ(int modelgridindex, float TJ) { modelgrid[modelgridindex].TJ = TJ; }
+void set_TJ(int modelgridindex, float TJ) { modelgrid[modelgridindex].TJ = TJ; }
 
-__host__ __device__ void set_W(int modelgridindex, float W) { modelgrid[modelgridindex].W = W; }
+void set_W(int modelgridindex, float W) { modelgrid[modelgridindex].W = W; }
 
-__host__ __device__ enum model_types get_model_type(void) { return model_type; }
+enum model_types get_model_type(void) { return model_type; }
 
-__host__ __device__ void set_model_type(enum model_types model_type_value) { model_type = model_type_value; }
+void set_model_type(enum model_types model_type_value) { model_type = model_type_value; }
 
-__host__ __device__ int get_npts_model(void)
+int get_npts_model(void)
 // number of model grid cells
 {
   assert_always(npts_model > 0);
   return npts_model;
 }
 
-__host__ __device__ int get_nonempty_npts_model(void)
+int get_nonempty_npts_model(void)
 // number of model grid cells
 {
   assert_always(nonempty_npts_model > 0);
   return nonempty_npts_model;
 }
 
-__host__ __device__ static void set_npts_model(int new_npts_model) {
+static void set_npts_model(int new_npts_model) {
   npts_model = new_npts_model;
 
   assert_always(modelgrid == nullptr);
@@ -371,14 +369,14 @@ static void allocate_initradiobund(void) {
 #endif
 }
 
-__host__ __device__ int get_t_model(void)
+int get_t_model(void)
 // get time at which model input densities are defined
 {
   assert_testmodeonly(t_model > 0.);
   return t_model;
 }
 
-__host__ __device__ int get_cell_modelgridindex(int cellindex) {
+int get_cell_modelgridindex(int cellindex) {
   assert_testmodeonly(cellindex >= 0);
   assert_testmodeonly(cellindex < ngrid);
   const int mgi = cell[cellindex].modelgridindex;
@@ -387,13 +385,13 @@ __host__ __device__ int get_cell_modelgridindex(int cellindex) {
   return mgi;
 }
 
-__host__ __device__ static void set_cell_modelgridindex(int cellindex, int new_modelgridindex) {
+static void set_cell_modelgridindex(int cellindex, int new_modelgridindex) {
   assert_testmodeonly(cellindex < ngrid);
   assert_testmodeonly(new_modelgridindex <= get_npts_model());
   cell[cellindex].modelgridindex = new_modelgridindex;
 }
 
-__host__ __device__ int get_numassociatedcells(const int modelgridindex)
+int get_numassociatedcells(const int modelgridindex)
 // number of propagation cells associated with each modelgrid cell
 {
   assert_testmodeonly(mg_associated_cells != nullptr);
@@ -401,7 +399,7 @@ __host__ __device__ int get_numassociatedcells(const int modelgridindex)
   return mg_associated_cells[modelgridindex];
 }
 
-__host__ __device__ int get_modelcell_nonemptymgi(int mgi)
+int get_modelcell_nonemptymgi(int mgi)
 // get the index in the list of non-empty cells for a given model grid cell
 {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
@@ -415,7 +413,7 @@ __host__ __device__ int get_modelcell_nonemptymgi(int mgi)
   return nonemptymgi;
 }
 
-__host__ __device__ int get_mgi_of_nonemptymgi(int nonemptymgi)
+int get_mgi_of_nonemptymgi(int nonemptymgi)
 // get the index in the list of non-empty cells for a given model grid cell
 {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
@@ -430,7 +428,7 @@ __host__ __device__ int get_mgi_of_nonemptymgi(int nonemptymgi)
 
 // the abundances below are initial abundances at t_model
 
-__host__ __device__ float get_modelinitradioabund_bynucindex(const int modelgridindex, const int nucindex) {
+float get_modelinitradioabund_bynucindex(const int modelgridindex, const int nucindex) {
   // get the mass fraction of a nuclide in a model grid cell at t=t_model by nuclide index
 
   if (modelgrid[modelgridindex].initradioabund == nullptr) {
@@ -439,7 +437,7 @@ __host__ __device__ float get_modelinitradioabund_bynucindex(const int modelgrid
   return modelgrid[modelgridindex].initradioabund[nucindex];
 }
 
-__host__ __device__ float get_modelinitradioabund(const int modelgridindex, const int z, const int a) {
+float get_modelinitradioabund(const int modelgridindex, const int z, const int a) {
   // get the mass fraction of a nuclide in a model grid cell at t=t_model by atomic number and mass number
 
   const int nucindex = decay::get_nuc_index(z, a);
@@ -448,8 +446,7 @@ __host__ __device__ float get_modelinitradioabund(const int modelgridindex, cons
   return get_modelinitradioabund_bynucindex(modelgridindex, nucindex);
 }
 
-__host__ __device__ static void set_modelinitradioabund(const int modelgridindex, const int z, const int a,
-                                                        const float abund) {
+static void set_modelinitradioabund(const int modelgridindex, const int z, const int a, const float abund) {
   // set the mass fraction of a nuclide in a model grid cell at t=t_model by atomic number and mass number
   // initradioabund array is in node shared memory
   assert_always(abund >= 0.);
@@ -462,8 +459,7 @@ __host__ __device__ static void set_modelinitradioabund(const int modelgridindex
   modelgrid[modelgridindex].initradioabund[nucindex] = abund;
 }
 
-__host__ __device__ static void set_modelinitradioabund_bynucindex(const int modelgridindex, const int nucindex,
-                                                                   const float abund) {
+static void set_modelinitradioabund_bynucindex(const int modelgridindex, const int nucindex, const float abund) {
   // set the mass fraction of a nuclide in a model grid cell at t=t_model by nuclide index
   // initradioabund array is in node shared memory
   assert_always(nucindex >= 0);
@@ -474,12 +470,12 @@ __host__ __device__ static void set_modelinitradioabund_bynucindex(const int mod
   modelgrid[modelgridindex].initradioabund[nucindex] = abund;
 }
 
-__host__ __device__ float get_stable_initabund(const int mgi, const int element) {
+float get_stable_initabund(const int mgi, const int element) {
   assert_testmodeonly(modelgrid[mgi].initmassfracstable != nullptr);
   return modelgrid[mgi].initmassfracstable[element];
 }
 
-__host__ __device__ float get_element_meanweight(const int mgi, const int element)
+float get_element_meanweight(const int mgi, const int element)
 // weight is in grams
 {
   const double mu = modelgrid[mgi].elem_meanweight[element];
@@ -489,13 +485,13 @@ __host__ __device__ float get_element_meanweight(const int mgi, const int elemen
   return globals::elements[element].initstablemeannucmass;
 }
 
-__host__ __device__ void set_element_meanweight(const int mgi, const int element, float meanweight)
+void set_element_meanweight(const int mgi, const int element, float meanweight)
 // weight is in grams
 {
   modelgrid[mgi].elem_meanweight[element] = meanweight;
 }
 
-__host__ __device__ double get_electronfrac(const int modelgridindex) {
+double get_electronfrac(const int modelgridindex) {
   double nucleondens = 0.;
   for (int element = 0; element < get_nelements(); element++) {
     nucleondens += get_elem_numberdens(modelgridindex, element) * get_element_meanweight(modelgridindex, element) / MH;
@@ -503,21 +499,19 @@ __host__ __device__ double get_electronfrac(const int modelgridindex) {
   return get_nnetot(modelgridindex) / nucleondens;
 }
 
-__host__ __device__ double get_initelectronfrac(const int modelgridindex) {
-  return modelgrid[modelgridindex].initelectronfrac;
-}
+double get_initelectronfrac(const int modelgridindex) { return modelgrid[modelgridindex].initelectronfrac; }
 
-__host__ __device__ static void set_initelectronfrac(const int modelgridindex, const double electronfrac) {
+static void set_initelectronfrac(const int modelgridindex, const double electronfrac) {
   modelgrid[modelgridindex].initelectronfrac = electronfrac;
 }
 
-__host__ __device__ double get_initenergyq(const int modelgridindex) {
+double get_initenergyq(const int modelgridindex) {
   // q: energy in the model at tmin per gram to use with USE_MODEL_INITIAL_ENERGY option [erg/g]
 
   return modelgrid[modelgridindex].initenergyq;
 }
 
-__host__ __device__ static void set_initenergyq(const int modelgridindex, const double initenergyq) {
+static void set_initenergyq(const int modelgridindex, const double initenergyq) {
   modelgrid[modelgridindex].initenergyq = initenergyq;
 }
 
@@ -546,8 +540,7 @@ void read_possible_yefile(void) {
   fclose(filein);
 }
 
-__host__ __device__ static void set_elem_stable_abund_from_total(const int mgi, const int element,
-                                                                 const float elemabundance) {
+static void set_elem_stable_abund_from_total(const int mgi, const int element, const float elemabundance) {
   // set the stable mass fraction of an element from the total element mass fraction
   // by subtracting the abundances of radioactive isotopes.
   // if the element Z=anumber has no specific stable abundance variable then the function does nothing
@@ -583,7 +576,7 @@ __host__ __device__ static void set_elem_stable_abund_from_total(const int mgi, 
   modelgrid[mgi].composition[element].abundance = isofracsum + massfracstable;
 }
 
-__host__ __device__ double get_cellradialpos(const int cellindex)
+double get_cellradialpos(const int cellindex)
 // get the radial distance from the origin to the centre of the cell
 {
   // spherical coordinate case is trivial
@@ -600,11 +593,11 @@ __host__ __device__ double get_cellradialpos(const int cellindex)
   return vec_len(dcen);
 }
 
-__host__ __device__ int get_elements_uppermost_ion(const int modelgridindex, const int element) {
+int get_elements_uppermost_ion(const int modelgridindex, const int element) {
   return modelgrid[modelgridindex].elements_uppermost_ion[element];
 }
 
-__host__ __device__ void set_elements_uppermost_ion(const int modelgridindex, const int element, const int newvalue) {
+void set_elements_uppermost_ion(const int modelgridindex, const int element, const int newvalue) {
   modelgrid[modelgridindex].elements_uppermost_ion[element] = newvalue;
 }
 

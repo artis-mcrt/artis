@@ -664,7 +664,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
   }
 }
 
-__host__ __device__ void cellhistory_reset(const int modelgridindex, const bool new_timestep) {
+void cellhistory_reset(const int modelgridindex, const bool new_timestep) {
   /// All entries of the cellhistory stack must be flagged as empty at the
   /// onset of the new timestep. Also, boundary crossing?
   /// Calculate the level populations for this cell, and flag the other entries

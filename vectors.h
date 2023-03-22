@@ -4,13 +4,12 @@
 #include <cmath>
 
 #include "constants.h"
-#include "cuda.h"
 #include "exspec.h"
 #include "packet.h"
 #include "sn3d.h"
 
-__host__ __device__ void scatter_dir(const double dir_in[3], double cos_theta, double dir_out[3]);
-__host__ __device__ void get_rand_isotropic_unitvec(double vecout[3]);
+void scatter_dir(const double dir_in[3], double cos_theta, double dir_out[3]);
+void get_rand_isotropic_unitvec(double vecout[3]);
 
 constexpr double vec_len(const double x[3])
 // return the the magnitude of a vector

@@ -837,7 +837,7 @@ void read_parameterfile_vpkt(void) {
   fclose(input_file);
 }
 
-__host__ __device__ int vpkt_call_estimators(struct packet *pkt_ptr, double t_current, int realtype) {
+int vpkt_call_estimators(struct packet *pkt_ptr, double t_current, int realtype) {
   double obs[3];
   int vflag = 0;
 

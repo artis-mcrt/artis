@@ -1,9 +1,8 @@
 // #include <gsl/gsl_poly.h>
-#ifndef __CUDA_ARCH__
-#include <gsl/gsl_blas.h>
-#endif
-
 #include "boundary.h"
+
+#include <gsl/gsl_blas.h>
+
 #include "grid.h"
 #include "rpkt.h"
 #include "sn3d.h"
@@ -11,8 +10,8 @@
 #include "update_packets.h"
 #include "vectors.h"
 
-__host__ __device__ static double get_shellcrossdist(const double pos[3], const double dir[3], const double shellradius,
-                                                     const bool isinnerboundary, const double tstart)
+static double get_shellcrossdist(const double pos[3], const double dir[3], const double shellradius,
+                                 const bool isinnerboundary, const double tstart)
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell
 // return -1 if there are no forward intersections (or if the intersection is tangential to the shell)
 {
@@ -41,18 +40,17 @@ __host__ __device__ static double get_shellcrossdist(const double pos[3], const 
 
     double posfinal1[3];
     double posfinal2[3];
-#ifndef __CUDA_ARCH__
+
     cblas_dcopy(3, pos, 1, posfinal1, 1);      // posfinal1 = pos
     cblas_daxpy(3, d1, dir, 1, posfinal1, 1);  // posfinal1 += d1 * dir;
 
     cblas_dcopy(3, pos, 1, posfinal2, 1);
     cblas_daxpy(3, d2, dir, 1, posfinal2, 1);
-#else
-    for (int d = 0; d < 3; d++) {
-      posfinal1[d] = pos[d] + d1 * dir[d];
-      posfinal2[d] = pos[d] + d2 * dir[d];
-    }
-#endif
+
+    // for (int d = 0; d < 3; d++) {
+    //   posfinal1[d] = pos[d] + d1 * dir[d];
+    //   posfinal2[d] = pos[d] + d2 * dir[d];
+    // }
 
     const double shellradiusfinal1 = shellradius / tstart * (tstart + d1 / speed);
     const double shellradiusfinal2 = shellradius / tstart * (tstart + d2 / speed);
@@ -98,7 +96,7 @@ __host__ __device__ static double get_shellcrossdist(const double pos[3], const 
   }
 }
 
-__host__ __device__ double boundary_cross(struct packet *const pkt_ptr, int *snext)
+double boundary_cross(struct packet *const pkt_ptr, int *snext)
 /// Basic routine to compute distance to a cell boundary.
 {
   const double tstart = pkt_ptr->prop_time;
@@ -329,7 +327,7 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, int *sne
   return distance;
 }
 
-__host__ __device__ void change_cell(struct packet *pkt_ptr, int snext)
+void change_cell(struct packet *pkt_ptr, int snext)
 /// Routine to take a packet across a boundary.
 {
   // const int cellindex = pkt_ptr->where;
