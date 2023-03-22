@@ -60,7 +60,7 @@ struct modelgrid_t {
 
   double totalcooling = -1;
   double **cooling_contrib_ion = nullptr;
-  short thick = 0;
+  uint_fast8_t thick = 0;
 };
 
 constexpr int get_ngriddimensions(void) { return (GRID_TYPE == GRID_SPHERICAL1D) ? 1 : 3; }
