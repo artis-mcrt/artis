@@ -17,7 +17,7 @@
 
 namespace radfield {
 
-__managed__ static double *J_normfactor = nullptr;
+static double *J_normfactor = nullptr;
 
 // typedef enum
 // {
@@ -39,9 +39,9 @@ struct radfieldbin {
   int contribcount;
 };
 
-__managed__ static double radfieldbin_nu_upper[RADFIELDBINCOUNT];  // array of upper frequency boundaries of bins
-__managed__ static struct radfieldbin *radfieldbins = nullptr;
-__managed__ static struct radfieldbin_solution *radfieldbin_solutions = nullptr;
+static double radfieldbin_nu_upper[RADFIELDBINCOUNT];  // array of upper frequency boundaries of bins
+static struct radfieldbin *radfieldbins = nullptr;
+static struct radfieldbin_solution *radfieldbin_solutions = nullptr;
 
 #ifdef MPI_ON
 MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
@@ -57,18 +57,18 @@ struct Jb_lu_estimator {
 
 // reallocate the detailed line arrays in units of BLOCKSIZEJBLUE
 constexpr int BLOCKSIZEJBLUE = 128;
-__managed__ static int detailed_linecount = 0;
+static int detailed_linecount = 0;
 
 // array of indicies into the linelist[] array for selected lines
-__managed__ static int *detailed_lineindicies;
+static int *detailed_lineindicies;
 
-__managed__ static struct Jb_lu_estimator **prev_Jb_lu_normed = nullptr;  // value from the previous timestep
-__managed__ static struct Jb_lu_estimator **Jb_lu_raw = nullptr;  // unnormalised estimator for the current timestep
+static struct Jb_lu_estimator **prev_Jb_lu_normed = nullptr;  // value from the previous timestep
+static struct Jb_lu_estimator **Jb_lu_raw = nullptr;          // unnormalised estimator for the current timestep
 
 // ** end detailed lines
 
-__managed__ static float *prev_bfrate_normed = nullptr;  // values from the previous timestep
-__managed__ static double *bfrate_raw = nullptr;         // unnormalised estimators for the current timestep
+static float *prev_bfrate_normed = nullptr;  // values from the previous timestep
+static double *bfrate_raw = nullptr;         // unnormalised estimators for the current timestep
 
 // expensive debugging mode to track the contributions to each bound-free rate estimator
 #if (DETAILED_BF_ESTIMATORS_BYTYPE)
@@ -77,8 +77,8 @@ struct bfratecontrib {
   double ratecontrib;
 };
 
-__managed__ static struct bfratecontrib ***bfrate_raw_bytype;  // unnormalised estimator contributions for stats
-__managed__ static int **bfrate_raw_bytype_size;
+static struct bfratecontrib ***bfrate_raw_bytype;  // unnormalised estimator contributions for stats
+static int **bfrate_raw_bytype_size;
 
 static int compare_bfrate_raw_bytype(const void *p1, const void *p2) {
   const struct bfratecontrib *elem1 = (struct bfratecontrib *)p1;
@@ -93,17 +93,17 @@ static int compare_bfrate_raw_bytype(const void *p1, const void *p2) {
 }
 #endif
 
-__managed__ static double *J = nullptr;  // after normalisation: [ergs/s/sr/cm2/Hz]
+static double *J = nullptr;  // after normalisation: [ergs/s/sr/cm2/Hz]
 #ifdef DO_TITER
-__managed__ static double *J_reduced_save = nullptr;
+static double *J_reduced_save = nullptr;
 #endif
 
 // J and nuJ are accumulated and then normalised in-place
 // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
 #ifndef FORCE_LTE
-__managed__ static double *nuJ = nullptr;
+static double *nuJ = nullptr;
 #ifdef DO_TITER
-__managed__ static double *nuJ_reduced_save = nullptr;
+static double *nuJ_reduced_save = nullptr;
 #endif
 #endif
 
@@ -465,7 +465,7 @@ void initialise_prev_titer_photoionestimators(void) {
   }
 }
 
-__host__ __device__ int get_Jblueindex(const int lineindex)
+int get_Jblueindex(const int lineindex)
 // returns -1 if the line does not have a Jblue estimator
 {
   // slow linear search
@@ -502,13 +502,13 @@ __host__ __device__ int get_Jblueindex(const int lineindex)
   return -1;
 }
 
-__host__ __device__ double get_Jb_lu(const int modelgridindex, const int jblueindex) {
+double get_Jb_lu(const int modelgridindex, const int jblueindex) {
   assert_always(jblueindex >= 0);
   assert_always(jblueindex < detailed_linecount);
   return prev_Jb_lu_normed[modelgridindex][jblueindex].value;
 }
 
-__host__ __device__ int get_Jb_lu_contribcount(const int modelgridindex, const int jblueindex) {
+int get_Jb_lu_contribcount(const int modelgridindex, const int jblueindex) {
   assert_always(jblueindex >= 0);
   assert_always(jblueindex < detailed_linecount);
   return prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount;
@@ -525,7 +525,7 @@ static double get_bin_J(int modelgridindex, int binindex)
   return radfieldbins[mgibinindex].J_raw * J_normfactor[modelgridindex];
 }
 
-__host__ __device__ static double get_bin_nuJ(int modelgridindex, int binindex) {
+static double get_bin_nuJ(int modelgridindex, int binindex) {
   assert_testmodeonly(J_normfactor[modelgridindex] > 0.0);
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(binindex >= 0);
@@ -534,7 +534,7 @@ __host__ __device__ static double get_bin_nuJ(int modelgridindex, int binindex) 
   return radfieldbins[mgibinindex].nuJ_raw * J_normfactor[modelgridindex];
 }
 
-__host__ __device__ static inline double get_bin_nu_bar(int modelgridindex, int binindex)
+static inline double get_bin_nu_bar(int modelgridindex, int binindex)
 // importantly, this is average beween the current and previous timestep
 {
   const double nuJ_sum = get_bin_nuJ(modelgridindex, binindex);
@@ -542,14 +542,14 @@ __host__ __device__ static inline double get_bin_nu_bar(int modelgridindex, int 
   return nuJ_sum / J_sum;
 }
 
-__host__ __device__ static inline double get_bin_nu_lower(int binindex) {
+static inline double get_bin_nu_lower(int binindex) {
   if (binindex > 0)
     return radfieldbin_nu_upper[binindex - 1];
   else
     return nu_lower_first_initial;
 }
 
-__host__ __device__ static inline int get_bin_contribcount(int modelgridindex, int binindex) {
+static inline int get_bin_contribcount(int modelgridindex, int binindex) {
   const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
   return radfieldbins[mgibinindex].contribcount;
 }
@@ -564,7 +564,7 @@ static inline float get_bin_T_R(int modelgridindex, int binindex) {
   return radfieldbin_solutions[mgibinindex].T_R;
 }
 
-__host__ __device__ static inline int select_bin(double nu) {
+static inline int select_bin(double nu) {
   if (nu < get_bin_nu_lower(0)) return -2;  // out of range, nu lower than lowest bin's lower boundary
 
   // find the lowest frequency bin with radfieldbin_nu_upper > nu
@@ -727,8 +727,8 @@ void zero_estimators(int modelgridindex)
 #endif
 }
 
-__host__ __device__ static void update_bfestimators(const int modelgridindex, const double distance_e_cmf,
-                                                    const double nu_cmf, const struct packet *const pkt_ptr) {
+static void update_bfestimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
+                                const struct packet *const pkt_ptr) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
   assert_always(bfrate_raw != nullptr);
 
@@ -792,8 +792,8 @@ __host__ __device__ static void update_bfestimators(const int modelgridindex, co
   }
 }
 
-__host__ __device__ void update_estimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
-                                           const struct packet *const pkt_ptr) {
+void update_estimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
+                       const struct packet *const pkt_ptr) {
   safeadd(J[modelgridindex], distance_e_cmf);
 
 #ifndef FORCE_LTE
@@ -853,13 +853,13 @@ void update_lineestimator(const int modelgridindex, const int lineindex, const d
   }
 }
 
-__host__ __device__ double dbb_mgi(double nu, int modelgridindex) {
+double dbb_mgi(double nu, int modelgridindex) {
   const float T_R_fullspec = grid::get_TR(modelgridindex);
   const float W_fullspec = grid::get_W(modelgridindex);
   return dbb(nu, T_R_fullspec, W_fullspec);
 }
 
-__host__ __device__ double radfield(double nu, int modelgridindex)
+double radfield(double nu, int modelgridindex)
 // returns mean intensity J_nu [ergs/s/sr/cm2/Hz]
 {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
@@ -917,7 +917,6 @@ constexpr double gsl_integrand_planck(const double nu, void *paras) {
   return integrand;
 }
 
-#ifndef __CUDA_ARCH__
 static double planck_integral(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor) {
   double integral = 0.;
 
@@ -941,9 +940,7 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
 
   return integral;
 }
-#endif
 
-#ifndef __CUDA_ARCH__
 static double planck_integral_analytic(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor) {
   double integral = 0.;
 
@@ -978,9 +975,7 @@ static double planck_integral_analytic(double T_R, double nu_lower, double nu_up
 
   return integral;
 }
-#endif
 
-#ifndef __CUDA_ARCH__
 static double delta_nu_bar(double T_R, void *paras)
 // difference between the average nu and the average nu of a planck function
 // at temperature T_R, in the frequency range corresponding to a bin
@@ -1028,9 +1023,7 @@ static double delta_nu_bar(double T_R, void *paras)
 
   return delta_nu_bar;
 }
-#endif
 
-#ifndef __CUDA_ARCH__
 static float find_T_R(int modelgridindex, int binindex) {
   double T_R = 0.0;
 
@@ -1094,9 +1087,8 @@ static float find_T_R(int modelgridindex, int binindex) {
 
   return T_R;
 }
-#endif
 
-#if (!defined __CUDA_ARCH__ && !defined FORCE_LTE)
+#if (!defined FORCE_LTE)
 static void set_params_fullspec(const int modelgridindex, const int timestep) {
   const double nubar = nuJ[modelgridindex] / J[modelgridindex];
   if (!std::isfinite(nubar) || nubar == 0.) {
@@ -1137,7 +1129,7 @@ static void set_params_fullspec(const int modelgridindex, const int timestep) {
 }
 #endif
 
-#if (!defined __CUDA_ARCH__ && !defined FORCE_LTE)
+#if (!defined FORCE_LTE)
 void fit_parameters(int modelgridindex, int timestep)
 // finds the best fitting W and temperature parameters in each spectral bin
 // using J and nuJ
@@ -1254,11 +1246,9 @@ void fit_parameters(int modelgridindex, int timestep)
 }
 #endif
 
-__host__ __device__ void set_J_normfactor(int modelgridindex, double normfactor) {
-  J_normfactor[modelgridindex] = normfactor;
-}
+void set_J_normfactor(int modelgridindex, double normfactor) { J_normfactor[modelgridindex] = normfactor; }
 
-__host__ __device__ void normalise_J(const int modelgridindex, const double estimator_normfactor_over4pi) {
+void normalise_J(const int modelgridindex, const double estimator_normfactor_over4pi) {
   assert_always(std::isfinite(J[modelgridindex]));
   J[modelgridindex] *= estimator_normfactor_over4pi;
   for (int i = 0; i < detailed_linecount; i++) {
@@ -1267,7 +1257,7 @@ __host__ __device__ void normalise_J(const int modelgridindex, const double esti
   }
 }
 
-__host__ __device__ void normalise_bf_estimators(const int modelgridindex, const double estimator_normfactor_over_H) {
+void normalise_bf_estimators(const int modelgridindex, const double estimator_normfactor_over_H) {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
     const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);

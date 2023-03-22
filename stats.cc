@@ -8,8 +8,8 @@
 
 namespace stats {
 
-static __managed__ double *ionstats = nullptr;
-static __managed__ int *eventstats = nullptr;
+static double *ionstats = nullptr;
+static int *eventstats = nullptr;
 
 void init(void) {
   if constexpr (TRACK_ION_STATS) {
@@ -25,8 +25,8 @@ void cleanup(void) {
   free(eventstats);
 }
 
-__host__ __device__ void increment_ion_stats(const int modelgridindex, const int element, const int ion,
-                                             enum ionstattypes ionstattype, const double increment) {
+void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype,
+                         const double increment) {
   if constexpr (!TRACK_ION_MASTATS) {
     return;
   }
@@ -43,9 +43,8 @@ __host__ __device__ void increment_ion_stats(const int modelgridindex, const int
       increment);
 }
 
-__host__ __device__ void increment_ion_stats_contabsorption(const struct packet *const pkt_ptr,
-                                                            const int modelgridindex, const int element,
-                                                            const int ion) {
+void increment_ion_stats_contabsorption(const struct packet *const pkt_ptr, const int modelgridindex, const int element,
+                                        const int ion) {
   const double n_photons_absorbed = pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
 
   stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION, n_photons_absorbed);
@@ -152,7 +151,7 @@ void normalise_ion_estimators(const int mgi, const double deltat, const double d
   }
 }
 
-__host__ __device__ void increment(enum eventcounters i) {
+void increment(enum eventcounters i) {
   assert_testmodeonly(i >= 0);
   assert_testmodeonly(i < COUNTER_COUNT);
   safeincrement(eventstats[i]);

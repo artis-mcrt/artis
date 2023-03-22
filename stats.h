@@ -1,7 +1,6 @@
 #ifndef STATS_H
 #define STATS_H
 
-#include "cuda.h"
 #include "packet.h"
 
 namespace stats {
@@ -87,11 +86,11 @@ void init(void);
 
 void cleanup(void);
 
-__host__ __device__ void increment_ion_stats(const int modelgridindex, const int element, const int ion,
-                                             enum ionstattypes ionstattype, const double increment);
+void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype,
+                         const double increment);
 
-__host__ __device__ void increment_ion_stats_contabsorption(const struct packet *const pkt_ptr,
-                                                            const int modelgridindex, const int element, const int ion);
+void increment_ion_stats_contabsorption(const struct packet *const pkt_ptr, const int modelgridindex, const int element,
+                                        const int ion);
 
 double get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype);
 
@@ -102,7 +101,7 @@ void reset_ion_stats(int modelgridindex);
 
 void normalise_ion_estimators(const int mgi, const double deltat, const double deltaV);
 
-__host__ __device__ void increment(enum eventcounters);
+void increment(enum eventcounters);
 
 void pkt_action_counters_reset(void);
 

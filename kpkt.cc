@@ -34,13 +34,11 @@ struct cellhistorycoolinglist {
   int upperlevel;
 };
 
-static __managed__ struct cellhistorycoolinglist *coolinglist;
+static struct cellhistorycoolinglist *coolinglist;
 
-__host__ __device__ static int get_ncoolingterms(int element, int ion) {
-  return globals::elements[element].ions[ion].ncoolingterms;
-}
+static int get_ncoolingterms(int element, int ion) { return globals::elements[element].ions[ion].ncoolingterms; }
 
-__host__ __device__ static double get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, float T_e) {
+static double get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, float T_e) {
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
   if (lowerindex < TABLESIZE - 1) {
     const int upperindex = lowerindex + 1;
@@ -55,8 +53,7 @@ __host__ __device__ static double get_bfcoolingcoeff(int element, int ion, int l
     return globals::bfcooling_coeff[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
 }
 
-__host__ __device__ void calculate_cooling_rates(const int modelgridindex,
-                                                 struct heatingcoolingrates *heatingcoolingrates)
+void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrates *heatingcoolingrates)
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
 {
@@ -163,8 +160,7 @@ __host__ __device__ void calculate_cooling_rates(const int modelgridindex,
   }
 }
 
-__host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int indexionstart,
-                                                         int tid)
+static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int indexionstart, int tid)
 // calculate the cooling contribution list of individual levels/processes for an ion
 // oldcoolingsum is the sum of lower ion (of same element or all ions of lower elements) cooling contributions
 {
@@ -282,7 +278,7 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
   assert_always(grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] == C_ion);
 }
 
-__host__ __device__ static void set_ncoolingterms(void) {
+static void set_ncoolingterms(void) {
   globals::ncoolingterms = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
@@ -398,7 +394,7 @@ void setup_coolinglist(void) {
   printout("[info] read_atomicdata: number of coolingterms %d\n", globals::ncoolingterms);
 }
 
-__host__ __device__ static double sample_planck(const double T)
+static double sample_planck(const double T)
 /// returns a randomly chosen frequency according to the Planck
 /// distribution of temperature T
 {
@@ -418,7 +414,7 @@ __host__ __device__ static double sample_planck(const double T)
   }
 }
 
-__host__ __device__ double do_kpkt_bb(struct packet *pkt_ptr)
+double do_kpkt_bb(struct packet *pkt_ptr)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 {
   // double nne = globals::cell[pkt_ptr->where].nne ;
@@ -444,7 +440,7 @@ __host__ __device__ double do_kpkt_bb(struct packet *pkt_ptr)
   return pkt_ptr->prop_time;
 }
 
-__host__ __device__ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
+double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 {
   const int tid = get_thread_num();

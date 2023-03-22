@@ -1891,32 +1891,6 @@ bool get_noncommentline(std::istream &input, std::string &line)
   }
 }
 
-#if CUDA_ENABLED
-__global__ static void kernel_setupcurand(unsigned long int pre_zseed, int rank) {
-  const int tid = threadIdx.x + blockDim.x * blockIdx.x;
-  if (tid < MCUDATHREADS) {
-    unsigned long int zseed = pre_zseed + (13 * rank);
-    curand_init(zseed, tid, 0, &globals::curandstates[tid]);
-    // const double zrand = curand_uniform_double(&curandstates[tid]);
-    // printf("kernel_setupcurand tidx %d %g\n", tid, zrand);
-  }
-}
-
-static void init_curand(unsigned long int pre_zseed, int rank) {
-  dim3 threadsPerBlock(256, 1, 1);
-  dim3 numBlocks((MCUDATHREADS + threadsPerBlock.x - 1) / threadsPerBlock.x, 1, 1);
-
-  kernel_setupcurand<<<numBlocks, threadsPerBlock>>>(pre_zseed, rank);
-
-  // Check for any errors launching the kernel
-  checkCudaErrors(cudaGetLastError());
-
-  // cudaDeviceSynchronize waits for the kernel to finish, and returns any errors encountered during the launch.
-  checkCudaErrors(cudaDeviceSynchronize());
-}
-#endif
-
-#ifndef __CUDA_ARCH__
 void read_parameterfile(int rank)
 /// Subroutine to read in input parameters from input.txt.
 {
@@ -1943,10 +1917,6 @@ void read_parameterfile(int rank)
     }
     printout("randomly-generated random number seed is %lu\n", pre_zseed);
   }
-
-#if CUDA_ENABLED
-  init_curand(pre_zseed, rank);
-#endif
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -2188,7 +2158,6 @@ void read_parameterfile(int rank)
     update_parameterfile(-1);
   }
 }
-#endif
 
 void update_parameterfile(int nts)
 /// Subroutine to read in input parameters from input.txt.

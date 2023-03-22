@@ -40,7 +40,6 @@ else ifeq ($(USER),localadmin_ccollins)
 	CXXFLAGS += -std=c++17 -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
 
 else
-
 	# sometimes the login nodes have slighty different CPUs
 	# to the job nodes. Try to find the lowest common denominator here
 	# to enable vector extensions
@@ -109,25 +108,6 @@ ifeq ($(OPENMP),ON)
 	BUILD_DIR := $(BUILD_DIR)_openmp
 endif
 
-sn3dcuda sn3dcudawhole: LDFLAGS += -lcudart
-sn3dcuda sn3dcudawhole: CXXFLAGS += -DCUDA_ENABLED=true
-
-# Gadi
-ifneq (,$(findstring gadi,$(HOSTNAME)))
-	# Tesla V100
-	CUDA_NVCC_FLAGS += -arch=sm_70 -gencode=arch=compute_70,code=sm_70 -gencode=arch=compute_70,code=compute_70
-	CXX = mpic++
-	# CXX = icpc
-	# CXXFLAGS += -qopenmp
-	INCLUDE += -I/home/120/ljs120/cuda_samples/common/inc
-endif
-
-# CXXFLAGS += -std=c++17
-# CXXFLAGS += -fPIC -shared
-# CUDA_NVCC_FLAGS += -Xcompiler -fPIC -shared -rdc=true
-CUDA_NVCC_FLAGS += -ccbin=$(CXX) -std=c++17 -O3 -use_fast_math -Xcompiler "$(CXXFLAGS)" -rdc=true --expt-relaxed-constexpr
-# CUDA_NVCC_FLAGS += -G -g
-
 ### use pg when you want to use gprof profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)
 
@@ -151,16 +131,6 @@ sn3d: $(sn3d_objects)
 
 sn3dwhole: version.h
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
-
-sn3dcudawhole: version.h
-	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_files) -o sn3dcuda
-
-sn3dcuda: version.h $(sn3d_objects)
-	nvcc --gpu-architecture=sm_70 --device-link $(sn3d_objects) --output-file gpucode.o
-	$(CXX) $(CXXFLAGS) gpucode.o $(INCLUDE) -lcudadevrt $(LDFLAGS) $(sn3d_objects) -o sn3dcuda
-
-# %.o: %.cc
-# 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c
 
 $(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
 	@mkdir -p $(@D)

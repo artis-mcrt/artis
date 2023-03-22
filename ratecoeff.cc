@@ -31,8 +31,8 @@
 //   int cellnumber;
 // } gslintegration_bfheatingparas;
 
-static __managed__ double T_step;
-__managed__ double T_step_log;
+static double T_step;
+double T_step_log;
 
 typedef struct {
   const double nu_edge;
@@ -682,7 +682,7 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
   return nu_lower;
 }
 
-__host__ __device__ double get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, float T_e)
+double get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, float T_e)
 /// Returns the rate coefficient for spontaneous recombination.
 {
   /*int lowerindex = floor((T-MINTEMP)/T_step);
