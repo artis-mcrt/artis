@@ -28,7 +28,7 @@ __host__ __device__ static void calculate_macroatom_transitionrates(const int mo
   // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
   double *processrates = chlevel->processrates;
   const auto T_e = grid::get_Te(modelgridindex);
-  const float nne = grid::get_nne(modelgridindex);
+  const auto nne = grid::get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, ion, level);
   const double statweight = stat_weight(element, ion, level);
 
@@ -40,7 +40,7 @@ __host__ __device__ static void calculate_macroatom_transitionrates(const int mo
   const int ndowntrans = get_ndowntrans(element, ion, level);
   for (int i = 0; i < ndowntrans; i++) {
     const int lower = globals::elements[element].ions[ion].levels[level].downtrans[i].targetlevelindex;
-    const double A_ul = globals::elements[element].ions[ion].levels[level].downtrans[i].einstein_A;
+    const auto A_ul = globals::elements[element].ions[ion].levels[level].downtrans[i].einstein_A;
     const double epsilon_target = epsilon(element, ion, lower);
     const double epsilon_trans = epsilon_current - epsilon_target;
 
