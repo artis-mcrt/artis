@@ -156,10 +156,9 @@ __host__ __device__ static int do_macroatom_internal_down_same(int modelgridinde
   return lower;
 }
 
-__host__ __device__ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int modelgridindex,
-                                                             const int element, const int ion, const int level,
-                                                             const double rad_deexc, const int activatingline,
-                                                             const double t_mid) {
+static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int modelgridindex, const int element,
+                                         const int ion, const int level, const double rad_deexc,
+                                         const int activatingline, const double t_mid) {
   /// radiative deexcitation of MA: emitt rpkt
   /// randomly select which line transitions occurs
   int linelistindex = -99;

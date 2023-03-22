@@ -35,9 +35,6 @@ void macroatom_close_file(void);
 
 __host__ __device__ void do_macroatom(struct packet *pkt_ptr, int timestep);
 
-__host__ __device__ double rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower,
-                                                      double epsilon_trans, float A_ul, auto upperstatweight,
-                                                      double t_current);
 __host__ __device__ double rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lower, int i,
                                                     double epsilon_trans, int lineindex, double t_current);
 __host__ __device__ double rad_recombination_ratecoeff(float T_e, float nne, int element, int ion, int upper, int lower,
@@ -55,5 +52,7 @@ __host__ __device__ double col_deexcitation_ratecoeff(float T_e, float nne, doub
 
 __host__ __device__ double col_excitation_ratecoeff(float T_e, float nne, int element, int ion, int lower, int i,
                                                     double epsilon_trans, double lowerstatweight);
+double rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower, double epsilon_trans,
+                                  float A_ul, double upperstatweight, double t_current);
 
 #endif  // MACROATOM_H
