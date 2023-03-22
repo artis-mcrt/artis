@@ -1740,12 +1740,12 @@ static void read_grid_restart_data(const int timestep) {
     float T_e = 0.;
     float W = 0.;
     float T_J = 0.;
-    short int thick = 0;
+    int thick = 0;
     double rpkt_emiss = 0.;
 
     if (get_numassociatedcells(mgi) > 0) {
       assert_always(
-          fscanf(gridsave_file, "%d %a %a %a %a %hd %la", &mgi_in, &T_R, &T_e, &W, &T_J, &thick, &rpkt_emiss) == 7);
+          fscanf(gridsave_file, "%d %a %a %a %a %d %la", &mgi_in, &T_R, &T_e, &W, &T_J, &thick, &rpkt_emiss) == 7);
 
       if (mgi_in != mgi) {
         printout("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort\n");
@@ -1820,7 +1820,7 @@ void write_grid_restart_data(const int timestep) {
 
     if (nonemptycell) {
       assert_always(globals::rpkt_emiss[mgi] >= 0.);
-      fprintf(gridsave_file, "%d %a %a %a %a %hd %la", mgi, get_TR(mgi), get_Te(mgi), get_W(mgi), get_TJ(mgi),
+      fprintf(gridsave_file, "%d %a %a %a %a %d %la", mgi, get_TR(mgi), get_Te(mgi), get_W(mgi), get_TJ(mgi),
               modelgrid[mgi].thick, globals::rpkt_emiss[mgi]);
     }
 
