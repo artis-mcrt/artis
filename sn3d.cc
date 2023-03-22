@@ -34,15 +34,11 @@ const bool do_exspec = false;
 
 // threadprivate variables
 int tid;
-__managed__ int myGpuId = 0;
-__managed__ bool use_cellhist;
-__managed__ bool neutral_flag;
-#ifndef __CUDA_ARCH__
+int myGpuId = 0;
+bool use_cellhist;
+bool neutral_flag;
 gsl_rng *rng = nullptr;
 std::mt19937_64 *stdrng = nullptr;
-#else
-__device__ void *rng = nullptr;
-#endif
 gsl_integration_workspace *gslworkspace = nullptr;
 FILE *output_file = nullptr;
 static FILE *linestat_file = nullptr;
@@ -461,19 +457,6 @@ static bool walltime_sufficient_to_continue(const int nts, const int nts_prev, c
   return do_this_full_loop;
 }
 
-#if CUDA_ENABLED
-void *makemanaged(void *ptr, size_t curSize) {
-  if (ptr == nullptr) {
-    return NULL;
-  }
-  void *newptr;
-  cudaMallocManaged(&newptr, curSize);
-  memcpy(newptr, ptr, curSize);
-  free(ptr);
-  return newptr;
-}
-#endif
-
 static void save_grid_and_packets(const int nts, const int my_rank, struct packet *packets) {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
@@ -728,30 +711,6 @@ int main(int argc, char *argv[]) {
   nvpkt_esc3 = 0;
 #endif
 
-#if CUDA_ENABLED
-  printf("CUDA ENABLED\n");
-  int deviceCount = -1;
-  checkCudaErrors(cudaGetDeviceCount(&deviceCount));
-  printf("deviceCount %d\n", deviceCount);
-  assert_always(deviceCount > 0);
-  {
-    myGpuId = 0;
-#ifdef _OPENMP
-    const int omp_tid = get_thread_num();
-    myGpuId = omp_tid % deviceCount;
-    printf("OMP thread id %d\n", omp_tid);
-#else
-#ifdef MPI_ON
-    const int local_rank = atoi(getenv("OMPI_COMM_WORLD_LOCAL_RANK"));
-    myGpuId = local_rank % deviceCount;
-    printf("local_rank %d\n", local_rank);
-#endif
-#endif
-    printf("myGpuId %d\n", myGpuId);
-  }
-  cudaSetDevice(myGpuId);
-#endif
-
 #ifdef MPI_ON
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &globals::rank_global);
@@ -857,15 +816,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-#if CUDA_ENABLED
-  struct packet *packets;
-  cudaMallocManaged(&packets, MPKTS * sizeof(struct packet));
-#if USECUDA_UPDATEPACKETS
-  cudaMemAdvise(packets, MPKTS * sizeof(struct packet), cudaMemAdviseSetPreferredLocation, myGpuId);
-#endif
-#else
   struct packet *const packets = (struct packet *)calloc(MPKTS, sizeof(struct packet));
-#endif
 
   assert_always(packets != nullptr);
 
@@ -891,23 +842,6 @@ int main(int argc, char *argv[]) {
            globals::node_nprocs - 1);
 #else
   printout("MPI is disabled in this build\n");
-#endif
-
-#ifdef __CUDACC__
-  printout("[CUDA] NVIDIA CUDA is available in this build\n");
-#endif
-
-#if CUDA_ENABLED
-  printout("[CUDA] NVIDIA CUDA accelerated routines are enabled\n");
-  printout("[CUDA] Detected %d CUDA capable device(s)\n", deviceCount);
-  printout("[CUDA] This rank will use cudaSetDevice(%d)\n", myGpuId);
-  struct cudaDeviceProp deviceProp;
-  checkCudaErrors(cudaGetDeviceProperties(&deviceProp, myGpuId));
-  printout("[CUDA] totalGlobalMem %7.1f GiB\n", deviceProp.totalGlobalMem / 1024. / 1024. / 1024.);
-  printout("[CUDA] multiProcessorCount %d\n", deviceProp.multiProcessorCount);
-  printout("[CUDA] maxThreadsPerMultiProcessor %d\n", deviceProp.maxThreadsPerMultiProcessor);
-  printout("[CUDA] maxThreadsPerBlock %d\n", deviceProp.maxThreadsPerBlock);
-  printout("[CUDA] warpSize %d\n", deviceProp.warpSize);
 #endif
 
   globals::kappa_rpkt_cont = (struct rpkt_cont_opacity *)calloc(get_max_threads(), sizeof(struct rpkt_cont_opacity));
@@ -1157,10 +1091,7 @@ int main(int argc, char *argv[]) {
   printout("simulation finished at %ld (this job wallclock hours %.2f * %d CPUs = %.1f CPU hours)\n", real_time_end,
            (real_time_end - real_time_start) / 3600., globals::nprocs,
            (real_time_end - real_time_start) / 3600. * globals::nprocs);
-#if CUDA_ENABLED
-  cudaDeviceReset();
-#endif
-  // fclose(tb_file);
+
   if (estimators_file != nullptr) {
     fclose(estimators_file);
   }
@@ -1180,11 +1111,7 @@ int main(int argc, char *argv[]) {
   omp_set_dynamic(0);
 #pragma omp parallel
 #endif
-  {
-#ifndef __CUDA_ARCH__
-    gsl_integration_workspace_free(gslworkspace);
-#endif
-  }
+  { gsl_integration_workspace_free(gslworkspace); }
 
   free(packets);
   if constexpr (TRACK_ION_STATS) {

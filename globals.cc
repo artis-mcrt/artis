@@ -7,156 +7,152 @@
 
 namespace globals {
 
-#if CUDA_ENABLED
-__managed__ curandState curandstates[MCUDATHREADS];
-#endif
-
-__managed__ double syn_dir[3];  // vector pointing from origin to observer
+double syn_dir[3];  // vector pointing from origin to observer
 
 // #define NRAYS_SYN 1 // number of rays traced in a syn calculation
 
 // RAY rays[NRAYS_SYN];
-__managed__ struct time *time_step = nullptr;
+struct time *time_step = nullptr;
 
-__managed__ int nsyn_time;
-__managed__ double time_syn[MSYN_TIME];
+int nsyn_time;
+double time_syn[MSYN_TIME];
 
-__managed__ int emiss_offset;  // the index in the line list of the 1st line for which
-                               // an emissivity estimator is recorded
-__managed__ int emiss_max;     // actual number of frequency points in emissivity grid
+int emiss_offset;  // the index in the line list of the 1st line for which
+                   // an emissivity estimator is recorded
+int emiss_max;     // actual number of frequency points in emissivity grid
 
 /// THESE ARE THE GRID BASED ESTIMATORS
-__managed__ float *compton_emiss = nullptr;  /// Volume estimator for the compton emissivity
-__managed__ double *rpkt_emiss = nullptr;    /// Volume estimator for the rpkt emissivity
+float *compton_emiss = nullptr;  /// Volume estimator for the compton emissivity
+double *rpkt_emiss = nullptr;    /// Volume estimator for the rpkt emissivity
 
 // for NO_LUT_PHOTOION = false
-__managed__ double *corrphotoionrenorm = nullptr;
-__managed__ double *gammaestimator = nullptr;
+double *corrphotoionrenorm = nullptr;
+double *gammaestimator = nullptr;
 
 // for NO_LUT_BFHEATING = false
-__managed__ double *bfheatingestimator = nullptr;
+double *bfheatingestimator = nullptr;
 
-__managed__ double *ffheatingestimator = nullptr;
-__managed__ double *colheatingestimator = nullptr;
+double *ffheatingestimator = nullptr;
+double *colheatingestimator = nullptr;
 #ifndef FORCE_LTE
 #ifdef DO_TITER
-__managed__ double *gammaestimator_save = nullptr;
-__managed__ double *bfheatingestimator_save = nullptr;
-__managed__ double *ffheatingestimator_save = nullptr;
-__managed__ double *colheatingestimator_save = nullptr;
+double *gammaestimator_save = nullptr;
+double *bfheatingestimator_save = nullptr;
+double *ffheatingestimator_save = nullptr;
+double *colheatingestimator_save = nullptr;
 #endif
 #endif
 
-__managed__ int *ecounter = nullptr;
-__managed__ int *acounter = nullptr;
+int *ecounter = nullptr;
+int *acounter = nullptr;
 
-__managed__ int nprocs_exspec = 1;
-__managed__ bool do_emission_res = 1;
+int nprocs_exspec = 1;
+bool do_emission_res = 1;
 
-__managed__ bool file_set;  // 1 if the output files already exist. 0 otherwise.
-__managed__ std::unique_ptr<bool[]> startofline;
-__managed__ bool do_comp_est;  // 1 = compute compton emissivity estimators. 0 = don't
-__managed__ bool do_r_lc;      // If not set to 1 then the opacity for r-packets is 0.
-__managed__ int do_rlc_est;    // 1 = compute estimators for the r-pkt light curve.
-                               // 2 = compute estimators with opacity weights
-                               // 3 = compute estimators, but use only for gamma-heating rate
+bool file_set;  // 1 if the output files already exist. 0 otherwise.
+std::unique_ptr<bool[]> startofline;
+bool do_comp_est;  // 1 = compute compton emissivity estimators. 0 = don't
+bool do_r_lc;      // If not set to 1 then the opacity for r-packets is 0.
+int do_rlc_est;    // 1 = compute estimators for the r-pkt light curve.
+                   // 2 = compute estimators with opacity weights
+                   // 3 = compute estimators, but use only for gamma-heating rate
 
-__managed__ double gamma_grey;  // set to -ve for proper treatment. If possitive, then
-                                // gamma_rays are treated as grey with this opacity.
+double gamma_grey;  // set to -ve for proper treatment. If possitive, then
+                    // gamma_rays are treated as grey with this opacity.
 
-__managed__ double max_path_step;
+double max_path_step;
 
-__managed__ int opacity_case;  // 0 normally, 1 for Fe-grp dependence.
-                               /// MK: 2 for Fe-grp dependence and proportional to 1/rho
-                               /// MK: 3 combination of 1 & 2 depending on a rho_crit
-                               /// MK: 4 non-grey treatment
+int opacity_case;  // 0 normally, 1 for Fe-grp dependence.
+                   /// MK: 2 for Fe-grp dependence and proportional to 1/rho
+                   /// MK: 3 combination of 1 & 2 depending on a rho_crit
+                   /// MK: 4 non-grey treatment
 
 /// ATOMIC DATA
 
-__managed__ int nlines = -1;
-__managed__ struct elementlist_entry *elements = nullptr;
-__managed__ const struct linelist_entry *linelist = nullptr;
-__managed__ struct bflist_t *bflist = nullptr;
-__managed__ double *spontrecombcoeff = nullptr;
+int nlines = -1;
+struct elementlist_entry *elements = nullptr;
+const struct linelist_entry *linelist = nullptr;
+struct bflist_t *bflist = nullptr;
+double *spontrecombcoeff = nullptr;
 
 // for NO_LUT_PHOTOION = false
-__managed__ double *corrphotoioncoeff = nullptr;
+double *corrphotoioncoeff = nullptr;
 
 // for NO_LUT_BFHEATING = false
-__managed__ double *bfheating_coeff = nullptr;
+double *bfheating_coeff = nullptr;
 
-__managed__ double *bfcooling_coeff = nullptr;
+double *bfcooling_coeff = nullptr;
 
-__managed__ struct rpkt_cont_opacity *kappa_rpkt_cont = nullptr;
+struct rpkt_cont_opacity *kappa_rpkt_cont = nullptr;
 
 /// Coolinglist
-__managed__ int ncoolingterms;
+int ncoolingterms;
 
 /// PHIXSLIST
 
-__managed__ double *allcont_nu_edge = nullptr;
-__managed__ const struct fullphixslist *allcont = nullptr;
+double *allcont_nu_edge = nullptr;
+const struct fullphixslist *allcont = nullptr;
 
 // for either NO_LUT_PHOTOION = false or NO_LUT_BFHEATING = false
-__managed__ struct groundphixslist *groundcont = nullptr;
+struct groundphixslist *groundcont = nullptr;
 
-__managed__ struct phixslist *phixslist = nullptr;
-__managed__ int nbfcontinua = -1;
-__managed__ int nbfcontinua_ground = -1;  /// number of bf-continua
-__managed__ int NPHIXSPOINTS = -1;
-__managed__ double NPHIXSNUINCREMENT = -1;
+struct phixslist *phixslist = nullptr;
+int nbfcontinua = -1;
+int nbfcontinua_ground = -1;  /// number of bf-continua
+int NPHIXSPOINTS = -1;
+double NPHIXSNUINCREMENT = -1;
 
-__managed__ struct cellhistory *cellhistory = nullptr;
+struct cellhistory *cellhistory = nullptr;
 
 #ifdef MPI_ON
 MPI_Comm mpi_comm_node = MPI_COMM_NULL;
 MPI_Comm mpi_comm_internode = MPI_COMM_NULL;
 #endif
 
-__managed__ int nprocs = -1;       // number of MPI processes
-__managed__ int rank_global = -1;  // rank of the active MPI process
+int nprocs = -1;       // number of MPI processes
+int rank_global = -1;  // rank of the active MPI process
 
-__managed__ int node_nprocs = -1;   // number of MPI processes on this node
-__managed__ int rank_in_node = -1;  // local rank within this node
+int node_nprocs = -1;   // number of MPI processes on this node
+int rank_in_node = -1;  // local rank within this node
 
-__managed__ int node_count = -1;  // number of MPI nodes
-__managed__ int node_id = -1;     // unique number for each node
+int node_count = -1;  // number of MPI nodes
+int node_id = -1;     // unique number for each node
 
-__managed__ constexpr int npkts = MPKTS;
-__managed__ int nesc = 0;  // number of packets that escape during current timestep
+constexpr int npkts = MPKTS;
+int nesc = 0;  // number of packets that escape during current timestep
 
-__managed__ double coordmax[3];
-__managed__ double vmax;
-__managed__ double rmax;        /// Total mass and outer velocity/radius
-__managed__ double tmax = -1.;  /// End time of current simulation
-__managed__ double tmin = -1.;  /// Start time of current simulation
+double coordmax[3];
+double vmax;
+double rmax;        /// Total mass and outer velocity/radius
+double tmax = -1.;  /// End time of current simulation
+double tmin = -1.;  /// Start time of current simulation
 
-__managed__ int ntstep = -1;      /// Number of timesteps
-__managed__ int itstep = -1;      /// Initial timestep's number
-__managed__ int ftstep = -1;      /// Final timestep's number
-__managed__ int nts_global = -1;  /// Current time step
+int ntstep = -1;      /// Number of timesteps
+int itstep = -1;      /// Initial timestep's number
+int ftstep = -1;      /// Final timestep's number
+int nts_global = -1;  /// Current time step
 
-__managed__ double nusyn_min;
-__managed__ double nusyn_max;  // limits on range for syn
-__managed__ int nfake_gam;     // # of fake gamma ray lines for syn
+double nusyn_min;
+double nusyn_max;  // limits on range for syn
+int nfake_gam;     // # of fake gamma ray lines for syn
 
 /// New variables for other opacity cases, still grey.
-__managed__ double opcase3_normal;  /// MK: normalisation factor for opacity_case 3
-__managed__ double rho_crit_para;   /// MK: free parameter for the selection of the critical opacity in opacity_case 3
-__managed__ double rho_crit;        /// MK: critical opacity in opacity_case 3 (could now be declared locally)
+double opcase3_normal;  /// MK: normalisation factor for opacity_case 3
+double rho_crit_para;   /// MK: free parameter for the selection of the critical opacity in opacity_case 3
+double rho_crit;        /// MK: critical opacity in opacity_case 3 (could now be declared locally)
 
-__managed__ int total_nlte_levels;  /// total number of nlte levels
+int total_nlte_levels;  /// total number of nlte levels
 
-__managed__ bool homogeneous_abundances;
+bool homogeneous_abundances;
 
-__managed__ bool simulation_continued_from_saved;
-__managed__ double nu_rfcut;
-__managed__ int num_lte_timesteps;
-__managed__ double cell_is_optically_thick;
-__managed__ int num_grey_timesteps;
-__managed__ int n_titer;
-__managed__ bool initial_iteration;
-__managed__ int n_kpktdiffusion_timesteps;
-__managed__ float kpktdiffusion_timescale;
+bool simulation_continued_from_saved;
+double nu_rfcut;
+int num_lte_timesteps;
+double cell_is_optically_thick;
+int num_grey_timesteps;
+int n_titer;
+bool initial_iteration;
+int n_kpktdiffusion_timesteps;
+float kpktdiffusion_timescale;
 
 }  // namespace globals

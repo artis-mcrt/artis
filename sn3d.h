@@ -19,8 +19,6 @@
 #include "globals.h"
 
 extern FILE *output_file;
-#ifndef __CUDA_ARCH__
-// host code
 
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
@@ -89,38 +87,15 @@ static inline int get_bflutindex(const int tempindex, const int element, const i
 }
 
 #ifdef _OPENMP
-#ifndef __CUDACC__
 #define safeadd(var, val) _Pragma("omp atomic update") var += val
 #else
 #define safeadd(var, val) var += val
-#endif
-#else
-#define safeadd(var, val) var += val
-#endif
-
-#else
-// device code
-
-#define printout(...) printf(__VA_ARGS__)
-
-#define assert_always(e) assert(e)
-
-#if defined TESTMODE && TESTMODE
-#define assert_testmodeonly(e) assert(e)
-#else
-#define assert_testmodeonly(e) ((void)0)
-#endif
-
-#define safeadd(var, val) atomicAdd(&var, val)
-
 #endif
 
 #define safeincrement(var) safeadd(var, 1)
 
 #include <gsl/gsl_integration.h>
 #include <stdarg.h>  /// MK: needed for printout()
-
-#include "cuda.h"
 
 // #define DO_TITER
 // #define FORCE_LTE
@@ -144,20 +119,16 @@ static inline int get_bflutindex(const int tempindex, const int element, const i
 #define RPKT_EVENTTYPE_CONT 551
 
 extern int tid;
-extern __managed__ bool use_cellhist;
-extern __managed__ bool neutral_flag;
-#ifndef __CUDA_ARCH__
+extern bool use_cellhist;
+extern bool neutral_flag;
 
 #include <gsl/gsl_rng.h>
 extern gsl_rng *rng;  // pointer for random number generator
 extern std::mt19937_64 *stdrng;
 static std::uniform_real_distribution<double> stdrngdis(0.0, 1.0);
 
-#else
-extern __device__ void *rng;
-#endif
 extern gsl_integration_workspace *gslworkspace;
-extern __managed__ int myGpuId;
+extern int myGpuId;
 
 #ifdef _OPENMP
 #pragma omp threadprivate(tid, myGpuId, use_cellhist, neutral_flag, rng, gslworkspace, output_file)
@@ -199,30 +170,24 @@ static int get_timestep(const double time) {
   return -1;
 }
 
-__host__ __device__ inline int get_max_threads(void) {
-#ifdef __CUDA_ARCH__
-  return MCUDATHREADS;
-#elif defined _OPENMP
+inline int get_max_threads(void) {
+#if defined _OPENMP
   return omp_get_max_threads();
 #else
   return 1;
 #endif
 }
 
-__host__ __device__ inline int get_num_threads(void) {
-#ifdef __CUDA_ARCH__
-  return blockDim.x * blockDim.y * blockDim.z;
-#elif defined _OPENMP
+inline int get_num_threads(void) {
+#if defined _OPENMP
   return omp_get_num_threads();
 #else
   return 1;
 #endif
 }
 
-__host__ __device__ inline int get_thread_num(void) {
-#ifdef __CUDA_ARCH__
-  return threadIdx.x + blockDim.x * blockIdx.x;
-#elif defined _OPENMP
+inline int get_thread_num(void) {
+#if defined _OPENMP
   return omp_get_thread_num();
 #else
   return 0;
