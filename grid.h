@@ -1,7 +1,7 @@
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
-#include <inttypes.h>
+#include <cinttypes>
 
 #include "artisoptions.h"
 #include "constants.h"
