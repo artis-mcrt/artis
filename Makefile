@@ -58,9 +58,9 @@ else
 endif
 
 # GSL (GNU Scientific Library)
-# GSL option 1: Use pkg-config to find GSL
 LDFLAGS += $(shell pkg-config --libs gsl)
 CXXFLAGS += $(shell pkg-config --cflags gsl)
+# GSL option 1: Use pkg-config or gsl-config to find GSL
 #
 # GSL option 2: Use default search paths to find GSL
 # LDFLAGS += -lgsl -lgslcblas -lm
