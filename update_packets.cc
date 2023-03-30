@@ -26,7 +26,7 @@ static void do_nonthermal_predeposit(struct packet *pkt_ptr, const int nts, cons
     const double rho = grid::get_rho(mgi);
     // const double rho2 = grid::get_rho_tmin(mgi) / pow(t_sim_th / globals::tmin, 3);
 
-    // endot [erg/s]
+    // endot [erg/s] from Barnes et al. (2016). see their figure 6.
     endot = (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
 
     // A discrete absorption event should occur somewhere along the
