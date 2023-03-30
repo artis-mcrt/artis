@@ -681,12 +681,6 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep) {
   globals::kappa_rpkt_cont[tid].recalculate_required = true;
 
   globals::cellhistory[tid].cellnumber = modelgridindex;
-  // TODO: should we bother for thick cells? still might use it for estimator output
-  // grid::modelgrid[modelgridindex].thick != 0
-  // if (modelgridindex < 0 || modelgridindex == grid::get_npts_model()) {
-  //   return;  // we only needed to invalidate the cell history but not setting up values from a
-  //   real cell
-  // }
 
   //  int nlevels_with_processrates = 0;
   // const double T_e = modelgridindex >= 0 ? grid ::get_Te(modelgridindex) : 0.;
