@@ -1343,34 +1343,34 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
   const double rho = grid::get_rho(modelgridindex);
 
   const int atomic_number = get_element(element);
-  std::set<int> a_isotopes;
+  std::set<int> a_isotopes;  // ensure we don't repeat isotopes
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
     const int nuc_z = get_nuc_z(nucindex);
-    const int a = get_nuc_a(nucindex);
-    if (nuc_z == atomic_number) {
+    const int nuc_a = get_nuc_a(nucindex);
+    if (nuc_z == atomic_number) {  // isotope of this element is on the network
       if (!a_isotopes.count(a)) {
         a_isotopes.insert(a);
         // radioactive isotope of the element
-        const double massfrac = get_nuc_massfrac(modelgridindex, atomic_number, a, t_current);
+        const double massfrac = get_nuc_massfrac(modelgridindex, atomic_number, nuc_a, t_current);
         if (massfrac > 0) {
-          const double numberdens = massfrac / nucmass(atomic_number, a) * rho;
+          const double numberdens = massfrac / nucmass(atomic_number, nuc_a) * rho;
 
-          fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number), a, numberdens);
+          fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number), nuc_a, numberdens);
         }
       }
-    } else {
+    } else {  // not the element that we want, but check if a decay produces it
       for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++) {
-        const int daughter_z = decay_daughter_z(nuc_z, a, dectypeindex);
-        const int daughter_a = decay_daughter_a(nuc_z, a, dectypeindex);
+        const int daughter_z = decay_daughter_z(nuc_z, nuc_a, dectypeindex);
+        const int daughter_a = decay_daughter_a(nuc_z, nuc_a, dectypeindex);
         if (!nuc_exists(daughter_z, daughter_a) && daughter_z == atomic_number &&
-            get_nuc_decaybranchprob(nuc_z, a, dectypeindex) > 0.) {
-          if (!a_isotopes.count(a)) {
-            a_isotopes.insert(a);
+            get_nuc_decaybranchprob_bynucindex(nucindex, dectypeindex) > 0.) {
+          if (!a_isotopes.count(nuc_a)) {
+            a_isotopes.insert(nuc_a);
             // nuclide decays into correct atomic number but outside of the radionuclide list. Daughter is assumed
             // stable
-            const double massfrac = get_nuc_massfrac(modelgridindex, atomic_number, a, t_current);
-            const double numberdens = massfrac / nucmass(nuc_z, a) * rho;
-            fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number), a, numberdens);
+            const double massfrac = get_nuc_massfrac(modelgridindex, atomic_number, nuc_a, t_current);
+            const double numberdens = massfrac / nucmass(nuc_z, nuc_a) * rho;
+            fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number), nuc_a, numberdens);
           }
         }
       }
