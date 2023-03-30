@@ -54,6 +54,8 @@ struct decaypath {
   std::vector<int> a;         // mass number
   std::vector<int> nucindex;  // index into nuclides list
   std::vector<int> decaytypes;
+  std::vector<double> lambdas;
+  std::vector<double> meanlifetimes;
 };
 
 std::vector<struct decaypath> decaypaths;
@@ -477,6 +479,18 @@ static void find_decaypaths(void) {
   }
 
   std::sort(decaypaths.begin(), decaypaths.end());
+
+  for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
+    int decaypathlength = get_decaypathlength(decaypathindex);
+
+    for (int i = 0; i < decaypathlength; i++) {
+      const double meanlife = get_meanlife_bynucindex(decaypaths[decaypathindex].nucindex[i]);
+      decaypaths[decaypathindex].meanlifetimes.push_back(meanlife);
+      decaypaths[decaypathindex].lambdas.push_back(1. / meanlife);
+    }
+    decaypaths[decaypathindex].lambdas.push_back(0.);
+    decaypaths[decaypathindex].meanlifetimes.push_back(-1);
+  }
 }
 
 int get_nucstring_z(const std::string &strnuc)
@@ -845,23 +859,19 @@ static double get_nuc_massfrac(const int modelgridindex, const int z, const int 
     assert_always(top_initabund >= 0.) if (top_initabund <= 0.) { continue; }
 
     int decaypathlength = get_decaypathlength(decaypathindex);
-    auto meanlifetimes = std::make_unique<double[]>(decaypathlength + 1);
-    for (int i = 0; i < decaypathlength; i++) {
-      meanlifetimes[i] = get_meanlife_bynucindex(decaypaths[decaypathindex].nucindex[i]);
-    }
 
     int fulldecaypathlength = decaypathlength;
     // if the nuclide is out of network, it's one past the end of the chain
     if (!nuc_exists_z_a ||
         (z == 2 && a == 4 &&
          decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1] == DECAYTYPE_ALPHA)) {
-      meanlifetimes[decaypathlength] = -1.;
       fulldecaypathlength = decaypathlength + 1;
     }
 
-    const double massfraccontrib =
-        (get_decaypath_branchproduct(decaypathindex) *
-         calculate_decaychain(top_initabund, meanlifetimes, fulldecaypathlength, t_afterinit, false) * nucmass(z, a));
+    const double massfraccontrib = (get_decaypath_branchproduct(decaypathindex) *
+                                    calculate_decaychain(top_initabund, decaypaths[decaypathindex].meanlifetimes,
+                                                         fulldecaypathlength, t_afterinit, false) *
+                                    nucmass(z, a));
     // assert_always(massfraccontrib >= 0.);
     nuctotal += massfraccontrib;
   }
