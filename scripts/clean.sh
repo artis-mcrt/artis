@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-paths="*.tmp *.out *.out.* out.txt output_*-?.txt exspec.txt machine.file.* core.* *.slurm"
+paths="*.tmp *.out *.out.* out.txt output_*-?.txt exspec.txt machine.file.* core.* *.slurm bflist.dat"
 
 # if [[ "$1" == "-d" ]]; then
 #   echo 1
