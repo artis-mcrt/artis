@@ -4,7 +4,7 @@
 
 cd $SLURM_SUBMIT_DIR
 
-spack load gsl target=$(spack arch -t)
+#spack load gsl%gcc target=$(spack arch -t)
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
