@@ -2155,9 +2155,6 @@ void grid_init(int my_rank)
   // the model cells that are not associated with any propagation cells
   if (GRID_TYPE == GRID_UNIFORM && get_model_type() == RHO_1D_READ && globals::rank_in_node == 0) {
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-      const int z = decay::get_nuc_z(nucindex);
-      const int a = decay::get_nuc_a(nucindex);
-
       if (totmassradionuclide[nucindex] <= 0) continue;
 
       double totmassradionuclide_actual = 0.;
@@ -2175,7 +2172,7 @@ void grid_init(int my_rank)
           if (get_numassociatedcells(mgi) > 0) {
             const double prev_abund = get_modelinitradioabund_bynucindex(mgi, nucindex);
             const double new_abund = prev_abund * ratio;
-            set_modelinitradioabund(mgi, z, a, new_abund);
+            set_modelinitradioabund_bynucindex(mgi, nucindex, new_abund);
           }
         }
       }
