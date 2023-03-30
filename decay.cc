@@ -1173,11 +1173,11 @@ double get_particle_injection_rate(const int modelgridindex, const double t, con
       continue;
     }
     const int a = get_nuc_a(nucindex);
-    const double meanlife = get_meanlife(z, a);
+    const double meanlife = get_meanlife_bynucindex(nucindex);
     if (meanlife < 0.) {
       continue;
     }
-    const double en_particles = nucdecayenergyparticle(z, a, decaytype);
+    const double en_particles = nucdecayenergyparticle_bynucindex(nucindex, decaytype);
     if (en_particles > 0.) {
       const double nucdecayrate = get_nuc_massfrac(modelgridindex, z, a, t) / meanlife *
                                   get_nuc_decaybranchprob_bynucindex(nucindex, decaytype);
