@@ -790,7 +790,7 @@ static double calculate_decaychain(const double firstinitabund, std::unique_ptr<
     } else {
       if (lambdas[j] > 0.) {
         const double sumtermtop =
-            (1 + meanlifetimes[j] / timediff) * exp(-timediff / meanlifetimes[j]) - meanlifetimes[j] / timediff;
+            (1 + 1 / lambdas[j] / timediff) * exp(-timediff * lambdas[j]) - 1. / lambdas[j] / timediff;
         sum += sumtermtop / denominator;
       }
     }
