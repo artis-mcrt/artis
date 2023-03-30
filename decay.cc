@@ -1348,8 +1348,8 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
     const int nuc_z = get_nuc_z(nucindex);
     const int nuc_a = get_nuc_a(nucindex);
     if (nuc_z == atomic_number) {  // isotope of this element is on the network
-      if (!a_isotopes.count(a)) {
-        a_isotopes.insert(a);
+      if (!a_isotopes.count(anuc_a)) {
+        a_isotopes.insert(nuc_a);
         // radioactive isotope of the element
         const double massfrac = get_nuc_massfrac(modelgridindex, atomic_number, nuc_a, t_current);
         if (massfrac > 0) {
