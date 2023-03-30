@@ -283,8 +283,8 @@ static double nucdecayenergy_bynucindex(int nucindex, int decaytype)
   return endecay;
 }
 
-static double nucdecayenergyqval(int z, int a, int decaytype) {
-  return nuclides[get_nuc_index(z, a)].endecay_q[decaytype];
+static double nucdecayenergyqval_bynucindex(int nucindex, int decaytype) {
+  return nuclides[nucindex].endecay_q[decaytype];
 }
 
 static double get_meanlife_bynucindex(int nucindex) {
@@ -1208,12 +1208,12 @@ double get_qdot_modelcell(const int modelgridindex, const double t, const int de
       continue;
     }
     const int a = get_nuc_a(nucindex);
-    const double meanlife = get_meanlife(z, a);
+    const double meanlife = get_meanlife_bynucindex(nucindex);
     if (meanlife <= 0) {
       continue;
     }
     const double q_decay =
-        nucdecayenergyqval(z, a, decaytype) * get_nuc_decaybranchprob_bynucindex(nucindex, decaytype);
+        nucdecayenergyqval_bynucindex(nucindex, decaytype) * get_nuc_decaybranchprob_bynucindex(nucindex, decaytype);
     if (q_decay <= 0.) {
       continue;
     }
