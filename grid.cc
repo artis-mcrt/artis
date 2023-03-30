@@ -676,7 +676,6 @@ static void calculate_kappagrey(void) {
     fclose(grid_file);
   }
 
-  printout("Initial densities taken from readin.\n");
   printout("Grey normalisation check: %g\n", check1 / check2);
 }
 
