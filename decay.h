@@ -32,7 +32,6 @@ bool nuc_exists(int z, int a);
 double nucdecayenergygamma(int z, int a);
 double nucdecayenergyparticle(int z_parent, int a_parent, int decaytype);
 void set_nucdecayenergygamma(int z, int a, double value);
-double get_meanlife(int z, int a);
 double nucmass(int z, int a);
 void update_abundances(int modelgridindex, int timestep, double t_current);
 double get_endecay_per_ejectamass_t0_to_time_withexpansion(int modelgridindex, double tstart);
