@@ -43,7 +43,7 @@ else
 	# sometimes the login nodes have slighty different CPUs
 	# to the job nodes. Try to find the lowest common denominator here
 	# to enable vector extensions
-	# CXXFLAGS += -march=haswell
+	# CXXFLAGS += -march=cascadelake
 	# CXXFLAGS += -march=skylake-avx512
 
 	# to get the current CPU architecture, run this:
@@ -52,7 +52,7 @@ else
 		CXXFLAGS += -march=skylake-avx512
 	else ifneq (,$(findstring lxbk,$(HOSTNAME)))
 		# virgo has some AMD nodes (znver1 arch) and some Intel
-		CXXFLAGS += -march=haswell
+		CXXFLAGS += -march=cascadelake
 	endif
 
 endif
