@@ -431,10 +431,7 @@ int get_mgi_of_nonemptymgi(int nonemptymgi)
 float get_modelinitradioabund(const int modelgridindex, const int nucindex) {
   // get the mass fraction of a nuclide in a model grid cell at t=t_model by nuclide index
 
-  assert_testmodeonly(decay::get_nuc_z(nucindex) >= 0);  // check not FAKE_GAM_LINE_ID nuclide
-  if (modelgrid[modelgridindex].initradioabund == nullptr) {
-    return 0.;
-  }
+  assert_testmodeonly(modelgrid[modelgridindex].initradioabund != nullptr);
   return modelgrid[modelgridindex].initradioabund[nucindex];
 }
 
