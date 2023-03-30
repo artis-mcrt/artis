@@ -1362,7 +1362,8 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
       for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++) {
         const int daughter_z = decay_daughter_z(nuc_z, nuc_a, dectypeindex);
         const int daughter_a = decay_daughter_a(nuc_z, nuc_a, dectypeindex);
-        if (!nuc_exists(daughter_z, daughter_a) && daughter_z == atomic_number &&
+        // if the nucleus exists, it will be picked up by the upper condition
+        if (daughter_z == atomic_number && !nuc_exists(daughter_z, daughter_a) &&
             get_nuc_decaybranchprob_bynucindex(nucindex, dectypeindex) > 0.) {
           if (!a_isotopes.count(nuc_a)) {
             a_isotopes.insert(nuc_a);
