@@ -428,38 +428,17 @@ int get_mgi_of_nonemptymgi(int nonemptymgi)
 
 // the abundances below are initial abundances at t_model
 
-float get_modelinitradioabund_bynucindex(const int modelgridindex, const int nucindex) {
+float get_modelinitradioabund(const int modelgridindex, const int nucindex) {
   // get the mass fraction of a nuclide in a model grid cell at t=t_model by nuclide index
 
+  assert_testmodeonly(decay::get_nuc_z(nucindex) >= 0);  // check not FAKE_GAM_LINE_ID nuclide
   if (modelgrid[modelgridindex].initradioabund == nullptr) {
     return 0.;
   }
   return modelgrid[modelgridindex].initradioabund[nucindex];
 }
 
-float get_modelinitradioabund(const int modelgridindex, const int z, const int a) {
-  // get the mass fraction of a nuclide in a model grid cell at t=t_model by atomic number and mass number
-
-  const int nucindex = decay::get_nuc_index(z, a);
-  assert_always(decay::get_nuc_z(nucindex) >= 0);  // check not FAKE_GAM_LINE_ID nuclide
-
-  return get_modelinitradioabund_bynucindex(modelgridindex, nucindex);
-}
-
-static void set_modelinitradioabund(const int modelgridindex, const int z, const int a, const float abund) {
-  // set the mass fraction of a nuclide in a model grid cell at t=t_model by atomic number and mass number
-  // initradioabund array is in node shared memory
-  assert_always(abund >= 0.);
-  assert_always(abund <= 1.);
-
-  const int nucindex = decay::get_nuc_index(z, a);
-  assert_always(decay::get_nuc_z(nucindex) >= 0 || abund == 0.);  // check not FAKE_GAM_LINE_ID nuclide
-
-  assert_always(modelgrid[modelgridindex].initradioabund != nullptr);
-  modelgrid[modelgridindex].initradioabund[nucindex] = abund;
-}
-
-static void set_modelinitradioabund_bynucindex(const int modelgridindex, const int nucindex, const float abund) {
+static void set_modelinitradioabund(const int modelgridindex, const int nucindex, const float abund) {
   // set the mass fraction of a nuclide in a model grid cell at t=t_model by nuclide index
   // initradioabund array is in node shared memory
   assert_always(nucindex >= 0);
@@ -551,7 +530,7 @@ static void set_elem_stable_abund_from_total(const int mgi, const int element, c
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     if (decay::get_nuc_z(nucindex) == atomic_number) {
       // radioactive isotope of this element
-      isofracsum += get_modelinitradioabund_bynucindex(mgi, nucindex);
+      isofracsum += get_modelinitradioabund(mgi, nucindex);
     }
   }
 
@@ -876,7 +855,7 @@ static void allocate_nonemptymodelcells(void) {
       set_rho(mgi, 0.);
       if (modelgrid[mgi].initradioabund != nullptr) {
         for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-          set_modelinitradioabund_bynucindex(mgi, nucindex, 0.);
+          set_modelinitradioabund(mgi, nucindex, 0.);
         }
       }
     }
@@ -1184,13 +1163,13 @@ static void read_model_radioabundances(std::ifstream &fmodel, std::string &line,
     //          mgi, f56ni_model, f56co_model, f52fe_model, f48cr_model, f57ni_model, f57co_model);
 
     if (keepcell) {
-      set_modelinitradioabund(mgi, 28, 56, f56ni_model);
-      set_modelinitradioabund(mgi, 27, 56, f56co_model);
-      set_modelinitradioabund(mgi, 28, 57, f57ni_model);
-      set_modelinitradioabund(mgi, 27, 57, f57co_model);
-      set_modelinitradioabund(mgi, 26, 52, f52fe_model);
-      set_modelinitradioabund(mgi, 24, 48, f48cr_model);
-      set_modelinitradioabund(mgi, 23, 48, 0.);
+      set_modelinitradioabund(mgi, decay::get_nucindex(28, 56), f56ni_model);
+      set_modelinitradioabund(mgi, decay::get_nucindex(27, 56), f56co_model);
+      set_modelinitradioabund(mgi, decay::get_nucindex(26, 52), f52fe_model);
+      set_modelinitradioabund(mgi, decay::get_nucindex(24, 48), f48cr_model);
+      set_modelinitradioabund(mgi, decay::get_nucindex(23, 48), 0.);
+      set_modelinitradioabund(mgi, decay::get_nucindex(28, 57), f57ni_model);
+      set_modelinitradioabund(mgi, decay::get_nucindex(27, 57), f57co_model);
 
       set_ffegrp(mgi, ffegrp_model);
 
@@ -1204,7 +1183,7 @@ static void read_model_radioabundances(std::ifstream &fmodel, std::string &line,
           double valuein = 0.;
           assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
           if (nucindexlist[i] >= 0) {
-            set_modelinitradioabund_bynucindex(mgi, nucindexlist[i], valuein);
+            set_modelinitradioabund(mgi, nucindexlist[i], valuein);
           } else if (colnames[i] == "cellYe") {
             set_initelectronfrac(mgi, valuein);
           } else if (colnames[i] == "q") {
@@ -1276,7 +1255,7 @@ static void read_1d_model(void)
 
   std::vector<int> nucindexlist(zlist.size());
   for (int i = 0; i < (int)zlist.size(); i++) {
-    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nuc_index(zlist[i], alist[i]) : -1;
+    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
   }
 
   int mgi = 0;
@@ -1367,7 +1346,7 @@ static void read_2d_model(void)
 
   std::vector<int> nucindexlist(zlist.size());
   for (int i = 0; i < (int)zlist.size(); i++) {
-    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nuc_index(zlist[i], alist[i]) : -1;
+    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
   }
 
   // Now read in the model. Each point in the model has two lines of input.
@@ -1475,7 +1454,7 @@ static void read_3d_model(void)
 
   std::vector<int> nucindexlist(zlist.size());
   for (int i = 0; i < (int)zlist.size(); i++) {
-    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nuc_index(zlist[i], alist[i]) : -1;
+    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
   }
 
   // mgi is the index to the model grid - empty cells are sent to special value get_npts_model(),
@@ -1604,7 +1583,7 @@ static void calc_modelinit_totmassradionuclides(void) {
     mtot_input += mass_in_shell;
 
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-      totmassradionuclide[nucindex] += mass_in_shell * get_modelinitradioabund_bynucindex(mgi, nucindex);
+      totmassradionuclide[nucindex] += mass_in_shell * get_modelinitradioabund(mgi, nucindex);
     }
 
     mfeg += mass_in_shell * get_ffegrp(mgi);
@@ -1875,11 +1854,6 @@ static void assign_initial_temperatures(void)
     double T_initial =
         pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.);
 
-    // printout("T_initial %g T_initial_alt %g\n", T_initial, T_initial_alt);
-
-    // printout("mgi %d: T_initial %g K tmin %g tstart %g rhoinit %g X_56Ni %g X_52Fe %g X_48cr %g\n",
-    //          mgi, T_initial, globals::tmin, tstart, get_rho_tmin(mgi), get_modelinitradioabund(mgi, 28, 56),
-    //          get_modelinitradioabund(mgi, 26, 52), get_modelinitradioabund(mgi, 24, 48));
     if (T_initial < MINTEMP) {
       printout("mgi %d: T_initial of %g is below MINTEMP %g K, setting to MINTEMP.\n", mgi, T_initial, MINTEMP);
       T_initial = MINTEMP;
@@ -2160,8 +2134,8 @@ void grid_init(int my_rank)
       double totmassradionuclide_actual = 0.;
       for (int mgi = 0; mgi < get_npts_model(); mgi++) {
         if (get_numassociatedcells(mgi) > 0) {
-          totmassradionuclide_actual += get_modelinitradioabund_bynucindex(mgi, nucindex) * get_rho_tmin(mgi) *
-                                        get_modelcell_assocvolume_tmin(mgi);
+          totmassradionuclide_actual +=
+              get_modelinitradioabund(mgi, nucindex) * get_rho_tmin(mgi) * get_modelcell_assocvolume_tmin(mgi);
         }
       }
 
@@ -2170,9 +2144,9 @@ void grid_init(int my_rank)
         // printout("nuclide %d ratio %g\n", nucindex, ratio);
         for (int mgi = 0; mgi < get_npts_model(); mgi++) {
           if (get_numassociatedcells(mgi) > 0) {
-            const double prev_abund = get_modelinitradioabund_bynucindex(mgi, nucindex);
+            const double prev_abund = get_modelinitradioabund(mgi, nucindex);
             const double new_abund = prev_abund * ratio;
-            set_modelinitradioabund_bynucindex(mgi, nucindex, new_abund);
+            set_modelinitradioabund(mgi, nucindex, new_abund);
           }
         }
       }
@@ -2183,6 +2157,6 @@ void grid_init(int my_rank)
 #endif
 }
 
-double get_totmassradionuclide(const int z, const int a) { return totmassradionuclide[decay::get_nuc_index(z, a)]; }
+double get_totmassradionuclide(const int z, const int a) { return totmassradionuclide[decay::get_nucindex(z, a)]; }
 
 }  // namespace grid

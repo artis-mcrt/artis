@@ -1500,9 +1500,10 @@ double calculate_populations(const int modelgridindex)
                                             element * get_max_nions() + ion];
           }
 
-          if ((Gamma == 0) && (!NT_ON || ((globals::rpkt_emiss[modelgridindex] == 0.) &&
-                                          (grid::get_modelinitradioabund(modelgridindex, 24, 48) == 0.) &&
-                                          (grid::get_modelinitradioabund(modelgridindex, 28, 56) == 0.))))
+          if ((Gamma == 0) &&
+              (!NT_ON || ((globals::rpkt_emiss[modelgridindex] == 0.) &&
+                          (grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(24, 48)) == 0.) &&
+                          (grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(28, 56)) == 0.))))
             break;
         }
         uppermost_ion = ion;

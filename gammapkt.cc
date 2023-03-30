@@ -52,11 +52,11 @@ constexpr bool operator<(const struct gammaline &g1, const struct gammaline &g2)
   return false;
 }
 
-static void read_gamma_spectrum(const int z, const int a, const char filename[50])
+static void read_gamma_spectrum(const int nucindex, const char filename[50])
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
 {
-  printout("reading gamma spectrum for Z=%d A=%d from %s...", z, a, filename);
-  const int nucindex = decay::get_nuc_index(z, a);
+  printout("reading gamma spectrum for Z=%d A=%d from %s...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
+           filename);
 
   FILE *filein = fopen_required(filename, "r");
   int nlines = 0;
@@ -78,19 +78,18 @@ static void read_gamma_spectrum(const int z, const int a, const char filename[50
   }
   fclose(filein);
 
-  decay::set_nucdecayenergygamma(z, a, E_gamma_avg);
+  decay::set_nucdecayenergygamma(nucindex, E_gamma_avg);
 
   printout("nlines %d avg_en_gamma %g MeV\n", nlines, E_gamma_avg / MEV);
 }
 
-static void set_trivial_gamma_spectrum(const int z, const int a) {
+static void set_trivial_gamma_spectrum(const int nucindex) {
   // printout("Setting trivial gamma spectrum for z %d a %d engamma %g\n", z, a, decay::nucdecayenergygamma(z, a));
-  const int nucindex = decay::get_nuc_index(z, a);
   const int nlines = 1;
   gamma_spectra[nucindex].nlines = nlines;
   gamma_spectra[nucindex].energy = std::make_unique<double[]>(nlines);
   gamma_spectra[nucindex].probability = std::make_unique<double[]>(nlines);
-  gamma_spectra[nucindex].energy[0] = decay::nucdecayenergygamma(z, a);
+  gamma_spectra[nucindex].energy[0] = decay::nucdecayenergygamma(nucindex);
   gamma_spectra[nucindex].probability[0] = 1.;
 }
 
@@ -137,13 +136,14 @@ static void read_decaydata(void) {
     snprintf(filename2, 128, "data/%s%d_lines.txt", elnamelower, a);
 
     if (std::ifstream(filename)) {
-      read_gamma_spectrum(z, a, filename);
+      read_gamma_spectrum(nucindex, filename);
     } else if (std::ifstream(filename2)) {
-      read_gamma_spectrum(z, a, filename2);
-    } else if (decay::nucdecayenergygamma(z, a) > 0.) {
+      read_gamma_spectrum(nucindex, filename2);
+    } else if (decay::nucdecayenergygamma(nucindex) > 0.) {
       // printout("%s does not exist. Setting 100%% chance of single gamma-line with energy %g MeV\n",
       //   filename, decay::nucdecayenergygamma(z, a) / EV / 1e6);
-      set_trivial_gamma_spectrum(z, a);
+      set_trivial_gamma_spectrum(nucindex);
+
       assert_always(z != 28 || a != 56);  // Ni-56 must have a gamma spectrum
       assert_always(z != 27 || a != 56);  // Co-56 must have a gamma spectrum
       assert_always(z != 23 || a != 48);  // V-48 must have a gamma spectrum
@@ -155,22 +155,11 @@ static void read_decaydata(void) {
     }
   }
 
-  // read_gamma_spectrum(28, 56, "ni56_lines.txt");
-  //
-  // read_gamma_spectrum(27, 56, "co56_lines.txt");
-  //
-  // read_gamma_spectrum(23, 48, "v48_lines.txt");
-  //
-  // read_gamma_spectrum(24, 48, "cr48_lines.txt");
-  //
-  // read_gamma_spectrum(28, 57, "ni57_lines.txt");
-  //
-  // read_gamma_spectrum(27, 57, "co57_lines.txt");
   if (decay::nuc_exists(26, 52)) {
-    decay::set_nucdecayenergygamma(26, 52, 0.86 * MEV);  // Fe52
+    decay::set_nucdecayenergygamma(decay::get_nucindex(26, 52), 0.86 * MEV);  // Fe52
   }
   if (decay::nuc_exists(25, 52)) {
-    decay::set_nucdecayenergygamma(25, 52, 3.415 * MEV);  // Mn52
+    decay::set_nucdecayenergygamma(decay::get_nucindex(25, 52), 3.415 * MEV);  // Mn52
   }
 }
 
@@ -228,9 +217,7 @@ static void choose_gamma_ray(struct packet *pkt_ptr) {
   // Routine to choose which gamma ray line it'll be.
 
   const int nucindex = pkt_ptr->pellet_nucindex;
-  const int z = decay::get_nuc_z(nucindex);
-  const int a = decay::get_nuc_a(nucindex);
-  double E_gamma = decay::nucdecayenergygamma(z, a);  // Average energy per gamma line of a decay
+  double E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
 
   const double zrand = rng_uniform();
   int nselected = -1;

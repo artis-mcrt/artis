@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "atomic.h"
+#include "decay.h"
 #include "grid.h"
 #include "macroatom.h"
 #include "nltepop.h"
@@ -175,8 +176,8 @@ double phi(const int element, const int ion, const int modelgridindex)
         Gamma * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
 
     if (Gamma == 0. && (!NT_ON || (globals::rpkt_emiss[modelgridindex] == 0. &&
-                                   grid::get_modelinitradioabund(modelgridindex, 24, 48) == 0. &&
-                                   grid::get_modelinitradioabund(modelgridindex, 28, 56) == 0.))) {
+                                   grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(24, 48)) == 0. &&
+                                   grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(28, 56)) == 0.))) {
       printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n", element, ion);
       abort();
     }
