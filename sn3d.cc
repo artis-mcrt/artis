@@ -49,7 +49,7 @@ static FILE *estimators_file = nullptr;
 int mpi_grid_buffer_size = 0;
 char *mpi_grid_buffer = nullptr;
 
-static void initialise_linestat_file(void) {
+static void initialise_linestat_file() {
   if (globals::simulation_continued_from_saved && !RECORD_LINESTAT) {
     // only write linestat.out on the first run, unless it contains statistics for each timestep
     return;
@@ -57,21 +57,29 @@ static void initialise_linestat_file(void) {
 
   linestat_file = fopen_required("linestat.out", "w");
 
-  for (int i = 0; i < globals::nlines; i++) fprintf(linestat_file, "%g ", CLIGHT / globals::linelist[i].nu);
+  for (int i = 0; i < globals::nlines; i++) {
+    fprintf(linestat_file, "%g ", CLIGHT / globals::linelist[i].nu);
+  }
   fprintf(linestat_file, "\n");
 
-  for (int i = 0; i < globals::nlines; i++)
+  for (int i = 0; i < globals::nlines; i++) {
     fprintf(linestat_file, "%d ", get_element(globals::linelist[i].elementindex));
+  }
   fprintf(linestat_file, "\n");
 
-  for (int i = 0; i < globals::nlines; i++)
+  for (int i = 0; i < globals::nlines; i++) {
     fprintf(linestat_file, "%d ", get_ionstage(globals::linelist[i].elementindex, globals::linelist[i].ionindex));
+  }
   fprintf(linestat_file, "\n");
 
-  for (int i = 0; i < globals::nlines; i++) fprintf(linestat_file, "%d ", globals::linelist[i].upperlevelindex + 1);
+  for (int i = 0; i < globals::nlines; i++) {
+    fprintf(linestat_file, "%d ", globals::linelist[i].upperlevelindex + 1);
+  }
   fprintf(linestat_file, "\n");
 
-  for (int i = 0; i < globals::nlines; i++) fprintf(linestat_file, "%d ", globals::linelist[i].lowerlevelindex + 1);
+  for (int i = 0; i < globals::nlines; i++) {
+    fprintf(linestat_file, "%d ", globals::linelist[i].lowerlevelindex + 1);
+  }
   fprintf(linestat_file, "\n");
 
   fflush(linestat_file);
@@ -80,7 +88,7 @@ static void initialise_linestat_file(void) {
 
 static void write_deposition_file(const int nts, const int my_rank, const int nstart, const int ndo) {
   printout("Calculating deposition rates...\n");
-  time_t time_write_deposition_file_start = time(nullptr);
+  time_t const time_write_deposition_file_start = time(nullptr);
   double mtot = 0.;
 
   // calculate analytical decay rates
@@ -390,7 +398,8 @@ static void write_temp_packetsfile(const int timestep, const int my_rank, const 
       printout("ERROR: Could not open file '%s' for mode 'wb'. \n", filename);
       write_success = false;
     } else {
-      write_success = (std::fwrite(pkt, sizeof(struct packet), globals::npkts, packets_file) == (size_t)globals::npkts);
+      write_success = (std::fwrite(pkt, sizeof(struct packet), globals::npkts, packets_file) ==
+                       static_cast<size_t>(globals::npkts));
       if (!write_success) {
         printout("fwrite() FAILED! will retry...\n");
       }
@@ -408,7 +417,7 @@ static void remove_temp_packetsfile(const int timestep, const int my_rank) {
   char filename[128];
   snprintf(filename, 128, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
-  if (!access(filename, F_OK)) {
+  if (access(filename, F_OK) == 0) {
     remove(filename);
     printout("Deleted %s\n", filename);
   }
@@ -418,7 +427,7 @@ static void remove_grid_restart_data(const int timestep) {
   char prevfilename[128];
   snprintf(prevfilename, 128, "gridsave_ts%d.tmp", timestep);
 
-  if (!access(prevfilename, F_OK)) {
+  if (access(prevfilename, F_OK) == 0) {
     remove(prevfilename);
     printout("Deleted %s\n", prevfilename);
   }
@@ -447,12 +456,13 @@ static bool walltime_sufficient_to_continue(const int nts, const int nts_prev, c
     // communicate whatever decision the rank 0 process decided, just in case they differ
     MPI_Bcast(&do_this_full_loop, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
 #endif
-    if (do_this_full_loop)
+    if (do_this_full_loop) {
       printout("TIMED_RESTARTS: Going to continue since remaining time %d s >= 1.5 * time_per_timestep\n",
                wallclock_remaining_seconds);
-    else
+    } else {
       printout("TIMED_RESTARTS: Going to terminate since remaining time %d s < 1.5 * time_per_timestep\n",
                wallclock_remaining_seconds);
+    }
   }
   return do_this_full_loop;
 }
@@ -529,7 +539,9 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-    if (my_rank == 0) remove_grid_restart_data(nts - 1);
+    if (my_rank == 0) {
+      remove_grid_restart_data(nts - 1);
+    }
 
     // delete temp packets files from previous timestep now that all restart data for the new timestep is available
     remove_temp_packetsfile(nts - 1, my_rank);
@@ -654,9 +666,13 @@ static bool do_timestep(const int nts, const int titer, const int my_rank, const
         /// Print net absorption/emission in lines to the linestat_file
         /// Currently linestat information is only properly implemented for MPI only runs
         /// For hybrid runs only data from thread 0 is recorded
-        for (int i = 0; i < globals::nlines; i++) fprintf(linestat_file, "%d ", globals::ecounter[i]);
+        for (int i = 0; i < globals::nlines; i++) {
+          fprintf(linestat_file, "%d ", globals::ecounter[i]);
+        }
         fprintf(linestat_file, "\n");
-        for (int i = 0; i < globals::nlines; i++) fprintf(linestat_file, "%d ", globals::acounter[i]);
+        for (int i = 0; i < globals::nlines; i++) {
+          fprintf(linestat_file, "%d ", globals::acounter[i]);
+        }
         fprintf(linestat_file, "\n");
         fflush(linestat_file);
       }
@@ -844,7 +860,8 @@ int main(int argc, char *argv[]) {
   printout("MPI is disabled in this build\n");
 #endif
 
-  globals::kappa_rpkt_cont = (struct rpkt_cont_opacity *)calloc(get_max_threads(), sizeof(struct rpkt_cont_opacity));
+  globals::kappa_rpkt_cont =
+      static_cast<struct rpkt_cont_opacity *>(calloc(get_max_threads(), sizeof(struct rpkt_cont_opacity)));
   assert_always(globals::kappa_rpkt_cont != nullptr);
 
   /// Using this and the global variable output_file opens and closes the output_file
