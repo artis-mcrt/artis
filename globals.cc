@@ -47,7 +47,7 @@ int *ecounter = nullptr;
 int *acounter = nullptr;
 
 int nprocs_exspec = 1;
-bool do_emission_res = 1;
+bool do_emission_res = true;
 
 bool file_set;  // 1 if the output files already exist. 0 otherwise.
 std::unique_ptr<bool[]> startofline;
