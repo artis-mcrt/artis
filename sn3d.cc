@@ -947,9 +947,9 @@ int main(int argc, char *argv[]) {
   /// The next loop is over all grid cells. For parallelisation, we want to split this loop between
   /// processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
   /// cells are sent to processes 0 ... process n_leftover -1.
-  int nstart = grid::get_nstart(my_rank);
-  int ndo = grid::get_ndo(my_rank);
-  int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
+  int const nstart = grid::get_nstart(my_rank);
+  int const ndo = grid::get_ndo(my_rank);
+  int const ndo_nonempty = grid::get_ndo_nonempty(my_rank);
   printout("process rank %d (global max rank %d) assigned %d modelgrid cells (%d nonempty)", my_rank,
            globals::nprocs - 1, ndo, ndo_nonempty);
   if (ndo > 0) {
@@ -960,7 +960,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-  int maxndo = grid::get_maxndo();
+  int const maxndo = grid::get_maxndo();
   /// Initialise the exchange buffer
   /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
   /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
