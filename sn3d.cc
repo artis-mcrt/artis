@@ -1114,7 +1114,9 @@ int main(int argc, char *argv[]) {
   }
 
   macroatom_close_file();
-  if (NLTE_POPS_ON) nltepop_close_file();
+  if (NLTE_POPS_ON) {
+    nltepop_close_file();
+  }
 
   radfield::close_file();
   nonthermal::close_file();
