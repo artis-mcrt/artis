@@ -6,7 +6,6 @@
 #include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_vector_double.h>
-#include <math.h>
 
 #include <algorithm>
 #include <cmath>
