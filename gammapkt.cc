@@ -71,8 +71,8 @@ static void read_gamma_spectrum(const int nucindex, const char filename[50])
 
   double E_gamma_avg = 0.;
   for (int n = 0; n < nlines; n++) {
-    double en_mev;
-    double prob;
+    double en_mev = 0.;
+    double prob = 0.;
     assert_always(fscanf(filein, "%lg %lg", &en_mev, &prob) == 2);
     gamma_spectra[nucindex].energy[n] = en_mev * MEV;
     gamma_spectra[nucindex].probability[n] = prob;
@@ -121,7 +121,7 @@ static void read_decaydata() {
     }
 
     const char *elname = decay::get_elname(z);
-    const int elnamelen = strlen(elname);  // excluding the NULL terminator
+    const size_t elnamelen = strlen(elname);  // excluding the NULL terminator
     assert_always(elnamelen < 7);
     char elnamelower[8];
     for (int i = 0; i < elnamelen; i++) {
@@ -468,12 +468,7 @@ static void compton_scatter(struct packet *pkt_ptr)
 
     // Now change the direction through the scattering angle.
 
-    double cos_theta;
-    if (xx < THOMSON_LIMIT) {
-      cos_theta = thomson_angle();
-    } else {
-      cos_theta = 1. - ((f - 1) / xx);
-    }
+    const double cos_theta = (xx < THOMSON_LIMIT) ? thomson_angle() : 1. - ((f - 1) / xx);
 
     double new_dir[3];
     scatter_dir(cmf_dir, cos_theta, new_dir);
