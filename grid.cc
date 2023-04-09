@@ -270,7 +270,7 @@ static void set_rho_tmin(int modelgridindex, float x) { modelgrid[modelgridindex
 
 static void set_rho(int modelgridindex, float x) { modelgrid[modelgridindex].rho = x; }
 
-void set_nne(int modelgridindex, float x) { modelgrid[modelgridindex].nne = x; }
+void set_nne(int modelgridindex, float nne) { modelgrid[modelgridindex].nne = nne; }
 
 void set_nnetot(int modelgridindex, float x) {
   assert_always(x >= 0.);

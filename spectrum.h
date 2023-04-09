@@ -24,7 +24,7 @@ struct spec {
 };
 
 void write_spectrum(const std::string &spec_filename, const char *emission_filename, const char *trueemission_filename,
-                    const char *absorption_filename, struct spec *spectra, int num_timesteps);
+                    const char *absorption_filename, struct spec *spectra, int numtimesteps);
 
 void write_specpol(const std::string &specpol_filename, const std::string &emission_filename,
                    const std::string &absorption_filename, struct spec *stokes_i, struct spec *stokes_q,
