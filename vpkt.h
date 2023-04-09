@@ -12,11 +12,11 @@ void lorentz(const double *e_rf, const double *n_rf, const double *v, double *e_
 
 void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *obs, int realtype);
 void add_to_vspecpol(struct packet *pkt_ptr, int bin, int ind, double t_arrive);
-void init_vspecpol(void);
-void read_parameterfile_vpkt(void);
+void init_vspecpol();
+void read_parameterfile_vpkt();
 void write_vspecpol(FILE *specpol_file);
 void read_vspecpol(int my_rank, int nts);
-void init_vpkt_grid(void);
+void init_vpkt_grid();
 void add_to_vpkt_grid(struct packet *dummy_ptr, const double *vel, int bin_range, int bin, const double *obs);
 void write_vpkt_grid(FILE *vpkt_grid_file);
 void read_vpkt_grid(FILE *vpkt_grid_file);

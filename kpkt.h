@@ -7,7 +7,7 @@
 
 namespace kpkt {
 
-void setup_coolinglist(void);
+void setup_coolinglist();
 void calculate_cooling_rates(int modelgridindex, struct heatingcoolingrates *heatingcoolingrates);
 double do_kpkt_bb(struct packet *pkt_ptr);
 double do_kpkt(struct packet *pkt_ptr, double t2, int nts);
