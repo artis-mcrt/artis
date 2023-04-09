@@ -2220,7 +2220,7 @@ void update_parameterfile(int nts)
         line.assign(c_line);
       }
 
-      if (noncomment_linenum < inputlinecomments.size()) {
+      if (noncomment_linenum < static_cast<int>(inputlinecomments.size())) {
         const int commentstart = 25;
 
         // truncate any existing comment on the line
