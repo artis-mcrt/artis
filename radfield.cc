@@ -477,7 +477,9 @@ int get_Jblueindex(const int lineindex)
   //     return i;
   // }
 
-  if constexpr (!DETAILED_LINE_ESTIMATORS_ON) return -1;
+  if constexpr (!DETAILED_LINE_ESTIMATORS_ON) {
+    return -1;
+  }
 
   // use a binary search, assuming the list is sorted
 
@@ -568,7 +570,9 @@ static inline float get_bin_T_R(int modelgridindex, int binindex) {
 }
 
 static inline int select_bin(double nu) {
-  if (nu < get_bin_nu_lower(0)) return -2;  // out of range, nu lower than lowest bin's lower boundary
+  if (nu < get_bin_nu_lower(0)) {
+    return -2;  // out of range, nu lower than lowest bin's lower boundary
+  }
 
   // find the lowest frequency bin with radfieldbin_nu_upper > nu
   const auto bin = std::upper_bound(&radfieldbin_nu_upper[0], &radfieldbin_nu_upper[RADFIELDBINCOUNT], nu);
@@ -736,7 +740,9 @@ static void update_bfestimators(const int modelgridindex, const double distance_
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
   assert_always(bfrate_raw != nullptr);
 
-  if (distance_e_cmf == 0) return;
+  if (distance_e_cmf == 0) {
+    return;
+  }
 
   const int nbfcontinua = globals::nbfcontinua;
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
@@ -844,7 +850,9 @@ void update_estimators(const int modelgridindex, const double distance_e_cmf, co
 }
 
 void update_lineestimator(const int modelgridindex, const int lineindex, const double increment) {
-  if (!DETAILED_LINE_ESTIMATORS_ON) return;
+  if (!DETAILED_LINE_ESTIMATORS_ON) {
+    return;
+  }
 
   const int jblueindex = get_Jblueindex(lineindex);
   if (jblueindex >= 0) {
@@ -916,7 +924,9 @@ constexpr double gsl_integrand_planck(const double nu, void *paras) {
 
   double integrand = TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / (std::expm1(HOVERKB * nu / T_R));
 
-  if (prefactor == TIMES_NU) integrand *= nu;
+  if (prefactor == TIMES_NU) {
+    integrand *= nu;
+  }
 
   return integrand;
 }
@@ -1042,7 +1052,9 @@ static float find_T_R(int modelgridindex, int binindex) {
   // printout("find_T_R: bin %4d delta_nu_bar(T_R_min) %g, delta_nu_bar(T_R_max) %g\n",
   //          binindex, delta_nu_bar_min,delta_nu_bar_max);
 
-  if (!std::isfinite(delta_nu_bar_min) || !std::isfinite(delta_nu_bar_max)) delta_nu_bar_max = delta_nu_bar_min = -1;
+  if (!std::isfinite(delta_nu_bar_min) || !std::isfinite(delta_nu_bar_max)) {
+    delta_nu_bar_max = delta_nu_bar_min = -1;
+  }
 
   if (delta_nu_bar_min * delta_nu_bar_max < 0) {
     /// If there is a root in the interval, solve for T_R
@@ -1074,7 +1086,9 @@ static float find_T_R(int modelgridindex, int binindex) {
       //          binindex,iteration_num,T_R_lower,T_R_upper,T_R,delta_nu_bar(T_R,&paras),status);
     } while (status == GSL_CONTINUE && iteration_num < maxit);
 
-    if (status == GSL_CONTINUE) printout("[warning] find_T_R: T_R did not converge within %d iterations\n", maxit);
+    if (status == GSL_CONTINUE) {
+      printout("[warning] find_T_R: T_R did not converge within %d iterations\n", maxit);
+    }
 
     gsl_root_fsolver_free(T_R_solver);
   } else if (delta_nu_bar_max < 0) {
@@ -1148,7 +1162,9 @@ void fit_parameters(int modelgridindex, int timestep)
     }
 
     double J_bin_sum = 0.;
-    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) J_bin_sum += get_bin_J(modelgridindex, binindex);
+    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
+      J_bin_sum += get_bin_J(modelgridindex, binindex);
+    }
 
     printout("radfield bins sum to J of %g (%.1f%% of total J).\n", J_bin_sum, 100. * J_bin_sum / J[modelgridindex]);
     printout("radfield: Finding parameters for %d bins...\n", RADFIELDBINCOUNT);
@@ -1156,7 +1172,9 @@ void fit_parameters(int modelgridindex, int timestep)
     double J_bin_max = 0.;
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
       const double J_bin = get_bin_J(modelgridindex, binindex);
-      if (J_bin > J_bin_max) J_bin_max = J_bin;
+      if (J_bin > J_bin_max) {
+        J_bin_max = J_bin;
+      }
     }
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
@@ -1611,10 +1629,14 @@ void read_restart_data(FILE *gridsave_file) {
                          &nu_upper_last_initial_in, &T_R_min_in, &T_R_max_in) == 5);
 
     double nu_lower_first_ratio = nu_lower_first_initial_in / nu_lower_first_initial;
-    if (nu_lower_first_ratio > 1.0) nu_lower_first_ratio = 1 / nu_lower_first_ratio;
+    if (nu_lower_first_ratio > 1.0) {
+      nu_lower_first_ratio = 1 / nu_lower_first_ratio;
+    }
 
     double nu_upper_last_ratio = nu_upper_last_initial_in / nu_upper_last_initial;
-    if (nu_upper_last_ratio > 1.0) nu_upper_last_ratio = 1 / nu_upper_last_ratio;
+    if (nu_upper_last_ratio > 1.0) {
+      nu_upper_last_ratio = 1 / nu_upper_last_ratio;
+    }
 
     if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != T_R_min || T_R_max_in != T_R_max ||
         nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999) {
@@ -1742,7 +1764,9 @@ inline int integrate(const gsl_function *f, double nu_a, double nu_b, double eps
 
       const int maxbinplusone = (binindex_b < 0) ? RADFIELDBINCOUNT : binindex_b;
 
-      for (int binindex = binindex_a; binindex < maxbinplusone; binindex++) pts[npts++] = get_bin_nu_upper(binindex);
+      for (int binindex = binindex_a; binindex < maxbinplusone; binindex++) {
+        pts[npts++] = get_bin_nu_upper(binindex);
+      }
 
       pts[npts++] = nu_b;
     }

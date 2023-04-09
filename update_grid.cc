@@ -1565,7 +1565,9 @@ double calculate_populations(const int modelgridindex)
       // %g\n",modelgridindex,element,uppermost_ion,factor); elements[element].uppermost_ion =
       // uppermost_ion;
       grid::set_elements_uppermost_ion(modelgridindex, element, uppermost_ion);
-      if (uppermost_ion == 0) only_neutral_ions++;
+      if (uppermost_ion == 0) {
+        only_neutral_ions++;
+      }
       nelements_in_cell++;
     }
   }
@@ -1702,7 +1704,9 @@ double calculate_populations(const int modelgridindex)
         if (ion <= uppermost_ion) {
           if (nnelement > 0) {
             nnion = nnelement * ionfractions[ion];
-            if (nnion < MINPOP) nnion = MINPOP;
+            if (nnion < MINPOP) {
+              nnion = MINPOP;
+            }
           } else {
             nnion = 0.;
           }

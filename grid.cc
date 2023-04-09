@@ -592,7 +592,9 @@ static void calculate_kappagrey() {
       if (get_rho_tmin(mgi) > 0.) {
         double kappagrey = (0.9 * get_ffegrp(mgi) + 0.1);
 
-        if (get_rho_tmin(mgi) > globals::rho_crit) kappagrey *= globals::rho_crit / get_rho_tmin(mgi);
+        if (get_rho_tmin(mgi) > globals::rho_crit) {
+          kappagrey *= globals::rho_crit / get_rho_tmin(mgi);
+        }
 
         set_kappagrey(mgi, kappagrey);
       } else if (get_rho_tmin(mgi) == 0.) {
@@ -1016,7 +1018,9 @@ static void abundances_read() {
     }
 
     if (get_numassociatedcells(mgi) > 0) {
-      if (threedimensional || normfactor <= 0.) normfactor = 1.;
+      if (threedimensional || normfactor <= 0.) {
+        normfactor = 1.;
+      }
 
       for (int element = 0; element < get_nelements(); element++) {
         /// now set the abundances (by mass) of included elements, i.e.
@@ -2126,7 +2130,9 @@ void grid_init(int my_rank)
   // the model cells that are not associated with any propagation cells
   if (GRID_TYPE == GRID_UNIFORM && get_model_type() == RHO_1D_READ && globals::rank_in_node == 0) {
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-      if (totmassradionuclide[nucindex] <= 0) continue;
+      if (totmassradionuclide[nucindex] <= 0) {
+        continue;
+      }
 
       double totmassradionuclide_actual = 0.;
       for (int mgi = 0; mgi < get_npts_model(); mgi++) {

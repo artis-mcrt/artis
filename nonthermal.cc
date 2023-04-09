@@ -266,7 +266,9 @@ static void read_auger_data() {
   const int xrayg[7] = {2, 2, 2, 4, 2, 2, 4};  // g statistical weight = 2j + 1
 
   while (!feof(augerfile)) {
-    if (line != fgets(line, 151, augerfile)) break;
+    if (line != fgets(line, 151, augerfile)) {
+      break;
+    }
 
     int Z = -1;
     int ionstage = -1;
@@ -734,7 +736,9 @@ void close_file() {
   free(deposition_rate_density);
   free(deposition_rate_density_timestep);
 
-  if (!NT_ON || !NT_SOLVE_SPENCERFANO) return;
+  if (!NT_ON || !NT_SOLVE_SPENCERFANO) {
+    return;
+  }
 
   if (nonthermalfile != nullptr) {
     fclose(nonthermalfile);
@@ -796,7 +800,9 @@ static int get_energyindex_ev_gteq(const double energy_ev)
 }
 
 static double get_y(const int modelgridindex, const double energy_ev) {
-  if (energy_ev <= 0) return 0.;
+  if (energy_ev <= 0) {
+    return 0.;
+  }
 
 #if (SF_USE_LOG_E_INCREMENT)
   const int index = log(energy_ev / SF_EMIN) / delta_log_e;
@@ -830,7 +836,9 @@ constexpr double electron_loss_rate(const double energy, const double nne)
 // nne is the thermal electron density [cm^-3]
 // return units are erg / cm
 {
-  if (energy <= 0.) return 0;
+  if (energy <= 0.) {
+    return 0;
+  }
 
   // normally set to 1.0, but Shingles et al. (2021) boosted this to increase heating
   const double boostfactor = 1.;
@@ -850,7 +858,9 @@ constexpr double xs_excitation(const struct linelist_entry *line, const double e
 // collisional excitation cross section in cm^2
 // energies are in erg
 {
-  if (energy < epsilon_trans) return 0.;
+  if (energy < epsilon_trans) {
+    return 0.;
+  }
 
   const double coll_str = line->coll_str;
 
@@ -892,7 +902,9 @@ static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const i
 
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans / EV);
 
-    for (int j = 0; j < en_startindex; j++) gsl_vector_set(xs_excitation_vec, j, 0.);
+    for (int j = 0; j < en_startindex; j++) {
+      gsl_vector_set(xs_excitation_vec, j, 0.);
+    }
 
     for (int j = en_startindex; j < SFPTS; j++) {
       const double energy = gsl_vector_get(envec, j) * EV;
@@ -916,7 +928,9 @@ static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const i
 
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans_ev);
 
-    for (int j = 0; j < en_startindex; j++) gsl_vector_set(xs_excitation_vec, j, 0.);
+    for (int j = 0; j < en_startindex; j++) {
+      gsl_vector_set(xs_excitation_vec, j, 0.);
+    }
 
     // U = en / epsilon
     // g_bar = A * log(U) + b
@@ -1171,8 +1185,12 @@ float get_nt_frac_heating(const int modelgridindex) {
 }
 
 static float get_nt_frac_ionization(const int modelgridindex) {
-  if (!NT_ON) return 0.;
-  if (!NT_SOLVE_SPENCERFANO) return 0.02;
+  if (!NT_ON) {
+    return 0.;
+  }
+  if (!NT_SOLVE_SPENCERFANO) {
+    return 0.02;
+  }
 
   const float frac_ionization = nt_solution[modelgridindex].frac_ionization;
 
@@ -1186,7 +1204,9 @@ static float get_nt_frac_ionization(const int modelgridindex) {
 }
 
 static float get_nt_frac_excitation(const int modelgridindex) {
-  if (!NT_ON || !NT_SOLVE_SPENCERFANO) return 0.;
+  if (!NT_ON || !NT_SOLVE_SPENCERFANO) {
+    return 0.;
+  }
 
   const float frac_excitation = nt_solution[modelgridindex].frac_excitation;
 
@@ -1399,7 +1419,9 @@ static double calculate_nt_ionization_ratecoeff(const int modelgridindex, const 
 
       if (assumeshellpotentialisvalence) {
         const double ionpot_shell = colliondata[collionindex].ionpot_ev * EV;
-        if (ionpot_valence < 0) ionpot_valence = ionpot_shell;
+        if (ionpot_valence < 0) {
+          ionpot_valence = ionpot_shell;
+        }
 
         // ensure that the first shell really was the valence shell (we assumed ascending energy order)
         assert_always(ionpot_shell >= ionpot_valence);
@@ -1476,7 +1498,9 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
       eta_sum += frac_ionization_shell;
       const double ionpot_shell = colliondata[collionindex].ionpot_ev * EV;
 
-      if (ionpot_valence < 0) ionpot_valence = ionpot_shell;
+      if (ionpot_valence < 0) {
+        ionpot_valence = ionpot_shell;
+      }
 
       // ensure that the first shell really was the valence shell (we assumed ascending energy order)
       assert_always(ionpot_shell >= ionpot_valence);
@@ -1549,7 +1573,9 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
 
   if (matching_nlsubshell_count > 0) {
     double eff_ionpot = X_ion / eta_over_ionpot_sum;
-    if (!std::isfinite(eff_ionpot)) eff_ionpot = 0.;
+    if (!std::isfinite(eff_ionpot)) {
+      eff_ionpot = 0.;
+    }
     nt_solution[modelgridindex].eff_ionpot[get_uniqueionindex(element, ion)] = eff_ionpot;
   } else {
     printout(
@@ -2150,7 +2176,9 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
         for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++) {
           const double probability = nt_ionization_upperion_probability(modelgridindex, element, ion, upperion, false);
           prob_sum += probability;
-          if (probability > 0.) printout(" %d: %.3f", get_ionstage(element, upperion), probability);
+          if (probability > 0.) {
+            printout(" %d: %.3f", get_ionstage(element, upperion), probability);
+          }
         }
         printout("\n");
         assert_always((fabs(prob_sum - 1.0) <= 1e-2) ||
@@ -2161,7 +2189,9 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
         for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++) {
           const double probability = nt_ionization_upperion_probability(modelgridindex, element, ion, upperion, true);
           enfrac_sum += probability;
-          if (probability > 0.) printout(" %d: %.3f", get_ionstage(element, upperion), probability);
+          if (probability > 0.) {
+            printout(" %d: %.3f", get_ionstage(element, upperion), probability);
+          }
         }
         printout("\n");
         assert_always(fabs(enfrac_sum - 1.0) <= 1e-2 ||
@@ -2674,17 +2704,25 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
         const int ionstage = get_ionstage(element, ion);
         if (first_included_ion_of_element) {
           printout("  including Z=%2d ion_stages: ", Z);
-          for (int i = 1; i < get_ionstage(element, ion); i++) printout("  ");
+          for (int i = 1; i < get_ionstage(element, ion); i++) {
+            printout("  ");
+          }
           first_included_ion_of_element = false;
         }
 
         printout("%d ", ionstage);
 
-        if (enable_sfexcitation) sfmatrix_add_excitation(sfmatrix, modelgridindex, element, ion);
+        if (enable_sfexcitation) {
+          sfmatrix_add_excitation(sfmatrix, modelgridindex, element, ion);
+        }
 
-        if (enable_sfionization && (ion < nions - 1)) sfmatrix_add_ionization(sfmatrix, Z, ionstage, nnion);
+        if (enable_sfionization && (ion < nions - 1)) {
+          sfmatrix_add_ionization(sfmatrix, Z, ionstage, nnion);
+        }
       }
-      if (!first_included_ion_of_element) printout("\n");
+      if (!first_included_ion_of_element) {
+        printout("\n");
+      }
     }
   }
 
@@ -2718,7 +2756,9 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   gsl_matrix_free(sfmatrix);
   gsl_vector_free(rhsvec);
 
-  if (timestep % 10 == 0) nt_write_to_file(modelgridindex, timestep, iteration);
+  if (timestep % 10 == 0) {
+    nt_write_to_file(modelgridindex, timestep, iteration);
+  }
 
   analyse_sf_solution(modelgridindex, timestep, enable_sfexcitation);
 

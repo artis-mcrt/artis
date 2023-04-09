@@ -11,7 +11,9 @@ void write_light_curve(const std::string &lc_filename, const int current_abin, c
   assert_always(numtimesteps <= globals::ntstep);
 
   std::ofstream lc_file(lc_filename);
-  if (!lc_file) throw std::system_error(errno, std::system_category(), "failed to open " + lc_filename);
+  if (!lc_file) {
+    throw std::system_error(errno, std::system_category(), "failed to open " + lc_filename);
+  }
 
   printout("Writing %s\n", lc_filename.c_str());
 

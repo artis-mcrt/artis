@@ -58,10 +58,14 @@ static void eliminate_nlte_matrix_rowcol(const int index, const int gs_index, gs
   const gsl_matrix rate_matrix_var = *rate_matrix;
 
   const int colcount = rate_matrix_var.size2;
-  for (int column = 0; column < colcount; column++) gsl_matrix_set(rate_matrix, index, column, 0.0);
+  for (int column = 0; column < colcount; column++) {
+    gsl_matrix_set(rate_matrix, index, column, 0.0);
+  }
 
   const int rowcount = rate_matrix_var.size1;
-  for (int row = 1; row < rowcount; row++) gsl_matrix_set(rate_matrix, row, index, 0.0);
+  for (int row = 1; row < rowcount; row++) {
+    gsl_matrix_set(rate_matrix, row, index, 0.0);
+  }
 
   gsl_matrix_set(rate_matrix, index, gs_index, -1.0);
   gsl_matrix_set(rate_matrix, index, index, 1.0);
@@ -80,13 +84,17 @@ static void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_v
     double row_max = 0.0;
     for (int column = 0; column < nlte_dimension; column++) {
       const double element_value = fabs(gsl_matrix_get(rate_matrix, index, column));
-      if (element_value > row_max) row_max = element_value;
+      if (element_value > row_max) {
+        row_max = element_value;
+      }
     }
     double col_max = 0.0;
     for (int row = 1; row < nlte_dimension; row++)  // skip the normalisation row 0
     {
       const double element_value = fabs(gsl_matrix_get(rate_matrix, row, index));
-      if (element_value > col_max) col_max = element_value;
+      if (element_value > col_max) {
+        col_max = element_value;
+      }
     }
     int ion = -1;
     int level = -1;
@@ -328,7 +336,9 @@ static void print_level_rates(const int modelgridindex, const int timestep, cons
       ntcoll_bf_out_total);
 
   for (int index = 0; index < nlte_dimension; index++) {
-    if (index == selected_index) continue;
+    if (index == selected_index) {
+      continue;
+    }
     int ion;
     int level;
     get_ion_level_of_nlte_vector_index(index, element, &ion, &level);

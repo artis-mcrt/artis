@@ -514,7 +514,9 @@ int get_nucstring_a(const std::string &strnuc)
   // find first digit character
   size_t i = 0;
   for (; i < strnuc.length(); i++) {
-    if (isdigit(strnuc[i])) break;
+    if (isdigit(strnuc[i])) {
+      break;
+    }
   }
 
   // remove the non-digit charts

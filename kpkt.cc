@@ -288,7 +288,9 @@ static void set_ncoolingterms() {
       globals::elements[element].ions[ion].coolingoffset = globals::ncoolingterms;
 
       /// Ionised ions add one ff-cooling term
-      if (get_ionstage(element, ion) > 1) ionterms++;
+      if (get_ionstage(element, ion) > 1) {
+        ionterms++;
+      }
       /// Ionisinglevels below the closure ion add to bf and col ionisation
       /// All the levels add number of col excitations
       const int nlevels = get_nlevels(element, ion);
@@ -410,7 +412,9 @@ static double sample_planck(const double T)
     const double zrand = rng_uniform();
     const double zrand2 = rng_uniform();
     const double nu = NU_MIN_R + zrand * (NU_MAX_R - NU_MIN_R);
-    if (zrand2 * B_peak <= radfield::dbb(nu, T, 1)) return nu;
+    if (zrand2 * B_peak <= radfield::dbb(nu, T, 1)) {
+      return nu;
+    }
     // printout("[debug] sample_planck: planck_sampling %d\n", i);
   }
 }
@@ -482,9 +486,13 @@ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
         coolingsum += grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion];
         // printout("Z=%d, ionstage %d, coolingsum %g\n", get_element(element), get_ionstage(element, ion),
         // coolingsum);
-        if (coolingsum > rndcool_ion) break;
+        if (coolingsum > rndcool_ion) {
+          break;
+        }
       }
-      if (coolingsum > rndcool_ion) break;
+      if (coolingsum > rndcool_ion) {
+        break;
+      }
     }
     // printout("kpkt selected Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
 

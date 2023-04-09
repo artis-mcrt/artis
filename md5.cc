@@ -169,10 +169,14 @@ void md5_final(MD5_CTX *ctx, BYTE hash[]) {
   // Pad whatever data is left in the buffer.
   if (ctx->datalen < 56) {
     ctx->data[i++] = 0x80;
-    while (i < 56) ctx->data[i++] = 0x00;
+    while (i < 56) {
+      ctx->data[i++] = 0x00;
+    }
   } else if (ctx->datalen >= 56) {
     ctx->data[i++] = 0x80;
-    while (i < 64) ctx->data[i++] = 0x00;
+    while (i < 64) {
+      ctx->data[i++] = 0x00;
+    }
     md5_transform(ctx, ctx->data);
     memset(ctx->data, 0, 56);
   }

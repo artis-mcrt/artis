@@ -248,7 +248,9 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
           ldist = CLIGHT * t_current * (dummy_ptr->nu_cmf / nutrans - 1);
         }
 
-        if (ldist < 0.) printout("[warning] get_event: ldist < 0 %g\n", ldist);
+        if (ldist < 0.) {
+          printout("[warning] get_event: ldist < 0 %g\n", ldist);
+        }
 
         if (ldist > sdist) { /* exit the while loop if you reach the boundary; go back to the previous transition to
                                 start next cell with the excluded line */
@@ -304,7 +306,9 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
     // printout("dummy->nu_cmf = %g \n",dummy_ptr->nu_cmf);
     mgi = grid::get_cell_modelgridindex(dummy_ptr->where);
     // break if you reach an empty cell
-    if (mgi == grid::get_npts_model()) break;
+    if (mgi == grid::get_npts_model()) {
+      break;
+    }
 
     /* kill vpkt with pass through a thick cell */
     if (grid::modelgrid[mgi].thick == 1) {
@@ -378,7 +382,9 @@ int check_tau(double *tau, double *tau_max) {
   int count = 0;
 
   for (int i = 0; i < Nspectra; i++) {
-    if (tau[i] > *tau_max) count += 1;
+    if (tau[i] > *tau_max) {
+      count += 1;
+    }
   }
 
   if (count == Nspectra) {
@@ -615,7 +621,9 @@ void add_to_vpkt_grid(struct packet *dummy_ptr, const double *vel, int bin_range
   }
 
   // Outside the grid
-  if (fabs(vref1) >= globals::vmax || fabs(vref2) >= globals::vmax) return;
+  if (fabs(vref1) >= globals::vmax || fabs(vref2) >= globals::vmax) {
+    return;
+  }
 
   // Bin size
   const double ybin = 2 * globals::vmax / NY_VGRID;
@@ -919,15 +927,31 @@ double rot_angle(double *n1, double *n2, double *ref1, double *ref2) {
   double cos_stokes_rot_1 = dot(ref1_sc, ref1);
   double cos_stokes_rot_2 = dot(ref1_sc, ref2);
 
-  if (cos_stokes_rot_1 < -1) cos_stokes_rot_1 = -1;
-  if (cos_stokes_rot_1 > 1) cos_stokes_rot_1 = 1;
+  if (cos_stokes_rot_1 < -1) {
+    cos_stokes_rot_1 = -1;
+  }
+  if (cos_stokes_rot_1 > 1) {
+    cos_stokes_rot_1 = 1;
+  }
 
-  if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 > 0)) i = acos(cos_stokes_rot_1);
-  if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 < 0)) i = 2 * acos(-1.) - acos(cos_stokes_rot_1);
-  if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 < 0)) i = acos(-1.) + acos(fabs(cos_stokes_rot_1));
-  if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 > 0)) i = acos(-1.) - acos(fabs(cos_stokes_rot_1));
-  if (cos_stokes_rot_1 == 0) i = acos(-1.) / 2.;
-  if (cos_stokes_rot_2 == 0) i = 0.0;
+  if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 > 0)) {
+    i = acos(cos_stokes_rot_1);
+  }
+  if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 < 0)) {
+    i = 2 * acos(-1.) - acos(cos_stokes_rot_1);
+  }
+  if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 < 0)) {
+    i = acos(-1.) + acos(fabs(cos_stokes_rot_1));
+  }
+  if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 > 0)) {
+    i = acos(-1.) - acos(fabs(cos_stokes_rot_1));
+  }
+  if (cos_stokes_rot_1 == 0) {
+    i = acos(-1.) / 2.;
+  }
+  if (cos_stokes_rot_2 == 0) {
+    i = 0.0;
+  }
 
   if (!std::isfinite(i)) {
     printout("Warning NaN: %3.6f \t %3.6f \t %3.6f \n", cos_stokes_rot_1, cos_stokes_rot_2, acos(cos_stokes_rot_1));
@@ -979,17 +1003,29 @@ void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cm
     cos2rot_angle = Q0 / p;
     sin2rot_angle = U0 / p;
 
-    if ((cos2rot_angle > 0) && (sin2rot_angle > 0)) rot_angle = acos(Q0 / p) / 2.;
-    if ((cos2rot_angle < 0) && (sin2rot_angle > 0)) rot_angle = (acos(-1.) - acos(fabs(Q0 / p))) / 2.;
-    if ((cos2rot_angle < 0) && (sin2rot_angle < 0)) rot_angle = (acos(-1.) + acos(fabs(Q0 / p))) / 2.;
-    if ((cos2rot_angle > 0) && (sin2rot_angle < 0)) rot_angle = (2. * acos(-1.) - acos(fabs(Q0 / p))) / 2.;
+    if ((cos2rot_angle > 0) && (sin2rot_angle > 0)) {
+      rot_angle = acos(Q0 / p) / 2.;
+    }
+    if ((cos2rot_angle < 0) && (sin2rot_angle > 0)) {
+      rot_angle = (acos(-1.) - acos(fabs(Q0 / p))) / 2.;
+    }
+    if ((cos2rot_angle < 0) && (sin2rot_angle < 0)) {
+      rot_angle = (acos(-1.) + acos(fabs(Q0 / p))) / 2.;
+    }
+    if ((cos2rot_angle > 0) && (sin2rot_angle < 0)) {
+      rot_angle = (2. * acos(-1.) - acos(fabs(Q0 / p))) / 2.;
+    }
     if (cos2rot_angle == 0) {
       rot_angle = 0.25 * acos(-1);
-      if (U0 < 0) rot_angle = 0.75 * acos(-1);
+      if (U0 < 0) {
+        rot_angle = 0.75 * acos(-1);
+      }
     }
     if (sin2rot_angle == 0) {
       rot_angle = 0.0;
-      if (Q0 < 0) rot_angle = 0.5 * acos(-1);
+      if (Q0 < 0) {
+        rot_angle = 0.5 * acos(-1);
+      }
     }
   }
 
@@ -1012,14 +1048,30 @@ void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cm
   e_cmf_ref2 = e_cmf[0] * ref2[0] + e_cmf[1] * ref2[1] + e_cmf[2] * ref2[2];
 
   // Compute the angle between ref1 and the electric field
-  if ((e_cmf_ref1 > 0) && (e_cmf_ref2 < 0)) theta_rot = acos(e_cmf_ref1);
-  if ((e_cmf_ref1 < 0) && (e_cmf_ref2 < 0)) theta_rot = acos(-1.) - acos(fabs(e_cmf_ref1));
-  if ((e_cmf_ref1 < 0) && (e_cmf_ref2 > 0)) theta_rot = acos(-1.) + acos(fabs(e_cmf_ref1));
-  if ((e_cmf_ref1 > 0) && (e_cmf_ref2 > 0)) theta_rot = 2 * acos(-1.) - acos(e_cmf_ref1);
-  if (e_cmf_ref1 == 0) theta_rot = acos(-1.) / 2.;
-  if (e_cmf_ref2 == 0) theta_rot = 0.0;
-  if (e_cmf_ref1 > 1) theta_rot = 0.0;
-  if (e_cmf_ref1 < -1) theta_rot = acos(-1.);
+  if ((e_cmf_ref1 > 0) && (e_cmf_ref2 < 0)) {
+    theta_rot = acos(e_cmf_ref1);
+  }
+  if ((e_cmf_ref1 < 0) && (e_cmf_ref2 < 0)) {
+    theta_rot = acos(-1.) - acos(fabs(e_cmf_ref1));
+  }
+  if ((e_cmf_ref1 < 0) && (e_cmf_ref2 > 0)) {
+    theta_rot = acos(-1.) + acos(fabs(e_cmf_ref1));
+  }
+  if ((e_cmf_ref1 > 0) && (e_cmf_ref2 > 0)) {
+    theta_rot = 2 * acos(-1.) - acos(e_cmf_ref1);
+  }
+  if (e_cmf_ref1 == 0) {
+    theta_rot = acos(-1.) / 2.;
+  }
+  if (e_cmf_ref2 == 0) {
+    theta_rot = 0.0;
+  }
+  if (e_cmf_ref1 > 1) {
+    theta_rot = 0.0;
+  }
+  if (e_cmf_ref1 < -1) {
+    theta_rot = acos(-1.);
+  }
 
   // Compute Stokes Parameters in the CMF
   *Q = cos(2 * theta_rot) * p;

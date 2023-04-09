@@ -465,7 +465,9 @@ static void precalculate_rate_coefficient_integrals() {
       gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
       for (int level = 0; level < nlevels; level++) {
-        if ((level > 0) && (level % 50 == 0)) printout("  completed up to level %d of %d\n", level, nlevels);
+        if ((level > 0) && (level % 50 == 0)) {
+          printout("  completed up to level %d of %d\n", level, nlevels);
+        }
 
         // coefficients are stored in node shared memory, so divide up the work on the node
         if ((level % globals::node_nprocs) != globals::rank_in_node) {
@@ -669,7 +671,9 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
     gsl_integration_qag(&F_alpha_sp, xlow, nu_max_phixs, 0, CONTINUUM_NU_INTEGRAL_ACCURACY, GSLWSIZE, GSL_INTEG_GAUSS31,
                         gslworkspace, &alpha_sp, &error);
 
-    if (zrand >= alpha_sp / total_alpha_sp) break;
+    if (zrand >= alpha_sp / total_alpha_sp) {
+      break;
+    }
   }
 
   gsl_set_error_handler(previous_handler);
@@ -715,7 +719,9 @@ double calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const
 // multiply by upper ion population (or ground population if per_groundmultipletpop is true) and nne to get a rate
 {
   const int lowerion = upperion - 1;
-  if (lowerion < 0) return 0.;
+  if (lowerion < 0) {
+    return 0.;
+  }
 
   double alpha = 0.;
   if (lowerion < get_nions(element) - 1) {
@@ -772,7 +778,9 @@ double calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const
       }
       nnupperlevel_so_far += nnupperlevel;
       for (int lower = 0; lower < get_nlevels(element, lowerion); lower++) {
-        if (lower_superlevel_only && (!level_isinsuperlevel(element, lowerion, lower))) continue;
+        if (lower_superlevel_only && (!level_isinsuperlevel(element, lowerion, lower))) {
+          continue;
+        }
 
         double recomb_coeff = 0.;
         if (collisional_not_radiative) {
@@ -914,7 +922,9 @@ static void read_recombrate_file()
           } else {
             printout("    scaling phixs of all levels by %.3f\n", phixs_multiplier);
 
-            for (int level = 0; level < nlevels; level++) scale_level_phixs(element, ion - 1, level, phixs_multiplier);
+            for (int level = 0; level < nlevels; level++) {
+              scale_level_phixs(element, ion - 1, level, phixs_multiplier);
+            }
 
             rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false,
                                            per_groundmultipletpop, false);
@@ -947,7 +957,9 @@ static void read_recombrate_file()
             printout("    scaling phixs of all levels by %.3f\n", phixs_multiplier);
             assert_always(phixs_multiplier >= 0);
 
-            for (int level = 0; level < nlevels; level++) scale_level_phixs(element, ion - 1, level, phixs_multiplier);
+            for (int level = 0; level < nlevels; level++) {
+              scale_level_phixs(element, ion - 1, level, phixs_multiplier);
+            }
           }
         } else {
           printout("rrc >= input_rrc_total!\n");
@@ -955,7 +967,9 @@ static void read_recombrate_file()
           printout("    scaling phixs of all levels by %.3f\n", phixs_multiplier);
           assert_always(phixs_multiplier >= 0);
 
-          for (int level = 0; level < nlevels; level++) scale_level_phixs(element, ion - 1, level, phixs_multiplier);
+          for (int level = 0; level < nlevels; level++) {
+            scale_level_phixs(element, ion - 1, level, phixs_multiplier);
+          }
         }
 
         rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false,
@@ -1185,7 +1199,9 @@ static double integrand_corrphotoioncoeff_custom_radfield(const double nu, void 
 #else
   const float T_e = params->T_e;
   double corrfactor = 1. - params->departure_ratio * exp(-HOVERKB * nu / T_e);
-  if (corrfactor < 0) corrfactor = 0.;
+  if (corrfactor < 0) {
+    corrfactor = 0.;
+  }
 #endif
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
@@ -1252,7 +1268,9 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
         "integral %g error %g\n",
         status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr,
         error);
-    if (!std::isfinite(gammacorr)) gammacorr = 0.;
+    if (!std::isfinite(gammacorr)) {
+      gammacorr = 0.;
+    }
   }
 
   gammacorr *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);

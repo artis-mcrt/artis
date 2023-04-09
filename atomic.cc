@@ -21,7 +21,9 @@ int get_continuumindex_phixstargetindex(const int element, const int ion, const 
 
 int get_phixtargetindex(const int element, const int ion, const int level, const int upperionlevel) {
   for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
-    if (upperionlevel == get_phixsupperlevel(element, ion, level, phixstargetindex)) return phixstargetindex;
+    if (upperionlevel == get_phixsupperlevel(element, ion, level, phixstargetindex)) {
+      return phixstargetindex;
+    }
   }
   printout("Could not find phixstargetindex\n");
   abort();

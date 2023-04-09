@@ -31,7 +31,9 @@ static double get_shellcrossdist(const double pos[3], const double dir[3], const
   if (discriminant < 0) {
     // no intersection
     assert_always(shellradius < vec_len(pos));
-    if constexpr (debug) printout("no intersection\n");
+    if constexpr (debug) {
+      printout("no intersection\n");
+    }
     return -1;
   } else if (discriminant > 0) {
     // two intersections

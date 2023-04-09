@@ -593,7 +593,9 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
       if (targetlevel < nlevelsmax && level < nlevelsmax) {
         nu_trans = (epsilon(element, ion, level) - epsilon(element, ion, targetlevel)) / H;
       }
-      if (!(nu_trans > 0)) continue;
+      if (!(nu_trans > 0)) {
+        continue;
+      }
 
       /// Make sure that we don't allow duplicate. In that case take only the lines
       /// first occurrence
@@ -971,7 +973,9 @@ static void read_atomicdata_files() {
     assert_always(globals::nlines == static_cast<int>(temp_linelist.size()));
   }
 
-  if (T_preset > 0) abort();
+  if (T_preset > 0) {
+    abort();
+  }
 
   /// Set up the list of allowed upward transitions for each level
   printout("total uptrans %d\n", totaluptrans);
@@ -1207,7 +1211,9 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
     int element;
     int ion;
     for (i = 1; i < globals::nbfcontinua_ground; i++) {
-      if (nu_edge < globals::groundcont[i].nu_edge) break;
+      if (nu_edge < globals::groundcont[i].nu_edge) {
+        break;
+      }
     }
     /*    if (i == nbfcontinua_ground)
         {
@@ -1552,7 +1558,9 @@ static void setup_phixs_list() {
       for (int level = 0; level < nlevels; level++) {
         const int nphixstargets = get_nphixstargets(element, ion, level);
 
-        if (nphixstargets > 0) nbftables++;
+        if (nphixstargets > 0) {
+          nbftables++;
+        }
 
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
           // const int upperlevel = get_phixsupperlevel(element, ion,level, 0);
@@ -2139,7 +2147,9 @@ void read_parameterfile(int rank)
   std::stringstream(line) >> dum1;
   if (do_exspec) {
     globals::do_emission_res = dum1;
-    if (globals::do_emission_res == 1) printout("input: do_exspec ... extract LOS dependent emission information\n");
+    if (globals::do_emission_res == 1) {
+      printout("input: do_exspec ... extract LOS dependent emission information\n");
+    }
   }
 
   /// To reduce the work imbalance between different MPI tasks I introduced a diffusion

@@ -192,7 +192,9 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int model
   const double epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, lower);
 
   double oldnucmf;
-  if (pkt_ptr->last_event == 1) oldnucmf = pkt_ptr->nu_cmf;
+  if (pkt_ptr->last_event == 1) {
+    oldnucmf = pkt_ptr->nu_cmf;
+  }
   pkt_ptr->nu_cmf = epsilon_trans / H;
 
   if (pkt_ptr->last_event == 1) {
@@ -322,7 +324,9 @@ static void do_macroatom_ionisation(const int modelgridindex, const int element,
     const double R = get_corrphotoioncoeff(element, *ion, *level, phixstargetindex, modelgridindex);
     const double C = col_ionization_ratecoeff(T_e, nne, element, *ion, *level, phixstargetindex, epsilon_trans);
     rate += (R + C) * epsilon_current;
-    if (zrand * internal_up_higher < rate) break;
+    if (zrand * internal_up_higher < rate) {
+      break;
+    }
   }
   if (zrand * internal_up_higher >= rate) {
     printout(
@@ -567,7 +571,9 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
           const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, modelgridindex);
           const double C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
           rate += (R + C) * epsilon_target;
-          if (zrand * processrates[MA_ACTION_INTERNALDOWNLOWER] < rate) break;
+          if (zrand * processrates[MA_ACTION_INTERNALDOWNLOWER] < rate) {
+            break;
+          }
         }
         /// and set the macroatom's new state
 
@@ -687,7 +693,9 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
 /// Calculation of radiative rates ///////////////////////////////////////////////////////
 
 void macroatom_open_file(const int my_rank) {
-  if constexpr (!LOG_MACROATOM) return;
+  if constexpr (!LOG_MACROATOM) {
+    return;
+  }
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "macroatom_%.4d.out", my_rank);
   assert_always(macroatom_file == nullptr);

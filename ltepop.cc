@@ -331,7 +331,9 @@ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int leve
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
-  if (level == 0) return get_groundlevelpop(modelgridindex, element, ion);
+  if (level == 0) {
+    return get_groundlevelpop(modelgridindex, element, ion);
+  }
 
   const double T_exc = LTEPOP_EXCITATIONTEMPERATURE;
   const double W = 1.;
