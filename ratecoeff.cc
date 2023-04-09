@@ -188,11 +188,11 @@ static bool read_ratecoeff_dat()
       }
       fclose(ratecoeff_file);
       return true;
-    } else {
-      printout("[info] ratecoefficients_init: ratecoeff_v2.dat does not match current simulation. Recalculating...\n");
-      fclose(ratecoeff_file);
-      return false;
     }
+    printout("[info] ratecoefficients_init: ratecoeff_v2.dat does not match current simulation. Recalculating...\n");
+    fclose(ratecoeff_file);
+    return false;
+
   } else {
     printout("[info] ratecoefficients_init:  No ratecoeff_v2.dat file available. Creating a new one...\n");
     return false;
@@ -1065,9 +1065,8 @@ double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixst
         globals::corrphotoioncoeff[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
 
     return (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower));
-  } else {
-    return globals::corrphotoioncoeff[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
   }
+  return globals::corrphotoioncoeff[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
 }
 
 double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex)

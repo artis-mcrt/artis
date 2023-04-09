@@ -926,7 +926,8 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
             "after %d iterations.\n",
             nlte_test, covergence_tolerance, fracdiff_T_e, covergence_tolerance, nlte_iter + 1);
         break;
-      } else if (nlte_iter == NLTEITER) {
+      }
+      if (nlte_iter == NLTEITER) {
         printout(
             "WARNING: NLTE solver failed to converge after %d iterations. Keeping solution from "
             "last iteration\n",

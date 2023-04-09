@@ -73,10 +73,9 @@ bool is_nlte(const int element, const int ion, const int level)
 {
   if (!NLTE_POPS_ON) {
     return false;
-  } else {
-    return LEVEL_IS_NLTE(get_element(element), get_ionstage(element, ion),
-                         level);  // defined in artisoptions.h
   }
+  return LEVEL_IS_NLTE(get_element(element), get_ionstage(element, ion),
+                       level);  // defined in artisoptions.h
 }
 
 bool level_isinsuperlevel(const int element, const int ion, const int level)
@@ -412,9 +411,8 @@ int get_nphixstargets(const int element, const int ion, const int level)
   const int nionisinglevels = get_ionisinglevels(element, ion);
   if ((ion < nions - 1) && (level < nionisinglevels)) {
     return globals::elements[element].ions[ion].levels[level].nphixstargets;
-  } else {
-    return 0;
   }
+  return 0;
 }
 
 int get_phixsupperlevel(const int element, const int ion, const int level, const int phixstargetindex)

@@ -713,7 +713,8 @@ int get_nul(double freq) {
 
   if (freq > freq_max) {
     return (allnuc_gamma_line_list.size() - 1);
-  } else if (freq < freq_min) {
+  }
+  if (freq < freq_min) {
     return RED_OF_LIST;
   } else {
     int too_high = allnuc_gamma_line_list.size() - 1;

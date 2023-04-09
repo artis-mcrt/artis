@@ -549,9 +549,8 @@ static inline double get_bin_nu_bar(int modelgridindex, int binindex)
 static inline double get_bin_nu_lower(int binindex) {
   if (binindex > 0) {
     return radfieldbin_nu_upper[binindex - 1];
-  } else {
-    return nu_lower_first_initial;
   }
+  return nu_lower_first_initial;
 }
 
 static inline int get_bin_contribcount(int modelgridindex, int binindex) {
@@ -1418,7 +1417,7 @@ double get_T_J_from_J(const int modelgridindex) {
     return grid::get_TR(modelgridindex);
   }
   /// Make sure that T is in the allowed temperature range.
-  else if (T_J > MAXTEMP) {
+  if (T_J > MAXTEMP) {
     printout("[warning] get_T_J_from_J: T_J would be %.1f > MAXTEMP. Clamping to MAXTEMP = %.0f K\n", T_J, MAXTEMP);
     return MAXTEMP;
   } else if (T_J < MINTEMP) {
@@ -1778,9 +1777,8 @@ inline int integrate(const gsl_function *f, double nu_a, double nu_b, double eps
     const int status = gsl_integration_qagp(f, pts, npts, epsabs, epsrel, limit, workspace, result, abserr);
     free(pts);
     return status;
-  } else {
-    return gsl_integration_qag(f, nu_a, nu_b, epsabs, epsrel, limit, key, workspace, result, abserr);
   }
+  return gsl_integration_qag(f, nu_a, nu_b, epsabs, epsrel, limit, key, workspace, result, abserr);
 }
 
 }  // namespace radfield

@@ -509,7 +509,8 @@ constexpr int compare_linelistentry(const void *p1, const void *p2)
     // if ((a1->elementindex == a2->elementindex) && (a1->ionindex == a2->ionindex)) {
     if (a1->lowerlevelindex > a2->lowerlevelindex) {
       return -1;
-    } else if (a1->lowerlevelindex < a2->lowerlevelindex) {
+    }
+    if (a1->lowerlevelindex < a2->lowerlevelindex) {
       return 1;
     } else if (a1->upperlevelindex > a2->upperlevelindex) {
       return -1;
@@ -523,7 +524,8 @@ constexpr int compare_linelistentry(const void *p1, const void *p2)
 
   if ((a1->nu < a2->nu) || (a1->nu == a2->nu)) {
     return 1;
-  } else if (a1->nu > a2->nu) {
+  }
+  if (a1->nu > a2->nu) {
     return -1;
   } else {
     return 0;
@@ -1894,7 +1896,8 @@ bool get_noncommentline(std::istream &input, std::string &line)
     // lineiscommentonly(line) ? "true" : "false");
     if (!linefound) {
       return false;
-    } else if (!lineiscommentonly(line)) {
+    }
+    if (!lineiscommentonly(line)) {
       return true;
     }
   }

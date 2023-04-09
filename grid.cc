@@ -129,7 +129,8 @@ double get_cellcoordmax(const int cellindex, const int axis)
 {
   if (GRID_TYPE == GRID_UNIFORM) {
     return grid::get_cellcoordmin(cellindex, axis) + grid::wid_init(0);
-  } else if (GRID_TYPE == GRID_SPHERICAL1D) {
+  }
+  if (GRID_TYPE == GRID_SPHERICAL1D) {
     return grid::get_cellcoordmin(cellindex, 0) + grid::wid_init(cellindex);
   } else {
     assert_always(false);

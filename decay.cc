@@ -430,7 +430,8 @@ constexpr bool operator<(const struct decaypath &d1, const struct decaypath &d2)
     // if (get_nucindex(d1.z[d1pos], d1.a[d1pos]) < get_nucindex(d2.z[d2pos], d2.a[d2pos]))
     if (d1.a[d1pos] < d2.a[d2pos]) {
       return true;
-    } else if (d1.a[d1pos] == d2.a[d2pos] && d1.z[d1pos] < d2.z[d2pos]) {
+    }
+    if (d1.a[d1pos] == d2.a[d2pos] && d1.z[d1pos] < d2.z[d2pos]) {
       return true;
     }
     if (d1.a[d1pos] != d2.a[d2pos] || d1.z[d1pos] != d2.z[d2pos]) {

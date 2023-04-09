@@ -38,7 +38,8 @@ static int compare_emission(const void *p1, const void *p2) {
 
   if (elem1->energyemitted < elem2->energyemitted) {
     return 1;
-  } else if (elem1->energyemitted > elem2->energyemitted) {
+  }
+  if (elem1->energyemitted > elem2->energyemitted) {
     return -1;
   } else {
     return 0;
@@ -51,7 +52,8 @@ static int compare_absorption(const void *p1, const void *p2) {
 
   if (elem1->energyabsorbed < elem2->energyabsorbed) {
     return 1;
-  } else if (elem1->energyabsorbed > elem2->energyabsorbed) {
+  }
+  if (elem1->energyabsorbed > elem2->energyabsorbed) {
     return -1;
   } else {
     return 0;
@@ -318,7 +320,8 @@ static int columnindex_from_emissiontype(const int et) {
     const int element = globals::linelist[et].elementindex;
     const int ion = globals::linelist[et].ionindex;
     return element * get_max_nions() + ion;
-  } else if (et == EMTYPE_FREEFREE) {
+  }
+  if (et == EMTYPE_FREEFREE) {
     /// ff-emission
 
     const int contindex = -1 - et;

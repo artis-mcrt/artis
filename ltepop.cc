@@ -104,9 +104,8 @@ static double interpolate_ions_spontrecombcoeff(const int element, const int ion
     double const f_lower = globals::elements[element].ions[ion].Alpha_sp[lowerindex];
 
     return f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower);
-  } else {
-    return globals::elements[element].ions[ion].Alpha_sp[TABLESIZE - 1];
   }
+  return globals::elements[element].ions[ion].Alpha_sp[TABLESIZE - 1];
 }
 
 double phi(const int element, const int ion, const int modelgridindex)
@@ -316,9 +315,9 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
   if (nn < MINPOP) {
     if (grid::get_elem_abundance(modelgridindex, element) > 0) {
       return MINPOP;
-    } else {
-      return 0.;
     }
+    return 0.;
+
   } else {
     return nn;
   }

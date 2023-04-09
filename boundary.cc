@@ -35,7 +35,8 @@ static double get_shellcrossdist(const double pos[3], const double dir[3], const
       printout("no intersection\n");
     }
     return -1;
-  } else if (discriminant > 0) {
+  }
+  if (discriminant > 0) {
     // two intersections
     double d1 = (-b + sqrt(discriminant)) / 2 / a;
     double d2 = (-b - sqrt(discriminant)) / 2 / a;
@@ -206,13 +207,13 @@ double boundary_cross(struct packet *const pkt_ptr, int *snext)
             printout("escaping packet\n");
             *snext = -99;
             return 0;
-          } else {
-            *snext = pkt_ptr->where + cellindexstride;
-            pkt_ptr->last_cross = invdirection;
-            printout("[warning] swapping packet cellindex from %d to %d and setting last_cross to %d\n", pkt_ptr->where,
-                     *snext, pkt_ptr->last_cross);
-            return 0;
           }
+          *snext = pkt_ptr->where + cellindexstride;
+          pkt_ptr->last_cross = invdirection;
+          printout("[warning] swapping packet cellindex from %d to %d and setting last_cross to %d\n", pkt_ptr->where,
+                   *snext, pkt_ptr->last_cross);
+          return 0;
+
         } else {
           printout("pretending last_cross is %d\n", direction);
           last_cross = direction;

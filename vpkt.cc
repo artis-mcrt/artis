@@ -389,9 +389,8 @@ int check_tau(double *tau, double *tau_max) {
 
   if (count == Nspectra) {
     return 0;
-  } else {
-    return 1;
   }
+  return 1;
 }
 
 // Routine to add a packet to the outcoming spectrum.
