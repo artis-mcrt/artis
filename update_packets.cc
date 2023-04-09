@@ -112,7 +112,7 @@ static void update_pellet(struct packet *pkt_ptr, const int nts, const double t2
     } else {
       safeadd(globals::time_step[nts].gamma_emission, pkt_ptr->e_cmf);
       // decay to gamma-ray, kpkt, or ntlepton
-      gammapkt::pellet_gamma_decay(nts, pkt_ptr);
+      gammapkt::pellet_gamma_decay(pkt_ptr);
     }
   } else if ((tdecay > 0) && (nts == 0)) {
     // These are pellets whose decay times were before the first time step

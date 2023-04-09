@@ -1128,8 +1128,8 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
 }
 
 static void read_model_radioabundances(std::ifstream &fmodel, std::string &line, const int linepos, const int mgi,
-                                       const bool keepcell, std::vector<int> &zlist, std::vector<int> &alist,
-                                       std::vector<std::string> &colnames, std::vector<int> &nucindexlist) {
+                                       const bool keepcell, std::vector<std::string> &colnames,
+                                       std::vector<int> &nucindexlist) {
   if (linepos < static_cast<int>(line.length())) {
     // still more line is remaining, so the abundances must be on the same line
     if (mgi == 0) {
@@ -1286,7 +1286,7 @@ static void read_1d_model()
       assert_always(false);
     }
 
-    read_model_radioabundances(fmodel, line, linepos, mgi, true, zlist, alist, colnames, nucindexlist);
+    read_model_radioabundances(fmodel, line, linepos, mgi, true, colnames, nucindexlist);
 
     mgi += 1;
     if (mgi == get_npts_model()) {
@@ -1382,7 +1382,7 @@ static void read_2d_model()
     set_rho_tmin(mgi, rho_tmin);
     set_rho(mgi, rho_tmin);
 
-    read_model_radioabundances(fmodel, line, linepos, mgi, true, zlist, alist, colnames, nucindexlist);
+    read_model_radioabundances(fmodel, line, linepos, mgi, true, colnames, nucindexlist);
 
     mgi++;
   }
@@ -1513,7 +1513,7 @@ static void read_3d_model()
       min_den = rho_model;
     }
 
-    read_model_radioabundances(fmodel, line, linepos, mgi, keepcell, zlist, alist, colnames, nucindexlist);
+    read_model_radioabundances(fmodel, line, linepos, mgi, keepcell, colnames, nucindexlist);
 
     if (keepcell) {
       nonemptymgi++;

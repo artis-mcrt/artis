@@ -242,11 +242,10 @@ static void choose_gamma_ray(struct packet *pkt_ptr) {
   // printout("%s PELLET %g\n", gammaspec->filename, gammaspec->energy[nselected]);
 }
 
-void pellet_gamma_decay(const int nts, struct packet *pkt_ptr) {
+void pellet_gamma_decay(struct packet *pkt_ptr) {
   // Subroutine to convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
 
-  // nts defines the time step we are in. pkt_ptr is a pointer to the packet
-  // that is decaying.
+  // pkt_ptr is a pointer to the packet that is decaying.
 
   // Start by getting the position of the pellet at the point of decay. Pellet
   // is moving with the matter.

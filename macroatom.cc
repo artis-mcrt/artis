@@ -131,8 +131,7 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
   }
 }
 
-static int do_macroatom_internal_down_same(int modelgridindex, int element, int ion, int level, double t_mid,
-                                           double total_internal_down_same) {
+static int do_macroatom_internal_down_same(int element, int ion, int level, double total_internal_down_same) {
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
   // printout("[debug] do_ma:   internal downward jump within current ionstage\n");
@@ -155,9 +154,8 @@ static int do_macroatom_internal_down_same(int modelgridindex, int element, int 
   return lower;
 }
 
-static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int modelgridindex, const int element,
-                                         const int ion, const int level, const double rad_deexc,
-                                         const int activatingline, const double t_mid) {
+static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int element, const int ion, const int level,
+                                         const double rad_deexc, const int activatingline) {
   /// radiative deexcitation of MA: emitt rpkt
   /// randomly select which line transitions occurs
   int linelistindex = -99;
@@ -452,8 +450,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
         // printout("[debug] do_ma:   radiative deexcitation\n");
         // printout("[debug] do_ma:   jumps = %d\n", jumps);
 
-        do_macroatom_raddeexcitation(pkt_ptr, modelgridindex, element, ion, level, processrates[MA_ACTION_RADDEEXC],
-                                     activatingline, t_mid);
+        do_macroatom_raddeexcitation(pkt_ptr, element, ion, level, processrates[MA_ACTION_RADDEEXC], activatingline);
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC,
@@ -503,8 +500,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
       case MA_ACTION_INTERNALDOWNSAME: {
         pkt_ptr->interactions += 1;
         jumps++;
-        level = do_macroatom_internal_down_same(modelgridindex, element, ion, level, t_mid,
-                                                processrates[MA_ACTION_INTERNALDOWNSAME]);
+        level = do_macroatom_internal_down_same(element, ion, level, processrates[MA_ACTION_INTERNALDOWNSAME]);
 
         break;
       }
