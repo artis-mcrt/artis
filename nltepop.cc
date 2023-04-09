@@ -109,7 +109,7 @@ static void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_v
         // gsl_vector_set(balance_vector, index, MINPOP / get_vector_get(pop_norm_factor_vec, index));
         // printout("(Eliminating this ground state)");
       } else {
-        double const gs_index = get_nlte_vector_index(element, ion, 0);
+        const int gs_index = get_nlte_vector_index(element, ion, 0);
         eliminate_nlte_matrix_rowcol(index, gs_index, rate_matrix, balance_vector);
         // printout("(forcing LTE population)");
       }
@@ -199,7 +199,7 @@ static void print_level_rates_summary(const int element, const int selected_ion,
     }
 
     const bool into_level = (i <= 1);
-    const bool only_levels_below = i % 2;
+    const bool only_levels_below = (i % 2) != 0;
     const bool only_levels_above = !only_levels_below;
 
     const double rad_bb_total =
