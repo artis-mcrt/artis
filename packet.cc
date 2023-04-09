@@ -191,8 +191,8 @@ void write_packets(char filename[], const struct packet *const pkt) {
 
 void read_temp_packetsfile(const int timestep, const int my_rank, struct packet *const pkt) {
   // read packets binary file
-  char filename[128];
-  snprintf(filename, 128, "packets_%.4d_ts%d.tmp", my_rank, timestep);
+  char filename[MAXFILENAMELENGTH];
+  snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   printout("Reading %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");
@@ -206,8 +206,8 @@ bool verify_temp_packetsfile(const int timestep, const int my_rank, const struct
   // return true if verification is good, otherwise return false
 
   // read packets binary file
-  char filename[128];
-  snprintf(filename, 128, "packets_%.4d_ts%d.tmp", my_rank, timestep);
+  char filename[MAXFILENAMELENGTH];
+  snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   printout("Verifying file %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");

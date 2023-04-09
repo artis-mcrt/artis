@@ -128,12 +128,12 @@ static void read_decaydata(void) {
     elnamelower[elnamelen] = '\0';
 
     // look in the current folder
-    char filename[128];
-    snprintf(filename, 128, "%s%d_lines.txt", elnamelower, a);
+    char filename[MAXFILENAMELENGTH];
+    snprintf(filename, MAXFILENAMELENGTH, "%s%d_lines.txt", elnamelower, a);
 
     // look in the 'data' subfolder
-    char filename2[128];
-    snprintf(filename2, 128, "data/%s%d_lines.txt", elnamelower, a);
+    char filename2[MAXFILENAMELENGTH];
+    snprintf(filename2, MAXFILENAMELENGTH, "data/%s%d_lines.txt", elnamelower, a);
 
     if (std::ifstream(filename)) {
       read_gamma_spectrum(nucindex, filename);

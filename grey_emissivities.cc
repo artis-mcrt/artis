@@ -134,8 +134,8 @@ void write_grey(int nts) {
   FILE *est_file = nullptr;
   FILE *dummy = nullptr;
   char chch;
-  char filename[128] = "grey_est_";
-  char junk[128];
+  char filename[MAXFILENAMELENGTH] = "grey_est_";
+  char junk[MAXFILENAMELENGTH];
 
   if ((dummy = fopen("dummy", "w+")) == nullptr) {
     printout("Cannot open dummy.\n");
@@ -155,8 +155,8 @@ void write_grey(int nts) {
   junk[i] = '\0';
   fclose(dummy);
 
-  strncat(filename, junk, 127);
-  strncat(filename, ".out", 127);
+  strncat(filename, junk, MAXFILENAMELENGTH);
+  strncat(filename, ".out", MAXFILENAMELENGTH);
 
   if (globals::file_set) {
     if ((est_file = fopen(filename, "r")) == nullptr) {

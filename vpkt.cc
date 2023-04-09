@@ -483,12 +483,12 @@ void write_vspecpol(FILE *specpol_file) {
 }
 
 void read_vspecpol(int my_rank, int nts) {
-  char filename[128];
+  char filename[MAXFILENAMELENGTH];
 
   if (nts % 2 == 0) {
-    snprintf(filename, 128, "vspecpol_%d_%d_odd.tmp", 0, my_rank);
+    snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_odd.tmp", 0, my_rank);
   } else {
-    snprintf(filename, 128, "vspecpol_%d_%d_even.tmp", 0, my_rank);
+    snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_even.tmp", 0, my_rank);
   }
 
   FILE *vspecpol_file = fopen_required(filename, "rb");

@@ -44,4 +44,6 @@ constexpr int GRID_SPHERICAL1D = 2;  // radial shells
 // constant for van-Regemorter approximation.
 constexpr double C_0 = 5.465e-11;
 
+constexpr int MAXFILENAMELENGTH = 128;
+
 #endif

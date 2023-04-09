@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
   globals::node_id = 0;
   globals::node_count = 0;
 #endif
-  char filename[128];
+  char filename[MAXFILENAMELENGTH];
 
   globals::startofline = std::make_unique<bool[]>(get_max_threads());
   if (globals::rank_global == 0) {
@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
 #endif
 
   if (globals::rank_global == 0) {
-    snprintf(filename, 128, "exspec.txt");
+    snprintf(filename, MAXFILENAMELENGTH, "exspec.txt");
     output_file = fopen_required(filename, "w");
     setvbuf(output_file, nullptr, _IOLBF, 1);
   }
@@ -198,8 +198,8 @@ int main(int argc, char *argv[]) {
       struct packet *pkts_start = load_allrank_packets ? &pkts[p * globals::npkts] : pkts;
 
       if (a == -1 || !load_allrank_packets) {
-        char pktfilename[128];
-        snprintf(pktfilename, 128, "packets%.2d_%.4d.out", 0, p);
+        char pktfilename[MAXFILENAMELENGTH];
+        snprintf(pktfilename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", 0, p);
         printout("reading %s (file %d of %d)\n", pktfilename, p + 1, globals::nprocs_exspec);
 
         if (!access(pktfilename, F_OK)) {
@@ -257,34 +257,34 @@ int main(int argc, char *argv[]) {
       // direction bin a
       // line-of-sight dependent spectra and light curves
 
-      char lc_filename[128] = "";
-      snprintf(lc_filename, 128, "light_curve_res_%.2d.out", a);
+      char lc_filename[MAXFILENAMELENGTH] = "";
+      snprintf(lc_filename, MAXFILENAMELENGTH, "light_curve_res_%.2d.out", a);
 
-      char spec_filename[128] = "";
-      snprintf(spec_filename, 128, "spec_res_%.2d.out", a);
+      char spec_filename[MAXFILENAMELENGTH] = "";
+      snprintf(spec_filename, MAXFILENAMELENGTH, "spec_res_%.2d.out", a);
 
-      char emission_filename[128] = "";
-      snprintf(emission_filename, 128, "emission_res_%.2d.out", a);
+      char emission_filename[MAXFILENAMELENGTH] = "";
+      snprintf(emission_filename, MAXFILENAMELENGTH, "emission_res_%.2d.out", a);
 
-      char trueemission_filename[128] = "";
-      snprintf(trueemission_filename, 128, "emissiontrue_res_%.2d.out", a);
+      char trueemission_filename[MAXFILENAMELENGTH] = "";
+      snprintf(trueemission_filename, MAXFILENAMELENGTH, "emissiontrue_res_%.2d.out", a);
 
-      char absorption_filename[128] = "";
-      snprintf(absorption_filename, 128, "absorption_res_%.2d.out", a);
+      char absorption_filename[MAXFILENAMELENGTH] = "";
+      snprintf(absorption_filename, MAXFILENAMELENGTH, "absorption_res_%.2d.out", a);
 
       write_light_curve(lc_filename, a, rpkt_light_curve_lum.data(), rpkt_light_curve_lumcmf.data(), globals::ntstep);
       write_spectrum(spec_filename, emission_filename, trueemission_filename, absorption_filename, rpkt_spectra,
                      globals::ntstep);
 
       if constexpr (POL_ON) {
-        char specpol_filename[128] = "";
-        snprintf(specpol_filename, 128, "specpol_res_%.2d.out", a);
+        char specpol_filename[MAXFILENAMELENGTH] = "";
+        snprintf(specpol_filename, MAXFILENAMELENGTH, "specpol_res_%.2d.out", a);
 
-        char emissionpol_filename[128] = "";
-        snprintf(emissionpol_filename, 128, "emissionpol_res_%.2d.out", a);
+        char emissionpol_filename[MAXFILENAMELENGTH] = "";
+        snprintf(emissionpol_filename, MAXFILENAMELENGTH, "emissionpol_res_%.2d.out", a);
 
-        char absorptionpol_filename[128] = "";
-        snprintf(absorptionpol_filename, 128, "absorptionpol_res_%.2d.out", a);
+        char absorptionpol_filename[MAXFILENAMELENGTH] = "";
+        snprintf(absorptionpol_filename, MAXFILENAMELENGTH, "absorptionpol_res_%.2d.out", a);
 
         write_specpol(specpol_filename, emissionpol_filename, absorptionpol_filename, stokes_i, stokes_q, stokes_u);
       }

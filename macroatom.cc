@@ -688,8 +688,8 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
 
 void macroatom_open_file(const int my_rank) {
   if constexpr (!LOG_MACROATOM) return;
-  char filename[128];
-  snprintf(filename, 128, "macroatom_%.4d.out", my_rank);
+  char filename[MAXFILENAMELENGTH];
+  snprintf(filename, MAXFILENAMELENGTH, "macroatom_%.4d.out", my_rank);
   assert_always(macroatom_file == nullptr);
   macroatom_file = fopen_required(filename, "w");
   fprintf(macroatom_file, "%8s %14s %2s %12s %12s %9s %9s %9s %11s %11s %11s %11s %9s\n", "timestep", "modelgridindex",

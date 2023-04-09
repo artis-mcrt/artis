@@ -1555,8 +1555,8 @@ double superlevel_boltzmann(const int modelgridindex, const int element, const i
 }
 
 void nltepop_open_file(const int my_rank) {
-  char filename[128];
-  snprintf(filename, 128, "nlte_%.4d.out", my_rank);
+  char filename[MAXFILENAMELENGTH];
+  snprintf(filename, MAXFILENAMELENGTH, "nlte_%.4d.out", my_rank);
   assert_always(nlte_file == nullptr);
   nlte_file = fopen_required(filename, "w");
   fprintf(nlte_file, "%8s %14s %2s %9s %5s %11s %11s %11s\n", "timestep", "modelgridindex", "Z", "ion_stage", "level",

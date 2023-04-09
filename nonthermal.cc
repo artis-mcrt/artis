@@ -497,8 +497,8 @@ void init(const int my_rank, const int ndo, const int ndo_nonempty) {
   printout("  SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN %s\n", SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN ? "on" : "off");
 
   if (ndo_nonempty > 0) {
-    char filename[128];
-    snprintf(filename, 128, "nonthermalspec_%.4d.out", my_rank);
+    char filename[MAXFILENAMELENGTH];
+    snprintf(filename, MAXFILENAMELENGTH, "nonthermalspec_%.4d.out", my_rank);
     nonthermalfile = fopen_required(filename, "w");
     fprintf(nonthermalfile, "%8s %15s %8s %11s %11s %11s\n", "timestep", "modelgridindex", "index", "energy_ev",
             "source", "y");

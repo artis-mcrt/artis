@@ -205,8 +205,8 @@ void write_compton_estimators(int nts) {
   FILE *est_file = nullptr;
   FILE *dummy = nullptr;
   char chch;
-  char filename[128] = "est_";
-  char junk[128];
+  char filename[MAXFILENAMELENGTH] = "est_";
+  char junk[MAXFILENAMELENGTH];
 
   dummy = fopen_required("dummy", "w+");
   fprintf(dummy, "%d", nts);
@@ -217,11 +217,12 @@ void write_compton_estimators(int nts) {
     junk[i] = chch;
     i = i + 1;
   }
+  assert_always(i < (MAXFILENAMELENGTH - 4 - 4));
   junk[i] = '\0';
   fclose(dummy);
 
-  strncat(filename, junk, 127);
-  strncat(filename, ".out", 127);
+  strncat(filename, junk, MAXFILENAMELENGTH - 8);
+  strncat(filename, ".out", 4);
 
   if (globals::file_set) {
     est_file = fopen_required(filename, "rb");
