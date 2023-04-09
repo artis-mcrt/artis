@@ -704,7 +704,7 @@ static bool nltepop_matrix_solve(const int element, const gsl_matrix *rate_matri
 // solve rate_matrix * x = balance_vector,
 // then popvec[i] = x[i] / pop_norm_factor_vec[i]
 {
-  bool completed_solution;
+  bool completed_solution = false;
   const unsigned int nlte_dimension = balance_vector->size;
   assert_always(pop_normfactor_vec->size == nlte_dimension);
   assert_always(rate_matrix->size1 == nlte_dimension);
@@ -718,7 +718,7 @@ static bool nltepop_matrix_solve(const int element, const gsl_matrix *rate_matri
 
   gsl_permutation *p = gsl_permutation_alloc(nlte_dimension);
 
-  int s;  // sign of the transformation
+  int s = 0;  // sign of the transformation
   gsl_linalg_LU_decomp(rate_matrix_LU_decomp, p, &s);
 
   if (lumatrix_is_singular(rate_matrix_LU_decomp, element)) {
@@ -741,7 +741,7 @@ static bool nltepop_matrix_solve(const int element, const gsl_matrix *rate_matri
     double error_best = -1.;
     gsl_vector *x_best = gsl_vector_alloc(nlte_dimension);  // population solution vector with lowest error
     gsl_vector *residual_vector = gsl_vector_alloc(nlte_dimension);
-    int iteration;
+    int iteration = 0;
     for (iteration = 0; iteration < 10; iteration++) {
       if (iteration > 0) {
         gsl_linalg_LU_refine(rate_matrix, rate_matrix_LU_decomp, p, balance_vector, x, gsl_work_vector);
@@ -787,8 +787,8 @@ static bool nltepop_matrix_solve(const int element, const gsl_matrix *rate_matri
       gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, row);
       gsl_blas_ddot(&row_view.vector, x, &recovered_balance_vector_elem);
 
-      int ion;
-      int level;
+      int ion = 0;
+      int level = 0;
       get_ion_level_of_nlte_vector_index(row, element, &ion, &level);
 
       // printout("index %4d (ion_stage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e
@@ -858,12 +858,12 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
   gsl_matrix *rate_matrix = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-  gsl_matrix *rate_matrix_rad_bb;
-  gsl_matrix *rate_matrix_coll_bb;
-  gsl_matrix *rate_matrix_ntcoll_bb;
-  gsl_matrix *rate_matrix_rad_bf;
-  gsl_matrix *rate_matrix_coll_bf;
-  gsl_matrix *rate_matrix_ntcoll_bf;
+  gsl_matrix *rate_matrix_rad_bb = nullptr;
+  gsl_matrix *rate_matrix_coll_bb = nullptr;
+  gsl_matrix *rate_matrix_ntcoll_bb = nullptr;
+  gsl_matrix *rate_matrix_rad_bf = nullptr;
+  gsl_matrix *rate_matrix_coll_bf = nullptr;
+  gsl_matrix *rate_matrix_ntcoll_bf = nullptr;
   if (individual_process_matricies) {
     rate_matrix_rad_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
     rate_matrix_coll_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
@@ -1141,8 +1141,8 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
     return 0.;
   }
 
-  double *rate_matrix;
-  double *balance_vector;
+  double *rate_matrix = nullptr;
+  double *balance_vector = nullptr;
 
   double test_ratio = 0.;
 
@@ -1238,14 +1238,14 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
         const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, i);
         assert_always(std::isfinite(C));
 
-        int level_use;
+        int level_use = 0;
         if ((level == 0) || is_nlte(element, ion, level)) {
           level_use = level;
         } else {
           level_use = nlevels_nlte + 1;
         }
 
-        int lower_use;
+        int lower_use = 0;
         if ((lower == 0) || (is_nlte(element, ion, lower))) {
           lower_use = lower;
         } else {
@@ -1273,7 +1273,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
         const double C = col_excitation_ratecoeff(T_e, nne, element, ion, level, i, epsilon_trans, statweight);
         assert_always(std::isfinite(C));
 
-        int level_use;
+        int level_use = 0;
         double s_renorm = 1.;
         if ((level == 0) || (is_nlte(element, ion, level))) {
           level_use = level;
@@ -1284,7 +1284,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
         }
         assert_always(std::isfinite(s_renorm));
 
-        int upper_use;
+        int upper_use = 0;
         if ((upper == 0) || (is_nlte(element, ion, upper))) {
           upper_use = upper;
         } else {
@@ -1300,7 +1300,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
       if (NT_ON && ion < get_nions(element) - 1) {
         const double Y = nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion);
 
-        int level_use;
+        int level_use = 0;
         double s_renorm = 1.0;
         if ((level == 0) || (is_nlte(element, ion, level))) {
           level_use = level;

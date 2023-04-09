@@ -50,13 +50,13 @@
 
 /*********************** FUNCTION DEFINITIONS ***********************/
 static void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
-  WORD a;
-  WORD b;
-  WORD c;
-  WORD d;
+  WORD a = 0;
+  WORD b = 0;
+  WORD c = 0;
+  WORD d = 0;
   WORD m[16];
-  WORD i;
-  WORD j;
+  WORD i = 0;
+  WORD j = 0;
 
   // MD5 specifies big endian byte order, but this implementation assumes a little
   // endian byte order CPU. Reverse all the bytes upon input, and re-reverse them
@@ -154,7 +154,7 @@ void md5_init(MD5_CTX *ctx) {
 }
 
 void md5_update(MD5_CTX *ctx, const BYTE data[], size_t len) {
-  size_t i;
+  size_t i = 0;
 
   for (i = 0; i < len; ++i) {
     ctx->data[ctx->datalen] = data[i];
@@ -168,7 +168,7 @@ void md5_update(MD5_CTX *ctx, const BYTE data[], size_t len) {
 }
 
 void md5_final(MD5_CTX *ctx, BYTE hash[]) {
-  size_t i;
+  size_t i = 0;
 
   i = ctx->datalen;
 

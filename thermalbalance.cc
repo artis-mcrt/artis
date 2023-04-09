@@ -451,7 +451,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 
     gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
     const int maxit = 100;
-    int status;
+    int status = 0;
     for (int iternum = 0; iternum < maxit; iternum++) {
       gsl_root_fsolver_iterate(T_e_solver);
       T_e = gsl_root_fsolver_root(T_e_solver);

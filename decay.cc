@@ -531,7 +531,7 @@ int get_nucstring_a(const std::string &strnuc)
 void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist) {
   assert_always(custom_zlist.size() == custom_alist.size());
 
-  struct nuclide default_nuclide;
+  struct nuclide default_nuclide {};
   default_nuclide.z = -1;
   default_nuclide.a = -1;
   default_nuclide.meanlife = -1;

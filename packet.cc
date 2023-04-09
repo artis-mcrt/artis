@@ -259,7 +259,7 @@ void read_packets(char filename[], struct packet *pkt) {
 
     std::istringstream ssline(line);
 
-    int pkt_type_in;
+    int pkt_type_in = 0;
     ssline >> pkt[i].number >> pkt[i].where >> pkt_type_in;
     pkt[i].type = static_cast<enum packet_type>(pkt_type_in);
 
@@ -275,7 +275,7 @@ void read_packets(char filename[], struct packet *pkt) {
 
     ssline >> pkt[i].e_cmf >> pkt[i].e_rf >> pkt[i].nu_cmf >> pkt[i].nu_rf;
 
-    int escape_type;
+    int escape_type = 0;
     ssline >> escape_type >> pkt[i].escape_time;
     pkt[i].escape_type = static_cast<enum packet_type>(escape_type);
 
@@ -296,7 +296,7 @@ void read_packets(char filename[], struct packet *pkt) {
 
     ssline >> pkt[i].pol_dir[0] >> pkt[i].pol_dir[1] >> pkt[i].pol_dir[2];
 
-    int int_originated_from_particlenotgamma;
+    int int_originated_from_particlenotgamma = 0;
     ssline >> int_originated_from_particlenotgamma;
     pkt[i].originated_from_particlenotgamma = (int_originated_from_particlenotgamma != 0);
 

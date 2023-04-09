@@ -172,7 +172,7 @@ double boundary_cross(struct packet *const pkt_ptr, int *snext)
       enum cell_boundary const invdirection = !flip ? posdirections[d] : negdirections[d];
       const int cellindexstride = flip ? -grid::get_coordcellindexincrement(d) : grid::get_coordcellindexincrement(d);
 
-      bool isoutside_thisside;
+      bool isoutside_thisside = false;
       if (flip) {
         isoutside_thisside = initpos[d] < (grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart -
                                            10.);  // 10 cm accuracy tolerance

@@ -6,6 +6,7 @@
 #include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_vector_double.h>
+#include <math.h>
 
 #include <algorithm>
 #include <cmath>
@@ -185,8 +186,8 @@ static double get_tot_nion(const int modelgridindex) { return get_nntot(modelgri
 static void read_binding_energies() {
   FILE *binding = fopen_required("binding_energies.txt", "r");
 
-  int dum1;
-  int dum2;
+  int dum1 = 0;
+  int dum2 = 0;
   assert_always(fscanf(binding, "%d %d", &dum1, &dum2) == 2);  // dimensions of the table
   if ((dum1 != M_NT_SHELLS) || (dum2 != MAX_Z_BINDING)) {
     printout("Wrong size for the binding energy tables!\n");
@@ -2820,16 +2821,16 @@ void write_restart_data(FILE *gridsave_file) {
 void read_restart_data(FILE *gridsave_file) {
   printout("Reading restart data for non-thermal solver\n");
 
-  int code_check;
+  int code_check = 0;
   assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
   if (code_check != 24724518) {
     printout("ERROR: Beginning of non-thermal restart data not found! Found %d instead of 24724518\n", code_check);
     abort();
   }
 
-  int sfpts_in;
-  double SF_EMIN_in;
-  double SF_EMAX_in;
+  int sfpts_in = 0;
+  double SF_EMIN_in = NAN;
+  double SF_EMAX_in = NAN;
   assert_always(fscanf(gridsave_file, "%d %la %la\n", &sfpts_in, &SF_EMIN_in, &SF_EMAX_in) == 3);
 
   if (sfpts_in != SFPTS || SF_EMIN_in != SF_EMIN || SF_EMAX_in != SF_EMAX) {
@@ -2841,7 +2842,7 @@ void read_restart_data(FILE *gridsave_file) {
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      int mgi_in;
+      int mgi_in = 0;
       assert_always(fscanf(gridsave_file, "%d %d %la ", &mgi_in, &deposition_rate_density_timestep[modelgridindex],
                            &deposition_rate_density[modelgridindex]) == 3);
 
@@ -2872,7 +2873,7 @@ void read_restart_data(FILE *gridsave_file) {
         check_auger_probabilities(modelgridindex);
 
         // read NT excitations
-        int frac_excitations_list_size_in;
+        int frac_excitations_list_size_in = 0;
         assert_always(fscanf(gridsave_file, "%d\n", &frac_excitations_list_size_in) == 1);
 
         if (nt_solution[modelgridindex].frac_excitations_list_size != frac_excitations_list_size_in) {

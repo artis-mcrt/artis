@@ -808,7 +808,7 @@ int main(int argc, char *argv[]) {
   int walltimelimitseconds = -1;
 #endif
 
-  int opt;
+  int opt = 0;
   while ((opt = getopt(argc, argv, "w:")) != -1) {
     switch (opt) {
       case 'w': {

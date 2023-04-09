@@ -1496,7 +1496,7 @@ double calculate_populations(const int modelgridindex)
 {
   /// and the solution function
   gsl_function f;
-  struct nne_solution_paras paras;
+  struct nne_solution_paras paras {};
   paras.cellnumber = modelgridindex;
   f.function = &nne_solution_f;
   f.params = &paras;
@@ -1519,14 +1519,14 @@ double calculate_populations(const int modelgridindex)
     grid::set_elements_uppermost_ion(modelgridindex, element, nions - 1);
     const double abundance = grid::get_elem_abundance(modelgridindex, element);
     if (abundance > 0) {
-      int uppermost_ion;
+      int uppermost_ion = 0;
 #ifdef FORCE_LTE
       uppermost_ion = get_nions(element) - 1;
 #else
       if (globals::initial_iteration || grid::modelgrid[modelgridindex].thick == 1) {
         uppermost_ion = get_nions(element) - 1;
       } else {
-        int ion;
+        int ion = 0;
         for (ion = 0; ion < nions - 1; ion++) {
           double Gamma = 0.;
           if constexpr (NO_LUT_PHOTOION) {
@@ -1548,7 +1548,7 @@ double calculate_populations(const int modelgridindex)
 #endif
 
       double factor = 1.;
-      int ion;
+      int ion = 0;
       for (ion = 0; ion < uppermost_ion; ion++) {
         factor *= nne_hi * phi(element, ion, modelgridindex);
         // printout("element %d, ion %d, factor %g\n",element,i,factor);

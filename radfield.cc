@@ -1070,7 +1070,7 @@ static float find_T_R(int modelgridindex, int binindex) {
     gsl_root_fsolver *T_R_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
     gsl_root_fsolver_set(T_R_solver, &find_T_R_f, T_R_min, T_R_max);
     int iteration_num = 0;
-    int status;
+    int status = 0;
     do {
       iteration_num++;
       gsl_root_fsolver_iterate(T_R_solver);
@@ -1615,7 +1615,7 @@ void write_restart_data(FILE *gridsave_file) {
 void read_restart_data(FILE *gridsave_file) {
   printout("Reading restart data for radiation field\n");
 
-  int code_check;
+  int code_check = 0;
   assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
   if (code_check != 30490824) {
     printout("ERROR: Beginning of radfield restart data not found! Found %d instead of 30490824\n", code_check);
@@ -1660,14 +1660,14 @@ void read_restart_data(FILE *gridsave_file) {
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    int gridsave_nbf_in;
+    int gridsave_nbf_in = 0;
     assert_always(fscanf(gridsave_file, "%d\n", &gridsave_nbf_in) == 1);
     assert_always(gridsave_nbf_in == globals::nbfcontinua);
 
     for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
       if (grid::get_numassociatedcells(modelgridindex) > 0) {
         const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-        int mgi_in;
+        int mgi_in = 0;
         assert_always(fscanf(gridsave_file, "%d\n", &mgi_in) == 1);
         assert_always(mgi_in == modelgridindex);
         for (int i = 0; i < globals::nbfcontinua; i++) {
@@ -1687,7 +1687,7 @@ void read_restart_data(FILE *gridsave_file) {
   }
 
   if (DETAILED_LINE_ESTIMATORS_ON) {
-    int detailed_linecount_in;
+    int detailed_linecount_in = 0;
     assert_always(fscanf(gridsave_file, "%d\n", &detailed_linecount_in) == 1);
 
     if (detailed_linecount_in != detailed_linecount) {
@@ -1704,7 +1704,7 @@ void read_restart_data(FILE *gridsave_file) {
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
       const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-      int mgi_in;
+      int mgi_in = 0;
       assert_always(fscanf(gridsave_file, "%d %la\n", &mgi_in, &J_normfactor[modelgridindex]) == 2);
       if (mgi_in != modelgridindex) {
         printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
