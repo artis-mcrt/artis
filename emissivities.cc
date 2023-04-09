@@ -136,7 +136,7 @@ void pp_emiss_cont(const struct packet *pkt_ptr, double dist) {
   // consistent with what syn_lc does.
 }
 
-void zero_estimators(void) {
+void zero_estimators() {
   // printout("zero_estimators()");
   for (int n = 0; n < grid::get_npts_model(); n++) {
     if (grid::get_numassociatedcells(n) > 0) {

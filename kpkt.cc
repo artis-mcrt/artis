@@ -278,7 +278,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
   assert_always(grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] == C_ion);
 }
 
-static void set_ncoolingterms(void) {
+static void set_ncoolingterms() {
   globals::ncoolingterms = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
@@ -307,7 +307,7 @@ static void set_ncoolingterms(void) {
   }
 }
 
-void setup_coolinglist(void) {
+void setup_coolinglist() {
   /// SET UP THE COOLING LIST
   ///======================================================
   /// Determine number of processes which allow kpkts to convert to something else.

@@ -107,26 +107,26 @@ static double *nuJ_reduced_save = nullptr;
 #endif
 #endif
 
-typedef enum {
+using enum_prefactor = enum {
   ONE = 0,
   TIMES_NU = 1,
-} enum_prefactor;
+};
 
-typedef struct {
+using gsl_planck_integral_paras = struct {
   const double T_R;
   const enum_prefactor prefactor;
-} gsl_planck_integral_paras;
+};
 
-typedef struct {
+using gsl_T_R_solver_paras = struct {
   int modelgridindex;
   int binindex;
-} gsl_T_R_solver_paras;
+};
 
 static FILE *radfieldfile = nullptr;
 
 static inline double get_bin_nu_upper(int binindex) { return radfieldbin_nu_upper[binindex]; }
 
-static void setup_bin_boundaries(void) {
+static void setup_bin_boundaries() {
   // double prev_nu_upper = nu_lower_first_initial;
 
   // choose between equally spaced in energy/frequency or wavelength (before bf edges shift boundaries around)
@@ -436,7 +436,7 @@ void init(int my_rank, int ndo, int ndo_nonempty)
 
 /// Initialise estimator arrays which hold the last time steps values (used to damp out
 /// fluctuations over timestep iterations if DO_TITER is defined) to -1.
-void initialise_prev_titer_photoionestimators(void) {
+void initialise_prev_titer_photoionestimators() {
   // for (n = 0; n < ngrid; n++)
   for (int n = 0; n < grid::get_npts_model(); n++) {
 // double T_e = grid::get_Te(n);
@@ -650,7 +650,7 @@ void write_to_file(int modelgridindex, int timestep) {
 }
 #endif
 
-void close_file(void) {
+void close_file() {
   if (radfieldfile != nullptr) {
     fclose(radfieldfile);
     radfieldfile = nullptr;
@@ -1719,7 +1719,7 @@ void read_restart_data(FILE *gridsave_file) {
 inline int integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel, size_t limit,
                      int key, gsl_integration_workspace *workspace, double *result, double *abserr) {
   if (MULTIBIN_RADFIELD_MODEL_ON && (globals::nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP)) {
-    double *pts = (double *)malloc((RADFIELDBINCOUNT + 3) * sizeof(double));
+    auto *pts = (double *)malloc((RADFIELDBINCOUNT + 3) * sizeof(double));
     int binindex_a = select_bin(nu_a);
     int binindex_b = select_bin(nu_b);
     int npts = 0;

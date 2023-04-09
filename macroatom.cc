@@ -697,7 +697,7 @@ void macroatom_open_file(const int my_rank) {
           "nu_rf_in", "nu_rf_out", "jumps");
 }
 
-void macroatom_close_file(void) {
+void macroatom_close_file() {
   if (macroatom_file != nullptr) {
     fclose(macroatom_file);
   }

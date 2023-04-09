@@ -34,19 +34,19 @@
 static double T_step;
 double T_step_log;
 
-typedef struct {
+using gsl_integral_paras_gammacorr = struct {
   const double nu_edge;
   const double departure_ratio;
   const float *const photoion_xs;
   const float T_e;
   const int modelgridindex;
-} gsl_integral_paras_gammacorr;
+};
 
 static char adatafile_hash[33];
 static char compositionfile_hash[33];
 static char phixsfile_hash[33];
 
-static bool read_ratecoeff_dat(void)
+static bool read_ratecoeff_dat()
 /// Try to read in the precalculated rate coefficients from file
 /// return true if successful or false otherwise
 {
@@ -199,7 +199,7 @@ static bool read_ratecoeff_dat(void)
   }
 }
 
-static void write_ratecoeff_dat(void) {
+static void write_ratecoeff_dat() {
   FILE *ratecoeff_file = fopen_required("ratecoeff_v2.dat", "w");
   fprintf(ratecoeff_file, "%32s\n", adatafile_hash);
   fprintf(ratecoeff_file, "%32s\n", compositionfile_hash);
@@ -443,7 +443,7 @@ static double bfcooling_integrand_gsl(const double nu, void *const voidparas)
   return x;
 }*/
 
-static void precalculate_rate_coefficient_integrals(void) {
+static void precalculate_rate_coefficient_integrals() {
   // target fractional accuracy of the integrator //=1e-5 took 8 hours with Fe I to V!
   const double epsrelwarning = 1e-2;  // fractional error to emit a warning
 
@@ -833,7 +833,7 @@ static void scale_level_phixs(const int element, const int ion, const int level,
   }
 }
 
-static void read_recombrate_file(void)
+static void read_recombrate_file()
 // calibrate the recombination rates to tabulated values by scaling the photoionisation cross sections
 {
   use_cellhist = false;
@@ -966,7 +966,7 @@ static void read_recombrate_file(void)
   fclose(recombrate_file);
 }
 
-static void precalculate_ion_alpha_sp(void) {
+static void precalculate_ion_alpha_sp() {
   for (int iter = 0; iter < TABLESIZE; iter++) {
     const float T_e = MINTEMP * exp(iter * T_step_log);
     for (int element = 0; element < get_nelements(); element++) {
@@ -990,7 +990,7 @@ static void precalculate_ion_alpha_sp(void) {
   }
 }
 
-void ratecoefficients_init(void)
+void ratecoefficients_init()
 /// Precalculates the rate coefficients for stimulated and spontaneous
 /// recombination and photoionisation on a given temperature grid using
 /// libgsl integrators.

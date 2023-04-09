@@ -95,7 +95,7 @@ static void set_trivial_gamma_spectrum(const int nucindex) {
   gamma_spectra[nucindex].probability[0] = 1.;
 }
 
-static void read_decaydata(void) {
+static void read_decaydata() {
   // migrate from old filename
   if (!std::ifstream("ni56_lines.txt") && std::ifstream("ni_lines.txt")) {
     printout("Moving ni_lines.txt to ni56_lines.txt\n");
@@ -166,7 +166,7 @@ static void read_decaydata(void) {
 }
 
 // construct an energy ordered gamma ray line list.
-void init_gamma_linelist(void) {
+void init_gamma_linelist() {
   read_decaydata();
 
   /* Start by setting up the grid of fake lines and their energies. */
@@ -385,7 +385,7 @@ static double choose_f(double xx, double zrand)
   return ftry;
 }
 
-static double thomson_angle(void) {
+static double thomson_angle() {
   // For Thomson scattering we can get the new angle from a random number very easily.
 
   const double zrand = rng_uniform();

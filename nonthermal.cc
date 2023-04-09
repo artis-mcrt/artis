@@ -180,7 +180,7 @@ static int compare_excitation_lineindicies(const void *p1, const void *p2) {
 static double get_tot_nion(const int modelgridindex) { return get_nntot(modelgridindex); }
 #endif
 
-static void read_binding_energies(void) {
+static void read_binding_energies() {
   FILE *binding = fopen_required("binding_energies.txt", "r");
 
   int dum1, dum2;
@@ -252,7 +252,7 @@ static void check_auger_probabilities(int modelgridindex) {
   }
 }
 
-static void read_auger_data(void) {
+static void read_auger_data() {
   printout("Reading Auger effect data...\n");
   FILE *augerfile = fopen_required("auger-km1993-table2.txt", "r");
 
@@ -384,7 +384,7 @@ static void read_auger_data(void) {
   fclose(augerfile);
 }
 
-static void read_collion_data(void) {
+static void read_collion_data() {
   printout("Reading collisional ionization data...\n");
 
   FILE *cifile = fopen_required("collion.txt", "r");
@@ -723,7 +723,7 @@ static void nt_write_to_file(const int modelgridindex, const int timestep, const
 #endif
 }
 
-void close_file(void) {
+void close_file() {
   nonthermal_initialized = false;
 
   free(deposition_rate_density);
@@ -1197,8 +1197,8 @@ static double get_mean_binding_energy(const int element, const int ion) {
   const int nbound = get_element(element) - ioncharge;  // number of bound electrons
 
   if (nbound > 0) {
-    for (int i = 0; i < M_NT_SHELLS; i++) {
-      q[i] = 0;
+    for (int &i : q) {
+      i = 0;
     }
 
     for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
@@ -1976,8 +1976,8 @@ void do_ntlepton(struct packet *pkt_ptr) {
 }
 
 static bool realloc_frac_excitations_list(const int modelgridindex, const int newsize) {
-  struct nt_excitation_struct *newptr = (struct nt_excitation_struct *)realloc(
-      nt_solution[modelgridindex].frac_excitations_list, newsize * sizeof(struct nt_excitation_struct));
+  auto *newptr = (struct nt_excitation_struct *)realloc(nt_solution[modelgridindex].frac_excitations_list,
+                                                        newsize * sizeof(struct nt_excitation_struct));
 
   if (newptr == nullptr && newsize > 0) {
     printout("ERROR: Not enough memory to reallocate NT excitation list for cell %d from size %d to %d.\n",
@@ -2902,7 +2902,7 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
 }
 #endif
 
-void nt_reset_stats(void) { nt_energy_deposited = 0.; }
+void nt_reset_stats() { nt_energy_deposited = 0.; }
 
 void nt_print_stats(const int timestep, const double modelvolume, const double deltat) {
   const double deposition_rate_density_montecarlo = nt_energy_deposited / EV / modelvolume / deltat;

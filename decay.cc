@@ -68,7 +68,7 @@ double *decaypath_energy_per_mass = nullptr;
 MPI_Win win_decaypath_energy_per_mass = MPI_WIN_NULL;
 #endif
 
-int get_num_nuclides(void) { return nuclides.size(); }
+int get_num_nuclides() { return nuclides.size(); }
 
 const char *get_elname(const int z) {
   assert_always(z <= Z_MAX);
@@ -293,7 +293,7 @@ double nucmass(int z, int a) {
   // return nuclides[nucindex].amass;
 }
 
-static int get_num_decaypaths(void) { return decaypaths.size(); }
+static int get_num_decaypaths() { return decaypaths.size(); }
 
 static int get_decaypathlength(int decaypathindex) { return decaypaths[decaypathindex].pathlength; }
 
@@ -368,7 +368,7 @@ static void printout_decaypath(const int decaypathindex) {
   printout("\n");
 }
 
-static void extend_lastdecaypath(void)
+static void extend_lastdecaypath()
 // follow decays at the ends of the current list of decaypaths,
 // to get decaypaths from all descendants
 {
@@ -445,7 +445,7 @@ constexpr bool operator<(const struct decaypath &d1, const struct decaypath &d2)
   return false;
 }
 
-static void find_decaypaths(void) {
+static void find_decaypaths() {
   for (int startnucindex = 0; startnucindex < get_num_nuclides(); startnucindex++) {
     if (get_nuc_z(startnucindex) < 1)  // FAKE_GAM_LINE_ID
     {
@@ -621,8 +621,8 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
       std::stringstream(line) >> a >> z >> q_mev >> e_gamma_mev >> e_elec_mev >> e_neutrino >> tau_sec;
 
       bool keeprow = false;  // keep if the mass number matches one of the input nuclides
-      for (int i = 0; i < (int)custom_alist.size(); i++) {
-        if (custom_alist[i] == a) {
+      for (int i : custom_alist) {
+        if (i == a) {
           keeprow = true;
           break;
         }
@@ -1084,7 +1084,7 @@ double get_modelcell_simtime_endecay_per_mass(const int mgi)
   return endecay_per_mass;
 }
 
-void setup_decaypath_energy_per_mass(void) {
+void setup_decaypath_energy_per_mass() {
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
   printout(
       "[info] mem_usage: decaypath_energy_per_mass[nonempty_npts_model*num_decaypaths] occupies %.1f MB (node "
@@ -1131,7 +1131,7 @@ void setup_decaypath_energy_per_mass(void) {
 #endif
 }
 
-void free_decaypath_energy_per_mass(void) {
+void free_decaypath_energy_per_mass() {
 #ifdef MPI_ON
   if (win_decaypath_energy_per_mass != MPI_WIN_NULL) {
     printout("[info] mem_usage: decaypath_energy_per_mass was freed\n");
@@ -1201,7 +1201,7 @@ double get_qdot_modelcell(const int modelgridindex, const double t, const int de
   return qdot;
 }
 
-double get_global_etot_t0_tinf(void) {
+double get_global_etot_t0_tinf() {
   double etot_tinf = 0.;
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
     const int z_top = decaypaths[decaypathindex].z[0];
@@ -1464,6 +1464,6 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
   pkt_ptr->nu_cmf = enparticle / H;  // will be overwritten for gamma rays, but affects the thermalisation of particles
 }
 
-void cleanup(void) { free_decaypath_energy_per_mass(); }
+void cleanup() { free_decaypath_energy_per_mass(); }
 
 }  // namespace decay

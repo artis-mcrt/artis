@@ -11,14 +11,14 @@ namespace stats {
 static double *ionstats = nullptr;
 static int *eventstats = nullptr;
 
-void init(void) {
+void init() {
   if constexpr (TRACK_ION_STATS) {
     ionstats = (double *)malloc(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT * sizeof(double));
   }
   eventstats = (int *)malloc(COUNTER_COUNT * sizeof(int));
 }
 
-void cleanup(void) {
+void cleanup() {
   if constexpr (TRACK_ION_STATS) {
     free(ionstats);
   }
@@ -157,7 +157,7 @@ void increment(enum eventcounters i) {
   safeincrement(eventstats[i]);
 }
 
-void pkt_action_counters_reset(void) {
+void pkt_action_counters_reset() {
   for (int i = 0; i < COUNTER_COUNT; i++) {
     eventstats[i] = 0;
   }
@@ -227,7 +227,7 @@ void pkt_action_counters_printout(const struct packet *const pkt, const int nts)
   printout("downscatterings  = %d\n", get_counter(COUNTER_DOWNSCATTER));
 }
 
-void reduce_estimators(void) {
+void reduce_estimators() {
 #ifdef MPI_ON
   MPI_Allreduce(MPI_IN_PLACE, &stats::ionstats, grid::get_npts_model() * get_includedions() * stats::ION_STAT_COUNT,
                 MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);

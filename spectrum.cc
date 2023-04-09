@@ -18,13 +18,13 @@ bool TRACE_EMISSION_ABSORPTION_REGION_ON = false;
 #define traceemissabs_timemin 320. * DAY
 #define traceemissabs_timemax 340. * DAY
 
-typedef struct emissionabsorptioncontrib {
+using emissionabsorptioncontrib = struct emissionabsorptioncontrib {
   double energyemitted;
   double emission_weightedvelocity_sum;
   double energyabsorbed;
   double absorption_weightedvelocity_sum;
   int lineindex;  // this will be important when the list gets sorted
-} emissionabsorptioncontrib;
+};
 
 static struct emissionabsorptioncontrib *traceemissionabsorption = nullptr;
 double traceemission_totalenergy = 0.;
@@ -56,7 +56,7 @@ static int compare_absorption(const void *p1, const void *p2) {
     return 0;
 }
 
-static void printout_tracemission_stats(void) {
+static void printout_tracemission_stats() {
   const int maxlinesprinted = 500;
 
   // mode is 0 for emission and 1 for absorption
@@ -136,7 +136,7 @@ static void printout_tracemission_stats(void) {
   traceemissionabsorption = nullptr;
 }
 
-static int get_proccount(void)
+static int get_proccount()
 // number of different emission processes (bf and bb for each ion, and free-free)
 {
   return 2 * get_nelements() * get_max_nions() + 1;
@@ -459,7 +459,7 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
   }
 }
 
-void init_spectrum_trace(void) {
+void init_spectrum_trace() {
   if (TRACE_EMISSION_ABSORPTION_REGION_ON) {
     traceemission_totalenergy = 0.;
     traceemissionabsorption =
@@ -574,7 +574,7 @@ static void alloc_emissionabsorption_spectra(spec *spectra) {
 struct spec *alloc_spectra(const bool do_emission_res) {
   long mem_usage = 0;
   assert_always(globals::ntstep > 0);
-  struct spec *spectra = static_cast<struct spec *>(malloc(sizeof(struct spec)));
+  auto *spectra = static_cast<struct spec *>(malloc(sizeof(struct spec)));
   mem_usage += globals::ntstep * sizeof(struct spec);
 
   spectra->do_emission_res = false;  // might be set true later by alloc_emissionabsorption_spectra

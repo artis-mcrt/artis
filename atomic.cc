@@ -154,7 +154,7 @@ double photoionization_crosssection_fromtable(const float *const photoion_xs, co
 
 void set_nelements(const int nelements_in) { nelements = nelements_in; }
 
-int get_nelements(void) { return nelements; }
+int get_nelements() { return nelements; }
 
 int get_element(const int element)
 /// Returns the atomic number associated with a given elementindex.
@@ -184,7 +184,7 @@ int get_elementindex(const int Z)
 
 void increase_includedions(const int nions) { includedions += nions; }
 
-int get_includedions(void)
+int get_includedions()
 // returns the number of ions of all elements combined
 {
   return includedions;
@@ -199,7 +199,7 @@ void update_max_nions(const int nions)
   }
 }
 
-int get_max_nions(void) {
+int get_max_nions() {
   // number greater than or equal to nions(element) for all elements
   return maxnions;
 }

@@ -68,7 +68,7 @@ std::vector<int> ranks_ndo;
 std::vector<int> ranks_ndo_nonempty;
 int maxndo = -1;
 
-double get_mtot_input(void)
+double get_mtot_input()
 // mass of the input model, which can be slightly different to the simulation mass
 // e.g. spherical shells mapped to cartesian grid
 {
@@ -294,18 +294,18 @@ void set_TJ(int modelgridindex, float TJ) { modelgrid[modelgridindex].TJ = TJ; }
 
 void set_W(int modelgridindex, float W) { modelgrid[modelgridindex].W = W; }
 
-enum model_types get_model_type(void) { return model_type; }
+enum model_types get_model_type() { return model_type; }
 
 void set_model_type(enum model_types model_type_value) { model_type = model_type_value; }
 
-int get_npts_model(void)
+int get_npts_model()
 // number of model grid cells
 {
   assert_always(npts_model > 0);
   return npts_model;
 }
 
-int get_nonempty_npts_model(void)
+int get_nonempty_npts_model()
 // number of model grid cells
 {
   assert_always(nonempty_npts_model > 0);
@@ -324,7 +324,7 @@ static void set_npts_model(int new_npts_model) {
   nonemptymgi_of_mgi = static_cast<int *>(malloc((npts_model + 1) * sizeof(int)));
 }
 
-static void allocate_initradiobund(void) {
+static void allocate_initradiobund() {
   assert_always(npts_model > 0);
 
   const int num_nuclides = decay::get_num_nuclides();
@@ -369,7 +369,7 @@ static void allocate_initradiobund(void) {
 #endif
 }
 
-int get_t_model(void)
+int get_t_model()
 // get time at which model input densities are defined
 {
   assert_testmodeonly(t_model > 0.);
@@ -491,7 +491,7 @@ static void set_initenergyq(const int modelgridindex, const double initenergyq) 
   modelgrid[modelgridindex].initenergyq = initenergyq;
 }
 
-void read_possible_yefile(void) {
+void read_possible_yefile() {
   if (!std::ifstream("Ye.txt")) {
     printout("Ye.txt not found\n");
     return;
@@ -577,7 +577,7 @@ void set_elements_uppermost_ion(const int modelgridindex, const int element, con
   modelgrid[modelgridindex].elements_uppermost_ion[element] = newvalue;
 }
 
-static void calculate_kappagrey(void) {
+static void calculate_kappagrey() {
   double rho_sum = 0.0;
   double fe_sum = 0.0;
   double opcase3_sum = 0.0;
@@ -679,13 +679,13 @@ static void calculate_kappagrey(void) {
   printout("Grey normalisation check: %g\n", check1 / check2);
 }
 
-static void allocate_composition_cooling(void)
+static void allocate_composition_cooling()
 /// Initialise composition dependent cell data for the given cell
 {
   const int npts_nonempty = get_nonempty_npts_model();  // add one for the combined empty cell at the end
 
-  float *initmassfracstable_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
-  float *elem_meanweight_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
+  auto *initmassfracstable_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
+  auto *elem_meanweight_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
 
   double *nltepops_allcells = nullptr;
   if (globals::total_nlte_levels > 0) {
@@ -796,7 +796,7 @@ static void allocate_composition_cooling(void)
   }
 }
 
-static void allocate_nonemptymodelcells(void) {
+static void allocate_nonemptymodelcells() {
   mem_usage_nltepops = 0;
   /// This is the placeholder for empty cells. Temperatures must be positive
   /// as long as ff opacities are calculated.
@@ -874,7 +874,7 @@ static void allocate_nonemptymodelcells(void) {
       mem_usage_nltepops / 1024. / 1024.);
 }
 
-static void map_1dmodeltogrid(void)
+static void map_1dmodeltogrid()
 // Map 1D spherical model grid onto propagation grid
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
@@ -906,7 +906,7 @@ static void map_1dmodeltogrid(void)
   }
 }
 
-static void map_2dmodeltogrid(void)
+static void map_2dmodeltogrid()
 // Map 2D cylindrical model onto propagation grid
 {
   for (int n = 0; n < ngrid; n++) {
@@ -952,7 +952,7 @@ static void map_2dmodeltogrid(void)
   }
 }
 
-static void map_3dmodeltogrid(void) {
+static void map_3dmodeltogrid() {
   // propagation grid must match the input model grid exactly for 3D models
   assert_always(ncoord_model[0] == ncoordgrid[0]);
   assert_always(ncoord_model[1] == ncoordgrid[1]);
@@ -971,7 +971,7 @@ static void map_3dmodeltogrid(void) {
   }
 }
 
-static void abundances_read(void) {
+static void abundances_read() {
 #ifdef MPI_ON
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
@@ -1204,7 +1204,7 @@ static void read_model_radioabundances(std::ifstream &fmodel, std::string &line,
   }
 }
 
-static void read_1d_model(void)
+static void read_1d_model()
 // Read in a 1D spherical model
 {
   std::ifstream fmodel("model.txt");
@@ -1299,7 +1299,7 @@ static void read_1d_model(void)
   globals::vmax = vout_model[get_npts_model() - 1];
 }
 
-static void read_2d_model(void)
+static void read_2d_model()
 // Read in a 2D axisymmetric spherical coordinate model
 {
   std::ifstream fmodel("model.txt");
@@ -1390,7 +1390,7 @@ static void read_2d_model(void)
   fmodel.close();
 }
 
-static void read_3d_model(void)
+static void read_3d_model()
 /// Subroutine to read in a 3-D model.
 {
   printout("reading 3D model.txt...\n");
@@ -1537,7 +1537,7 @@ static void read_3d_model(void)
   fmodel.close();
 }
 
-static void calc_modelinit_totmassradionuclides(void) {
+static void calc_modelinit_totmassradionuclides() {
   mtot_input = 0.;
   mfeg = 0.;
 
@@ -1594,7 +1594,7 @@ static void calc_modelinit_totmassradionuclides(void) {
            get_totmassradionuclide(27, 57) / MSUN);
 }
 
-void read_ejecta_model(void) {
+void read_ejecta_model() {
   switch (get_model_type()) {
     case RHO_UNIFORM: {
       assert_always(false);  // needs to be reimplemented using spherical coordinate mode
@@ -1822,7 +1822,7 @@ void write_grid_restart_data(const int timestep) {
   printout("done in %ld seconds.\n", time(nullptr) - sys_time_start_write_restart);
 }
 
-static void assign_initial_temperatures(void)
+static void assign_initial_temperatures()
 /// Routine for assigning temperatures to the grid cells at the start of the simulation.
 {
 #ifdef MPI_ON
@@ -1867,7 +1867,7 @@ static void assign_initial_temperatures(void)
   }
 }
 
-static void setup_nstart_ndo(void) {
+static void setup_nstart_ndo() {
   const int nprocesses = globals::nprocs;
   const int npts_nonempty = get_nonempty_npts_model();
   const int min_nonempty_perproc = npts_nonempty / nprocesses;  // integer division, minimum non-empty cells per process
@@ -1936,7 +1936,7 @@ static void setup_nstart_ndo(void) {
   }
 }
 
-int get_maxndo(void) {
+int get_maxndo() {
   if (ranks_ndo.size() == 0) {
     setup_nstart_ndo();
   }
@@ -1964,7 +1964,7 @@ int get_ndo_nonempty(const int rank) {
   return ranks_ndo_nonempty[rank];
 }
 
-static void uniform_grid_setup(void)
+static void uniform_grid_setup()
 /// Routine for doing a uniform cuboidal grid.
 {
   // vmax is per coordinate, but the simulation volume corners will
@@ -2022,7 +2022,7 @@ static void uniform_grid_setup(void)
   }
 }
 
-static void spherical1d_grid_setup(void) {
+static void spherical1d_grid_setup() {
   assert_always(get_model_type() == RHO_1D_READ);
   coordlabel[0] = 'r';
   coordlabel[1] = '_';

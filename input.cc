@@ -177,9 +177,9 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
 
     double nu_edge = (epsilon(element, upperion, 0) - epsilon(element, lowerion, lowerlevel)) / H;
 
-    double *nutable = static_cast<double *>(calloc(nphixspoints_inputtable, sizeof(double)));
+    auto *nutable = static_cast<double *>(calloc(nphixspoints_inputtable, sizeof(double)));
     assert_always(nutable != nullptr);
-    double *phixstable = static_cast<double *>(calloc(nphixspoints_inputtable, sizeof(double)));
+    auto *phixstable = static_cast<double *>(calloc(nphixspoints_inputtable, sizeof(double)));
     assert_always(phixstable != nullptr);
 
     for (int i = 0; i < nphixspoints_inputtable; i++) {
@@ -490,8 +490,8 @@ constexpr bool operator<(const linelist_entry &a, const linelist_entry &b)
 constexpr int compare_linelistentry(const void *p1, const void *p2)
 /// Helper function to sort the linelist by frequency.
 {
-  linelist_entry *a1 = (linelist_entry *)(p1);
-  linelist_entry *a2 = (linelist_entry *)(p2);
+  auto *a1 = (linelist_entry *)(p1);
+  auto *a2 = (linelist_entry *)(p2);
 
   if (fabs(a2->nu - a1->nu) < (1.e-10 * a1->nu)) {
     if ((a1->elementindex == a2->elementindex) && (a1->ionindex == a2->ionindex) &&
@@ -733,7 +733,7 @@ static int calculate_nlevels_groundterm(int element, int ion) {
   return nlevels_groundterm;
 }
 
-static void read_atomicdata_files(void) {
+static void read_atomicdata_files() {
   int totaluptrans = 0;
   int totaldowntrans = 0;
 
@@ -899,8 +899,7 @@ static void read_atomicdata_files(void) {
           static_cast<struct levellist_entry *>(calloc(nlevelsmax, sizeof(struct levellist_entry)));
       assert_always(globals::elements[element].ions[ion].levels != nullptr);
 
-      struct transitions *transitions =
-          static_cast<struct transitions *>(calloc(nlevelsmax, sizeof(struct transitions)));
+      auto *transitions = static_cast<struct transitions *>(calloc(nlevelsmax, sizeof(struct transitions)));
       assert_always(transitions != nullptr);
 
       read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, transitions);
@@ -1256,7 +1255,7 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
   return index;
 }
 
-static void setup_cellhistory(void) {
+static void setup_cellhistory() {
   /// SET UP THE CELL HISTORY
   ///======================================================
   /// Stack which holds information about population and other cell specific data
@@ -1445,7 +1444,7 @@ static bool operator<(const groundphixslist &a, const groundphixslist &b)
   return a.nu_edge < b.nu_edge;
 }
 
-static void setup_phixs_list(void) {
+static void setup_phixs_list() {
   // set up the photoionisation transition lists
   // and temporary gamma/kappa lists for each thread
 
@@ -1538,7 +1537,7 @@ static void setup_phixs_list(void) {
     std::sort(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground);
   }
 
-  struct fullphixslist *nonconstallcont =
+  auto *nonconstallcont =
       static_cast<struct fullphixslist *>(malloc(globals::nbfcontinua * sizeof(struct fullphixslist)));
   printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
            globals::nbfcontinua * (sizeof(fullphixslist)) / 1024. / 1024.);
@@ -1603,7 +1602,7 @@ static void setup_phixs_list(void) {
 
     MPI_Barrier(MPI_COMM_WORLD);
 #else
-    float *allphixsblock = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
+    auto *allphixsblock = static_cast<float *>(malloc(nbftables * globals::NPHIXSPOINTS * sizeof(float)));
 #endif
 
     assert_always(allphixsblock != nullptr);
@@ -1702,7 +1701,7 @@ static void setup_phixs_list(void) {
       mem_usage_photoionluts / 1024. / 1024.);
 }
 
-static void read_atomicdata(void) {
+static void read_atomicdata() {
   read_atomicdata_files();
 
   printout("included ions %d\n", get_includedions());
@@ -2242,7 +2241,7 @@ void update_parameterfile(int nts)
   printout("done\n");
 }
 
-void time_init(void)
+void time_init()
 // Subroutine to define the time steps.
 {
   /// t=globals::tmin is the start of the calcualtion. t=globals::tmax is the end of the calculation.
@@ -2398,7 +2397,7 @@ void time_init(void)
   }
 }
 
-void write_timestep_file(void) {
+void write_timestep_file() {
   FILE *timestepfile = fopen_required("timesteps.out", "w");
   fprintf(timestepfile, "#timestep tstart_days tmid_days twidth_days\n");
   for (int n = 0; n < globals::ntstep; n++) {

@@ -1563,7 +1563,7 @@ void nltepop_open_file(const int my_rank) {
           "n_LTE", "n_NLTE", "ion_popfrac");
 }
 
-void nltepop_close_file(void) {
+void nltepop_close_file() {
   if (nlte_file != nullptr) {
     fclose(nlte_file);
     nlte_file = nullptr;

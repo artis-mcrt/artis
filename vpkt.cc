@@ -405,7 +405,7 @@ void add_to_vspecpol(struct packet *pkt_ptr, int bin, int ind, double t_arrive) 
   }
 }
 
-void init_vspecpol(void) {
+void init_vspecpol() {
   vstokes_i = (struct vspecpol **)malloc(VMTBINS * sizeof(struct vspecpol *));
   vstokes_q = (struct vspecpol **)malloc(VMTBINS * sizeof(struct vspecpol *));
   vstokes_u = (struct vspecpol **)malloc(VMTBINS * sizeof(struct vspecpol *));
@@ -547,7 +547,7 @@ void read_vspecpol(int my_rank, int nts) {
   fclose(vspecpol_file);
 }
 
-void init_vpkt_grid(void) {
+void init_vpkt_grid() {
   const double ybin = 2 * globals::vmax / NY_VGRID;
   const double zbin = 2 * globals::vmax / NZ_VGRID;
 
@@ -667,7 +667,7 @@ void read_vpkt_grid(FILE *vpkt_grid_file) {
   }
 }
 
-void read_parameterfile_vpkt(void) {
+void read_parameterfile_vpkt() {
   FILE *input_file = fopen_required("vpkt.txt", "r");
 
   // Nobs
