@@ -9,6 +9,7 @@ Checks: >
     -cppcoreguidelines-avoid-magic-numbers,
     -cppcoreguidelines-pro-bounds-pointer-arithmetic,
     -clang-diagnostic-error,
+    -fuchsia-*,
     -google-readability-todo,
     -*static-assert*,
     -readability-identifier-length,
