@@ -993,7 +993,7 @@ static void abundances_read() {
   // loop over propagation cells for 3D models, or modelgrid cells
   const int npts_model = get_npts_model();
   for (int mgi = 0; mgi < npts_model; mgi++) {
-    std::string line = "";
+    std::string line;
     assert_always(get_noncommentline(abundance_file, line));
     std::istringstream ssline(line);
 
@@ -1942,28 +1942,28 @@ static void setup_nstart_ndo() {
 }
 
 int get_maxndo() {
-  if (ranks_ndo.size() == 0) {
+  if (ranks_ndo.empty()) {
     setup_nstart_ndo();
   }
   return maxndo;
 }
 
 int get_nstart(const int rank) {
-  if (ranks_ndo.size() == 0) {
+  if (ranks_ndo.empty()) {
     setup_nstart_ndo();
   }
   return ranks_nstart[rank];
 }
 
 int get_ndo(const int rank) {
-  if (ranks_ndo.size() == 0) {
+  if (ranks_ndo.empty()) {
     setup_nstart_ndo();
   }
   return ranks_ndo[rank];
 }
 
 int get_ndo_nonempty(const int rank) {
-  if (ranks_ndo.size() == 0) {
+  if (ranks_ndo.empty()) {
     setup_nstart_ndo();
   }
   return ranks_ndo_nonempty[rank];

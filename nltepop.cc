@@ -628,10 +628,10 @@ static void nltepop_matrix_normalise(const int modelgridindex, const int element
 
     gsl_vector_set(pop_norm_factor_vec, column, calculate_levelpop_lte(modelgridindex, element, ion, level));
 
-    if ((level != 0) && (is_nlte(element, ion, level) == false)) {
+    if ((level != 0) && (!is_nlte(element, ion, level))) {
       // level is a superlevel, so add populations of higher levels to the norm factor
       for (int dummylevel = level + 1; dummylevel < get_nlevels(element, ion); dummylevel++) {
-        if (is_nlte(element, ion, dummylevel) == false) {
+        if (!is_nlte(element, ion, dummylevel)) {
           *gsl_vector_ptr(pop_norm_factor_vec, column) +=
               calculate_levelpop_lte(modelgridindex, element, ion, dummylevel);
         }
@@ -883,7 +883,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   gsl_vector *const balance_vector = gsl_vector_calloc(nlte_dimension);
 
-  if (!balance_vector) {
+  if (balance_vector == nullptr) {
     printout("Cannot allocate NLTE rate matrix/balance vector memory.\n");
     abort();
   }

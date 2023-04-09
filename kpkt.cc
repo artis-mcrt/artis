@@ -528,7 +528,7 @@ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     const double zrand2 = rng_uniform();
     const double rndcool_ion_process = zrand2 * globals::cellhistory[tid].cooling_contrib[ihigh];
 
-    const auto selectedvalue =
+    auto *const selectedvalue =
         std::upper_bound(&globals::cellhistory[tid].cooling_contrib[ilow],
                          &globals::cellhistory[tid].cooling_contrib[ihigh + 1], rndcool_ion_process);
     const int i = selectedvalue - globals::cellhistory[tid].cooling_contrib;

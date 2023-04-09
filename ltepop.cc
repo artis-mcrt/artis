@@ -508,7 +508,7 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
   const int nlevels = get_nlevels(element, ion);
   const double groundpop = get_groundlevelpop(modelgridindex, element, ion);
   for (int level = 1; level < nlevels; level++) {
-    bool skipminpop;
+    bool skipminpop = false;
     const double nn = calculate_levelpop_nominpop(modelgridindex, element, ion, level, &skipminpop) / groundpop;
     // const double nn = get_levelpop(modelgridindex, element, ion, level) / groundpop;
     U += nn;

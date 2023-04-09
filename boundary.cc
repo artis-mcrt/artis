@@ -86,7 +86,8 @@ static double get_shellcrossdist(const double pos[3], const double dir[3], const
     }
     if (d2 < 0) {
       return d1;
-    } else if (d1 < 0) {
+    }
+    if (d1 < 0) {
       return d2;
     } else {
       return fmin(d1, d2);
@@ -173,7 +174,7 @@ double boundary_cross(struct packet *const pkt_ptr, int *snext)
       const int cellindexstride = flip ? -grid::get_coordcellindexincrement(d) : grid::get_coordcellindexincrement(d);
 
       bool isoutside_thisside = false;
-      if (flip) {
+      if (flip != 0) {
         isoutside_thisside = initpos[d] < (grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart -
                                            10.);  // 10 cm accuracy tolerance
       } else {
@@ -187,14 +188,14 @@ double boundary_cross(struct packet *const pkt_ptr, int *snext)
           printout(
               "[warning] packet %d outside coord %d %c%c boundary of cell %d. pkttype %d initpos(tmin) %g, vel %g, "
               "cellcoordmin %g, cellcoordmax %g\n",
-              pkt_ptr->number, d, flip ? '-' : '+', grid::coordlabel[d], cellindex, pkt_ptr->type, initpos[d2], vel[d2],
-              grid::get_cellcoordmin(cellindex, d2) / globals::tmin * tstart,
+              pkt_ptr->number, d, flip != 0 ? '-' : '+', grid::coordlabel[d], cellindex, pkt_ptr->type, initpos[d2],
+              vel[d2], grid::get_cellcoordmin(cellindex, d2) / globals::tmin * tstart,
               cellcoordmax[d2] / globals::tmin * tstart);
         }
         printout("globals::tmin %g tstart %g tstart/globals::tmin %g tdecay %g\n", globals::tmin, tstart,
                  tstart / globals::tmin, pkt_ptr->tdecay);
         // printout("[warning] pkt_ptr->number %d\n", pkt_ptr->number);
-        if (flip) {
+        if (flip != 0) {
           printout("[warning] delta %g\n",
                    (initpos[d] * globals::tmin / tstart) - grid::get_cellcoordmin(cellindex, d));
         } else {

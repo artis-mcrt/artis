@@ -202,7 +202,7 @@ int main(int argc, char *argv[]) {
         snprintf(pktfilename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", 0, p);
         printout("reading %s (file %d of %d)\n", pktfilename, p + 1, globals::nprocs_exspec);
 
-        if (!access(pktfilename, F_OK)) {
+        if (access(pktfilename, F_OK) == 0) {
           read_packets(pktfilename, pkts_start);
         } else {
           printout("   WARNING %s does not exist - trying temp packets file at beginning of timestep %d...\n   ",

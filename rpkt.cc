@@ -991,7 +991,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
 
   int snext = -99;
   bool end_packet = false;
-  while (end_packet == false) {
+  while (!end_packet) {
     const int cellindex = vpkt.where;
     const int mgi = grid::get_cell_modelgridindex(cellindex);
     if (grid::modelgrid[mgi].thick == 1) {

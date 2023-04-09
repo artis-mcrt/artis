@@ -1856,10 +1856,10 @@ void input(int rank)
 
 #ifdef MPI_ON
   const time_t time_before_barrier = time(nullptr);
-  printout("barrier after read_atomicdata(): time before barrier %d, ", (int)time_before_barrier);
+  printout("barrier after read_atomicdata(): time before barrier %d, ", static_cast<int>(time_before_barrier));
   MPI_Barrier(MPI_COMM_WORLD);
-  printout("time after barrier %d (waited %d seconds)\n", (int)time(nullptr),
-           (int)(time(nullptr) - time_before_barrier));
+  printout("time after barrier %d (waited %d seconds)\n", static_cast<int>(time(nullptr)),
+           static_cast<int>(time(nullptr) - time_before_barrier));
 #endif
 
   grid::read_ejecta_model();

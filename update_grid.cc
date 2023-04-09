@@ -1283,7 +1283,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       /// Need the total number density of bound and free electrons for Compton scattering
       calculate_electron_densities(mgi);  // if this causes problems, disable the nne calculation (only need nne_tot)
 
-      if (!((nts - globals::itstep) == 0 && titer == 0)) {
+      if ((nts - globals::itstep) != 0 || titer != 0) {
         radfield::normalise_J(mgi, estimator_normfactor_over4pi);  // this applies normalisation to the fullspec J
         radfield::set_J_normfactor(mgi,
                                    estimator_normfactor_over4pi);  // this stores the factor that will be applied

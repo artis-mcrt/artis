@@ -15,8 +15,8 @@ bool TRACE_EMISSION_ABSORPTION_REGION_ON = false;
 #define traceemissabs_lambdamax 25000.
 #define traceemissabs_nulower (1.e8 * CLIGHT / traceemissabs_lambdamax)
 #define traceemissabs_nuupper (1.e8 * CLIGHT / traceemissabs_lambdamin)
-#define traceemissabs_timemin 320. * DAY
-#define traceemissabs_timemax 340. * DAY
+#define traceemissabs_timemin (320. * DAY)
+#define traceemissabs_timemax (340. * DAY)
 
 using emissionabsorptioncontrib = struct emissionabsorptioncontrib {
   double energyemitted;
