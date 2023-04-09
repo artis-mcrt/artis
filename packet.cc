@@ -118,8 +118,8 @@ void packet_init(int my_rank, struct packet *pkt)
     const double targetval = zrand * norm;
 
     // first en_cumulative[i] such that en_cumulative[i] > targetval
-    const double *const upperval = std::upper_bound(en_cumulative.begin(), en_cumulative.end(), targetval);
-    assert_always(upperval < en_cumulative.end());
+    auto upperval = std::upper_bound(en_cumulative.begin(), en_cumulative.end(), targetval);
+    assert_always(upperval != en_cumulative.end());
     const int cellindex = std::distance(en_cumulative.begin(), upperval);
 
     place_pellet(e0, cellindex, n, &pkt[n]);
