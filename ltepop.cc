@@ -94,14 +94,14 @@ static double interpolate_ions_spontrecombcoeff(const int element, const int ion
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_always(T >= MINTEMP);
-  int lowerindex = floor(log(T / MINTEMP) / T_step_log);
+  int const lowerindex = floor(log(T / MINTEMP) / T_step_log);
   if (lowerindex < TABLESIZE - 1) {
-    int upperindex = lowerindex + 1;
-    double T_lower = MINTEMP * exp(lowerindex * T_step_log);
-    double T_upper = MINTEMP * exp(upperindex * T_step_log);
+    int const upperindex = lowerindex + 1;
+    double const T_lower = MINTEMP * exp(lowerindex * T_step_log);
+    double const T_upper = MINTEMP * exp(upperindex * T_step_log);
 
-    double f_upper = globals::elements[element].ions[ion].Alpha_sp[upperindex];
-    double f_lower = globals::elements[element].ions[ion].Alpha_sp[lowerindex];
+    double const f_upper = globals::elements[element].ions[ion].Alpha_sp[upperindex];
+    double const f_lower = globals::elements[element].ions[ion].Alpha_sp[lowerindex];
 
     return f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower);
   } else {
@@ -184,7 +184,7 @@ double phi(const int element, const int ion, const int modelgridindex)
     }
 
     // Alpha_st = stimrecombestimator[cellnumber*get_nelements()*get_max_nions()+element*get_max_nions()+ion];
-    double Alpha_st = 0.;  /// approximate treatment neglects stimulated recombination
+    double const Alpha_st = 0.;  /// approximate treatment neglects stimulated recombination
 
     double Alpha_sp = 0.;
     if constexpr (NLTE_POPS_ON) {

@@ -581,7 +581,7 @@ static void calculate_kappagrey() {
   double rho_sum = 0.0;
   double fe_sum = 0.0;
   double opcase3_sum = 0.0;
-  int empty_cells = 0;
+  int const empty_cells = 0;
 
   for (int n = 0; n < ngrid; n++) {
     const int mgi = get_cell_modelgridindex(n);
@@ -1243,7 +1243,7 @@ static void read_1d_model()
   std::vector<int> zlist;
   std::vector<int> alist;
   std::vector<std::string> colnames;
-  std::streampos oldpos = fmodel.tellg();  // get position in case we need to undo getline
+  std::streampos const oldpos = fmodel.tellg();  // get position in case we need to undo getline
   std::getline(fmodel, line);
   if (lineiscommentonly(line)) {
     read_model_headerline(line, zlist, alist, colnames);
@@ -1261,7 +1261,7 @@ static void read_1d_model()
 
   int mgi = 0;
   while (std::getline(fmodel, line)) {
-    std::istringstream ssline(line);
+    std::istringstream const ssline(line);
     int cellnumberin;
     double vout_kmps;
     double log_rho;
@@ -1334,7 +1334,7 @@ static void read_2d_model()
   std::vector<int> zlist;
   std::vector<int> alist;
   std::vector<std::string> colnames;
-  std::streampos oldpos = fmodel.tellg();  // get position in case we need to undo getline
+  std::streampos const oldpos = fmodel.tellg();  // get position in case we need to undo getline
   std::getline(fmodel, line);
   if (lineiscommentonly(line)) {
     read_model_headerline(line, zlist, alist, colnames);
@@ -1429,7 +1429,7 @@ static void read_3d_model()
   assert_always(get_noncommentline(fmodel, line));
   std::stringstream(line) >> globals::vmax;
 
-  double xmax_tmodel = globals::vmax * t_model;
+  double const xmax_tmodel = globals::vmax * t_model;
 
   /// Now read in the lines of the model.
   min_den = -1.;
@@ -1442,7 +1442,7 @@ static void read_3d_model()
   std::vector<int> zlist;
   std::vector<int> alist;
   std::vector<std::string> colnames;
-  std::streampos oldpos = fmodel.tellg();  // get position in case we need to undo getline
+  std::streampos const oldpos = fmodel.tellg();  // get position in case we need to undo getline
   std::getline(fmodel, line);
   if (lineiscommentonly(line)) {
     read_model_headerline(line, zlist, alist, colnames);
@@ -1467,8 +1467,8 @@ static void read_3d_model()
     float cellpos_in[3];
     float rho_model;
     int linepos = 0;
-    int items_read = sscanf(line.c_str(), "%d %g %g %g %g%n", &cellnumberin, &cellpos_in[0], &cellpos_in[1],
-                            &cellpos_in[2], &rho_model, &linepos);
+    int const items_read = sscanf(line.c_str(), "%d %g %g %g %g%n", &cellnumberin, &cellpos_in[0], &cellpos_in[1],
+                                  &cellpos_in[2], &rho_model, &linepos);
     assert_always(items_read == 5);
     // printout("cell %d, posz %g, posy %g, posx %g, rho %g, rho_init %g\n",dum1,dum3,dum4,dum5,rho_model,rho_model*
     // pow( (t_model/globals::tmin), 3.));
@@ -2110,8 +2110,8 @@ void grid_init(int my_rank)
   calculate_kappagrey();
   abundances_read();
 
-  int ndo = grid::get_ndo(my_rank);
-  int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
+  int const ndo = grid::get_ndo(my_rank);
+  int const ndo_nonempty = grid::get_ndo_nonempty(my_rank);
 
   radfield::init(my_rank, ndo, ndo_nonempty);
   nonthermal::init(my_rank, ndo, ndo_nonempty);

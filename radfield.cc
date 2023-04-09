@@ -486,7 +486,7 @@ int get_Jblueindex(const int lineindex)
   int low = 0;
   int high = detailed_linecount;
   while (low <= high) {
-    int mid = low + ((high - low) / 2);
+    int const mid = low + ((high - low) / 2);
     if (detailed_lineindicies[mid] < lineindex) {
       low = mid + 1;
     } else if (detailed_lineindicies[mid] > lineindex) {
@@ -609,7 +609,7 @@ void write_to_file(int modelgridindex, int timestep) {
       double J_nu_bar = 0.0;
       int contribcount = 0;
 
-      bool skipoutput = false;
+      bool const skipoutput = false;
 
       if (binindex >= 0) {
         nu_lower = get_bin_nu_lower(binindex);
@@ -943,8 +943,8 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
   const gsl_function F_planck = {.function = &gsl_integrand_planck, .params = &intparas};
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-  int status = gsl_integration_qag(&F_planck, nu_lower, nu_upper, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61,
-                                   gslworkspace, &integral, &error);
+  int const status = gsl_integration_qag(&F_planck, nu_lower, nu_upper, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61,
+                                         gslworkspace, &integral, &error);
   if (status != 0) {
     printout("planck_integral integrator status %d, GSL_FAILURE= %d. Integral value %g, setting to zero.\n", status,
              GSL_FAILURE, integral);
@@ -959,12 +959,12 @@ static double planck_integral_analytic(double T_R, double nu_lower, double nu_up
   double integral = 0.;
 
   if (prefactor == TIMES_NU) {
-    double debye_upper = gsl_sf_debye_4(HOVERKB * nu_upper / T_R) * pow(nu_upper, 4);
-    double debye_lower = gsl_sf_debye_4(HOVERKB * nu_lower / T_R) * pow(nu_lower, 4);
+    double const debye_upper = gsl_sf_debye_4(HOVERKB * nu_upper / T_R) * pow(nu_upper, 4);
+    double const debye_lower = gsl_sf_debye_4(HOVERKB * nu_lower / T_R) * pow(nu_lower, 4);
     integral = TWOHOVERCLIGHTSQUARED * (debye_upper - debye_lower) * T_R / HOVERKB / 4.;
   } else {
-    double debye_upper = gsl_sf_debye_3(HOVERKB * nu_upper / T_R) * pow(nu_upper, 3);
-    double debye_lower = gsl_sf_debye_3(HOVERKB * nu_lower / T_R) * pow(nu_lower, 3);
+    double const debye_upper = gsl_sf_debye_3(HOVERKB * nu_upper / T_R) * pow(nu_upper, 3);
+    double const debye_lower = gsl_sf_debye_3(HOVERKB * nu_lower / T_R) * pow(nu_lower, 3);
     integral = TWOHOVERCLIGHTSQUARED * (debye_upper - debye_lower) * T_R / HOVERKB / 3.;
 
     if (integral == 0.) {
@@ -1748,7 +1748,7 @@ inline int integrate(const gsl_function *f, double nu_a, double nu_b, double eps
   if (MULTIBIN_RADFIELD_MODEL_ON && (globals::nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP)) {
     auto *pts = static_cast<double *>(malloc((RADFIELDBINCOUNT + 3) * sizeof(double)));
     int binindex_a = select_bin(nu_a);
-    int binindex_b = select_bin(nu_b);
+    int const binindex_b = select_bin(nu_b);
     int npts = 0;
     pts[npts++] = nu_a;
     if (binindex_a == binindex_b)  // both higher, both lower, or match the same bin

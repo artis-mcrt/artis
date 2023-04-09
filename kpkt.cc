@@ -465,7 +465,7 @@ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
   }
   // double deltat = 1. / (nne * 1.02e-12 * pow(T_e / 1e4, 0.843));
   // printout("kpkt diffusion time simple %g, advanced %g\n", deltat, 1 / (nne * 1.02e-12 * pow(T_e / 1e4, 0.843)));
-  double t_current = t1 + deltat;
+  double const t_current = t1 + deltat;
 
   if (t_current <= t2) {
     vec_scale(pkt_ptr->pos, t_current / t1);
@@ -543,7 +543,7 @@ double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       printout("lower %g, %g, %g\n", globals::cellhistory[tid].cooling_contrib[get_coolinglistoffset(element, ion) - 1],
                globals::cellhistory[tid].cooling_contrib[get_coolinglistoffset(element, ion)],
                globals::cellhistory[tid].cooling_contrib[get_coolinglistoffset(element, ion) + 1]);
-      int finalpos = get_coolinglistoffset(element, ion) + get_ncoolingterms(element, ion) - 1;
+      int const finalpos = get_coolinglistoffset(element, ion) + get_ncoolingterms(element, ion) - 1;
       printout("upper %g, %g, %g\n", globals::cellhistory[tid].cooling_contrib[finalpos - 1],
                globals::cellhistory[tid].cooling_contrib[finalpos],
                globals::cellhistory[tid].cooling_contrib[finalpos + 1]);

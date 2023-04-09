@@ -159,15 +159,15 @@ double boundary_cross(struct packet *const pkt_ptr, int *snext)
   // cellymax %g, cellzmax %g\n",cellcoordmax[0],cellcoordmax[1],cellcoordmax[2]);
 
   enum cell_boundary last_cross = pkt_ptr->last_cross;
-  enum cell_boundary negdirections[3] = {NEG_X, NEG_Y, NEG_Z};  // 'X' might actually be radial coordinate
-  enum cell_boundary posdirections[3] = {POS_X, POS_Y, POS_Z};
+  enum cell_boundary const negdirections[3] = {NEG_X, NEG_Y, NEG_Z};  // 'X' might actually be radial coordinate
+  enum cell_boundary const posdirections[3] = {POS_X, POS_Y, POS_Z};
 
   // printout("checking inside cell boundary\n");
   for (int d = 0; d < ndim; d++) {
     // flip is either zero or one to indicate +ve and -ve boundaries along the selected axis
     for (int flip = 0; flip < 2; flip++) {
-      enum cell_boundary direction = flip ? posdirections[d] : negdirections[d];
-      enum cell_boundary invdirection = !flip ? posdirections[d] : negdirections[d];
+      enum cell_boundary const direction = flip ? posdirections[d] : negdirections[d];
+      enum cell_boundary const invdirection = !flip ? posdirections[d] : negdirections[d];
       const int cellindexstride = flip ? -grid::get_coordcellindexincrement(d) : grid::get_coordcellindexincrement(d);
 
       bool isoutside_thisside;
@@ -322,7 +322,7 @@ double boundary_cross(struct packet *const pkt_ptr, int *snext)
   }
 
   // Now we know what happens. The distance to crossing is....
-  double distance = CLIGHT_PROP * time;
+  double const distance = CLIGHT_PROP * time;
   // printout("boundary_cross: time %g distance %g\n", time, distance);
   // closest = close;
 

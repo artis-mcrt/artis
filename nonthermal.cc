@@ -354,7 +354,7 @@ static void read_auger_data() {
 
           printout("\n");
           // printout("ionpot %g %g, g %d\n", colliondata[i].ionpot_ev, ionpot_ev, g);
-          bool found_existing_data = (colliondata[i].auger_g_accumulated > 0.);
+          bool const found_existing_data = (colliondata[i].auger_g_accumulated > 0.);
 
           // keep existing data but update according to statistical weight represented by existing and new data
           const double oldweight = colliondata[i].auger_g_accumulated / (g + colliondata[i].auger_g_accumulated);
@@ -1084,7 +1084,7 @@ static double N_e(const int modelgridindex, const double energy)
 
           // integral from ionpot up to lambda
           for (int i = integral1startindex; i <= integral1stopindex; i++) {
-            double endash = gsl_vector_get(envec, i);
+            double const endash = gsl_vector_get(envec, i);
 #if (SF_USE_LOG_E_INCREMENT)
             const double delta_endash = gsl_vector_get(delta_envec, i);
 #else
@@ -1099,7 +1099,7 @@ static double N_e(const int modelgridindex, const double energy)
           // integral from 2E + I up to E_max
           const int integral2startindex = get_energyindex_ev_lteq(2 * energy_ev + ionpot_ev);
           for (int i = integral2startindex; i < SFPTS; i++) {
-            double endash = gsl_vector_get(envec, i);
+            double const endash = gsl_vector_get(envec, i);
 #if (SF_USE_LOG_E_INCREMENT)
             const double delta_endash = gsl_vector_get(delta_envec, i);
 #else
@@ -1374,7 +1374,7 @@ static double calculate_nt_frac_ionization_shell(const int modelgridindex, const
   gsl_vector_mul(cross_section_vec, delta_envec);
 #endif
 
-  gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
+  gsl_vector_view const yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
 
   double y_dot_crosssection_de = 0.;
   gsl_blas_ddot(&yvecview.vector, cross_section_vec, &y_dot_crosssection_de);
@@ -1443,7 +1443,7 @@ static double calculate_nt_ionization_ratecoeff(const int modelgridindex, const 
   assert_always(nt_solution[modelgridindex].yfunc != nullptr);
 
   double y_dot_crosssection_de = 0.;
-  gsl_vector_view yvecview_thismgi = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
+  gsl_vector_view const yvecview_thismgi = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
   gsl_blas_ddot(&yvecview_thismgi.vector, cross_section_vec_allshells, &y_dot_crosssection_de);
   gsl_vector_free(cross_section_vec_allshells);
 
@@ -1719,7 +1719,7 @@ double nt_ionization_ratecoeff(const int modelgridindex, const int element, cons
   assert_always(grid::get_numassociatedcells(modelgridindex) > 0);
 
   if (NT_SOLVE_SPENCERFANO) {
-    double Y_nt = nt_ionization_ratecoeff_sf(modelgridindex, element, ion);
+    double const Y_nt = nt_ionization_ratecoeff_sf(modelgridindex, element, ion);
     if (!std::isfinite(Y_nt)) {
       // probably because eff_ionpot = 0 because the solver hasn't been run yet, or no impact ionization cross sections
       // exist
@@ -1761,7 +1761,7 @@ static double calculate_nt_excitation_ratecoeff_perdeposition(const int modelgri
 #endif
 
     double y_dot_crosssection = 0.;
-    gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
+    gsl_vector_view const yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
     gsl_blas_ddot(xs_excitation_vec, &yvecview.vector, &y_dot_crosssection);
     gsl_vector_free(xs_excitation_vec);
 
@@ -2634,8 +2634,8 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
           .nneperion_when_solved = nne_per_ion;
   nt_solution[modelgridindex].timestep_last_solved = timestep;
 
-  bool enable_sfexcitation = true;
-  bool enable_sfionization = true;
+  bool const enable_sfexcitation = true;
+  bool const enable_sfionization = true;
   // if (timestep <= globals::num_lte_timesteps)
   // {
   //   // for the first run of the solver at the first NLTE timestep (which usually requires many iterations),

@@ -402,7 +402,7 @@ void add_to_vspecpol(struct packet *pkt_ptr, int bin, int ind, double t_arrive) 
 
   /// Put this into the time grid.
   if (t_arrive > tmin_vspec && t_arrive < tmax_vspec) {
-    int nt = (log(t_arrive) - log(tmin_vspec)) / dlogt_vspec;
+    int const nt = (log(t_arrive) - log(tmin_vspec)) / dlogt_vspec;
     if (pkt_ptr->nu_rf > numin_vspec && pkt_ptr->nu_rf < numax_vspec) {
       const int nnu = (log(pkt_ptr->nu_rf) - log(numin_vspec)) / dlognu_vspec;
       const double pktcontrib = pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI /
@@ -925,7 +925,7 @@ double rot_angle(double *n1, double *n2, double *ref1, double *ref2) {
   vec_norm(ref1_sc, ref1_sc);
 
   double cos_stokes_rot_1 = dot(ref1_sc, ref1);
-  double cos_stokes_rot_2 = dot(ref1_sc, ref2);
+  double const cos_stokes_rot_2 = dot(ref1_sc, ref2);
 
   if (cos_stokes_rot_1 < -1) {
     cos_stokes_rot_1 = -1;

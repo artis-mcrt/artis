@@ -109,7 +109,7 @@ static bool read_ratecoeff_dat()
             assert_always(fscanf(ratecoeff_file, "%d %d %d %d\n", &in_element, &in_ionstage, &in_levels,
                                  &in_ionisinglevels) == 4);
             const int nlevels = get_nlevels(element, ion);
-            int ionisinglevels = get_ionisinglevels(element, ion);
+            int const ionisinglevels = get_ionisinglevels(element, ion);
             if (get_element(element) != in_element || get_ionstage(element, ion) != in_ionstage ||
                 nlevels != in_levels || ionisinglevels != in_ionisinglevels) {
               printout(
@@ -137,7 +137,7 @@ static bool read_ratecoeff_dat()
     if (fileisamatch) {
       printout("Matching ratecoeff_v2.dat file found. Readin this file ...\n");
       for (int element = 0; element < get_nelements(); element++) {
-        int nions = get_nions(element) - 1;
+        int const nions = get_nions(element) - 1;
         for (int ion = 0; ion < nions; ion++) {
           // nlevels = get_nlevels(element,ion);
           const int nlevels =

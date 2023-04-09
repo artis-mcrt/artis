@@ -103,7 +103,7 @@ double photoionization_crosssection_fromtable(const float *const photoion_xs, co
     if (nu == nu_edge) {
       sigma_bf = photoion_xs[0];
     } else if (nu <= nu_edge * (1 + globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS)) {
-      int i = floor(nu / (globals::NPHIXSNUINCREMENT * nu_edge)) - 10;
+      int const i = floor(nu / (globals::NPHIXSNUINCREMENT * nu_edge)) - 10;
       sigma_bf = photoion_xs[i];
     } else {
       /// use a parameterization of sigma_bf by the Kramers formula

@@ -472,7 +472,7 @@ static void find_decaypaths() {
   std::sort(decaypaths.begin(), decaypaths.end());
 
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
-    int decaypathlength = get_decaypathlength(decaypathindex);
+    int const decaypathlength = get_decaypathlength(decaypathindex);
 
     for (int i = 0; i < decaypathlength; i++) {
       const double meanlife = get_meanlife(decaypaths[decaypathindex].nucindex[i]);
@@ -623,7 +623,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
       std::stringstream(line) >> a >> z >> q_mev >> e_gamma_mev >> e_elec_mev >> e_neutrino >> tau_sec;
 
       bool keeprow = false;  // keep if the mass number matches one of the input nuclides
-      for (int i : custom_alist) {
+      for (int const i : custom_alist) {
         if (i == a) {
           keeprow = true;
           break;
@@ -664,7 +664,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
       std::stringstream(line) >> a >> z >> branch_alpha >> branch_beta >> halflife >> Q_total_alphadec >>
           Q_total_betadec >> e_alpha_mev >> e_gamma_mev >> e_beta_mev;
 
-      bool keeprow = ((branch_alpha > 0. || branch_beta > 0.) && halflife > 0.);
+      bool const keeprow = ((branch_alpha > 0. || branch_beta > 0.) && halflife > 0.);
       if (keeprow) {
         const double tau_sec = halflife / log(2);
         int alphanucindex = -1;
@@ -852,7 +852,7 @@ static double get_nuc_massfrac(const int modelgridindex, const int z, const int 
       continue;
     }
 
-    int decaypathlength = get_decaypathlength(decaypathindex);
+    int const decaypathlength = get_decaypathlength(decaypathindex);
 
     int fulldecaypathlength = decaypathlength;
     // if the nuclide is out of network, it's one past the end of the chain
@@ -1057,7 +1057,7 @@ static double get_decaypath_power_per_ejectamass(const int decaypathindex, const
 
   const double t_afterinit = time - grid::get_t_model();
 
-  int decaypathlength = get_decaypathlength(decaypathindex);
+  int const decaypathlength = get_decaypathlength(decaypathindex);
 
   // contribution to the end nuclide abundance from the top of chain (could be a length-one chain Z,A_top = Z,A_end
   // so contribution would be from init abundance only)

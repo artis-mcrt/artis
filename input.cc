@@ -175,7 +175,7 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
     assert_always(get_nphixstargets(element, lowerion, lowerlevel) == 1);
     assert_always(get_phixsupperlevel(element, lowerion, lowerlevel, 0) == 0);
 
-    double nu_edge = (epsilon(element, upperion, 0) - epsilon(element, lowerion, lowerlevel)) / H;
+    double const nu_edge = (epsilon(element, upperion, 0) - epsilon(element, lowerion, lowerlevel)) / H;
 
     auto *nutable = static_cast<double *>(calloc(nphixspoints_inputtable, sizeof(double)));
     assert_always(nutable != nullptr);
@@ -1089,7 +1089,7 @@ static void read_atomicdata_files() {
 
   printout("establish connection between transitions and sorted linelist...");
 
-  time_t time_start_establish_linelist_connections = time(nullptr);
+  time_t const time_start_establish_linelist_connections = time(nullptr);
   for (int lineindex = 0; lineindex < globals::nlines; lineindex++) {
     const int element = globals::linelist[lineindex].elementindex;
     const int ion = globals::linelist[lineindex].ionindex;
@@ -1226,7 +1226,7 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
     if (i == globals::nbfcontinua_ground) {
       element = globals::groundcont[i - 1].element;
       ion = globals::groundcont[i - 1].ion;
-      int level = globals::groundcont[i - 1].level;
+      int const level = globals::groundcont[i - 1].level;
       if (element == el && ion == in && level == ll) {
         index = i - 1;
       } else {
@@ -1889,7 +1889,7 @@ bool get_noncommentline(std::istream &input, std::string &line)
 // read the next line, skipping any comment lines beginning with '#'
 {
   while (true) {
-    bool linefound = getline(input, line);
+    bool const linefound = getline(input, line);
     // printout("LINE: >%s<  linefound: %s commentonly: %s \n", line.c_str(), linefound ? "true" : "false",
     // lineiscommentonly(line) ? "true" : "false");
     if (!linefound) {
@@ -1934,7 +1934,7 @@ void read_parameterfile(int rank)
     /// For MPI parallelisation, the random seed is changed based on the rank of the process
     /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
     /// to the thread-ID tid.
-    unsigned long int zseed = pre_zseed + (13 * rank) + (17 * tid); /* rnum generator seed */
+    unsigned long int const zseed = pre_zseed + (13 * rank) + (17 * tid); /* rnum generator seed */
     printout("rank %d: thread %d has zseed %lu\n", rank, tid, zseed);
     /// start by setting up the randon number generator
     rng_init(zseed);

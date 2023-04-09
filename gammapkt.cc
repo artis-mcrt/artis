@@ -219,7 +219,7 @@ static void choose_gamma_ray(struct packet *pkt_ptr) {
   // Routine to choose which gamma ray line it'll be.
 
   const int nucindex = pkt_ptr->pellet_nucindex;
-  double E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
+  double const E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
 
   const double zrand = rng_uniform();
   int nselected = -1;
@@ -324,7 +324,7 @@ constexpr double sigma_compton_partial(const double x, const double f)
 static double sig_comp(const struct packet *pkt_ptr) {
   // Start by working out the compton x-section in the co-moving frame.
 
-  double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
+  double const xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
 
   // Use this to decide whether the Thompson limit is acceptable.
 
@@ -332,7 +332,7 @@ static double sig_comp(const struct packet *pkt_ptr) {
   if (xx < THOMSON_LIMIT) {
     sigma_cmf = SIGMA_T;
   } else {
-    double fmax = (1 + (2 * xx));
+    double const fmax = (1 + (2 * xx));
     sigma_cmf = sigma_compton_partial(xx, fmax);
   }
 
@@ -583,7 +583,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
   // So distance before physical event is...
 
-  double edist = (tau_next - tau_current) / kap_tot;
+  double const edist = (tau_next - tau_current) / kap_tot;
 
   if (edist < 0) {
     printout("Negative distance (edist). Abort. \n");
@@ -592,7 +592,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
   // Find how far it can travel during the time inverval.
 
-  double tdist = (t2 - pkt_ptr->prop_time) * CLIGHT_PROP;
+  double const tdist = (t2 - pkt_ptr->prop_time) * CLIGHT_PROP;
 
   if (tdist < 0) {
     printout("Negative distance (tdist). Abort. \n");

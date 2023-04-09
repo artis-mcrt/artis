@@ -12,15 +12,15 @@ constexpr double meanf_sigma(const double x)
 // Routine to compute the mean energy converted to non-thermal electrons times
 // the Klein-Nishina cross section.
 {
-  double f = 1 + (2 * x);
+  double const f = 1 + (2 * x);
 
-  double term0 = 2 / x;
-  double term1 = (1 - (2 / x) - (3 / (x * x))) * log(f);
-  double term2 = ((4 / x) + (3 / (x * x)) - 1) * 2 * x / f;
-  double term3 = (1 - (2 / x) - (1 / (x * x))) * 2 * x * (1 + x) / f / f;
-  double term4 = -2. * x * ((4 * x * x) + (6 * x) + 3) / 3 / f / f / f;
+  double const term0 = 2 / x;
+  double const term1 = (1 - (2 / x) - (3 / (x * x))) * log(f);
+  double const term2 = ((4 / x) + (3 / (x * x)) - 1) * 2 * x / f;
+  double const term3 = (1 - (2 / x) - (1 / (x * x))) * 2 * x * (1 + x) / f / f;
+  double const term4 = -2. * x * ((4 * x * x) + (6 * x) + 3) / 3 / f / f / f;
 
-  double tot = 3 * SIGMA_T * (term0 + term1 + term2 + term3 + term4) / (8 * x);
+  double const tot = 3 * SIGMA_T * (term0 + term1 + term2 + term3 + term4) / (8 * x);
 
   return tot;
 }
@@ -46,7 +46,7 @@ void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist) {
     double vel_vec[3];
     get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
 
-    double doppler_sq = doppler_squared_nucmf_on_nurf(pkt_ptr->dir, vel_vec);
+    double const doppler_sq = doppler_squared_nucmf_on_nurf(pkt_ptr->dir, vel_vec);
 
     const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
     double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + sig_photo_electric(pkt_ptr) +

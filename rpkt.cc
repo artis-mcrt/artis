@@ -673,9 +673,9 @@ static void closest_transition_empty(struct packet *pkt_ptr)
 /// here its possible that the packet jumps over several lines
 {
   // int left = 0;
-  int left = pkt_ptr->next_trans;
+  int const left = pkt_ptr->next_trans;
   // printout("[debug] closest_transition: initial left %d\n",left);
-  int right = globals::nlines - 1;
+  int const right = globals::nlines - 1;
 
   // printout("[debug] ___closest_transition___: initial left %d, right %d, nu_cmf %g\n",left,right,pkt_ptr->nu_cmf);
   // printout("[debug] ___closest_transition___: nu_left %g, nu_right%g\n",linelist[left].nu,linelist[right].nu);
@@ -850,7 +850,7 @@ static bool do_rpkt_step(struct packet *pkt_ptr, const double t2)
 
     // Find how far it can travel during the time inverval.
 
-    double tdist = (t2 - pkt_ptr->prop_time) * CLIGHT_PROP;
+    double const tdist = (t2 - pkt_ptr->prop_time) * CLIGHT_PROP;
 
     assert_always(tdist >= 0);
 

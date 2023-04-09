@@ -109,7 +109,7 @@ static void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_v
         // gsl_vector_set(balance_vector, index, MINPOP / get_vector_get(pop_norm_factor_vec, index));
         // printout("(Eliminating this ground state)");
       } else {
-        double gs_index = get_nlte_vector_index(element, ion, 0);
+        double const gs_index = get_nlte_vector_index(element, ion, 0);
         eliminate_nlte_matrix_rowcol(index, gs_index, rate_matrix, balance_vector);
         // printout("(forcing LTE population)");
       }
@@ -677,7 +677,7 @@ static void set_element_pops_lte(const int modelgridindex, const int element) {
 }
 
 static bool lumatrix_is_singular(const gsl_matrix *LU, const int element) {
-  size_t n = LU->size1;
+  size_t const n = LU->size1;
   bool is_singular = false;
 
   for (size_t i = 0; i < n; i++) {
@@ -1086,7 +1086,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
                                   rate_matrix_ntcoll_bf);
     }
 
-    bool print_detailed_level_stats = false;
+    bool const print_detailed_level_stats = false;
 
     // if ((atomic_number == 26) && ((timestep % 5) == 0) && (nlte_iter == 0))
     // {
@@ -1170,7 +1170,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
   // storage). Our rate matrix will need to be of this dimension +3: the
   // ground state, the "super level" and the ground state of the ion
   // above. If there's no super level needed then we only need +2
-  int nlte_start = globals::elements[element].ions[ion].first_nlte;
+  int const nlte_start = globals::elements[element].ions[ion].first_nlte;
 
   //      if (get_groundlevelpop(modelgridindex,element,ion) > (1.2*MINPOP))
   if (grid::get_elem_abundance(modelgridindex, element) > 0.0) {
@@ -1358,7 +1358,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
           assert_always(std::isfinite(C));
           // C=C*1.e-10;
 
-          double upper_renorm = get_levelpop(modelgridindex, element, ion + 1, upper) / upperion_partition;
+          double const upper_renorm = get_levelpop(modelgridindex, element, ion + 1, upper) / upperion_partition;
           assert_always(std::isfinite(upper_renorm));
           // TODO: would the line below be correct, or is it equal to the above line?
           // double upper_renorm = superlevel_boltzmann(modelgridindex,element,ion+1,upper) / upperion_partition;
@@ -1418,7 +1418,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
     int s;  // sign of the transformation
     gsl_linalg_LU_decomp(&m.matrix, p, &s);
 
-    gsl_vector_view b = gsl_vector_view_array(balance_vector, nlte_size);
+    gsl_vector_view const b = gsl_vector_view_array(balance_vector, nlte_size);
     gsl_vector *x = gsl_vector_alloc(nlte_size);
     gsl_linalg_LU_solve(&m.matrix, p, &b.vector, x);  // solve matrix equation m * x = b for x (populations)
     // gsl_linalg_HH_solve (&m.matrix, &b.vector, x);
