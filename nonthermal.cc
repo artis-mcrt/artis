@@ -1664,10 +1664,8 @@ double nt_ionization_upperion_probability(const int modelgridindex, const int el
     printout("WARNING: tried to ionise from Z=%02d ionstage %d to %d\n", get_element(element),
              get_ionstage(element, lowerion), get_ionstage(element, upperion));
     return 0.;
-
-  } else {
-    return (upperion == lowerion + 1) ? 1.0 : 0.;
   }
+  return (upperion == lowerion + 1) ? 1.0 : 0.;
 }
 
 int nt_ionisation_maxupperion(const int element, const int lowerion) {

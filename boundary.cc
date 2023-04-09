@@ -92,13 +92,11 @@ static double get_shellcrossdist(const double pos[3], const double dir[3], const
     }
     return fmin(d1, d2);
 
-  } else {
-    // exactly one intersection
-    // ignore this and don't change which cell the packet is in
-    assert_always(shellradius <= vec_len(pos));
-    printout("single intersection\n");
-    return -1.;
-  }
+  }  // exactly one intersection
+  // ignore this and don't change which cell the packet is in
+  assert_always(shellradius <= vec_len(pos));
+  printout("single intersection\n");
+  return -1.;
 }
 
 double boundary_cross(struct packet *const pkt_ptr, int *snext)

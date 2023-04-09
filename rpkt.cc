@@ -956,13 +956,11 @@ static bool do_rpkt_step(struct packet *pkt_ptr, const double t2)
     }
 
     return false;
-  } else {
-    printout("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist,
-             tdist);
-    printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
-    abort();
-    return false;
   }
+  printout("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist,
+           tdist);
+  printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
+  abort();
 }
 
 void do_rpkt(struct packet *pkt_ptr, const double t2) {
