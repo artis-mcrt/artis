@@ -1,0 +1,4 @@
+---
+Checks: clang-diagnostic-*,clang-analyzer-*,abseil-*,bugprone-*,google-*,misc-*,modernize-*,mpi*,performance-*,readability-*,openmp-*,-clang-diagnostic-error,-google-readability-todo,-readability-identifier-length,-readability-magic-numbers,-modernize-use-trailing-return-type,
+WarningsAsErrors: ''
+FormatStyle: none
