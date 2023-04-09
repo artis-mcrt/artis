@@ -29,6 +29,7 @@ repos:
           - id: clang-format
             args: [-i]
           # - id: clang-tidy
+          #   args: [-extra-arg=-std=c++20]
           # - id: oclint
           # - id: uncrustify
           # - id: cppcheck
