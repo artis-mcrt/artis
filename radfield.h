@@ -10,9 +10,9 @@
 namespace radfield {
 void zero_estimators(int modelgridindex);
 void init(int my_rank, int ndo, int ndo_nonempty);
-void initialise_prev_titer_photoionestimators(void);
+void initialise_prev_titer_photoionestimators();
 void write_to_file(int modelgridindex, int timestep);
-void close_file(void);
+void close_file();
 void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const struct packet *pkt_ptr);
 void update_lineestimator(int modelgridindex, int lineindex, double increment);
 double radfield(double nu, int modelgridindex);
@@ -27,7 +27,7 @@ double get_Jb_lu(int modelgridindex, int jblueindex);
 int get_Jb_lu_contribcount(int modelgridindex, int jblueindex);
 void titer_J(int modelgridindex);
 void titer_nuJ(int modelgridindex);
-void reduce_estimators(void);
+void reduce_estimators();
 void do_MPI_Bcast(int modelgridindex, int root, int root_node_id);
 void write_restart_data(FILE *gridsave_file);
 void read_restart_data(FILE *gridsave_file);
