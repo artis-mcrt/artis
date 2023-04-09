@@ -1374,44 +1374,42 @@ void calculate_kappa_rpkt_cont(const struct packet *const pkt_ptr,
   double kappa_bf = 0.;
   double kappa_ffheating = 0.;
 
-  if (globals::do_r_lc) {
-    if (globals::opacity_case == 4) {
-      /// First contribution: Thomson scattering on free electrons
-      sigma = SIGMA_T * nne;
-      // reduced e/s for debugging
-      // sigma = 1e-30*sigma;
-      // switched off e/s for debugging
-      // sigma_cmf = 0. * nne;
-      // sigma *= 0.1;
+  if (globals::opacity_case == 4) {
+    /// First contribution: Thomson scattering on free electrons
+    sigma = SIGMA_T * nne;
+    // reduced e/s for debugging
+    // sigma = 1e-30*sigma;
+    // switched off e/s for debugging
+    // sigma_cmf = 0. * nne;
+    // sigma *= 0.1;
 
-      /// Second contribution: free-free absorption
-      kappa_ff = calculate_kappa_ff(modelgridindex, nu_cmf);
-      kappa_ffheating = kappa_ff;
+    /// Second contribution: free-free absorption
+    kappa_ff = calculate_kappa_ff(modelgridindex, nu_cmf);
+    kappa_ffheating = kappa_ff;
 
-      /// Third contribution: bound-free absorption
-      kappa_bf = calculate_kappa_bf_gammacontr(modelgridindex, nu_cmf);
+    /// Third contribution: bound-free absorption
+    kappa_bf = calculate_kappa_bf_gammacontr(modelgridindex, nu_cmf);
 
-      // const double pkt_lambda = 1e8 * CLIGHT / nu_cmf;
-      // if (pkt_lambda < 4000)
-      // {
-      //   printout("lambda %7.1f kappa_bf %g \n", pkt_lambda, kappa_bf);
-      // }
-    } else {
-      /// in the other cases kappa_grey is an mass absorption coefficient
-      /// therefore use the mass density
-      // sigma = globals::cell[pkt_ptr->where].kappa_grey * globals::cell[pkt_ptr->where].rho;
-      // sigma = SIGMA_T * nne;
+    // const double pkt_lambda = 1e8 * CLIGHT / nu_cmf;
+    // if (pkt_lambda < 4000)
+    // {
+    //   printout("lambda %7.1f kappa_bf %g \n", pkt_lambda, kappa_bf);
+    // }
+  } else {
+    /// in the other cases kappa_grey is an mass absorption coefficient
+    /// therefore use the mass density
+    // sigma = globals::cell[pkt_ptr->where].kappa_grey * globals::cell[pkt_ptr->where].rho;
+    // sigma = SIGMA_T * nne;
 
-      sigma = 0.;
-      // kappa_ff = 0.9*sigma;
-      // sigma *= 0.1;
-      // kappa_bf = 0.;
+    sigma = 0.;
+    // kappa_ff = 0.9*sigma;
+    // sigma *= 0.1;
+    // kappa_bf = 0.;
 
-      // Second contribution: free-free absorption
-      kappa_ff = 1e5 * calculate_kappa_ff(modelgridindex, nu_cmf);
+    // Second contribution: free-free absorption
+    kappa_ff = 1e5 * calculate_kappa_ff(modelgridindex, nu_cmf);
 
-      kappa_bf = 0.;
-    }
+    kappa_bf = 0.;
   }
 
   kappa_rpkt_cont_thisthread->nu = nu_cmf;

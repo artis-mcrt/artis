@@ -244,8 +244,6 @@ extern bool do_emission_res;
 extern bool file_set;
 extern std::unique_ptr<bool[]> startofline;
 
-constexpr bool do_comp_est = false;
-constexpr bool do_r_lc = true;
 constexpr int do_rlc_est = 3;
 
 extern double gamma_grey;
