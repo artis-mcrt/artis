@@ -192,11 +192,9 @@ static bool read_ratecoeff_dat()
     printout("[info] ratecoefficients_init: ratecoeff_v2.dat does not match current simulation. Recalculating...\n");
     fclose(ratecoeff_file);
     return false;
-
-  } else {
-    printout("[info] ratecoefficients_init:  No ratecoeff_v2.dat file available. Creating a new one...\n");
-    return false;
   }
+  printout("[info] ratecoefficients_init:  No ratecoeff_v2.dat file available. Creating a new one...\n");
+  return false;
 }
 
 static void write_ratecoeff_dat() {

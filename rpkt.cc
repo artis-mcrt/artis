@@ -49,19 +49,17 @@ int closest_transition(const double nu_cmf, const int next_trans)
     /// if nu_cmf is larger than the highest frequency in the the linelist,
     /// interaction with the first line occurs - no search
     return 0;
-  } else {
-    /// otherwise go through the list until nu_cmf is located between two
-    /// entries in the line list and get the index of the closest line
-    /// to lower frequencies
+  }  /// otherwise go through the list until nu_cmf is located between two
+  /// entries in the line list and get the index of the closest line
+  /// to lower frequencies
 
-    // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
-    // lower_bound matches the first element where the comparison function is false
-    const linelist_entry *matchline =
-        std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf);
-    const int matchindex = matchline - globals::linelist;
+  // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
+  // lower_bound matches the first element where the comparison function is false
+  const linelist_entry *matchline =
+      std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf);
+  const int matchindex = matchline - globals::linelist;
 
-    return matchindex;
-  }
+  return matchindex;
 }
 
 static double get_event(const int modelgridindex,
@@ -915,7 +913,8 @@ static bool do_rpkt_step(struct packet *pkt_ptr, const double t2)
     }
 
     return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
-  } else if ((edist < sdist) && (edist < tdist)) {
+  }
+  if ((edist < sdist) && (edist < tdist)) {
     // bound-bound or continuum event
     // printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
     move_pkt_withtime(pkt_ptr, edist / 2.);

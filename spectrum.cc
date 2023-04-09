@@ -41,9 +41,8 @@ static int compare_emission(const void *p1, const void *p2) {
   }
   if (elem1->energyemitted > elem2->energyemitted) {
     return -1;
-  } else {
-    return 0;
   }
+  return 0;
 }
 
 static int compare_absorption(const void *p1, const void *p2) {
@@ -55,9 +54,8 @@ static int compare_absorption(const void *p1, const void *p2) {
   }
   if (elem1->energyabsorbed > elem2->energyabsorbed) {
     return -1;
-  } else {
-    return 0;
   }
+  return 0;
 }
 
 static void printout_tracemission_stats() {
@@ -328,7 +326,8 @@ static int columnindex_from_emissiontype(const int et) {
     assert_always(contindex >= globals::nbfcontinua);  // make sure the special value didn't collide with a real process
 
     return 2 * get_nelements() * get_max_nions();
-  } else if (et == EMTYPE_NOTSET) {
+  }
+  if (et == EMTYPE_NOTSET) {
     return -1;
   } else {
     /// bf-emission

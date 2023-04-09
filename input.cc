@@ -512,7 +512,8 @@ constexpr int compare_linelistentry(const void *p1, const void *p2)
     }
     if (a1->lowerlevelindex < a2->lowerlevelindex) {
       return 1;
-    } else if (a1->upperlevelindex > a2->upperlevelindex) {
+    }
+    if (a1->upperlevelindex > a2->upperlevelindex) {
       return -1;
     } else if (a1->upperlevelindex < a2->upperlevelindex) {
       return 1;
@@ -527,9 +528,8 @@ constexpr int compare_linelistentry(const void *p1, const void *p2)
   }
   if (a1->nu > a2->nu) {
     return -1;
-  } else {
-    return 0;
   }
+  return 0;
 }
 
 static void add_transitions_to_unsorted_linelist(const int element, const int ion, const int nlevelsmax,

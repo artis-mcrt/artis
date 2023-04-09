@@ -83,7 +83,8 @@ static double get_shellcrossdist(const double pos[3], const double dir[3], const
     // ignore negative d values, and if two are positive then return the smaller one
     if (d1 < 0 && d2 < 0) {
       return -1;
-    } else if (d2 < 0) {
+    }
+    if (d2 < 0) {
       return d1;
     } else if (d1 < 0) {
       return d2;
@@ -213,11 +214,9 @@ double boundary_cross(struct packet *const pkt_ptr, int *snext)
           printout("[warning] swapping packet cellindex from %d to %d and setting last_cross to %d\n", pkt_ptr->where,
                    *snext, pkt_ptr->last_cross);
           return 0;
-
-        } else {
-          printout("pretending last_cross is %d\n", direction);
-          last_cross = direction;
         }
+        printout("pretending last_cross is %d\n", direction);
+        last_cross = direction;
       }
     }
   }

@@ -317,10 +317,8 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
       return MINPOP;
     }
     return 0.;
-
-  } else {
-    return nn;
   }
+  return nn;
 }
 
 double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)

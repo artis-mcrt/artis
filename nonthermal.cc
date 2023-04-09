@@ -160,9 +160,8 @@ static int compare_excitation_fractions(const void *p1, const void *p2) {
   }
   if (elem1->frac_deposition > elem2->frac_deposition) {
     return -1;
-  } else {
-    return 0;
   }
+  return 0;
 }
 
 // for ascending sort
@@ -175,9 +174,8 @@ static int compare_excitation_lineindicies(const void *p1, const void *p2) {
   }
   if (elem1->lineindex < elem2->lineindex) {
     return -1;
-  } else {
-    return 0;
   }
+  return 0;
 }
 
 #ifndef get_tot_nion
@@ -778,9 +776,8 @@ static int get_energyindex_ev_lteq(const double energy_ev)
   }
   if (index > SFPTS - 1) {
     return SFPTS - 1;
-  } else {
-    return index;
   }
+  return index;
 }
 
 static int get_energyindex_ev_gteq(const double energy_ev)
@@ -797,9 +794,8 @@ static int get_energyindex_ev_gteq(const double energy_ev)
   }
   if (index > SFPTS - 1) {
     return SFPTS - 1;
-  } else {
-    return index;
   }
+  return index;
 }
 
 static double get_y(const int modelgridindex, const double energy_ev) {
@@ -821,17 +817,16 @@ static double get_y(const int modelgridindex, const double energy_ev) {
   }
   if (index > SFPTS - 1) {
     return 0.;
-  } else {
-    const double enbelow = gsl_vector_get(envec, index);
-    const double enabove = gsl_vector_get(envec, index + 1);
-    const double ybelow = get_y_sample(modelgridindex, index);
-    const double yabove = get_y_sample(modelgridindex, index + 1);
-    const double x = (energy_ev - enbelow) / (enabove - enbelow);
-    return (1 - x) * ybelow + x * yabove;
-
-    // or return the nearest neighbour
-    // return get_y_sample(modelgridindex, index);
   }
+  const double enbelow = gsl_vector_get(envec, index);
+  const double enabove = gsl_vector_get(envec, index + 1);
+  const double ybelow = get_y_sample(modelgridindex, index);
+  const double yabove = get_y_sample(modelgridindex, index + 1);
+  const double x = (energy_ev - enbelow) / (enabove - enbelow);
+  return (1 - x) * ybelow + x * yabove;
+
+  // or return the nearest neighbour
+  // return get_y_sample(modelgridindex, index);
 }
 
 constexpr double electron_loss_rate(const double energy, const double nne)
@@ -885,9 +880,8 @@ constexpr double xs_excitation(const struct linelist_entry *line, const double e
     const double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
     // Eq 4 of Mewe 1972, possibly from Seaton 1962?
     return prefactor * A_naught_squared * pow(H_ionpot / epsilon_trans, 2) * fij * g_bar / U;
-  } else {
-    return 0.;
   }
+  return 0.;
 }
 
 static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int lineindex,
@@ -948,10 +942,8 @@ static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const i
     }
 
     return en_startindex;
-  } else {
-    // gsl_vector_set_zero(xs_excitation_vec);
-    return -1;
-  }
+  }  // gsl_vector_set_zero(xs_excitation_vec);
+  return -1;
 }
 
 constexpr double xs_impactionization(const double energy_ev, const struct collionrow &colliondata)
@@ -1025,7 +1017,8 @@ static double get_J(const int Z, const int ionstage, const double ionpot_ev) {
     }
     if (Z == 10) {  // Ne I
       return 24.2;
-    } else if (Z == 18) {  // Ar I
+    }
+    if (Z == 18) {  // Ar I
       return 10.0;
     }
   }
@@ -1183,11 +1176,10 @@ float get_nt_frac_heating(const int modelgridindex) {
   }
   if (!NT_SOLVE_SPENCERFANO) {
     return 0.97;
-  } else {
-    const float frac_heating = nt_solution[modelgridindex].frac_heating;
-    // add any debugging checks here?
-    return frac_heating;
   }
+  const float frac_heating = nt_solution[modelgridindex].frac_heating;
+  // add any debugging checks here?
+  return frac_heating;
 }
 
 static float get_nt_frac_ionization(const int modelgridindex) {
@@ -1636,8 +1628,8 @@ double nt_ionization_upperion_probability(const int modelgridindex, const int el
             .ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + numaugerelec];
       }
       return nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + numaugerelec];
-
-    } else if (numaugerelec == NT_MAX_AUGER_ELECTRONS) {
+    }
+    if (numaugerelec == NT_MAX_AUGER_ELECTRONS) {
       double prob_remaining = 1.;
       for (int a = 0; a < NT_MAX_AUGER_ELECTRONS; a++) {
         if (energyweighted) {
@@ -1743,9 +1735,9 @@ double nt_ionization_ratecoeff(const int modelgridindex, const int element, cons
             Y_nt, get_element(element), get_ionstage(element, ion), modelgridindex, Y_nt_wfapprox);
       }
       return Y_nt_wfapprox;
-    } else {
-      return Y_nt;
     }
+    return Y_nt;
+
   } else {
     return nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
   }

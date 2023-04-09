@@ -1420,7 +1420,8 @@ double get_T_J_from_J(const int modelgridindex) {
   if (T_J > MAXTEMP) {
     printout("[warning] get_T_J_from_J: T_J would be %.1f > MAXTEMP. Clamping to MAXTEMP = %.0f K\n", T_J, MAXTEMP);
     return MAXTEMP;
-  } else if (T_J < MINTEMP) {
+  }
+  if (T_J < MINTEMP) {
     printout("[warning] get_T_J_from_J: T_J would be %.1f < MINTEMP. Clamping to MINTEMP = %.0f K\n", T_J, MINTEMP);
     return MINTEMP;
   } else {
