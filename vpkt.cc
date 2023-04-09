@@ -411,7 +411,7 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
 E.g. imagine that a packet in the first setup (all elements included) reaches tau = tau_max_vpkt
 because of the element Zi. If we remove Zi, tau now could be lower than tau_max_vpkt and could
 thus contribute to the spectrum. */
-int check_tau(double *tau, double *tau_max) {
+int check_tau(const double *tau, const double *tau_max) {
   int count = 0;
 
   for (int i = 0; i < Nspectra; i++) {
@@ -1114,7 +1114,7 @@ void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cm
 }
 
 /* ----------------------- Lorentz transformations from RF to CMF --------------------------------------------- */
-void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf) {
+void lorentz(const double *e_rf, const double *n_rf, const double *v, double *e_cmf) {
   double beta[3];
   double e_par[3];
   double e_perp[3];

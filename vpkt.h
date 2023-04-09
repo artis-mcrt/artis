@@ -8,7 +8,7 @@
 double rot_angle(double *n1, double *n2, double *ref1, double *ref2);
 void meridian(const double *n, double *ref1, double *ref2);
 void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf);
-void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf);
+void lorentz(const double *e_rf, const double *n_rf, const double *v, double *e_cmf);
 
 void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *obs, int realtype);
 void add_to_vspecpol(struct packet *pkt_ptr, int bin, int ind, double t_arrive);
@@ -20,7 +20,7 @@ void init_vpkt_grid(void);
 void add_to_vpkt_grid(struct packet *dummy_ptr, const double *vel, int bin_range, int bin, const double *obs);
 void write_vpkt_grid(FILE *vpkt_grid_file);
 void read_vpkt_grid(FILE *vpkt_grid_file);
-int check_tau(double *tau, double *tau_max);
+int check_tau(const double *tau, const double *tau_max);
 int vpkt_call_estimators(struct packet *pkt_ptr, double t_current, int realtype);
 
 // --------------------------------------------------------------------------------

@@ -351,7 +351,7 @@ void change_cell(struct packet *pkt_ptr, int snext)
   }
 }
 
-static int get_cell(double pos[3], double t)
+static int get_cell(const double pos[3], double t)
 /// identify the cell index from a position and a time.
 {
   assert_always(GRID_TYPE == GRID_UNIFORM);  // other grid types not implemented yet
