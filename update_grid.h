@@ -5,7 +5,7 @@
 #include <ctime>
 
 void update_grid(FILE *estimators_file, int nts, int nts_prev, int my_rank, int nstart, int ndo, int titer,
-                 const time_t real_time_start);
+                 time_t real_time_start);
 void precalculate_partfuncts(int modelgridindex);
 void cellhistory_reset(int cellnumber, bool set_population);
 double calculate_populations(int modelgridindex);

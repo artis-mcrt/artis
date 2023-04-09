@@ -22,9 +22,9 @@ double nt_excitation_ratecoeff(int modelgridindex, int element, int ion, int low
 void do_ntlepton(struct packet *pkt_ptr);
 void write_restart_data(FILE *gridsave_file);
 void read_restart_data(FILE *gridsave_file);
-void nt_MPI_Bcast(const int modelgridindex, const int root);
+void nt_MPI_Bcast(int modelgridindex, int root);
 void nt_reset_stats();
-void nt_print_stats(const int timestep, const double modelvolume, const double deltat);
+void nt_print_stats(int timestep, double modelvolume, double deltat);
 }  // namespace nonthermal
 
 #endif  // NONTHERMAL_H

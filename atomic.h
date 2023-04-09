@@ -16,7 +16,7 @@ double get_tau_sobolev(int modelgridindex, int lineindex, double t_current);
 double get_nntot(int modelgridindex);
 bool is_nlte(int element, int ion, int level);
 bool level_isinsuperlevel(int element, int ion, int level);
-double photoionization_crosssection_fromtable(const float *const photoion_xs, double nu_edge, double nu);
+double photoionization_crosssection_fromtable(const float *photoion_xs, double nu_edge, double nu);
 void set_nelements(int nelements_in);
 int get_nelements();
 int get_element(int element);
@@ -53,7 +53,7 @@ double statw_upper(int lineindex);
 double statw_lower(int lineindex);
 double statw_upper(const struct linelist_entry *line);
 double statw_lower(const struct linelist_entry *line);
-double photoionization_crosssection(int element, int ion, int level, double nu_edge, const double nu);
+double photoionization_crosssection(int element, int ion, int level, double nu_edge, double nu);
 double get_phixs_threshold(int element, int ion, int level, int phixstargetindex);
 
 #endif  // ATOMIC_H

@@ -35,7 +35,7 @@ void normalise_bf_estimators(int modelgridindex, double estimator_normfactor_ove
 double get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex);
 void print_bfrate_contributions(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex,
                                 double nnlowerlevel, double nnlowerion);
-void reset_bfrate_contributions(const int modelgridindex);
+void reset_bfrate_contributions(int modelgridindex);
 int integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel, size_t limit, int key,
               gsl_integration_workspace *workspace, double *result, double *abserr);
 
