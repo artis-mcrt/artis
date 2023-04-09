@@ -350,11 +350,6 @@ static void mpi_reduce_estimators(int my_rank, int nts) {
     assert_always(globals::rpkt_emiss != nullptr);
     MPI_Allreduce(MPI_IN_PLACE, globals::rpkt_emiss, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
-  if (globals::do_comp_est) {
-    assert_always(globals::compton_emiss != nullptr);
-    MPI_Allreduce(MPI_IN_PLACE, globals::compton_emiss, grid::get_npts_model() * globals::EMISS_MAX, MPI_FLOAT, MPI_SUM,
-                  MPI_COMM_WORLD);
-  }
 
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -573,8 +568,6 @@ static bool do_timestep(const int nts, const int titer, const int my_rank, const
     }
   }
 
-  globals::do_comp_est = globals::do_r_lc ? false : estim_switch(nts);
-
   // Update the matter quantities in the grid for the new timestep.
 
   update_grid(estimators_file, nts, nts_prev, my_rank, nstart, ndo, titer, real_time_start);
@@ -621,12 +614,6 @@ static bool do_timestep(const int nts, const int titer, const int my_rank, const
 
     // The estimators have been summed across all proceses and distributed.
     // They will now be normalised independently on all processes
-    if (globals::do_comp_est) {
-      normalise_compton_estimators(nts);
-      if (my_rank == 0) {
-        write_compton_estimators(nts);
-      }
-    }
 
     if (globals::do_rlc_est != 0) {
       normalise_grey(nts);

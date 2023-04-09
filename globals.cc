@@ -51,11 +51,6 @@ bool do_emission_res = true;
 
 bool file_set;  // 1 if the output files already exist. 0 otherwise.
 std::unique_ptr<bool[]> startofline;
-bool do_comp_est = false;  // compute compton emissivity estimators
-bool do_r_lc;              // If not true then the opacity for r-packets is 0.
-int do_rlc_est;            // 1 = compute estimators for the r-pkt light curve.
-                           // 2 = compute estimators with opacity weights
-                           // 3 = compute estimators, but use only for gamma-heating rate
 
 double gamma_grey;  // set to -ve for proper treatment. If possitive, then
                     // gamma_rays are treated as grey with this opacity.
@@ -134,7 +129,6 @@ int nts_global = -1;  /// Current time step
 
 double nusyn_min;
 double nusyn_max;  // limits on range for syn
-int nfake_gam;     // # of fake gamma ray lines for syn
 
 /// New variables for other opacity cases, still grey.
 double opcase3_normal;  /// MK: normalisation factor for opacity_case 3

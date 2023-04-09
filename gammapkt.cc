@@ -601,13 +601,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
     // Move it into the new cell.
     if (kap_tot > 0) {
-      if (globals::do_comp_est) {
-        compton_emiss_cont(pkt_ptr, sdist);
-        pp_emiss_cont(pkt_ptr, sdist);
-      }
-      if (globals::do_rlc_est != 0) {
-        rlc_emiss_gamma(pkt_ptr, sdist);
-      }
+      rlc_emiss_gamma(pkt_ptr, sdist);
     }
 
     pkt_ptr->prop_time += sdist / 2. / CLIGHT_PROP;
@@ -622,13 +616,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     move_pkt(pkt_ptr, tdist / 2.);
 
     if (kap_tot > 0) {
-      if (globals::do_comp_est) {
-        compton_emiss_cont(pkt_ptr, tdist);
-        pp_emiss_cont(pkt_ptr, tdist);
-      }
-      if (globals::do_rlc_est != 0) {
-        rlc_emiss_gamma(pkt_ptr, tdist);
-      }
+      rlc_emiss_gamma(pkt_ptr, tdist);
     }
     pkt_ptr->prop_time = t2;
     move_pkt(pkt_ptr, tdist / 2.);
@@ -636,13 +624,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     pkt_ptr->prop_time += edist / 2. / CLIGHT_PROP;
     move_pkt(pkt_ptr, edist / 2.);
     if (kap_tot > 0) {
-      if (globals::do_comp_est) {
-        compton_emiss_cont(pkt_ptr, edist);
-        pp_emiss_cont(pkt_ptr, edist);
-      }
-      if (globals::do_rlc_est != 0) {
-        rlc_emiss_gamma(pkt_ptr, edist);
-      }
+      rlc_emiss_gamma(pkt_ptr, edist);
     }
     pkt_ptr->prop_time += edist / 2. / CLIGHT_PROP;
     move_pkt(pkt_ptr, edist / 2.);

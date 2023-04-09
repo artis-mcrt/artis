@@ -244,9 +244,9 @@ extern bool do_emission_res;
 extern bool file_set;
 extern std::unique_ptr<bool[]> startofline;
 
-extern bool do_comp_est;
-extern bool do_r_lc;
-extern int do_rlc_est;
+constexpr bool do_comp_est = false;
+constexpr bool do_r_lc = true;
+constexpr int do_rlc_est = 3;
 
 extern double gamma_grey;
 
@@ -319,7 +319,7 @@ extern int nts_global;
 
 extern double nusyn_min;
 extern double nusyn_max;
-extern int nfake_gam;
+constexpr int nfake_gam = 1;
 
 extern double opcase3_normal;
 extern double rho_crit_para;

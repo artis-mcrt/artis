@@ -45,8 +45,8 @@ const std::array<std::string, 24> inputlinecomments = {
     " 5: nsyn_time: number of times for synthesis",
     " 6: start and end times for synthesis",
     " 7: model_type: number of dimensions (1, 2, or 3)",
-    " 8: compute r-light curve (1: no estimators, 2: thin cells, 3: thick cells, 4: gamma-ray heating)",
-    " 9: n_out_it: UNUSED number of iterations",
+    " 8: UNUSED compute r-light curve (1: no estimators, 2: thin cells, 3: thick cells, 4: gamma-ray heating)",
+    " 9: UNUSED n_out_it: number of iterations",
     "10: UNUSED: change speed of light by some factor. Change constants.h CLIGHT_PROP instead",
     "11: use grey opacity for gammas?",
     "12: syn_dir: x, y, and z components of unit vector (will be normalised after input or randomised if zero length)",
@@ -1827,12 +1827,6 @@ void input(int rank)
     abort();
   }
 
-  /// Lightcurve setting
-  globals::do_r_lc = false;  /// default to no lc = gamma-ray spectrum
-  globals::do_rlc_est = 0;   /// ^^
-
-  globals::nfake_gam = 1;  /// # of fake gamma ray lines for syn
-
   /// Read in parameters from input.txt
   read_parameterfile(rank);
 
@@ -1990,17 +1984,7 @@ void read_parameterfile(int rank)
   }
 
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> dum1;  // compute the r-light curve?
-  // 1: lc no estimators
-  // 2: lc case with thin cells
-  // 3: lc case with thick cells
-  // 4: gamma-ray heating case
-  globals::do_r_lc = (dum1 != 0);
-  if (dum1 > 0) {
-    globals::do_rlc_est = dum1 - 1;
-  }
-  assert_always(dum1 >= 0);
-  assert_always(dum1 <= 4);
+  std::stringstream(line) >> dum1;  // UNUSED compute the r-light curve?
 
   assert_always(get_noncommentline(file, line));
   int n_out_it;
