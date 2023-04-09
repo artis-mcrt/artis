@@ -329,24 +329,22 @@ static int columnindex_from_emissiontype(const int et) {
   }
   if (et == EMTYPE_NOTSET) {
     return -1;
-  } else {
-    /// bf-emission
-    const int contindex = -1 - et;
-    if (globals::nbfcontinua == 0) {
-      // assert_always(false);  // if there are no bf processes, we should not get here
-      return 2 * get_nelements() * get_max_nions();
-    }
-    assert_always(contindex < globals::nbfcontinua);
-    const int element = globals::bflist[contindex].elementindex;
-    const int ion = globals::bflist[contindex].ionindex;
-    const int level = globals::bflist[contindex].levelindex;
-    const int phixstargetindex = globals::bflist[contindex].phixstargetindex;
-    const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-
-    assert_always(get_continuumindex(element, ion, level, upperionlevel) == et);
-
-    return get_nelements() * get_max_nions() + element * get_max_nions() + ion;
+  }  /// bf-emission
+  const int contindex = -1 - et;
+  if (globals::nbfcontinua == 0) {
+    // assert_always(false);  // if there are no bf processes, we should not get here
+    return 2 * get_nelements() * get_max_nions();
   }
+  assert_always(contindex < globals::nbfcontinua);
+  const int element = globals::bflist[contindex].elementindex;
+  const int ion = globals::bflist[contindex].ionindex;
+  const int level = globals::bflist[contindex].levelindex;
+  const int phixstargetindex = globals::bflist[contindex].phixstargetindex;
+  const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+
+  assert_always(get_continuumindex(element, ion, level, upperionlevel) == et);
+
+  return get_nelements() * get_max_nions() + element * get_max_nions() + ion;
 }
 
 static void add_to_spec(const struct packet *const pkt_ptr, const int current_abin, struct spec *spectra,

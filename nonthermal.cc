@@ -1660,11 +1660,11 @@ double nt_ionization_upperion_probability(const int modelgridindex, const int el
         }
       }
       return prob_remaining;
-    } else {
-      printout("WARNING: tried to ionise from Z=%02d ionstage %d to %d\n", get_element(element),
-               get_ionstage(element, lowerion), get_ionstage(element, upperion));
-      return 0.;
     }
+    printout("WARNING: tried to ionise from Z=%02d ionstage %d to %d\n", get_element(element),
+             get_ionstage(element, lowerion), get_ionstage(element, upperion));
+    return 0.;
+
   } else {
     return (upperion == lowerion + 1) ? 1.0 : 0.;
   }
@@ -1738,10 +1738,8 @@ double nt_ionization_ratecoeff(const int modelgridindex, const int element, cons
       return Y_nt_wfapprox;
     }
     return Y_nt;
-
-  } else {
-    return nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
   }
+  return nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
 }
 
 static double calculate_nt_excitation_ratecoeff_perdeposition(const int modelgridindex, const int lineindex,

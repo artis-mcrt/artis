@@ -1,20 +1,11 @@
 ---
 Checks: >
     *,
-    clang-diagnostic-*,
-    clang-analyzer-*,
-    cppcoreguidelines-*,
-    abseil-*,
-    bugprone-*,
-    google-*,
-    misc-*,
-    modernize-*,
-    mpi*,
-    performance-*,
-    readability-*,
-    openmp-*,
     -abseil-*,
+    -android-*
+    -altera-*,
     -llvmlibc-*,
+    -cppcoreguidelines-avoid-magic-numbers,
     -clang-diagnostic-error,
     -google-readability-todo,
     -readability-identifier-length,

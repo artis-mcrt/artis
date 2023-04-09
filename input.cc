@@ -515,7 +515,8 @@ constexpr int compare_linelistentry(const void *p1, const void *p2)
     }
     if (a1->upperlevelindex > a2->upperlevelindex) {
       return -1;
-    } else if (a1->upperlevelindex < a2->upperlevelindex) {
+    }
+    if (a1->upperlevelindex < a2->upperlevelindex) {
       return 1;
     } else {
       return 0;

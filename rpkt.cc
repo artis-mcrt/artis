@@ -936,7 +936,8 @@ static bool do_rpkt_step(struct packet *pkt_ptr, const double t2)
     }
 
     return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
-  } else if ((tdist < sdist) && (tdist < edist)) {
+  }
+  if ((tdist < sdist) && (tdist < edist)) {
     // reaches end of timestep before cell boundary or interaction
     // printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
     move_pkt_withtime(pkt_ptr, tdist / 2.);
