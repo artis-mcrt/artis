@@ -339,8 +339,8 @@ static void print_level_rates(const int modelgridindex, const int timestep, cons
     if (index == selected_index) {
       continue;
     }
-    int ion;
-    int level;
+    int ion = -1;
+    int level = -1;
     get_ion_level_of_nlte_vector_index(index, element, &ion, &level);
     const int ionstage = get_ionstage(element, ion);
     // in means populating the selected level, out means depopulating the selected level
