@@ -151,12 +151,13 @@ void write_grey(int nts) {
   while ((chch = fgetc(dummy)) != EOF) {
     junk[i] = chch;
     i = i + 1;
+    assert_always(i < (MAXFILENAMELENGTH - 9 - 4));
   }
   junk[i] = '\0';
   fclose(dummy);
 
-  strncat(filename, junk, MAXFILENAMELENGTH);
-  strncat(filename, ".out", MAXFILENAMELENGTH);
+  strncat(filename, junk, MAXFILENAMELENGTH - 9 - 4);
+  strncat(filename, ".out", 4);
 
   if (globals::file_set) {
     if ((est_file = fopen(filename, "r")) == nullptr) {
