@@ -49,8 +49,9 @@ static double get_bfcoolingcoeff(int element, int ion, int level, int phixstarge
     const double f_lower = globals::bfcooling_coeff[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
 
     return (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
-  } else
+  } else {
     return globals::bfcooling_coeff[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
+  }
 }
 
 void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrates *heatingcoolingrates)

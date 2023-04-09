@@ -208,12 +208,13 @@ static bool std_compare_packets_bymodelgriddensity(const struct packet &p1, cons
   const bool esc1 = (p1.type == TYPE_ESCAPE);
   const bool esc2 = (p2.type == TYPE_ESCAPE);
 
-  if (!esc1 && esc2)
+  if (!esc1 && esc2) {
     return true;
-  else if (esc1 && !esc2)
+  } else if (esc1 && !esc2) {
     return false;
-  else if (esc1 && esc2)
+  } else if (esc1 && esc2) {
     return false;
+  }
 
   // for both non-escaped packets, order by descending cell density
   const int mgi1 = grid::get_cell_modelgridindex(p1.where);

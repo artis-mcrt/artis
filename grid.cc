@@ -1053,8 +1053,9 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
   int columnindex = -1;
 
   while (std::getline(iss, token, ' ')) {
-    if (std::all_of(token.begin(), token.end(), isspace))  // skip whitespace tokens
+    if (std::all_of(token.begin(), token.end(), isspace)) {  // skip whitespace tokens
       continue;
+    }
 
     columnindex++;
 

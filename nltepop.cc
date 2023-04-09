@@ -455,9 +455,10 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
       *gsl_matrix_ptr(rate_matrix_rad_bb, lower_index, upper_index) += R;
       *gsl_matrix_ptr(rate_matrix_coll_bb, upper_index, upper_index) -= C;
       *gsl_matrix_ptr(rate_matrix_coll_bb, lower_index, upper_index) += C;
-      if ((R < 0) || (C < 0))
+      if ((R < 0) || (C < 0)) {
         printout("  WARNING: Negative de-excitation rate from ion_stage %d level %d to level %d\n",
                  get_ionstage(element, ion), level, lower);
+      }
     }
 
     // excitation
@@ -505,9 +506,10 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
       *gsl_matrix_ptr(rate_matrix_coll_bb, upper_index, lower_index) += C;
       *gsl_matrix_ptr(rate_matrix_ntcoll_bb, lower_index, lower_index) -= NTC;
       *gsl_matrix_ptr(rate_matrix_ntcoll_bb, upper_index, lower_index) += NTC;
-      if ((R < 0) || (C < 0))
+      if ((R < 0) || (C < 0)) {
         printout("  WARNING: Negative excitation rate from ion %d level %d to level %d\n", get_ionstage(element, ion),
                  level, upper);
+      }
     }
   }
 }
@@ -545,9 +547,10 @@ static void nltepop_matrix_add_ionisation(const int modelgridindex, const int el
       *gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, lower_index) -= C_ionisation * s_renorm[level];
       *gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, lower_index) += C_ionisation * s_renorm[level];
 
-      if ((R_ionisation < 0) || (C_ionisation < 0))
+      if ((R_ionisation < 0) || (C_ionisation < 0)) {
         printout("  WARNING: Negative ionization rate from ion_stage %d level %d phixstargetindex %d\n",
                  get_ionstage(element, ion), level, phixstargetindex);
+      }
 
       // recombination
       if (upper <= maxrecombininglevel)  // we can skip this part if the functions below will return zero anyway
@@ -561,9 +564,10 @@ static void nltepop_matrix_add_ionisation(const int modelgridindex, const int el
         *gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, upper_index) -= C_recomb * s_renorm[upper];
         *gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, upper_index) += C_recomb * s_renorm[upper];
 
-        if ((R_recomb < 0) || (C_recomb < 0))
+        if ((R_recomb < 0) || (C_recomb < 0)) {
           printout("  WARNING: Negative recombination rate to ion_stage %d level %d phixstargetindex %d\n",
                    get_ionstage(element, ion), level, phixstargetindex);
+        }
       }
     }
   }
@@ -1571,8 +1575,9 @@ void nltepop_close_file() {
 }
 
 void nltepop_write_to_file(const int modelgridindex, const int timestep) {
-  if (globals::initial_iteration)  // NLTE solver hasn't been run yet
+  if (globals::initial_iteration) {  // NLTE solver hasn't been run yet
     return;
+  }
 
   assert_always(nlte_file != nullptr);
   // fprintf(nlte_file,"#timestep %d modelgridindex %d T_R %g T_e %g W %g T_J %g nne %g\n",

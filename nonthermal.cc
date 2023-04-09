@@ -155,12 +155,13 @@ static int compare_excitation_fractions(const void *p1, const void *p2) {
   const struct nt_excitation_struct *elem1 = (struct nt_excitation_struct *)p1;
   const struct nt_excitation_struct *elem2 = (struct nt_excitation_struct *)p2;
 
-  if (elem1->frac_deposition < elem2->frac_deposition)
+  if (elem1->frac_deposition < elem2->frac_deposition) {
     return 1;
-  else if (elem1->frac_deposition > elem2->frac_deposition)
+  } else if (elem1->frac_deposition > elem2->frac_deposition) {
     return -1;
-  else
+  } else {
     return 0;
+  }
 }
 
 // for ascending sort
@@ -168,12 +169,13 @@ static int compare_excitation_lineindicies(const void *p1, const void *p2) {
   const struct nt_excitation_struct *elem1 = (struct nt_excitation_struct *)p1;
   const struct nt_excitation_struct *elem2 = (struct nt_excitation_struct *)p2;
 
-  if (elem1->lineindex > elem2->lineindex)
+  if (elem1->lineindex > elem2->lineindex) {
     return 1;
-  else if (elem1->lineindex < elem2->lineindex)
+  } else if (elem1->lineindex < elem2->lineindex) {
     return -1;
-  else
+  } else {
     return 0;
+  }
 }
 
 #ifndef get_tot_nion
@@ -549,10 +551,10 @@ void init(const int my_rank, const int ndo, const int ndo_nonempty) {
     nt_solution[modelgridindex].frac_excitations_list_size = 0;
   }
 
-  if (STORE_NT_SPECTRUM)
+  if (STORE_NT_SPECTRUM) {
     printout("[info] mem_usage: storing non-thermal spectra for all allocated cells occupies %.3f MB\n",
              mem_usage_yfunc / 1024 / 1024.);
-  ;
+  };
 
   envec = gsl_vector_calloc(SFPTS);  // energy grid on which solution is sampled
   logenvec = gsl_vector_calloc(SFPTS);
@@ -591,10 +593,11 @@ void init(const int my_rank, const int ndo, const int ndo_nonempty) {
     gsl_vector_set(logenvec, s, log(energy_ev));
 
     // spread the source over some energy width
-    if (s < sourcelowerindex)
+    if (s < sourcelowerindex) {
       gsl_vector_set(sourcevec, s, 0.);
-    else
+    } else {
       gsl_vector_set(sourcevec, s, 1. / source_spread_en);
+    }
   }
 
   // integrate the source vector to find the assumed injection rate
@@ -765,12 +768,13 @@ static int get_energyindex_ev_lteq(const double energy_ev)
   const int index = floor((energy_ev - SF_EMIN) / DELTA_E);
 #endif
 
-  if (index < 0)
+  if (index < 0) {
     return 0;
-  else if (index > SFPTS - 1)
+  } else if (index > SFPTS - 1) {
     return SFPTS - 1;
-  else
+  } else {
     return index;
+  }
 }
 
 static int get_energyindex_ev_gteq(const double energy_ev)
@@ -782,12 +786,13 @@ static int get_energyindex_ev_gteq(const double energy_ev)
   const int index = ceil((energy_ev - SF_EMIN) / DELTA_E);
 #endif
 
-  if (index < 0)
+  if (index < 0) {
     return 0;
-  else if (index > SFPTS - 1)
+  } else if (index > SFPTS - 1) {
     return SFPTS - 1;
-  else
+  } else {
     return index;
+  }
 }
 
 static double get_y(const int modelgridindex, const double energy_ev) {
@@ -804,9 +809,9 @@ static double get_y(const int modelgridindex, const double energy_ev) {
     // return 0.;
     assert_always(std::isfinite(get_y_sample(modelgridindex, 0)));
     return get_y_sample(modelgridindex, 0);
-  } else if (index > SFPTS - 1)
+  } else if (index > SFPTS - 1) {
     return 0.;
-  else {
+  } else {
     const double enbelow = gsl_vector_get(envec, index);
     const double enabove = gsl_vector_get(envec, index + 1);
     const double ybelow = get_y_sample(modelgridindex, index);
@@ -866,8 +871,9 @@ constexpr double xs_excitation(const struct linelist_entry *line, const double e
     const double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
     // Eq 4 of Mewe 1972, possibly from Seaton 1962?
     return prefactor * A_naught_squared * pow(H_ionpot / epsilon_trans, 2) * fij * g_bar / U;
-  } else
+  } else {
     return 0.;
+  }
 }
 
 static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int lineindex,
@@ -996,12 +1002,13 @@ static double get_J(const int Z, const int ionstage, const double ionpot_ev) {
   // returns an energy in eV
   // values from Opal et al. 1971 as applied by Kozma & Fransson 1992
   if (ionstage == 1) {
-    if (Z == 2)  // He I
+    if (Z == 2) {  // He I
       return 15.8;
-    else if (Z == 10)  // Ne I
+    } else if (Z == 10) {  // Ne I
       return 24.2;
-    else if (Z == 18)  // Ar I
+    } else if (Z == 18) {  // Ar I
       return 10.0;
+    }
   }
 
   return 0.6 * ionpot_ev;
@@ -1025,8 +1032,9 @@ static double N_e(const int modelgridindex, const double energy)
       const int ionstage = get_ionstage(element, ion);
       const double nnion = ionstagepop(modelgridindex, element, ion);
 
-      if (nnion < minionfraction * tot_nion)  // skip negligible ions
+      if (nnion < minionfraction * tot_nion) {  // skip negligible ions
         continue;
+      }
 
       // excitation terms
 
@@ -1577,8 +1585,9 @@ static double nt_ionization_ratecoeff_sf(const int modelgridindex, const int ele
     return deposition_rate_density / get_tot_nion(modelgridindex) / get_eff_ionpot(modelgridindex, element, ion);
     // alternatively, if the y vector is still in memory:
     // return calculate_nt_ionization_ratecoeff(modelgridindex, element, ion);
-  } else
+  } else {
     return 0.;
+  }
 }
 
 double nt_ionization_upperion_probability(const int modelgridindex, const int element, const int lowerion,
@@ -1705,8 +1714,9 @@ double nt_ionization_ratecoeff(const int modelgridindex, const int element, cons
     } else {
       return Y_nt;
     }
-  } else
+  } else {
     return nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
+  }
 }
 
 static double calculate_nt_excitation_ratecoeff_perdeposition(const int modelgridindex, const int lineindex,
@@ -2012,8 +2022,9 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
       const double nnion = ionstagepop(modelgridindex, element, ion);
 
       // if (nnion < minionfraction * get_tot_nion(modelgridindex)) // skip negligible ions
-      if (nnion <= 0.)  // skip zero-abundance ions
+      if (nnion <= 0.) {  // skip zero-abundance ions
         continue;
+      }
 
       double frac_ionization_ion = 0.;
       double frac_excitation_ion = 0.;
@@ -2485,9 +2496,10 @@ static void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec,
   gsl_vector *residual_vector = gsl_vector_alloc(SFPTS);
   int iteration;
   for (iteration = 0; iteration < 10; iteration++) {
-    if (iteration > 0)
+    if (iteration > 0) {
       gsl_linalg_LU_refine(sfmatrix, sfmatrix_LU, p, rhsvec, yvec,
                            gsl_work_vector);  // first argument must be original matrix
+    }
 
     // calculate Ax - b = residual
     gsl_vector_memcpy(residual_vector, rhsvec);
@@ -2503,9 +2515,10 @@ static void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec,
     // printout("Linear algebra solver iteration %d has a maximum residual of %g\n",iteration,error);
   }
   if (error_best >= 0.) {
-    if (error_best > 1e-10)
+    if (error_best > 1e-10) {
       printout("  SF solver LU_refine: After %d iterations, best solution vector has a max residual of %g (WARNING)\n",
                iteration, error_best);
+    }
     gsl_vector_memcpy(yvec, yvec_best);
   }
   gsl_vector_free(yvec_best);
@@ -2637,8 +2650,9 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
       gsl_vector_const_view source_e_to_SF_EMAX = gsl_vector_const_subvector(sourcevec, i + 1, SFPTS - i - 1);
       source_integral_to_SF_EMAX = gsl_blas_dasum(&source_e_to_SF_EMAX.vector) * DELTA_E;
 #endif
-    } else
+    } else {
       source_integral_to_SF_EMAX = 0;
+    }
 
     gsl_vector_set(rhsvec, i, source_integral_to_SF_EMAX);
   }

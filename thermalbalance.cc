@@ -465,8 +465,9 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
       }
     }
 
-    if (status == GSL_CONTINUE)
+    if (status == GSL_CONTINUE) {
       printout("[warning] call_T_e_finder: T_e did not converge within %d iterations\n", maxit);
+    }
 
     gsl_root_fsolver_free(T_e_solver);
   }

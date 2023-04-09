@@ -207,14 +207,15 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
     kap_cont_noes = kap_cont - globals::kappa_rpkt_cont[tid].es;
 
     for (int ind = 0; ind < Nspectra; ind++) {
-      if (exclude[ind] == -2)
+      if (exclude[ind] == -2) {
         tau_vpkt[ind] += kap_cont_nobf * s_cont;
-      else if (exclude[ind] == -3)
+      } else if (exclude[ind] == -3) {
         tau_vpkt[ind] += kap_cont_noff * s_cont;
-      else if (exclude[ind] == -4)
+      } else if (exclude[ind] == -4) {
         tau_vpkt[ind] += kap_cont_noes * s_cont;
-      else
+      } else {
         tau_vpkt[ind] += kap_cont * s_cont;
+      }
     }
 
     // kill vpkt with high optical depth
@@ -312,12 +313,13 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
   }
 
   /* increment the number of escaped virtual packet in the given timestep */
-  if (realtype == 1)
+  if (realtype == 1) {
     safeincrement(nvpkt_esc1);
-  else if (realtype == 2)
+  } else if (realtype == 2) {
     safeincrement(nvpkt_esc2);
-  else if (realtype == 3)
+  } else if (realtype == 3) {
     safeincrement(nvpkt_esc3);
+  }
 
   // -------------- final stokes vector ---------------
 
@@ -333,8 +335,9 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
     dummy_ptr->stokes[1] = Qtmp;
     dummy_ptr->stokes[2] = Utmp;
 
-    if (Itmp != Itmp || Qtmp != Qtmp || Utmp != Utmp)
+    if (Itmp != Itmp || Qtmp != Qtmp || Utmp != Utmp) {
       printout("Nan Number!! %g %g %g %g %g %g %g %g \n", Itmp, Qtmp, Utmp, pn, tau_vpkt[ind], mu, i1, i2);
+    }
 
     /* bin on fly and produce file with spectrum */
 
@@ -378,10 +381,11 @@ int check_tau(double *tau, double *tau_max) {
     if (tau[i] > *tau_max) count += 1;
   }
 
-  if (count == Nspectra)
+  if (count == Nspectra) {
     return 0;
-  else
+  } else {
     return 1;
+  }
 }
 
 // Routine to add a packet to the outcoming spectrum.
@@ -925,8 +929,9 @@ double rot_angle(double *n1, double *n2, double *ref1, double *ref2) {
   if (cos_stokes_rot_1 == 0) i = acos(-1.) / 2.;
   if (cos_stokes_rot_2 == 0) i = 0.0;
 
-  if (!std::isfinite(i))
+  if (!std::isfinite(i)) {
     printout("Warning NaN: %3.6f \t %3.6f \t %3.6f \n", cos_stokes_rot_1, cos_stokes_rot_2, acos(cos_stokes_rot_1));
+  }
 
   return i;
 }

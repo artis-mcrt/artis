@@ -408,9 +408,9 @@ int get_nphixstargets(const int element, const int ion, const int level)
   assert_testmodeonly(level < get_nlevels(element, ion));
   const int nions = get_nions(element);
   const int nionisinglevels = get_ionisinglevels(element, ion);
-  if ((ion < nions - 1) && (level < nionisinglevels))
+  if ((ion < nions - 1) && (level < nionisinglevels)) {
     return globals::elements[element].ions[ion].levels[level].nphixstargets;
-  else {
+  } else {
     return 0;
   }
 }

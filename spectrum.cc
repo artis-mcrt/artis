@@ -36,24 +36,26 @@ static int compare_emission(const void *p1, const void *p2) {
   const struct emissionabsorptioncontrib *elem1 = (struct emissionabsorptioncontrib *)p1;
   const struct emissionabsorptioncontrib *elem2 = (struct emissionabsorptioncontrib *)p2;
 
-  if (elem1->energyemitted < elem2->energyemitted)
+  if (elem1->energyemitted < elem2->energyemitted) {
     return 1;
-  else if (elem1->energyemitted > elem2->energyemitted)
+  } else if (elem1->energyemitted > elem2->energyemitted) {
     return -1;
-  else
+  } else {
     return 0;
+  }
 }
 
 static int compare_absorption(const void *p1, const void *p2) {
   const struct emissionabsorptioncontrib *elem1 = (struct emissionabsorptioncontrib *)p1;
   const struct emissionabsorptioncontrib *elem2 = (struct emissionabsorptioncontrib *)p2;
 
-  if (elem1->energyabsorbed < elem2->energyabsorbed)
+  if (elem1->energyabsorbed < elem2->energyabsorbed) {
     return 1;
-  else if (elem1->energyabsorbed > elem2->energyabsorbed)
+  } else if (elem1->energyabsorbed > elem2->energyabsorbed) {
     return -1;
-  else
+  } else {
     return 0;
+  }
 }
 
 static void printout_tracemission_stats() {
@@ -99,12 +101,13 @@ static void printout_tracemission_stats() {
         const double linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
         // flux-weighted average radial velocity of emission in km/s
         double v_rad;
-        if (mode == 0)
+        if (mode == 0) {
           v_rad =
               traceemissionabsorption[i].emission_weightedvelocity_sum / traceemissionabsorption[i].energyemitted / 1e5;
-        else
+        } else {
           v_rad = traceemissionabsorption[i].absorption_weightedvelocity_sum /
                   traceemissionabsorption[i].energyabsorbed / 1e5;
+        }
 
         const int lower = globals::linelist[lineindex].lowerlevelindex;
         const int upper = globals::linelist[lineindex].upperlevelindex;
@@ -126,8 +129,9 @@ static void printout_tracemission_stats() {
                  globals::linelist[lineindex].upperlevelindex, globals::linelist[lineindex].lowerlevelindex,
                  globals::linelist[lineindex].coll_str, einstein_spontaneous_emission(lineindex),
                  globals::linelist[lineindex].forbidden, linelambda, v_rad, B_lu, B_ul);
-      } else
+      } else {
         break;
+      }
     }
     printout("\n");
   }

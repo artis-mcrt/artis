@@ -521,12 +521,13 @@ constexpr int compare_linelistentry(const void *p1, const void *p2)
     // }
   }
 
-  if ((a1->nu < a2->nu) || (a1->nu == a2->nu))
+  if ((a1->nu < a2->nu) || (a1->nu == a2->nu)) {
     return 1;
-  else if (a1->nu > a2->nu)
+  } else if (a1->nu > a2->nu) {
     return -1;
-  else
+  } else {
     return 0;
+  }
 }
 
 static void add_transitions_to_unsorted_linelist(const int element, const int ion, const int nlevelsmax,
@@ -759,8 +760,9 @@ static void read_atomicdata_files() {
   int homogeneous_abundances_in;
   assert_always(fscanf(compositiondata, "%d", &homogeneous_abundances_in) == 1);
   globals::homogeneous_abundances = (homogeneous_abundances_in != 0);
-  if (globals::homogeneous_abundances)
+  if (globals::homogeneous_abundances) {
     printout("[info] read_atomicdata: homogeneous abundances as defined in compositiondata.txt are active\n");
+  }
 
   /// open transition data file
   std::ifstream ftransitiondata("transitiondata.txt");
@@ -2072,18 +2074,20 @@ void read_parameterfile(int rank)
 #endif
 
   if (NT_ON) {
-    if (NT_SOLVE_SPENCERFANO)
+    if (NT_SOLVE_SPENCERFANO) {
       printout("input: Non-thermal ionisation with a Spencer-Fano solution is switched on for this run.\n");
-    else
+    } else {
       printout("input: Non-thermal ionisation with the work function approximation is switched on for this run.\n");
+    }
 #ifdef FORCE_LTE
     printout(
         "input: Non-thermal ionisation requires the code to run in non-LTE mode. Remove macro FORCE_LTE and "
         "recompile!\n");
     abort();
 #endif
-  } else
+  } else {
     printout("input: No non-thermal ionisation is used in this run.\n");
+  }
 
   if (NO_LUT_PHOTOION) {
     printout(

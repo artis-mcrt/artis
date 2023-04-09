@@ -59,9 +59,9 @@ static bool read_ratecoeff_dat()
     char adatafile_hash_in[33];
     assert_always(fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in) == 1);
     printout("ratecoeff_v2.dat: MD5 adata.txt = %s ", adatafile_hash_in);
-    if (strcmp(adatafile_hash, adatafile_hash_in) == 0)
+    if (strcmp(adatafile_hash, adatafile_hash_in) == 0) {
       printout("(pass)\n");
-    else {
+    } else {
       printout("MISMATCH: MD5 adata.txt = %s\n", adatafile_hash);
       fileisamatch = false;
     }
@@ -69,9 +69,9 @@ static bool read_ratecoeff_dat()
     char compositionfile_hash_in[33];
     assert_always(fscanf(ratecoeff_file, "%32s\n", compositionfile_hash_in) == 1);
     printout("ratecoeff_v2.dat: MD5 compositiondata.txt %s ", compositionfile_hash_in);
-    if (strcmp(compositionfile_hash, compositionfile_hash_in) == 0)
+    if (strcmp(compositionfile_hash, compositionfile_hash_in) == 0) {
       printout("(pass)\n");
-    else {
+    } else {
       printout("\nMISMATCH: MD5 compositiondata.txt = %s\n", compositionfile_hash);
       fileisamatch = false;
     }
@@ -79,9 +79,9 @@ static bool read_ratecoeff_dat()
     char phixsfile_hash_in[33];
     assert_always(fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in) == 1);
     printout("ratecoeff_v2.dat: MD5 %s = %s ", phixsdata_filenames[phixs_file_version], phixsfile_hash_in);
-    if (strcmp(phixsfile_hash, phixsfile_hash_in) == 0)
+    if (strcmp(phixsfile_hash, phixsfile_hash_in) == 0) {
       printout("(pass)\n");
-    else {
+    } else {
       printout("\nMISMATCH: MD5 %s = %s\n", phixsdata_filenames[phixs_file_version], phixsfile_hash);
       fileisamatch = false;
     }
@@ -938,8 +938,9 @@ static void read_recombrate_file()
             assert_always(phixs_multiplier_superlevel >= 0);
 
             const int first_superlevel_level = get_nlevels_nlte(element, ion - 1) + 1;
-            for (int level = first_superlevel_level; level < nlevels; level++)
+            for (int level = first_superlevel_level; level < nlevels; level++) {
               scale_level_phixs(element, ion - 1, level, phixs_multiplier_superlevel);
+            }
           } else {
             printout("There is no superlevel recombination, so multiplying all levels instead\n");
             const double phixs_multiplier = input_rrc_total / rrc;
@@ -1050,8 +1051,9 @@ double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixst
         globals::corrphotoioncoeff[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
 
     return (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower));
-  } else
+  } else {
     return globals::corrphotoioncoeff[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
+  }
 }
 
 double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex)

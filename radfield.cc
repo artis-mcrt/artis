@@ -285,8 +285,9 @@ void init(int my_rank, int ndo, int ndo_nonempty)
         // else if (ionstage == 2 && lowerlevel == 9 && upperlevel == 64)
         //   addline = true;
 
-        if (lowerlevel <= 15 && A_ul > 0.)  // ionstage <= 3 && A_ul > 1e3 &&
+        if (lowerlevel <= 15 && A_ul > 0.) {  // ionstage <= 3 && A_ul > 1e3 &&
           addline = true;
+        }
 
         if (addline) {
           // printout("Adding Jblue estimator for lineindex %d Z=%02d ionstage %d lower %d upper %d A_ul %g\n",
@@ -544,10 +545,11 @@ static inline double get_bin_nu_bar(int modelgridindex, int binindex)
 }
 
 static inline double get_bin_nu_lower(int binindex) {
-  if (binindex > 0)
+  if (binindex > 0) {
     return radfieldbin_nu_upper[binindex - 1];
-  else
+  } else {
     return nu_lower_first_initial;
+  }
 }
 
 static inline int get_bin_contribcount(int modelgridindex, int binindex) {
@@ -589,8 +591,9 @@ void write_to_file(int modelgridindex, int timestep) {
 #endif
 
     int totalcontribs = 0;
-    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
       totalcontribs += get_bin_contribcount(modelgridindex, binindex);
+    }
 
     for (int binindex = -1 - detailed_linecount; binindex < RADFIELDBINCOUNT; binindex++) {
       double nu_lower = 0.0;
@@ -1403,8 +1406,9 @@ double get_T_J_from_J(const int modelgridindex) {
   } else if (T_J < MINTEMP) {
     printout("[warning] get_T_J_from_J: T_J would be %.1f < MINTEMP. Clamping to MINTEMP = %.0f K\n", T_J, MINTEMP);
     return MINTEMP;
-  } else
+  } else {
     return T_J;
+  }
 }
 
 #ifdef DO_TITER
@@ -1750,8 +1754,9 @@ inline int integrate(const gsl_function *f, double nu_a, double nu_b, double eps
     const int status = gsl_integration_qagp(f, pts, npts, epsabs, epsrel, limit, workspace, result, abserr);
     free(pts);
     return status;
-  } else
+  } else {
     return gsl_integration_qag(f, nu_a, nu_b, epsabs, epsrel, limit, key, workspace, result, abserr);
+  }
 }
 
 }  // namespace radfield
