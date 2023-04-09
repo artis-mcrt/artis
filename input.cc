@@ -36,8 +36,7 @@ struct transitiontable_entry {
   bool forbidden;
 };  /// only used temporarily during input
 
-const int inputlinecommentcount = 24;
-std::string inputlinecomments[inputlinecommentcount] = {
+const std::array<std::string, 24> inputlinecomments = {
     " 0: pre_zseed: specific random number seed if > 0 or random if negative",
     " 1: globals::ntstep: number of timesteps",
     " 2: itstep ftstep: timestep number range start (inclusive) and stop (not inclusive)",
@@ -1210,22 +1209,14 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
     index = -1;
     *index_in_groundlevelcontestimator = -1;
   } else {
-    int i;
-    int element;
-    int ion;
+    int i = 1;
+    int element = -1;
+    int ion = -1;
     for (i = 1; i < globals::nbfcontinua_ground; i++) {
       if (nu_edge < globals::groundcont[i].nu_edge) {
         break;
       }
     }
-    /*    if (i == nbfcontinua_ground)
-        {
-          printout("[fatal] search_groundphixslist: i %d, nu_edge %g, globals::groundcont[i-1].nu_edge %g ...
-       abort\n",i,nu_edge,globals::groundcont[i-1].nu_edge); printout("[fatal] search_groundphixslist: this is
-       element %d, ion %d, level %d in groundphixslist at i-1\n",el,in,ll);
-          //printout("[fatal] search_groundphixslist: this is element %d, ion %d, level %d in groundphixslist at
-       i-1\n",globals::groundcont[i-1].element,globals::groundcont[i-1].ion,groundphixslist[i-1].level); abort();
-        }*/
     if (i == globals::nbfcontinua_ground) {
       element = globals::groundcont[i - 1].element;
       ion = globals::groundcont[i - 1].ion;
@@ -2203,7 +2194,7 @@ void update_parameterfile(int nts)
     if (!lineiscommentonly(line)) {
       noncomment_linenum++;  // line number starting from 0, ignoring comment and blank lines (that start with '#')
 
-      // if (!preceeding_comment && noncomment_linenum < inputlinecommentcount - 1)
+      // if (!preceeding_comment && noncomment_linenum < inputlinecomments.size() - 1)
       // {
       //   fileout << '#' << inputlinecomments[noncomment_linenum] << '\n';
       // }
@@ -2229,7 +2220,7 @@ void update_parameterfile(int nts)
         line.assign(c_line);
       }
 
-      if (noncomment_linenum < inputlinecommentcount) {
+      if (noncomment_linenum < inputlinecomments.size()) {
         const int commentstart = 25;
 
         // truncate any existing comment on the line
