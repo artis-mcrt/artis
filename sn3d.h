@@ -20,19 +20,19 @@
 
 extern FILE *output_file;
 
-#define __artis_assert(e)                                                                                              \
-  {                                                                                                                    \
-    const bool pass = static_cast<bool>(e);                                                                            \
-    if (!pass) {                                                                                                       \
-      if (output_file != nullptr) {                                                                                    \
-        (void)fprintf(output_file, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global,    \
-                      __FILE__, __LINE__, #e, __PRETTY_FUNCTION__);                                                    \
-      }                                                                                                                \
-      (void)fprintf(stderr, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global, __FILE__, \
-                    __LINE__, #e, __PRETTY_FUNCTION__);                                                                \
-      abort();                                                                                                         \
-    }                                                                                                                  \
-    assert(pass);                                                                                                      \
+#define __artis_assert(e)                                                                                           \
+  {                                                                                                                 \
+    const bool pass = static_cast<bool>(e);                                                                         \
+    if (!pass) {                                                                                                    \
+      if (output_file != nullptr) {                                                                                 \
+        () fprintf(output_file, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global,    \
+                   __FILE__, __LINE__, #e, __PRETTY_FUNCTION__);                                                    \
+      }                                                                                                             \
+      () fprintf(stderr, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global, __FILE__, \
+                 __LINE__, #e, __PRETTY_FUNCTION__);                                                                \
+      abort();                                                                                                      \
+    }                                                                                                               \
+    assert(pass);                                                                                                   \
   }
 
 #define assert_always(e) __artis_assert(e)
@@ -170,7 +170,7 @@ static int get_timestep(const double time) {
   return -1;
 }
 
-inline int get_max_threads(void) {
+inline int get_max_threads() {
 #if defined _OPENMP
   return omp_get_max_threads();
 #else
@@ -178,7 +178,7 @@ inline int get_max_threads(void) {
 #endif
 }
 
-inline int get_num_threads(void) {
+inline int get_num_threads() {
 #if defined _OPENMP
   return omp_get_num_threads();
 #else
@@ -186,7 +186,7 @@ inline int get_num_threads(void) {
 #endif
 }
 
-inline int get_thread_num(void) {
+inline int get_thread_num() {
 #if defined _OPENMP
   return omp_get_thread_num();
 #else
@@ -194,7 +194,7 @@ inline int get_thread_num(void) {
 #endif
 }
 
-inline double rng_uniform(void) {
+inline double rng_uniform() {
   if constexpr (USE_GSL_RANDOM) {
     return gsl_rng_uniform(rng);
   } else {
@@ -202,7 +202,7 @@ inline double rng_uniform(void) {
   }
 }
 
-inline double rng_uniform_pos(void) {
+inline double rng_uniform_pos() {
   if constexpr (USE_GSL_RANDOM) {
     return gsl_rng_uniform_pos(rng);
   } else {
@@ -235,7 +235,7 @@ inline bool is_pid_running(pid_t pid) {
   return false;
 }
 
-inline void check_already_running(void) {
+inline void check_already_running() {
   pid_t artispid = getpid();
 
   if (std::filesystem::exists("artis.pid")) {
