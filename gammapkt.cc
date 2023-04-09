@@ -201,7 +201,7 @@ void init_gamma_linelist() {
   assert_always(static_cast<int>(allnuc_gamma_line_list.size()) == total_lines);
   std::sort(allnuc_gamma_line_list.begin(), allnuc_gamma_line_list.end());
 
-  FILE *const line_list = fopen_required("gammalinelist.out", "w+");
+  FILE *const line_list = fopen_required("gammalinelist.out", "w");
 
   fprintf(line_list, "#index nucindex Z A nucgammmaindex en_gamma_mev gammaline_probability\n");
   for (int i = 0; i < total_lines; i++) {
