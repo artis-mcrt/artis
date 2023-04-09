@@ -586,7 +586,7 @@ static inline int select_bin(double nu) {
 
 #ifndef FORCE_LTE
 void write_to_file(int modelgridindex, int timestep) {
-  static_assert(MULTIBIN_RADFIELD_MODEL_ON);
+  assert_always(MULTIBIN_RADFIELD_MODEL_ON);
 
 #ifdef _OPENMP
 #pragma omp critical(out_file)
