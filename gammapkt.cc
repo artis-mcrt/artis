@@ -124,7 +124,7 @@ static void read_decaydata() {
     const size_t elnamelen = strlen(elname);  // excluding the NULL terminator
     assert_always(elnamelen < 7);
     char elnamelower[8];
-    for (int i = 0; i < elnamelen; i++) {
+    for (size_t i = 0; i < elnamelen; i++) {
       elnamelower[i] = tolower(elname[i]);
     }
     elnamelower[elnamelen] = '\0';
