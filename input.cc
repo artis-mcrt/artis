@@ -990,8 +990,8 @@ static void read_atomicdata_files() {
       const double nu = temp_linelist[i].nu;
       const double nu_next = temp_linelist[i + 1].nu;
       if (fabs(nu_next - nu) < (1.e-10 * nu)) {
-        auto a1 = &temp_linelist[i];
-        auto a2 = &temp_linelist[i + 1];
+        auto *a1 = &temp_linelist[i];
+        auto *a2 = &temp_linelist[i + 1];
 
         if ((a1->elementindex == a2->elementindex) && (a1->ionindex == a2->ionindex) &&
             (a1->lowerlevelindex == a2->lowerlevelindex) && (a1->upperlevelindex == a2->upperlevelindex)) {
