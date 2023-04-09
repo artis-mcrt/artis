@@ -2900,7 +2900,9 @@ void read_restart_data(FILE *gridsave_file) {
 
 #ifdef MPI_ON
 void nt_MPI_Bcast(const int modelgridindex, const int root) {
-  if (grid::get_numassociatedcells(modelgridindex) == 0) return;
+  if (grid::get_numassociatedcells(modelgridindex) == 0) {
+    return;
+  }
 
   // printout("nonthermal_MPI_Bcast cell %d before: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
   //          modelgridindex, logged_element_z, logged_ion_stage,
