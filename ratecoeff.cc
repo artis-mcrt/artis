@@ -666,7 +666,7 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
   double alpha_sp_old = total_alpha_sp;
   double alpha_sp = total_alpha_sp;
 
-  int i;
+  int i = 1;
   for (i = 1; i < npieces; i++) {
     alpha_sp_old = alpha_sp;
     const double xlow = nu_threshold + i * deltanu;
