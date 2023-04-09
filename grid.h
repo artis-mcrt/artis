@@ -65,7 +65,7 @@ struct modelgrid_t {
   uint_fast8_t thick = 0;
 };
 
-constexpr int get_ngriddimensions() { return (GRID_TYPE == GRID_SPHERICAL1D) ? 1 : 3; }
+constexpr int get_ngriddimensions(void) { return (GRID_TYPE == GRID_SPHERICAL1D) ? 1 : 3; }
 
 extern struct modelgrid_t *modelgrid;
 
@@ -113,15 +113,15 @@ double get_electronfrac(int mgi);
 int get_numassociatedcells(int modelgridindex);
 int get_modelcell_nonemptymgi(int mgi);
 int get_mgi_of_nonemptymgi(int nonemptymgi);
-enum model_types get_model_type();
+enum model_types get_model_type(void);
 void set_model_type(enum model_types model_type_value);
-int get_npts_model();
-int get_nonempty_npts_model();
-int get_t_model();
+int get_npts_model(void);
+int get_nonempty_npts_model(void);
+int get_t_model(void);
 int get_cell_modelgridindex(int cellindex);
-void read_ejecta_model();
+void read_ejecta_model(void);
 void write_grid_restart_data(int timestep);
-int get_maxndo();
+int get_maxndo(void);
 int get_nstart(int rank);
 int get_ndo(int rank);
 int get_ndo_nonempty(int rank);

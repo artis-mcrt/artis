@@ -1,7 +1,7 @@
 #ifndef RATECOEFF_H
 #define RATECOEFF_H
 
-void ratecoefficients_init();
+void ratecoefficients_init(void);
 
 double select_continuum_nu(int element, int ion, int level, int upperionlevel, float T_e);
 

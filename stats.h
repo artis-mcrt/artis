@@ -82,9 +82,9 @@ enum eventcounters {
   COUNTER_COUNT = 34,
 };
 
-void init();
+void init(void);
 
-void cleanup();
+void cleanup(void);
 
 void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype,
                          const double increment);
@@ -103,13 +103,13 @@ void normalise_ion_estimators(const int mgi, const double deltat, const double d
 
 void increment(enum eventcounters);
 
-void pkt_action_counters_reset();
+void pkt_action_counters_reset(void);
 
 int get_counter(enum eventcounters i);
 
 void pkt_action_counters_printout(const struct packet *const pkt, const int nts);
 
-void reduce_estimators();
+void reduce_estimators(void);
 }  // namespace stats
 
 #endif  // STATS_H

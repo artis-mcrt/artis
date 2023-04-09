@@ -31,7 +31,7 @@ enum ma_action {
 #include "packet.h"
 
 void macroatom_open_file(int my_rank);
-void macroatom_close_file();
+void macroatom_close_file(void);
 
 void do_macroatom(struct packet *pkt_ptr, int timestep);
 

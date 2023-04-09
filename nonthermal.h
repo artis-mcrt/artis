@@ -7,7 +7,7 @@
 
 namespace nonthermal {
 void init(int my_rank, int ndo, int ndo_nonempty);
-void close_file();
+void close_file(void);
 void solve_spencerfano(int modelgridindex, int timestep, int iteration);
 double nt_ionization_ratecoeff(int modelgridindex, int element, int ion);
 double nt_ionization_upperion_probability(int modelgridindex, int element, int lowerion, int upperion,
@@ -23,7 +23,7 @@ void do_ntlepton(struct packet *pkt_ptr);
 void write_restart_data(FILE *gridsave_file);
 void read_restart_data(FILE *gridsave_file);
 void nt_MPI_Bcast(const int modelgridindex, const int root);
-void nt_reset_stats();
+void nt_reset_stats(void);
 void nt_print_stats(const int timestep, const double modelvolume, const double deltat);
 }  // namespace nonthermal
 
