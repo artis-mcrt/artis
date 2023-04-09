@@ -13,9 +13,10 @@ static int *eventstats = nullptr;
 
 void init() {
   if constexpr (TRACK_ION_STATS) {
-    ionstats = (double *)malloc(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT * sizeof(double));
+    ionstats =
+        static_cast<double *>(malloc(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT * sizeof(double)));
   }
-  eventstats = (int *)malloc(COUNTER_COUNT * sizeof(int));
+  eventstats = static_cast<int *>(malloc(COUNTER_COUNT * sizeof(int)));
 }
 
 void cleanup() {
@@ -126,7 +127,7 @@ void reset_ion_stats(int modelgridindex) {
   for (int element = 0; element < get_nelements(); element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
       for (int i = 0; i < ION_STAT_COUNT; i++) {
-        set_ion_stats(modelgridindex, element, ion, (enum stats::ionstattypes)i, 0.);
+        set_ion_stats(modelgridindex, element, ion, static_cast<enum stats::ionstattypes>(i), 0.);
       }
     }
   }
@@ -137,14 +138,15 @@ void normalise_ion_estimators(const int mgi, const double deltat, const double d
     for (int ion = 0; ion < get_nions(element); ion++) {
       for (int i = 0; i < ION_STAT_COUNT; i++) {
         // energy or event count per volume per second
-        const double ratedensity =
-            get_ion_stats(mgi, element, ion, (enum stats::ionstattypes)i) / deltaV / deltat / globals::nprocs;
+        const double ratedensity = get_ion_stats(mgi, element, ion, static_cast<enum stats::ionstattypes>(i)) / deltaV /
+                                   deltat / globals::nprocs;
 
         if (i < nstatcounters_ratecoeff) {
           // convert photon event counters into rate coefficients
-          set_ion_stats(mgi, element, ion, (enum stats::ionstattypes)i, ratedensity / ionstagepop(mgi, element, ion));
+          set_ion_stats(mgi, element, ion, static_cast<enum stats::ionstattypes>(i),
+                        ratedensity / ionstagepop(mgi, element, ion));
         } else {
-          set_ion_stats(mgi, element, ion, (enum stats::ionstattypes)i, ratedensity);
+          set_ion_stats(mgi, element, ion, static_cast<enum stats::ionstattypes>(i), ratedensity);
         }
       }
     }
@@ -177,7 +179,7 @@ void pkt_action_counters_printout(const struct packet *const pkt, const int nts)
     assert_always(pkt[i].interactions >= 0);
     allpktinteractions += pkt[i].interactions;
   }
-  const double meaninteractions = (double)allpktinteractions / globals::npkts;
+  const double meaninteractions = static_cast<double>(allpktinteractions) / globals::npkts;
   printout("mean number of interactions per packet = %g\n", meaninteractions);
 
   const double deltat = globals::time_step[nts].width;

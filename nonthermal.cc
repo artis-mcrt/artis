@@ -391,7 +391,7 @@ static void read_collion_data() {
 
   assert_always(fscanf(cifile, "%d", &colliondatacount) == 1);
   printout("Reading %d collisional transition rows\n", colliondatacount);
-  colliondata = (struct collionrow *)calloc(colliondatacount, sizeof(struct collionrow));
+  colliondata = static_cast<struct collionrow *>(calloc(colliondatacount, sizeof(struct collionrow)));
   int n = 0;  // the index of kept rows, skipping rows that aren't in the simulation
   for (int i = 0; i < colliondatacount; i++) {
     assert_always(fscanf(cifile, "%2d %2d %1d %1d %lg %lg %lg %lg %lg", &colliondata[n].Z, &colliondata[n].nelec,
@@ -423,7 +423,7 @@ static void read_collion_data() {
   }
   printout("Stored %d of %d input shell cross sections\n", n, colliondatacount);
   colliondatacount = n;
-  colliondata = (struct collionrow *)realloc(colliondata, colliondatacount * sizeof(struct collionrow));
+  colliondata = static_cast<struct collionrow *>(realloc(colliondata, colliondatacount * sizeof(struct collionrow)));
   if (colliondata == nullptr) {
     printout("Could not reallocate colliondata.\n");
     abort();
@@ -463,8 +463,8 @@ void init(const int my_rank, const int ndo, const int ndo_nonempty) {
   assert_always(nonthermal_initialized == false);
   nonthermal_initialized = true;
 
-  deposition_rate_density = (double *)malloc(grid::get_npts_model() * sizeof(double));
-  deposition_rate_density_timestep = (int *)malloc(grid::get_npts_model() * sizeof(int));
+  deposition_rate_density = static_cast<double *>(malloc(grid::get_npts_model() * sizeof(double)));
+  deposition_rate_density_timestep = static_cast<int *>(malloc(grid::get_npts_model() * sizeof(int)));
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     deposition_rate_density[modelgridindex] = -1.;
@@ -505,7 +505,8 @@ void init(const int my_rank, const int ndo, const int ndo_nonempty) {
     fflush(nonthermalfile);
   }
 
-  nt_solution = (struct nt_solution_struct *)calloc(grid::get_npts_model(), sizeof(struct nt_solution_struct));
+  nt_solution =
+      static_cast<struct nt_solution_struct *>(calloc(grid::get_npts_model(), sizeof(struct nt_solution_struct)));
 
   long mem_usage_yfunc = 0;
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
@@ -518,16 +519,17 @@ void init(const int my_rank, const int ndo, const int ndo_nonempty) {
     nt_solution[modelgridindex].timestep_last_solved = -1;
 
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      nt_solution[modelgridindex].eff_ionpot = (float *)calloc(get_includedions(), sizeof(float));
-      nt_solution[modelgridindex].fracdep_ionization_ion = (double *)calloc(get_includedions(), sizeof(double));
+      nt_solution[modelgridindex].eff_ionpot = static_cast<float *>(calloc(get_includedions(), sizeof(float)));
+      nt_solution[modelgridindex].fracdep_ionization_ion =
+          static_cast<double *>(calloc(get_includedions(), sizeof(double)));
 
       nt_solution[modelgridindex].prob_num_auger =
-          (float *)calloc(get_includedions() * (NT_MAX_AUGER_ELECTRONS + 1), sizeof(float));
+          static_cast<float *>(calloc(get_includedions() * (NT_MAX_AUGER_ELECTRONS + 1), sizeof(float)));
       nt_solution[modelgridindex].ionenfrac_num_auger =
-          (float *)calloc(get_includedions() * (NT_MAX_AUGER_ELECTRONS + 1), sizeof(float));
+          static_cast<float *>(calloc(get_includedions() * (NT_MAX_AUGER_ELECTRONS + 1), sizeof(float)));
 
       if (STORE_NT_SPECTRUM) {
-        nt_solution[modelgridindex].yfunc = (double *)calloc(SFPTS, sizeof(double));
+        nt_solution[modelgridindex].yfunc = static_cast<double *>(calloc(SFPTS, sizeof(double)));
         assert_always(nt_solution[modelgridindex].yfunc != nullptr);
         mem_usage_yfunc += SFPTS * sizeof(double);
       }
@@ -1976,8 +1978,8 @@ void do_ntlepton(struct packet *pkt_ptr) {
 }
 
 static bool realloc_frac_excitations_list(const int modelgridindex, const int newsize) {
-  auto *newptr = (struct nt_excitation_struct *)realloc(nt_solution[modelgridindex].frac_excitations_list,
-                                                        newsize * sizeof(struct nt_excitation_struct));
+  auto *newptr = static_cast<struct nt_excitation_struct *>(
+      realloc(nt_solution[modelgridindex].frac_excitations_list, newsize * sizeof(struct nt_excitation_struct)));
 
   if (newptr == nullptr && newsize > 0) {
     printout("ERROR: Not enough memory to reallocate NT excitation list for cell %d from size %d to %d.\n",
@@ -2689,7 +2691,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   // printout("\n");
 
   if (!STORE_NT_SPECTRUM) {
-    nt_solution[modelgridindex].yfunc = (double *)calloc(SFPTS, sizeof(double));
+    nt_solution[modelgridindex].yfunc = static_cast<double *>(calloc(SFPTS, sizeof(double)));
   }
 
   gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);

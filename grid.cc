@@ -348,7 +348,7 @@ static void allocate_initradiobund() {
   initradioabund_allcells = static_cast<float *>(malloc(totalradioabundsize));
 #endif
   printout("[info] mem_usage: radioabundance data for %d nuclides for %d cells occupies %.3f MB (node shared memory)\n",
-           num_nuclides, npts_model, (double)totalradioabundsize / 1024 / 1024);
+           num_nuclides, npts_model, static_cast<double>(totalradioabundsize) / 1024 / 1024);
 
 #ifdef MPI_ON
   MPI_Barrier(globals::mpi_comm_node);
@@ -1125,7 +1125,7 @@ static void read_model_headerline(std::string line, std::vector<int> &zlist, std
 static void read_model_radioabundances(std::ifstream &fmodel, std::string &line, const int linepos, const int mgi,
                                        const bool keepcell, std::vector<int> &zlist, std::vector<int> &alist,
                                        std::vector<std::string> &colnames, std::vector<int> &nucindexlist) {
-  if (linepos < (int)line.length()) {
+  if (linepos < static_cast<int>(line.length())) {
     // still more line is remaining, so the abundances must be on the same line
     if (mgi == 0) {
       printout("model.txt has has single line per cell format\n");
@@ -1175,7 +1175,7 @@ static void read_model_radioabundances(std::ifstream &fmodel, std::string &line,
           assert_always(ssline >> abundin);  // ignore
         }
 
-        for (int i = 0; i < (int)colnames.size(); i++) {
+        for (int i = 0; i < static_cast<int>(colnames.size()); i++) {
           double valuein = 0.;
           assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
           if (nucindexlist[i] >= 0) {
@@ -1250,7 +1250,7 @@ static void read_1d_model()
   allocate_initradiobund();
 
   std::vector<int> nucindexlist(zlist.size());
-  for (int i = 0; i < (int)zlist.size(); i++) {
+  for (int i = 0; i < static_cast<int>(zlist.size()); i++) {
     nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
   }
 
@@ -1341,7 +1341,7 @@ static void read_2d_model()
   allocate_initradiobund();
 
   std::vector<int> nucindexlist(zlist.size());
-  for (int i = 0; i < (int)zlist.size(); i++) {
+  for (int i = 0; i < static_cast<int>(zlist.size()); i++) {
     nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
   }
 
@@ -1449,7 +1449,7 @@ static void read_3d_model()
   allocate_initradiobund();
 
   std::vector<int> nucindexlist(zlist.size());
-  for (int i = 0; i < (int)zlist.size(); i++) {
+  for (int i = 0; i < static_cast<int>(zlist.size()); i++) {
     nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
   }
 

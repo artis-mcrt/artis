@@ -406,15 +406,15 @@ void add_to_vspecpol(struct packet *pkt_ptr, int bin, int ind, double t_arrive) 
 }
 
 void init_vspecpol() {
-  vstokes_i = (struct vspecpol **)malloc(VMTBINS * sizeof(struct vspecpol *));
-  vstokes_q = (struct vspecpol **)malloc(VMTBINS * sizeof(struct vspecpol *));
-  vstokes_u = (struct vspecpol **)malloc(VMTBINS * sizeof(struct vspecpol *));
+  vstokes_i = static_cast<struct vspecpol **>(malloc(VMTBINS * sizeof(struct vspecpol *)));
+  vstokes_q = static_cast<struct vspecpol **>(malloc(VMTBINS * sizeof(struct vspecpol *)));
+  vstokes_u = static_cast<struct vspecpol **>(malloc(VMTBINS * sizeof(struct vspecpol *)));
 
   const int indexmax = Nspectra * Nobs;
   for (int p = 0; p < VMTBINS; p++) {
-    vstokes_i[p] = (struct vspecpol *)malloc(indexmax * sizeof(struct vspecpol));
-    vstokes_q[p] = (struct vspecpol *)malloc(indexmax * sizeof(struct vspecpol));
-    vstokes_u[p] = (struct vspecpol *)malloc(indexmax * sizeof(struct vspecpol));
+    vstokes_i[p] = static_cast<struct vspecpol *>(malloc(indexmax * sizeof(struct vspecpol)));
+    vstokes_q[p] = static_cast<struct vspecpol *>(malloc(indexmax * sizeof(struct vspecpol)));
+    vstokes_u[p] = static_cast<struct vspecpol *>(malloc(indexmax * sizeof(struct vspecpol)));
   }
 
   for (int ind_comb = 0; ind_comb < indexmax; ind_comb++) {

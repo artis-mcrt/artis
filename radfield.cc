@@ -184,7 +184,7 @@ static void setup_bin_boundaries() {
 }
 
 static void realloc_detailed_lines(const int new_size) {
-  detailed_lineindicies = (int *)realloc(detailed_lineindicies, new_size * sizeof(int));
+  detailed_lineindicies = static_cast<int *>(realloc(detailed_lineindicies, new_size * sizeof(int)));
   if (detailed_lineindicies == nullptr) {
     printout("ERROR: Not enough memory to reallocate detailed Jblue estimator line list\n");
     abort();
@@ -192,11 +192,11 @@ static void realloc_detailed_lines(const int new_size) {
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      prev_Jb_lu_normed[modelgridindex] = (struct Jb_lu_estimator *)realloc(prev_Jb_lu_normed[modelgridindex],
-                                                                            new_size * sizeof(struct Jb_lu_estimator));
+      prev_Jb_lu_normed[modelgridindex] = static_cast<struct Jb_lu_estimator *>(
+          realloc(prev_Jb_lu_normed[modelgridindex], new_size * sizeof(struct Jb_lu_estimator)));
 
-      Jb_lu_raw[modelgridindex] =
-          (struct Jb_lu_estimator *)realloc(Jb_lu_raw[modelgridindex], new_size * sizeof(struct Jb_lu_estimator));
+      Jb_lu_raw[modelgridindex] = static_cast<struct Jb_lu_estimator *>(
+          realloc(Jb_lu_raw[modelgridindex], new_size * sizeof(struct Jb_lu_estimator)));
 
       if (prev_Jb_lu_normed[modelgridindex] == nullptr || Jb_lu_raw[modelgridindex] == nullptr) {
         printout("ERROR: Not enough memory to reallocate detailed Jblue estimator list for cell %d.\n", modelgridindex);
@@ -252,8 +252,9 @@ void init(int my_rank, int ndo, int ndo_nonempty)
 #endif
 
   prev_Jb_lu_normed =
-      (struct Jb_lu_estimator **)malloc((grid::get_npts_model() + 1) * sizeof(struct Jb_lu_estimator *));
-  Jb_lu_raw = (struct Jb_lu_estimator **)malloc((grid::get_npts_model() + 1) * sizeof(struct Jb_lu_estimator *));
+      static_cast<struct Jb_lu_estimator **>(malloc((grid::get_npts_model() + 1) * sizeof(struct Jb_lu_estimator *)));
+  Jb_lu_raw =
+      static_cast<struct Jb_lu_estimator **>(malloc((grid::get_npts_model() + 1) * sizeof(struct Jb_lu_estimator *)));
 
   detailed_linecount = 0;
 
@@ -907,8 +908,8 @@ double radfield(double nu, int modelgridindex)
 }
 
 constexpr double gsl_integrand_planck(const double nu, void *paras) {
-  const double T_R = ((gsl_planck_integral_paras *)paras)->T_R;
-  const enum_prefactor prefactor = ((gsl_planck_integral_paras *)paras)->prefactor;
+  const double T_R = (static_cast<gsl_planck_integral_paras *>(paras))->T_R;
+  const enum_prefactor prefactor = (static_cast<gsl_planck_integral_paras *>(paras))->prefactor;
 
   double integrand = TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / (std::expm1(HOVERKB * nu / T_R));
 
@@ -980,8 +981,8 @@ static double delta_nu_bar(double T_R, void *paras)
 // difference between the average nu and the average nu of a planck function
 // at temperature T_R, in the frequency range corresponding to a bin
 {
-  const int modelgridindex = ((gsl_T_R_solver_paras *)paras)->modelgridindex;
-  const int binindex = ((gsl_T_R_solver_paras *)paras)->binindex;
+  const int modelgridindex = (static_cast<gsl_T_R_solver_paras *>(paras))->modelgridindex;
+  const int binindex = (static_cast<gsl_T_R_solver_paras *>(paras))->binindex;
 
   const double nu_lower = get_bin_nu_lower(binindex);
   const double nu_upper = get_bin_nu_upper(binindex);
@@ -1719,7 +1720,7 @@ void read_restart_data(FILE *gridsave_file) {
 inline int integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel, size_t limit,
                      int key, gsl_integration_workspace *workspace, double *result, double *abserr) {
   if (MULTIBIN_RADFIELD_MODEL_ON && (globals::nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP)) {
-    auto *pts = (double *)malloc((RADFIELDBINCOUNT + 3) * sizeof(double));
+    auto *pts = static_cast<double *>(malloc((RADFIELDBINCOUNT + 3) * sizeof(double)));
     int binindex_a = select_bin(nu_a);
     int binindex_b = select_bin(nu_b);
     int npts = 0;

@@ -832,7 +832,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  auto *const packets = (struct packet *)calloc(MPKTS, sizeof(struct packet));
+  auto *const packets = static_cast<struct packet *>(calloc(MPKTS, sizeof(struct packet)));
 
   assert_always(packets != nullptr);
 

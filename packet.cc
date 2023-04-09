@@ -261,7 +261,7 @@ void read_packets(char filename[], struct packet *pkt) {
 
     int pkt_type_in;
     ssline >> pkt[i].number >> pkt[i].where >> pkt_type_in;
-    pkt[i].type = (enum packet_type)pkt_type_in;
+    pkt[i].type = static_cast<enum packet_type>(pkt_type_in);
 
     ssline >> pkt[i].pos[0] >> pkt[i].pos[1] >> pkt[i].pos[2];
 
@@ -269,7 +269,7 @@ void read_packets(char filename[], struct packet *pkt) {
 
     int last_cross_in;
     ssline >> last_cross_in;
-    pkt[i].last_cross = (enum cell_boundary)last_cross_in;
+    pkt[i].last_cross = static_cast<enum cell_boundary>(last_cross_in);
 
     ssline >> pkt[i].tdecay;
 
@@ -277,7 +277,7 @@ void read_packets(char filename[], struct packet *pkt) {
 
     int escape_type;
     ssline >> escape_type >> pkt[i].escape_time;
-    pkt[i].escape_type = (enum packet_type)escape_type;
+    pkt[i].escape_type = static_cast<enum packet_type>(escape_type);
 
     ssline >> pkt[i].next_trans >> pkt[i].interactions >> pkt[i].last_event;
     assert_always(pkt[i].interactions >= 0);

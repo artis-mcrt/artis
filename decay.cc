@@ -150,7 +150,7 @@ constexpr int decay_daughter_z(const int z_parent, const int a_parent, int decay
   assert_always(decaytype >= 0);
   assert_always(decaytype < DECAYTYPE_COUNT);
 
-  switch ((enum decaytypes)decaytype) {
+  switch (static_cast<enum decaytypes>(decaytype)) {
     case DECAYTYPE_ALPHA: {
       return z_parent - 2;  // lose two protons and two neutrons
     }
@@ -174,7 +174,7 @@ constexpr int decay_daughter_z(const int z_parent, const int a_parent, int decay
 constexpr int decay_daughter_a(const int z_parent, const int a_parent, int decaytype)
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
-  switch ((enum decaytypes)decaytype) {
+  switch (static_cast<enum decaytypes>(decaytype)) {
     case DECAYTYPE_ALPHA: {
       return a_parent - 4;  // lose two protons and two neutrons
     }
@@ -693,7 +693,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
     falpha.close();
   }
 
-  for (int i = 0; i < (int)custom_alist.size(); i++) {
+  for (int i = 0; i < static_cast<int>(custom_alist.size()); i++) {
     const int z = custom_zlist[i];
     const int a = custom_alist[i];
     if (!nuc_exists(z, a)) {
@@ -727,7 +727,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
     // printout_decaypath(decaypathindex);
     maxdecaypathlength = std::max(maxdecaypathlength, get_decaypathlength(decaypathindex));
   }
-  printout("Number of decay paths: %d (max length %d)\n", (int)get_num_decaypaths(), maxdecaypathlength);
+  printout("Number of decay paths: %d (max length %d)\n", get_num_decaypaths(), maxdecaypathlength);
 
   // TODO: generalise this to all included nuclides
   printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n",

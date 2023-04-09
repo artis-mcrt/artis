@@ -436,7 +436,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
     for (int action = 0; action < MA_ACTION_COUNT; action++) {
       rate += processrates[action];
       if (rate > randomrate) {
-        selected_action = (enum ma_action)(action);
+        selected_action = static_cast<enum ma_action>(action);
         break;
       }
     }
