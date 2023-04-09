@@ -1307,16 +1307,6 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       }
     }
 
-    if (globals::do_rlc_est == 2 && grid::get_nne(mgi) > 0) {
-      const double cell_len_scale_a = 0.1 / grid::get_nne(mgi) / SIGMA_T;
-      if (cell_len_scale_a < mps[tid]) {
-        mps[tid] = cell_len_scale_a;
-      }
-      const double cell_len_scale_b = 0.1 / grid::get_rho(mgi) / globals::GREY_OP;
-      if (cell_len_scale_b < mps[tid]) {
-        mps[tid] = cell_len_scale_b;
-      }
-    }
     const int update_grid_cell_seconds = time(nullptr) - sys_time_start_update_cell;
     if (update_grid_cell_seconds > 0) {
       printout("update_grid_cell for cell %d timestep %d took %ld seconds\n", mgi, nts, update_grid_cell_seconds);
@@ -1468,12 +1458,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     }
   }
 
-  if (globals::do_rlc_est == 2) {
-    const double trat = globals::time_step[nts].start / globals::tmin;
-    if (globals::max_path_step < (grid::wid_init(0) * trat / 10.)) {
-      globals::max_path_step = grid::wid_init(0) / 10. * trat;
-    }
-  }
   globals::max_path_step = fmin(globals::max_path_step, globals::rmax / 10.);
   printout("max_path_step %g\n", globals::max_path_step);
 

@@ -890,9 +890,6 @@ static bool do_rpkt_step(struct packet *pkt_ptr, const double t2)
     // Move it into the new cell.
     move_pkt_withtime(pkt_ptr, sdist / 2.);
     update_estimators(pkt_ptr, sdist);
-    if (globals::do_rlc_est != 0 && globals::do_rlc_est != 3) {
-      rlc_emiss_rpkt(pkt_ptr, sdist);
-    }
     move_pkt_withtime(pkt_ptr, sdist / 2.);
 
     if (snext != pkt_ptr->where) {
@@ -919,9 +916,6 @@ static bool do_rpkt_step(struct packet *pkt_ptr, const double t2)
     // printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
     move_pkt_withtime(pkt_ptr, edist / 2.);
     update_estimators(pkt_ptr, edist);
-    if (globals::do_rlc_est != 0 && globals::do_rlc_est != 3) {
-      rlc_emiss_rpkt(pkt_ptr, edist);
-    }
     move_pkt_withtime(pkt_ptr, edist / 2.);
 
     // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
@@ -942,9 +936,6 @@ static bool do_rpkt_step(struct packet *pkt_ptr, const double t2)
     // printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
     move_pkt_withtime(pkt_ptr, tdist / 2.);
     update_estimators(pkt_ptr, tdist);
-    if (globals::do_rlc_est != 0 && globals::do_rlc_est != 3) {
-      rlc_emiss_rpkt(pkt_ptr, tdist);
-    }
     pkt_ptr->prop_time = t2;
     move_pkt(pkt_ptr, tdist / 2.);
     pkt_ptr->last_event = pkt_ptr->last_event + 1000;

@@ -346,10 +346,8 @@ static void mpi_reduce_estimators(int my_rank, int nts) {
     MPI_Allreduce(MPI_IN_PLACE, globals::acounter, globals::nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   }
 
-  if (globals::do_rlc_est != 0) {
-    assert_always(globals::rpkt_emiss != nullptr);
-    MPI_Allreduce(MPI_IN_PLACE, globals::rpkt_emiss, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  }
+  assert_always(globals::rpkt_emiss != nullptr);
+  MPI_Allreduce(MPI_IN_PLACE, globals::rpkt_emiss, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -615,12 +613,7 @@ static bool do_timestep(const int nts, const int titer, const int my_rank, const
     // The estimators have been summed across all proceses and distributed.
     // They will now be normalised independently on all processes
 
-    if (globals::do_rlc_est != 0) {
-      normalise_grey(nts);
-      if ((globals::do_rlc_est != 3) && (my_rank == 0)) {
-        write_grey(nts);
-      }
-    }
+    normalise_grey(nts);
 
     write_deposition_file(nts, my_rank, nstart, ndo);
 

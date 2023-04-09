@@ -359,14 +359,9 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
   kpkt::calculate_cooling_rates(modelgridindex, heatingcoolingrates);
   calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates);
 
-  /// If selected take direct gamma heating into account
-  if (globals::do_rlc_est == 3) {
-    const double nt_frac_heating = nonthermal::get_nt_frac_heating(modelgridindex);
-    heatingcoolingrates->heating_dep = nonthermal::get_deposition_rate_density(modelgridindex) * nt_frac_heating;
-    heatingcoolingrates->nt_frac_heating = nt_frac_heating;
-  } else {
-    heatingcoolingrates->heating_dep = 0.;
-  }
+  const double nt_frac_heating = nonthermal::get_nt_frac_heating(modelgridindex);
+  heatingcoolingrates->heating_dep = nonthermal::get_deposition_rate_density(modelgridindex) * nt_frac_heating;
+  heatingcoolingrates->nt_frac_heating = nt_frac_heating;
 
   /// Adiabatic cooling term
   const double p = nntot * KB * T_e;
