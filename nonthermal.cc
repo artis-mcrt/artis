@@ -185,7 +185,8 @@ static double get_tot_nion(const int modelgridindex) { return get_nntot(modelgri
 static void read_binding_energies() {
   FILE *binding = fopen_required("binding_energies.txt", "r");
 
-  int dum1, dum2;
+  int dum1;
+  int dum2;
   assert_always(fscanf(binding, "%d %d", &dum1, &dum2) == 2);  // dimensions of the table
   if ((dum1 != M_NT_SHELLS) || (dum2 != MAX_Z_BINDING)) {
     printout("Wrong size for the binding energy tables!\n");

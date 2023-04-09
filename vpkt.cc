@@ -74,19 +74,52 @@ int nvpkt_esc2;  // kpkt deactivation
 int nvpkt_esc3;  // macroatom deactivation
 
 void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *obs, int realtype) {
-  double vel_vec[3], old_dir_cmf[3], obs_cmf[3], vel_rev[3];
+  double vel_vec[3];
+  double old_dir_cmf[3];
+  double obs_cmf[3];
+  double vel_rev[3];
   double s_cont;
-  double kap_cont, kap_cont_nobf, kap_cont_noff, kap_cont_noes;
+  double kap_cont;
+  double kap_cont_nobf;
+  double kap_cont_noff;
+  double kap_cont_noes;
   int snext;
   double t_arrive;
-  int element, ion, upper, lower;
-  double A_ul, B_ul, B_lu;
-  double n_u, n_l, t_line;
+  int element;
+  int ion;
+  int upper;
+  int lower;
+  double A_ul;
+  double B_ul;
+  double B_lu;
+  double n_u;
+  double n_l;
+  double t_line;
   int mgi;
-  double Qold, Uold, Inew, Qnew, Unew, Itmp, Qtmp, Utmp, I, Q, U, pn, prob;
-  double mu, i1, i2, cos2i1, sin2i1, cos2i2, sin2i2;
-  double ref1[3], ref2[3];
-  int anumber, tau_flag = 0;
+  double Qold;
+  double Uold;
+  double Inew;
+  double Qnew;
+  double Unew;
+  double Itmp;
+  double Qtmp;
+  double Utmp;
+  double I;
+  double Q;
+  double U;
+  double pn;
+  double prob;
+  double mu;
+  double i1;
+  double i2;
+  double cos2i1;
+  double sin2i1;
+  double cos2i2;
+  double sin2i2;
+  double ref1[3];
+  double ref2[3];
+  int anumber;
+  int tau_flag = 0;
 
   int bin_range;
 
@@ -502,7 +535,9 @@ void read_vspecpol(int my_rank, int nts) {
 
   FILE *vspecpol_file = fopen_required(filename, "rb");
 
-  float a, b, c;
+  float a;
+  float b;
+  float c;
 
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
     // Initialise times and frequencies
@@ -591,7 +626,8 @@ void init_vpkt_grid() {
 
 // Routine to add a packet to the outcoming spectrum.
 void add_to_vpkt_grid(struct packet *dummy_ptr, const double *vel, int bin_range, int bin, const double *obs) {
-  double vref1, vref2;
+  double vref1;
+  double vref2;
 
   // Observer orientation
 
@@ -1079,7 +1115,17 @@ void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cm
 
 /* ----------------------- Lorentz transformations from RF to CMF --------------------------------------------- */
 void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf) {
-  double beta[3], e_par[3], e_perp[3], b_rf[3], b_par[3], b_perp[3], vsqr, gamma_rel, v_cr_b[3], v_cr_e[3], b_cmf[3];
+  double beta[3];
+  double e_par[3];
+  double e_perp[3];
+  double b_rf[3];
+  double b_par[3];
+  double b_perp[3];
+  double vsqr;
+  double gamma_rel;
+  double v_cr_b[3];
+  double v_cr_e[3];
+  double b_cmf[3];
 
   beta[0] = v[0] / CLIGHT;
   beta[1] = v[1] / CLIGHT;

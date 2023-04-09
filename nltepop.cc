@@ -787,7 +787,8 @@ static bool nltepop_matrix_solve(const int element, const gsl_matrix *rate_matri
       gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, row);
       gsl_blas_ddot(&row_view.vector, x, &recovered_balance_vector_elem);
 
-      int ion, level;
+      int ion;
+      int level;
       get_ion_level_of_nlte_vector_index(row, element, &ion, &level);
 
       // printout("index %4d (ion_stage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e

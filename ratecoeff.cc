@@ -105,7 +105,10 @@ static bool read_ratecoeff_dat()
         for (int element = 0; element < get_nelements(); element++) {
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions; ion++) {
-            int in_element, in_ionstage, in_levels, in_ionisinglevels;
+            int in_element;
+            int in_ionstage;
+            int in_levels;
+            int in_ionisinglevels;
             assert_always(fscanf(ratecoeff_file, "%d %d %d %d\n", &in_element, &in_ionstage, &in_levels,
                                  &in_ionisinglevels) == 4);
             const int nlevels = get_nlevels(element, ion);
@@ -150,7 +153,10 @@ static bool read_ratecoeff_dat()
             for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
               /// Loop over the temperature grid
               for (int iter = 0; iter < TABLESIZE; iter++) {
-                double alpha_sp, bfcooling_coeff, corrphotoioncoeff, bfheating_coeff;
+                double alpha_sp;
+                double bfcooling_coeff;
+                double corrphotoioncoeff;
+                double bfheating_coeff;
                 assert_always(fscanf(ratecoeff_file, "%la %la %la %la\n", &alpha_sp, &bfcooling_coeff,
                                      &corrphotoioncoeff, &bfheating_coeff) == 4);
 
