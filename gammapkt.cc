@@ -44,9 +44,11 @@ constexpr bool operator<(const struct gammaline &g1, const struct gammaline &g2)
   // true if d1 < d2
   if (g1.energy < g2.energy) {
     return true;
-  } else if (g1.energy == g2.energy && g1.nucindex < g2.nucindex) {
+  }
+  if (g1.energy == g2.energy && g1.nucindex < g2.nucindex) {
     return true;
-  } else if (g1.energy == g2.energy && g1.nucindex == g2.nucindex && g1.nucgammaindex < g2.nucgammaindex) {
+  }
+  if (g1.energy == g2.energy && g1.nucindex == g2.nucindex && g1.nucgammaindex < g2.nucgammaindex) {
     return true;
   }
   return false;
