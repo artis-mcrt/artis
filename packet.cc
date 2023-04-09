@@ -179,7 +179,7 @@ void write_packets(char filename[], const struct packet *const pkt) {
     fprintf(packets_file, "%lg %lg %lg ", pkt[i].absorptiondir[0], pkt[i].absorptiondir[1], pkt[i].absorptiondir[2]);
     fprintf(packets_file, "%lg %lg %lg ", pkt[i].stokes[0], pkt[i].stokes[1], pkt[i].stokes[2]);
     fprintf(packets_file, "%lg %lg %lg ", pkt[i].pol_dir[0], pkt[i].pol_dir[1], pkt[i].pol_dir[2]);
-    fprintf(packets_file, "%d ", pkt[i].originated_from_particlenotgamma);
+    fprintf(packets_file, "%d ", static_cast<int>(pkt[i].originated_from_particlenotgamma));
     fprintf(packets_file, "%g ", pkt[i].trueemissionvelocity);
     fprintf(packets_file, "%d ", pkt[i].trueem_time);
     fprintf(packets_file, "%d ", pkt[i].pellet_nucindex);
