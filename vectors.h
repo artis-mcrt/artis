@@ -120,7 +120,7 @@ constexpr double doppler_squared_nucmf_on_nurf(const double dir_rf[3], const dou
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
 
   const double ndotv = dot(dir_rf, vel_rf);
-  double dopplerfactorsq;
+  double dopplerfactorsq = 1.;
 
   if (USE_RELATIVISTIC_DOPPLER_SHIFT) {
     const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;

@@ -78,54 +78,54 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
   double old_dir_cmf[3];
   double obs_cmf[3];
   double vel_rev[3];
-  double s_cont;
-  double kap_cont;
-  double kap_cont_nobf;
-  double kap_cont_noff;
-  double kap_cont_noes;
-  int snext;
-  double t_arrive;
-  int element;
-  int ion;
-  int upper;
-  int lower;
-  double A_ul;
-  double B_ul;
-  double B_lu;
-  double n_u;
-  double n_l;
-  double t_line;
-  int mgi;
-  double Qold;
-  double Uold;
-  double Inew;
-  double Qnew;
-  double Unew;
-  double Itmp;
-  double Qtmp;
-  double Utmp;
-  double I;
-  double Q;
-  double U;
-  double pn;
-  double prob;
-  double mu;
-  double i1;
-  double i2;
-  double cos2i1;
-  double sin2i1;
-  double cos2i2;
-  double sin2i2;
+  double s_cont = NAN;
+  double kap_cont = NAN;
+  double kap_cont_nobf = NAN;
+  double kap_cont_noff = NAN;
+  double kap_cont_noes = NAN;
+  int snext = 0;
+  double t_arrive = NAN;
+  int element = 0;
+  int ion = 0;
+  int upper = 0;
+  int lower = 0;
+  double A_ul = NAN;
+  double B_ul = NAN;
+  double B_lu = NAN;
+  double n_u = NAN;
+  double n_l = NAN;
+  double t_line = NAN;
+  int mgi = 0;
+  double Qold = NAN;
+  double Uold = NAN;
+  double Inew = NAN;
+  double Qnew = NAN;
+  double Unew = NAN;
+  double Itmp = NAN;
+  double Qtmp = NAN;
+  double Utmp = NAN;
+  double I = NAN;
+  double Q = NAN;
+  double U = NAN;
+  double pn = NAN;
+  double prob = NAN;
+  double mu = NAN;
+  double i1 = NAN;
+  double i2 = NAN;
+  double cos2i1 = NAN;
+  double sin2i1 = NAN;
+  double cos2i2 = NAN;
+  double sin2i2 = NAN;
   double ref1[3];
   double ref2[3];
-  int anumber;
+  int anumber = 0;
   int tau_flag = 0;
 
-  int bin_range;
+  int bin_range = 0;
 
   struct packet dummy;
   dummy = *pkt_ptr;
-  struct packet *dummy_ptr;
+  struct packet *dummy_ptr = nullptr;
   dummy_ptr = &dummy;
 
   bool end_packet = false;
@@ -535,9 +535,9 @@ void read_vspecpol(int my_rank, int nts) {
 
   FILE *vspecpol_file = fopen_required(filename, "rb");
 
-  float a;
-  float b;
-  float c;
+  float a = NAN;
+  float b = NAN;
+  float c = NAN;
 
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
     // Initialise times and frequencies
@@ -626,8 +626,8 @@ void init_vpkt_grid() {
 
 // Routine to add a packet to the outcoming spectrum.
 void add_to_vpkt_grid(struct packet *dummy_ptr, const double *vel, int bin_range, int bin, const double *obs) {
-  double vref1;
-  double vref2;
+  double vref1 = NAN;
+  double vref2 = NAN;
 
   // Observer orientation
 
@@ -748,7 +748,7 @@ void read_parameterfile_vpkt() {
   }
 
   // Nspectra opacity choices (i.e. Nspectra spectra for each observer)
-  int nspectra_customlist_flag;
+  int nspectra_customlist_flag = 0;
   assert_always(fscanf(input_file, "%d ", &nspectra_customlist_flag) == 1);
 
   if (nspectra_customlist_flag != 1) {
@@ -852,8 +852,8 @@ void read_parameterfile_vpkt() {
   printout("vpkt.txt: velocity grid map %s\n", (vgrid_flag == 1) ? "ENABLED" : "DISABLED");
 
   if (vgrid_flag == 1) {
-    double tmin_grid_in_days;
-    double tmax_grid_in_days;
+    double tmin_grid_in_days = NAN;
+    double tmax_grid_in_days = NAN;
     // Specify time range for velocity grid map
     assert_always(fscanf(input_file, "%lg %lg \n", &tmin_grid_in_days, &tmax_grid_in_days) == 2);
     tmin_grid = tmin_grid_in_days * DAY;
@@ -1012,8 +1012,8 @@ void meridian(const double *n, double *ref1, double *ref2) {
 
 // Routine to transform the Stokes Parameters from RF to CMF
 void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf) {
-  double cos2rot_angle;
-  double sin2rot_angle;
+  double cos2rot_angle = NAN;
+  double sin2rot_angle = NAN;
   double e_rf[3];
   double e_cmf[3];
   double e_cmf_ref1 = 0.;
@@ -1121,8 +1121,8 @@ void lorentz(const double *e_rf, const double *n_rf, const double *v, double *e_
   double b_rf[3];
   double b_par[3];
   double b_perp[3];
-  double vsqr;
-  double gamma_rel;
+  double vsqr = NAN;
+  double gamma_rel = NAN;
   double v_cr_b[3];
   double v_cr_e[3];
   double b_cmf[3];

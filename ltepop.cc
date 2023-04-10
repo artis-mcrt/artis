@@ -346,7 +346,7 @@ static auto calculate_levelpop_nominpop(int modelgridindex, int element, int ion
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
 
-  double nn;
+  double nn = NAN;
 
   //  T_exc = MINTEMP;
 
@@ -446,7 +446,7 @@ auto calculate_partfunct(int element, int ion, int modelgridindex) -> double
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
-  double pop_store;
+  double pop_store = NAN;
   // double E_level, E_ground, test;
 
   int initial = 0;

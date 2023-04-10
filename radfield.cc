@@ -1600,10 +1600,10 @@ void read_restart_data(FILE *gridsave_file) {
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    double T_R_min_in;
-    double T_R_max_in;
-    double nu_lower_first_initial_in;
-    double nu_upper_last_initial_in;
+    double T_R_min_in = NAN;
+    double T_R_max_in = NAN;
+    double nu_lower_first_initial_in = NAN;
+    double nu_upper_last_initial_in = NAN;
     int bincount_in = 0;
     assert_always(fscanf(gridsave_file, "%d %la %la %la %la\n", &bincount_in, &nu_lower_first_initial_in,
                          &nu_upper_last_initial_in, &T_R_min_in, &T_R_max_in) == 5);

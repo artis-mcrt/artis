@@ -1556,7 +1556,7 @@ auto calculate_populations(const int modelgridindex) -> double
       const int nions = get_nions(element);
       /// Assign the species population to the neutral ion and set higher ions to MINPOP
       for (int ion = 0; ion < nions; ion++) {
-        double nnion;
+        double nnion = NAN;
         if (ion == 0) {
           nnion = nnelement;
         } else if (nnelement > 0.) {
@@ -1660,7 +1660,7 @@ auto calculate_populations(const int modelgridindex) -> double
 
       /// Use ionizationfractions to calculate the groundlevel populations
       for (int ion = 0; ion < nions; ion++) {
-        double nnion;
+        double nnion = NAN;
         if (ion <= uppermost_ion) {
           if (nnelement > 0) {
             nnion = nnelement * ionfractions[ion];

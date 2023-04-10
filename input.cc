@@ -105,7 +105,7 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
 
       double probability_sum = 0.;
       for (int i = 0; i < in_nphixstargets; i++) {
-        double phixstargetprobability;
+        double phixstargetprobability = NAN;
         assert_always(fscanf(phixsdata, "%d %lg\n", &upperlevel_in, &phixstargetprobability) == 2);
         const int upperlevel = upperlevel_in - groundstate_index_in;
         assert_always(upperlevel >= 0);
@@ -128,7 +128,7 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
       assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != nullptr);
 
       for (int i = 0; i < in_nphixstargets; i++) {
-        double phixstargetprobability;
+        double phixstargetprobability = NAN;
         assert_always(fscanf(phixsdata, "%d %lg\n", &upperlevel_in, &phixstargetprobability) == 2);
       }
 
@@ -214,7 +214,7 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
     free(phixstable);
   } else {
     for (int i = 0; i < globals::NPHIXSPOINTS; i++) {
-      float phixs;
+      float phixs = NAN;
       assert_always(fscanf(phixsdata, "%g\n", &phixs) == 1);
       assert_always(phixs >= 0);
 
@@ -308,10 +308,10 @@ static void read_phixs_data(int phixs_file_version) {
     {
       if (upperlevel_in < 0)  // a table of target states and probabilities will follow, so read past those lines
       {
-        int nphixstargets;
+        int nphixstargets = 0;
         assert_always(fscanf(phixsdata, "%d\n", &nphixstargets) == 1);
         for (int i = 0; i < nphixstargets; i++) {
-          double phixstargetprobability;
+          double phixstargetprobability = NAN;
           assert_always(fscanf(phixsdata, "%d %lg\n", &upperlevel_in, &phixstargetprobability) == 2);
         }
       }
@@ -343,10 +343,10 @@ static void read_ion_levels(FILE *adata, const int element, const int ion, const
 
   int transitionblockindex = 0;
   for (int level = 0; level < nlevels; level++) {
-    int levelindex_in;
-    double levelenergy;
-    double statweight;
-    int ntransitions;
+    int levelindex_in = 0;
+    double levelenergy = NAN;
+    double statweight = NAN;
+    int ntransitions = 0;
     assert_always(fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex_in, &levelenergy, &statweight, &ntransitions) ==
                   4);
     assert_always(levelindex_in == level + groundstate_index_in);
@@ -535,7 +535,7 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
                                                  std::vector<struct linelist_entry> &temp_linelist) {
   const int lineindex_initial = *lineindex;
   const int tottransitions = transitiontable.size();
-  int totupdowntrans;
+  int totupdowntrans = 0;
   // pass 0 to get transition counts of each level
   // pass 1 to allocate and fill transition arrays
   for (int pass = 0; pass < 2; pass++) {
@@ -775,13 +775,13 @@ static void read_atomicdata_files() {
   int nbfcheck = 0;
   for (int element = 0; element < get_nelements(); element++) {
     /// read information about the next element which should be stored to memory
-    int Z;
-    int nions;
-    int lowermost_ionstage;
-    int uppermost_ionstage;
-    int nlevelsmax_readin;
-    double abundance;
-    double mass_amu;
+    int Z = 0;
+    int nions = 0;
+    int lowermost_ionstage = 0;
+    int uppermost_ionstage = 0;
+    int nlevelsmax_readin = 0;
+    double abundance = NAN;
+    double mass_amu = NAN;
     assert_always(fscanf(compositiondata, "%d %d %d %d %d %lg %lg", &Z, &nions, &lowermost_ionstage,
                          &uppermost_ionstage, &nlevelsmax_readin, &abundance, &mass_amu) == 7);
     printout("readin compositiondata: next element Z %d, nions %d, lowermost %d, uppermost %d, nlevelsmax %d\n", Z,
@@ -830,10 +830,10 @@ static void read_atomicdata_files() {
           energyoffset += ionpot;
         }
         for (int i = 0; i < nlevels; i++) {
-          double levelenergy;
-          double statweight;
-          int levelindex;
-          int ntransitions;
+          double levelenergy = NAN;
+          double statweight = NAN;
+          int levelindex = 0;
+          int ntransitions = 0;
           assert_always(
               fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex, &levelenergy, &statweight, &ntransitions) == 4);
         }
@@ -2025,13 +2025,13 @@ void read_parameterfile(int rank)
   /// he calculation of rho_crit itself depends on the time, therfore it happens in grid_init and update_grid
 
   assert_always(get_noncommentline(file, line));
-  int debug_packet;
+  int debug_packet = 0;
   std::stringstream(line) >> debug_packet;  // activate debug output for packet
   assert_always(debug_packet == -1);
   // select a negative value to deactivate
 
   // Do we start a new simulation or, continue another one?
-  int continue_flag;
+  int continue_flag = 0;
   assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> continue_flag;
   globals::simulation_continued_from_saved = (continue_flag == 1);

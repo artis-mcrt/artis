@@ -1447,7 +1447,7 @@ auto solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timestep)
       test_ratio = 0.0;
     }
 
-    double test_ratio_upper;
+    double test_ratio_upper = NAN;
     if ((get_groundlevelpop(modelgridindex, element, ion + 1) > (1.1 * MINPOP)) &&
         (gsl_vector_get(x, nlte_size - 1) > (1.1 * MINPOP))) {
       test_ratio_upper = get_groundlevelpop(modelgridindex, element, ion + 1) *
@@ -1609,7 +1609,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
 
       for (int level = 0; level <= nlevels_nlte + nsuperlevels; level++) {
         double nnlevellte = calculate_levelpop_lte(modelgridindex, element, ion, level);
-        double nnlevelnlte;
+        double nnlevelnlte = NAN;
 
         // use "%8d %14d %2d %9d " for fixed width
         fprintf(nlte_file, "%d %d %d %d ", timestep, modelgridindex, atomic_number, ion_stage);

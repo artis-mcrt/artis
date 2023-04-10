@@ -111,7 +111,7 @@ static auto get_event(const int modelgridindex,
       // multiple scattering events of one pp in a single line
       dummypkt_ptr->next_trans = lineindex + 1;
 
-      double ldist;  // distance from current position to the line interaction
+      double ldist = NAN;  // distance from current position to the line interaction
       if (dummypkt_ptr->nu_cmf <= nu_trans) {
         // printout(
         //     "[warning] packet %d dummypkt_ptr->nu_cmf %lg <= nu_trans %lg diff %lg next_trans %d, Z=%d ionstage %d
@@ -850,7 +850,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
   assert_always(tdist >= 0);
 
-  double edist;
+  double edist = NAN;
   int rpkt_eventtype = -1;
   bool find_nextline = false;
   if (mgi == grid::get_npts_model()) {

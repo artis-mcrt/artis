@@ -1,5 +1,6 @@
 #include "spectrum.h"
 
+#include <cmath>
 #include <ctime>
 #include <memory>
 
@@ -86,8 +87,8 @@ static void printout_tracemission_stats() {
     printout("%17s %4s %9s %5s %5s %8s %8s %4s %7s %7s %7s %7s\n", "energy", "Z", "ion_stage", "upper", "lower",
              "coll_str", "A", "forb", "lambda", "<v_rad>", "B_lu", "B_ul");
     for (int i = 0; i < nlines_limited; i++) {
-      double encontrib;
-      double totalenergy;
+      double encontrib = NAN;
+      double totalenergy = NAN;
       if (mode == 0) {
         encontrib = traceemissionabsorption[i].energyemitted;
         totalenergy = traceemission_totalenergy;
@@ -102,7 +103,7 @@ static void printout_tracemission_stats() {
         const int ion = globals::linelist[lineindex].ionindex;
         const double linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
         // flux-weighted average radial velocity of emission in km/s
-        double v_rad;
+        double v_rad = NAN;
         if (mode == 0) {
           v_rad =
               traceemissionabsorption[i].emission_weightedvelocity_sum / traceemissionabsorption[i].energyemitted / 1e5;

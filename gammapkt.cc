@@ -1,6 +1,7 @@
 #include "gammapkt.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <fstream>
 #include <limits>
@@ -327,7 +328,7 @@ static auto sig_comp(const struct packet *pkt_ptr) -> double {
 
   // Use this to decide whether the Thompson limit is acceptable.
 
-  double sigma_cmf;
+  double sigma_cmf = NAN;
   if (xx < THOMSON_LIMIT) {
     sigma_cmf = SIGMA_T;
   } else {
@@ -409,7 +410,7 @@ static auto thomson_angle() -> double {
 static void compton_scatter(struct packet *pkt_ptr)
 // Routine to deal with physical Compton scattering event.
 {
-  double f;
+  double f = NAN;
 
   //  printout("Compton scattering.\n");
 
@@ -530,7 +531,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   // boundaries. sdist is the boundary distance and snext is the
   // grid cell into which we pass.
 
-  int snext;
+  int snext = 0;
   double sdist = boundary_cross(pkt_ptr, &snext);
 
   const double maxsdist = (GRID_TYPE == GRID_SPHERICAL1D)

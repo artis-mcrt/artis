@@ -22,3 +22,7 @@ ExtraArgs: [-std=c++20]
 CheckOptions:
     - key: modernize-deprecated-headers.CheckHeaderFile
       value: enabled
+    - key: cppcoreguidelines-init-variables.IncludeStyle
+      value: google
+    - key: cppcoreguidelines-init-variables.MathHeader
+      value: <cmath>

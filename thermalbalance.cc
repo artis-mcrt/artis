@@ -348,7 +348,7 @@ static auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> doub
   /// Set new T_e guess for the current cell and update populations
   // globals::cell[cellnumber].T_e = T_e;
   grid::set_Te(modelgridindex, T_e);
-  double nntot;
+  double nntot = NAN;
   if (NLTE_POPS_ON && NLTE_POPS_ALL_IONS_SIMULTANEOUS) {
     nntot = calculate_electron_densities(modelgridindex);
   } else {
@@ -413,7 +413,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
   }
 
   // double thermalmax = find_T_e(T_max,find_T_e_f.params);
-  double T_e;
+  double T_e = NAN;
   if (thermalmin * thermalmax < 0) {
     /// If it has, then solve for the root T_e
     /// but first of all printout heating and cooling rates if the tb_info switch is set

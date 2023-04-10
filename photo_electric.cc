@@ -1,5 +1,7 @@
 #include "photo_electric.h"
 
+#include <cmath>
+
 #include "grid.h"
 #include "sn3d.h"
 #include "stats.h"
@@ -8,7 +10,7 @@
 // Stuff for photo electric effect scattering.
 
 auto sig_photo_electric(const struct packet *pkt_ptr) -> double {
-  double sigma_cmf;
+  double sigma_cmf = NAN;
   // Start by working out the x-section in the co-moving frame.
 
   const int cellindex = pkt_ptr->where;
@@ -51,7 +53,7 @@ auto sig_photo_electric(const struct packet *pkt_ptr) -> double {
 auto sig_pair_prod(const struct packet *pkt_ptr) -> double {
   // Cross section for pair production.
 
-  double sigma_cmf;
+  double sigma_cmf = NAN;
 
   // Start by working out the x-section in the co-moving frame.
 
@@ -65,8 +67,8 @@ auto sig_pair_prod(const struct packet *pkt_ptr) -> double {
 
     if (pkt_ptr->nu_cmf > 2.46636e+20) {
       // double sigma_cmf_cno;
-      double sigma_cmf_si;
-      double sigma_cmf_fe;
+      double sigma_cmf_si = NAN;
+      double sigma_cmf_fe = NAN;
       const double f_fe = grid::get_ffegrp(mgi);
       if (pkt_ptr->nu_cmf > 3.61990e+20) {
         // sigma_cmf_cno = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.5))) * 49.e-27;

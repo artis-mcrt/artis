@@ -1221,7 +1221,7 @@ static auto get_nt_frac_excitation(const int modelgridindex) -> float {
 
 static auto get_mean_binding_energy(const int element, const int ion) -> double {
   int q[M_NT_SHELLS];
-  double total;
+  double total = NAN;
 
   const int ioncharge = get_ionstage(element, ion) - 1;
   const int nbound = get_element(element) - ioncharge;  // number of bound electrons
@@ -2665,7 +2665,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
     *gsl_matrix_ptr(sfmatrix, i, i) += electron_loss_rate(en * EV, nne) / EV;
 
-    double source_integral_to_SF_EMAX;
+    double source_integral_to_SF_EMAX = NAN;
     if (i < SFPTS - 1) {
 #if (SF_USE_LOG_E_INCREMENT)
       gsl_vector *sourcevec_de = gsl_vector_alloc(SFPTS);

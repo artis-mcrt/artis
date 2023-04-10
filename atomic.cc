@@ -1,10 +1,11 @@
 #include "atomic.h"
 
+#include <cmath>
+
 #include "artisoptions.h"
 #include "grid.h"
 #include "ltepop.h"
 #include "sn3d.h"
-#include "update_grid.h"
 
 double last_phixs_nuovernuedge =
     -1;                       // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
@@ -97,7 +98,7 @@ auto photoionization_crosssection_fromtable(const float *const photoion_xs, cons
   //   return 1.;
   // return 1. * pow(nu_edge / nu, 3);
 
-  float sigma_bf;
+  float sigma_bf = NAN;
 
   if (phixs_file_version == 1) {
     // classic mode: no interpolation
