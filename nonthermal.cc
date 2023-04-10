@@ -2412,7 +2412,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
         const double en = gsl_vector_get(envec, i);
 
         // endash ranges from en to SF_EMAX, but skip over the zero-cross section points
-        const int jstart = i > xsstartindex ? i : xsstartindex;
+        const int jstart = std::max(i, xsstartindex);
         for (int j = jstart; j < SFPTS; j++) {
           // j is the matrix column index which corresponds to the piece of the integral at y(E') where E' >= E and E' =
           // envec(j)
