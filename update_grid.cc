@@ -1615,7 +1615,7 @@ auto calculate_populations(const int modelgridindex) -> double
     int iter = 0;
     const int maxit = 100;
     const double fractional_accuracy = 1e-3;
-    int status;
+    int status = 0;
     do {
       iter++;
       gsl_root_fsolver_iterate(solver);
