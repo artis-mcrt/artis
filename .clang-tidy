@@ -12,6 +12,7 @@ Checks: >
     -clang-diagnostic-error,
     -fuchsia-*,
     -google-readability-todo,
+    -hicpp-vararg,
     -*static-assert*,
     -readability-identifier-length,
     -readability-function-cognitive-complexity,
