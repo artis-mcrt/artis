@@ -266,7 +266,7 @@ void read_packets(char filename[], struct packet *pkt) {
 
     ssline >> pkt[i].dir[0] >> pkt[i].dir[1] >> pkt[i].dir[2];
 
-    int last_cross_in;
+    int last_cross_in = 0;
     ssline >> last_cross_in;
     pkt[i].last_cross = static_cast<enum cell_boundary>(last_cross_in);
 

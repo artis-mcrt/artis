@@ -273,10 +273,10 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
     MPI_Barrier(MPI_COMM_WORLD);
 
     position = 0;
-    int nlp;
+    int nlp = 0;
     MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
     for (int nn = 0; nn < nlp; nn++) {
-      int mgi;
+      int mgi = 0;
       MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
 
       if (grid::get_numassociatedcells(mgi) > 0) {

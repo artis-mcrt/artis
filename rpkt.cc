@@ -688,7 +688,7 @@ static void closest_transition_empty(struct packet *pkt_ptr)
     pkt_ptr->next_trans = globals::nlines + 1;  /// helper variable to overcome numerical problems after line scattering
   }
 
-  int matchindex;
+  int matchindex = 0;
   /// no check for left > 0 in the empty case as it is possible that the packet is moved over
   /// several lines through the empty cell
   if (pkt_ptr->nu_cmf >= globals::linelist[left].nu) {
@@ -798,7 +798,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   // Start by finding the distance to the crossing of the grid cell
   // boundaries. sdist is the boundary distance and snext is the
   // grid cell into which we pass.
-  int snext;
+  int snext = 0;
   double sdist = boundary_cross(pkt_ptr, &snext);
 
   if (sdist == 0) {

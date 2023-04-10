@@ -550,7 +550,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
 
         const int nlevels = get_ionisinglevels(element, ion - 1);
         // nlevels = get_ionisinglevels(element,ion-1);
-        int lower;
+        int lower = 0;
         for (lower = 0; lower < nlevels; lower++) {
           const double epsilon_target = epsilon(element, ion - 1, lower);
           const double epsilon_trans = epsilon_current - epsilon_target;

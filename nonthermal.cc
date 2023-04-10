@@ -2521,7 +2521,7 @@ static void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec,
   gsl_vector *yvec_best = gsl_vector_alloc(SFPTS);  // solution vector with lowest error
   gsl_vector *gsl_work_vector = gsl_vector_calloc(SFPTS);
   gsl_vector *residual_vector = gsl_vector_alloc(SFPTS);
-  int iteration;
+  int iteration = 0;
   for (iteration = 0; iteration < 10; iteration++) {
     if (iteration > 0) {
       gsl_linalg_LU_refine(sfmatrix, sfmatrix_LU, p, rhsvec, yvec,

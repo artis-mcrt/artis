@@ -1323,7 +1323,7 @@ auto solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timestep)
       if ((ion < get_nions(element) - 1) && (level < ionisinglevels)) {
         double s_renorm = 1.;
 
-        int level_use;
+        int level_use = 0;
         if ((level == 0) || (is_nlte(element, ion, level))) {
           level_use = level;
         } else {
@@ -1418,7 +1418,7 @@ auto solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timestep)
     gsl_matrix_view m = gsl_matrix_view_array(rate_matrix, nlte_size, nlte_size);
     gsl_permutation *p = gsl_permutation_alloc(nlte_size);
 
-    int s;  // sign of the transformation
+    int s = 0;  // sign of the transformation
     gsl_linalg_LU_decomp(&m.matrix, p, &s);
 
     gsl_vector_view const b = gsl_vector_view_array(balance_vector, nlte_size);
@@ -1682,14 +1682,14 @@ void nltepop_write_restart_data(FILE *restart_file) {
 void nltepop_read_restart_data(FILE *restart_file) {
   printout("Reading restart data for populations\n");
 
-  int code_check;
+  int code_check = 0;
   assert_always(fscanf(restart_file, "%d\n", &code_check) == 1);
   if (code_check != 75618527) {
     printout("ERROR: Beginning of NLTE restart data not found!\n");
     abort();
   }
 
-  int total_nlte_levels_in;
+  int total_nlte_levels_in = 0;
   assert_always(fscanf(restart_file, "%d\n", &total_nlte_levels_in) == 1);
   if (total_nlte_levels_in != globals::total_nlte_levels) {
     printout("ERROR: Expected %d NLTE levels but found %d in restart file\n", globals::total_nlte_levels,
@@ -1699,7 +1699,7 @@ void nltepop_read_restart_data(FILE *restart_file) {
 
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    int mgi_in;
+    int mgi_in = 0;
     assert_always(fscanf(restart_file, "%d %la\n", &mgi_in, &grid::modelgrid[modelgridindex].totalcooling) == 2);
     if (mgi_in != modelgridindex) {
       printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
@@ -1709,7 +1709,7 @@ void nltepop_read_restart_data(FILE *restart_file) {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
-        int ion_in;
+        int ion_in = 0;
         assert_always(fscanf(restart_file, "%d %a %a %la\n", &ion_in,
                              &grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
                              &grid::modelgrid[modelgridindex].composition[element].partfunct[ion],

@@ -1262,9 +1262,9 @@ static void read_1d_model()
   int mgi = 0;
   while (std::getline(fmodel, line)) {
     std::istringstream const ssline(line);
-    int cellnumberin;
     double vout_kmps;
     double log_rho;
+    int cellnumberin = 0;
     int linepos = 0;
 
     const int items_read = sscanf(line.c_str(), "%d %lg %lg%n", &cellnumberin, &vout_kmps, &log_rho, &linepos);
@@ -1463,7 +1463,7 @@ static void read_3d_model()
   int mgi = 0;  // corresponds to model.txt index column, but zero indexed! (model.txt might be 1-indexed)
   int nonemptymgi = 0;
   while (std::getline(fmodel, line)) {
-    int cellnumberin;
+    int cellnumberin = 0;
     float cellpos_in[3];
     float rho_model;
     int linepos = 0;
@@ -1708,7 +1708,7 @@ static void read_grid_restart_data(const int timestep) {
                          &globals::time_step[nts].cmf_lum, &globals::time_step[nts].pellet_decays) == 16);
   }
 
-  int timestep_in;
+  int timestep_in = 0;
   assert_always(fscanf(gridsave_file, "%d ", &timestep_in) == 1);
   assert_always(timestep_in == timestep);
 

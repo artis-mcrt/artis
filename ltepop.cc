@@ -35,7 +35,7 @@ auto nne_solution_f(double x, void *paras) -> double
       auto ionfractions = std::make_unique<double[]>(uppermost_ion + 1);
       get_ionfractions(element, modelgridindex, x, ionfractions, uppermost_ion);
 
-      int ion;
+      int ion = 0;
       for (ion = 0; ion <= uppermost_ion; ion++) {
         // printout("debug element %d, ion %d, ionfract(element,ion,T,x) %g\n",element,ion,ionfractions[ion]);
         innersum += (get_ionstage(element, ion) - 1) * ionfractions[ion];

@@ -90,7 +90,7 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.0;
   } else  // upperlevel < 0, indicating that a table of upper levels and their probabilities will follow
   {
-    int in_nphixstargets;
+    int in_nphixstargets = 0;
     assert_always(fscanf(phixsdata, "%d\n", &in_nphixstargets) == 1);
     assert_always(in_nphixstargets >= 0);
     // read in a table of target states and probabilities and store them
@@ -441,7 +441,7 @@ static void read_ion_transitions(std::istream &ftransitiondata, const int tottra
       // this entire block can be removed if we don't want to add in extra collisonal
       // transitions between levels
       if (prev_lower < nlevels_requiretransitions) {
-        int stoplevel;
+        int stoplevel = 0;
         if (lower == prev_lower && upper > prev_upper + 1) {
           // same lower level, but some upper levels were skipped over
           stoplevel = upper - 1;
@@ -546,7 +546,7 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
 
 #ifdef MPI_ON
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Win win;
+      MPI_Win win = nullptr;
 
       int my_rank_trans = totupdowntrans / globals::node_nprocs;
       // rank_in_node 0 gets any remainder
@@ -746,7 +746,7 @@ static void read_atomicdata_files() {
   printout("single_level_top_ion: %s\n", single_level_top_ion ? "true" : "false");
   printout("single_ground_level: %s\n", single_ground_level ? "true" : "false");
   /// initialize atomic data structure to number of elements
-  int nelements_in;
+  int nelements_in = 0;
   assert_always(fscanf(compositiondata, "%d", &nelements_in) == 1);
   set_nelements(nelements_in);
   globals::elements = static_cast<elementlist_entry *>(calloc(get_nelements(), sizeof(elementlist_entry)));
@@ -756,9 +756,9 @@ static void read_atomicdata_files() {
   std::vector<struct linelist_entry> temp_linelist;
 
   /// temperature to determine relevant ionstages
-  int T_preset;
+  int T_preset = 0;
   assert_always(fscanf(compositiondata, "%d", &T_preset) == 1);
-  int homogeneous_abundances_in;
+  int homogeneous_abundances_in = 0;
   assert_always(fscanf(compositiondata, "%d", &homogeneous_abundances_in) == 1);
   globals::homogeneous_abundances = (homogeneous_abundances_in != 0);
   if (globals::homogeneous_abundances) {
@@ -1038,9 +1038,9 @@ static void read_atomicdata_files() {
   }
 
   // create a linelist shared on node and then copy data across, freeing the local copy
-  struct linelist_entry *nonconstlinelist;
+  struct linelist_entry *nonconstlinelist = nullptr;
 #ifdef MPI_ON
-  MPI_Win win;
+  MPI_Win win = nullptr;
 
   int my_rank_lines = globals::nlines / globals::node_nprocs;
   // rank_in_node 0 gets any remainder
@@ -1201,7 +1201,7 @@ static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcont
 /// NB: groundphixslist must be in ascending order.
 {
   assert_always((!NO_LUT_PHOTOION || !NO_LUT_BFHEATING));
-  int index;
+  int index = 0;
 
   if (nu_edge < globals::groundcont[0].nu_edge) {
     index = -1;
@@ -1570,7 +1570,7 @@ static void setup_phixs_list() {
           nonconstallcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
           if constexpr (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING) {
-            int index_in_groundlevelcontestimator;
+            int index_in_groundlevelcontestimator = 0;
             nonconstallcont[allcontindex].index_in_groundphixslist =
                 search_groundphixslist(nu_edge, &index_in_groundlevelcontestimator, element, ion, level);
 
@@ -1594,8 +1594,8 @@ static void setup_phixs_list() {
 
 // copy the photoionisation tables into one contiguous block of memory
 #ifdef MPI_ON
-    float *allphixsblock;
-    MPI_Win win_allphixsblock;
+    float *allphixsblock = nullptr;
+    MPI_Win win_allphixsblock = nullptr;
     MPI_Aint size = (globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0;
     int disp_unit = sizeof(linelist_entry);
 
@@ -1890,7 +1890,7 @@ auto get_noncommentline(std::istream &input, std::string &line) -> bool
 void read_parameterfile(int rank)
 /// Subroutine to read in input parameters from input.txt.
 {
-  unsigned long int pre_zseed;
+  unsigned long int pre_zseed = 0;
 
   std::ifstream file("input.txt");
   assert_always(file.is_open());
@@ -1899,7 +1899,7 @@ void read_parameterfile(int rank)
 
   assert_always(get_noncommentline(file, line));
 
-  long int zseed_input;
+  long int zseed_input = 0;
   std::stringstream(line) >> zseed_input;
 
   if (zseed_input > 0) {
@@ -1974,7 +1974,7 @@ void read_parameterfile(int rank)
   }
 
   assert_always(get_noncommentline(file, line));
-  int dum1;
+  int dum1 = 0;
   std::stringstream(line) >> dum1;  // model type
   if (dum1 == 1) {
     set_model_type(grid::RHO_1D_READ);
@@ -1988,7 +1988,7 @@ void read_parameterfile(int rank)
   std::stringstream(line) >> dum1;  // UNUSED compute the r-light curve?
 
   assert_always(get_noncommentline(file, line));
-  int n_out_it;
+  int n_out_it = 0;
   std::stringstream(line) >> n_out_it;  // UNUSED number of iterations
 
   assert_always(get_noncommentline(file, line));

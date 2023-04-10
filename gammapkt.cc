@@ -428,7 +428,7 @@ static void compton_scatter(struct packet *pkt_ptr)
   // factor by which the energy changes "f" such that
   // sigma_partial/sigma_tot = zrand
 
-  bool stay_gamma;
+  bool stay_gamma = false;
   if (xx < THOMSON_LIMIT) {
     f = 1.0;  // no energy loss
     stay_gamma = true;
