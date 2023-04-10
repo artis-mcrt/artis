@@ -263,12 +263,6 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
 
   pkt_ptr->nu_cmf = select_continuum_nu(element, upperion - 1, lower, upperionlevel, T_e);
 
-#ifndef FORCE_LTE
-  // mabfcount[pkt_ptr->where] += pkt_ptr->e_cmf;
-  // mabfcount_thermal[pkt_ptr->where] += pkt_ptr->e_cmf*(1-nu_threshold/pkt_ptr->nu_cmf);
-  // matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
-#endif
-
   // printout("%s: From Z=%d ionstage %d, recombining to ionstage %d level %d\n",
   //          __func__, get_element(element), get_ionstage(element, *ion + 1), get_ionstage(element, *ion), lower);
   // printout("[debug] do_ma:   pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
@@ -491,9 +485,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
 
         pkt_ptr->type = TYPE_KPKT;
         end_packet = true;
-#ifndef FORCE_LTE
         safeadd(globals::colheatingestimator[modelgridindex], pkt_ptr->e_cmf);
-#endif
         break;
       }
 
@@ -539,9 +531,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
 
         pkt_ptr->type = TYPE_KPKT;
         end_packet = true;
-#ifndef FORCE_LTE
         safeadd(globals::colheatingestimator[modelgridindex], pkt_ptr->e_cmf);
-#endif
         break;
       }
 

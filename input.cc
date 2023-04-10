@@ -2051,11 +2051,7 @@ void read_parameterfile(int rank)
   /// Sets the number of initial LTE timesteps for NLTE runs
   assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> globals::num_lte_timesteps;
-#ifdef FORCE_LTE
-  printout("input: this is a pure LTE run\n");
-#else
   printout("input: doing the first %d timesteps in LTE\n", globals::num_lte_timesteps);
-#endif
 
   if (NT_ON) {
     if (NT_SOLVE_SPENCERFANO) {
@@ -2063,12 +2059,6 @@ void read_parameterfile(int rank)
     } else {
       printout("input: Non-thermal ionisation with the work function approximation is switched on for this run.\n");
     }
-#ifdef FORCE_LTE
-    printout(
-        "input: Non-thermal ionisation requires the code to run in non-LTE mode. Remove macro FORCE_LTE and "
-        "recompile!\n");
-    abort();
-#endif
   } else {
     printout("input: No non-thermal ionisation is used in this run.\n");
   }

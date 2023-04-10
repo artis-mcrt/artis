@@ -142,7 +142,6 @@ void zero_estimators() {
     if (grid::get_numassociatedcells(n) > 0) {
       radfield::zero_estimators(n);
 
-#ifndef FORCE_LTE
       globals::ffheatingestimator[n] = 0.;
       globals::colheatingestimator[n] = 0.;
 
@@ -160,7 +159,6 @@ void zero_estimators() {
           }
         }
       }
-#endif
       for (int m = 0; m < globals::emiss_max; m++) {
         globals::compton_emiss[n * globals::EMISS_MAX + m] = 0.0;
       }

@@ -655,7 +655,6 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
       }
 
-#ifndef FORCE_LTE
       if (!NO_LUT_PHOTOION) {
         fprintf(estimators_file, "corrphotoionrenorm Z=%2d", get_element(element));
         for (int ion = 0; ion < nions; ion++) {
@@ -671,17 +670,14 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
         fprintf(estimators_file, "\n");
       }
-#endif
     }
 
-#ifndef FORCE_LTE
     fprintf(estimators_file, "heating: ff %11.5e bf %11.5e coll %11.5e       dep %11.5e heating_dep/total_dep %.3f\n",
             heatingcoolingrates->heating_ff, heatingcoolingrates->heating_bf, heatingcoolingrates->heating_collisional,
             heatingcoolingrates->heating_dep, heatingcoolingrates->nt_frac_heating);
     fprintf(estimators_file, "cooling: ff %11.5e fb %11.5e coll %11.5e adiabatic %11.5e\n",
             heatingcoolingrates->cooling_ff, heatingcoolingrates->cooling_fb, heatingcoolingrates->cooling_collisional,
             heatingcoolingrates->cooling_adiabatic);
-#endif
 
   } else {
     // modelgrid cells which are not represented in the simulation grid
@@ -1028,7 +1024,6 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
 }
 
 #ifdef DO_TITER
-#ifndef FORCE_LTE
 static void titer_average_estimators(const int n) {
   if (globals::ffheatingestimator_save[n] >= 0) {
     globals::ffheatingestimator[n] = (globals::ffheatingestimator[n] + globals::ffheatingestimator_save[n]) / 2;
@@ -1039,7 +1034,6 @@ static void titer_average_estimators(const int n) {
   }
   globals::colheatingestimator_save[n] = globals::colheatingestimator[n];
 }
-#endif
 #endif
 
 static void zero_gammaestimator(const int modelgridindex) {
@@ -1099,14 +1093,12 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         // For the initial timestep, temperatures have already been assigned
         // either by trapped energy release calculation, or reading from gridsave file
 
-#ifndef FORCE_LTE
         if constexpr (!NO_LUT_PHOTOION) {
           /// Determine renormalisation factor for corrected photoionization cross-sections
           if (!globals::simulation_continued_from_saved) {
             set_all_corrphotoionrenorm(mgi, 1.);
           }
         }
-#endif
 
         /// W == 1 indicates that this modelgrid cell was treated grey in the
         /// last timestep. Therefore it has no valid Gamma estimators and must
@@ -1152,11 +1144,8 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
           stats::normalise_ion_estimators(mgi, deltat, deltaV);
         }
 
-#ifndef FORCE_LTE
         // initial_iteration really means either ts 0 or nts < globals::num_lte_timesteps
-        if (globals::initial_iteration || grid::modelgrid[mgi].thick == 1)
-#endif
-        {
+        if (globals::initial_iteration || grid::modelgrid[mgi].thick == 1) {
           // LTE mode or grey mode (where temperature doesn't matter but is calculated anyway)
 
           const double T_J = radfield::get_T_J_from_J(mgi);
@@ -1165,17 +1154,13 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
           grid::set_TJ(mgi, T_J);
           grid::set_W(mgi, 1);
 
-#ifndef FORCE_LTE
           if constexpr (!NO_LUT_PHOTOION) {
             set_all_corrphotoionrenorm(mgi, 1.);
           }
-#endif
 
           precalculate_partfuncts(mgi);
           calculate_populations(mgi);
-        }
-#ifndef FORCE_LTE
-        else  // not (initial_iteration || grid::modelgrid[n].thick == 1)
+        } else  // not (initial_iteration || grid::modelgrid[n].thick == 1)
         {
           // non-LTE timesteps with T_e from heating/cooling
 
@@ -1203,7 +1188,6 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
           solve_Te_nltepops(mgi, nts, titer, heatingcoolingrates);
         }
-#endif
         printout("Temperature/NLTE solution for cell %d timestep %d took %ld seconds\n", mgi, nts,
                  time(nullptr) - sys_time_start_temperature_corrections);
       }
@@ -1319,12 +1303,10 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     grid::set_Te(mgi, 0.);
     grid::set_W(mgi, 0.);
 
-#ifndef FORCE_LTE
     if constexpr (!NO_LUT_PHOTOION) {
       zero_gammaestimator(mgi);
       set_all_corrphotoionrenorm(mgi, 0.);
     }
-#endif
   }
 }
 
@@ -1339,7 +1321,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   printout("timestep %d: time before update grid %ld (tstart + %ld) simtime ts_mid %g days\n", nts,
            sys_time_start_update_grid, sys_time_start_update_grid - real_time_start, globals::time_step[nts].mid / DAY);
 
-#ifndef FORCE_LTE
   if constexpr (!NO_LUT_PHOTOION) {
     /// Initialise globals::corrphotoionrenorm[i] to zero before update_grid is called
     /// unless they have been read from file
@@ -1351,7 +1332,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       printout("after nts %d, titer %d: reset corr photoionrenorm\n", nts, titer);
     }
   }
-#endif
 
   // printout("[debug] update_grid: starting update for timestep %d...\n",m);
   const double tratmid = globals::time_step[nts].mid / globals::tmin;
@@ -1504,9 +1484,6 @@ double calculate_populations(const int modelgridindex)
     const double abundance = grid::get_elem_abundance(modelgridindex, element);
     if (abundance > 0) {
       int uppermost_ion = 0;
-#ifdef FORCE_LTE
-      uppermost_ion = get_nions(element) - 1;
-#else
       if (globals::initial_iteration || grid::modelgrid[modelgridindex].thick == 1) {
         uppermost_ion = get_nions(element) - 1;
       } else {
@@ -1529,7 +1506,6 @@ double calculate_populations(const int modelgridindex)
         }
         uppermost_ion = ion;
       }
-#endif
 
       double factor = 1.;
       int ion = 0;
@@ -1619,7 +1595,7 @@ double calculate_populations(const int modelgridindex)
                T_e, W, grid::get_rho(modelgridindex));
       printout("nne@x_lo %g\n", nne_solution_f(nne_lo, f.params));
       printout("nne@x_hi %g\n", nne_solution_f(nne_hi, f.params));
-#ifndef FORCE_LTE
+
       for (int element = 0; element < get_nelements(); element++) {
         printout("cell %d, element %d, uppermost_ion is %d\n", modelgridindex, element,
                  grid::get_elements_uppermost_ion(modelgridindex, element));
@@ -1632,7 +1608,6 @@ double calculate_populations(const int modelgridindex)
           }
         }
       }
-#endif
     }
     gsl_root_fsolver *solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
 

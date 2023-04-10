@@ -139,11 +139,7 @@ double phi(const int element, const int ion, const int modelgridindex)
 
   /// Newest ionisation formula
 
-#ifdef FORCE_LTE
-  const bool use_lte_ratio = true;
-#else
   const bool use_lte_ratio = (globals::initial_iteration || grid::modelgrid[modelgridindex].thick == 1);
-#endif
 
   if (use_lte_ratio) {
     const double ionpot = epsilon(element, ion + 1, 0) - epsilon(element, ion, 0);
@@ -441,45 +437,6 @@ double get_levelpop(int modelgridindex, int element, int ion, int level)
 
   return nn;
 }
-
-/*
-#ifdef FORCE_LTE
-{
-  double nn;
-
-  double T_R = grid::get_TR(modelgridindex);
-  //double W = globals::cell[cellnumber].W;
-
-  if (level == 0) nn = get_groundlevelpop(modelgridindex,element,ion);
-  else nn = get_groundlevelpop(modelgridindex,element,ion) * stat_weight(element,ion,level)/stat_weight(element,ion,0) *
-exp(-(epsilon(element,ion,level)-epsilon(element,ion,0))/KB/T_R);
-
-  return nn;
-}
-#else
-{
-  double E_level,E_ground;
-  double nn;
-
-  double T_J = grid::get_TJ(modelgridindex);
-  double T_R = grid::get_TR(modelgridindex);
-  double W = grid::get_W(modelgridindex);
-  //double T_J = pow(W,1./4.)*T_R;
-
-  if (level == 0) nn = get_groundlevelpop(modelgridindex,element,ion);
-  else
-  {
-    E_level = epsilon(element,ion,level);
-    E_ground = epsilon(element,ion,0);
-    nn = get_groundlevelpop(modelgridindex,element,ion) * stat_weight(element,ion,level)/stat_weight(element,ion,0) *
-exp(-(E_level-E_ground)/KB/T_J);
-  }
-
-  if (nn < MINPOP) nn = MINPOP;
-  return nn;
-}
-#endif
-*/
 
 double calculate_partfunct(int element, int ion, int modelgridindex)
 /// Calculates the partition function for ion=ion of element=element in

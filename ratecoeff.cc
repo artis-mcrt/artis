@@ -1169,11 +1169,7 @@ double get_stimrecombcoeff(int element, int lowerion, int level, int phixstarget
 #endif
 
   if (!use_cellhist || stimrecombcoeff < 0) {
-#ifdef FORCE_LTE
-    stimrecombcoeff = 0.;
-#else
     stimrecombcoeff = calculate_stimrecombcoeff_integral(element, lowerion, level, phixstargetindex, modelgridindex);
-#endif
 
 #if (SEPARATE_STIMRECOMB)
     if (use_cellhist) {
@@ -1307,13 +1303,6 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
   }
 
   if (!use_cellhist || gammacorr < 0) {
-#ifdef FORCE_LTE
-    {
-      /// Interpolate gammacorr out of precalculated values
-      const double T_R = grid::get_TR(modelgridindex);
-      gammacorr = interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
-    }
-#else
     {
       if constexpr (NO_LUT_PHOTOION) {
         gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
@@ -1330,7 +1319,6 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
         }
       }
     }
-#endif
     if (use_cellhist) {
       globals::cellhistory[tid]
           .chelements[element]

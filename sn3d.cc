@@ -319,7 +319,6 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
 
 static void mpi_reduce_estimators(int my_rank, int nts) {
   radfield::reduce_estimators();
-#ifndef FORCE_LTE
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, globals::ffheatingestimator, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, globals::colheatingestimator, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM,
@@ -336,7 +335,6 @@ static void mpi_reduce_estimators(int my_rank, int nts) {
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
-#endif
 
   if constexpr (RECORD_LINESTAT) {
     MPI_Barrier(MPI_COMM_WORLD);

@@ -34,13 +34,11 @@ double *bfheatingestimator = nullptr;
 
 double *ffheatingestimator = nullptr;
 double *colheatingestimator = nullptr;
-#ifndef FORCE_LTE
 #ifdef DO_TITER
 double *gammaestimator_save = nullptr;
 double *bfheatingestimator_save = nullptr;
 double *ffheatingestimator_save = nullptr;
 double *colheatingestimator_save = nullptr;
-#endif
 #endif
 
 int *ecounter = nullptr;

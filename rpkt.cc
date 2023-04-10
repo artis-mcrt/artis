@@ -729,7 +729,6 @@ static void update_estimators(struct packet *pkt_ptr, const double distance)
   const double nu = pkt_ptr->nu_cmf;
   radfield::update_estimators(modelgridindex, distance_e_cmf, nu, pkt_ptr);
 
-#ifndef FORCE_LTE
   /// ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
   /// quick and dirty solution: store info in element=ion=0, and leave the others untouched (i.e. zero)
   safeadd(globals::ffheatingestimator[modelgridindex], distance_e_cmf * globals::kappa_rpkt_cont[tid].ffheating);
@@ -774,8 +773,6 @@ static void update_estimators(struct packet *pkt_ptr, const double distance)
       }
     }
   }
-
-#endif
 }
 
 static bool do_rpkt_step(struct packet *pkt_ptr, const double t2)

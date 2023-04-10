@@ -1665,13 +1665,11 @@ void read_ejecta_model() {
 #endif
   }
 
-#ifndef FORCE_LTE
   globals::ffheatingestimator = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
   globals::colheatingestimator = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
 #ifdef DO_TITER
   globals::ffheatingestimator_save = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
   globals::colheatingestimator_save = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
-#endif
 #endif
 
   calc_modelinit_totmassradionuclides();
@@ -1747,7 +1745,6 @@ static void read_grid_restart_data(const int timestep) {
     modelgrid[mgi].thick = thick;
     globals::rpkt_emiss[mgi] = rpkt_emiss;
 
-#ifndef FORCE_LTE
     if constexpr (!NO_LUT_PHOTOION) {
       for (int element = 0; element < get_nelements(); element++) {
         const int nions = get_nions(element);
@@ -1758,7 +1755,6 @@ static void read_grid_restart_data(const int timestep) {
         }
       }
     }
-#endif
   }
 
   // the order of these calls is very important!
@@ -1804,7 +1800,6 @@ void write_grid_restart_data(const int timestep) {
               modelgrid[mgi].thick, globals::rpkt_emiss[mgi]);
     }
 
-#ifndef FORCE_LTE
     if constexpr (!NO_LUT_PHOTOION) {
       for (int element = 0; element < get_nelements(); element++) {
         const int nions = get_nions(element);
@@ -1815,7 +1810,6 @@ void write_grid_restart_data(const int timestep) {
         }
       }
     }
-#endif
     fprintf(gridsave_file, "\n");
   }
 

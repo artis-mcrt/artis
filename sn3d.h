@@ -98,7 +98,6 @@ static inline int get_bflutindex(const int tempindex, const int element, const i
 #include <stdarg.h>  /// MK: needed for printout()
 
 // #define DO_TITER
-// #define FORCE_LTE
 
 #if !defined MPI_ON
 // #define MPI_ON //only needed for debugging MPI, the makefile will switch this on

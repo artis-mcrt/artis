@@ -100,11 +100,9 @@ static double *J_reduced_save = nullptr;
 
 // J and nuJ are accumulated and then normalised in-place
 // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
-#ifndef FORCE_LTE
 static double *nuJ = nullptr;
 #ifdef DO_TITER
 static double *nuJ_reduced_save = nullptr;
-#endif
 #endif
 
 using enum_prefactor = enum {
@@ -242,13 +240,11 @@ void init(int my_rank, int ndo, int ndo_nonempty)
   J_reduced_save = (double *)malloc((grid::get_npts_model() + 1) * sizeof(double));
 #endif
 
-// J and nuJ are accumulated and then normalised in-place
-// i.e. be sure the normalisation has been applied (exactly once) before using the values here!
-#ifndef FORCE_LTE
+  // J and nuJ are accumulated and then normalised in-place
+  // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
   nuJ = static_cast<double *>(malloc((grid::get_npts_model() + 1) * sizeof(double)));
 #ifdef DO_TITER
   nuJ_reduced_save = static_cast<double *>(malloc((grid::get_npts_model() + 1) * sizeof(double)));
-#endif
 #endif
 
   prev_Jb_lu_normed =
@@ -445,7 +441,6 @@ void initialise_prev_titer_photoionestimators() {
 #ifdef DO_TITER
     J_reduced_save[n] = -1.;
 #endif
-#ifndef FORCE_LTE
 #ifdef DO_TITER
     nuJ_reduced_save[n] = -1.;
     globals::ffheatingestimator_save[n] = -1.;
@@ -463,7 +458,6 @@ void initialise_prev_titer_photoionestimators() {
 #endif
       }
     }
-#endif
   }
 }
 
@@ -584,7 +578,6 @@ static inline int select_bin(double nu) {
   return binindex;
 }
 
-#ifndef FORCE_LTE
 void write_to_file(int modelgridindex, int timestep) {
   assert_always(MULTIBIN_RADFIELD_MODEL_ON);
 
@@ -655,7 +648,6 @@ void write_to_file(int modelgridindex, int timestep) {
   }
 #endif
 }
-#endif
 
 void close_file() {
   if (radfieldfile != nullptr) {
@@ -715,7 +707,6 @@ void zero_estimators(int modelgridindex)
 
   assert_always(J != nullptr);
   J[modelgridindex] = 0.;  // this is required even if FORCE_LTE is on
-#ifndef FORCE_LTE
   assert_always(nuJ != nullptr);
   nuJ[modelgridindex] = 0.;
 
@@ -731,7 +722,6 @@ void zero_estimators(int modelgridindex)
     }
   }
   set_J_normfactor(modelgridindex, -1.0);
-#endif
 }
 
 static void update_bfestimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
@@ -805,7 +795,6 @@ void update_estimators(const int modelgridindex, const double distance_e_cmf, co
                        const struct packet *const pkt_ptr) {
   safeadd(J[modelgridindex], distance_e_cmf);
 
-#ifndef FORCE_LTE
   safeadd(nuJ[modelgridindex], distance_e_cmf * nu_cmf);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
@@ -845,7 +834,6 @@ void update_estimators(const int modelgridindex, const double distance_e_cmf, co
     //            modelgridindex, binindex, nu_lower_first, get_bin_nu_upper(modelgridindex,RADFIELDBINCOUNT - 1));
     // }
   }
-#endif
 }
 
 void update_lineestimator(const int modelgridindex, const int lineindex, const double increment) {
@@ -1105,7 +1093,6 @@ static float find_T_R(int modelgridindex, int binindex) {
   return T_R;
 }
 
-#if (!defined FORCE_LTE)
 static void set_params_fullspec(const int modelgridindex, const int timestep) {
   const double nubar = nuJ[modelgridindex] / J[modelgridindex];
   if (!std::isfinite(nubar) || nubar == 0.) {
@@ -1144,9 +1131,7 @@ static void set_params_fullspec(const int modelgridindex, const int timestep) {
         modelgridindex, timestep, J[modelgridindex], 1e8 * CLIGHT / nubar, T_J, T_R, W);
   }
 }
-#endif
 
-#if (!defined FORCE_LTE)
 void fit_parameters(int modelgridindex, int timestep)
 // finds the best fitting W and temperature parameters in each spectral bin
 // using J and nuJ
@@ -1265,7 +1250,6 @@ void fit_parameters(int modelgridindex, int timestep)
     write_to_file(modelgridindex, timestep);
   }
 }
-#endif
 
 void set_J_normfactor(int modelgridindex, double normfactor) { J_normfactor[modelgridindex] = normfactor; }
 
@@ -1401,12 +1385,10 @@ double get_bfrate_estimator(const int element, const int lowerion, const int low
   }
 }
 
-#ifndef FORCE_LTE
 void normalise_nuJ(const int modelgridindex, const double estimator_normfactor_over4pi) {
   assert_always(std::isfinite(nuJ[modelgridindex]));
   nuJ[modelgridindex] *= estimator_normfactor_over4pi;
 }
-#endif
 
 double get_T_J_from_J(const int modelgridindex) {
   const double T_J = pow(J[modelgridindex] * PI / STEBO, 1. / 4.);
@@ -1436,7 +1418,6 @@ void titer_J(const int modelgridindex) {
   J_reduced_save[modelgridindex] = J[modelgridindex];
 }
 
-#ifndef FORCE_LTE
 void titer_nuJ(const int modelgridindex) {
   if (nuJ_reduced_save[modelgridindex] >= 0) {
     nuJ[modelgridindex] = (nuJ[modelgridindex] + nuJ_reduced_save[modelgridindex]) / 2;
@@ -1444,16 +1425,13 @@ void titer_nuJ(const int modelgridindex) {
   nuJ_reduced_save[modelgridindex] = nuJ[modelgridindex];
 }
 #endif
-#endif
 
 #ifdef MPI_ON
 void reduce_estimators(void)
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 {
   MPI_Allreduce(MPI_IN_PLACE, J, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-#ifndef FORCE_LTE
   MPI_Allreduce(MPI_IN_PLACE, nuJ, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-#endif
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     MPI_Allreduce(MPI_IN_PLACE, bfrate_raw, grid::get_nonempty_npts_model() * globals::nbfcontinua, MPI_DOUBLE, MPI_SUM,

@@ -226,13 +226,11 @@ extern double *bfheatingestimator;
 
 extern double *ffheatingestimator;
 extern double *colheatingestimator;
-#ifndef FORCE_LTE
 #ifdef DO_TITER
 extern double *gammaestimator_save;
 extern double *bfheatingestimator_save;
 extern double *ffheatingestimator_save;
 extern double *colheatingestimator_save;
-#endif
 #endif
 
 extern int *ecounter;

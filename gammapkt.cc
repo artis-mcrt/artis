@@ -638,12 +638,8 @@ void do_gamma(struct packet *pkt_ptr, double t2)
       // Photo electric effect - makes it a k-packet for sure.
       pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -4;
-#ifndef FORCE_LTE
-      // kgammadep[pkt_ptr->where] += pkt_ptr->e_cmf;
-#endif
       // pkt_ptr->type = TYPE_PRE_KPKT;
       // pkt_ptr->type = TYPE_GAMMA_KPKT;
-      // if (tid == 0) nt_stat_from_gamma++;
       stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
     } else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand * kap_tot)) {
       // It's a pair production
