@@ -1427,7 +1427,7 @@ void titer_nuJ(const int modelgridindex) {
 #endif
 
 #ifdef MPI_ON
-void reduce_estimators(void)
+void reduce_estimators()
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 {
   MPI_Allreduce(MPI_IN_PLACE, J, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
