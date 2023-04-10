@@ -15,10 +15,8 @@
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
-#include "sn3d.h"
 #include "stats.h"
 #include "thermalbalance.h"
-#include "vpkt.h"
 
 void precalculate_partfuncts(int modelgridindex)
 /// The partition functions depend only on T_R and W. This means they don't
