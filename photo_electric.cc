@@ -7,7 +7,7 @@
 
 // Stuff for photo electric effect scattering.
 
-double sig_photo_electric(const struct packet *pkt_ptr) {
+auto sig_photo_electric(const struct packet *pkt_ptr) -> double {
   double sigma_cmf;
   // Start by working out the x-section in the co-moving frame.
 
@@ -48,7 +48,7 @@ double sig_photo_electric(const struct packet *pkt_ptr) {
   return sigma_rf;
 }
 
-double sig_pair_prod(const struct packet *pkt_ptr) {
+auto sig_pair_prod(const struct packet *pkt_ptr) -> double {
   // Cross section for pair production.
 
   double sigma_cmf;

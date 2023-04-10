@@ -68,26 +68,26 @@ double *decaypath_energy_per_mass = nullptr;
 MPI_Win win_decaypath_energy_per_mass = MPI_WIN_NULL;
 #endif
 
-int get_num_nuclides() { return nuclides.size(); }
+auto get_num_nuclides() -> int { return nuclides.size(); }
 
-const char *get_elname(const int z) {
+auto get_elname(const int z) -> const char * {
   assert_always(z <= Z_MAX);
   return elsymbols[z];
 }
 
-int get_nuc_z(int nucindex) {
+auto get_nuc_z(int nucindex) -> int {
   assert_testmodeonly(nucindex >= 0);
   assert_testmodeonly(nucindex < get_num_nuclides());
   return nuclides[nucindex].z;
 }
 
-int get_nuc_a(int nucindex) {
+auto get_nuc_a(int nucindex) -> int {
   assert_testmodeonly(nucindex >= 0);
   assert_testmodeonly(nucindex < get_num_nuclides());
   return nuclides[nucindex].a;
 }
 
-static int get_nucindex_or_neg_one(int z, int a)
+static auto get_nucindex_or_neg_one(int z, int a) -> int
 // get the nuclide array index from the atomic number and mass number
 {
   assert_testmodeonly(get_num_nuclides() > 0);
@@ -101,7 +101,7 @@ static int get_nucindex_or_neg_one(int z, int a)
   return -1;  // nuclide not found
 }
 
-int get_nucindex(int z, int a)
+auto get_nucindex(int z, int a) -> int
 // get the nuclide array index from the atomic number and mass number
 {
   const int nucindex = get_nucindex_or_neg_one(z, a);
@@ -113,7 +113,7 @@ int get_nucindex(int z, int a)
   return -1;
 }
 
-bool nuc_exists(int z, int a)
+auto nuc_exists(int z, int a) -> bool
 // check if nuclide exists in the simulation
 {
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
@@ -124,7 +124,7 @@ bool nuc_exists(int z, int a)
   return false;
 }
 
-static double get_meanlife(int nucindex) {
+static auto get_meanlife(int nucindex) -> double {
   assert_testmodeonly(nucindex >= 0);
   assert_testmodeonly(nucindex < get_num_nuclides());
   return nuclides[nucindex].meanlife;
@@ -144,7 +144,7 @@ static void printout_nuclidemeanlife(const int z, const int a) {
   }
 }
 
-constexpr int decay_daughter_z(const int z_parent, const int a_parent, int decaytype)
+constexpr auto decay_daughter_z(const int z_parent, const int a_parent, int decaytype) -> int
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
   assert_always(decaytype >= 0);
@@ -171,7 +171,7 @@ constexpr int decay_daughter_z(const int z_parent, const int a_parent, int decay
   return -1;  // no daughter
 }
 
-constexpr int decay_daughter_a(const int z_parent, const int a_parent, int decaytype)
+constexpr auto decay_daughter_a(const int z_parent, const int a_parent, int decaytype) -> int
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
   switch (static_cast<enum decaytypes>(decaytype)) {
@@ -193,7 +193,7 @@ constexpr int decay_daughter_a(const int z_parent, const int a_parent, int decay
   return -1;  // no daughter
 }
 
-static double get_nuc_decaybranchprob(const int nucindex, const int decaytype) {
+static auto get_nuc_decaybranchprob(const int nucindex, const int decaytype) -> double {
   assert_testmodeonly(nucindex >= 0);
   assert_testmodeonly(nucindex < get_num_nuclides());
   assert_testmodeonly(decaytype >= 0);
@@ -201,11 +201,11 @@ static double get_nuc_decaybranchprob(const int nucindex, const int decaytype) {
   return nuclides[nucindex].branchprobs[decaytype];
 }
 
-static double get_nuc_decaybranchprob(const int z_parent, const int a_parent, const int decaytype) {
+static auto get_nuc_decaybranchprob(const int z_parent, const int a_parent, const int decaytype) -> double {
   return get_nuc_decaybranchprob(get_nucindex(z_parent, a_parent), decaytype);
 }
 
-static bool nuc_is_parent(const int z_parent, const int a_parent, const int z, const int a)
+static auto nuc_is_parent(const int z_parent, const int a_parent, const int z, const int a) -> bool
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
   assert_testmodeonly(nuc_exists(z_parent, a_parent));
@@ -220,12 +220,12 @@ static bool nuc_is_parent(const int z_parent, const int a_parent, const int z, c
   return false;
 }
 
-double nucdecayenergygamma(int nucindex)
+auto nucdecayenergygamma(int nucindex) -> double
 // average energy per decay in the form of gamma rays [erg]
 {
   return nuclides[nucindex].endecay_gamma;
 }
-double nucdecayenergygamma(int z, int a) { return nucdecayenergygamma(get_nucindex(z, a)); }
+auto nucdecayenergygamma(int z, int a) -> double { return nucdecayenergygamma(get_nucindex(z, a)); }
 
 void set_nucdecayenergygamma(int nucindex, double value)
 // set average energy per decay in the form of gamma rays [erg]
@@ -233,7 +233,7 @@ void set_nucdecayenergygamma(int nucindex, double value)
   nuclides[nucindex].endecay_gamma = value;
 }
 
-static double nucdecayenergyparticle(const int nucindex, const int decaytype)
+static auto nucdecayenergyparticle(const int nucindex, const int decaytype) -> double
 // decay energy in the form of kinetic energy of electrons, positrons, or alpha particles,
 // depending on the relevant decay type (but not including neutrinos)
 {
@@ -260,7 +260,7 @@ static double nucdecayenergyparticle(const int nucindex, const int decaytype)
   return 0.;
 }
 
-static double nucdecayenergytotal(const int z, const int a)
+static auto nucdecayenergytotal(const int z, const int a) -> double
 // average energy (erg) per decay in the form of gammas and particles [erg]
 {
   const int nucindex = get_nucindex(z, a);
@@ -273,7 +273,7 @@ static double nucdecayenergytotal(const int z, const int a)
   return endecay;
 }
 
-static double nucdecayenergy(int nucindex, int decaytype)
+static auto nucdecayenergy(int nucindex, int decaytype) -> double
 // contributed energy release per decay [erg] for decaytype (e.g. DECAYTYPE_BETAPLUS)
 // (excludes neutrinos!)
 {
@@ -282,9 +282,11 @@ static double nucdecayenergy(int nucindex, int decaytype)
   return endecay;
 }
 
-static double nucdecayenergyqval(int nucindex, int decaytype) { return nuclides[nucindex].endecay_q[decaytype]; }
+static auto nucdecayenergyqval(int nucindex, int decaytype) -> double {
+  return nuclides[nucindex].endecay_q[decaytype];
+}
 
-double nucmass(int z, int a) {
+auto nucmass(int z, int a) -> double {
   assert_testmodeonly(z > 0);
   assert_testmodeonly(a >= z);
 
@@ -293,11 +295,11 @@ double nucmass(int z, int a) {
   // return nuclides[nucindex].amass;
 }
 
-static int get_num_decaypaths() { return decaypaths.size(); }
+static auto get_num_decaypaths() -> int { return decaypaths.size(); }
 
-static int get_decaypathlength(int decaypathindex) { return decaypaths[decaypathindex].pathlength; }
+static auto get_decaypathlength(int decaypathindex) -> int { return decaypaths[decaypathindex].pathlength; }
 
-static double calculate_decaypath_branchproduct(int decaypathindex)
+static auto calculate_decaypath_branchproduct(int decaypathindex) -> double
 // return the product of all branching factors in the decay path
 {
   double branchprod = 1.;
@@ -308,7 +310,7 @@ static double calculate_decaypath_branchproduct(int decaypathindex)
   return branchprod;
 }
 
-static double get_decaypath_lastnucdecayenergy(const int decaypathindex)
+static auto get_decaypath_lastnucdecayenergy(const int decaypathindex) -> double
 // a decaypath's energy is the decay energy of the last nuclide and decaytype in the chain
 {
   const int nucindex_end = decaypaths[decaypathindex].nucindex[get_decaypathlength(decaypathindex) - 1];
@@ -412,7 +414,7 @@ static void extend_lastdecaypath()
   }
 }
 
-constexpr bool operator<(const struct decaypath &d1, const struct decaypath &d2)
+constexpr auto operator<(const struct decaypath &d1, const struct decaypath &d2) -> bool
 // true if d1 < d2
 // order the chains in the same way as when the search moved up from the descendant
 // instead of down from the ancestor, for ease of test comparison
@@ -492,7 +494,7 @@ static void find_decaypaths() {
   }
 }
 
-int get_nucstring_z(const std::string &strnuc)
+auto get_nucstring_z(const std::string &strnuc) -> int
 // convert something like Ni56 to integer 28
 {
   std::string elcode = strnuc;
@@ -509,7 +511,7 @@ int get_nucstring_z(const std::string &strnuc)
   return -1;
 }
 
-int get_nucstring_a(const std::string &strnuc)
+auto get_nucstring_a(const std::string &strnuc) -> int
 // convert something like Ni56 to integer 56
 {
   // find first digit character
@@ -743,7 +745,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
            nucdecayenergytotal(25, 52) / MEV);
 }
 
-static double sample_decaytime(const int decaypathindex, const double tdecaymin, const double tdecaymax) {
+static auto sample_decaytime(const int decaypathindex, const double tdecaymin, const double tdecaymax) -> double {
   double tdecay = -1;
   const double t_model = grid::get_t_model();
   // rejection method. draw random times until they are within the correct range.
@@ -759,8 +761,8 @@ static double sample_decaytime(const int decaypathindex, const double tdecaymin,
   return tdecay;
 }
 
-static double calculate_decaychain(const double firstinitabund, std::vector<double> &lambdas, const int num_nuclides,
-                                   const double timediff, bool useexpansionfactor) {
+static auto calculate_decaychain(const double firstinitabund, std::vector<double> &lambdas, const int num_nuclides,
+                                 const double timediff, bool useexpansionfactor) -> double {
   // calculate final number abundance from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
   // the top nuclide initial abundance is set and the chain-end abundance is returned (all intermediates nuclides
   // are assumed to start with zero abundance)
@@ -806,7 +808,7 @@ static double calculate_decaychain(const double firstinitabund, std::vector<doub
   return lastabund;
 }
 
-static double get_nuc_massfrac(const int modelgridindex, const int z, const int a, const double time)
+static auto get_nuc_massfrac(const int modelgridindex, const int z, const int a, const double time) -> double
 // Get the mass fraction of a nuclide accounting for all decays including those of its parent and grandparent.
 // e.g., Co56 abundance may first increase with time due to Ni56 decays, then decease due to Co56 decay
 // Can be called for stable nuclides that are one daughters of the radioactive nuclide list e.g., Fe56
@@ -879,8 +881,8 @@ static double get_nuc_massfrac(const int modelgridindex, const int z, const int 
   return nuctotal;
 }
 
-static double get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const int decaypathindex,
-                                                         const double time)
+static auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const int decaypathindex,
+                                                       const double time) -> double
 // returns decay energy [erg/g] that would be released from time tstart [s] to time infinity by a given decaypath
 {
   // e.g. Ni56 -> Co56, represents the decay of Co56 nuclei
@@ -925,9 +927,9 @@ static double get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridinde
   return endecay;
 }
 
-double get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(const int modelgridindex,
-                                                                           const int decaypathindex,
-                                                                           const double tstart)
+auto get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(const int modelgridindex,
+                                                                         const int decaypathindex, const double tstart)
+    -> double
 // just here as as check on the analytic result from get_endecay_per_ejectamass_t0_to_time_withexpansion()
 // this version does an Euler integration
 {
@@ -967,7 +969,7 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(const
   return chain_endecay;
 }
 
-double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridindex, const double tstart)
+auto get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridindex, const double tstart) -> double
 // calculate the decay energy per unit mass [erg/g] released from time t_model to tstart, accounting for
 // the photon energy loss due to expansion between time of decays and tstart (equation 18 of Lucy 2005)
 {
@@ -1004,8 +1006,8 @@ double get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridin
   return tot_endecay;
 }
 
-static double get_endecay_per_ejectamass_between_times(const int mgi, const int decaypathindex, double tlow,
-                                                       double thigh)
+static auto get_endecay_per_ejectamass_between_times(const int mgi, const int decaypathindex, double tlow, double thigh)
+    -> double
 // get decay energy per mass [erg/g] released by a decaypath between times tlow [s] and thigh [s]
 {
   assert_always(tlow <= thigh);
@@ -1017,7 +1019,7 @@ static double get_endecay_per_ejectamass_between_times(const int mgi, const int 
   return endiff;
 }
 
-static double calculate_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex)
+static auto calculate_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex) -> double
 // calculate the decay energy released during the simulation time per unit mass [erg/g]
 {
   assert_testmodeonly(mgi < grid::get_npts_model());
@@ -1031,7 +1033,7 @@ static double calculate_simtime_endecay_per_ejectamass(const int mgi, const int 
   }
 }
 
-static double get_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex)
+static auto get_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex) -> double
 // get the decay energy released during the simulation time per unit mass [erg/g]
 {
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
@@ -1041,7 +1043,8 @@ static double get_simtime_endecay_per_ejectamass(const int mgi, const int decayp
   return chainendecay;
 }
 
-static double get_decaypath_power_per_ejectamass(const int decaypathindex, const int modelgridindex, const double time)
+static auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int modelgridindex, const double time)
+    -> double
 // total decay power per mass [erg/s/g] for a given decaypath
 {
   // only decays at the end of the chain contributed from the initial abundance of the top of the chain are counted
@@ -1076,7 +1079,7 @@ static double get_decaypath_power_per_ejectamass(const int decaypathindex, const
   return decaypower;
 }
 
-double get_modelcell_simtime_endecay_per_mass(const int mgi)
+auto get_modelcell_simtime_endecay_per_mass(const int mgi) -> double
 // get the density at time tmin of decay energy that will
 // be released during the simulation time range [erg/cm3]
 {
@@ -1150,7 +1153,7 @@ void free_decaypath_energy_per_mass() {
 #endif
 }
 
-double get_particle_injection_rate(const int modelgridindex, const double t, const int decaytype)
+auto get_particle_injection_rate(const int modelgridindex, const double t, const int decaytype) -> double
 // energy release rate in form of kinetic energy of positrons, electrons, and alpha particles in [erg/s/g]
 {
   double dep_sum = 0.;
@@ -1178,7 +1181,7 @@ double get_particle_injection_rate(const int modelgridindex, const double t, con
   return dep_sum;
 }
 
-double get_qdot_modelcell(const int modelgridindex, const double t, const int decaytype)
+auto get_qdot_modelcell(const int modelgridindex, const double t, const int decaytype) -> double
 // energy release rate [erg/s/g] including everything (even neutrinos that are ignored elsewhere)
 {
   double qdot = 0.;
@@ -1204,7 +1207,7 @@ double get_qdot_modelcell(const int modelgridindex, const double t, const int de
   return qdot;
 }
 
-double get_global_etot_t0_tinf() {
+auto get_global_etot_t0_tinf() -> double {
   double etot_tinf = 0.;
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
     const int z_top = decaypaths[decaypathindex].z[0];

@@ -20,9 +20,9 @@
 
 // Material for handing r-packet propagation.
 
-constexpr bool operator<(const linelist_entry &line, const double &nu_cmf) { return !(line.nu <= nu_cmf); }
+constexpr auto operator<(const linelist_entry &line, const double &nu_cmf) -> bool { return !(line.nu <= nu_cmf); }
 
-int closest_transition(const double nu_cmf, const int next_trans)
+auto closest_transition(const double nu_cmf, const int next_trans) -> int
 /// for the propagation through non empty cells
 // find the next transition lineindex redder than nu_cmf
 // return -1 if no transition can be reached
@@ -62,12 +62,12 @@ int closest_transition(const double nu_cmf, const int next_trans)
   return matchindex;
 }
 
-static double get_event(const int modelgridindex,
-                        struct packet *pkt_ptr,  // pointer to packet object
-                        int *rpkt_eventtype,
-                        const double tau_rnd,    // random optical depth until which the packet travels
-                        const double abort_dist  // maximal travel distance before packet leaves cell or time step ends
-                        )
+static auto get_event(const int modelgridindex,
+                      struct packet *pkt_ptr,  // pointer to packet object
+                      int *rpkt_eventtype,
+                      const double tau_rnd,    // random optical depth until which the packet travels
+                      const double abort_dist  // maximal travel distance before packet leaves cell or time step ends
+                      ) -> double
 // returns edist, the distance to the next physical event (continuum or bound-bound)
 // BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
 {
@@ -775,7 +775,7 @@ static void update_estimators(struct packet *pkt_ptr, const double distance)
   }
 }
 
-static bool do_rpkt_step(struct packet *pkt_ptr, const double t2)
+static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 // Routine for moving an r-packet. Similar to do_gamma in objective.
 // return value - true if no mgi change, no pkttype change and not reached end of timestep, false otherwise
 {
@@ -957,9 +957,9 @@ void do_rpkt(struct packet *pkt_ptr, const double t2) {
   }
 }
 
-static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double start_nu_cmf, int startcellindex,
-                                                double tstart, double dirvec[3], enum cell_boundary last_cross,
-                                                double *tot_tau_cont, double *tot_tau_lines) {
+static auto get_rpkt_escapeprob_fromdirection(const double startpos[3], double start_nu_cmf, int startcellindex,
+                                              double tstart, double dirvec[3], enum cell_boundary last_cross,
+                                              double *tot_tau_cont, double *tot_tau_lines) -> double {
   struct packet vpkt;
   vpkt.type = TYPE_RPKT;
   vpkt.nu_cmf = start_nu_cmf;
@@ -1064,7 +1064,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
   return escape_prob;
 }
 
-double get_rpkt_escape_prob(struct packet *pkt_ptr, const double tstart) {
+auto get_rpkt_escape_prob(struct packet *pkt_ptr, const double tstart) -> double {
   // return -1.; // disable this functionality and speed up the code
 
   const int startcellindex = pkt_ptr->where;
@@ -1159,7 +1159,7 @@ void emitt_rpkt(struct packet *pkt_ptr) {
   // printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 }
 
-static double calculate_kappa_ff(const int modelgridindex, const double nu)
+static auto calculate_kappa_ff(const int modelgridindex, const double nu) -> double
 /// free-free opacity
 {
   assert_always(nu > 0.);
@@ -1207,7 +1207,7 @@ static double calculate_kappa_ff(const int modelgridindex, const double nu)
   return kappa_ff;
 }
 
-double calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu)
+auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) -> double
 // bound-free opacity
 {
   double kappa_bf_sum = 0.;

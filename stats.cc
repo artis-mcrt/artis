@@ -107,7 +107,8 @@ void increment_ion_stats_contabsorption(const struct packet *const pkt_ptr, cons
   }
 }
 
-double get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype) {
+auto get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype)
+    -> double {
   assert_always(ion < get_nions(element));
   assert_always(ionstattype < ION_STAT_COUNT);
   const int uniqueionindex = get_uniqueionindex(element, ion);
@@ -168,7 +169,7 @@ void pkt_action_counters_reset() {
   globals::nesc = 0;
 }
 
-int get_counter(enum eventcounters i) {
+auto get_counter(enum eventcounters i) -> int {
   assert_always(i < COUNTER_COUNT);
   return eventstats[i];
 }

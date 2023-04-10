@@ -424,7 +424,7 @@ static void remove_grid_restart_data(const int timestep) {
   }
 }
 
-static bool walltime_sufficient_to_continue(const int nts, const int nts_prev, const int walltimelimitseconds) {
+static auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const int walltimelimitseconds) -> bool {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -539,8 +539,8 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
   }
 }
 
-static bool do_timestep(const int nts, const int titer, const int my_rank, const int nstart, const int ndo,
-                        struct packet *packets, const int walltimelimitseconds) {
+static auto do_timestep(const int nts, const int titer, const int my_rank, const int nstart, const int ndo,
+                        struct packet *packets, const int walltimelimitseconds) -> bool {
   bool do_this_full_loop = true;
 
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
@@ -691,7 +691,7 @@ static bool do_timestep(const int nts, const int titer, const int my_rank, const
   return !do_this_full_loop;
 }
 
-int main(int argc, char *argv[]) {
+auto main(int argc, char *argv[]) -> int {
   real_time_start = time(nullptr);
   char filename[MAXFILENAMELENGTH];
 

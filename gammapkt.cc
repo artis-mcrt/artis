@@ -40,7 +40,7 @@ struct gammaline {
 
 static std::vector<struct gammaline> allnuc_gamma_line_list;
 
-constexpr bool operator<(const struct gammaline &g1, const struct gammaline &g2) {
+constexpr auto operator<(const struct gammaline &g1, const struct gammaline &g2) -> bool {
   // true if d1 < d2
   if (g1.energy < g2.energy) {
     return true;
@@ -308,7 +308,7 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
   // printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 }
 
-constexpr double sigma_compton_partial(const double x, const double f)
+constexpr auto sigma_compton_partial(const double x, const double f) -> double
 // Routine to compute the partial cross section for Compton scattering.
 //   xx is the photon energy (in units of electron mass) and f
 //  is the energy loss factor up to which we wish to integrate.
@@ -320,7 +320,7 @@ constexpr double sigma_compton_partial(const double x, const double f)
   return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
 }
 
-static double sig_comp(const struct packet *pkt_ptr) {
+static auto sig_comp(const struct packet *pkt_ptr) -> double {
   // Start by working out the compton x-section in the co-moving frame.
 
   double const xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
@@ -348,7 +348,7 @@ static double sig_comp(const struct packet *pkt_ptr) {
   return sigma_rf;
 }
 
-static double choose_f(double xx, double zrand)
+static auto choose_f(double xx, double zrand) -> double
 // To choose the value of f to integrate to - idea is we want
 //   sigma_compton_partial(xx,f) = zrand.
 {
@@ -384,7 +384,7 @@ static double choose_f(double xx, double zrand)
   return ftry;
 }
 
-static double thomson_angle() {
+static auto thomson_angle() -> double {
   // For Thomson scattering we can get the new angle from a random number very easily.
 
   const double zrand = rng_uniform();
@@ -662,7 +662,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   }
 }
 
-double get_gam_freq(const int n) {
+auto get_gam_freq(const int n) -> double {
   if (n == RED_OF_LIST) {
     return 0.0;
   }
@@ -680,7 +680,7 @@ double get_gam_freq(const int n) {
   return gamma_spectra[nucindex].energy[lineid] / H;
 }
 
-int get_nul(double freq) {
+auto get_nul(double freq) -> int {
   const double freq_max = get_gam_freq(allnuc_gamma_line_list.size() - 1);
   const double freq_min = get_gam_freq(0);
 

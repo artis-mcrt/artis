@@ -32,7 +32,7 @@ double traceabsorption_totalenergy = 0.;
 
 static struct spec *rpkt_spectra = nullptr;
 
-static int compare_emission(const void *p1, const void *p2) {
+static auto compare_emission(const void *p1, const void *p2) -> int {
   const struct emissionabsorptioncontrib *elem1 = (struct emissionabsorptioncontrib *)p1;
   const struct emissionabsorptioncontrib *elem2 = (struct emissionabsorptioncontrib *)p2;
 
@@ -45,7 +45,7 @@ static int compare_emission(const void *p1, const void *p2) {
   return 0;
 }
 
-static int compare_absorption(const void *p1, const void *p2) {
+static auto compare_absorption(const void *p1, const void *p2) -> int {
   const struct emissionabsorptioncontrib *elem1 = (struct emissionabsorptioncontrib *)p1;
   const struct emissionabsorptioncontrib *elem2 = (struct emissionabsorptioncontrib *)p2;
 
@@ -142,7 +142,7 @@ static void printout_tracemission_stats() {
   traceemissionabsorption = nullptr;
 }
 
-static int get_proccount()
+static auto get_proccount() -> int
 // number of different emission processes (bf and bb for each ion, and free-free)
 {
   return 2 * get_nelements() * get_max_nions() + 1;
@@ -312,7 +312,7 @@ void write_specpol(const std::string &specpol_filename, const std::string &emiss
   }
 }
 
-static int columnindex_from_emissiontype(const int et) {
+static auto columnindex_from_emissiontype(const int et) -> int {
   if (et >= 0) {
     /// bb-emission
     const int element = globals::linelist[et].elementindex;
@@ -577,7 +577,7 @@ static void alloc_emissionabsorption_spectra(spec *spectra) {
            mem_usage / 1024. / 1024., MNUBINS);
 }
 
-struct spec *alloc_spectra(const bool do_emission_res) {
+auto alloc_spectra(const bool do_emission_res) -> struct spec * {
   long mem_usage = 0;
   assert_always(globals::ntstep > 0);
   auto *spectra = static_cast<struct spec *>(malloc(sizeof(struct spec)));

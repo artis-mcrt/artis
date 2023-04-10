@@ -30,7 +30,7 @@ struct gsl_integral_paras_bfheating {
   const float *photoion_xs;
 };
 
-double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T, double W) {
+auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T, double W) -> double {
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
   /// correction may be evaluated at T_R!
@@ -56,7 +56,7 @@ double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetin
   return W * bfheatingcoeff;
 }
 
-static double integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas)
+static auto integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas) -> double
 /// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
 {
   const struct gsl_integral_paras_bfheating *const params =
@@ -76,7 +76,8 @@ static double integrand_bfheatingcoeff_custom_radfield(double nu, void *voidpara
   return sigma_bf * (1 - nu_edge / nu) * radfield::radfield(nu, modelgridindex) * (1 - exp(-HOVERKB * nu / T_R));
 }
 
-static double calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex) {
+static auto calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
+    -> double {
   double error = 0.0;
   const double epsrel = 1e-3;
   const double epsrelwarning = 1e-1;
@@ -130,7 +131,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   return bfheating;
 }
 
-static double get_bfheatingcoeff(int element, int ion, int level)
+static auto get_bfheatingcoeff(int element, int ion, int level) -> double
 // depends only the radiation field
 // no dependence on T_e or populations
 {
@@ -181,8 +182,8 @@ void calculate_bfheatingcoeffs(int modelgridindex) {
   globals::cellhistory[tid].bfheating_mgi = modelgridindex;
 }
 
-static double get_heating_ion_coll_deexc(const int modelgridindex, const int element, const int ion, const double T_e,
-                                         const double nne) {
+static auto get_heating_ion_coll_deexc(const int modelgridindex, const int element, const int ion, const double T_e,
+                                       const double nne) -> double {
   double C_deexc = 0.;
   const int nlevels = get_nlevels(element, ion);
 
@@ -335,7 +336,7 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
   heatingcoolingrates->heating_ff = ffheating;
 }
 
-static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
+static auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double
 /// Thermal balance equation on which we have to iterate to get T_e
 {
   const struct Te_solution_paras *const params = static_cast<struct Te_solution_paras *>(paras);

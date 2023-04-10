@@ -13,7 +13,7 @@
 #include "sn3d.h"
 #include "update_grid.h"
 
-double nne_solution_f(double x, void *paras)
+auto nne_solution_f(double x, void *paras) -> double
 /// For libgsl bracketing type solver
 /// provides the equation which has to be solved to obtain the electron number
 /// density (passed by x)
@@ -90,7 +90,7 @@ void get_ionfractions(int element, int modelgridindex, double nne, std::unique_p
   }
 }
 
-static double interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T) {
+static auto interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_always(T >= MINTEMP);
@@ -108,7 +108,7 @@ static double interpolate_ions_spontrecombcoeff(const int element, const int ion
   return globals::elements[element].ions[ion].Alpha_sp[TABLESIZE - 1];
 }
 
-double phi(const int element, const int ion, const int modelgridindex)
+auto phi(const int element, const int ion, const int modelgridindex) -> double
 /// Calculates population ratio (a saha factor) of two consecutive ionisation stages
 /// in nebular approximation phi_j,k* = N_j,k*/(N_j+1,k* * nne)
 {
@@ -296,7 +296,7 @@ SAHACONST * pow(T,-1.5) * exp(deltaE/KB/T);
 }
 */
 
-double get_groundlevelpop(int modelgridindex, int element, int ion)
+auto get_groundlevelpop(int modelgridindex, int element, int ion) -> double
 /// Returns the given ions groundlevel population for modelgridindex which was precalculated
 /// during update_grid and stored to the grid.
 {
@@ -317,7 +317,7 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
   return nn;
 }
 
-double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
+auto calculate_levelpop_lte(int modelgridindex, int element, int ion, int level) -> double
 /// Calculates occupation population of a level assuming LTE excitation
 {
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
@@ -339,7 +339,8 @@ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int leve
           exp(-(E_level - E_ground) / KB / T_exc));
 }
 
-static double calculate_levelpop_nominpop(int modelgridindex, int element, int ion, int level, bool *skipminpop) {
+static auto calculate_levelpop_nominpop(int modelgridindex, int element, int ion, int level, bool *skipminpop)
+    -> double {
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
@@ -406,7 +407,7 @@ static double calculate_levelpop_nominpop(int modelgridindex, int element, int i
   return nn;
 }
 
-double calculate_levelpop(int modelgridindex, int element, int ion, int level) {
+auto calculate_levelpop(int modelgridindex, int element, int ion, int level) -> double {
   bool skipminpop = false;
   double nn = calculate_levelpop_nominpop(modelgridindex, element, ion, level, &skipminpop);
   if (!skipminpop && nn < MINPOP) {
@@ -421,7 +422,7 @@ double calculate_levelpop(int modelgridindex, int element, int ion, int level) {
   return nn;
 }
 
-double get_levelpop(int modelgridindex, int element, int ion, int level)
+auto get_levelpop(int modelgridindex, int element, int ion, int level) -> double
 /// Calculates the population of a level from either LTE or NLTE information
 {
   double nn = 0.;
@@ -438,7 +439,7 @@ double get_levelpop(int modelgridindex, int element, int ion, int level)
   return nn;
 }
 
-double calculate_partfunct(int element, int ion, int modelgridindex)
+auto calculate_partfunct(int element, int ion, int modelgridindex) -> double
 /// Calculates the partition function for ion=ion of element=element in
 /// cell modelgridindex
 {
@@ -489,7 +490,7 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
   return U;
 }
 
-double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold)
+auto calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold) -> double
 /// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
 {
   const double g_lower = stat_weight(element, ion, level);
@@ -507,7 +508,7 @@ double calculate_sahafact(int element, int ion, int level, int upperionlevel, do
   return sf;
 }
 
-double ionstagepop(int modelgridindex, int element, int ion)
+auto ionstagepop(int modelgridindex, int element, int ion) -> double
 /// Calculates the given ionstages total population in nebular approximation for modelgridindex
 /// The precalculated ground level population and partition function are used.
 {

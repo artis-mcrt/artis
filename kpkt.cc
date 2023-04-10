@@ -36,9 +36,11 @@ struct cellhistorycoolinglist {
 
 static struct cellhistorycoolinglist *coolinglist;
 
-static int get_ncoolingterms(int element, int ion) { return globals::elements[element].ions[ion].ncoolingterms; }
+static auto get_ncoolingterms(int element, int ion) -> int {
+  return globals::elements[element].ions[ion].ncoolingterms;
+}
 
-static double get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, float T_e) {
+static auto get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, float T_e) -> double {
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
   if (lowerindex < TABLESIZE - 1) {
     const int upperindex = lowerindex + 1;
@@ -396,7 +398,7 @@ void setup_coolinglist() {
   printout("[info] read_atomicdata: number of coolingterms %d\n", globals::ncoolingterms);
 }
 
-static double sample_planck(const double T)
+static auto sample_planck(const double T) -> double
 /// returns a randomly chosen frequency according to the Planck
 /// distribution of temperature T
 {
@@ -418,7 +420,7 @@ static double sample_planck(const double T)
   }
 }
 
-double do_kpkt_bb(struct packet *pkt_ptr)
+auto do_kpkt_bb(struct packet *pkt_ptr) -> double
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 {
   // double nne = globals::cell[pkt_ptr->where].nne ;
@@ -444,7 +446,7 @@ double do_kpkt_bb(struct packet *pkt_ptr)
   return pkt_ptr->prop_time;
 }
 
-double do_kpkt(struct packet *pkt_ptr, double t2, int nts)
+auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 {
   const int tid = get_thread_num();

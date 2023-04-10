@@ -201,7 +201,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
   }
 }
 
-static bool std_compare_packets_bymodelgriddensity(const struct packet &p1, const struct packet &p2) {
+static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, const struct packet &p2) -> bool {
   // return true if packet p1 goes before p2
 
   // move escaped packets to the end of the list for better performance

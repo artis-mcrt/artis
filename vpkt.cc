@@ -411,7 +411,7 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
 E.g. imagine that a packet in the first setup (all elements included) reaches tau = tau_max_vpkt
 because of the element Zi. If we remove Zi, tau now could be lower than tau_max_vpkt and could
 thus contribute to the spectrum. */
-int check_tau(const double *tau, const double *tau_max) {
+auto check_tau(const double *tau, const double *tau_max) -> int {
   int count = 0;
 
   for (int i = 0; i < Nspectra; i++) {
@@ -884,7 +884,7 @@ void read_parameterfile_vpkt() {
   fclose(input_file);
 }
 
-int vpkt_call_estimators(struct packet *pkt_ptr, double t_current, int realtype) {
+auto vpkt_call_estimators(struct packet *pkt_ptr, double t_current, int realtype) -> int {
   double obs[3];
   int vflag = 0;
 
@@ -945,7 +945,7 @@ int vpkt_call_estimators(struct packet *pkt_ptr, double t_current, int realtype)
   return vflag;
 }
 
-double rot_angle(double *n1, double *n2, double *ref1, double *ref2) {
+auto rot_angle(double *n1, double *n2, double *ref1, double *ref2) -> double {
   /* ------------- Rotation angle from the scattering plane --------------------------------------------- */
   /* -------- We need to rotate Stokes Parameters to (or from) the scattering plane from (or to) -------- */
   /* -------- the meridian frame such that Q=1 is in the scattering plane and along ref1 ---------------- */

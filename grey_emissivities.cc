@@ -8,7 +8,7 @@
 #include "sn3d.h"
 #include "vectors.h"
 
-constexpr double meanf_sigma(const double x)
+constexpr auto meanf_sigma(const double x) -> double
 // Routine to compute the mean energy converted to non-thermal electrons times
 // the Klein-Nishina cross section.
 {

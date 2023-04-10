@@ -10,8 +10,8 @@
 #include "update_packets.h"
 #include "vectors.h"
 
-static double get_shellcrossdist(const double pos[3], const double dir[3], const double shellradius,
-                                 const bool isinnerboundary, const double tstart)
+static auto get_shellcrossdist(const double pos[3], const double dir[3], const double shellradius,
+                               const bool isinnerboundary, const double tstart) -> double
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell
 // return -1 if there are no forward intersections (or if the intersection is tangential to the shell)
 {
@@ -99,7 +99,7 @@ static double get_shellcrossdist(const double pos[3], const double dir[3], const
   return -1.;
 }
 
-double boundary_cross(struct packet *const pkt_ptr, int *snext)
+auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
 /// Basic routine to compute distance to a cell boundary.
 {
   const double tstart = pkt_ptr->prop_time;
@@ -350,7 +350,7 @@ void change_cell(struct packet *pkt_ptr, int snext)
   }
 }
 
-static int get_cell(const double pos[3], double t)
+static auto get_cell(const double pos[3], double t) -> int
 /// identify the cell index from a position and a time.
 {
   assert_always(GRID_TYPE == GRID_UNIFORM);  // other grid types not implemented yet

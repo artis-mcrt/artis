@@ -480,13 +480,13 @@ static void read_ion_transitions(std::istream &ftransitiondata, const int tottra
   }
 }
 
-constexpr bool operator<(const linelist_entry &a, const linelist_entry &b)
+constexpr auto operator<(const linelist_entry &a, const linelist_entry &b) -> bool
 // sort the lineline in descending frequency
 {
   return a.nu > b.nu;
 }
 
-constexpr int compare_linelistentry(const void *p1, const void *p2)
+constexpr auto compare_linelistentry(const void *p1, const void *p2) -> int
 /// Helper function to sort the linelist by frequency.
 {
   auto *a1 = (linelist_entry *)(p1);
@@ -694,7 +694,7 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
 #endif
 }
 
-static int calculate_nlevels_groundterm(int element, int ion) {
+static auto calculate_nlevels_groundterm(int element, int ion) -> int {
   const int nlevels = get_nlevels(element, ion);
   if (nlevels == 1) {
     return 1;
@@ -1193,7 +1193,8 @@ static void read_atomicdata_files() {
   printout("cont_index %d\n", cont_index);
 }
 
-static int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimator, int el, int in, int ll)
+static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimator, int el, int in, int ll)
+    -> int
 /// Return the closest ground level continuum index to the given edge
 /// frequency. If the given edge frequency is redder than the reddest
 /// continuum return -1.
@@ -1431,13 +1432,13 @@ static void write_bflist_file(int includedphotoiontransitions) {
   }
 }
 
-static bool operator<(const fullphixslist &a, const fullphixslist &b)
+static auto operator<(const fullphixslist &a, const fullphixslist &b) -> bool
 /// Helper function to sort the phixslist by ascending threshold frequency.
 {
   return a.nu_edge < b.nu_edge;
 }
 
-static bool operator<(const groundphixslist &a, const groundphixslist &b)
+static auto operator<(const groundphixslist &a, const groundphixslist &b) -> bool
 /// Helper function to sort the groundphixslist by ascending threshold frequency.
 {
   return a.nu_edge < b.nu_edge;
@@ -1864,13 +1865,13 @@ void input(int rank)
   }
 }
 
-static bool getline(std::istream &input, std::string &line)
+static auto getline(std::istream &input, std::string &line) -> bool
 // return true if line read, false if not (EOF)
 {
   return !(!std::getline(input, line));
 }
 
-bool get_noncommentline(std::istream &input, std::string &line)
+auto get_noncommentline(std::istream &input, std::string &line) -> bool
 // read the next line, skipping any comment lines beginning with '#'
 {
   while (true) {

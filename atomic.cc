@@ -13,13 +13,14 @@ int maxnions = 0;             // highest number of ions for any element
 int includedions = 0;         // number of ions of any element
 int phixs_file_version = -1;  // 1 for phixsdata.txt (classic) and 2 for phixsdata_v2.txt
 
-int get_continuumindex_phixstargetindex(const int element, const int ion, const int level, const int phixstargetindex)
+auto get_continuumindex_phixstargetindex(const int element, const int ion, const int level, const int phixstargetindex)
+    -> int
 /// Returns the index of the continuum associated to the given level.
 {
   return globals::elements[element].ions[ion].levels[level].cont_index - phixstargetindex;
 }
 
-int get_phixtargetindex(const int element, const int ion, const int level, const int upperionlevel) {
+auto get_phixtargetindex(const int element, const int ion, const int level, const int upperionlevel) -> int {
   for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
     if (upperionlevel == get_phixsupperlevel(element, ion, level, phixstargetindex)) {
       return phixstargetindex;
@@ -30,14 +31,14 @@ int get_phixtargetindex(const int element, const int ion, const int level, const
   return -1;
 }
 
-int get_continuumindex(const int element, const int ion, const int level, const int upperionlevel)
+auto get_continuumindex(const int element, const int ion, const int level, const int upperionlevel) -> int
 /// Returns the index of the continuum associated to the given level.
 {
   const int phixstargetindex = get_phixtargetindex(element, ion, level, upperionlevel);
   return get_continuumindex_phixstargetindex(element, ion, level, phixstargetindex);
 }
 
-double get_tau_sobolev(const int modelgridindex, const int lineindex, const double t_current) {
+auto get_tau_sobolev(const int modelgridindex, const int lineindex, const double t_current) -> double {
   const int element = globals::linelist[lineindex].elementindex;
   const int ion = globals::linelist[lineindex].ionindex;
   const int lower = globals::linelist[lineindex].lowerlevelindex;
@@ -55,7 +56,7 @@ double get_tau_sobolev(const int modelgridindex, const int lineindex, const doub
   return tau_sobolev;
 }
 
-double get_nntot(int modelgridindex)
+auto get_nntot(int modelgridindex) -> double
 // total ion (nuclei) density
 {
   double nntot = 0.;
@@ -66,7 +67,7 @@ double get_nntot(int modelgridindex)
   return nntot;
 }
 
-bool is_nlte(const int element, const int ion, const int level)
+auto is_nlte(const int element, const int ion, const int level) -> bool
 // Returns true if (element,ion,level) is to be treated in nlte.
 // (note this function returns true for the ground state,
 //  although it is stored separately from the excited NLTE states)
@@ -78,13 +79,14 @@ bool is_nlte(const int element, const int ion, const int level)
                        level);  // defined in artisoptions.h
 }
 
-bool level_isinsuperlevel(const int element, const int ion, const int level)
+auto level_isinsuperlevel(const int element, const int ion, const int level) -> bool
 // ion has NLTE levels, but this one is not NLTE => is in the superlevel
 {
   return (NLTE_POPS_ON && !is_nlte(element, ion, level) && level != 0 && (get_nlevels_nlte(element, ion) > 0));
 }
 
-double photoionization_crosssection_fromtable(const float *const photoion_xs, const double nu_edge, const double nu)
+auto photoionization_crosssection_fromtable(const float *const photoion_xs, const double nu_edge, const double nu)
+    -> double
 /// Calculates the photoionisation cross-section at frequency nu out of the atomic data.
 /// Input: - edge frequency nu_edge of the desired bf-continuum
 ///        - nu
@@ -155,9 +157,9 @@ double photoionization_crosssection_fromtable(const float *const photoion_xs, co
 
 void set_nelements(const int nelements_in) { nelements = nelements_in; }
 
-int get_nelements() { return nelements; }
+auto get_nelements() -> int { return nelements; }
 
-int get_element(const int element)
+auto get_element(const int element) -> int
 /// Returns the atomic number associated with a given elementindex.
 {
   assert_testmodeonly(element >= 0);
@@ -165,7 +167,7 @@ int get_element(const int element)
   return globals::elements[element].anumber;
 }
 
-int get_elementindex(const int Z)
+auto get_elementindex(const int Z) -> int
 /// Returns the elementindex associated with a given atomic number.
 /// If there is no element with the given atomic number in the atomic data
 /// a negative value is returned to flag this event.
@@ -185,7 +187,7 @@ int get_elementindex(const int Z)
 
 void increase_includedions(const int nions) { includedions += nions; }
 
-int get_includedions()
+auto get_includedions() -> int
 // returns the number of ions of all elements combined
 {
   return includedions;
@@ -200,12 +202,12 @@ void update_max_nions(const int nions)
   }
 }
 
-int get_max_nions() {
+auto get_max_nions() -> int {
   // number greater than or equal to nions(element) for all elements
   return maxnions;
 }
 
-int get_nions(const int element)
+auto get_nions(const int element) -> int
 /// Returns the number of ions associated with a specific element given by
 /// its elementindex.
 {
@@ -213,7 +215,7 @@ int get_nions(const int element)
   return globals::elements[element].nions;
 }
 
-int get_ionstage(const int element, const int ion)
+auto get_ionstage(const int element, const int ion) -> int
 /// Returns the ionisation stage of an ion specified by its elementindex and
 /// ionindex.
 {
@@ -222,7 +224,7 @@ int get_ionstage(const int element, const int ion)
   return globals::elements[element].ions[ion].ionstage;
 }
 
-int get_nlevels(const int element, const int ion)
+auto get_nlevels(const int element, const int ion) -> int
 /// Returns the number of levels associated with with a specific ion given
 /// its elementindex and ionindex.
 {
@@ -231,7 +233,7 @@ int get_nlevels(const int element, const int ion)
   return globals::elements[element].ions[ion].nlevels;
 }
 
-int get_nlevels_nlte(const int element, const int ion)
+auto get_nlevels_nlte(const int element, const int ion) -> int
 // Returns the number of NLTE levels associated with with a specific ion given
 // its elementindex and ionindex. Includes the superlevel if there is one but does not include the ground state
 {
@@ -240,13 +242,13 @@ int get_nlevels_nlte(const int element, const int ion)
   return globals::elements[element].ions[ion].nlevels_nlte;
 }
 
-int get_nlevels_groundterm(const int element, const int ion) {
+auto get_nlevels_groundterm(const int element, const int ion) -> int {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   return globals::elements[element].ions[ion].nlevels_groundterm;
 }
 
-int get_ionisinglevels(const int element, const int ion)
+auto get_ionisinglevels(const int element, const int ion) -> int
 /// Returns the number of levels associated with an ion that
 /// have energies below the ionisation threshold.
 {
@@ -255,7 +257,7 @@ int get_ionisinglevels(const int element, const int ion)
   return globals::elements[element].ions[ion].ionisinglevels;
 }
 
-int get_uniqueionindex(const int element, const int ion)
+auto get_uniqueionindex(const int element, const int ion) -> int
 // Get an index for an ionstage of an element that is unique for every ion of every element
 {
   assert_testmodeonly(element < get_nelements());
@@ -287,7 +289,7 @@ void get_ionfromuniqueionindex(const int allionsindex, int *element, int *ion) {
   assert_always(false);  // allionsindex too high to be valid
 }
 
-int get_uniquelevelindex(const int element, const int ion, const int level)
+auto get_uniquelevelindex(const int element, const int ion, const int level) -> int
 // Get an index for level of an ionstage of an element that is unique across every ion of every element
 {
   assert_testmodeonly(element < get_nelements());
@@ -333,7 +335,7 @@ void get_levelfromuniquelevelindex(const int alllevelsindex, int *element, int *
   assert_always(false);  // alllevelsindex too high to be valid
 }
 
-double epsilon(const int element, const int ion, const int level)
+auto epsilon(const int element, const int ion, const int level) -> double
 /// Returns the energy of (element,ion,level).
 {
   assert_testmodeonly(element < get_nelements());
@@ -342,7 +344,7 @@ double epsilon(const int element, const int ion, const int level)
   return globals::elements[element].ions[ion].levels[level].epsilon;
 }
 
-double stat_weight(const int element, const int ion, const int level)
+auto stat_weight(const int element, const int ion, const int level) -> double
 /// Returns the statistical weight of (element,ion,level).
 {
   assert_testmodeonly(element < get_nelements());
@@ -351,7 +353,7 @@ double stat_weight(const int element, const int ion, const int level)
   return globals::elements[element].ions[ion].levels[level].stat_weight;
 }
 
-int get_maxrecombininglevel(const int element, const int ion)
+auto get_maxrecombininglevel(const int element, const int ion) -> int
 /// Returns the number of bf-continua associated with ion ion of element element.
 {
   assert_testmodeonly(element < get_nelements());
@@ -359,13 +361,13 @@ int get_maxrecombininglevel(const int element, const int ion)
   return globals::elements[element].ions[ion].maxrecombininglevel;
 }
 
-bool ion_has_superlevel(const int element, const int ion) {
+auto ion_has_superlevel(const int element, const int ion) -> bool {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   return (get_nlevels(element, ion) > get_nlevels_nlte(element, ion) + 1);
 }
 
-int get_ndowntrans(const int element, const int ion, const int level)
+auto get_ndowntrans(const int element, const int ion, const int level) -> int
 // the number of downward bound-bound transitions from the specified level
 {
   assert_testmodeonly(element < get_nelements());
@@ -374,7 +376,7 @@ int get_ndowntrans(const int element, const int ion, const int level)
   return globals::elements[element].ions[ion].levels[level].ndowntrans;
 }
 
-int get_nuptrans(const int element, const int ion, const int level)
+auto get_nuptrans(const int element, const int ion, const int level) -> int
 // the number of upward bound-bound transitions from the specified level
 {
   assert_testmodeonly(element < get_nelements());
@@ -401,7 +403,7 @@ void set_nuptrans(const int element, const int ion, const int level, const int n
   globals::elements[element].ions[ion].levels[level].nuptrans = nuptrans;
 }
 
-int get_nphixstargets(const int element, const int ion, const int level)
+auto get_nphixstargets(const int element, const int ion, const int level) -> int
 /// Returns the number of target states for photoionization of (element,ion,level).
 {
   assert_testmodeonly(element < get_nelements());
@@ -415,7 +417,7 @@ int get_nphixstargets(const int element, const int ion, const int level)
   return 0;
 }
 
-int get_phixsupperlevel(const int element, const int ion, const int level, const int phixstargetindex)
+auto get_phixsupperlevel(const int element, const int ion, const int level, const int phixstargetindex) -> int
 /// Returns the level index of a target state for photoionization of (element,ion,level).
 {
   assert_testmodeonly(element < get_nelements());
@@ -427,7 +429,7 @@ int get_phixsupperlevel(const int element, const int ion, const int level, const
   return globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].levelindex;
 }
 
-double get_phixs_threshold(const int element, const int ion, const int level, const int phixstargetindex)
+auto get_phixs_threshold(const int element, const int ion, const int level, const int phixstargetindex) -> double
 /// Returns the energy of (element,ion,level).
 {
   assert_testmodeonly(element < get_nelements());
@@ -445,7 +447,7 @@ double get_phixs_threshold(const int element, const int ion, const int level, co
   }
 }
 
-double get_phixsprobability(const int element, const int ion, const int level, const int phixstargetindex)
+auto get_phixsprobability(const int element, const int ion, const int level, const int phixstargetindex) -> double
 /// Returns the probability of a target state for photoionization of (element,ion,level).
 {
   assert_testmodeonly(element < get_nelements());
@@ -457,7 +459,7 @@ double get_phixsprobability(const int element, const int ion, const int level, c
   return globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].probability;
 }
 
-double einstein_spontaneous_emission(const int lineindex)
+auto einstein_spontaneous_emission(const int lineindex) -> double
 // double einstein_spontaneous_emission(int element, int ion, int upper, int lower)
 /// reads A_ul from levellist which consists of
 /// (epsilon_upper; 0) | (g_upper; 0) | (A_upper,upper-1; f_upper,upper-1) | (A_uppper,upper-2; f_upper,upper-2) | ... |
@@ -470,7 +472,7 @@ double einstein_spontaneous_emission(const int lineindex)
   return globals::linelist[lineindex].einstein_A;
 }
 
-double osc_strength(const int lineindex)
+auto osc_strength(const int lineindex) -> double
 // double osc_strength(int element, int ion, int upper, int lower)
 /// reads f_lu from levellist which consists of
 /// (epsilon_upper; 0) | (g_upper; 0) | (A_upper,upper-1; f_upper,upper-1) | (A_uppper,upper-2; f_upper,upper-2) | ... |
@@ -479,22 +481,22 @@ double osc_strength(const int lineindex)
   return globals::linelist[lineindex].osc_strength;
 }
 
-double get_coll_str(const int lineindex) { return globals::linelist[lineindex].coll_str; }
+auto get_coll_str(const int lineindex) -> double { return globals::linelist[lineindex].coll_str; }
 
-double statw_upper(const int lineindex) { return statw_upper(&globals::linelist[lineindex]); }
+auto statw_upper(const int lineindex) -> double { return statw_upper(&globals::linelist[lineindex]); }
 
-double statw_lower(const int lineindex) { return statw_lower(&globals::linelist[lineindex]); }
+auto statw_lower(const int lineindex) -> double { return statw_lower(&globals::linelist[lineindex]); }
 
-double statw_upper(const struct linelist_entry *line) {
+auto statw_upper(const struct linelist_entry *line) -> double {
   return stat_weight(line->elementindex, line->ionindex, line->upperlevelindex);
 }
 
-double statw_lower(const struct linelist_entry *line) {
+auto statw_lower(const struct linelist_entry *line) -> double {
   return stat_weight(line->elementindex, line->ionindex, line->lowerlevelindex);
 }
 
-double photoionization_crosssection(const int element, const int ion, const int level, const double nu_edge,
-                                    const double nu) {
+auto photoionization_crosssection(const int element, const int ion, const int level, const double nu_edge,
+                                  const double nu) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));

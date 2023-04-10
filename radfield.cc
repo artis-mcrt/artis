@@ -122,7 +122,7 @@ using gsl_T_R_solver_paras = struct {
 
 static FILE *radfieldfile = nullptr;
 
-static inline double get_bin_nu_upper(int binindex) { return radfieldbin_nu_upper[binindex]; }
+static inline auto get_bin_nu_upper(int binindex) -> double { return radfieldbin_nu_upper[binindex]; }
 
 static void setup_bin_boundaries() {
   // double prev_nu_upper = nu_lower_first_initial;
@@ -461,7 +461,7 @@ void initialise_prev_titer_photoionestimators() {
   }
 }
 
-int get_Jblueindex(const int lineindex)
+auto get_Jblueindex(const int lineindex) -> int
 // returns -1 if the line does not have a Jblue estimator
 {
   // slow linear search
@@ -500,19 +500,19 @@ int get_Jblueindex(const int lineindex)
   return -1;
 }
 
-double get_Jb_lu(const int modelgridindex, const int jblueindex) {
+auto get_Jb_lu(const int modelgridindex, const int jblueindex) -> double {
   assert_always(jblueindex >= 0);
   assert_always(jblueindex < detailed_linecount);
   return prev_Jb_lu_normed[modelgridindex][jblueindex].value;
 }
 
-int get_Jb_lu_contribcount(const int modelgridindex, const int jblueindex) {
+auto get_Jb_lu_contribcount(const int modelgridindex, const int jblueindex) -> int {
   assert_always(jblueindex >= 0);
   assert_always(jblueindex < detailed_linecount);
   return prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount;
 }
 
-static double get_bin_J(int modelgridindex, int binindex)
+static auto get_bin_J(int modelgridindex, int binindex) -> double
 // get the normalised J_nu
 {
   assert_testmodeonly(J_normfactor[modelgridindex] > 0.0);
@@ -523,7 +523,7 @@ static double get_bin_J(int modelgridindex, int binindex)
   return radfieldbins[mgibinindex].J_raw * J_normfactor[modelgridindex];
 }
 
-static double get_bin_nuJ(int modelgridindex, int binindex) {
+static auto get_bin_nuJ(int modelgridindex, int binindex) -> double {
   assert_testmodeonly(J_normfactor[modelgridindex] > 0.0);
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(binindex >= 0);
@@ -532,7 +532,7 @@ static double get_bin_nuJ(int modelgridindex, int binindex) {
   return radfieldbins[mgibinindex].nuJ_raw * J_normfactor[modelgridindex];
 }
 
-static inline double get_bin_nu_bar(int modelgridindex, int binindex)
+static inline auto get_bin_nu_bar(int modelgridindex, int binindex) -> double
 // importantly, this is average beween the current and previous timestep
 {
   const double nuJ_sum = get_bin_nuJ(modelgridindex, binindex);
@@ -540,29 +540,29 @@ static inline double get_bin_nu_bar(int modelgridindex, int binindex)
   return nuJ_sum / J_sum;
 }
 
-static inline double get_bin_nu_lower(int binindex) {
+static inline auto get_bin_nu_lower(int binindex) -> double {
   if (binindex > 0) {
     return radfieldbin_nu_upper[binindex - 1];
   }
   return nu_lower_first_initial;
 }
 
-static inline int get_bin_contribcount(int modelgridindex, int binindex) {
+static inline auto get_bin_contribcount(int modelgridindex, int binindex) -> int {
   const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
   return radfieldbins[mgibinindex].contribcount;
 }
 
-static inline float get_bin_W(int modelgridindex, int binindex) {
+static inline auto get_bin_W(int modelgridindex, int binindex) -> float {
   const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
   return radfieldbin_solutions[mgibinindex].W;
 }
 
-static inline float get_bin_T_R(int modelgridindex, int binindex) {
+static inline auto get_bin_T_R(int modelgridindex, int binindex) -> float {
   const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
   return radfieldbin_solutions[mgibinindex].T_R;
 }
 
-static inline int select_bin(double nu) {
+static inline auto select_bin(double nu) -> int {
   if (nu < get_bin_nu_lower(0)) {
     return -2;  // out of range, nu lower than lowest bin's lower boundary
   }
@@ -852,13 +852,13 @@ void update_lineestimator(const int modelgridindex, const int lineindex, const d
   }
 }
 
-double dbb_mgi(double nu, int modelgridindex) {
+auto dbb_mgi(double nu, int modelgridindex) -> double {
   const float T_R_fullspec = grid::get_TR(modelgridindex);
   const float W_fullspec = grid::get_W(modelgridindex);
   return dbb(nu, T_R_fullspec, W_fullspec);
 }
 
-double radfield(double nu, int modelgridindex)
+auto radfield(double nu, int modelgridindex) -> double
 // returns mean intensity J_nu [ergs/s/sr/cm2/Hz]
 {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
@@ -905,7 +905,7 @@ double radfield(double nu, int modelgridindex)
   return J_nu_fullspec;
 }
 
-constexpr double gsl_integrand_planck(const double nu, void *paras) {
+constexpr auto gsl_integrand_planck(const double nu, void *paras) -> double {
   const double T_R = (static_cast<gsl_planck_integral_paras *>(paras))->T_R;
   const enum_prefactor prefactor = (static_cast<gsl_planck_integral_paras *>(paras))->prefactor;
 
@@ -918,7 +918,7 @@ constexpr double gsl_integrand_planck(const double nu, void *paras) {
   return integrand;
 }
 
-static double planck_integral(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor) {
+static auto planck_integral(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor) -> double {
   double integral = 0.;
 
   double error = 0.;
@@ -942,7 +942,7 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
   return integral;
 }
 
-static double planck_integral_analytic(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor) {
+static auto planck_integral_analytic(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor) -> double {
   double integral = 0.;
 
   if (prefactor == TIMES_NU) {
@@ -977,7 +977,7 @@ static double planck_integral_analytic(double T_R, double nu_lower, double nu_up
   return integral;
 }
 
-static double delta_nu_bar(double T_R, void *paras)
+static auto delta_nu_bar(double T_R, void *paras) -> double
 // difference between the average nu and the average nu of a planck function
 // at temperature T_R, in the frequency range corresponding to a bin
 {
@@ -1025,7 +1025,7 @@ static double delta_nu_bar(double T_R, void *paras)
   return delta_nu_bar;
 }
 
-static float find_T_R(int modelgridindex, int binindex) {
+static auto find_T_R(int modelgridindex, int binindex) -> float {
   double T_R = 0.0;
 
   gsl_T_R_solver_paras paras;
@@ -1285,7 +1285,7 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
   }
 }
 
-static int get_bfcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) {
+static auto get_bfcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) -> int {
   // simple linear search seems to be faster than the binary search
   // possibly because lower frequency transitions near start of list are more likely to be called?
   for (int i = 0; i < globals::nbfcontinua; i++) {
@@ -1368,8 +1368,8 @@ void print_bfrate_contributions(const int element, const int lowerion, const int
 }
 #endif
 
-double get_bfrate_estimator(const int element, const int lowerion, const int lower, const int phixstargetindex,
-                            const int modelgridindex) {
+auto get_bfrate_estimator(const int element, const int lowerion, const int lower, const int phixstargetindex,
+                          const int modelgridindex) -> double {
   if constexpr (!DETAILED_BF_ESTIMATORS_ON) {
     return -1;
   } else {
@@ -1390,7 +1390,7 @@ void normalise_nuJ(const int modelgridindex, const double estimator_normfactor_o
   nuJ[modelgridindex] *= estimator_normfactor_over4pi;
 }
 
-double get_T_J_from_J(const int modelgridindex) {
+auto get_T_J_from_J(const int modelgridindex) -> double {
   const double T_J = pow(J[modelgridindex] * PI / STEBO, 1. / 4.);
   if (!std::isfinite(T_J)) {
     /// keep old value of T_J
@@ -1723,8 +1723,8 @@ void read_restart_data(FILE *gridsave_file) {
 
 // not in use, but could potential improve speed and accuracy of integrating
 // across the binned radiation field which is discontinuous at the bin boundaries
-inline int integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel, size_t limit,
-                     int key, gsl_integration_workspace *workspace, double *result, double *abserr) {
+inline auto integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel, size_t limit,
+                      int key, gsl_integration_workspace *workspace, double *result, double *abserr) -> int {
   if (MULTIBIN_RADFIELD_MODEL_ON && (globals::nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP)) {
     auto *pts = static_cast<double *>(malloc((RADFIELDBINCOUNT + 3) * sizeof(double)));
     int binindex_a = select_bin(nu_a);

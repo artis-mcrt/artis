@@ -46,7 +46,7 @@ static char adatafile_hash[33];
 static char compositionfile_hash[33];
 static char phixsfile_hash[33];
 
-static bool read_ratecoeff_dat()
+static auto read_ratecoeff_dat() -> bool
 /// Try to read in the precalculated rate coefficients from file
 /// return true if successful or false otherwise
 {
@@ -247,7 +247,7 @@ static void write_ratecoeff_dat() {
 ///****************************************************************************
 /// The following functions define the integrands for these rate coefficients
 /// for use with libgsl integrators.
-static double alpha_sp_integrand_gsl(const double nu, void *const voidparas)
+static auto alpha_sp_integrand_gsl(const double nu, void *const voidparas) -> double
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
@@ -262,7 +262,7 @@ static double alpha_sp_integrand_gsl(const double nu, void *const voidparas)
   return x;
 }
 
-static double alpha_sp_E_integrand_gsl(const double nu, void *const voidparas)
+static auto alpha_sp_E_integrand_gsl(const double nu, void *const voidparas) -> double
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
@@ -303,7 +303,7 @@ static double alpha_sp_E_integrand_gsl(const double nu, void *const voidparas)
   return x;
 }*/
 
-static double gammacorr_integrand_gsl(const double nu, void *const voidparas)
+static auto gammacorr_integrand_gsl(const double nu, void *const voidparas) -> double
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
@@ -321,7 +321,7 @@ static double gammacorr_integrand_gsl(const double nu, void *const voidparas)
   return sigma_bf * ONEOVERH / nu * radfield::dbb(nu, T, 1) * (1 - exp(-HOVERKB * nu / T));
 }
 
-static double approx_bfheating_integrand_gsl(const double nu, void *const voidparas)
+static auto approx_bfheating_integrand_gsl(const double nu, void *const voidparas) -> double
 /// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
 /// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
 /// formula. The radiation fields dependence on W is taken into account by multiplying
@@ -376,7 +376,7 @@ static double approx_bfheating_integrand_gsl(const double nu, void *const voidpa
   return x;
 }*/
 
-static double bfcooling_integrand_gsl(const double nu, void *const voidparas)
+static auto bfcooling_integrand_gsl(const double nu, void *const voidparas) -> double
 /// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
 /// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
 /// formula. The radiation fields dependence on W is taken into account by multiplying
@@ -632,7 +632,7 @@ static void precalculate_rate_coefficient_integrals() {
   }
 }
 
-double select_continuum_nu(int element, int lowerion, int lower, int upperionlevel, float T_e) {
+auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel, float T_e) -> double {
   const int phixstargetindex = get_phixtargetindex(element, lowerion, lower, upperionlevel);
   const double E_threshold = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
   const double nu_threshold = ONEOVERH * E_threshold;
@@ -690,7 +690,7 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
   return nu_lower;
 }
 
-double get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, float T_e)
+auto get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, float T_e) -> double
 /// Returns the rate coefficient for spontaneous recombination.
 {
   /*int lowerindex = floor((T-MINTEMP)/T_step);
@@ -716,10 +716,10 @@ double get_spontrecombcoeff(int element, int ion, int level, int phixstargetinde
   return Alpha_sp;
 }
 
-double calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const int element, const int upperion,
-                                const bool assume_lte, const bool collisional_not_radiative, const bool printdebug,
-                                const bool lower_superlevel_only, const bool per_groundmultipletpop,
-                                const bool stimonly)
+auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const int element, const int upperion,
+                              const bool assume_lte, const bool collisional_not_radiative, const bool printdebug,
+                              const bool lower_superlevel_only, const bool per_groundmultipletpop, const bool stimonly)
+    -> double
 // multiply by upper ion population (or ground population if per_groundmultipletpop is true) and nne to get a rate
 {
   const int lowerion = upperion - 1;
@@ -1055,7 +1055,7 @@ void ratecoefficients_init()
   precalculate_ion_alpha_sp();
 }
 
-double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T) {
+auto interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T) -> double {
   assert_always(!NO_LUT_PHOTOION);
   const int lowerindex = floor(log(T / MINTEMP) / T_step_log);
   if (lowerindex < TABLESIZE - 1) {
@@ -1073,7 +1073,7 @@ double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixst
   return globals::corrphotoioncoeff[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
 }
 
-double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex)
+auto get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex) -> double
 /// Returns the for stimulated emission corrected photoionisation rate coefficient.
 {
   assert_always(!NO_LUT_PHOTOION);
@@ -1086,7 +1086,7 @@ double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstarge
   return W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
 }
 
-static double integrand_stimrecombination_custom_radfield(const double nu, void *voidparas) {
+static auto integrand_stimrecombination_custom_radfield(const double nu, void *voidparas) -> double {
   {
     const gsl_integral_paras_gammacorr *const params = static_cast<gsl_integral_paras_gammacorr *>(voidparas);
     const int modelgridindex = params->modelgridindex;
@@ -1101,8 +1101,8 @@ static double integrand_stimrecombination_custom_radfield(const double nu, void 
   }
 }
 
-static double calculate_stimrecombcoeff_integral(int element, int lowerion, int level, int phixstargetindex,
-                                                 int modelgridindex) {
+static auto calculate_stimrecombcoeff_integral(int element, int lowerion, int level, int phixstargetindex,
+                                               int modelgridindex) -> double {
   // if (nnlevel <= 1.1 * MINPOP)
   // {
   //   return 0.;
@@ -1152,7 +1152,7 @@ static double calculate_stimrecombcoeff_integral(int element, int lowerion, int 
   return stimrecombcoeff;
 }
 
-double get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetindex, int modelgridindex)
+auto get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetindex, int modelgridindex) -> double
 /// Returns the stimulated recombination rate coefficient
 // multiple by upper level population and nne to get rate
 {
@@ -1186,7 +1186,7 @@ double get_stimrecombcoeff(int element, int lowerion, int level, int phixstarget
   return stimrecombcoeff;
 }
 
-static double integrand_corrphotoioncoeff_custom_radfield(const double nu, void *const voidparas)
+static auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void *const voidparas) -> double
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
@@ -1212,8 +1212,8 @@ static double integrand_corrphotoioncoeff_custom_radfield(const double nu, void 
   return ONEOVERH * sigma_bf / nu * Jnu * corrfactor;
 }
 
-static double calculate_corrphotoioncoeff_integral(int element, int ion, int level, int phixstargetindex,
-                                                   int modelgridindex) {
+static auto calculate_corrphotoioncoeff_integral(int element, int ion, int level, int phixstargetindex,
+                                                 int modelgridindex) -> double {
   constexpr double epsrel = 1e-3;
   constexpr double epsrelwarning = 1e-1;
   constexpr double epsabs = 0.;
@@ -1277,7 +1277,7 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   return gammacorr;
 }
 
-double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
+auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex) -> double
 /// Returns the photoionisation rate coefficient (corrected for stimulated emission)
 {
   /// The correction factor for stimulated emission in gammacorr is set to its
@@ -1332,8 +1332,8 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
   return gammacorr;
 }
 
-static int get_nlevels_important(int modelgridindex, int element, int ion, bool assume_lte, float T_e,
-                                 double *nnlevelsum_out)
+static auto get_nlevels_important(int modelgridindex, int element, int ion, bool assume_lte, float T_e,
+                                  double *nnlevelsum_out) -> int
 // get the number of levels that make up a fraction of the ion population
 // of at least IONGAMMA_POPFRAC_LEVELS_INCLUDED
 {
@@ -1375,7 +1375,7 @@ static int get_nlevels_important(int modelgridindex, int element, int ion, bool 
   return nlevels_important;
 }
 
-double calculate_iongamma_per_gspop(const int modelgridindex, const int element, const int ion)
+auto calculate_iongamma_per_gspop(const int modelgridindex, const int element, const int ion) -> double
 // ionisation rate coefficient. multiply by get_groundlevelpop to get a rate [s^-1]
 {
   const int nions = get_nions(element);
@@ -1413,9 +1413,9 @@ double calculate_iongamma_per_gspop(const int modelgridindex, const int element,
   return Gamma;
 }
 
-double calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, const int element, const int lowerion,
-                                     const bool assume_lte, const bool collisional_not_radiative, const bool printdebug,
-                                     const bool force_bfest, const bool force_bfintegral)
+auto calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, const int element, const int lowerion,
+                                   const bool assume_lte, const bool collisional_not_radiative, const bool printdebug,
+                                   const bool force_bfest, const bool force_bfintegral) -> double
 // ionisation rate coefficient. multiply by the lower ion pop to get a rate
 // currently only used for the estimator output file, not the simulation
 {

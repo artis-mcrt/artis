@@ -68,14 +68,14 @@ std::vector<int> ranks_ndo;
 std::vector<int> ranks_ndo_nonempty;
 int maxndo = -1;
 
-double get_mtot_input()
+auto get_mtot_input() -> double
 // mass of the input model, which can be slightly different to the simulation mass
 // e.g. spherical shells mapped to cartesian grid
 {
   return mtot_input;
 }
 
-double wid_init(const int cellindex)
+auto wid_init(const int cellindex) -> double
 // for a uniform grid this is the extent along the x,y,z coordinate (x_2 - x_1, etc.)
 // for spherical grid this is the radial extent (r_outer - r_inner)
 // these values are for time globals::tmin
@@ -92,7 +92,7 @@ double wid_init(const int cellindex)
   }
 }
 
-double get_modelcell_assocvolume_tmin(const int modelgridindex)
+auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double
 // return the model cell volume (when mapped to the propagation cells) at globals::tmin
 // for a uniform cubic grid this is constant
 {
@@ -108,7 +108,7 @@ double get_modelcell_assocvolume_tmin(const int modelgridindex)
   }
 }
 
-double get_gridcell_volume_tmin(const int cellindex)
+auto get_gridcell_volume_tmin(const int cellindex) -> double
 // return the propagation cell volume at globals::tmin
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
 {
@@ -123,7 +123,7 @@ double get_gridcell_volume_tmin(const int cellindex)
   }
 }
 
-double get_cellcoordmax(const int cellindex, const int axis)
+auto get_cellcoordmax(const int cellindex, const int axis) -> double
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
 {
@@ -136,7 +136,7 @@ double get_cellcoordmax(const int cellindex, const int axis)
   assert_always(false);
 }
 
-double get_cellcoordmin(const int cellindex, const int axis)
+auto get_cellcoordmin(const int cellindex, const int axis) -> double
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
 {
@@ -144,7 +144,7 @@ double get_cellcoordmin(const int cellindex, const int axis)
   // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
 }
 
-int get_coordcellindexincrement(const int axis)
+auto get_coordcellindexincrement(const int axis) -> int
 // how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r direction)
 {
   switch (GRID_TYPE) {
@@ -170,7 +170,7 @@ int get_coordcellindexincrement(const int axis)
   }
 }
 
-int get_cellcoordpointnum(const int cellindex, const int axis)
+auto get_cellcoordpointnum(const int cellindex, const int axis) -> int
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
 {
   // return cell[cellindex].nxyz[axis];
@@ -199,11 +199,11 @@ int get_cellcoordpointnum(const int cellindex, const int axis)
   }
 }
 
-float get_rho_tmin(int modelgridindex) { return modelgrid[modelgridindex].rhoinit; }
+auto get_rho_tmin(int modelgridindex) -> float { return modelgrid[modelgridindex].rhoinit; }
 
-float get_rho(int modelgridindex) { return modelgrid[modelgridindex].rho; }
+auto get_rho(int modelgridindex) -> float { return modelgrid[modelgridindex].rho; }
 
-float get_nne(int modelgridindex) {
+auto get_nne(int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex < (get_npts_model() + 1));
 
@@ -212,7 +212,7 @@ float get_nne(int modelgridindex) {
   return nne;
 }
 
-float get_nnetot(int modelgridindex) {
+auto get_nnetot(int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex < (get_npts_model() + 1));
 
@@ -221,7 +221,7 @@ float get_nnetot(int modelgridindex) {
   return nnetot;
 }
 
-float get_ffegrp(int modelgridindex) { return modelgrid[modelgridindex].ffegrp; }
+auto get_ffegrp(int modelgridindex) -> float { return modelgrid[modelgridindex].ffegrp; }
 
 void set_elem_abundance(int modelgridindex, int element, float newabundance)
 // mass fraction of an element (all isotopes combined)
@@ -229,38 +229,38 @@ void set_elem_abundance(int modelgridindex, int element, float newabundance)
   modelgrid[modelgridindex].composition[element].abundance = newabundance;
 }
 
-double get_elem_numberdens(int modelgridindex, int element)
+auto get_elem_numberdens(int modelgridindex, int element) -> double
 // mass fraction of an element (all isotopes combined)
 {
   const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
   return get_elem_abundance(modelgridindex, element) / elem_meanweight * grid::get_rho(modelgridindex);
 }
 
-float get_kappagrey(int modelgridindex) {
+auto get_kappagrey(int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].kappagrey;
 }
 
-float get_Te(int modelgridindex) {
+auto get_Te(int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].Te;
 }
 
-float get_TR(int modelgridindex) {
+auto get_TR(int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].TR;
 }
 
-float get_TJ(int modelgridindex) {
+auto get_TJ(int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].TJ;
 }
 
-float get_W(int modelgridindex) {
+auto get_W(int modelgridindex) -> float {
   assert_testmodeonly(modelgridindex >= 0);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return modelgrid[modelgridindex].W;
@@ -294,18 +294,18 @@ void set_TJ(int modelgridindex, float TJ) { modelgrid[modelgridindex].TJ = TJ; }
 
 void set_W(int modelgridindex, float W) { modelgrid[modelgridindex].W = W; }
 
-enum model_types get_model_type() { return model_type; }
+auto get_model_type() -> enum model_types { return model_type; }
 
 void set_model_type(enum model_types model_type_value) { model_type = model_type_value; }
 
-int get_npts_model()
+auto get_npts_model() -> int
 // number of model grid cells
 {
   assert_always(npts_model > 0);
   return npts_model;
 }
 
-int get_nonempty_npts_model()
+auto get_nonempty_npts_model() -> int
 // number of model grid cells
 {
   assert_always(nonempty_npts_model > 0);
@@ -369,14 +369,14 @@ static void allocate_initradiobund() {
 #endif
 }
 
-int get_t_model()
+auto get_t_model() -> int
 // get time at which model input densities are defined
 {
   assert_testmodeonly(t_model > 0.);
   return t_model;
 }
 
-int get_cell_modelgridindex(int cellindex) {
+auto get_cell_modelgridindex(int cellindex) -> int {
   assert_testmodeonly(cellindex >= 0);
   assert_testmodeonly(cellindex < ngrid);
   const int mgi = cell[cellindex].modelgridindex;
@@ -391,7 +391,7 @@ static void set_cell_modelgridindex(int cellindex, int new_modelgridindex) {
   cell[cellindex].modelgridindex = new_modelgridindex;
 }
 
-int get_numassociatedcells(const int modelgridindex)
+auto get_numassociatedcells(const int modelgridindex) -> int
 // number of propagation cells associated with each modelgrid cell
 {
   assert_testmodeonly(mg_associated_cells != nullptr);
@@ -399,7 +399,7 @@ int get_numassociatedcells(const int modelgridindex)
   return mg_associated_cells[modelgridindex];
 }
 
-int get_modelcell_nonemptymgi(int mgi)
+auto get_modelcell_nonemptymgi(int mgi) -> int
 // get the index in the list of non-empty cells for a given model grid cell
 {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
@@ -413,7 +413,7 @@ int get_modelcell_nonemptymgi(int mgi)
   return nonemptymgi;
 }
 
-int get_mgi_of_nonemptymgi(int nonemptymgi)
+auto get_mgi_of_nonemptymgi(int nonemptymgi) -> int
 // get the index in the list of non-empty cells for a given model grid cell
 {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
@@ -428,7 +428,7 @@ int get_mgi_of_nonemptymgi(int nonemptymgi)
 
 // the abundances below are initial abundances at t_model
 
-float get_modelinitradioabund(const int modelgridindex, const int nucindex) {
+auto get_modelinitradioabund(const int modelgridindex, const int nucindex) -> float {
   // get the mass fraction of a nuclide in a model grid cell at t=t_model by nuclide index
 
   assert_testmodeonly(modelgrid[modelgridindex].initradioabund != nullptr);
@@ -446,12 +446,12 @@ static void set_modelinitradioabund(const int modelgridindex, const int nucindex
   modelgrid[modelgridindex].initradioabund[nucindex] = abund;
 }
 
-float get_stable_initabund(const int mgi, const int element) {
+auto get_stable_initabund(const int mgi, const int element) -> float {
   assert_testmodeonly(modelgrid[mgi].initmassfracstable != nullptr);
   return modelgrid[mgi].initmassfracstable[element];
 }
 
-float get_element_meanweight(const int mgi, const int element)
+auto get_element_meanweight(const int mgi, const int element) -> float
 // weight is in grams
 {
   const double mu = modelgrid[mgi].elem_meanweight[element];
@@ -467,7 +467,7 @@ void set_element_meanweight(const int mgi, const int element, float meanweight)
   modelgrid[mgi].elem_meanweight[element] = meanweight;
 }
 
-double get_electronfrac(const int modelgridindex) {
+auto get_electronfrac(const int modelgridindex) -> double {
   double nucleondens = 0.;
   for (int element = 0; element < get_nelements(); element++) {
     nucleondens += get_elem_numberdens(modelgridindex, element) * get_element_meanweight(modelgridindex, element) / MH;
@@ -475,13 +475,13 @@ double get_electronfrac(const int modelgridindex) {
   return get_nnetot(modelgridindex) / nucleondens;
 }
 
-double get_initelectronfrac(const int modelgridindex) { return modelgrid[modelgridindex].initelectronfrac; }
+auto get_initelectronfrac(const int modelgridindex) -> double { return modelgrid[modelgridindex].initelectronfrac; }
 
 static void set_initelectronfrac(const int modelgridindex, const double electronfrac) {
   modelgrid[modelgridindex].initelectronfrac = electronfrac;
 }
 
-double get_initenergyq(const int modelgridindex) {
+auto get_initenergyq(const int modelgridindex) -> double {
   // q: energy in the model at tmin per gram to use with USE_MODEL_INITIAL_ENERGY option [erg/g]
 
   return modelgrid[modelgridindex].initenergyq;
@@ -552,7 +552,7 @@ static void set_elem_stable_abund_from_total(const int mgi, const int element, c
   modelgrid[mgi].composition[element].abundance = isofracsum + massfracstable;
 }
 
-double get_cellradialpos(const int cellindex)
+auto get_cellradialpos(const int cellindex) -> double
 // get the radial distance from the origin to the centre of the cell
 {
   // spherical coordinate case is trivial
@@ -569,7 +569,7 @@ double get_cellradialpos(const int cellindex)
   return vec_len(dcen);
 }
 
-int get_elements_uppermost_ion(const int modelgridindex, const int element) {
+auto get_elements_uppermost_ion(const int modelgridindex, const int element) -> int {
   return modelgrid[modelgridindex].elements_uppermost_ion[element];
 }
 
@@ -1043,7 +1043,7 @@ static void abundances_read() {
   printout("done.\n");
 }
 
-static bool str_starts_with(const std::string &str, const std::string &strprefix) {
+static auto str_starts_with(const std::string &str, const std::string &strprefix) -> bool {
   // return true if str starts with strprefix
   return (str.rfind(strprefix, 0) == 0);
 }
@@ -1935,28 +1935,28 @@ static void setup_nstart_ndo() {
   }
 }
 
-int get_maxndo() {
+auto get_maxndo() -> int {
   if (ranks_ndo.empty()) {
     setup_nstart_ndo();
   }
   return maxndo;
 }
 
-int get_nstart(const int rank) {
+auto get_nstart(const int rank) -> int {
   if (ranks_ndo.empty()) {
     setup_nstart_ndo();
   }
   return ranks_nstart[rank];
 }
 
-int get_ndo(const int rank) {
+auto get_ndo(const int rank) -> int {
   if (ranks_ndo.empty()) {
     setup_nstart_ndo();
   }
   return ranks_ndo[rank];
 }
 
-int get_ndo_nonempty(const int rank) {
+auto get_ndo_nonempty(const int rank) -> int {
   if (ranks_ndo.empty()) {
     setup_nstart_ndo();
   }
@@ -2154,6 +2154,8 @@ void grid_init(int my_rank)
 #endif
 }
 
-double get_totmassradionuclide(const int z, const int a) { return totmassradionuclide[decay::get_nucindex(z, a)]; }
+auto get_totmassradionuclide(const int z, const int a) -> double {
+  return totmassradionuclide[decay::get_nucindex(z, a)];
+}
 
 }  // namespace grid

@@ -1454,7 +1454,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       time(nullptr) - time_update_grid_end_thisrank, time(nullptr) - sys_time_start_update_grid);
 }
 
-double calculate_populations(const int modelgridindex)
+auto calculate_populations(const int modelgridindex) -> double
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
@@ -1693,7 +1693,7 @@ double calculate_populations(const int modelgridindex)
   return nntot;
 }
 
-double calculate_electron_densities(const int modelgridindex)
+auto calculate_electron_densities(const int modelgridindex) -> double
 // Determines the free and total electron number densities
 // for a given cell and stores them, assuming ion populations (ground_level_pop and partfunc)
 // are fixed (determined by NLTE all-ion solver)

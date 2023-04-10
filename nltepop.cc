@@ -24,7 +24,7 @@ static FILE *nlte_file = nullptr;
 // can save memory by using a combined rate matrix at the cost of diagnostic information
 constexpr bool individual_process_matricies = true;
 
-static inline int get_nlte_vector_index(const int element, const int ion, const int level)
+static inline auto get_nlte_vector_index(const int element, const int ion, const int level) -> int
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into grid::modelgrid[modelgridindex].nlte_pops that contains all elements
 {
@@ -118,8 +118,9 @@ static void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_v
   }
 }
 
-static double get_total_rate(const int index_selected, const gsl_matrix *rate_matrix, const gsl_vector *popvec,
-                             const bool into_level, const bool only_levels_below, const bool only_levels_above) {
+static auto get_total_rate(const int index_selected, const gsl_matrix *rate_matrix, const gsl_vector *popvec,
+                           const bool into_level, const bool only_levels_below, const bool only_levels_above)
+    -> double {
   double total_rate = 0.;
   assert_always(!only_levels_below || !only_levels_above);
 
@@ -169,11 +170,12 @@ static double get_total_rate(const int index_selected, const gsl_matrix *rate_ma
   return total_rate;
 }
 
-static double get_total_rate_in(const int index_to, const gsl_matrix *rate_matrix, const gsl_vector *popvec) {
+static auto get_total_rate_in(const int index_to, const gsl_matrix *rate_matrix, const gsl_vector *popvec) -> double {
   return get_total_rate(index_to, rate_matrix, popvec, true, false, false);
 }
 
-static double get_total_rate_out(const int index_from, const gsl_matrix *rate_matrix, const gsl_vector *popvec) {
+static auto get_total_rate_out(const int index_from, const gsl_matrix *rate_matrix, const gsl_vector *popvec)
+    -> double {
   return get_total_rate(index_from, rate_matrix, popvec, false, false, false);
 }
 
@@ -401,8 +403,8 @@ static void nltepop_reset_element(const int modelgridindex, const int element) {
   }
 }
 
-static int get_element_nlte_dimension_and_slpartfunc(const int modelgridindex, const int element, const int nions,
-                                                     std::unique_ptr<double[]> &superlevel_partfunc) {
+static auto get_element_nlte_dimension_and_slpartfunc(const int modelgridindex, const int element, const int nions,
+                                                      std::unique_ptr<double[]> &superlevel_partfunc) -> int {
   int nlte_dimension = 0;
   for (int ion = 0; ion < nions; ion++) {
     superlevel_partfunc[ion] = 0.;
@@ -676,7 +678,7 @@ static void set_element_pops_lte(const int modelgridindex, const int element) {
   // }
 }
 
-static bool lumatrix_is_singular(const gsl_matrix *LU, const int element) {
+static auto lumatrix_is_singular(const gsl_matrix *LU, const int element) -> bool {
   size_t const n = LU->size1;
   bool is_singular = false;
 
@@ -699,8 +701,8 @@ static bool lumatrix_is_singular(const gsl_matrix *LU, const int element) {
   return is_singular;
 }
 
-static bool nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, const gsl_vector *balance_vector,
-                                 gsl_vector *popvec, const gsl_vector *pop_normfactor_vec)
+static auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matrix, const gsl_vector *balance_vector,
+                                 gsl_vector *popvec, const gsl_vector *pop_normfactor_vec) -> bool
 // solve rate_matrix * x = balance_vector,
 // then popvec[i] = x[i] / pop_norm_factor_vec[i]
 {
@@ -1134,7 +1136,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 }
 
 // this does single ion solving and will be deprecated at some point
-double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timestep)
+auto solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timestep) -> double
 // solves for nlte correction factors to level populations for levels
 {
   if (!(get_nlevels(element, ion) > 1)) {
@@ -1559,7 +1561,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
   return test_ratio;
 }
 
-double superlevel_boltzmann(const int modelgridindex, const int element, const int ion, const int level) {
+auto superlevel_boltzmann(const int modelgridindex, const int element, const int ion, const int level) -> double {
   const int superlevel_index = get_nlevels_nlte(element, ion) + 1;
   const double T_exc = LTEPOP_EXCITATIONTEMPERATURE;
   const double E_level = epsilon(element, ion, level);

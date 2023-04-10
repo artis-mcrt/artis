@@ -201,7 +201,7 @@ void read_temp_packetsfile(const int timestep, const int my_rank, struct packet 
   printout("done\n");
 }
 
-bool verify_temp_packetsfile(const int timestep, const int my_rank, const struct packet *const pkt) {
+auto verify_temp_packetsfile(const int timestep, const int my_rank, const struct packet *const pkt) -> bool {
   // return true if verification is good, otherwise return false
 
   // read packets binary file
