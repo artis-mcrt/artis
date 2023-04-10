@@ -2398,8 +2398,8 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
       // CMFGEN Fortran source code (Li, Dessart, Hillier 2012, doi:10.1111/j.1365-2966.2012.21198.x)
       // I had neglected this, so the limits of integration were incorrect. The fix didn't massively affect
       // ionisation rates or spectra, but it was a source of error that led to energy fractions not adding up to 100%
-      double int_eps_upper[SFPTS];
-      double prefactors[SFPTS];
+      std::array<double, SFPTS> int_eps_upper = {0};
+      std::array<double, SFPTS> prefactors = {0};
       for (int j = xsstartindex; j < SFPTS; j++) {
         const double endash = gsl_vector_get(envec, j);
         const double epsilon_upper = std::min((endash + ionpot_ev) / 2, endash);
