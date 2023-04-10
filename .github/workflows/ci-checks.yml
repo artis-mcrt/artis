@@ -5,9 +5,9 @@ on:
     push:
         branches-ignore:
             - classic*
-    pull_request:
-        branches-ignore:
-            - classic*
+    # pull_request:
+    #     branches-ignore:
+    #         - classic*
 
 jobs:
     cppcheck:
