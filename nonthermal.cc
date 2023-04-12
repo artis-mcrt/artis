@@ -696,7 +696,7 @@ static void nt_write_to_file(const int modelgridindex, const int timestep, const
 #pragma omp critical(nonthermal_out_file)
   {
 #endif
-    if (!nonthermal_initialized) {
+    if (!nonthermal_initialized || nonthermalfile == nullptr) {
       printout("Call to nonthermal_write_to_file before nonthermal_init");
       abort();
     }
