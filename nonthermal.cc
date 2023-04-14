@@ -166,8 +166,8 @@ static auto compare_excitation_fractions(const void *p1, const void *p2) -> int 
 
 // for ascending sort
 static auto compare_excitation_lineindicies(const void *p1, const void *p2) -> int {
-  const struct nt_excitation_struct *elem1 = (struct nt_excitation_struct *)p1;
-  const struct nt_excitation_struct *elem2 = (struct nt_excitation_struct *)p2;
+  const auto *elem1 = static_cast<const struct nt_excitation_struct *>(p1);
+  const auto *elem2 = static_cast<const struct nt_excitation_struct *>(p2);
 
   if (elem1->lineindex > elem2->lineindex) {
     return 1;
