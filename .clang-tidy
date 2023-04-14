@@ -5,6 +5,7 @@ Checks: >
     -abseil-*,
     -android-*,
     -altera-*,
+    -bugprone-easily-swappable-parameters,
     -llvmlibc-*,
     -cert-err34-c,
     -cppcoreguidelines-avoid-magic-numbers,
