@@ -2626,10 +2626,9 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
       "%d (nne=%g e-/cm^3)\n",
       SFPTS, SF_EMIN, SF_EMAX, modelgridindex, timestep, iteration, nne);
 
-  assert_always(SF_EMIN > 0.)
+  assert_always(SF_EMIN > 0.);
 
-      nt_solution[modelgridindex]
-          .nneperion_when_solved = nne_per_ion;
+  nt_solution[modelgridindex].nneperion_when_solved = nne_per_ion;
   nt_solution[modelgridindex].timestep_last_solved = timestep;
 
   bool const enable_sfexcitation = true;
