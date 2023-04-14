@@ -48,7 +48,7 @@ int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usuall
 
 struct gridcell *cell = nullptr;
 
-static long mem_usage_nltepops = 0;
+static size_t mem_usage_nltepops = 0;
 
 static int *mg_associated_cells = nullptr;
 static int *nonemptymgi_of_mgi = nullptr;

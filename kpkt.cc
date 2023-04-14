@@ -321,7 +321,7 @@ void setup_coolinglist() {
   /// \sum_{elements,ions}get_nlevels(element,ion) and free-free which is \sum_{elements} get_nions(element)-1
 
   set_ncoolingterms();
-  const long mem_usage_coolinglist = globals::ncoolingterms * sizeof(struct cellhistorycoolinglist);
+  const size_t mem_usage_coolinglist = globals::ncoolingterms * sizeof(struct cellhistorycoolinglist);
   coolinglist = static_cast<struct cellhistorycoolinglist *>(
       malloc(globals::ncoolingterms * sizeof(struct cellhistorycoolinglist)));
   printout("[info] mem_usage: coolinglist occupies %.3f MB\n", mem_usage_coolinglist / 1024. / 1024.);

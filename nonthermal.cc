@@ -513,7 +513,7 @@ void init(const int my_rank, const int ndo, const int ndo_nonempty) {
   nt_solution =
       static_cast<struct nt_solution_struct *>(calloc(grid::get_npts_model(), sizeof(struct nt_solution_struct)));
 
-  long mem_usage_yfunc = 0;
+  size_t mem_usage_yfunc = 0;
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     // should make these negative?
     nt_solution[modelgridindex].frac_heating = 0.97;

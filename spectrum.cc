@@ -541,7 +541,7 @@ void init_spectra(struct spec *spectra, const double nu_min, const double nu_max
 }
 
 static void alloc_emissionabsorption_spectra(spec *spectra) {
-  long mem_usage = 0;
+  size_t mem_usage = 0;
   const int proccount = get_proccount();
   spectra->do_emission_res = true;
 
@@ -579,7 +579,7 @@ static void alloc_emissionabsorption_spectra(spec *spectra) {
 }
 
 auto alloc_spectra(const bool do_emission_res) -> struct spec * {
-  long mem_usage = 0;
+  size_t mem_usage = 0;
   assert_always(globals::ntstep > 0);
   auto *spectra = static_cast<struct spec *>(malloc(sizeof(struct spec)));
   mem_usage += globals::ntstep * sizeof(struct spec);

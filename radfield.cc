@@ -330,11 +330,11 @@ void init(int my_rank, int ndo, int ndo_nonempty)
 
     setup_bin_boundaries();
 
-    const long mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin);
+    const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin);
     radfieldbins =
         static_cast<struct radfieldbin *>(malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin)));
 
-    const long mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution);
+    const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution);
 
 #ifdef MPI_ON
     {

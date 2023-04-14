@@ -67,7 +67,7 @@ const std::array<std::string, 24> inputlinecomments = {
 
 static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputtable, const int element,
                                   const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
-                                  const double phixs_threshold_ev, long *mem_usage_phixs) {
+                                  const double phixs_threshold_ev, size_t *mem_usage_phixs) {
   if (upperlevel_in >= 0)  // file gives photoionisation to a single target state only
   {
     int upperlevel = upperlevel_in - groundstate_index_in;
@@ -236,7 +236,7 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
 static void read_phixs_data(int phixs_file_version) {
   globals::nbfcontinua_ground = 0;
   globals::nbfcontinua = 0;
-  long mem_usage_phixs = 0;
+  size_t mem_usage_phixs = 0;
 
   printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version]);
 
@@ -1267,7 +1267,7 @@ static void setup_cellhistory() {
 #pragma omp parallel
   {
 #endif
-    long mem_usage_cellhistory = 0;
+    size_t mem_usage_cellhistory = 0;
     mem_usage_cellhistory += sizeof(struct cellhistory);
 
     printout("[info] input: initializing cellhistory for thread %d ...\n", tid);
@@ -1293,8 +1293,8 @@ static void setup_cellhistory() {
       abort();
     }
 
-    long chlevelblocksize = 0;
-    long chphixsblocksize = 0;
+    size_t chlevelblocksize = 0;
+    size_t chphixsblocksize = 0;
     int chtransblocksize = 0;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
@@ -1645,7 +1645,7 @@ static void setup_phixs_list() {
   globals::allcont = nonconstallcont;
   nonconstallcont = nullptr;
 
-  long mem_usage_photoionluts = 2 * TABLESIZE * globals::nbfcontinua * sizeof(double);
+  size_t mem_usage_photoionluts = 2 * TABLESIZE * globals::nbfcontinua * sizeof(double);
 
   if (globals::nbfcontinua > 0) {
 #ifdef MPI_ON
