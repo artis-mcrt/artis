@@ -710,7 +710,7 @@ static void nt_write_to_file(const int modelgridindex, const int timestep, const
         nonthermalfile_offset_iteration_zero = ftell(nonthermalfile);
       } else {
         // overwrite the non-thermal spectrum of a previous iteration of the same timestep and gridcell
-        fseek(nonthermalfile, nonthermalfile_offset_iteration_zero, SEEK_SET);
+        assert_always(fseek(nonthermalfile, nonthermalfile_offset_iteration_zero, SEEK_SET) == 0);
       }
     }
 
