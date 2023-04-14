@@ -298,7 +298,7 @@ static void read_auger_data() {
       float n_auger_elec_avg = 0;
       double prob_num_auger[NT_MAX_AUGER_ELECTRONS + 1];
       for (int a = 0; a < 9; a++) {
-        linepos = line + 26 + a * 5;
+        linepos = line + static_cast<ptrdiff_t>(26 + a * 5);
         // have to read out exactly 5 characters at a time because the columns are sometimes not separated by a space
         char strprob[6] = "00000";
         assert_always(sscanf(linepos, "%5c%n", strprob, &offset) == 1);
