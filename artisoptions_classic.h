@@ -245,4 +245,7 @@ constexpr bool USE_GSL_RANDOM = true;
 // once a new gridsave and packets*.tmp have been written, don't delete the previous set
 constexpr bool KEEP_ALL_RESTART_FILES = false;
 
+// multiply bound-free cooling coefficient by upper level population instead of the upper ion target level population
+constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
+
 #endif  // ARTISOPTIONS_H
