@@ -120,7 +120,7 @@ void packet_init(int my_rank, struct packet *pkt)
     // first en_cumulative[i] such that en_cumulative[i] > targetval
     auto upperval = std::upper_bound(en_cumulative.begin(), en_cumulative.end(), targetval);
     assert_always(upperval != en_cumulative.end());
-    const int cellindex = std::distance(en_cumulative.begin(), upperval);
+    const ptrdiff_t cellindex = std::distance(en_cumulative.begin(), upperval);
 
     place_pellet(e0, cellindex, n, &pkt[n]);
   }

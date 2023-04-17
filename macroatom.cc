@@ -146,7 +146,7 @@ static auto do_macroatom_internal_down_same(int element, int ion, int level, dou
   // first sum_internal_down_same[i] such that sum_internal_down_same[i] > targetval
   const double *const upperval =
       std::upper_bound(&sum_internal_down_same[0], &sum_internal_down_same[ndowntrans], targetval);
-  const int downtransindex = upperval - &sum_internal_down_same[0];
+  const ptrdiff_t downtransindex = upperval - &sum_internal_down_same[0];
 
   assert_always(downtransindex < ndowntrans);
   const int lower = globals::elements[element].ions[ion].levels[level].downtrans[downtransindex].targetlevelindex;
@@ -170,7 +170,7 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
   // first sum_epstrans_rad_deexc[i] such that sum_epstrans_rad_deexc[i] > targetval
   const double *const upperval =
       std::upper_bound(&sum_epstrans_rad_deexc[0], &sum_epstrans_rad_deexc[ndowntrans], targetval);
-  const int downtransindex = upperval - &sum_epstrans_rad_deexc[0];
+  const ptrdiff_t downtransindex = upperval - &sum_epstrans_rad_deexc[0];
 
   assert_always(downtransindex < ndowntrans);
   linelistindex = globals::elements[element].ions[ion].levels[level].downtrans[downtransindex].lineindex;
@@ -607,7 +607,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
         // first sum_internal_up_same[i] such that sum_internal_up_same[i] > targetval
         const double *const upperval =
             std::upper_bound(&sum_internal_up_same[0], &sum_internal_up_same[nuptrans], targetval);
-        const int uptransindex = upperval - &sum_internal_up_same[0];
+        const ptrdiff_t uptransindex = upperval - &sum_internal_up_same[0];
 
         assert_always(uptransindex < nuptrans);
         const int upper = globals::elements[element].ions[ion].levels[level].uptrans[uptransindex].targetlevelindex;
