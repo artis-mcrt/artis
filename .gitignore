@@ -20,3 +20,4 @@ artisoptions.h
 *.d
 build
 compile_commands.json
+*.dSYM/
