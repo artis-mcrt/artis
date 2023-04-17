@@ -807,7 +807,7 @@ static auto get_y(const int modelgridindex, const double energy_ev) -> double {
 #if (SF_USE_LOG_E_INCREMENT)
   const int index = log(energy_ev / SF_EMIN) / delta_log_e;
 #else
-  const int index = (energy_ev - SF_EMIN) / DELTA_E;
+  const int index = static_cast<int>((energy_ev - SF_EMIN) / DELTA_E);
 #endif
 
   // assert_always(index > 0);
