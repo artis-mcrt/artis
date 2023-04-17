@@ -1059,8 +1059,7 @@ static void set_all_corrphotoionrenorm(const int modelgridindex, const double va
 }
 
 static void update_grid_cell(const int mgi, const int nts, const int nts_prev, const int titer, const double tratmid,
-                             const double deltat, std::unique_ptr<double[]> &mps,
-                             struct heatingcoolingrates *heatingcoolingrates)
+                             const double deltat, struct heatingcoolingrates *heatingcoolingrates)
 // n is the modelgrid index
 {
   const int assoc_cells = grid::get_numassociatedcells(mgi);
@@ -1382,7 +1381,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
         // cellhistory_reset(-99, true);
 
         struct heatingcoolingrates heatingcoolingrates = {};
-        update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, mps, &heatingcoolingrates);
+        update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates);
 
         // maybe want to add omp ordered here if the modelgrid cells should be output in order
         // use_cellhist = true;
