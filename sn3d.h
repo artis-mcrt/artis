@@ -212,7 +212,7 @@ inline double rng_uniform_pos(void) {
   }
 }
 
-inline void rng_init(unsigned long int zseed) {
+inline void rng_init(unsigned long zseed) {
   if constexpr (USE_GSL_RANDOM) {
     rng = gsl_rng_alloc(gsl_rng_ran3);
     gsl_rng_set(rng, zseed);

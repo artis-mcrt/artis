@@ -1,5 +1,6 @@
-#ifndef ARTISOPTIONS_H
+#ifndef ARTISOPTIONS_H  // NOLINT(llvm-header-guard)
 #define ARTISOPTIONS_H
+// NOLINTBEGIN(modernize*,misc-unused-parameters)
 
 #include <cstdlib>
 
@@ -27,10 +28,10 @@ constexpr int NLTEITER = 30;
 // for now, all NLTE levels should be contiguous and include the ground state
 // (i.e. level indices < X should return true for some X)
 constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) {
-  if (element_z == 26 && ionstage == 2)
+  if (element_z == 26 && ionstage == 2) {
     return (level <= 197);
-  else
-    return (level <= 80);
+  }
+  return (level <= 80);
 }
 
 // atomic data and LTE
@@ -255,4 +256,5 @@ constexpr bool KEEP_ALL_RESTART_FILES = false;
 // multiply bound-free cooling coefficient by upper level population instead of the upper ion target level population
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
 
+// NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H

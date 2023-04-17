@@ -1,5 +1,6 @@
-#ifndef ARTISOPTIONS_H
+#ifndef ARTISOPTIONS_H  // NOLINT(llvm-header-guard)
 #define ARTISOPTIONS_H
+// NOLINTBEGIN(modernize*,misc-unused-parameters)
 
 #include <cstdlib>
 
@@ -236,4 +237,5 @@ constexpr bool KEEP_ALL_RESTART_FILES = false;
 // multiply bound-free cooling coefficient by upper level population instead of the upper ion target level population
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
 
+// NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H
