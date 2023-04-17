@@ -244,4 +244,7 @@ constexpr double FIXED_TIMESTEP_WIDTH = 0.1;
 
 constexpr double TIMESTEP_TRANSITION_TIME = 5;
 
+// multiply bound-free cooling coefficient by upper level population instead of the upper ion target level population
+constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
+
 #endif  // ARTISOPTIONS_H
