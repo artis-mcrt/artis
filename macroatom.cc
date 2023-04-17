@@ -936,7 +936,7 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
   const double coll_str_thisline = globals::elements[element].ions[ion].levels[upper].downtrans[i].coll_str;
   double C = 0.;
   if (coll_str_thisline < 0) {
-    const double forbidden = globals::elements[element].ions[ion].levels[upper].downtrans[i].forbidden;
+    const bool forbidden = globals::elements[element].ions[ion].levels[upper].downtrans[i].forbidden;
     if (!forbidden)  // alternative: (coll_strength > -1.5) i.e. to catch -1
     {
       /// permitted E1 electric dipole transitions
