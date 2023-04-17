@@ -614,7 +614,7 @@ static void nltepop_matrix_add_nt_ionisation(const int modelgridindex, const int
 
 static void nltepop_matrix_normalise(const int modelgridindex, const int element, gsl_matrix *rate_matrix,
                                      gsl_vector *pop_norm_factor_vec) {
-  const unsigned int nlte_dimension = pop_norm_factor_vec->size;
+  const int nlte_dimension = pop_norm_factor_vec->size;
   assert_always(pop_norm_factor_vec->size == nlte_dimension);
   assert_always(rate_matrix->size1 == nlte_dimension);
   assert_always(rate_matrix->size2 == nlte_dimension);
@@ -705,7 +705,7 @@ static auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matri
 // then popvec[i] = x[i] / pop_norm_factor_vec[i]
 {
   bool completed_solution = false;
-  const unsigned int nlte_dimension = balance_vector->size;
+  const int nlte_dimension = balance_vector->size;
   assert_always(pop_normfactor_vec->size == nlte_dimension);
   assert_always(rate_matrix->size1 == nlte_dimension);
   assert_always(rate_matrix->size2 == nlte_dimension);
