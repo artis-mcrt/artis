@@ -2,11 +2,13 @@
 #define SN3D_H
 
 #include <getopt.h>
-#include <signal.h>
+#include <gsl/gsl_integration.h>
 #include <sys/wait.h>
 
 #include <cassert>
 #include <chrono>
+#include <csignal>
+#include <cstdarg>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -57,7 +59,7 @@ extern int tid;
 template <typename... Args>
 static int printout(const char *format, Args... args) {
   if (globals::startofline[tid]) {
-    time_t now_time = time(nullptr);
+    const time_t now_time = time(nullptr);
     char s[32] = "";
     strftime(s, 32, "%FT%TZ", gmtime(&now_time));
     fprintf(output_file, "%s ", s);
@@ -68,7 +70,7 @@ static int printout(const char *format, Args... args) {
 
 static int printout(const char *format) {
   if (globals::startofline[tid]) {
-    time_t now_time = time(nullptr);
+    const time_t now_time = time(nullptr);
     char s[32] = "";
     strftime(s, 32, "%FT%TZ", gmtime(&now_time));
     fprintf(output_file, "%s ", s);
@@ -93,9 +95,6 @@ static inline int get_bflutindex(const int tempindex, const int element, const i
 #endif
 
 #define safeincrement(var) safeadd(var, 1)
-
-#include <gsl/gsl_integration.h>
-#include <stdarg.h>  /// MK: needed for printout()
 
 // #define DO_TITER
 
