@@ -819,11 +819,7 @@ auto rad_recombination_ratecoeff(const float T_e, const float nne, const int ele
   const int nphixstargets = get_nphixstargets(element, upperion - 1, lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     if (get_phixsupperlevel(element, upperion - 1, lower, phixstargetindex) == upper) {
-      R = nne *
-          get_spontrecombcoeff(
-              element, upperion - 1, lower, phixstargetindex,
-              T_e);  // +
-                     // stimrecombestimator_save[pkt_ptr->where*get_nelements()*get_max_nions()+element*get_max_nions()+(ion-1)]);
+      R = nne * get_spontrecombcoeff(element, upperion - 1, lower, phixstargetindex, T_e);
       // printout("calculate rad_recombination: element %d, ion %d, upper %d, -> lower %d, nne %g, spontrecombcoeff
       // %g\n",element,ion,upper,lower,nne,get_spontrecombcoeff(element, ion-1, lower, T_e));
 
@@ -840,15 +836,7 @@ auto rad_recombination_ratecoeff(const float T_e, const float nne, const int ele
 }
 
 auto stim_recombination_ratecoeff(const float nne, const int element, const int upperion, const int upper,
-                                  const int lower, const int modelgridindex) -> double
-/// radiative recombination rate: paperII 3.5.2
-// multiply by upper level population to get a rate per second
-{
-  // it's probably faster to only check this condition outside this function
-  // in a case where this wasn't checked, the function will return zero anyway
-  // if (upper > get_maxrecombininglevel(element, upperion))
-  //   return 0.;
-
+                                  const int lower, const int modelgridindex) -> double {
   double R = 0.0;
   const int nphixstargets = get_nphixstargets(element, upperion - 1, lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
