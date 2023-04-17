@@ -138,12 +138,13 @@ __host__ __device__ void calculate_cooling_rates(const int modelgridindex,
           /// --------------------
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level);
                phixstargetindex++) {
-            // const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-            // const double nnupperlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
-            const double nnupperion = ionstagepop(modelgridindex, element, ion + 1);
+            const double pop = (BFCOOLING_USELEVELPOPNOTIONPOP
+                                    ? get_levelpop(modelgridindex, element, ion + 1,
+                                                   get_phixsupperlevel(element, ion, level, phixstargetindex))
+                                    : ionstagepop(modelgridindex, element, ion + 1));
 
             const double C_fb_ion_thistarget =
-                get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperion * nne;
+                get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * pop * nne;
             C_fb_all += C_fb_ion_thistarget;
             C_ion += C_fb_ion_thistarget;
           }
@@ -283,11 +284,12 @@ __host__ __device__ static void calculate_kpkt_rates_ion(int modelgridindex, int
       /// free bound rates are calculated from the lower ion, but associated to the higher ion
       /// --------------------
       for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
-        // const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-        // const double nnupperlevel = get_levelpop(modelgridindex,element,ion + 1, upper);
-        const double nnupperion = ionstagepop(modelgridindex, element, ion + 1);
+        const double pop =
+            (BFCOOLING_USELEVELPOPNOTIONPOP ? get_levelpop(modelgridindex, element, ion + 1,
+                                                           get_phixsupperlevel(element, ion, level, phixstargetindex))
+                                            : ionstagepop(modelgridindex, element, ion + 1));
 
-        const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperion * nne;
+        const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * pop * nne;
         contrib += C;
         globals::cellhistory[tid].cooling_contrib[i] = contrib;
 
