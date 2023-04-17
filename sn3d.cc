@@ -788,25 +788,14 @@ auto main(int argc, char *argv[]) -> int {
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "w:")) != -1) {
-    switch (opt) {
-      case 'w': {
-        printout("Command line argument specifies wall time hours '%s', setting ", optarg);
-        const float walltimehours = strtof(optarg, nullptr);
-        walltimelimitseconds = walltimehours * 3600;
-        printout("walltimelimitseconds = %d\n", walltimelimitseconds);
-        break;
-      }
-
-        // case 'p':
-        //   printout("Command line argument specifies number of packets '%s', setting ", optarg);
-        //   npkts = (int) strtol(optarg,nullptr, 10);
-        //   printout("npkts = %d\n", npkts);
-        //   break;
-
-      default: {
-        fprintf(stderr, "Usage: %s [-w WALLTIMELIMITHOURS]\n", argv[0]);
-        exit(EXIT_FAILURE);
-      }
+    if (opt == 'w') {
+      printout("Command line argument specifies wall time hours '%s', setting ", optarg);
+      const float walltimehours = strtof(optarg, nullptr);
+      walltimelimitseconds = static_cast<int>(walltimehours * 3600);
+      printout("walltimelimitseconds = %d\n", walltimelimitseconds);
+    } else {
+      fprintf(stderr, "Usage: %s [-w WALLTIMELIMITHOURS]\n", argv[0]);
+      exit(EXIT_FAILURE);
     }
   }
 
