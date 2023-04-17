@@ -2128,7 +2128,10 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
             }
 
             if (excitationindex < nt_solution[modelgridindex].frac_excitations_list_size) {
-              double ratecoeffperdeposition = nt_frac_excitation_perlevelpop / epsilon_trans;
+              const double ratecoeffperdeposition = nt_frac_excitation_perlevelpop / epsilon_trans;
+
+              assert_always(ratecoeffperdeposition >= 0);
+              assert_always(std::isfinite(ratecoeffperdeposition));
 
               // if (get_coll_str(lineindex) < 0) // if collision strength is not defined, the rate coefficient is
               // unreliable
