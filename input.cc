@@ -1287,11 +1287,10 @@ static void setup_cellhistory() {
              globals::ncoolingterms * sizeof(double) / 1024. / 1024.);
 
     mem_usage_cellhistory += get_nelements() * sizeof(struct chelements);
-    if ((globals::cellhistory[tid].chelements =
-             static_cast<struct chelements *>(malloc(get_nelements() * sizeof(struct chelements)))) == nullptr) {
-      printout("[fatal] input: not enough memory to initialize cellhistory's elementlist ... abort\n");
-      abort();
-    }
+    globals::cellhistory[tid].chelements =
+        static_cast<struct chelements *>(malloc(get_nelements() * sizeof(struct chelements)));
+
+    assert_always(globals::cellhistory[tid].chelements != nullptr);
 
     size_t chlevelblocksize = 0;
     size_t chphixsblocksize = 0;
