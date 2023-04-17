@@ -1,6 +1,8 @@
 ---
 Checks: >
     *,
+    -*static-assert*,
+    -*avoid-c-arrays,
     -cert-dcl03-c,
     -abseil-*,
     -android-*,
@@ -9,6 +11,7 @@ Checks: >
     -bugprone-implicit-widening-of-multiplication-result,
     -bugprone-narrowing-conversions,
     -llvmlibc-*,
+    -cert-err33-c,
     -cert-err34-c,
     -cppcoreguidelines-avoid-magic-numbers,
     -cppcoreguidelines-avoid-non-const-global-variables,
@@ -26,7 +29,7 @@ Checks: >
     -hicpp-no-array-decay,
     -hicpp-no-malloc,
     -hicpp-signed-bitwise,
-    -*static-assert*,
+    -misc-use-anonymous-namespace,
     -readability-identifier-length,
     -readability-function-cognitive-complexity,
     -readability-magic-numbers,
