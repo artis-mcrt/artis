@@ -266,7 +266,7 @@ static void read_auger_data() {
   const int xrayl[7] = {0, 0, 1, 1, 0, 1, 1};
   const int xrayg[7] = {2, 2, 2, 4, 2, 2, 4};  // g statistical weight = 2j + 1
 
-  while (!feof(augerfile)) {
+  while (feof(augerfile) == 0) {
     if (line != fgets(line, 151, augerfile)) {
       break;
     }
@@ -2120,7 +2120,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
 #if NT_EXCITATION_ON
           // the atomic data set was limited for Fe V, which caused the ground multiplet to be massively
           // depleted, and then almost no recombination happened!
-          if (above_minionfraction && nt_frac_excitation_perlevelpop > 0 && !(Z == 26 && ionstage == 5)) {
+          if (above_minionfraction && nt_frac_excitation_perlevelpop > 0 && (Z != 26 || ionstage != 5)) {
             if (excitationindex >= nt_solution[modelgridindex].frac_excitations_list_size) {
               const int newsize = nt_solution[modelgridindex].frac_excitations_list_size + NT_BLOCKSIZEEXCITATION;
 
@@ -2559,7 +2559,7 @@ static void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec,
   // gsl_matrix_free(sfmatrix_LU); // if this matrix is different to sfmatrix then free it
   gsl_permutation_free(p);
 
-  if (!gsl_vector_isnonneg(yvec)) {
+  if (gsl_vector_isnonneg(yvec) == 0) {
     printout("solve_sfmatrix: WARNING: y function goes negative!\n");
   }
 }
