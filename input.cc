@@ -2189,8 +2189,8 @@ void update_parameterfile(int nts)
         const int commentstart = 25;
 
         // truncate any existing comment on the line
-        if (line.find("#") != std::string::npos) {
-          line.resize(line.find("#"));
+        if (line.find('#') != std::string::npos) {
+          line.resize(line.find('#'));
         }
 
         line.resize(commentstart, ' ');
