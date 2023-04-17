@@ -218,7 +218,7 @@ void pkt_action_counters_printout(const struct packet *const pkt, const int nts)
   printout("nt_stat_to_ionization = %d\n", get_counter(COUNTER_NT_STAT_TO_IONIZATION));
   printout("nt_stat_to_excitation = %d\n", get_counter(COUNTER_NT_STAT_TO_EXCITATION));
   printout("nt_stat_to_kpkt = %d\n", get_counter(COUNTER_NT_STAT_TO_KPKT));
-  nonthermal::nt_print_stats(nts, modelvolume, deltat);
+  nonthermal::nt_print_stats(modelvolume, deltat);
 
   printout("escounter = %d\n", get_counter(COUNTER_ESCOUNTER));
   printout("cellcrossing  = %d\n", get_counter(COUNTER_CELLCROSSINGS));

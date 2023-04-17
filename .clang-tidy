@@ -6,6 +6,7 @@ Checks: >
     -android-*,
     -altera-*,
     -bugprone-easily-swappable-parameters,
+    -bugprone-implicit-widening-of-multiplication-result,
     -bugprone-narrowing-conversions,
     -llvmlibc-*,
     -cert-err34-c,
@@ -20,9 +21,11 @@ Checks: >
     -clang-diagnostic-error,
     -fuchsia-*,
     -google-readability-todo,
+    -google-runtime-int,
     -hicpp-vararg,
     -hicpp-no-array-decay,
     -hicpp-no-malloc,
+    -hicpp-signed-bitwise,
     -*static-assert*,
     -readability-identifier-length,
     -readability-function-cognitive-complexity,
@@ -36,7 +39,10 @@ CheckOptions:
       value: google
     - key: cppcoreguidelines-init-variables.MathHeader
       value: <cmath>
-    - key: cppcoreguidelines-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
-      value: 'false'
     - key: cppcoreguidelines-narrowing-conversions.IgnoreConversionFromTypes
       value: size_t;ptrdiff_t;size_type;difference_type;time_t
+    - key: cppcoreguidelines-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
+      value: 'false'
+    - key: cppcoreguidelines-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
+      value: 'false'
+

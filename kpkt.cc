@@ -542,7 +542,7 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
     auto *const selectedvalue =
         std::upper_bound(&globals::cellhistory[tid].cooling_contrib[ilow],
                          &globals::cellhistory[tid].cooling_contrib[ihigh + 1], rndcool_ion_process);
-    const int i = selectedvalue - globals::cellhistory[tid].cooling_contrib;
+    const ptrdiff_t i = selectedvalue - globals::cellhistory[tid].cooling_contrib;
 
     if (i > ihigh) {
       printout("do_kpkt: error occured while selecting a cooling channel: low %d, high %d, i %d, rndcool %g\n", ilow,
@@ -599,33 +599,22 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
       /// co-moving frame.
       const int element = coolinglist[i].element;
       const int lowerion = coolinglist[i].ion;
-      const int level = coolinglist[i].level;
+      const int lowerlevel = coolinglist[i].level;
       const int upper = coolinglist[i].upperlevel;
-      // const double nu_threshold = get_phixs_threshold(element, ion, level, phixstargetindex)
-
-      // printout("[debug] do_kpkt: k-pkt -> free-bound\n");
-      // printout("[debug] do_kpkt: element  %d, ion %d, level %d, upper %d, nu_threshold
-      // %g\n",element,ion,level,upper,nu_threshold);
+      // const double nu_threshold = get_phixs_threshold(element, ion, lowerlevel, phixstargetindex)
 
       /// then randomly sample the packets frequency according to the continuums
-      /// energy distribution and set some flags
-      // zrand = rng_uniform();   /// delivers zrand in [0,1[
-      // zrand = 1. - zrand;   /// convert it to ]0,1]
-      // pkt_ptr->nu_cmf = nu_threshold * (1 - KB*T_e/H/nu_threshold*log(zrand));
-      // pkt_ptr->nu_cmf = nu_threshold * (1+sqrt(1+(4*KB*T_e/H/nu_threshold)))/2 * (1 -
-      // KB*T_e/H/nu_threshold*log(zrand)); pkt_ptr->nu_cmf = nu_threshold;
+      /// energy distribution
 
       // Sample the packets comoving frame frequency according to paperII 4.2.2
       // zrand = rng_uniform();
       // if (zrand < 0.5)
-      { pkt_ptr->nu_cmf = select_continuum_nu(element, lowerion, level, upper, T_e); }
+      { pkt_ptr->nu_cmf = select_continuum_nu(element, lowerion, lowerlevel, upper, T_e); }
       // else
       // {
       //   ///Emitt like a BB
       //   pkt_ptr->nu_cmf = sample_planck(T_e);
       // }
-
-      // printout("[debug] do_kpkt: pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
 
       // and then emitt the packet randomly in the comoving frame
       emitt_rpkt(pkt_ptr);
@@ -642,7 +631,7 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
       stats::increment(stats::COUNTER_K_STAT_TO_R_FB);
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 7;
-      pkt_ptr->emissiontype = get_continuumindex(element, lowerion, level, upper);
+      pkt_ptr->emissiontype = get_continuumindex(element, lowerion, lowerlevel, upper);
       pkt_ptr->trueemissiontype = pkt_ptr->emissiontype;
       vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
       pkt_ptr->em_time = pkt_ptr->prop_time;

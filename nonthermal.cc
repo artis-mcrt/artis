@@ -1153,7 +1153,7 @@ static auto calculate_frac_heating(const int modelgridindex) -> float
 #else
   const double firstdeltaendash = DELTA_E;
 #endif
-  const int nsteps = ceil(SF_EMIN / firstdeltaendash) * 10;
+  const int nsteps = static_cast<int>(ceil(SF_EMIN / firstdeltaendash) * 10);
   const double delta_endash = SF_EMIN / nsteps;
   for (int j = 0; j < nsteps; j++) {
     const double endash = SF_EMIN * j / nsteps;
@@ -2963,7 +2963,7 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
 
 void nt_reset_stats() { nt_energy_deposited = 0.; }
 
-void nt_print_stats(const int timestep, const double modelvolume, const double deltat) {
+void nt_print_stats(const double modelvolume, const double deltat) {
   const double deposition_rate_density_montecarlo = nt_energy_deposited / EV / modelvolume / deltat;
 
   // deposition rate density for all cells has not been communicated yet - could change this

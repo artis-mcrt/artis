@@ -621,7 +621,7 @@ static void nltepop_matrix_normalise(const int modelgridindex, const int element
 
   // TODO: consider replacing normalisation by LTE populations with
   // GSL's gsl_linalg_balance_matrix(gsl_matrix * A, gsl_vector * D) function instead
-  for (unsigned int column = 0; column < nlte_dimension; column++) {
+  for (int column = 0; column < nlte_dimension; column++) {
     int ion = -1;
     int level = -1;
     get_ion_level_of_nlte_vector_index(column, element, &ion, &level);
@@ -782,7 +782,7 @@ static auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matri
     gsl_vector_mul(popvec, pop_normfactor_vec);
     // popvec will be used contains the real population densities
 
-    for (unsigned int row = 0; row < nlte_dimension; row++) {
+    for (int row = 0; row < nlte_dimension; row++) {
       double recovered_balance_vector_elem = 0.;
       gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, row);
       gsl_blas_ddot(&row_view.vector, x, &recovered_balance_vector_elem);
