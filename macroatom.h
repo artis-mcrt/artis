@@ -39,8 +39,8 @@ double rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int 
                                   float A_ul, double upperstatweight, double t_current);
 double rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lower, int i, double epsilon_trans,
                                 int lineindex, double t_current);
-double rad_recombination_ratecoeff(float T_e, float nne, int element, int ion, int upper, int lower,
-                                   int modelgridindex);
+double rad_recombination_ratecoeff(float T_e, float nne, int element, int upperion, int upperionlevel,
+                                   int lowerionlevel, int modelgridindex);
 double stim_recombination_ratecoeff(float nne, int element, int upperion, int upper, int lower, int modelgridindex);
 
 double col_recombination_ratecoeff(int modelgridindex, int element, int upperion, int upper, int lower,

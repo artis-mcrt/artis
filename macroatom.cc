@@ -806,25 +806,24 @@ auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const
 }
 
 auto rad_recombination_ratecoeff(const float T_e, const float nne, const int element, const int upperion,
-                                 const int upper, const int lower, const int modelgridindex) -> double
+                                 const int upperionlevel, const int lowerionlevel, const int modelgridindex) -> double
 /// radiative recombination rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
 {
   // it's probably faster to only check this condition outside this function
   // in a case where this wasn't checked, the function will return zero anyway
-  // if (upper > get_maxrecombininglevel(element, upperion))
+  // if (upperionlevel > get_maxrecombininglevel(element, upperion))
   //   return 0.;
 
   double R = 0.0;
-  const int nphixstargets = get_nphixstargets(element, upperion - 1, lower);
+  const int lowerion = upperion - 1;
+  const int nphixstargets = get_nphixstargets(element, lowerion, lowerionlevel);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-    if (get_phixsupperlevel(element, upperion - 1, lower, phixstargetindex) == upper) {
-      R = nne * get_spontrecombcoeff(element, upperion - 1, lower, phixstargetindex, T_e);
-      // printout("calculate rad_recombination: element %d, ion %d, upper %d, -> lower %d, nne %g, spontrecombcoeff
-      // %g\n",element,ion,upper,lower,nne,get_spontrecombcoeff(element, ion-1, lower, T_e));
+    if (get_phixsupperlevel(element, lowerion, lowerionlevel, phixstargetindex) == upperionlevel) {
+      R = nne * get_spontrecombcoeff(element, lowerion, lowerionlevel, phixstargetindex, T_e);
 
       if (modelgridindex >= 0 && SEPARATE_STIMRECOMB) {
-        R += nne * get_stimrecombcoeff(element, upperion - 1, lower, phixstargetindex, modelgridindex);
+        R += nne * get_stimrecombcoeff(element, lowerion, lowerionlevel, phixstargetindex, modelgridindex);
       }
       break;
     }
