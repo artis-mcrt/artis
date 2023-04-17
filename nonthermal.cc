@@ -2139,6 +2139,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
               nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition =
                   ratecoeffperdeposition;
               nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex = lineindex;
+              nt_solution[modelgridindex].frac_excitations_list[excitationindex].loweruptransindex = t;
               (excitationindex)++;
             }
           }
