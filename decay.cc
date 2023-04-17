@@ -144,7 +144,7 @@ static void printout_nuclidemeanlife(const int z, const int a) {
   }
 }
 
-constexpr auto decay_daughter_z(const int z_parent, const int a_parent, int decaytype) -> int
+constexpr auto decay_daughter_z(const int z_parent, const int /*a_parent*/, int decaytype) -> int
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
   assert_always(decaytype >= 0);
@@ -171,7 +171,7 @@ constexpr auto decay_daughter_z(const int z_parent, const int a_parent, int deca
   return -1;  // no daughter
 }
 
-constexpr auto decay_daughter_a(const int z_parent, const int a_parent, int decaytype) -> int
+constexpr auto decay_daughter_a(const int /*z_parent*/, const int a_parent, int decaytype) -> int
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
   switch (static_cast<enum decaytypes>(decaytype)) {
@@ -344,7 +344,7 @@ static void printout_decaytype(const int decaytype) {
 }
 
 static void printout_decaypath(const int decaypathindex) {
-  assert_always(decaypaths.size() > 0);
+  assert_always(!decaypaths.empty());
   printout(" decaypath %d: ", decaypathindex);
   printout_nuclidename(decaypaths[decaypathindex].z[0], decaypaths[decaypathindex].a[0]);
   printout_nuclidemeanlife(decaypaths[decaypathindex].z[0], decaypaths[decaypathindex].a[0]);
@@ -441,11 +441,7 @@ constexpr auto operator<(const struct decaypath &d1, const struct decaypath &d2)
     }
   }
   // one is an extension of the other
-  if (matchingoverlap && d1.pathlength < d2.pathlength) {
-    return true;
-  }
-
-  return false;
+  return matchingoverlap && d1.pathlength < d2.pathlength;
 }
 
 static void find_decaypaths() {
@@ -517,7 +513,7 @@ auto get_nucstring_a(const std::string &strnuc) -> int
   // find first digit character
   size_t i = 0;
   for (; i < strnuc.length(); i++) {
-    if (isdigit(strnuc[i])) {
+    if (isdigit(strnuc[i]) != 0) {
       break;
     }
   }
@@ -609,7 +605,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
   nuclides.back().meanlife = 0.0211395 * DAY;
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
 
-  if (custom_alist.size() > 0) {
+  if (!custom_alist.empty()) {
     std::ifstream fbetaminus("betaminusdecays.txt");
     assert_always(fbetaminus.is_open());
     std::string line;
@@ -834,7 +830,7 @@ static auto get_nuc_massfrac(const int modelgridindex, const int z, const int a,
     // match 4He abundance to alpha decay of any nucleus (no continue), otherwise check daughter nuclide matches
     if (z != 2 || a != 4 ||
         decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1] != DECAYTYPE_ALPHA) {
-      if (nuc_exists_z_a && !(z_end == z && a_end == a))  // requested nuclide is in network, so match last nuc in chain
+      if (nuc_exists_z_a && (z_end != z || a_end != a))  // requested nuclide is in network, so match last nuc in chain
       {
         continue;
       }
@@ -1240,7 +1236,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
       const int a = get_nuc_a(nucindex);
       if (nuc_z == atomic_number) {
         // this nucleus is an isotope of the element
-        if (!a_isotopes.count(a)) {
+        if (a_isotopes.count(a) == 0u) {
           a_isotopes.insert(a);
           const double nuc_massfrac = get_nuc_massfrac(modelgridindex, atomic_number, a, t_current);
           isomassfracsum += nuc_massfrac;
@@ -1253,7 +1249,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
           const int daughter_a = decay_daughter_a(nuc_z, a, dectypeindex);
           if (daughter_z == atomic_number && !nuc_exists(daughter_z, daughter_a) &&
               get_nuc_decaybranchprob(nuc_z, a, dectypeindex) > 0.) {
-            if (!a_isotopes.count(daughter_a)) {
+            if (a_isotopes.count(daughter_a) == 0u) {
               a_isotopes.insert(daughter_a);
               // nuclide decays into correct atomic number but outside of the radionuclide list
               // note: there could also be stable isotopes of this element included in stable_initabund(z), but
@@ -1267,7 +1263,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
       }
     }
 
-    if (atomic_number == 2 && !nuc_exists(2, 4) && !a_isotopes.count(4)) {
+    if (atomic_number == 2 && !nuc_exists(2, 4) && (a_isotopes.count(4) == 0u)) {
       // 4He will not be identified as a daughter nucleus of above decays, so add it in
       const double nuc_massfrac = get_nuc_massfrac(modelgridindex, 2, 4, t_current);
       isomassfracsum += nuc_massfrac;
@@ -1337,7 +1333,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
     const int nuc_z = get_nuc_z(nucindex);
     const int nuc_a = get_nuc_a(nucindex);
     if (nuc_z == atomic_number) {  // isotope of this element is on the network
-      if (!a_isotopes.count(nuc_a)) {
+      if (a_isotopes.count(nuc_a) == 0u) {
         a_isotopes.insert(nuc_a);
         // radioactive isotope of the element
         const double massfrac = get_nuc_massfrac(modelgridindex, atomic_number, nuc_a, t_current);
@@ -1354,7 +1350,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
         // if the nucleus exists, it will be picked up by the upper condition
         if (daughter_z == atomic_number && !nuc_exists(daughter_z, daughter_a) &&
             get_nuc_decaybranchprob(nucindex, dectypeindex) > 0.) {
-          if (!a_isotopes.count(nuc_a)) {
+          if (a_isotopes.count(nuc_a) == 0u) {
             a_isotopes.insert(nuc_a);
             // nuclide decays into correct atomic number but outside of the radionuclide list. Daughter is assumed
             // stable
