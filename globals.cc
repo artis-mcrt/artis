@@ -14,9 +14,6 @@ double syn_dir[3];  // vector pointing from origin to observer
 // RAY rays[NRAYS_SYN];
 struct time *time_step = nullptr;
 
-int nsyn_time;
-double time_syn[MSYN_TIME];
-
 int emiss_offset;  // the index in the line list of the 1st line for which
                    // an emissivity estimator is recorded
 int emiss_max;     // actual number of frequency points in emissivity grid

@@ -42,7 +42,7 @@ const std::array<std::string, 24> inputlinecomments = {
     " 2: itstep ftstep: timestep number range start (inclusive) and stop (not inclusive)",
     " 3: tmin_days tmax_days: start and end times [day]",
     " 4: nusyn_min_mev nusyn_max_mev: lowest and highest frequency to synthesise [MeV]",
-    " 5: nsyn_time: number of times for synthesis",
+    " 5: UNUSED nsyn_time: number of times for synthesis",
     " 6: start and end times for synthesis",
     " 7: model_type: number of dimensions (1, 2, or 3)",
     " 8: UNUSED compute r-light curve (1: no estimators, 2: thin cells, 3: thick cells, 4: gamma-ray heating)",
@@ -1962,16 +1962,12 @@ void read_parameterfile(int rank)
   globals::nusyn_min = syn_min_mev * MEV / H;  // lowest frequency to synthesise
   globals::nusyn_max = syn_max_mev * MEV / H;  // highest frequency to synthesise
 
-  assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> globals::nsyn_time;  // number of times for synthesis
+  assert_always(get_noncommentline(file, line));  // UNUSED number of times for synthesis
 
   float dum2 = 0.;
   float dum3 = 0.;
   assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> dum2 >> dum3;  // start and end times for synthesis
-  for (int i = 0; i < globals::nsyn_time; i++) {
-    globals::time_syn[i] = exp(log(dum2) + (dum3 * i)) * DAY;
-  }
 
   assert_always(get_noncommentline(file, line));
   int dum1 = 0;
@@ -1984,12 +1980,9 @@ void read_parameterfile(int rank)
     set_model_type(grid::RHO_3D_READ);
   }
 
-  assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> dum1;  // UNUSED compute the r-light curve?
+  assert_always(get_noncommentline(file, line));  // UNUSED compute the r-light curve?
 
-  assert_always(get_noncommentline(file, line));
-  int n_out_it = 0;
-  std::stringstream(line) >> n_out_it;  // UNUSED number of iterations
+  assert_always(get_noncommentline(file, line));  // UNUSED number of iterations
 
   assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> dum2;        // change speed of light

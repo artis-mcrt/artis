@@ -206,10 +206,6 @@ extern double syn_dir[3];  // vector pointing from origin to observer
 
 extern struct time *time_step;
 
-constexpr int MSYN_TIME = 100;
-extern int nsyn_time;
-extern double time_syn[MSYN_TIME];
-
 constexpr int EMISS_MAX = 2;
 extern int emiss_offset;
 extern int emiss_max;
