@@ -134,7 +134,7 @@ void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrate
             const double pop = (BFCOOLING_USELEVELPOPNOTIONPOP
                                     ? get_levelpop(modelgridindex, element, ion + 1,
                                                    get_phixsupperlevel(element, ion, level, phixstargetindex))
-                                    : ionstagepop(modelgridindex, element, ion + 1));
+                                    : nnupperion);
 
             const double C_fb_ion_thistarget =
                 get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * pop * nne;
@@ -265,7 +265,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
         const double pop =
             (BFCOOLING_USELEVELPOPNOTIONPOP ? get_levelpop(modelgridindex, element, ion + 1,
                                                            get_phixsupperlevel(element, ion, level, phixstargetindex))
-                                            : ionstagepop(modelgridindex, element, ion + 1));
+                                            : nnupperion);
         const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * pop * nne;
         C_ion += C;
 
