@@ -232,7 +232,7 @@ void pkt_action_counters_printout(const struct packet *const pkt, const int nts)
 
 void reduce_estimators() {
 #ifdef MPI_ON
-  MPI_Allreduce(MPI_IN_PLACE, &stats::ionstats, grid::get_npts_model() * get_includedions() * stats::ION_STAT_COUNT,
+  MPI_Allreduce(MPI_IN_PLACE, stats::ionstats, grid::get_npts_model() * get_includedions() * stats::ION_STAT_COUNT,
                 MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #endif
 }
