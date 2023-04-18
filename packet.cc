@@ -250,8 +250,7 @@ void read_packets(char filename[], struct packet *pkt) {
     if (i > globals::npkts - 1) {
       printout(
           "ERROR: More data found beyond packet %d (expecting %d packets). Recompile exspec with the correct number "
-          "of "
-          "packets. Run (wc -l < packets00_0000.out) to count them.\n",
+          "of packets. Run (wc -l < packets00_0000.out) to count them.\n",
           packets_read, globals::npkts);
       abort();
     }
