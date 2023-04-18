@@ -568,8 +568,8 @@ static inline auto select_bin(double nu) -> int {
   }
 
   // find the lowest frequency bin with radfieldbin_nu_upper > nu
-  const auto *bin = std::upper_bound(&radfieldbin_nu_upper[0], &radfieldbin_nu_upper[RADFIELDBINCOUNT], nu);
-  const int binindex = std::distance(bin, &radfieldbin_nu_upper[0]);
+  auto *bin = std::upper_bound(&radfieldbin_nu_upper[0], &radfieldbin_nu_upper[RADFIELDBINCOUNT], nu);
+  const int binindex = std::distance(&radfieldbin_nu_upper[0], bin);
   if (binindex >= RADFIELDBINCOUNT) {
     // out of range, nu higher than highest bin's upper boundary
     return -1;
