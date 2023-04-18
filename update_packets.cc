@@ -100,13 +100,11 @@ static void update_pellet(struct packet *pkt_ptr, const int nts, const double t2
         safeadd(globals::time_step[nts].electron_emission, pkt_ptr->e_cmf);
         pkt_ptr->em_time = pkt_ptr->prop_time;
         pkt_ptr->type = TYPE_NONTHERMAL_PREDEPOSIT;
-        // pkt_ptr->type = TYPE_NTLEPTON;
         pkt_ptr->absorptiontype = -10;
       } else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA) {
         safeadd(globals::time_step[nts].alpha_emission, pkt_ptr->e_cmf);
         pkt_ptr->em_time = pkt_ptr->prop_time;
         pkt_ptr->type = TYPE_NONTHERMAL_PREDEPOSIT;
-        // pkt_ptr->type = TYPE_NTLEPTON;
         pkt_ptr->absorptiontype = -10;
       }
     } else {
@@ -137,7 +135,7 @@ static void update_pellet(struct packet *pkt_ptr, const int nts, const double t2
 static void do_packet(struct packet *const pkt_ptr, const double t2, const int nts)
 // update a packet no further than time t2
 {
-  const int pkt_type = pkt_ptr->type;  // avoid dereferencing multiple times
+  const int pkt_type = pkt_ptr->type;
 
   switch (pkt_type) {
     case TYPE_RADIOACTIVE_PELLET: {
