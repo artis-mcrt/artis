@@ -294,7 +294,6 @@ static void read_auger_data() {
       assert_always(sscanf(linepos, "%d %g %g %d%n", &shellnum, &ionpot_ev, &en_auger_ev_total_nocorrection,
                            &epsilon_e3, &offset) == 4);
       assert_always(offset == 20);
-      linepos += offset + 1;  // skip one space after so all following columns are exactly 5 characters each
 
       float n_auger_elec_avg = 0;
       double prob_num_auger[NT_MAX_AUGER_ELECTRONS + 1];
@@ -304,7 +303,6 @@ static void read_auger_data() {
         char strprob[6] = "00000";
         assert_always(sscanf(linepos, "%5c%n", strprob, &offset) == 1);
         assert_always(offset == 5);
-        linepos += offset;
         strprob[5] = '\0';
 
         int probnaugerelece4 = -1;
