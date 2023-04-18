@@ -126,7 +126,7 @@ static void read_decaydata() {
     assert_always(elnamelen < 7);
     char elnamelower[8];
     for (size_t i = 0; i < elnamelen; i++) {
-      elnamelower[i] = tolower(elname[i]);
+      elnamelower[i] = static_cast<char>(tolower(elname[i]));
     }
     elnamelower[elnamelen] = '\0';
 
@@ -181,7 +181,7 @@ void init_gamma_linelist() {
     gamma_spectra[FAKE_GAM_LINE_ID].probability[i] = 0.0;
   }
 
-  // /Now do the sorting.
+  // Now do the sorting.
 
   int total_lines = 0;
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
