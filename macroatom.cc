@@ -744,12 +744,13 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
   return R;
 }
 
-auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower, const int i,
-                              const double epsilon_trans, int lineindex, const double t_current) -> double
+auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower,
+                              const int uptransindex, const double epsilon_trans, int lineindex, const double t_current)
+    -> double
 /// radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
 {
-  const int upper = globals::elements[element].ions[ion].levels[lower].uptrans[i].targetlevelindex;
+  const int upper = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].targetlevelindex;
 
   const double n_u = get_levelpop(modelgridindex, element, ion, upper);
   const double n_l = get_levelpop(modelgridindex, element, ion, lower);
@@ -757,7 +758,7 @@ auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const
   // if ((n_u >= 1.1 * MINPOP) && (n_l >= 1.1 * MINPOP))
   {
     const double nu_trans = epsilon_trans / H;
-    const double A_ul = globals::elements[element].ions[ion].levels[lower].uptrans[i].einstein_A;
+    const double A_ul = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].einstein_A;
     const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
     const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
@@ -926,16 +927,17 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
 }
 
 auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans, int element, int ion,
-                                int upper, int i) -> double
+                                int upper, int downtransindex) -> double
 // multiply by upper level population to get a rate per second
 {
-  const int lower = globals::elements[element].ions[ion].levels[upper].downtrans[i].targetlevelindex;
+  const int lower = globals::elements[element].ions[ion].levels[upper].downtrans[downtransindex].targetlevelindex;
   const double upperstatweight = stat_weight(element, ion, upper);
   const double lowerstatweight = stat_weight(element, ion, lower);
-  const double coll_str_thisline = globals::elements[element].ions[ion].levels[upper].downtrans[i].coll_str;
+  const double coll_str_thisline =
+      globals::elements[element].ions[ion].levels[upper].downtrans[downtransindex].coll_str;
   double C = 0.;
   if (coll_str_thisline < 0) {
-    const bool forbidden = globals::elements[element].ions[ion].levels[upper].downtrans[i].forbidden;
+    const bool forbidden = globals::elements[element].ions[ion].levels[upper].downtrans[downtransindex].forbidden;
     if (!forbidden)  // alternative: (coll_strength > -1.5) i.e. to catch -1
     {
       /// permitted E1 electric dipole transitions
@@ -944,7 +946,8 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
       // f = osc_strength(element,ion,upper,lower);
       // C = n_u * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) *
       // stat_weight(element,ion,lower)/stat_weight(element,ion,upper)  * nne * f;
-      const double trans_osc_strength = globals::elements[element].ions[ion].levels[upper].downtrans[i].osc_strength;
+      const double trans_osc_strength =
+          globals::elements[element].ions[ion].levels[upper].downtrans[downtransindex].osc_strength;
 
       const double eoverkt = epsilon_trans / (KB * T_e);
       /// Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
@@ -982,20 +985,21 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
   return C;
 }
 
-auto col_excitation_ratecoeff(const float T_e, const float nne, int element, int ion, int lower, int i,
+auto col_excitation_ratecoeff(const float T_e, const float nne, int element, int ion, int lower, int uptransindex,
                               const double epsilon_trans, const double lowerstatweight) -> double
 // multiply by lower level population to get a rate per second
 {
   // assert_testmodeonly(i < get_nuptrans(element, ion, lower));
   double C = 0.;
-  const double coll_strength = globals::elements[element].ions[ion].levels[lower].uptrans[i].coll_str;
+  const double coll_strength = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].coll_str;
   const double eoverkt = epsilon_trans / (KB * T_e);
 
   if (coll_strength < 0) {
-    const bool forbidden = globals::elements[element].ions[ion].levels[lower].uptrans[i].forbidden;
+    const bool forbidden = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].forbidden;
     if (!forbidden)  // alternative: (coll_strength > -1.5) i.e. to catch -1
     {
-      const double trans_osc_strength = globals::elements[element].ions[ion].levels[lower].uptrans[i].osc_strength;
+      const double trans_osc_strength =
+          globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].osc_strength;
       /// permitted E1 electric dipole transitions
       /// collisional excitation: formula valid only for atoms!!!!!!!!!!!
       /// Rutten script eq. 3.32. p.50
@@ -1017,7 +1021,7 @@ auto col_excitation_ratecoeff(const float T_e, const float nne, int element, int
     {
       // forbidden transitions: magnetic dipole, electric quadropole...
       // Axelrod's approximation (thesis 1980)
-      const int upper = globals::elements[element].ions[ion].levels[lower].uptrans[i].targetlevelindex;
+      const int upper = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].targetlevelindex;
       const double upperstatweight = stat_weight(element, ion, upper);
       C = nne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * upperstatweight / std::sqrt(T_e);
     }
