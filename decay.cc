@@ -1236,7 +1236,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
       const int a = get_nuc_a(nucindex);
       if (nuc_z == atomic_number) {
         // this nucleus is an isotope of the element
-        if (a_isotopes.count(a) == 0u) {
+        if (!a_isotopes.contains(a)) {
           a_isotopes.insert(a);
           const double nuc_massfrac = get_nuc_massfrac(modelgridindex, atomic_number, a, t_current);
           isomassfracsum += nuc_massfrac;
@@ -1249,7 +1249,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
           const int daughter_a = decay_daughter_a(nuc_z, a, dectypeindex);
           if (daughter_z == atomic_number && !nuc_exists(daughter_z, daughter_a) &&
               get_nuc_decaybranchprob(nuc_z, a, dectypeindex) > 0.) {
-            if (a_isotopes.count(daughter_a) == 0u) {
+            if (!a_isotopes.contains(daughter_a)) {
               a_isotopes.insert(daughter_a);
               // nuclide decays into correct atomic number but outside of the radionuclide list
               // note: there could also be stable isotopes of this element included in stable_initabund(z), but
@@ -1263,7 +1263,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
       }
     }
 
-    if (atomic_number == 2 && !nuc_exists(2, 4) && (a_isotopes.count(4) == 0u)) {
+    if (atomic_number == 2 && !nuc_exists(2, 4) && (!a_isotopes.contains(4))) {
       // 4He will not be identified as a daughter nucleus of above decays, so add it in
       const double nuc_massfrac = get_nuc_massfrac(modelgridindex, 2, 4, t_current);
       isomassfracsum += nuc_massfrac;
@@ -1316,12 +1316,6 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   // assert_always(fabs(nucfracsum - initnucfracsum) < 0.001); // decays shouldn't change nuclear mass fraction sum
 
   nonthermal::calculate_deposition_rate_density(modelgridindex, timestep);
-  // printout("model cell %d at t_current %g has frac: Ni %g Co %g Fe %g, stable: Ni %g Co %g Fe %g\n",
-  //          modelgridindex, t_current,
-  //          grid::get_elem_abundance(modelgridinex, get_elementindex(28)),
-  //          grid::get_elem_abundance(modelgridinex, get_elementindex(27)),
-  //          grid::get_elem_abundance(modelgridinex, get_elementindex(26)),
-  //          get_fnistabel(modelgridindex), get_fcostable(modelgridindex), get_ffestable(modelgridindex));
 }
 
 void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, const double t_current, const int element) {
@@ -1333,7 +1327,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
     const int nuc_z = get_nuc_z(nucindex);
     const int nuc_a = get_nuc_a(nucindex);
     if (nuc_z == atomic_number) {  // isotope of this element is on the network
-      if (a_isotopes.count(nuc_a) == 0u) {
+      if (!a_isotopes.contains(nuc_a)) {
         a_isotopes.insert(nuc_a);
         // radioactive isotope of the element
         const double massfrac = get_nuc_massfrac(modelgridindex, atomic_number, nuc_a, t_current);
@@ -1350,7 +1344,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
         // if the nucleus exists, it will be picked up by the upper condition
         if (daughter_z == atomic_number && !nuc_exists(daughter_z, daughter_a) &&
             get_nuc_decaybranchprob(nucindex, dectypeindex) > 0.) {
-          if (a_isotopes.count(nuc_a) == 0u) {
+          if (!a_isotopes.contains(nuc_a)) {
             a_isotopes.insert(nuc_a);
             // nuclide decays into correct atomic number but outside of the radionuclide list. Daughter is assumed
             // stable
