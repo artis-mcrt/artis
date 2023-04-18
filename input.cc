@@ -43,7 +43,7 @@ const std::array<std::string, 24> inputlinecomments = {
     " 3: tmin_days tmax_days: start and end times [day]",
     " 4: UNUSED nusyn_min_mev nusyn_max_mev: lowest and highest frequency to synthesise [MeV]",
     " 5: UNUSED nsyn_time: number of times for synthesis",
-    " 6: start and end times for synthesis",
+    " 6: UNUSED start and end times for synthesis",
     " 7: model_type: number of dimensions (1, 2, or 3)",
     " 8: UNUSED compute r-light curve (1: no estimators, 2: thin cells, 3: thick cells, 4: gamma-ray heating)",
     " 9: UNUSED n_out_it: number of iterations",
