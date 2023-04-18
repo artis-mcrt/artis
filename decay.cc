@@ -397,13 +397,10 @@ static void extend_lastdecaypath()
       }
 
       const int newpathlength = get_decaypathlength(startdecaypathindex) + 1;
-      decaypaths.push_back({.pathlength = newpathlength,
-                            .z = decaypaths[startdecaypathindex].z,
-                            .a = decaypaths[startdecaypathindex].a,
-                            .nucindex = decaypaths[startdecaypathindex].nucindex,
-                            .decaytypes = decaypaths[startdecaypathindex].decaytypes});
+      decaypaths.push_back(decaypaths[startdecaypathindex]);
       const int lastindex = decaypaths.size() - 1;
 
+      decaypaths[lastindex].pathlength = newpathlength;
       decaypaths[lastindex].z.push_back(daughter_z);
       decaypaths[lastindex].a.push_back(daughter_a);
       decaypaths[lastindex].nucindex.push_back(daughter_nucindex);
