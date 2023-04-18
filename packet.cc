@@ -165,7 +165,7 @@ void write_packets(char filename[], const struct packet *const pkt) {
     fprintf(packets_file, "%g ", pkt[i].nu_cmf);
     fprintf(packets_file, "%g ", pkt[i].nu_rf);
     fprintf(packets_file, "%d ", pkt[i].escape_type);
-    fprintf(packets_file, "%d ", pkt[i].escape_time);
+    fprintf(packets_file, "%g ", pkt[i].escape_time);
     fprintf(packets_file, "%d ", pkt[i].next_trans);
     fprintf(packets_file, "%d ", pkt[i].interactions);
     fprintf(packets_file, "%d ", pkt[i].last_event);

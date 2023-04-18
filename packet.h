@@ -55,8 +55,8 @@ struct packet {
                        // onset of the simulation (-7)
                        // decay of a positron pellet (-10)
   int trueemissiontype = EMTYPE_NOTSET;  // emission type coming from a kpkt to rpkt (last thermal emission)
-  float trueem_time;
-  double absorptionfreq;    // records nu_cmf of packet at last absorption
+  float trueem_time;                     // first thermal emission time [s]
+  double absorptionfreq;                 // records nu_cmf of packet at last absorption
   double absorptiondir[3];  // Direction of propagation (x,y,z) when a packet was last absorbed in a line. Always a
                             // unit vector.
   double stokes[3];         // I, Q and U Stokes parameters
@@ -64,7 +64,7 @@ struct packet {
                       // always be perpendicular to dir
   double tdecay;      // Time at which pellet decays.
   enum packet_type escape_type;           // Flag to tell us in which form it escaped from the grid.
-  int escape_time;                        // time at which is passes out of the grid [s]
+  float escape_time;                      // time at which is passes out of the grid [s]
   int number;                             // A unique number to identify the packet
   bool originated_from_particlenotgamma;  // first-non-pellet packet type was gamma
   int pellet_decaytype;                   // index into decay::decaytypes
