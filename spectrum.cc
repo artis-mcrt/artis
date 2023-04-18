@@ -12,12 +12,12 @@
 
 bool TRACE_EMISSION_ABSORPTION_REGION_ON = false;
 
-#define traceemissabs_lambdamin 1000.  // in Angstroms
-#define traceemissabs_lambdamax 25000.
-#define traceemissabs_nulower (1.e8 * CLIGHT / traceemissabs_lambdamax)
-#define traceemissabs_nuupper (1.e8 * CLIGHT / traceemissabs_lambdamin)
-#define traceemissabs_timemin (320. * DAY)
-#define traceemissabs_timemax (340. * DAY)
+constexpr double traceemissabs_lambdamin = 1000.;  // in Angstroms
+constexpr double traceemissabs_lambdamax = 25000.;
+constexpr double traceemissabs_nulower = (1.e8 * CLIGHT / traceemissabs_lambdamax);
+constexpr double traceemissabs_nuupper = (1.e8 * CLIGHT / traceemissabs_lambdamin);
+constexpr double traceemissabs_timemin = (320. * DAY);
+constexpr double traceemissabs_timemax = (340. * DAY);
 
 using emissionabsorptioncontrib = struct emissionabsorptioncontrib {
   double energyemitted;
@@ -34,8 +34,8 @@ double traceabsorption_totalenergy = 0.;
 static struct spec *rpkt_spectra = nullptr;
 
 static auto compare_emission(const void *p1, const void *p2) -> int {
-  const struct emissionabsorptioncontrib *elem1 = (struct emissionabsorptioncontrib *)p1;
-  const struct emissionabsorptioncontrib *elem2 = (struct emissionabsorptioncontrib *)p2;
+  const auto *elem1 = static_cast<const struct emissionabsorptioncontrib *>(p1);
+  const auto *elem2 = static_cast<const struct emissionabsorptioncontrib *>(p2);
 
   if (elem1->energyemitted < elem2->energyemitted) {
     return 1;
@@ -47,8 +47,8 @@ static auto compare_emission(const void *p1, const void *p2) -> int {
 }
 
 static auto compare_absorption(const void *p1, const void *p2) -> int {
-  const struct emissionabsorptioncontrib *elem1 = (struct emissionabsorptioncontrib *)p1;
-  const struct emissionabsorptioncontrib *elem2 = (struct emissionabsorptioncontrib *)p2;
+  const auto *elem1 = static_cast<const struct emissionabsorptioncontrib *>(p1);
+  const auto *elem2 = static_cast<const struct emissionabsorptioncontrib *>(p2);
 
   if (elem1->energyabsorbed < elem2->energyabsorbed) {
     return 1;
