@@ -10,7 +10,6 @@
 
 #include "boundary.h"
 #include "decay.h"
-#include "emissivities.h"
 #include "grey_emissivities.h"
 #include "grid.h"
 #include "nonthermal.h"

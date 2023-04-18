@@ -206,11 +206,6 @@ extern double syn_dir[3];  // vector pointing from origin to observer
 
 extern struct time *time_step;
 
-constexpr int EMISS_MAX = 2;
-extern int emiss_offset;
-extern int emiss_max;
-
-extern float *compton_emiss;
 extern double *rpkt_emiss;
 
 // for NO_LUT_PHOTOION = false
@@ -305,10 +300,6 @@ extern int ntstep;
 extern int itstep;
 extern int ftstep;
 extern int nts_global;
-
-extern double nusyn_min;
-extern double nusyn_max;
-constexpr int nfake_gam = 1;
 
 extern double opcase3_normal;
 extern double rho_crit_para;

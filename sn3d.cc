@@ -14,7 +14,6 @@
 
 #include "atomic.h"
 #include "decay.h"
-#include "emissivities.h"
 #include "globals.h"
 #include "grey_emissivities.h"
 #include "grid.h"
@@ -536,6 +535,35 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
 
     // delete temp packets files from previous timestep now that all restart data for the new timestep is available
     remove_temp_packetsfile(nts - 1, my_rank);
+  }
+}
+
+static void zero_estimators() {
+  // printout("zero_estimators()");
+  for (int n = 0; n < grid::get_npts_model(); n++) {
+    if (grid::get_numassociatedcells(n) > 0) {
+      radfield::zero_estimators(n);
+
+      globals::ffheatingestimator[n] = 0.;
+      globals::colheatingestimator[n] = 0.;
+
+      if constexpr (TRACK_ION_STATS) {
+        stats::reset_ion_stats(n);
+      }
+
+      for (int element = 0; element < get_nelements(); element++) {
+        for (int ion = 0; ion < get_max_nions(); ion++) {
+          if constexpr (!NO_LUT_PHOTOION) {
+            globals::gammaestimator[n * get_nelements() * get_max_nions() + element * get_max_nions() + ion] = 0.;
+          }
+          if constexpr (!NO_LUT_BFHEATING) {
+            globals::bfheatingestimator[n * get_nelements() * get_max_nions() + element * get_max_nions() + ion] = 0.;
+          }
+        }
+      }
+
+      globals::rpkt_emiss[n] = 0.0;
+    }
   }
 }
 

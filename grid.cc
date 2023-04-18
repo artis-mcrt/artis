@@ -1641,7 +1641,6 @@ void read_ejecta_model() {
 
   globals::coordmax[0] = globals::coordmax[1] = globals::coordmax[2] = globals::rmax;
 
-  globals::compton_emiss = static_cast<float *>(malloc((get_npts_model() + 1) * globals::EMISS_MAX * sizeof(float)));
   globals::rpkt_emiss = static_cast<double *>(calloc((get_npts_model() + 1), sizeof(double)));
 
   if constexpr (!NO_LUT_PHOTOION) {

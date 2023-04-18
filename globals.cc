@@ -11,13 +11,7 @@ double syn_dir[3];  // vector pointing from origin to observer
 
 struct time *time_step = nullptr;
 
-int emiss_offset;  // the index in the line list of the 1st line for which
-                   // an emissivity estimator is recorded
-int emiss_max;     // actual number of frequency points in emissivity grid
-
-/// THESE ARE THE GRID BASED ESTIMATORS
-float *compton_emiss = nullptr;  /// Volume estimator for the compton emissivity
-double *rpkt_emiss = nullptr;    /// Volume estimator for the rpkt emissivity
+double *rpkt_emiss = nullptr;  /// Volume estimator for the rpkt emissivity
 
 // for NO_LUT_PHOTOION = false
 double *corrphotoionrenorm = nullptr;
@@ -117,9 +111,6 @@ int ntstep = -1;      /// Number of timesteps
 int itstep = -1;      /// Initial timestep's number
 int ftstep = -1;      /// Final timestep's number
 int nts_global = -1;  /// Current time step
-
-double nusyn_min;
-double nusyn_max;  // limits on range for syn
 
 /// New variables for other opacity cases, still grey.
 double opcase3_normal;  /// MK: normalisation factor for opacity_case 3

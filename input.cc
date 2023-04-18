@@ -41,7 +41,7 @@ const std::array<std::string, 24> inputlinecomments = {
     " 1: globals::ntstep: number of timesteps",
     " 2: itstep ftstep: timestep number range start (inclusive) and stop (not inclusive)",
     " 3: tmin_days tmax_days: start and end times [day]",
-    " 4: nusyn_min_mev nusyn_max_mev: lowest and highest frequency to synthesise [MeV]",
+    " 4: UNUSED nusyn_min_mev nusyn_max_mev: lowest and highest frequency to synthesise [MeV]",
     " 5: UNUSED nsyn_time: number of times for synthesis",
     " 6: start and end times for synthesis",
     " 7: model_type: number of dimensions (1, 2, or 3)",
@@ -1846,22 +1846,6 @@ void input(int rank)
 #endif
 
   grid::read_ejecta_model();
-
-  /// Now that the list exists use it to find values for spectral synthesis
-  const int lindex_max = gammapkt::get_nul(globals::nusyn_max);
-  const int lindex_min = gammapkt::get_nul(globals::nusyn_min);
-  printout("lindex_max %d, lindex_min %d\n", lindex_max, lindex_min);
-
-  globals::emiss_offset = lindex_min;
-  globals::emiss_max = lindex_max - lindex_min + 1;
-  printout("emiss_max using %d of a possible %d\n", globals::emiss_max, globals::EMISS_MAX);
-
-  if (globals::emiss_max > globals::EMISS_MAX) {
-    printout(
-        "Too many points needed for emissivities. Use smaller frequency range or increase globals::EMISS_MAX. "
-        "Abort.\n");
-    abort();
-  }
 }
 
 static auto getline(std::istream &input, std::string &line) -> bool
@@ -1954,23 +1938,15 @@ void read_parameterfile(int rank)
   globals::tmin = tmin_days * DAY;
   globals::tmax = tmax_days * DAY;
 
-  float syn_min_mev = 0.;
-  float syn_max_mev = 0.;
-  assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> syn_min_mev >> syn_max_mev;
-  globals::nusyn_min = syn_min_mev * MEV / H;  // lowest frequency to synthesise
-  globals::nusyn_max = syn_max_mev * MEV / H;  // highest frequency to synthesise
+  assert_always(get_noncommentline(file, line));  // UNUSED nusyn_min_mev nusyn_max_mev
 
   assert_always(get_noncommentline(file, line));  // UNUSED number of times for synthesis
 
-  float dum2 = 0.;
-  float dum3 = 0.;
-  assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> dum2 >> dum3;  // start and end times for synthesis
+  assert_always(get_noncommentline(file, line));  // UNUSED start and end times for synthesis
 
-  assert_always(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));  // model dimensions
   int dum1 = 0;
-  std::stringstream(line) >> dum1;  // model type
+  std::stringstream(line) >> dum1;
   if (dum1 == 1) {
     set_model_type(grid::RHO_1D_READ);
   } else if (dum1 == 2) {
@@ -1983,9 +1959,7 @@ void read_parameterfile(int rank)
 
   assert_always(get_noncommentline(file, line));  // UNUSED number of iterations
 
-  assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> dum2;        // change speed of light
-  assert_always(fabs(dum2 - 1.) < 1e-3);  // no longer in use. Change CLIGHT_PROP constant instead
+  assert_always(get_noncommentline(file, line));  // UNUSED change speed of light
 
   assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> globals::gamma_grey;  // use grey opacity for gammas?
@@ -2036,6 +2010,7 @@ void read_parameterfile(int rank)
 
   /// Wavelength (in Angstroms) at which the parameterisation of the radiation field
   /// switches from the nebular approximation to LTE.
+  float dum2 = NAN;
   assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> dum2;  // free parameter for calculation of rho_crit
   globals::nu_rfcut = CLIGHT / (dum2 * 1e-8);
