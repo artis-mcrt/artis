@@ -17,8 +17,8 @@ int nt_random_upperion(int modelgridindex, int element, int lowerion, bool energ
 void calculate_deposition_rate_density(int modelgridindex, int timestep);
 double get_deposition_rate_density(int modelgridindex);
 float get_nt_frac_heating(int modelgridindex);
-double nt_excitation_ratecoeff(int modelgridindex, int element, int ion, int lower, int upper, double epsilon_trans,
-                               int lineindex);
+double nt_excitation_ratecoeff(int modelgridindex, int element, int ion, int lowerlevel, int uptransindex,
+                               double epsilon_trans, int lineindex);
 void do_ntlepton(struct packet *pkt_ptr);
 void write_restart_data(FILE *gridsave_file);
 void read_restart_data(FILE *gridsave_file);

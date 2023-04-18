@@ -859,8 +859,8 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
   return boostfactor * nne * 2 * PI * pow(QE, 4) / energy * log(ME * pow(v, 3) / (eulergamma * pow(QE, 2) * omegap));
 }
 
-constexpr auto xs_excitation(const struct linelist_entry *line, const double epsilon_trans, const double energy)
-    -> double
+constexpr auto xs_excitation(const int element, const int ion, const int lower, const int uptransindex,
+                             const double epsilon_trans, const double lowerstatweight, const double energy) -> double
 // collisional excitation cross section in cm^2
 // energies are in erg
 {
@@ -868,15 +868,16 @@ constexpr auto xs_excitation(const struct linelist_entry *line, const double eps
     return 0.;
   }
 
-  const double coll_str = line->coll_str;
-
-  if (coll_str >= 0) {
+  const double coll_strength = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].coll_str;
+  if (coll_strength >= 0) {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11
-    return pow(H_ionpot / energy, 2) / statw_lower(line) * coll_str * PI * A_naught_squared;
+    return pow(H_ionpot / energy, 2) / lowerstatweight * coll_strength * PI * A_naught_squared;
   }
-  if (!line->forbidden) {
-    const double fij = line->osc_strength;
+  const bool forbidden = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].forbidden;
+  if (!forbidden) {
+    const double trans_osc_strength =
+        globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].osc_strength;
     // permitted E1 electric dipole transitions
     const double U = energy / epsilon_trans;
 
@@ -887,24 +888,24 @@ constexpr auto xs_excitation(const struct linelist_entry *line, const double eps
 
     const double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
     // Eq 4 of Mewe 1972, possibly from Seaton 1962?
-    return prefactor * A_naught_squared * pow(H_ionpot / epsilon_trans, 2) * fij * g_bar / U;
+    return prefactor * A_naught_squared * pow(H_ionpot / epsilon_trans, 2) * trans_osc_strength * g_bar / U;
   }
   return 0.;
 }
 
-static auto get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int lineindex,
-                                     const double statweight_lower, const double epsilon_trans) -> int
+static auto get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int element, const int ion,
+                                     const int lower, const int uptransindex, const double statweight_lower,
+                                     const double epsilon_trans) -> int
 // vector of collisional excitation cross sections in cm^2
 // epsilon_trans is in erg
 // returns the index of the first valid cross section point (en >= epsilon_trans)
 // all elements below this index are invalid and should not be used
 {
-  const double coll_str = get_coll_str(lineindex);
-
-  if (coll_str >= 0) {
+  const double coll_strength = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].coll_str;
+  if (coll_strength >= 0) {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11
-    const double constantfactor = pow(H_ionpot, 2) / statweight_lower * coll_str * PI * A_naught_squared;
+    const double constantfactor = pow(H_ionpot, 2) / statweight_lower * coll_strength * PI * A_naught_squared;
 
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans / EV);
 
@@ -918,8 +919,10 @@ static auto get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const 
     }
     return en_startindex;
   }
-  if (!globals::linelist[lineindex].forbidden) {
-    const double fij = osc_strength(lineindex);
+  const bool forbidden = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].forbidden;
+  if (!forbidden) {
+    const double trans_osc_strength =
+        globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].osc_strength;
     // permitted E1 electric dipole transitions
 
     // const double g_bar = 0.2;
@@ -931,7 +934,7 @@ static auto get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const 
 
     // Eq 4 of Mewe 1972, possibly from Seaton 1962?
     const double constantfactor =
-        epsilon_trans_ev * prefactor * A_naught_squared * pow(H_ionpot / epsilon_trans, 2) * fij;
+        epsilon_trans_ev * prefactor * A_naught_squared * pow(H_ionpot / epsilon_trans, 2) * trans_osc_strength;
 
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans_ev);
 
@@ -1065,6 +1068,7 @@ static auto N_e(const int modelgridindex, const double energy) -> double
         const int nuptrans = get_nuptrans(element, ion, lower);
         const double nnlevel = get_levelpop(modelgridindex, element, ion, lower);
         const double epsilon_lower = epsilon(element, ion, lower);
+        const auto statweight_lower = stat_weight(element, ion, lower);
         for (int t = 0; t < nuptrans; t++) {
           const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
           const int upper = globals::linelist[lineindex].upperlevelindex;
@@ -1074,7 +1078,7 @@ static auto N_e(const int modelgridindex, const double energy) -> double
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           const double epsilon_trans_ev = epsilon_trans / EV;
           N_e_ion += (nnlevel / nnion) * get_y(modelgridindex, energy_ev + epsilon_trans_ev) *
-                     xs_excitation(&globals::linelist[lineindex], epsilon_trans, energy + epsilon_trans);
+                     xs_excitation(element, ion, lower, t, epsilon_trans, statweight_lower, energy + epsilon_trans);
         }
       }
 
@@ -1748,7 +1752,8 @@ auto nt_ionization_ratecoeff(const int modelgridindex, const int element, const 
   return nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
 }
 
-static auto calculate_nt_excitation_ratecoeff_perdeposition(const int modelgridindex, const int lineindex,
+static auto calculate_nt_excitation_ratecoeff_perdeposition(const int modelgridindex, const int element, const int ion,
+                                                            const int lower, const int uptransindex,
                                                             const double statweight_lower, const double epsilon_trans)
     -> double
 // Kozma & Fransson equation 9 divided by level population and epsilon_trans
@@ -1759,7 +1764,8 @@ static auto calculate_nt_excitation_ratecoeff_perdeposition(const int modelgridi
   }
 
   gsl_vector *xs_excitation_vec = gsl_vector_alloc(SFPTS);
-  if (get_xs_excitation_vector(xs_excitation_vec, lineindex, statweight_lower, epsilon_trans) >= 0) {
+  if (get_xs_excitation_vector(xs_excitation_vec, element, ion, lower, uptransindex, statweight_lower, epsilon_trans) >=
+      0) {
 #if (SF_USE_LOG_E_INCREMENT)
     gsl_vector_mul(xs_excitation_vec, delta_envec);
 #endif
@@ -1780,13 +1786,16 @@ static auto calculate_nt_excitation_ratecoeff_perdeposition(const int modelgridi
   return 0.;
 }
 
-auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower,
-                             const int upper, const double epsilon_trans, const int lineindex) -> double {
+auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lowerlevel,
+                             const int uptransindex, const double epsilon_trans, const int lineindex) -> double {
   if constexpr (!NT_EXCITATION_ON) {
     return 0.;
   }
-
-  if ((lower >= NTEXCITATION_MAXNLEVELS_LOWER) || (upper >= NTEXCITATION_MAXNLEVELS_UPPER)) {
+  if (lowerlevel >= NTEXCITATION_MAXNLEVELS_LOWER) {
+    return 0.;
+  }
+  const int upperlevel = globals::elements[element].ions[ion].levels[lowerlevel].uptrans[uptransindex].targetlevelindex;
+  if (upperlevel >= NTEXCITATION_MAXNLEVELS_UPPER) {
     return 0.;
   }
 
@@ -1799,10 +1808,10 @@ auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const 
   // it didn't make the cut to be kept in the stored excitation list
   if (STORE_NT_SPECTRUM) {
     const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
-    const double statweight_lower = stat_weight(element, ion, lower);
+    const double statweight_lower = stat_weight(element, ion, lowerlevel);
 
-    const double ratecoeffperdeposition =
-        calculate_nt_excitation_ratecoeff_perdeposition(modelgridindex, lineindex, statweight_lower, epsilon_trans);
+    const double ratecoeffperdeposition = calculate_nt_excitation_ratecoeff_perdeposition(
+        modelgridindex, element, ion, lowerlevel, uptransindex, statweight_lower, epsilon_trans);
 
     return ratecoeffperdeposition * deposition_rate_density;
   }
@@ -2123,7 +2132,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
 
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           const double nt_frac_excitation_perlevelpop =
-              epsilon_trans * calculate_nt_excitation_ratecoeff_perdeposition(modelgridindex, lineindex,
+              epsilon_trans * calculate_nt_excitation_ratecoeff_perdeposition(modelgridindex, element, ion, lower, t,
                                                                               statweight_lower, epsilon_trans);
           const double frac_excitation_thistrans = nnlevel * nt_frac_excitation_perlevelpop;
           frac_excitation_ion += frac_excitation_thistrans;
@@ -2357,7 +2366,7 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
       }
 
       const int xsstartindex =
-          get_xs_excitation_vector(vec_xs_excitation_deltae, lineindex, statweight_lower, epsilon_trans);
+          get_xs_excitation_vector(vec_xs_excitation_deltae, element, ion, lower, t, statweight_lower, epsilon_trans);
       if (xsstartindex >= 0) {
 #if (SF_USE_LOG_E_INCREMENT)
         gsl_vector_mul(vec_xs_excitation_deltae, delta_envec);
