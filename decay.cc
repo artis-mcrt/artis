@@ -446,10 +446,6 @@ constexpr auto operator<(const struct decaypath &d1, const struct decaypath &d2)
 
 static void find_decaypaths() {
   for (int startnucindex = 0; startnucindex < get_num_nuclides(); startnucindex++) {
-    if (get_nuc_z(startnucindex) < 1)  // FAKE_GAM_LINE_ID
-    {
-      continue;
-    }
     const int z = get_nuc_z(startnucindex);
     const int a = get_nuc_a(startnucindex);
 
@@ -568,11 +564,6 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
   // nuclides.back().endecay_positron = 0.63 * MEV;
   // nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.19;
   // nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 0.81;
-
-  nuclides.push_back(default_nuclide);
-  nuclides.back().z = -1;  // FAKE_GAM_LINE_ID
-  nuclides.back().a = -1;
-  nuclides.back().branchprobs[DECAYTYPE_NONE] = 1.;
 
   nuclides.push_back(default_nuclide);
   nuclides.back().z = 24;  // Cr48
@@ -810,10 +801,6 @@ static auto get_nuc_massfrac(const int modelgridindex, const int z, const int a,
 // Can be called for stable nuclides that are one daughters of the radioactive nuclide list e.g., Fe56
 // For stable nuclides, abundance returned only comes from other decays (some could be included in init model elem frac)
 {
-  if (z < 1)  // skip FAKE_GAM_LINE_ID
-  {
-    return 0.;
-  }
   assert_always(time >= 0.);
 
   const double t_afterinit = time - grid::get_t_model();

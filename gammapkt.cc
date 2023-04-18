@@ -170,17 +170,6 @@ static void read_decaydata() {
 void init_gamma_linelist() {
   read_decaydata();
 
-  /* Start by setting up the grid of fake lines and their energies. */
-  gamma_spectra[FAKE_GAM_LINE_ID].nlines = globals::nfake_gam;
-  gamma_spectra[FAKE_GAM_LINE_ID].energy = std::make_unique<double[]>(globals::nfake_gam);
-  gamma_spectra[FAKE_GAM_LINE_ID].probability = std::make_unique<double[]>(globals::nfake_gam);
-
-  const double deltanu = (globals::nusyn_max - globals::nusyn_min) / (gamma_spectra[FAKE_GAM_LINE_ID].nlines - 3);
-  for (int i = 0; i < gamma_spectra[FAKE_GAM_LINE_ID].nlines; i++) {
-    gamma_spectra[FAKE_GAM_LINE_ID].energy[i] = (globals::nusyn_min + deltanu * (i - 1)) * H;
-    gamma_spectra[FAKE_GAM_LINE_ID].probability[i] = 0.0;
-  }
-
   // Now do the sorting.
 
   int total_lines = 0;

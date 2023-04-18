@@ -3,8 +3,6 @@
 
 // #include <cstdio>
 
-const int FAKE_GAM_LINE_ID = 3;
-
 #include <string>
 #include <vector>
 
