@@ -464,7 +464,7 @@ static void zero_all_effionpot(const int modelgridindex) {
   check_auger_probabilities(modelgridindex);
 }
 
-void init(const int my_rank, const int ndo, const int ndo_nonempty) {
+void init(const int my_rank, const int ndo_nonempty) {
   assert_always(nonthermal_initialized == false);
   nonthermal_initialized = true;
 
