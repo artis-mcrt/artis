@@ -69,14 +69,12 @@ CXXFLAGS += $(shell pkg-config --cflags gsl)
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true -O3 -DLIBCXX_ENABLE_DEBUG_MODE -D_GLIBCXX_DEBUG
+	CXXFLAGS += -DTESTMODE=true -O3 -DLIBCXX_ENABLE_DEBUG_MODE
 	CXXFLAGS += -fsanitize=address -fno-omit-frame-pointer -fno-common
 	BUILD_DIR := $(BUILD_DIR)_testmode
-else ifeq ($(TESTMODE),OFF)
+else
 	# skip array range checking for better performance and use optimizations
 	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3
-else
-	$(error bad value for testmode option. Should be ON or OFF)
 endif
 
 CXXFLAGS += -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -Wno-inline
@@ -88,6 +86,13 @@ else ifeq ($(MPI),)
 	MPI := ON
 else
 $(error bad value for MPI option. Should be ON or OFF)
+endif
+
+ifeq ($(TESTMODE),ON)
+else ifeq ($(TESTMODE),OFF)
+else ifeq ($(TESTMODE),)
+else
+$(error bad value for testmode option. Should be ON or OFF)
 endif
 
 ifeq ($(MPI),ON)
