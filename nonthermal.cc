@@ -2016,19 +2016,24 @@ void do_ntlepton(struct packet *pkt_ptr) {
   stats::increment(stats::COUNTER_NT_STAT_TO_KPKT);
 }
 
-static auto realloc_frac_excitations_list(const int modelgridindex, const int newsize) -> bool {
-  auto *newptr = static_cast<struct nt_excitation_struct *>(
-      realloc(nt_solution[modelgridindex].frac_excitations_list, newsize * sizeof(struct nt_excitation_struct)));
+static void realloc_frac_excitations_list(const int modelgridindex, const int newsize) {
+  assert_always(newsize >= 0);
+  if (newsize == 0 && nt_solution[modelgridindex].frac_excitations_list_size > 0) {
+    free(nt_solution[modelgridindex].frac_excitations_list);
+  }
+  auto *newptr =
+      (newsize > 0)
+          ? static_cast<struct nt_excitation_struct *>(realloc(nt_solution[modelgridindex].frac_excitations_list,
+                                                               newsize * sizeof(struct nt_excitation_struct)))
+          : nullptr;
 
   if (newptr == nullptr && newsize > 0) {
     printout("ERROR: Not enough memory to reallocate NT excitation list for cell %d from size %d to %d.\n",
              modelgridindex, nt_solution[modelgridindex].frac_excitations_list_size, newsize);
-    // abort();
-    return false;
+    assert_always(false);
   }
   nt_solution[modelgridindex].frac_excitations_list = newptr;
   nt_solution[modelgridindex].frac_excitations_list_size = newsize;
-  return true;
 }
 
 static void analyse_sf_solution(const int modelgridindex, const int timestep, const bool enable_sfexcitation) {
@@ -2938,8 +2943,7 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
     MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list_size, 1, MPI_INT, root, MPI_COMM_WORLD);
 
     if (nt_solution[modelgridindex].frac_excitations_list_size != frac_excitations_list_size_old) {
-      assert_always(
-          realloc_frac_excitations_list(modelgridindex, nt_solution[modelgridindex].frac_excitations_list_size));
+      realloc_frac_excitations_list(modelgridindex, nt_solution[modelgridindex].frac_excitations_list_size);
     }
 
     const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list_size;
