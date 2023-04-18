@@ -397,6 +397,7 @@ static void read_collion_data() {
 
   assert_always(fscanf(cifile, "%d", &colliondatacount) == 1);
   printout("Reading %d collisional transition rows\n", colliondatacount);
+  assert_always(colliondatacount > 0);
   colliondata = static_cast<struct collionrow *>(calloc(colliondatacount, sizeof(struct collionrow)));
   int n = 0;  // the index of kept rows, skipping rows that aren't in the simulation
   for (int i = 0; i < colliondatacount; i++) {
