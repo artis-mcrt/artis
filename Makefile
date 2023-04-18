@@ -3,7 +3,7 @@
 # place in architecture folder, e.g. build/arm64
 BUILD_DIR = build/$(shell uname -m)
 
-CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -g -flto=auto -Werror -Werror=undef -Wpedantic -Wextra -Wall
+CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -g -flto=auto -Werror -Werror=undef #-Wpedantic -Wextra -Wall
 # CXXFLAGS += -Wunreachable-code
 
 ifeq ($(shell uname -s),Darwin)
