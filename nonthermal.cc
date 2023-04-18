@@ -418,7 +418,7 @@ static void read_collion_data() {
     const int ionstage = colliondata[n].Z - colliondata[n].nelec + 1;
     const int element = get_elementindex(colliondata[n].Z);
     if (element >= 0 && get_ionstage(element, 0) <= ionstage &&
-        ionstage < (get_ionstage(element, 0) + get_nions(element))) {
+        ionstage <= get_ionstage(element, get_nions(element) - 1)) {
       // printout("Including ionisation data for Z=%d ionstage %d\n", colliondata[n].Z, ionstage);
       n++;
     } else {
@@ -432,6 +432,7 @@ static void read_collion_data() {
   printout("Stored %d of %d input shell cross sections\n", n, colliondatacount);
 
   if (n < colliondatacount) {
+    assert_always(n > 0);
     // since we used a subset of the ion cross sections, we can shrink the list
     colliondatacount = n;
     auto *colliondatarealloc =
