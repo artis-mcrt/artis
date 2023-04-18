@@ -9,9 +9,6 @@ namespace globals {
 
 double syn_dir[3];  // vector pointing from origin to observer
 
-// #define NRAYS_SYN 1 // number of rays traced in a syn calculation
-
-// RAY rays[NRAYS_SYN];
 struct time *time_step = nullptr;
 
 int emiss_offset;  // the index in the line list of the 1st line for which
