@@ -563,7 +563,7 @@ void init(const int my_rank, const int ndo_nonempty) {
 
   if (STORE_NT_SPECTRUM) {
     printout("[info] mem_usage: storing non-thermal spectra for all allocated cells occupies %.3f MB\n",
-             mem_usage_yfunc / 1024 / 1024.);
+             mem_usage_yfunc / 1024. / 1024.);
   };
 
   envec = gsl_vector_calloc(SFPTS);  // energy grid on which solution is sampled
