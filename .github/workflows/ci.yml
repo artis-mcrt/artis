@@ -26,6 +26,7 @@ jobs:
             fail-fast: false
 
         runs-on: ${{ matrix.os }}
+        timeout-minutes: 25
         name: ${{ matrix.testname }} ${{ matrix.testmode == 'ON' && ' testmode ON' || ''}}
 
         steps:
