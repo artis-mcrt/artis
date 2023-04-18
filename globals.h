@@ -235,7 +235,6 @@ extern int *acounter;
 extern int nprocs_exspec;
 extern bool do_emission_res;
 
-extern bool file_set;
 extern std::unique_ptr<bool[]> startofline;
 
 extern double gamma_grey;

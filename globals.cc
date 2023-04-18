@@ -41,7 +41,6 @@ int *acounter = nullptr;
 int nprocs_exspec = 1;
 bool do_emission_res = true;
 
-bool file_set;  // 1 if the output files already exist. 0 otherwise.
 std::unique_ptr<bool[]> startofline;
 
 double gamma_grey;  // set to -ve for proper treatment. If possitive, then

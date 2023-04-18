@@ -885,7 +885,6 @@ auto main(int argc, char *argv[]) -> int {
   printout("time write syn_dir.txt file %ld\n", time(nullptr));
 
   bool terminate_early = false;
-  globals::file_set = false;  // LJS: deprecate this switch?
 
   /// Initialise the grid. Call routine that sets up the initial positions
   /// and sizes of the grid cells.
