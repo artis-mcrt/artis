@@ -121,28 +121,29 @@ struct nt_excitation_struct {
 };
 
 struct nt_solution_struct {
-  double *yfunc;  // Samples of the Spencer-Fano solution function. Multiply by energy to get non-thermal electron
-                  // number flux. y(E) * dE is the flux of electrons with energy in the range (E, E + dE) y has units of
-                  // particles / cm2 / s / eV
+  double *yfunc = nullptr;  // Samples of the Spencer-Fano solution function. Multiply by energy to get non-thermal
+                            // electron number flux. y(E) * dE is the flux of electrons with energy in the range (E, E +
+                            // dE) y has units of particles / cm2 / s / eV
 
-  float frac_heating;     // energy fractions should add up to 1.0 if the solution is good
-  float frac_ionization;  // fraction of deposition energy going to ionization
-  float frac_excitation;  // fraction of deposition energy going to excitation
+  float frac_heating = 1.;     // energy fractions should add up to 1.0 if the solution is good
+  float frac_ionization = 0.;  // fraction of deposition energy going to ionization
+  float frac_excitation = 0.;  // fraction of deposition energy going to excitation
 
   // these points arrays of length includedions
-  float *eff_ionpot;               // these are used to calculate the non-thermal ionization rate
-  double *fracdep_ionization_ion;  // the fraction of the non-thermal deposition energy going to ionizing this ion
+  float *eff_ionpot = nullptr;  // these are used to calculate the non-thermal ionization rate
+  double *fracdep_ionization_ion =
+      nullptr;  // the fraction of the non-thermal deposition energy going to ionizing this ion
 
   // these  point to arrays of length includedions * (NT_MAX_AUGER_ELECTRONS + 1)
-  float *prob_num_auger;  // probability that one ionisation of this ion will produce n Auger electrons. elements sum
-                          // to 1.0 for a given ion
-  float *ionenfrac_num_auger;  // like above, but energy weighted. elements sum to 1.0 for an ion
+  float *prob_num_auger = nullptr;       // probability that one ionisation of this ion will produce n Auger electrons.
+                                         // elements sum to 1.0 for a given ion
+  float *ionenfrac_num_auger = nullptr;  // like above, but energy weighted. elements sum to 1.0 for an ion
 
-  int frac_excitations_list_size;
-  struct nt_excitation_struct *frac_excitations_list;
+  int frac_excitations_list_size = 0;
+  struct nt_excitation_struct *frac_excitations_list = nullptr;
 
-  int timestep_last_solved;     // the quantities above were calculated for this timestep
-  float nneperion_when_solved;  // the nne when the solver was last run
+  int timestep_last_solved = -1;      // the quantities above were calculated for this timestep
+  float nneperion_when_solved = NAN;  // the nne when the solver was last run
 };
 
 static struct nt_solution_struct *nt_solution;
@@ -399,6 +400,7 @@ static void read_collion_data() {
   colliondata = static_cast<struct collionrow *>(calloc(colliondatacount, sizeof(struct collionrow)));
   int n = 0;  // the index of kept rows, skipping rows that aren't in the simulation
   for (int i = 0; i < colliondatacount; i++) {
+    assert_always(n < colliondatacount);
     assert_always(fscanf(cifile, "%2d %2d %1d %1d %lg %lg %lg %lg %lg", &colliondata[n].Z, &colliondata[n].nelec,
                          &colliondata[n].n, &colliondata[n].l, &colliondata[n].ionpot_ev, &colliondata[n].A,
                          &colliondata[n].B, &colliondata[n].C, &colliondata[n].D) == 9);
@@ -427,11 +429,14 @@ static void read_collion_data() {
     //        colliondata[n].A, colliondata[n].B, colliondata[n].C, colliondata[n].D);
   }
   printout("Stored %d of %d input shell cross sections\n", n, colliondatacount);
-  colliondatacount = n;
-  colliondata = static_cast<struct collionrow *>(realloc(colliondata, colliondatacount * sizeof(struct collionrow)));
-  if (colliondata == nullptr) {
-    printout("Could not reallocate colliondata.\n");
-    abort();
+
+  if (n < colliondatacount) {
+    // since we used a subset of the ion cross sections, we can shrink the list
+    colliondatacount = n;
+    auto *colliondatarealloc =
+        static_cast<struct collionrow *>(realloc(colliondata, colliondatacount * sizeof(struct collionrow)));
+    assert_always(colliondatarealloc != nullptr);
+    colliondata = colliondatarealloc;
   }
 
   fclose(cifile);
