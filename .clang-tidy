@@ -8,6 +8,7 @@ Checks: >
     -android-*,
     -altera-*,
     -bugprone-easily-swappable-parameters,
+    -bugprone-exception-escape,
     -bugprone-implicit-widening-of-multiplication-result,
     -bugprone-narrowing-conversions,
     -llvmlibc-*,
@@ -48,4 +49,3 @@ CheckOptions:
       value: 'false'
     - key: cppcoreguidelines-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
       value: 'false'
-
