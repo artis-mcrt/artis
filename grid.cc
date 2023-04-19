@@ -1048,7 +1048,7 @@ static auto str_starts_with(const std::string &str, const std::string &strprefix
   return (str.rfind(strprefix, 0) == 0);
 }
 
-static void read_model_headerline(std::string line, std::vector<int> &zlist, std::vector<int> &alist,
+static void read_model_headerline(const std::string &line, std::vector<int> &zlist, std::vector<int> &alist,
                                   std::vector<std::string> &columnname) {
   // custom header line
   std::istringstream iss(line);
