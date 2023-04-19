@@ -167,9 +167,10 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
   for (int d = 0; d < ndim; d++) {
     // flip is either zero or one to indicate +ve and -ve boundaries along the selected axis
     for (int flip = 0; flip < 2; flip++) {
-      enum cell_boundary const direction = flip ? posdirections[d] : negdirections[d];
-      enum cell_boundary const invdirection = !flip ? posdirections[d] : negdirections[d];
-      const int cellindexstride = flip ? -grid::get_coordcellindexincrement(d) : grid::get_coordcellindexincrement(d);
+      enum cell_boundary const direction = flip != 0 ? posdirections[d] : negdirections[d];
+      enum cell_boundary const invdirection = flip == 0 ? posdirections[d] : negdirections[d];
+      const int cellindexstride =
+          flip != 0 ? -grid::get_coordcellindexincrement(d) : grid::get_coordcellindexincrement(d);
 
       bool isoutside_thisside = false;
       if (flip != 0) {
