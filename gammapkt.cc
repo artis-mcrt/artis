@@ -628,7 +628,6 @@ void do_gamma(struct packet *pkt_ptr, double t2)
       pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -4;
       // pkt_ptr->type = TYPE_PRE_KPKT;
-      // pkt_ptr->type = TYPE_GAMMA_KPKT;
       stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
     } else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand * kap_tot)) {
       // It's a pair production

@@ -173,19 +173,12 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
 
     case TYPE_KPKT:
     case TYPE_PRE_KPKT:
-    case TYPE_GAMMA_KPKT:
-      /*It's a k-packet - convert to r-packet (low freq).*/
-      // printout("k-packet propagation\n");
+      // It's a k-packet - convert to r-packet (low freq).
 
-      // t_change_type = do_kpkt(pkt_ptr, t_current, t2);
       if (pkt_type == TYPE_PRE_KPKT || grid::modelgrid[grid::get_cell_modelgridindex(pkt_ptr->where)].thick == 1) {
         kpkt::do_kpkt_bb(pkt_ptr);
-      } else if (pkt_type == TYPE_KPKT) {
-        kpkt::do_kpkt(pkt_ptr, t2, nts);
       } else {
-        printout("kpkt not of type TYPE_KPKT or TYPE_PRE_KPKT\n");
-        abort();
-        // t_change_type = do_kpkt_ffonly(pkt_ptr, t_current, t2);
+        kpkt::do_kpkt(pkt_ptr, t2, nts);
       }
       break;
 
