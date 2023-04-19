@@ -2103,7 +2103,6 @@ void grid_init(int my_rank)
   calculate_kappagrey();
   abundances_read();
 
-  int const ndo = grid::get_ndo(my_rank);
   int const ndo_nonempty = grid::get_ndo_nonempty(my_rank);
 
   radfield::init(my_rank, ndo_nonempty);
