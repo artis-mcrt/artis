@@ -440,8 +440,6 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
   const auto T_e = grid::get_Te(modelgridindex);
   const float nne = grid::get_nne(modelgridindex);
   const int nlevels = get_nlevels(element, ion);
-  // const int Z = get_element(element);
-  // const int ionstage = get_ionstage(element, ion);
   for (int level = 0; level < nlevels; level++) {
     const int level_index = get_nlte_vector_index(element, ion, level);
     const double epsilon_level = epsilon(element, ion, level);
@@ -1221,7 +1219,6 @@ auto solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timestep)
     }
 
     for (int level = 0; level < get_nlevels(element, ion); level++) {
-      // printout("level %d\n", level);
       const double epsilon_current = epsilon(element, ion, level);
       const double statweight = stat_weight(element, ion, level);
 
