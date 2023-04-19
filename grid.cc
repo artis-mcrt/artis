@@ -2106,7 +2106,7 @@ void grid_init(int my_rank)
   int const ndo = grid::get_ndo(my_rank);
   int const ndo_nonempty = grid::get_ndo_nonempty(my_rank);
 
-  radfield::init(my_rank, ndo, ndo_nonempty);
+  radfield::init(my_rank, ndo_nonempty);
   nonthermal::init(my_rank, ndo_nonempty);
 
   /// and assign a temperature to the cells

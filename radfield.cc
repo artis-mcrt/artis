@@ -228,7 +228,7 @@ static void add_detailed_line(const int lineindex)
   // printout("Added Jblue estimator for lineindex %d count %d\n", lineindex, detailed_linecount);
 }
 
-void init(int my_rank, int ndo, int ndo_nonempty)
+void init(int my_rank, int ndo_nonempty)
 // this should be called only after the atomic data is in memory
 {
   const int nonempty_npts_model = grid::get_nonempty_npts_model();

@@ -141,7 +141,7 @@ static auto get_bfheatingcoeff(int element, int ion, int level) -> double
 void calculate_bfheatingcoeffs(int modelgridindex) {
   const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++) {
-    if (!(grid::get_elem_abundance(modelgridindex, element) > minelfrac || !NO_LUT_BFHEATING)) {
+    if (grid::get_elem_abundance(modelgridindex, element) <= minelfrac && NO_LUT_BFHEATING) {
       printout("skipping Z=%d X=%g, ", get_element(element), grid::get_elem_abundance(modelgridindex, element));
     }
 

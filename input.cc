@@ -2080,8 +2080,8 @@ void read_parameterfile(int rank)
   assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> dum1;
   if (do_exspec) {
-    globals::do_emission_res = dum1;
-    if (globals::do_emission_res == 1) {
+    globals::do_emission_res = (dum1 != 0);
+    if (globals::do_emission_res) {
       printout("input: do_exspec ... extract LOS dependent emission information\n");
     }
   }

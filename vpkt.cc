@@ -225,7 +225,7 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
 
   mgi = grid::get_cell_modelgridindex(dummy_ptr->where);
 
-  while (end_packet == false) {
+  while (!end_packet) {
     ldist = 0;
 
     /* distance to the next cell */

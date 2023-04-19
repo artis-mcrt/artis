@@ -192,8 +192,7 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
 
 #ifdef MPI_ON
 static void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const int nstart, const int ndo,
-                                            const int nts, const int titer, char *mpi_grid_buffer,
-                                            const int mpi_grid_buffer_size) {
+                                            char *mpi_grid_buffer, const int mpi_grid_buffer_size) {
   int position = 0;
   for (int root = 0; root < nprocs; root++) {
     MPI_Barrier(MPI_COMM_WORLD);
@@ -316,7 +315,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-static void mpi_reduce_estimators(int my_rank, int nts) {
+static void mpi_reduce_estimators(int nts) {
   radfield::reduce_estimators();
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, globals::ffheatingestimator, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -600,8 +599,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
 
 /// Each process has now updated its own set of cells. The results now need to be communicated between processes.
 #ifdef MPI_ON
-  mpi_communicate_grid_properties(my_rank, globals::nprocs, nstart, ndo, nts, titer, mpi_grid_buffer,
-                                  mpi_grid_buffer_size);
+  mpi_communicate_grid_properties(my_rank, globals::nprocs, nstart, ndo, mpi_grid_buffer, mpi_grid_buffer_size);
 #endif
 
   printout("timestep %d: time after grid properties have been communicated %ld (took %ld seconds)\n", nts,
@@ -633,7 +631,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
     // estimators together now, sum them, and distribute the results
 
     const time_t time_communicate_estimators_start = time(nullptr);
-    mpi_reduce_estimators(my_rank, nts);
+    mpi_reduce_estimators(nts);
 #endif
 
     // The estimators have been summed across all proceses and distributed.
