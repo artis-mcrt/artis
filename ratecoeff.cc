@@ -991,10 +991,7 @@ static void precalculate_ion_alpha_sp() {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element) - 1;
       for (int ion = 0; ion < nions; ion++) {
-        // nlevels = get_nlevels(element, ion);
-        // nlevels = get_ionisinglevels(element, ion); ///number of levels of the current ion which have an associated
-        // photoion cross section
-        const int nlevels = get_ionisinglevels(element, ion);  /// number of ionising levels used in the simulation
+        const int nlevels = get_ionisinglevels(element, ion);
         double zeta = 0.;
         for (int level = 0; level < nlevels; level++) {
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level);
@@ -1468,7 +1465,6 @@ auto calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, co
 
         if (force_bfintegral || printdebug) {
           // use the cellhistory but not the detailed bf estimators
-          // TODO: restore cell history part
           gamma_coeff_integral +=
               calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, modelgridindex);
           // double gamma_coeff_integral_level_ch = globals::cellhistory[tid]
