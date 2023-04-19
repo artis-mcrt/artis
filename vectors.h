@@ -197,7 +197,7 @@ constexpr int get_escapedirectionbin(const double dir_in[3], const double syn_di
 
   /// Angle resolved case: need to work out the correct angle bin
   const double costheta = dot(dir, syn_dir);
-  const int costhetabin = ((costheta + 1.0) * NPHIBINS / 2.0);
+  const int costhetabin = static_cast<int>((costheta + 1.0) * NPHIBINS / 2.0);
   assert_testmodeonly(costhetabin < NCOSTHETABINS);
 
   double vec1[3] = {0};
@@ -213,12 +213,12 @@ constexpr int get_escapedirectionbin(const double dir_in[3], const double syn_di
 
   int phibin = 0;
   if (testphi > 0) {
-    phibin = (acos(cosphi) / 2. / PI * NPHIBINS);
+    phibin = static_cast<int>(acos(cosphi) / 2. / PI * NPHIBINS);
   } else {
-    phibin = ((acos(cosphi) + PI) / 2. / PI * NPHIBINS);
+    phibin = static_cast<int>((acos(cosphi) + PI) / 2. / PI * NPHIBINS);
   }
   assert_testmodeonly(phibin < NPHIBINS);
-  const int na = (costhetabin * NPHIBINS) + phibin;
+  const int na = static_cast<int>((costhetabin * NPHIBINS) + phibin);
   assert_always(na < MABINS);
 
   return na;
