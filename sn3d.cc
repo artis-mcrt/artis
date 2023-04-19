@@ -958,28 +958,11 @@ auto main(int argc, char *argv[]) -> int {
   /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
   mpi_grid_buffer_size = 4 * ((12 + 4 * get_includedions()) * (maxndo) + 1);
   printout("reserve mpi_grid_buffer_size %d space for MPI communication buffer\n", mpi_grid_buffer_size);
-  // char buffer[mpi_grid_buffer_size];
   mpi_grid_buffer = static_cast<char *>(malloc(mpi_grid_buffer_size * sizeof(char)));
-  if (mpi_grid_buffer == nullptr) {
-    printout("[fatal] input: not enough memory to initialize MPI grid buffer ... abort.\n");
-    abort();
-  }
+  assert_always(mpi_grid_buffer != nullptr);
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  /** That's the end of the initialisation. */
-  /** *******************************************/
-
-  /// Now comes the loop over timesteps. Before doing this we need to
-  /// define the time steps.
-  // time_init();
-
-  /// Standard approach: for loop over given number of time steps
-  // for (nts = globals::itstep; nts < ftstep; nts++)
-  //{
-
-  /// Now use while loop to allow for timed restarts
-  const int last_loop = globals::ftstep;
   int nts = globals::itstep;
 
   macroatom_open_file(my_rank);
@@ -1021,7 +1004,7 @@ auto main(int argc, char *argv[]) -> int {
   }
 #endif
 
-  while (nts < last_loop && !terminate_early) {
+  while (nts < globals::ftstep && !terminate_early) {
     globals::nts_global = nts;
 #ifdef MPI_ON
     //        const time_t time_before_barrier = time(nullptr);
