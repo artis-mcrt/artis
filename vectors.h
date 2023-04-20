@@ -212,7 +212,7 @@ constexpr int get_escapedirectionbin(const double dir_in[3], const double syn_di
   const double testphi = dot(vec1, vec3);
 
   int phibin = 0;
-  if (testphi > 0) {
+  if (testphi >= 0) {
     phibin = static_cast<int>(acos(cosphi) / 2. / PI * NPHIBINS);
   } else {
     phibin = static_cast<int>((acos(cosphi) + PI) / 2. / PI * NPHIBINS);
