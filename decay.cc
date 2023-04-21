@@ -1270,8 +1270,6 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   // {
   //   const int z = get_nuc_z(nucindex);
   //   const int a = get_nuc_a(nucindex);
-  //   if (z < 1) // FAKE_GAM_LINE_ID
-  //     continue;
   //   initnucfracsum += grid::get_modelinitradioabund(modelgridindex, z, a);
   //   nucfracsum += get_nuc_massfrac(modelgridindex, z, a, t_current);
   //

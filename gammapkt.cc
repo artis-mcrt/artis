@@ -650,22 +650,4 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   }
 }
 
-auto get_gam_freq(const int n) -> double {
-  if (n == RED_OF_LIST) {
-    return 0.0;
-  }
-
-  // returns the frequency of line n
-  const int nucindex = allnuc_gamma_line_list[n].nucindex;
-  const int lineid = allnuc_gamma_line_list[n].nucgammaindex;
-
-  if (nucindex >= decay::get_num_nuclides() || lineid >= gamma_spectra[nucindex].nlines) {
-    printout("Unknown line. %d Abort.\n", n);
-    printout("line_list->nucindex[n] %d line_list->index[n] %d\n", nucindex, lineid);
-    abort();
-  }
-
-  return gamma_spectra[nucindex].energy[lineid] / H;
-}
-
 }  // namespace gammapkt
