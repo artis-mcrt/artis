@@ -121,8 +121,8 @@ static auto calculate_bfheatingcoeff(int element, int ion, int level, int phixst
     printout(
         "bf_heating integrator gsl warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d "
         "integral %g error %g\n",
-        status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, bfheating,
-        error);
+        status, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), level, phixstargetindex,
+        bfheating, error);
   }
   gsl_set_error_handler(previous_handler);
 
@@ -142,7 +142,7 @@ void calculate_bfheatingcoeffs(int modelgridindex) {
   const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(modelgridindex, element) <= minelfrac && NO_LUT_BFHEATING) {
-      printout("skipping Z=%d X=%g, ", get_element(element), grid::get_elem_abundance(modelgridindex, element));
+      printout("skipping Z=%d X=%g, ", get_atomicnumber(element), grid::get_elem_abundance(modelgridindex, element));
     }
 
     const int nions = get_nions(element);
@@ -203,7 +203,7 @@ static auto get_heating_ion_coll_deexc(const int modelgridindex, const int eleme
   }
   // const double nnion = ionstagepop(modelgridindex, element, ion);
   // printout("ion_col_deexc_heating: T_e %g nne %g Z=%d ionstage %d nnion %g heating_contrib %g contrib/nnion %g\n",
-  // T_e, nne, get_element(element), get_ionstage(element, ion), nnion, C_deexc, C_deexc / nnion);
+  // T_e, nne, get_atomicnumber(element), get_ionstage(element, ion), nnion, C_deexc, C_deexc / nnion);
   return C_deexc;
 }
 

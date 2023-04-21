@@ -253,7 +253,7 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
     printout(
         "%s: From Z=%d ionstage %d level %d, could not select lower level to recombine to. zrand %g * rad_recomb %g >= "
         "rate %g",
-        __func__, get_element(element), get_ionstage(element, *ion), *level, zrand, rad_recomb, rate);
+        __func__, get_atomicnumber(element), get_ionstage(element, *ion), *level, zrand, rad_recomb, rate);
     abort();
   }
 
@@ -264,7 +264,7 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
   pkt_ptr->nu_cmf = select_continuum_nu(element, upperion - 1, lower, upperionlevel, T_e);
 
   // printout("%s: From Z=%d ionstage %d, recombining to ionstage %d level %d\n",
-  //          __func__, get_element(element), get_ionstage(element, *ion + 1), get_ionstage(element, *ion), lower);
+  //          __func__, get_atomicnumber(element), get_ionstage(element, *ion + 1), get_ionstage(element, *ion), lower);
   // printout("[debug] do_ma:   pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
 
   if (!std::isfinite(pkt_ptr->nu_cmf)) {
@@ -324,7 +324,7 @@ static void do_macroatom_ionisation(const int modelgridindex, const int element,
     printout(
         "%s: From Z=%d ionstage %d level %d, could not select upper level to ionise to. zrand %g * internal_up_higher "
         "%g >= rate %g\n",
-        __func__, get_element(element), get_ionstage(element, *ion), *level, zrand, internal_up_higher, rate);
+        __func__, get_atomicnumber(element), get_ionstage(element, *ion), *level, zrand, internal_up_higher, rate);
     abort();
   }
 
@@ -386,7 +386,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
     /// originating levels population cancels out in the macroatom transition probabilities
     /// which are based on detailed balance.
 
-    // printout("[debug] %s Z=%d ionstage %d level %d, jumps %d\n", __func__, get_element(element),
+    // printout("[debug] %s Z=%d ionstage %d level %d, jumps %d\n", __func__, get_atomicnumber(element),
     // get_ionstage(element,ion), level, jumps);
 
     assert_always(ion >= 0);
@@ -459,7 +459,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
 
         if constexpr (LOG_MACROATOM) {
           fprintf(macroatom_file, "%8d %14d %2d %12d %12d %9d %9d %9d %11.5e %11.5e %11.5e %11.5e %9d\n", timestep,
-                  modelgridindex, get_element(element), get_ionstage(element, ion_in), get_ionstage(element, ion),
+                  modelgridindex, get_atomicnumber(element), get_ionstage(element, ion_in), get_ionstage(element, ion),
                   level_in, level, activatingline, nu_cmf_in, pkt_ptr->nu_cmf, nu_rf_in, pkt_ptr->nu_rf, jumps);
         }
 
@@ -584,7 +584,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
         if (get_ionstage(element, ion) == 0 && lower == 0) {
           printout("internal downward transition to ground level occured ... abort\n");
           printout("element %d, ion %d, level %d, lower %d\n", element, ion, level, lower);
-          printout("Z %d, ionstage %d, energy %g\n", get_element(element), get_ionstage(element, ion - 1),
+          printout("Z %d, ionstage %d, energy %g\n", get_atomicnumber(element), get_ionstage(element, ion - 1),
                    globals::elements[element].ions[ion - 1].levels[lower].epsilon);
           printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
           abort();
@@ -655,7 +655,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
           stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL,
                                      pkt_ptr->e_cmf);
         }
-        // printout("Macroatom non-thermal ionisation to Z=%d ionstage %d level %d\n", get_element(element), ion,
+        // printout("Macroatom non-thermal ionisation to Z=%d ionstage %d level %d\n", get_atomicnumber(element), ion,
         // level);
         break;
       }
@@ -735,7 +735,7 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
       // abort();
     }
 
-    // printout("[debug] rad_rates_down: Z=%d, ionstage %d, upper %d, lower %d\n", get_element(element),
+    // printout("[debug] rad_rates_down: Z=%d, ionstage %d, upper %d, lower %d\n", get_atomicnumber(element),
     // get_ionstage(element, ion), upper, lower); printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n", A_ul,
     // tau_sobolev, n_u);
     assert_testmodeonly(std::isfinite(R));
@@ -785,7 +785,7 @@ auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const
             // %g\n",
             //          linelambda, contribcount, R_Jb, R_radfield, R_Jb / R_radfield);
             // printout("  (for transition Z=%02d ionstage %d lower %d upper %d)\n",
-            //          get_element(element), get_ionstage(element, ion), lower, upper);
+            //          get_atomicnumber(element), get_ionstage(element, ion), lower, upper);
             R = R_Jb;
           }
         }

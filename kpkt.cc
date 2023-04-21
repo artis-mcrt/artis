@@ -494,7 +494,7 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
       const int nions = get_nions(element);
       for (ion = 0; ion < nions; ion++) {
         coolingsum += grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion];
-        // printout("Z=%d, ionstage %d, coolingsum %g\n", get_element(element), get_ionstage(element, ion),
+        // printout("Z=%d, ionstage %d, coolingsum %g\n", get_atomicnumber(element), get_ionstage(element, ion),
         // coolingsum);
         if (coolingsum > rndcool_ion) {
           break;
@@ -504,7 +504,7 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
         break;
       }
     }
-    // printout("kpkt selected Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
+    // printout("kpkt selected Z=%d ionstage %d\n", get_atomicnumber(element), get_ionstage(element, ion));
 
     if (element >= get_nelements() || element < 0 || ion >= get_nions(element) || ion < 0) {
       printout("do_kpkt: problem selecting a cooling process ... abort\n");

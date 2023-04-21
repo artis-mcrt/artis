@@ -249,7 +249,7 @@ static void print_element_rates_summary(const int element, const int modelgridin
     const int nlevels = get_nlevels(element, ion);
     const int nlevels_nlte = get_nlevels_nlte(element, ion);
 
-    const int atomic_number = get_element(element);
+    const int atomic_number = get_atomicnumber(element);
     const int ionstage = get_ionstage(element, ion);
 
     const int max_printed_levels = ion_has_superlevel(element, ion) ? nlevels_nlte + 2 : nlevels_nlte + 1;
@@ -300,7 +300,7 @@ static void print_level_rates(const int modelgridindex, const int timestep, cons
 
   const gsl_vector popvector = *popvec;
   const int nlte_dimension = popvector.size;
-  const int atomic_number = get_element(element);
+  const int atomic_number = get_atomicnumber(element);
   const int selected_ionstage = get_ionstage(element, selected_ion);
   const int selected_index = get_nlte_vector_index(element, selected_ion, selected_level);
   const double pop_selectedlevel = gsl_vector_get(popvec, selected_index);
@@ -685,10 +685,11 @@ static auto lumatrix_is_singular(const gsl_matrix *LU, const int element) -> boo
       int level = -1;
       get_ion_level_of_nlte_vector_index(i, element, &ion, &level);
       if (is_nlte(element, ion, level)) {
-        printout("NLTE disconnected level: Z=%d ionstage %d level %d\n", get_element(element),
+        printout("NLTE disconnected level: Z=%d ionstage %d level %d\n", get_atomicnumber(element),
                  get_ionstage(element, ion), level);
       } else {
-        printout("NLTE disconnected superlevel: Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
+        printout("NLTE disconnected superlevel: Z=%d ionstage %d\n", get_atomicnumber(element),
+                 get_ionstage(element, ion));
       }
       is_singular = true;
     }
@@ -720,7 +721,7 @@ static auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matri
   gsl_linalg_LU_decomp(rate_matrix_LU_decomp, p, &s);
 
   if (lumatrix_is_singular(rate_matrix_LU_decomp, element)) {
-    printout("ERROR: NLTE matrix is singular for element Z=%d!\n", get_element(element));
+    printout("ERROR: NLTE matrix is singular for element Z=%d!\n", get_atomicnumber(element));
     // abort();
     completed_solution = false;
   } else {
@@ -800,7 +801,7 @@ static auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matri
         printout(
             "  WARNING: NLTE solver gave negative population to index %ud (Z=%d ion_stage %d level %d), pop = %g. "
             "Replacing with LTE pop of %g\n",
-            row, get_element(element), get_ionstage(element, ion), level,
+            row, get_atomicnumber(element), get_ionstage(element, ion), level,
             gsl_vector_get(x, row) * gsl_vector_get(pop_normfactor_vec, row), gsl_vector_get(pop_normfactor_vec, row));
         gsl_vector_set(popvec, row, gsl_vector_get(pop_normfactor_vec, row));
       }
@@ -821,7 +822,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 // solves the statistical balance equations to find NLTE level populations for all ions of an element
 // (ionisation balance follows from this too)
 {
-  const int atomic_number = get_element(element);
+  const int atomic_number = get_atomicnumber(element);
 
   if (grid::get_elem_abundance(modelgridindex, element) <= 0.) {
     // abundance of this element is zero, so do not store any NLTE populations
@@ -1006,8 +1007,8 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
             (gsl_vector_get(popvec, index_sl) / grid::modelgrid[modelgridindex].rho / superlevel_partfunc[ion]);
 
         // printout("solve_nlte_pops_element: The Z=%d ionstage %d superlevel population is %g with rho %g and
-        // superlevel_partfunc %g Te %g scaled pop stored as %g\n", get_element(element), get_ionstage(element, ion),
-        // gsl_vector_get(popvec, index_sl), grid::modelgrid[modelgridindex].rho, superlevel_partfunc[ion],
+        // superlevel_partfunc %g Te %g scaled pop stored as %g\n", get_atomicnumber(element), get_ionstage(element,
+        // ion), gsl_vector_get(popvec, index_sl), grid::modelgrid[modelgridindex].rho, superlevel_partfunc[ion],
         // grid::get_Te(modelgridindex), grid::modelgrid[modelgridindex].nlte_pops[nlte_start + nlevels_nlte]); the
         // stored population is already divided by the partfunc, so just multiply it by the superlevel_boltzmann to get
         // the population of a level in the SL
@@ -1127,7 +1128,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_vector_free(pop_norm_factor_vec);
   const int duration_nltesolver = time(nullptr) - sys_time_start_nltesolver;
   if (duration_nltesolver > 2) {
-    printout("NLTE population solver call for Z=%d took %d seconds\n", get_element(element), duration_nltesolver);
+    printout("NLTE population solver call for Z=%d took %d seconds\n", get_atomicnumber(element), duration_nltesolver);
   }
 }
 
@@ -1150,7 +1151,7 @@ auto solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timestep)
   printout(
       "Solving for NLTE populations in cell %d. Doing Z=%d ionstage %d (element %d, ion %d). I think it's timestep "
       "%d\n",
-      modelgridindex, get_element(element), get_ionstage(element, ion), element, ion, timestep);
+      modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), element, ion, timestep);
   // printout("Current Te %g and ne %g\n",T_e, nne);
 
   const int nlevels_nlte = get_nlevels_nlte(element, ion);
@@ -1593,7 +1594,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
 
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
-    const int atomic_number = get_element(element);
+    const int atomic_number = get_atomicnumber(element);
 
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels_nlte = get_nlevels_nlte(element, ion);
@@ -1633,8 +1634,8 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
           nnlevelnlte = slpopfactor * superlevel_partfunc;
 
           // printout("nltepop_write_to_file: The Z=%d ionstage %d superlevel population is %g with rho %g and
-          // superlevel_partfunc %g Te %g scaled pop stored as %g\n", get_element(element), get_ionstage(element, ion),
-          // nnlevelnlte, grid::modelgrid[modelgridindex].rho, superlevel_partfunc, grid::get_Te(modelgridindex),
+          // superlevel_partfunc %g Te %g scaled pop stored as %g\n", get_atomicnumber(element), get_ionstage(element,
+          // ion), nnlevelnlte, grid::modelgrid[modelgridindex].rho, superlevel_partfunc, grid::get_Te(modelgridindex),
           // grid::modelgrid[modelgridindex].nlte_pops[ion_first_nlte + nlevels_nlte]);
         }
 

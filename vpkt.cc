@@ -271,7 +271,7 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
         lower = globals::linelist[lineindex].lowerlevelindex;
         A_ul = globals::linelist[lineindex].einstein_A;
 
-        anumber = get_element(element);
+        anumber = get_atomicnumber(element);
 
         dummy_ptr->next_trans = lineindex + 1;
 

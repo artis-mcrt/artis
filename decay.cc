@@ -1209,7 +1209,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   printout("update_abundances for cell %d timestep %d\n", modelgridindex, timestep);
 
   for (int element = get_nelements() - 1; element >= 0; element--) {
-    const int atomic_number = get_element(element);
+    const int atomic_number = get_atomicnumber(element);
     std::set<int> a_isotopes;
     // for the current element,
     // the mass fraction sum of radioactive isotopes, and stable nuclei coming from other decays
@@ -1305,7 +1305,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, const double t_current, const int element) {
   const double rho = grid::get_rho(modelgridindex);
 
-  const int atomic_number = get_element(element);
+  const int atomic_number = get_atomicnumber(element);
   std::set<int> a_isotopes;  // ensure we don't repeat isotopes
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
     const int nuc_z = get_nuc_z(nucindex);

@@ -62,7 +62,7 @@ static void initialise_linestat_file() {
   fprintf(linestat_file, "\n");
 
   for (int i = 0; i < globals::nlines; i++) {
-    fprintf(linestat_file, "%d ", get_element(globals::linelist[i].elementindex));
+    fprintf(linestat_file, "%d ", get_atomicnumber(globals::linelist[i].elementindex));
   }
   fprintf(linestat_file, "\n");
 

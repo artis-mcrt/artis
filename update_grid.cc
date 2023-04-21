@@ -71,7 +71,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         continue;
       }
 
-      fprintf(estimators_file, "populations        Z=%2d", get_element(element));
+      fprintf(estimators_file, "populations        Z=%2d", get_atomicnumber(element));
       const int nions = get_nions(element);
       if (nions > 0) {
         // add spaces for missing lowest ion stages to match other elements
@@ -104,7 +104,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
       // if (timestep % 10 == 0)
       // {
-      //   fprintf(estimators_file, "RRC_LTE_Nahar      Z=%2d", get_element(element));
+      //   fprintf(estimators_file, "RRC_LTE_Nahar      Z=%2d", get_atomicnumber(element));
       //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
       //     fprintf(estimators_file, "              ");
       //   for (int ion = 0; ion < nions; ion++)
@@ -119,7 +119,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
       // per_gmpop = false;
 
-      // fprintf(estimators_file, "AlphaLTE_R*nne Z=%2d", get_element(element));
+      // fprintf(estimators_file, "AlphaLTE_R*nne Z=%2d", get_atomicnumber(element));
       // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
       //   fprintf(estimators_file, "              ");
       // for (int ion = 0; ion < nions; ion++)
@@ -134,7 +134,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       assume_lte = false;
 
       if constexpr (TRACK_ION_STATS && TRACK_ION_MASTATS) {
-        fprintf(estimators_file, "MA_IN_RADEXC       Z=%2d", get_element(element));
+        fprintf(estimators_file, "MA_IN_RADEXC       Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -146,7 +146,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
         fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
 
-        fprintf(estimators_file, "MA_OUT_RADEEXC     Z=%2d", get_element(element));
+        fprintf(estimators_file, "MA_OUT_RADEEXC     Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -158,7 +158,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
         fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
 
-        fprintf(estimators_file, "MA_IN_COLEXC       Z=%2d", get_element(element));
+        fprintf(estimators_file, "MA_IN_COLEXC       Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -170,7 +170,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
         fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
 
-        fprintf(estimators_file, "MA_OUT_COLDEEXC    Z=%2d", get_element(element));
+        fprintf(estimators_file, "MA_OUT_COLDEEXC    Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -182,7 +182,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
         fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
 
-        fprintf(estimators_file, "MA_IN_PHOTOION     Z=%2d", get_element(element));
+        fprintf(estimators_file, "MA_IN_PHOTOION     Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -194,7 +194,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
         fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
 
-        fprintf(estimators_file, "MA_OUT_RADRECOMB   Z=%2d", get_element(element));
+        fprintf(estimators_file, "MA_OUT_RADRECOMB   Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -206,7 +206,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
         fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
 
-        fprintf(estimators_file, "MA_IN_COLION       Z=%2d", get_element(element));
+        fprintf(estimators_file, "MA_IN_COLION       Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -218,7 +218,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
         fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
 
-        fprintf(estimators_file, "MA_OUT_COLRECOMB   Z=%2d", get_element(element));
+        fprintf(estimators_file, "MA_OUT_COLRECOMB   Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -230,7 +230,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
         fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
 
-        fprintf(estimators_file, "MA_IN_NTCOLION     Z=%2d", get_element(element));
+        fprintf(estimators_file, "MA_IN_NTCOLION     Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -242,7 +242,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
         fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
 
-        fprintf(estimators_file, "MA_IN_TOTAL        Z=%2d", get_element(element));
+        fprintf(estimators_file, "MA_IN_TOTAL        Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -254,7 +254,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
         fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
 
-        fprintf(estimators_file, "MA_OUT_TOTAL       Z=%2d", get_element(element));
+        fprintf(estimators_file, "MA_OUT_TOTAL       Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -266,7 +266,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
         fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
 
-        fprintf(estimators_file, "MA_IN_INTERNAL     Z=%2d", get_element(element));
+        fprintf(estimators_file, "MA_IN_INTERNAL     Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -278,7 +278,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
         fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
 
-        fprintf(estimators_file, "MA_OUT_INTERNAL    Z=%2d", get_element(element));
+        fprintf(estimators_file, "MA_OUT_INTERNAL    Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -292,13 +292,13 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
 
       // // spontaneous radiative recombination rate coefficient (may or may not include stim. recomb)
-      // fprintf(estimators_file, "AlphaR*nne         Z=%2d", get_element(element));
+      // fprintf(estimators_file, "AlphaR*nne         Z=%2d", get_atomicnumber(element));
       // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
       //   fprintf(estimators_file, "              ");
       // for (int ion = 0; ion < nions; ion++)
       // {
       //   const bool printdebug = false;
-      //   // const bool printdebug = (get_element(element) >= 26);
+      //   // const bool printdebug = (get_atomicnumber(element) >= 26);
       //
       //   fprintf(estimators_file, "  %d: %9.3e",
       //           get_ionstage(element, ion),
@@ -309,13 +309,13 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       //
       // if (timestep % 10 == 0)
       // {
-      //   fprintf(estimators_file, "AlphaR_toSL*nne    Z=%2d", get_element(element));
+      //   fprintf(estimators_file, "AlphaR_toSL*nne    Z=%2d", get_atomicnumber(element));
       //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
       //     fprintf(estimators_file, "              ");
       //   for (int ion = 0; ion < nions; ion++)
       //   {
       //     const bool printdebug = false;
-      //     // const bool printdebug = (get_element(element) >= 26);
+      //     // const bool printdebug = (get_atomicnumber(element) >= 26);
       //
       //     fprintf(estimators_file, "  %d: %9.3e",
       //             get_ionstage(element, ion),
@@ -326,7 +326,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       // }
       //
       // if constexpr (TRACK_ION_STATS) {
-      //   fprintf(estimators_file, "AlphaR_MC_MA*nne   Z=%2d", get_element(element));
+      //   fprintf(estimators_file, "AlphaR_MC_MA*nne   Z=%2d", get_atomicnumber(element));
       //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
       //     fprintf(estimators_file, "              ");
       //   for (int ion = 0; ion < nions; ion++) {
@@ -337,7 +337,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       // }
       //
       // if constexpr (TRACK_ION_STATS) {
-      //   fprintf(estimators_file, "AlphaR_MC_KPKT*nne Z=%2d", get_element(element));
+      //   fprintf(estimators_file, "AlphaR_MC_KPKT*nne Z=%2d", get_atomicnumber(element));
       //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
       //     fprintf(estimators_file, "              ");
       //   for (int ion = 0; ion < nions; ion++) {
@@ -348,7 +348,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       // }
 
       if constexpr (TRACK_ION_STATS) {
-        fprintf(estimators_file, "AlphaR_MC*nne      Z=%2d", get_element(element));
+        fprintf(estimators_file, "AlphaR_MC*nne      Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -359,7 +359,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
         fprintf(estimators_file, "\n");
 
-        fprintf(estimators_file, "BF_escfrac         Z=%2d", get_element(element));
+        fprintf(estimators_file, "BF_escfrac         Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -371,7 +371,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
         fprintf(estimators_file, "\n");
 
-        fprintf(estimators_file, "BF_escfrac_vpkt    Z=%2d", get_element(element));
+        fprintf(estimators_file, "BF_escfrac_vpkt    Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -383,7 +383,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
         fprintf(estimators_file, "\n");
 
-        fprintf(estimators_file, "BB_escfrac         Z=%2d", get_element(element));
+        fprintf(estimators_file, "BB_escfrac         Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -396,13 +396,13 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
 
       // stimulated recombination rate coefficient
-      // fprintf(estimators_file, "Alpha_stim*nne   Z=%2d", get_element(element));
+      // fprintf(estimators_file, "Alpha_stim*nne   Z=%2d", get_atomicnumber(element));
       // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
       //   fprintf(estimators_file, "              ");
       // for (int ion = 0; ion < nions; ion++)
       // {
       //   // const bool printdebug = false;
-      //   const bool printdebug = (get_element(element) >= 26);
+      //   const bool printdebug = (get_atomicnumber(element) >= 26);
       //
       //   fprintf(estimators_file, "  %d: %9.3e",
       //           get_ionstage(element, ion),
@@ -412,7 +412,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       // fprintf(estimators_file, "\n");
 
       // thermal collisional recombination rate coefficient
-      // fprintf(estimators_file, "Alpha_C*nne      Z=%2d", get_element(element));
+      // fprintf(estimators_file, "Alpha_C*nne      Z=%2d", get_atomicnumber(element));
       // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
       //   fprintf(estimators_file, "              ");
       // for (int ion = 0; ion < nions; ion++)
@@ -426,7 +426,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
       // if (timestep % 20 == 0)
       // {
-      //   fprintf(estimators_file, "kappa_bf(nuedge)   Z=%2d", get_element(element));
+      //   fprintf(estimators_file, "kappa_bf(nuedge)   Z=%2d", get_atomicnumber(element));
       //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
       //     fprintf(estimators_file, "              ");
       //   for (int ion = 0; ion < nions - 1; ion++)
@@ -442,12 +442,12 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       // }
 
       // {
-      //   fprintf(estimators_file, "gamma_R            Z=%2d", get_element(element));
+      //   fprintf(estimators_file, "gamma_R            Z=%2d", get_atomicnumber(element));
       //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
       //     fprintf(estimators_file, "              ");
       //   for (int ion = 0; ion < nions - 1; ion++)
       //   {
-      //     // const bool printdebug_gammar = (get_element(element) == 26 && get_ionstage(element, ion) == 2);
+      //     // const bool printdebug_gammar = (get_atomicnumber(element) == 26 && get_ionstage(element, ion) == 2);
       //     const bool printdebug_gammar = false;
       //     fprintf(estimators_file, "  %d: %9.3e",
       //             get_ionstage(element, ion),
@@ -458,12 +458,12 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       // }
 
       if (DETAILED_BF_ESTIMATORS_ON) {
-        fprintf(estimators_file, "gamma_R_integral   Z=%2d", get_element(element));
+        fprintf(estimators_file, "gamma_R_integral   Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
         for (int ion = 0; ion < nions - 1; ion++) {
-          // const bool printdebug_gammar = (get_element(element) == 26 && get_ionstage(element, ion) == 2);
+          // const bool printdebug_gammar = (get_atomicnumber(element) == 26 && get_ionstage(element, ion) == 2);
           const bool printdebug_gammar = false;
           fprintf(
               estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
@@ -473,13 +473,13 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
 
       if (DETAILED_BF_ESTIMATORS_ON) {
-        fprintf(estimators_file, "gamma_R_bfest      Z=%2d", get_element(element));
+        fprintf(estimators_file, "gamma_R_bfest      Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
         for (int ion = 0; ion < nions - 1; ion++) {
-          // const bool printdebug_gammar = ((get_element(element) == 26 || get_element(element) == 28) &&
-          // get_ionstage(element, ion) >= 2); const bool printdebug_gammar = (get_element(element) >= 26);
+          // const bool printdebug_gammar = ((get_atomicnumber(element) == 26 || get_atomicnumber(element) == 28) &&
+          // get_ionstage(element, ion) >= 2); const bool printdebug_gammar = (get_atomicnumber(element) >= 26);
           const bool printdebug_gammar = false;
           fprintf(
               estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
@@ -489,7 +489,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
 
       if constexpr (TRACK_ION_STATS) {
-        fprintf(estimators_file, "gamma_R_MC         Z=%2d", get_element(element));
+        fprintf(estimators_file, "gamma_R_MC         Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -501,7 +501,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
 
       if constexpr (TRACK_ION_STATS) {
-        fprintf(estimators_file, "gamma_R_MC_BF      Z=%2d", get_element(element));
+        fprintf(estimators_file, "gamma_R_MC_BF      Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -512,7 +512,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "\n");
       }
 
-      // fprintf(estimators_file, "gamma_R_MC_BFsameZ Z=%2d", get_element(element));
+      // fprintf(estimators_file, "gamma_R_MC_BFsameZ Z=%2d", get_atomicnumber(element));
       // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
       //   fprintf(estimators_file, "              ");
       // for (int ion = 0; ion < nions; ion++)
@@ -524,7 +524,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       // fprintf(estimators_file, "\n");
 
       if constexpr (TRACK_ION_STATS) {
-        fprintf(estimators_file, "gamma_R_MC_BF_i+1  Z=%2d", get_element(element));
+        fprintf(estimators_file, "gamma_R_MC_BF_i+1  Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -536,7 +536,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
 
       if constexpr (TRACK_ION_STATS) {
-        fprintf(estimators_file, "gamma_R_MC_BF_i+2  Z=%2d", get_element(element));
+        fprintf(estimators_file, "gamma_R_MC_BF_i+2  Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -548,7 +548,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
 
       if constexpr (TRACK_ION_STATS) {
-        fprintf(estimators_file, "gamma_R_MC_BF_i+3  Z=%2d", get_element(element));
+        fprintf(estimators_file, "gamma_R_MC_BF_i+3  Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -560,7 +560,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
 
       if constexpr (TRACK_ION_STATS) {
-        fprintf(estimators_file, "gamma_R_MC_BFtoSL  Z=%2d", get_element(element));
+        fprintf(estimators_file, "gamma_R_MC_BFtoSL  Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -572,7 +572,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
 
       if constexpr (TRACK_ION_STATS) {
-        fprintf(estimators_file, "gamma_R_MC_BB      Z=%2d", get_element(element));
+        fprintf(estimators_file, "gamma_R_MC_BB      Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -584,7 +584,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
 
       if constexpr (TRACK_ION_STATS) {
-        fprintf(estimators_file, "gamma_R_MC_BB_i+1  Z=%2d", get_element(element));
+        fprintf(estimators_file, "gamma_R_MC_BB_i+1  Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -596,7 +596,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
 
       if constexpr (TRACK_ION_STATS) {
-        fprintf(estimators_file, "gamma_R_MC_BB_i+2  Z=%2d", get_element(element));
+        fprintf(estimators_file, "gamma_R_MC_BB_i+2  Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -608,7 +608,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
 
       if constexpr (TRACK_ION_STATS) {
-        fprintf(estimators_file, "gamma_R_MC_BB_i+3  Z=%2d", get_element(element));
+        fprintf(estimators_file, "gamma_R_MC_BB_i+3  Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -619,7 +619,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "\n");
       }
 
-      // fprintf(estimators_file, "gamma_C          Z=%2d", get_element(element));
+      // fprintf(estimators_file, "gamma_C          Z=%2d", get_atomicnumber(element));
       // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
       //   fprintf(estimators_file, "              ");
       // for (int ion = 0; ion < nions - 1; ion++)
@@ -632,7 +632,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       // fprintf(estimators_file, "\n");
 
       if (NT_ON) {
-        fprintf(estimators_file, "gamma_NT           Z=%2d", get_element(element));
+        fprintf(estimators_file, "gamma_NT           Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");
         }
@@ -643,7 +643,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "\n");
 
         if constexpr (TRACK_ION_STATS) {
-          fprintf(estimators_file, "gamma_NT_MC        Z=%2d", get_element(element));
+          fprintf(estimators_file, "gamma_NT_MC        Z=%2d", get_atomicnumber(element));
           for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
             fprintf(estimators_file, "              ");
           }
@@ -656,14 +656,14 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
 
       if (!NO_LUT_PHOTOION) {
-        fprintf(estimators_file, "corrphotoionrenorm Z=%2d", get_element(element));
+        fprintf(estimators_file, "corrphotoionrenorm Z=%2d", get_atomicnumber(element));
         for (int ion = 0; ion < nions; ion++) {
           fprintf(
               estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
               globals::corrphotoionrenorm[mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion]);
         }
         fprintf(estimators_file, "\n");
-        fprintf(estimators_file, "gammaestimator     Z=%2d", get_element(element));
+        fprintf(estimators_file, "gammaestimator     Z=%2d", get_atomicnumber(element));
         for (int ion = 0; ion < nions; ion++) {
           fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
                   globals::gammaestimator[mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion]);
@@ -1500,7 +1500,7 @@ auto calculate_populations(const int modelgridindex) -> double
               "[info] calculate_populations: uppermost_ion limited by phi factors for element "
               "Z=%d, ionstage %d in "
               "cell %d\n",
-              get_element(element), get_ionstage(element, ion), modelgridindex);
+              get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
           break;
         }
       }
@@ -1534,7 +1534,7 @@ auto calculate_populations(const int modelgridindex) -> double
     for (int element = 0; element < get_nelements(); element++) {
       /// calculate number density of the current element (abundances are given by mass)
       const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
-      nne_tot += nnelement * get_element(element);
+      nne_tot += nnelement * get_atomicnumber(element);
 
       const int nions = get_nions(element);
       /// Assign the species population to the neutral ion and set higher ions to MINPOP
@@ -1632,7 +1632,7 @@ auto calculate_populations(const int modelgridindex) -> double
       const int nions = get_nions(element);
       /// calculate number density of the current element (abundances are given by mass)
       const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
-      nne_tot += nnelement * get_element(element);
+      nne_tot += nnelement * get_atomicnumber(element);
 
       const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
       auto ionfractions = std::make_unique<double[]>(uppermost_ion + 1);
@@ -1687,7 +1687,7 @@ auto calculate_electron_densities(const int modelgridindex) -> double
   for (int element = 0; element < get_nelements(); element++) {
     // calculate number density of the current element (abundances are given by mass)
     const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
-    nne_tot += nnelement * get_element(element);
+    nne_tot += nnelement * get_atomicnumber(element);
 
     // Use ionization fractions to calculate the free electron contributions
     if (nnelement > 0) {

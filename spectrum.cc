@@ -128,7 +128,7 @@ static void printout_tracemission_stats() {
         // const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * em_time;
 
         printout("%7.2e (%5.1f%%) %4d %9d %5d %5d %8.1f %8.2e %4d %7.1f %7.1f %7.1e %7.1e\n", encontrib,
-                 100 * encontrib / totalenergy, get_element(element), get_ionstage(element, ion),
+                 100 * encontrib / totalenergy, get_atomicnumber(element), get_ionstage(element, ion),
                  globals::linelist[lineindex].upperlevelindex, globals::linelist[lineindex].lowerlevelindex,
                  globals::linelist[lineindex].coll_str, einstein_spontaneous_emission(lineindex),
                  globals::linelist[lineindex].forbidden, linelambda, v_rad, B_lu, B_ul);

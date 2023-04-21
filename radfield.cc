@@ -151,7 +151,7 @@ static void setup_bin_boundaries() {
     //     const int level = globals::groundcont[i].level;
     //     const int phixstargetindex = globals::groundcont[i].phixstargetindex;
     //
-    //     const int Z = get_element(element);
+    //     const int Z = get_atomicnumber(element);
     //     const int ion_stage = get_ionstage(element, ion);
     //     const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
     //
@@ -263,7 +263,7 @@ void init(int my_rank, int ndo_nonempty)
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
     for (int i = 0; i < globals::nlines; i++) {
       const int element = globals::linelist[i].elementindex;
-      const int Z = get_element(element);
+      const int Z = get_atomicnumber(element);
       if (Z == 26) {
         const int lowerlevel = globals::linelist[i].lowerlevelindex;
         // const int upperlevel = linelist[i].upperlevelindex;
@@ -495,7 +495,7 @@ auto get_Jblueindex(const int lineindex) -> int
   // const int lower = linelist[lineindex].lowerlevelindex;
   // const int upper = linelist[lineindex].upperlevelindex;
   // printout("Could not find lineindex %d among %d items (Z=%02d ionstage %d lower %d upper %d)\n",
-  //          lineindex, detailed_linecount, get_element(element), get_ionstage(element, ion), lower, upper);
+  //          lineindex, detailed_linecount, get_atomicnumber(element), get_ionstage(element, ion), lower, upper);
 
   return -1;
 }
@@ -753,7 +753,7 @@ static void update_bfestimators(const int modelgridindex, const double distance_
       const int element = allcont[allcontindex].element;
       // const int ion = allcont[allcontindex].ion;
       // const int ionstage = get_ionstage(element, ion);
-      const int atomic_number = get_element(element);
+      const int atomic_number = get_atomicnumber(element);
       if ((atomic_number == 26))  //  && ionstage == 2
       {
         const int oldlistsize = bfrate_raw_bytype_size[modelgridindex][allcontindex];
@@ -1331,8 +1331,8 @@ void print_bfrate_contributions(const int element, const int lowerion, const int
         const int upper = globals::linelist[et].upperlevelindex;
         const int lower = globals::linelist[et].lowerlevelindex;
         const double lambda_trans = 1e8 * CLIGHT / globals::linelist[et].nu;
-        printout("%7d bound-bound Z=%2d ion_stage %d upper+1 %4d lower+1 %4d lambda %5.1f\n", et, get_element(element),
-                 get_ionstage(element, ion), upper + 1, lower + 1, lambda_trans);
+        printout("%7d bound-bound Z=%2d ion_stage %d upper+1 %4d lower+1 %4d lambda %5.1f\n", et,
+                 get_atomicnumber(element), get_ionstage(element, ion), upper + 1, lower + 1, lambda_trans);
       } else if (et == EMTYPE_FREEFREE) {
         /// ff-emission
         printout("%7d free-free scattering\n", et);
@@ -1353,7 +1353,8 @@ void print_bfrate_contributions(const int element, const int lowerion, const int
         assert_always(get_continuumindex(element, ion, lower, upperionlevel) == et);
         const int lowerionstage = get_ionstage(element, ion);
         printout("%7d bound-free  Z=%2d ion_stage %d->%d upper+1 %4d lower+1 %4d lambda %5.1f\n", et,
-                 get_element(element), lowerionstage + 1, lowerionstage, upperionlevel + 1, lower + 1, lambda_trans);
+                 get_atomicnumber(element), lowerionstage + 1, lowerionstage, upperionlevel + 1, lower + 1,
+                 lambda_trans);
       }
     }
 
@@ -1379,7 +1380,7 @@ auto get_bfrate_estimator(const int element, const int lowerion, const int lower
       return prev_bfrate_normed[nonemptymgi * globals::nbfcontinua + allcontindex];
     }
 
-    printout("no bf rate for element Z=%d ion_stage %d lower %d phixstargetindex %d\n", get_element(element),
+    printout("no bf rate for element Z=%d ion_stage %d lower %d phixstargetindex %d\n", get_atomicnumber(element),
              get_ionstage(element, lowerion), lower, phixstargetindex);
     return -1.;
   }

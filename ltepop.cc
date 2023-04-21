@@ -80,7 +80,7 @@ void get_ionfractions(int element, int modelgridindex, double nne, std::unique_p
     if (!std::isfinite(ionfractions[ion])) {
       if (modelgridindex != grid::get_npts_model()) {
         printout("[warning] ionfract set to zero for ionstage %d of Z=%d in cell %d with T_e %g, T_R %g\n",
-                 get_ionstage(element, ion), get_element(element), modelgridindex, grid::get_Te(modelgridindex),
+                 get_ionstage(element, ion), get_atomicnumber(element), modelgridindex, grid::get_Te(modelgridindex),
                  grid::get_TR(modelgridindex));
         // abort();
         ionfractions[ion] = 0;

@@ -19,7 +19,7 @@ bool level_isinsuperlevel(int element, int ion, int level);
 double photoionization_crosssection_fromtable(const float *photoion_xs, double nu_edge, double nu);
 void set_nelements(int nelements_in);
 int get_nelements();
-int get_element(int element);
+int get_atomicnumber(int element);
 int get_elementindex(int Z);
 void increase_includedions(int nions);
 int get_includedions();

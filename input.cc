@@ -117,7 +117,7 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
       }
       if (fabs(probability_sum - 1.0) > 0.01) {
         printout("WARNING: photoionisation table for Z=%d ionstage %d has probabilities that sum to %g",
-                 get_element(element), get_ionstage(element, lowerion), probability_sum);
+                 get_atomicnumber(element), get_ionstage(element, lowerion), probability_sum);
       }
     } else  // file has table of target states and probabilities but our top ion is limited to one level
     {
@@ -496,10 +496,10 @@ constexpr auto compare_linelistentry(const void *p1, const void *p2) -> int
     if ((a1->elementindex == a2->elementindex) && (a1->ionindex == a2->ionindex) &&
         (a1->lowerlevelindex == a2->lowerlevelindex) && (a1->upperlevelindex == a2->upperlevelindex)) {
       printout("Duplicate transition line? %s\n", a1->nu == a2->nu ? "nu match exact" : "close to nu match");
-      printout("a: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_element(a1->elementindex),
+      printout("a: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_atomicnumber(a1->elementindex),
                get_ionstage(a1->elementindex, a1->ionindex), a1->lowerlevelindex, a1->upperlevelindex, a1->nu,
                1e8 * CLIGHT / a1->nu);
-      printout("b: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_element(a2->elementindex),
+      printout("b: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_atomicnumber(a2->elementindex),
                get_ionstage(a2->elementindex, a2->ionindex), a2->lowerlevelindex, a2->upperlevelindex, a2->nu,
                1e8 * CLIGHT / a2->nu);
     }
@@ -999,10 +999,10 @@ static void read_atomicdata_files() {
         if ((a1->elementindex == a2->elementindex) && (a1->ionindex == a2->ionindex) &&
             (a1->lowerlevelindex == a2->lowerlevelindex) && (a1->upperlevelindex == a2->upperlevelindex)) {
           printout("Duplicate transition line? %s\n", a1->nu == a2->nu ? "nu match exact" : "close to nu match");
-          printout("a: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_element(a1->elementindex),
+          printout("a: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_atomicnumber(a1->elementindex),
                    get_ionstage(a1->elementindex, a1->ionindex), a1->lowerlevelindex, a1->upperlevelindex, a1->nu,
                    1e8 * CLIGHT / a1->nu);
-          printout("b: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_element(a2->elementindex),
+          printout("b: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_atomicnumber(a2->elementindex),
                    get_ionstage(a2->elementindex, a2->ionindex), a2->lowerlevelindex, a2->upperlevelindex, a2->nu,
                    1e8 * CLIGHT / a2->nu);
         }
@@ -1178,7 +1178,7 @@ static void read_atomicdata_files() {
 
           if (nlevels_groundterm != phixstargetlevels) {
             printout("WARNING: Z=%d ion_stage %d nlevels_groundterm %d phixstargetlevels(ion-1) %d.\n",
-                     get_element(element), get_ionstage(element, ion), nlevels_groundterm, phixstargetlevels);
+                     get_atomicnumber(element), get_ionstage(element, ion), nlevels_groundterm, phixstargetlevels);
             // if (nlevels_groundterm < phixstargetlevels)
             // {
             //   printout("  -> setting to %d\n", phixstargetlevels);
@@ -1729,8 +1729,8 @@ static void read_atomicdata() {
   printout("[input] this simulation contains\n");
   printout("----------------------------------\n");
   for (int element = 0; element < get_nelements(); element++) {
-    printout("[input]  element %d (Z=%2d %s)\n", element, get_element(element),
-             decay::get_elname(get_element(element)));
+    printout("[input]  element %d (Z=%2d %s)\n", element, get_atomicnumber(element),
+             decay::get_elname(get_atomicnumber(element)));
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
       int ion_photoiontransitions = 0;
@@ -1795,7 +1795,7 @@ static void read_atomicdata() {
         assert_always(has_superlevel == ion_has_superlevel(element, ion));
 
         printout("[input]  element %2d Z=%2d ion_stage %2d has %5d NLTE excited levels%s. Starting at %d\n", element,
-                 get_element(element), get_ionstage(element, ion), fullnlteexcitedlevelcount,
+                 get_atomicnumber(element), get_ionstage(element, ion), fullnlteexcitedlevelcount,
                  has_superlevel ? " plus a superlevel" : "", globals::elements[element].ions[ion].first_nlte);
       }
     }

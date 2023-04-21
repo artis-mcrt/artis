@@ -116,7 +116,7 @@ static auto get_event(const int modelgridindex,
         // printout(
         //     "[warning] packet %d dummypkt_ptr->nu_cmf %lg <= nu_trans %lg diff %lg next_trans %d, Z=%d ionstage %d
         //     " "lower %d upper %d\n", pkt_ptr->number, dummypkt_ptr->nu_cmf, nu_trans, (dummypkt_ptr->nu_cmf -
-        //     nu_trans) / nu_trans, dummypkt_ptr->next_trans, get_element(element), get_ionstage(element, ion),
+        //     nu_trans) / nu_trans, dummypkt_ptr->next_trans, get_atomicnumber(element), get_ionstage(element, ion),
         //     lower, upper);
         ldist = 0;  /// photon was propagated too far, make sure that we don't miss a line
       } else if (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
@@ -1175,7 +1175,7 @@ static auto calculate_kappa_ff(const int modelgridindex, const double nu) -> dou
     for (int ion = 0; ion < get_nions(element); ion++) {
       /// calculate population of ionstage ...
       const double nnion = ionstagepop(modelgridindex, element, ion);
-      // Z = get_element(element);  ///atomic number
+      // Z = get_atomicnumber(element);  ///atomic number
       // if (get_ionstage(element,ion) > 1)
       /// Z is ionic charge in the following formula
       const int Z = get_ionstage(element, ion) - 1;
@@ -1304,7 +1304,7 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
           printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf_contr %g ... abort\n",
                    kappa_bf_contr);
           printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n", i, element, ion, level);
-          printout("[fatal] Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
+          printout("[fatal] Z=%d ionstage %d\n", get_atomicnumber(element), get_ionstage(element, ion));
           printout("[fatal] globals::cell[%d].composition[%d].abundance = %g\n", modelgridindex, element,
                    grid::get_elem_abundance(modelgridindex, element));
           printout("[fatal] nne %g, nnlevel %g, (or %g)\n", grid::get_nne(modelgridindex), nnlevel,

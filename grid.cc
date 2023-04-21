@@ -521,7 +521,7 @@ static void set_elem_stable_abund_from_total(const int mgi, const int element, c
   // by subtracting the abundances of radioactive isotopes.
   // if the element Z=anumber has no specific stable abundance variable then the function does nothing
 
-  const int atomic_number = get_element(element);
+  const int atomic_number = get_atomicnumber(element);
 
   double isofracsum = 0.;  // mass fraction sum of radioactive isotopes
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
@@ -1025,7 +1025,7 @@ static void abundances_read() {
       for (int element = 0; element < get_nelements(); element++) {
         /// now set the abundances (by mass) of included elements, i.e.
         /// read out the abundances specified in the atomic data file
-        const int anumber = get_element(element);
+        const int anumber = get_atomicnumber(element);
         const float elemabundance = abundances_in[anumber - 1] / normfactor;
         assert_always(elemabundance >= 0.);
 

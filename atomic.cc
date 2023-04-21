@@ -76,7 +76,7 @@ auto is_nlte(const int element, const int ion, const int level) -> bool
   if (!NLTE_POPS_ON) {
     return false;
   }
-  return LEVEL_IS_NLTE(get_element(element), get_ionstage(element, ion),
+  return LEVEL_IS_NLTE(get_atomicnumber(element), get_ionstage(element, ion),
                        level);  // defined in artisoptions.h
 }
 
@@ -160,7 +160,7 @@ void set_nelements(const int nelements_in) { nelements = nelements_in; }
 
 auto get_nelements() -> int { return nelements; }
 
-auto get_element(const int element) -> int
+auto get_atomicnumber(const int element) -> int
 /// Returns the atomic number associated with a given elementindex.
 {
   assert_testmodeonly(element >= 0);

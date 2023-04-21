@@ -113,12 +113,12 @@ static auto read_ratecoeff_dat() -> bool
                                  &in_ionisinglevels) == 4);
             const int nlevels = get_nlevels(element, ion);
             int const ionisinglevels = get_ionisinglevels(element, ion);
-            if (get_element(element) != in_element || get_ionstage(element, ion) != in_ionstage ||
+            if (get_atomicnumber(element) != in_element || get_ionstage(element, ion) != in_ionstage ||
                 nlevels != in_levels || ionisinglevels != in_ionisinglevels) {
               printout(
                   "Levels or ionising levels count mismatch! element %d %d ionstage %d %d nlevels %d %d ionisinglevels "
                   "%d %d\n",
-                  get_element(element), in_element, get_ionstage(element, ion), in_ionstage, nlevels, in_levels,
+                  get_atomicnumber(element), in_element, get_ionstage(element, ion), in_ionstage, nlevels, in_levels,
                   ionisinglevels, in_ionisinglevels);
               fileisamatch = false;
               break;
@@ -213,7 +213,7 @@ static void write_ratecoeff_dat() {
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      fprintf(ratecoeff_file, "%d %d %d %d\n", get_element(element), get_ionstage(element, ion),
+      fprintf(ratecoeff_file, "%d %d %d %d\n", get_atomicnumber(element), get_ionstage(element, ion),
               get_nlevels(element, ion), get_ionisinglevels(element, ion));
     }
   }
@@ -459,7 +459,7 @@ static void precalculate_rate_coefficient_integrals() {
 #endif
     for (int ion = 0; ion < nions; ion++) {
       // nlevels = get_nlevels(element,ion);
-      const int atomic_number = get_element(element);
+      const int atomic_number = get_atomicnumber(element);
       const int ionstage = get_ionstage(element, ion);
       const int nlevels = get_ionisinglevels(element, ion);
       /// That's only an option for pure LTE
@@ -556,7 +556,7 @@ static void precalculate_rate_coefficient_integrals() {
             //   GSL_INTEG_GAUSS61, w, &alpha_sp_new, &error); alpha_sp_new *= FOURPI * sfac_b * phixstargetprobability;
             //   printout("recomb: T_e %6.1f Z=%d ionstage %d->%d upper+1 %5d lower+1 %5d sfac %7.2e sfac_new %7.2e
             //   alpha %7.2e alpha_new %7.2e threshold_ev %7.2e threshold_new_ev %7.2e\n",
-            //           T_e, get_element(element), get_ionstage(element, ion + 1),
+            //           T_e, get_atomicnumber(element), get_ionstage(element, ion + 1),
             //           get_ionstage(element, ion), upperlevel + 1, level + 1,
             //           sfac, sfac_b,
             //           alpha_sp, alpha_sp_new,
@@ -651,7 +651,7 @@ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel
 
   // printout("emitted bf photon Z=%2d ionstage %d->%d upper %4d lower %4d lambda %7.1f lambda_edge %7.1f ratio %g zrand
   // %g\n",
-  //    get_element(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), upperionlevel,
+  //    get_atomicnumber(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), upperionlevel,
   //    lower, 1e8 * CLIGHT / nu_selected, 1e8 * CLIGHT / nu_threshold, nu_selected / nu_threshold, zrand);
 
   const double deltanu = (nu_max_phixs - nu_threshold) / npieces;
@@ -803,14 +803,15 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
           printout(
               "recomb: Z=%d ionstage %d->%d upper+1 %5d lower+1 %5d alpha_level %7.2e alpha_ion_contrib %7.2e sum "
               "%7.2e nnlevel %7.2e nnionfrac %7.2e\n",
-              get_element(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), upper + 1,
-              lower + 1, alpha_level, alpha_ion_contrib, alpha, nnupperlevel, nnupperlevel_so_far / nnupperion);
+              get_atomicnumber(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion),
+              upper + 1, lower + 1, alpha_level, alpha_ion_contrib, alpha, nnupperlevel,
+              nnupperlevel_so_far / nnupperion);
         }
       }
     }
   }
   if (printdebug) {
-    printout("recomb: Z=%2d ionstage %d->%d upper+1 [all] lower+1 [all] Alpha %g\n\n", get_element(element),
+    printout("recomb: Z=%2d ionstage %d->%d upper+1 [all] lower+1 [all] Alpha %g\n\n", get_atomicnumber(element),
              get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), alpha);
   }
   return alpha;
@@ -1142,7 +1143,7 @@ static auto calculate_stimrecombcoeff_integral(int element, int lowerion, int le
   //   error *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
   //   printout("stimrecombcoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex
   //   %d gamma %g error %g\n",
-  //            status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex,
+  //            status, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), level, phixstargetindex,
   //            gammacorr, error);
   // }
 
@@ -1262,8 +1263,8 @@ static auto calculate_corrphotoioncoeff_integral(int element, int ion, int level
     printout(
         "corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d "
         "integral %g error %g\n",
-        status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr,
-        error);
+        status, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), level, phixstargetindex,
+        gammacorr, error);
     if (!std::isfinite(gammacorr)) {
       gammacorr = 0.;
     }
@@ -1500,7 +1501,7 @@ auto calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, co
         printout(
             "Gamma_R: Z=%d ionstage %d->%d lower+1 %5d upper+1 %5d lambda_threshold %7.1f Gamma_integral %7.2e "
             "Gamma_bfest %7.2e Gamma_used %7.2e Gamma_used_sum %7.2e\n",
-            get_element(element), get_ionstage(element, lowerion), get_ionstage(element, lowerion + 1), lower + 1,
+            get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element, lowerion + 1), lower + 1,
             upper + 1, threshold_angstroms, gamma_ion_contribution_integral, gamma_ion_contribution_bfest,
             gamma_ion_contribution_used, gamma_ion_used);
 
@@ -1512,8 +1513,9 @@ auto calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, co
     }
   }
   if (printdebug) {
-    printout("Gamma_R: Z=%d ionstage %d->%d lower+1 [all] upper+1 [all] Gamma_used_ion %7.2e\n", get_element(element),
-             get_ionstage(element, lowerion), get_ionstage(element, lowerion + 1), gamma_ion_used);
+    printout("Gamma_R: Z=%d ionstage %d->%d lower+1 [all] upper+1 [all] Gamma_used_ion %7.2e\n",
+             get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element, lowerion + 1),
+             gamma_ion_used);
   }
 
   return gamma_ion;
