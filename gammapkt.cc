@@ -30,8 +30,6 @@ struct gamma_spec {
 
 static struct gamma_spec *gamma_spectra;
 
-constexpr int RED_OF_LIST = -956;  // must be negative
-
 struct gammaline {
   int nucindex;       // is it a Ni56, Co56, a fake line, etc
   int nucgammaindex;  // which of the lines of that nuclide is it
