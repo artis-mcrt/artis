@@ -668,30 +668,4 @@ auto get_gam_freq(const int n) -> double {
   return gamma_spectra[nucindex].energy[lineid] / H;
 }
 
-auto get_nul(double freq) -> int {
-  const double freq_max = get_gam_freq(allnuc_gamma_line_list.size() - 1);
-  const double freq_min = get_gam_freq(0);
-
-  if (freq > freq_max) {
-    return (allnuc_gamma_line_list.size() - 1);
-  }
-  if (freq < freq_min) {
-    return RED_OF_LIST;
-  }
-  int too_high = allnuc_gamma_line_list.size() - 1;
-  int too_low = 0;
-
-  while (too_high != too_low + 1) {
-    const int tryindex = (too_high + too_low) / 2;
-    const double freq_try = get_gam_freq(tryindex);
-    if (freq_try >= freq) {
-      too_high = tryindex;
-    } else {
-      too_low = tryindex;
-    }
-  }
-
-  return too_low;
-}
-
 }  // namespace gammapkt
