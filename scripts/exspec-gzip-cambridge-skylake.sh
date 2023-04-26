@@ -124,14 +124,14 @@ fi
 
 echo -e "\nnumtasks=$numtasks, numnodes=$numnodes, mpi_tasks_per_node=$mpi_tasks_per_node (OMP_NUM_THREADS=$OMP_NUM_THREADS)"
 
-if [ ! -f emission.out.xz ]; then
+if [ ! -f emission.out.zst ]; then
   ./artis/scripts/exspec-before.sh
 
   echo -e "\nExecuting command:\n==================\n$CMD\n"
 
   eval $CMD
 else
-  echo 'Not running exspec because emission.out.xz was found'
+  echo 'Not running exspec because emission.out.zst was found'
 fi
 
 ./artis/scripts/exspec-after.sh
