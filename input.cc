@@ -1150,7 +1150,8 @@ static void read_atomicdata_files(void) {
 //  phixs_file_version = phixs_v2_exists ? 2 : 1;
 
 //  read_phixs_data(phixs_file_version);
-
+  globals::nbfcontinua_ground = 0;
+  globals::nbfcontinua = 0;
   // read both phixs files
   phixs_file_version = 1;
   read_phixs_data(phixs_file_version);
