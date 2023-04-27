@@ -546,7 +546,7 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
 
 #ifdef MPI_ON
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Win win = nullptr;
+      MPI_Win win = MPI_WIN_NULL;
 
       int my_rank_trans = totupdowntrans / globals::node_nprocs;
       // rank_in_node 0 gets any remainder
@@ -1040,7 +1040,7 @@ static void read_atomicdata_files() {
   // create a linelist shared on node and then copy data across, freeing the local copy
   struct linelist_entry *nonconstlinelist = nullptr;
 #ifdef MPI_ON
-  MPI_Win win = nullptr;
+  MPI_Win win = MPI_WIN_NULL;
 
   int my_rank_lines = globals::nlines / globals::node_nprocs;
   // rank_in_node 0 gets any remainder
@@ -1594,7 +1594,7 @@ static void setup_phixs_list() {
 // copy the photoionisation tables into one contiguous block of memory
 #ifdef MPI_ON
     float *allphixsblock = nullptr;
-    MPI_Win win_allphixsblock = nullptr;
+    MPI_Win win_allphixsblock = MPI_WIN_NULL;
     MPI_Aint size = (globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0;
     int disp_unit = sizeof(linelist_entry);
 
