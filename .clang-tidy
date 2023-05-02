@@ -31,6 +31,7 @@ Checks: >
     -hicpp-no-malloc,
     -hicpp-signed-bitwise,
     -misc-use-anonymous-namespace,
+    -misc-no-recursion,
     -readability-identifier-length,
     -readability-function-cognitive-complexity,
     -readability-magic-numbers,
