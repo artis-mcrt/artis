@@ -1411,7 +1411,7 @@ static void read_3d_model()
   std::stringstream(line) >> npts_model_in;
   set_npts_model(npts_model_in);
 
-  ncoord_model[0] = ncoord_model[1] = ncoord_model[2] = round(pow(npts_model_in, 1 / 3.));
+  ncoord_model[0] = ncoord_model[1] = ncoord_model[2] = static_cast<int>(round(pow(npts_model_in, 1 / 3.)));
   assert_always(ncoord_model[0] * ncoord_model[1] * ncoord_model[2] == npts_model_in);
 
   // for a 3D input model, the progation cells will match the input cells exactly
