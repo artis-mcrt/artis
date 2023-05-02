@@ -134,12 +134,12 @@ struct linelist_entry {
   float einstein_A;
   float osc_strength;
   float coll_str;
-  const int elementindex;     /// It's a transition of element (not its atomic number,
-                              /// but the (x-1)th element included in the simulation.
-  const int ionindex;         /// The same for the elements ion
-  const int upperlevelindex;  /// And the participating upper
-  const int lowerlevelindex;  /// and lower levels
-  const bool forbidden;
+  int elementindex;     /// It's a transition of element (not its atomic number,
+                        /// but the (x-1)th element included in the simulation.
+  int ionindex;         /// The same for the elements ion
+  int upperlevelindex;  /// And the participating upper
+  int lowerlevelindex;  /// and lower levels
+  bool forbidden;
 };
 
 struct nne_solution_paras {
