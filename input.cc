@@ -988,8 +988,8 @@ static void read_atomicdata_files() {
   if (globals::rank_in_node == 0) {
     // Luke: this comparison function has side-effects that clamp similar frequencies together
     qsort(temp_linelist.data(), globals::nlines, sizeof(linelist_entry), compare_linelistentry);
-    // std::sort(temp_linelist.begin(), temp_linelist.end(),
-    //           [](const auto &a, const auto &b) { return static_cast<bool>(a.nu < b.nu); });
+    std::sort(temp_linelist.begin(), temp_linelist.end(),
+              [](const auto &a, const auto &b) { return static_cast<bool>(a.nu > b.nu); });
 
     for (int i = 0; i < globals::nlines - 1; i++) {
       const double nu = temp_linelist[i].nu;
