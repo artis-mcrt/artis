@@ -35,12 +35,12 @@ struct nuclide {
   int z;                                // atomic number
   int a;                                // mass number
   double meanlife;                      // mean lifetime before decay [s]
-  double endecay_electron;              // average energy per decay in kinetic energy of emitted electons [erg]
-  double endecay_positron;              // average energy per decay in kinetic energy of emitted positrons [erg]
+  double endecay_electron;              // average energy per beta- decay in kinetic energy of emitted electons [erg]
+  double endecay_positron;              // average energy per beta+ decay in kinetic energy of emitted positrons [erg]
   double endecay_gamma;                 // average energy per decay in gamma rays [erg]
-  double endecay_alpha;                 // average energy per decay in kinetic energy of alpha particles [erg]
+  double endecay_alpha;                 // average energy per alpha decay in kinetic energy of alpha particles [erg]
   double endecay_q[DECAYTYPE_COUNT];    // Q-value for decay (reactant minus product energy) of each decay type
-  double branchprobs[DECAYTYPE_COUNT];  // branching probabilities of each decay type
+  double branchprobs[DECAYTYPE_COUNT];  // branch probabilities of each decay type
 };
 
 std::vector<struct nuclide> nuclides;
@@ -253,11 +253,10 @@ static auto nucdecayenergyparticle(const int nucindex, const int decaytype) -> d
     case DECAYTYPE_BETAMINUS: {
       return nuclides[nucindex].endecay_electron;
     }
-    case DECAYTYPE_NONE: {
+    default: {
       return 0.;
     }
   }
-  return 0.;
 }
 
 static auto nucdecayenergytotal(const int z, const int a) -> double
