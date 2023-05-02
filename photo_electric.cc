@@ -13,8 +13,7 @@ auto sig_photo_electric(const struct packet *pkt_ptr) -> double {
   double sigma_cmf = NAN;
   // Start by working out the x-section in the co-moving frame.
 
-  const int cellindex = pkt_ptr->where;
-  const int mgi = grid::get_cell_modelgridindex(cellindex);
+  const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
   const double rho = grid::get_rho(mgi);
 
   if (globals::gamma_grey < 0) {
