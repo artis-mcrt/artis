@@ -920,7 +920,8 @@ auto get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(const i
     }
   }
 
-  const int nsteps = ceil((tstart - grid::get_t_model()) / min_meanlife) * 100000;  // min steps across the meanlifetime
+  const int nsteps = static_cast<int>(ceil((tstart - grid::get_t_model()) / min_meanlife) *
+                                      100000);  // min steps across the meanlifetime
   double chain_endecay = 0.;
   double last_chain_endecay = -1.;
   double last_t = -1.;
