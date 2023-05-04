@@ -1057,10 +1057,8 @@ static auto find_T_R(int modelgridindex, int binindex) -> float {
     /// one dimensional gsl root solver, bracketing type
     gsl_root_fsolver *T_R_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
     gsl_root_fsolver_set(T_R_solver, &find_T_R_f, T_R_min, T_R_max);
-    int iteration_num = 0;
     int status = 0;
-    do {
-      iteration_num++;
+    for (int iteration_num = 0; iteration_num <= maxit; iteration_num++) {
       gsl_root_fsolver_iterate(T_R_solver);
       T_R = gsl_root_fsolver_root(T_R_solver);
 
@@ -1071,7 +1069,10 @@ static auto find_T_R(int modelgridindex, int binindex) -> float {
       // printout("find_T_R: bin %4d iter %d, T_R is between %7.1f and %7.1f, guess %7.1f, delta_nu_bar %g, status
       // %d\n",
       //          binindex,iteration_num,T_R_lower,T_R_upper,T_R,delta_nu_bar(T_R,&paras),status);
-    } while (status == GSL_CONTINUE && iteration_num < maxit);
+      if (status != GSL_CONTINUE) {
+        break;
+      }
+    }
 
     if (status == GSL_CONTINUE) {
       printout("[warning] find_T_R: T_R did not converge within %d iterations\n", maxit);
