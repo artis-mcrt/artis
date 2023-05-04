@@ -108,7 +108,7 @@ static inline int get_bflutindex(const int tempindex, const int element, const i
 
 // #define _OPENMP
 #ifdef _OPENMP
-#include "omp.h"
+#include <omp.h>
 #endif
 
 #define COOLING_UNDEFINED -99
