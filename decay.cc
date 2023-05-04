@@ -339,6 +339,8 @@ static void printout_decaytype(const int decaytype) {
       printout("none");
       break;
     }
+    default:
+      break;
   }
 }
 

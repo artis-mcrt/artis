@@ -454,9 +454,9 @@ auto get_stable_initabund(const int mgi, const int element) -> float {
 auto get_element_meanweight(const int mgi, const int element) -> float
 // weight is in grams
 {
-  const double mu = modelgrid[mgi].elem_meanweight[element];
-  if (USE_CALCULATED_MEANATOMICWEIGHT && mu > 0) {
-    return mu;
+  if (USE_CALCULATED_MEANATOMICWEIGHT) {
+    const double mu = modelgrid[mgi].elem_meanweight[element];
+    if (mu > 0) return mu;
   }
   return globals::elements[element].initstablemeannucmass;
 }

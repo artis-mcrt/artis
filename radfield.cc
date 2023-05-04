@@ -111,8 +111,8 @@ using enum_prefactor = enum {
 };
 
 using gsl_planck_integral_paras = struct {
-  const double T_R;
-  const enum_prefactor prefactor;
+  double T_R;
+  enum_prefactor prefactor;
 };
 
 using gsl_T_R_solver_paras = struct {
@@ -182,11 +182,13 @@ static void setup_bin_boundaries() {
 }
 
 static void realloc_detailed_lines(const int new_size) {
-  detailed_lineindicies = static_cast<int *>(realloc(detailed_lineindicies, new_size * sizeof(int)));
-  if (detailed_lineindicies == nullptr) {
+  auto *newptr = static_cast<int *>(realloc(detailed_lineindicies, new_size * sizeof(int)));
+  if (newptr == nullptr) {
     printout("ERROR: Not enough memory to reallocate detailed Jblue estimator line list\n");
     abort();
   }
+  assert_always(newptr != nullptr);
+  detailed_lineindicies = newptr;
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
