@@ -369,7 +369,7 @@ static void allocate_initradiobund() {
 #endif
 }
 
-auto get_t_model() -> int
+auto get_t_model() -> double
 // get time at which model input densities are defined
 {
   assert_testmodeonly(t_model > 0.);

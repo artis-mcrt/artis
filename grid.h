@@ -117,7 +117,7 @@ enum model_types get_model_type();
 void set_model_type(enum model_types model_type_value);
 int get_npts_model();
 int get_nonempty_npts_model();
-int get_t_model();
+double get_t_model();
 int get_cell_modelgridindex(int cellindex);
 void read_ejecta_model();
 void write_grid_restart_data(int timestep);
