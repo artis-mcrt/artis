@@ -32,14 +32,31 @@ repos:
           #     args: [-extra-arg=-std=c++20]
           # - id: oclint
           # - id: uncrustify
-          - id: cppcheck
-            args: [-q, --error-exitcode=1, --force, '--enable=performance,portability', --language=c++, --std=c++20, --suppress=unmatchedSuppression, --suppress=missingIncludeSystem,
-                --suppress=unusedFunction]
+          # - id: cppcheck
+          #   args:
+          #       [
+          #           -q,
+          #           --error-exitcode=1,
+          #           --force,
+          #           '--enable=performance,portability',
+          #           --language=c++,
+          #           --std=c++20,
+          #           --suppress=unmatchedSuppression,
+          #           --suppress=missingIncludeSystem,
+          #           --suppress=unusedFunction,
+          #       ]
           # - id: cpplint
           #   args: [--linelength=120, '--filter=-legal/copyright,-readability/casting,-whitespace/braces,-readability/todo']
           # - id: include-what-you-use
           #   args: [--cxx17ns, --update_comments]
-
+    - repo: local
+      hooks:
+          - id: make
+            name: make
+            entry: make
+            language: system
+            types: [c++, makefile]
+            pass_filenames: false
     - repo: https://github.com/jumanjihouse/pre-commit-hook-yamlfmt
       rev: 0.2.2 # or other specific tag
       hooks:
