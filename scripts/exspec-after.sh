@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# don't compress the files if we didn't successfully run exspec
 if [[ -f emission.out || -f emission.out.xz || -f emission.out.lz4 || -f emission.out.zst ]]; then
 
   if command -v zstd > /dev/null; then
