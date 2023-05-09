@@ -1,3 +1,4 @@
+```
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
 constexpr int MPKTS;
 
@@ -227,3 +228,4 @@ constexpr bool KEEP_ALL_RESTART_FILES;
 
 // multiply bound-free cooling coefficient by upper level population instead of the upper ion target level population
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
+```
