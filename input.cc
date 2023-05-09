@@ -244,17 +244,21 @@ static void read_phixs_data(int phixs_file_version) {
 
   FILE *phixsdata = fopen_required(phixsdata_filenames[phixs_file_version], "r");
 
-  if (phixs_file_version == 1) {
+  if (phixs_file_version == 1 && USE_TWO_PHIXS_FILES == true)  {
+    printout("using NPHIXSPOINTS = %d and NPHIXSNUINCREMENT = %lg from phixsdata_v2.txt to interpolate "
+             "phixsdata.txt data\n", globals::NPHIXSPOINTS, globals::NPHIXSNUINCREMENT);
+  } else if (phixs_file_version == 1) {
     globals::NPHIXSPOINTS = 100;
-    globals::NPHIXSNUINCREMENT = .1;
-    last_phixs_nuovernuedge = 10;
+    globals::NPHIXSNUINCREMENT = .03;
+    printout("using NPHIXSPOINTS = %d and NPHIXSNUINCREMENT = %lg set in input.cc to interpolate phixsdata.txt data\n",
+        globals::NPHIXSPOINTS, globals::NPHIXSNUINCREMENT);
   } else {
     assert_always(fscanf(phixsdata, "%d\n", &globals::NPHIXSPOINTS) == 1);
     assert_always(globals::NPHIXSPOINTS > 0);
     assert_always(fscanf(phixsdata, "%lg\n", &globals::NPHIXSNUINCREMENT) == 1);
     assert_always(globals::NPHIXSNUINCREMENT > 0.);
-    last_phixs_nuovernuedge = (1.0 + globals::NPHIXSNUINCREMENT * (globals::NPHIXSPOINTS - 1));
   }
+  last_phixs_nuovernuedge = (1.0 + globals::NPHIXSNUINCREMENT * (globals::NPHIXSPOINTS - 1));
 
   int Z = -1;
   int upperionstage = -1;
@@ -1151,9 +1155,11 @@ static void read_atomicdata_files(void) {
       globals::nbfcontinua_ground = 0;
       globals::nbfcontinua = 0;
       // read both phixs files
-      phixs_file_version = 1;
-      read_phixs_data(phixs_file_version);
+      printout("Reading two phixs files: Reading phixsdata_v2.txt first so we use NPHIXSPOINTS and NPHIXSNUINCREMENT "
+               "from phixsdata_v2.txt to interpolate the phixsdata.txt data\n")
       phixs_file_version = 2;
+      read_phixs_data(phixs_file_version);
+      phixs_file_version = 1;
       read_phixs_data(phixs_file_version);
   } else {
         assert_always(phixs_v1_exists ^ phixs_v2_exists);  // XOR: one of the the two files must exist but not both
