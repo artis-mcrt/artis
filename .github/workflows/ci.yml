@@ -139,7 +139,7 @@ jobs:
                   ../../scripts/movefiles.sh job1
                   time mpirun -np 1 ./exspec
                   python3 ../../scripts/mergeangleres.py
-                  rm light_curve_res_*.out spec_res_*.out, specpol_res_*.out
+                  rm -f light_curve_res_*.out spec_res_*.out specpol_res_*.out
 
             - name: cat exspec log
               if: always()
