@@ -46,6 +46,7 @@ constexpr double RECOMBCALIBRATION_T_ELEC = 6000.;
 constexpr bool DIPOLE = true;
 constexpr bool POL_ON = true;
 
+// #define VPKT_ON
 constexpr size_t GSLWSIZE = 16384;
 
 constexpr bool TRACK_ION_STATS = false;
