@@ -245,6 +245,7 @@ static void read_phixs_data(int phixs_file_version) {
   if (phixs_file_version == 1) {
     globals::NPHIXSPOINTS = 100;
     globals::NPHIXSNUINCREMENT = .1;
+    // not exactly where the last point is, but classic integrals go from nu_edge to 10*nu_edge
     last_phixs_nuovernuedge = 10;
   } else {
     assert_always(fscanf(phixsdata, "%d\n", &globals::NPHIXSPOINTS) == 1);
