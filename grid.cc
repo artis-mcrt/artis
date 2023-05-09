@@ -1138,7 +1138,7 @@ static void read_model_radioabundances(std::ifstream &fmodel, std::string &line,
     line = line.substr(linepos);
     for (const char &c : line) {
       if (isspace(c) == 0) {
-        one_line_per_cell = false;
+        one_line_per_cell = true;
         break;
       }
     }
