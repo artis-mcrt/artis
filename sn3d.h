@@ -145,7 +145,7 @@ static inline void gsl_error_handler_printout(const char *reason, const char *fi
 
 static FILE *fopen_required(const char *filename, const char *mode) {
   assert_always(filename != nullptr);
-  FILE *file = fopen(filename, mode);
+  FILE *file = std::fopen(filename, mode);
   if (file == nullptr) {
     printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename, mode);
     abort();
