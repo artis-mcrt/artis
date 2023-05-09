@@ -1130,12 +1130,24 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
 static void read_model_radioabundances(std::ifstream &fmodel, std::string &line, const int linepos, const int mgi,
                                        const bool keepcell, std::vector<std::string> &colnames,
                                        std::vector<int> &nucindexlist) {
+  bool one_line_per_cell = false;
+
   if (linepos < static_cast<int>(line.length())) {
-    // still more line is remaining, so the abundances must be on the same line
+    // still more line is remaining, so any non-whitespace chars mean that
+    // the abundances are on the same line
+    line = line.substr(linepos);
+    for (const char &c : line) {
+      if (isspace(c) == 0) {
+        one_line_per_cell = false;
+        break;
+      }
+    }
+  }
+
+  if (one_line_per_cell) {
     if (mgi == 0) {
       printout("model.txt has has single line per cell format\n");
     }
-    line = line.substr(linepos);
   } else {
     // we reached the end of this line before abundances were read
     if (mgi == 0) {
@@ -1577,7 +1589,8 @@ static void calc_modelinit_totmassradionuclides() {
       printout("Unknown model type %d in function %s\n", get_model_type(), __func__);
       abort();
     }
-    // can use grid::get_modelcell_assocvolume_tmin(mgi) to get actual simulated volume (with slight error versus input)
+    // can use grid::get_modelcell_assocvolume_tmin(mgi) to get actual simulated volume (with slight error versus
+    // input)
 
     const double mass_in_shell = get_rho_tmin(mgi) * cellvolume;
 
