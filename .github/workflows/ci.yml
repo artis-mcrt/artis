@@ -5,9 +5,9 @@ on:
     push:
         branches-ignore:
             - classic*
-    # pull_request:
-    #     branches-ignore:
-    #         - classic*
+  # pull_request:
+  #     branches-ignore:
+  #         - classic*
 
 env:
     ASAN_OPTIONS: detect_stack_use_after_return=1:detect_leaks=0
@@ -19,7 +19,7 @@ jobs:
         # os: ['ubuntu-latest', 'self-hosted']
                 os: [ubuntu-22.04]
                 testmode: [OFF, ON]
-                testname: [classicmode, kilonova, nebularonezone]
+                testname: [classicmode, classicmode_3d, kilonova, nebularonezone]
                 exclude:
                     - os: self-hosted
                       testmode: ON
@@ -50,10 +50,10 @@ jobs:
                   g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
-            # we can cache this, but then we don't test the code that generates ratecoeff_v2.dat
+      # we can cache this, but then we don't test the code that generates ratecoeff_v2.dat
             - name: Cache ratecoeff_v2.dat
-              if: matrix.testname == 'classicmode'
-              # if: matrix.testname == 'classicmode' && matrix.testmode != 'ON'
+              if: matrix.testname == 'classicmode' || matrix.testname == 'classicmode_3d'
+        # if: matrix.testname == 'classicmode' && matrix.testmode != 'ON'
               uses: actions/cache@v3
               with:
                   path: tests/${{ matrix.testname }}_testrun/ratecoeff_v2.dat
