@@ -238,4 +238,7 @@ constexpr double TIMESTEP_TRANSITION_TIME = 5;
 // multiply bound-free cooling coefficient by upper level population instead of the upper ion target level population
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
 
+// option to read in both phixs files when using a hybrid atomic data set
+constexpr bool USE_TWO_PHIXS_FILES = false;
+
 #endif  // ARTISOPTIONS_H

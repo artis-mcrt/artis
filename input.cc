@@ -234,8 +234,10 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
 
 static void read_phixs_data(int phixs_file_version) {
 
-//      globals::nbfcontinua_ground = 0;
-//      globals::nbfcontinua = 0;
+  if (USE_TWO_PHIXS_FILES == false) {
+      globals::nbfcontinua_ground = 0;
+      globals::nbfcontinua = 0;
+  }
   long mem_usage_phixs = 0;
 
   printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version]);
@@ -1145,18 +1147,19 @@ static void read_atomicdata_files(void) {
   /// finally read in photoionisation cross sections and store them to the atomic data structure
   const bool phixs_v1_exists = std::ifstream(phixsdata_filenames[1]).good();
   const bool phixs_v2_exists = std::ifstream(phixsdata_filenames[2]).good();
-//  assert_always(phixs_v1_exists ^ phixs_v2_exists);  // XOR: one of the the two files must exist but not both
-
-//  phixs_file_version = phixs_v2_exists ? 2 : 1;
-
-//  read_phixs_data(phixs_file_version);
-  globals::nbfcontinua_ground = 0;
-  globals::nbfcontinua = 0;
-  // read both phixs files
-  phixs_file_version = 1;
-  read_phixs_data(phixs_file_version);
-  phixs_file_version = 2;
-  read_phixs_data(phixs_file_version);
+  if (USE_TWO_PHIXS_FILES == true) {
+      globals::nbfcontinua_ground = 0;
+      globals::nbfcontinua = 0;
+      // read both phixs files
+      phixs_file_version = 1;
+      read_phixs_data(phixs_file_version);
+      phixs_file_version = 2;
+      read_phixs_data(phixs_file_version);
+  } else {
+        assert_always(phixs_v1_exists ^ phixs_v2_exists);  // XOR: one of the the two files must exist but not both
+        phixs_file_version = phixs_v2_exists ? 2 : 1;
+        read_phixs_data(phixs_file_version);
+  }
 
   int cont_index = -1;
   for (int element = 0; element < get_nelements(); element++) {
@@ -1416,7 +1419,7 @@ static void write_bflist_file(int includedphotoiontransitions) {
             fprintf(bflist_file, "%d %d %d %d %d\n", i, element, ion, level, upperionlevel);
           }
 
-//          assert_always(-1 - i == get_continuumindex(element, ion, level, upperionlevel));
+          assert_always(-1 - i == get_continuumindex(element, ion, level, upperionlevel));
 
           assert_always(
               i !=
@@ -1707,7 +1710,6 @@ static void read_atomicdata(void)
       includedphotoiontransitions += photoiontransitions;
     }
   }
-  printout("nbfcontinua %d photoionisation transitions %d\n", globals::nbfcontinua, includedphotoiontransitions);
   assert_always(includedphotoiontransitions == globals::nbfcontinua);
 
   printout("[input.c]   in total %d ions, %d levels (%d ionising), %d lines, %d photoionisation transitions\n",
