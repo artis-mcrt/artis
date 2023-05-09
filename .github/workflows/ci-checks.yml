@@ -45,8 +45,7 @@ jobs:
         runs-on: ubuntu-22.04
         strategy:
             matrix:
-                compiler: [{name: gcc, ver: 11}, {name: gcc, ver: 12}, {name: gcc, ver: 13}, {name: clang, ver: 14}, {name: clang, ver: 15}, {name: clang,
-                          ver: 16}]
+                compiler: [{name: gcc, ver: 11}, {name: gcc, ver: 12}, {name: clang, ver: 14}, {name: clang, ver: 15}]
                 mpi: [ON, OFF]
                 artisoptionsfile: [artisoptions_christinenonthermal.h, artisoptions_classic.h, artisoptions_kilonova_lte.h, artisoptions_nltenebular.h]
             fail-fast: false
