@@ -58,6 +58,6 @@ repos:
             types: [c++, makefile]
             pass_filenames: false
     - repo: https://github.com/jumanjihouse/pre-commit-hook-yamlfmt
-      rev: 0.2.2 # or other specific tag
+      rev: 0.2.3 # or other specific tag
       hooks:
           - id: yamlfmt
