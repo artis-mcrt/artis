@@ -1156,7 +1156,7 @@ static void read_atomicdata_files(void) {
       globals::nbfcontinua = 0;
       // read both phixs files
       printout("Reading two phixs files: Reading phixsdata_v2.txt first so we use NPHIXSPOINTS and NPHIXSNUINCREMENT "
-               "from phixsdata_v2.txt to interpolate the phixsdata.txt data\n")
+               "from phixsdata_v2.txt to interpolate the phixsdata.txt data\n");
       phixs_file_version = 2;
       read_phixs_data(phixs_file_version);
       phixs_file_version = 1;
