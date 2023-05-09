@@ -6,27 +6,19 @@
 
 #include "constants.h"
 
-// Number of energy packets per process (MPI rank). OpenMP threads share these packets
 constexpr int MPKTS = 10000;
 
 constexpr int GRID_TYPE = GRID_UNIFORM;
 constexpr int CUBOID_NCOORDGRID_X = 100;
 constexpr int CUBOID_NCOORDGRID_Y = 100;
 constexpr int CUBOID_NCOORDGRID_Z = 100;
-// constexpr int GRID_TYPE = GRID_SPHERICAL1D;
 
-// non-LTE population solver
 constexpr bool NLTE_POPS_ON = true;
 
-// solve the NLTE population matrix equation simultaneously for levels of all ions of an element
 constexpr bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;
 
-// maximum number of NLTE/Te/Spencer-Fano iterations
 constexpr int NLTEITER = 30;
 
-// this macro function determines which levels of which ions will be treated in full NLTE (if NLTE_POPS_ON is true)
-// for now, all NLTE levels should be contiguous and include the ground state
-// (i.e. level indices < X should return true for some X)
 constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) {
   if (element_z < 22) {
     return (level <= 200);
@@ -34,173 +26,102 @@ constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) {
   return (level <= 300);
 }
 
-// atomic data and LTE
 #define LTEPOP_EXCITATIONTEMPERATURE grid::get_Te(modelgridindex)
 
-constexpr bool single_level_top_ion = false;  // Only include a single level for the highest ion stage
+constexpr bool single_level_top_ion = false;
 
-constexpr bool single_ground_level = false;  // if false, read from file or autodetect
+constexpr bool single_ground_level = false;
 
-// option to enforce connecting the lower n levels to all other levels with collisions
-// disable by returning zero
 constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {
-  return ((Z == 26 && ionstage == 5) && ionstage >= 1) ? 80 : 0;  // if Co V require 80 transitions, else rurn 0
+  return ((Z == 26 && ionstage == 5) && ionstage >= 1) ? 80 : 0;
 }
 
-// if uniform pellet energies are not used, a uniform decay time distribution is used with scaled packet energies
 constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
 constexpr bool DIRECT_COL_HEAT = true;
 constexpr bool NO_INITIAL_PACKETS = false;
 constexpr bool RECORD_LINESTAT = false;
 
-// allows non-zero energy density at time t_model using q column in model.txt
-// NO_INITIAL_PACKETS must be disabled to make use of this
 constexpr bool USE_MODEL_INITIAL_ENERGY = true;
 
-/// Rate coefficients
-constexpr int TABLESIZE = 100;  // 200 //100
+constexpr int TABLESIZE = 100;
 constexpr double MINTEMP = 3000.;
-constexpr double MAXTEMP = 140000.;  // 1000000.
+constexpr double MAXTEMP = 140000.;
 
-// temperature for which total ion recombination rate are calibrated to input data (recombrates.txt)
 constexpr double RECOMBCALIBRATION_T_ELEC = 15000.;
 
-// Polarisation for real packets
 constexpr bool DIPOLE = false;
 constexpr bool POL_ON = false;
 
-// Polarisation for virtual packets
-// #define VPKT_ON
-
-// GSL integration workspace size
 constexpr size_t GSLWSIZE = 16384;
 
 constexpr bool TRACK_ION_STATS = false;
 constexpr bool TRACK_ION_MASTATS = false;
 
-constexpr double MINDENSITY = 1e-40;  /// Minimum cell density. Below cells are treated as empty.
 constexpr double MINPOP = 1e-40;
 
-constexpr double NU_MIN_R = 1e13;  /// lower frequency boundary for UVOIR spectra and BB sampling
-constexpr double NU_MAX_R = 5e16;  /// upper frequency boundary for UVOIR spectra and BB sampling
+constexpr double NU_MIN_R = 1e13;
+constexpr double NU_MAX_R = 5e16;
 
-// ****
-// Start of radiation field model options
-//
-
-// if using this, avoid look up tables and switch on the direct integration options below
-// (since LUTs created with Planck function J_nu)
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON = true;
 
 constexpr int RADFIELDBINCOUNT = 64;
 
 constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
 
-constexpr double nu_lower_first_initial = (CLIGHT / (40000e-8));  // CLIGHT / ([lambda Angstroms]e-8)
-constexpr double nu_upper_last_initial = (CLIGHT / (500e-8));     // not including the very top super bin
-constexpr double nu_upper_superbin = (CLIGHT / (50e-8));          // very top end super bin
+constexpr double nu_lower_first_initial = (CLIGHT / (40000e-8));
+constexpr double nu_upper_last_initial = (CLIGHT / (500e-8));
+constexpr double nu_upper_superbin = (CLIGHT / (50e-8));
 
 constexpr double T_R_min = 500;
 constexpr double T_R_max = 250000;
 
-// store Jb_lu estimators for particular lines chosen in radfield::init()
 constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 
-// store detailed bound-free rate estimators
 constexpr bool DETAILED_BF_ESTIMATORS_ON = true;
 
-// if DETAILED_BF_ESTIMATORS_ON, then use BF estimators at the following timestep and later
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 13;
 
-// extremely slow and memory consuming - for debugging only
-// not safe for MPI or OpenMP - single process and single thread only!
-// this will output a list of contributions to each bound-free rate estimator
-// with each packet emission type ranked by their contribution to the rate
 #define DETAILED_BF_ESTIMATORS_BYTYPE false
 
-// dynamically calculate photoionization rates for the current radiation field
-// instead of interpolating values from a lookup table for a blackbody radiation field
 constexpr bool NO_LUT_PHOTOION = true;
 
-// as above for bound-free heating
 constexpr bool NO_LUT_BFHEATING = true;
 
-// if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
 #define SEPARATE_STIMRECOMB false
 
-//
-// End of radiation field model options
-// ****
-
-// ****
-// Start of non-thermal solution options
-//
-
-/// non-thermal ionisation
 constexpr bool NT_ON = true;
 
-/// use the detailed Spencer-Fano solver instead of the work function approximation
 constexpr bool NT_SOLVE_SPENCERFANO = true;
 
-// number of energy points in the Spencer-Fano solution vector
 constexpr int SFPTS = 4096;
 
-// eV
 constexpr double SF_EMAX = 16000;
 
-// eV
 constexpr double SF_EMIN = 0.1;
 
-// use a grid of energy points with constant spacing in log energy
 #define SF_USE_LOG_E_INCREMENT false
 
-// trigger a Spencer-Fano solution at least once every n timesteps
-// 0 can only use solutions from previous NLTE iterations on the current timestep
-// <=-1 will always solve the SF equation for every iteration of every timestep
 constexpr int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 0;
 
-// a change in the electron fraction (e.g. 0.5 is a 50% change) since the previous solution will also trigger a
-// solution
 constexpr double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS = 0.05;
 
-// just consider excitation from the first N levels and to the first M upper levels,
-// because these transitions really slow down the solver
-constexpr int NTEXCITATION_MAXNLEVELS_LOWER = 5;    // set to zero for none
-constexpr int NTEXCITATION_MAXNLEVELS_UPPER = 250;  // maximum number of upper levels included
+constexpr int NTEXCITATION_MAXNLEVELS_LOWER = 5;
+constexpr int NTEXCITATION_MAXNLEVELS_UPPER = 250;
 
-// limit the number of stored non-thermal excitation transition rates to reduce memory cost.
-// if this is higher than SFPTS, then you might as well just store
-// the full NT degradation spectrum and calculate the rates as needed (although CPU costs)
 constexpr int MAX_NT_EXCITATIONS_STORED = 25000;
 
-// set to true to keep a list of non-thermal excitation rates for use
-// in the NLTE pop solver, macroatom, and NTLEPTON packets.
-// Even with this off, excitations will be included in the solution
-// and their combined deposition fraction is calculated
 #define NT_EXCITATION_ON false
 
-// increase the excitation and ionization lists by this blocksize when reallocating
 constexpr int NT_BLOCKSIZEEXCITATION = 5192;
 
-// calculate eff_ionpot and ionisation rates by always dividing by the valence shell potential for the ion
-// instead of the specific shell potentials
 constexpr bool NT_USE_VALENCE_IONPOTENTIAL = false;
 
-// allow ions to lose more than one electron per impact ionisation using Auger effect probabilities
-// associate with electron shells
-// if this is greater than zero, make sure NT_USE_VALENCE_IONPOTENTIAL is false!
 constexpr int NT_MAX_AUGER_ELECTRONS = 2;
 
-// add the Auger electron term to the Spencer-Fano equation
 constexpr bool SF_AUGER_CONTRIBUTION_ON = true;
 
-// set true to divide up the mean Auger energy by the number of electrons that come out
 constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN = false;
-
-//
-// End of non-thermal solution options
-// ****
 
 constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-3;
 
@@ -208,8 +129,6 @@ constexpr double CONTINUUM_NU_INTEGRAL_ACCURACY = 1e-3;
 
 constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
 
-// when calculating ion ionisation rate coefficient (for estimator files), contribute the lowest n levels that
-// make up at least IONGAMMA_POPFRAC_LEVELS_INCLUDED fraction of the ion population
 constexpr double IONGAMMA_POPFRAC_LEVELS_INCLUDED = 0.999;
 
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = false;
@@ -219,12 +138,6 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = false;
 constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = false;
 
 constexpr bool INSTANT_PARTICLE_DEPOSITION = true;
-
-// Options for different types of timestep set-ups, only one of these can be true at one time. The hybrid timestep
-// schemes that switch between log and fixed require a transition time from one scheme to the other as well as the
-// fixed timestep width to be set. These values need to be consistent with the number of timesteps i.e. don't give
-// values that would give the same number or more more fixed timesteps than the total number of timesteps in the
-// simulation. The times are set in days.
 
 enum timestepsizemethods {
   TIMESTEP_SIZES_LOGARITHMIC = 0,
@@ -241,10 +154,8 @@ constexpr double TIMESTEP_TRANSITION_TIME = -1.;
 
 constexpr bool USE_GSL_RANDOM = true;
 
-// once a new gridsave and packets*.tmp have been written, don't delete the previous set
 constexpr bool KEEP_ALL_RESTART_FILES = false;
 
-// multiply bound-free cooling coefficient by upper level population instead of the upper ion target level population
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
 
 // NOLINTEND(modernize*,misc-unused-parameters)
