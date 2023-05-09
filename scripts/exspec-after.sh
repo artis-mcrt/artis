@@ -17,7 +17,7 @@ if [[ -f emission.out || -f emission.out.xz || -f emission.out.lz4 || -f emissio
   # join 3D direction files, if they exist
   ./artis/scripts/mergeangleres.py
 
-  mkdir packets || true
+  mkdir -p packets
   mv packets*.out* packets/ || true
 
   # 3D kilonova model.txt and abundances.txt can be huge, so compress txt files
