@@ -2575,7 +2575,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
     nt_solution[modelgridindex].nneperion_when_solved = -1.;
     nt_solution[modelgridindex].timestep_last_solved = -1;
 
-    nt_solution[modelgridindex].frac_excitations_list.clear();
+    nt_solution[modelgridindex].frac_excitations_list.resize(0);
 
     zero_all_effionpot(modelgridindex);
     return;
