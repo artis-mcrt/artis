@@ -1,6 +1,7 @@
 #ifndef SPECTRUM_H
 #define SPECTRUM_H
 
+#include <memory>
 #include <string>
 
 struct timestepspec {
