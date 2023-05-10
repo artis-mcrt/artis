@@ -6,9 +6,6 @@ b497243c9e617e73cd95fa09edc50c4e  emission.out
 670b6b6b65db1efe1b8bebf0b912c634  emissionpol.out
 a85c1fddd587fd596cddeecb10cfb8ee  emissiontrue.out
 a938f32c1eec09a8b93c0e5bce3bacfa  gamma_light_curve.out
-03ad5a0955a40a47811b4e984552f6d3  gamma_spec.out
-057b226c371f3819cba5e04bfea3d114  gammalinelist.out
-20bddb22b6f084a7abc105c210366bfd  grid.out
 eea1cb59c07340b1934ae19be85e2101  light_curve.out
 05097c89d9be1cc48d18d2419edba2c7  linestat.out
 c4e4e8d00846618f3931dc01cf52615f  modelgridrankassignments.out
