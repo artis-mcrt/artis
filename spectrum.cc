@@ -486,12 +486,10 @@ void free_spectra(std::unique_ptr<struct spec> &spectra) {
   spectra->lower_freq.reset();
   spectra->delta_freq.reset();
   spectra->fluxalltimesteps.reset();
-  if (spectra->do_emission_res) {
-    free(spectra->absorptionalltimesteps);
-    free(spectra->emissionalltimesteps);
-    free(spectra->trueemissionalltimesteps);
-  }
-  free(spectra->timesteps);
+  spectra->absorptionalltimesteps.reset();
+  spectra->emissionalltimesteps.reset();
+  spectra->trueemissionalltimesteps.reset();
+  spectra->timesteps.reset();
   spectra.reset();
 }
 
@@ -547,15 +545,14 @@ static void alloc_emissionabsorption_spectra(auto &spectra) {
 
   mem_usage += globals::ntstep * MNUBINS * get_nelements() * get_max_nions() * sizeof(double);
   spectra->absorptionalltimesteps =
-      static_cast<double *>(malloc(globals::ntstep * MNUBINS * get_nelements() * get_max_nions() * sizeof(double)));
+      std::make_unique<double[]>(globals::ntstep * MNUBINS * get_nelements() * get_max_nions());
   assert_always(spectra->absorptionalltimesteps != nullptr);
 
   mem_usage += 2 * globals::ntstep * MNUBINS * proccount * sizeof(double);
-  spectra->emissionalltimesteps = static_cast<double *>(malloc(globals::ntstep * MNUBINS * proccount * sizeof(double)));
+  spectra->emissionalltimesteps = std::make_unique<double[]>(globals::ntstep * MNUBINS * proccount);
   assert_always(spectra->emissionalltimesteps != nullptr);
 
-  spectra->trueemissionalltimesteps =
-      static_cast<double *>(malloc(globals::ntstep * MNUBINS * proccount * sizeof(double)));
+  spectra->trueemissionalltimesteps = std::make_unique<double[]>(globals::ntstep * MNUBINS * proccount);
   assert_always(spectra->trueemissionalltimesteps != nullptr);
 
   for (int nts = 0; nts < globals::ntstep; nts++) {
@@ -589,7 +586,7 @@ auto alloc_spectra(const bool do_emission_res) -> std::unique_ptr<struct spec> {
   spectra->lower_freq = std::make_unique<float[]>(MNUBINS);
   spectra->delta_freq = std::make_unique<float[]>(MNUBINS);
 
-  spectra->timesteps = static_cast<struct timestepspec *>(malloc(globals::ntstep * sizeof(struct timestepspec)));
+  spectra->timesteps = std::make_unique<struct timestepspec[]>(globals::ntstep);
   mem_usage += globals::ntstep * sizeof(struct timestepspec);
 
   spectra->fluxalltimesteps = std::make_unique<double[]>(globals::ntstep * MNUBINS);
