@@ -1595,18 +1595,20 @@ auto calculate_populations(const int modelgridindex) -> double
     gsl_root_fsolver *solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
 
     gsl_root_fsolver_set(solver, &f, nne_lo, nne_hi);
-    int iter = 0;
-    const int maxit = 100;
-    const double fractional_accuracy = 1e-3;
-    int status = 0;
-    do {
+    constexpr int maxit = 100;
+    constexpr double fractional_accuracy = 1e-3;
+    int status = GSL_CONTINUE;
+    for (int iter = 0; iter <= maxit; iter++) {
       iter++;
       gsl_root_fsolver_iterate(solver);
       nne = gsl_root_fsolver_root(solver);
       nne_lo = gsl_root_fsolver_x_lower(solver);
       nne_hi = gsl_root_fsolver_x_upper(solver);
       status = gsl_root_test_interval(nne_lo, nne_hi, 0, fractional_accuracy);
-    } while (status == GSL_CONTINUE && iter < maxit);
+      if (status != GSL_CONTINUE) {
+        break;
+      }
+    }
 
     gsl_root_fsolver_free(solver);
 
