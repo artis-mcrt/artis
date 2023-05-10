@@ -25,17 +25,17 @@ struct spec {
 };
 
 void write_spectrum(const std::string &spec_filename, const char *emission_filename, const char *trueemission_filename,
-                    const char *absorption_filename, struct spec *spectra, int numtimesteps);
+                    const char *absorption_filename, const struct spec &spectra, int numtimesteps);
 
 void write_specpol(const std::string &specpol_filename, const std::string &emission_filename,
                    const std::string &absorption_filename, struct spec *stokes_i, struct spec *stokes_q,
                    struct spec *stokes_u);
 
-void add_to_spec_res(const struct packet *pkt_ptr, int current_abin, struct spec *spectra, struct spec *stokes_i,
+void add_to_spec_res(const struct packet *pkt_ptr, int current_abin, struct spec &spectra, struct spec *stokes_i,
                      struct spec *stokes_q, struct spec *stokes_u);
 
 std::unique_ptr<struct spec> alloc_spectra(bool do_emission_res);
-void init_spectra(struct spec *spectra, double nu_min, double nu_max, bool do_emission_res);
+void init_spectra(struct spec &spectra, double nu_min, double nu_max, bool do_emission_res);
 void init_spectrum_trace();
 void free_spectra(std::unique_ptr<struct spec> &spectra);
 void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts);
