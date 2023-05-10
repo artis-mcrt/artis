@@ -395,8 +395,8 @@ static void read_ion_levels(FILE *adata, const int element, const int ion, const
 
 static void read_ion_transitions(std::istream &ftransitiondata, const int tottransitions_in_file, int *tottransitions,
                                  std::vector<struct transitiontable_entry> &transitiontable,
-                                 const int nlevels_requiretransitions, const int nlevels_requiretransitions_upperlevels,
-                                 const int Z, const int ionstage) {
+                                 const int nlevels_requiretransitions,
+                                 const int nlevels_requiretransitions_upperlevels) {
   std::string line;
 
   if (*tottransitions == 0) {
@@ -935,7 +935,7 @@ static void read_atomicdata_files() {
       nlevels_requiretransitions_upperlevels = std::min(nlevelsmax, nlevels_requiretransitions_upperlevels);
 
       read_ion_transitions(ftransitiondata, tottransitions_in_file, &tottransitions, transitiontable,
-                           nlevels_requiretransitions, nlevels_requiretransitions_upperlevels, Z, ionstage);
+                           nlevels_requiretransitions, nlevels_requiretransitions_upperlevels);
 
       add_transitions_to_unsorted_linelist(element, ion, nlevelsmax, transitiontable, transitions, &lineindex,
                                            temp_linelist);
