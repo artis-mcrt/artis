@@ -115,7 +115,7 @@ constexpr int NTEXCITATION_MAXNLEVELS_UPPER = 250;
 
 constexpr int MAX_NT_EXCITATIONS_STORED = 25000;
 
-#define NT_EXCITATION_ON true
+constexpr bool NT_EXCITATION_ON = true;
 
 constexpr int NT_BLOCKSIZEEXCITATION = 5192;
 
