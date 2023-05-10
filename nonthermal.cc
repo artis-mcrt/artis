@@ -2856,7 +2856,8 @@ void read_restart_data(FILE *gridsave_file) {
         int frac_excitations_list_size_in = 0;
         assert_always(fscanf(gridsave_file, "%d\n", &frac_excitations_list_size_in) == 1);
 
-        if (nt_solution[modelgridindex].frac_excitations_list.size() != frac_excitations_list_size_in) {
+        if (static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size()) !=
+            frac_excitations_list_size_in) {
           nt_solution[modelgridindex].frac_excitations_list.resize(frac_excitations_list_size_in);
         }
 
