@@ -23,8 +23,8 @@ namespace gammapkt {
 // Code for handing gamma rays - creation and propagation
 
 struct gamma_spec {
-  std::unique_ptr<double[]> energy;  // in erg
-  std::unique_ptr<double[]> probability;
+  std::unique_ptr<double[]> energy = nullptr;  // in erg
+  std::unique_ptr<double[]> probability = nullptr;
   int nlines;
 };
 
