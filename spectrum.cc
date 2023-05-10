@@ -250,7 +250,7 @@ void write_specpol(const std::string &specpol_filename, const std::string &emiss
   const int proccount = get_proccount();
   const int ioncount = get_nelements() * get_max_nions();
   for (int m = 0; m < MNUBINS; m++) {
-    fprintf(specpol_file, "%g ", ((stokes_i[0].lower_freq[m] + (stokes_i[0].delta_freq[m] / 2))));
+    fprintf(specpol_file, "%g ", ((stokes_i->lower_freq[m] + (stokes_i->delta_freq[m] / 2))));
 
     // Stokes I
     for (int p = 0; p < globals::ntstep; p++) {
