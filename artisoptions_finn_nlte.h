@@ -65,8 +65,8 @@ constexpr bool USE_MODEL_INITIAL_ENERGY = true;
 constexpr double RECOMBCALIBRATION_T_ELEC = 15000.;
 
 // Polarisation for real packets
- #define DIPOLE
- #define POL_ON
+#define DIPOLE
+#define POL_ON
 
 // Polarisation for virtual packets
 // #define VPKT_ON

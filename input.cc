@@ -233,10 +233,9 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
 }
 
 static void read_phixs_data(int phixs_file_version) {
-
   if (USE_TWO_PHIXS_FILES == false) {
-      globals::nbfcontinua_ground = 0;
-      globals::nbfcontinua = 0;
+    globals::nbfcontinua_ground = 0;
+    globals::nbfcontinua = 0;
   }
   long mem_usage_phixs = 0;
 
@@ -244,14 +243,16 @@ static void read_phixs_data(int phixs_file_version) {
 
   FILE *phixsdata = fopen_required(phixsdata_filenames[phixs_file_version], "r");
 
-  if (phixs_file_version == 1 && USE_TWO_PHIXS_FILES == true)  {
-    printout("using NPHIXSPOINTS = %d and NPHIXSNUINCREMENT = %lg from phixsdata_v2.txt to interpolate "
-             "phixsdata.txt data\n", globals::NPHIXSPOINTS, globals::NPHIXSNUINCREMENT);
+  if (phixs_file_version == 1 && USE_TWO_PHIXS_FILES == true) {
+    printout(
+        "using NPHIXSPOINTS = %d and NPHIXSNUINCREMENT = %lg from phixsdata_v2.txt to interpolate "
+        "phixsdata.txt data\n",
+        globals::NPHIXSPOINTS, globals::NPHIXSNUINCREMENT);
   } else if (phixs_file_version == 1) {
     globals::NPHIXSPOINTS = 100;
     globals::NPHIXSNUINCREMENT = .03;
     printout("using NPHIXSPOINTS = %d and NPHIXSNUINCREMENT = %lg set in input.cc to interpolate phixsdata.txt data\n",
-        globals::NPHIXSPOINTS, globals::NPHIXSNUINCREMENT);
+             globals::NPHIXSPOINTS, globals::NPHIXSNUINCREMENT);
   } else {
     assert_always(fscanf(phixsdata, "%d\n", &globals::NPHIXSPOINTS) == 1);
     assert_always(globals::NPHIXSPOINTS > 0);
@@ -1152,19 +1153,20 @@ static void read_atomicdata_files(void) {
   const bool phixs_v1_exists = std::ifstream(phixsdata_filenames[1]).good();
   const bool phixs_v2_exists = std::ifstream(phixsdata_filenames[2]).good();
   if (USE_TWO_PHIXS_FILES == true) {
-      globals::nbfcontinua_ground = 0;
-      globals::nbfcontinua = 0;
-      // read both phixs files
-      printout("Reading two phixs files: Reading phixsdata_v2.txt first so we use NPHIXSPOINTS and NPHIXSNUINCREMENT "
-               "from phixsdata_v2.txt to interpolate the phixsdata.txt data\n");
-      phixs_file_version = 2;
-      read_phixs_data(phixs_file_version);
-      phixs_file_version = 1;
-      read_phixs_data(phixs_file_version);
+    globals::nbfcontinua_ground = 0;
+    globals::nbfcontinua = 0;
+    // read both phixs files
+    printout(
+        "Reading two phixs files: Reading phixsdata_v2.txt first so we use NPHIXSPOINTS and NPHIXSNUINCREMENT "
+        "from phixsdata_v2.txt to interpolate the phixsdata.txt data\n");
+    phixs_file_version = 2;
+    read_phixs_data(phixs_file_version);
+    phixs_file_version = 1;
+    read_phixs_data(phixs_file_version);
   } else {
-        assert_always(phixs_v1_exists ^ phixs_v2_exists);  // XOR: one of the the two files must exist but not both
-        phixs_file_version = phixs_v2_exists ? 2 : 1;
-        read_phixs_data(phixs_file_version);
+    assert_always(phixs_v1_exists ^ phixs_v2_exists);  // XOR: one of the the two files must exist but not both
+    phixs_file_version = phixs_v2_exists ? 2 : 1;
+    read_phixs_data(phixs_file_version);
   }
 
   int cont_index = -1;
