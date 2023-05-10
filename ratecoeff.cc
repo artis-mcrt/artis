@@ -37,7 +37,7 @@ double T_step_log;
 using gsl_integral_paras_gammacorr = struct {
   double nu_edge;
   double departure_ratio;
-  float *const photoion_xs;
+  float *photoion_xs;
   float T_e;
   int modelgridindex;
 };
