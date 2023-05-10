@@ -6,7 +6,6 @@
 
 #include "atomic.h"
 #include "boundary.h"
-#include "grey_emissivities.h"
 #include "grid.h"
 #include "kpkt.h"
 #include "ltepop.h"

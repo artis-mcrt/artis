@@ -10,11 +10,9 @@
 
 #include "boundary.h"
 #include "decay.h"
-#include "grey_emissivities.h"
 #include "grid.h"
 #include "nonthermal.h"
 #include "packet.h"
-#include "photo_electric.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"
@@ -200,6 +198,23 @@ void init_gamma_linelist() {
             gamma_spectra[nucindex].probability[index]);
   }
   fclose(line_list);
+}
+
+void normalise_grey(int nts) {
+  const double dt = globals::time_step[nts].width;
+  globals::time_step[nts].gamma_dep_pathint = 0.;
+  for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
+    if (grid::get_numassociatedcells(mgi) > 0) {
+      const double dV = grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
+
+      globals::time_step[nts].gamma_dep_pathint += globals::rpkt_emiss[mgi] * 2.e20 / globals::nprocs;
+
+      globals::rpkt_emiss[mgi] = globals::rpkt_emiss[mgi] * ONEOVER4PI / dV / dt / globals::nprocs;
+
+      assert_testmodeonly(globals::rpkt_emiss[mgi] >= 0.);
+      assert_testmodeonly(isfinite(globals::rpkt_emiss[mgi]));
+    }
+  }
 }
 
 static void choose_gamma_ray(struct packet *pkt_ptr) {
@@ -502,6 +517,225 @@ static void compton_scatter(struct packet *pkt_ptr)
   }
 }
 
+static auto sig_photo_electric(const struct packet *pkt_ptr) -> double {
+  // photo electric effect scattering
+
+  double sigma_cmf = NAN;
+  // Start by working out the x-section in the co-moving frame.
+
+  const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+  const double rho = grid::get_rho(mgi);
+
+  if (globals::gamma_grey < 0) {
+    // double sigma_cmf_cno = 0.0448e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.2);
+
+    double sigma_cmf_si = 1.16e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.13);
+
+    double sigma_cmf_fe = 25.7e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.0);
+
+    // 2.41326e19 = 100keV in frequency.
+
+    // Now need to multiply by the particle number density.
+
+    // sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
+    //  Assumes Z = 7. So mass = 14.
+
+    sigma_cmf_si *= rho / MH / 28;
+    // Assumes Z = 14. So mass = 28.
+
+    sigma_cmf_fe *= rho / MH / 56;
+    // Assumes Z = 28. So mass = 56.
+
+    const double f_fe = grid::get_ffegrp(mgi);
+
+    sigma_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
+  } else {
+    sigma_cmf = globals::gamma_grey * rho;
+  }
+
+  // Now need to convert between frames.
+
+  const double sigma_rf = sigma_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
+  return sigma_rf;
+}
+
+static auto sig_pair_prod(const struct packet *pkt_ptr) -> double {
+  // Cross section for pair production.
+
+  double sigma_cmf = NAN;
+
+  // Start by working out the x-section in the co-moving frame.
+
+  const int cellindex = pkt_ptr->where;
+  const int mgi = grid::get_cell_modelgridindex(cellindex);
+  const double rho = grid::get_rho(mgi);
+
+  if (globals::gamma_grey < 0) {
+    // 2.46636e+20 = 1022 keV in frequency
+    // 3.61990e+20 = 1500 keV in frequency
+
+    if (pkt_ptr->nu_cmf > 2.46636e+20) {
+      // double sigma_cmf_cno;
+      double sigma_cmf_si = NAN;
+      double sigma_cmf_fe = NAN;
+      const double f_fe = grid::get_ffegrp(mgi);
+      if (pkt_ptr->nu_cmf > 3.61990e+20) {
+        // sigma_cmf_cno = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.5))) * 49.e-27;
+
+        sigma_cmf_si = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.5))) * 196.e-27;
+
+        sigma_cmf_fe = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.5))) * 784.e-27;
+      } else {
+        // sigma_cmf_cno = 1.0063 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.022) * 49.e-27;
+
+        sigma_cmf_si = 1.0063 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.022) * 196.e-27;
+
+        sigma_cmf_fe = 1.0063 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.022) * 784.e-27;
+      }
+
+      // Now need to multiply by the particle number density.
+
+      // sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
+      // Assumes Z = 7. So mass = 14.
+
+      sigma_cmf_si *= rho / MH / 28;
+      // Assumes Z = 14. So mass = 28.
+
+      sigma_cmf_fe *= rho / MH / 56;
+      // Assumes Z = 28. So mass = 56.
+
+      sigma_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
+    } else {
+      sigma_cmf = 0.0;
+    }
+  } else {
+    sigma_cmf = 0.0;
+  }
+
+  // Now need to convert between frames.
+
+  double sigma_rf = sigma_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
+
+  if (sigma_rf < 0) {
+    printout("Negative pair production sigma. Setting to zero. Abort? %g\n", sigma_rf);
+    sigma_rf = 0.0;
+  }
+
+  return sigma_rf;
+}
+
+constexpr auto meanf_sigma(const double x) -> double
+// Routine to compute the mean energy converted to non-thermal electrons times
+// the Klein-Nishina cross section.
+{
+  double const f = 1 + (2 * x);
+
+  double const term0 = 2 / x;
+  double const term1 = (1 - (2 / x) - (3 / (x * x))) * log(f);
+  double const term2 = ((4 / x) + (3 / (x * x)) - 1) * 2 * x / f;
+  double const term3 = (1 - (2 / x) - (1 / (x * x))) * 2 * x * (1 + x) / f / f;
+  double const term4 = -2. * x * ((4 * x * x) + (6 * x) + 3) / 3 / f / f / f;
+
+  double const tot = 3 * SIGMA_T * (term0 + term1 + term2 + term3 + term4) / (8 * x);
+
+  return tot;
+}
+
+static void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist) {
+  // Subroutine to record the heating rate in a cell due to gamma rays.
+  // By heating rate I mean, for now, really the rate at which the code is making
+  // k-packets in that cell which will then convert into r-packets. This is (going
+  // to be) used for the new light_curve syn-style calculation.
+
+  // The intention is that rpkt_emiss will contain the emissivity of r-packets
+  // in the co-moving frame (which is going to be isotropic).
+
+  // This is only done to order v/c for now.
+
+  // Called with a packet that is about to travel a
+  // distance dist in the lab frame.
+
+  const int cellindex = pkt_ptr->where;
+  const int mgi = grid::get_cell_modelgridindex(cellindex);
+
+  if (dist > 0) {
+    double vel_vec[3];
+    get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
+
+    double const doppler_sq = doppler_squared_nucmf_on_nurf(pkt_ptr->dir, vel_vec);
+
+    const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
+    double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + sig_photo_electric(pkt_ptr) +
+                           (sig_pair_prod(pkt_ptr) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
+    heating_cont = heating_cont * pkt_ptr->e_rf * dist * doppler_sq;
+
+    // The terms in the above are for Compton, photoelectric and pair production. The pair production one
+    // assumes that a fraction (1. - (1.022 MeV / nu)) of the gamma's energy is thermalised.
+    // The remaining 1.022 MeV is made into gamma rays
+
+    // For normalisation this needs to be
+    //  1) divided by volume
+    //  2) divided by the length of the time step
+    //  3) divided by 4 pi sr
+    //  This will all be done later
+    assert_testmodeonly(heating_cont >= 0.);
+    assert_testmodeonly(isfinite(heating_cont));
+    safeadd(globals::rpkt_emiss[mgi], 2.e-20 * heating_cont);
+  }
+}
+
+void pair_prod(struct packet *pkt_ptr) {
+  // Routine to deal with pair production.
+
+  //  In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
+  //  gamma ray energy - 1.022 MeV. We assume that the electron deposits any kinetic energy directly to
+  //  the thermal pool. The positron annihilates with an electron locally making a pair of gamma rays
+  //  at 0.511 MeV in the local cmf (isotropic). So all the thermal energy goes to the thermal pool
+  //  immediately and the remainder goes into gamma-rays at 0.511 MeV.
+
+  const double prob_gamma = 1.022 * MEV / (H * pkt_ptr->nu_cmf);
+
+  if (prob_gamma < 0) {
+    printout("prob_gamma < 0. pair_prod. Abort. %g\n", prob_gamma);
+    abort();
+  }
+
+  const double zrand = rng_uniform();
+
+  if (zrand > prob_gamma) {
+    // Convert it to an e-minus packet - actually it could be positron EK too, but this works
+    // for consistency with compton_scatter.
+    pkt_ptr->type = TYPE_NTLEPTON;
+    pkt_ptr->absorptiontype = -5;
+    stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
+  } else {
+    // The energy goes into emission at 511 keV.
+    pkt_ptr->nu_cmf = 0.511 * MEV / H;
+
+    // Now let's give the gamma ray a direction.
+
+    double dir_cmf[3];
+    get_rand_isotropic_unitvec(dir_cmf);
+
+    // This direction is in the cmf - we want to convert it to the rest
+    // frame - use aberation of angles. We want to convert from cmf to
+    // rest so need -ve velocity.
+
+    double vel_vec[3];
+    get_velocity(pkt_ptr->pos, vel_vec, -1. * pkt_ptr->prop_time);
+    // negative time since we want the backwards transformation here
+
+    angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
+
+    const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
+    pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
+    pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
+
+    pkt_ptr->type = TYPE_GAMMA;
+    pkt_ptr->last_cross = NONE;
+  }
+}
+
 void do_gamma(struct packet *pkt_ptr, double t2)
 // Now routine for moving a gamma packet. Idea is that we have as input
 // a gamma packet with known properties at time t1 and we want to follow it
@@ -545,9 +779,9 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     snext = pkt_ptr->where;
   }
 
-  /* Now consider the scattering/destruction processes. */
-  /* Compton scattering - need to determine the scattering co-efficient.*/
-  /* Routine returns the value in the rest frame. */
+  // Now consider the scattering/destruction processes.
+  // Compton scattering - need to determine the scattering co-efficient.
+  // Routine returns the value in the rest frame.
 
   double kap_compton = 0.0;
   if (globals::gamma_grey < 0) {

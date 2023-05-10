@@ -485,7 +485,7 @@ void init_spectrum_trace() {
 void free_spectra(std::unique_ptr<struct spec> &spectra) {
   spectra->lower_freq.reset();
   spectra->delta_freq.reset();
-  free(spectra->fluxalltimesteps);
+  spectra->fluxalltimesteps.reset();
   if (spectra->do_emission_res) {
     free(spectra->absorptionalltimesteps);
     free(spectra->emissionalltimesteps);
@@ -592,7 +592,7 @@ auto alloc_spectra(const bool do_emission_res) -> std::unique_ptr<struct spec> {
   spectra->timesteps = static_cast<struct timestepspec *>(malloc(globals::ntstep * sizeof(struct timestepspec)));
   mem_usage += globals::ntstep * sizeof(struct timestepspec);
 
-  spectra->fluxalltimesteps = static_cast<double *>(malloc(globals::ntstep * MNUBINS * sizeof(double)));
+  spectra->fluxalltimesteps = std::make_unique<double[]>(globals::ntstep * MNUBINS);
   mem_usage += globals::ntstep * MNUBINS * sizeof(double);
 
   assert_always(MNUBINS > 0);
