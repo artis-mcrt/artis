@@ -1009,35 +1009,8 @@ static void read_atomicdata_files() {
                    get_ionstage(a2->elementindex, a2->ionindex), a2->lowerlevelindex, a2->upperlevelindex, a2->nu,
                    1e8 * CLIGHT / a2->nu);
         }
-
-        // clamp close lines to exact overlaps
-        // temp_linelist[i + 1].nu = temp_linelist[i].nu;
       }
     }
-
-    // printout("Preventing duplicate transition lines...\n");
-    // int pass = 0;
-    // int numduplicates = 0;
-    // do {
-    //   pass++;
-
-    //   qsort(temp_linelist, globals::nlines, sizeof(linelist_entry), compare_linelistentry_simple);
-
-    //   numduplicates = 0;
-    //   for (int i = 0; i < globals::nlines - 1; i++) {
-    //     const double nu = temp_linelist[i].nu;
-    //     const double nu_next = temp_linelist[i + 1].nu;
-
-    //     if (nu == nu_next) {
-    //       numduplicates++;
-    //       const double lambda_prev = 1e8 * CLIGHT / temp_linelist[i].nu;
-    //       const double lambda_new = lambda_prev + 0.01 * ((i % 10) + 1);
-    //       temp_linelist[i].nu = 1e8 * CLIGHT / lambda_new;
-    //     }
-    //   }
-
-    //   printout("pass %d found %d duplicate atomic lines...resorting...\n", pass, numduplicates);
-    // } while (numduplicates > 0);
   }
 
   // create a linelist shared on node and then copy data across, freeing the local copy
