@@ -31,7 +31,7 @@ static struct emissionabsorptioncontrib *traceemissionabsorption = nullptr;
 double traceemission_totalenergy = 0.;
 double traceabsorption_totalenergy = 0.;
 
-static struct spec *rpkt_spectra = nullptr;
+std::unique_ptr<struct spec> rpkt_spectra = nullptr;
 
 static auto compare_emission(const void *p1, const void *p2) -> int {
   const auto *elem1 = static_cast<const struct emissionabsorptioncontrib *>(p1);
@@ -482,7 +482,7 @@ void init_spectrum_trace() {
   }
 }
 
-void free_spectra(struct spec *spectra) {
+void free_spectra(std::unique_ptr<struct spec> &spectra) {
   free(spectra->lower_freq);
   free(spectra->delta_freq);
   free(spectra->fluxalltimesteps);
@@ -492,7 +492,7 @@ void free_spectra(struct spec *spectra) {
     free(spectra->trueemissionalltimesteps);
   }
   free(spectra->timesteps);
-  free(spectra);
+  spectra.reset();
 }
 
 void init_spectra(struct spec *spectra, const double nu_min, const double nu_max, const bool do_emission_res) {
@@ -540,7 +540,7 @@ void init_spectra(struct spec *spectra, const double nu_min, const double nu_max
   }
 }
 
-static void alloc_emissionabsorption_spectra(spec *spectra) {
+static void alloc_emissionabsorption_spectra(auto &spectra) {
   size_t mem_usage = 0;
   const int proccount = get_proccount();
   spectra->do_emission_res = true;
@@ -578,10 +578,11 @@ static void alloc_emissionabsorption_spectra(spec *spectra) {
            mem_usage / 1024. / 1024., MNUBINS);
 }
 
-auto alloc_spectra(const bool do_emission_res) -> struct spec * {
+auto alloc_spectra(const bool do_emission_res) -> std::unique_ptr<struct spec> {
   size_t mem_usage = 0;
   assert_always(globals::ntstep > 0);
-  auto *spectra = static_cast<struct spec *>(malloc(sizeof(struct spec)));
+  // std::unique_ptr<struct spec> spectra(new struct spec);
+  auto spectra = std::make_unique<struct spec>();
   mem_usage += globals::ntstep * sizeof(struct spec);
 
   spectra->do_emission_res = false;  // might be set true later by alloc_emissionabsorption_spectra
@@ -660,7 +661,7 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
 
   bool do_emission_res = WRITE_PARTIAL_EMISSIONABSORPTIONSPEC ? globals::do_emission_res : false;
 
-  if (rpkt_spectra == nullptr) {
+  if (rpkt_spectra.get() == nullptr) {
     rpkt_spectra = alloc_spectra(do_emission_res);
     assert_always(rpkt_spectra != nullptr);
   }
@@ -676,14 +677,14 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
     }
   }
 
-  init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, do_emission_res);
+  init_spectra(rpkt_spectra.get(), NU_MIN_R, NU_MAX_R, do_emission_res);
 
   for (int ii = 0; ii < globals::npkts; ii++) {
     if (pkts[ii].type == TYPE_ESCAPE) {
       const int abin = -1;  // all angles
       if (pkts[ii].escape_type == TYPE_RPKT) {
         add_to_lc_res(&pkts[ii], abin, rpkt_light_curve_lum.data(), rpkt_light_curve_lumcmf.data());
-        add_to_spec_res(&pkts[ii], abin, rpkt_spectra, stokes_i, stokes_q, stokes_u);
+        add_to_spec_res(&pkts[ii], abin, rpkt_spectra.get(), stokes_i, stokes_q, stokes_u);
       } else if (abin == -1 && pkts[ii].escape_type == TYPE_GAMMA) {
         add_to_lc_res(&pkts[ii], abin, gamma_light_curve_lum.data(), gamma_light_curve_lumcmf.data());
       }
@@ -696,7 +697,7 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
   const time_t time_mpireduction_start = time(nullptr);
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-  mpi_reduce_spectra(my_rank, rpkt_spectra, numtimesteps);
+  mpi_reduce_spectra(my_rank, rpkt_spectra.get(), numtimesteps);
   MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lum.data(), rpkt_light_curve_lum.data(), numtimesteps,
              MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lumcmf.data(), rpkt_light_curve_lumcmf.data(), numtimesteps,
@@ -713,7 +714,7 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
     write_light_curve("light_curve.out", -1, rpkt_light_curve_lum.data(), rpkt_light_curve_lumcmf.data(), numtimesteps);
     write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum.data(), gamma_light_curve_lumcmf.data(),
                       numtimesteps);
-    write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, numtimesteps);
+    write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra.get(), numtimesteps);
   }
 
 #ifdef MPI_ON
