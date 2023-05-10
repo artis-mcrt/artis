@@ -482,17 +482,6 @@ void init_spectrum_trace() {
   }
 }
 
-void free_spectra(std::unique_ptr<struct spec> &spectra) {
-  spectra->lower_freq.reset();
-  spectra->delta_freq.reset();
-  spectra->fluxalltimesteps.reset();
-  spectra->absorptionalltimesteps.reset();
-  spectra->emissionalltimesteps.reset();
-  spectra->trueemissionalltimesteps.reset();
-  spectra->timesteps.reset();
-  spectra.reset();
-}
-
 void init_spectra(struct spec &spectra, const double nu_min, const double nu_max, const bool do_emission_res) {
   // start by setting up the time and frequency bins.
   // it is all done interms of a logarithmic spacing in both t and nu - get the

@@ -293,21 +293,11 @@ auto main(int argc, char *argv[]) -> int {
     }
   }
 
-  free_spectra(rpkt_spectra);
-
-  if (stokes_i != nullptr) {
-    free_spectra(stokes_i);
-  }
-
-  if (stokes_q != nullptr) {
-    free_spectra(stokes_q);
-  }
-
-  if (stokes_u != nullptr) {
-    free_spectra(stokes_u);
-  }
-
-  free_spectra(gamma_spectra);
+  rpkt_spectra.reset();
+  stokes_i.reset();
+  stokes_q.reset();
+  stokes_u.reset();
+  gamma_spectra.reset();
 
   free(pkts);
   decay::cleanup();
