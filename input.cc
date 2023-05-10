@@ -250,7 +250,7 @@ static void read_phixs_data(int phixs_file_version) {
         globals::NPHIXSPOINTS, globals::NPHIXSNUINCREMENT);
   } else if (phixs_file_version == 1) {
     globals::NPHIXSPOINTS = 100;
-    globals::NPHIXSNUINCREMENT = .03;
+    globals::NPHIXSNUINCREMENT = .1;
     printout("using NPHIXSPOINTS = %d and NPHIXSNUINCREMENT = %lg set in input.cc to interpolate phixsdata.txt data\n",
              globals::NPHIXSPOINTS, globals::NPHIXSNUINCREMENT);
   } else {
