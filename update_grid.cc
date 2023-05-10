@@ -844,7 +844,6 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
     call_T_e_finder(n, nts, globals::time_step[nts_for_te].mid, MINTEMP, MAXTEMP, heatingcoolingrates);
 
     const int duration_solve_T_e = time(nullptr) - sys_time_start_Te;
-    const double fracdiff_T_e = fabs((grid::get_Te(n) / prev_T_e) - 1);
 
     if (!NLTE_POPS_ON || !NLTE_POPS_ALL_IONS_SIMULTANEOUS)  // do this in LTE or NLTE single ion solver mode
     {
@@ -864,6 +863,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
     }
 
     if (NLTE_POPS_ON) {
+      const double fracdiff_T_e = fabs((grid::get_Te(n) / prev_T_e) - 1);
       const time_t sys_time_start_nltepops = time(nullptr);
       // fractional difference between previous and current iteration's (nne or max(ground state
       // population change))
