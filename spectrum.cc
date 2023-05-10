@@ -364,7 +364,7 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
     const double nu_max = spectra->nu_max;
     const double dlognu = (log(nu_max) - log(nu_min)) / MNUBINS;
 
-    const int nnu = (log(pkt_ptr->nu_rf) - log(nu_min)) / dlognu;
+    const int nnu = static_cast<int>((log(pkt_ptr->nu_rf) - log(nu_min)) / dlognu);
     assert_always(nnu < MNUBINS);
 
     const double deltaE = pkt_ptr->e_rf / globals::time_step[nt].width / spectra->delta_freq[nnu] / 4.e12 / PI /
@@ -422,7 +422,7 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
         }
       }
 
-      const int nnu_abs = (log(pkt_ptr->absorptionfreq) - log(nu_min)) / dlognu;
+      const int nnu_abs = static_cast<int>((log(pkt_ptr->absorptionfreq) - log(nu_min)) / dlognu);
       if (nnu_abs >= 0 && nnu_abs < MNUBINS) {
         const int ioncount = get_nelements() * get_max_nions();
         const double deltaE_absorption = pkt_ptr->e_rf / globals::time_step[nt].width / spectra->delta_freq[nnu_abs] /
@@ -617,18 +617,14 @@ void add_to_spec_res(const struct packet *const pkt_ptr, int current_abin, struc
                      struct spec *stokes_q, struct spec *stokes_u)
 // Routine to add a packet to the outgoing spectrum.
 {
-  /* Need to (1) decide which time bin to put it in and (2) which frequency bin. */
+  // Need to (1) decide which time bin to put it in and (2) which frequency bin.
 
-  /* Time bin - we know that it escaped at "escape_time". However, we have to allow
-     for travel time. Use the formula in Leon's paper.
-     The extra distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
-  */
+  // Time bin - we know that it escaped at "escape_time". However, we have to allow
+  // for travel time. Use the formula in Leon's paper.
+  // The extra distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
 
-  if (current_abin == -1) {
-    // angle averaged spectrum
-    add_to_spec(pkt_ptr, current_abin, spectra, stokes_i, stokes_q, stokes_u);
-  } else if (get_escapedirectionbin(pkt_ptr->dir, globals::syn_dir) == current_abin) {
-    // Add only packets which escape to the current angle bin
+  if (current_abin == -1 || get_escapedirectionbin(pkt_ptr->dir, globals::syn_dir) == current_abin) {
+    // either angle average spectrum or packet matches the selected angle bin
     add_to_spec(pkt_ptr, current_abin, spectra, stokes_i, stokes_q, stokes_u);
   }
 }
