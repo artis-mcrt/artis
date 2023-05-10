@@ -483,13 +483,15 @@ void init_spectrum_trace() {
 }
 
 void free_spectra(struct spec *spectra) {
-  spectra->lower_freq.reset();
-  spectra->delta_freq.reset();
-  spectra->fluxalltimesteps.reset();
-  spectra->absorptionalltimesteps.reset();
-  spectra->emissionalltimesteps.reset();
-  spectra->trueemissionalltimesteps.reset();
-  spectra->timesteps.reset();
+  free(spectra->lower_freq);
+  free(spectra->delta_freq);
+  free(spectra->fluxalltimesteps);
+  if (spectra->do_emission_res) {
+    free(spectra->absorptionalltimesteps);
+    free(spectra->emissionalltimesteps);
+    free(spectra->trueemissionalltimesteps);
+  }
+  free(spectra->timesteps);
   free(spectra);
 }
 
@@ -545,14 +547,15 @@ static void alloc_emissionabsorption_spectra(spec *spectra) {
 
   mem_usage += globals::ntstep * MNUBINS * get_nelements() * get_max_nions() * sizeof(double);
   spectra->absorptionalltimesteps =
-      std::make_unique<double[]>(globals::ntstep * MNUBINS * get_nelements() * get_max_nions());
+      static_cast<double *>(malloc(globals::ntstep * MNUBINS * get_nelements() * get_max_nions() * sizeof(double)));
   assert_always(spectra->absorptionalltimesteps != nullptr);
 
   mem_usage += 2 * globals::ntstep * MNUBINS * proccount * sizeof(double);
-  spectra->emissionalltimesteps = std::make_unique<double[]>(globals::ntstep * MNUBINS * proccount);
+  spectra->emissionalltimesteps = static_cast<double *>(malloc(globals::ntstep * MNUBINS * proccount * sizeof(double)));
   assert_always(spectra->emissionalltimesteps != nullptr);
 
-  spectra->trueemissionalltimesteps = std::make_unique<double[]>(globals::ntstep * MNUBINS * proccount);
+  spectra->trueemissionalltimesteps =
+      static_cast<double *>(malloc(globals::ntstep * MNUBINS * proccount * sizeof(double)));
   assert_always(spectra->trueemissionalltimesteps != nullptr);
 
   for (int nts = 0; nts < globals::ntstep; nts++) {
@@ -582,13 +585,13 @@ auto alloc_spectra(const bool do_emission_res) -> struct spec * {
   mem_usage += globals::ntstep * sizeof(struct spec);
 
   spectra->do_emission_res = false;  // might be set true later by alloc_emissionabsorption_spectra
-  spectra->lower_freq = std::make_unique<float[]>(MNUBINS);
-  spectra->delta_freq = std::make_unique<float[]>(MNUBINS);
+  spectra->lower_freq = static_cast<float *>(malloc(MNUBINS * sizeof(float)));
+  spectra->delta_freq = static_cast<float *>(malloc(MNUBINS * sizeof(float)));
 
-  spectra->timesteps = std::make_unique<struct timestepspec[]>(globals::ntstep);
+  spectra->timesteps = static_cast<struct timestepspec *>(malloc(globals::ntstep * sizeof(struct timestepspec)));
   mem_usage += globals::ntstep * sizeof(struct timestepspec);
 
-  spectra->fluxalltimesteps = std::make_unique<double[]>(globals::ntstep * MNUBINS);
+  spectra->fluxalltimesteps = static_cast<double *>(malloc(globals::ntstep * MNUBINS * sizeof(double)));
   mem_usage += globals::ntstep * MNUBINS * sizeof(double);
 
   assert_always(MNUBINS > 0);
