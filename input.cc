@@ -2042,28 +2042,14 @@ void read_parameterfile(int rank)
   std::stringstream(line) >> max_bf_continua;
   assert_always(max_bf_continua == -1);
 
-  /// The following parameters affect the do_exspec mode only /////////////////
-  /// Read number of MPI tasks for exspec
+  /// for exspec: read number of MPI tasks
   assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> globals::nprocs_exspec;
-  if (do_exspec) {
-    printout("input: do_exspec ... extract spectra for %d MPI tasks\n", globals::nprocs_exspec);
-    printout("input: do_exspec ... and %d packets per task\n", globals::npkts);
-  }
 
   /// Extract line-of-sight dependent information of last emission for spectrum_res
-  ///   if 1, yes
-  ///   if 0, no
-  /// Only affects runs with do_exspec. But then it needs huge amounts of memory!!!
-  /// Thus be aware to reduce MNUBINS for this mode of operation!
   assert_always(get_noncommentline(file, line));
   std::stringstream(line) >> dum1;
-  if (do_exspec) {
-    globals::do_emission_res = (dum1 != 0);
-    if (globals::do_emission_res) {
-      printout("input: do_exspec ... extract LOS dependent emission information\n");
-    }
-  }
+  globals::do_emission_res = (dum1 != 0);
 
   /// To reduce the work imbalance between different MPI tasks I introduced a diffusion
   /// for kpkts, since it turned out that this work imbalance was largely dominated
