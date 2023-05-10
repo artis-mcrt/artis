@@ -385,17 +385,6 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
   const double T_e_old = grid::get_Te(modelgridindex);
   printout("Finding T_e in cell %d at timestep %d...", modelgridindex, timestep);
 
-  // double deltat = (T_max - T_min) / 100;
-
-  /// Force tb_info for all cells
-  // tb_info = 1;
-
-  /// Check whether the thermal balance equation has a root in [T_min,T_max]
-  // gsl_root_fsolver *solver;
-  // solver = gsl_root_fsolver_alloc(solvertype);
-  // mintemp_f.function = &mintemp_solution_f;
-  // maxtemp_f.function = &maxtemp_solution_f;
-
   struct Te_solution_paras paras = {
       .t_current = t_current, .modelgridindex = modelgridindex, .heatingcoolingrates = heatingcoolingrates};
 
@@ -403,7 +392,8 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 
   double thermalmin = T_e_eqn_heating_minus_cooling(T_min, find_T_e_f.params);
   double thermalmax = T_e_eqn_heating_minus_cooling(T_max, find_T_e_f.params);
-  // printout("(heating - cooling) at T_min: %g, at T_max: %g\n",thermalmin,thermalmax);
+
+  // printout("(heating - cooling) at T_min: %g, at T_max: %g\n", thermalmin, thermalmax);
   if (!std::isfinite(thermalmin) || !std::isfinite(thermalmax)) {
     printout(
         "[abort request] call_T_e_finder: non-finite results in modelcell %d (T_R=%g, W=%g). T_e forced to be "
@@ -412,35 +402,10 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
     thermalmax = thermalmin = -1;
   }
 
-  // double thermalmax = find_T_e(T_max,find_T_e_f.params);
   double T_e = NAN;
+  /// Check whether the thermal balance equation has a root in [T_min,T_max]
   if (thermalmin * thermalmax < 0) {
     /// If it has, then solve for the root T_e
-    /// but first of all printout heating and cooling rates if the tb_info switch is set
-    /*if (tb_info == 1)
-    {
-      for (i = 0; i <= 100; i++)
-      {
-        T_e = T_min + i*deltat;
-        thermalmin = find_T_e(T_e,find_T_e_f.params);
-        //fprintf(tb_file,"%d %g %g %g %g %g %g %g %g %g %g
-    %g\n",modelgridindex,T_e,heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collbb,heatingrates[tid].collbf,heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collbb,coolingrates[tid].collbf,coolingrates[tid].adiabatic);
-        fprintf(tb_file,"%d %g %g %g %g %g %g %g %g
-    %g\n",modelgridindex,T_e,heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collisional,
-    heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collisional,coolingrates[tid].adiabatic);
-      }
-    }*/
-    /// now start so iterate on T_e solution
-    /// onedimensional gsl root solver, derivative type
-    /*const gsl_root_fdfsolver_type *solvertype;
-    solvertype = gsl_root_fdfsolver_newton;
-    gsl_root_fdfsolver *solver;
-    solver = gsl_root_fdfsolver_alloc(solvertype);
-
-    gsl_function_fdf fdf;
-    fdf.f = &nne_solution_f;
-    fdf.df = &nne_solution_deriv;
-    fdf.fdf = &nne_solution_fdf;*/
 
     // one-dimensional gsl root solver, bracketing type
     gsl_root_fsolver *T_e_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
@@ -468,11 +433,9 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
     gsl_root_fsolver_free(T_e_solver);
   }
   /// Quick solver style: works if we can assume that there is either one or no
-  /// solution on [MINTEMP.MAXTEMP] (check that by doing a plot of heating-cooling
-  /// vs. T_e using the tb_info switch)
+  /// solution on [MINTEMP.MAXTEMP] (check that by doing a plot of heating-cooling vs. T_e)
   else if (thermalmax < 0) {
     /// Thermal balance equation always negative ===> T_e = T_min
-    /// Calculate the rates again at this T_e to print them to file
     T_e = MINTEMP;
     printout(
         "[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary %g in modelcell %d "
@@ -480,82 +443,12 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
         MINTEMP, modelgridindex, grid::get_TR(modelgridindex), grid::get_W(modelgridindex));
   } else {
     /// Thermal balance equation always negative ===> T_e = T_max
-    /// Calculate the rates again at this T_e to print them to file
     T_e = MAXTEMP;
     printout(
         "[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [%g,%g] in modelcell %d "
         "(T_R=%g,W=%g). T_e forced to be MAXTEMP\n",
         MINTEMP, MAXTEMP, modelgridindex, grid::get_TR(modelgridindex), grid::get_W(modelgridindex));
   }
-
-  /// Otherwise the more expensive solver style _might_ work
-  /*
-  else
-  {
-      /// Search for the first temperature point where the cooling rates dominate over
-      /// the heating rates. This determines the interval in which the solution must be
-      double helper = -99.;
-      for (i = 0; i <= 100; i++)
-      {
-        T_e = T_min + i*deltat;
-        thermalmin = find_T_e(T_e,find_T_e_f.params);
-        if (tb_info == 1)
-        {
-          fprintf(tb_file,"%d %g %g %g %g %g %g %g %g
-  %g\n",modelgridindex,T_e,heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collisional,
-  heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collisional,coolingrates[tid].adiabatic);
-        }
-        if (thermalmin <= 0 && helper < 0)
-        {
-          helper = T_e;
-          if (tb_info != 1) break;
-        }
-        //if (find_T_e(T_e,find_T_e_f.params) <= 0) break;
-      }
-      if (helper < 0) helper = MAXTEMP;
-      T_min = helper-deltat;
-      T_max = helper;
-      //T_min = T_e-deltat;
-      //T_max = T_e;
-      //if (tb_info == 1) printout("T_min %g, T_max %g for cell %d\n",T_min,T_max,modelgridindex);
-
-      if (T_max == MAXTEMP)
-      {
-        printout("[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [%g,%g] in cell %d
-  (T_R=%g,W=%g). T_e forced to be
-  MAXTEMP\n",MINTEMP,MAXTEMP,modelgridindex,get_TR(modelgridindex),get_W(modelgridindex)); T_e = MAXTEMP;
-      }
-      else if (T_min < MINTEMP)
-      {
-        printout("[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary %g in cell %d
-  (T_R=%g,W=%g). T_e forced to be
-  MINTEMP\n",MINTEMP,modelgridindex,modelgridindex,get_TR(modelgridindex),get_W(modelgridindex)); T_e =  MINTEMP;
-      }
-      else
-      {
-        /// We found an interval which has a solution. Solve for the root
-        T_e_solver = gsl_root_fsolver_alloc(solvertype);
-        gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
-        iter2 = 0;
-        do
-        {
-          iter2++;
-          status = gsl_root_fsolver_iterate(T_e_solver);
-          T_e = gsl_root_fsolver_root(T_e_solver);
-          grid::set_Te(modelgridindex,T_e);
-          T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
-          T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
-          status = gsl_root_test_interval(T_e_min,T_e_max,0,fractional_accuracy);
-          //printout("[debug] find T_e:   %d [%g, %g] %g %g\n",iter2,x_lo,x_hi,x_0,x_hi-x_lo);
-        }
-        while (status == GSL_CONTINUE && iter2 < maxit);
-        if (status == GSL_CONTINUE) printout("[warning] call_T_e_finder: T_e did not converge within %d
-  iterations\n",maxit); gsl_root_fsolver_free(T_e_solver);
-        //printout("%d %g %g %g %g %g %g %g %g %g %g %g
-  %g\n",cellnumber,T_e,ffheatingestimator[cellnumber*get_nelements()*get_max_nions()+0*get_max_nions()+0],bfheatingestimator[cellnumber*get_nelements()*get_max_nions()+0*get_max_nions()+0],heatingrates[tid].collbb,heatingrates[tid].collbf,heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collbb,coolingrates[tid].collbf,coolingrates[tid].adiabatic,ffheatingestimator[cellnumber*get_nelements()*get_max_nions()+0*get_max_nions()+0]+bfheatingestimator[cellnumber*get_nelements()*get_max_nions()+0*get_max_nions()+0]+heatingrates[tid].collbb+heatingrates[tid].collbf+heatingrates[tid].gamma-coolingrates[tid].ff-coolingrates[tid].fb-coolingrates[tid].collbb-coolingrates[tid].collbf-coolingrates[tid].adiabatic);
-      }
-  }
-  */
 
   if (neutral_flag) {
     printout("[info] call_T_e_finder: cell %d contains only neutral ions\n", modelgridindex);

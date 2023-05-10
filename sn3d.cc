@@ -857,27 +857,6 @@ auto main(int argc, char *argv[]) -> int {
       static_cast<struct rpkt_cont_opacity *>(calloc(get_max_threads(), sizeof(struct rpkt_cont_opacity)));
   assert_always(globals::kappa_rpkt_cont != nullptr);
 
-  /// Using this and the global variable output_file opens and closes the output_file
-  /// only once, which speeds up the simulation with a lots of output switched on (debugging).
-  /// The downside is that while the simulation runs, its output is only readable on that
-  /// machine where the simulation is running.
-  /// NB: printout also needs some changes to get this working!
-  /*
-  output_file = fopen_required("output.txt", "w");
-  /// Makes sure that the output_file is written line-by-line
-  setvbuf(output_file,nullptr, _IOLBF, 1);
-  */
-
-  /*
-  ldist_file = fopen_required("ldist.out", "w");
-  */
-
-  // snprintf(filename, MAXFILENAMELENGTH, "tb%.4d.txt", my_rank);
-  //(tb_file = fopen_required(filename, "w");
-  // setvbuf(tb_file,nullptr, _IOLBF, 1);
-
-  // printout("CELLHISTORYSIZE %d\n",CELLHISTORYSIZE);
-
   input(my_rank);
 
   if (my_rank == 0) {
@@ -891,7 +870,7 @@ auto main(int argc, char *argv[]) -> int {
   /// and for photoionisation. With the nebular approximation they only depend on T_e
   /// T_R and W. W is easily factored out. For stimulated recombination we must assume
   /// T_e = T_R for this precalculation.
-  /// Make this parallel ?
+
   printout("time before tabulation of rate coefficients %ld\n", time(nullptr));
   ratecoefficients_init();
   printout("time after tabulation of rate coefficients %ld\n", time(nullptr));
@@ -912,12 +891,13 @@ auto main(int argc, char *argv[]) -> int {
 
   bool terminate_early = false;
 
-  /// Initialise the grid. Call routine that sets up the initial positions
-  /// and sizes of the grid cells.
   time_init();
+
   if (my_rank == 0) {
     write_timestep_file();
   }
+
+  /// Initialise the grid. Set up the initial positions and sizes of the grid cells.
   printout("time grid_init %ld\n", time(nullptr));
   grid::grid_init(my_rank);
 
@@ -1018,22 +998,9 @@ auto main(int argc, char *argv[]) -> int {
     // The first time step must solve the ionisation balance in LTE
     globals::initial_iteration = (nts == 0);
 #else
-    /// Do 3 iterations on timestep 0-9
-    /*if (nts == 0)
-    {
-      n_titer = 3;
-      initial_iteration = true;
-    }
-    else if (nts < 6)
-    {
-      n_titer = 3;
-      initial_iteration = false;
-    }
-    else
-    {
-      n_titer = 1;
-      initial_iteration = false;
-    }*/
+    /// titer example: Do 3 iterations on timestep 0-6
+    // globals::n_titer = (nts < 6) ? 3: 1;
+
     globals::n_titer = 1;
     globals::initial_iteration = (nts < globals::num_lte_timesteps);
 #endif
@@ -1062,12 +1029,6 @@ auto main(int argc, char *argv[]) -> int {
   if (linestat_file != nullptr) {
     fclose(linestat_file);
   }
-  // fclose(ldist_file);
-  // fclose(output_file);
-
-  /* Spec syn. */
-  // grid_init();
-  // syn_gamma();
 
   if ((globals::ntstep != globals::ftstep) || (terminate_early)) {
     printout("RESTART_NEEDED to continue model\n");

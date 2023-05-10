@@ -165,9 +165,9 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
 
     meridian(old_dir_cmf, ref1, ref2);
 
-    /* This is the i1 angle of Bulla+2015, obtained by computing the angle between the
-       reference axes ref1 and ref2 in the meridian frame and the corresponding axes
-       ref1_sc and ref2_sc in the scattering plane. */
+    // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
+    // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
+    // ref1_sc and ref2_sc in the scattering plane.
     i1 = rot_angle(old_dir_cmf, obs_cmf, ref1, ref2);
     cos2i1 = cos(2 * i1);
     sin2i1 = sin(2 * i1);
@@ -193,9 +193,9 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
 
     meridian(obs_cmf, ref1, ref2);
 
-    /* This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
-       reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
-       meridian frame. NB: we need to add PI to transform THETA to i2 */
+    // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
+    // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
+    // meridian frame. NB: we need to add PI to transform THETA to i2
     i2 = PI + rot_angle(obs_cmf, old_dir_cmf, ref1, ref2);
     cos2i2 = cos(2 * i2);
     sin2i2 = sin(2 * i2);
@@ -228,7 +228,7 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
   while (!end_packet) {
     ldist = 0;
 
-    /* distance to the next cell */
+    // distance to the next cell
     sdist = boundary_cross(dummy_ptr, &snext);
     s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
 
@@ -349,7 +349,7 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
     }
   }
 
-  /* increment the number of escaped virtual packet in the given timestep */
+  // increment the number of escaped virtual packet in the given timestep
   if (realtype == 1) {
     safeincrement(nvpkt_esc1);
   } else if (realtype == 2) {
@@ -376,7 +376,7 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
       printout("Nan Number!! %g %g %g %g %g %g %g %g \n", Itmp, Qtmp, Utmp, pn, tau_vpkt[ind], mu, i1, i2);
     }
 
-    /* bin on fly and produce file with spectrum */
+    // bin on fly and produce file with spectrum
 
     t_arrive = t_current - (dot(pkt_ptr->pos, dummy_ptr->dir) / CLIGHT_PROP);
 
@@ -407,10 +407,10 @@ void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *o
   }
 }
 
-/* Virtual packet is killed when tau reaches tau_max_vpkt for ALL the different setups
-E.g. imagine that a packet in the first setup (all elements included) reaches tau = tau_max_vpkt
-because of the element Zi. If we remove Zi, tau now could be lower than tau_max_vpkt and could
-thus contribute to the spectrum. */
+// Virtual packet is killed when tau reaches tau_max_vpkt for ALL the different setups
+// E.g. imagine that a packet in the first setup (all elements included) reaches tau = tau_max_vpkt
+// because of the element Zi. If we remove Zi, tau now could be lower than tau_max_vpkt and could
+// thus contribute to the spectrum.
 auto check_tau(const double *tau, const double *tau_max) -> int {
   int count = 0;
 
@@ -516,11 +516,6 @@ void write_vspecpol(FILE *specpol_file) {
 
       fprintf(specpol_file, "\n");
     }
-
-    /*
-     fclose(specpol_file);
-     fclose(emissionpol_file);
-     */
   }
 }
 
