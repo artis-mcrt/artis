@@ -8,6 +8,4 @@ constexpr int NPHIBINS = 10;
 constexpr int NCOSTHETABINS = 10;
 constexpr int MABINS = NPHIBINS * NCOSTHETABINS;
 
-extern const bool do_exspec;
-
 #endif  // EXSPEC_H

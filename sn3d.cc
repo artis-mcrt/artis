@@ -29,8 +29,6 @@
 #include "version.h"
 #include "vpkt.h"
 
-const bool do_exspec = false;
-
 // threadprivate variables
 int tid;
 int myGpuId = 0;

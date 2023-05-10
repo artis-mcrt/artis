@@ -26,8 +26,6 @@
 #include "spectrum.h"
 #include "version.h"
 
-const bool do_exspec = true;
-
 // threadprivate variables
 FILE *output_file = nullptr;
 int tid = 0;
@@ -119,7 +117,7 @@ auto main(int argc, char *argv[]) -> int {
   assert_always(globals::rank_global == 0);
   assert_always(globals::nprocs == 1);
 
-  printout("Begining do_exspec.\n");
+  printout("Begining exspec.\n");
 
   /// Get input stuff
   printout("time before input %ld\n", time(nullptr));
