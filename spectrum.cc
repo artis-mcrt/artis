@@ -357,11 +357,11 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
   // specific angle bins contain fewer packets than the full sphere, so must be normalised to match
   const double anglefactor = (current_abin >= 0) ? MABINS : 1.;
 
+  const double nu_min = spectra.nu_min;
+  const double nu_max = spectra.nu_max;
   const double t_arrive = get_arrive_time(pkt_ptr);
-  if (t_arrive > globals::tmin && t_arrive < globals::tmax && pkt_ptr->nu_rf > NU_MIN_R && pkt_ptr->nu_rf < NU_MAX_R) {
+  if (t_arrive > globals::tmin && t_arrive < globals::tmax && pkt_ptr->nu_rf > nu_min && pkt_ptr->nu_rf < nu_max) {
     const int nt = get_timestep(t_arrive);
-    const double nu_min = spectra.nu_min;
-    const double nu_max = spectra.nu_max;
     const double dlognu = (log(nu_max) - log(nu_min)) / MNUBINS;
 
     const int nnu = static_cast<int>((log(pkt_ptr->nu_rf) - log(nu_min)) / dlognu);
