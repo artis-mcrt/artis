@@ -14,8 +14,8 @@ struct timestepspec {
 struct spec {
   double nu_min = -1.;
   double nu_max = -1.;
-  float *lower_freq = nullptr;
-  float *delta_freq = nullptr;
+  std::unique_ptr<float[]> lower_freq = nullptr;
+  std::unique_ptr<float[]> delta_freq = nullptr;
   double *fluxalltimesteps = nullptr;
   double *absorptionalltimesteps = nullptr;
   double *emissionalltimesteps = nullptr;

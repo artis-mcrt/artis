@@ -483,8 +483,8 @@ void init_spectrum_trace() {
 }
 
 void free_spectra(std::unique_ptr<struct spec> &spectra) {
-  free(spectra->lower_freq);
-  free(spectra->delta_freq);
+  spectra->lower_freq.reset();
+  spectra->delta_freq.reset();
   free(spectra->fluxalltimesteps);
   if (spectra->do_emission_res) {
     free(spectra->absorptionalltimesteps);
@@ -507,8 +507,8 @@ void init_spectra(struct spec *spectra, const double nu_min, const double nu_max
   spectra->nu_min = nu_min;
   spectra->nu_max = nu_max;
   spectra->do_emission_res = do_emission_res;
-  assert_always(spectra->lower_freq != nullptr);
-  assert_always(spectra->delta_freq != nullptr);
+  assert_always(spectra->lower_freq.get() != nullptr);
+  assert_always(spectra->delta_freq.get() != nullptr);
   for (int nnu = 0; nnu < MNUBINS; nnu++) {
     spectra->lower_freq[nnu] = exp(log(nu_min) + (nnu * (dlognu)));
     spectra->delta_freq[nnu] = exp(log(nu_min) + ((nnu + 1) * (dlognu))) - spectra->lower_freq[nnu];
@@ -586,8 +586,8 @@ auto alloc_spectra(const bool do_emission_res) -> std::unique_ptr<struct spec> {
   mem_usage += globals::ntstep * sizeof(struct spec);
 
   spectra->do_emission_res = false;  // might be set true later by alloc_emissionabsorption_spectra
-  spectra->lower_freq = static_cast<float *>(malloc(MNUBINS * sizeof(float)));
-  spectra->delta_freq = static_cast<float *>(malloc(MNUBINS * sizeof(float)));
+  spectra->lower_freq = std::make_unique<float[]>(MNUBINS);
+  spectra->delta_freq = std::make_unique<float[]>(MNUBINS);
 
   spectra->timesteps = static_cast<struct timestepspec *>(malloc(globals::ntstep * sizeof(struct timestepspec)));
   mem_usage += globals::ntstep * sizeof(struct timestepspec);
@@ -661,7 +661,7 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
 
   bool do_emission_res = WRITE_PARTIAL_EMISSIONABSORPTIONSPEC ? globals::do_emission_res : false;
 
-  if (rpkt_spectra.get() == nullptr) {
+  if (rpkt_spectra == nullptr) {
     rpkt_spectra = alloc_spectra(do_emission_res);
     assert_always(rpkt_spectra != nullptr);
   }
