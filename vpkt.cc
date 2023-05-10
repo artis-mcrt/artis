@@ -434,9 +434,9 @@ void add_to_vspecpol(struct packet *pkt_ptr, int bin, int ind, double t_arrive) 
 
   /// Put this into the time grid.
   if (t_arrive > tmin_vspec && t_arrive < tmax_vspec) {
-    int const nt = (log(t_arrive) - log(tmin_vspec)) / dlogt_vspec;
+    const int nt = static_cast<int>((log(t_arrive) - log(tmin_vspec)) / dlogt_vspec);
     if (pkt_ptr->nu_rf > numin_vspec && pkt_ptr->nu_rf < numax_vspec) {
-      const int nnu = (log(pkt_ptr->nu_rf) - log(numin_vspec)) / dlognu_vspec;
+      const int nnu = static_cast<int>((log(pkt_ptr->nu_rf) - log(numin_vspec)) / dlognu_vspec);
       const double pktcontrib = pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI /
                                 PARSEC / PARSEC / globals::nprocs * 4 * PI;
 
@@ -660,8 +660,8 @@ void add_to_vpkt_grid(struct packet *dummy_ptr, const double *vel, int bin_range
   const double zbin = 2 * globals::vmax / NZ_VGRID;
 
   // Grid cell
-  const int nt = (globals::vmax - vref1) / ybin;
-  const int mt = (globals::vmax - vref2) / zbin;
+  const int nt = static_cast<int>((globals::vmax - vref1) / ybin);
+  const int mt = static_cast<int>((globals::vmax - vref2) / zbin);
 
   // Add contribution
   if (dummy_ptr->nu_rf > nu_grid_min[bin_range] && dummy_ptr->nu_rf < nu_grid_max[bin_range]) {

@@ -18,16 +18,16 @@
 #include "update_grid.h"
 
 struct Te_solution_paras {
-  const double t_current;
-  const int modelgridindex;
-  struct heatingcoolingrates *const heatingcoolingrates;
+  double t_current;
+  int modelgridindex;
+  struct heatingcoolingrates *heatingcoolingrates;
 };
 
 struct gsl_integral_paras_bfheating {
-  const double nu_edge;
-  const int modelgridindex;
-  const float T_R;
-  const float *photoion_xs;
+  double nu_edge;
+  int modelgridindex;
+  float T_R;
+  float *photoion_xs;
 };
 
 auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T, double W) -> double {
