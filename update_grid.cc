@@ -1442,11 +1442,10 @@ auto calculate_populations(const int modelgridindex) -> double
 /// libgsl's root_solvers and calculates the depending level populations.
 {
   /// and the solution function
-  gsl_function f;
-  struct nne_solution_paras paras {};
-  paras.cellnumber = modelgridindex;
-  f.function = &nne_solution_f;
-  f.params = &paras;
+  struct nne_solution_paras paras {
+    .cellnumber = modelgridindex
+  };
+  gsl_function f{.function = &nne_solution_f, .params = &paras};
 
   neutral_flag = false;
 
