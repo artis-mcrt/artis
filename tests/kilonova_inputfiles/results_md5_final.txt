@@ -4,7 +4,7 @@ f741da8dc778045128bc708884c6f7d1  deposition.out
 2183c62679cc04a8a31e894ba59ec5e0  emission.out
 89321348b06a320ff64a7ad2a7e7e3a2  emissiontrue.out
 6eca8b3e749ecb29800ee24b637e179f  gamma_light_curve.out
-484c6a1384f4bf203f31ce715419c6b1  gamma_spec.out
+c842a494a2c00fc36c5d800adc22199e  gamma_spec.out
 65cc464631353798bfeb1827f4affcf5  gammalinelist.out
 17cf657837d7df2969e3e1540b183cfe  grid.out
 f2491b46c120da8f361a7e5eb3ea9247  light_curve.out
