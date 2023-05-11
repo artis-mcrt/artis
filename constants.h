@@ -45,6 +45,7 @@ constexpr int GRID_SPHERICAL1D = 2;  // radial shells
 constexpr double C_0 = 5.465e-11;
 
 constexpr int MAXFILENAMELENGTH = 128;
+constexpr size_t GSLWSIZE = 16384;  // GSL integration workspace size
 
 enum timestepsizemethods {
   TIMESTEP_SIZES_LOGARITHMIC = 0,

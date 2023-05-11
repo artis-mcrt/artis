@@ -62,8 +62,6 @@ constexpr bool POL_ON;
 // Polarisation for virtual packets
 // #define VPKT_ON
 
-// GSL integration workspace size
-constexpr size_t GSLWSIZE;
 
 constexpr bool TRACK_ION_STATS;
 constexpr bool TRACK_ION_MASTATS;

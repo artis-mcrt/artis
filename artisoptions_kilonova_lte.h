@@ -49,7 +49,6 @@ constexpr bool DIPOLE = false;
 constexpr bool POL_ON = false;
 
 // #define VPKT_ON
-constexpr size_t GSLWSIZE = 16384;
 
 constexpr bool TRACK_ION_STATS = false;
 constexpr bool TRACK_ION_MASTATS = false;
