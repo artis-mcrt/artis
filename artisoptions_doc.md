@@ -99,12 +99,6 @@ constexpr bool DETAILED_BF_ESTIMATORS_ON;
 // if DETAILED_BF_ESTIMATORS_ON, then use BF estimators at the following timestep and later
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP;
 
-// extremely slow and memory consuming - for debugging only
-// not safe for MPI or OpenMP - single process and single thread only!
-// this will output a list of contributions to each bound-free rate estimator
-// with each packet emission type ranked by their contribution to the rate
-#define DETAILED_BF_ESTIMATORS_BYTYPE false
-
 // dynamically calculate photoionization rates for the current radiation field
 // instead of interpolating values from a lookup table for a blackbody radiation field
 constexpr bool NO_LUT_PHOTOION;
@@ -133,9 +127,6 @@ constexpr double SF_EMAX;
 
 // eV
 constexpr double SF_EMIN;
-
-// use a grid of energy points with constant spacing in log energy
-#define SF_USE_LOG_E_INCREMENT false
 
 // trigger a Spencer-Fano solution at least once every n timesteps
 // 0 can only use solutions from previous NLTE iterations on the current timestep

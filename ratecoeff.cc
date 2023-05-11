@@ -1504,11 +1504,6 @@ auto calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, co
             get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element, lowerion + 1), lower + 1,
             upper + 1, threshold_angstroms, gamma_ion_contribution_integral, gamma_ion_contribution_bfest,
             gamma_ion_contribution_used, gamma_ion_used);
-
-#if (DETAILED_BF_ESTIMATORS_BYTYPE)
-        radfield::print_bfrate_contributions(element, lowerion, lower, phixstargetindex, modelgridindex, nnlowerlevel,
-                                             nnlowerion);
-#endif
       }
     }
   }
