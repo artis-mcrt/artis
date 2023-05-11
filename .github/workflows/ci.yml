@@ -164,7 +164,7 @@ jobs:
               run: |
                   touch requirements.txt
                   rm output/packets*.*
-                  zstd -v -T0 --rm -f output/*_res_*.out
+                  find . -name "*_res_*.out" -exec zstd -v -T0 --rm -f {} \;
 
             - name: Upload output files
               uses: actions/upload-artifact@v3
