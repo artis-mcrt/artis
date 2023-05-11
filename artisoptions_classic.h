@@ -98,8 +98,6 @@ constexpr double SF_EMAX = 16000;
 
 constexpr double SF_EMIN = 0.1;
 
-#define SF_USE_LOG_E_INCREMENT false
-
 constexpr int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 0;
 
 constexpr double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS = 0.05;
