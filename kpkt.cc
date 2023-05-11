@@ -588,11 +588,11 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
       pkt_ptr->em_time = pkt_ptr->prop_time;
       pkt_ptr->nscatterings = 0;
 
-#ifdef VPKT_ON
-      // generate a virtual packet
-      int realtype = 2;
-      vpkt_call_estimators(pkt_ptr, t_current, realtype);
-#endif
+      if constexpr (VPKT_ON) {
+        // generate a virtual packet
+        int realtype = 2;
+        vpkt_call_estimators(pkt_ptr, t_current, realtype);
+      }
     } else if (coolinglist[i].type == COOLINGTYPE_FB) {
       /// The k-packet converts directly into a r-packet by free-bound-emission.
       /// Need to select the r-packets frequency and a random direction in the
@@ -637,11 +637,11 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
       pkt_ptr->em_time = pkt_ptr->prop_time;
       pkt_ptr->nscatterings = 0;
 
-// call the estimator routine - generate a virtual packet
-#ifdef VPKT_ON
-      int realtype = 2;
-      vpkt_call_estimators(pkt_ptr, t_current, realtype);
-#endif
+      // call the estimator routine - generate a virtual packet
+      if constexpr (VPKT_ON) {
+        int realtype = 2;
+        vpkt_call_estimators(pkt_ptr, t_current, realtype);
+      }
     } else if (coolinglist[i].type == COOLINGTYPE_COLLEXC) {
       /// the k-packet activates a macro-atom due to collisional excitation
       // printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");

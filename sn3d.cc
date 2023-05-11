@@ -467,25 +467,25 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
     // save packet state at start of current timestep (before propagation)
     write_temp_packetsfile(nts, my_rank, packets);
 
-#ifdef VPKT_ON
-    char filename[MAXFILENAMELENGTH];
-    snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
+    if constexpr (VPKT_ON) {
+      char filename[MAXFILENAMELENGTH];
+      snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
 
-    FILE *vspecpol_file = fopen_required(filename, "wb");
+      FILE *vspecpol_file = fopen_required(filename, "wb");
 
-    write_vspecpol(vspecpol_file);
-    fclose(vspecpol_file);
+      write_vspecpol(vspecpol_file);
+      fclose(vspecpol_file);
 
-    // Write temporary files for vpkt_grid
-    if (vgrid_flag == 1) {
-      snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
+      // Write temporary files for vpkt_grid
+      if (vgrid_flag == 1) {
+        snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
 
-      FILE *vpkt_grid_file = fopen_required(filename, "wb");
+        FILE *vpkt_grid_file = fopen_required(filename, "wb");
 
-      write_vpkt_grid(vpkt_grid_file);
-      fclose(vpkt_grid_file);
+        write_vpkt_grid(vpkt_grid_file);
+        fclose(vpkt_grid_file);
+      }
     }
-#endif
 
     const time_t time_write_packets_file_finished = time(nullptr);
 
@@ -649,19 +649,19 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
     printout("During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (t=%gd)\n", nts, my_rank,
              globals::time_step[nts].pellet_decays, globals::nesc, globals::time_step[nts].mid / DAY);
 
-#ifdef VPKT_ON
-    printout("During timestep %d on MPI process %d, %d virtual packets were generated and %d escaped. \n", nts, my_rank,
-             nvpkt, nvpkt_esc1 + nvpkt_esc2 + nvpkt_esc3);
-    printout(
-        "%d virtual packets came from an electron scattering event, %d from a kpkt deactivation and %d from a "
-        "macroatom deactivation. \n",
-        nvpkt_esc1, nvpkt_esc2, nvpkt_esc3);
+    if constexpr (VPKT_ON) {
+      printout("During timestep %d on MPI process %d, %d virtual packets were generated and %d escaped. \n", nts,
+               my_rank, nvpkt, nvpkt_esc1 + nvpkt_esc2 + nvpkt_esc3);
+      printout(
+          "%d virtual packets came from an electron scattering event, %d from a kpkt deactivation and %d from a "
+          "macroatom deactivation. \n",
+          nvpkt_esc1, nvpkt_esc2, nvpkt_esc3);
 
-    nvpkt = 0;
-    nvpkt_esc1 = 0;
-    nvpkt_esc2 = 0;
-    nvpkt_esc3 = 0;
-#endif
+      nvpkt = 0;
+      nvpkt_esc1 = 0;
+      nvpkt_esc2 = 0;
+      nvpkt_esc3 = 0;
+    }
 
     if constexpr (RECORD_LINESTAT) {
       if (my_rank == 0) {
@@ -686,21 +686,21 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
       // snprintf(filename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", middle_iteration, my_rank);
       write_packets(filename, packets);
 
-// write specpol of the virtual packets
-#ifdef VPKT_ON
-      snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d-%d.out", my_rank, tid);
-      FILE *vspecpol_file = fopen_required(filename, "w");
+      // write specpol of the virtual packets
+      if constexpr (VPKT_ON) {
+        snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d-%d.out", my_rank, tid);
+        FILE *vspecpol_file = fopen_required(filename, "w");
 
-      write_vspecpol(vspecpol_file);
-      fclose(vspecpol_file);
+        write_vspecpol(vspecpol_file);
+        fclose(vspecpol_file);
 
-      if (vgrid_flag == 1) {
-        snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d-%d.out", my_rank, tid);
-        FILE *vpkt_grid_file = fopen_required(filename, "w");
-        write_vpkt_grid(vpkt_grid_file);
-        fclose(vpkt_grid_file);
+        if (vgrid_flag == 1) {
+          snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d-%d.out", my_rank, tid);
+          FILE *vpkt_grid_file = fopen_required(filename, "w");
+          write_vpkt_grid(vpkt_grid_file);
+          fclose(vpkt_grid_file);
+        }
       }
-#endif
 
       printout("time after write final packets file %ld\n", time(nullptr));
 
@@ -722,12 +722,12 @@ auto main(int argc, char *argv[]) -> int {
   // if DETAILED_BF_ESTIMATORS_ON is true, NO_LUT_PHOTOION must be true
   assert_always(!DETAILED_BF_ESTIMATORS_ON || NO_LUT_PHOTOION);
 
-#ifdef VPKT_ON
-  nvpkt = 0;
-  nvpkt_esc1 = 0;
-  nvpkt_esc2 = 0;
-  nvpkt_esc3 = 0;
-#endif
+  if constexpr (VPKT_ON) {
+    nvpkt = 0;
+    nvpkt_esc1 = 0;
+    nvpkt_esc2 = 0;
+    nvpkt_esc3 = 0;
+  }
 
 #ifdef MPI_ON
   MPI_Init(&argc, &argv);
@@ -954,33 +954,33 @@ auto main(int argc, char *argv[]) -> int {
     }
   }
 
-// Initialise virtual packets file and vspecpol
-#ifdef VPKT_ON
-  init_vspecpol();
-  if (vgrid_flag == 1) {
-    init_vpkt_grid();
-  }
-
-  if (globals::simulation_continued_from_saved) {
-    // Continue simulation: read into temporary files
-
-    read_vspecpol(my_rank, nts);
-
+  // Initialise virtual packets file and vspecpol
+  if constexpr (VPKT_ON) {
+    init_vspecpol();
     if (vgrid_flag == 1) {
-      if (nts % 2 == 0) {
-        snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
-      } else {
-        snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_even.tmp", 0, my_rank);
+      init_vpkt_grid();
+    }
+
+    if (globals::simulation_continued_from_saved) {
+      // Continue simulation: read into temporary files
+
+      read_vspecpol(my_rank, nts);
+
+      if (vgrid_flag == 1) {
+        if (nts % 2 == 0) {
+          snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
+        } else {
+          snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_even.tmp", 0, my_rank);
+        }
+
+        FILE *vpktgrid_file = fopen_required(filename, "rb");
+
+        read_vpkt_grid(vpktgrid_file);
+
+        fclose(vpktgrid_file);
       }
-
-      FILE *vpktgrid_file = fopen_required(filename, "rb");
-
-      read_vpkt_grid(vpktgrid_file);
-
-      fclose(vpktgrid_file);
     }
   }
-#endif
 
   while (nts < globals::ftstep && !terminate_early) {
     globals::nts_global = nts;

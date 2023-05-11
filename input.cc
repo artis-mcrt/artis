@@ -1809,10 +1809,10 @@ void input(int rank)
   /// Read in parameters from input.txt
   read_parameterfile(rank);
 
-/// Read in parameters from vpkt.txt
-#ifdef VPKT_ON
-  read_parameterfile_vpkt();
-#endif
+  /// Read in parameters from vpkt.txt
+  if (VPKT_ON) {
+    read_parameterfile_vpkt();
+  }
 
   read_atomicdata();
 

@@ -1221,13 +1221,9 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         printout("timestep %d cell %d is treated in grey approximation (kappa_grey %g [cm2/g], tau %g >= %g)\n", nts,
                  mgi, grid::get_kappagrey(mgi), grey_optical_depth, globals::cell_is_optically_thick);
         grid::modelgrid[mgi].thick = 1;
-      }
-#ifdef VPKT_ON
-      else if (grey_optical_depth > cell_is_optically_thick_vpkt) {
+      } else if (VPKT_ON && (grey_optical_depth > cell_is_optically_thick_vpkt)) {
         grid::modelgrid[mgi].thick = 2;
-      }
-#endif
-      else {
+      } else {
         grid::modelgrid[mgi].thick = 0;
       }
 

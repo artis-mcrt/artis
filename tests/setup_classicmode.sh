@@ -16,6 +16,6 @@ sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 15000;/g' classicmode
 
 sed -i'' -e 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' classicmode_testrun/artisoptions.h
 
-sed -i'' -e 's,// #define VPKT_ON.*,#define VPKT_ON,g' classicmode_testrun/artisoptions.h
+sed -i'' -e 's/constexpr bool VPKT_ON.*/constexpr bool VPKT_ON = true;,g' classicmode_testrun/artisoptions.h
 
 set +x

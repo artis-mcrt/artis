@@ -217,10 +217,10 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
   pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
 
-#ifdef VPKT_ON
-  const int realtype = 3;
-  vpkt_call_estimators(pkt_ptr, pkt_ptr->prop_time, realtype);
-#endif
+  if constexpr (VPKT_ON) {
+    const int realtype = 3;
+    vpkt_call_estimators(pkt_ptr, pkt_ptr->prop_time, realtype);
+  }
 }
 
 static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridindex, const int element, int *ion,
@@ -294,10 +294,10 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
   pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
 
-#ifdef VPKT_ON
-  const int realtype = 3;
-  vpkt_call_estimators(pkt_ptr, pkt_ptr->prop_time, realtype);
-#endif
+  if constexpr (VPKT_ON) {
+    const int realtype = 3;
+    vpkt_call_estimators(pkt_ptr, pkt_ptr->prop_time, realtype);
+  }
 }
 
 static void do_macroatom_ionisation(const int modelgridindex, const int element, int *ion, int *level,

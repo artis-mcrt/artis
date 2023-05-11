@@ -517,12 +517,12 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, struct rpkt_cont_opacit
     pkt_ptr->last_event = 12;
     stats::increment(stats::COUNTER_ESCOUNTER);
 
-// generate a virtual packet
-#ifdef VPKT_ON
-    int realtype = 1;
-    pkt_ptr->last_cross = NONE;
-    vpkt_call_estimators(pkt_ptr, pkt_ptr->prop_time, realtype);
-#endif
+    // generate a virtual packet
+    if constexpr (VPKT_ON) {
+      int realtype = 1;
+      pkt_ptr->last_cross = NONE;
+      vpkt_call_estimators(pkt_ptr, pkt_ptr->prop_time, realtype);
+    }
 
     // pkt_ptr->nu_cmf = 3.7474058e+14;
     electron_scatter_rpkt(pkt_ptr);
