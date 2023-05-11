@@ -1,5 +1,7 @@
 #include "atomic.h"
 
+#include <fstream>
+
 #include "artisoptions.h"
 #include "grid.h"
 #include "ltepop.h"
@@ -98,6 +100,9 @@ __host__ __device__ double photoionization_crosssection_fromtable(const float *c
 
   float sigma_bf;
 
+  const bool phixs_v1_exists = std::ifstream(phixsdata_filenames[1]).good();
+  const bool phixs_v2_exists = std::ifstream(phixsdata_filenames[2]).good();
+  //  if (phixs_v1_exists && !phixs_v2_exists) {      // only do this if only classic phixs exists??
   if (phixs_file_version == 1) {
     // classic mode: no interpolation
     if (nu == nu_edge) {

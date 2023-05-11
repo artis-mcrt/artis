@@ -233,24 +233,24 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
 }
 
 static void read_phixs_data(int phixs_file_version) {
-  if (USE_TWO_PHIXS_FILES == false) {
-    globals::nbfcontinua_ground = 0;
-    globals::nbfcontinua = 0;
-  }
   long mem_usage_phixs = 0;
 
   printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version]);
 
   FILE *phixsdata = fopen_required(phixsdata_filenames[phixs_file_version], "r");
 
-  if (phixs_file_version == 1 && USE_TWO_PHIXS_FILES == true) {
+  const bool phixs_v1_exists = std::ifstream(phixsdata_filenames[1]).good();
+  const bool phixs_v2_exists = std::ifstream(phixsdata_filenames[2]).good();
+  if (phixs_file_version == 1 && phixs_v2_exists) {
     printout(
         "using NPHIXSPOINTS = %d and NPHIXSNUINCREMENT = %lg from phixsdata_v2.txt to interpolate "
         "phixsdata.txt data\n",
         globals::NPHIXSPOINTS, globals::NPHIXSNUINCREMENT);
+    last_phixs_nuovernuedge = (1.0 + globals::NPHIXSNUINCREMENT * (globals::NPHIXSPOINTS - 1));
   } else if (phixs_file_version == 1) {
     globals::NPHIXSPOINTS = 100;
     globals::NPHIXSNUINCREMENT = .1;
+    last_phixs_nuovernuedge = 10;  // this matches classic
     printout("using NPHIXSPOINTS = %d and NPHIXSNUINCREMENT = %lg set in input.cc to interpolate phixsdata.txt data\n",
              globals::NPHIXSPOINTS, globals::NPHIXSNUINCREMENT);
   } else {
@@ -258,8 +258,8 @@ static void read_phixs_data(int phixs_file_version) {
     assert_always(globals::NPHIXSPOINTS > 0);
     assert_always(fscanf(phixsdata, "%lg\n", &globals::NPHIXSNUINCREMENT) == 1);
     assert_always(globals::NPHIXSNUINCREMENT > 0.);
+    last_phixs_nuovernuedge = (1.0 + globals::NPHIXSNUINCREMENT * (globals::NPHIXSPOINTS - 1));
   }
-  last_phixs_nuovernuedge = (1.0 + globals::NPHIXSNUINCREMENT * (globals::NPHIXSPOINTS - 1));
 
   int Z = -1;
   int upperionstage = -1;
@@ -1152,9 +1152,9 @@ static void read_atomicdata_files(void) {
   /// finally read in photoionisation cross sections and store them to the atomic data structure
   const bool phixs_v1_exists = std::ifstream(phixsdata_filenames[1]).good();
   const bool phixs_v2_exists = std::ifstream(phixsdata_filenames[2]).good();
-  if (USE_TWO_PHIXS_FILES == true) {
-    globals::nbfcontinua_ground = 0;
-    globals::nbfcontinua = 0;
+  globals::nbfcontinua_ground = 0;
+  globals::nbfcontinua = 0;
+  if (phixs_v1_exists && phixs_v2_exists) {
     // read both phixs files
     printout(
         "Reading two phixs files: Reading phixsdata_v2.txt first so we use NPHIXSPOINTS and NPHIXSNUINCREMENT "
