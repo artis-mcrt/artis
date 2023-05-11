@@ -207,7 +207,7 @@ void normalise_grey(int nts) {
     if (grid::get_numassociatedcells(mgi) > 0) {
       const double dV = grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
 
-      globals::time_step[nts].gamma_dep_pathint += globals::rpkt_emiss[mgi] * 2.e20 / globals::nprocs;
+      globals::time_step[nts].gamma_dep_pathint += globals::rpkt_emiss[mgi] / globals::nprocs;
 
       globals::rpkt_emiss[mgi] = globals::rpkt_emiss[mgi] * ONEOVER4PI / dV / dt / globals::nprocs;
 
@@ -680,7 +680,7 @@ static void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist) {
     //  This will all be done later
     assert_testmodeonly(heating_cont >= 0.);
     assert_testmodeonly(isfinite(heating_cont));
-    safeadd(globals::rpkt_emiss[mgi], 2.e-20 * heating_cont);
+    safeadd(globals::rpkt_emiss[mgi], heating_cont);
   }
 }
 
