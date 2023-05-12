@@ -5,7 +5,7 @@ if [[ -f emission.out || -f emission.out.xz || -f emission.out.lz4 || -f emissio
 
   if command -v zstd > /dev/null; then
     # zstd does decent compression at high speeds
-    cmdcompress="zstd -T0 -19 -v --rm -f"
+    cmdcompress="zstd -T0 -16 -v --rm -f"
   elif command -v lz4 > /dev/null; then
     # lz4 is extremely fast, but low compression ratios
     cmdcompress="lz4 -v --best --rm -f"
