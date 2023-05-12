@@ -23,12 +23,12 @@ if [[ -f emission.out || -f emission.out.xz || -f emission.out.lz4 || -f emissio
   # 3D kilonova model.txt and abundances.txt can be huge, so compress txt files
   # do maxdepth 1 first in case job gets killed during run folder compression
   find . -maxdepth 1 -name '*.txt' ! -name "output_0-0.txt" -size +2M -exec $cmdcompress {} \;
-  find . -maxdepth 1 -name '*.out' -size +1M -exec $cmdcompress {} \;
+  find . -maxdepth 1 -name '*.out' ! -name "slurm-*.out" -size +1M -exec $cmdcompress {} \;
 
   find packets/ -name 'packets*.out' -size +1M -exec $cmdcompress {} \;
 
   find . -maxdepth 2 -name '*.txt' ! -name "output_0-0.txt" -size +2M -exec $cmdcompress {} \;
-  find . -maxdepth 2 -name '*.out' -size +1M -exec $cmdcompress {} \;
+  find . -maxdepth 2 -name '*.out' ! -name "slurm-*.out" -size +1M -exec $cmdcompress {} \;
 
 fi
 
