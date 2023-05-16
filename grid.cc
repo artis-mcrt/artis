@@ -456,7 +456,9 @@ auto get_element_meanweight(const int mgi, const int element) -> float
 {
   if (USE_CALCULATED_MEANATOMICWEIGHT) {
     const double mu = modelgrid[mgi].elem_meanweight[element];
-    if (mu > 0) return mu;
+    if (mu > 0) {
+      return mu;
+    }
   }
   return globals::elements[element].initstablemeannucmass;
 }
@@ -1867,7 +1869,10 @@ static void assign_initial_temperatures()
     } else if (T_initial > MAXTEMP) {
       printout("mgi %d: T_initial of %g is above MAXTEMP %g K, setting to MAXTEMP.\n", mgi, T_initial, MAXTEMP);
       T_initial = MAXTEMP;
+    } else if (!std::isfinite(T_initial)) {
+      printout("mgi %d: T_initial of %g is infinite!\n", mgi, T_initial);
     }
+    assert_always(std::isfinite(T_initial));
 
     set_Te(mgi, T_initial);
     set_TJ(mgi, T_initial);
