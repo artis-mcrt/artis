@@ -4,6 +4,7 @@
 #include <getopt.h>
 #include <gsl/gsl_integration.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #include <cassert>
 #include <chrono>
