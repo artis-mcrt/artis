@@ -193,7 +193,7 @@ jobs:
               if: always() && matrix.testmode == 'OFF'
               working-directory: tests/
               run: |
-                  at plotlightcurve ${{ matrix.testname }}_testrun
+                  at plotlightcurves ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum nebularonezone
               if: always() && matrix.testname == 'nebularonezone' && matrix.testmode == 'OFF'
