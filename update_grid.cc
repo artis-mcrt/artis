@@ -655,7 +655,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
       }
 
-      if (!NO_LUT_PHOTOION) {
+      if (!NO_LUT_PHOTOION && globals::nbfcontinua > 0) {
         fprintf(estimators_file, "corrphotoionrenorm Z=%2d", get_atomicnumber(element));
         for (int ion = 0; ion < nions; ion++) {
           fprintf(
