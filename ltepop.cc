@@ -477,7 +477,7 @@ auto calculate_partfunct(int element, int ion, int modelgridindex) -> double
     printout("modelgridindex %d\n", modelgridindex);
     printout("nlevels %d\n", nlevels);
     printout("sw %g\n", stat_weight(element, ion, 0));
-    // printout("T_exc %g \n",T_exc);
+    printout("T_exc %g \n", LTEPOP_EXCITATIONTEMPERATURE);
     abort();
   }
 
