@@ -1883,7 +1883,7 @@ void read_parameterfile(int rank)
     /// For MPI parallelisation, the random seed is changed based on the rank of the process
     /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
     /// to the thread-ID tid.
-    unsigned long const zseed = pre_zseed + (13 * rank) + (17 * tid); /* rnum generator seed */
+    const uint_fast64_t zseed = pre_zseed + (13 * rank) + (17 * tid); /* rnum generator seed */
     printout("rank %d: thread %d has zseed %lu\n", rank, tid, zseed);
     /// start by setting up the randon number generator
     rng_init(zseed);
