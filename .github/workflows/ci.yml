@@ -177,7 +177,7 @@ jobs:
               if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
               uses: actions/setup-python@v4
               with:
-                  python-version: '3.10'
+                  python-version: '3.11'
                   cache: pip
 
             - name: Install artistools
