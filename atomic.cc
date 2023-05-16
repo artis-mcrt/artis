@@ -13,7 +13,6 @@ __managed__ double last_phixs_nuovernuedge =
 __managed__ int nelements = 0;     // total number of elements included in the simulation
 __managed__ int maxnions = 0;      // highest number of ions for any element
 __managed__ int includedions = 0;  // number of ions of any element
-int phixs_file_version = -1;       // 1 for phixsdata.txt (classic) and 2 for phixsdata_v2.txt
 
 __host__ __device__ static int get_continuumindex_phixstargetindex(const int element, const int ion, const int level,
                                                                    const int phixstargetindex)
@@ -100,15 +99,12 @@ __host__ __device__ double photoionization_crosssection_fromtable(const float *c
 
   float sigma_bf;
 
-  const bool phixs_v1_exists = std::ifstream(phixsdata_filenames[1]).good();
-  const bool phixs_v2_exists = std::ifstream(phixsdata_filenames[2]).good();
-  //  if (phixs_v1_exists && !phixs_v2_exists) {      // only do this if only classic phixs exists??
-  if (phixs_file_version == 1) {
+  if (phixs_file_version_exists[1] && !phixs_file_version_exists[2]) {
     // classic mode: no interpolation
     if (nu == nu_edge) {
       sigma_bf = photoion_xs[0];
     } else if (nu <= nu_edge * (1 + globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS)) {
-      int i = floor(nu / (globals::NPHIXSNUINCREMENT * nu_edge)) - 10;
+      int i = floor((nu - nu_edge) / (globals::NPHIXSNUINCREMENT * nu_edge));
       sigma_bf = photoion_xs[i];
     } else {
       /// use a parameterization of sigma_bf by the Kramers formula

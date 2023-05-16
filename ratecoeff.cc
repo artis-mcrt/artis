@@ -45,8 +45,7 @@ typedef struct {
 
 static char adatafile_hash[33];
 static char compositionfile_hash[33];
-static char phixsfile_v1_hash[33];
-static char phixsfile_v2_hash[33];
+std::array<char[33], 3> phixsfile_hash;
 
 static bool read_ratecoeff_dat(void)
 /// Try to read in the precalculated rate coefficients from file
@@ -78,41 +77,17 @@ static bool read_ratecoeff_dat(void)
       fileisamatch = false;
     }
 
-    const bool phixs_v1_exists = std::ifstream(phixsdata_filenames[1]).good();
-    const bool phixs_v2_exists = std::ifstream(phixsdata_filenames[2]).good();
-    if (phixs_v1_exists && phixs_v2_exists) {
-      char phixsfile_v2_hash_in[33];
-      char phixsfile_v1_hash_in[33];
-      assert_always(fscanf(ratecoeff_file, "%32s\n", phixsfile_v2_hash_in) == 1);
-      assert_always(fscanf(ratecoeff_file, "%32s\n", phixsfile_v1_hash_in) == 1);
-      printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[2], phixsfile_v2_hash_in);
-      printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[1], phixsfile_v1_hash_in);
-      if (strcmp(phixsfile_v2_hash, phixsfile_v2_hash_in) == 0 && strcmp(phixsfile_v1_hash, phixsfile_v1_hash_in) == 0)
-        printout("(pass)\n");
-      else {
-        printout("\nMISMATCH: MD5 %s = %s and MD5 %s = %s\n", phixsdata_filenames[2], phixsfile_v2_hash,
-                 phixsdata_filenames[1], phixsfile_v1_hash);
-        fileisamatch = false;
-      }
-    } else if (phixs_v1_exists) {
-      char phixsfile_v1_hash_in[33];
-      assert_always(fscanf(ratecoeff_file, "%32s\n", phixsfile_v1_hash_in) == 1);
-      printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[1], phixsfile_v1_hash_in);
-      if (strcmp(phixsfile_v1_hash, phixsfile_v1_hash_in) == 0)
-        printout("(pass)\n");
-      else {
-        printout("\nMISMATCH: MD5 %s = %s\n", phixsdata_filenames[1], phixsfile_v1_hash);
-        fileisamatch = false;
-      }
-    } else {
-      char phixsfile_v2_hash_in[33];
-      assert_always(fscanf(ratecoeff_file, "%32s\n", phixsfile_v2_hash_in) == 1);
-      printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[2], phixsfile_v2_hash_in);
-      if (strcmp(phixsfile_v2_hash, phixsfile_v2_hash_in) == 0)
-        printout("(pass)\n");
-      else {
-        printout("\nMISMATCH: MD5 %s = %s\n", phixsdata_filenames[2], phixsfile_v2_hash);
-        fileisamatch = false;
+    for (int phixsver = 1; phixsver <= 2; phixsver++) {
+      if (phixs_file_version_exists[phixsver]) {
+        char phixsfile_hash_in[33];
+        assert_always(fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in) == 1);
+        printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixsver], phixsfile_hash_in);
+        if (strcmp(phixsfile_hash[phixsver], phixsfile_hash_in) == 0) {
+          printout("(pass)\n");
+        } else {
+          printout("\nMISMATCH: MD5 %s = %s\n", phixsdata_filenames[phixsver], phixsfile_hash[phixsver]);
+          fileisamatch = false;
+        }
       }
     }
 
@@ -226,15 +201,10 @@ static void write_ratecoeff_dat(void) {
   FILE *ratecoeff_file = fopen_required("ratecoeff.dat", "w");
   fprintf(ratecoeff_file, "%32s\n", adatafile_hash);
   fprintf(ratecoeff_file, "%32s\n", compositionfile_hash);
-  const bool phixs_v1_exists = std::ifstream(phixsdata_filenames[1]).good();
-  const bool phixs_v2_exists = std::ifstream(phixsdata_filenames[2]).good();
-  if (phixs_v1_exists && phixs_v2_exists) {
-    fprintf(ratecoeff_file, "%32s\n", phixsfile_v2_hash);
-    fprintf(ratecoeff_file, "%32s\n", phixsfile_v1_hash);
-  } else if (phixs_v1_exists) {
-    fprintf(ratecoeff_file, "%32s\n", phixsfile_v1_hash);
-  } else {
-    fprintf(ratecoeff_file, "%32s\n", phixsfile_v2_hash);
+  for (int phixsver = 1; phixsver <= 2; phixsver++) {
+    if (phixs_file_version_exists[phixsver]) {
+      fprintf(ratecoeff_file, "%32s\n", phixsfile_hash[phixsver]);
+    }
   }
   fprintf(ratecoeff_file, "%g %g %d %d\n", MINTEMP, MAXTEMP, TABLESIZE, globals::nlines);
   for (int element = 0; element < get_nelements(); element++) {
@@ -1044,16 +1014,10 @@ void ratecoefficients_init(void)
 
   md5_file("adata.txt", adatafile_hash);
   md5_file("compositiondata.txt", compositionfile_hash);
-  assert_always(phixs_file_version >= 0);  // check that it has been changed from the default value of -1
-  const bool phixs_v1_exists = std::ifstream(phixsdata_filenames[1]).good();
-  const bool phixs_v2_exists = std::ifstream(phixsdata_filenames[2]).good();
-  if (phixs_v1_exists && phixs_v2_exists) {
-    md5_file(phixsdata_filenames[1], phixsfile_v1_hash);
-    md5_file(phixsdata_filenames[2], phixsfile_v2_hash);
-  } else if (phixs_v1_exists) {
-    md5_file(phixsdata_filenames[1], phixsfile_v1_hash);
-  } else {
-    md5_file(phixsdata_filenames[2], phixsfile_v2_hash);
+  for (int phixsver = 1; phixsver <= 2; phixsver++) {
+    if (phixs_file_version_exists[phixsver]) {
+      md5_file(phixsdata_filenames[phixsver], phixsfile_hash[phixsver]);
+    }
   }
 
   /// Check if we need to calculate the ratecoefficients or if we were able to read them from file
