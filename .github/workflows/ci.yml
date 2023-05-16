@@ -193,19 +193,19 @@ jobs:
               if: always() && matrix.testmode == 'OFF'
               working-directory: tests/
               run: |
-                  python3 -m artistools.lightcurve ${{ matrix.testname }}_testrun
+                  at plotlightcurve ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum nebularonezone
               if: always() && matrix.testname == 'nebularonezone' && matrix.testmode == 'OFF'
               working-directory: tests/
               run: |
-                  python3 -m artistools.spectra -ts 8 ${{ matrix.testname }}_testrun
+                  at plotspectra -ts 8 ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum classicmode
               if: always() && matrix.testname == 'classicmode' && matrix.testmode == 'OFF'
               working-directory: tests/
               run: |
-                  python3 -m artistools.spectra -t 18-22 ${{ matrix.testname }}_testrun
+                  at plotspectra -t 18-22 ${{ matrix.testname }}_testrun
 
             - name: Upload plot files
               if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
