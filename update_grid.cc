@@ -1016,8 +1016,6 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 {
   const int assoc_cells = grid::get_numassociatedcells(mgi);
   if (assoc_cells > 0) {
-    // estimators were accumulated in nts_prev, but radiation density, etc should be scaled to the cell volume at
-    // nts
     const double deltaV = grid::vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
     const time_t sys_time_start_update_cell = time(NULL);
     // const bool log_this_cell = ((n % 50 == 0) || (npts_model < 50));

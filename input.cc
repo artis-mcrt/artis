@@ -22,6 +22,8 @@
 #include "vpkt.h"
 
 const int groundstate_index_in = 1;  // starting level index in the input files
+int phixs_file_version = -1;
+std::array<bool, 3> phixs_file_version_exists;
 
 struct transitions {
   int *to;
@@ -233,18 +235,24 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
 }
 
 static void read_phixs_data(int phixs_file_version) {
-  globals::nbfcontinua_ground = 0;
-  globals::nbfcontinua = 0;
   long mem_usage_phixs = 0;
 
   printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version]);
 
   FILE *phixsdata = fopen_required(phixsdata_filenames[phixs_file_version], "r");
 
-  if (phixs_file_version == 1) {
+  if (phixs_file_version == 1 && phixs_file_version_exists[2]) {
+    printout(
+        "using NPHIXSPOINTS = %d and NPHIXSNUINCREMENT = %lg from phixsdata_v2.txt to interpolate "
+        "phixsdata.txt data\n",
+        globals::NPHIXSPOINTS, globals::NPHIXSNUINCREMENT);
+    last_phixs_nuovernuedge = (1.0 + globals::NPHIXSNUINCREMENT * (globals::NPHIXSPOINTS - 1));
+  } else if (phixs_file_version == 1) {
     globals::NPHIXSPOINTS = 100;
     globals::NPHIXSNUINCREMENT = .1;
-    last_phixs_nuovernuedge = 10;
+    last_phixs_nuovernuedge = 10;  // to match classic
+    printout("using NPHIXSPOINTS = %d and NPHIXSNUINCREMENT = %lg set in input.cc\n", globals::NPHIXSPOINTS,
+             globals::NPHIXSNUINCREMENT);
   } else {
     assert_always(fscanf(phixsdata, "%d\n", &globals::NPHIXSPOINTS) == 1);
     assert_always(globals::NPHIXSPOINTS > 0);
@@ -1142,13 +1150,25 @@ static void read_atomicdata_files(void) {
   /// Photoionisation cross-sections
   ///======================================================
   /// finally read in photoionisation cross sections and store them to the atomic data structure
-  const bool phixs_v1_exists = std::ifstream(phixsdata_filenames[1]).good();
-  const bool phixs_v2_exists = std::ifstream(phixsdata_filenames[2]).good();
-  assert_always(phixs_v1_exists ^ phixs_v2_exists);  // XOR: one of the the two files must exist but not both
-
-  phixs_file_version = phixs_v2_exists ? 2 : 1;
-
-  read_phixs_data(phixs_file_version);
+  phixs_file_version_exists[1] = std::ifstream(phixsdata_filenames[1]).good();
+  phixs_file_version_exists[2] = std::ifstream(phixsdata_filenames[2]).good();
+  globals::nbfcontinua_ground = 0;
+  globals::nbfcontinua = 0;
+  if (phixs_file_version_exists[1] && phixs_file_version_exists[2]) {
+    // read both phixs files
+    printout(
+        "Reading two phixs files: Reading phixsdata_v2.txt first so we use NPHIXSPOINTS and NPHIXSNUINCREMENT "
+        "from phixsdata_v2.txt to interpolate the phixsdata.txt data\n");
+    phixs_file_version = 2;
+    read_phixs_data(phixs_file_version);
+    phixs_file_version = 1;
+    read_phixs_data(phixs_file_version);
+  } else {
+    assert_always(phixs_file_version_exists[1] ^
+                  phixs_file_version_exists[2]);  // XOR: one of the the two files must exist but not both
+    phixs_file_version = phixs_file_version_exists[2] ? 2 : 1;
+    read_phixs_data(phixs_file_version);
+  }
 
   int cont_index = -1;
   for (int element = 0; element < get_nelements(); element++) {
