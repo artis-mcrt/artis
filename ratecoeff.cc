@@ -8,7 +8,6 @@
 // #define  _XOPEN_SOURCE
 #define D_POSIX_SOURCE
 #include <cstdio>
-#include <fstream>
 
 #include "artisoptions.h"
 #include "atomic.h"
