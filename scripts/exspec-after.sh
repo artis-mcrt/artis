@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # don't compress the files if we didn't successfully run exspec
-if [[ -f emission.out || -f emission.out.xz || -f emission.out.lz4 || -f emission.out.zst ]]; then
+if [[ -f emission.out* ]]; then
 
   if command -v zstd > /dev/null; then
     # zstd does decent compression at high speeds
@@ -29,6 +29,8 @@ if [[ -f emission.out || -f emission.out.xz || -f emission.out.lz4 || -f emissio
 
   find . -maxdepth 2 -name '*.txt' ! -name "output_0-0.txt" -size +2M -exec $cmdcompress {} \;
   find . -maxdepth 2 -name '*.out' ! -name "slurm-*.out" -size +1M -exec $cmdcompress {} \;
+
+  ./artis/scripts/tar_rm_logs.sh
 
 fi
 
