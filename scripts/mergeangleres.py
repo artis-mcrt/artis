@@ -8,7 +8,7 @@ def resfilepath(fileprefix: str, abin: int) -> Path:
 
 
 def main() -> None:
-    for fileprefix in ["light_curve", "spec", "specpos"]:
+    for fileprefix in ["light_curve", "spec", "specpol"]:
         if not resfilepath(fileprefix, 0).is_file():
             continue
 
