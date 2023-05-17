@@ -13,11 +13,10 @@ function trap_ctrlc() {
 
 trap "trap_ctrlc" 2
 
-if [[ -f logfiles.tar.zst ]]; then
-    echo "logfiles.tar.zst already exists! Not overwriting"
+if [[ -f logfiles.tar* ]]; then
+    echo "logfiles.tar* already exists! Not overwriting"
     exit 1
 else
-    tar --zstd -cvf $tmpdir/logfiles.tar.zst */output_*.txt* && mv $tmpdir/logfiles.tar.zst . && rm -rf $tmpdir && find . -mindepth 2 -name "output_*.txt*" ! -name "output_0-0.txt*" -delete
-
+    tar -cvf $tmpdir/logfiles.tar */output_*.txt* && zstd -v -T0 -19 $tmpdir/logfiles.tar && mv $tmpdir/logfiles.tar.zst . && rm -rf $tmpdir && find . -mindepth 2 -name "output_*.txt*" ! -name "output_0-0.txt*" -delete
 fi
 
