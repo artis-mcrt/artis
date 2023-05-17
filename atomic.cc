@@ -1,7 +1,5 @@
 #include "atomic.h"
 
-#include <fstream>
-
 #include "artisoptions.h"
 #include "grid.h"
 #include "ltepop.h"
