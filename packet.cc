@@ -231,7 +231,7 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, const struct
   return readback_passed;
 }
 
-void read_packets(char filename[], struct packet *pkt) {
+void read_packets(const char filename[], struct packet *pkt) {
   // read packets*.out text format file
   std::ifstream packets_file(filename);
   assert_always(packets_file.is_open());
