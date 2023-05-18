@@ -1110,7 +1110,8 @@ static void read_atomicdata_files() {
         break;  // should be safe to end here if there is max. one transition per pair of levels
       }
     }
-  }
+  });
+
   printout("took %ds\n", time(nullptr) - time_start_establish_linelist_connections);
 
   for (int element = 0; element < get_nelements(); element++) {
