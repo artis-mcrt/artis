@@ -329,9 +329,8 @@ static void read_auger_data() {
       }
 
       // now loop through shells with impact ionisation cross sections and apply Auger data that matches n, l values
-      for (int i = 0; i < colliondata.size(); i++) {
-        if (colliondata[i].Z == Z && colliondata[i].nelec == (Z - ionstage + 1) && colliondata[i].n == n &&
-            colliondata[i].l == l) {
+      for (auto &i : colliondata) {
+        if (i.Z == Z && i.nelec == (Z - ionstage + 1) && i.n == n && i.l == l) {
           printout(
               "Z=%2d ionstage %2d shellnum %d n %d l %d ionpot %7.2f E_A %8.1f E_A' %8.1f epsilon %6d <n_Auger> %5.1f "
               "P(n_Auger)",
@@ -347,22 +346,21 @@ static void read_auger_data() {
 
           printout("\n");
           // printout("ionpot %g %g, g %d\n", colliondata[i].ionpot_ev, ionpot_ev, g);
-          bool const found_existing_data = (colliondata[i].auger_g_accumulated > 0.);
+          bool const found_existing_data = (i.auger_g_accumulated > 0.);
 
           // keep existing data but update according to statistical weight represented by existing and new data
-          const double oldweight = colliondata[i].auger_g_accumulated / (g + colliondata[i].auger_g_accumulated);
-          const double newweight = g / (g + colliondata[i].auger_g_accumulated);
-          colliondata[i].auger_g_accumulated += g;
+          const double oldweight = i.auger_g_accumulated / (g + i.auger_g_accumulated);
+          const double newweight = g / (g + i.auger_g_accumulated);
+          i.auger_g_accumulated += g;
 
           // update the statistical-weight averaged values
-          colliondata[i].en_auger_ev = oldweight * colliondata[i].en_auger_ev + newweight * en_auger_ev;
-          colliondata[i].n_auger_elec_avg = oldweight * colliondata[i].n_auger_elec_avg + newweight * n_auger_elec_avg;
+          i.en_auger_ev = oldweight * i.en_auger_ev + newweight * en_auger_ev;
+          i.n_auger_elec_avg = oldweight * i.n_auger_elec_avg + newweight * n_auger_elec_avg;
 
           prob_sum = 0.;
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-            colliondata[i].prob_num_auger[a] =
-                oldweight * colliondata[i].prob_num_auger[a] + newweight * prob_num_auger[a];
-            prob_sum += colliondata[i].prob_num_auger[a];
+            i.prob_num_auger[a] = oldweight * i.prob_num_auger[a] + newweight * prob_num_auger[a];
+            prob_sum += i.prob_num_auger[a];
           }
           assert_always(fabs(prob_sum - 1.0) < 0.001);
 
@@ -370,7 +368,7 @@ static void read_auger_data() {
             printout("  same NL shell already has data from another X-ray shell. New g-weighted values: P(n_Auger)");
 
             for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-              printout(" %d: %4.2f", a, colliondata[i].prob_num_auger[a]);
+              printout(" %d: %4.2f", a, i.prob_num_auger[a]);
             }
             printout("\n");
           }
@@ -1019,9 +1017,9 @@ static auto N_e(const int modelgridindex, const double energy) -> double
       }
 
       // ionization terms
-      for (int n = 0; n < colliondata.size(); n++) {
-        if (colliondata[n].Z == Z && colliondata[n].nelec == Z - ionstage + 1) {
-          const double ionpot_ev = colliondata[n].ionpot_ev;
+      for (auto &collionrow : colliondata) {
+        if (collionrow.Z == Z && collionrow.nelec == Z - ionstage + 1) {
+          const double ionpot_ev = collionrow.ionpot_ev;
           const double J = get_J(Z, ionstage, ionpot_ev);
           const double lambda = fmin(SF_EMAX - energy_ev, energy_ev + ionpot_ev);
 
@@ -1033,8 +1031,7 @@ static auto N_e(const int modelgridindex, const double energy) -> double
             double const endash = gsl_vector_get(envec, i);
             const double delta_endash = DELTA_E;
 
-            N_e_ion += get_y(modelgridindex, energy_ev + endash) *
-                       xs_impactionization(energy_ev + endash, colliondata[n]) *
+            N_e_ion += get_y(modelgridindex, energy_ev + endash) * xs_impactionization(energy_ev + endash, collionrow) *
                        Psecondary(energy_ev + endash, endash, ionpot_ev, J) * delta_endash;
           }
 
@@ -1043,7 +1040,7 @@ static auto N_e(const int modelgridindex, const double energy) -> double
           for (int i = integral2startindex; i < SFPTS; i++) {
             double const endash = gsl_vector_get(envec, i);
             const double delta_endash = DELTA_E;
-            N_e_ion += get_y_sample(modelgridindex, i) * xs_impactionization(endash, colliondata[n]) *
+            N_e_ion += get_y_sample(modelgridindex, i) * xs_impactionization(endash, collionrow) *
                        Psecondary(endash, energy_ev + ionpot_ev, ionpot_ev, J) * delta_endash;
           }
         }
@@ -1336,12 +1333,12 @@ static auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const in
   const int ionstage = get_ionstage(element, ion);
   double ionpot_valence = -1;
 
-  for (int collionindex = 0; collionindex < colliondata.size(); collionindex++) {
-    if (colliondata[collionindex].Z == Z && colliondata[collionindex].nelec == Z - ionstage + 1) {
-      get_xs_ionization_vector(cross_section_vec, colliondata[collionindex]);
+  for (auto &collionrow : colliondata) {
+    if (collionrow.Z == Z && collionrow.nelec == Z - ionstage + 1) {
+      get_xs_ionization_vector(cross_section_vec, collionrow);
 
       if (assumeshellpotentialisvalence) {
-        const double ionpot_shell = colliondata[collionindex].ionpot_ev * EV;
+        const double ionpot_shell = collionrow.ionpot_ev * EV;
         if (ionpot_valence < 0) {
           ionpot_valence = ionpot_shell;
         }
@@ -1407,7 +1404,7 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
   double eta_sum = 0.;
   double ionpot_valence = -1;
   int matching_nlsubshell_count = 0;
-  for (int collionindex = 0; collionindex < colliondata.size(); collionindex++) {
+  for (int collionindex = 0; collionindex < static_cast<int>(colliondata.size()); collionindex++) {
     if (colliondata[collionindex].Z == Z && colliondata[collionindex].nelec == Z - ionstage + 1) {
       matching_nlsubshell_count++;
       const double frac_ionization_shell =
@@ -1938,7 +1935,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
       calculate_eff_ionpot_auger_rates(modelgridindex, element, ion);
 
       int matching_nlsubshell_count = 0;
-      for (int n = 0; n < colliondata.size(); n++) {
+      for (int n = 0; n < static_cast<int>(colliondata.size()); n++) {
         if (colliondata[n].Z == Z && colliondata[n].nelec == Z - ionstage + 1) {
           const double frac_ionization_ion_shell = calculate_nt_frac_ionization_shell(modelgridindex, element, ion, n);
           frac_ionization_ion += frac_ionization_ion_shell;
@@ -2240,10 +2237,10 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
 // add the ionization terms to the Spencer-Fano matrix
 {
   gsl_vector *const vec_xs_ionization = gsl_vector_alloc(SFPTS);
-  for (int collionindex = 0; collionindex < colliondata.size(); collionindex++) {
-    if (colliondata[collionindex].Z == Z && colliondata[collionindex].nelec == Z - ionstage + 1) {
-      const double ionpot_ev = colliondata[collionindex].ionpot_ev;
-      const double en_auger_ev = colliondata[collionindex].en_auger_ev;
+  for (auto &collionrow : colliondata) {
+    if (collionrow.Z == Z && collionrow.nelec == Z - ionstage + 1) {
+      const double ionpot_ev = collionrow.ionpot_ev;
+      const double en_auger_ev = collionrow.en_auger_ev;
       // const double n_auger_elec_avg = colliondata[n].n_auger_elec_avg;
       const double J = get_J(Z, ionstage, ionpot_ev);
 
@@ -2252,7 +2249,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
       // printout("Z=%2d ion_stage %d n %d l %d ionpot %g eV\n",
       //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
 
-      const int xsstartindex = get_xs_ionization_vector(vec_xs_ionization, colliondata[collionindex]);
+      const int xsstartindex = get_xs_ionization_vector(vec_xs_ionization, collionrow);
       // Luke Shingles: the use of min and max on the epsilon limits keeps energies
       // from becoming unphysical. This insight came from reading the
       // CMFGEN Fortran source code (Li, Dessart, Hillier 2012, doi:10.1111/j.1365-2966.2012.21198.x)
@@ -2310,7 +2307,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
         if (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
           // en_auger_ev is (if LJS understands it correctly) averaged to include some probability of zero Auger
           // electrons so we need a boost to get the average energy of Auger electrons given that there are one or more
-          const double en_boost = 1 / (1. - colliondata[collionindex].prob_num_auger[0]);
+          const double en_boost = 1 / (1. - collionrow.prob_num_auger[0]);
 
           augerstopindex = get_energyindex_ev_gteq(en_auger_ev * en_boost);
         } else {
@@ -2323,10 +2320,10 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
           for (int j = jstart; j < SFPTS; j++) {
             const double xs = gsl_vector_get(vec_xs_ionization, j);
             if (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
-              const double en_boost = 1 / (1. - colliondata[collionindex].prob_num_auger[0]);
+              const double en_boost = 1 / (1. - collionrow.prob_num_auger[0]);
               for (int a = 1; a <= NT_MAX_AUGER_ELECTRONS; a++) {
                 if (en < (en_auger_ev * en_boost / a)) {
-                  *gsl_matrix_ptr(sfmatrix, i, j) -= nnion * xs * colliondata[collionindex].prob_num_auger[a] * a;
+                  *gsl_matrix_ptr(sfmatrix, i, j) -= nnion * xs * collionrow.prob_num_auger[a] * a;
                 }
               }
             } else {
