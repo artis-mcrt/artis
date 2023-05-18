@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -494,7 +495,7 @@ static void set_initenergyq(const int modelgridindex, const double initenergyq) 
 }
 
 void read_possible_yefile() {
-  if (!std::ifstream("Ye.txt")) {
+  if (!std::filesystem::exists("Ye.txt")) {
     printout("Ye.txt not found\n");
     return;
   }
