@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <ranges>
 #include <sstream>
 #include <vector>
 
@@ -1076,7 +1077,8 @@ static void read_atomicdata_files() {
   printout("establish connection between transitions and sorted linelist...");
 
   time_t const time_start_establish_linelist_connections = time(nullptr);
-  for (int lineindex = 0; lineindex < globals::nlines; lineindex++) {
+  auto idx = std::views::iota(0, globals::nlines);
+  std::for_each(idx.begin(), idx.end(), [](int lineindex) {
     const auto &line = globals::linelist[lineindex];
     const int element = line.elementindex;
     const int ion = line.ionindex;
