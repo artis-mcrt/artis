@@ -1,5 +1,6 @@
-#ifndef ARTISOPTIONS_H
+#ifndef ARTISOPTIONS_H  // NOLINT(llvm-header-guard)
 #define ARTISOPTIONS_H
+// NOLINTBEGIN(modernize*,misc-unused-parameters)
 
 #include <cstdlib>
 
@@ -146,4 +147,5 @@ constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = true;
 
 constexpr bool CLASSIC_LINELIST_SORT = true;
 
+// NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H
