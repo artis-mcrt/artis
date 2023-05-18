@@ -1732,8 +1732,7 @@ auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const 
     return ratecoeffperdeposition * deposition_rate_density;
   }
 
-  const int list_size = nt_solution[modelgridindex].frac_excitations_list.size();
-
+  // const int list_size = nt_solution[modelgridindex].frac_excitations_list.size();
   // linear search for the lineindex
   // for (int excitationindex = 0; excitationindex < list_size; excitationindex++)
   // {
@@ -1748,24 +1747,17 @@ auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const 
   // }
 
   // binary search, assuming the excitation list is sorted by lineindex ascending
-  int low = 0;
-  int high = list_size - 1;
-  while (low <= high) {
-    const int excitationindex = low + ((high - low) / 2);
-    if (nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex < lineindex) {
-      low = excitationindex + 1;
-    } else if (nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex > lineindex) {
-      high = excitationindex - 1;
-    } else {
-      const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
-      const double ratecoeffperdeposition =
-          nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition;
-
-      return ratecoeffperdeposition * deposition_rate_density;
-    }
+  auto ntexclist = nt_solution[modelgridindex].frac_excitations_list;
+  auto ntexcitation = std::lower_bound(ntexclist.begin(), ntexclist.end(), lineindex,
+                                       [](const auto &exc, const int lineindex) { return exc.lineindex < lineindex; });
+  if (ntexcitation == ntexclist.end()) {
+    return 0.;
   }
 
-  return 0.;
+  const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
+  const double ratecoeffperdeposition = ntexcitation->ratecoeffperdeposition;
+
+  return ratecoeffperdeposition * deposition_rate_density;
 }
 
 static void select_nt_ionization(int modelgridindex, int *element, int *lowerion)
