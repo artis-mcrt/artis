@@ -329,8 +329,8 @@ static void read_auger_data() {
       }
 
       // now loop through shells with impact ionisation cross sections and apply Auger data that matches n, l values
-      for (auto &i : colliondata) {
-        if (i.Z == Z && i.nelec == (Z - ionstage + 1) && i.n == n && i.l == l) {
+      for (auto &collionrow : colliondata) {
+        if (collionrow.Z == Z && collionrow.nelec == (Z - ionstage + 1) && collionrow.n == n && collionrow.l == l) {
           printout(
               "Z=%2d ionstage %2d shellnum %d n %d l %d ionpot %7.2f E_A %8.1f E_A' %8.1f epsilon %6d <n_Auger> %5.1f "
               "P(n_Auger)",
@@ -346,21 +346,21 @@ static void read_auger_data() {
 
           printout("\n");
           // printout("ionpot %g %g, g %d\n", colliondata[i].ionpot_ev, ionpot_ev, g);
-          bool const found_existing_data = (i.auger_g_accumulated > 0.);
+          bool const found_existing_data = (collionrow.auger_g_accumulated > 0.);
 
           // keep existing data but update according to statistical weight represented by existing and new data
-          const double oldweight = i.auger_g_accumulated / (g + i.auger_g_accumulated);
-          const double newweight = g / (g + i.auger_g_accumulated);
-          i.auger_g_accumulated += g;
+          const double oldweight = collionrow.auger_g_accumulated / (g + collionrow.auger_g_accumulated);
+          const double newweight = g / (g + collionrow.auger_g_accumulated);
+          collionrow.auger_g_accumulated += g;
 
           // update the statistical-weight averaged values
-          i.en_auger_ev = oldweight * i.en_auger_ev + newweight * en_auger_ev;
-          i.n_auger_elec_avg = oldweight * i.n_auger_elec_avg + newweight * n_auger_elec_avg;
+          collionrow.en_auger_ev = oldweight * collionrow.en_auger_ev + newweight * en_auger_ev;
+          collionrow.n_auger_elec_avg = oldweight * collionrow.n_auger_elec_avg + newweight * n_auger_elec_avg;
 
           prob_sum = 0.;
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-            i.prob_num_auger[a] = oldweight * i.prob_num_auger[a] + newweight * prob_num_auger[a];
-            prob_sum += i.prob_num_auger[a];
+            collionrow.prob_num_auger[a] = oldweight * collionrow.prob_num_auger[a] + newweight * prob_num_auger[a];
+            prob_sum += collionrow.prob_num_auger[a];
           }
           assert_always(fabs(prob_sum - 1.0) < 0.001);
 
@@ -368,7 +368,7 @@ static void read_auger_data() {
             printout("  same NL shell already has data from another X-ray shell. New g-weighted values: P(n_Auger)");
 
             for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-              printout(" %d: %4.2f", a, i.prob_num_auger[a]);
+              printout(" %d: %4.2f", a, collionrow.prob_num_auger[a]);
             }
             printout("\n");
           }
