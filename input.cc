@@ -1084,31 +1084,33 @@ static void read_atomicdata_files() {
     const int lowerlevel = line.lowerlevelindex;
     const int upperlevel = line.upperlevelindex;
 
+    // there is never more than one transition per pair of levels,
+    // so find the first matching the upper and lower transition
+
     const int nupperdowntrans = get_ndowntrans(element, ion, upperlevel);
-    for (int ii = 0; ii < nupperdowntrans; ii++) {
-      // negative indicates a level instead of a lineindex
-      if (globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].targetlevelindex == lowerlevel) {
-        globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].lineindex = lineindex;
-        globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].einstein_A = line.einstein_A;
-        globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].coll_str = line.coll_str;
-        globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].osc_strength = line.osc_strength;
-        globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].forbidden = line.forbidden;
-        break;  // should be safe to end here if there is max. one transition per pair of levels
-      }
-    }
+    auto *downtranslist = globals::elements[element].ions[ion].levels[upperlevel].downtrans;
+    auto *downtrans = std::find_if(downtranslist, downtranslist + nupperdowntrans,
+                                   [=](auto &downtrans) { return downtrans.targetlevelindex == lowerlevel; });
+    assert_always(downtrans != (downtranslist + nupperdowntrans));
+    // assert_always(downtrans->targetlevelindex == lowerlevel);
+    downtrans->lineindex = lineindex;
+    downtrans->einstein_A = line.einstein_A;
+    downtrans->coll_str = line.coll_str;
+    downtrans->osc_strength = line.osc_strength;
+    downtrans->forbidden = line.forbidden;
 
     const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
-    for (int ii = 0; ii < nloweruptrans; ii++) {
-      // negative indicates a level instead of a lineindex
-      if (globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].targetlevelindex == upperlevel) {
-        globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].lineindex = lineindex;
-        globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].einstein_A = line.einstein_A;
-        globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].coll_str = line.coll_str;
-        globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].osc_strength = line.osc_strength;
-        globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].forbidden = line.forbidden;
-        break;  // should be safe to end here if there is max. one transition per pair of levels
-      }
-    }
+    auto *uptranslist = globals::elements[element].ions[ion].levels[lowerlevel].uptrans;
+    auto *uptrans = std::find_if(uptranslist, uptranslist + nloweruptrans,
+                                 [=](auto &uptrans) { return uptrans.targetlevelindex == upperlevel; });
+
+    assert_always(uptrans != (uptranslist + nloweruptrans));
+    // assert_always(uptrans->targetlevelindex == upperlevel);
+    uptrans->lineindex = lineindex;
+    uptrans->einstein_A = line.einstein_A;
+    uptrans->coll_str = line.coll_str;
+    uptrans->osc_strength = line.osc_strength;
+    uptrans->forbidden = line.forbidden;
   }
 
   printout("took %ds\n", time(nullptr) - time_start_establish_linelist_connections);
