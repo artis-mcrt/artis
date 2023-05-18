@@ -149,9 +149,6 @@ constexpr int MAX_NT_EXCITATIONS_STORED;
 // and their combined deposition fraction is calculated
 constexpr bool NT_EXCITATION_ON = false;
 
-// increase the excitation and ionization lists by this blocksize when reallocating
-constexpr int NT_BLOCKSIZEEXCITATION;
-
 // calculate eff_ionpot and ionisation rates by always dividing by the valence shell potential for the ion
 // instead of the specific shell potentials
 constexpr bool NT_USE_VALENCE_IONPOTENTIAL;

@@ -51,7 +51,6 @@ constexpr bool VPKT_ON = false;
 constexpr bool TRACK_ION_STATS = false;
 constexpr bool TRACK_ION_MASTATS = false;
 
-constexpr double MINDENSITY = 1e-40;
 constexpr double MINPOP = 1e-30;
 
 constexpr double NU_MIN_R = 1e14;
@@ -105,8 +104,6 @@ constexpr int NTEXCITATION_MAXNLEVELS_UPPER = 250;
 constexpr int MAX_NT_EXCITATIONS_STORED = 25000;
 
 constexpr bool NT_EXCITATION_ON = false;
-
-constexpr int NT_BLOCKSIZEEXCITATION = 5192;
 
 constexpr bool NT_USE_VALENCE_IONPOTENTIAL = false;
 

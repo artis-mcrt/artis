@@ -104,8 +104,6 @@ constexpr int MAX_NT_EXCITATIONS_STORED = 25000;
 
 constexpr bool NT_EXCITATION_ON = false;
 
-constexpr int NT_BLOCKSIZEEXCITATION = 5192;
-
 constexpr bool NT_USE_VALENCE_IONPOTENTIAL = false;
 
 constexpr int NT_MAX_AUGER_ELECTRONS = 2;
