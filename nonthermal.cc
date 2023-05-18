@@ -1750,7 +1750,7 @@ auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const 
   auto ntexclist = nt_solution[modelgridindex].frac_excitations_list;
   auto ntexcitation = std::lower_bound(ntexclist.begin(), ntexclist.end(), lineindex,
                                        [](const auto &exc, const int lineindex) { return exc.lineindex < lineindex; });
-  if (ntexcitation == ntexclist.end()) {
+  if (ntexcitation == ntexclist.end() || ntexcitation->lineindex != lineindex) {
     return 0.;
   }
 
