@@ -1078,7 +1078,7 @@ static void read_atomicdata_files() {
 
   time_t const time_start_establish_linelist_connections = time(nullptr);
   auto idx = std::views::iota(0, globals::nlines);
-  std::for_each(idx.begin(), idx.end(), [](int lineindex) {
+  std::for_each(idx.begin(), idx.end(), [&](int lineindex) {
     const auto &line = globals::linelist[lineindex];
     const int element = line.elementindex;
     const int ion = line.ionindex;
