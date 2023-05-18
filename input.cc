@@ -1077,8 +1077,10 @@ static void read_atomicdata_files() {
   printout("establish connection between transitions and sorted linelist...");
 
   time_t const time_start_establish_linelist_connections = time(nullptr);
-  auto idx = std::ranges::iota_view(0, globals::nlines);
-  std::for_each(idx.begin(), idx.end(), [&](int lineindex) {
+  // auto idx = std::views::iota(0, globals::nlines);
+  auto idx = std::vector<int>(globals::nlines);
+  std::iota(idx.begin(), idx.end(), 0);
+  std::for_each(idx.begin(), idx.end(), [](int lineindex) {
     const auto &line = globals::linelist[lineindex];
     const int element = line.elementindex;
     const int ion = line.ionindex;
