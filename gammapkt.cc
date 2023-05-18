@@ -32,23 +32,23 @@ struct gammaline {
   int nucindex;       // is it a Ni56, Co56, a fake line, etc
   int nucgammaindex;  // which of the lines of that nuclide is it
   double energy;      // in erg
+
+  auto operator<(const struct gammaline &g2) const -> bool {
+    // true if d1 < d2
+    if (energy < g2.energy) {
+      return true;
+    }
+    if (energy == g2.energy && nucindex < g2.nucindex) {
+      return true;
+    }
+    if (energy == g2.energy && nucindex == g2.nucindex && nucgammaindex < g2.nucgammaindex) {
+      return true;
+    }
+    return false;
+  }
 };
 
 static std::vector<struct gammaline> allnuc_gamma_line_list;
-
-constexpr auto operator<(const struct gammaline &g1, const struct gammaline &g2) -> bool {
-  // true if d1 < d2
-  if (g1.energy < g2.energy) {
-    return true;
-  }
-  if (g1.energy == g2.energy && g1.nucindex < g2.nucindex) {
-    return true;
-  }
-  if (g1.energy == g2.energy && g1.nucindex == g2.nucindex && g1.nucgammaindex < g2.nucgammaindex) {
-    return true;
-  }
-  return false;
-}
 
 static void read_gamma_spectrum(const int nucindex, const char filename[50])
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
