@@ -1285,14 +1285,14 @@ static auto get_oneoverw(const int element, const int ion, const int modelgridin
 }
 
 static auto calculate_nt_frac_ionization_shell(const int modelgridindex, const int element, const int ion,
-                                               const int collionindex) -> double
+                                               const struct collionrow &collionrow) -> double
 // the fraction of deposition energy that goes into ionising electrons in this particular shell
 {
   const double nnion = ionstagepop(modelgridindex, element, ion);  // hopefully ions per cm^3?
-  const double ionpot_ev = colliondata[collionindex].ionpot_ev;
+  const double ionpot_ev = collionrow.ionpot_ev;
 
   gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
-  get_xs_ionization_vector(cross_section_vec, colliondata[collionindex]);
+  get_xs_ionization_vector(cross_section_vec, collionrow);
 
   // either multiply by the variable delta_e for LOG_E spacing...
 
@@ -1404,13 +1404,12 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
   double eta_sum = 0.;
   double ionpot_valence = -1;
   int matching_nlsubshell_count = 0;
-  for (int collionindex = 0; collionindex < static_cast<int>(colliondata.size()); collionindex++) {
-    if (colliondata[collionindex].Z == Z && colliondata[collionindex].nelec == Z - ionstage + 1) {
+  for (auto &collionrow : colliondata) {
+    if (collionrow.Z == Z && collionrow.nelec == Z - ionstage + 1) {
       matching_nlsubshell_count++;
-      const double frac_ionization_shell =
-          calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionindex);
+      const double frac_ionization_shell = calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionrow);
       eta_sum += frac_ionization_shell;
-      const double ionpot_shell = colliondata[collionindex].ionpot_ev * EV;
+      const double ionpot_shell = collionrow.ionpot_ev * EV;
 
       if (ionpot_valence < 0) {
         ionpot_valence = ionpot_shell;
@@ -1425,12 +1424,8 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
       eta_over_ionpot_sum += eta_over_ionpot;
 
       for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-        eta_nauger_ionize_over_ionpot_sum[a] += eta_over_ionpot * colliondata[collionindex].prob_num_auger[a];
-        // printout("test Z=%d ion %d shell %d prob_num_auger(%d) = %g, eta_over_ionpot %g, product %g\n",
-        // get_atomicnumber(element), get_ionstage(element, ion), collionindex, a,
-        // colliondata[collionindex].prob_num_auger[a], eta_over_ionpot, eta_over_ionpot *
-        // colliondata[collionindex].prob_num_auger[a]);
-        eta_nauger_ionize_sum[a] += frac_ionization_shell * colliondata[collionindex].prob_num_auger[a];
+        eta_nauger_ionize_over_ionpot_sum[a] += eta_over_ionpot * collionrow.prob_num_auger[a];
+        eta_nauger_ionize_sum[a] += frac_ionization_shell * collionrow.prob_num_auger[a];
       }
     }
   }
@@ -1935,18 +1930,19 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
       calculate_eff_ionpot_auger_rates(modelgridindex, element, ion);
 
       int matching_nlsubshell_count = 0;
-      for (int n = 0; n < static_cast<int>(colliondata.size()); n++) {
-        if (colliondata[n].Z == Z && colliondata[n].nelec == Z - ionstage + 1) {
-          const double frac_ionization_ion_shell = calculate_nt_frac_ionization_shell(modelgridindex, element, ion, n);
+      for (auto &collionrow : colliondata) {
+        if (collionrow.Z == Z && collionrow.nelec == Z - ionstage + 1) {
+          const double frac_ionization_ion_shell =
+              calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionrow);
           frac_ionization_ion += frac_ionization_ion_shell;
           matching_nlsubshell_count++;
-          printout("      shell n %d, l %d, I %5.1f eV: frac_ionization %10.4e", colliondata[n].n, colliondata[n].l,
-                   colliondata[n].ionpot_ev, frac_ionization_ion_shell);
+          printout("      shell n %d, l %d, I %5.1f eV: frac_ionization %10.4e", collionrow.n, collionrow.l,
+                   collionrow.ionpot_ev, frac_ionization_ion_shell);
 
           if (NT_MAX_AUGER_ELECTRONS > 0) {
             printout("  prob(n Auger elec):");
             for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-              printout(" %d: %.2f", a, colliondata[n].prob_num_auger[a]);
+              printout(" %d: %.2f", a, collionrow.prob_num_auger[a]);
             }
           }
           printout("\n");
