@@ -44,7 +44,7 @@ using gsl_integral_paras_gammacorr = struct {
 
 static char adatafile_hash[33];
 static char compositionfile_hash[33];
-static char phixsfile_hash[33];
+std::array<char[33], 3> phixsfile_hash;
 
 static auto read_ratecoeff_dat() -> bool
 /// Try to read in the precalculated rate coefficients from file
@@ -76,14 +76,18 @@ static auto read_ratecoeff_dat() -> bool
       fileisamatch = false;
     }
 
-    char phixsfile_hash_in[33];
-    assert_always(fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in) == 1);
-    printout("ratecoeff_v2.dat: MD5 %s = %s ", phixsdata_filenames[phixs_file_version], phixsfile_hash_in);
-    if (strcmp(phixsfile_hash, phixsfile_hash_in) == 0) {
-      printout("(pass)\n");
-    } else {
-      printout("\nMISMATCH: MD5 %s = %s\n", phixsdata_filenames[phixs_file_version], phixsfile_hash);
-      fileisamatch = false;
+    for (int phixsver = 1; phixsver <= 2; phixsver++) {
+      if (phixs_file_version_exists[phixsver]) {
+        char phixsfile_hash_in[33];
+        assert_always(fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in) == 1);
+        printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixsver], phixsfile_hash_in);
+        if (strcmp(phixsfile_hash[phixsver], phixsfile_hash_in) == 0) {
+          printout("(pass)\n");
+        } else {
+          printout("\nMISMATCH: MD5 %s = %s\n", phixsdata_filenames[phixsver], phixsfile_hash[phixsver]);
+          fileisamatch = false;
+        }
+      }
     }
 
     if (fileisamatch) {
@@ -207,7 +211,11 @@ static void write_ratecoeff_dat() {
   FILE *ratecoeff_file = fopen_required("ratecoeff_v2.dat", "w");
   fprintf(ratecoeff_file, "%32s\n", adatafile_hash);
   fprintf(ratecoeff_file, "%32s\n", compositionfile_hash);
-  fprintf(ratecoeff_file, "%32s\n", phixsfile_hash);
+  for (int phixsver = 1; phixsver <= 2; phixsver++) {
+    if (phixs_file_version_exists[phixsver]) {
+      fprintf(ratecoeff_file, "%32s\n", phixsfile_hash[phixsver]);
+    }
+  }
   fprintf(ratecoeff_file, "%la %la %d %d %la\n", MINTEMP, MAXTEMP, TABLESIZE, globals::nlines,
           RATECOEFF_INTEGRAL_ACCURACY);
   for (int element = 0; element < get_nelements(); element++) {
@@ -1021,8 +1029,11 @@ void ratecoefficients_init()
 
   md5_file("adata.txt", adatafile_hash);
   md5_file("compositiondata.txt", compositionfile_hash);
-  assert_always(phixs_file_version >= 0);  // check that it has been changed from the default value of -1
-  md5_file(phixsdata_filenames[phixs_file_version], phixsfile_hash);
+  for (int phixsver = 1; phixsver <= 2; phixsver++) {
+    if (phixs_file_version_exists[phixsver]) {
+      md5_file(phixsdata_filenames[phixsver], phixsfile_hash[phixsver]);
+    }
+  }
 
   /// Check if we need to calculate the ratecoefficients or if we were able to read them from file
   bool ratecoeff_match = false;

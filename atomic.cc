@@ -8,11 +8,11 @@
 #include "sn3d.h"
 
 double last_phixs_nuovernuedge =
-    -1;                       // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
-int nelements = 0;            // total number of elements included in the simulation
-int maxnions = 0;             // highest number of ions for any element
-int includedions = 0;         // number of ions of any element
-int phixs_file_version = -1;  // 1 for phixsdata.txt (classic) and 2 for phixsdata_v2.txt
+    -1;                // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
+int nelements = 0;     // total number of elements included in the simulation
+int maxnions = 0;      // highest number of ions for any element
+int includedions = 0;  // number of ions of any element
+std::array<bool, 3> phixs_file_version_exists;
 
 auto get_continuumindex_phixstargetindex(const int element, const int ion, const int level, const int phixstargetindex)
     -> int
@@ -100,12 +100,12 @@ auto photoionization_crosssection_fromtable(const float *const photoion_xs, cons
 
   float sigma_bf = NAN;
 
-  if (phixs_file_version == 1) {
+  if (phixs_file_version_exists[1] && !phixs_file_version_exists[2]) {
     // classic mode: no interpolation
     if (nu == nu_edge) {
       sigma_bf = photoion_xs[0];
     } else if (nu <= nu_edge * (1 + globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS)) {
-      int const i = static_cast<int>(floor(nu / (globals::NPHIXSNUINCREMENT * nu_edge)) - 10);
+      const int i = static_cast<int>(floor((nu - nu_edge) / (globals::NPHIXSNUINCREMENT * nu_edge)));
       sigma_bf = photoion_xs[i];
     } else {
       /// use a parameterization of sigma_bf by the Kramers formula
