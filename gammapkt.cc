@@ -23,7 +23,7 @@ namespace gammapkt {
 struct gamma_spec {
   std::unique_ptr<double[]> energy = nullptr;  // in erg
   std::unique_ptr<double[]> probability = nullptr;
-  int nlines;
+  int nlines = 0;
 };
 
 static struct gamma_spec *gamma_spectra;
