@@ -649,8 +649,8 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
               .forbidden = transitiontable[ii].forbidden,
           });
 
-          // the line list has not been sorted yet, so the store the negative level index for now and
-          // this will be replaced with the index into the sorted line list later
+          // the line list has not been sorted yet, so the store the level index for now and
+          // the index into the sorted line list will be set later
           globals::elements[element].ions[ion].levels[level].downtrans[nupperdowntrans - 1].targetlevelindex =
               targetlevel;
           globals::elements[element].ions[ion].levels[targetlevel].uptrans[nloweruptrans - 1].targetlevelindex = level;
