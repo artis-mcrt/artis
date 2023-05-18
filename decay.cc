@@ -49,13 +49,13 @@ std::vector<struct nuclide> nuclides;
 // to another (daughter of last nuclide in decaypath) via decays
 // every different path within the network is considered, e.g. 56Ni -> 56Co -> 56Fe is separate to 56Ni -> 56Co
 struct decaypath {
-  int pathlength;
-  std::vector<int> z;         // atomic number
-  std::vector<int> a;         // mass number
-  std::vector<int> nucindex;  // index into nuclides list
-  std::vector<int> decaytypes;
-  std::vector<double> lambdas;
-  double branchproduct;  // product of all branching factors along the path set by calculate_decaypath_branchproduct()
+  int pathlength{};
+  std::vector<int> z{};         // atomic number
+  std::vector<int> a{};         // mass number
+  std::vector<int> nucindex{};  // index into nuclides list
+  std::vector<int> decaytypes{};
+  std::vector<double> lambdas{};
+  double branchproduct{};  // product of all branching factors along the path set by calculate_decaypath_branchproduct()
 };
 
 std::vector<struct decaypath> decaypaths;
