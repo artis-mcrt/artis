@@ -91,8 +91,7 @@ struct collionrow {
   float n_auger_elec_avg;
 };
 
-static struct collionrow *colliondata = nullptr;
-static int colliondatacount = 0;
+static std::vector<struct collionrow> colliondata;
 
 static FILE *nonthermalfile = nullptr;
 static bool nonthermal_initialized = false;
@@ -330,7 +329,7 @@ static void read_auger_data() {
       }
 
       // now loop through shells with impact ionisation cross sections and apply Auger data that matches n, l values
-      for (int i = 0; i < colliondatacount; i++) {
+      for (int i = 0; i < colliondata.size(); i++) {
         if (colliondata[i].Z == Z && colliondata[i].nelec == (Z - ionstage + 1) && colliondata[i].n == n &&
             colliondata[i].l == l) {
           printout(
@@ -386,52 +385,38 @@ static void read_collion_data() {
   printout("Reading collisional ionization data...\n");
 
   FILE *cifile = fopen_required("collion.txt", "r");
-
+  int colliondatacount = 0;
   assert_always(fscanf(cifile, "%d", &colliondatacount) == 1);
   printout("Reading %d collisional transition rows\n", colliondatacount);
   assert_always(colliondatacount > 0);
-  colliondata = static_cast<struct collionrow *>(calloc(colliondatacount, sizeof(struct collionrow)));
-  int n = 0;  // the index of kept rows, skipping rows that aren't in the simulation
+
   for (int i = 0; i < colliondatacount; i++) {
-    assert_always(n < colliondatacount);
-    assert_always(fscanf(cifile, "%2d %2d %1d %1d %lg %lg %lg %lg %lg", &colliondata[n].Z, &colliondata[n].nelec,
-                         &colliondata[n].n, &colliondata[n].l, &colliondata[n].ionpot_ev, &colliondata[n].A,
-                         &colliondata[n].B, &colliondata[n].C, &colliondata[n].D) == 9);
+    struct collionrow collionrow {};
+    assert_always(fscanf(cifile, "%2d %2d %1d %1d %lg %lg %lg %lg %lg", &collionrow.Z, &collionrow.nelec, &collionrow.n,
+                         &collionrow.l, &collionrow.ionpot_ev, &collionrow.A, &collionrow.B, &collionrow.C,
+                         &collionrow.D) == 9);
 
-    colliondata[n].prob_num_auger[0] = 1.;
+    const int element = get_elementindex(collionrow.Z);
+    const int ionstage = collionrow.Z - collionrow.nelec + 1;
+    if (element < 0 || ionstage < get_ionstage(element, 0) ||
+        ionstage > get_ionstage(element, get_nions(element) - 1)) {
+      continue;
+    }
+    collionrow.prob_num_auger[0] = 1.;
     for (int a = 1; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-      colliondata[n].prob_num_auger[a] = 0.;
+      collionrow.prob_num_auger[a] = 0.;
     }
 
-    colliondata[n].auger_g_accumulated = 0.;
-    colliondata[n].en_auger_ev = 0.;
-    colliondata[n].n_auger_elec_avg = 0.;
+    collionrow.auger_g_accumulated = 0.;
+    collionrow.en_auger_ev = 0.;
+    collionrow.n_auger_elec_avg = 0.;
 
-    const int ionstage = colliondata[n].Z - colliondata[n].nelec + 1;
-    const int element = get_elementindex(colliondata[n].Z);
-    if (element >= 0 && get_ionstage(element, 0) <= ionstage &&
-        ionstage <= get_ionstage(element, get_nions(element) - 1)) {
-      // printout("Including ionisation data for Z=%d ionstage %d\n", colliondata[n].Z, ionstage);
-      n++;
-    } else {
-      // printout("Excluding ionisation data for Z=%d ionstage %d\n", colliondata[n].Z, ionstage);
-    }
+    colliondata.push_back(collionrow);
 
-    // printout("ci row: %2d %2d %1d %1d %lg %lg %lg %lg %lg\n",
-    //        colliondata[n].Z, colliondata[n].nelec, colliondata[n].n, colliondata[n].l, colliondata[n].ionpot_ev,
-    //        colliondata[n].A, colliondata[n].B, colliondata[n].C, colliondata[n].D);
+    // printout("ci row: %2d %2d %1d %1d %lg %lg %lg %lg %lg\n", collionrow.Z, collionrow.nelec, collionrow.n,
+    //          collionrow.l, collionrow.ionpot_ev, collionrow.A, collionrow.B, collionrow.C, collionrow.D);
   }
-  printout("Stored %d of %d input shell cross sections\n", n, colliondatacount);
-
-  if (n < colliondatacount) {
-    assert_always(n > 0);
-    // since we used a subset of the ion cross sections, we can shrink the list
-    colliondatacount = n;
-    auto *colliondatarealloc =
-        static_cast<struct collionrow *>(realloc(colliondata, colliondatacount * sizeof(struct collionrow)));
-    assert_always(colliondatarealloc != nullptr);
-    colliondata = colliondatarealloc;
-  }
+  printout("Stored %d of %d input shell cross sections\n", colliondata.size(), colliondatacount);
 
   fclose(cifile);
 
@@ -729,7 +714,7 @@ void close_file() {
       free(nt_solution[modelgridindex].ionenfrac_num_auger);
     }
   }
-  free(colliondata);
+  colliondata.clear();
 }
 
 static auto get_energyindex_ev_lteq(const double energy_ev) -> int
@@ -1034,7 +1019,7 @@ static auto N_e(const int modelgridindex, const double energy) -> double
       }
 
       // ionization terms
-      for (int n = 0; n < colliondatacount; n++) {
+      for (int n = 0; n < colliondata.size(); n++) {
         if (colliondata[n].Z == Z && colliondata[n].nelec == Z - ionstage + 1) {
           const double ionpot_ev = colliondata[n].ionpot_ev;
           const double J = get_J(Z, ionstage, ionpot_ev);
@@ -1351,7 +1336,7 @@ static auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const in
   const int ionstage = get_ionstage(element, ion);
   double ionpot_valence = -1;
 
-  for (int collionindex = 0; collionindex < colliondatacount; collionindex++) {
+  for (int collionindex = 0; collionindex < colliondata.size(); collionindex++) {
     if (colliondata[collionindex].Z == Z && colliondata[collionindex].nelec == Z - ionstage + 1) {
       get_xs_ionization_vector(cross_section_vec, colliondata[collionindex]);
 
@@ -1422,7 +1407,7 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
   double eta_sum = 0.;
   double ionpot_valence = -1;
   int matching_nlsubshell_count = 0;
-  for (int collionindex = 0; collionindex < colliondatacount; collionindex++) {
+  for (int collionindex = 0; collionindex < colliondata.size(); collionindex++) {
     if (colliondata[collionindex].Z == Z && colliondata[collionindex].nelec == Z - ionstage + 1) {
       matching_nlsubshell_count++;
       const double frac_ionization_shell =
@@ -1732,20 +1717,6 @@ auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const 
     return ratecoeffperdeposition * deposition_rate_density;
   }
 
-  // const int list_size = nt_solution[modelgridindex].frac_excitations_list.size();
-  // linear search for the lineindex
-  // for (int excitationindex = 0; excitationindex < list_size; excitationindex++)
-  // {
-  //   if (nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex == lineindex)
-  //   {
-  //     const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
-  //     const double ratecoeffperdeposition =
-  //     nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition;
-  //
-  //     return ratecoeffperdeposition * deposition_rate_density;
-  //   }
-  // }
-
   // binary search, assuming the excitation list is sorted by lineindex ascending
   auto ntexclist = nt_solution[modelgridindex].frac_excitations_list;
   auto ntexcitation = std::lower_bound(ntexclist.begin(), ntexclist.end(), lineindex,
@@ -1967,7 +1938,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
       calculate_eff_ionpot_auger_rates(modelgridindex, element, ion);
 
       int matching_nlsubshell_count = 0;
-      for (int n = 0; n < colliondatacount; n++) {
+      for (int n = 0; n < colliondata.size(); n++) {
         if (colliondata[n].Z == Z && colliondata[n].nelec == Z - ionstage + 1) {
           const double frac_ionization_ion_shell = calculate_nt_frac_ionization_shell(modelgridindex, element, ion, n);
           frac_ionization_ion += frac_ionization_ion_shell;
@@ -2269,7 +2240,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
 // add the ionization terms to the Spencer-Fano matrix
 {
   gsl_vector *const vec_xs_ionization = gsl_vector_alloc(SFPTS);
-  for (int collionindex = 0; collionindex < colliondatacount; collionindex++) {
+  for (int collionindex = 0; collionindex < colliondata.size(); collionindex++) {
     if (colliondata[collionindex].Z == Z && colliondata[collionindex].nelec == Z - ionstage + 1) {
       const double ionpot_ev = colliondata[collionindex].ionpot_ev;
       const double en_auger_ev = colliondata[collionindex].en_auger_ev;
