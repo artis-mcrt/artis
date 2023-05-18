@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <limits>
 #include <sstream>
@@ -1131,25 +1132,23 @@ static void read_atomicdata_files() {
     }
   }
 
-  /// finally read in photoionisation cross sections and store them to the atomic data structure
-  phixs_file_version_exists[1] = std::ifstream(phixsdata_filenames[1]).good();
-  phixs_file_version_exists[2] = std::ifstream(phixsdata_filenames[2]).good();
   globals::nbfcontinua_ground = 0;
   globals::nbfcontinua = 0;
+
+  // read in photoionisation cross sections
+  phixs_file_version_exists[1] = std::filesystem::exists(phixsdata_filenames[1]);
+  phixs_file_version_exists[2] = std::filesystem::exists(phixsdata_filenames[2]);
+  assert_always(phixs_file_version_exists[1] || phixs_file_version_exists[2]);  // at least one must exist
   if (phixs_file_version_exists[1] && phixs_file_version_exists[2]) {
-    // read both phixs files
     printout(
         "Reading two phixs files: Reading phixsdata_v2.txt first so we use NPHIXSPOINTS and NPHIXSNUINCREMENT "
         "from phixsdata_v2.txt to interpolate the phixsdata.txt data\n");
-    phixs_file_version = 2;
-    read_phixs_data(phixs_file_version);
-    phixs_file_version = 1;
-    read_phixs_data(phixs_file_version);
-  } else {
-    assert_always(phixs_file_version_exists[1] ^
-                  phixs_file_version_exists[2]);  // XOR: one of the the two files must exist but not both
-    phixs_file_version = phixs_file_version_exists[2] ? 2 : 1;
-    read_phixs_data(phixs_file_version);
+  }
+  if (phixs_file_version_exists[2]) {
+    read_phixs_data(2);
+  }
+  if (phixs_file_version_exists[1]) {
+    read_phixs_data(1);
   }
 
   int cont_index = -1;
