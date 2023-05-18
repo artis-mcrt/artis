@@ -1077,25 +1077,21 @@ static void read_atomicdata_files() {
 
   time_t const time_start_establish_linelist_connections = time(nullptr);
   for (int lineindex = 0; lineindex < globals::nlines; lineindex++) {
-    const int element = globals::linelist[lineindex].elementindex;
-    const int ion = globals::linelist[lineindex].ionindex;
-    const int lowerlevel = globals::linelist[lineindex].lowerlevelindex;
-    const int upperlevel = globals::linelist[lineindex].upperlevelindex;
+    const auto &line = globals::linelist[lineindex];
+    const int element = line.elementindex;
+    const int ion = line.ionindex;
+    const int lowerlevel = line.lowerlevelindex;
+    const int upperlevel = line.upperlevelindex;
 
     const int nupperdowntrans = get_ndowntrans(element, ion, upperlevel);
     for (int ii = 0; ii < nupperdowntrans; ii++) {
       // negative indicates a level instead of a lineindex
       if (globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].targetlevelindex == lowerlevel) {
         globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].lineindex = lineindex;
-        globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].einstein_A =
-            globals::linelist[lineindex].einstein_A;
-        globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].coll_str =
-            globals::linelist[lineindex].coll_str;
-        globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].osc_strength =
-            globals::linelist[lineindex].osc_strength;
-
-        globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].forbidden =
-            globals::linelist[lineindex].forbidden;
+        globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].einstein_A = line.einstein_A;
+        globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].coll_str = line.coll_str;
+        globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].osc_strength = line.osc_strength;
+        globals::elements[element].ions[ion].levels[upperlevel].downtrans[ii].forbidden = line.forbidden;
         break;  // should be safe to end here if there is max. one transition per pair of levels
       }
     }
@@ -1105,14 +1101,10 @@ static void read_atomicdata_files() {
       // negative indicates a level instead of a lineindex
       if (globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].targetlevelindex == upperlevel) {
         globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].lineindex = lineindex;
-        globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].einstein_A =
-            globals::linelist[lineindex].einstein_A;
-        globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].coll_str =
-            globals::linelist[lineindex].coll_str;
-        globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].osc_strength =
-            globals::linelist[lineindex].osc_strength;
-        globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].forbidden =
-            globals::linelist[lineindex].forbidden;
+        globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].einstein_A = line.einstein_A;
+        globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].coll_str = line.coll_str;
+        globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].osc_strength = line.osc_strength;
+        globals::elements[element].ions[ion].levels[lowerlevel].uptrans[ii].forbidden = line.forbidden;
         break;  // should be safe to end here if there is max. one transition per pair of levels
       }
     }
