@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # don't compress the files if we didn't successfully run exspec
-if [[-f emission.out* ]; then
+if [-f emission.out* ]; then
 
   if command -v zstd > /dev/null; then
     # zstd does decent compression at high speeds
