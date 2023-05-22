@@ -236,7 +236,7 @@ static void read_phixs_data_table(FILE *phixsdata, const int nphixspoints_inputt
   }
 }
 
-static void read_phixs_data(int phixs_file_version) {
+static void read_phixs_data(const int phixs_file_version) {
   size_t mem_usage_phixs = 0;
 
   printout("readin phixs data from %s\n", phixsdata_filenames[phixs_file_version]);
@@ -1102,15 +1102,16 @@ static void read_atomicdata_files() {
     auto *downtranslist = globals::elements[element].ions[ion].levels[upperlevel].downtrans;
     auto *downtrans = std::find_if(downtranslist, downtranslist + nupperdowntrans,
                                    [=](auto &downtrans) { return downtrans.targetlevelindex == lowerlevel; });
-    assert_always(downtrans->targetlevelindex == lowerlevel);
+    assert_always(downtrans != (downtranslist + nupperdowntrans));
+    // assert_always(downtrans->targetlevelindex == lowerlevel);
     downtrans->lineindex = lineindex;
 
     const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
     auto *uptranslist = globals::elements[element].ions[ion].levels[lowerlevel].uptrans;
     auto *uptrans = std::find_if(uptranslist, uptranslist + nloweruptrans,
                                  [=](auto &uptrans) { return uptrans.targetlevelindex == upperlevel; });
-
-    assert_always(uptrans->targetlevelindex == upperlevel);
+    assert_always(uptrans != (uptranslist + nloweruptrans));
+    // assert_always(uptrans->targetlevelindex == upperlevel);
     uptrans->lineindex = lineindex;
   }
 
