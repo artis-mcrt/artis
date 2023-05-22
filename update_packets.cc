@@ -294,8 +294,7 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
         const int mgi = grid::get_cell_modelgridindex(cellindex);
         /// for non empty cells update the global available level populations and cooling terms
         /// Reset cellhistory if packet starts up in another than the last active cell
-        if (mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi &&
-            grid::modelgrid[mgi].thick == 0) {
+        if (mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi) {
           stats::increment(stats::COUNTER_UPDATECELL);
           cellhistory_reset(mgi, false);
         }
