@@ -651,16 +651,27 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
 
           // the line list has not been sorted yet, so the store the level index for now and
           // the index into the sorted line list will be set later
-          globals::elements[element].ions[ion].levels[level].downtrans[nupperdowntrans - 1].targetlevelindex =
-              targetlevel;
-          globals::elements[element].ions[ion].levels[targetlevel].uptrans[nloweruptrans - 1].targetlevelindex = level;
+
+          globals::elements[element].ions[ion].levels[level].downtrans[nupperdowntrans - 1] = {
+              .lineindex = -1,
+              .targetlevelindex = targetlevel,
+              .einstein_A = static_cast<float>(A_ul),
+              .coll_str = coll_str,
+              .osc_strength = f_ul,
+              .forbidden = transitiontable[ii].forbidden};
+          globals::elements[element].ions[ion].levels[targetlevel].uptrans[nloweruptrans - 1] = {
+              .lineindex = -1,
+              .targetlevelindex = level,
+              .einstein_A = static_cast<float>(A_ul),
+              .coll_str = coll_str,
+              .osc_strength = f_ul,
+              .forbidden = transitiontable[ii].forbidden};
         }
 
         /// This is not a metastable level.
         globals::elements[element].ions[ion].levels[level].metastable = false;
 
         (*lineindex)++;
-
       } else if (pass == 1 && globals::rank_in_node == 0) {
         // This is a new branch to deal with lines that have different types of transition. It should trip after a
         // transition is already known.
@@ -1091,26 +1102,16 @@ static void read_atomicdata_files() {
     auto *downtranslist = globals::elements[element].ions[ion].levels[upperlevel].downtrans;
     auto *downtrans = std::find_if(downtranslist, downtranslist + nupperdowntrans,
                                    [=](auto &downtrans) { return downtrans.targetlevelindex == lowerlevel; });
-    assert_always(downtrans != (downtranslist + nupperdowntrans));
-    // assert_always(downtrans->targetlevelindex == lowerlevel);
+    assert_always(downtrans->targetlevelindex == lowerlevel);
     downtrans->lineindex = lineindex;
-    downtrans->einstein_A = line.einstein_A;
-    downtrans->coll_str = line.coll_str;
-    downtrans->osc_strength = line.osc_strength;
-    downtrans->forbidden = line.forbidden;
 
     const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
     auto *uptranslist = globals::elements[element].ions[ion].levels[lowerlevel].uptrans;
     auto *uptrans = std::find_if(uptranslist, uptranslist + nloweruptrans,
                                  [=](auto &uptrans) { return uptrans.targetlevelindex == upperlevel; });
 
-    assert_always(uptrans != (uptranslist + nloweruptrans));
-    // assert_always(uptrans->targetlevelindex == upperlevel);
+    assert_always(uptrans->targetlevelindex == upperlevel);
     uptrans->lineindex = lineindex;
-    uptrans->einstein_A = line.einstein_A;
-    uptrans->coll_str = line.coll_str;
-    uptrans->osc_strength = line.osc_strength;
-    uptrans->forbidden = line.forbidden;
   }
 
   printout("took %ds\n", time(nullptr) - time_start_establish_linelist_connections);
