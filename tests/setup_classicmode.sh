@@ -2,20 +2,24 @@
 
 set -x
 
-rsync -av classicmode_inputfiles/ classicmode_testrun/
+runfolder=classicmode_testrun
+
+mkdir -p $runfolder
 
 if [ ! -f atomicdata_classic.tar.xz ]; then curl -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_classic.tar.xz; fi
 
-tar -xf atomicdata_classic.tar.xz --directory classicmode_testrun/
+tar -xf atomicdata_classic.tar.xz --directory $runfolder/
 
-cp ../data/* classicmode_testrun/
+rsync -av classicmode_inputfiles/ $runfolder/
 
-cp ../artisoptions_classic.h classicmode_testrun/artisoptions.h
+cp ../data/* $runfolder/
 
-sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 15000;/g' classicmode_testrun/artisoptions.h
+cp ../artisoptions_classic.h $runfolder/artisoptions.h
 
-sed -i'' -e 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' classicmode_testrun/artisoptions.h
+sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 15000;/g' $runfolder/artisoptions.h
 
-sed -i'' -e 's/constexpr bool VPKT_ON.*/constexpr bool VPKT_ON = true;/g' classicmode_testrun/artisoptions.h
+sed -i'' -e 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' $runfolder/artisoptions.h
+
+sed -i'' -e 's/constexpr bool VPKT_ON.*/constexpr bool VPKT_ON = true;/g' $runfolder/artisoptions.h
 
 set +x
