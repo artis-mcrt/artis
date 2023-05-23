@@ -17,5 +17,5 @@ exspec.txt
 binding_energies.txt
 *_reference
 *_testrun
-atomicdata_feconi
+atomicdata_*
 *.pdf

@@ -68,6 +68,13 @@ jobs:
                   path: tests/atomicdata_feconi.tar.xz
                   key: tests/atomicdata_feconi.tar.xz
 
+            - name: Cache test atomic data classic
+              uses: actions/cache@v3
+              id: cache-testatomicdata-classic
+              with:
+                  path: tests/atomicdata_classic.tar.xz
+                  key: tests/atomicdata_classic.tar.xz
+
             - name: Download/extract test data
               working-directory: tests/
               run: |

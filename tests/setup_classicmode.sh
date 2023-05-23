@@ -4,9 +4,9 @@ set -x
 
 rsync -av classicmode_inputfiles/ classicmode_testrun/
 
-if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_feconi.tar.xz; fi
+if [ ! -f atomicdata_classic.tar.xz ]; then curl -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_classic.tar.xz; fi
 
-tar -xf atomicdata_feconi.tar.xz --directory classicmode_testrun/
+tar -xf atomicdata_classic.tar.xz --directory classicmode_testrun/
 
 cp ../data/* classicmode_testrun/
 
