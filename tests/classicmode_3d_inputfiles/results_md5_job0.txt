@@ -13,6 +13,5 @@ e08bbb965fac36412810b8769a13ab9d  grid.out
 b9922d87ffc20c54f86954d495e0f948  packets00_0001.out
 32ea18ab6ee97eacd56bb5b63f15eceb  spec.out
 bc01f046eab9bf3802149e0ff63d5069  timesteps.out
-97792efa8fd4e21d40c6532c75997951  ratecoeff.dat
 f9340385f90c0d0c9158789e1257ce7e  job0/estimators_0000.out
 d79125aa57d24715521d55c168b3ee79  job0/estimators_0001.out

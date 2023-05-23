@@ -13,7 +13,6 @@ c36666a8401b814ea3d785d34cfda8dc  gamma_light_curve.out
 f5d0beac6607f7c943521ae817df596c  packets00_0001.out
 bcb43f7ee46596bd24e0ab90774d93e4  spec.out
 8e7163982f1aa938dc1505478b8c60d1  timesteps.out
-f971dfa7783cba5e435378dc097611fa  ratecoeff.dat
 08eb1796a7f9729f012a3692abd5c5ee  job0/estimators_0000.out
 5aa018922ab0ed82383d2b909d44cc6c  job0/nlte_0000.out
 1c4b1ccb2ea3bd56f3ef976e4dce870e  job0/nonthermalspec_0000.out
