@@ -104,8 +104,16 @@ static auto read_ratecoeff_dat() -> bool
       if (T_min == MINTEMP && T_max == MAXTEMP && in_tablesize == TABLESIZE && in_nlines == globals::nlines &&
           in_ratecoeff_integral_accuracy == RATECOEFF_INTEGRAL_ACCURACY) {
         printout("(pass)\n");
-        // this is redundant if the adata and composition data matches, but have
-        // to read through to maintain consistency with older files
+      } else {
+        printout(
+            "\nMISMATCH: this simulation has MINTEMP %g MAXTEMP %g TABLESIZE %d nlines %d "
+            "RATECOEFF_INTEGRAL_ACCURACY %g\n",
+            MINTEMP, MAXTEMP, TABLESIZE, globals::nlines, RATECOEFF_INTEGRAL_ACCURACY);
+        fileisamatch = false;
+      }
+
+      if (fileisamatch) {
+        // this is redundant if the adata and composition data matches, consider removing
         for (int element = 0; element < get_nelements(); element++) {
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions; ion++) {
@@ -132,12 +140,6 @@ static auto read_ratecoeff_dat() -> bool
             break;
           }
         }
-      } else {
-        printout(
-            "\nMISMATCH: this simulation has MINTEMP %g MAXTEMP %g TABLESIZE %d nlines %d "
-            "RATECOEFF_INTEGRAL_ACCURACY %g\n",
-            MINTEMP, MAXTEMP, TABLESIZE, globals::nlines, RATECOEFF_INTEGRAL_ACCURACY);
-        fileisamatch = false;
       }
     }
 
