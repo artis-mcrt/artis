@@ -50,7 +50,7 @@ jobs:
                   g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
-            # we can cache this, but then we don't test the code that generates ratecoeff.dat
+            # cache this for classic options because the super low integration tolerance makes generation of the file very slow
             - name: Cache ratecoeff.dat
               if: matrix.testname == 'classicmode' || matrix.testname == 'classicmode_3d'
               # if: matrix.testname == 'classicmode' && matrix.testmode != 'ON'
@@ -102,6 +102,11 @@ jobs:
                   cp input-newrun.txt input.txt
                   touch output_0-0.txt
                   time mpirun -np 2 ./sn3d
+
+            - name: Move job0 files
+              if: always()
+              working-directory: tests/${{ matrix.testname }}_testrun/
+              run: |
                   mkdir job0
                   ../../scripts/movefiles.sh job0
 
@@ -129,6 +134,11 @@ jobs:
               run: |
                   cp input-resume.txt input.txt
                   time mpirun -np 2 ./sn3d
+
+            - name: Move job1 files
+              if: always()
+              working-directory: tests/${{ matrix.testname }}_testrun/
+              run: |
                   mkdir job1
                   ../../scripts/movefiles.sh job1
 
