@@ -93,8 +93,12 @@ static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
   int in_nlines = -1;
   int in_nbfcontinua = -1;
   double in_ratecoeff_integral_accuracy = -1.;
-  assert_always(fscanf(ratecoeff_file, "%la %la %d %d %d %la\n", &in_T_min, &in_T_max, &in_tablesize, &in_nlines,
-                       &in_nbfcontinua, &in_ratecoeff_integral_accuracy) == 5);
+  int items_read = fscanf(ratecoeff_file, "%la %la %d %d %d %la\n", &in_T_min, &in_T_max, &in_tablesize, &in_nlines,
+                          &in_nbfcontinua, &in_ratecoeff_integral_accuracy);
+  if (items_read != 6) {
+    printout("\nMISMATCH: error reading header line\n");
+    return false;
+  }
   printout("ratecoeff.dat: Tmin %g Tmax %g TABLESIZE %d nlines %d nbfcontinua %d in_ratecoeff_integral_accuracy %g ",
            in_T_min, in_T_max, in_tablesize, in_nlines, in_nbfcontinua, in_ratecoeff_integral_accuracy);
 
