@@ -132,7 +132,7 @@ static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
     }
   }
 
-  printout("Matching ratecoeff.dat file found. Readin this file ...\n");
+  printout("Existing ratecoeff.dat is valid. Reading this file...\n");
   for (int element = 0; element < get_nelements(); element++) {
     int const nions = get_nions(element) - 1;
     for (int ion = 0; ion < nions; ion++) {
