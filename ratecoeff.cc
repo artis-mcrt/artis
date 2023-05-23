@@ -87,26 +87,42 @@ static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
     }
   }
 
-  double T_min = NAN;
-  double T_max = NAN;
-  int in_tablesize = 0;
-  int in_nlines = 0;
-  double in_ratecoeff_integral_accuracy = NAN;
-  assert_always(fscanf(ratecoeff_file, "%la %la %d %d %la\n", &T_min, &T_max, &in_tablesize, &in_nlines,
-                       &in_ratecoeff_integral_accuracy) == 5);
-  printout("ratecoeff.dat: Tmin %g Tmax %g TABLESIZE %d nlines %d in_ratecoeff_integral_accuracy %g ", T_min, T_max,
-           in_tablesize, in_nlines, in_ratecoeff_integral_accuracy);
+  double in_T_min = -1.;
+  double in_T_max = -1.;
+  int in_tablesize = -1;
+  int in_nlines = -1;
+  int in_nbfcontinua = -1;
+  double in_ratecoeff_integral_accuracy = -1.;
+  assert_always(fscanf(ratecoeff_file, "%la %la %d %d %d %la\n", &in_T_min, &in_T_max, &in_tablesize, &in_nlines,
+                       &in_nbfcontinua, &in_ratecoeff_integral_accuracy) == 5);
+  printout("ratecoeff.dat: Tmin %g Tmax %g TABLESIZE %d nlines %d nbfcontinua %d in_ratecoeff_integral_accuracy %g ",
+           in_T_min, in_T_max, in_tablesize, in_nlines, in_nbfcontinua, in_ratecoeff_integral_accuracy);
 
-  if (T_min == MINTEMP && T_max == MAXTEMP && in_tablesize == TABLESIZE && in_nlines == globals::nlines &&
-      in_ratecoeff_integral_accuracy == RATECOEFF_INTEGRAL_ACCURACY) {
-    printout("(pass)\n");
-  } else {
-    printout(
-        "\nMISMATCH: this simulation has MINTEMP %g MAXTEMP %g TABLESIZE %d nlines %d "
-        "RATECOEFF_INTEGRAL_ACCURACY %g\n",
-        MINTEMP, MAXTEMP, TABLESIZE, globals::nlines, RATECOEFF_INTEGRAL_ACCURACY);
+  if (in_T_min != MINTEMP) {
+    printout("\nMISMATCH: this simulation has MINTEMP %g\n", MINTEMP);
     return false;
   }
+  if (in_T_max != MAXTEMP) {
+    printout("\nMISMATCH: this simulation has MAXTEMP %g\n", MAXTEMP);
+    return false;
+  }
+  if (in_tablesize != TABLESIZE) {
+    printout("\nMISMATCH: this simulation has TABLESIZE %d\n", TABLESIZE);
+    return false;
+  }
+  if (in_nlines != globals::nlines) {
+    printout("\nMISMATCH: this simulation has nlines %d\n", globals::nlines);
+    return false;
+  }
+  if (in_nbfcontinua != globals::nbfcontinua) {
+    printout("\nMISMATCH: this simulation has nbfcontinua %d\n", globals::nbfcontinua);
+    return false;
+  }
+  if (in_ratecoeff_integral_accuracy != RATECOEFF_INTEGRAL_ACCURACY) {
+    printout("\nMISMATCH: this simulation has RATECOEFF_INTEGRAL_ACCURACY %g\n", RATECOEFF_INTEGRAL_ACCURACY);
+    return false;
+  }
+  printout("(pass)\n");
 
   // this is redundant if the adata and composition data matches, consider removing
   for (int element = 0; element < get_nelements(); element++) {
@@ -196,7 +212,7 @@ static void write_ratecoeff_dat() {
       fprintf(ratecoeff_file, "%32s\n", phixsfile_hash[phixsver]);
     }
   }
-  fprintf(ratecoeff_file, "%la %la %d %d %la\n", MINTEMP, MAXTEMP, TABLESIZE, globals::nlines,
+  fprintf(ratecoeff_file, "%la %la %d %d %d %la\n", MINTEMP, MAXTEMP, TABLESIZE, globals::nlines, globals::nbfcontinua,
           RATECOEFF_INTEGRAL_ACCURACY);
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
