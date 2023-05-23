@@ -54,7 +54,9 @@ static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
   /// the precalculated rate coefficients
 
   char adatafile_hash_in[33] = "UNKNOWN";
-  if (fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in) != 1) return false;
+  if (fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in) != 1) {
+    return false;
+  }
   printout("ratecoeff.dat: MD5 adata.txt = %s ", adatafile_hash_in);
   if (strcmp(adatafile_hash, adatafile_hash_in) == 0) {
     printout("(pass)\n");
@@ -64,7 +66,9 @@ static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
   }
 
   char compositionfile_hash_in[33] = "UNKNOWN";
-  if (fscanf(ratecoeff_file, "%32s\n", compositionfile_hash_in) != 1) return false;
+  if (fscanf(ratecoeff_file, "%32s\n", compositionfile_hash_in) != 1) {
+    return false;
+  }
   printout("ratecoeff.dat: MD5 compositiondata.txt %s ", compositionfile_hash_in);
   if (strcmp(compositionfile_hash, compositionfile_hash_in) == 0) {
     printout("(pass)\n");
@@ -76,7 +80,9 @@ static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
   for (int phixsver = 1; phixsver <= 2; phixsver++) {
     if (phixs_file_version_exists[phixsver]) {
       char phixsfile_hash_in[33] = "UNKNOWN";
-      if (fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in) != 1) return false;
+      if (fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in) != 1) {
+        return false;
+      }
       printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixsver], phixsfile_hash_in);
       if (strcmp(phixsfile_hash[phixsver], phixsfile_hash_in) == 0) {
         printout("(pass)\n");
@@ -93,8 +99,8 @@ static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
   int in_nlines = -1;
   int in_nbfcontinua = -1;
   double in_ratecoeff_integral_accuracy = -1.;
-  int items_read = fscanf(ratecoeff_file, "%la %la %d %d %d %la\n", &in_T_min, &in_T_max, &in_tablesize, &in_nlines,
-                          &in_nbfcontinua, &in_ratecoeff_integral_accuracy);
+  const int items_read = fscanf(ratecoeff_file, "%la %la %d %d %d %la\n", &in_T_min, &in_T_max, &in_tablesize,
+                                &in_nlines, &in_nbfcontinua, &in_ratecoeff_integral_accuracy);
   if (items_read != 6) {
     printout("\nMISMATCH: error reading header line\n");
     return false;
@@ -179,13 +185,13 @@ static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
             // assert_always(std::isfinite(bfcooling_coeff) && bfcooling_coeff >= 0);
             globals::bfcooling_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = bfcooling_coeff;
 
-            if constexpr (!NO_LUT_PHOTOION) {
+            if constexpr (USE_LUT_PHOTOION) {
               if (corrphotoioncoeff >= 0) {
                 globals::corrphotoioncoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] =
                     corrphotoioncoeff;
               } else {
                 printout(
-                    "ERROR: NO_LUT_PHOTOION is off, but there are no corrphotoioncoeff values in ratecoeff file\n");
+                    "ERROR: USE_LUT_PHOTOION is on, but there are no corrphotoioncoeff values in ratecoeff file\n");
                 abort();
               }
             }
@@ -240,7 +246,7 @@ static void write_ratecoeff_dat() {
             const double alpha_sp = globals::spontrecombcoeff[bflutindex];
             const double bfcooling_coeff = globals::bfcooling_coeff[bflutindex];
 
-            const double corrphotoioncoeff = NO_LUT_PHOTOION ? -1 : globals::corrphotoioncoeff[bflutindex];
+            const double corrphotoioncoeff = !USE_LUT_PHOTOION ? -1 : globals::corrphotoioncoeff[bflutindex];
             const double bfheating_coeff = NO_LUT_BFHEATING ? -1 : globals::bfheating_coeff[bflutindex];
 
             fprintf(ratecoeff_file, "%la %la %la %la\n", alpha_sp, bfcooling_coeff, corrphotoioncoeff, bfheating_coeff);
@@ -315,7 +321,7 @@ static auto gammacorr_integrand_gsl(const double nu, void *const voidparas) -> d
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
-  assert_testmodeonly(!NO_LUT_PHOTOION);
+  assert_testmodeonly(USE_LUT_PHOTOION);
   const gslintegration_paras *const params = static_cast<gslintegration_paras *>(voidparas);
 
   const float T = params->T;
@@ -577,7 +583,7 @@ static void precalculate_rate_coefficient_integrals() {
             //   (integral %g, sahafac %g)\n", element, ion, level, upperlevel, T_e, alpha_sp, alpha_sp/(FOURPI * sfac *
             //   phixstargetprobability),sfac);
 
-            if constexpr (!NO_LUT_PHOTOION) {
+            if constexpr (USE_LUT_PHOTOION) {
               double gammacorr = 0.0;
               const gsl_function F_gammacorr = {.function = &gammacorr_integrand_gsl, .params = &intparas};
 
@@ -840,7 +846,7 @@ static void scale_level_phixs(const int element, const int ion, const int level,
       for (int iter = 0; iter < TABLESIZE; iter++) {
         globals::spontrecombcoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
 
-        if constexpr (!NO_LUT_PHOTOION) {
+        if constexpr (USE_LUT_PHOTOION) {
           globals::corrphotoioncoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
         }
 
@@ -1074,7 +1080,7 @@ void ratecoefficients_init()
 }
 
 auto interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T) -> double {
-  assert_always(!NO_LUT_PHOTOION);
+  assert_always(USE_LUT_PHOTOION);
   const int lowerindex = floor(log(T / MINTEMP) / T_step_log);
   if (lowerindex < TABLESIZE - 1) {
     const int upperindex = lowerindex + 1;
@@ -1094,7 +1100,7 @@ auto interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstar
 auto get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex) -> double
 /// Returns the for stimulated emission corrected photoionisation rate coefficient.
 {
-  assert_always(!NO_LUT_PHOTOION);
+  assert_always(USE_LUT_PHOTOION);
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
   /// correction may be evaluated at T_R!
@@ -1322,7 +1328,7 @@ auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex
 
   if (!use_cellhist || gammacorr < 0) {
     {
-      if constexpr (NO_LUT_PHOTOION) {
+      if constexpr (!USE_LUT_PHOTOION) {
         gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
       } else {
         const double W = grid::get_W(modelgridindex);

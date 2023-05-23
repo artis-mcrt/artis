@@ -155,7 +155,7 @@ auto phi(const int element, const int ion, const int modelgridindex) -> double
   // else
   {
     double Gamma = 0.;
-    if constexpr (NO_LUT_PHOTOION) {
+    if constexpr (!USE_LUT_PHOTOION) {
       Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
     } else {
       Gamma =

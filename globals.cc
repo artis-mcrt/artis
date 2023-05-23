@@ -13,7 +13,7 @@ struct time *time_step = nullptr;
 
 double *rpkt_emiss = nullptr;  /// Volume estimator for the rpkt emissivity
 
-// for NO_LUT_PHOTOION = false
+// for USE_LUT_PHOTOION = true
 double *corrphotoionrenorm = nullptr;
 double *gammaestimator = nullptr;
 
@@ -55,7 +55,7 @@ const struct linelist_entry *linelist = nullptr;
 struct bflist_t *bflist = nullptr;
 double *spontrecombcoeff = nullptr;
 
-// for NO_LUT_PHOTOION = false
+// for USE_LUT_PHOTOION = true
 double *corrphotoioncoeff = nullptr;
 
 // for NO_LUT_BFHEATING = false
@@ -73,7 +73,7 @@ int ncoolingterms;
 double *allcont_nu_edge = nullptr;
 const struct fullphixslist *allcont = nullptr;
 
-// for either NO_LUT_PHOTOION = false or NO_LUT_BFHEATING = false
+// for either USE_LUT_PHOTOION = true or NO_LUT_BFHEATING = false
 struct groundphixslist *groundcont = nullptr;
 
 struct phixslist *phixslist = nullptr;

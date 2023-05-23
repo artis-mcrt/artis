@@ -1659,7 +1659,7 @@ void read_ejecta_model() {
 
   globals::rpkt_emiss = static_cast<double *>(calloc((get_npts_model() + 1), sizeof(double)));
 
-  if constexpr (!NO_LUT_PHOTOION) {
+  if constexpr (USE_LUT_PHOTOION) {
     globals::corrphotoionrenorm =
         static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
     globals::gammaestimator =
@@ -1760,7 +1760,7 @@ static void read_grid_restart_data(const int timestep) {
     modelgrid[mgi].thick = thick;
     globals::rpkt_emiss[mgi] = rpkt_emiss;
 
-    if constexpr (!NO_LUT_PHOTOION) {
+    if constexpr (USE_LUT_PHOTOION) {
       for (int element = 0; element < get_nelements(); element++) {
         const int nions = get_nions(element);
         for (int ion = 0; ion < nions; ion++) {
@@ -1815,7 +1815,7 @@ void write_grid_restart_data(const int timestep) {
               modelgrid[mgi].thick, globals::rpkt_emiss[mgi]);
     }
 
-    if constexpr (!NO_LUT_PHOTOION) {
+    if constexpr (USE_LUT_PHOTOION) {
       for (int element = 0; element < get_nelements(); element++) {
         const int nions = get_nions(element);
         for (int ion = 0; ion < nions; ion++) {

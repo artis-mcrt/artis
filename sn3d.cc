@@ -211,7 +211,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
                     globals::mpi_comm_internode);
         }
 
-        if constexpr (!NO_LUT_PHOTOION) {
+        if constexpr (USE_LUT_PHOTOION) {
           assert_always(globals::corrphotoionrenorm != nullptr);
           MPI_Bcast(&globals::corrphotoionrenorm[modelgridindex * get_nelements() * get_max_nions()],
                     get_nelements() * get_max_nions(), MPI_DOUBLE, root, MPI_COMM_WORLD);
@@ -322,7 +322,7 @@ static void mpi_reduce_estimators(int nts) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   const int arraylen = grid::get_npts_model() * get_nelements() * get_max_nions();
-  if constexpr (!NO_LUT_PHOTOION) {
+  if constexpr (USE_LUT_PHOTOION) {
     MPI_Barrier(MPI_COMM_WORLD);
     assert_always(globals::gammaestimator != nullptr);
     MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -550,7 +550,7 @@ static void zero_estimators() {
 
       for (int element = 0; element < get_nelements(); element++) {
         for (int ion = 0; ion < get_max_nions(); ion++) {
-          if constexpr (!NO_LUT_PHOTOION) {
+          if constexpr (USE_LUT_PHOTOION) {
             globals::gammaestimator[n * get_nelements() * get_max_nions() + element * get_max_nions() + ion] = 0.;
           }
           if constexpr (!NO_LUT_BFHEATING) {
@@ -719,8 +719,8 @@ auto main(int argc, char *argv[]) -> int {
   real_time_start = time(nullptr);
   char filename[MAXFILENAMELENGTH];
 
-  // if DETAILED_BF_ESTIMATORS_ON is true, NO_LUT_PHOTOION must be true
-  assert_always(!DETAILED_BF_ESTIMATORS_ON || NO_LUT_PHOTOION);
+  // if DETAILED_BF_ESTIMATORS_ON is true, USE_LUT_PHOTOION must be false
+  assert_always(!DETAILED_BF_ESTIMATORS_ON || !USE_LUT_PHOTOION);
 
   if constexpr (VPKT_ON) {
     nvpkt = 0;

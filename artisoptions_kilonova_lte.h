@@ -77,7 +77,7 @@ constexpr bool DETAILED_BF_ESTIMATORS_ON = false;
 
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 13;
 
-constexpr bool NO_LUT_PHOTOION = false;
+constexpr bool USE_LUT_PHOTOION = true;
 
 constexpr bool NO_LUT_BFHEATING = false;
 

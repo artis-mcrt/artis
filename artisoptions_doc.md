@@ -104,7 +104,7 @@ constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP;
 
 // dynamically calculate photoionization rates for the current radiation field
 // instead of interpolating values from a lookup table for a blackbody radiation field
-constexpr bool NO_LUT_PHOTOION;
+constexpr bool USE_LUT_PHOTOION;
 
 // as above for bound-free heating
 constexpr bool NO_LUT_BFHEATING;

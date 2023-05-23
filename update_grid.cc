@@ -655,7 +655,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
       }
 
-      if (!NO_LUT_PHOTOION && globals::nbfcontinua > 0) {
+      if (USE_LUT_PHOTOION && globals::nbfcontinua > 0) {
         fprintf(estimators_file, "corrphotoionrenorm Z=%2d", get_atomicnumber(element));
         for (int ion = 0; ion < nions; ion++) {
           fprintf(
@@ -824,7 +824,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
     const time_t sys_time_start_partfuncs_or_gamma = time(nullptr);
     if (!NLTE_POPS_ON) {
       precalculate_partfuncts(n);
-    } else if (!NO_LUT_PHOTOION && (nlte_iter != 0)) {
+    } else if (USE_LUT_PHOTOION && (nlte_iter != 0)) {
       // recalculate the Gammas using the current population estimates
       for (int element = 0; element < get_nelements(); element++) {
         const int nions = get_nions(element);
@@ -936,8 +936,8 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
 }
 
 static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, const double estimator_normfactor) {
-  assert_always(!NO_LUT_PHOTOION || !NO_LUT_BFHEATING);
-  if constexpr (!NO_LUT_PHOTOION) {
+  assert_always(USE_LUT_PHOTOION || !NO_LUT_BFHEATING);
+  if constexpr (USE_LUT_PHOTOION) {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++) {
@@ -974,7 +974,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
       /// photoionsation rate!
     }
   }
-  if constexpr (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING) {
+  if constexpr (USE_LUT_PHOTOION || !NO_LUT_BFHEATING) {
     /// Then reopen the same loops again.
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
@@ -986,7 +986,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
         // nlevels = get_ionisinglevels(element,ion);
         const int ionestimindex = n * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
 
-        if constexpr (!NO_LUT_PHOTOION) {
+        if constexpr (USE_LUT_PHOTOION) {
           globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(n, element, ion);
           // printout("mgi %d, element %d, ion %d, Gamma %g\n",n,element,ion,Gamma);
         }
@@ -1037,7 +1037,7 @@ static void titer_average_estimators(const int n) {
 #endif
 
 static void zero_gammaestimator(const int modelgridindex) {
-  assert_always(!NO_LUT_PHOTOION);
+  assert_always(USE_LUT_PHOTOION);
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
@@ -1048,7 +1048,7 @@ static void zero_gammaestimator(const int modelgridindex) {
 }
 
 static void set_all_corrphotoionrenorm(const int modelgridindex, const double value) {
-  assert_always(!NO_LUT_PHOTOION);
+  assert_always(USE_LUT_PHOTOION);
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
@@ -1090,7 +1090,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         // For the initial timestep, temperatures have already been assigned
         // either by trapped energy release calculation, or reading from gridsave file
 
-        if constexpr (!NO_LUT_PHOTOION) {
+        if constexpr (USE_LUT_PHOTOION) {
           /// Determine renormalisation factor for corrected photoionization cross-sections
           if (!globals::simulation_continued_from_saved) {
             set_all_corrphotoionrenorm(mgi, 1.);
@@ -1151,7 +1151,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
           grid::set_TJ(mgi, T_J);
           grid::set_W(mgi, 1);
 
-          if constexpr (!NO_LUT_PHOTOION) {
+          if constexpr (USE_LUT_PHOTOION) {
             set_all_corrphotoionrenorm(mgi, 1.);
           }
 
@@ -1171,7 +1171,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
           titer_average_estimators(mgi);
 #endif
 
-          if constexpr (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING) {
+          if constexpr (USE_LUT_PHOTOION || !NO_LUT_BFHEATING) {
             update_gamma_corrphotoionrenorm_bfheating_estimators(mgi, estimator_normfactor);
           }
 
@@ -1296,7 +1296,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     grid::set_Te(mgi, 0.);
     grid::set_W(mgi, 0.);
 
-    if constexpr (!NO_LUT_PHOTOION) {
+    if constexpr (USE_LUT_PHOTOION) {
       zero_gammaestimator(mgi);
       set_all_corrphotoionrenorm(mgi, 0.);
     }
@@ -1314,7 +1314,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   printout("timestep %d: time before update grid %ld (tstart + %ld) simtime ts_mid %g days\n", nts,
            sys_time_start_update_grid, sys_time_start_update_grid - real_time_start, globals::time_step[nts].mid / DAY);
 
-  if constexpr (!NO_LUT_PHOTOION) {
+  if constexpr (USE_LUT_PHOTOION) {
     /// Initialise globals::corrphotoionrenorm[i] to zero before update_grid is called
     /// unless they have been read from file
     if ((!globals::simulation_continued_from_saved) || (nts - globals::itstep != 0) || (titer != 0)) {
@@ -1389,7 +1389,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
         /// else, only reset gammaestimator to zero. This allows us to do a global MPI
         /// communication after update_grid to synchronize gammaestimator
         /// and write a contiguous restart file with grid properties
-        if constexpr (!NO_LUT_PHOTOION) {
+        if constexpr (USE_LUT_PHOTOION) {
           zero_gammaestimator(mgi);
         }
       }
@@ -1466,7 +1466,7 @@ auto calculate_populations(const int modelgridindex) -> double
         int ion = 0;
         for (ion = 0; ion < nions - 1; ion++) {
           double Gamma = 0.;
-          if constexpr (NO_LUT_PHOTOION) {
+          if constexpr (!USE_LUT_PHOTOION) {
             Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
           } else {
             Gamma = globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() +
@@ -1576,7 +1576,7 @@ auto calculate_populations(const int modelgridindex) -> double
         printout("cell %d, element %d, uppermost_ion is %d\n", modelgridindex, element,
                  grid::get_elements_uppermost_ion(modelgridindex, element));
 
-        if constexpr (!NO_LUT_PHOTOION) {
+        if constexpr (USE_LUT_PHOTOION) {
           for (int ion = 0; ion <= grid::get_elements_uppermost_ion(modelgridindex, element); ion++) {
             printout("element %d, ion %d, gammaionest %g\n", element, ion,
                      globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() +

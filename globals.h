@@ -61,7 +61,7 @@ struct groundphixslist {
 };
 
 struct phixslist {
-  double *groundcont_gamma_contr = nullptr;  // for either NO_LUT_PHOTOION = false or NO_LUT_BFHEATING = false
+  double *groundcont_gamma_contr = nullptr;  // for either USE_LUT_PHOTOION = true or NO_LUT_BFHEATING = false
   double *kappa_bf_sum = nullptr;
   double *gamma_contr = nullptr;  // needed for DETAILED_BF_ESTIMATORS_ON
 };
@@ -208,7 +208,7 @@ extern struct time *time_step;
 
 extern double *rpkt_emiss;
 
-// for NO_LUT_PHOTOION = false
+// for USE_LUT_PHOTOION = true
 extern double *corrphotoionrenorm;
 extern double *gammaestimator;
 
@@ -247,7 +247,7 @@ extern struct bflist_t *bflist;
 
 extern double *spontrecombcoeff;
 
-// for NO_LUT_PHOTOION = false
+// for USE_LUT_PHOTOION = true
 extern double *corrphotoioncoeff;
 
 // for NO_LUT_BFHEATING = false
@@ -262,7 +262,7 @@ extern int ncoolingterms;
 extern double *allcont_nu_edge;
 extern const struct fullphixslist *allcont;
 
-// for either NO_LUT_PHOTOION = false or NO_LUT_BFHEATING = false
+// for either USE_LUT_PHOTOION = true or NO_LUT_BFHEATING = false
 extern struct groundphixslist *groundcont;
 
 extern struct phixslist *phixslist;
