@@ -53,8 +53,8 @@ static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
   /// Check whether current atomic data and temperature range match
   /// the precalculated rate coefficients
 
-  char adatafile_hash_in[33];
-  assert_always(fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in) == 1);
+  char adatafile_hash_in[33] = "UNKNOWN";
+  fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in);
   printout("ratecoeff.dat: MD5 adata.txt = %s ", adatafile_hash_in);
   if (strcmp(adatafile_hash, adatafile_hash_in) == 0) {
     printout("(pass)\n");
@@ -63,8 +63,8 @@ static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
     return false;
   }
 
-  char compositionfile_hash_in[33];
-  assert_always(fscanf(ratecoeff_file, "%32s\n", compositionfile_hash_in) == 1);
+  char compositionfile_hash_in[33] = "UNKNOWN";
+  fscanf(ratecoeff_file, "%32s\n", compositionfile_hash_in);
   printout("ratecoeff.dat: MD5 compositiondata.txt %s ", compositionfile_hash_in);
   if (strcmp(compositionfile_hash, compositionfile_hash_in) == 0) {
     printout("(pass)\n");
@@ -75,8 +75,8 @@ static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
 
   for (int phixsver = 1; phixsver <= 2; phixsver++) {
     if (phixs_file_version_exists[phixsver]) {
-      char phixsfile_hash_in[33];
-      assert_always(fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in) == 1);
+      char phixsfile_hash_in[33] = "UNKNOWN";
+      fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in);
       printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixsver], phixsfile_hash_in);
       if (strcmp(phixsfile_hash[phixsver], phixsfile_hash_in) == 0) {
         printout("(pass)\n");
