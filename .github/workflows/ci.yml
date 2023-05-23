@@ -93,24 +93,24 @@ jobs:
                   cp input-newrun.txt input.txt
                   touch output_0-0.txt
                   time mpirun -np 2 ./sn3d
+                  mkdir job0
+                  ../../scripts/movefiles.sh job0
 
             - name: cat job0 estimators
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat estimators*.out
+              run: cat job0/estimators*.out
 
             - name: cat job0 output log
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat output_0-0.txt
+              run: cat job0/output_0-0.txt
 
             - name: Checksum job0 output files
               if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
-                  mkdir job0
-                  ../../scripts/movefiles.sh job0
-                  md5sum *.out ratecoeff*.dat job0/*.out
+                  md5sum *.out job0/*.out
 
                   if [ -f results_md5_job0.txt ]; then md5sum -c results_md5_job0.txt; else echo "results_md5_job0.txt not found"; fi
 
@@ -120,23 +120,23 @@ jobs:
               run: |
                   cp input-resume.txt input.txt
                   time mpirun -np 2 ./sn3d
+                  mkdir job1
+                  ../../scripts/movefiles.sh job1
 
             - name: cat job1 estimators
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat estimators*.out
+              run: cat job1/estimators*.out
 
             - name: cat job1 output log
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat output_0-0.txt
+              run: cat job1/output_0-0.txt
 
             - name: Run exspec
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
-                  mkdir job1
-                  ../../scripts/movefiles.sh job1
                   time mpirun -np 1 ./exspec
                   python3 ../../scripts/mergeangleres.py
                   rm -f light_curve_res_*.out spec_res_*.out specpol_res_*.out
