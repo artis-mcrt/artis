@@ -15,6 +15,6 @@ c4e4e8d00846618f3931dc01cf52615f  modelgridrankassignments.out
 040c71f981716a2abf0467a82b1ac13c  timesteps.out
 99bfc68bdb59019cbde8ce02858391b1  vspecpol_0-0.out
 99bfc68bdb59019cbde8ce02858391b1  vspecpol_1-0.out
-97792efa8fd4e21d40c6532c75997951  ratecoeff_v2.dat
+97792efa8fd4e21d40c6532c75997951  ratecoeff.dat
 ca307347ab249c9d4a18ab92a2f5f674  job0/estimators_0000.out
 8832733af2324b0b2e459411502acbae  job0/estimators_0001.out

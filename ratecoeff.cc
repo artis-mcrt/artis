@@ -46,171 +46,149 @@ static char adatafile_hash[33];
 static char compositionfile_hash[33];
 std::array<char[33], 3> phixsfile_hash;
 
-static auto read_ratecoeff_dat() -> bool
+static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
 /// Try to read in the precalculated rate coefficients from file
 /// return true if successful or false otherwise
 {
-  FILE *ratecoeff_file = fopen("ratecoeff_v2.dat", "r");
-  if (ratecoeff_file != nullptr) {
-    /// Check whether current atomic data and temperature range match
-    /// the precalculated rate coefficients
-    bool fileisamatch = true;  // assume true until a mismatch is detected
+  /// Check whether current atomic data and temperature range match
+  /// the precalculated rate coefficients
 
-    char adatafile_hash_in[33];
-    assert_always(fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in) == 1);
-    printout("ratecoeff_v2.dat: MD5 adata.txt = %s ", adatafile_hash_in);
-    if (strcmp(adatafile_hash, adatafile_hash_in) == 0) {
-      printout("(pass)\n");
-    } else {
-      printout("MISMATCH: MD5 adata.txt = %s\n", adatafile_hash);
-      fileisamatch = false;
-    }
+  char adatafile_hash_in[33];
+  assert_always(fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in) == 1);
+  printout("ratecoeff.dat: MD5 adata.txt = %s ", adatafile_hash_in);
+  if (strcmp(adatafile_hash, adatafile_hash_in) == 0) {
+    printout("(pass)\n");
+  } else {
+    printout("MISMATCH: MD5 adata.txt = %s\n", adatafile_hash);
+    return false;
+  }
 
-    char compositionfile_hash_in[33];
-    assert_always(fscanf(ratecoeff_file, "%32s\n", compositionfile_hash_in) == 1);
-    printout("ratecoeff_v2.dat: MD5 compositiondata.txt %s ", compositionfile_hash_in);
-    if (strcmp(compositionfile_hash, compositionfile_hash_in) == 0) {
-      printout("(pass)\n");
-    } else {
-      printout("\nMISMATCH: MD5 compositiondata.txt = %s\n", compositionfile_hash);
-      fileisamatch = false;
-    }
+  char compositionfile_hash_in[33];
+  assert_always(fscanf(ratecoeff_file, "%32s\n", compositionfile_hash_in) == 1);
+  printout("ratecoeff.dat: MD5 compositiondata.txt %s ", compositionfile_hash_in);
+  if (strcmp(compositionfile_hash, compositionfile_hash_in) == 0) {
+    printout("(pass)\n");
+  } else {
+    printout("\nMISMATCH: MD5 compositiondata.txt = %s\n", compositionfile_hash);
+    return false;
+  }
 
-    for (int phixsver = 1; phixsver <= 2; phixsver++) {
-      if (phixs_file_version_exists[phixsver]) {
-        char phixsfile_hash_in[33];
-        assert_always(fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in) == 1);
-        printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixsver], phixsfile_hash_in);
-        if (strcmp(phixsfile_hash[phixsver], phixsfile_hash_in) == 0) {
-          printout("(pass)\n");
-        } else {
-          printout("\nMISMATCH: MD5 %s = %s\n", phixsdata_filenames[phixsver], phixsfile_hash[phixsver]);
-          fileisamatch = false;
-        }
-      }
-    }
-
-    if (fileisamatch) {
-      double T_min = NAN;
-      double T_max = NAN;
-      int in_tablesize = 0;
-      int in_nlines = 0;
-      double in_ratecoeff_integral_accuracy = NAN;
-      assert_always(fscanf(ratecoeff_file, "%la %la %d %d %la\n", &T_min, &T_max, &in_tablesize, &in_nlines,
-                           &in_ratecoeff_integral_accuracy) == 5);
-      printout("ratecoeff_v2.dat: Tmin %g Tmax %g TABLESIZE %d nlines %d in_ratecoeff_integral_accuracy %g ", T_min,
-               T_max, in_tablesize, in_nlines, in_ratecoeff_integral_accuracy);
-
-      if (T_min == MINTEMP && T_max == MAXTEMP && in_tablesize == TABLESIZE && in_nlines == globals::nlines &&
-          in_ratecoeff_integral_accuracy == RATECOEFF_INTEGRAL_ACCURACY) {
+  for (int phixsver = 1; phixsver <= 2; phixsver++) {
+    if (phixs_file_version_exists[phixsver]) {
+      char phixsfile_hash_in[33];
+      assert_always(fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in) == 1);
+      printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixsver], phixsfile_hash_in);
+      if (strcmp(phixsfile_hash[phixsver], phixsfile_hash_in) == 0) {
         printout("(pass)\n");
       } else {
-        printout(
-            "\nMISMATCH: this simulation has MINTEMP %g MAXTEMP %g TABLESIZE %d nlines %d "
-            "RATECOEFF_INTEGRAL_ACCURACY %g\n",
-            MINTEMP, MAXTEMP, TABLESIZE, globals::nlines, RATECOEFF_INTEGRAL_ACCURACY);
-        fileisamatch = false;
-      }
-
-      if (fileisamatch) {
-        // this is redundant if the adata and composition data matches, consider removing
-        for (int element = 0; element < get_nelements(); element++) {
-          const int nions = get_nions(element);
-          for (int ion = 0; ion < nions; ion++) {
-            int in_element = 0;
-            int in_ionstage = 0;
-            int in_levels = 0;
-            int in_ionisinglevels = 0;
-            assert_always(fscanf(ratecoeff_file, "%d %d %d %d\n", &in_element, &in_ionstage, &in_levels,
-                                 &in_ionisinglevels) == 4);
-            const int nlevels = get_nlevels(element, ion);
-            int const ionisinglevels = get_ionisinglevels(element, ion);
-            if (get_atomicnumber(element) != in_element || get_ionstage(element, ion) != in_ionstage ||
-                nlevels != in_levels || ionisinglevels != in_ionisinglevels) {
-              printout(
-                  "Levels or ionising levels count mismatch! element %d %d ionstage %d %d nlevels %d %d ionisinglevels "
-                  "%d %d\n",
-                  get_atomicnumber(element), in_element, get_ionstage(element, ion), in_ionstage, nlevels, in_levels,
-                  ionisinglevels, in_ionisinglevels);
-              fileisamatch = false;
-              break;
-            }
-          }
-          if (!fileisamatch) {
-            break;
-          }
-        }
+        printout("\nMISMATCH: MD5 %s = %s\n", phixsdata_filenames[phixsver], phixsfile_hash[phixsver]);
+        return false;
       }
     }
+  }
 
-    if (fileisamatch) {
-      printout("Matching ratecoeff_v2.dat file found. Readin this file ...\n");
-      for (int element = 0; element < get_nelements(); element++) {
-        int const nions = get_nions(element) - 1;
-        for (int ion = 0; ion < nions; ion++) {
-          // nlevels = get_nlevels(element,ion);
-          const int nlevels =
-              get_ionisinglevels(element, ion);  /// number of ionising levels associated with current ion
-          // int nbfcont = get_ionisinglevels(element,ion);     /// number of ionising levels of the current ion which
-          // are used in the simulation
-          for (int level = 0; level < nlevels; level++) {
-            /// Loop over the phixs target states
-            const int nphixstargets = get_nphixstargets(element, ion, level);
-            for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-              /// Loop over the temperature grid
-              for (int iter = 0; iter < TABLESIZE; iter++) {
-                double alpha_sp = NAN;
-                double bfcooling_coeff = NAN;
-                double corrphotoioncoeff = NAN;
-                double bfheating_coeff = NAN;
-                assert_always(fscanf(ratecoeff_file, "%la %la %la %la\n", &alpha_sp, &bfcooling_coeff,
-                                     &corrphotoioncoeff, &bfheating_coeff) == 4);
+  double T_min = NAN;
+  double T_max = NAN;
+  int in_tablesize = 0;
+  int in_nlines = 0;
+  double in_ratecoeff_integral_accuracy = NAN;
+  assert_always(fscanf(ratecoeff_file, "%la %la %d %d %la\n", &T_min, &T_max, &in_tablesize, &in_nlines,
+                       &in_ratecoeff_integral_accuracy) == 5);
+  printout("ratecoeff.dat: Tmin %g Tmax %g TABLESIZE %d nlines %d in_ratecoeff_integral_accuracy %g ", T_min, T_max,
+           in_tablesize, in_nlines, in_ratecoeff_integral_accuracy);
 
-                // assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0);
-                globals::spontrecombcoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = alpha_sp;
+  if (T_min == MINTEMP && T_max == MAXTEMP && in_tablesize == TABLESIZE && in_nlines == globals::nlines &&
+      in_ratecoeff_integral_accuracy == RATECOEFF_INTEGRAL_ACCURACY) {
+    printout("(pass)\n");
+  } else {
+    printout(
+        "\nMISMATCH: this simulation has MINTEMP %g MAXTEMP %g TABLESIZE %d nlines %d "
+        "RATECOEFF_INTEGRAL_ACCURACY %g\n",
+        MINTEMP, MAXTEMP, TABLESIZE, globals::nlines, RATECOEFF_INTEGRAL_ACCURACY);
+    return false;
+  }
 
-                // assert_always(std::isfinite(bfcooling_coeff) && bfcooling_coeff >= 0);
-                globals::bfcooling_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = bfcooling_coeff;
+  // this is redundant if the adata and composition data matches, consider removing
+  for (int element = 0; element < get_nelements(); element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      int in_element = 0;
+      int in_ionstage = 0;
+      int in_levels = 0;
+      int in_ionisinglevels = 0;
+      assert_always(
+          fscanf(ratecoeff_file, "%d %d %d %d\n", &in_element, &in_ionstage, &in_levels, &in_ionisinglevels) == 4);
+      const int nlevels = get_nlevels(element, ion);
+      int const ionisinglevels = get_ionisinglevels(element, ion);
+      if (get_atomicnumber(element) != in_element || get_ionstage(element, ion) != in_ionstage ||
+          nlevels != in_levels || ionisinglevels != in_ionisinglevels) {
+        printout(
+            "Levels or ionising levels count mismatch! element %d %d ionstage %d %d nlevels %d %d ionisinglevels "
+            "%d %d\n",
+            get_atomicnumber(element), in_element, get_ionstage(element, ion), in_ionstage, nlevels, in_levels,
+            ionisinglevels, in_ionisinglevels);
+        return false;
+      }
+    }
+  }
 
-                if constexpr (!NO_LUT_PHOTOION) {
-                  if (corrphotoioncoeff >= 0) {
-                    globals::corrphotoioncoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] =
-                        corrphotoioncoeff;
-                  } else {
-                    printout(
-                        "ERROR: NO_LUT_PHOTOION is off, but there are no corrphotoioncoeff values in ratecoeff file\n");
-                    abort();
-                  }
-                }
-                if constexpr (!NO_LUT_BFHEATING) {
-                  if (bfheating_coeff >= 0) {
-                    globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] =
-                        bfheating_coeff;
-                  } else {
-                    printout(
-                        "ERROR: NO_LUT_BFHEATING is off, but there are no bfheating_coeff values in the ratecoeff "
-                        "file\n");
-                    abort();
-                  }
-                }
+  printout("Matching ratecoeff.dat file found. Readin this file ...\n");
+  for (int element = 0; element < get_nelements(); element++) {
+    int const nions = get_nions(element) - 1;
+    for (int ion = 0; ion < nions; ion++) {
+      // nlevels = get_nlevels(element,ion);
+      const int nlevels = get_ionisinglevels(element, ion);  /// number of ionising levels associated with current ion
+      // int nbfcont = get_ionisinglevels(element,ion);     /// number of ionising levels of the current ion which
+      // are used in the simulation
+      for (int level = 0; level < nlevels; level++) {
+        /// Loop over the phixs target states
+        const int nphixstargets = get_nphixstargets(element, ion, level);
+        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+          /// Loop over the temperature grid
+          for (int iter = 0; iter < TABLESIZE; iter++) {
+            double alpha_sp = NAN;
+            double bfcooling_coeff = NAN;
+            double corrphotoioncoeff = NAN;
+            double bfheating_coeff = NAN;
+            assert_always(fscanf(ratecoeff_file, "%la %la %la %la\n", &alpha_sp, &bfcooling_coeff, &corrphotoioncoeff,
+                                 &bfheating_coeff) == 4);
+
+            // assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0);
+            globals::spontrecombcoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = alpha_sp;
+
+            // assert_always(std::isfinite(bfcooling_coeff) && bfcooling_coeff >= 0);
+            globals::bfcooling_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = bfcooling_coeff;
+
+            if constexpr (!NO_LUT_PHOTOION) {
+              if (corrphotoioncoeff >= 0) {
+                globals::corrphotoioncoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] =
+                    corrphotoioncoeff;
+              } else {
+                printout(
+                    "ERROR: NO_LUT_PHOTOION is off, but there are no corrphotoioncoeff values in ratecoeff file\n");
+                abort();
+              }
+            }
+            if constexpr (!NO_LUT_BFHEATING) {
+              if (bfheating_coeff >= 0) {
+                globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = bfheating_coeff;
+              } else {
+                printout(
+                    "ERROR: NO_LUT_BFHEATING is off, but there are no bfheating_coeff values in the ratecoeff "
+                    "file\n");
+                abort();
               }
             }
           }
         }
       }
-      fclose(ratecoeff_file);
-      return true;
     }
-    printout("[info] ratecoefficients_init: ratecoeff_v2.dat does not match current simulation. Recalculating...\n");
-    fclose(ratecoeff_file);
-    return false;
   }
-  printout("[info] ratecoefficients_init:  No ratecoeff_v2.dat file available. Creating a new one...\n");
-  return false;
+  return true;
 }
 
 static void write_ratecoeff_dat() {
-  FILE *ratecoeff_file = fopen_required("ratecoeff_v2.dat", "w");
+  FILE *ratecoeff_file = fopen_required("ratecoeff.dat", "w");
   fprintf(ratecoeff_file, "%32s\n", adatafile_hash);
   fprintf(ratecoeff_file, "%32s\n", compositionfile_hash);
   for (int phixsver = 1; phixsver <= 2; phixsver++) {
@@ -1040,7 +1018,16 @@ void ratecoefficients_init()
   /// Check if we need to calculate the ratecoefficients or if we were able to read them from file
   bool ratecoeff_match = false;
   if (globals::rank_in_node == 0) {
-    ratecoeff_match = read_ratecoeff_dat();
+    FILE *ratecoeff_file = fopen("ratecoeff.dat", "r");
+    if (ratecoeff_file != nullptr) {
+      ratecoeff_match = read_ratecoeff_dat(ratecoeff_file);
+      if (!ratecoeff_match) {
+        printout("[info] ratecoefficients_init: ratecoeff.dat does not match current simulation. Recalculating...\n");
+      }
+      fclose(ratecoeff_file);
+    } else {
+      printout("[info] ratecoefficients_init: ratecoeff.dat file not found. Creating a new one...\n");
+    }
   }
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
