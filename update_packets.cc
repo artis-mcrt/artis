@@ -175,20 +175,24 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
       break;
     }
 
-    case TYPE_KPKT:
-    case TYPE_PRE_KPKT:
-      // It's a k-packet - convert to r-packet (low freq).
+    case TYPE_PRE_KPKT: {
+      kpkt::do_kpkt_bb(pkt_ptr);
+      break;
+    }
 
-      if (pkt_type == TYPE_PRE_KPKT || grid::modelgrid[grid::get_cell_modelgridindex(pkt_ptr->where)].thick == 1) {
+    case TYPE_KPKT: {
+      if (grid::modelgrid[grid::get_cell_modelgridindex(pkt_ptr->where)].thick == 1) {
         kpkt::do_kpkt_bb(pkt_ptr);
       } else {
         kpkt::do_kpkt(pkt_ptr, t2, nts);
       }
       break;
+    }
 
-    case TYPE_MA:
+    case TYPE_MA: {
       do_macroatom(pkt_ptr, nts);
       break;
+    }
 
     default:
       printout("packet_prop: Unknown packet type %d. Abort.\n", pkt_ptr->type);
