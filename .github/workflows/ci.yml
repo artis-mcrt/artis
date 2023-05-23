@@ -105,7 +105,7 @@ jobs:
               run: cat output_0-0.txt
 
             - name: Checksum job0 output files
-              if: always() && matrix.os != 'selfhosted'
+              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   mkdir job0
@@ -152,7 +152,7 @@ jobs:
                   cat exspec.txt
 
             - name: Checksum job1 output files
-              if: always() && matrix.os != 'selfhosted'
+              if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   md5sum *.out job1/*.out
