@@ -936,7 +936,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
 }
 
 static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, const double estimator_normfactor) {
-  assert_always(USE_LUT_PHOTOION || !NO_LUT_BFHEATING);
+  assert_always(USE_LUT_PHOTOION || USE_LUT_BFHEATING);
   if constexpr (USE_LUT_PHOTOION) {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
@@ -974,7 +974,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
       /// photoionsation rate!
     }
   }
-  if constexpr (USE_LUT_PHOTOION || !NO_LUT_BFHEATING) {
+  if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     /// Then reopen the same loops again.
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
@@ -991,7 +991,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
           // printout("mgi %d, element %d, ion %d, Gamma %g\n",n,element,ion,Gamma);
         }
 
-        if constexpr (!NO_LUT_BFHEATING) {
+        if constexpr (USE_LUT_BFHEATING) {
           globals::bfheatingestimator[ionestimindex] *= estimator_normfactor;
 #ifdef DO_TITER
           if (bfheatingestimator_save[ionestimindex] >= 0) {
@@ -1171,7 +1171,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
           titer_average_estimators(mgi);
 #endif
 
-          if constexpr (USE_LUT_PHOTOION || !NO_LUT_BFHEATING) {
+          if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
             update_gamma_corrphotoionrenorm_bfheating_estimators(mgi, estimator_normfactor);
           }
 

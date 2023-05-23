@@ -1194,7 +1194,7 @@ static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcont
 /// continuum return -1.
 /// NB: groundphixslist must be in ascending order.
 {
-  assert_always((USE_LUT_PHOTOION || !NO_LUT_BFHEATING));
+  assert_always((USE_LUT_PHOTOION || USE_LUT_BFHEATING));
   int index = 0;
 
   if (nu_edge < globals::groundcont[0].nu_edge) {
@@ -1459,7 +1459,7 @@ static void setup_phixs_list() {
   for (int itid = 0; itid < get_max_threads(); itid++) {
     /// Number of ground level bf-continua equals the total number of included ions minus the number
     /// of included elements, because the uppermost ionisation stages can't ionise.
-    if ((USE_LUT_PHOTOION || !NO_LUT_BFHEATING) && globals::nbfcontinua_ground > 0) {
+    if ((USE_LUT_PHOTOION || USE_LUT_BFHEATING) && globals::nbfcontinua_ground > 0) {
       globals::phixslist[itid].groundcont_gamma_contr =
           static_cast<double *>(malloc(globals::nbfcontinua_ground * sizeof(double)));
       assert_always(globals::phixslist[itid].groundcont_gamma_contr != nullptr);
@@ -1496,13 +1496,13 @@ static void setup_phixs_list() {
              globals::nbfcontinua * sizeof(double) / 1024. / 1024.);
   }
 
-  if constexpr (USE_LUT_PHOTOION || !NO_LUT_BFHEATING) {
+  if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     globals::groundcont =
         static_cast<struct groundphixslist *>(malloc(globals::nbfcontinua_ground * sizeof(struct groundphixslist)));
     assert_always(globals::groundcont != nullptr);
   }
 
-  if constexpr (USE_LUT_PHOTOION || !NO_LUT_BFHEATING) {
+  if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     int groundcontindex = 0;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
@@ -1562,7 +1562,7 @@ static void setup_phixs_list() {
           nonconstallcont[allcontindex].probability = get_phixsprobability(element, ion, level, phixstargetindex);
           nonconstallcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-          if constexpr (USE_LUT_PHOTOION || !NO_LUT_BFHEATING) {
+          if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
             int index_in_groundlevelcontestimator = 0;
             nonconstallcont[allcontindex].index_in_groundphixslist =
                 search_groundphixslist(nu_edge, &index_in_groundlevelcontestimator, element, ion, level);
@@ -1666,7 +1666,7 @@ static void setup_phixs_list() {
       mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
     }
 
-    if constexpr (!NO_LUT_BFHEATING) {
+    if constexpr (USE_LUT_BFHEATING) {
 #ifdef MPI_ON
       size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * sizeof(double) : 0;
       assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
@@ -2035,7 +2035,7 @@ void read_parameterfile(int rank)
         "estimator.\n");
   }
 
-  if (NO_LUT_BFHEATING) {
+  if (!USE_LUT_BFHEATING) {
     printout(
         "bfheating coefficients are calculated from the radiation field at each timestep in each modelgrid cell (no "
         "LUT).\n");

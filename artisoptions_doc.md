@@ -102,12 +102,12 @@ constexpr bool DETAILED_BF_ESTIMATORS_ON;
 // if DETAILED_BF_ESTIMATORS_ON, then use BF estimators at the following timestep and later
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP;
 
-// dynamically calculate photoionization rates for the current radiation field
-// instead of interpolating values from a lookup table for a blackbody radiation field
+// interpolate values from a lookup table for a blackbody radiation field
+// instead of dynamically integrating photoionization rates for the exact radiation field
 constexpr bool USE_LUT_PHOTOION;
 
 // as above for bound-free heating
-constexpr bool NO_LUT_BFHEATING;
+constexpr bool USE_LUT_BFHEATING;
 
 // if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
 #define SEPARATE_STIMRECOMB false

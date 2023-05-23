@@ -1671,7 +1671,7 @@ void read_ejecta_model() {
 #endif
   }
 
-  if constexpr (!NO_LUT_BFHEATING) {
+  if constexpr (USE_LUT_BFHEATING) {
     globals::bfheatingestimator =
         static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
 #ifdef DO_TITER

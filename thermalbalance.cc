@@ -34,7 +34,7 @@ auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetinde
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
   /// correction may be evaluated at T_R!
-  assert_always(!NO_LUT_BFHEATING);
+  assert_always(USE_LUT_BFHEATING);
   double bfheatingcoeff = 0.;
 
   /*double nnlevel = get_levelpop(cellnumber,element,ion,level);
@@ -141,7 +141,7 @@ static auto get_bfheatingcoeff(int element, int ion, int level) -> double
 void calculate_bfheatingcoeffs(int modelgridindex) {
   const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++) {
-    if (grid::get_elem_abundance(modelgridindex, element) <= minelfrac && NO_LUT_BFHEATING) {
+    if (grid::get_elem_abundance(modelgridindex, element) <= minelfrac && !USE_LUT_BFHEATING) {
       printout("skipping Z=%d X=%g, ", get_atomicnumber(element), grid::get_elem_abundance(modelgridindex, element));
     }
 
@@ -150,10 +150,10 @@ void calculate_bfheatingcoeffs(int modelgridindex) {
       const int nlevels = get_nlevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
         double bfheatingcoeff = 0.;
-        if (grid::get_elem_abundance(modelgridindex, element) > minelfrac || !NO_LUT_BFHEATING) {
+        if (grid::get_elem_abundance(modelgridindex, element) > minelfrac || USE_LUT_BFHEATING) {
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level);
                phixstargetindex++) {
-            if constexpr (NO_LUT_BFHEATING) {
+            if constexpr (!USE_LUT_BFHEATING) {
               bfheatingcoeff += calculate_bfheatingcoeff(element, ion, level, phixstargetindex, modelgridindex);
             } else {
               /// The correction factor for stimulated emission in gammacorr is set to its
@@ -166,7 +166,7 @@ void calculate_bfheatingcoeffs(int modelgridindex) {
           }
           assert_always(std::isfinite(bfheatingcoeff));
 
-          if constexpr (!NO_LUT_BFHEATING) {
+          if constexpr (USE_LUT_BFHEATING) {
             const int index_in_groundlevelcontestimator =
                 globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
             if (index_in_groundlevelcontestimator >= 0) {

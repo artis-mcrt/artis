@@ -412,7 +412,7 @@ void initialise_prev_titer_photoionestimators() {
       for (int ion = 0; ion < nions - 1; ion++) {
 #ifdef DO_TITER
         globals::gammaestimator_save[n * get_nelements() * get_max_nions() + element * get_max_nions() + ion] = -1.;
-        if constexpr (!NO_LUT_BFHEATING) {
+        if constexpr (USE_LUT_BFHEATING) {
           globals::bfheatingestimator_save[n * get_nelements() * get_max_nions() + element * get_max_nions() + ion] =
               -1.;
         }

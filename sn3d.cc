@@ -327,7 +327,7 @@ static void mpi_reduce_estimators(int nts) {
     assert_always(globals::gammaestimator != nullptr);
     MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
-  if constexpr (!NO_LUT_BFHEATING) {
+  if constexpr (USE_LUT_BFHEATING) {
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
@@ -553,7 +553,7 @@ static void zero_estimators() {
           if constexpr (USE_LUT_PHOTOION) {
             globals::gammaestimator[n * get_nelements() * get_max_nions() + element * get_max_nions() + ion] = 0.;
           }
-          if constexpr (!NO_LUT_BFHEATING) {
+          if constexpr (USE_LUT_BFHEATING) {
             globals::bfheatingestimator[n * get_nelements() * get_max_nions() + element * get_max_nions() + ion] = 0.;
           }
         }

@@ -17,7 +17,7 @@ double *rpkt_emiss = nullptr;  /// Volume estimator for the rpkt emissivity
 double *corrphotoionrenorm = nullptr;
 double *gammaestimator = nullptr;
 
-// for NO_LUT_BFHEATING = false
+// for USE_LUT_BFHEATING = true
 double *bfheatingestimator = nullptr;
 
 double *ffheatingestimator = nullptr;
@@ -58,7 +58,7 @@ double *spontrecombcoeff = nullptr;
 // for USE_LUT_PHOTOION = true
 double *corrphotoioncoeff = nullptr;
 
-// for NO_LUT_BFHEATING = false
+// for USE_LUT_BFHEATING = true
 double *bfheating_coeff = nullptr;
 
 double *bfcooling_coeff = nullptr;
@@ -73,7 +73,7 @@ int ncoolingterms;
 double *allcont_nu_edge = nullptr;
 const struct fullphixslist *allcont = nullptr;
 
-// for either USE_LUT_PHOTOION = true or NO_LUT_BFHEATING = false
+// for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
 struct groundphixslist *groundcont = nullptr;
 
 struct phixslist *phixslist = nullptr;

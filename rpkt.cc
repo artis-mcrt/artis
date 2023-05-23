@@ -732,7 +732,7 @@ static void update_estimators(struct packet *pkt_ptr, const double distance)
   /// quick and dirty solution: store info in element=ion=0, and leave the others untouched (i.e. zero)
   safeadd(globals::ffheatingestimator[modelgridindex], distance_e_cmf * globals::kappa_rpkt_cont[tid].ffheating);
 
-  if constexpr (USE_LUT_PHOTOION || !NO_LUT_BFHEATING) {
+  if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     const double distance_e_cmf_over_nu = distance_e_cmf / nu;
     const int nelements = get_nelements();
     const int max_nions = get_max_nions();
@@ -762,7 +762,7 @@ static void update_estimators(struct packet *pkt_ptr, const double distance)
             }
           }
 
-          if constexpr (!NO_LUT_BFHEATING) {
+          if constexpr (USE_LUT_BFHEATING) {
             safeadd(globals::bfheatingestimator[ionestimindex],
                     globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu));
           }
@@ -1210,7 +1210,7 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
 // bound-free opacity
 {
   double kappa_bf_sum = 0.;
-  if constexpr (USE_LUT_PHOTOION || !NO_LUT_BFHEATING) {
+  if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     for (int gphixsindex = 0; gphixsindex < globals::nbfcontinua_ground; gphixsindex++) {
       globals::phixslist[tid].groundcont_gamma_contr[gphixsindex] = 0.;
     }
@@ -1288,7 +1288,7 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
 
         const double kappa_bf_contr = nnlevel * sigma_bf * probability * corrfactor;
 
-        if constexpr (USE_LUT_PHOTOION || !NO_LUT_BFHEATING) {
+        if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
           if (level == 0) {
             const int gphixsindex = globals::allcont[i].index_in_groundphixslist;
             globals::phixslist[tid].groundcont_gamma_contr[gphixsindex] += sigma_bf * probability * corrfactor;

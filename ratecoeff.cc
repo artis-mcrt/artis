@@ -195,12 +195,12 @@ static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
                 abort();
               }
             }
-            if constexpr (!NO_LUT_BFHEATING) {
+            if constexpr (USE_LUT_BFHEATING) {
               if (bfheating_coeff >= 0) {
                 globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] = bfheating_coeff;
               } else {
                 printout(
-                    "ERROR: NO_LUT_BFHEATING is off, but there are no bfheating_coeff values in the ratecoeff "
+                    "ERROR: USE_LUT_BFHEATING is on, but there are no bfheating_coeff values in the ratecoeff "
                     "file\n");
                 abort();
               }
@@ -247,7 +247,7 @@ static void write_ratecoeff_dat() {
             const double bfcooling_coeff = globals::bfcooling_coeff[bflutindex];
 
             const double corrphotoioncoeff = !USE_LUT_PHOTOION ? -1 : globals::corrphotoioncoeff[bflutindex];
-            const double bfheating_coeff = NO_LUT_BFHEATING ? -1 : globals::bfheating_coeff[bflutindex];
+            const double bfheating_coeff = !USE_LUT_BFHEATING ? -1 : globals::bfheating_coeff[bflutindex];
 
             fprintf(ratecoeff_file, "%la %la %la %la\n", alpha_sp, bfcooling_coeff, corrphotoioncoeff, bfheating_coeff);
           }
@@ -341,7 +341,7 @@ static auto approx_bfheating_integrand_gsl(const double nu, void *const voidpara
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-  assert_testmodeonly(!NO_LUT_BFHEATING);
+  assert_testmodeonly(USE_LUT_BFHEATING);
 
   const gslintegration_paras *const params = static_cast<gslintegration_paras *>(voidparas);
 
@@ -601,7 +601,7 @@ static void precalculate_rate_coefficient_integrals() {
               globals::corrphotoioncoeff[bflutindex] = gammacorr;
             }
 
-            if constexpr (!NO_LUT_BFHEATING) {
+            if constexpr (USE_LUT_BFHEATING) {
               double bfheating_coeff = 0.0;
               const gsl_function F_bfheating = {.function = &approx_bfheating_integrand_gsl, .params = &intparas};
 
@@ -850,7 +850,7 @@ static void scale_level_phixs(const int element, const int ion, const int level,
           globals::corrphotoioncoeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
         }
 
-        if constexpr (!NO_LUT_BFHEATING) {
+        if constexpr (USE_LUT_BFHEATING) {
           globals::bfheating_coeff[get_bflutindex(iter, element, ion, level, phixstargetindex)] *= factor;
         }
 
