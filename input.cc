@@ -305,7 +305,7 @@ static void read_phixs_data(const int phixs_file_version) {
       assert_always(lowerionstage >= 0);
       assert_always(lowerlevel >= 0);
       /// store only photoionization crosssections for ions that are part of the current model atom
-      if (lowerion >= 0 && lowerlevel < get_nlevels(element, lowerion) && upperion < get_nions(element)) {
+      if (lowerion >= 0 && upperion < get_nions(element) && lowerlevel < get_nlevels(element, lowerion)) {
         read_phixs_data_table(phixsdata, nphixspoints_inputtable, element, lowerion, lowerlevel, upperion,
                               upperlevel_in, phixs_threshold_ev, &mem_usage_phixs);
 
