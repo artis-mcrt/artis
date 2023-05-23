@@ -327,7 +327,7 @@ auto calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
     return get_groundlevelpop(modelgridindex, element, ion);
   }
 
-  const double T_exc = LTEPOP_EXCITATIONTEMPERATURE;
+  const double T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(modelgridindex) : grid::get_Te(modelgridindex);
   const double W = 1.;
 
   const double E_level = epsilon(element, ion, level);
@@ -477,7 +477,6 @@ auto calculate_partfunct(int element, int ion, int modelgridindex) -> double
     printout("modelgridindex %d\n", modelgridindex);
     printout("nlevels %d\n", nlevels);
     printout("sw %g\n", stat_weight(element, ion, 0));
-    printout("T_exc %g \n", LTEPOP_EXCITATIONTEMPERATURE);
     abort();
   }
 

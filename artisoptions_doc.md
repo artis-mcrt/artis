@@ -21,8 +21,8 @@ constexpr int NLTEITER;
 // (i.e. level indices < X should return true for some X)
 constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) { return false; }
 
-// atomic data and LTE
-#define LTEPOP_EXCITATIONTEMPERATURE grid::get_Te(modelgridindex)
+// Use TJ radiation density temperature for Boltzmann excitation formua instead of electron temperature Te
+constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
 
 // Only include a single level for the highest ion stage
 constexpr bool single_level_top_ion;
