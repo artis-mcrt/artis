@@ -1857,7 +1857,7 @@ static void assign_initial_temperatures()
       continue;
     }
     double decayedenergy_per_mass = decay::get_endecay_per_ejectamass_t0_to_time_withexpansion(mgi, tstart);
-    if constexpr (!NO_INITIAL_PACKETS && USE_MODEL_INITIAL_ENERGY) {
+    if constexpr (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) {
       decayedenergy_per_mass += get_initenergyq(mgi);
     }
 

@@ -6,7 +6,7 @@
 
 #include "constants.h"
 
-constexpr int MPKTS = 100000;
+constexpr int MPKTS = 4000;
 
 constexpr int GRID_TYPE = GRID_UNIFORM;
 constexpr int CUBOID_NCOORDGRID_X = 100;
@@ -32,7 +32,7 @@ constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) { return 0; }
 constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
 constexpr bool DIRECT_COL_HEAT = false;
-constexpr bool NO_INITIAL_PACKETS = false;
+constexpr bool INITIAL_PACKETS_ON = true;
 constexpr bool RECORD_LINESTAT = false;
 
 constexpr bool USE_MODEL_INITIAL_ENERGY = true;

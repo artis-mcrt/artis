@@ -66,7 +66,7 @@ void packet_init(int my_rank, struct packet *pkt)
 #endif
   printout("UNIFORM_PELLET_ENERGIES is %s\n", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
 
-  printout("INITIAL_PACKETS is %s\n", (NO_INITIAL_PACKETS ? "off" : "on"));
+  printout("INITIAL_PACKETS_ON is %s\n", (INITIAL_PACKETS_ON ? "on" : "off"));
 
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
@@ -88,7 +88,7 @@ void packet_init(int my_rank, struct packet *pkt)
     if (mgi < grid::get_npts_model())  // some grid cells are empty
     {
       double q = decay::get_modelcell_simtime_endecay_per_mass(mgi);
-      if constexpr (!NO_INITIAL_PACKETS && USE_MODEL_INITIAL_ENERGY) {
+      if constexpr (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) {
         q += grid::get_initenergyq(mgi);
       }
 

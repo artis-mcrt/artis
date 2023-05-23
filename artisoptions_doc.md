@@ -40,12 +40,18 @@ constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {
 constexpr bool UNIFORM_PELLET_ENERGIES;
 
 constexpr bool DIRECT_COL_HEAT;
-constexpr bool NO_INITIAL_PACKETS;
-constexpr bool RECORD_LINESTAT;
+
+// INITIAL PACKETS will seed the cells on the first timestep at tmin with K-packets
+// repesenting decay energy from t_model to tmin, and,
+// if USE_MODEL_INITIAL_ENERGY is true, also the snapshot energy at t_model
+constexpr bool INITIAL_PACKETS_ON;
 
 // allows non-zero energy density at time t_model using q column in model.txt
-// NO_INITIAL_PACKETS must be disabled to make use of this
+// INITIAL_PACKETS_ON must be true to make use of this
 constexpr bool USE_MODEL_INITIAL_ENERGY;
+
+// record counts of emissions and absorptions in each line
+constexpr bool RECORD_LINESTAT;
 
 /// Rate coefficients
 constexpr int TABLESIZE;

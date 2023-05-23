@@ -1006,7 +1006,7 @@ static auto calculate_simtime_endecay_per_ejectamass(const int mgi, const int de
 {
   assert_testmodeonly(mgi < grid::get_npts_model());
 
-  if constexpr (NO_INITIAL_PACKETS) {
+  if constexpr (!INITIAL_PACKETS_ON) {
     // get decay energy released from t=tmin to tmax
     return get_endecay_per_ejectamass_between_times(mgi, decaypathindex, globals::tmin, globals::tmax);
   } else {
@@ -1355,7 +1355,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
   const int num_decaypaths = get_num_decaypaths();
 
   // decay channels include all radioactive decay paths, and possibly also an initial cell energy channel
-  const int num_decaychannels = num_decaypaths + ((!NO_INITIAL_PACKETS && USE_MODEL_INITIAL_ENERGY) ? 1 : 0);
+  const int num_decaychannels = num_decaypaths + ((INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) ? 1 : 0);
 
   auto cumulative_en_sum = std::make_unique<double[]>(num_decaychannels);
   double energysum = 0.;
@@ -1389,7 +1389,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
   if (decaychannelindex >= num_decaypaths) {
     assert_always(decaychannelindex == num_decaypaths);  // only one non-radioactive channel for now
     assert_always(USE_MODEL_INITIAL_ENERGY);
-    assert_always(!NO_INITIAL_PACKETS);
+    assert_always(INITIAL_PACKETS_ON);
 
     pkt_ptr->prop_time = globals::tmin;
     pkt_ptr->tdecay = globals::tmin;
@@ -1404,7 +1404,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
   const int decaypathindex = decaychannelindex;
 
   // possibly allow decays before the first timestep
-  const double tdecaymin = NO_INITIAL_PACKETS ? globals::tmin : grid::get_t_model();
+  const double tdecaymin = !INITIAL_PACKETS_ON ? globals::tmin : grid::get_t_model();
 
   if constexpr (UNIFORM_PELLET_ENERGIES) {
     pkt_ptr->tdecay = sample_decaytime(decaypathindex, tdecaymin, globals::tmax);

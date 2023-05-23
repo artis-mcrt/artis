@@ -38,7 +38,7 @@ constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) { return 0; }
 constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
 constexpr bool DIRECT_COL_HEAT = true;
-constexpr bool NO_INITIAL_PACKETS = false;
+constexpr bool INITIAL_PACKETS_ON = true;
 constexpr bool RECORD_LINESTAT = true;
 
 constexpr bool USE_MODEL_INITIAL_ENERGY = true;
