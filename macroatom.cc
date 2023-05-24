@@ -823,8 +823,10 @@ auto rad_recombination_ratecoeff(const float T_e, const float nne, const int ele
     if (get_phixsupperlevel(element, lowerion, lowerionlevel, phixstargetindex) == upperionlevel) {
       R = nne * get_spontrecombcoeff(element, lowerion, lowerionlevel, phixstargetindex, T_e);
 
-      if (modelgridindex >= 0 && SEPARATE_STIMRECOMB) {
-        R += nne * get_stimrecombcoeff(element, lowerion, lowerionlevel, phixstargetindex, modelgridindex);
+      if constexpr (SEPARATE_STIMRECOMB) {
+        if (modelgridindex >= 0) {
+          R += nne * get_stimrecombcoeff(element, lowerion, lowerionlevel, phixstargetindex, modelgridindex);
+        }
       }
       break;
     }
@@ -838,15 +840,18 @@ auto rad_recombination_ratecoeff(const float T_e, const float nne, const int ele
 auto stim_recombination_ratecoeff(const float nne, const int element, const int upperion, const int upper,
                                   const int lower, const int modelgridindex) -> double {
   double R = 0.0;
-  const int nphixstargets = get_nphixstargets(element, upperion - 1, lower);
-  for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-    if (get_phixsupperlevel(element, upperion - 1, lower, phixstargetindex) == upper) {
-      R = nne * get_stimrecombcoeff(element, upperion - 1, lower, phixstargetindex, modelgridindex);
-      break;
-    }
-  }
 
-  assert_always(std::isfinite(R));
+  if constexpr (SEPARATE_STIMRECOMB) {
+    const int nphixstargets = get_nphixstargets(element, upperion - 1, lower);
+    for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+      if (get_phixsupperlevel(element, upperion - 1, lower, phixstargetindex) == upper) {
+        R = nne * get_stimrecombcoeff(element, upperion - 1, lower, phixstargetindex, modelgridindex);
+        break;
+      }
+    }
+
+    assert_always(std::isfinite(R));
+  }
 
   return R;
 }
