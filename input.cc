@@ -1297,7 +1297,7 @@ static void setup_cellhistory() {
 
         for (int level = 0; level < nlevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
-          chphixsblocksize += nphixstargets * sizeof(struct chphixstargets);
+          chphixsblocksize += nphixstargets * sizeof(chphixstargets);
 
           const int ndowntrans = get_ndowntrans(element, ion, level);
           const int nuptrans = get_nuptrans(element, ion, level);
@@ -1307,8 +1307,8 @@ static void setup_cellhistory() {
     }
     assert_always(chlevelblocksize > 0);
     globals::cellhistory[tid].ch_all_levels = static_cast<struct chlevels *>(malloc(chlevelblocksize));
-    struct chphixstargets *chphixstargetsblock =
-        chphixsblocksize > 0 ? static_cast<struct chphixstargets *>(malloc(chphixsblocksize)) : nullptr;
+    chphixstargets *chphixstargetsblock =
+        chphixsblocksize > 0 ? static_cast<chphixstargets *>(malloc(chphixsblocksize)) : nullptr;
     mem_usage_cellhistory += chlevelblocksize + chphixsblocksize;
 
     mem_usage_cellhistory += chtransblocksize * sizeof(double);

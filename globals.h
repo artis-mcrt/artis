@@ -164,18 +164,27 @@ struct rpkt_cont_opacity {
   bool recalculate_required;  // e.g. when cell or timestep has changed
 };
 
-struct chphixstargets {
+template <bool separatestimrecomb>
+struct _chphixstargets {};
+
+template <>
+struct _chphixstargets<false> {
   double corrphotoioncoeff;
-#if (SEPARATE_STIMRECOMB)
-  double stimrecombcoeff;
-#endif
 };
+
+template <>
+struct _chphixstargets<true> {
+  double corrphotoioncoeff;
+  double stimrecombcoeff;
+};
+
+using chphixstargets = _chphixstargets<SEPARATE_STIMRECOMB>;
 
 #include "macroatom.h"
 
 struct chlevels {
   double processrates[MA_ACTION_COUNT];
-  struct chphixstargets *chphixstargets;
+  chphixstargets *chphixstargets;
   double bfheatingcoeff;
   double population;
   double *sum_epstrans_rad_deexc;
