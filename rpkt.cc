@@ -1216,10 +1216,8 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
     }
   }
 
-#if (!SEPARATE_STIMRECOMB)
   const double T_e = grid::get_Te(modelgridindex);
   const double nne = grid::get_nne(modelgridindex);
-#endif
   const double nnetot = grid::get_nnetot(modelgridindex);
 
   /// The phixslist is sorted by nu_edge in ascending order (longest to shortest wavelength)
@@ -1264,27 +1262,28 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
         const double probability = globals::allcont[i].probability;
         // assert_always(probability == probability2);
 
-#if (SEPARATE_STIMRECOMB)
-        const double corrfactor = 1.;  // no subtraction of stimulated recombination
-#else
-        double departure_ratio = globals::cellhistory[tid].ch_allcont_departureratios[i];
-        if (departure_ratio < 0) {
-          // const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+        double corrfactor;
+        if constexpr (SEPARATE_STIMRECOMB) {
+          corrfactor = 1.;  // no subtraction of stimulated recombination
+        } else {
+          double departure_ratio = globals::cellhistory[tid].ch_allcont_departureratios[i];
+          if (departure_ratio < 0) {
+            // const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-          const int upper = globals::allcont[i].upperlevel;
-          const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
-          const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
-          departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
-          globals::cellhistory[tid].ch_allcont_departureratios[i] = departure_ratio;
-        }
+            const int upper = globals::allcont[i].upperlevel;
+            const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
+            const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
+            departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
+            globals::cellhistory[tid].ch_allcont_departureratios[i] = departure_ratio;
+          }
 
-        const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
-        double corrfactor = 1 - stimfactor;  // photoionisation minus stimulated recombination
-        if (corrfactor < 0) {
-          corrfactor = 0.;
+          const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
+          corrfactor = 1 - stimfactor;  // photoionisation minus stimulated recombination
+          if (corrfactor < 0) {
+            corrfactor = 0.;
+          }
+          // const double corrfactor = 1.; // no subtraction of stimulated recombination
         }
-        // const double corrfactor = 1.; // no subtraction of stimulated recombination
-#endif
 
         const double kappa_bf_contr = nnlevel * sigma_bf * probability * corrfactor;
 
