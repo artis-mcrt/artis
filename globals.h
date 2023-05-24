@@ -165,20 +165,12 @@ struct rpkt_cont_opacity {
 };
 
 template <bool separatestimrecomb>
-struct _chphixstargets {};
-
-template <>
-struct _chphixstargets<false> {
+struct _chphixstargets {
   double corrphotoioncoeff;
+  std::enable_if<separatestimrecomb, double> stimrecombcoeff;
 };
 
-template <>
-struct _chphixstargets<true> {
-  double corrphotoioncoeff;
-  double stimrecombcoeff;
-};
-
-using chphixstargets_t = _chphixstargets<SEPARATE_STIMRECOMB>;
+using chphixstargets_t = struct _chphixstargets<SEPARATE_STIMRECOMB>;
 
 #include "macroatom.h"
 
