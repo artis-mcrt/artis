@@ -178,13 +178,13 @@ struct _chphixstargets<true> {
   double stimrecombcoeff;
 };
 
-using chphixstargets = _chphixstargets<SEPARATE_STIMRECOMB>;
+using chphixstargets_t = _chphixstargets<SEPARATE_STIMRECOMB>;
 
 #include "macroatom.h"
 
 struct chlevels {
   double processrates[MA_ACTION_COUNT];
-  chphixstargets *chphixstargets;
+  chphixstargets_t *chphixstargets;
   double bfheatingcoeff;
   double population;
   double *sum_epstrans_rad_deexc;
