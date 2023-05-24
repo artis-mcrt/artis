@@ -22,9 +22,8 @@ constexpr int NLTEITER = 30;
 constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) {
   if (element_z == 26 && ionstage == 2) {
     return (level <= 197);
-  } else {
-    return (level <= 80);
   }
+  return (level <= 80);
 }
 
 constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
