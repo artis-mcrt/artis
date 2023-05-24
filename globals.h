@@ -167,7 +167,12 @@ struct rpkt_cont_opacity {
 template <bool separatestimrecomb>
 struct _chphixstargets {
   double corrphotoioncoeff;
-  std::enable_if<separatestimrecomb, double> stimrecombcoeff;
+};
+
+template <>
+struct _chphixstargets<true> {
+  double corrphotoioncoeff;
+  double separatestimrecomb;
 };
 
 using chphixstargets_t = struct _chphixstargets<SEPARATE_STIMRECOMB>;
