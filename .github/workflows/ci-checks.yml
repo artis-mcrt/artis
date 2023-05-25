@@ -45,7 +45,7 @@ jobs:
         runs-on: ubuntu-22.04
         strategy:
             matrix:
-                compiler: [{name: gcc, ver: 11}, {name: gcc, ver: 12}, {name: clang, ver: 14}, {name: clang, ver: 15}]
+                compiler: [{name: gcc, ver: 11}, {name: gcc, ver: 12}, {name: clang, ver: 14}, {name: clang, ver: 15}, {name: clang, ver: 16}]
                 mpi: [ON, OFF]
                 artisoptionsfile: [artisoptions_classic.h, artisoptions_nltenebular.h]
             fail-fast: false
@@ -71,11 +71,22 @@ jobs:
                   sudo apt-get install -y gcc-${{ matrix.compiler.ver }} g++-${{ matrix.compiler.ver }}
                   echo "CXX=g++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
 
+            - name: Install LLVM and Clang
+              if: matrix.compiler.name == 'clang'
+              uses: KyleMayes/install-llvm-action@v1
+              with:
+                  version: ${{ matrix.compiler.ver }}
+
             - name: Install clang-${{ matrix.compiler.ver }}
               if: matrix.compiler.name == 'clang'
               run: |
-                  sudo apt-get install -y clang-${{ matrix.compiler.ver }} --install-suggests
                   echo "CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
+
+            # - name: Install clang-${{ matrix.compiler.ver }}
+            #   if: matrix.compiler.name == 'clang'
+            #   run: |
+            #       sudo apt-get install -y clang-${{ matrix.compiler.ver }} --install-suggests
+            #       echo "CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
 
             - name: install openmpi
               if: matrix.mpi == 'ON'
