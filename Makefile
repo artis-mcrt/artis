@@ -21,7 +21,6 @@ ifeq ($(shell uname -s),Darwin)
 #	CXXFLAGS += -Rpass=loop-vectorize
 #	CXXFLAGS += -Rpass-missed=loop-vectorize
 #	CXXFLAGS += -Rpass-analysis=loop-vectorize
-
 	# CXXFLAGS += -fopenmp-simd
 
 	# enable OpenMP for Clang
@@ -41,6 +40,8 @@ else ifeq ($(USER),localadmin_ccollins)
 	CXXFLAGS += -std=c++17 -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
 
 else
+	CXXFLAGS += -stdlib=libstdc++
+
 	# sometimes the login nodes have slighty different CPUs
 	# to the job nodes. Try to find the lowest common denominator here
 	# to enable vector extensions
