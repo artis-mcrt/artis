@@ -909,7 +909,7 @@ auto main(int argc, char *argv[]) -> int {
     /// Next we want to initialise the packets.
     /// Create a bunch of npkts packets
     /// and write them to a binary file for later readin.
-    packet_init(my_rank, packets);
+    packet_init(packets);
     zero_estimators();
   }
 

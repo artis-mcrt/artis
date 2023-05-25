@@ -73,7 +73,7 @@ static void eliminate_nlte_matrix_rowcol(const int index, const int gs_index, gs
 }
 
 static void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_vector *balance_vector,
-                               const gsl_vector *pop_norm_factor_vec)
+                               const gsl_vector * /*pop_norm_factor_vec*/)
 // find rows and columns that barely interaction with other levels, and effectively
 // removing them by zeroing their interactions and setting their departure
 // coeff to 1.0

@@ -519,7 +519,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, struct rpkt_cont_opacit
 
     // generate a virtual packet
     if constexpr (VPKT_ON) {
-      int realtype = 1;
+      int const realtype = 1;
       pkt_ptr->last_cross = NONE;
       vpkt_call_estimators(pkt_ptr, pkt_ptr->prop_time, realtype);
     }
@@ -1262,7 +1262,7 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
         const double probability = globals::allcont[i].probability;
         // assert_always(probability == probability2);
 
-        double corrfactor;
+        double corrfactor = NAN;
         if constexpr (SEPARATE_STIMRECOMB) {
           corrfactor = 1.;  // no subtraction of stimulated recombination
         } else {

@@ -58,7 +58,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
 }
 
-void packet_init(int my_rank, struct packet *pkt)
+void packet_init(struct packet *pkt)
 /// Subroutine that initialises the packets if we start a new simulation.
 {
 #ifdef MPI_ON
