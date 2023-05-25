@@ -8,26 +8,30 @@
 
 namespace stats {
 
-static __managed__ double *ionstats = NULL;
-static __managed__ int *eventstats = NULL;
+static double *ionstats = nullptr;
+static int *eventstats = nullptr;
 
-void init(void) {
-  if (TRACK_ION_STATS) {
-    ionstats = (double *)malloc(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT * sizeof(double));
+void init() {
+  if constexpr (TRACK_ION_STATS) {
+    ionstats =
+        static_cast<double *>(malloc(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT * sizeof(double)));
   }
-  eventstats = (int *)malloc(COUNTER_COUNT * sizeof(int));
+  eventstats = static_cast<int *>(malloc(COUNTER_COUNT * sizeof(int)));
 }
 
-void cleanup(void) {
-  if (TRACK_ION_STATS) {
+void cleanup() {
+  if constexpr (TRACK_ION_STATS) {
     free(ionstats);
   }
   free(eventstats);
 }
 
-__host__ __device__ void increment_ion_stats(const int modelgridindex, const int element, const int ion,
-                                             enum ionstattypes ionstattype, const double increment) {
-  if (!TRACK_ION_MASTATS && (ionstattype >= 18)) {
+void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype,
+                         const double increment) {
+  if constexpr (!TRACK_ION_MASTATS) {
+    return;
+  }
+  if (ionstattype >= 18) {
     return;
   }
 
@@ -40,9 +44,8 @@ __host__ __device__ void increment_ion_stats(const int modelgridindex, const int
       increment);
 }
 
-__host__ __device__ void increment_ion_stats_contabsorption(const struct packet *const pkt_ptr,
-                                                            const int modelgridindex, const int element,
-                                                            const int ion) {
+void increment_ion_stats_contabsorption(const struct packet *const pkt_ptr, const int modelgridindex, const int element,
+                                        const int ion) {
   const double n_photons_absorbed = pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
 
   stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION, n_photons_absorbed);
@@ -68,7 +71,8 @@ __host__ __device__ void increment_ion_stats_contabsorption(const struct packet 
                                    n_photons_absorbed);
       }
     }
-  } else if (et != -9999999)  // r-pkt is from bound-free emission (not free-free scattering)
+  } else if (et != EMTYPE_FREEFREE &&
+             et != EMTYPE_NOTSET)  // r-pkt is from bound-free emission (not free-free scattering)
   {
     stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION_FROMBOUNDFREE, n_photons_absorbed);
 
@@ -103,7 +107,8 @@ __host__ __device__ void increment_ion_stats_contabsorption(const struct packet 
   }
 }
 
-double get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype) {
+auto get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype)
+    -> double {
   assert_always(ion < get_nions(element));
   assert_always(ionstattype < ION_STAT_COUNT);
   const int uniqueionindex = get_uniqueionindex(element, ion);
@@ -123,7 +128,7 @@ void reset_ion_stats(int modelgridindex) {
   for (int element = 0; element < get_nelements(); element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
       for (int i = 0; i < ION_STAT_COUNT; i++) {
-        set_ion_stats(modelgridindex, element, ion, (enum stats::ionstattypes)i, 0.);
+        set_ion_stats(modelgridindex, element, ion, static_cast<enum stats::ionstattypes>(i), 0.);
       }
     }
   }
@@ -134,27 +139,28 @@ void normalise_ion_estimators(const int mgi, const double deltat, const double d
     for (int ion = 0; ion < get_nions(element); ion++) {
       for (int i = 0; i < ION_STAT_COUNT; i++) {
         // energy or event count per volume per second
-        const double ratedensity =
-            get_ion_stats(mgi, element, ion, (enum stats::ionstattypes)i) / deltaV / deltat / globals::nprocs;
+        const double ratedensity = get_ion_stats(mgi, element, ion, static_cast<enum stats::ionstattypes>(i)) / deltaV /
+                                   deltat / globals::nprocs;
 
         if (i < nstatcounters_ratecoeff) {
           // convert photon event counters into rate coefficients
-          set_ion_stats(mgi, element, ion, (enum stats::ionstattypes)i, ratedensity / ionstagepop(mgi, element, ion));
+          set_ion_stats(mgi, element, ion, static_cast<enum stats::ionstattypes>(i),
+                        ratedensity / ionstagepop(mgi, element, ion));
         } else {
-          set_ion_stats(mgi, element, ion, (enum stats::ionstattypes)i, ratedensity);
+          set_ion_stats(mgi, element, ion, static_cast<enum stats::ionstattypes>(i), ratedensity);
         }
       }
     }
   }
 }
 
-__host__ __device__ void increment(enum eventcounters i) {
+void increment(enum eventcounters i) {
   assert_testmodeonly(i >= 0);
   assert_testmodeonly(i < COUNTER_COUNT);
   safeincrement(eventstats[i]);
 }
 
-void pkt_action_counters_reset(void) {
+void pkt_action_counters_reset() {
   for (int i = 0; i < COUNTER_COUNT; i++) {
     eventstats[i] = 0;
   }
@@ -163,7 +169,7 @@ void pkt_action_counters_reset(void) {
   globals::nesc = 0;
 }
 
-int get_counter(enum eventcounters i) {
+auto get_counter(enum eventcounters i) -> int {
   assert_always(i < COUNTER_COUNT);
   return eventstats[i];
 }
@@ -174,13 +180,13 @@ void pkt_action_counters_printout(const struct packet *const pkt, const int nts)
     assert_always(pkt[i].interactions >= 0);
     allpktinteractions += pkt[i].interactions;
   }
-  const double meaninteractions = (double)allpktinteractions / globals::npkts;
+  const double meaninteractions = static_cast<double>(allpktinteractions) / globals::npkts;
   printout("mean number of interactions per packet = %g\n", meaninteractions);
 
   const double deltat = globals::time_step[nts].width;
   double modelvolume = 0.;
   for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
-    modelvolume += grid::vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
+    modelvolume += grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
   }
 
   /// Printout packet statistics
@@ -212,7 +218,7 @@ void pkt_action_counters_printout(const struct packet *const pkt, const int nts)
   printout("nt_stat_to_ionization = %d\n", get_counter(COUNTER_NT_STAT_TO_IONIZATION));
   printout("nt_stat_to_excitation = %d\n", get_counter(COUNTER_NT_STAT_TO_EXCITATION));
   printout("nt_stat_to_kpkt = %d\n", get_counter(COUNTER_NT_STAT_TO_KPKT));
-  nonthermal::nt_print_stats(nts, modelvolume, deltat);
+  nonthermal::nt_print_stats(modelvolume, deltat);
 
   printout("escounter = %d\n", get_counter(COUNTER_ESCOUNTER));
   printout("cellcrossing  = %d\n", get_counter(COUNTER_CELLCROSSINGS));
@@ -224,9 +230,9 @@ void pkt_action_counters_printout(const struct packet *const pkt, const int nts)
   printout("downscatterings  = %d\n", get_counter(COUNTER_DOWNSCATTER));
 }
 
-void reduce_estimators(void) {
+void reduce_estimators() {
 #ifdef MPI_ON
-  MPI_Allreduce(MPI_IN_PLACE, &stats::ionstats, grid::get_npts_model() * get_includedions() * stats::ION_STAT_COUNT,
+  MPI_Allreduce(MPI_IN_PLACE, stats::ionstats, grid::get_npts_model() * get_includedions() * stats::ION_STAT_COUNT,
                 MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #endif
 }

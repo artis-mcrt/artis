@@ -3,29 +3,28 @@
 
 #include <cstdio>
 
-#include "cuda.h"
 #include "packet.h"
 
 namespace nonthermal {
-void init(int my_rank, int ndo, int ndo_nonempty);
-void close_file(void);
+void init(int my_rank, int ndo_nonempty);
+void close_file();
 void solve_spencerfano(int modelgridindex, int timestep, int iteration);
-__host__ __device__ double nt_ionization_ratecoeff(int modelgridindex, int element, int ion);
-__host__ __device__ double nt_ionization_upperion_probability(int modelgridindex, int element, int lowerion,
-                                                              int upperion, bool energyweighted);
-__host__ __device__ int nt_ionisation_maxupperion(int element, int lowerion);
-__host__ __device__ int nt_random_upperion(int modelgridindex, int element, int lowerion, bool energyweighted);
-__host__ __device__ void calculate_deposition_rate_density(int modelgridindex, int timestep);
-__host__ __device__ double get_deposition_rate_density(int modelgridindex);
-__host__ __device__ float get_nt_frac_heating(int modelgridindex);
-double nt_excitation_ratecoeff(int modelgridindex, int element, int ion, int lower, int upper, double epsilon_trans,
-                               int lineindex);
-__host__ __device__ void do_ntlepton(struct packet *pkt_ptr);
+double nt_ionization_ratecoeff(int modelgridindex, int element, int ion);
+double nt_ionization_upperion_probability(int modelgridindex, int element, int lowerion, int upperion,
+                                          bool energyweighted);
+int nt_ionisation_maxupperion(int element, int lowerion);
+int nt_random_upperion(int modelgridindex, int element, int lowerion, bool energyweighted);
+void calculate_deposition_rate_density(int modelgridindex, int timestep);
+double get_deposition_rate_density(int modelgridindex);
+float get_nt_frac_heating(int modelgridindex);
+double nt_excitation_ratecoeff(int modelgridindex, int element, int ion, int lowerlevel, int uptransindex,
+                               double epsilon_trans, int lineindex);
+void do_ntlepton(struct packet *pkt_ptr);
 void write_restart_data(FILE *gridsave_file);
 void read_restart_data(FILE *gridsave_file);
-void nt_MPI_Bcast(const int modelgridindex, const int root);
-void nt_reset_stats(void);
-void nt_print_stats(const int timestep, const double modelvolume, const double deltat);
+void nt_MPI_Bcast(int modelgridindex, int root);
+void nt_reset_stats();
+void nt_print_stats(double modelvolume, double deltat);
 }  // namespace nonthermal
 
 #endif  // NONTHERMAL_H

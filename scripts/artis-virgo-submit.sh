@@ -1,5 +1,6 @@
-#!/bin/bash
-# each AMD node has 192GB RAM and 2x64 core CPUs
-#--ntasks-per-node=48 will give 192/48=4GB per MPI rank
-#--ntasks-per-core=1 gives 1.5GB per rank (probably fine for 1D models)
-sbatch -J $(basename $(exec pwd)) --ntasks=960 --ntasks-per-node=48 --constraint=amd --partition=long --time=24:00:00 --mail-type=ALL --mail-user=${USER}@gsi.de --no-requeue -- artis/scripts/artis-virgo-slurmjob.sh
+#!/bin/bash -x
+# 1920 cores and 4GB per core for 3D LTE kilonova models (and maybe 3D NLTE Type Ia?)
+sbatch -J $(basename $(exec pwd)) --ntasks=1920 --mem-per-cpu=4096MB --partition=long --time=48:00:00 --mail-type=ALL --mail-user=${USER}@gsi.de --no-requeue -- artis/scripts/artis-virgo-slurmjob.sh
+
+# 960 cores and 1.5GB per core for simple 1D models (maybe 3D Type Ia without full NLTE?)
+#sbatch -J $(basename $(exec pwd)) --ntasks=960 --mem-per-cpu=1536M --partition=long --time=48:00:00 --mail-type=ALL --mail-user=${USER}@gsi.de --no-requeue -- artis/scripts/artis-virgo-slurmjob.sh

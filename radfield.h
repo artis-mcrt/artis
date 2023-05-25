@@ -9,42 +9,41 @@
 
 namespace radfield {
 void zero_estimators(int modelgridindex);
-void init(int my_rank, int ndo, int ndo_nonempty);
-void initialise_prev_titer_photoionestimators(void);
+void init(int my_rank, int ndo_nonempty);
+void initialise_prev_titer_photoionestimators();
 void write_to_file(int modelgridindex, int timestep);
-void close_file(void);
-__host__ __device__ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf,
-                                           const struct packet *pkt_ptr);
+void close_file();
+void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const struct packet *pkt_ptr);
 void update_lineestimator(int modelgridindex, int lineindex, double increment);
-__host__ __device__ double radfield(double nu, int modelgridindex);
-__host__ __device__ double dbb_mgi(double nu, int modelgridindex);
+double radfield(double nu, int modelgridindex);
+double dbb_mgi(double nu, int modelgridindex);
 void fit_parameters(int modelgridindex, int timestep);
-__host__ __device__ void set_J_normfactor(int modelgridindex, double normfactor);
-__host__ __device__ void normalise_J(int modelgridindex, double estimator_normfactor_over4pi);
-__host__ __device__ void normalise_nuJ(int modelgridindex, double estimator_normfactor_over4pi);
-__host__ __device__ double get_T_J_from_J(int modelgridindex);
-__host__ __device__ int get_Jblueindex(int lineindex);
-__host__ __device__ double get_Jb_lu(int modelgridindex, int jblueindex);
-__host__ __device__ int get_Jb_lu_contribcount(int modelgridindex, int jblueindex);
+void set_J_normfactor(int modelgridindex, double normfactor);
+void normalise_J(int modelgridindex, double estimator_normfactor_over4pi);
+void normalise_nuJ(int modelgridindex, double estimator_normfactor_over4pi);
+double get_T_J_from_J(int modelgridindex);
+int get_Jblueindex(int lineindex);
+double get_Jb_lu(int modelgridindex, int jblueindex);
+int get_Jb_lu_contribcount(int modelgridindex, int jblueindex);
 void titer_J(int modelgridindex);
 void titer_nuJ(int modelgridindex);
-void reduce_estimators(void);
+void reduce_estimators();
 void do_MPI_Bcast(int modelgridindex, int root, int root_node_id);
 void write_restart_data(FILE *gridsave_file);
 void read_restart_data(FILE *gridsave_file);
-__host__ __device__ void normalise_bf_estimators(int modelgridindex, double estimator_normfactor_over_H);
+void normalise_bf_estimators(int modelgridindex, double estimator_normfactor_over_H);
 double get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex);
 void print_bfrate_contributions(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex,
                                 double nnlowerlevel, double nnlowerion);
-void reset_bfrate_contributions(const int modelgridindex);
+void reset_bfrate_contributions(int modelgridindex);
 int integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel, size_t limit, int key,
               gsl_integration_workspace *workspace, double *result, double *abserr);
 
 template <typename T_t, typename W_t>
-__host__ __device__ constexpr double dbb(double nu, T_t T, W_t W)
+constexpr double dbb(double nu, T_t T, W_t W)
 // returns J_nu for a dilute black body [ergs/s/sr/cm2/Hz]
 {
-  return W * TWOHOVERCLIGHTSQUARED * pow(nu, 3) / expm1(HOVERKB * nu / T);
+  return W * TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / std::expm1(HOVERKB * nu / T);
 }
 
 }  // namespace radfield

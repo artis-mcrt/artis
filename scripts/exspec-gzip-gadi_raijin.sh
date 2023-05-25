@@ -25,11 +25,11 @@ module load gsl/2.5
 module load intel-mpi/2018.3.222
 module load intel-cc/2018.3.222
 
-if [ ! -f emission.out.xz ]; then
+if [ ! -f emission.out.zst ]; then
   ./artis/scripts/exspec-before.sh
   ./exspec
 else
-  echo 'Not running exspec because emission.out.xz was found'
+  echo 'Not running exspec because emission.out.zst was found'
 fi
 
 ./artis/scripts/exspec-after.sh

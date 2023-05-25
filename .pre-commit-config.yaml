@@ -2,7 +2,7 @@
 fail_fast: false
 repos:
     - repo: https://github.com/pre-commit/pre-commit-hooks
-      rev: v4.3.0
+      rev: v4.4.0
       hooks:
           - id: check-added-large-files
             args: [--maxkb=800]
@@ -27,27 +27,37 @@ repos:
       rev: v1.3.5
       hooks:
           - id: clang-format
-    # - id: clang-tidy
-    # - id: oclint
-    # - id: uncrustify
-    # - id: cppcheck
-    #   args:
-    #     [
-    #       "--force",
-    #       "--language=c++",
-    #       "--std=c++17",
-    #       "--suppress=missingIncludeSystem",
-    #     ]
-    # - id: cpplint
-    #   args:
-    #     [
-    #       "--linelength=120",
-    #       "--filter=-legal/copyright,-readability/casting,-whitespace/braces,-readability/todo",
-    #     ]
-    # - id: include-what-you-use
-    #   args: ["--cxx17ns", "--update_comments"]
-
+            args: [-i]
+          #   - id: clang-tidy
+          #     args: [-extra-arg=-std=c++20]
+          # - id: oclint
+          # - id: uncrustify
+          # - id: cppcheck
+          #   args:
+          #       [
+          #           -q,
+          #           --error-exitcode=1,
+          #           --force,
+          #           '--enable=performance,portability',
+          #           --language=c++,
+          #           --std=c++20,
+          #           --suppress=unmatchedSuppression,
+          #           --suppress=missingIncludeSystem,
+          #           --suppress=unusedFunction,
+          #       ]
+          # - id: cpplint
+          #   args: [--linelength=120, '--filter=-legal/copyright,-readability/casting,-whitespace/braces,-readability/todo']
+          # - id: include-what-you-use
+          #   args: [--cxx17ns, --update_comments]
+    - repo: local
+      hooks:
+          - id: make
+            name: make
+            entry: make
+            language: system
+            types: [c++, makefile]
+            pass_filenames: false
     - repo: https://github.com/jumanjihouse/pre-commit-hook-yamlfmt
-      rev: 0.2.2 # or other specific tag
+      rev: 0.2.3 # or other specific tag
       hooks:
           - id: yamlfmt

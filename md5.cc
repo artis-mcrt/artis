@@ -20,43 +20,50 @@
 #include "sn3d.h"
 
 /****************************** MACROS ******************************/
-#define ROTLEFT(a, b) ((a << b) | (a >> (32 - b)))
+#define ROTLEFT(a, b) (((a) << (b)) | ((a) >> (32 - (b))))
 
-#define F(x, y, z) ((x & y) | (~x & z))
-#define G(x, y, z) ((x & z) | (y & ~z))
-#define _H(x, y, z) (x ^ y ^ z)
-#define I(x, y, z) (y ^ (x | ~z))
+#define F(x, y, z) (((x) & (y)) | (~(x) & (z)))
+#define G(x, y, z) (((x) & (z)) | ((y) & ~(z)))
+#define _H(x, y, z) ((x) ^ (y) ^ (z))
+#define I(x, y, z) ((y) ^ ((x) | ~(z)))
 
-#define FF(a, b, c, d, m, s, t) \
-  {                             \
-    a += F(b, c, d) + m + t;    \
-    a = b + ROTLEFT(a, s);      \
+#define FF(a, b, c, d, m, s, t)    \
+  {                                \
+    (a) += F(b, c, d) + (m) + (t); \
+    (a) = (b) + ROTLEFT(a, s);     \
   }
-#define GG(a, b, c, d, m, s, t) \
-  {                             \
-    a += G(b, c, d) + m + t;    \
-    a = b + ROTLEFT(a, s);      \
+#define GG(a, b, c, d, m, s, t)    \
+  {                                \
+    (a) += G(b, c, d) + (m) + (t); \
+    (a) = (b) + ROTLEFT(a, s);     \
   }
-#define HH(a, b, c, d, m, s, t) \
-  {                             \
-    a += _H(b, c, d) + m + t;   \
-    a = b + ROTLEFT(a, s);      \
+#define HH(a, b, c, d, m, s, t)     \
+  {                                 \
+    (a) += _H(b, c, d) + (m) + (t); \
+    (a) = (b) + ROTLEFT(a, s);      \
   }
-#define II(a, b, c, d, m, s, t) \
-  {                             \
-    a += I(b, c, d) + m + t;    \
-    a = b + ROTLEFT(a, s);      \
+#define II(a, b, c, d, m, s, t)    \
+  {                                \
+    (a) += I(b, c, d) + (m) + (t); \
+    (a) = (b) + ROTLEFT(a, s);     \
   }
 
 /*********************** FUNCTION DEFINITIONS ***********************/
 static void md5_transform(MD5_CTX *ctx, const BYTE data[]) {
-  WORD a, b, c, d, m[16], i, j;
+  WORD a = 0;
+  WORD b = 0;
+  WORD c = 0;
+  WORD d = 0;
+  WORD m[16];
+  WORD i = 0;
+  WORD j = 0;
 
   // MD5 specifies big endian byte order, but this implementation assumes a little
   // endian byte order CPU. Reverse all the bytes upon input, and re-reverse them
   // on output (in md5_final()).
-  for (i = 0, j = 0; i < 16; ++i, j += 4)
+  for (i = 0, j = 0; i < 16; ++i, j += 4) {
     m[i] = (data[j]) + (data[j + 1] << 8) + (data[j + 2] << 16) + (data[j + 3] << 24);
+  }
 
   a = ctx->state[0];
   b = ctx->state[1];
@@ -147,7 +154,7 @@ void md5_init(MD5_CTX *ctx) {
 }
 
 void md5_update(MD5_CTX *ctx, const BYTE data[], size_t len) {
-  size_t i;
+  size_t i = 0;
 
   for (i = 0; i < len; ++i) {
     ctx->data[ctx->datalen] = data[i];
@@ -161,17 +168,21 @@ void md5_update(MD5_CTX *ctx, const BYTE data[], size_t len) {
 }
 
 void md5_final(MD5_CTX *ctx, BYTE hash[]) {
-  size_t i;
+  size_t i = 0;
 
   i = ctx->datalen;
 
   // Pad whatever data is left in the buffer.
   if (ctx->datalen < 56) {
     ctx->data[i++] = 0x80;
-    while (i < 56) ctx->data[i++] = 0x00;
+    while (i < 56) {
+      ctx->data[i++] = 0x00;
+    }
   } else if (ctx->datalen >= 56) {
     ctx->data[i++] = 0x80;
-    while (i < 64) ctx->data[i++] = 0x00;
+    while (i < 64) {
+      ctx->data[i++] = 0x00;
+    }
     md5_transform(ctx, ctx->data);
     memset(ctx->data, 0, 56);
   }
@@ -205,7 +216,7 @@ void md5_file(const char filename[], char hashout[2 * MD5_BLOCK_SIZE + 1]) {
 
   FILE *infile = fopen(filename, "r");
 
-  assert_always(infile != NULL);
+  assert_always(infile != nullptr);
 
   BYTE buffer[1024];
 

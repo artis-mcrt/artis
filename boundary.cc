@@ -1,9 +1,8 @@
 // #include <gsl/gsl_poly.h>
-#ifndef __CUDA_ARCH__
-#include <gsl/gsl_blas.h>
-#endif
-
 #include "boundary.h"
+
+#include <gsl/gsl_blas.h>
+
 #include "grid.h"
 #include "rpkt.h"
 #include "sn3d.h"
@@ -11,14 +10,14 @@
 #include "update_packets.h"
 #include "vectors.h"
 
-__host__ __device__ static double get_shellcrossdist(const double pos[3], const double dir[3], const double shellradius,
-                                                     const bool isinnerboundary, const double tstart)
+static auto get_shellcrossdist(const double pos[3], const double dir[3], const double shellradius,
+                               const bool isinnerboundary, const double tstart) -> double
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell
 // return -1 if there are no forward intersections (or if the intersection is tangential to the shell)
 {
   assert_always(shellradius > 0);
-  const bool debug = false;
-  if (debug) {
+  constexpr bool debug = false;
+  if constexpr (debug) {
     printout("get_shellcrossdist isinnerboundary %d\n", isinnerboundary);
     printout("shellradius %g tstart %g len(pos) %g\n", shellradius, tstart, vec_len(pos));
   }
@@ -32,27 +31,29 @@ __host__ __device__ static double get_shellcrossdist(const double pos[3], const 
   if (discriminant < 0) {
     // no intersection
     assert_always(shellradius < vec_len(pos));
-    if (debug) printout("no intersection\n");
+    if constexpr (debug) {
+      printout("no intersection\n");
+    }
     return -1;
-  } else if (discriminant > 0) {
+  }
+  if (discriminant > 0) {
     // two intersections
     double d1 = (-b + sqrt(discriminant)) / 2 / a;
     double d2 = (-b - sqrt(discriminant)) / 2 / a;
 
     double posfinal1[3];
     double posfinal2[3];
-#ifndef __CUDA_ARCH__
+
     cblas_dcopy(3, pos, 1, posfinal1, 1);      // posfinal1 = pos
     cblas_daxpy(3, d1, dir, 1, posfinal1, 1);  // posfinal1 += d1 * dir;
 
     cblas_dcopy(3, pos, 1, posfinal2, 1);
     cblas_daxpy(3, d2, dir, 1, posfinal2, 1);
-#else
-    for (int d = 0; d < 3; d++) {
-      posfinal1[d] = pos[d] + d1 * dir[d];
-      posfinal2[d] = pos[d] + d2 * dir[d];
-    }
-#endif
+
+    // for (int d = 0; d < 3; d++) {
+    //   posfinal1[d] = pos[d] + d1 * dir[d];
+    //   posfinal2[d] = pos[d] + d2 * dir[d];
+    // }
 
     const double shellradiusfinal1 = shellradius / tstart * (tstart + d1 / speed);
     const double shellradiusfinal2 = shellradius / tstart * (tstart + d2 / speed);
@@ -82,23 +83,23 @@ __host__ __device__ static double get_shellcrossdist(const double pos[3], const 
     // ignore negative d values, and if two are positive then return the smaller one
     if (d1 < 0 && d2 < 0) {
       return -1;
-    } else if (d2 < 0) {
-      return d1;
-    } else if (d1 < 0) {
-      return d2;
-    } else {
-      return fmin(d1, d2);
     }
-  } else {
-    // exactly one intersection
-    // ignore this and don't change which cell the packet is in
-    assert_always(shellradius <= vec_len(pos));
-    printout("single intersection\n");
-    return -1.;
-  }
+    if (d2 < 0) {
+      return d1;
+    }
+    if (d1 < 0) {
+      return d2;
+    }
+    return fmin(d1, d2);
+
+  }  // exactly one intersection
+  // ignore this and don't change which cell the packet is in
+  assert_always(shellradius <= vec_len(pos));
+  printout("single intersection\n");
+  return -1.;
 }
 
-__host__ __device__ double boundary_cross(struct packet *const pkt_ptr, int *snext)
+auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
 /// Basic routine to compute distance to a cell boundary.
 {
   const double tstart = pkt_ptr->prop_time;
@@ -159,19 +160,20 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, int *sne
   // cellymax %g, cellzmax %g\n",cellcoordmax[0],cellcoordmax[1],cellcoordmax[2]);
 
   enum cell_boundary last_cross = pkt_ptr->last_cross;
-  enum cell_boundary negdirections[3] = {NEG_X, NEG_Y, NEG_Z};  // 'X' might actually be radial coordinate
-  enum cell_boundary posdirections[3] = {POS_X, POS_Y, POS_Z};
+  enum cell_boundary const negdirections[3] = {NEG_X, NEG_Y, NEG_Z};  // 'X' might actually be radial coordinate
+  enum cell_boundary const posdirections[3] = {POS_X, POS_Y, POS_Z};
 
   // printout("checking inside cell boundary\n");
   for (int d = 0; d < ndim; d++) {
     // flip is either zero or one to indicate +ve and -ve boundaries along the selected axis
     for (int flip = 0; flip < 2; flip++) {
-      enum cell_boundary direction = flip ? posdirections[d] : negdirections[d];
-      enum cell_boundary invdirection = !flip ? posdirections[d] : negdirections[d];
-      const int cellindexstride = flip ? -grid::get_coordcellindexincrement(d) : grid::get_coordcellindexincrement(d);
+      enum cell_boundary const direction = flip != 0 ? posdirections[d] : negdirections[d];
+      enum cell_boundary const invdirection = flip == 0 ? posdirections[d] : negdirections[d];
+      const int cellindexstride =
+          flip != 0 ? -grid::get_coordcellindexincrement(d) : grid::get_coordcellindexincrement(d);
 
-      bool isoutside_thisside;
-      if (flip) {
+      bool isoutside_thisside = false;
+      if (flip != 0) {
         isoutside_thisside = initpos[d] < (grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart -
                                            10.);  // 10 cm accuracy tolerance
       } else {
@@ -185,14 +187,14 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, int *sne
           printout(
               "[warning] packet %d outside coord %d %c%c boundary of cell %d. pkttype %d initpos(tmin) %g, vel %g, "
               "cellcoordmin %g, cellcoordmax %g\n",
-              pkt_ptr->number, d, flip ? '-' : '+', grid::coordlabel[d], cellindex, pkt_ptr->type, initpos[d2], vel[d2],
-              grid::get_cellcoordmin(cellindex, d2) / globals::tmin * tstart,
+              pkt_ptr->number, d, flip != 0 ? '-' : '+', grid::coordlabel[d], cellindex, pkt_ptr->type, initpos[d2],
+              vel[d2], grid::get_cellcoordmin(cellindex, d2) / globals::tmin * tstart,
               cellcoordmax[d2] / globals::tmin * tstart);
         }
         printout("globals::tmin %g tstart %g tstart/globals::tmin %g tdecay %g\n", globals::tmin, tstart,
                  tstart / globals::tmin, pkt_ptr->tdecay);
         // printout("[warning] pkt_ptr->number %d\n", pkt_ptr->number);
-        if (flip) {
+        if (flip != 0) {
           printout("[warning] delta %g\n",
                    (initpos[d] * globals::tmin / tstart) - grid::get_cellcoordmin(cellindex, d));
         } else {
@@ -206,17 +208,15 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, int *sne
             printout("escaping packet\n");
             *snext = -99;
             return 0;
-          } else {
-            *snext = pkt_ptr->where + cellindexstride;
-            pkt_ptr->last_cross = invdirection;
-            printout("[warning] swapping packet cellindex from %d to %d and setting last_cross to %d\n", pkt_ptr->where,
-                     *snext, pkt_ptr->last_cross);
-            return 0;
           }
-        } else {
-          printout("pretending last_cross is %d\n", direction);
-          last_cross = direction;
+          *snext = pkt_ptr->where + cellindexstride;
+          pkt_ptr->last_cross = invdirection;
+          printout("[warning] swapping packet cellindex from %d to %d and setting last_cross to %d\n", pkt_ptr->where,
+                   *snext, pkt_ptr->last_cross);
+          return 0;
         }
+        printout("pretending last_cross is %d\n", direction);
+        last_cross = direction;
       }
     }
   }
@@ -322,21 +322,19 @@ __host__ __device__ double boundary_cross(struct packet *const pkt_ptr, int *sne
   }
 
   // Now we know what happens. The distance to crossing is....
-  double distance = CLIGHT_PROP * time;
+  double const distance = CLIGHT_PROP * time;
   // printout("boundary_cross: time %g distance %g\n", time, distance);
   // closest = close;
 
   return distance;
 }
 
-__host__ __device__ void change_cell(struct packet *pkt_ptr, int snext)
+void change_cell(struct packet *pkt_ptr, int snext)
 /// Routine to take a packet across a boundary.
 {
-  if (false) {
-    const int cellindex = pkt_ptr->where;
-    printout("[debug] cellnumber %d nne %g\n", cellindex, grid::get_nne(grid::get_cell_modelgridindex(cellindex)));
-    printout("[debug] snext %d\n", snext);
-  }
+  // const int cellindex = pkt_ptr->where;
+  // printout("[debug] cellnumber %d nne %g\n", cellindex, grid::get_nne(grid::get_cell_modelgridindex(cellindex)));
+  // printout("[debug] snext %d\n", snext);
 
   if (snext == -99) {
     // Then the packet is exiting the grid. We need to record
@@ -347,24 +345,28 @@ __host__ __device__ void change_cell(struct packet *pkt_ptr, int snext)
     safeincrement(globals::nesc);
   } else {
     // Just need to update "where".
-    // const int cellnum = pkt_ptr->where;
-    // const int old_mgi = grid::get_cell_modelgridindex(cellnum);
     pkt_ptr->where = snext;
-    // const int mgi = grid::get_cell_modelgridindex(snext);
 
     stats::increment(stats::COUNTER_CELLCROSSINGS);
   }
 }
 
-// static int locate(const struct packet *pkt_ptr, double t_current)
-// /// Routine to return which grid cell the packet is in.
-// {
-//   // Cheap and nasty version for now - assume a uniform grid.
-//   int xx = (pkt_ptr->pos[0] - (globals::cell[0].pos_min[0]*t_current/globals::tmin)) /
-//   (grid::wid_init*t_current/globals::tmin); int yy = (pkt_ptr->pos[1] -
-//   (globals::cell[0].pos_min[1]*t_current/globals::tmin)) / (grid::wid_init*t_current/globals::tmin); int zz =
-//   (pkt_ptr->pos[2] - (globals::cell[0].pos_min[2]*t_current/globals::tmin)) /
-//   (grid::wid_init*t_current/globals::tmin);
-//
-//   return xx + (grid::ncoordgrid[0] * yy) + (grid::ncoordgrid[0] * grid::ncoordgrid[1] * zz);
-// }
+static auto get_cell(const double pos[3], double t) -> int
+/// identify the cell index from a position and a time.
+{
+  assert_always(GRID_TYPE == GRID_UNIFORM);  // other grid types not implemented yet
+
+  const double trat = t / globals::tmin;
+  const int nx = static_cast<int>((pos[0] - (grid::get_cellcoordmin(0, 0) * trat)) / (grid::wid_init(0) * trat));
+  const int ny = static_cast<int>((pos[1] - (grid::get_cellcoordmin(0, 1) * trat)) / (grid::wid_init(0) * trat));
+  const int nz = static_cast<int>((pos[2] - (grid::get_cellcoordmin(0, 2) * trat)) / (grid::wid_init(0) * trat));
+
+  const int cellindex = nx + (grid::ncoordgrid[0] * ny) + (grid::ncoordgrid[0] * grid::ncoordgrid[1] * nz);
+
+  // do a check
+  for (int n = 0; n < grid::get_ngriddimensions(); n++) {
+    assert_always(pos[n] >= grid::get_cellcoordmin(cellindex, n));
+    assert_always(pos[n] <= grid::get_cellcoordmax(cellindex, n));
+  }
+  return cellindex;
+}

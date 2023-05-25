@@ -1,27 +1,26 @@
-GIT_VERSION := $(shell git describe --dirty --always --tags)
-GIT_HASH := $(shell git rev-parse HEAD)
-GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 .DEFAULT_GOAL := all
-SYSNAME := $(shell uname -s)
 
+# place in architecture folder, e.g. build/arm64
 BUILD_DIR = build/$(shell uname -m)
 
-CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -g -flto=auto
+CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -g -flto=auto -Werror -Werror=undef
+# CXXFLAGS += -Wpedantic -Wextra -Wall
+# CXXFLAGS += -Wunreachable-code
 
-ifeq ($(SYSNAME),Darwin)
-	# macOS
+ifeq ($(shell uname -s),Darwin)
+# 	macOS
 
-	# march=native also works on Apple Silicon with Clang >=15
-	CXXFLAGS += -march=native
+	ifeq ($(shell uname -m),arm64)
+#	 	On Arm, -mcpu combines -march and -mtune
+		CXXFLAGS += -mcpu=native
+	else
+#		On x86, -march implies -mtune
+		CXXFLAGS += -march=native
+	endif
+
 #	CXXFLAGS += -Rpass=loop-vectorize
 #	CXXFLAGS += -Rpass-missed=loop-vectorize
 #	CXXFLAGS += -Rpass-analysis=loop-vectorize
-
-	# ifeq ($(shell uname -m),arm64)
-	# 	CXXFLAGS += -mcpu=apple-m1
-	# else
-	# 	CXXFLAGS += -march=native
-	# endif
 
 	# CXXFLAGS += -fopenmp-simd
 
@@ -39,15 +38,30 @@ else ifeq ($(USER),localadmin_ccollins)
 	LIB = /home/localadmin_ccollins/gsl/lib
 	CXXFLAGS += -g -I$(INCLUDE)
 	LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
-	CXXFLAGS += -std=c++17 -march=native -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
+	CXXFLAGS += -std=c++17 -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
+
+else
+	# sometimes the login nodes have slighty different CPUs
+	# to the job nodes. Try to find the lowest common denominator here
+	# to enable vector extensions
+	# CXXFLAGS += -march=cascadelake
+	# CXXFLAGS += -march=skylake-avx512
+
+	# to get the current CPU architecture, run this:
+	# g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
+	ifneq (,$(findstring juwels,$(HOSTNAME)))
+		CXXFLAGS += -march=skylake-avx512
+	else ifneq (,$(findstring lxbk,$(HOSTNAME)))
+		# virgo has some AMD nodes (znver1 arch) and some Intel
+		CXXFLAGS += -march=cascadelake
+	endif
 
 endif
 
-
 # GSL (GNU Scientific Library)
-# GSL option 1: Use pkg-config to find GSL
 LDFLAGS += $(shell pkg-config --libs gsl)
 CXXFLAGS += $(shell pkg-config --cflags gsl)
+# GSL option 1: Use pkg-config or gsl-config to find GSL
 #
 # GSL option 2: Use default search paths to find GSL
 # LDFLAGS += -lgsl -lgslcblas -lm
@@ -56,7 +70,9 @@ CXXFLAGS += $(shell pkg-config --cflags gsl)
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true -O3
+	CXXFLAGS += -DTESTMODE=true -O3 -DLIBCXX_ENABLE_DEBUG_MODE
+	# makes GitHub actions classic test run forever?
+	# CXXFLAGS += -D_GLIBCXX_DEBUG
 	CXXFLAGS += -fsanitize=address -fno-omit-frame-pointer -fno-common
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
@@ -84,7 +100,7 @@ endif
 
 ifeq ($(MPI),ON)
 	CXX = mpicxx
-	CXXFLAGS += -DMPI_ON
+	CXXFLAGS += -DMPI_ON=true
 	BUILD_DIR := $(BUILD_DIR)_mpi
 endif
 
@@ -94,25 +110,6 @@ ifeq ($(OPENMP),ON)
 	LDFLAGS += -lomp
 	BUILD_DIR := $(BUILD_DIR)_openmp
 endif
-
-sn3dcuda sn3dcudawhole: LDFLAGS += -lcudart
-sn3dcuda sn3dcudawhole: CXXFLAGS += -DCUDA_ENABLED=true
-
-# Gadi
-ifneq (,$(findstring gadi,$(HOSTNAME)))
-	# Tesla V100
-	CUDA_NVCC_FLAGS += -arch=sm_70 -gencode=arch=compute_70,code=sm_70 -gencode=arch=compute_70,code=compute_70
-	CXX = mpic++
-	# CXX = icpc
-	# CXXFLAGS += -qopenmp
-	INCLUDE += -I/home/120/ljs120/cuda_samples/common/inc
-endif
-
-# CXXFLAGS += -std=c++17
-# CXXFLAGS += -fPIC -shared
-# CUDA_NVCC_FLAGS += -Xcompiler -fPIC -shared -rdc=true
-CUDA_NVCC_FLAGS += -ccbin=$(CXX) -std=c++17 -O3 -use_fast_math -Xcompiler "$(CXXFLAGS)" -rdc=true --expt-relaxed-constexpr
-# CUDA_NVCC_FLAGS += -G -g
 
 ### use pg when you want to use gprof profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)
@@ -130,7 +127,7 @@ exspec_dep = $(exspec_objects:%.o=%.d)
 
 all: sn3d exspec
 
-sn3d: version.h artisoptions.h $(sn3d_objects) Makefile
+sn3d: $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
 #	$(LINK.cpp) $(filter %.o,$^) -o $@
 -include $(sn3d_dep)
@@ -138,31 +135,25 @@ sn3d: version.h artisoptions.h $(sn3d_objects) Makefile
 sn3dwhole: version.h
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
 
-sn3dcudawhole: version.h
-	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_files) -o sn3dcuda
-
-sn3dcuda: version.h $(sn3d_objects)
-	nvcc --gpu-architecture=sm_70 --device-link $(sn3d_objects) --output-file gpucode.o
-	$(CXX) $(CXXFLAGS) gpucode.o $(INCLUDE) -lcudadevrt $(LDFLAGS) $(sn3d_objects) -o sn3dcuda
-
-# %.o: %.cc
-# 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c
-
-$(BUILD_DIR)/%.o: %.cc Makefile artisoptions.h
+$(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -MD -MP -c $< -o $@
 
-exspec: version.h artisoptions.h $(exspec_objects) Makefile
+$(BUILD_DIR)/sn3d.o $(BUILD_DIR)/exspec.o: version.h artisoptions.h Makefile
+
+exspec: $(exspec_objects)
 	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec
 -include $(exspec_dep)
 
 .PHONY: clean version.h TESTMODE TESTMODEON
 
 version.h:
-	@echo "#define GIT_VERSION \"$(GIT_VERSION)\"" > version.h
-	@echo "#define GIT_HASH \"$(GIT_HASH)\"" >> version.h
-	@echo "#define GIT_BRANCH \"$(GIT_BRANCH)\"" >> version.h
+	@echo "constexpr const char* GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";" > version.h
+	@echo "constexpr const char* GIT_HASH = \"$(shell git rev-parse HEAD)\";" >> version.h
+# requires git > 2.22
+# @echo "constexpr const char* GIT_BRANCH = \"$(shell git branch --show)\";" >> version.h
+	@echo "constexpr const char* GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD )\";" >> version.h
+	@echo "constexpr const char* GIT_STATUS = \"$(shell git status --short)\";" >> version.h
 
 clean:
 	rm -rf sn3d exspec build version.h *.o *.d
-

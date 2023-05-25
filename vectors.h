@@ -4,13 +4,12 @@
 #include <cmath>
 
 #include "constants.h"
-#include "cuda.h"
 #include "exspec.h"
 #include "packet.h"
 #include "sn3d.h"
 
-__host__ __device__ void scatter_dir(const double dir_in[3], double cos_theta, double dir_out[3]);
-__host__ __device__ void get_rand_isotropic_unitvec(double vecout[3]);
+void scatter_dir(const double dir_in[3], double cos_theta, double dir_out[3]);
+void get_rand_isotropic_unitvec(double vecout[3]);
 
 constexpr double vec_len(const double x[3])
 // return the the magnitude of a vector
@@ -26,6 +25,8 @@ constexpr void vec_norm(const double vec_in[3], double vec_out[3])
   vec_out[0] = vec_in[0] / magnitude;
   vec_out[1] = vec_in[1] / magnitude;
   vec_out[2] = vec_in[2] / magnitude;
+
+  assert_testmodeonly(fabs(vec_len(vec_out) - 1.) < 1.e-10);
 }
 
 constexpr double dot(const double x[3], const double y[3])
@@ -76,6 +77,8 @@ constexpr void angle_ab(const double dir1[3], const double vel[3], double dir2[3
   for (int d = 0; d < 3; d++) {
     dir2[d] = (dir1[d] - (vel[d] * fact2)) / fact1;
   }
+
+  vec_norm(dir2, dir2);
 }
 
 constexpr double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
@@ -93,8 +96,8 @@ constexpr double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_
 
   if (USE_RELATIVISTIC_DOPPLER_SHIFT) {
     const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;
-    assert_always(betasq >= 0.);  // v < c
-    assert_always(betasq < 1.);   // v < c
+    assert_testmodeonly(betasq >= 0.);  // v < c
+    assert_testmodeonly(betasq < 1.);   // v < c
     dopplerfactor = dopplerfactor / std::sqrt(1 - betasq);
   }
 
@@ -102,6 +105,36 @@ constexpr double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_
   assert_testmodeonly(dopplerfactor > 0);
 
   return dopplerfactor;
+}
+
+constexpr double doppler_squared_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
+// Doppler factor squared, either to first order v/c or fully relativisitic
+// depending on USE_RELATIVISTIC_DOPPLER_SHIFT
+//
+// arguments:
+//   dir_rf: the rest frame direction (unit vector) of light propagation
+//   vel_rf: velocity of the comoving frame relative to the rest frame
+// returns: the ratio f = (nu_cmf / nu_rf) ^ 2
+{
+  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
+  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
+
+  const double ndotv = dot(dir_rf, vel_rf);
+  double dopplerfactorsq = 1.;
+
+  if (USE_RELATIVISTIC_DOPPLER_SHIFT) {
+    const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;
+    assert_testmodeonly(betasq >= 0.);  // v < c
+    assert_testmodeonly(betasq < 1.);   // v < c
+    dopplerfactorsq = std::pow(1. - (ndotv / CLIGHT), 2) / (1 - betasq);
+  } else {
+    dopplerfactorsq = 1. - 2 * (ndotv / CLIGHT);
+  }
+
+  assert_testmodeonly(std::isfinite(dopplerfactorsq));
+  assert_testmodeonly(dopplerfactorsq > 0);
+
+  return dopplerfactorsq;
 }
 
 constexpr double doppler_packet_nucmf_on_nurf(const struct packet *const pkt_ptr) {
@@ -164,7 +197,7 @@ constexpr int get_escapedirectionbin(const double dir_in[3], const double syn_di
 
   /// Angle resolved case: need to work out the correct angle bin
   const double costheta = dot(dir, syn_dir);
-  const int costhetabin = ((costheta + 1.0) * NPHIBINS / 2.0);
+  const int costhetabin = static_cast<int>((costheta + 1.0) * NPHIBINS / 2.0);
   assert_testmodeonly(costhetabin < NCOSTHETABINS);
 
   double vec1[3] = {0};
@@ -179,13 +212,13 @@ constexpr int get_escapedirectionbin(const double dir_in[3], const double syn_di
   const double testphi = dot(vec1, vec3);
 
   int phibin = 0;
-  if (testphi > 0) {
-    phibin = (acos(cosphi) / 2. / PI * NPHIBINS);
+  if (testphi >= 0) {
+    phibin = static_cast<int>(acos(cosphi) / 2. / PI * NPHIBINS);
   } else {
-    phibin = ((acos(cosphi) + PI) / 2. / PI * NPHIBINS);
+    phibin = static_cast<int>((acos(cosphi) + PI) / 2. / PI * NPHIBINS);
   }
   assert_testmodeonly(phibin < NPHIBINS);
-  const int na = (costhetabin * NPHIBINS) + phibin;
+  const int na = static_cast<int>((costhetabin * NPHIBINS) + phibin);
   assert_always(na < MABINS);
 
   return na;

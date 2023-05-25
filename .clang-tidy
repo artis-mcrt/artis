@@ -1,0 +1,53 @@
+---
+Checks: >
+    *,
+    -*static-assert*,
+    -*avoid-c-arrays,
+    -cert-dcl03-c,
+    -abseil-*,
+    -android-*,
+    -altera-*,
+    -bugprone-easily-swappable-parameters,
+    -bugprone-exception-escape,
+    -bugprone-implicit-widening-of-multiplication-result,
+    -bugprone-narrowing-conversions,
+    -llvmlibc-*,
+    -cert-err33-c,
+    -cert-err34-c,
+    -cppcoreguidelines-avoid-magic-numbers,
+    -cppcoreguidelines-avoid-non-const-global-variables,
+    -cppcoreguidelines-no-malloc,
+    -cppcoreguidelines-owning-memory,
+    -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+    -cppcoreguidelines-pro-bounds-constant-array-index,
+    -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+    -cppcoreguidelines-pro-type-vararg,
+    -clang-diagnostic-error,
+    -fuchsia-*,
+    -google-readability-todo,
+    -google-runtime-int,
+    -hicpp-vararg,
+    -hicpp-no-array-decay,
+    -hicpp-no-malloc,
+    -hicpp-signed-bitwise,
+    -misc-use-anonymous-namespace,
+    -misc-no-recursion,
+    -readability-identifier-length,
+    -readability-function-cognitive-complexity,
+    -readability-magic-numbers,
+WarningsAsErrors: ''
+FormatStyle: file
+ExtraArgs: [-std=c++20]
+CheckOptions:
+    - key: modernize-deprecated-headers.CheckHeaderFile
+      value: 'true'
+    - key: cppcoreguidelines-init-variables.IncludeStyle
+      value: google
+    - key: cppcoreguidelines-init-variables.MathHeader
+      value: <cmath>
+    - key: cppcoreguidelines-narrowing-conversions.IgnoreConversionFromTypes
+      value: size_t;ptrdiff_t;size_type;difference_type;time_t
+    - key: cppcoreguidelines-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
+      value: 'false'
+    - key: cppcoreguidelines-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
+      value: 'false'

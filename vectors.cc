@@ -7,13 +7,13 @@
 #include "artisoptions.h"
 #include "sn3d.h"
 
-__host__ __device__ void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[3])
+void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[3])
 // Routine for scattering a direction through angle theta.
 {
   // begin with setting the direction in coordinates where original direction
   // is parallel to z-hat.
 
-  const double zrand = gsl_rng_uniform(rng);
+  const double zrand = rng_uniform();
   const double phi = zrand * 2 * PI;
 
   const double sin_theta_sq = 1. - (cos_theta * cos_theta);
@@ -41,9 +41,11 @@ __host__ __device__ void scatter_dir(const double dir_in[3], const double cos_th
   dir_out[0] = (r11 * xprime) + (r21 * yprime) + (r31 * zprime);
   dir_out[1] = (r12 * xprime) + (r22 * yprime) + (r32 * zprime);
   dir_out[2] = (r13 * xprime) + (r23 * yprime) + (r33 * zprime);
+
+  assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
 }
 
-__host__ __device__ void get_rand_isotropic_unitvec(double vecout[3])
+void get_rand_isotropic_unitvec(double vecout[3])
 // Assuming isotropic distribution, get a random direction vector
 {
   // alternatively, use GSL's functions:
@@ -52,8 +54,8 @@ __host__ __device__ void get_rand_isotropic_unitvec(double vecout[3])
   // gsl_ran_dir_nd(rng, 3, vecout);
   // but check validity first
 
-  const double zrand = gsl_rng_uniform(rng);
-  const double zrand2 = gsl_rng_uniform(rng);
+  const double zrand = rng_uniform();
+  const double zrand2 = rng_uniform();
 
   const double mu = -1 + (2. * zrand);
   const double phi = zrand2 * 2 * PI;
@@ -62,4 +64,6 @@ __host__ __device__ void get_rand_isotropic_unitvec(double vecout[3])
   vecout[0] = sintheta * std::cos(phi);
   vecout[1] = sintheta * std::sin(phi);
   vecout[2] = mu;
+
+  assert_testmodeonly(std::fabs(vec_len(vecout) - 1.) < 1e-10);
 }

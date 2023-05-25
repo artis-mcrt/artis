@@ -13,6 +13,10 @@ def main() -> None:
             continue
 
         outfile = Path(fileprefix + "_res.out")
+        outfile.unlink(missing_ok=True)
+
+        Path(fileprefix + "_res.out.xz").unlink(missing_ok=True)
+
         print(f"Merging {fileprefix}_res_??.out into {outfile}")
         with outfile.open("wt", encoding="utf-8") as fout:
             for abin in range(0, 100):
@@ -20,5 +24,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    # multiprocessing.freeze_support()
     main()

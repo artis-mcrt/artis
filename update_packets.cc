@@ -14,20 +14,14 @@
 #include "update_grid.h"
 
 static void do_nonthermal_predeposit(struct packet *pkt_ptr, const int nts, const double t2) {
-  const double ts = pkt_ptr->prop_time;
-
-  const double particle_en = H * pkt_ptr->nu_cmf;
-  // endot is energy loss rate (positive) in [erg/s]
-  double endot = 0.;
-
-  double t_absorb = ts;  // default to instant deposition
-  if (!INSTANT_PARTICLE_DEPOSITION) {
+  if constexpr (!INSTANT_PARTICLE_DEPOSITION) {
+    const double ts = pkt_ptr->prop_time;
     const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
     const double rho = grid::get_rho(mgi);
-    // const double rho2 = grid::get_rhoinit(mgi) / pow(t_sim_th / globals::tmin, 3);
 
-    // endot [erg/s]
-    endot = (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
+    // endot is energy loss rate (positive) in [erg/s]
+    // endot [erg/s] from Barnes et al. (2016). see their figure 6.
+    const double endot = (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
 
     // A discrete absorption event should occur somewhere along the
     // continuous track from initial kinetic energy to zero KE.
@@ -35,11 +29,13 @@ static void do_nonthermal_predeposit(struct packet *pkt_ptr, const int nts, cons
     // endot(E) * delta_t = endot(E) * delta_E / endot(E) = delta_E (delta_t is the time spent in the bin range)
     // so all final energies are equally likely.
     // Choose random en_absorb [0, particle_en]
-    const double zrand = gsl_rng_uniform(rng);
+    const double zrand = rng_uniform();
+
+    const double particle_en = H * pkt_ptr->nu_cmf;
     const double en_absorb = zrand * particle_en;
 
     // for endot independent of energy, the next line is trival (for E dependent endot, an integral would be needed)
-    t_absorb = ts + en_absorb / endot;
+    const double t_absorb = ts + en_absorb / endot;
 
     // const double deltat_zeroen = particle_en / endot;
     // const double t_sim_zeroen = ts + deltat_zeroen;
@@ -48,24 +44,32 @@ static void do_nonthermal_predeposit(struct packet *pkt_ptr, const int nts, cons
     //          particle_en / MEV,
     //          ts / 86400,
     //          deltat_zeroen / 86400, t_sim_zeroen / 86400, t2 / 86400, t_absorb / 86400);
-  }
 
-  if (t_absorb <= t2) {
-    if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA) {
-      safeadd(globals::time_step[nts].alpha_dep, pkt_ptr->e_cmf);
-    } else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_BETAMINUS) {
-      safeadd(globals::time_step[nts].electron_dep, pkt_ptr->e_cmf);
-    } else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_BETAPLUS) {
-      safeadd(globals::time_step[nts].positron_dep, pkt_ptr->e_cmf);
+    if (t_absorb > t2) {
+      // absorption happens beyond the end of the current timestep,
+      // so reduce the particle energy for the end of this timestep
+      pkt_ptr->nu_cmf = (particle_en - endot * (t2 - ts)) / H;
+      vec_scale(pkt_ptr->pos, t2 / ts);
+      pkt_ptr->prop_time = t2;
+      return;
     }
+
+    // absorption happen part way through this timestep
     vec_scale(pkt_ptr->pos, t_absorb / ts);
     pkt_ptr->prop_time = t_absorb;
-    pkt_ptr->type = TYPE_NTLEPTON;
-  } else {
-    pkt_ptr->nu_cmf = (particle_en - endot * (t2 - ts)) / H;
-    vec_scale(pkt_ptr->pos, t2 / ts);
-    pkt_ptr->prop_time = t2;
   }
+
+  // absorption happens
+
+  if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA) {
+    safeadd(globals::time_step[nts].alpha_dep, pkt_ptr->e_cmf);
+  } else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_BETAMINUS) {
+    safeadd(globals::time_step[nts].electron_dep, pkt_ptr->e_cmf);
+  } else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_BETAPLUS) {
+    safeadd(globals::time_step[nts].positron_dep, pkt_ptr->e_cmf);
+  }
+
+  pkt_ptr->type = TYPE_NTLEPTON;
 }
 
 static void update_pellet(struct packet *pkt_ptr, const int nts, const double t2) {
@@ -100,19 +104,17 @@ static void update_pellet(struct packet *pkt_ptr, const int nts, const double t2
         safeadd(globals::time_step[nts].electron_emission, pkt_ptr->e_cmf);
         pkt_ptr->em_time = pkt_ptr->prop_time;
         pkt_ptr->type = TYPE_NONTHERMAL_PREDEPOSIT;
-        // pkt_ptr->type = TYPE_NTLEPTON;
         pkt_ptr->absorptiontype = -10;
       } else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA) {
         safeadd(globals::time_step[nts].alpha_emission, pkt_ptr->e_cmf);
         pkt_ptr->em_time = pkt_ptr->prop_time;
         pkt_ptr->type = TYPE_NONTHERMAL_PREDEPOSIT;
-        // pkt_ptr->type = TYPE_NTLEPTON;
         pkt_ptr->absorptiontype = -10;
       }
     } else {
       safeadd(globals::time_step[nts].gamma_emission, pkt_ptr->e_cmf);
       // decay to gamma-ray, kpkt, or ntlepton
-      gammapkt::pellet_gamma_decay(nts, pkt_ptr);
+      gammapkt::pellet_gamma_decay(pkt_ptr);
     }
   } else if ((tdecay > 0) && (nts == 0)) {
     // These are pellets whose decay times were before the first time step
@@ -137,7 +139,7 @@ static void update_pellet(struct packet *pkt_ptr, const int nts, const double t2
 static void do_packet(struct packet *const pkt_ptr, const double t2, const int nts)
 // update a packet no further than time t2
 {
-  const int pkt_type = pkt_ptr->type;  // avoid dereferencing multiple times
+  const int pkt_type = pkt_ptr->type;
 
   switch (pkt_type) {
     case TYPE_RADIOACTIVE_PELLET: {
@@ -173,27 +175,24 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
       break;
     }
 
-    case TYPE_KPKT:
-    case TYPE_PRE_KPKT:
-    case TYPE_GAMMA_KPKT:
-      /*It's a k-packet - convert to r-packet (low freq).*/
-      // printout("k-packet propagation\n");
+    case TYPE_PRE_KPKT: {
+      kpkt::do_kpkt_bb(pkt_ptr);
+      break;
+    }
 
-      // t_change_type = do_kpkt(pkt_ptr, t_current, t2);
-      if (pkt_type == TYPE_PRE_KPKT || grid::modelgrid[grid::get_cell_modelgridindex(pkt_ptr->where)].thick == 1) {
+    case TYPE_KPKT: {
+      if (grid::modelgrid[grid::get_cell_modelgridindex(pkt_ptr->where)].thick == 1) {
         kpkt::do_kpkt_bb(pkt_ptr);
-      } else if (pkt_type == TYPE_KPKT) {
-        kpkt::do_kpkt(pkt_ptr, t2, nts);
       } else {
-        printout("kpkt not of type TYPE_KPKT or TYPE_PRE_KPKT\n");
-        abort();
-        // t_change_type = do_kpkt_ffonly(pkt_ptr, t_current, t2);
+        kpkt::do_kpkt(pkt_ptr, t2, nts);
       }
       break;
+    }
 
-    case TYPE_MA:
+    case TYPE_MA: {
       do_macroatom(pkt_ptr, nts);
       break;
+    }
 
     default:
       printout("packet_prop: Unknown packet type %d. Abort.\n", pkt_ptr->type);
@@ -201,32 +200,43 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
   }
 }
 
-static bool std_compare_packets_bymodelgriddensity(const struct packet &p1, const struct packet &p2) {
+static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, const struct packet &p2) -> bool {
   // return true if packet p1 goes before p2
 
   // move escaped packets to the end of the list for better performance
   const bool esc1 = (p1.type == TYPE_ESCAPE);
   const bool esc2 = (p2.type == TYPE_ESCAPE);
 
-  if (!esc1 && esc2)
+  if (!esc1 && esc2) {
     return true;
-  else if (esc1 && !esc2)
+  }
+  if (esc1 && !esc2) {
     return false;
-  else if (esc1 && esc2)
+  }
+  if (esc1 && esc2) {
     return false;
+  }
 
   // for both non-escaped packets, order by descending cell density
   const int mgi1 = grid::get_cell_modelgridindex(p1.where);
   const int mgi2 = grid::get_cell_modelgridindex(p2.where);
-  if (grid::get_rho(mgi1) > grid::get_rho(mgi2)) return true;
+  if (grid::get_rho(mgi1) > grid::get_rho(mgi2)) {
+    return true;
+  }
 
-  if (grid::get_rho(mgi1) == grid::get_rho(mgi2) && (mgi1 < mgi2)) return true;
+  if (grid::get_rho(mgi1) == grid::get_rho(mgi2) && (mgi1 < mgi2)) {
+    return true;
+  }
 
   // same cell, order by type
-  if ((mgi1 == mgi2) && (p1.type < p2.type)) return true;
+  if ((mgi1 == mgi2) && (p1.type < p2.type)) {
+    return true;
+  }
 
   // same cell and type, order by decreasing frequency
-  if ((mgi1 == mgi2) && (p1.type == p2.type) && (p1.nu_cmf > p2.nu_cmf)) return true;
+  if ((mgi1 == mgi2) && (p1.type == p2.type) && (p1.nu_cmf > p2.nu_cmf)) {
+    return true;
+  }
 
   return false;
 }
@@ -242,20 +252,20 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
   const double ts = globals::time_step[nts].start;
   const double tw = globals::time_step[nts].width;
 
-  const time_t time_update_packets_start = time(NULL);
+  const time_t time_update_packets_start = time(nullptr);
   printout("timestep %d: start update_packets at time %ld\n", nts, time_update_packets_start);
   bool timestepcomplete = false;
   int passnumber = 0;
   while (!timestepcomplete) {
     timestepcomplete = true;  // will be set false if any packets did not finish propagating in this pass
 
-    const time_t sys_time_start_pass = time(NULL);
+    const time_t sys_time_start_pass = time(nullptr);
 
     // printout("sorting packets...");
 
     std::sort(packets, packets + globals::npkts, std_compare_packets_bymodelgriddensity);
 
-    // printout("took %lds\n", time(NULL) - sys_time_start_pass);
+    // printout("took %lds\n", time(nullptr) - sys_time_start_pass);
 
     printout("  update_packets timestep %d pass %3d: started at %ld\n", nts, passnumber, sys_time_start_pass);
 
@@ -281,7 +291,6 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
 
       if (passnumber == 0) {
         pkt_ptr->interactions = 0;
-        pkt_ptr->scat_count = 0;
       }
 
       if (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < (ts + tw)) {
@@ -314,20 +323,21 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
     const int cellhistresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
     printout(
         "  update_packets timestep %d pass %3d: finished at %ld packetsupdated %7d cellhistoryresets %7d (took %lds)\n",
-        nts, passnumber, time(NULL), count_pktupdates, cellhistresets, time(NULL) - sys_time_start_pass);
+        nts, passnumber, time(nullptr), count_pktupdates, cellhistresets, time(nullptr) - sys_time_start_pass);
 
     passnumber++;
   }
 
   stats::pkt_action_counters_printout(packets, nts);
 
-  const time_t time_update_packets_end_thisrank = time(NULL);
-  printout("end of update_packets for this rank at time %ld\n", time_update_packets_end_thisrank);
+  const time_t time_update_packets_end_thisrank = time(nullptr);
+  printout("timestep %d: end of update_packets for this rank at time %ld\n", nts, time_update_packets_end_thisrank);
 
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);  // hold all processes once the packets are updated
 #endif
-  printout("timestep %d: time after update packets %ld (rank %d took %lds, waited %lds, total %lds)\n", nts, time(NULL),
-           my_rank, time_update_packets_end_thisrank - time_update_packets_start,
-           time(NULL) - time_update_packets_end_thisrank, time(NULL) - time_update_packets_start);
+  printout(
+      "timestep %d: time after update packets for all processes %ld (rank %d took %lds, waited %lds, total %lds)\n",
+      nts, time(nullptr), my_rank, time_update_packets_end_thisrank - time_update_packets_start,
+      time(nullptr) - time_update_packets_end_thisrank, time(nullptr) - time_update_packets_start);
 }

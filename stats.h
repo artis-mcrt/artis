@@ -1,7 +1,6 @@
 #ifndef STATS_H
 #define STATS_H
 
-#include "cuda.h"
 #include "packet.h"
 
 namespace stats {
@@ -83,34 +82,31 @@ enum eventcounters {
   COUNTER_COUNT = 34,
 };
 
-void init(void);
+void init();
 
-void cleanup(void);
+void cleanup();
 
-__host__ __device__ void increment_ion_stats(const int modelgridindex, const int element, const int ion,
-                                             enum ionstattypes ionstattype, const double increment);
+void increment_ion_stats(int modelgridindex, int element, int ion, enum ionstattypes ionstattype, double increment);
 
-__host__ __device__ void increment_ion_stats_contabsorption(const struct packet *const pkt_ptr,
-                                                            const int modelgridindex, const int element, const int ion);
+void increment_ion_stats_contabsorption(const struct packet *pkt_ptr, int modelgridindex, int element, int ion);
 
-double get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype);
+double get_ion_stats(int modelgridindex, int element, int ion, enum ionstattypes ionstattype);
 
-void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype,
-                   const double newvalue);
+void set_ion_stats(int modelgridindex, int element, int ion, enum ionstattypes ionstattype, double newvalue);
 
 void reset_ion_stats(int modelgridindex);
 
-void normalise_ion_estimators(const int mgi, const double deltat, const double deltaV);
+void normalise_ion_estimators(int mgi, double deltat, double deltaV);
 
-__host__ __device__ void increment(enum eventcounters);
+void increment(enum eventcounters);
 
-void pkt_action_counters_reset(void);
+void pkt_action_counters_reset();
 
 int get_counter(enum eventcounters i);
 
-void pkt_action_counters_printout(const struct packet *const pkt, const int nts);
+void pkt_action_counters_printout(const struct packet *pkt, int nts);
 
-void reduce_estimators(void);
+void reduce_estimators();
 }  // namespace stats
 
 #endif  // STATS_H

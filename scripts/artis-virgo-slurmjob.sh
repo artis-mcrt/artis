@@ -1,18 +1,28 @@
-#!/bin/bash -x
+#!/bin/bash
 ## SLURM META DIRECTIVES HERE DON'T WORK UNDER CENTOS VIRTUAL APPLICATION ENVIRONMENT
 ## So they are located in artis-virgo-submit.sh as cmd-line parameters to sbatch
 
 cd $SLURM_SUBMIT_DIR
 
-spack load gsl target=$(spack arch -t)
+#spack load gsl%gcc target=$(spack arch -t)
 
-echo "$(date): time before srun sn3d"
-time srun -- ./sn3d -w 24 > out.txt
-echo "$(date): time after srun sn3d finished"
-echo "seconds elapsed: $SECONDS"
+echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
-mkdir ${SLURM_JOBID}.slurm
-source ./artis/scripts/movefiles.sh ${SLURM_JOBID}.slurm
+# decompress any zipped input files
+source ./artis/scripts/exspec-before.sh
+
+hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
+echo "$(date): before srun sn3d. hours left: $hoursleft"
+time srun -- ./sn3d -w $hoursleft > out.txt
+hoursleftafter=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
+echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
+hourselapsed=$(python3 -c "print($hoursleft - $hoursleftafter)")
+echo "hours of runtime: $hourselapsed"
+cpuhrs=$(python3 -c "print($SLURM_NTASKS * $hourselapsed)")
+echo "ntasks: $SLURM_NTASKS -> CPU core hrs: $cpuhrs"
+
+mkdir ${SLURM_JOB_ID}.slurm
+source ./artis/scripts/movefiles.sh ${SLURM_JOB_ID}.slurm
 
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
