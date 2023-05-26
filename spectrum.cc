@@ -129,12 +129,10 @@ static void printout_tracemission_stats() {
                                        [=](auto &downtrans) { return downtrans.targetlevelindex == lower; });
         assert_always(downtrans != (downtranslist + nupperdowntrans));
 
-        auto coll_str = downtrans->coll_str;
-
         printout("%7.2e (%5.1f%%) %4d %9d %5d %5d %8.1f %8.2e %4d %7.1f %7.1f %7.1e %7.1e\n", encontrib,
                  100 * encontrib / totalenergy, get_atomicnumber(element), get_ionstage(element, ion),
-                 globals::linelist[lineindex].upperlevelindex, globals::linelist[lineindex].lowerlevelindex, coll_str,
-                 einstein_spontaneous_emission(lineindex), globals::linelist[lineindex].forbidden, linelambda, v_rad,
+                 globals::linelist[lineindex].upperlevelindex, globals::linelist[lineindex].lowerlevelindex,
+                 downtrans->coll_str, einstein_spontaneous_emission(lineindex), downtrans->forbidden, linelambda, v_rad,
                  B_lu, B_ul);
       } else {
         break;
