@@ -871,8 +871,7 @@ static void allocate_nonemptymodelcells() {
 
   printout(
       "[info] mem_usage: NLTE populations for all allocated cells occupy a total of %.3f MB (node shared memory)\n",
-      get_nonempty_npts_model() * globals::total_nlte_levels * sizeof(double) * globals::total_nlte_levels *
-          sizeof(double) / 1024. / 1024.);
+      get_nonempty_npts_model() * globals::total_nlte_levels * sizeof(double) / 1024. / 1024.);
 }
 
 static void map_1dmodeltogrid()
