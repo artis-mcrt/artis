@@ -137,7 +137,6 @@ struct linelist_entry {
   int ionindex;         /// The same for the elements ion
   int upperlevelindex;  /// And the participating upper
   int lowerlevelindex;  /// and lower levels
-  bool forbidden;
 };
 
 struct nne_solution_paras {
