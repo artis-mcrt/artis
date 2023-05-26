@@ -49,8 +49,6 @@ int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usuall
 
 struct gridcell *cell = nullptr;
 
-static size_t mem_usage_nltepops = 0;
-
 static int *mg_associated_cells = nullptr;
 static int *nonemptymgi_of_mgi = nullptr;
 static int *mgi_of_nonemptymgi = nullptr;
@@ -712,8 +710,6 @@ static void allocate_composition_cooling()
     assert_always(nltepops_allcells != nullptr);
   }
 
-  mem_usage_nltepops += npts_nonempty * globals::total_nlte_levels * sizeof(double);
-
   for (int nonemptymgi = 0; nonemptymgi < npts_nonempty; nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
@@ -802,7 +798,6 @@ static void allocate_composition_cooling()
 }
 
 static void allocate_nonemptymodelcells() {
-  mem_usage_nltepops = 0;
   /// This is the placeholder for empty cells. Temperatures must be positive
   /// as long as ff opacities are calculated.
   set_rho_tmin(get_npts_model(), 0.);
@@ -876,7 +871,8 @@ static void allocate_nonemptymodelcells() {
 
   printout(
       "[info] mem_usage: NLTE populations for all allocated cells occupy a total of %.3f MB (node shared memory)\n",
-      mem_usage_nltepops / 1024. / 1024.);
+      npts_nonempty * globals::total_nlte_levels * sizeof(double) * globals::total_nlte_levels * sizeof(double) /
+          1024. / 1024.);
 }
 
 static void map_1dmodeltogrid()
