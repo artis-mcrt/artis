@@ -31,7 +31,6 @@
 
 // threadprivate variables
 int tid;
-int myGpuId = 0;
 bool use_cellhist;
 bool neutral_flag;
 gsl_rng *rng = nullptr;
@@ -909,7 +908,7 @@ auto main(int argc, char *argv[]) -> int {
     /// Next we want to initialise the packets.
     /// Create a bunch of npkts packets
     /// and write them to a binary file for later readin.
-    packet_init(my_rank, packets);
+    packet_init(packets);
     zero_estimators();
   }
 

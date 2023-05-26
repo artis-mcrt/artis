@@ -496,49 +496,6 @@ constexpr auto operator<(const linelist_entry &a, const linelist_entry &b) -> bo
   return a.nu > b.nu;
 }
 
-constexpr auto compare_linelistentry(const void *p1, const void *p2) -> int
-/// Helper function to sort the linelist by frequency.
-{
-  auto *a1 = (linelist_entry *)(p1);
-  auto *a2 = (linelist_entry *)(p2);
-
-  if (fabs(a2->nu - a1->nu) < (1.e-10 * a1->nu)) {
-    if ((a1->elementindex == a2->elementindex) && (a1->ionindex == a2->ionindex) &&
-        (a1->lowerlevelindex == a2->lowerlevelindex) && (a1->upperlevelindex == a2->upperlevelindex)) {
-      printout("Duplicate transition line? %s\n", a1->nu == a2->nu ? "nu match exact" : "close to nu match");
-      printout("a: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_atomicnumber(a1->elementindex),
-               get_ionstage(a1->elementindex, a1->ionindex), a1->lowerlevelindex, a1->upperlevelindex, a1->nu,
-               1e8 * CLIGHT / a1->nu);
-      printout("b: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_atomicnumber(a2->elementindex),
-               get_ionstage(a2->elementindex, a2->ionindex), a2->lowerlevelindex, a2->upperlevelindex, a2->nu,
-               1e8 * CLIGHT / a2->nu);
-    }
-
-    a2->nu = a1->nu;
-    if (a1->lowerlevelindex > a2->lowerlevelindex) {
-      return -1;
-    }
-    if (a1->lowerlevelindex < a2->lowerlevelindex) {
-      return 1;
-    }
-    if (a1->upperlevelindex > a2->upperlevelindex) {
-      return -1;
-    }
-    if (a1->upperlevelindex < a2->upperlevelindex) {
-      return 1;
-    }
-    return 0;
-  }
-
-  if ((a1->nu < a2->nu) || (a1->nu == a2->nu)) {
-    return 1;
-  }
-  if (a1->nu > a2->nu) {
-    return -1;
-  }
-  return 0;
-}
-
 static void add_transitions_to_unsorted_linelist(const int element, const int ion, const int nlevelsmax,
                                                  const std::vector<struct transitiontable_entry> &transitiontable,
                                                  struct transitions *transitions, int *lineindex,
@@ -1007,13 +964,8 @@ static void read_atomicdata_files() {
 
   if (globals::rank_in_node == 0) {
     /// sort the linelist by decreasing frequency
-    if (CLASSIC_LINELIST_SORT) {
-      // Luke: this comparison function has side-effects that clamp similar frequencies together
-      qsort(temp_linelist.data(), globals::nlines, sizeof(linelist_entry), compare_linelistentry);
-    } else {
-      std::sort(temp_linelist.begin(), temp_linelist.end(),
-                [](const auto &a, const auto &b) { return static_cast<bool>(a.nu > b.nu); });
-    }
+    std::sort(temp_linelist.begin(), temp_linelist.end(),
+              [](const auto &a, const auto &b) { return static_cast<bool>(a.nu > b.nu); });
 
     for (int i = 0; i < globals::nlines - 1; i++) {
       const double nu = temp_linelist[i].nu;

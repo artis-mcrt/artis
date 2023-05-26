@@ -49,8 +49,6 @@ int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usuall
 
 struct gridcell *cell = nullptr;
 
-static size_t mem_usage_nltepops = 0;
-
 static int *mg_associated_cells = nullptr;
 static int *nonemptymgi_of_mgi = nullptr;
 static int *mgi_of_nonemptymgi = nullptr;
@@ -81,59 +79,64 @@ auto wid_init(const int cellindex) -> double
 // for spherical grid this is the radial extent (r_outer - r_inner)
 // these values are for time globals::tmin
 {
-  switch (GRID_TYPE) {
-    case GRID_SPHERICAL1D: {
-      const int modelgridindex = get_cell_modelgridindex(cellindex);
-      const double v_inner = modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.;
-      return (vout_model[modelgridindex] - v_inner) * globals::tmin;
-    }
-
-    default:
-      return 2 * globals::coordmax[0] / ncoordgrid[0];
+  if constexpr (GRID_TYPE == GRID_UNIFORM) {
+    return 2 * globals::coordmax[0] / ncoordgrid[0];
   }
+
+  if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
+    const int modelgridindex = get_cell_modelgridindex(cellindex);
+    const double v_inner = modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.;
+    return (vout_model[modelgridindex] - v_inner) * globals::tmin;
+  }
+
+  assert_always(false);
 }
 
 auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double
 // return the model cell volume (when mapped to the propagation cells) at globals::tmin
 // for a uniform cubic grid this is constant
 {
-  switch (GRID_TYPE) {
-    case GRID_SPHERICAL1D:
-      return 4. / 3. * PI *
-             (pow(globals::tmin * vout_model[modelgridindex], 3) -
-              pow(globals::tmin * (modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.), 3));
-
-    default: {
-      return (wid_init(0) * wid_init(0) * wid_init(0)) * get_numassociatedcells(modelgridindex);
-    }
+  if constexpr (GRID_TYPE == GRID_UNIFORM) {
+    return (wid_init(0) * wid_init(0) * wid_init(0)) * get_numassociatedcells(modelgridindex);
   }
+
+  if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
+    return 4. / 3. * PI *
+           (pow(globals::tmin * vout_model[modelgridindex], 3) -
+            pow(globals::tmin * (modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.), 3));
+  }
+
+  assert_always(false);
 }
 
 auto get_gridcell_volume_tmin(const int cellindex) -> double
 // return the propagation cell volume at globals::tmin
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
 {
-  switch (GRID_TYPE) {
-    case GRID_SPHERICAL1D: {
-      const int mgi = get_cell_modelgridindex(cellindex);
-      return get_modelcell_assocvolume_tmin(mgi);
-    }
-
-    default:
-      return (wid_init(0) * wid_init(0) * wid_init(0));
+  if constexpr (GRID_TYPE == GRID_UNIFORM) {
+    return (wid_init(0) * wid_init(0) * wid_init(0));
   }
+
+  if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
+    const int mgi = get_cell_modelgridindex(cellindex);
+    return get_modelcell_assocvolume_tmin(mgi);
+  }
+
+  assert_always(false);
 }
 
 auto get_cellcoordmax(const int cellindex, const int axis) -> double
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
 {
-  if (GRID_TYPE == GRID_UNIFORM) {
+  if constexpr (GRID_TYPE == GRID_UNIFORM) {
     return grid::get_cellcoordmin(cellindex, axis) + grid::wid_init(0);
   }
-  if (GRID_TYPE == GRID_SPHERICAL1D) {
+
+  if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
     return grid::get_cellcoordmin(cellindex, 0) + grid::wid_init(cellindex);
   }
+
   assert_always(false);
 }
 
@@ -148,56 +151,58 @@ auto get_cellcoordmin(const int cellindex, const int axis) -> double
 auto get_coordcellindexincrement(const int axis) -> int
 // how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r direction)
 {
-  switch (GRID_TYPE) {
-    case GRID_SPHERICAL1D:
-      return 1;
+  if constexpr (GRID_TYPE == GRID_UNIFORM) {
+    switch (axis) {
+      case 0:
+        return 1;
 
-    default:
-      switch (axis) {
-        case 0:
-          return 1;
+      case 1:
+        return ncoordgrid[0];
 
-        case 1:
-          return ncoordgrid[0];
+      case 2:
+        return ncoordgrid[0] * ncoordgrid[1];
 
-        case 2:
-          return ncoordgrid[0] * ncoordgrid[1];
-
-        default:
-          printout("invalid coordinate index %d", axis);
-          abort();
-          return -1;
-      }
+      default:
+        printout("invalid coordinate index %d", axis);
+        abort();
+        return -1;
+    }
   }
+
+  if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
+    return 1;
+  }
+
+  assert_always(false);
 }
 
 auto get_cellcoordpointnum(const int cellindex, const int axis) -> int
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
 {
-  // return cell[cellindex].nxyz[axis];
+  if constexpr (GRID_TYPE == GRID_UNIFORM) {
+    switch (axis) {
+      // increment x first, then y, then z
+      case 0:
+        return cellindex % ncoordgrid[0];
 
-  switch (GRID_TYPE) {
-    case GRID_SPHERICAL1D:
-      return cellindex;
+      case 1:
+        return (cellindex / ncoordgrid[0]) % ncoordgrid[1];
 
-    default:
-      switch (axis) {
-        // increment x first, then y, then z
-        case 0:
-          return cellindex % ncoordgrid[0];
+      case 2:
+        return (cellindex / (ncoordgrid[0] * ncoordgrid[1])) % ncoordgrid[2];
 
-        case 1:
-          return (cellindex / ncoordgrid[0]) % ncoordgrid[1];
-
-        case 2:
-          return (cellindex / (ncoordgrid[0] * ncoordgrid[1])) % ncoordgrid[2];
-
-        default:
-          printout("invalid coordinate index %d", axis);
-          abort();
-          return -1;
-      }
+      default:
+        printout("invalid coordinate index %d", axis);
+        abort();
+        return -1;
+    }
   }
+
+  if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
+    return cellindex;
+  }
+
+  assert_always(false);
 }
 
 auto get_rho_tmin(int modelgridindex) -> float { return modelgrid[modelgridindex].rhoinit; }
@@ -712,8 +717,6 @@ static void allocate_composition_cooling()
     assert_always(nltepops_allcells != nullptr);
   }
 
-  mem_usage_nltepops += npts_nonempty * globals::total_nlte_levels * sizeof(double);
-
   for (int nonemptymgi = 0; nonemptymgi < npts_nonempty; nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
@@ -802,7 +805,6 @@ static void allocate_composition_cooling()
 }
 
 static void allocate_nonemptymodelcells() {
-  mem_usage_nltepops = 0;
   /// This is the placeholder for empty cells. Temperatures must be positive
   /// as long as ff opacities are calculated.
   set_rho_tmin(get_npts_model(), 0.);
@@ -876,7 +878,7 @@ static void allocate_nonemptymodelcells() {
 
   printout(
       "[info] mem_usage: NLTE populations for all allocated cells occupy a total of %.3f MB (node shared memory)\n",
-      mem_usage_nltepops / 1024. / 1024.);
+      get_nonempty_npts_model() * globals::total_nlte_levels * sizeof(double) / 1024. / 1024.);
 }
 
 static void map_1dmodeltogrid()

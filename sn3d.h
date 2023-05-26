@@ -21,7 +21,30 @@
 #include "artisoptions.h"
 #include "globals.h"
 
+// #define _OPENMP
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 extern FILE *output_file;
+extern int tid;
+extern bool use_cellhist;
+extern bool neutral_flag;
+
+#include <gsl/gsl_rng.h>
+extern gsl_rng *rng;  // pointer for random number generator
+extern std::mt19937_64 *stdrng;
+static std::uniform_real_distribution<double> stdrngdis(0.0, 1.0);
+
+extern gsl_integration_workspace *gslworkspace;
+
+#ifdef _OPENMP
+#pragma omp threadprivate(tid, use_cellhist, neutral_flag, rng, gslworkspace, output_file)
+#endif
 
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
@@ -98,43 +121,6 @@ static inline int get_bflutindex(const int tempindex, const int element, const i
 #define safeincrement(var) safeadd(var, 1)
 
 // #define DO_TITER
-
-#if !defined MPI_ON
-// #define MPI_ON //only needed for debugging MPI, the makefile will switch this on
-#endif
-
-#ifdef MPI_ON
-#include <mpi.h>
-#endif
-
-// #define _OPENMP
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-
-#define COOLING_UNDEFINED -99
-
-#define RPKT_EVENTTYPE_BB 550
-#define RPKT_EVENTTYPE_CONT 551
-
-extern int tid;
-extern bool use_cellhist;
-extern bool neutral_flag;
-
-#include <gsl/gsl_rng.h>
-extern gsl_rng *rng;  // pointer for random number generator
-extern std::mt19937_64 *stdrng;
-static std::uniform_real_distribution<double> stdrngdis(0.0, 1.0);
-
-extern gsl_integration_workspace *gslworkspace;
-extern int myGpuId;
-
-#ifdef _OPENMP
-#pragma omp threadprivate(tid, myGpuId, use_cellhist, neutral_flag, rng, gslworkspace, output_file)
-#endif
-
-#include "globals.h"
-#include "vectors.h"
 
 static inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno) {
   if (gsl_errno != 18)  // roundoff error

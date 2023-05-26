@@ -590,7 +590,7 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
 
       if constexpr (VPKT_ON) {
         // generate a virtual packet
-        int realtype = 2;
+        int const realtype = 2;
         vpkt_call_estimators(pkt_ptr, t_current, realtype);
       }
     } else if (coolinglist[i].type == COOLINGTYPE_FB) {
@@ -639,7 +639,7 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
 
       // call the estimator routine - generate a virtual packet
       if constexpr (VPKT_ON) {
-        int realtype = 2;
+        int const realtype = 2;
         vpkt_call_estimators(pkt_ptr, t_current, realtype);
       }
     } else if (coolinglist[i].type == COOLINGTYPE_COLLEXC) {

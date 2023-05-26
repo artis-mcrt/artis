@@ -220,7 +220,4 @@ constexpr bool KEEP_ALL_RESTART_FILES;
 // multiply bound-free cooling coefficient by upper level population instead of the upper ion target level population
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 
-// classic artis used a comparison function with side effects and the resulting line list
-// was not correctly sorted by frequency
-constexpr bool CLASSIC_LINELIST_SORT;
 ```

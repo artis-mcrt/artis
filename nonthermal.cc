@@ -1114,7 +1114,7 @@ static auto get_nt_frac_ionization(const int modelgridindex) -> float {
     return 0.;
   }
   if (!NT_SOLVE_SPENCERFANO) {
-    return 0.02;
+    return 0.03;
   }
 
   const float frac_ionization = nt_solution[modelgridindex].frac_ionization;
@@ -1744,6 +1744,7 @@ static void select_nt_ionization(int modelgridindex, int *element, int *lowerion
 }
 
 static auto ion_ntion_energyrate(int modelgridindex, int element, int lowerion) -> double {
+  // returns the energy rate [erg/s] going toward non-thermal ionisation of lowerion
   const double nnlowerion = ionstagepop(modelgridindex, element, lowerion);
   double enrate = 0.;
   for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++) {
@@ -1764,6 +1765,7 @@ static auto ion_ntion_energyrate(int modelgridindex, int element, int lowerion) 
 }
 
 static auto get_ntion_energyrate(int modelgridindex) -> double {
+  // returns the energy rate [erg/s] going toward non-thermal ionisation in a modelgrid cell
   double ratetotal = 0.;
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
     const int nions = get_nions(ielement);

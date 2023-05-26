@@ -5,6 +5,8 @@
 #include "packet.h"
 #include "thermalbalance.h"
 
+constexpr double COOLING_UNDEFINED = -99;
+
 namespace kpkt {
 
 void setup_coolinglist();
