@@ -11,7 +11,7 @@
 #include "sn3d.h"
 #include "vectors.h"
 
-constexpr bool TRACE_EMISSION_ABSORPTION_REGION_ON = false;
+bool TRACE_EMISSION_ABSORPTION_REGION_ON = false;
 
 constexpr double traceemissabs_lambdamin = 1000.;  // in Angstroms
 constexpr double traceemissabs_lambdamax = 25000.;
