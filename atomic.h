@@ -47,7 +47,6 @@ double get_phixsprobability(int element, int ion, int level, int phixstargetinde
 void set_ndowntrans(int element, int ion, int level, int ndowntrans);
 void set_nuptrans(int element, int ion, int level, int nuptrans);
 double einstein_spontaneous_emission(int lineindex);
-double osc_strength(int lineindex);
 double get_coll_str(int lineindex);
 double statw_upper(int lineindex);
 double statw_lower(int lineindex);

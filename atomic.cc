@@ -473,15 +473,6 @@ auto einstein_spontaneous_emission(const int lineindex) -> double
   return globals::linelist[lineindex].einstein_A;
 }
 
-auto osc_strength(const int lineindex) -> double
-// double osc_strength(int element, int ion, int upper, int lower)
-/// reads f_lu from levellist which consists of
-/// (epsilon_upper; 0) | (g_upper; 0) | (A_upper,upper-1; f_upper,upper-1) | (A_uppper,upper-2; f_upper,upper-2) | ... |
-/// (A_upper,1; f_upper,1)
-{
-  return globals::linelist[lineindex].osc_strength;
-}
-
 auto get_coll_str(const int lineindex) -> double { return globals::linelist[lineindex].coll_str; }
 
 auto statw_upper(const int lineindex) -> double { return statw_upper(&globals::linelist[lineindex]); }

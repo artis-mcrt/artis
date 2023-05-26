@@ -597,7 +597,6 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
         temp_linelist.push_back({
             .nu = nu_trans,
             .einstein_A = static_cast<float>(A_ul),
-            .osc_strength = f_ul,
             .coll_str = coll_str,
             .elementindex = element,
             .ionindex = ion,
