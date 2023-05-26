@@ -1114,7 +1114,7 @@ static auto get_nt_frac_ionization(const int modelgridindex) -> float {
     return 0.;
   }
   if (!NT_SOLVE_SPENCERFANO) {
-    return 0.02;
+    return 0.03;
   }
 
   const float frac_ionization = nt_solution[modelgridindex].frac_ionization;
