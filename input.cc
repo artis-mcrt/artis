@@ -490,12 +490,6 @@ static void read_ion_transitions(std::istream &ftransitiondata, const int tottra
   }
 }
 
-constexpr auto operator<(const linelist_entry &a, const linelist_entry &b) -> bool
-// sort the lineline in descending frequency
-{
-  return a.nu > b.nu;
-}
-
 static void add_transitions_to_unsorted_linelist(const int element, const int ion, const int nlevelsmax,
                                                  const std::vector<struct transitiontable_entry> &transitiontable,
                                                  struct transitions *transitions, int *lineindex,
@@ -925,7 +919,7 @@ static void read_atomicdata_files() {
            (totaluptrans + totaldowntrans) * sizeof(struct level_transition) / 1024. / 1024.);
 
   if (globals::rank_in_node == 0) {
-    /// sort the linelist by decreasing frequency
+    // sort the lineline in descending frequency
     std::sort(temp_linelist.begin(), temp_linelist.end(),
               [](const auto &a, const auto &b) { return static_cast<bool>(a.nu > b.nu); });
 
