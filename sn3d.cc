@@ -31,7 +31,6 @@
 
 // threadprivate variables
 int tid;
-int myGpuId = 0;
 bool use_cellhist;
 bool neutral_flag;
 gsl_rng *rng = nullptr;

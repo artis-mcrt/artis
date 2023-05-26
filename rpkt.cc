@@ -19,6 +19,9 @@
 
 // Material for handing r-packet propagation.
 
+constexpr int RPKT_EVENTTYPE_BB = 550;
+constexpr int RPKT_EVENTTYPE_CONT = 551;
+
 constexpr auto operator<(const linelist_entry &line, const double &nu_cmf) -> bool { return !(line.nu <= nu_cmf); }
 
 auto closest_transition(const double nu_cmf, const int next_trans) -> int

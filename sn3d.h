@@ -112,11 +112,6 @@ static inline int get_bflutindex(const int tempindex, const int element, const i
 #include <omp.h>
 #endif
 
-#define COOLING_UNDEFINED -99
-
-#define RPKT_EVENTTYPE_BB 550
-#define RPKT_EVENTTYPE_CONT 551
-
 extern int tid;
 extern bool use_cellhist;
 extern bool neutral_flag;
@@ -127,10 +122,9 @@ extern std::mt19937_64 *stdrng;
 static std::uniform_real_distribution<double> stdrngdis(0.0, 1.0);
 
 extern gsl_integration_workspace *gslworkspace;
-extern int myGpuId;
 
 #ifdef _OPENMP
-#pragma omp threadprivate(tid, myGpuId, use_cellhist, neutral_flag, rng, gslworkspace, output_file)
+#pragma omp threadprivate(tid, use_cellhist, neutral_flag, rng, gslworkspace, output_file)
 #endif
 
 #include "globals.h"
