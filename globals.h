@@ -132,7 +132,6 @@ struct elementlist_entry {
 struct linelist_entry {
   double nu;  /// Frequency of the line transition
   float einstein_A;
-  float coll_str;
   int elementindex;     /// It's a transition of element (not its atomic number,
                         /// but the (x-1)th element included in the simulation.
   int ionindex;         /// The same for the elements ion

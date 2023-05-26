@@ -47,7 +47,6 @@ double get_phixsprobability(int element, int ion, int level, int phixstargetinde
 void set_ndowntrans(int element, int ion, int level, int ndowntrans);
 void set_nuptrans(int element, int ion, int level, int nuptrans);
 double einstein_spontaneous_emission(int lineindex);
-double get_coll_str(int lineindex);
 double photoionization_crosssection(int element, int ion, int level, double nu_edge, double nu);
 double get_phixs_threshold(int element, int ion, int level, int phixstargetindex);
 

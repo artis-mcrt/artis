@@ -469,8 +469,6 @@ auto einstein_spontaneous_emission(const int lineindex) -> double
   return globals::linelist[lineindex].einstein_A;
 }
 
-auto get_coll_str(const int lineindex) -> double { return globals::linelist[lineindex].coll_str; }
-
 auto photoionization_crosssection(const int element, const int ion, const int level, const double nu_edge,
                                   const double nu) -> double {
   assert_testmodeonly(element < get_nelements());
