@@ -595,7 +595,6 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
             .ionindex = ion,
             .upperlevelindex = level,
             .lowerlevelindex = targetlevel,
-            .forbidden = transitiontable[ii].forbidden,
         });
 
         // the line list has not been sorted yet, so the store the level index for now and
