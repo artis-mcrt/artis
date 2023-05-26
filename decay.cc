@@ -14,6 +14,7 @@
 
 #include "atomic.h"
 #include "gammapkt.h"
+#include "globals.h"
 #include "grid.h"
 #include "input.h"
 #include "nonthermal.h"

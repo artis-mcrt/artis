@@ -12,6 +12,7 @@
 #include "sn3d.h"
 #include "stats.h"
 #include "update_grid.h"
+#include "vectors.h"
 
 static void do_nonthermal_predeposit(struct packet *pkt_ptr, const int nts, const double t2) {
   if constexpr (!INSTANT_PARTICLE_DEPOSITION) {
