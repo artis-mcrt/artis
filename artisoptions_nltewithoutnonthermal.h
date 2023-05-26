@@ -144,7 +144,5 @@ constexpr bool KEEP_ALL_RESTART_FILES = false;
 
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = true;
 
-constexpr bool CLASSIC_LINELIST_SORT = true;
-
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H
