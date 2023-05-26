@@ -115,8 +115,8 @@ static void printout_tracemission_stats() {
         const int lower = globals::linelist[lineindex].lowerlevelindex;
         const int upper = globals::linelist[lineindex].upperlevelindex;
 
-        const double statweight_target = statw_upper(lineindex);
-        const double statweight_lower = statw_lower(lineindex);
+        const double statweight_target = stat_weight(element, ion, upper);
+        const double statweight_lower = stat_weight(element, ion, lower);
 
         const double nu_trans = (epsilon(element, ion, upper) - epsilon(element, ion, lower)) / H;
         const double A_ul = einstein_spontaneous_emission(lineindex);

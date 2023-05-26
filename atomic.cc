@@ -466,26 +466,10 @@ auto einstein_spontaneous_emission(const int lineindex) -> double
 /// (epsilon_upper; 0) | (g_upper; 0) | (A_upper,upper-1; f_upper,upper-1) | (A_uppper,upper-2; f_upper,upper-2) | ... |
 /// (A_upper,1; f_upper,1)
 {
-  /*
-    int index = (upper-lower) - 1;
-    double A_ul = globals::elements[element].ions[ion].levels[upper].transitions[index].einstein_A;
-  */
   return globals::linelist[lineindex].einstein_A;
 }
 
 auto get_coll_str(const int lineindex) -> double { return globals::linelist[lineindex].coll_str; }
-
-auto statw_upper(const int lineindex) -> double { return statw_upper(&globals::linelist[lineindex]); }
-
-auto statw_lower(const int lineindex) -> double { return statw_lower(&globals::linelist[lineindex]); }
-
-auto statw_upper(const struct linelist_entry *line) -> double {
-  return stat_weight(line->elementindex, line->ionindex, line->upperlevelindex);
-}
-
-auto statw_lower(const struct linelist_entry *line) -> double {
-  return stat_weight(line->elementindex, line->ionindex, line->lowerlevelindex);
-}
 
 auto photoionization_crosssection(const int element, const int ion, const int level, const double nu_edge,
                                   const double nu) -> double {
