@@ -562,64 +562,100 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
       const int transitioncheck = transitions[level].to[(level - targetlevel) - 1];
 
       // -99 means that the transition hasn't been seen yet
-      assert_always(transitioncheck == -99);
-      transitions[level].to[level - targetlevel - 1] = *lineindex;
+      if (transitioncheck == -99) {
+        transitions[level].to[level - targetlevel - 1] = *lineindex;
 
-      const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
-      set_ndowntrans(element, ion, level, nupperdowntrans);
+        const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
+        set_ndowntrans(element, ion, level, nupperdowntrans);
 
-      const int nloweruptrans = get_nuptrans(element, ion, targetlevel) + 1;
-      set_nuptrans(element, ion, targetlevel, nloweruptrans);
+        const int nloweruptrans = get_nuptrans(element, ion, targetlevel) + 1;
+        set_nuptrans(element, ion, targetlevel, nloweruptrans);
 
-      totupdowntrans += 2;
+        totupdowntrans += 2;
 
-      if (pass == 1 && globals::rank_in_node == 0) {
+        if (pass == 1 && globals::rank_in_node == 0) {
+          const double A_ul = transitiontable[ii].A;
+          const float coll_str = transitiontable[ii].coll_str;
+
+          const double g = stat_weight(element, ion, level) / stat_weight(element, ion, targetlevel);
+          const float f_ul = g * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
+          assert_always(std::isfinite(f_ul));
+
+          // printout("lineindex %d, element %d, ion %d, lower %d, upper %d, nu
+          // %g\n",*lineindex,element,ion,level-i-1,level,nu_trans);
+
+          temp_linelist.push_back({
+              .nu = nu_trans,
+              .einstein_A = static_cast<float>(A_ul),
+              .elementindex = element,
+              .ionindex = ion,
+              .upperlevelindex = level,
+              .lowerlevelindex = targetlevel,
+          });
+
+          // the line list has not been sorted yet, so the store the level index for now and
+          // the index into the sorted line list will be set later
+
+          globals::elements[element].ions[ion].levels[level].downtrans[nupperdowntrans - 1] = {
+              .lineindex = -1,
+              .targetlevelindex = targetlevel,
+              .einstein_A = static_cast<float>(A_ul),
+              .coll_str = coll_str,
+              .osc_strength = f_ul,
+              .forbidden = transitiontable[ii].forbidden};
+          globals::elements[element].ions[ion].levels[targetlevel].uptrans[nloweruptrans - 1] = {
+              .lineindex = -1,
+              .targetlevelindex = level,
+              .einstein_A = static_cast<float>(A_ul),
+              .coll_str = coll_str,
+              .osc_strength = f_ul,
+              .forbidden = transitiontable[ii].forbidden};
+        }
+
+        /// This is not a metastable level.
+        globals::elements[element].ions[ion].levels[level].metastable = false;
+
+        (*lineindex)++;
+      } else if (pass == 1 && globals::rank_in_node == 0) {
+        // This is a new branch to deal with lines that have different types of transition. It should trip after a
+        // transition is already known.
+        const int linelistindex = transitions[level].to[level - targetlevel - 1];
         const double A_ul = transitiontable[ii].A;
         const float coll_str = transitiontable[ii].coll_str;
-        // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
 
         const double g = stat_weight(element, ion, level) / stat_weight(element, ion, targetlevel);
         const float f_ul = g * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
-        assert_always(std::isfinite(f_ul));
-        // f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
-        // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength =
-        // g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
 
-        // printout("lineindex %d, element %d, ion %d, lower %d, upper %d, nu
-        // %g\n",*lineindex,element,ion,level-i-1,level,nu_trans);
+        if ((temp_linelist[linelistindex].elementindex != element) || (temp_linelist[linelistindex].ionindex != ion) ||
+            (temp_linelist[linelistindex].upperlevelindex != level) ||
+            (temp_linelist[linelistindex].lowerlevelindex != targetlevel)) {
+          printout("[input] Failure to identify level pair for duplicate bb-transition ... going to abort now\n");
+          printout("[input]   element %d ion %d targetlevel %d level %d\n", element, ion, targetlevel, level);
+          printout("[input]   transitions[level].to[level-targetlevel-1]=linelistindex %d\n",
+                   transitions[level].to[level - targetlevel - 1]);
+          printout("[input]   A_ul %g, coll_str %g\n", A_ul, coll_str);
+          printout(
+              "[input]   globals::linelist[linelistindex].elementindex %d, "
+              "globals::linelist[linelistindex].ionindex %d, globals::linelist[linelistindex].upperlevelindex "
+              "%d, globals::linelist[linelistindex].lowerlevelindex %d\n",
+              temp_linelist[linelistindex].elementindex, temp_linelist[linelistindex].ionindex,
+              temp_linelist[linelistindex].upperlevelindex, temp_linelist[linelistindex].lowerlevelindex);
+          abort();
+        }
+        const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
 
-        temp_linelist.push_back({
-            .nu = nu_trans,
-            .einstein_A = static_cast<float>(A_ul),
-            .elementindex = element,
-            .ionindex = ion,
-            .upperlevelindex = level,
-            .lowerlevelindex = targetlevel,
-        });
+        const int nloweruptrans = get_nuptrans(element, ion, targetlevel) + 1;
 
-        // the line list has not been sorted yet, so the store the level index for now and
-        // the index into the sorted line list will be set later
+        auto &downtransition = globals::elements[element].ions[ion].levels[level].downtrans[nupperdowntrans - 1];
+        downtransition.einstein_A += static_cast<float>(A_ul);
+        downtransition.osc_strength += f_ul;
+        downtransition.coll_str = std::max(downtransition.coll_str, coll_str);
 
-        globals::elements[element].ions[ion].levels[level].downtrans[nupperdowntrans - 1] = {
-            .lineindex = -1,
-            .targetlevelindex = targetlevel,
-            .einstein_A = static_cast<float>(A_ul),
-            .coll_str = coll_str,
-            .osc_strength = f_ul,
-            .forbidden = transitiontable[ii].forbidden};
-        globals::elements[element].ions[ion].levels[targetlevel].uptrans[nloweruptrans - 1] = {
-            .lineindex = -1,
-            .targetlevelindex = level,
-            .einstein_A = static_cast<float>(A_ul),
-            .coll_str = coll_str,
-            .osc_strength = f_ul,
-            .forbidden = transitiontable[ii].forbidden};
+        auto &uptransition = globals::elements[element].ions[ion].levels[targetlevel].uptrans[nloweruptrans - 1];
+        uptransition.einstein_A += static_cast<float>(A_ul);
+        uptransition.osc_strength += f_ul;
+        uptransition.coll_str = std::max(uptransition.coll_str, coll_str);
       }
-
-      /// This is not a metastable level.
-      globals::elements[element].ions[ion].levels[level].metastable = false;
-
-      (*lineindex)++;
     }
   }
 #ifdef MPI_ON
