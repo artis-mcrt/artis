@@ -490,12 +490,6 @@ static void read_ion_transitions(std::istream &ftransitiondata, const int tottra
   }
 }
 
-constexpr auto operator<(const linelist_entry &a, const linelist_entry &b) -> bool
-// sort the lineline in descending frequency
-{
-  return a.nu > b.nu;
-}
-
 static void add_transitions_to_unsorted_linelist(const int element, const int ion, const int nlevelsmax,
                                                  const std::vector<struct transitiontable_entry> &transitiontable,
                                                  struct transitions *transitions, int *lineindex,
@@ -582,14 +576,10 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
         if (pass == 1 && globals::rank_in_node == 0) {
           const double A_ul = transitiontable[ii].A;
           const float coll_str = transitiontable[ii].coll_str;
-          // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
 
           const double g = stat_weight(element, ion, level) / stat_weight(element, ion, targetlevel);
           const float f_ul = g * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
           assert_always(std::isfinite(f_ul));
-          // f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
-          // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength =
-          // g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
 
           // printout("lineindex %d, element %d, ion %d, lower %d, upper %d, nu
           // %g\n",*lineindex,element,ion,level-i-1,level,nu_trans);
@@ -597,13 +587,10 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
           temp_linelist.push_back({
               .nu = nu_trans,
               .einstein_A = static_cast<float>(A_ul),
-              .osc_strength = f_ul,
-              .coll_str = coll_str,
               .elementindex = element,
               .ionindex = ion,
               .upperlevelindex = level,
               .lowerlevelindex = targetlevel,
-              .forbidden = transitiontable[ii].forbidden,
           });
 
           // the line list has not been sorted yet, so the store the level index for now and
@@ -634,14 +621,10 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
         // transition is already known.
         const int linelistindex = transitions[level].to[level - targetlevel - 1];
         const double A_ul = transitiontable[ii].A;
-        const double coll_str = transitiontable[ii].coll_str;
-        // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
+        const float coll_str = transitiontable[ii].coll_str;
 
         const double g = stat_weight(element, ion, level) / stat_weight(element, ion, targetlevel);
-        const double f_ul = g * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
-        // f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
-        // globals::elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength =
-        // g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
+        const float f_ul = g * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
 
         if ((temp_linelist[linelistindex].elementindex != element) || (temp_linelist[linelistindex].ionindex != ion) ||
             (temp_linelist[linelistindex].upperlevelindex != level) ||
@@ -659,11 +642,19 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
               temp_linelist[linelistindex].upperlevelindex, temp_linelist[linelistindex].lowerlevelindex);
           abort();
         }
-        temp_linelist[linelistindex].einstein_A += A_ul;
-        temp_linelist[linelistindex].osc_strength += f_ul;
-        if (coll_str > temp_linelist[linelistindex].coll_str) {
-          temp_linelist[linelistindex].coll_str = coll_str;
-        }
+        const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
+
+        const int nloweruptrans = get_nuptrans(element, ion, targetlevel) + 1;
+
+        auto &downtransition = globals::elements[element].ions[ion].levels[level].downtrans[nupperdowntrans - 1];
+        downtransition.einstein_A += static_cast<float>(A_ul);
+        downtransition.osc_strength += f_ul;
+        downtransition.coll_str = std::max(downtransition.coll_str, coll_str);
+
+        auto &uptransition = globals::elements[element].ions[ion].levels[targetlevel].uptrans[nloweruptrans - 1];
+        uptransition.einstein_A += static_cast<float>(A_ul);
+        uptransition.osc_strength += f_ul;
+        uptransition.coll_str = std::max(uptransition.coll_str, coll_str);
       }
     }
   }
@@ -963,7 +954,7 @@ static void read_atomicdata_files() {
            (totaluptrans + totaldowntrans) * sizeof(struct level_transition) / 1024. / 1024.);
 
   if (globals::rank_in_node == 0) {
-    /// sort the linelist by decreasing frequency
+    // sort the lineline in descending frequency
     std::sort(temp_linelist.begin(), temp_linelist.end(),
               [](const auto &a, const auto &b) { return static_cast<bool>(a.nu > b.nu); });
 
@@ -1377,18 +1368,6 @@ static void write_bflist_file(int includedphotoiontransitions) {
   }
 }
 
-static auto operator<(const fullphixslist &a, const fullphixslist &b) -> bool
-/// Helper function to sort the phixslist by ascending threshold frequency.
-{
-  return a.nu_edge < b.nu_edge;
-}
-
-static auto operator<(const groundphixslist &a, const groundphixslist &b) -> bool
-/// Helper function to sort the groundphixslist by ascending threshold frequency.
-{
-  return a.nu_edge < b.nu_edge;
-}
-
 static void setup_phixs_list() {
   // set up the photoionisation transition lists
   // and temporary gamma/kappa lists for each thread
@@ -1479,7 +1458,8 @@ static void setup_phixs_list() {
       }
     }
     assert_always(groundcontindex == globals::nbfcontinua_ground);
-    std::sort(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground);
+    std::sort(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground,
+              [](const auto &a, const auto &b) { return static_cast<bool>(a.nu_edge < b.nu_edge); });
   }
 
   auto *nonconstallcont =
@@ -1533,7 +1513,8 @@ static void setup_phixs_list() {
 
   if (globals::nbfcontinua > 0) {
     // indicies above were temporary only. continum index should be to the sorted list
-    std::sort(nonconstallcont, nonconstallcont + globals::nbfcontinua);
+    std::sort(nonconstallcont, nonconstallcont + globals::nbfcontinua,
+              [](const auto &a, const auto &b) { return static_cast<bool>(a.nu_edge < b.nu_edge); });
 
     globals::allcont_nu_edge = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
 
