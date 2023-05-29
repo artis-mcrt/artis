@@ -1368,18 +1368,6 @@ static void write_bflist_file(int includedphotoiontransitions) {
   }
 }
 
-static auto operator<(const fullphixslist &a, const fullphixslist &b) -> bool
-/// Helper function to sort the phixslist by ascending threshold frequency.
-{
-  return a.nu_edge < b.nu_edge;
-}
-
-static auto operator<(const groundphixslist &a, const groundphixslist &b) -> bool
-/// Helper function to sort the groundphixslist by ascending threshold frequency.
-{
-  return a.nu_edge < b.nu_edge;
-}
-
 static void setup_phixs_list() {
   // set up the photoionisation transition lists
   // and temporary gamma/kappa lists for each thread
@@ -1470,7 +1458,8 @@ static void setup_phixs_list() {
       }
     }
     assert_always(groundcontindex == globals::nbfcontinua_ground);
-    std::sort(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground);
+    std::sort(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground,
+              [](const auto &a, const auto &b) { return static_cast<bool>(a.nu_edge < b.nu_edge); });
   }
 
   auto *nonconstallcont =
@@ -1524,7 +1513,8 @@ static void setup_phixs_list() {
 
   if (globals::nbfcontinua > 0) {
     // indicies above were temporary only. continum index should be to the sorted list
-    std::sort(nonconstallcont, nonconstallcont + globals::nbfcontinua);
+    std::sort(nonconstallcont, nonconstallcont + globals::nbfcontinua,
+              [](const auto &a, const auto &b) { return static_cast<bool>(a.nu_edge < b.nu_edge); });
 
     globals::allcont_nu_edge = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
 
