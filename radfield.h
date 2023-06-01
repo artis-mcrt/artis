@@ -39,9 +39,8 @@ void reset_bfrate_contributions(int modelgridindex);
 int integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel, size_t limit, int key,
               gsl_integration_workspace *workspace, double *result, double *abserr);
 
-template <typename T_t, typename W_t>
-constexpr double dbb(double nu, T_t T, W_t W)
-// returns J_nu for a dilute black body [ergs/s/sr/cm2/Hz]
+constexpr double dbb(double nu, auto T, auto W)
+// returns J_nu [ergs/s/sr/cm2/Hz] for a dilute black body with temperature T and dilution factor W
 {
   return W * TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / std::expm1(HOVERKB * nu / T);
 }
