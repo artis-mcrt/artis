@@ -1,4 +1,3 @@
-// #include <gsl/gsl_poly.h>
 #include "boundary.h"
 
 #include <gsl/gsl_blas.h>
