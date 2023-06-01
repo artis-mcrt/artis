@@ -1442,8 +1442,6 @@ auto calculate_populations(const int modelgridindex) -> double
   };
   gsl_function f{.function = &nne_solution_f, .params = &paras};
 
-  neutral_flag = false;
-
   /// Get temperatures
   const double T_R = grid::get_TR(modelgridindex);
   const auto T_e = grid::get_Te(modelgridindex);
@@ -1520,9 +1518,7 @@ auto calculate_populations(const int modelgridindex) -> double
     /// Introduce a flag variable which is sent to the T_e solver so that
     /// we get this info only once when T_e is converged and not for each
     /// iteration step.
-    neutral_flag = true;
-    // printout("[warning] calculate_populations: only neutral ions in cell %d
-    // modelgridindex\n",modelgridindex); abort();
+    printout("[warning] calculate_populations: only neutral ions in cell modelgridindex %d\n", modelgridindex);
     /// Now calculate the ground level populations in nebular approximation and store them to the
     /// grid
     for (int element = 0; element < get_nelements(); element++) {

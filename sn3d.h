@@ -33,15 +33,14 @@
 extern FILE *output_file;
 extern int tid;
 extern bool use_cellhist;
-extern bool neutral_flag;
 
-extern std::mt19937 *stdrng;
-static std::uniform_real_distribution<float> stdrngdis(0.0, 1.0);
+extern std::mt19937 stdrng;
+static std::uniform_real_distribution<float> stdrngdis(0., 1.);
 
 extern gsl_integration_workspace *gslworkspace;
 
 #ifdef _OPENMP
-#pragma omp threadprivate(tid, use_cellhist, neutral_flag, rng, gslworkspace, output_file)
+#pragma omp threadprivate(tid, use_cellhist, stdrng, gslworkspace, output_file)
 #endif
 
 #define __artis_assert(e)                                                                                              \
@@ -182,7 +181,13 @@ inline int get_thread_num(void) {
 #endif
 }
 
-inline float rng_uniform(void) { return stdrngdis(*stdrng); }
+inline float rng_uniform(void) {
+  float zrand;
+  do {
+    zrand = stdrngdis(stdrng);
+  } while (zrand == 1.);
+  return zrand;
+}
 
 inline float rng_uniform_pos(void) {
   float zrand = 0.;
@@ -194,7 +199,7 @@ inline float rng_uniform_pos(void) {
 
 inline void rng_init(const uint_fast64_t zseed) {
   printout("rng is a std::mt19937 generator\n");
-  stdrng = new std::mt19937(zseed);
+  stdrng.seed(zseed);
 }
 
 inline bool is_pid_running(pid_t pid) {

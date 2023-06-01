@@ -30,8 +30,7 @@
 FILE *output_file = nullptr;
 int tid = 0;
 bool use_cellhist = false;
-bool neutral_flag = false;
-std::mt19937 *stdrng = nullptr;
+std::mt19937 stdrng;
 gsl_integration_workspace *gslworkspace = nullptr;
 
 auto main(int argc, char *argv[]) -> int {

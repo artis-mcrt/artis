@@ -453,10 +453,6 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
         MINTEMP, MAXTEMP, modelgridindex, grid::get_TR(modelgridindex), grid::get_W(modelgridindex));
   }
 
-  if (neutral_flag) {
-    printout("[info] call_T_e_finder: cell %d contains only neutral ions\n", modelgridindex);
-  }
-
   if (T_e > 2 * T_e_old) {
     T_e = 2 * T_e_old;
     printout("use T_e damping in cell %d\n", modelgridindex);

@@ -32,8 +32,7 @@
 // threadprivate variables
 int tid;
 bool use_cellhist;
-bool neutral_flag;
-std::mt19937 *stdrng = nullptr;
+std::mt19937 stdrng;
 gsl_integration_workspace *gslworkspace = nullptr;
 FILE *output_file = nullptr;
 static FILE *linestat_file = nullptr;
