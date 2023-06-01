@@ -184,7 +184,8 @@ inline int get_thread_num(void) {
 inline float rng_uniform(void) {
   float zrand;
   do {
-    zrand = stdrngdis(stdrng);
+    // zrand = stdrngdis(stdrng);
+    zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
   } while (zrand == 1.);
   return zrand;
 }
