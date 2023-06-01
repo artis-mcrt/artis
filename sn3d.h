@@ -37,8 +37,8 @@ extern bool neutral_flag;
 
 #include <gsl/gsl_rng.h>
 extern gsl_rng *rng;  // pointer for random number generator
-extern std::mt19937_64 *stdrng;
-static std::uniform_real_distribution<double> stdrngdis(0.0, 1.0);
+extern std::mt19937 *stdrng;
+static std::uniform_real_distribution<float> stdrngdis(0.0, 1.0);
 
 extern gsl_integration_workspace *gslworkspace;
 
@@ -184,35 +184,19 @@ inline int get_thread_num(void) {
 #endif
 }
 
-inline double rng_uniform(void) {
-  if constexpr (USE_GSL_RANDOM) {
-    return gsl_rng_uniform(rng);
-  } else {
-    return stdrngdis(*stdrng);
-  }
-}
+inline float rng_uniform(void) { return stdrngdis(*stdrng); }
 
-inline double rng_uniform_pos(void) {
-  if constexpr (USE_GSL_RANDOM) {
-    return gsl_rng_uniform_pos(rng);
-  } else {
-    double zrand = 0.;
-    do {
-      zrand = rng_uniform();
-    } while (zrand <= 0.);
-    return zrand;
-  }
+inline float rng_uniform_pos(void) {
+  float zrand = 0.;
+  do {
+    zrand = rng_uniform();
+  } while (zrand <= 0.);
+  return zrand;
 }
 
 inline void rng_init(const uint_fast64_t zseed) {
-  if constexpr (USE_GSL_RANDOM) {
-    rng = gsl_rng_alloc(gsl_rng_ran3);
-    gsl_rng_set(rng, zseed);
-    printout("rng is a '%s' generator\n", gsl_rng_name(rng));
-  } else {
-    printout("rng is a std::mt19937_64 generator\n");
-    stdrng = new std::mt19937_64(zseed);
-  }
+  printout("rng is a std::mt19937 generator\n");
+  stdrng = new std::mt19937(zseed);
 }
 
 inline bool is_pid_running(pid_t pid) {

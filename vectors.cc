@@ -1,7 +1,5 @@
 #include "vectors.h"
 
-// #include <gsl/gsl_randist.h>
-
 #include <cmath>
 
 #include "artisoptions.h"

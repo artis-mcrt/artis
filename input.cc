@@ -1809,18 +1809,15 @@ void read_parameterfile(int rank)
 
   assert_always(get_noncommentline(file, line));
 
-  long zseed_input = 0;
+  uint_fast64_t zseed_input = 0;
   std::stringstream(line) >> zseed_input;
 
   if (zseed_input > 0) {
     pre_zseed = zseed_input;  // random number seed
     printout("using input.txt specified random number seed of %lu\n", pre_zseed);
   } else {
-    if constexpr (USE_GSL_RANDOM) {
-      pre_zseed = time(nullptr);
-    } else {
-      pre_zseed = std::random_device{}();
-    }
+    // pre_zseed = time(nullptr);
+    pre_zseed = std::random_device{}();
     printout("randomly-generated random number seed is %lu\n", pre_zseed);
   }
 
@@ -1831,11 +1828,10 @@ void read_parameterfile(int rank)
     /// For MPI parallelisation, the random seed is changed based on the rank of the process
     /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
     /// to the thread-ID tid.
-    const uint_fast64_t zseed = pre_zseed + (13 * rank) + (17 * tid); /* rnum generator seed */
+    const uint_fast64_t zseed = pre_zseed + 13 * (rank * get_num_threads() + tid);
     printout("rank %d: thread %d has zseed %lu\n", rank, tid, zseed);
-    /// start by setting up the randon number generator
     rng_init(zseed);
-    /// call it a few times to get it in motion.
+    /// call it a few times
     for (int n = 0; n < 100; n++) {
       rng_uniform();
     }

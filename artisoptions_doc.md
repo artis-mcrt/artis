@@ -212,8 +212,6 @@ constexpr double FIXED_TIMESTEP_WIDTH;
 
 constexpr double TIMESTEP_TRANSITION_TIME;
 
-constexpr bool USE_GSL_RANDOM;
-
 // once a new gridsave and packets*.tmp have been written, don't delete the previous set
 constexpr bool KEEP_ALL_RESTART_FILES;
 
