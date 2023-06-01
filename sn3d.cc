@@ -33,7 +33,6 @@
 int tid;
 bool use_cellhist;
 bool neutral_flag;
-gsl_rng *rng = nullptr;
 std::mt19937 *stdrng = nullptr;
 gsl_integration_workspace *gslworkspace = nullptr;
 FILE *output_file = nullptr;

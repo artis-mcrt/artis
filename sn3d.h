@@ -35,8 +35,6 @@ extern int tid;
 extern bool use_cellhist;
 extern bool neutral_flag;
 
-#include <gsl/gsl_rng.h>
-extern gsl_rng *rng;  // pointer for random number generator
 extern std::mt19937 *stdrng;
 static std::uniform_real_distribution<float> stdrngdis(0.0, 1.0);
 

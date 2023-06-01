@@ -31,7 +31,6 @@ FILE *output_file = nullptr;
 int tid = 0;
 bool use_cellhist = false;
 bool neutral_flag = false;
-gsl_rng *rng = nullptr;
 std::mt19937 *stdrng = nullptr;
 gsl_integration_workspace *gslworkspace = nullptr;
 
