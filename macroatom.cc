@@ -32,6 +32,8 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
   const double epsilon_current = epsilon(element, ion, level);
   const double statweight = stat_weight(element, ion, level);
 
+  const auto &levelref = globals::elements[element].ions[ion].levels[level];
+
   /// Downward transitions within the current ionisation stage:
   /// radiative/collisional deexcitation and internal downward jumps
   processrates[MA_ACTION_RADDEEXC] = 0.;
@@ -39,7 +41,7 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
   processrates[MA_ACTION_INTERNALDOWNSAME] = 0.;
   const int ndowntrans = get_ndowntrans(element, ion, level);
   for (int i = 0; i < ndowntrans; i++) {
-    const auto &downtransition = globals::elements[element].ions[ion].levels[level].downtrans[i];
+    const auto &downtransition = levelref.downtrans[i];
     const int lower = downtransition.targetlevelindex;
     const auto A_ul = downtransition.einstein_A;
     const double epsilon_target = epsilon(element, ion, lower);
@@ -93,8 +95,8 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
   processrates[MA_ACTION_INTERNALUPSAME] = 0.;
   const int nuptrans = get_nuptrans(element, ion, level);
   for (int i = 0; i < nuptrans; i++) {
-    const int upper = globals::elements[element].ions[ion].levels[level].uptrans[i].targetlevelindex;
-    const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans[i].lineindex;
+    const int upper = levelref.uptrans[i].targetlevelindex;
+    const int lineindex = levelref.uptrans[i].lineindex;
     const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
 
     const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, lineindex, t_mid);
