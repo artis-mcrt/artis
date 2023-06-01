@@ -779,12 +779,6 @@ void update_lineestimator(const int modelgridindex, const int lineindex, const d
   }
 }
 
-auto dbb_mgi(double nu, int modelgridindex) -> double {
-  const float T_R_fullspec = grid::get_TR(modelgridindex);
-  const float W_fullspec = grid::get_W(modelgridindex);
-  return dbb(nu, T_R_fullspec, W_fullspec);
-}
-
 auto radfield(double nu, int modelgridindex) -> double
 // returns mean intensity J_nu [ergs/s/sr/cm2/Hz]
 {

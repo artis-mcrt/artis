@@ -16,7 +16,6 @@ void close_file();
 void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const struct packet *pkt_ptr);
 void update_lineestimator(int modelgridindex, int lineindex, double increment);
 double radfield(double nu, int modelgridindex);
-double dbb_mgi(double nu, int modelgridindex);
 void fit_parameters(int modelgridindex, int timestep);
 void set_J_normfactor(int modelgridindex, double normfactor);
 void normalise_J(int modelgridindex, double estimator_normfactor_over4pi);

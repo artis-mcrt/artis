@@ -1230,7 +1230,6 @@ static auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void *c
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
 
-  // const double Jnu = use_cellhist ? radfield::radfield(nu, modelgridindex) : radfield::dbb_mgi(nu, modelgridindex);
   const double Jnu = radfield::radfield(nu, modelgridindex);
 
   // TODO: MK thesis page 41, use population ratios and Te?
