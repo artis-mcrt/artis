@@ -35,7 +35,6 @@ extern int tid;
 extern bool use_cellhist;
 
 extern std::mt19937 stdrng;
-static std::uniform_real_distribution<float> stdrngdis(0., 1.);
 
 extern gsl_integration_workspace *gslworkspace;
 
@@ -184,7 +183,6 @@ inline int get_thread_num(void) {
 inline float rng_uniform(void) {
   float zrand;
   do {
-    // zrand = stdrngdis(stdrng);
     zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
   } while (zrand == 1.);
   return zrand;
