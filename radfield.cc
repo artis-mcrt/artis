@@ -1,5 +1,6 @@
 #include "radfield.h"
 
+#include <gsl/gsl_errno.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_sf_debye.h>

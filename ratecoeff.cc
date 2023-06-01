@@ -5,8 +5,9 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
-// #define  _XOPEN_SOURCE
 #define D_POSIX_SOURCE
+#include <gsl/gsl_errno.h>
+
 #include <cstdio>
 
 #include "artisoptions.h"
