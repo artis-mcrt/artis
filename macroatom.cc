@@ -95,8 +95,9 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
   processrates[MA_ACTION_INTERNALUPSAME] = 0.;
   const int nuptrans = get_nuptrans(element, ion, level);
   for (int i = 0; i < nuptrans; i++) {
-    const int upper = levelref.uptrans[i].targetlevelindex;
-    const int lineindex = levelref.uptrans[i].lineindex;
+    const auto &uptransition = globals::elements[element].ions[ion].levels[level].uptrans[i];
+    const int upper = uptransition.targetlevelindex;
+    const int lineindex = uptransition.lineindex;
     const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
 
     const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, i, epsilon_trans, lineindex, t_mid);
