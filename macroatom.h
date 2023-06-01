@@ -49,7 +49,7 @@ double col_ionization_ratecoeff(float T_e, float nne, int element, int ion, int 
                                 double epsilon_trans);
 
 double col_deexcitation_ratecoeff(float T_e, float nne, double epsilon_trans, int element, int ion, int upper,
-                                  int downtransindex);
+                                  const struct level_transition &downtransition);
 
 double col_excitation_ratecoeff(float T_e, float nne, int element, int ion, int lower, int uptransindex,
                                 double epsilon_trans, double lowerstatweight);

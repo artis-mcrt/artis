@@ -448,15 +448,17 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
     // de-excitation
     const int ndowntrans = get_ndowntrans(element, ion, level);
     for (int i = 0; i < ndowntrans; i++) {
-      const double A_ul = globals::elements[element].ions[ion].levels[level].downtrans[i].einstein_A;
-      const int lower = globals::elements[element].ions[ion].levels[level].downtrans[i].targetlevelindex;
+      const auto &downtransition = globals::elements[element].ions[ion].levels[level].downtrans[i];
+      const double A_ul = downtransition.einstein_A;
+      const int lower = downtransition.targetlevelindex;
 
       const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
 
       const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, A_ul,
                                                   statweight, t_mid) *
                        s_renorm[level];
-      const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, i) * s_renorm[level];
+      const double C =
+          col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, downtransition) * s_renorm[level];
 
       const int upper_index = level_index;
       const int lower_index = get_nlte_vector_index(element, ion, lower);
@@ -1226,14 +1228,15 @@ auto solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timestep)
       // deexcitation
       const int ndowntrans = get_ndowntrans(element, ion, level);
       for (int i = 0; i < ndowntrans; i++) {
-        const double A_ul = globals::elements[element].ions[ion].levels[level].downtrans[i].einstein_A;
-        const int lower = globals::elements[element].ions[ion].levels[level].downtrans[i].targetlevelindex;
+        const auto &downtransition = globals::elements[element].ions[ion].levels[level].downtrans[i];
+        const double A_ul = downtransition.einstein_A;
+        const int lower = downtransition.targetlevelindex;
         const double epsilon_trans = epsilon_current - epsilon(element, ion, lower);
 
         const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, A_ul,
                                                     statweight, t_mid);
         assert_always(std::isfinite(R));
-        const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, i);
+        const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, downtransition);
         assert_always(std::isfinite(C));
 
         int level_use = 0;

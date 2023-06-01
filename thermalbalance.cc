@@ -194,10 +194,12 @@ static auto get_heating_ion_coll_deexc(const int modelgridindex, const int eleme
     // ----------------------------------------------------------
     const int ndowntrans = get_ndowntrans(element, ion, level);
     for (int i = 0; i < ndowntrans; i++) {
-      const int lower = globals::elements[element].ions[ion].levels[level].downtrans[i].targetlevelindex;
+      const auto &downtransition = globals::elements[element].ions[ion].levels[level].downtrans[i];
+      const int lower = downtransition.targetlevelindex;
       const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
-      const double C =
-          nnlevel * col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, i) * epsilon_trans;
+      const double C = nnlevel *
+                       col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, downtransition) *
+                       epsilon_trans;
       C_deexc += C;
     }
   }

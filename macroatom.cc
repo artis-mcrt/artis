@@ -39,14 +39,15 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
   processrates[MA_ACTION_INTERNALDOWNSAME] = 0.;
   const int ndowntrans = get_ndowntrans(element, ion, level);
   for (int i = 0; i < ndowntrans; i++) {
-    const int lower = globals::elements[element].ions[ion].levels[level].downtrans[i].targetlevelindex;
-    const auto A_ul = globals::elements[element].ions[ion].levels[level].downtrans[i].einstein_A;
+    const auto &downtransition = globals::elements[element].ions[ion].levels[level].downtrans[i];
+    const int lower = downtransition.targetlevelindex;
+    const auto A_ul = downtransition.einstein_A;
     const double epsilon_target = epsilon(element, ion, lower);
     const double epsilon_trans = epsilon_current - epsilon_target;
 
     const double R =
         rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, A_ul, statweight, t_mid);
-    const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, i);
+    const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, downtransition);
 
     const double individ_internal_down_same = (R + C) * epsilon_target;
 
@@ -933,17 +934,16 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
 }
 
 auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans, int element, int ion,
-                                int upper, int downtransindex) -> double
+                                int upper, const struct level_transition &downtransition) -> double
 // multiply by upper level population to get a rate per second
 {
-  const int lower = globals::elements[element].ions[ion].levels[upper].downtrans[downtransindex].targetlevelindex;
+  const int lower = downtransition.targetlevelindex;
   const double upperstatweight = stat_weight(element, ion, upper);
   const double lowerstatweight = stat_weight(element, ion, lower);
-  const double coll_str_thisline =
-      globals::elements[element].ions[ion].levels[upper].downtrans[downtransindex].coll_str;
+  const double coll_str_thisline = downtransition.coll_str;
   double C = 0.;
   if (coll_str_thisline < 0) {
-    const bool forbidden = globals::elements[element].ions[ion].levels[upper].downtrans[downtransindex].forbidden;
+    const bool forbidden = downtransition.forbidden;
     if (!forbidden)  // alternative: (coll_strength > -1.5) i.e. to catch -1
     {
       /// permitted E1 electric dipole transitions
@@ -952,8 +952,7 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
       // f = osc_strength(element,ion,upper,lower);
       // C = n_u * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) *
       // stat_weight(element,ion,lower)/stat_weight(element,ion,upper)  * nne * f;
-      const double trans_osc_strength =
-          globals::elements[element].ions[ion].levels[upper].downtrans[downtransindex].osc_strength;
+      const double trans_osc_strength = downtransition.osc_strength;
 
       const double eoverkt = epsilon_trans / (KB * T_e);
       /// Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
