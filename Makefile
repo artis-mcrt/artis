@@ -3,7 +3,7 @@
 # place in architecture folder, e.g. build/arm64
 BUILD_DIR = build/$(shell uname -m)
 
-CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -g -flto=auto -Werror -Werror=undef
+CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto=auto -Werror -Werror=undef
 # CXXFLAGS += -Wpedantic -Wextra -Wall
 # CXXFLAGS += -Wunreachable-code
 
@@ -133,7 +133,7 @@ sn3d: $(sn3d_objects)
 -include $(sn3d_dep)
 
 sn3dwhole: version.h
-	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
+	$(CXX) $(CXXFLAGS) -g $(sn3d_files) $(LDFLAGS) -o sn3d
 
 $(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
 	@mkdir -p $(@D)
