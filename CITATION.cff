@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
+message: "If you use this software, please cite Sim (2007) and Kromer & Sim (2009). For specific features, please also cite: polarisation and virtual packets (Bulla et al. 2015), non-LTE populations and the non-thermal solver (Shingles et al. 2020), alpha- and beta-decays and time-dependent thermalisation (Shingles et al. 2023, in prep)."
 authors:
   - family-names: Sim
     given-names: Stuart
@@ -26,4 +26,4 @@ doi: 10.5281/zenodo.7981387
 license: MIT
 repository-code: 'https://github.com/artis-mcrt/artis'
 abstract: >-
- ARTIS (Sim 2007; Kromer & Sim 2009) is a 3D radiative transfer code for Type Ia supernovae using the Monte Carlo method with indivisible energy packets (Lucy 2002).
+ ARTIS (Sim 2007; Kromer & Sim 2009) is a 3D radiative transfer code for Type Ia supernovae using the Monte Carlo method with indivisible energy packets (Lucy 2002). The latest version incorporates polarisation and virtual packets (Bulla et al. 2015), non-LTE physics appropriate for the nebular phase of Type Ia supernovae (Shingles et al. 2020), and alpha- and beta-decays with time-dependent thermalisation (Shingles et al. 2023, in prep).
