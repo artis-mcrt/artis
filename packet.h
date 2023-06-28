@@ -55,7 +55,7 @@ struct packet {
                        // decay of a positron pellet (-10)
   int trueemissiontype = EMTYPE_NOTSET;  // emission type coming from a kpkt to rpkt (last thermal emission)
   float trueem_time;                     // first thermal emission time [s]
-  double absorptionfreq;                 // records nu_cmf of packet at last absorption
+  double absorptionfreq;                 // records nu_rf of packet at last absorption
   double absorptiondir[3];  // Direction of propagation (x,y,z) when a packet was last absorbed in a line. Always a
                             // unit vector.
   double stokes[3];         // I, Q and U Stokes parameters
