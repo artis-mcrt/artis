@@ -23,7 +23,7 @@
 #! How much wallclock time will be required?
 #SBATCH --time=36:00:00
 #! What types of email messages do you wish to receive?
-##SBATCH --mail-type=ALL
+#SBATCH --mail-type=ALL
 ##SBATCH --mail-user=luke.shingles@gmail.com
 #! Uncomment this to prevent the job from being requeued (e.g. if
 #! interrupted by node failure or system downtime):
@@ -55,15 +55,14 @@ module purge                               # Removes all modules still loaded
 module load rhel8/default-icl              # REQUIRED - loads the basic environment
 
 #! Insert additional module load commands after this line if needed:
-# module load intel/bundles/complib/2020.4
-module load openmpi/gcc/9.3/4.0.4
+module load gcc/11
 module load gsl/2.7
 
 #! Full path to application executable:
 application="./sn3d"
 
 #! Run options for the application:
-options="-w 36"
+options="-w 36 > out.txt"
 
 #! Work directory (i.e. where the job will run):
 workdir="$SLURM_SUBMIT_DIR"  # The value of SLURM_SUBMIT_DIR sets workdir to the directory
@@ -90,14 +89,14 @@ export I_MPI_PIN_ORDER=scatter # Adjacent domains have minimal sharing of caches
 #! Uncomment one choice for CMD below (add mpirun/mpiexec options if necessary):
 
 #! Choose this for a MPI code (possibly using OpenMP) using Intel MPI.
-#CMD="mpirun -ppn $mpi_tasks_per_node -np $np $application $options"
+CMD="mpirun -ppn $mpi_tasks_per_node -np $np $application $options"
 
 #! Choose this for a pure shared-memory OpenMP parallel program on a single node:
 #! (OMP_NUM_THREADS threads will be created):
 # CMD="$application $options"
 
 #! Choose this for a MPI code (possibly using OpenMP) using OpenMPI:
-CMD="mpirun -npernode $mpi_tasks_per_node -np $np $application $options"
+#CMD="mpirun -npernode $mpi_tasks_per_node -np $np $application $options"
 
 
 cd $workdir
