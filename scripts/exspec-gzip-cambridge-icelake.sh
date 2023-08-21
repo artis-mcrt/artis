@@ -19,18 +19,15 @@
 #! How many (MPI) tasks will there be in total? (<= nodes*76)
 #! The Ice Lake (icelake) nodes have 76 CPUs (cores) each and
 #! 3380 MiB of memory per CPU.
-#SBATCH --ntasks=1
+#SBATCH --ntasks=6
 #! How much wallclock time will be required?
 #SBATCH --time=36:00:00
 #! What types of email messages do you wish to receive?
-##SBATCH --mail-type=ALL
+#SBATCH --mail-type=ALL
 ##SBATCH --mail-user=luke.shingles@gmail.com
 #! Uncomment this to prevent the job from being requeued (e.g. if
 #! interrupted by node failure or system downtime):
 #SBATCH --no-requeue
-
-#! For 6GB per CPU, set "-p skylake"; for 12GB per CPU, set "-p skylake-himem":
-#SBATCH -p skylake
 
 #! sbatch directives end here (put any additional directives above this line)
 
@@ -58,8 +55,7 @@ module purge                               # Removes all modules still loaded
 module load rhel8/default-icl              # REQUIRED - loads the basic environment
 
 #! Insert additional module load commands after this line if needed:
-# module load intel/bundles/complib/2020.4
-module load openmpi/gcc/9.3/4.0.4
+module load gcc/11
 module load gsl/2.7
 
 #! Full path to application executable:
