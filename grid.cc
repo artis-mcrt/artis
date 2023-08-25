@@ -37,8 +37,8 @@ int nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 double t_model = -1.;  // time at which densities in input model are correct.
 double *vout_model = nullptr;
 int ncoord_model[3];  // the model.txt input grid dimensions
-double dcoord1;
-double dcoord2;  // spacings of a 2D model grid - must be uniform grid
+double dcoord_rcyl;
+double dcoord_z;  // spacings of a 2D model grid - must be uniform grid
 
 double min_den;  // minimum model density
 
@@ -66,13 +66,6 @@ std::vector<int> ranks_nstart;
 std::vector<int> ranks_ndo;
 std::vector<int> ranks_ndo_nonempty;
 int maxndo = -1;
-
-auto get_mtot_input() -> double
-// mass of the input model, which can be slightly different to the simulation mass
-// e.g. spherical shells mapped to cartesian grid
-{
-  return mtot_input;
-}
 
 auto wid_init(const int cellindex) -> double
 // for a uniform grid this is the extent along the x,y,z coordinate (x_2 - x_1, etc.)
@@ -920,39 +913,42 @@ static void map_2dmodeltogrid()
     const double radial_pos = get_cellradialpos(n);
 
     if (radial_pos < globals::rmax) {
-      double dcen[3];
+      double pos_mid[3];
       for (int d = 0; d < 3; d++) {
         const double cellcoordmin =
             -globals::coordmax[d] + (2 * get_cellcoordpointnum(n, d) * globals::coordmax[d] / ncoordgrid[0]);
-        dcen[d] = cellcoordmin + (0.5 * wid_init(0));
+        pos_mid[d] = cellcoordmin + (0.5 * wid_init(0));
       }
 
       set_cell_modelgridindex(n, 0);
-      const double zcylindrical = dcen[2];
-      dcen[2] = 0.0;
-      const double rcylindrical = vec_len(dcen);
+      const double zcylindrical = pos_mid[2];
+      pos_mid[2] = 0.0;
+      const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
 
       // Grid is uniform so only need to search in 1d to get r and z positions
 
-      int mkeep1 = 0;
+      int mkeep_rcyl = 0;
       for (int m = 0; m < ncoord_model[0]; m++) {
-        if (rcylindrical > (m * dcoord1 * globals::tmin / t_model)) {
-          mkeep1 = m;
-          // set_cell_modelgridindex(n, m + 1);
+        if (rcylindrical > (m * dcoord_rcyl * globals::tmin / t_model)) {
+          mkeep_rcyl = m;
         }
       }
 
-      int mkeep2 = 0;
+      int mkeep_z = 0;
       for (int m = 0; m < ncoord_model[1]; m++) {
-        if (zcylindrical > (((m * dcoord2) * globals::tmin / t_model) - globals::rmax)) {
-          mkeep2 = m;
-          // set_cell_modelgridindex(n, m + 1);
+        if (zcylindrical > (((m * dcoord_z) * globals::tmin / t_model) - globals::rmax)) {
+          mkeep_z = m;
         }
       }
-      set_cell_modelgridindex(n, (mkeep2 * ncoord_model[0]) + mkeep1);
-      modelgrid[get_cell_modelgridindex(n)].initial_radial_pos_sum += radial_pos;
 
-      // renorm[mkeep]++;
+      const int mgi = (mkeep_z * ncoord_model[0]) + mkeep_rcyl;
+      if (get_rho_tmin(mgi) > 0) {
+        set_cell_modelgridindex(n, mgi);
+        modelgrid[mgi].initial_radial_pos_sum += radial_pos;
+      } else {
+        set_cell_modelgridindex(n, get_npts_model());
+      }
+
     } else {
       set_cell_modelgridindex(n, get_npts_model());
     }
@@ -1077,8 +1073,9 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
       assert_always(columnindex == 2);
       assert_always(get_model_type() == RHO_1D_READ);
     } else if (token == "rho") {
-      // 2D amd 3D models have rho [g/cm3]
-      assert_always(columnindex == 4);
+      // 2D and 3D models have rho [g/cm3]
+      assert_always((columnindex == 4 && get_model_type() != RHO_3D_READ) ||
+                    (columnindex == 3 && get_model_type() == RHO_2D_READ));
       assert_always(get_model_type() != RHO_1D_READ);
       continue;
     } else if (token == "X_Fegroup") {
@@ -1345,8 +1342,8 @@ static void read_2d_model()
   assert_always(get_noncommentline(fmodel, line));
   std::stringstream(line) >> globals::vmax;
 
-  dcoord1 = globals::vmax * t_model / ncoord_model[0];       // dr for input model
-  dcoord2 = 2. * globals::vmax * t_model / ncoord_model[1];  // dz for input model
+  dcoord_rcyl = globals::vmax * t_model / ncoord_model[0];    // dr for input model
+  dcoord_z = 2. * globals::vmax * t_model / ncoord_model[1];  // dz for input model
 
   std::vector<int> zlist;
   std::vector<int> alist;
@@ -1373,6 +1370,7 @@ static void read_2d_model()
   // Second is the total FeG mass, initial 56Ni mass, initial 56Co mass
 
   int mgi = 0;
+  int nonemptymgi = 0;
   while (std::getline(fmodel, line)) {
     int cellnumberin = 0;
     float cell_r_in = NAN;
@@ -1389,17 +1387,27 @@ static void read_2d_model()
     assert_always(cellnumberin == mgi + first_cellindex);
 
     const int ncoord1 = (mgi % ncoord_model[0]);
-    const double r_cylindrical = (ncoord1 + 0.5) * dcoord1;
+    const double r_cylindrical = (ncoord1 + 0.5) * dcoord_rcyl;
     assert_always(fabs(cell_r_in / r_cylindrical - 1) < 1e-3);
     const int ncoord2 = (mgi / ncoord_model[0]);
-    const double z = -globals::vmax * t_model + ((ncoord2 + 0.5) * dcoord2);
+    const double z = -globals::vmax * t_model + ((ncoord2 + 0.5) * dcoord_z);
     assert_always(fabs(cell_z_in / z - 1) < 1e-3);
 
+    if (rho_tmodel < 0) {
+      printout("negative input density %g %d\n", rho_tmodel, mgi);
+      abort();
+    }
+
+    const bool keepcell = (rho_tmodel > 0);
     const double rho_tmin = rho_tmodel * pow(t_model / globals::tmin, 3);
     set_rho_tmin(mgi, rho_tmin);
     set_rho(mgi, rho_tmin);
 
-    read_model_radioabundances(fmodel, line, linepos, mgi, true, colnames, nucindexlist);
+    read_model_radioabundances(fmodel, line, linepos, mgi, keepcell, colnames, nucindexlist);
+
+    if (keepcell) {
+      nonemptymgi++;
+    }
 
     mgi++;
   }
@@ -1410,6 +1418,7 @@ static void read_2d_model()
   }
 
   fmodel.close();
+  printout("Effectively used model grid cells %d\n", nonemptymgi);
 }
 
 static void read_3d_model()
@@ -1571,7 +1580,6 @@ static void calc_modelinit_totmassradionuclides() {
     totmassradionuclide[nucindex] = 0.;
   }
 
-  int n1 = 0;
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
     if (get_rho_tmin(mgi) <= 0.) {
       continue;
@@ -1582,11 +1590,9 @@ static void calc_modelinit_totmassradionuclides() {
       // mass_in_shell = rho_model[mgi] * (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(t_model, 3) / 3.;
       cellvolume = (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(globals::tmin, 3) / 3.;
     } else if (get_model_type() == RHO_2D_READ) {
-      cellvolume = pow(globals::tmin / t_model, 3) * ((2 * n1) + 1) * PI * dcoord2 * pow(dcoord1, 2.);
-      n1++;
-      if (n1 == ncoord_model[0]) {
-        n1 = 0;
-      }
+      const int n_r = mgi % ncoord_model[0];
+      cellvolume = pow(globals::tmin / t_model, 3) * dcoord_z * 2 * PI *
+                   (pow((n_r + 1) * dcoord_rcyl, 2.) - pow(n_r * dcoord_rcyl, 2.));
     } else if (get_model_type() == RHO_3D_READ) {
       /// Assumes cells are cubes here - all same volume.
       cellvolume = pow((2 * globals::vmax * globals::tmin), 3.) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
@@ -2138,10 +2144,11 @@ void grid_init(int my_rank)
     assign_initial_temperatures();
   }
 
-  // when mapping 1D spherical model onto cubic grid, scale up the
+  // when mapping 1D spherical or 2D cylindrical model onto cubic grid, scale up the
   // radioactive abundances to account for the missing masses in
   // the model cells that are not associated with any propagation cells
-  if (GRID_TYPE == GRID_UNIFORM && get_model_type() == RHO_1D_READ && globals::rank_in_node == 0) {
+  // Luke: TODO: it's probably better to adjust the density instead of the abundances
+  if (GRID_TYPE == GRID_UNIFORM && get_model_type() != RHO_3D_READ && globals::rank_in_node == 0) {
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
       if (totmassradionuclide[nucindex] <= 0) {
         continue;
