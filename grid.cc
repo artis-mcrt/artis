@@ -2148,7 +2148,7 @@ void grid_init(int my_rank)
   // radioactive abundances to account for the missing masses in
   // the model cells that are not associated with any propagation cells
   // Luke: TODO: it's probably better to adjust the density instead of the abundances
-  if (GRID_TYPE == GRID_UNIFORM && get_model_type() != RHO_3D_READ && globals::rank_in_node == 0) {
+  if (GRID_TYPE == GRID_UNIFORM && get_model_type() == RHO_1D_READ && globals::rank_in_node == 0) {
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
       if (totmassradionuclide[nucindex] <= 0) {
         continue;
