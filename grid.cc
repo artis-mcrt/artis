@@ -922,7 +922,6 @@ static void map_2dmodeltogrid()
 
       set_cell_modelgridindex(n, 0);
       const double zcylindrical = pos_mid[2];
-      pos_mid[2] = 0.0;
       const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
 
       // Grid is uniform so only need to search in 1d to get r and z positions
