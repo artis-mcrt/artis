@@ -1572,7 +1572,7 @@ static void calc_modelinit_totmassradionuclides() {
       cellvolume = (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(globals::tmin, 3) / 3.;
     } else if (get_model_type() == RHO_2D_READ) {
       const int n_r = mgi % ncoord_model[0];
-      cellvolume = pow(globals::tmin / t_model, 3) * dcoord_z * 2 * PI *
+      cellvolume = pow(globals::tmin / t_model, 3) * dcoord_z * PI *
                    (pow((n_r + 1) * dcoord_rcyl, 2.) - pow(n_r * dcoord_rcyl, 2.));
     } else if (get_model_type() == RHO_3D_READ) {
       /// Assumes cells are cubes here - all same volume.
