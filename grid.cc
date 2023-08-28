@@ -912,42 +912,24 @@ static void map_2dmodeltogrid()
   for (int n = 0; n < ngrid; n++) {
     const double radial_pos = get_cellradialpos(n);
 
-    if (radial_pos < globals::rmax) {
-      double pos_mid[3];
-      for (int d = 0; d < 3; d++) {
-        const double cellcoordmin =
-            -globals::coordmax[d] + (2 * get_cellcoordpointnum(n, d) * globals::coordmax[d] / ncoordgrid[0]);
-        pos_mid[d] = cellcoordmin + (0.5 * wid_init(0));
-      }
+    double pos_mid[3];
+    for (int d = 0; d < 3; d++) {
+      pos_mid[d] = (get_cellcoordmin(n, d) + (0.5 * wid_init(0)));
+    }
 
-      set_cell_modelgridindex(n, 0);
-      const double zcylindrical = pos_mid[2];
-      const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
+    // Grid is uniform so only need to search in 1d to get r and z positions
+    assert_always(ncoord_model[0] == 25);
+    assert_always(ncoord_model[1] == 50);
+    const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
 
-      // Grid is uniform so only need to search in 1d to get r and z positions
+    const int n_rcyl = static_cast<int>(rcylindrical / globals::tmin / globals::vmax * ncoord_model[0]);
+    const int n_z =
+        static_cast<int>((pos_mid[2] / globals::tmin + globals::vmax) / (2 * globals::vmax) * ncoord_model[1]);
 
-      int mkeep_rcyl = 0;
-      for (int m = 0; m < ncoord_model[0]; m++) {
-        if (rcylindrical > (m * dcoord_rcyl * globals::tmin / t_model)) {
-          mkeep_rcyl = m;
-        }
-      }
-
-      int mkeep_z = 0;
-      for (int m = 0; m < ncoord_model[1]; m++) {
-        if (zcylindrical > (((m * dcoord_z) * globals::tmin / t_model) - globals::rmax)) {
-          mkeep_z = m;
-        }
-      }
-
-      const int mgi = (mkeep_z * ncoord_model[0]) + mkeep_rcyl;
-      if (get_rho_tmin(mgi) > 0) {
-        set_cell_modelgridindex(n, mgi);
-        modelgrid[mgi].initial_radial_pos_sum += radial_pos;
-      } else {
-        set_cell_modelgridindex(n, get_npts_model());
-      }
-
+    const int mgi = (n_z * ncoord_model[0]) + n_rcyl;
+    if (n_rcyl > 0 && n_rcyl < ncoord_model[0] && n_z > 0 && n_z < ncoord_model[1] && get_rho_tmin(mgi) > 0) {
+      set_cell_modelgridindex(n, mgi);
+      modelgrid[mgi].initial_radial_pos_sum += radial_pos;
     } else {
       set_cell_modelgridindex(n, get_npts_model());
     }
@@ -2174,6 +2156,13 @@ void grid_init(int my_rank)
       }
     }
   }
+
+  double mtot_mapped = 0.;
+  for (int mgi = 0; mgi < get_npts_model(); mgi++) {
+    mtot_mapped += get_rho_tmin(mgi) * get_modelcell_assocvolume_tmin(mgi);
+  }
+  printout("Total mapped mass: %9.3e [Msun]\n", mtot_mapped / MSUN);
+
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
