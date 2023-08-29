@@ -917,9 +917,7 @@ static void map_2dmodeltogrid()
       pos_mid[d] = (get_cellcoordmin(n, d) + (0.5 * wid_init(0)));
     }
 
-    // Grid is uniform so only need to search in 1d to get r and z positions
-    assert_always(ncoord_model[0] == 25);
-    assert_always(ncoord_model[1] == 50);
+    // Grid is uniform so only need to search to get r and z positions
     const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
 
     const int n_rcyl = static_cast<int>(rcylindrical / globals::tmin / globals::vmax * ncoord_model[0]);
