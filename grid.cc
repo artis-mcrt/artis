@@ -1075,6 +1075,7 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
       continue;
     } else {
       assert_always(get_model_type() != RHO_1D_READ || columnindex >= 10);
+      assert_always(get_model_type() != RHO_2D_READ || columnindex >= 11);
       assert_always(get_model_type() != RHO_3D_READ || columnindex >= 12);
 
       columnname.push_back(token);
