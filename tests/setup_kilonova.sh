@@ -16,7 +16,7 @@ cp ../artisoptions_kilonova_lte.h kilonova_testrun/artisoptions.h
 
 cd kilonova_testrun
 
-xz -dvk -T0 *.xz
+xz -dv -T0 *.xz
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 80000;/g' artisoptions.h
 

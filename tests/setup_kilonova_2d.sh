@@ -14,11 +14,11 @@ rsync -av kilonova_2d_inputfiles/ $runfolder/
 
 cp ../data/* $runfolder/
 
-cp ../artisoptions_classic.h $runfolder/artisoptions.h
+cp ../artisoptions_kilonova_lte.h $runfolder/artisoptions.h
 
 cd $runfolder
 
-xz -dvk -T0 *.xz
+xz -dv -T0 *.xz
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 80000;/g' artisoptions.h
 
