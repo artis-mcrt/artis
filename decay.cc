@@ -22,7 +22,7 @@
 
 namespace decay {
 
-constexpr int Z_MAX = 119;
+constexpr int Z_MAX = 118;
 const char *elsymbols[1 + Z_MAX] = {
     "n",  "H",  "He", "Li", "Be", "B",  "C",  "N",  "O",  "F",  "Ne", "Na",  "Mg", "Al",  "Si", "P",   "S",
     "Cl", "Ar", "K",  "Ca", "Sc", "Ti", "V",  "Cr", "Mn", "Fe", "Co", "Ni",  "Cu", "Zn",  "Ga", "Ge",  "As",
