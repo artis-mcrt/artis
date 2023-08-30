@@ -1341,7 +1341,7 @@ static void read_2d_model()
 
   std::vector<int> nucindexlist(zlist.size());
   for (int i = 0; i < static_cast<int>(zlist.size()); i++) {
-    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
+    nucindexlist[i] = (zlist[i] >= 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
   }
 
   // Now read in the model. Each point in the model has two lines of input.
