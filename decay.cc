@@ -72,7 +72,7 @@ MPI_Win win_decaypath_energy_per_mass = MPI_WIN_NULL;
 auto get_num_nuclides() -> int { return nuclides.size(); }
 
 auto get_elname(const int z) -> const char * {
-  assert_always(z <= Z_MAX);
+  assert_testmodeonly(z <= Z_MAX);
   return elsymbols[z];
 }
 
@@ -491,7 +491,7 @@ auto get_nucstring_z(const std::string &strnuc) -> int
   std::string elcode = strnuc;
   elcode.erase(std::remove_if(elcode.begin(), elcode.end(), &isdigit), elcode.end());
 
-  for (int z = 1; z <= Z_MAX; z++) {
+  for (int z = 0; z <= Z_MAX; z++) {
     if (strcmp(elcode.c_str(), get_elname(z)) == 0)  // first to letters match el symbol
     {
       return z;
