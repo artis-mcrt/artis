@@ -296,7 +296,7 @@ static void read_phixs_data(const int phixs_file_version) {
 
     /// store only photoionization crosssections for elements that are part of the current model atom
     skip_this_phixs_table = true;  // will be set to false for good data
-    if (element >= 0) {
+    if (element >= 0 && get_nions(element) > 0) {
       /// translate readin ionstages to ion indices
 
       const int upperion = upperionstage - get_ionstage(element, 0);
