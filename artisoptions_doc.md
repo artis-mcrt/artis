@@ -2,7 +2,7 @@
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
 constexpr int MPKTS;
 
-constexpr int GRID_TYPE = {GRID_UNIFORM, GRID_SPHERICAL1D}
+constexpr int GRID_TYPE = {GRID_UNIFORM, GRID_SPHERICAL1D, GRID_CYLINDRICAL2D}
 constexpr int CUBOID_NCOORDGRID_X;
 constexpr int CUBOID_NCOORDGRID_Y;
 constexpr int CUBOID_NCOORDGRID_Z;

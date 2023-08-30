@@ -38,8 +38,9 @@ constexpr double OSCSTRENGTHCONVERSION = 1.3473837e+21;
 
 constexpr double H_ionpot = 13.5979996 * EV;
 
-constexpr int GRID_UNIFORM = 1;      // Simple cuboidal cells.
-constexpr int GRID_SPHERICAL1D = 2;  // radial shells
+constexpr int GRID_UNIFORM = 1;        // Simple cuboidal cells.
+constexpr int GRID_SPHERICAL1D = 2;    // radial shells
+constexpr int GRID_CYLINDRICAL2D = 3;  // cylindrical shells
 
 // constant for van-Regemorter approximation.
 constexpr double C_0 = 5.465e-11;
