@@ -230,10 +230,9 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
 
   double t_coordmaxboundary[3];  // time to reach the cell's upper boundary on each coordinate
   double t_coordminboundary[3];  // likewise, the lower boundaries (smallest x,y,z or radius value in the cell)
-  if (GRID_TYPE == GRID_SPHERICAL1D) {
+  if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
     last_cross = NONE;  // we will handle this separately by setting d_inner and d_outer negative for invalid directions
     const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
-
     const double d_inner = (r_inner > 0.) ? get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_inner, true, tstart) : -1.;
     t_coordminboundary[0] = d_inner / CLIGHT_PROP;
 
@@ -249,6 +248,27 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
     //          grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin, cellcoordmax[0] * tstart /
     //          globals::tmin);
     // printout("tstart %g\n", tstart);
+  } else if (GRID_TYPE == GRID_CYLINDRICAL2D) {
+    // coordinate 0 is radius in XY plane, coord 1 is Z
+    last_cross = NONE;  // we will handle this separately by setting d_inner and d_outer negative for invalid directions
+    const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
+
+    // to get the cylindrical intersection, get the spherical intersection when Z components are zero
+    const double pktposnoz[3] = {pkt_ptr->pos[0], pkt_ptr->pos[1], 0.};
+    const double pktdirnoz[3] = {pkt_ptr->dir[0], pkt_ptr->dir[1], 0.};
+    const double d_inner = (r_inner > 0.) ? get_shellcrossdist(pktposnoz, pktdirnoz, r_inner, true, tstart) : -1.;
+    t_coordminboundary[0] = d_inner / CLIGHT_PROP;
+
+    const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
+    const double d_outer = get_shellcrossdist(pktposnoz, pktdirnoz, r_outer, false, tstart);
+    t_coordmaxboundary[0] = d_outer / CLIGHT_PROP;
+
+    t_coordmaxboundary[1] =
+        ((initpos[2] - (vel[2] * tstart)) / ((cellcoordmax[1]) - (vel[2] * globals::tmin)) * globals::tmin) - tstart;
+
+    t_coordminboundary[1] = ((initpos[2] - (vel[2] * tstart)) /
+                             ((grid::get_cellcoordmin(cellindex, 1)) - (vel[2] * globals::tmin)) * globals::tmin) -
+                            tstart;
   } else {
     // const double overshoot = grid::wid_init(cellindex) * 2e-7;
     constexpr double overshoot = 0.;
