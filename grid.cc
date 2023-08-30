@@ -1187,9 +1187,10 @@ static void read_model_radioabundances(std::ifstream &fmodel, std::string &line,
           } else if (colnames[i] == "tracercount") {
             ;
           } else {
-            printout("Not sure what to do with column %s nucindex %d valuein %lg\n", colnames[i].c_str(),
-                     nucindexlist[i], valuein);
-            assert_always(false);
+            if (mgi == 0) {
+              printout("WARNING: ignoring column '%s' nucindex %d valuein[mgi=0] %lg\n", colnames[i].c_str(),
+                       nucindexlist[i], valuein);
+            }
           }
         }
         double valuein = 0.;
@@ -1341,7 +1342,7 @@ static void read_2d_model()
 
   std::vector<int> nucindexlist(zlist.size());
   for (int i = 0; i < static_cast<int>(zlist.size()); i++) {
-    nucindexlist[i] = (zlist[i] >= 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
+    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
   }
 
   // Now read in the model. Each point in the model has two lines of input.
