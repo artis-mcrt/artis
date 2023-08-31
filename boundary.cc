@@ -9,27 +9,27 @@
 #include "update_packets.h"
 #include "vectors.h"
 
-static auto get_shellcrossdist(const double pos[3], const double dir[3], const double shellradius,
-                               const bool isinnerboundary, const double tstart) -> double
+static auto expanding_shell_intersection(const double pos[3], const double dir[3], const double shellradiuststart,
+                                         const bool isinnerboundary, const double tstart) -> double
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell
 // return -1 if there are no forward intersections (or if the intersection is tangential to the shell)
 {
-  assert_always(shellradius > 0);
+  assert_always(shellradiuststart > 0);
   constexpr bool debug = false;
   if constexpr (debug) {
-    printout("get_shellcrossdist isinnerboundary %d\n", isinnerboundary);
-    printout("shellradius %g tstart %g len(pos) %g\n", shellradius, tstart, vec_len(pos));
+    printout("expanding_shell_intersection isinnerboundary %d\n", isinnerboundary);
+    printout("shellradiuststart %g tstart %g len(pos) %g\n", shellradiuststart, tstart, vec_len(pos));
   }
   const double speed = vec_len(dir) * CLIGHT_PROP;
-  const double a = dot(dir, dir) - pow(shellradius / tstart / speed, 2);
-  const double b = 2 * (dot(dir, pos) - pow(shellradius, 2) / tstart / speed);
-  const double c = dot(pos, pos) - pow(shellradius, 2);
+  const double a = dot(dir, dir) - pow(shellradiuststart / tstart / speed, 2);
+  const double b = 2 * (dot(dir, pos) - pow(shellradiuststart, 2) / tstart / speed);
+  const double c = dot(pos, pos) - pow(shellradiuststart, 2);
 
   const double discriminant = pow(b, 2) - 4 * a * c;
 
   if (discriminant < 0) {
     // no intersection
-    assert_always(shellradius < vec_len(pos));
+    assert_always(shellradiuststart < vec_len(pos));
     if constexpr (debug) {
       printout("no intersection\n");
     }
@@ -37,63 +37,58 @@ static auto get_shellcrossdist(const double pos[3], const double dir[3], const d
   }
   if (discriminant > 0) {
     // two intersections
-    double d1 = (-b + sqrt(discriminant)) / 2 / a;
-    double d2 = (-b - sqrt(discriminant)) / 2 / a;
+    double dist1 = (-b + sqrt(discriminant)) / 2 / a;
+    double dist2 = (-b - sqrt(discriminant)) / 2 / a;
 
     double posfinal1[3];
     double posfinal2[3];
 
-    cblas_dcopy(3, pos, 1, posfinal1, 1);      // posfinal1 = pos
-    cblas_daxpy(3, d1, dir, 1, posfinal1, 1);  // posfinal1 += d1 * dir;
+    for (int d = 0; d < 3; d++) {
+      posfinal1[d] = pos[d] + dist1 * dir[d];
+      posfinal2[d] = pos[d] + dist2 * dir[d];
+    }
 
-    cblas_dcopy(3, pos, 1, posfinal2, 1);
-    cblas_daxpy(3, d2, dir, 1, posfinal2, 1);
-
-    // for (int d = 0; d < 3; d++) {
-    //   posfinal1[d] = pos[d] + d1 * dir[d];
-    //   posfinal2[d] = pos[d] + d2 * dir[d];
-    // }
-
-    const double shellradiusfinal1 = shellradius / tstart * (tstart + d1 / speed);
-    const double shellradiusfinal2 = shellradius / tstart * (tstart + d2 / speed);
-    // printout("solution1 d1 %g radiusfinal1 %g shellradiusfinal1 %g\n", d1, vec_len(posfinal1), shellradiusfinal1);
-    // printout("solution2 d2 %g radiusfinal2 %g shellradiusfinal2 %g\n", d2, vec_len(posfinal2), shellradiusfinal2);
+    const double shellradiusfinal1 = shellradiuststart / tstart * (tstart + dist1 / speed);
+    const double shellradiusfinal2 = shellradiuststart / tstart * (tstart + dist2 / speed);
+    // printout("solution1 dist1 %g radiusfinal1 %g shellradiusfinal1 %g\n", dist1, vec_len(posfinal1),
+    // shellradiusfinal1); printout("solution2 dist2 %g radiusfinal2 %g shellradiusfinal2 %g\n", dist2,
+    // vec_len(posfinal2), shellradiusfinal2);
     assert_always(fabs(vec_len(posfinal1) / shellradiusfinal1 - 1.) < 1e-3);
     assert_always(fabs(vec_len(posfinal2) / shellradiusfinal2 - 1.) < 1e-3);
 
     // invalidate any solutions that require entering the boundary from the wrong radial direction
     if (isinnerboundary) {
       if (dot(posfinal1, dir) > 0.) {
-        d1 = -1;
+        dist1 = -1;
       }
       if (dot(posfinal2, dir) > 0.) {
-        d2 = -1;
+        dist2 = -1;
       }
     } else {
       if (dot(posfinal1, dir) < 0.) {
-        d1 = -1;
+        dist1 = -1;
       }
       if (dot(posfinal2, dir) < 0.) {
-        d2 = -1;
+        dist2 = -1;
       }
     }
 
     // negative d means in the reverse direction along the ray
     // ignore negative d values, and if two are positive then return the smaller one
-    if (d1 < 0 && d2 < 0) {
+    if (dist1 < 0 && dist2 < 0) {
       return -1;
     }
-    if (d2 < 0) {
-      return d1;
+    if (dist2 < 0) {
+      return dist1;
     }
-    if (d1 < 0) {
-      return d2;
+    if (dist1 < 0) {
+      return dist2;
     }
-    return fmin(d1, d2);
+    return fmin(dist1, dist2);
 
   }  // exactly one intersection
   // ignore this and don't change which cell the packet is in
-  assert_always(shellradius <= vec_len(pos));
+  assert_always(shellradiuststart <= vec_len(pos));
   printout("single intersection\n");
   return -1.;
 }
@@ -247,11 +242,12 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
     last_cross = NONE;  // we will handle this separately by setting d_inner and d_outer negative for invalid directions
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
-    const double d_outer = get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_outer, false, tstart);
+    const double d_outer = expanding_shell_intersection(pkt_ptr->pos, pkt_ptr->dir, r_outer, false, tstart);
     t_coordmaxboundary[0] = d_outer / CLIGHT_PROP;
 
     const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
-    const double d_inner = (r_inner > 0.) ? get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_inner, true, tstart) : -1.;
+    const double d_inner =
+        (r_inner > 0.) ? expanding_shell_intersection(pkt_ptr->pos, pkt_ptr->dir, r_inner, true, tstart) : -1.;
     t_coordminboundary[0] = d_inner / CLIGHT_PROP;
 
   } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
@@ -263,11 +259,12 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
     const double pktdirnoz[3] = {pkt_ptr->dir[0], pkt_ptr->dir[1], 0.};
 
     const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
-    const double d_inner = (r_inner > 0.) ? get_shellcrossdist(pktposnoz, pktdirnoz, r_inner, true, tstart) : -1.;
+    const double d_inner =
+        (r_inner > 0.) ? expanding_shell_intersection(pktposnoz, pktdirnoz, r_inner, true, tstart) : -1.;
     t_coordminboundary[0] = d_inner / CLIGHT_PROP;
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
-    const double d_outer = get_shellcrossdist(pktposnoz, pktdirnoz, r_outer, false, tstart);
+    const double d_outer = expanding_shell_intersection(pktposnoz, pktdirnoz, r_outer, false, tstart);
     t_coordmaxboundary[0] = d_outer / CLIGHT_PROP;
 
     // z boundaries same as Cartesian
