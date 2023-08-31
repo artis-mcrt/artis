@@ -2,6 +2,8 @@
 
 #include <gsl/gsl_blas.h>
 
+#include <limits>
+
 #include "grid.h"
 #include "rpkt.h"
 #include "sn3d.h"
@@ -20,7 +22,7 @@ static auto expanding_shell_intersection(const double pos[3], const double dir[3
     printout("expanding_shell_intersection isinnerboundary %d\n", isinnerboundary);
     printout("shellradiuststart %g tstart %g len(pos) %g\n", shellradiuststart, tstart, vec_len(pos));
   }
-  const double speed = vec_len(dir) * CLIGHT_PROP;
+  const double speed = vec_len(dir) * CLIGHT_PROP;  // hopefully this is the same as CLIGHT_PROP
   const double a = dot(dir, dir) - pow(shellradiuststart / tstart / speed, 2);
   const double b = 2 * (dot(dir, pos) - pow(shellradiuststart, 2) / tstart / speed);
   const double c = dot(pos, pos) - pow(shellradiuststart, 2);
@@ -29,6 +31,7 @@ static auto expanding_shell_intersection(const double pos[3], const double dir[3
 
   if (discriminant < 0) {
     // no intersection
+    assert_always(isinnerboundary);
     assert_always(shellradiuststart < vec_len(pos));
     if constexpr (debug) {
       printout("no intersection\n");
@@ -297,7 +300,7 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
   // printout("comparing distances. last_cross = %d\n", last_cross);
   // We now need to identify the shortest +ve time - that's the one we want.
   int choice = 0;  /// just a control variable to
-  double time = 1.e99;
+  double time = std::numeric_limits<double>::max();
   // close = 1.e99;
   // printout("bondary.c check value of last_cross = %d\n",last_cross);
   for (int d = 0; d < ndim; d++) {
