@@ -909,28 +909,36 @@ static void map_1dmodeltogrid()
 static void map_2dmodeltogrid()
 // Map 2D cylindrical model onto propagation grid
 {
-  for (int n = 0; n < ngrid; n++) {
-    const double radial_pos = get_cellradialpos(n);
+  for (int cellindex = 0; cellindex < ngrid; cellindex++) {
+    int mgi = get_npts_model();  // default to empty unless set
 
-    double pos_mid[3];
-    for (int d = 0; d < 3; d++) {
-      pos_mid[d] = (get_cellcoordmin(n, d) + (0.5 * wid_init(0)));
+    if (GRID_TYPE == GRID_CYLINDRICAL2D) {
+      mgi = cellindex;  // direct mapping
+    } else {
+      double pos_mid[3];
+      for (int d = 0; d < 3; d++) {
+        pos_mid[d] = (get_cellcoordmin(cellindex, d) + (0.5 * wid_init(0)));
+      }
+
+      // 2D grid is uniform so rcyl and z positions can easily be calculated
+      const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
+
+      const int n_rcyl = static_cast<int>(rcylindrical / globals::tmin / globals::vmax * ncoord_model[0]);
+      const int n_z =
+          static_cast<int>((pos_mid[2] / globals::tmin + globals::vmax) / (2 * globals::vmax) * ncoord_model[1]);
+
+      if (n_rcyl > 0 && n_rcyl < ncoord_model[0] && n_z > 0 && n_z < ncoord_model[1]) {
+        mgi = (n_z * ncoord_model[0]) + n_rcyl;
+      }
     }
 
-    // Grid is uniform so only need to search to get r and z positions
-    const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
-
-    const int n_rcyl = static_cast<int>(rcylindrical / globals::tmin / globals::vmax * ncoord_model[0]);
-    const int n_z =
-        static_cast<int>((pos_mid[2] / globals::tmin + globals::vmax) / (2 * globals::vmax) * ncoord_model[1]);
-
-    const int mgi = (n_z * ncoord_model[0]) + n_rcyl;
-    if (n_rcyl > 0 && n_rcyl < ncoord_model[0] && n_z > 0 && n_z < ncoord_model[1] && get_rho_tmin(mgi) > 0) {
-      set_cell_modelgridindex(n, mgi);
+    if (get_rho_tmin(mgi) > 0) {
+      const double radial_pos = get_cellradialpos(cellindex);
       modelgrid[mgi].initial_radial_pos_sum += radial_pos;
     } else {
-      set_cell_modelgridindex(n, get_npts_model());
+      mgi = get_npts_model();
     }
+    set_cell_modelgridindex(cellindex, mgi);
   }
 }
 
