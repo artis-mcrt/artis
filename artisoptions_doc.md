@@ -2,7 +2,9 @@
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
 constexpr int MPKTS;
 
-constexpr int GRID_TYPE = {GRID_CARTESIAN3D, GRID_SPHERICAL1D, GRID_CYLINDRICAL2D}
+constexpr int GRID_TYPE = {GRID_CARTESIAN3D, GRID_CYLINDRICAL2D, GRID_SPHERICAL1D}
+
+// for GRID_CARTESIAN3D, set the dimensions. This will have no effect with a 3D model.txt since they will be set to match the input
 constexpr int CUBOID_NCOORDGRID_X;
 constexpr int CUBOID_NCOORDGRID_Y;
 constexpr int CUBOID_NCOORDGRID_Z;
