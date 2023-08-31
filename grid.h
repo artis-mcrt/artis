@@ -68,7 +68,7 @@ constexpr int get_ngriddimensions(void) {
       return 1;
     case GRID_CYLINDRICAL2D:
       return 2;
-    case GRID_UNIFORM:
+    case GRID_CARTESIAN3D:
       return 3;
   }
 }

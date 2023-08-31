@@ -72,7 +72,7 @@ auto wid_init(const int cellindex) -> double
 // for spherical grid this is the radial extent (r_outer - r_inner)
 // these values are for time globals::tmin
 {
-  if constexpr (GRID_TYPE == GRID_UNIFORM) {
+  if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     return 2 * globals::coordmax[0] / ncoordgrid[0];
   }
 
@@ -89,7 +89,7 @@ auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double
 // return the model cell volume (when mapped to the propagation cells) at globals::tmin
 // for a uniform cubic grid this is constant
 {
-  if constexpr (GRID_TYPE == GRID_UNIFORM) {
+  if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     return (wid_init(0) * wid_init(0) * wid_init(0)) * get_numassociatedcells(modelgridindex);
   }
 
@@ -106,7 +106,7 @@ auto get_gridcell_volume_tmin(const int cellindex) -> double
 // return the propagation cell volume at globals::tmin
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
 {
-  if constexpr (GRID_TYPE == GRID_UNIFORM) {
+  if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     return (wid_init(0) * wid_init(0) * wid_init(0));
   }
 
@@ -122,7 +122,7 @@ auto get_cellcoordmax(const int cellindex, const int axis) -> double
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
 {
-  if constexpr (GRID_TYPE == GRID_UNIFORM) {
+  if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     return grid::get_cellcoordmin(cellindex, axis) + grid::wid_init(0);
   }
 
@@ -144,7 +144,7 @@ auto get_cellcoordmin(const int cellindex, const int axis) -> double
 auto get_coordcellindexincrement(const int axis) -> int
 // how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r direction)
 {
-  if constexpr (GRID_TYPE == GRID_UNIFORM) {
+  if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     switch (axis) {
       case 0:
         return 1;
@@ -172,7 +172,7 @@ auto get_coordcellindexincrement(const int axis) -> int
 auto get_cellcoordpointnum(const int cellindex, const int axis) -> int
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
 {
-  if constexpr (GRID_TYPE == GRID_UNIFORM) {
+  if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     switch (axis) {
       // increment x first, then y, then z
       case 0:
@@ -882,7 +882,7 @@ static void map_1dmodeltogrid()
     const double vcell = radial_pos / globals::tmin;
     const double vmin = 0.;
     if (radial_pos < globals::rmax) {
-      if (GRID_TYPE == GRID_SPHERICAL1D) {
+      if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
         set_cell_modelgridindex(cellindex, cellindex);
       } else {
         int mgi = 0;
@@ -912,7 +912,7 @@ static void map_2dmodeltogrid()
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     int mgi = get_npts_model();  // default to empty unless set
 
-    if (GRID_TYPE == GRID_CYLINDRICAL2D) {
+    if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
       mgi = cellindex;  // direct mapping
     } else {
       double pos_mid[3];
@@ -2074,7 +2074,7 @@ void grid_init(int my_rank)
   /// The cells will be ordered by x then y, then z. Call a routine that
   /// sets up the initial positions and widths of the cells.
   char grid_type_name[256] = "";
-  if (GRID_TYPE == GRID_UNIFORM) {
+  if (GRID_TYPE == GRID_CARTESIAN3D) {
     uniform_grid_setup();
     strcpy(grid_type_name, "uniform cuboidal");
   } else if (GRID_TYPE == GRID_SPHERICAL1D) {
@@ -2105,10 +2105,10 @@ void grid_init(int my_rank)
   if (get_model_type() == RHO_1D_READ) {
     map_1dmodeltogrid();
   } else if (get_model_type() == RHO_2D_READ) {
-    assert_always(GRID_TYPE == GRID_UNIFORM);
+    assert_always(GRID_TYPE == GRID_CARTESIAN3D);
     map_2dmodeltogrid();
   } else if (get_model_type() == RHO_3D_READ) {
-    assert_always(GRID_TYPE == GRID_UNIFORM);
+    assert_always(GRID_TYPE == GRID_CARTESIAN3D);
     map_3dmodeltogrid();
   } else {
     printout("[fatal] grid_init: Error: Unknown density type. Abort.");
@@ -2137,7 +2137,7 @@ void grid_init(int my_rank)
   // radioactive abundances to account for the missing masses in
   // the model cells that are not associated with any propagation cells
   // Luke: TODO: it's probably better to adjust the density instead of the abundances
-  if (GRID_TYPE == GRID_UNIFORM && get_model_type() == RHO_1D_READ && globals::rank_in_node == 0) {
+  if (GRID_TYPE == GRID_CARTESIAN3D && get_model_type() == RHO_1D_READ && globals::rank_in_node == 0) {
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
       if (totmassradionuclide[nucindex] <= 0) {
         continue;

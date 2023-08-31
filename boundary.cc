@@ -126,7 +126,7 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
   double cellcoordmax[3] = {0};
   double pktvelgridcoord[3] = {0};  // pkt_ptr->dir * CLIGHT_PROP converted to grid coordinates
 
-  if constexpr (GRID_TYPE == GRID_UNIFORM) {
+  if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     // keep xyz Cartesian coordinates.
     for (int d = 0; d < ndim; d++) {
       pktposgridcoord[d] = pkt_ptr->pos[d];
@@ -279,7 +279,7 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
     t_coordmaxboundary[1] = ((pktposgridcoord[2] - (pktvelgridcoord[2] * tstart)) /
                              ((cellcoordmax[1]) - (pktvelgridcoord[2] * globals::tmin)) * globals::tmin) -
                             tstart;
-  } else if constexpr (GRID_TYPE == GRID_UNIFORM) {
+  } else if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     // const double overshoot = grid::wid_init(cellindex) * 2e-7;
     constexpr double overshoot = 0.;
     for (int d = 0; d < 3; d++) {
@@ -386,7 +386,7 @@ void change_cell(struct packet *pkt_ptr, int snext)
 static auto get_cell(const double pos[3], double t) -> int
 /// identify the cell index from a position and a time.
 {
-  assert_always(GRID_TYPE == GRID_UNIFORM);  // other grid types not implemented yet
+  assert_always(GRID_TYPE == GRID_CARTESIAN3D);  // other grid types not implemented yet
 
   const double trat = t / globals::tmin;
   const int nx = static_cast<int>((pos[0] - (grid::get_cellcoordmin(0, 0) * trat)) / (grid::wid_init(0) * trat));
