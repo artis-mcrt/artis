@@ -880,12 +880,12 @@ static void map_1dmodeltogrid()
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const double radial_pos = get_cellradialpos(cellindex);
     const double vcell = radial_pos / globals::tmin;
-    int mgi;  // default to empty unless set
+    int mgi = get_npts_model();  // default to empty unless set
     if (radial_pos < globals::rmax) {
       if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
         mgi = cellindex;  // direct mapping
       } else {
-        int mgi = 0;
+        mgi = 0;
 
         for (int i = 0; i < (get_npts_model() - 1); i++) {
           if (vout_model[mgi] < vcell) {
