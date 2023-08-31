@@ -2,12 +2,12 @@
 #define BOUNDARY_H
 
 enum cell_boundary {
-  NEG_X = 101,
-  POS_X = 102,
-  NEG_Y = 103,
-  POS_Y = 104,
-  NEG_Z = 105,
-  POS_Z = 106,
+  COORD0_MIN = 101,
+  COORD0_MAX = 102,
+  COORD1_MIN = 103,
+  COORD1_MAX = 104,
+  COORD2_MIN = 105,
+  COORD2_MAX = 106,
   NONE = 107,
 };
 
