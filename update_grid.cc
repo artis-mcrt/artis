@@ -1191,18 +1191,14 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       }
 
       const float nne = grid::get_nne(mgi);
-      const double compton_optical_depth = SIGMA_T * nne * grid::wid_init(mgi) * tratmid;
+      const double compton_optical_depth = SIGMA_T * nne * grid::wid_init(mgi, 0) * tratmid;
 
       double radial_pos = grid::modelgrid[mgi].initial_radial_pos_sum * tratmid / assoc_cells;
-      if (GRID_TYPE == GRID_SPHERICAL1D) {
-        const double r_inner = grid::get_cellcoordmin(mgi, 0) * tratmid;
-        const double r_outer = r_inner + grid::wid_init(mgi) * tratmid;
-        radial_pos = 3. / 4 * (pow(r_outer, 4.) - pow(r_inner, 4.)) /
-                     (pow(r_outer, 3) - pow(r_inner, 3.));  // volume averaged mean radius
-        // printout("r_inner %g r_outer %g tratmid %g assoc_cells %d\n", r_inner, r_outer,
-        // tratmid, assoc_cells);
+      if constexpr (GRID_TYPE == GRID_SPHERICAL1D || GRID_TYPE == GRID_CYLINDRICAL2D) {
+        radial_pos = grid::get_cellradialpos(mgi) * tratmid;  // volume averaged mean radius
       }
-      const double grey_optical_deptha = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * grid::wid_init(mgi) * tratmid;
+      const double grey_optical_deptha =
+          grid::get_kappagrey(mgi) * grid::get_rho(mgi) * grid::wid_init(mgi, 0) * tratmid;
       // cube corners will have radial pos > rmax, so clamp to 0.
       const double dist_to_obs = std::max(0., globals::rmax * tratmid - radial_pos);
       const double grey_optical_depth = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * dist_to_obs;

@@ -81,7 +81,7 @@ extern char coordlabel[3];
 
 int get_elements_uppermost_ion(int modelgridindex, int element);
 void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);
-double wid_init(int cellindex);
+double wid_init(int cellindex, int axis);
 double get_modelcell_assocvolume_tmin(int modelgridindex);
 double get_gridcell_volume_tmin(int cellindex);
 double get_cellcoordmax(int cellindex, int axis);

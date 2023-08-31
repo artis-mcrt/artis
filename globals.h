@@ -293,7 +293,6 @@ extern int node_id;
 extern const int npkts;
 extern int nesc;
 
-extern double coordmax[3];
 extern double vmax;
 extern double rmax;
 extern double tmax;

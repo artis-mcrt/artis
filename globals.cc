@@ -101,7 +101,6 @@ int node_id = -1;     // unique number for each node
 constexpr int npkts = MPKTS;
 int nesc = 0;  // number of packets that escape during current timestep
 
-double coordmax[3];
 double vmax;
 double rmax;        /// Total mass and outer velocity/radius
 double tmax = -1.;  /// End time of current simulation

@@ -829,7 +829,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
              grid::get_cellcoordmin(cellindexnew, 0) * pkt_ptr->prop_time / globals::tmin,
              grid::get_cellcoordmin(cellindexnew, 1) * pkt_ptr->prop_time / globals::tmin,
              grid::get_cellcoordmin(cellindexnew, 2) * pkt_ptr->prop_time / globals::tmin);
-    printout("[warning] r_pkt: cell width %g\n", grid::wid_init(0) * pkt_ptr->prop_time / globals::tmin);
+    printout("[warning] r_pkt: cell width %g\n", grid::wid_init(cellindexnew, 0) * pkt_ptr->prop_time / globals::tmin);
     // abort();
   }
   if (((snext != -99) && (snext < 0)) || (snext >= grid::ngrid)) {
