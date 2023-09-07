@@ -547,7 +547,8 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
   // nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.436;
 
   // Ni56
-  nuclides.push_back({.z = 28, .a = 56, .meanlife = 8.80 * DAY, .branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.});
+  nuclides.push_back({.z = 28, .a = 56, .meanlife = 8.80 * DAY});
+  nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
 
   nuclides.push_back(default_nuclide);
   nuclides.back().z = 27;  // Co56
