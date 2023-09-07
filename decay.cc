@@ -538,12 +538,12 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
   // Co56
   nuclides.push_back({.z = 27, .a = 56, .meanlife = 113.7 * DAY});
   // old method: move BETAPLUS branching factor into average positron energy
-  // nuclides.back().endecay_positron = 0.63 * MEV * 0.19;
-  // nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 1.;
+  nuclides.back().endecay_positron = 0.63 * MEV * 0.19;
+  nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 1.;
   // should produce the same results if everything is done correctly
-  nuclides.back().endecay_positron = 0.63 * MEV;
-  nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.19;
-  nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 0.81;
+  // nuclides.back().endecay_positron = 0.63 * MEV;
+  // nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.19;
+  // nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 0.81;
 
   // Cr48
   nuclides.push_back({.z = 24, .a = 48, .meanlife = 1.29602 * DAY});
