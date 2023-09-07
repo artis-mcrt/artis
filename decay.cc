@@ -524,19 +524,6 @@ auto get_nucstring_a(const std::string &strnuc) -> int
 void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist) {
   assert_always(custom_zlist.size() == custom_alist.size());
 
-  struct nuclide default_nuclide {};
-  default_nuclide.z = -1;
-  default_nuclide.a = -1;
-  default_nuclide.meanlife = -1;
-  default_nuclide.endecay_electron = 0.;
-  default_nuclide.endecay_positron = 0.;
-  default_nuclide.endecay_gamma = 0.;
-  default_nuclide.endecay_alpha = 0.;
-  for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++) {
-    default_nuclide.branchprobs[dectypeindex] = 0.;
-    default_nuclide.endecay_q[dectypeindex] = 0.;
-  }
-
   // Ni57
   nuclides.push_back({.z = 28, .a = 57, .meanlife = 51.36 * 60});
   nuclides.back().endecay_positron = 0.354 * MEV * 0.436;
@@ -667,10 +654,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
     const int a = custom_alist[i];
     if (!nuc_exists(z, a)) {
       // printout("Adding Z %d A %d with no decay data (assuming stable)\n", z, a);
-      nuclides.push_back(default_nuclide);
-      nuclides.back().z = z;
-      nuclides.back().a = a;
-      nuclides.back().meanlife = -1;
+      nuclides.push_back({.z = z, .a = a, .meanlife = -1});
     }
   }
 
