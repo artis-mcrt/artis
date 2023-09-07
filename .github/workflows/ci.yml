@@ -253,6 +253,7 @@ jobs:
     #       time mpirun -np 2 ./sn3d
     combine_checksums:
         needs: testmodels
+        if: always()
         runs-on: ubuntu-22.04
         steps:
             - name: Download test output
