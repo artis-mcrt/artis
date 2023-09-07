@@ -1815,9 +1815,6 @@ void do_ntlepton(struct packet *pkt_ptr) {
     // printout("frac_ionization compare %g and %g\n", frac_ionization, get_nt_frac_ionization(modelgridindex));
     // const double frac_ionization = 0.;
 
-    // const double frac_excitation = get_nt_frac_excitation(modelgridindex);
-    const double frac_excitation = 0.;
-
     if (zrand < frac_ionization) {
       int element = -1;
       int lowerion = -1;
@@ -1854,7 +1851,10 @@ void do_ntlepton(struct packet *pkt_ptr) {
 
       return;
     }
-    if (NT_EXCITATION_ON && zrand < frac_ionization + frac_excitation) {
+
+    // const double frac_excitation = NT_EXCITATION_ON ? get_nt_frac_excitation(modelgridindex) : 0;
+    const double frac_excitation = 0.;
+    if (zrand < (frac_ionization + frac_excitation)) {
       zrand -= frac_ionization;
       // now zrand is between zero and frac_excitation
       // the selection algorithm is the same as for the ionization transitions
