@@ -252,6 +252,7 @@ jobs:
     #       touch output_0-0.txt
     #       time mpirun -np 2 ./sn3d
     combine_checksums:
+        needs: testmodels
         runs-on: ubuntu-22.04
         steps:
             - name: Download test output
