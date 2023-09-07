@@ -537,10 +537,8 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
     default_nuclide.endecay_q[dectypeindex] = 0.;
   }
 
-  nuclides.push_back(default_nuclide);
-  nuclides.back().z = 28;  // Ni57
-  nuclides.back().a = 57;
-  nuclides.back().meanlife = 51.36 * 60;
+  // Ni57
+  nuclides.push_back({.z = 28, .a = 57, .meanlife = 51.36 * 60});
   nuclides.back().endecay_positron = 0.354 * MEV * 0.436;
   nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 1.;
   // nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.436;
@@ -550,10 +548,8 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
   nuclides.push_back({.z = 28, .a = 56, .meanlife = 8.80 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
 
-  nuclides.push_back(default_nuclide);
-  nuclides.back().z = 27;  // Co56
-  nuclides.back().a = 56;
-  nuclides.back().meanlife = 113.7 * DAY;
+  // Co56
+  nuclides.push_back({.z = 27, .a = 56, .meanlife = 113.7 * DAY});
   // old method: move BETAPLUS branching factor into average positron energy
   nuclides.back().endecay_positron = 0.63 * MEV * 0.19;
   nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 1.;
@@ -562,35 +558,25 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
   // nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.19;
   // nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 0.81;
 
-  nuclides.push_back(default_nuclide);
-  nuclides.back().z = 24;  // Cr48
-  nuclides.back().a = 48;
-  nuclides.back().meanlife = 1.29602 * DAY;
+  // Cr48
+  nuclides.push_back({.z = 24, .a = 48, .meanlife = 1.29602 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
 
-  nuclides.push_back(default_nuclide);
-  nuclides.back().z = 23;  // V48
-  nuclides.back().a = 48;
-  nuclides.back().meanlife = 23.0442 * DAY;
+  // V48
+  nuclides.push_back({.z = 23, .a = 48, .meanlife = 23.0442 * DAY});
   nuclides.back().endecay_positron = 0.290 * MEV * 0.499;
   nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 1.;
 
-  nuclides.push_back(default_nuclide);
-  nuclides.back().z = 27;  // Co57
-  nuclides.back().a = 57;
-  nuclides.back().meanlife = 392.03 * DAY;
+  // Co57
+  nuclides.push_back({.z = 27, .a = 57, .meanlife = 392.03 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
 
-  nuclides.push_back(default_nuclide);
-  nuclides.back().z = 26;  // Fe52
-  nuclides.back().a = 52;
-  nuclides.back().meanlife = 0.497429 * DAY;
+  // Fe52
+  nuclides.push_back({.z = 26, .a = 52, .meanlife = 0.497429 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
 
-  nuclides.push_back(default_nuclide);
-  nuclides.back().z = 25;  // Mn52
-  nuclides.back().a = 52;
-  nuclides.back().meanlife = 0.0211395 * DAY;
+  // Mn52
+  nuclides.push_back({.z = 25, .a = 52, .meanlife = 0.0211395 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
 
   if (!custom_alist.empty()) {
@@ -619,10 +605,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
 
       if (keeprow) {
         assert_always(!nuc_exists(z, a));
-        nuclides.push_back(default_nuclide);
-        nuclides.back().z = z;
-        nuclides.back().a = a;
-        nuclides.back().meanlife = tau_sec;
+        nuclides.push_back({.z = z, .a = a, .meanlife = tau_sec});
         nuclides.back().branchprobs[DECAYTYPE_BETAMINUS] = 1.;
         nuclides.back().endecay_q[DECAYTYPE_BETAMINUS] = q_mev * MEV;
         nuclides.back().endecay_electron = e_elec_mev * MEV;
@@ -663,11 +646,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
           // printout("compare z %d a %d e_beta_mev1 %g e_beta_mev2 %g\n", z, a, nuclides[get_nucindex(z,
           // a)].endecay_positron / MEV, e_beta_mev);
         } else {
-          nuclides.push_back(default_nuclide);
-          nuclides.back().z = z;
-          nuclides.back().a = a;
-          nuclides.back().meanlife = tau_sec;
-          nuclides.back().endecay_gamma = e_gamma_mev * MEV;
+          nuclides.push_back({.z = z, .a = a, .meanlife = tau_sec, .endecay_gamma = e_gamma_mev * MEV});
           alphanucindex = nuclides.size() - 1;
         }
         nuclides[alphanucindex].endecay_alpha = e_alpha_mev * MEV;
