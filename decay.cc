@@ -33,15 +33,15 @@ const char *elsymbols[1 + Z_MAX] = {
     "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Uut", "Fl", "Uup", "Lv", "Uus", "Uuo"};
 
 struct nuclide {
-  int z;                                // atomic number
-  int a;                                // mass number
-  double meanlife;                      // mean lifetime before decay [s]
-  double endecay_electron;              // average energy per beta- decay in kinetic energy of emitted electons [erg]
-  double endecay_positron;              // average energy per beta+ decay in kinetic energy of emitted positrons [erg]
-  double endecay_gamma;                 // average energy per decay in gamma rays [erg]
-  double endecay_alpha;                 // average energy per alpha decay in kinetic energy of alpha particles [erg]
-  double endecay_q[DECAYTYPE_COUNT];    // Q-value for decay (reactant minus product energy) of each decay type
-  double branchprobs[DECAYTYPE_COUNT];  // branch probabilities of each decay type
+  int z = -1;                    // atomic number
+  int a = -1;                    // mass number
+  double meanlife = -1;          // mean lifetime before decay [s]
+  double endecay_electron = 0.;  // average energy per beta- decay in kinetic energy of emitted electons [erg]
+  double endecay_positron = 0.;  // average energy per beta+ decay in kinetic energy of emitted positrons [erg]
+  double endecay_gamma = 0.;     // average energy per decay in gamma rays [erg]
+  double endecay_alpha = 0.;     // average energy per alpha decay in kinetic energy of alpha particles [erg]
+  double endecay_q[DECAYTYPE_COUNT] = {0.};    // Q-value (reactant minus product energy) for each decay type
+  double branchprobs[DECAYTYPE_COUNT] = {0.};  // branch probability of each decay type
 };
 
 std::vector<struct nuclide> nuclides;
@@ -546,10 +546,8 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
   // nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.436;
   // nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.436;
 
-  nuclides.push_back(default_nuclide);
-  nuclides.back().z = 28;  // Ni56
-  nuclides.back().a = 56;
-  nuclides.back().meanlife = 8.80 * DAY;
+  // Ni56
+  nuclides.push_back({.z = 28, .a = 56, .meanlife = 8.80 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
 
   nuclides.push_back(default_nuclide);
@@ -618,6 +616,7 @@ void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist)
           break;
         }
       }
+
       if (keeprow) {
         assert_always(!nuc_exists(z, a));
         nuclides.push_back(default_nuclide);
