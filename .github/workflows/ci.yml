@@ -124,9 +124,8 @@ jobs:
               if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
-                  md5sum *.out job0/*.out
-
                   if [ -f results_md5_job0.txt ]; then md5sum -c results_md5_job0.txt; else echo "results_md5_job0.txt not found"; fi
+                  md5sum *.out job0/*.out | tee results_md5_job0.txt
 
             - name: Run test job1 resume
               if: always()
@@ -174,8 +173,8 @@ jobs:
               if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
-                  md5sum *.out job1/*.out
                   if [ -f results_md5_final.txt ]; then md5sum -c results_md5_final.txt; else echo "results_md5_final.txt not found"; fi
+                  md5sum *.out job1/*.out | tee results_md5_final.txt
 
             - name: Prepare for next steps
               if: always() && matrix.os != 'selfhosted'
@@ -252,3 +251,16 @@ jobs:
     #       cp input-newrun.txt input.txt
     #       touch output_0-0.txt
     #       time mpirun -np 2 ./sn3d
+    combine_checksums:
+        runs-on: ubuntu-22.04
+        steps:
+            - name: Download test output
+              uses: actions/download-artifact@v3
+              with:
+                  name: test-classicmode-output
+
+            - name: Upload checksum files
+              uses: actions/upload-artifact@v3
+              with:
+                  name: checksums
+                  path: tests/*/output/results_md5*.txt
