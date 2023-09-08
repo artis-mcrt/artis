@@ -264,4 +264,4 @@ jobs:
               uses: actions/upload-artifact@v3
               with:
                   name: Checksums
-                  path: test_*_output/results_md5*.txt
+                  path: test-*-output/results_md5*.txt
