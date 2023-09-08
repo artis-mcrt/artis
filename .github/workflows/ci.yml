@@ -266,8 +266,6 @@ jobs:
         steps:
             - name: Download test output
               uses: actions/download-artifact@v3
-              with:
-                  name: test-*-inputfiles
 
             - name: List all files
               if: always()
