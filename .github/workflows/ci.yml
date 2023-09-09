@@ -195,7 +195,7 @@ jobs:
               uses: actions/upload-artifact@v3
               if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
               with:
-                  name: ${{ matrix.testname }}-inputfiles
+                  name: ${{ matrix.testname }}_inputfiles
                   path: tests/${{ matrix.testname }}_inputfiles/results_md5*
 
             - name: Set up Python
@@ -262,7 +262,7 @@ jobs:
     combine_checksums:
         needs: testmodels
         if: always()
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-latest
         steps:
             - name: Download test output
               uses: actions/download-artifact@v3
@@ -274,5 +274,5 @@ jobs:
             - name: Upload bundled checksum files
               uses: actions/upload-artifact@v3
               with:
-                  name: Checksums
-                  path: '*-inputfiles/results_md5*.txt'
+                  name: checksums
+                  path: '*_inputfiles/results_md5*.txt'
