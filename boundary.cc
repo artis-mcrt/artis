@@ -280,17 +280,14 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
                              ((cellcoordmax[1]) - (pktvelgridcoord[2] * globals::tmin)) * globals::tmin) -
                             tstart;
   } else if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
-    // const double overshoot = grid::wid_init(cellindex) * 2e-7;
-    constexpr double overshoot = 0.;
     for (int d = 0; d < 3; d++) {
       t_coordmaxboundary[d] = ((pktposgridcoord[d] - (pktvelgridcoord[d] * tstart)) /
-                               ((cellcoordmax[d] + overshoot) - (pktvelgridcoord[d] * globals::tmin)) * globals::tmin) -
+                               (cellcoordmax[d] - (pktvelgridcoord[d] * globals::tmin)) * globals::tmin) -
                               tstart;
 
       t_coordminboundary[d] =
           ((pktposgridcoord[d] - (pktvelgridcoord[d] * tstart)) /
-           ((grid::get_cellcoordmin(cellindex, d) - overshoot) - (pktvelgridcoord[d] * globals::tmin)) *
-           globals::tmin) -
+           (grid::get_cellcoordmin(cellindex, d) - (pktvelgridcoord[d] * globals::tmin)) * globals::tmin) -
           tstart;
     }
   } else {
