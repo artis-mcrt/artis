@@ -195,7 +195,7 @@ jobs:
               uses: actions/upload-artifact@v3
               if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
               with:
-                  name: test-${{ matrix.testname }}-inputfiles
+                  name: ${{ matrix.testname }}-inputfiles
                   path: tests/${{ matrix.testname }}_inputfiles/results_md5*
 
             - name: Set up Python
@@ -275,4 +275,4 @@ jobs:
               uses: actions/upload-artifact@v3
               with:
                   name: Checksums
-                  path: test-*-inputfiles/results_md5*.txt
+                  path: '*-inputfiles/results_md5*.txt'
