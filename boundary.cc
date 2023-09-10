@@ -140,7 +140,7 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
 
     // second cylindrical coordinate is z
     pktposgridcoord[1] = pkt_ptr->pos[2];
-    cellcoordmax[1] = grid::get_cellcoordmax(cellindex, 2);
+    cellcoordmax[1] = grid::get_cellcoordmax(cellindex, 1);
     pktvelgridcoord[1] = pkt_ptr->dir[2] * CLIGHT_PROP;
 
   } else if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
@@ -272,12 +272,12 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
 
     // z boundaries same as Cartesian
     t_coordminboundary[1] =
-        ((pktposgridcoord[2] - (pktvelgridcoord[2] * tstart)) /
-         ((grid::get_cellcoordmin(cellindex, 1)) - (pktvelgridcoord[2] * globals::tmin)) * globals::tmin) -
+        ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
+         ((grid::get_cellcoordmin(cellindex, 1)) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
         tstart;
 
-    t_coordmaxboundary[1] = ((pktposgridcoord[2] - (pktvelgridcoord[2] * tstart)) /
-                             ((cellcoordmax[1]) - (pktvelgridcoord[2] * globals::tmin)) * globals::tmin) -
+    t_coordmaxboundary[1] = ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
+                             ((cellcoordmax[1]) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
                             tstart;
   } else if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     for (int d = 0; d < 3; d++) {
