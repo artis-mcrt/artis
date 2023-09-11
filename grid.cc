@@ -2247,7 +2247,7 @@ static auto get_poscoordpointnum(double pos, double time, int axis) -> int {
   }
 }
 
-auto get_cellindex_from_pos(const double pos[3], double time, int cellindexcheck) -> int
+auto get_cellindex_from_pos(const double pos[3], double time) -> int
 /// identify the cell index from an (x,y,z) position and a time.
 {
   double posgridcoords[3];
@@ -2257,23 +2257,8 @@ auto get_cellindex_from_pos(const double pos[3], double time, int cellindexcheck
     cellindex += get_coordcellindexincrement(d) * get_poscoordpointnum(posgridcoords[d], time, d);
   }
 
-  // do a check
-
+  // do a check that the position is within the cell
   const double trat = time / globals::tmin;
-  if (cellindex != cellindexcheck) {
-    printout("problem time %g tmin %g trat %g vmax %lg ncoords %d %d pos xyz %g %g %g\n", time, globals::tmin, trat,
-             globals::vmax, ncoordgrid[0], ncoordgrid[1], pos[0], pos[1], pos[2]);
-    printout("cellindex %d cellindexcheck %d\n", cellindex, cellindexcheck);
-    for (int n = 0; n < grid::get_ngriddimensions(); n++) {
-      printout("cellindex1 coord %d gridcoordpos %g n_i %d == %d cellcoordmin %g cellcoordmax %g\n", n,
-               posgridcoords[n], get_cellcoordpointnum(cellindex, n), get_poscoordpointnum(posgridcoords[n], time, n),
-               grid::get_cellcoordmin(cellindex, n) * trat, grid::get_cellcoordmax(cellindex, n) * trat);
-      printout("cellindex2 coord %d gridcoordpos %g n_i %d cellcoordmin %g cellcoordmax %g\n", n, posgridcoords[n],
-               get_cellcoordpointnum(cellindexcheck, n), grid::get_cellcoordmin(cellindexcheck, n) * trat,
-               grid::get_cellcoordmax(cellindexcheck, n) * trat);
-    }
-  }
-
   for (int n = 0; n < grid::get_ngriddimensions(); n++) {
     assert_always(posgridcoords[n] >= grid::get_cellcoordmin(cellindex, n) * trat);
     assert_always(posgridcoords[n] <= grid::get_cellcoordmax(cellindex, n) * trat);

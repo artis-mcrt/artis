@@ -127,7 +127,7 @@ int get_npts_model();
 int get_nonempty_npts_model();
 double get_t_model();
 int get_cell_modelgridindex(int cellindex);
-int get_cellindex_from_pos(const double pos[3], double time, int cellindexcheck);
+int get_cellindex_from_pos(const double pos[3], double time);
 void read_ejecta_model();
 void write_grid_restart_data(int timestep);
 int get_maxndo();

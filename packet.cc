@@ -60,7 +60,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     assert_always(false);
   }
 
-  assert_always(grid::get_cellindex_from_pos(pkt_ptr->pos, pkt_ptr->prop_time, cellindex) == cellindex);
+  assert_testmodeonly(grid::get_cellindex_from_pos(pkt_ptr->pos, pkt_ptr->prop_time) == cellindex);
   const int mgi = grid::get_cell_modelgridindex(cellindex);
 
   decay::setup_radioactive_pellet(e0, mgi, pkt_ptr);
