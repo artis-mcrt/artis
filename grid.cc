@@ -37,8 +37,6 @@ int nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 double t_model = -1.;  // time at which densities in input model are correct.
 double *vout_model = nullptr;
 int ncoord_model[3];  // the model.txt input grid dimensions
-double dcoord_rcyl;
-double dcoord_z;  // spacings of a 2D model grid - must be uniform grid
 
 double min_den;  // minimum model density
 
@@ -1348,9 +1346,6 @@ static void read_2d_model()
   assert_always(get_noncommentline(fmodel, line));
   std::stringstream(line) >> globals::vmax;
 
-  dcoord_rcyl = globals::vmax * t_model / ncoord_model[0];    // dr for input model
-  dcoord_z = 2. * globals::vmax * t_model / ncoord_model[1];  // dz for input model
-
   std::vector<int> zlist;
   std::vector<int> alist;
   std::vector<std::string> colnames;
@@ -1374,6 +1369,8 @@ static void read_2d_model()
   // First is an index for the cell then its r-mid point then its z-mid point
   // then its total mass density.
   // Second is the total FeG mass, initial 56Ni mass, initial 56Co mass
+  const double dcoord_rcyl = globals::vmax * t_model / ncoord_model[0];    // dr for input model
+  const double dcoord_z = 2. * globals::vmax * t_model / ncoord_model[1];  // dz for input model
 
   int mgi = 0;
   int nonemptymgi = 0;
@@ -1585,6 +1582,9 @@ static void calc_modelinit_totmassradionuclides() {
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     totmassradionuclide[nucindex] = 0.;
   }
+
+  const double dcoord_rcyl = globals::vmax * t_model / ncoord_model[0];    // dr for input model
+  const double dcoord_z = 2. * globals::vmax * t_model / ncoord_model[1];  // dz for input model
 
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
     if (get_rho_tmin(mgi) <= 0.) {
