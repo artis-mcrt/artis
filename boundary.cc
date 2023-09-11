@@ -296,7 +296,7 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
 
   // printout("comparing distances. last_cross = %d\n", last_cross);
   // We now need to identify the shortest +ve time - that's the one we want.
-  int choice = 0;  /// just a control variable to
+  enum cell_boundary choice = NONE;  /// just a control variable to
   double time = std::numeric_limits<double>::max();
   for (int d = 0; d < ndim; d++) {
     if ((t_coordmaxboundary[d] > 0) && (t_coordmaxboundary[d] < time) && (last_cross != negdirections[d])) {
@@ -322,7 +322,7 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
     }
   }
 
-  if (choice == 0) {
+  if (choice == NONE) {
     printout("Something wrong in boundary crossing - didn't find anything.\n");
     printout("packet %d cell %d or %d\n", pkt_ptr->number, cellindex, pkt_ptr->where);
     printout("choice %d\n", choice);
