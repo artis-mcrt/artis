@@ -1333,6 +1333,7 @@ static void read_2d_model()
   // 1st read the number of data points in the table of input model.
   assert_always(get_noncommentline(fmodel, line));
   std::stringstream(line) >> ncoord_model[0] >> ncoord_model[1];  // r and z (cylindrical polar)
+  ncoord_model[2] = 0.;
 
   set_npts_model(ncoord_model[0] * ncoord_model[1]);
 
@@ -2078,6 +2079,10 @@ static void cylindrical_2d_grid_setup() {
   coordlabel[0] = 'r';
   coordlabel[1] = 'z';
   coordlabel[2] = '_';
+
+  ncoordgrid[0] = ncoord_model[0];
+  ncoordgrid[1] = ncoord_model[1];
+  ncoordgrid[2] = ncoord_model[2];
 
   ngrid = ncoordgrid[0] * ncoordgrid[1];
   cell = static_cast<struct gridcell *>(malloc(ngrid * sizeof(struct gridcell)));
