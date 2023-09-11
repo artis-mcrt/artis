@@ -809,9 +809,9 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
     return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
   }
-  const double maxsdist = (GRID_TYPE == GRID_SPHERICAL1D)
-                              ? 2 * globals::rmax * (pkt_ptr->prop_time + sdist / CLIGHT_PROP) / globals::tmin
-                              : globals::rmax * pkt_ptr->prop_time / globals::tmin;
+  const double maxsdist = (GRID_TYPE == GRID_CARTESIAN3D)
+                              ? globals::rmax * pkt_ptr->prop_time / globals::tmin
+                              : 2 * globals::rmax * (pkt_ptr->prop_time + sdist / CLIGHT_PROP) / globals::tmin;
   if (sdist > maxsdist) {
     printout("[fatal] do_rpkt: Unreasonably large sdist for packet %d. Rpkt. Abort. %g %g %g\n", pkt_ptr->number,
              globals::rmax, pkt_ptr->prop_time / globals::tmin, sdist);
