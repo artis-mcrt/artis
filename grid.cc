@@ -2457,10 +2457,10 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
         const int d2 = d;
         {
           printout(
-              "[warning] packet %d outside coord %d %c%c boundary of cell %d. pkttype %d initpos(tmin) %g, vel %g, "
+              "[warning] packet %d outside coord %d %c%c boundary of cell %d. pkttype %d vel %g initpos(tmin) %g "
               "cellcoordmin %g, cellcoordmax %g\n",
               pkt_ptr->number, d, flip != 0 ? '-' : '+', grid::coordlabel[d], cellindex, pkt_ptr->type,
-              pktposgridcoord[d2], pktvelgridcoord[d2], grid::get_cellcoordmin(cellindex, d2) / globals::tmin * tstart,
+              pktvelgridcoord[d2], pktposgridcoord[d2], grid::get_cellcoordmin(cellindex, d2) / globals::tmin * tstart,
               cellcoordmax[d2] / globals::tmin * tstart);
         }
         printout("globals::tmin %g tstart %g tstart/globals::tmin %g tdecay %g\n", globals::tmin, tstart,
@@ -2555,8 +2555,6 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
   } else {
     assert_always(false);
   }
-
-  // printout("comparing distances. last_cross = %d\n", last_cross);
 
   // We now need to identify the shortest +ve distance - that's the one we want.
   enum cell_boundary choice = NONE;
