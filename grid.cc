@@ -2557,13 +2557,17 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
   }
 
   // printout("comparing distances. last_cross = %d\n", last_cross);
-  // We now need to identify the shortest +ve time - that's the one we want.
-  enum cell_boundary choice = NONE;  /// just a control variable to
-  double time = std::numeric_limits<double>::max();
+
+  // We now need to identify the shortest +ve distance - that's the one we want.
+  enum cell_boundary choice = NONE;
+  double crosstime = std::numeric_limits<double>::max();
+  double distance = std::numeric_limits<double>::max();
   for (int d = 0; d < ndim; d++) {
-    if ((t_coordmaxboundary[d] > 0) && (t_coordmaxboundary[d] < time) && (last_cross != negdirections[d])) {
+    // upper d coordinate of the current cell
+    if ((t_coordmaxboundary[d] > 0) && (t_coordmaxboundary[d] < crosstime) && (last_cross != negdirections[d])) {
       choice = posdirections[d];
-      time = t_coordmaxboundary[d];
+      crosstime = t_coordmaxboundary[d];
+      distance = CLIGHT_PROP * t_coordmaxboundary[d];
       if (grid::get_cellcoordpointnum(cellindex, d) == (grid::ncoordgrid[d] - 1)) {
         *snext = -99;
       } else {
@@ -2572,9 +2576,11 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
       }
     }
 
-    if ((t_coordminboundary[d] > 0) && (t_coordminboundary[d] < time) && (last_cross != posdirections[d])) {
+    // lower d coordinate of the current cell
+    if ((t_coordminboundary[d] > 0) && (t_coordminboundary[d] < crosstime) && (last_cross != posdirections[d])) {
       choice = negdirections[d];
-      time = t_coordminboundary[d];
+      crosstime = t_coordminboundary[d];
+      distance = CLIGHT_PROP * t_coordminboundary[d];
       if (grid::get_cellcoordpointnum(cellindex, d) == 0) {
         *snext = -99;
       } else {
@@ -2603,13 +2609,8 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
     }
     printout("tstart %g\n", tstart);
 
-    // abort();
+    assert_always(false);
   }
-
-  // Now we know what happens. The distance to crossing is....
-  double const distance = CLIGHT_PROP * time;
-  // printout("boundary_cross: time %g distance %g\n", time, distance);
-  // closest = close;
 
   return distance;
 }
