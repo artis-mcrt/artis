@@ -1391,11 +1391,11 @@ static void read_2d_model()
     }
     assert_always(cellnumberin == mgi + first_cellindex);
 
-    const int ncoord1 = (mgi % ncoord_model[0]);
-    const double r_cylindrical = (ncoord1 + 0.5) * dcoord_rcyl;
+    const int n_rcyl = (mgi % ncoord_model[0]);
+    const double r_cylindrical = (n_rcyl + 0.5) * dcoord_rcyl;
     assert_always(fabs(cell_r_in / r_cylindrical - 1) < 1e-3);
-    const int ncoord2 = (mgi / ncoord_model[0]);
-    const double z = -globals::vmax * t_model + ((ncoord2 + 0.5) * dcoord_z);
+    const int n_z = (mgi / ncoord_model[0]);
+    const double z = -globals::vmax * t_model + ((n_z + 0.5) * dcoord_z);
     assert_always(fabs(cell_z_in / z - 1) < 1e-3);
 
     if (rho_tmodel < 0) {
@@ -2113,9 +2113,10 @@ void grid_init(int my_rank)
   printout("grid_init: rho_crit = %g [g/cm3]\n", globals::rho_crit);
 
   if (get_model_type() == RHO_1D_READ) {
+    assert_always(GRID_TYPE == GRID_CARTESIAN3D || GRID_TYPE == GRID_SPHERICAL1D);
     map_1dmodeltogrid();
   } else if (get_model_type() == RHO_2D_READ) {
-    assert_always(GRID_TYPE == GRID_CARTESIAN3D);
+    assert_always(GRID_TYPE == GRID_CARTESIAN3D || GRID_TYPE == GRID_CYLINDRICAL2D);
     map_2dmodeltogrid();
   } else if (get_model_type() == RHO_3D_READ) {
     assert_always(GRID_TYPE == GRID_CARTESIAN3D);
