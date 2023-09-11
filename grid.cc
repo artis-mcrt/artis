@@ -155,29 +155,23 @@ auto get_cellcoordmin(const int cellindex, const int axis) -> double
 auto get_coordcellindexincrement(const int axis) -> int
 // how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r direction)
 {
-  if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
-    switch (axis) {
-      case 0:
-        return 1;
+  // assert_testmodeonly(axis < get_ngriddimensions());
 
-      case 1:
-        return ncoordgrid[0];
+  switch (axis) {
+    case 0:
+      return 1;
 
-      case 2:
-        return ncoordgrid[0] * ncoordgrid[1];
+    case 1:
+      return ncoordgrid[0];
 
-      default:
-        printout("invalid coordinate index %d", axis);
-        abort();
-        return -1;
-    }
+    case 2:
+      return ncoordgrid[0] * ncoordgrid[1];
+
+    default:
+      printout("invalid coordinate index %d", axis);
+      abort();
+      return -1;
   }
-
-  if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
-    return 1;
-  }
-
-  assert_always(false);
 }
 
 auto get_cellcoordpointnum(const int cellindex, const int axis) -> int
