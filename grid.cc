@@ -177,9 +177,10 @@ auto get_coordcellindexincrement(const int axis) -> int
 auto get_cellcoordpointnum(const int cellindex, const int axis) -> int
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
 {
-  if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
+  if constexpr (GRID_TYPE == GRID_CARTESIAN3D || GRID_TYPE == GRID_CYLINDRICAL2D) {
     switch (axis) {
-      // increment x first, then y, then z
+      // 3D Cartesian: increment x first, then y, then z
+      // 2D Cylindrical: increment r first, then z
       case 0:
         return cellindex % ncoordgrid[0];
 
@@ -1392,11 +1393,11 @@ static void read_2d_model()
     assert_always(cellnumberin == mgi + first_cellindex);
 
     const int n_rcyl = (mgi % ncoord_model[0]);
-    const double r_cylindrical = (n_rcyl + 0.5) * dcoord_rcyl;
-    assert_always(fabs(cell_r_in / r_cylindrical - 1) < 1e-3);
+    const double pos_r_cyl_mid = (n_rcyl + 0.5) * dcoord_rcyl;
+    assert_always(fabs(cell_r_in / pos_r_cyl_mid - 1) < 1e-3);
     const int n_z = (mgi / ncoord_model[0]);
-    const double z = -globals::vmax * t_model + ((n_z + 0.5) * dcoord_z);
-    assert_always(fabs(cell_z_in / z - 1) < 1e-3);
+    const double pos_z_mid = -globals::vmax * t_model + ((n_z + 0.5) * dcoord_z);
+    assert_always(fabs(cell_z_in / pos_z_mid - 1) < 1e-3);
 
     if (rho_tmodel < 0) {
       printout("negative input density %g %d\n", rho_tmodel, mgi);
@@ -1605,8 +1606,6 @@ static void calc_modelinit_totmassradionuclides() {
       printout("Unknown model type %d in function %s\n", get_model_type(), __func__);
       abort();
     }
-    // can use grid::get_modelcell_assocvolume_tmin(mgi) to get actual simulated volume (with slight error versus
-    // input)
 
     const double mass_in_shell = get_rho_tmin(mgi) * cellvolume;
 
@@ -2063,13 +2062,37 @@ static void spherical1d_grid_setup() {
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
   cell = static_cast<struct gridcell *>(malloc(ngrid * sizeof(struct gridcell)));
 
-  // in this mode, cellindex and modelgridindex are the same thing
+  // direct mapping, cellindex and modelgridindex are the same
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
     const int mgi = cellindex;  // interchangeable in this mode
     const double v_inner = mgi > 0 ? vout_model[mgi - 1] : 0.;
     set_cell_modelgridindex(cellindex, mgi);
     cell[cellindex].pos_min[0] = v_inner * globals::tmin;
     cell[cellindex].pos_min[1] = 0.;
+    cell[cellindex].pos_min[2] = 0.;
+  }
+}
+
+static void cylindrical_2d_grid_setup() {
+  assert_always(get_model_type() == RHO_2D_READ);
+  coordlabel[0] = 'r';
+  coordlabel[1] = 'z';
+  coordlabel[2] = '_';
+
+  ngrid = ncoordgrid[0] * ncoordgrid[1];
+  cell = static_cast<struct gridcell *>(malloc(ngrid * sizeof(struct gridcell)));
+
+  // direct mapping, cellindex and modelgridindex are the same
+  for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
+    const int mgi = cellindex;  // interchangeable in this mode
+    set_cell_modelgridindex(cellindex, mgi);
+
+    const int n_rcyl = get_cellcoordpointnum(cellindex, 0);
+    const int n_z = get_cellcoordpointnum(cellindex, 1);
+
+    cell[cellindex].pos_min[0] = n_rcyl * globals::vmax * globals::tmin / ncoord_model[0];
+    cell[cellindex].pos_min[1] =
+        -globals::vmax * globals::tmin + 2. * globals::vmax * globals::tmin * n_z / ncoord_model[1];
     cell[cellindex].pos_min[2] = 0.;
   }
 }
@@ -2090,6 +2113,9 @@ void grid_init(int my_rank)
   } else if (GRID_TYPE == GRID_SPHERICAL1D) {
     spherical1d_grid_setup();
     strcpy(grid_type_name, "spherical");
+  } else if (GRID_TYPE == GRID_CYLINDRICAL2D) {
+    cylindrical_2d_grid_setup();
+    strcpy(grid_type_name, "cylindrical");
   } else {
     printout("[fatal] grid_init: Error: Unknown grid type. Abort.");
     abort();
@@ -2180,7 +2206,8 @@ void grid_init(int my_rank)
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
     mtot_mapped += get_rho_tmin(mgi) * get_modelcell_assocvolume_tmin(mgi);
   }
-  printout("Total mapped mass: %9.3e [Msun]\n", mtot_mapped / MSUN);
+  printout("Total grid-mapped mass: %9.3e [Msun] (%.1f%% of input mass)\n", mtot_mapped / MSUN,
+           mtot_mapped / mtot_input * 100.);
 
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
@@ -2189,6 +2216,33 @@ void grid_init(int my_rank)
 
 auto get_totmassradionuclide(const int z, const int a) -> double {
   return totmassradionuclide[decay::get_nucindex(z, a)];
+}
+
+static auto get_cell(const double pos[3], double t) -> int
+/// identify the cell index from an (x,y,z) position and a time.
+{
+  assert_always(GRID_TYPE == GRID_CARTESIAN3D);  // other grid types not implemented yet
+  int cellindex = -1;
+  if (GRID_TYPE == GRID_CARTESIAN3D) {
+    const double trat = t / globals::tmin;
+    const int nx = static_cast<int>((pos[0] - (grid::get_cellcoordmin(0, 0) * trat)) / (grid::wid_init(0, 0) * trat));
+    const int ny = static_cast<int>((pos[1] - (grid::get_cellcoordmin(0, 1) * trat)) / (grid::wid_init(0, 1) * trat));
+    const int nz = static_cast<int>((pos[2] - (grid::get_cellcoordmin(0, 2) * trat)) / (grid::wid_init(0, 1) * trat));
+    cellindex = nx + (grid::ncoordgrid[0] * ny) + (grid::ncoordgrid[0] * grid::ncoordgrid[1] * nz);
+  } else if (GRID_TYPE == GRID_CYLINDRICAL2D) {
+    const double rcylindrical = std::sqrt(std::pow(pos[0], 2) + std::pow(pos[1], 2));
+
+    const int n_rcyl = static_cast<int>(rcylindrical / globals::tmin / globals::vmax * ncoord_model[0]);
+    const int n_z = static_cast<int>((pos[2] / globals::tmin + globals::vmax) / (2 * globals::vmax) * ncoord_model[1]);
+    cellindex = n_z * grid::ncoordgrid[0] + n_rcyl;
+  }
+
+  // do a check
+  for (int n = 0; n < grid::get_ngriddimensions(); n++) {
+    assert_always(pos[n] >= grid::get_cellcoordmin(cellindex, n));
+    assert_always(pos[n] <= grid::get_cellcoordmax(cellindex, n));
+  }
+  return cellindex;
 }
 
 }  // namespace grid
