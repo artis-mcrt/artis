@@ -373,23 +373,3 @@ void change_cell(struct packet *pkt_ptr, int snext)
     stats::increment(stats::COUNTER_CELLCROSSINGS);
   }
 }
-
-static auto get_cell(const double pos[3], double t) -> int
-/// identify the cell index from a position and a time.
-{
-  assert_always(GRID_TYPE == GRID_CARTESIAN3D);  // other grid types not implemented yet
-
-  const double trat = t / globals::tmin;
-  const int nx = static_cast<int>((pos[0] - (grid::get_cellcoordmin(0, 0) * trat)) / (grid::wid_init(0, 0) * trat));
-  const int ny = static_cast<int>((pos[1] - (grid::get_cellcoordmin(0, 1) * trat)) / (grid::wid_init(0, 1) * trat));
-  const int nz = static_cast<int>((pos[2] - (grid::get_cellcoordmin(0, 2) * trat)) / (grid::wid_init(0, 1) * trat));
-
-  const int cellindex = nx + (grid::ncoordgrid[0] * ny) + (grid::ncoordgrid[0] * grid::ncoordgrid[1] * nz);
-
-  // do a check
-  for (int n = 0; n < grid::get_ngriddimensions(); n++) {
-    assert_always(pos[n] >= grid::get_cellcoordmin(cellindex, n));
-    assert_always(pos[n] <= grid::get_cellcoordmax(cellindex, n));
-  }
-  return cellindex;
-}
