@@ -942,7 +942,7 @@ static void map_2dmodeltogrid()
       const int n_z =
           static_cast<int>((pos_mid[2] / globals::tmin + globals::vmax) / (2 * globals::vmax) * ncoord_model[1]);
 
-      if (n_rcyl > 0 && n_rcyl < ncoord_model[0] && n_z > 0 && n_z < ncoord_model[1]) {
+      if (n_rcyl >= 0 && n_rcyl < ncoord_model[0] && n_z >= 0 && n_z < ncoord_model[1]) {
         mgi = (n_z * ncoord_model[0]) + n_rcyl;
       }
     }
