@@ -131,12 +131,12 @@ auto get_cellcoordmax(const int cellindex, const int axis) -> double
 
   if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
     assert_testmodeonly(axis <= 1);
-    return grid::get_cellcoordmin(cellindex, 0) + grid::wid_init(cellindex, axis);
+    return grid::get_cellcoordmin(cellindex, axis) + grid::wid_init(cellindex, axis);
   }
 
   if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
     assert_testmodeonly(axis == 0);
-    return grid::get_cellcoordmin(cellindex, 0) + grid::wid_init(cellindex, axis);
+    return grid::get_cellcoordmin(cellindex, axis) + grid::wid_init(cellindex, axis);
   }
 
   assert_always(false);
@@ -1370,8 +1370,6 @@ static void read_2d_model()
   // First is an index for the cell then its r-mid point then its z-mid point
   // then its total mass density.
   // Second is the total FeG mass, initial 56Ni mass, initial 56Co mass
-  const double dcoord_rcyl = globals::vmax * t_model / ncoord_model[0];    // dr for input model
-  const double dcoord_z = 2. * globals::vmax * t_model / ncoord_model[1];  // dz for input model
 
   int mgi = 0;
   int nonemptymgi = 0;
@@ -1391,10 +1389,10 @@ static void read_2d_model()
     assert_always(cellnumberin == mgi + first_cellindex);
 
     const int n_rcyl = (mgi % ncoord_model[0]);
-    const double pos_r_cyl_mid = (n_rcyl + 0.5) * dcoord_rcyl;
+    const double pos_r_cyl_mid = (n_rcyl + 0.5) * globals::vmax * t_model / ncoord_model[0];
     assert_always(fabs(cell_r_in / pos_r_cyl_mid - 1) < 1e-3);
     const int n_z = (mgi / ncoord_model[0]);
-    const double pos_z_mid = -globals::vmax * t_model + ((n_z + 0.5) * dcoord_z);
+    const double pos_z_mid = globals::vmax * t_model * (-1 + 2 * (n_z + 0.5) / ncoord_model[1]);
     assert_always(fabs(cell_z_in / pos_z_mid - 1) < 1e-3);
 
     if (rho_tmodel < 0) {
@@ -2095,9 +2093,8 @@ static void cylindrical_2d_grid_setup() {
     const int n_rcyl = get_cellcoordpointnum(cellindex, 0);
     const int n_z = get_cellcoordpointnum(cellindex, 1);
 
-    cell[cellindex].pos_min[0] = n_rcyl * globals::vmax * globals::tmin / ncoord_model[0];
-    cell[cellindex].pos_min[1] =
-        -globals::vmax * globals::tmin + 2. * globals::vmax * globals::tmin * n_z / ncoord_model[1];
+    cell[cellindex].pos_min[0] = n_rcyl * globals::rmax / ncoord_model[0];
+    cell[cellindex].pos_min[1] = globals::rmax * (-1 + n_z * 2. / ncoord_model[1]);
     cell[cellindex].pos_min[2] = 0.;
   }
 }
@@ -2223,7 +2220,33 @@ auto get_totmassradionuclide(const int z, const int a) -> double {
   return totmassradionuclide[decay::get_nucindex(z, a)];
 }
 
-static auto get_cell(const double pos[3], double t) -> int
+static auto get_poscoordpointnum(double pos, double time, int axis) -> int {
+  // pos must be position in grid coordinate system, not necessarily xyz
+
+  if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
+    return static_cast<int>((pos / time + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
+  } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
+    if (axis == 0) {
+      return static_cast<int>(pos / time / globals::vmax * ncoordgrid[axis]);
+    }
+    if (axis == 1) {
+      return static_cast<int>((pos / time + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
+    }
+    assert_always(false);
+
+  } else if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
+    for (int n_r = 0; n_r < ncoordgrid[0]; n_r++) {
+      if ((pos >= grid::get_cellcoordmin(n_r, 0)) && (pos < grid::get_cellcoordmax(n_r, 0))) {
+        return n_r;
+      }
+    }
+    assert_always(false);
+  } else {
+    assert_always(false);
+  }
+}
+
+auto get_cellindex_from_pos(const double pos[3], double time, int cellindexcheck) -> int
 /// identify the cell index from an (x,y,z) position and a time.
 {
   assert_always(GRID_TYPE == GRID_CARTESIAN3D);  // other grid types not implemented yet

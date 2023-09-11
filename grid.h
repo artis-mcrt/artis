@@ -139,6 +139,22 @@ static inline float get_elem_abundance(int modelgridindex, int element)
   return modelgrid[modelgridindex].composition[element].abundance;
 }
 
+constexpr auto get_gridcoords_from_xyz(const double pos_xyz[3], double posgridcoord[3]) -> void {
+  if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
+    posgridcoord[0] = pos_xyz[0];
+    posgridcoord[1] = pos_xyz[1];
+    posgridcoord[2] = pos_xyz[2];
+  } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
+    posgridcoord[0] = std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2));
+    posgridcoord[1] = pos_xyz[2];
+    posgridcoord[2] = 0.;
+  } else if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
+    posgridcoord[0] = vec_len(pos_xyz);
+    posgridcoord[1] = 0.;
+    posgridcoord[2] = 0.;
+  }
+}
+
 }  // namespace grid
 
 #endif  // GRIDINIT_H
