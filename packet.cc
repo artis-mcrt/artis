@@ -29,28 +29,38 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
     const double zrand = rng_uniform();
     const double r_inner = grid::get_cellcoordmin(cellindex, 0);
-    const double r_outer = grid::get_cellcoordmin(cellindex, 0) + grid::wid_init(cellindex, 0);
+    const double r_outer = grid::get_cellcoordmax(cellindex, 0);
+    // use equal volume probability distribution to select radius
     const double radius = pow(zrand * pow(r_inner, 3) + (1. - zrand) * pow(r_outer, 3), 1 / 3.);
     // assert_always(radius >= r_inner);
     // assert_always(radius <= r_outer);
 
     get_rand_isotropic_unitvec(pkt_ptr->pos);
     vec_scale(pkt_ptr->pos, radius);
+
   } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
     const double zrand1 = rng_uniform();
     const double rcyl_inner = grid::get_cellcoordmin(cellindex, 0);
-    const double rcyl_outer = grid::get_cellcoordmin(cellindex, 0) + grid::wid_init(cellindex, 0);
-    pkt_ptr->pos[0] = sqrt(zrand1 * pow(rcyl_inner, 2) + (1. - zrand1) * pow(rcyl_outer, 2));
+    const double rcyl_outer = grid::get_cellcoordmax(cellindex, 0);
+    // use equal area probability distribution to select radius
+    const double rcyl_rand = sqrt(zrand1 * pow(rcyl_inner, 2) + (1. - zrand1) * pow(rcyl_outer, 2));
+    const double theta_rand = rng_uniform() * 2 * PI;
+    pkt_ptr->pos[0] = std::cos(theta_rand) * rcyl_rand;
+    pkt_ptr->pos[1] = std::sin(theta_rand) * rcyl_rand;
 
     const double zrand2 = rng_uniform_pos();
-    pkt_ptr->pos[1] = grid::get_cellcoordmin(cellindex, 1) + (zrand2 * grid::wid_init(cellindex, 1));
-  } else {
+    pkt_ptr->pos[2] = grid::get_cellcoordmin(cellindex, 1) + (zrand2 * grid::wid_init(cellindex, 1));
+
+  } else if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     for (int axis = 0; axis < 3; axis++) {
       const double zrand = rng_uniform_pos();
       pkt_ptr->pos[axis] = grid::get_cellcoordmin(cellindex, axis) + (zrand * grid::wid_init(cellindex, axis));
     }
+  } else {
+    assert_always(false);
   }
 
+  assert_always(grid::get_cellindex_from_pos(pkt_ptr->pos, pkt_ptr->prop_time, cellindex) == cellindex);
   const int mgi = grid::get_cell_modelgridindex(cellindex);
 
   decay::setup_radioactive_pellet(e0, mgi, pkt_ptr);

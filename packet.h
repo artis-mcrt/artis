@@ -19,13 +19,21 @@ enum packet_type {
 constexpr int EMTYPE_NOTSET = -9999000;
 constexpr int EMTYPE_FREEFREE = -9999999;
 
-#include "boundary.h"
-
 struct mastate {
   int element;         /// macro atom of type element (this is an element index)
   int ion;             /// in ionstage ion (this is an ion index)
   int level;           /// and level=level (this is a level index)
   int activatingline;  /// Linelistindex of the activating line for bb activated MAs, -99 else.
+};
+
+enum cell_boundary {
+  COORD0_MIN = 101,
+  COORD0_MAX = 102,
+  COORD1_MIN = 103,
+  COORD1_MAX = 104,
+  COORD2_MIN = 105,
+  COORD2_MAX = 106,
+  NONE = 107,
 };
 
 struct packet {

@@ -5,7 +5,6 @@
 #include <limits>
 
 #include "atomic.h"
-#include "boundary.h"
 #include "grid.h"
 #include "kpkt.h"
 #include "ltepop.h"
@@ -801,10 +800,10 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   // boundaries. sdist is the boundary distance and snext is the
   // grid cell into which we pass.
   int snext = 0;
-  double sdist = boundary_cross(pkt_ptr, &snext);
+  double sdist = grid::boundary_cross(pkt_ptr, &snext);
 
   if (sdist == 0) {
-    change_cell(pkt_ptr, snext);
+    grid::change_cell(pkt_ptr, snext);
     const int cellindexnew = pkt_ptr->where;
     mgi = grid::get_cell_modelgridindex(cellindexnew);
 
@@ -892,7 +891,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     move_pkt_withtime(pkt_ptr, sdist / 2.);
 
     if (snext != pkt_ptr->where) {
-      change_cell(pkt_ptr, snext);
+      grid::change_cell(pkt_ptr, snext);
       const int cellindexnew = pkt_ptr->where;
       mgi = grid::get_cell_modelgridindex(cellindexnew);
     }
@@ -989,7 +988,7 @@ static auto get_rpkt_escapeprob_fromdirection(const double startpos[3], double s
 
     // distance to the next cell
     vpkt.prop_time = t_future;
-    const double sdist = boundary_cross(&vpkt, &snext);
+    const double sdist = grid::boundary_cross(&vpkt, &snext);
 
     if (snext >= 0) {
       const int nextmgi = grid::get_cell_modelgridindex(snext);
@@ -1054,7 +1053,7 @@ static auto get_rpkt_escapeprob_fromdirection(const double startpos[3], double s
 
     if (snext != vpkt.where) {
       vpkt.prop_time = t_future;
-      change_cell(&vpkt, snext);
+      grid::change_cell(&vpkt, snext);
       end_packet = (vpkt.type == TYPE_ESCAPE);
     }
   }

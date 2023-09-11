@@ -5,6 +5,8 @@
 
 #include "artisoptions.h"
 #include "constants.h"
+#include "packet.h"
+#include "vectors.h"
 
 namespace grid {
 
@@ -125,6 +127,7 @@ int get_npts_model();
 int get_nonempty_npts_model();
 double get_t_model();
 int get_cell_modelgridindex(int cellindex);
+int get_cellindex_from_pos(const double pos[3], double time, int cellindexcheck);
 void read_ejecta_model();
 void write_grid_restart_data(int timestep);
 int get_maxndo();
@@ -132,6 +135,8 @@ int get_nstart(int rank);
 int get_ndo(int rank);
 int get_ndo_nonempty(int rank);
 double get_totmassradionuclide(int z, int a);
+double boundary_cross(struct packet *pkt_ptr, int *snext);
+void change_cell(struct packet *pkt_ptr, int snext);
 
 static inline float get_elem_abundance(int modelgridindex, int element)
 // mass fraction of an element (all isotopes combined)

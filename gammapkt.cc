@@ -8,7 +8,6 @@
 #include <memory>
 #include <vector>
 
-#include "boundary.h"
 #include "decay.h"
 #include "grid.h"
 #include "nonthermal.h"
@@ -752,7 +751,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   // grid cell into which we pass.
 
   int snext = 0;
-  double sdist = boundary_cross(pkt_ptr, &snext);
+  double sdist = grid::boundary_cross(pkt_ptr, &snext);
 
   const double maxsdist = (GRID_TYPE == GRID_SPHERICAL1D)
                               ? 2 * globals::rmax * (pkt_ptr->prop_time + sdist / CLIGHT_PROP) / globals::tmin
@@ -829,7 +828,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     move_pkt(pkt_ptr, sdist / 2.);
 
     if (snext != pkt_ptr->where) {
-      change_cell(pkt_ptr, snext);
+      grid::change_cell(pkt_ptr, snext);
     }
   } else if ((tdist < sdist) && (tdist < edist)) {
     // Doesn't reach boundary.
