@@ -2,17 +2,19 @@
 
 set -x
 
-rsync -av nebularonezone_inputfiles/ nebularonezone_testrun/
+runfolder=nebularonezone_1d_3dgrid_testrun
+
+rsync -av nebularonezone_1d_3dgrid_inputfiles/ nebularonezone_1d_3dgrid_testrun/
 
 if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_feconi.tar.xz; fi
 
-tar -xf atomicdata_feconi.tar.xz --directory nebularonezone_testrun/
+tar -xf atomicdata_feconi.tar.xz --directory nebularonezone_1d_3dgrid_testrun/
 
-cp ../data/* nebularonezone_testrun/
+cp ../data/* nebularonezone_1d_3dgrid_testrun/
 
-cp ../artisoptions_nltenebular.h nebularonezone_testrun/artisoptions.h
+cp ../artisoptions_nltenebular.h nebularonezone_1d_3dgrid_testrun/artisoptions.h
 
-cd nebularonezone_testrun
+cd nebularonezone_1d_3dgrid_testrun
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 1000000;/g' artisoptions.h
 

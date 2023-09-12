@@ -2,7 +2,7 @@
 
 set -x
 
-runfolder=kilonova_2d_2dgrid_testrun
+runfolder=kilonova_1d_1dgrid_testrun
 
 mkdir -p $runfolder
 
