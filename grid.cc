@@ -2404,12 +2404,12 @@ auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
     cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
   }
   if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
-    // keep xyz Cartesian coordinates.
+    // keep xyz Cartesian coordinates
     for (int d = 0; d < ndim; d++) {
       pktvelgridcoord[d] = pkt_ptr->dir[d] * CLIGHT_PROP;
     }
   } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
-    // xy plane radius and z position
+    // xy plane radial velocity
     pktvelgridcoord[0] =
         (pkt_ptr->pos[0] * pkt_ptr->dir[0] + pkt_ptr->pos[1] * pkt_ptr->dir[1]) / pktposgridcoord[0] * CLIGHT_PROP;
 
