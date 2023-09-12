@@ -52,8 +52,8 @@ MPI_Win win_prev_bfrate_normed = MPI_WIN_NULL;
 // ** Detailed lines - Jblue_lu estimators for selected lines
 
 struct Jb_lu_estimator {
-  double value;
-  int contribcount;
+  double value = 0.;
+  int contribcount = 0;
 };
 
 // reallocate the detailed line arrays in units of BLOCKSIZEJBLUE
@@ -784,25 +784,13 @@ auto radfield(double nu, int modelgridindex) -> double
 {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     if (globals::nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP) {
-      // const double lambda = 1e8 * CLIGHT / nu;
-      // if (lambda < 1085) // Fe II ground state edge
-      // {
-      //   return dbb(nu, grid::get_TR(modelgridindex), grid::get_W(modelgridindex));
-      // }
       const int binindex = select_bin(nu);
       if (binindex >= 0) {
         const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
         const struct radfieldbin_solution *const bin = &radfieldbin_solutions[mgibinindex];
         if (bin->W >= 0.) {
-          // if (bin->fit_type == FIT_DILUTE_BLACKBODY)
-          {
-            const double J_nu = dbb(nu, bin->T_R, bin->W);
-            return J_nu;
-          }
-          // else
-          // {
-          //   return bin->W;
-          // }
+          const double J_nu = dbb(nu, bin->T_R, bin->W);
+          return J_nu;
         }
       } else {  // binindex < 0
         // if (nu > get_bin_nu_upper(RADFIELDBINCOUNT - 1))
@@ -899,7 +887,7 @@ static auto planck_integral_analytic(double T_R, double nu_lower, double nu_uppe
 }
 
 static auto delta_nu_bar(double T_R, void *paras) -> double
-// difference between the average nu and the average nu of a planck function
+// difference between the average nu and the average nu of a Planck function
 // at temperature T_R, in the frequency range corresponding to a bin
 {
   const int modelgridindex = (static_cast<gsl_T_R_solver_paras *>(paras))->modelgridindex;
@@ -938,10 +926,6 @@ static auto delta_nu_bar(double T_R, void *paras) -> double
         "nu_bar_estimator %g\n",
         delta_nu_bar, nu_bar_planck_T_R, nu_times_planck_numerical, planck_integral_numerical, nu_bar_estimator);
   }
-
-  // double delta_nu_bar = nu_bar_planck_T_R / nu_bar_estimator - 1.0;
-
-  // printout("delta_nu_bar %g nu_bar_planck %g\n",delta_nu_bar,nu_bar_planck);
 
   return delta_nu_bar;
 }
