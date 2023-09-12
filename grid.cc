@@ -2267,8 +2267,9 @@ auto get_cellindex_from_pos(const double pos[3], double time) -> int
   return cellindex;
 }
 
-static auto expanding_shell_intersection(const double pos[3], const double dir[3], const double shellradiuststart,
-                                         const bool isinnerboundary, const double tstart) -> double
+static auto expanding_shell_intersection(const double pos[3], const double dir[3], const double speed,
+                                         const double shellradiuststart, const bool isinnerboundary,
+                                         const double tstart) -> double
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell
 // return -1 if there are no forward intersections (or if the intersection is tangential to the shell)
 {
@@ -2278,7 +2279,6 @@ static auto expanding_shell_intersection(const double pos[3], const double dir[3
     printout("expanding_shell_intersection isinnerboundary %d\n", isinnerboundary);
     printout("shellradiuststart %g tstart %g len(pos) %g\n", shellradiuststart, tstart, vec_len(pos));
   }
-  const double speed = vec_len(dir) * CLIGHT_PROP;  // hopefully this is the same as CLIGHT_PROP
   const double a = dot(dir, dir) - pow(shellradiuststart / tstart / speed, 2);
   const double b = 2 * (dot(dir, pos) - pow(shellradiuststart, 2) / tstart / speed);
   const double c = dot(pos, pos) - pow(shellradiuststart, 2);
@@ -2370,17 +2370,14 @@ static auto expanding_shell_intersection(const double pos[3], const double dir[3
   return -1.;
 }
 
-static auto expanding_cylinder_intersection(const double pos[3], const double dir_in[3], const double shellradiuststart,
-                                            const bool isinnerboundary, const double tstart) -> double
+static auto expanding_cylinder_intersection(const double pos[3], const double dir[3], const double xyspeed,
+                                            const double shellradiuststart, const bool isinnerboundary,
+                                            const double tstart) -> double
 // find the closest forward distance to the intersection of a ray with an expanding cylindrical shell
 // return -1 if there are no forward intersections (or if the intersection is tangential to the shell)
 {
   assert_always(shellradiuststart > 0);
-  double dir[3] = {dir_in[0], dir_in[1], 0.};
-  const double dirxy = vec_len(dir);
-  vec_norm(dir, dir);
 
-  const double xyspeed = dirxy * CLIGHT_PROP;  // hopefully this is the same as CLIGHT_PROP
   const double a = dot(dir, dir) - pow(shellradiuststart / tstart / xyspeed, 2);
   const double b = 2 * (dot(dir, pos) - pow(shellradiuststart, 2) / tstart / xyspeed);
   const double c = dot(pos, pos) - pow(shellradiuststart, 2);
@@ -2611,13 +2608,14 @@ auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
   double d_coordminboundary[3] = {-1};  // distance to reach the cell's lower boundary on each coordinate
   if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
     last_cross = BOUNDARY_NONE;  // handle this separately by setting d_inner and d_outer negative for invalid direction
+    const double speed = vec_len(pkt_ptr->dir) * CLIGHT_PROP;  // just in case dir is not normalised
 
     const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
     d_coordminboundary[0] =
-        (r_inner > 0.) ? expanding_shell_intersection(pkt_ptr->pos, pkt_ptr->dir, r_inner, true, tstart) : -1.;
+        (r_inner > 0.) ? expanding_shell_intersection(pkt_ptr->pos, pkt_ptr->dir, speed, r_inner, true, tstart) : -1.;
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
-    d_coordmaxboundary[0] = expanding_shell_intersection(pkt_ptr->pos, pkt_ptr->dir, r_outer, false, tstart);
+    d_coordmaxboundary[0] = expanding_shell_intersection(pkt_ptr->pos, pkt_ptr->dir, speed, r_outer, false, tstart);
 
   } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
     // coordinate 0 is radius in x-y plane, coord 1 is z
@@ -2629,7 +2627,7 @@ auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
     // to get the cylindrical intersection, get the spherical intersection when Z components are zero
     const double posnoz[3] = {pkt_ptr->pos[0], pkt_ptr->pos[1], 0.};
     double dirnoz[3] = {pkt_ptr->dir[0], pkt_ptr->dir[1], 0.};
-    const double xyspeed = vec_len(dirnoz) * CLIGHT_PROP;  // hopefully this is the same as CLIGHT_PROP
+    const double xyspeed = vec_len(dirnoz) * CLIGHT_PROP;  // r_cyl component of velocity
     vec_norm(dirnoz, dirnoz);
 
     const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
@@ -2637,7 +2635,7 @@ auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
     // don't try to calculate the intersection if the inner radius is zero
     if (r_inner > 0) {
       const double d_rcyl_coordminboundary =
-          expanding_cylinder_intersection(posnoz, pkt_ptr->dir, r_inner, true, tstart);
+          expanding_cylinder_intersection(posnoz, dirnoz, xyspeed, r_inner, true, tstart);
       if (d_rcyl_coordminboundary >= 0) {
         const double d_z_coordminboundary = d_rcyl_coordminboundary / xyspeed * pkt_ptr->dir[2] * CLIGHT_PROP;
         d_coordminboundary[0] =
@@ -2647,7 +2645,7 @@ auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
     const double d_rcyl_coordmaxboundary =
-        expanding_cylinder_intersection(posnoz, pkt_ptr->dir, r_outer, false, tstart);
+        expanding_cylinder_intersection(posnoz, dirnoz, xyspeed, r_outer, false, tstart);
     d_coordmaxboundary[0] = -1;
     if (d_rcyl_coordmaxboundary >= 0) {
       const double d_z_coordmaxboundary = d_rcyl_coordmaxboundary / xyspeed * pkt_ptr->dir[2] * CLIGHT_PROP;
