@@ -18,8 +18,6 @@ cp ../artisoptions_classic.h $runfolder/artisoptions.h
 
 cd $runfolder
 
-xz -dv -T0 *.xz
-
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 15000;/g' $runfolder/artisoptions.h
 
 sed -i'' -e 's/constexpr int GRID_TYPE.*/constexpr int GRID_TYPE = GRID_CARTESIAN3D;/g' artisoptions.h
