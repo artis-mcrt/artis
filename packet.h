@@ -37,10 +37,10 @@ enum cell_boundary {
 };
 
 struct packet {
-  int where;                             // The propagation grid cell that the packet is in.
-  enum packet_type type;                 // type of packet (k-, r-, etc.)
-  enum cell_boundary last_cross = NONE;  // To avoid rounding errors on cell crossing.
-  int interactions;                      // number of interactions the packet undergone
+  int where;                                      // The propagation grid cell that the packet is in.
+  enum packet_type type;                          // type of packet (k-, r-, etc.)
+  enum cell_boundary last_cross = BOUNDARY_NONE;  // To avoid rounding errors on cell crossing.
+  int interactions;                               // number of interactions the packet undergone
   int nscatterings;                  // records number of electron scatterings a r-pkt undergone since it was emitted
   int last_event;                    // debug: stores information about the packets history
   double pos[3];                     // Position of the packet (x,y,z).
