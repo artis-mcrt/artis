@@ -2370,6 +2370,110 @@ static auto expanding_shell_intersection(const double pos[3], const double dir[3
   return -1.;
 }
 
+static auto expanding_cylinder_intersection(const double pos[3], const double dir_in[3], const double shellradiuststart,
+                                            const bool isinnerboundary, const double tstart) -> double
+// find the closest forward distance to the intersection of a ray with an expanding cylindrical shell
+// return -1 if there are no forward intersections (or if the intersection is tangential to the shell)
+{
+  assert_always(shellradiuststart > 0);
+  double dir[3] = {dir_in[0], dir_in[1], 0.};
+  const double dirxy = vec_len(dir);
+  vec_norm(dir, dir);
+
+  const double xyspeed = dirxy * CLIGHT_PROP;  // hopefully this is the same as CLIGHT_PROP
+  const double a = dot(dir, dir) - pow(shellradiuststart / tstart / xyspeed, 2);
+  const double b = 2 * (dot(dir, pos) - pow(shellradiuststart, 2) / tstart / xyspeed);
+  const double c = dot(pos, pos) - pow(shellradiuststart, 2);
+
+  const double discriminant = pow(b, 2) - 4 * a * c;
+
+  if (discriminant < 0) {
+    // no intersection
+    assert_always(isinnerboundary);
+    assert_always(shellradiuststart < vec_len(pos));
+    return -1;
+  }
+  if (discriminant > 0) {
+    // two intersections
+    double dist1_xy = (-b + sqrt(discriminant)) / 2 / a;
+    const double dist1_z = dist1_xy / xyspeed * dir_in[2] * CLIGHT_PROP;
+
+    double dist2_xy = (-b - sqrt(discriminant)) / 2 / a;
+    const double dist2_z = dist2_xy / xyspeed * dir_in[2] * CLIGHT_PROP;
+
+    double dist1 = std::sqrt(dist1_xy * dist1_xy + dist1_z * dist1_z);
+    double dist2 = std::sqrt(dist2_xy * dist2_xy + dist2_z * dist2_z);
+
+    double posfinal1[3] = {0};
+    double posfinal2[3] = {0};
+
+    for (int d = 0; d < 2; d++) {
+      posfinal1[d] = pos[d] + dist1_xy * dir[d];
+      posfinal2[d] = pos[d] + dist2_xy * dir[d];
+    }
+
+    const double v_rad_shell = shellradiuststart / tstart;
+    const double v_rad_final1 = dot(posfinal1, dir) * xyspeed / vec_len(posfinal1);
+    const double v_rad_final2 = dot(posfinal2, dir) * xyspeed / vec_len(posfinal2);
+
+    // invalidate any solutions that require entering the boundary from the wrong radial direction
+    if (isinnerboundary) {
+      // if the packet's radial velocity at intersection is greater than the inner shell's radial velocity,
+      // then it is catching up from below the inner shell and should pass through it
+      if (v_rad_final1 > v_rad_shell) {
+        dist1 = -1;
+        dist1_xy = -1;
+      }
+      if (v_rad_final2 > v_rad_shell) {
+        dist2 = -1;
+        dist2_xy = -1;
+      }
+    } else {
+      // if the packet's radial velocity at intersection is less than the outer shell's radial velocity,
+      // then it is coming from above the outer shell and should pass through it
+      if (v_rad_final1 < v_rad_shell) {
+        dist1 = -1;
+        dist1_xy = -1;
+      }
+      if (v_rad_final2 < v_rad_shell) {
+        dist2 = -1;
+        dist2_xy = -1;
+      }
+    }
+
+    if (dist1_xy >= 0) {
+      const double shellradiusfinal1 = shellradiuststart / tstart * (tstart + dist1_xy / xyspeed);
+      assert_always(fabs(vec_len(posfinal1) / shellradiusfinal1 - 1.) < 1e-3);
+    }
+
+    if (dist2_xy >= 0) {
+      const double shellradiusfinal2 = shellradiuststart / tstart * (tstart + dist2_xy / xyspeed);
+      assert_always(fabs(vec_len(posfinal2) / shellradiusfinal2 - 1.) < 1e-3);
+    }
+
+    // negative d means in the reverse direction along the ray
+    // ignore negative d values, and if two are positive then return the smaller one
+    if (dist1_xy < 0 && dist2_xy < 0) {
+      return -1;
+    }
+    if (dist2_xy < 0) {
+      return dist1;
+    }
+    if (dist1_xy < 0) {
+      return dist2;
+    }
+    if (dist1_xy < dist2_xy) {
+      return dist1;
+    }
+    return dist2;
+
+  }  // exactly one intersection
+  // ignore this and don't change which cell the packet is in
+  assert_always(shellradiuststart <= vec_len(pos));
+  printout("single intersection\n");
+  return -1.;
+}
+
 auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
 /// Basic routine to compute distance to a cell boundary.
 {
@@ -2454,11 +2558,17 @@ auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
           flip != 0 ? -grid::get_coordcellindexincrement(d) : grid::get_coordcellindexincrement(d);
 
       bool isoutside_thisside = false;
+      double delta = 0.;
       if (flip != 0) {
-        isoutside_thisside = pktposgridcoord[d] < (grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart -
-                                                   10.);  // 10 cm accuracy tolerance
+        // packet pos below min
+        const double boundaryposmin = grid::get_cellcoordmin(cellindex, d) / globals::tmin * tstart;
+        delta = pktposgridcoord[d] - boundaryposmin;
+        isoutside_thisside = pktposgridcoord[d] < (boundaryposmin - 10.);  // 10 cm accuracy tolerance
       } else {
-        isoutside_thisside = pktposgridcoord[d] > (cellcoordmax[d] / globals::tmin * tstart + 10.);
+        // packet pos above max
+        const double boundaryposmax = cellcoordmax[d] / globals::tmin * tstart;
+        delta = pktposgridcoord[d] - boundaryposmax;
+        isoutside_thisside = pktposgridcoord[d] > (boundaryposmax + 10.);
       }
 
       if (isoutside_thisside && (last_cross != direction)) {
@@ -2476,12 +2586,7 @@ auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
         printout("globals::tmin %g tstart %g tstart/globals::tmin %g tdecay %g\n", globals::tmin, tstart,
                  tstart / globals::tmin, pkt_ptr->tdecay);
         // printout("[warning] pkt_ptr->number %d\n", pkt_ptr->number);
-        if (flip != 0) {
-          printout("[warning] delta %g\n",
-                   (pktposgridcoord[d] * globals::tmin / tstart) - grid::get_cellcoordmin(cellindex, d));
-        } else {
-          printout("[warning] delta %g\n", cellcoordmax[d] - (pktposgridcoord[d] * globals::tmin / tstart));
-        }
+        printout("[warning] delta %g\n", delta);
 
         printout("[warning] dir [%g, %g, %g]\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
         if ((pktvelgridcoord[d] - (pktposgridcoord[d] / tstart)) > 0) {
@@ -2525,18 +2630,21 @@ auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
 
   } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
     // coordinate 0 is radius in x-y plane, coord 1 is z
-    last_cross = BOUNDARY_NONE;  // handle this separately by setting d_inner and d_outer negative for invalid direction
+    if (last_cross == COORD0_MIN || last_cross == COORD0_MAX) {
+      last_cross =
+          BOUNDARY_NONE;  // handle this separately by setting d_inner and d_outer negative for invalid direction
+    }
 
     // to get the cylindrical intersection, get the spherical intersection when Z components are zero
-    const double pktposnoz[3] = {pkt_ptr->pos[0], pkt_ptr->pos[1], 0.};
-    const double pktdirnoz[3] = {pkt_ptr->dir[0], pkt_ptr->dir[1], 0.};
+    const double posnoz[3] = {pkt_ptr->pos[0], pkt_ptr->pos[1], 0.};
 
     const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
+    // distance in the xy plane
     d_coordminboundary[0] =
-        (r_inner > 0.) ? expanding_shell_intersection(pktposnoz, pktdirnoz, r_inner, true, tstart) : -1.;
+        (r_inner > 0.) ? expanding_cylinder_intersection(posnoz, pkt_ptr->dir, r_inner, true, tstart) : -1.;
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
-    d_coordmaxboundary[0] = expanding_shell_intersection(pktposnoz, pktdirnoz, r_outer, false, tstart);
+    d_coordmaxboundary[0] = expanding_cylinder_intersection(posnoz, pkt_ptr->dir, r_outer, false, tstart);
 
     // z boundaries same as Cartesian
     const double t_zcoordminboundary =
