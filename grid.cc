@@ -2307,19 +2307,27 @@ static auto expanding_shell_intersection(const double pos[3], const double dir[3
       posfinal2[d] = pos[d] + dist2 * dir[d];
     }
 
+    const double v_rad_shell = shellradiuststart / tstart;
+    const double v_rad_final1 = dot(posfinal1, dir) * CLIGHT_PROP / vec_len(posfinal1);
+    const double v_rad_final2 = dot(posfinal2, dir) * CLIGHT_PROP / vec_len(posfinal2);
+
     // invalidate any solutions that require entering the boundary from the wrong radial direction
     if (isinnerboundary) {
-      if (dot(posfinal1, dir) > 0.) {
+      // if the packet's radial velocity at intersection is greater than the inner shell's radial velocity,
+      // then it is catching up from below the inner shell
+      if (v_rad_final1 > v_rad_shell) {
         dist1 = -1;
       }
-      if (dot(posfinal2, dir) > 0.) {
+      if (v_rad_final2 > v_rad_shell) {
         dist2 = -1;
       }
     } else {
-      if (dot(posfinal1, dir) < 0.) {
+      // if the packet's radial velocity at intersection is less than the outer shell's radial velocity,
+      // then it is coming from above the outer shell
+      if (v_rad_final1 < v_rad_shell) {
         dist1 = -1;
       }
-      if (dot(posfinal2, dir) < 0.) {
+      if (v_rad_final2 < v_rad_shell) {
         dist2 = -1;
       }
     }
