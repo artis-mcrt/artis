@@ -18,6 +18,8 @@ cd nebularonezone_1d_3dgrid_testrun
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 1000000;/g' artisoptions.h
 
+sed -i'' -e 's/constexpr int GRID_TYPE.*/constexpr int GRID_TYPE = GRID_CARTESIAN3D;/g' artisoptions.h
+
 sed -i'' -e 's/constexpr int TABLESIZE.*/constexpr int TABLESIZE = 20;/g' artisoptions.h
 sed -i'' -e 's/constexpr double MINTEMP.*/constexpr double MINTEMP = 2000.;/g' artisoptions.h
 sed -i'' -e 's/constexpr double MAXTEMP.*/constexpr double MAXTEMP = 10000.;/g' artisoptions.h

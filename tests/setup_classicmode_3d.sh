@@ -16,6 +16,7 @@ cp ../artisoptions_classic.h classicmode_3d_testrun/artisoptions.h
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 15000;/g' classicmode_3d_testrun/artisoptions.h
 
+sed -i'' -e 's/constexpr int GRID_TYPE.*/constexpr int GRID_TYPE = GRID_CARTESIAN3D;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' classicmode_3d_testrun/artisoptions.h
 
