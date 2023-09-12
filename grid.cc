@@ -2299,8 +2299,8 @@ static auto expanding_shell_intersection(const double pos[3], const double dir[3
     double dist1 = (-b + sqrt(discriminant)) / 2 / a;
     double dist2 = (-b - sqrt(discriminant)) / 2 / a;
 
-    double posfinal1[3];
-    double posfinal2[3];
+    double posfinal1[3] = {0};
+    double posfinal2[3] = {0};
 
     for (int d = 0; d < 3; d++) {
       posfinal1[d] = pos[d] + dist1 * dir[d];
@@ -2450,10 +2450,7 @@ static auto expanding_cylinder_intersection(const double pos[3], const double di
     if (dist1_xy < 0) {
       return dist2_xy;
     }
-    if (dist1_xy < dist2_xy) {
-      return dist1_xy;
-    }
-    return dist2_xy;
+    return fmin(dist1_xy, dist2_xy);
 
   }  // exactly one intersection
   // ignore this and don't change which cell the packet is in
