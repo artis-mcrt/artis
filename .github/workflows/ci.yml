@@ -19,7 +19,7 @@ jobs:
                 # os: ['ubuntu-latest', 'self-hosted']
                 os: [ubuntu-22.04]
                 testmode: [OFF, ON]
-                testname: [classicmode_1d_3dgrid, classicmode_3d, kilonova_1d_1dgrid, kilonova_1d_3dgrid, kilonova_2d_2dgrid, kilonova_2d_3dgrid, nebularonezone]
+                testname: [classicmode_1d_3dgrid, classicmode_3d, kilonova_1d_1dgrid, kilonova_1d_3dgrid, kilonova_2d_2dgrid, kilonova_2d_3dgrid, nebularonezone_1d_3dgrid]
                 exclude:
                     - os: self-hosted
                       testmode: ON
@@ -52,8 +52,7 @@ jobs:
 
             # cache this for classic options because the super low integration tolerance makes generation of the file very slow
             - name: Cache ratecoeff.dat
-              if: matrix.testname == 'classicmode' || matrix.testname == 'classicmode_3d'
-              # if: matrix.testname == 'classicmode' && matrix.testmode != 'ON'
+              if: matrix.testname == 'classicmode_1d_3dgrid' || matrix.testname == 'classicmode_3d'
               uses: actions/cache@v3
               with:
                   path: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
@@ -62,7 +61,7 @@ jobs:
                       tests/${{ matrix.testname }}_testrun/ratecoeff.dat-
 
             - name: Cache test atomic data
-              if: matrix.testname != 'classicmode'
+              if: ${{ !startsWith(matrix.testname, 'classicmode_1d') }}
               uses: actions/cache@v3
               id: cache-testatomicdata
               with:
@@ -70,7 +69,7 @@ jobs:
                   key: tests/atomicdata_feconi.tar.xz
 
             - name: Cache test atomic data classic
-              if: matrix.testname == 'classicmode'
+              if: ${{ startsWith(matrix.testname, 'classicmode_1d') }}
               uses: actions/cache@v3
               id: cache-testatomicdata-classic
               with:
