@@ -2511,8 +2511,6 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
   // globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 2), cellcoordmax[2] - (initpos[2] *
   // globals::tmin/tstart)); printout("dir [%g, %g, %g]\n", pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 
-  double t_coordmaxboundary[3];  // time to reach the cell's upper boundary on each coordinate
-  double t_coordminboundary[3];  // time to reach the cell's lower boundary on each coordinate
   double d_coordmaxboundary[3];  // distance to reach the cell's upper boundary on each coordinate
   double d_coordminboundary[3];  // distance to reach the cell's lower boundary on each coordinate
   if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
@@ -2521,11 +2519,9 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
     const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
     d_coordminboundary[0] =
         (r_inner > 0.) ? expanding_shell_intersection(pkt_ptr->pos, pkt_ptr->dir, r_inner, true, tstart) : -1.;
-    t_coordminboundary[0] = d_coordminboundary[0] / CLIGHT_PROP;
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
     d_coordmaxboundary[0] = expanding_shell_intersection(pkt_ptr->pos, pkt_ptr->dir, r_outer, false, tstart);
-    t_coordmaxboundary[0] = d_coordmaxboundary[0] / CLIGHT_PROP;
 
   } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
     // coordinate 0 is radius in x-y plane, coord 1 is z
@@ -2538,36 +2534,34 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
     const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
     d_coordminboundary[0] =
         (r_inner > 0.) ? expanding_shell_intersection(pktposnoz, pktdirnoz, r_inner, true, tstart) : -1.;
-    t_coordminboundary[0] = d_coordminboundary[0] / CLIGHT_PROP;
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
     d_coordmaxboundary[0] = expanding_shell_intersection(pktposnoz, pktdirnoz, r_outer, false, tstart);
-    t_coordmaxboundary[0] = d_coordmaxboundary[0] / CLIGHT_PROP;
 
     // z boundaries same as Cartesian
-    t_coordminboundary[1] =
+    const double t_coordminboundary =
         ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
          ((grid::get_cellcoordmin(cellindex, 1)) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
         tstart;
-    d_coordminboundary[1] = CLIGHT_PROP * t_coordminboundary[1];
+    d_coordminboundary[1] = CLIGHT_PROP * t_coordminboundary;
 
-    t_coordmaxboundary[1] = ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
-                             ((cellcoordmax[1]) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
-                            tstart;
-    d_coordmaxboundary[1] = CLIGHT_PROP * t_coordmaxboundary[1];
+    const double t_coordmaxboundary = ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
+                                       ((cellcoordmax[1]) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
+                                      tstart;
+    d_coordmaxboundary[1] = CLIGHT_PROP * t_coordmaxboundary;
   } else if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     for (int d = 0; d < 3; d++) {
-      t_coordminboundary[d] =
+      const double t_coordminboundary =
           ((pktposgridcoord[d] - (pktvelgridcoord[d] * tstart)) /
            (grid::get_cellcoordmin(cellindex, d) - (pktvelgridcoord[d] * globals::tmin)) * globals::tmin) -
           tstart;
-      d_coordminboundary[d] = CLIGHT_PROP * t_coordminboundary[d];
+      d_coordminboundary[d] = CLIGHT_PROP * t_coordminboundary;
 
-      t_coordmaxboundary[d] = ((pktposgridcoord[d] - (pktvelgridcoord[d] * tstart)) /
-                               (cellcoordmax[d] - (pktvelgridcoord[d] * globals::tmin)) * globals::tmin) -
-                              tstart;
+      const double t_coordmaxboundary = ((pktposgridcoord[d] - (pktvelgridcoord[d] * tstart)) /
+                                         (cellcoordmax[d] - (pktvelgridcoord[d] * globals::tmin)) * globals::tmin) -
+                                        tstart;
 
-      d_coordmaxboundary[d] = CLIGHT_PROP * t_coordmaxboundary[d];
+      d_coordmaxboundary[d] = CLIGHT_PROP * t_coordmaxboundary;
     }
   } else {
     assert_always(false);
@@ -2614,7 +2608,7 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
     printout("|initpos| %g |dir| %g |pos.dir| %g\n", vec_len(pkt_ptr->pos), vec_len(pkt_ptr->dir),
              dot(pkt_ptr->pos, pkt_ptr->dir));
     for (int d2 = 0; d2 < ndim; d2++) {
-      printout("coord %d: txyz_plus %g txyz_minus %g \n", d2, t_coordmaxboundary[d2], t_coordminboundary[d2]);
+      printout("coord %d: dist_posmax %g dist_posmin %g \n", d2, d_coordmaxboundary[d2], d_coordminboundary[d2]);
       printout("coord %d: cellcoordmin %g cellcoordmax %g\n", d2,
                grid::get_cellcoordmin(cellindex, d2) * tstart / globals::tmin,
                cellcoordmax[d2] * tstart / globals::tmin);
