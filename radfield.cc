@@ -876,22 +876,22 @@ static auto planck_integral_analytic(double T_R, double nu_lower, double nu_uppe
     integral = TWOHOVERCLIGHTSQUARED * (debye_upper - debye_lower) * T_R / HOVERKB / 3.;
 
     if (integral == 0.) {
-      /*double upperexp = exp(HOVERKB * nu_upper / T_R);
-      double upperint = - pow(nu_upper,4) / 4
-                        + pow(nu_upper,3) * log(1 - upperexp) / HOVERKB
-                        + 3 * pow(nu_upper,2) * polylog(2,upperexp) / pow(HOVERKB,2)
-                        - 6 * nu_upper * polylog(3,upperexp) / pow(HOVERKB,3)
-                        + 6 * polylog(4,upperexp) / pow(HOVERKB,4);
-      double lowerexp = exp(HOVERKB * nu_lower / T_R);
-      double lowerint = - pow(nu_lower,4) / 4
-                        + pow(nu_lower,3) * log(1 - lowerexp) / HOVERKB
-                        + 3 * pow(nu_lower,2) * polylog(2,lowerexp) / pow(HOVERKB,2)
-                        - 6 * nu_lower * polylog(3,lowerexp) / pow(HOVERKB,3)
-                        + 6 * polylog(4,lowerexp) / pow(HOVERKB,4);
-      double integral2 = TWOHOVERCLIGHTSQUARED * (upperint - lowerint);
+      // double upperexp = exp(HOVERKB * nu_upper / T_R);
+      // double upperint = - pow(nu_upper,4) / 4
+      //                   + pow(nu_upper,3) * log(1 - upperexp) / HOVERKB
+      //                   + 3 * pow(nu_upper,2) * polylog(2,upperexp) / pow(HOVERKB,2)
+      //                   - 6 * nu_upper * polylog(3,upperexp) / pow(HOVERKB,3)
+      //                   + 6 * polylog(4,upperexp) / pow(HOVERKB,4);
+      // double lowerexp = exp(HOVERKB * nu_lower / T_R);
+      // double lowerint = - pow(nu_lower,4) / 4
+      //                   + pow(nu_lower,3) * log(1 - lowerexp) / HOVERKB
+      //                   + 3 * pow(nu_lower,2) * polylog(2,lowerexp) / pow(HOVERKB,2)
+      //                   - 6 * nu_lower * polylog(3,lowerexp) / pow(HOVERKB,3)
+      //                   + 6 * polylog(4,lowerexp) / pow(HOVERKB,4);
+      // double integral2 = TWOHOVERCLIGHTSQUARED * (upperint - lowerint);
 
-      printout("planck_integral_analytic is zero. debye_upper %g debye_lower %g. Test alternative %g\n",
-               debye_upper,debye_lower,integral2);*/
+      // printout("planck_integral_analytic is zero. debye_upper %g debye_lower %g. Test alternative %g\n",
+      //          debye_upper,debye_lower,integral2);
     }
   }
 
