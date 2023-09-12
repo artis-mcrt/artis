@@ -2314,7 +2314,7 @@ static auto expanding_shell_intersection(const double pos[3], const double dir[3
     // invalidate any solutions that require entering the boundary from the wrong radial direction
     if (isinnerboundary) {
       // if the packet's radial velocity at intersection is greater than the inner shell's radial velocity,
-      // then it is catching up from below the inner shell
+      // then it is catching up from below the inner shell and should pass through it
       if (v_rad_final1 > v_rad_shell) {
         dist1 = -1;
       }
@@ -2323,7 +2323,7 @@ static auto expanding_shell_intersection(const double pos[3], const double dir[3
       }
     } else {
       // if the packet's radial velocity at intersection is less than the outer shell's radial velocity,
-      // then it is coming from above the outer shell
+      // then it is coming from above the outer shell and should pass through it
       if (v_rad_final1 < v_rad_shell) {
         dist1 = -1;
       }
@@ -2539,16 +2539,16 @@ auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
     d_coordmaxboundary[0] = expanding_shell_intersection(pktposnoz, pktdirnoz, r_outer, false, tstart);
 
     // z boundaries same as Cartesian
-    const double t_coordminboundary =
+    const double t_zcoordminboundary =
         ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
          ((grid::get_cellcoordmin(cellindex, 1)) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
         tstart;
-    d_coordminboundary[1] = CLIGHT_PROP * t_coordminboundary;
+    d_coordminboundary[1] = CLIGHT_PROP * t_zcoordminboundary;
 
-    const double t_coordmaxboundary = ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
-                                       ((cellcoordmax[1]) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
-                                      tstart;
-    d_coordmaxboundary[1] = CLIGHT_PROP * t_coordmaxboundary;
+    const double t_zcoordmaxboundary = ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
+                                        ((cellcoordmax[1]) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
+                                       tstart;
+    d_coordmaxboundary[1] = CLIGHT_PROP * t_zcoordmaxboundary;
   } else if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     for (int d = 0; d < 3; d++) {
       const double t_coordminboundary =
