@@ -16,16 +16,22 @@ cp ../data/* $runfolder/
 
 cp ../artisoptions_classic.h $runfolder/artisoptions.h
 
+cd $runfolder
+
+xz -dv -T0 *.xz
+
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 15000;/g' $runfolder/artisoptions.h
 
 sed -i'' -e 's/constexpr int GRID_TYPE.*/constexpr int GRID_TYPE = GRID_CARTESIAN3D;/g' artisoptions.h
 
-sed -i'' -e 's/constexpr int CUBOID_NCOORDGRID_X.*/constexpr int CUBOID_NCOORDGRID_X = 100;/g' classicmode_3d_testrun/artisoptions.h
-sed -i'' -e 's/constexpr int CUBOID_NCOORDGRID_Y.*/constexpr int CUBOID_NCOORDGRID_Y = 100;/g' classicmode_3d_testrun/artisoptions.h
-sed -i'' -e 's/constexpr int CUBOID_NCOORDGRID_Z.*/constexpr int CUBOID_NCOORDGRID_Z = 100;/g' classicmode_3d_testrun/artisoptions.h
+sed -i'' -e 's/constexpr int CUBOID_NCOORDGRID_X.*/constexpr int CUBOID_NCOORDGRID_X = 100;/g' artisoptions.h
+sed -i'' -e 's/constexpr int CUBOID_NCOORDGRID_Y.*/constexpr int CUBOID_NCOORDGRID_Y = 100;/g' artisoptions.h
+sed -i'' -e 's/constexpr int CUBOID_NCOORDGRID_Z.*/constexpr int CUBOID_NCOORDGRID_Z = 100;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' $runfolder/artisoptions.h
 
 sed -i'' -e 's/constexpr bool VPKT_ON.*/constexpr bool VPKT_ON = true;/g' $runfolder/artisoptions.h
+
+cd -
 
 set +x

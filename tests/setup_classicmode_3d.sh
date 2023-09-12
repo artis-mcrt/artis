@@ -2,23 +2,30 @@
 
 set -x
 
-rsync -av classicmode_3d_inputfiles/ classicmode_3d_testrun/
+runfolder=classicmode_3d_testrun
 
-xz -d -T0 -v classicmode_3d_testrun/*.xz
+mkdir -p $runfolder
+
+rsync -av classicmode_3d_inputfiles/ $runfolder/
 
 if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_feconi.tar.xz; fi
 
-tar -xf atomicdata_feconi.tar.xz --directory classicmode_3d_testrun/
+tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
 
-cp ../data/* classicmode_3d_testrun/
+cp ../data/* $runfolder/
 
-cp ../artisoptions_classic.h classicmode_3d_testrun/artisoptions.h
+cp ../artisoptions_classic.h $runfolder/artisoptions.h
 
-sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 15000;/g' classicmode_3d_testrun/artisoptions.h
+cd $runfolder
+
+xz -dv -T0 *.xz
+
+sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 15000;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr int GRID_TYPE.*/constexpr int GRID_TYPE = GRID_CARTESIAN3D;/g' artisoptions.h
 
-sed -i'' -e 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' classicmode_3d_testrun/artisoptions.h
+sed -i'' -e 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' artisoptions.h
 
+cd -
 
 set +x
