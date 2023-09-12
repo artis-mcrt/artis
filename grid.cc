@@ -2589,7 +2589,7 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
     }
   }
 
-  if (choice == NONE) {
+  if (choice == BOUNDARY_NONE) {
     printout("Something wrong in boundary crossing - didn't find anything.\n");
     printout("packet %d cell %d or %d\n", pkt_ptr->number, cellindex, pkt_ptr->where);
     printout("choice %d\n", choice);
