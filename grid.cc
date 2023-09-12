@@ -2575,13 +2575,11 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
 
   // We now need to identify the shortest +ve distance - that's the one we want.
   enum cell_boundary choice = BOUNDARY_NONE;
-  double crosstime = std::numeric_limits<double>::max();
   double distance = std::numeric_limits<double>::max();
   for (int d = 0; d < ndim; d++) {
     // upper d coordinate of the current cell
-    if ((t_coordmaxboundary[d] > 0) && (t_coordmaxboundary[d] < crosstime) && (last_cross != negdirections[d])) {
+    if ((d_coordmaxboundary[d] > 0) && (d_coordmaxboundary[d] < distance) && (last_cross != negdirections[d])) {
       choice = posdirections[d];
-      crosstime = t_coordmaxboundary[d];
       distance = d_coordmaxboundary[d];
       if (grid::get_cellcoordpointnum(cellindex, d) == (grid::ncoordgrid[d] - 1)) {
         *snext = -99;
@@ -2592,9 +2590,8 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
     }
 
     // lower d coordinate of the current cell
-    if ((t_coordminboundary[d] > 0) && (t_coordminboundary[d] < crosstime) && (last_cross != posdirections[d])) {
+    if ((d_coordminboundary[d] > 0) && (d_coordminboundary[d] < distance) && (last_cross != posdirections[d])) {
       choice = negdirections[d];
-      crosstime = t_coordminboundary[d];
       distance = d_coordminboundary[d];
       if (grid::get_cellcoordpointnum(cellindex, d) == 0) {
         *snext = -99;
