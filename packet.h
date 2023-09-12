@@ -33,7 +33,7 @@ enum cell_boundary {
   COORD1_MAX = 104,
   COORD2_MIN = 105,
   COORD2_MAX = 106,
-  NONE = 107,
+  BOUNDARY_NONE = 107,
 };
 
 struct packet {

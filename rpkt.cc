@@ -345,7 +345,7 @@ static auto get_event(const int modelgridindex,
 static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   /// now make the packet a r-pkt and set further flags
   pkt_ptr->type = TYPE_RPKT;
-  pkt_ptr->last_cross = NONE;  /// allow all further cell crossings
+  pkt_ptr->last_cross = BOUNDARY_NONE;  /// allow all further cell crossings
 
   double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
@@ -522,7 +522,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, struct rpkt_cont_opacit
     // generate a virtual packet
     if constexpr (VPKT_ON) {
       int const realtype = 1;
-      pkt_ptr->last_cross = NONE;
+      pkt_ptr->last_cross = BOUNDARY_NONE;
       vpkt_call_estimators(pkt_ptr, pkt_ptr->prop_time, realtype);
     }
 
@@ -1114,7 +1114,7 @@ auto get_rpkt_escape_prob(struct packet *pkt_ptr, const double tstart) -> double
 void emitt_rpkt(struct packet *pkt_ptr) {
   /// now make the packet a r-pkt and set further flags
   pkt_ptr->type = TYPE_RPKT;
-  pkt_ptr->last_cross = NONE;  /// allow all further cell crossings
+  pkt_ptr->last_cross = BOUNDARY_NONE;  /// allow all further cell crossings
 
   /// Need to assign a new direction. Assume isotropic emission in the cmf
 

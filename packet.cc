@@ -23,7 +23,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   pkt_ptr->where = cellindex;
   pkt_ptr->number = pktnumber;  /// record the packets number for debugging
   pkt_ptr->prop_time = globals::tmin;
-  // pkt_ptr->last_cross = NONE;
+  // pkt_ptr->last_cross = BOUNDARY_NONE;
   pkt_ptr->originated_from_particlenotgamma = false;
 
   if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {

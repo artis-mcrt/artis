@@ -2505,7 +2505,7 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
   double t_coordmaxboundary[3];  // time to reach the cell's upper boundary on each coordinate
   double t_coordminboundary[3];  // likewise, the lower boundaries (smallest x,y,z or radius value in the cell)
   if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
-    last_cross = NONE;  // we will handle this separately by setting d_inner and d_outer negative for invalid directions
+    last_cross = BOUNDARY_NONE;  // handle this separately by setting d_inner and d_outer negative for invalid direction
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
     const double d_outer = expanding_shell_intersection(pkt_ptr->pos, pkt_ptr->dir, r_outer, false, tstart);
@@ -2518,7 +2518,7 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
 
   } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
     // coordinate 0 is radius in x-y plane, coord 1 is z
-    last_cross = NONE;  // we will handle this separately by setting d_inner and d_outer negative for invalid directions
+    last_cross = BOUNDARY_NONE;  // handle this separately by setting d_inner and d_outer negative for invalid direction
 
     // to get the cylindrical intersection, get the spherical intersection when Z components are zero
     const double pktposnoz[3] = {pkt_ptr->pos[0], pkt_ptr->pos[1], 0.};
@@ -2558,7 +2558,7 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
   }
 
   // We now need to identify the shortest +ve distance - that's the one we want.
-  enum cell_boundary choice = NONE;
+  enum cell_boundary choice = BOUNDARY_NONE;
   double crosstime = std::numeric_limits<double>::max();
   double distance = std::numeric_limits<double>::max();
   for (int d = 0; d < ndim; d++) {

@@ -287,7 +287,7 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
   pkt_ptr->type = TYPE_GAMMA;
-  pkt_ptr->last_cross = NONE;
+  pkt_ptr->last_cross = BOUNDARY_NONE;
 
   // initialise polarisation information
   pkt_ptr->stokes[0] = 1.0;
@@ -507,7 +507,7 @@ static void compton_scatter(struct packet *pkt_ptr)
     pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
     pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
-    pkt_ptr->last_cross = NONE;  // allow it to re-cross a boundary
+    pkt_ptr->last_cross = BOUNDARY_NONE;  // allow it to re-cross a boundary
   } else {
     // It's converted to an e-minus packet.
     pkt_ptr->type = TYPE_NTLEPTON;
@@ -731,7 +731,7 @@ void pair_prod(struct packet *pkt_ptr) {
     pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
     pkt_ptr->type = TYPE_GAMMA;
-    pkt_ptr->last_cross = NONE;
+    pkt_ptr->last_cross = BOUNDARY_NONE;
   }
 }
 
