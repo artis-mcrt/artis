@@ -2274,11 +2274,6 @@ static auto expanding_shell_intersection(const double pos[3], const double dir[3
 // return -1 if there are no forward intersections (or if the intersection is tangential to the shell)
 {
   assert_always(shellradiuststart > 0);
-  constexpr bool debug = false;
-  if constexpr (debug) {
-    printout("expanding_shell_intersection isinnerboundary %d\n", isinnerboundary);
-    printout("shellradiuststart %g tstart %g len(pos) %g\n", shellradiuststart, tstart, vec_len(pos));
-  }
   const double a = dot(dir, dir) - pow(shellradiuststart / tstart / speed, 2);
   const double b = 2 * (dot(dir, pos) - pow(shellradiuststart, 2) / tstart / speed);
   const double c = dot(pos, pos) - pow(shellradiuststart, 2);
@@ -2289,9 +2284,6 @@ static auto expanding_shell_intersection(const double pos[3], const double dir[3
     // no intersection
     assert_always(isinnerboundary);
     assert_always(shellradiuststart < vec_len(pos));
-    if constexpr (debug) {
-      printout("no intersection\n");
-    }
     return -1;
   }
   if (discriminant > 0) {
@@ -2308,8 +2300,8 @@ static auto expanding_shell_intersection(const double pos[3], const double dir[3
     }
 
     const double v_rad_shell = shellradiuststart / tstart;
-    const double v_rad_final1 = dot(posfinal1, dir) * CLIGHT_PROP / vec_len(posfinal1);
-    const double v_rad_final2 = dot(posfinal2, dir) * CLIGHT_PROP / vec_len(posfinal2);
+    const double v_rad_final1 = dot(posfinal1, dir) * speed / vec_len(posfinal1);
+    const double v_rad_final2 = dot(posfinal2, dir) * speed / vec_len(posfinal2);
 
     // invalidate any solutions that require entering the boundary from the wrong radial direction
     if (isinnerboundary) {
@@ -2334,19 +2326,11 @@ static auto expanding_shell_intersection(const double pos[3], const double dir[3
 
     if (dist1 >= 0) {
       const double shellradiusfinal1 = shellradiuststart / tstart * (tstart + dist1 / speed);
-      if constexpr (debug) {
-        printout("solution1 dist1 %g radiusfinal1 %g shellradiusfinal1 %g\n", dist1, vec_len(posfinal1),
-                 shellradiusfinal1);
-      }
       assert_always(fabs(vec_len(posfinal1) / shellradiusfinal1 - 1.) < 1e-3);
     }
 
     if (dist2 >= 0) {
       const double shellradiusfinal2 = shellradiuststart / tstart * (tstart + dist2 / speed);
-      if constexpr (debug) {
-        printout("solution2 dist2 %g radiusfinal2 %g shellradiusfinal2 %g\n", dist2, vec_len(posfinal2),
-                 shellradiusfinal2);
-      }
       assert_always(fabs(vec_len(posfinal2) / shellradiusfinal2 - 1.) < 1e-3);
     }
 
@@ -2366,96 +2350,6 @@ static auto expanding_shell_intersection(const double pos[3], const double dir[3
   }  // exactly one intersection
   // ignore this and don't change which cell the packet is in
   assert_always(shellradiuststart <= vec_len(pos));
-  printout("single intersection\n");
-  return -1.;
-}
-
-static auto expanding_cylinder_intersection(const double pos[3], const double dir[3], const double xyspeed,
-                                            const double shellradiuststart, const bool isinnerboundary,
-                                            const double tstart) -> double
-// find the closest forward distance to the intersection of a ray with an expanding cylindrical shell
-// return -1 if there are no forward intersections (or if the intersection is tangential to the shell)
-{
-  assert_always(shellradiuststart > 0);
-
-  const double a = dot(dir, dir) - pow(shellradiuststart / tstart / xyspeed, 2);
-  const double b = 2 * (dot(dir, pos) - pow(shellradiuststart, 2) / tstart / xyspeed);
-  const double c = dot(pos, pos) - pow(shellradiuststart, 2);
-
-  const double discriminant = pow(b, 2) - 4 * a * c;
-
-  if (discriminant < 0) {
-    // no intersection
-    assert_always(isinnerboundary);
-    assert_always(shellradiuststart < vec_len(pos));
-    return -1;
-  }
-  if (discriminant > 0) {
-    // two intersections
-    double dist1_xy = (-b + sqrt(discriminant)) / 2 / a;
-
-    double dist2_xy = (-b - sqrt(discriminant)) / 2 / a;
-
-    double posfinal1[3] = {0};
-    double posfinal2[3] = {0};
-
-    for (int d = 0; d < 2; d++) {
-      posfinal1[d] = pos[d] + dist1_xy * dir[d];
-      posfinal2[d] = pos[d] + dist2_xy * dir[d];
-    }
-
-    const double v_rad_shell = shellradiuststart / tstart;
-    const double v_rad_final1 = dot(posfinal1, dir) * xyspeed / vec_len(posfinal1);
-    const double v_rad_final2 = dot(posfinal2, dir) * xyspeed / vec_len(posfinal2);
-
-    // invalidate any solutions that require entering the boundary from the wrong radial direction
-    if (isinnerboundary) {
-      // if the packet's radial velocity at intersection is greater than the inner shell's radial velocity,
-      // then it is catching up from below the inner shell and should pass through it
-      if (v_rad_final1 > v_rad_shell) {
-        dist1_xy = -1;
-      }
-      if (v_rad_final2 > v_rad_shell) {
-        dist2_xy = -1;
-      }
-    } else {
-      // if the packet's radial velocity at intersection is less than the outer shell's radial velocity,
-      // then it is coming from above the outer shell and should pass through it
-      if (v_rad_final1 < v_rad_shell) {
-        dist1_xy = -1;
-      }
-      if (v_rad_final2 < v_rad_shell) {
-        dist2_xy = -1;
-      }
-    }
-
-    if (dist1_xy >= 0) {
-      const double shellradiusfinal1 = shellradiuststart / tstart * (tstart + dist1_xy / xyspeed);
-      assert_always(fabs(vec_len(posfinal1) / shellradiusfinal1 - 1.) < 1e-3);
-    }
-
-    if (dist2_xy >= 0) {
-      const double shellradiusfinal2 = shellradiuststart / tstart * (tstart + dist2_xy / xyspeed);
-      assert_always(fabs(vec_len(posfinal2) / shellradiusfinal2 - 1.) < 1e-3);
-    }
-
-    // negative d means in the reverse direction along the ray
-    // ignore negative d values, and if two are positive then return the smaller one
-    if (dist1_xy < 0 && dist2_xy < 0) {
-      return -1;
-    }
-    if (dist2_xy < 0) {
-      return dist1_xy;
-    }
-    if (dist1_xy < 0) {
-      return dist2_xy;
-    }
-    return fmin(dist1_xy, dist2_xy);
-
-  }  // exactly one intersection
-  // ignore this and don't change which cell the packet is in
-  assert_always(shellradiuststart <= vec_len(pos));
-  printout("single intersection\n");
   return -1.;
 }
 
@@ -2632,7 +2526,7 @@ auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
     // don't try to calculate the intersection if the inner radius is zero
     if (r_inner > 0) {
       const double d_rcyl_coordminboundary =
-          expanding_cylinder_intersection(posnoz, dirnoz, xyspeed, r_inner, true, tstart);
+          expanding_shell_intersection(posnoz, dirnoz, xyspeed, r_inner, true, tstart);
       if (d_rcyl_coordminboundary >= 0) {
         const double d_z_coordminboundary = d_rcyl_coordminboundary / xyspeed * pkt_ptr->dir[2] * CLIGHT_PROP;
         d_coordminboundary[0] =
@@ -2642,7 +2536,7 @@ auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
     const double d_rcyl_coordmaxboundary =
-        expanding_cylinder_intersection(posnoz, dirnoz, xyspeed, r_outer, false, tstart);
+        expanding_shell_intersection(posnoz, dirnoz, xyspeed, r_outer, false, tstart);
     d_coordmaxboundary[0] = -1;
     if (d_rcyl_coordmaxboundary >= 0) {
       const double d_z_coordmaxboundary = d_rcyl_coordmaxboundary / xyspeed * pkt_ptr->dir[2] * CLIGHT_PROP;
