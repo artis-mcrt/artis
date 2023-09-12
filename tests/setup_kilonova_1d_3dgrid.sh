@@ -2,7 +2,7 @@
 
 set -x
 
-runfolder=kilonova_2d_2dgrid_testrun
+runfolder=kilonova_1d_3dgrid_testrun
 
 mkdir -p $runfolder
 
@@ -10,7 +10,7 @@ if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O https://theory.gsi.de/~lshing
 
 tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
 
-rsync -av kilonova_inputfiles/ $runfolder/
+rsync -av kilonova_1d_3dgrid_inputfiles/ $runfolder/
 
 cp ../data/* $runfolder/
 

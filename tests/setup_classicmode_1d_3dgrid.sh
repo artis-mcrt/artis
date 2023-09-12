@@ -2,7 +2,7 @@
 
 set -x
 
-runfolder=classicmode_testrun
+runfolder=classicmode_1d_3dgrid_testrun
 
 mkdir -p $runfolder
 
@@ -10,7 +10,7 @@ if [ ! -f atomicdata_classic.tar.xz ]; then curl -O https://theory.gsi.de/~lshin
 
 tar -xf atomicdata_classic.tar.xz --directory $runfolder/
 
-rsync -av classicmode_inputfiles/ $runfolder/
+rsync -av classicmode_1d_3dgrid_inputfiles/ $runfolder/
 
 cp ../data/* $runfolder/
 
