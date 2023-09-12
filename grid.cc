@@ -2458,7 +2458,7 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
         const int d2 = d;
         {
           printout(
-              "[warning] packet %d outside coord %d %c%c boundary of cell %d. pkttype %d vel %g initpos(tmin) %g "
+              "[warning] packet %d outside coord %d %c%c boundary of cell %d. pkttype %d vel %g initpos %g "
               "cellcoordmin %g, cellcoordmax %g\n",
               pkt_ptr->number, d, flip != 0 ? '-' : '+', grid::coordlabel[d], cellindex, pkt_ptr->type,
               pktvelgridcoord[d2], pktposgridcoord[d2], grid::get_cellcoordmin(cellindex, d2) / globals::tmin * tstart,
