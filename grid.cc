@@ -2464,7 +2464,7 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
               pktvelgridcoord[d2], pktposgridcoord[d2], grid::get_cellcoordmin(cellindex, d2) / globals::tmin * tstart,
               cellcoordmax[d2] / globals::tmin * tstart);
         }
-        printout("last_cross %d previouswhere %d\n", pkt_ptr->last_cross, pkt_ptr->previouswhere);
+        // printout("last_cross %d previouswhere %d\n", pkt_ptr->last_cross, pkt_ptr->previouswhere);
         printout("globals::tmin %g tstart %g tstart/globals::tmin %g tdecay %g\n", globals::tmin, tstart,
                  tstart / globals::tmin, pkt_ptr->tdecay);
         // printout("[warning] pkt_ptr->number %d\n", pkt_ptr->number);
