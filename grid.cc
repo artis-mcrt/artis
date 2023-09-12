@@ -2275,6 +2275,9 @@ static constexpr auto expanding_shell_intersection(const double pos[3], const do
 // return -1 if there are no forward intersections (or if the intersection is tangential to the shell)
 {
   assert_always(shellradiuststart > 0);
+
+  // quadratic equation for intersection of ray with sphere
+  // a*d^2 + b*d + c = 0
   const double a = dot(dir, dir) - pow(shellradiuststart / tstart / speed, 2);
   const double b = 2 * (dot(dir, pos) - pow(shellradiuststart, 2) / tstart / speed);
   const double c = dot(pos, pos) - pow(shellradiuststart, 2);
@@ -2287,6 +2290,7 @@ static constexpr auto expanding_shell_intersection(const double pos[3], const do
     assert_always(shellradiuststart < vec_len(pos));
     return -1;
   }
+
   if (discriminant > 0) {
     // two intersections
     double dist1 = (-b + sqrt(discriminant)) / 2 / a;
@@ -2349,6 +2353,8 @@ static constexpr auto expanding_shell_intersection(const double pos[3], const do
     return fmin(dist1, dist2);
 
   }  // exactly one intersection
+
+  // one intersection
   // ignore this and don't change which cell the packet is in
   assert_always(shellradiuststart <= vec_len(pos));
   return -1.;
