@@ -2410,18 +2410,6 @@ auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
 {
   const double tstart = pkt_ptr->prop_time;
 
-  // There are six possible boundary crossings. Each of the three
-  // cartesian coordinates may be taken in turn. For x, the packet
-  // trajectory is
-  // x = x0 + (dir.x) * c * (t - tstart)
-  // the boundries follow
-  // x+/- = x+/-(tmin) * (t/tmin)
-  // so the crossing occurs when
-  // t = (x0 - (dir.x)*c*tstart)/(x+/-(tmin)/tmin - (dir.x)c)
-
-  // Modified so that it also returns the distance to the closest cell
-  // boundary, regardless of direction.
-
   // d is used to loop over the coordinate indicies 0,1,2 for x,y,z
 
   const int cellindex = pkt_ptr->where;
@@ -2457,22 +2445,6 @@ auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
   } else {
     assert_always(false);
   }
-
-  // for (int d = 0; d < ndim; d++)
-  // {
-  //   if (initpos[d] < grid::get_cellcoordmin(cellindex, d) || initpos[d] > cellcoordmax[d])
-  //   {
-  //     printout("WARNING: packet should have already escaped.\n");
-  //     *snext = -99;
-  //     return 0;
-  //   }
-  // }
-
-  // printout("boundary.c: x0 %g, y0 %g, z0 %g\n", initpos[0] initpos[1] initpos[2]);
-  // printout("boundary.c: vx %g, vy %g, vz %g\n",vel[0],vel[1],vel[2]);
-  // printout("boundary.c: cellxmin %g, cellymin %g, cellzmin %g\n",grid::get_cellcoordmin(cellindex,
-  // 0),grid::get_cellcoordmin(cellindex, 1),grid::get_cellcoordmin(cellindex, 2)); printout("boundary.c: cellxmax %g,
-  // cellymax %g, cellzmax %g\n",cellcoordmax[0],cellcoordmax[1],cellcoordmax[2]);
 
   enum cell_boundary last_cross = pkt_ptr->last_cross;
   enum cell_boundary const negdirections[3] = {COORD0_MIN, COORD1_MIN,
@@ -2571,6 +2543,18 @@ auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
                                               tstart, cellcoordmax, d_coordminboundary, d_coordmaxboundary);
 
   } else if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
+    // There are six possible boundary crossings. Each of the three
+    // cartesian coordinates may be taken in turn. For x, the packet
+    // trajectory is
+    // x = x0 + (dir.x) * c * (t - tstart)
+    // the boundries follow
+    // x+/- = x+/-(tmin) * (t/tmin)
+    // so the crossing occurs when
+    // t = (x0 - (dir.x)*c*tstart)/(x+/-(tmin)/tmin - (dir.x)c)
+
+    // Modified so that it also returns the distance to the closest cell
+    // boundary, regardless of direction.
+
     for (int d = 0; d < 3; d++) {
       const double t_coordminboundary =
           ((pktposgridcoord[d] - (pktvelgridcoord[d] * tstart)) /
