@@ -2396,13 +2396,8 @@ static auto expanding_cylinder_intersection(const double pos[3], const double di
   if (discriminant > 0) {
     // two intersections
     double dist1_xy = (-b + sqrt(discriminant)) / 2 / a;
-    const double dist1_z = dist1_xy / xyspeed * dir_in[2] * CLIGHT_PROP;
 
     double dist2_xy = (-b - sqrt(discriminant)) / 2 / a;
-    const double dist2_z = dist2_xy / xyspeed * dir_in[2] * CLIGHT_PROP;
-
-    double dist1 = std::sqrt(dist1_xy * dist1_xy + dist1_z * dist1_z);
-    double dist2 = std::sqrt(dist2_xy * dist2_xy + dist2_z * dist2_z);
 
     double posfinal1[3] = {0};
     double posfinal2[3] = {0};
@@ -2421,22 +2416,18 @@ static auto expanding_cylinder_intersection(const double pos[3], const double di
       // if the packet's radial velocity at intersection is greater than the inner shell's radial velocity,
       // then it is catching up from below the inner shell and should pass through it
       if (v_rad_final1 > v_rad_shell) {
-        dist1 = -1;
         dist1_xy = -1;
       }
       if (v_rad_final2 > v_rad_shell) {
-        dist2 = -1;
         dist2_xy = -1;
       }
     } else {
       // if the packet's radial velocity at intersection is less than the outer shell's radial velocity,
       // then it is coming from above the outer shell and should pass through it
       if (v_rad_final1 < v_rad_shell) {
-        dist1 = -1;
         dist1_xy = -1;
       }
       if (v_rad_final2 < v_rad_shell) {
-        dist2 = -1;
         dist2_xy = -1;
       }
     }
@@ -2457,15 +2448,15 @@ static auto expanding_cylinder_intersection(const double pos[3], const double di
       return -1;
     }
     if (dist2_xy < 0) {
-      return dist1;
+      return dist1_xy;
     }
     if (dist1_xy < 0) {
-      return dist2;
+      return dist2_xy;
     }
     if (dist1_xy < dist2_xy) {
-      return dist1;
+      return dist1_xy;
     }
-    return dist2;
+    return dist2_xy;
 
   }  // exactly one intersection
   // ignore this and don't change which cell the packet is in
@@ -2637,16 +2628,34 @@ auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
 
     // to get the cylindrical intersection, get the spherical intersection when Z components are zero
     const double posnoz[3] = {pkt_ptr->pos[0], pkt_ptr->pos[1], 0.};
+    double dirnoz[3] = {pkt_ptr->dir[0], pkt_ptr->dir[1], 0.};
+    const double xyspeed = vec_len(dirnoz) * CLIGHT_PROP;  // hopefully this is the same as CLIGHT_PROP
+    vec_norm(dirnoz, dirnoz);
 
     const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
-    // distance in the xy plane
-    d_coordminboundary[0] =
-        (r_inner > 0.) ? expanding_cylinder_intersection(posnoz, pkt_ptr->dir, r_inner, true, tstart) : -1.;
+    d_coordminboundary[0] = -1;
+    // don't try to calculate the intersection if the inner radius is zero
+    if (r_inner > 0) {
+      const double d_rcyl_coordminboundary =
+          expanding_cylinder_intersection(posnoz, pkt_ptr->dir, r_inner, true, tstart);
+      if (d_rcyl_coordminboundary >= 0) {
+        const double d_z_coordminboundary = d_rcyl_coordminboundary / xyspeed * pkt_ptr->dir[2] * CLIGHT_PROP;
+        d_coordminboundary[0] =
+            std::sqrt(d_rcyl_coordminboundary * d_rcyl_coordminboundary + d_z_coordminboundary * d_z_coordminboundary);
+      }
+    }
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
-    d_coordmaxboundary[0] = expanding_cylinder_intersection(posnoz, pkt_ptr->dir, r_outer, false, tstart);
+    const double d_rcyl_coordmaxboundary =
+        expanding_cylinder_intersection(posnoz, pkt_ptr->dir, r_outer, false, tstart);
+    d_coordmaxboundary[0] = -1;
+    if (d_rcyl_coordmaxboundary >= 0) {
+      const double d_z_coordmaxboundary = d_rcyl_coordmaxboundary / xyspeed * pkt_ptr->dir[2] * CLIGHT_PROP;
+      d_coordmaxboundary[0] =
+          std::sqrt(d_rcyl_coordmaxboundary * d_rcyl_coordmaxboundary + d_z_coordmaxboundary * d_z_coordmaxboundary);
+    }
 
-    // z boundaries same as Cartesian
+    // z boundaries are the same as Cartesian
     const double t_zcoordminboundary =
         ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
          ((grid::get_cellcoordmin(cellindex, 1)) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
