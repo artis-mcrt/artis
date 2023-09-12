@@ -2370,7 +2370,7 @@ static auto expanding_shell_intersection(const double pos[3], const double dir[3
   return -1.;
 }
 
-auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
+auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
 /// Basic routine to compute distance to a cell boundary.
 {
   const double tstart = pkt_ptr->prop_time;
@@ -2394,9 +2394,9 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
   // the following four vectors are in grid coordinates, so either x,y,z or r
   const int ndim = grid::get_ngriddimensions();
   assert_testmodeonly(ndim <= 3);
-  double pktposgridcoord[3] = {0};  // pkt_ptr->pos converted to propagation grid coordinates
+  double pktposgridcoord[3] = {0};  // pkt_ptr->pos converted from xyz to propagation grid coordinates
   double cellcoordmax[3] = {0};
-  double pktvelgridcoord[3] = {0};  // pkt_ptr->dir * CLIGHT_PROP converted to grid coordinates
+  double pktvelgridcoord[3] = {0};  // pkt_ptr->dir * CLIGHT_PROP converted from xyz to grid coordinates
 
   get_gridcoords_from_xyz(pkt_ptr->pos, pktposgridcoord);
 
@@ -2511,8 +2511,8 @@ auto boundary_cross(struct packet *const pkt_ptr, int *snext) -> double
   // globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 2), cellcoordmax[2] - (initpos[2] *
   // globals::tmin/tstart)); printout("dir [%g, %g, %g]\n", pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 
-  double d_coordmaxboundary[3];  // distance to reach the cell's upper boundary on each coordinate
-  double d_coordminboundary[3];  // distance to reach the cell's lower boundary on each coordinate
+  double d_coordmaxboundary[3] = {-1};  // distance to reach the cell's upper boundary on each coordinate
+  double d_coordminboundary[3] = {-1};  // distance to reach the cell's lower boundary on each coordinate
   if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
     last_cross = BOUNDARY_NONE;  // handle this separately by setting d_inner and d_outer negative for invalid direction
 

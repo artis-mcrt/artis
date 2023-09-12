@@ -800,7 +800,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   // boundaries. sdist is the boundary distance and snext is the
   // grid cell into which we pass.
   int snext = 0;
-  double sdist = grid::boundary_cross(pkt_ptr, &snext);
+  double sdist = grid::boundary_distance(pkt_ptr, &snext);
 
   if (sdist == 0) {
     grid::change_cell(pkt_ptr, snext);
@@ -988,7 +988,7 @@ static auto get_rpkt_escapeprob_fromdirection(const double startpos[3], double s
 
     // distance to the next cell
     vpkt.prop_time = t_future;
-    const double sdist = grid::boundary_cross(&vpkt, &snext);
+    const double sdist = grid::boundary_distance(&vpkt, &snext);
 
     if (snext >= 0) {
       const int nextmgi = grid::get_cell_modelgridindex(snext);
