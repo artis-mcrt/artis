@@ -895,7 +895,7 @@ static void map_1dmodeltogrid()
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const double radial_pos = get_cellradialpos(cellindex);
-    const double vcell = radial_pos / globals::tmin;
+
     int mgi = get_npts_model();  // default to empty unless set
     if (radial_pos < globals::rmax) {
       if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
@@ -903,6 +903,7 @@ static void map_1dmodeltogrid()
       } else {
         mgi = 0;
 
+        const double vcell = radial_pos / globals::tmin;
         for (int i = 0; i < (get_npts_model() - 1); i++) {
           if (vout_model[mgi] < vcell) {
             mgi = i + 1;
@@ -1991,7 +1992,7 @@ auto get_ndo_nonempty(const int rank) -> int {
   return ranks_ndo_nonempty[rank];
 }
 
-static void uniform_grid_setup()
+static void setup_grid_cartesian_3d()
 /// Routine for doing a uniform cuboidal grid.
 {
   // vmax is per coordinate, but the simulation volume corners will
@@ -2049,7 +2050,7 @@ static void uniform_grid_setup()
   }
 }
 
-static void spherical1d_grid_setup() {
+static void setup_grid_spherical1d() {
   assert_always(get_model_type() == RHO_1D_READ);
   coordlabel[0] = 'r';
   coordlabel[1] = '_';
@@ -2073,7 +2074,7 @@ static void spherical1d_grid_setup() {
   }
 }
 
-static void cylindrical_2d_grid_setup() {
+static void setup_grid_cylindrical_2d() {
   assert_always(get_model_type() == RHO_2D_READ);
   coordlabel[0] = 'r';
   coordlabel[1] = 'z';
@@ -2111,13 +2112,13 @@ void grid_init(int my_rank)
   /// sets up the initial positions and widths of the cells.
   char grid_type_name[256] = "";
   if (GRID_TYPE == GRID_CARTESIAN3D) {
-    uniform_grid_setup();
+    setup_grid_cartesian_3d();
     strcpy(grid_type_name, "uniform cuboidal");
   } else if (GRID_TYPE == GRID_SPHERICAL1D) {
-    spherical1d_grid_setup();
+    setup_grid_spherical1d();
     strcpy(grid_type_name, "spherical");
   } else if (GRID_TYPE == GRID_CYLINDRICAL2D) {
-    cylindrical_2d_grid_setup();
+    setup_grid_cylindrical_2d();
     strcpy(grid_type_name, "cylindrical");
   } else {
     printout("[fatal] grid_init: Error: Unknown grid type. Abort.");
