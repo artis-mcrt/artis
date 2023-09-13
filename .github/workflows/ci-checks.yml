@@ -27,7 +27,7 @@ jobs:
             - name: run cppcheck
               run: |
                   cp artisoptions_nltenebular.h artisoptions.h
-                  cppcheck --force --language=c++ --std=c++20 .
+                  cppcheck --force --error-exitcode=1 --language=c++ --std=c++20 --enable=performance,portability --suppress=knownConditionTrueFalse .
 
     clang-format:
         runs-on: ubuntu-22.04
