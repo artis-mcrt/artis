@@ -26,24 +26,24 @@ int vpkt_call_estimators(struct packet *pkt_ptr, double t_current, int realtype)
 // --------------------------------------------------------------------------------
 // ---------------------------  VIRTUAL PACKETS -----------------------------------
 // --------------------------------------------------------------------------------
-#define MRANGE_GRID 5
-#define NY_VGRID 50
-#define NZ_VGRID 50
+constexpr int MRANGE_GRID = 5;
+constexpr int NY_VGRID = 50;
+constexpr int NZ_VGRID = 50;
 
 // FREQUENCY
 // dlognu = (log(numax) - log(numin)) / VMNUBINS ~ 3.9e-4 (10'000 over 1e14-5e15 Hz)
-#define numin_vspec (CLIGHT / 10000 * 1e8)
-#define numax_vspec (CLIGHT / 3500 * 1e8)
-#define VMNUBINS 2500
+constexpr double numin_vspec = (CLIGHT / 10000 * 1e8);
+constexpr double numax_vspec = (CLIGHT / 3500 * 1e8);
+constexpr int VMNUBINS = 2500;
 
 // TIME
 // dlogt = (log(globals::tmin) - log(globals::tmax)) / VMTBINS ~ 3.69e-2 (111 over 2-120 d)
-#define tmin_vspec (10 * DAY)
-#define tmax_vspec (30 * DAY)
-#define VMTBINS 30
+constexpr double tmin_vspec = (10 * DAY);
+constexpr double tmax_vspec = (30 * DAY);
+constexpr int VMTBINS = 30;
 
 // Total number of frequency ranges
-#define MRANGE 2
+constexpr int MRANGE = 2;
 
 extern int vgrid_flag;
 
