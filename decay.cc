@@ -521,7 +521,7 @@ auto get_nucstring_a(const std::string &strnuc) -> int
   return a;
 }
 
-void init_nuclides(std::vector<int> custom_zlist, std::vector<int> custom_alist) {
+void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> &custom_alist) {
   assert_always(custom_zlist.size() == custom_alist.size());
 
   // Ni57

@@ -18,7 +18,7 @@ enum decaytypes {
   DECAYTYPE_COUNT = 5,
 };
 
-void init_nuclides(std::vector<int> zlist, std::vector<int> alist);
+void init_nuclides(const std::vector<int> &zlist, const std::vector<int> &alist);
 int get_nucstring_z(const std::string &strnuc);
 int get_nucstring_a(const std::string &strnuc);
 int get_num_nuclides();
