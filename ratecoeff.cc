@@ -321,9 +321,6 @@ static void write_ratecoeff_dat() {
   fclose(ratecoeff_file);
 }
 
-///****************************************************************************
-/// The following functions define the integrands for these rate coefficients
-/// for use with libgsl integrators.
 static auto alpha_sp_integrand_gsl(const double nu, void *const voidparas) -> double
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
@@ -356,29 +353,6 @@ static auto alpha_sp_E_integrand_gsl(const double nu, void *const voidparas) -> 
   /// set contributions from Lyman continuum artificially to zero to overcome it's large opacity
   return x;
 }
-
-/*static double gamma_integrand_gsl(double nu, void *paras)
-/// Integrand to calculate the rate coefficient for photoionization
-/// using gsl integrators.
-{
-  double T = ((gslintegration_paras *) paras)->T;
-  double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
-
-  /// Information about the current level is passed via the global variable
-  /// mastate[tid] and its child values element, ion, level
-  /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
-  double sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge,nu);
-
-  /// Dependence on dilution factor W is linear. This allows to set it here to
-  /// 1. and scale to its actual value later on.
-  double x = sigma_bf / H / nu * radfield::dbb(nu,T,1.);
-  //x = sigma_bf/H/nu * radfield::dbb(nu,T,1.);
-  //if (HOVERKB*nu/T < 1e-2) x = sigma_bf * pow(nu,2)/(HOVERKB*nu/T);
-  //else if (HOVERKB*nu/T >= 1e2) x = sigma_bf * pow(nu,2)*exp(-HOVERKB*nu/T);
-  //else x = sigma_bf * pow(nu,2)/(exp(HOVERKB*nu/T)-1);
-
-  return x;
-}*/
 
 static auto gammacorr_integrand_gsl(const double nu, void *const voidparas) -> double
 /// Integrand to calculate the rate coefficient for photoionization
@@ -428,30 +402,6 @@ static auto approx_bfheating_integrand_gsl(const double nu, void *const voidpara
 
   return x;
 }
-
-/*double bfheating_integrand_gsl(double nu, void *paras)
-/// Integrand to calculate the modified rate coefficient for photoionization
-/// using gsl integrators.
-{
-  double get_groundlevelpop(int cellnumber, int element, int ion);
-  double x;
-
-  int cellnumber = ((gslintegration_bfheatingparas *) paras)->cellnumber;
-  double nu_edge = ((gslintegration_bfheatingparas *) paras)->nu_edge;
-
-  float T_e = globals::cell[cellnumber].T_e;
-  double T_R = globals::cell[cellnumber].T_R;
-  double W = globals::cell[cellnumber].W;
-  float nne = globals::cell[cellnumber].nne;
-
-  double sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge,nu);
-  double E_threshold = nu_edge*H;
-  double sfac = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
-  double nnionlevel = get_groundlevelpop(cellnumber,element,ion+1);
-
-  x = sigma_bf*(1-nu_edge/nu)*radfield::dbb(nu,T_R,W) * (1-nnionlevel*nne/nnlevel*sf*exp(-H*nu/KB/T_e));
-  return x;
-}*/
 
 static auto bfcooling_integrand_gsl(const double nu, void *const voidparas) -> double
 /// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way

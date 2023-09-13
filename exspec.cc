@@ -1,15 +1,3 @@
-/* 2007-10-30 -- MK
-   Non-grey treatment of UVOIR opacity as opacity_case 4 added.
-   Still not fully commented.
-   Comments are marked by ///  Deactivated code by // */
-/* 2007-01-17 -- MK
-   Several minor modifications (some marked in the code with //MK), these include
-     - global printout() routine (located in sn3d.c)
-     - opacity_cases 2 and 3 added (changes in grid_init.c and update_grid.c,
-       original opacity stuff was moved there from input.c) */
-/* This is a code copied from Lucy 2004 paper on t-dependent supernova
-   explosions. */
-
 #include "exspec.h"
 
 #include <unistd.h>
