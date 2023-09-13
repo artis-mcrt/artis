@@ -1005,12 +1005,12 @@ static void abundances_read() {
 
     int cellnumberinput = -1;
     assert_always(ssline >> cellnumberinput);
-    assert_always(cellnumberinput == mgi + first_cellindex)
+    assert_always(cellnumberinput == mgi + first_cellindex);
 
-        // the abundances.txt file specifies the elemental mass fractions for each model cell
-        // (or proportial to mass frac, e.g. element densities because they will be normalised anyway)
-        // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
-        double normfactor = 0.;
+    // the abundances.txt file specifies the elemental mass fractions for each model cell
+    // (or proportial to mass frac, e.g. element densities because they will be normalised anyway)
+    // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
+    double normfactor = 0.;
     float abundances_in[150] = {0.};
     for (int anumber = 1; anumber <= 150; anumber++) {
       abundances_in[anumber - 1] = 0.;
