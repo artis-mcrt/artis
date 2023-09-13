@@ -64,20 +64,20 @@ jobs:
                   # echo "count=$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')" >> $GITHUB_OUTPUT
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
-            - name: apt-get update
+            - name: apt update
               run: |
-                  sudo apt-get update
+                  sudo apt update
 
             - name: Install gcc-${{ matrix.compiler.ver }}
               if: matrix.compiler.name == 'gcc'
               run: |
-                  sudo apt-get install -y gcc-${{ matrix.compiler.ver }} g++-${{ matrix.compiler.ver }}
+                  sudo apt install -y gcc-${{ matrix.compiler.ver }} g++-${{ matrix.compiler.ver }}
                   echo "CXX=g++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
 
             - name: Install clang-${{ matrix.compiler.ver }}
               if: matrix.compiler.name == 'clang'
               run: |
-                  sudo apt-get install -y clang-${{ matrix.compiler.ver }} --install-suggests
+                  sudo apt install -y clang-${{ matrix.compiler.ver }} --install-suggests
                   echo "CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
 
             - name: install openmpi
@@ -86,7 +86,7 @@ jobs:
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
             - name: install gsl
-              run: sudo apt-get install libgsl-dev
+              run: sudo apt install libgsl-dev
 
       # - name: Set compiler environment variables (MPI off)
       #   if: matrix.mpi == 'OFF'
