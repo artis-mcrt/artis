@@ -112,7 +112,7 @@ static auto get_event(const int modelgridindex,
       // multiple scattering events of one pp in a single line
       dummypkt_ptr->next_trans = lineindex + 1;
 
-      double ldist = NAN;  // distance from current position to the line interaction
+      double ldist;  // distance from current position to the line interaction
       if (dummypkt_ptr->nu_cmf <= nu_trans) {
         // printout(
         //     "[warning] packet %d dummypkt_ptr->nu_cmf %lg <= nu_trans %lg diff %lg next_trans %d, Z=%d ionstage %d
@@ -714,7 +714,7 @@ static void closest_transition_empty(struct packet *pkt_ptr)
                                      /// multiple scattering events of one pp in a single line
 }
 
-static void update_estimators(struct packet *pkt_ptr, const double distance)
+static void update_estimators(const struct packet *pkt_ptr, const double distance)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.
@@ -851,7 +851,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
   assert_always(tdist >= 0);
 
-  double edist = NAN;
+  double edist;
   int rpkt_eventtype = -1;
   bool find_nextline = false;
   if (mgi == grid::get_npts_model()) {
@@ -1264,7 +1264,7 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
         const double probability = globals::allcont[i].probability;
         // assert_always(probability == probability2);
 
-        double corrfactor = NAN;
+        double corrfactor;
         if constexpr (SEPARATE_STIMRECOMB) {
           corrfactor = 1.;  // no subtraction of stimulated recombination
         } else {

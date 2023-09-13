@@ -98,7 +98,7 @@ auto photoionization_crosssection_fromtable(const float *const photoion_xs, cons
   //   return 1.;
   // return 1. * pow(nu_edge / nu, 3);
 
-  float sigma_bf = NAN;
+  float sigma_bf = 0.;
 
   if (phixs_file_version_exists[1] && !phixs_file_version_exists[2]) {
     // classic mode: no interpolation

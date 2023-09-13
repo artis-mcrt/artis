@@ -328,7 +328,7 @@ static auto sig_comp(const struct packet *pkt_ptr) -> double {
 
   // Use this to decide whether the Thompson limit is acceptable.
 
-  double sigma_cmf = NAN;
+  double sigma_cmf;
   if (xx < THOMSON_LIMIT) {
     sigma_cmf = SIGMA_T;
   } else {
@@ -519,7 +519,7 @@ static void compton_scatter(struct packet *pkt_ptr)
 static auto sig_photo_electric(const struct packet *pkt_ptr) -> double {
   // photo electric effect scattering
 
-  double sigma_cmf = NAN;
+  double sigma_cmf;
   // Start by working out the x-section in the co-moving frame.
 
   const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
@@ -561,7 +561,7 @@ static auto sig_photo_electric(const struct packet *pkt_ptr) -> double {
 static auto sig_pair_prod(const struct packet *pkt_ptr) -> double {
   // Cross section for pair production.
 
-  double sigma_cmf = NAN;
+  double sigma_cmf = 0.;
 
   // Start by working out the x-section in the co-moving frame.
 
@@ -575,8 +575,8 @@ static auto sig_pair_prod(const struct packet *pkt_ptr) -> double {
 
     if (pkt_ptr->nu_cmf > 2.46636e+20) {
       // double sigma_cmf_cno;
-      double sigma_cmf_si = NAN;
-      double sigma_cmf_fe = NAN;
+      double sigma_cmf_si;
+      double sigma_cmf_fe;
       const double f_fe = grid::get_ffegrp(mgi);
       if (pkt_ptr->nu_cmf > 3.61990e+20) {
         // sigma_cmf_cno = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.5))) * 49.e-27;

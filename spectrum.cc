@@ -127,7 +127,7 @@ static void printout_tracemission_stats() {
         const int nupperdowntrans = get_ndowntrans(element, ion, upper);
         auto *downtranslist = globals::elements[element].ions[ion].levels[upper].downtrans;
         auto *downtrans = std::find_if(downtranslist, downtranslist + nupperdowntrans,
-                                       [=](auto &downtrans) { return downtrans.targetlevelindex == lower; });
+                                       [=](const auto &downtrans) { return downtrans.targetlevelindex == lower; });
         assert_always(downtrans != (downtranslist + nupperdowntrans));
 
         printout("%7.2e (%5.1f%%) %4d %9d %5d %5d %8.1f %8.2e %4d %7.1f %7.1f %7.1e %7.1e\n", encontrib,
@@ -223,8 +223,8 @@ void write_spectrum(const std::string &spec_filename, const char *emission_filen
 }
 
 void write_specpol(const std::string &specpol_filename, const std::string &emission_filename,
-                   const std::string &absorption_filename, struct spec *stokes_i, struct spec *stokes_q,
-                   struct spec *stokes_u) {
+                   const std::string &absorption_filename, const struct spec *stokes_i, const struct spec *stokes_q,
+                   const struct spec *stokes_u) {
   FILE *specpol_file = fopen_required(specpol_filename.c_str(), "w");
   FILE *emissionpol_file = nullptr;
   FILE *absorptionpol_file = nullptr;
@@ -352,7 +352,7 @@ static auto columnindex_from_emissiontype(const int et) -> int {
 }
 
 static void add_to_spec(const struct packet *const pkt_ptr, const int current_abin, struct spec &spectra,
-                        struct spec *stokes_i, struct spec *stokes_q, struct spec *stokes_u)
+                        const struct spec *stokes_i, const struct spec *stokes_q, const struct spec *stokes_u)
 // Routine to add a packet to the outgoing spectrum.
 {
   // Need to (1) decide which time bin to put it in and (2) which frequency bin.
@@ -603,8 +603,8 @@ auto alloc_spectra(const bool do_emission_res) -> std::unique_ptr<struct spec> {
   return spectra;
 }
 
-void add_to_spec_res(const struct packet *const pkt_ptr, int current_abin, struct spec &spectra, struct spec *stokes_i,
-                     struct spec *stokes_q, struct spec *stokes_u)
+void add_to_spec_res(const struct packet *const pkt_ptr, int current_abin, struct spec &spectra,
+                     const struct spec *stokes_i, const struct spec *stokes_q, const struct spec *stokes_u)
 // Routine to add a packet to the outgoing spectrum.
 {
   // Need to (1) decide which time bin to put it in and (2) which frequency bin.
