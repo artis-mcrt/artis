@@ -72,7 +72,7 @@ int nvpkt_esc1;  // electron scattering event
 int nvpkt_esc2;  // kpkt deactivation
 int nvpkt_esc3;  // macroatom deactivation
 
-void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *obs, int realtype) {
+void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double (&obs)[3], int realtype) {
   double vel_vec[3];
   double old_dir_cmf[3];
   double obs_cmf[3];
@@ -1005,7 +1005,7 @@ void meridian(const double *n, double *ref1, double *ref2) {
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
-void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf) {
+void frame_transform(const double (&n_rf)[3], double *Q, double *U, const double (&v)[3], double (&n_cmf)[3]) {
   double cos2rot_angle = NAN;
   double sin2rot_angle = NAN;
   double e_rf[3];

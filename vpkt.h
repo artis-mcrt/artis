@@ -7,10 +7,10 @@
 
 double rot_angle(double *n1, double *n2, double *ref1, double *ref2);
 void meridian(const double *n, double *ref1, double *ref2);
-void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf);
+void frame_transform(const double (&n_rf)[3], double *Q, double *U, const double (&v)[3], double (&n_cmf)[3]);
 void lorentz(const double *e_rf, const double *n_rf, const double *v, double *e_cmf);
 
-void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double *obs, int realtype);
+void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double (&obs)[3], int realtype);
 void add_to_vspecpol(struct packet *pkt_ptr, int bin, int ind, double t_arrive);
 void init_vspecpol();
 void read_parameterfile_vpkt();
