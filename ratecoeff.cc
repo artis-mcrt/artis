@@ -1061,7 +1061,6 @@ void ratecoefficients_init()
 /// T_e = T_R for this precalculation.
 {
   /// Determine the temperture grids gridsize
-  T_step = (1. * MAXTEMP - MINTEMP) / (TABLESIZE - 1.);  /// global variables
   T_step_log = (log(MAXTEMP) - log(MINTEMP)) / (TABLESIZE - 1.);
 
   md5_file("adata.txt", adatafile_hash);
