@@ -53,15 +53,9 @@ int nlines = -1;
 struct elementlist_entry *elements = nullptr;
 const struct linelist_entry *linelist = nullptr;
 struct bflist_t *bflist = nullptr;
-double *spontrecombcoeff = nullptr;
-
-// for USE_LUT_PHOTOION = true
-double *corrphotoioncoeff = nullptr;
 
 // for USE_LUT_BFHEATING = true
 double *bfheating_coeff = nullptr;
-
-double *bfcooling_coeff = nullptr;
 
 struct rpkt_cont_opacity *kappa_rpkt_cont = nullptr;
 

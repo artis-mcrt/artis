@@ -8,6 +8,7 @@
 #include "sn3d.h"
 
 namespace radfield {
+
 void zero_estimators(int modelgridindex);
 void init(int my_rank, int ndo_nonempty);
 void initialise_prev_titer_photoionestimators();

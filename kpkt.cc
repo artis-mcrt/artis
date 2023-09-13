@@ -40,21 +40,6 @@ static auto get_ncoolingterms(int element, int ion) -> int {
   return globals::elements[element].ions[ion].ncoolingterms;
 }
 
-static auto get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, float T_e) -> double {
-  const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
-  if (lowerindex < TABLESIZE - 1) {
-    const int upperindex = lowerindex + 1;
-    const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
-    const double T_upper = MINTEMP * exp(upperindex * T_step_log);
-
-    const double f_upper = globals::bfcooling_coeff[get_bflutindex(upperindex, element, ion, level, phixstargetindex)];
-    const double f_lower = globals::bfcooling_coeff[get_bflutindex(lowerindex, element, ion, level, phixstargetindex)];
-
-    return (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
-  }
-  return globals::bfcooling_coeff[get_bflutindex(TABLESIZE - 1, element, ion, level, phixstargetindex)];
-}
-
 void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrates *heatingcoolingrates)
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct

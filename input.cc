@@ -20,6 +20,7 @@
 #include "grid.h"
 #include "kpkt.h"
 #include "nltepop.h"
+#include "ratecoeff.h"
 #include "rpkt.h"
 #include "sn3d.h"
 #include "vpkt.h"
@@ -1570,62 +1571,7 @@ static void setup_phixs_list() {
   globals::allcont = nonconstallcont;
   nonconstallcont = nullptr;
 
-  size_t mem_usage_photoionluts = 2 * TABLESIZE * globals::nbfcontinua * sizeof(double);
-
-  if (globals::nbfcontinua > 0) {
-#ifdef MPI_ON
-    MPI_Win win = MPI_WIN_NULL;
-    MPI_Aint size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * sizeof(double) : 0;
-    int disp_unit = sizeof(double);
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &globals::spontrecombcoeff, &win) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::spontrecombcoeff) == MPI_SUCCESS);
-#else
-    globals::spontrecombcoeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
-#endif
-    assert_always(globals::spontrecombcoeff != nullptr);
-
-    if constexpr (USE_LUT_PHOTOION) {
-#ifdef MPI_ON
-      size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * sizeof(double) : 0;
-      assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                            &globals::corrphotoioncoeff, &win) == MPI_SUCCESS);
-      assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::corrphotoioncoeff) == MPI_SUCCESS);
-#else
-      globals::corrphotoioncoeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
-#endif
-      assert_always(globals::corrphotoioncoeff != nullptr);
-      mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
-    }
-
-    if constexpr (USE_LUT_BFHEATING) {
-#ifdef MPI_ON
-      size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * sizeof(double) : 0;
-      assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                            &globals::bfheating_coeff, &win) == MPI_SUCCESS);
-      assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::bfheating_coeff) == MPI_SUCCESS);
-#else
-      globals::bfheating_coeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
-#endif
-      assert_always(globals::bfheating_coeff != nullptr);
-      mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
-    }
-
-#ifdef MPI_ON
-    size = (globals::rank_in_node == 0) ? TABLESIZE * globals::nbfcontinua * sizeof(double) : 0;
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &globals::bfcooling_coeff, &win) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &globals::bfcooling_coeff) == MPI_SUCCESS);
-#else
-    globals::bfcooling_coeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
-#endif
-    assert_always(globals::bfcooling_coeff != nullptr);
-  }
-
-  printout(
-      "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
-      "corrphotoioncoeff/bfheating if enabled) occupy %.3f MB\n",
-      mem_usage_photoionluts / 1024. / 1024.);
+  setup_photoion_luts();
 }
 
 static void read_atomicdata() {

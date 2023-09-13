@@ -247,15 +247,8 @@ extern struct elementlist_entry *elements;
 extern const struct linelist_entry *linelist;
 extern struct bflist_t *bflist;
 
-extern double *spontrecombcoeff;
-
-// for USE_LUT_PHOTOION = true
-extern double *corrphotoioncoeff;
-
 // for USE_LUT_BFHEATING = true
 extern double *bfheating_coeff;
-
-extern double *bfcooling_coeff;
 
 extern struct rpkt_cont_opacity *kappa_rpkt_cont;
 
