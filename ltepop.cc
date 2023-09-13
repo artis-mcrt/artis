@@ -28,7 +28,6 @@ auto nne_solution_f(double x, void *paras) -> double
     if (abundance > 0 && get_nions(element) > 0) {
       const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
       double innersum = 0.;
-      // printout("debug get_nions (element %d) %d =========================\n",element,get_nions(element));
       // uppermost_ion = globals::elements[element].uppermost_ion;
       const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
 
@@ -60,7 +59,7 @@ void get_ionfractions(int element, int modelgridindex, double nne, double *ionfr
 {
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(uppermost_ion < get_nions(element) || get_nions(element) == 0);
+  assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
 
   auto nnionfactor = std::make_unique<double[]>(uppermost_ion + 1);
   nnionfactor[uppermost_ion] = 1;
