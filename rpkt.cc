@@ -127,15 +127,6 @@ static auto get_event(const int modelgridindex,
         // which changes the distance reach a line resonance and creates a dependence
         // on packet position and direction
 
-        // relativistic distance formula from tardis-sn project
-        // (committed by Christian Vogl, https://github.com/tardis-sn/tardis/pull/697)
-        // const double nu_r = nu_trans / dummypkt_ptr->nu_rf;
-        // const double ct = CLIGHT * dummypkt_ptr->prop_time;
-        // const double r = vec_len(dummypkt_ptr->pos);  // radius
-        // const double mu = dot(dummypkt_ptr->dir, dummypkt_ptr->pos) / r;
-        // ldist = -mu * r + (ct - nu_r * nu_r * sqrt(ct * ct - (1 + r * r * (1 - mu * mu) * (1 + pow(nu_r, -2))))) /
-        //                       (1 + nu_r * nu_r);
-
         // use linear interpolation of frequency along the path
         ldist = (nu_trans - dummypkt_ptr->nu_cmf) / (nu_cmf_abort - pkt_ptr->nu_cmf) * abort_dist;
       }
