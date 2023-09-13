@@ -32,7 +32,6 @@
 //   int cellnumber;
 // } gslintegration_bfheatingparas;
 
-double T_step;
 double T_step_log;
 
 static double *spontrecombcoeffs = nullptr;
@@ -575,7 +574,7 @@ static void precalculate_rate_coefficient_integrals() {
             double error = NAN;
             int status = 0;
             const float T_e = MINTEMP * exp(iter * T_step_log);
-            // T_e = MINTEMP + iter*T_step;
+
             const double sfac = calculate_sahafact(element, ion, level, upperlevel, T_e, E_threshold);
             // printout("%d %g\n",iter,T_e);
 
@@ -618,29 +617,6 @@ static void precalculate_rate_coefficient_integrals() {
             }
             // assert_always(alpha_sp >= 0);
             spontrecombcoeffs[bflutindex] = alpha_sp;
-
-            // if (atomic_number == 26 && ionstage == 3 && level < 5)
-            // {
-            //   const double E_threshold_b = get_phixs_threshold(element, ion, level, phixstargetindex);
-            //   const double sfac_b = calculate_sahafact(element,ion,level,upperlevel,T_e,E_threshold_b);
-            //   const double nu_threshold_b = E_threshold_b / H;
-            //   const double nu_max_phixs_b = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in
-            //   the phixs table intparas.nu_edge = nu_threshold_b;              // Global variable which passes the
-            //   threshold to the integrator
-            //                                                 // the threshold of the first target gives nu of the
-            //                                                 first phixstable point
-            //   double alpha_sp_new;
-            //   status = gsl_integration_qag(&F_alpha_sp, nu_threshold_b, nu_max_phixs_b, 0, intaccuracy, GSLWSIZE,
-            //   GSL_INTEG_GAUSS61, w, &alpha_sp_new, &error); alpha_sp_new *= FOURPI * sfac_b * phixstargetprobability;
-            //   printout("recomb: T_e %6.1f Z=%d ionstage %d->%d upper+1 %5d lower+1 %5d sfac %7.2e sfac_new %7.2e
-            //   alpha %7.2e alpha_new %7.2e threshold_ev %7.2e threshold_new_ev %7.2e\n",
-            //           T_e, get_atomicnumber(element), get_ionstage(element, ion + 1),
-            //           get_ionstage(element, ion), upperlevel + 1, level + 1,
-            //           sfac, sfac_b,
-            //           alpha_sp, alpha_sp_new,
-            //           E_threshold / EV,
-            //           E_threshold_b / EV);
-            // }
 
             // if (iter == 0)
             //   printout("alpha_sp: element %d ion %d level %d upper level %d at temperature %g, alpha_sp is %g
@@ -727,11 +703,6 @@ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel
 
   const double zrand = 1. - rng_uniform();  // Make sure that 0 < zrand <= 1
 
-  // printout("emitted bf photon Z=%2d ionstage %d->%d upper %4d lower %4d lambda %7.1f lambda_edge %7.1f ratio %g zrand
-  // %g\n",
-  //    get_atomicnumber(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), upperionlevel,
-  //    lower, 1e8 * CLIGHT / nu_selected, 1e8 * CLIGHT / nu_threshold, nu_selected / nu_threshold, zrand);
-
   const double deltanu = (nu_max_phixs - nu_threshold) / npieces;
   double error = NAN;
 
@@ -771,10 +742,6 @@ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel
 auto get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, float T_e) -> double
 /// Returns the rate coefficient for spontaneous recombination.
 {
-  /*int lowerindex = floor((T-MINTEMP)/T_step);
-  int upperindex = lowerindex + 1;
-  double T_upper =  MINTEMP + upperindex*T_step;
-  double T_lower =  MINTEMP + lowerindex*T_step;*/
   double Alpha_sp = NAN;
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
   assert_always(lowerindex >= 0);
