@@ -1031,7 +1031,7 @@ static void read_atomicdata_files() {
   printout("establish connection between transitions and sorted linelist...");
 
   time_t const time_start_establish_linelist_connections = time(nullptr);
-  for (int lineindex = 0; lineindex < globals::nlines; lineindex++) {
+  for (lineindex = 0; lineindex < globals::nlines; lineindex++) {
     const auto &line = globals::linelist[lineindex];
     const int element = line.elementindex;
     const int ion = line.ionindex;
@@ -1044,7 +1044,7 @@ static void read_atomicdata_files() {
     const int nupperdowntrans = get_ndowntrans(element, ion, upperlevel);
     auto *downtranslist = globals::elements[element].ions[ion].levels[upperlevel].downtrans;
     auto *downtrans = std::find_if(downtranslist, downtranslist + nupperdowntrans,
-                                   [=](auto &downtrans) { return downtrans.targetlevelindex == lowerlevel; });
+                                   [=](const auto &downtrans) { return downtrans.targetlevelindex == lowerlevel; });
     assert_always(downtrans != (downtranslist + nupperdowntrans));
     // assert_always(downtrans->targetlevelindex == lowerlevel);
     downtrans->lineindex = lineindex;
@@ -1052,7 +1052,7 @@ static void read_atomicdata_files() {
     const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
     auto *uptranslist = globals::elements[element].ions[ion].levels[lowerlevel].uptrans;
     auto *uptrans = std::find_if(uptranslist, uptranslist + nloweruptrans,
-                                 [=](auto &uptrans) { return uptrans.targetlevelindex == upperlevel; });
+                                 [=](const auto &uptrans) { return uptrans.targetlevelindex == upperlevel; });
     assert_always(uptrans != (uptranslist + nloweruptrans));
     // assert_always(uptrans->targetlevelindex == upperlevel);
     uptrans->lineindex = lineindex;
@@ -1144,7 +1144,7 @@ static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcont
     index = -1;
     *index_in_groundlevelcontestimator = -1;
   } else {
-    int i = 1;
+    int i;
     int element = -1;
     int ion = -1;
     for (i = 1; i < globals::nbfcontinua_ground; i++) {

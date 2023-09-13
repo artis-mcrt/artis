@@ -997,8 +997,7 @@ static void abundances_read() {
   /// i.e. in total one integer and 30 floats.
 
   // loop over propagation cells for 3D models, or modelgrid cells
-  const int npts_model = get_npts_model();
-  for (int mgi = 0; mgi < npts_model; mgi++) {
+  for (int mgi = 0; mgi < get_npts_model(); mgi++) {
     std::string line;
     assert_always(get_noncommentline(abundance_file, line));
     std::istringstream ssline(line);
@@ -2460,7 +2459,7 @@ auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
       const int cellindexstride =
           flip != 0 ? -grid::get_coordcellindexincrement(d) : grid::get_coordcellindexincrement(d);
 
-      bool isoutside_thisside = false;
+      bool isoutside_thisside;
       double delta = 0.;
       if (flip != 0) {
         // packet pos below min

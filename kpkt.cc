@@ -473,8 +473,8 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
     assert_always(grid::modelgrid[modelgridindex].totalcooling > 0.);
     const double rndcool_ion = zrand * grid::modelgrid[modelgridindex].totalcooling;
 
-    int element = -1;
-    int ion = -1;
+    int element;
+    int ion;
     for (element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (ion = 0; ion < nions; ion++) {
