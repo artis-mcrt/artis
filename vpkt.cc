@@ -62,8 +62,6 @@ int vgrid_flag;
 double dlogt_vspec;
 double dlognu_vspec;
 
-int realtype;
-
 // number of virtual packets in a given timestep
 int nvpkt;
 
@@ -72,7 +70,8 @@ int nvpkt_esc1;  // electron scattering event
 int nvpkt_esc2;  // kpkt deactivation
 int nvpkt_esc3;  // macroatom deactivation
 
-void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double (&obs)[3], int realtype) {
+void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int bin, double obs[3],
+                    const int realtype) {
   double vel_vec[3];
   double old_dir_cmf[3];
   double obs_cmf[3];
@@ -426,7 +425,7 @@ auto check_tau(const double *tau, const double *tau_max) -> int {
 }
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vspecpol(struct packet *pkt_ptr, int bin, int ind, double t_arrive) {
+void add_to_vspecpol(const struct packet *const pkt_ptr, int bin, int ind, double t_arrive) {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
 
   const int ind_comb = Nspectra * bin + ind;
@@ -619,7 +618,8 @@ void init_vpkt_grid() {
 }
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vpkt_grid(struct packet *dummy_ptr, const double *vel, int bin_range, int bin, const double *obs) {
+void add_to_vpkt_grid(const struct packet *const dummy_ptr, const double vel[3], int bin_range, int bin,
+                      const double obs[3]) {
   double vref1 = NAN;
   double vref2 = NAN;
 
@@ -878,7 +878,7 @@ void read_parameterfile_vpkt() {
   fclose(input_file);
 }
 
-auto vpkt_call_estimators(struct packet *pkt_ptr, double t_current, int realtype) -> int {
+auto vpkt_call_estimators(struct packet *pkt_ptr, const double t_current, const int realtype) -> int {
   double obs[3];
   int vflag = 0;
 
@@ -939,7 +939,7 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, double t_current, int realtype
   return vflag;
 }
 
-auto rot_angle(double *n1, double *n2, double *ref1, double *ref2) -> double {
+auto rot_angle(double n1[3], double n2[3], double ref1[3], double ref2[3]) -> double {
   /* ------------- Rotation angle from the scattering plane --------------------------------------------- */
   /* -------- We need to rotate Stokes Parameters to (or from) the scattering plane from (or to) -------- */
   /* -------- the meridian frame such that Q=1 is in the scattering plane and along ref1 ---------------- */
@@ -990,7 +990,7 @@ auto rot_angle(double *n1, double *n2, double *ref1, double *ref2) -> double {
 }
 
 // Routine to compute the meridian frame axes ref1 and ref2
-void meridian(const double *n, double *ref1, double *ref2) {
+void meridian(const double n[3], double ref1[3], double ref2[3]) {
   // for ref_1 use (from triple product rule)
 
   ref1[0] = -1. * n[0] * n[2] / sqrt(n[0] * n[0] + n[1] * n[1]);
@@ -1005,7 +1005,7 @@ void meridian(const double *n, double *ref1, double *ref2) {
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
-void frame_transform(const double (&n_rf)[3], double *Q, double *U, const double (&v)[3], double (&n_cmf)[3]) {
+void frame_transform(const double n_rf[3], double *Q, double *U, const double v[3], double n_cmf[3]) {
   double cos2rot_angle = NAN;
   double sin2rot_angle = NAN;
   double e_rf[3];
@@ -1108,7 +1108,7 @@ void frame_transform(const double (&n_rf)[3], double *Q, double *U, const double
 }
 
 /* ----------------------- Lorentz transformations from RF to CMF --------------------------------------------- */
-void lorentz(const double *e_rf, const double *n_rf, const double *v, double *e_cmf) {
+void lorentz(const double e_rf[3], const double n_rf[3], const double v[3], double e_cmf[3]) {
   double beta[3];
   double e_par[3];
   double e_perp[3];

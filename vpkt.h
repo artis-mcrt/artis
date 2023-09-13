@@ -5,19 +5,20 @@
 
 #include "artisoptions.h"
 
-double rot_angle(double *n1, double *n2, double *ref1, double *ref2);
-void meridian(const double *n, double *ref1, double *ref2);
-void frame_transform(const double (&n_rf)[3], double *Q, double *U, const double (&v)[3], double (&n_cmf)[3]);
-void lorentz(const double *e_rf, const double *n_rf, const double *v, double *e_cmf);
+double rot_angle(double n1[3], double n2[3], double ref1[3], double ref2[3]);
+void meridian(const double n[3], double ref1[3], double ref2[3]);
+void frame_transform(const double n_rf[3], double *Q, double *U, const double v[3], double n_cmf[3]);
+void lorentz(const double e_rf[3], const double n_rf[3], const double v[3], double e_cmf[3]);
 
-void rlc_emiss_vpkt(struct packet *pkt_ptr, double t_current, int bin, double (&obs)[3], int realtype);
-void add_to_vspecpol(struct packet *pkt_ptr, int bin, int ind, double t_arrive);
+void rlc_emiss_vpkt(const struct packet *const pkt_ptr, double t_current, int bin, double obs[3], int realtype);
+void add_to_vspecpol(const struct packet *const pkt_ptr, int bin, int ind, double t_arrive);
 void init_vspecpol();
 void read_parameterfile_vpkt();
 void write_vspecpol(FILE *specpol_file);
 void read_vspecpol(int my_rank, int nts);
 void init_vpkt_grid();
-void add_to_vpkt_grid(struct packet *dummy_ptr, const double *vel, int bin_range, int bin, const double *obs);
+void add_to_vpkt_grid(const struct packet *const dummy_ptr, const double vel[3], int bin_range, int bin,
+                      const double obs[3]);
 void write_vpkt_grid(FILE *vpkt_grid_file);
 void read_vpkt_grid(FILE *vpkt_grid_file);
 int check_tau(const double *tau, const double *tau_max);
