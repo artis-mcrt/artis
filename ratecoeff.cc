@@ -66,7 +66,7 @@ void setup_photoion_luts(void) {
                                           &win) == MPI_SUCCESS);
     assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &spontrecombcoeffs) == MPI_SUCCESS);
 #else
-    spontrecombcoeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+    spontrecombcoeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
 #endif
     assert_always(spontrecombcoeffs != nullptr);
 
@@ -77,7 +77,7 @@ void setup_photoion_luts(void) {
                                             &win) == MPI_SUCCESS);
       assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &corrphotoioncoeffs) == MPI_SUCCESS);
 #else
-      corrphotoioncoeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+      corrphotoioncoeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
 #endif
       assert_always(corrphotoioncoeffs != nullptr);
       mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
@@ -102,7 +102,7 @@ void setup_photoion_luts(void) {
                                           &win) == MPI_SUCCESS);
     assert_always(MPI_Win_shared_query(win, 0, &size, &disp_unit, &bfcooling_coeffs) == MPI_SUCCESS);
 #else
-    bfcooling_coeff = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
+    bfcooling_coeffs = static_cast<double *>(malloc(TABLESIZE * globals::nbfcontinua * sizeof(double)));
 #endif
     assert_always(bfcooling_coeffs != nullptr);
   }
