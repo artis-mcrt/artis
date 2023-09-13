@@ -1458,7 +1458,7 @@ auto calculate_populations(const int modelgridindex) -> double
       if (globals::initial_iteration || grid::modelgrid[modelgridindex].thick == 1) {
         uppermost_ion = get_nions(element) - 1;
       } else {
-        int ion = 0;
+        int ion = -1;
         for (ion = 0; ion < nions - 1; ion++) {
           double Gamma = 0.;
           if constexpr (!USE_LUT_PHOTOION) {
@@ -1497,7 +1497,7 @@ auto calculate_populations(const int modelgridindex) -> double
       // %g\n",modelgridindex,element,uppermost_ion,factor); elements[element].uppermost_ion =
       // uppermost_ion;
       grid::set_elements_uppermost_ion(modelgridindex, element, uppermost_ion);
-      if (uppermost_ion == 0) {
+      if (uppermost_ion <= 0) {
         only_neutral_ions++;
       }
       nelements_in_cell++;
