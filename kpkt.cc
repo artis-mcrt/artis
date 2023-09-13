@@ -36,7 +36,7 @@ struct cellhistorycoolinglist {
 
 static struct cellhistorycoolinglist *coolinglist;
 
-static auto get_ncoolingterms(int element, int ion) -> int {
+static auto get_ncoolingterms_ion(int element, int ion) -> int {
   return globals::elements[element].ions[ion].ncoolingterms;
 }
 
@@ -268,7 +268,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
   }
 
   assert_testmodeonly(indexionstart == get_coolinglistoffset(element, ion));
-  assert_always(i == indexionstart + get_ncoolingterms(element, ion));
+  assert_always(i == indexionstart + get_ncoolingterms_ion(element, ion));
 
   // we just summed up every individual cooling process. make sure it matches the stored total for the ion
   assert_always(grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] == C_ion);
@@ -384,7 +384,7 @@ void setup_coolinglist() {
           }
         }
       }
-      assert_always(i == get_coolinglistoffset(element, ion) + get_ncoolingterms(element, ion));
+      assert_always(i == get_coolinglistoffset(element, ion) + get_ncoolingterms_ion(element, ion));
     }
   }
 
@@ -510,7 +510,7 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
 
     // printout("element %d, ion %d, coolingsum %g\n",element,ion,coolingsum);
     const int ilow = get_coolinglistoffset(element, ion);
-    const int ihigh = ilow + get_ncoolingterms(element, ion) - 1;
+    const int ihigh = ilow + get_ncoolingterms_ion(element, ion) - 1;
     // printout("element %d, ion %d, low %d, high %d\n",element,ion,low,high);
     if (globals::cellhistory[tid].cooling_contrib[ilow] < 0.) {
       // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d
@@ -533,12 +533,12 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
       printout("do_kpkt: error occured while selecting a cooling channel: low %d, high %d, i %d, rndcool %g\n", ilow,
                ihigh, i, rndcool_ion_process);
       printout("element %d, ion %d, offset %d, terms %d, coolingsum %g\n", element, ion,
-               get_coolinglistoffset(element, ion), get_ncoolingterms(element, ion), coolingsum);
+               get_coolinglistoffset(element, ion), get_ncoolingterms_ion(element, ion), coolingsum);
 
       printout("lower %g, %g, %g\n", globals::cellhistory[tid].cooling_contrib[get_coolinglistoffset(element, ion) - 1],
                globals::cellhistory[tid].cooling_contrib[get_coolinglistoffset(element, ion)],
                globals::cellhistory[tid].cooling_contrib[get_coolinglistoffset(element, ion) + 1]);
-      int const finalpos = get_coolinglistoffset(element, ion) + get_ncoolingterms(element, ion) - 1;
+      int const finalpos = get_coolinglistoffset(element, ion) + get_ncoolingterms_ion(element, ion) - 1;
       printout("upper %g, %g, %g\n", globals::cellhistory[tid].cooling_contrib[finalpos - 1],
                globals::cellhistory[tid].cooling_contrib[finalpos],
                globals::cellhistory[tid].cooling_contrib[finalpos + 1]);
