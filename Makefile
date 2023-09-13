@@ -3,8 +3,8 @@
 # place in architecture folder, e.g. build/arm64
 BUILD_DIR = build/$(shell uname -m)
 
-CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto=auto -Werror -Werror=undef
-# CXXFLAGS += -Wpedantic -Wextra -Wall
+CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto=auto
+
 # CXXFLAGS += -Wunreachable-code
 
 ifeq ($(shell uname -s),Darwin)
@@ -84,7 +84,7 @@ else
 	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3
 endif
 
-CXXFLAGS += -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -Wno-inline
+CXXFLAGS += -Werror -Werror=undef -Wextra -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -Wno-inline
 
 ifeq ($(MPI),ON)
 else ifeq ($(MPI),OFF)

@@ -737,8 +737,10 @@ void read_parameterfile_vpkt() {
     double phi_degrees = 0.;
     assert_always(fscanf(input_file, "%lg \n", &phi_degrees) == 1);
     phiobs[i] = phi_degrees * PI / 180.;
+    const double theta_degrees = std::acos(nz_obs_vpkt[i]) / PI * 180.;
 
-    printout("vpkt.txt:   direction %d costheta %g phi %g (%g degrees)\n", i, nz_obs_vpkt[i], phiobs[i], phi_degrees);
+    printout("vpkt.txt:   direction %d costheta %g (%.1f degrees) phi %g (%.1f degrees)\n", i, nz_obs_vpkt[i],
+             theta_degrees, phiobs[i], phi_degrees);
   }
 
   // Nspectra opacity choices (i.e. Nspectra spectra for each observer)

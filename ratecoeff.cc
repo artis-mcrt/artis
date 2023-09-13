@@ -358,7 +358,6 @@ static auto gammacorr_integrand_gsl(const double nu, void *const voidparas) -> d
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
-  assert_testmodeonly(USE_LUT_PHOTOION);
   const gslintegration_paras *const params = static_cast<gslintegration_paras *>(voidparas);
 
   const float T = params->T;
@@ -378,8 +377,6 @@ static auto approx_bfheating_integrand_gsl(const double nu, void *const voidpara
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-  assert_testmodeonly(USE_LUT_BFHEATING);
-
   const gslintegration_paras *const params = static_cast<gslintegration_paras *>(voidparas);
 
   const float T = params->T;
