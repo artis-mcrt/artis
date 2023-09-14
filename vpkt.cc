@@ -8,6 +8,7 @@
 #include "ltepop.h"
 #include "rpkt.h"
 #include "sn3d.h"
+#include "stats.h"
 #include "update_grid.h"
 #include "vectors.h"
 
@@ -330,6 +331,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
     move_pkt(dummy_ptr, sdist);
 
     // printout("About to change vpkt cell\n");
+
     grid::change_cell(dummy_ptr, snext);
     end_packet = (dummy_ptr->type == TYPE_ESCAPE);
     // printout("Completed change vpkt cell\n");
@@ -344,6 +346,12 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
     /* kill vpkt with pass through a thick cell */
     if (grid::modelgrid[mgi].thick == 1) {
       return;
+    }
+
+    mgi = grid::get_cell_modelgridindex(dummy_ptr->where);
+    if (mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi) {
+      stats::increment(stats::COUNTER_UPDATECELL);
+      cellhistory_reset(mgi, false);
     }
   }
 
@@ -935,6 +943,11 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const double t_current, const 
     }
   }
 
+  mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+  if (mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi) {
+    stats::increment(stats::COUNTER_UPDATECELL);
+    cellhistory_reset(mgi, false);
+  }
   // we just used the opacity variables for v-packets. We need to reset them for the original r packet
   calculate_kappa_rpkt_cont(pkt_ptr, &globals::kappa_rpkt_cont[tid]);
 
