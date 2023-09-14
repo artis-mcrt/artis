@@ -297,8 +297,8 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
         B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * A_ul;
         B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
-        n_u = get_levelpop(mgi, element, ion, upper);
-        n_l = get_levelpop(mgi, element, ion, lower);
+        n_u = calculate_levelpop(mgi, element, ion, upper);
+        n_l = calculate_levelpop(mgi, element, ion, lower);
 
         // Check on the element to exclude
         // NB: ldist before need to be computed anyway (I want to move the packets to the
