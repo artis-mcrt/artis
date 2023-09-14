@@ -13,7 +13,9 @@ c4e4e8d00846618f3931dc01cf52615f  modelgridrankassignments.out
 abe86b7151c6d14e0f5b8e392f1a5038  packets00_0001.out
 3ebda12327cb0334a8cb89b4ebab96b8  spec.out
 040c71f981716a2abf0467a82b1ac13c  timesteps.out
-99bfc68bdb59019cbde8ce02858391b1  vspecpol_0-0.out
-99bfc68bdb59019cbde8ce02858391b1  vspecpol_1-0.out
+d04b04da202515e44b961e6ec9f96c60  vpkt_grid_0-0.out
+d04b04da202515e44b961e6ec9f96c60  vpkt_grid_1-0.out
+6d20f0c0996b05e1b960f5a47d7f2ce0  vspecpol_0-0.out
+993ee12dd8d8970f44bd9d3b3b78c645  vspecpol_1-0.out
 21fffbf2819d3096a5f53db671d20b46  job0/estimators_0000.out
 44fb33e76712a7c74158eb8606d2f01e  job0/estimators_0001.out
