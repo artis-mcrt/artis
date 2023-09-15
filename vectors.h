@@ -34,10 +34,10 @@ constexpr void vec_norm(std::span<const double, 3> vec_in, std::span<double, 3> 
   assert_testmodeonly(fabs(vec_len(vec_out) - 1.) < 1.e-10);
 }
 
-constexpr double dot(std::span<const double, 3> x, std::span<const double, 3> y)
+constexpr auto dot(std::span<const double> x, std::span<const double> y) -> double
 // vector dot product
 {
-  return (x[0] * y[0]) + (x[1] * y[1]) + (x[2] * y[2]);
+  return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
 constexpr void get_velocity(std::span<const double, 3> x, std::span<double, 3> y, const double t)
