@@ -177,9 +177,7 @@ constexpr void move_pkt_withtime(struct packet *pkt_ptr, const double distance)
 
   // frequency should only over decrease due to packet movement
   // enforce this to overcome numerical error
-  if (pkt_ptr->nu_cmf > nu_cmf_old) {
-    pkt_ptr->nu_cmf = nu_cmf_old;
-  }
+  pkt_ptr->nu_cmf = std::min(pkt_ptr->nu_cmf, nu_cmf_old);
 }
 
 constexpr double get_arrive_time(const struct packet *pkt_ptr)
