@@ -1251,8 +1251,6 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
         if constexpr (!SEPARATE_STIMRECOMB) {
           double departure_ratio = globals::cellhistory[tid].ch_allcont_departureratios[i];
           if (departure_ratio < 0) {
-            // const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-
             const int upper = globals::allcont[i].upperlevel;
             const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
             const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
