@@ -2251,7 +2251,7 @@ static auto get_poscoordpointnum(double pos, double time, int axis) -> int {
 auto get_cellindex_from_pos(std::span<const double, 3> pos, double time) -> int
 /// identify the cell index from an (x,y,z) position and a time.
 {
-  double posgridcoords[3];
+  double posgridcoords[3] = {NAN, NAN, NAN};
   get_gridcoords_from_xyz(pos, posgridcoords);
   int cellindex = 0;
   for (int d = 0; d < get_ngriddimensions(); d++) {
@@ -2295,8 +2295,8 @@ static constexpr auto expanding_shell_intersection(std::span<const double, 3> po
     double dist1 = (-b + sqrt(discriminant)) / 2 / a;
     double dist2 = (-b - sqrt(discriminant)) / 2 / a;
 
-    double posfinal1[3] = {0};
-    double posfinal2[3] = {0};
+    double posfinal1[3];
+    double posfinal2[3];
 
     for (int d = 0; d < 3; d++) {
       posfinal1[d] = pos[d] + dist1 * dir[d];

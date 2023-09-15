@@ -460,7 +460,7 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   vel_rev[1] = -vel_vec[1];
   vel_rev[2] = -vel_vec[2];
 
-  double dummy_dir[3];
+  double dummy_dir[3] = {NAN, NAN, NAN};
   frame_transform(new_dir_cmf, &Q, &U, vel_rev, dummy_dir);
 
   pkt_ptr->stokes[0] = I;
@@ -1081,7 +1081,7 @@ auto get_rpkt_escape_prob(struct packet *pkt_ptr, const double tstart) -> double
   double escape_prob_sum = 0.;
   const int ndirs = 40;  // number of random directions to sample
   for (int n = 0; n < ndirs; n++) {
-    double dirvec[3];
+    double dirvec[3] = {NAN, NAN, NAN};
     get_rand_isotropic_unitvec(dirvec);
     double tau_cont = 0.;
     double tau_lines = 0.;

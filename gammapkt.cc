@@ -471,7 +471,7 @@ static void compton_scatter(struct packet *pkt_ptr)
 
     const double cos_theta = (xx < THOMSON_LIMIT) ? thomson_angle() : 1. - ((f - 1) / xx);
 
-    double new_dir[3];
+    double new_dir[3] = {NAN, NAN, NAN};
     scatter_dir(cmf_dir, cos_theta, new_dir);
 
     const double test = dot(new_dir, new_dir);

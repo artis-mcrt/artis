@@ -115,8 +115,6 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   double sin2i1 = NAN;
   double cos2i2 = NAN;
   double sin2i2 = NAN;
-  double ref1[3];
-  double ref2[3];
   int anumber = 0;
   int tau_flag = 0;
 
@@ -153,6 +151,8 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
 
   // ------------ SCATTERING EVENT: dipole function --------------------
 
+  double ref1[3] = {NAN, NAN, NAN};
+  double ref2[3] = {NAN, NAN, NAN};
   if (realtype == 1) {
     // Transform Stokes Parameters from the RF to the CMF
 
@@ -1023,16 +1023,10 @@ void meridian(std::span<const double, 3> n, std::span<double, 3> ref1, std::span
 // Routine to transform the Stokes Parameters from RF to CMF
 void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v,
                      std::span<double, 3> n_cmf) {
-  double cos2rot_angle = NAN;
-  double sin2rot_angle = NAN;
-  double e_rf[3];
-  double e_cmf[3];
-  double e_cmf_ref1 = 0.;
-  double e_cmf_ref2 = 0.;
   double theta_rot = 0.;
 
-  double ref1[3];
-  double ref2[3];
+  double ref1[3] = {NAN, NAN, NAN};
+  double ref2[3] = {NAN, NAN, NAN};
   // Meridian frame in the RF
   meridian(n_rf, ref1, ref2);
 
@@ -1044,6 +1038,8 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
 
   // We want to compute the angle between ref1 and the electric field
   double rot_angle = 0;
+  double cos2rot_angle = NAN;
+  double sin2rot_angle = NAN;
 
   if (p > 0) {
     cos2rot_angle = Q0 / p;
@@ -1076,13 +1072,15 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
   }
 
   // Define electric field by linear combination of ref1 and ref2 (using the angle just computed)
-  e_rf[0] = cos(rot_angle) * ref1[0] - sin(rot_angle) * ref2[0];
-  e_rf[1] = cos(rot_angle) * ref1[1] - sin(rot_angle) * ref2[1];
-  e_rf[2] = cos(rot_angle) * ref1[2] - sin(rot_angle) * ref2[2];
+
+  const double e_rf[3] = {cos(rot_angle) * ref1[0] - sin(rot_angle) * ref2[0],
+                          cos(rot_angle) * ref1[1] - sin(rot_angle) * ref2[1],
+                          cos(rot_angle) * ref1[2] - sin(rot_angle) * ref2[2]};
 
   // Aberration
   angle_ab(n_rf, v, n_cmf);
 
+  double e_cmf[3] = {NAN, NAN, NAN};
   // Lorentz transformation of E
   lorentz(e_rf, n_rf, v, e_cmf);
 
@@ -1090,8 +1088,8 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
   meridian(n_cmf, ref1, ref2);
 
   // Projection of E onto ref1 and ref2
-  e_cmf_ref1 = e_cmf[0] * ref1[0] + e_cmf[1] * ref1[1] + e_cmf[2] * ref1[2];
-  e_cmf_ref2 = e_cmf[0] * ref2[0] + e_cmf[1] * ref2[1] + e_cmf[2] * ref2[2];
+  const double e_cmf_ref1 = e_cmf[0] * ref1[0] + e_cmf[1] * ref1[1] + e_cmf[2] * ref1[2];
+  const double e_cmf_ref2 = e_cmf[0] * ref2[0] + e_cmf[1] * ref2[1] + e_cmf[2] * ref2[2];
 
   // Compute the angle between ref1 and the electric field
   if ((e_cmf_ref1 > 0) && (e_cmf_ref2 < 0)) {
