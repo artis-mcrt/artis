@@ -2362,13 +2362,16 @@ static constexpr auto expanding_shell_intersection(const double pos[3], const do
 static auto get_coordboundary_distances_cylindrical2d(const double pkt_pos[3], const double pkt_dir[3],
                                                       const double pktposgridcoord[3], const double pktvelgridcoord[3],
                                                       int cellindex, const double tstart, const double cellcoordmax[3],
-                                                      double d_coordminboundary[3],
-                                                      double d_coordmaxboundary[3])
-    -> void {  // to get the cylindrical intersection, get the spherical intersection when Z components are zero
+                                                      double d_coordminboundary[3], double d_coordmaxboundary[3])
+    -> void {
+  // to get the cylindrical intersection, get the spherical intersection when Z components are zero
   const double posnoz[3] = {pkt_pos[0], pkt_pos[1], 0.};
-  double dirnoz[3] = {pkt_dir[0], pkt_dir[1], 0.};
-  const double xyspeed = vec_len(dirnoz) * CLIGHT_PROP;  // r_cyl component of velocity
-  vec_norm(dirnoz, dirnoz);
+
+  const double dirxylen = std::sqrt((pkt_dir[0] * pkt_dir[0]) + (pkt_dir[1] * pkt_dir[1]));
+  const double xyspeed = dirxylen * CLIGHT_PROP;  // r_cyl component of velocity
+
+  // make a normalised direction vector in the xy plane
+  double dirnoz[3] = {pkt_dir[0] / dirxylen, pkt_dir[1] / dirxylen, 0.};
 
   const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
   d_coordminboundary[0] = -1;
