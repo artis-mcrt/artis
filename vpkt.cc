@@ -109,10 +109,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   double pn = NAN;
   double prob = NAN;
   double mu = NAN;
-  double i1 = NAN;
   double i2 = NAN;
-  double cos2i1 = NAN;
-  double sin2i1 = NAN;
   double cos2i2 = NAN;
   double sin2i2 = NAN;
   int anumber = 0;
@@ -167,9 +164,9 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
     // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
     // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
     // ref1_sc and ref2_sc in the scattering plane.
-    i1 = rot_angle(old_dir_cmf, obs_cmf, ref1, ref2);
-    cos2i1 = cos(2 * i1);
-    sin2i1 = sin(2 * i1);
+    const double i1 = rot_angle(old_dir_cmf, obs_cmf, ref1, ref2);
+    const double cos2i1 = cos(2 * i1);
+    const double sin2i1 = sin(2 * i1);
 
     Qold = Qi * cos2i1 - Ui * sin2i1;
     Uold = Qi * sin2i1 + Ui * cos2i1;
@@ -370,16 +367,14 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
     // printout("bin %d spectrum %d tau_vpkt %g\n", bin, ind, tau_vpkt[ind]);
     prob = pn * exp(-tau_vpkt[ind]);
 
-    Itmp = I * prob;
-    Qtmp = Q * prob;
-    Utmp = U * prob;
+    assert_always(std::isfinite(prob));
 
-    dummy_ptr->stokes[0] = Itmp;
-    dummy_ptr->stokes[1] = Qtmp;
-    dummy_ptr->stokes[2] = Utmp;
+    dummy_ptr->stokes[0] = I * prob;
+    dummy_ptr->stokes[1] = Q * prob;
+    dummy_ptr->stokes[2] = U * prob;
 
-    if (Itmp != Itmp || Qtmp != Qtmp || Utmp != Utmp) {
-      printout("Nan Number!! %g %g %g %g %g %g %g %g \n", Itmp, Qtmp, Utmp, pn, tau_vpkt[ind], mu, i1, i2);
+    for (double stokeval : dummy_ptr->stokes) {
+      assert_always(std::isfinite(stokeval));
     }
 
     // bin on fly and produce file with spectrum
