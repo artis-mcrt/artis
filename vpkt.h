@@ -44,9 +44,9 @@ constexpr int VMNUBINS = 2500;
 
 // TIME
 // dlogt = (log(globals::tmin) - log(globals::tmax)) / VMTBINS ~ 3.69e-2 (111 over 2-120 d)
-constexpr double tmin_vspec = (120 * DAY);
-constexpr double tmax_vspec = (150 * DAY);
-constexpr int VMTBINS = 10;
+constexpr double tmin_vspec = (10 * DAY);
+constexpr double tmax_vspec = (30 * DAY);
+constexpr int VMTBINS = 30;
 
 // Total number of frequency ranges
 constexpr int MRANGE = 2;
