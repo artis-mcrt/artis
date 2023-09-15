@@ -2300,7 +2300,7 @@ static constexpr auto expanding_shell_intersection(std::span<const double> pos, 
     double posfinal1[3];
     double posfinal2[3];
 
-    for (int d = 0; d < pos.size(); d++) {
+    for (size_t d = 0; d < pos.size(); d++) {
       posfinal1[d] = pos[d] + dist1 * dir[d];
       posfinal2[d] = pos[d] + dist2 * dir[d];
     }
