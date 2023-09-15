@@ -2267,11 +2267,13 @@ auto get_cellindex_from_pos(std::span<const double, 3> pos, double time) -> int
   return cellindex;
 }
 
-static constexpr auto expanding_shell_intersection(std::span<const double, 3> pos, std::span<const double, 3> dir,
+static constexpr auto expanding_shell_intersection(std::span<const double> pos, std::span<const double> dir,
                                                    const double speed, const double shellradiuststart,
                                                    const bool isinnerboundary, const double tstart) -> double
-// find the closest forward distance to the intersection of a ray with an expanding spherical shell
-// return -1 if there are no forward intersections (or if the intersection is tangential to the shell)
+// find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
+// 3-vectors) or expanding circle (2D vectors)
+// returns -1 if there are no forward intersections (or if the intersection
+// is tangential to the shell)
 {
   assert_always(shellradiuststart > 0);
 
@@ -2298,7 +2300,7 @@ static constexpr auto expanding_shell_intersection(std::span<const double, 3> po
     double posfinal1[3];
     double posfinal2[3];
 
-    for (int d = 0; d < 3; d++) {
+    for (int d = 0; d < pos.size(); d++) {
       posfinal1[d] = pos[d] + dist1 * dir[d];
       posfinal2[d] = pos[d] + dist2 * dir[d];
     }
@@ -2364,14 +2366,16 @@ static auto get_coordboundary_distances_cylindrical2d(const double pkt_pos[3], c
                                                       int cellindex, const double tstart, const double cellcoordmax[3],
                                                       double d_coordminboundary[3], double d_coordmaxboundary[3])
     -> void {
-  // to get the cylindrical intersection, get the spherical intersection when Z components are zero
-  const double posnoz[3] = {pkt_pos[0], pkt_pos[1], 0.};
+  // to get the cylindrical intersection, get the spherical intersection with Z components set to zero, and the
+  // propagation speed set to the xy component of the 3-velocity
+
+  const double posnoz[2] = {pkt_pos[0], pkt_pos[1]};
 
   const double dirxylen = std::sqrt((pkt_dir[0] * pkt_dir[0]) + (pkt_dir[1] * pkt_dir[1]));
   const double xyspeed = dirxylen * CLIGHT_PROP;  // r_cyl component of velocity
 
   // make a normalised direction vector in the xy plane
-  const double dirnoz[3] = {pkt_dir[0] / dirxylen, pkt_dir[1] / dirxylen, 0.};
+  const double dirnoz[2] = {pkt_dir[0] / dirxylen, pkt_dir[1] / dirxylen};
 
   const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
   d_coordminboundary[0] = -1;
