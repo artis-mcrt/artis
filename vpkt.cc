@@ -223,7 +223,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   // --------- compute the optical depth to boundary ----------------
 
   mgi = grid::get_cell_modelgridindex(dummy_ptr->where);
-  struct rpkt_cont_opacity kappa_rpkt_cont = {};
+  struct rpkt_cont_opacity kappa_vpkt_cont = {};
 
   while (!end_packet) {
     ldist = 0;
@@ -232,12 +232,12 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
     sdist = grid::boundary_distance(dummy_ptr, &snext);
     s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
 
-    calculate_kappa_rpkt_cont(dummy_ptr, &kappa_rpkt_cont);
+    calculate_kappa_rpkt_cont(dummy_ptr, &kappa_vpkt_cont);
 
-    kap_cont = kappa_rpkt_cont.total;
-    kap_cont_nobf = kap_cont - kappa_rpkt_cont.bf;
-    kap_cont_noff = kap_cont - kappa_rpkt_cont.ff;
-    kap_cont_noes = kap_cont - kappa_rpkt_cont.es;
+    kap_cont = kappa_vpkt_cont.total;
+    kap_cont_nobf = kap_cont - kappa_vpkt_cont.bf;
+    kap_cont_noff = kap_cont - kappa_vpkt_cont.ff;
+    kap_cont_noes = kap_cont - kappa_vpkt_cont.es;
 
     for (int ind = 0; ind < Nspectra; ind++) {
       if (exclude[ind] == -2) {
