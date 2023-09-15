@@ -84,11 +84,6 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   double kap_cont_noes = NAN;
   int snext = 0;
   double t_arrive = NAN;
-  int element = 0;
-  int ion = 0;
-  int upper = 0;
-  int lower = 0;
-  double A_ul = NAN;
   double B_ul = NAN;
   double B_lu = NAN;
   double n_u = NAN;
@@ -112,7 +107,6 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   double i2 = NAN;
   double cos2i2 = NAN;
   double sin2i2 = NAN;
-  int anumber = 0;
   int tau_flag = 0;
 
   int bin_range = 0;
@@ -262,13 +256,13 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
       const double nutrans = globals::linelist[lineindex].nu;
 
       if (lineindex >= 0) {
-        element = globals::linelist[lineindex].elementindex;
-        ion = globals::linelist[lineindex].ionindex;
-        upper = globals::linelist[lineindex].upperlevelindex;
-        lower = globals::linelist[lineindex].lowerlevelindex;
-        A_ul = globals::linelist[lineindex].einstein_A;
+        const int element = globals::linelist[lineindex].elementindex;
+        const int ion = globals::linelist[lineindex].ionindex;
+        const int upper = globals::linelist[lineindex].upperlevelindex;
+        const int lower = globals::linelist[lineindex].lowerlevelindex;
+        const auto A_ul = globals::linelist[lineindex].einstein_A;
 
-        anumber = get_atomicnumber(element);
+        const int anumber = get_atomicnumber(element);
 
         dummy_ptr->next_trans = lineindex + 1;
 
@@ -373,7 +367,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
     dummy_ptr->stokes[1] = Q * prob;
     dummy_ptr->stokes[2] = U * prob;
 
-    for (double stokeval : dummy_ptr->stokes) {
+    for (const auto stokeval : dummy_ptr->stokes) {
       assert_always(std::isfinite(stokeval));
     }
 
