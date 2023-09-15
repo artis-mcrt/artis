@@ -2,6 +2,7 @@
 #define GRIDINIT_H
 
 #include <cinttypes>
+#include <span>
 
 #include "artisoptions.h"
 #include "constants.h"
@@ -128,7 +129,7 @@ int get_npts_model();
 int get_nonempty_npts_model();
 double get_t_model();
 int get_cell_modelgridindex(int cellindex);
-int get_cellindex_from_pos(const double pos[3], double time);
+int get_cellindex_from_pos(std::span<const double, 3> pos, double time);
 void read_ejecta_model();
 void write_grid_restart_data(int timestep);
 int get_maxndo();
@@ -145,7 +146,7 @@ static inline float get_elem_abundance(int modelgridindex, int element)
   return modelgrid[modelgridindex].composition[element].abundance;
 }
 
-constexpr auto get_gridcoords_from_xyz(const double pos_xyz[3], double posgridcoord[3]) -> void {
+constexpr auto get_gridcoords_from_xyz(std::span<const double, 3> pos_xyz, std::span<double, 3> posgridcoord) -> void {
   if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     posgridcoord[0] = pos_xyz[0];
     posgridcoord[1] = pos_xyz[1];

@@ -2,23 +2,28 @@
 #define VPKT_H
 
 #include <cstdio>
+#include <span>
 
 #include "artisoptions.h"
 
-double rot_angle(double n1[3], double n2[3], double ref1[3], double ref2[3]);
-void meridian(const double n[3], double ref1[3], double ref2[3]);
-void frame_transform(const double n_rf[3], double *Q, double *U, const double v[3], double n_cmf[3]);
-void lorentz(const double e_rf[3], const double n_rf[3], const double v[3], double e_cmf[3]);
+double rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<double, 3> ref1,
+                 std::span<double, 3> ref2);
+void meridian(std::span<const double, 3> n, std::span<double, 3> ref1, std::span<double, 3> ref2);
+void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v,
+                     std::span<double, 3> n_cmf);
+void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, std::span<const double, 3> v,
+             std::span<double, 3> e_cmf);
 
-void rlc_emiss_vpkt(const struct packet *const pkt_ptr, double t_current, int bin, double obs[3], int realtype);
+void rlc_emiss_vpkt(const struct packet *const pkt_ptr, double t_current, int bin, std::span<double, 3> obs,
+                    int realtype);
 void add_to_vspecpol(const struct packet *const pkt_ptr, int bin, int ind, double t_arrive);
 void init_vspecpol();
 void read_parameterfile_vpkt();
 void write_vspecpol(FILE *specpol_file);
 void read_vspecpol(int my_rank, int nts);
 void init_vpkt_grid();
-void add_to_vpkt_grid(const struct packet *const dummy_ptr, const double vel[3], int bin_range, int bin,
-                      const double obs[3]);
+void add_to_vpkt_grid(const struct packet *const dummy_ptr, std::span<const double, 3> vel, int bin_range, int bin,
+                      std::span<const double, 3> obs);
 void write_vpkt_grid(FILE *vpkt_grid_file);
 void read_vpkt_grid(FILE *vpkt_grid_file);
 int check_tau(const double *tau, const double *tau_max);
@@ -39,9 +44,9 @@ constexpr int VMNUBINS = 2500;
 
 // TIME
 // dlogt = (log(globals::tmin) - log(globals::tmax)) / VMTBINS ~ 3.69e-2 (111 over 2-120 d)
-constexpr double tmin_vspec = (10 * DAY);
-constexpr double tmax_vspec = (30 * DAY);
-constexpr int VMTBINS = 30;
+constexpr double tmin_vspec = (120 * DAY);
+constexpr double tmax_vspec = (150 * DAY);
+constexpr int VMTBINS = 10;
 
 // Total number of frequency ranges
 constexpr int MRANGE = 2;

@@ -2,22 +2,23 @@
 #define VECTORS_H
 
 #include <cmath>
+#include <span>
 
 #include "constants.h"
 #include "exspec.h"
 #include "packet.h"
 #include "sn3d.h"
 
-void scatter_dir(const double dir_in[3], double cos_theta, double dir_out[3]);
-void get_rand_isotropic_unitvec(double vecout[3]);
+void scatter_dir(std::span<const double, 3> dir_in, double cos_theta, std::span<double, 3> dir_out);
+void get_rand_isotropic_unitvec(std::span<double, 3> vecout);
 
-constexpr double vec_len(const double x[3])
+constexpr double vec_len(std::span<const double, 3> x)
 // return the the magnitude of a vector
 {
   return std::sqrt((x[0] * x[0]) + (x[1] * x[1]) + (x[2] * x[2]));
 }
 
-constexpr void vec_norm(const double vec_in[3], double vec_out[3])
+constexpr void vec_norm(std::span<const double, 3> vec_in, std::span<double, 3> vec_out)
 // normalizing a copy of vec_in and save it to vec_out
 {
   const double magnitude = vec_len(vec_in);
@@ -29,13 +30,13 @@ constexpr void vec_norm(const double vec_in[3], double vec_out[3])
   assert_testmodeonly(fabs(vec_len(vec_out) - 1.) < 1.e-10);
 }
 
-constexpr double dot(const double x[3], const double y[3])
+constexpr double dot(std::span<const double, 3> x, std::span<const double, 3> y)
 // vector dot product
 {
   return (x[0] * y[0]) + (x[1] * y[1]) + (x[2] * y[2]);
 }
 
-constexpr void get_velocity(const double x[3], double y[3], const double t)
+constexpr void get_velocity(std::span<const double, 3> x, std::span<double, 3> y, const double t)
 // Routine for getting velocity vector of the flow at a position with homologous expansion.
 {
   y[0] = x[0] / t;
@@ -43,25 +44,26 @@ constexpr void get_velocity(const double x[3], double y[3], const double t)
   y[2] = x[2] / t;
 }
 
-constexpr void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]) {
+constexpr void cross_prod(std::span<const double, 3> vec1, std::span<const double, 3> vec2,
+                          std::span<double, 3> vecout) {
   vecout[0] = (vec1[1] * vec2[2]) - (vec2[1] * vec1[2]);
   vecout[1] = (vec1[2] * vec2[0]) - (vec2[2] * vec1[0]);
   vecout[2] = (vec1[0] * vec2[1]) - (vec2[0] * vec1[1]);
 }
 
-constexpr void vec_scale(double vec[3], const double scalefactor) {
+constexpr void vec_scale(std::span<double, 3> vec, const double scalefactor) {
   vec[0] *= scalefactor;
   vec[1] *= scalefactor;
   vec[2] *= scalefactor;
 }
 
-constexpr void vec_copy(double destination[3], const double source[3]) {
+constexpr void vec_copy(std::span<double, 3> destination, std::span<const double, 3> source) {
   destination[0] = source[0];
   destination[1] = source[1];
   destination[2] = source[2];
 }
 
-constexpr void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
+constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double, 3> vel, std::span<double, 3> dir2)
 // aberation of angles in special relativity
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1
@@ -81,7 +83,7 @@ constexpr void angle_ab(const double dir1[3], const double vel[3], double dir2[3
   vec_norm(dir2, dir2);
 }
 
-constexpr double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
+constexpr double doppler_nucmf_on_nurf(std::span<const double, 3> dir_rf, std::span<const double, 3> vel_rf)
 // Doppler factor
 // arguments:
 //   dir_rf: the rest frame direction (unit vector) of light propagation
@@ -107,7 +109,7 @@ constexpr double doppler_nucmf_on_nurf(const double dir_rf[3], const double vel_
   return dopplerfactor;
 }
 
-constexpr double doppler_squared_nucmf_on_nurf(const double dir_rf[3], const double vel_rf[3])
+constexpr double doppler_squared_nucmf_on_nurf(std::span<const double, 3> dir_rf, std::span<const double, 3> vel_rf)
 // Doppler factor squared, either to first order v/c or fully relativisitic
 // depending on USE_RELATIVISTIC_DOPPLER_SHIFT
 //
@@ -188,7 +190,7 @@ inline double get_arrive_time_cmf(const struct packet *pkt_ptr) {
   return pkt_ptr->escape_time * std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
 }
 
-constexpr int get_escapedirectionbin(const double dir_in[3], const double syn_dir[3]) {
+constexpr int get_escapedirectionbin(std::span<const double, 3> dir_in, std::span<const double, 3> syn_dir) {
   constexpr double xhat[3] = {1.0, 0.0, 0.0};
 
   // sometimes dir vectors aren't accurately normalised

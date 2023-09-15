@@ -71,7 +71,7 @@ int nvpkt_esc1;  // electron scattering event
 int nvpkt_esc2;  // kpkt deactivation
 int nvpkt_esc3;  // macroatom deactivation
 
-void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int bin, double obs[3],
+void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int bin, std::span<double, 3> obs,
                     const int realtype) {
   double vel_vec[3];
   double old_dir_cmf[3];
@@ -626,8 +626,8 @@ void init_vpkt_grid() {
 }
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vpkt_grid(const struct packet *const dummy_ptr, const double vel[3], int bin_range, int bin,
-                      const double obs[3]) {
+void add_to_vpkt_grid(const struct packet *const dummy_ptr, std::span<const double, 3> vel, int bin_range, int bin,
+                      std::span<const double, 3> obs) {
   double vref1 = NAN;
   double vref2 = NAN;
 
@@ -954,7 +954,8 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const double t_current, const 
   return vflag;
 }
 
-auto rot_angle(double n1[3], double n2[3], double ref1[3], double ref2[3]) -> double {
+auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<double, 3> ref1, std::span<double, 3> ref2)
+    -> double {
   /* ------------- Rotation angle from the scattering plane --------------------------------------------- */
   /* -------- We need to rotate Stokes Parameters to (or from) the scattering plane from (or to) -------- */
   /* -------- the meridian frame such that Q=1 is in the scattering plane and along ref1 ---------------- */
@@ -1005,7 +1006,7 @@ auto rot_angle(double n1[3], double n2[3], double ref1[3], double ref2[3]) -> do
 }
 
 // Routine to compute the meridian frame axes ref1 and ref2
-void meridian(const double n[3], double ref1[3], double ref2[3]) {
+void meridian(std::span<const double, 3> n, std::span<double, 3> ref1, std::span<double, 3> ref2) {
   // for ref_1 use (from triple product rule)
 
   ref1[0] = -1. * n[0] * n[2] / sqrt(n[0] * n[0] + n[1] * n[1]);
@@ -1020,7 +1021,8 @@ void meridian(const double n[3], double ref1[3], double ref2[3]) {
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
-void frame_transform(const double n_rf[3], double *Q, double *U, const double v[3], double n_cmf[3]) {
+void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v,
+                     std::span<double, 3> n_cmf) {
   double cos2rot_angle = NAN;
   double sin2rot_angle = NAN;
   double e_rf[3];
@@ -1123,7 +1125,8 @@ void frame_transform(const double n_rf[3], double *Q, double *U, const double v[
 }
 
 /* ----------------------- Lorentz transformations from RF to CMF --------------------------------------------- */
-void lorentz(const double e_rf[3], const double n_rf[3], const double v[3], double e_cmf[3]) {
+void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, std::span<const double, 3> v,
+             std::span<double, 3> e_cmf) {
   double beta[3];
   double e_par[3];
   double e_perp[3];

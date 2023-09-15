@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <span>
 
 #include "atomic.h"
 #include "grid.h"
@@ -949,9 +950,10 @@ void do_rpkt(struct packet *pkt_ptr, const double t2) {
   }
 }
 
-static auto get_rpkt_escapeprob_fromdirection(const double startpos[3], double start_nu_cmf, int startcellindex,
-                                              double tstart, double dirvec[3], enum cell_boundary last_cross,
-                                              double *tot_tau_cont, double *tot_tau_lines) -> double {
+static auto get_rpkt_escapeprob_fromdirection(std::span<const double, 3> startpos, double start_nu_cmf,
+                                              int startcellindex, double tstart, std::span<double, 3> dirvec,
+                                              enum cell_boundary last_cross, double *tot_tau_cont,
+                                              double *tot_tau_lines) -> double {
   struct packet vpkt;
   vpkt.type = TYPE_RPKT;
   vpkt.nu_cmf = start_nu_cmf;

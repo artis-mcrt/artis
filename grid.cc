@@ -2248,7 +2248,7 @@ static auto get_poscoordpointnum(double pos, double time, int axis) -> int {
   }
 }
 
-auto get_cellindex_from_pos(const double pos[3], double time) -> int
+auto get_cellindex_from_pos(std::span<const double, 3> pos, double time) -> int
 /// identify the cell index from an (x,y,z) position and a time.
 {
   double posgridcoords[3];
@@ -2267,9 +2267,9 @@ auto get_cellindex_from_pos(const double pos[3], double time) -> int
   return cellindex;
 }
 
-static constexpr auto expanding_shell_intersection(const double pos[3], const double dir[3], const double speed,
-                                                   const double shellradiuststart, const bool isinnerboundary,
-                                                   const double tstart) -> double
+static constexpr auto expanding_shell_intersection(std::span<const double, 3> pos, std::span<const double, 3> dir,
+                                                   const double speed, const double shellradiuststart,
+                                                   const bool isinnerboundary, const double tstart) -> double
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell
 // return -1 if there are no forward intersections (or if the intersection is tangential to the shell)
 {
@@ -2371,7 +2371,7 @@ static auto get_coordboundary_distances_cylindrical2d(const double pkt_pos[3], c
   const double xyspeed = dirxylen * CLIGHT_PROP;  // r_cyl component of velocity
 
   // make a normalised direction vector in the xy plane
-  double dirnoz[3] = {pkt_dir[0] / dirxylen, pkt_dir[1] / dirxylen, 0.};
+  const double dirnoz[3] = {pkt_dir[0] / dirxylen, pkt_dir[1] / dirxylen, 0.};
 
   const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
   d_coordminboundary[0] = -1;

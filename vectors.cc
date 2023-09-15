@@ -5,7 +5,7 @@
 #include "artisoptions.h"
 #include "sn3d.h"
 
-void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[3])
+void scatter_dir(std::span<const double, 3> dir_in, const double cos_theta, std::span<double, 3> dir_out)
 // Routine for scattering a direction through angle theta.
 {
   // begin with setting the direction in coordinates where original direction
@@ -43,7 +43,7 @@ void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[
   assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
 }
 
-void get_rand_isotropic_unitvec(double vecout[3])
+void get_rand_isotropic_unitvec(std::span<double, 3> vecout)
 // Assuming isotropic distribution, get a random direction vector
 {
   // alternatively, use GSL's functions:
