@@ -1236,29 +1236,19 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
         (!DETAILED_BF_ESTIMATORS_ON &&
          ((ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6) || (level == 0)))) {
       const double nu_edge = globals::allcont[i].nu_edge;
-      // const int phixstargetindex = globals::allcont[i].phixstargetindex;
       const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
-      // printout("i %d, nu_edge %g\n",i,nu_edge);
       const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
       if (nu < nu_edge) {
         break;
       }
 
       if (nu <= nu_max_phixs && nnlevel > 0) {
-        // printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
-        // const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
-        // const double sigma_bf = photoionization_crosssection_fromtable(
-        //     globals::elements[element].ions[ion].levels[level].photoion_xs, nu_edge, nu);
         const double sigma_bf = photoionization_crosssection_fromtable(globals::allcont[i].photoion_xs, nu_edge, nu);
 
-        // const double probability = get_phixsprobability(element, ion, level, phixstargetindex);
         const double probability = globals::allcont[i].probability;
-        // assert_always(probability == probability2);
 
-        double corrfactor;
-        if constexpr (SEPARATE_STIMRECOMB) {
-          corrfactor = 1.;  // no subtraction of stimulated recombination
-        } else {
+        double corrfactor = 1.;  // default to no subtraction of stimulated recombination
+        if constexpr (!SEPARATE_STIMRECOMB) {
           double departure_ratio = globals::cellhistory[tid].ch_allcont_departureratios[i];
           if (departure_ratio < 0) {
             // const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
@@ -1271,11 +1261,7 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
           }
 
           const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
-          corrfactor = 1 - stimfactor;  // photoionisation minus stimulated recombination
-          if (corrfactor < 0) {
-            corrfactor = 0.;
-          }
-          // const double corrfactor = 1.; // no subtraction of stimulated recombination
+          corrfactor = std::max(0., 1 - stimfactor);  // photoionisation minus stimulated recombination
         }
 
         const double kappa_bf_contr = nnlevel * sigma_bf * probability * corrfactor;
