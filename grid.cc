@@ -2361,11 +2361,13 @@ static constexpr auto expanding_shell_intersection(std::span<const double> pos, 
   return -1.;
 }
 
-static auto get_coordboundary_distances_cylindrical2d(const double pkt_pos[3], const double pkt_dir[3],
-                                                      const double pktposgridcoord[3], const double pktvelgridcoord[3],
-                                                      int cellindex, const double tstart, const double cellcoordmax[3],
-                                                      double d_coordminboundary[3], double d_coordmaxboundary[3])
-    -> void {
+static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3> pkt_pos,
+                                                      std::span<const double, 3> pkt_dir,
+                                                      std::span<const double, 3> pktposgridcoord,
+                                                      std::span<const double, 3> pktvelgridcoord, int cellindex,
+                                                      const double tstart, std::span<const double, 3> cellcoordmax,
+                                                      std::span<double, 3> d_coordminboundary,
+                                                      std::span<double, 3> d_coordmaxboundary) -> void {
   // to get the cylindrical intersection, get the spherical intersection with Z components set to zero, and the
   // propagation speed set to the xy component of the 3-velocity
 
