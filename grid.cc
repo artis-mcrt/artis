@@ -2297,8 +2297,8 @@ static constexpr auto expanding_shell_intersection(std::span<const double> pos, 
     double dist1 = (-b + sqrt(discriminant)) / 2 / a;
     double dist2 = (-b - sqrt(discriminant)) / 2 / a;
 
-    double posfinal1[3];
-    double posfinal2[3];
+    double posfinal1[3] = {0};
+    double posfinal2[3] = {0};
 
     for (size_t d = 0; d < pos.size(); d++) {
       posfinal1[d] = pos[d] + dist1 * dir[d];
@@ -2306,8 +2306,8 @@ static constexpr auto expanding_shell_intersection(std::span<const double> pos, 
     }
 
     const double v_rad_shell = shellradiuststart / tstart;
-    const double v_rad_final1 = dot(posfinal1, dir) * speed / vec_len(posfinal1);
-    const double v_rad_final2 = dot(posfinal2, dir) * speed / vec_len(posfinal2);
+    const double v_rad_final1 = dot(dir, posfinal1) * speed / vec_len(posfinal1);
+    const double v_rad_final2 = dot(dir, posfinal2) * speed / vec_len(posfinal2);
 
     // invalidate any solutions that require entering the boundary from the wrong radial direction
     if (isinnerboundary) {
