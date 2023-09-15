@@ -12,10 +12,14 @@
 void scatter_dir(std::span<const double, 3> dir_in, double cos_theta, std::span<double, 3> dir_out);
 void get_rand_isotropic_unitvec(std::span<double, 3> vecout);
 
-constexpr double vec_len(std::span<const double, 3> x)
+constexpr auto vec_len(std::span<const double> vec) -> double
 // return the the magnitude of a vector
 {
-  return std::sqrt((x[0] * x[0]) + (x[1] * x[1]) + (x[2] * x[2]));
+  double squaredlen = 0;
+  for (const auto &vec_i : vec) {
+    squaredlen += (vec_i * vec_i);
+  }
+  return std::sqrt(squaredlen);
 }
 
 constexpr void vec_norm(std::span<const double, 3> vec_in, std::span<double, 3> vec_out)
