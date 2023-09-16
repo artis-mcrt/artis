@@ -31,7 +31,7 @@ constexpr std::string_view elsymbols[] = {
     "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W",  "Re", "Os", "Ir", "Pt", "Au",  "Hg", "Tl",  "Pb", "Bi",  "Po",
     "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U",  "Np", "Pu", "Am", "Cm",  "Bk", "Cf",  "Es", "Fm",  "Md",
     "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Uut", "Fl", "Uup", "Lv", "Uus", "Uuo"};
-constexpr int Z_MAX = elsymbols.size() - 1;
+constexpr int Z_MAX = elsymbols.length() - 1;
 
 struct nuclide {
   int z = -1;                    // atomic number
@@ -74,7 +74,7 @@ auto get_num_nuclides() -> int { return nuclides.size(); }
 
 auto get_elname(const int z) -> const char * {
   assert_testmodeonly(z <= Z_MAX);
-  return elsymbols[z];
+  return elsymbols[z].front();
 }
 
 auto get_nuc_z(int nucindex) -> int {
