@@ -23,7 +23,7 @@
 
 namespace decay {
 
-constexpr std::string_view elsymbols[] = {
+constexpr std::vector<std::string_view> elsymbols = {
     "n",  "H",  "He", "Li", "Be", "B",  "C",  "N",  "O",  "F",  "Ne", "Na",  "Mg", "Al",  "Si", "P",   "S",
     "Cl", "Ar", "K",  "Ca", "Sc", "Ti", "V",  "Cr", "Mn", "Fe", "Co", "Ni",  "Cu", "Zn",  "Ga", "Ge",  "As",
     "Se", "Br", "Kr", "Rb", "Sr", "Y",  "Zr", "Nb", "Mo", "Tc", "Ru", "Rh",  "Pd", "Ag",  "Cd", "In",  "Sn",
@@ -74,7 +74,7 @@ auto get_num_nuclides() -> int { return nuclides.size(); }
 
 auto get_elname(const int z) -> const char * {
   assert_testmodeonly(z <= Z_MAX);
-  return elsymbols[z].front();
+  return &elsymbols[z].front();
 }
 
 auto get_nuc_z(int nucindex) -> int {
