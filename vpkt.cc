@@ -1114,33 +1114,26 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
 /* ----------------------- Lorentz transformations from RF to CMF --------------------------------------------- */
 void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, std::span<const double, 3> v,
              std::span<double, 3> e_cmf) {
-  double e_perp[3];
-  double b_rf[3];
-  double b_par[3];
   double b_perp[3];
   double v_cr_b[3];
   double v_cr_e[3];
   double b_cmf[3];
 
   const double beta[3] = {v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
-  double vsqr = dot(beta, beta);
+  double const vsqr = dot(beta, beta);
 
   const double gamma_rel = 1. / (sqrt(1 - vsqr));
 
   const double e_par[3] = {dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
                            dot(e_rf, beta) * beta[2] / (vsqr)};
 
-  e_perp[0] = e_rf[0] - e_par[0];
-  e_perp[1] = e_rf[1] - e_par[1];
-  e_perp[2] = e_rf[2] - e_par[2];
+  const double e_perp[3] = {e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
 
-  b_rf[0] = n_rf[1] * e_rf[2] - n_rf[2] * e_rf[1];
-  b_rf[1] = n_rf[2] * e_rf[0] - n_rf[0] * e_rf[2];
-  b_rf[2] = n_rf[0] * e_rf[1] - n_rf[1] * e_rf[0];
+  const double b_rf[3] = {n_rf[1] * e_rf[2] - n_rf[2] * e_rf[1], n_rf[2] * e_rf[0] - n_rf[0] * e_rf[2],
+                          n_rf[0] * e_rf[1] - n_rf[1] * e_rf[0]};
 
-  b_par[0] = dot(b_rf, beta) * beta[0] / (vsqr);
-  b_par[1] = dot(b_rf, beta) * beta[1] / (vsqr);
-  b_par[2] = dot(b_rf, beta) * beta[2] / (vsqr);
+  const double b_par[3] = {dot(b_rf, beta) * beta[0] / (vsqr), dot(b_rf, beta) * beta[1] / (vsqr),
+                           dot(b_rf, beta) * beta[2] / (vsqr)};
 
   b_perp[0] = b_rf[0] - b_par[0];
   b_perp[1] = b_rf[1] - b_par[1];
