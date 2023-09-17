@@ -98,8 +98,6 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   double prob = NAN;
   double mu = NAN;
   double i2 = NAN;
-  double cos2i2 = NAN;
-  double sin2i2 = NAN;
   int tau_flag = 0;
 
   int bin_range = 0;
@@ -177,8 +175,8 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
     // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
     // meridian frame. NB: we need to add PI to transform THETA to i2
     i2 = PI + rot_angle(obs_cmf, old_dir_cmf, ref1, ref2);
-    cos2i2 = cos(2 * i2);
-    sin2i2 = sin(2 * i2);
+    const double cos2i2 = cos(2 * i2);
+    const double sin2i2 = sin(2 * i2);
 
     Q = Qnew * cos2i2 + Unew * sin2i2;
     U = -Qnew * sin2i2 + Unew * cos2i2;
