@@ -104,10 +104,8 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
 
   int bin_range = 0;
 
-  struct packet dummy;
-  dummy = *pkt_ptr;
-  struct packet *dummy_ptr = nullptr;
-  dummy_ptr = &dummy;
+  struct packet dummy = *pkt_ptr;
+  struct packet *dummy_ptr = &dummy;
 
   bool end_packet = false;
   double ldist = 0;
