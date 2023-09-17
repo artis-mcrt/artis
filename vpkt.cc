@@ -1114,28 +1114,21 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
 /* ----------------------- Lorentz transformations from RF to CMF --------------------------------------------- */
 void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, std::span<const double, 3> v,
              std::span<double, 3> e_cmf) {
-  double beta[3];
-  double e_par[3];
   double e_perp[3];
   double b_rf[3];
   double b_par[3];
   double b_perp[3];
-  double vsqr = NAN;
-  double gamma_rel = NAN;
   double v_cr_b[3];
   double v_cr_e[3];
   double b_cmf[3];
 
-  beta[0] = v[0] / CLIGHT;
-  beta[1] = v[1] / CLIGHT;
-  beta[2] = v[2] / CLIGHT;
-  vsqr = dot(beta, beta);
+  const double beta[3] = {v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
+  double vsqr = dot(beta, beta);
 
-  gamma_rel = 1. / (sqrt(1 - vsqr));
+  const double gamma_rel = 1. / (sqrt(1 - vsqr));
 
-  e_par[0] = dot(e_rf, beta) * beta[0] / (vsqr);
-  e_par[1] = dot(e_rf, beta) * beta[1] / (vsqr);
-  e_par[2] = dot(e_rf, beta) * beta[2] / (vsqr);
+  const double e_par[3] = {dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
+                           dot(e_rf, beta) * beta[2] / (vsqr)};
 
   e_perp[0] = e_rf[0] - e_par[0];
   e_perp[1] = e_rf[1] - e_par[1];
