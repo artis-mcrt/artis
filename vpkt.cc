@@ -81,9 +81,6 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   double n_u = NAN;
   double n_l = NAN;
   int mgi = 0;
-  double Itmp = NAN;
-  double Qtmp = NAN;
-  double Utmp = NAN;
   double I = NAN;
   double Q = NAN;
   double U = NAN;
@@ -366,9 +363,9 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   if (vgrid_flag == 1) {
     prob = pn * exp(-tau_vpkt[0]);
 
-    Itmp = I * prob;
-    Qtmp = Q * prob;
-    Utmp = U * prob;
+    const double Itmp = I * prob;
+    const double Qtmp = Q * prob;
+    const double Utmp = U * prob;
 
     dummy_ptr->stokes[0] = Itmp;
     dummy_ptr->stokes[1] = Qtmp;
