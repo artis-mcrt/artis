@@ -87,7 +87,6 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   double pn = NAN;
   double prob = NAN;
   double mu = NAN;
-  double i2 = NAN;
   int tau_flag = 0;
 
   int bin_range = 0;
@@ -166,7 +165,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
     // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
     // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
     // meridian frame. NB: we need to add PI to transform THETA to i2
-    i2 = PI + rot_angle(obs_cmf, old_dir_cmf, ref1, ref2);
+    const double i2 = PI + rot_angle(obs_cmf, old_dir_cmf, ref1, ref2);
     const double cos2i2 = cos(2 * i2);
     const double sin2i2 = sin(2 * i2);
 
