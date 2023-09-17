@@ -1133,9 +1133,9 @@ void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, s
 
   gamma_rel = 1. / (sqrt(1 - vsqr));
 
-  e_par[0] = (e_rf[0] * beta[0] + e_rf[1] * beta[1] + e_rf[2] * beta[2]) * beta[0] / (vsqr);
-  e_par[1] = (e_rf[0] * beta[0] + e_rf[1] * beta[1] + e_rf[2] * beta[2]) * beta[1] / (vsqr);
-  e_par[2] = (e_rf[0] * beta[0] + e_rf[1] * beta[1] + e_rf[2] * beta[2]) * beta[2] / (vsqr);
+  e_par[0] = dot(e_rf, beta) * beta[0] / (vsqr);
+  e_par[1] = dot(e_rf, beta) * beta[1] / (vsqr);
+  e_par[2] = dot(e_rf, beta) * beta[2] / (vsqr);
 
   e_perp[0] = e_rf[0] - e_par[0];
   e_perp[1] = e_rf[1] - e_par[1];
@@ -1146,8 +1146,8 @@ void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, s
   b_rf[2] = n_rf[0] * e_rf[1] - n_rf[1] * e_rf[0];
 
   b_par[0] = dot(b_rf, beta) * beta[0] / (vsqr);
-  b_par[1] = (b_rf[0] * beta[0] + b_rf[1] * beta[1] + b_rf[2] * beta[2]) * beta[1] / (vsqr);
-  b_par[2] = (b_rf[0] * beta[0] + b_rf[1] * beta[1] + b_rf[2] * beta[2]) * beta[2] / (vsqr);
+  b_par[1] = dot(b_rf, beta) * beta[1] / (vsqr);
+  b_par[2] = dot(b_rf, beta) * beta[2] / (vsqr);
 
   b_perp[0] = b_rf[0] - b_par[0];
   b_perp[1] = b_rf[1] - b_par[1];
