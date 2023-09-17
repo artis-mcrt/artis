@@ -1077,8 +1077,8 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
   meridian(n_cmf, ref1, ref2);
 
   // Projection of E onto ref1 and ref2
-  const double e_cmf_ref1 = e_cmf[0] * ref1[0] + e_cmf[1] * ref1[1] + e_cmf[2] * ref1[2];
-  const double e_cmf_ref2 = e_cmf[0] * ref2[0] + e_cmf[1] * ref2[1] + e_cmf[2] * ref2[2];
+  const double e_cmf_ref1 = dot(e_cmf, ref1);
+  const double e_cmf_ref2 = dot(e_cmf, ref2);
 
   // Compute the angle between ref1 and the electric field
   if ((e_cmf_ref1 > 0) && (e_cmf_ref2 < 0)) {
