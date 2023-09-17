@@ -78,13 +78,8 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   double obs_cmf[3];
   double vel_rev[3];
   double s_cont = NAN;
-  double kap_cont = NAN;
-  double kap_cont_nobf = NAN;
-  double kap_cont_noff = NAN;
-  double kap_cont_noes = NAN;
   int snext = 0;
   double t_arrive = NAN;
-  double B_lu = NAN;
   double n_u = NAN;
   double n_l = NAN;
   double t_line = NAN;
@@ -223,10 +218,10 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
 
     calculate_kappa_rpkt_cont(dummy_ptr, &kappa_vpkt_cont);
 
-    kap_cont = kappa_vpkt_cont.total;
-    kap_cont_nobf = kap_cont - kappa_vpkt_cont.bf;
-    kap_cont_noff = kap_cont - kappa_vpkt_cont.ff;
-    kap_cont_noes = kap_cont - kappa_vpkt_cont.es;
+    const double kap_cont = kappa_vpkt_cont.total;
+    const double kap_cont_nobf = kap_cont - kappa_vpkt_cont.bf;
+    const double kap_cont_noff = kap_cont - kappa_vpkt_cont.ff;
+    const double kap_cont_noes = kap_cont - kappa_vpkt_cont.es;
 
     for (int ind = 0; ind < Nspectra; ind++) {
       if (exclude[ind] == -2) {
@@ -284,7 +279,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
         t_line = t_current + ldist / CLIGHT;
 
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * A_ul;
-        B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
+        const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
         n_u = calculate_levelpop(mgi, element, ion, upper);
         n_l = calculate_levelpop(mgi, element, ion, lower);
