@@ -83,8 +83,6 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   double n_u = NAN;
   double n_l = NAN;
   int mgi = 0;
-  double Qold = NAN;
-  double Uold = NAN;
   double Inew = NAN;
   double Qnew = NAN;
   double Unew = NAN;
@@ -150,8 +148,8 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
     const double cos2i1 = cos(2 * i1);
     const double sin2i1 = sin(2 * i1);
 
-    Qold = Qi * cos2i1 - Ui * sin2i1;
-    Uold = Qi * sin2i1 + Ui * cos2i1;
+    const double Qold = Qi * cos2i1 - Ui * sin2i1;
+    const double Uold = Qi * sin2i1 + Ui * cos2i1;
 
     // Scattering
 
