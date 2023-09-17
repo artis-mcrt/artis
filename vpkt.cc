@@ -1145,7 +1145,7 @@ void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, s
   b_rf[1] = n_rf[2] * e_rf[0] - n_rf[0] * e_rf[2];
   b_rf[2] = n_rf[0] * e_rf[1] - n_rf[1] * e_rf[0];
 
-  b_par[0] = (b_rf[0] * beta[0] + b_rf[1] * beta[1] + b_rf[2] * beta[2]) * beta[0] / (vsqr);
+  b_par[0] = dot(b_rf, beta) * beta[0] / (vsqr);
   b_par[1] = (b_rf[0] * beta[0] + b_rf[1] * beta[1] + b_rf[2] * beta[2]) * beta[1] / (vsqr);
   b_par[2] = (b_rf[0] * beta[0] + b_rf[1] * beta[1] + b_rf[2] * beta[2]) * beta[2] / (vsqr);
 
