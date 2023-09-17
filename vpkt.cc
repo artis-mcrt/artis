@@ -1132,8 +1132,8 @@ void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, s
 
   // const double b_perp[3] = {b_rf[0] - b_par[0], b_rf[1] - b_par[1], b_rf[2] - b_par[2]};
 
-  const double v_cr_b[3] = {beta[1] * b_rf[2] - beta[2] * b_rf[1], beta[2] * b_rf[0] - beta[0] * b_rf[2],
-                            beta[0] * b_rf[1] - beta[1] * b_rf[0]};
+  double v_cr_b[3];
+  cross_prod(beta, b_rf, v_cr_b);
 
   // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
   //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
