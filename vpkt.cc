@@ -77,7 +77,6 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   double vel_rev[3];
   double s_cont = NAN;
   int snext = 0;
-  double t_arrive = NAN;
   double n_u = NAN;
   double n_l = NAN;
   int mgi = 0;
@@ -334,6 +333,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
     safeincrement(nvpkt_esc3);
   }
 
+  const double t_arrive = t_current - (dot(pkt_ptr->pos, dummy_ptr->dir) / CLIGHT_PROP);
   // -------------- final stokes vector ---------------
 
   for (int ind = 0; ind < Nspectra; ind++) {
@@ -351,8 +351,6 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
     }
 
     // bin on fly and produce file with spectrum
-
-    t_arrive = t_current - (dot(pkt_ptr->pos, dummy_ptr->dir) / CLIGHT_PROP);
 
     add_to_vspecpol(dummy_ptr, bin, ind, t_arrive);
   }
