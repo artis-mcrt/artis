@@ -107,7 +107,6 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   double i2 = NAN;
   double cos2i2 = NAN;
   double sin2i2 = NAN;
-  int tau_flag = 0;
 
   int bin_range = 0;
 
@@ -243,8 +242,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
     }
 
     // kill vpkt with high optical depth
-    tau_flag = check_tau(tau_vpkt, &tau_max_vpkt);
-    if (tau_flag == 0) {
+    if (check_tau(tau_vpkt, &tau_max_vpkt) == 0) {
       return;
     }
 
@@ -303,9 +301,8 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
           }
         }
 
-        /* kill vpkt with high optical depth */
-        tau_flag = check_tau(tau_vpkt, &tau_max_vpkt);
-        if (tau_flag == 0) {
+        // kill vpkt with high optical depth
+        if (check_tau(tau_vpkt, &tau_max_vpkt) == 0) {
           return;
         }
       } else {
@@ -1004,16 +1001,12 @@ void meridian(std::span<const double, 3> n, std::span<double, 3> ref1, std::span
 
   // for ref_2 use vector product of n_cmf with ref1
 
-  ref2[0] = n[2] * ref1[1] - n[1] * ref1[2];
-  ref2[1] = n[0] * ref1[2] - n[2] * ref1[0];
-  ref2[2] = n[1] * ref1[0] - n[0] * ref1[1];
+  cross_prod(n, ref1, ref2);
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
 void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v,
                      std::span<double, 3> n_cmf) {
-  double theta_rot = 0.;
-
   double ref1[3] = {NAN, NAN, NAN};
   double ref2[3] = {NAN, NAN, NAN};
   // Meridian frame in the RF
@@ -1081,6 +1074,7 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
   const double e_cmf_ref2 = dot(e_cmf, ref2);
 
   // Compute the angle between ref1 and the electric field
+  double theta_rot = 0.;
   if ((e_cmf_ref1 > 0) && (e_cmf_ref2 < 0)) {
     theta_rot = acos(e_cmf_ref1);
   }
