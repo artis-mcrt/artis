@@ -82,7 +82,6 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   double t_arrive = NAN;
   double n_u = NAN;
   double n_l = NAN;
-  double t_line = NAN;
   int mgi = 0;
   double Qold = NAN;
   double Uold = NAN;
@@ -111,7 +110,6 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   dummy_ptr = &dummy;
 
   bool end_packet = false;
-  double sdist = 0;
   double ldist = 0;
   double t_future = t_current;
 
@@ -214,7 +212,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
     ldist = 0;
 
     // distance to the next cell
-    sdist = grid::boundary_distance(dummy_ptr, &snext);
+    const double sdist = grid::boundary_distance(dummy_ptr, &snext);
     s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
 
     calculate_kappa_rpkt_cont(dummy_ptr, &kappa_vpkt_cont);
@@ -278,7 +276,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
           break;
         }
 
-        t_line = t_current + ldist / CLIGHT;
+        const double t_line = t_current + ldist / CLIGHT;
 
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * A_ul;
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
