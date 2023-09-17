@@ -73,8 +73,6 @@ int nvpkt_esc3;  // macroatom deactivation
 
 void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int bin, std::span<double, 3> obs,
                     const int realtype) {
-  double obs_cmf[3];
-  double vel_rev[3];
   double s_cont = NAN;
   int snext = 0;
   double n_u = NAN;
@@ -129,6 +127,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
 
     // Need to rotate Stokes Parameters in the scattering plane
 
+    double obs_cmf[3];
     angle_ab(dummy_ptr->dir, vel_vec, obs_cmf);
 
     meridian(old_dir_cmf, ref1, ref2);
@@ -173,9 +172,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
 
     // Transform Stokes Parameters from the CMF to the RF
 
-    vel_rev[0] = -vel_vec[0];
-    vel_rev[1] = -vel_vec[1];
-    vel_rev[2] = -vel_vec[2];
+    const double vel_rev[3] = {-vel_vec[0], -vel_vec[1], -vel_vec[2]};
 
     frame_transform(obs_cmf, &Q, &U, vel_rev, obs);
   }
