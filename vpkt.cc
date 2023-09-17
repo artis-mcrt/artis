@@ -83,9 +83,6 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   double n_u = NAN;
   double n_l = NAN;
   int mgi = 0;
-  double Inew = NAN;
-  double Qnew = NAN;
-  double Unew = NAN;
   double Itmp = NAN;
   double Qtmp = NAN;
   double Utmp = NAN;
@@ -157,9 +154,9 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
 
     pn = 3. / (16. * PI) * (1 + pow(mu, 2.) + (pow(mu, 2.) - 1) * Qold);
 
-    Inew = 0.75 * ((mu * mu + 1.0) + Qold * (mu * mu - 1.0));
-    Qnew = 0.75 * ((mu * mu - 1.0) + Qold * (mu * mu + 1.0));
-    Unew = 1.5 * mu * Uold;
+    const double Inew = 0.75 * ((mu * mu + 1.0) + Qold * (mu * mu - 1.0));
+    double Qnew = 0.75 * ((mu * mu - 1.0) + Qold * (mu * mu + 1.0));
+    double Unew = 1.5 * mu * Uold;
 
     Qnew = Qnew / Inew;
     Unew = Unew / Inew;
