@@ -73,8 +73,6 @@ int nvpkt_esc3;  // macroatom deactivation
 
 void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int bin, std::span<double, 3> obs,
                     const int realtype) {
-  double vel_vec[3];
-  double old_dir_cmf[3];
   double obs_cmf[3];
   double vel_rev[3];
   double s_cont = NAN;
@@ -114,6 +112,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
 
   safeincrement(nvpkt);  // increment the number of virtual packet in the given timestep
 
+  double vel_vec[3] = {NAN, NAN, NAN};
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
 
   // rf frequency and energy
@@ -130,6 +129,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   if (realtype == 1) {
     // Transform Stokes Parameters from the RF to the CMF
 
+    double old_dir_cmf[3] = {NAN, NAN, NAN};
     frame_transform(pkt_ptr->dir, &Qi, &Ui, vel_vec, old_dir_cmf);
 
     // Need to rotate Stokes Parameters in the scattering plane
