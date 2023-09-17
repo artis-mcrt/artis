@@ -73,7 +73,6 @@ int nvpkt_esc3;  // macroatom deactivation
 
 void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int bin, std::span<double, 3> obs,
                     const int realtype) {
-  double s_cont = NAN;
   int snext = 0;
   double n_u = NAN;
   double n_l = NAN;
@@ -196,7 +195,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
 
     // distance to the next cell
     const double sdist = grid::boundary_distance(dummy_ptr, &snext);
-    s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
+    const double s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
 
     calculate_kappa_rpkt_cont(dummy_ptr, &kappa_vpkt_cont);
 
