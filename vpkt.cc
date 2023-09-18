@@ -92,7 +92,7 @@ static auto all_taus_past_taumax(std::vector<double> &tau, const double tau_max)
 }
 
 // Routine to add a packet to the outcoming spectrum.
-static void add_to_vspecpol(const struct packet *const pkt_ptr, const int bin, const int ind, const double t_arrive) {
+static void add_to_vspecpol(const struct packet &vpkt, const int bin, const int ind, const double t_arrive) {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
 
   const int ind_comb = Nspectra * bin + ind;
@@ -100,20 +100,20 @@ static void add_to_vspecpol(const struct packet *const pkt_ptr, const int bin, c
   /// Put this into the time grid.
   if (t_arrive > VSPEC_TIMEMIN && t_arrive < VSPEC_TIMEMAX) {
     const int nt = static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec);
-    if (pkt_ptr->nu_rf > VSPEC_NUMIN && pkt_ptr->nu_rf < VSPEC_NUMAX) {
-      const int nnu = static_cast<int>((log(pkt_ptr->nu_rf) - log(VSPEC_NUMIN)) / dlognu_vspec);
-      const double pktcontrib = pkt_ptr->e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI /
+    if (vpkt.nu_rf > VSPEC_NUMIN && vpkt.nu_rf < VSPEC_NUMAX) {
+      const int nnu = static_cast<int>((log(vpkt.nu_rf) - log(VSPEC_NUMIN)) / dlognu_vspec);
+      const double pktcontrib = vpkt.e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI /
                                 PARSEC / PARSEC / globals::nprocs * 4 * PI;
 
-      safeadd(vspecpol[nt][ind_comb].flux_i[nnu], pkt_ptr->stokes[0] * pktcontrib);
-      safeadd(vspecpol[nt][ind_comb].flux_q[nnu], pkt_ptr->stokes[1] * pktcontrib);
-      safeadd(vspecpol[nt][ind_comb].flux_u[nnu], pkt_ptr->stokes[2] * pktcontrib);
+      safeadd(vspecpol[nt][ind_comb].flux_i[nnu], vpkt.stokes[0] * pktcontrib);
+      safeadd(vspecpol[nt][ind_comb].flux_q[nnu], vpkt.stokes[1] * pktcontrib);
+      safeadd(vspecpol[nt][ind_comb].flux_u[nnu], vpkt.stokes[2] * pktcontrib);
     }
   }
 }
 
 // Routine to add a packet to the outcoming spectrum.
-static void add_to_vpkt_grid(const struct packet *const dummy_ptr, std::span<const double, 3> vel, const int bin_range,
+static void add_to_vpkt_grid(const struct packet &vpkt, std::span<const double, 3> vel, const int bin_range,
                              const int bin, std::span<const double, 3> obs) {
   double vref1 = NAN;
   double vref2 = NAN;
@@ -158,10 +158,10 @@ static void add_to_vpkt_grid(const struct packet *const dummy_ptr, std::span<con
   const int mt = static_cast<int>((globals::vmax - vref2) / zbin);
 
   // Add contribution
-  if (dummy_ptr->nu_rf > nu_grid_min[bin_range] && dummy_ptr->nu_rf < nu_grid_max[bin_range]) {
-    safeadd(vgrid_i[nt][mt].flux[bin_range][bin], dummy_ptr->stokes[0] * dummy_ptr->e_rf);
-    safeadd(vgrid_q[nt][mt].flux[bin_range][bin], dummy_ptr->stokes[1] * dummy_ptr->e_rf);
-    safeadd(vgrid_u[nt][mt].flux[bin_range][bin], dummy_ptr->stokes[2] * dummy_ptr->e_rf);
+  if (vpkt.nu_rf > nu_grid_min[bin_range] && vpkt.nu_rf < nu_grid_max[bin_range]) {
+    safeadd(vgrid_i[nt][mt].flux[bin_range][bin], vpkt.stokes[0] * vpkt.e_rf);
+    safeadd(vgrid_q[nt][mt].flux[bin_range][bin], vpkt.stokes[1] * vpkt.e_rf);
+    safeadd(vgrid_u[nt][mt].flux[bin_range][bin], vpkt.stokes[2] * vpkt.e_rf);
   }
 }
 
@@ -175,8 +175,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
   int bin_range = 0;
 
-  struct packet dummy = *pkt_ptr;
-  struct packet *dummy_ptr = &dummy;
+  struct packet vpkt = *pkt_ptr;
 
   bool end_packet = false;
   double ldist = 0;
@@ -186,9 +185,9 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     tau_vpkt[ind] = 0;
   }
 
-  dummy_ptr->dir[0] = obs[0];
-  dummy_ptr->dir[1] = obs[1];
-  dummy_ptr->dir[2] = obs[2];
+  vpkt.dir[0] = obs[0];
+  vpkt.dir[1] = obs[1];
+  vpkt.dir[2] = obs[2];
 
   safeincrement(nvpkt);  // increment the number of virtual packet in the given timestep
 
@@ -196,11 +195,11 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
 
   // rf frequency and energy
-  dummy_ptr->nu_rf = dummy_ptr->nu_cmf / doppler_nucmf_on_nurf(dummy_ptr->dir, vel_vec);
-  dummy_ptr->e_rf = dummy_ptr->e_cmf * dummy_ptr->nu_rf / dummy_ptr->nu_cmf;
+  vpkt.nu_rf = vpkt.nu_cmf / doppler_nucmf_on_nurf(vpkt.dir, vel_vec);
+  vpkt.e_rf = vpkt.e_cmf * vpkt.nu_rf / vpkt.nu_cmf;
 
-  double Qi = dummy_ptr->stokes[1];
-  double Ui = dummy_ptr->stokes[2];
+  double Qi = vpkt.stokes[1];
+  double Ui = vpkt.stokes[2];
 
   // ------------ SCATTERING EVENT: dipole function --------------------
 
@@ -216,7 +215,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     // Need to rotate Stokes Parameters in the scattering plane
 
     double obs_cmf[3];
-    angle_ab(dummy_ptr->dir, vel_vec, obs_cmf);
+    angle_ab(vpkt.dir, vel_vec, obs_cmf);
 
     meridian(old_dir_cmf, ref1, ref2);
 
@@ -274,15 +273,15 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
   // --------- compute the optical depth to boundary ----------------
 
-  mgi = grid::get_cell_modelgridindex(dummy_ptr->where);
+  mgi = grid::get_cell_modelgridindex(vpkt.where);
   struct rpkt_cont_opacity kappa_vpkt_cont = {};
 
   while (!end_packet) {
     // distance to the next cell
-    const double sdist = grid::boundary_distance(dummy_ptr, &snext);
+    const double sdist = grid::boundary_distance(&vpkt, &snext);
     const double s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
 
-    calculate_kappa_rpkt_cont(dummy_ptr, &kappa_vpkt_cont);
+    calculate_kappa_rpkt_cont(&vpkt, &kappa_vpkt_cont);
 
     const double kap_cont = kappa_vpkt_cont.total;
     const double kap_cont_nobf = kap_cont - kappa_vpkt_cont.bf;
@@ -310,7 +309,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     while (ldist < sdist) {
       // printout("next_trans = %d \t nutrans = %g \t",dummy_ptr->next_trans,nutrans);
 
-      const int lineindex = closest_transition(dummy_ptr->nu_cmf, dummy_ptr->next_trans);
+      const int lineindex = closest_transition(vpkt.nu_cmf, vpkt.next_trans);
 
       const double nutrans = globals::linelist[lineindex].nu;
 
@@ -323,12 +322,12 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
         const int anumber = get_atomicnumber(element);
 
-        dummy_ptr->next_trans = lineindex + 1;
+        vpkt.next_trans = lineindex + 1;
 
-        if (dummy_ptr->nu_cmf < nutrans) {
+        if (vpkt.nu_cmf < nutrans) {
           ldist = 0;
         } else {
-          ldist = CLIGHT * t_current * (dummy_ptr->nu_cmf / nutrans - 1);
+          ldist = CLIGHT * t_current * (vpkt.nu_cmf / nutrans - 1);
         }
 
         if (ldist < 0.) {
@@ -339,7 +338,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
           // exit the while loop if you reach the boundary; go back to the previous transition to start next cell with
           // the excluded line
 
-          dummy_ptr->next_trans -= 1;
+          vpkt.next_trans -= 1;
           // printout("ldist > sdist : line in the next cell\n");
           break;
         }
@@ -368,8 +367,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
           return;
         }
       } else {
-        dummy_ptr->next_trans =
-            globals::nlines + 1;  /// helper variable to overcome numerical problems after line scattering
+        vpkt.next_trans = globals::nlines + 1;  /// helper variable to overcome numerical problems after line scattering
       }
     }
 
@@ -378,17 +376,17 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     // printf("I'm changing cell. I'm going from nu_cmf = %.e ",dummy_ptr->nu_cmf);
 
     t_future += (sdist / CLIGHT_PROP);
-    dummy_ptr->prop_time = t_future;
-    move_pkt(dummy_ptr, sdist);
+    vpkt.prop_time = t_future;
+    move_pkt(&vpkt, sdist);
 
     // printout("About to change vpkt cell\n");
 
-    grid::change_cell(dummy_ptr, snext);
-    end_packet = (dummy_ptr->type == TYPE_ESCAPE);
+    grid::change_cell(&vpkt, snext);
+    end_packet = (vpkt.type == TYPE_ESCAPE);
     // printout("Completed change vpkt cell\n");
 
     // printout("dummy->nu_cmf = %g \n",dummy_ptr->nu_cmf);
-    mgi = grid::get_cell_modelgridindex(dummy_ptr->where);
+    mgi = grid::get_cell_modelgridindex(vpkt.where);
     // break if you reach an empty cell
     if (mgi == grid::get_npts_model()) {
       break;
@@ -414,7 +412,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     safeincrement(nvpkt_esc3);
   }
 
-  const double t_arrive = t_current - (dot(pkt_ptr->pos, dummy_ptr->dir) / CLIGHT_PROP);
+  const double t_arrive = t_current - (dot(pkt_ptr->pos, vpkt.dir) / CLIGHT_PROP);
   // -------------- final stokes vector ---------------
 
   for (int ind = 0; ind < Nspectra; ind++) {
@@ -423,17 +421,17 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
     assert_always(std::isfinite(prob));
 
-    dummy_ptr->stokes[0] = I * prob;
-    dummy_ptr->stokes[1] = Q * prob;
-    dummy_ptr->stokes[2] = U * prob;
+    vpkt.stokes[0] = I * prob;
+    vpkt.stokes[1] = Q * prob;
+    vpkt.stokes[2] = U * prob;
 
-    for (const auto stokeval : dummy_ptr->stokes) {
+    for (const auto stokeval : vpkt.stokes) {
       assert_always(std::isfinite(stokeval));
     }
 
     // bin on fly and produce file with spectrum
 
-    add_to_vspecpol(dummy_ptr, bin, ind, t_arrive);
+    add_to_vspecpol(vpkt, bin, ind, t_arrive);
   }
 
   // vpkt grid
@@ -441,15 +439,14 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   if (vgrid_on) {
     const double prob = pn * exp(-tau_vpkt[0]);
 
-    dummy_ptr->stokes[0] = I * prob;
-    dummy_ptr->stokes[1] = Q * prob;
-    dummy_ptr->stokes[2] = U * prob;
+    vpkt.stokes[0] = I * prob;
+    vpkt.stokes[1] = Q * prob;
+    vpkt.stokes[2] = U * prob;
 
     for (bin_range = 0; bin_range < Nrange_grid; bin_range++) {
-      if (dummy_ptr->nu_rf > nu_grid_min[bin_range] &&
-          dummy_ptr->nu_rf < nu_grid_max[bin_range]) {       // Frequency selection
-        if (t_arrive > tmin_grid && t_arrive < tmax_grid) {  // Time selection
-          add_to_vpkt_grid(dummy_ptr, vel_vec, bin_range, bin, obs);
+      if (vpkt.nu_rf > nu_grid_min[bin_range] && vpkt.nu_rf < nu_grid_max[bin_range]) {  // Frequency selection
+        if (t_arrive > tmin_grid && t_arrive < tmax_grid) {                              // Time selection
+          add_to_vpkt_grid(vpkt, vel_vec, bin_range, bin, obs);
         }
       }
     }
