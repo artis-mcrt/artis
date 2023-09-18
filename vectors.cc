@@ -24,7 +24,7 @@ void scatter_dir(std::span<const double, 3> dir_in, const double cos_theta, std:
   // Rotation matrix is determined by dir_in.
 
   const double norm1 = 1. / std::sqrt((dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1]));
-  const double norm2 = 1. / std::sqrt((dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1]) + (dir_in[2] * dir_in[2]));
+  const double norm2 = 1. / vec_len(dir_in);
 
   const double r11 = dir_in[1] * norm1;
   const double r12 = -1 * dir_in[0] * norm1;
