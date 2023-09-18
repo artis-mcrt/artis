@@ -235,7 +235,7 @@ auto main(int argc, char *argv[]) -> int {
                       stokes_u.get());
       }
 
-      write_spectrum("gamma_spec.out", nullptr, nullptr, nullptr, *gamma_spectra, globals::ntstep);
+      write_spectrum("gamma_spec.out", "", "", "", *gamma_spectra, globals::ntstep);
 
       printout("finished angle-averaged stuff\n");
     } else {
