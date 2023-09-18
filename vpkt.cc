@@ -29,8 +29,8 @@ float delta_freq_vspec[VMNUBINS];
 
 int Nobs;      // Number of observer directions
 int Nspectra;  // Number of virtual packet spectra per observer direction (total + elements switched off)
-double *nz_obs_vpkt;
-double *phiobs;
+std::vector<double> nz_obs_vpkt;
+std::vector<double> phiobs;
 double tmin_vspec_input;
 double tmax_vspec_input;
 int Nrange;
@@ -39,7 +39,7 @@ std::vector<double> numin_vspec_input;
 std::vector<double> numax_vspec_input;
 double cell_is_optically_thick_vpkt;
 double tau_max_vpkt;
-double *exclude;
+std::vector<int> exclude;
 double *tau_vpkt;
 
 // --------- Vstruct packet GRID -----------
@@ -681,7 +681,7 @@ void read_parameterfile_vpkt() {
   printout("vpkt.txt: Nobs %d directions\n", Nobs);
 
   // nz_obs_vpkt. Cos(theta) to the observer. A list in the case of many observers
-  nz_obs_vpkt = static_cast<double *>(malloc(Nobs * sizeof(double)));
+  nz_obs_vpkt.resize(Nobs);
   for (int i = 0; i < Nobs; i++) {
     assert_always(fscanf(input_file, "%lg", &nz_obs_vpkt[i]) == 1);
 
@@ -696,7 +696,7 @@ void read_parameterfile_vpkt() {
   }
 
   // phi to the observer (degrees). A list in the case of many observers
-  phiobs = static_cast<double *>(malloc(Nobs * sizeof(double)));
+  phiobs.resize(Nobs);
   for (int i = 0; i < Nobs; i++) {
     double phi_degrees = 0.;
     assert_always(fscanf(input_file, "%lg \n", &phi_degrees) == 1);
@@ -713,15 +713,15 @@ void read_parameterfile_vpkt() {
 
   if (nspectra_customlist_flag != 1) {
     Nspectra = 1;
-    exclude = static_cast<double *>(malloc(Nspectra * sizeof(double)));
+    exclude.resize(Nspectra, 0);
 
     exclude[0] = 0;
   } else {
     assert_always(fscanf(input_file, "%d ", &Nspectra) == 1);
-    exclude = static_cast<double *>(malloc(Nspectra * sizeof(double)));
+    exclude.resize(Nspectra, 0);
 
     for (int i = 0; i < Nspectra; i++) {
-      assert_always(fscanf(input_file, "%lg ", &exclude[i]) == 1);
+      assert_always(fscanf(input_file, "%d ", &exclude[i]) == 1);
 
       // The first number should be equal to zero!
       assert_always(exclude[0] == 0);  // The first spectrum should allow for all opacities (exclude[i]=0)
