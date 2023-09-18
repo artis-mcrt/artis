@@ -43,7 +43,7 @@ double tau_max_vpkt;
 std::vector<int> exclude;  // vector of opacity contribution setups
                            //-1: no line opacity; -2: no bf opacity; -3: no ff opacity; -4: no es opacity,
                            // +ve: exclude element with atomic number's contribution to bound-bound opacity
-double *tau_vpkt;
+std::vector<double> tau_vpkt;
 
 // --------- Vstruct packet GRID -----------
 
@@ -79,7 +79,7 @@ int nvpkt_esc3;  // macroatom deactivation
 // E.g. imagine that a packet in the first setup (all elements included) reaches tau = tau_max_vpkt
 // because of the element Zi. If we remove Zi, tau now could be lower than tau_max_vpkt and could
 // thus contribute to the spectrum.
-static auto all_taus_past_taumax(const double *tau, const double tau_max) -> bool {
+static auto all_taus_past_taumax(std::vector<double> &tau, const double tau_max) -> bool {
   int count = 0;
 
   for (int i = 0; i < Nspectra; i++) {
@@ -701,7 +701,7 @@ void read_parameterfile_vpkt() {
   }
 
   printout("vpkt.txt: Nspectra %d per observer\n", Nspectra);
-  tau_vpkt = static_cast<double *>(malloc(Nspectra * sizeof(double)));
+  tau_vpkt.resize(Nspectra, 0.);
 
   // time window. If dum4=1 it restrict vpkt to time windown (dum5,dum6)
   int override_tminmax = 0;
