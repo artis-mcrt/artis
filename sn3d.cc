@@ -646,7 +646,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
     printout("During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (t=%gd)\n", nts, my_rank,
              globals::time_step[nts].pellet_decays, globals::nesc, globals::time_step[nts].mid / DAY);
 
-    if constexpr (VPKT_ON) {
+    if (VPKT_ON) {
       printout("During timestep %d on MPI process %d, %d virtual packets were generated and %d escaped. \n", nts,
                my_rank, nvpkt, nvpkt_esc1 + nvpkt_esc2 + nvpkt_esc3);
       printout(
