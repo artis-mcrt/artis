@@ -13,14 +13,14 @@
 #include "vectors.h"
 
 struct vspecpol {
-  double flux[VMNUBINS] = {0.};
+  double flux_i[VMNUBINS] = {0.};
+  double flux_q[VMNUBINS] = {0.};
+  double flux_u[VMNUBINS] = {0.};
   float lower_time = NAN;
   float delta_t = NAN;
 };
 
-struct vspecpol **vstokes_i;
-struct vspecpol **vstokes_q;
-struct vspecpol **vstokes_u;
+struct vspecpol **vspecpol = nullptr;
 
 float lower_freq_vspec[VMNUBINS];
 float delta_freq_vspec[VMNUBINS];
@@ -102,12 +102,12 @@ static void add_to_vspecpol(const struct packet *const pkt_ptr, const int bin, c
     const int nt = static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec);
     if (pkt_ptr->nu_rf > VSPEC_NUMIN && pkt_ptr->nu_rf < VSPEC_NUMAX) {
       const int nnu = static_cast<int>((log(pkt_ptr->nu_rf) - log(VSPEC_NUMIN)) / dlognu_vspec);
-      const double pktcontrib = pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI /
+      const double pktcontrib = pkt_ptr->e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI /
                                 PARSEC / PARSEC / globals::nprocs * 4 * PI;
 
-      safeadd(vstokes_i[nt][ind_comb].flux[nnu], pkt_ptr->stokes[0] * pktcontrib);
-      safeadd(vstokes_q[nt][ind_comb].flux[nnu], pkt_ptr->stokes[1] * pktcontrib);
-      safeadd(vstokes_u[nt][ind_comb].flux[nnu], pkt_ptr->stokes[2] * pktcontrib);
+      safeadd(vspecpol[nt][ind_comb].flux_i[nnu], pkt_ptr->stokes[0] * pktcontrib);
+      safeadd(vspecpol[nt][ind_comb].flux_q[nnu], pkt_ptr->stokes[1] * pktcontrib);
+      safeadd(vspecpol[nt][ind_comb].flux_u[nnu], pkt_ptr->stokes[2] * pktcontrib);
     }
   }
 }
@@ -457,15 +457,11 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 }
 
 void init_vspecpol() {
-  vstokes_i = static_cast<struct vspecpol **>(malloc(VMTBINS * sizeof(struct vspecpol *)));
-  vstokes_q = static_cast<struct vspecpol **>(malloc(VMTBINS * sizeof(struct vspecpol *)));
-  vstokes_u = static_cast<struct vspecpol **>(malloc(VMTBINS * sizeof(struct vspecpol *)));
+  vspecpol = static_cast<struct vspecpol **>(malloc(VMTBINS * sizeof(struct vspecpol *)));
 
   const int indexmax = Nspectra * Nobs;
   for (int p = 0; p < VMTBINS; p++) {
-    vstokes_i[p] = static_cast<struct vspecpol *>(malloc(indexmax * sizeof(struct vspecpol)));
-    vstokes_q[p] = static_cast<struct vspecpol *>(malloc(indexmax * sizeof(struct vspecpol)));
-    vstokes_u[p] = static_cast<struct vspecpol *>(malloc(indexmax * sizeof(struct vspecpol)));
+    vspecpol[p] = static_cast<struct vspecpol *>(malloc(indexmax * sizeof(struct vspecpol)));
   }
 
   for (int ind_comb = 0; ind_comb < indexmax; ind_comb++) {
@@ -477,17 +473,17 @@ void init_vspecpol() {
     dlognu_vspec = (log(VSPEC_NUMAX) - log(VSPEC_NUMIN)) / VMNUBINS;
 
     for (int n = 0; n < VMTBINS; n++) {
-      vstokes_i[n][ind_comb].lower_time = exp(log(VSPEC_TIMEMIN) + (n * (dlogt_vspec)));
-      vstokes_i[n][ind_comb].delta_t =
-          exp(log(VSPEC_TIMEMIN) + ((n + 1) * (dlogt_vspec))) - vstokes_i[n][ind_comb].lower_time;
+      vspecpol[n][ind_comb].lower_time = exp(log(VSPEC_TIMEMIN) + (n * (dlogt_vspec)));
+      vspecpol[n][ind_comb].delta_t =
+          exp(log(VSPEC_TIMEMIN) + ((n + 1) * (dlogt_vspec))) - vspecpol[n][ind_comb].lower_time;
 
       for (int m = 0; m < VMNUBINS; m++) {
         lower_freq_vspec[m] = exp(log(VSPEC_NUMIN) + (m * (dlognu_vspec)));
         delta_freq_vspec[m] = exp(log(VSPEC_NUMIN) + ((m + 1) * (dlognu_vspec))) - lower_freq_vspec[m];
 
-        vstokes_i[n][ind_comb].flux[m] = 0.0;
-        vstokes_q[n][ind_comb].flux[m] = 0.0;
-        vstokes_u[n][ind_comb].flux[m] = 0.0;
+        vspecpol[n][ind_comb].flux_i[m] = 0.0;
+        vspecpol[n][ind_comb].flux_q[m] = 0.0;
+        vspecpol[n][ind_comb].flux_u[m] = 0.0;
       }
     }
   }
@@ -499,7 +495,7 @@ void write_vspecpol(FILE *specpol_file) {
 
     for (int l = 0; l < 3; l++) {
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(specpol_file, "%g ", (vstokes_i[p][ind_comb].lower_time + (vstokes_i[p][ind_comb].delta_t / 2.)) / DAY);
+        fprintf(specpol_file, "%g ", (vspecpol[p][ind_comb].lower_time + (vspecpol[p][ind_comb].delta_t / 2.)) / DAY);
       }
     }
 
@@ -510,17 +506,17 @@ void write_vspecpol(FILE *specpol_file) {
 
       // Stokes I
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(specpol_file, "%g ", vstokes_i[p][ind_comb].flux[m]);
+        fprintf(specpol_file, "%g ", vspecpol[p][ind_comb].flux_i[m]);
       }
 
       // Stokes Q
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(specpol_file, "%g ", vstokes_q[p][ind_comb].flux[m]);
+        fprintf(specpol_file, "%g ", vspecpol[p][ind_comb].flux_q[m]);
       }
 
       // Stokes U
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(specpol_file, "%g ", vstokes_u[p][ind_comb].flux[m]);
+        fprintf(specpol_file, "%g ", vspecpol[p][ind_comb].flux_u[m]);
       }
 
       fprintf(specpol_file, "\n");
@@ -560,17 +556,17 @@ void read_vspecpol(int my_rank, int nts) {
 
       // Stokes I
       for (int p = 0; p < VMTBINS; p++) {
-        assert_always(fscanf(vspecpol_file, "%lg ", &vstokes_i[p][ind_comb].flux[j]) == 1);
+        assert_always(fscanf(vspecpol_file, "%lg ", &vspecpol[p][ind_comb].flux_i[j]) == 1);
       }
 
       // Stokes Q
       for (int p = 0; p < VMTBINS; p++) {
-        assert_always(fscanf(vspecpol_file, "%lg ", &vstokes_q[p][ind_comb].flux[j]) == 1);
+        assert_always(fscanf(vspecpol_file, "%lg ", &vspecpol[p][ind_comb].flux_q[j]) == 1);
       }
 
       // Stokes U
       for (int p = 0; p < VMTBINS; p++) {
-        assert_always(fscanf(vspecpol_file, "%lg ", &vstokes_u[p][ind_comb].flux[j]) == 1);
+        assert_always(fscanf(vspecpol_file, "%lg ", &vspecpol[p][ind_comb].flux_u[j]) == 1);
       }
 
       assert_always(fscanf(vspecpol_file, "\n") == 0);
