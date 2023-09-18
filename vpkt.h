@@ -32,6 +32,7 @@ int vpkt_call_estimators(struct packet *pkt_ptr, int realtype);
 // --------------------------------------------------------------------------------
 // ---------------------------  VIRTUAL PACKETS -----------------------------------
 // --------------------------------------------------------------------------------
+constexpr int MRANGE_GRID = 5;
 constexpr int NY_VGRID = 50;
 constexpr int NZ_VGRID = 50;
 

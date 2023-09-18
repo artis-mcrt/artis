@@ -45,9 +45,9 @@ double *tau_vpkt;
 // --------- Vstruct packet GRID -----------
 
 struct vgrid {
-  std::vector<std::vector<double>> flux;
-  std::vector<std::vector<double>> yvel;
-  std::vector<std::vector<double>> zvel;
+  double *flux[MRANGE_GRID];
+  double *yvel[MRANGE_GRID];
+  double *zvel[MRANGE_GRID];
 };
 
 struct vgrid vgrid_i[NY_VGRID][NZ_VGRID];
@@ -57,8 +57,8 @@ struct vgrid vgrid_u[NY_VGRID][NZ_VGRID];
 int Nrange_grid;
 double tmin_grid;
 double tmax_grid;
-std::vector<double> nu_grid_min;
-std::vector<double> nu_grid_max;
+double nu_grid_min[MRANGE_GRID];
+double nu_grid_max[MRANGE_GRID];
 int vgrid_flag;
 double dlogt_vspec;
 double dlognu_vspec;
@@ -552,22 +552,20 @@ void init_vpkt_grid() {
 
   for (int n = 0; n < NY_VGRID; n++) {
     for (int m = 0; m < NZ_VGRID; m++) {
-      vgrid_i[n][m].flux.resize(Nrange_grid);
-      vgrid_i[n][m].yvel.resize(Nrange_grid);
-      vgrid_i[n][m].zvel.resize(Nrange_grid);
-      for (int bin_range = 0; bin_range < Nrange_grid; bin_range++) {
-        vgrid_i[n][m].flux[bin_range].resize(Nobs, 0.);
-        vgrid_i[n][m].yvel[bin_range].resize(Nobs, 0.);
-        vgrid_i[n][m].zvel[bin_range].resize(Nobs, 0.);
+      for (int bin_range = 0; bin_range < MRANGE_GRID; bin_range++) {
+        vgrid_i[n][m].flux[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
+        vgrid_i[n][m].yvel[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
+        vgrid_i[n][m].zvel[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
 
-        vgrid_q[n][m].flux[bin_range].resize(Nobs, 0.);
-        vgrid_q[n][m].yvel[bin_range].resize(Nobs, 0.);
-        vgrid_q[n][m].zvel[bin_range].resize(Nobs, 0.);
+        vgrid_q[n][m].flux[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
+        vgrid_q[n][m].yvel[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
+        vgrid_q[n][m].zvel[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
 
-        vgrid_u[n][m].flux[bin_range].resize(Nobs, 0.);
-        vgrid_u[n][m].yvel[bin_range].resize(Nobs, 0.);
-        vgrid_u[n][m].zvel[bin_range].resize(Nobs, 0.);
+        vgrid_u[n][m].flux[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
+        vgrid_u[n][m].yvel[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
+        vgrid_u[n][m].zvel[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
 
+        vgrid_i[n][m].flux[bin_range] = static_cast<double *>(malloc(Nobs * sizeof(double)));
         for (int bin = 0; bin < Nobs; bin++) {
           vgrid_i[n][m].flux[bin_range][bin] = 0.0;
           vgrid_q[n][m].flux[bin_range][bin] = 0.0;
@@ -828,13 +826,15 @@ void read_parameterfile_vpkt() {
 
     printout("vpkt.txt: velocity grid frequency intervals %d\n", Nrange_grid);
 
+    assert_always(Nrange_grid <= MRANGE_GRID);
+
     for (int i = 0; i < Nrange_grid; i++) {
       double range_lambda_min = 0.;
       double range_lambda_max = 0.;
       assert_always(fscanf(input_file, "%lg %lg", &range_lambda_min, &range_lambda_max) == 2);
 
-      nu_grid_max.push_back(CLIGHT / (range_lambda_min * 1e-8));
-      nu_grid_min.push_back(CLIGHT / (range_lambda_max * 1e-8));
+      nu_grid_max[i] = CLIGHT / (range_lambda_min * 1e-8);
+      nu_grid_min[i] = CLIGHT / (range_lambda_max * 1e-8);
 
       printout("vpkt.txt:   velgrid range %d lambda [%g, %g] Angstroms\n", i, 1e8 * CLIGHT / nu_grid_max[i],
                1e8 * CLIGHT / nu_grid_min[i]);
