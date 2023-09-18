@@ -166,7 +166,7 @@ static void add_to_vpkt_grid(const struct packet *const dummy_ptr, std::span<con
 }
 
 static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int bin,
-                           std::span<const double, 3> obs, const int realtype) {
+                           std::span<double, 3> obs, const int realtype) {
   int snext = 0;
   double n_u = NAN;
   double n_l = NAN;
