@@ -152,8 +152,9 @@ static auto get_proccount() -> int
   return 2 * get_nelements() * get_max_nions() + 1;
 }
 
-void write_spectrum(const std::string &spec_filename, const char *emission_filename, const char *trueemission_filename,
-                    const char *absorption_filename, const struct spec &spectra, int numtimesteps) {
+void write_spectrum(const std::string &spec_filename, const std::string &emission_filename,
+                    const std::string &trueemission_filename, const std::string &absorption_filename,
+                    const struct spec &spectra, int numtimesteps) {
   FILE *spec_file = fopen_required(spec_filename.c_str(), "w");
 
   FILE *emission_file = nullptr;
@@ -163,14 +164,14 @@ void write_spectrum(const std::string &spec_filename, const char *emission_filen
   bool const do_emission_res = spectra.do_emission_res;
 
   if (do_emission_res) {
-    emission_file = fopen_required(emission_filename, "w");
+    emission_file = fopen_required(emission_filename.c_str(), "w");
     assert_always(emission_file != nullptr);
-    trueemission_file = fopen_required(trueemission_filename, "w");
+    trueemission_file = fopen_required(trueemission_filename.c_str(), "w");
     assert_always(trueemission_file != nullptr);
-    absorption_file = fopen_required(absorption_filename, "w");
+    absorption_file = fopen_required(absorption_filename.c_str(), "w");
     assert_always(absorption_file != nullptr);
-    printout("Writing %s, %s, %s, and %s\n", spec_filename.c_str(), emission_filename, trueemission_filename,
-             absorption_filename);
+    printout("Writing %s, %s, %s, and %s\n", spec_filename.c_str(), emission_filename.c_str(),
+             trueemission_filename.c_str(), absorption_filename.c_str());
   } else {
     printout("Writing %s\n", spec_filename.c_str());
   }
