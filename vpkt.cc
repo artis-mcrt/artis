@@ -83,12 +83,9 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   double pn = NAN;
   double prob = NAN;
 
-  int bin_range = 0;
-
   struct packet dummy = *pkt_ptr;
   struct packet *dummy_ptr = &dummy;
 
-  bool end_packet = false;
   double ldist = 0;
   double t_future = t_current;
 
@@ -96,9 +93,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
     tau_vpkt[ind] = 0;
   }
 
-  dummy_ptr->dir[0] = obs[0];
-  dummy_ptr->dir[1] = obs[1];
-  dummy_ptr->dir[2] = obs[2];
+  vec_copy(dummy.pos, obs);
 
   safeincrement(nvpkt);  // increment the number of virtual packet in the given timestep
 
@@ -188,6 +183,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   mgi = grid::get_cell_modelgridindex(dummy_ptr->where);
   struct rpkt_cont_opacity kappa_vpkt_cont = {};
 
+  bool end_packet = false;
   while (!end_packet) {
     ldist = 0;
 
@@ -360,7 +356,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
     dummy_ptr->stokes[1] = Qtmp;
     dummy_ptr->stokes[2] = Utmp;
 
-    for (bin_range = 0; bin_range < Nrange_grid; bin_range++) {
+    for (int bin_range = 0; bin_range < Nrange_grid; bin_range++) {
       if (dummy_ptr->nu_rf > nu_grid_min[bin_range] &&
           dummy_ptr->nu_rf < nu_grid_max[bin_range]) {       // Frequency selection
         if (t_arrive > tmin_grid && t_arrive < tmax_grid) {  // Time selection
@@ -887,8 +883,8 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const double t_current, const 
       for (int i = 0; i < Nrange; i++) {
         // Loop over frequency ranges
 
-        if (pkt_ptr->nu_cmf / doppler_nucmf_on_nurf(obs, vel_vec) > numin_vspec_input[i] &&
-            pkt_ptr->nu_cmf / doppler_nucmf_on_nurf(obs, vel_vec) < numax_vspec_input[i]) {
+        const double nu_rf = pkt_ptr->nu_rf / doppler_nucmf_on_nurf(obs, vel_vec);
+        if (nu_rf > numin_vspec_input[i] && nu_rf < numax_vspec_input[i]) {
           // frequency selection
 
           rlc_emiss_vpkt(pkt_ptr, t_current, bin, obs, realtype);
