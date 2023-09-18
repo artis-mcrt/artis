@@ -477,24 +477,23 @@ void init_vspecpol() {
     vstokes_u[p] = static_cast<struct vspecpol *>(malloc(indexmax * sizeof(struct vspecpol)));
   }
 
-  for (int m = 0; m < VMNUBINS; m++) {
-    lower_freq_vspec[m] = exp(log(VSPEC_NUMIN) + (m * (dlognu_vspec)));
-    delta_freq_vspec[m] = exp(log(VSPEC_NUMIN) + ((m + 1) * (dlognu_vspec))) - lower_freq_vspec[m];
-  }
-
-  dlogt_vspec = (log(VSPEC_TIMEMAX) - log(VSPEC_TIMEMIN)) / VMTBINS;
-  dlognu_vspec = (log(VSPEC_NUMAX) - log(VSPEC_NUMIN)) / VMNUBINS;
-  for (int n = 0; n < VMTBINS; n++) {
+  for (int ind_comb = 0; ind_comb < indexmax; ind_comb++) {
     // start by setting up the time and frequency bins.
     // it is all done interms of a logarithmic spacing in both t and nu - get the
     // step sizes first.
 
-    for (int ind_comb = 0; ind_comb < indexmax; ind_comb++) {
+    dlogt_vspec = (log(VSPEC_TIMEMAX) - log(VSPEC_TIMEMIN)) / VMTBINS;
+    dlognu_vspec = (log(VSPEC_NUMAX) - log(VSPEC_NUMIN)) / VMNUBINS;
+
+    for (int n = 0; n < VMTBINS; n++) {
       vstokes_i[n][ind_comb].lower_time = exp(log(VSPEC_TIMEMIN) + (n * (dlogt_vspec)));
       vstokes_i[n][ind_comb].delta_t =
           exp(log(VSPEC_TIMEMIN) + ((n + 1) * (dlogt_vspec))) - vstokes_i[n][ind_comb].lower_time;
 
       for (int m = 0; m < VMNUBINS; m++) {
+        lower_freq_vspec[m] = exp(log(VSPEC_NUMIN) + (m * (dlognu_vspec)));
+        delta_freq_vspec[m] = exp(log(VSPEC_NUMIN) + ((m + 1) * (dlognu_vspec))) - lower_freq_vspec[m];
+
         vstokes_i[n][ind_comb].flux[m] = 0.0;
         vstokes_q[n][ind_comb].flux[m] = 0.0;
         vstokes_u[n][ind_comb].flux[m] = 0.0;
@@ -838,6 +837,7 @@ void read_parameterfile_vpkt() {
 
 auto vpkt_call_estimators(struct packet *pkt_ptr, const int realtype) -> int {
   const double t_current = pkt_ptr->prop_time;
+  double obs[3];
   int vflag = 0;
 
   double vel_vec[3];
@@ -860,8 +860,10 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const int realtype) -> int {
 
   for (int bin = 0; bin < Nobs; bin++) {
     // loop over different observers
-    const double obs[3] = {sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * cos(phiobs[bin]),
-                           sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * sin(phiobs[bin]), nz_obs_vpkt[bin]};
+
+    obs[0] = sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * cos(phiobs[bin]);
+    obs[1] = sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * sin(phiobs[bin]);
+    obs[2] = nz_obs_vpkt[bin];
 
     const double t_arrive = t_current - (dot(pkt_ptr->pos, obs) / CLIGHT_PROP);
 
