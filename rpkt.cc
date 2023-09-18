@@ -129,7 +129,7 @@ static auto get_event(const int modelgridindex,
         // on packet position and direction
 
         // use linear interpolation of frequency along the path
-        ldist = (nu_trans - dummypkt_ptr->nu_cmf) / (nu_cmf_abort - pkt_ptr->nu_cmf) * abort_dist;
+        ldist = (nu_trans - dummypkt_ptr->nu_cmf) / d_nu_on_d_l;
       }
 
       if (ldist < 0.) {
