@@ -493,10 +493,6 @@ void init_vspecpol() {
       for (int m = 0; m < VMNUBINS; m++) {
         lower_freq_vspec[m] = exp(log(VSPEC_NUMIN) + (m * (dlognu_vspec)));
         delta_freq_vspec[m] = exp(log(VSPEC_NUMIN) + ((m + 1) * (dlognu_vspec))) - lower_freq_vspec[m];
-
-        vstokes_i[n][ind_comb].flux[m] = 0.0;
-        vstokes_q[n][ind_comb].flux[m] = 0.0;
-        vstokes_u[n][ind_comb].flux[m] = 0.0;
       }
     }
   }
