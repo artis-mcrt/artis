@@ -573,10 +573,6 @@ void init_vpkt_grid() {
         vgrid_u[n][m].zvel[bin_range].resize(Nobs, 0.);
 
         for (int bin = 0; bin < Nobs; bin++) {
-          vgrid_i[n][m].flux[bin_range][bin] = 0.0;
-          vgrid_q[n][m].flux[bin_range][bin] = 0.0;
-          vgrid_u[n][m].flux[bin_range][bin] = 0.0;
-
           vgrid_i[n][m].yvel[bin_range][bin] = globals::vmax - (n + 0.5) * ybin;
           vgrid_i[n][m].zvel[bin_range][bin] = globals::vmax - (m + 0.5) * zbin;
         }
@@ -599,12 +595,12 @@ void add_to_vpkt_grid(const struct packet *const dummy_ptr, std::span<const doub
 
   // Packet velocity
 
-  /* if nobs = x , vref1 = vy and vref2 = vz */
+  // if nobs = x , vref1 = vy and vref2 = vz
   if (nx == 1) {
     vref1 = vel[1];
     vref2 = vel[2];
   }
-  /* if nobs = x , vref1 = vy and vref2 = vz */
+  // if nobs = x , vref1 = vy and vref2 = vz
   else if (nx == -1) {
     vref1 = -vel[1];
     vref2 = -vel[2];
