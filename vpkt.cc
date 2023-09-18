@@ -72,8 +72,101 @@ int nvpkt_esc1;  // electron scattering event
 int nvpkt_esc2;  // kpkt deactivation
 int nvpkt_esc3;  // macroatom deactivation
 
-void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int bin, std::span<double, 3> obs,
-                    const int realtype) {
+// Virtual packet is killed when tau reaches tau_max_vpkt for ALL the different setups
+// E.g. imagine that a packet in the first setup (all elements included) reaches tau = tau_max_vpkt
+// because of the element Zi. If we remove Zi, tau now could be lower than tau_max_vpkt and could
+// thus contribute to the spectrum.
+static auto check_tau(const double *tau, const double *tau_max) -> int {
+  int count = 0;
+
+  for (int i = 0; i < Nspectra; i++) {
+    if (tau[i] > *tau_max) {
+      count += 1;
+    }
+  }
+
+  if (count == Nspectra) {
+    return 0;
+  }
+  return 1;
+}
+
+// Routine to add a packet to the outcoming spectrum.
+void add_to_vspecpol(const struct packet *const pkt_ptr, int bin, int ind, double t_arrive) {
+  // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
+
+  const int ind_comb = Nspectra * bin + ind;
+
+  /// Put this into the time grid.
+  if (t_arrive > VSPEC_TIMEMIN && t_arrive < VSPEC_TIMEMAX) {
+    const int nt = static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec);
+    if (pkt_ptr->nu_rf > VSPEC_NUMIN && pkt_ptr->nu_rf < VSPEC_NUMAX) {
+      const int nnu = static_cast<int>((log(pkt_ptr->nu_rf) - log(VSPEC_NUMIN)) / dlognu_vspec);
+      const double pktcontrib = pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI /
+                                PARSEC / PARSEC / globals::nprocs * 4 * PI;
+
+      safeadd(vstokes_i[nt][ind_comb].flux[nnu], pkt_ptr->stokes[0] * pktcontrib);
+      safeadd(vstokes_q[nt][ind_comb].flux[nnu], pkt_ptr->stokes[1] * pktcontrib);
+      safeadd(vstokes_u[nt][ind_comb].flux[nnu], pkt_ptr->stokes[2] * pktcontrib);
+    }
+  }
+}
+
+// Routine to add a packet to the outcoming spectrum.
+void add_to_vpkt_grid(const struct packet *const dummy_ptr, std::span<const double, 3> vel, int bin_range, int bin,
+                      std::span<const double, 3> obs) {
+  double vref1 = NAN;
+  double vref2 = NAN;
+
+  // Observer orientation
+
+  const double nx = obs[0];
+  const double ny = obs[1];
+  const double nz = obs[2];
+
+  // Packet velocity
+
+  // if nobs = x , vref1 = vy and vref2 = vz
+  if (nx == 1) {
+    vref1 = vel[1];
+    vref2 = vel[2];
+  }
+  // if nobs = x , vref1 = vy and vref2 = vz
+  else if (nx == -1) {
+    vref1 = -vel[1];
+    vref2 = -vel[2];
+  }
+
+  // Rotate velocity into projected area seen by the observer (see notes)
+  else {
+    // Rotate velocity from (x,y,z) to (n_obs,ref1,ref2) so that x correspond to n_obs (see notes)
+    vref1 = -ny * vel[0] + (nx + nz * nz / (1 + nx)) * vel[1] - ny * nz * (1 - nx) / sqrt(1 - nx * nx) * vel[2];
+    vref2 = -nz * vel[0] - ny * nz * (1 - nx) / sqrt(1 - nx * nx) * vel[1] + (nx + ny * ny / (1 + nx)) * vel[2];
+  }
+
+  // Outside the grid
+  if (fabs(vref1) >= globals::vmax || fabs(vref2) >= globals::vmax) {
+    return;
+  }
+
+  // Bin size
+  const double ybin = 2 * globals::vmax / VGRID_NY;
+  const double zbin = 2 * globals::vmax / VGRID_NZ;
+
+  // Grid cell
+  const int nt = static_cast<int>((globals::vmax - vref1) / ybin);
+  const int mt = static_cast<int>((globals::vmax - vref2) / zbin);
+
+  // Add contribution
+  if (dummy_ptr->nu_rf > nu_grid_min[bin_range] && dummy_ptr->nu_rf < nu_grid_max[bin_range]) {
+    safeadd(vgrid_i[nt][mt].flux[bin_range][bin], dummy_ptr->stokes[0] * dummy_ptr->e_rf);
+    safeadd(vgrid_q[nt][mt].flux[bin_range][bin], dummy_ptr->stokes[1] * dummy_ptr->e_rf);
+    safeadd(vgrid_u[nt][mt].flux[bin_range][bin], dummy_ptr->stokes[2] * dummy_ptr->e_rf);
+  }
+}
+
+static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int bin,
+                           std::span<double, 3> obs, const int realtype) {
   int snext = 0;
   double n_u = NAN;
   double n_l = NAN;
@@ -372,46 +465,6 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   }
 }
 
-// Virtual packet is killed when tau reaches tau_max_vpkt for ALL the different setups
-// E.g. imagine that a packet in the first setup (all elements included) reaches tau = tau_max_vpkt
-// because of the element Zi. If we remove Zi, tau now could be lower than tau_max_vpkt and could
-// thus contribute to the spectrum.
-auto check_tau(const double *tau, const double *tau_max) -> int {
-  int count = 0;
-
-  for (int i = 0; i < Nspectra; i++) {
-    if (tau[i] > *tau_max) {
-      count += 1;
-    }
-  }
-
-  if (count == Nspectra) {
-    return 0;
-  }
-  return 1;
-}
-
-// Routine to add a packet to the outcoming spectrum.
-void add_to_vspecpol(const struct packet *const pkt_ptr, int bin, int ind, double t_arrive) {
-  // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
-
-  const int ind_comb = Nspectra * bin + ind;
-
-  /// Put this into the time grid.
-  if (t_arrive > VSPEC_TIMEMIN && t_arrive < VSPEC_TIMEMAX) {
-    const int nt = static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec);
-    if (pkt_ptr->nu_rf > VSPEC_NUMIN && pkt_ptr->nu_rf < VSPEC_NUMAX) {
-      const int nnu = static_cast<int>((log(pkt_ptr->nu_rf) - log(VSPEC_NUMIN)) / dlognu_vspec);
-      const double pktcontrib = pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI /
-                                PARSEC / PARSEC / globals::nprocs * 4 * PI;
-
-      safeadd(vstokes_i[nt][ind_comb].flux[nnu], pkt_ptr->stokes[0] * pktcontrib);
-      safeadd(vstokes_q[nt][ind_comb].flux[nnu], pkt_ptr->stokes[1] * pktcontrib);
-      safeadd(vstokes_u[nt][ind_comb].flux[nnu], pkt_ptr->stokes[2] * pktcontrib);
-    }
-  }
-}
-
 void init_vspecpol() {
   vstokes_i = static_cast<struct vspecpol **>(malloc(VMTBINS * sizeof(struct vspecpol *)));
   vstokes_q = static_cast<struct vspecpol **>(malloc(VMTBINS * sizeof(struct vspecpol *)));
@@ -558,59 +611,6 @@ void init_vpkt_grid() {
         vgrid_u[n][m].flux[bin_range] = std::vector<double>(Nobs, 0.);
       }
     }
-  }
-}
-
-// Routine to add a packet to the outcoming spectrum.
-void add_to_vpkt_grid(const struct packet *const dummy_ptr, std::span<const double, 3> vel, int bin_range, int bin,
-                      std::span<const double, 3> obs) {
-  double vref1 = NAN;
-  double vref2 = NAN;
-
-  // Observer orientation
-
-  const double nx = obs[0];
-  const double ny = obs[1];
-  const double nz = obs[2];
-
-  // Packet velocity
-
-  // if nobs = x , vref1 = vy and vref2 = vz
-  if (nx == 1) {
-    vref1 = vel[1];
-    vref2 = vel[2];
-  }
-  // if nobs = x , vref1 = vy and vref2 = vz
-  else if (nx == -1) {
-    vref1 = -vel[1];
-    vref2 = -vel[2];
-  }
-
-  // Rotate velocity into projected area seen by the observer (see notes)
-  else {
-    // Rotate velocity from (x,y,z) to (n_obs,ref1,ref2) so that x correspond to n_obs (see notes)
-    vref1 = -ny * vel[0] + (nx + nz * nz / (1 + nx)) * vel[1] - ny * nz * (1 - nx) / sqrt(1 - nx * nx) * vel[2];
-    vref2 = -nz * vel[0] - ny * nz * (1 - nx) / sqrt(1 - nx * nx) * vel[1] + (nx + ny * ny / (1 + nx)) * vel[2];
-  }
-
-  // Outside the grid
-  if (fabs(vref1) >= globals::vmax || fabs(vref2) >= globals::vmax) {
-    return;
-  }
-
-  // Bin size
-  const double ybin = 2 * globals::vmax / VGRID_NY;
-  const double zbin = 2 * globals::vmax / VGRID_NZ;
-
-  // Grid cell
-  const int nt = static_cast<int>((globals::vmax - vref1) / ybin);
-  const int mt = static_cast<int>((globals::vmax - vref2) / zbin);
-
-  // Add contribution
-  if (dummy_ptr->nu_rf > nu_grid_min[bin_range] && dummy_ptr->nu_rf < nu_grid_max[bin_range]) {
-    safeadd(vgrid_i[nt][mt].flux[bin_range][bin], dummy_ptr->stokes[0] * dummy_ptr->e_rf);
-    safeadd(vgrid_q[nt][mt].flux[bin_range][bin], dummy_ptr->stokes[1] * dummy_ptr->e_rf);
-    safeadd(vgrid_u[nt][mt].flux[bin_range][bin], dummy_ptr->stokes[2] * dummy_ptr->e_rf);
   }
 }
 
