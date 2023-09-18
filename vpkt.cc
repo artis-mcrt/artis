@@ -173,7 +173,6 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   double Q = NAN;
   double U = NAN;
   double pn = NAN;
-  double prob = NAN;
 
   int bin_range = 0;
 
@@ -421,7 +420,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
   for (int ind = 0; ind < Nspectra; ind++) {
     // printout("bin %d spectrum %d tau_vpkt %g\n", bin, ind, tau_vpkt[ind]);
-    prob = pn * exp(-tau_vpkt[ind]);
+    const double prob = pn * exp(-tau_vpkt[ind]);
 
     assert_always(std::isfinite(prob));
 
@@ -441,15 +440,11 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   // vpkt grid
 
   if (vgrid_on) {
-    prob = pn * exp(-tau_vpkt[0]);
+    const double prob = pn * exp(-tau_vpkt[0]);
 
-    const double Itmp = I * prob;
-    const double Qtmp = Q * prob;
-    const double Utmp = U * prob;
-
-    dummy_ptr->stokes[0] = Itmp;
-    dummy_ptr->stokes[1] = Qtmp;
-    dummy_ptr->stokes[2] = Utmp;
+    dummy_ptr->stokes[0] = I * prob;
+    dummy_ptr->stokes[1] = Q * prob;
+    dummy_ptr->stokes[2] = U * prob;
 
     for (bin_range = 0; bin_range < Nrange_grid; bin_range++) {
       if (dummy_ptr->nu_rf > nu_grid_min[bin_range] &&
