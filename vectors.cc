@@ -23,7 +23,7 @@ void scatter_dir(std::span<const double, 3> dir_in, const double cos_theta, std:
   // Now need to derotate the coordinates back to real x,y,z.
   // Rotation matrix is determined by dir_in.
 
-  const double norm1 = 1. / vec_len(dir_in.subspan(0, 2));
+  const double norm1 = 1. / vec_len(dir_in.first(2));
   const double norm2 = 1. / vec_len(dir_in);
 
   const double r11 = dir_in[1] * norm1;
