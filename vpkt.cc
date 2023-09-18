@@ -33,13 +33,16 @@ std::vector<double> nz_obs_vpkt;
 std::vector<double> phiobs;
 double VSPEC_TIMEMIN_input;
 double VSPEC_TIMEMAX_input;
-int Nrange;
+int Nrange;  // Number of wavelength ranges
 
 std::vector<double> VSPEC_NUMIN_input;
 std::vector<double> VSPEC_NUMAX_input;
 double cell_is_optically_thick_vpkt;
 double tau_max_vpkt;
-std::vector<int> exclude;
+
+std::vector<int> exclude;  // vector of opacity contribution setups
+                           //-1: no line opacity; -2: no bf opacity; -3: no ff opacity; -4: no es opacity,
+                           // +ve: exclude element with atomic number's contribution to bound-bound opacity
 double *tau_vpkt;
 
 // --------- Vstruct packet GRID -----------
@@ -169,7 +172,6 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   double I = NAN;
   double Q = NAN;
   double U = NAN;
-  double pn = NAN;
 
   int bin_range = 0;
 
@@ -204,6 +206,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
   double ref1[3] = {NAN, NAN, NAN};
   double ref2[3] = {NAN, NAN, NAN};
+  double pn = NAN;
   if (realtype == 1) {
     // Transform Stokes Parameters from the RF to the CMF
 
@@ -332,8 +335,9 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
           printout("[warning] get_event: ldist < 0 %g\n", ldist);
         }
 
-        if (ldist > sdist) { /* exit the while loop if you reach the boundary; go back to the previous transition to
-                                start next cell with the excluded line */
+        if (ldist > sdist) {
+          // exit the while loop if you reach the boundary; go back to the previous transition to start next cell with
+          // the excluded line
 
           dummy_ptr->next_trans -= 1;
           // printout("ldist > sdist : line in the next cell\n");
