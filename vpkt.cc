@@ -35,8 +35,8 @@ double tmin_vspec_input;
 double tmax_vspec_input;
 int Nrange;
 
-double numin_vspec_input[MRANGE];
-double numax_vspec_input[MRANGE];
+std::vector<double> numin_vspec_input;
+std::vector<double> numax_vspec_input;
 double cell_is_optically_thick_vpkt;
 double tau_max_vpkt;
 double *exclude;
@@ -765,9 +765,12 @@ void read_parameterfile_vpkt() {
   assert_always(numax_vspec > numin_vspec);
   printout("vpkt: compiled with numax_vspec %g lambda_min %g Å\n", numax_vspec, 1e8 * CLIGHT / numax_vspec);
   printout("vpkt: compiled with numin_vspec %g lambda_max %g Å\n", numin_vspec, 1e8 * CLIGHT / numin_vspec);
+
   if (flag_custom_freq_ranges == 1) {
     assert_always(fscanf(input_file, "%d ", &Nrange) == 1);
     assert_always(Nrange <= MRANGE);
+    numin_vspec_input.resize(Nrange, 0.);
+    numax_vspec_input.resize(Nrange, 0.);
 
     printout("vpkt.txt: Nrange %d frequency intervals per spectrum per observer\n", Nrange);
 
@@ -778,17 +781,17 @@ void read_parameterfile_vpkt() {
 
       numin_vspec_input[i] = CLIGHT / (lmax_vspec_input * 1e-8);
       numax_vspec_input[i] = CLIGHT / (lmin_vspec_input * 1e-8);
-      printout("vpkt.txt:   range %d lambda [%g, %g] Angstroms\n", i, 1e8 * CLIGHT / numax_vspec_input[i],
-               1e8 * CLIGHT / numin_vspec_input[i]);
     }
   } else {
     Nrange = 1;
 
-    numin_vspec_input[0] = numin_vspec;
-    numax_vspec_input[0] = numax_vspec;
+    numin_vspec_input.push_back(numin_vspec);
+    numax_vspec_input.push_back(numax_vspec);
 
     printout("vpkt.txt: Nrange 1 frequency interval (inherited from numin_vspec and numax_vspec)\n");
-    const int i = 0;
+  }
+
+  for (int i = 0; i < Nrange; i++) {
     printout("vpkt.txt:   range %d lambda [%g, %g] Angstroms\n", i, 1e8 * CLIGHT / numax_vspec_input[i],
              1e8 * CLIGHT / numin_vspec_input[i]);
   }
