@@ -57,8 +57,8 @@ struct vgrid vgrid_u[NY_VGRID][NZ_VGRID];
 int Nrange_grid;
 double tmin_grid;
 double tmax_grid;
-double nu_grid_min[MRANGE_GRID];
-double nu_grid_max[MRANGE_GRID];
+std::vector<double> nu_grid_min;
+std::vector<double> nu_grid_max;
 int vgrid_flag;
 double dlogt_vspec;
 double dlognu_vspec;
@@ -828,6 +828,8 @@ void read_parameterfile_vpkt() {
 
     assert_always(Nrange_grid <= MRANGE_GRID);
 
+    nu_grid_max.resize(Nrange_grid, 0.);
+    nu_grid_min.resize(Nrange_grid, 0.);
     for (int i = 0; i < Nrange_grid; i++) {
       double range_lambda_min = 0.;
       double range_lambda_max = 0.;
