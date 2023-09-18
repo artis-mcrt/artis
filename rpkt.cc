@@ -115,13 +115,8 @@ static auto get_event(const int modelgridindex,
 
       double ldist;  // distance from current position to the line interaction
       if (dummypkt_ptr->nu_cmf <= nu_trans) {
-        // printout(
-        //     "[warning] packet %d dummypkt_ptr->nu_cmf %lg <= nu_trans %lg diff %lg next_trans %d, Z=%d ionstage %d
-        //     " "lower %d upper %d\n", pkt_ptr->number, dummypkt_ptr->nu_cmf, nu_trans, (dummypkt_ptr->nu_cmf -
-        //     nu_trans) / nu_trans, dummypkt_ptr->next_trans, get_atomicnumber(element), get_ionstage(element, ion),
-        //     lower, upper);
         ldist = 0;  /// photon was propagated too far, make sure that we don't miss a line
-      } else if (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
+      } else if constexpr (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
         ldist = CLIGHT * dummypkt_ptr->prop_time * (dummypkt_ptr->nu_cmf / nu_trans - 1);
       } else {
         // With special relativity, the Doppler shift formula has an extra factor of 1/gamma in it,
@@ -147,17 +142,9 @@ static auto get_event(const int modelgridindex,
       if (tau_rnd - tau > tau_cont) {
         // got past the continuum optical depth so propagate to the line, and check interaction
 
-        // if ((dist + ldist) > abort_dist) {
         if (nu_trans < nu_cmf_abort) {
           dummypkt_ptr->next_trans -= 1;  // back up one line, because we didn't reach it before the boundary/timelimit
           pkt_ptr->next_trans = dummypkt_ptr->next_trans;
-
-          // const double nextline_nu = globals::linelist[pkt_ptr->next_trans].nu;
-
-          // printout("[debug] get_event:         leave propagation loop (dist %g > abort_dist %g) ...
-          // dummypkt_ptr->next_trans %d\n", dist, abort_dist, dummypkt_ptr->next_trans);
-
-          // assert_always(nextline_nu <= nu_cmf_abort);
 
           return std::numeric_limits<double>::max();
         }
@@ -184,13 +171,11 @@ static auto get_event(const int modelgridindex,
           // printout(
           //     "[debug] get_event: tau_rnd - tau > tau_cont + tau_line ... proceed this packets "
           //     "propagation\n");
-          // printout("[debug] get_event:         dist %g, abort_dist %g, dist-abort_dist %g\n", dist, abort_dist,
-          //          dist - abort_dist);
 
-          dist = dist + ldist;
-
+          dist += ldist;
           tau += tau_cont + tau_line;
-          if (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
+
+          if constexpr (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
             move_pkt_withtime(dummypkt_ptr, ldist);
           } else {
             // avoid move_pkt_withtime() to skip the standard Doppler shift calculation
@@ -199,8 +184,7 @@ static auto get_event(const int modelgridindex,
             dummypkt_ptr->pos[1] += (dummypkt_ptr->dir[1] * ldist);
             dummypkt_ptr->pos[2] += (dummypkt_ptr->dir[2] * ldist);
             dummypkt_ptr->prop_time += ldist / CLIGHT_PROP;
-            // dummypkt_ptr->nu_cmf = nu_trans;
-            dummypkt_ptr->nu_cmf = pkt_ptr->nu_cmf + d_nu_on_d_l * dist;
+            dummypkt_ptr->nu_cmf = pkt_ptr->nu_cmf + d_nu_on_d_l * dist;  // should equal nu_trans;
             assert_testmodeonly(dummypkt_ptr->nu_cmf <= pkt_ptr->nu_cmf);
           }
 
