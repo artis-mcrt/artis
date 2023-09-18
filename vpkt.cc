@@ -46,8 +46,8 @@ double *tau_vpkt;
 
 struct vgrid {
   std::vector<std::vector<double>> flux;
-  std::vector<std::vector<double>> yvel;
-  std::vector<std::vector<double>> zvel;
+  double yvel;
+  double zvel;
 };
 
 struct vgrid vgrid_i[NY_VGRID][NZ_VGRID];
@@ -556,26 +556,23 @@ void init_vpkt_grid() {
 
   for (int n = 0; n < NY_VGRID; n++) {
     for (int m = 0; m < NZ_VGRID; m++) {
+      const double yvel = globals::vmax - (n + 0.5) * ybin;
+      const double zvel = globals::vmax - (m + 0.5) * zbin;
+
+      vgrid_i[n][m].yvel = yvel;
+      vgrid_i[n][m].zvel = zvel;
+
+      vgrid_q[n][m].yvel = yvel;
+      vgrid_q[n][m].zvel = zvel;
+
+      vgrid_u[n][m].yvel = yvel;
+      vgrid_u[n][m].zvel = zvel;
+
       vgrid_i[n][m].flux.resize(Nrange_grid);
-      vgrid_i[n][m].yvel.resize(Nrange_grid);
-      vgrid_i[n][m].zvel.resize(Nrange_grid);
       for (int bin_range = 0; bin_range < Nrange_grid; bin_range++) {
         vgrid_i[n][m].flux[bin_range].resize(Nobs, 0.);
-        vgrid_i[n][m].yvel[bin_range].resize(Nobs, 0.);
-        vgrid_i[n][m].zvel[bin_range].resize(Nobs, 0.);
-
         vgrid_q[n][m].flux[bin_range].resize(Nobs, 0.);
-        vgrid_q[n][m].yvel[bin_range].resize(Nobs, 0.);
-        vgrid_q[n][m].zvel[bin_range].resize(Nobs, 0.);
-
         vgrid_u[n][m].flux[bin_range].resize(Nobs, 0.);
-        vgrid_u[n][m].yvel[bin_range].resize(Nobs, 0.);
-        vgrid_u[n][m].zvel[bin_range].resize(Nobs, 0.);
-
-        for (int bin = 0; bin < Nobs; bin++) {
-          vgrid_i[n][m].yvel[bin_range][bin] = globals::vmax - (n + 0.5) * ybin;
-          vgrid_i[n][m].zvel[bin_range][bin] = globals::vmax - (m + 0.5) * zbin;
-        }
       }
     }
   }
@@ -639,8 +636,8 @@ void write_vpkt_grid(FILE *vpkt_grid_file) {
     for (int bin_range = 0; bin_range < Nrange_grid; bin_range++) {
       for (int n = 0; n < NY_VGRID; n++) {
         for (int m = 0; m < NZ_VGRID; m++) {
-          fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].yvel[bin_range][bin]);
-          fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].zvel[bin_range][bin]);
+          fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].yvel);
+          fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].zvel);
 
           fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].flux[bin_range][bin]);
           fprintf(vpkt_grid_file, "%g ", vgrid_q[n][m].flux[bin_range][bin]);
@@ -658,8 +655,8 @@ void read_vpkt_grid(FILE *vpkt_grid_file) {
     for (int bin_range = 0; bin_range < Nrange_grid; bin_range++) {
       for (int n = 0; n < NY_VGRID; n++) {
         for (int m = 0; m < NZ_VGRID; m++) {
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].yvel[bin_range][bin]) == 1);
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].zvel[bin_range][bin]) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].yvel) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].zvel) == 1);
 
           assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].flux[bin_range][bin]) == 1);
           assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_q[n][m].flux[bin_range][bin]) == 1);
