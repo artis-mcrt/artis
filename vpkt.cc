@@ -568,7 +568,7 @@ void init_vpkt_grid() {
       vgrid_u[n][m].yvel = yvel;
       vgrid_u[n][m].zvel = zvel;
 
-      vgrid_i[n][m].flux.resize(Nrange_grid);
+      vgrid_i[n][m].flux.resize(Nrange_grid, {});
       for (int bin_range = 0; bin_range < Nrange_grid; bin_range++) {
         vgrid_i[n][m].flux[bin_range].resize(Nobs, 0.);
         vgrid_q[n][m].flux[bin_range].resize(Nobs, 0.);
