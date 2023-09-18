@@ -168,8 +168,6 @@ static void add_to_vpkt_grid(const struct packet *const dummy_ptr, std::span<con
 static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int bin,
                            std::span<double, 3> obs, const int realtype) {
   int snext = 0;
-  double n_u = NAN;
-  double n_l = NAN;
   int mgi = 0;
   double I = NAN;
   double Q = NAN;
@@ -283,8 +281,6 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   struct rpkt_cont_opacity kappa_vpkt_cont = {};
 
   while (!end_packet) {
-    ldist = 0;
-
     // distance to the next cell
     const double sdist = grid::boundary_distance(dummy_ptr, &snext);
     const double s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
@@ -313,6 +309,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
       return;
     }
 
+    ldist = 0;
     while (ldist < sdist) {
       // printout("next_trans = %d \t nutrans = %g \t",dummy_ptr->next_trans,nutrans);
 
@@ -354,8 +351,8 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * A_ul;
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
-        n_u = calculate_levelpop(mgi, element, ion, upper);
-        n_l = calculate_levelpop(mgi, element, ion, lower);
+        const auto n_u = calculate_levelpop(mgi, element, ion, upper);
+        const auto n_l = calculate_levelpop(mgi, element, ion, lower);
 
         // Check on the element to exclude
         // NB: ldist before need to be computed anyway (I want to move the packets to the
