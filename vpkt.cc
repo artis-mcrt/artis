@@ -13,9 +13,9 @@
 #include "vectors.h"
 
 struct vspecpol {
-  double flux[VMNUBINS];
-  float lower_time;
-  float delta_t;
+  double flux[VMNUBINS] = {0.};
+  float lower_time = NAN;
+  float delta_t = NAN;
 };
 
 struct vspecpol **vstokes_i;
@@ -60,8 +60,9 @@ double tmax_grid;
 std::vector<double> nu_grid_min;
 std::vector<double> nu_grid_max;
 bool vgrid_on;
-double dlogt_vspec;
-double dlognu_vspec;
+
+double dlogt_vspec = NAN;
+double dlognu_vspec = NAN;
 
 // number of virtual packets in a given timestep
 int nvpkt;
@@ -499,22 +500,7 @@ void read_vspecpol(int my_rank, int nts) {
   float c = NAN;
 
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
-    // Initialise times and frequencies
-    dlogt_vspec = (log(VSPEC_TIMEMAX) - log(VSPEC_TIMEMIN)) / VMTBINS;
-    dlognu_vspec = (log(VSPEC_NUMAX) - log(VSPEC_NUMIN)) / VMNUBINS;
-
-    for (int n = 0; n < VMTBINS; n++) {
-      vstokes_i[n][ind_comb].lower_time = exp(log(VSPEC_TIMEMIN) + (n * (dlogt_vspec)));
-      vstokes_i[n][ind_comb].delta_t =
-          exp(log(VSPEC_TIMEMIN) + ((n + 1) * (dlogt_vspec))) - vstokes_i[n][ind_comb].lower_time;
-
-      for (int m = 0; m < VMNUBINS; m++) {
-        lower_freq_vspec[m] = exp(log(VSPEC_NUMIN) + (m * (dlognu_vspec)));
-        delta_freq_vspec[m] = exp(log(VSPEC_NUMIN) + ((m + 1) * (dlognu_vspec))) - lower_freq_vspec[m];
-      }
-    }
-
-    // Initialise I,Q,U fluxes (from temporary files)
+    // Initialise I,Q,U fluxes from temporary files
     assert_always(fscanf(vspecpol_file, "%g ", &a) == 1);
 
     for (int l = 0; l < 3; l++) {
