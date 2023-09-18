@@ -173,17 +173,7 @@ static auto get_event(const int modelgridindex,
         const double n_u = get_levelpop(modelgridindex, element, ion, upper);
         const double n_l = get_levelpop(modelgridindex, element, ion, lower);
 
-        double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * dummypkt_ptr->prop_time;
-
-        if (tau_line < 0) {
-          // printout("[warning] get_event: tau_line %g < 0, n_l %g, n_u %g, B_lu %g, B_ul %g, W %g, T_R %g, element
-          // %d, ion %d, upper %d, lower %d ... abort\n",tau_line,
-          // n_l,n_u,B_lu,B_ul,get_W(grid::get_cell_modelgridindex(pkt_ptr->where)),get_TR(grid::get_cell_modelgridindex(pkt_ptr->where)),element,ion,upper,lower);
-          // printout("[warning] get_event: set tau_line = 0\n");
-          tau_line = 0.;
-          // printout("[fatal] get_event: tau_line < 0 ... abort\n");
-          // abort();
-        }
+        const double tau_line = std::max(0., (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * dummypkt_ptr->prop_time);
 
         // printout("[debug] get_event:     tau_line %g\n", tau_line);
         // printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
@@ -214,34 +204,8 @@ static auto get_event(const int modelgridindex,
             assert_testmodeonly(dummypkt_ptr->nu_cmf <= pkt_ptr->nu_cmf);
           }
 
-          // if (fabs(dummypkt_ptr->nu_cmf / nu_trans - 1.) > 1e-5) {
-          //   printout("dopplercheck: packet %d nu_cmf %g nu_line %g ratio-1 %g errorfrac %g\n", pkt_ptr->number,
-          //            dummypkt_ptr->nu_cmf, nu_trans, (dummypkt_ptr->nu_cmf - nu_trans) / nu_trans,
-          //            fabs(dummypkt_ptr->nu_cmf / nu_trans - 1.));
-          // }
-
           radfield::update_lineestimator(modelgridindex, lineindex,
                                          dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
-
-          // const int next_trans = dummypkt_ptr->next_trans;
-          // printout(
-          //     "[debug] get_event:         dummypkt_ptr->nu_cmf %g, nu(dummypkt_ptr->next_trans=%d) %g, "
-          //     "nu(dummypkt_ptr->next_trans-1=%d) %g\n",
-          //     dummypkt_ptr->nu_cmf, next_trans, globals::linelist[next_trans].nu, next_trans - 1,
-          //     globals::linelist[next_trans - 1].nu);
-          // printout(
-          //     "[debug] get_event:         (dummypkt_ptr->nu_cmf - "
-          //     "nu(dummypkt_ptr->next_trans-1))/dummypkt_ptr->nu_cmf %g\n",
-          //     (dummypkt_ptr->nu_cmf - globals::linelist[next_trans - 1].nu) / dummypkt_ptr->nu_cmf);
-
-          // if (dummypkt_ptr->nu_cmf >= globals::linelist[next_trans].nu &&
-          //     dummypkt_ptr->nu_cmf < globals::linelist[next_trans - 1].nu) {
-          //   printout("[debug] get_event:           nu(next_trans-1) > nu_cmf >= nu(next_trans)\n");
-          // } else if (dummypkt_ptr->nu_cmf < globals::linelist[next_trans].nu) {
-          //   printout("[debug] get_event:           nu_cmf < nu(next_trans)\n");
-          // } else {
-          //   printout("[debug] get_event:           nu_cmf >= nu(next_trans-1)\n");
-          // }
 
         } else {
           /// bound-bound process occurs
