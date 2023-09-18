@@ -474,7 +474,7 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
       fclose(vspecpol_file);
 
       // Write temporary files for vpkt_grid
-      if (vgrid_flag == 1) {
+      if (vgrid_on) {
         snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
 
         FILE *vpkt_grid_file = fopen_required(filename, "wb");
@@ -691,7 +691,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
         write_vspecpol(vspecpol_file);
         fclose(vspecpol_file);
 
-        if (vgrid_flag == 1) {
+        if (vgrid_on) {
           snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d-%d.out", my_rank, tid);
           FILE *vpkt_grid_file = fopen_required(filename, "w");
           write_vpkt_grid(vpkt_grid_file);
@@ -954,7 +954,7 @@ auto main(int argc, char *argv[]) -> int {
   // Initialise virtual packets file and vspecpol
   if constexpr (VPKT_ON) {
     init_vspecpol();
-    if (vgrid_flag == 1) {
+    if (vgrid_on) {
       init_vpkt_grid();
     }
 
@@ -963,7 +963,7 @@ auto main(int argc, char *argv[]) -> int {
 
       read_vspecpol(my_rank, nts);
 
-      if (vgrid_flag == 1) {
+      if (vgrid_on) {
         if (nts % 2 == 0) {
           snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
         } else {

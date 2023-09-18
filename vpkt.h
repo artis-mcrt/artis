@@ -47,7 +47,7 @@ constexpr double tmin_vspec = (10 * DAY);
 constexpr double tmax_vspec = (30 * DAY);
 constexpr int VMTBINS = 30;
 
-extern int vgrid_flag;
+extern bool vgrid_on;
 
 extern int nvpkt;
 extern int nvpkt_esc1;  // electron scattering event

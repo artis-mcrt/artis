@@ -46,8 +46,8 @@ double *tau_vpkt;
 
 struct vgrid {
   std::vector<std::vector<double>> flux;
-  double yvel;
-  double zvel;
+  double yvel = NAN;
+  double zvel = NAN;
 };
 
 struct vgrid vgrid_i[NY_VGRID][NZ_VGRID];
@@ -59,7 +59,7 @@ double tmin_grid;
 double tmax_grid;
 std::vector<double> nu_grid_min;
 std::vector<double> nu_grid_max;
-int vgrid_flag;
+bool vgrid_on;
 double dlogt_vspec;
 double dlognu_vspec;
 
@@ -349,7 +349,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
 
   // vpkt grid
 
-  if (vgrid_flag == 1) {
+  if (vgrid_on) {
     prob = pn * exp(-tau_vpkt[0]);
 
     const double Itmp = I * prob;
@@ -807,10 +807,12 @@ void read_parameterfile_vpkt() {
   printout("vpkt.txt: tau_max_vpkt %g\n", tau_max_vpkt);
 
   // Produce velocity grid map if =1
-  assert_always(fscanf(input_file, "%d \n", &vgrid_flag) == 1);
-  printout("vpkt.txt: velocity grid map %s\n", (vgrid_flag == 1) ? "ENABLED" : "DISABLED");
+  int in_vgrid_on = 0;
+  assert_always(fscanf(input_file, "%d \n", &in_vgrid_on) == 1);
+  vgrid_on = in_vgrid_on != 0;
+  printout("vpkt.txt: velocity grid map %s\n", (vgrid_on) ? "ENABLED" : "DISABLED");
 
-  if (vgrid_flag == 1) {
+  if (vgrid_on) {
     double tmin_grid_in_days = NAN;
     double tmax_grid_in_days = NAN;
     // Specify time range for velocity grid map
