@@ -424,27 +424,22 @@ void init_vspecpol() {
     vstokes_u[p] = static_cast<struct vspecpol *>(malloc(indexmax * sizeof(struct vspecpol)));
   }
 
+  dlogt_vspec = (log(VSPEC_TIMEMAX) - log(VSPEC_TIMEMIN)) / VMTBINS;
+  dlognu_vspec = (log(VSPEC_NUMAX) - log(VSPEC_NUMIN)) / VMNUBINS;
+  for (int m = 0; m < VMNUBINS; m++) {
+    lower_freq_vspec[m] = exp(log(VSPEC_NUMIN) + (m * (dlognu_vspec)));
+    delta_freq_vspec[m] = exp(log(VSPEC_NUMIN) + ((m + 1) * (dlognu_vspec))) - lower_freq_vspec[m];
+  }
+
   for (int ind_comb = 0; ind_comb < indexmax; ind_comb++) {
     // start by setting up the time and frequency bins.
     // it is all done interms of a logarithmic spacing in both t and nu - get the
     // step sizes first.
 
-    dlogt_vspec = (log(VSPEC_TIMEMAX) - log(VSPEC_TIMEMIN)) / VMTBINS;
-    dlognu_vspec = (log(VSPEC_NUMAX) - log(VSPEC_NUMIN)) / VMNUBINS;
-
     for (int n = 0; n < VMTBINS; n++) {
       vstokes_i[n][ind_comb].lower_time = exp(log(VSPEC_TIMEMIN) + (n * (dlogt_vspec)));
       vstokes_i[n][ind_comb].delta_t =
           exp(log(VSPEC_TIMEMIN) + ((n + 1) * (dlogt_vspec))) - vstokes_i[n][ind_comb].lower_time;
-
-      for (int m = 0; m < VMNUBINS; m++) {
-        lower_freq_vspec[m] = exp(log(VSPEC_NUMIN) + (m * (dlognu_vspec)));
-        delta_freq_vspec[m] = exp(log(VSPEC_NUMIN) + ((m + 1) * (dlognu_vspec))) - lower_freq_vspec[m];
-
-        vstokes_i[n][ind_comb].flux[m] = 0.0;
-        vstokes_q[n][ind_comb].flux[m] = 0.0;
-        vstokes_u[n][ind_comb].flux[m] = 0.0;
-      }
     }
   }
 }
