@@ -82,7 +82,6 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   double U = NAN;
   double pn = NAN;
   double prob = NAN;
-  double mu = NAN;
   int tau_flag = 0;
 
   int bin_range = 0;
@@ -143,7 +142,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
 
     // Scattering
 
-    mu = dot(old_dir_cmf, obs_cmf);
+    const double mu = dot(old_dir_cmf, obs_cmf);
 
     pn = 3. / (16. * PI) * (1 + pow(mu, 2.) + (pow(mu, 2.) - 1) * Qold);
 
