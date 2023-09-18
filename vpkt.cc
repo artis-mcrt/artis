@@ -92,7 +92,7 @@ static auto check_tau(const double *tau, const double *tau_max) -> int {
 }
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vspecpol(const struct packet *const pkt_ptr, int bin, int ind, double t_arrive) {
+static void add_to_vspecpol(const struct packet *const pkt_ptr, const int bin, const int ind, const double t_arrive) {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
 
   const int ind_comb = Nspectra * bin + ind;
@@ -113,8 +113,8 @@ void add_to_vspecpol(const struct packet *const pkt_ptr, int bin, int ind, doubl
 }
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vpkt_grid(const struct packet *const dummy_ptr, std::span<const double, 3> vel, int bin_range, int bin,
-                      std::span<const double, 3> obs) {
+static void add_to_vpkt_grid(const struct packet *const dummy_ptr, std::span<const double, 3> vel, const int bin_range,
+                             const int bin, std::span<const double, 3> obs) {
   double vref1 = NAN;
   double vref2 = NAN;
 
@@ -166,7 +166,7 @@ void add_to_vpkt_grid(const struct packet *const dummy_ptr, std::span<const doub
 }
 
 static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int bin,
-                           std::span<double, 3> obs, const int realtype) {
+                           std::span<const double, 3> obs, const int realtype) {
   int snext = 0;
   double n_u = NAN;
   double n_l = NAN;
@@ -368,7 +368,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
           }
         }
 
-        /* kill vpkt with high optical depth */
+        // kill vpkt with high optical depth
         if (check_tau(tau_vpkt, &tau_max_vpkt) == 0) {
           return;
         }
@@ -838,7 +838,6 @@ void read_parameterfile_vpkt() {
 
 auto vpkt_call_estimators(struct packet *pkt_ptr, const int realtype) -> int {
   const double t_current = pkt_ptr->prop_time;
-  double obs[3];
   int vflag = 0;
 
   double vel_vec[3];
@@ -861,10 +860,8 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const int realtype) -> int {
 
   for (int bin = 0; bin < Nobs; bin++) {
     // loop over different observers
-
-    obs[0] = sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * cos(phiobs[bin]);
-    obs[1] = sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * sin(phiobs[bin]);
-    obs[2] = nz_obs_vpkt[bin];
+    const double obs[3] = {sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * cos(phiobs[bin]),
+                           sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * sin(phiobs[bin]), nz_obs_vpkt[bin]};
 
     const double t_arrive = t_current - (dot(pkt_ptr->pos, obs) / CLIGHT_PROP);
 
