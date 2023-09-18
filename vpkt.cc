@@ -82,7 +82,6 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
   double U = NAN;
   double pn = NAN;
   double prob = NAN;
-  int tau_flag = 0;
 
   int bin_range = 0;
 
@@ -216,8 +215,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
     }
 
     // kill vpkt with high optical depth
-    tau_flag = check_tau(tau_vpkt, &tau_max_vpkt);
-    if (tau_flag == 0) {
+    if (check_tau(tau_vpkt, &tau_max_vpkt) == 0) {
       return;
     }
 
@@ -277,8 +275,7 @@ void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, 
         }
 
         /* kill vpkt with high optical depth */
-        tau_flag = check_tau(tau_vpkt, &tau_max_vpkt);
-        if (tau_flag == 0) {
+        if (check_tau(tau_vpkt, &tau_max_vpkt) == 0) {
           return;
         }
       } else {
