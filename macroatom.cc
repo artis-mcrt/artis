@@ -224,7 +224,7 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
 
   if constexpr (VPKT_ON) {
     const int realtype = 3;
-    vpkt_call_estimators(pkt_ptr, pkt_ptr->prop_time, realtype);
+    vpkt_call_estimators(pkt_ptr, realtype);
   }
 }
 
@@ -301,7 +301,7 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
 
   if constexpr (VPKT_ON) {
     const int realtype = 3;
-    vpkt_call_estimators(pkt_ptr, pkt_ptr->prop_time, realtype);
+    vpkt_call_estimators(pkt_ptr, realtype);
   }
 }
 

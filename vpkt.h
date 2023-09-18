@@ -27,7 +27,7 @@ void add_to_vpkt_grid(const struct packet *const dummy_ptr, std::span<const doub
 void write_vpkt_grid(FILE *vpkt_grid_file);
 void read_vpkt_grid(FILE *vpkt_grid_file);
 int check_tau(const double *tau, const double *tau_max);
-int vpkt_call_estimators(struct packet *pkt_ptr, double t_current, int realtype);
+int vpkt_call_estimators(struct packet *pkt_ptr, int realtype);
 
 // --------------------------------------------------------------------------------
 // ---------------------------  VIRTUAL PACKETS -----------------------------------
@@ -47,9 +47,6 @@ constexpr int VMNUBINS = 2500;
 constexpr double tmin_vspec = (10 * DAY);
 constexpr double tmax_vspec = (30 * DAY);
 constexpr int VMTBINS = 30;
-
-// Total number of frequency ranges
-constexpr int MRANGE = 2;
 
 extern int vgrid_flag;
 

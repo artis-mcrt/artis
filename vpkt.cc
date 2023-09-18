@@ -764,7 +764,6 @@ void read_parameterfile_vpkt() {
 
   if (flag_custom_freq_ranges == 1) {
     assert_always(fscanf(input_file, "%d ", &Nrange) == 1);
-    assert_always(Nrange <= MRANGE);
     numin_vspec_input.resize(Nrange, 0.);
     numax_vspec_input.resize(Nrange, 0.);
 
@@ -845,12 +844,13 @@ void read_parameterfile_vpkt() {
   fclose(input_file);
 }
 
-auto vpkt_call_estimators(struct packet *pkt_ptr, const double t_current, const int realtype) -> int {
+auto vpkt_call_estimators(struct packet *pkt_ptr, const int realtype) -> int {
+  const double t_current = pkt_ptr->prop_time;
   double obs[3];
   int vflag = 0;
 
   double vel_vec[3];
-  get_velocity(pkt_ptr->pos, vel_vec, t_current);
+  get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
 
   // Cut on vpkts
   int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
@@ -859,8 +859,7 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const double t_current, const 
     return 0;
   }
 
-  /* this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each observer)
-   */
+  // this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each observer)
   if (pkt_ptr->next_trans == 0) {
     const int lineindex = closest_transition(pkt_ptr->nu_cmf, pkt_ptr->next_trans);  /// returns negative
     if (lineindex < 0) {
@@ -869,7 +868,7 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const double t_current, const 
   }
 
   for (int bin = 0; bin < Nobs; bin++) {
-    /* loop over different observers */
+    // loop over different observers
 
     obs[0] = sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * cos(phiobs[bin]);
     obs[1] = sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * sin(phiobs[bin]);

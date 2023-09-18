@@ -515,7 +515,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, struct rpkt_cont_opacit
     if constexpr (VPKT_ON) {
       int const realtype = 1;
       pkt_ptr->last_cross = BOUNDARY_NONE;
-      vpkt_call_estimators(pkt_ptr, pkt_ptr->prop_time, realtype);
+      vpkt_call_estimators(pkt_ptr, realtype);
     }
 
     // pkt_ptr->nu_cmf = 3.7474058e+14;
