@@ -65,6 +65,8 @@ constexpr double RECOMBCALIBRATION_T_ELEC;
 
 // Polarisation for real packets
 constexpr bool DIPOLE;
+
+// Only affects exspec and enables writing specpol.out, emissionpol.out, absorptionpol.out
 constexpr bool POL_ON;
 
 // Polarisation for virtual packets
