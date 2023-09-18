@@ -76,19 +76,16 @@ int nvpkt_esc3;  // macroatom deactivation
 // E.g. imagine that a packet in the first setup (all elements included) reaches tau = tau_max_vpkt
 // because of the element Zi. If we remove Zi, tau now could be lower than tau_max_vpkt and could
 // thus contribute to the spectrum.
-static auto check_tau(const double *tau, const double *tau_max) -> int {
+static auto all_taus_past_taumax(const double *tau, const double tau_max) -> bool {
   int count = 0;
 
   for (int i = 0; i < Nspectra; i++) {
-    if (tau[i] > *tau_max) {
+    if (tau[i] > tau_max) {
       count += 1;
     }
   }
 
-  if (count == Nspectra) {
-    return 0;
-  }
-  return 1;
+  return count == Nspectra;
 }
 
 // Routine to add a packet to the outcoming spectrum.
@@ -263,11 +260,9 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     const double vel_rev[3] = {-vel_vec[0], -vel_vec[1], -vel_vec[2]};
 
     frame_transform(obs_cmf, &Q, &U, vel_rev, obs);
-  }
 
-  // ------------ MACROATOM and KPKT: isotropic emission --------------------
-
-  if (realtype == 2 || realtype == 3) {
+  } else if (realtype == 2 || realtype == 3) {
+    // ------------ MACROATOM and KPKT: isotropic emission --------------------
     I = 1;
     Q = 0;
     U = 0;
@@ -304,7 +299,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     }
 
     // kill vpkt with high optical depth
-    if (check_tau(tau_vpkt, &tau_max_vpkt) == 0) {
+    if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
       return;
     }
 
@@ -365,7 +360,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
         }
 
         // kill vpkt with high optical depth
-        if (check_tau(tau_vpkt, &tau_max_vpkt) == 0) {
+        if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
           return;
         }
       } else {
