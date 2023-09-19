@@ -890,17 +890,12 @@ auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<doubl
   /* -------- We need to rotate Stokes Parameters to (or from) the scattering plane from (or to) -------- */
   /* -------- the meridian frame such that Q=1 is in the scattering plane and along ref1 ---------------- */
 
-  double i = 0;
-
-  double ref1_sc[3];
   // ref1_sc is the ref1 axis in the scattering plane ref1 = n1 x ( n1 x n2 )
-  ref1_sc[0] = n1[0] * dot(n1, n2) - n2[0];
-  ref1_sc[1] = n1[1] * dot(n1, n2) - n2[1];
-  ref1_sc[2] = n1[2] * dot(n1, n2) - n2[2];
+  double ref1_sc[3]{n1[0] * dot(n1, n2) - n2[0], n1[1] * dot(n1, n2) - n2[1], n1[2] * dot(n1, n2) - n2[2]};
   vec_norm(ref1_sc, ref1_sc);
 
   double cos_stokes_rot_1 = dot(ref1_sc, ref1);
-  double const cos_stokes_rot_2 = dot(ref1_sc, ref2);
+  const double cos_stokes_rot_2 = dot(ref1_sc, ref2);
 
   if (cos_stokes_rot_1 < -1) {
     cos_stokes_rot_1 = -1;
@@ -909,6 +904,7 @@ auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<doubl
     cos_stokes_rot_1 = 1;
   }
 
+  double i = 0;
   if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 > 0)) {
     i = acos(cos_stokes_rot_1);
   } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 > 0)) {
