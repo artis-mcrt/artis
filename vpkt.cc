@@ -944,10 +944,7 @@ void meridian(std::span<const double, 3> n, std::span<double, 3> ref1, std::span
   ref1[2] = (1 - (n[2] * n[2])) / n_xylen;
 
   // for ref_2 use vector product of n_cmf with ref1
-
-  ref2[0] = n[2] * ref1[1] - n[1] * ref1[2];
-  ref2[1] = n[0] * ref1[2] - n[2] * ref1[0];
-  ref2[2] = n[1] * ref1[0] - n[0] * ref1[1];
+  cross_prod(ref1, n, ref2);
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
