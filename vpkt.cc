@@ -891,7 +891,8 @@ auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<doubl
   /* -------- the meridian frame such that Q=1 is in the scattering plane and along ref1 ---------------- */
 
   // ref1_sc is the ref1 axis in the scattering plane ref1 = n1 x ( n1 x n2 )
-  double ref1_sc[3]{n1[0] * dot(n1, n2) - n2[0], n1[1] * dot(n1, n2) - n2[1], n1[2] * dot(n1, n2) - n2[2]};
+  const double n1_dot_n2 = dot(n1, n2);
+  double ref1_sc[3] = {n1[0] * n1_dot_n2 - n2[0], n1[1] * n1_dot_n2 - n2[1], n1[2] * n1_dot_n2 - n2[2]};
   vec_norm(ref1_sc, ref1_sc);
 
   double cos_stokes_rot_1 = dot(ref1_sc, ref1);
