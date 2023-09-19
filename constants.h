@@ -1,6 +1,8 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+#include <cmath>
+
 /// fundamental constants
 constexpr double CLIGHT = 2.99792458e+10;  /// Speed of light [cm/s]
 constexpr double CLIGHT_PROP = CLIGHT;     // Speed of light for ray travel. Physically = CLIGHT but
@@ -11,7 +13,7 @@ constexpr double LSUN = 3.826e+33;         /// Solar luminosity [erg/s]
 constexpr double MH = 1.67352e-24;         /// Mass of hydrogen atom [g]
 constexpr double ME = 9.1093897e-28;       /// Mass of free electron [g]
 constexpr double QE = 4.80325E-10;         /// elementary charge in cgs units [statcoulomb]
-constexpr double PI = 3.1415926535987;
+constexpr double PI = M_PI;
 constexpr double EV = 1.6021772e-12;         /// eV to ergs [eV/erg]
 constexpr double MEV = 1.6021772e-6;         /// MeV to ergs [MeV/erg]
 constexpr double DAY = 86400.0;              /// day to seconds [s/day]
