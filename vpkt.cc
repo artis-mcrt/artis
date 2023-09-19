@@ -190,8 +190,9 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
 
   // rf frequency and energy
-  vpkt.nu_rf = vpkt.nu_cmf / doppler_nucmf_on_nurf(vpkt.dir, vel_vec);
-  vpkt.e_rf = vpkt.e_cmf * vpkt.nu_rf / vpkt.nu_cmf;
+  const double dopplerfactor = doppler_nucmf_on_nurf(vpkt.dir, vel_vec);
+  vpkt.nu_rf = vpkt.nu_cmf / dopplerfactor;
+  vpkt.e_rf = vpkt.e_cmf / dopplerfactor;
 
   double Qi = vpkt.stokes[1];
   double Ui = vpkt.stokes[2];
