@@ -473,8 +473,8 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
     assert_always(grid::modelgrid[modelgridindex].totalcooling > 0.);
     const double rndcool_ion = zrand * grid::modelgrid[modelgridindex].totalcooling;
 
-    int element;
-    int ion;
+    int element = -1;
+    int ion = -1;
     for (element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (ion = 0; ion < nions; ion++) {
@@ -566,7 +566,6 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
       pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
       stats::increment(stats::COUNTER_K_STAT_TO_R_FF);
 
-      pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 6;
       pkt_ptr->emissiontype = EMTYPE_FREEFREE;
       vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
@@ -585,18 +584,16 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
       const int lowerion = coolinglist[i].ion;
       const int lowerlevel = coolinglist[i].level;
       const int upper = coolinglist[i].upperlevel;
-      // const double nu_threshold = get_phixs_threshold(element, ion, lowerlevel, phixstargetindex)
 
       /// then randomly sample the packets frequency according to the continuums
       /// energy distribution
 
       // Sample the packets comoving frame frequency according to paperII 4.2.2
-      // zrand = rng_uniform();
-      // if (zrand < 0.5)
-      { pkt_ptr->nu_cmf = select_continuum_nu(element, lowerion, lowerlevel, upper, T_e); }
-      // else
-      // {
-      //   ///Emitt like a BB
+      // const double zrand = rng_uniform();
+      // if (zrand < 0.5) {
+      pkt_ptr->nu_cmf = select_continuum_nu(element, lowerion, lowerlevel, upper, T_e);
+      // } else {
+      //   // Emit like a BB
       //   pkt_ptr->nu_cmf = sample_planck(T_e);
       // }
 
@@ -613,7 +610,6 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
 
       pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
       stats::increment(stats::COUNTER_K_STAT_TO_R_FB);
-      pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 7;
       pkt_ptr->emissiontype = get_continuumindex(element, lowerion, lowerlevel, upper);
       pkt_ptr->trueemissiontype = pkt_ptr->emissiontype;
@@ -644,8 +640,9 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
       int upper = -1;
       // excitation to same ionization stage
       const int nuptrans = get_nuptrans(element, ion, level);
+      const auto *const uptrans = globals::elements[element].ions[ion].levels[level].uptrans;
       for (int ii = 0; ii < nuptrans; ii++) {
-        const int tmpupper = globals::elements[element].ions[ion].levels[level].uptrans[ii].targetlevelindex;
+        const int tmpupper = uptrans[ii].targetlevelindex;
         // printout("    excitation to level %d possible\n",upper);
         const double epsilon_trans = epsilon(element, ion, tmpupper) - epsilon_current;
         const double C = nnlevel *
@@ -685,7 +682,6 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
       stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_COLLEXC);
       stats::increment(stats::COUNTER_K_STAT_TO_MA_COLLEXC);
 
-      pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 8;
       pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
       pkt_ptr->trueemissionvelocity = -1;
@@ -708,7 +704,6 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
       stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_COLLION);
       stats::increment(stats::COUNTER_K_STAT_TO_MA_COLLION);
 
-      pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 9;
       pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
       pkt_ptr->trueemissionvelocity = -1;
@@ -720,6 +715,8 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
       printout("[fatal] do_kpkt: pkt_ptr->where %d, mgi %d\n", pkt_ptr->where, modelgridindex);
       abort();
     }
+
+    pkt_ptr->interactions++;
 
     return pkt_ptr->prop_time;
   }
