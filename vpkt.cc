@@ -131,7 +131,7 @@ static void add_to_vpkt_grid(const struct packet &vpkt, std::span<const double, 
     vref1 = vel[1];
     vref2 = vel[2];
   }
-  // if nobs = x , vref1 = vy and vref2 = vz
+  // if nobs = -x , vref1 = -vy and vref2 = -vz
   else if (obs[0] == -1) {
     vref1 = -vel[1];
     vref2 = -vel[2];
