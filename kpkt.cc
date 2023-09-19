@@ -196,7 +196,7 @@ void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrate
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
       const double C_ion = calculate_cooling_rates_ion<false>(modelgridindex, element, ion, -1, tid, &C_ff_all,
-                                                              &C_fb_all, &C_exc, &C_ionization);
+                                                              &C_fb_all, &C_exc_all, &C_ionization_all);
       grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] = C_ion;
     }
   }
