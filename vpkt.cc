@@ -303,7 +303,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
       return;
     }
 
-    struct packet dummypkt_abort = *pkt_ptr;
+    struct packet dummypkt_abort = vpkt;
     move_pkt_withtime(&dummypkt_abort, sdist);
     const double nu_cmf_abort = dummypkt_abort.nu_cmf;
     assert_testmodeonly(nu_cmf_abort <= vpkt.nu_cmf);
