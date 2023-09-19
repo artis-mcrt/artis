@@ -1208,7 +1208,9 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
                                                : calculate_levelpop(modelgridindex, element, ion + 1, upper);
             const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
             departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
-            globals::cellhistory[tid].ch_allcont_departureratios[i] = departure_ratio;
+            if (usecellhistupdatephixslist) {
+              globals::cellhistory[tid].ch_allcont_departureratios[i] = departure_ratio;
+            }
           }
 
           const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
