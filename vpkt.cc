@@ -19,7 +19,7 @@ struct stokeparams {
 };
 
 struct vspecpol {
-  struct stokeparams flux[VMNUBINS] = {0.};
+  struct stokeparams flux[VMNUBINS];
   float lower_time = NAN;
   float delta_t = NAN;
 };
