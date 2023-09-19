@@ -303,6 +303,12 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
       return;
     }
 
+    struct packet dummypkt_abort = *pkt_ptr;
+    move_pkt_withtime(&dummypkt_abort, sdist);
+    const double nu_cmf_abort = dummypkt_abort.nu_cmf;
+    assert_testmodeonly(nu_cmf_abort <= vpkt.nu_cmf);
+    const double d_nu_on_d_l = (nu_cmf_abort - vpkt.nu_cmf) / sdist;
+
     ldist = 0;
     while (ldist < sdist) {
       const int lineindex = closest_transition(vpkt.nu_cmf, vpkt.next_trans);
@@ -317,14 +323,16 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
         const int lower = globals::linelist[lineindex].lowerlevelindex;
         const auto A_ul = globals::linelist[lineindex].einstein_A;
 
-        const int anumber = get_atomicnumber(element);
-
         vpkt.next_trans = lineindex + 1;
 
+        // get distance to the line interaction
         if (vpkt.nu_cmf < nutrans) {
           ldist = 0;
-        } else {
+        } else if constexpr (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
           ldist = CLIGHT * t_current * (vpkt.nu_cmf / nutrans - 1);
+        } else {
+          // use linear interpolation of frequency along the path
+          ldist = (nutrans - vpkt.nu_cmf) / d_nu_on_d_l;
         }
 
         if (ldist < 0.) {
@@ -351,6 +359,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
         // Check on the element to exclude
         // NB: ldist before need to be computed anyway (I want to move the packets to the
         // line interaction point even if I don't interact)
+        const int anumber = get_atomicnumber(element);
         const double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line;
         for (int ind = 0; ind < Nspectra; ind++) {
           // If exclude[ind]==-1, I do not include line opacity
