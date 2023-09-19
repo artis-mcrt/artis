@@ -166,7 +166,7 @@ static void add_to_vpkt_grid(const struct packet &vpkt, std::span<const double, 
 }
 
 static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int obsbin,
-                           std::span<double, 3> obs, const int realtype) {
+                           std::span<double, 3> obs, const enum packet_type realtype) {
   int snext = 0;
   int mgi = 0;
 
@@ -204,7 +204,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   double I = NAN;
   double Q = NAN;
   double U = NAN;
-  if (realtype == 1) {
+  if (realtype == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
 
     double old_dir_cmf[3] = {NAN, NAN, NAN};
@@ -261,7 +261,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
     frame_transform(obs_cmf, &Q, &U, vel_rev, obs);
 
-  } else if (realtype == 2 || realtype == 3) {
+  } else if (realtype == TYPE_KPKT || realtype == TYPE_MA) {
     // MACROATOM and KPKT: isotropic emission
     I = 1;
     Q = 0;
@@ -402,11 +402,11 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   }
 
   // increment the number of escaped virtual packet in the given timestep
-  if (realtype == 1) {
+  if (realtype == TYPE_RPKT) {
     safeincrement(nvpkt_esc1);
-  } else if (realtype == 2) {
+  } else if (realtype == TYPE_KPKT) {
     safeincrement(nvpkt_esc2);
-  } else if (realtype == 3) {
+  } else if (realtype == TYPE_MA) {
     safeincrement(nvpkt_esc3);
   }
 
@@ -818,7 +818,7 @@ void read_parameterfile_vpkt() {
   fclose(input_file);
 }
 
-auto vpkt_call_estimators(struct packet *pkt_ptr, const int realtype) -> int {
+auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type realtype) -> int {
   const double t_current = pkt_ptr->prop_time;
   double obs[3];
   int vflag = 0;

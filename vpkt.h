@@ -5,6 +5,7 @@
 #include <span>
 
 #include "artisoptions.h"
+#include "packet.h"
 
 double rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<double, 3> ref1,
                  std::span<double, 3> ref2);
@@ -21,7 +22,7 @@ void read_vspecpol(int my_rank, int nts);
 void init_vpkt_grid();
 void write_vpkt_grid(FILE *vpkt_grid_file);
 void read_vpkt_grid(FILE *vpkt_grid_file);
-int vpkt_call_estimators(struct packet *pkt_ptr, int realtype);
+int vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type);
 
 // --------------------------------------------------------------------------------
 // ---------------------------  VIRTUAL PACKETS -----------------------------------

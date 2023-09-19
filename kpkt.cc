@@ -575,8 +575,7 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
 
       if constexpr (VPKT_ON) {
         // generate a virtual packet
-        int const realtype = 2;
-        vpkt_call_estimators(pkt_ptr, realtype);
+        vpkt_call_estimators(pkt_ptr, TYPE_KPKT);
       }
     } else if (coolinglist[i].type == COOLINGTYPE_FB) {
       /// The k-packet converts directly into a r-packet by free-bound-emission.
@@ -624,8 +623,7 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
 
       // call the estimator routine - generate a virtual packet
       if constexpr (VPKT_ON) {
-        int const realtype = 2;
-        vpkt_call_estimators(pkt_ptr, realtype);
+        vpkt_call_estimators(pkt_ptr, TYPE_KPKT);
       }
     } else if (coolinglist[i].type == COOLINGTYPE_COLLEXC) {
       /// the k-packet activates a macro-atom due to collisional excitation

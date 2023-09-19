@@ -223,8 +223,7 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
   pkt_ptr->nscatterings = 0;
 
   if constexpr (VPKT_ON) {
-    const int realtype = 3;
-    vpkt_call_estimators(pkt_ptr, realtype);
+    vpkt_call_estimators(pkt_ptr, TYPE_MA);
   }
 }
 
@@ -300,8 +299,7 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
   pkt_ptr->nscatterings = 0;
 
   if constexpr (VPKT_ON) {
-    const int realtype = 3;
-    vpkt_call_estimators(pkt_ptr, realtype);
+    vpkt_call_estimators(pkt_ptr, TYPE_MA);
   }
 }
 
