@@ -943,8 +943,6 @@ void meridian(std::span<const double, 3> n, std::span<double, 3> ref1, std::span
 // Routine to transform the Stokes Parameters from RF to CMF
 void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v,
                      std::span<double, 3> n_cmf) {
-  double theta_rot = 0.;
-
   double ref1[3] = {NAN, NAN, NAN};
   double ref2[3] = {NAN, NAN, NAN};
   // Meridian frame in the RF
@@ -958,12 +956,10 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
 
   // We want to compute the angle between ref1 and the electric field
   double rot_angle = 0;
-  double cos2rot_angle = NAN;
-  double sin2rot_angle = NAN;
 
   if (p > 0) {
-    cos2rot_angle = Q0 / p;
-    sin2rot_angle = U0 / p;
+    const double cos2rot_angle = Q0 / p;
+    const double sin2rot_angle = U0 / p;
 
     if ((cos2rot_angle > 0) && (sin2rot_angle > 0)) {
       rot_angle = acos(Q0 / p) / 2.;
@@ -1008,6 +1004,7 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
   const double cosine_elec_ref2 = dot(elec_cmf, ref2);
 
   // Compute the angle between ref1 and the electric field
+  double theta_rot = 0.;
   if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 < 0)) {
     theta_rot = acos(cosine_elec_ref1);
   } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 > 0)) {
@@ -1035,9 +1032,10 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
   *U = sin(2 * theta_rot) * p;
 }
 
-/* ----------------------- Lorentz transformations from RF to CMF --------------------------------------------- */
 void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, std::span<const double, 3> v,
              std::span<double, 3> e_cmf) {
+  // Lorentz transformations from RF to CMF
+
   const double beta[3] = {v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
   double const vsqr = dot(beta, beta);
 
