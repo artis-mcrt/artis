@@ -886,9 +886,9 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type realtyp
 
 auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<double, 3> ref1, std::span<double, 3> ref2)
     -> double {
-  /* ------------- Rotation angle from the scattering plane --------------------------------------------- */
-  /* -------- We need to rotate Stokes Parameters to (or from) the scattering plane from (or to) -------- */
-  /* -------- the meridian frame such that Q=1 is in the scattering plane and along ref1 ---------------- */
+  // Rotation angle from the scattering plane
+  // We need to rotate Stokes Parameters to (or from) the scattering plane from (or to)
+  // the meridian frame such that Q=1 is in the scattering plane and along ref1
 
   // ref1_sc is the ref1 axis in the scattering plane ref1 = n1 x ( n1 x n2 )
   const double n1_dot_n2 = dot(n1, n2);
