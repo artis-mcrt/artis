@@ -275,16 +275,16 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     calculate_kappa_rpkt_cont(&vpkt, &kappa_vpkt_cont, false);
 
     const double kap_cont = kappa_vpkt_cont.total;
-    const double kap_cont_nobf = kap_cont - kappa_vpkt_cont.bf;
-    const double kap_cont_noff = kap_cont - kappa_vpkt_cont.ff;
-    const double kap_cont_noes = kap_cont - kappa_vpkt_cont.es;
 
     for (int ind = 0; ind < Nspectra; ind++) {
       if (exclude[ind] == -2) {
+        const double kap_cont_nobf = kap_cont - kappa_vpkt_cont.bf;
         tau_vpkt[ind] += kap_cont_nobf * s_cont;
       } else if (exclude[ind] == -3) {
+        const double kap_cont_noff = kap_cont - kappa_vpkt_cont.ff;
         tau_vpkt[ind] += kap_cont_noff * s_cont;
       } else if (exclude[ind] == -4) {
+        const double kap_cont_noes = kap_cont - kappa_vpkt_cont.es;
         tau_vpkt[ind] += kap_cont_noes * s_cont;
       } else {
         tau_vpkt[ind] += kap_cont * s_cont;
@@ -357,7 +357,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
         const int anumber = get_atomicnumber(element);
         for (int ind = 0; ind < Nspectra; ind++) {
           // If exclude[ind]==-1, I do not include line opacity
-          if (exclude[ind] != -1 && (anumber != exclude[ind])) {
+          if (exclude[ind] != -1 && (exclude[ind] != anumber)) {
             tau_vpkt[ind] += tau_line;
           }
         }
