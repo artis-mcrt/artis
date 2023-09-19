@@ -909,14 +909,14 @@ auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<doubl
   if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 > 0)) {
     i = acos(cos_stokes_rot_1);
   } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 > 0)) {
-    i = acos(-1.) - acos(fabs(cos_stokes_rot_1));
+    i = M_PI - acos(fabs(cos_stokes_rot_1));
   } else if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 < 0)) {
-    i = 2 * acos(-1.) - acos(cos_stokes_rot_1);
+    i = 2 * M_PI - acos(cos_stokes_rot_1);
   } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 < 0)) {
-    i = acos(-1.) + acos(fabs(cos_stokes_rot_1));
+    i = M_PI + acos(fabs(cos_stokes_rot_1));
   }
   if (cos_stokes_rot_1 == 0) {
-    i = acos(-1.) / 2.;
+    i = M_PI / 2.;
   }
   if (cos_stokes_rot_2 == 0) {
     i = 0.0;
@@ -965,21 +965,21 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
     if ((cos2rot_angle > 0) && (sin2rot_angle > 0)) {
       rot_angle = acos(Q0 / p) / 2.;
     } else if ((cos2rot_angle < 0) && (sin2rot_angle > 0)) {
-      rot_angle = (acos(-1.) - acos(fabs(cos2rot_angle))) / 2.;
+      rot_angle = (M_PI - acos(fabs(cos2rot_angle))) / 2.;
     } else if ((cos2rot_angle < 0) && (sin2rot_angle < 0)) {
-      rot_angle = (acos(-1.) + acos(fabs(cos2rot_angle))) / 2.;
+      rot_angle = (M_PI + acos(fabs(cos2rot_angle))) / 2.;
     } else if ((cos2rot_angle > 0) && (sin2rot_angle < 0)) {
-      rot_angle = (2. * acos(-1.) - acos(fabs(cos2rot_angle))) / 2.;
+      rot_angle = (2. * M_PI - acos(fabs(cos2rot_angle))) / 2.;
     } else if (cos2rot_angle == 0) {
-      rot_angle = 0.25 * acos(-1);
+      rot_angle = 0.25 * M_PI;
       if (U0 < 0) {
-        rot_angle = 0.75 * acos(-1);
+        rot_angle = 0.75 * M_PI;
       }
     }
     if (sin2rot_angle == 0) {
       rot_angle = 0.0;
       if (Q0 < 0) {
-        rot_angle = 0.5 * acos(-1);
+        rot_angle = 0.5 * M_PI;
       }
     }
   }
@@ -1009,14 +1009,14 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
   if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 < 0)) {
     theta_rot = acos(cosine_elec_ref1);
   } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 > 0)) {
-    theta_rot = acos(-1.) + acos(fabs(cosine_elec_ref1));
+    theta_rot = M_PI + acos(fabs(cosine_elec_ref1));
   } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 < 0)) {
-    theta_rot = acos(-1.) - acos(fabs(cosine_elec_ref1));
+    theta_rot = M_PI - acos(fabs(cosine_elec_ref1));
   } else if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 > 0)) {
-    theta_rot = 2 * acos(-1.) - acos(cosine_elec_ref1);
+    theta_rot = 2 * M_PI - acos(cosine_elec_ref1);
   }
   if (cosine_elec_ref1 == 0) {
-    theta_rot = acos(-1.) / 2.;
+    theta_rot = M_PI / 2.;
   }
   if (cosine_elec_ref2 == 0) {
     theta_rot = 0.0;
@@ -1025,7 +1025,7 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
     theta_rot = 0.0;
   }
   if (cosine_elec_ref1 < -1) {
-    theta_rot = acos(-1.);
+    theta_rot = M_PI;
   }
 
   // Compute Stokes Parameters in the CMF
