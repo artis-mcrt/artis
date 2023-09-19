@@ -41,9 +41,9 @@ static auto get_ncoolingterms_ion(int element, int ion) -> int {
 }
 
 template <bool update_cooling_contrib_list>
-static auto calculate_kpkt_rates_ion(const int modelgridindex, const int element, const int ion,
-                                     const int indexionstart, const int tid, double *C_ff, double *C_fb, double *C_exc,
-                                     double *C_ionization) -> double
+static auto calculate_cooling_rates_ion(const int modelgridindex, const int element, const int ion,
+                                        const int indexionstart, const int tid, double *C_ff, double *C_fb,
+                                        double *C_exc, double *C_ionization) -> double
 // calculate the cooling contribution list of individual levels/processes for an ion
 // oldcoolingsum is the sum of lower ion (of same element or all ions of lower elements) cooling contributions
 {
@@ -188,15 +188,15 @@ void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrate
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
 {
-  double C_ff_all = 0.;      /// free-free creation of rpkts
-  double C_fb_all = 0.;      /// free-bound creation of rpkt
-  double C_exc = 0.;         /// collisional excitation of macroatoms
-  double C_ionization = 0.;  /// collisional ionisation of macroatoms
+  double C_ff_all = 0.;          /// free-free creation of rpkts
+  double C_fb_all = 0.;          /// free-bound creation of rpkt
+  double C_exc_all = 0.;         /// collisional excitation of macroatoms
+  double C_ionization_all = 0.;  /// collisional ionisation of macroatoms
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      const double C_ion = calculate_kpkt_rates_ion<false>(modelgridindex, element, ion, -1, tid, &C_ff_all, &C_fb_all,
-                                                           &C_exc, &C_ionization);
+      const double C_ion = calculate_cooling_rates_ion<false>(modelgridindex, element, ion, -1, tid, &C_ff_all,
+                                                              &C_fb_all, &C_exc, &C_ionization);
       grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] = C_ion;
     }
   }
@@ -214,7 +214,7 @@ void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrate
 
   // only used in the T_e solver and write_to_estimators file
   if (heatingcoolingrates != nullptr) {
-    heatingcoolingrates->cooling_collisional = C_collexcion_all;
+    heatingcoolingrates->cooling_collisional = C_exc_all + C_ionization_all;
     heatingcoolingrates->cooling_fb = C_fb_all;
     heatingcoolingrates->cooling_ff = C_ff_all;
   }
@@ -462,8 +462,8 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
       // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d
       // oldcoolingsum %g\n",
       //          modelgridindex, element, ion, ilow, high, oldcoolingsum);
-      const double C_ion =
-          calculate_kpkt_rates_ion<true>(modelgridindex, element, ion, ilow, tid, nullptr, nullptr, nullptr, nullptr);
+      const double C_ion = calculate_cooling_rates_ion<true>(modelgridindex, element, ion, ilow, tid, nullptr, nullptr,
+                                                             nullptr, nullptr);
       // we just summed up every individual cooling process. make sure it matches the stored total for the ion
       assert_always(C_ion == grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]);
     }
