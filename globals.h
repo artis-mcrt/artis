@@ -149,15 +149,15 @@ struct gslintegration_paras {
 };
 
 struct rpkt_cont_opacity {
-  double nu;  // frequency at which opacity was calculated
-  double total;
-  double es;
-  double ff;
-  double bf;
-  double ffheating;
+  double nu = NAN;  // frequency at which opacity was calculated
+  double total = 0.;
+  double es = 0.;
+  double ff = 0.;
+  double bf = 0.;
+  double ffheating = 0.;
   // double bfheating;
-  int modelgridindex;
-  bool recalculate_required;  // e.g. when cell or timestep has changed
+  int modelgridindex = -1;
+  bool recalculate_required = true;  // e.g. when cell or timestep has changed
 };
 
 template <bool separatestimrecomb>
