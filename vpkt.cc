@@ -996,44 +996,44 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
 
   // Define electric field by linear combination of ref1 and ref2 (using the angle just computed)
 
-  const double e_rf[3] = {cos(rot_angle) * ref1[0] - sin(rot_angle) * ref2[0],
-                          cos(rot_angle) * ref1[1] - sin(rot_angle) * ref2[1],
-                          cos(rot_angle) * ref1[2] - sin(rot_angle) * ref2[2]};
+  const double elec_rf[3] = {cos(rot_angle) * ref1[0] - sin(rot_angle) * ref2[0],
+                             cos(rot_angle) * ref1[1] - sin(rot_angle) * ref2[1],
+                             cos(rot_angle) * ref1[2] - sin(rot_angle) * ref2[2]};
 
   // Aberration
   angle_ab(n_rf, v, n_cmf);
 
-  double e_cmf[3] = {NAN, NAN, NAN};
+  double elec_cmf[3] = {NAN, NAN, NAN};
   // Lorentz transformation of E
-  lorentz(e_rf, n_rf, v, e_cmf);
+  lorentz(elec_rf, n_rf, v, elec_cmf);
 
   // Meridian frame in the CMF
   meridian(n_cmf, ref1, ref2);
 
   // Projection of E onto ref1 and ref2
-  const double e_cmf_ref1 = dot(e_cmf, ref1);
-  const double e_cmf_ref2 = dot(e_cmf, ref2);
+  const double cosine_elec_ref1 = dot(elec_cmf, ref1);
+  const double cosine_elec_ref2 = dot(elec_cmf, ref2);
 
   // Compute the angle between ref1 and the electric field
-  if ((e_cmf_ref1 > 0) && (e_cmf_ref2 < 0)) {
-    theta_rot = acos(e_cmf_ref1);
-  } else if ((e_cmf_ref1 < 0) && (e_cmf_ref2 < 0)) {
-    theta_rot = acos(-1.) - acos(fabs(e_cmf_ref1));
-  } else if ((e_cmf_ref1 < 0) && (e_cmf_ref2 > 0)) {
-    theta_rot = acos(-1.) + acos(fabs(e_cmf_ref1));
-  } else if ((e_cmf_ref1 > 0) && (e_cmf_ref2 > 0)) {
-    theta_rot = 2 * acos(-1.) - acos(e_cmf_ref1);
+  if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 < 0)) {
+    theta_rot = acos(cosine_elec_ref1);
+  } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 < 0)) {
+    theta_rot = acos(-1.) - acos(fabs(cosine_elec_ref1));
+  } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 > 0)) {
+    theta_rot = acos(-1.) + acos(fabs(cosine_elec_ref1));
+  } else if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 > 0)) {
+    theta_rot = 2 * acos(-1.) - acos(cosine_elec_ref1);
   }
-  if (e_cmf_ref1 == 0) {
+  if (cosine_elec_ref1 == 0) {
     theta_rot = acos(-1.) / 2.;
   }
-  if (e_cmf_ref2 == 0) {
+  if (cosine_elec_ref2 == 0) {
     theta_rot = 0.0;
   }
-  if (e_cmf_ref1 > 1) {
+  if (cosine_elec_ref1 > 1) {
     theta_rot = 0.0;
   }
-  if (e_cmf_ref1 < -1) {
+  if (cosine_elec_ref1 < -1) {
     theta_rot = acos(-1.);
   }
 
