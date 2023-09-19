@@ -96,10 +96,10 @@ static auto all_taus_past_taumax(std::vector<double> &tau, const double tau_max)
 }
 
 // Routine to add a packet to the outcoming spectrum.
-static void add_to_vspecpol(const struct packet &vpkt, const int bin, const int ind, const double t_arrive) {
+static void add_to_vspecpol(const struct packet &vpkt, const int obsbin, const int ind, const double t_arrive) {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
 
-  const int ind_comb = Nspectra * bin + ind;
+  const int ind_comb = Nspectra * obsbin + ind;
 
   /// Put this into the time grid.
   if (t_arrive > VSPEC_TIMEMIN && t_arrive < VSPEC_TIMEMAX) {
@@ -117,26 +117,22 @@ static void add_to_vspecpol(const struct packet &vpkt, const int bin, const int 
 }
 
 // Routine to add a packet to the outcoming spectrum.
-static void add_to_vpkt_grid(const struct packet &vpkt, std::span<const double, 3> vel, const int bin_range,
-                             const int bin, std::span<const double, 3> obs) {
+static void add_to_vpkt_grid(const struct packet &vpkt, std::span<const double, 3> vel, const int wlbin,
+                             const int obsbin, std::span<const double, 3> obs) {
   double vref1 = NAN;
   double vref2 = NAN;
 
-  // Observer orientation
-
-  const double nx = obs[0];
-  const double ny = obs[1];
-  const double nz = obs[2];
+  // obs is the observer orientation
 
   // Packet velocity
 
   // if nobs = x , vref1 = vy and vref2 = vz
-  if (nx == 1) {
+  if (obs[0] == 1) {
     vref1 = vel[1];
     vref2 = vel[2];
   }
   // if nobs = x , vref1 = vy and vref2 = vz
-  else if (nx == -1) {
+  else if (obs[0] == -1) {
     vref1 = -vel[1];
     vref2 = -vel[2];
   }
@@ -144,8 +140,10 @@ static void add_to_vpkt_grid(const struct packet &vpkt, std::span<const double, 
   // Rotate velocity into projected area seen by the observer (see notes)
   else {
     // Rotate velocity from (x,y,z) to (n_obs,ref1,ref2) so that x correspond to n_obs (see notes)
-    vref1 = -ny * vel[0] + (nx + nz * nz / (1 + nx)) * vel[1] - ny * nz * (1 - nx) / sqrt(1 - nx * nx) * vel[2];
-    vref2 = -nz * vel[0] - ny * nz * (1 - nx) / sqrt(1 - nx * nx) * vel[1] + (nx + ny * ny / (1 + nx)) * vel[2];
+    vref1 = -obs[1] * vel[0] + (obs[0] + obs[2] * obs[2] / (1 + obs[0])) * vel[1] -
+            obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - obs[0] * obs[0]) * vel[2];
+    vref2 = -obs[2] * vel[0] - obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - obs[0] * obs[0]) * vel[1] +
+            (obs[0] + obs[1] * obs[1] / (1 + obs[0])) * vel[2];
   }
 
   // Outside the grid
@@ -154,30 +152,26 @@ static void add_to_vpkt_grid(const struct packet &vpkt, std::span<const double, 
   }
 
   // Bin size
-  const double ybin = 2 * globals::vmax / VGRID_NY;
-  const double zbin = 2 * globals::vmax / VGRID_NZ;
 
-  // Grid cell
-  const int nt = static_cast<int>((globals::vmax - vref1) / ybin);
-  const int mt = static_cast<int>((globals::vmax - vref2) / zbin);
+  // vgrid cell (can be different to propagation cell size)
+  const int ny = static_cast<int>((globals::vmax - vref1) / (2 * globals::vmax / VGRID_NY));
+  const int nz = static_cast<int>((globals::vmax - vref2) / (2 * globals::vmax / VGRID_NZ));
 
   // Add contribution
-  if (vpkt.nu_rf > nu_grid_min[bin_range] && vpkt.nu_rf < nu_grid_max[bin_range]) {
-    safeadd(vgrid_i[nt][mt].flux[bin_range][bin], vpkt.stokes[0] * vpkt.e_rf);
-    safeadd(vgrid_q[nt][mt].flux[bin_range][bin], vpkt.stokes[1] * vpkt.e_rf);
-    safeadd(vgrid_u[nt][mt].flux[bin_range][bin], vpkt.stokes[2] * vpkt.e_rf);
+  if (vpkt.nu_rf > nu_grid_min[wlbin] && vpkt.nu_rf < nu_grid_max[wlbin]) {
+    safeadd(vgrid_i[ny][nz].flux[wlbin][obsbin], vpkt.stokes[0] * vpkt.e_rf);
+    safeadd(vgrid_q[ny][nz].flux[wlbin][obsbin], vpkt.stokes[1] * vpkt.e_rf);
+    safeadd(vgrid_u[ny][nz].flux[wlbin][obsbin], vpkt.stokes[2] * vpkt.e_rf);
   }
 }
 
-static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int bin,
+static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int obsbin,
                            std::span<double, 3> obs, const int realtype) {
   int snext = 0;
   int mgi = 0;
   double I = NAN;
   double Q = NAN;
   double U = NAN;
-
-  int bin_range = 0;
 
   struct packet vpkt = *pkt_ptr;
 
@@ -420,7 +414,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   // -------------- final stokes vector ---------------
 
   for (int ind = 0; ind < Nspectra; ind++) {
-    // printout("bin %d spectrum %d tau_vpkt %g\n", bin, ind, tau_vpkt[ind]);
+    // printout("obsbin %d spectrum %d tau_vpkt %g\n", obsbin, ind, tau_vpkt[ind]);
     const double prob = pn * exp(-tau_vpkt[ind]);
 
     assert_always(std::isfinite(prob));
@@ -435,7 +429,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
     // bin on fly and produce file with spectrum
 
-    add_to_vspecpol(vpkt, bin, ind, t_arrive);
+    add_to_vspecpol(vpkt, obsbin, ind, t_arrive);
   }
 
   // vpkt grid
@@ -447,10 +441,10 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     vpkt.stokes[1] = Q * prob;
     vpkt.stokes[2] = U * prob;
 
-    for (bin_range = 0; bin_range < Nrange_grid; bin_range++) {
-      if (vpkt.nu_rf > nu_grid_min[bin_range] && vpkt.nu_rf < nu_grid_max[bin_range]) {  // Frequency selection
-        if (t_arrive > tmin_grid && t_arrive < tmax_grid) {                              // Time selection
-          add_to_vpkt_grid(vpkt, vel_vec, bin_range, bin, obs);
+    for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
+      if (vpkt.nu_rf > nu_grid_min[wlbin] && vpkt.nu_rf < nu_grid_max[wlbin]) {  // Frequency selection
+        if (t_arrive > tmin_grid && t_arrive < tmax_grid) {                      // Time selection
+          add_to_vpkt_grid(vpkt, vel_vec, wlbin, obsbin, obs);
         }
       }
     }
@@ -599,26 +593,26 @@ void init_vpkt_grid() {
       vgrid_i[n][m].flux.resize(Nrange_grid, {});
       vgrid_q[n][m].flux.resize(Nrange_grid, {});
       vgrid_u[n][m].flux.resize(Nrange_grid, {});
-      for (int bin_range = 0; bin_range < Nrange_grid; bin_range++) {
-        vgrid_i[n][m].flux[bin_range] = std::vector<double>(Nobs, 0.);
-        vgrid_q[n][m].flux[bin_range] = std::vector<double>(Nobs, 0.);
-        vgrid_u[n][m].flux[bin_range] = std::vector<double>(Nobs, 0.);
+      for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
+        vgrid_i[n][m].flux[wlbin] = std::vector<double>(Nobs, 0.);
+        vgrid_q[n][m].flux[wlbin] = std::vector<double>(Nobs, 0.);
+        vgrid_u[n][m].flux[wlbin] = std::vector<double>(Nobs, 0.);
       }
     }
   }
 }
 
 void write_vpkt_grid(FILE *vpkt_grid_file) {
-  for (int bin = 0; bin < Nobs; bin++) {
-    for (int bin_range = 0; bin_range < Nrange_grid; bin_range++) {
+  for (int obsbin = 0; obsbin < Nobs; obsbin++) {
+    for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
           fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].yvel);
           fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].zvel);
 
-          fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].flux[bin_range][bin]);
-          fprintf(vpkt_grid_file, "%g ", vgrid_q[n][m].flux[bin_range][bin]);
-          fprintf(vpkt_grid_file, "%g ", vgrid_u[n][m].flux[bin_range][bin]);
+          fprintf(vpkt_grid_file, "%g ", vgrid_i[n][m].flux[wlbin][obsbin]);
+          fprintf(vpkt_grid_file, "%g ", vgrid_q[n][m].flux[wlbin][obsbin]);
+          fprintf(vpkt_grid_file, "%g ", vgrid_u[n][m].flux[wlbin][obsbin]);
 
           fprintf(vpkt_grid_file, "\n");
         }
@@ -628,16 +622,16 @@ void write_vpkt_grid(FILE *vpkt_grid_file) {
 }
 
 void read_vpkt_grid(FILE *vpkt_grid_file) {
-  for (int bin = 0; bin < Nobs; bin++) {
-    for (int bin_range = 0; bin_range < Nrange_grid; bin_range++) {
+  for (int obsbin = 0; obsbin < Nobs; obsbin++) {
+    for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
           assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].yvel) == 1);
           assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].zvel) == 1);
 
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].flux[bin_range][bin]) == 1);
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_q[n][m].flux[bin_range][bin]) == 1);
-          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_u[n][m].flux[bin_range][bin]) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].flux[wlbin][obsbin]) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_q[n][m].flux[wlbin][obsbin]) == 1);
+          assert_always(fscanf(vpkt_grid_file, "%lg ", &vgrid_u[n][m].flux[wlbin][obsbin]) == 1);
 
           assert_always(fscanf(vpkt_grid_file, "\n") == 0);
         }
@@ -847,12 +841,12 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const int realtype) -> int {
     }
   }
 
-  for (int bin = 0; bin < Nobs; bin++) {
+  for (int obsbin = 0; obsbin < Nobs; obsbin++) {
     // loop over different observers
 
-    obs[0] = sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * cos(phiobs[bin]);
-    obs[1] = sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * sin(phiobs[bin]);
-    obs[2] = nz_obs_vpkt[bin];
+    obs[0] = sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * cos(phiobs[obsbin]);
+    obs[1] = sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * sin(phiobs[obsbin]);
+    obs[2] = nz_obs_vpkt[obsbin];
 
     const double t_arrive = t_current - (dot(pkt_ptr->pos, obs) / CLIGHT_PROP);
 
@@ -866,7 +860,7 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const int realtype) -> int {
             pkt_ptr->nu_cmf / doppler_nucmf_on_nurf(obs, vel_vec) < VSPEC_NUMAX_input[i]) {
           // frequency selection
 
-          rlc_emiss_vpkt(pkt_ptr, t_current, bin, obs, realtype);
+          rlc_emiss_vpkt(pkt_ptr, t_current, obsbin, obs, realtype);
 
           vflag = 1;
 
