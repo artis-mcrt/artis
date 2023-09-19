@@ -230,7 +230,7 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
 static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridindex, const int element, int *ion,
                                    int *level, const double rad_recomb) {
   const auto T_e = grid::get_Te(modelgridindex);
-  const float nne = grid::get_nne(modelgridindex);
+  const auto nne = grid::get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, *ion, *level);
   const int upperion = *ion;
   const int upperionlevel = *level;
@@ -306,7 +306,7 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
 static void do_macroatom_ionisation(const int modelgridindex, const int element, int *ion, int *level,
                                     const double epsilon_current, const double internal_up_higher) {
   const auto T_e = grid::get_Te(modelgridindex);
-  const float nne = grid::get_nne(modelgridindex);
+  const auto nne = grid::get_nne(modelgridindex);
 
   int upper = -1;
   /// Randomly select the occuring transition
@@ -349,7 +349,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = grid::get_cell_modelgridindex(cellindex);
   const auto T_e = grid::get_Te(modelgridindex);
-  const float nne = grid::get_nne(modelgridindex);
+  const auto nne = grid::get_nne(modelgridindex);
 
   assert_always(grid::modelgrid[modelgridindex].thick != 1);  // macroatom should not be used in thick cells
 
