@@ -911,15 +911,12 @@ auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<doubl
 
   if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 > 0)) {
     i = acos(cos_stokes_rot_1);
-  }
-  if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 < 0)) {
-    i = 2 * acos(-1.) - acos(cos_stokes_rot_1);
-  }
-  if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 < 0)) {
-    i = acos(-1.) + acos(fabs(cos_stokes_rot_1));
-  }
-  if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 > 0)) {
+  } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 > 0)) {
     i = acos(-1.) - acos(fabs(cos_stokes_rot_1));
+  } else if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 < 0)) {
+    i = 2 * acos(-1.) - acos(cos_stokes_rot_1);
+  } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 < 0)) {
+    i = acos(-1.) + acos(fabs(cos_stokes_rot_1));
   }
   if (cos_stokes_rot_1 == 0) {
     i = acos(-1.) / 2.;
@@ -1017,10 +1014,10 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
   // Compute the angle between ref1 and the electric field
   if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 < 0)) {
     theta_rot = acos(cosine_elec_ref1);
-  } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 < 0)) {
-    theta_rot = acos(-1.) - acos(fabs(cosine_elec_ref1));
   } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 > 0)) {
     theta_rot = acos(-1.) + acos(fabs(cosine_elec_ref1));
+  } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 < 0)) {
+    theta_rot = acos(-1.) - acos(fabs(cosine_elec_ref1));
   } else if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 > 0)) {
     theta_rot = 2 * acos(-1.) - acos(cosine_elec_ref1);
   }
