@@ -84,15 +84,7 @@ int nvpkt_esc3;  // macroatom deactivation
 // because of the element Zi. If we remove Zi, tau now could be lower than tau_max_vpkt and could
 // thus contribute to the spectrum.
 static auto all_taus_past_taumax(std::vector<double> &tau, const double tau_max) -> bool {
-  int count = 0;
-
-  for (int i = 0; i < Nspectra; i++) {
-    if (tau[i] > tau_max) {
-      count += 1;
-    }
-  }
-
-  return count == Nspectra;
+  return std::all_of(tau.begin(), tau.end(), [tau_max](const double tau_i) { return tau_i > tau_max; });
 }
 
 // Routine to add a packet to the outcoming spectrum.
