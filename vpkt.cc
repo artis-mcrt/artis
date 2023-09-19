@@ -860,10 +860,8 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type realtyp
 
         if (nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) {
           // frequency selection
-          const bool use_cellhist_prev = use_cellhist;
-          use_cellhist = false;
+
           rlc_emiss_vpkt(pkt_ptr, t_current, obsbin, obsdir, realtype);
-          use_cellhist = use_cellhist_prev;
         }
       }
     }
