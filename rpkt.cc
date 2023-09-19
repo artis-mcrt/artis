@@ -92,7 +92,7 @@ static auto get_event(const int modelgridindex,
   struct packet dummypkt = *pkt_ptr;
   struct packet *const dummypkt_ptr = &dummypkt;
 
-  calculate_kappa_rpkt_cont(pkt_ptr, &globals::kappa_rpkt_cont[tid]);
+  calculate_kappa_rpkt_cont(pkt_ptr, &globals::kappa_rpkt_cont[tid], true);
   const double kap_cont = globals::kappa_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(pkt_ptr);
   while (true) {
     /// calculate distance to next line encounter ldist
@@ -937,7 +937,7 @@ static auto get_rpkt_escapeprob_fromdirection(std::span<const double, 3> startpo
       }
     }
 
-    calculate_kappa_rpkt_cont(&vpkt, &globals::kappa_rpkt_cont[tid]);
+    calculate_kappa_rpkt_cont(&vpkt, &globals::kappa_rpkt_cont[tid], false);
 
     const double kappa_cont = globals::kappa_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(&vpkt);
 
@@ -1148,11 +1148,12 @@ static auto calculate_kappa_ff(const int modelgridindex, const double nu) -> dou
   return kappa_ff;
 }
 
+template <bool usecellhistupdatephixslist>
 auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) -> double
 // bound-free opacity
 {
   double kappa_bf_sum = 0.;
-  if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
+  if constexpr (usecellhistupdatephixslist && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
     for (int gphixsindex = 0; gphixsindex < globals::nbfcontinua_ground; gphixsindex++) {
       globals::phixslist[tid].groundcont_gamma_contr[gphixsindex] = 0.;
     }
@@ -1185,7 +1186,8 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
         (!DETAILED_BF_ESTIMATORS_ON &&
          ((ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6) || (level == 0)))) {
       const double nu_edge = globals::allcont[i].nu_edge;
-      const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+      const double nnlevel = usecellhistupdatephixslist ? get_levelpop(modelgridindex, element, ion, level)
+                                                        : calculate_levelpop(modelgridindex, element, ion, level);
       const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
       if (nu < nu_edge) {
         break;
@@ -1201,7 +1203,9 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
           double departure_ratio = globals::cellhistory[tid].ch_allcont_departureratios[i];
           if (departure_ratio < 0) {
             const int upper = globals::allcont[i].upperlevel;
-            const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
+            const double nnupperionlevel = usecellhistupdatephixslist
+                                               ? get_levelpop(modelgridindex, element, ion + 1, upper)
+                                               : calculate_levelpop(modelgridindex, element, ion + 1, upper);
             const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
             departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
             globals::cellhistory[tid].ch_allcont_departureratios[i] = departure_ratio;
@@ -1213,19 +1217,19 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
 
         const double sigma_contr = sigma_bf * probability * corrfactor;
 
-        if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
+        if constexpr (usecellhistupdatephixslist && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
           if (level == 0) {
             const int gphixsindex = globals::allcont[i].index_in_groundphixslist;
             globals::phixslist[tid].groundcont_gamma_contr[gphixsindex] += sigma_contr;
           }
         }
 
-        if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+        if constexpr (usecellhistupdatephixslist && DETAILED_BF_ESTIMATORS_ON) {
           globals::phixslist[tid].gamma_contr[i] = sigma_contr;
         }
 
         const double kappa_bf_contr = nnlevel * sigma_contr;
-        if (!std::isfinite(kappa_bf_contr)) {
+        if (usecellhistupdatephixslist && !std::isfinite(kappa_bf_contr)) {
           printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf_contr %g ... abort\n",
                    kappa_bf_contr);
           printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n", i, element, ion, level);
@@ -1240,16 +1244,18 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
         }
 
         kappa_bf_sum += kappa_bf_contr;
-        globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
-      } else {
+        if constexpr (usecellhistupdatephixslist) {
+          globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
+        }
+      } else if constexpr (usecellhistupdatephixslist) {
         // ignore this particular process
         globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
         if constexpr (DETAILED_BF_ESTIMATORS_ON) {
           globals::phixslist[tid].gamma_contr[i] = 0.;
         }
       }
-    } else  // no element present or not an important level
-    {
+    } else if constexpr (usecellhistupdatephixslist) {
+      // no element present or not an important level
       globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
       if constexpr (DETAILED_BF_ESTIMATORS_ON) {
         globals::phixslist[tid].gamma_contr[i] = 0.;
@@ -1257,17 +1263,19 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
     }
   }
 
-  for (; i < globals::nbfcontinua; i++) {
-    globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
-    if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-      globals::phixslist[tid].gamma_contr[i] = 0.;
+  if constexpr (usecellhistupdatephixslist) {
+    for (; i < globals::nbfcontinua; i++) {
+      globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
+      if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+        globals::phixslist[tid].gamma_contr[i] = 0.;
+      }
     }
   }
   return kappa_bf_sum;
 }
 
-void calculate_kappa_rpkt_cont(const struct packet *const pkt_ptr,
-                               struct rpkt_cont_opacity *kappa_rpkt_cont_thisthread) {
+void calculate_kappa_rpkt_cont(const struct packet *const pkt_ptr, struct rpkt_cont_opacity *kappa_rpkt_cont_thisthread,
+                               const bool usecellhistupdatephixslist) {
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = grid::get_cell_modelgridindex(cellindex);
   assert_always(modelgridindex != grid::get_npts_model());
@@ -1301,7 +1309,8 @@ void calculate_kappa_rpkt_cont(const struct packet *const pkt_ptr,
     kappa_ffheating = kappa_ff;
 
     /// Third contribution: bound-free absorption
-    kappa_bf = calculate_kappa_bf_gammacontr(modelgridindex, nu_cmf);
+    kappa_bf = usecellhistupdatephixslist ? calculate_kappa_bf_gammacontr<true>(modelgridindex, nu_cmf)
+                                          : calculate_kappa_bf_gammacontr<false>(modelgridindex, nu_cmf);
 
     // const double pkt_lambda = 1e8 * CLIGHT / nu_cmf;
     // if (pkt_lambda < 4000)

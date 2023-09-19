@@ -280,7 +280,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     const double sdist = grid::boundary_distance(&vpkt, &snext);
     const double s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
 
-    calculate_kappa_rpkt_cont(&vpkt, &kappa_vpkt_cont);
+    calculate_kappa_rpkt_cont(&vpkt, &kappa_vpkt_cont, false);
 
     const double kap_cont = kappa_vpkt_cont.total;
     const double kap_cont_nobf = kap_cont - kappa_vpkt_cont.bf;
@@ -887,7 +887,7 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type realtyp
       cellhistory_reset(mgi, false);
     }
     // we just used the opacity variables for v-packets. We need to reset them for the original r packet
-    calculate_kappa_rpkt_cont(pkt_ptr, &globals::kappa_rpkt_cont[tid]);
+    calculate_kappa_rpkt_cont(pkt_ptr, &globals::kappa_rpkt_cont[tid], true);
   }
 }
 
