@@ -151,7 +151,8 @@ void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrate
   }
 }
 
-static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int indexionstart, int tid)
+static auto calculate_kpkt_rates_ion(const int modelgridindex, const int element, const int ion,
+                                     const int indexionstart, const int tid) -> double
 // calculate the cooling contribution list of individual levels/processes for an ion
 // oldcoolingsum is the sum of lower ion (of same element or all ions of lower elements) cooling contributions
 {
@@ -269,8 +270,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
   assert_testmodeonly(indexionstart == get_coolinglistoffset(element, ion));
   assert_always(i == indexionstart + get_ncoolingterms_ion(element, ion));
 
-  // we just summed up every individual cooling process. make sure it matches the stored total for the ion
-  assert_always(grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] == C_ion);
+  return C_ion;
 }
 
 static void set_ncoolingterms() {
@@ -515,7 +515,9 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
       // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d
       // oldcoolingsum %g\n",
       //          modelgridindex, element, ion, ilow, high, oldcoolingsum);
-      calculate_kpkt_rates_ion(modelgridindex, element, ion, ilow, tid);
+      const double C_ion = calculate_kpkt_rates_ion(modelgridindex, element, ion, ilow, tid);
+      // we just summed up every individual cooling process. make sure it matches the stored total for the ion
+      assert_always(C_ion == grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]);
     }
 
     // with the ion selected, we now select a level and transition type
