@@ -1212,7 +1212,6 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
         }
 
         const double sigma_contr = sigma_bf * probability * corrfactor;
-        const double kappa_bf_contr = nnlevel * sigma_contr;
 
         if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
           if (level == 0) {
@@ -1225,6 +1224,7 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
           globals::phixslist[tid].gamma_contr[i] = sigma_contr;
         }
 
+        const double kappa_bf_contr = nnlevel * sigma_contr;
         if (!std::isfinite(kappa_bf_contr)) {
           printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf_contr %g ... abort\n",
                    kappa_bf_contr);
