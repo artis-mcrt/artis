@@ -974,17 +974,13 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
 
     if ((cos2rot_angle > 0) && (sin2rot_angle > 0)) {
       rot_angle = acos(Q0 / p) / 2.;
-    }
-    if ((cos2rot_angle < 0) && (sin2rot_angle > 0)) {
+    } else if ((cos2rot_angle < 0) && (sin2rot_angle > 0)) {
       rot_angle = (acos(-1.) - acos(fabs(Q0 / p))) / 2.;
-    }
-    if ((cos2rot_angle < 0) && (sin2rot_angle < 0)) {
+    } else if ((cos2rot_angle < 0) && (sin2rot_angle < 0)) {
       rot_angle = (acos(-1.) + acos(fabs(Q0 / p))) / 2.;
-    }
-    if ((cos2rot_angle > 0) && (sin2rot_angle < 0)) {
+    } else if ((cos2rot_angle > 0) && (sin2rot_angle < 0)) {
       rot_angle = (2. * acos(-1.) - acos(fabs(Q0 / p))) / 2.;
-    }
-    if (cos2rot_angle == 0) {
+    } else if (cos2rot_angle == 0) {
       rot_angle = 0.25 * acos(-1);
       if (U0 < 0) {
         rot_angle = 0.75 * acos(-1);
