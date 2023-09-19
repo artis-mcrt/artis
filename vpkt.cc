@@ -402,11 +402,6 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     if (grid::modelgrid[mgi].thick == 1) {
       return;
     }
-
-    if (mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi) {
-      stats::increment(stats::COUNTER_UPDATECELL);
-      cellhistory_reset(mgi, false);
-    }
   }
 
   // increment the number of escaped virtual packet in the given timestep
@@ -828,14 +823,13 @@ void read_parameterfile_vpkt() {
 
 auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type realtype) -> void {
   // Cut on vpkts
-  int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+  const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
 
   if (grid::modelgrid[mgi].thick != 0) {
     return;
   }
 
   const double t_current = pkt_ptr->prop_time;
-  bool cellchanged = false;
 
   double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
@@ -868,26 +862,9 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type realtyp
           // frequency selection
 
           rlc_emiss_vpkt(pkt_ptr, t_current, obsbin, obsdir, realtype);
-
-          cellchanged = true;
-
-          // Need to update the starting cell for next observer
-          // If previous vpkt reached tau_lim, change_cell (and then update_cell) hasn't been called
-          mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
-          cellhistory_reset(mgi, false);
         }
       }
     }
-  }
-
-  if (cellchanged) {
-    mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
-    if (mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi) {
-      stats::increment(stats::COUNTER_UPDATECELL);
-      cellhistory_reset(mgi, false);
-    }
-    // we just used the opacity variables for v-packets. We need to reset them for the original r packet
-    calculate_kappa_rpkt_cont(pkt_ptr, &globals::kappa_rpkt_cont[tid], true);
   }
 }
 
