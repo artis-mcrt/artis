@@ -49,8 +49,7 @@ void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrate
 
   double C_ff_all = 0.;          /// free-free creation of rpkts
   double C_fb_all = 0.;          /// free-bound creation of rpkt
-  double C_exc_all = 0.;         /// collisional excitation of macroatoms
-  double C_ionization_all = 0.;  /// collisional ionisation of macroatoms
+  double C_collexcion_all = 0.;  /// collisional excitation or ionisation of macroatoms
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
@@ -83,7 +82,7 @@ void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrate
           const double C = nnlevel *
                            col_excitation_ratecoeff(T_e, nne, element, ion, level, ii, epsilon_trans, statweight) *
                            epsilon_trans;
-          C_exc_all += C;
+          C_collexcion_all += C;
           C_ion += C;
         }
       }
@@ -106,7 +105,7 @@ void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrate
             const double C_ionization_ion_thistarget =
                 nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans) *
                 epsilon_trans;
-            C_ionization_all += C_ionization_ion_thistarget;
+            C_collexcion_all += C_ionization_ion_thistarget;
             C_ion += C_ionization_ion_thistarget;
           }
         }
@@ -146,7 +145,7 @@ void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrate
 
   // only used in the T_e solver and write_to_estimators file
   if (heatingcoolingrates != nullptr) {
-    heatingcoolingrates->cooling_collisional = C_exc_all + C_ionization_all;
+    heatingcoolingrates->cooling_collisional = C_collexcion_all;
     heatingcoolingrates->cooling_fb = C_fb_all;
     heatingcoolingrates->cooling_ff = C_ff_all;
   }
