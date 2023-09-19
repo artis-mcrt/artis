@@ -365,10 +365,10 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   double ref2[3];
   meridian(old_dir_cmf, ref1, ref2);
 
-  /* This is the i1 angle of Bulla+2015, obtained by computing the angle between the
-     reference axes ref1 and ref2 in the meridian frame and the corresponding axes
-     ref1_sc and ref2_sc in the scattering plane. It is the supplementary angle of the
-     scatt angle phisc chosen in the rejection technique above (phisc+i1=180 or phisc+i1=540) */
+  // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
+  // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
+  // ref1_sc and ref2_sc in the scattering plane. It is the supplementary angle of the
+  // scatt angle phisc chosen in the rejection technique above (phisc+i1=180 or phisc+i1=540)
   const double i1 = rot_angle(old_dir_cmf, new_dir_cmf, ref1, ref2);
   const double cos2i1 = cos(2 * i1);
   const double sin2i1 = sin(2 * i1);
@@ -393,8 +393,8 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   meridian(new_dir_cmf, ref1, ref2);
 
   // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
-  //   reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
-  //   meridian frame. NB: we need to add PI to transform THETA to i2
+  // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
+  // meridian frame. NB: we need to add PI to transform THETA to i2
   const double i2 = PI + rot_angle(new_dir_cmf, old_dir_cmf, ref1, ref2);
   const double cos2i2 = cos(2 * i2);
   const double sin2i2 = sin(2 * i2);
@@ -415,13 +415,13 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   pkt_ptr->stokes[1] = Q;
   pkt_ptr->stokes[2] = U;
 
-  // ---------------------- Update rest frame direction, frequency and energy --------------------
+  // Update rest frame direction, frequency and energy
 
   pkt_ptr->dir[0] = dummy_dir[0];
   pkt_ptr->dir[1] = dummy_dir[1];
   pkt_ptr->dir[2] = dummy_dir[2];
 
-  // Check unit vector.
+  // Check unit vector
   assert_testmodeonly(fabs(vec_len(pkt_ptr->dir) - 1.) < 1.e-6);
 
   // Finally we want to put in the rest frame energy and frequency.

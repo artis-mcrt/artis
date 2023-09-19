@@ -169,9 +169,6 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
                            std::span<double, 3> obs, const int realtype) {
   int snext = 0;
   int mgi = 0;
-  double I = NAN;
-  double Q = NAN;
-  double U = NAN;
 
   struct packet vpkt = *pkt_ptr;
 
@@ -204,6 +201,9 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   double ref1[3] = {NAN, NAN, NAN};
   double ref2[3] = {NAN, NAN, NAN};
   double pn = NAN;
+  double I = NAN;
+  double Q = NAN;
+  double U = NAN;
   if (realtype == 1) {
     // Transform Stokes Parameters from the RF to the CMF
 
@@ -262,14 +262,14 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     frame_transform(obs_cmf, &Q, &U, vel_rev, obs);
 
   } else if (realtype == 2 || realtype == 3) {
-    // ------------ MACROATOM and KPKT: isotropic emission --------------------
+    // MACROATOM and KPKT: isotropic emission
     I = 1;
     Q = 0;
     U = 0;
     pn = 1 / (4 * PI);
   }
 
-  // --------- compute the optical depth to boundary ----------------
+  // compute the optical depth to boundary
 
   mgi = grid::get_cell_modelgridindex(vpkt.where);
   struct rpkt_cont_opacity kappa_vpkt_cont = {};
@@ -390,7 +390,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
       break;
     }
 
-    /* kill vpkt with pass through a thick cell */
+    // kill vpkt with pass through a thick cell
     if (grid::modelgrid[mgi].thick == 1) {
       return;
     }
