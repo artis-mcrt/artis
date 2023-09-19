@@ -1017,14 +1017,11 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
   // Compute the angle between ref1 and the electric field
   if ((e_cmf_ref1 > 0) && (e_cmf_ref2 < 0)) {
     theta_rot = acos(e_cmf_ref1);
-  }
-  if ((e_cmf_ref1 < 0) && (e_cmf_ref2 < 0)) {
+  } else if ((e_cmf_ref1 < 0) && (e_cmf_ref2 < 0)) {
     theta_rot = acos(-1.) - acos(fabs(e_cmf_ref1));
-  }
-  if ((e_cmf_ref1 < 0) && (e_cmf_ref2 > 0)) {
+  } else if ((e_cmf_ref1 < 0) && (e_cmf_ref2 > 0)) {
     theta_rot = acos(-1.) + acos(fabs(e_cmf_ref1));
-  }
-  if ((e_cmf_ref1 > 0) && (e_cmf_ref2 > 0)) {
+  } else if ((e_cmf_ref1 > 0) && (e_cmf_ref2 > 0)) {
     theta_rot = 2 * acos(-1.) - acos(e_cmf_ref1);
   }
   if (e_cmf_ref1 == 0) {
