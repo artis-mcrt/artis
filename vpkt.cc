@@ -305,13 +305,12 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
     ldist = 0;
     while (ldist < sdist) {
-      // printout("next_trans = %d \t nutrans = %g \t",dummy_ptr->next_trans,nutrans);
-
       const int lineindex = closest_transition(vpkt.nu_cmf, vpkt.next_trans);
 
-      const double nutrans = globals::linelist[lineindex].nu;
-
-      if (lineindex >= 0) {
+      if (lineindex < 0) {
+        vpkt.next_trans = globals::nlines + 1;
+      } else {
+        const double nutrans = globals::linelist[lineindex].nu;
         const int element = globals::linelist[lineindex].elementindex;
         const int ion = globals::linelist[lineindex].ionindex;
         const int upper = globals::linelist[lineindex].upperlevelindex;
@@ -364,8 +363,6 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
         if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
           return;
         }
-      } else {
-        vpkt.next_trans = globals::nlines + 1;  /// helper variable to overcome numerical problems after line scattering
       }
     }
 
