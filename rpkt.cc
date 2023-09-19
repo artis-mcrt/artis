@@ -1106,7 +1106,7 @@ static auto calculate_kappa_ff(const int modelgridindex, const double nu) -> dou
   assert_always(nu > 0.);
   const double g_ff = 1;
 
-  const float nne = grid::get_nne(modelgridindex);
+  const auto nne = grid::get_nne(modelgridindex);
   const auto T_e = grid::get_Te(modelgridindex);
 
   double kappa_ff = 0.;
@@ -1211,17 +1211,18 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
           corrfactor = std::max(0., 1 - stimfactor);  // photoionisation minus stimulated recombination
         }
 
-        const double kappa_bf_contr = nnlevel * sigma_bf * probability * corrfactor;
+        const double sigma_contr = sigma_bf * probability * corrfactor;
+        const double kappa_bf_contr = nnlevel * sigma_contr;
 
         if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
           if (level == 0) {
             const int gphixsindex = globals::allcont[i].index_in_groundphixslist;
-            globals::phixslist[tid].groundcont_gamma_contr[gphixsindex] += sigma_bf * probability * corrfactor;
+            globals::phixslist[tid].groundcont_gamma_contr[gphixsindex] += sigma_contr;
           }
         }
 
         if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-          globals::phixslist[tid].gamma_contr[i] = sigma_bf * probability * corrfactor;
+          globals::phixslist[tid].gamma_contr[i] = sigma_contr;
         }
 
         if (!std::isfinite(kappa_bf_contr)) {
@@ -1279,7 +1280,7 @@ void calculate_kappa_rpkt_cont(const struct packet *const pkt_ptr,
     return;
   }
 
-  const float nne = grid::get_nne(modelgridindex);
+  const auto nne = grid::get_nne(modelgridindex);
 
   double sigma = 0.0;
   double kappa_ff = 0.;
