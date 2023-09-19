@@ -860,11 +860,12 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type realtyp
     if (t_arrive >= VSPEC_TIMEMIN_input && t_arrive <= VSPEC_TIMEMAX_input) {
       // time selection
 
+      const double nu_rf = pkt_ptr->nu_cmf / doppler_nucmf_on_nurf(obs, vel_vec);
+
       for (int i = 0; i < Nrange; i++) {
         // Loop over frequency ranges
 
-        if (pkt_ptr->nu_cmf / doppler_nucmf_on_nurf(obs, vel_vec) > VSPEC_NUMIN_input[i] &&
-            pkt_ptr->nu_cmf / doppler_nucmf_on_nurf(obs, vel_vec) < VSPEC_NUMAX_input[i]) {
+        if (nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) {
           // frequency selection
 
           rlc_emiss_vpkt(pkt_ptr, t_current, obsbin, obs, realtype);
