@@ -166,7 +166,7 @@ static void add_to_vpkt_grid(const struct packet &vpkt, std::span<const double, 
 }
 
 static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int obsbin,
-                           std::span<double, 3> obs, const enum packet_type realtype) {
+                           std::span<double, 3> obsdir, const enum packet_type realtype) {
   int snext = 0;
   int mgi = 0;
 
@@ -180,9 +180,9 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     tau_vpkt[ind] = 0;
   }
 
-  vpkt.dir[0] = obs[0];
-  vpkt.dir[1] = obs[1];
-  vpkt.dir[2] = obs[2];
+  vpkt.dir[0] = obsdir[0];
+  vpkt.dir[1] = obsdir[1];
+  vpkt.dir[2] = obsdir[2];
 
   safeincrement(nvpkt);  // increment the number of virtual packet in the given timestep
 
@@ -260,7 +260,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
     const double vel_rev[3] = {-vel_vec[0], -vel_vec[1], -vel_vec[2]};
 
-    frame_transform(obs_cmf, &Q, &U, vel_rev, obs);
+    frame_transform(obs_cmf, &Q, &U, vel_rev, obsdir);
 
   } else if (realtype == TYPE_KPKT || realtype == TYPE_MA) {
     // MACROATOM and KPKT: isotropic emission
@@ -452,7 +452,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       if (vpkt.nu_rf > nu_grid_min[wlbin] && vpkt.nu_rf < nu_grid_max[wlbin]) {  // Frequency selection
         if (t_arrive > tmin_grid && t_arrive < tmax_grid) {                      // Time selection
-          add_to_vpkt_grid(vpkt, vel_vec, wlbin, obsbin, obs);
+          add_to_vpkt_grid(vpkt, vel_vec, wlbin, obsbin, obsdir);
         }
       }
     }
@@ -827,19 +827,18 @@ void read_parameterfile_vpkt() {
 }
 
 auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type realtype) -> int {
-  const double t_current = pkt_ptr->prop_time;
-  double obs[3];
-  int vflag = 0;
-
-  double vel_vec[3];
-  get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
-
   // Cut on vpkts
   int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
 
   if (grid::modelgrid[mgi].thick != 0) {
     return 0;
   }
+
+  const double t_current = pkt_ptr->prop_time;
+  int vflag = 0;
+
+  double vel_vec[3];
+  get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
 
   // this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each observer)
   if (pkt_ptr->next_trans == 0) {
@@ -850,18 +849,17 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type realtyp
   }
 
   for (int obsbin = 0; obsbin < Nobs; obsbin++) {
-    // loop over different observers
+    // loop over different observer directions
 
-    obs[0] = sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * cos(phiobs[obsbin]);
-    obs[1] = sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * sin(phiobs[obsbin]);
-    obs[2] = nz_obs_vpkt[obsbin];
+    double obsdir[3] = {sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * cos(phiobs[obsbin]),
+                        sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * sin(phiobs[obsbin]), nz_obs_vpkt[obsbin]};
 
-    const double t_arrive = t_current - (dot(pkt_ptr->pos, obs) / CLIGHT_PROP);
+    const double t_arrive = t_current - (dot(pkt_ptr->pos, obsdir) / CLIGHT_PROP);
 
     if (t_arrive >= VSPEC_TIMEMIN_input && t_arrive <= VSPEC_TIMEMAX_input) {
       // time selection
 
-      const double nu_rf = pkt_ptr->nu_cmf / doppler_nucmf_on_nurf(obs, vel_vec);
+      const double nu_rf = pkt_ptr->nu_cmf / doppler_nucmf_on_nurf(obsdir, vel_vec);
 
       for (int i = 0; i < Nrange; i++) {
         // Loop over frequency ranges
@@ -869,7 +867,7 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type realtyp
         if (nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) {
           // frequency selection
 
-          rlc_emiss_vpkt(pkt_ptr, t_current, obsbin, obs, realtype);
+          rlc_emiss_vpkt(pkt_ptr, t_current, obsbin, obsdir, realtype);
 
           vflag = 1;
 
