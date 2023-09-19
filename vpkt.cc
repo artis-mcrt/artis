@@ -12,10 +12,14 @@
 #include "update_grid.h"
 #include "vectors.h"
 
+struct stokeparams {
+  double i = 0.;
+  double q = 0.;
+  double u = 0.;
+};
+
 struct vspecpol {
-  double flux_i[VMNUBINS] = {0.};
-  double flux_q[VMNUBINS] = {0.};
-  double flux_u[VMNUBINS] = {0.};
+  struct stokeparams flux[VMNUBINS] = {0.};
   float lower_time = NAN;
   float delta_t = NAN;
 };
@@ -105,9 +109,9 @@ static void add_to_vspecpol(const struct packet &vpkt, const int bin, const int 
       const double pktcontrib = vpkt.e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI /
                                 PARSEC / PARSEC / globals::nprocs * 4 * PI;
 
-      safeadd(vspecpol[nt][ind_comb].flux_i[nnu], vpkt.stokes[0] * pktcontrib);
-      safeadd(vspecpol[nt][ind_comb].flux_q[nnu], vpkt.stokes[1] * pktcontrib);
-      safeadd(vspecpol[nt][ind_comb].flux_u[nnu], vpkt.stokes[2] * pktcontrib);
+      safeadd(vspecpol[nt][ind_comb].flux[nnu].i, vpkt.stokes[0] * pktcontrib);
+      safeadd(vspecpol[nt][ind_comb].flux[nnu].q, vpkt.stokes[1] * pktcontrib);
+      safeadd(vspecpol[nt][ind_comb].flux[nnu].u, vpkt.stokes[2] * pktcontrib);
     }
   }
 }
@@ -478,10 +482,10 @@ void init_vspecpol() {
       vspecpol[n][ind_comb].delta_t =
           exp(log(VSPEC_TIMEMIN) + ((n + 1) * (dlogt_vspec))) - vspecpol[n][ind_comb].lower_time;
 
-      for (int m = 0; m < VMNUBINS; m++) {
-        vspecpol[n][ind_comb].flux_i[m] = 0.0;
-        vspecpol[n][ind_comb].flux_q[m] = 0.0;
-        vspecpol[n][ind_comb].flux_u[m] = 0.0;
+      for (auto &flux : vspecpol[n][ind_comb].flux) {
+        flux.i = 0.0;
+        flux.q = 0.0;
+        flux.u = 0.0;
       }
     }
   }
@@ -504,17 +508,17 @@ void write_vspecpol(FILE *specpol_file) {
 
       // Stokes I
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(specpol_file, "%g ", vspecpol[p][ind_comb].flux_i[m]);
+        fprintf(specpol_file, "%g ", vspecpol[p][ind_comb].flux[m].i);
       }
 
       // Stokes Q
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(specpol_file, "%g ", vspecpol[p][ind_comb].flux_q[m]);
+        fprintf(specpol_file, "%g ", vspecpol[p][ind_comb].flux[m].q);
       }
 
       // Stokes U
       for (int p = 0; p < VMTBINS; p++) {
-        fprintf(specpol_file, "%g ", vspecpol[p][ind_comb].flux_u[m]);
+        fprintf(specpol_file, "%g ", vspecpol[p][ind_comb].flux[m].u);
       }
 
       fprintf(specpol_file, "\n");
@@ -554,17 +558,17 @@ void read_vspecpol(int my_rank, int nts) {
 
       // Stokes I
       for (int p = 0; p < VMTBINS; p++) {
-        assert_always(fscanf(vspecpol_file, "%lg ", &vspecpol[p][ind_comb].flux_i[j]) == 1);
+        assert_always(fscanf(vspecpol_file, "%lg ", &vspecpol[p][ind_comb].flux[j].i) == 1);
       }
 
       // Stokes Q
       for (int p = 0; p < VMTBINS; p++) {
-        assert_always(fscanf(vspecpol_file, "%lg ", &vspecpol[p][ind_comb].flux_q[j]) == 1);
+        assert_always(fscanf(vspecpol_file, "%lg ", &vspecpol[p][ind_comb].flux[j].q) == 1);
       }
 
       // Stokes U
       for (int p = 0; p < VMTBINS; p++) {
-        assert_always(fscanf(vspecpol_file, "%lg ", &vspecpol[p][ind_comb].flux_u[j]) == 1);
+        assert_always(fscanf(vspecpol_file, "%lg ", &vspecpol[p][ind_comb].flux[j].u) == 1);
       }
 
       assert_always(fscanf(vspecpol_file, "\n") == 0);
