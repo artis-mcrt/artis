@@ -1201,7 +1201,7 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
         if constexpr (!SEPARATE_STIMRECOMB) {
           double departure_ratio = globals::cellhistory[tid].ch_allcont_departureratios[i];
-          if (departure_ratio < 0) {
+          if (!usecellhistupdatephixslist || departure_ratio < 0) {
             const int upper = globals::allcont[i].upperlevel;
             const double nnupperionlevel = usecellhistupdatephixslist
                                                ? get_levelpop(modelgridindex, element, ion + 1, upper)
