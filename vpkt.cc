@@ -352,11 +352,11 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
         // Check on the element to exclude
         // NB: ldist before need to be computed anyway (I want to move the packets to the
         // line interaction point even if I don't interact)
-
+        const double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line;
         for (int ind = 0; ind < Nspectra; ind++) {
           // If exclude[ind]==-1, I do not include line opacity
           if (exclude[ind] != -1 && (anumber != exclude[ind])) {
-            tau_vpkt[ind] += (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line;
+            tau_vpkt[ind] += tau_line;
           }
         }
 
