@@ -317,11 +317,6 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
         vpkt.next_trans = globals::nlines + 1;
       } else {
         const double nutrans = globals::linelist[lineindex].nu;
-        const int element = globals::linelist[lineindex].elementindex;
-        const int ion = globals::linelist[lineindex].ionindex;
-        const int upper = globals::linelist[lineindex].upperlevelindex;
-        const int lower = globals::linelist[lineindex].lowerlevelindex;
-        const auto A_ul = globals::linelist[lineindex].einstein_A;
 
         vpkt.next_trans = lineindex + 1;
 
@@ -350,17 +345,23 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
         const double t_line = t_current + ldist / CLIGHT;
 
+        const int element = globals::linelist[lineindex].elementindex;
+        const int ion = globals::linelist[lineindex].ionindex;
+        const int upper = globals::linelist[lineindex].upperlevelindex;
+        const int lower = globals::linelist[lineindex].lowerlevelindex;
+        const auto A_ul = globals::linelist[lineindex].einstein_A;
+
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * A_ul;
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
         const auto n_u = calculate_levelpop(mgi, element, ion, upper);
         const auto n_l = calculate_levelpop(mgi, element, ion, lower);
+        const double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line;
 
         // Check on the element to exclude
         // NB: ldist before need to be computed anyway (I want to move the packets to the
         // line interaction point even if I don't interact)
         const int anumber = get_atomicnumber(element);
-        const double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line;
         for (int ind = 0; ind < Nspectra; ind++) {
           // If exclude[ind]==-1, I do not include line opacity
           if (exclude[ind] != -1 && (anumber != exclude[ind])) {
