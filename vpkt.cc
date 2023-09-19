@@ -944,10 +944,10 @@ auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<doubl
 // Routine to compute the meridian frame axes ref1 and ref2
 void meridian(std::span<const double, 3> n, std::span<double, 3> ref1, std::span<double, 3> ref2) {
   // for ref_1 use (from triple product rule)
-
-  ref1[0] = -1. * n[0] * n[2] / sqrt(n[0] * n[0] + n[1] * n[1]);
-  ref1[1] = -1. * n[1] * n[2] / sqrt(n[0] * n[0] + n[1] * n[1]);
-  ref1[2] = (1 - (n[2] * n[2])) / sqrt(n[0] * n[0] + n[1] * n[1]);
+  const double n_xylen = sqrt(n[0] * n[0] + n[1] * n[1]);
+  ref1[0] = -1. * n[0] * n[2] / n_xylen;
+  ref1[1] = -1. * n[1] * n[2] / n_xylen;
+  ref1[2] = (1 - (n[2] * n[2])) / n_xylen;
 
   // for ref_2 use vector product of n_cmf with ref1
 
