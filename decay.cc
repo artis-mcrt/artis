@@ -413,13 +413,15 @@ constexpr auto operator<(const struct decaypath &d1, const struct decaypath &d2)
 // instead of down from the ancestor, for ease of test comparison
 // chains are sorted by mass number of first, second, third, etc position in chain
 {
-  const int smallestpathlength = std::min(get_decaypathlength(d1), get_decaypathlength(d2));
+  const int d1_length = d1.z.size();
+  const int d2_length = d2.z.size();
+  const int smallestpathlength = std::min(d1_length, d2_length);
   bool matchingoverlap = true;
   for (int i = 0; i < smallestpathlength; i++) {
-    const int d1pos = get_decaypathlength(d1) - 1 - i;
+    const int d1pos = d1_length - 1 - i;
     // assert_always(d1pos >= 0);
     // assert_always(d1pos < d1.pathlength);
-    const int d2pos = get_decaypathlength(d2) - 1 - i;
+    const int d2pos = d2_length - 1 - i;
     // assert_always(d2pos >= 0);
     // assert_always(d2pos < d2.pathlength);
     // if (get_nucindex(d1.z[d1pos], d1.a[d1pos]) < get_nucindex(d2.z[d2pos], d2.a[d2pos]))
@@ -434,7 +436,7 @@ constexpr auto operator<(const struct decaypath &d1, const struct decaypath &d2)
     }
   }
   // one is an extension of the other
-  return matchingoverlap && get_decaypathlength(d1) < get_decaypathlength(d2);
+  return matchingoverlap && d1_length < d1_length;
 }
 
 static void find_decaypaths() {
