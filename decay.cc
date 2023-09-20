@@ -293,7 +293,7 @@ auto nucmass(int z, int a) -> double {
   // return nuclides[nucindex].amass;
 }
 
-static constexpr auto get_num_decaypaths() -> int { return decaypaths.size(); }
+static constexpr auto get_num_decaypaths() -> int { return static_cast<int>(decaypaths.size()); }
 
 static constexpr auto get_decaypathlength(const decaypath &dpath) -> int { return dpath.pathlength; }
 static auto get_decaypathlength(int decaypathindex) -> int { return get_decaypathlength(decaypaths[decaypathindex]); }
@@ -638,6 +638,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
     falpha.close();
   }
 
+  // add any extra nuclides that were specified but not in the decay data files
   for (int i = 0; i < static_cast<int>(custom_alist.size()); i++) {
     const int z = custom_zlist[i];
     const int a = custom_alist[i];
@@ -698,9 +699,6 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
   // call find_decaypaths() again for new nuclide indicies
   find_decaypaths();
 
-  /// Read in data for gamma ray lines and make a list of them in energy order.
-  gammapkt::init_gamma_linelist();
-
   printout("Number of nuclides: num_nuclides %d\n", get_num_nuclides());
   int maxdecaypathlength = 0;
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
@@ -708,6 +706,9 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
     maxdecaypathlength = std::max(maxdecaypathlength, get_decaypathlength(decaypathindex));
   }
   printout("Number of decay paths: %d (max length %d)\n", get_num_decaypaths(), maxdecaypathlength);
+
+  /// Read in data for gamma ray lines and make a list of them in energy order.
+  gammapkt::init_gamma_linelist();
 
   // TODO: generalise this to all included nuclides
   printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n",
