@@ -495,7 +495,7 @@ static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const s
                                     // erase if not in standard nuc list
                                     return !std::any_of(
                                         standard_nuclides.begin(), standard_nuclides.end(), [&](const auto &stdnuc) {
-                                          return (decaypath.z[0] == stdnuc.z) || (decaypath.a[0] == stdnuc.a);
+                                          return (decaypath.z[0] == stdnuc.z) && (decaypath.a[0] == stdnuc.a);
                                         });
                                   }),
                    decaypaths.end());
