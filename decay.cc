@@ -416,27 +416,22 @@ static auto operator<(const struct decaypath &d1, const struct decaypath &d2) ->
   const int d1_length = get_decaypathlength(d1);
   const int d2_length = get_decaypathlength(d2);
   const int smallestpathlength = std::min(d1_length, d2_length);
-  bool matchingoverlap = true;
   for (int i = 0; i < smallestpathlength; i++) {
-    const int d1pos = d1_length - 1 - i;
-    // assert_always(d1pos >= 0);
-    // assert_always(d1pos < d1.pathlength);
-    const int d2pos = d2_length - 1 - i;
-    // assert_always(d2pos >= 0);
-    // assert_always(d2pos < d2.pathlength);
-    // if (get_nucindex(d1.z[d1pos], d1.a[d1pos]) < get_nucindex(d2.z[d2pos], d2.a[d2pos]))
-    if (d1.a[d1pos] < d2.a[d2pos]) {
+    if (d1.a[i] < d2.a[i]) {
       return true;
     }
-    if (d1.a[d1pos] == d2.a[d2pos] && d1.z[d1pos] < d2.z[d2pos]) {
+    if (d1.a[i] > d2.a[i]) {
+      return false;
+    }
+    if (d1.z[i] < d2.z[i]) {
       return true;
     }
-    if (d1.a[d1pos] != d2.a[d2pos] || d1.z[d1pos] != d2.z[d2pos]) {
-      matchingoverlap = false;
+    if (d1.z[i] > d2.z[i]) {
+      return false;
     }
   }
   // one is an extension of the other
-  return matchingoverlap && d1_length < d2_length;
+  return d1_length < d2_length;
 }
 
 static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vector<int> &custom_alist,
