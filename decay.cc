@@ -439,7 +439,8 @@ constexpr auto operator<(const struct decaypath &d1, const struct decaypath &d2)
   return matchingoverlap && d1_length < d2_length;
 }
 
-static void find_decaypaths() {
+static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vector<int> &custom_alist,
+                            std::vector<struct nuclide> &standard_nuclides) {
   decaypaths.clear();
   for (int startnucindex = 0; startnucindex < get_num_nuclides(); startnucindex++) {
     const int z = get_nuc_z(startnucindex);
@@ -447,6 +448,21 @@ static void find_decaypaths() {
 
     for (const auto decaytype : all_decaytypes) {
       if (get_nuc_decaybranchprob(startnucindex, decaytype) == 0. || get_meanlife(startnucindex) <= 0.) {
+        continue;
+      }
+      bool is_input_nuclide = false;
+      for (size_t i = 0; i < custom_zlist.size(); i++) {
+        if ((z == custom_zlist[i]) && (a == custom_alist[i])) {
+          is_input_nuclide = true;
+          break;
+        }
+      }
+      if (!is_input_nuclide) {
+        // erase if not in standard nuc list
+        is_input_nuclide = std::any_of(standard_nuclides.begin(), standard_nuclides.end(),
+                                       [z, a](const auto &stdnuc) { return (z == stdnuc.z) && (a == stdnuc.a); });
+      }
+      if (!is_input_nuclide) {
         continue;
       }
 
@@ -701,7 +717,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
   }
 
   printout("Number of nuclides before filtering: %d\n", get_num_nuclides());
-  find_decaypaths();
+  find_decaypaths(custom_zlist, custom_alist, standard_nuclides);
   printout("Number of decay paths before filtering: %d\n", get_num_decaypaths());
   // filter_unused_nuclides(custom_zlist, custom_alist, standard_nuclides);
 
