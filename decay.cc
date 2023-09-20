@@ -41,8 +41,8 @@ struct nuclide {
   double endecay_positron = 0.;  // average energy per beta+ decay in kinetic energy of emitted positrons [erg]
   double endecay_gamma = 0.;     // average energy per decay in gamma rays [erg]
   double endecay_alpha = 0.;     // average energy per alpha decay in kinetic energy of alpha particles [erg]
-  double endecay_q[DECAYTYPE_COUNT] = {0.};    // Q-value (reactant minus product energy) for each decay type
-  double branchprobs[DECAYTYPE_COUNT] = {0.};  // branch probability of each decay type
+  double endecay_q[decaytypes::DECAYTYPE_COUNT] = {0.};  // Q-value (reactant minus product energy) for each decay type
+  double branchprobs[decaytypes::DECAYTYPE_COUNT] = {0.};  // branch probability of each decay type
 };
 
 std::vector<struct nuclide> nuclides;
@@ -150,23 +150,23 @@ constexpr auto decay_daughter_z(const int z_parent, const int /*a_parent*/, int 
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
   assert_always(decaytype >= 0);
-  assert_always(decaytype < DECAYTYPE_COUNT);
+  assert_always(decaytype < decaytypes::DECAYTYPE_COUNT);
 
   switch (static_cast<enum decaytypes>(decaytype)) {
-    case DECAYTYPE_ALPHA: {
+    case decaytypes::DECAYTYPE_ALPHA: {
       return z_parent - 2;  // lose two protons and two neutrons
     }
-    case DECAYTYPE_BETAPLUS:
-    case DECAYTYPE_ELECTRONCAPTURE: {
+    case decaytypes::DECAYTYPE_BETAPLUS:
+    case decaytypes::DECAYTYPE_ELECTRONCAPTURE: {
       return z_parent - 1;  // lose a proton, gain a neutron
     }
-    case DECAYTYPE_BETAMINUS: {
+    case decaytypes::DECAYTYPE_BETAMINUS: {
       return z_parent + 1;  // lose a neutron, gain a proton
     }
-    case DECAYTYPE_NONE: {
+    case decaytypes::DECAYTYPE_NONE: {
       return -1;  // no daughter
     }
-    case DECAYTYPE_COUNT: {
+    case decaytypes::DECAYTYPE_COUNT: {
       assert_always(false);
     }
   }
@@ -177,18 +177,18 @@ constexpr auto decay_daughter_a(const int /*z_parent*/, const int a_parent, int 
 // check if (z_parent, a_parent) is a parent of (z, a)
 {
   switch (static_cast<enum decaytypes>(decaytype)) {
-    case DECAYTYPE_ALPHA: {
+    case decaytypes::DECAYTYPE_ALPHA: {
       return a_parent - 4;  // lose two protons and two neutrons
     }
-    case DECAYTYPE_BETAPLUS:
-    case DECAYTYPE_ELECTRONCAPTURE:
-    case DECAYTYPE_BETAMINUS: {
+    case decaytypes::DECAYTYPE_BETAPLUS:
+    case decaytypes::DECAYTYPE_ELECTRONCAPTURE:
+    case decaytypes::DECAYTYPE_BETAMINUS: {
       return a_parent;  // swap a neutron to proton or vice-versa
     }
-    case DECAYTYPE_NONE: {
+    case decaytypes::DECAYTYPE_NONE: {
       return -1;  // no daughter
     }
-    case DECAYTYPE_COUNT: {
+    case decaytypes::DECAYTYPE_COUNT: {
       assert_always(false);
     }
   }
@@ -199,7 +199,7 @@ static auto get_nuc_decaybranchprob(const int nucindex, const int decaytype) -> 
   assert_testmodeonly(nucindex >= 0);
   assert_testmodeonly(nucindex < get_num_nuclides());
   assert_testmodeonly(decaytype >= 0);
-  assert_testmodeonly(decaytype < DECAYTYPE_COUNT);
+  assert_testmodeonly(decaytype < decaytypes::DECAYTYPE_COUNT);
   return nuclides[nucindex].branchprobs[decaytype];
 }
 
@@ -212,7 +212,7 @@ static auto nuc_is_parent(const int z_parent, const int a_parent, const int z, c
 {
   assert_testmodeonly(nuc_exists(z_parent, a_parent));
   // each radioactive nuclide is limited to one daughter nuclide
-  for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++) {
+  for (int dectypeindex = 0; dectypeindex < decaytypes::DECAYTYPE_COUNT; dectypeindex++) {
     if (decay_daughter_z(z_parent, a_parent, dectypeindex) == z &&
         decay_daughter_a(z_parent, a_parent, dectypeindex) == a &&
         get_nuc_decaybranchprob(z_parent, a_parent, dectypeindex) > 0.) {
@@ -240,19 +240,19 @@ static auto nucdecayenergyparticle(const int nucindex, const int decaytype) -> d
 // depending on the relevant decay type (but not including neutrinos)
 {
   assert_testmodeonly(decaytype >= 0);
-  assert_testmodeonly(decaytype < DECAYTYPE_COUNT);
+  assert_testmodeonly(decaytype < decaytypes::DECAYTYPE_COUNT);
 
   switch (decaytype) {
-    case DECAYTYPE_ALPHA: {
+    case decaytypes::DECAYTYPE_ALPHA: {
       return nuclides[nucindex].endecay_alpha;
     }
-    case DECAYTYPE_BETAPLUS: {
+    case decaytypes::DECAYTYPE_BETAPLUS: {
       return nuclides[nucindex].endecay_positron;
     }
-    case DECAYTYPE_ELECTRONCAPTURE: {
+    case decaytypes::DECAYTYPE_ELECTRONCAPTURE: {
       return 0.;
     }
-    case DECAYTYPE_BETAMINUS: {
+    case decaytypes::DECAYTYPE_BETAMINUS: {
       return nuclides[nucindex].endecay_electron;
     }
     default: {
@@ -267,7 +267,7 @@ static auto nucdecayenergytotal(const int z, const int a) -> double
   const int nucindex = get_nucindex(z, a);
   double endecay = 0.;
   endecay += nuclides[nucindex].endecay_gamma;
-  for (int decaytype = 0; decaytype < DECAYTYPE_COUNT; decaytype++) {
+  for (int decaytype = 0; decaytype < decaytypes::DECAYTYPE_COUNT; decaytype++) {
     endecay += nucdecayenergyparticle(nucindex, decaytype) * get_nuc_decaybranchprob(nucindex, decaytype);
   }
 
@@ -275,7 +275,7 @@ static auto nucdecayenergytotal(const int z, const int a) -> double
 }
 
 static auto nucdecayenergy(int nucindex, int decaytype) -> double
-// contributed energy release per decay [erg] for decaytype (e.g. DECAYTYPE_BETAPLUS)
+// contributed energy release per decay [erg] for decaytype (e.g. decaytypes::DECAYTYPE_BETAPLUS)
 // (excludes neutrinos!)
 {
   const double endecay = nuclides[nucindex].endecay_gamma + nucdecayenergyparticle(nucindex, decaytype);
@@ -321,23 +321,23 @@ static auto get_decaypath_lastnucdecayenergy(const int decaypathindex) -> double
 
 static void printout_decaytype(const int decaytype) {
   switch (decaytype) {
-    case DECAYTYPE_ALPHA: {
+    case decaytypes::DECAYTYPE_ALPHA: {
       printout("alpha");
       break;
     }
-    case DECAYTYPE_BETAPLUS: {
+    case decaytypes::DECAYTYPE_BETAPLUS: {
       printout("beta+");
       break;
     }
-    case DECAYTYPE_ELECTRONCAPTURE: {
+    case decaytypes::DECAYTYPE_ELECTRONCAPTURE: {
       printout("ec");
       break;
     }
-    case DECAYTYPE_BETAMINUS: {
+    case decaytypes::DECAYTYPE_BETAMINUS: {
       printout("beta-");
       break;
     }
-    case DECAYTYPE_NONE: {
+    case decaytypes::DECAYTYPE_NONE: {
       printout("none");
       break;
     }
@@ -386,7 +386,7 @@ static void extend_lastdecaypath()
   const int daughter_a = decay_daughter_a(last_z, last_a, dectypeindex);
   if (nuc_exists(daughter_z, daughter_a)) {
     const int daughter_nucindex = get_nucindex(daughter_z, daughter_a);
-    for (int dectypeindex2 = 0; dectypeindex2 < DECAYTYPE_COUNT; dectypeindex2++) {
+    for (int dectypeindex2 = 0; dectypeindex2 < decaytypes::DECAYTYPE_COUNT; dectypeindex2++) {
       if (get_nuc_decaybranchprob(daughter_nucindex, dectypeindex2) == 0.) {
         continue;
       }
@@ -449,7 +449,7 @@ static void find_decaypaths() {
     const int z = get_nuc_z(startnucindex);
     const int a = get_nuc_a(startnucindex);
 
-    for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++) {
+    for (int dectypeindex = 0; dectypeindex < decaytypes::DECAYTYPE_COUNT; dectypeindex++) {
       if (get_nuc_decaybranchprob(startnucindex, dectypeindex) == 0. || get_meanlife(startnucindex) <= 0.) {
         continue;
       }
@@ -657,7 +657,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
   // TESTING: REMOVE
   // for (int i = 0; i < get_num_nuclides(); i++)
   // {
-  //   for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
+  //   for (int dectypeindex = 0; dectypeindex < decaytypes::DECAYTYPE_COUNT; dectypeindex++)
   //   {
   //     nuclides[i].branchprobs[dectypeindex] *= 1e-4;
   //     nuclides[i].endecay_gamma = 0.;
@@ -773,7 +773,7 @@ static auto get_nuc_massfrac(const int modelgridindex, const int z, const int a,
 
     // match 4He abundance to alpha decay of any nucleus (no continue), otherwise check daughter nuclide matches
     if (z != 2 || a != 4 ||
-        decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1] != DECAYTYPE_ALPHA) {
+        decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1] != decaytypes::DECAYTYPE_ALPHA) {
       if (nuc_exists_z_a && (z_end != z || a_end != a))  // requested nuclide is in network, so match last nuc in chain
       {
         continue;
@@ -799,9 +799,9 @@ static auto get_nuc_massfrac(const int modelgridindex, const int z, const int a,
 
     int fulldecaypathlength = decaypathlength;
     // if the nuclide is out of network, it's one past the end of the chain
-    if (!nuc_exists_z_a ||
-        (z == 2 && a == 4 &&
-         decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1] == DECAYTYPE_ALPHA)) {
+    if (!nuc_exists_z_a || (z == 2 && a == 4 &&
+                            decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1] ==
+                                decaytypes::DECAYTYPE_ALPHA)) {
       fulldecaypathlength = decaypathlength + 1;
     }
 
@@ -1189,7 +1189,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
         }
       } else {
         // check if the nucleus decays off the network but into the selected element
-        for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++) {
+        for (int dectypeindex = 0; dectypeindex < decaytypes::DECAYTYPE_COUNT; dectypeindex++) {
           const int daughter_z = decay_daughter_z(nuc_z, a, dectypeindex);
           const int daughter_a = decay_daughter_a(nuc_z, a, dectypeindex);
           if (daughter_z == atomic_number && !nuc_exists(daughter_z, daughter_a) &&
@@ -1238,7 +1238,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   //   // printout(" init: %g now: %g\n", grid::get_modelinitradioabund(modelgridindex, z, a),
   //   get_nuc_massfrac(modelgridindex, z, a, t_current));
   //
-  //   for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++)
+  //   for (int dectypeindex = 0; dectypeindex < decaytypes::DECAYTYPE_COUNT; dectypeindex++)
   //   {
   //     if (!nuc_exists(decay_daughter_z(z, a, dectypeindex), decay_daughter_a(z, a, dectypeindex)) &&
   //         get_nuc_decaybranchprob(z, a, dectypeindex) > 0.)
@@ -1281,7 +1281,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
         }
       }
     } else {  // not the element that we want, but check if a decay produces it
-      for (int dectypeindex = 0; dectypeindex < DECAYTYPE_COUNT; dectypeindex++) {
+      for (int dectypeindex = 0; dectypeindex < decaytypes::DECAYTYPE_COUNT; dectypeindex++) {
         const int daughter_z = decay_daughter_z(nuc_z, nuc_a, dectypeindex);
         const int daughter_a = decay_daughter_a(nuc_z, nuc_a, dectypeindex);
         // if the nucleus exists, it will be picked up by the upper condition
