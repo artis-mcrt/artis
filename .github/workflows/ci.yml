@@ -150,6 +150,11 @@ jobs:
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: cat job1/output_0-0.txt
 
+            - name: cat job1 deposition.out
+              if: always()
+              working-directory: tests/${{ matrix.testname }}_testrun/
+              run: cat deposition.out
+
             - name: Run exspec
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
