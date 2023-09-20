@@ -573,13 +573,9 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
       double tau_sec = 0.;
       std::stringstream(line) >> a >> z >> q_mev >> e_gamma_mev >> e_elec_mev >> e_neutrino >> tau_sec;
 
-      bool keeprow = false;  // keep if the mass number matches one of the input nuclides
-      for (int const i : custom_alist) {
-        if (i == a) {
-          keeprow = true;
-          break;
-        }
-      }
+      // keep if the mass number matches one of the input nuclides
+      const bool keeprow =
+          std::any_of(custom_alist.begin(), custom_alist.end(), [a](const auto a_custom) { return a == a_custom; });
 
       if (keeprow) {
         assert_always(!nuc_exists(z, a));
