@@ -1,6 +1,7 @@
 #include "decay.h"
 
-#include <algorithm>  // std::max
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
 #include <fstream>
@@ -41,8 +42,9 @@ struct nuclide {
   double endecay_positron = 0.;  // average energy per beta+ decay in kinetic energy of emitted positrons [erg]
   double endecay_gamma = 0.;     // average energy per decay in gamma rays [erg]
   double endecay_alpha = 0.;     // average energy per alpha decay in kinetic energy of alpha particles [erg]
-  double endecay_q[decaytypes::DECAYTYPE_COUNT] = {0.};  // Q-value (reactant minus product energy) for each decay type
-  double branchprobs[decaytypes::DECAYTYPE_COUNT] = {0.};  // branch probability of each decay type
+  std::array<double, decaytypes::DECAYTYPE_COUNT> endecay_q = {
+      0.};  // Q-value (reactant minus product energy) for each decay type
+  std::array<double, decaytypes::DECAYTYPE_COUNT> branchprobs = {0.};  // branch probability of each decay type
 };
 
 std::vector<struct nuclide> nuclides;
@@ -518,6 +520,8 @@ auto get_nucstring_a(const std::string &strnuc) -> int
 }
 
 void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> &custom_alist) {
+  // add all nuclides and decays, and later trim any irrelevant ones (not connected to input-specified nuclei) later
+
   assert_always(custom_zlist.size() == custom_alist.size());
 
   // Ni57
@@ -556,6 +560,8 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
   // Mn52
   nuclides.push_back({.z = 25, .a = 52, .meanlife = 0.0211395 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
+
+  auto standard_nuclides = nuclides;
 
   if (!custom_alist.empty()) {
     std::ifstream fbetaminus("betaminusdecays.txt");
@@ -645,6 +651,24 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
   gammapkt::init_gamma_linelist();
 
   find_decaypaths();
+
+  // remove decaypaths that do not start with either a custom input nuclide or standard one
+  decaypaths.erase(std::remove_if(decaypaths.begin(), decaypaths.end(),
+                                  [&](const auto &decaypath) {
+                                    for (auto i = 0; i < custom_zlist.size(); i++) {
+                                      if ((decaypath.z[0] == custom_zlist[i]) && (decaypath.a[0] == custom_alist[i])) {
+                                        return false;
+                                      }
+                                    }
+                                    // erase if not in standard nuc list
+                                    return !std::any_of(
+                                        standard_nuclides.begin(), standard_nuclides.end(), [&](const auto &stdnuc) {
+                                          return (decaypath.z[0] == stdnuc.z) || (decaypath.a[0] == stdnuc.a);
+                                        });
+                                  }),
+                   decaypaths.end());
+
+  // TODO: remove nuclides that are not in any decaypath and call find_decaypaths() again for updated nuclide indices
 
   int maxdecaypathlength = 0;
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
