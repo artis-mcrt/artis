@@ -655,7 +655,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
   // remove decaypaths that do not start with either a custom input nuclide or standard one
   decaypaths.erase(std::remove_if(decaypaths.begin(), decaypaths.end(),
                                   [&](const auto &decaypath) {
-                                    for (auto i = 0; i < custom_zlist.size(); i++) {
+                                    for (size_t i = 0; i < custom_zlist.size(); i++) {
                                       if ((decaypath.z[0] == custom_zlist[i]) && (decaypath.a[0] == custom_alist[i])) {
                                         return false;
                                       }
