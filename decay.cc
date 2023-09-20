@@ -523,21 +523,14 @@ static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const s
                            continue;
                          }
 
-                         bool nuc_in_decaypath = false;
                          for (size_t i = 0; i < decaypath.z.size(); i++) {
                            if (decaypath.z[i] == nuc.z && decaypath.a[i] == nuc.a) {
-                             nuc_in_decaypath = true;
-                             break;
+                             // decay path starts with input nuc and nuc is in the decay path, so keep it
+                             return false;
                            };
                          }
-                         if (!nuc_in_decaypath) {
-                           continue;
-                         }
-
-                         // decay path starts with input nuc and nuc is in the decay path, so keep it
-                         return false;
                        }
-                       //  printout("Deleting nuclide (Z=%d)%s-%d\n", nuc.z, get_elname(nuc.z), nuc.a);
+                       printout("Deleting nuclide (Z=%d)%s-%d\n", nuc.z, get_elname(nuc.z), nuc.a);
                        return true;
                      }),
       nuclides.end());
