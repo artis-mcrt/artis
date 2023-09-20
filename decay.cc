@@ -668,37 +668,58 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
                                   }),
                    decaypaths.end());
 
-  // remove nuclides that are not in any decaypath or the standard list
+  // remove nuclides that are not in any decaypath that starts with a standard or custom input-specified nuclide
   nuclides.erase(
       std::remove_if(nuclides.begin(), nuclides.end(),
                      [&](const auto &nuc) {
-                       // keep nuclide if it's part of any decaypath (or the daughter nucleus one past the end)
                        for (const auto &decaypath : decaypaths) {
+                         bool nuc_in_decaypath = false;
+                         for (size_t i = 0; i < decaypath.z.size(); i++) {
+                           if (decaypath.z[i] == nuc.z && decaypath.a[i] == nuc.a) {
+                             nuc_in_decaypath = true;
+                             break;
+                           };
+                         }
                          const int daughter_z =
                              decay_daughter_z(decaypath.z.back(), decaypath.a.back(), decaypath.decaytypes.back());
                          const int daughter_a =
                              decay_daughter_a(decaypath.z.back(), decaypath.a.back(), decaypath.decaytypes.back());
                          if (daughter_z == nuc.z && daughter_a == nuc.a) {
-                           return false;
+                           nuc_in_decaypath = true;
                          }
-                         for (size_t i = 0; i < decaypath.z.size(); i++) {
-                           if (decaypath.z[i] == nuc.z && decaypath.a[i] == nuc.a) {
-                             return false;
+                         if (!nuc_in_decaypath) {
+                           continue;
+                         }
+
+                         bool decaypath_starts_with_inputnuc = false;
+                         const int zstart = decaypath.z.front();
+                         const int astart = decaypath.a.front();
+                         if (std::any_of(standard_nuclides.begin(), standard_nuclides.end(), [&](const auto &stdnuc) {
+                               return (stdnuc.z == zstart) && (stdnuc.a == astart);
+                             })) {
+                           decaypath_starts_with_inputnuc = true;
+                         } else {
+                           for (size_t i = 0; i < custom_zlist.size(); i++) {
+                             if ((zstart == custom_zlist[i]) && (astart == custom_alist[i])) {
+                               decaypath_starts_with_inputnuc = true;
+                               break;
+                             }
                            }
                          }
-                       }
+                         if (!decaypath_starts_with_inputnuc) {
+                           continue;
+                         }
 
-                       // erase if not in standard nuclide list
-                       return !std::any_of(standard_nuclides.begin(), standard_nuclides.end(), [&](const auto &stdnuc) {
-                         return (stdnuc.z == nuc.z) && (stdnuc.a == nuc.a);
-                       });
+                         // decay path starts with input nuc and nuc is in the decay path, so keep it
+                         return false;
+                       }
+                       return true;
                      }),
       nuclides.end());
 
+  printout("Number of nuclides: num_nuclides %d\n", get_num_nuclides());
   // call find_decaypaths() again for new nuclide indicies
   find_decaypaths();
-
-  printout("Number of nuclides: num_nuclides %d\n", get_num_nuclides());
   int maxdecaypathlength = 0;
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
     // printout_decaypath(decaypathindex);
