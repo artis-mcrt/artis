@@ -654,16 +654,6 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
     }
   }
 
-  // TESTING: REMOVE
-  // for (int i = 0; i < get_num_nuclides(); i++)
-  // {
-  //   for (int dectypeindex = 0; dectypeindex < decaytypes::DECAYTYPE_COUNT; dectypeindex++)
-  //   {
-  //     nuclides[i].branchprobs[dectypeindex] *= 1e-4;
-  //     nuclides[i].endecay_gamma = 0.;
-  //   }
-  // }
-
   printout("init_nuclides: num_nuclides %d\n", get_num_nuclides());
 
   /// Read in data for gamma ray lines and make a list of them in energy order.
