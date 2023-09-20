@@ -1072,15 +1072,17 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
       assert_always(columnindex == 0);
     } else if (token == "velocity_outer") {
       assert_always(columnindex == 1);
+    } else if (str_starts_with(token, "pos_")) {
+      continue;
     } else if (token == "logrho") {
       // 1D models have log10(rho [g/cm3])
       assert_always(columnindex == 2);
       assert_always(get_model_type() == RHO_1D_READ);
     } else if (token == "rho") {
       // 2D and 3D models have rho [g/cm3]
+      assert_always(get_model_type() != RHO_1D_READ);
       assert_always((columnindex == 4 && get_model_type() != RHO_3D_READ) ||
                     (columnindex == 3 && get_model_type() == RHO_2D_READ));
-      assert_always(get_model_type() != RHO_1D_READ);
       continue;
     } else if (token == "X_Fegroup") {
       continue;
@@ -1095,8 +1097,6 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
     } else if (token == "X_Ni57") {
       continue;
     } else if (token == "X_Co57") {
-      continue;
-    } else if (str_starts_with(token, "pos_")) {
       continue;
     } else {
       assert_always(get_model_type() != RHO_1D_READ || columnindex >= 10);
