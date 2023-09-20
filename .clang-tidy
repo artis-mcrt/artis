@@ -33,6 +33,7 @@ Checks: >
     -hicpp-signed-bitwise,
     -misc-use-anonymous-namespace,
     -misc-no-recursion,
+    -misc-non-private-member-variables-in-classes,
     -readability-identifier-length,
     -readability-function-cognitive-complexity,
     -readability-magic-numbers,

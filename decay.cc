@@ -49,6 +49,55 @@ struct nuclide {
 
 std::vector<struct nuclide> nuclides;
 
+constexpr auto decay_daughter_z(const int z_parent, const int /*a_parent*/, const int decaytype) -> int
+// check if (z_parent, a_parent) is a parent of (z, a)
+{
+  assert_always(decaytype >= 0);
+  assert_always(decaytype < decaytypes::DECAYTYPE_COUNT);
+
+  switch (static_cast<enum decaytypes>(decaytype)) {
+    case decaytypes::DECAYTYPE_ALPHA: {
+      return z_parent - 2;  // lose two protons and two neutrons
+    }
+    case decaytypes::DECAYTYPE_BETAPLUS:
+    case decaytypes::DECAYTYPE_ELECTRONCAPTURE: {
+      return z_parent - 1;  // lose a proton, gain a neutron
+    }
+    case decaytypes::DECAYTYPE_BETAMINUS: {
+      return z_parent + 1;  // lose a neutron, gain a proton
+    }
+    case decaytypes::DECAYTYPE_NONE: {
+      return -1;  // no daughter
+    }
+    case decaytypes::DECAYTYPE_COUNT: {
+      assert_always(false);
+    }
+  }
+  return -1;  // no daughter
+}
+
+constexpr auto decay_daughter_a(const int /*z_parent*/, const int a_parent, const int decaytype) -> int
+// check if (z_parent, a_parent) is a parent of (z, a)
+{
+  switch (static_cast<enum decaytypes>(decaytype)) {
+    case decaytypes::DECAYTYPE_ALPHA: {
+      return a_parent - 4;  // lose two protons and two neutrons
+    }
+    case decaytypes::DECAYTYPE_BETAPLUS:
+    case decaytypes::DECAYTYPE_ELECTRONCAPTURE:
+    case decaytypes::DECAYTYPE_BETAMINUS: {
+      return a_parent;  // swap a neutron to proton or vice-versa
+    }
+    case decaytypes::DECAYTYPE_NONE: {
+      return -1;  // no daughter
+    }
+    case decaytypes::DECAYTYPE_COUNT: {
+      assert_always(false);
+    }
+  }
+  return -1;  // no daughter
+}
+
 // a decay path follows the contribution from an initial nuclear abundance
 // to another (daughter of last nuclide in decaypath) via decays
 // every different path within the network is considered, e.g. 56Ni -> 56Co -> 56Fe is separate to 56Ni -> 56Co
@@ -59,6 +108,9 @@ struct decaypath {
   std::vector<int> decaytypes{};
   std::vector<double> lambdas{};
   double branchproduct{};  // product of all branching factors along the path set by calculate_decaypath_branchproduct()
+
+  [[nodiscard]] auto final_daughter_a() const -> int { return decay_daughter_a(z.back(), a.back(), decaytypes.back()); }
+  [[nodiscard]] auto final_daughter_z() const -> int { return decay_daughter_z(z.back(), a.back(), decaytypes.back()); }
 };
 
 std::vector<struct decaypath> decaypaths;
@@ -145,55 +197,6 @@ static void printout_nuclidemeanlife(const int z, const int a) {
   } else {
     printout("[stable,offnet]");
   }
-}
-
-constexpr auto decay_daughter_z(const int z_parent, const int /*a_parent*/, int decaytype) -> int
-// check if (z_parent, a_parent) is a parent of (z, a)
-{
-  assert_always(decaytype >= 0);
-  assert_always(decaytype < decaytypes::DECAYTYPE_COUNT);
-
-  switch (static_cast<enum decaytypes>(decaytype)) {
-    case decaytypes::DECAYTYPE_ALPHA: {
-      return z_parent - 2;  // lose two protons and two neutrons
-    }
-    case decaytypes::DECAYTYPE_BETAPLUS:
-    case decaytypes::DECAYTYPE_ELECTRONCAPTURE: {
-      return z_parent - 1;  // lose a proton, gain a neutron
-    }
-    case decaytypes::DECAYTYPE_BETAMINUS: {
-      return z_parent + 1;  // lose a neutron, gain a proton
-    }
-    case decaytypes::DECAYTYPE_NONE: {
-      return -1;  // no daughter
-    }
-    case decaytypes::DECAYTYPE_COUNT: {
-      assert_always(false);
-    }
-  }
-  return -1;  // no daughter
-}
-
-constexpr auto decay_daughter_a(const int /*z_parent*/, const int a_parent, int decaytype) -> int
-// check if (z_parent, a_parent) is a parent of (z, a)
-{
-  switch (static_cast<enum decaytypes>(decaytype)) {
-    case decaytypes::DECAYTYPE_ALPHA: {
-      return a_parent - 4;  // lose two protons and two neutrons
-    }
-    case decaytypes::DECAYTYPE_BETAPLUS:
-    case decaytypes::DECAYTYPE_ELECTRONCAPTURE:
-    case decaytypes::DECAYTYPE_BETAMINUS: {
-      return a_parent;  // swap a neutron to proton or vice-versa
-    }
-    case decaytypes::DECAYTYPE_NONE: {
-      return -1;  // no daughter
-    }
-    case decaytypes::DECAYTYPE_COUNT: {
-      assert_always(false);
-    }
-  }
-  return -1;  // no daughter
 }
 
 static auto get_nuc_decaybranchprob(const int nucindex, const int decaytype) -> double {
@@ -356,11 +359,9 @@ static void printout_decaypath(const int decaypathindex) {
     printout_nuclidename(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i]);
     printout_nuclidemeanlife(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i]);
   }
-  const int last_z = decaypaths[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
-  const int last_a = decaypaths[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
   const int last_decaytype = decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1];
-  const int end_z = decay_daughter_z(last_z, last_a, last_decaytype);
-  const int end_a = decay_daughter_a(last_z, last_a, last_decaytype);
+  const int end_z = decaypaths[decaypathindex].final_daughter_z();
+  const int end_a = decaypaths[decaypathindex].final_daughter_a();
   printout(" -> ");
   printout_decaytype(last_decaytype);
   printout(" -> ");
@@ -375,12 +376,9 @@ static void extend_lastdecaypath()
 // to get decaypaths from all descendants
 {
   const int startdecaypathindex = decaypaths.size() - 1;
-  const int last_z = decaypaths[startdecaypathindex].z[get_decaypathlength(startdecaypathindex) - 1];
-  const int last_a = decaypaths[startdecaypathindex].a[get_decaypathlength(startdecaypathindex) - 1];
-  const int dectypeindex = decaypaths[startdecaypathindex].decaytypes[get_decaypathlength(startdecaypathindex) - 1];
 
-  const int daughter_z = decay_daughter_z(last_z, last_a, dectypeindex);
-  const int daughter_a = decay_daughter_a(last_z, last_a, dectypeindex);
+  const int daughter_z = decaypaths[startdecaypathindex].final_daughter_z();
+  const int daughter_a = decaypaths[startdecaypathindex].final_daughter_a();
   if (nuc_exists(daughter_z, daughter_a)) {
     const int daughter_nucindex = get_nucindex(daughter_z, daughter_a);
     for (enum decaytypes dectypeindex2 : all_decaytypes) {
@@ -519,11 +517,7 @@ static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const s
 
                        // keep if it is connected by decays to one of the standard or custom input-specified nuclides
                        for (const auto &decaypath : decaypaths) {
-                         const int daughter_z =
-                             decay_daughter_z(decaypath.z.back(), decaypath.a.back(), decaypath.decaytypes.back());
-                         const int daughter_a =
-                             decay_daughter_a(decaypath.z.back(), decaypath.a.back(), decaypath.decaytypes.back());
-                         if (daughter_z == nuc.z && daughter_a == nuc.a) {
+                         if (decaypath.final_daughter_z() == nuc.z && decaypath.final_daughter_a() == nuc.a) {
                            continue;
                          }
 
