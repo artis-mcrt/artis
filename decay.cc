@@ -703,7 +703,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
   printout("Number of nuclides before filtering: %d\n", get_num_nuclides());
   find_decaypaths();
   printout("Number of decay paths before filtering: %d\n", get_num_decaypaths());
-  filter_unused_nuclides(custom_zlist, custom_alist, standard_nuclides);
+  // filter_unused_nuclides(custom_zlist, custom_alist, standard_nuclides);
 
   printout("Number of nuclides:  %d\n", get_num_nuclides());
   // call find_decaypaths() again for new nuclide indicies
