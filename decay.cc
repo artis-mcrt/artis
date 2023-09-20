@@ -407,14 +407,14 @@ static void extend_lastdecaypath()
   }
 }
 
-constexpr auto operator<(const struct decaypath &d1, const struct decaypath &d2) -> bool
+static auto operator<(const struct decaypath &d1, const struct decaypath &d2) -> bool
 // true if d1 < d2
 // order the chains in the same way as when the search moved up from the descendant
 // instead of down from the ancestor, for ease of test comparison
 // chains are sorted by mass number of first, second, third, etc position in chain
 {
-  const int d1_length = d1.z.size();
-  const int d2_length = d2.z.size();
+  const int d1_length = get_decaypathlength(d1);
+  const int d2_length = get_decaypathlength(d2);
   const int smallestpathlength = std::min(d1_length, d2_length);
   bool matchingoverlap = true;
   for (int i = 0; i < smallestpathlength; i++) {
