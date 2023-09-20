@@ -450,21 +450,21 @@ static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vec
       if (get_nuc_decaybranchprob(startnucindex, decaytype) == 0. || get_meanlife(startnucindex) <= 0.) {
         continue;
       }
-      // bool is_input_nuclide = false;
-      // for (size_t i = 0; i < custom_zlist.size(); i++) {
-      //   if ((z == custom_zlist[i]) && (a == custom_alist[i])) {
-      //     is_input_nuclide = true;
-      //     break;
-      //   }
-      // }
-      // if (!is_input_nuclide) {
-      //   // erase if not in standard nuc list
-      //   is_input_nuclide = std::any_of(standard_nuclides.begin(), standard_nuclides.end(),
-      //                                  [z, a](const auto &stdnuc) { return (z == stdnuc.z) && (a == stdnuc.a); });
-      // }
-      // if (!is_input_nuclide) {
-      //   continue;
-      // }
+      bool is_input_nuclide = false;
+      for (size_t i = 0; i < custom_zlist.size(); i++) {
+        if ((z == custom_zlist[i]) && (a == custom_alist[i])) {
+          is_input_nuclide = true;
+          break;
+        }
+      }
+      if (!is_input_nuclide) {
+        // erase if not in standard nuc list
+        is_input_nuclide = std::any_of(standard_nuclides.begin(), standard_nuclides.end(),
+                                       [z, a](const auto &stdnuc) { return (z == stdnuc.z) && (a == stdnuc.a); });
+      }
+      if (!is_input_nuclide) {
+        continue;
+      }
 
       decaypaths.push_back({.z = std::vector<int>(1, z),
                             .a = std::vector<int>(1, a),
