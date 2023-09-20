@@ -53,7 +53,6 @@ std::vector<struct nuclide> nuclides;
 // to another (daughter of last nuclide in decaypath) via decays
 // every different path within the network is considered, e.g. 56Ni -> 56Co -> 56Fe is separate to 56Ni -> 56Co
 struct decaypath {
-  int pathlength = 0;
   std::vector<int> z{};         // atomic number
   std::vector<int> a{};         // mass number
   std::vector<int> nucindex{};  // index into nuclides list
@@ -295,7 +294,7 @@ auto nucmass(int z, int a) -> double {
 
 static constexpr auto get_num_decaypaths() -> int { return static_cast<int>(decaypaths.size()); }
 
-static constexpr auto get_decaypathlength(const decaypath &dpath) -> int { return dpath.pathlength; }
+static constexpr auto get_decaypathlength(const decaypath &dpath) -> int { return static_cast<int>(dpath.z.size()); }
 static auto get_decaypathlength(int decaypathindex) -> int { return get_decaypathlength(decaypaths[decaypathindex]); }
 
 static auto calculate_decaypath_branchproduct(int decaypathindex) -> double
@@ -397,11 +396,9 @@ static void extend_lastdecaypath()
         }
       }
 
-      const int newpathlength = get_decaypathlength(startdecaypathindex) + 1;
       decaypaths.push_back(decaypaths[startdecaypathindex]);
       const int lastindex = decaypaths.size() - 1;
 
-      decaypaths[lastindex].pathlength = newpathlength;
       decaypaths[lastindex].z.push_back(daughter_z);
       decaypaths[lastindex].a.push_back(daughter_a);
       decaypaths[lastindex].nucindex.push_back(daughter_nucindex);
@@ -418,13 +415,13 @@ constexpr auto operator<(const struct decaypath &d1, const struct decaypath &d2)
 // instead of down from the ancestor, for ease of test comparison
 // chains are sorted by mass number of first, second, third, etc position in chain
 {
-  const int smallestpathlength = std::min(d1.pathlength, d2.pathlength);
+  const int smallestpathlength = std::min(get_decaypathlength(d1), get_decaypathlength(d2));
   bool matchingoverlap = true;
   for (int i = 0; i < smallestpathlength; i++) {
-    const int d1pos = d1.pathlength - 1 - i;
+    const int d1pos = get_decaypathlength(d1) - 1 - i;
     // assert_always(d1pos >= 0);
     // assert_always(d1pos < d1.pathlength);
-    const int d2pos = d2.pathlength - 1 - i;
+    const int d2pos = get_decaypathlength(d2) - 1 - i;
     // assert_always(d2pos >= 0);
     // assert_always(d2pos < d2.pathlength);
     // if (get_nucindex(d1.z[d1pos], d1.a[d1pos]) < get_nucindex(d2.z[d2pos], d2.a[d2pos]))
@@ -439,7 +436,7 @@ constexpr auto operator<(const struct decaypath &d1, const struct decaypath &d2)
     }
   }
   // one is an extension of the other
-  return matchingoverlap && d1.pathlength < d2.pathlength;
+  return matchingoverlap && get_decaypathlength(d1) < get_decaypathlength(d2);
 }
 
 static void find_decaypaths() {
@@ -453,8 +450,7 @@ static void find_decaypaths() {
         continue;
       }
 
-      decaypaths.push_back({.pathlength = 1,
-                            .z = std::vector<int>(1, z),
+      decaypaths.push_back({.z = std::vector<int>(1, z),
                             .a = std::vector<int>(1, a),
                             .nucindex = std::vector<int>(1, startnucindex),
                             .decaytypes = std::vector<int>(1, decaytype)});
