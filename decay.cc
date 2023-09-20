@@ -573,21 +573,15 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
       double tau_sec = 0.;
       std::stringstream(line) >> a >> z >> q_mev >> e_gamma_mev >> e_elec_mev >> e_neutrino >> tau_sec;
 
-      // keep if the mass number matches one of the input nuclides
-      const bool keeprow =
-          std::any_of(custom_alist.begin(), custom_alist.end(), [a](const auto a_custom) { return a == a_custom; });
-
-      if (keeprow) {
-        assert_always(!nuc_exists(z, a));
-        nuclides.push_back({.z = z, .a = a, .meanlife = tau_sec});
-        nuclides.back().branchprobs[DECAYTYPE_BETAMINUS] = 1.;
-        nuclides.back().endecay_q[DECAYTYPE_BETAMINUS] = q_mev * MEV;
-        nuclides.back().endecay_electron = e_elec_mev * MEV;
-        nuclides.back().endecay_gamma = e_gamma_mev * MEV;
-        // printout("betaminus file: Adding (Z=%d)%s-%d endecay_electron %g endecay_gamma %g tau_s %g\n",
-        //          z, get_elname(z), a, e_elec_mev, e_gamma_mev, tau_sec);
-        assert_always(e_elec_mev >= 0.);
-      }
+      assert_always(!nuc_exists(z, a));
+      nuclides.push_back({.z = z, .a = a, .meanlife = tau_sec});
+      nuclides.back().branchprobs[DECAYTYPE_BETAMINUS] = 1.;
+      nuclides.back().endecay_q[DECAYTYPE_BETAMINUS] = q_mev * MEV;
+      nuclides.back().endecay_electron = e_elec_mev * MEV;
+      nuclides.back().endecay_gamma = e_gamma_mev * MEV;
+      // printout("betaminus file: Adding (Z=%d)%s-%d endecay_electron %g endecay_gamma %g tau_s %g\n",
+      //          z, get_elname(z), a, e_elec_mev, e_gamma_mev, tau_sec);
+      assert_always(e_elec_mev >= 0.);
     }
     fbetaminus.close();
 
