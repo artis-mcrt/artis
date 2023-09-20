@@ -295,9 +295,9 @@ auto nucmass(int z, int a) -> double {
   // return nuclides[nucindex].amass;
 }
 
-static constexpr auto get_num_decaypaths() -> int { return static_cast<int>(decaypaths.size()); }
+static auto get_num_decaypaths() -> int { return static_cast<int>(decaypaths.size()); }
 
-static constexpr auto get_decaypathlength(const decaypath &dpath) -> int { return static_cast<int>(dpath.z.size()); }
+static auto get_decaypathlength(const decaypath &dpath) -> int { return static_cast<int>(dpath.z.size()); }
 static auto get_decaypathlength(int decaypathindex) -> int { return get_decaypathlength(decaypaths[decaypathindex]); }
 
 static auto calculate_decaypath_branchproduct(int decaypathindex) -> double
