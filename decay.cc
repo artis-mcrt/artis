@@ -528,7 +528,7 @@ static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const s
                            };
                          }
                        }
-                       printout("Deleting nuclide (Z=%d)%s-%d\n", nuc.z, get_elname(nuc.z), nuc.a);
+                       printout("removing unused nuclide (Z=%d)%s-%d\n", nuc.z, get_elname(nuc.z), nuc.a);
                        return true;
                      }),
       nuclides.end());
@@ -698,18 +698,22 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
     }
   }
 
-  printout("Number of nuclides before filtering: num_nuclides %d\n", get_num_nuclides());
+  printout("Number of nuclides before filtering: %d\n", get_num_nuclides());
   find_decaypaths();
   printout("Number of decay paths before filtering: %d\n", get_num_decaypaths());
-  // filter_unused_nuclides(custom_zlist, custom_alist, standard_nuclides);
+  filter_unused_nuclides(custom_zlist, custom_alist, standard_nuclides);
 
-  printout("Number of nuclides: num_nuclides %d\n", get_num_nuclides());
+  printout("Number of nuclides:  %d\n", get_num_nuclides());
   // call find_decaypaths() again for new nuclide indicies
-  find_decaypaths();
+
   int maxdecaypathlength = 0;
-  for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
+  for (auto &decaypath : decaypaths) {
     // printout_decaypath(decaypathindex);
-    maxdecaypathlength = std::max(maxdecaypathlength, get_decaypathlength(decaypathindex));
+    // fix up nuclide indicies after we have removed some nuclides
+    for (int i = 0; i < get_decaypathlength(decaypath); i++) {
+      decaypath.nucindex[i] = get_nucindex(decaypath.z[i], decaypath.a[i]);
+    }
+    maxdecaypathlength = std::max(maxdecaypathlength, get_decaypathlength(decaypath));
   }
   printout("Number of decay paths: %d (max length %d)\n", get_num_decaypaths(), maxdecaypathlength);
 
