@@ -53,7 +53,7 @@ std::vector<struct nuclide> nuclides;
 // to another (daughter of last nuclide in decaypath) via decays
 // every different path within the network is considered, e.g. 56Ni -> 56Co -> 56Fe is separate to 56Ni -> 56Co
 struct decaypath {
-  int pathlength{};
+  int pathlength = 0;
   std::vector<int> z{};         // atomic number
   std::vector<int> a{};         // mass number
   std::vector<int> nucindex{};  // index into nuclides list
@@ -666,7 +666,32 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
                                   }),
                    decaypaths.end());
 
-  // TODO: remove nuclides that are not in any decaypath and call find_decaypaths() again for updated nuclide indices
+  // remove nuclides that are not in any decaypath or the standard list
+  nuclides.erase(
+      std::remove_if(nuclides.begin(), nuclides.end(),
+                     [&](const auto &nuc) {
+                       // keep nuclide if it's part of any decaypath (or the daughter nucleus one past the end)
+                       for (const auto &decaypath : decaypaths) {
+                         for (int i = 0; i < decaypath.pathlength; i++) {
+                           if (decaypath.z[i] == nuc.z && decaypath.a[i] == nuc.a) {
+                             return false;
+                           }
+                           if (decay_daughter_z(decaypath.z[i], decaypath.a[i], decaypath.decaytypes[i]) == nuc.z &&
+                               decay_daughter_a(decaypath.z[i], decaypath.a[i], decaypath.decaytypes[i]) == nuc.a) {
+                             return false;
+                           }
+                         }
+                       }
+
+                       // erase if not in standard nuclide list
+                       return !std::any_of(standard_nuclides.begin(), standard_nuclides.end(), [&](const auto &stdnuc) {
+                         return (stdnuc.z == nuc.z) && (stdnuc.a == nuc.a);
+                       });
+                     }),
+      nuclides.end());
+
+  // call find_decaypaths() again for new nuclide indicies
+  find_decaypaths();
 
   /// Read in data for gamma ray lines and make a list of them in energy order.
   gammapkt::init_gamma_linelist();
