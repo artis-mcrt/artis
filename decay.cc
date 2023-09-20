@@ -293,9 +293,10 @@ auto nucmass(int z, int a) -> double {
   // return nuclides[nucindex].amass;
 }
 
-static auto get_num_decaypaths() -> int { return decaypaths.size(); }
+static constexpr auto get_num_decaypaths() -> int { return decaypaths.size(); }
 
-static auto get_decaypathlength(int decaypathindex) -> int { return decaypaths[decaypathindex].pathlength; }
+static constexpr auto get_decaypathlength(const decaypath &dpath) -> int { return dpath.pathlength; }
+static auto get_decaypathlength(int decaypathindex) -> int { return get_decaypathlength(decaypaths[decaypathindex]); }
 
 static auto calculate_decaypath_branchproduct(int decaypathindex) -> double
 // return the product of all branching factors in the decay path
@@ -442,6 +443,7 @@ constexpr auto operator<(const struct decaypath &d1, const struct decaypath &d2)
 }
 
 static void find_decaypaths() {
+  decaypaths.clear();
   for (int startnucindex = 0; startnucindex < get_num_nuclides(); startnucindex++) {
     const int z = get_nuc_z(startnucindex);
     const int a = get_nuc_a(startnucindex);
