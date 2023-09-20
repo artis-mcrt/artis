@@ -645,10 +645,8 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
     }
   }
 
-  printout("init_nuclides: num_nuclides %d\n", get_num_nuclides());
-
-  /// Read in data for gamma ray lines and make a list of them in energy order.
-  gammapkt::init_gamma_linelist();
+  printout("Number of nuclides before filtering: num_nuclides %d\n", get_num_nuclides());
+  printout("Number of decay paths before filtering: %d\n", get_num_decaypaths());
 
   find_decaypaths();
 
@@ -670,6 +668,10 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
 
   // TODO: remove nuclides that are not in any decaypath and call find_decaypaths() again for updated nuclide indices
 
+  /// Read in data for gamma ray lines and make a list of them in energy order.
+  gammapkt::init_gamma_linelist();
+
+  printout("Number of nuclides: num_nuclides %d\n", get_num_nuclides());
   int maxdecaypathlength = 0;
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
     // printout_decaypath(decaypathindex);
