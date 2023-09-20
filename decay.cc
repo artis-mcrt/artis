@@ -267,7 +267,7 @@ static auto nucdecayenergytotal(const int z, const int a) -> double
   const int nucindex = get_nucindex(z, a);
   double endecay = 0.;
   endecay += nuclides[nucindex].endecay_gamma;
-  for (int decaytype = 0; decaytype < decaytypes::DECAYTYPE_COUNT; decaytype++) {
+  for (const auto decaytype : all_decaytypes) {
     endecay += nucdecayenergyparticle(nucindex, decaytype) * get_nuc_decaybranchprob(nucindex, decaytype);
   }
 
@@ -386,7 +386,7 @@ static void extend_lastdecaypath()
   const int daughter_a = decay_daughter_a(last_z, last_a, dectypeindex);
   if (nuc_exists(daughter_z, daughter_a)) {
     const int daughter_nucindex = get_nucindex(daughter_z, daughter_a);
-    for (int dectypeindex2 = 0; dectypeindex2 < decaytypes::DECAYTYPE_COUNT; dectypeindex2++) {
+    for (enum decaytypes dectypeindex2 : all_decaytypes) {
       if (get_nuc_decaybranchprob(daughter_nucindex, dectypeindex2) == 0.) {
         continue;
       }
@@ -449,8 +449,8 @@ static void find_decaypaths() {
     const int z = get_nuc_z(startnucindex);
     const int a = get_nuc_a(startnucindex);
 
-    for (int dectypeindex = 0; dectypeindex < decaytypes::DECAYTYPE_COUNT; dectypeindex++) {
-      if (get_nuc_decaybranchprob(startnucindex, dectypeindex) == 0. || get_meanlife(startnucindex) <= 0.) {
+    for (const auto decaytype : all_decaytypes) {
+      if (get_nuc_decaybranchprob(startnucindex, decaytype) == 0. || get_meanlife(startnucindex) <= 0.) {
         continue;
       }
 
@@ -458,7 +458,7 @@ static void find_decaypaths() {
                             .z = std::vector<int>(1, z),
                             .a = std::vector<int>(1, a),
                             .nucindex = std::vector<int>(1, startnucindex),
-                            .decaytypes = std::vector<int>(1, dectypeindex)});
+                            .decaytypes = std::vector<int>(1, decaytype)});
 
       extend_lastdecaypath();  // take this single step chain and find all descendants
     }
@@ -1179,11 +1179,11 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
         }
       } else {
         // check if the nucleus decays off the network but into the selected element
-        for (int dectypeindex = 0; dectypeindex < decaytypes::DECAYTYPE_COUNT; dectypeindex++) {
-          const int daughter_z = decay_daughter_z(nuc_z, a, dectypeindex);
-          const int daughter_a = decay_daughter_a(nuc_z, a, dectypeindex);
+        for (const auto decaytype : all_decaytypes) {
+          const int daughter_z = decay_daughter_z(nuc_z, a, decaytype);
+          const int daughter_a = decay_daughter_a(nuc_z, a, decaytype);
           if (daughter_z == atomic_number && !nuc_exists(daughter_z, daughter_a) &&
-              get_nuc_decaybranchprob(nuc_z, a, dectypeindex) > 0.) {
+              get_nuc_decaybranchprob(nuc_z, a, decaytype) > 0.) {
             if (!a_isotopes.contains(daughter_a)) {
               a_isotopes.insert(daughter_a);
               // nuclide decays into correct atomic number but outside of the radionuclide list
@@ -1271,12 +1271,12 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
         }
       }
     } else {  // not the element that we want, but check if a decay produces it
-      for (int dectypeindex = 0; dectypeindex < decaytypes::DECAYTYPE_COUNT; dectypeindex++) {
-        const int daughter_z = decay_daughter_z(nuc_z, nuc_a, dectypeindex);
-        const int daughter_a = decay_daughter_a(nuc_z, nuc_a, dectypeindex);
+      for (const auto decaytype : all_decaytypes) {
+        const int daughter_z = decay_daughter_z(nuc_z, nuc_a, decaytype);
+        const int daughter_a = decay_daughter_a(nuc_z, nuc_a, decaytype);
         // if the nucleus exists, it will be picked up by the upper condition
         if (daughter_z == atomic_number && !nuc_exists(daughter_z, daughter_a) &&
-            get_nuc_decaybranchprob(nucindex, dectypeindex) > 0.) {
+            get_nuc_decaybranchprob(nucindex, decaytype) > 0.) {
           if (!a_isotopes.contains(nuc_a)) {
             a_isotopes.insert(nuc_a);
             // nuclide decays into correct atomic number but outside of the radionuclide list. Daughter is assumed

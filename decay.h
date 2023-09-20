@@ -18,6 +18,10 @@ enum decaytypes {
   DECAYTYPE_COUNT = 5,
 };
 
+constexpr std::array<enum decaytypes, 5> all_decaytypes = {
+    decaytypes::DECAYTYPE_ALPHA, decaytypes::DECAYTYPE_ELECTRONCAPTURE, decaytypes::DECAYTYPE_BETAPLUS,
+    decaytypes::DECAYTYPE_BETAMINUS, decaytypes::DECAYTYPE_NONE};
+
 void init_nuclides(const std::vector<int> &zlist, const std::vector<int> &alist);
 int get_nucstring_z(const std::string &strnuc);
 int get_nucstring_a(const std::string &strnuc);

@@ -12,6 +12,8 @@
 
 #include "sn3d.h"
 
+#include <filesystem>
+
 #include "atomic.h"
 #include "decay.h"
 #include "gammapkt.h"
@@ -116,13 +118,13 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
           mtot += cellmass;
         }
 
-        for (int dectypeindex = 0; dectypeindex < decay::DECAYTYPE_COUNT; dectypeindex++) {
+        for (const auto decaytype : decay::all_decaytypes) {
           // Qdot here has been multiplied by mass, so it is in units of [erg/s]
-          const double qdot_cell = decay::get_qdot_modelcell(mgi, t_mid, dectypeindex) * cellmass;
+          const double qdot_cell = decay::get_qdot_modelcell(mgi, t_mid, decaytype) * cellmass;
           globals::time_step[i].qdot_total += qdot_cell;
-          if (dectypeindex == decay::DECAYTYPE_BETAMINUS) {
+          if (decaytype == decay::DECAYTYPE_BETAMINUS) {
             globals::time_step[i].qdot_betaminus += qdot_cell;
-          } else if (dectypeindex == decay::DECAYTYPE_ALPHA) {
+          } else if (decaytype == decay::DECAYTYPE_ALPHA) {
             globals::time_step[i].qdot_alpha += qdot_cell;
           }
         }
@@ -1074,8 +1076,9 @@ auto main(int argc, char *argv[]) -> int {
   MPI_Finalize();
 #endif
 
-  if (std::filesystem::exists("artis.pid")) {
-    std::filesystem::remove("artis.pid");
+  std::filesystem::path pid_file_path("artis.pid");
+  if (std::filesystem::exists(pid_file_path)) {
+    std::filesystem::remove(pid_file_path);
   }
 
   return 0;
