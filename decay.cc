@@ -436,7 +436,7 @@ constexpr auto operator<(const struct decaypath &d1, const struct decaypath &d2)
     }
   }
   // one is an extension of the other
-  return matchingoverlap && d1_length < d1_length;
+  return matchingoverlap && d1_length < d2_length;
 }
 
 static void find_decaypaths() {
