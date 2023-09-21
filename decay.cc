@@ -536,9 +536,8 @@ static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const s
 
   // update the nuclide indicies in the decay paths after we possibly removed some nuclides
   for (auto &decaypath : decaypaths) {
-    for (int i = 0; i < get_decaypathlength(decaypath); i++) {
-      decaypath.nucindex[i] = get_nucindex(decaypath.z[i], decaypath.a[i]);
-    }
+    std::transform(decaypath.z.cbegin(), decaypath.z.cend(), decaypath.a.cbegin(), decaypath.nucindex.begin(),
+                   [](const auto z, const auto a) { return get_nucindex(z, a); });
   }
 }
 
