@@ -740,8 +740,8 @@ static auto sample_decaytime(const int decaypathindex, const double tdecaymin, c
   return tdecay;
 }
 
-static auto calculate_decaychain(const double firstinitabund, const std::vector<double> &lambdas,
-                                 const int num_nuclides, const double timediff, const bool useexpansionfactor)
+static constexpr auto calculate_decaychain(const double firstinitabund, const std::vector<double> &lambdas,
+                                           const int num_nuclides, const double timediff, const bool useexpansionfactor)
     -> double {
   // calculate final number abundance from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
   // the top nuclide initial abundance is set and the chain-end abundance is returned (all intermediates nuclides
@@ -803,13 +803,12 @@ static auto get_nuc_massfrac(const int modelgridindex, const int z, const int a,
   // decay chains include all paths from radionuclides to other radionuclides (including trivial size-one chains)
 
   double nuctotal = 0.;  // abundance or decay rate, depending on mode parameter
-  for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
-    const int z_end = decaypaths[decaypathindex].z[get_decaypathlength(decaypathindex) - 1];
-    const int a_end = decaypaths[decaypathindex].a[get_decaypathlength(decaypathindex) - 1];
+  for (const auto &decaypath : decaypaths) {
+    const int z_end = decaypath.z.back();
+    const int a_end = decaypath.a.back();
 
     // match 4He abundance to alpha decay of any nucleus (no continue), otherwise check daughter nuclide matches
-    if (z != 2 || a != 4 ||
-        decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1] != decaytypes::DECAYTYPE_ALPHA) {
+    if (z != 2 || a != 4 || decaypath.decaytypes.back() != decaytypes::DECAYTYPE_ALPHA) {
       if (nuc_exists_z_a && (z_end != z || a_end != a))  // requested nuclide is in network, so match last nuc in chain
       {
         continue;
@@ -821,9 +820,9 @@ static auto get_nuc_massfrac(const int modelgridindex, const int z, const int a,
       }
     }
 
-    const int z_top = decaypaths[decaypathindex].z[0];
-    const int a_top = decaypaths[decaypathindex].a[0];
-    const int nucindex_top = decaypaths[decaypathindex].nucindex[0];
+    const int z_top = decaypath.z[0];
+    const int a_top = decaypath.a[0];
+    const int nucindex_top = decaypath.nucindex[0];
 
     const double top_initabund = grid::get_modelinitradioabund(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
     assert_always(top_initabund >= 0.);
@@ -831,20 +830,18 @@ static auto get_nuc_massfrac(const int modelgridindex, const int z, const int a,
       continue;
     }
 
-    int const decaypathlength = get_decaypathlength(decaypathindex);
+    int const decaypathlength = get_decaypathlength(decaypath);
 
     int fulldecaypathlength = decaypathlength;
     // if the nuclide is out of network, it's one past the end of the chain
-    if (!nuc_exists_z_a || (z == 2 && a == 4 &&
-                            decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1] ==
-                                decaytypes::DECAYTYPE_ALPHA)) {
+    if (!nuc_exists_z_a || (z == 2 && a == 4 && decaypath.decaytypes.back() == decaytypes::DECAYTYPE_ALPHA)) {
       fulldecaypathlength = decaypathlength + 1;
     }
 
-    const double massfraccontrib = (decaypaths[decaypathindex].branchproduct *
-                                    calculate_decaychain(top_initabund, decaypaths[decaypathindex].lambdas,
-                                                         fulldecaypathlength, t_afterinit, false) *
-                                    nucmass(z, a));
+    const double massfraccontrib =
+        (decaypath.branchproduct *
+         calculate_decaychain(top_initabund, decaypath.lambdas, fulldecaypathlength, t_afterinit, false) *
+         nucmass(z, a));
     // assert_always(massfraccontrib >= 0.);
     nuctotal += massfraccontrib;
   }
