@@ -7,12 +7,9 @@
 #include <unistd.h>
 
 #include <cassert>
-// #include <chrono>
 #include <csignal>
-// #include <cstdarg>
 #include <cstdio>
 #include <cstring>
-// #include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -129,7 +126,8 @@ static inline void gsl_error_handler_printout(const char *reason, const char *fi
 static FILE *fopen_required(const char *filename, const char *mode) {
   assert_always(filename != nullptr);
   std::string datafolderfilename("data/");
-  datafolderfilename += filename;
+
+  std::filesystem::path pid_file_path(datafolderfilename + filename);
   if (mode[0] == 'r' && std::filesystem::exists(datafolderfilename)) {
     return fopen_required(datafolderfilename.c_str(), mode);
   }
