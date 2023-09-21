@@ -451,9 +451,9 @@ static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vec
         }
       }
       // skip path if it doesn't start from a nuclide in the custom or standard input lists
-      if (!is_custom_nuclide &&
-          !std::any_of(standard_nuclides.cbegin(), standard_nuclides.cend(),
-                       [z, a](const auto &stdnuc) { return (z == stdnuc.z) && (a == stdnuc.a); })) {
+      if (!is_custom_nuclide && !std::ranges::any_of(standard_nuclides, [z, a](const auto &stdnuc) {
+            return (z == stdnuc.z) && (a == stdnuc.a);
+          })) {
         continue;
       }
 
@@ -498,7 +498,7 @@ static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const s
       std::remove_if(nuclides.begin(), nuclides.end(),
                      [&](const auto &nuc) {
                        // keep nucleus if it is in the standard list
-                       if (std::any_of(standard_nuclides.cbegin(), standard_nuclides.cend(), [&](const auto &stdnuc) {
+                       if (std::ranges::any_of(standard_nuclides, [&](const auto &stdnuc) {
                              return (stdnuc.z == nuc.z) && (stdnuc.a == nuc.a);
                            })) {
                          return false;
