@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "constants.h"
 #include "packet.h"
 
 namespace decay {
@@ -35,7 +36,6 @@ bool nuc_exists(int z, int a);
 double nucdecayenergygamma(int nucindex);
 double nucdecayenergygamma(int z, int a);
 void set_nucdecayenergygamma(int nucindex, double value);
-double nucmass(int z, int a);
 void update_abundances(int modelgridindex, int timestep, double t_current);
 double get_endecay_per_ejectamass_t0_to_time_withexpansion(int modelgridindex, double tstart);
 double get_modelcell_simtime_endecay_per_mass(int mgi);
@@ -47,6 +47,8 @@ double get_global_etot_t0_tinf();
 void fprint_nuc_abundances(FILE *estimators_file, int modelgridindex, double t_current, int element);
 void setup_radioactive_pellet(double e0, int mgi, struct packet *pkt_ptr);
 void cleanup();
+
+auto constexpr nucmass(int z, int a) -> double { return a * MH; }
 }  // namespace decay
 
 #endif  // DECAY_H

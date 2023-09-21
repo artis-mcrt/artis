@@ -24,7 +24,8 @@
 
 namespace decay {
 
-constexpr std::string_view elsymbols[] = {
+constexpr int Z_MAX = 118;
+constexpr std::string_view elsymbols[Z_MAX + 1] = {
     "n",  "H",  "He", "Li", "Be", "B",  "C",  "N",  "O",  "F",  "Ne", "Na",  "Mg", "Al",  "Si", "P",   "S",
     "Cl", "Ar", "K",  "Ca", "Sc", "Ti", "V",  "Cr", "Mn", "Fe", "Co", "Ni",  "Cu", "Zn",  "Ga", "Ge",  "As",
     "Se", "Br", "Kr", "Rb", "Sr", "Y",  "Zr", "Nb", "Mo", "Tc", "Ru", "Rh",  "Pd", "Ag",  "Cd", "In",  "Sn",
@@ -32,7 +33,6 @@ constexpr std::string_view elsymbols[] = {
     "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W",  "Re", "Os", "Ir", "Pt", "Au",  "Hg", "Tl",  "Pb", "Bi",  "Po",
     "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U",  "Np", "Pu", "Am", "Cm",  "Bk", "Cf",  "Es", "Fm",  "Md",
     "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Uut", "Fl", "Uup", "Lv", "Uus", "Uuo"};
-constexpr int Z_MAX = 119;
 
 struct nuclide {
   int z = -1;                    // atomic number
@@ -284,15 +284,6 @@ static auto nucdecayenergy(int nucindex, int decaytype) -> double
 
 static auto nucdecayenergyqval(int nucindex, int decaytype) -> double {
   return nuclides[nucindex].endecay_q[decaytype];
-}
-
-auto nucmass(int z, int a) -> double {
-  assert_testmodeonly(z > 0);
-  assert_testmodeonly(a >= z);
-
-  return a * MH;
-
-  // return nuclides[nucindex].amass;
 }
 
 static auto get_num_decaypaths() -> int { return static_cast<int>(decaypaths.size()); }
@@ -1131,9 +1122,6 @@ auto get_particle_injection_rate(const int modelgridindex, const double t, const
   double dep_sum = 0.;
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
     const int z = get_nuc_z(nucindex);
-    if (z < 1) {
-      continue;
-    }
     const int a = get_nuc_a(nucindex);
     const double meanlife = get_meanlife(nucindex);
     if (meanlife < 0.) {
@@ -1159,9 +1147,6 @@ auto get_qdot_modelcell(const int modelgridindex, const double t, const int deca
   double qdot = 0.;
   for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
     const int z = get_nuc_z(nucindex);
-    if (z < 1) {
-      continue;
-    }
     const int a = get_nuc_a(nucindex);
     const double meanlife = get_meanlife(nucindex);
     if (meanlife < 0.) {
