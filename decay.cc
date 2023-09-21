@@ -216,7 +216,7 @@ static auto nuc_is_parent(const int z_parent, const int a_parent, const int z, c
 {
   assert_testmodeonly(nuc_exists(z_parent, a_parent));
   // each radioactive nuclide is limited to one daughter nuclide
-  return std::any_of(all_decaytypes.cbegin(), all_decaytypes.cend(), [=](const auto decaytype) {
+  return std::ranges::any_of(all_decaytypes, [=](const auto decaytype) {
     return decay_daughter_z(z_parent, a_parent, decaytype) == z && decay_daughter_a(z_parent, a_parent, decaytype) == a;
   });
 }
