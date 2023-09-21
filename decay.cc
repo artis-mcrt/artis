@@ -492,20 +492,21 @@ static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vec
 static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> &custom_alist,
                                    std::vector<struct nuclide> &standard_nuclides) {
   // reduce decaypaths to just those that start with either a custom input nuclide or standard one
-  decaypaths.erase(std::remove_if(decaypaths.begin(), decaypaths.end(),
-                                  [&](const auto &decaypath) {
-                                    for (size_t i = 0; i < custom_zlist.size(); i++) {
-                                      if ((decaypath.z[0] == custom_zlist[i]) && (decaypath.a[0] == custom_alist[i])) {
-                                        return false;
-                                      }
-                                    }
-                                    // erase if not in standard nuc list
-                                    return !std::any_of(
-                                        standard_nuclides.begin(), standard_nuclides.end(), [&](const auto &stdnuc) {
-                                          return (decaypath.z[0] == stdnuc.z) && (decaypath.a[0] == stdnuc.a);
-                                        });
-                                  }),
-                   decaypaths.end());
+  // decaypaths.erase(std::remove_if(decaypaths.begin(), decaypaths.end(),
+  //                                 [&](const auto &decaypath) {
+  //                                   for (size_t i = 0; i < custom_zlist.size(); i++) {
+  //                                     if ((decaypath.z[0] == custom_zlist[i]) && (decaypath.a[0] == custom_alist[i]))
+  //                                     {
+  //                                       return false;
+  //                                     }
+  //                                   }
+  //                                   // erase if not in standard nuc list
+  //                                   return !std::any_of(
+  //                                       standard_nuclides.begin(), standard_nuclides.end(), [&](const auto &stdnuc) {
+  //                                         return (decaypath.z[0] == stdnuc.z) && (decaypath.a[0] == stdnuc.a);
+  //                                       });
+  //                                 }),
+  //                  decaypaths.end());
 
   // remove nuclides that are not a standard or custom input-specified nuclide, or connected to these by decays
   nuclides.erase(
