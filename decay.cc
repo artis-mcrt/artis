@@ -491,23 +491,6 @@ static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vec
 
 static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> &custom_alist,
                                    std::vector<struct nuclide> &standard_nuclides) {
-  // reduce decaypaths to just those that start with either a custom input nuclide or standard one
-  // decaypaths.erase(std::remove_if(decaypaths.begin(), decaypaths.end(),
-  //                                 [&](const auto &decaypath) {
-  //                                   for (size_t i = 0; i < custom_zlist.size(); i++) {
-  //                                     if ((decaypath.z[0] == custom_zlist[i]) && (decaypath.a[0] == custom_alist[i]))
-  //                                     {
-  //                                       return false;
-  //                                     }
-  //                                   }
-  //                                   // erase if not in standard nuc list
-  //                                   return !std::any_of(
-  //                                       standard_nuclides.begin(), standard_nuclides.end(), [&](const auto &stdnuc) {
-  //                                         return (decaypath.z[0] == stdnuc.z) && (decaypath.a[0] == stdnuc.a);
-  //                                       });
-  //                                 }),
-  //                  decaypaths.end());
-
   // remove nuclides that are not a standard or custom input-specified nuclide, or connected to these by decays
   nuclides.erase(
       std::remove_if(nuclides.begin(), nuclides.end(),
@@ -543,6 +526,13 @@ static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const s
                      }),
       nuclides.end());
   nuclides.shrink_to_fit();
+
+  // update the nuclide indicies in the decay paths after we possibly removed some nuclides
+  for (auto &decaypath : decaypaths) {
+    for (int i = 0; i < get_decaypathlength(decaypath); i++) {
+      decaypath.nucindex[i] = get_nucindex(decaypath.z[i], decaypath.a[i]);
+    }
+  }
 }
 
 auto get_nucstring_z(const std::string &strnuc) -> int
@@ -710,19 +700,12 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
 
   printout("Number of nuclides before filtering: %d\n", get_num_nuclides());
   find_decaypaths(custom_zlist, custom_alist, standard_nuclides);
-  printout("Number of decay paths before filtering: %d\n", get_num_decaypaths());
   filter_unused_nuclides(custom_zlist, custom_alist, standard_nuclides);
 
   printout("Number of nuclides:  %d\n", get_num_nuclides());
-  // call find_decaypaths() again for new nuclide indicies
 
   int maxdecaypathlength = 0;
   for (auto &decaypath : decaypaths) {
-    // printout_decaypath(decaypathindex);
-    // fix up nuclide indicies after we have removed some nuclides
-    for (int i = 0; i < get_decaypathlength(decaypath); i++) {
-      decaypath.nucindex[i] = get_nucindex(decaypath.z[i], decaypath.a[i]);
-    }
     maxdecaypathlength = std::max(maxdecaypathlength, get_decaypathlength(decaypath));
   }
   printout("Number of decay paths: %d (max length %d)\n", get_num_decaypaths(), maxdecaypathlength);
@@ -757,8 +740,9 @@ static auto sample_decaytime(const int decaypathindex, const double tdecaymin, c
   return tdecay;
 }
 
-static auto calculate_decaychain(const double firstinitabund, std::vector<double> &lambdas, const int num_nuclides,
-                                 const double timediff, bool useexpansionfactor) -> double {
+static auto calculate_decaychain(const double firstinitabund, const std::vector<double> &lambdas,
+                                 const int num_nuclides, const double timediff, const bool useexpansionfactor)
+    -> double {
   // calculate final number abundance from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
   // the top nuclide initial abundance is set and the chain-end abundance is returned (all intermediates nuclides
   // are assumed to start with zero abundance)
