@@ -955,18 +955,7 @@ auto get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridinde
 {
   double tot_endecay = 0.;
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
-    if (get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, decaypathindex, grid::get_t_model()) <= 0.) {
-      // skip unused chains
-      continue;
-    }
-    // printout_decaypath(decaypathindex);
-    // get_endecay_per_ejectamass_t0_to_time_withexpansion_chain_numerical(modelgridindex, decaypathindex, tstart);
-
     const int decaypathlength = get_decaypathlength(decaypathindex);
-
-    // const double numerator = calculate_decaychain(1., meanlifetimes, decaypathlength + 1, tdiff, true);
-    // const double factor = numerator / calculate_decaychain(1., meanlifetimes, decaypathlength + 1, tdiff, false);
-    // printout("  Analytical expansion factor: %g\n", factor);
 
     const int z_top = decaypaths[decaypathindex].z[0];
     const int a_top = decaypaths[decaypathindex].a[0];
@@ -979,7 +968,6 @@ auto get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridinde
                                                        decaypathlength + 1, tstart - grid::get_t_model(), true) *
                                   get_decaypath_lastnucdecayenergy(decaypathindex));
 
-    // printout("  Analytical chain_endecay: %g\n", chain_endecay);
     tot_endecay += chain_endecay;
   }
 
