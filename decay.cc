@@ -468,23 +468,25 @@ static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vec
 
   std::sort(decaypaths.begin(), decaypaths.end());
 
-  for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
-    int const decaypathlength = get_decaypathlength(decaypathindex);
+  for (auto &decaypath : decaypaths) {
+    // all nuclei in the path (except for the last one, which is allowed to be stable) must have a mean life >0
+    assert_always(std::all_of(decaypath.nucindex.begin(), decaypath.nucindex.end() - 1,
+                              [](const auto nucindex) { return get_meanlife(nucindex) > 0.; }));
 
-    for (int i = 0; i < decaypathlength; i++) {
-      const double meanlife = get_meanlife(decaypaths[decaypathindex].nucindex[i]);
+    // convert mean lifetimes to decay constants
+    decaypath.lambdas.resize(decaypath.nucindex.size());
+    std::transform(decaypath.nucindex.begin(), decaypath.nucindex.end(), decaypath.lambdas.begin(),
+                   [](const auto nucindex) {
+                     const double meanlife = get_meanlife(nucindex);
+                     // last nuclide might be stable (meanlife <= 0.)
+                     const double lambda = (meanlife > 0.) ? 1. / meanlife : 0.;
+                     return lambda;
+                   });
 
-      // last nuclide might be stable (meanlife <= 0.)
-      assert_always(meanlife > 0. || (i == decaypathlength - 1));  // only the last nuclide can be stable
-      const double lambda = (meanlife > 0.) ? 1. / meanlife : 0.;
+    // the nuclide one past the end of the path is a used as a sink, so treat it as stable (even if it's not)
+    decaypath.lambdas.push_back(0.);
 
-      decaypaths[decaypathindex].lambdas.push_back(lambda);
-    }
-
-    // the nuclide past the end of the path is a used as a sink, so treat it as stable (even if it's not)
-    decaypaths[decaypathindex].lambdas.push_back(0.);
-
-    decaypaths[decaypathindex].branchproduct = calculate_decaypath_branchproduct(decaypathindex);
+    decaypath.branchproduct = calculate_decaypath_branchproduct(decaypath);
   }
   decaypaths.shrink_to_fit();
 }
