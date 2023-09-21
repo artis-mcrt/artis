@@ -528,7 +528,7 @@ static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const s
                        // keep if it is connected by decays to one of the standard or custom input-specified nuclides
                        for (const auto &decaypath : decaypaths) {
                          if (decaypath.final_daughter_z() == nuc.z && decaypath.final_daughter_a() == nuc.a) {
-                           continue;
+                           return false;
                          }
 
                          for (size_t i = 0; i < decaypath.z.size(); i++) {
