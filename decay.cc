@@ -307,7 +307,7 @@ static auto calculate_decaypath_branchproduct(int decaypathindex) -> double
   return calculate_decaypath_branchproduct(decaypaths[decaypathindex]);
 }
 
-static auto get_decaypath_lastnucdecayenergy(const decaypath dpath) -> double
+static auto get_decaypath_lastnucdecayenergy(const decaypath &dpath) -> double
 // a decaypath's energy is the decay energy of the last nuclide and decaytype in the chain
 {
   const int nucindex_end = dpath.nucindex.back();
@@ -1065,7 +1065,7 @@ void setup_decaypath_energy_per_mass() {
   if (globals::rank_in_node == 0) {
     my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
   }
-  MPI_Aint size = my_rank_cells * get_num_decaypaths() * sizeof(double);
+  auto size = static_cast<MPI_Aint>(my_rank_cells * get_num_decaypaths() * sizeof(double));
 
   int disp_unit = sizeof(double);
   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
