@@ -1164,7 +1164,7 @@ auto get_qdot_modelcell(const int modelgridindex, const double t, const int deca
     }
     const int a = get_nuc_a(nucindex);
     const double meanlife = get_meanlife(nucindex);
-    if (meanlife <= 0) {
+    if (meanlife < 0.) {
       continue;
     }
     const double q_decay = nucdecayenergyqval(nucindex, decaytype) * get_nuc_decaybranchprob(nucindex, decaytype);
