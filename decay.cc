@@ -316,12 +316,16 @@ static auto calculate_decaypath_branchproduct(int decaypathindex) -> double
   return calculate_decaypath_branchproduct(decaypaths[decaypathindex]);
 }
 
-static auto get_decaypath_lastnucdecayenergy(const int decaypathindex) -> double
+static auto get_decaypath_lastnucdecayenergy(const decaypath dpath) -> double
 // a decaypath's energy is the decay energy of the last nuclide and decaytype in the chain
 {
-  const int nucindex_end = decaypaths[decaypathindex].nucindex[get_decaypathlength(decaypathindex) - 1];
-  const int decaytype_end = decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1];
+  const int nucindex_end = dpath.nucindex.back();
+  const int decaytype_end = dpath.decaytypes.back();
   return nucdecayenergy(nucindex_end, decaytype_end);
+}
+
+static auto get_decaypath_lastnucdecayenergy(const int decaypathindex) -> double {
+  return get_decaypath_lastnucdecayenergy(decaypaths[decaypathindex]);
 }
 
 static void printout_decaytype(const int decaytype) {
@@ -353,25 +357,25 @@ static void printout_decaytype(const int decaytype) {
 
 static void printout_decaypath(const int decaypathindex) {
   assert_always(!decaypaths.empty());
+  const auto &decaypath = decaypaths[decaypathindex];
   printout(" decaypath %d: ", decaypathindex);
-  printout_nuclidename(decaypaths[decaypathindex].z[0], decaypaths[decaypathindex].a[0]);
-  printout_nuclidemeanlife(decaypaths[decaypathindex].z[0], decaypaths[decaypathindex].a[0]);
 
-  for (int i = 1; i < get_decaypathlength(decaypathindex); i++) {
-    printout(" -> ");
-    printout_decaytype(decaypaths[decaypathindex].decaytypes[i - 1]);
-    printout(" -> ");
-    printout_nuclidename(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i]);
-    printout_nuclidemeanlife(decaypaths[decaypathindex].z[i], decaypaths[decaypathindex].a[i]);
+  for (int i = 0; i < get_decaypathlength(decaypathindex); i++) {
+    printout_nuclidename(decaypath.z[i], decaypath.a[i]);
+    printout_nuclidemeanlife(decaypath.z[i], decaypath.a[i]);
+
+    if (decaypath.decaytypes[i] != DECAYTYPE_NONE) {
+      printout(" -> ");
+      printout_decaytype(decaypath.decaytypes[i]);
+      printout(" -> ");
+    }
   }
-  const int last_decaytype = decaypaths[decaypathindex].decaytypes[get_decaypathlength(decaypathindex) - 1];
-  const int end_z = decaypaths[decaypathindex].final_daughter_z();
-  const int end_a = decaypaths[decaypathindex].final_daughter_a();
-  printout(" -> ");
-  printout_decaytype(last_decaytype);
-  printout(" -> ");
-  printout_nuclidename(end_z, end_a);
-  printout_nuclidemeanlife(end_z, end_a);
+
+  // if the last nuclide is unstable, print its daughter nucleus
+  if (decaypath.decaytypes.back() != DECAYTYPE_NONE) {
+    printout_nuclidename(decaypath.final_daughter_z(), decaypath.final_daughter_a());
+    printout_nuclidemeanlife(decaypath.final_daughter_z(), decaypath.final_daughter_a());
+  }
 
   printout("\n");
 }
@@ -954,19 +958,19 @@ auto get_endecay_per_ejectamass_t0_to_time_withexpansion(const int modelgridinde
 // the photon energy loss due to expansion between time of decays and tstart (equation 18 of Lucy 2005)
 {
   double tot_endecay = 0.;
-  for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
-    const int decaypathlength = get_decaypathlength(decaypathindex);
+  for (const auto &decaypath : decaypaths) {
+    const int decaypathlength = get_decaypathlength(decaypath);
 
-    const int z_top = decaypaths[decaypathindex].z[0];
-    const int a_top = decaypaths[decaypathindex].a[0];
-    const int nucindex_top = decaypaths[decaypathindex].nucindex[0];
+    const int z_top = decaypath.z[0];
+    const int a_top = decaypath.a[0];
+    const int nucindex_top = decaypath.nucindex[0];
 
     const double top_initabund = grid::get_modelinitradioabund(modelgridindex, nucindex_top) / nucmass(z_top, a_top);
 
-    const double chain_endecay = (decaypaths[decaypathindex].branchproduct *
-                                  calculate_decaychain(top_initabund, decaypaths[decaypathindex].lambdas,
-                                                       decaypathlength + 1, tstart - grid::get_t_model(), true) *
-                                  get_decaypath_lastnucdecayenergy(decaypathindex));
+    const double chain_endecay = (decaypath.branchproduct *
+                                  calculate_decaychain(top_initabund, decaypath.lambdas, decaypathlength + 1,
+                                                       tstart - grid::get_t_model(), true) *
+                                  get_decaypath_lastnucdecayenergy(decaypath));
 
     tot_endecay += chain_endecay;
   }
