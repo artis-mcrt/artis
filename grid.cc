@@ -1062,7 +1062,7 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
   int columnindex = -1;
 
   while (std::getline(iss, token, ' ')) {
-    if (std::all_of(token.begin(), token.end(), isspace)) {  // skip whitespace tokens
+    if (std::all_of(token.cbegin(), token.cend(), isspace)) {  // skip whitespace tokens
       continue;
     }
 

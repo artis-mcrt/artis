@@ -138,9 +138,9 @@ void packet_init(struct packet *pkt)
     const double targetval = zrand * norm;
 
     // first en_cumulative[i] such that en_cumulative[i] > targetval
-    auto upperval = std::upper_bound(en_cumulative.begin(), en_cumulative.end(), targetval);
+    auto upperval = std::upper_bound(en_cumulative.cbegin(), en_cumulative.cend(), targetval);
     assert_always(upperval != en_cumulative.end());
-    const ptrdiff_t cellindex = std::distance(en_cumulative.begin(), upperval);
+    const ptrdiff_t cellindex = std::distance(en_cumulative.cbegin(), upperval);
 
     place_pellet(e0, cellindex, n, &pkt[n]);
   }
