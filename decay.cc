@@ -216,7 +216,7 @@ static auto nuc_is_parent(const int z_parent, const int a_parent, const int z, c
 {
   assert_testmodeonly(nuc_exists(z_parent, a_parent));
   // each radioactive nuclide is limited to one daughter nuclide
-  return std::any_of(all_decaytypes.begin(), all_decaytypes.end(), [=](const auto decaytype) {
+  return std::any_of(all_decaytypes.cbegin(), all_decaytypes.cend(), [=](const auto decaytype) {
     return decay_daughter_z(z_parent, a_parent, decaytype) == z && decay_daughter_a(z_parent, a_parent, decaytype) == a;
   });
 }
@@ -300,15 +300,20 @@ static auto get_num_decaypaths() -> int { return static_cast<int>(decaypaths.siz
 static auto get_decaypathlength(const decaypath &dpath) -> int { return static_cast<int>(dpath.z.size()); }
 static auto get_decaypathlength(int decaypathindex) -> int { return get_decaypathlength(decaypaths[decaypathindex]); }
 
-static auto calculate_decaypath_branchproduct(int decaypathindex) -> double
+static auto calculate_decaypath_branchproduct(const decaypath &decaypath) -> double
 // return the product of all branching factors in the decay path
 {
   double branchprod = 1.;
-  for (int i = 0; i < get_decaypathlength(decaypathindex); i++) {
-    branchprod = branchprod * get_nuc_decaybranchprob(decaypaths[decaypathindex].nucindex[i],
-                                                      decaypaths[decaypathindex].decaytypes[i]);
+  for (int i = 0; i < get_decaypathlength(decaypath); i++) {
+    branchprod = branchprod * get_nuc_decaybranchprob(decaypath.nucindex[i], decaypath.decaytypes[i]);
   }
   return branchprod;
+}
+
+static auto calculate_decaypath_branchproduct(int decaypathindex) -> double
+// return the product of all branching factors in the decay path
+{
+  return calculate_decaypath_branchproduct(decaypaths[decaypathindex]);
 }
 
 static auto get_decaypath_lastnucdecayenergy(const int decaypathindex) -> double
@@ -452,7 +457,7 @@ static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vec
       }
       // skip path if it doesn't start from a nuclide in the custom or standard input lists
       if (!is_custom_nuclide &&
-          !std::any_of(standard_nuclides.begin(), standard_nuclides.end(),
+          !std::any_of(standard_nuclides.cbegin(), standard_nuclides.cend(),
                        [z, a](const auto &stdnuc) { return (z == stdnuc.z) && (a == stdnuc.a); })) {
         continue;
       }
@@ -470,12 +475,12 @@ static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vec
 
   for (auto &decaypath : decaypaths) {
     // all nuclei in the path (except for the last one, which is allowed to be stable) must have a mean life >0
-    assert_always(std::all_of(decaypath.nucindex.begin(), decaypath.nucindex.end() - 1,
+    assert_always(std::all_of(decaypath.nucindex.cbegin(), decaypath.nucindex.cend() - 1,
                               [](const auto nucindex) { return get_meanlife(nucindex) > 0.; }));
 
     // convert mean lifetimes to decay constants
     decaypath.lambdas.resize(decaypath.nucindex.size());
-    std::transform(decaypath.nucindex.begin(), decaypath.nucindex.end(), decaypath.lambdas.begin(),
+    std::transform(decaypath.nucindex.cbegin(), decaypath.nucindex.cend(), decaypath.lambdas.begin(),
                    [](const auto nucindex) {
                      const double meanlife = get_meanlife(nucindex);
                      // last nuclide might be stable (meanlife <= 0.)
@@ -498,7 +503,7 @@ static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const s
       std::remove_if(nuclides.begin(), nuclides.end(),
                      [&](const auto &nuc) {
                        // keep nucleus if it is in the standard list
-                       if (std::any_of(standard_nuclides.begin(), standard_nuclides.end(), [&](const auto &stdnuc) {
+                       if (std::any_of(standard_nuclides.cbegin(), standard_nuclides.cend(), [&](const auto &stdnuc) {
                              return (stdnuc.z == nuc.z) && (stdnuc.a == nuc.a);
                            })) {
                          return false;
