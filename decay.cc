@@ -409,9 +409,7 @@ static void extend_lastdecaypath()
 
 static auto operator<(const struct decaypath &d1, const struct decaypath &d2) -> bool
 // true if d1 < d2
-// order the chains in the same way as when the search moved up from the descendant
-// instead of down from the ancestor, for ease of test comparison
-// chains are sorted by mass number of first, second, third, etc position in chain
+// chains are sorted by mass number, then atomic number, then length
 {
   const int d1_length = get_decaypathlength(d1);
   const int d2_length = get_decaypathlength(d2);
