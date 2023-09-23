@@ -12,7 +12,7 @@
 void scatter_dir(std::span<const double, 3> dir_in, double cos_theta, std::span<double, 3> dir_out);
 void get_rand_isotropic_unitvec(std::span<double, 3> vecout);
 
-constexpr auto vec_len(std::span<const double> vec) -> double
+[[nodiscard]] [[gnu::const]] constexpr auto vec_len(std::span<const double> vec) -> double
 // return the the magnitude of a vector
 {
   double squaredlen = 0;
@@ -87,7 +87,8 @@ constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double,
   vec_norm(dir2, dir2);
 }
 
-constexpr double doppler_nucmf_on_nurf(std::span<const double, 3> dir_rf, std::span<const double, 3> vel_rf)
+[[nodiscard]] constexpr double doppler_nucmf_on_nurf(std::span<const double, 3> dir_rf,
+                                                     std::span<const double, 3> vel_rf)
 // Doppler factor
 // arguments:
 //   dir_rf: the rest frame direction (unit vector) of light propagation
@@ -113,7 +114,8 @@ constexpr double doppler_nucmf_on_nurf(std::span<const double, 3> dir_rf, std::s
   return dopplerfactor;
 }
 
-constexpr double doppler_squared_nucmf_on_nurf(std::span<const double, 3> dir_rf, std::span<const double, 3> vel_rf)
+[[nodiscard]] constexpr double doppler_squared_nucmf_on_nurf(std::span<const double, 3> dir_rf,
+                                                             std::span<const double, 3> vel_rf)
 // Doppler factor squared, either to first order v/c or fully relativisitic
 // depending on USE_RELATIVISTIC_DOPPLER_SHIFT
 //
@@ -180,7 +182,7 @@ constexpr void move_pkt_withtime(struct packet *pkt_ptr, const double distance)
   pkt_ptr->nu_cmf = std::min(pkt_ptr->nu_cmf, nu_cmf_old);
 }
 
-constexpr double get_arrive_time(const struct packet *pkt_ptr)
+[[nodiscard]] [[gnu::const]] constexpr double get_arrive_time(const struct packet *pkt_ptr)
 /// We know that a packet escaped at "escape_time". However, we have
 /// to allow for travel time. Use the formula in Leon's paper. The extra
 /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
