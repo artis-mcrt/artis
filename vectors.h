@@ -12,7 +12,7 @@
 void scatter_dir(std::span<const double, 3> dir_in, double cos_theta, std::span<double, 3> dir_out);
 void get_rand_isotropic_unitvec(std::span<double, 3> vecout);
 
-[[nodiscard]] [[gnu::const]] constexpr auto vec_len(std::span<const double> vec) -> double
+[[nodiscard]] [[gnu::pure]] constexpr auto vec_len(std::span<const double> vec) -> double
 // return the the magnitude of a vector
 {
   double squaredlen = 0;
@@ -34,13 +34,13 @@ constexpr void vec_norm(std::span<const double, 3> vec_in, std::span<double, 3> 
   assert_testmodeonly(fabs(vec_len(vec_out) - 1.) < 1.e-10);
 }
 
-[[nodiscard]] [[gnu::const]] constexpr auto dot(std::span<const double> x, std::span<const double> y) -> double
+[[nodiscard]] [[gnu::pure]] constexpr auto dot(std::span<const double> x, std::span<const double> y) -> double
 // vector dot product
 {
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
-constexpr void get_velocity(std::span<const double, 3> x, std::span<double, 3> y, const double t)
+[[nodiscard]] [[gnu::pure]] constexpr void get_velocity(std::span<const double, 3> x, std::span<double, 3> y, const double t)
 // Routine for getting velocity vector of the flow at a position with homologous expansion.
 {
   y[0] = x[0] / t;
@@ -114,7 +114,7 @@ constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double,
   return dopplerfactor;
 }
 
-[[nodiscard]] constexpr double doppler_squared_nucmf_on_nurf(std::span<const double, 3> dir_rf,
+[[nodiscard]] [[gnu::pure]] constexpr double doppler_squared_nucmf_on_nurf(std::span<const double, 3> dir_rf,
                                                              std::span<const double, 3> vel_rf)
 // Doppler factor squared, either to first order v/c or fully relativisitic
 // depending on USE_RELATIVISTIC_DOPPLER_SHIFT
