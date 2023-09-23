@@ -34,7 +34,7 @@ constexpr void vec_norm(std::span<const double, 3> vec_in, std::span<double, 3> 
   assert_testmodeonly(fabs(vec_len(vec_out) - 1.) < 1.e-10);
 }
 
-constexpr auto dot(std::span<const double> x, std::span<const double> y) -> double
+[[nodiscard]] [[gnu::const]] constexpr auto dot(std::span<const double> x, std::span<const double> y) -> double
 // vector dot product
 {
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
