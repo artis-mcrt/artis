@@ -2267,9 +2267,9 @@ auto get_cellindex_from_pos(std::span<const double, 3> pos, double time) -> int
   return cellindex;
 }
 
-static constexpr auto expanding_shell_intersection(std::span<const double> pos, std::span<const double> dir,
-                                                   const double speed, const double shellradiuststart,
-                                                   const bool isinnerboundary, const double tstart) -> double
+[[nodiscard]] [[gnu::pure]] static constexpr auto expanding_shell_intersection(
+    std::span<const double> pos, std::span<const double> dir, const double speed, const double shellradiuststart,
+    const bool isinnerboundary, const double tstart) -> double
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
 // 3-vectors) or expanding circle (2D vectors)
 // returns -1 if there are no forward intersections (or if the intersection
@@ -2413,7 +2413,7 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
   d_coordmaxboundary[1] = CLIGHT_PROP * t_zcoordmaxboundary;
 }
 
-auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
+[[nodiscard]] auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
 /// Basic routine to compute distance to a cell boundary.
 {
   const double tstart = pkt_ptr->prop_time;
