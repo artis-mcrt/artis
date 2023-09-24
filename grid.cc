@@ -891,7 +891,7 @@ static void allocate_nonemptymodelcells() {
       get_nonempty_npts_model() * globals::total_nlte_levels * sizeof(double) / 1024. / 1024.);
 }
 
-static void map_1dmodeltogrid()
+static void map_1dmodelto3dgrid()
 // Map 1D spherical model grid onto propagation grid
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
@@ -916,7 +916,7 @@ static void map_1dmodeltogrid()
   }
 }
 
-static void map_2dmodeltogrid()
+static void map_2dmodelto3dgrid()
 // Map 2D cylindrical model onto propagation grid
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
@@ -963,8 +963,24 @@ static void map_3dmodeltogrid() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     // mgi and cellindex are interchangeable in this mode
     const int mgi = cellindex;
+
     modelgrid[mgi].initial_radial_pos_sum = get_cellradialpos(cellindex);
     if (get_rho_tmin(mgi) > 0) {
+      set_cell_modelgridindex(cellindex, mgi);
+    } else {
+      set_cell_modelgridindex(cellindex, get_npts_model());
+    }
+  }
+}
+
+static void map_modeltogrid_direct()
+// Map 1D spherical model grid onto propagation grid
+{
+  for (int cellindex = 0; cellindex < ngrid; cellindex++) {
+    const int mgi = cellindex;  // direct mapping
+
+    if (get_rho_tmin(mgi) > 0) {
+      modelgrid[mgi].initial_radial_pos_sum = get_cellradialpos(cellindex);
       set_cell_modelgridindex(cellindex, mgi);
     } else {
       set_cell_modelgridindex(cellindex, get_npts_model());
@@ -2136,11 +2152,21 @@ void grid_init(int my_rank)
   printout("grid_init: rho_crit = %g [g/cm3]\n", globals::rho_crit);
 
   if (get_model_type() == RHO_1D_READ) {
-    assert_always(GRID_TYPE == GRID_CARTESIAN3D || GRID_TYPE == GRID_SPHERICAL1D);
-    map_1dmodeltogrid();
+    if (GRID_TYPE == GRID_CARTESIAN3D) {
+      map_1dmodelto3dgrid();
+    } else if (GRID_TYPE == GRID_SPHERICAL1D) {
+      map_modeltogrid_direct();
+    } else {
+      assert_always(false);
+    }
   } else if (get_model_type() == RHO_2D_READ) {
-    assert_always(GRID_TYPE == GRID_CARTESIAN3D || GRID_TYPE == GRID_CYLINDRICAL2D);
-    map_2dmodeltogrid();
+    if (GRID_TYPE == GRID_CARTESIAN3D) {
+      map_2dmodelto3dgrid();
+    } else if (GRID_TYPE == GRID_CYLINDRICAL2D) {
+      map_modeltogrid_direct();
+    } else {
+      assert_always(false);
+    }
   } else if (get_model_type() == RHO_3D_READ) {
     assert_always(GRID_TYPE == GRID_CARTESIAN3D);
     map_3dmodeltogrid();
