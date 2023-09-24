@@ -59,7 +59,7 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
   // lower_bound matches the first element where the comparison function is false
   const linelist_entry *matchline =
       std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf);
-  const int matchindex = matchline - globals::linelist;
+  const int matchindex = std::distance(matchline, globals::linelist);
 
   return matchindex;
 }
@@ -642,7 +642,7 @@ static void closest_transition_empty(struct packet *pkt_ptr)
 
     const linelist_entry *matchline =
         std::lower_bound(&globals::linelist[pkt_ptr->next_trans], &globals::linelist[globals::nlines], pkt_ptr->nu_cmf);
-    matchindex = matchline - globals::linelist;
+    matchindex = std::distance(matchline, globals::linelist);
   }
 
   /// For the empty case it's match not match+1: a line interaction is only possible in the next iteration
