@@ -908,10 +908,10 @@ static void map_1dmodelto3dgrid()
 
     if (get_rho_tmin(mgi) > 0) {
       modelgrid[mgi].initial_radial_pos_sum += radial_pos;
+      set_cell_modelgridindex(cellindex, mgi);
     } else {
-      mgi = get_npts_model();
+      set_cell_modelgridindex(cellindex, get_npts_model());
     }
-    set_cell_modelgridindex(cellindex, mgi);
   }
 }
 
@@ -941,10 +941,10 @@ static void map_2dmodelto3dgrid()
     if (get_rho_tmin(mgi) > 0) {
       const double radial_pos = get_cellradialpos(cellindex);
       modelgrid[mgi].initial_radial_pos_sum += radial_pos;
+      set_cell_modelgridindex(cellindex, mgi);
     } else {
-      mgi = get_npts_model();
+      set_cell_modelgridindex(cellindex, get_npts_model());
     }
-    set_cell_modelgridindex(cellindex, mgi);
   }
 }
 
