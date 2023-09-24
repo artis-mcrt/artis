@@ -30,7 +30,7 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
 // return -1 if no transition can be reached
 {
   if (next_trans > (globals::nlines - 1)) {
-    // packet is tagged as having now more line interactions
+    // packet is tagged as having no more line interactions
     return -1;
   }
   /// if nu_cmf is smaller than the lowest frequency in the linelist,
@@ -608,12 +608,6 @@ static auto closest_transition_empty(const double nu_cmf, int next_trans) -> int
     /// if nu_cmf is larger than the highest frequency in the allowed part of the linelist,
     /// interaction with the first line of this part of the list occurs
     return next_trans;
-  }
-
-  /// if nu_cmf is smaller than the lowest frequency in the linelist,
-  /// no line interaction is possible
-  if ((nu_cmf < globals::linelist[globals::nlines - 1].nu) || (next_trans > (globals::nlines - 1))) {
-    return globals::nlines;
   }
 
   /// otherwise go through the list until nu_cmf is located between two
