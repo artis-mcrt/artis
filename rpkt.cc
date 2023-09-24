@@ -606,17 +606,16 @@ static void rpkt_event_thickcell(struct packet *pkt_ptr)
   pkt_ptr->em_time = pkt_ptr->prop_time;
 }
 
-static int closest_transition_empty(const double nu_cmf, int next_trans)
+static auto closest_transition_empty(const double nu_cmf, int next_trans) -> int
 /// for the propagation through empty cells
 /// here its possible that the packet jumps over several lines
 {
   int const left = next_trans;
   // printout("[debug] closest_transition: initial left %d\n",left);
-  int const right = globals::nlines - 1;
 
   /// if nu_cmf is smaller than the lowest frequency in the linelist,
   /// no line interaction is possible: return negative value as a flag
-  if (nu_cmf < globals::linelist[right].nu) {
+  if (nu_cmf < globals::linelist[globals::nlines - 1].nu) {
     next_trans = globals::nlines + 1;
   }
   if (left > right) {
