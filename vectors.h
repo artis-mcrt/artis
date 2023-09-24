@@ -34,7 +34,7 @@ constexpr void vec_norm(std::span<const double, 3> vec_in, std::span<double, 3> 
   assert_testmodeonly(fabs(vec_len(vec_out) - 1.) < 1.e-10);
 }
 
-[[nodiscard]] [[gnu::const]] constexpr auto dot(std::span<const double> x, std::span<const double> y) -> double
+[[nodiscard]] [[gnu::pure]] constexpr auto dot(std::span<const double> x, std::span<const double> y) -> double
 // vector dot product
 {
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
@@ -182,7 +182,7 @@ constexpr void move_pkt_withtime(struct packet *pkt_ptr, const double distance)
   pkt_ptr->nu_cmf = std::min(pkt_ptr->nu_cmf, nu_cmf_old);
 }
 
-[[nodiscard]] [[gnu::const]] constexpr double get_arrive_time(const struct packet *const pkt_ptr)
+[[nodiscard]] [[gnu::pure]] constexpr double get_arrive_time(const struct packet *const pkt_ptr)
 /// We know that a packet escaped at "escape_time". However, we have
 /// to allow for travel time. Use the formula in Leon's paper. The extra
 /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
