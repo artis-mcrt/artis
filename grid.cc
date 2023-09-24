@@ -905,9 +905,9 @@ static void map_1dmodeltogrid()
       mgi = 0;
 
       const double vcell = radial_pos / globals::tmin;
-      for (int i = 0; i < (get_npts_model() - 1); i++) {
-        if (vout_model[mgi] < vcell) {
-          mgi = i + 1;
+      for (int i = 1; i < get_npts_model(); i++) {
+        if (vcell >= vout_model[mgi - 1]) {
+          mgi = i;
         }
       }
     }
