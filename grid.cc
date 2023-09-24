@@ -898,25 +898,24 @@ static void map_1dmodeltogrid()
     const double radial_pos = get_cellradialpos(cellindex);
 
     int mgi = get_npts_model();  // default to empty unless set
-    if (radial_pos < globals::rmax) {
-      if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
-        mgi = cellindex;  // direct mapping
-      } else {
-        mgi = 0;
 
-        const double vcell = radial_pos / globals::tmin;
-        for (int i = 0; i < (get_npts_model() - 1); i++) {
-          if (vout_model[mgi] < vcell) {
-            mgi = i + 1;
-          }
+    if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
+      mgi = cellindex;  // direct mapping
+    } else if (radial_pos < globals::rmax) {
+      mgi = 0;
+
+      const double vcell = radial_pos / globals::tmin;
+      for (int i = 0; i < (get_npts_model() - 1); i++) {
+        if (vout_model[mgi] < vcell) {
+          mgi = i + 1;
         }
       }
+    }
 
-      if (get_rho_tmin(mgi) > 0) {
-        modelgrid[mgi].initial_radial_pos_sum += radial_pos;
-      } else {
-        mgi = get_npts_model();
-      }
+    if (get_rho_tmin(mgi) > 0) {
+      modelgrid[mgi].initial_radial_pos_sum += radial_pos;
+    } else {
+      mgi = get_npts_model();
     }
     set_cell_modelgridindex(cellindex, mgi);
   }
