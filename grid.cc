@@ -897,14 +897,9 @@ static void map_1dmodelto3dgrid()
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const double radial_pos = get_cellradialpos(cellindex);
 
-    int mgi = get_npts_model();  // default to empty unless set
-
-    // TODO: remove this if guard and see if that makes any difference
-    if (radial_pos < globals::rmax) {
-      const double vcell = radial_pos / globals::tmin;
-      mgi = std::distance(vout_model, std::find_if_not(vout_model, vout_model + get_npts_model(),
-                                                       [vcell](double v_outer) { return v_outer < vcell; }));
-    }
+    const double vcell = radial_pos / globals::tmin;
+    const int mgi = std::distance(vout_model, std::find_if_not(vout_model, vout_model + get_npts_model(),
+                                                               [vcell](double v_outer) { return v_outer < vcell; }));
 
     if (get_rho_tmin(mgi) > 0) {
       modelgrid[mgi].initial_radial_pos_sum += radial_pos;
