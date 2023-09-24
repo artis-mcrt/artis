@@ -618,7 +618,7 @@ static auto closest_transition_empty(const double nu_cmf, int next_trans) -> int
   if (nu_cmf < globals::linelist[globals::nlines - 1].nu) {
     next_trans = globals::nlines + 1;
   }
-  if (left > right) {
+  if (left > (globals::nlines - 1)) {
     // printout("[debug] pp should have no line interaction anymore\n");
     next_trans = globals::nlines + 1;
   }
