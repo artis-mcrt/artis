@@ -899,9 +899,8 @@ static void map_1dmodelto3dgrid()
 
     int mgi = get_npts_model();  // default to empty unless set
 
-    if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
-      mgi = cellindex;  // direct mapping
-    } else if (radial_pos < globals::rmax) {
+    // TODO: remove this if guard and see if that makes any difference
+    if (radial_pos < globals::rmax) {
       const double vcell = radial_pos / globals::tmin;
       mgi = std::distance(vout_model, std::find_if_not(vout_model, vout_model + get_npts_model(),
                                                        [vcell](double v_outer) { return v_outer < vcell; }));
@@ -922,26 +921,21 @@ static void map_2dmodelto3dgrid()
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     int mgi = get_npts_model();  // default to empty unless set
 
-    if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
-      // direct mapping
-      mgi = cellindex;
-    } else {
-      // map to 3D Cartesian grid
-      double pos_mid[3];
-      for (int d = 0; d < 3; d++) {
-        pos_mid[d] = (get_cellcoordmin(cellindex, d) + (0.5 * wid_init(cellindex, d)));
-      }
+    // map to 3D Cartesian grid
+    double pos_mid[3];
+    for (int d = 0; d < 3; d++) {
+      pos_mid[d] = (get_cellcoordmin(cellindex, d) + (0.5 * wid_init(cellindex, d)));
+    }
 
-      // 2D grid is uniform so rcyl and z positions can easily be calculated
-      const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
+    // 2D grid is uniform so rcyl and z positions can easily be calculated
+    const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
 
-      const int n_rcyl = static_cast<int>(rcylindrical / globals::tmin / globals::vmax * ncoord_model[0]);
-      const int n_z =
-          static_cast<int>((pos_mid[2] / globals::tmin + globals::vmax) / (2 * globals::vmax) * ncoord_model[1]);
+    const int n_rcyl = static_cast<int>(rcylindrical / globals::tmin / globals::vmax * ncoord_model[0]);
+    const int n_z =
+        static_cast<int>((pos_mid[2] / globals::tmin + globals::vmax) / (2 * globals::vmax) * ncoord_model[1]);
 
-      if (n_rcyl >= 0 && n_rcyl < ncoord_model[0] && n_z >= 0 && n_z < ncoord_model[1]) {
-        mgi = (n_z * ncoord_model[0]) + n_rcyl;
-      }
+    if (n_rcyl >= 0 && n_rcyl < ncoord_model[0] && n_z >= 0 && n_z < ncoord_model[1]) {
+      mgi = (n_z * ncoord_model[0]) + n_rcyl;
     }
 
     if (get_rho_tmin(mgi) > 0) {
