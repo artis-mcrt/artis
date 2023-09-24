@@ -903,10 +903,10 @@ static void map_1dmodeltogrid()
       mgi = cellindex;  // direct mapping
     } else if (radial_pos < globals::rmax) {
       mgi = 0;
-
       const double vcell = radial_pos / globals::tmin;
-      for (int i = 1; i < get_npts_model(); i++) {
-        if (vcell >= vout_model[mgi - 1]) {
+      for (int i = 0; i < get_npts_model(); i++) {
+        const double v_inner = i > 0 ? vout_model[i - 1] : 0.;
+        if (vcell >= v_inner) {
           mgi = i;
         }
       }
@@ -969,8 +969,7 @@ static void map_3dmodeltogrid() {
     // mgi and cellindex are interchangeable in this mode
     const int mgi = cellindex;
     modelgrid[mgi].initial_radial_pos_sum = get_cellradialpos(cellindex);
-    const bool keepcell = (get_rho_tmin(mgi) > 0);
-    if (keepcell) {
+    if (get_rho_tmin(mgi) > 0) {
       set_cell_modelgridindex(cellindex, mgi);
     } else {
       set_cell_modelgridindex(cellindex, get_npts_model());
