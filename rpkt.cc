@@ -606,33 +606,26 @@ static auto closest_transition_empty(const double nu_cmf, int next_trans) -> int
 /// for the propagation through empty cells
 /// here its possible that the packet jumps over several lines
 {
-  int matchindex = 0;
   /// no check for left > 0 in the empty case as it is possible that the packet is moved over
   /// several lines through the empty cell
   if ((next_trans < globals::nlines - 1) && (nu_cmf >= globals::linelist[next_trans].nu)) {
     /// if nu_cmf is larger than the highest frequency in the allowed part of the linelist,
     /// interaction with the first line of this part of the list occurs
-    matchindex = next_trans;
-  } else {
-    /// if nu_cmf is smaller than the lowest frequency in the linelist,
-    /// no line interaction is possible: return negative value as a flag
-    if ((nu_cmf < globals::linelist[globals::nlines - 1].nu) || (next_trans > (globals::nlines - 1))) {
-      next_trans = globals::nlines + 1;
-    }
-
-    /// otherwise go through the list until nu_cmf is located between two
-    /// entries in the line list and get the index of the closest line
-    /// to lower frequencies
-
-    const linelist_entry *matchline =
-        std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf);
-    matchindex = matchline - globals::linelist;
+    return next_trans;
   }
 
-  /// For the empty case it's match not match+1: a line interaction is only possible in the next iteration
-  /// of the propagation loop. We just have to make sure that the next "normal" line search knows about the
-  /// current position of the photon in the frequency list.
-  return matchindex;
+  /// if nu_cmf is smaller than the lowest frequency in the linelist,
+  /// no line interaction is possible: return negative value as a flag
+  if ((nu_cmf < globals::linelist[globals::nlines - 1].nu) || (next_trans > (globals::nlines - 1))) {
+    next_trans = globals::nlines + 1;
+  }
+
+  /// otherwise go through the list until nu_cmf is located between two
+  /// entries in the line list and get the index of the closest line
+  /// to lower frequencies
+
+  const auto *matchline = std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf);
+  return std::distance(globals::linelist, matchline);
 }
 
 static void update_estimators(const struct packet *pkt_ptr, const double distance)
