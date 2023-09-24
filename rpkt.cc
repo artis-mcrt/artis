@@ -59,9 +59,8 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
   // lower_bound matches the first element where the comparison function is false
   const linelist_entry *matchline =
       std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf);
-  const int matchindex = std::distance(matchline, globals::linelist);
 
-  return matchindex;
+  return matchline - globals::linelist;
 }
 
 static auto get_event(const int modelgridindex,
@@ -614,8 +613,6 @@ static auto closest_transition_empty(const double nu_cmf, const int next_trans) 
   int const left = next_trans;
   int const right = globals::nlines - 1;
 
-  // printout("[debug] ___closest_transition___: initial left %d, right %d, nu_cmf %g\n",left,right,pkt_ptr->nu_cmf);
-  // printout("[debug] ___closest_transition___: nu_left %g, nu_right%g\n",linelist[left].nu,linelist[right].nu);
   /// if nu_cmf is smaller than the lowest frequency in the linelist,
   /// no line interaction is possible: return negative value as a flag
   if (nu_cmf < globals::linelist[right].nu) {
@@ -639,7 +636,7 @@ static auto closest_transition_empty(const double nu_cmf, const int next_trans) 
 
   const linelist_entry *matchline =
       std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf);
-  return std::distance(matchline, globals::linelist);
+  return matchline - globals::linelist;
 
   /// For the empty case it's match not match+1: a line interaction is only possible in the next iteration
   /// of the propagation loop. We just have to make sure that the next "normal" line search knows about the
@@ -783,7 +780,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
   assert_always(tdist >= 0);
 
-  double edist;
+  double edist = -1;
   int rpkt_eventtype = -1;
   bool find_nextline = false;
   if (mgi == grid::get_npts_model()) {
