@@ -614,17 +614,17 @@ static void closest_transition_empty(struct packet *pkt_ptr)
   // printout("[debug] closest_transition: initial left %d\n",left);
   int const right = globals::nlines - 1;
 
+  int matchindex;
   /// if nu_cmf is smaller than the lowest frequency in the linelist,
   /// no line interaction is possible: return negative value as a flag
   if (pkt_ptr->nu_cmf < globals::linelist[right].nu) {
-    pkt_ptr->next_trans = globals::nlines + 1;
+    matchindex = globals::nlines + 1;
   }
   if (left > right) {
     // printout("[debug] pp should have no line interaction anymore\n");
-    pkt_ptr->next_trans = globals::nlines + 1;
+    matchindex = globals::nlines + 1;
   }
 
-  int matchindex = 0;
   /// no check for left > 0 in the empty case as it is possible that the packet is moved over
   /// several lines through the empty cell
   if (pkt_ptr->nu_cmf >= globals::linelist[left].nu) {
@@ -637,7 +637,7 @@ static void closest_transition_empty(struct packet *pkt_ptr)
     /// to lower frequencies
 
     const linelist_entry *matchline =
-        std::lower_bound(&globals::linelist[pkt_ptr->next_trans], &globals::linelist[globals::nlines], pkt_ptr->nu_cmf);
+        std::lower_bound(&globals::linelist[matchindex], &globals::linelist[globals::nlines], pkt_ptr->nu_cmf);
     matchindex = matchline - globals::linelist;
   }
 
