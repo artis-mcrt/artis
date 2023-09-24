@@ -606,28 +606,28 @@ static void rpkt_event_thickcell(struct packet *pkt_ptr)
   pkt_ptr->em_time = pkt_ptr->prop_time;
 }
 
-static void closest_transition_empty(struct packet *pkt_ptr)
+static int closest_transition_empty(const double nu_cmf, int next_trans)
 /// for the propagation through empty cells
 /// here its possible that the packet jumps over several lines
 {
-  int const left = pkt_ptr->next_trans;
+  int const left = next_trans;
   // printout("[debug] closest_transition: initial left %d\n",left);
   int const right = globals::nlines - 1;
 
   /// if nu_cmf is smaller than the lowest frequency in the linelist,
   /// no line interaction is possible: return negative value as a flag
-  if (pkt_ptr->nu_cmf < globals::linelist[right].nu) {
-    pkt_ptr->next_trans = globals::nlines + 1;
+  if (nu_cmf < globals::linelist[right].nu) {
+    next_trans = globals::nlines + 1;
   }
   if (left > right) {
     // printout("[debug] pp should have no line interaction anymore\n");
-    pkt_ptr->next_trans = globals::nlines + 1;
+    next_trans = globals::nlines + 1;
   }
 
   int matchindex = 0;
   /// no check for left > 0 in the empty case as it is possible that the packet is moved over
   /// several lines through the empty cell
-  if (pkt_ptr->nu_cmf >= globals::linelist[left].nu) {
+  if (nu_cmf >= globals::linelist[left].nu) {
     /// if nu_cmf is larger than the highest frequency in the allowed part of the linelist,
     /// interaction with the first line of this part of the list occurs
     matchindex = left;
@@ -637,14 +637,14 @@ static void closest_transition_empty(struct packet *pkt_ptr)
     /// to lower frequencies
 
     const linelist_entry *matchline =
-        std::lower_bound(&globals::linelist[pkt_ptr->next_trans], &globals::linelist[globals::nlines], pkt_ptr->nu_cmf);
+        std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf);
     matchindex = matchline - globals::linelist;
   }
 
   /// For the empty case it's match not match+1: a line interaction is only possible in the next iteration
   /// of the propagation loop. We just have to make sure that the next "normal" line search knows about the
   /// current position of the photon in the frequency list.
-  pkt_ptr->next_trans = matchindex;
+  return matchindex;
 }
 
 static void update_estimators(const struct packet *pkt_ptr, const double distance)
@@ -836,7 +836,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     if (find_nextline) {
       /// However, this is only required if the new cell is non-empty or non-grey
       if (mgi != grid::get_npts_model() && grid::modelgrid[mgi].thick != 1) {
-        closest_transition_empty(pkt_ptr);
+        pkt_ptr->next_trans = closest_transition_empty(pkt_ptr->nu_cmf, pkt_ptr->next_trans);
       }
     }
 
@@ -874,7 +874,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
     /// find the next possible line interaction.
     if (find_nextline) {
-      closest_transition_empty(pkt_ptr);
+      pkt_ptr->next_trans = closest_transition_empty(pkt_ptr->nu_cmf, pkt_ptr->next_trans);
     }
 
     return false;
