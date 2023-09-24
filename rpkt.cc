@@ -44,14 +44,6 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
     /// current nu_cmf which might be smaller than globals::linelist[left].nu due to propagation errors
     return next_trans;
   }
-  if (nu_cmf >= globals::linelist[0].nu) {
-    /// if nu_cmf is larger than the highest frequency in the the linelist,
-    /// interaction with the first line occurs - no search
-    return 0;
-  }  /// otherwise go through the list until nu_cmf is located between two
-  /// entries in the line list and get the index of the closest line
-  /// to lower frequencies
-
   // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
   // lower_bound matches the first element where the comparison function is false
   const auto *matchline = std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf);
