@@ -615,7 +615,7 @@ static auto closest_transition_empty(const double nu_cmf, int next_trans) -> int
   }
 
   /// if nu_cmf is smaller than the lowest frequency in the linelist,
-  /// no line interaction is possible: return negative value as a flag
+  /// no line interaction is possible
   if ((nu_cmf < globals::linelist[globals::nlines - 1].nu) || (next_trans > (globals::nlines - 1))) {
     next_trans = globals::nlines + 1;
   }
