@@ -34,13 +34,13 @@ constexpr void vec_norm(std::span<const double, 3> vec_in, std::span<double, 3> 
   assert_testmodeonly(fabs(vec_len(vec_out) - 1.) < 1.e-10);
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto dot(std::span<const double> x, std::span<const double> y) -> double
+[[nodiscard]] [[gnu::const]] constexpr auto dot(std::span<const double> x, std::span<const double> y) -> double
 // vector dot product
 {
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr void get_velocity(std::span<const double, 3> x, std::span<double, 3> y, const double t)
+constexpr void get_velocity(std::span<const double, 3> x, std::span<double, 3> y, const double t)
 // Routine for getting velocity vector of the flow at a position with homologous expansion.
 {
   y[0] = x[0] / t;
@@ -87,8 +87,8 @@ constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double,
   vec_norm(dir2, dir2);
 }
 
-[[nodiscard]] constexpr double doppler_nucmf_on_nurf(std::span<const double, 3> dir_rf,
-                                                     std::span<const double, 3> vel_rf)
+[[gnu::pure]] [[nodiscard]] constexpr double doppler_nucmf_on_nurf(std::span<const double, 3> dir_rf,
+                                                                   std::span<const double, 3> vel_rf)
 // Doppler factor
 // arguments:
 //   dir_rf: the rest frame direction (unit vector) of light propagation
@@ -115,7 +115,7 @@ constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double,
 }
 
 [[nodiscard]] [[gnu::pure]] constexpr double doppler_squared_nucmf_on_nurf(std::span<const double, 3> dir_rf,
-                                                             std::span<const double, 3> vel_rf)
+                                                                           std::span<const double, 3> vel_rf)
 // Doppler factor squared, either to first order v/c or fully relativisitic
 // depending on USE_RELATIVISTIC_DOPPLER_SHIFT
 //
@@ -145,7 +145,7 @@ constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double,
   return dopplerfactorsq;
 }
 
-constexpr double doppler_packet_nucmf_on_nurf(const struct packet *const pkt_ptr) {
+[[gnu::pure]] constexpr double doppler_packet_nucmf_on_nurf(const struct packet *const pkt_ptr) {
   double flow_velocity[3] = {0, 0, 0};  // homologous flow velocity
   get_velocity(pkt_ptr->pos, flow_velocity, pkt_ptr->prop_time);
   return doppler_nucmf_on_nurf(pkt_ptr->dir, flow_velocity);
@@ -182,7 +182,7 @@ constexpr void move_pkt_withtime(struct packet *pkt_ptr, const double distance)
   pkt_ptr->nu_cmf = std::min(pkt_ptr->nu_cmf, nu_cmf_old);
 }
 
-[[nodiscard]] [[gnu::const]] constexpr double get_arrive_time(const struct packet *pkt_ptr)
+[[nodiscard]] [[gnu::const]] constexpr double get_arrive_time(const struct packet *const pkt_ptr)
 /// We know that a packet escaped at "escape_time". However, we have
 /// to allow for travel time. Use the formula in Leon's paper. The extra
 /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
