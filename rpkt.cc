@@ -830,8 +830,8 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
     /// find the next possible line interaction.
     /// However, this is only required if the new cell is non-empty or non-grey
-    if (find_nextline && (mgi != grid::get_npts_model() && grid::modelgrid[mgi].thick != 1)) {
-      pkt_ptr->next_trans = closest_transition_empty(pkt_ptr->nu_cmf, pkt_ptr->next_trans);
+    if (find_nextline && mgi != grid::get_npts_model() && grid::modelgrid[mgi].thick != 1) {
+      pkt_ptr->next_trans = closest_transition_empty(pkt_ptr);
     }
 
     return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
@@ -868,7 +868,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
     /// find the next possible line interaction.
     if (find_nextline) {
-      closest_transition_empty(pkt_ptr->nu_cmf, pkt_ptr->next_trans);
+      pkt_ptr->next_trans = closest_transition_empty(pkt_ptr);
     }
 
     return false;
