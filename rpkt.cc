@@ -29,13 +29,13 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
 // find the next transition lineindex redder than nu_cmf
 // return -1 if no transition can be reached
 {
+  if (next_trans > (globals::nlines - 1)) {
+    // printout("[debug] pp should have no line interaction anymore\n");
+    return -1;
+  }
   /// if nu_cmf is smaller than the lowest frequency in the linelist,
   /// no line interaction is possible: return negative value as a flag
   if (nu_cmf < globals::linelist[globals::nlines - 1].nu) {
-    return -1;
-  }
-  if (next_trans > (globals::nlines - 1)) {
-    // printout("[debug] pp should have no line interaction anymore\n");
     return -1;
   }
 
