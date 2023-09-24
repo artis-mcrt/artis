@@ -610,21 +610,18 @@ static void closest_transition_empty(struct packet *pkt_ptr)
 /// for the propagation through empty cells
 /// here its possible that the packet jumps over several lines
 {
-  // int left = 0;
   int const left = pkt_ptr->next_trans;
   // printout("[debug] closest_transition: initial left %d\n",left);
   int const right = globals::nlines - 1;
 
-  // printout("[debug] ___closest_transition___: initial left %d, right %d, nu_cmf %g\n",left,right,pkt_ptr->nu_cmf);
-  // printout("[debug] ___closest_transition___: nu_left %g, nu_right%g\n",linelist[left].nu,linelist[right].nu);
   /// if nu_cmf is smaller than the lowest frequency in the linelist,
   /// no line interaction is possible: return negative value as a flag
   if (pkt_ptr->nu_cmf < globals::linelist[right].nu) {
-    pkt_ptr->next_trans = globals::nlines + 1;  /// helper variable to overcome numerical problems after line scattering
+    pkt_ptr->next_trans = globals::nlines + 1;
   }
   if (left > right) {
     // printout("[debug] pp should have no line interaction anymore\n");
-    pkt_ptr->next_trans = globals::nlines + 1;  /// helper variable to overcome numerical problems after line scattering
+    pkt_ptr->next_trans = globals::nlines + 1;
   }
 
   int matchindex = 0;
@@ -647,9 +644,7 @@ static void closest_transition_empty(struct packet *pkt_ptr)
   /// For the empty case it's match not match+1: a line interaction is only possible in the next iteration
   /// of the propagation loop. We just have to make sure that the next "normal" line search knows about the
   /// current position of the photon in the frequency list.
-  pkt_ptr->next_trans = matchindex;  /// helper variable to overcome numerical problems after line scattering
-                                     /// further scattering events should be located at lower frequencies to prevent
-                                     /// multiple scattering events of one pp in a single line
+  pkt_ptr->next_trans = matchindex;
 }
 
 static void update_estimators(const struct packet *pkt_ptr, const double distance)
