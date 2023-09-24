@@ -954,33 +954,18 @@ static void map_2dmodelto3dgrid()
   }
 }
 
-static void map_3dmodeltogrid() {
-  // propagation grid must match the input model grid exactly for 3D models
-  assert_always(ncoord_model[0] == ncoordgrid[0]);
-  assert_always(ncoord_model[1] == ncoordgrid[1]);
-  assert_always(ncoord_model[2] == ncoordgrid[2]);
-
-  for (int cellindex = 0; cellindex < ngrid; cellindex++) {
-    // mgi and cellindex are interchangeable in this mode
-    const int mgi = cellindex;
-
-    modelgrid[mgi].initial_radial_pos_sum = get_cellradialpos(cellindex);
-    if (get_rho_tmin(mgi) > 0) {
-      set_cell_modelgridindex(cellindex, mgi);
-    } else {
-      set_cell_modelgridindex(cellindex, get_npts_model());
-    }
-  }
-}
-
 static void map_modeltogrid_direct()
-// Map 1D spherical model grid onto propagation grid
+// mgi and cellindex are interchangeable in this mode
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = cellindex;  // direct mapping
 
-    if (get_rho_tmin(mgi) > 0) {
+    // strange difference: 3D mode gives a radial pos to empty cells, 1D and 2D do not
+    // TODO: Check if this affects anything
+    if (GRID_TYPE == GRID_CARTESIAN3D || get_rho_tmin(mgi) > 0) {
       modelgrid[mgi].initial_radial_pos_sum = get_cellradialpos(cellindex);
+    }
+    if (get_rho_tmin(mgi) > 0) {
       set_cell_modelgridindex(cellindex, mgi);
     } else {
       set_cell_modelgridindex(cellindex, get_npts_model());
@@ -2169,7 +2154,10 @@ void grid_init(int my_rank)
     }
   } else if (get_model_type() == RHO_3D_READ) {
     assert_always(GRID_TYPE == GRID_CARTESIAN3D);
-    map_3dmodeltogrid();
+    assert_always(ncoord_model[0] == ncoordgrid[0]);
+    assert_always(ncoord_model[1] == ncoordgrid[1]);
+    assert_always(ncoord_model[2] == ncoordgrid[2]);
+    map_modeltogrid_direct();
   } else {
     printout("[fatal] grid_init: Error: Unknown density type. Abort.");
     abort();
