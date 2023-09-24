@@ -622,7 +622,7 @@ static auto closest_transition_empty(const double nu_cmf, int next_trans) -> int
   int matchindex = 0;
   /// no check for left > 0 in the empty case as it is possible that the packet is moved over
   /// several lines through the empty cell
-  if (nu_cmf >= globals::linelist[left].nu) {
+  if ((left < globals::nlines - 1) && (nu_cmf >= globals::linelist[left].nu)) {
     /// if nu_cmf is larger than the highest frequency in the allowed part of the linelist,
     /// interaction with the first line of this part of the list occurs
     matchindex = left;
