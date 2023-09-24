@@ -30,7 +30,7 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
 // return -1 if no transition can be reached
 {
   if (next_trans > (globals::nlines - 1)) {
-    // printout("[debug] pp should have no line interaction anymore\n");
+    // packet is tagged as having now more line interactions
     return -1;
   }
   /// if nu_cmf is smaller than the lowest frequency in the linelist,
