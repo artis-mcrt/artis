@@ -607,50 +607,43 @@ static void rpkt_event_thickcell(struct packet *pkt_ptr)
   pkt_ptr->em_time = pkt_ptr->prop_time;
 }
 
-static void closest_transition_empty(struct packet *pkt_ptr)
+static auto closest_transition_empty(const double nu_cmf, const int next_trans) -> int
 /// for the propagation through empty cells
 /// here its possible that the packet jumps over several lines
 {
-  // int left = 0;
-  int const left = pkt_ptr->next_trans;
-  // printout("[debug] closest_transition: initial left %d\n",left);
+  int const left = next_trans;
   int const right = globals::nlines - 1;
 
   // printout("[debug] ___closest_transition___: initial left %d, right %d, nu_cmf %g\n",left,right,pkt_ptr->nu_cmf);
   // printout("[debug] ___closest_transition___: nu_left %g, nu_right%g\n",linelist[left].nu,linelist[right].nu);
   /// if nu_cmf is smaller than the lowest frequency in the linelist,
   /// no line interaction is possible: return negative value as a flag
-  if (pkt_ptr->nu_cmf < globals::linelist[right].nu) {
-    pkt_ptr->next_trans = globals::nlines + 1;  /// helper variable to overcome numerical problems after line scattering
+  if (nu_cmf < globals::linelist[right].nu) {
+    return globals::nlines + 1;  /// helper variable to overcome numerical problems after line scattering
   }
   if (left > right) {
     // printout("[debug] pp should have no line interaction anymore\n");
-    pkt_ptr->next_trans = globals::nlines + 1;  /// helper variable to overcome numerical problems after line scattering
+    return globals::nlines + 1;  /// helper variable to overcome numerical problems after line scattering
   }
 
-  int matchindex = 0;
   /// no check for left > 0 in the empty case as it is possible that the packet is moved over
   /// several lines through the empty cell
-  if (pkt_ptr->nu_cmf >= globals::linelist[left].nu) {
+  if (nu_cmf >= globals::linelist[left].nu) {
     /// if nu_cmf is larger than the highest frequency in the allowed part of the linelist,
     /// interaction with the first line of this part of the list occurs
-    matchindex = left;
-  } else {
-    /// otherwise go through the list until nu_cmf is located between two
-    /// entries in the line list and get the index of the closest line
-    /// to lower frequencies
-
-    const linelist_entry *matchline =
-        std::lower_bound(&globals::linelist[pkt_ptr->next_trans], &globals::linelist[globals::nlines], pkt_ptr->nu_cmf);
-    matchindex = std::distance(matchline, globals::linelist);
+    return left;
   }
+  /// otherwise go through the list until nu_cmf is located between two
+  /// entries in the line list and get the index of the closest line
+  /// to lower frequencies
+
+  const linelist_entry *matchline =
+      std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf);
+  return std::distance(matchline, globals::linelist);
 
   /// For the empty case it's match not match+1: a line interaction is only possible in the next iteration
   /// of the propagation loop. We just have to make sure that the next "normal" line search knows about the
   /// current position of the photon in the frequency list.
-  pkt_ptr->next_trans = matchindex;  /// helper variable to overcome numerical problems after line scattering
-                                     /// further scattering events should be located at lower frequencies to prevent
-                                     /// multiple scattering events of one pp in a single line
 }
 
 static void update_estimators(const struct packet *pkt_ptr, const double distance)
@@ -839,11 +832,9 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
     /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
     /// find the next possible line interaction.
-    if (find_nextline) {
-      /// However, this is only required if the new cell is non-empty or non-grey
-      if (mgi != grid::get_npts_model() && grid::modelgrid[mgi].thick != 1) {
-        closest_transition_empty(pkt_ptr);
-      }
+    /// However, this is only required if the new cell is non-empty or non-grey
+    if (find_nextline && (mgi != grid::get_npts_model() && grid::modelgrid[mgi].thick != 1)) {
+      pkt_ptr->next_trans = closest_transition_empty(pkt_ptr->next_trans, pkt_ptr->nu_cmf);
     }
 
     return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
@@ -880,7 +871,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
     /// find the next possible line interaction.
     if (find_nextline) {
-      closest_transition_empty(pkt_ptr);
+      closest_transition_empty(pkt_ptr->next_trans, pkt_ptr->nu_cmf);
     }
 
     return false;
