@@ -902,14 +902,9 @@ static void map_1dmodeltogrid()
     if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
       mgi = cellindex;  // direct mapping
     } else if (radial_pos < globals::rmax) {
-      mgi = 0;
       const double vcell = radial_pos / globals::tmin;
-      for (int i = 0; i < get_npts_model(); i++) {
-        const double v_inner = i > 0 ? vout_model[i - 1] : 0.;
-        if (vcell >= v_inner) {
-          mgi = i;
-        }
-      }
+      mgi = std::distance(vout_model, std::find_if_not(vout_model, vout_model + get_npts_model(),
+                                                       [vcell](double v_outer) { return v_outer < vcell; }));
     }
 
     if (get_rho_tmin(mgi) > 0) {
