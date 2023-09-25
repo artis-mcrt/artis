@@ -648,12 +648,15 @@ static void read_vpkt_grid(const int my_rank, const int nts) {
 }
 
 void vpkt_remove_temp_file(const int nts, const int my_rank) {
-  char filename[MAXFILENAMELENGTH];
-  snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, nts);
+  char filenames[2][MAXFILENAMELENGTH];
+  snprintf(filenames[0], MAXFILENAMELENGTH, "vspecpol_%d_%d_ts%d.tmp", 0, my_rank, nts);
+  snprintf(filenames[1], MAXFILENAMELENGTH, "vpkt_grid_%d_%d_ts%d.tmp", 0, my_rank, nts);
 
-  if (access(filename, F_OK) == 0) {
-    remove(filename);
-    printout("Deleted %s\n", filename);
+  for (auto &filename : filenames) {
+    if (access(filename, F_OK) == 0) {
+      remove(filename);
+      printout("Deleted %s\n", filename);
+    }
   }
 }
 
