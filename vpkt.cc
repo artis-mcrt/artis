@@ -986,6 +986,46 @@ void meridian(std::span<const double, 3> n, std::span<double, 3> ref1, std::span
   cross_prod(ref1, n, ref2);
 }
 
+static void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, std::span<const double, 3> v,
+                    std::span<double, 3> e_cmf) {
+  // Lorentz transformations from RF to CMF
+
+  const double beta[3] = {v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
+  double const vsqr = dot(beta, beta);
+
+  const double gamma_rel = 1. / (sqrt(1 - vsqr));
+
+  const double e_par[3] = {dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
+                           dot(e_rf, beta) * beta[2] / (vsqr)};
+
+  const double e_perp[3] = {e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
+
+  double b_rf[3] = {NAN, NAN, NAN};
+  cross_prod(n_rf, e_rf, b_rf);
+
+  // const double b_par[3] = {dot(b_rf, beta) * beta[0] / (vsqr), dot(b_rf, beta) * beta[1] / (vsqr),
+  //                          dot(b_rf, beta) * beta[2] / (vsqr)};
+
+  // const double b_perp[3] = {b_rf[0] - b_par[0], b_rf[1] - b_par[1], b_rf[2] - b_par[2]};
+
+  double v_cr_b[3] = {NAN, NAN, NAN};
+  cross_prod(beta, b_rf, v_cr_b);
+
+  // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
+  //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
+
+  e_cmf[0] = e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]);
+  e_cmf[1] = e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]);
+  e_cmf[2] = e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2]);
+  vec_norm(e_cmf, e_cmf);
+
+  // double b_cmf[3];
+  // b_cmf[0] = b_par[0] + gamma_rel * (b_perp[0] - v_cr_e[0]);
+  // b_cmf[1] = b_par[1] + gamma_rel * (b_perp[1] - v_cr_e[1]);
+  // b_cmf[2] = b_par[2] + gamma_rel * (b_perp[2] - v_cr_e[2]);
+  // vec_norm(b_cmf, b_cmf);
+}
+
 // Routine to transform the Stokes Parameters from RF to CMF
 void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v,
                      std::span<double, 3> n_cmf) {
@@ -1076,44 +1116,4 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
   // Compute Stokes Parameters in the CMF
   *Q = cos(2 * theta_rot) * p;
   *U = sin(2 * theta_rot) * p;
-}
-
-static void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, std::span<const double, 3> v,
-                    std::span<double, 3> e_cmf) {
-  // Lorentz transformations from RF to CMF
-
-  const double beta[3] = {v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
-  double const vsqr = dot(beta, beta);
-
-  const double gamma_rel = 1. / (sqrt(1 - vsqr));
-
-  const double e_par[3] = {dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
-                           dot(e_rf, beta) * beta[2] / (vsqr)};
-
-  const double e_perp[3] = {e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
-
-  double b_rf[3] = {NAN, NAN, NAN};
-  cross_prod(n_rf, e_rf, b_rf);
-
-  // const double b_par[3] = {dot(b_rf, beta) * beta[0] / (vsqr), dot(b_rf, beta) * beta[1] / (vsqr),
-  //                          dot(b_rf, beta) * beta[2] / (vsqr)};
-
-  // const double b_perp[3] = {b_rf[0] - b_par[0], b_rf[1] - b_par[1], b_rf[2] - b_par[2]};
-
-  double v_cr_b[3] = {NAN, NAN, NAN};
-  cross_prod(beta, b_rf, v_cr_b);
-
-  // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
-  //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
-
-  e_cmf[0] = e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]);
-  e_cmf[1] = e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]);
-  e_cmf[2] = e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2]);
-  vec_norm(e_cmf, e_cmf);
-
-  // double b_cmf[3];
-  // b_cmf[0] = b_par[0] + gamma_rel * (b_perp[0] - v_cr_e[0]);
-  // b_cmf[1] = b_par[1] + gamma_rel * (b_perp[1] - v_cr_e[1]);
-  // b_cmf[2] = b_par[2] + gamma_rel * (b_perp[2] - v_cr_e[2]);
-  // vec_norm(b_cmf, b_cmf);
 }
