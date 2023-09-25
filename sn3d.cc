@@ -466,7 +466,7 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
     // save packet state at start of current timestep (before propagation)
     write_temp_packetsfile(nts, my_rank, packets);
 
-    vpkt_write_timestep_file(nts, my_rank, tid, false);
+    vpkt_write_timestep(nts, my_rank, tid, false);
 
     const time_t time_write_packets_file_finished = time(nullptr);
 
@@ -667,7 +667,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
       // snprintf(filename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", middle_iteration, my_rank);
       write_packets(filename, packets);
 
-      vpkt_write_timestep_file(nts, my_rank, tid, true);
+      vpkt_write_timestep(nts, my_rank, tid, true);
 
       printout("time after write final packets file %ld\n", time(nullptr));
 

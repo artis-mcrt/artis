@@ -21,7 +21,7 @@ void read_vspecpol(int my_rank, int nts);
 void init_vpkt_grid();
 void read_vpkt_grid(FILE *vpkt_grid_file);
 void vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type);
-void vpkt_write_timestep_file(int nts, int my_rank, int tid, bool is_final);
+void vpkt_write_timestep(int nts, int my_rank, int tid, bool is_final);
 
 // --------------------------------------------------------------------------------
 // ---------------------------  VIRTUAL PACKETS -----------------------------------
