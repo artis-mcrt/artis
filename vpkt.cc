@@ -869,7 +869,7 @@ void vpkt_init(const int nts, const int my_rank, const int tid, const bool conti
         snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_even.tmp", 0, my_rank);
       }
 
-      FILE *vpktgrid_file = fopen_required(filename, "b");
+      FILE *vpktgrid_file = fopen_required(filename, "rb");
 
       read_vpkt_grid(vpktgrid_file);
 
