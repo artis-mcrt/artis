@@ -822,27 +822,25 @@ void vpkt_write_timestep(const int nts, const int my_rank, const int tid,
   }
 
   char filename[MAXFILENAMELENGTH];
-  FILE *vspecpol_file;
+
   if (is_final) {
     snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d-%d.out", my_rank, tid);
-    vspecpol_file = fopen_required(filename, "w");
   } else {
     snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
-    vspecpol_file = fopen_required(filename, "wb");
   }
 
+  FILE *vspecpol_file = fopen_required(filename, "w");
   write_vspecpol(vspecpol_file);
   fclose(vspecpol_file);
 
   if (vgrid_on) {
-    FILE *vpkt_grid_file;
     if (is_final) {
       snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d-%d.out", my_rank, tid);
-      vpkt_grid_file = fopen_required(filename, "w");
     } else {
       snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
-      vpkt_grid_file = fopen_required(filename, "wb");
     }
+
+    FILE *vpkt_grid_file = fopen_required(filename, "w");
     write_vpkt_grid(vpkt_grid_file);
     fclose(vpkt_grid_file);
   }
