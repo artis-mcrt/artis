@@ -447,7 +447,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   }
 }
 
-void init_vspecpol() {
+static void init_vspecpol() {
   vspecpol = static_cast<struct vspecpol **>(malloc(VMTBINS * sizeof(struct vspecpol *)));
 
   const int indexmax = Nspectra * Nobs;
@@ -516,7 +516,7 @@ static void write_vspecpol(FILE *specpol_file) {
   }
 }
 
-void read_vspecpol(int my_rank, int nts) {
+static void read_vspecpol(int my_rank, int nts) {
   char filename[MAXFILENAMELENGTH];
 
   if (nts % 2 == 0) {
@@ -568,7 +568,7 @@ void read_vspecpol(int my_rank, int nts) {
   fclose(vspecpol_file);
 }
 
-void init_vpkt_grid() {
+static void init_vpkt_grid() {
   const double ybin = 2 * globals::vmax / VGRID_NY;
   const double zbin = 2 * globals::vmax / VGRID_NZ;
 
@@ -617,7 +617,7 @@ static void write_vpkt_grid(FILE *vpkt_grid_file) {
   }
 }
 
-void read_vpkt_grid(FILE *vpkt_grid_file) {
+static void read_vpkt_grid(FILE *vpkt_grid_file) {
   for (int obsbin = 0; obsbin < Nobs; obsbin++) {
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
@@ -844,6 +844,34 @@ void vpkt_write_timestep(const int nts, const int my_rank, const int tid,
     }
     write_vpkt_grid(vpkt_grid_file);
     fclose(vpkt_grid_file);
+  }
+}
+
+void vpkt_init(const int nts, const int my_rank, const int tid, const bool continued_from_saved) {
+  init_vspecpol();
+  if (vgrid_on) {
+    init_vpkt_grid();
+  }
+
+  if (continued_from_saved) {
+    // Continue simulation: read into temporary files
+
+    read_vspecpol(my_rank, nts);
+
+    char filename[MAXFILENAMELENGTH];
+    if (vgrid_on) {
+      if (nts % 2 == 0) {
+        snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
+      } else {
+        snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_even.tmp", 0, my_rank);
+      }
+
+      FILE *vpktgrid_file = fopen_required(filename, "rb");
+
+      read_vpkt_grid(vpktgrid_file);
+
+      fclose(vpktgrid_file);
+    }
   }
 }
 

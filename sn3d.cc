@@ -923,30 +923,7 @@ auto main(int argc, char *argv[]) -> int {
 
   // Initialise virtual packets file and vspecpol
   if constexpr (VPKT_ON) {
-    init_vspecpol();
-    if (vgrid_on) {
-      init_vpkt_grid();
-    }
-
-    if (globals::simulation_continued_from_saved) {
-      // Continue simulation: read into temporary files
-
-      read_vspecpol(my_rank, nts);
-
-      if (vgrid_on) {
-        if (nts % 2 == 0) {
-          snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
-        } else {
-          snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_even.tmp", 0, my_rank);
-        }
-
-        FILE *vpktgrid_file = fopen_required(filename, "rb");
-
-        read_vpkt_grid(vpktgrid_file);
-
-        fclose(vpktgrid_file);
-      }
-    }
+    vpkt_init(nts, my_rank, tid, globals::simulation_continued_from_saved);
   }
 
   while (nts < globals::ftstep && !terminate_early) {
