@@ -1,7 +1,10 @@
 #include "vpkt.h"
 
+#include <unistd.h>
+
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 
 #include "atomic.h"
@@ -520,7 +523,7 @@ static void write_vspecpol(FILE *specpol_file) {
 static void read_vspecpol(int my_rank, int nts) {
   char filename[MAXFILENAMELENGTH];
 
-  snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 1) ? "even" : "odd");
+  snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_ts%d.tmp", 0, my_rank, nts);
 
   FILE *vspecpol_file = fopen_required(filename, "r");
 
@@ -620,7 +623,7 @@ static void read_vpkt_grid(const int my_rank, const int nts) {
   }
 
   char filename[MAXFILENAMELENGTH];
-  snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 1) ? "even" : "odd");
+  snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_ts%d.tmp", 0, my_rank, nts);
 
   FILE *vpkt_grid_file = fopen_required(filename, "r");
 
@@ -642,6 +645,16 @@ static void read_vpkt_grid(const int my_rank, const int nts) {
   }
 
   fclose(vpkt_grid_file);
+}
+
+void vpkt_remove_temp_file(const int nts, const int my_rank) {
+  char filename[MAXFILENAMELENGTH];
+  snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, nts);
+
+  if (access(filename, F_OK) == 0) {
+    remove(filename);
+    printout("Deleted %s\n", filename);
+  }
 }
 
 void read_parameterfile_vpkt() {
@@ -833,7 +846,7 @@ void vpkt_write_timestep(const int nts, const int my_rank, const int tid,
   if (is_final) {
     snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d-%d.out", my_rank, tid);
   } else {
-    snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
+    snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_ts%d.tmp", 0, my_rank, nts);
   }
 
   FILE *vspecpol_file = fopen_required(filename, "w");
@@ -844,7 +857,7 @@ void vpkt_write_timestep(const int nts, const int my_rank, const int tid,
     if (is_final) {
       snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d-%d.out", my_rank, tid);
     } else {
-      snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
+      snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_ts%d.tmp", 0, my_rank, nts);
     }
 
     FILE *vpkt_grid_file = fopen_required(filename, "w");

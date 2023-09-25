@@ -513,6 +513,7 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
 
     // delete temp packets files from previous timestep now that all restart data for the new timestep is available
     remove_temp_packetsfile(nts - 1, my_rank);
+    vpkt_remove_temp_file(nts - 1, my_rank);
   }
 }
 

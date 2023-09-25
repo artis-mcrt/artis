@@ -1,7 +1,6 @@
 #ifndef VPKT_H
 #define VPKT_H
 
-#include <cstdio>
 #include <span>
 
 #include "artisoptions.h"
@@ -18,9 +17,8 @@ void vpkt_init(int nts, int my_rank, int tid, bool continued_from_saved);
 void vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type);
 void vpkt_write_timestep(int nts, int my_rank, int tid, bool is_final);
 
-// --------------------------------------------------------------------------------
-// ---------------------------  VIRTUAL PACKETS -----------------------------------
-// --------------------------------------------------------------------------------
+void vpkt_remove_temp_file(int nts, int my_rank);
+
 constexpr int VGRID_NY = 50;
 constexpr int VGRID_NZ = 50;
 
