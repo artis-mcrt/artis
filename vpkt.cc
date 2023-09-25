@@ -520,7 +520,7 @@ static void write_vspecpol(FILE *specpol_file) {
 static void read_vspecpol(int my_rank, int nts) {
   char filename[MAXFILENAMELENGTH];
 
-  snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
+  snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 1) ? "even" : "odd");
 
   FILE *vspecpol_file = fopen_required(filename, "r");
 
@@ -620,7 +620,7 @@ static void read_vpkt_grid(const int my_rank, const int nts) {
   }
 
   char filename[MAXFILENAMELENGTH];
-  snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
+  snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 1) ? "even" : "odd");
 
   FILE *vpkt_grid_file = fopen_required(filename, "r");
 
