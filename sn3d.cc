@@ -466,25 +466,7 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
     // save packet state at start of current timestep (before propagation)
     write_temp_packetsfile(nts, my_rank, packets);
 
-    if constexpr (VPKT_ON) {
-      char filename[MAXFILENAMELENGTH];
-      snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
-
-      FILE *vspecpol_file = fopen_required(filename, "wb");
-
-      write_vspecpol(vspecpol_file);
-      fclose(vspecpol_file);
-
-      // Write temporary files for vpkt_grid
-      if (vgrid_on) {
-        snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
-
-        FILE *vpkt_grid_file = fopen_required(filename, "wb");
-
-        write_vpkt_grid(vpkt_grid_file);
-        fclose(vpkt_grid_file);
-      }
-    }
+    vpkt_write_timestep_file(nts, my_rank, tid, false);
 
     const time_t time_write_packets_file_finished = time(nullptr);
 
@@ -685,21 +667,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
       // snprintf(filename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", middle_iteration, my_rank);
       write_packets(filename, packets);
 
-      // write specpol of the virtual packets
-      if constexpr (VPKT_ON) {
-        snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d-%d.out", my_rank, tid);
-        FILE *vspecpol_file = fopen_required(filename, "w");
-
-        write_vspecpol(vspecpol_file);
-        fclose(vspecpol_file);
-
-        if (vgrid_on) {
-          snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d-%d.out", my_rank, tid);
-          FILE *vpkt_grid_file = fopen_required(filename, "w");
-          write_vpkt_grid(vpkt_grid_file);
-          fclose(vpkt_grid_file);
-        }
-      }
+      vpkt_write_timestep_file(nts, my_rank, tid, true);
 
       printout("time after write final packets file %ld\n", time(nullptr));
 

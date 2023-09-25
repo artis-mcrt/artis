@@ -481,7 +481,7 @@ void init_vspecpol() {
   }
 }
 
-void write_vspecpol(FILE *specpol_file) {
+static void write_vspecpol(FILE *specpol_file) {
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
     fprintf(specpol_file, "%g ", 0.);
 
@@ -598,7 +598,7 @@ void init_vpkt_grid() {
   }
 }
 
-void write_vpkt_grid(FILE *vpkt_grid_file) {
+static void write_vpkt_grid(FILE *vpkt_grid_file) {
   for (int obsbin = 0; obsbin < Nobs; obsbin++) {
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
@@ -812,6 +812,39 @@ void read_parameterfile_vpkt() {
   }
 
   fclose(input_file);
+}
+
+void vpkt_write_timestep(const int nts, const int my_rank, const int tid,
+                         const bool is_final) {  // write specpol of the virtual packets
+  if constexpr (!VPKT_ON) {
+    return;
+  }
+
+  char filename[MAXFILENAMELENGTH];
+  FILE *vspecpol_file;
+  if (is_final) {
+    snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d-%d.out", my_rank, tid);
+    vspecpol_file = fopen_required(filename, "w");
+  } else {
+    snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
+    vspecpol_file = fopen_required(filename, "wb");
+  }
+
+  write_vspecpol(vspecpol_file);
+  fclose(vspecpol_file);
+
+  if (vgrid_on) {
+    FILE *vpkt_grid_file;
+    if (is_final) {
+      snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d-%d.out", my_rank, tid);
+      vpkt_grid_file = fopen_required(filename, "w");
+    } else {
+      snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
+      vpkt_grid_file = fopen_required(filename, "wb");
+    }
+    write_vpkt_grid(vpkt_grid_file);
+    fclose(vpkt_grid_file);
+  }
 }
 
 auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type realtype) -> void {
