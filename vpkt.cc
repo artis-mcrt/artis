@@ -869,7 +869,7 @@ void vpkt_init(const int nts, const int my_rank, const int tid, const bool conti
         snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_even.tmp", 0, my_rank);
       }
 
-      FILE *vpktgrid_file = fopen_required(filename, "rb");
+      FILE *vpktgrid_file = fopen_required(filename, "b");
 
       read_vpkt_grid(vpktgrid_file);
 
@@ -1078,8 +1078,8 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
   *U = sin(2 * theta_rot) * p;
 }
 
-void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, std::span<const double, 3> v,
-             std::span<double, 3> e_cmf) {
+static void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, std::span<const double, 3> v,
+                    std::span<double, 3> e_cmf) {
   // Lorentz transformations from RF to CMF
 
   const double beta[3] = {v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
