@@ -38,8 +38,6 @@ constexpr double VSPEC_TIMEMIN = 10 * DAY;
 constexpr double VSPEC_TIMEMAX = 30 * DAY;
 constexpr int VMTBINS = 30;
 
-extern bool vgrid_on;
-
 extern int nvpkt;
 extern int nvpkt_esc1;  // electron scattering event
 extern int nvpkt_esc2;  // kpkt deactivation

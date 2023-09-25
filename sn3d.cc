@@ -921,10 +921,8 @@ auto main(int argc, char *argv[]) -> int {
     }
   }
 
-  // Initialise virtual packets file and vspecpol
-  if constexpr (VPKT_ON) {
-    vpkt_init(nts, my_rank, tid, globals::simulation_continued_from_saved);
-  }
+  // initialise or read in virtual packet spectra
+  vpkt_init(nts, my_rank, tid, globals::simulation_continued_from_saved);
 
   while (nts < globals::ftstep && !terminate_early) {
     globals::nts_global = nts;

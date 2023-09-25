@@ -848,6 +848,10 @@ void vpkt_write_timestep(const int nts, const int my_rank, const int tid,
 }
 
 void vpkt_init(const int nts, const int my_rank, const int tid, const bool continued_from_saved) {
+  if constexpr (!VPKT_ON) {
+    return;
+  }
+
   init_vspecpol();
   if (vgrid_on) {
     init_vpkt_grid();
@@ -876,6 +880,10 @@ void vpkt_init(const int nts, const int my_rank, const int tid, const bool conti
 }
 
 auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type realtype) -> void {
+  if constexpr (!VPKT_ON) {
+    return;
+  }
+
   // Cut on vpkts
   const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
 
