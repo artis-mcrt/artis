@@ -853,6 +853,7 @@ void vpkt_write_timestep(const int nts, const int my_rank, const int tid,
     snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_ts%d.tmp", 0, my_rank, nts);
   }
 
+  printout("Writing vspecpol file %s\n", filename);
   FILE *vspecpol_file = fopen_required(filename, "w");
   write_vspecpol(vspecpol_file);
   fclose(vspecpol_file);
@@ -864,6 +865,7 @@ void vpkt_write_timestep(const int nts, const int my_rank, const int tid,
       snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_ts%d.tmp", 0, my_rank, nts);
     }
 
+    printout("Writing vpkt grid file %s\n", filename);
     FILE *vpkt_grid_file = fopen_required(filename, "w");
     write_vpkt_grid(vpkt_grid_file);
     fclose(vpkt_grid_file);
