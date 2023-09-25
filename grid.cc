@@ -32,7 +32,7 @@ int ncoordgrid[3];  /// propagation grid dimensions
 int ngrid;
 char coordlabel[3];
 
-enum model_types model_type = RHO_1D_READ;
+enum gridtypes model_type = GRID_SPHERICAL1D;
 int npts_model = 0;           // number of model grid cells
 int nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
@@ -299,9 +299,9 @@ void set_TJ(int modelgridindex, float TJ) { modelgrid[modelgridindex].TJ = TJ; }
 
 void set_W(int modelgridindex, float W) { modelgrid[modelgridindex].W = W; }
 
-auto get_model_type() -> enum model_types { return model_type; }
+auto get_model_type() -> enum gridtypes { return model_type; }
 
-void set_model_type(enum model_types model_type_value) { model_type = model_type_value; }
+void set_model_type(enum gridtypes model_type_value) { model_type = model_type_value; }
 
 auto get_npts_model() -> int
 // number of model grid cells
@@ -834,9 +834,10 @@ static void allocate_nonemptymodelcells() {
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = get_cell_modelgridindex(cellindex);
-    assert_always(!(get_model_type() == RHO_3D_READ) || (get_rho_tmin(mgi) > 0) || (mgi == get_npts_model()));
+    assert_always(!(get_model_type() == GRID_CARTESIAN3D) || (get_rho_tmin(mgi) > 0) || (mgi == get_npts_model()));
     mg_associated_cells[mgi] += 1;
-    assert_always(!(get_model_type() == RHO_3D_READ) || (mg_associated_cells[mgi] == 1) || (mgi == get_npts_model()));
+    assert_always(!(get_model_type() == GRID_CARTESIAN3D) || (mg_associated_cells[mgi] == 1) ||
+                  (mgi == get_npts_model()));
   }
 
   // find number of non-empty cells and allocate nonempty list
@@ -968,7 +969,7 @@ static void abundances_read() {
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
   printout("reading abundances.txt...");
-  const bool threedimensional = (get_model_type() == RHO_3D_READ);
+  const bool threedimensional = (get_model_type() == GRID_CARTESIAN3D);
 
   /// Open the abundances file
   std::ifstream abundance_file("abundances.txt");
@@ -1060,12 +1061,12 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
     } else if (token == "logrho") {
       // 1D models have log10(rho [g/cm3])
       assert_always(columnindex == 2);
-      assert_always(get_model_type() == RHO_1D_READ);
+      assert_always(get_model_type() == GRID_SPHERICAL1D);
     } else if (token == "rho") {
       // 2D and 3D models have rho [g/cm3]
-      assert_always(get_model_type() != RHO_1D_READ);
-      assert_always((columnindex == 4 && get_model_type() != RHO_3D_READ) ||
-                    (columnindex == 3 && get_model_type() == RHO_2D_READ));
+      assert_always(get_model_type() != GRID_SPHERICAL1D);
+      assert_always((columnindex == 4 && get_model_type() != GRID_CARTESIAN3D) ||
+                    (columnindex == 3 && get_model_type() == GRID_CYLINDRICAL2D));
       continue;
     } else if (token == "X_Fegroup") {
       continue;
@@ -1082,9 +1083,9 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
     } else if (token == "X_Co57") {
       continue;
     } else {
-      assert_always(get_model_type() != RHO_1D_READ || columnindex >= 10);
-      assert_always(get_model_type() != RHO_2D_READ || columnindex >= 11);
-      assert_always(get_model_type() != RHO_3D_READ || columnindex >= 12);
+      assert_always(get_model_type() != GRID_SPHERICAL1D || columnindex >= 10);
+      assert_always(get_model_type() != GRID_CYLINDRICAL2D || columnindex >= 11);
+      assert_always(get_model_type() != GRID_CARTESIAN3D || columnindex >= 12);
 
       columnname.push_back(token);
 
@@ -1575,15 +1576,15 @@ static void calc_modelinit_totmassradionuclides() {
       continue;
     }
     double cellvolume = 0.;
-    if (get_model_type() == RHO_1D_READ) {
+    if (get_model_type() == GRID_SPHERICAL1D) {
       const double v_inner = (mgi == 0) ? 0. : vout_model[mgi - 1];
       // mass_in_shell = rho_model[mgi] * (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(t_model, 3) / 3.;
       cellvolume = (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(globals::tmin, 3) / 3.;
-    } else if (get_model_type() == RHO_2D_READ) {
+    } else if (get_model_type() == GRID_CYLINDRICAL2D) {
       const int n_r = mgi % ncoord_model[0];
       cellvolume = pow(globals::tmin / t_model, 3) * dcoord_z * PI *
                    (pow((n_r + 1) * dcoord_rcyl, 2.) - pow(n_r * dcoord_rcyl, 2.));
-    } else if (get_model_type() == RHO_3D_READ) {
+    } else if (get_model_type() == GRID_CARTESIAN3D) {
       /// Assumes cells are cubes here - all same volume.
       cellvolume = pow((2 * globals::vmax * globals::tmin), 3.) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
     } else {
@@ -1613,25 +1614,20 @@ static void calc_modelinit_totmassradionuclides() {
 
 void read_ejecta_model() {
   switch (get_model_type()) {
-    case RHO_UNIFORM: {
-      assert_always(false);  // needs to be reimplemented using spherical coordinate mode
-      break;
-    }
-
-    case RHO_1D_READ: {
+    case GRID_SPHERICAL1D: {
       printout("Read 1D model\n");
       read_1d_model();
       break;
     }
 
-    case RHO_2D_READ: {
+    case GRID_CYLINDRICAL2D: {
       printout("Read 2D model\n");
 
       read_2d_model();
       break;
     }
 
-    case RHO_3D_READ: {
+    case GRID_CARTESIAN3D: {
       printout("Read 3D model\n");
 
       read_3d_model();
@@ -1985,7 +1981,7 @@ static void setup_grid_cartesian_3d()
   assert_always(vmax_corner < CLIGHT);
 
   /// Set grid size for uniform xyz grid
-  if (get_model_type() == RHO_3D_READ) {
+  if (get_model_type() == GRID_CARTESIAN3D) {
     // if we used in a 3D ejecta model, the propagation grid must match the input grid exactly
     ncoordgrid[0] = ncoord_model[0];
     ncoordgrid[1] = ncoord_model[1];
@@ -2034,7 +2030,7 @@ static void setup_grid_cartesian_3d()
 }
 
 static void setup_grid_spherical1d() {
-  assert_always(get_model_type() == RHO_1D_READ);
+  assert_always(get_model_type() == GRID_SPHERICAL1D);
   coordlabel[0] = 'r';
   coordlabel[1] = '_';
   coordlabel[2] = '_';
@@ -2058,7 +2054,7 @@ static void setup_grid_spherical1d() {
 }
 
 static void setup_grid_cylindrical_2d() {
-  assert_always(get_model_type() == RHO_2D_READ);
+  assert_always(get_model_type() == GRID_CYLINDRICAL2D);
   coordlabel[0] = 'r';
   coordlabel[1] = 'z';
   coordlabel[2] = '_';
@@ -2125,7 +2121,7 @@ void grid_init(int my_rank)
       ME * CLIGHT * decay::nucmass(28, 56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::tmin);
   printout("grid_init: rho_crit = %g [g/cm3]\n", globals::rho_crit);
 
-  if (get_model_type() == RHO_1D_READ) {
+  if (get_model_type() == GRID_SPHERICAL1D) {
     if (GRID_TYPE == GRID_CARTESIAN3D) {
       map_1dmodelto3dgrid();
     } else if (GRID_TYPE == GRID_SPHERICAL1D) {
@@ -2133,7 +2129,7 @@ void grid_init(int my_rank)
     } else {
       assert_always(false);
     }
-  } else if (get_model_type() == RHO_2D_READ) {
+  } else if (get_model_type() == GRID_CYLINDRICAL2D) {
     if (GRID_TYPE == GRID_CARTESIAN3D) {
       map_2dmodelto3dgrid();
     } else if (GRID_TYPE == GRID_CYLINDRICAL2D) {
@@ -2141,7 +2137,7 @@ void grid_init(int my_rank)
     } else {
       assert_always(false);
     }
-  } else if (get_model_type() == RHO_3D_READ) {
+  } else if (get_model_type() == GRID_CARTESIAN3D) {
     assert_always(GRID_TYPE == GRID_CARTESIAN3D);
     assert_always(ncoord_model[0] == ncoordgrid[0]);
     assert_always(ncoord_model[1] == ncoordgrid[1]);
@@ -2174,7 +2170,7 @@ void grid_init(int my_rank)
   // radioactive abundances to account for the missing masses in
   // the model cells that are not associated with any propagation cells
   // Luke: TODO: it's probably better to adjust the density instead of the abundances
-  if (GRID_TYPE == GRID_CARTESIAN3D && get_model_type() == RHO_1D_READ && globals::rank_in_node == 0) {
+  if (GRID_TYPE == GRID_CARTESIAN3D && get_model_type() == GRID_SPHERICAL1D && globals::rank_in_node == 0) {
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
       if (totmassradionuclide[nucindex] <= 0) {
         continue;

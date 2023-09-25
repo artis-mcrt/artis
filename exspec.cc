@@ -156,7 +156,7 @@ auto main(int argc, char *argv[]) -> int {
   // grid_init();
   time_init();
 
-  const int amax = ((grid::get_model_type() == grid::RHO_1D_READ)) ? 0 : MABINS;
+  const int amax = ((grid::get_model_type() == GRID_SPHERICAL1D)) ? 0 : MABINS;
   // a is the escape direction angle bin
   for (int a = -1; a < amax; a++) {
     /// Set up the light curve grid and initialise the bins to zero.

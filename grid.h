@@ -24,13 +24,6 @@ struct gridcell {
   int modelgridindex;
 };
 
-enum model_types {
-  RHO_UNIFORM = 1,  // Constant density. NOT IN USE
-  RHO_1D_READ = 2,  // Read model 1D
-  RHO_2D_READ = 4,  // Read model 2D
-  RHO_3D_READ = 3,  // Read model 3D
-};
-
 struct modelgrid_t {
   float Te = -1.;
   float TR = -1.;
@@ -123,8 +116,8 @@ double get_electronfrac(int modelgridindex);
 int get_numassociatedcells(int modelgridindex);
 int get_modelcell_nonemptymgi(int mgi);
 int get_mgi_of_nonemptymgi(int nonemptymgi);
-enum model_types get_model_type();
-void set_model_type(enum model_types model_type_value);
+enum gridtypes get_model_type();
+void set_model_type(enum gridtypes model_type_value);
 int get_npts_model();
 int get_nonempty_npts_model();
 double get_t_model();

@@ -1816,11 +1816,11 @@ void read_parameterfile(int rank)
   int dum1 = 0;
   std::stringstream(line) >> dum1;
   if (dum1 == 1) {
-    set_model_type(grid::RHO_1D_READ);
+    grid::set_model_type(GRID_SPHERICAL1D);
   } else if (dum1 == 2) {
-    set_model_type(grid::RHO_2D_READ);
+    grid::set_model_type(GRID_CYLINDRICAL2D);
   } else if (dum1 == 3) {
-    set_model_type(grid::RHO_3D_READ);
+    grid::set_model_type(GRID_CARTESIAN3D);
   }
 
   assert_always(get_noncommentline(file, line));  // UNUSED compute the r-light curve?
