@@ -524,6 +524,7 @@ static void read_vspecpol(int my_rank, int nts) {
   char filename[MAXFILENAMELENGTH];
 
   snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_ts%d.tmp", 0, my_rank, nts);
+  printout("Reading vspecpol file %s\n", filename);
 
   FILE *vspecpol_file = fopen_required(filename, "r");
 
@@ -624,7 +625,7 @@ static void read_vpkt_grid(const int my_rank, const int nts) {
 
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_ts%d.tmp", 0, my_rank, nts);
-
+  printout("Reading vpkt grid file %s\n", filename);
   FILE *vpkt_grid_file = fopen_required(filename, "r");
 
   for (int obsbin = 0; obsbin < Nobs; obsbin++) {
