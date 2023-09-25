@@ -176,6 +176,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   vpkt.dir[0] = obsdir[0];
   vpkt.dir[1] = obsdir[1];
   vpkt.dir[2] = obsdir[2];
+  vpkt.last_cross = BOUNDARY_NONE;
 
   safeincrement(nvpkt);  // increment the number of virtual packet in the given timestep
 

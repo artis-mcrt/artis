@@ -451,10 +451,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, struct rpkt_cont_opacit
     stats::increment(stats::COUNTER_ESCOUNTER);
 
     // generate a virtual packet
-    if constexpr (VPKT_ON) {
-      pkt_ptr->last_cross = BOUNDARY_NONE;
-      vpkt_call_estimators(pkt_ptr, TYPE_RPKT);
-    }
+    vpkt_call_estimators(pkt_ptr, TYPE_RPKT);
 
     // pkt_ptr->nu_cmf = 3.7474058e+14;
     electron_scatter_rpkt(pkt_ptr);
