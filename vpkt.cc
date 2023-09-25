@@ -526,7 +526,7 @@ static void read_vspecpol(int my_rank, int nts) {
     snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_even.tmp", 0, my_rank);
   }
 
-  FILE *vspecpol_file = fopen_required(filename, "rb");
+  FILE *vspecpol_file = fopen_required(filename, "r");
 
   float a = NAN;
   float b = NAN;
@@ -618,7 +618,20 @@ static void write_vpkt_grid(FILE *vpkt_grid_file) {
   }
 }
 
-static void read_vpkt_grid(FILE *vpkt_grid_file) {
+static void read_vpkt_grid(const int my_rank, const int nts) {
+  if (!vgrid_on) {
+    return;
+  }
+
+  char filename[MAXFILENAMELENGTH];
+  if (nts % 2 == 0) {
+    snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
+  } else {
+    snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_even.tmp", 0, my_rank);
+  }
+
+  FILE *vpkt_grid_file = fopen_required(filename, "r");
+
   for (int obsbin = 0; obsbin < Nobs; obsbin++) {
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
@@ -635,6 +648,8 @@ static void read_vpkt_grid(FILE *vpkt_grid_file) {
       }
     }
   }
+
+  fclose(vpkt_grid_file);
 }
 
 void read_parameterfile_vpkt() {
@@ -861,19 +876,8 @@ void vpkt_init(const int nts, const int my_rank, const int tid, const bool conti
 
     read_vspecpol(my_rank, nts);
 
-    char filename[MAXFILENAMELENGTH];
     if (vgrid_on) {
-      if (nts % 2 == 0) {
-        snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
-      } else {
-        snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_even.tmp", 0, my_rank);
-      }
-
-      FILE *vpktgrid_file = fopen_required(filename, "rb");
-
-      read_vpkt_grid(vpktgrid_file);
-
-      fclose(vpktgrid_file);
+      read_vpkt_grid(my_rank, nts);
     }
   }
 }
