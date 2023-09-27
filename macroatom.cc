@@ -340,7 +340,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
   const auto T_e = grid::get_Te(modelgridindex);
 
   // EXPERIMENT: disable macroatom and emit according to blackbody
-  // do_kpkt_blackbody(pkt_ptr);
+  // kpkt::do_kpkt_blackbody(pkt_ptr);
   // stats::increment(stats::COUNTER_RESONANCESCATTERINGS);
   // pkt_ptr->interactions++;
   // return;
