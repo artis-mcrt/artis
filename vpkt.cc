@@ -278,87 +278,91 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
         grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.where, &snext, &vpkt.last_cross);
     const double s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
 
-    calculate_kappa_rpkt_cont(vpkt.nu_cmf, &kappa_vpkt_cont, mgi, false);
+    if (mgi == grid::get_npts_model()) {
+      vpkt.next_trans = -1;
+    } else {
+      calculate_kappa_rpkt_cont(vpkt.nu_cmf, &kappa_vpkt_cont, mgi, false);
 
-    const double kap_cont = kappa_vpkt_cont.total;
+      const double kap_cont = kappa_vpkt_cont.total;
 
-    for (int ind = 0; ind < Nspectra; ind++) {
-      if (exclude[ind] == -2) {
-        const double kap_cont_nobf = kap_cont - kappa_vpkt_cont.bf;
-        tau_vpkt[ind] += kap_cont_nobf * s_cont;
-      } else if (exclude[ind] == -3) {
-        const double kap_cont_noff = kap_cont - kappa_vpkt_cont.ff;
-        tau_vpkt[ind] += kap_cont_noff * s_cont;
-      } else if (exclude[ind] == -4) {
-        const double kap_cont_noes = kap_cont - kappa_vpkt_cont.es;
-        tau_vpkt[ind] += kap_cont_noes * s_cont;
-      } else {
-        tau_vpkt[ind] += kap_cont * s_cont;
+      for (int ind = 0; ind < Nspectra; ind++) {
+        if (exclude[ind] == -2) {
+          const double kap_cont_nobf = kap_cont - kappa_vpkt_cont.bf;
+          tau_vpkt[ind] += kap_cont_nobf * s_cont;
+        } else if (exclude[ind] == -3) {
+          const double kap_cont_noff = kap_cont - kappa_vpkt_cont.ff;
+          tau_vpkt[ind] += kap_cont_noff * s_cont;
+        } else if (exclude[ind] == -4) {
+          const double kap_cont_noes = kap_cont - kappa_vpkt_cont.es;
+          tau_vpkt[ind] += kap_cont_noes * s_cont;
+        } else {
+          tau_vpkt[ind] += kap_cont * s_cont;
+        }
       }
-    }
 
-    // kill vpkt with high optical depth
-    if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
-      return;
-    }
+      // kill vpkt with high optical depth
+      if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
+        return;
+      }
 
-    struct packet dummypkt_abort = vpkt;
-    move_pkt_withtime(&dummypkt_abort, sdist);
-    const double nu_cmf_abort = dummypkt_abort.nu_cmf;
-    assert_testmodeonly(nu_cmf_abort <= vpkt.nu_cmf);
-    const double d_nu_on_d_l = (nu_cmf_abort - vpkt.nu_cmf) / sdist;
+      struct packet dummypkt_abort = vpkt;
+      move_pkt_withtime(&dummypkt_abort, sdist);
+      const double nu_cmf_abort = dummypkt_abort.nu_cmf;
+      assert_testmodeonly(nu_cmf_abort <= vpkt.nu_cmf);
+      const double d_nu_on_d_l = (nu_cmf_abort - vpkt.nu_cmf) / sdist;
 
-    ldist = 0;
-    while (ldist < sdist) {
-      const int lineindex = closest_transition(vpkt.nu_cmf, vpkt.next_trans);
+      ldist = 0;
+      while (ldist < sdist) {
+        const int lineindex = closest_transition(vpkt.nu_cmf, vpkt.next_trans);
 
-      if (lineindex < 0) {
-        vpkt.next_trans = globals::nlines + 1;
-      } else {
-        const double nutrans = globals::linelist[lineindex].nu;
+        if (lineindex < 0) {
+          vpkt.next_trans = globals::nlines + 1;
+        } else {
+          const double nutrans = globals::linelist[lineindex].nu;
 
-        vpkt.next_trans = lineindex + 1;
+          vpkt.next_trans = lineindex + 1;
 
-        ldist = get_linedistance(t_current, vpkt.nu_cmf, nutrans, d_nu_on_d_l);
+          ldist = get_linedistance(t_current, vpkt.nu_cmf, nutrans, d_nu_on_d_l);
 
-        if (ldist > sdist) {
-          // exit the while loop if you reach the boundary; go back to the previous transition to start next cell with
-          // the excluded line
+          if (ldist > sdist) {
+            // exit the while loop if you reach the boundary; go back to the previous transition to start next cell with
+            // the excluded line
 
-          vpkt.next_trans -= 1;
-          // printout("ldist > sdist : line in the next cell\n");
-          break;
-        }
-
-        const double t_line = t_current + ldist / CLIGHT;
-
-        const int element = globals::linelist[lineindex].elementindex;
-        const int ion = globals::linelist[lineindex].ionindex;
-        const int upper = globals::linelist[lineindex].upperlevelindex;
-        const int lower = globals::linelist[lineindex].lowerlevelindex;
-        const auto A_ul = globals::linelist[lineindex].einstein_A;
-
-        const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * A_ul;
-        const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
-
-        const auto n_u = calculate_levelpop(mgi, element, ion, upper);
-        const auto n_l = calculate_levelpop(mgi, element, ion, lower);
-        const double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line;
-
-        // Check on the element to exclude
-        // NB: ldist before need to be computed anyway (I want to move the packets to the
-        // line interaction point even if I don't interact)
-        const int anumber = get_atomicnumber(element);
-        for (int ind = 0; ind < Nspectra; ind++) {
-          // If exclude[ind]==-1, I do not include line opacity
-          if (exclude[ind] != -1 && (exclude[ind] != anumber)) {
-            tau_vpkt[ind] += tau_line;
+            vpkt.next_trans -= 1;
+            // printout("ldist > sdist : line in the next cell\n");
+            break;
           }
-        }
 
-        // kill vpkt with high optical depth
-        if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
-          return;
+          const double t_line = t_current + ldist / CLIGHT;
+
+          const int element = globals::linelist[lineindex].elementindex;
+          const int ion = globals::linelist[lineindex].ionindex;
+          const int upper = globals::linelist[lineindex].upperlevelindex;
+          const int lower = globals::linelist[lineindex].lowerlevelindex;
+          const auto A_ul = globals::linelist[lineindex].einstein_A;
+
+          const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * A_ul;
+          const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
+
+          const auto n_u = calculate_levelpop(mgi, element, ion, upper);
+          const auto n_l = calculate_levelpop(mgi, element, ion, lower);
+          const double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line;
+
+          // Check on the element to exclude
+          // NB: ldist before need to be computed anyway (I want to move the packets to the
+          // line interaction point even if I don't interact)
+          const int anumber = get_atomicnumber(element);
+          for (int ind = 0; ind < Nspectra; ind++) {
+            // If exclude[ind]==-1, I do not include line opacity
+            if (exclude[ind] != -1 && (exclude[ind] != anumber)) {
+              tau_vpkt[ind] += tau_line;
+            }
+          }
+
+          // kill vpkt with high optical depth
+          if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
+            return;
+          }
         }
       }
     }
