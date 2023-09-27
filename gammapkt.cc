@@ -751,7 +751,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   // grid cell into which we pass.
 
   int snext = 0;
-  double sdist = grid::boundary_distance(pkt_ptr, &snext);
+  double sdist = grid::boundary_distance(pkt_ptr->dir, pkt_ptr->pos, pkt_ptr->prop_time, pkt_ptr->where, &snext);
 
   const double maxsdist = (GRID_TYPE == GRID_CARTESIAN3D)
                               ? globals::rmax * pkt_ptr->prop_time / globals::tmin

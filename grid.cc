@@ -2405,14 +2405,11 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
   d_coordmaxboundary[1] = CLIGHT_PROP * t_zcoordmaxboundary;
 }
 
-[[nodiscard]] auto boundary_distance(struct packet *const pkt_ptr, int *snext) -> double
+[[nodiscard]] auto boundary_distance(std::span<const double, 3> dir, std::span<const double, 3> pos,
+                                     const double tstart, int cellindex, int *snext) -> double
 /// Basic routine to compute distance to a cell boundary.
 {
-  const double tstart = pkt_ptr->prop_time;
-
   // d is used to loop over the coordinate indicies 0,1,2 for x,y,z
-
-  const int cellindex = pkt_ptr->where;
 
   // the following four vectors are in grid coordinates, so either x,y,z or r
   const int ndim = grid::get_ngriddimensions();

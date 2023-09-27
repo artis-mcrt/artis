@@ -169,6 +169,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   struct packet vpkt = *pkt_ptr;
 
   bool end_packet = false;
+  double ldist = 0;
   double t_future = t_current;
 
   for (int ind = 0; ind < Nspectra; ind++) {
@@ -273,7 +274,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
   while (!end_packet) {
     // distance to the next cell
-    const double sdist = grid::boundary_distance(&vpkt, &snext);
+    const double sdist = grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.where, &snext);
     const double s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
 
     calculate_kappa_rpkt_cont(vpkt.nu_cmf, &kappa_vpkt_cont, mgi, false);
@@ -306,67 +307,60 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     assert_testmodeonly(nu_cmf_abort <= vpkt.nu_cmf);
     const double d_nu_on_d_l = (nu_cmf_abort - vpkt.nu_cmf) / sdist;
 
-    if (mgi != grid::get_npts_model()) {
-      double ldist = 0.;
-      while (ldist < sdist) {
-        const int lineindex = closest_transition(vpkt.nu_cmf, vpkt.next_trans);
+    ldist = 0;
+    while (ldist < sdist) {
+      const int lineindex = closest_transition(vpkt.nu_cmf, vpkt.next_trans);
 
-        if (lineindex < 0) {
-          vpkt.next_trans = globals::nlines + 1;
-        } else {
-          const double nutrans = globals::linelist[lineindex].nu;
+      if (lineindex < 0) {
+        vpkt.next_trans = globals::nlines + 1;
+      } else {
+        const double nutrans = globals::linelist[lineindex].nu;
 
-          vpkt.next_trans = lineindex + 1;
+        vpkt.next_trans = lineindex + 1;
 
-          ldist = get_linedistance(t_current, vpkt.nu_cmf, nutrans, d_nu_on_d_l);
+        ldist = get_linedistance(t_current, vpkt.nu_cmf, nutrans, d_nu_on_d_l);
 
-          if (ldist > sdist) {
-            // exit the while loop if you reach the boundary; go back to the previous transition to start next cell with
-            // the excluded line
+        if (ldist > sdist) {
+          // exit the while loop if you reach the boundary; go back to the previous transition to start next cell with
+          // the excluded line
 
-            vpkt.next_trans -= 1;
-            // printout("ldist > sdist : line in the next cell\n");
-            break;
-          }
+          vpkt.next_trans -= 1;
+          // printout("ldist > sdist : line in the next cell\n");
+          break;
+        }
 
-          // break if you reach an empty cell
-          if (mgi == grid::get_npts_model()) {
-            break;
-          }
+        const double t_line = t_current + ldist / CLIGHT;
 
-          const double t_line = t_current + ldist / CLIGHT;
+        const int element = globals::linelist[lineindex].elementindex;
+        const int ion = globals::linelist[lineindex].ionindex;
+        const int upper = globals::linelist[lineindex].upperlevelindex;
+        const int lower = globals::linelist[lineindex].lowerlevelindex;
+        const auto A_ul = globals::linelist[lineindex].einstein_A;
 
-          const int element = globals::linelist[lineindex].elementindex;
-          const int ion = globals::linelist[lineindex].ionindex;
-          const int upper = globals::linelist[lineindex].upperlevelindex;
-          const int lower = globals::linelist[lineindex].lowerlevelindex;
-          const auto A_ul = globals::linelist[lineindex].einstein_A;
+        const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * A_ul;
+        const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
-          const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * A_ul;
-          const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
+        const auto n_u = calculate_levelpop(mgi, element, ion, upper);
+        const auto n_l = calculate_levelpop(mgi, element, ion, lower);
+        const double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line;
 
-          const auto n_u = calculate_levelpop(mgi, element, ion, upper);
-          const auto n_l = calculate_levelpop(mgi, element, ion, lower);
-          const double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line;
-
-          // Check on the element to exclude
-          // NB: ldist before need to be computed anyway (I want to move the packets to the
-          // line interaction point even if I don't interact)
-          const int anumber = get_atomicnumber(element);
-          for (int ind = 0; ind < Nspectra; ind++) {
-            // If exclude[ind]==-1, I do not include line opacity
-            if (exclude[ind] != -1 && (exclude[ind] != anumber)) {
-              tau_vpkt[ind] += tau_line;
-            }
-          }
-
-          // kill vpkt with high optical depth
-          if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
-            return;
+        // Check on the element to exclude
+        // NB: ldist before need to be computed anyway (I want to move the packets to the
+        // line interaction point even if I don't interact)
+        const int anumber = get_atomicnumber(element);
+        for (int ind = 0; ind < Nspectra; ind++) {
+          // If exclude[ind]==-1, I do not include line opacity
+          if (exclude[ind] != -1 && (exclude[ind] != anumber)) {
+            tau_vpkt[ind] += tau_line;
           }
         }
+
+        // kill vpkt with high optical depth
+        if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
+          return;
+        }
       }
-    }  // end of while loop
+    }
 
     // virtual packet is still at the starting position
     // move it to cell boundary and go to next cell
@@ -376,20 +370,19 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     vpkt.prop_time = t_future;
     move_pkt(&vpkt, sdist);
 
-    // if we just moved through an empty cell, find the next line interaction
-    if (mgi == grid::get_npts_model()) {
-      vpkt.next_trans = closest_transition_empty(pkt_ptr->nu_cmf, pkt_ptr->next_trans);
-    }
-
     grid::change_cell(&vpkt, snext);
     end_packet = (vpkt.type == TYPE_ESCAPE);
 
     mgi = grid::get_cell_modelgridindex(vpkt.where);
-  }
+    // break if you reach an empty cell
+    if (mgi == grid::get_npts_model()) {
+      break;
+    }
 
-  // kill vpkt with pass through a thick cell
-  if (grid::modelgrid[mgi].thick != 0) {
-    return;
+    // kill vpkt with pass through a thick cell
+    if (grid::modelgrid[mgi].thick != 0) {
+      return;
+    }
   }
 
   // increment the number of escaped virtual packet in the given timestep
