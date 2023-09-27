@@ -575,26 +575,6 @@ static void rpkt_event_thickcell(struct packet *pkt_ptr)
   pkt_ptr->em_time = pkt_ptr->prop_time;
 }
 
-auto closest_transition_empty(const double nu_cmf, int next_trans) -> int
-/// for the propagation through empty cells
-/// here its possible that the packet jumps over several lines
-{
-  /// no check for left > 0 in the empty case as it is possible that the packet is moved over
-  /// several lines through the empty cell
-  if ((next_trans < globals::nlines - 1) && (nu_cmf >= globals::linelist[next_trans].nu)) {
-    /// if nu_cmf is larger than the highest frequency in the allowed part of the linelist,
-    /// interaction with the first line of this part of the list occurs
-    return next_trans;
-  }
-
-  /// otherwise go through the list until nu_cmf is located between two
-  /// entries in the line list and get the index of the closest line
-  /// to lower frequencies
-
-  const auto *matchline = std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf);
-  return std::distance(globals::linelist, matchline);
-}
-
 static void update_estimators(const struct packet *pkt_ptr, const double distance)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
@@ -735,11 +715,10 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
   double edist = -1;
   int rpkt_eventtype = -1;
-  bool find_nextline = false;
   if (mgi == grid::get_npts_model()) {
     /// for empty cells no physical event occurs. The packets just propagate.
     edist = std::numeric_limits<double>::max();
-    find_nextline = true;
+    pkt_ptr->next_trans = -1;
     // printout("[debug] do_rpkt: propagating through empty cell, set edist=1e99\n");
   } else if (grid::modelgrid[mgi].thick == 1) {
     /// In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
@@ -748,7 +727,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     const double kappa = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * doppler_packet_nucmf_on_nurf(pkt_ptr);
     const double tau_current = 0.0;
     edist = (tau_next - tau_current) / kappa;
-    find_nextline = true;
+    pkt_ptr->next_trans = -1;
     // printout("[debug] do_rpkt: propagating through grey cell, edist  %g\n",edist);
   } else {
     // get distance to the next physical event (continuum or bound-bound)
@@ -778,15 +757,6 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     }
 
     pkt_ptr->last_event = pkt_ptr->last_event + 100;
-
-    /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
-    /// find the next possible line interaction.
-    if (find_nextline) {
-      /// However, this is only required if the new cell is non-empty or non-grey
-      if (mgi != grid::get_npts_model() && grid::modelgrid[mgi].thick != 1) {
-        pkt_ptr->next_trans = closest_transition_empty(pkt_ptr->nu_cmf, pkt_ptr->next_trans);
-      }
-    }
 
     return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
   }
@@ -818,12 +788,6 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     pkt_ptr->prop_time = t2;
     move_pkt(pkt_ptr, tdist / 2.);
     pkt_ptr->last_event = pkt_ptr->last_event + 1000;
-
-    /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
-    /// find the next possible line interaction.
-    if (find_nextline) {
-      pkt_ptr->next_trans = closest_transition_empty(pkt_ptr->nu_cmf, pkt_ptr->next_trans);
-    }
 
     return false;
   }
