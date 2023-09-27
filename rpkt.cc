@@ -771,8 +771,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     // printout("[debug] do_rpkt: propagating through grey cell, edist  %g\n",edist);
   } else {
     // get distance to the next physical event (continuum or bound-bound)
-    edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, tau_next,
-                      fmin(tdist, sdist));  //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+    edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, tau_next, fmin(tdist, sdist));
 
     // const int next_trans = pkt_ptr->next_trans;
     // printout("[debug] do_rpkt: after edist: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g\n", pkt_ptr->nu_cmf,
