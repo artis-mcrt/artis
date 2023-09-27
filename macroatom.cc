@@ -345,7 +345,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
 
   const auto nne = grid::get_nne(modelgridindex);
 
-  assert_always(grid::modelgrid[modelgridindex].thick != 1);  // macroatom should not be used in thick cells
+  assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);  // macroatom should not be used in thick cells
 
   /// calculate occupation number for active MA level ////////////////////////////////////
   /// general QUESTION: is it better to calculate the n_1 (later the n_ionstage and
@@ -386,14 +386,14 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
     // printout("[debug] %s Z=%d ionstage %d level %d, jumps %d\n", __func__, get_atomicnumber(element),
     // get_ionstage(element,ion), level, jumps);
 
-    assert_always(ion >= 0);
-    assert_always(ion < get_nions(element));
+    assert_testmodeonly(ion >= 0);
+    assert_testmodeonly(ion < get_nions(element));
 
     const double epsilon_current = epsilon(element, ion, level);
     // const int ndowntrans = get_ndowntrans(element, ion, level);
     const int nuptrans = get_nuptrans(element, ion, level);
 
-    assert_always(globals::cellhistory[tid].cellnumber == modelgridindex);
+    assert_testmodeonly(globals::cellhistory[tid].cellnumber == modelgridindex);
 
     struct chlevels *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
     const double *processrates = chlevel->processrates;
