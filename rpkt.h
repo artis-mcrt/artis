@@ -9,8 +9,8 @@ void emitt_rpkt(struct packet *pkt_ptr);
 int closest_transition(double nu_cmf, int next_trans);
 double get_rpkt_escape_prob(struct packet *pkt_ptr, double tstart);
 double calculate_kappa_bf_gammacontr(int modelgridindex, double nu);
-void calculate_kappa_rpkt_cont(const struct packet *pkt_ptr, struct rpkt_cont_opacity *kappa_rpkt_cont_thisthread,
-                               const bool usecellhistupdatephixslist);
+void calculate_kappa_rpkt_cont(double nu_cmf, struct rpkt_cont_opacity *kappa_rpkt_cont_thisthread, int modelgridindex,
+                               bool usecellhistupdatephixslist);
 
 constexpr auto get_linedistance(const double prop_time, const double nu_cmf, const double nu_trans,
                                 const double d_nu_on_d_l) -> double {

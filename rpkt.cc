@@ -82,7 +82,7 @@ static auto get_event(const int modelgridindex,
 
   struct packet dummypkt = *pkt_ptr;
 
-  calculate_kappa_rpkt_cont(pkt_ptr, &globals::kappa_rpkt_cont[tid], true);
+  calculate_kappa_rpkt_cont(pkt_ptr->nu_cmf, &globals::kappa_rpkt_cont[tid], modelgridindex, true);
   const double kap_cont = globals::kappa_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(pkt_ptr);
   while (true) {
     /// calculate distance to next line encounter ldist
@@ -878,7 +878,7 @@ static auto get_rpkt_escapeprob_fromdirection(std::span<const double, 3> startpo
       }
     }
 
-    calculate_kappa_rpkt_cont(&vpkt, &globals::kappa_rpkt_cont[tid], false);
+    calculate_kappa_rpkt_cont(vpkt.nu_cmf, &globals::kappa_rpkt_cont[tid], mgi, false);
 
     const double kappa_cont = globals::kappa_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(&vpkt);
 
@@ -1217,13 +1217,10 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
   return kappa_bf_sum;
 }
 
-void calculate_kappa_rpkt_cont(const struct packet *const pkt_ptr, struct rpkt_cont_opacity *kappa_rpkt_cont_thisthread,
-                               const bool usecellhistupdatephixslist) {
-  const int cellindex = pkt_ptr->where;
-  const int modelgridindex = grid::get_cell_modelgridindex(cellindex);
-  assert_always(modelgridindex != grid::get_npts_model());
-  assert_always(grid::modelgrid[modelgridindex].thick != 1);
-  const double nu_cmf = pkt_ptr->nu_cmf;
+void calculate_kappa_rpkt_cont(const double nu_cmf, struct rpkt_cont_opacity *kappa_rpkt_cont_thisthread,
+                               const int modelgridindex, const bool usecellhistupdatephixslist) {
+  assert_testmodeonly(modelgridindex != grid::get_npts_model());
+  assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
   if ((modelgridindex == kappa_rpkt_cont_thisthread->modelgridindex) &&
       (!kappa_rpkt_cont_thisthread->recalculate_required) &&
       (fabs(kappa_rpkt_cont_thisthread->nu / nu_cmf - 1.0) < 1e-4)) {
