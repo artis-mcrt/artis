@@ -104,25 +104,7 @@ static auto get_event(const int modelgridindex,
       // multiple scattering events of one pp in a single line
       dummypkt_ptr->next_trans = lineindex + 1;
 
-      double ldist;  // distance from current position to the line interaction
-      if (dummypkt_ptr->nu_cmf <= nu_trans) {
-        ldist = 0;  /// photon was propagated too far, make sure that we don't miss a line
-      } else if constexpr (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
-        ldist = CLIGHT * dummypkt_ptr->prop_time * (dummypkt_ptr->nu_cmf / nu_trans - 1);
-      } else {
-        // With special relativity, the Doppler shift formula has an extra factor of 1/gamma in it,
-        // which changes the distance reach a line resonance and creates a dependence
-        // on packet position and direction
-
-        // use linear interpolation of frequency along the path
-        ldist = (nu_trans - dummypkt_ptr->nu_cmf) / d_nu_on_d_l;
-      }
-
-      if (ldist < 0.) {
-        printout("[warning] ldist %lg < 0.\n", ldist);
-        assert_always(ldist >= -100.);
-        ldist = 0.;
-      }
+      const double ldist = get_linedistance(dummypkt.prop_time, dummypkt.nu_cmf, nu_trans, d_nu_on_d_l);
 
       // printout("[debug] get_event:     ldist %g\n",ldist);
 

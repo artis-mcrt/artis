@@ -318,19 +318,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
         vpkt.next_trans = lineindex + 1;
 
-        // get distance to the line interaction
-        if (vpkt.nu_cmf < nutrans) {
-          ldist = 0;
-        } else if constexpr (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
-          ldist = CLIGHT * t_current * (vpkt.nu_cmf / nutrans - 1);
-        } else {
-          // use linear interpolation of frequency along the path
-          ldist = (nutrans - vpkt.nu_cmf) / d_nu_on_d_l;
-        }
-
-        if (ldist < 0.) {
-          printout("[warning] get_event: ldist < 0 %g\n", ldist);
-        }
+        ldist = get_linedistance(t_current, vpkt.nu_cmf, nutrans, d_nu_on_d_l);
 
         if (ldist > sdist) {
           // exit the while loop if you reach the boundary; go back to the previous transition to start next cell with
