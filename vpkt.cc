@@ -384,7 +384,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     }
 
     // kill vpkt with pass through a thick cell
-    if (grid::modelgrid[mgi].thick == 1) {
+    if (grid::modelgrid[mgi].thick != 0) {
       return;
     }
   }
