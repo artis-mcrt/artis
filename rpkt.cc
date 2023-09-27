@@ -204,46 +204,32 @@ static auto get_event(const int modelgridindex,
           return edist;
         }
       } else {
-        /// continuum process occurs
-
-        edist = dist + (tau_rnd - tau) / kap_cont;
-        // assert_always((tau_rnd - tau) / kap_cont < ldist);
-        dummypkt.next_trans -= 1;
-        // printout("[debug] get_event:        distance to the occuring continuum event %g, abort_dist %g\n", edist,
-        // abort_dist);
+        /// continuum process occurs before reaching the line
 
         *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
 
-        pkt_ptr->next_trans = dummypkt.next_trans;
+        pkt_ptr->next_trans = dummypkt.next_trans - 1;
 
-        return edist;
+        return dist + (tau_rnd - tau) / kap_cont;
       }
     } else {
       /// no line interaction possible - check whether continuum process occurs in cell
 
       // printout("[debug] get_event:     line interaction impossible\n");
 
-      /// helper variable to overcome numerical problems after line scattering
-      dummypkt.next_trans = globals::nlines + 1;
-
       const double tau_cont = kap_cont * (abort_dist - dist);
 
       if (tau_rnd - tau > tau_cont) {
-        /// travel out of cell or time step
-        // printout("[debug] get_event:       travel out of cell or time step\n");
-
-        edist = std::numeric_limits<double>::max();
-      } else {
-        /// continuum process occurs at edist
-        edist = dist + (tau_rnd - tau) / kap_cont;
-        // printout("[debug] get_event:       continuum process occurs at edist %g\n",edist);
-
-        *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
+        // no continuum event occurs before abort_dist
+        return std::numeric_limits<double>::max();
       }
+      /// continuum process occurs at edist
 
-      pkt_ptr->next_trans = dummypkt.next_trans;
+      *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
 
-      return edist;
+      pkt_ptr->next_trans = globals::nlines + 1;
+
+      return dist + (tau_rnd - tau) / kap_cont;
     }
   }
 
@@ -719,7 +705,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   if (mgi == grid::get_npts_model()) {
     /// for empty cells no physical event occurs. The packets just propagate.
     edist = std::numeric_limits<double>::max();
-    pkt_ptr->next_trans = -1;
+    pkt_ptr->next_trans = -1;  // skip over lines and search for line list position on the next non-empty cell
   } else if (grid::modelgrid[mgi].thick == 1) {
     /// In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
 
