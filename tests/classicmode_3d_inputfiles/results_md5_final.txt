@@ -513,8 +513,8 @@ e08bbb965fac36412810b8769a13ab9d  grid.out
 70e81530f62a71d79331bd1cc3b3ab2a  light_curve_res.out
 fb8c9b73ab7c5bb1fac556612d74812d  linestat.out
 07e400ff3495dc0b972ebe785db8b3c2  modelgridrankassignments.out
-1639e53bdf3d6a7873a9bb9678487535  packets00_0000.out
-93c67e106f9683fa56d466fd457335b9  packets00_0001.out
+74638da3be21c7ece229fe1f25e269f6  packets00_0000.out
+59b9851e06fd71689cb236156b8f86f1  packets00_0001.out
 e8f84a37c5b40b4d740b469bff9d06eb  spec.out
 a1f6d856cf7de99f8c05d36b4850b3d0  spec_res.out
 ec3dbfdcce79009bfc49d73703a851ea  specpol.out
