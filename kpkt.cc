@@ -360,7 +360,7 @@ static auto sample_planck(const double T) -> double
   }
 }
 
-void do_kpkt_bb(struct packet *pkt_ptr)
+void do_kpkt_blackbody(struct packet *pkt_ptr)
 /// handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
 {
   const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
