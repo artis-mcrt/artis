@@ -274,7 +274,8 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
   while (!end_packet) {
     // distance to the next cell
-    const double sdist = grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.where, &snext);
+    const double sdist =
+        grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.where, &snext, &vpkt.last_cross);
     const double s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
 
     calculate_kappa_rpkt_cont(vpkt.nu_cmf, &kappa_vpkt_cont, mgi, false);

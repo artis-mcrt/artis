@@ -131,7 +131,7 @@ int get_ndo(int rank);
 int get_ndo_nonempty(int rank);
 double get_totmassradionuclide(int z, int a);
 double boundary_distance(std::span<const double, 3> dir, std::span<const double, 3> pos, const double tstart,
-                         int cellindex, int *snext);
+                         int cellindex, int *snext, enum cell_boundary *last_cross);
 void change_cell(struct packet *pkt_ptr, int snext);
 
 static inline float get_elem_abundance(int modelgridindex, int element)
