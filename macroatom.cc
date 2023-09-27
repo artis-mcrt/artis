@@ -341,6 +341,8 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
 
   // EXPERIMENT: disable macroatom and emit according to blackbody
   // do_kpkt_blackbody(pkt_ptr);
+  // stats::increment(stats::COUNTER_RESONANCESCATTERINGS);
+  // pkt_ptr->interactions++;
   // return;
 
   // EXPERIMENT: disable macroatom and scatter
@@ -348,6 +350,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
   // pkt_ptr->next_trans = pkt_ptr->next_trans + 1;
   // vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
   // pkt_ptr->em_time = pkt_ptr->prop_time;
+  // pkt_ptr->interactions++;
   // emitt_rpkt(pkt_ptr);
   // return;
 
