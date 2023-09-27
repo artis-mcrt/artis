@@ -91,23 +91,18 @@ static auto get_event(const int modelgridindex,
     const int lineindex = closest_transition(dummypkt.nu_cmf,
                                              dummypkt.next_trans);  /// returns negative value if nu_cmf > nu_trans
     if (lineindex >= 0) {
-      /// line interaction in principle possible (nu_cmf > nu_trans)
-      // printout("[debug] get_event:   line interaction possible\n");
+      /// line interaction is possible (nu_cmf > nu_trans)
 
       const double nu_trans = globals::linelist[lineindex].nu;
 
       // helper variable to overcome numerical problems after line scattering
       // further scattering events should be located at lower frequencies to prevent
-      // multiple scattering events of one pp in a single line
+      // multiple scattering events of one packet in a single line
       dummypkt.next_trans = lineindex + 1;
 
       const double ldist = get_linedistance(dummypkt.prop_time, dummypkt.nu_cmf, nu_trans, d_nu_on_d_l);
 
-      // printout("[debug] get_event:     ldist %g\n",ldist);
-
       const double tau_cont = kap_cont * ldist;
-
-      // printout("[debug] get_event:     tau_rnd %g, tau %g, tau_cont %g\n", tau_rnd, tau, tau_cont);
 
       if (tau_rnd - tau > tau_cont) {
         // got past the continuum optical depth so propagate to the line, and check interaction
@@ -213,12 +208,10 @@ static auto get_event(const int modelgridindex,
     } else {
       /// no line interaction possible - check whether continuum process occurs in cell
 
-      // printout("[debug] get_event:     line interaction impossible\n");
-
       const double tau_cont = kap_cont * (abort_dist - dist);
 
       if (tau_rnd - tau > tau_cont) {
-        // no continuum event occurs before abort_dist
+        // no continuum event before abort_dist
         return std::numeric_limits<double>::max();
       }
       /// continuum process occurs at edist
