@@ -81,7 +81,6 @@ static auto get_event(const int modelgridindex,
   const double d_nu_on_d_l = (nu_cmf_abort - pkt_ptr->nu_cmf) / abort_dist;
 
   struct packet dummypkt = *pkt_ptr;
-  struct packet *const dummypkt_ptr = &dummypkt;
 
   calculate_kappa_rpkt_cont(pkt_ptr, &globals::kappa_rpkt_cont[tid], true);
   const double kap_cont = globals::kappa_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(pkt_ptr);
@@ -90,8 +89,8 @@ static auto get_event(const int modelgridindex,
     /// first select the closest transition in frequency
     /// we need its frequency nu_trans, the element/ion and the corresponding levels
     /// create therefore new variables in packet, which contain next_lowerlevel, ...
-    const int lineindex = closest_transition(dummypkt_ptr->nu_cmf,
-                                             dummypkt_ptr->next_trans);  /// returns negative value if nu_cmf > nu_trans
+    const int lineindex = closest_transition(dummypkt.nu_cmf,
+                                             dummypkt.next_trans);  /// returns negative value if nu_cmf > nu_trans
 
     if (lineindex >= 0) {
       /// line interaction in principle possible (nu_cmf > nu_trans)
@@ -102,7 +101,7 @@ static auto get_event(const int modelgridindex,
       // helper variable to overcome numerical problems after line scattering
       // further scattering events should be located at lower frequencies to prevent
       // multiple scattering events of one pp in a single line
-      dummypkt_ptr->next_trans = lineindex + 1;
+      dummypkt.next_trans = lineindex + 1;
 
       const double ldist = get_linedistance(dummypkt.prop_time, dummypkt.nu_cmf, nu_trans, d_nu_on_d_l);
 
@@ -116,8 +115,8 @@ static auto get_event(const int modelgridindex,
         // got past the continuum optical depth so propagate to the line, and check interaction
 
         if (nu_trans < nu_cmf_abort) {
-          dummypkt_ptr->next_trans -= 1;  // back up one line, because we didn't reach it before the boundary/timelimit
-          pkt_ptr->next_trans = dummypkt_ptr->next_trans;
+          dummypkt.next_trans -= 1;  // back up one line, because we didn't reach it before the boundary/timelimit
+          pkt_ptr->next_trans = dummypkt.next_trans;
 
           return std::numeric_limits<double>::max();
         }
@@ -133,7 +132,7 @@ static auto get_event(const int modelgridindex,
         const double n_u = get_levelpop(modelgridindex, element, ion, upper);
         const double n_l = get_levelpop(modelgridindex, element, ion, lower);
 
-        const double tau_line = std::max(0., (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * dummypkt_ptr->prop_time);
+        const double tau_line = std::max(0., (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * dummypkt.prop_time);
 
         // printout("[debug] get_event:     tau_line %g\n", tau_line);
         // printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
@@ -149,20 +148,20 @@ static auto get_event(const int modelgridindex,
           tau += tau_cont + tau_line;
 
           if constexpr (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
-            move_pkt_withtime(dummypkt_ptr, ldist);
+            move_pkt_withtime(&dummypkt, ldist);
           } else {
             // avoid move_pkt_withtime() to skip the standard Doppler shift calculation
             // and use the linear approx instead
-            dummypkt_ptr->pos[0] += (dummypkt_ptr->dir[0] * ldist);
-            dummypkt_ptr->pos[1] += (dummypkt_ptr->dir[1] * ldist);
-            dummypkt_ptr->pos[2] += (dummypkt_ptr->dir[2] * ldist);
-            dummypkt_ptr->prop_time += ldist / CLIGHT_PROP;
-            dummypkt_ptr->nu_cmf = pkt_ptr->nu_cmf + d_nu_on_d_l * dist;  // should equal nu_trans;
-            assert_testmodeonly(dummypkt_ptr->nu_cmf <= pkt_ptr->nu_cmf);
+            dummypkt.pos[0] += (dummypkt.dir[0] * ldist);
+            dummypkt.pos[1] += (dummypkt.dir[1] * ldist);
+            dummypkt.pos[2] += (dummypkt.dir[2] * ldist);
+            dummypkt.prop_time += ldist / CLIGHT_PROP;
+            dummypkt.nu_cmf = pkt_ptr->nu_cmf + d_nu_on_d_l * dist;  // should equal nu_trans;
+            assert_testmodeonly(dummypkt.nu_cmf <= pkt_ptr->nu_cmf);
           }
 
           radfield::update_lineestimator(modelgridindex, lineindex,
-                                         dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
+                                         dummypkt.prop_time * CLIGHT * dummypkt.e_cmf / dummypkt.nu_cmf);
 
         } else {
           /// bound-bound process occurs
@@ -190,10 +189,9 @@ static auto get_event(const int modelgridindex,
           }
 
           if (DETAILED_LINE_ESTIMATORS_ON) {
-            move_pkt_withtime(dummypkt_ptr, ldist);
-            radfield::update_lineestimator(
-                modelgridindex, lineindex,
-                dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
+            move_pkt_withtime(&dummypkt, ldist);
+            radfield::update_lineestimator(modelgridindex, lineindex,
+                                           dummypkt.prop_time * CLIGHT * dummypkt.e_cmf / dummypkt.nu_cmf);
           }
 
           *rpkt_eventtype = RPKT_EVENTTYPE_BB;
@@ -201,7 +199,7 @@ static auto get_event(const int modelgridindex,
           // printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop
           // %d\n",edist,abort_dist,edist-abort_dist,endloop);
 
-          pkt_ptr->next_trans = dummypkt_ptr->next_trans;
+          pkt_ptr->next_trans = dummypkt.next_trans;
 
           return edist;
         }
@@ -210,13 +208,13 @@ static auto get_event(const int modelgridindex,
 
         edist = dist + (tau_rnd - tau) / kap_cont;
         // assert_always((tau_rnd - tau) / kap_cont < ldist);
-        dummypkt_ptr->next_trans -= 1;
+        dummypkt.next_trans -= 1;
         // printout("[debug] get_event:        distance to the occuring continuum event %g, abort_dist %g\n", edist,
         // abort_dist);
 
         *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
 
-        pkt_ptr->next_trans = dummypkt_ptr->next_trans;
+        pkt_ptr->next_trans = dummypkt.next_trans;
 
         return edist;
       }
@@ -226,7 +224,7 @@ static auto get_event(const int modelgridindex,
       // printout("[debug] get_event:     line interaction impossible\n");
 
       /// helper variable to overcome numerical problems after line scattering
-      dummypkt_ptr->next_trans = globals::nlines + 1;
+      dummypkt.next_trans = globals::nlines + 1;
 
       const double tau_cont = kap_cont * (abort_dist - dist);
 
@@ -243,7 +241,7 @@ static auto get_event(const int modelgridindex,
         *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
       }
 
-      pkt_ptr->next_trans = dummypkt_ptr->next_trans;
+      pkt_ptr->next_trans = dummypkt.next_trans;
 
       return edist;
     }
