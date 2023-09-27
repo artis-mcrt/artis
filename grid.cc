@@ -2406,10 +2406,11 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
 }
 
 [[nodiscard]] auto boundary_distance(std::span<const double, 3> dir, std::span<const double, 3> pos,
-                                     const double tstart, int cellindex, int *snext, enum cell_boundary *last_cross)
+                                     const double tstart, int cellindex, int *snext, enum cell_boundary *pkt_last_cross)
     -> double
 /// Basic routine to compute distance to a cell boundary.
 {
+  auto last_cross = *pkt_last_cross;
   // d is used to loop over the coordinate indicies 0,1,2 for x,y,z
 
   // the following four vectors are in grid coordinates, so either x,y,z or r
@@ -2470,7 +2471,7 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
         isoutside_thisside = pktposgridcoord[d] > (boundaryposmax + 10.);
       }
 
-      if (isoutside_thisside && (*last_cross != direction)) {
+      if (isoutside_thisside && (last_cross != direction)) {
         // for (int d2 = 0; d2 < ndim; d2++)
         const int d2 = d;
         {
@@ -2493,13 +2494,13 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
             return 0;
           }
           *snext = cellindex + cellindexstride;
-          *last_cross = invdirection;
+          *pkt_last_cross = invdirection;
           printout("[warning] swapping packet cellindex from %d to %d and setting last_cross to %d\n", cellindex,
-                   *snext, *last_cross);
+                   *snext, *pkt_last_cross);
           return 0;
         }
         printout("pretending last_cross is %d\n", direction);
-        *last_cross = direction;
+        last_cross = direction;
       }
     }
   }
@@ -2515,8 +2516,7 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
   double d_coordmaxboundary[3] = {-1};  // distance to reach the cell's upper boundary on each coordinate
   double d_coordminboundary[3] = {-1};  // distance to reach the cell's lower boundary on each coordinate
   if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
-    *last_cross =
-        BOUNDARY_NONE;  // handle this separately by setting d_inner and d_outer negative for invalid direction
+    last_cross = BOUNDARY_NONE;  // handle this separately by setting d_inner and d_outer negative for invalid direction
     const double speed = vec_len(dir) * CLIGHT_PROP;  // just in case dir is not normalised
 
     const double r_inner = grid::get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
@@ -2527,8 +2527,8 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
 
   } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
     // coordinate 0 is radius in x-y plane, coord 1 is z
-    if (*last_cross == COORD0_MIN || *last_cross == COORD0_MAX) {
-      *last_cross =
+    if (last_cross == COORD0_MIN || last_cross == COORD0_MAX) {
+      last_cross =
           BOUNDARY_NONE;  // handle this separately by setting d_inner and d_outer negative for invalid direction
     }
 
@@ -2570,30 +2570,28 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
   double distance = std::numeric_limits<double>::max();
   for (int d = 0; d < ndim; d++) {
     // upper d coordinate of the current cell
-    if ((d_coordmaxboundary[d] > 0) && (d_coordmaxboundary[d] < distance) && (*last_cross != negdirections[d])) {
+    if ((d_coordmaxboundary[d] > 0) && (d_coordmaxboundary[d] < distance) && (last_cross != negdirections[d])) {
       choice = posdirections[d];
       distance = d_coordmaxboundary[d];
       if (grid::get_cellcoordpointnum(cellindex, d) == (grid::ncoordgrid[d] - 1)) {
         *snext = -99;
       } else {
+        *pkt_last_cross = choice;
         *snext = cellindex + grid::get_coordcellindexincrement(d);
       }
     }
 
     // lower d coordinate of the current cell
-    if ((d_coordminboundary[d] > 0) && (d_coordminboundary[d] < distance) && (*last_cross != posdirections[d])) {
+    if ((d_coordminboundary[d] > 0) && (d_coordminboundary[d] < distance) && (last_cross != posdirections[d])) {
       choice = negdirections[d];
       distance = d_coordminboundary[d];
       if (grid::get_cellcoordpointnum(cellindex, d) == 0) {
         *snext = -99;
       } else {
+        *pkt_last_cross = choice;
         *snext = cellindex - grid::get_coordcellindexincrement(d);
       }
     }
-  }
-
-  if (*snext != -99) {
-    *last_cross = choice;
   }
 
   if (choice == BOUNDARY_NONE) {
