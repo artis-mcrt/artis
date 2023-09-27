@@ -713,38 +713,26 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
   assert_always(tdist >= 0);
 
+  /// Get distance to the next physical event (continuum or bound-bound)
   double edist = -1;
   int rpkt_eventtype = -1;
   if (mgi == grid::get_npts_model()) {
     /// for empty cells no physical event occurs. The packets just propagate.
     edist = std::numeric_limits<double>::max();
     pkt_ptr->next_trans = -1;
-    // printout("[debug] do_rpkt: propagating through empty cell, set edist=1e99\n");
   } else if (grid::modelgrid[mgi].thick == 1) {
     /// In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
-    /// Get distance to the next physical event in this case only electron scattering
-    // kappa = SIGMA_T*grid::get_nne(mgi);
+
     const double kappa = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * doppler_packet_nucmf_on_nurf(pkt_ptr);
     const double tau_current = 0.0;
     edist = (tau_next - tau_current) / kappa;
     pkt_ptr->next_trans = -1;
-    // printout("[debug] do_rpkt: propagating through grey cell, edist  %g\n",edist);
   } else {
-    // get distance to the next physical event (continuum or bound-bound)
     edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, tau_next, fmin(tdist, sdist));
-
-    // const int next_trans = pkt_ptr->next_trans;
-    // printout("[debug] do_rpkt: after edist: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g\n", pkt_ptr->nu_cmf,
-    //          next_trans, globals::linelist[next_trans].nu);
   }
   assert_always(edist >= 0);
 
-  // printout("[debug] do_rpkt: packet %d sdist, tdist, edist %g, %g, %g old_last_cross %d next_cross %d cellindex
-  // %d dir %g %g
-  // %g\n",pkt_ptr->number,sdist,tdist,edist,old_last_cross,pkt_ptr->last_cross,pkt_ptr->where,pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
-
   if ((sdist < tdist) && (sdist < edist)) {
-    // printout("[debug] do_rpkt: sdist < tdist && sdist < edist\n");
     // Move it into the new cell.
     move_pkt_withtime(pkt_ptr, sdist / 2.);
     update_estimators(pkt_ptr, sdist);
@@ -760,9 +748,9 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
     return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
   }
+
   if ((edist < sdist) && (edist < tdist)) {
     // bound-bound or continuum event
-    // printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
     move_pkt_withtime(pkt_ptr, edist / 2.);
     update_estimators(pkt_ptr, edist);
     move_pkt_withtime(pkt_ptr, edist / 2.);
@@ -780,9 +768,9 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
     return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
   }
+
   if ((tdist < sdist) && (tdist < edist)) {
     // reaches end of timestep before cell boundary or interaction
-    // printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
     move_pkt_withtime(pkt_ptr, tdist / 2.);
     update_estimators(pkt_ptr, tdist);
     pkt_ptr->prop_time = t2;
@@ -791,6 +779,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
     return false;
   }
+
   printout("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist,
            tdist);
   printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
