@@ -360,15 +360,12 @@ static auto sample_planck(const double T) -> double
   }
 }
 
-auto do_kpkt_bb(struct packet *pkt_ptr) -> double
-/// Now routine to deal with a k-packet. Similar idea to do_gamma.
+void do_kpkt_bb(struct packet *pkt_ptr)
+/// handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
 {
-  // double nne = globals::cell[pkt_ptr->where].nne ;
-  const int cellindex = pkt_ptr->where;
-  const int modelgridindex = grid::get_cell_modelgridindex(cellindex);
-  const auto T_e = grid::get_Te(modelgridindex);
+  const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
 
-  pkt_ptr->nu_cmf = sample_planck(T_e);
+  pkt_ptr->nu_cmf = sample_planck(grid::get_Te(modelgridindex));
   assert_always(std::isfinite(pkt_ptr->nu_cmf));
   /// and then emitt the packet randomly in the comoving frame
   emitt_rpkt(pkt_ptr);
@@ -382,17 +379,14 @@ auto do_kpkt_bb(struct packet *pkt_ptr) -> double
   vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
   pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
-
-  return pkt_ptr->prop_time;
 }
 
-auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
-/// Now routine to deal with a k-packet. Similar idea to do_gamma.
+void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
+/// handle a k-packet (kinetic energy of the free electrons)
 {
   const int tid = get_thread_num();
   const double t1 = pkt_ptr->prop_time;
-  const int cellindex = pkt_ptr->where;
-  const int modelgridindex = grid::get_cell_modelgridindex(cellindex);
+  const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
 
   /// don't calculate cooling rates after each cell crossings any longer
   /// but only if we really get a kpkt and they hadn't been calculated already
@@ -406,9 +400,12 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
   }
   // double deltat = 1. / (nne * 1.02e-12 * pow(T_e / 1e4, 0.843));
   // printout("kpkt diffusion time simple %g, advanced %g\n", deltat, 1 / (nne * 1.02e-12 * pow(T_e / 1e4, 0.843)));
-  double const t_current = t1 + deltat;
+  const double t_current = t1 + deltat;
 
-  if (t_current <= t2) {
+  if (t_current > t2) {
+    vec_scale(pkt_ptr->pos, t2 / t1);
+    pkt_ptr->prop_time = t2;
+  } else {
     vec_scale(pkt_ptr->pos, t_current / t1);
     pkt_ptr->prop_time = t_current;
 
@@ -660,12 +657,7 @@ auto do_kpkt(struct packet *pkt_ptr, double t2, int nts) -> double
     }
 
     pkt_ptr->interactions++;
-
-    return pkt_ptr->prop_time;
   }
-  vec_scale(pkt_ptr->pos, t2 / t1);
-  pkt_ptr->prop_time = t2;
-  return pkt_ptr->prop_time;
 }
 
 /*static int compare_coolinglistentry(const void *p1, const void *p2)
