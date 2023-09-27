@@ -1290,7 +1290,7 @@ void calculate_kappa_rpkt_cont(const double nu_cmf, struct rpkt_cont_opacity *ka
              kappa_rpkt_cont_thisthread->bf);
     printout("[fatal] nbfcontinua %d\n", globals::nbfcontinua);
     printout("[fatal] in cell %d with density %g\n", modelgridindex, grid::get_rho(modelgridindex));
-    printout("[fatal] pkt_ptr->nu_cmf %g\n", pkt_ptr->nu_cmf);
+    printout("[fatal] pkt_ptr->nu_cmf %g\n", nu_cmf);
     if (std::isfinite(kappa_rpkt_cont_thisthread->es)) {
       kappa_rpkt_cont_thisthread->ff = 0.;
       kappa_rpkt_cont_thisthread->bf = 0.;
