@@ -575,7 +575,7 @@ static void rpkt_event_thickcell(struct packet *pkt_ptr)
   pkt_ptr->em_time = pkt_ptr->prop_time;
 }
 
-static auto closest_transition_empty(const double nu_cmf, int next_trans) -> int
+auto closest_transition_empty(const double nu_cmf, int next_trans) -> int
 /// for the propagation through empty cells
 /// here its possible that the packet jumps over several lines
 {
