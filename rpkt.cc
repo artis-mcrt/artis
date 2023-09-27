@@ -66,9 +66,6 @@ static auto get_event(const int modelgridindex,
 {
   // printout("get_event()\n");
   /// initialize loop variables
-  double tau = 0.;   /// initial optical depth along path
-  double dist = 0.;  /// initial position on path
-  double edist = 0.;
 
   struct packet dummypkt_abort = *pkt_ptr;
   // this is done is two parts to get identical results to do_rpkt_step()
@@ -84,6 +81,8 @@ static auto get_event(const int modelgridindex,
 
   calculate_kappa_rpkt_cont(pkt_ptr->nu_cmf, &globals::kappa_rpkt_cont[tid], modelgridindex, true);
   const double kap_cont = globals::kappa_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(pkt_ptr);
+  double tau = 0.;   // optical depth along path
+  double dist = 0.;  // position on path
   while (true) {
     /// calculate distance to next line encounter ldist
     /// first select the closest transition in frequency
@@ -91,7 +90,6 @@ static auto get_event(const int modelgridindex,
     /// create therefore new variables in packet, which contain next_lowerlevel, ...
     const int lineindex = closest_transition(dummypkt.nu_cmf,
                                              dummypkt.next_trans);  /// returns negative value if nu_cmf > nu_trans
-
     if (lineindex >= 0) {
       /// line interaction in principle possible (nu_cmf > nu_trans)
       // printout("[debug] get_event:   line interaction possible\n");
@@ -115,8 +113,8 @@ static auto get_event(const int modelgridindex,
         // got past the continuum optical depth so propagate to the line, and check interaction
 
         if (nu_trans < nu_cmf_abort) {
-          dummypkt.next_trans -= 1;  // back up one line, because we didn't reach it before the boundary/timelimit
-          pkt_ptr->next_trans = dummypkt.next_trans;
+          // back up one line, because we didn't reach it before the boundary/timelimit
+          pkt_ptr->next_trans = dummypkt.next_trans - 1;
 
           return std::numeric_limits<double>::max();
         }
@@ -172,7 +170,7 @@ static auto get_event(const int modelgridindex,
           pkt_ptr->mastate.level = upper;  /// if the MA will be activated it must be in the transitions upper level
           pkt_ptr->mastate.activatingline = lineindex;
 
-          edist = dist + ldist;
+          double edist = dist + ldist;
           if (edist >= abort_dist) {
             // if the edist > abort_dist, the line will not be activated in do_rpkt, even thought we are sure that we
             // should hit based on the frequency checks
@@ -235,8 +233,6 @@ static auto get_event(const int modelgridindex,
 
   // should have already returned somewhere!
   assert_always(false);
-
-  return edist;
 }
 
 static void electron_scatter_rpkt(struct packet *pkt_ptr) {
