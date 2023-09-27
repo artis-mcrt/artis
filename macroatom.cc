@@ -163,7 +163,6 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
                                          const double rad_deexc, const int activatingline) {
   /// radiative deexcitation of MA: emitt rpkt
   /// randomly select which line transitions occurs
-  int linelistindex = -99;
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
   double *sum_epstrans_rad_deexc =
@@ -178,7 +177,7 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
   const ptrdiff_t downtransindex = upperval - &sum_epstrans_rad_deexc[0];
 
   assert_always(downtransindex < ndowntrans);
-  linelistindex = globals::elements[element].ions[ion].levels[level].downtrans[downtransindex].lineindex;
+  auto linelistindex = globals::elements[element].ions[ion].levels[level].downtrans[downtransindex].lineindex;
 
   if (linelistindex == activatingline) {
     stats::increment(stats::COUNTER_RESONANCESCATTERINGS);
@@ -337,14 +336,13 @@ static void do_macroatom_ionisation(const int modelgridindex, const int element,
 void do_macroatom(struct packet *pkt_ptr, const int timestep)
 /// Material for handling activated macro atoms.
 {
+  const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
+  const auto T_e = grid::get_Te(modelgridindex);
   const int tid = get_thread_num();
   const double t_mid = globals::time_step[timestep].mid;
 
   // printout("[debug] do MA\n");
 
-  const int cellindex = pkt_ptr->where;
-  const int modelgridindex = grid::get_cell_modelgridindex(cellindex);
-  const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
 
   assert_always(grid::modelgrid[modelgridindex].thick != 1);  // macroatom should not be used in thick cells
