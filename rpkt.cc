@@ -22,8 +22,6 @@
 constexpr int RPKT_EVENTTYPE_BB = 550;
 constexpr int RPKT_EVENTTYPE_CONT = 551;
 
-constexpr auto operator<(const linelist_entry &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; }
-
 auto closest_transition(const double nu_cmf, const int next_trans) -> int
 /// for the propagation through non empty cells
 // find the next transition lineindex redder than nu_cmf
@@ -46,7 +44,9 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
   }
   // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
   // lower_bound matches the first element where the comparison function is false
-  const auto *matchline = std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf);
+  const auto *matchline =
+      std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf,
+                       [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; });
   const int matchindex = std::distance(globals::linelist, matchline);
   if (matchindex >= globals::nlines) {
     return -1;
