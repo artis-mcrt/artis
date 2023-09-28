@@ -1183,7 +1183,7 @@ static void read_model_radioabundances(std::ifstream &fmodel, std::string &line,
           assert_always(ssline >> abundin);  // ignore
         }
 
-        for (int i = 0; i < static_cast<int>(colnames.size()); i++) {
+        for (size_t i = 0; i < colnames.size(); i++) {
           double valuein = 0.;
           assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
           if (nucindexlist[i] >= 0) {
