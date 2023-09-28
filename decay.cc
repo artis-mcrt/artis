@@ -7,6 +7,8 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <numeric>
+#include <ranges>
 #include <regex>
 #include <set>
 #include <sstream>
@@ -264,13 +266,12 @@ static auto nucdecayenergytotal(const int z, const int a) -> double
 // average energy (erg) per decay in the form of gammas and particles [erg]
 {
   const int nucindex = get_nucindex(z, a);
-  double endecay = 0.;
-  endecay += nuclides[nucindex].endecay_gamma;
-  for (const auto decaytype : all_decaytypes) {
-    endecay += nucdecayenergyparticle(nucindex, decaytype) * get_nuc_decaybranchprob(nucindex, decaytype);
-  }
+  const auto endecay_particles = std::transform_reduce(
+      all_decaytypes.begin(), all_decaytypes.end(), 0., std::plus{}, [nucindex](const auto &decaytype) {
+        return nucdecayenergyparticle(nucindex, decaytype) * get_nuc_decaybranchprob(nucindex, decaytype);
+      });
 
-  return endecay;
+  return nuclides[nucindex].endecay_gamma + endecay_particles;
 }
 
 static auto nucdecayenergy(int nucindex, int decaytype) -> double
