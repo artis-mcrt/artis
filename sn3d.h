@@ -125,11 +125,11 @@ static inline void gsl_error_handler_printout(const char *reason, const char *fi
 
 static FILE *fopen_required(const char *filename, const char *mode) {
   assert_always(filename != nullptr);
-  std::string datafolderfilename("data/");
+  const std::string datafolderfilename = "data/" + std::string(filename);
 
-  std::filesystem::path pid_file_path(datafolderfilename + filename);
-  if (mode[0] == 'r' && std::filesystem::exists(datafolderfilename)) {
-    return fopen_required(datafolderfilename.c_str(), mode);
+  std::filesystem::path datafolder_filepath(datafolderfilename);
+  if (mode[0] == 'r' && std::filesystem::exists(datafolder_filepath)) {
+    return fopen_required(datafolder_filepath.c_str(), mode);
   }
   FILE *file = std::fopen(filename, mode);
   if (file == nullptr) {
