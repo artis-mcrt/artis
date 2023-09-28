@@ -267,7 +267,7 @@ static auto nucdecayenergytotal(const int z, const int a) -> double
 {
   const int nucindex = get_nucindex(z, a);
   const auto endecay_particles = std::transform_reduce(
-      all_decaytypes.begin(), all_decaytypes.end(), 0., std::plus{}, [nucindex](const auto &decaytype) {
+      all_decaytypes.cbegin(), all_decaytypes.cend(), 0., std::plus{}, [nucindex](const auto &decaytype) {
         return nucdecayenergyparticle(nucindex, decaytype) * get_nuc_decaybranchprob(nucindex, decaytype);
       });
 
