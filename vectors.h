@@ -2,6 +2,7 @@
 #define VECTORS_H
 
 #include <cmath>
+#include <numeric>
 #include <span>
 
 #include "constants.h"
@@ -15,8 +16,7 @@ void get_rand_isotropic_unitvec(std::span<double, 3> vecout);
 [[nodiscard]] [[gnu::pure]] constexpr auto vec_len(std::span<const double> vec) -> double
 // return the the magnitude of a vector
 {
-  const double squaredlen =
-      std::transform_reduce(vec.begin(), vec.end(), 0., std::plus{}, [](auto val) { return val * val; });
+  const double squaredlen = std::accumulate(vec.begin(), vec.end(), 0., [](auto a, auto b) { return a + b * b; });
 
   return std::sqrt(squaredlen);
 }
