@@ -16,7 +16,7 @@ void get_rand_isotropic_unitvec(std::span<double, 3> vecout);
 // return the the magnitude of a vector
 {
   const double squaredlen =
-      std::accumulate(vec.begin(), vec.end(), 0., [](const double &a, const double &b) { return a + b * b; });
+      std::transform_reduce(vec.begin(), vec.end(), 0., std::plus{}, [](auto val) { return val * val; });
 
   return std::sqrt(squaredlen);
 }
