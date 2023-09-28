@@ -1065,7 +1065,7 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
     } else if (token == "rho") {
       // 2D and 3D models have rho [g/cm3]
       assert_always(get_model_type() != GRID_SPHERICAL1D);
-      assert_always((columnindex == 4 && get_model_type() != GRID_CARTESIAN3D) ||
+      assert_always((columnindex == 4 && get_model_type() == GRID_CARTESIAN3D) ||
                     (columnindex == 3 && get_model_type() == GRID_CYLINDRICAL2D));
       continue;
     } else if (token == "X_Fegroup") {
