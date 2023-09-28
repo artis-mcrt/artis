@@ -155,7 +155,7 @@ static auto get_proccount() -> int
 void write_spectrum(const std::string &spec_filename, const std::string &emission_filename,
                     const std::string &trueemission_filename, const std::string &absorption_filename,
                     const struct spec &spectra, int numtimesteps) {
-  FILE *spec_file = fopen_required(spec_filename.c_str(), "w");
+  FILE *spec_file = fopen_required(spec_filename, "w");
 
   FILE *emission_file = nullptr;
   FILE *trueemission_file = nullptr;
@@ -164,11 +164,11 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
   bool const do_emission_res = spectra.do_emission_res;
 
   if (do_emission_res) {
-    emission_file = fopen_required(emission_filename.c_str(), "w");
+    emission_file = fopen_required(emission_filename, "w");
     assert_always(emission_file != nullptr);
-    trueemission_file = fopen_required(trueemission_filename.c_str(), "w");
+    trueemission_file = fopen_required(trueemission_filename, "w");
     assert_always(trueemission_file != nullptr);
-    absorption_file = fopen_required(absorption_filename.c_str(), "w");
+    absorption_file = fopen_required(absorption_filename, "w");
     assert_always(absorption_file != nullptr);
     printout("Writing %s, %s, %s, and %s\n", spec_filename.c_str(), emission_filename.c_str(),
              trueemission_filename.c_str(), absorption_filename.c_str());
@@ -226,15 +226,15 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
 void write_specpol(const std::string &specpol_filename, const std::string &emission_filename,
                    const std::string &absorption_filename, const struct spec *stokes_i, const struct spec *stokes_q,
                    const struct spec *stokes_u) {
-  FILE *specpol_file = fopen_required(specpol_filename.c_str(), "w");
+  FILE *specpol_file = fopen_required(specpol_filename, "w");
   FILE *emissionpol_file = nullptr;
   FILE *absorptionpol_file = nullptr;
 
   const bool do_emission_res = stokes_i->do_emission_res;
 
   if (do_emission_res) {
-    emissionpol_file = fopen_required(emission_filename.c_str(), "w");
-    absorptionpol_file = fopen_required(absorption_filename.c_str(), "w");
+    emissionpol_file = fopen_required(emission_filename, "w");
+    absorptionpol_file = fopen_required(absorption_filename, "w");
     printout("Writing %s, %s, and %s\n", specpol_filename.c_str(), emission_filename.c_str(),
              absorption_filename.c_str());
   } else {
