@@ -123,17 +123,16 @@ static inline void gsl_error_handler_printout(const char *reason, const char *fi
   }
 }
 
-static FILE *fopen_required(const char *filename, const char *mode) {
-  assert_always(filename != nullptr);
-  const std::string datafolderfilename = "data/" + std::string(filename);
-
-  std::filesystem::path datafolder_filepath(datafolderfilename);
-  if (mode[0] == 'r' && std::filesystem::exists(datafolder_filepath)) {
-    return fopen_required(datafolder_filepath.c_str(), mode);
+static FILE *fopen_required(const std::string &filename, const char *mode) {
+  // look in the data folder first
+  const std::string datafolderfilename = "data/" + filename;
+  if (mode[0] == 'r' && std::filesystem::exists(datafolderfilename)) {
+    return fopen_required(datafolderfilename, mode);
   }
-  FILE *file = std::fopen(filename, mode);
+
+  FILE *file = std::fopen(filename.c_str(), mode);
   if (file == nullptr) {
-    printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename, mode);
+    printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename.c_str(), mode);
     abort();
   }
 
