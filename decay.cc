@@ -706,7 +706,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
   printout("Number of nuclides:  %d\n", get_num_nuclides());
 
   int maxdecaypathlength = 0;
-  for (auto &decaypath : decaypaths) {
+  for (const auto &decaypath : decaypaths) {
     maxdecaypathlength = std::max(maxdecaypathlength, get_decaypathlength(decaypath));
   }
   printout("Number of decay paths: %d (max length %d)\n", get_num_decaypaths(), maxdecaypathlength);
