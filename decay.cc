@@ -836,6 +836,7 @@ static auto get_nuc_massfrac(const int modelgridindex, const int z, const int a,
 
     int fulldecaypathlength = decaypathlength;
     // if the nuclide is out of network, it's one past the end of the chain
+    // or if we're counting alpha particles and the last decaytype is alpha, then the alpha sink is one past the end
     if (!nuc_exists_z_a || (z == 2 && a == 4 && decaypath.decaytypes.back() == decaytypes::DECAYTYPE_ALPHA)) {
       fulldecaypathlength = decaypathlength + 1;
     }
