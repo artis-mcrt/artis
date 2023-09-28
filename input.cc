@@ -1028,7 +1028,7 @@ static void read_atomicdata_files() {
   //   fclose(linelist_file);
   // }
 
-  printout("establish connection between transitions and sorted linelist...");
+  printout("establishing connection between transitions and sorted linelist...\n");
 
   time_t const time_start_establish_linelist_connections = time(nullptr);
   for (lineindex = 0; lineindex < globals::nlines; lineindex++) {
@@ -1058,7 +1058,7 @@ static void read_atomicdata_files() {
     uptrans->lineindex = lineindex;
   }
 
-  printout("took %ds\n", time(nullptr) - time_start_establish_linelist_connections);
+  printout("  took %ds\n", time(nullptr) - time_start_establish_linelist_connections);
 
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
