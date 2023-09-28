@@ -266,9 +266,9 @@ static auto nucdecayenergytotal(const int z, const int a) -> double
 // average energy (erg) per decay in the form of gammas and particles [erg]
 {
   const int nucindex = get_nucindex(z, a);
-  const auto endecay_particles = std::transform_reduce(
-      all_decaytypes.cbegin(), all_decaytypes.cend(), 0., std::plus{}, [nucindex](const auto &decaytype) {
-        return nucdecayenergyparticle(nucindex, decaytype) * get_nuc_decaybranchprob(nucindex, decaytype);
+  const auto endecay_particles = std::accumulate(
+      all_decaytypes.cbegin(), all_decaytypes.cend(), 0., [nucindex](const double ensum, const auto &decaytype) {
+        return ensum + nucdecayenergyparticle(nucindex, decaytype) * get_nuc_decaybranchprob(nucindex, decaytype);
       });
 
   return nuclides[nucindex].endecay_gamma + endecay_particles;
@@ -707,7 +707,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
   printout("Number of nuclides:  %d\n", get_num_nuclides());
 
   const int maxdecaypathlength = std::accumulate(
-      decaypaths.begin(), decaypaths.end(), 0,
+      decaypaths.cbegin(), decaypaths.cend(), 0,
       [](const int maxlen, const auto decaypath) { return std::max(maxlen, get_decaypathlength(decaypath)); });
 
   printout("Number of decay paths: %d (max length %d)\n", get_num_decaypaths(), maxdecaypathlength);
