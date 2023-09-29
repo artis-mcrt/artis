@@ -212,7 +212,7 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
   pkt_ptr->last_event = 0;
 
   // emit the rpkt in a random direction
-  emitt_rpkt(pkt_ptr);
+  emit_rpkt(pkt_ptr);
 
   // the r-pkt can only interact with lines redder than the current one
   pkt_ptr->next_trans = linelistindex + 1;
@@ -277,7 +277,7 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
   pkt_ptr->last_event = 2;
 
   /// Finally emit the packet into a randomly chosen direction, update the continuum opacity and set some flags
-  emitt_rpkt(pkt_ptr);
+  emit_rpkt(pkt_ptr);
 
   if constexpr (TRACK_ION_STATS) {
     stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_RADRECOMB_MACROATOM,

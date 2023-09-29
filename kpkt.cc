@@ -368,7 +368,7 @@ void do_kpkt_blackbody(struct packet *pkt_ptr)
   pkt_ptr->nu_cmf = sample_planck(grid::get_Te(modelgridindex));
   assert_always(std::isfinite(pkt_ptr->nu_cmf));
   /// and then emitt the packet randomly in the comoving frame
-  emitt_rpkt(pkt_ptr);
+  emit_rpkt(pkt_ptr);
   // printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
   pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
   // if (tid == 0) k_stat_to_r_bb++;
@@ -508,7 +508,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
       assert_always(std::isfinite(pkt_ptr->nu_cmf));
       /// and then emitt the packet randomly in the comoving frame
-      emitt_rpkt(pkt_ptr);
+      emit_rpkt(pkt_ptr);
       pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
       stats::increment(stats::COUNTER_K_STAT_TO_R_FF);
 
@@ -541,7 +541,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       // }
 
       // and then emitt the packet randomly in the comoving frame
-      emitt_rpkt(pkt_ptr);
+      emit_rpkt(pkt_ptr);
 
       if constexpr (TRACK_ION_STATS) {
         stats::increment_ion_stats(modelgridindex, element, lowerion + 1, stats::ION_RADRECOMB_KPKT,

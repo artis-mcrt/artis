@@ -542,7 +542,7 @@ static void rpkt_event_thickcell(struct packet *pkt_ptr)
   pkt_ptr->last_event = 12;
   stats::increment(stats::COUNTER_ESCOUNTER);
 
-  emitt_rpkt(pkt_ptr);
+  emit_rpkt(pkt_ptr);
   /// Electron scattering does not modify the last emission flag
   // pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
   /// but it updates the last emission position
@@ -922,7 +922,7 @@ auto get_rpkt_escape_prob(struct packet *pkt_ptr, const double tstart) -> double
   return escape_prob_avg;
 }
 
-void emitt_rpkt(struct packet *pkt_ptr) {
+void emit_rpkt(struct packet *pkt_ptr) {
   /// now make the packet a r-pkt and set further flags
   pkt_ptr->type = TYPE_RPKT;
   pkt_ptr->last_cross = BOUNDARY_NONE;  /// allow all further cell crossings
