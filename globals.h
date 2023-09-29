@@ -301,8 +301,6 @@ extern double rho_crit;
 
 extern int total_nlte_levels;
 
-extern bool homogeneous_abundances;
-
 extern bool simulation_continued_from_saved;
 extern double nu_rfcut;
 extern int num_lte_timesteps;

@@ -725,10 +725,7 @@ static void read_atomicdata_files() {
   assert_always(fscanf(compositiondata, "%d", &T_preset) == 1);
   int homogeneous_abundances_in = 0;
   assert_always(fscanf(compositiondata, "%d", &homogeneous_abundances_in) == 1);
-  globals::homogeneous_abundances = (homogeneous_abundances_in != 0);
-  if (globals::homogeneous_abundances) {
-    printout("[info] read_atomicdata: homogeneous abundances as defined in compositiondata.txt are active\n");
-  }
+  assert_always(homogeneous_abundances_in == 0);  // no longer in use
 
   /// open transition data file
   auto ftransitiondata = fstream_required("transitiondata.txt", std::ios::in);

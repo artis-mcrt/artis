@@ -1181,8 +1181,6 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 /// Parameters: - modelgridindex: the grid cell for which to update the abundances
 ///             - t_current: current time (here mid of current timestep)
 {
-  assert_always(!globals::homogeneous_abundances);  // no longer supported
-
   printout("update_abundances for cell %d timestep %d\n", modelgridindex, timestep);
 
   for (int element = get_nelements() - 1; element >= 0; element--) {

@@ -112,8 +112,6 @@ double rho_crit;        /// MK: critical opacity in opacity_case 3 (could now be
 
 int total_nlte_levels;  /// total number of nlte levels
 
-bool homogeneous_abundances;
-
 bool simulation_continued_from_saved;
 double nu_rfcut;
 int num_lte_timesteps;
