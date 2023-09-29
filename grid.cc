@@ -972,7 +972,7 @@ static void abundances_read() {
   const bool threedimensional = (get_model_type() == GRID_CARTESIAN3D);
 
   /// Open the abundances file
-  std::ifstream abundance_file("abundances.txt");
+  auto abundance_file = fstream_required("abundances.txt", std::ios::in);
 
   /// and process through the grid to read in the abundances per cell
   /// The abundance file should only contain information for non-empty
@@ -1024,7 +1024,6 @@ static void abundances_read() {
     }
   }
 
-  abundance_file.close();
 #ifdef MPI_ON
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
@@ -1118,7 +1117,7 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
   // }
 }
 
-static void read_model_radioabundances(std::ifstream &fmodel, std::string &line, const int linepos, const int mgi,
+static void read_model_radioabundances(std::fstream &fmodel, std::string &line, const int linepos, const int mgi,
                                        const bool keepcell, std::vector<std::string> &colnames,
                                        std::vector<int> &nucindexlist) {
   bool one_line_per_cell = false;
@@ -1216,8 +1215,7 @@ static void read_model_radioabundances(std::ifstream &fmodel, std::string &line,
 static void read_1d_model()
 // Read in a 1D spherical model
 {
-  std::ifstream fmodel("model.txt");
-  assert_always(fmodel.is_open());
+  auto fmodel = fstream_required("model.txt", std::ios::in);
 
   std::string line;
 
@@ -1309,8 +1307,7 @@ static void read_1d_model()
 static void read_2d_model()
 // Read in a 2D axisymmetric spherical coordinate model
 {
-  std::ifstream fmodel("model.txt");
-  assert_always(fmodel.is_open());
+  auto fmodel = fstream_required("model.txt", std::ios::in);
 
   std::string line;
 
@@ -1409,9 +1406,7 @@ static void read_2d_model()
 static void read_3d_model()
 /// Subroutine to read in a 3-D model.
 {
-  printout("reading 3D model.txt...\n");
-  std::ifstream fmodel("model.txt");
-  assert_always(fmodel.is_open());
+  auto fmodel = fstream_required("model.txt", std::ios::in);
 
   std::string line;
 
