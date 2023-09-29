@@ -723,9 +723,10 @@ static void read_atomicdata_files() {
   /// temperature to determine relevant ionstages
   int T_preset = 0;
   assert_always(compositiondata >> T_preset);
-  int homogeneous_abundances_in = 0;
-  assert_always(compositiondata >> homogeneous_abundances_in);
-  assert_always(homogeneous_abundances_in == 0);  // no longer in use
+  assert_always(T_preset == 0);  // no longer in use
+  int homogeneous_abundances = 0;
+  assert_always(compositiondata >> homogeneous_abundances);
+  assert_always(homogeneous_abundances == 0);  // no longer in use
 
   /// open transition data file
   auto ftransitiondata = fstream_required("transitiondata.txt", std::ios::in);
