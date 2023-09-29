@@ -1671,8 +1671,6 @@ static void read_atomicdata() {
 void input(int rank)
 /// To govern the input. For now hardwire everything.
 {
-  globals::homogeneous_abundances = false;
-
   globals::n_titer = 1;
   globals::initial_iteration = false;
 
