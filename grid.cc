@@ -1303,8 +1303,6 @@ static void read_1d_model()
     abort();
   }
 
-  fmodel.close();
-
   globals::vmax = vout_model[get_npts_model() - 1];
 }
 
@@ -1405,7 +1403,6 @@ static void read_2d_model()
     abort();
   }
 
-  fmodel.close();
   printout("Effectively used model grid cells %d\n", nonemptymgi);
 }
 
@@ -1550,10 +1547,6 @@ static void read_3d_model()
 
   printout("min_den %g [g/cm3]\n", min_den);
   printout("Effectively used model grid cells %d\n", nonemptymgi);
-
-  /// Now, set actual size of the modelgrid to the number of non-empty cells.
-
-  fmodel.close();
 }
 
 static void calc_modelinit_totmassradionuclides() {
