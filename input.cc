@@ -1709,17 +1709,11 @@ void input(int rank)
   grid::read_ejecta_model();
 }
 
-static auto getline(std::istream &input, std::string &line) -> bool
-// return true if line read, false if not (EOF)
-{
-  return !(!std::getline(input, line));
-}
-
 auto get_noncommentline(std::fstream &input, std::string &line) -> bool
 // read the next line, skipping any comment lines beginning with '#'
 {
   while (true) {
-    bool const linefound = getline(input, line);
+    const bool linefound = !(!std::getline(input, line));
     // printout("LINE: >%s<  linefound: %s commentonly: %s \n", line.c_str(), linefound ? "true" : "false",
     // lineiscommentonly(line) ? "true" : "false");
     if (!linefound) {
