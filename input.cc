@@ -340,7 +340,7 @@ static void read_phixs_data(const int phixs_file_version) {
   printout("[info] mem_usage: photoionisation tables occupy %.3f MB\n", mem_usage_phixs / 1024. / 1024.);
 }
 
-static void read_ion_levels(FILE *adata, const int element, const int ion, const int nions, const int nlevels,
+static void read_ion_levels(std::fstream &adata, const int element, const int ion, const int nions, const int nlevels,
                             int nlevelsmax, const double energyoffset, const double ionpot,
                             struct transitions *transitions) {
   const int nlevels_used = std::min(nlevels, nlevelsmax);
@@ -354,8 +354,9 @@ static void read_ion_levels(FILE *adata, const int element, const int ion, const
     double levelenergy = NAN;
     double statweight = NAN;
     int ntransitions = 0;
-    assert_always(fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex_in, &levelenergy, &statweight, &ntransitions) ==
-                  4);
+    std::string line;
+    assert_always(get_noncommentline(adata, line));
+    assert_always(std::stringstream(line) >> levelindex_in >> levelenergy >> statweight >> ntransitions);
     assert_always(levelindex_in == level + groundstate_index_in);
 
     if (level < nlevelsmax) {
@@ -706,7 +707,7 @@ static void read_atomicdata_files() {
 
   auto compositiondata = fstream_required("compositiondata.txt", std::ios::in);
 
-  FILE *adata = fopen_required("adata.txt", "r");
+  auto adata = fstream_required("adata.txt", std::ios::in);
 
   printout("single_level_top_ion: %s\n", single_level_top_ion ? "true" : "false");
   printout("single_ground_level: %s\n", single_ground_level ? "true" : "false");
@@ -796,11 +797,16 @@ static void read_atomicdata_files() {
           double statweight = NAN;
           int levelindex = 0;
           int ntransitions = 0;
-          assert_always(
-              fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex, &levelenergy, &statweight, &ntransitions) == 4);
+          std::string line;
+          std::getline(adata, line);
+          std::istringstream ssline(line);
+
+          assert_always(ssline >> levelindex >> levelenergy >> statweight >> ntransitions);
         }
 
-        assert_always(fscanf(adata, "%d %d %d %lg\n", &adata_Z_in, &ionstage, &nlevels, &ionpot) == 4);
+        std::string line;
+        assert_always(get_noncommentline(adata, line));
+        assert_always(std::istringstream(line) >> adata_Z_in >> ionstage >> nlevels >> ionpot);
       }
 
       printout("adata header matched: Z %d, ionstage %d, nlevels %d\n", adata_Z_in, ionstage, nlevels);
@@ -922,7 +928,6 @@ static void read_atomicdata_files() {
       uniqueionindex++;
     }
   }
-  fclose(adata);
   printout("nbfcheck %d\n", nbfcheck);
 
   /// Save the linecounters value to the global variable containing the number of lines
