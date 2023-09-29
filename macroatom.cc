@@ -345,15 +345,6 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
   // pkt_ptr->interactions++;
   // return;
 
-  // EXPERIMENT: disable macroatom and scatter
-  // pkt_ptr->emissiontype = pkt_ptr->next_trans;
-  // pkt_ptr->next_trans = pkt_ptr->next_trans + 1;
-  // vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
-  // pkt_ptr->em_time = pkt_ptr->prop_time;
-  // pkt_ptr->interactions++;
-  // emitt_rpkt(pkt_ptr);
-  // return;
-
   const int tid = get_thread_num();
   const double t_mid = globals::time_step[timestep].mid;
 
