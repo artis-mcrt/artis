@@ -403,7 +403,7 @@ static void read_ion_levels(FILE *adata, const int element, const int ion, const
   }
 }
 
-static void read_ion_transitions(std::istream &ftransitiondata, const int tottransitions_in_file, int *tottransitions,
+static void read_ion_transitions(std::fstream &ftransitiondata, const int tottransitions_in_file, int *tottransitions,
                                  std::vector<struct transitiontable_entry> &transitiontable,
                                  const int nlevels_requiretransitions,
                                  const int nlevels_requiretransitions_upperlevels) {
@@ -735,8 +735,7 @@ static void read_atomicdata_files() {
   }
 
   /// open transition data file
-  std::ifstream ftransitiondata("transitiondata.txt");
-  assert_always(ftransitiondata.is_open());
+  auto ftransitiondata = fstream_required("transitiondata.txt", std::ios::in);
 
   int lineindex = 0;         /// counter to determine the total number of lines
   int uniqueionindex = 0;    // index into list of all ions of all elements
@@ -1726,7 +1725,7 @@ static auto getline(std::istream &input, std::string &line) -> bool
   return !(!std::getline(input, line));
 }
 
-auto get_noncommentline(std::istream &input, std::string &line) -> bool
+auto get_noncommentline(std::fstream &input, std::string &line) -> bool
 // read the next line, skipping any comment lines beginning with '#'
 {
   while (true) {
@@ -1747,8 +1746,7 @@ void read_parameterfile(int rank)
 {
   unsigned long pre_zseed = 0;
 
-  std::ifstream file("input.txt");
-  assert_always(file.is_open());
+  auto file = fstream_required("input.txt", std::ios::in);
 
   std::string line;
 
