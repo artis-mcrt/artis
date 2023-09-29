@@ -139,6 +139,16 @@ static FILE *fopen_required(const std::string &filename, const char *mode) {
   return file;
 }
 
+static std::fstream fstream_required(const std::string &filename, std::ios_base::openmode mode) {
+  const std::string datafolderfilename = "data/" + filename;
+  if (mode == std::ios::in && std::filesystem::exists(datafolderfilename)) {
+    return fstream_required(datafolderfilename, mode);
+  }
+  auto file = std::fstream(filename, mode);
+  assert_always(file.is_open());
+  return file;
+}
+
 static int get_timestep(const double time) {
   assert_always(time >= globals::tmin);
   assert_always(time < globals::tmax);
@@ -212,7 +222,7 @@ inline void check_already_running(void) {
   pid_t artispid = getpid();
 
   if (std::filesystem::exists("artis.pid")) {
-    std::ifstream pidfile("artis.pid", std::ifstream::in);
+    auto pidfile = std::fstream("artis.pid", std::ios::in);
     pid_t artispid_in;
     pidfile >> artispid_in;
     pidfile.close();
@@ -226,7 +236,7 @@ inline void check_already_running(void) {
     }
   }
 
-  std::ofstream pidfile("artis.pid", std::ofstream::out | std::ofstream::trunc);
+  auto pidfile = std::fstream("artis.pid", std::ofstream::out | std::ofstream::trunc);
   pidfile << artispid;
   pidfile.close();
 }
