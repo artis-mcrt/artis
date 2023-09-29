@@ -704,7 +704,7 @@ static void read_atomicdata_files() {
   int totaluptrans = 0;
   int totaldowntrans = 0;
 
-  FILE *compositiondata = fopen_required("compositiondata.txt", "r");
+  auto compositiondata = fstream_required("compositiondata.txt", std::ios::in);
 
   FILE *adata = fopen_required("adata.txt", "r");
 
@@ -712,7 +712,7 @@ static void read_atomicdata_files() {
   printout("single_ground_level: %s\n", single_ground_level ? "true" : "false");
   /// initialize atomic data structure to number of elements
   int nelements_in = 0;
-  assert_always(fscanf(compositiondata, "%d", &nelements_in) == 1);
+  assert_always(compositiondata >> nelements_in);
   set_nelements(nelements_in);
   globals::elements = static_cast<elementlist_entry *>(calloc(get_nelements(), sizeof(elementlist_entry)));
   assert_always(globals::elements != nullptr);
@@ -722,9 +722,9 @@ static void read_atomicdata_files() {
 
   /// temperature to determine relevant ionstages
   int T_preset = 0;
-  assert_always(fscanf(compositiondata, "%d", &T_preset) == 1);
+  assert_always(compositiondata >> T_preset);
   int homogeneous_abundances_in = 0;
-  assert_always(fscanf(compositiondata, "%d", &homogeneous_abundances_in) == 1);
+  assert_always(compositiondata >> homogeneous_abundances_in);
   assert_always(homogeneous_abundances_in == 0);  // no longer in use
 
   /// open transition data file
@@ -743,8 +743,8 @@ static void read_atomicdata_files() {
     int nlevelsmax_readin = 0;
     double abundance = NAN;
     double mass_amu = NAN;
-    assert_always(fscanf(compositiondata, "%d %d %d %d %d %lg %lg", &Z, &nions, &lowermost_ionstage,
-                         &uppermost_ionstage, &nlevelsmax_readin, &abundance, &mass_amu) == 7);
+    assert_always(compositiondata >> Z >> nions >> lowermost_ionstage >> uppermost_ionstage >> nlevelsmax_readin >>
+                  abundance >> mass_amu);
     printout("readin compositiondata: next element Z %d, nions %d, lowermost %d, uppermost %d, nlevelsmax %d\n", Z,
              nions, lowermost_ionstage, uppermost_ionstage, nlevelsmax_readin);
     assert_always(Z > 0);
@@ -922,8 +922,6 @@ static void read_atomicdata_files() {
     }
   }
   fclose(adata);
-  ftransitiondata.close();
-  fclose(compositiondata);
   printout("nbfcheck %d\n", nbfcheck);
 
   /// Save the linecounters value to the global variable containing the number of lines
