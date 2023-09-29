@@ -618,7 +618,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
   auto standard_nuclides = nuclides;
 
   if (!custom_alist.empty()) {
-    std::ifstream fbetaminus("betaminusdecays.txt");
+    auto fbetaminus = fstream_required("betaminusdecays.txt", std::ios::in);
     assert_always(fbetaminus.is_open());
     std::string line;
     while (get_noncommentline(fbetaminus, line)) {
@@ -643,9 +643,8 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
       //          z, get_elname(z), a, e_elec_mev, e_gamma_mev, tau_sec);
       assert_always(e_elec_mev >= 0.);
     }
-    fbetaminus.close();
 
-    std::ifstream falpha("alphadecays.txt");
+    auto falpha = fstream_required("alphadecays.txt", std::ios::in);
     assert_always(falpha.is_open());
     while (get_noncommentline(falpha, line)) {
       // columns: # A, Z, branch_alpha, branch_beta, halflife[s], Q_total_alphadec[MeV], Q_total_betadec[MeV],
@@ -687,7 +686,6 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
         //          z, get_elname(z), a, e_alpha_mev, e_gamma_mev, tau_sec);
       }
     }
-    falpha.close();
   }
 
   // add any extra nuclides that were specified but not in the decay data files
