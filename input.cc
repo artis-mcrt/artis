@@ -273,15 +273,16 @@ static void read_phixs_data(const int phixs_file_version) {
   double phixs_threshold_ev = -1;
   while (true) {
     int nphixspoints_inputtable = 0;
+    std::string phixsline;
+    if (!get_noncommentline(phixsfile, phixsline)) {
+      break;
+    }
     if (phixs_file_version == 1) {
-      if (!(phixsfile >> Z >> upperionstage >> upperlevel_in >> lowerionstage >> lowerlevel_in >>
-            nphixspoints_inputtable)) {
-        break;
-      }
+      assert_always(std::istringstream(phixsline) >> Z >> upperionstage >> upperlevel_in >> lowerionstage >>
+                    lowerlevel_in >> nphixspoints_inputtable);
     } else {
-      if (!(phixsfile >> Z >> upperionstage >> upperlevel_in >> lowerionstage >> lowerlevel_in >> phixs_threshold_ev)) {
-        break;
-      };
+      assert_always(std::istringstream(phixsline) >> Z >> upperionstage >> upperlevel_in >> lowerionstage >>
+                    lowerlevel_in >> phixs_threshold_ev);
       nphixspoints_inputtable = globals::NPHIXSPOINTS;
     }
     assert_always(Z > 0);
