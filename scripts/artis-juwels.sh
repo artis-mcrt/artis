@@ -13,6 +13,8 @@
 module load Stages/2023 GCC ParaStationMPI
 module load GSL
 
+module list
+
 cd $SLURM_SUBMIT_DIR
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
