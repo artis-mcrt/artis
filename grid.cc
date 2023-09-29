@@ -1921,13 +1921,12 @@ static void setup_nstart_ndo() {
   assert_always(npts_nonempty_assigned == get_nonempty_npts_model());
 
   if (globals::rank_global == 0) {
-    std::ofstream fileout("modelgridrankassignments.out");
+    auto fileout = std::ofstream("modelgridrankassignments.out");
     assert_always(fileout.is_open());
     fileout << "#rank nstart ndo ndo_nonempty\n";
     for (int r = 0; r < nprocesses; r++) {
       fileout << r << " " << ranks_nstart[r] << " " << ranks_ndo[r] << " " << ranks_ndo_nonempty[r] << "\n";
     }
-    fileout.close();
   }
 }
 
