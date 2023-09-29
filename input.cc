@@ -357,7 +357,7 @@ static void read_ion_levels(std::fstream &adata, const int element, const int io
     int ntransitions = 0;
     std::string line;
     assert_always(get_noncommentline(adata, line));
-    assert_always(std::stringstream(line) >> levelindex_in >> levelenergy >> statweight >> ntransitions);
+    assert_always(std::istringstream(line) >> levelindex_in >> levelenergy >> statweight >> ntransitions);
     assert_always(levelindex_in == level + groundstate_index_in);
 
     if (level < nlevelsmax) {
@@ -426,7 +426,7 @@ static void read_ion_transitions(std::fstream &ftransitiondata, const int tottra
       int intforbidden = 0;
       assert_always(getline(ftransitiondata, line));
       if (i == 0) {
-        std::stringstream ss(line);
+        std::istringstream ss(line);
         std::string word;
         int word_count = 0;
         while (ss >> word) {
@@ -436,10 +436,10 @@ static void read_ion_transitions(std::fstream &ftransitiondata, const int tottra
         oldtransitionformat = (word_count == 4);
       }
       if (!oldtransitionformat) {
-        assert_always(sscanf(line.c_str(), "%d %d %g %g %d", &lower_in, &upper_in, &A, &coll_str, &intforbidden) == 5);
+        assert_always(std::istringstream(line) >> lower_in >> upper_in >> A >> coll_str >> intforbidden);
       } else {
         int transindex = 0;  // not used
-        assert_always(sscanf(line.c_str(), "%d %d %d %g", &transindex, &lower_in, &upper_in, &A) == 4);
+        assert_always(std::istringstream(line) >> transindex >> lower_in >> upper_in >> A);
       }
       const int lower = lower_in - groundstate_index_in;
       const int upper = upper_in - groundstate_index_in;
@@ -800,9 +800,8 @@ static void read_atomicdata_files() {
           int ntransitions = 0;
           std::string line;
           std::getline(adata, line);
-          std::istringstream ssline(line);
 
-          assert_always(ssline >> levelindex >> levelenergy >> statweight >> ntransitions);
+          assert_always(std::istringstream(line) >> levelindex >> levelenergy >> statweight >> ntransitions);
         }
 
         std::string line;
@@ -845,9 +844,8 @@ static void read_atomicdata_files() {
         for (int i = 0; i < tottransitions_in_file; i++) {
           assert_always(getline(ftransitiondata, line));
         }
-        assert_always(get_noncommentline(ftransitiondata, line));
-        assert_always(
-            sscanf(line.c_str(), "%d %d %d", &transdata_Z_in, &transdata_ionstage_in, &tottransitions_in_file) == 3);
+        assert_always(get_noncommentline(ftransitiondata, line));  // get_noncommentline to skip over blank lines
+        assert_always(std::istringstream(line) >> transdata_Z_in >> transdata_ionstage_in >> tottransitions_in_file);
       }
 
       printout("transdata header matched: transdata_Z_in %d, transdata_ionstage_in %d, tottransitions %d\n",
@@ -1743,7 +1741,7 @@ void read_parameterfile(int rank)
   assert_always(get_noncommentline(file, line));
 
   uint_fast64_t zseed_input = 0;
-  std::stringstream(line) >> zseed_input;
+  std::istringstream(line) >> zseed_input;
 
   if (zseed_input > 0) {
     pre_zseed = zseed_input;  // random number seed
@@ -1773,12 +1771,11 @@ void read_parameterfile(int rank)
 #endif
 
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> globals::ntstep;  // number of time steps
+  std::istringstream(line) >> globals::ntstep;  // number of time steps
   assert_always(globals::ntstep > 0);
 
   assert_always(get_noncommentline(file, line));
-  // printout("line %s\n", line.c_str());
-  std::stringstream(line) >> globals::itstep >> globals::ftstep;  // number of start and end time step
+  std::istringstream(line) >> globals::itstep >> globals::ftstep;  // number of start and end time step
   printout("input: itstep %d ftstep %d\n", globals::itstep, globals::ftstep);
   assert_always(globals::itstep < globals::ntstep);
   assert_always(globals::itstep <= globals::ftstep);
@@ -1787,7 +1784,7 @@ void read_parameterfile(int rank)
   double tmin_days = 0.;
   double tmax_days = 0.;
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> tmin_days >> tmax_days;  // start and end times
+  std::istringstream(line) >> tmin_days >> tmax_days;  // start and end times
   assert_always(tmin_days > 0);
   assert_always(tmax_days > 0);
   assert_always(tmin_days < tmax_days);
@@ -1802,7 +1799,7 @@ void read_parameterfile(int rank)
 
   assert_always(get_noncommentline(file, line));  // model dimensions
   int dum1 = 0;
-  std::stringstream(line) >> dum1;
+  std::istringstream(line) >> dum1;
   if (dum1 == 1) {
     grid::set_model_type(GRID_SPHERICAL1D);
   } else if (dum1 == 2) {
@@ -1818,11 +1815,11 @@ void read_parameterfile(int rank)
   assert_always(get_noncommentline(file, line));  // UNUSED change speed of light
 
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> globals::gamma_grey;  // use grey opacity for gammas?
+  std::istringstream(line) >> globals::gamma_grey;  // use grey opacity for gammas?
 
   float syn_dir_in[3];
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> syn_dir_in[0] >> syn_dir_in[1] >> syn_dir_in[2];  // components of syn_dir
+  std::istringstream(line) >> syn_dir_in[0] >> syn_dir_in[1] >> syn_dir_in[2];  // components of syn_dir
 
   const double rr = (syn_dir_in[0] * syn_dir_in[0]) + (syn_dir_in[1] * syn_dir_in[1]) + (syn_dir_in[2] * syn_dir_in[2]);
   // ensure that this vector is normalised.
@@ -1839,23 +1836,23 @@ void read_parameterfile(int rank)
   }
 
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> globals::opacity_case;  // opacity choice
+  std::istringstream(line) >> globals::opacity_case;  // opacity choice
 
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> globals::rho_crit_para;  // free parameter for calculation of rho_crit
+  std::istringstream(line) >> globals::rho_crit_para;  // free parameter for calculation of rho_crit
   printout("input: rho_crit_para %g\n", globals::rho_crit_para);
   /// he calculation of rho_crit itself depends on the time, therfore it happens in grid_init and update_grid
 
   assert_always(get_noncommentline(file, line));
   int debug_packet = 0;
-  std::stringstream(line) >> debug_packet;  // activate debug output for packet
+  std::istringstream(line) >> debug_packet;  // activate debug output for packet
   assert_always(debug_packet == -1);
   // select a negative value to deactivate
 
   // Do we start a new simulation or, continue another one?
   int continue_flag = 0;
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> continue_flag;
+  std::istringstream(line) >> continue_flag;
   globals::simulation_continued_from_saved = (continue_flag == 1);
   if (globals::simulation_continued_from_saved) {
     printout("input: resuming simulation from saved point\n");
@@ -1868,13 +1865,13 @@ void read_parameterfile(int rank)
   /// switches from the nebular approximation to LTE.
   float dum2 = NAN;
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> dum2;  // free parameter for calculation of rho_crit
+  std::istringstream(line) >> dum2;  // free parameter for calculation of rho_crit
   globals::nu_rfcut = CLIGHT / (dum2 * 1e-8);
   printout("input: nu_rfcut %g\n", globals::nu_rfcut);
 
   /// Sets the number of initial LTE timesteps for NLTE runs
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> globals::num_lte_timesteps;
+  std::istringstream(line) >> globals::num_lte_timesteps;
   printout("input: doing the first %d timesteps in LTE\n", globals::num_lte_timesteps);
 
   if (NT_ON) {
@@ -1907,7 +1904,7 @@ void read_parameterfile(int rank)
 
   /// Set up initial grey approximation?
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> globals::cell_is_optically_thick >> globals::num_grey_timesteps;
+  std::istringstream(line) >> globals::cell_is_optically_thick >> globals::num_grey_timesteps;
   printout(
       "input: cells with Thomson optical depth > %g are treated in grey approximation for the first %d timesteps\n",
       globals::cell_is_optically_thick, globals::num_grey_timesteps);
@@ -1915,16 +1912,16 @@ void read_parameterfile(int rank)
   /// Limit the number of bf-continua
   assert_always(get_noncommentline(file, line));
   int max_bf_continua = 0;
-  std::stringstream(line) >> max_bf_continua;
+  std::istringstream(line) >> max_bf_continua;
   assert_always(max_bf_continua == -1);
 
   /// for exspec: read number of MPI tasks
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> globals::nprocs_exspec;
+  std::istringstream(line) >> globals::nprocs_exspec;
 
   /// Extract line-of-sight dependent information of last emission for spectrum_res
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> dum1;
+  std::istringstream(line) >> dum1;
   globals::do_emission_res = (dum1 != 0);
 
   /// To reduce the work imbalance between different MPI tasks I introduced a diffusion
@@ -1935,7 +1932,7 @@ void read_parameterfile(int rank)
   /// kpkts live. Parameter two (an int) gives the number of time steps for which we
   /// want to use this approximation
   assert_always(get_noncommentline(file, line));
-  std::stringstream(line) >> globals::kpktdiffusion_timescale >> globals::n_kpktdiffusion_timesteps;
+  std::istringstream(line) >> globals::kpktdiffusion_timescale >> globals::n_kpktdiffusion_timesteps;
   printout("input: kpkts diffuse %g of a time step's length for the first %d time steps\n",
            globals::kpktdiffusion_timescale, globals::n_kpktdiffusion_timesteps);
 
