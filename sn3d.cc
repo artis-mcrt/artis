@@ -982,7 +982,7 @@ auto main(int argc, char *argv[]) -> int {
 #endif
 
   const time_t real_time_end = time(nullptr);
-  printout("simulation finished at %ld (this job wallclock hours %.2f * %d CPUs = %.1f CPU hours)\n", real_time_end,
+  printout("sn3d finished at %ld (this job wallclock hours %.2f * %d CPUs = %.1f CPU hours)\n", real_time_end,
            (real_time_end - real_time_start) / 3600., globals::nprocs,
            (real_time_end - real_time_start) / 3600. * globals::nprocs);
 
