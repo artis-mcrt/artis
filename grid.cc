@@ -1135,8 +1135,7 @@ static void read_model_radioabundances(std::fstream &fmodel, std::istringstream 
           abundcolcount++;
         }
       }
-      printout("line %s\n", line.c_str());
-      printout("Found %d abundance columns in model.txt\n", abundcolcount);
+
       assert_always(abundcolcount == 5 || abundcolcount == 7);
       colnames.emplace_back("X_Fegroup");
       colnames.emplace_back("X_Ni56");
