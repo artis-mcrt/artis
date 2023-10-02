@@ -105,7 +105,7 @@ jobs:
             - name: Show job0 perf report
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: perf report
+              run: perf report --stdio
 
             - name: Move job0 files
               if: always()
