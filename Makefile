@@ -18,6 +18,7 @@ ifeq ($(shell uname -s),Darwin)
 		CXXFLAGS += -march=native
 	endif
 
+	CXXFLAGS += -fno-omit-frame-pointer
 #	CXXFLAGS += -Rpass=loop-vectorize
 #	CXXFLAGS += -Rpass-missed=loop-vectorize
 #	CXXFLAGS += -Rpass-analysis=loop-vectorize
