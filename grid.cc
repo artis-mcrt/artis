@@ -1120,7 +1120,6 @@ static void read_model_radioabundances(std::fstream &fmodel, std::istringstream 
 
   if (!one_line_per_cell) {
     assert_always(std::getline(fmodel, line));
-    ssline = std::istringstream(line);
   }
 
   if (mgi == 0) {
@@ -1135,6 +1134,7 @@ static void read_model_radioabundances(std::fstream &fmodel, std::istringstream 
     if (colnames.empty()) {
       std::string token;
       int abundcolcount = 0;
+      ssline = std::istringstream(line);
       while (std::getline(ssline, token, ' ')) {
         if (std::ranges::all_of(token, isspace)) {  // skip whitespace tokens
           continue;
