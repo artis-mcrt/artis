@@ -1101,15 +1101,15 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
   // }
 }
 
-static void read_model_radioabundances(std::fstream &fmodel, std::string &line, const int linepos, const int mgi,
+static void read_model_radioabundances(std::fstream &fmodel, std::istringstream &ssline, const int mgi,
                                        const bool keepcell, std::vector<std::string> &colnames,
                                        std::vector<int> &nucindexlist) {
   bool one_line_per_cell = false;
-
-  if (linepos < static_cast<int>(line.length())) {
+  std::string line;
+  assert_always(std::getline(ssline, line));
+  if (line.length() > 0) {
     // still more line is remaining, so any non-whitespace chars mean that
     // the abundances are on the same line
-    line = line.substr(linepos);
     for (const char &c : line) {
       if (isspace(c) == 0) {
         one_line_per_cell = true;
@@ -1120,6 +1120,7 @@ static void read_model_radioabundances(std::fstream &fmodel, std::string &line, 
 
   if (!one_line_per_cell) {
     assert_always(std::getline(fmodel, line));
+    ssline = std::istringstream(line);
   }
 
   if (mgi == 0) {
@@ -1132,7 +1133,6 @@ static void read_model_radioabundances(std::fstream &fmodel, std::string &line, 
 
     // if there was no header line, we need to set up the column names and nucindexlist
     if (colnames.empty()) {
-      std::istringstream ssline(line);
       std::string token;
       int abundcolcount = 0;
       while (std::getline(ssline, token, ' ')) {
@@ -1169,7 +1169,7 @@ static void read_model_radioabundances(std::fstream &fmodel, std::string &line, 
     return;
   }
 
-  std::istringstream ssline(line);
+  ssline = std::istringstream(line);
   for (size_t i = 0; i < colnames.size(); i++) {
     double valuein = 0.;
     assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
@@ -1207,7 +1207,7 @@ static void read_1d_model()
   // 1st read the number of data points in the table of input model.
   int npts_model_in = 0;
   assert_always(get_noncommentline(fmodel, line));
-  std::stringstream(line) >> npts_model_in;
+  std::istringstream(line) >> npts_model_in;
 
   set_npts_model(npts_model_in);
   ncoord_model[0] = npts_model_in;
@@ -1217,7 +1217,7 @@ static void read_1d_model()
   // Now read the time (in days) at which the model is specified.
   double t_model_days = NAN;
   assert_always(get_noncommentline(fmodel, line));
-  std::stringstream(line) >> t_model_days;
+  std::istringstream(line) >> t_model_days;
   t_model = t_model_days * DAY;
 
   // Now read in the lines of the model. Each line has 5 entries: the
@@ -1251,11 +1251,9 @@ static void read_1d_model()
     double vout_kmps = NAN;
     double log_rho = NAN;
     int cellnumberin = 0;
-    int linepos = 0;
+    std::istringstream ssline(line);
 
-    const int items_read = sscanf(line.c_str(), "%d %lg %lg%n", &cellnumberin, &vout_kmps, &log_rho, &linepos);
-
-    if (items_read == 3) {
+    if (ssline >> cellnumberin >> vout_kmps >> log_rho) {
       if (mgi == 0) {
         first_cellindex = cellnumberin;
       }
@@ -1267,12 +1265,11 @@ static void read_1d_model()
       set_rho_tmin(mgi, rho_tmin);
       set_rho(mgi, rho_tmin);
     } else {
-      printout("Unexpected number of values in model.txt. items_read = %d\n", items_read);
+      printout("Unexpected number of values in model.txt\n");
       printout("line: %s\n", line.c_str());
       assert_always(false);
     }
-
-    read_model_radioabundances(fmodel, line, linepos, mgi, true, colnames, nucindexlist);
+    read_model_radioabundances(fmodel, ssline, mgi, true, colnames, nucindexlist);
 
     mgi += 1;
     if (mgi == get_npts_model()) {
@@ -1297,7 +1294,7 @@ static void read_2d_model()
 
   // 1st read the number of data points in the table of input model.
   assert_always(get_noncommentline(fmodel, line));
-  std::stringstream(line) >> ncoord_model[0] >> ncoord_model[1];  // r and z (cylindrical polar)
+  std::istringstream(line) >> ncoord_model[0] >> ncoord_model[1];  // r and z (cylindrical polar)
   ncoord_model[2] = 0.;
 
   set_npts_model(ncoord_model[0] * ncoord_model[1]);
@@ -1305,12 +1302,12 @@ static void read_2d_model()
   // Now read the time (in days) at which the model is specified.
   double t_model_days = NAN;
   assert_always(get_noncommentline(fmodel, line));
-  std::stringstream(line) >> t_model_days;
+  std::istringstream(line) >> t_model_days;
   t_model = t_model_days * DAY;
 
   /// Now read in vmax for the model (in cm s^-1).
   assert_always(get_noncommentline(fmodel, line));
-  std::stringstream(line) >> globals::vmax;
+  std::istringstream(line) >> globals::vmax;
 
   std::vector<int> zlist;
   std::vector<int> alist;
@@ -1343,10 +1340,8 @@ static void read_2d_model()
     float cell_r_in = NAN;
     float cell_z_in = NAN;
     double rho_tmodel = NAN;
-    int linepos = 0;
-
-    assert_always(
-        sscanf(line.c_str(), "%d %g %g %lg%n", &cellnumberin, &cell_r_in, &cell_z_in, &rho_tmodel, &linepos) == 4);
+    std::istringstream ssline(line);
+    assert_always(ssline >> cellnumberin >> cell_r_in >> cell_z_in >> rho_tmodel);
 
     if (mgi == 0) {
       first_cellindex = cellnumberin;
@@ -1370,7 +1365,7 @@ static void read_2d_model()
     set_rho_tmin(mgi, rho_tmin);
     set_rho(mgi, rho_tmin);
 
-    read_model_radioabundances(fmodel, line, linepos, mgi, keepcell, colnames, nucindexlist);
+    read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist);
 
     if (keepcell) {
       nonemptymgi++;
@@ -1398,7 +1393,7 @@ static void read_3d_model()
   /// This MUST be the same number as the maximum number of points used in the grid - if not, abort.
   int npts_model_in = 0;
   assert_always(get_noncommentline(fmodel, line));
-  std::stringstream(line) >> npts_model_in;
+  std::istringstream(line) >> npts_model_in;
   set_npts_model(npts_model_in);
 
   ncoord_model[0] = ncoord_model[1] = ncoord_model[2] = static_cast<int>(round(pow(npts_model_in, 1 / 3.)));
@@ -1412,12 +1407,12 @@ static void read_3d_model()
 
   double t_model_days = NAN;
   assert_always(get_noncommentline(fmodel, line));
-  std::stringstream(line) >> t_model_days;
+  std::istringstream(line) >> t_model_days;
   t_model = t_model_days * DAY;
 
   /// Now read in vmax for the model (in cm s^-1).
   assert_always(get_noncommentline(fmodel, line));
-  std::stringstream(line) >> globals::vmax;
+  std::istringstream(line) >> globals::vmax;
 
   double const xmax_tmodel = globals::vmax * t_model;
 
@@ -1456,10 +1451,9 @@ static void read_3d_model()
     int cellnumberin = 0;
     float cellpos_in[3];
     float rho_model = NAN;
-    int linepos = 0;
-    int const items_read = sscanf(line.c_str(), "%d %g %g %g %g%n", &cellnumberin, &cellpos_in[0], &cellpos_in[1],
-                                  &cellpos_in[2], &rho_model, &linepos);
-    assert_always(items_read == 5);
+    std::istringstream ssline(line);
+
+    assert_always(ssline >> cellnumberin >> cellpos_in[0] >> cellpos_in[1] >> cellpos_in[2] >> rho_model);
     // printout("cell %d, posz %g, posy %g, posx %g, rho %g, rho_init %g\n",dum1,dum3,dum4,dum5,rho_model,rho_model*
     // pow( (t_model/globals::tmin), 3.));
 
@@ -1503,7 +1497,7 @@ static void read_3d_model()
       min_den = rho_model;
     }
 
-    read_model_radioabundances(fmodel, line, linepos, mgi, keepcell, colnames, nucindexlist);
+    read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist);
 
     if (keepcell) {
       nonemptymgi++;
