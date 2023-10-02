@@ -787,7 +787,7 @@ auto main(int argc, char *argv[]) -> int {
       printout("walltimelimitseconds = %d\n", walltimelimitseconds);
     } else {
       fprintf(stderr, "Usage: %s [-w WALLTIMELIMITHOURS]\n", argv[0]);
-      exit(EXIT_FAILURE);
+      abort();
     }
   }
 
@@ -1020,7 +1020,7 @@ auto main(int argc, char *argv[]) -> int {
   MPI_Finalize();
 #endif
 
-  std::filesystem::path pid_file_path("artis.pid");
+  const std::filesystem::path pid_file_path("artis.pid");
   if (std::filesystem::exists(pid_file_path)) {
     std::filesystem::remove(pid_file_path);
   }
