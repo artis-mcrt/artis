@@ -1147,66 +1147,58 @@ static void read_model_radioabundances(std::fstream &fmodel, std::string &line, 
   }
 
   std::istringstream ssline(line);
-  double f56ni_model = 0.;
-  double f56co_model = 0.;
-  double ffegrp_model = 0.;
-  double f48cr_model = 0.;
-  double f52fe_model = 0.;
-  double f57ni_model = 0.;
-  double f57co_model = 0.;
-  const int items_read = sscanf(line.c_str(), "%lg %lg %lg %lg %lg %lg %lg", &ffegrp_model, &f56ni_model, &f56co_model,
-                                &f52fe_model, &f48cr_model, &f57ni_model, &f57co_model);
+  double f56ni_model = -1.;
+  double f56co_model = -1.;
+  double ffegrp_model = -1.;
+  double f48cr_model = -1.;
+  double f52fe_model = -1.;
+  double f57ni_model = -1.;
+  double f57co_model = -1.;
 
-  if (items_read == 5 || items_read == 7) {
-    if (items_read == 7 && mgi == 0) {
+  if ((ssline >> ffegrp_model >> f56ni_model >> f56co_model >> f52fe_model >> f48cr_model)) {
+    if ((ssline >> f57ni_model >> f57co_model) && (mgi == 0)) {
       printout("Found Ni57 and Co57 abundance columns in model.txt\n");
     }
+    if (!keepcell) {
+      return;
+    }
 
-    // printout("mgi %d ni56 %g co56 %g fe52 %g cr48 %g ni57 %g co57 %g\n",
-    //          mgi, f56ni_model, f56co_model, f52fe_model, f48cr_model, f57ni_model, f57co_model);
+    set_ffegrp(mgi, ffegrp_model);
 
-    if (keepcell) {
-      set_modelinitradioabund(mgi, decay::get_nucindex(28, 56), f56ni_model);
-      set_modelinitradioabund(mgi, decay::get_nucindex(27, 56), f56co_model);
-      set_modelinitradioabund(mgi, decay::get_nucindex(26, 52), f52fe_model);
-      set_modelinitradioabund(mgi, decay::get_nucindex(24, 48), f48cr_model);
-      set_modelinitradioabund(mgi, decay::get_nucindex(23, 48), 0.);
+    set_modelinitradioabund(mgi, decay::get_nucindex(28, 56), f56ni_model);
+    set_modelinitradioabund(mgi, decay::get_nucindex(27, 56), f56co_model);
+    set_modelinitradioabund(mgi, decay::get_nucindex(26, 52), f52fe_model);
+    set_modelinitradioabund(mgi, decay::get_nucindex(24, 48), f48cr_model);
+    set_modelinitradioabund(mgi, decay::get_nucindex(23, 48), 0.);
+
+    if ((f57ni_model >= 0.) && (f57co_model >= 0.)) {
       set_modelinitradioabund(mgi, decay::get_nucindex(28, 57), f57ni_model);
       set_modelinitradioabund(mgi, decay::get_nucindex(27, 57), f57co_model);
 
-      set_ffegrp(mgi, ffegrp_model);
-
-      if (items_read == 7) {
-        for (int i = 0; i < items_read; i++) {
-          double abundin = 0.;
-          assert_always(ssline >> abundin);  // ignore
-        }
-
-        for (size_t i = 0; i < colnames.size(); i++) {
-          double valuein = 0.;
-          assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
-          if (nucindexlist[i] >= 0) {
-            set_modelinitradioabund(mgi, nucindexlist[i], valuein);
-          } else if (colnames[i] == "cellYe") {
-            set_initelectronfrac(mgi, valuein);
-          } else if (colnames[i] == "q") {
-            // use value for t_model and adjust to tmin with expansion factor
-            set_initenergyq(mgi, valuein * t_model / globals::tmin);
-          } else if (colnames[i] == "tracercount") {
-            ;
-          } else {
-            if (mgi == 0) {
-              printout("WARNING: ignoring column '%s' nucindex %d valuein[mgi=0] %lg\n", colnames[i].c_str(),
-                       nucindexlist[i], valuein);
-            }
+      for (size_t i = 0; i < colnames.size(); i++) {
+        double valuein = 0.;
+        assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
+        if (nucindexlist[i] >= 0) {
+          set_modelinitradioabund(mgi, nucindexlist[i], valuein);
+        } else if (colnames[i] == "cellYe") {
+          set_initelectronfrac(mgi, valuein);
+        } else if (colnames[i] == "q") {
+          // use value for t_model and adjust to tmin with expansion factor
+          set_initenergyq(mgi, valuein * t_model / globals::tmin);
+        } else if (colnames[i] == "tracercount") {
+          ;
+        } else {
+          if (mgi == 0) {
+            printout("WARNING: ignoring column '%s' nucindex %d valuein[mgi=0] %lg\n", colnames[i].c_str(),
+                     nucindexlist[i], valuein);
           }
         }
-        double valuein = 0.;
-        assert_always(!(ssline >> valuein));  // should be no tokens left!
       }
+      double valuein = 0.;
+      assert_always(!(ssline >> valuein));  // should be no tokens left!
     }
   } else {
-    printout("Unexpected number of values in model.txt. items_read = %d\n", items_read);
+    printout("Unexpected number of values in model.txt\n");
     printout("line: %s\n", line.c_str());
     abort();
   }
