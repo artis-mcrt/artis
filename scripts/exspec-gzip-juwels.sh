@@ -11,8 +11,6 @@
 
 module load Stages/2023 GCC ParaStationMPI GSL
 
-export PATH="/p/software/juwels/stages/2022/software/zstd/1.5.0-GCCcore-11.2.0/bin/:$PATH"
-
 cd $SLURM_SUBMIT_DIR
 
 if [ ! -f emission.out.zst ]; then
