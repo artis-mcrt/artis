@@ -198,12 +198,12 @@ auto main(int argc, char *argv[]) -> int {
           nesc_tot++;
           if (pkts_start[ii].escape_type == TYPE_RPKT) {
             nesc_rpkt++;
-            add_to_lc_res(&pkts_start[ii], a, rpkt_light_curve_lum.data(), rpkt_light_curve_lumcmf.data());
+            add_to_lc_res(&pkts_start[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
             add_to_spec_res(&pkts_start[ii], a, *rpkt_spectra, stokes_i.get(), stokes_q.get(), stokes_u.get());
           } else if (pkts_start[ii].escape_type == TYPE_GAMMA) {
             nesc_gamma++;
             if (a == -1) {
-              add_to_lc_res(&pkts_start[ii], a, gamma_light_curve_lum.data(), gamma_light_curve_lumcmf.data());
+              add_to_lc_res(&pkts_start[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
               add_to_spec_res(&pkts_start[ii], a, *gamma_spectra, nullptr, nullptr, nullptr);
             }
           }

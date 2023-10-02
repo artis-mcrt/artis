@@ -673,10 +673,10 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
     if (pkts[ii].type == TYPE_ESCAPE) {
       const int abin = -1;  // all angles
       if (pkts[ii].escape_type == TYPE_RPKT) {
-        add_to_lc_res(&pkts[ii], abin, rpkt_light_curve_lum.data(), rpkt_light_curve_lumcmf.data());
+        add_to_lc_res(&pkts[ii], abin, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
         add_to_spec_res(&pkts[ii], abin, *rpkt_spectra, stokes_i, stokes_q, stokes_u);
       } else if (abin == -1 && pkts[ii].escape_type == TYPE_GAMMA) {
-        add_to_lc_res(&pkts[ii], abin, gamma_light_curve_lum.data(), gamma_light_curve_lumcmf.data());
+        add_to_lc_res(&pkts[ii], abin, gamma_light_curve_lum, gamma_light_curve_lumcmf);
       }
     }
   }

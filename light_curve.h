@@ -5,7 +5,8 @@
 
 #include "exspec.h"
 
-void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, double *light_curve_lum, double *light_curve_lumcmf);
+void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, std::vector<double> &light_curve_lum,
+                   std::vector<double> &light_curve_lumcmf);
 
 void write_light_curve(const std::string &lc_filename, int current_abin, const double *light_curve_lum,
                        const double *light_curve_lumcmf, int numtimesteps);

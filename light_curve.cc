@@ -38,7 +38,8 @@ void write_light_curve(const std::string &lc_filename, const int current_abin, c
   }
 }
 
-void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, double *light_curve_lum, double *light_curve_lumcmf)
+void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, std::vector<double> &light_curve_lum,
+                   std::vector<double> &light_curve_lumcmf)
 // add a packet to the outgoing light-curve.
 {
   if (current_abin == -1) {
