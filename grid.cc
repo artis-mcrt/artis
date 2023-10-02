@@ -1123,6 +1123,7 @@ static void read_model_radioabundances(std::fstream &fmodel, std::string &line, 
   if (!keepcell && mgi > 0) {
     return;
   }
+
   bool one_line_per_cell = false;
 
   if (linepos < static_cast<int>(line.length())) {
@@ -1137,76 +1138,75 @@ static void read_model_radioabundances(std::fstream &fmodel, std::string &line, 
     }
   }
 
-  if (one_line_per_cell) {
-    if (mgi == 0) {
+  if (!one_line_per_cell) {
+    assert_always(std::getline(fmodel, line));
+  }
+  if (mgi == 0) {
+    if (one_line_per_cell) {
       printout("model.txt has has single line per cell format\n");
-    }
-  } else {
-    // we reached the end of this line before abundances were read
-    if (mgi == 0) {
+    } else {
+      // we reached the end of this line before abundances were read
       printout("model.txt has has two lines per cell format\n");
     }
-    assert_always(std::getline(fmodel, line));
+    if (colnames.empty()) {
+      // if there was no header line, we need to set up the column names and nucindexlist
+      std::istringstream ssline(line);
+      std::string token;
+      int abundcolcount = -1;
+      while (std::getline(ssline, token, ' ')) {
+        if (std::ranges::all_of(token, isspace)) {  // skip whitespace tokens
+          continue;
+        }
+        abundcolcount++;
+      }
+      abundcolcount--;  // ignore the X_Fegroup for now
+      assert_always(abundcolcount == 4 || abundcolcount == 6);
+      colnames.emplace_back("X_Ni56");
+      colnames.emplace_back("X_Co56");
+      colnames.emplace_back("X_Fe52");
+      colnames.emplace_back("X_Cr48");
+      if (abundcolcount == 6) {
+        printout("Found Ni57 and Co57 abundance columns in model.txt\n");
+        colnames.emplace_back("X_Ni57");
+        colnames.emplace_back("X_Co57");
+      }
+      for (const auto &colname : colnames) {
+        const int z = decay::get_nucstring_z(colname.substr(2));  // + 2 skips the 'X_'
+        const int a = decay::get_nucstring_a(colname.substr(2));
+        nucindexlist.push_back(decay::get_nucindex(z, a));
+      }
+    }
   }
 
   std::istringstream ssline(line);
-  double f56ni_model = -1.;
-  double f56co_model = -1.;
   double ffegrp_model = -1.;
-  double f48cr_model = -1.;
-  double f52fe_model = -1.;
-  double f57ni_model = -1.;
-  double f57co_model = -1.;
 
-  if (!(ssline >> ffegrp_model >> f56ni_model >> f56co_model >> f52fe_model >> f48cr_model)) {
-    printout("Unexpected number of values in model.txt\n");
-    printout("line: %s\n", line.c_str());
-    abort();
-  }
-
-  if ((ssline >> f57ni_model >> f57co_model) && (mgi == 0)) {
-    printout("Found Ni57 and Co57 abundance columns in model.txt\n");
-  }
-  if (!keepcell) {
-    return;
-  }
-
+  assert_always(ssline >> ffegrp_model);
   set_ffegrp(mgi, ffegrp_model);
 
-  set_modelinitradioabund(mgi, decay::get_nucindex(28, 56), f56ni_model);
-  set_modelinitradioabund(mgi, decay::get_nucindex(27, 56), f56co_model);
-  set_modelinitradioabund(mgi, decay::get_nucindex(26, 52), f52fe_model);
-  set_modelinitradioabund(mgi, decay::get_nucindex(24, 48), f48cr_model);
-  set_modelinitradioabund(mgi, decay::get_nucindex(23, 48), 0.);
-
-  if ((f57ni_model >= 0.) && (f57co_model >= 0.)) {
-    set_modelinitradioabund(mgi, decay::get_nucindex(28, 57), f57ni_model);
-    set_modelinitradioabund(mgi, decay::get_nucindex(27, 57), f57co_model);
-
-    for (size_t i = 0; i < colnames.size(); i++) {
-      double valuein = 0.;
-      assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
-      if (nucindexlist[i] >= 0) {
-        assert_testmodeonly(valuein >= 0.);
-        assert_testmodeonly(valuein <= 1.);
-        set_modelinitradioabund(mgi, nucindexlist[i], valuein);
-      } else if (colnames[i] == "cellYe") {
-        set_initelectronfrac(mgi, valuein);
-      } else if (colnames[i] == "q") {
-        // use value for t_model and adjust to tmin with expansion factor
-        set_initenergyq(mgi, valuein * t_model / globals::tmin);
-      } else if (colnames[i] == "tracercount") {
-        ;
-      } else {
-        if (mgi == 0) {
-          printout("WARNING: ignoring column '%s' nucindex %d valuein[mgi=0] %lg\n", colnames[i].c_str(),
-                   nucindexlist[i], valuein);
-        }
+  for (size_t i = 0; i < colnames.size(); i++) {
+    double valuein = 0.;
+    assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
+    if (nucindexlist[i] >= 0) {
+      assert_testmodeonly(valuein >= 0.);
+      assert_testmodeonly(valuein <= 1.);
+      set_modelinitradioabund(mgi, nucindexlist[i], valuein);
+    } else if (colnames[i] == "cellYe") {
+      set_initelectronfrac(mgi, valuein);
+    } else if (colnames[i] == "q") {
+      // use value for t_model and adjust to tmin with expansion factor
+      set_initenergyq(mgi, valuein * t_model / globals::tmin);
+    } else if (colnames[i] == "tracercount") {
+      ;
+    } else {
+      if (mgi == 0) {
+        printout("WARNING: ignoring column '%s' nucindex %d valuein[mgi=0] %lg\n", colnames[i].c_str(), nucindexlist[i],
+                 valuein);
       }
     }
-    double valuein = 0.;
-    assert_always(!(ssline >> valuein));  // should be no tokens left!
   }
+  double valuein = 0.;
+  assert_always(!(ssline >> valuein));  // should be no tokens left!
 }
 
 static void read_1d_model()
