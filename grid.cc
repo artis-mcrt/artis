@@ -1131,10 +1131,9 @@ static void read_model_radioabundances(std::fstream &fmodel, std::istringstream 
       int abundcolcount = 0;
       ssline = std::istringstream(line);
       while (std::getline(ssline, token, ' ')) {
-        if (std::ranges::all_of(token, isspace)) {  // skip whitespace tokens
-          continue;
+        if (!std::ranges::all_of(token, isspace)) {  // skip whitespace tokens
+          abundcolcount++;
         }
-        abundcolcount++;
       }
       printout("line %s\n", line.c_str());
       printout("Found %d abundance columns in model.txt\n", abundcolcount);
