@@ -372,7 +372,7 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
     assert_always(nnu < MNUBINS);
 
     const double deltaE = pkt_ptr->e_rf / globals::time_step[nt].width / spectra.delta_freq[nnu] / 4.e12 / PI / PARSEC /
-                          PARSEC / globals::nprocs * anglefactor;
+                          PARSEC / globals::nprocs_exspec * anglefactor;
 
     spectra.timesteps[nt].flux[nnu] += deltaE;
 
@@ -430,7 +430,7 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
       if (nnu_abs >= 0 && nnu_abs < MNUBINS) {
         const int ioncount = get_nelements() * get_max_nions();
         const double deltaE_absorption = pkt_ptr->e_rf / globals::time_step[nt].width / spectra.delta_freq[nnu_abs] /
-                                         4.e12 / PI / PARSEC / PARSEC / globals::nprocs * anglefactor;
+                                         4.e12 / PI / PARSEC / PARSEC / globals::nprocs_exspec * anglefactor;
         const int at = pkt_ptr->absorptiontype;
         if (at >= 0) {
           /// bb-emission
