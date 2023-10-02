@@ -1248,7 +1248,6 @@ static void read_1d_model()
 
   int mgi = 0;
   while (std::getline(fmodel, line)) {
-    std::istringstream const ssline(line);
     double vout_kmps = NAN;
     double log_rho = NAN;
     int cellnumberin = 0;
