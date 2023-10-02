@@ -112,7 +112,7 @@ void setup_photoion_luts() {
       mem_usage_photoionluts / 1024. / 1024.);
 }
 
-static auto read_ratecoeff_dat(std::ifstream &ratecoeff_file) -> bool
+static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
 /// Try to read in the precalculated rate coefficients from file
 /// return true if successful or false otherwise
 {
@@ -120,7 +120,7 @@ static auto read_ratecoeff_dat(std::ifstream &ratecoeff_file) -> bool
   /// the precalculated rate coefficients
 
   char adatafile_hash_in[33] = "UNKNOWN";
-  if (!(ratecoeff_file >> adatafile_hash_in)) {
+  if (fscanf(ratecoeff_file, "%32s\n", adatafile_hash_in) != 1) {
     return false;
   }
   printout("ratecoeff.dat: MD5 adata.txt = %s ", adatafile_hash_in);
@@ -132,7 +132,7 @@ static auto read_ratecoeff_dat(std::ifstream &ratecoeff_file) -> bool
   }
 
   char compositionfile_hash_in[33] = "UNKNOWN";
-  if (!(ratecoeff_file >> compositionfile_hash_in)) {
+  if (fscanf(ratecoeff_file, "%32s\n", compositionfile_hash_in) != 1) {
     return false;
   }
   printout("ratecoeff.dat: MD5 compositiondata.txt %s ", compositionfile_hash_in);
@@ -146,7 +146,7 @@ static auto read_ratecoeff_dat(std::ifstream &ratecoeff_file) -> bool
   for (int phixsver = 1; phixsver <= 2; phixsver++) {
     if (phixs_file_version_exists[phixsver]) {
       char phixsfile_hash_in[33] = "UNKNOWN";
-      if (!(ratecoeff_file >> phixsfile_hash_in)) {
+      if (fscanf(ratecoeff_file, "%32s\n", phixsfile_hash_in) != 1) {
         return false;
       }
       printout("ratecoeff.dat: MD5 %s = %s ", phixsdata_filenames[phixsver], phixsfile_hash_in);
@@ -165,8 +165,9 @@ static auto read_ratecoeff_dat(std::ifstream &ratecoeff_file) -> bool
   int in_nlines = -1;
   int in_nbfcontinua = -1;
   double in_ratecoeff_integral_accuracy = -1.;
-  if (!(ratecoeff_file >> in_T_min >> in_T_max >> in_tablesize >> in_nlines >> in_nbfcontinua >>
-        in_ratecoeff_integral_accuracy)) {
+  const int items_read = fscanf(ratecoeff_file, "%la %la %d %d %d %la\n", &in_T_min, &in_T_max, &in_tablesize,
+                                &in_nlines, &in_nbfcontinua, &in_ratecoeff_integral_accuracy);
+  if (items_read != 6) {
     printout("\nMISMATCH: error reading header line\n");
     return false;
   }
@@ -207,7 +208,8 @@ static auto read_ratecoeff_dat(std::ifstream &ratecoeff_file) -> bool
       int in_ionstage = 0;
       int in_levels = 0;
       int in_ionisinglevels = 0;
-      assert_always(ratecoeff_file >> in_element >> in_ionstage >> in_levels >> in_ionisinglevels);
+      assert_always(
+          fscanf(ratecoeff_file, "%d %d %d %d\n", &in_element, &in_ionstage, &in_levels, &in_ionisinglevels) == 4);
       const int nlevels = get_nlevels(element, ion);
       int const ionisinglevels = get_ionisinglevels(element, ion);
       if (get_atomicnumber(element) != in_element || get_ionstage(element, ion) != in_ionstage ||
@@ -240,8 +242,8 @@ static auto read_ratecoeff_dat(std::ifstream &ratecoeff_file) -> bool
             double in_bfcooling_coeff = NAN;
             double in_corrphotoioncoeff = NAN;
             double in_bfheating_coeff = NAN;
-            assert_always(ratecoeff_file >> in_alpha_sp >> in_bfcooling_coeff >> in_corrphotoioncoeff >>
-                          in_bfheating_coeff);
+            assert_always(fscanf(ratecoeff_file, "%la %la %la %la\n", &in_alpha_sp, &in_bfcooling_coeff,
+                                 &in_corrphotoioncoeff, &in_bfheating_coeff) == 4);
 
             // assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0);
             spontrecombcoeffs[get_bflutindex(iter, element, ion, level, phixstargetindex)] = in_alpha_sp;
@@ -1019,12 +1021,13 @@ void ratecoefficients_init()
   /// Check if we need to calculate the ratecoefficients or if we were able to read them from file
   bool ratecoeff_match = false;
   if (globals::rank_in_node == 0) {
-    auto ratecoeff_file = std::ifstream("ratecoeff.dat", std::ios::in);
-    if (ratecoeff_file.is_open()) {
+    FILE *ratecoeff_file = fopen("ratecoeff.dat", "r");
+    if (ratecoeff_file != nullptr) {
       ratecoeff_match = read_ratecoeff_dat(ratecoeff_file);
       if (!ratecoeff_match) {
         printout("[info] ratecoefficients_init: ratecoeff.dat does not match current simulation. Recalculating...\n");
       }
+      fclose(ratecoeff_file);
     } else {
       printout("[info] ratecoefficients_init: ratecoeff.dat file not found. Creating a new one...\n");
     }
