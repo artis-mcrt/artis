@@ -1107,15 +1107,10 @@ static void read_model_radioabundances(std::fstream &fmodel, std::istringstream 
   bool one_line_per_cell = false;
   std::string line;
   assert_always(std::getline(ssline, line));
-  if (line.length() > 0) {
-    // still more line is remaining, so any non-whitespace chars mean that
+  if (line.length() > 0 && !std::ranges::all_of(line, isspace)) {
+    // finding any non-whitespace chars mean that
     // the abundances are on the same line
-    for (const char &c : line) {
-      if (isspace(c) == 0) {
-        one_line_per_cell = true;
-        break;
-      }
-    }
+    one_line_per_cell = true;
   }
 
   if (!one_line_per_cell) {
