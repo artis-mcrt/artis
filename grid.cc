@@ -1141,6 +1141,7 @@ static void read_model_radioabundances(std::fstream &fmodel, std::string &line, 
   if (!one_line_per_cell) {
     assert_always(std::getline(fmodel, line));
   }
+
   if (mgi == 0) {
     if (one_line_per_cell) {
       printout("model.txt has has single line per cell format\n");
@@ -1148,11 +1149,12 @@ static void read_model_radioabundances(std::fstream &fmodel, std::string &line, 
       // we reached the end of this line before abundances were read
       printout("model.txt has has two lines per cell format\n");
     }
+
+    // if there was no header line, we need to set up the column names and nucindexlist
     if (colnames.empty()) {
-      // if there was no header line, we need to set up the column names and nucindexlist
       std::istringstream ssline(line);
       std::string token;
-      int abundcolcount = -1;
+      int abundcolcount = 0;
       while (std::getline(ssline, token, ' ')) {
         if (std::ranges::all_of(token, isspace)) {  // skip whitespace tokens
           continue;
@@ -1160,6 +1162,8 @@ static void read_model_radioabundances(std::fstream &fmodel, std::string &line, 
         abundcolcount++;
       }
       abundcolcount--;  // ignore the X_Fegroup for now
+      printout("line %s\n", line.c_str());
+      printout("Found %d abundance columns in model.txt\n", abundcolcount);
       assert_always(abundcolcount == 4 || abundcolcount == 6);
       colnames.emplace_back("X_Ni56");
       colnames.emplace_back("X_Co56");
@@ -2441,7 +2445,7 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
       const int cellindexstride =
           flip != 0 ? -grid::get_coordcellindexincrement(d) : grid::get_coordcellindexincrement(d);
 
-      bool isoutside_thisside;
+      bool isoutside_thisside = false;
       double delta = 0.;
       if (flip != 0) {
         // packet pos below min
