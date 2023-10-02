@@ -100,12 +100,7 @@ jobs:
               run: |
                   cp input-newrun.txt input.txt
                   touch output_0-0.txt
-                  perf record -F 99 mpirun -np 2 ./sn3d
-
-            - name: Show job0 perf report
-              if: always()
-              working-directory: tests/${{ matrix.testname }}_testrun/
-              run: perf report --stdio
+                  time mpirun -np 2 ./sn3d
 
             - name: Move job0 files
               if: always()
