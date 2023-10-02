@@ -1104,10 +1104,6 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
 static void read_model_radioabundances(std::fstream &fmodel, std::string &line, const int linepos, const int mgi,
                                        const bool keepcell, std::vector<std::string> &colnames,
                                        std::vector<int> &nucindexlist) {
-  if (!keepcell && mgi > 0) {
-    return;
-  }
-
   bool one_line_per_cell = false;
 
   if (linepos < static_cast<int>(line.length())) {
@@ -1124,6 +1120,10 @@ static void read_model_radioabundances(std::fstream &fmodel, std::string &line, 
 
   if (!one_line_per_cell) {
     assert_always(std::getline(fmodel, line));
+  }
+
+  if (!keepcell && mgi > 0) {
+    return;
   }
 
   if (mgi == 0) {
@@ -1153,7 +1153,7 @@ static void read_model_radioabundances(std::fstream &fmodel, std::string &line, 
       colnames.emplace_back("X_Co56");
       colnames.emplace_back("X_Fe52");
       colnames.emplace_back("X_Cr48");
-      if (abundcolcount == 6) {
+      if (abundcolcount == 7) {
         printout("Found Ni57 and Co57 abundance columns in model.txt\n");
         colnames.emplace_back("X_Ni57");
         colnames.emplace_back("X_Co57");
@@ -1172,7 +1172,6 @@ static void read_model_radioabundances(std::fstream &fmodel, std::string &line, 
   }
 
   std::istringstream ssline(line);
-
   for (size_t i = 0; i < colnames.size(); i++) {
     double valuein = 0.;
     assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
