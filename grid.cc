@@ -1122,10 +1122,6 @@ static void read_model_radioabundances(std::fstream &fmodel, std::string &line, 
     assert_always(std::getline(fmodel, line));
   }
 
-  if (!keepcell && mgi > 0) {
-    return;
-  }
-
   if (mgi == 0) {
     if (one_line_per_cell) {
       printout("model.txt has has single line per cell format\n");
@@ -1169,6 +1165,8 @@ static void read_model_radioabundances(std::fstream &fmodel, std::string &line, 
         }
       }
     }
+  } else if (!keepcell) {
+    return;
   }
 
   std::istringstream ssline(line);
