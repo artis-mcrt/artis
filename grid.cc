@@ -1068,18 +1068,9 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
                     (columnindex == 3 && get_model_type() == GRID_CYLINDRICAL2D));
       continue;
     } else if (token == "X_Fegroup") {
-      continue;
-    } else if (token == "X_Ni56") {
-      continue;
-    } else if (token == "X_Co56") {
-      continue;
-    } else if (token == "X_Fe52") {
-      continue;
-    } else if (token == "X_Cr48") {
-      continue;
-    } else if (token == "X_Ni57") {
-      continue;
-    } else if (token == "X_Co57") {
+      columnname.push_back(token);
+      zlist.push_back(-1);
+      alist.push_back(-1);
       continue;
     } else {
       assert_always(get_model_type() != GRID_SPHERICAL1D || columnindex >= 10);
@@ -1161,10 +1152,10 @@ static void read_model_radioabundances(std::fstream &fmodel, std::string &line, 
         }
         abundcolcount++;
       }
-      abundcolcount--;  // ignore the X_Fegroup for now
       printout("line %s\n", line.c_str());
       printout("Found %d abundance columns in model.txt\n", abundcolcount);
-      assert_always(abundcolcount == 4 || abundcolcount == 6);
+      assert_always(abundcolcount == 5 || abundcolcount == 7);
+      colnames.emplace_back("X_Fegroup");
       colnames.emplace_back("X_Ni56");
       colnames.emplace_back("X_Co56");
       colnames.emplace_back("X_Fe52");
@@ -1174,19 +1165,20 @@ static void read_model_radioabundances(std::fstream &fmodel, std::string &line, 
         colnames.emplace_back("X_Ni57");
         colnames.emplace_back("X_Co57");
       }
+
       for (const auto &colname : colnames) {
-        const int z = decay::get_nucstring_z(colname.substr(2));  // + 2 skips the 'X_'
-        const int a = decay::get_nucstring_a(colname.substr(2));
-        nucindexlist.push_back(decay::get_nucindex(z, a));
+        if (colname == "X_Fegroup") {
+          nucindexlist.push_back(-1);
+        } else {
+          const int z = decay::get_nucstring_z(colname.substr(2));  // + 2 skips the 'X_'
+          const int a = decay::get_nucstring_a(colname.substr(2));
+          nucindexlist.push_back(decay::get_nucindex(z, a));
+        }
       }
     }
   }
 
   std::istringstream ssline(line);
-  double ffegrp_model = -1.;
-
-  assert_always(ssline >> ffegrp_model);
-  set_ffegrp(mgi, ffegrp_model);
 
   for (size_t i = 0; i < colnames.size(); i++) {
     double valuein = 0.;
@@ -1195,6 +1187,8 @@ static void read_model_radioabundances(std::fstream &fmodel, std::string &line, 
       assert_testmodeonly(valuein >= 0.);
       assert_testmodeonly(valuein <= 1.);
       set_modelinitradioabund(mgi, nucindexlist[i], valuein);
+    } else if (colnames[i] == "X_Fegroup") {
+      set_ffegrp(mgi, valuein);
     } else if (colnames[i] == "cellYe") {
       set_initelectronfrac(mgi, valuein);
     } else if (colnames[i] == "q") {
