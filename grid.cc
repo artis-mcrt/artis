@@ -1071,27 +1071,20 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
       columnname.push_back(token);
       zlist.push_back(-1);
       alist.push_back(-1);
-      continue;
-    } else {
-      assert_always(get_model_type() != GRID_SPHERICAL1D || columnindex >= 10);
-      assert_always(get_model_type() != GRID_CYLINDRICAL2D || columnindex >= 11);
-      assert_always(get_model_type() != GRID_CARTESIAN3D || columnindex >= 12);
-
+    } else if (str_starts_with(token, "X_")) {
       columnname.push_back(token);
-
-      if (str_starts_with(token, "X_")) {
-        const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
-        const int a = decay::get_nucstring_a(token.substr(2));
-        assert_always(z >= 0);
-        assert_always(a >= 0);
-        //   printout("Custom column: '%s' Z %d A %d\n", token.c_str(), z, a);
-        zlist.push_back(z);
-        alist.push_back(a);
-      } else {
-        //   printout("Custom column: '%s' Z %d A %d\n", token.c_str(), -1, -1);
-        zlist.push_back(-1);
-        alist.push_back(-1);
-      }
+      const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
+      const int a = decay::get_nucstring_a(token.substr(2));
+      assert_always(z >= 0);
+      assert_always(a >= 0);
+      //   printout("Custom column: '%s' Z %d A %d\n", token.c_str(), z, a);
+      zlist.push_back(z);
+      alist.push_back(a);
+    } else {
+      //   printout("Custom column: '%s' Z %d A %d\n", token.c_str(), -1, -1);
+      columnname.push_back(token);
+      zlist.push_back(-1);
+      alist.push_back(-1);
     }
   }
 
