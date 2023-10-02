@@ -217,10 +217,8 @@ auto main(int argc, char *argv[]) -> int {
 
     if (a == -1) {
       // angle-averaged spectra and light curves
-      write_light_curve("light_curve.out", -1, rpkt_light_curve_lum.data(), rpkt_light_curve_lumcmf.data(),
-                        globals::ntstep);
-      write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum.data(), gamma_light_curve_lumcmf.data(),
-                        globals::ntstep);
+      write_light_curve("light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntstep);
+      write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf, globals::ntstep);
 
       write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", *rpkt_spectra, globals::ntstep);
 
@@ -251,7 +249,7 @@ auto main(int argc, char *argv[]) -> int {
       char absorption_filename[MAXFILENAMELENGTH] = "";
       snprintf(absorption_filename, MAXFILENAMELENGTH, "absorption_res_%.2d.out", a);
 
-      write_light_curve(lc_filename, a, rpkt_light_curve_lum.data(), rpkt_light_curve_lumcmf.data(), globals::ntstep);
+      write_light_curve(lc_filename, a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntstep);
       write_spectrum(spec_filename, emission_filename, trueemission_filename, absorption_filename, *rpkt_spectra,
                      globals::ntstep);
 

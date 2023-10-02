@@ -6,8 +6,9 @@
 
 // Routine to make a MC light curve from the r-packets.
 
-void write_light_curve(const std::string &lc_filename, const int current_abin, const double *light_curve_lum,
-                       const double *light_curve_lumcmf, const int numtimesteps) {
+void write_light_curve(const std::string &lc_filename, const int current_abin,
+                       const std::vector<double> &light_curve_lum, const std::vector<double> &light_curve_lumcmf,
+                       const int numtimesteps) {
   assert_always(numtimesteps <= globals::ntstep);
 
   std::ofstream lc_file(lc_filename);

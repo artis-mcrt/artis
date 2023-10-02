@@ -701,9 +701,8 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
   const time_t time_mpireduction_end = time(nullptr);
 
   if (my_rank == 0) {
-    write_light_curve("light_curve.out", -1, rpkt_light_curve_lum.data(), rpkt_light_curve_lumcmf.data(), numtimesteps);
-    write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum.data(), gamma_light_curve_lumcmf.data(),
-                      numtimesteps);
+    write_light_curve("light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, numtimesteps);
+    write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf, numtimesteps);
     write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", *rpkt_spectra, numtimesteps);
   }
 
