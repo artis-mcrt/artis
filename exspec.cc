@@ -113,27 +113,21 @@ auto main(int argc, char *argv[]) -> int {
   // however, we might be running exspec with 1 or just a few ranks
   globals::nprocs = globals::nprocs_exspec;
 
-  constexpr double maxpktmem_mb = 32000;
-  bool load_allrank_packets = false;
-
-  if ((globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024.) < maxpktmem_mb) {
-    printout(
-        "mem_usage: loading packets from all %d processes simultaneously (total %d packets, %.1f MB memory is within "
-        "limit of %.1f MB)\n",
-        globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
-        globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024., maxpktmem_mb);
-    load_allrank_packets = true;
+  auto *pkts = static_cast<struct packet *>(malloc(globals::nprocs_exspec * globals::npkts * sizeof(struct packet)));
+  const bool load_allrank_packets = (pkts != nullptr);
+  if (load_allrank_packets) {
+    printout("mem_usage: loading %d packets from each %d processes simultaneously (total %d packets, %.1f MB memory)\n",
+             globals::npkts, globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
+             globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024.);
   } else {
+    printout("mem_usage: malloc failed to allocate memory for all packets\n");
     printout(
-        "mem_usage: loading packets from each of %d processes sequentially (total %d packets, %.1f MB memory would be "
-        "above limit of %.1f MB)\n",
-        globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
-        globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024., maxpktmem_mb);
-    load_allrank_packets = false;
+        "mem_usage: loading %d packets from each of %d processes sequentially (total %d packets, %.1f MB memory)\n",
+        globals::npkts, globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
+        globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024.);
+    auto *pkts = static_cast<struct packet *>(malloc(globals::npkts * sizeof(struct packet)));
+    assert_always(pkts != nullptr);
   }
-
-  const int npkts_loaded = load_allrank_packets ? globals::nprocs_exspec * globals::npkts : globals::npkts;
-  auto *pkts = static_cast<struct packet *>(malloc(npkts_loaded * sizeof(struct packet)));
 
   init_spectrum_trace();  // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
 
