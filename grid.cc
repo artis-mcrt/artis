@@ -1269,7 +1269,9 @@ static void read_1d_model()
     int cellnumberin = 0;
     int linepos = 0;
 
-    if (ssline >> cellnumberin >> vout_kmps >> log_rho >> linepos) {
+    const int items_read = sscanf(line.c_str(), "%d %lg %lg%n", &cellnumberin, &vout_kmps, &log_rho, &linepos);
+
+    if (items_read == 3) {
       if (mgi == 0) {
         first_cellindex = cellnumberin;
       }
@@ -1281,7 +1283,7 @@ static void read_1d_model()
       set_rho_tmin(mgi, rho_tmin);
       set_rho(mgi, rho_tmin);
     } else {
-      printout("Unexpected number of values in model.txt.\n");
+      printout("Unexpected number of values in model.txt. items_read = %d\n", items_read);
       printout("line: %s\n", line.c_str());
       assert_always(false);
     }
