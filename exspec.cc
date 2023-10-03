@@ -131,13 +131,13 @@ auto main(int argc, char *argv[]) -> int {
 
   init_spectrum_trace();  // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
 
-  auto rpkt_spectra = alloc_spectra(globals::do_emission_res);
+  struct spec rpkt_spectra;
 
-  std::unique_ptr<struct spec> stokes_i = POL_ON ? alloc_spectra(globals::do_emission_res) : nullptr;
-  std::unique_ptr<struct spec> stokes_q = POL_ON ? alloc_spectra(globals::do_emission_res) : nullptr;
-  std::unique_ptr<struct spec> stokes_u = POL_ON ? alloc_spectra(globals::do_emission_res) : nullptr;
+  struct spec stokes_i;
+  struct spec stokes_q;
+  struct spec stokes_u;
 
-  auto gamma_spectra = alloc_spectra(false);
+  struct spec gamma_spectra;
 
   /// Initialise the grid. Call routine that sets up the initial positions
   /// and sizes of the grid cells.
@@ -154,17 +154,17 @@ auto main(int argc, char *argv[]) -> int {
     std::vector<double> gamma_light_curve_lumcmf(globals::ntstep, 0.);
     /// Set up the spectrum grid and initialise the bins to zero.
 
-    init_spectra(*rpkt_spectra, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
+    init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
 
     if constexpr (POL_ON) {
-      init_spectra(*stokes_i, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
-      init_spectra(*stokes_q, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
-      init_spectra(*stokes_u, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
+      init_spectra(stokes_i, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
+      init_spectra(stokes_q, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
+      init_spectra(stokes_u, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
     }
 
     const double nu_min_gamma = 0.05 * MEV / H;
     const double nu_max_gamma = 4. * MEV / H;
-    init_spectra(*gamma_spectra, nu_min_gamma, nu_max_gamma, false);
+    init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
 
     for (int p = 0; p < globals::nprocs_exspec; p++) {
       struct packet *pkts_start = load_allrank_packets ? &pkts[p * globals::npkts] : pkts;
@@ -193,12 +193,12 @@ auto main(int argc, char *argv[]) -> int {
           if (pkts_start[ii].escape_type == TYPE_RPKT) {
             nesc_rpkt++;
             add_to_lc_res(&pkts_start[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-            add_to_spec_res(&pkts_start[ii], a, *rpkt_spectra, stokes_i.get(), stokes_q.get(), stokes_u.get());
+            add_to_spec_res(&pkts_start[ii], a, rpkt_spectra, &stokes_i, &stokes_q, &stokes_u);
           } else if (pkts_start[ii].escape_type == TYPE_GAMMA) {
             nesc_gamma++;
             if (a == -1) {
               add_to_lc_res(&pkts_start[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-              add_to_spec_res(&pkts_start[ii], a, *gamma_spectra, nullptr, nullptr, nullptr);
+              add_to_spec_res(&pkts_start[ii], a, gamma_spectra, nullptr, nullptr, nullptr);
             }
           }
         }
@@ -214,14 +214,13 @@ auto main(int argc, char *argv[]) -> int {
       write_light_curve("light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntstep);
       write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf, globals::ntstep);
 
-      write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", *rpkt_spectra, globals::ntstep);
+      write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, globals::ntstep);
 
       if constexpr (POL_ON) {
-        write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", stokes_i.get(), stokes_q.get(),
-                      stokes_u.get());
+        write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", &stokes_i, &stokes_q, &stokes_u);
       }
 
-      write_spectrum("gamma_spec.out", "", "", "", *gamma_spectra, globals::ntstep);
+      write_spectrum("gamma_spec.out", "", "", "", gamma_spectra, globals::ntstep);
 
       printout("finished angle-averaged stuff\n");
     } else {
@@ -244,7 +243,7 @@ auto main(int argc, char *argv[]) -> int {
       snprintf(absorption_filename, MAXFILENAMELENGTH, "absorption_res_%.2d.out", a);
 
       write_light_curve(lc_filename, a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntstep);
-      write_spectrum(spec_filename, emission_filename, trueemission_filename, absorption_filename, *rpkt_spectra,
+      write_spectrum(spec_filename, emission_filename, trueemission_filename, absorption_filename, rpkt_spectra,
                      globals::ntstep);
 
       if constexpr (POL_ON) {
@@ -257,19 +256,18 @@ auto main(int argc, char *argv[]) -> int {
         char absorptionpol_filename[MAXFILENAMELENGTH] = "";
         snprintf(absorptionpol_filename, MAXFILENAMELENGTH, "absorptionpol_res_%.2d.out", a);
 
-        write_specpol(specpol_filename, emissionpol_filename, absorptionpol_filename, stokes_i.get(), stokes_q.get(),
-                      stokes_u.get());
+        write_specpol(specpol_filename, emissionpol_filename, absorptionpol_filename, &stokes_i, &stokes_q, &stokes_u);
       }
 
       printout("Did %d of %d angle bins.\n", a + 1, MABINS);
     }
   }
 
-  rpkt_spectra.reset();
-  stokes_i.reset();
-  stokes_q.reset();
-  stokes_u.reset();
-  gamma_spectra.reset();
+  rpkt_spectra = {};
+  stokes_i = {};
+  stokes_q = {};
+  stokes_u = {};
+  gamma_spectra = {};
 
   free(pkts);
   decay::cleanup();

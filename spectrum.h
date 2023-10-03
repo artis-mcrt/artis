@@ -36,7 +36,6 @@ void write_specpol(const std::string &specpol_filename, const std::string &emiss
 void add_to_spec_res(const struct packet *pkt_ptr, int current_abin, struct spec &spectra, const struct spec *stokes_i,
                      const struct spec *stokes_q, const struct spec *stokes_u);
 
-std::unique_ptr<struct spec> alloc_spectra(bool do_emission_res);
 void init_spectra(struct spec &spectra, double nu_min, double nu_max, bool do_emission_res);
 void init_spectrum_trace();
 void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts);
