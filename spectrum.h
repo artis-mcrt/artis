@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 struct timestepspec {
   double *flux = nullptr;
