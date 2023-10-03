@@ -22,7 +22,7 @@ struct spec {
   std::unique_ptr<double[]> emissionalltimesteps = nullptr;
   std::unique_ptr<double[]> trueemissionalltimesteps = nullptr;
   std::unique_ptr<struct timestepspec[]> timesteps = nullptr;
-  bool do_emission_res = true;
+  bool do_emission_res = false;
 };
 
 void write_spectrum(const std::string &spec_filename, const std::string &emission_filename,
