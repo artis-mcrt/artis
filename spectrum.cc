@@ -499,6 +499,9 @@ void init_spectra(struct spec &spectra, const double nu_min, const double nu_max
   spectra.nu_min = nu_min;
   spectra.nu_max = nu_max;
   spectra.do_emission_res = do_emission_res;
+  const bool print_memusage =
+      (spectra.lower_freq.empty() || (do_emission_res && spectra.absorptionalltimesteps.empty()));
+
   spectra.lower_freq.resize(MNUBINS);
   spectra.delta_freq.resize(spectra.lower_freq.size());
   for (size_t nnu = 0; nnu < spectra.lower_freq.size(); nnu++) {
@@ -540,8 +543,10 @@ void init_spectra(struct spec &spectra, const double nu_min, const double nu_max
       spectra.timesteps[nts].emission = &spectra.emissionalltimesteps[nts * MNUBINS * proccount];
       spectra.timesteps[nts].trueemission = &spectra.trueemissionalltimesteps[nts * MNUBINS * proccount];
     }
-    printout("[info] mem_usage: set of emission/absorption spectra occupy %.3f MB (nnubins %d)\n",
-             mem_usage / 1024. / 1024., MNUBINS);
+    if (print_memusage) {
+      printout("[info] mem_usage: set of emission/absorption spectra occupy %.3f MB (nnubins %d)\n",
+               mem_usage / 1024. / 1024., MNUBINS);
+    }
 
   } else {
     for (int nts = 0; nts < globals::ntstep; nts++) {
@@ -554,7 +559,9 @@ void init_spectra(struct spec &spectra, const double nu_min, const double nu_max
     spectra.emissionalltimesteps.clear();
     spectra.trueemissionalltimesteps.clear();
 
-    printout("[info] mem_usage: set of spectra occupy %.3f MB (nnubins %d)\n", mem_usage / 1024. / 1024., MNUBINS);
+    if (print_memusage) {
+      printout("[info] mem_usage: set of spectra occupy %.3f MB (nnubins %d)\n", mem_usage / 1024. / 1024., MNUBINS);
+    }
   }
 }
 
