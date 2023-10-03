@@ -218,8 +218,7 @@ auto main(int argc, char *argv[]) -> int {
       write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, globals::ntstep);
 
       if constexpr (POL_ON) {
-        write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", POL_ON ? &stokes_i : nullptr,
-                      POL_ON ? &stokes_q : nullptr, POL_ON ? &stokes_u : nullptr);
+        write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", &stokes_i, &stokes_q, &stokes_u);
       }
 
       write_spectrum("gamma_spec.out", "", "", "", gamma_spectra, globals::ntstep);
