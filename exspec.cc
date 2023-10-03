@@ -133,15 +133,9 @@ auto main(int argc, char *argv[]) -> int {
 
   auto rpkt_spectra = alloc_spectra(globals::do_emission_res);
 
-  std::unique_ptr<struct spec> stokes_i = nullptr;
-  std::unique_ptr<struct spec> stokes_q = nullptr;
-  std::unique_ptr<struct spec> stokes_u = nullptr;
-
-  if constexpr (POL_ON) {
-    stokes_i = alloc_spectra(globals::do_emission_res);
-    stokes_q = alloc_spectra(globals::do_emission_res);
-    stokes_u = alloc_spectra(globals::do_emission_res);
-  }
+  std::unique_ptr<struct spec> stokes_i = POL_ON ? alloc_spectra(globals::do_emission_res) : nullptr;
+  std::unique_ptr<struct spec> stokes_q = POL_ON ? alloc_spectra(globals::do_emission_res) : nullptr;
+  std::unique_ptr<struct spec> stokes_u = POL_ON ? alloc_spectra(globals::do_emission_res) : nullptr;
 
   auto gamma_spectra = alloc_spectra(false);
 
