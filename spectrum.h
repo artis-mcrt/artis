@@ -16,7 +16,7 @@ struct spec {
   double nu_min = -1.;
   double nu_max = -1.;
   std::vector<float> lower_freq;
-  std::unique_ptr<float[]> delta_freq = nullptr;
+  std::vector<float> delta_freq;
   std::unique_ptr<double[]> fluxalltimesteps = nullptr;
   std::unique_ptr<double[]> absorptionalltimesteps = nullptr;
   std::unique_ptr<double[]> emissionalltimesteps = nullptr;

@@ -253,7 +253,8 @@ void write_specpol(const std::string &specpol_filename, const std::string &emiss
 
   const int proccount = get_proccount();
   const int ioncount = get_nelements() * get_max_nions();
-  for (int m = 0; m < MNUBINS; m++) {
+  assert_always(stokes_i->lower_freq.size() == stokes_i->delta_freq.size());
+  for (size_t m = 0; m < stokes_i->lower_freq.size(); m++) {
     fprintf(specpol_file, "%g ", ((stokes_i->lower_freq[m] + (stokes_i->delta_freq[m] / 2))));
 
     // Stokes I
@@ -499,8 +500,8 @@ void init_spectra(struct spec &spectra, const double nu_min, const double nu_max
   spectra.nu_max = nu_max;
   spectra.do_emission_res = do_emission_res;
   spectra.lower_freq.resize(MNUBINS);
-  assert_always(spectra.delta_freq.get() != nullptr);
-  for (int nnu = 0; nnu < MNUBINS; nnu++) {
+  spectra.delta_freq.resize(spectra.lower_freq.size());
+  for (size_t nnu = 0; nnu < spectra.lower_freq.size(); nnu++) {
     spectra.lower_freq[nnu] = exp(log(nu_min) + (nnu * (dlognu)));
     spectra.delta_freq[nnu] = exp(log(nu_min) + ((nnu + 1) * (dlognu))) - spectra.lower_freq[nnu];
   }
@@ -576,7 +577,6 @@ auto alloc_spectra(const bool do_emission_res) -> std::unique_ptr<struct spec> {
   mem_usage += globals::ntstep * sizeof(struct spec);
 
   spectra->do_emission_res = false;  // might be set true later by alloc_emissionabsorption_spectra
-  spectra->delta_freq = std::make_unique<float[]>(MNUBINS);
 
   spectra->timesteps = std::make_unique<struct timestepspec[]>(globals::ntstep);
   mem_usage += globals::ntstep * sizeof(struct timestepspec);
