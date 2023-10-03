@@ -34,7 +34,7 @@
 // threadprivate variables
 int tid;
 bool use_cellhist;
-std::mt19937 stdrng;
+std::mt19937 stdrng(std::random_device{}());
 gsl_integration_workspace *gslworkspace = nullptr;
 FILE *output_file = nullptr;
 static FILE *linestat_file = nullptr;

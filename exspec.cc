@@ -18,7 +18,7 @@
 FILE *output_file = nullptr;
 int tid = 0;
 bool use_cellhist = false;
-std::mt19937 stdrng;
+std::mt19937 stdrng(std::random_device{}());
 gsl_integration_workspace *gslworkspace = nullptr;
 
 auto main(int argc, char *argv[]) -> int {
