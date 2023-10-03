@@ -498,7 +498,7 @@ void init_spectra(struct spec &spectra, const double nu_min, const double nu_max
   spectra.nu_min = nu_min;
   spectra.nu_max = nu_max;
   spectra.do_emission_res = do_emission_res;
-  assert_always(spectra.lower_freq.get() != nullptr);
+  spectra.lower_freq.resize(MNUBINS);
   assert_always(spectra.delta_freq.get() != nullptr);
   for (int nnu = 0; nnu < MNUBINS; nnu++) {
     spectra.lower_freq[nnu] = exp(log(nu_min) + (nnu * (dlognu)));
@@ -576,7 +576,6 @@ auto alloc_spectra(const bool do_emission_res) -> std::unique_ptr<struct spec> {
   mem_usage += globals::ntstep * sizeof(struct spec);
 
   spectra->do_emission_res = false;  // might be set true later by alloc_emissionabsorption_spectra
-  spectra->lower_freq = std::make_unique<float[]>(MNUBINS);
   spectra->delta_freq = std::make_unique<float[]>(MNUBINS);
 
   spectra->timesteps = std::make_unique<struct timestepspec[]>(globals::ntstep);
