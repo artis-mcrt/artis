@@ -193,7 +193,8 @@ auto main(int argc, char *argv[]) -> int {
           if (pkts_start[ii].escape_type == TYPE_RPKT) {
             nesc_rpkt++;
             add_to_lc_res(&pkts_start[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-            add_to_spec_res(&pkts_start[ii], a, rpkt_spectra, &stokes_i, &stokes_q, &stokes_u);
+            add_to_spec_res(&pkts_start[ii], a, rpkt_spectra, POL_ON ? &stokes_i : nullptr,
+                            POL_ON ? &stokes_q : nullptr, POL_ON ? &stokes_u : nullptr);
           } else if (pkts_start[ii].escape_type == TYPE_GAMMA) {
             nesc_gamma++;
             if (a == -1) {
@@ -217,7 +218,8 @@ auto main(int argc, char *argv[]) -> int {
       write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, globals::ntstep);
 
       if constexpr (POL_ON) {
-        write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", &stokes_i, &stokes_q, &stokes_u);
+        write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", POL_ON ? &stokes_i : nullptr,
+                      POL_ON ? &stokes_q : nullptr, POL_ON ? &stokes_u : nullptr);
       }
 
       write_spectrum("gamma_spec.out", "", "", "", gamma_spectra, globals::ntstep);
@@ -262,12 +264,6 @@ auto main(int argc, char *argv[]) -> int {
       printout("Did %d of %d angle bins.\n", a + 1, MABINS);
     }
   }
-
-  rpkt_spectra = {};
-  stokes_i = {};
-  stokes_q = {};
-  stokes_u = {};
-  gamma_spectra = {};
 
   free(pkts);
   decay::cleanup();

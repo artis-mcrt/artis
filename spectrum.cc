@@ -507,8 +507,11 @@ void init_spectra(struct spec &spectra, const double nu_min, const double nu_max
   }
 
   spectra.do_emission_res = do_emission_res;  // might be set true later by alloc_emissionabsorption_spectra
+
   spectra.timesteps.resize(globals::ntstep);
   spectra.fluxalltimesteps.resize(globals::ntstep * MNUBINS);
+  std::ranges::fill(spectra.fluxalltimesteps, 0.0);
+
   mem_usage += globals::ntstep * sizeof(struct spec);
   mem_usage += globals::ntstep * sizeof(struct timestepspec);
   mem_usage += globals::ntstep * MNUBINS * sizeof(double);
@@ -526,6 +529,10 @@ void init_spectra(struct spec &spectra, const double nu_min, const double nu_max
     spectra.absorptionalltimesteps.resize(globals::ntstep * MNUBINS * get_nelements() * get_max_nions());
     spectra.emissionalltimesteps.resize(globals::ntstep * MNUBINS * proccount);
     spectra.trueemissionalltimesteps.resize(globals::ntstep * MNUBINS * proccount);
+
+    std::ranges::fill(spectra.absorptionalltimesteps, 0.0);
+    std::ranges::fill(spectra.emissionalltimesteps, 0.0);
+    std::ranges::fill(spectra.trueemissionalltimesteps, 0.0);
 
     for (size_t nts = 0; nts < spectra.timesteps.size(); nts++) {
       spectra.timesteps[nts].absorption =
@@ -549,11 +556,6 @@ void init_spectra(struct spec &spectra, const double nu_min, const double nu_max
 
     printout("[info] mem_usage: set of spectra occupy %.3f MB (nnubins %d)\n", mem_usage / 1024. / 1024., MNUBINS);
   }
-
-  std::ranges::fill(spectra.fluxalltimesteps, 0.0);
-  std::ranges::fill(spectra.absorptionalltimesteps, 0.0);
-  std::ranges::fill(spectra.emissionalltimesteps, 0.0);
-  std::ranges::fill(spectra.trueemissionalltimesteps, 0.0);
 }
 
 void add_to_spec_res(const struct packet *const pkt_ptr, int current_abin, struct spec &spectra,
@@ -573,18 +575,18 @@ void add_to_spec_res(const struct packet *const pkt_ptr, int current_abin, struc
 }
 
 #ifdef MPI_ON
-static void mpi_reduce_spectra(int my_rank, struct spec *spectra, int numtimesteps) {
+static void mpi_reduce_spectra(int my_rank, struct spec &spectra, int numtimesteps) {
   for (int n = 0; n < numtimesteps; n++) {
-    MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra->timesteps[n].flux, spectra->timesteps[n].flux, MNUBINS,
-               MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.timesteps[n].flux, spectra.timesteps[n].flux, MNUBINS, MPI_DOUBLE,
+               MPI_SUM, 0, MPI_COMM_WORLD);
 
-    if (spectra->do_emission_res) {
+    if (spectra.do_emission_res) {
       const int proccount = get_proccount();
-      MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra->timesteps[n].absorption, spectra->timesteps[n].absorption,
+      MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.timesteps[n].absorption, spectra.timesteps[n].absorption,
                  MNUBINS * get_nelements() * get_max_nions(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra->timesteps[n].emission, spectra->timesteps[n].emission,
+      MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.timesteps[n].emission, spectra.timesteps[n].emission,
                  MNUBINS * proccount, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra->timesteps[n].trueemission, spectra->timesteps[n].trueemission,
+      MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.timesteps[n].trueemission, spectra.timesteps[n].trueemission,
                  MNUBINS * proccount, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     }
   }
@@ -630,7 +632,7 @@ void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts)
   const time_t time_mpireduction_start = time(nullptr);
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-  mpi_reduce_spectra(my_rank, &rpkt_spectra, numtimesteps);
+  mpi_reduce_spectra(my_rank, rpkt_spectra, numtimesteps);
   MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lum.data(), rpkt_light_curve_lum.data(), numtimesteps,
              MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : rpkt_light_curve_lumcmf.data(), rpkt_light_curve_lumcmf.data(), numtimesteps,
