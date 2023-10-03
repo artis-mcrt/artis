@@ -578,6 +578,7 @@ auto alloc_spectra(const bool do_emission_res) -> std::unique_ptr<struct spec> {
   spectra->timesteps.resize(globals::ntstep);
   mem_usage += globals::ntstep * sizeof(struct timestepspec);
 
+  spectra->fluxalltimesteps.resize(globals::ntstep * MNUBINS);
   mem_usage += globals::ntstep * MNUBINS * sizeof(double);
 
   assert_always(MNUBINS > 0);
