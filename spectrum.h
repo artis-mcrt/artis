@@ -17,10 +17,10 @@ struct spec {
   double nu_max = -1.;
   std::vector<float> lower_freq;
   std::vector<float> delta_freq;
-  std::unique_ptr<double[]> fluxalltimesteps = nullptr;
-  std::unique_ptr<double[]> absorptionalltimesteps = nullptr;
-  std::unique_ptr<double[]> emissionalltimesteps = nullptr;
-  std::unique_ptr<double[]> trueemissionalltimesteps = nullptr;
+  std::vector<double> fluxalltimesteps;
+  std::vector<double> absorptionalltimesteps;
+  std::vector<double> emissionalltimesteps;
+  std::vector<double> trueemissionalltimesteps;
   std::vector<struct timestepspec> timesteps;
   bool do_emission_res = false;
 };

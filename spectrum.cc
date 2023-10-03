@@ -538,16 +538,12 @@ static void alloc_emissionabsorption_spectra(auto &spectra) {
   spectra->do_emission_res = true;
 
   mem_usage += globals::ntstep * MNUBINS * get_nelements() * get_max_nions() * sizeof(double);
-  spectra->absorptionalltimesteps =
-      std::make_unique<double[]>(globals::ntstep * MNUBINS * get_nelements() * get_max_nions());
-  assert_always(spectra->absorptionalltimesteps != nullptr);
+  spectra->absorptionalltimesteps.resize(globals::ntstep * MNUBINS * get_nelements() * get_max_nions());
 
   mem_usage += 2 * globals::ntstep * MNUBINS * proccount * sizeof(double);
-  spectra->emissionalltimesteps = std::make_unique<double[]>(globals::ntstep * MNUBINS * proccount);
-  assert_always(spectra->emissionalltimesteps != nullptr);
+  spectra->emissionalltimesteps.resize(globals::ntstep * MNUBINS * proccount);
 
-  spectra->trueemissionalltimesteps = std::make_unique<double[]>(globals::ntstep * MNUBINS * proccount);
-  assert_always(spectra->trueemissionalltimesteps != nullptr);
+  spectra->trueemissionalltimesteps.resize(globals::ntstep * MNUBINS * proccount);
 
   spectra->timesteps.resize(globals::ntstep);
   for (size_t nts = 0; nts < spectra->timesteps.size(); nts++) {
@@ -582,7 +578,6 @@ auto alloc_spectra(const bool do_emission_res) -> std::unique_ptr<struct spec> {
   spectra->timesteps.resize(globals::ntstep);
   mem_usage += globals::ntstep * sizeof(struct timestepspec);
 
-  spectra->fluxalltimesteps = std::make_unique<double[]>(globals::ntstep * MNUBINS);
   mem_usage += globals::ntstep * MNUBINS * sizeof(double);
 
   assert_always(MNUBINS > 0);
