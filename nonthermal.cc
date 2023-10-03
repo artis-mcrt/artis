@@ -144,34 +144,6 @@ static struct nt_solution_struct *nt_solution;
 static double *deposition_rate_density;
 static int *deposition_rate_density_timestep;
 
-// for descending sort
-static auto compare_excitation_fractions(const void *p1, const void *p2) -> int {
-  const auto *elem1 = static_cast<const struct nt_excitation_struct *>(p1);
-  const auto *elem2 = static_cast<const struct nt_excitation_struct *>(p2);
-
-  if (elem1->frac_deposition < elem2->frac_deposition) {
-    return 1;
-  }
-  if (elem1->frac_deposition > elem2->frac_deposition) {
-    return -1;
-  }
-  return 0;
-}
-
-// for ascending sort
-static auto compare_excitation_lineindicies(const void *p1, const void *p2) -> int {
-  const auto *elem1 = static_cast<const struct nt_excitation_struct *>(p1);
-  const auto *elem2 = static_cast<const struct nt_excitation_struct *>(p2);
-
-  if (elem1->lineindex > elem2->lineindex) {
-    return 1;
-  }
-  if (elem1->lineindex < elem2->lineindex) {
-    return -1;
-  }
-  return 0;
-}
-
 #ifndef get_tot_nion
 static auto get_tot_nion(const int modelgridindex) -> double { return get_nntot(modelgridindex); }
 #endif
@@ -2067,9 +2039,10 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
   }
 
   if constexpr (NT_EXCITATION_ON && (MAX_NT_EXCITATIONS_STORED > 0)) {
-    qsort(nt_solution[modelgridindex].frac_excitations_list.data(),
-          nt_solution[modelgridindex].frac_excitations_list.size(), sizeof(struct nt_excitation_struct),
-          compare_excitation_fractions);
+    // sort by descending frac_deposition
+    std::sort(nt_solution[modelgridindex].frac_excitations_list.begin(),
+              nt_solution[modelgridindex].frac_excitations_list.end(),
+              [](const auto &a, const auto &b) { return static_cast<bool>(a.frac_deposition > b.frac_deposition); });
 
     // the excitation list is now sorted by frac_deposition descending
     const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
@@ -2124,10 +2097,10 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
       }
     }
 
-    // now sort the excitation list by lineindex ascending for fast lookup with a binary search
-    qsort(nt_solution[modelgridindex].frac_excitations_list.data(),
-          nt_solution[modelgridindex].frac_excitations_list.size(), sizeof(struct nt_excitation_struct),
-          compare_excitation_lineindicies);
+    // sort the excitation list by ascending lineindex for fast lookup with a binary search
+    std::sort(nt_solution[modelgridindex].frac_excitations_list.begin(),
+              nt_solution[modelgridindex].frac_excitations_list.end(),
+              [](const auto &a, const auto &b) { return static_cast<bool>(a.lineindex < b.lineindex); });
 
   }  // NT_EXCITATION_ON
 
