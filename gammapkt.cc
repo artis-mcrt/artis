@@ -653,31 +653,33 @@ static void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist) {
   // Called with a packet that is about to travel a
   // distance dist in the lab frame.
 
-  if (dist > 0) {
-    double vel_vec[3];
-    get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
-
-    double const doppler_sq = doppler_squared_nucmf_on_nurf(pkt_ptr->dir, vel_vec);
-
-    const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
-    const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
-    double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + sigma_photo_electric_rf(pkt_ptr) +
-                           (sigma_pair_prod_rf(pkt_ptr) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
-    heating_cont = heating_cont * pkt_ptr->e_rf * dist * doppler_sq;
-
-    // The terms in the above are for Compton, photoelectric and pair production. The pair production one
-    // assumes that a fraction (1. - (1.022 MeV / nu)) of the gamma's energy is thermalised.
-    // The remaining 1.022 MeV is made into gamma rays
-
-    // For normalisation this needs to be
-    //  1) divided by volume
-    //  2) divided by the length of the time step
-    //  3) divided by 4 pi sr
-    //  This will all be done later
-    assert_testmodeonly(heating_cont >= 0.);
-    assert_testmodeonly(isfinite(heating_cont));
-    safeadd(globals::rpkt_emiss[mgi], heating_cont);
+  if (!(dist > 0)) {
+    return;
   }
+
+  double vel_vec[3];
+  get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
+
+  double const doppler_sq = doppler_squared_nucmf_on_nurf(pkt_ptr->dir, vel_vec);
+
+  const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+  const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
+  double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + sigma_photo_electric_rf(pkt_ptr) +
+                         (sigma_pair_prod_rf(pkt_ptr) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
+  heating_cont = heating_cont * pkt_ptr->e_rf * dist * doppler_sq;
+
+  // The terms in the above are for Compton, photoelectric and pair production. The pair production one
+  // assumes that a fraction (1. - (1.022 MeV / nu)) of the gamma's energy is thermalised.
+  // The remaining 1.022 MeV is made into gamma rays
+
+  // For normalisation this needs to be
+  //  1) divided by volume
+  //  2) divided by the length of the time step
+  //  3) divided by 4 pi sr
+  //  This will all be done later
+  assert_testmodeonly(heating_cont >= 0.);
+  assert_testmodeonly(isfinite(heating_cont));
+  safeadd(globals::rpkt_emiss[mgi], heating_cont);
 }
 
 void pair_prod(struct packet *pkt_ptr) {
