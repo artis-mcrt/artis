@@ -1623,10 +1623,10 @@ auto calculate_populations(const int modelgridindex) -> double
       nne_tot += nnelement * get_atomicnumber(element);
 
       const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
-      auto ionfractions = std::make_unique<double[]>(uppermost_ion + 1);
+      auto ionfractions = std::vector<double>(uppermost_ion + 1);
 
       if (nnelement > 0) {
-        get_ionfractions(element, modelgridindex, nne, ionfractions.get(), uppermost_ion);
+        get_ionfractions(element, modelgridindex, nne, ionfractions, uppermost_ion);
       }
 
       /// Use ionizationfractions to calculate the groundlevel populations
