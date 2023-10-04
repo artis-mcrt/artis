@@ -321,7 +321,7 @@ constexpr auto sigma_compton_partial(const double x, const double f) -> double
   return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
 }
 
-static auto sig_comp(const struct packet *pkt_ptr) -> double {
+static auto sigma_compton_rf(const struct packet *pkt_ptr) -> double {
   // Start by working out the compton x-section in the co-moving frame.
 
   double const xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
@@ -337,8 +337,7 @@ static auto sig_comp(const struct packet *pkt_ptr) -> double {
   }
 
   // Now need to multiply by the electron number density.
-  const int cellindex = pkt_ptr->where;
-  sigma_cmf *= grid::get_nnetot(grid::get_cell_modelgridindex(cellindex));
+  sigma_cmf *= grid::get_nnetot(grid::get_cell_modelgridindex(pkt_ptr->where));
 
   // Now need to convert between frames.
 
@@ -516,7 +515,7 @@ static void compton_scatter(struct packet *pkt_ptr)
   }
 }
 
-static auto sig_photo_electric(const struct packet *pkt_ptr) -> double {
+static auto sigma_photo_electric_rf(const struct packet *pkt_ptr) -> double {
   // photo electric effect scattering
 
   double sigma_cmf;
@@ -558,7 +557,7 @@ static auto sig_photo_electric(const struct packet *pkt_ptr) -> double {
   return sigma_rf;
 }
 
-static auto sig_pair_prod(const struct packet *pkt_ptr) -> double {
+static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
   // Cross section for pair production.
 
   double sigma_cmf = 0.;
@@ -664,8 +663,8 @@ static void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist) {
     double const doppler_sq = doppler_squared_nucmf_on_nurf(pkt_ptr->dir, vel_vec);
 
     const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
-    double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + sig_photo_electric(pkt_ptr) +
-                           (sig_pair_prod(pkt_ptr) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
+    double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + sigma_photo_electric_rf(pkt_ptr) +
+                           (sigma_pair_prod_rf(pkt_ptr) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
     heating_cont = heating_cont * pkt_ptr->e_rf * dist * doppler_sq;
 
     // The terms in the above are for Compton, photoelectric and pair production. The pair production one
@@ -785,11 +784,11 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
   double kap_compton = 0.0;
   if (globals::gamma_grey < 0) {
-    kap_compton = sig_comp(pkt_ptr);
+    kap_compton = sigma_compton_rf(pkt_ptr);
   }
 
-  const double kap_photo_electric = sig_photo_electric(pkt_ptr);
-  const double kap_pair_prod = sig_pair_prod(pkt_ptr);
+  const double kap_photo_electric = sigma_photo_electric_rf(pkt_ptr);
+  const double kap_pair_prod = sigma_pair_prod_rf(pkt_ptr);
   const double kap_tot = kap_compton + kap_photo_electric + kap_pair_prod;
 
   assert_testmodeonly(std::isfinite(kap_compton));
