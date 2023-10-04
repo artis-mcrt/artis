@@ -1087,7 +1087,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
 
     if (globals::opacity_case >= 4) {
-      if (nts == globals::itstep && titer == 0) {
+      if (nts == globals::timestep_start && titer == 0) {
         // For the initial timestep, temperatures have already been assigned
         // either by trapped energy release calculation, or reading from gridsave file
 
@@ -1229,7 +1229,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         const int element = 0;
         const int ion = 0;
         grid::modelgrid[mgi].cooling_contrib_ion[element][ion] = -1.;
-      } else if (globals::simulation_continued_from_saved && nts == globals::itstep) {
+      } else if (globals::simulation_continued_from_saved && nts == globals::timestep_start) {
         // cooling rates were read from the gridsave file for this timestep
         // make sure they are valid
         assert_always(grid::modelgrid[mgi].totalcooling >= 0.);
@@ -1257,7 +1257,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       /// Need the total number density of bound and free electrons for Compton scattering
       calculate_electron_densities(mgi);  // if this causes problems, disable the nne calculation (only need nne_tot)
 
-      if ((nts - globals::itstep) != 0 || titer != 0) {
+      if ((nts - globals::timestep_start) != 0 || titer != 0) {
         radfield::normalise_J(mgi, estimator_normfactor_over4pi);  // this applies normalisation to the fullspec J
         radfield::set_J_normfactor(mgi,
                                    estimator_normfactor_over4pi);  // this stores the factor that will be applied
@@ -1314,7 +1314,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   if constexpr (USE_LUT_PHOTOION) {
     /// Initialise globals::corrphotoionrenorm[i] to zero before update_grid is called
     /// unless they have been read from file
-    if ((!globals::simulation_continued_from_saved) || (nts - globals::itstep != 0) || (titer != 0)) {
+    if ((!globals::simulation_continued_from_saved) || (nts - globals::timestep_start != 0) || (titer != 0)) {
       printout("nts %d, titer %d: reset corr photoionrenorm\n", nts, titer);
       for (int i = 0; i < grid::get_npts_model() * get_nelements() * get_max_nions(); i++) {
         globals::corrphotoionrenorm[i] = 0.;

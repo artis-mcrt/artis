@@ -291,8 +291,8 @@ extern double tmax;
 extern double tmin;
 
 extern int ntimesteps;
-extern int itstep;
-extern int ftstep;
+extern int timestep_start;
+extern int timestep_finish;
 extern int timestep;
 
 extern double opcase3_normal;

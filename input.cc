@@ -43,7 +43,7 @@ struct transitiontable_entry {
 constexpr std::array<std::string_view, 24> inputlinecomments = {
     " 0: pre_zseed: specific random number seed if > 0 or random if negative",
     " 1: ntimesteps: number of timesteps",
-    " 2: itstep ftstep: timestep number range start (inclusive) and stop (not inclusive)",
+    " 2: timestep_start timestep_finish: timestep number range start (inclusive) and stop (not inclusive)",
     " 3: tmin_days tmax_days: start and end times [day]",
     " 4: UNUSED nusyn_min_mev nusyn_max_mev: lowest and highest frequency to synthesise [MeV]",
     " 5: UNUSED nsyn_time: number of times for synthesis",
@@ -1775,11 +1775,11 @@ void read_parameterfile(int rank)
   assert_always(globals::ntimesteps > 0);
 
   assert_always(get_noncommentline(file, line));
-  std::istringstream(line) >> globals::itstep >> globals::ftstep;  // number of start and end time step
-  printout("input: itstep %d ftstep %d\n", globals::itstep, globals::ftstep);
-  assert_always(globals::itstep < globals::ntimesteps);
-  assert_always(globals::itstep <= globals::ftstep);
-  assert_always(globals::ftstep <= globals::ntimesteps);
+  std::istringstream(line) >> globals::timestep_start >> globals::timestep_finish;  // number of start and end time step
+  printout("input: timestep_start %d timestep_finish %d\n", globals::timestep_start, globals::timestep_finish);
+  assert_always(globals::timestep_start < globals::ntimesteps);
+  assert_always(globals::timestep_start <= globals::timestep_finish);
+  assert_always(globals::timestep_finish <= globals::ntimesteps);
 
   double tmin_days = 0.;
   double tmax_days = 0.;
@@ -1858,7 +1858,7 @@ void read_parameterfile(int rank)
     printout("input: resuming simulation from saved point\n");
   } else {
     printout("input: starting a new simulation\n");
-    assert_always(globals::itstep == 0);
+    assert_always(globals::timestep_start == 0);
   }
 
   /// Wavelength (in Angstroms) at which the parameterisation of the radiation field
@@ -1984,7 +1984,7 @@ void update_parameterfile(int nts)
       if (nts >= 0) {
         if (noncomment_linenum == 2) {
           /// Number of start and end time step
-          snprintf(c_line, 1024, "%d %d", nts, globals::ftstep);
+          snprintf(c_line, 1024, "%d %d", nts, globals::timestep_finish);
           // line.assign(c_line);
           line.replace(line.begin(), line.end(), c_line);
         } else if (noncomment_linenum == 16) {

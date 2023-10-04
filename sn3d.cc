@@ -551,7 +551,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
   bool do_this_full_loop = true;
 
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
-  if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::itstep))) {
+  if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::timestep_start))) {
     /// Read the packets file to reset before each additional iteration on the timestep
     read_temp_packetsfile(nts, my_rank, packets);
   }
@@ -588,7 +588,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
   /// If this is not the 0th time step of the current job step,
   /// write out a snapshot of the grid properties for further restarts
   /// and update input.txt accordingly
-  if (((nts - globals::itstep) != 0)) {
+  if (((nts - globals::timestep_start) != 0)) {
     save_grid_and_packets(nts, my_rank, packets);
     do_this_full_loop = walltime_sufficient_to_continue(nts, nts_prev, walltimelimitseconds);
   }
@@ -600,7 +600,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
   zero_estimators();
 
   // MPI_Barrier(MPI_COMM_WORLD);
-  if ((nts < globals::ftstep) && do_this_full_loop) {
+  if ((nts < globals::timestep_finish) && do_this_full_loop) {
     /// Now process the packets.
 
     update_packets(my_rank, nts, packets);
@@ -662,7 +662,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
       }
     }
 
-    if (nts == globals::ftstep - 1) {
+    if (nts == globals::timestep_finish - 1) {
       char filename[MAXFILENAMELENGTH];
       snprintf(filename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", 0, my_rank);
       // snprintf(filename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", middle_iteration, my_rank);
@@ -909,7 +909,7 @@ auto main(int argc, char *argv[]) -> int {
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  int nts = globals::itstep;
+  int nts = globals::timestep_start;
 
   macroatom_open_file(my_rank);
   if (ndo > 0) {
@@ -925,7 +925,7 @@ auto main(int argc, char *argv[]) -> int {
   // initialise or read in virtual packet spectra
   vpkt_init(nts, my_rank, tid, globals::simulation_continued_from_saved);
 
-  while (nts < globals::ftstep && !terminate_early) {
+  while (nts < globals::timestep_finish && !terminate_early) {
     globals::timestep = nts;
 #ifdef MPI_ON
     //        const time_t time_before_barrier = time(nullptr);
@@ -971,7 +971,7 @@ auto main(int argc, char *argv[]) -> int {
     fclose(linestat_file);
   }
 
-  if ((globals::ntimesteps != globals::ftstep) || (terminate_early)) {
+  if ((globals::ntimesteps != globals::timestep_finish) || (terminate_early)) {
     printout("RESTART_NEEDED to continue model\n");
   } else {
     printout("No need for restart\n");
