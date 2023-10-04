@@ -61,7 +61,7 @@ void get_ionfractions(int element, int modelgridindex, double nne, double *ionfr
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
 
-  auto nnionfactor = std::make_unique<double[]>(uppermost_ion + 1);
+  auto nnionfactor = std::vector<double>(uppermost_ion + 1);
   nnionfactor[uppermost_ion] = 1;
 
   double denominator = 1.;
