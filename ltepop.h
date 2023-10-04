@@ -8,8 +8,7 @@
 #include "sn3d.h"
 
 double nne_solution_f(double x, void *paras);
-void get_ionfractions(int element, int modelgridindex, double nne, std::vector<double> &ionfractions,
-                      int uppermost_ion);
+std::vector<double> get_ionfractions(int element, int modelgridindex, double nne, int uppermost_ion);
 double phi(int element, int ion, int modelgridindex);
 double calculate_partfunct(int element, int ion, int modelgridindex);
 double get_groundlevelpop(int modelgridindex, int element, int ion);
