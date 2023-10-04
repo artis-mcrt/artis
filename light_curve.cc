@@ -9,7 +9,7 @@
 void write_light_curve(const std::string &lc_filename, const int current_abin,
                        const std::vector<double> &light_curve_lum, const std::vector<double> &light_curve_lumcmf,
                        const int numtimesteps) {
-  assert_always(numtimesteps <= globals::ntstep);
+  assert_always(numtimesteps <= globals::ntimesteps);
 
   std::ofstream lc_file(lc_filename);
   if (!lc_file) {

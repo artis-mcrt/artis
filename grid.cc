@@ -1648,9 +1648,9 @@ static void read_grid_restart_data(const int timestep) {
   printout("READIN GRID SNAPSHOT from %s\n", filename);
   FILE *gridsave_file = fopen_required(filename, "r");
 
-  int ntstep_in = -1;
-  assert_always(fscanf(gridsave_file, "%d ", &ntstep_in) == 1);
-  assert_always(ntstep_in == globals::ntstep);
+  int ntimesteps_in = -1;
+  assert_always(fscanf(gridsave_file, "%d ", &ntimesteps_in) == 1);
+  assert_always(ntimesteps_in == globals::ntimesteps);
 
   int nprocs_in = -1;
   assert_always(fscanf(gridsave_file, "%d ", &nprocs_in) == 1);
@@ -1660,7 +1660,7 @@ static void read_grid_restart_data(const int timestep) {
   assert_always(fscanf(gridsave_file, "%d ", &nthreads_in) == 1);
   assert_always(nthreads_in == get_num_threads());
 
-  for (int nts = 0; nts < globals::ntstep; nts++) {
+  for (int nts = 0; nts < globals::ntimesteps; nts++) {
     assert_always(fscanf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
                          &globals::time_step[nts].gamma_dep, &globals::time_step[nts].gamma_dep_pathint,
                          &globals::time_step[nts].positron_dep, &globals::time_step[nts].eps_positron_ana_power,
@@ -1737,11 +1737,11 @@ void write_grid_restart_data(const int timestep) {
 
   FILE *gridsave_file = fopen_required(filename, "w");
 
-  fprintf(gridsave_file, "%d ", globals::ntstep);
+  fprintf(gridsave_file, "%d ", globals::ntimesteps);
   fprintf(gridsave_file, "%d ", globals::nprocs);
   fprintf(gridsave_file, "%d ", get_num_threads());
 
-  for (int nts = 0; nts < globals::ntstep; nts++) {
+  for (int nts = 0; nts < globals::ntimesteps; nts++) {
     fprintf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
             globals::time_step[nts].gamma_dep, globals::time_step[nts].gamma_dep_pathint,
             globals::time_step[nts].positron_dep, globals::time_step[nts].eps_positron_ana_power,

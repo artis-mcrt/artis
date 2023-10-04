@@ -100,10 +100,10 @@ double rmax;        /// Total mass and outer velocity/radius
 double tmax = -1.;  /// End time of current simulation
 double tmin = -1.;  /// Start time of current simulation
 
-int ntstep = -1;    /// Number of timesteps
-int itstep = -1;    /// Initial timestep's number
-int ftstep = -1;    /// Final timestep's number
-int timestep = -1;  /// Current time step
+int ntimesteps = -1;  /// Number of timesteps
+int itstep = -1;      /// Initial timestep's number
+int ftstep = -1;      /// Final timestep's number
+int timestep = -1;    /// Current time step
 
 /// New variables for other opacity cases, still grey.
 double opcase3_normal;  /// MK: normalisation factor for opacity_case 3

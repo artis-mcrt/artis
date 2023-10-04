@@ -830,7 +830,7 @@ auto main(int argc, char *argv[]) -> int {
   }
 
   printout("time after input %ld\n", time(nullptr));
-  printout("timesteps %d\n", globals::ntstep);
+  printout("timesteps %d\n", globals::ntimesteps);
 
   /// Precalculate the rate coefficients for spontaneous and stimulated recombination
   /// and for photoionisation. With the nebular approximation they only depend on T_e
@@ -971,7 +971,7 @@ auto main(int argc, char *argv[]) -> int {
     fclose(linestat_file);
   }
 
-  if ((globals::ntstep != globals::ftstep) || (terminate_early)) {
+  if ((globals::ntimesteps != globals::ftstep) || (terminate_early)) {
     printout("RESTART_NEEDED to continue model\n");
   } else {
     printout("No need for restart\n");

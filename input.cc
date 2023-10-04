@@ -42,7 +42,7 @@ struct transitiontable_entry {
 
 constexpr std::array<std::string_view, 24> inputlinecomments = {
     " 0: pre_zseed: specific random number seed if > 0 or random if negative",
-    " 1: ntstep: number of timesteps",
+    " 1: ntimesteps: number of timesteps",
     " 2: itstep ftstep: timestep number range start (inclusive) and stop (not inclusive)",
     " 3: tmin_days tmax_days: start and end times [day]",
     " 4: UNUSED nusyn_min_mev nusyn_max_mev: lowest and highest frequency to synthesise [MeV]",
@@ -1771,15 +1771,15 @@ void read_parameterfile(int rank)
 #endif
 
   assert_always(get_noncommentline(file, line));
-  std::istringstream(line) >> globals::ntstep;  // number of time steps
-  assert_always(globals::ntstep > 0);
+  std::istringstream(line) >> globals::ntimesteps;  // number of time steps
+  assert_always(globals::ntimesteps > 0);
 
   assert_always(get_noncommentline(file, line));
   std::istringstream(line) >> globals::itstep >> globals::ftstep;  // number of start and end time step
   printout("input: itstep %d ftstep %d\n", globals::itstep, globals::ftstep);
-  assert_always(globals::itstep < globals::ntstep);
+  assert_always(globals::itstep < globals::ntimesteps);
   assert_always(globals::itstep <= globals::ftstep);
-  assert_always(globals::ftstep <= globals::ntstep);
+  assert_always(globals::ftstep <= globals::ntimesteps);
 
   double tmin_days = 0.;
   double tmax_days = 0.;
@@ -2035,15 +2035,15 @@ void time_init()
 // Subroutine to define the time steps.
 {
   /// t=globals::tmin is the start of the calcualtion. t=globals::tmax is the end of the calculation.
-  /// globals::ntstep is the number of time steps wanted.
+  /// globals::ntimesteps is the number of time steps wanted.
 
-  globals::time_step = static_cast<struct time *>(malloc((globals::ntstep + 1) * sizeof(struct time)));
+  globals::time_step = static_cast<struct time *>(malloc((globals::ntimesteps + 1) * sizeof(struct time)));
 
   /// Now set the individual time steps
   switch (TIMESTEP_SIZE_METHOD) {
     case TIMESTEP_SIZES_LOGARITHMIC: {
-      for (int n = 0; n < globals::ntstep; n++) {  // For logarithmic steps, the logarithmic inverval will be
-        const double dlogt = (log(globals::tmax) - log(globals::tmin)) / globals::ntstep;
+      for (int n = 0; n < globals::ntimesteps; n++) {  // For logarithmic steps, the logarithmic inverval will be
+        const double dlogt = (log(globals::tmax) - log(globals::tmin)) / globals::ntimesteps;
         globals::time_step[n].start = globals::tmin * exp(n * dlogt);
         globals::time_step[n].mid = globals::tmin * exp((n + 0.5) * dlogt);
         globals::time_step[n].width = (globals::tmin * exp((n + 1) * dlogt)) - globals::time_step[n].start;
@@ -2052,9 +2052,9 @@ void time_init()
     }
 
     case TIMESTEP_SIZES_CONSTANT: {
-      for (int n = 0; n < globals::ntstep; n++) {
+      for (int n = 0; n < globals::ntimesteps; n++) {
         // for constant timesteps
-        const double dt = (globals::tmax - globals::tmin) / globals::ntstep;
+        const double dt = (globals::tmax - globals::tmin) / globals::ntimesteps;
         globals::time_step[n].start = globals::tmin + n * dt;
         globals::time_step[n].width = dt;
         globals::time_step[n].mid = globals::time_step[n].start + 0.5 * globals::time_step[n].width;
@@ -2071,12 +2071,12 @@ void time_init()
       const int nts_fixed = ceil((globals::tmax - t_transition) / maxtsdelta);
       const double fixed_tsdelta = (globals::tmax - t_transition) / nts_fixed;
       assert_always(nts_fixed > 0);
-      assert_always(nts_fixed < globals::ntstep);
-      const int nts_log = globals::ntstep - nts_fixed;
+      assert_always(nts_fixed < globals::ntimesteps);
+      const int nts_log = globals::ntimesteps - nts_fixed;
       assert_always(nts_log > 0);
-      assert_always(nts_log < globals::ntstep);
-      assert_always((nts_log + nts_fixed) == globals::ntstep);
-      for (int n = 0; n < globals::ntstep; n++) {
+      assert_always(nts_log < globals::ntimesteps);
+      assert_always((nts_log + nts_fixed) == globals::ntimesteps);
+      for (int n = 0; n < globals::ntimesteps; n++) {
         if (n < nts_log) {
           // For logarithmic steps, the logarithmic inverval will be
           const double dlogt = (log(t_transition) - log(globals::tmin)) / nts_log;
@@ -2104,12 +2104,12 @@ void time_init()
       const int nts_fixed = ceil((t_transition - globals::tmin) / maxtsdelta);
       const double fixed_tsdelta = (t_transition - globals::tmin) / nts_fixed;
       assert_always(nts_fixed > 0);
-      assert_always(nts_fixed < globals::ntstep);
-      const int nts_log = globals::ntstep - nts_fixed;
+      assert_always(nts_fixed < globals::ntimesteps);
+      const int nts_log = globals::ntimesteps - nts_fixed;
       assert_always(nts_log > 0);
-      assert_always(nts_log < globals::ntstep);
-      assert_always((nts_log + nts_fixed) == globals::ntstep);
-      for (int n = 0; n < globals::ntstep; n++) {
+      assert_always(nts_log < globals::ntimesteps);
+      assert_always((nts_log + nts_fixed) == globals::ntimesteps);
+      for (int n = 0; n < globals::ntimesteps; n++) {
         if (n < nts_fixed) {
           // for constant timesteps
           globals::time_step[n].start = globals::tmin + n * fixed_tsdelta;
@@ -2134,7 +2134,7 @@ void time_init()
 
   // to limit the timestep durations
   // const double maxt = 0.5 * DAY;
-  // for (int n = globals::ntstep - 1; n > 0; n--)
+  // for (int n = globals::ntimesteps - 1; n > 0; n--)
   // {
   //   if (globals::time_step[n].width > maxt)
   //   {
@@ -2143,7 +2143,7 @@ void time_init()
   //     globals::time_step[n].start += boundaryshift;
   //     globals::time_step[n - 1].width += boundaryshift;
   //   }
-  //   else if (n < globals::ntstep - 1 && globals::time_step[n + 1].width > maxt)
+  //   else if (n < globals::ntimesteps - 1 && globals::time_step[n + 1].width > maxt)
   //   {
   //     printout("TIME: Keeping logarithmic durations for timesteps <= %d\n", n);
   //   }
@@ -2152,22 +2152,23 @@ void time_init()
 
   /// and add a dummy timestep which contains the endtime
   /// of the calculation
-  globals::time_step[globals::ntstep].start = globals::tmax;
-  globals::time_step[globals::ntstep].mid = globals::tmax;
-  globals::time_step[globals::ntstep].width = 0.;
+  globals::time_step[globals::ntimesteps].start = globals::tmax;
+  globals::time_step[globals::ntimesteps].mid = globals::tmax;
+  globals::time_step[globals::ntimesteps].width = 0.;
 
   // check consistency of start + width = start_next
-  for (int n = 1; n < globals::ntstep; n++) {
+  for (int n = 1; n < globals::ntimesteps; n++) {
     assert_always(
         fabs((globals::time_step[n - 1].start + globals::time_step[n - 1].width) / globals::time_step[n].start) - 1 <
         0.001);
   }
-  assert_always(fabs((globals::time_step[globals::ntstep - 1].start + globals::time_step[globals::ntstep - 1].width) /
-                     globals::tmax) -
-                    1 <
-                0.001);
+  assert_always(
+      fabs((globals::time_step[globals::ntimesteps - 1].start + globals::time_step[globals::ntimesteps - 1].width) /
+           globals::tmax) -
+          1 <
+      0.001);
 
-  for (int n = 0; n < globals::ntstep; n++) {
+  for (int n = 0; n < globals::ntimesteps; n++) {
     globals::time_step[n].positron_dep = 0.;
     globals::time_step[n].eps_positron_ana_power = 0.;
     globals::time_step[n].electron_dep = 0.;
@@ -2190,7 +2191,7 @@ void time_init()
 void write_timestep_file() {
   FILE *timestepfile = fopen_required("timesteps.out", "w");
   fprintf(timestepfile, "#timestep tstart_days tmid_days twidth_days\n");
-  for (int n = 0; n < globals::ntstep; n++) {
+  for (int n = 0; n < globals::ntimesteps; n++) {
     fprintf(timestepfile, "%d %lg %lg %lg\n", n, globals::time_step[n].start / DAY, globals::time_step[n].mid / DAY,
             globals::time_step[n].width / DAY);
   }

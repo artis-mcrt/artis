@@ -290,7 +290,7 @@ extern double rmax;
 extern double tmax;
 extern double tmin;
 
-extern int ntstep;
+extern int ntimesteps;
 extern int itstep;
 extern int ftstep;
 extern int timestep;

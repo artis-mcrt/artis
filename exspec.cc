@@ -148,10 +148,10 @@ auto main(int argc, char *argv[]) -> int {
   // a is the escape direction angle bin
   for (int a = -1; a < amax; a++) {
     /// Set up the light curve grid and initialise the bins to zero.
-    std::vector<double> rpkt_light_curve_lum(globals::ntstep, 0.);
-    std::vector<double> rpkt_light_curve_lumcmf(globals::ntstep, 0.);
-    std::vector<double> gamma_light_curve_lum(globals::ntstep, 0.);
-    std::vector<double> gamma_light_curve_lumcmf(globals::ntstep, 0.);
+    std::vector<double> rpkt_light_curve_lum(globals::ntimesteps, 0.);
+    std::vector<double> rpkt_light_curve_lumcmf(globals::ntimesteps, 0.);
+    std::vector<double> gamma_light_curve_lum(globals::ntimesteps, 0.);
+    std::vector<double> gamma_light_curve_lumcmf(globals::ntimesteps, 0.);
     /// Set up the spectrum grid and initialise the bins to zero.
 
     init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
@@ -212,16 +212,18 @@ auto main(int argc, char *argv[]) -> int {
 
     if (a == -1) {
       // angle-averaged spectra and light curves
-      write_light_curve("light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntstep);
-      write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf, globals::ntstep);
+      write_light_curve("light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntimesteps);
+      write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf,
+                        globals::ntimesteps);
 
-      write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, globals::ntstep);
+      write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra,
+                     globals::ntimesteps);
 
       if constexpr (POL_ON) {
         write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", &stokes_i, &stokes_q, &stokes_u);
       }
 
-      write_spectrum("gamma_spec.out", "", "", "", gamma_spectra, globals::ntstep);
+      write_spectrum("gamma_spec.out", "", "", "", gamma_spectra, globals::ntimesteps);
 
       printout("finished angle-averaged stuff\n");
     } else {
@@ -243,9 +245,9 @@ auto main(int argc, char *argv[]) -> int {
       char absorption_filename[MAXFILENAMELENGTH] = "";
       snprintf(absorption_filename, MAXFILENAMELENGTH, "absorption_res_%.2d.out", a);
 
-      write_light_curve(lc_filename, a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntstep);
+      write_light_curve(lc_filename, a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntimesteps);
       write_spectrum(spec_filename, emission_filename, trueemission_filename, absorption_filename, rpkt_spectra,
-                     globals::ntstep);
+                     globals::ntimesteps);
 
       if constexpr (POL_ON) {
         char specpol_filename[MAXFILENAMELENGTH] = "";
