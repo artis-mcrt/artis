@@ -1732,7 +1732,7 @@ auto get_noncommentline(std::fstream &input, std::string &line) -> bool
 void read_parameterfile(int rank)
 /// Subroutine to read in input parameters from input.txt.
 {
-  unsigned long pre_zseed = 0;
+  uint_least64_t pre_zseed = 0;
 
   auto file = fstream_required("input.txt", std::ios::in);
 
@@ -1747,7 +1747,6 @@ void read_parameterfile(int rank)
     pre_zseed = zseed_input;  // random number seed
     printout("using input.txt specified random number seed of %lu\n", pre_zseed);
   } else {
-    // pre_zseed = time(nullptr);
     pre_zseed = std::random_device{}();
     printout("randomly-generated random number seed is %lu\n", pre_zseed);
   }
@@ -1759,7 +1758,7 @@ void read_parameterfile(int rank)
     /// For MPI parallelisation, the random seed is changed based on the rank of the process
     /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
     /// to the thread-ID tid.
-    const uint_fast64_t zseed = pre_zseed + 13 * (rank * get_num_threads() + tid);
+    const auto zseed = pre_zseed + 13 * (rank * get_num_threads() + tid);
     printout("rank %d: thread %d has zseed %lu\n", rank, tid, zseed);
     rng_init(zseed);
     /// call it a few times
