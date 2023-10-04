@@ -348,7 +348,7 @@ static auto sigma_compton_rf(const struct packet *pkt_ptr) -> double {
   return sigma_rf;
 }
 
-static auto choose_f(double xx, double zrand) -> double
+static auto choose_f(const double xx, const double zrand) -> double
 // To choose the value of f to integrate to - idea is we want
 //   sigma_compton_partial(xx,f) = zrand.
 {
@@ -653,15 +653,13 @@ static void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist) {
   // Called with a packet that is about to travel a
   // distance dist in the lab frame.
 
-  const int cellindex = pkt_ptr->where;
-  const int mgi = grid::get_cell_modelgridindex(cellindex);
-
   if (dist > 0) {
     double vel_vec[3];
     get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
 
     double const doppler_sq = doppler_squared_nucmf_on_nurf(pkt_ptr->dir, vel_vec);
 
+    const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
     const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
     double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + sigma_photo_electric_rf(pkt_ptr) +
                            (sigma_pair_prod_rf(pkt_ptr) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
