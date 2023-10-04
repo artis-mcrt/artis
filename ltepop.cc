@@ -31,7 +31,8 @@ auto nne_solution_f(double x, void *paras) -> double
       // uppermost_ion = globals::elements[element].uppermost_ion;
       const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
 
-      auto ionfractions = get_ionfractions(element, modelgridindex, x, uppermost_ion);
+      auto ionfractions = std::vector<double>(uppermost_ion + 1);
+      get_ionfractions(element, modelgridindex, x, ionfractions, uppermost_ion);
 
       int ion = 0;
       for (ion = 0; ion <= uppermost_ion; ion++) {
@@ -52,11 +53,10 @@ auto nne_solution_f(double x, void *paras) -> double
   return rho * outersum - x;
 }
 
-std::vector<double> get_ionfractions(int element, int modelgridindex, double nne, int uppermost_ion)
+void get_ionfractions(int element, int modelgridindex, double nne, std::vector<double> &ionfractions, int uppermost_ion)
 // Calculate the fractions of an element's population in each ionization stage
 // size of ionfractions array must be >= uppermostion + 1
 {
-  auto ionfractions = std::vector<double>(uppermost_ion + 1, 0.);
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
@@ -86,7 +86,6 @@ std::vector<double> get_ionfractions(int element, int modelgridindex, double nne
     }
     // printout("ionfract(%d,%d,%d,%g) = %g\n", element, ion, modelgridindex, nne, ionfractions[ion]);
   }
-  return ionfractions;
 }
 
 static auto interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T) -> double {
