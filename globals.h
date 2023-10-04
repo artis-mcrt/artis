@@ -293,7 +293,7 @@ extern double tmin;
 extern int ntstep;
 extern int itstep;
 extern int ftstep;
-extern int nts_global;
+extern int timestep;
 
 extern double opcase3_normal;
 extern double rho_crit_para;

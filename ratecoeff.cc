@@ -1298,7 +1298,7 @@ auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex
   /// correction may be evaluated at T_R!
   double gammacorr = -1;
 
-  if (DETAILED_BF_ESTIMATORS_ON && globals::nts_global >= DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP) {
+  if (DETAILED_BF_ESTIMATORS_ON && globals::timestep >= DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP) {
     gammacorr = radfield::get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
     // gammacorr will be -1 if no estimators available
     if (gammacorr > 0) {

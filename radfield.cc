@@ -783,7 +783,7 @@ auto radfield(double nu, int modelgridindex) -> double
 // returns mean intensity J_nu [ergs/s/sr/cm2/Hz]
 {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    if (globals::nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP) {
+    if (globals::timestep >= FIRST_NLTE_RADFIELD_TIMESTEP) {
       const int binindex = select_bin(nu);
       if (binindex >= 0) {
         const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
@@ -1551,7 +1551,7 @@ void read_restart_data(FILE *gridsave_file) {
 // across the binned radiation field which is discontinuous at the bin boundaries
 inline auto integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel, size_t limit,
                       int key, gsl_integration_workspace *workspace, double *result, double *abserr) -> int {
-  if (MULTIBIN_RADFIELD_MODEL_ON && (globals::nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP)) {
+  if (MULTIBIN_RADFIELD_MODEL_ON && (globals::timestep >= FIRST_NLTE_RADFIELD_TIMESTEP)) {
     auto *pts = static_cast<double *>(malloc((RADFIELDBINCOUNT + 3) * sizeof(double)));
     int binindex_a = select_bin(nu_a);
     int const binindex_b = select_bin(nu_b);

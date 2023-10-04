@@ -42,7 +42,7 @@ struct transitiontable_entry {
 
 constexpr std::array<std::string_view, 24> inputlinecomments = {
     " 0: pre_zseed: specific random number seed if > 0 or random if negative",
-    " 1: globals::ntstep: number of timesteps",
+    " 1: ntstep: number of timesteps",
     " 2: itstep ftstep: timestep number range start (inclusive) and stop (not inclusive)",
     " 3: tmin_days tmax_days: start and end times [day]",
     " 4: UNUSED nusyn_min_mev nusyn_max_mev: lowest and highest frequency to synthesise [MeV]",

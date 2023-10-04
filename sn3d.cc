@@ -926,7 +926,7 @@ auto main(int argc, char *argv[]) -> int {
   vpkt_init(nts, my_rank, tid, globals::simulation_continued_from_saved);
 
   while (nts < globals::ftstep && !terminate_early) {
-    globals::nts_global = nts;
+    globals::timestep = nts;
 #ifdef MPI_ON
     //        const time_t time_before_barrier = time(nullptr);
     MPI_Barrier(MPI_COMM_WORLD);

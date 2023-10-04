@@ -594,13 +594,7 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
 auto get_deposition_rate_density(const int modelgridindex) -> double
 // should be in erg / s / cm^3
 {
-  // if (deposition_rate_density[modelgridindex] <= 0)
-  // {
-  //   calculate_deposition_rate_density(modelgridindex, nts_global);
-  //   printout("No deposition_rate_density for cell %d. Calculated value of %g has been stored.\n",
-  //            modelgridindex, deposition_rate_density[modelgridindex]);
-  // }
-  assert_always(deposition_rate_density_timestep[modelgridindex] == globals::nts_global);
+  assert_always(deposition_rate_density_timestep[modelgridindex] == globals::timestep);
   assert_always(deposition_rate_density[modelgridindex] >= 0);
   return deposition_rate_density[modelgridindex];
 }
