@@ -569,47 +569,47 @@ static auto sig_pair_prod(const struct packet *pkt_ptr) -> double {
   const int mgi = grid::get_cell_modelgridindex(cellindex);
   const double rho = grid::get_rho(mgi);
 
-  if (globals::gamma_grey < 0) {
-    // 2.46636e+20 = 1022 keV in frequency
-    // 3.61990e+20 = 1500 keV in frequency
-
-    if (pkt_ptr->nu_cmf > 2.46636e+20) {
-      // double sigma_cmf_cno;
-      double sigma_cmf_si;
-      double sigma_cmf_fe;
-      const double f_fe = grid::get_ffegrp(mgi);
-      if (pkt_ptr->nu_cmf > 3.61990e+20) {
-        // sigma_cmf_cno = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.5))) * 49.e-27;
-
-        sigma_cmf_si = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.5))) * 196.e-27;
-
-        sigma_cmf_fe = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.5))) * 784.e-27;
-      } else {
-        // sigma_cmf_cno = 1.0063 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.022) * 49.e-27;
-
-        sigma_cmf_si = 1.0063 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.022) * 196.e-27;
-
-        sigma_cmf_fe = 1.0063 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.022) * 784.e-27;
-      }
-
-      // Now need to multiply by the particle number density.
-
-      // sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
-      // Assumes Z = 7. So mass = 14.
-
-      sigma_cmf_si *= rho / MH / 28;
-      // Assumes Z = 14. So mass = 28.
-
-      sigma_cmf_fe *= rho / MH / 56;
-      // Assumes Z = 28. So mass = 56.
-
-      sigma_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
-    } else {
-      sigma_cmf = 0.0;
-    }
-  } else {
-    sigma_cmf = 0.0;
+  if (globals::gamma_grey >= 0.) {
+    return 0.;
   }
+
+  // 2.46636e+20 = 1022 keV in frequency
+  if (pkt_ptr->nu_cmf <= 2.46636e+20) {
+    return 0.;
+  }
+
+  // double sigma_cmf_cno;
+  double sigma_cmf_si;
+  double sigma_cmf_fe;
+  const double f_fe = grid::get_ffegrp(mgi);
+
+  // 3.61990e+20 = 1500 keV in frequency
+  if (pkt_ptr->nu_cmf > 3.61990e+20) {
+    // sigma_cmf_cno = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.5))) * 49.e-27;
+
+    sigma_cmf_si = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.5))) * 196.e-27;
+
+    sigma_cmf_fe = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.5))) * 784.e-27;
+  } else {
+    // sigma_cmf_cno = 1.0063 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.022) * 49.e-27;
+
+    sigma_cmf_si = 1.0063 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.022) * 196.e-27;
+
+    sigma_cmf_fe = 1.0063 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.022) * 784.e-27;
+  }
+
+  // Now need to multiply by the particle number density.
+
+  // sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
+  // Assumes Z = 7. So mass = 14.
+
+  sigma_cmf_si *= rho / MH / 28;
+  // Assumes Z = 14. So mass = 28.
+
+  sigma_cmf_fe *= rho / MH / 56;
+  // Assumes Z = 28. So mass = 56.
+
+  sigma_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
 
   // Now need to convert between frames.
 
