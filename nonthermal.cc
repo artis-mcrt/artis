@@ -563,7 +563,7 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
 {
   const double gamma_deposition = globals::rpkt_emiss[modelgridindex] * FOURPI;
 
-  const double tmid = globals::time_step[timestep].mid;
+  const double tmid = globals::timestep[timestep].mid;
   const double rho = grid::get_rho(modelgridindex);
 
   // TODO: calculate thermalisation ratio from the previous timestep either globally (easy) or per cell
@@ -2073,7 +2073,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
             nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition;
         const double ntcollexc_ratecoeff = ratecoeffperdeposition * deposition_rate_density;
 
-        const double t_mid = globals::time_step[timestep].mid;
+        const double t_mid = globals::timestep[timestep].mid;
         const double radexc_ratecoeff = rad_excitation_ratecoeff(modelgridindex, element, ion, lower, uptransindex,
                                                                  epsilon_trans, lineindex, t_mid);
 

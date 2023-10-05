@@ -837,7 +837,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   const time_t sys_time_start_nltesolver = time(nullptr);
 
-  const double t_mid = globals::time_step[timestep].mid;
+  const double t_mid = globals::timestep[timestep].mid;
   const int nions = get_nions(element);
   const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
 
@@ -1157,7 +1157,7 @@ auto solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timestep)
   // printout("Current Te %g and ne %g\n",T_e, nne);
 
   const int nlevels_nlte = get_nlevels_nlte(element, ion);
-  const double t_mid = globals::time_step[timestep].mid;
+  const double t_mid = globals::timestep[timestep].mid;
 
   int nlte_size = 0;
   bool super_level = false;

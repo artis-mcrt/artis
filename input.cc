@@ -2036,16 +2036,16 @@ void time_init()
   /// t=globals::tmin is the start of the calcualtion. t=globals::tmax is the end of the calculation.
   /// globals::ntimesteps is the number of time steps wanted.
 
-  globals::time_step = static_cast<struct time *>(malloc((globals::ntimesteps + 1) * sizeof(struct time)));
+  globals::timestep = static_cast<struct time *>(malloc((globals::ntimesteps + 1) * sizeof(struct time)));
 
   /// Now set the individual time steps
   switch (TIMESTEP_SIZE_METHOD) {
     case TIMESTEP_SIZES_LOGARITHMIC: {
       for (int n = 0; n < globals::ntimesteps; n++) {  // For logarithmic steps, the logarithmic inverval will be
         const double dlogt = (log(globals::tmax) - log(globals::tmin)) / globals::ntimesteps;
-        globals::time_step[n].start = globals::tmin * exp(n * dlogt);
-        globals::time_step[n].mid = globals::tmin * exp((n + 0.5) * dlogt);
-        globals::time_step[n].width = (globals::tmin * exp((n + 1) * dlogt)) - globals::time_step[n].start;
+        globals::timestep[n].start = globals::tmin * exp(n * dlogt);
+        globals::timestep[n].mid = globals::tmin * exp((n + 0.5) * dlogt);
+        globals::timestep[n].width = (globals::tmin * exp((n + 1) * dlogt)) - globals::timestep[n].start;
       }
       break;
     }
@@ -2054,9 +2054,9 @@ void time_init()
       for (int n = 0; n < globals::ntimesteps; n++) {
         // for constant timesteps
         const double dt = (globals::tmax - globals::tmin) / globals::ntimesteps;
-        globals::time_step[n].start = globals::tmin + n * dt;
-        globals::time_step[n].width = dt;
-        globals::time_step[n].mid = globals::time_step[n].start + 0.5 * globals::time_step[n].width;
+        globals::timestep[n].start = globals::tmin + n * dt;
+        globals::timestep[n].width = dt;
+        globals::timestep[n].mid = globals::timestep[n].start + 0.5 * globals::timestep[n].width;
       }
       break;
     }
@@ -2079,16 +2079,16 @@ void time_init()
         if (n < nts_log) {
           // For logarithmic steps, the logarithmic inverval will be
           const double dlogt = (log(t_transition) - log(globals::tmin)) / nts_log;
-          globals::time_step[n].start = globals::tmin * exp(n * dlogt);
-          globals::time_step[n].mid = globals::tmin * exp((n + 0.5) * dlogt);
-          globals::time_step[n].width = (globals::tmin * exp((n + 1) * dlogt)) - globals::time_step[n].start;
+          globals::timestep[n].start = globals::tmin * exp(n * dlogt);
+          globals::timestep[n].mid = globals::tmin * exp((n + 0.5) * dlogt);
+          globals::timestep[n].width = (globals::tmin * exp((n + 1) * dlogt)) - globals::timestep[n].start;
         } else {
           // for constant timesteps
           const double prev_start =
-              n > 0 ? (globals::time_step[n - 1].start + globals::time_step[n - 1].width) : globals::tmin;
-          globals::time_step[n].start = prev_start;
-          globals::time_step[n].width = fixed_tsdelta;
-          globals::time_step[n].mid = globals::time_step[n].start + 0.5 * globals::time_step[n].width;
+              n > 0 ? (globals::timestep[n - 1].start + globals::timestep[n - 1].width) : globals::tmin;
+          globals::timestep[n].start = prev_start;
+          globals::timestep[n].width = fixed_tsdelta;
+          globals::timestep[n].mid = globals::timestep[n].start + 0.5 * globals::timestep[n].width;
         }
       }
       break;
@@ -2111,17 +2111,17 @@ void time_init()
       for (int n = 0; n < globals::ntimesteps; n++) {
         if (n < nts_fixed) {
           // for constant timesteps
-          globals::time_step[n].start = globals::tmin + n * fixed_tsdelta;
-          globals::time_step[n].width = fixed_tsdelta;
-          globals::time_step[n].mid = globals::time_step[n].start + 0.5 * globals::time_step[n].width;
+          globals::timestep[n].start = globals::tmin + n * fixed_tsdelta;
+          globals::timestep[n].width = fixed_tsdelta;
+          globals::timestep[n].mid = globals::timestep[n].start + 0.5 * globals::timestep[n].width;
         } else {
           // For logarithmic time steps, the logarithmic interval will be
           const double dlogt = (log(globals::tmax) - log(t_transition)) / nts_log;
           const double prev_start =
-              n > 0 ? (globals::time_step[n - 1].start + globals::time_step[n - 1].width) : globals::tmin;
-          globals::time_step[n].start = prev_start;
-          globals::time_step[n].width = (t_transition * exp((n - nts_fixed + 1) * dlogt)) - globals::time_step[n].start;
-          globals::time_step[n].mid = globals::time_step[n].start + 0.5 * globals::time_step[n].width;
+              n > 0 ? (globals::timestep[n - 1].start + globals::timestep[n - 1].width) : globals::tmin;
+          globals::timestep[n].start = prev_start;
+          globals::timestep[n].width = (t_transition * exp((n - nts_fixed + 1) * dlogt)) - globals::timestep[n].start;
+          globals::timestep[n].mid = globals::timestep[n].start + 0.5 * globals::timestep[n].width;
         }
       }
       break;
@@ -2135,55 +2135,55 @@ void time_init()
   // const double maxt = 0.5 * DAY;
   // for (int n = globals::ntimesteps - 1; n > 0; n--)
   // {
-  //   if (globals::time_step[n].width > maxt)
+  //   if (globals::timestep[n].width > maxt)
   //   {
-  //     const double boundaryshift = globals::time_step[n].width - maxt;
-  //     globals::time_step[n].width -= boundaryshift;
-  //     globals::time_step[n].start += boundaryshift;
-  //     globals::time_step[n - 1].width += boundaryshift;
+  //     const double boundaryshift = globals::timestep[n].width - maxt;
+  //     globals::timestep[n].width -= boundaryshift;
+  //     globals::timestep[n].start += boundaryshift;
+  //     globals::timestep[n - 1].width += boundaryshift;
   //   }
-  //   else if (n < globals::ntimesteps - 1 && globals::time_step[n + 1].width > maxt)
+  //   else if (n < globals::ntimesteps - 1 && globals::timestep[n + 1].width > maxt)
   //   {
   //     printout("TIME: Keeping logarithmic durations for timesteps <= %d\n", n);
   //   }
   // }
-  // assert_always(globals::time_step[0].width <= maxt); // no solution is possible with these constraints!
+  // assert_always(globals::timestep[0].width <= maxt); // no solution is possible with these constraints!
 
   /// and add a dummy timestep which contains the endtime
   /// of the calculation
-  globals::time_step[globals::ntimesteps].start = globals::tmax;
-  globals::time_step[globals::ntimesteps].mid = globals::tmax;
-  globals::time_step[globals::ntimesteps].width = 0.;
+  globals::timestep[globals::ntimesteps].start = globals::tmax;
+  globals::timestep[globals::ntimesteps].mid = globals::tmax;
+  globals::timestep[globals::ntimesteps].width = 0.;
 
   // check consistency of start + width = start_next
   for (int n = 1; n < globals::ntimesteps; n++) {
-    assert_always(
-        fabs((globals::time_step[n - 1].start + globals::time_step[n - 1].width) / globals::time_step[n].start) - 1 <
-        0.001);
+    assert_always(fabs((globals::timestep[n - 1].start + globals::timestep[n - 1].width) / globals::timestep[n].start) -
+                      1 <
+                  0.001);
   }
   assert_always(
-      fabs((globals::time_step[globals::ntimesteps - 1].start + globals::time_step[globals::ntimesteps - 1].width) /
+      fabs((globals::timestep[globals::ntimesteps - 1].start + globals::timestep[globals::ntimesteps - 1].width) /
            globals::tmax) -
           1 <
       0.001);
 
   for (int n = 0; n < globals::ntimesteps; n++) {
-    globals::time_step[n].positron_dep = 0.;
-    globals::time_step[n].eps_positron_ana_power = 0.;
-    globals::time_step[n].electron_dep = 0.;
-    globals::time_step[n].electron_emission = 0.;
-    globals::time_step[n].eps_electron_ana_power = 0.;
-    globals::time_step[n].alpha_dep = 0.;
-    globals::time_step[n].alpha_emission = 0.;
-    globals::time_step[n].eps_alpha_ana_power = 0.;
-    globals::time_step[n].gamma_dep = 0.;
-    globals::time_step[n].gamma_dep_pathint = 0.;
-    globals::time_step[n].qdot_betaminus = 0.;
-    globals::time_step[n].qdot_alpha = 0.;
-    globals::time_step[n].qdot_total = 0.;
-    globals::time_step[n].gamma_emission = 0.;
-    globals::time_step[n].cmf_lum = 0.0;
-    globals::time_step[n].pellet_decays = 0;
+    globals::timestep[n].positron_dep = 0.;
+    globals::timestep[n].eps_positron_ana_power = 0.;
+    globals::timestep[n].electron_dep = 0.;
+    globals::timestep[n].electron_emission = 0.;
+    globals::timestep[n].eps_electron_ana_power = 0.;
+    globals::timestep[n].alpha_dep = 0.;
+    globals::timestep[n].alpha_emission = 0.;
+    globals::timestep[n].eps_alpha_ana_power = 0.;
+    globals::timestep[n].gamma_dep = 0.;
+    globals::timestep[n].gamma_dep_pathint = 0.;
+    globals::timestep[n].qdot_betaminus = 0.;
+    globals::timestep[n].qdot_alpha = 0.;
+    globals::timestep[n].qdot_total = 0.;
+    globals::timestep[n].gamma_emission = 0.;
+    globals::timestep[n].cmf_lum = 0.0;
+    globals::timestep[n].pellet_decays = 0;
   }
 }
 
@@ -2191,8 +2191,8 @@ void write_timestep_file() {
   FILE *timestepfile = fopen_required("timesteps.out", "w");
   fprintf(timestepfile, "#timestep tstart_days tmid_days twidth_days\n");
   for (int n = 0; n < globals::ntimesteps; n++) {
-    fprintf(timestepfile, "%d %lg %lg %lg\n", n, globals::time_step[n].start / DAY, globals::time_step[n].mid / DAY,
-            globals::time_step[n].width / DAY);
+    fprintf(timestepfile, "%d %lg %lg %lg\n", n, globals::timestep[n].start / DAY, globals::timestep[n].mid / DAY,
+            globals::timestep[n].width / DAY);
   }
   fclose(timestepfile);
 }

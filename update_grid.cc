@@ -58,7 +58,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
             "tdays %7.2f\n",
             timestep, mgi, titer, grid::get_TR(mgi), T_e, grid::get_W(mgi), grid::get_TJ(mgi),
             grid::modelgrid[mgi].grey_depth, grid::modelgrid[mgi].thick, nne, Y_e,
-            globals::time_step[timestep].mid / DAY);
+            globals::timestep[timestep].mid / DAY);
     // fprintf(estimators_file,"%d %g %g %g %g %g %g %g
     //",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
 
@@ -90,7 +90,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
       fprintf(estimators_file, "  SUM: %9.3e", elpop);
 
-      decay::fprint_nuc_abundances(estimators_file, mgi, globals::time_step[timestep].mid, element);
+      decay::fprint_nuc_abundances(estimators_file, mgi, globals::timestep[timestep].mid, element);
 
       if (nions == 0 || elpop <= 0.) {
         // dummy element for nuclear abundances only
@@ -842,7 +842,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
     const time_t sys_time_start_Te = time(nullptr);
     const int nts_for_te = (titer == 0) ? nts - 1 : nts;
 
-    call_T_e_finder(n, nts, globals::time_step[nts_for_te].mid, MINTEMP, MAXTEMP, heatingcoolingrates);
+    call_T_e_finder(n, nts, globals::timestep[nts_for_te].mid, MINTEMP, MAXTEMP, heatingcoolingrates);
 
     const int duration_solve_T_e = time(nullptr) - sys_time_start_Te;
 
@@ -1066,7 +1066,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
   const int assoc_cells = grid::get_numassociatedcells(mgi);
   if (assoc_cells > 0) {
     const double deltaV =
-        grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::time_step[nts_prev].mid / globals::tmin, 3);
+        grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timestep[nts_prev].mid / globals::tmin, 3);
     const time_t sys_time_start_update_cell = time(nullptr);
 
     /// Update current mass density of cell
@@ -1082,7 +1082,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     // grid::modelgrid[n].totalcooling = COOLING_UNDEFINED;
 
     /// Update abundances of radioactive isotopes
-    decay::update_abundances(mgi, nts, globals::time_step[nts].mid);
+    decay::update_abundances(mgi, nts, globals::timestep[nts].mid);
     const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
     const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
 
@@ -1309,7 +1309,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   const time_t sys_time_start_update_grid = time(nullptr);
   printout("\n");
   printout("timestep %d: time before update grid %ld (tstart + %ld) simtime ts_mid %g days\n", nts,
-           sys_time_start_update_grid, sys_time_start_update_grid - real_time_start, globals::time_step[nts].mid / DAY);
+           sys_time_start_update_grid, sys_time_start_update_grid - real_time_start, globals::timestep[nts].mid / DAY);
 
   if constexpr (USE_LUT_PHOTOION) {
     /// Initialise globals::corrphotoionrenorm[i] to zero before update_grid is called
@@ -1324,7 +1324,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   }
 
   // printout("[debug] update_grid: starting update for timestep %d...\n",m);
-  const double tratmid = globals::time_step[nts].mid / globals::tmin;
+  const double tratmid = globals::timestep[nts].mid / globals::tmin;
 
   /// Thread private substitution of max_path_step. Its minimum is
   /// assigned to max_path_step after the parallel update_grid finished.
@@ -1338,14 +1338,14 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   /// regime proportional to the density to a regime independent of the density
   /// This is done by solving for tau_sobolev == 1
   /// tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(28, 56) * 3000e-8 *
-  /// globals::time_step[m].mid;
+  /// globals::timestep[m].mid;
   globals::rho_crit = ME * CLIGHT * decay::nucmass(28, 56) /
-                      (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::time_step[nts].mid);
+                      (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::timestep[nts].mid);
   printout("update_grid: rho_crit = %g\n", globals::rho_crit);
 
   // These values will not be used if nts == 0, but set them anyway
   // nts_prev is the previous timestep, unless this is timestep zero
-  const double deltat = globals::time_step[nts_prev].width;
+  const double deltat = globals::timestep[nts_prev].width;
 
   // printout("timestep %d, titer %d\n", nts, titer);
   // printout("deltat %g\n", deltat);

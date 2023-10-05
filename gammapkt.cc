@@ -200,13 +200,13 @@ void init_gamma_linelist() {
 }
 
 void normalise_grey(int nts) {
-  const double dt = globals::time_step[nts].width;
-  globals::time_step[nts].gamma_dep_pathint = 0.;
+  const double dt = globals::timestep[nts].width;
+  globals::timestep[nts].gamma_dep_pathint = 0.;
   for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
     if (grid::get_numassociatedcells(mgi) > 0) {
-      const double dV = grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
+      const double dV = grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timestep[nts].mid / globals::tmin, 3);
 
-      globals::time_step[nts].gamma_dep_pathint += globals::rpkt_emiss[mgi] / globals::nprocs;
+      globals::timestep[nts].gamma_dep_pathint += globals::rpkt_emiss[mgi] / globals::nprocs;
 
       globals::rpkt_emiss[mgi] = globals::rpkt_emiss[mgi] * ONEOVER4PI / dV / dt / globals::nprocs;
 
