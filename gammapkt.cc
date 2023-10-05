@@ -561,8 +561,6 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
 static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
   // calculate the absorption coefficient [cm^-1] for pair production in the observer reference frame
 
-  double sigma_cmf = 0.;
-
   // Start by working out the x-section in the co-moving frame.
 
   const int cellindex = pkt_ptr->where;
@@ -609,18 +607,18 @@ static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
   sigma_cmf_fe *= rho / MH / 56;
   // Assumes Z = 28. So mass = 56.
 
-  sigma_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
+  const double chi_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
 
   // Now need to convert between frames.
 
-  double sigma_rf = sigma_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
+  double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
 
-  if (sigma_rf < 0) {
-    printout("Negative pair production sigma. Setting to zero. Abort? %g\n", sigma_rf);
-    sigma_rf = 0.0;
+  if (chi_rf < 0) {
+    printout("Negative pair production sigma. Setting to zero. Abort? %g\n", chi_rf);
+    chi_rf = 0.0;
   }
 
-  return sigma_rf;
+  return chi_rf;
 }
 
 constexpr auto meanf_sigma(const double x) -> double
