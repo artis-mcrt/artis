@@ -541,7 +541,7 @@ static auto get_kappa_photo_electric_rf(const struct packet *pkt_ptr) -> double 
     const double kappa_cmf_si = sigma_cmf_si * rho / MH / 28;
     // Assumes Z = 14. So mass = 28.
 
-    const double kappa_cmf_fe = sigma_cmf_fe *= rho / MH / 56;
+    const double kappa_cmf_fe = sigma_cmf_fe * rho / MH / 56;
     // Assumes Z = 28. So mass = 56.
 
     const double f_fe = grid::get_ffegrp(mgi);
