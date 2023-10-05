@@ -1429,15 +1429,57 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       time(nullptr) - time_update_grid_end_thisrank, time(nullptr) - sys_time_start_update_grid);
 }
 
+static auto find_uppermost_ion(const int modelgridindex, const int element, const double nne_hi) -> int {
+  int uppermost_ion = 0;
+  const int nions = get_nions(element);
+  if (globals::initial_iteration || grid::modelgrid[modelgridindex].thick == 1) {
+    uppermost_ion = nions - 1;
+  } else {
+    int ion = -1;
+    for (ion = 0; ion < nions - 1; ion++) {
+      double Gamma = 0.;
+      if constexpr (!USE_LUT_PHOTOION) {
+        Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
+      } else {
+        Gamma = globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() +
+                                        ion];
+      }
+
+      if ((Gamma == 0) &&
+          (!NT_ON || ((globals::rpkt_emiss[modelgridindex] == 0.) &&
+                      (grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(24, 48)) == 0.) &&
+                      (grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(28, 56)) == 0.)))) {
+        break;
+      }
+    }
+    uppermost_ion = ion;
+  }
+
+  double factor = 1.;
+  int ion = 0;
+  for (ion = 0; ion < uppermost_ion; ion++) {
+    factor *= nne_hi * phi(element, ion, modelgridindex);
+    // printout("element %d, ion %d, factor %g\n",element,i,factor);
+    if (!std::isfinite(factor)) {
+      printout(
+          "[info] calculate_populations: uppermost_ion limited by phi factors for element "
+          "Z=%d, ionstage %d in "
+          "cell %d\n",
+          get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
+      break;
+    }
+  }
+  uppermost_ion = ion;
+  return uppermost_ion;
+}
+
 auto calculate_populations(const int modelgridindex) -> double
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
   /// and the solution function
-  struct nne_solution_paras paras {
-    .cellnumber = modelgridindex
-  };
-  gsl_function f{.function = &nne_solution_f, .params = &paras};
+  struct nne_solution_paras paras = {.cellnumber = modelgridindex};
+  gsl_function f = {.function = &nne_solution_f, .params = &paras};
 
   /// Get temperatures
   const double T_R = grid::get_TR(modelgridindex);
@@ -1451,49 +1493,9 @@ auto calculate_populations(const int modelgridindex) -> double
   int nelements_in_cell = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
-    // elements[element].uppermost_ion = nions-1;
-    grid::set_elements_uppermost_ion(modelgridindex, element, nions - 1);
     const double abundance = grid::get_elem_abundance(modelgridindex, element);
     if (abundance > 0) {
-      int uppermost_ion = 0;
-      if (globals::initial_iteration || grid::modelgrid[modelgridindex].thick == 1) {
-        uppermost_ion = get_nions(element) - 1;
-      } else {
-        int ion = -1;
-        for (ion = 0; ion < nions - 1; ion++) {
-          double Gamma = 0.;
-          if constexpr (!USE_LUT_PHOTOION) {
-            Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
-          } else {
-            Gamma = globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() +
-                                            element * get_max_nions() + ion];
-          }
-
-          if ((Gamma == 0) &&
-              (!NT_ON || ((globals::rpkt_emiss[modelgridindex] == 0.) &&
-                          (grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(24, 48)) == 0.) &&
-                          (grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(28, 56)) == 0.)))) {
-            break;
-          }
-        }
-        uppermost_ion = ion;
-      }
-
-      double factor = 1.;
-      int ion = 0;
-      for (ion = 0; ion < uppermost_ion; ion++) {
-        factor *= nne_hi * phi(element, ion, modelgridindex);
-        // printout("element %d, ion %d, factor %g\n",element,i,factor);
-        if (!std::isfinite(factor)) {
-          printout(
-              "[info] calculate_populations: uppermost_ion limited by phi factors for element "
-              "Z=%d, ionstage %d in "
-              "cell %d\n",
-              get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
-          break;
-        }
-      }
-      uppermost_ion = ion;
+      const int uppermost_ion = find_uppermost_ion(modelgridindex, element, nne_hi);
       // printout("cell %d, element %d, final uppermost_ion is %d, factor
       // %g\n",modelgridindex,element,uppermost_ion,factor); elements[element].uppermost_ion =
       // uppermost_ion;
@@ -1502,6 +1504,8 @@ auto calculate_populations(const int modelgridindex) -> double
         only_neutral_ions++;
       }
       nelements_in_cell++;
+    } else {
+      grid::set_elements_uppermost_ion(modelgridindex, element, nions - 1);
     }
   }
 
