@@ -31,8 +31,7 @@ auto nne_solution_f(double x, void *paras) -> double
       // uppermost_ion = globals::elements[element].uppermost_ion;
       const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
 
-      auto ionfractions = std::vector<double>(uppermost_ion + 1);
-      get_ionfractions(element, modelgridindex, x, ionfractions, uppermost_ion);
+      auto ionfractions = get_ionfractions(element, modelgridindex, x, ionfractions, uppermost_ion);
 
       int ion = 0;
       for (ion = 0; ion <= uppermost_ion; ion++) {
@@ -53,7 +52,8 @@ auto nne_solution_f(double x, void *paras) -> double
   return rho * outersum - x;
 }
 
-void get_ionfractions(int element, int modelgridindex, double nne, std::vector<double> &ionfractions, int uppermost_ion)
+std::vector<double> get_ionfractions(const int element, const int modelgridindex, const double nne,
+                                     const int uppermost_ion)
 // Calculate the fractions of an element's population in each ionization stage
 // size of ionfractions array must be >= uppermostion + 1
 {
@@ -61,6 +61,7 @@ void get_ionfractions(int element, int modelgridindex, double nne, std::vector<d
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
 
+  std::vector<double> ionfractions(uppermost_ion + 1);
   auto nnionfactor = std::vector<double>(uppermost_ion + 1);
   nnionfactor[uppermost_ion] = 1;
 
@@ -72,8 +73,7 @@ void get_ionfractions(int element, int modelgridindex, double nne, std::vector<d
   }
 
   for (int ion = 0; ion <= uppermost_ion; ion++) {
-    const double numerator = nnionfactor[ion];
-    ionfractions[ion] = numerator / denominator;
+    ionfractions[ion] = nnionfactor[ion] / denominator;
 
     if (!std::isfinite(ionfractions[ion])) {
       if (modelgridindex != grid::get_npts_model()) {
@@ -86,6 +86,7 @@ void get_ionfractions(int element, int modelgridindex, double nne, std::vector<d
     }
     // printout("ionfract(%d,%d,%d,%g) = %g\n", element, ion, modelgridindex, nne, ionfractions[ion]);
   }
+  return ionfractions;
 }
 
 static auto interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T) -> double {
