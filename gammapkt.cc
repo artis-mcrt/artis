@@ -787,17 +787,17 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     chi_compton = get_chi_compton_rf(pkt_ptr);
   }
 
-  const double kap_photo_electric = get_chi_photo_electric_rf(pkt_ptr);
-  const double kap_pair_prod = sigma_pair_prod_rf(pkt_ptr);
-  const double kap_tot = chi_compton + kap_photo_electric + kap_pair_prod;
+  const double chi_photo_electric = get_chi_photo_electric_rf(pkt_ptr);
+  const double chi_pair_prod = sigma_pair_prod_rf(pkt_ptr);
+  const double chi_tot = chi_compton + chi_photo_electric + chi_pair_prod;
 
   assert_testmodeonly(std::isfinite(chi_compton));
-  assert_testmodeonly(std::isfinite(kap_photo_electric));
-  assert_testmodeonly(std::isfinite(kap_pair_prod));
+  assert_testmodeonly(std::isfinite(chi_photo_electric));
+  assert_testmodeonly(std::isfinite(chi_pair_prod));
 
   // So distance before physical event is...
 
-  double const edist = (tau_next - tau_current) / kap_tot;
+  double const edist = (tau_next - tau_current) / chi_tot;
 
   if (edist < 0) {
     printout("Negative distance (edist). Abort. \n");
@@ -820,7 +820,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     move_pkt(pkt_ptr, sdist / 2.);
 
     // Move it into the new cell.
-    if (kap_tot > 0) {
+    if (chi_tot > 0) {
       rlc_emiss_gamma(pkt_ptr, sdist);
     }
 
@@ -835,7 +835,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     pkt_ptr->prop_time += tdist / 2. / CLIGHT_PROP;
     move_pkt(pkt_ptr, tdist / 2.);
 
-    if (kap_tot > 0) {
+    if (chi_tot > 0) {
       rlc_emiss_gamma(pkt_ptr, tdist);
     }
     pkt_ptr->prop_time = t2;
@@ -843,7 +843,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   } else if ((edist < sdist) && (edist < tdist)) {
     pkt_ptr->prop_time += edist / 2. / CLIGHT_PROP;
     move_pkt(pkt_ptr, edist / 2.);
-    if (kap_tot > 0) {
+    if (chi_tot > 0) {
       rlc_emiss_gamma(pkt_ptr, edist);
     }
     pkt_ptr->prop_time += edist / 2. / CLIGHT_PROP;
@@ -851,21 +851,21 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
     // event occurs. Choose which event and call the appropriate subroutine.
     zrand = rng_uniform();
-    if (chi_compton > (zrand * kap_tot)) {
+    if (chi_compton > (zrand * chi_tot)) {
       // Compton scattering.
       compton_scatter(pkt_ptr);
-    } else if ((chi_compton + kap_photo_electric) > (zrand * kap_tot)) {
+    } else if ((chi_compton + chi_photo_electric) > (zrand * chi_tot)) {
       // Photo electric effect - makes it a k-packet for sure.
       pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -4;
       // pkt_ptr->type = TYPE_PRE_KPKT;
       stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
-    } else if ((chi_compton + kap_photo_electric + kap_pair_prod) > (zrand * kap_tot)) {
+    } else if ((chi_compton + chi_photo_electric + chi_pair_prod) > (zrand * chi_tot)) {
       // It's a pair production
       pair_prod(pkt_ptr);
     } else {
-      printout("Failed to identify event. Gamma (1). chi_compton %g kap_photo_electric %g kap_tot %g zrand %g Abort.\n",
-               chi_compton, kap_photo_electric, kap_tot, zrand);
+      printout("Failed to identify event. Gamma (1). chi_compton %g chi_photo_electric %g chi_tot %g zrand %g Abort.\n",
+               chi_compton, chi_photo_electric, chi_tot, zrand);
       const int cellindex = pkt_ptr->where;
       printout(
           " globals::cell[pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g "
