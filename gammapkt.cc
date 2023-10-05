@@ -516,7 +516,7 @@ static void compton_scatter(struct packet *pkt_ptr)
 }
 
 static auto sigma_photo_electric_rf(const struct packet *pkt_ptr) -> double {
-  // photo electric effect scattering
+  // calculate the absorption coefficient [cm^-1] for photo electric effect scattering in the observer reference frame
 
   double sigma_cmf;
   // Start by working out the x-section in the co-moving frame.
@@ -558,7 +558,7 @@ static auto sigma_photo_electric_rf(const struct packet *pkt_ptr) -> double {
 }
 
 static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
-  // Cross section for pair production.
+  // calculate the absorption coefficient [cm^-1] for pair production in the observer reference frame
 
   double sigma_cmf = 0.;
 
