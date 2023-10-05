@@ -546,7 +546,7 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
 
     const double f_fe = grid::get_ffegrp(mgi);
 
-    chi_cmf = (chi_cmf_si * f_fe) + (chi_cmf_si * (1. - f_fe));
+    chi_cmf = (chi_cmf_fe * f_fe) + (chi_cmf_si * (1. - f_fe));
   } else {
     chi_cmf = globals::gamma_grey * rho;
   }
