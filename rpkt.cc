@@ -80,7 +80,7 @@ static auto get_event(const int modelgridindex,
   struct packet dummypkt = *pkt_ptr;
 
   calculate_kappa_rpkt_cont(pkt_ptr->nu_cmf, &globals::kappa_rpkt_cont[tid], modelgridindex, true);
-  const double kap_cont = globals::kappa_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(pkt_ptr);
+  const double chi_cont = globals::kappa_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(pkt_ptr);
   double tau = 0.;   // optical depth along path
   double dist = 0.;  // position on path
   while (true) {
@@ -102,7 +102,7 @@ static auto get_event(const int modelgridindex,
 
       const double ldist = get_linedistance(dummypkt.prop_time, dummypkt.nu_cmf, nu_trans, d_nu_on_d_l);
 
-      const double tau_cont = kap_cont * ldist;
+      const double tau_cont = chi_cont * ldist;
 
       if (tau_rnd - tau > tau_cont) {
         // got past the continuum optical depth so propagate to the line, and check interaction
@@ -203,12 +203,12 @@ static auto get_event(const int modelgridindex,
 
         pkt_ptr->next_trans = dummypkt.next_trans - 1;
 
-        return dist + (tau_rnd - tau) / kap_cont;
+        return dist + (tau_rnd - tau) / chi_cont;
       }
     } else {
       /// no line interaction possible - check whether continuum process occurs in cell
 
-      const double tau_cont = kap_cont * (abort_dist - dist);
+      const double tau_cont = chi_cont * (abort_dist - dist);
 
       if (tau_rnd - tau > tau_cont) {
         // no continuum event before abort_dist
@@ -220,7 +220,7 @@ static auto get_event(const int modelgridindex,
 
       pkt_ptr->next_trans = globals::nlines + 1;
 
-      return dist + (tau_rnd - tau) / kap_cont;
+      return dist + (tau_rnd - tau) / chi_cont;
     }
   }
 
