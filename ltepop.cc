@@ -31,7 +31,7 @@ auto nne_solution_f(double x, void *paras) -> double
       // uppermost_ion = globals::elements[element].uppermost_ion;
       const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
 
-      auto ionfractions = get_ionfractions(element, modelgridindex, x, ionfractions, uppermost_ion);
+      auto ionfractions = get_ionfractions(element, modelgridindex, x, uppermost_ion);
 
       int ion = 0;
       for (ion = 0; ion <= uppermost_ion; ion++) {
