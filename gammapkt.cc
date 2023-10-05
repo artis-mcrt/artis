@@ -782,16 +782,16 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   // Compton scattering - need to determine the scattering co-efficient.
   // Routine returns the value in the rest frame.
 
-  double kap_compton = 0.0;
+  double chi_compton = 0.0;
   if (globals::gamma_grey < 0) {
-    kap_compton = get_chi_compton_rf(pkt_ptr);
+    chi_compton = get_chi_compton_rf(pkt_ptr);
   }
 
   const double kap_photo_electric = get_chi_photo_electric_rf(pkt_ptr);
   const double kap_pair_prod = sigma_pair_prod_rf(pkt_ptr);
-  const double kap_tot = kap_compton + kap_photo_electric + kap_pair_prod;
+  const double kap_tot = chi_compton + kap_photo_electric + kap_pair_prod;
 
-  assert_testmodeonly(std::isfinite(kap_compton));
+  assert_testmodeonly(std::isfinite(chi_compton));
   assert_testmodeonly(std::isfinite(kap_photo_electric));
   assert_testmodeonly(std::isfinite(kap_pair_prod));
 
@@ -851,21 +851,21 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
     // event occurs. Choose which event and call the appropriate subroutine.
     zrand = rng_uniform();
-    if (kap_compton > (zrand * kap_tot)) {
+    if (chi_compton > (zrand * kap_tot)) {
       // Compton scattering.
       compton_scatter(pkt_ptr);
-    } else if ((kap_compton + kap_photo_electric) > (zrand * kap_tot)) {
+    } else if ((chi_compton + kap_photo_electric) > (zrand * kap_tot)) {
       // Photo electric effect - makes it a k-packet for sure.
       pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -4;
       // pkt_ptr->type = TYPE_PRE_KPKT;
       stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
-    } else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand * kap_tot)) {
+    } else if ((chi_compton + kap_photo_electric + kap_pair_prod) > (zrand * kap_tot)) {
       // It's a pair production
       pair_prod(pkt_ptr);
     } else {
-      printout("Failed to identify event. Gamma (1). kap_compton %g kap_photo_electric %g kap_tot %g zrand %g Abort.\n",
-               kap_compton, kap_photo_electric, kap_tot, zrand);
+      printout("Failed to identify event. Gamma (1). chi_compton %g kap_photo_electric %g kap_tot %g zrand %g Abort.\n",
+               chi_compton, kap_photo_electric, kap_tot, zrand);
       const int cellindex = pkt_ptr->where;
       printout(
           " globals::cell[pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g "
