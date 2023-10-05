@@ -283,20 +283,20 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     } else {
       calculate_kappa_rpkt_cont(vpkt.nu_cmf, &kappa_vpkt_cont, mgi, false);
 
-      const double kap_cont = kappa_vpkt_cont.total;
+      const double chi_cont = kappa_vpkt_cont.total;
 
       for (int ind = 0; ind < Nspectra; ind++) {
         if (exclude[ind] == -2) {
-          const double kap_cont_nobf = kap_cont - kappa_vpkt_cont.bf;
-          tau_vpkt[ind] += kap_cont_nobf * s_cont;
+          const double chi_cont_nobf = chi_cont - kappa_vpkt_cont.bf;
+          tau_vpkt[ind] += chi_cont_nobf * s_cont;
         } else if (exclude[ind] == -3) {
-          const double kap_cont_noff = kap_cont - kappa_vpkt_cont.ff;
-          tau_vpkt[ind] += kap_cont_noff * s_cont;
+          const double chi_cont_noff = chi_cont - kappa_vpkt_cont.ff;
+          tau_vpkt[ind] += chi_cont_noff * s_cont;
         } else if (exclude[ind] == -4) {
-          const double kap_cont_noes = kap_cont - kappa_vpkt_cont.es;
-          tau_vpkt[ind] += kap_cont_noes * s_cont;
+          const double chi_cont_noes = chi_cont - kappa_vpkt_cont.es;
+          tau_vpkt[ind] += chi_cont_noes * s_cont;
         } else {
-          tau_vpkt[ind] += kap_cont * s_cont;
+          tau_vpkt[ind] += chi_cont * s_cont;
         }
       }
 
