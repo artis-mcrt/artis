@@ -972,7 +972,8 @@ void emit_rpkt(struct packet *pkt_ptr) {
 }
 
 static auto calculate_kappa_ff(const int modelgridindex, const double nu) -> double
-/// free-free opacity
+// calculate the free-free absorption coefficient [cm^-1]
+// = kappa(free-free) * nne
 {
   assert_always(nu > 0.);
   const double g_ff = 1;
@@ -1014,8 +1015,7 @@ static auto calculate_kappa_ff(const int modelgridindex, const double nu) -> dou
     printout("ERRORL: kappa_ff is non-infinite mgi %d nne %g nu %g T_e %g\n", modelgridindex, nne, nu, T_e);
     abort();
   }
-  // kappa_ffheating *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB*nu/T_e));
-  // kappa_ff *= 1e5;
+
   return kappa_ff;
 }
 
