@@ -309,7 +309,7 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
   // printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 }
 
-constexpr auto sigma_compton_partial(const double x, const double f) -> double
+static constexpr auto sigma_compton_partial(const double x, const double f) -> double
 // Routine to compute the partial cross section for Compton scattering.
 //   xx is the photon energy (in units of electron mass) and f
 //  is the energy loss factor up to which we wish to integrate.
@@ -321,7 +321,7 @@ constexpr auto sigma_compton_partial(const double x, const double f) -> double
   return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
 }
 
-static auto kappa_compton_rf(const struct packet *pkt_ptr) -> double {
+static auto get_kappa_compton_rf(const struct packet *pkt_ptr) -> double {
   // calculate the absorption coefficient [cm^-1] for Compton scattering in the observer reference frame
   // Start by working out the compton x-section in the co-moving frame.
 
@@ -515,10 +515,10 @@ static void compton_scatter(struct packet *pkt_ptr)
   }
 }
 
-static auto sigma_photo_electric_rf(const struct packet *pkt_ptr) -> double {
-  // photo electric effect scattering
+static auto get_kappa_photo_electric_rf(const struct packet *pkt_ptr) -> double {
+  // calculate the absorption coefficient [cm^-1] for photo electric effect scattering in the observer reference frame
 
-  double sigma_cmf;
+  double kappa_cmf;
   // Start by working out the x-section in the co-moving frame.
 
   const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
@@ -538,34 +538,31 @@ static auto sigma_photo_electric_rf(const struct packet *pkt_ptr) -> double {
     // sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
     //  Assumes Z = 7. So mass = 14.
 
-    sigma_cmf_si *= rho / MH / 28;
+    const double kappa_cmf_si = sigma_cmf_si * rho / MH / 28;
     // Assumes Z = 14. So mass = 28.
 
-    sigma_cmf_fe *= rho / MH / 56;
+    const double kappa_cmf_fe = sigma_cmf_fe *= rho / MH / 56;
     // Assumes Z = 28. So mass = 56.
 
     const double f_fe = grid::get_ffegrp(mgi);
 
-    sigma_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
+    kappa_cmf = (kappa_cmf_fe * f_fe) + (kappa_cmf_si * (1. - f_fe));
   } else {
-    sigma_cmf = globals::gamma_grey * rho;
+    kappa_cmf = globals::gamma_grey * rho;
   }
 
   // Now need to convert between frames.
 
-  const double sigma_rf = sigma_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
-  return sigma_rf;
+  const double kappa_rf = kappa_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
+  return kappa_rf;
 }
 
-static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
-  // Cross section for pair production.
-
-  double sigma_cmf = 0.;
+static auto get_kappa_pair_prod_rf(const struct packet *pkt_ptr) -> double {
+  // calculate the absorption coefficient [cm^-1] for pair production in the observer reference frame
 
   // Start by working out the x-section in the co-moving frame.
 
-  const int cellindex = pkt_ptr->where;
-  const int mgi = grid::get_cell_modelgridindex(cellindex);
+  const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
   const double rho = grid::get_rho(mgi);
 
   if (globals::gamma_grey >= 0.) {
@@ -602,24 +599,21 @@ static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
   // sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
   // Assumes Z = 7. So mass = 14.
 
-  sigma_cmf_si *= rho / MH / 28;
+  const double kappa_cmf_si = sigma_cmf_si * rho / MH / 28;
   // Assumes Z = 14. So mass = 28.
 
-  sigma_cmf_fe *= rho / MH / 56;
+  const double kappa_cmf_fe = sigma_cmf_fe * rho / MH / 56;
   // Assumes Z = 28. So mass = 56.
 
-  sigma_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
+  const double kappa_cmf = (kappa_cmf_fe * f_fe) + (kappa_cmf_si * (1. - f_fe));
 
   // Now need to convert between frames.
 
-  double sigma_rf = sigma_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
+  const double kappa_rf = kappa_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
 
-  if (sigma_rf < 0) {
-    printout("Negative pair production sigma. Setting to zero. Abort? %g\n", sigma_rf);
-    sigma_rf = 0.0;
-  }
+  assert_testmodeonly(kappa_rf >= 0.);
 
-  return sigma_rf;
+  return kappa_rf;
 }
 
 constexpr auto meanf_sigma(const double x) -> double
@@ -664,8 +658,8 @@ static void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist) {
 
   const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
   const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
-  double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + sigma_photo_electric_rf(pkt_ptr) +
-                         (sigma_pair_prod_rf(pkt_ptr) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
+  double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + get_kappa_photo_electric_rf(pkt_ptr) +
+                         (get_kappa_pair_prod_rf(pkt_ptr) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
   heating_cont = heating_cont * pkt_ptr->e_rf * dist * doppler_sq;
 
   // The terms in the above are for Compton, photoelectric and pair production. The pair production one
@@ -782,13 +776,10 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   // Compton scattering - need to determine the scattering co-efficient.
   // Routine returns the value in the rest frame.
 
-  double kap_compton = 0.0;
-  if (globals::gamma_grey < 0) {
-    kap_compton = kappa_compton_rf(pkt_ptr);
-  }
+  const double kap_compton = (globals::gamma_grey < 0) ? get_kappa_compton_rf(pkt_ptr) : 0.0;
 
-  const double kap_photo_electric = sigma_photo_electric_rf(pkt_ptr);
-  const double kap_pair_prod = sigma_pair_prod_rf(pkt_ptr);
+  const double kap_photo_electric = get_kappa_photo_electric_rf(pkt_ptr);
+  const double kap_pair_prod = get_kappa_pair_prod_rf(pkt_ptr);
   const double kap_tot = kap_compton + kap_photo_electric + kap_pair_prod;
 
   assert_testmodeonly(std::isfinite(kap_compton));
