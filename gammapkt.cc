@@ -321,7 +321,7 @@ constexpr auto sigma_compton_partial(const double x, const double f) -> double
   return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
 }
 
-static auto kappa_compton_rf(const struct packet *pkt_ptr) -> double {
+static auto get_chi_compton_rf(const struct packet *pkt_ptr) -> double {
   // calculate the absorption coefficient [cm^-1] for Compton scattering in the observer reference frame
   // Start by working out the compton x-section in the co-moving frame.
 
@@ -338,14 +338,14 @@ static auto kappa_compton_rf(const struct packet *pkt_ptr) -> double {
   }
 
   // Now need to multiply by the electron number density.
-  const double kappa_cmf = sigma_cmf * grid::get_nnetot(grid::get_cell_modelgridindex(pkt_ptr->where));
+  const double chi_cmf = sigma_cmf * grid::get_nnetot(grid::get_cell_modelgridindex(pkt_ptr->where));
 
   // convert between frames
-  const double kappa_rf = kappa_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
+  const double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
 
-  assert_testmodeonly(std::isfinite(kappa_rf));
+  assert_testmodeonly(std::isfinite(chi_rf));
 
-  return kappa_rf;
+  return chi_rf;
 }
 
 static auto choose_f(const double xx, const double zrand) -> double
@@ -784,7 +784,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
   double kap_compton = 0.0;
   if (globals::gamma_grey < 0) {
-    kap_compton = kappa_compton_rf(pkt_ptr);
+    kap_compton = get_chi_compton_rf(pkt_ptr);
   }
 
   const double kap_photo_electric = sigma_photo_electric_rf(pkt_ptr);
