@@ -396,7 +396,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
   const auto T_e = grid::get_Te(modelgridindex);
   double deltat = 0.;
   if (nts < globals::n_kpktdiffusion_timesteps) {
-    deltat = globals::kpktdiffusion_timescale * globals::timestep[nts].width;
+    deltat = globals::kpktdiffusion_timescale * globals::time_step[nts].width;
   }
   // double deltat = 1. / (nne * 1.02e-12 * pow(T_e / 1e4, 0.843));
   // printout("kpkt diffusion time simple %g, advanced %g\n", deltat, 1 / (nne * 1.02e-12 * pow(T_e / 1e4, 0.843)));

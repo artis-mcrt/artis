@@ -9,7 +9,7 @@ namespace globals {
 
 double syn_dir[3];  // vector pointing from origin to observer
 
-struct time *timestep = nullptr;
+struct time *time_step = nullptr;
 
 double *rpkt_emiss = nullptr;  /// Volume estimator for the rpkt emissivity
 

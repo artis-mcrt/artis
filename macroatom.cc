@@ -346,7 +346,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
   // return;
 
   const int tid = get_thread_num();
-  const double t_mid = globals::timestep[timestep].mid;
+  const double t_mid = globals::time_step[timestep].mid;
 
   // printout("[debug] do MA\n");
 

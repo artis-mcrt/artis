@@ -63,11 +63,11 @@ static void do_nonthermal_predeposit(struct packet *pkt_ptr, const int nts, cons
   // absorption happens
 
   if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA) {
-    safeadd(globals::timestep[nts].alpha_dep, pkt_ptr->e_cmf);
+    safeadd(globals::time_step[nts].alpha_dep, pkt_ptr->e_cmf);
   } else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_BETAMINUS) {
-    safeadd(globals::timestep[nts].electron_dep, pkt_ptr->e_cmf);
+    safeadd(globals::time_step[nts].electron_dep, pkt_ptr->e_cmf);
   } else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_BETAPLUS) {
-    safeadd(globals::timestep[nts].positron_dep, pkt_ptr->e_cmf);
+    safeadd(globals::time_step[nts].positron_dep, pkt_ptr->e_cmf);
   }
 
   pkt_ptr->type = TYPE_NTLEPTON;
@@ -90,7 +90,7 @@ static void update_pellet(struct packet *pkt_ptr, const int nts, const double t2
     // That's all that needs to be done for the inactive pellet.
   } else if (tdecay > ts) {
     // The packet decays in the current timestep.
-    safeincrement(globals::timestep[nts].pellet_decays);
+    safeincrement(globals::time_step[nts].pellet_decays);
 
     pkt_ptr->prop_time = tdecay;
     vec_scale(pkt_ptr->pos, tdecay / ts);
@@ -98,22 +98,22 @@ static void update_pellet(struct packet *pkt_ptr, const int nts, const double t2
     if (pkt_ptr->originated_from_particlenotgamma)  // will decay to non-thermal particle
     {
       if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_BETAPLUS) {
-        safeadd(globals::timestep[nts].positron_dep, pkt_ptr->e_cmf);
+        safeadd(globals::time_step[nts].positron_dep, pkt_ptr->e_cmf);
         pkt_ptr->type = TYPE_NTLEPTON;
         pkt_ptr->absorptiontype = -10;
       } else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_BETAMINUS) {
-        safeadd(globals::timestep[nts].electron_emission, pkt_ptr->e_cmf);
+        safeadd(globals::time_step[nts].electron_emission, pkt_ptr->e_cmf);
         pkt_ptr->em_time = pkt_ptr->prop_time;
         pkt_ptr->type = TYPE_NONTHERMAL_PREDEPOSIT;
         pkt_ptr->absorptiontype = -10;
       } else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA) {
-        safeadd(globals::timestep[nts].alpha_emission, pkt_ptr->e_cmf);
+        safeadd(globals::time_step[nts].alpha_emission, pkt_ptr->e_cmf);
         pkt_ptr->em_time = pkt_ptr->prop_time;
         pkt_ptr->type = TYPE_NONTHERMAL_PREDEPOSIT;
         pkt_ptr->absorptiontype = -10;
       }
     } else {
-      safeadd(globals::timestep[nts].gamma_emission, pkt_ptr->e_cmf);
+      safeadd(globals::time_step[nts].gamma_emission, pkt_ptr->e_cmf);
       // decay to gamma-ray, kpkt, or ntlepton
       gammapkt::pellet_gamma_decay(pkt_ptr);
     }
@@ -152,7 +152,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
       gammapkt::do_gamma(pkt_ptr, t2);
 
       if (pkt_ptr->type != TYPE_GAMMA && pkt_ptr->type != TYPE_ESCAPE) {
-        safeadd(globals::timestep[nts].gamma_dep, pkt_ptr->e_cmf);
+        safeadd(globals::time_step[nts].gamma_dep, pkt_ptr->e_cmf);
       }
       break;
     }
@@ -161,7 +161,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
       do_rpkt(pkt_ptr, t2);
 
       if (pkt_ptr->type == TYPE_ESCAPE) {
-        safeadd(globals::timestep[nts].cmf_lum, pkt_ptr->e_cmf);
+        safeadd(globals::time_step[nts].cmf_lum, pkt_ptr->e_cmf);
       }
       break;
     }
@@ -250,8 +250,8 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
   // matter. Those that are photons (or one sort or another) will already have a position and
   // a direction.
 
-  const double ts = globals::timestep[nts].start;
-  const double tw = globals::timestep[nts].width;
+  const double ts = globals::time_step[nts].start;
+  const double tw = globals::time_step[nts].width;
 
   const time_t time_update_packets_start = time(nullptr);
   printout("timestep %d: start update_packets at time %ld\n", nts, time_update_packets_start);

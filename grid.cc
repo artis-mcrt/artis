@@ -1662,14 +1662,14 @@ static void read_grid_restart_data(const int timestep) {
 
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
     assert_always(fscanf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
-                         &globals::timestep[nts].gamma_dep, &globals::timestep[nts].gamma_dep_pathint,
-                         &globals::timestep[nts].positron_dep, &globals::timestep[nts].eps_positron_ana_power,
-                         &globals::timestep[nts].electron_dep, &globals::timestep[nts].electron_emission,
-                         &globals::timestep[nts].eps_electron_ana_power, &globals::timestep[nts].alpha_dep,
-                         &globals::timestep[nts].alpha_emission, &globals::timestep[nts].eps_alpha_ana_power,
-                         &globals::timestep[nts].qdot_betaminus, &globals::timestep[nts].qdot_alpha,
-                         &globals::timestep[nts].qdot_total, &globals::timestep[nts].gamma_emission,
-                         &globals::timestep[nts].cmf_lum, &globals::timestep[nts].pellet_decays) == 16);
+                         &globals::time_step[nts].gamma_dep, &globals::time_step[nts].gamma_dep_pathint,
+                         &globals::time_step[nts].positron_dep, &globals::time_step[nts].eps_positron_ana_power,
+                         &globals::time_step[nts].electron_dep, &globals::time_step[nts].electron_emission,
+                         &globals::time_step[nts].eps_electron_ana_power, &globals::time_step[nts].alpha_dep,
+                         &globals::time_step[nts].alpha_emission, &globals::time_step[nts].eps_alpha_ana_power,
+                         &globals::time_step[nts].qdot_betaminus, &globals::time_step[nts].qdot_alpha,
+                         &globals::time_step[nts].qdot_total, &globals::time_step[nts].gamma_emission,
+                         &globals::time_step[nts].cmf_lum, &globals::time_step[nts].pellet_decays) == 16);
   }
 
   int timestep_in = 0;
@@ -1743,14 +1743,14 @@ void write_grid_restart_data(const int timestep) {
 
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
     fprintf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
-            globals::timestep[nts].gamma_dep, globals::timestep[nts].gamma_dep_pathint,
-            globals::timestep[nts].positron_dep, globals::timestep[nts].eps_positron_ana_power,
-            globals::timestep[nts].electron_dep, globals::timestep[nts].electron_emission,
-            globals::timestep[nts].eps_electron_ana_power, globals::timestep[nts].alpha_dep,
-            globals::timestep[nts].alpha_emission, globals::timestep[nts].eps_alpha_ana_power,
-            globals::timestep[nts].qdot_betaminus, globals::timestep[nts].qdot_alpha, globals::timestep[nts].qdot_total,
-            globals::timestep[nts].gamma_emission, globals::timestep[nts].cmf_lum,
-            globals::timestep[nts].pellet_decays);
+            globals::time_step[nts].gamma_dep, globals::time_step[nts].gamma_dep_pathint,
+            globals::time_step[nts].positron_dep, globals::time_step[nts].eps_positron_ana_power,
+            globals::time_step[nts].electron_dep, globals::time_step[nts].electron_emission,
+            globals::time_step[nts].eps_electron_ana_power, globals::time_step[nts].alpha_dep,
+            globals::time_step[nts].alpha_emission, globals::time_step[nts].eps_alpha_ana_power,
+            globals::time_step[nts].qdot_betaminus, globals::time_step[nts].qdot_alpha,
+            globals::time_step[nts].qdot_total, globals::time_step[nts].gamma_emission, globals::time_step[nts].cmf_lum,
+            globals::time_step[nts].pellet_decays);
   }
 
   fprintf(gridsave_file, "%d ", timestep);
@@ -1799,7 +1799,7 @@ static void assign_initial_temperatures()
   /// according to the local energy density resulting from the 56Ni decay.
   /// The dilution factor is W=1 in LTE.
 
-  const double tstart = globals::timestep[0].mid;
+  const double tstart = globals::time_step[0].mid;
 
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
     if (get_numassociatedcells(mgi) == 0) {
@@ -2074,7 +2074,7 @@ void grid_init(int my_rank)
   // Calculate the critical opacity at which opacity_case 3 switches from a
   // regime proportional to the density to a regime independent of the density
   // This is done by solving for tau_sobolev == 1
-  // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(28, 56) * 3000e-8 * globals::timestep[m].mid;
+  // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(28, 56) * 3000e-8 * globals::time_step[m].mid;
   globals::rho_crit =
       ME * CLIGHT * decay::nucmass(28, 56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::tmin);
   printout("grid_init: rho_crit = %g [g/cm3]\n", globals::rho_crit);

@@ -185,10 +185,10 @@ void pkt_action_counters_printout(const struct packet *const pkt, const int nts)
   const double meaninteractions = static_cast<double>(allpktinteractions) / globals::npkts;
   printout("mean number of interactions per packet = %g\n", meaninteractions);
 
-  const double deltat = globals::timestep[nts].width;
+  const double deltat = globals::time_step[nts].width;
   double modelvolume = 0.;
   for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
-    modelvolume += grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timestep[nts].mid / globals::tmin, 3);
+    modelvolume += grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
   }
 
   /// Printout packet statistics
