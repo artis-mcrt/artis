@@ -153,8 +153,8 @@ static int get_timestep(const double time) {
   assert_always(time >= globals::tmin);
   assert_always(time < globals::tmax);
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
-    const double tsend = (nts < (globals::ntimesteps - 1)) ? globals::time_step[nts + 1].start : globals::tmax;
-    if (time >= globals::time_step[nts].start && time < tsend) {
+    const double tsend = (nts < (globals::ntimesteps - 1)) ? globals::timesteps[nts + 1].start : globals::tmax;
+    if (time >= globals::timesteps[nts].start && time < tsend) {
       return nts;
     }
   }

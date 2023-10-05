@@ -206,7 +206,7 @@ namespace globals {
 
 extern double syn_dir[3];  // vector pointing from origin to observer
 
-extern struct time *time_step;
+extern struct time *timesteps;
 
 extern double *rpkt_emiss;
 

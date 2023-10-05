@@ -184,7 +184,7 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
 
   fprintf(spec_file, "%g ", 0.0);
   for (int p = 0; p < numtimesteps; p++) {
-    fprintf(spec_file, "%g ", globals::time_step[p].mid / DAY);
+    fprintf(spec_file, "%g ", globals::timesteps[p].mid / DAY);
   }
   fprintf(spec_file, "\n");
 
@@ -245,7 +245,7 @@ void write_specpol(const std::string &specpol_filename, const std::string &emiss
 
   for (int l = 0; l < 3; l++) {
     for (int p = 0; p < globals::ntimesteps; p++) {
-      fprintf(specpol_file, "%g ", globals::time_step[p].mid / DAY);
+      fprintf(specpol_file, "%g ", globals::timesteps[p].mid / DAY);
     }
   }
 
@@ -372,7 +372,7 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
     const int nnu = static_cast<int>((log(pkt_ptr->nu_rf) - log(nu_min)) / dlognu);
     assert_always(nnu < MNUBINS);
 
-    const double deltaE = pkt_ptr->e_rf / globals::time_step[nt].width / spectra.delta_freq[nnu] / 4.e12 / PI / PARSEC /
+    const double deltaE = pkt_ptr->e_rf / globals::timesteps[nt].width / spectra.delta_freq[nnu] / 4.e12 / PI / PARSEC /
                           PARSEC / globals::nprocs_exspec * anglefactor;
 
     spectra.timesteps[nt].flux[nnu] += deltaE;
@@ -430,7 +430,7 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
       const int nnu_abs = static_cast<int>((log(pkt_ptr->absorptionfreq) - log(nu_min)) / dlognu);
       if (nnu_abs >= 0 && nnu_abs < MNUBINS) {
         const int ioncount = get_nelements() * get_max_nions();
-        const double deltaE_absorption = pkt_ptr->e_rf / globals::time_step[nt].width / spectra.delta_freq[nnu_abs] /
+        const double deltaE_absorption = pkt_ptr->e_rf / globals::timesteps[nt].width / spectra.delta_freq[nnu_abs] /
                                          4.e12 / PI / PARSEC / PARSEC / globals::nprocs_exspec * anglefactor;
         const int at = pkt_ptr->absorptiontype;
         if (at >= 0) {
