@@ -515,10 +515,10 @@ static void compton_scatter(struct packet *pkt_ptr)
   }
 }
 
-static auto sigma_photo_electric_rf(const struct packet *pkt_ptr) -> double {
+static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
   // calculate the absorption coefficient [cm^-1] for photo electric effect scattering in the observer reference frame
 
-  double sigma_cmf;
+  double chi_cmf;
   // Start by working out the x-section in the co-moving frame.
 
   const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
@@ -527,9 +527,9 @@ static auto sigma_photo_electric_rf(const struct packet *pkt_ptr) -> double {
   if (globals::gamma_grey < 0) {
     // double sigma_cmf_cno = 0.0448e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.2);
 
-    double sigma_cmf_si = 1.16e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.13);
+    const double sigma_cmf_si = 1.16e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.13);
 
-    double sigma_cmf_fe = 25.7e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.0);
+    const double sigma_cmf_fe = 25.7e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.0);
 
     // 2.41326e19 = 100keV in frequency.
 
@@ -538,23 +538,23 @@ static auto sigma_photo_electric_rf(const struct packet *pkt_ptr) -> double {
     // sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
     //  Assumes Z = 7. So mass = 14.
 
-    sigma_cmf_si *= rho / MH / 28;
+    const double chi_cmf_si = sigma_cmf_si * rho / MH / 28;
     // Assumes Z = 14. So mass = 28.
 
-    sigma_cmf_fe *= rho / MH / 56;
+    const double chi_cmf_fe = sigma_cmf_fe * rho / MH / 56;
     // Assumes Z = 28. So mass = 56.
 
     const double f_fe = grid::get_ffegrp(mgi);
 
-    sigma_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
+    chi_cmf = (chi_cmf_si * f_fe) + (chi_cmf_si * (1. - f_fe));
   } else {
-    sigma_cmf = globals::gamma_grey * rho;
+    chi_cmf = globals::gamma_grey * rho;
   }
 
   // Now need to convert between frames.
 
-  const double sigma_rf = sigma_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
-  return sigma_rf;
+  const double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
+  return chi_rf;
 }
 
 static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
@@ -664,7 +664,7 @@ static void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist) {
 
   const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
   const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
-  double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + sigma_photo_electric_rf(pkt_ptr) +
+  double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + get_chi_photo_electric_rf(pkt_ptr) +
                          (sigma_pair_prod_rf(pkt_ptr) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
   heating_cont = heating_cont * pkt_ptr->e_rf * dist * doppler_sq;
 
@@ -787,7 +787,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     kap_compton = get_chi_compton_rf(pkt_ptr);
   }
 
-  const double kap_photo_electric = sigma_photo_electric_rf(pkt_ptr);
+  const double kap_photo_electric = get_chi_photo_electric_rf(pkt_ptr);
   const double kap_pair_prod = sigma_pair_prod_rf(pkt_ptr);
   const double kap_tot = kap_compton + kap_photo_electric + kap_pair_prod;
 
