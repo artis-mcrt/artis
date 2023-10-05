@@ -630,7 +630,7 @@ static void calculate_kappagrey() {
     grid_file = fopen_required("grid.out", "w");
   }
 
-  /// Second pass through allows calculation of normalized kappa_grey
+  /// Second pass through allows calculation of normalized chi_grey
   double check1 = 0.0;
   double check2 = 0.0;
   for (int n = 0; n < ngrid; n++) {

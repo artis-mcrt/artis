@@ -427,17 +427,17 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
       // if (timestep % 20 == 0)
       // {
-      //   fprintf(estimators_file, "kappa_bf(nuedge)   Z=%2d", get_atomicnumber(element));
+      //   fprintf(estimators_file, "chi_bf(nuedge)   Z=%2d", get_atomicnumber(element));
       //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
       //     fprintf(estimators_file, "              ");
       //   for (int ion = 0; ion < nions - 1; ion++)
       //   {
       //     double nu_edge = (epsilon(element, ion + 1, 0) - epsilon(element, ion, 0)) / H;
-      //     double kappa_bf = calculate_kappa_bf_gammacontr(mgi, nu_edge, false);
+      //     double chi_bf = calculate_chi_bf_gammacontr(mgi, nu_edge, false);
       //
       //     fprintf(estimators_file, "  %d: %9.3e",
       //             get_ionstage(element, ion),
-      //             kappa_bf);
+      //             chi_bf);
       //   }
       //   fprintf(estimators_file, "\n");
       // }
@@ -708,7 +708,7 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep) {
   const int tid = get_thread_num();
 
   // force rpkt opacities to be recalculated next time they are accessed
-  globals::kappa_rpkt_cont[tid].recalculate_required = true;
+  globals::chi_rpkt_cont[tid].recalculate_required = true;
 
   globals::cellhistory[tid].cellnumber = modelgridindex;
 
@@ -1214,8 +1214,8 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       // grey_optical_depth = compton_optical_depth;
 
       if ((grey_optical_depth >= globals::cell_is_optically_thick) && (nts < globals::num_grey_timesteps)) {
-        printout("timestep %d cell %d is treated in grey approximation (kappa_grey %g [cm2/g], tau %g >= %g)\n", nts,
-                 mgi, grid::get_kappagrey(mgi), grey_optical_depth, globals::cell_is_optically_thick);
+        printout("timestep %d cell %d is treated in grey approximation (chi_grey %g [cm2/g], tau %g >= %g)\n", nts, mgi,
+                 grid::get_kappagrey(mgi), grey_optical_depth, globals::cell_is_optically_thick);
         grid::modelgrid[mgi].thick = 1;
       } else if (VPKT_ON && (grey_optical_depth > cell_is_optically_thick_vpkt)) {
         grid::modelgrid[mgi].thick = 2;
@@ -1272,7 +1272,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       }
 
       if (globals::opacity_case == 3) {
-        // printout("update_grid: opacity_case 3 ... updating globals::cell[n].kappa_grey"); //MK
+        // printout("update_grid: opacity_case 3 ... updating globals::cell[n].chi_grey"); //MK
         if (grid::get_rho(mgi) > globals::rho_crit) {
           grid::set_kappagrey(mgi, globals::opcase3_normal * (0.9 * grid::get_ffegrp(mgi) + 0.1) * globals::rho_crit /
                                        grid::get_rho(mgi));

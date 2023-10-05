@@ -37,8 +37,8 @@ bool do_emission_res = true;
 
 std::unique_ptr<bool[]> startofline;
 
-double gamma_grey;  // set to -ve for proper treatment. If possitive, then
-                    // gamma_rays are treated as grey with this opacity.
+double gamma_kappagrey;  // set to -ve for proper treatment. If possitive, then
+                         // gamma_rays are treated as grey with this opacity.
 
 double max_path_step;
 
@@ -57,7 +57,7 @@ struct bflist_t *bflist = nullptr;
 // for USE_LUT_BFHEATING = true
 double *bfheating_coeff = nullptr;
 
-struct rpkt_cont_opacity *kappa_rpkt_cont = nullptr;
+struct rpkt_continuum_absorptioncoeffs *chi_rpkt_cont = nullptr;
 
 /// Coolinglist
 int ncoolingterms;

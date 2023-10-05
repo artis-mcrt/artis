@@ -819,9 +819,9 @@ auto main(int argc, char *argv[]) -> int {
   printout("MPI is disabled in this build\n");
 #endif
 
-  globals::kappa_rpkt_cont =
-      static_cast<struct rpkt_cont_opacity *>(calloc(get_max_threads(), sizeof(struct rpkt_cont_opacity)));
-  assert_always(globals::kappa_rpkt_cont != nullptr);
+  globals::chi_rpkt_cont = static_cast<struct rpkt_continuum_absorptioncoeffs *>(
+      calloc(get_max_threads(), sizeof(struct rpkt_continuum_absorptioncoeffs)));
+  assert_always(globals::chi_rpkt_cont != nullptr);
 
   input(my_rank);
 

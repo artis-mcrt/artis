@@ -270,7 +270,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   // compute the optical depth to boundary
 
   mgi = grid::get_cell_modelgridindex(vpkt.where);
-  struct rpkt_cont_opacity kappa_vpkt_cont = {};
+  struct rpkt_continuum_absorptioncoeffs chi_vpkt_cont = {};
 
   while (!end_packet) {
     // distance to the next cell
@@ -281,19 +281,19 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     if (mgi == grid::get_npts_model()) {
       vpkt.next_trans = -1;
     } else {
-      calculate_kappa_rpkt_cont(vpkt.nu_cmf, &kappa_vpkt_cont, mgi, false);
+      calculate_chi_rpkt_cont(vpkt.nu_cmf, &chi_vpkt_cont, mgi, false);
 
-      const double chi_cont = kappa_vpkt_cont.total;
+      const double chi_cont = chi_vpkt_cont.total;
 
       for (int ind = 0; ind < Nspectra; ind++) {
         if (exclude[ind] == -2) {
-          const double chi_cont_nobf = chi_cont - kappa_vpkt_cont.bf;
+          const double chi_cont_nobf = chi_cont - chi_vpkt_cont.bf;
           tau_vpkt[ind] += chi_cont_nobf * s_cont;
         } else if (exclude[ind] == -3) {
-          const double chi_cont_noff = chi_cont - kappa_vpkt_cont.ff;
+          const double chi_cont_noff = chi_cont - chi_vpkt_cont.ff;
           tau_vpkt[ind] += chi_cont_noff * s_cont;
         } else if (exclude[ind] == -4) {
-          const double chi_cont_noes = chi_cont - kappa_vpkt_cont.es;
+          const double chi_cont_noes = chi_cont - chi_vpkt_cont.es;
           tau_vpkt[ind] += chi_cont_noes * s_cont;
         } else {
           tau_vpkt[ind] += chi_cont * s_cont;

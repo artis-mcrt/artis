@@ -79,8 +79,8 @@ static auto get_event(const int modelgridindex,
 
   struct packet dummypkt = *pkt_ptr;
 
-  calculate_kappa_rpkt_cont(pkt_ptr->nu_cmf, &globals::kappa_rpkt_cont[tid], modelgridindex, true);
-  const double chi_cont = globals::kappa_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(pkt_ptr);
+  calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, &globals::chi_rpkt_cont[tid], modelgridindex, true);
+  const double chi_cont = globals::chi_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(pkt_ptr);
   double tau = 0.;   // optical depth along path
   double dist = 0.;  // position on path
   while (true) {
@@ -378,24 +378,24 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 }
 
-static void rpkt_event_continuum(struct packet *pkt_ptr, struct rpkt_cont_opacity kappa_rpkt_cont_thisthread,
-                                 int modelgridindex) {
+static void rpkt_event_continuum(struct packet *pkt_ptr,
+                                 struct rpkt_continuum_absorptioncoeffs chi_rpkt_cont_thisthread, int modelgridindex) {
   const double nu = pkt_ptr->nu_cmf;
 
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
-  const double kappa_cont = kappa_rpkt_cont_thisthread.total * dopplerfactor;
-  const double sigma = kappa_rpkt_cont_thisthread.es * dopplerfactor;
-  const double kappa_ff = kappa_rpkt_cont_thisthread.ff * dopplerfactor;
-  const double kappa_bf = kappa_rpkt_cont_thisthread.bf * dopplerfactor;
+  const double chi_cont = chi_rpkt_cont_thisthread.total * dopplerfactor;
+  const double sigma = chi_rpkt_cont_thisthread.es * dopplerfactor;
+  const double chi_ff = chi_rpkt_cont_thisthread.ff * dopplerfactor;
+  const double chi_bf = chi_rpkt_cont_thisthread.bf * dopplerfactor;
 
-  /// continuum process happens. select due to its probabilities sigma/kappa_cont, kappa_ff/kappa_cont,
-  /// kappa_bf/kappa_cont
+  /// continuum process happens. select due to its probabilities sigma/chi_cont, chi_ff/chi_cont,
+  /// chi_bf/chi_cont
   const double zrand = rng_uniform();
   // printout("[debug] rpkt_event:   r-pkt undergoes a continuum transition\n");
-  // printout("[debug] rpkt_event:   zrand*kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n", zrand * kappa_cont,
-  // sigma, kappa_ff, kappa_bf);
+  // printout("[debug] rpkt_event:   zrand*chi_cont %g, sigma %g, chi_ff %g, chi_bf %g\n", zrand * chi_cont,
+  // sigma, chi_ff, chi_bf);
 
-  if (zrand * kappa_cont < sigma) {
+  if (zrand * chi_cont < sigma) {
     /// electron scattering occurs
     /// in this case the packet stays a R_PKT of same nu_cmf than before (coherent scattering)
     /// but with different direction
@@ -419,7 +419,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, struct rpkt_cont_opacit
     /// Set some flags
     // pkt_ptr->next_trans = 0;   ///packet's comoving frame frequency is conserved during electron scattering
     /// don't touch the value of next_trans to save transition history
-  } else if (zrand * kappa_cont < sigma + kappa_ff) {
+  } else if (zrand * chi_cont < sigma + chi_ff) {
     /// ff: transform to k-pkt
     // printout("[debug] rpkt_event:   free-free transition\n");
     stats::increment(stats::COUNTER_K_STAT_FROM_FF);
@@ -427,23 +427,23 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, struct rpkt_cont_opacit
     pkt_ptr->last_event = 5;
     pkt_ptr->type = TYPE_KPKT;
     pkt_ptr->absorptiontype = -1;
-  } else if (zrand * kappa_cont < sigma + kappa_ff + kappa_bf) {
+  } else if (zrand * chi_cont < sigma + chi_ff + chi_bf) {
     /// bf: transform to k-pkt or activate macroatom corresponding to probabilities
     // printout("[debug] rpkt_event:   bound-free transition\n");
 
     pkt_ptr->absorptiontype = -2;
 
-    const double kappa_bf_inrest = kappa_rpkt_cont_thisthread.bf;
-    assert_always(globals::phixslist[tid].kappa_bf_sum[globals::nbfcontinua - 1] == kappa_bf_inrest);
+    const double chi_bf_inrest = chi_rpkt_cont_thisthread.bf;
+    assert_always(globals::phixslist[tid].chi_bf_sum[globals::nbfcontinua - 1] == chi_bf_inrest);
 
     /// Determine in which continuum the bf-absorption occurs
     const double zrand2 = rng_uniform();
-    const double kappa_bf_rand = zrand2 * kappa_bf_inrest;
+    const double chi_bf_rand = zrand2 * chi_bf_inrest;
 
-    // first kappa_bf_sum[i] such that kappa_bf_sum[i] > kappa_bf_rand
-    double *upperval = std::upper_bound(&globals::phixslist[tid].kappa_bf_sum[0],
-                                        &globals::phixslist[tid].kappa_bf_sum[globals::nbfcontinua - 1], kappa_bf_rand);
-    const int allcontindex = std::distance(&globals::phixslist[tid].kappa_bf_sum[0], upperval);
+    // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand
+    double *upperval = std::upper_bound(&globals::phixslist[tid].chi_bf_sum[0],
+                                        &globals::phixslist[tid].chi_bf_sum[globals::nbfcontinua - 1], chi_bf_rand);
+    const int allcontindex = std::distance(&globals::phixslist[tid].chi_bf_sum[0], upperval);
     assert_always(allcontindex < globals::nbfcontinua);
 
     const double nu_edge = globals::allcont[allcontindex].nu_edge;
@@ -568,7 +568,7 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
 
   /// ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
   /// quick and dirty solution: store info in element=ion=0, and leave the others untouched (i.e. zero)
-  safeadd(globals::ffheatingestimator[modelgridindex], distance_e_cmf * globals::kappa_rpkt_cont[tid].ffheating);
+  safeadd(globals::ffheatingestimator[modelgridindex], distance_e_cmf * globals::chi_rpkt_cont[tid].ffheating);
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     const double distance_e_cmf_over_nu = distance_e_cmf / nu;
@@ -580,7 +580,7 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
       if (nu > nu_edge) {
         const int element = globals::groundcont[i].element;
         /// Cells with zero abundance for a specific element have zero contribution
-        /// (set in calculate_kappa_rpkt_cont and therefore do not contribute to
+        /// (set in calculate_chi_rpkt_cont and therefore do not contribute to
         /// the estimators
         if (grid::get_elem_abundance(modelgridindex, element) > 0) {
           const int ion = globals::groundcont[i].ion;
@@ -736,7 +736,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     } else if (rpkt_eventtype == RPKT_EVENTTYPE_BB) {
       rpkt_event_boundbound(pkt_ptr, mgi);
     } else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT) {
-      rpkt_event_continuum(pkt_ptr, globals::kappa_rpkt_cont[tid], mgi);
+      rpkt_event_continuum(pkt_ptr, globals::chi_rpkt_cont[tid], mgi);
     } else {
       assert_always(false);
     }
@@ -808,11 +808,11 @@ static auto get_rpkt_escapeprob_fromdirection(std::span<const double, 3> startpo
       }
     }
 
-    calculate_kappa_rpkt_cont(vpkt.nu_cmf, &globals::kappa_rpkt_cont[tid], mgi, false);
+    calculate_chi_rpkt_cont(vpkt.nu_cmf, &globals::chi_rpkt_cont[tid], mgi, false);
 
-    const double kappa_cont = globals::kappa_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(&vpkt);
+    const double chi_cont = globals::chi_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(&vpkt);
 
-    *tot_tau_cont += kappa_cont * sdist;
+    *tot_tau_cont += chi_cont * sdist;
 
     if ((*tot_tau_lines + *tot_tau_cont) > 10.) {
       // printout("reached tau limit of %g\n", (tot_tau_lines + tot_tau_cont));
@@ -971,7 +971,7 @@ void emit_rpkt(struct packet *pkt_ptr) {
   // printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 }
 
-static auto calculate_kappa_ff(const int modelgridindex, const double nu) -> double
+static auto calculate_chi_ff(const int modelgridindex, const double nu) -> double
 // calculate the free-free absorption coefficient [cm^-1]
 // = kappa(free-free) * nne
 {
@@ -981,31 +981,31 @@ static auto calculate_kappa_ff(const int modelgridindex, const double nu) -> dou
   const auto nne = grid::get_nne(modelgridindex);
   const auto T_e = grid::get_Te(modelgridindex);
 
-  double kappa_ff = 0.;
-  // kappa_ffheating = 0.;
+  double chi_ff = 0.;
+  // chi_ffheating = 0.;
   const int nelements = get_nelements();
   for (int element = 0; element < nelements; element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
       const double nnion = ionstagepop(modelgridindex, element, ion);
       const int ioncharge = get_ionstage(element, ion) - 1;
-      kappa_ff += ioncharge * ioncharge * g_ff * nnion;
+      chi_ff += ioncharge * ioncharge * g_ff * nnion;
     }
   }
-  kappa_ff *= 3.69255e8 / sqrt(T_e) * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
+  chi_ff *= 3.69255e8 / sqrt(T_e) * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
 
-  if (!std::isfinite(kappa_ff)) {
-    printout("ERRORL: kappa_ff is non-infinite mgi %d nne %g nu %g T_e %g\n", modelgridindex, nne, nu, T_e);
+  if (!std::isfinite(chi_ff)) {
+    printout("ERRORL: chi_ff is non-infinite mgi %d nne %g nu %g T_e %g\n", modelgridindex, nne, nu, T_e);
     abort();
   }
 
-  return kappa_ff;
+  return chi_ff;
 }
 
 template <bool usecellhistupdatephixslist>
-auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) -> double
+auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> double
 // bound-free opacity
 {
-  double kappa_bf_sum = 0.;
+  double chi_bf_sum = 0.;
   if constexpr (usecellhistupdatephixslist && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
     for (int gphixsindex = 0; gphixsindex < globals::nbfcontinua_ground; gphixsindex++) {
       globals::phixslist[tid].groundcont_gamma_contr[gphixsindex] = 0.;
@@ -1083,10 +1083,10 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
           globals::phixslist[tid].gamma_contr[i] = sigma_contr;
         }
 
-        const double kappa_bf_contr = nnlevel * sigma_contr;
-        if (usecellhistupdatephixslist && !std::isfinite(kappa_bf_contr)) {
-          printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf_contr %g ... abort\n",
-                   kappa_bf_contr);
+        const double chi_bf_contr = nnlevel * sigma_contr;
+        if (usecellhistupdatephixslist && !std::isfinite(chi_bf_contr)) {
+          printout("[fatal] calculate_chi_rpkt_cont: non-finite contribution to chi_bf_contr %g ... abort\n",
+                   chi_bf_contr);
           printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n", i, element, ion, level);
           printout("[fatal] Z=%d ionstage %d\n", get_atomicnumber(element), get_ionstage(element, ion));
           printout("[fatal] globals::cell[%d].composition[%d].abundance = %g\n", modelgridindex, element,
@@ -1098,20 +1098,20 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
           abort();
         }
 
-        kappa_bf_sum += kappa_bf_contr;
+        chi_bf_sum += chi_bf_contr;
         if constexpr (usecellhistupdatephixslist) {
-          globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
+          globals::phixslist[tid].chi_bf_sum[i] = chi_bf_sum;
         }
       } else if constexpr (usecellhistupdatephixslist) {
         // ignore this particular process
-        globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
+        globals::phixslist[tid].chi_bf_sum[i] = chi_bf_sum;
         if constexpr (DETAILED_BF_ESTIMATORS_ON) {
           globals::phixslist[tid].gamma_contr[i] = 0.;
         }
       }
     } else if constexpr (usecellhistupdatephixslist) {
       // no element present or not an important level
-      globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
+      globals::phixslist[tid].chi_bf_sum[i] = chi_bf_sum;
       if constexpr (DETAILED_BF_ESTIMATORS_ON) {
         globals::phixslist[tid].gamma_contr[i] = 0.;
       }
@@ -1120,22 +1120,21 @@ auto calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu) ->
 
   if constexpr (usecellhistupdatephixslist) {
     for (; i < globals::nbfcontinua; i++) {
-      globals::phixslist[tid].kappa_bf_sum[i] = kappa_bf_sum;
+      globals::phixslist[tid].chi_bf_sum[i] = chi_bf_sum;
       if constexpr (DETAILED_BF_ESTIMATORS_ON) {
         globals::phixslist[tid].gamma_contr[i] = 0.;
       }
     }
   }
-  return kappa_bf_sum;
+  return chi_bf_sum;
 }
 
-void calculate_kappa_rpkt_cont(const double nu_cmf, struct rpkt_cont_opacity *kappa_rpkt_cont_thisthread,
-                               const int modelgridindex, const bool usecellhistupdatephixslist) {
+void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorptioncoeffs *chi_rpkt_cont_thisthread,
+                             const int modelgridindex, const bool usecellhistupdatephixslist) {
   assert_testmodeonly(modelgridindex != grid::get_npts_model());
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
-  if ((modelgridindex == kappa_rpkt_cont_thisthread->modelgridindex) &&
-      (!kappa_rpkt_cont_thisthread->recalculate_required) &&
-      (fabs(kappa_rpkt_cont_thisthread->nu / nu_cmf - 1.0) < 1e-4)) {
+  if ((modelgridindex == chi_rpkt_cont_thisthread->modelgridindex) &&
+      (!chi_rpkt_cont_thisthread->recalculate_required) && (fabs(chi_rpkt_cont_thisthread->nu / nu_cmf - 1.0) < 1e-4)) {
     // calculated values are a match already
     return;
   }
@@ -1143,9 +1142,9 @@ void calculate_kappa_rpkt_cont(const double nu_cmf, struct rpkt_cont_opacity *ka
   const auto nne = grid::get_nne(modelgridindex);
 
   double sigma = 0.0;
-  double kappa_ff = 0.;
-  double kappa_bf = 0.;
-  double kappa_ffheating = 0.;
+  double chi_ff = 0.;
+  double chi_bf = 0.;
+  double chi_ffheating = 0.;
 
   if (globals::opacity_case == 4) {
     /// First contribution: Thomson scattering on free electrons
@@ -1157,56 +1156,56 @@ void calculate_kappa_rpkt_cont(const double nu_cmf, struct rpkt_cont_opacity *ka
     // sigma *= 0.1;
 
     /// Second contribution: free-free absorption
-    kappa_ff = calculate_kappa_ff(modelgridindex, nu_cmf);
-    kappa_ffheating = kappa_ff;
+    chi_ff = calculate_chi_ff(modelgridindex, nu_cmf);
+    chi_ffheating = chi_ff;
 
     /// Third contribution: bound-free absorption
-    kappa_bf = usecellhistupdatephixslist ? calculate_kappa_bf_gammacontr<true>(modelgridindex, nu_cmf)
-                                          : calculate_kappa_bf_gammacontr<false>(modelgridindex, nu_cmf);
+    chi_bf = usecellhistupdatephixslist ? calculate_chi_bf_gammacontr<true>(modelgridindex, nu_cmf)
+                                        : calculate_chi_bf_gammacontr<false>(modelgridindex, nu_cmf);
 
     // const double pkt_lambda = 1e8 * CLIGHT / nu_cmf;
     // if (pkt_lambda < 4000)
     // {
-    //   printout("lambda %7.1f kappa_bf %g \n", pkt_lambda, kappa_bf);
+    //   printout("lambda %7.1f chi_bf %g \n", pkt_lambda, chi_bf);
     // }
   } else {
-    /// in the other cases kappa_grey is an mass absorption coefficient
+    /// in the other cases chi_grey is an mass absorption coefficient
     /// therefore use the mass density
-    // sigma = globals::cell[pkt_ptr->where].kappa_grey * globals::cell[pkt_ptr->where].rho;
+    // sigma = globals::cell[pkt_ptr->where].chi_grey * globals::cell[pkt_ptr->where].rho;
     // sigma = SIGMA_T * nne;
 
     sigma = 0.;
-    // kappa_ff = 0.9*sigma;
+    // chi_ff = 0.9*sigma;
     // sigma *= 0.1;
-    // kappa_bf = 0.;
+    // chi_bf = 0.;
 
     // Second contribution: free-free absorption
-    kappa_ff = 1e5 * calculate_kappa_ff(modelgridindex, nu_cmf);
+    chi_ff = 1e5 * calculate_chi_ff(modelgridindex, nu_cmf);
 
-    kappa_bf = 0.;
+    chi_bf = 0.;
   }
 
-  kappa_rpkt_cont_thisthread->nu = nu_cmf;
-  kappa_rpkt_cont_thisthread->modelgridindex = modelgridindex;
-  kappa_rpkt_cont_thisthread->recalculate_required = false;
-  kappa_rpkt_cont_thisthread->total = sigma + kappa_bf + kappa_ff;
-  kappa_rpkt_cont_thisthread->es = sigma;
-  kappa_rpkt_cont_thisthread->ff = kappa_ff;
-  kappa_rpkt_cont_thisthread->bf = kappa_bf;
-  kappa_rpkt_cont_thisthread->ffheating = kappa_ffheating;
-  // kappa_rpkt_cont_thisthread.bfheating = kappa_bfheating;
+  chi_rpkt_cont_thisthread->nu = nu_cmf;
+  chi_rpkt_cont_thisthread->modelgridindex = modelgridindex;
+  chi_rpkt_cont_thisthread->recalculate_required = false;
+  chi_rpkt_cont_thisthread->total = sigma + chi_bf + chi_ff;
+  chi_rpkt_cont_thisthread->es = sigma;
+  chi_rpkt_cont_thisthread->ff = chi_ff;
+  chi_rpkt_cont_thisthread->bf = chi_bf;
+  chi_rpkt_cont_thisthread->ffheating = chi_ffheating;
+  // chi_rpkt_cont_thisthread.bfheating = chi_bfheating;
 
-  if (!std::isfinite(kappa_rpkt_cont_thisthread->total)) {
-    printout("[fatal] calculate_kappa_rpkt_cont: resulted in non-finite kappa_rpkt_cont.total ... abort\n");
-    printout("[fatal] es %g, ff %g, bf %g\n", kappa_rpkt_cont_thisthread->es, kappa_rpkt_cont_thisthread->ff,
-             kappa_rpkt_cont_thisthread->bf);
+  if (!std::isfinite(chi_rpkt_cont_thisthread->total)) {
+    printout("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort\n");
+    printout("[fatal] es %g, ff %g, bf %g\n", chi_rpkt_cont_thisthread->es, chi_rpkt_cont_thisthread->ff,
+             chi_rpkt_cont_thisthread->bf);
     printout("[fatal] nbfcontinua %d\n", globals::nbfcontinua);
     printout("[fatal] in cell %d with density %g\n", modelgridindex, grid::get_rho(modelgridindex));
     printout("[fatal] pkt_ptr->nu_cmf %g\n", nu_cmf);
-    if (std::isfinite(kappa_rpkt_cont_thisthread->es)) {
-      kappa_rpkt_cont_thisthread->ff = 0.;
-      kappa_rpkt_cont_thisthread->bf = 0.;
-      kappa_rpkt_cont_thisthread->total = kappa_rpkt_cont_thisthread->es;
+    if (std::isfinite(chi_rpkt_cont_thisthread->es)) {
+      chi_rpkt_cont_thisthread->ff = 0.;
+      chi_rpkt_cont_thisthread->bf = 0.;
+      chi_rpkt_cont_thisthread->total = chi_rpkt_cont_thisthread->es;
     } else {
       abort();
     }

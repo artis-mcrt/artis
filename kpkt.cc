@@ -369,7 +369,7 @@ void do_kpkt_blackbody(struct packet *pkt_ptr)
   assert_always(std::isfinite(pkt_ptr->nu_cmf));
   /// and then emitt the packet randomly in the comoving frame
   emit_rpkt(pkt_ptr);
-  // printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
+  // printout("[debug] calculate_chi_rpkt after kpkt to rpkt by ff\n");
   pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
   // if (tid == 0) k_stat_to_r_bb++;
   stats::increment(stats::COUNTER_K_STAT_TO_R_BB);

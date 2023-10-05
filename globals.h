@@ -61,7 +61,7 @@ struct groundphixslist {
 
 struct phixslist {
   double *groundcont_gamma_contr = nullptr;  // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
-  double *kappa_bf_sum = nullptr;
+  double *chi_bf_sum = nullptr;
   double *gamma_contr = nullptr;  // needed for DETAILED_BF_ESTIMATORS_ON
 };
 
@@ -148,7 +148,7 @@ struct gslintegration_paras {
   const float *const photoion_xs;
 };
 
-struct rpkt_cont_opacity {
+struct rpkt_continuum_absorptioncoeffs {
   double nu = NAN;  // frequency at which opacity was calculated
   double total = 0.;
   double es = 0.;
@@ -234,7 +234,7 @@ extern bool do_emission_res;
 
 extern std::unique_ptr<bool[]> startofline;
 
-extern double gamma_grey;
+extern double gamma_kappagrey;
 
 constexpr double GREY_OP = 0.1;
 
@@ -250,7 +250,7 @@ extern struct bflist_t *bflist;
 // for USE_LUT_BFHEATING = true
 extern double *bfheating_coeff;
 
-extern struct rpkt_cont_opacity *kappa_rpkt_cont;
+extern struct rpkt_continuum_absorptioncoeffs *chi_rpkt_cont;
 
 extern int ncoolingterms;
 

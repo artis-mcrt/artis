@@ -524,7 +524,7 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
   const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
   const double rho = grid::get_rho(mgi);
 
-  if (globals::gamma_grey < 0) {
+  if (globals::gamma_kappagrey < 0) {
     // double sigma_cmf_cno = 0.0448e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.2);
 
     // sigma terms
@@ -549,7 +549,7 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
 
     chi_cmf = (chi_cmf_fe * f_fe) + (chi_cmf_si * (1. - f_fe));
   } else {
-    chi_cmf = globals::gamma_grey * rho;
+    chi_cmf = globals::gamma_kappagrey * rho;
   }
 
   // Now need to convert between frames.
@@ -567,7 +567,7 @@ static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
   const int mgi = grid::get_cell_modelgridindex(cellindex);
   const double rho = grid::get_rho(mgi);
 
-  if (globals::gamma_grey >= 0.) {
+  if (globals::gamma_kappagrey >= 0.) {
     return 0.;
   }
 
@@ -782,7 +782,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   // Routine returns the value in the rest frame.
 
   double chi_compton = 0.0;
-  if (globals::gamma_grey < 0) {
+  if (globals::gamma_kappagrey < 0) {
     chi_compton = get_chi_compton_rf(pkt_ptr);
   }
 

@@ -52,7 +52,7 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
     " 8: UNUSED compute r-light curve (1: no estimators, 2: thin cells, 3: thick cells, 4: gamma-ray heating)",
     " 9: UNUSED n_out_it: number of iterations",
     "10: UNUSED: change speed of light by some factor. Change constants.h CLIGHT_PROP instead",
-    "11: use grey opacity for gammas?",
+    "11: gamma_kappagrey: if >0: use grey opacity for gammas, if <0: use detailed opacity",
     "12: syn_dir: x, y, and z components of unit vector (will be normalised after input or randomised if zero length)",
     "13: opacity_case: opacity choice",
     "14: rho_crit_para: free parameter for calculation of rho_crit",
@@ -1398,8 +1398,8 @@ static void setup_phixs_list() {
     }
 
     if (globals::nbfcontinua > 0) {
-      globals::phixslist[itid].kappa_bf_sum = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
-      assert_always(globals::phixslist[itid].kappa_bf_sum != nullptr);
+      globals::phixslist[itid].chi_bf_sum = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
+      assert_always(globals::phixslist[itid].chi_bf_sum != nullptr);
 
       if constexpr (DETAILED_BF_ESTIMATORS_ON) {
         globals::phixslist[itid].gamma_contr = static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
@@ -1407,18 +1407,18 @@ static void setup_phixs_list() {
       }
 
       for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++) {
-        globals::phixslist[itid].kappa_bf_sum[allcontindex] = 0.;
+        globals::phixslist[itid].chi_bf_sum[allcontindex] = 0.;
 
         if constexpr (DETAILED_BF_ESTIMATORS_ON) {
           globals::phixslist[itid].gamma_contr[allcontindex] = 0.;
         }
       }
     } else {
-      globals::phixslist[itid].kappa_bf_sum = nullptr;
+      globals::phixslist[itid].chi_bf_sum = nullptr;
       globals::phixslist[itid].gamma_contr = nullptr;
     }
 
-    printout("[info] mem_usage: phixslist[tid].kappa_bf_contr for thread %d occupies %.3f MB\n", itid,
+    printout("[info] mem_usage: phixslist[tid].chi_bf_contr for thread %d occupies %.3f MB\n", itid,
              globals::nbfcontinua * sizeof(double) / 1024. / 1024.);
   }
 
@@ -1814,7 +1814,7 @@ void read_parameterfile(int rank)
   assert_always(get_noncommentline(file, line));  // UNUSED change speed of light
 
   assert_always(get_noncommentline(file, line));
-  std::istringstream(line) >> globals::gamma_grey;  // use grey opacity for gammas?
+  std::istringstream(line) >> globals::gamma_kappagrey;  // use grey opacity for gammas?
 
   float syn_dir_in[3];
   assert_always(get_noncommentline(file, line));
