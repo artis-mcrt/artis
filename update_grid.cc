@@ -1113,8 +1113,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
         precalculate_partfuncts(mgi);
 
-        if (!globals::simulation_continued_from_saved || !NLTE_POPS_ON || globals::initial_iteration ||
-            grid::modelgrid[mgi].thick == 1) {
+        if (!globals::simulation_continued_from_saved || !NLTE_POPS_ON || globals::initial_iteration) {
           calculate_populations(mgi);  // these were not read from the gridsave file, so calculate them now
         } else {
           calculate_electron_densities(mgi);
