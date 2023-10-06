@@ -525,15 +525,16 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
   const double rho = grid::get_rho(mgi);
 
   if (globals::gamma_kappagrey < 0) {
-    // double sigma_cmf_cno = 0.0448e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.2);
-
     // Cross sections from Equation 2 of Kailash & Sutherland (1988), attributed to Veigele (1973)
 
     // 2.41326e19 = 100 keV in frequency
+    const double hnu_over_100kev = pkt_ptr->nu_cmf / 2.41326e+19;
 
-    const double sigma_cmf_si = 1.16e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.13);
+    // double sigma_cmf_cno = 0.0448e-24 * pow(hnu_over_100kev, -3.2);
 
-    const double sigma_cmf_fe = 25.7e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.0);
+    const double sigma_cmf_si = 1.16e-24 * pow(hnu_over_100kev, -3.13);
+
+    const double sigma_cmf_fe = 25.7e-24 * pow(hnu_over_100kev, -3.0);
 
     // Now need to multiply by the particle number density.
 
