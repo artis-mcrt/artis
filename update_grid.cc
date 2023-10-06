@@ -1662,5 +1662,5 @@ auto calculate_electron_densities(const int modelgridindex) -> double
 
   grid::set_nne(modelgridindex, nne);
   grid::set_nnetot(modelgridindex, nne_tot);
-  return nne_tot;
+  return nntot;
 }
