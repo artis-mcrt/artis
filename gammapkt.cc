@@ -601,10 +601,10 @@ static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
   // sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
   // Assumes Z = 7. So mass = 14.
 
-  sigma_cmf_si = sigma_cmf_si * rho / MH / 28;
+  sigma_cmf_si = sigma_cmf_si * (rho / MH / 28);
   // Assumes Z = 14. So mass = 28.
 
-  sigma_cmf_fe = sigma_cmf_fe * rho / MH / 56;
+  sigma_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
   // Assumes Z = 28. So mass = 56.
 
   const double chi_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
