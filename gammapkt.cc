@@ -518,7 +518,7 @@ static void compton_scatter(struct packet *pkt_ptr)
 static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
   // calculate the absorption coefficient [cm^-1] for photo electric effect scattering in the observer reference frame
 
-  double chi_cmf;
+  double chi_cmf = NAN;
   // Start by working out the x-section in the co-moving frame.
 
   const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
@@ -527,17 +527,15 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
   if (globals::gamma_kappagrey < 0) {
     // double sigma_cmf_cno = 0.0448e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.2);
 
-    // sigma terms
+    // Cross sections from Equation 2 of Kailash & Sutherland (1988), attributed to Veigele (1973)
+
+    // 2.41326e19 = 100 keV in frequency
+
     const double sigma_cmf_si = 1.16e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.13);
 
     const double sigma_cmf_fe = 25.7e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.0);
 
-    // 2.41326e19 = 100keV in frequency.
-
     // Now need to multiply by the particle number density.
-
-    // sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
-    //  Assumes Z = 7. So mass = 14.
 
     const double chi_cmf_si = sigma_cmf_si * (rho / MH / 28);
     // Assumes Z = 14. So mass = 28.
@@ -577,9 +575,11 @@ static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
   }
 
   // double sigma_cmf_cno;
-  double sigma_cmf_si;
-  double sigma_cmf_fe;
+  double sigma_cmf_si = NAN;
+  double sigma_cmf_fe = NAN;
   const double f_fe = grid::get_ffegrp(mgi);
+
+  // Cross sections from Equation 2 of Kailash & Sutherland (1988), attributed to Hubbell (1969)
 
   // 3.61990e+20 = 1500 keV in frequency
   if (pkt_ptr->nu_cmf > 3.61990e+20) {
