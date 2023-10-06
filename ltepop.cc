@@ -26,10 +26,8 @@ auto nne_solution_f(double x, void *paras) -> double
   for (int element = 0; element < get_nelements(); element++) {
     const double abundance = grid::modelgrid[modelgridindex].composition[element].abundance;
     if (abundance > 0 && get_nions(element) > 0) {
-      const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
       double innersum = 0.;
       const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
-
       auto ionfractions = get_ionfractions(element, modelgridindex, x, uppermost_ion);
 
       int ion = 0;
@@ -38,6 +36,7 @@ auto nne_solution_f(double x, void *paras) -> double
         innersum += (get_ionstage(element, ion) - 1) * ionfractions[ion];
       }
       assert_always(std::isfinite(innersum));
+      const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
       outersum += abundance / elem_meanweight * innersum;
       if (!std::isfinite(outersum)) {
         printout("nne_solution_f: element %d ion %d uppermostion %d abundance %g, mass %g\n", element, ion,
