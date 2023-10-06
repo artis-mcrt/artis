@@ -439,8 +439,7 @@ auto calculate_sahafact(int element, int ion, int level, int upperionlevel, doub
 }
 
 auto ionstagepop(int modelgridindex, int element, int ion) -> double
-/// Calculates the given ionstages total population in nebular approximation for modelgridindex
-/// The precalculated ground level population and partition function are used.
+/// Calculates the given ionstage's population density using the ground level population and partition function
 {
   return get_groundlevelpop(modelgridindex, element, ion) *
          grid::modelgrid[modelgridindex].composition[element].partfunct[ion] / stat_weight(element, ion, 0);
