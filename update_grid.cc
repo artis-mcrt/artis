@@ -21,7 +21,7 @@
 #include "thermalbalance.h"
 #include "vpkt.h"
 
-void precalculate_partfuncts(int modelgridindex)
+void calculate_cellpartfuncts(int modelgridindex)
 /// The partition functions depend only on T_R and W. This means they don't
 /// change during any iteration on T_e. Therefore their precalculation was
 /// taken out of calculate_populations to save runtime.
@@ -31,8 +31,6 @@ void precalculate_partfuncts(int modelgridindex)
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      // printout("precalc element %d, ion %d, mgi %d\n",element,ion,modelgridindex);
-      // globals::cell[cellnumber].composition[element].ltepartfunct[ion] = calculate_ltepartfunct(element,ion,T_R);
       grid::modelgrid[modelgridindex].composition[element].partfunct[ion] =
           calculate_partfunct(element, ion, modelgridindex);
     }
@@ -824,7 +822,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
 
     const time_t sys_time_start_partfuncs_or_gamma = time(nullptr);
     if (!NLTE_POPS_ON) {
-      precalculate_partfuncts(n);
+      calculate_cellpartfuncts(n);
     } else if (USE_LUT_PHOTOION && (nlte_iter != 0)) {
       // recalculate the Gammas using the current population estimates
       for (int element = 0; element < get_nelements(); element++) {
@@ -891,7 +889,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
 
       if (NLTE_POPS_ALL_IONS_SIMULTANEOUS) {
         const double nne_prev = grid::get_nne(n);
-        precalculate_partfuncts(n);
+        calculate_cellpartfuncts(n);
         calculate_electron_densities(n);  // sets nne
         const double fracdiff_nne = fabs((grid::get_nne(n) / nne_prev) - 1);
         nlte_test = fracdiff_nne;
@@ -1113,7 +1111,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       printout("initial_iteration %d\n", globals::initial_iteration);
       printout("mgi %d modelgrid.thick: %d (for this grid update only)\n", mgi, grid::modelgrid[mgi].thick);
 
-      precalculate_partfuncts(mgi);
+      calculate_cellpartfuncts(mgi);
 
       if (!globals::simulation_continued_from_saved || !NLTE_POPS_ON || globals::initial_iteration ||
           grid::modelgrid[mgi].thick == 1) {
@@ -1159,7 +1157,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
           set_all_corrphotoionrenorm(mgi, 1.);
         }
 
-        precalculate_partfuncts(mgi);
+        calculate_cellpartfuncts(mgi);
         calculate_populations(mgi);
       } else {
         // not initial_iteration and not a thick cell
@@ -1455,7 +1453,6 @@ auto calculate_populations(const int modelgridindex) -> double
 
   double nne_hi = grid::get_rho(modelgridindex) / MH;
 
-  /// The following section of uppermost_ion is (so far) NOT thread safe!!!!!!!!!!!!!!!!!!!!!!!
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(modelgridindex, element) > 0) {
@@ -1650,7 +1647,6 @@ auto calculate_electron_densities(const int modelgridindex) -> double
     if (nnelement > 0) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
-        // if (ion <= globals::elements[element].uppermost_ion)
         const auto nnion = ionstagepop(modelgridindex, element, ion);
         const int ioncharge = get_ionstage(element, ion) - 1;
         nne += ioncharge * nnion;
