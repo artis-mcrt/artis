@@ -222,14 +222,12 @@ auto calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
   }
 
   const double T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(modelgridindex) : grid::get_Te(modelgridindex);
-  const double W = 1.;
 
-  const double E_level = epsilon(element, ion, level);
-  const double E_ground = epsilon(element, ion, 0);
+  const double E_aboveground = epsilon(element, ion, level) - epsilon(element, ion, 0);
   const double nnground = groundlevelpop;
 
-  return (nnground * W * stat_weight(element, ion, level) / stat_weight(element, ion, 0) *
-          exp(-(E_level - E_ground) / KB / T_exc));
+  return (nnground * stat_weight(element, ion, level) / stat_weight(element, ion, 0) *
+          exp(-E_aboveground / KB / T_exc));
 }
 
 static auto calculate_levelpop_nominpop(int modelgridindex, int element, int ion, int level, bool *skipminpop)
