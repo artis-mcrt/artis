@@ -215,8 +215,10 @@ auto calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
+
+  const auto groundlevelpop = get_groundlevelpop(modelgridindex, element, ion);
   if (level == 0) {
-    return get_groundlevelpop(modelgridindex, element, ion);
+    return groundlevelpop;
   }
 
   const double T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(modelgridindex) : grid::get_Te(modelgridindex);
@@ -224,7 +226,7 @@ auto calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
 
   const double E_level = epsilon(element, ion, level);
   const double E_ground = epsilon(element, ion, 0);
-  const double nnground = get_groundlevelpop(modelgridindex, element, ion);
+  const double nnground = groundlevelpop;
 
   return (nnground * W * stat_weight(element, ion, level) / stat_weight(element, ion, 0) *
           exp(-(E_level - E_ground) / KB / T_exc));
