@@ -1510,9 +1510,7 @@ auto calculate_populations(const int modelgridindex) -> double
       }
     }
     nntot += nne;
-    if (nne < MINPOP) {
-      nne = MINPOP;
-    }
+    nne = std::max(MINPOP, nne);
     grid::set_nne(modelgridindex, nne);
     grid::set_nnetot(modelgridindex, nne_tot);
     return nntot;
@@ -1568,9 +1566,7 @@ auto calculate_populations(const int modelgridindex) -> double
 
   gsl_root_fsolver_free(solver);
 
-  if (nne < MINPOP) {
-    nne = MINPOP;
-  }
+  nne = std::max(MINPOP, nne);
 
   grid::set_nne(modelgridindex, nne);
   if (status == GSL_CONTINUE) {
@@ -1601,10 +1597,7 @@ auto calculate_populations(const int modelgridindex) -> double
       double nnion = NAN;
       if (ion <= uppermost_ion) {
         if (nnelement > 0) {
-          nnion = nnelement * ionfractions[ion];
-          if (nnion < MINPOP) {
-            nnion = MINPOP;
-          }
+          nnion = std::max(MINPOP, nnelement * ionfractions[ion]);
         } else {
           nnion = 0.;
         }
