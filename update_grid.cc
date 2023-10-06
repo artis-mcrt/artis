@@ -1478,23 +1478,18 @@ auto calculate_populations(const int modelgridindex) -> double
   double nne_hi = grid::get_rho(modelgridindex) / MH;
 
   /// The following section of uppermost_ion is (so far) NOT thread safe!!!!!!!!!!!!!!!!!!!!!!!
-  int only_neutral_ions = 0;
-  int nelements_in_cell = 0;
+  bool only_neutrals = true;
   for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    const double abundance = grid::get_elem_abundance(modelgridindex, element);
-    if (abundance > 0) {
+    if (grid::get_elem_abundance(modelgridindex, element) > 0) {
       const int uppermost_ion = find_uppermost_ion(modelgridindex, element, nne_hi);
-      // printout("cell %d, element %d, final uppermost_ion is %d, factor
-      // %g\n",modelgridindex,element,uppermost_ion,factor); elements[element].uppermost_ion =
-      // uppermost_ion;
       grid::set_elements_uppermost_ion(modelgridindex, element, uppermost_ion);
-      if (uppermost_ion <= 0) {
-        only_neutral_ions++;
+
+      const int uppermost_ioncharge = get_ionstage(element, uppermost_ion) - 1;
+      if (uppermost_ioncharge > 0) {
+        only_neutrals = false;
       }
-      nelements_in_cell++;
     } else {
-      grid::set_elements_uppermost_ion(modelgridindex, element, nions - 1);
+      grid::set_elements_uppermost_ion(modelgridindex, element, get_nions(element) - 1);
     }
   }
 
@@ -1502,7 +1497,7 @@ auto calculate_populations(const int modelgridindex) -> double
   double nne_tot = 0.;  /// total number of electrons in grid cell which are possible
                         /// targets for compton scattering of gamma rays
   double nntot = 0.;
-  if (only_neutral_ions == nelements_in_cell) {
+  if (only_neutrals) {
     /// Special case of only neutral ions, set nne to some finite value that
     /// packets are not lost in kpkts
     /// Introduce a flag variable which is sent to the T_e solver so that
@@ -1572,6 +1567,7 @@ auto calculate_populations(const int modelgridindex) -> double
         }
       }
     }
+
     gsl_root_fsolver *solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
 
     gsl_root_fsolver_set(solver, &f, nne_lo, nne_hi);
@@ -1600,12 +1596,9 @@ auto calculate_populations(const int modelgridindex) -> double
     if (status == GSL_CONTINUE) {
       printout("[warning] calculate_populations: nne did not converge within %d iterations\n", maxit);
     }
-    // printout("[debug] update_grid:   status = %s\n",gsl_strerror(status));
-    // printout("[debug] update_grid:   converged nne %g\n",globals::cell[modelgridindex].nne);
 
     /// Now calculate the ground level populations in nebular approximation and store them to the
     /// grid
-    // double nne_check = 0.;
     nne_tot = 0.;  /// total number of electrons in grid cell which are possible
                    /// targets for compton scattering of gamma rays
 
