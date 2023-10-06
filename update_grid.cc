@@ -1470,7 +1470,7 @@ auto calculate_populations(const int modelgridindex) -> double
     }
   }
 
-  float nne = 0.;
+  double nne = 0.;
   double nne_tot = 0.;  /// total number of electrons in grid cell which are possible
                         /// targets for compton scattering of gamma rays
   double nntot = 0.;
@@ -1485,7 +1485,7 @@ auto calculate_populations(const int modelgridindex) -> double
     /// grid
     for (int element = 0; element < get_nelements(); element++) {
       /// calculate number density of the current element (abundances are given by mass)
-      const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
+      const auto nnelement = grid::get_elem_numberdens(modelgridindex, element);
       nne_tot += nnelement * get_atomicnumber(element);
 
       const int nions = get_nions(element);
@@ -1638,7 +1638,8 @@ auto calculate_electron_densities(const int modelgridindex) -> double
 // are fixed (determined by NLTE all-ion solver)
 {
   double nne_tot = 0.;  // total electron density
-  float nne = 0.;       // free electron density
+  double nne = 0.;      // free electron density
+  double nntot = 0.;
 
   for (int element = 0; element < get_nelements(); element++) {
     // calculate number density of the current element (abundances are given by mass)
@@ -1650,10 +1651,14 @@ auto calculate_electron_densities(const int modelgridindex) -> double
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
         // if (ion <= globals::elements[element].uppermost_ion)
-        nne += (get_ionstage(element, ion) - 1) * ionstagepop(modelgridindex, element, ion);
+        const auto nnion = ionstagepop(modelgridindex, element, ion);
+        const int ioncharge = get_ionstage(element, ion) - 1;
+        nne += ioncharge * nnion;
+        nntot += nnion;
       }
     }
   }
+  nntot += nne;
 
   grid::set_nne(modelgridindex, nne);
   grid::set_nnetot(modelgridindex, nne_tot);
