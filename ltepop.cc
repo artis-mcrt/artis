@@ -114,6 +114,8 @@ auto phi(const int element, const int ion, const int modelgridindex) -> double
   assert_testmodeonly(ion < get_nions(element));
 
   double phi = 0;
+  auto partfunc_ion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
+  auto partfunc_upperion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion + 1];
 
   const auto T_e = grid::get_Te(modelgridindex);
   /// Newest ionisation formula
@@ -123,87 +125,76 @@ auto phi(const int element, const int ion, const int modelgridindex) -> double
   if (use_lte_ratio) {
     const double ionpot = epsilon(element, ion + 1, 0) - epsilon(element, ion, 0);
     // printout("ionpot for element %d, ion %d is %g\n", element, ion, ionpot / EV);
-    const double partfunct_ratio = grid::modelgrid[modelgridindex].composition[element].partfunct[ion] /
-                                   grid::modelgrid[modelgridindex].composition[element].partfunct[ion + 1];
-    phi = partfunct_ratio * SAHACONST * pow(T_e, -1.5) * exp(ionpot / KB / T_e);
-  } else
+    const double partfunct_ratio = partfunc_ion / partfunc_upperion;
+    return partfunct_ratio * SAHACONST * pow(T_e, -1.5) * exp(ionpot / KB / T_e);
+  }
+
   // elseif (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
   //     {
   //       const float nne = grid::get_nne(modelgridindex);
   //       phi = ionstagepop(modelgridindex,element,ion) / ionstagepop(modelgridindex,element,ion+1) / nne;
   //     }
   // else
-  {
-    double Gamma = 0.;
-    if constexpr (!USE_LUT_PHOTOION) {
-      Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
-    } else {
-      Gamma =
-          globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() + ion];
-    }
-    // printout("phicompare element %d ion %d T_e = %g gammaestimator %g calculate_iongamma_per_gspop %g\n",
-    //          element, ion, T_e,
-    //          globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() +
-    //          ion], calculate_iongamma_per_gspop(modelgridindex, element, ion));
 
-    // Gamma is the photoionization rate per ground level pop
-    const double Gamma_ion =
-        Gamma * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
+  double Gamma = 0.;
+  if constexpr (!USE_LUT_PHOTOION) {
+    Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
+  } else {
+    Gamma =
+        globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() + ion];
+  }
+  // printout("phicompare element %d ion %d T_e = %g gammaestimator %g calculate_iongamma_per_gspop %g\n",
+  //          element, ion, T_e,
+  //          globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() +
+  //          ion], calculate_iongamma_per_gspop(modelgridindex, element, ion));
 
-    if (Gamma == 0. && (!NT_ON || (globals::rpkt_emiss[modelgridindex] == 0. &&
-                                   grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(24, 48)) == 0. &&
-                                   grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(28, 56)) == 0.))) {
-      printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n", element, ion);
-      abort();
-    }
+  // Gamma is the photoionization rate per ground level pop
+  const double Gamma_ion = Gamma * stat_weight(element, ion, 0) / partfunc_ion;
 
-    // Alpha_st = stimrecombestimator[cellnumber*get_nelements()*get_max_nions()+element*get_max_nions()+ion];
-    double const Alpha_st = 0.;  /// approximate treatment neglects stimulated recombination
+  if (Gamma == 0. && (!NT_ON || (globals::rpkt_emiss[modelgridindex] == 0. &&
+                                 grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(24, 48)) == 0. &&
+                                 grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(28, 56)) == 0.))) {
+    printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n", element, ion);
+    abort();
+  }
 
-    double Alpha_sp = 0.;
-    if constexpr (NLTE_POPS_ON) {
-      Alpha_sp =
-          calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, false, false, false, false, false);
-    } else {
-      Alpha_sp = interpolate_ions_spontrecombcoeff(element, ion, T_e);
-    }
+  // Alpha_st = stimrecombestimator[cellnumber*get_nelements()*get_max_nions()+element*get_max_nions()+ion];
+  double const Alpha_st = 0.;  /// approximate treatment neglects stimulated recombination
 
-    // const double Col_rec = calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, true, false, false,
-    // false);
-    const double Col_rec = 0.;
+  double Alpha_sp = 0.;
+  if constexpr (NLTE_POPS_ON) {
+    Alpha_sp =
+        calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, false, false, false, false, false);
+  } else {
+    Alpha_sp = interpolate_ions_spontrecombcoeff(element, ion, T_e);
+  }
 
-    double Y_nt = 0.0;
+  // const double Col_rec = calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, true, false, false,
+  // false);
+  const double Col_rec = 0.;
 
-    if constexpr (NT_ON) {
-      Y_nt = nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion);
-    }
+  double Y_nt = 0.0;
 
-    // || !std::isfinite(Gamma))
-    // return phi_lte(element,ion,cellnumber);
-    // gamma_lte = interpolate_photoioncoeff_below(element,ion,0,T_e) +
-    // interpolate_photoioncoeff_above(element,ion,0,T_e); zeta = interpolate_zeta(element,ion,T_e); alpha_sp =
-    // interpolate_spontrecombcoeff(element,ion,0,T_e); phi = gamma_lte*(Alpha_sp+Apha_st)/(Gamma*alpha_sp) *
-    // partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
+  if constexpr (NT_ON) {
+    Y_nt = nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion);
+  }
 
-    phi = (Alpha_sp + Alpha_st + Col_rec) / (Gamma_ion + Y_nt);
+  phi = (Alpha_sp + Alpha_st + Col_rec) / (Gamma_ion + Y_nt);
 
-    // Y_nt should generally be higher than the Gamma term for nebular epoch
+  // Y_nt should generally be higher than the Gamma term for nebular epoch
 
-    if (!std::isfinite(phi) || phi == 0.) {
-      printout(
-          "[fatal] phi: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g ... remove higher or "
-          "lower ionisation stages\n",
-          phi, element, ion, T_e);
-      printout("[fatal] phi: Alpha_sp %g, Alpha_st %g, Gamma %g, partfunct %g, stat_weight %g\n", Alpha_sp, Alpha_st,
-               Gamma, grid::modelgrid[modelgridindex].composition[element].partfunct[ion],
-               stat_weight(element, ion, 0));
-      printout("[fatal] phi: upperionpartfunct %g, upperionstatweight %g\n",
-               grid::modelgrid[modelgridindex].composition[element].partfunct[ion + 1],
-               stat_weight(element, ion + 1, 0));
-      printout("[fatal] phi: Y_nt %g Col_rec %g grid::get_nne(modelgridindex) %g\n", Y_nt, Col_rec,
-               grid::get_nne(modelgridindex));
-      // abort();
-    }
+  if (!std::isfinite(phi) || phi == 0.) {
+    printout(
+        "[fatal] phi: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g ... remove higher or "
+        "lower ionisation stages\n",
+        phi, element, ion, T_e);
+    printout("[fatal] phi: Alpha_sp %g, Alpha_st %g, Gamma %g, partfunct %g, stat_weight %g\n", Alpha_sp, Alpha_st,
+             Gamma, partfunc_ion, stat_weight(element, ion, 0));
+    printout("[fatal] phi: upperionpartfunct %g, upperionstatweight %g\n", partfunc_upperion,
+             stat_weight(element, ion + 1, 0));
+    printout("[fatal] phi: Y_nt %g Col_rec %g grid::get_nne(modelgridindex) %g\n", Y_nt, Col_rec,
+             grid::get_nne(modelgridindex));
+    // abort();
   }
 
   return phi;
@@ -410,8 +401,8 @@ auto calculate_sahafact(int element, int ion, int level, int upperionlevel, doub
   // E_threshold, sf,stat_weight(element,ion,level),stat_weight(element,ion+1,0) );
   if (sf < 0) {
     printout(
-        "[fatal] calculate_sahafact: Negative Saha factor. sfac %g element %d ion %d level %d upperionlevel %d g_lower "
-        "%g g_upper %g T %g E_threshold %g exppart %g\n",
+        "[fatal] calculate_sahafact: Negative Saha factor. sfac %g element %d ion %d level %d upperionlevel %d "
+        "g_lower %g g_upper %g T %g E_threshold %g exppart %g\n",
         sf, element, ion, level, upperionlevel, g_lower, g_upper, T, E_threshold, exp(E_threshold / KB / T));
     abort();
   }
