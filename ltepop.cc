@@ -169,13 +169,9 @@ auto phi(const int element, const int ion, const int modelgridindex) -> double
   // false);
   const double Col_rec = 0.;
 
-  double Y_nt = 0.0;
+  const double gamma_nt = NT_ON ? nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion) : 0.;
 
-  if constexpr (NT_ON) {
-    Y_nt = nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion);
-  }
-
-  phi = (Alpha_sp + Col_rec) / (Gamma_ion + Y_nt);
+  phi = (Alpha_sp + Col_rec) / (Gamma_ion + gamma_nt);
 
   // Y_nt should generally be higher than the Gamma term for nebular epoch
 
@@ -188,7 +184,7 @@ auto phi(const int element, const int ion, const int modelgridindex) -> double
              stat_weight(element, ion, 0));
     printout("[fatal] phi: upperionpartfunct %g, upperionstatweight %g\n", partfunc_upperion,
              stat_weight(element, ion + 1, 0));
-    printout("[fatal] phi: Y_nt %g Col_rec %g grid::get_nne(modelgridindex) %g\n", Y_nt, Col_rec,
+    printout("[fatal] phi: gamma_nt %g Col_rec %g grid::get_nne(modelgridindex) %g\n", gamma_nt, Col_rec,
              grid::get_nne(modelgridindex));
     abort();
   }
