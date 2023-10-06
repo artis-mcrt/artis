@@ -1445,12 +1445,6 @@ auto calculate_populations(const int modelgridindex) -> double
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
-  /// and the solution function
-  struct nne_solution_paras paras = {.cellnumber = modelgridindex};
-  gsl_function f = {.function = &nne_solution_f, .params = &paras};
-
-  /// Get temperatures
-
   double nne_hi = grid::get_rho(modelgridindex) / MH;
 
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
@@ -1516,12 +1510,11 @@ auto calculate_populations(const int modelgridindex) -> double
     return nntot;
   }
 
-  /// Apply solver to get nne
   /// Search solution for nne in [nne_lo,nne_hi]
-  // printout("nne@x_lo %g\n", nne_solution_f(nne_lo,f.params));
-  // printout("nne@x_hi %g\n", nne_solution_f(nne_hi,f.params));
-  // printout("n, x_lo, x_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g,
-  // %g\n",modelgridindex,x_lo,x_hi,T_R,T_e,W,globals::cell[modelgridindex].rho);
+
+  struct nne_solution_paras paras = {.cellnumber = modelgridindex};
+  gsl_function f = {.function = &nne_solution_f, .params = &paras};
+
   double nne_lo = 0.;  // MINPOP;
   if (nne_solution_f(nne_lo, f.params) * nne_solution_f(nne_hi, f.params) > 0) {
     const auto T_R = grid::get_TR(modelgridindex);
