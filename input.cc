@@ -1675,7 +1675,7 @@ void input(int rank)
 /// To govern the input. For now hardwire everything.
 {
   globals::n_titer = 1;
-  globals::initial_iteration = false;
+  globals::lte_iteration = false;
 
   printout("[info] input: do n_titer %d iterations per timestep\n", globals::n_titer);
   if (globals::n_titer > 1) {

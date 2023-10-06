@@ -118,7 +118,7 @@ int num_lte_timesteps;
 double cell_is_optically_thick;
 int num_grey_timesteps;
 int n_titer;
-bool initial_iteration;
+bool lte_iteration;
 int n_kpktdiffusion_timesteps;
 float kpktdiffusion_timescale;
 

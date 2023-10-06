@@ -117,7 +117,7 @@ auto phi(const int element, const int ion, const int modelgridindex) -> double
   const auto T_e = grid::get_Te(modelgridindex);
   /// Newest ionisation formula
 
-  const bool use_lte_ratio = (globals::initial_iteration || grid::modelgrid[modelgridindex].thick == 1);
+  const bool use_lte_ratio = (globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1);
 
   if (use_lte_ratio) {
     const double ionpot = epsilon(element, ion + 1, 0) - epsilon(element, ion, 0);

@@ -1108,12 +1108,12 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         grid::modelgrid[mgi].thick = 1;
       }
 
-      printout("initial_iteration %d\n", globals::initial_iteration);
+      printout("lte_iteration %d\n", globals::lte_iteration);
       printout("mgi %d modelgrid.thick: %d (for this grid update only)\n", mgi, grid::modelgrid[mgi].thick);
 
       calculate_cellpartfuncts(mgi);
 
-      if (!globals::simulation_continued_from_saved || !NLTE_POPS_ON || globals::initial_iteration ||
+      if (!globals::simulation_continued_from_saved || !NLTE_POPS_ON || globals::lte_iteration ||
           grid::modelgrid[mgi].thick == 1) {
         calculate_populations(mgi);  // these were not read from the gridsave file, so calculate them now
       } else {
@@ -1143,8 +1143,8 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         stats::normalise_ion_estimators(mgi, deltat, deltaV);
       }
 
-      // initial_iteration really means either ts 0 or nts < globals::num_lte_timesteps
-      if (globals::initial_iteration || grid::modelgrid[mgi].thick == 1) {
+      // lte_iteration really means either ts 0 or nts < globals::num_lte_timesteps
+      if (globals::lte_iteration || grid::modelgrid[mgi].thick == 1) {
         // LTE mode or grey mode (where temperature doesn't matter but is calculated anyway)
 
         const double T_J = radfield::get_T_J_from_J(mgi);
@@ -1160,7 +1160,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         calculate_cellpartfuncts(mgi);
         calculate_populations(mgi);
       } else {
-        // not initial_iteration and not a thick cell
+        // not lte_iteration and not a thick cell
         // non-LTE timesteps with T_e from heating/cooling
 
         radfield::normalise_nuJ(mgi, estimator_normfactor_over4pi);
@@ -1400,7 +1400,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 static auto find_uppermost_ion(const int modelgridindex, const int element, const double nne_hi) -> int {
   int uppermost_ion = 0;
   const int nions = get_nions(element);
-  if (globals::initial_iteration || grid::modelgrid[modelgridindex].thick == 1) {
+  if (globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1) {
     uppermost_ion = nions - 1;
   } else {
     int ion = -1;

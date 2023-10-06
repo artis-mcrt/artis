@@ -937,13 +937,13 @@ auto main(int argc, char *argv[]) -> int {
 
 #ifdef DO_TITER
     // The first time step must solve the ionisation balance in LTE
-    globals::initial_iteration = (nts == 0);
+    globals::lte_iteration = (nts == 0);
 #else
     /// titer example: Do 3 iterations on timestep 0-6
     // globals::n_titer = (nts < 6) ? 3: 1;
 
     globals::n_titer = 1;
-    globals::initial_iteration = (nts < globals::num_lte_timesteps);
+    globals::lte_iteration = (nts < globals::num_lte_timesteps);
 #endif
 
     for (int titer = 0; titer < globals::n_titer; titer++) {
