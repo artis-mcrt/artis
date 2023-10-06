@@ -1076,6 +1076,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
 
     if (globals::opacity_case < 4) {
+      // various forms of grey opacity
       grid::modelgrid[mgi].thick = 1;
 
       if (globals::opacity_case == 3) {
@@ -1093,11 +1094,9 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       // For the initial timestep, temperatures have already been assigned
       // either by trapped energy release calculation, or reading from gridsave file
 
-      if constexpr (USE_LUT_PHOTOION) {
+      if (USE_LUT_PHOTOION && !globals::simulation_continued_from_saved) {
         /// Determine renormalisation factor for corrected photoionization cross-sections
-        if (!globals::simulation_continued_from_saved) {
-          set_all_corrphotoionrenorm(mgi, 1.);
-        }
+        set_all_corrphotoionrenorm(mgi, 1.);
       }
 
       /// W == 1 indicates that this modelgrid cell was treated grey in the
@@ -1110,6 +1109,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
             mgi);
         grid::modelgrid[mgi].thick = 1;
       }
+
       printout("initial_iteration %d\n", globals::initial_iteration);
       printout("mgi %d modelgrid.thick: %d (for this grid update only)\n", mgi, grid::modelgrid[mgi].thick);
 
@@ -1161,8 +1161,8 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
         precalculate_partfuncts(mgi);
         calculate_populations(mgi);
-      } else  // not (initial_iteration || grid::modelgrid[n].thick == 1)
-      {
+      } else {
+        // not initial_iteration and not a thick cell
         // non-LTE timesteps with T_e from heating/cooling
 
         radfield::normalise_nuJ(mgi, estimator_normfactor_over4pi);
