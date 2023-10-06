@@ -54,7 +54,6 @@ auto nne_solution_f(double x, void *paras) -> double
 std::vector<double> get_ionfractions(const int element, const int modelgridindex, const double nne,
                                      const int uppermost_ion)
 // Calculate the fractions of an element's population in each ionization stage
-// size of ionfractions array must be >= uppermostion + 1
 {
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
