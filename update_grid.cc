@@ -1520,109 +1520,110 @@ auto calculate_populations(const int modelgridindex) -> double
       nne = MINPOP;
     }
     grid::set_nne(modelgridindex, nne);
-  } else {
-    /// Apply solver to get nne
-    /// Search solution for nne in [nne_lo,nne_hi]
-    // printout("nne@x_lo %g\n", nne_solution_f(nne_lo,f.params));
-    // printout("nne@x_hi %g\n", nne_solution_f(nne_hi,f.params));
-    // printout("n, x_lo, x_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g,
-    // %g\n",modelgridindex,x_lo,x_hi,T_R,T_e,W,globals::cell[modelgridindex].rho);
-    double nne_lo = 0.;  // MINPOP;
-    if (nne_solution_f(nne_lo, f.params) * nne_solution_f(nne_hi, f.params) > 0) {
-      printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_lo, nne_hi, T_R,
-               T_e, W, grid::get_rho(modelgridindex));
-      printout("nne@x_lo %g\n", nne_solution_f(nne_lo, f.params));
-      printout("nne@x_hi %g\n", nne_solution_f(nne_hi, f.params));
+    grid::set_nnetot(modelgridindex, nne_tot);
+    return nntot;
+  }
 
-      for (int element = 0; element < get_nelements(); element++) {
-        printout("cell %d, element %d, uppermost_ion is %d\n", modelgridindex, element,
-                 grid::get_elements_uppermost_ion(modelgridindex, element));
+  /// Apply solver to get nne
+  /// Search solution for nne in [nne_lo,nne_hi]
+  // printout("nne@x_lo %g\n", nne_solution_f(nne_lo,f.params));
+  // printout("nne@x_hi %g\n", nne_solution_f(nne_hi,f.params));
+  // printout("n, x_lo, x_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g,
+  // %g\n",modelgridindex,x_lo,x_hi,T_R,T_e,W,globals::cell[modelgridindex].rho);
+  double nne_lo = 0.;  // MINPOP;
+  if (nne_solution_f(nne_lo, f.params) * nne_solution_f(nne_hi, f.params) > 0) {
+    printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_lo, nne_hi, T_R,
+             T_e, W, grid::get_rho(modelgridindex));
+    printout("nne@x_lo %g\n", nne_solution_f(nne_lo, f.params));
+    printout("nne@x_hi %g\n", nne_solution_f(nne_hi, f.params));
 
-        if constexpr (USE_LUT_PHOTOION) {
-          for (int ion = 0; ion <= grid::get_elements_uppermost_ion(modelgridindex, element); ion++) {
-            printout("element %d, ion %d, gammaionest %g\n", element, ion,
-                     globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() +
-                                             element * get_max_nions() + ion]);
-          }
+    for (int element = 0; element < get_nelements(); element++) {
+      printout("cell %d, element %d, uppermost_ion is %d\n", modelgridindex, element,
+               grid::get_elements_uppermost_ion(modelgridindex, element));
+
+      if constexpr (USE_LUT_PHOTOION) {
+        for (int ion = 0; ion <= grid::get_elements_uppermost_ion(modelgridindex, element); ion++) {
+          printout("element %d, ion %d, gammaionest %g\n", element, ion,
+                   globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() +
+                                           element * get_max_nions() + ion]);
         }
       }
     }
+  }
 
-    gsl_root_fsolver *solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
+  gsl_root_fsolver *solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
 
-    gsl_root_fsolver_set(solver, &f, nne_lo, nne_hi);
-    constexpr int maxit = 100;
-    constexpr double fractional_accuracy = 1e-3;
-    int status = GSL_CONTINUE;
-    for (int iter = 0; iter <= maxit; iter++) {
-      iter++;
-      gsl_root_fsolver_iterate(solver);
-      nne = gsl_root_fsolver_root(solver);
-      nne_lo = gsl_root_fsolver_x_lower(solver);
-      nne_hi = gsl_root_fsolver_x_upper(solver);
-      status = gsl_root_test_interval(nne_lo, nne_hi, 0, fractional_accuracy);
-      if (status != GSL_CONTINUE) {
-        break;
-      }
+  gsl_root_fsolver_set(solver, &f, nne_lo, nne_hi);
+  constexpr int maxit = 100;
+  constexpr double fractional_accuracy = 1e-3;
+  int status = GSL_CONTINUE;
+  for (int iter = 0; iter <= maxit; iter++) {
+    iter++;
+    gsl_root_fsolver_iterate(solver);
+    nne = gsl_root_fsolver_root(solver);
+    nne_lo = gsl_root_fsolver_x_lower(solver);
+    nne_hi = gsl_root_fsolver_x_upper(solver);
+    status = gsl_root_test_interval(nne_lo, nne_hi, 0, fractional_accuracy);
+    if (status != GSL_CONTINUE) {
+      break;
+    }
+  }
+
+  gsl_root_fsolver_free(solver);
+
+  if (nne < MINPOP) {
+    nne = MINPOP;
+  }
+
+  grid::set_nne(modelgridindex, nne);
+  if (status == GSL_CONTINUE) {
+    printout("[warning] calculate_populations: nne did not converge within %d iterations\n", maxit);
+  }
+
+  /// Now calculate the ground level populations in nebular approximation and store them to the
+  /// grid
+  nne_tot = 0.;  /// total number of electrons in grid cell which are possible
+                 /// targets for compton scattering of gamma rays
+
+  nntot = nne;
+  for (int element = 0; element < get_nelements(); element++) {
+    const int nions = get_nions(element);
+    /// calculate number density of the current element (abundances are given by mass)
+    const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
+    nne_tot += nnelement * get_atomicnumber(element);
+
+    const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
+    std::vector<double> ionfractions;
+
+    if (nnelement > 0) {
+      ionfractions = get_ionfractions(element, modelgridindex, nne, uppermost_ion);
     }
 
-    gsl_root_fsolver_free(solver);
-
-    if (nne < MINPOP) {
-      nne = MINPOP;
-    }
-
-    grid::set_nne(modelgridindex, nne);
-    if (status == GSL_CONTINUE) {
-      printout("[warning] calculate_populations: nne did not converge within %d iterations\n", maxit);
-    }
-
-    /// Now calculate the ground level populations in nebular approximation and store them to the
-    /// grid
-    nne_tot = 0.;  /// total number of electrons in grid cell which are possible
-                   /// targets for compton scattering of gamma rays
-
-    nntot = nne;
-    for (int element = 0; element < get_nelements(); element++) {
-      const int nions = get_nions(element);
-      /// calculate number density of the current element (abundances are given by mass)
-      const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
-      nne_tot += nnelement * get_atomicnumber(element);
-
-      const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
-      std::vector<double> ionfractions;
-
-      if (nnelement > 0) {
-        ionfractions = get_ionfractions(element, modelgridindex, nne, uppermost_ion);
-      }
-
-      /// Use ionizationfractions to calculate the groundlevel populations
-      for (int ion = 0; ion < nions; ion++) {
-        double nnion = NAN;
-        if (ion <= uppermost_ion) {
-          if (nnelement > 0) {
-            nnion = nnelement * ionfractions[ion];
-            if (nnion < MINPOP) {
-              nnion = MINPOP;
-            }
-          } else {
-            nnion = 0.;
+    /// Use ionizationfractions to calculate the groundlevel populations
+    for (int ion = 0; ion < nions; ion++) {
+      double nnion = NAN;
+      if (ion <= uppermost_ion) {
+        if (nnelement > 0) {
+          nnion = nnelement * ionfractions[ion];
+          if (nnion < MINPOP) {
+            nnion = MINPOP;
           }
         } else {
-          nnion = MINPOP;  /// uppermost_ion is only < nions-1 in cells with nonzero abundance of
-                           /// the given species
+          nnion = 0.;
         }
-        nntot += nnion;
+      } else {
+        nnion = MINPOP;  /// uppermost_ion is only < nions-1 in cells with nonzero abundance of
+                         /// the given species
+      }
+      nntot += nnion;
 
-        grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] =
-            (nnion * stat_weight(element, ion, 0) /
-             grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
+      grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] =
+          (nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
 
-        if (!std::isfinite(grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) {
-          printout(
-              "[warning] calculate_populations: groundlevelpop infinite in connection with "
-              "MINPOP\n");
-        }
+      if (!std::isfinite(grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) {
+        printout(
+            "[warning] calculate_populations: groundlevelpop infinite in connection with "
+            "MINPOP\n");
       }
     }
   }
