@@ -1452,9 +1452,6 @@ auto calculate_populations(const int modelgridindex) -> double
   gsl_function f = {.function = &nne_solution_f, .params = &paras};
 
   /// Get temperatures
-  const double T_R = grid::get_TR(modelgridindex);
-  const auto T_e = grid::get_Te(modelgridindex);
-  const double W = grid::get_W(modelgridindex);
 
   double nne_hi = grid::get_rho(modelgridindex) / MH;
 
@@ -1532,6 +1529,9 @@ auto calculate_populations(const int modelgridindex) -> double
   // %g\n",modelgridindex,x_lo,x_hi,T_R,T_e,W,globals::cell[modelgridindex].rho);
   double nne_lo = 0.;  // MINPOP;
   if (nne_solution_f(nne_lo, f.params) * nne_solution_f(nne_hi, f.params) > 0) {
+    const auto T_R = grid::get_TR(modelgridindex);
+    const auto T_e = grid::get_Te(modelgridindex);
+    const auto W = grid::get_W(modelgridindex);
     printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_lo, nne_hi, T_R,
              T_e, W, grid::get_rho(modelgridindex));
     printout("nne@x_lo %g\n", nne_solution_f(nne_lo, f.params));
