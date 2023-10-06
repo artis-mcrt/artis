@@ -1075,190 +1075,8 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
     const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
 
-    if (globals::opacity_case >= 4) {
-      if (nts == globals::timestep_start && titer == 0) {
-        // For the initial timestep, temperatures have already been assigned
-        // either by trapped energy release calculation, or reading from gridsave file
-
-        if constexpr (USE_LUT_PHOTOION) {
-          /// Determine renormalisation factor for corrected photoionization cross-sections
-          if (!globals::simulation_continued_from_saved) {
-            set_all_corrphotoionrenorm(mgi, 1.);
-          }
-        }
-
-        /// W == 1 indicates that this modelgrid cell was treated grey in the
-        /// last timestep. Therefore it has no valid Gamma estimators and must
-        /// be treated in LTE at restart.
-        if (grid::modelgrid[mgi].thick == 0 && grid::get_W(mgi) == 1) {
-          printout(
-              "force modelgrid cell %d to grey/LTE for update grid since existing W == 1. (will not have gamma "
-              "estimators)\n",
-              mgi);
-          grid::modelgrid[mgi].thick = 1;
-        }
-        printout("initial_iteration %d\n", globals::initial_iteration);
-        printout("mgi %d modelgrid.thick: %d (for this grid update only)\n", mgi, grid::modelgrid[mgi].thick);
-
-        precalculate_partfuncts(mgi);
-
-        if (!globals::simulation_continued_from_saved || !NLTE_POPS_ON || globals::initial_iteration ||
-            grid::modelgrid[mgi].thick == 1) {
-          calculate_populations(mgi);  // these were not read from the gridsave file, so calculate them now
-        } else {
-          calculate_electron_densities(mgi);
-        }
-      } else {
-        /// For all other timesteps temperature corrections have to be applied
-
-        /// we have to calculate the electron density
-        /// and all the level populations
-        /// Normalise estimators and make sure that they are finite.
-        /// Then update T_R and W using the estimators.
-        /// (This could in principle also be done for empty cells)
-
-        const time_t sys_time_start_temperature_corrections = time(nullptr);
-
-        radfield::normalise_J(mgi, estimator_normfactor_over4pi);  // this applies normalisation to the fullspec J
-        radfield::set_J_normfactor(mgi,
-                                   estimator_normfactor_over4pi);  // this stores the factor that will be applied
-                                                                   // later for the J bins but not fullspec J
-
-#ifdef DO_TITER
-        radfield::titer_J(mgi);
-#endif
-
-        if constexpr (TRACK_ION_STATS) {
-          stats::normalise_ion_estimators(mgi, deltat, deltaV);
-        }
-
-        // initial_iteration really means either ts 0 or nts < globals::num_lte_timesteps
-        if (globals::initial_iteration || grid::modelgrid[mgi].thick == 1) {
-          // LTE mode or grey mode (where temperature doesn't matter but is calculated anyway)
-
-          const double T_J = radfield::get_T_J_from_J(mgi);
-          grid::set_TR(mgi, T_J);
-          grid::set_Te(mgi, T_J);
-          grid::set_TJ(mgi, T_J);
-          grid::set_W(mgi, 1);
-
-          if constexpr (USE_LUT_PHOTOION) {
-            set_all_corrphotoionrenorm(mgi, 1.);
-          }
-
-          precalculate_partfuncts(mgi);
-          calculate_populations(mgi);
-        } else  // not (initial_iteration || grid::modelgrid[n].thick == 1)
-        {
-          // non-LTE timesteps with T_e from heating/cooling
-
-          radfield::normalise_nuJ(mgi, estimator_normfactor_over4pi);
-
-          globals::ffheatingestimator[mgi] *= estimator_normfactor;
-          globals::colheatingestimator[mgi] *= estimator_normfactor;
-
-#ifdef DO_TITER
-          radfield::titer_nuJ(mgi);
-          titer_average_estimators(mgi);
-#endif
-
-          if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-            update_gamma_corrphotoionrenorm_bfheating_estimators(mgi, estimator_normfactor);
-          }
-
-          // Get radiation field parameters (T_J, T_R, W, and bins if enabled) out of the
-          // full-spectrum and binned J and nuJ estimators
-          radfield::fit_parameters(mgi, nts);
-
-          if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-            radfield::normalise_bf_estimators(mgi, estimator_normfactor / H);
-          }
-
-          solve_Te_nltepops(mgi, nts, titer, heatingcoolingrates);
-        }
-        printout("Temperature/NLTE solution for cell %d timestep %d took %ld seconds\n", mgi, nts,
-                 time(nullptr) - sys_time_start_temperature_corrections);
-      }
-
-      const float nne = grid::get_nne(mgi);
-      const double compton_optical_depth = SIGMA_T * nne * grid::wid_init(mgi, 0) * tratmid;
-
-      double radial_pos = grid::modelgrid[mgi].initial_radial_pos_sum * tratmid / assoc_cells;
-      if constexpr (GRID_TYPE == GRID_SPHERICAL1D || GRID_TYPE == GRID_CYLINDRICAL2D) {
-        radial_pos = grid::get_cellradialpos(mgi) * tratmid;  // volume averaged mean radius
-      }
-      const double grey_optical_deptha =
-          grid::get_kappagrey(mgi) * grid::get_rho(mgi) * grid::wid_init(mgi, 0) * tratmid;
-      // cube corners will have radial pos > rmax, so clamp to 0.
-      const double dist_to_obs = std::max(0., globals::rmax * tratmid - radial_pos);
-      const double grey_optical_depth = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * dist_to_obs;
-      printout(
-          "modelgridcell %d, compton optical depth (/propgridcell) %g, grey optical depth "
-          "(/propgridcell) %g\n",
-          mgi, compton_optical_depth, grey_optical_deptha);
-      printout("radial_pos %g, distance_to_obs %g, tau_dist %g\n", radial_pos, dist_to_obs, grey_optical_depth);
-
-      grid::modelgrid[mgi].grey_depth = grey_optical_depth;
-
-      // grey_optical_depth = compton_optical_depth;
-
-      if ((grey_optical_depth >= globals::cell_is_optically_thick) && (nts < globals::num_grey_timesteps)) {
-        printout("timestep %d cell %d is treated in grey approximation (chi_grey %g [cm2/g], tau %g >= %g)\n", nts, mgi,
-                 grid::get_kappagrey(mgi), grey_optical_depth, globals::cell_is_optically_thick);
-        grid::modelgrid[mgi].thick = 1;
-      } else if (VPKT_ON && (grey_optical_depth > cell_is_optically_thick_vpkt)) {
-        grid::modelgrid[mgi].thick = 2;
-      } else {
-        grid::modelgrid[mgi].thick = 0;
-      }
-
-      if (grid::modelgrid[mgi].thick == 1) {
-        // cooling rates calculation can be skipped for thick cells
-        // flag with negative numbers to indicate that the rates are invalid
-        grid::modelgrid[mgi].totalcooling = -1.;
-        const int element = 0;
-        const int ion = 0;
-        grid::modelgrid[mgi].cooling_contrib_ion[element][ion] = -1.;
-      } else if (globals::simulation_continued_from_saved && nts == globals::timestep_start) {
-        // cooling rates were read from the gridsave file for this timestep
-        // make sure they are valid
-        assert_always(grid::modelgrid[mgi].totalcooling >= 0.);
-        const int element = 0;
-        const int ion = 0;
-        assert_always(grid::modelgrid[mgi].cooling_contrib_ion[element][ion] >= 0.);
-      } else {
-        /// Cooling rates depend only on cell properties, precalculate total cooling
-        /// and ion contributions inside update grid and communicate between MPI tasks
-        const time_t sys_time_start_calc_kpkt_rates = time(nullptr);
-
-        printout("calculate_cooling_rates for timestep %d cell %d...", nts, mgi);
-
-        // don't pass pointer to heatingcoolingrates because current populations and rates weren't
-        // used to determine T_e
-        kpkt::calculate_cooling_rates(mgi, nullptr);
-
-        printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc_kpkt_rates);
-      }
-    } else {
-      // For opacity_case != 4 the opacity treatment is grey. Enforce
-      // optically thick treatment in this case (should be equivalent to grey)
+    if (globals::opacity_case < 4) {
       grid::modelgrid[mgi].thick = 1;
-
-      /// Need the total number density of bound and free electrons for Compton scattering
-      calculate_electron_densities(mgi);  // if this causes problems, disable the nne calculation (only need nne_tot)
-
-      if ((nts - globals::timestep_start) != 0 || titer != 0) {
-        radfield::normalise_J(mgi, estimator_normfactor_over4pi);  // this applies normalisation to the fullspec J
-        radfield::set_J_normfactor(mgi,
-                                   estimator_normfactor_over4pi);  // this stores the factor that will be applied
-                                                                   // later for the J bins but not fullspec J
-
-        const double T_J = radfield::get_T_J_from_J(mgi);
-        grid::set_TR(mgi, T_J);
-        grid::set_Te(mgi, T_J);
-        grid::set_TJ(mgi, T_J);
-        grid::set_W(mgi, 1);
-      }
 
       if (globals::opacity_case == 3) {
         // printout("update_grid: opacity_case 3 ... updating globals::cell[n].chi_grey"); //MK
@@ -1269,6 +1087,169 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
           grid::set_kappagrey(mgi, globals::opcase3_normal * (0.9 * grid::get_ffegrp(mgi) + 0.1));
         }
       }
+    }
+
+    if (nts == globals::timestep_start && titer == 0) {
+      // For the initial timestep, temperatures have already been assigned
+      // either by trapped energy release calculation, or reading from gridsave file
+
+      if constexpr (USE_LUT_PHOTOION) {
+        /// Determine renormalisation factor for corrected photoionization cross-sections
+        if (!globals::simulation_continued_from_saved) {
+          set_all_corrphotoionrenorm(mgi, 1.);
+        }
+      }
+
+      /// W == 1 indicates that this modelgrid cell was treated grey in the
+      /// last timestep. Therefore it has no valid Gamma estimators and must
+      /// be treated in LTE at restart.
+      if (grid::modelgrid[mgi].thick == 0 && grid::get_W(mgi) == 1) {
+        printout(
+            "force modelgrid cell %d to grey/LTE for update grid since existing W == 1. (will not have gamma "
+            "estimators)\n",
+            mgi);
+        grid::modelgrid[mgi].thick = 1;
+      }
+      printout("initial_iteration %d\n", globals::initial_iteration);
+      printout("mgi %d modelgrid.thick: %d (for this grid update only)\n", mgi, grid::modelgrid[mgi].thick);
+
+      precalculate_partfuncts(mgi);
+
+      if (!globals::simulation_continued_from_saved || !NLTE_POPS_ON || globals::initial_iteration ||
+          grid::modelgrid[mgi].thick == 1) {
+        calculate_populations(mgi);  // these were not read from the gridsave file, so calculate them now
+      } else {
+        calculate_electron_densities(mgi);
+      }
+    } else {
+      /// For all other timesteps temperature corrections have to be applied
+
+      /// we have to calculate the electron density
+      /// and all the level populations
+      /// Normalise estimators and make sure that they are finite.
+      /// Then update T_R and W using the estimators.
+      /// (This could in principle also be done for empty cells)
+
+      const time_t sys_time_start_temperature_corrections = time(nullptr);
+
+      radfield::normalise_J(mgi, estimator_normfactor_over4pi);  // this applies normalisation to the fullspec J
+      radfield::set_J_normfactor(mgi,
+                                 estimator_normfactor_over4pi);  // this stores the factor that will be applied
+                                                                 // later for the J bins but not fullspec J
+
+#ifdef DO_TITER
+      radfield::titer_J(mgi);
+#endif
+
+      if constexpr (TRACK_ION_STATS) {
+        stats::normalise_ion_estimators(mgi, deltat, deltaV);
+      }
+
+      // initial_iteration really means either ts 0 or nts < globals::num_lte_timesteps
+      if (globals::initial_iteration || grid::modelgrid[mgi].thick == 1) {
+        // LTE mode or grey mode (where temperature doesn't matter but is calculated anyway)
+
+        const double T_J = radfield::get_T_J_from_J(mgi);
+        grid::set_TR(mgi, T_J);
+        grid::set_Te(mgi, T_J);
+        grid::set_TJ(mgi, T_J);
+        grid::set_W(mgi, 1);
+
+        if constexpr (USE_LUT_PHOTOION) {
+          set_all_corrphotoionrenorm(mgi, 1.);
+        }
+
+        precalculate_partfuncts(mgi);
+        calculate_populations(mgi);
+      } else  // not (initial_iteration || grid::modelgrid[n].thick == 1)
+      {
+        // non-LTE timesteps with T_e from heating/cooling
+
+        radfield::normalise_nuJ(mgi, estimator_normfactor_over4pi);
+
+        globals::ffheatingestimator[mgi] *= estimator_normfactor;
+        globals::colheatingestimator[mgi] *= estimator_normfactor;
+
+#ifdef DO_TITER
+        radfield::titer_nuJ(mgi);
+        titer_average_estimators(mgi);
+#endif
+
+        if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
+          update_gamma_corrphotoionrenorm_bfheating_estimators(mgi, estimator_normfactor);
+        }
+
+        // Get radiation field parameters (T_J, T_R, W, and bins if enabled) out of the
+        // full-spectrum and binned J and nuJ estimators
+        radfield::fit_parameters(mgi, nts);
+
+        if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+          radfield::normalise_bf_estimators(mgi, estimator_normfactor / H);
+        }
+
+        solve_Te_nltepops(mgi, nts, titer, heatingcoolingrates);
+      }
+      printout("Temperature/NLTE solution for cell %d timestep %d took %ld seconds\n", mgi, nts,
+               time(nullptr) - sys_time_start_temperature_corrections);
+    }
+
+    const float nne = grid::get_nne(mgi);
+    const double compton_optical_depth = SIGMA_T * nne * grid::wid_init(mgi, 0) * tratmid;
+
+    double radial_pos = grid::modelgrid[mgi].initial_radial_pos_sum * tratmid / assoc_cells;
+    if constexpr (GRID_TYPE == GRID_SPHERICAL1D || GRID_TYPE == GRID_CYLINDRICAL2D) {
+      radial_pos = grid::get_cellradialpos(mgi) * tratmid;  // volume averaged mean radius
+    }
+    const double grey_optical_deptha = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * grid::wid_init(mgi, 0) * tratmid;
+    // cube corners will have radial pos > rmax, so clamp to 0.
+    const double dist_to_obs = std::max(0., globals::rmax * tratmid - radial_pos);
+    const double grey_optical_depth = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * dist_to_obs;
+    printout(
+        "modelgridcell %d, compton optical depth (/propgridcell) %g, grey optical depth "
+        "(/propgridcell) %g\n",
+        mgi, compton_optical_depth, grey_optical_deptha);
+    printout("radial_pos %g, distance_to_obs %g, tau_dist %g\n", radial_pos, dist_to_obs, grey_optical_depth);
+
+    grid::modelgrid[mgi].grey_depth = grey_optical_depth;
+
+    // grey_optical_depth = compton_optical_depth;
+
+    if ((grey_optical_depth >= globals::cell_is_optically_thick) && (nts < globals::num_grey_timesteps)) {
+      printout("timestep %d cell %d is treated in grey approximation (chi_grey %g [cm2/g], tau %g >= %g)\n", nts, mgi,
+               grid::get_kappagrey(mgi), grey_optical_depth, globals::cell_is_optically_thick);
+      grid::modelgrid[mgi].thick = 1;
+    } else if (VPKT_ON && (grey_optical_depth > cell_is_optically_thick_vpkt)) {
+      grid::modelgrid[mgi].thick = 2;
+    } else {
+      grid::modelgrid[mgi].thick = 0;
+    }
+
+    if (grid::modelgrid[mgi].thick == 1) {
+      // cooling rates calculation can be skipped for thick cells
+      // flag with negative numbers to indicate that the rates are invalid
+      grid::modelgrid[mgi].totalcooling = -1.;
+      const int element = 0;
+      const int ion = 0;
+      grid::modelgrid[mgi].cooling_contrib_ion[element][ion] = -1.;
+    } else if (globals::simulation_continued_from_saved && nts == globals::timestep_start) {
+      // cooling rates were read from the gridsave file for this timestep
+      // make sure they are valid
+      assert_always(grid::modelgrid[mgi].totalcooling >= 0.);
+      const int element = 0;
+      const int ion = 0;
+      assert_always(grid::modelgrid[mgi].cooling_contrib_ion[element][ion] >= 0.);
+    } else {
+      /// Cooling rates depend only on cell properties, precalculate total cooling
+      /// and ion contributions inside update grid and communicate between MPI tasks
+      const time_t sys_time_start_calc_kpkt_rates = time(nullptr);
+
+      printout("calculate_cooling_rates for timestep %d cell %d...", nts, mgi);
+
+      // don't pass pointer to heatingcoolingrates because current populations and rates weren't
+      // used to determine T_e
+      kpkt::calculate_cooling_rates(mgi, nullptr);
+
+      printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc_kpkt_rates);
     }
 
     const int update_grid_cell_seconds = time(nullptr) - sys_time_start_update_cell;
