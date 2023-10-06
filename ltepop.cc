@@ -51,8 +51,8 @@ auto nne_solution_f(double x, void *paras) -> double
   return rho * outersum - x;
 }
 
-std::vector<double> get_ionfractions(const int element, const int modelgridindex, const double nne,
-                                     const int uppermost_ion)
+auto get_ionfractions(const int element, const int modelgridindex, const double nne, const int uppermost_ion)
+    -> std::vector<double>
 // Calculate the fractions of an element's population in each ionization stage
 {
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
@@ -115,25 +115,7 @@ auto phi(const int element, const int ion, const int modelgridindex) -> double
 
   double phi = 0;
 
-  // double Y_nt, ionpot_in;
-  // int element_in, ion_in, nions_in;
-  // double rate_use;
-
   const auto T_e = grid::get_Te(modelgridindex);
-  // double T_R = grid::get_TR(modelgridindex);
-
-  // double W = globals::cell[cellnumber].W;
-
-  /// Old ionisation formula
-  // partfunct_ratio =
-  // globals::cell[cellnumber].composition[element].partfunct[ion]/globals::cell[cellnumber].composition[element].partfunct[ion+1];
-  // phi = 1./W * sqrt(T_R/T_e) * partfunct_ratio * SAHACONST * pow(T_R,-1.5) * exp(ionpot/KB/T_R);
-
-  /// New ionisation formula with zeta
-  // zeta = interpolate_zeta(element,ion,T_e);
-  // phi = 1./W * 1./(zeta+W*(1-zeta)) * sqrt(T_R/T_e) * partfunct_ratio * SAHACONST * pow(T_R,-1.5) *
-  // exp(ionpot/KB/T_R);
-
   /// Newest ionisation formula
 
   const bool use_lte_ratio = (globals::initial_iteration || grid::modelgrid[modelgridindex].thick == 1);
