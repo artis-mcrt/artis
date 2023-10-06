@@ -48,8 +48,8 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
     printout("writing to estimators file timestep %d cell %d...\n", timestep, mgi);
 
     const auto T_e = grid::get_Te(mgi);
-    const float nne = grid::get_nne(mgi);
-    const double Y_e = grid::get_electronfrac(mgi);
+    const auto nne = grid::get_nne(mgi);
+    const auto Y_e = grid::get_electronfrac(mgi);
     // fprintf(estimators_file,"%d %g %g %g %g %d
     // ",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grid::modelgrid[n].thick); fprintf(estimators_file,"%d %g %g %g
     // %g %g ",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grey_optical_depth);

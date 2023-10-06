@@ -279,8 +279,6 @@ static auto calculate_levelpop_nominpop(int modelgridindex, int element, int ion
 
   double nn = NAN;
 
-  //  T_exc = MINTEMP;
-
   if (level == 0) {
     nn = get_groundlevelpop(modelgridindex, element, ion);
   } else if constexpr (NLTE_POPS_ON) {
