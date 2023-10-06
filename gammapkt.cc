@@ -583,18 +583,19 @@ static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
   // Cross sections from Equation 2 of Kailash & Sutherland (1988), attributed to Hubbell (1969)
 
   // 3.61990e+20 = 1500 keV in frequency
+  const double hnu_over_mev = pkt_ptr->nu_cmf / 2.41326e+20;
   if (pkt_ptr->nu_cmf > 3.61990e+20) {
     // sigma_cmf_cno = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.5))) * 49.e-27;
 
-    sigma_cmf_si = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.5))) * 196.e-27;
+    sigma_cmf_si = (0.0481 + (0.301 * (hnu_over_mev - 1.5))) * 196.e-27;
 
-    sigma_cmf_fe = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.5))) * 784.e-27;
+    sigma_cmf_fe = (0.0481 + (0.301 * (hnu_over_mev - 1.5))) * 784.e-27;
   } else {
     // sigma_cmf_cno = 1.0063 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.022) * 49.e-27;
 
-    sigma_cmf_si = 1.0063 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.022) * 196.e-27;
+    sigma_cmf_si = 1.0063 * (hnu_over_mev - 1.022) * 196.e-27;
 
-    sigma_cmf_fe = 1.0063 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.022) * 784.e-27;
+    sigma_cmf_fe = 1.0063 * (hnu_over_mev - 1.022) * 784.e-27;
   }
 
   // Now need to multiply by the particle number density.
