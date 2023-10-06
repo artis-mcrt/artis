@@ -528,9 +528,9 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
     // double sigma_cmf_cno = 0.0448e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.2);
 
     // sigma terms
-    double chi_cmf_si = 1.16e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.13);
+    const double sigma_cmf_si = 1.16e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.13);
 
-    double chi_cmf_fe = 25.7e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.0);
+    const double sigma_cmf_fe = 25.7e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.0);
 
     // 2.41326e19 = 100keV in frequency.
 
@@ -539,10 +539,10 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
     // sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
     //  Assumes Z = 7. So mass = 14.
 
-    chi_cmf_si *= rho / MH / 28;
+    const double chi_cmf_si = sigma_cmf_si * (rho / MH / 28);
     // Assumes Z = 14. So mass = 28.
 
-    chi_cmf_fe *= rho / MH / 56;
+    const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
     // Assumes Z = 28. So mass = 56.
 
     const double f_fe = grid::get_ffegrp(mgi);
