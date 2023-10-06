@@ -1478,15 +1478,14 @@ auto calculate_populations(const int modelgridindex) -> double
   double nne_hi = grid::get_rho(modelgridindex) / MH;
 
   /// The following section of uppermost_ion is (so far) NOT thread safe!!!!!!!!!!!!!!!!!!!!!!!
-  bool only_neutrals = true;
+  bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(modelgridindex, element) > 0) {
       const int uppermost_ion = find_uppermost_ion(modelgridindex, element, nne_hi);
       grid::set_elements_uppermost_ion(modelgridindex, element, uppermost_ion);
 
-      const int uppermost_ioncharge = get_ionstage(element, uppermost_ion) - 1;
-      if (uppermost_ioncharge > 0) {
-        only_neutrals = false;
+      if (uppermost_ion > 0) {
+        only_lowest_ionstage = false;
       }
     } else {
       grid::set_elements_uppermost_ion(modelgridindex, element, get_nions(element) - 1);
@@ -1497,7 +1496,7 @@ auto calculate_populations(const int modelgridindex) -> double
   double nne_tot = 0.;  /// total number of electrons in grid cell which are possible
                         /// targets for compton scattering of gamma rays
   double nntot = 0.;
-  if (only_neutrals) {
+  if (only_lowest_ionstage) {
     /// Special case of only neutral ions, set nne to some finite value that
     /// packets are not lost in kpkts
     /// Introduce a flag variable which is sent to the T_e solver so that
