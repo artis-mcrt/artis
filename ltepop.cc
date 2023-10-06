@@ -19,27 +19,26 @@ auto nne_solution_f(double x, void *paras) -> double
 /// density (passed by x)
 {
   const int modelgridindex = (static_cast<struct nne_solution_paras *>(paras))->cellnumber;
-  const double rho = grid::get_rho(modelgridindex);
 
   double outersum = 0.;
-  // printout("debug get_nelements() %d =========================\n",get_nelements());
   for (int element = 0; element < get_nelements(); element++) {
     const double abundance = grid::modelgrid[modelgridindex].composition[element].abundance;
     if (abundance > 0 && get_nions(element) > 0) {
-      double innersum = 0.;
       const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
       auto ionfractions = get_ionfractions(element, modelgridindex, x, uppermost_ion);
 
-      int ion = 0;
-      for (ion = 0; ion <= uppermost_ion; ion++) {
-        // printout("debug element %d, ion %d, ionfract(element,ion,T,x) %g\n",element,ion,ionfractions[ion]);
-        innersum += (get_ionstage(element, ion) - 1) * ionfractions[ion];
+      double elem_nne_contrib = 0.;
+      for (int ion = 0; ion <= uppermost_ion; ion++) {
+        elem_nne_contrib += (get_ionstage(element, ion) - 1) * ionfractions[ion];
       }
-      assert_always(std::isfinite(innersum));
+
+      assert_always(std::isfinite(elem_nne_contrib));
+
       const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
-      outersum += abundance / elem_meanweight * innersum;
+      outersum += abundance / elem_meanweight * elem_nne_contrib;
+
       if (!std::isfinite(outersum)) {
-        printout("nne_solution_f: element %d ion %d uppermostion %d abundance %g, mass %g\n", element, ion,
+        printout("nne_solution_f: element %d uppermostion %d abundance %g, mass %g\n", element,
                  grid::get_elements_uppermost_ion(modelgridindex, element), abundance, elem_meanweight);
         printout("outersum %g\n", outersum);
         abort();
@@ -47,6 +46,7 @@ auto nne_solution_f(double x, void *paras) -> double
     }
   }
 
+  const double rho = grid::get_rho(modelgridindex);
   return rho * outersum - x;
 }
 
