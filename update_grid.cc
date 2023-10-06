@@ -897,30 +897,25 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
         nlte_test = fracdiff_nne;
         printout(
             "NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e "
-            "%ds, NLTE "
-            "populations "
-            "%ds\n",
+            "%ds, NLTE populations %ds\n",
             n, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
         printout(
             "NLTE (Spencer-Fano/Te/pops) solver cell %d timestep %d iteration %d: prev_iter nne "
-            "%g, new nne is %g, "
-            "fracdiff %g, prev T_e %g new T_e %g fracdiff %g\n",
+            "%g, new nne is %g, fracdiff %g, prev T_e %g new T_e %g fracdiff %g\n",
             n, nts, nlte_iter, nne_prev, grid::get_nne(n), nlte_test, prev_T_e, grid::get_Te(n), fracdiff_T_e);
         // damp changes in nne if oscillating to much
         // grid::set_nne(n, (grid::get_nne(n) + nne_prev) / 2.);
       } else {
         printout(
             "Completed iteration for NLTE population solver in cell %d for timestep %d. "
-            "Fractional error returned: "
-            "%g\n",
+            "Fractional error returned: %g\n",
             n, nts, nlte_test);
       }
 
       if (nlte_test <= covergence_tolerance && fracdiff_T_e <= covergence_tolerance) {
         printout(
             "NLTE (Spencer-Fano/Te/pops) solver nne converged to tolerance %g <= %g and T_e to "
-            "tolerance %g <= %g "
-            "after %d iterations.\n",
+            "tolerance %g <= %g after %d iterations.\n",
             nlte_test, covergence_tolerance, fracdiff_T_e, covergence_tolerance, nlte_iter + 1);
         break;
       }
@@ -1069,20 +1064,14 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
     const time_t sys_time_start_update_cell = time(nullptr);
 
-    /// Update current mass density of cell
-    // n = nonemptycells[my_rank+ncl*nprocs];
     printout("update_grid_cell: working on cell %d before timestep %d titeration %d...\n", mgi, nts, titer);
-    // n = nonemptycells[ncl];
-    // printout("[debug] update_grid: ncl %d is %d non-empty cell updating grid cell %d ... T_e
-    // %g, rho %g\n",ncl,my_rank+ncl*nprocs,n,globals::cell[n].T_e,globals::cell[n].rho);
-    grid::modelgrid[mgi].rho = grid::get_rho_tmin(mgi) / pow(tratmid, 3);
-    // globals::cell[n].rho = globals::cell[n].rho_init / pow(tratmid,3);
-    // rho = globals::cell[n].rho;
-    /// This is done outside update grid now
-    // grid::modelgrid[n].totalcooling = COOLING_UNDEFINED;
 
-    /// Update abundances of radioactive isotopes
+    /// Update current mass density of cell
+    grid::modelgrid[mgi].rho = grid::get_rho_tmin(mgi) / pow(tratmid, 3);
+
+    /// Update elemental abundances with radioactive decays
     decay::update_abundances(mgi, nts, globals::timesteps[nts].mid);
+
     const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
     const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
 

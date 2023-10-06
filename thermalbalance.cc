@@ -368,9 +368,9 @@ static auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> doub
   heatingcoolingrates->nt_frac_heating = nt_frac_heating;
 
   /// Adiabatic cooling term
-  const double p = nntot * KB * T_e;
+  const double p = nntot * KB * T_e;  // pressure in [erg/cm^3]
   const double volumetmin = grid::get_modelcell_assocvolume_tmin(modelgridindex);
-  const double dV = 3 * volumetmin / pow(globals::tmin, 3) * pow(t_current, 2);
+  const double dV = 3 * volumetmin / pow(globals::tmin, 3) * pow(t_current, 2);  // really dV/dt
   const double V = volumetmin * pow(t_current / globals::tmin, 3);
   // printout("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
   heatingcoolingrates->cooling_adiabatic = p * dV / V;

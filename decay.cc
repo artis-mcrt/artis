@@ -1177,7 +1177,7 @@ auto get_global_etot_t0_tinf() -> double {
 }
 
 void update_abundances(const int modelgridindex, const int timestep, const double t_current)
-/// Updates the mass fractions of elements associated with the decay sequence
+/// Updates the mass fractions of elements using the current abundances of nuclides
 /// Parameters: - modelgridindex: the grid cell for which to update the abundances
 ///             - t_current: current time (here mid of current timestep)
 {
