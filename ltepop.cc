@@ -32,8 +32,6 @@ auto nne_solution_f(double x, void *paras) -> double
         elem_nne_contrib += (get_ionstage(element, ion) - 1) * ionfractions[ion];
       }
 
-      assert_always(std::isfinite(elem_nne_contrib));
-
       const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
       outersum += abundance / elem_meanweight * elem_nne_contrib;
 
@@ -199,9 +197,6 @@ auto get_groundlevelpop(int modelgridindex, int element, int ion) -> double
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
-  // double nn = grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
-  // if (nn < MINPOP) nn = MINPOP;
-  // return nn;
 
   const double nn = grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
   if (nn < MINPOP) {
