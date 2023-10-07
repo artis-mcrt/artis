@@ -1549,15 +1549,15 @@ auto calculate_ion_balance(const int modelgridindex, const bool allow_nlte) -> d
       break;
     }
   }
+  if (status == GSL_CONTINUE) {
+    printout("[warning] calculate_ion_balance: nne did not converge within %d iterations\n", maxit);
+  }
 
   gsl_root_fsolver_free(solver);
 
   nne = std::max(MINPOP, nne);
 
   grid::set_nne(modelgridindex, nne);
-  if (status == GSL_CONTINUE) {
-    printout("[warning] calculate_ion_balance: nne did not converge within %d iterations\n", maxit);
-  }
 
   /// Now calculate the ground level populations in nebular approximation and store them to the
   /// grid
