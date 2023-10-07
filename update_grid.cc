@@ -24,7 +24,7 @@
 void calculate_cellpartfuncts(int modelgridindex)
 /// The partition functions depend only on T_R and W. This means they don't
 /// change during any iteration on T_e. Therefore their precalculation was
-/// taken out of calculate_populations to save runtime.
+/// taken out of calculate_ion_balance to save runtime.
 {
   /// Precalculate partition functions for each ion in every cell
   /// this saves a factor 10 in calculation time of Saha-Boltzman populations
@@ -836,7 +836,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
     {
       /// Store population values to the grid
       const time_t sys_time_start_pops = time(nullptr);
-      calculate_populations(n);
+      calculate_ion_balance(n);
       const int duration_solve_pops = time(nullptr) - sys_time_start_pops;
       // calculate_cooling_rates(n);
       // calculate_heating_rates(n);
@@ -1103,7 +1103,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
       if (!globals::simulation_continued_from_saved || !NLTE_POPS_ON || globals::lte_iteration ||
           grid::modelgrid[mgi].thick == 1) {
-        calculate_populations(mgi);  // these were not read from the gridsave file, so calculate them now
+        calculate_ion_balance(mgi);  // these were not read from the gridsave file, so calculate them now
       } else {
         calculate_electron_densities(mgi);
       }
@@ -1146,7 +1146,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         }
 
         calculate_cellpartfuncts(mgi);
-        calculate_populations(mgi);
+        calculate_ion_balance(mgi);
       } else {
         // not lte_iteration and not a thick cell
         // non-LTE timesteps with T_e from heating/cooling
@@ -1418,7 +1418,7 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
     // printout("element %d, ion %d, factor %g\n",element,i,factor);
     if (!std::isfinite(factor)) {
       printout(
-          "[info] calculate_populations: uppermost_ion limited by phi factors for element "
+          "[info] calculate_ion_balance: uppermost_ion limited by phi factors for element "
           "Z=%d, ionstage %d in "
           "cell %d\n",
           get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
@@ -1429,7 +1429,55 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
   return uppermost_ion;
 }
 
-auto calculate_populations(const int modelgridindex) -> double
+static auto handle_neutral_ion_balance(const int modelgridindex) -> double {
+  /// Special case of only neutral ions, set nne to some finite value that
+  /// packets are not lost in kpkts
+  /// Introduce a flag variable which is sent to the T_e solver so that
+  /// we get this info only once when T_e is converged and not for each
+  /// iteration step.
+  printout("[warning] calculate_ion_balance: only neutral ions in cell modelgridindex %d\n", modelgridindex);
+  /// Now calculate the ground level populations in nebular approximation and store them to the
+  /// grid
+  double nne = 0.;
+  double nne_tot = 0.;  /// total number of electrons in grid cell which are possible
+                        /// targets for compton scattering of gamma rays
+  double nntot = 0.;
+  for (int element = 0; element < get_nelements(); element++) {
+    /// calculate number density of the current element (abundances are given by mass)
+    const auto nnelement = grid::get_elem_numberdens(modelgridindex, element);
+    nne_tot += nnelement * get_atomicnumber(element);
+
+    const int nions = get_nions(element);
+    /// Assign the species population to the neutral ion and set higher ions to MINPOP
+    for (int ion = 0; ion < nions; ion++) {
+      double nnion = NAN;
+      if (ion == 0) {
+        nnion = nnelement;
+      } else if (nnelement > 0.) {
+        nnion = MINPOP;
+      } else {
+        nnion = 0.;
+      }
+      nntot += nnion;
+      nne += nnion * (get_ionstage(element, ion) - 1);
+      grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] =
+          (nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
+
+      if (!std::isfinite(grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) {
+        printout(
+            "[warning] calculate_ion_balance: groundlevelpop infinite in connection with "
+            "MINPOP\n");
+      }
+    }
+  }
+  nntot += nne;
+  nne = std::max(MINPOP, nne);
+  grid::set_nne(modelgridindex, nne);
+  grid::set_nnetot(modelgridindex, nne_tot);
+  return nntot;
+}
+
+auto calculate_ion_balance(const int modelgridindex) -> double
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
@@ -1449,53 +1497,8 @@ auto calculate_populations(const int modelgridindex) -> double
     }
   }
 
-  double nne = 0.;
-  double nne_tot = 0.;  /// total number of electrons in grid cell which are possible
-                        /// targets for compton scattering of gamma rays
-  double nntot = 0.;
   if (only_lowest_ionstage) {
-    /// Special case of only neutral ions, set nne to some finite value that
-    /// packets are not lost in kpkts
-    /// Introduce a flag variable which is sent to the T_e solver so that
-    /// we get this info only once when T_e is converged and not for each
-    /// iteration step.
-    printout("[warning] calculate_populations: only neutral ions in cell modelgridindex %d\n", modelgridindex);
-    /// Now calculate the ground level populations in nebular approximation and store them to the
-    /// grid
-    for (int element = 0; element < get_nelements(); element++) {
-      /// calculate number density of the current element (abundances are given by mass)
-      const auto nnelement = grid::get_elem_numberdens(modelgridindex, element);
-      nne_tot += nnelement * get_atomicnumber(element);
-
-      const int nions = get_nions(element);
-      /// Assign the species population to the neutral ion and set higher ions to MINPOP
-      for (int ion = 0; ion < nions; ion++) {
-        double nnion = NAN;
-        if (ion == 0) {
-          nnion = nnelement;
-        } else if (nnelement > 0.) {
-          nnion = MINPOP;
-        } else {
-          nnion = 0.;
-        }
-        nntot += nnion;
-        nne += nnion * (get_ionstage(element, ion) - 1);
-        grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] =
-            (nnion * stat_weight(element, ion, 0) /
-             grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
-
-        if (!std::isfinite(grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) {
-          printout(
-              "[warning] calculate_populations: groundlevelpop infinite in connection with "
-              "MINPOP\n");
-        }
-      }
-    }
-    nntot += nne;
-    nne = std::max(MINPOP, nne);
-    grid::set_nne(modelgridindex, nne);
-    grid::set_nnetot(modelgridindex, nne_tot);
-    return nntot;
+    return handle_neutral_ion_balance(modelgridindex);
   }
 
   /// Search solution for nne in [nne_lo,nne_hi]
@@ -1527,6 +1530,8 @@ auto calculate_populations(const int modelgridindex) -> double
     }
   }
 
+  double nne = 0.;
+
   gsl_root_fsolver *solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
 
   gsl_root_fsolver_set(solver, &f, nne_lo, nne_hi);
@@ -1551,15 +1556,14 @@ auto calculate_populations(const int modelgridindex) -> double
 
   grid::set_nne(modelgridindex, nne);
   if (status == GSL_CONTINUE) {
-    printout("[warning] calculate_populations: nne did not converge within %d iterations\n", maxit);
+    printout("[warning] calculate_ion_balance: nne did not converge within %d iterations\n", maxit);
   }
 
   /// Now calculate the ground level populations in nebular approximation and store them to the
   /// grid
-  nne_tot = 0.;  /// total number of electrons in grid cell which are possible
-                 /// targets for compton scattering of gamma rays
-
-  nntot = nne;
+  double nne_tot = 0.;  /// total number of electrons in grid cell which are possible
+                        /// targets for compton scattering of gamma rays
+  double nntot = nne;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     /// calculate number density of the current element (abundances are given by mass)
@@ -1593,7 +1597,7 @@ auto calculate_populations(const int modelgridindex) -> double
 
       if (!std::isfinite(grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) {
         printout(
-            "[warning] calculate_populations: groundlevelpop infinite in connection with "
+            "[warning] calculate_ion_balance: groundlevelpop infinite in connection with "
             "MINPOP\n");
       }
     }

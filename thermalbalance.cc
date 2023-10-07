@@ -355,7 +355,7 @@ static auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> doub
   if (NLTE_POPS_ON && NLTE_POPS_ALL_IONS_SIMULTANEOUS) {
     nntot = calculate_electron_densities(modelgridindex);
   } else {
-    nntot = calculate_populations(modelgridindex);
+    nntot = calculate_ion_balance(modelgridindex);
   }
 
   /// Then calculate heating and cooling rates
