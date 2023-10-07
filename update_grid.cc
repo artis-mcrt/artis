@@ -877,7 +877,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
       if (NLTE_POPS_ALL_IONS_SIMULTANEOUS) {
         const double nne_prev = grid::get_nne(n);
         calculate_cellpartfuncts(n);
-        calculate_electron_densities(n);  // sets nne
+        calculate_ion_balance(n, true);  // sets nne
         const double fracdiff_nne = fabs((grid::get_nne(n) / nne_prev) - 1);
         nlte_test = fracdiff_nne;
         printout(
@@ -1104,7 +1104,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
           grid::modelgrid[mgi].thick == 1) {
         calculate_ion_balance(mgi, false);  // these were not read from the gridsave file, so calculate them now
       } else {
-        calculate_electron_densities(mgi);
+        calculate_ion_balance(mgi, true);
       }
     } else {
       /// For all other timesteps temperature corrections have to be applied
