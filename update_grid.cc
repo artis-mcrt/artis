@@ -837,7 +837,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
     {
       /// Store population values to the grid
       const time_t sys_time_start_pops = time(nullptr);
-      calculate_ion_balance(n);
+      calculate_ion_balance(n, false);
       const int duration_solve_pops = time(nullptr) - sys_time_start_pops;
       // calculate_cooling_rates(n);
       // calculate_heating_rates(n);
@@ -1104,7 +1104,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
       if (!globals::simulation_continued_from_saved || !NLTE_POPS_ON || globals::lte_iteration ||
           grid::modelgrid[mgi].thick == 1) {
-        calculate_ion_balance(mgi);  // these were not read from the gridsave file, so calculate them now
+        calculate_ion_balance(mgi, false);  // these were not read from the gridsave file, so calculate them now
       } else {
         calculate_electron_densities(mgi);
       }
@@ -1147,7 +1147,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         }
 
         calculate_cellpartfuncts(mgi);
-        calculate_ion_balance(mgi);
+        calculate_ion_balance(mgi, false);
       } else {
         // not lte_iteration and not a thick cell
         // non-LTE timesteps with T_e from heating/cooling
@@ -1477,10 +1477,13 @@ static auto handle_neutral_ion_balance(const int modelgridindex) -> double {
   return nntot;
 }
 
-auto calculate_ion_balance(const int modelgridindex) -> double
+auto calculate_ion_balance(const int modelgridindex, const bool allow_nlte) -> double
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
+  if (allow_nlte) {
+    return calculate_electron_densities(modelgridindex);
+  }
   double nne_hi = grid::get_rho(modelgridindex) / MH;
 
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
