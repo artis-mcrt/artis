@@ -546,9 +546,6 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       if constexpr (TRACK_ION_STATS) {
         stats::increment_ion_stats(modelgridindex, element, lowerion + 1, stats::ION_RADRECOMB_KPKT,
                                    pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
-        const double escape_prob = get_rpkt_escape_prob(pkt_ptr, pkt_ptr->prop_time);
-        stats::increment_ion_stats(modelgridindex, element, lowerion + 1, stats::ION_RADRECOMB_ESCAPED,
-                                   pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
       }
 
       pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process

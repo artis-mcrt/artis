@@ -370,18 +370,6 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         }
         fprintf(estimators_file, "\n");
 
-        fprintf(estimators_file, "BF_escfrac_vpkt    Z=%2d", get_atomicnumber(element));
-        for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
-          fprintf(estimators_file, "              ");
-        }
-        for (int ion = 0; ion < nions; ion++) {
-          const double alpha_r_mc = get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_MACROATOM) +
-                                    get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_KPKT);
-          const double alpha_r_mc_escaped = get_ion_stats(mgi, element, ion, stats::ION_RADRECOMB_ESCAPED);
-          fprintf(estimators_file, "  %d: %9.3f", get_ionstage(element, ion), alpha_r_mc_escaped / alpha_r_mc);
-        }
-        fprintf(estimators_file, "\n");
-
         fprintf(estimators_file, "BB_escfrac         Z=%2d", get_atomicnumber(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
           fprintf(estimators_file, "              ");

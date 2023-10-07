@@ -282,11 +282,6 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
   if constexpr (TRACK_ION_STATS) {
     stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_RADRECOMB_MACROATOM,
                                pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
-
-    const double escape_prob = get_rpkt_escape_prob(pkt_ptr, pkt_ptr->prop_time);
-
-    stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_RADRECOMB_ESCAPED,
-                               pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
   }
 
   pkt_ptr->next_trans = 0;  /// continuum transition, no restrictions for further line interactions
