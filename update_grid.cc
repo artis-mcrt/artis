@@ -25,6 +25,7 @@ void calculate_cellpartfuncts(int modelgridindex)
 /// The partition functions depend only on T_R and W. This means they don't
 /// change during any iteration on T_e. Therefore their precalculation was
 /// taken out of calculate_ion_balance to save runtime.
+// TODO: not true if LTEPOP_EXCITATION_USE_TJ is true unless LTE mode only (TJ=TR=Te)
 {
   /// Precalculate partition functions for each ion in every cell
   /// this saves a factor 10 in calculation time of Saha-Boltzman populations
@@ -1421,8 +1422,7 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
           "Z=%d, ionstage %d in "
           "cell %d\n",
           get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
-      uppermost_ion = ion;
-      break;
+      return ion;
     }
   }
   return uppermost_ion;
