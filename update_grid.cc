@@ -1536,11 +1536,10 @@ auto calculate_ion_balance(const int modelgridindex, const bool allow_nlte) -> d
   gsl_root_fsolver *solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
 
   gsl_root_fsolver_set(solver, &f, nne_lo, nne_hi);
-  constexpr int maxit = 100;
+  constexpr int maxit = 50;
   constexpr double fractional_accuracy = 1e-3;
   int status = GSL_CONTINUE;
   for (int iter = 0; iter <= maxit; iter++) {
-    iter++;
     gsl_root_fsolver_iterate(solver);
     nne = gsl_root_fsolver_root(solver);
     nne_lo = gsl_root_fsolver_x_lower(solver);
