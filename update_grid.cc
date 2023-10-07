@@ -877,7 +877,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
       if (NLTE_POPS_ALL_IONS_SIMULTANEOUS) {
         const double nne_prev = grid::get_nne(n);
         calculate_cellpartfuncts(n);
-        calculate_ion_balance(n, true);  // sets nne
+        calculate_electron_densities(n);  // sets nne
         const double fracdiff_nne = fabs((grid::get_nne(n) / nne_prev) - 1);
         nlte_test = fracdiff_nne;
         printout(
@@ -1475,6 +1475,38 @@ static auto handle_neutral_ion_balance(const int modelgridindex) -> double {
   return nntot;
 }
 
+auto calculate_electron_densities(const int modelgridindex) -> double
+// Determines the free and total electron number densities
+// for a given cell and stores them, assuming ion populations (ground_level_pop and partfunc)
+// are fixed (determined by NLTE all-ion solver)
+{
+  double nne_tot = 0.;  // total electron density
+  double nne = 0.;      // free electron density
+  double nntot = 0.;
+
+  for (int element = 0; element < get_nelements(); element++) {
+    // calculate number density of the current element (abundances are given by mass)
+    const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
+    nne_tot += nnelement * get_atomicnumber(element);
+
+    // Use ionization fractions to calculate the free electron contributions
+    if (nnelement > 0) {
+      const int nions = get_nions(element);
+      for (int ion = 0; ion < nions; ion++) {
+        const auto nnion = ionstagepop(modelgridindex, element, ion);
+        const int ioncharge = get_ionstage(element, ion) - 1;
+        nne += ioncharge * nnion;
+        nntot += nnion;
+      }
+    }
+  }
+  nntot += nne;
+
+  grid::set_nne(modelgridindex, nne);
+  grid::set_nnetot(modelgridindex, nne_tot);
+  return nntot;
+}
+
 auto calculate_ion_balance(const int modelgridindex, const bool allow_nlte) -> double
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
@@ -1601,38 +1633,6 @@ auto calculate_ion_balance(const int modelgridindex, const bool allow_nlte) -> d
     }
   }
 
-  grid::set_nnetot(modelgridindex, nne_tot);
-  return nntot;
-}
-
-auto calculate_electron_densities(const int modelgridindex) -> double
-// Determines the free and total electron number densities
-// for a given cell and stores them, assuming ion populations (ground_level_pop and partfunc)
-// are fixed (determined by NLTE all-ion solver)
-{
-  double nne_tot = 0.;  // total electron density
-  double nne = 0.;      // free electron density
-  double nntot = 0.;
-
-  for (int element = 0; element < get_nelements(); element++) {
-    // calculate number density of the current element (abundances are given by mass)
-    const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
-    nne_tot += nnelement * get_atomicnumber(element);
-
-    // Use ionization fractions to calculate the free electron contributions
-    if (nnelement > 0) {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions; ion++) {
-        const auto nnion = ionstagepop(modelgridindex, element, ion);
-        const int ioncharge = get_ionstage(element, ion) - 1;
-        nne += ioncharge * nnion;
-        nntot += nnion;
-      }
-    }
-  }
-  nntot += nne;
-
-  grid::set_nne(modelgridindex, nne);
   grid::set_nnetot(modelgridindex, nne_tot);
   return nntot;
 }
