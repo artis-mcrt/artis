@@ -843,9 +843,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
       // calculate_heating_rates(n);
       printout(
           "Grid solver cell %d timestep %d: time spent on: Spencer-Fano %ds, partfuncs/gamma "
-          "%ds, T_e %ds, "
-          "populations "
-          "%ds\n",
+          "%ds, T_e %ds, populations %ds\n",
           n, nts, duration_solve_spencerfano, duration_solve_partfuncs_or_gamma, duration_solve_T_e,
           duration_solve_pops);
     }
