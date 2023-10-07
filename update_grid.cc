@@ -1490,7 +1490,9 @@ auto calculate_ion_balance(const int modelgridindex) -> double
       const int uppermost_ion = find_uppermost_ion(modelgridindex, element, nne_hi);
       grid::set_elements_uppermost_ion(modelgridindex, element, uppermost_ion);
 
-      only_lowest_ionstage = only_lowest_ionstage || (uppermost_ion > 0);
+      if (uppermost_ion > 0) {
+        only_lowest_ionstage = false;
+      }
     } else {
       grid::set_elements_uppermost_ion(modelgridindex, element, get_nions(element) - 1);
     }
