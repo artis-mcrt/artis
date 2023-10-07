@@ -1420,8 +1420,7 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
     if (!std::isfinite(factor)) {
       printout(
           "[info] calculate_ion_balance: uppermost_ion limited by phi factors for element "
-          "Z=%d, ionstage %d in "
-          "cell %d\n",
+          "Z=%d, ionstage %d in cell %d\n",
           get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
       return ion;
     }
