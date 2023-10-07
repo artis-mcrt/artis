@@ -2119,7 +2119,7 @@ void grid_init(int my_rank)
   if (globals::simulation_continued_from_saved) {
     /// For continuation of an existing simulation we read the temperatures
     /// at the end of the simulation and write them to the grid.
-    read_grid_restart_data(globals::timestep_start);
+    read_grid_restart_data(globals::timestep_initial);
   } else {
     assign_initial_temperatures();
   }

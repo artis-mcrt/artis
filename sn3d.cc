@@ -551,7 +551,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
   bool do_this_full_loop = true;
 
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
-  if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::timestep_start))) {
+  if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::timestep_initial))) {
     /// Read the packets file to reset before each additional iteration on the timestep
     read_temp_packetsfile(nts, my_rank, packets);
   }
@@ -588,7 +588,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
   /// If this is not the 0th time step of the current job step,
   /// write out a snapshot of the grid properties for further restarts
   /// and update input.txt accordingly
-  if (((nts - globals::timestep_start) != 0)) {
+  if (((nts - globals::timestep_initial) != 0)) {
     save_grid_and_packets(nts, my_rank, packets);
     do_this_full_loop = walltime_sufficient_to_continue(nts, nts_prev, walltimelimitseconds);
   }
@@ -909,7 +909,7 @@ auto main(int argc, char *argv[]) -> int {
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  int nts = globals::timestep_start;
+  int nts = globals::timestep_initial;
 
   macroatom_open_file(my_rank);
   if (ndo > 0) {

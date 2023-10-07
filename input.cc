@@ -1774,10 +1774,11 @@ void read_parameterfile(int rank)
   assert_always(globals::ntimesteps > 0);
 
   assert_always(get_noncommentline(file, line));
-  std::istringstream(line) >> globals::timestep_start >> globals::timestep_finish;  // number of start and end time step
-  printout("input: timestep_start %d timestep_finish %d\n", globals::timestep_start, globals::timestep_finish);
-  assert_always(globals::timestep_start < globals::ntimesteps);
-  assert_always(globals::timestep_start <= globals::timestep_finish);
+  std::istringstream(line) >> globals::timestep_initial >>
+      globals::timestep_finish;  // number of start and end time step
+  printout("input: timestep_start %d timestep_finish %d\n", globals::timestep_initial, globals::timestep_finish);
+  assert_always(globals::timestep_initial < globals::ntimesteps);
+  assert_always(globals::timestep_initial <= globals::timestep_finish);
   assert_always(globals::timestep_finish <= globals::ntimesteps);
 
   double tmin_days = 0.;
@@ -1857,7 +1858,7 @@ void read_parameterfile(int rank)
     printout("input: resuming simulation from saved point\n");
   } else {
     printout("input: starting a new simulation\n");
-    assert_always(globals::timestep_start == 0);
+    assert_always(globals::timestep_initial == 0);
   }
 
   /// Wavelength (in Angstroms) at which the parameterisation of the radiation field
