@@ -1413,18 +1413,20 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
   }
 
   double factor = 1.;
-  for (int ion = 0; ion < uppermost_ion; ion++) {
+  int ion = 0;
+  for (ion = 0; ion < uppermost_ion; ion++) {
     factor *= nne_hi * phi(element, ion, modelgridindex);
-
+    // printout("element %d, ion %d, factor %g\n",element,i,factor);
     if (!std::isfinite(factor)) {
       printout(
           "[info] calculate_ion_balance: uppermost_ion limited by phi factors for element "
           "Z=%d, ionstage %d in "
           "cell %d\n",
           get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
-      return ion;
+      break;
     }
   }
+  uppermost_ion = ion;
   return uppermost_ion;
 }
 
