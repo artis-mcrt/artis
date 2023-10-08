@@ -13,7 +13,7 @@ int get_continuumindex_phixstargetindex(int element, int ion, int level, int phi
 int get_continuumindex(int element, int ion, int level, int upperionlevel);
 int get_phixtargetindex(int element, int ion, int level, int upperionlevel);
 double get_tau_sobolev(int modelgridindex, int lineindex, double t_current);
-auto get_nnion(int modelgridindex) -> double;
+auto get_nnions(int modelgridindex) -> double;
 bool is_nlte(int element, int ion, int level);
 bool level_isinsuperlevel(int element, int ion, int level);
 double photoionization_crosssection_fromtable(const float *photoion_xs, double nu_edge, double nu);
