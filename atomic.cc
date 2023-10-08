@@ -57,7 +57,7 @@ auto get_tau_sobolev(const int modelgridindex, const int lineindex, const double
   return tau_sobolev;
 }
 
-auto get_nnions(int modelgridindex) -> double
+auto get_tot_nions(int modelgridindex) -> double
 // total density of nuclei
 {
   double nntot = 0.;
