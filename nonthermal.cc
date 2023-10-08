@@ -25,7 +25,7 @@ namespace nonthermal {
 // THESE OPTIONS ARE USED TO TEST THE SF SOLVER
 // Compare to Kozma & Fransson (1992) pure-oxygen plasma, nne = 1e8, x_e = 0.01
 // #define yscalefactoroverride(mgi) (1e10)
-// #define get_tot_nions(x) (1e10)
+// #define get_nnion_tot(x) (1e10)
 // #define ionstagepop(modelgridindex, element, ion) ionstagepop_override(modelgridindex, element, ion)
 // #define grid::get_nne(x) (1e8)
 // #define SFPTS 10000  // number of energy points in the Spencer-Fano solution vector
@@ -35,7 +35,7 @@ namespace nonthermal {
 // static double ionstagepop_override(const int modelgridindex, const int element, const int ion)
 // Fake the composition to test the NT solver
 // {
-//   const double nntot = get_tot_nions(modelgridindex);
+//   const double nntot = get_nnion_tot(modelgridindex);
 //   if (get_atomicnumber(element) == 8)
 //   {
 //     const int ion_stage = get_ionstage(element, ion);
@@ -939,7 +939,7 @@ static auto N_e(const int modelgridindex, const double energy) -> double
 // not valid for energy > SF_EMIN
 {
   const double energy_ev = energy / EV;
-  const double tot_nion = get_tot_nions(modelgridindex);
+  const double tot_nion = get_nnion_tot(modelgridindex);
   double N_e = 0.;
 
   for (int element = 0; element < get_nelements(); element++) {
@@ -1277,7 +1277,7 @@ static auto nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const int
   // to get the non-thermal ionization rate we need to divide the energy deposited
   // per unit volume per unit time in the grid cell (sum of terms above)
   // by the total ion number density and the "work per ion pair"
-  return deposition_rate_density / get_tot_nions(modelgridindex) * get_oneoverw(element, ion, modelgridindex);
+  return deposition_rate_density / get_nnion_tot(modelgridindex) * get_oneoverw(element, ion, modelgridindex);
 }
 
 static auto calculate_nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion,
@@ -1341,7 +1341,7 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
   const int ionstage = get_ionstage(element, ion);
   const int uniqueionindex = get_uniqueionindex(element, ion);
   const double nnion = ionstagepop(modelgridindex, element, ion);  // ions/cm^3
-  const double tot_nion = get_tot_nions(modelgridindex);
+  const double tot_nion = get_nnion_tot(modelgridindex);
   const double X_ion = nnion / tot_nion;  // molar fraction of this ion
 
   // The ionization rates of all shells of an ion add to make the ion's total ionization rate,
@@ -1479,7 +1479,7 @@ static auto nt_ionization_ratecoeff_sf(const int modelgridindex, const int eleme
 
   const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
   if (deposition_rate_density > 0.) {
-    return deposition_rate_density / get_tot_nions(modelgridindex) / get_eff_ionpot(modelgridindex, element, ion);
+    return deposition_rate_density / get_nnion_tot(modelgridindex) / get_eff_ionpot(modelgridindex, element, ion);
     // alternatively, if the y vector is still in memory:
     // return calculate_nt_ionization_ratecoeff(modelgridindex, element, ion);
   }
@@ -1863,7 +1863,7 @@ void do_ntlepton(struct packet *pkt_ptr) {
 
 static void analyse_sf_solution(const int modelgridindex, const int timestep, const bool enable_sfexcitation) {
   const float nne = grid::get_nne(modelgridindex);
-  const double nntot = get_tot_nions(modelgridindex);
+  const double nntot = get_nnion_tot(modelgridindex);
   const double nnetot = grid::get_nnetot(modelgridindex);
 
   double frac_excitation_total = 0.;
@@ -1880,7 +1880,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
       const int ionstage = get_ionstage(element, ion);
       const double nnion = ionstagepop(modelgridindex, element, ion);
 
-      // if (nnion < minionfraction * get_tot_nions(modelgridindex)) // skip negligible ions
+      // if (nnion < minionfraction * get_nnion_tot(modelgridindex)) // skip negligible ions
       if (nnion <= 0.) {  // skip zero-abundance ions
         continue;
       }
@@ -1930,7 +1930,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
       if (!enable_sfexcitation) {
         nlevels = -1;  // disable all excitations
       }
-      const bool above_minionfraction = (nnion >= minionfraction * get_tot_nions(modelgridindex));
+      const bool above_minionfraction = (nnion >= minionfraction * get_nnion_tot(modelgridindex));
 
       for (int lower = 0; lower < nlevels; lower++) {
         const double statweight_lower = stat_weight(element, ion, lower);
@@ -2403,7 +2403,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   const float nne = grid::get_nne(modelgridindex);  // electrons per cm^3
   // const double nnetot = grid::get_nnetot(modelgridindex);
-  const double nne_per_ion = nne / get_tot_nions(modelgridindex);
+  const double nne_per_ion = nne / get_nnion_tot(modelgridindex);
   const double nne_per_ion_last = nt_solution[modelgridindex].nneperion_when_solved;
   const double nne_per_ion_fracdiff = fabs((nne_per_ion_last / nne_per_ion) - 1.);
   const int timestep_last_solved = nt_solution[modelgridindex].timestep_last_solved;
@@ -2487,7 +2487,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
       for (int ion = 0; ion < nions; ion++) {
         const double nnion = ionstagepop(modelgridindex, element, ion);  // hopefully ions per cm^3?
 
-        if (nnion < minionfraction * get_tot_nions(modelgridindex))  // skip negligible ions
+        if (nnion < minionfraction * get_nnion_tot(modelgridindex))  // skip negligible ions
         {
           continue;
         }
