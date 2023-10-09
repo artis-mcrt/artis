@@ -29,7 +29,7 @@ using emissionabsorptioncontrib = struct emissionabsorptioncontrib {
   int lineindex;  // this will be important when the list gets sorted
 };
 
-static struct emissionabsorptioncontrib *traceemissionabsorption = nullptr;
+static std::vector<struct emissionabsorptioncontrib> traceemissionabsorption;
 double traceemission_totalenergy = 0.;
 double traceabsorption_totalenergy = 0.;
 
