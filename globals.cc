@@ -50,7 +50,7 @@ int opacity_case;  // 0 normally, 1 for Fe-grp dependence.
 /// ATOMIC DATA
 
 int nlines = -1;
-struct elementlist_entry *elements = nullptr;
+std::vector<struct elementlist_entry> elements;
 const struct linelist_entry *linelist = nullptr;
 struct bflist_t *bflist = nullptr;
 

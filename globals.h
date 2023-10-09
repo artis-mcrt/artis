@@ -243,7 +243,8 @@ extern double max_path_step;
 extern int opacity_case;
 
 extern int nlines;
-extern struct elementlist_entry *elements;
+extern std::vector<struct elementlist_entry> elements;
+
 extern const struct linelist_entry *linelist;
 extern struct bflist_t *bflist;
 

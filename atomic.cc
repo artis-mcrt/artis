@@ -9,7 +9,6 @@
 
 double last_phixs_nuovernuedge =
     -1;                // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
-int nelements = 0;     // total number of elements included in the simulation
 int maxnions = 0;      // highest number of ions for any element
 int includedions = 0;  // number of ions of any element
 std::array<bool, 3> phixs_file_version_exists;
@@ -156,13 +155,9 @@ auto photoionization_crosssection_fromtable(const float *const photoion_xs, cons
   return sigma_bf;
 }
 
-void set_nelements(const int nelements_in) {
-  globals::elements = static_cast<elementlist_entry *>(calloc(nelements_in, sizeof(elementlist_entry)));
-  assert_always(globals::elements != nullptr);
-  nelements = nelements_in;
-}
+void set_nelements(const int nelements_in) { globals::elements.resize(nelements_in); }
 
-auto get_nelements() -> int { return nelements; }
+auto get_nelements() -> int { return globals::elements.size(); }
 
 auto get_atomicnumber(const int element) -> int
 /// Returns the atomic number associated with a given elementindex.
