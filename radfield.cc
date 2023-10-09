@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <ctime>
+#include <ranges>
 
 #include "atomic.h"
 #include "grid.h"
