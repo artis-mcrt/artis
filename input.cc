@@ -1630,21 +1630,20 @@ static void read_atomicdata() {
   globals::total_nlte_levels = 0;
   int n_super_levels = 0;
 
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-
-    for (int ion = 0; ion < nions; ion++) {
-      const int nlevels = get_nlevels(element, ion);
-      int fullnlteexcitedlevelcount = 0;
-      for (int level = 1; level < nlevels; level++) {
-        if (is_nlte(element, ion, level) && NLTE_POPS_ON) {
-          fullnlteexcitedlevelcount++;
-          globals::total_nlte_levels++;
-        }
-      }
-
-      if (fullnlteexcitedlevelcount > 0) {
+  if (NLTE_POPS_ON) {
+    for (int element = 0; element < get_nelements(); element++) {
+      const int nions = get_nions(element);
+      for (int ion = 0; ion < nions; ion++) {
         globals::elements[element].ions[ion].first_nlte = globals::total_nlte_levels;
+        const int nlevels = get_nlevels(element, ion);
+        int fullnlteexcitedlevelcount = 0;
+        for (int level = 1; level < nlevels; level++) {
+          if (is_nlte(element, ion, level)) {
+            fullnlteexcitedlevelcount++;
+            globals::total_nlte_levels++;
+          }
+        }
+
         const bool has_superlevel = (nlevels > (fullnlteexcitedlevelcount + 1));
         if (has_superlevel) {
           // If there are more levels that the ground state + the number of NLTE levels then we need an extra
@@ -1661,9 +1660,6 @@ static void read_atomicdata() {
         printout("[input]  element %2d Z=%2d ion_stage %2d has %5d NLTE excited levels%s. Starting at %d\n", element,
                  get_atomicnumber(element), get_ionstage(element, ion), fullnlteexcitedlevelcount,
                  has_superlevel ? " plus a superlevel" : "", globals::elements[element].ions[ion].first_nlte);
-      } else {
-        globals::elements[element].ions[ion].first_nlte = -1;
-        globals::elements[element].ions[ion].nlevels_nlte = 0;
       }
     }
   }
