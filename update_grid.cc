@@ -921,10 +921,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++) {
         const int ionestimindex = get_ionestimindex(n, element, ion);
-        // printout("mgi %d, element %d, ion %d, gammaest
-        // %g\n",n,element,ion,globals::gammaestimator[ionestimindex]);
         globals::gammaestimator[ionestimindex] *= estimator_normfactor / H;
-// printout("mgi %d, element %d, ion %d, gammaest %g\n",n,element,ion,globals::gammaestimator[ionestimindex]);
 #ifdef DO_TITER
         if (globals::gammaestimator_save[ionestimindex] >= 0) {
           globals::gammaestimator[ionestimindex] =
