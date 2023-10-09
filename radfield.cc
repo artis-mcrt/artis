@@ -733,7 +733,7 @@ void update_estimators(const int modelgridindex, const double distance_e_cmf, co
   safeadd(nuJ[nonemptymgi], distance_e_cmf * nu_cmf);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    update_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr);
+    update_bfestimators(nonemptymgi, distance_e_cmf, nu_cmf, pkt_ptr);
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
