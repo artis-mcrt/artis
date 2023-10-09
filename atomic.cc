@@ -186,7 +186,14 @@ auto get_elementindex(const int Z) -> int
   return -100;
 }
 
-void increase_includedions(const int nions) { includedions += nions; }
+void update_includedions_maxnions() {
+  includedions = 0;
+  maxnions = 0;
+  for (int element = 0; element < get_nelements(); element++) {
+    includedions += get_nions(element);
+    maxnions = std::max(maxnions, get_nions(element));
+  }
+}
 
 auto get_includedions() -> int
 // returns the number of ions of all elements combined
@@ -197,11 +204,7 @@ auto get_includedions() -> int
 void update_max_nions(const int nions)
 // Will ensure that maxnions is always greater than or equal to the number of nions
 // this is called at startup once per element with the number of ions
-{
-  if (nions > maxnions || maxnions < 0) {
-    maxnions = nions;
-  }
-}
+{}
 
 auto get_max_nions() -> int {
   // number greater than or equal to nions(element) for all elements

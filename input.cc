@@ -756,15 +756,11 @@ static void read_atomicdata_files() {
     assert_always(abundance >= 0);
     assert_always(mass_amu >= 0);
 
-    update_max_nions(nions);
-    assert_always(nions <= get_max_nions());
-
     /// write this element's data to memory
     globals::elements[element].anumber = Z;
     globals::elements[element].nions = nions;
     globals::elements[element].abundance = abundance;  /// abundances are expected to be given by mass
     globals::elements[element].initstablemeannucmass = mass_amu * MH;
-    increase_includedions(nions);
 
     /// Initialize the elements ionlist
     globals::elements[element].ions = static_cast<ionlist_entry *>(calloc(nions, sizeof(ionlist_entry)));
@@ -1588,6 +1584,8 @@ static void read_atomicdata() {
   setup_cellhistory();
 
   /// Printout some information about the read-in model atom
+
+  update_includedions_maxnions();
 
   int includedlevels = 0;
   int includedionisinglevels = 0;
