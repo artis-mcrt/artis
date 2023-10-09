@@ -76,7 +76,7 @@ static double *bfrate_raw = nullptr;         // unnormalised estimators for the 
 
 static std::vector<double> J;  // after normalisation: [ergs/s/sr/cm2/Hz]
 #ifdef DO_TITER
-static double *J_reduced_save = nullptr;
+static std::vector<double> J_reduced_save;
 #endif
 
 // J and nuJ are accumulated and then normalised in-place
@@ -218,10 +218,10 @@ void init(int my_rank, int ndo_nonempty)
 
   assert_always(J_normfactor == nullptr);
   J_normfactor = static_cast<double *>(malloc((grid::get_npts_model() + 1) * sizeof(double)));
-  J.resize(grid::get_npts_model() + 1);
+  J.resize(nonempty_npts_model + 1);
 
 #ifdef DO_TITER
-  J_reduced_save = (double *)malloc((grid::get_npts_model() + 1) * sizeof(double));
+  J_reduced_save.resize(nonempty_npts_model + 1);
 #endif
 
   // J and nuJ are accumulated and then normalised in-place
@@ -401,7 +401,8 @@ void init(int my_rank, int ndo_nonempty)
 void initialise_prev_titer_photoionestimators() {
   for (int n = 0; n < grid::get_npts_model(); n++) {
 #ifdef DO_TITER
-    J_reduced_save[n] = -1.;
+    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+    J_reduced_save[nonemptymgi] = -1.;
 #endif
 #ifdef DO_TITER
     nuJ_reduced_save[n] = -1.;
@@ -541,7 +542,7 @@ static inline auto select_bin(double nu) -> int {
 
 void write_to_file(int modelgridindex, int timestep) {
   assert_always(MULTIBIN_RADFIELD_MODEL_ON);
-
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 #ifdef _OPENMP
 #pragma omp critical(out_file)
   {
@@ -575,7 +576,7 @@ void write_to_file(int modelgridindex, int timestep) {
         contribcount = get_bin_contribcount(modelgridindex, binindex);
       } else if (binindex == -1) {  // bin -1 is the full spectrum fit
         nuJ_out = nuJ[modelgridindex];
-        J_out = J[modelgridindex];
+        J_out = J[nonemptymgi];
         T_R = grid::get_TR(modelgridindex);
         W = grid::get_W(modelgridindex);
         contribcount = totalcontribs;
@@ -651,8 +652,8 @@ void zero_estimators(int modelgridindex)
     return;
   }
 
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
     assert_always(bfrate_raw != nullptr);
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
       for (int i = 0; i < globals::nbfcontinua; i++) {
@@ -670,11 +671,10 @@ void zero_estimators(int modelgridindex)
     }
   }
 
-  J[modelgridindex] = 0.;  // this is required even if FORCE_LTE is on
-  assert_always(nuJ != nullptr);
+  J[nonemptymgi] = 0.;  // this is required even if FORCE_LTE is on
   nuJ[modelgridindex] = 0.;
 
-  if (MULTIBIN_RADFIELD_MODEL_ON && (grid::get_numassociatedcells(modelgridindex) > 0)) {
+  if (MULTIBIN_RADFIELD_MODEL_ON) {
     // printout("radfield: zeroing estimators in %d bins in cell %d\n",RADFIELDBINCOUNT,modelgridindex);
 
     assert_always(radfieldbins != nullptr);
@@ -723,7 +723,7 @@ void update_estimators(const int modelgridindex, const double distance_e_cmf, co
                        const struct packet *const pkt_ptr) {
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
-  safeadd(J[modelgridindex], distance_e_cmf);
+  safeadd(J[nonemptymgi], distance_e_cmf);
   safeadd(nuJ[modelgridindex], distance_e_cmf * nu_cmf);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
@@ -986,12 +986,13 @@ static auto find_T_R(int modelgridindex, int binindex) -> float {
 }
 
 static void set_params_fullspec(const int modelgridindex, const int timestep) {
-  const double nubar = nuJ[modelgridindex] / J[modelgridindex];
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const double nubar = nuJ[modelgridindex] / J[nonemptymgi];
   if (!std::isfinite(nubar) || nubar == 0.) {
     printout("[warning] T_R estimator infinite in cell %d, keep T_R, T_J, W of last timestep. J = %g. nuJ = %g\n",
-             modelgridindex, J[modelgridindex], nuJ[modelgridindex]);
+             modelgridindex, J[nonemptymgi], nuJ[modelgridindex]);
   } else {
-    float T_J = pow(J[modelgridindex] * PI / STEBO, 1 / 4.);
+    float T_J = pow(J[nonemptymgi] * PI / STEBO, 1 / 4.);
     if (T_J > MAXTEMP) {
       printout("[warning] temperature estimator T_J = %g exceeds T_max %g in cell %d. Setting T_J = T_max!\n", T_J,
                MAXTEMP, modelgridindex);
@@ -1015,12 +1016,12 @@ static void set_params_fullspec(const int modelgridindex, const int timestep) {
     }
     grid::set_TR(modelgridindex, T_R);
 
-    const float W = J[modelgridindex] * PI / STEBO / pow(T_R, 4);
+    const float W = J[nonemptymgi] * PI / STEBO / pow(T_R, 4);
     grid::set_W(modelgridindex, W);
 
     printout(
         "Full-spectrum fit radfield for cell %d at timestep %d: J %g, nubar %5.1f Angstrom, T_J %g, T_R %g, W %g\n",
-        modelgridindex, timestep, J[modelgridindex], 1e8 * CLIGHT / nubar, T_J, T_R, W);
+        modelgridindex, timestep, J[nonemptymgi], 1e8 * CLIGHT / nubar, T_J, T_R, W);
   }
 }
 
@@ -1146,8 +1147,9 @@ void fit_parameters(int modelgridindex, int timestep)
 void set_J_normfactor(int modelgridindex, double normfactor) { J_normfactor[modelgridindex] = normfactor; }
 
 void normalise_J(const int modelgridindex, const double estimator_normfactor_over4pi) {
-  assert_always(std::isfinite(J[modelgridindex]));
-  J[modelgridindex] *= estimator_normfactor_over4pi;
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  assert_always(std::isfinite(J[nonemptymgi]));
+  J[nonemptymgi] *= estimator_normfactor_over4pi;
   for (int i = 0; i < detailed_linecount; i++) {
     prev_Jb_lu_normed[modelgridindex][i].value = Jb_lu_raw[modelgridindex][i].value * estimator_normfactor_over4pi;
     prev_Jb_lu_normed[modelgridindex][i].contribcount = Jb_lu_raw[modelgridindex][i].contribcount;
@@ -1203,7 +1205,8 @@ void normalise_nuJ(const int modelgridindex, const double estimator_normfactor_o
 }
 
 auto get_T_J_from_J(const int modelgridindex) -> double {
-  const double T_J = pow(J[modelgridindex] * PI / STEBO, 1. / 4.);
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  const double T_J = pow(J[nonemptymgi] * PI / STEBO, 1. / 4.);
   if (!std::isfinite(T_J)) {
     /// keep old value of T_J
     printout("[warning] get_T_J_from_J: T_J estimator infinite in cell %d, use value of last timestep\n",
@@ -1224,10 +1227,11 @@ auto get_T_J_from_J(const int modelgridindex) -> double {
 
 #ifdef DO_TITER
 void titer_J(const int modelgridindex) {
-  if (J_reduced_save[modelgridindex] >= 0) {
-    J[modelgridindex] = (J[modelgridindex] + J_reduced_save[modelgridindex]) / 2;
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  if (J_reduced_save[nonemptymgi] >= 0) {
+    J[nonemptymgi] = (J[nonemptymgi] + J_reduced_save[nonemptymgi]) / 2;
   }
-  J_reduced_save[modelgridindex] = J[modelgridindex];
+  J_reduced_save[nonemptymgi] = J[nonemptymgi];
 }
 
 void titer_nuJ(const int modelgridindex) {
