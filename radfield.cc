@@ -1246,11 +1246,13 @@ void titer_nuJ(const int modelgridindex) {
 void reduce_estimators()
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 {
-  MPI_Allreduce(MPI_IN_PLACE, J.data(), J.size(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  const int nonempty_npts_model = grid::get_nonempty_npts_model();
+
+  MPI_Allreduce(MPI_IN_PLACE, J.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, nuJ, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    MPI_Allreduce(MPI_IN_PLACE, bfrate_raw, grid::get_nonempty_npts_model() * globals::nbfcontinua, MPI_DOUBLE, MPI_SUM,
+    MPI_Allreduce(MPI_IN_PLACE, bfrate_raw, nonempty_npts_model * globals::nbfcontinua, MPI_DOUBLE, MPI_SUM,
                   MPI_COMM_WORLD);
   }
 
@@ -1259,22 +1261,12 @@ void reduce_estimators()
     printout("Reducing binned radiation field estimators");
     assert_always(radfieldbins != nullptr);
 
-    for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-      // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex,
-      // grid::get_numassociatedcells(modelgridindex));
-      if (grid::get_numassociatedcells(modelgridindex) > 0) {
-        const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-          const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
-          // printout("MPI: pre-MPI_Allreduce, this process modelgrid %d binindex %d has a individual contribcount of
-          // %d\n",modelgridindex,binindex,radfieldbins[mgibinindex].contribcount);
-          MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-          MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-          MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-
-          // printout("MPI: After MPI_Allreduce: this process modelgrid %d binindex %d has a contribcount of
-          // %d\n",modelgridindex,binindex,radfieldbins[mgibinindex].contribcount);
-        }
+    for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
+      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
+        const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
+        MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
       }
     }
     const int duration_reduction = time(nullptr) - sys_time_start_reduction;
@@ -1286,8 +1278,6 @@ void reduce_estimators()
     printout("Reducing detailed line estimators");
 
     for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-      // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex,
-      // grid::get_numassociatedcells(modelgridindex));
       if (grid::get_numassociatedcells(modelgridindex) > 0) {
         for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
           MPI_Allreduce(MPI_IN_PLACE, &Jb_lu_raw[modelgridindex][jblueindex].value, 1, MPI_DOUBLE, MPI_SUM,
