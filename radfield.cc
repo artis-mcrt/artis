@@ -399,9 +399,7 @@ void init(int my_rank, int ndo_nonempty)
 /// Initialise estimator arrays which hold the last time steps values (used to damp out
 /// fluctuations over timestep iterations if DO_TITER is defined) to -1.
 void initialise_prev_titer_photoionestimators() {
-  // for (n = 0; n < ngrid; n++)
   for (int n = 0; n < grid::get_npts_model(); n++) {
-// double T_e = grid::get_Te(n);
 #ifdef DO_TITER
     J_reduced_save[n] = -1.;
 #endif
@@ -414,10 +412,9 @@ void initialise_prev_titer_photoionestimators() {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++) {
 #ifdef DO_TITER
-        globals::gammaestimator_save[n * get_nelements() * get_max_nions() + element * get_max_nions() + ion] = -1.;
+        globals::gammaestimator_save[get_ionestimindex(n, element, ion)] = -1.;
         if constexpr (USE_LUT_BFHEATING) {
-          globals::bfheatingestimator_save[n * get_nelements() * get_max_nions() + element * get_max_nions() + ion] =
-              -1.;
+          globals::bfheatingestimator_save[get_ionestimindex(n, element, ion)] = -1.;
         }
 #endif
       }
