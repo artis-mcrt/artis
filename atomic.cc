@@ -243,8 +243,8 @@ auto has_nlte_levels(const int element) -> bool {
         return true;
       }
     }
-    return false;
   }
+  return false;
 }
 
 auto get_nlevels_nlte(const int element, const int ion) -> int
