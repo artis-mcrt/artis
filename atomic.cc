@@ -172,16 +172,15 @@ auto get_elementindex(const int Z) -> int
 /// If there is no element with the given atomic number in the atomic data
 /// a negative value is returned to flag this event.
 {
-  for (int i = 0; i < get_nelements(); i++) {
-    // printf("i %d, Z %d, elements[i].anumber %d\n",i,Z,elements[i].anumber);
-    if (Z == globals::elements[i].anumber) {
-      return i;
-    }
+  const auto elem =
+      std::ranges::find_if(globals::elements, [Z](const elementlist_entry &element) { return element.anumber == Z; });
+  if (elem != globals::elements.end()) {
+    return std::distance(globals::elements.begin(), elem);
   }
 
-  // printout("[debug] get_elementindex: element Z=%d was not found in atomic data ... skip readin of cross sections for
-  // this element\n",Z); printout("[fatal] get_elementindex: element Z=%d was not found in atomic data ... abort\n");
-  // abort();;
+  // printout("[debug] get_elementindex: element Z=%d was not found in atomic data ... skip readin of cross sections
+  // for this element\n",Z); printout("[fatal] get_elementindex: element Z=%d was not found in atomic data ...
+  // abort\n"); abort();;
   return -100;
 }
 
