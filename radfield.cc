@@ -729,22 +729,6 @@ void update_estimators(const int modelgridindex, const double distance_e_cmf, co
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    // int binindex = 0;
-    // if (nu_cmf <= get_bin_nu_lower(modelgridindex,binindex))
-    // {
-    //   printout("radfield: Extending nu_lower_first from %g down to %g\n",nu_lower_first,nu_cmf);
-    //   nu_lower_first = nu_cmf;
-    // }
-    // else if (nu_cmf > radfieldbin_nu_upper[modelgridindex][RADFIELDBINCOUNT - 1])
-    // {
-    //   binindex = RADFIELDBINCOUNT - 1;
-    //   printout("radfield: Extending nu_upper_last from %g up to
-    //   %g\n",get_bin_nu_upper(modelgridindex,binindex),nu_cmf); get_bin_nu_upper(modelgridindex, binindex) = nu_cmf;
-    // }
-    // else
-    // {
-    //   binindex = select_bin(modelgridindex,nu_cmf);
-    // }
     const int binindex = select_bin(nu_cmf);
 
     if (binindex >= 0) {
