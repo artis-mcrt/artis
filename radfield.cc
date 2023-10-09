@@ -1176,13 +1176,16 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
 static auto get_bfcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) -> int {
   // simple linear search seems to be faster than the binary search
   // possibly because lower frequency transitions near start of list are more likely to be called?
-  for (int i = 0; i < globals::nbfcontinua; i++) {
-    if ((globals::allcont[i].element == element) && (globals::allcont[i].ion == lowerion) &&
-        (globals::allcont[i].level == lower) && (globals::allcont[i].phixstargetindex == phixstargetindex)) {
-      return i;
-    }
-  }
+  const auto &matchbf = std::find_if(globals::allcont, globals::allcont + globals::nbfcontinua, [=](const auto &bf) {
+    return (bf.element == element) && (bf.ion == lowerion) && (bf.level == lower) &&
+           (bf.phixstargetindex == phixstargetindex);
+  });
 
+  const int bfcontindex = std::distance(globals::allcont, matchbf);
+
+  if (bfcontindex < globals::nbfcontinua) {
+    return bfcontindex;
+  }
   // not found in the continua list
   return -1;
 }
