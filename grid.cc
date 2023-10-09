@@ -49,9 +49,9 @@ int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usuall
 
 struct gridcell *cell = nullptr;
 
-static int *mg_associated_cells = nullptr;
-static int *nonemptymgi_of_mgi = nullptr;
-static int *mgi_of_nonemptymgi = nullptr;
+static std::vector<int> mg_associated_cells;
+static std::vector<int> nonemptymgi_of_mgi;
+static std::vector<int> mgi_of_nonemptymgi;
 
 double *totmassradionuclide = nullptr;  /// total mass of each radionuclide in the ejecta
 
@@ -323,10 +323,8 @@ static void set_npts_model(int new_npts_model) {
   assert_always(modelgrid == nullptr);
   modelgrid = static_cast<struct modelgrid_t *>(calloc(npts_model + 1, sizeof(struct modelgrid_t)));
   assert_always(modelgrid != nullptr);
-  assert_always(mg_associated_cells == nullptr);
-  mg_associated_cells = static_cast<int *>(malloc((npts_model + 1) * sizeof(int)));
-  assert_always(nonemptymgi_of_mgi == nullptr);
-  nonemptymgi_of_mgi = static_cast<int *>(malloc((npts_model + 1) * sizeof(int)));
+  mg_associated_cells.resize(npts_model + 1);
+  nonemptymgi_of_mgi.resize(npts_model + 1);
 }
 
 static void allocate_initradiobund() {
@@ -399,7 +397,6 @@ static void set_cell_modelgridindex(int cellindex, int new_modelgridindex) {
 auto get_numassociatedcells(const int modelgridindex) -> int
 // number of propagation cells associated with each modelgrid cell
 {
-  assert_testmodeonly(mg_associated_cells != nullptr);
   assert_testmodeonly(modelgridindex <= get_npts_model());
   return mg_associated_cells[modelgridindex];
 }
@@ -849,8 +846,7 @@ static void allocate_nonemptymodelcells() {
   }
   assert_always(nonempty_npts_model > 0);
 
-  assert_always(mgi_of_nonemptymgi == nullptr);
-  mgi_of_nonemptymgi = static_cast<int *>(malloc((nonempty_npts_model) * sizeof(int)));
+  mgi_of_nonemptymgi.resize(nonempty_npts_model);
 
   int nonemptymgi = 0;  // index within list of non-empty modelgrid cells
 
