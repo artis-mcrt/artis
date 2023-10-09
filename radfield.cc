@@ -649,6 +649,11 @@ void zero_estimators(int modelgridindex)
 // set up the new bins and clear the estimators in preparation
 // for a timestep
 {
+  if (grid::get_numassociatedcells(modelgridindex) == 0) {
+    return;
+  }
+
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     assert_always(bfrate_raw != nullptr);
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
