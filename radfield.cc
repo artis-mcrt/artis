@@ -1049,9 +1049,7 @@ void fit_parameters(int modelgridindex, int timestep)
     double J_bin_max = 0.;
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
       const double J_bin = get_bin_J(modelgridindex, binindex);
-      if (J_bin > J_bin_max) {
-        J_bin_max = J_bin;
-      }
+      J_bin_max = std::max(J_bin_max, J_bin);
     }
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
