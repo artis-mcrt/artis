@@ -646,15 +646,14 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       if (USE_LUT_PHOTOION && globals::nbfcontinua > 0) {
         fprintf(estimators_file, "corrphotoionrenorm Z=%2d", get_atomicnumber(element));
         for (int ion = 0; ion < nions; ion++) {
-          fprintf(
-              estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-              globals::corrphotoionrenorm[mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion]);
+          fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
+                  globals::corrphotoionrenorm[get_ionestimindex(mgi, element, ion)]);
         }
         fprintf(estimators_file, "\n");
         fprintf(estimators_file, "gammaestimator     Z=%2d", get_atomicnumber(element));
         for (int ion = 0; ion < nions; ion++) {
           fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                  globals::gammaestimator[mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion]);
+                  globals::gammaestimator[get_ionestimindex(mgi, element, ion)]);
         }
         fprintf(estimators_file, "\n");
       }
@@ -1019,8 +1018,7 @@ static void zero_gammaestimator(const int modelgridindex) {
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() + ion] =
-          0.;
+      globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
     }
   }
 }
@@ -1030,8 +1028,7 @@ static void set_all_corrphotoionrenorm(const int modelgridindex, const double va
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      globals::corrphotoionrenorm[modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() +
-                                  ion] = value;
+      globals::corrphotoionrenorm[get_ionestimindex(modelgridindex, element, ion)] = value;
     }
   }
 }
