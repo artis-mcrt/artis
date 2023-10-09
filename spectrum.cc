@@ -4,6 +4,7 @@
 #include <cmath>
 #include <ctime>
 #include <memory>
+#include <vector>
 
 #include "atomic.h"
 #include "exspec.h"
@@ -34,39 +35,14 @@ double traceabsorption_totalenergy = 0.;
 
 struct spec rpkt_spectra;
 
-static auto compare_emission(const void *p1, const void *p2) -> int {
-  const auto *elem1 = static_cast<const struct emissionabsorptioncontrib *>(p1);
-  const auto *elem2 = static_cast<const struct emissionabsorptioncontrib *>(p2);
-
-  if (elem1->energyemitted < elem2->energyemitted) {
-    return 1;
-  }
-  if (elem1->energyemitted > elem2->energyemitted) {
-    return -1;
-  }
-  return 0;
-}
-
-static auto compare_absorption(const void *p1, const void *p2) -> int {
-  const auto *elem1 = static_cast<const struct emissionabsorptioncontrib *>(p1);
-  const auto *elem2 = static_cast<const struct emissionabsorptioncontrib *>(p2);
-
-  if (elem1->energyabsorbed < elem2->energyabsorbed) {
-    return 1;
-  }
-  if (elem1->energyabsorbed > elem2->energyabsorbed) {
-    return -1;
-  }
-  return 0;
-}
-
 static void printout_tracemission_stats() {
   const int maxlinesprinted = 500;
 
   // mode is 0 for emission and 1 for absorption
   for (int mode = 0; mode < 2; mode++) {
     if (mode == 0) {
-      qsort(traceemissionabsorption, globals::nlines, sizeof(emissionabsorptioncontrib), compare_emission);
+      std::sort(traceemissionabsorption.begin(), traceemissionabsorption.end(),
+                [](const auto &a, const auto &b) { return a.energyemitted > b.energyemitted; });
       printout("lambda [%5.1f, %5.1f] nu %g %g\n", traceemissabs_lambdamin, traceemissabs_lambdamax,
                traceemissabs_nulower, traceemissabs_nuupper);
 
@@ -74,7 +50,8 @@ static void printout_tracemission_stats() {
                traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY,
                traceemissabs_timemax / DAY, traceemission_totalenergy);
     } else {
-      qsort(traceemissionabsorption, globals::nlines, sizeof(emissionabsorptioncontrib), compare_absorption);
+      std::sort(traceemissionabsorption.begin(), traceemissionabsorption.end(),
+                [](const auto &a, const auto &b) { return a.energyabsorbed > b.energyabsorbed; });
       printout("Top line absorption contributions in the range lambda [%5.1f, %5.1f] time [%5.1fd, %5.1fd] (%g erg)\n",
                traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY,
                traceemissabs_timemax / DAY, traceabsorption_totalenergy);
@@ -142,8 +119,7 @@ static void printout_tracemission_stats() {
     printout("\n");
   }
 
-  free(traceemissionabsorption);
-  traceemissionabsorption = nullptr;
+  traceemissionabsorption.clear();
 }
 
 static auto get_proccount() -> int
@@ -176,7 +152,7 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
     printout("Writing %s\n", spec_filename.c_str());
   }
 
-  if (TRACE_EMISSION_ABSORPTION_REGION_ON && do_emission_res && traceemissionabsorption != nullptr) {
+  if (TRACE_EMISSION_ABSORPTION_REGION_ON && do_emission_res && !traceemissionabsorption.empty()) {
     printout_tracemission_stats();
   }
 
@@ -474,8 +450,7 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
 void init_spectrum_trace() {
   if (TRACE_EMISSION_ABSORPTION_REGION_ON) {
     traceemission_totalenergy = 0.;
-    traceemissionabsorption =
-        static_cast<struct emissionabsorptioncontrib *>(malloc(globals::nlines * sizeof(emissionabsorptioncontrib)));
+    traceemissionabsorption.resize(globals::nlines);
     traceabsorption_totalenergy = 0.;
     for (int i = 0; i < globals::nlines; i++) {
       traceemissionabsorption[i].energyemitted = 0.;
