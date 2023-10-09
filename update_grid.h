@@ -8,7 +8,6 @@ void update_grid(FILE *estimators_file, int nts, int nts_prev, int my_rank, int 
                  time_t real_time_start);
 void calculate_cellpartfuncts(int modelgridindex);
 void cellhistory_reset(int modelgridindex, bool new_timestep);
-double calculate_ion_balance(int modelgridindex, bool allow_nlte);
-double calculate_electron_densities(int modelgridindex);
+double calculate_ion_balance_nne(int modelgridindex, bool allow_nlte);
 
 #endif  // UPDATE_GRID_H

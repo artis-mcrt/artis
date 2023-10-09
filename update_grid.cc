@@ -24,7 +24,7 @@
 void calculate_cellpartfuncts(int modelgridindex)
 /// The partition functions depend only on T_R and W. This means they don't
 /// change during any iteration on T_e. Therefore their precalculation was
-/// taken out of calculate_ion_balance to save runtime.
+/// taken out of calculate_ion_balance_nne to save runtime.
 // TODO: not true if LTEPOP_EXCITATION_USE_TJ is true unless LTE mode only (TJ=TR=Te)
 {
   /// Precalculate partition functions for each ion in every cell
@@ -835,7 +835,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
     {
       /// Store population values to the grid
       const time_t sys_time_start_pops = time(nullptr);
-      calculate_ion_balance(n, false);
+      calculate_ion_balance_nne(n, false);
       const int duration_solve_pops = time(nullptr) - sys_time_start_pops;
       // calculate_cooling_rates(n);
       // calculate_heating_rates(n);
@@ -875,7 +875,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
       if (NLTE_POPS_ALL_IONS_SIMULTANEOUS) {
         const double nne_prev = grid::get_nne(n);
         calculate_cellpartfuncts(n);
-        calculate_electron_densities(n);  // sets nne
+        calculate_ion_balance_nne(n, true);  // sets nne
         const double fracdiff_nne = fabs((grid::get_nne(n) / nne_prev) - 1);
         nlte_test = fracdiff_nne;
         printout(
@@ -1091,12 +1091,9 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
       calculate_cellpartfuncts(mgi);
 
-      if (!globals::simulation_continued_from_saved || !NLTE_POPS_ON || globals::lte_iteration ||
-          grid::modelgrid[mgi].thick == 1) {
-        calculate_ion_balance(mgi, false);  // these were not read from the gridsave file, so calculate them now
-      } else {
-        calculate_ion_balance(mgi, true);
-      }
+      const bool allow_nlte = globals::simulation_continued_from_saved && NLTE_POPS_ON && !globals::lte_iteration &&
+                              grid::modelgrid[mgi].thick != 1;
+      calculate_ion_balance_nne(mgi, allow_nlte);
     } else {
       /// For all other timesteps temperature corrections have to be applied
 
@@ -1136,7 +1133,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         }
 
         calculate_cellpartfuncts(mgi);
-        calculate_ion_balance(mgi, false);
+        calculate_ion_balance_nne(mgi, false);
       } else {
         // not lte_iteration and not a thick cell
         // non-LTE timesteps with T_e from heating/cooling
@@ -1407,7 +1404,7 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
 
     if (!std::isfinite(factor)) {
       printout(
-          "[info] calculate_ion_balance: uppermost_ion limited by phi factors for element "
+          "[info] calculate_ion_balance_nne: uppermost_ion limited by phi factors for element "
           "Z=%d, ionstage %d in cell %d\n",
           get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
       return ion;
@@ -1423,7 +1420,7 @@ static auto handle_neutral_ion_balance(const int modelgridindex) -> double {
   /// Introduce a flag variable which is sent to the T_e solver so that
   /// we get this info only once when T_e is converged and not for each
   /// iteration step.
-  printout("[warning] calculate_ion_balance: only neutral ions in cell modelgridindex %d\n", modelgridindex);
+  printout("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex %d\n", modelgridindex);
   /// Now calculate the ground level populations in nebular approximation and store them to the
   /// grid
   double nne = 0.;
@@ -1453,7 +1450,7 @@ static auto handle_neutral_ion_balance(const int modelgridindex) -> double {
 
       if (!std::isfinite(grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) {
         printout(
-            "[warning] calculate_ion_balance: groundlevelpop infinite in connection with "
+            "[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with "
             "MINPOP\n");
       }
     }
@@ -1465,51 +1462,45 @@ static auto handle_neutral_ion_balance(const int modelgridindex) -> double {
   return nntot;
 }
 
-auto calculate_electron_densities(const int modelgridindex) -> double
-// Determines the free and total electron number densities
-// for a given cell and stores them, assuming ion populations (ground_level_pop and partfunc)
-// are fixed (determined by NLTE all-ion solver)
-{
-  double nne_tot = 0.;  // total electron density
-  double nne = 0.;      // free electron density
-  double nntot = 0.;
-
-  for (int element = 0; element < get_nelements(); element++) {
-    // calculate number density of the current element (abundances are given by mass)
-    const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
-    nne_tot += nnelement * get_atomicnumber(element);
-
-    // Use ionization fractions to calculate the free electron contributions
-    if (nnelement > 0) {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions; ion++) {
-        const auto nnion = ionstagepop(modelgridindex, element, ion);
-        const int ioncharge = get_ionstage(element, ion) - 1;
-        nne += ioncharge * nnion;
-        nntot += nnion;
-      }
-    }
-  }
-  nntot += nne;
-
-  grid::set_nne(modelgridindex, nne);
-  grid::set_nnetot(modelgridindex, nne_tot);
-  return nntot;
-}
-
-auto calculate_ion_balance(const int modelgridindex, const bool allow_nlte) -> double
+auto calculate_ion_balance_nne(const int modelgridindex, const bool allow_nlte) -> double
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
   if (allow_nlte) {
-    return calculate_electron_densities(modelgridindex);
+    double nne_tot = 0.;  // total electron density
+    double nne = 0.;      // free electron density
+    double nntot = 0.;
+
+    for (int element = 0; element < get_nelements(); element++) {
+      // calculate number density of the current element (abundances are given by mass)
+      const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
+      nne_tot += nnelement * get_atomicnumber(element);
+
+      // Use ionization fractions to calculate the free electron contributions
+      if (nnelement > 0) {
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions; ion++) {
+          const auto nnion = ionstagepop(modelgridindex, element, ion);
+          const int ioncharge = get_ionstage(element, ion) - 1;
+          nne += ioncharge * nnion;
+          nntot += nnion;
+        }
+      }
+    }
+    nntot += nne;
+
+    grid::set_nne(modelgridindex, nne);
+    grid::set_nnetot(modelgridindex, nne_tot);
+    return nntot;
   }
+
   double nne_hi = grid::get_rho(modelgridindex) / MH;
 
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(modelgridindex, element) > 0) {
-      const int uppermost_ion = find_uppermost_ion(modelgridindex, element, nne_hi);
+      const int uppermost_ion =
+          allow_nlte ? get_nions(element) - 1 : find_uppermost_ion(modelgridindex, element, nne_hi);
       grid::set_elements_uppermost_ion(modelgridindex, element, uppermost_ion);
 
       only_lowest_ionstage = only_lowest_ionstage && (uppermost_ion <= 0);
@@ -1569,7 +1560,7 @@ auto calculate_ion_balance(const int modelgridindex, const bool allow_nlte) -> d
     }
   }
   if (status == GSL_CONTINUE) {
-    printout("[warning] calculate_ion_balance: nne did not converge within %d iterations\n", maxit);
+    printout("[warning] calculate_ion_balance_nne: nne did not converge within %d iterations\n", maxit);
   }
 
   gsl_root_fsolver_free(solver);
@@ -1616,7 +1607,7 @@ auto calculate_ion_balance(const int modelgridindex, const bool allow_nlte) -> d
 
       if (!std::isfinite(grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) {
         printout(
-            "[warning] calculate_ion_balance: groundlevelpop infinite in connection with "
+            "[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with "
             "MINPOP\n");
       }
     }

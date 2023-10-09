@@ -351,7 +351,7 @@ static auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> doub
   /// Set new T_e guess for the current cell and update populations
   // globals::cell[cellnumber].T_e = T_e;
   grid::set_Te(modelgridindex, T_e);
-  const double nntot = calculate_ion_balance(modelgridindex, NLTE_POPS_ON && NLTE_POPS_ALL_IONS_SIMULTANEOUS);
+  const double nntot = calculate_ion_balance_nne(modelgridindex, NLTE_POPS_ON && NLTE_POPS_ALL_IONS_SIMULTANEOUS);
 
   /// Then calculate heating and cooling rates
   const float nne = grid::get_nne(modelgridindex);
