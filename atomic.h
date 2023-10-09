@@ -49,6 +49,6 @@ double einstein_spontaneous_emission(int lineindex);
 double photoionization_crosssection(int element, int ion, int level, double nu_edge, double nu);
 double get_phixs_threshold(int element, int ion, int level, int phixstargetindex);
 
-bool has_nlte_levels(int element);
+bool elem_has_nlte_levels(int element);
 
 #endif  // ATOMIC_H

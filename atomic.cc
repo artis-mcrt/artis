@@ -236,7 +236,7 @@ auto get_nlevels(const int element, const int ion) -> int
   return globals::elements[element].ions[ion].nlevels;
 }
 
-auto has_nlte_levels(const int element) -> bool {
+auto elem_has_nlte_levels(const int element) -> bool {
   for (int ion = 0; ion < get_nions(element); ++ion) {
     for (int level = 1; level < get_nlevels(element, ion); level++) {
       if (is_nlte(element, ion, level) && NLTE_POPS_ON) {
