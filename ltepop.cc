@@ -229,7 +229,7 @@ static auto calculate_levelpop_nominpop(int modelgridindex, int element, int ion
 
   if (level == 0) {
     nn = get_groundlevelpop(modelgridindex, element, ion);
-  } else if constexpr (NLTE_POPS_ON) {
+  } else if (elem_has_nlte_levels(element)) {
     if (is_nlte(element, ion, level)) {
       // printout("Using an nlte population!\n");
       const double nltepop_over_rho =
