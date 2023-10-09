@@ -654,11 +654,10 @@ void zero_estimators(int modelgridindex)
     return;
   }
 
-  // const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
     assert_always(bfrate_raw != nullptr);
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
       for (int i = 0; i < globals::nbfcontinua; i++) {
         bfrate_raw[nonemptymgi * globals::nbfcontinua + i] = 0.;
       }
