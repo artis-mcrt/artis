@@ -12,9 +12,6 @@ constexpr int CUBOID_NCOORDGRID_Z;
 // non-LTE population solver
 constexpr bool NLTE_POPS_ON;
 
-// solve the NLTE population matrix equation simultaneously for levels of all ions of an element
-constexpr bool NLTE_POPS_ALL_IONS_SIMULTANEOUS;
-
 // maximum number of NLTE/Te/Spencer-Fano iterations
 constexpr int NLTEITER;
 

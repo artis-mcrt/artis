@@ -831,7 +831,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
 
     const int duration_solve_T_e = time(nullptr) - sys_time_start_Te;
 
-    if (!NLTE_POPS_ON || !NLTE_POPS_ALL_IONS_SIMULTANEOUS)  // do this in LTE or NLTE single ion solver mode
+    if (!NLTE_POPS_ON)  // do this in LTE or NLTE single ion solver mode
     {
       /// Store population values to the grid
       const time_t sys_time_start_pops = time(nullptr);
@@ -852,48 +852,26 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
       // fractional difference between previous and current iteration's (nne or max(ground state
       // population change))
       double nlte_test = 0.;
-      if (NLTE_POPS_ALL_IONS_SIMULTANEOUS) {
-        for (int element = 0; element < get_nelements(); element++) {
-          if (get_nions(element) > 0) {
-            solve_nlte_pops_element(element, n, nts, nlte_iter);
-          }
-        }
-      } else {
-        for (int element = 0; element < get_nelements(); element++) {
-          const int nions = get_nions(element);
-          for (int ion = 0; ion < nions - 1; ion++) {
-            const double trial = fabs(solve_nlte_pops_ion(element, ion, n, nts) - 1);
-
-            if (trial > nlte_test) {
-              nlte_test = trial;
-            }
-          }
+      for (int element = 0; element < get_nelements(); element++) {
+        if (get_nions(element) > 0) {
+          solve_nlte_pops_element(element, n, nts, nlte_iter);
         }
       }
       const int duration_solve_nltepops = time(nullptr) - sys_time_start_nltepops;
 
-      if (NLTE_POPS_ALL_IONS_SIMULTANEOUS) {
-        const double nne_prev = grid::get_nne(n);
-        calculate_cellpartfuncts(n);
-        calculate_ion_balance_nne(n, true);  // sets nne
-        const double fracdiff_nne = fabs((grid::get_nne(n) / nne_prev) - 1);
-        nlte_test = fracdiff_nne;
-        printout(
-            "NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e "
-            "%ds, NLTE populations %ds\n",
-            n, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
-        printout(
-            "NLTE (Spencer-Fano/Te/pops) solver cell %d timestep %d iteration %d: prev_iter nne "
-            "%g, new nne is %g, fracdiff %g, prev T_e %g new T_e %g fracdiff %g\n",
-            n, nts, nlte_iter, nne_prev, grid::get_nne(n), nlte_test, prev_T_e, grid::get_Te(n), fracdiff_T_e);
-        // damp changes in nne if oscillating to much
-        // grid::set_nne(n, (grid::get_nne(n) + nne_prev) / 2.);
-      } else {
-        printout(
-            "Completed iteration for NLTE population solver in cell %d for timestep %d. "
-            "Fractional error returned: %g\n",
-            n, nts, nlte_test);
-      }
+      const double nne_prev = grid::get_nne(n);
+      calculate_cellpartfuncts(n);
+      calculate_ion_balance_nne(n, true);  // sets nne
+      const double fracdiff_nne = fabs((grid::get_nne(n) / nne_prev) - 1);
+      nlte_test = fracdiff_nne;
+      printout(
+          "NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e "
+          "%ds, NLTE populations %ds\n",
+          n, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
+      printout(
+          "NLTE (Spencer-Fano/Te/pops) solver cell %d timestep %d iteration %d: prev_iter nne "
+          "%g, new nne is %g, fracdiff %g, prev T_e %g new T_e %g fracdiff %g\n",
+          n, nts, nlte_iter, nne_prev, grid::get_nne(n), nlte_test, prev_T_e, grid::get_Te(n), fracdiff_T_e);
 
       if (nlte_test <= covergence_tolerance && fracdiff_T_e <= covergence_tolerance) {
         printout(

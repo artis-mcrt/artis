@@ -126,13 +126,6 @@ auto phi(const int element, const int ion, const int modelgridindex) -> double
     return partfunct_ratio * SAHACONST * pow(T_e, -1.5) * exp(ionpot / KB / T_e);
   }
 
-  // elseif (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
-  //     {
-  //       const float nne = grid::get_nne(modelgridindex);
-  //       phi = ionstagepop(modelgridindex,element,ion) / ionstagepop(modelgridindex,element,ion+1) / nne;
-  //     }
-  // else
-
   double Gamma = 0.;
   if constexpr (!USE_LUT_PHOTOION) {
     Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
