@@ -157,9 +157,9 @@ auto photoionization_crosssection_fromtable(const float *const photoion_xs, cons
 }
 
 void set_nelements(const int nelements_in) {
-  nelements = nelements_in;
-  globals::elements = static_cast<elementlist_entry *>(calloc(get_nelements(), sizeof(elementlist_entry)));
+  globals::elements = static_cast<elementlist_entry *>(calloc(nelements_in, sizeof(elementlist_entry)));
   assert_always(globals::elements != nullptr);
+  nelements = nelements_in;
 }
 
 auto get_nelements() -> int { return nelements; }
