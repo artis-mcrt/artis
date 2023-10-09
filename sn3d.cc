@@ -212,10 +212,10 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
 
         if constexpr (USE_LUT_PHOTOION) {
           assert_always(globals::corrphotoionrenorm != nullptr);
-          MPI_Bcast(&globals::corrphotoionrenorm[modelgridindex * get_nelements() * get_max_nions()],
+          MPI_Bcast(&globals::corrphotoionrenorm[get_ionestimindex(modelgridindex, 0, 0)],
                     get_nelements() * get_max_nions(), MPI_DOUBLE, root, MPI_COMM_WORLD);
           assert_always(globals::gammaestimator != nullptr);
-          MPI_Bcast(&globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions()],
+          MPI_Bcast(&globals::gammaestimator[get_ionestimindex(modelgridindex, 0, 0)],
                     get_nelements() * get_max_nions(), MPI_DOUBLE, root, MPI_COMM_WORLD);
         }
       }

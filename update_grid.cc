@@ -1387,8 +1387,7 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
       if constexpr (!USE_LUT_PHOTOION) {
         Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
       } else {
-        Gamma = globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() +
-                                        ion];
+        Gamma = globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)];
       }
 
       if ((Gamma == 0) &&
@@ -1545,8 +1544,7 @@ auto calculate_ion_balance(const int modelgridindex, const bool allow_nlte) -> d
       if constexpr (USE_LUT_PHOTOION) {
         for (int ion = 0; ion <= grid::get_elements_uppermost_ion(modelgridindex, element); ion++) {
           printout("element %d, ion %d, gammaionest %g\n", element, ion,
-                   globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() +
-                                           element * get_max_nions() + ion]);
+                   globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)]);
         }
       }
     }
