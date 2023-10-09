@@ -73,7 +73,7 @@ static double *bfrate_raw = nullptr;         // unnormalised estimators for the 
 
 // expensive debugging mode to track the contributions to each bound-free rate estimator
 
-static double *J = nullptr;  // after normalisation: [ergs/s/sr/cm2/Hz]
+static std::vector<double> J;  // after normalisation: [ergs/s/sr/cm2/Hz]
 #ifdef DO_TITER
 static double *J_reduced_save = nullptr;
 #endif
@@ -217,7 +217,8 @@ void init(int my_rank, int ndo_nonempty)
 
   assert_always(J_normfactor == nullptr);
   J_normfactor = static_cast<double *>(malloc((grid::get_npts_model() + 1) * sizeof(double)));
-  J = static_cast<double *>(malloc((grid::get_npts_model() + 1) * sizeof(double)));
+  J.resize(grid::get_npts_model() + 1);
+
 #ifdef DO_TITER
   J_reduced_save = (double *)malloc((grid::get_npts_model() + 1) * sizeof(double));
 #endif
@@ -667,7 +668,6 @@ void zero_estimators(int modelgridindex)
     }
   }
 
-  assert_always(J != nullptr);
   J[modelgridindex] = 0.;  // this is required even if FORCE_LTE is on
   assert_always(nuJ != nullptr);
   nuJ[modelgridindex] = 0.;
@@ -1256,7 +1256,7 @@ void titer_nuJ(const int modelgridindex) {
 void reduce_estimators()
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 {
-  MPI_Allreduce(MPI_IN_PLACE, J, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, J.data(), grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, nuJ, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
