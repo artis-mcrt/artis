@@ -156,7 +156,11 @@ auto photoionization_crosssection_fromtable(const float *const photoion_xs, cons
   return sigma_bf;
 }
 
-void set_nelements(const int nelements_in) { nelements = nelements_in; }
+void set_nelements(const int nelements_in) {
+  nelements = nelements_in;
+  globals::elements = static_cast<elementlist_entry *>(calloc(get_nelements(), sizeof(elementlist_entry)));
+  assert_always(globals::elements != nullptr);
+}
 
 auto get_nelements() -> int { return nelements; }
 

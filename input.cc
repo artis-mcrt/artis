@@ -716,8 +716,6 @@ static void read_atomicdata_files() {
   int nelements_in = 0;
   assert_always(compositiondata >> nelements_in);
   set_nelements(nelements_in);
-  globals::elements = static_cast<elementlist_entry *>(calloc(get_nelements(), sizeof(elementlist_entry)));
-  assert_always(globals::elements != nullptr);
 
   /// Initialize the linelist
   std::vector<struct linelist_entry> temp_linelist;
