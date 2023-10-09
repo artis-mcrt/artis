@@ -241,4 +241,8 @@ inline void check_already_running(void) {
   pidfile.close();
 }
 
+inline int get_ionestimindex(const int mgi, const int element, const int ion) {
+  return mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
+}
+
 #endif  // SN3D_H

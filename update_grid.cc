@@ -817,8 +817,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
       for (int element = 0; element < get_nelements(); element++) {
         const int nions = get_nions(element);
         for (int ion = 0; ion < nions - 1; ion++) {
-          globals::gammaestimator[n * get_nelements() * get_max_nions() + element * get_max_nions() + ion] =
-              calculate_iongamma_per_gspop(n, element, ion);
+          globals::gammaestimator[get_ionestimindex(n, element, ion)] = calculate_iongamma_per_gspop(n, element, ion);
         }
       }
     }
@@ -922,7 +921,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++) {
-        const int ionestimindex = n * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
+        const int ionestimindex = get_ionestimindex(n, element, ion);
         // printout("mgi %d, element %d, ion %d, gammaest
         // %g\n",n,element,ion,globals::gammaestimator[ionestimindex]);
         globals::gammaestimator[ionestimindex] *= estimator_normfactor / H;
@@ -963,9 +962,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
         /// Reuse the gammaestimator array as temporary storage of the Gamma values during
         /// the remaining part of the update_grid phase. Afterwards it is reset to record
         /// the next timesteps gamma estimators.
-        // nlevels = get_nlevels(element,ion);
-        // nlevels = get_ionisinglevels(element,ion);
-        const int ionestimindex = n * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
+        const int ionestimindex = get_ionestimindex(n, element, ion);
 
         if constexpr (USE_LUT_PHOTOION) {
           globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(n, element, ion);

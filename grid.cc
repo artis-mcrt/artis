@@ -1713,7 +1713,7 @@ static void read_grid_restart_data(const int timestep) {
       for (int element = 0; element < get_nelements(); element++) {
         const int nions = get_nions(element);
         for (int ion = 0; ion < nions; ion++) {
-          const int estimindex = mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
+          const int estimindex = get_ionestimindex(mgi, element, ion);
           assert_always(fscanf(gridsave_file, " %la %la", &globals::corrphotoionrenorm[estimindex],
                                &globals::gammaestimator[estimindex]) == 2);
         }

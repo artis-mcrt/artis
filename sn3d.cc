@@ -533,10 +533,10 @@ static void zero_estimators() {
       for (int element = 0; element < get_nelements(); element++) {
         for (int ion = 0; ion < get_max_nions(); ion++) {
           if constexpr (USE_LUT_PHOTOION) {
-            globals::gammaestimator[n * get_nelements() * get_max_nions() + element * get_max_nions() + ion] = 0.;
+            globals::gammaestimator[get_ionestimindex(n, element, ion)] = 0.;
           }
           if constexpr (USE_LUT_BFHEATING) {
-            globals::bfheatingestimator[n * get_nelements() * get_max_nions() + element * get_max_nions() + ion] = 0.;
+            globals::bfheatingestimator[get_ionestimindex(n, element, ion)] = 0.;
           }
         }
       }

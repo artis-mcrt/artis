@@ -137,8 +137,7 @@ auto phi(const int element, const int ion, const int modelgridindex) -> double
   if constexpr (!USE_LUT_PHOTOION) {
     Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
   } else {
-    Gamma =
-        globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions() + element * get_max_nions() + ion];
+    Gamma = globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)];
   }
   // printout("phicompare element %d ion %d T_e = %g gammaestimator %g calculate_iongamma_per_gspop %g\n",
   //          element, ion, T_e,
