@@ -1,6 +1,7 @@
 #include "atomic.h"
 
 #include <cmath>
+#include <ranges>
 
 #include "artisoptions.h"
 #include "grid.h"
