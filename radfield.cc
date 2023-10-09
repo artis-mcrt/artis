@@ -686,7 +686,7 @@ void zero_estimators(int modelgridindex)
   set_J_normfactor(modelgridindex, -1.0);
 }
 
-static void update_bfestimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
+static void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
                                 const struct packet *const pkt_ptr) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
   assert_always(bfrate_raw != nullptr);
@@ -697,7 +697,6 @@ static void update_bfestimators(const int modelgridindex, const double distance_
 
   const int nbfcontinua = globals::nbfcontinua;
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   // const double dopplerfactor = 1.;
 
   const int tid = get_thread_num();
@@ -720,8 +719,9 @@ static void update_bfestimators(const int modelgridindex, const double distance_
 
 void update_estimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
                        const struct packet *const pkt_ptr) {
-  safeadd(J[modelgridindex], distance_e_cmf);
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
+  safeadd(J[modelgridindex], distance_e_cmf);
   safeadd(nuJ[modelgridindex], distance_e_cmf * nu_cmf);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
@@ -732,7 +732,7 @@ void update_estimators(const int modelgridindex, const double distance_e_cmf, co
     const int binindex = select_bin(nu_cmf);
 
     if (binindex >= 0) {
-      const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
+      const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
       safeadd(radfieldbins[mgibinindex].J_raw, distance_e_cmf);
       safeadd(radfieldbins[mgibinindex].nuJ_raw, distance_e_cmf * nu_cmf);
       safeincrement(radfieldbins[mgibinindex].contribcount);
