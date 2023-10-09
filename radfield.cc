@@ -81,9 +81,9 @@ static std::vector<double> J_reduced_save;
 
 // J and nuJ are accumulated and then normalised in-place
 // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
-static double *nuJ = nullptr;
+static std::vector<double> nuJ;
 #ifdef DO_TITER
-static double *nuJ_reduced_save = nullptr;
+static std::vector<double> nuJ_reduced_save;
 #endif
 
 using enum_prefactor = enum {
@@ -226,9 +226,9 @@ void init(int my_rank, int ndo_nonempty)
 
   // J and nuJ are accumulated and then normalised in-place
   // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
-  nuJ = static_cast<double *>(malloc((grid::get_npts_model() + 1) * sizeof(double)));
+  nuJ.resize(nonempty_npts_model + 1);
 #ifdef DO_TITER
-  nuJ_reduced_save = static_cast<double *>(malloc((grid::get_npts_model() + 1) * sizeof(double)));
+  nuJ.resize(nonempty_npts_model + 1);
 #endif
 
   prev_Jb_lu_normed =
@@ -575,7 +575,7 @@ void write_to_file(int modelgridindex, int timestep) {
         J_nu_bar = J_out / (nu_upper - nu_lower);
         contribcount = get_bin_contribcount(modelgridindex, binindex);
       } else if (binindex == -1) {  // bin -1 is the full spectrum fit
-        nuJ_out = nuJ[modelgridindex];
+        nuJ_out = nuJ[nonemptymgi];
         J_out = J[nonemptymgi];
         T_R = grid::get_TR(modelgridindex);
         W = grid::get_W(modelgridindex);
@@ -672,7 +672,7 @@ void zero_estimators(int modelgridindex)
   }
 
   J[nonemptymgi] = 0.;  // this is required even if FORCE_LTE is on
-  nuJ[modelgridindex] = 0.;
+  nuJ[nonemptymgi] = 0.;
 
   if (MULTIBIN_RADFIELD_MODEL_ON) {
     // printout("radfield: zeroing estimators in %d bins in cell %d\n",RADFIELDBINCOUNT,modelgridindex);
@@ -724,7 +724,7 @@ void update_estimators(const int modelgridindex, const double distance_e_cmf, co
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
   safeadd(J[nonemptymgi], distance_e_cmf);
-  safeadd(nuJ[modelgridindex], distance_e_cmf * nu_cmf);
+  safeadd(nuJ[nonemptymgi], distance_e_cmf * nu_cmf);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     update_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr);
@@ -987,10 +987,10 @@ static auto find_T_R(int modelgridindex, int binindex) -> float {
 
 static void set_params_fullspec(const int modelgridindex, const int timestep) {
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  const double nubar = nuJ[modelgridindex] / J[nonemptymgi];
+  const double nubar = nuJ[nonemptymgi] / J[nonemptymgi];
   if (!std::isfinite(nubar) || nubar == 0.) {
     printout("[warning] T_R estimator infinite in cell %d, keep T_R, T_J, W of last timestep. J = %g. nuJ = %g\n",
-             modelgridindex, J[nonemptymgi], nuJ[modelgridindex]);
+             modelgridindex, J[nonemptymgi], nuJ[nonemptymgi]);
   } else {
     float T_J = pow(J[nonemptymgi] * PI / STEBO, 1 / 4.);
     if (T_J > MAXTEMP) {
@@ -1200,8 +1200,9 @@ auto get_bfrate_estimator(const int element, const int lowerion, const int lower
 }
 
 void normalise_nuJ(const int modelgridindex, const double estimator_normfactor_over4pi) {
-  assert_always(std::isfinite(nuJ[modelgridindex]));
-  nuJ[modelgridindex] *= estimator_normfactor_over4pi;
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  assert_always(std::isfinite(nuJ[nonemptymgi]));
+  nuJ[nonemptymgi] *= estimator_normfactor_over4pi;
 }
 
 auto get_T_J_from_J(const int modelgridindex) -> double {
@@ -1235,10 +1236,11 @@ void titer_J(const int modelgridindex) {
 }
 
 void titer_nuJ(const int modelgridindex) {
-  if (nuJ_reduced_save[modelgridindex] >= 0) {
-    nuJ[modelgridindex] = (nuJ[modelgridindex] + nuJ_reduced_save[modelgridindex]) / 2;
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  if (nuJ_reduced_save[nonemptymgi] >= 0) {
+    nuJ[nonemptymgi] = (nuJ[nonemptymgi] + nuJ_reduced_save[nonemptymgi]) / 2;
   }
-  nuJ_reduced_save[modelgridindex] = nuJ[modelgridindex];
+  nuJ_reduced_save[nonemptymgi] = nuJ[nonemptymgi];
 }
 #endif
 
@@ -1249,7 +1251,7 @@ void reduce_estimators()
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
 
   MPI_Allreduce(MPI_IN_PLACE, J.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, nuJ, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, nuJ.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     MPI_Allreduce(MPI_IN_PLACE, bfrate_raw, nonempty_npts_model * globals::nbfcontinua, MPI_DOUBLE, MPI_SUM,
