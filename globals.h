@@ -126,6 +126,7 @@ struct elementlist_entry {
   /// and their daughters. Neither it will work with OpenMP threads.
   float abundance;              ///
   float initstablemeannucmass;  /// Atomic mass number in multiple of MH
+  bool has_nlte_levels = false;
 };
 
 struct linelist_entry {

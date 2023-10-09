@@ -1634,32 +1634,35 @@ static void read_atomicdata() {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
-        globals::elements[element].ions[ion].first_nlte = globals::total_nlte_levels;
         const int nlevels = get_nlevels(element, ion);
         int fullnlteexcitedlevelcount = 0;
         for (int level = 1; level < nlevels; level++) {
           if (is_nlte(element, ion, level)) {
+            globals::elements[element].has_nlte_levels = true;
             fullnlteexcitedlevelcount++;
             globals::total_nlte_levels++;
           }
         }
 
-        const bool has_superlevel = (nlevels > (fullnlteexcitedlevelcount + 1));
-        if (has_superlevel) {
-          // If there are more levels that the ground state + the number of NLTE levels then we need an extra
-          // slot to store data for the "superlevel", which is a representation of all the other levels that
-          // are not treated in detail.
-          globals::total_nlte_levels++;
-          n_super_levels++;
-        }
-
         globals::elements[element].ions[ion].nlevels_nlte = fullnlteexcitedlevelcount;
 
-        assert_always(has_superlevel == ion_has_superlevel(element, ion));
+        if (globals::elements[element].has_nlte_levels) {
+          globals::elements[element].ions[ion].first_nlte = globals::total_nlte_levels;
 
-        printout("[input]  element %2d Z=%2d ion_stage %2d has %5d NLTE excited levels%s. Starting at %d\n", element,
-                 get_atomicnumber(element), get_ionstage(element, ion), fullnlteexcitedlevelcount,
-                 has_superlevel ? " plus a superlevel" : "", globals::elements[element].ions[ion].first_nlte);
+          const bool has_superlevel = (nlevels > (fullnlteexcitedlevelcount + 1));
+          if (has_superlevel) {
+            // If there are more levels that the ground state + the number of NLTE levels then we need an extra
+            // slot to store data for the "superlevel", which is a representation of all the other levels that
+            // are not treated in detail.
+            globals::total_nlte_levels++;
+            n_super_levels++;
+          }
+          assert_always(has_superlevel == ion_has_superlevel(element, ion));
+
+          printout("[input]  element %2d Z=%2d ion_stage %2d has %5d NLTE excited levels%s. Starting at %d\n", element,
+                   get_atomicnumber(element), get_ionstage(element, ion), fullnlteexcitedlevelcount,
+                   has_superlevel ? " plus a superlevel" : "", globals::elements[element].ions[ion].first_nlte);
+        }
       }
     }
   }
