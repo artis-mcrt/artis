@@ -236,6 +236,17 @@ auto get_nlevels(const int element, const int ion) -> int
   return globals::elements[element].ions[ion].nlevels;
 }
 
+auto has_nlte_levels(const int element) -> bool {
+  for (int ion = 0; ion < get_nions(element); ++ion) {
+    for (int level = 1; level < get_nlevels(element, ion); level++) {
+      if (is_nlte(element, ion, level) && NLTE_POPS_ON) {
+        return true;
+      }
+    }
+    return false;
+  }
+}
+
 auto get_nlevels_nlte(const int element, const int ion) -> int
 // Returns the number of NLTE levels associated with with a specific ion given
 // its elementindex and ionindex. Includes the superlevel if there is one but does not include the ground state

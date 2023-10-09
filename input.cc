@@ -1637,15 +1637,13 @@ static void read_atomicdata() {
       int fullnlteexcitedlevelcount = 0;
       for (int level = 1; level < nlevels; level++) {
         if (is_nlte(element, ion, level) && NLTE_POPS_ON) {
-          globals::elements[element].has_nlte_levels = true;
           fullnlteexcitedlevelcount++;
           globals::total_nlte_levels++;
         }
       }
-
       globals::elements[element].ions[ion].nlevels_nlte = fullnlteexcitedlevelcount;
 
-      if (globals::elements[element].has_nlte_levels) {
+      if (has_nlte_levels(element)) {
         globals::elements[element].ions[ion].first_nlte = globals::total_nlte_levels;
 
         const bool has_superlevel = (nlevels > (fullnlteexcitedlevelcount + 1));
