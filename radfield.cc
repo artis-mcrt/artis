@@ -1246,7 +1246,7 @@ void titer_nuJ(const int modelgridindex) {
 void reduce_estimators()
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 {
-  MPI_Allreduce(MPI_IN_PLACE, J.data(), grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, J.data(), J.size(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, nuJ, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
