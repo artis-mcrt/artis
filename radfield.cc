@@ -69,7 +69,7 @@ static struct Jb_lu_estimator **Jb_lu_raw = nullptr;          // unnormalised es
 
 // ** end detailed lines
 
-static std::span<float> prev_bfrate_normed;  // values from the previous timestep
+static float *prev_bfrate_normed = nullptr;  // values from the previous timestep
 static double *bfrate_raw = nullptr;         // unnormalised estimators for the current timestep
 
 // expensive debugging mode to track the contributions to each bound-free rate estimator
@@ -350,7 +350,6 @@ void init(int my_rank, int ndo_nonempty)
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    float *prev_bfrate_normed_data = nullptr;
 #ifdef MPI_ON
     {
       int my_rank_cells = nonempty_npts_model / globals::node_nprocs;
@@ -360,17 +359,15 @@ void init(int my_rank, int ndo_nonempty)
       }
       MPI_Aint size = my_rank_cells * globals::nbfcontinua * sizeof(float);
       int disp_unit = sizeof(float);
-      MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, prev_bfrate_normed_data,
+      MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed,
                               &win_prev_bfrate_normed);
-      MPI_Win_shared_query(win_prev_bfrate_normed, 0, &size, &disp_unit, prev_bfrate_normed_data);
+      MPI_Win_shared_query(win_prev_bfrate_normed, 0, &size, &disp_unit, &prev_bfrate_normed);
     }
 #else
     {
-      prev_bfrate_normed_data =
-          static_cast<float *>(malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(float)));
+      prev_bfrate_normed = static_cast<float *>(malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(float)));
     }
 #endif
-    prev_bfrate_normed = std::span(prev_bfrate_normed_data, nonempty_npts_model);
     printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (node shared memory)\n",
              nonempty_npts_model * globals::nbfcontinua * sizeof(float) / 1024. / 1024.);
 
@@ -641,10 +638,9 @@ void close_file() {
       MPI_Win_free(&win_prev_bfrate_normed);
     }
 #else
-    if (prev_bfrate_normed.data != nullptr) {
-      free(prev_bfrate_normed.data());
+    if (prev_bfrate_normed != nullptr) {
+      free(prev_bfrate_normed);
     }
-    prev_bfrate_normed = {};
 #endif
   }
 }
