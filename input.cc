@@ -855,6 +855,7 @@ static void read_atomicdata_files() {
       globals::elements[element].ions[ion].ionpot = ionpot * EV;
       globals::elements[element].ions[ion].nlevels_groundterm = -1;
       globals::elements[element].ions[ion].uniqueionindex = uniqueionindex;
+      globals::elements[element].ions[ion].first_nlte = -1;
 
       globals::elements[element].ions[ion].Alpha_sp = static_cast<float *>(calloc(TABLESIZE, sizeof(float)));
       assert_always(globals::elements[element].ions[ion].Alpha_sp != nullptr);
