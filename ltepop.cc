@@ -85,7 +85,7 @@ static auto phi(const int element, const int ion, const int modelgridindex) -> d
   }
 
   double Alpha_sp = 0.;
-  if constexpr (NLTE_POPS_ON) {
+  if (element_is_nlte) {
     Alpha_sp =
         calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, false, false, false, false, false);
   } else {
