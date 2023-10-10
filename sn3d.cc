@@ -205,7 +205,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
 
       if (grid::get_numassociatedcells(modelgridindex) > 0) {
         nonthermal::nt_MPI_Bcast(modelgridindex, root);
-        if (NLTE_POPS_ON && globals::rank_in_node == 0) {
+        if (globals::total_nlte_levels > 0 && globals::rank_in_node == 0) {
           MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, root_node_id,
                     globals::mpi_comm_internode);
         }
@@ -991,9 +991,7 @@ auto main(int argc, char *argv[]) -> int {
   }
 
   macroatom_close_file();
-  if (NLTE_POPS_ON) {
-    nltepop_close_file();
-  }
+  nltepop_close_file();
 
   radfield::close_file();
   nonthermal::close_file();
