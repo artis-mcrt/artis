@@ -1234,7 +1234,7 @@ static auto get_oneoverw(const int element, const int ion, const int modelgridin
 
   double Zbar = 0.0;  // mass-weighted average atomic number
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
-    Zbar += grid::modelgrid[modelgridindex].composition[ielement].abundance * globals::elements[ielement].anumber;
+    Zbar += grid::get_elem_abundance(modelgridindex, ielement) * get_atomicnumber(ielement);
   }
   // printout("cell %d has Zbar of %g\n", modelgridindex, Zbar);
 
