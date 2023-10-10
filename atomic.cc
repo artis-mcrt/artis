@@ -80,7 +80,7 @@ auto is_nlte(const int element, const int ion, const int level) -> bool
 auto level_isinsuperlevel(const int element, const int ion, const int level) -> bool
 // ion has NLTE levels, but this one is not NLTE => is in the superlevel
 {
-  return (NLTE_POPS_ON && !is_nlte(element, ion, level) && level != 0 && (get_nlevels_nlte(element, ion) > 0));
+  return (!is_nlte(element, ion, level) && level != 0 && (get_nlevels_nlte(element, ion) > 0));
 }
 
 auto photoionization_crosssection_fromtable(const float *const photoion_xs, const double nu_edge, const double nu)
