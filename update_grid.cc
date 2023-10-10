@@ -828,7 +828,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
       const time_t sys_time_start_nltepops = time(nullptr);
       // fractional difference between previous and current iteration's (nne or max(ground state
       // population change))
-      double nlte_test = 0.;
+      double fracdiff_nne = 0.;
       for (int element = 0; element < get_nelements(); element++) {
         if (get_nions(element) > 0) {
           solve_nlte_pops_element(element, n, nts, nlte_iter);
@@ -839,8 +839,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
 
       const double nne_prev = grid::get_nne(n);
       calculate_ion_balance_nne(n);  // sets nne
-      const double fracdiff_nne = fabs((grid::get_nne(n) / nne_prev) - 1);
-      nlte_test = fracdiff_nne;
+      fracdiff_nne = fabs((grid::get_nne(n) / nne_prev) - 1);
       printout(
           "NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e "
           "%ds, NLTE populations %ds\n",
@@ -848,13 +847,13 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
       printout(
           "NLTE (Spencer-Fano/Te/pops) solver cell %d timestep %d iteration %d: prev_iter nne "
           "%g, new nne is %g, fracdiff %g, prev T_e %g new T_e %g fracdiff %g\n",
-          n, nts, nlte_iter, nne_prev, grid::get_nne(n), nlte_test, prev_T_e, grid::get_Te(n), fracdiff_T_e);
+          n, nts, nlte_iter, nne_prev, grid::get_nne(n), fracdiff_nne, prev_T_e, grid::get_Te(n), fracdiff_T_e);
 
-      if (nlte_test <= covergence_tolerance && fracdiff_T_e <= covergence_tolerance) {
+      if (fracdiff_nne <= covergence_tolerance && fracdiff_T_e <= covergence_tolerance) {
         printout(
             "NLTE (Spencer-Fano/Te/pops) solver nne converged to tolerance %g <= %g and T_e to "
             "tolerance %g <= %g after %d iterations.\n",
-            nlte_test, covergence_tolerance, fracdiff_T_e, covergence_tolerance, nlte_iter + 1);
+            fracdiff_nne, covergence_tolerance, fracdiff_T_e, covergence_tolerance, nlte_iter + 1);
         break;
       }
       if (nlte_iter == NLTEITER) {
