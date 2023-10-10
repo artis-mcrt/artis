@@ -61,8 +61,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
     // fprintf(estimators_file,"%d %g %g %g %g %g %g %g
     //",n,get_TR(n),grid::get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
 
-    if (NLTE_POPS_ON)  //  && timestep % 2 == 0
-    {
+    if (globals::total_nlte_levels > 0) {
       nltepop_write_to_file(mgi, timestep);
     }
 
