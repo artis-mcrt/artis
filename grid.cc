@@ -1683,7 +1683,7 @@ static void read_grid_restart_data(const int timestep) {
 
     if (get_numassociatedcells(mgi) > 0) {
       assert_always(fscanf(gridsave_file, "%d %a %a %a %a %d %la %a %a", &mgi_in, &T_R, &T_e, &W, &T_J, &thick,
-                           &rpkt_emiss, &modelgrid[mgi].nne, &modelgrid[mgi].nnetot) == 7);
+                           &rpkt_emiss, &modelgrid[mgi].nne, &modelgrid[mgi].nnetot) == 9);
 
       if (mgi_in != mgi) {
         printout("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort\n");
