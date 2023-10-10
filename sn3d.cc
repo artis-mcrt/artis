@@ -917,7 +917,7 @@ auto main(int argc, char *argv[]) -> int {
     snprintf(filename, MAXFILENAMELENGTH, "estimators_%.4d.out", my_rank);
     estimators_file = fopen_required(filename, "w");
 
-    if (NLTE_POPS_ON && ndo_nonempty > 0) {
+    if (globals::total_nlte_levels > 0 && ndo_nonempty > 0) {
       nltepop_open_file(my_rank);
     }
   }
