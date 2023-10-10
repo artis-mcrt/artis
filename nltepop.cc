@@ -1244,10 +1244,8 @@ void nltepop_write_restart_data(FILE *restart_file) {
                 grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]);
       }
     }
-    if (NLTE_POPS_ON) {
-      for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
-        fprintf(restart_file, "%la ", grid::modelgrid[modelgridindex].nlte_pops[nlteindex]);
-      }
+    for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
+      fprintf(restart_file, "%la ", grid::modelgrid[modelgridindex].nlte_pops[nlteindex]);
     }
   }
 }
@@ -1293,15 +1291,13 @@ void nltepop_read_restart_data(FILE *restart_file) {
         }
       }
     }
-    if (NLTE_POPS_ON) {
-      for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
+    for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
 #ifdef MPI_ON
-        if (globals::rank_in_node != 0) {
-          assert_always(fscanf(restart_file, "%*a ") == 0);  // discard value (master rank of this node will set it)
-        } else
+      if (globals::rank_in_node != 0) {
+        assert_always(fscanf(restart_file, "%*a ") == 0);  // discard value (master rank of this node will set it)
+      } else
 #endif
-          assert_always(fscanf(restart_file, "%la ", &grid::modelgrid[modelgridindex].nlte_pops[nlteindex]) == 1);
-      }
+        assert_always(fscanf(restart_file, "%la ", &grid::modelgrid[modelgridindex].nlte_pops[nlteindex]) == 1);
     }
   }
 }
