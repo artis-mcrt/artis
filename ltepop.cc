@@ -541,69 +541,65 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
     return nntot;
   }
 
-  const bool use_nne_solver = !only_lowest_ionstage && allow_nlte;
+  /// Search solution for nne in [nne_lo,nne_hi]
 
-  double nne = 0.;  // free electron density
-  if (use_nne_solver) {
-    /// Search solution for nne in [nne_lo,nne_hi]
+  struct nne_solution_paras paras = {.cellnumber = modelgridindex};
+  gsl_function f = {.function = &nne_solution_f, .params = &paras};
 
-    struct nne_solution_paras paras = {.cellnumber = modelgridindex};
-    gsl_function f = {.function = &nne_solution_f, .params = &paras};
+  double nne_lo = 0.;  // MINPOP;
+  if (nne_solution_f(nne_lo, f.params) * nne_solution_f(nne_hi, f.params) > 0) {
+    const auto T_R = grid::get_TR(modelgridindex);
+    const auto T_e = grid::get_Te(modelgridindex);
+    const auto W = grid::get_W(modelgridindex);
+    printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_lo, nne_hi, T_R,
+             T_e, W, grid::get_rho(modelgridindex));
+    printout("nne@x_lo %g\n", nne_solution_f(nne_lo, f.params));
+    printout("nne@x_hi %g\n", nne_solution_f(nne_hi, f.params));
 
-    double nne_lo = 0.;  // MINPOP;
-    if (nne_solution_f(nne_lo, f.params) * nne_solution_f(nne_hi, f.params) > 0) {
-      const auto T_R = grid::get_TR(modelgridindex);
-      const auto T_e = grid::get_Te(modelgridindex);
-      const auto W = grid::get_W(modelgridindex);
-      printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_lo, nne_hi, T_R,
-               T_e, W, grid::get_rho(modelgridindex));
-      printout("nne@x_lo %g\n", nne_solution_f(nne_lo, f.params));
-      printout("nne@x_hi %g\n", nne_solution_f(nne_hi, f.params));
+    for (int element = 0; element < get_nelements(); element++) {
+      printout("cell %d, element %d, uppermost_ion is %d\n", modelgridindex, element,
+               grid::get_elements_uppermost_ion(modelgridindex, element));
 
-      for (int element = 0; element < get_nelements(); element++) {
-        printout("cell %d, element %d, uppermost_ion is %d\n", modelgridindex, element,
-                 grid::get_elements_uppermost_ion(modelgridindex, element));
-
-        if constexpr (USE_LUT_PHOTOION) {
-          for (int ion = 0; ion <= grid::get_elements_uppermost_ion(modelgridindex, element); ion++) {
-            printout("element %d, ion %d, gammaionest %g\n", element, ion,
-                     globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)]);
-          }
+      if constexpr (USE_LUT_PHOTOION) {
+        for (int ion = 0; ion <= grid::get_elements_uppermost_ion(modelgridindex, element); ion++) {
+          printout("element %d, ion %d, gammaionest %g\n", element, ion,
+                   globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)]);
         }
       }
     }
-
-    gsl_root_fsolver *solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
-
-    gsl_root_fsolver_set(solver, &f, nne_lo, nne_hi);
-    constexpr int maxit = 50;
-    constexpr double fractional_accuracy = 1e-3;
-    int status = GSL_CONTINUE;
-    for (int iter = 0; iter <= maxit; iter++) {
-      gsl_root_fsolver_iterate(solver);
-      nne = gsl_root_fsolver_root(solver);
-      nne_lo = gsl_root_fsolver_x_lower(solver);
-      nne_hi = gsl_root_fsolver_x_upper(solver);
-      status = gsl_root_test_interval(nne_lo, nne_hi, 0, fractional_accuracy);
-      if (status != GSL_CONTINUE) {
-        break;
-      }
-    }
-    if (status == GSL_CONTINUE) {
-      printout("[warning] calculate_ion_balance_nne: nne did not converge within %d iterations\n", maxit);
-    }
-
-    gsl_root_fsolver_free(solver);
-
-    nne = std::max(MINPOP, nne);
-
-    grid::set_nne(modelgridindex, nne);
   }
+
+  double nne = 0.;
+
+  gsl_root_fsolver *solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
+
+  gsl_root_fsolver_set(solver, &f, nne_lo, nne_hi);
+  constexpr int maxit = 50;
+  constexpr double fractional_accuracy = 1e-3;
+  int status = GSL_CONTINUE;
+  for (int iter = 0; iter <= maxit; iter++) {
+    gsl_root_fsolver_iterate(solver);
+    nne = gsl_root_fsolver_root(solver);
+    nne_lo = gsl_root_fsolver_x_lower(solver);
+    nne_hi = gsl_root_fsolver_x_upper(solver);
+    status = gsl_root_test_interval(nne_lo, nne_hi, 0, fractional_accuracy);
+    if (status != GSL_CONTINUE) {
+      break;
+    }
+  }
+  if (status == GSL_CONTINUE) {
+    printout("[warning] calculate_ion_balance_nne: nne did not converge within %d iterations\n", maxit);
+  }
+
+  gsl_root_fsolver_free(solver);
+
+  nne = std::max(MINPOP, nne);
+
+  grid::set_nne(modelgridindex, nne);
 
   /// Now calculate the ground level populations in nebular approximation and store them to the
   /// grid
-  double nntot = use_nne_solver ? nne : 0.;
-  double nne_sum = 0.;
+  double nntot = nne;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     /// calculate number density of the current element (abundances are given by mass)
@@ -626,8 +622,6 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
         nnion = MINPOP;
       }
       nntot += nnion;
-      const int ioncharge = get_ionstage(element, ion) - 1;
-      nne_sum += ioncharge * nnion;
 
       const double groundpop =
           (nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
@@ -638,12 +632,6 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
 
       grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
     }
-  }
-
-  if (!use_nne_solver) {
-    nntot += nne_sum;
-    nne = std::max(MINPOP, nne_sum);
-    grid::set_nne(modelgridindex, nne_sum);
   }
 
   return nntot;
