@@ -1064,9 +1064,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
       calculate_cellpartfuncts(mgi);
       if (!globals::simulation_continued_from_saved) {
-        const bool allow_nlte = globals::simulation_continued_from_saved && NLTE_POPS_ON && !globals::lte_iteration &&
-                                grid::modelgrid[mgi].thick != 1;
-        calculate_ion_balance_nne(mgi, allow_nlte);
+        calculate_ion_balance_nne(mgi, false);
       }
     } else {
       // For all other timesteps temperature corrections have to be applied
@@ -1432,10 +1430,14 @@ static auto handle_neutral_ion_balance(const int modelgridindex) -> double {
   return nntot;
 }
 
-auto calculate_ion_balance_nne(const int modelgridindex, const bool allow_nlte) -> double
+auto calculate_ion_balance_nne(const int modelgridindex, bool allow_nlte) -> double
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
+  if (globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1) {
+    allow_nlte = false;
+  }
+
   if (allow_nlte) {
     double nne = 0.;  // free electron density
     double nntot = 0.;
