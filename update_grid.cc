@@ -832,8 +832,8 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
       for (int element = 0; element < get_nelements(); element++) {
         if (get_nions(element) > 0) {
           solve_nlte_pops_element(element, n, nts, nlte_iter);
+          calculate_cellpartfuncts(n, element);
         }
-        calculate_cellpartfuncts(n, element);
       }
       const int duration_solve_nltepops = time(nullptr) - sys_time_start_nltepops;
 
@@ -1042,7 +1042,9 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       printout("lte_iteration %d\n", globals::lte_iteration);
       printout("mgi %d modelgrid.thick: %d (for this grid update only)\n", mgi, grid::modelgrid[mgi].thick);
 
-      calculate_cellpartfuncts(mgi);
+      for (int element = 0; element < get_nelements(); element++) {
+        calculate_cellpartfuncts(mgi, element);
+      }
       if (!globals::simulation_continued_from_saved) {
         calculate_ion_balance_nne(mgi);
       }
@@ -1084,7 +1086,9 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
           set_all_corrphotoionrenorm(mgi, 1.);
         }
 
-        calculate_cellpartfuncts(mgi);
+        for (int element = 0; element < get_nelements(); element++) {
+          calculate_cellpartfuncts(mgi, element);
+        }
         calculate_ion_balance_nne(mgi);
       } else {
         // not lte_iteration and not a thick cell
