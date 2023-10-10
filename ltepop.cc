@@ -24,11 +24,10 @@ auto nne_solution_f(double x, void *paras) -> double
   for (int element = 0; element < get_nelements(); element++) {
     const double massfrac = grid::modelgrid[modelgridindex].composition[element].abundance;
     if (massfrac > 0 && get_nions(element) > 0) {
-      const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
-      auto ionfractions = get_ionfractions(element, modelgridindex, x, uppermost_ion);
+      auto ionfractions = get_ionfractions(element, modelgridindex, x);
 
       double elem_nne_contrib = 0.;
-      for (int ion = 0; ion <= uppermost_ion; ion++) {
+      for (int ion = 0; ion < ionfractions.size(); ion++) {
         elem_nne_contrib += (get_ionstage(element, ion) - 1) * ionfractions[ion];
       }
 
@@ -48,10 +47,10 @@ auto nne_solution_f(double x, void *paras) -> double
   return rho * outersum - x;
 }
 
-auto get_ionfractions(const int element, const int modelgridindex, const double nne, const int uppermost_ion)
-    -> std::vector<double>
+auto get_ionfractions(const int element, const int modelgridindex, const double nne) -> std::vector<double>
 // Calculate the fractions of an element's population in each ionization stage
 {
+  const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));

@@ -1550,7 +1550,7 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
     std::vector<double> ionfractions;
 
     if (nnelement > 0) {
-      ionfractions = get_ionfractions(element, modelgridindex, nne, uppermost_ion);
+      ionfractions = get_ionfractions(element, modelgridindex, nne);
     }
 
     /// Use ionizationfractions to calculate the groundlevel populations
