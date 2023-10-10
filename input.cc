@@ -1881,22 +1881,22 @@ void read_parameterfile(int rank)
     printout("input: No non-thermal ionisation is used in this run.\n");
   }
 
-  if (!USE_LUT_PHOTOION) {
-    printout(
-        "Corrphotoioncoeff is calculated from the radiation field at each timestep in each modelgrid cell (no "
-        "LUT).\n");
-  } else {
+  if (USE_LUT_PHOTOION) {
     printout(
         "Corrphotoioncoeff is calculated from LTE lookup tables (ratecoeff.dat) and corrphotoionrenorm "
         "estimator.\n");
+  } else {
+    printout(
+        "Corrphotoioncoeff is calculated from the radiation field at each timestep in each modelgrid cell (no "
+        "LUT).\n");
   }
 
-  if (!USE_LUT_BFHEATING) {
+  if (USE_LUT_BFHEATING) {
+    printout("bfheating coefficients are calculated from LTE lookup tables (ratecoeff.dat) and bfheatingestimator.\n");
+  } else {
     printout(
         "bfheating coefficients are calculated from the radiation field at each timestep in each modelgrid cell (no "
         "LUT).\n");
-  } else {
-    printout("bfheating coefficients are calculated from LTE lookup tables (ratecoeff.dat) and bfheatingestimator.\n");
   }
 
   /// Set up initial grey approximation?
