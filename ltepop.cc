@@ -118,19 +118,19 @@ static auto get_ionfractions(const int element, const int modelgridindex, const 
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
 
-  std::vector<double> ionfractions(uppermost_ion + 1);
   std::vector<double> nnionfactor(uppermost_ion + 1);
   nnionfactor[uppermost_ion] = 1;
 
-  double denominator = 1.;
+  double nnionfactorsum = 1.;
 
   for (int ion = uppermost_ion - 1; ion >= 0; ion--) {
     nnionfactor[ion] = nnionfactor[ion + 1] * nne * phi(element, ion, modelgridindex);
-    denominator += nnionfactor[ion];
+    nnionfactorsum += nnionfactor[ion];
   }
 
+  std::vector<double> ionfractions(uppermost_ion + 1);
   for (int ion = 0; ion <= uppermost_ion; ion++) {
-    ionfractions[ion] = nnionfactor[ion] / denominator;
+    ionfractions[ion] = nnionfactor[ion] / nnionfactorsum;
 
     if (!std::isfinite(ionfractions[ion])) {
       if (modelgridindex != grid::get_npts_model()) {
