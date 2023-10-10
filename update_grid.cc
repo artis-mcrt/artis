@@ -832,7 +832,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
 
     if (globals::total_nlte_levels == 0) {
       const time_t sys_time_start_pops = time(nullptr);
-      calculate_ion_balance_nne(n, false);
+      calculate_ion_balance_nne(n);
       const int duration_solve_pops = time(nullptr) - sys_time_start_pops;
 
       printout(
@@ -858,7 +858,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
 
       const double nne_prev = grid::get_nne(n);
       calculate_cellpartfuncts(n);
-      calculate_ion_balance_nne(n, true);  // sets nne
+      calculate_ion_balance_nne(n);  // sets nne
       const double fracdiff_nne = fabs((grid::get_nne(n) / nne_prev) - 1);
       nlte_test = fracdiff_nne;
       printout(
@@ -1064,7 +1064,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
       calculate_cellpartfuncts(mgi);
       if (!globals::simulation_continued_from_saved) {
-        calculate_ion_balance_nne(mgi, false);
+        calculate_ion_balance_nne(mgi);
       }
     } else {
       // For all other timesteps temperature corrections have to be applied
@@ -1105,7 +1105,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         }
 
         calculate_cellpartfuncts(mgi);
-        calculate_ion_balance_nne(mgi, false);
+        calculate_ion_balance_nne(mgi);
       } else {
         // not lte_iteration and not a thick cell
         // non-LTE timesteps with T_e from heating/cooling
@@ -1430,14 +1430,13 @@ static auto handle_neutral_ion_balance(const int modelgridindex) -> double {
   return nntot;
 }
 
-auto calculate_ion_balance_nne(const int modelgridindex, bool allow_nlte) -> double
+auto calculate_ion_balance_nne(const int modelgridindex) -> double
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
-  allow_nlte = (globals::total_nlte_levels > 0);
-  if (globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1) {
-    allow_nlte = false;
-  }
+  const bool allow_nlte =
+      (globals::total_nlte_levels > 0) && !globals::lte_iteration && (grid::modelgrid[modelgridindex].thick != 1);
+
   if (allow_nlte) {
     double nne = 0.;  // free electron density
     double nntot = 0.;
