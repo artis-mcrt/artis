@@ -16,76 +16,6 @@
 #include "sn3d.h"
 #include "update_grid.h"
 
-auto nne_solution_f(double x, void *paras) -> double
-/// For libgsl bracketing type solver
-/// provides the equation which has to be solved to obtain the electron number
-/// density (passed by x)
-{
-  const int modelgridindex = (static_cast<struct nne_solution_paras *>(paras))->cellnumber;
-
-  double outersum = 0.;
-  for (int element = 0; element < get_nelements(); element++) {
-    const double massfrac = grid::modelgrid[modelgridindex].composition[element].abundance;
-    if (massfrac > 0 && get_nions(element) > 0) {
-      auto ionfractions = get_ionfractions(element, modelgridindex, x);
-      const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
-      double elem_nne_contrib = 0.;
-      for (int ion = 0; ion <= uppermost_ion; ion++) {
-        elem_nne_contrib += (get_ionstage(element, ion) - 1) * ionfractions[ion];
-      }
-
-      const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
-      outersum += massfrac / elem_meanweight * elem_nne_contrib;
-
-      if (!std::isfinite(outersum)) {
-        printout("nne_solution_f: element %d uppermostion %d massfrac %g, mass %g\n", element,
-                 grid::get_elements_uppermost_ion(modelgridindex, element), massfrac, elem_meanweight);
-        printout("outersum %g\n", outersum);
-        abort();
-      }
-    }
-  }
-
-  const double rho = grid::get_rho(modelgridindex);
-  return rho * outersum - x;
-}
-
-auto get_ionfractions(const int element, const int modelgridindex, const double nne) -> std::vector<double>
-// Calculate the fractions of an element's population in each ionization stage
-{
-  const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
-  assert_testmodeonly(modelgridindex < grid::get_npts_model());
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
-
-  std::vector<double> ionfractions(uppermost_ion + 1);
-  std::vector<double> nnionfactor(uppermost_ion + 1);
-  nnionfactor[uppermost_ion] = 1;
-
-  double denominator = 1.;
-
-  for (int ion = uppermost_ion - 1; ion >= 0; ion--) {
-    nnionfactor[ion] = nnionfactor[ion + 1] * nne * phi(element, ion, modelgridindex);
-    denominator += nnionfactor[ion];
-  }
-
-  for (int ion = 0; ion <= uppermost_ion; ion++) {
-    ionfractions[ion] = nnionfactor[ion] / denominator;
-
-    if (!std::isfinite(ionfractions[ion])) {
-      if (modelgridindex != grid::get_npts_model()) {
-        printout("[warning] ionfract set to zero for ionstage %d of Z=%d in cell %d with T_e %g, T_R %g\n",
-                 get_ionstage(element, ion), get_atomicnumber(element), modelgridindex, grid::get_Te(modelgridindex),
-                 grid::get_TR(modelgridindex));
-        // abort();
-        ionfractions[ion] = 0;
-      }
-    }
-    // printout("ionfract(%d,%d,%d,%g) = %g\n", element, ion, modelgridindex, nne, ionfractions[ion]);
-  }
-  return ionfractions;
-}
-
 static auto interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
@@ -104,7 +34,7 @@ static auto interpolate_ions_spontrecombcoeff(const int element, const int ion, 
   return globals::elements[element].ions[ion].Alpha_sp[TABLESIZE - 1];
 }
 
-auto phi(const int element, const int ion, const int modelgridindex) -> double
+static auto phi(const int element, const int ion, const int modelgridindex) -> double
 /// Calculates population ratio (a saha factor) of two consecutive ionisation stages
 /// in nebular approximation phi_j,k* = N_j,k*/(N_j+1,k* * nne)
 {
@@ -178,6 +108,76 @@ auto phi(const int element, const int ion, const int modelgridindex) -> double
   }
 
   return phi;
+}
+
+static auto get_ionfractions(const int element, const int modelgridindex, const double nne) -> std::vector<double>
+// Calculate the fractions of an element's population in each ionization stage
+{
+  const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
+  assert_testmodeonly(modelgridindex < grid::get_npts_model());
+  assert_testmodeonly(element < get_nelements());
+  assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
+
+  std::vector<double> ionfractions(uppermost_ion + 1);
+  std::vector<double> nnionfactor(uppermost_ion + 1);
+  nnionfactor[uppermost_ion] = 1;
+
+  double denominator = 1.;
+
+  for (int ion = uppermost_ion - 1; ion >= 0; ion--) {
+    nnionfactor[ion] = nnionfactor[ion + 1] * nne * phi(element, ion, modelgridindex);
+    denominator += nnionfactor[ion];
+  }
+
+  for (int ion = 0; ion <= uppermost_ion; ion++) {
+    ionfractions[ion] = nnionfactor[ion] / denominator;
+
+    if (!std::isfinite(ionfractions[ion])) {
+      if (modelgridindex != grid::get_npts_model()) {
+        printout("[warning] ionfract set to zero for ionstage %d of Z=%d in cell %d with T_e %g, T_R %g\n",
+                 get_ionstage(element, ion), get_atomicnumber(element), modelgridindex, grid::get_Te(modelgridindex),
+                 grid::get_TR(modelgridindex));
+        // abort();
+        ionfractions[ion] = 0;
+      }
+    }
+    // printout("ionfract(%d,%d,%d,%g) = %g\n", element, ion, modelgridindex, nne, ionfractions[ion]);
+  }
+  return ionfractions;
+}
+
+static auto nne_solution_f(double x, void *paras) -> double
+/// For libgsl bracketing type solver
+/// provides the equation which has to be solved to obtain the electron number
+/// density (passed by x)
+{
+  const int modelgridindex = (static_cast<struct nne_solution_paras *>(paras))->cellnumber;
+
+  double outersum = 0.;
+  for (int element = 0; element < get_nelements(); element++) {
+    const double massfrac = grid::modelgrid[modelgridindex].composition[element].abundance;
+    if (massfrac > 0 && get_nions(element) > 0) {
+      auto ionfractions = get_ionfractions(element, modelgridindex, x);
+      const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
+      double elem_nne_contrib = 0.;
+      for (int ion = 0; ion <= uppermost_ion; ion++) {
+        elem_nne_contrib += (get_ionstage(element, ion) - 1) * ionfractions[ion];
+      }
+
+      const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
+      outersum += massfrac / elem_meanweight * elem_nne_contrib;
+
+      if (!std::isfinite(outersum)) {
+        printout("nne_solution_f: element %d uppermostion %d massfrac %g, mass %g\n", element,
+                 grid::get_elements_uppermost_ion(modelgridindex, element), massfrac, elem_meanweight);
+        printout("outersum %g\n", outersum);
+        abort();
+      }
+    }
+  }
+
+  const double rho = grid::get_rho(modelgridindex);
+  return rho * outersum - x;
 }
 
 auto get_groundlevelpop(int modelgridindex, int element, int ion) -> double
