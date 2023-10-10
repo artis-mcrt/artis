@@ -60,6 +60,11 @@ static auto phi(const int element, const int ion, const int modelgridindex) -> d
     return partfunct_ratio * SAHACONST * pow(T_e, -1.5) * exp(ionpot / KB / T_e);
   }
 
+  if (elem_has_nlte_levels(element)) {
+    return ionstagepop(modelgridindex, element, ion) / ionstagepop(modelgridindex, element, ion + 1) *
+           grid::get_nne(modelgridindex);
+  }
+
   double Gamma = 0.;
   if constexpr (USE_LUT_PHOTOION) {
     Gamma = globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)];
