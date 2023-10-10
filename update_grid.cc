@@ -788,11 +788,11 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
     const int duration_solve_spencerfano = time(nullptr) - sys_time_start_spencerfano;
 
     const time_t sys_time_start_partfuncs_or_gamma = time(nullptr);
-    if (!NLTE_POPS_ON) {
-      calculate_cellpartfuncts(n);
-    } else if (USE_LUT_PHOTOION && (nlte_iter != 0)) {
-      // recalculate the Gammas using the current population estimates
-      for (int element = 0; element < get_nelements(); element++) {
+    for (int element = 0; element < get_nelements(); element++) {
+      if (!NLTE_POPS_ON) {
+        calculate_cellpartfuncts(n, element);
+      } else if (USE_LUT_PHOTOION && (nlte_iter != 0)) {
+        // recalculate the Gammas using the current population estimates
         const int nions = get_nions(element);
         for (int ion = 0; ion < nions - 1; ion++) {
           globals::gammaestimator[get_ionestimindex(n, element, ion)] = calculate_iongamma_per_gspop(n, element, ion);
@@ -833,11 +833,11 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
         if (get_nions(element) > 0) {
           solve_nlte_pops_element(element, n, nts, nlte_iter);
         }
+        calculate_cellpartfuncts(n, element);
       }
       const int duration_solve_nltepops = time(nullptr) - sys_time_start_nltepops;
 
       const double nne_prev = grid::get_nne(n);
-      calculate_cellpartfuncts(n);
       calculate_ion_balance_nne(n);  // sets nne
       const double fracdiff_nne = fabs((grid::get_nne(n) / nne_prev) - 1);
       nlte_test = fracdiff_nne;

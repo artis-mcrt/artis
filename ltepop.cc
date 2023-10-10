@@ -366,7 +366,7 @@ static auto calculate_partfunct(int element, int ion, int modelgridindex) -> dou
   return U;
 }
 
-void calculate_cellpartfuncts(int modelgridindex)
+void calculate_cellpartfuncts(const int modelgridindex, const int element)
 /// The partition functions depend only on T_R and W. This means they don't
 /// change during any iteration on T_e. Therefore their precalculation was
 /// taken out of calculate_ion_balance_nne to save runtime.
@@ -374,12 +374,10 @@ void calculate_cellpartfuncts(int modelgridindex)
 {
   /// Precalculate partition functions for each ion in every cell
   /// this saves a factor 10 in calculation time of Saha-Boltzman populations
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      grid::modelgrid[modelgridindex].composition[element].partfunct[ion] =
-          calculate_partfunct(element, ion, modelgridindex);
-    }
+  const int nions = get_nions(element);
+  for (int ion = 0; ion < nions; ion++) {
+    grid::modelgrid[modelgridindex].composition[element].partfunct[ion] =
+        calculate_partfunct(element, ion, modelgridindex);
   }
 }
 

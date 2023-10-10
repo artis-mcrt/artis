@@ -1032,7 +1032,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = gsl_vector_get(popvec, index_gs);
       // solution_ion_pop += gsl_vector_get(popvec, index_gs);
 
-      calculate_cellpartfuncts(modelgridindex);
+      calculate_cellpartfuncts(modelgridindex, element);
 
       // ion_populations[ion] = solution_ion_pop;
       // if (ion > 0)
