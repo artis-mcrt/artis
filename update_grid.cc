@@ -903,7 +903,6 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
     }
   }
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-    /// Then reopen the same loops again.
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++) {
@@ -914,7 +913,6 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
 
         if constexpr (USE_LUT_PHOTOION) {
           globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(n, element, ion);
-          // printout("mgi %d, element %d, ion %d, Gamma %g\n",n,element,ion,Gamma);
         }
 
         if constexpr (USE_LUT_BFHEATING) {
@@ -940,9 +938,6 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
                 element, ion, 0, 0, n, globals::bfheatingestimator[ionestimindex], bfheatingcoeff_ana);
             abort();
           }
-
-          // printout("cell %d element %d ion %d bfheatingestimator
-          // %g\n",n,element,ion,bfheatingestimator[ionestimindex]);
         }
       }
     }

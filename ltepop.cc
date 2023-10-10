@@ -16,6 +16,10 @@
 #include "sn3d.h"
 #include "update_grid.h"
 
+struct nne_solution_paras {
+  int modelgridindex;
+};
+
 static auto interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
@@ -52,7 +56,6 @@ static auto phi(const int element, const int ion, const int modelgridindex) -> d
 
   if (use_lte_ratio) {
     const double ionpot = epsilon(element, ion + 1, 0) - epsilon(element, ion, 0);
-    // printout("ionpot for element %d, ion %d is %g\n", element, ion, ionpot / EV);
     const double partfunct_ratio = partfunc_ion / partfunc_upperion;
     return partfunct_ratio * SAHACONST * pow(T_e, -1.5) * exp(ionpot / KB / T_e);
   }
@@ -144,7 +147,7 @@ static auto nne_solution_f(double nne, void *paras) -> double
 // assume a value for nne and then calculate the resulting nne
 // the difference between the assumed and calculated nne is returned
 {
-  const int modelgridindex = (static_cast<struct nne_solution_paras *>(paras))->cellnumber;
+  const int modelgridindex = (static_cast<struct nne_solution_paras *>(paras))->modelgridindex;
 
   double outersum = 0.;
   for (int element = 0; element < get_nelements(); element++) {
@@ -530,7 +533,7 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
 
   /// Search solution for nne in [nne_lo,nne_hi]
 
-  struct nne_solution_paras paras = {.cellnumber = modelgridindex};
+  struct nne_solution_paras paras = {.modelgridindex = modelgridindex};
   gsl_function f = {.function = &nne_solution_f, .params = &paras};
 
   double nne_lo = 0.;  // MINPOP;

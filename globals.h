@@ -138,10 +138,6 @@ struct linelist_entry {
   int lowerlevelindex;  /// and lower levels
 };
 
-struct nne_solution_paras {
-  int cellnumber;
-};
-
 struct gslintegration_paras {
   const double nu_edge;
   const float T;
