@@ -146,10 +146,9 @@ static auto get_ionfractions(const int element, const int modelgridindex, const 
   return ionfractions;
 }
 
-static auto nne_solution_f(double x, void *paras) -> double
-/// For libgsl bracketing type solver
-/// provides the equation which has to be solved to obtain the electron number
-/// density (passed by x)
+static auto nne_solution_f(double nne, void *paras) -> double
+// assume a value for nne and then calculate the resulting nne
+// the difference between the assumed and calculated nne is returned
 {
   const int modelgridindex = (static_cast<struct nne_solution_paras *>(paras))->cellnumber;
 
@@ -157,7 +156,7 @@ static auto nne_solution_f(double x, void *paras) -> double
   for (int element = 0; element < get_nelements(); element++) {
     const double massfrac = grid::modelgrid[modelgridindex].composition[element].abundance;
     if (massfrac > 0 && get_nions(element) > 0) {
-      auto ionfractions = get_ionfractions(element, modelgridindex, x);
+      const auto ionfractions = get_ionfractions(element, modelgridindex, nne);
       const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
       double elem_nne_contrib = 0.;
       for (int ion = 0; ion <= uppermost_ion; ion++) {
@@ -177,7 +176,7 @@ static auto nne_solution_f(double x, void *paras) -> double
   }
 
   const double rho = grid::get_rho(modelgridindex);
-  return rho * outersum - x;
+  return rho * outersum - nne;
 }
 
 auto get_groundlevelpop(int modelgridindex, int element, int ion) -> double
