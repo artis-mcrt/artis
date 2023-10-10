@@ -316,7 +316,7 @@ auto get_levelpop(int modelgridindex, int element, int ion, int level) -> double
   return nn;
 }
 
-auto calculate_partfunct(int element, int ion, int modelgridindex) -> double
+static auto calculate_partfunct(int element, int ion, int modelgridindex) -> double
 /// Calculates the partition function for ion=ion of element=element in
 /// cell modelgridindex
 {
@@ -364,6 +364,23 @@ auto calculate_partfunct(int element, int ion, int modelgridindex) -> double
   }
 
   return U;
+}
+
+void calculate_cellpartfuncts(int modelgridindex)
+/// The partition functions depend only on T_R and W. This means they don't
+/// change during any iteration on T_e. Therefore their precalculation was
+/// taken out of calculate_ion_balance_nne to save runtime.
+// TODO: not true if LTEPOP_EXCITATION_USE_TJ is true unless LTE mode only (TJ=TR=Te)
+{
+  /// Precalculate partition functions for each ion in every cell
+  /// this saves a factor 10 in calculation time of Saha-Boltzman populations
+  for (int element = 0; element < get_nelements(); element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      grid::modelgrid[modelgridindex].composition[element].partfunct[ion] =
+          calculate_partfunct(element, ion, modelgridindex);
+    }
+  }
 }
 
 auto calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold) -> double

@@ -18,23 +18,6 @@
 #include "thermalbalance.h"
 #include "vpkt.h"
 
-void calculate_cellpartfuncts(int modelgridindex)
-/// The partition functions depend only on T_R and W. This means they don't
-/// change during any iteration on T_e. Therefore their precalculation was
-/// taken out of calculate_ion_balance_nne to save runtime.
-// TODO: not true if LTEPOP_EXCITATION_USE_TJ is true unless LTE mode only (TJ=TR=Te)
-{
-  /// Precalculate partition functions for each ion in every cell
-  /// this saves a factor 10 in calculation time of Saha-Boltzman populations
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      grid::modelgrid[modelgridindex].composition[element].partfunct[ion] =
-          calculate_partfunct(element, ion, modelgridindex);
-    }
-  }
-}
-
 static void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer,
                                      const struct heatingcoolingrates *heatingcoolingrates) {
   // return; disable for better performance (if estimators files are not needed)
@@ -837,7 +820,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
           "%ds, T_e %ds, populations %ds\n",
           n, nts, duration_solve_spencerfano, duration_solve_partfuncs_or_gamma, duration_solve_T_e,
           duration_solve_pops);
-      break;  // no iteration is needed without NLTE_POPS_ON
+      break;  // no iteration is needed without nlte pops
     }
 
     if (globals::total_nlte_levels > 0) {
