@@ -1632,6 +1632,10 @@ static void read_atomicdata() {
   int n_super_levels = 0;
 
   for (int element = 0; element < get_nelements(); element++) {
+    globals::elements[element].has_nlte_levels = elem_has_nlte_levels_search(element);
+  }
+
+  for (int element = 0; element < get_nelements(); element++) {
     if (elem_has_nlte_levels(element)) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
@@ -1644,6 +1648,7 @@ static void read_atomicdata() {
             globals::total_nlte_levels++;
           }
         }
+        globals::elements[element].ions[ion].nlevels_nlte = fullnlteexcitedlevelcount;
 
         const bool has_superlevel = (nlevels > (fullnlteexcitedlevelcount + 1));
         if (has_superlevel) {
@@ -1653,8 +1658,6 @@ static void read_atomicdata() {
           globals::total_nlte_levels++;
           n_super_levels++;
         }
-
-        globals::elements[element].ions[ion].nlevels_nlte = fullnlteexcitedlevelcount;
 
         assert_always(has_superlevel == ion_has_superlevel(element, ion));
 
