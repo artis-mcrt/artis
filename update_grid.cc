@@ -789,7 +789,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
 
     const time_t sys_time_start_partfuncs_or_gamma = time(nullptr);
     for (int element = 0; element < get_nelements(); element++) {
-      if (!NLTE_POPS_ON) {
+      if (!elem_has_nlte_levels(element)) {
         calculate_cellpartfuncts(n, element);
       } else if (USE_LUT_PHOTOION && (nlte_iter != 0)) {
         // recalculate the Gammas using the current population estimates
