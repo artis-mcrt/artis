@@ -836,8 +836,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
       const time_t sys_time_start_pops = time(nullptr);
       calculate_ion_balance_nne(n, false);
       const int duration_solve_pops = time(nullptr) - sys_time_start_pops;
-      // calculate_cooling_rates(n);
-      // calculate_heating_rates(n);
+
       printout(
           "Grid solver cell %d timestep %d: time spent on: Spencer-Fano %ds, partfuncs/gamma "
           "%ds, T_e %ds, populations %ds\n",
