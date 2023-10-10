@@ -1394,6 +1394,10 @@ auto iongamma_is_zero(const int modelgridindex, const int element, const int ion
     return true;
   }
 
+  if constexpr (USE_LUT_PHOTOION) {
+    return (globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)] == 0);
+  }
+
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
 
