@@ -1062,10 +1062,6 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       printout("mgi %d modelgrid.thick: %d (for this grid update only)\n", mgi, grid::modelgrid[mgi].thick);
 
       calculate_cellpartfuncts(mgi);
-
-      const bool allow_nlte = globals::simulation_continued_from_saved && NLTE_POPS_ON && !globals::lte_iteration &&
-                              grid::modelgrid[mgi].thick != 1;
-      calculate_ion_balance_nne(mgi, allow_nlte);
     } else {
       /// For all other timesteps temperature corrections have to be applied
 
