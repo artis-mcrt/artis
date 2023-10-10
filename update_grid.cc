@@ -830,9 +830,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
 
     const int duration_solve_T_e = time(nullptr) - sys_time_start_Te;
 
-    if (!NLTE_POPS_ON)  // do this in LTE or NLTE single ion solver mode
-    {
-      /// Store population values to the grid
+    if (!NLTE_POPS_ON) {
       const time_t sys_time_start_pops = time(nullptr);
       calculate_ion_balance_nne(n, false);
       const int duration_solve_pops = time(nullptr) - sys_time_start_pops;
@@ -842,8 +840,8 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
           "%ds, T_e %ds, populations %ds\n",
           n, nts, duration_solve_spencerfano, duration_solve_partfuncs_or_gamma, duration_solve_T_e,
           duration_solve_pops);
+      break;  // no iteration is needed without NLTE_POPS_ON
     }
-
     if (NLTE_POPS_ON) {
       const double fracdiff_T_e = fabs((grid::get_Te(n) / prev_T_e) - 1);
       const time_t sys_time_start_nltepops = time(nullptr);
@@ -884,8 +882,6 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
             "last iteration\n",
             nlte_iter + 1);
       }
-    } else {
-      break;  // no iteration is needed without NLTE_POPS_ON
     }
   }
 }
