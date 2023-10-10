@@ -1631,8 +1631,8 @@ static void read_atomicdata() {
   globals::total_nlte_levels = 0;
   int n_super_levels = 0;
 
-  if (NLTE_POPS_ON) {
-    for (int element = 0; element < get_nelements(); element++) {
+  for (int element = 0; element < get_nelements(); element++) {
+    if (elem_has_nlte_levels(element)) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
         globals::elements[element].ions[ion].first_nlte = globals::total_nlte_levels;
