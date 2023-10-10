@@ -1237,7 +1237,13 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
     grid::set_element_meanweight(modelgridindex, element, isomassfracsum / isomassfrac_on_nucmass_sum);
   }
 
-  // consider calling calculate_electron_densities() here
+  // total number of electrons in grid cell which are possible  targets for compton scattering of gamma rays
+  double nnetot = 0.;
+  for (int element = 0; element < get_nelements(); element++) {
+    const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
+    nnetot += nnelement * get_atomicnumber(element);
+  }
+  grid::set_nnetot(modelgridindex, nnetot);
 
   // double initnucfracsum = 0.;
   // double nucfracsum = 0.;

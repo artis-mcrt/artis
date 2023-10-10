@@ -1434,15 +1434,6 @@ auto calculate_ion_balance_nne(const int modelgridindex, const bool allow_nlte) 
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
-  // targets for compton scattering of gamma rays
-  double nnetot = 0.;  /// total number of electrons in grid cell which are possible
-                       /// targets for compton scattering of gamma rays
-  for (int element = 0; element < get_nelements(); element++) {
-    const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
-    nnetot += nnelement * get_atomicnumber(element);
-  }
-  grid::set_nnetot(modelgridindex, nnetot);
-
   if (allow_nlte) {
     double nne = 0.;  // free electron density
     double nntot = 0.;
