@@ -668,10 +668,6 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
         int alphanucindex = -1;
         if (nuc_exists(z, a)) {
           alphanucindex = get_nucindex(z, a);
-          // printout("compare z %d a %d e_gamma_mev1 %g e_gamma_mev2 %g\n", z, a, nucdecayenergygamma(z, a) / MEV,
-          // e_gamma_mev); printout("compare z %d a %d tau1 %g tau2 %g\n", z, a, get_meanlife(z, a), tau_sec);
-          // printout("compare z %d a %d e_beta_mev1 %g e_beta_mev2 %g\n", z, a, nuclides[get_nucindex(z,
-          // a)].endecay_positron / MEV, e_beta_mev);
         } else {
           nuclides.push_back({.z = z, .a = a, .meanlife = tau_sec, .endecay_gamma = e_gamma_mev * MEV});
           alphanucindex = nuclides.size() - 1;

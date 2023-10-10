@@ -1546,7 +1546,7 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
     /// calculate number density of the current element (abundances are given by mass)
     const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
 
-    auto ionfractions = (nnelement > 0) ? get_ionfractions(element, modelgridindex, nne) : std::vector<double>();
+    const auto ionfractions = (nnelement > 0) ? get_ionfractions(element, modelgridindex, nne) : std::vector<double>();
 
     const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
 
@@ -1560,19 +1560,18 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
           nnion = 0.;
         }
       } else {
-        nnion = MINPOP;  /// uppermost_ion is only < nions-1 in cells with nonzero abundance of
-                         /// the given species
+        nnion = MINPOP;
       }
       nntot += nnion;
 
-      grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] =
+      const double groundpop =
           (nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
 
-      if (!std::isfinite(grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) {
-        printout(
-            "[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with "
-            "MINPOP\n");
+      if (!std::isfinite(groundpop)) {
+        printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
       }
+
+      grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
     }
   }
 
