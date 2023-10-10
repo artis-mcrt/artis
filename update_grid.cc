@@ -1434,10 +1434,10 @@ auto calculate_ion_balance_nne(const int modelgridindex, bool allow_nlte) -> dou
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
+  allow_nlte = (globals::total_nlte_levels > 0);
   if (globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1) {
     allow_nlte = false;
   }
-
   if (allow_nlte) {
     double nne = 0.;  // free electron density
     double nntot = 0.;
