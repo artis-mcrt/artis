@@ -25,9 +25,9 @@ auto nne_solution_f(double x, void *paras) -> double
     const double massfrac = grid::modelgrid[modelgridindex].composition[element].abundance;
     if (massfrac > 0 && get_nions(element) > 0) {
       auto ionfractions = get_ionfractions(element, modelgridindex, x);
-
+      const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
       double elem_nne_contrib = 0.;
-      for (int ion = 0; ion < ionfractions.size(); ion++) {
+      for (int ion = 0; ion <= uppermost_ion; ion++) {
         elem_nne_contrib += (get_ionstage(element, ion) - 1) * ionfractions[ion];
       }
 
