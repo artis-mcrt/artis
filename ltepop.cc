@@ -42,7 +42,6 @@ static auto phi(const int element, const int ion, const int modelgridindex) -> d
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
 
-  double phi = 0;
   auto partfunc_ion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
   auto partfunc_upperion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion + 1];
 
@@ -89,7 +88,7 @@ static auto phi(const int element, const int ion, const int modelgridindex) -> d
 
   const double gamma_nt = NT_ON ? nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion) : 0.;
 
-  phi = (Alpha_sp + Col_rec) / (Gamma_ion + gamma_nt);
+  double phi = (Alpha_sp + Col_rec) / (Gamma_ion + gamma_nt);
 
   // Y_nt should generally be higher than the Gamma term for nebular epoch
 
@@ -406,7 +405,7 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
   } else {
     int ion = -1;
     for (ion = 0; ion < nions - 1; ion++) {
-      bool zerogamma;
+      bool zerogamma = false;
       if constexpr (!USE_LUT_PHOTOION) {
         zerogamma = iongamma_is_zero(modelgridindex, element, ion);
       } else {
