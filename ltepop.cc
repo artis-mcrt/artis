@@ -46,23 +46,25 @@ static auto phi(const int element, const int ion, const int modelgridindex) -> d
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
 
+  const bool use_lte_ratio = (globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1);
+
+  if (!use_lte_ratio && elem_has_nlte_levels(element)) {
+    // use the ratio set by the NLTE solver
+    return ionstagepop(modelgridindex, element, ion) / ionstagepop(modelgridindex, element, ion + 1) *
+           grid::get_nne(modelgridindex);
+  }
+
   auto partfunc_ion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
   auto partfunc_upperion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion + 1];
 
   const auto T_e = grid::get_Te(modelgridindex);
   /// Newest ionisation formula
 
-  const bool use_lte_ratio = (globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1);
-
   if (use_lte_ratio) {
+    // use Saha-Boltzmann ratio
     const double ionpot = epsilon(element, ion + 1, 0) - epsilon(element, ion, 0);
     const double partfunct_ratio = partfunc_ion / partfunc_upperion;
     return partfunct_ratio * SAHACONST * pow(T_e, -1.5) * exp(ionpot / KB / T_e);
-  }
-
-  if (elem_has_nlte_levels(element)) {
-    return ionstagepop(modelgridindex, element, ion) / ionstagepop(modelgridindex, element, ion + 1) *
-           grid::get_nne(modelgridindex);
   }
 
   double Gamma = 0.;
