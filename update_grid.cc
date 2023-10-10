@@ -802,8 +802,8 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
   for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++) {
     const time_t sys_time_start_spencerfano = time(nullptr);
     if (NT_ON && NT_SOLVE_SPENCERFANO) {
-      nonthermal::solve_spencerfano(n, nts,
-                                    nlte_iter);  // depends on the ionization balance, and weakly on nne
+      // SF solution depends on the ionization balance, and weakly on nne
+      nonthermal::solve_spencerfano(n, nts, nlte_iter);
     }
     const int duration_solve_spencerfano = time(nullptr) - sys_time_start_spencerfano;
 
@@ -821,16 +821,16 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
     }
     const int duration_solve_partfuncs_or_gamma = time(nullptr) - sys_time_start_partfuncs_or_gamma;
 
-    /// Find T_e as solution for thermal balance
     const double prev_T_e = grid::get_Te(n);
     const time_t sys_time_start_Te = time(nullptr);
     const int nts_for_te = (titer == 0) ? nts - 1 : nts;
 
+    /// Find T_e as solution for thermal balance
     call_T_e_finder(n, nts, globals::timesteps[nts_for_te].mid, MINTEMP, MAXTEMP, heatingcoolingrates);
 
     const int duration_solve_T_e = time(nullptr) - sys_time_start_Te;
 
-    if (!NLTE_POPS_ON) {
+    if (globals::total_nlte_levels == 0) {
       const time_t sys_time_start_pops = time(nullptr);
       calculate_ion_balance_nne(n, false);
       const int duration_solve_pops = time(nullptr) - sys_time_start_pops;
@@ -842,7 +842,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
           duration_solve_pops);
       break;  // no iteration is needed without NLTE_POPS_ON
     }
-    if (NLTE_POPS_ON) {
+    if (globals::total_nlte_levels > 0) {
       const double fracdiff_T_e = fabs((grid::get_Te(n) / prev_T_e) - 1);
       const time_t sys_time_start_nltepops = time(nullptr);
       // fractional difference between previous and current iteration's (nne or max(ground state
