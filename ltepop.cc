@@ -88,7 +88,7 @@ static auto phi(const int element, const int ion, const int modelgridindex) -> d
 
   const double gamma_nt = NT_ON ? nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion) : 0.;
 
-  double phi = (Alpha_sp + Col_rec) / (Gamma_ion + gamma_nt);
+  const double phi = (Alpha_sp + Col_rec) / (Gamma_ion + gamma_nt);
 
   // Y_nt should generally be higher than the Gamma term for nebular epoch
 
