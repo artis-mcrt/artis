@@ -1797,10 +1797,9 @@ static void assign_initial_temperatures()
 
   const double tstart = globals::timesteps[0].mid;
 
-  for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-    if (get_numassociatedcells(mgi) == 0) {
-      continue;
-    }
+  for (int nonempymgi = 0; nonempymgi < get_nonempty_npts_model(); nonempymgi++) {
+    const int mgi = get_mgi_of_nonemptymgi(nonempymgi);
+
     double decayedenergy_per_mass = decay::get_endecay_per_ejectamass_t0_to_time_withexpansion(mgi, tstart);
     if constexpr (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) {
       decayedenergy_per_mass += get_initenergyq(mgi);
