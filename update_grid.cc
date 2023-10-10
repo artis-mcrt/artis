@@ -842,6 +842,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
           duration_solve_pops);
       break;  // no iteration is needed without NLTE_POPS_ON
     }
+
     if (globals::total_nlte_levels > 0) {
       const double fracdiff_T_e = fabs((grid::get_Te(n) / prev_T_e) - 1);
       const time_t sys_time_start_nltepops = time(nullptr);
@@ -1062,8 +1063,13 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       printout("mgi %d modelgrid.thick: %d (for this grid update only)\n", mgi, grid::modelgrid[mgi].thick);
 
       calculate_cellpartfuncts(mgi);
+      if (!globals::simulation_continued_from_saved) {
+        const bool allow_nlte = globals::simulation_continued_from_saved && NLTE_POPS_ON && !globals::lte_iteration &&
+                                grid::modelgrid[mgi].thick != 1;
+        calculate_ion_balance_nne(mgi, allow_nlte);
+      }
     } else {
-      /// For all other timesteps temperature corrections have to be applied
+      // For all other timesteps temperature corrections have to be applied
 
       /// we have to calculate the electron density
       /// and all the level populations
