@@ -326,17 +326,15 @@ static auto calculate_partfunct(int element, int ion, int modelgridindex) -> dou
   double pop_store = NAN;
   // double E_level, E_ground, test;
 
-  int initial = 0;
+  bool initial = false;
   if (get_groundlevelpop(modelgridindex, element, ion) < MINPOP) {
     // either there reall is none of this ion or this is a first pass through
     // in either case, we won't have any real nlte_populations so the actual value of
     // of groundlevelpop for this calculation doesn't matter, so long as it's not zero!
     pop_store = get_groundlevelpop(modelgridindex, element, ion);
-    initial = 1;
+    initial = true;
     grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = 1.0;
   }
-
-  // printout("groundlevelpop %g\n", get_groundlevelpop(modelgridindex,element,ion));
 
   double U = 1.;
 
@@ -345,7 +343,6 @@ static auto calculate_partfunct(int element, int ion, int modelgridindex) -> dou
   for (int level = 1; level < nlevels; level++) {
     bool skipminpop = false;
     const double nn = calculate_levelpop_nominpop(modelgridindex, element, ion, level, &skipminpop) / groundpop;
-    // const double nn = get_levelpop(modelgridindex, element, ion, level) / groundpop;
     U += nn;
   }
   U *= stat_weight(element, ion, 0);
@@ -358,7 +355,7 @@ static auto calculate_partfunct(int element, int ion, int modelgridindex) -> dou
     abort();
   }
 
-  if (initial == 1) {
+  if (initial) {
     // put back the zero, just in case it matters for something
     grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = pop_store;
   }
