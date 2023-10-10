@@ -1546,12 +1546,9 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
     /// calculate number density of the current element (abundances are given by mass)
     const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
 
-    const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
-    std::vector<double> ionfractions;
+    auto ionfractions = (nnelement > 0) ? get_ionfractions(element, modelgridindex, nne) : std::vector<double>();
 
-    if (nnelement > 0) {
-      ionfractions = get_ionfractions(element, modelgridindex, nne);
-    }
+    const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
 
     /// Use ionizationfractions to calculate the groundlevel populations
     for (int ion = 0; ion < nions; ion++) {
