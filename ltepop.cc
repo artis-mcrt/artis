@@ -406,14 +406,14 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
   } else {
     int ion = -1;
     for (ion = 0; ion < nions - 1; ion++) {
-      double Gamma = 0.;
+      bool zerogamma;
       if constexpr (!USE_LUT_PHOTOION) {
-        Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
+        zerogamma = iongamma_is_zero(modelgridindex, element, ion);
       } else {
-        Gamma = globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)];
+        zerogamma = globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)] == 0;
       }
 
-      if ((Gamma == 0) &&
+      if (zerogamma &&
           (!NT_ON || ((globals::rpkt_emiss[modelgridindex] == 0.) &&
                       (grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(24, 48)) == 0.) &&
                       (grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(28, 56)) == 0.)))) {

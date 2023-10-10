@@ -1388,6 +1388,39 @@ static auto get_nlevels_important(int modelgridindex, int element, int ion, bool
   return nlevels_important;
 }
 
+auto iongamma_is_zero(const int modelgridindex, const int element, const int ion) -> bool {
+  const int nions = get_nions(element);
+  if (ion >= nions - 1) {
+    return true;
+  }
+
+  const auto T_e = grid::get_Te(modelgridindex);
+  const auto nne = grid::get_nne(modelgridindex);
+
+  for (int level = 0; level < get_nlevels(element, ion); level++) {
+    const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+    if (nnlevel == 0.) {
+      continue;
+    }
+    const int nphixstargets = get_nphixstargets(element, ion, level);
+    for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+      const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+
+      if (nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex) > 0.) {
+        return false;
+      }
+
+      const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
+      // printout("%g %g %g\n", get_levelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
+
+      if (nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans) > 0) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 auto calculate_iongamma_per_gspop(const int modelgridindex, const int element, const int ion) -> double
 // ionisation rate coefficient. multiply by get_groundlevelpop to get a rate [s^-1]
 {
