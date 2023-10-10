@@ -158,7 +158,7 @@ static auto nne_solution_f(double nne, void *paras) -> double
 
   double outersum = 0.;
   for (int element = 0; element < get_nelements(); element++) {
-    const double massfrac = grid::modelgrid[modelgridindex].composition[element].abundance;
+    const double massfrac = grid::get_elem_abundance(modelgridindex, element);
     if (massfrac > 0 && get_nions(element) > 0) {
       const auto ionfractions = get_ionfractions(element, modelgridindex, nne);
       const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
