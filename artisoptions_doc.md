@@ -9,13 +9,10 @@ constexpr int CUBOID_NCOORDGRID_X;
 constexpr int CUBOID_NCOORDGRID_Y;
 constexpr int CUBOID_NCOORDGRID_Z;
 
-// non-LTE population solver
-constexpr bool NLTE_POPS_ON;
-
 // maximum number of NLTE/Te/Spencer-Fano iterations
 constexpr int NLTEITER;
 
-// this macro function determines which levels of which ions will be treated in full NLTE (if NLTE_POPS_ON is true)
+// this macro function determines which levels of which ions will be treated in full NLTE
 // for now, all NLTE levels should be contiguous and include the ground state
 // (i.e. level indices < X should return true for some X)
 constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) { return false; }
