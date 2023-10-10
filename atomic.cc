@@ -73,9 +73,6 @@ auto is_nlte(const int element, const int ion, const int level) -> bool
 // (note this function returns true for the ground state,
 //  although it is stored separately from the excited NLTE states)
 {
-  if (!NLTE_POPS_ON) {
-    return false;
-  }
   return LEVEL_IS_NLTE(get_atomicnumber(element), get_ionstage(element, ion),
                        level);  // defined in artisoptions.h
 }
