@@ -1396,13 +1396,10 @@ static auto handle_neutral_ion_balance(const int modelgridindex) -> double {
   /// Now calculate the ground level populations in nebular approximation and store them to the
   /// grid
   double nne = 0.;
-  double nne_tot = 0.;  /// total number of electrons in grid cell which are possible
-                        /// targets for compton scattering of gamma rays
   double nntot = 0.;
   for (int element = 0; element < get_nelements(); element++) {
     /// calculate number density of the current element (abundances are given by mass)
     const auto nnelement = grid::get_elem_numberdens(modelgridindex, element);
-    nne_tot += nnelement * get_atomicnumber(element);
 
     const int nions = get_nions(element);
     /// Assign the species population to the neutral ion and set higher ions to MINPOP
@@ -1430,7 +1427,6 @@ static auto handle_neutral_ion_balance(const int modelgridindex) -> double {
   nntot += nne;
   nne = std::max(MINPOP, nne);
   grid::set_nne(modelgridindex, nne);
-  grid::set_nnetot(modelgridindex, nne_tot);
   return nntot;
 }
 
@@ -1438,15 +1434,22 @@ auto calculate_ion_balance_nne(const int modelgridindex, const bool allow_nlte) 
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
+  // targets for compton scattering of gamma rays
+  double nnetot = 0.;  /// total number of electrons in grid cell which are possible
+                       /// targets for compton scattering of gamma rays
+  for (int element = 0; element < get_nelements(); element++) {
+    const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
+    nnetot += nnelement * get_atomicnumber(element);
+  }
+  grid::set_nnetot(modelgridindex, nnetot);
+
   if (allow_nlte) {
-    double nne_tot = 0.;  // total electron density
-    double nne = 0.;      // free electron density
+    double nne = 0.;  // free electron density
     double nntot = 0.;
 
     for (int element = 0; element < get_nelements(); element++) {
       // calculate number density of the current element (abundances are given by mass)
       const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
-      nne_tot += nnelement * get_atomicnumber(element);
 
       // Use ionization fractions to calculate the free electron contributions
       if (nnelement > 0) {
@@ -1462,7 +1465,6 @@ auto calculate_ion_balance_nne(const int modelgridindex, const bool allow_nlte) 
     nntot += nne;
 
     grid::set_nne(modelgridindex, nne);
-    grid::set_nnetot(modelgridindex, nne_tot);
     return nntot;
   }
 
@@ -1543,14 +1545,11 @@ auto calculate_ion_balance_nne(const int modelgridindex, const bool allow_nlte) 
 
   /// Now calculate the ground level populations in nebular approximation and store them to the
   /// grid
-  double nne_tot = 0.;  /// total number of electrons in grid cell which are possible
-                        /// targets for compton scattering of gamma rays
   double nntot = nne;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     /// calculate number density of the current element (abundances are given by mass)
     const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
-    nne_tot += nnelement * get_atomicnumber(element);
 
     const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
     std::vector<double> ionfractions;
@@ -1585,6 +1584,5 @@ auto calculate_ion_balance_nne(const int modelgridindex, const bool allow_nlte) 
     }
   }
 
-  grid::set_nnetot(modelgridindex, nne_tot);
   return nntot;
 }
