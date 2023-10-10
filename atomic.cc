@@ -234,14 +234,9 @@ auto get_nlevels(const int element, const int ion) -> int
 }
 
 auto elem_has_nlte_levels(const int element) -> bool {
-  if constexpr (!NLTE_POPS_ON) {
-    return false;
-  }
   for (int ion = 0; ion < get_nions(element); ++ion) {
-    for (int level = 1; level < get_nlevels(element, ion); level++) {
-      if (is_nlte(element, ion, level)) {
-        return true;
-      }
+    if (get_nlevels_nlte(element, ion) > 0) {
+      return true;
     }
   }
   return false;
