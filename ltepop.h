@@ -17,5 +17,6 @@ double get_levelpop(int modelgridindex, int element, int ion, int level);
 double calculate_levelpop(int modelgridindex, int element, int ion, int level);
 double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
 double ionstagepop(int modelgridindex, int element, int ion);
+double calculate_ion_balance_nne(int modelgridindex);
 
 #endif  // LTEPOP_H
