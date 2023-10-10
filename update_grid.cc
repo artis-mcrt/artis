@@ -842,9 +842,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
           "%ds, T_e %ds, populations %ds\n",
           n, nts, duration_solve_spencerfano, duration_solve_partfuncs_or_gamma, duration_solve_T_e,
           duration_solve_pops);
-    }
-
-    if (NLTE_POPS_ON) {
+    } else {
       const double fracdiff_T_e = fabs((grid::get_Te(n) / prev_T_e) - 1);
       const time_t sys_time_start_nltepops = time(nullptr);
       // fractional difference between previous and current iteration's (nne or max(ground state
@@ -884,7 +882,8 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
             "last iteration\n",
             nlte_iter + 1);
       }
-    } else {
+    }
+    else {
       break;  // no iteration is needed without NLTE_POPS_ON
     }
   }
