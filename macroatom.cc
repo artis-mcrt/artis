@@ -24,9 +24,9 @@ constexpr bool LOG_MACROATOM = false;
 static FILE *macroatom_file = nullptr;
 
 static void calculate_macroatom_transitionrates(const int modelgridindex, const int element, const int ion,
-                                                const int level, const double t_mid, struct chlevels *const chlevel) {
+                                                const int level, const double t_mid, struct chlevels &chlevel) {
   // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
-  double *processrates = chlevel->processrates;
+  auto &processrates = chlevel.processrates;
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, ion, level);
@@ -60,8 +60,8 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
     processrates[MA_ACTION_COLDEEXC] += individ_col_deexc;
     processrates[MA_ACTION_INTERNALDOWNSAME] += individ_internal_down_same;
 
-    chlevel->sum_epstrans_rad_deexc[i] = processrates[MA_ACTION_RADDEEXC];
-    chlevel->sum_internal_down_same[i] = processrates[MA_ACTION_INTERNALDOWNSAME];
+    chlevel.sum_epstrans_rad_deexc[i] = processrates[MA_ACTION_RADDEEXC];
+    chlevel.sum_internal_down_same[i] = processrates[MA_ACTION_INTERNALDOWNSAME];
 
     // printout("checking downtrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,lower,R,C,epsilon_trans);
   }
@@ -108,7 +108,7 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
     const double individ_internal_up_same = (R + C + NT) * epsilon_current;
 
     processrates[MA_ACTION_INTERNALUPSAME] += individ_internal_up_same;
-    chlevel->sum_internal_up_same[i] = processrates[MA_ACTION_INTERNALUPSAME];
+    chlevel.sum_internal_up_same[i] = processrates[MA_ACTION_INTERNALUPSAME];
   }
 
   assert_always(std::isfinite(processrates[MA_ACTION_INTERNALUPSAME]));
@@ -397,8 +397,8 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
 
     assert_testmodeonly(globals::cellhistory[tid].cellnumber == modelgridindex);
 
-    struct chlevels *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
-    const double *processrates = chlevel->processrates;
+    auto &chlevel = globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
+    auto &processrates = chlevel.processrates;
     /// If there are no precalculated rates available then calculate them
     if (processrates[MA_ACTION_COLDEEXC] < 0) {
       calculate_macroatom_transitionrates(modelgridindex, element, ion, level, t_mid, chlevel);

@@ -174,7 +174,7 @@ using chphixstargets_t = struct _chphixstargets<SEPARATE_STIMRECOMB>;
 #include "macroatom.h"
 
 struct chlevels {
-  double processrates[MA_ACTION_COUNT];
+  std::array<double, MA_ACTION_COUNT> processrates;
   chphixstargets_t *chphixstargets;
   double bfheatingcoeff;
   double population;
