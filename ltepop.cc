@@ -206,15 +206,14 @@ auto calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
 
-  const auto groundlevelpop = get_groundlevelpop(modelgridindex, element, ion);
+  const auto nnground = get_groundlevelpop(modelgridindex, element, ion);
   if (level == 0) {
-    return groundlevelpop;
+    return nnground;
   }
 
-  const double T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(modelgridindex) : grid::get_Te(modelgridindex);
+  const auto T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(modelgridindex) : grid::get_Te(modelgridindex);
 
   const double E_aboveground = epsilon(element, ion, level) - epsilon(element, ion, 0);
-  const double nnground = groundlevelpop;
 
   return (nnground * stat_weight(element, ion, level) / stat_weight(element, ion, 0) *
           exp(-E_aboveground / KB / T_exc));
@@ -469,7 +468,7 @@ static void set_groundlevelpops(const int modelgridindex, const float nne, bool 
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     if ((allow_nlte && elem_has_nlte_levels(element)) || nions == 0) {
-      // ion ground level populations are set by NLTE solver
+      // element's ground level populations were already set by the NLTE solver
       continue;
     }
 
