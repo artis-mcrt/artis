@@ -460,7 +460,7 @@ static auto calculate_nne(const int modelgridindex) -> float {
   return std::max(MINPOP, nne);
 }
 
-static void set_groundlevelpops(const int modelgridindex) {
+static void set_groundlevelpops(const int modelgridindex, const float nne) {
   /// Now calculate the ground level populations in nebular approximation and store them to the
   /// grid
   for (int element = 0; element < get_nelements(); element++) {
@@ -472,9 +472,8 @@ static void set_groundlevelpops(const int modelgridindex) {
     /// calculate number density of the current element (abundances are given by mass)
     const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
 
-    const auto ionfractions = (nnelement > 0)
-                                  ? calculate_ionfractions(element, modelgridindex, grid::get_nne(modelgridindex))
-                                  : std::vector<double>();
+    const auto ionfractions =
+        (nnelement > 0) ? calculate_ionfractions(element, modelgridindex, nne) : std::vector<double>();
 
     const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
 
@@ -535,7 +534,7 @@ static void set_groundlevelpops_neutral(const int modelgridindex) {
   }
 }
 
-static void solve_for_nne(const int modelgridindex, double nne_hi) {
+static auto find_converged_nne(const int modelgridindex, double nne_hi) -> float {
   /// Search solution for nne in [nne_lo,nne_hi]
 
   struct nne_solution_paras paras = {.modelgridindex = modelgridindex};
@@ -588,9 +587,7 @@ static void solve_for_nne(const int modelgridindex, double nne_hi) {
 
   gsl_root_fsolver_free(solver);
 
-  nne_solution = std::max(MINPOP, nne_solution);
-
-  grid::set_nne(modelgridindex, nne_solution);
+  return std::max(MINPOP, nne_solution);
 }
 
 auto calculate_ion_balance_nne(const int modelgridindex) -> void
@@ -601,11 +598,13 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void
       (globals::total_nlte_levels > 0) && !globals::lte_iteration && (grid::modelgrid[modelgridindex].thick != 1);
 
   if (allow_nlte) {
+    // TODO: allow the converged nne solver to run in case some elements are LTE/quasi-LTE, but hopefully it won't
+    // change anything
     grid::set_nne(modelgridindex, calculate_nne(modelgridindex));
     return;
   }
 
-  double nne_hi = grid::get_rho(modelgridindex) / MH;
+  const double nne_hi = grid::get_rho(modelgridindex) / MH;
 
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {
@@ -623,14 +622,12 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void
 
   if (only_lowest_ionstage) {
     set_groundlevelpops_neutral(modelgridindex);
+  } else {
+    const auto nne_solution = find_converged_nne(modelgridindex, nne_hi);
+    grid::set_nne(modelgridindex, nne_solution);
 
-    grid::set_nne(modelgridindex, calculate_nne(modelgridindex));
-    return;
+    set_groundlevelpops(modelgridindex, nne_solution);
   }
-
-  solve_for_nne(modelgridindex, nne_hi);
-
-  set_groundlevelpops(modelgridindex);
 
   grid::set_nne(modelgridindex, calculate_nne(modelgridindex));
 }
