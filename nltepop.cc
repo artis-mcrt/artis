@@ -864,10 +864,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   gsl_vector *const balance_vector = gsl_vector_calloc(nlte_dimension);
 
-  if (balance_vector == nullptr) {
-    printout("Cannot allocate NLTE rate matrix/balance vector memory.\n");
-    abort();
-  }
+  assert_always(balance_vector != nullptr);
 
   // printout("  Adding rates for ion stages:");
   for (int ion = 0; ion < nions; ion++) {
