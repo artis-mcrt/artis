@@ -1,6 +1,7 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#include <atomic>
 #include <memory>
 #include <vector>
 

@@ -5,8 +5,6 @@
 #include <mpi.h>
 #endif
 
-#include <atomic>
-
 namespace globals {
 
 double syn_dir[3];  // vector pointing from origin to observer
