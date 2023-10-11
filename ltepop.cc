@@ -47,8 +47,8 @@ static auto phi(const int element, const int ion, const int modelgridindex) -> d
   assert_testmodeonly(ion < get_nions(element));
 
   const bool use_lte_ratio = (globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1);
-  const bool element_is_nlte = elem_has_nlte_levels(element);
-  if (!use_lte_ratio && element_is_nlte) {
+  const bool element_is_nlte = !use_lte_ratio && elem_has_nlte_levels(element);
+  if (element_is_nlte) {
     // use the ratio set by the NLTE solver
     return ionstagepop(modelgridindex, element, ion) / ionstagepop(modelgridindex, element, ion + 1) *
            grid::get_nne(modelgridindex);
