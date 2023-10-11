@@ -73,6 +73,8 @@ auto main(int argc, char *argv[]) -> int {
     snprintf(filename, MAXFILENAMELENGTH, "exspec.txt");
     output_file = fopen_required(filename, "w");
     setvbuf(output_file, nullptr, _IOLBF, 1);
+  } else {
+    output_file = stdout;
   }
 
   printout("git branch %s\n", GIT_BRANCH);
