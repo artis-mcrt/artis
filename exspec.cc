@@ -111,7 +111,6 @@ auto main(int argc, char *argv[]) -> int {
   printout("time after input %ld\n", time(nullptr));
   // nprocs_exspec is the number of rank output files to process with expec
   // however, we might be running exspec with 1 or just a few ranks
-  globals::nprocs = globals::nprocs_exspec;
 
   auto *pkts = static_cast<struct packet *>(malloc(globals::nprocs_exspec * globals::npkts * sizeof(struct packet)));
   const bool load_allrank_packets = (pkts != nullptr);
