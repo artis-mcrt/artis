@@ -281,7 +281,7 @@ extern int node_count;
 extern int node_id;
 
 extern const int npkts;
-extern int nesc;
+extern std::atomic<int> nesc;
 
 extern double vmax;
 extern double rmax;
