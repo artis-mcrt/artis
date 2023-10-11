@@ -38,6 +38,17 @@ static auto interpolate_ions_spontrecombcoeff(const int element, const int ion, 
   return globals::elements[element].ions[ion].Alpha_sp[TABLESIZE - 1];
 }
 
+static auto phi_lte(const int element, const int ion, const int modelgridindex) -> double {
+  // use Saha equation for LTE ionization balance
+  auto partfunc_ion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
+  auto partfunc_upperion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion + 1];
+
+  const auto T_e = grid::get_Te(modelgridindex);
+  const double ionpot = epsilon(element, ion + 1, 0) - epsilon(element, ion, 0);
+  const double partfunct_ratio = partfunc_ion / partfunc_upperion;
+  return partfunct_ratio * SAHACONST * pow(T_e, -1.5) * exp(ionpot / KB / T_e);
+}
+
 static auto phi(const int element, const int ion, const int modelgridindex) -> double
 /// Calculates population ratio (a saha factor) of two consecutive ionisation stages
 /// in nebular approximation phi_j,k* = N_j,k*/(N_j+1,k* * nne)
@@ -46,9 +57,11 @@ static auto phi(const int element, const int ion, const int modelgridindex) -> d
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
 
-  const bool use_lte_ratio = (globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1);
+  if (globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1) {
+    return phi_lte(element, ion, modelgridindex);
+  }
 
-  if (!use_lte_ratio && elem_has_nlte_levels(element)) {
+  if (elem_has_nlte_levels(element)) {
     // use the ratio set by the NLTE solver
     return ionstagepop(modelgridindex, element, ion) / ionstagepop(modelgridindex, element, ion + 1) *
            grid::get_nne(modelgridindex);
@@ -58,14 +71,6 @@ static auto phi(const int element, const int ion, const int modelgridindex) -> d
   auto partfunc_upperion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion + 1];
 
   const auto T_e = grid::get_Te(modelgridindex);
-  /// Newest ionisation formula
-
-  if (use_lte_ratio) {
-    // use Saha-Boltzmann ratio
-    const double ionpot = epsilon(element, ion + 1, 0) - epsilon(element, ion, 0);
-    const double partfunct_ratio = partfunc_ion / partfunc_upperion;
-    return partfunct_ratio * SAHACONST * pow(T_e, -1.5) * exp(ionpot / KB / T_e);
-  }
 
   double Gamma = 0.;
   if constexpr (USE_LUT_PHOTOION) {
