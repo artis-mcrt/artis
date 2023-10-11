@@ -310,6 +310,8 @@ extern bool lte_iteration;
 extern int n_kpktdiffusion_timesteps;
 extern float kpktdiffusion_timescale;
 
+void setup_mpi_vars();
+
 }  // namespace globals
 
 #endif  // GLOBALS_H
