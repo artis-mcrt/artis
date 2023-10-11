@@ -460,74 +460,82 @@ static auto calculate_nne(const int modelgridindex) -> float {
   return std::max(MINPOP, nne);
 }
 
-auto calculate_ion_balance_nne(const int modelgridindex) -> void
-/// Determines the electron number density for a given cell using one of
-/// libgsl's root_solvers and calculates the depending level populations.
-{
-  const bool allow_nlte =
-      (globals::total_nlte_levels > 0) && !globals::lte_iteration && (grid::modelgrid[modelgridindex].thick != 1);
-
-  if (allow_nlte) {
-    grid::set_nne(modelgridindex, calculate_nne(modelgridindex));
-    return;
-  }
-
-  double nne_hi = grid::get_rho(modelgridindex) / MH;
-
-  bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
+static void set_groundlevelpops(const int modelgridindex) {
+  /// Now calculate the ground level populations in nebular approximation and store them to the
+  /// grid
   for (int element = 0; element < get_nelements(); element++) {
-    if (grid::get_elem_abundance(modelgridindex, element) > 0) {
-      const int uppermost_ion = (allow_nlte && elem_has_nlte_levels(element))
-                                    ? get_nions(element) - 1
-                                    : find_uppermost_ion(modelgridindex, element, nne_hi);
-      grid::set_elements_uppermost_ion(modelgridindex, element, uppermost_ion);
-
-      only_lowest_ionstage = only_lowest_ionstage && (uppermost_ion <= 0);
-    } else {
-      grid::set_elements_uppermost_ion(modelgridindex, element, get_nions(element) - 1);
+    const int nions = get_nions(element);
+    if (elem_has_nlte_levels(element) || nions == 0) {
+      continue;
     }
-  }
 
-  if (only_lowest_ionstage) {
-    /// Special case of only neutral ions, set nne to some finite value that
-    /// packets are not lost in kpkts
-    /// Introduce a flag variable which is sent to the T_e solver so that
-    /// we get this info only once when T_e is converged and not for each
-    /// iteration step.
-    printout("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex %d\n", modelgridindex);
-    /// Now calculate the ground level populations in nebular approximation and store them to the
-    /// grid
-    for (int element = 0; element < get_nelements(); element++) {
-      /// calculate number density of the current element (abundances are given by mass)
-      const auto nnelement = grid::get_elem_numberdens(modelgridindex, element);
-      const int nions = get_nions(element);
-      /// Assign the species population to the neutral ion and set higher ions to MINPOP
-      for (int ion = 0; ion < nions; ion++) {
-        double nnion = NAN;
-        if (ion == 0) {
-          nnion = nnelement;
-        } else if (nnelement > 0.) {
-          nnion = MINPOP;
+    /// calculate number density of the current element (abundances are given by mass)
+    const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
+
+    const auto ionfractions = (nnelement > 0)
+                                  ? calculate_ionfractions(element, modelgridindex, grid::get_nne(modelgridindex))
+                                  : std::vector<double>();
+
+    const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
+
+    /// Use ionizationfractions to calculate the groundlevel populations
+    for (int ion = 0; ion < nions; ion++) {
+      double nnion = NAN;
+      if (ion <= uppermost_ion) {
+        if (nnelement > 0) {
+          nnion = std::max(MINPOP, nnelement * ionfractions[ion]);
         } else {
           nnion = 0.;
         }
-        const double groundpop = (nnion * stat_weight(element, ion, 0) /
-                                  grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
-
-        if (!std::isfinite(groundpop)) {
-          printout(
-              "[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with "
-              "MINPOP\n");
-        }
-
-        grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
+      } else {
+        nnion = MINPOP;
       }
+
+      const double groundpop =
+          (nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
+
+      if (!std::isfinite(groundpop)) {
+        printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
+      }
+
+      grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
     }
-
-    grid::set_nne(modelgridindex, calculate_nne(modelgridindex));
-    return;
   }
+}
 
+static void set_groundlevelpops_neutral(const int modelgridindex) {
+  /// Special case of only neutral ions, set nne to some finite value that
+  /// packets are not lost in kpkts
+  printout("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex %d\n", modelgridindex);
+  /// Now calculate the ground level populations in nebular approximation and store them to the
+  /// grid
+  for (int element = 0; element < get_nelements(); element++) {
+    /// calculate number density of the current element (abundances are given by mass)
+    const auto nnelement = grid::get_elem_numberdens(modelgridindex, element);
+    const int nions = get_nions(element);
+    /// Assign the species population to the neutral ion and set higher ions to MINPOP
+    for (int ion = 0; ion < nions; ion++) {
+      double nnion = NAN;
+      if (ion == 0) {
+        nnion = nnelement;
+      } else if (nnelement > 0.) {
+        nnion = MINPOP;
+      } else {
+        nnion = 0.;
+      }
+      const double groundpop =
+          (nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
+
+      if (!std::isfinite(groundpop)) {
+        printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
+      }
+
+      grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
+    }
+  }
+}
+
+static void solve_for_nne(const int modelgridindex, double nne_hi) {
   /// Search solution for nne in [nne_lo,nne_hi]
 
   struct nne_solution_paras paras = {.modelgridindex = modelgridindex};
@@ -583,43 +591,46 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void
   nne_solution = std::max(MINPOP, nne_solution);
 
   grid::set_nne(modelgridindex, nne_solution);
+}
 
-  /// Now calculate the ground level populations in nebular approximation and store them to the
-  /// grid
+auto calculate_ion_balance_nne(const int modelgridindex) -> void
+/// Determines the electron number density for a given cell using one of
+/// libgsl's root_solvers and calculates the depending level populations.
+{
+  const bool allow_nlte =
+      (globals::total_nlte_levels > 0) && !globals::lte_iteration && (grid::modelgrid[modelgridindex].thick != 1);
+
+  if (allow_nlte) {
+    grid::set_nne(modelgridindex, calculate_nne(modelgridindex));
+    return;
+  }
+
+  double nne_hi = grid::get_rho(modelgridindex) / MH;
+
+  bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    /// calculate number density of the current element (abundances are given by mass)
-    const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
+    if (grid::get_elem_abundance(modelgridindex, element) > 0) {
+      const int uppermost_ion = (allow_nlte && elem_has_nlte_levels(element))
+                                    ? get_nions(element) - 1
+                                    : find_uppermost_ion(modelgridindex, element, nne_hi);
+      grid::set_elements_uppermost_ion(modelgridindex, element, uppermost_ion);
 
-    const auto ionfractions = (nnelement > 0)
-                                  ? calculate_ionfractions(element, modelgridindex, grid::get_nne(modelgridindex))
-                                  : std::vector<double>();
-
-    const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
-
-    /// Use ionizationfractions to calculate the groundlevel populations
-    for (int ion = 0; ion < nions; ion++) {
-      double nnion = NAN;
-      if (ion <= uppermost_ion) {
-        if (nnelement > 0) {
-          nnion = std::max(MINPOP, nnelement * ionfractions[ion]);
-        } else {
-          nnion = 0.;
-        }
-      } else {
-        nnion = MINPOP;
-      }
-
-      const double groundpop =
-          (nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
-
-      if (!std::isfinite(groundpop)) {
-        printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
-      }
-
-      grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
+      only_lowest_ionstage = only_lowest_ionstage && (uppermost_ion <= 0);
+    } else {
+      grid::set_elements_uppermost_ion(modelgridindex, element, get_nions(element) - 1);
     }
   }
+
+  if (only_lowest_ionstage) {
+    set_groundlevelpops_neutral(modelgridindex);
+
+    grid::set_nne(modelgridindex, calculate_nne(modelgridindex));
+    return;
+  }
+
+  solve_for_nne(modelgridindex, nne_hi);
+
+  set_groundlevelpops(modelgridindex);
 
   grid::set_nne(modelgridindex, calculate_nne(modelgridindex));
 }
