@@ -376,7 +376,7 @@ static auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> doub
   const double total_coolingrate = heatingcoolingrates->cooling_ff + heatingcoolingrates->cooling_fb +
                                    heatingcoolingrates->cooling_collisional + heatingcoolingrates->cooling_adiabatic;
 
-  return total_heating_rate - total_coolingrate;  // - 0.01*(heatingrates_thisthread->bf+coolingrates[tid].fb)/2;
+  return total_heating_rate - total_coolingrate;
 }
 
 void call_T_e_finder(const int modelgridindex, const int timestep, const double t_current, const double T_min,
