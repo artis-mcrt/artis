@@ -162,12 +162,10 @@ static auto nne_solution_f(double nne_assumed, void *paras) -> double
     if (nnelement > 0 && get_nions(element) > 0) {
       const auto ionfractions = calculate_ionfractions(element, modelgridindex, nne_assumed);
       const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
-      double elem_nne_contrib = 0.;
       for (int ion = 0; ion <= uppermost_ion; ion++) {
         const double nnion = nnelement * ionfractions[ion];
         const int ioncharge = get_ionstage(element, ion) - 1;
         nne_after += ioncharge * nnion;
-        elem_nne_contrib += (get_ionstage(element, ion) - 1) * ionfractions[ion];
       }
 
       if (!std::isfinite(nne_after)) {
