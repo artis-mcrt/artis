@@ -405,8 +405,11 @@ auto ionstagepop(int modelgridindex, int element, int ion) -> double
 }
 
 static auto find_uppermost_ion(const int modelgridindex, const int element, const double nne_hi) -> int {
-  int uppermost_ion = 0;
   const int nions = get_nions(element);
+  if (nions == 0) {
+    return -1;
+  }
+  int uppermost_ion = 0;
   if (globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1) {
     uppermost_ion = nions - 1;
   } else {
