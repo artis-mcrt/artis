@@ -111,6 +111,7 @@ auto main(int argc, char *argv[]) -> int {
   printout("time before input %ld\n", time(nullptr));
   input(globals::rank_global);
   printout("time after input %ld\n", time(nullptr));
+
   // nprocs_exspec is the number of rank output files to process with expec
   // however, we might be running exspec with 1 or just a few ranks
 
@@ -278,7 +279,6 @@ auto main(int argc, char *argv[]) -> int {
 
   free(pkts);
   decay::cleanup();
-
   printout("exspec finished at %ld (tstart + %ld seconds)\n", time(nullptr), time(nullptr) - sys_time_start);
 
   if (output_file != nullptr) {
