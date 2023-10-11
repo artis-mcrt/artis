@@ -1,6 +1,7 @@
 #include "stats.h"
 
-#include <cstdint>
+#include <atomic>
+#include <vector>
 
 #include "atomic.h"
 #include "globals.h"
@@ -11,21 +12,19 @@
 namespace stats {
 
 static double *ionstats = nullptr;
-static int *eventstats = nullptr;
+static std::array<std::atomic<int>, COUNTER_COUNT> eventstats;
 
 void init() {
   if constexpr (TRACK_ION_STATS) {
     ionstats =
         static_cast<double *>(malloc(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT * sizeof(double)));
   }
-  eventstats = static_cast<int *>(malloc(COUNTER_COUNT * sizeof(int)));
 }
 
 void cleanup() {
   if constexpr (TRACK_ION_STATS) {
     free(ionstats);
   }
-  free(eventstats);
 }
 
 void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype,
