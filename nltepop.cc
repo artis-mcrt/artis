@@ -1146,7 +1146,7 @@ void nltepop_close_file() {
 }
 
 void nltepop_write_to_file(const int modelgridindex, const int timestep) {
-  if (globals::lte_iteration) {  // NLTE solver hasn't been run yet
+  if (globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1) {  // NLTE solver hasn't been run yet
     return;
   }
 
