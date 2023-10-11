@@ -520,12 +520,12 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
           nnion = 0.;
         }
         nntot += nnion;
+        const double groundpop = (nnion * stat_weight(element, ion, 0) /
+                                  grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
         nne += nnion * (get_ionstage(element, ion) - 1);
-        grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] =
-            (nnion * stat_weight(element, ion, 0) /
-             grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
+        grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
 
-        if (!std::isfinite(grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) {
+        if (!std::isfinite(groundpop)) {
           printout(
               "[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with "
               "MINPOP\n");
@@ -618,10 +618,11 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
       } else {
         nnion = MINPOP;
       }
-      nntot += nnion;
 
       const double groundpop =
           (nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
+
+      nntot += nnion;
 
       if (!std::isfinite(groundpop)) {
         printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
