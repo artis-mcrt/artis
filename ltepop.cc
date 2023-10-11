@@ -439,9 +439,8 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
   return uppermost_ion;
 }
 
-static auto calculate_nntot_nne(const int modelgridindex) -> double {
+static auto calculate_nne(const int modelgridindex) -> float {
   double nne = 0.;  // free electron density
-  double nntot = 0.;
 
   for (int element = 0; element < get_nelements(); element++) {
     // calculate number density of the current element (abundances are given by mass)
@@ -454,18 +453,14 @@ static auto calculate_nntot_nne(const int modelgridindex) -> double {
         const auto nnion = ionstagepop(modelgridindex, element, ion);
         const int ioncharge = get_ionstage(element, ion) - 1;
         nne += ioncharge * nnion;
-        nntot += nnion;
       }
     }
   }
-  nntot += nne;
 
-  nne = std::max(MINPOP, nne);
-  grid::set_nne(modelgridindex, nne);
-  return nntot;
+  return std::max(MINPOP, nne);
 }
 
-auto calculate_ion_balance_nne(const int modelgridindex) -> double
+auto calculate_ion_balance_nne(const int modelgridindex) -> void
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
@@ -473,7 +468,8 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
       (globals::total_nlte_levels > 0) && !globals::lte_iteration && (grid::modelgrid[modelgridindex].thick != 1);
 
   if (allow_nlte) {
-    return calculate_nntot_nne(modelgridindex);
+    grid::set_nne(modelgridindex, calculate_nne(modelgridindex));
+    return;
   }
 
   double nne_hi = grid::get_rho(modelgridindex) / MH;
@@ -501,8 +497,6 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
     printout("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex %d\n", modelgridindex);
     /// Now calculate the ground level populations in nebular approximation and store them to the
     /// grid
-    double nne = 0.;
-    double nntot = 0.;  // total density of ions and free electrons
     for (int element = 0; element < get_nelements(); element++) {
       /// calculate number density of the current element (abundances are given by mass)
       const auto nnelement = grid::get_elem_numberdens(modelgridindex, element);
@@ -517,7 +511,6 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
         } else {
           nnion = 0.;
         }
-        nntot += nnion;
         const double groundpop = (nnion * stat_weight(element, ion, 0) /
                                   grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
 
@@ -528,16 +521,11 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
         }
 
         grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
-
-        nnion = ionstagepop(modelgridindex, element, ion);  // recover nnion with roundoff error included
-
-        nne += nnion * (get_ionstage(element, ion) - 1);
       }
     }
-    nntot += nne;
-    nne = std::max(MINPOP, nne);
-    grid::set_nne(modelgridindex, nne);
-    return nntot;
+
+    grid::set_nne(modelgridindex, calculate_nne(modelgridindex));
+    return;
   }
 
   /// Search solution for nne in [nne_lo,nne_hi]
@@ -598,8 +586,6 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
 
   /// Now calculate the ground level populations in nebular approximation and store them to the
   /// grid
-  double nntot = 0.;
-  double nne = 0.;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     /// calculate number density of the current element (abundances are given by mass)
@@ -632,16 +618,8 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
       }
 
       grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
-
-      nnion = ionstagepop(modelgridindex, element, ion);  // recover nnion with roundoff error included
-
-      nntot += nnion;
-      const int ioncharge = get_ionstage(element, ion) - 1;
-      nne += ioncharge * nnion;
     }
   }
-  nntot += nne;
-  grid::set_nne(modelgridindex, nne);
 
-  return nntot;
+  grid::set_nne(modelgridindex, calculate_nne(modelgridindex));
 }
