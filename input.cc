@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <memory>
 #include <ranges>
 #include <sstream>
 #include <vector>
@@ -2033,7 +2034,7 @@ void time_init()
   /// t=globals::tmin is the start of the calculation. t=globals::tmax is the end of the calculation.
   /// globals::ntimesteps is the number of time steps
 
-  globals::timesteps = static_cast<struct time *>(malloc((globals::ntimesteps + 1) * sizeof(struct time)));
+  globals::timesteps = std::make_unique<struct time[]>(globals::ntimesteps + 1);
 
   /// Now set the individual time steps
   switch (TIMESTEP_SIZE_METHOD) {
