@@ -834,7 +834,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       modelgridindex, timestep, nlte_iter, atomic_number, grid::get_elem_abundance(modelgridindex, element), nnelement);
 
   auto superlevel_partfunc = std::vector<double>(nions) = get_element_superlevelpartfuncs(modelgridindex, element);
-  const size_t nlte_dimension = get_element_nlte_dimension(element);
+  const int nlte_dimension = get_element_nlte_dimension(element);
 
   // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
