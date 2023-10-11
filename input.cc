@@ -1918,10 +1918,6 @@ void read_parameterfile(int rank)
   /// for exspec: read number of MPI tasks
   assert_always(get_noncommentline(file, line));
   std::istringstream(line) >> globals::nprocs_exspec;
-  // for a new simulation, nprocs_exspec is set to nprocs
-  if (!globals::simulation_continued_from_saved) {
-    globals::nprocs_exspec = globals::nprocs;
-  }
 
   /// Extract line-of-sight dependent information of last emission for spectrum_res
   assert_always(get_noncommentline(file, line));

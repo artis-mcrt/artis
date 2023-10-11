@@ -824,6 +824,11 @@ auto main(int argc, char *argv[]) -> int {
   assert_always(globals::chi_rpkt_cont != nullptr);
 
   input(my_rank);
+  if (globals::simulation_continued_from_saved) {
+    assert_always(globals::nprocs_exspec = globals::nprocs);
+  } else {
+    globals::nprocs_exspec = globals::nprocs;
+  }
 
   if (my_rank == 0) {
     initialise_linestat_file();
