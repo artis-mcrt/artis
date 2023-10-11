@@ -461,46 +461,40 @@ static void set_calculated_nne(const int modelgridindex) {
   grid::set_nne(modelgridindex, std::max(MINPOP, nne));
 }
 
-static void set_groundlevelpops(const int modelgridindex, const float nne, bool allow_nlte) {
+static void set_groundlevelpops(const int modelgridindex, const int element, const float nne) {
   /// Now calculate the ground level populations in nebular approximation and store them to the
   /// grid
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    if ((allow_nlte && elem_has_nlte_levels(element)) || nions == 0) {
-      // element's ground level populations were already set by the NLTE solver
-      continue;
-    }
+  const int nions = get_nions(element);
 
-    /// calculate number density of the current element (abundances are given by mass)
-    const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
+  /// calculate number density of the current element (abundances are given by mass)
+  const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
 
-    const auto ionfractions =
-        (nnelement > 0) ? calculate_ionfractions(element, modelgridindex, nne) : std::vector<double>();
+  const auto ionfractions =
+      (nnelement > 0) ? calculate_ionfractions(element, modelgridindex, nne) : std::vector<double>();
 
-    const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
+  const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
 
-    /// Use ionizationfractions to calculate the groundlevel populations
-    for (int ion = 0; ion < nions; ion++) {
-      double nnion = NAN;
-      if (ion <= uppermost_ion) {
-        if (nnelement > 0) {
-          nnion = std::max(MINPOP, nnelement * ionfractions[ion]);
-        } else {
-          nnion = 0.;
-        }
+  /// Use ionizationfractions to calculate the groundlevel populations
+  for (int ion = 0; ion < nions; ion++) {
+    double nnion = NAN;
+    if (ion <= uppermost_ion) {
+      if (nnelement > 0) {
+        nnion = std::max(MINPOP, nnelement * ionfractions[ion]);
       } else {
-        nnion = MINPOP;
+        nnion = 0.;
       }
-
-      const double groundpop =
-          nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
-
-      if (!std::isfinite(groundpop)) {
-        printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
-      }
-
-      grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
+    } else {
+      nnion = MINPOP;
     }
+
+    const double groundpop =
+        nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
+
+    if (!std::isfinite(groundpop)) {
+      printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
+    }
+
+    grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
   }
 }
 
@@ -617,7 +611,13 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void
     const auto nne_solution = find_converged_nne(modelgridindex, nne_hi);
     grid::set_nne(modelgridindex, nne_solution);
 
-    set_groundlevelpops(modelgridindex, nne_solution, allow_nlte);
+    for (int element = 0; element < get_nelements(); element++) {
+      const int nions = get_nions(element);
+      if ((!allow_nlte || !elem_has_nlte_levels(element)) && nions > 0) {
+        // element's ground level populations were not already set by the NLTE solver
+        set_groundlevelpops(modelgridindex, element, nne_solution);
+      }
+    }
   }
 
   set_calculated_nne(modelgridindex);
