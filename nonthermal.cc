@@ -47,14 +47,13 @@ namespace nonthermal {
 //   return 0.;
 // }
 
-#define STORE_NT_SPECTRUM \
-  false  // if this is on, the non-thermal energy spectrum will be kept in memory for
-         // every grid cell during packet propagation, which
-         // can take up a lot of memory for large grid sizes
-         // alternatively, just the non-thermal ionization rates can be stored
-         // but we might want to re-enable this option to incorporate
-         // non-thermal excitation rates if there are
-         // many more transitions to store than there are NT spectrum samples
+constexpr bool STORE_NT_SPECTRUM = false;  // if this is on, the non-thermal energy spectrum will be kept in memory for
+                                           // every grid cell during packet propagation, which
+                                           // can take up a lot of memory for large grid sizes
+                                           // alternatively, just the non-thermal ionization rates can be stored
+                                           // but we might want to re-enable this option to incorporate
+                                           // non-thermal excitation rates if there are
+                                           // many more transitions to store than there are NT spectrum samples
 
 // minimum number fraction of the total population to include in SF solution
 constexpr double minionfraction = 1.e-8;
