@@ -403,30 +403,35 @@ static void nltepop_reset_element(const int modelgridindex, const int element) {
   }
 }
 
-static auto get_element_nlte_dimension_and_slpartfunc(const int modelgridindex, const int element, const int nions,
-                                                      std::vector<double> &superlevel_partfunc) -> int {
-  int nlte_dimension = 0;
+static auto get_element_superlevelpartfuncs(const int modelgridindex, const int element) -> std::vector<double> {
+  const int nions = get_nions(element);
+  std::vector<double> superlevel_partfuncs(nions, 0.);
   for (int ion = 0; ion < nions; ion++) {
-    superlevel_partfunc[ion] = 0.;
-    const int nlevels_nlte = get_nlevels_nlte(element, ion);
-
-    // this is the total number of nlte_levels (i.e. the size of the
-    // storage). Our rate matrix will need to be of this dimension +2: the
-    // ground state, the "super level".
-    // If there's no super level needed then we only need +1
     if (ion_has_superlevel(element, ion)) {
-      nlte_dimension += nlevels_nlte + 2;
+      const int nlevels_nlte = get_nlevels_nlte(element, ion);
       const int nlevels = get_nlevels(element, ion);
       for (int level = nlevels_nlte + 1; level < nlevels; level++) {
-        superlevel_partfunc[ion] += superlevel_boltzmann(modelgridindex, element, ion, level);
+        superlevel_partfuncs[ion] += superlevel_boltzmann(modelgridindex, element, ion, level);
       }
-      // printout("  NLTE: including ion_stage %d, which contributes %d to the vector dimension (including superlevel
-      // with partfunc %g)\n",
-      //          get_ionstage(element, ion), nlevels_nlte + 2, superlevel_partfunc[ion]);
     } else {
-      nlte_dimension += nlevels_nlte + 1;
-      // printout("  NLTE: including ion_stage %d, which contributes %d to the vector dimension (no super level)\n",
-      //          get_ionstage(element, ion), nlevels_nlte + 1);
+      superlevel_partfuncs[ion] = 0.;
+    }
+  }
+
+  return superlevel_partfuncs;
+}
+
+static auto get_element_nlte_dimension(const int element) -> int {
+  int nlte_dimension = 0;
+  const int nions = get_nions(element);
+  for (int ion = 0; ion < nions; ion++) {
+    const int nlevels_nlte = get_nlevels_nlte(element, ion);
+
+    nlte_dimension += nlevels_nlte + 1;  // ground state is not counted in nlevels_nlte
+
+    // add super level if it exists
+    if (ion_has_superlevel(element, ion)) {
+      nlte_dimension++;
     }
   }
 
@@ -851,10 +856,8 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   // grid::set_W(modelgridindex,1.0);
   // printout("T_E %g T_R was %g, setting to 3000 \n",grid::get_Te(modelgridindex),get_TR(modelgridindex));
 
-  auto superlevel_partfunc =
-      std::vector<double>(nions);  // space is allocated for every ion, even if it does not have a superlevel
-  const int nlte_dimension =
-      get_element_nlte_dimension_and_slpartfunc(modelgridindex, element, nions, superlevel_partfunc);
+  auto superlevel_partfunc = std::vector<double>(nions) = get_element_superlevelpartfuncs(modelgridindex, element);
+  const int nlte_dimension = get_element_nlte_dimension(element);
 
   // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
