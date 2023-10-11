@@ -523,16 +523,17 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
         const double groundpop = (nnion * stat_weight(element, ion, 0) /
                                   grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
 
-        nnion = ionstagepop(modelgridindex, element, ion);  // recover nnion with roundoff error included
-
-        nne += nnion * (get_ionstage(element, ion) - 1);
-        grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
-
         if (!std::isfinite(groundpop)) {
           printout(
               "[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with "
               "MINPOP\n");
         }
+
+        grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
+
+        nnion = ionstagepop(modelgridindex, element, ion);  // recover nnion with roundoff error included
+
+        nne += nnion * (get_ionstage(element, ion) - 1);
       }
     }
     nntot += nne;
@@ -600,6 +601,7 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
   /// Now calculate the ground level populations in nebular approximation and store them to the
   /// grid
   double nntot = 0.;
+  double nnesum = 0.;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     /// calculate number density of the current element (abundances are given by mass)
@@ -625,15 +627,17 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
       const double groundpop =
           (nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
 
-      nnion = ionstagepop(modelgridindex, element, ion);  // recover nnion with roundoff error included
-
-      nntot += nnion;
-
       if (!std::isfinite(groundpop)) {
         printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
       }
 
       grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
+
+      nnion = ionstagepop(modelgridindex, element, ion);  // recover nnion with roundoff error included
+
+      nntot += nnion;
+      const int ioncharge = get_ionstage(element, ion) - 1;
+      nnesum += ioncharge * nnion;
     }
   }
   nntot += nne;
