@@ -1657,6 +1657,7 @@ static void read_grid_restart_data(const int timestep) {
   assert_always(nthreads_in == get_num_threads());
 
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
+    int pellet_decays = 0.;
     assert_always(fscanf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
                          &globals::timesteps[nts].gamma_dep, &globals::timesteps[nts].gamma_dep_pathint,
                          &globals::timesteps[nts].positron_dep, &globals::timesteps[nts].eps_positron_ana_power,
@@ -1665,7 +1666,8 @@ static void read_grid_restart_data(const int timestep) {
                          &globals::timesteps[nts].alpha_emission, &globals::timesteps[nts].eps_alpha_ana_power,
                          &globals::timesteps[nts].qdot_betaminus, &globals::timesteps[nts].qdot_alpha,
                          &globals::timesteps[nts].qdot_total, &globals::timesteps[nts].gamma_emission,
-                         &globals::timesteps[nts].cmf_lum, &globals::timesteps[nts].pellet_decays) == 16);
+                         &globals::timesteps[nts].cmf_lum, &pellet_decays) == 16);
+    globals::timesteps[nts].pellet_decays = pellet_decays;
   }
 
   int timestep_in = 0;
@@ -1746,7 +1748,7 @@ void write_grid_restart_data(const int timestep) {
             globals::timesteps[nts].alpha_emission, globals::timesteps[nts].eps_alpha_ana_power,
             globals::timesteps[nts].qdot_betaminus, globals::timesteps[nts].qdot_alpha,
             globals::timesteps[nts].qdot_total, globals::timesteps[nts].gamma_emission, globals::timesteps[nts].cmf_lum,
-            globals::timesteps[nts].pellet_decays);
+            globals::timesteps[nts].pellet_decays.load());
   }
 
   fprintf(gridsave_file, "%d ", timestep);

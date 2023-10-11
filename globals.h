@@ -11,25 +11,25 @@
 #include "artisoptions.h"
 
 struct time {
-  double start;                   // time at start of this timestep. [s]
-  double width;                   // Width of timestep. [s]
-  double mid;                     // Mid time in step - computed logarithmically. [s]
-  double gamma_dep;               // cmf gamma ray energy deposition from absorption events [erg]
-  double gamma_dep_pathint;       // cmf gamma ray energy deposition from packet trajectories [erg]
-  double positron_dep;            // cmf positron energy deposition [erg]
-  double eps_positron_ana_power;  // cmf positron KE energy generation rate analytical [erg/s]
-  double electron_dep;            // cmf electron energy deposition [erg]
-  double electron_emission;       // cmf electron KE energy generation [erg]
-  double eps_electron_ana_power;  // cmf electron KE energy generation rate analytical [erg/s]
-  double alpha_dep;               // cmf alpha energy deposition [erg]
-  double alpha_emission;          // cmf alpha KE energy generation [erg]
-  double eps_alpha_ana_power;     // cmf alpha KE energy generation rate analytical [erg/s]
-  double gamma_emission;          // gamma decay energy generation in this timestep [erg]
-  double qdot_betaminus;          // energy generation from beta-minus decays (including neutrinos) [erg/s/g]
-  double qdot_alpha;              // energy generation from alpha decays (including neutrinos) [erg/s/g]
-  double qdot_total;              // energy generation from all decays (including neutrinos) [erg/s/g]
-  double cmf_lum;                 // cmf luminosity light curve [erg]
-  int pellet_decays;              // Number of pellets that decay in this time step.
+  double start;                    // time at start of this timestep. [s]
+  double width;                    // Width of timestep. [s]
+  double mid;                      // Mid time in step - computed logarithmically. [s]
+  double gamma_dep;                // cmf gamma ray energy deposition from absorption events [erg]
+  double gamma_dep_pathint;        // cmf gamma ray energy deposition from packet trajectories [erg]
+  double positron_dep;             // cmf positron energy deposition [erg]
+  double eps_positron_ana_power;   // cmf positron KE energy generation rate analytical [erg/s]
+  double electron_dep;             // cmf electron energy deposition [erg]
+  double electron_emission;        // cmf electron KE energy generation [erg]
+  double eps_electron_ana_power;   // cmf electron KE energy generation rate analytical [erg/s]
+  double alpha_dep;                // cmf alpha energy deposition [erg]
+  double alpha_emission;           // cmf alpha KE energy generation [erg]
+  double eps_alpha_ana_power;      // cmf alpha KE energy generation rate analytical [erg/s]
+  double gamma_emission;           // gamma decay energy generation in this timestep [erg]
+  double qdot_betaminus;           // energy generation from beta-minus decays (including neutrinos) [erg/s/g]
+  double qdot_alpha;               // energy generation from alpha decays (including neutrinos) [erg/s/g]
+  double qdot_total;               // energy generation from all decays (including neutrinos) [erg/s/g]
+  double cmf_lum;                  // cmf luminosity light curve [erg]
+  std::atomic<int> pellet_decays;  // Number of pellets that decay in this time step.
 };
 
 struct bflist_t {
