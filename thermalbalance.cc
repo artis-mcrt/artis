@@ -353,17 +353,17 @@ static auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> doub
   grid::set_Te(modelgridindex, T_e);
   calculate_ion_balance_nne(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
-  const double nntot = get_nnion_tot(modelgridindex) + nne;
 
   /// Then calculate heating and cooling rates
   kpkt::calculate_cooling_rates(modelgridindex, heatingcoolingrates);
   calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates);
 
   const double nt_frac_heating = nonthermal::get_nt_frac_heating(modelgridindex);
-  heatingcoolingrates->heating_dep = nonthermal::get_deposition_rate_density(modelgridindex) * nt_frac_heating;
-  heatingcoolingrates->nt_frac_heating = nt_frac_heating;
+  heatingcoolingrates->heating_dep =
+      nonthermal::get_deposition_rate_density(modelgridindex) * heatingcoolingrates->nt_frac_heating;
 
   /// Adiabatic cooling term
+  const double nntot = get_nnion_tot(modelgridindex) + nne;
   const double p = nntot * KB * T_e;  // pressure in [erg/cm^3]
   const double volumetmin = grid::get_modelcell_assocvolume_tmin(modelgridindex);
   const double dV = 3 * volumetmin / pow(globals::tmin, 3) * pow(t_current, 2);  // really dV/dt
