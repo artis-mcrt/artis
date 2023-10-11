@@ -825,7 +825,7 @@ auto main(int argc, char *argv[]) -> int {
 
   input(my_rank);
   if (globals::simulation_continued_from_saved) {
-    assert_always(globals::nprocs_exspec = globals::nprocs);
+    assert_always(globals::nprocs_exspec == globals::nprocs);
   } else {
     globals::nprocs_exspec = globals::nprocs;
   }
