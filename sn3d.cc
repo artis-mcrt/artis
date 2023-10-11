@@ -732,9 +732,8 @@ auto main(int argc, char *argv[]) -> int {
   globals::node_count = 0;
 #endif
 
-  const int my_rank = globals::rank_global;
-
-  if (my_rank == 0) {
+  globals::startofline = std::make_unique<bool[]>(get_max_threads());
+  if (globals::rank_global == 0) {
     check_already_running();
   }
 
@@ -743,7 +742,7 @@ auto main(int argc, char *argv[]) -> int {
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  globals::startofline = std::make_unique<bool[]>(get_max_threads());
+  const int my_rank = globals::rank_global;
 
 #ifdef _OPENMP
   /// Explicitly turn off dynamic threads because we use the threadprivate directive!!!

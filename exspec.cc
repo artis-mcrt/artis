@@ -57,7 +57,6 @@ auto main(int argc, char *argv[]) -> int {
   globals::node_id = 0;
   globals::node_count = 0;
 #endif
-  char filename[MAXFILENAMELENGTH];
 
   globals::startofline = std::make_unique<bool[]>(get_max_threads());
   if (globals::rank_global == 0) {
@@ -69,12 +68,13 @@ auto main(int argc, char *argv[]) -> int {
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
+  char filename[MAXFILENAMELENGTH];
   if (globals::rank_global == 0) {
     snprintf(filename, MAXFILENAMELENGTH, "exspec.txt");
     output_file = fopen_required(filename, "w");
     setvbuf(output_file, nullptr, _IOLBF, 1);
   } else {
-    output_file = stdout;
+    output_file = nullptr;
   }
 
   printout("git branch %s\n", GIT_BRANCH);
