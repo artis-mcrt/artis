@@ -697,7 +697,10 @@ auto main(int argc, char *argv[]) -> int {
     nvpkt_esc3 = 0;
   }
 
+#ifdef MPI_ON
   MPI_Init(&argc, &argv);
+#endif
+
   globals::setup_mpi_vars();
 
   globals::startofline = std::make_unique<bool[]>(get_max_threads());

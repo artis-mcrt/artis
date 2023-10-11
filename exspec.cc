@@ -153,7 +153,10 @@ static void do_angle_bin(const int a, packet *pkts, bool load_allrank_packets, s
 auto main(int argc, char *argv[]) -> int {
   const time_t sys_time_start = time(nullptr);
 
+#ifdef MPI_ON
   MPI_Init(&argc, &argv);
+#endif
+
   globals::setup_mpi_vars();
 
   globals::startofline = std::make_unique<bool[]>(get_max_threads());
