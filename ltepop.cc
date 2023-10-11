@@ -571,7 +571,7 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
     }
   }
 
-  double nne = 0.;
+  double nne_solution = 0.;
 
   gsl_root_fsolver *solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
 
@@ -582,7 +582,7 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
   int iter = 0;
   for (iter = 0; iter <= maxit; iter++) {
     gsl_root_fsolver_iterate(solver);
-    nne = gsl_root_fsolver_root(solver);
+    nne_solution = gsl_root_fsolver_root(solver);
     nne_lo = gsl_root_fsolver_x_lower(solver);
     nne_hi = gsl_root_fsolver_x_upper(solver);
     status = gsl_root_test_interval(nne_lo, nne_hi, 0, fractional_accuracy);
@@ -595,9 +595,9 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
 
   gsl_root_fsolver_free(solver);
 
-  nne = std::max(MINPOP, nne);
+  nne_solution = std::max(MINPOP, nne_solution);
 
-  grid::set_nne(modelgridindex, nne);
+  grid::set_nne(modelgridindex, nne_solution);
 
   /// Now calculate the ground level populations in nebular approximation and store them to the
   /// grid
