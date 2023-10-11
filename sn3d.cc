@@ -935,16 +935,12 @@ auto main(int argc, char *argv[]) -> int {
     //        time_after_barrier);
 #endif
 
-#ifdef DO_TITER
-    // The first time step must solve the ionisation balance in LTE
-    globals::lte_iteration = (nts == 0);
-#else
     /// titer example: Do 3 iterations on timestep 0-6
     // globals::n_titer = (nts < 6) ? 3: 1;
 
     globals::n_titer = 1;
     globals::lte_iteration = (nts < globals::num_lte_timesteps);
-#endif
+    assert_always(globals::num_lte_timesteps > 0);  // The first time step must solve the ionisation balance in LTE
 
     for (int titer = 0; titer < globals::n_titer; titer++) {
       terminate_early = do_timestep(nts, titer, my_rank, nstart, ndo, packets, walltimelimitseconds);
