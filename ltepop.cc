@@ -457,7 +457,7 @@ static auto calculate_nne(const int modelgridindex) -> float {
     }
   }
 
-  return std::max(MINPOP, nne);
+  grid::set_nne(modelgridindex, std::max(MINPOP, nne));
 }
 
 static void set_groundlevelpops(const int modelgridindex, const float nne, bool allow_nlte) {
@@ -466,6 +466,7 @@ static void set_groundlevelpops(const int modelgridindex, const float nne, bool 
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     if ((allow_nlte && elem_has_nlte_levels(element)) || nions == 0) {
+      // ion ground level populations are set by NLTE solver
       continue;
     }
 
@@ -491,7 +492,7 @@ static void set_groundlevelpops(const int modelgridindex, const float nne, bool 
       }
 
       const double groundpop =
-          (nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
+          nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
 
       if (!std::isfinite(groundpop)) {
         printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
@@ -524,10 +525,6 @@ static void set_groundlevelpops_neutral(const int modelgridindex) {
       }
       const double groundpop =
           (nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
-
-      if (!std::isfinite(groundpop)) {
-        printout("[warning] calculate_ion_balance_nne: groundlevelpop infinite in connection with MINPOP\n");
-      }
 
       grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
     }
@@ -622,5 +619,5 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void
     set_groundlevelpops(modelgridindex, nne_solution, allow_nlte);
   }
 
-  grid::set_nne(modelgridindex, calculate_nne(modelgridindex));
+  calculate_nne(modelgridindex);
 }
