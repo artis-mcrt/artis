@@ -2028,10 +2028,10 @@ void update_parameterfile(int nts)
 }
 
 void time_init()
-// Subroutine to define the time steps.
+// define the time steps
 {
-  /// t=globals::tmin is the start of the calcualtion. t=globals::tmax is the end of the calculation.
-  /// globals::ntimesteps is the number of time steps wanted.
+  /// t=globals::tmin is the start of the calculation. t=globals::tmax is the end of the calculation.
+  /// globals::ntimesteps is the number of time steps
 
   globals::timesteps = static_cast<struct time *>(malloc((globals::ntimesteps + 1) * sizeof(struct time)));
 

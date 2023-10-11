@@ -21,6 +21,135 @@ bool use_cellhist = false;
 std::mt19937 stdrng(std::random_device{}());
 gsl_integration_workspace *gslworkspace = nullptr;
 
+static void do_angle_bin(const int a, packet *pkts, bool load_allrank_packets, struct spec &rpkt_spectra,
+                         struct spec &stokes_i, struct spec &stokes_q, struct spec &stokes_u,
+                         struct spec &gamma_spectra) {
+  std::vector<double> rpkt_light_curve_lum(globals::ntimesteps, 0.);
+  std::vector<double> rpkt_light_curve_lumcmf(globals::ntimesteps, 0.);
+  std::vector<double> gamma_light_curve_lum(globals::ntimesteps, 0.);
+  std::vector<double> gamma_light_curve_lumcmf(globals::ntimesteps, 0.);
+
+  /// Set up the spectrum grid and initialise the bins to zero.
+  init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
+
+  if constexpr (POL_ON) {
+    init_spectra(stokes_i, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
+    init_spectra(stokes_q, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
+    init_spectra(stokes_u, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
+  }
+
+  const double nu_min_gamma = 0.05 * MEV / H;
+  const double nu_max_gamma = 4. * MEV / H;
+  init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
+
+  for (int p = 0; p < globals::nprocs_exspec; p++) {
+    struct packet *pkts_start = load_allrank_packets ? &pkts[p * globals::npkts] : pkts;
+
+    if (a == -1 || !load_allrank_packets) {
+      char pktfilename[MAXFILENAMELENGTH];
+      snprintf(pktfilename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", 0, p);
+      printout("reading %s (file %d of %d)\n", pktfilename, p + 1, globals::nprocs_exspec);
+
+      if (access(pktfilename, F_OK) == 0) {
+        read_packets(pktfilename, pkts_start);
+      } else {
+        printout("   WARNING %s does not exist - trying temp packets file at beginning of timestep %d...\n",
+                 pktfilename, globals::timestep_initial);
+        read_temp_packetsfile(globals::timestep_initial, p, pkts_start);
+      }
+    }
+
+#ifdef MPI_ON
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
+    if (p % globals::nprocs != globals::rank_global) {
+      printout("skipping packets file %d %d\n", p + 1, globals::nprocs);
+      continue;
+    }
+
+    int nesc_tot = 0;
+    int nesc_gamma = 0;
+    int nesc_rpkt = 0;
+    for (int ii = 0; ii < globals::npkts; ii++) {
+      // printout("packet %d escape_type %d type %d", ii, pkts[ii].escape_type, pkts[ii].type);
+      if (pkts_start[ii].type == TYPE_ESCAPE) {
+        nesc_tot++;
+        if (pkts_start[ii].escape_type == TYPE_RPKT) {
+          nesc_rpkt++;
+          add_to_lc_res(&pkts_start[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+          add_to_spec_res(&pkts_start[ii], a, rpkt_spectra, POL_ON ? &stokes_i : nullptr, POL_ON ? &stokes_q : nullptr,
+                          POL_ON ? &stokes_u : nullptr);
+        } else if (pkts_start[ii].escape_type == TYPE_GAMMA) {
+          nesc_gamma++;
+          if (a == -1) {
+            add_to_lc_res(&pkts_start[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+            add_to_spec_res(&pkts_start[ii], a, gamma_spectra, nullptr, nullptr, nullptr);
+          }
+        }
+      }
+    }
+    if (a == -1 || !load_allrank_packets) {
+      printout("  %d of %d packets escaped (%d gamma-pkts and %d r-pkts)\n", nesc_tot, globals::npkts, nesc_gamma,
+               nesc_rpkt);
+    }
+  }
+
+  if (a == -1) {
+    // angle-averaged spectra and light curves
+    write_light_curve("light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntimesteps);
+    write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf,
+                      globals::ntimesteps);
+
+    write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, globals::ntimesteps);
+
+    if constexpr (POL_ON) {
+      write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", &stokes_i, &stokes_q, &stokes_u);
+    }
+
+    write_spectrum("gamma_spec.out", "", "", "", gamma_spectra, globals::ntimesteps);
+
+    printout("finished angle-averaged stuff\n");
+  } else {
+    // direction bin a
+    // line-of-sight dependent spectra and light curves
+
+    char lc_filename[MAXFILENAMELENGTH] = "";
+    snprintf(lc_filename, MAXFILENAMELENGTH, "light_curve_res_%.2d.out", a);
+
+    char spec_filename[MAXFILENAMELENGTH] = "";
+    snprintf(spec_filename, MAXFILENAMELENGTH, "spec_res_%.2d.out", a);
+
+    char emission_filename[MAXFILENAMELENGTH] = "";
+    snprintf(emission_filename, MAXFILENAMELENGTH, "emission_res_%.2d.out", a);
+
+    char trueemission_filename[MAXFILENAMELENGTH] = "";
+    snprintf(trueemission_filename, MAXFILENAMELENGTH, "emissiontrue_res_%.2d.out", a);
+
+    char absorption_filename[MAXFILENAMELENGTH] = "";
+    snprintf(absorption_filename, MAXFILENAMELENGTH, "absorption_res_%.2d.out", a);
+
+    write_light_curve(lc_filename, a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntimesteps);
+    write_spectrum(spec_filename, emission_filename, trueemission_filename, absorption_filename, rpkt_spectra,
+                   globals::ntimesteps);
+
+    if constexpr (POL_ON) {
+      char specpol_filename[MAXFILENAMELENGTH] = "";
+      snprintf(specpol_filename, MAXFILENAMELENGTH, "specpol_res_%.2d.out", a);
+
+      char emissionpol_filename[MAXFILENAMELENGTH] = "";
+      snprintf(emissionpol_filename, MAXFILENAMELENGTH, "emissionpol_res_%.2d.out", a);
+
+      char absorptionpol_filename[MAXFILENAMELENGTH] = "";
+      snprintf(absorptionpol_filename, MAXFILENAMELENGTH, "absorptionpol_res_%.2d.out", a);
+
+      write_specpol(specpol_filename, emissionpol_filename, absorptionpol_filename, &stokes_i, &stokes_q, &stokes_u);
+    }
+
+    printout("Did %d of %d angle bins.\n", a + 1, MABINS);
+  }
+}
+
 auto main(int argc, char *argv[]) -> int {
   const time_t sys_time_start = time(nullptr);
 
@@ -110,140 +239,12 @@ auto main(int argc, char *argv[]) -> int {
 
   struct spec gamma_spectra;
 
-  /// Initialise the grid. Call routine that sets up the initial positions
-  /// and sizes of the grid cells.
-  // grid_init();
   time_init();
 
   const int amax = ((grid::get_model_type() == GRID_SPHERICAL1D)) ? 0 : MABINS;
   // a is the escape direction angle bin
   for (int a = -1; a < amax; a++) {
-    /// Set up the light curve grid and initialise the bins to zero.
-    std::vector<double> rpkt_light_curve_lum(globals::ntimesteps, 0.);
-    std::vector<double> rpkt_light_curve_lumcmf(globals::ntimesteps, 0.);
-    std::vector<double> gamma_light_curve_lum(globals::ntimesteps, 0.);
-    std::vector<double> gamma_light_curve_lumcmf(globals::ntimesteps, 0.);
-    /// Set up the spectrum grid and initialise the bins to zero.
-
-    init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
-
-    if constexpr (POL_ON) {
-      init_spectra(stokes_i, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
-      init_spectra(stokes_q, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
-      init_spectra(stokes_u, NU_MIN_R, NU_MAX_R, globals::do_emission_res);
-    }
-
-    const double nu_min_gamma = 0.05 * MEV / H;
-    const double nu_max_gamma = 4. * MEV / H;
-    init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
-
-    for (int p = 0; p < globals::nprocs_exspec; p++) {
-      struct packet *pkts_start = load_allrank_packets ? &pkts[p * globals::npkts] : pkts;
-
-      if (a == -1 || !load_allrank_packets) {
-        char pktfilename[MAXFILENAMELENGTH];
-        snprintf(pktfilename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", 0, p);
-        printout("reading %s (file %d of %d)\n", pktfilename, p + 1, globals::nprocs_exspec);
-
-        if (access(pktfilename, F_OK) == 0) {
-          read_packets(pktfilename, pkts_start);
-        } else {
-          printout("   WARNING %s does not exist - trying temp packets file at beginning of timestep %d...\n",
-                   pktfilename, globals::timestep_initial);
-          read_temp_packetsfile(globals::timestep_initial, p, pkts_start);
-        }
-      }
-
-#ifdef MPI_ON
-      MPI_Barrier(MPI_COMM_WORLD);
-#endif
-
-      if (p % globals::nprocs != globals::rank_global) {
-        printout("skipping packets file %d %d\n", p + 1, globals::nprocs);
-        continue;
-      }
-
-      int nesc_tot = 0;
-      int nesc_gamma = 0;
-      int nesc_rpkt = 0;
-      for (int ii = 0; ii < globals::npkts; ii++) {
-        // printout("packet %d escape_type %d type %d", ii, pkts[ii].escape_type, pkts[ii].type);
-        if (pkts_start[ii].type == TYPE_ESCAPE) {
-          nesc_tot++;
-          if (pkts_start[ii].escape_type == TYPE_RPKT) {
-            nesc_rpkt++;
-            add_to_lc_res(&pkts_start[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-            add_to_spec_res(&pkts_start[ii], a, rpkt_spectra, POL_ON ? &stokes_i : nullptr,
-                            POL_ON ? &stokes_q : nullptr, POL_ON ? &stokes_u : nullptr);
-          } else if (pkts_start[ii].escape_type == TYPE_GAMMA) {
-            nesc_gamma++;
-            if (a == -1) {
-              add_to_lc_res(&pkts_start[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-              add_to_spec_res(&pkts_start[ii], a, gamma_spectra, nullptr, nullptr, nullptr);
-            }
-          }
-        }
-      }
-      if (a == -1 || !load_allrank_packets) {
-        printout("  %d of %d packets escaped (%d gamma-pkts and %d r-pkts)\n", nesc_tot, globals::npkts, nesc_gamma,
-                 nesc_rpkt);
-      }
-    }
-
-    if (a == -1) {
-      // angle-averaged spectra and light curves
-      write_light_curve("light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntimesteps);
-      write_light_curve("gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf,
-                        globals::ntimesteps);
-
-      write_spectrum("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra,
-                     globals::ntimesteps);
-
-      if constexpr (POL_ON) {
-        write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", &stokes_i, &stokes_q, &stokes_u);
-      }
-
-      write_spectrum("gamma_spec.out", "", "", "", gamma_spectra, globals::ntimesteps);
-
-      printout("finished angle-averaged stuff\n");
-    } else {
-      // direction bin a
-      // line-of-sight dependent spectra and light curves
-
-      char lc_filename[MAXFILENAMELENGTH] = "";
-      snprintf(lc_filename, MAXFILENAMELENGTH, "light_curve_res_%.2d.out", a);
-
-      char spec_filename[MAXFILENAMELENGTH] = "";
-      snprintf(spec_filename, MAXFILENAMELENGTH, "spec_res_%.2d.out", a);
-
-      char emission_filename[MAXFILENAMELENGTH] = "";
-      snprintf(emission_filename, MAXFILENAMELENGTH, "emission_res_%.2d.out", a);
-
-      char trueemission_filename[MAXFILENAMELENGTH] = "";
-      snprintf(trueemission_filename, MAXFILENAMELENGTH, "emissiontrue_res_%.2d.out", a);
-
-      char absorption_filename[MAXFILENAMELENGTH] = "";
-      snprintf(absorption_filename, MAXFILENAMELENGTH, "absorption_res_%.2d.out", a);
-
-      write_light_curve(lc_filename, a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntimesteps);
-      write_spectrum(spec_filename, emission_filename, trueemission_filename, absorption_filename, rpkt_spectra,
-                     globals::ntimesteps);
-
-      if constexpr (POL_ON) {
-        char specpol_filename[MAXFILENAMELENGTH] = "";
-        snprintf(specpol_filename, MAXFILENAMELENGTH, "specpol_res_%.2d.out", a);
-
-        char emissionpol_filename[MAXFILENAMELENGTH] = "";
-        snprintf(emissionpol_filename, MAXFILENAMELENGTH, "emissionpol_res_%.2d.out", a);
-
-        char absorptionpol_filename[MAXFILENAMELENGTH] = "";
-        snprintf(absorptionpol_filename, MAXFILENAMELENGTH, "absorptionpol_res_%.2d.out", a);
-
-        write_specpol(specpol_filename, emissionpol_filename, absorptionpol_filename, &stokes_i, &stokes_q, &stokes_u);
-      }
-
-      printout("Did %d of %d angle bins.\n", a + 1, MABINS);
-    }
+    do_angle_bin(a, pkts, load_allrank_packets, rpkt_spectra, stokes_i, stokes_q, stokes_u, gamma_spectra);
   }
 
   free(pkts);
