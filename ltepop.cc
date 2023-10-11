@@ -63,8 +63,8 @@ static auto phi(const int element, const int ion, const int modelgridindex) -> d
 
   if (elem_has_nlte_levels(element)) {
     // use the ratio set by the NLTE solver
-    return ionstagepop(modelgridindex, element, ion) / ionstagepop(modelgridindex, element, ion + 1) *
-           grid::get_nne(modelgridindex);
+    return ionstagepop(modelgridindex, element, ion) /
+           (ionstagepop(modelgridindex, element, ion + 1) * grid::get_nne(modelgridindex));
   }
 
   auto partfunc_ion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
