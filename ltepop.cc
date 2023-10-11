@@ -442,7 +442,7 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
   return uppermost_ion;
 }
 
-static auto calculate_nne(const int modelgridindex) -> float {
+static void set_calculated_nne(const int modelgridindex) {
   double nne = 0.;  // free electron density
 
   for (int element = 0; element < get_nelements(); element++) {
@@ -622,5 +622,5 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void
     set_groundlevelpops(modelgridindex, nne_solution, allow_nlte);
   }
 
-  calculate_nne(modelgridindex);
+  set_calculated_nne(modelgridindex);
 }
