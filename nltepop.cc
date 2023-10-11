@@ -658,27 +658,9 @@ static void nltepop_matrix_normalise(const int modelgridindex, const int element
 static void set_element_pops_lte(const int modelgridindex, const int element) {
   nltepop_reset_element(modelgridindex, element);
 
-  // const int nions = get_nions(element);
-  // for (int ion = 0; ion < nions; ion++)
-  //   grid::modelgrid[modelgridindex].composition[element].partfunct[ion] = calculate_partfunct(element, ion,
-  //   modelgridindex);
-  //
-  // const float nne = grid::get_nne(modelgridindex);
-  // const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
-  // const double nnelement = grid::get_elem_abundance(modelgridindex, element) / elem_meanweight *
-  // grid::get_rho(modelgridindex); for (int ion = 0; ion < nions; ion++)
-  // {
-  //   double nnion;
-  //   if (ion == 0)
-  //     nnion = nnelement * ionfract(element, ion, modelgridindex, nne);
-  //   else
-  //     nnion = MINPOP;
-  //
-  //   grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (
-  //     nnion * stat_weight(element,ion,0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
-  //
-  //   assert_always(std::isfinite(grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]));
-  // }
+  calculate_cellpartfuncts(modelgridindex, element);
+  const auto nne = grid::get_nne(modelgridindex);
+  set_groundlevelpops(modelgridindex, element, nne, true);
 }
 
 static auto lumatrix_is_singular(const gsl_matrix *LU, const int element) -> bool {

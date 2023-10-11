@@ -118,7 +118,8 @@ static auto phi(const int element, const int ion, const int modelgridindex) -> d
   return phi;
 }
 
-static auto calculate_ionfractions(const int element, const int modelgridindex, const double nne) -> std::vector<double>
+static auto calculate_ionfractions(const int element, const int modelgridindex, const double nne, const bool force_lte)
+    -> std::vector<double>
 // Calculate the fractions of an element's population in each ionization stage
 {
   const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
@@ -132,7 +133,8 @@ static auto calculate_ionfractions(const int element, const int modelgridindex, 
   double normfactor = 1.;
 
   for (int ion = uppermost_ion - 1; ion >= 0; ion--) {
-    ionfractions[ion] = ionfractions[ion + 1] * nne * phi(element, ion, modelgridindex);
+    const auto phifactor = force_lte ? phi_lte(element, ion, modelgridindex) : phi(element, ion, modelgridindex);
+    ionfractions[ion] = ionfractions[ion + 1] * nne * phifactor;
     normfactor += ionfractions[ion];
   }
 
@@ -159,7 +161,7 @@ static auto nne_solution_f(double nne_assumed, void *paras) -> double
   for (int element = 0; element < get_nelements(); element++) {
     const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
     if (nnelement > 0 && get_nions(element) > 0) {
-      const auto ionfractions = calculate_ionfractions(element, modelgridindex, nne_assumed);
+      const auto ionfractions = calculate_ionfractions(element, modelgridindex, nne_assumed, false);
       const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
       for (int ion = 0; ion <= uppermost_ion; ion++) {
         const double nnion = nnelement * ionfractions[ion];
@@ -461,7 +463,7 @@ static void set_calculated_nne(const int modelgridindex) {
   grid::set_nne(modelgridindex, std::max(MINPOP, nne));
 }
 
-static void set_groundlevelpops(const int modelgridindex, const int element, const float nne) {
+void set_groundlevelpops(const int modelgridindex, const int element, const float nne, const bool force_lte) {
   /// Now calculate the ground level populations in nebular approximation and store them to the
   /// grid
   const int nions = get_nions(element);
@@ -470,7 +472,7 @@ static void set_groundlevelpops(const int modelgridindex, const int element, con
   const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
 
   const auto ionfractions =
-      (nnelement > 0) ? calculate_ionfractions(element, modelgridindex, nne) : std::vector<double>();
+      (nnelement > 0) ? calculate_ionfractions(element, modelgridindex, nne, force_lte) : std::vector<double>();
 
   const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
 
@@ -614,7 +616,7 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void
       const int nions = get_nions(element);
       if ((!allow_nlte || !elem_has_nlte_levels(element)) && nions > 0) {
         // element's ground level populations were not already set by the NLTE solver
-        set_groundlevelpops(modelgridindex, element, nne_solution);
+        set_groundlevelpops(modelgridindex, element, nne_solution, false);
       }
     }
   }
