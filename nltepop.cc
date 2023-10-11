@@ -833,13 +833,8 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       "population %.2e)\n",
       modelgridindex, timestep, nlte_iter, atomic_number, grid::get_elem_abundance(modelgridindex, element), nnelement);
 
-  // LTE test, make sure binned radfield is off
-  // grid::set_TR(modelgridindex,3000);
-  // grid::set_W(modelgridindex,1.0);
-  // printout("T_E %g T_R was %g, setting to 3000 \n",grid::get_Te(modelgridindex),get_TR(modelgridindex));
-
   auto superlevel_partfunc = std::vector<double>(nions) = get_element_superlevelpartfuncs(modelgridindex, element);
-  const int nlte_dimension = get_element_nlte_dimension(element);
+  const size_t nlte_dimension = get_element_nlte_dimension(element);
 
   // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
@@ -964,7 +959,6 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       assert_always(gsl_vector_get(popvec, index) >= 0.);
     }
 
-    // double ion_populations[nions];
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels_nlte = get_nlevels_nlte(element, ion);
       const int index_gs = get_nlte_vector_index(element, ion, 0);
@@ -1018,40 +1012,6 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       // solution_ion_pop += gsl_vector_get(popvec, index_gs);
 
       calculate_cellpartfuncts(modelgridindex, element);
-
-      // ion_populations[ion] = solution_ion_pop;
-      // if (ion > 0)
-      // {
-      //   const double gspopratio = grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion-1] /
-      //   grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
-      //
-      //   const double ionpot = epsilon(element,ion,0) - epsilon(element,ion-1,0);
-      //   const auto T_e = grid::get_Te(modelgridindex);
-      //   const double partfunct_ratio = grid::modelgrid[modelgridindex].composition[element].partfunct[ion-1] /
-      //   grid::modelgrid[modelgridindex].composition[element].partfunct[ion]; const double gs_g_ratio =
-      //   stat_weight(element,ion-1,0) / stat_weight(element,ion,0); const double sbphi_gs = gs_g_ratio * SAHACONST *
-      //   pow(T_e,-1.5) * exp(ionpot/KB/T_e) * grid::get_nne(modelgridindex); const double solution_ion_pop_ratio =
-      //   ion_populations[ion-1] / ion_populations[ion]; const double sbphi = partfunct_ratio * SAHACONST *
-      //   pow(T_e,-1.5) * exp(ionpot/KB/T_e) * grid::get_nne(modelgridindex);
-      //
-      //   printout("    The ratio of groundlevel pops (ion %d)/(ion %d) is %g, Saha-Boltzmann value is %g ratio %g\n",
-      //            get_ionstage(element,ion-1),ion_stage,gspopratio,sbphi_gs,gspopratio/sbphi_gs);
-      //   printout("    The ratio of total pops (ion %d)/(ion %d) is %g, Saha-Boltzmann value is %g ratio %g\n",
-      //            get_ionstage(element,ion-1),ion_stage,solution_ion_pop_ratio,sbphi,solution_ion_pop_ratio/sbphi);
-      //   const float nne = grid::get_nne(modelgridindex);
-      //   // calculate_partfunct(element, ion, modelgridindex) *
-      //   grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] / stat_weight(element,ion,0))
-      //   printout("    The corresponding phi-factor is: %g\n", (solution_ion_pop_ratio / nne));
-      //   printout("    The ionization solver gives phi(ion_stage=%d / %d) = %g\n",
-      //            get_ionstage(element, ion-1), get_ionstage(element, ion), phi(element, ion-1, modelgridindex));
-      // }
-
-      // double nne = grid::get_nne(modelgridindex);
-      // printout("  From ion fract, the ion pop should be %g\n", ionfract(element, ion, modelgridindex,
-      // nne)*nnelement); printout("  I think that the element population is: %g (from abundance %g and rho %g)\n",
-      // grid::get_elem_abundance(modelgridindex,element)/elem_meanweight*grid::get_rho(modelgridindex),
-      // grid::get_elem_abundance(modelgridindex,element), grid::get_rho(modelgridindex)); printout("  I currently think
-      // that the top ion is: %d\n", elements_uppermost_ion[tid][element]);
     }
 
     const double elem_pop_abundance = nnelement;
