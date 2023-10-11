@@ -57,10 +57,6 @@ static auto phi(const int element, const int ion, const int modelgridindex) -> d
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
 
-  if (globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1) {
-    return phi_lte(element, ion, modelgridindex);
-  }
-
   if (elem_has_nlte_levels(element)) {
     // use the ratio set by the NLTE solver
     return ionstagepop(modelgridindex, element, ion) /
@@ -410,7 +406,8 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
     return -1;
   }
   int uppermost_ion = 0;
-  if (globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1) {
+  const bool assume_lte = globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1;
+  if (assume_lte) {
     uppermost_ion = nions - 1;
   } else {
     int ion = -1;
@@ -428,7 +425,8 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
   double factor = 1.;
   int ion = 0;
   for (ion = 0; ion < uppermost_ion; ion++) {
-    factor *= nne_hi * phi(element, ion, modelgridindex);
+    const auto phifactor = assume_lte ? phi_lte(element, ion, modelgridindex) : phi(element, ion, modelgridindex);
+    factor *= nne_hi * phifactor;
 
     if (!std::isfinite(factor)) {
       printout(
