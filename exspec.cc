@@ -280,7 +280,10 @@ auto main(int argc, char *argv[]) -> int {
   decay::cleanup();
 
   printout("exspec finished at %ld (tstart + %ld seconds)\n", time(nullptr), time(nullptr) - sys_time_start);
-  fclose(output_file);
+
+  if (output_file != nullptr) {
+    fclose(output_file);
+  }
 
 #ifdef MPI_ON
   MPI_Finalize();
