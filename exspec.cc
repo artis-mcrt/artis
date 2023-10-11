@@ -182,6 +182,15 @@ auto main(int argc, char *argv[]) -> int {
         }
       }
 
+#ifdef MPI_ON
+      MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
+      if (p % globals::nprocs != globals::rank_global) {
+        printout("skipping packets file %d %d\n", p + 1, globals::nprocs);
+        continue;
+      }
+
       int nesc_tot = 0;
       int nesc_gamma = 0;
       int nesc_rpkt = 0;
