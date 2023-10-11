@@ -119,7 +119,7 @@ static auto phi(const int element, const int ion, const int modelgridindex) -> d
   return phi;
 }
 
-static auto get_ionfractions(const int element, const int modelgridindex, const double nne) -> std::vector<double>
+static auto calculate_ionfractions(const int element, const int modelgridindex, const double nne) -> std::vector<double>
 // Calculate the fractions of an element's population in each ionization stage
 {
   const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
@@ -150,37 +150,37 @@ static auto get_ionfractions(const int element, const int modelgridindex, const 
   return ionfractions;
 }
 
-static auto nne_solution_f(double nne, void *paras) -> double
+static auto nne_solution_f(double nne_assumed, void *paras) -> double
 // assume a value for nne and then calculate the resulting nne
 // the difference between the assumed and calculated nne is returned
 {
   const int modelgridindex = (static_cast<struct nne_solution_paras *>(paras))->modelgridindex;
 
-  double outersum = 0.;
+  double nne_after = 0.;  // the resulting nne after setting the ion balance with nne_assumed
   for (int element = 0; element < get_nelements(); element++) {
-    const double massfrac = grid::get_elem_abundance(modelgridindex, element);
-    if (massfrac > 0 && get_nions(element) > 0) {
-      const auto ionfractions = get_ionfractions(element, modelgridindex, nne);
+    const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
+    if (nnelement > 0 && get_nions(element) > 0) {
+      const auto ionfractions = calculate_ionfractions(element, modelgridindex, nne_assumed);
       const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
       double elem_nne_contrib = 0.;
       for (int ion = 0; ion <= uppermost_ion; ion++) {
+        const double nnion = nnelement * ionfractions[ion];
+        const int ioncharge = get_ionstage(element, ion) - 1;
+        nne_after += ioncharge * nnion;
         elem_nne_contrib += (get_ionstage(element, ion) - 1) * ionfractions[ion];
       }
 
-      const double elem_meanweight = grid::get_element_meanweight(modelgridindex, element);
-      outersum += massfrac / elem_meanweight * elem_nne_contrib;
-
-      if (!std::isfinite(outersum)) {
-        printout("nne_solution_f: element %d uppermostion %d massfrac %g, mass %g\n", element,
-                 grid::get_elements_uppermost_ion(modelgridindex, element), massfrac, elem_meanweight);
-        printout("outersum %g\n", outersum);
+      if (!std::isfinite(nne_after)) {
+        printout("nne_solution_f: element %d uppermostion %d nnelement %g\n", element,
+                 grid::get_elements_uppermost_ion(modelgridindex, element), nnelement);
+        printout("nne before %g after %g\n", nne_assumed, nne_after);
         abort();
       }
     }
   }
+  nne_after = std::max(MINPOP, nne_after);
 
-  const double rho = grid::get_rho(modelgridindex);
-  return rho * outersum - nne;
+  return nne_after - nne_assumed;
 }
 
 auto get_groundlevelpop(int modelgridindex, int element, int ion) -> double
@@ -484,8 +484,9 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(modelgridindex, element) > 0) {
-      const int uppermost_ion =
-          allow_nlte ? get_nions(element) - 1 : find_uppermost_ion(modelgridindex, element, nne_hi);
+      const int uppermost_ion = (allow_nlte && elem_has_nlte_levels(element))
+                                    ? get_nions(element) - 1
+                                    : find_uppermost_ion(modelgridindex, element, nne_hi);
       grid::set_elements_uppermost_ion(modelgridindex, element, uppermost_ion);
 
       only_lowest_ionstage = only_lowest_ionstage && (uppermost_ion <= 0);
@@ -578,7 +579,8 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
   constexpr int maxit = 50;
   constexpr double fractional_accuracy = 1e-3;
   int status = GSL_CONTINUE;
-  for (int iter = 0; iter <= maxit; iter++) {
+  int iter = 0;
+  for (iter = 0; iter <= maxit; iter++) {
     gsl_root_fsolver_iterate(solver);
     nne = gsl_root_fsolver_root(solver);
     nne_lo = gsl_root_fsolver_x_lower(solver);
@@ -588,9 +590,8 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
       break;
     }
   }
-  if (status == GSL_CONTINUE) {
-    printout("[warning] calculate_ion_balance_nne: nne did not converge within %d iterations\n", maxit);
-  }
+  printout("[warning] calculate_ion_balance_nne: nne %s within %d iterations\n",
+           ((status == GSL_CONTINUE) ? "did not converge" : "coverged"), iter + 1);
 
   gsl_root_fsolver_free(solver);
 
@@ -601,13 +602,15 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
   /// Now calculate the ground level populations in nebular approximation and store them to the
   /// grid
   double nntot = 0.;
-  double nnesum = 0.;
+  double nne = 0.;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     /// calculate number density of the current element (abundances are given by mass)
     const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
 
-    const auto ionfractions = (nnelement > 0) ? get_ionfractions(element, modelgridindex, nne) : std::vector<double>();
+    const auto ionfractions = (nnelement > 0)
+                                  ? calculate_ionfractions(element, modelgridindex, grid::get_nne(modelgridindex))
+                                  : std::vector<double>();
 
     const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
 
@@ -637,10 +640,11 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
 
       nntot += nnion;
       const int ioncharge = get_ionstage(element, ion) - 1;
-      nnesum += ioncharge * nnion;
+      nne += ioncharge * nnion;
     }
   }
   nntot += nne;
+  grid::set_nne(modelgridindex, nne);
 
   return nntot;
 }
