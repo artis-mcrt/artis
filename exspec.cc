@@ -179,7 +179,7 @@ auto main(int argc, char *argv[]) -> int {
         if (access(pktfilename, F_OK) == 0) {
           read_packets(pktfilename, pkts_start);
         } else {
-          printout("   WARNING %s does not exist - trying temp packets file at beginning of timestep %d...\n   ",
+          printout("   WARNING %s does not exist - trying temp packets file at beginning of timestep %d...\n",
                    pktfilename, globals::timestep_initial);
           read_temp_packetsfile(globals::timestep_initial, p, pkts_start);
         }
