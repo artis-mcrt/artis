@@ -396,7 +396,7 @@ auto calculate_sahafact(int element, int ion, int level, int upperionlevel, doub
 }
 
 auto ionstagepop(int modelgridindex, int element, int ion) -> double
-/// Calculates the given ionstage's population density using the ground level population and partition function
+/// Use the ground level population and partition function to get an ion population
 {
   return get_groundlevelpop(modelgridindex, element, ion) *
          grid::modelgrid[modelgridindex].composition[element].partfunct[ion] / stat_weight(element, ion, 0);
@@ -586,8 +586,7 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
-  const bool allow_nlte =
-      (globals::total_nlte_levels > 0 && !globals::lte_iteration && grid::modelgrid[modelgridindex].thick != 1);
+  const bool allow_nlte = !globals::lte_iteration && grid::modelgrid[modelgridindex].thick != 1;
 
   const double nne_hi = grid::get_rho(modelgridindex) / MH;
 
