@@ -662,7 +662,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
       std::stringstream(line) >> a >> z >> branch_alpha >> branch_beta >> halflife >> Q_total_alphadec >>
           Q_total_betadec >> e_alpha_mev >> e_gamma_mev >> e_beta_mev;
 
-      bool const keeprow = ((branch_alpha > 0. || branch_beta > 0.) && halflife > 0.);
+      const bool keeprow = ((branch_alpha > 0. || branch_beta > 0.) && halflife > 0.);
       if (keeprow) {
         const double tau_sec = halflife / log(2);
         int alphanucindex = -1;
@@ -826,7 +826,7 @@ static auto get_nuc_massfrac(const int modelgridindex, const int z, const int a,
       continue;
     }
 
-    int const decaypathlength = get_decaypathlength(decaypath);
+    const int decaypathlength = get_decaypathlength(decaypath);
 
     int fulldecaypathlength = decaypathlength;
     // if the nuclide is out of network, it's one past the end of the chain
@@ -1020,7 +1020,7 @@ static auto get_decaypath_power_per_ejectamass(const int decaypathindex, const i
 
   const double t_afterinit = time - grid::get_t_model();
 
-  int const decaypathlength = get_decaypathlength(decaypathindex);
+  const int decaypathlength = get_decaypathlength(decaypathindex);
 
   // contribution to the end nuclide abundance from the top of chain (could be a length-one chain Z,A_top = Z,A_end
   // so contribution would be from init abundance only)

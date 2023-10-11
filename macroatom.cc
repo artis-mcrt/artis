@@ -232,7 +232,7 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
   const int upperion = *ion;
   const int upperionlevel = *level;
   /// Randomly select a continuum
-  double const zrand = rng_uniform();
+  const double zrand = rng_uniform();
   double rate = 0;
   const int nlevels = get_ionisinglevels(element, upperion - 1);
   int lower = 0;
@@ -764,7 +764,7 @@ auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const
     const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
     if (tau_sobolev > 1e-100) {
-      double const beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));
+      const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));
 
       const double R_over_J_nu = n_l > 0. ? (B_lu - B_ul * n_u / n_l) * beta : B_lu * beta;
 
@@ -888,7 +888,7 @@ auto col_recombination_ratecoeff(const int modelgridindex, const int element, co
 
       const double sf = calculate_sahafact(element, upperion - 1, lower, upper, T_e, epsilon_trans);
 
-      double const C = nne * nne * sf * 1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1;
+      const double C = nne * nne * sf * 1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1;
 
       return C;
     }

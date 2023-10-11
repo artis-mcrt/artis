@@ -179,7 +179,7 @@ static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoint
     assert_always(get_nphixstargets(element, lowerion, lowerlevel) == 1);
     assert_always(get_phixsupperlevel(element, lowerion, lowerlevel, 0) == 0);
 
-    double const nu_edge = (epsilon(element, upperion, 0) - epsilon(element, lowerion, lowerlevel)) / H;
+    const double nu_edge = (epsilon(element, upperion, 0) - epsilon(element, lowerion, lowerlevel)) / H;
 
     auto *nutable = static_cast<double *>(calloc(nphixspoints_inputtable, sizeof(double)));
     assert_always(nutable != nullptr);
@@ -1146,7 +1146,7 @@ static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcont
     if (i == globals::nbfcontinua_ground) {
       element = globals::groundcont[i - 1].element;
       ion = globals::groundcont[i - 1].ion;
-      int const level = globals::groundcont[i - 1].level;
+      const int level = globals::groundcont[i - 1].level;
       if (element == el && ion == in && level == ll) {
         index = i - 1;
       } else {

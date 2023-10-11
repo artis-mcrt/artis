@@ -220,7 +220,7 @@ static void choose_gamma_ray(struct packet *pkt_ptr) {
   // Routine to choose which gamma ray line it'll be.
 
   const int nucindex = pkt_ptr->pellet_nucindex;
-  double const E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
+  const double E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
 
   const double zrand = rng_uniform();
   int nselected = -1;
@@ -325,7 +325,7 @@ static auto get_chi_compton_rf(const struct packet *pkt_ptr) -> double {
   // calculate the absorption coefficient [cm^-1] for Compton scattering in the observer reference frame
   // Start by working out the compton x-section in the co-moving frame.
 
-  double const xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
+  const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
 
   // Use this to decide whether the Thompson limit is acceptable.
 
@@ -333,7 +333,7 @@ static auto get_chi_compton_rf(const struct packet *pkt_ptr) -> double {
   if (xx < THOMSON_LIMIT) {
     sigma_cmf = SIGMA_T;
   } else {
-    double const fmax = (1 + (2 * xx));
+    const double fmax = (1 + (2 * xx));
     sigma_cmf = sigma_compton_partial(xx, fmax);
   }
 
@@ -627,15 +627,15 @@ constexpr auto meanf_sigma(const double x) -> double
 // Routine to compute the mean energy converted to non-thermal electrons times
 // the Klein-Nishina cross section.
 {
-  double const f = 1 + (2 * x);
+  const double f = 1 + (2 * x);
 
-  double const term0 = 2 / x;
-  double const term1 = (1 - (2 / x) - (3 / (x * x))) * log(f);
-  double const term2 = ((4 / x) + (3 / (x * x)) - 1) * 2 * x / f;
-  double const term3 = (1 - (2 / x) - (1 / (x * x))) * 2 * x * (1 + x) / f / f;
-  double const term4 = -2. * x * ((4 * x * x) + (6 * x) + 3) / 3 / f / f / f;
+  const double term0 = 2 / x;
+  const double term1 = (1 - (2 / x) - (3 / (x * x))) * log(f);
+  const double term2 = ((4 / x) + (3 / (x * x)) - 1) * 2 * x / f;
+  const double term3 = (1 - (2 / x) - (1 / (x * x))) * 2 * x * (1 + x) / f / f;
+  const double term4 = -2. * x * ((4 * x * x) + (6 * x) + 3) / 3 / f / f / f;
 
-  double const tot = 3 * SIGMA_T * (term0 + term1 + term2 + term3 + term4) / (8 * x);
+  const double tot = 3 * SIGMA_T * (term0 + term1 + term2 + term3 + term4) / (8 * x);
 
   return tot;
 }
@@ -661,7 +661,7 @@ static void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist) {
   double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
 
-  double const doppler_sq = doppler_squared_nucmf_on_nurf(pkt_ptr->dir, vel_vec);
+  const double doppler_sq = doppler_squared_nucmf_on_nurf(pkt_ptr->dir, vel_vec);
 
   const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
   const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
@@ -798,7 +798,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
   // So distance before physical event is...
 
-  double const edist = (tau_next - tau_current) / chi_tot;
+  const double edist = (tau_next - tau_current) / chi_tot;
 
   if (edist < 0) {
     printout("Negative distance (edist). Abort. \n");
@@ -807,7 +807,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
   // Find how far it can travel during the time inverval.
 
-  double const tdist = (t2 - pkt_ptr->prop_time) * CLIGHT_PROP;
+  const double tdist = (t2 - pkt_ptr->prop_time) * CLIGHT_PROP;
 
   if (tdist < 0) {
     printout("Negative distance (tdist). Abort. \n");

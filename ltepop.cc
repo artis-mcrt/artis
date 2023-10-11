@@ -24,14 +24,14 @@ static auto interpolate_ions_spontrecombcoeff(const int element, const int ion, 
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_always(T >= MINTEMP);
-  int const lowerindex = floor(log(T / MINTEMP) / T_step_log);
+  const int lowerindex = floor(log(T / MINTEMP) / T_step_log);
   if (lowerindex < TABLESIZE - 1) {
-    int const upperindex = lowerindex + 1;
-    double const T_lower = MINTEMP * exp(lowerindex * T_step_log);
-    double const T_upper = MINTEMP * exp(upperindex * T_step_log);
+    const int upperindex = lowerindex + 1;
+    const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
+    const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
-    double const f_upper = globals::elements[element].ions[ion].Alpha_sp[upperindex];
-    double const f_lower = globals::elements[element].ions[ion].Alpha_sp[lowerindex];
+    const double f_upper = globals::elements[element].ions[ion].Alpha_sp[upperindex];
+    const double f_lower = globals::elements[element].ions[ion].Alpha_sp[lowerindex];
 
     return f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower);
   }

@@ -211,7 +211,7 @@ static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
       assert_always(
           fscanf(ratecoeff_file, "%d %d %d %d\n", &in_element, &in_ionstage, &in_levels, &in_ionisinglevels) == 4);
       const int nlevels = get_nlevels(element, ion);
-      int const ionisinglevels = get_ionisinglevels(element, ion);
+      const int ionisinglevels = get_ionisinglevels(element, ion);
       if (get_atomicnumber(element) != in_element || get_ionstage(element, ion) != in_ionstage ||
           nlevels != in_levels || ionisinglevels != in_ionisinglevels) {
         printout(
@@ -226,7 +226,7 @@ static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
 
   printout("Existing ratecoeff.dat is valid. Reading this file...\n");
   for (int element = 0; element < get_nelements(); element++) {
-    int const nions = get_nions(element) - 1;
+    const int nions = get_nions(element) - 1;
     for (int ion = 0; ion < nions; ion++) {
       // nlevels = get_nlevels(element,ion);
       const int nlevels = get_ionisinglevels(element, ion);  /// number of ionising levels associated with current ion

@@ -64,9 +64,9 @@ void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, std::vector<d
   }
   if (get_escapedirectionbin(pkt_ptr->dir, globals::syn_dir) == current_abin) {
     // Add only packets which escape to the current angle bin
-    double const t_arrive = get_arrive_time(pkt_ptr);
+    const double t_arrive = get_arrive_time(pkt_ptr);
     if (t_arrive > globals::tmin && t_arrive < globals::tmax) {
-      int const nt = get_timestep(t_arrive);
+      const int nt = get_timestep(t_arrive);
       safeadd(light_curve_lum[nt], pkt_ptr->e_rf / globals::timesteps[nt].width * MABINS / globals::nprocs_exspec);
     }
   }

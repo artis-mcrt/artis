@@ -681,7 +681,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
   // Find how far it can travel during the time inverval.
 
-  double const tdist = (t2 - pkt_ptr->prop_time) * CLIGHT_PROP;
+  const double tdist = (t2 - pkt_ptr->prop_time) * CLIGHT_PROP;
 
   assert_always(tdist >= 0);
 

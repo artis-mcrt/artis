@@ -995,7 +995,7 @@ static void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> 
   // Lorentz transformations from RF to CMF
 
   const double beta[3] = {v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
-  double const vsqr = dot(beta, beta);
+  const double vsqr = dot(beta, beta);
 
   const double gamma_rel = 1. / (sqrt(1 - vsqr));
 

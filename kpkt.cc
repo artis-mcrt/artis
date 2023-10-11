@@ -484,7 +484,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       printout("lower %g, %g, %g\n", globals::cellhistory[tid].cooling_contrib[get_coolinglistoffset(element, ion) - 1],
                globals::cellhistory[tid].cooling_contrib[get_coolinglistoffset(element, ion)],
                globals::cellhistory[tid].cooling_contrib[get_coolinglistoffset(element, ion) + 1]);
-      int const finalpos = get_coolinglistoffset(element, ion) + get_ncoolingterms_ion(element, ion) - 1;
+      const int finalpos = get_coolinglistoffset(element, ion) + get_ncoolingterms_ion(element, ion) - 1;
       printout("upper %g, %g, %g\n", globals::cellhistory[tid].cooling_contrib[finalpos - 1],
                globals::cellhistory[tid].cooling_contrib[finalpos],
                globals::cellhistory[tid].cooling_contrib[finalpos + 1]);

@@ -1030,7 +1030,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
                                   rate_matrix_ntcoll_bf);
     }
 
-    bool const print_detailed_level_stats = false;
+    const bool print_detailed_level_stats = false;
 
     // if ((atomic_number == 26) && ((timestep % 5) == 0) && (nlte_iter == 0))
     // {

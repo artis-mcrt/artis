@@ -137,7 +137,7 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
   FILE *trueemission_file = nullptr;
   FILE *absorption_file = nullptr;
 
-  bool const do_emission_res = spectra.do_emission_res;
+  const bool do_emission_res = spectra.do_emission_res;
 
   if (do_emission_res) {
     emission_file = fopen_required(emission_filename, "w");

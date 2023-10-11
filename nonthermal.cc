@@ -313,7 +313,7 @@ static void read_auger_data() {
 
           printout("\n");
           // printout("ionpot %g %g, g %d\n", colliondata[i].ionpot_ev, ionpot_ev, g);
-          bool const found_existing_data = (collionrow.auger_g_accumulated > 0.);
+          const bool found_existing_data = (collionrow.auger_g_accumulated > 0.);
 
           // keep existing data but update according to statistical weight represented by existing and new data
           const double oldweight = collionrow.auger_g_accumulated / (g + collionrow.auger_g_accumulated);
@@ -989,7 +989,7 @@ static auto N_e(const int modelgridindex, const double energy) -> double
 
           // integral from ionpot up to lambda
           for (int i = integral1startindex; i <= integral1stopindex; i++) {
-            double const endash = gsl_vector_get(envec, i);
+            const double endash = gsl_vector_get(envec, i);
             const double delta_endash = DELTA_E;
 
             N_e_ion += get_y(modelgridindex, energy_ev + endash) * xs_impactionization(energy_ev + endash, collionrow) *
@@ -999,7 +999,7 @@ static auto N_e(const int modelgridindex, const double energy) -> double
           // integral from 2E + I up to E_max
           const int integral2startindex = get_energyindex_ev_lteq(2 * energy_ev + ionpot_ev);
           for (int i = integral2startindex; i < SFPTS; i++) {
-            double const endash = gsl_vector_get(envec, i);
+            const double endash = gsl_vector_get(envec, i);
             const double delta_endash = DELTA_E;
             N_e_ion += get_y_sample(modelgridindex, i) * xs_impactionization(endash, collionrow) *
                        Psecondary(endash, energy_ev + ionpot_ev, ionpot_ev, J) * delta_endash;
@@ -1459,7 +1459,7 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
   }
 }
 
-static auto get_eff_ionpot(const int modelgridindex, const int element, int const ion) -> float
+static auto get_eff_ionpot(const int modelgridindex, const int element, const int ion) -> float
 // get the effective ion potential from the stored value
 // a value of 0. should be treated as invalid
 {
@@ -1587,7 +1587,7 @@ auto nt_ionization_ratecoeff(const int modelgridindex, const int element, const 
   assert_always(grid::get_numassociatedcells(modelgridindex) > 0);
 
   if (NT_SOLVE_SPENCERFANO) {
-    double const Y_nt = nt_ionization_ratecoeff_sf(modelgridindex, element, ion);
+    const double Y_nt = nt_ionization_ratecoeff_sf(modelgridindex, element, ion);
     if (!std::isfinite(Y_nt)) {
       // probably because eff_ionpot = 0 because the solver hasn't been run yet, or no impact ionization cross sections
       // exist
@@ -2433,8 +2433,8 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   nt_solution[modelgridindex].nneperion_when_solved = nne_per_ion;
   nt_solution[modelgridindex].timestep_last_solved = timestep;
 
-  bool const enable_sfexcitation = true;
-  bool const enable_sfionization = true;
+  const bool enable_sfexcitation = true;
+  const bool enable_sfionization = true;
   // if (timestep <= globals::num_lte_timesteps)
   // {
   //   // for the first run of the solver at the first NLTE timestep (which usually requires many iterations),

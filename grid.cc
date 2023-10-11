@@ -596,7 +596,7 @@ static void calculate_kappagrey() {
   double rho_sum = 0.0;
   double fe_sum = 0.0;
   double opcase3_sum = 0.0;
-  int const empty_cells = 0;
+  const int empty_cells = 0;
 
   for (int n = 0; n < ngrid; n++) {
     const int mgi = get_cell_modelgridindex(n);
@@ -1403,7 +1403,7 @@ static void read_3d_model()
   assert_always(get_noncommentline(fmodel, line));
   std::istringstream(line) >> globals::vmax;
 
-  double const xmax_tmodel = globals::vmax * t_model;
+  const double xmax_tmodel = globals::vmax * t_model;
 
   /// Now read in the lines of the model.
   min_den = -1.;
@@ -2107,7 +2107,7 @@ void grid_init(int my_rank)
   calculate_kappagrey();
   abundances_read();
 
-  int const ndo_nonempty = grid::get_ndo_nonempty(my_rank);
+  const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
 
   radfield::init(my_rank, ndo_nonempty);
   nonthermal::init(my_rank, ndo_nonempty);
