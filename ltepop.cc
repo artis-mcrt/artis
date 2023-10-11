@@ -169,8 +169,7 @@ static auto nne_solution_f(double nne_assumed, void *paras) -> double
       }
 
       if (!std::isfinite(nne_after)) {
-        printout("nne_solution_f: element %d uppermostion %d nnelement %g\n", element,
-                 grid::get_elements_uppermost_ion(modelgridindex, element), nnelement);
+        printout("nne_solution_f: element %d uppermostion %d nnelement %g\n", element, uppermost_ion, nnelement);
         printout("nne before %g after %g\n", nne_assumed, nne_after);
         abort();
       }
