@@ -504,7 +504,7 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
     /// Now calculate the ground level populations in nebular approximation and store them to the
     /// grid
     double nne = 0.;
-    double nntot = 0.;
+    double nntot = 0.;  // total density of ions and free electrons
     for (int element = 0; element < get_nelements(); element++) {
       /// calculate number density of the current element (abundances are given by mass)
       const auto nnelement = grid::get_elem_numberdens(modelgridindex, element);
@@ -596,7 +596,7 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
 
   /// Now calculate the ground level populations in nebular approximation and store them to the
   /// grid
-  double nntot = nne;
+  double nntot = 0.;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     /// calculate number density of the current element (abundances are given by mass)
@@ -630,6 +630,7 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
       grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
     }
   }
+  nntot += nne;
 
   return nntot;
 }
