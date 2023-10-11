@@ -522,6 +522,9 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
         nntot += nnion;
         const double groundpop = (nnion * stat_weight(element, ion, 0) /
                                   grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
+
+        nnion = ionstagepop(modelgridindex, element, ion);  // recover nnion with roundoff error included
+
         nne += nnion * (get_ionstage(element, ion) - 1);
         grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = groundpop;
 
@@ -621,6 +624,8 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> double
 
       const double groundpop =
           (nnion * stat_weight(element, ion, 0) / grid::modelgrid[modelgridindex].composition[element].partfunct[ion]);
+
+      nnion = ionstagepop(modelgridindex, element, ion);  // recover nnion with roundoff error included
 
       nntot += nnion;
 
