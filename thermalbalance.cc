@@ -204,7 +204,7 @@ static auto get_heating_ion_coll_deexc(const int modelgridindex, const int eleme
       C_deexc += C;
     }
   }
-  // const double nnion = ionstagepop(modelgridindex, element, ion);
+  // const double nnion = get_nnion(modelgridindex, element, ion);
   // printout("ion_col_deexc_heating: T_e %g nne %g Z=%d ionstage %d nnion %g heating_contrib %g contrib/nnion %g\n",
   // T_e, nne, get_atomicnumber(element), get_ionstage(element, ion), nnion, C_deexc, C_deexc / nnion);
   return C_deexc;

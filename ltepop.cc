@@ -64,8 +64,8 @@ static auto phi(const int element, const int ion, const int modelgridindex) -> d
 
   if (elem_has_nlte_levels(element)) {
     // use the ratio set by the NLTE solver
-    return ionstagepop(modelgridindex, element, ion) /
-           (ionstagepop(modelgridindex, element, ion + 1) * grid::get_nne(modelgridindex));
+    return get_nnion(modelgridindex, element, ion) /
+           (get_nnion(modelgridindex, element, ion + 1) * grid::get_nne(modelgridindex));
   }
 
   auto partfunc_ion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
@@ -164,7 +164,7 @@ static auto get_element_nne_contrib(const int modelgridindex, const int element)
     double nne = 0.;
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      const auto nnion = ionstagepop(modelgridindex, element, ion);
+      const auto nnion = get_nnion(modelgridindex, element, ion);
       const int ioncharge = get_ionstage(element, ion) - 1;
       nne += ioncharge * nnion;
     }
@@ -188,7 +188,7 @@ static auto nne_solution_f(double nne_assumed, void *voidparas) -> double
       if (!force_lte && elem_has_nlte_levels(element)) {
         const int nions = get_nions(element);
         for (int ion = 0; ion < nions; ion++) {
-          const auto nnion = ionstagepop(modelgridindex, element, ion);
+          const auto nnion = get_nnion(modelgridindex, element, ion);
           const int ioncharge = get_ionstage(element, ion) - 1;
           nne_after += ioncharge * nnion;
         }
@@ -426,7 +426,7 @@ auto calculate_sahafact(int element, int ion, int level, int upperionlevel, doub
   return sf;
 }
 
-auto ionstagepop(int modelgridindex, int element, int ion) -> double
+auto get_nnion(int modelgridindex, int element, int ion) -> double
 /// Use the ground level population and partition function to get an ion population
 {
   return get_groundlevelpop(modelgridindex, element, ion) *

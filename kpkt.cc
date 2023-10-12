@@ -56,7 +56,7 @@ static auto calculate_cooling_rates_ion(const int modelgridindex, const int elem
   const int nions = get_nions(element);
 
   const int nionisinglevels = get_ionisinglevels(element, ion);
-  const double nncurrention = ionstagepop(modelgridindex, element, ion);
+  const double nncurrention = get_nnion(modelgridindex, element, ion);
 
   /// ff creation of rpkt
   const int ioncharge = get_ionstage(element, ion) - 1;
@@ -115,7 +115,7 @@ static auto calculate_cooling_rates_ion(const int modelgridindex, const int elem
   }
 
   if (ion < nions - 1) {
-    const double nnupperion = ionstagepop(modelgridindex, element, ion + 1);
+    const double nnupperion = get_nnion(modelgridindex, element, ion + 1);
 
     // ionization to higher ionization stage
     for (int level = 0; level < nionisinglevels; level++) {

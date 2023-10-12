@@ -18,6 +18,7 @@ constexpr int NLTEITER;
 constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) { return false; }
 
 // Use TJ radiation density temperature for Boltzmann excitation formua instead of electron temperature Te
+// This is default on for classic, and off for nebularnlte, where it affects the super-level
 constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
 
 // Only include a single level for the highest ion stage

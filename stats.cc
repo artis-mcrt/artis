@@ -146,7 +146,7 @@ void normalise_ion_estimators(const int mgi, const double deltat, const double d
         if (i < nstatcounters_ratecoeff) {
           // convert photon event counters into rate coefficients
           set_ion_stats(mgi, element, ion, static_cast<enum stats::ionstattypes>(i),
-                        ratedensity / ionstagepop(mgi, element, ion));
+                        ratedensity / get_nnion(mgi, element, ion));
         } else {
           set_ion_stats(mgi, element, ion, static_cast<enum stats::ionstattypes>(i), ratedensity);
         }

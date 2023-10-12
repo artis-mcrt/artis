@@ -828,7 +828,7 @@ static auto calculate_chi_ff(const int modelgridindex, const double nu) -> doubl
   const int nelements = get_nelements();
   for (int element = 0; element < nelements; element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
-      const double nnion = ionstagepop(modelgridindex, element, ion);
+      const double nnion = get_nnion(modelgridindex, element, ion);
       const int ioncharge = get_ionstage(element, ion) - 1;
       chi_ff += ioncharge * ioncharge * g_ff * nnion;
     }
@@ -878,8 +878,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
     /// the involved atomic species
 
     if ((DETAILED_BF_ESTIMATORS_ON && grid::get_elem_abundance(modelgridindex, element) > 0) ||
-        (!DETAILED_BF_ESTIMATORS_ON &&
-         ((ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6) || (level == 0)))) {
+        (!DETAILED_BF_ESTIMATORS_ON && ((get_nnion(modelgridindex, element, ion) / nnetot > 1.e-6) || (level == 0)))) {
       const double nu_edge = globals::allcont[i].nu_edge;
       const double nnlevel = usecellhistupdatephixslist ? get_levelpop(modelgridindex, element, ion, level)
                                                         : calculate_levelpop(modelgridindex, element, ion, level);

@@ -60,8 +60,8 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
       double elpop = 0.;
       for (int ion = 0; ion < nions; ion++) {
-        elpop += ionstagepop(mgi, element, ion);
-        fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ionstagepop(mgi, element, ion));
+        elpop += get_nnion(mgi, element, ion);
+        fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), get_nnion(mgi, element, ion));
       }
       if (nions == 0) {
         elpop = grid::get_elem_numberdens(mgi, element);

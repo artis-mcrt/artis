@@ -1000,9 +1000,9 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       //            grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]
       //            / stat_weight(element, ion, 0)));
 
-      // ionstagepop here must be called before setting the new ground level population
+      // get_nnion here must be called before setting the new ground level population
       // printout("    For ion_stage %d the total population is %g, but was previously %g\n",
-      //          ion_stage,solution_ion_pop,ionstagepop(modelgridindex, element, ion));
+      //          ion_stage,solution_ion_pop,get_nnion(modelgridindex, element, ion));
 
       // store the ground level population
       grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = gsl_vector_get(popvec, index_gs);
@@ -1158,7 +1158,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
           // grid::modelgrid[modelgridindex].nlte_pops[ion_first_nlte + nlevels_nlte]);
         }
 
-        const double ion_popfrac = nnlevelnlte / ionstagepop(modelgridindex, element, ion);
+        const double ion_popfrac = nnlevelnlte / get_nnion(modelgridindex, element, ion);
         fprintf(nlte_file, "%11.5e %11.5e %11.5e\n", nnlevellte, nnlevelnlte, ion_popfrac);
       }
     }

@@ -1354,7 +1354,7 @@ static auto get_nlevels_important(int modelgridindex, int element, int ion, bool
     return get_nlevels(element, ion);
   }
   // get the stored ion population for comparison with the cumulative sum of level pops
-  const double nnion_real = ionstagepop(modelgridindex, element, ion);
+  const double nnion_real = get_nnion(modelgridindex, element, ion);
 
   double nnlevelsum = 0.;
   int nlevels_important = get_ionisinglevels(element, ion);  // levels needed to get majority of ion pop
