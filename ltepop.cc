@@ -492,7 +492,7 @@ void set_groundlevelpops_if_needed(const int modelgridindex, const int element, 
   /// ionization/recombination balance (Photoionization Equilibrium)
   const int nions = get_nions(element);
 
-  if (!force_lte && elem_has_nlte_levels(element) || nions <= 0) {
+  if ((!force_lte && elem_has_nlte_levels(element)) || nions <= 0) {
     // avoid overwriting the ground level populations set by the NLTE pop solver
     return;
   }
