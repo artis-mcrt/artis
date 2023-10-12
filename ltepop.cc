@@ -589,8 +589,9 @@ static auto find_converged_nne(const int modelgridindex, double nne_hi, const bo
       break;
     }
   }
-  printout("[warning] calculate_ion_balance_nne: nne %s within %d iterations\n",
-           ((status == GSL_CONTINUE) ? "did not converge" : "coverged"), iter + 1);
+  if (status == GSL_CONTINUE) {
+    printout("[warning] calculate_ion_balance_nne: nne did not converge within %d iterations\n", iter + 1);
+  }
 
   gsl_root_fsolver_free(solver);
 
