@@ -54,7 +54,8 @@ jobs:
                 artisoptionsfile: [artisoptions_classic.h, artisoptions_nltenebular.h]
             fail-fast: false
 
-        name: ${{ matrix.compiler.name }}-${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}} ${{ matrix.artisoptionsfile }}
+        name: ${{ matrix.compiler.name }}-${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}
+            ${{ matrix.artisoptionsfile }}
         steps:
             - uses: actions/checkout@v3
 
@@ -85,6 +86,11 @@ jobs:
               if: matrix.mpi == 'ON'
               run: |
                   sudo apt install -y openmpi-bin libopenmpi-dev
+
+            - name: install OpenMP
+              if: matrix.openmp == 'ON'
+              run: |
+                  sudo apt-get install -y libomp libomp-dev
 
             - name: install gsl
               run: sudo apt install libgsl-dev
