@@ -358,7 +358,7 @@ static auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> doub
   kpkt::calculate_cooling_rates(modelgridindex, heatingcoolingrates);
   calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates);
 
-  const double nt_frac_heating = nonthermal::get_nt_frac_heating(modelgridindex);
+  heatingcoolingrates->nt_frac_heating = nonthermal::get_nt_frac_heating(modelgridindex);
   heatingcoolingrates->heating_dep =
       nonthermal::get_deposition_rate_density(modelgridindex) * heatingcoolingrates->nt_frac_heating;
 
