@@ -158,20 +158,13 @@ static auto nne_solution_f(double nne_assumed, void *voidparas) -> double
 {
   const auto *paras = reinterpret_cast<struct nne_solution_paras *>(voidparas);
   const int modelgridindex = paras->modelgridindex;
-  const bool nlte_solver_pops_available = paras->nlte_solver_pops_available;
+  // const bool nlte_solver_pops_available = paras->nlte_solver_pops_available;
 
   double nne_after = 0.;  // the resulting nne after setting the ion balance with nne_assumed
   for (int element = 0; element < get_nelements(); element++) {
     const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
     if (nnelement > 0 && get_nions(element) > 0) {
-      if (nlte_solver_pops_available && elem_has_nlte_levels(element)) {
-        // const int nions = get_nions(element);
-        // for (int ion = 0; ion < nions; ion++) {
-        //   const auto nnion = ionstagepop(modelgridindex, element, ion);
-        //   const int ioncharge = get_ionstage(element, ion) - 1;
-        //   nne_after += ioncharge * nnion;
-        // }
-      } else {
+      {
         const auto ionfractions = calculate_ionfractions(element, modelgridindex, nne_assumed, false);
         const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
         for (int ion = 0; ion <= uppermost_ion; ion++) {
