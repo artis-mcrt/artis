@@ -463,7 +463,8 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
   double factor = 1.;
   int ion = 0;
   for (ion = 0; ion < uppermost_ion; ion++) {
-    factor *= nne_hi * phi(element, ion, modelgridindex);
+    const auto phifactor = force_lte ? phi_lte(element, ion, modelgridindex) : phi(element, ion, modelgridindex);
+    factor *= nne_hi * phifactor;
 
     if (!std::isfinite(factor)) {
       printout(
