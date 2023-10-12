@@ -660,7 +660,7 @@ static void set_element_pops_lte(const int modelgridindex, const int element) {
 
   calculate_cellpartfuncts(modelgridindex, element);
   const auto nne = grid::get_nne(modelgridindex);
-  set_groundlevelpops(modelgridindex, element, nne, true);
+  set_groundlevelpops_if_needed(modelgridindex, element, nne, true);
 }
 
 static auto lumatrix_is_singular(const gsl_matrix *LU, const int element) -> bool {

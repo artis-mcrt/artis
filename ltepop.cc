@@ -487,10 +487,15 @@ static void set_calculated_nne(const int modelgridindex) {
   grid::set_nne(modelgridindex, std::max(MINPOP, nne));
 }
 
-void set_groundlevelpops(const int modelgridindex, const int element, const float nne, const bool force_lte) {
-  /// Now calculate the ground level populations in nebular approximation and store them to the
-  /// grid
+void set_groundlevelpops_if_needed(const int modelgridindex, const int element, const float nne, const bool force_lte) {
+  /// If not already set by the NLTE solver, set the ground level populations from either Saha LTE or
+  /// ionization/recombination balance (Photoionization Equilibrium)
   const int nions = get_nions(element);
+
+  if (!force_lte && elem_has_nlte_levels(element) || nions <= 0) {
+    // avoid overwriting the ground level populations set by the NLTE pop solver
+    return;
+  }
 
   /// calculate number density of the current element (abundances are given by mass)
   const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
@@ -635,10 +640,7 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void
     grid::set_nne(modelgridindex, nne_solution);
 
     for (int element = 0; element < get_nelements(); element++) {
-      if (force_lte || !elem_has_nlte_levels(element)) {
-        // element's ground level populations were not already set by the NLTE solver
-        set_groundlevelpops(modelgridindex, element, nne_solution, force_lte);
-      }
+      set_groundlevelpops_if_needed(modelgridindex, element, nne_solution, force_lte);
     }
   }
 
