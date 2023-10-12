@@ -94,7 +94,7 @@ jobs:
             - name: install OpenMP
               if: matrix.openmp == 'ON'
               run: |
-                  sudo apt-get install -y libomp11 libomp11-dev
+                  sudo apt-get install -y libomp libomp-dev
 
             - name: install gsl
               run: sudo apt install libgsl-dev
