@@ -529,10 +529,7 @@ static void set_groundlevelpops_neutral(const int modelgridindex) {
   /// Special case of only neutral ions, set nne to some finite value that
   /// packets are not lost in kpkts
   printout("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex %d\n", modelgridindex);
-  /// Now calculate the ground level populations in nebular approximation and store them to the
-  /// grid
   for (int element = 0; element < get_nelements(); element++) {
-    /// calculate number density of the current element (abundances are given by mass)
     const auto nnelement = grid::get_elem_numberdens(modelgridindex, element);
     const int nions = get_nions(element);
     /// Assign the species population to the neutral ion and set higher ions to MINPOP
