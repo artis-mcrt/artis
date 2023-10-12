@@ -407,6 +407,8 @@ static void read_ion_transitions(std::fstream &ftransitiondata, const int tottra
                                  const int nlevels_requiretransitions,
                                  const int nlevels_requiretransitions_upperlevels) {
   transitiontable.reserve(*tottransitions);
+  transitiontable.clear();
+
   std::string line;
 
   if (*tottransitions == 0) {
@@ -722,6 +724,8 @@ static void read_atomicdata_files() {
   /// Initialize the linelist
   std::vector<struct linelist_entry> temp_linelist;
 
+  std::vector<struct transitiontable_entry> transitiontable;
+
   /// temperature to determine relevant ionstages
   int T_preset = 0;
   assert_always(compositiondata >> T_preset);
@@ -880,9 +884,6 @@ static void read_atomicdata_files() {
 
       assert_always(transdata_Z_in == Z);
       assert_always(transdata_ionstage_in == ionstage);
-
-      /// read in the level and transition data for this ion
-      std::vector<struct transitiontable_entry> transitiontable;
 
       /// load transition table for the CURRENT ion to temporary memory
 
