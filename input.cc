@@ -450,6 +450,7 @@ static void read_ion_transitions(std::fstream &ftransitiondata, const int tottra
       // this entire block can be removed if we don't want to add in extra collisonal
       // transitions between levels
       if (prev_lower < nlevels_requiretransitions) {
+        assert_always(prev_lower >= 0);
         int stoplevel = 0;
         if (lower == prev_lower && upper > prev_upper + 1) {
           // same lower level, but some upper levels were skipped over
@@ -471,7 +472,6 @@ static void read_ion_transitions(std::fstream &ftransitiondata, const int tottra
           // printout("+adding transition index %d Z=%02d ionstage %d lower %d upper %d\n", i, Z, ionstage, prev_lower,
           // tmplevel);
           (*tottransitions)++;
-          assert_always(prev_lower >= 0);
           assert_always(tmplevel >= 0);
           transitiontable.push_back(
               {.lower = prev_lower, .upper = tmplevel, .A = 0., .coll_str = -2., .forbidden = true});
