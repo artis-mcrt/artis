@@ -634,7 +634,7 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void
     for (int element = 0; element < get_nelements(); element++) {
       if (force_lte || !elem_has_nlte_levels(element)) {
         // element's ground level populations were not already set by the NLTE solver
-        set_groundlevelpops(modelgridindex, element, nne_solution, false);
+        set_groundlevelpops(modelgridindex, element, nne_solution, force_lte);
       }
     }
   }
