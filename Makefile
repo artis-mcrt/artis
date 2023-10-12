@@ -87,11 +87,15 @@ endif
 
 CXXFLAGS += -Werror -Werror=undef -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -Wno-inline
 
-ifeq ($(MPI),ON)
-else ifeq ($(MPI),OFF)
-else ifeq ($(MPI),)
+ifeq ($(MPI),)
 	# MPI option not specified. set to true by default
 	MPI := ON
+endif
+ifeq ($(MPI),ON)
+	CXX = mpicxx
+	CXXFLAGS += -DMPI_ON=true
+	BUILD_DIR := $(BUILD_DIR)_mpi
+else ifeq ($(MPI),OFF)
 else
 $(error bad value for MPI option. Should be ON or OFF)
 endif
@@ -103,16 +107,14 @@ else
 $(error bad value for testmode option. Should be ON or OFF)
 endif
 
-ifeq ($(MPI),ON)
-	CXX = mpicxx
-	CXXFLAGS += -DMPI_ON=true
-	BUILD_DIR := $(BUILD_DIR)_mpi
-endif
-
 ifeq ($(OPENMP),ON)
 	CXXFLAGS += -Xpreprocessor -fopenmp
 	LDFLAGS += -lomp
 	BUILD_DIR := $(BUILD_DIR)_openmp
+else ifeq ($(OPENMP),OFF)
+else ifeq ($(OPENMP),)
+else
+$(error bad value for testmode option. Should be ON or OFF)
 endif
 
 ### use pg when you want to use gprof profiler
