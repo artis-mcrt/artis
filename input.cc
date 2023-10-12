@@ -429,12 +429,12 @@ static void read_ion_transitions(std::fstream &ftransitiondata, const int tottra
       if (i == 0) {
         std::istringstream ss(line);
         std::string word;
-        int word_count = 0;
+        int column_count = 0;
         while (ss >> word) {
-          word_count++;
+          column_count++;
         }
-        assert_always(word_count == 4 || word_count == 5);
-        oldtransitionformat = (word_count == 4);
+        assert_always(column_count == 4 || column_count == 5);
+        oldtransitionformat = (column_count == 4);
       }
       if (!oldtransitionformat) {
         assert_always(std::istringstream(line) >> lower_in >> upper_in >> A >> coll_str >> intforbidden);
