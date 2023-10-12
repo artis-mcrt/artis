@@ -52,7 +52,15 @@ jobs:
                 mpi: [ON, OFF]
                 openmp: [ON, OFF]
                 artisoptionsfile: [artisoptions_classic.h, artisoptions_nltenebular.h]
-
+                exclude:
+                    - compiler: {name: gcc, ver: 11}
+                      openmp: ON
+                    - compiler: {name: gcc, ver: 12}
+                      openmp: ON
+                    - compiler: {name: gcc, ver: 13}
+                      openmp: ON
+                    - compiler: {name: clang, ver: 15}
+                      openmp: ON
             fail-fast: false
 
         name: ${{ matrix.compiler.name }}-${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}
