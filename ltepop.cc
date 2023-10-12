@@ -58,10 +58,8 @@ static auto phi(const int element, const int ion, const int modelgridindex) -> d
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
 
-  if (globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1) {
-    return phi_lte(element, ion, modelgridindex);
-  }
-
+  assert_testmodeonly(!globals::lte_iteration &&
+                      grid::modelgrid[modelgridindex].thick != 1);  // should use use phi_lte instead
   assert_testmodeonly(!elem_has_nlte_levels(element));  // don't use this function if the NLTE solver is active
 
   auto partfunc_ion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
