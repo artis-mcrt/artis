@@ -121,7 +121,8 @@ static auto phi(const int element, const int ion, const int modelgridindex) -> d
 
 static auto calculate_ionfractions(const int element, const int modelgridindex, const double nne, const bool force_lte)
     -> std::vector<double>
-// Calculate the fractions of an element's population in each ionization stage
+// Calculate the fractions of an element's population in each ionization stage based on Saha LTE or ionisation
+// equilibrium
 {
   const int uppermost_ion = grid::get_elements_uppermost_ion(modelgridindex, element);
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
@@ -186,7 +187,7 @@ static auto nne_solution_f(double nne_assumed, void *voidparas) -> double
     const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
     if (nnelement > 0 && get_nions(element) > 0) {
       if (!force_lte && elem_has_nlte_levels(element)) {
-        // populations from the NLTE solver are fixed within the nne solver
+        // populations from the NLTE solver are fixed during the nne solver
         nne_after += get_element_nne_contrib(modelgridindex, element);
       } else {
         const auto ionfractions = calculate_ionfractions(element, modelgridindex, nne_assumed, force_lte);
@@ -489,8 +490,9 @@ void set_groundlevelpops_if_needed(const int modelgridindex, const int element, 
   /// ionization/recombination balance (Photoionization Equilibrium)
   const int nions = get_nions(element);
 
-  if ((!force_lte && elem_has_nlte_levels(element)) || nions <= 0) {
-    // avoid overwriting the ground level populations set by the NLTE pop solver
+  // avoid overwriting the ground level populations set by the NLTE pop solver
+  const bool already_set_by_nlte_solver = !force_lte && elem_has_nlte_levels(element);
+  if (already_set_by_nlte_solver || nions <= 0) {
     return;
   }
 
@@ -502,7 +504,7 @@ void set_groundlevelpops_if_needed(const int modelgridindex, const int element, 
 
   const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
 
-  /// Use ionizationfractions to calculate the groundlevel populations
+  /// Use ion fractions to calculate the groundlevel populations
   for (int ion = 0; ion < nions; ion++) {
     double nnion = NAN;
     if (ion <= uppermost_ion) {
