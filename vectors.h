@@ -1,6 +1,7 @@
 #ifndef VECTORS_H
 #define VECTORS_H
 
+#include <array>
 #include <cmath>
 #include <numeric>
 #include <span>
@@ -126,7 +127,7 @@ constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double,
 // returns: the ratio f = (nu_cmf / nu_rf) ^ 2
 {
   // velocity of the comoving frame relative to the rest frame
-  double vel_rf[3] = {0, 0, 0};  // homologous flow velocity
+  std::array<double, 3> vel_rf = {0, 0, 0};  // homologous flow velocity
   get_velocity(pos_rf, vel_rf, prop_time);
 
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
@@ -206,21 +207,21 @@ constexpr int get_escapedirectionbin(std::span<const double, 3> dir_in, std::spa
 
   // sometimes dir vectors aren't accurately normalised
   const double dirmag = vec_len(dir_in);
-  const double dir[3] = {dir_in[0] / dirmag, dir_in[1] / dirmag, dir_in[2] / dirmag};
+  std::array<const double, 3> dir = {dir_in[0] / dirmag, dir_in[1] / dirmag, dir_in[2] / dirmag};
 
   /// Angle resolved case: need to work out the correct angle bin
   const double costheta = dot(dir, syn_dir);
   const int costhetabin = static_cast<int>((costheta + 1.0) * NPHIBINS / 2.0);
   assert_testmodeonly(costhetabin < NCOSTHETABINS);
 
-  double vec1[3] = {0};
+  std::array<double, 3> vec1 = {0};
   cross_prod(dir, syn_dir, vec1);
 
-  double vec2[3] = {0};
+  std::array<double, 3> vec2 = {0};
   cross_prod(xhat, syn_dir, vec2);
   const double cosphi = dot(vec1, vec2) / vec_len(vec1) / vec_len(vec2);
 
-  double vec3[3] = {0};
+  std::array<double, 3> vec3 = {0};
   cross_prod(vec2, syn_dir, vec3);
   const double testphi = dot(vec1, vec3);
 
