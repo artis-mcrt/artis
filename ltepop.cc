@@ -50,7 +50,7 @@ static auto phi_lte(const int element, const int ion, const int modelgridindex) 
   return partfunct_ratio * SAHACONST * pow(T_e, -1.5) * exp(ionpot / KB / T_e);
 }
 
-static auto phi(const int element, const int ion, const int modelgridindex) -> double
+static auto phi_ion_equilib(const int element, const int ion, const int modelgridindex) -> double
 /// Calculates population ratio (a saha factor) of two consecutive ionisation stages
 /// in nebular approximation phi_j,k* = N_j,k*/(N_j+1,k* * nne)
 {
@@ -58,8 +58,9 @@ static auto phi(const int element, const int ion, const int modelgridindex) -> d
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
 
-  assert_testmodeonly(!globals::lte_iteration &&
-                      grid::modelgrid[modelgridindex].thick != 1);  // should use use phi_lte instead
+  assert_testmodeonly(!globals::lte_iteration);
+  assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);  // should use use phi_lte instead
+
   assert_testmodeonly(!elem_has_nlte_levels(element));  // don't use this function if the NLTE solver is active
 
   auto partfunc_ion = grid::modelgrid[modelgridindex].composition[element].partfunct[ion];
@@ -133,7 +134,8 @@ static auto calculate_ionfractions(const int element, const int modelgridindex, 
   double normfactor = 1.;
 
   for (int ion = uppermost_ion - 1; ion >= 0; ion--) {
-    const auto phifactor = force_lte ? phi_lte(element, ion, modelgridindex) : phi(element, ion, modelgridindex);
+    const auto phifactor =
+        force_lte ? phi_lte(element, ion, modelgridindex) : phi_ion_equilib(element, ion, modelgridindex);
     ionfractions[ion] = ionfractions[ion + 1] * nne * phifactor;
     normfactor += ionfractions[ion];
   }
@@ -454,7 +456,8 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
   double factor = 1.;
   int ion = 0;
   for (ion = 0; ion < uppermost_ion; ion++) {
-    const auto phifactor = force_lte ? phi_lte(element, ion, modelgridindex) : phi(element, ion, modelgridindex);
+    const auto phifactor =
+        force_lte ? phi_lte(element, ion, modelgridindex) : phi_ion_equilib(element, ion, modelgridindex);
     factor *= nne_hi * phifactor;
 
     if (!std::isfinite(factor)) {
