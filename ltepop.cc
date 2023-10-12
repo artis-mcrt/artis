@@ -189,7 +189,7 @@ static auto nne_solution_f(double nne_assumed, void *voidparas) -> double
         // populations from the NLTE solver are fixed within the nne solver
         nne_after += get_element_nne_contrib(modelgridindex, element);
       } else {
-        const auto ionfractions = calculate_ionfractions(element, modelgridindex, nne_assumed, false);
+        const auto ionfractions = calculate_ionfractions(element, modelgridindex, nne_assumed, force_lte);
         const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
         for (int ion = 0; ion <= uppermost_ion; ion++) {
           const double nnion = nnelement * ionfractions[ion];
