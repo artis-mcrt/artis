@@ -313,7 +313,6 @@ auto calculate_levelpop(int modelgridindex, int element, int ion, int level) -> 
   if (!skipminpop && nn < MINPOP) {
     if (grid::get_elem_abundance(modelgridindex, element) > 0) {
       nn = MINPOP;
-      // nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
     } else {
       nn = 0.;
     }
