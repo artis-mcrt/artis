@@ -128,6 +128,10 @@ static auto calculate_ionfractions(const int element, const int modelgridindex, 
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
 
+  if (uppermost_ion < 0) {
+    return {};
+  }
+
   std::vector<double> ionfractions(uppermost_ion + 1);
   ionfractions[uppermost_ion] = 1;
 
