@@ -416,14 +416,19 @@ auto ionstagepop(int modelgridindex, int element, int ion) -> double
          grid::modelgrid[modelgridindex].composition[element].partfunct[ion] / stat_weight(element, ion, 0);
 }
 
-static auto find_uppermost_ion(const int modelgridindex, const int element, const double nne_hi) -> int {
+static auto find_uppermost_ion(const int modelgridindex, const int element, const double nne_hi, const bool force_lte)
+    -> int {
   const int nions = get_nions(element);
   if (nions == 0) {
     return -1;
   }
+  if (!force_lte && elem_has_nlte_levels(element)) {
+    return nions - 1;
+  }
+
   int uppermost_ion = 0;
-  const bool assume_lte = globals::lte_iteration || grid::modelgrid[modelgridindex].thick == 1;
-  if (assume_lte) {
+
+  if (force_lte) {
     uppermost_ion = nions - 1;
   } else {
     int ion = -1;
@@ -614,9 +619,7 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(modelgridindex, element) > 0) {
-      const int uppermost_ion = (!force_lte && elem_has_nlte_levels(element))
-                                    ? get_nions(element) - 1
-                                    : find_uppermost_ion(modelgridindex, element, nne_hi);
+      const int uppermost_ion = find_uppermost_ion(modelgridindex, element, nne_hi, force_lte);
       grid::set_elements_uppermost_ion(modelgridindex, element, uppermost_ion);
 
       only_lowest_ionstage = only_lowest_ionstage && (uppermost_ion <= 0);
