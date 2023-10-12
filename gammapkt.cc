@@ -525,9 +525,9 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
   const double rho = grid::get_rho(mgi);
 
   if (globals::gamma_kappagrey < 0) {
-    // Cross sections from Equation 2 of Kailash & Sutherland (1988), attributed to Veigele (1973)
+    // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Veigele (1973)
 
-    // 2.41326e19 = 100 keV in frequency
+    // 2.41326e19 Hz = 100 keV / H
     const double hnu_over_100kev = pkt_ptr->nu_cmf / 2.41326e+19;
 
     // double sigma_cmf_cno = 0.0448e-24 * pow(hnu_over_100kev, -3.2);
@@ -551,7 +551,7 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
     chi_cmf = globals::gamma_kappagrey * rho;
   }
 
-  // Now need to convert between frames.
+  // Now convert between frames.
 
   const double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
   return chi_rf;
@@ -560,17 +560,14 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
 static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
   // calculate the absorption coefficient [cm^-1] for pair production in the observer reference frame
 
-  // Start by working out the x-section in the co-moving frame.
-
-  const int cellindex = pkt_ptr->where;
-  const int mgi = grid::get_cell_modelgridindex(cellindex);
+  const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
   const double rho = grid::get_rho(mgi);
 
   if (globals::gamma_kappagrey >= 0.) {
     return 0.;
   }
 
-  // 2.46636e+20 = 1022 keV in frequency
+  // 2.46636e+20 Hz = 1022 keV / H
   if (pkt_ptr->nu_cmf <= 2.46636e+20) {
     return 0.;
   }
@@ -580,9 +577,9 @@ static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
   double sigma_cmf_fe = NAN;
   const double f_fe = grid::get_ffegrp(mgi);
 
-  // Cross sections from Equation 2 of Kailash & Sutherland (1988), attributed to Hubbell (1969)
+  // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Hubbell (1969)
 
-  // 3.61990e+20 = 1500 keV in frequency
+  // 3.61990e+20 = 1500 keV in frequency / H
   const double hnu_over_mev = pkt_ptr->nu_cmf / 2.41326e+20;
   if (pkt_ptr->nu_cmf > 3.61990e+20) {
     // sigma_cmf_cno = (0.0481 + (0.301 * (hnu_over_mev - 1.5))) * 49.e-27;
@@ -598,7 +595,7 @@ static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
     sigma_cmf_fe = 1.0063 * (hnu_over_mev - 1.022) * 784.e-27;
   }
 
-  // Now need to multiply by the particle number density.
+  // multiply by the particle number density.
 
   // sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
   // Assumes Z = 7. So mass = 14.
