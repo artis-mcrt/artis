@@ -8,18 +8,21 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <span>
 #include <sstream>
 #include <string>
 #include <vector>
 
+#include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
 #include "decay.h"
+#include "globals.h"
 #include "input.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "packet.h"
 #include "radfield.h"
-#include "rpkt.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"

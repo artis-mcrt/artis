@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "atomic.h"
+#include "constants.h"
 #include "decay.h"
 #include "grid.h"
 #include "kpkt.h"
