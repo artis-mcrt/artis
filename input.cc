@@ -406,6 +406,7 @@ static void read_ion_transitions(std::fstream &ftransitiondata, const int tottra
                                  std::vector<struct transitiontable_entry> &transitiontable,
                                  const int nlevels_requiretransitions,
                                  const int nlevels_requiretransitions_upperlevels) {
+  transitiontable.reserve(*tottransitions);
   std::string line;
 
   if (*tottransitions == 0) {
@@ -882,7 +883,6 @@ static void read_atomicdata_files() {
 
       /// read in the level and transition data for this ion
       std::vector<struct transitiontable_entry> transitiontable;
-      transitiontable.reserve(tottransitions);
 
       /// load transition table for the CURRENT ion to temporary memory
 
