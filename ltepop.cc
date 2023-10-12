@@ -183,12 +183,28 @@ static auto nne_solution_f(double nne_assumed, void *voidparas) -> double
 
   double nne_after = 0.;  // the resulting nne after setting the ion balance with nne_assumed
   for (int element = 0; element < get_nelements(); element++) {
-    set_groundlevelpops_if_needed(modelgridindex, element, nne_assumed, force_lte);
-    nne_after += get_element_nne_contrib(modelgridindex, element);
+    const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
+    if (nnelement > 0 && get_nions(element) > 0) {
+      if (!force_lte && elem_has_nlte_levels(element)) {
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions; ion++) {
+          const auto nnion = ionstagepop(modelgridindex, element, ion);
+          const int ioncharge = get_ionstage(element, ion) - 1;
+          nne_after += ioncharge * nnion;
+        }
+      } else {
+        const auto ionfractions = calculate_ionfractions(element, modelgridindex, nne_assumed, false);
+        const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
+        for (int ion = 0; ion <= uppermost_ion; ion++) {
+          const double nnion = nnelement * ionfractions[ion];
+          const int ioncharge = get_ionstage(element, ion) - 1;
+          nne_after += ioncharge * nnion;
+        }
+      }
 
-    assert_always(std::isfinite(nne_after));
+      assert_always(std::isfinite(nne_after));
+    }
   }
-
   nne_after = std::max(MINPOP, nne_after);
 
   return nne_after - nne_assumed;
