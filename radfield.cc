@@ -752,7 +752,7 @@ void update_estimators(const int modelgridindex, const double distance_e_cmf, co
 }
 
 void update_lineestimator(const int modelgridindex, const int lineindex, const double increment) {
-  if (!DETAILED_LINE_ESTIMATORS_ON) {
+  if constexpr (!DETAILED_LINE_ESTIMATORS_ON) {
     return;
   }
 
@@ -1334,7 +1334,7 @@ void do_MPI_Bcast(const int modelgridindex, const int root, int root_node_id)
     }
   }
 
-  if (DETAILED_LINE_ESTIMATORS_ON) {
+  if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
     for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
       MPI_Bcast(&prev_Jb_lu_normed[modelgridindex][jblueindex].value, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
       MPI_Bcast(&prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
@@ -1483,7 +1483,7 @@ void read_restart_data(FILE *gridsave_file) {
     }
   }
 
-  if (DETAILED_LINE_ESTIMATORS_ON) {
+  if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
     int detailed_linecount_in = 0;
     assert_always(fscanf(gridsave_file, "%d\n", &detailed_linecount_in) == 1);
 

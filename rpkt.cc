@@ -166,9 +166,7 @@ static auto get_event(const int modelgridindex,
           pkt_ptr->mastate.level = upper;  /// if the MA will be activated it must be in the transitions upper level
           pkt_ptr->mastate.activatingline = lineindex;
 
-          double edist = dist + ldist;
-
-          if (DETAILED_LINE_ESTIMATORS_ON) {
+          if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
             move_pkt_withtime(&dummypkt, ldist);
             radfield::update_lineestimator(modelgridindex, lineindex,
                                            dummypkt.prop_time * CLIGHT * dummypkt.e_cmf / dummypkt.nu_cmf);
@@ -181,7 +179,7 @@ static auto get_event(const int modelgridindex,
 
           pkt_ptr->next_trans = dummypkt.next_trans;
 
-          return edist;
+          return dist + ldist;
         }
       } else {
         /// continuum process occurs before reaching the line
