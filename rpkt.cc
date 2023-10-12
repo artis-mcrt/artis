@@ -853,9 +853,9 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
     }
   }
 
-  const double T_e = grid::get_Te(modelgridindex);
-  const double nne = grid::get_nne(modelgridindex);
-  const double nnetot = grid::get_nnetot(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
+  const auto nne = grid::get_nne(modelgridindex);
+  const auto nnetot = grid::get_nnetot(modelgridindex);
 
   /// The phixslist is sorted by nu_edge in ascending order (longest to shortest wavelength)
   /// If nu < allcont[i].nu_edge no absorption in any of the following continua
@@ -879,12 +879,12 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
     if ((DETAILED_BF_ESTIMATORS_ON && grid::get_elem_abundance(modelgridindex, element) > 0) ||
         (!DETAILED_BF_ESTIMATORS_ON && ((get_nnion(modelgridindex, element, ion) / nnetot > 1.e-6) || (level == 0)))) {
       const double nu_edge = globals::allcont[i].nu_edge;
-      const double nnlevel = usecellhistupdatephixslist ? get_levelpop(modelgridindex, element, ion, level)
-                                                        : calculate_levelpop(modelgridindex, element, ion, level);
-      const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
       if (nu < nu_edge) {
         break;
       }
+      const double nnlevel = usecellhistupdatephixslist ? get_levelpop(modelgridindex, element, ion, level)
+                                                        : calculate_levelpop(modelgridindex, element, ion, level);
+      const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
       if (nu <= nu_max_phixs && nnlevel > 0) {
         const double sigma_bf = photoionization_crosssection_fromtable(globals::allcont[i].photoion_xs, nu_edge, nu);
