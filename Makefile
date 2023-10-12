@@ -110,8 +110,7 @@ ifeq ($(MPI),ON)
 endif
 
 ifeq ($(OPENMP),ON)
-	CXXFLAGS += -Xpreprocessor
-	CXXFLAGS += -fopenmp
+	CXXFLAGS += -Xpreprocessor -fopenmp
 	LDFLAGS += -lomp
 	BUILD_DIR := $(BUILD_DIR)_openmp
 endif

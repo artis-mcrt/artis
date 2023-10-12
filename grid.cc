@@ -2586,7 +2586,7 @@ void change_cell(struct packet *pkt_ptr, int snext)
     pkt_ptr->escape_type = pkt_ptr->type;
     pkt_ptr->escape_time = pkt_ptr->prop_time;
     pkt_ptr->type = TYPE_ESCAPE;
-    safeincrement(globals::nesc);
+    globals::nesc++;
   } else {
     // Just need to update "where".
     pkt_ptr->where = snext;
