@@ -167,20 +167,6 @@ static auto get_event(const int modelgridindex,
           pkt_ptr->mastate.activatingline = lineindex;
 
           double edist = dist + ldist;
-          if (edist >= abort_dist) {
-            // if the edist > abort_dist, the line will not be activated in do_rpkt, even thought we are sure that we
-            // should hit based on the frequency checks
-            // this seems to only occur for kilonova models, maybe due to some combination of:
-            // - very rapid expansion
-            // - relativistic doppler shift (more complex expression causing numerical errors)
-            // - massive atomic dataset with densely packed lines
-            const double edist_new = abort_dist * (1 - 2e-8);
-            printout(
-                "[warning] bound-bound edist %lg was >= abort_dist %lg but nu_trans >= nu_cmf_abort (we haven't "
-                "redshifted past abort boundary). Fixing by reducing event distance to %lg ...\n",
-                edist, abort_dist, edist_new);
-            edist = edist_new;
-          }
 
           if (DETAILED_LINE_ESTIMATORS_ON) {
             move_pkt_withtime(&dummypkt, ldist);
@@ -966,6 +952,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
       }
     }
   }
+
   return chi_bf_sum;
 }
 
