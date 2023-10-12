@@ -18,6 +18,7 @@
 
 struct nne_solution_paras {
   int modelgridindex;
+  bool nlte_solver_pops_available;
 };
 
 static auto interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T) -> double {
@@ -151,29 +152,36 @@ static auto calculate_ionfractions(const int element, const int modelgridindex, 
   return ionfractions;
 }
 
-static auto nne_solution_f(double nne_assumed, void *paras) -> double
+static auto nne_solution_f(double nne_assumed, void *voidparas) -> double
 // assume a value for nne and then calculate the resulting nne
 // the difference between the assumed and calculated nne is returned
 {
-  const int modelgridindex = (static_cast<struct nne_solution_paras *>(paras))->modelgridindex;
+  const auto *paras = reinterpret_cast<struct nne_solution_paras *>(voidparas);
+  const int modelgridindex = paras->modelgridindex;
+  const bool nlte_solver_pops_available = paras->nlte_solver_pops_available;
 
   double nne_after = 0.;  // the resulting nne after setting the ion balance with nne_assumed
   for (int element = 0; element < get_nelements(); element++) {
     const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
     if (nnelement > 0 && get_nions(element) > 0) {
-      const auto ionfractions = calculate_ionfractions(element, modelgridindex, nne_assumed, false);
-      const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
-      for (int ion = 0; ion <= uppermost_ion; ion++) {
-        const double nnion = nnelement * ionfractions[ion];
-        const int ioncharge = get_ionstage(element, ion) - 1;
-        nne_after += ioncharge * nnion;
+      if (nlte_solver_pops_available && elem_has_nlte_levels(element)) {
+        // const int nions = get_nions(element);
+        // for (int ion = 0; ion < nions; ion++) {
+        //   const auto nnion = ionstagepop(modelgridindex, element, ion);
+        //   const int ioncharge = get_ionstage(element, ion) - 1;
+        //   nne_after += ioncharge * nnion;
+        // }
+      } else {
+        const auto ionfractions = calculate_ionfractions(element, modelgridindex, nne_assumed, false);
+        const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
+        for (int ion = 0; ion <= uppermost_ion; ion++) {
+          const double nnion = nnelement * ionfractions[ion];
+          const int ioncharge = get_ionstage(element, ion) - 1;
+          nne_after += ioncharge * nnion;
+        }
       }
 
-      if (!std::isfinite(nne_after)) {
-        printout("nne_solution_f: element %d uppermostion %d nnelement %g\n", element, uppermost_ion, nnelement);
-        printout("nne before %g after %g\n", nne_assumed, nne_after);
-        abort();
-      }
+      assert_always(std::isfinite(nne_after));
     }
   }
   nne_after = std::max(MINPOP, nne_after);
@@ -529,10 +537,12 @@ static void set_groundlevelpops_neutral(const int modelgridindex) {
   }
 }
 
-static auto find_converged_nne(const int modelgridindex, double nne_hi) -> float {
+static auto find_converged_nne(const int modelgridindex, double nne_hi, const bool nlte_solver_pops_available)
+    -> float {
   /// Search solution for nne in [nne_lo,nne_hi]
 
-  struct nne_solution_paras paras = {.modelgridindex = modelgridindex};
+  struct nne_solution_paras paras = {.modelgridindex = modelgridindex,
+                                     .nlte_solver_pops_available = nlte_solver_pops_available};
   gsl_function f = {.function = &nne_solution_f, .params = &paras};
 
   double nne_lo = 0.;  // MINPOP;
@@ -589,14 +599,14 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
-  const bool allow_nlte = !globals::lte_iteration && grid::modelgrid[modelgridindex].thick != 1;
+  const bool nlte_solver_pops_available = !globals::lte_iteration && grid::modelgrid[modelgridindex].thick != 1;
 
   const double nne_hi = grid::get_rho(modelgridindex) / MH;
 
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(modelgridindex, element) > 0) {
-      const int uppermost_ion = (allow_nlte && elem_has_nlte_levels(element))
+      const int uppermost_ion = (nlte_solver_pops_available && elem_has_nlte_levels(element))
                                     ? get_nions(element) - 1
                                     : find_uppermost_ion(modelgridindex, element, nne_hi);
       grid::set_elements_uppermost_ion(modelgridindex, element, uppermost_ion);
@@ -610,12 +620,12 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void
   if (only_lowest_ionstage) {
     set_groundlevelpops_neutral(modelgridindex);
   } else {
-    const auto nne_solution = find_converged_nne(modelgridindex, nne_hi);
+    const auto nne_solution = find_converged_nne(modelgridindex, nne_hi, nlte_solver_pops_available);
     grid::set_nne(modelgridindex, nne_solution);
 
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
-      if ((!allow_nlte || !elem_has_nlte_levels(element)) && nions > 0) {
+      if ((!nlte_solver_pops_available || !elem_has_nlte_levels(element)) && nions > 0) {
         // element's ground level populations were not already set by the NLTE solver
         set_groundlevelpops(modelgridindex, element, nne_solution, false);
       }
