@@ -700,7 +700,7 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
   }
 
   const int nbfcontinua = globals::nbfcontinua;
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
   // const double dopplerfactor = 1.;
 
   const int tid = get_thread_num();

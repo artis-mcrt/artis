@@ -80,7 +80,8 @@ static auto get_event(const int modelgridindex,
   struct packet dummypkt = *pkt_ptr;
 
   calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, &globals::chi_rpkt_cont[tid], modelgridindex, true);
-  const double chi_cont = globals::chi_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(pkt_ptr);
+  const double chi_cont =
+      globals::chi_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
   double tau = 0.;   // optical depth along path
   double dist = 0.;  // position on path
   while (true) {
@@ -373,7 +374,7 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   // Finally we want to put in the rest frame energy and frequency.
   // And record that it's now a r-pkt.
 
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 }
@@ -382,7 +383,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr,
                                  struct rpkt_continuum_absorptioncoeffs chi_rpkt_cont_thisthread, int modelgridindex) {
   const double nu = pkt_ptr->nu_cmf;
 
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
   const double chi_cont = chi_rpkt_cont_thisthread.total * dopplerfactor;
   const double sigma = chi_rpkt_cont_thisthread.es * dopplerfactor;
   const double chi_ff = chi_rpkt_cont_thisthread.ff * dopplerfactor;
@@ -695,7 +696,8 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   } else if (grid::modelgrid[mgi].thick == 1) {
     /// In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
 
-    const double kappa = grid::get_kappagrey(mgi) * grid::get_rho(mgi) * doppler_packet_nucmf_on_nurf(pkt_ptr);
+    const double kappa = grid::get_kappagrey(mgi) * grid::get_rho(mgi) *
+                         doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
     const double tau_current = 0.0;
     edist = (tau_next - tau_current) / kappa;
     pkt_ptr->next_trans = -1;
@@ -787,7 +789,7 @@ void emit_rpkt(struct packet *pkt_ptr) {
   /// Finally we want to put in the rest frame energy and frequency. And record
   /// that it's now a r-pkt.
 
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 

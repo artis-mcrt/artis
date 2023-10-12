@@ -282,7 +282,7 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
   // that it's now a gamma ray.
 
   pkt_ptr->prop_time = pkt_ptr->tdecay;
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
@@ -341,7 +341,7 @@ static auto get_chi_compton_rf(const struct packet *pkt_ptr) -> double {
   const double chi_cmf = sigma_cmf * grid::get_nnetot(grid::get_cell_modelgridindex(pkt_ptr->where));
 
   // convert between frames
-  const double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
+  const double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
 
   assert_testmodeonly(std::isfinite(chi_rf));
 
@@ -502,7 +502,7 @@ static void compton_scatter(struct packet *pkt_ptr)
 
     // It now has a rest frame direction and a co-moving frequency.
     //  Just need to set the rest frame energy.
-    const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
+    const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
     pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
     pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
@@ -553,7 +553,7 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
 
   // Now convert between frames.
 
-  const double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
+  const double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
   return chi_rf;
 }
 
@@ -610,7 +610,7 @@ static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
 
   // Now need to convert between frames.
 
-  double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
+  double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
 
   if (chi_rf < 0) {
     printout("Negative pair production sigma. Setting to zero. Abort? %g\n", chi_rf);
@@ -655,10 +655,7 @@ static void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist) {
     return;
   }
 
-  double vel_vec[3];
-  get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
-
-  const double doppler_sq = doppler_squared_nucmf_on_nurf(pkt_ptr->dir, vel_vec);
+  const double doppler_sq = doppler_squared_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
 
   const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
   const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
@@ -723,7 +720,7 @@ void pair_prod(struct packet *pkt_ptr) {
 
     angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
 
-    const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
+    const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
     pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
     pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 

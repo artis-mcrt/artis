@@ -113,16 +113,22 @@ constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double,
   return dopplerfactor;
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr double doppler_squared_nucmf_on_nurf(std::span<const double, 3> dir_rf,
-                                                                           std::span<const double, 3> vel_rf)
+[[gnu::pure]] [[nodiscard]] constexpr double doppler_squared_nucmf_on_nurf(std::span<const double, 3> pos_rf,
+                                                                           std::span<const double, 3> dir_rf,
+                                                                           const double prop_time)
 // Doppler factor squared, either to first order v/c or fully relativisitic
 // depending on USE_RELATIVISTIC_DOPPLER_SHIFT
 //
 // arguments:
+//   pos_rf: the rest frame position of the packet
 //   dir_rf: the rest frame direction (unit vector) of light propagation
-//   vel_rf: velocity of the comoving frame relative to the rest frame
+//   prop_time: the propagation time of the packet
 // returns: the ratio f = (nu_cmf / nu_rf) ^ 2
 {
+  // velocity of the comoving frame relative to the rest frame
+  double vel_rf[3] = {0, 0, 0};  // homologous flow velocity
+  get_velocity(pos_rf, vel_rf, prop_time);
+
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
 
@@ -144,10 +150,12 @@ constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double,
   return dopplerfactorsq;
 }
 
-[[gnu::pure]] constexpr double doppler_packet_nucmf_on_nurf(const struct packet *const pkt_ptr) {
+[[gnu::pure]] [[nodiscard]] constexpr double doppler_packet_nucmf_on_nurf(std::span<const double, 3> pos_rf,
+                                                                          std::span<const double, 3> dir_rf,
+                                                                          const double prop_time) {
   double flow_velocity[3] = {0, 0, 0};  // homologous flow velocity
-  get_velocity(pkt_ptr->pos, flow_velocity, pkt_ptr->prop_time);
-  return doppler_nucmf_on_nurf(pkt_ptr->dir, flow_velocity);
+  get_velocity(pos_rf, flow_velocity, prop_time);
+  return doppler_nucmf_on_nurf(dir_rf, flow_velocity);
 }
 
 constexpr void move_pkt(struct packet *pkt_ptr, const double distance)
@@ -163,7 +171,7 @@ constexpr void move_pkt(struct packet *pkt_ptr, const double distance)
 
   /// During motion, rest frame energy and frequency are conserved.
   /// But need to update the co-moving ones.
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
   pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
   pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
 }
