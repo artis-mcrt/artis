@@ -186,12 +186,8 @@ static auto nne_solution_f(double nne_assumed, void *voidparas) -> double
     const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
     if (nnelement > 0 && get_nions(element) > 0) {
       if (!force_lte && elem_has_nlte_levels(element)) {
-        const int nions = get_nions(element);
-        for (int ion = 0; ion < nions; ion++) {
-          const auto nnion = get_nnion(modelgridindex, element, ion);
-          const int ioncharge = get_ionstage(element, ion) - 1;
-          nne_after += ioncharge * nnion;
-        }
+        // populations from the NLTE solver are fixed within the nne solver
+        nne_after += get_element_nne_contrib(modelgridindex, element);
       } else {
         const auto ionfractions = calculate_ionfractions(element, modelgridindex, nne_assumed, false);
         const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
