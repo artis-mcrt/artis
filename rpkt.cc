@@ -802,8 +802,7 @@ void emit_rpkt(struct packet *pkt_ptr) {
   cross_prod(pkt_ptr->dir, dummy_dir, pkt_ptr->pol_dir);
 
   if ((dot(pkt_ptr->pol_dir, pkt_ptr->pol_dir)) < 1.e-8) {
-    dummy_dir[0] = dummy_dir[2] = 0.0;
-    dummy_dir[1] = 1.0;
+    dummy_dir = {0., 0., 1.};
     cross_prod(pkt_ptr->dir, dummy_dir, pkt_ptr->pol_dir);
   }
 
