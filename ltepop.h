@@ -15,6 +15,8 @@ double calculate_sahafact(int element, int ion, int level, int upperionlevel, do
 double get_nnion(int modelgridindex, int element, int ion);
 void calculate_ion_balance_nne(int modelgridindex);
 void calculate_cellpartfuncts(int modelgridindex, int element);
-void set_groundlevelpops_if_needed(const int modelgridindex, const int element, const float nne, const bool force_lte);
+[[nodiscard]] auto calculate_ionfractions(const int element, const int modelgridindex, const double nne,
+                                          const bool force_lte) -> std::vector<double>;
+void set_groundlevelpops(const int modelgridindex, const int element, const float nne, const bool force_lte);
 
 #endif  // LTEPOP_H

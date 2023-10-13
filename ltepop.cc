@@ -114,8 +114,8 @@ static auto phi_ion_equilib(const int element, const int ion, const int modelgri
   return phi;
 }
 
-static auto calculate_ionfractions(const int element, const int modelgridindex, const double nne, const bool force_lte)
-    -> std::vector<double>
+[[nodiscard]] auto calculate_ionfractions(const int element, const int modelgridindex, const double nne,
+                                          const bool force_lte) -> std::vector<double>
 // Calculate the fractions of an element's population in each ionization stage based on Saha LTE or ionisation
 // equilibrium
 {
@@ -481,14 +481,12 @@ static void set_calculated_nne(const int modelgridindex) {
   grid::set_nne(modelgridindex, std::max(MINPOP, nne));
 }
 
-void set_groundlevelpops_if_needed(const int modelgridindex, const int element, const float nne, const bool force_lte) {
+void set_groundlevelpops(const int modelgridindex, const int element, const float nne, const bool force_lte) {
   /// If not already set by the NLTE solver, set the ground level populations from either Saha LTE or
   /// ionization/recombination balance (Photoionization Equilibrium)
   const int nions = get_nions(element);
 
-  // avoid overwriting the ground level populations set by the NLTE pop solver
-  const bool already_set_by_nlte_solver = !force_lte && elem_has_nlte_levels(element);
-  if (already_set_by_nlte_solver || nions <= 0) {
+  if (nions <= 0) {
     return;
   }
 
@@ -633,7 +631,11 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void
     grid::set_nne(modelgridindex, nne_solution);
 
     for (int element = 0; element < get_nelements(); element++) {
-      set_groundlevelpops_if_needed(modelgridindex, element, nne_solution, force_lte);
+      // avoid overwriting the ground level populations set by the NLTE pop solver
+      const bool already_set_by_nlte_solver = !force_lte && elem_has_nlte_levels(element);
+      if (!already_set_by_nlte_solver) {
+        set_groundlevelpops(modelgridindex, element, nne_solution, force_lte);
+      }
     }
   }
 
