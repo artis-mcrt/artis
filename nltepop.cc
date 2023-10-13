@@ -982,26 +982,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
         const int index_sl = get_nlte_vector_index(element, ion, nlevels_nlte + 1);
         grid::modelgrid[modelgridindex].nlte_pops[nlte_start + nlevels_nlte] =
             (gsl_vector_get(popvec, index_sl) / grid::modelgrid[modelgridindex].rho / superlevel_partfunc[ion]);
-
-        // printout("solve_nlte_pops_element: The Z=%d ionstage %d superlevel population is %g with rho %g and
-        // superlevel_partfunc %g Te %g scaled pop stored as %g\n", get_atomicnumber(element), get_ionstage(element,
-        // ion), gsl_vector_get(popvec, index_sl), grid::modelgrid[modelgridindex].rho, superlevel_partfunc[ion],
-        // grid::get_Te(modelgridindex), grid::modelgrid[modelgridindex].nlte_pops[nlte_start + nlevels_nlte]); the
-        // stored population is already divided by the partfunc, so just multiply it by the superlevel_boltzmann to get
-        // the population of a level in the SL
-
-        // solution_ion_pop += gsl_vector_get(popvec, index_sl);
       }
-      // printout("    I had a ground level pop of %g, a part fn of %g and therefore an ion pop of %g\n",
-      //          grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
-      //          grid::modelgrid[modelgridindex].composition[element].partfunct[ion],
-      //          (grid::modelgrid[modelgridindex].composition[element].partfunct[ion] *
-      //            grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]
-      //            / stat_weight(element, ion, 0)));
-
-      // get_nnion here must be called before setting the new ground level population
-      // printout("    For ion_stage %d the total population is %g, but was previously %g\n",
-      //          ion_stage,solution_ion_pop,get_nnion(modelgridindex, element, ion));
 
       // store the ground level population
       grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = gsl_vector_get(popvec, index_gs);
