@@ -656,11 +656,10 @@ static void nltepop_matrix_normalise(const int modelgridindex, const int element
 }
 
 static void set_element_pops_lte(const int modelgridindex, const int element) {
-  nltepop_reset_element(modelgridindex, element);
+  nltepop_reset_element(modelgridindex, element);  // set NLTE pops as invalid so that LTE pops will be used instead
 
   calculate_cellpartfuncts(modelgridindex, element);
-  const auto nne = grid::get_nne(modelgridindex);
-  set_groundlevelpops(modelgridindex, element, nne, true);
+  set_groundlevelpops(modelgridindex, element, grid::get_nne(modelgridindex), true);
 }
 
 static auto lumatrix_is_singular(const gsl_matrix *LU, const int element) -> bool {
