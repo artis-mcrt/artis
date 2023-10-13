@@ -1011,14 +1011,13 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       calculate_cellpartfuncts(modelgridindex, element);
     }
 
-    const double elem_pop_abundance = nnelement;
     const double elem_pop_matrix = gsl_blas_dasum(popvec);
-    const double elem_pop_error_percent = fabs((elem_pop_abundance / elem_pop_matrix) - 1) * 100;
+    const double elem_pop_error_percent = fabs((nnelement / elem_pop_matrix) - 1) * 100;
     if (elem_pop_error_percent > 1.0) {
       printout(
           "  WARNING: The Z=%d element population is: %g (from abundance) and %g (from matrix solution sum of level "
           "pops), error: %.1f%%. Forcing element pops to LTE.\n",
-          atomic_number, elem_pop_abundance, elem_pop_matrix, elem_pop_error_percent);
+          atomic_number, nnelement, elem_pop_matrix, elem_pop_error_percent);
       set_element_pops_lte(modelgridindex, element);
     }
 
