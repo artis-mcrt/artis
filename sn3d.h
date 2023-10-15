@@ -111,7 +111,7 @@ static inline int get_bflutindex(const int tempindex, const int element, const i
 #define safeadd(var, val) var = var + val
 #endif
 
-static inline void safeincrement(auto var) { safeadd(var, 1); };
+#define safeincrement(var) safeadd(var, 1)
 
 // #define DO_TITER
 
