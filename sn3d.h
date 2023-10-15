@@ -105,11 +105,14 @@ static inline int get_bflutindex(const int tempindex, const int element, const i
   return bflutindex;
 }
 
+static inline void safeadd(auto var, auto val) {
 #ifdef _OPENMP
-#define safeadd(var, val) _Pragma("omp atomic update") var += val
+#pragma omp atomic update
+  var += val;
 #else
-#define safeadd(var, val) var = var + val
+  var = var + val;
 #endif
+}
 
 #define safeincrement(var) safeadd(var, 1)
 
