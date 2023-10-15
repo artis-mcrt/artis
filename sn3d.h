@@ -114,7 +114,7 @@ static inline void safeadd(auto var, auto val) {
 #endif
 }
 
-#define safeincrement(var) safeadd(var, 1)
+static inline void safeincrement(auto var) { safeadd(var, 1); };
 
 // #define DO_TITER
 
