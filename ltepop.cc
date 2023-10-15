@@ -115,7 +115,7 @@ static auto phi_ion_equilib(const int element, const int ion, const int modelgri
 }
 
 [[nodiscard]] auto calculate_ionfractions(const int element, const int modelgridindex, const double nne,
-                                          const bool force_lte) -> std::vector<double>
+                                          const bool use_phi_lte) -> std::vector<double>
 // Calculate the fractions of an element's population in each ionization stage based on Saha LTE or ionisation
 // equilibrium
 {
@@ -135,7 +135,7 @@ static auto phi_ion_equilib(const int element, const int ion, const int modelgri
 
   for (int ion = uppermost_ion - 1; ion >= 0; ion--) {
     const auto phifactor =
-        force_lte ? phi_lte(element, ion, modelgridindex) : phi_ion_equilib(element, ion, modelgridindex);
+        use_phi_lte ? phi_lte(element, ion, modelgridindex) : phi_ion_equilib(element, ion, modelgridindex);
     ionfractions[ion] = ionfractions[ion + 1] * nne * phifactor;
     normfactor += ionfractions[ion];
   }
