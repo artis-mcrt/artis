@@ -835,7 +835,7 @@ static void allocate_nonemptymodelcells() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const auto radial_pos_mid = get_cellradialpos(cellindex);
 
-    if (false && FORCE_SPHERICAL_ESCAPE_SURFACE && radial_pos_mid > globals::vmax * globals::tmin) {
+    if (FORCE_SPHERICAL_ESCAPE_SURFACE && radial_pos_mid > globals::vmax * globals::tmin) {
       // for 1D models, the final shell outer v should already be at vmax
       assert_always(model_type != GRID_SPHERICAL1D || cell[cellindex].modelgridindex == get_npts_model());
       cell[cellindex].modelgridindex = get_npts_model();
@@ -2359,6 +2359,21 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
     -> double
 /// Basic routine to compute distance to a cell boundary.
 {
+  if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
+    double cell_diag_len;
+    if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
+      cell_diag_len = std::sqrt(3 * std::pow(wid_init(cellindex, 0), 2)) / 2;
+    } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
+      cell_diag_len = std::sqrt(std::pow(wid_init(cellindex, 0), 2) + std::pow(wid_init(cellindex, 1), 2)) / 2;
+    } else {
+      cell_diag_len = 0.;
+    }
+    if (vec_len(pos) / tstart > globals::vmax + cell_diag_len) {
+      *snext = -99;
+      return 0.;
+    }
+  }
+
   auto last_cross = *pkt_last_cross;
   // d is used to loop over the coordinate indicies 0,1,2 for x,y,z
 
@@ -2540,13 +2555,6 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
         *pkt_last_cross = choice;
         *snext = cellindex - grid::get_coordcellindexincrement(d);
       }
-    }
-  }
-
-  if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
-    const double max_escape_radius = globals::vmax * (tstart + distance / CLIGHT_PROP);
-    if (*snext >= 0 && get_cellradialpos(*snext) > max_escape_radius) {
-      *snext = -99;
     }
   }
 
