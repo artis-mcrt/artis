@@ -9,6 +9,9 @@ constexpr int CUBOID_NCOORDGRID_X;
 constexpr int CUBOID_NCOORDGRID_Y;
 constexpr int CUBOID_NCOORDGRID_Z;
 
+// for 2D cylindrical and 3D Cartesian, remove the corners (v > vmax) to force a spherical escape surface
+constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE;
+
 // maximum number of NLTE/Te/Spencer-Fano iterations
 constexpr int NLTEITER;
 

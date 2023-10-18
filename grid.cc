@@ -562,7 +562,6 @@ static void set_elem_stable_abund_from_total(const int mgi, const int element, c
 auto get_cellradialpos(const int cellindex) -> double
 // get the radial distance from the origin to the centre of the cell at time tmin
 {
-  // spherical coordinate case is trivial
   if (GRID_TYPE == GRID_SPHERICAL1D) {
     // mid point radius
     // return get_cellcoordmin(cellindex, 0) + (0.5 * wid_init(cellindex, 0));
@@ -901,7 +900,7 @@ static void map_1dmodelto3dgrid()
     const int mgi = std::distance(vout_model, std::find_if_not(vout_model, vout_model + get_npts_model(),
                                                                [vcell](double v_outer) { return v_outer < vcell; }));
 
-    if (get_rho_tmin(mgi) > 0) {
+    if (modelgrid[mgi].rhoinit > 0) {
       modelgrid[mgi].initial_radial_pos_sum += radial_pos;
       set_cell_modelgridindex(cellindex, mgi);
     } else {
@@ -933,9 +932,14 @@ static void map_2dmodelto3dgrid()
       mgi = (n_z * ncoord_model[0]) + n_rcyl;
     }
 
-    if (get_rho_tmin(mgi) > 0) {
-      const double radial_pos = get_cellradialpos(cellindex);
-      modelgrid[mgi].initial_radial_pos_sum += radial_pos;
+    const auto radial_pos_mid = get_cellradialpos(cellindex);
+
+    if (FORCE_SPHERICAL_ESCAPE_SURFACE && radial_pos_mid > globals::vmax * globals::tmin) {
+      modelgrid[mgi].rhoinit = 0.;
+    }
+
+    if (modelgrid[mgi].rhoinit > 0) {
+      modelgrid[mgi].initial_radial_pos_sum += radial_pos_mid;
       set_cell_modelgridindex(cellindex, mgi);
     } else {
       set_cell_modelgridindex(cellindex, get_npts_model());
@@ -949,9 +953,15 @@ static void map_modeltogrid_direct()
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = cellindex;  // direct mapping
 
-    modelgrid[mgi].initial_radial_pos_sum = get_cellradialpos(cellindex);
+    const auto radial_pos_mid = get_cellradialpos(cellindex);
 
-    if (get_rho_tmin(mgi) > 0) {
+    modelgrid[mgi].initial_radial_pos_sum = radial_pos_mid;
+
+    if (FORCE_SPHERICAL_ESCAPE_SURFACE && radial_pos_mid > globals::vmax * globals::tmin) {
+      modelgrid[mgi].rhoinit = 0.;
+    }
+
+    if (modelgrid[mgi].rhoinit > 0) {
       set_cell_modelgridindex(cellindex, mgi);
     } else {
       set_cell_modelgridindex(cellindex, get_npts_model());
@@ -2546,6 +2556,13 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
         *pkt_last_cross = choice;
         *snext = cellindex - grid::get_coordcellindexincrement(d);
       }
+    }
+  }
+
+  if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
+    const double escape_radius = globals::vmax * (tstart + distance / CLIGHT_PROP);
+    if (get_cellradialpos(*snext) > escape_radius) {
+      *snext = -99;
     }
   }
 
