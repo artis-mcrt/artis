@@ -912,7 +912,7 @@ static void map_1dmodelto3dgrid()
     const int mgi = std::distance(vout_model, std::find_if_not(vout_model, vout_model + get_npts_model(),
                                                                [vcell](double v_outer) { return v_outer < vcell; }));
 
-    if (modelgrid[mgi].rhoinit > 0) {
+    if (mgi < get_npts_model() && modelgrid[mgi].rhoinit > 0) {
       set_cell_modelgridindex(cellindex, mgi);
     } else {
       set_cell_modelgridindex(cellindex, get_npts_model());
