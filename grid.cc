@@ -906,11 +906,10 @@ static void map_1dmodelto3dgrid()
 // Map 1D spherical model grid onto propagation grid
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
-    const double radial_pos = get_cellradialpos(cellindex);
-
-    const double vcell = radial_pos / globals::tmin;
-    const int mgi = std::distance(vout_model, std::find_if_not(vout_model, vout_model + get_npts_model(),
-                                                               [vcell](double v_outer) { return v_outer < vcell; }));
+    const double cellvmid = get_cellradialpos(cellindex) / globals::tmin;
+    const int mgi =
+        std::distance(vout_model, std::find_if_not(vout_model, vout_model + get_npts_model(),
+                                                   [cellvmid](double v_outer) { return v_outer < cellvmid; }));
 
     if (mgi < get_npts_model() && modelgrid[mgi].rhoinit > 0) {
       set_cell_modelgridindex(cellindex, mgi);
@@ -2078,28 +2077,21 @@ void grid_init(int my_rank)
       ME * CLIGHT * decay::nucmass(28, 56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::tmin);
   printout("grid_init: rho_crit = %g [g/cm3]\n", globals::rho_crit);
 
-  if (get_model_type() == GRID_SPHERICAL1D) {
-    if (GRID_TYPE == GRID_CARTESIAN3D) {
-      map_1dmodelto3dgrid();
-    } else if (GRID_TYPE == GRID_SPHERICAL1D) {
-      map_modeltogrid_direct();
-    } else {
-      assert_always(false);
+  if (get_model_type() == GRID_TYPE) {
+    if (get_model_type() == GRID_CARTESIAN3D) {
+      assert_always(GRID_TYPE == GRID_CARTESIAN3D);
+      assert_always(ncoord_model[0] == ncoordgrid[0]);
+      assert_always(ncoord_model[1] == ncoordgrid[1]);
+      assert_always(ncoord_model[2] == ncoordgrid[2]);
     }
-  } else if (get_model_type() == GRID_CYLINDRICAL2D) {
-    if (GRID_TYPE == GRID_CARTESIAN3D) {
-      map_2dmodelto3dgrid();
-    } else if (GRID_TYPE == GRID_CYLINDRICAL2D) {
-      map_modeltogrid_direct();
-    } else {
-      assert_always(false);
-    }
-  } else if (get_model_type() == GRID_CARTESIAN3D) {
-    assert_always(GRID_TYPE == GRID_CARTESIAN3D);
-    assert_always(ncoord_model[0] == ncoordgrid[0]);
-    assert_always(ncoord_model[1] == ncoordgrid[1]);
-    assert_always(ncoord_model[2] == ncoordgrid[2]);
+
     map_modeltogrid_direct();
+  } else if (get_model_type() == GRID_SPHERICAL1D) {
+    assert_always(GRID_TYPE == GRID_CARTESIAN3D);
+    map_1dmodelto3dgrid();
+  } else if (get_model_type() == GRID_CYLINDRICAL2D) {
+    assert_always(GRID_TYPE == GRID_CARTESIAN3D);
+    map_2dmodelto3dgrid();
   } else {
     printout("[fatal] grid_init: Error: Unknown density type. Abort.");
     abort();
@@ -2552,8 +2544,8 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
   }
 
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
-    const double escape_radius = globals::vmax * (tstart + distance / CLIGHT_PROP);
-    if (*snext >= 0 && get_cellradialpos(*snext) > escape_radius) {
+    const double max_escape_radius = globals::vmax * (tstart + distance / CLIGHT_PROP);
+    if (*snext >= 0 && get_cellradialpos(*snext) > max_escape_radius) {
       *snext = -99;
     }
   }
