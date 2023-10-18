@@ -107,7 +107,6 @@ void set_TR(int modelgridindex, float TR);
 void set_TJ(int modelgridindex, float TJ);
 void set_W(int modelgridindex, float W);
 void grid_init(int my_rank);
-double get_cellradialpos(int cellindex);
 float get_modelinitradioabund(int modelgridindex, int nucindex);
 float get_stable_initabund(int mgi, int element);
 float get_element_meanweight(int mgi, int element);

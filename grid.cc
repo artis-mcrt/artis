@@ -578,7 +578,7 @@ static void set_elem_stable_abund_from_total(const int mgi, const int element, c
   modelgrid[mgi].composition[element].abundance = isofracsum + massfracstable;
 }
 
-auto get_cellradialpos(const int cellindex) -> double
+static auto get_cellradialposmid(const int cellindex) -> double
 // get the radial distance from the origin to the centre of the cell at time tmin
 {
   if (GRID_TYPE == GRID_SPHERICAL1D) {
@@ -852,7 +852,7 @@ static void allocate_nonemptymodelcells() {
   }
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
-    const auto radial_pos_mid = get_cellradialpos(cellindex);
+    const auto radial_pos_mid = get_cellradialposmid(cellindex);
 
     if (FORCE_SPHERICAL_ESCAPE_SURFACE && radial_pos_mid > globals::vmax * globals::tmin) {
       // for 1D models, the final shell outer v should already be at vmax
@@ -925,7 +925,7 @@ static void map_1dmodelto3dgrid()
 // Map 1D spherical model grid onto propagation grid
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
-    const double cellvmid = get_cellradialpos(cellindex) / globals::tmin;
+    const double cellvmid = get_cellradialposmid(cellindex) / globals::tmin;
     const int mgi =
         std::distance(vout_model, std::find_if_not(vout_model, vout_model + get_npts_model(),
                                                    [cellvmid](double v_outer) { return v_outer < cellvmid; }));
@@ -2379,10 +2379,7 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
 /// Basic routine to compute distance to a cell boundary.
 {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
-    const double cell_r_mid = get_cellradialpos(cellindex);
-    const double cell_r_inner = get_cell_r_inner(cellindex);
-
-    if (cell_r_inner - (cell_r_mid - cell_r_inner) > globals::vmax * globals::tmin) {
+    if (get_cell_r_inner(cellindex) > globals::vmax * globals::tmin) {
       *snext = -99;
       return 0.;
     }
