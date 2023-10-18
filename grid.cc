@@ -155,6 +155,25 @@ auto get_cellcoordmin(const int cellindex, const int axis) -> double
   // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
 }
 
+static auto get_cell_r_inner(const int cellindex) -> double {
+  if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
+    return get_cellcoordmin(cellindex, 0);
+  }
+
+  if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
+    const auto rcyl_inner = get_cellcoordmin(cellindex, 0);
+    const auto z_inner = std::min(std::abs(get_cellcoordmin(cellindex, 1)), std::abs(get_cellcoordmax(cellindex, 1)));
+    return std::sqrt(std::pow(rcyl_inner, 2) + std::pow(z_inner, 2));
+  }
+
+  if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
+    const auto x_inner = std::min(std::abs(get_cellcoordmin(cellindex, 0)), std::abs(get_cellcoordmax(cellindex, 0)));
+    const auto y_inner = std::min(std::abs(get_cellcoordmin(cellindex, 1)), std::abs(get_cellcoordmax(cellindex, 1)));
+    const auto z_inner = std::min(std::abs(get_cellcoordmin(cellindex, 2)), std::abs(get_cellcoordmax(cellindex, 2)));
+    return std::sqrt(std::pow(x_inner, 2) + std::pow(y_inner, 2) + std::pow(z_inner, 2));
+  }
+}
+
 auto get_coordcellindexincrement(const int axis) -> int
 // how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r direction)
 {
@@ -2360,15 +2379,7 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
 /// Basic routine to compute distance to a cell boundary.
 {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
-    double cell_diag_len;
-    if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
-      cell_diag_len = std::sqrt(3 * std::pow(wid_init(cellindex, 0), 2)) / 2;
-    } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
-      cell_diag_len = std::sqrt(std::pow(wid_init(cellindex, 0), 2) + std::pow(wid_init(cellindex, 1), 2)) / 2;
-    } else {
-      cell_diag_len = 0.;
-    }
-    if (vec_len(pos) / tstart > globals::vmax + cell_diag_len) {
+    if (get_cell_r_inner(cellindex) > globals::vmax * globals::tmin) {
       *snext = -99;
       return 0.;
     }
