@@ -2379,7 +2379,10 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
 /// Basic routine to compute distance to a cell boundary.
 {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
-    if (get_cell_r_inner(cellindex) > globals::vmax * globals::tmin) {
+    const double cell_r_mid = get_cellradialpos(cellindex);
+    const double cell_r_inner = get_cell_r_inner(cellindex);
+
+    if (cell_r_inner + (cell_r_mid - cell_r_inner) > globals::vmax * globals::tmin) {
       *snext = -99;
       return 0.;
     }
