@@ -949,11 +949,8 @@ static void map_modeltogrid_direct()
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = cellindex;  // direct mapping
 
-    // strange difference: 3D mode gives a radial pos to empty cells, 1D and 2D do not
-    // TODO: Check if this affects anything
-    if (GRID_TYPE == GRID_CARTESIAN3D || get_rho_tmin(mgi) > 0) {
-      modelgrid[mgi].initial_radial_pos_sum = get_cellradialpos(cellindex);
-    }
+    modelgrid[mgi].initial_radial_pos_sum = get_cellradialpos(cellindex);
+
     if (get_rho_tmin(mgi) > 0) {
       set_cell_modelgridindex(cellindex, mgi);
     } else {
