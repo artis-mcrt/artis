@@ -2553,7 +2553,7 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
 
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
     const double escape_radius = globals::vmax * (tstart + distance / CLIGHT_PROP);
-    if (get_cellradialpos(*snext) > escape_radius) {
+    if (*snext >= 0 && get_cellradialpos(*snext) > escape_radius) {
       *snext = -99;
     }
   }
