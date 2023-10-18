@@ -12,7 +12,7 @@ constexpr int GRID_TYPE = GRID_CARTESIAN3D;
 constexpr int CUBOID_NCOORDGRID_X = 50;
 constexpr int CUBOID_NCOORDGRID_Y = 50;
 constexpr int CUBOID_NCOORDGRID_Z = 50;
-constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE = true;
+constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE = false;
 
 constexpr int NLTEITER = 30;
 
