@@ -829,12 +829,23 @@ static void allocate_nonemptymodelcells() {
   // Determine the number of simulation cells associated with the model cells
   for (int mgi = 0; mgi < (get_npts_model() + 1); mgi++) {
     mg_associated_cells[mgi] = 0;
+    modelgrid[mgi].initial_radial_pos_sum = 0.;
   }
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
+    const auto radial_pos_mid = get_cellradialpos(cellindex);
+
+    if (FORCE_SPHERICAL_ESCAPE_SURFACE && radial_pos_mid > globals::vmax * globals::tmin) {
+      modelgrid[get_cell_modelgridindex(cellindex)].rhoinit = 0.;
+      cell[cellindex].modelgridindex = get_npts_model();
+    }
+
     const int mgi = get_cell_modelgridindex(cellindex);
     assert_always(!(get_model_type() == GRID_CARTESIAN3D) || (get_rho_tmin(mgi) > 0) || (mgi == get_npts_model()));
+
     mg_associated_cells[mgi] += 1;
+    modelgrid[mgi].initial_radial_pos_sum += radial_pos_mid;
+
     assert_always(!(get_model_type() == GRID_CARTESIAN3D) || (mg_associated_cells[mgi] == 1) ||
                   (mgi == get_npts_model()));
   }
@@ -901,7 +912,6 @@ static void map_1dmodelto3dgrid()
                                                                [vcell](double v_outer) { return v_outer < vcell; }));
 
     if (modelgrid[mgi].rhoinit > 0) {
-      modelgrid[mgi].initial_radial_pos_sum += radial_pos;
       set_cell_modelgridindex(cellindex, mgi);
     } else {
       set_cell_modelgridindex(cellindex, get_npts_model());
@@ -932,14 +942,7 @@ static void map_2dmodelto3dgrid()
       mgi = (n_z * ncoord_model[0]) + n_rcyl;
     }
 
-    const auto radial_pos_mid = get_cellradialpos(cellindex);
-
-    if (FORCE_SPHERICAL_ESCAPE_SURFACE && radial_pos_mid > globals::vmax * globals::tmin) {
-      modelgrid[mgi].rhoinit = 0.;
-    }
-
     if (modelgrid[mgi].rhoinit > 0) {
-      modelgrid[mgi].initial_radial_pos_sum += radial_pos_mid;
       set_cell_modelgridindex(cellindex, mgi);
     } else {
       set_cell_modelgridindex(cellindex, get_npts_model());
@@ -952,14 +955,6 @@ static void map_modeltogrid_direct()
 {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = cellindex;  // direct mapping
-
-    const auto radial_pos_mid = get_cellradialpos(cellindex);
-
-    modelgrid[mgi].initial_radial_pos_sum = radial_pos_mid;
-
-    if (FORCE_SPHERICAL_ESCAPE_SURFACE && radial_pos_mid > globals::vmax * globals::tmin) {
-      modelgrid[mgi].rhoinit = 0.;
-    }
 
     if (modelgrid[mgi].rhoinit > 0) {
       set_cell_modelgridindex(cellindex, mgi);
@@ -2048,10 +2043,6 @@ static void setup_grid_cylindrical_2d() {
 void grid_init(int my_rank)
 /// Initialises the propagation grid cells and associates them with modelgrid cells
 {
-  for (int n = 0; n <= get_npts_model(); n++) {
-    modelgrid[n].initial_radial_pos_sum = 0;
-  }
-
   /// The cells will be ordered by x then y, then z. Call a routine that
   /// sets up the initial positions and widths of the cells.
   char grid_type_name[256] = "";
