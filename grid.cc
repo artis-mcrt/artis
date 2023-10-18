@@ -2382,7 +2382,7 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
     const double cell_r_mid = get_cellradialpos(cellindex);
     const double cell_r_inner = get_cell_r_inner(cellindex);
 
-    if (cell_r_inner + (cell_r_mid - cell_r_inner) > globals::vmax * globals::tmin) {
+    if (cell_r_inner - (cell_r_mid - cell_r_inner) > globals::vmax * globals::tmin) {
       *snext = -99;
       return 0.;
     }
