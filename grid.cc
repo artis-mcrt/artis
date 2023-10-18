@@ -562,7 +562,7 @@ static void set_elem_stable_abund_from_total(const int mgi, const int element, c
 auto get_cellradialpos(const int cellindex) -> double
 // get the radial distance from the origin to the centre of the cell at time tmin
 {
-  // direct mapping cases
+  // spherical coordinate case is trivial
   if (GRID_TYPE == GRID_SPHERICAL1D) {
     // mid point radius
     // return get_cellcoordmin(cellindex, 0) + (0.5 * wid_init(cellindex, 0));
