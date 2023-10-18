@@ -835,7 +835,7 @@ static void allocate_nonemptymodelcells() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const auto radial_pos_mid = get_cellradialpos(cellindex);
 
-    if (FORCE_SPHERICAL_ESCAPE_SURFACE && radial_pos_mid > globals::vmax * globals::tmin) {
+    if (false && FORCE_SPHERICAL_ESCAPE_SURFACE && radial_pos_mid > globals::vmax * globals::tmin) {
       // for 1D models, the final shell outer v should already be at vmax
       assert_always(model_type != GRID_SPHERICAL1D || cell[cellindex].modelgridindex == get_npts_model());
       cell[cellindex].modelgridindex = get_npts_model();
