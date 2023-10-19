@@ -1203,8 +1203,7 @@ static void read_model_radioabundances(std::fstream &fmodel, std::istringstream 
   assert_always(!(ssline >> valuein));  // should be no tokens left!
 }
 
-static auto get_model_columns(std::fstream &fmodel)
-    -> std::tuple<std::vector<int>, std::vector<int>, std::vector<std::string>> {
+static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<std::string>, std::vector<int>> {
   std::streampos const oldpos = fmodel.tellg();  // get position in case we need to undo getline
 
   std::vector<int> zlist;
@@ -1218,7 +1217,15 @@ static auto get_model_columns(std::fstream &fmodel)
   } else {
     fmodel.seekg(oldpos);  // undo getline because it was data, not a header line
   }
-  return std::make_tuple(zlist, alist, colnames);
+
+  decay::init_nuclides(zlist, alist);
+
+  std::vector<int> nucindexlist(zlist.size());
+  for (int i = 0; i < static_cast<int>(zlist.size()); i++) {
+    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
+  }
+
+  return std::make_tuple(colnames, nucindexlist);
 }
 
 static void read_1d_model()
@@ -1251,15 +1258,9 @@ static void read_1d_model()
   // in the cell (float). For now, the last number is recorded but never
   // used.
 
-  auto [zlist, alist, colnames] = get_model_columns(fmodel);
+  auto [colnames, nucindexlist] = read_model_columns(fmodel);
 
-  decay::init_nuclides(zlist, alist);
   allocate_initradiobund();
-
-  std::vector<int> nucindexlist(zlist.size());
-  for (int i = 0; i < static_cast<int>(zlist.size()); i++) {
-    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
-  }
 
   int mgi = 0;
   while (std::getline(fmodel, line)) {
@@ -1324,15 +1325,9 @@ static void read_2d_model()
   assert_always(get_noncommentline(fmodel, line));
   std::istringstream(line) >> globals::vmax;
 
-  auto [zlist, alist, colnames] = get_model_columns(fmodel);
+  auto [colnames, nucindexlist] = read_model_columns(fmodel);
 
-  decay::init_nuclides(zlist, alist);
   allocate_initradiobund();
-
-  std::vector<int> nucindexlist(zlist.size());
-  for (int i = 0; i < static_cast<int>(zlist.size()); i++) {
-    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
-  }
 
   // Now read in the model. Each point in the model has two lines of input.
   // First is an index for the cell then its r-mid point then its z-mid point
@@ -1430,15 +1425,9 @@ static void read_3d_model()
   bool posmatch_xyz = true;
   bool posmatch_zyx = true;
 
-  auto [zlist, alist, colnames] = get_model_columns(fmodel);
+  auto [colnames, nucindexlist] = read_model_columns(fmodel);
 
-  decay::init_nuclides(zlist, alist);
   allocate_initradiobund();
-
-  std::vector<int> nucindexlist(zlist.size());
-  for (int i = 0; i < static_cast<int>(zlist.size()); i++) {
-    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
-  }
 
   // mgi is the index to the model grid - empty cells are sent to special value get_npts_model(),
   // otherwise each input cell is one modelgrid cell
