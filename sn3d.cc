@@ -734,7 +734,7 @@ auto main(int argc, char *argv[]) -> int {
 #ifdef _OPENMP
     printout("OpenMP parallelisation active with %d threads (max %d)\n", get_num_threads(), get_max_threads());
 #else
-    printout("OpenMP is not available in this build\n");
+    printout("OpenMP is not enabled in this build (this is normal)\n");
 #endif
 
     gslworkspace = gsl_integration_workspace_alloc(GSLWSIZE);
