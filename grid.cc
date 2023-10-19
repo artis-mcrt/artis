@@ -1121,6 +1121,18 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
   // }
 }
 
+static auto get_token_count(std::string &line) -> int {
+  std::string token;
+  int abundcolcount = 0;
+  auto ssline = std::istringstream(line);
+  while (std::getline(ssline, token, ' ')) {
+    if (!std::ranges::all_of(token, isspace)) {  // skip whitespace tokens
+      abundcolcount++;
+    }
+  }
+  return abundcolcount;
+}
+
 static void read_model_radioabundances(std::fstream &fmodel, std::istringstream &ssline, const int mgi,
                                        const bool keepcell, std::vector<std::string> &colnames,
                                        std::vector<int> &nucindexlist) {
@@ -1147,14 +1159,7 @@ static void read_model_radioabundances(std::fstream &fmodel, std::istringstream 
 
     // if there was no header line, we need to set up the column names and nucindexlist
     if (colnames.empty()) {
-      std::string token;
-      int abundcolcount = 0;
-      ssline = std::istringstream(line);
-      while (std::getline(ssline, token, ' ')) {
-        if (!std::ranges::all_of(token, isspace)) {  // skip whitespace tokens
-          abundcolcount++;
-        }
-      }
+      const int abundcolcount = get_token_count(line);
 
       assert_always(abundcolcount == 5 || abundcolcount == 7);
       colnames.emplace_back("X_Fegroup");
