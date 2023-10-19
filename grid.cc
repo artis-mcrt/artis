@@ -1215,6 +1215,18 @@ static void read_model_radioabundances(std::fstream &fmodel, std::istringstream 
   assert_always(!(ssline >> valuein));  // should be no tokens left!
 }
 
+static auto get_model_columns(std::fstream &fmodel, std::vector<int> &zlist, std::vector<int> &alist,
+                              std::vector<std::string> &colnames) -> void {
+  std::streampos const oldpos = fmodel.tellg();  // get position in case we need to undo getline
+  std::string line;
+  std::getline(fmodel, line);
+  if (lineiscommentonly(line)) {
+    read_model_headerline(line, zlist, alist, colnames);
+  } else {
+    fmodel.seekg(oldpos);  // undo getline because it was data, not a header line
+  }
+}
+
 static void read_1d_model()
 // Read in a 1D spherical model
 {
@@ -1248,13 +1260,7 @@ static void read_1d_model()
   std::vector<int> zlist;
   std::vector<int> alist;
   std::vector<std::string> colnames;
-  std::streampos const oldpos = fmodel.tellg();  // get position in case we need to undo getline
-  std::getline(fmodel, line);
-  if (lineiscommentonly(line)) {
-    read_model_headerline(line, zlist, alist, colnames);
-  } else {
-    fmodel.seekg(oldpos);  // undo getline because it was data, not a header line
-  }
+  get_model_columns(fmodel, zlist, alist, colnames);
 
   decay::init_nuclides(zlist, alist);
   allocate_initradiobund();
@@ -1330,13 +1336,7 @@ static void read_2d_model()
   std::vector<int> zlist;
   std::vector<int> alist;
   std::vector<std::string> colnames;
-  std::streampos const oldpos = fmodel.tellg();  // get position in case we need to undo getline
-  std::getline(fmodel, line);
-  if (lineiscommentonly(line)) {
-    read_model_headerline(line, zlist, alist, colnames);
-  } else {
-    fmodel.seekg(oldpos);  // undo getline because it was data, not a header line
-  }
+  get_model_columns(fmodel, zlist, alist, colnames);
 
   decay::init_nuclides(zlist, alist);
   allocate_initradiobund();
@@ -1445,13 +1445,7 @@ static void read_3d_model()
   std::vector<int> zlist;
   std::vector<int> alist;
   std::vector<std::string> colnames;
-  std::streampos const oldpos = fmodel.tellg();  // get position in case we need to undo getline
-  std::getline(fmodel, line);
-  if (lineiscommentonly(line)) {
-    read_model_headerline(line, zlist, alist, colnames);
-  } else {
-    fmodel.seekg(oldpos);  // undo getline because it was data, not a header line
-  }
+  get_model_columns(fmodel, zlist, alist, colnames);
 
   decay::init_nuclides(zlist, alist);
   allocate_initradiobund();
