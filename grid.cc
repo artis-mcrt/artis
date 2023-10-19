@@ -1215,9 +1215,14 @@ static void read_model_radioabundances(std::fstream &fmodel, std::istringstream 
   assert_always(!(ssline >> valuein));  // should be no tokens left!
 }
 
-static auto get_model_columns(std::fstream &fmodel, std::vector<int> &zlist, std::vector<int> &alist,
-                              std::vector<std::string> &colnames) -> void {
+static auto get_model_columns(std::fstream &fmodel)
+    -> std::tuple<std::vector<int>, std::vector<int>, std::vector<std::string>> {
   std::streampos const oldpos = fmodel.tellg();  // get position in case we need to undo getline
+
+  std::vector<int> zlist;
+  std::vector<int> alist;
+  std::vector<std::string> colnames;
+
   std::string line;
   std::getline(fmodel, line);
   if (lineiscommentonly(line)) {
@@ -1225,6 +1230,7 @@ static auto get_model_columns(std::fstream &fmodel, std::vector<int> &zlist, std
   } else {
     fmodel.seekg(oldpos);  // undo getline because it was data, not a header line
   }
+  return std::make_tuple(zlist, alist, colnames);
 }
 
 static void read_1d_model()
@@ -1257,10 +1263,7 @@ static void read_1d_model()
   // in the cell (float). For now, the last number is recorded but never
   // used.
 
-  std::vector<int> zlist;
-  std::vector<int> alist;
-  std::vector<std::string> colnames;
-  get_model_columns(fmodel, zlist, alist, colnames);
+  auto [zlist, alist, colnames] = get_model_columns(fmodel);
 
   decay::init_nuclides(zlist, alist);
   allocate_initradiobund();
@@ -1333,10 +1336,7 @@ static void read_2d_model()
   assert_always(get_noncommentline(fmodel, line));
   std::istringstream(line) >> globals::vmax;
 
-  std::vector<int> zlist;
-  std::vector<int> alist;
-  std::vector<std::string> colnames;
-  get_model_columns(fmodel, zlist, alist, colnames);
+  auto [zlist, alist, colnames] = get_model_columns(fmodel);
 
   decay::init_nuclides(zlist, alist);
   allocate_initradiobund();
@@ -1442,10 +1442,7 @@ static void read_3d_model()
   bool posmatch_xyz = true;
   bool posmatch_zyx = true;
 
-  std::vector<int> zlist;
-  std::vector<int> alist;
-  std::vector<std::string> colnames;
-  get_model_columns(fmodel, zlist, alist, colnames);
+  auto [zlist, alist, colnames] = get_model_columns(fmodel);
 
   decay::init_nuclides(zlist, alist);
   allocate_initradiobund();
