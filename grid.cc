@@ -1107,18 +1107,6 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
       alist.push_back(-1);
     }
   }
-
-  // alternative:
-  // while(iss >> token)
-  // {
-  //   printout("Custom header column: %s\n", token.c_str());
-  //   columns.push_back(token);
-  // }
-
-  // for(std::vector<std::string>::iterator it = columns.begin(); it != columns.end(); ++it)
-  // {
-  //   printout("Repeat of Custom header column: %s\n", it->c_str());
-  // }
 }
 
 static auto get_token_count(std::string &line) -> int {
