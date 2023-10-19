@@ -102,6 +102,7 @@ float get_W(int modelgridindex);
 void set_nne(int modelgridindex, float nne);
 void set_nnetot(int modelgridindex, float x);
 void set_kappagrey(int modelgridindex, float kappagrey);
+void set_rho(int modelgridindex, float x);
 void set_Te(int modelgridindex, float Te);
 void set_TR(int modelgridindex, float TR);
 void set_TJ(int modelgridindex, float TJ);

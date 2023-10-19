@@ -991,7 +991,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     printout("update_grid_cell: working on cell %d before timestep %d titeration %d...\n", mgi, nts, titer);
 
     /// Update current mass density of cell
-    grid::modelgrid[mgi].rho = grid::get_rho_tmin(mgi) / pow(tratmid, 3);
+    grid::set_rho(mgi, grid::get_rho_tmin(mgi) / pow(tratmid, 3));
 
     /// Update elemental abundances with radioactive decays
     decay::update_abundances(mgi, nts, globals::timesteps[nts].mid);

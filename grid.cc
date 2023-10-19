@@ -295,7 +295,7 @@ auto get_W(int modelgridindex) -> float {
 
 static void set_rho_tmin(int modelgridindex, float x) { modelgrid[modelgridindex].rhoinit = x; }
 
-static void set_rho(int modelgridindex, float x) { modelgrid[modelgridindex].rho = x; }
+void set_rho(int modelgridindex, float x) { modelgrid[modelgridindex].rho = x; }
 
 void set_nne(int modelgridindex, float nne) { modelgrid[modelgridindex].nne = nne; }
 
