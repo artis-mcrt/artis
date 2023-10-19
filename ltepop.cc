@@ -186,7 +186,8 @@ static auto nne_solution_f(double nne_assumed, void *voidparas) -> double
         // populations from the NLTE solver are fixed during the nne solver
         nne_after += get_element_nne_contrib(modelgridindex, element);
       } else {
-        const auto ionfractions = calculate_ionfractions(element, modelgridindex, nne_assumed, force_lte);
+        const bool use_phi_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
+        const auto ionfractions = calculate_ionfractions(element, modelgridindex, nne_assumed, use_phi_lte);
         const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
         for (int ion = 0; ion <= uppermost_ion; ion++) {
           const double nnion = nnelement * ionfractions[ion];
@@ -435,6 +436,7 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
     return nions - 1;
   }
 
+  const bool use_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
   int uppermost_ion = 0;
 
   if (force_lte) {
@@ -456,7 +458,7 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
   int ion = 0;
   for (ion = 0; ion < uppermost_ion; ion++) {
     const auto phifactor =
-        force_lte ? phi_lte(element, ion, modelgridindex) : phi_ion_equilib(element, ion, modelgridindex);
+        use_lte ? phi_lte(element, ion, modelgridindex) : phi_ion_equilib(element, ion, modelgridindex);
     factor *= nne_hi * phifactor;
 
     if (!std::isfinite(factor)) {

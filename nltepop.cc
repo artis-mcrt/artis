@@ -626,6 +626,7 @@ static void nltepop_matrix_normalise(const int modelgridindex, const int element
 
   // TODO: consider replacing normalisation by LTE populations with
   // GSL's gsl_linalg_balance_matrix(gsl_matrix * A, gsl_vector * D) function instead
+  set_groundlevelpops(modelgridindex, element, grid::get_nne(modelgridindex), true);
   for (size_t column = 0; column < nlte_dimension; column++) {
     int ion = -1;
     int level = -1;
@@ -911,6 +912,25 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_vector_set_all(&first_row_view.vector, 1.0);
   // set first balance vector entry to the element population (all other entries will be zero)
   gsl_vector_set(balance_vector, 0, nnelement);
+
+  if (FORCE_SAHA_ION_BALANCE(atomic_number)) {
+    const auto ionfractions = calculate_ionfractions(element, modelgridindex, grid::get_nne(modelgridindex), true);
+    const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
+    for (int ion = 1; ion <= uppermost_ion; ion++) {
+      // replace matrix row for ion's ground state with sum of this ion's level populations is equal to the ion
+      // population
+      const double nnion = nnelement * ionfractions[ion];
+      const int index_ion_ground = get_nlte_vector_index(element, ion, 0);
+      const int index_ion_toplevel = get_nlte_vector_index(element, ion, get_nlevels(element, ion));
+      gsl_vector_view ion_ground_row_view = gsl_matrix_row(rate_matrix, index_ion_ground);
+      gsl_vector_set_all(&ion_ground_row_view.vector, 0.);
+      for (int index = index_ion_ground; index <= index_ion_toplevel; index++) {
+        gsl_vector_set(&ion_ground_row_view.vector, index, 1.);
+      }
+
+      gsl_vector_set(balance_vector, get_nlte_vector_index(element, ion, index_ion_ground), nnion);
+    }
+  }
 
   // calculate the normalisation factors and apply them to the matrix
   // columns and balance vector elements
