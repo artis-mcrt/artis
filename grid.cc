@@ -1051,11 +1051,6 @@ static void abundances_read() {
   printout("done.\n");
 }
 
-static auto str_starts_with(const std::string &str, const std::string &strprefix) -> bool {
-  // return true if str starts with strprefix
-  return (str.rfind(strprefix, 0) == 0);
-}
-
 static void read_model_headerline(const std::string &line, std::vector<int> &zlist, std::vector<int> &alist,
                                   std::vector<std::string> &columnname) {
   // custom header line
@@ -1075,7 +1070,7 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
       assert_always(columnindex == 0);
     } else if (token == "velocity_outer") {
       assert_always(columnindex == 1);
-    } else if (str_starts_with(token, "pos_")) {
+    } else if (token.starts_with("pos_")) {
       continue;
     } else if (token == "logrho") {
       // 1D models have log10(rho [g/cm3])
@@ -1091,7 +1086,7 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
       columnname.push_back(token);
       zlist.push_back(-1);
       alist.push_back(-1);
-    } else if (str_starts_with(token, "X_")) {
+    } else if (token.starts_with("X_")) {
       columnname.push_back(token);
       const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
       const int a = decay::get_nucstring_a(token.substr(2));
