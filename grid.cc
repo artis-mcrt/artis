@@ -1229,7 +1229,7 @@ static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<s
     nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
   }
 
-  allocate_initradiobund(zlist.size());
+  allocate_initradiobund();
 
   return std::make_tuple(colnames, nucindexlist, one_line_per_cell);
 }
