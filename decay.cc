@@ -617,7 +617,23 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
 
   auto standard_nuclides = nuclides;
 
-  if (!custom_alist.empty()) {
+  // any nuclides in the custom list that are not in the standard list need beta and alpha decay data
+
+  bool use_custom_nuclides = false;
+  for (size_t i = 0; i < custom_zlist.size(); i++) {
+    if (custom_zlist[i] < 0 || custom_alist[i] < 0) {
+      continue;
+    }
+    const bool in_std_list = std::ranges::any_of(standard_nuclides, [=](const auto &stdnuc) {
+      return (custom_zlist[i] == stdnuc.z) && (custom_alist[i] == stdnuc.a);
+    });
+    if (!in_std_list) {
+      use_custom_nuclides = true;
+      break;
+    }
+  }
+
+  if (use_custom_nuclides) {
     auto fbetaminus = fstream_required("betaminusdecays.txt", std::ios::in);
     assert_always(fbetaminus.is_open());
     std::string line;

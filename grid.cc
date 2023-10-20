@@ -1070,6 +1070,8 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
       assert_always(columnindex == 0);
     } else if (token == "velocity_outer") {
       assert_always(columnindex == 1);
+    } else if (token == "vel_r_max_kmps") {
+      assert_always(columnindex == 1);
     } else if (token.starts_with("pos_")) {
       continue;
     } else if (token == "logrho") {
@@ -1118,62 +1120,21 @@ static auto get_token_count(std::string &line) -> int {
 
 static void read_model_radioabundances(std::fstream &fmodel, std::istringstream &ssline, const int mgi,
                                        const bool keepcell, std::vector<std::string> &colnames,
-                                       std::vector<int> &nucindexlist) {
-  bool one_line_per_cell = false;
-  std::string line;
-  assert_always(std::getline(ssline, line));
-  if (line.length() > 0 && !std::ranges::all_of(line, isspace)) {
-    // finding any non-whitespace chars mean that
-    // the abundances are on the same line
-    one_line_per_cell = true;
-  }
-
+                                       std::vector<int> &nucindexlist, bool one_line_per_cell) {
   if (!one_line_per_cell) {
+    std::string line;
     assert_always(std::getline(fmodel, line));
+    ssline = std::istringstream(line);
   }
 
-  if (mgi == 0) {
-    if (one_line_per_cell) {
-      printout("model.txt has has single line per cell format\n");
-    } else {
-      // we reached the end of this line before abundances were read
-      printout("model.txt has has two lines per cell format\n");
-    }
-
-    // if there was no header line, we need to set up the column names and nucindexlist
-    if (colnames.empty()) {
-      const int abundcolcount = get_token_count(line);
-
-      assert_always(abundcolcount == 5 || abundcolcount == 7);
-      colnames.emplace_back("X_Fegroup");
-      colnames.emplace_back("X_Ni56");
-      colnames.emplace_back("X_Co56");
-      colnames.emplace_back("X_Fe52");
-      colnames.emplace_back("X_Cr48");
-      if (abundcolcount == 7) {
-        printout("Found Ni57 and Co57 abundance columns in model.txt\n");
-        colnames.emplace_back("X_Ni57");
-        colnames.emplace_back("X_Co57");
-      }
-
-      for (const auto &colname : colnames) {
-        if (colname == "X_Fegroup") {
-          nucindexlist.push_back(-1);
-        } else {
-          const int z = decay::get_nucstring_z(colname.substr(2));  // + 2 skips the 'X_'
-          const int a = decay::get_nucstring_a(colname.substr(2));
-          nucindexlist.push_back(decay::get_nucindex(z, a));
-        }
-      }
-    }
-  } else if (!keepcell) {
+  if (!keepcell) {
     return;
   }
 
-  ssline = std::istringstream(line);
   for (size_t i = 0; i < colnames.size(); i++) {
     double valuein = 0.;
     assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
+
     if (nucindexlist[i] >= 0) {
       assert_testmodeonly(valuein >= 0.);
       assert_testmodeonly(valuein <= 1.);
@@ -1198,7 +1159,7 @@ static void read_model_radioabundances(std::fstream &fmodel, std::istringstream 
   assert_always(!(ssline >> valuein));  // should be no tokens left!
 }
 
-static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<std::string>, std::vector<int>> {
+static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<std::string>, std::vector<int>, bool> {
   std::streampos const oldpos = fmodel.tellg();  // get position in case we need to undo getline
 
   std::vector<int> zlist;
@@ -1207,11 +1168,57 @@ static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<s
 
   std::string line;
   std::getline(fmodel, line);
-  if (lineiscommentonly(line)) {
-    read_model_headerline(line, zlist, alist, colnames);
-  } else {
-    fmodel.seekg(oldpos);  // undo getline because it was data, not a header line
+  std::string headerline;
+  const bool header_specified = lineiscommentonly(line);
+  if (header_specified) {
+    // line is the header
+    headerline = line;
+    std::getline(fmodel, line);
   }
+
+  int colcount = get_token_count(line);
+
+  if (!header_specified) {
+    // line is not a comment, so it must be the first line of data
+    // add a default header for unlabelled columns
+    switch (model_type) {
+      case GRID_SPHERICAL1D:
+        headerline = "#inputcellid vel_r_max_kmps logrho";
+        break;
+      case GRID_CYLINDRICAL2D:
+        headerline = "#inputcellid pos_rcyl_mid pos_z_mid rho";
+        break;
+      case GRID_CARTESIAN3D:
+        headerline = "#inputcellid pos_x_min pos_y_min pos_z_min rho";
+        break;
+    }
+    headerline += " X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48";
+  }
+
+  const bool one_line_per_cell = (colcount >= get_token_count(headerline));
+
+  printout("model.txt has %s line per cell format\n", one_line_per_cell ? "one" : "two");
+
+  if (!one_line_per_cell) {  // add columns from the second line
+    std::getline(fmodel, line);
+    colcount += get_token_count(line);
+  }
+
+  if (!header_specified && colcount > get_token_count(headerline)) {
+    headerline += " X_Ni57 X_Co57";
+  }
+
+  assert_always(colcount == get_token_count(headerline));
+
+  fmodel.seekg(oldpos);  // get back to start of data
+
+  if (header_specified) {
+    printout("model.txt has header line: %s\n", headerline.c_str());
+  } else {
+    printout("model.txt has no header line. Using default: %s\n", headerline.c_str());
+  }
+
+  read_model_headerline(headerline, zlist, alist, colnames);
 
   decay::init_nuclides(zlist, alist);
 
@@ -1220,7 +1227,7 @@ static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<s
     nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
   }
 
-  return std::make_tuple(colnames, nucindexlist);
+  return std::make_tuple(colnames, nucindexlist, one_line_per_cell);
 }
 
 static void read_1d_model()
@@ -1253,7 +1260,7 @@ static void read_1d_model()
   // in the cell (float). For now, the last number is recorded but never
   // used.
 
-  auto [colnames, nucindexlist] = read_model_columns(fmodel);
+  auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
 
   allocate_initradiobund();
 
@@ -1280,7 +1287,7 @@ static void read_1d_model()
       printout("line: %s\n", line.c_str());
       assert_always(false);
     }
-    read_model_radioabundances(fmodel, ssline, mgi, true, colnames, nucindexlist);
+    read_model_radioabundances(fmodel, ssline, mgi, true, colnames, nucindexlist, one_line_per_cell);
 
     mgi += 1;
     if (mgi == get_npts_model()) {
@@ -1320,7 +1327,7 @@ static void read_2d_model()
   assert_always(get_noncommentline(fmodel, line));
   std::istringstream(line) >> globals::vmax;
 
-  auto [colnames, nucindexlist] = read_model_columns(fmodel);
+  auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
 
   allocate_initradiobund();
 
@@ -1361,7 +1368,7 @@ static void read_2d_model()
     set_rho_tmin(mgi, rho_tmin);
     set_rho(mgi, rho_tmin);
 
-    read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist);
+    read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
 
     if (keepcell) {
       nonemptymgi++;
@@ -1375,7 +1382,7 @@ static void read_2d_model()
     abort();
   }
 
-  printout("Effectively used model grid cells %d\n", nonemptymgi);
+  printout("Effectively used model grid cells: %d\n", nonemptymgi);
 }
 
 static void read_3d_model()
@@ -1420,7 +1427,7 @@ static void read_3d_model()
   bool posmatch_xyz = true;
   bool posmatch_zyx = true;
 
-  auto [colnames, nucindexlist] = read_model_columns(fmodel);
+  auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
 
   allocate_initradiobund();
 
@@ -1478,7 +1485,7 @@ static void read_3d_model()
       min_den = rho_model;
     }
 
-    read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist);
+    read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
 
     if (keepcell) {
       nonemptymgi++;
@@ -1500,7 +1507,7 @@ static void read_3d_model()
   }
 
   printout("min_den %g [g/cm3]\n", min_den);
-  printout("Effectively used model grid cells %d\n", nonemptymgi);
+  printout("Effectively used model grid cells: %d\n", nonemptymgi);
 }
 
 static void calc_modelinit_totmassradionuclides() {
