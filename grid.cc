@@ -1264,7 +1264,7 @@ static void read_1d_model()
   // in the cell (float). For now, the last number is recorded but never
   // used.
 
-  auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
+  const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
 
   int mgi = 0;
   while (std::getline(fmodel, line)) {
@@ -1330,7 +1330,7 @@ static void read_2d_model()
   assert_always(get_noncommentline(fmodel, line));
   std::istringstream(line) >> globals::vmax;
 
-  auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
+  const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
 
   // Now read in the model. Each point in the model has two lines of input.
   // First is an index for the cell then its r-mid point then its z-mid point
@@ -1428,7 +1428,7 @@ static void read_3d_model()
   bool posmatch_xyz = true;
   bool posmatch_zyx = true;
 
-  auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
+  const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
 
   // mgi is the index to the model grid - empty cells are sent to special value get_npts_model(),
   // otherwise each input cell is one modelgrid cell
