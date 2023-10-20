@@ -1160,7 +1160,7 @@ static void read_model_radioabundances(std::fstream &fmodel, std::istringstream 
 }
 
 static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<std::string>, std::vector<int>, bool> {
-  std::streampos const oldpos = fmodel.tellg();  // get position in case we need to undo getline
+  auto oldpos = fmodel.tellg();  // get position in case we need to undo getline
 
   std::vector<int> zlist;
   std::vector<int> alist;
@@ -1173,6 +1173,7 @@ static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<s
   if (header_specified) {
     // line is the header
     headerline = line;
+    oldpos = fmodel.tellg();
     std::getline(fmodel, line);
   }
 
@@ -1210,11 +1211,12 @@ static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<s
 
   assert_always(colcount == get_token_count(headerline));
 
+  fmodel.seekg(oldpos);  // get back to start of data
+
   if (header_specified) {
     printout("model.txt has header line: %s\n", headerline.c_str());
   } else {
     printout("model.txt has no header line. Using default: %s\n", headerline.c_str());
-    fmodel.seekg(oldpos);  // get back to start of data
   }
 
   parse_model_headerline(headerline, zlist, alist, colnames);
@@ -1273,6 +1275,7 @@ static void read_1d_model()
     if (ssline >> cellnumberin >> vout_kmps >> log_rho) {
       if (mgi == 0) {
         first_cellindex = cellnumberin;
+        printout("first_cellindex %d\n", first_cellindex);
       }
       assert_always(cellnumberin == mgi + first_cellindex);
 
@@ -1295,7 +1298,7 @@ static void read_1d_model()
   }
 
   if (mgi != get_npts_model()) {
-    printout("ERROR in model.txt. Found %d only cells instead of %d expected.\n", mgi - 1, get_npts_model());
+    printout("ERROR in model.txt. Found only %d cells instead of %d expected.\n", mgi - 1, get_npts_model());
     abort();
   }
 
