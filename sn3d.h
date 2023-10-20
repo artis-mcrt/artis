@@ -145,7 +145,10 @@ static std::fstream fstream_required(const std::string &filename, std::ios_base:
     return fstream_required(datafolderfilename, mode);
   }
   auto file = std::fstream(filename, mode);
-  assert_always(file.is_open());
+  if (!file.is_open()) {
+    printout("ERROR: Could not open file '%s'\n", filename.c_str());
+    abort();
+  }
   return file;
 }
 
