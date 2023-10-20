@@ -1160,7 +1160,7 @@ static void read_model_radioabundances(std::fstream &fmodel, std::istringstream 
 }
 
 static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<std::string>, std::vector<int>, bool> {
-  auto oldpos = fmodel.tellg();  // get position in case we need to undo getline
+  auto pos_data_start = fmodel.tellg();  // get position in case we need to undo getline
 
   std::vector<int> zlist;
   std::vector<int> alist;
@@ -1168,18 +1168,17 @@ static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<s
 
   std::string line;
   std::getline(fmodel, line);
+
   std::string headerline;
+
   const bool header_specified = lineiscommentonly(line);
+
   if (header_specified) {
     // line is the header
     headerline = line;
-    oldpos = fmodel.tellg();
+    pos_data_start = fmodel.tellg();
     std::getline(fmodel, line);
-  }
-
-  int colcount = get_token_count(line);
-
-  if (!header_specified) {
+  } else {
     // line is not a comment, so it must be the first line of data
     // add a default header for unlabelled columns
     switch (model_type) {
@@ -1196,6 +1195,7 @@ static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<s
     headerline += " X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48";
   }
 
+  int colcount = get_token_count(line);
   const bool one_line_per_cell = (colcount >= get_token_count(headerline));
 
   printout("model.txt has %s line per cell format\n", one_line_per_cell ? "one" : "two");
@@ -1211,7 +1211,7 @@ static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<s
 
   assert_always(colcount == get_token_count(headerline));
 
-  fmodel.seekg(oldpos);  // get back to start of data
+  fmodel.seekg(pos_data_start);  // get back to start of data
 
   if (header_specified) {
     printout("model.txt has header line: %s\n", headerline.c_str());
