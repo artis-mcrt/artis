@@ -1051,8 +1051,8 @@ static void abundances_read() {
   printout("done.\n");
 }
 
-static void read_model_headerline(const std::string &line, std::vector<int> &zlist, std::vector<int> &alist,
-                                  std::vector<std::string> &columnname) {
+static void parse_model_headerline(const std::string &line, std::vector<int> &zlist, std::vector<int> &alist,
+                                   std::vector<std::string> &colnames) {
   // custom header line
   std::istringstream iss(line);
   std::string token;
@@ -1085,11 +1085,11 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
                     (columnindex == 3 && get_model_type() == GRID_CYLINDRICAL2D));
       continue;
     } else if (token == "X_Fegroup") {
-      columnname.push_back(token);
+      colnames.push_back(token);
       zlist.push_back(-1);
       alist.push_back(-1);
     } else if (token.starts_with("X_")) {
-      columnname.push_back(token);
+      colnames.push_back(token);
       const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
       const int a = decay::get_nucstring_a(token.substr(2));
       assert_always(z >= 0);
@@ -1099,7 +1099,7 @@ static void read_model_headerline(const std::string &line, std::vector<int> &zli
       alist.push_back(a);
     } else {
       //   printout("Custom column: '%s' Z %d A %d\n", token.c_str(), -1, -1);
-      columnname.push_back(token);
+      colnames.push_back(token);
       zlist.push_back(-1);
       alist.push_back(-1);
     }
@@ -1210,15 +1210,14 @@ static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<s
 
   assert_always(colcount == get_token_count(headerline));
 
-  fmodel.seekg(oldpos);  // get back to start of data
-
   if (header_specified) {
     printout("model.txt has header line: %s\n", headerline.c_str());
   } else {
     printout("model.txt has no header line. Using default: %s\n", headerline.c_str());
+    fmodel.seekg(oldpos);  // get back to start of data
   }
 
-  read_model_headerline(headerline, zlist, alist, colnames);
+  parse_model_headerline(headerline, zlist, alist, colnames);
 
   decay::init_nuclides(zlist, alist);
 
