@@ -1226,7 +1226,7 @@ static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<s
   decay::init_nuclides(zlist, alist);
 
   std::vector<int> nucindexlist(zlist.size());
-  for (const auto i : std::views::iota(0U, zlist.size())) {
+  for (const auto i : std::views::iota(zlist.size())) {
     nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
   }
 
