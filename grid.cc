@@ -1121,8 +1121,8 @@ static auto get_token_count(std::string &line) -> int {
 static void read_model_radioabundances(std::fstream &fmodel, std::istringstream &ssline, const int mgi,
                                        const bool keepcell, std::vector<std::string> &colnames,
                                        std::vector<int> &nucindexlist, bool one_line_per_cell) {
+  std::string line;
   if (!one_line_per_cell) {
-    std::string line;
     assert_always(std::getline(fmodel, line));
     ssline = std::istringstream(line);
   }
