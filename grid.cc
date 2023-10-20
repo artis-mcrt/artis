@@ -1229,6 +1229,8 @@ static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<s
     nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
   }
 
+  allocate_initradiobund(zlist.size());
+
   return std::make_tuple(colnames, nucindexlist, one_line_per_cell);
 }
 
@@ -1263,8 +1265,6 @@ static void read_1d_model()
   // used.
 
   auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
-
-  allocate_initradiobund();
 
   int mgi = 0;
   while (std::getline(fmodel, line)) {
@@ -1331,8 +1331,6 @@ static void read_2d_model()
   std::istringstream(line) >> globals::vmax;
 
   auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
-
-  allocate_initradiobund();
 
   // Now read in the model. Each point in the model has two lines of input.
   // First is an index for the cell then its r-mid point then its z-mid point
@@ -1431,8 +1429,6 @@ static void read_3d_model()
   bool posmatch_zyx = true;
 
   auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
-
-  allocate_initradiobund();
 
   // mgi is the index to the model grid - empty cells are sent to special value get_npts_model(),
   // otherwise each input cell is one modelgrid cell
