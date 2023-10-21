@@ -208,7 +208,7 @@ code until 2012-07-30:
 2009-07-15, v108
  - Modified initial grey approximation now calculates
    an optical depth to the surface of the simulation
-   volume using kappa_grey.
+   volume using chi_grey.
  - As of now (2009-07-15) the local thomson and grey
    optical depth in a cell and the depth to the
    surface are save in the estimator files. This requires
@@ -226,7 +226,7 @@ code until 2012-07-30:
    files.
  - Proper initialisation of absorption counters added (2009-05-30).
  - Changes to the initial grey approximation, reintroducing
-   the concept of kappa_grey.
+   the concept of chi_grey.
  - Array boundaries which have to be changed for each run moved to
    types.h
 

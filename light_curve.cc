@@ -6,9 +6,10 @@
 
 // Routine to make a MC light curve from the r-packets.
 
-void write_light_curve(const std::string &lc_filename, const int current_abin, const double *light_curve_lum,
-                       const double *light_curve_lumcmf, const int numtimesteps) {
-  assert_always(numtimesteps <= globals::ntstep);
+void write_light_curve(const std::string &lc_filename, const int current_abin,
+                       const std::vector<double> &light_curve_lum, const std::vector<double> &light_curve_lumcmf,
+                       const int numtimesteps) {
+  assert_always(numtimesteps <= globals::ntimesteps);
 
   std::ofstream lc_file(lc_filename);
   if (!lc_file) {
@@ -22,7 +23,7 @@ void write_light_curve(const std::string &lc_filename, const int current_abin, c
 
   /// Print out the UVOIR bolometric light curve.
   for (int nts = 0; nts < numtimesteps; nts++) {
-    assert_always(snprintf(linebuffer, maxlen, "%g %g %g", globals::time_step[nts].mid / DAY,
+    assert_always(snprintf(linebuffer, maxlen, "%g %g %g", globals::timesteps[nts].mid / DAY,
                            (light_curve_lum[nts] / LSUN), (light_curve_lumcmf[nts] / LSUN)) < maxlen);
     lc_file << linebuffer << '\n';
   }
@@ -30,15 +31,16 @@ void write_light_curve(const std::string &lc_filename, const int current_abin, c
   if (current_abin == -1) {
     /// Now print out the gamma ray deposition rate in the same file.
     for (int m = 0; m < numtimesteps; m++) {
-      assert_always(snprintf(linebuffer, maxlen, "%g %g %g", globals::time_step[m].mid / DAY,
-                             (globals::time_step[m].gamma_dep / LSUN / globals::time_step[m].width),
-                             (globals::time_step[m].cmf_lum / globals::time_step[m].width / LSUN)) < maxlen);
+      assert_always(snprintf(linebuffer, maxlen, "%g %g %g", globals::timesteps[m].mid / DAY,
+                             (globals::timesteps[m].gamma_dep / LSUN / globals::timesteps[m].width),
+                             (globals::timesteps[m].cmf_lum / globals::timesteps[m].width / LSUN)) < maxlen);
       lc_file << linebuffer << '\n';
     }
   }
 }
 
-void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, double *light_curve_lum, double *light_curve_lumcmf)
+void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, std::vector<double> &light_curve_lum,
+                   std::vector<double> &light_curve_lumcmf)
 // add a packet to the outgoing light-curve.
 {
   if (current_abin == -1) {
@@ -46,7 +48,7 @@ void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, double *light
     const double arrive_time = get_arrive_time(pkt_ptr);
     if (arrive_time > globals::tmin && arrive_time < globals::tmax) {
       const int nt = get_timestep(arrive_time);
-      safeadd(light_curve_lum[nt], pkt_ptr->e_rf / globals::time_step[nt].width / globals::nprocs);
+      safeadd(light_curve_lum[nt], pkt_ptr->e_rf / globals::timesteps[nt].width / globals::nprocs_exspec);
     }
 
     /// Now do the cmf light curve.
@@ -54,7 +56,7 @@ void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, double *light
     const double arrive_time_cmf = get_arrive_time_cmf(pkt_ptr);
     if (arrive_time_cmf > globals::tmin && arrive_time_cmf < globals::tmax) {
       const int nt = get_timestep(arrive_time_cmf);
-      safeadd(light_curve_lumcmf[nt], pkt_ptr->e_cmf / globals::time_step[nt].width / globals::nprocs /
+      safeadd(light_curve_lumcmf[nt], pkt_ptr->e_cmf / globals::timesteps[nt].width / globals::nprocs_exspec /
                                           sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED)));
     }
 
@@ -62,10 +64,10 @@ void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, double *light
   }
   if (get_escapedirectionbin(pkt_ptr->dir, globals::syn_dir) == current_abin) {
     // Add only packets which escape to the current angle bin
-    double const t_arrive = get_arrive_time(pkt_ptr);
+    const double t_arrive = get_arrive_time(pkt_ptr);
     if (t_arrive > globals::tmin && t_arrive < globals::tmax) {
-      int const nt = get_timestep(t_arrive);
-      safeadd(light_curve_lum[nt], pkt_ptr->e_rf / globals::time_step[nt].width * MABINS / globals::nprocs);
+      const int nt = get_timestep(t_arrive);
+      safeadd(light_curve_lum[nt], pkt_ptr->e_rf / globals::timesteps[nt].width * MABINS / globals::nprocs_exspec);
     }
   }
 }

@@ -8,7 +8,6 @@
 #include <memory>
 #include <vector>
 
-#include "boundary.h"
 #include "decay.h"
 #include "grid.h"
 #include "nonthermal.h"
@@ -201,13 +200,13 @@ void init_gamma_linelist() {
 }
 
 void normalise_grey(int nts) {
-  const double dt = globals::time_step[nts].width;
-  globals::time_step[nts].gamma_dep_pathint = 0.;
+  const double dt = globals::timesteps[nts].width;
+  globals::timesteps[nts].gamma_dep_pathint = 0.;
   for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
     if (grid::get_numassociatedcells(mgi) > 0) {
-      const double dV = grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
+      const double dV = grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts].mid / globals::tmin, 3);
 
-      globals::time_step[nts].gamma_dep_pathint += globals::rpkt_emiss[mgi] / globals::nprocs;
+      globals::timesteps[nts].gamma_dep_pathint += globals::rpkt_emiss[mgi] / globals::nprocs;
 
       globals::rpkt_emiss[mgi] = globals::rpkt_emiss[mgi] * ONEOVER4PI / dV / dt / globals::nprocs;
 
@@ -221,7 +220,7 @@ static void choose_gamma_ray(struct packet *pkt_ptr) {
   // Routine to choose which gamma ray line it'll be.
 
   const int nucindex = pkt_ptr->pellet_nucindex;
-  double const E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
+  const double E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
 
   const double zrand = rng_uniform();
   int nselected = -1;
@@ -283,20 +282,18 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
   // that it's now a gamma ray.
 
   pkt_ptr->prop_time = pkt_ptr->tdecay;
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
   pkt_ptr->type = TYPE_GAMMA;
-  pkt_ptr->last_cross = NONE;
+  pkt_ptr->last_cross = BOUNDARY_NONE;
 
   // initialise polarisation information
   pkt_ptr->stokes[0] = 1.0;
   pkt_ptr->stokes[1] = pkt_ptr->stokes[2] = 0.0;
-  double dummy_dir[3];
+  std::array<double, 3> dummy_dir = {0., 0., 1.};
 
-  dummy_dir[0] = dummy_dir[1] = 0.0;
-  dummy_dir[2] = 1.0;
   cross_prod(pkt_ptr->dir, dummy_dir, pkt_ptr->pol_dir);
   if ((dot(pkt_ptr->pol_dir, pkt_ptr->pol_dir)) < 1.e-8) {
     dummy_dir[0] = dummy_dir[2] = 0.0;
@@ -322,35 +319,34 @@ constexpr auto sigma_compton_partial(const double x, const double f) -> double
   return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
 }
 
-static auto sig_comp(const struct packet *pkt_ptr) -> double {
+static auto get_chi_compton_rf(const struct packet *pkt_ptr) -> double {
+  // calculate the absorption coefficient [cm^-1] for Compton scattering in the observer reference frame
   // Start by working out the compton x-section in the co-moving frame.
 
-  double const xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
+  const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
 
   // Use this to decide whether the Thompson limit is acceptable.
 
-  double sigma_cmf = NAN;
+  double sigma_cmf;
   if (xx < THOMSON_LIMIT) {
     sigma_cmf = SIGMA_T;
   } else {
-    double const fmax = (1 + (2 * xx));
+    const double fmax = (1 + (2 * xx));
     sigma_cmf = sigma_compton_partial(xx, fmax);
   }
 
   // Now need to multiply by the electron number density.
-  const int cellindex = pkt_ptr->where;
-  sigma_cmf *= grid::get_nnetot(grid::get_cell_modelgridindex(cellindex));
+  const double chi_cmf = sigma_cmf * grid::get_nnetot(grid::get_cell_modelgridindex(pkt_ptr->where));
 
-  // Now need to convert between frames.
+  // convert between frames
+  const double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
 
-  const double sigma_rf = sigma_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
+  assert_testmodeonly(std::isfinite(chi_rf));
 
-  assert_testmodeonly(std::isfinite(sigma_rf));
-
-  return sigma_rf;
+  return chi_rf;
 }
 
-static auto choose_f(double xx, double zrand) -> double
+static auto choose_f(const double xx, const double zrand) -> double
 // To choose the value of f to integrate to - idea is we want
 //   sigma_compton_partial(xx,f) = zrand.
 {
@@ -472,7 +468,7 @@ static void compton_scatter(struct packet *pkt_ptr)
 
     const double cos_theta = (xx < THOMSON_LIMIT) ? thomson_angle() : 1. - ((f - 1) / xx);
 
-    double new_dir[3];
+    double new_dir[3] = {NAN, NAN, NAN};
     scatter_dir(cmf_dir, cos_theta, new_dir);
 
     const double test = dot(new_dir, new_dir);
@@ -504,11 +500,11 @@ static void compton_scatter(struct packet *pkt_ptr)
 
     // It now has a rest frame direction and a co-moving frequency.
     //  Just need to set the rest frame energy.
-    const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
+    const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
     pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
     pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
-    pkt_ptr->last_cross = NONE;  // allow it to re-cross a boundary
+    pkt_ptr->last_cross = BOUNDARY_NONE;  // allow it to re-cross a boundary
   } else {
     // It's converted to an e-minus packet.
     pkt_ptr->type = TYPE_NTLEPTON;
@@ -517,126 +513,124 @@ static void compton_scatter(struct packet *pkt_ptr)
   }
 }
 
-static auto sig_photo_electric(const struct packet *pkt_ptr) -> double {
-  // photo electric effect scattering
+static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
+  // calculate the absorption coefficient [cm^-1] for photo electric effect scattering in the observer reference frame
 
-  double sigma_cmf = NAN;
+  double chi_cmf = NAN;
   // Start by working out the x-section in the co-moving frame.
 
   const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
   const double rho = grid::get_rho(mgi);
 
-  if (globals::gamma_grey < 0) {
-    // double sigma_cmf_cno = 0.0448e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.2);
+  if (globals::gamma_kappagrey < 0) {
+    // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Veigele (1973)
 
-    double sigma_cmf_si = 1.16e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.13);
+    // 2.41326e19 Hz = 100 keV / H
+    const double hnu_over_100kev = pkt_ptr->nu_cmf / 2.41326e+19;
 
-    double sigma_cmf_fe = 25.7e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.0);
+    // double sigma_cmf_cno = 0.0448e-24 * pow(hnu_over_100kev, -3.2);
 
-    // 2.41326e19 = 100keV in frequency.
+    const double sigma_cmf_si = 1.16e-24 * pow(hnu_over_100kev, -3.13);
+
+    const double sigma_cmf_fe = 25.7e-24 * pow(hnu_over_100kev, -3.0);
 
     // Now need to multiply by the particle number density.
 
-    // sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
-    //  Assumes Z = 7. So mass = 14.
-
-    sigma_cmf_si *= rho / MH / 28;
+    const double chi_cmf_si = sigma_cmf_si * (rho / MH / 28);
     // Assumes Z = 14. So mass = 28.
 
-    sigma_cmf_fe *= rho / MH / 56;
+    const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
     // Assumes Z = 28. So mass = 56.
 
     const double f_fe = grid::get_ffegrp(mgi);
 
-    sigma_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
+    chi_cmf = (chi_cmf_fe * f_fe) + (chi_cmf_si * (1. - f_fe));
   } else {
-    sigma_cmf = globals::gamma_grey * rho;
+    chi_cmf = globals::gamma_kappagrey * rho;
   }
 
-  // Now need to convert between frames.
+  // Now convert between frames.
 
-  const double sigma_rf = sigma_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
-  return sigma_rf;
+  const double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
+  return chi_rf;
 }
 
-static auto sig_pair_prod(const struct packet *pkt_ptr) -> double {
-  // Cross section for pair production.
+static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
+  // calculate the absorption coefficient [cm^-1] for pair production in the observer reference frame
 
-  double sigma_cmf = NAN;
-
-  // Start by working out the x-section in the co-moving frame.
-
-  const int cellindex = pkt_ptr->where;
-  const int mgi = grid::get_cell_modelgridindex(cellindex);
+  const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
   const double rho = grid::get_rho(mgi);
 
-  if (globals::gamma_grey < 0) {
-    // 2.46636e+20 = 1022 keV in frequency
-    // 3.61990e+20 = 1500 keV in frequency
-
-    if (pkt_ptr->nu_cmf > 2.46636e+20) {
-      // double sigma_cmf_cno;
-      double sigma_cmf_si = NAN;
-      double sigma_cmf_fe = NAN;
-      const double f_fe = grid::get_ffegrp(mgi);
-      if (pkt_ptr->nu_cmf > 3.61990e+20) {
-        // sigma_cmf_cno = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.5))) * 49.e-27;
-
-        sigma_cmf_si = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.5))) * 196.e-27;
-
-        sigma_cmf_fe = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.5))) * 784.e-27;
-      } else {
-        // sigma_cmf_cno = 1.0063 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.022) * 49.e-27;
-
-        sigma_cmf_si = 1.0063 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.022) * 196.e-27;
-
-        sigma_cmf_fe = 1.0063 * ((pkt_ptr->nu_cmf / 2.41326e+20) - 1.022) * 784.e-27;
-      }
-
-      // Now need to multiply by the particle number density.
-
-      // sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
-      // Assumes Z = 7. So mass = 14.
-
-      sigma_cmf_si *= rho / MH / 28;
-      // Assumes Z = 14. So mass = 28.
-
-      sigma_cmf_fe *= rho / MH / 56;
-      // Assumes Z = 28. So mass = 56.
-
-      sigma_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
-    } else {
-      sigma_cmf = 0.0;
-    }
-  } else {
-    sigma_cmf = 0.0;
+  if (globals::gamma_kappagrey >= 0.) {
+    return 0.;
   }
+
+  // 2.46636e+20 Hz = 1022 keV / H
+  if (pkt_ptr->nu_cmf <= 2.46636e+20) {
+    return 0.;
+  }
+
+  // double sigma_cmf_cno;
+  double sigma_cmf_si = NAN;
+  double sigma_cmf_fe = NAN;
+  const double f_fe = grid::get_ffegrp(mgi);
+
+  // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Hubbell (1969)
+
+  // 3.61990e+20 = 1500 keV in frequency / H
+  const double hnu_over_mev = pkt_ptr->nu_cmf / 2.41326e+20;
+  if (pkt_ptr->nu_cmf > 3.61990e+20) {
+    // sigma_cmf_cno = (0.0481 + (0.301 * (hnu_over_mev - 1.5))) * 49.e-27;
+
+    sigma_cmf_si = (0.0481 + (0.301 * (hnu_over_mev - 1.5))) * 196.e-27;
+
+    sigma_cmf_fe = (0.0481 + (0.301 * (hnu_over_mev - 1.5))) * 784.e-27;
+  } else {
+    // sigma_cmf_cno = 1.0063 * (hnu_over_mev - 1.022) * 49.e-27;
+
+    sigma_cmf_si = 1.0063 * (hnu_over_mev - 1.022) * 196.e-27;
+
+    sigma_cmf_fe = 1.0063 * (hnu_over_mev - 1.022) * 784.e-27;
+  }
+
+  // multiply by the particle number density.
+
+  // sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
+  // Assumes Z = 7. So mass = 14.
+
+  const double chi_cmf_si = sigma_cmf_si * (rho / MH / 28);
+  // Assumes Z = 14. So mass = 28.
+
+  const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
+  // Assumes Z = 28. So mass = 56.
+
+  const double chi_cmf = (chi_cmf_fe * f_fe) + (chi_cmf_si * (1. - f_fe));
 
   // Now need to convert between frames.
 
-  double sigma_rf = sigma_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr);
+  double chi_rf = chi_cmf * doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
 
-  if (sigma_rf < 0) {
-    printout("Negative pair production sigma. Setting to zero. Abort? %g\n", sigma_rf);
-    sigma_rf = 0.0;
+  if (chi_rf < 0) {
+    printout("Negative pair production sigma. Setting to zero. Abort? %g\n", chi_rf);
+    chi_rf = 0.0;
   }
 
-  return sigma_rf;
+  return chi_rf;
 }
 
 constexpr auto meanf_sigma(const double x) -> double
 // Routine to compute the mean energy converted to non-thermal electrons times
 // the Klein-Nishina cross section.
 {
-  double const f = 1 + (2 * x);
+  const double f = 1 + (2 * x);
 
-  double const term0 = 2 / x;
-  double const term1 = (1 - (2 / x) - (3 / (x * x))) * log(f);
-  double const term2 = ((4 / x) + (3 / (x * x)) - 1) * 2 * x / f;
-  double const term3 = (1 - (2 / x) - (1 / (x * x))) * 2 * x * (1 + x) / f / f;
-  double const term4 = -2. * x * ((4 * x * x) + (6 * x) + 3) / 3 / f / f / f;
+  const double term0 = 2 / x;
+  const double term1 = (1 - (2 / x) - (3 / (x * x))) * log(f);
+  const double term2 = ((4 / x) + (3 / (x * x)) - 1) * 2 * x / f;
+  const double term3 = (1 - (2 / x) - (1 / (x * x))) * 2 * x * (1 + x) / f / f;
+  const double term4 = -2. * x * ((4 * x * x) + (6 * x) + 3) / 3 / f / f / f;
 
-  double const tot = 3 * SIGMA_T * (term0 + term1 + term2 + term3 + term4) / (8 * x);
+  const double tot = 3 * SIGMA_T * (term0 + term1 + term2 + term3 + term4) / (8 * x);
 
   return tot;
 }
@@ -655,33 +649,30 @@ static void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist) {
   // Called with a packet that is about to travel a
   // distance dist in the lab frame.
 
-  const int cellindex = pkt_ptr->where;
-  const int mgi = grid::get_cell_modelgridindex(cellindex);
-
-  if (dist > 0) {
-    double vel_vec[3];
-    get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
-
-    double const doppler_sq = doppler_squared_nucmf_on_nurf(pkt_ptr->dir, vel_vec);
-
-    const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
-    double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + sig_photo_electric(pkt_ptr) +
-                           (sig_pair_prod(pkt_ptr) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
-    heating_cont = heating_cont * pkt_ptr->e_rf * dist * doppler_sq;
-
-    // The terms in the above are for Compton, photoelectric and pair production. The pair production one
-    // assumes that a fraction (1. - (1.022 MeV / nu)) of the gamma's energy is thermalised.
-    // The remaining 1.022 MeV is made into gamma rays
-
-    // For normalisation this needs to be
-    //  1) divided by volume
-    //  2) divided by the length of the time step
-    //  3) divided by 4 pi sr
-    //  This will all be done later
-    assert_testmodeonly(heating_cont >= 0.);
-    assert_testmodeonly(isfinite(heating_cont));
-    safeadd(globals::rpkt_emiss[mgi], heating_cont);
+  if (!(dist > 0)) {
+    return;
   }
+
+  const double doppler_sq = doppler_squared_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
+
+  const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+  const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
+  double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + get_chi_photo_electric_rf(pkt_ptr) +
+                         (sigma_pair_prod_rf(pkt_ptr) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
+  heating_cont = heating_cont * pkt_ptr->e_rf * dist * doppler_sq;
+
+  // The terms in the above are for Compton, photoelectric and pair production. The pair production one
+  // assumes that a fraction (1. - (1.022 MeV / nu)) of the gamma's energy is thermalised.
+  // The remaining 1.022 MeV is made into gamma rays
+
+  // For normalisation this needs to be
+  //  1) divided by volume
+  //  2) divided by the length of the time step
+  //  3) divided by 4 pi sr
+  //  This will all be done later
+  assert_testmodeonly(heating_cont >= 0.);
+  assert_testmodeonly(isfinite(heating_cont));
+  safeadd(globals::rpkt_emiss[mgi], heating_cont);
 }
 
 void pair_prod(struct packet *pkt_ptr) {
@@ -727,12 +718,12 @@ void pair_prod(struct packet *pkt_ptr) {
 
     angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
 
-    const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr);
+    const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
     pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
     pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
     pkt_ptr->type = TYPE_GAMMA;
-    pkt_ptr->last_cross = NONE;
+    pkt_ptr->last_cross = BOUNDARY_NONE;
   }
 }
 
@@ -752,11 +743,12 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   // grid cell into which we pass.
 
   int snext = 0;
-  double sdist = boundary_cross(pkt_ptr, &snext);
+  double sdist = grid::boundary_distance(pkt_ptr->dir, pkt_ptr->pos, pkt_ptr->prop_time, pkt_ptr->where, &snext,
+                                         &pkt_ptr->last_cross);
 
-  const double maxsdist = (GRID_TYPE == GRID_SPHERICAL1D)
-                              ? 2 * globals::rmax * (pkt_ptr->prop_time + sdist / CLIGHT_PROP) / globals::tmin
-                              : globals::rmax * pkt_ptr->prop_time / globals::tmin;
+  const double maxsdist = (GRID_TYPE == GRID_CARTESIAN3D)
+                              ? globals::rmax * pkt_ptr->prop_time / globals::tmin
+                              : 2 * globals::rmax * (pkt_ptr->prop_time + sdist / CLIGHT_PROP) / globals::tmin;
   if (sdist > maxsdist) {
     printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", globals::rmax, pkt_ptr->prop_time / globals::tmin,
              sdist);
@@ -783,22 +775,22 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   // Compton scattering - need to determine the scattering co-efficient.
   // Routine returns the value in the rest frame.
 
-  double kap_compton = 0.0;
-  if (globals::gamma_grey < 0) {
-    kap_compton = sig_comp(pkt_ptr);
+  double chi_compton = 0.0;
+  if (globals::gamma_kappagrey < 0) {
+    chi_compton = get_chi_compton_rf(pkt_ptr);
   }
 
-  const double kap_photo_electric = sig_photo_electric(pkt_ptr);
-  const double kap_pair_prod = sig_pair_prod(pkt_ptr);
-  const double kap_tot = kap_compton + kap_photo_electric + kap_pair_prod;
+  const double chi_photo_electric = get_chi_photo_electric_rf(pkt_ptr);
+  const double chi_pair_prod = sigma_pair_prod_rf(pkt_ptr);
+  const double chi_tot = chi_compton + chi_photo_electric + chi_pair_prod;
 
-  assert_testmodeonly(std::isfinite(kap_compton));
-  assert_testmodeonly(std::isfinite(kap_photo_electric));
-  assert_testmodeonly(std::isfinite(kap_pair_prod));
+  assert_testmodeonly(std::isfinite(chi_compton));
+  assert_testmodeonly(std::isfinite(chi_photo_electric));
+  assert_testmodeonly(std::isfinite(chi_pair_prod));
 
   // So distance before physical event is...
 
-  double const edist = (tau_next - tau_current) / kap_tot;
+  const double edist = (tau_next - tau_current) / chi_tot;
 
   if (edist < 0) {
     printout("Negative distance (edist). Abort. \n");
@@ -807,7 +799,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
   // Find how far it can travel during the time inverval.
 
-  double const tdist = (t2 - pkt_ptr->prop_time) * CLIGHT_PROP;
+  const double tdist = (t2 - pkt_ptr->prop_time) * CLIGHT_PROP;
 
   if (tdist < 0) {
     printout("Negative distance (tdist). Abort. \n");
@@ -821,7 +813,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     move_pkt(pkt_ptr, sdist / 2.);
 
     // Move it into the new cell.
-    if (kap_tot > 0) {
+    if (chi_tot > 0) {
       rlc_emiss_gamma(pkt_ptr, sdist);
     }
 
@@ -829,14 +821,14 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     move_pkt(pkt_ptr, sdist / 2.);
 
     if (snext != pkt_ptr->where) {
-      change_cell(pkt_ptr, snext);
+      grid::change_cell(pkt_ptr, snext);
     }
   } else if ((tdist < sdist) && (tdist < edist)) {
     // Doesn't reach boundary.
     pkt_ptr->prop_time += tdist / 2. / CLIGHT_PROP;
     move_pkt(pkt_ptr, tdist / 2.);
 
-    if (kap_tot > 0) {
+    if (chi_tot > 0) {
       rlc_emiss_gamma(pkt_ptr, tdist);
     }
     pkt_ptr->prop_time = t2;
@@ -844,7 +836,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   } else if ((edist < sdist) && (edist < tdist)) {
     pkt_ptr->prop_time += edist / 2. / CLIGHT_PROP;
     move_pkt(pkt_ptr, edist / 2.);
-    if (kap_tot > 0) {
+    if (chi_tot > 0) {
       rlc_emiss_gamma(pkt_ptr, edist);
     }
     pkt_ptr->prop_time += edist / 2. / CLIGHT_PROP;
@@ -852,24 +844,24 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
     // event occurs. Choose which event and call the appropriate subroutine.
     zrand = rng_uniform();
-    if (kap_compton > (zrand * kap_tot)) {
+    if (chi_compton > (zrand * chi_tot)) {
       // Compton scattering.
       compton_scatter(pkt_ptr);
-    } else if ((kap_compton + kap_photo_electric) > (zrand * kap_tot)) {
+    } else if ((chi_compton + chi_photo_electric) > (zrand * chi_tot)) {
       // Photo electric effect - makes it a k-packet for sure.
       pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -4;
       // pkt_ptr->type = TYPE_PRE_KPKT;
       stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
-    } else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand * kap_tot)) {
+    } else if ((chi_compton + chi_photo_electric + chi_pair_prod) > (zrand * chi_tot)) {
       // It's a pair production
       pair_prod(pkt_ptr);
     } else {
-      printout("Failed to identify event. Gamma (1). kap_compton %g kap_photo_electric %g kap_tot %g zrand %g Abort.\n",
-               kap_compton, kap_photo_electric, kap_tot, zrand);
+      printout("Failed to identify event. Gamma (1). chi_compton %g chi_photo_electric %g chi_tot %g zrand %g Abort.\n",
+               chi_compton, chi_photo_electric, chi_tot, zrand);
       const int cellindex = pkt_ptr->where;
       printout(
-          " /*globals::cell[*/pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g "
+          " globals::cell[pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g "
           "pkt_ptr->dir[2] %g pkt_ptr->pos[0] %g pkt_ptr->pos[1] %g pkt_ptr->pos[2] %g \n",
           grid::get_rho(grid::get_cell_modelgridindex(cellindex)), pkt_ptr->nu_cmf, pkt_ptr->dir[0], pkt_ptr->dir[0],
           pkt_ptr->dir[1], pkt_ptr->dir[2], pkt_ptr->pos[1], pkt_ptr->pos[2]);

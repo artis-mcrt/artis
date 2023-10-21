@@ -11,23 +11,26 @@ on:
 
 jobs:
     cppcheck:
-        runs-on: ubuntu-22.04
+        runs-on: macos-latest
 
         steps:
             - uses: actions/checkout@v3
 
             - name: install dependencies
               run: |
-                  # git status
-                  # sudo apt-get update
-                  # sudo apt-get install libgsl-dev
-                  # sudo apt install -y openmpi-bin libopenmpi-dev
-                  sudo apt-get -y install cppcheck
-
-            - name: run cppcheck
-              run: |
+                  brew update
+                  brew install gsl openmpi cppcheck
                   cp artisoptions_nltenebular.h artisoptions.h
-                  cppcheck --force --language=c++ --std=c++20 .
+
+            - name: run cppcheck and check for errors
+              run: |
+                  cppcheck --version
+                  cppcheck --force --error-exitcode=1 --language=c++ --std=c++20 --enable=warning,performance,portability .
+
+            - name: show cppcheck style suggestions
+              run: |
+                  cppcheck --version
+                  cppcheck --force --language=c++ --std=c++20 --enable=style --suppress=knownConditionTrueFalse .
 
     clang-format:
         runs-on: ubuntu-22.04
@@ -45,12 +48,23 @@ jobs:
         runs-on: ubuntu-22.04
         strategy:
             matrix:
-                compiler: [{name: gcc, ver: 11}, {name: gcc, ver: 12}, {name: clang, ver: 14}, {name: clang, ver: 15}]
+                compiler: [{name: gcc, ver: 11}, {name: gcc, ver: 12}, {name: gcc, ver: 13}, {name: clang, ver: 14}, {name: clang, ver: 15}]
                 mpi: [ON, OFF]
+                openmp: [ON, OFF]
                 artisoptionsfile: [artisoptions_classic.h, artisoptions_nltenebular.h]
+                exclude:
+                    - compiler: {name: gcc, ver: 11}
+                      openmp: ON
+                    - compiler: {name: gcc, ver: 12}
+                      openmp: ON
+                    - compiler: {name: gcc, ver: 13}
+                      openmp: ON
+                    - compiler: {name: clang, ver: 15}
+                      openmp: ON
             fail-fast: false
 
-        name: ${{ matrix.compiler.name }}-${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}} ${{ matrix.artisoptionsfile }}
+        name: ${{ matrix.compiler.name }}-${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}
+            ${{ matrix.artisoptionsfile }}
         steps:
             - uses: actions/checkout@v3
 
@@ -61,20 +75,24 @@ jobs:
                   # echo "count=$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')" >> $GITHUB_OUTPUT
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
-            - name: apt-get update
+            - name: apt update
               run: |
+                  sudo add-apt-repository main
+                  sudo add-apt-repository universe
+                  sudo add-apt-repository restricted
+                  sudo add-apt-repository multiverse
                   sudo apt-get update
 
             - name: Install gcc-${{ matrix.compiler.ver }}
               if: matrix.compiler.name == 'gcc'
               run: |
-                  sudo apt-get install -y gcc-${{ matrix.compiler.ver }} g++-${{ matrix.compiler.ver }}
+                  sudo apt install -y gcc-${{ matrix.compiler.ver }} g++-${{ matrix.compiler.ver }}
                   echo "CXX=g++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
 
             - name: Install clang-${{ matrix.compiler.ver }}
               if: matrix.compiler.name == 'clang'
               run: |
-                  sudo apt-get install -y clang-${{ matrix.compiler.ver }} --install-suggests
+                  sudo apt install -y clang-${{ matrix.compiler.ver }} --install-suggests
                   echo "CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
 
             - name: install openmpi
@@ -82,8 +100,13 @@ jobs:
               run: |
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
+            - name: install OpenMP
+              if: matrix.openmp == 'ON'
+              run: |
+                  sudo apt-get install -y libomp5-14 libomp-dev
+
             - name: install gsl
-              run: sudo apt-get install libgsl-dev
+              run: sudo apt install libgsl-dev
 
       # - name: Set compiler environment variables (MPI off)
       #   if: matrix.mpi == 'OFF'
@@ -103,4 +126,4 @@ jobs:
             - name: Compile
               run: |
                   cp -v -p ${{ matrix.artisoptionsfile }} artisoptions.h
-                  make MPI=${{matrix.mpi}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec

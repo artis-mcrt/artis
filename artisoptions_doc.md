@@ -2,26 +2,26 @@
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
 constexpr int MPKTS;
 
-constexpr int GRID_TYPE = {GRID_UNIFORM, GRID_SPHERICAL1D}
+constexpr int GRID_TYPE = {GRID_CARTESIAN3D, GRID_CYLINDRICAL2D, GRID_SPHERICAL1D}
+
+// for GRID_CARTESIAN3D, set the dimensions. This will have no effect with a 3D model.txt since they will be set to match the input
 constexpr int CUBOID_NCOORDGRID_X;
 constexpr int CUBOID_NCOORDGRID_Y;
 constexpr int CUBOID_NCOORDGRID_Z;
 
-// non-LTE population solver
-constexpr bool NLTE_POPS_ON;
-
-// solve the NLTE population matrix equation simultaneously for levels of all ions of an element
-constexpr bool NLTE_POPS_ALL_IONS_SIMULTANEOUS;
+// for 2D cylindrical and 3D Cartesian, remove the corners (v > vmax) to force a spherical escape surface
+constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE;
 
 // maximum number of NLTE/Te/Spencer-Fano iterations
 constexpr int NLTEITER;
 
-// this macro function determines which levels of which ions will be treated in full NLTE (if NLTE_POPS_ON is true)
+// this macro function determines which levels of which ions will be treated in full NLTE
 // for now, all NLTE levels should be contiguous and include the ground state
 // (i.e. level indices < X should return true for some X)
 constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) { return false; }
 
 // Use TJ radiation density temperature for Boltzmann excitation formua instead of electron temperature Te
+// This is default on for classic, and off for nebularnlte, where it affects the super-level
 constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
 
 // Only include a single level for the highest ion stage
@@ -63,6 +63,8 @@ constexpr double RECOMBCALIBRATION_T_ELEC;
 
 // Polarisation for real packets
 constexpr bool DIPOLE;
+
+// Only affects exspec and enables writing specpol.out, emissionpol.out, absorptionpol.out
 constexpr bool POL_ON;
 
 // Polarisation for virtual packets
@@ -211,8 +213,6 @@ constexpr enum timestepsizemethods TIMESTEP_SIZE_METHOD;
 constexpr double FIXED_TIMESTEP_WIDTH;
 
 constexpr double TIMESTEP_TRANSITION_TIME;
-
-constexpr bool USE_GSL_RANDOM;
 
 // once a new gridsave and packets*.tmp have been written, don't delete the previous set
 constexpr bool KEEP_ALL_RESTART_FILES;

@@ -8,20 +8,19 @@
 
 constexpr int MPKTS = 15000;
 
-constexpr int GRID_TYPE = GRID_UNIFORM;
+constexpr int GRID_TYPE = GRID_CARTESIAN3D;
 constexpr int CUBOID_NCOORDGRID_X = 50;
 constexpr int CUBOID_NCOORDGRID_Y = 50;
 constexpr int CUBOID_NCOORDGRID_Z = 50;
-
-constexpr bool NLTE_POPS_ON = false;
-
-constexpr bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;
+constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE = false;
 
 constexpr int NLTEITER = 30;
 
 constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) { return false; }
 
-constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
+constexpr bool LTEPOP_EXCITATION_USE_TJ = true;
+
+constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return false; }
 
 constexpr bool single_level_top_ion = false;
 
@@ -133,8 +132,6 @@ constexpr enum timestepsizemethods TIMESTEP_SIZE_METHOD = TIMESTEP_SIZES_LOGARIT
 constexpr double FIXED_TIMESTEP_WIDTH = -1.;
 
 constexpr double TIMESTEP_TRANSITION_TIME = -1.;
-
-constexpr bool USE_GSL_RANDOM = true;
 
 constexpr bool KEEP_ALL_RESTART_FILES = false;
 

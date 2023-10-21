@@ -1,13 +1,11 @@
 #include "vectors.h"
 
-// #include <gsl/gsl_randist.h>
-
 #include <cmath>
 
 #include "artisoptions.h"
 #include "sn3d.h"
 
-void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[3])
+void scatter_dir(std::span<const double, 3> dir_in, const double cos_theta, std::span<double, 3> dir_out)
 // Routine for scattering a direction through angle theta.
 {
   // begin with setting the direction in coordinates where original direction
@@ -26,7 +24,7 @@ void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[
   // Rotation matrix is determined by dir_in.
 
   const double norm1 = 1. / std::sqrt((dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1]));
-  const double norm2 = 1. / std::sqrt((dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1]) + (dir_in[2] * dir_in[2]));
+  const double norm2 = 1. / vec_len(dir_in);
 
   const double r11 = dir_in[1] * norm1;
   const double r12 = -1 * dir_in[0] * norm1;
@@ -45,7 +43,7 @@ void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[
   assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
 }
 
-void get_rand_isotropic_unitvec(double vecout[3])
+void get_rand_isotropic_unitvec(std::span<double, 3> vecout)
 // Assuming isotropic distribution, get a random direction vector
 {
   // alternatively, use GSL's functions:

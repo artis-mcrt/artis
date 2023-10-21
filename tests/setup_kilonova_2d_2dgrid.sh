@@ -2,29 +2,35 @@
 
 set -x
 
-mkdir -p kilonova_testrun
+runfolder=kilonova_2d_2dgrid_testrun
+
+mkdir -p $runfolder
 
 if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_feconi.tar.xz; fi
 
-tar -xf atomicdata_feconi.tar.xz --directory kilonova_testrun/
+tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
 
-rsync -av kilonova_inputfiles/ kilonova_testrun/
+# same input files as the other test run
+rsync -av kilonova_2d_3dgrid_inputfiles/ $runfolder/
 
-cp ../data/* kilonova_testrun/
+# for the checksum files
+rsync -av --ignore-times kilonova_2d_2dgrid_inputfiles/ $runfolder/
 
-cp ../artisoptions_kilonova_lte.h kilonova_testrun/artisoptions.h
+cp ../data/* $runfolder/
 
-cd kilonova_testrun
+cp ../artisoptions_kilonova_lte.h $runfolder/artisoptions.h
 
-xz -dvk -T0 *.xz
+cd $runfolder
+
+xz -dv -T0 *.xz
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 80000;/g' artisoptions.h
+
+sed -i'' -e 's/constexpr int GRID_TYPE.*/constexpr int GRID_TYPE = GRID_CYLINDRICAL2D;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr int TABLESIZE.*/constexpr int TABLESIZE = 20;/g' artisoptions.h
 sed -i'' -e 's/constexpr double MINTEMP.*/constexpr double MINTEMP = 1000.;/g' artisoptions.h
 sed -i'' -e 's/constexpr double MAXTEMP.*/constexpr double MAXTEMP = 20000.;/g' artisoptions.h
-
-sed -i'' -e 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' artisoptions.h
 
 cd -
 

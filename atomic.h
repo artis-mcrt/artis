@@ -13,7 +13,7 @@ int get_continuumindex_phixstargetindex(int element, int ion, int level, int phi
 int get_continuumindex(int element, int ion, int level, int upperionlevel);
 int get_phixtargetindex(int element, int ion, int level, int upperionlevel);
 double get_tau_sobolev(int modelgridindex, int lineindex, double t_current);
-double get_nntot(int modelgridindex);
+auto get_nnion_tot(int modelgridindex) -> double;
 bool is_nlte(int element, int ion, int level);
 bool level_isinsuperlevel(int element, int ion, int level);
 double photoionization_crosssection_fromtable(const float *photoion_xs, double nu_edge, double nu);
@@ -21,9 +21,8 @@ void set_nelements(int nelements_in);
 int get_nelements();
 int get_atomicnumber(int element);
 int get_elementindex(int Z);
-void increase_includedions(int nions);
 int get_includedions();
-void update_max_nions(int nions);
+void update_includedions_maxnions();
 int get_max_nions();
 int get_nions(int element);
 int get_ionstage(int element, int ion);
@@ -49,5 +48,7 @@ void set_nuptrans(int element, int ion, int level, int nuptrans);
 double einstein_spontaneous_emission(int lineindex);
 double photoionization_crosssection(int element, int ion, int level, double nu_edge, double nu);
 double get_phixs_threshold(int element, int ion, int level, int phixstargetindex);
+bool elem_has_nlte_levels(int element);
+bool elem_has_nlte_levels_search(int element);
 
 #endif  // ATOMIC_H

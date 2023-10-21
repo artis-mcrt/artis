@@ -7,12 +7,9 @@
 #include <unistd.h>
 
 #include <cassert>
-#include <chrono>
 #include <csignal>
-#include <cstdarg>
 #include <cstdio>
 #include <cstring>
-#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -33,17 +30,13 @@
 extern FILE *output_file;
 extern int tid;
 extern bool use_cellhist;
-extern bool neutral_flag;
 
-#include <gsl/gsl_rng.h>
-extern gsl_rng *rng;  // pointer for random number generator
-extern std::mt19937_64 *stdrng;
-static std::uniform_real_distribution<double> stdrngdis(0.0, 1.0);
+extern std::mt19937 stdrng;
 
 extern gsl_integration_workspace *gslworkspace;
 
 #ifdef _OPENMP
-#pragma omp threadprivate(tid, use_cellhist, neutral_flag, rng, gslworkspace, output_file)
+#pragma omp threadprivate(tid, use_cellhist, stdrng, gslworkspace, output_file)
 #endif
 
 #define __artis_assert(e)                                                                                              \
@@ -115,7 +108,7 @@ static inline int get_bflutindex(const int tempindex, const int element, const i
 #ifdef _OPENMP
 #define safeadd(var, val) _Pragma("omp atomic update") var += val
 #else
-#define safeadd(var, val) var += val
+#define safeadd(var, val) var = var + val
 #endif
 
 #define safeincrement(var) safeadd(var, 1)
@@ -130,28 +123,41 @@ static inline void gsl_error_handler_printout(const char *reason, const char *fi
   }
 }
 
-static FILE *fopen_required(const char *filename, const char *mode) {
-  assert_always(filename != nullptr);
-  std::string datafolderfilename("data/");
-  datafolderfilename += filename;
+static FILE *fopen_required(const std::string &filename, const char *mode) {
+  // look in the data folder first
+  const std::string datafolderfilename = "data/" + filename;
   if (mode[0] == 'r' && std::filesystem::exists(datafolderfilename)) {
-    return fopen_required(datafolderfilename.c_str(), mode);
+    return fopen_required(datafolderfilename, mode);
   }
-  FILE *file = std::fopen(filename, mode);
+
+  FILE *file = std::fopen(filename.c_str(), mode);
   if (file == nullptr) {
-    printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename, mode);
+    printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename.c_str(), mode);
     abort();
   }
 
   return file;
 }
 
+static std::fstream fstream_required(const std::string &filename, std::ios_base::openmode mode) {
+  const std::string datafolderfilename = "data/" + filename;
+  if (mode == std::ios::in && std::filesystem::exists(datafolderfilename)) {
+    return fstream_required(datafolderfilename, mode);
+  }
+  auto file = std::fstream(filename, mode);
+  if (!file.is_open()) {
+    printout("ERROR: Could not open file '%s'\n", filename.c_str());
+    abort();
+  }
+  return file;
+}
+
 static int get_timestep(const double time) {
   assert_always(time >= globals::tmin);
   assert_always(time < globals::tmax);
-  for (int nts = 0; nts < globals::ntstep; nts++) {
-    const double tsend = (nts < (globals::ntstep - 1)) ? globals::time_step[nts + 1].start : globals::tmax;
-    if (time >= globals::time_step[nts].start && time < tsend) {
+  for (int nts = 0; nts < globals::ntimesteps; nts++) {
+    const double tsend = (nts < (globals::ntimesteps - 1)) ? globals::timesteps[nts + 1].start : globals::tmax;
+    if (time >= globals::timesteps[nts].start && time < tsend) {
       return nts;
     }
   }
@@ -184,35 +190,25 @@ inline int get_thread_num(void) {
 #endif
 }
 
-inline double rng_uniform(void) {
-  if constexpr (USE_GSL_RANDOM) {
-    return gsl_rng_uniform(rng);
-  } else {
-    return stdrngdis(*stdrng);
-  }
+inline float rng_uniform(void) {
+  float zrand;
+  do {
+    zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
+  } while (zrand == 1.);
+  return zrand;
 }
 
-inline double rng_uniform_pos(void) {
-  if constexpr (USE_GSL_RANDOM) {
-    return gsl_rng_uniform_pos(rng);
-  } else {
-    double zrand = 0.;
-    do {
-      zrand = rng_uniform();
-    } while (zrand <= 0.);
-    return zrand;
-  }
+inline float rng_uniform_pos(void) {
+  float zrand = 0.;
+  do {
+    zrand = rng_uniform();
+  } while (zrand <= 0.);
+  return zrand;
 }
 
 inline void rng_init(const uint_fast64_t zseed) {
-  if constexpr (USE_GSL_RANDOM) {
-    rng = gsl_rng_alloc(gsl_rng_ran3);
-    gsl_rng_set(rng, zseed);
-    printout("rng is a '%s' generator\n", gsl_rng_name(rng));
-  } else {
-    printout("rng is a std::mt19937_64 generator\n");
-    stdrng = new std::mt19937_64(zseed);
-  }
+  printout("rng is a std::mt19937 generator\n");
+  stdrng.seed(zseed);
 }
 
 inline bool is_pid_running(pid_t pid) {
@@ -229,7 +225,7 @@ inline void check_already_running(void) {
   pid_t artispid = getpid();
 
   if (std::filesystem::exists("artis.pid")) {
-    std::ifstream pidfile("artis.pid", std::ifstream::in);
+    auto pidfile = std::fstream("artis.pid", std::ios::in);
     pid_t artispid_in;
     pidfile >> artispid_in;
     pidfile.close();
@@ -243,9 +239,13 @@ inline void check_already_running(void) {
     }
   }
 
-  std::ofstream pidfile("artis.pid", std::ofstream::out | std::ofstream::trunc);
+  auto pidfile = std::fstream("artis.pid", std::ofstream::out | std::ofstream::trunc);
   pidfile << artispid;
   pidfile.close();
+}
+
+inline int get_ionestimindex(const int mgi, const int element, const int ion) {
+  return mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
 }
 
 #endif  // SN3D_H

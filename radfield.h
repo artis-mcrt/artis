@@ -8,6 +8,7 @@
 #include "sn3d.h"
 
 namespace radfield {
+
 void zero_estimators(int modelgridindex);
 void init(int my_rank, int ndo_nonempty);
 void initialise_prev_titer_photoionestimators();
@@ -16,7 +17,6 @@ void close_file();
 void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const struct packet *pkt_ptr);
 void update_lineestimator(int modelgridindex, int lineindex, double increment);
 double radfield(double nu, int modelgridindex);
-double dbb_mgi(double nu, int modelgridindex);
 void fit_parameters(int modelgridindex, int timestep);
 void set_J_normfactor(int modelgridindex, double normfactor);
 void normalise_J(int modelgridindex, double estimator_normfactor_over4pi);
@@ -39,9 +39,8 @@ void reset_bfrate_contributions(int modelgridindex);
 int integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel, size_t limit, int key,
               gsl_integration_workspace *workspace, double *result, double *abserr);
 
-template <typename T_t, typename W_t>
-constexpr double dbb(double nu, T_t T, W_t W)
-// returns J_nu for a dilute black body [ergs/s/sr/cm2/Hz]
+constexpr double dbb(double nu, auto T, auto W)
+// returns J_nu [ergs/s/sr/cm2/Hz] for a dilute black body with temperature T and dilution factor W
 {
   return W * TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / std::expm1(HOVERKB * nu / T);
 }

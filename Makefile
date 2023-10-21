@@ -3,8 +3,8 @@
 # place in architecture folder, e.g. build/arm64
 BUILD_DIR = build/$(shell uname -m)
 
-CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -g -flto=auto -Werror -Werror=undef
-# CXXFLAGS += -Wpedantic -Wextra -Wall
+CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto=auto
+
 # CXXFLAGS += -Wunreachable-code
 
 ifeq ($(shell uname -s),Darwin)
@@ -18,6 +18,7 @@ ifeq ($(shell uname -s),Darwin)
 		CXXFLAGS += -march=native
 	endif
 
+	CXXFLAGS += -fno-omit-frame-pointer
 #	CXXFLAGS += -Rpass=loop-vectorize
 #	CXXFLAGS += -Rpass-missed=loop-vectorize
 #	CXXFLAGS += -Rpass-analysis=loop-vectorize
@@ -77,20 +78,24 @@ ifeq ($(TESTMODE),ON)
 	CXXFLAGS += -DTESTMODE=true -O3 -DLIBCXX_ENABLE_DEBUG_MODE
 	# makes GitHub actions classic test run forever?
 	# CXXFLAGS += -D_GLIBCXX_DEBUG
-	CXXFLAGS += -fsanitize=address -fno-omit-frame-pointer -fno-common
+	CXXFLAGS += -fsanitize=address,undefined -fno-omit-frame-pointer -fno-common
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
 	# skip array range checking for better performance and use optimizations
 	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3
 endif
 
-CXXFLAGS += -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -Wno-inline
+CXXFLAGS += -Werror -Werror=undef -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -Wno-inline
 
-ifeq ($(MPI),ON)
-else ifeq ($(MPI),OFF)
-else ifeq ($(MPI),)
+ifeq ($(MPI),)
 	# MPI option not specified. set to true by default
 	MPI := ON
+endif
+ifeq ($(MPI),ON)
+	CXX = mpicxx
+	CXXFLAGS += -DMPI_ON=true
+	BUILD_DIR := $(BUILD_DIR)_mpi
+else ifeq ($(MPI),OFF)
 else
 $(error bad value for MPI option. Should be ON or OFF)
 endif
@@ -102,17 +107,14 @@ else
 $(error bad value for testmode option. Should be ON or OFF)
 endif
 
-ifeq ($(MPI),ON)
-	CXX = mpicxx
-	CXXFLAGS += -DMPI_ON=true
-	BUILD_DIR := $(BUILD_DIR)_mpi
-endif
-
 ifeq ($(OPENMP),ON)
-	CXXFLAGS += -Xpreprocessor
-	CXXFLAGS += -fopenmp
+	CXXFLAGS += -Xpreprocessor -fopenmp
 	LDFLAGS += -lomp
 	BUILD_DIR := $(BUILD_DIR)_openmp
+else ifeq ($(OPENMP),OFF)
+else ifeq ($(OPENMP),)
+else
+$(error bad value for testmode option. Should be ON or OFF)
 endif
 
 ### use pg when you want to use gprof profiler
@@ -137,7 +139,7 @@ sn3d: $(sn3d_objects)
 -include $(sn3d_dep)
 
 sn3dwhole: version.h
-	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
+	$(CXX) $(CXXFLAGS) -g $(sn3d_files) $(LDFLAGS) -o sn3d
 
 $(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
 	@mkdir -p $(@D)

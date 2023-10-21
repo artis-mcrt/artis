@@ -1,5 +1,8 @@
 #include "stats.h"
 
+#include <atomic>
+#include <vector>
+
 #include "atomic.h"
 #include "globals.h"
 #include "grid.h"
@@ -9,21 +12,19 @@
 namespace stats {
 
 static double *ionstats = nullptr;
-static int *eventstats = nullptr;
+static std::array<std::atomic<int>, COUNTER_COUNT> eventstats;
 
 void init() {
   if constexpr (TRACK_ION_STATS) {
     ionstats =
         static_cast<double *>(malloc(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT * sizeof(double)));
   }
-  eventstats = static_cast<int *>(malloc(COUNTER_COUNT * sizeof(int)));
 }
 
 void cleanup() {
   if constexpr (TRACK_ION_STATS) {
     free(ionstats);
   }
-  free(eventstats);
 }
 
 void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype,
@@ -145,7 +146,7 @@ void normalise_ion_estimators(const int mgi, const double deltat, const double d
         if (i < nstatcounters_ratecoeff) {
           // convert photon event counters into rate coefficients
           set_ion_stats(mgi, element, ion, static_cast<enum stats::ionstattypes>(i),
-                        ratedensity / ionstagepop(mgi, element, ion));
+                        ratedensity / get_nnion(mgi, element, ion));
         } else {
           set_ion_stats(mgi, element, ion, static_cast<enum stats::ionstattypes>(i), ratedensity);
         }
@@ -157,7 +158,7 @@ void normalise_ion_estimators(const int mgi, const double deltat, const double d
 void increment(enum eventcounters i) {
   assert_testmodeonly(i >= 0);
   assert_testmodeonly(i < COUNTER_COUNT);
-  safeincrement(eventstats[i]);
+  eventstats[i]++;
 }
 
 void pkt_action_counters_reset() {
@@ -175,7 +176,7 @@ auto get_counter(enum eventcounters i) -> int {
 }
 
 void pkt_action_counters_printout(const struct packet *const pkt, const int nts) {
-  long allpktinteractions = 0;
+  u_int64_t allpktinteractions = 0;
   for (int i = 0; i < globals::npkts; i++) {
     assert_always(pkt[i].interactions >= 0);
     allpktinteractions += pkt[i].interactions;
@@ -183,10 +184,10 @@ void pkt_action_counters_printout(const struct packet *const pkt, const int nts)
   const double meaninteractions = static_cast<double>(allpktinteractions) / globals::npkts;
   printout("mean number of interactions per packet = %g\n", meaninteractions);
 
-  const double deltat = globals::time_step[nts].width;
+  const double deltat = globals::timesteps[nts].width;
   double modelvolume = 0.;
   for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
-    modelvolume += grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
+    modelvolume += grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts].mid / globals::tmin, 3);
   }
 
   /// Printout packet statistics

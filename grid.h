@@ -2,9 +2,12 @@
 #define GRIDINIT_H
 
 #include <cinttypes>
+#include <span>
 
 #include "artisoptions.h"
 #include "constants.h"
+#include "packet.h"
+#include "vectors.h"
 
 namespace grid {
 
@@ -19,13 +22,6 @@ struct compositionlist_entry {
 struct gridcell {
   double pos_min[3];  // Initial co-ordinates of inner most corner of cell.
   int modelgridindex;
-};
-
-enum model_types {
-  RHO_UNIFORM = 1,  // Constant density. NOT IN USE
-  RHO_1D_READ = 2,  // Read model 1D
-  RHO_2D_READ = 4,  // Read model 2D
-  RHO_3D_READ = 3,  // Read model 3D
 };
 
 struct modelgrid_t {
@@ -62,7 +58,17 @@ struct modelgrid_t {
   uint_fast8_t thick = 0;
 };
 
-constexpr int get_ngriddimensions(void) { return (GRID_TYPE == GRID_SPHERICAL1D) ? 1 : 3; }
+constexpr int get_ngriddimensions(void) {
+  switch (GRID_TYPE) {
+    case GRID_SPHERICAL1D:
+      return 1;
+    case GRID_CYLINDRICAL2D:
+      return 2;
+    case GRID_CARTESIAN3D:
+      return 3;
+  }
+  assert_always(false);
+}
 
 extern struct modelgrid_t *modelgrid;
 
@@ -72,7 +78,7 @@ extern char coordlabel[3];
 
 int get_elements_uppermost_ion(int modelgridindex, int element);
 void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);
-double wid_init(int cellindex);
+double wid_init(int cellindex, int axis);
 double get_modelcell_assocvolume_tmin(int modelgridindex);
 double get_gridcell_volume_tmin(int cellindex);
 double get_cellcoordmax(int cellindex, int axis);
@@ -96,12 +102,12 @@ float get_W(int modelgridindex);
 void set_nne(int modelgridindex, float nne);
 void set_nnetot(int modelgridindex, float x);
 void set_kappagrey(int modelgridindex, float kappagrey);
+void set_rho(int modelgridindex, float x);
 void set_Te(int modelgridindex, float Te);
 void set_TR(int modelgridindex, float TR);
 void set_TJ(int modelgridindex, float TJ);
 void set_W(int modelgridindex, float W);
 void grid_init(int my_rank);
-double get_cellradialpos(int cellindex);
 float get_modelinitradioabund(int modelgridindex, int nucindex);
 float get_stable_initabund(int mgi, int element);
 float get_element_meanweight(int mgi, int element);
@@ -110,12 +116,13 @@ double get_electronfrac(int modelgridindex);
 int get_numassociatedcells(int modelgridindex);
 int get_modelcell_nonemptymgi(int mgi);
 int get_mgi_of_nonemptymgi(int nonemptymgi);
-enum model_types get_model_type();
-void set_model_type(enum model_types model_type_value);
+enum gridtypes get_model_type();
+void set_model_type(enum gridtypes model_type_value);
 int get_npts_model();
 int get_nonempty_npts_model();
 double get_t_model();
 int get_cell_modelgridindex(int cellindex);
+int get_cellindex_from_pos(std::span<const double, 3> pos, double time);
 void read_ejecta_model();
 void write_grid_restart_data(int timestep);
 int get_maxndo();
@@ -123,11 +130,30 @@ int get_nstart(int rank);
 int get_ndo(int rank);
 int get_ndo_nonempty(int rank);
 double get_totmassradionuclide(int z, int a);
+double boundary_distance(std::span<const double, 3> dir, std::span<const double, 3> pos, double tstart, int cellindex,
+                         int *snext, enum cell_boundary *pkt_last_cross);
+void change_cell(struct packet *pkt_ptr, int snext);
 
 static inline float get_elem_abundance(int modelgridindex, int element)
 // mass fraction of an element (all isotopes combined)
 {
   return modelgrid[modelgridindex].composition[element].abundance;
+}
+
+constexpr auto get_gridcoords_from_xyz(std::span<const double, 3> pos_xyz, std::span<double, 3> posgridcoord) -> void {
+  if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
+    posgridcoord[0] = pos_xyz[0];
+    posgridcoord[1] = pos_xyz[1];
+    posgridcoord[2] = pos_xyz[2];
+  } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
+    posgridcoord[0] = std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2));
+    posgridcoord[1] = pos_xyz[2];
+    posgridcoord[2] = 0.;
+  } else if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
+    posgridcoord[0] = vec_len(pos_xyz);
+    posgridcoord[1] = 0.;
+    posgridcoord[2] = 0.;
+  }
 }
 
 }  // namespace grid

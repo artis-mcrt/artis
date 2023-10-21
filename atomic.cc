@@ -1,6 +1,7 @@
 #include "atomic.h"
 
 #include <cmath>
+#include <ranges>
 
 #include "artisoptions.h"
 #include "grid.h"
@@ -9,7 +10,6 @@
 
 double last_phixs_nuovernuedge =
     -1;                // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
-int nelements = 0;     // total number of elements included in the simulation
 int maxnions = 0;      // highest number of ions for any element
 int includedions = 0;  // number of ions of any element
 std::array<bool, 3> phixs_file_version_exists;
@@ -57,8 +57,8 @@ auto get_tau_sobolev(const int modelgridindex, const int lineindex, const double
   return tau_sobolev;
 }
 
-auto get_nntot(int modelgridindex) -> double
-// total ion (nuclei) density
+auto get_nnion_tot(int modelgridindex) -> double
+// total density of nuclei
 {
   double nntot = 0.;
   for (int element = 0; element < get_nelements(); element++) {
@@ -73,9 +73,6 @@ auto is_nlte(const int element, const int ion, const int level) -> bool
 // (note this function returns true for the ground state,
 //  although it is stored separately from the excited NLTE states)
 {
-  if (!NLTE_POPS_ON) {
-    return false;
-  }
   return LEVEL_IS_NLTE(get_atomicnumber(element), get_ionstage(element, ion),
                        level);  // defined in artisoptions.h
 }
@@ -83,7 +80,7 @@ auto is_nlte(const int element, const int ion, const int level) -> bool
 auto level_isinsuperlevel(const int element, const int ion, const int level) -> bool
 // ion has NLTE levels, but this one is not NLTE => is in the superlevel
 {
-  return (NLTE_POPS_ON && !is_nlte(element, ion, level) && level != 0 && (get_nlevels_nlte(element, ion) > 0));
+  return (!is_nlte(element, ion, level) && level != 0 && (get_nlevels_nlte(element, ion) > 0));
 }
 
 auto photoionization_crosssection_fromtable(const float *const photoion_xs, const double nu_edge, const double nu)
@@ -98,7 +95,7 @@ auto photoionization_crosssection_fromtable(const float *const photoion_xs, cons
   //   return 1.;
   // return 1. * pow(nu_edge / nu, 3);
 
-  float sigma_bf = NAN;
+  float sigma_bf = 0.;
 
   if (phixs_file_version_exists[1] && !phixs_file_version_exists[2]) {
     // classic mode: no interpolation
@@ -156,9 +153,9 @@ auto photoionization_crosssection_fromtable(const float *const photoion_xs, cons
   return sigma_bf;
 }
 
-void set_nelements(const int nelements_in) { nelements = nelements_in; }
+void set_nelements(const int nelements_in) { globals::elements.resize(nelements_in); }
 
-auto get_nelements() -> int { return nelements; }
+auto get_nelements() -> int { return globals::elements.size(); }
 
 auto get_atomicnumber(const int element) -> int
 /// Returns the atomic number associated with a given elementindex.
@@ -173,20 +170,26 @@ auto get_elementindex(const int Z) -> int
 /// If there is no element with the given atomic number in the atomic data
 /// a negative value is returned to flag this event.
 {
-  for (int i = 0; i < get_nelements(); i++) {
-    // printf("i %d, Z %d, elements[i].anumber %d\n",i,Z,elements[i].anumber);
-    if (Z == globals::elements[i].anumber) {
-      return i;
-    }
+  const auto elem =
+      std::ranges::find_if(globals::elements, [Z](const elementlist_entry &element) { return element.anumber == Z; });
+  if (elem != globals::elements.end()) {
+    return std::distance(globals::elements.begin(), elem);
   }
 
-  // printout("[debug] get_elementindex: element Z=%d was not found in atomic data ... skip readin of cross sections for
-  // this element\n",Z); printout("[fatal] get_elementindex: element Z=%d was not found in atomic data ... abort\n");
-  // abort();;
+  // printout("[debug] get_elementindex: element Z=%d was not found in atomic data ... skip readin of cross sections
+  // for this element\n",Z); printout("[fatal] get_elementindex: element Z=%d was not found in atomic data ...
+  // abort\n"); abort();;
   return -100;
 }
 
-void increase_includedions(const int nions) { includedions += nions; }
+void update_includedions_maxnions() {
+  includedions = 0;
+  maxnions = 0;
+  for (int element = 0; element < get_nelements(); element++) {
+    includedions += get_nions(element);
+    maxnions = std::max(maxnions, get_nions(element));
+  }
+}
 
 auto get_includedions() -> int
 // returns the number of ions of all elements combined
@@ -197,11 +200,7 @@ auto get_includedions() -> int
 void update_max_nions(const int nions)
 // Will ensure that maxnions is always greater than or equal to the number of nions
 // this is called at startup once per element with the number of ions
-{
-  if (nions > maxnions || maxnions < 0) {
-    maxnions = nions;
-  }
-}
+{}
 
 auto get_max_nions() -> int {
   // number greater than or equal to nions(element) for all elements
@@ -232,6 +231,19 @@ auto get_nlevels(const int element, const int ion) -> int
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   return globals::elements[element].ions[ion].nlevels;
+}
+
+auto elem_has_nlte_levels(const int element) -> bool { return globals::elements[element].has_nlte_levels; }
+
+auto elem_has_nlte_levels_search(const int element) -> bool {
+  for (int ion = 0; ion < get_nions(element); ion++) {
+    for (int level = 1; level < get_nlevels(element, ion); level++) {
+      if (is_nlte(element, ion, level)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 auto get_nlevels_nlte(const int element, const int ion) -> int

@@ -1,5 +1,6 @@
 #include "thermalbalance.h"
 
+#include <gsl/gsl_errno.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_roots.h>
 
@@ -194,14 +195,16 @@ static auto get_heating_ion_coll_deexc(const int modelgridindex, const int eleme
     // ----------------------------------------------------------
     const int ndowntrans = get_ndowntrans(element, ion, level);
     for (int i = 0; i < ndowntrans; i++) {
-      const int lower = globals::elements[element].ions[ion].levels[level].downtrans[i].targetlevelindex;
+      const auto &downtransition = globals::elements[element].ions[ion].levels[level].downtrans[i];
+      const int lower = downtransition.targetlevelindex;
       const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
-      const double C =
-          nnlevel * col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, i) * epsilon_trans;
+      const double C = nnlevel *
+                       col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, element, ion, level, downtransition) *
+                       epsilon_trans;
       C_deexc += C;
     }
   }
-  // const double nnion = ionstagepop(modelgridindex, element, ion);
+  // const double nnion = get_nnion(modelgridindex, element, ion);
   // printout("ion_col_deexc_heating: T_e %g nne %g Z=%d ionstage %d nnion %g heating_contrib %g contrib/nnion %g\n",
   // T_e, nne, get_atomicnumber(element), get_ionstage(element, ion), nnion, C_deexc, C_deexc / nnion);
   return C_deexc;
@@ -348,26 +351,22 @@ static auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> doub
   /// Set new T_e guess for the current cell and update populations
   // globals::cell[cellnumber].T_e = T_e;
   grid::set_Te(modelgridindex, T_e);
-  double nntot = NAN;
-  if (NLTE_POPS_ON && NLTE_POPS_ALL_IONS_SIMULTANEOUS) {
-    nntot = calculate_electron_densities(modelgridindex);
-  } else {
-    nntot = calculate_populations(modelgridindex);
-  }
+  calculate_ion_balance_nne(modelgridindex);
+  const auto nne = grid::get_nne(modelgridindex);
 
   /// Then calculate heating and cooling rates
-  const float nne = grid::get_nne(modelgridindex);
   kpkt::calculate_cooling_rates(modelgridindex, heatingcoolingrates);
   calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates);
 
-  const double nt_frac_heating = nonthermal::get_nt_frac_heating(modelgridindex);
-  heatingcoolingrates->heating_dep = nonthermal::get_deposition_rate_density(modelgridindex) * nt_frac_heating;
-  heatingcoolingrates->nt_frac_heating = nt_frac_heating;
+  heatingcoolingrates->nt_frac_heating = nonthermal::get_nt_frac_heating(modelgridindex);
+  heatingcoolingrates->heating_dep =
+      nonthermal::get_deposition_rate_density(modelgridindex) * heatingcoolingrates->nt_frac_heating;
 
   /// Adiabatic cooling term
-  const double p = nntot * KB * T_e;
+  const double nntot = get_nnion_tot(modelgridindex) + nne;
+  const double p = nntot * KB * T_e;  // pressure in [erg/cm^3]
   const double volumetmin = grid::get_modelcell_assocvolume_tmin(modelgridindex);
-  const double dV = 3 * volumetmin / pow(globals::tmin, 3) * pow(t_current, 2);
+  const double dV = 3 * volumetmin / pow(globals::tmin, 3) * pow(t_current, 2);  // really dV/dt
   const double V = volumetmin * pow(t_current / globals::tmin, 3);
   // printout("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
   heatingcoolingrates->cooling_adiabatic = p * dV / V;
@@ -377,7 +376,7 @@ static auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> doub
   const double total_coolingrate = heatingcoolingrates->cooling_ff + heatingcoolingrates->cooling_fb +
                                    heatingcoolingrates->cooling_collisional + heatingcoolingrates->cooling_adiabatic;
 
-  return total_heating_rate - total_coolingrate;  // - 0.01*(heatingrates_thisthread->bf+coolingrates[tid].fb)/2;
+  return total_heating_rate - total_coolingrate;
 }
 
 void call_T_e_finder(const int modelgridindex, const int timestep, const double t_current, const double T_min,
@@ -448,10 +447,6 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
         "[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [%g,%g] in modelcell %d "
         "(T_R=%g,W=%g). T_e forced to be MAXTEMP\n",
         MINTEMP, MAXTEMP, modelgridindex, grid::get_TR(modelgridindex), grid::get_W(modelgridindex));
-  }
-
-  if (neutral_flag) {
-    printout("[info] call_T_e_finder: cell %d contains only neutral ions\n", modelgridindex);
   }
 
   if (T_e > 2 * T_e_old) {

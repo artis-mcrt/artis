@@ -9,9 +9,7 @@
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=luke.shingles@gmail.com
 
-module load Stages/2023 GCC ParaStationMPI GSL
-
-export PATH="/p/software/juwels/stages/2022/software/zstd/1.5.0-GCCcore-11.2.0/bin/:$PATH"
+module load Stages/2023 GCC ParaStationMPI GSL zstd/.1.5.2
 
 cd $SLURM_SUBMIT_DIR
 

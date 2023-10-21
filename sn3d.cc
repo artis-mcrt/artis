@@ -12,6 +12,8 @@
 
 #include "sn3d.h"
 
+#include <filesystem>
+
 #include "atomic.h"
 #include "decay.h"
 #include "gammapkt.h"
@@ -32,9 +34,7 @@
 // threadprivate variables
 int tid;
 bool use_cellhist;
-bool neutral_flag;
-gsl_rng *rng = nullptr;
-std::mt19937_64 *stdrng = nullptr;
+std::mt19937 stdrng(std::random_device{}());
 gsl_integration_workspace *gslworkspace = nullptr;
 FILE *output_file = nullptr;
 static FILE *linestat_file = nullptr;
@@ -91,15 +91,15 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
   // for (int i = 0; i <= nts; i++)
   const int i = nts;
   {
-    const double t_mid = globals::time_step[i].mid;
+    const double t_mid = globals::timesteps[i].mid;
 
     // power in [erg/s]
-    globals::time_step[i].eps_positron_ana_power = 0.;
-    globals::time_step[i].eps_electron_ana_power = 0.;
-    globals::time_step[i].eps_alpha_ana_power = 0.;
-    globals::time_step[i].qdot_betaminus = 0.;
-    globals::time_step[i].qdot_alpha = 0.;
-    globals::time_step[i].qdot_total = 0.;
+    globals::timesteps[i].eps_positron_ana_power = 0.;
+    globals::timesteps[i].eps_electron_ana_power = 0.;
+    globals::timesteps[i].eps_alpha_ana_power = 0.;
+    globals::timesteps[i].qdot_betaminus = 0.;
+    globals::timesteps[i].qdot_alpha = 0.;
+    globals::timesteps[i].qdot_total = 0.;
 
     for (int mgi = nstart; mgi < (nstart + ndo); mgi++)
     // for (int mgi = 0; mgi < grid::get_npts_model(); mgi++)
@@ -107,25 +107,25 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
       if (grid::get_numassociatedcells(mgi) > 0) {
         const double cellmass = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
 
-        globals::time_step[i].eps_positron_ana_power +=
+        globals::timesteps[i].eps_positron_ana_power +=
             cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAPLUS);
-        globals::time_step[i].eps_electron_ana_power +=
+        globals::timesteps[i].eps_electron_ana_power +=
             cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_BETAMINUS);
-        globals::time_step[i].eps_alpha_ana_power +=
+        globals::timesteps[i].eps_alpha_ana_power +=
             cellmass * decay::get_particle_injection_rate(mgi, t_mid, decay::DECAYTYPE_ALPHA);
 
         if (i == nts) {
           mtot += cellmass;
         }
 
-        for (int dectypeindex = 0; dectypeindex < decay::DECAYTYPE_COUNT; dectypeindex++) {
+        for (const auto decaytype : decay::all_decaytypes) {
           // Qdot here has been multiplied by mass, so it is in units of [erg/s]
-          const double qdot_cell = decay::get_qdot_modelcell(mgi, t_mid, dectypeindex) * cellmass;
-          globals::time_step[i].qdot_total += qdot_cell;
-          if (dectypeindex == decay::DECAYTYPE_BETAMINUS) {
-            globals::time_step[i].qdot_betaminus += qdot_cell;
-          } else if (dectypeindex == decay::DECAYTYPE_ALPHA) {
-            globals::time_step[i].qdot_alpha += qdot_cell;
+          const double qdot_cell = decay::get_qdot_modelcell(mgi, t_mid, decaytype) * cellmass;
+          globals::timesteps[i].qdot_total += qdot_cell;
+          if (decaytype == decay::DECAYTYPE_BETAMINUS) {
+            globals::timesteps[i].qdot_betaminus += qdot_cell;
+          } else if (decaytype == decay::DECAYTYPE_ALPHA) {
+            globals::timesteps[i].qdot_alpha += qdot_cell;
           }
         }
       }
@@ -133,12 +133,12 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
 
 #ifdef MPI_ON
     // in MPI mode, each process only did some fraction of the cells
-    MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[i].eps_positron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[i].eps_electron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[i].eps_alpha_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[i].qdot_betaminus, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[i].qdot_alpha, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[i].qdot_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[i].eps_positron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[i].eps_electron_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[i].eps_alpha_ana_power, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[i].qdot_betaminus, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[i].qdot_alpha, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[i].qdot_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #endif
   }
 
@@ -156,26 +156,26 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
         "Qdot_betaminus_ana_erg/s/g Qdotalpha_ana_erg/s/g eps_erg/s/g Qdot_ana_erg/s/g\n");
 
     for (int i = 0; i <= nts; i++) {
-      const double t_mid = globals::time_step[i].mid;
-      const double t_width = globals::time_step[i].width;
-      const double total_dep = (globals::time_step[i].gamma_dep + globals::time_step[i].positron_dep +
-                                globals::time_step[i].electron_dep + globals::time_step[i].alpha_dep);
+      const double t_mid = globals::timesteps[i].mid;
+      const double t_width = globals::timesteps[i].width;
+      const double total_dep = (globals::timesteps[i].gamma_dep + globals::timesteps[i].positron_dep +
+                                globals::timesteps[i].electron_dep + globals::timesteps[i].alpha_dep);
 
       // dep is used here for positrons and alphas because it is the same as the emission rate
-      const double epsilon_mc = (globals::time_step[i].gamma_emission + globals::time_step[i].positron_dep +
-                                 globals::time_step[i].electron_emission + globals::time_step[i].alpha_emission) /
+      const double epsilon_mc = (globals::timesteps[i].gamma_emission + globals::timesteps[i].positron_dep +
+                                 globals::timesteps[i].electron_emission + globals::timesteps[i].alpha_emission) /
                                 mtot / t_width;
 
       fprintf(dep_file, "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n", i, t_mid / DAY, t_mid,
-              total_dep / t_width / LSUN, globals::time_step[i].gamma_dep / t_width / LSUN,
-              globals::time_step[i].gamma_dep_pathint / t_width / LSUN,
-              globals::time_step[i].positron_dep / t_width / LSUN, globals::time_step[i].eps_positron_ana_power / LSUN,
-              globals::time_step[i].electron_dep / t_width / LSUN,
-              globals::time_step[i].electron_emission / t_width / LSUN,
-              globals::time_step[i].eps_electron_ana_power / LSUN, globals::time_step[i].alpha_dep / t_width / LSUN,
-              globals::time_step[i].alpha_emission / t_width / LSUN, globals::time_step[i].eps_alpha_ana_power / LSUN,
-              globals::time_step[i].gamma_emission / t_width / LSUN, globals::time_step[i].qdot_betaminus / mtot,
-              globals::time_step[i].qdot_alpha / mtot, epsilon_mc, globals::time_step[i].qdot_total / mtot);
+              total_dep / t_width / LSUN, globals::timesteps[i].gamma_dep / t_width / LSUN,
+              globals::timesteps[i].gamma_dep_pathint / t_width / LSUN,
+              globals::timesteps[i].positron_dep / t_width / LSUN, globals::timesteps[i].eps_positron_ana_power / LSUN,
+              globals::timesteps[i].electron_dep / t_width / LSUN,
+              globals::timesteps[i].electron_emission / t_width / LSUN,
+              globals::timesteps[i].eps_electron_ana_power / LSUN, globals::timesteps[i].alpha_dep / t_width / LSUN,
+              globals::timesteps[i].alpha_emission / t_width / LSUN, globals::timesteps[i].eps_alpha_ana_power / LSUN,
+              globals::timesteps[i].gamma_emission / t_width / LSUN, globals::timesteps[i].qdot_betaminus / mtot,
+              globals::timesteps[i].qdot_alpha / mtot, epsilon_mc, globals::timesteps[i].qdot_total / mtot);
     }
     fclose(dep_file);
 
@@ -205,17 +205,17 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
 
       if (grid::get_numassociatedcells(modelgridindex) > 0) {
         nonthermal::nt_MPI_Bcast(modelgridindex, root);
-        if (NLTE_POPS_ON && globals::rank_in_node == 0) {
+        if (globals::total_nlte_levels > 0 && globals::rank_in_node == 0) {
           MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, root_node_id,
                     globals::mpi_comm_internode);
         }
 
         if constexpr (USE_LUT_PHOTOION) {
           assert_always(globals::corrphotoionrenorm != nullptr);
-          MPI_Bcast(&globals::corrphotoionrenorm[modelgridindex * get_nelements() * get_max_nions()],
+          MPI_Bcast(&globals::corrphotoionrenorm[get_ionestimindex(modelgridindex, 0, 0)],
                     get_nelements() * get_max_nions(), MPI_DOUBLE, root, MPI_COMM_WORLD);
           assert_always(globals::gammaestimator != nullptr);
-          MPI_Bcast(&globals::gammaestimator[modelgridindex * get_nelements() * get_max_nions()],
+          MPI_Bcast(&globals::gammaestimator[get_ionestimindex(modelgridindex, 0, 0)],
                     get_nelements() * get_max_nions(), MPI_DOUBLE, root, MPI_COMM_WORLD);
         }
       }
@@ -345,23 +345,23 @@ static void mpi_reduce_estimators(int nts) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   /// Communicate gamma and positron deposition and write to file
-  MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].cmf_lum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].gamma_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].positron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].electron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].electron_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].alpha_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].alpha_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].gamma_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].cmf_lum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].gamma_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].positron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].electron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].electron_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].alpha_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].alpha_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::timesteps[nts].gamma_emission, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-  globals::time_step[nts].cmf_lum /= globals::nprocs;
-  globals::time_step[nts].gamma_dep /= globals::nprocs;
-  globals::time_step[nts].positron_dep /= globals::nprocs;
-  globals::time_step[nts].electron_dep /= globals::nprocs;
-  globals::time_step[nts].electron_emission /= globals::nprocs;
-  globals::time_step[nts].alpha_dep /= globals::nprocs;
-  globals::time_step[nts].alpha_emission /= globals::nprocs;
-  globals::time_step[nts].gamma_emission /= globals::nprocs;
+  globals::timesteps[nts].cmf_lum /= globals::nprocs;
+  globals::timesteps[nts].gamma_dep /= globals::nprocs;
+  globals::timesteps[nts].positron_dep /= globals::nprocs;
+  globals::timesteps[nts].electron_dep /= globals::nprocs;
+  globals::timesteps[nts].electron_emission /= globals::nprocs;
+  globals::timesteps[nts].alpha_dep /= globals::nprocs;
+  globals::timesteps[nts].alpha_emission /= globals::nprocs;
+  globals::timesteps[nts].gamma_emission /= globals::nprocs;
 
   if constexpr (TRACK_ION_STATS) {
     stats::reduce_estimators();
@@ -466,25 +466,7 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
     // save packet state at start of current timestep (before propagation)
     write_temp_packetsfile(nts, my_rank, packets);
 
-    if constexpr (VPKT_ON) {
-      char filename[MAXFILENAMELENGTH];
-      snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
-
-      FILE *vspecpol_file = fopen_required(filename, "wb");
-
-      write_vspecpol(vspecpol_file);
-      fclose(vspecpol_file);
-
-      // Write temporary files for vpkt_grid
-      if (vgrid_flag == 1) {
-        snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_%s.tmp", 0, my_rank, (nts % 2 == 0) ? "even" : "odd");
-
-        FILE *vpkt_grid_file = fopen_required(filename, "wb");
-
-        write_vpkt_grid(vpkt_grid_file);
-        fclose(vpkt_grid_file);
-      }
-    }
+    vpkt_write_timestep(nts, my_rank, tid, false);
 
     const time_t time_write_packets_file_finished = time(nullptr);
 
@@ -531,6 +513,7 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
 
     // delete temp packets files from previous timestep now that all restart data for the new timestep is available
     remove_temp_packetsfile(nts - 1, my_rank);
+    vpkt_remove_temp_file(nts - 1, my_rank);
   }
 }
 
@@ -550,10 +533,10 @@ static void zero_estimators() {
       for (int element = 0; element < get_nelements(); element++) {
         for (int ion = 0; ion < get_max_nions(); ion++) {
           if constexpr (USE_LUT_PHOTOION) {
-            globals::gammaestimator[n * get_nelements() * get_max_nions() + element * get_max_nions() + ion] = 0.;
+            globals::gammaestimator[get_ionestimindex(n, element, ion)] = 0.;
           }
           if constexpr (USE_LUT_BFHEATING) {
-            globals::bfheatingestimator[n * get_nelements() * get_max_nions() + element * get_max_nions() + ion] = 0.;
+            globals::bfheatingestimator[get_ionestimindex(n, element, ion)] = 0.;
           }
         }
       }
@@ -568,7 +551,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
   bool do_this_full_loop = true;
 
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
-  if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::itstep))) {
+  if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::timestep_initial))) {
     /// Read the packets file to reset before each additional iteration on the timestep
     read_temp_packetsfile(nts, my_rank, packets);
   }
@@ -605,7 +588,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
   /// If this is not the 0th time step of the current job step,
   /// write out a snapshot of the grid properties for further restarts
   /// and update input.txt accordingly
-  if (((nts - globals::itstep) != 0)) {
+  if (((nts - globals::timestep_initial) != 0)) {
     save_grid_and_packets(nts, my_rank, packets);
     do_this_full_loop = walltime_sufficient_to_continue(nts, nts_prev, walltimelimitseconds);
   }
@@ -617,7 +600,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
   zero_estimators();
 
   // MPI_Barrier(MPI_COMM_WORLD);
-  if ((nts < globals::ftstep) && do_this_full_loop) {
+  if ((nts < globals::timestep_finish) && do_this_full_loop) {
     /// Now process the packets.
 
     update_packets(my_rank, nts, packets);
@@ -646,9 +629,9 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
 #endif
 
     printout("During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (t=%gd)\n", nts, my_rank,
-             globals::time_step[nts].pellet_decays, globals::nesc, globals::time_step[nts].mid / DAY);
+             globals::timesteps[nts].pellet_decays.load(), globals::nesc.load(), globals::timesteps[nts].mid / DAY);
 
-    if constexpr (VPKT_ON) {
+    if (VPKT_ON) {
       printout("During timestep %d on MPI process %d, %d virtual packets were generated and %d escaped. \n", nts,
                my_rank, nvpkt, nvpkt_esc1 + nvpkt_esc2 + nvpkt_esc3);
       printout(
@@ -679,27 +662,13 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
       }
     }
 
-    if (nts == globals::ftstep - 1) {
+    if (nts == globals::timestep_finish - 1) {
       char filename[MAXFILENAMELENGTH];
       snprintf(filename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", 0, my_rank);
       // snprintf(filename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", middle_iteration, my_rank);
       write_packets(filename, packets);
 
-      // write specpol of the virtual packets
-      if constexpr (VPKT_ON) {
-        snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d-%d.out", my_rank, tid);
-        FILE *vspecpol_file = fopen_required(filename, "w");
-
-        write_vspecpol(vspecpol_file);
-        fclose(vspecpol_file);
-
-        if (vgrid_flag == 1) {
-          snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d-%d.out", my_rank, tid);
-          FILE *vpkt_grid_file = fopen_required(filename, "w");
-          write_vpkt_grid(vpkt_grid_file);
-          fclose(vpkt_grid_file);
-        }
-      }
+      vpkt_write_timestep(nts, my_rank, tid, true);
 
       printout("time after write final packets file %ld\n", time(nullptr));
 
@@ -730,42 +699,12 @@ auto main(int argc, char *argv[]) -> int {
 
 #ifdef MPI_ON
   MPI_Init(&argc, &argv);
-  MPI_Comm_rank(MPI_COMM_WORLD, &globals::rank_global);
-  MPI_Comm_size(MPI_COMM_WORLD, &globals::nprocs);
-
-  // make an intra-node communicator (group ranks that can share memory)
-  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, globals::rank_global, MPI_INFO_NULL,
-                      &globals::mpi_comm_node);
-  // get the local rank within this node
-  MPI_Comm_rank(globals::mpi_comm_node, &globals::rank_in_node);
-  // get the number of ranks on the node
-  MPI_Comm_size(globals::mpi_comm_node, &globals::node_nprocs);
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  // make an inter-node communicator (using local rank as the key for group membership)
-  MPI_Comm_split(MPI_COMM_WORLD, globals::rank_in_node, globals::rank_global, &globals::mpi_comm_internode);
-
-  // take the node id from the local rank 0 (node master) and broadcast it
-  if (globals::rank_in_node == 0) {
-    MPI_Comm_rank(globals::mpi_comm_internode, &globals::node_id);
-    MPI_Comm_size(globals::mpi_comm_internode, &globals::node_count);
-  }
-
-  MPI_Bcast(&globals::node_id, 1, MPI_INT, 0, globals::mpi_comm_node);
-  MPI_Bcast(&globals::node_count, 1, MPI_INT, 0, globals::mpi_comm_node);
-
-#else
-  globals::rank_global = 0;
-  globals::nprocs = 1;
-  globals::rank_in_node = 0;
-  globals::node_nprocs = 1;
-  globals::node_id = 0;
-  globals::node_count = 0;
 #endif
 
-  const int my_rank = globals::rank_global;
+  globals::setup_mpi_vars();
 
-  if (my_rank == 0) {
+  globals::startofline = std::make_unique<bool[]>(get_max_threads());
+  if (globals::rank_global == 0) {
     check_already_running();
   }
 
@@ -774,7 +713,7 @@ auto main(int argc, char *argv[]) -> int {
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  globals::startofline = std::make_unique<bool[]>(get_max_threads());
+  const int my_rank = globals::rank_global;
 
 #ifdef _OPENMP
   /// Explicitly turn off dynamic threads because we use the threadprivate directive!!!
@@ -795,7 +734,7 @@ auto main(int argc, char *argv[]) -> int {
 #ifdef _OPENMP
     printout("OpenMP parallelisation active with %d threads (max %d)\n", get_num_threads(), get_max_threads());
 #else
-    printout("OpenMP is not available in this build\n");
+    printout("OpenMP is not enabled in this build (this is normal)\n");
 #endif
 
     gslworkspace = gsl_integration_workspace_alloc(GSLWSIZE);
@@ -818,7 +757,7 @@ auto main(int argc, char *argv[]) -> int {
       printout("walltimelimitseconds = %d\n", walltimelimitseconds);
     } else {
       fprintf(stderr, "Usage: %s [-w WALLTIMELIMITHOURS]\n", argv[0]);
-      exit(EXIT_FAILURE);
+      abort();
     }
   }
 
@@ -850,18 +789,23 @@ auto main(int argc, char *argv[]) -> int {
   printout("MPI is disabled in this build\n");
 #endif
 
-  globals::kappa_rpkt_cont =
-      static_cast<struct rpkt_cont_opacity *>(calloc(get_max_threads(), sizeof(struct rpkt_cont_opacity)));
-  assert_always(globals::kappa_rpkt_cont != nullptr);
+  globals::chi_rpkt_cont = static_cast<struct rpkt_continuum_absorptioncoeffs *>(
+      calloc(get_max_threads(), sizeof(struct rpkt_continuum_absorptioncoeffs)));
+  assert_always(globals::chi_rpkt_cont != nullptr);
 
   input(my_rank);
+  if (globals::simulation_continued_from_saved) {
+    assert_always(globals::nprocs_exspec == globals::nprocs);
+  } else {
+    globals::nprocs_exspec = globals::nprocs;
+  }
 
   if (my_rank == 0) {
     initialise_linestat_file();
   }
 
   printout("time after input %ld\n", time(nullptr));
-  printout("timesteps %d\n", globals::ntstep);
+  printout("timesteps %d\n", globals::ntimesteps);
 
   /// Precalculate the rate coefficients for spontaneous and stimulated recombination
   /// and for photoionisation. With the nebular approximation they only depend on T_e
@@ -916,9 +860,9 @@ auto main(int argc, char *argv[]) -> int {
   /// The next loop is over all grid cells. For parallelisation, we want to split this loop between
   /// processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
   /// cells are sent to processes 0 ... process n_leftover -1.
-  int const nstart = grid::get_nstart(my_rank);
-  int const ndo = grid::get_ndo(my_rank);
-  int const ndo_nonempty = grid::get_ndo_nonempty(my_rank);
+  const int nstart = grid::get_nstart(my_rank);
+  const int ndo = grid::get_ndo(my_rank);
+  const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
   printout("process rank %d (global max rank %d) assigned %d modelgrid cells (%d nonempty)", my_rank,
            globals::nprocs - 1, ndo, ndo_nonempty);
   if (ndo > 0) {
@@ -929,7 +873,7 @@ auto main(int argc, char *argv[]) -> int {
 
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-  int const maxndo = grid::get_maxndo();
+  const int maxndo = grid::get_maxndo();
   /// Initialise the exchange buffer
   /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
   /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
@@ -940,7 +884,7 @@ auto main(int argc, char *argv[]) -> int {
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  int nts = globals::itstep;
+  int nts = globals::timestep_initial;
 
   macroatom_open_file(my_rank);
   if (ndo > 0) {
@@ -948,41 +892,16 @@ auto main(int argc, char *argv[]) -> int {
     snprintf(filename, MAXFILENAMELENGTH, "estimators_%.4d.out", my_rank);
     estimators_file = fopen_required(filename, "w");
 
-    if (NLTE_POPS_ON && ndo_nonempty > 0) {
+    if (globals::total_nlte_levels > 0 && ndo_nonempty > 0) {
       nltepop_open_file(my_rank);
     }
   }
 
-  // Initialise virtual packets file and vspecpol
-  if constexpr (VPKT_ON) {
-    init_vspecpol();
-    if (vgrid_flag == 1) {
-      init_vpkt_grid();
-    }
+  // initialise or read in virtual packet spectra
+  vpkt_init(nts, my_rank, tid, globals::simulation_continued_from_saved);
 
-    if (globals::simulation_continued_from_saved) {
-      // Continue simulation: read into temporary files
-
-      read_vspecpol(my_rank, nts);
-
-      if (vgrid_flag == 1) {
-        if (nts % 2 == 0) {
-          snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
-        } else {
-          snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_even.tmp", 0, my_rank);
-        }
-
-        FILE *vpktgrid_file = fopen_required(filename, "rb");
-
-        read_vpkt_grid(vpktgrid_file);
-
-        fclose(vpktgrid_file);
-      }
-    }
-  }
-
-  while (nts < globals::ftstep && !terminate_early) {
-    globals::nts_global = nts;
+  while (nts < globals::timestep_finish && !terminate_early) {
+    globals::timestep = nts;
 #ifdef MPI_ON
     //        const time_t time_before_barrier = time(nullptr);
     MPI_Barrier(MPI_COMM_WORLD);
@@ -991,16 +910,12 @@ auto main(int argc, char *argv[]) -> int {
     //        time_after_barrier);
 #endif
 
-#ifdef DO_TITER
-    // The first time step must solve the ionisation balance in LTE
-    globals::initial_iteration = (nts == 0);
-#else
     /// titer example: Do 3 iterations on timestep 0-6
     // globals::n_titer = (nts < 6) ? 3: 1;
 
     globals::n_titer = 1;
-    globals::initial_iteration = (nts < globals::num_lte_timesteps);
-#endif
+    globals::lte_iteration = (nts < globals::num_lte_timesteps);
+    assert_always(globals::num_lte_timesteps > 0);  // The first time step must solve the ionisation balance in LTE
 
     for (int titer = 0; titer < globals::n_titer; titer++) {
       terminate_early = do_timestep(nts, titer, my_rank, nstart, ndo, packets, walltimelimitseconds);
@@ -1027,7 +942,7 @@ auto main(int argc, char *argv[]) -> int {
     fclose(linestat_file);
   }
 
-  if ((globals::ntstep != globals::ftstep) || (terminate_early)) {
+  if ((globals::ntimesteps != globals::timestep_finish) || (terminate_early)) {
     printout("RESTART_NEEDED to continue model\n");
   } else {
     printout("No need for restart\n");
@@ -1038,7 +953,7 @@ auto main(int argc, char *argv[]) -> int {
 #endif
 
   const time_t real_time_end = time(nullptr);
-  printout("simulation finished at %ld (this job wallclock hours %.2f * %d CPUs = %.1f CPU hours)\n", real_time_end,
+  printout("sn3d finished at %ld (this job wallclock hours %.2f * %d CPUs = %.1f CPU hours)\n", real_time_end,
            (real_time_end - real_time_start) / 3600., globals::nprocs,
            (real_time_end - real_time_start) / 3600. * globals::nprocs);
 
@@ -1047,9 +962,7 @@ auto main(int argc, char *argv[]) -> int {
   }
 
   macroatom_close_file();
-  if (NLTE_POPS_ON) {
-    nltepop_close_file();
-  }
+  nltepop_close_file();
 
   radfield::close_file();
   nonthermal::close_file();
@@ -1076,8 +989,9 @@ auto main(int argc, char *argv[]) -> int {
   MPI_Finalize();
 #endif
 
-  if (std::filesystem::exists("artis.pid")) {
-    std::filesystem::remove("artis.pid");
+  const std::filesystem::path pid_file_path("artis.pid");
+  if (std::filesystem::exists(pid_file_path)) {
+    std::filesystem::remove(pid_file_path);
   }
 
   return 0;
