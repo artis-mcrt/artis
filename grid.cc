@@ -2008,6 +2008,10 @@ static void setup_grid_spherical1d() {
 }
 
 static void setup_grid_cylindrical_2d() {
+  const double vmax_corner = sqrt(2 * pow(globals::vmax, 2));
+  printout("corner vmax %g [cm/s] (%.2fc)\n", vmax_corner, vmax_corner / CLIGHT);
+  assert_always(vmax_corner < CLIGHT);
+
   assert_always(get_model_type() == GRID_CYLINDRICAL2D);
   coordlabel[0] = 'r';
   coordlabel[1] = 'z';
