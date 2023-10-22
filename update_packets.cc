@@ -1,6 +1,7 @@
 #include "update_packets.h"
 
 #include <algorithm>
+#include <ranges>
 
 #include "decay.h"
 #include "gammapkt.h"
@@ -242,10 +243,11 @@ static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, cons
   return false;
 }
 
-static auto do_cell_packet_updates(struct packet *const packetstart, const int groupsize, const int nts,
+static auto do_cell_packet_updates(struct packet *const packetstart, const size_t groupsize, const int nts,
                                    const double ts_end) -> bool {
-  bool timestepcomplete = true;
-  for (struct packet *pkt_ptr = packetstart; pkt_ptr != packetstart + groupsize; pkt_ptr++) {
+  auto indices = std::views::iota(0U, groupsize);
+  std::ranges::for_each(indices, [&packetstart, ts_end, nts](const int idx) {
+    auto *pkt_ptr = &packetstart[idx];
     const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
     int newmgi = mgi;
     while ((newmgi == mgi || newmgi == grid::get_npts_model()) && pkt_ptr->prop_time < ts_end &&
@@ -253,11 +255,11 @@ static auto do_cell_packet_updates(struct packet *const packetstart, const int g
       do_packet(pkt_ptr, ts_end, nts);
       newmgi = grid::get_cell_modelgridindex(pkt_ptr->where);
     }
+  });
 
-    if (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < ts_end) {
-      timestepcomplete = false;
-    }
-  }
+  const bool timestepcomplete = std::ranges::all_of(indices, [&packetstart, ts_end](const int idx) {
+    return packetstart[idx].type == TYPE_ESCAPE || packetstart[idx].prop_time >= ts_end;
+  });
 
   return timestepcomplete;
 }
