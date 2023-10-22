@@ -243,9 +243,7 @@ static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, cons
   return false;
 }
 
-static auto do_cell_packet_updates(struct packet *packetstart, const size_t groupsize, const int nts,
-                                   const double ts_end) -> bool {
-  auto packets = std::span{packetstart, groupsize};
+static void do_cell_packet_updates(std::span<packet> packets, const int nts, const double ts_end) {
   std::ranges::for_each(packets, [ts_end, nts](auto &pkt) {
     auto *pkt_ptr = &pkt;
     const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
@@ -256,11 +254,6 @@ static auto do_cell_packet_updates(struct packet *packetstart, const size_t grou
       newmgi = grid::get_cell_modelgridindex(pkt_ptr->where);
     }
   });
-
-  const bool timestepcomplete = std::ranges::all_of(
-      packets, [ts_end](const auto &pkt) { return pkt.type == TYPE_ESCAPE || pkt.prop_time >= ts_end; });
-
-  return timestepcomplete;
 }
 
 void update_packets(const int my_rank, const int nts, struct packet *packets)
@@ -319,10 +312,14 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
         if (cellhistory_reset_required || last_packet) {
           if (pktgroupbegin >= 0 && n > 0) {
             const int pktgroupend = last_packet ? globals::npkts - 1 : n - 1;
-            const int groupsize = pktgroupend - pktgroupbegin + 1;
+            const size_t groupsize = pktgroupend - pktgroupbegin + 1;
             if (groupsize > 0) {
-              timestepcomplete = do_cell_packet_updates(&packets[pktgroupbegin], groupsize, nts, ts_end);
+              auto pktgroup = std::span{&packets[pktgroupbegin], groupsize};
+              do_cell_packet_updates(pktgroup, nts, ts_end);
               count_pktupdates += groupsize;
+              timestepcomplete = timestepcomplete && std::ranges::all_of(pktgroup, [ts_end](const auto &pkt) {
+                                   return pkt.type == TYPE_ESCAPE || pkt.prop_time >= ts_end;
+                                 });
             }
           }
 
