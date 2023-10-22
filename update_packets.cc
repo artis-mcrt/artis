@@ -279,17 +279,6 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
     for (int n = 0; n < globals::npkts; n++) {
       struct packet *pkt_ptr = &packets[n];
 
-      // if (pkt_ptr->type == TYPE_ESCAPE)
-      // {
-      //   printout("packet index %d already escaped. Skipping rest of packets (which are all escaped).\n", n);
-      //   // for (int n2 = n; n2 < globals::npkts; n2++)
-      //   // {
-      //   //   assert_always(packets[n2].type == TYPE_ESCAPE);
-      //   // }
-      //   break;
-      // }
-      // pkt_ptr->timestep = nts;
-
       if (passnumber == 0) {
         pkt_ptr->interactions = 0;
       }
