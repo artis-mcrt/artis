@@ -272,6 +272,7 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
 
   const double ts = globals::timesteps[nts].start;
   const double tw = globals::timesteps[nts].width;
+  const double ts_end = ts + tw;
 
   const time_t time_update_packets_start = time(nullptr);
   printout("timestep %d: start update_packets at time %ld\n", nts, time_update_packets_start);
@@ -293,7 +294,7 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
     int count_pktupdates = 0;
     const int updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
 
-    int pktgroupbegin = -1;
+    int pktgroupbegin = 0;
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
@@ -304,7 +305,8 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
         pkt_ptr->interactions = 0;
       }
 
-      if (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < (ts + tw)) {
+      const bool last_packet = (n == globals::npkts - 1);
+      if ((pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < ts_end) || last_packet) {
         if (pktgroupbegin < 0) {
           pktgroupbegin = n;
         }
@@ -313,14 +315,14 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
             (mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi &&
              grid::modelgrid[mgi].thick == 0);
 
-        const bool last_packet = (n == globals::npkts - 1);
         if (cellhistory_reset_required || last_packet) {
           if (pktgroupbegin >= 0 && n > 0) {
             const int pktgroupend = last_packet ? globals::npkts - 1 : n - 1;
             const int groupsize = pktgroupend - pktgroupbegin + 1;
-            timestepcomplete = do_cell_packet_updates(&packets[pktgroupbegin], groupsize, nts, ts + tw);
-            count_pktupdates += groupsize;
-            pktgroupbegin = pktgroupend + 1;
+            if (groupsize > 0) {
+              timestepcomplete = do_cell_packet_updates(&packets[pktgroupbegin], groupsize, nts, ts_end);
+              count_pktupdates += groupsize;
+            }
           }
 
           if (cellhistory_reset_required) {
