@@ -318,6 +318,7 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
           const int pktgroupend = (n == globals::npkts - 1) ? n : n - 1;
           timestepcomplete = do_cell_packet_updates(mgi, packets, pktgroupbegin, pktgroupend, nts, ts + tw);
           count_pktupdates += pktgroupend - pktgroupbegin + 1;
+          pktgroupbegin = pktgroupend + 1;
         }
       }
     }
