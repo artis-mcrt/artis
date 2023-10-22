@@ -243,11 +243,11 @@ static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, cons
   return false;
 }
 
-static auto do_cell_packet_updates(struct packet *const packetstart, const size_t groupsize, const int nts,
+static auto do_cell_packet_updates(struct packet *packetstart, const size_t groupsize, const int nts,
                                    const double ts_end) -> bool {
-  auto indices = std::views::iota(0U, groupsize);
-  std::ranges::for_each(indices, [&packetstart, ts_end, nts](const int idx) {
-    auto *pkt_ptr = &packetstart[idx];
+  auto packets = std::span{packetstart, groupsize};
+  std::ranges::for_each(packets, [ts_end, nts](auto &pkt) {
+    auto *pkt_ptr = &pkt;
     const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
     int newmgi = mgi;
     while ((newmgi == mgi || newmgi == grid::get_npts_model()) && pkt_ptr->prop_time < ts_end &&
@@ -257,9 +257,8 @@ static auto do_cell_packet_updates(struct packet *const packetstart, const size_
     }
   });
 
-  const bool timestepcomplete = std::ranges::all_of(indices, [&packetstart, ts_end](const int idx) {
-    return packetstart[idx].type == TYPE_ESCAPE || packetstart[idx].prop_time >= ts_end;
-  });
+  const bool timestepcomplete = std::ranges::all_of(
+      packets, [ts_end](const auto &pkt) { return pkt.type == TYPE_ESCAPE || pkt.prop_time >= ts_end; });
 
   return timestepcomplete;
 }
@@ -337,7 +336,8 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
     }
     const int cellhistresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
     printout(
-        "  update_packets timestep %d pass %3d: finished at %ld packetsupdated %7d cellhistoryresets %7d (took %lds)\n",
+        "  update_packets timestep %d pass %3d: finished at %ld packetsupdated %7d cellhistoryresets %7d (took "
+        "%lds)\n",
         nts, passnumber, time(nullptr), count_pktupdates, cellhistresets, time(nullptr) - sys_time_start_pass);
 
     passnumber++;
