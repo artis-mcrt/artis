@@ -305,7 +305,6 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
           cellhistory_reset(mgi, false);
         }
 
-        // enum packet_type oldtype = pkt_ptr->type;
         int newmgi = mgi;
         while ((newmgi == mgi || newmgi == grid::get_npts_model()) && pkt_ptr->prop_time < (ts + tw) &&
                pkt_ptr->type != TYPE_ESCAPE) {
