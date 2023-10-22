@@ -245,13 +245,11 @@ static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, cons
 
 static void do_cell_packet_updates(std::span<packet> packets, const int nts, const double ts_end) {
   std::ranges::for_each(packets, [ts_end, nts](auto &pkt) {
-    auto *pkt_ptr = &pkt;
-    const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+    const int mgi = grid::get_cell_modelgridindex(pkt.where);
     int newmgi = mgi;
-    while ((newmgi == mgi || newmgi == grid::get_npts_model()) && pkt_ptr->prop_time < ts_end &&
-           pkt_ptr->type != TYPE_ESCAPE) {
-      do_packet(pkt_ptr, ts_end, nts);
-      newmgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+    while ((newmgi == mgi || newmgi == grid::get_npts_model()) && pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE) {
+      do_packet(&pkt, ts_end, nts);
+      newmgi = grid::get_cell_modelgridindex(pkt.where);
     }
   });
 }
@@ -315,10 +313,13 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
             const size_t groupsize = pktgroupend - pktgroupbegin + 1;
             if (groupsize > 0) {
               auto pktgroup = std::span{&packets[pktgroupbegin], groupsize};
+              count_pktupdates += std::ranges::count_if(
+                  pktgroup, [ts_end](const auto &pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; });
+
               do_cell_packet_updates(pktgroup, nts, ts_end);
-              count_pktupdates += groupsize;
+
               timestepcomplete = timestepcomplete && std::ranges::all_of(pktgroup, [ts_end](const auto &pkt) {
-                                   return pkt.type == TYPE_ESCAPE || pkt.prop_time >= ts_end;
+                                   return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE;
                                  });
             }
           }
