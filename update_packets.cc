@@ -307,15 +307,12 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
 
         // enum packet_type oldtype = pkt_ptr->type;
         int newmgi = mgi;
-        bool workedonpacket = false;
         while ((newmgi == mgi || newmgi == grid::get_npts_model()) && pkt_ptr->prop_time < (ts + tw) &&
                pkt_ptr->type != TYPE_ESCAPE) {
-          workedonpacket = true;
           do_packet(pkt_ptr, ts + tw, nts);
-          const int newcellnum = pkt_ptr->where;
-          newmgi = grid::get_cell_modelgridindex(newcellnum);
+          newmgi = grid::get_cell_modelgridindex(pkt_ptr->where);
         }
-        count_pktupdates += workedonpacket ? 1 : 0;
+        count_pktupdates++;
 
         if (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < (ts + tw)) {
           timestepcomplete = false;
