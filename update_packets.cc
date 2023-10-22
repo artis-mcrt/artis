@@ -242,15 +242,11 @@ static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, cons
   return false;
 }
 
-static auto do_cell_packet_updates(const int mgi, struct packet *const packets, const int pktgroupbegin,
-                                   const int pktgroupend, const int nts, const double ts_end) -> bool {
-  stats::increment(stats::COUNTER_UPDATECELL);
-  cellhistory_reset(mgi, false);
-
+static auto do_cell_packet_updates(const int mgi, struct packet *const packetstart, const int groupsize, const int nts,
+                                   const double ts_end) -> bool {
   bool timestepcomplete = true;
-  for (int i = pktgroupbegin; i <= pktgroupend; i++) {
-    struct packet *pkt_ptr = &packets[i];
-
+  for (struct packet *pkt_ptr = packetstart; pkt_ptr != packetstart + groupsize; pkt_ptr++) {
+    const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
     int newmgi = mgi;
     while ((newmgi == mgi || newmgi == grid::get_npts_model()) && pkt_ptr->prop_time < ts_end &&
            pkt_ptr->type != TYPE_ESCAPE) {
@@ -310,14 +306,21 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
 
       if (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < (ts + tw)) {
         const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+        if (mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi &&
+            grid::modelgrid[mgi].thick == 0) {
+          stats::increment(stats::COUNTER_UPDATECELL);
+          cellhistory_reset(mgi, false);
+        }
+
         /// for non empty cells update the global available level populations and cooling terms
         /// Reset cellhistory if packet starts up in another than the last active cell
         if ((mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi &&
              grid::modelgrid[mgi].thick == 0) ||
             n == globals::npkts - 1) {
           const int pktgroupend = (n == globals::npkts - 1) ? n : n - 1;
-          timestepcomplete = do_cell_packet_updates(mgi, packets, pktgroupbegin, pktgroupend, nts, ts + tw);
-          count_pktupdates += pktgroupend - pktgroupbegin + 1;
+          const int groupsize = pktgroupend - pktgroupbegin + 1;
+          timestepcomplete = do_cell_packet_updates(mgi, &packets[pktgroupbegin], groupsize, nts, ts + tw);
+          count_pktupdates += groupsize;
           pktgroupbegin = pktgroupend + 1;
         }
       }
