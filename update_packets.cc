@@ -284,8 +284,7 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
       }
 
       if (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < (ts + tw)) {
-        const int cellindex = pkt_ptr->where;
-        const int mgi = grid::get_cell_modelgridindex(cellindex);
+        const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
         /// for non empty cells update the global available level populations and cooling terms
         /// Reset cellhistory if packet starts up in another than the last active cell
         if (mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi &&
