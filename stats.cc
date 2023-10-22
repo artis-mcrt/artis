@@ -158,7 +158,7 @@ void normalise_ion_estimators(const int mgi, const double deltat, const double d
 void increment(enum eventcounters i) {
   assert_testmodeonly(i >= 0);
   assert_testmodeonly(i < COUNTER_COUNT);
-  eventstats[i].fetch_add(1);
+  eventstats[i]++;
 }
 
 void pkt_action_counters_reset() {
