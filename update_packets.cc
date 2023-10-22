@@ -248,7 +248,7 @@ static auto do_cell_packet_updates(const int mgi, struct packet *const packets, 
   cellhistory_reset(mgi, false);
 
   bool timestepcomplete = true;
-  for (int i = pktgroupbegin; i < pktgroupend; i++) {
+  for (int i = pktgroupbegin; i <= pktgroupend; i++) {
     struct packet *pkt_ptr = &packets[i];
 
     int newmgi = mgi;
