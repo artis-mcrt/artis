@@ -242,7 +242,7 @@ static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, cons
   return false;
 }
 
-static auto do_cell_packet_updates(const int mgi, struct packet *const packetstart, const int groupsize, const int nts,
+static auto do_cell_packet_updates(struct packet *const packetstart, const int groupsize, const int nts,
                                    const double ts_end) -> bool {
   bool timestepcomplete = true;
   for (struct packet *pkt_ptr = packetstart; pkt_ptr != packetstart + groupsize; pkt_ptr++) {
@@ -293,7 +293,7 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
     int count_pktupdates = 0;
     const int updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
 
-    int pktgroupbegin = 0;
+    int pktgroupbegin = -1;
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
@@ -305,23 +305,29 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
       }
 
       if (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < (ts + tw)) {
-        const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
-        if (mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi &&
-            grid::modelgrid[mgi].thick == 0) {
-          stats::increment(stats::COUNTER_UPDATECELL);
-          cellhistory_reset(mgi, false);
+        if (pktgroupbegin < 0) {
+          pktgroupbegin = n;
         }
+        const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+        const bool cellhistory_reset_required =
+            (mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi &&
+             grid::modelgrid[mgi].thick == 0);
 
-        /// for non empty cells update the global available level populations and cooling terms
-        /// Reset cellhistory if packet starts up in another than the last active cell
-        if ((mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi &&
-             grid::modelgrid[mgi].thick == 0) ||
-            n == globals::npkts - 1) {
-          const int pktgroupend = (n == globals::npkts - 1) ? n : n - 1;
-          const int groupsize = pktgroupend - pktgroupbegin + 1;
-          timestepcomplete = do_cell_packet_updates(mgi, &packets[pktgroupbegin], groupsize, nts, ts + tw);
-          count_pktupdates += groupsize;
-          pktgroupbegin = pktgroupend + 1;
+        const bool last_packet = (n == globals::npkts - 1);
+        if (cellhistory_reset_required || last_packet) {
+          if (pktgroupbegin >= 0 && n > 0) {
+            const int pktgroupend = last_packet ? globals::npkts - 1 : n - 1;
+            const int groupsize = pktgroupend - pktgroupbegin + 1;
+            timestepcomplete = do_cell_packet_updates(&packets[pktgroupbegin], groupsize, nts, ts + tw);
+            count_pktupdates += groupsize;
+            pktgroupbegin = pktgroupend + 1;
+          }
+
+          if (cellhistory_reset_required) {
+            stats::increment(stats::COUNTER_UPDATECELL);
+            cellhistory_reset(mgi, false);
+            pktgroupbegin = n;
+          }
         }
       }
     }
