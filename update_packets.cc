@@ -283,7 +283,10 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
 
     printout("  update_packets timestep %d pass %3d: started at %ld\n", nts, passnumber, sys_time_start_pass);
 
-    int count_pktupdates = 0;
+    const int count_pktupdates =
+        static_cast<int>(std::ranges::count_if(std::span{packets, globals::npkts}, [ts_end](const auto &pkt) {
+          return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE;
+        }));
     const int updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
     int packetgroupstart = 0;
 
@@ -308,8 +311,6 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
           const size_t packetgroupsize = packetgrouplast - packetgroupstart + 1;
           if (packetgroupsize > 0) {
             auto pktgroup = std::span{&packets[packetgroupstart], packetgroupsize};
-            count_pktupdates += static_cast<int>(std::ranges::count_if(
-                pktgroup, [ts_end](const auto &pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
 
             do_cell_packet_updates(pktgroup, nts, ts_end);
 
@@ -329,8 +330,6 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
     const size_t packetgroupsize = packetgrouplast - packetgroupstart + 1;
     if (packetgroupsize > 0) {
       auto pktgroup = std::span{&packets[packetgroupstart], packetgroupsize};
-      count_pktupdates += static_cast<int>(std::ranges::count_if(
-          pktgroup, [ts_end](const auto &pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
 
       do_cell_packet_updates(pktgroup, nts, ts_end);
 
