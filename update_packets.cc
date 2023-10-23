@@ -250,7 +250,7 @@ static void do_cell_packet_updates(std::span<packet> packets, const int nts, con
     while (pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE) {
       do_packet(&pkt, ts_end, nts);
       newmgi = grid::get_cell_modelgridindex(pkt.where);
-      if (newmgi != mgi && newmgi != grid::get_npts_model() && grid::modelgrid[newmgi].thick != 1) {
+      if (newmgi != mgi && newmgi != grid::get_npts_model()) {
         break;
       }
     }
