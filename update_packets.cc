@@ -302,7 +302,7 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
         const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
         const bool cellhistory_reset_required =
             (mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi &&
-             grid::modelgrid[mgi].thick == 0);
+             grid::modelgrid[mgi].thick != 1);
 
         if (cellhistory_reset_required) {
           const int packetgrouplast = n - 1;
