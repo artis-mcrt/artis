@@ -254,14 +254,13 @@ static void do_cell_packet_updates(std::span<packet> packets, const int nts, con
   });
 }
 
-void update_packets(const int my_rank, const int nts, struct packet *packets)
+void update_packets(const int my_rank, const int nts, std::span<struct packet> packets)
 // Subroutine to move and update packets during the current timestep (nts)
 {
   // At the start, the packets have all either just been initialised or have already been
   // processed for one or more timesteps. Those that are pellets will just be sitting in the
   // matter. Those that are photons (or one sort or another) will already have a position and
   // a direction.
-  auto spanpackets = std::span{packets, static_cast<size_t>(globals::npkts)};
   const double ts = globals::timesteps[nts].start;
   const double tw = globals::timesteps[nts].width;
   const double ts_end = ts + tw;
@@ -275,14 +274,14 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
 
     // printout("sorting packets...");
 
-    std::sort(packets, packets + globals::npkts, std_compare_packets_bymodelgriddensity);
+    std::sort(std::begin(packets), std::end(packets), std_compare_packets_bymodelgriddensity);
 
     // printout("took %lds\n", time(nullptr) - sys_time_start_pass);
 
     printout("  update_packets timestep %d pass %3d: started at %ld\n", nts, passnumber, sys_time_start_pass);
 
     const int count_pktupdates = static_cast<int>(std::ranges::count_if(
-        spanpackets, [ts_end](const auto &pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
+        packets, [ts_end](const auto &pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
     const int updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
     int packetgroupstart = 0;
 
@@ -327,7 +326,7 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
     }
 
     timestepcomplete = std::ranges::all_of(
-        spanpackets, [ts_end](const auto &pkt) { return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE; });
+        packets, [ts_end](const auto &pkt) { return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE; });
 
     const int cellhistresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
     printout(
@@ -338,7 +337,7 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
     passnumber++;
   }
 
-  stats::pkt_action_counters_printout(packets, nts);
+  stats::pkt_action_counters_printout(packets.data(), nts);
 
   const time_t time_update_packets_end_thisrank = time(nullptr);
   printout("timestep %d: end of update_packets for this rank at time %ld\n", nts, time_update_packets_end_thisrank);

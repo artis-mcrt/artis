@@ -603,7 +603,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
   if ((nts < globals::timestep_finish) && do_this_full_loop) {
     /// Now process the packets.
 
-    update_packets(my_rank, nts, packets);
+    update_packets(my_rank, nts, std::span{packets, static_cast<size_t>(globals::npkts)});
 
 #ifdef MPI_ON
     // All the processes have their own versions of the estimators for this time step now.
