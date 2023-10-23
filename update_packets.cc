@@ -297,16 +297,14 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
         pkt_ptr->interactions = 0;
       }
 
-      // const bool last_packet = (n == globals::npkts - 1);
-      const bool last_packet = (n == globals::npkts - 1);
-      if ((pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < ts_end) || last_packet) {
+      if ((pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < ts_end)) {
         const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
         const bool cellhistory_reset_required =
             (mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi &&
              grid::modelgrid[mgi].thick == 0);
 
-        if (cellhistory_reset_required || last_packet) {
-          const int packetgrouplast = last_packet ? n : n - 1;
+        if (cellhistory_reset_required) {
+          const int packetgrouplast = n - 1;
           const size_t packetgroupsize = packetgrouplast - packetgroupstart + 1;
           if (packetgroupsize > 0) {
             auto pktgroup = std::span{&packets[packetgroupstart], packetgroupsize};
@@ -320,14 +318,27 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
                                });
           }
 
-          if (cellhistory_reset_required) {
-            stats::increment(stats::COUNTER_UPDATECELL);
-            cellhistory_reset(mgi, false);
-            packetgroupstart = n;
-          }
+          stats::increment(stats::COUNTER_UPDATECELL);
+          cellhistory_reset(mgi, false);
+          packetgroupstart = n;
         }
       }
     }
+
+    const int packetgrouplast = globals::npkts - 1;
+    const size_t packetgroupsize = packetgrouplast - packetgroupstart + 1;
+    if (packetgroupsize > 0) {
+      auto pktgroup = std::span{&packets[packetgroupstart], packetgroupsize};
+      count_pktupdates += static_cast<int>(std::ranges::count_if(
+          pktgroup, [ts_end](const auto &pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
+
+      do_cell_packet_updates(pktgroup, nts, ts_end);
+
+      timestepcomplete = timestepcomplete && std::ranges::all_of(pktgroup, [ts_end](const auto &pkt) {
+                           return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE;
+                         });
+    }
+
     const int cellhistresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
     printout(
         "  update_packets timestep %d pass %3d: finished at %ld packetsupdated %7d cellhistoryresets %7d (took "
