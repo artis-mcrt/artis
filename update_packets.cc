@@ -286,7 +286,6 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
     int count_pktupdates = 0;
     const int updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
 
-    int pktgroupbegin = 0;
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
@@ -297,39 +296,27 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
         pkt_ptr->interactions = 0;
       }
 
-      const bool last_packet = (n == globals::npkts - 1);
-      if ((pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < ts_end) || last_packet) {
-        if (pktgroupbegin < 0) {
-          pktgroupbegin = n;
-        }
+      // const bool last_packet = (n == globals::npkts - 1);
+      if ((pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < ts_end)) {
         const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
         const bool cellhistory_reset_required =
             (mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi &&
              grid::modelgrid[mgi].thick == 0);
 
-        if (cellhistory_reset_required || last_packet) {
-          if (pktgroupbegin >= 0 && n > 0) {
-            const int pktgroupend = last_packet ? globals::npkts - 1 : n - 1;
-            const size_t groupsize = pktgroupend - pktgroupbegin + 1;
-            if (groupsize > 0) {
-              auto pktgroup = std::span{&packets[pktgroupbegin], groupsize};
-              count_pktupdates += std::ranges::count_if(
-                  pktgroup, [ts_end](const auto &pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; });
-
-              do_cell_packet_updates(pktgroup, nts, ts_end);
-
-              timestepcomplete = timestepcomplete && std::ranges::all_of(pktgroup, [ts_end](const auto &pkt) {
-                                   return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE;
-                                 });
-            }
-          }
-
-          if (cellhistory_reset_required) {
-            stats::increment(stats::COUNTER_UPDATECELL);
-            cellhistory_reset(mgi, false);
-            pktgroupbegin = n;
-          }
+        if (cellhistory_reset_required) {
+          stats::increment(stats::COUNTER_UPDATECELL);
+          cellhistory_reset(mgi, false);
         }
+
+        auto pktgroup = std::span{&packets[n], 1U};
+        count_pktupdates += std::ranges::count_if(
+            pktgroup, [ts_end](const auto &pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; });
+
+        do_cell_packet_updates(pktgroup, nts, ts_end);
+
+        timestepcomplete = timestepcomplete && std::ranges::all_of(pktgroup, [ts_end](const auto &pkt) {
+                             return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE;
+                           });
       }
     }
     const int cellhistresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
