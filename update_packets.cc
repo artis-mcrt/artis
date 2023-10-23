@@ -298,27 +298,30 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
       }
 
       const bool last_packet = (n == globals::npkts - 1);
-      const bool packet_updaterequred = (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < ts_end);
-      if (packet_updaterequred) {
-        count_pktupdates++;
-      }
-      if (packet_updaterequred || last_packet) {
+      if ((pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < ts_end) || last_packet) {
+        if (pktgroupbegin < 0) {
+          pktgroupbegin = n;
+        }
         const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
         const bool cellhistory_reset_required =
             (mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi &&
              grid::modelgrid[mgi].thick == 0);
 
         if (cellhistory_reset_required || last_packet) {
-          const int pktgroupend = last_packet ? globals::npkts - 1 : n - 1;
-          const size_t groupsize = pktgroupend - pktgroupbegin + 1;
-          if (groupsize > 0) {
-            auto pktgroup = std::span{&packets[pktgroupbegin], groupsize};
+          if (pktgroupbegin >= 0 && n > 0) {
+            const int pktgroupend = last_packet ? globals::npkts - 1 : n - 1;
+            const size_t groupsize = pktgroupend - pktgroupbegin + 1;
+            if (groupsize > 0) {
+              auto pktgroup = std::span{&packets[pktgroupbegin], groupsize};
+              count_pktupdates += std::ranges::count_if(
+                  pktgroup, [ts_end](const auto &pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; });
 
-            do_cell_packet_updates(pktgroup, nts, ts_end);
+              do_cell_packet_updates(pktgroup, nts, ts_end);
 
-            timestepcomplete = timestepcomplete && std::ranges::all_of(pktgroup, [ts_end](const auto &pkt) {
-                                 return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE;
-                               });
+              timestepcomplete = timestepcomplete && std::ranges::all_of(pktgroup, [ts_end](const auto &pkt) {
+                                   return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE;
+                                 });
+            }
           }
 
           if (cellhistory_reset_required) {
