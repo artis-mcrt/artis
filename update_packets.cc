@@ -292,14 +292,14 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
 #pragma omp parallel for schedule(dynamic)
 #endif
     for (int n = 0; n < globals::npkts; n++) {
-      struct packet *pkt_ptr = &packets[n];
+      auto &pkt = packets[n];
 
       if (passnumber == 0) {
-        pkt_ptr->interactions = 0;
+        pkt.interactions = 0;
       }
 
-      if ((pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < ts_end)) {
-        const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+      if ((pkt.type != TYPE_ESCAPE && pkt.prop_time < ts_end)) {
+        const int mgi = grid::get_cell_modelgridindex(pkt.where);
         const bool cellhistory_reset_required =
             (mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi &&
              grid::modelgrid[mgi].thick != 1);
