@@ -303,9 +303,7 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
              grid::modelgrid[mgi].thick != 1);
 
         if (cellhistory_reset_required) {
-          auto pktgroup = std::span{packetgroupstart, &pkt};
-
-          do_cell_packet_updates(pktgroup, nts, ts_end);
+          do_cell_packet_updates(std::span{packetgroupstart, &pkt}, nts, ts_end);
 
           stats::increment(stats::COUNTER_UPDATECELL);
           cellhistory_reset(mgi, false);
@@ -314,9 +312,7 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
       }
     }
 
-    auto pktgroup = std::span{packetgroupstart, &packets[globals::npkts]};
-
-    do_cell_packet_updates(pktgroup, nts, ts_end);
+    do_cell_packet_updates(std::span{packetgroupstart, &packets[globals::npkts]}, nts, ts_end);
 
     timestepcomplete = std::ranges::all_of(
         packets, [ts_end](const auto &pkt) { return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE; });
