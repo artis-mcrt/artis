@@ -305,8 +305,7 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
              grid::modelgrid[mgi].thick != 1);
 
         if (cellhistory_reset_required) {
-          const int packetgrouplast = n - 1;
-          const size_t packetgroupsize = packetgrouplast - packetgroupstart + 1;
+          const size_t packetgroupsize = n - packetgroupstart;
           auto pktgroup = std::span{&packets[packetgroupstart], packetgroupsize};
 
           do_cell_packet_updates(pktgroup, nts, ts_end);
@@ -318,8 +317,7 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
       }
     }
 
-    const int packetgrouplast = globals::npkts - 1;
-    const size_t packetgroupsize = packetgrouplast - packetgroupstart + 1;
+    const size_t packetgroupsize = globals::npkts - packetgroupstart;
     auto pktgroup = std::span{&packets[packetgroupstart], packetgroupsize};
 
     do_cell_packet_updates(pktgroup, nts, ts_end);
