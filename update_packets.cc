@@ -320,11 +320,9 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
 
     const int packetgrouplast = globals::npkts - 1;
     const size_t packetgroupsize = packetgrouplast - packetgroupstart + 1;
-    if (packetgroupsize > 0) {
-      auto pktgroup = std::span{&packets[packetgroupstart], packetgroupsize};
+    auto pktgroup = std::span{&packets[packetgroupstart], packetgroupsize};
 
-      do_cell_packet_updates(pktgroup, nts, ts_end);
-    }
+    do_cell_packet_updates(pktgroup, nts, ts_end);
 
     timestepcomplete = std::ranges::all_of(
         packets, [ts_end](const auto &pkt) { return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE; });
