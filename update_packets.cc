@@ -268,6 +268,10 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
   const double tw = globals::timesteps[nts].width;
   const double ts_end = ts + tw;
 
+  for (auto &pkt : packets) {
+    pkt.interactions = 0;
+  }
+
   const time_t time_update_packets_start = time(nullptr);
   printout("timestep %d: start update_packets at time %ld\n", nts, time_update_packets_start);
   bool timestepcomplete = false;
@@ -293,10 +297,6 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
 #endif
     for (int n = 0; n < globals::npkts; n++) {
       auto &pkt = packets[n];
-
-      if (passnumber == 0) {
-        pkt.interactions = 0;
-      }
 
       if ((pkt.type != TYPE_ESCAPE && pkt.prop_time < ts_end)) {
         const int mgi = grid::get_cell_modelgridindex(pkt.where);
