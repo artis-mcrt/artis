@@ -290,14 +290,12 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
     const int count_pktupdates = static_cast<int>(std::ranges::count_if(
         packets, [ts_end](const auto &pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
     const int updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
-    int packetgroupstart = 0;
+    auto *packetgroupstart = packets.data();
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
-    for (int n = 0; n < globals::npkts; n++) {
-      auto &pkt = packets[n];
-
+    for (auto &pkt : packets) {
       if ((pkt.type != TYPE_ESCAPE && pkt.prop_time < ts_end)) {
         const int mgi = grid::get_cell_modelgridindex(pkt.where);
         const bool cellhistory_reset_required =
@@ -305,20 +303,18 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
              grid::modelgrid[mgi].thick != 1);
 
         if (cellhistory_reset_required) {
-          const size_t packetgroupsize = n - packetgroupstart;
-          auto pktgroup = std::span{&packets[packetgroupstart], packetgroupsize};
+          auto pktgroup = std::span{packetgroupstart, &pkt};
 
           do_cell_packet_updates(pktgroup, nts, ts_end);
 
           stats::increment(stats::COUNTER_UPDATECELL);
           cellhistory_reset(mgi, false);
-          packetgroupstart = n;
+          packetgroupstart = &pkt;
         }
       }
     }
 
-    const size_t packetgroupsize = globals::npkts - packetgroupstart;
-    auto pktgroup = std::span{&packets[packetgroupstart], packetgroupsize};
+    auto pktgroup = std::span{packetgroupstart, &packets[globals::npkts]};
 
     do_cell_packet_updates(pktgroup, nts, ts_end);
 
