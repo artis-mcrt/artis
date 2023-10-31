@@ -989,11 +989,6 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
     chi_bf = usecellhistupdatephixslist ? calculate_chi_bf_gammacontr<true>(modelgridindex, nu_cmf)
                                         : calculate_chi_bf_gammacontr<false>(modelgridindex, nu_cmf);
 
-    // const double pkt_lambda = 1e8 * CLIGHT / nu_cmf;
-    // if (pkt_lambda < 4000)
-    // {
-    //   printout("lambda %7.1f chi_bf %g \n", pkt_lambda, chi_bf);
-    // }
   } else {
     /// in the other cases chi_grey is an mass absorption coefficient
     /// therefore use the mass density
@@ -1003,10 +998,6 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
     sigma = 0.;
     // chi_ff = 0.9*sigma;
     // sigma *= 0.1;
-    // chi_bf = 0.;
-
-    // Second contribution: free-free absorption
-    chi_ff = 1e5 * calculate_chi_ff(modelgridindex, nu_cmf);
 
     chi_bf = 0.;
   }
