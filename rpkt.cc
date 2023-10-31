@@ -969,7 +969,8 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
   const auto nne = grid::get_nne(modelgridindex);
 
   double sigma = 0.0;
-  double chi_ff = 0.;
+  /// free-free absorption
+  const double chi_ff = calculate_chi_ff(modelgridindex, nu_cmf);
   double chi_bf = 0.;
   double chi_ffheating = 0.;
 
@@ -982,8 +983,6 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
     // sigma_cmf = 0. * nne;
     // sigma *= 0.1;
 
-    /// Second contribution: free-free absorption
-    chi_ff = calculate_chi_ff(modelgridindex, nu_cmf);
     chi_ffheating = chi_ff;
 
     /// Third contribution: bound-free absorption
