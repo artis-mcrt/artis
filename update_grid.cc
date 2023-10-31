@@ -1026,7 +1026,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       /// W == 1 indicates that this modelgrid cell was treated grey in the
       /// last timestep. Therefore it has no valid Gamma estimators and must
       /// be treated in LTE at restart.
-      if (grid::modelgrid[mgi].thick == 0 && grid::get_W(mgi) == 1) {
+      if (grid::modelgrid[mgi].thick != 1 && grid::get_W(mgi) == 1) {
         printout(
             "force modelgrid cell %d to grey/LTE for update grid since existing W == 1. (will not have gamma "
             "estimators)\n",

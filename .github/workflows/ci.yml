@@ -5,6 +5,8 @@ on:
     push:
         branches-ignore:
             - classic*
+    schedule:
+        - cron: 0 13 * * 1
     # pull_request:
     #     branches-ignore:
     #         - classic*
