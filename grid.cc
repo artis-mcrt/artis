@@ -645,7 +645,7 @@ static void calculate_kappagrey() {
   }
 
   if (globals::rank_global == 0) {
-    FILE *grid_file = grid_file = fopen_required("grid.out", "w");
+    FILE *grid_file = fopen_required("grid.out", "w");
     for (int n = 0; n < ngrid; n++) {
       const int mgi = get_cell_modelgridindex(n);
       if (mgi != get_npts_model()) {
