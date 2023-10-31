@@ -2079,7 +2079,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
         const auto coll_str = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].coll_str;
 
         printout(
-            "    frac_deposition %.3e Z=%d ionstage %d lower %4d upper %4d rad_exc %.1e coll_exc %.1e nt_exc %.1e "
+            "    frac_deposition %.3e Z=%2d ionstage %d lower %4d upper %4d rad_exc %.1e coll_exc %.1e nt_exc %.1e "
             "nt/tot %.1e collstr %.1e lineindex %d\n",
             frac_deposition, get_atomicnumber(element), get_ionstage(element, ion), lower, upper, radexc_ratecoeff,
             collexc_ratecoeff, ntcollexc_ratecoeff, ntcollexc_ratecoeff / exc_ratecoeff, coll_str, lineindex);
