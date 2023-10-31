@@ -644,20 +644,22 @@ static void calculate_kappagrey() {
     }
   }
 
-  FILE *grid_file = nullptr;
   if (globals::rank_global == 0) {
-    grid_file = fopen_required("grid.out", "w");
+    FILE *grid_file = grid_file = fopen_required("grid.out", "w");
+    for (int n = 0; n < ngrid; n++) {
+      const int mgi = get_cell_modelgridindex(n);
+      if (mgi != get_npts_model()) {
+        fprintf(grid_file, "%d %d\n", n, mgi);  /// write only non-empty cells to grid file
+      }
+    }
+    fclose(grid_file);
   }
 
   /// Second pass through allows calculation of normalized chi_grey
   double check1 = 0.0;
   double check2 = 0.0;
-  for (int n = 0; n < ngrid; n++) {
-    const int mgi = get_cell_modelgridindex(n);
-    if (globals::rank_global == 0 && mgi != get_npts_model()) {
-      fprintf(grid_file, "%d %d\n", n, mgi);  /// write only non-empty cells to grid file
-    }
-
+  for (const int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+    const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
     if (get_rho_tmin(mgi) > 0) {
       double kappa = 0.;
       if (globals::opacity_case == 0) {
@@ -709,10 +711,6 @@ static void calculate_kappagrey() {
 
     check1 = check1 + (get_kappagrey(mgi) * get_rho_tmin(mgi));
     check2 = check2 + get_rho_tmin(mgi);
-  }
-
-  if (globals::rank_global == 0) {
-    fclose(grid_file);
   }
 
   printout("Grey normalisation check: %g\n", check1 / check2);
