@@ -626,7 +626,6 @@ static void nltepop_matrix_normalise(const int modelgridindex, const int element
 
   // TODO: consider replacing normalisation by LTE populations with
   // GSL's gsl_linalg_balance_matrix(gsl_matrix * A, gsl_vector * D) function instead
-  set_groundlevelpops(modelgridindex, element, grid::get_nne(modelgridindex), true);
   for (size_t column = 0; column < nlte_dimension; column++) {
     int ion = -1;
     int level = -1;
