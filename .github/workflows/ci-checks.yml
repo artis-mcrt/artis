@@ -51,7 +51,6 @@ jobs:
                 compiler: [{name: gcc, ver: 11}, {name: gcc, ver: 12}, {name: gcc, ver: 13}, {name: clang, ver: 14}, {name: clang, ver: 15}]
                 mpi: [ON, OFF]
                 openmp: [ON, OFF]
-                artisoptionsfile: [artisoptions_classic.h, artisoptions_nltenebular.h]
                 exclude:
                     - compiler: {name: gcc, ver: 11}
                       openmp: ON
@@ -64,7 +63,6 @@ jobs:
             fail-fast: false
 
         name: ${{ matrix.compiler.name }}-${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}
-            ${{ matrix.artisoptionsfile }}
         steps:
             - uses: actions/checkout@v3
 
@@ -123,7 +121,12 @@ jobs:
               run: |
                   ${{ env.CXX }} --version
 
-            - name: Compile
+            - name: Compile classic mode
               run: |
-                  cp -v -p ${{ matrix.artisoptionsfile }} artisoptions.h
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+
+            - name: Compile nebular mode
+              run: |
+                  cp -v -p artisoptions_classic.h artisoptions.h
                   make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
