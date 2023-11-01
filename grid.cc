@@ -1505,7 +1505,7 @@ static void read_3d_model()
   }
 
   printout("min_den %g [g/cm3]\n", min_den);
-  printout("Effectively used model grid cells: %d\n", nonemptymgi);
+  printout("effectively used model grid cells: %d\n", nonemptymgi);
 }
 
 static void calc_modelinit_totmassradionuclides() {
