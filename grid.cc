@@ -1382,7 +1382,7 @@ static void read_2d_model()
     abort();
   }
 
-  printout("Effectively used model grid cells: %d\n", nonemptymgi);
+  printout("effectively used model grid cells: %d\n", nonemptymgi);
 }
 
 static void read_3d_model()
