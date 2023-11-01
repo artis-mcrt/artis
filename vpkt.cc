@@ -48,8 +48,9 @@ std::vector<double> VSPEC_NUMAX_input;
 double cell_is_optically_thick_vpkt;
 double tau_max_vpkt;
 
-std::vector<int> exclude;  // vector of opacity contribution setups
-                           //-1: no line opacity; -2: no bf opacity; -3: no ff opacity; -4: no es opacity,
+std::vector<int> exclude;  // vector of opacity contribution setups:
+                           // 0: full opacity
+                           // -1: no line opacity; -2: no bf opacity; -3: no ff opacity; -4: no es opacity,
                            // +ve: exclude element with atomic number's contribution to bound-bound opacity
 std::vector<double> tau_vpkt;
 
