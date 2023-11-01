@@ -563,8 +563,9 @@ static void set_elem_stable_abund_from_total(const int mgi, const int element, c
   if (massfracstable < 0.) {
     if ((isofracsum / elemabundance - 1.) > 1e-4)  //  allow some roundoff error
     {
-      printout("WARNING: cell %d Z=%d element abundance is less than the sum of its radioisotope abundances \n", mgi,
-               atomic_number);
+      printout(
+          "WARNING: modelgridindex %d Z=%d element abundance is less than the sum of its radioisotope abundances \n",
+          mgi, atomic_number);
       printout("  massfrac(Z) %g massfrac_radioisotopes(Z) %g\n", elemabundance, isofracsum);
       printout("  increasing elemental abundance to %g and setting stable isotopic abundance to zero\n", isofracsum);
     }
