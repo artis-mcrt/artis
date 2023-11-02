@@ -163,7 +163,7 @@ void packet_init(struct packet *pkt)
   printout("total energy that will be freed during simulation time: %g erg\n", e_cmf_total);
 }
 
-void write_packets(char filename[], const struct packet *const pkt) {
+void write_packets(const char filename[], const struct packet *const pkt) {
   // write packets text file
   FILE *packets_file = fopen_required(filename, "w");
   fprintf(packets_file,
