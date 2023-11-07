@@ -353,11 +353,11 @@ static void set_npts_model(int new_npts_model) {
 static void allocate_initradiobund() {
   assert_always(npts_model > 0);
 
-  const int num_nuclides = decay::get_num_nuclides();
+  const size_t num_nuclides = decay::get_num_nuclides();
 
   const size_t totalradioabundsize = (npts_model + 1) * num_nuclides * sizeof(float);
 #ifdef MPI_ON
-  int my_rank_cells = (npts_model + 1) / globals::node_nprocs;
+  auto my_rank_cells = (npts_model + 1) / globals::node_nprocs;
   // rank_in_node 0 gets any remainder
   if (globals::rank_in_node == 0) {
     my_rank_cells += (npts_model + 1) - (my_rank_cells * globals::node_nprocs);
@@ -374,7 +374,7 @@ static void allocate_initradiobund() {
   initradioabund_allcells = static_cast<float *>(malloc(totalradioabundsize));
 #endif
   printout("[info] mem_usage: radioabundance data for %d nuclides for %d cells occupies %.3f MB (node shared memory)\n",
-           num_nuclides, npts_model, static_cast<double>(totalradioabundsize) / 1024 / 1024);
+           num_nuclides, npts_model, static_cast<double>(totalradioabundsize) / 1024. / 1024.);
 
 #ifdef MPI_ON
   MPI_Barrier(globals::mpi_comm_node);
@@ -382,7 +382,7 @@ static void allocate_initradiobund() {
 
   assert_always(initradioabund_allcells != nullptr);
 
-  for (int mgi = 0; mgi < (npts_model + 1); mgi++) {
+  for (size_t mgi = 0; mgi < (npts_model + 1); mgi++) {
     modelgrid[mgi].initradioabund = &initradioabund_allcells[mgi * num_nuclides];
     if (mgi % globals::node_nprocs == globals::rank_in_node) {
       for (int i = 0; i < decay::get_num_nuclides(); i++) {
