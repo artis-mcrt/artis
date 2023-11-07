@@ -384,7 +384,7 @@ static void allocate_initradiobund() {
 
   for (size_t mgi = 0; mgi < (npts_model + 1); mgi++) {
     modelgrid[mgi].initradioabund = &initradioabund_allcells[mgi * num_nuclides];
-    if (mgi % globals::node_nprocs == globals::rank_in_node) {
+    if (mgi % static_cast<size_t>(globals::node_nprocs) == static_cast<size_t>(globals::rank_in_node)) {
       for (int i = 0; i < decay::get_num_nuclides(); i++) {
         modelgrid[mgi].initradioabund[i] = 0.;
       }
