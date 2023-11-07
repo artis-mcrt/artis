@@ -10,6 +10,8 @@ CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto=auto
 ifeq ($(shell uname -s),Darwin)
 # 	macOS
 
+# fixes gcc on macos
+#	LDFLAGS += -Wl,-ld_classic
 	ifeq ($(shell uname -m),arm64)
 #	 	On Arm, -mcpu combines -march and -mtune
 		CXXFLAGS += -mcpu=native
@@ -82,7 +84,7 @@ ifeq ($(TESTMODE),ON)
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
 	# skip array range checking for better performance and use optimizations
-	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3
+	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3 -ffast-math -fno-finite-math-only
 endif
 
 CXXFLAGS += -Werror -Werror=undef -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -Wno-inline
