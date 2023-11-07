@@ -37,8 +37,8 @@ int ngrid;
 char coordlabel[3];
 
 enum gridtypes model_type = GRID_SPHERICAL1D;
-int npts_model = 0;           // number of model grid cells
-int nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
+size_t npts_model = 0;           // number of model grid cells
+size_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
 double t_model = -1.;  // time at which densities in input model are correct.
 double *vout_model = nullptr;
