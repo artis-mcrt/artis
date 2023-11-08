@@ -540,7 +540,8 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
         stats::increment(stats::COUNTER_MA_STAT_INTERNALDOWNLOWER);
 
         /// Randomly select the occuring transition
-        zrand = rng_uniform();
+        const double zrand = rng_uniform();
+        const double targetval = zrand * zrand * processrates[MA_ACTION_INTERNALDOWNLOWER];
         // zrand = 1. - 1e-14;
         double rate = 0.;
         // nlevels = get_nlevels(element,ion-1);
@@ -554,7 +555,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
           const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, modelgridindex);
           const double C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
           rate += (R + C) * epsilon_target;
-          if (zrand * processrates[MA_ACTION_INTERNALDOWNLOWER] < rate) {
+          if (targetval < rate) {
             break;
           }
         }
