@@ -226,7 +226,7 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
   const int upperion = *ion;
   const int upperionlevel = *level;
   /// Randomly select a continuum
-  const double zrand = rng_uniform();
+  const double targetval = rng_uniform() * rad_recomb;
   double rate = 0;
   const int nlevels = get_ionisinglevels(element, upperion - 1);
   int lower = 0;
@@ -240,15 +240,16 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
     // upperion - 1, lower))); printout("[debug] do_ma:   rate to level %d of ion %d = %g\n", lower, upperion - 1,
     // rate); printout("[debug] do_ma:   zrand*rad_recomb = %g\n", zrand * rad_recomb);
 
-    if (zrand * rad_recomb < rate) {
+    if (targetval < rate) {
       break;
     }
   }
-  if (zrand * rad_recomb >= rate) {
+  if (targetval >= rate) {
     printout(
-        "%s: From Z=%d ionstage %d level %d, could not select lower level to recombine to. zrand %g * rad_recomb %g >= "
+        "%s: From Z=%d ionstage %d level %d, could not select lower level to recombine to. targetval %g * rad_recomb "
+        "%g >= "
         "rate %g",
-        __func__, get_atomicnumber(element), get_ionstage(element, *ion), *level, zrand, rad_recomb, rate);
+        __func__, get_atomicnumber(element), get_ionstage(element, *ion), *level, targetval, rad_recomb, rate);
     abort();
   }
 
