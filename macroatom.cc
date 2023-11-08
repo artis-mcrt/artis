@@ -596,11 +596,10 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
         jumps++;
 
         /// randomly select the occuring transition
-        zrand = rng_uniform();
         const double *sum_internal_up_same =
             globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].sum_internal_up_same;
 
-        const double targetval = zrand * processrates[MA_ACTION_INTERNALUPSAME];
+        const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALUPSAME];
 
         // first sum_internal_up_same[i] such that sum_internal_up_same[i] > targetval
         const double *const upperval =
