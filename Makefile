@@ -79,12 +79,16 @@ CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 ifeq ($(TESTMODE),ON)
 	CXXFLAGS += -DTESTMODE=true -O3 -DLIBCXX_ENABLE_DEBUG_MODE
 	# makes GitHub actions classic test run forever?
-	# CXXFLAGS += -D_GLIBCXX_DEBUG
+	# CXXFLAGS += -D_GLIBCXX_DEBUG=1
 	CXXFLAGS += -fsanitize=address,undefined -fno-omit-frame-pointer -fno-common
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
 	# skip array range checking for better performance and use optimizations
-	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3 -ffast-math -fno-finite-math-only
+	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3
+endif
+
+ifeq ($(FASTMATH),ON)
+	CXXFLAGS += -ffast-math -fno-finite-math-only
 endif
 
 CXXFLAGS += -Werror -Werror=undef -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -Wno-inline
