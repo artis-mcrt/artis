@@ -136,17 +136,16 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
   }
 }
 
-static auto do_macroatom_internal_down_same(int element, int ion, int level, double total_internal_down_same) -> int {
+static auto do_macroatom_internal_down_same(int element, int ion, int level) -> int {
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
   // printout("[debug] do_ma:   internal downward jump within current ionstage\n");
 
-  /// Randomly select the occuring transition
-  const double zrand = rng_uniform();
-  const double targetval = zrand * total_internal_down_same;
-
   const double *sum_internal_down_same =
       globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].sum_internal_down_same;
+
+  /// Randomly select the occuring transition
+  const double targetval = rng_uniform() * sum_internal_down_same[ndowntrans - 1];
 
   // first sum_internal_down_same[i] such that sum_internal_down_same[i] > targetval
   const double *const upperval =
@@ -479,7 +478,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
       case MA_ACTION_INTERNALDOWNSAME: {
         pkt_ptr->interactions += 1;
         jumps++;
-        level = do_macroatom_internal_down_same(element, ion, level, processrates[MA_ACTION_INTERNALDOWNSAME]);
+        level = do_macroatom_internal_down_same(element, ion, level);
 
         break;
       }
