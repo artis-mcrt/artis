@@ -418,12 +418,9 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
     // }
 
     // select transition according to probabilities
-    std::array<double, MA_ACTION_COUNT> cumulative_transitions;
-    double sum = 0.;
-    for (int action = 0; action < MA_ACTION_COUNT; action++) {
-      sum += processrates[action];
-      cumulative_transitions[action] = sum;
-    }
+    std::array<double, MA_ACTION_COUNT> cumulative_transitions = {0};
+    std::partial_sum(processrates.begin(), processrates.end(), cumulative_transitions.begin());
+
     assert_always(cumulative_transitions[MA_ACTION_COUNT - 1] > 0);
 
     enum ma_action selected_action = MA_ACTION_COUNT;
