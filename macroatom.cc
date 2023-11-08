@@ -418,25 +418,23 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
     // }
 
     // select transition according to probabilities
-    double total_transitions = 0.;
+    std::array<double, MA_ACTION_COUNT> cumulative_transitions;
     for (int action = 0; action < MA_ACTION_COUNT; action++) {
-      total_transitions += processrates[action];
+      cumulative_transitions[action] += processrates[action];
     }
-    assert_always(total_transitions > 0);
+    assert_always(cumulative_transitions[MA_ACTION_COUNT - 1] > 0);
 
     enum ma_action selected_action = MA_ACTION_COUNT;
     double zrand = rng_uniform();
-    const double randomrate = zrand * total_transitions;
-    double rate = 0.;
+    const double randomrate = zrand * cumulative_transitions[MA_ACTION_COUNT - 1];
     for (int action = 0; action < MA_ACTION_COUNT; action++) {
-      rate += processrates[action];
-      if (rate > randomrate) {
+      if (cumulative_transitions[action] > randomrate) {
         selected_action = static_cast<enum ma_action>(action);
         break;
       }
     }
 
-    assert_always(rate > randomrate);
+    assert_always(cumulative_transitions[selected_action] > randomrate);
 
     switch (selected_action) {
       case MA_ACTION_RADDEEXC: {
