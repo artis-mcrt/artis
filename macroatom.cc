@@ -186,11 +186,7 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
     safeincrement(globals::ecounter[selecteddowntrans.lineindex]);
   }
 
-  const int lower = selecteddowntrans.targetlevelindex;
-
-  // printout("[debug] do_ma:   jump to level %d\n", lower);
-
-  const double epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, lower);
+  const double epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, selecteddowntrans.targetlevelindex);
 
   double oldnucmf = NAN;
   if (pkt_ptr->last_event == 1) {
