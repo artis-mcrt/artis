@@ -169,21 +169,22 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
   const double targetval = zrand * sum_epstrans_rad_deexc[ndowntrans];
 
   // first sum_epstrans_rad_deexc[i] such that sum_epstrans_rad_deexc[i] > targetval
-  const auto *upperval = std::upper_bound(sum_epstrans_rad_deexc, sum_epstrans_rad_deexc + ndowntrans, targetval);
+  const auto *downtrans = std::upper_bound(sum_epstrans_rad_deexc, sum_epstrans_rad_deexc + ndowntrans, targetval);
   auto downtransindex = std::distance(sum_epstrans_rad_deexc, upperval);
 
   assert_always(downtransindex < ndowntrans);
-  auto linelistindex = globals::elements[element].ions[ion].levels[level].downtrans[downtransindex].lineindex;
 
-  if (linelistindex == activatingline) {
+  const auto &selecteddowntrans = globals::elements[element].ions[ion].levels[level].downtrans[downtransindex];
+
+  if (selecteddowntrans.linelistindex == activatingline) {
     stats::increment(stats::COUNTER_RESONANCESCATTERINGS);
   }
 
   if constexpr (RECORD_LINESTAT) {
-    safeincrement(globals::ecounter[linelistindex]);
+    safeincrement(globals::ecounter[selecteddowntrans.linelistindex]);
   }
 
-  const int lower = globals::elements[element].ions[ion].levels[level].downtrans[downtransindex].targetlevelindex;
+  const int lower = selecteddowntrans.targetlevelindex;
 
   // printout("[debug] do_ma:   jump to level %d\n", lower);
 
@@ -211,8 +212,8 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
   emit_rpkt(pkt_ptr);
 
   // the r-pkt can only interact with lines redder than the current one
-  pkt_ptr->next_trans = linelistindex + 1;
-  pkt_ptr->emissiontype = linelistindex;
+  pkt_ptr->next_trans = selecteddowntrans.linelistindex + 1;
+  pkt_ptr->emissiontype = selecteddowntrans.linelistindex;
   vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
   pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
