@@ -160,21 +160,17 @@ static auto do_macroatom_internal_down_same(int element, int ion, int level, dou
 }
 
 static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int element, const int ion, const int level,
-                                         const double rad_deexc, const int activatingline) {
+                                         const double *sum_epstrans_rad_deexc, const int activatingline) {
   /// radiative deexcitation of MA: emitt rpkt
   /// randomly select which line transitions occurs
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
-  double *sum_epstrans_rad_deexc =
-      globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].sum_epstrans_rad_deexc;
-
   const double zrand = rng_uniform();
-  const double targetval = zrand * rad_deexc;
+  const double targetval = zrand * sum_epstrans_rad_deexc[ndowntrans];
 
   // first sum_epstrans_rad_deexc[i] such that sum_epstrans_rad_deexc[i] > targetval
-  const double *const upperval =
-      std::upper_bound(&sum_epstrans_rad_deexc[0], &sum_epstrans_rad_deexc[ndowntrans], targetval);
-  const ptrdiff_t downtransindex = upperval - &sum_epstrans_rad_deexc[0];
+  const auto *upperval = std::upper_bound(sum_epstrans_rad_deexc, sum_epstrans_rad_deexc + ndowntrans, targetval);
+  auto downtransindex = std::distance(sum_epstrans_rad_deexc, upperval);
 
   assert_always(downtransindex < ndowntrans);
   auto linelistindex = globals::elements[element].ions[ion].levels[level].downtrans[downtransindex].lineindex;
@@ -418,20 +414,15 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
     // }
 
     // select transition according to probabilities
-    std::array<double, MA_ACTION_COUNT> cumulative_transitions = {0};
+    std::array<double, MA_ACTION_COUNT> cumulative_transitions;
     std::partial_sum(processrates.begin(), processrates.end(), cumulative_transitions.begin());
 
-    assert_always(cumulative_transitions[MA_ACTION_COUNT - 1] > 0);
+    const double randomrate = rng_uniform() * cumulative_transitions[MA_ACTION_COUNT - 1];
 
-    enum ma_action selected_action = MA_ACTION_COUNT;
-    double zrand = rng_uniform();
-    const double randomrate = zrand * cumulative_transitions[MA_ACTION_COUNT - 1];
-    for (int action = 0; action < MA_ACTION_COUNT; action++) {
-      if (cumulative_transitions[action] > randomrate) {
-        selected_action = static_cast<enum ma_action>(action);
-        break;
-      }
-    }
+    // first cumulative_transitions[i] such that cumulative_transitions[i] > randomrate
+    const auto *upperval = std::upper_bound(cumulative_transitions.begin(), cumulative_transitions.end(), randomrate);
+    const auto selected_action =
+        static_cast<const enum ma_action>(std::distance(cumulative_transitions.cbegin(), upperval));
 
     assert_always(selected_action < MA_ACTION_COUNT);
     assert_always(cumulative_transitions[selected_action] > randomrate);
@@ -441,7 +432,10 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
         // printout("[debug] do_ma:   radiative deexcitation\n");
         // printout("[debug] do_ma:   jumps = %d\n", jumps);
 
-        do_macroatom_raddeexcitation(pkt_ptr, element, ion, level, processrates[MA_ACTION_RADDEEXC], activatingline);
+        do_macroatom_raddeexcitation(
+            pkt_ptr, element, ion, level,
+            &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].sum_epstrans_rad_deexc[0],
+            activatingline);
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC,
