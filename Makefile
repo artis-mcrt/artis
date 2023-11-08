@@ -77,18 +77,20 @@ CXXFLAGS += $(shell pkg-config --cflags gsl)
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true -O3 -DLIBCXX_ENABLE_DEBUG_MODE
+	CXXFLAGS += -DTESTMODE=true -DLIBCXX_ENABLE_DEBUG_MODE
 	# makes GitHub actions classic test run forever?
 	# CXXFLAGS += -D_GLIBCXX_DEBUG=1
 	CXXFLAGS += -fsanitize=address,undefined -fno-omit-frame-pointer
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
 	# skip array range checking for better performance and use optimizations
-	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3
+	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF
 endif
 
 ifeq ($(FASTMATH),ON)
-	CXXFLAGS += -ffast-math -fno-finite-math-only
+	CXXFLAGS += -Ofast -ffast-math -funsafe-math-optimizations -fno-finite-math-only
+else
+	CXXFLAGS += -O3
 endif
 
 CXXFLAGS += -Werror -Werror=undef -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -Wno-inline
