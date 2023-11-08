@@ -419,8 +419,10 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
 
     // select transition according to probabilities
     std::array<double, MA_ACTION_COUNT> cumulative_transitions;
+    double sum = 0.;
     for (int action = 0; action < MA_ACTION_COUNT; action++) {
-      cumulative_transitions[action] += processrates[action];
+      sum += processrates[action];
+      cumulative_transitions[action] = sum;
     }
     assert_always(cumulative_transitions[MA_ACTION_COUNT - 1] > 0);
 
@@ -434,6 +436,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
       }
     }
 
+    assert_always(selected_action < MA_ACTION_COUNT);
     assert_always(cumulative_transitions[selected_action] > randomrate);
 
     switch (selected_action) {
@@ -542,7 +545,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
         /// Randomly select the occuring transition
         zrand = rng_uniform();
         // zrand = 1. - 1e-14;
-        rate = 0.;
+        double rate = 0.;
         // nlevels = get_nlevels(element,ion-1);
 
         const int nlevels = get_ionisinglevels(element, ion - 1);
