@@ -534,8 +534,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
         stats::increment(stats::COUNTER_MA_STAT_INTERNALDOWNLOWER);
 
         /// Randomly select the occuring transition
-        const double zrand = rng_uniform();
-        const double targetval = zrand * zrand * processrates[MA_ACTION_INTERNALDOWNLOWER];
+        const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALDOWNLOWER];
         // zrand = 1. - 1e-14;
         double rate = 0.;
         // nlevels = get_nlevels(element,ion-1);
