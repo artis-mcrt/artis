@@ -160,13 +160,15 @@ static auto do_macroatom_internal_down_same(int element, int ion, int level, dou
 }
 
 static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int element, const int ion, const int level,
-                                         const double *sum_epstrans_rad_deexc, const int activatingline) {
+                                         const int activatingline) {
   /// radiative deexcitation of MA: emitt rpkt
   /// randomly select which line transitions occurs
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
-  const double zrand = rng_uniform();
-  const double targetval = zrand * sum_epstrans_rad_deexc[ndowntrans];
+  const auto *sum_epstrans_rad_deexc =
+      globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].sum_epstrans_rad_deexc;
+
+  const double targetval = rng_uniform() * sum_epstrans_rad_deexc[ndowntrans];
 
   // first sum_epstrans_rad_deexc[i] such that sum_epstrans_rad_deexc[i] > targetval
   const auto *upperval = std::upper_bound(sum_epstrans_rad_deexc, sum_epstrans_rad_deexc + ndowntrans, targetval);
@@ -433,10 +435,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
         // printout("[debug] do_ma:   radiative deexcitation\n");
         // printout("[debug] do_ma:   jumps = %d\n", jumps);
 
-        do_macroatom_raddeexcitation(
-            pkt_ptr, element, ion, level,
-            &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].sum_epstrans_rad_deexc[0],
-            activatingline);
+        do_macroatom_raddeexcitation(pkt_ptr, element, ion, level, activatingline);
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC,
