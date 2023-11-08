@@ -54,3 +54,5 @@ CheckOptions:
       value: 'false'
     - key: cppcoreguidelines-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
       value: 'false'
+    - key: cppcoreguidelines-pro-type-member-init.IgnoreArrays
+      value: 'true'
