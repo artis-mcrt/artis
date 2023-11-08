@@ -168,7 +168,7 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
   const auto *sum_epstrans_rad_deexc =
       globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].sum_epstrans_rad_deexc;
 
-  const double targetval = rng_uniform() * sum_epstrans_rad_deexc[ndowntrans];
+  const double targetval = rng_uniform() * sum_epstrans_rad_deexc[ndowntrans - 1];
 
   // first sum_epstrans_rad_deexc[i] such that sum_epstrans_rad_deexc[i] > targetval
   const auto *upperval = std::upper_bound(sum_epstrans_rad_deexc, sum_epstrans_rad_deexc + ndowntrans, targetval);
