@@ -488,7 +488,7 @@ static void precalculate_rate_coefficient_integrals() {
       const int nlevels = get_ionisinglevels(element, ion);
       /// That's only an option for pure LTE
       // if (TAKE_N_BFCONTINUA < nlevels) nlevels = TAKE_N_BFCONTINUA;
-      printout("Performing rate integrals for Z = %d, ion_stage %d...\n", atomic_number, ionstage);
+      printout("Performing rate integrals for Z = %d, ionstage %d...\n", atomic_number, ionstage);
 
       gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 

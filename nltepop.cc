@@ -99,7 +99,7 @@ static void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_v
     int ion = -1;
     int level = -1;
     get_ion_level_of_nlte_vector_index(index, element, &ion, &level);
-    // printout("index%4d (ion_stage%2d level%4d) row_max %.1e col_max %.1e ",
+    // printout("index%4d (ionstage%2d level%4d) row_max %.1e col_max %.1e ",
     //          index,get_ionstage(element,ion),level,row_max,col_max);
 
     if ((row_max < 1e-100) || (col_max < 1e-100)) {
@@ -256,10 +256,9 @@ static void print_element_rates_summary(const int element, const int modelgridin
 
     for (int level = 0; (level < max_printed_levels) && (level < nlevels) && (level <= nlevels_nlte + 1); level++) {
       if (level == 0) {
-        printout(
-            "  modelgridindex %d timestep %d NLTE iteration %d Te %g nne %g: NLTE summary for Z=%d ion_stage %d:\n",
-            modelgridindex, timestep, nlte_iter, grid::get_Te(modelgridindex), grid::get_nne(modelgridindex),
-            atomic_number, ionstage);
+        printout("  modelgridindex %d timestep %d NLTE iteration %d Te %g nne %g: NLTE summary for Z=%d ionstage %d:\n",
+                 modelgridindex, timestep, nlte_iter, grid::get_Te(modelgridindex), grid::get_nne(modelgridindex),
+                 atomic_number, ionstage);
         printout(
             "                         pop       rates     bb_rad     bb_col   bb_ntcol     bf_rad     bf_col   "
             "bf_ntcol\n");
@@ -305,7 +304,7 @@ static void print_level_rates(const int modelgridindex, const int timestep, cons
   const int selected_index = get_nlte_vector_index(element, selected_ion, selected_level);
   const double pop_selectedlevel = gsl_vector_get(popvec, selected_index);
   printout(
-      "timestep %d cell %d Te %g nne %g NLTE level diagnostics for Z=%d ion_stage %d level %d rates into and out of "
+      "timestep %d cell %d Te %g nne %g NLTE level diagnostics for Z=%d ionstage %d level %d rates into and out of "
       "this level\n",
       timestep, modelgridindex, grid::get_Te(modelgridindex), grid::get_nne(modelgridindex), atomic_number,
       selected_ionstage, selected_level);
@@ -473,7 +472,7 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
       *gsl_matrix_ptr(rate_matrix_coll_bb, upper_index, upper_index) -= C;
       *gsl_matrix_ptr(rate_matrix_coll_bb, lower_index, upper_index) += C;
       if ((R < 0) || (C < 0)) {
-        printout("  WARNING: Negative de-excitation rate from ion_stage %d level %d to level %d\n",
+        printout("  WARNING: Negative de-excitation rate from ionstage %d level %d to level %d\n",
                  get_ionstage(element, ion), level, lower);
       }
     }
@@ -563,7 +562,7 @@ static void nltepop_matrix_add_ionisation(const int modelgridindex, const int el
       *gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, lower_index) += C_ionisation * s_renorm[level];
 
       if ((R_ionisation < 0) || (C_ionisation < 0)) {
-        printout("  WARNING: Negative ionization rate from ion_stage %d level %d phixstargetindex %d\n",
+        printout("  WARNING: Negative ionization rate from ionstage %d level %d phixstargetindex %d\n",
                  get_ionstage(element, ion), level, phixstargetindex);
       }
 
@@ -580,7 +579,7 @@ static void nltepop_matrix_add_ionisation(const int modelgridindex, const int el
         *gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, upper_index) += C_recomb * s_renorm[upper];
 
         if ((R_recomb < 0) || (C_recomb < 0)) {
-          printout("  WARNING: Negative recombination rate to ion_stage %d level %d phixstargetindex %d\n",
+          printout("  WARNING: Negative recombination rate to ionstage %d level %d phixstargetindex %d\n",
                    get_ionstage(element, ion), level, phixstargetindex);
         }
       }
@@ -595,7 +594,7 @@ static void nltepop_matrix_add_nt_ionisation(const int modelgridindex, const int
   assert_always(ion + 1 < get_nions(element));  // can't ionise the top ion
   const double Y_nt = nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion);
   if (Y_nt < 0.) {
-    printout("  WARNING: Negative NT_ionization rate from ion_stage %d\n", get_ionstage(element, ion));
+    printout("  WARNING: Negative NT_ionization rate from ionstage %d\n", get_ionstage(element, ion));
   }
 
   const int nlevels = get_nlevels(element, ion);
@@ -778,7 +777,7 @@ static auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matri
       int level = 0;
       get_ion_level_of_nlte_vector_index(row, element, &ion, &level);
 
-      // printout("index %4d (ion_stage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e
+      // printout("index %4d (ionstage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e
       // departure ratio %.4f\n",
       //          row,get_ionstage(element,ion),level, gsl_vector_get(residual_vector,row),
       //          recovered_balance_vector_elem, gsl_vector_get(x,row),
@@ -787,7 +786,7 @@ static auto nltepop_matrix_solve(const int element, const gsl_matrix *rate_matri
 
       if (gsl_vector_get(popvec, row) < 0.0) {
         printout(
-            "  WARNING: NLTE solver gave negative population to index %ud (Z=%d ion_stage %d level %d), pop = %g. "
+            "  WARNING: NLTE solver gave negative population to index %ud (Z=%d ionstage %d level %d), pop = %g. "
             "Replacing with LTE pop of %g\n",
             row, get_atomicnumber(element), get_ionstage(element, ion), level,
             gsl_vector_get(x, row) * gsl_vector_get(pop_normfactor_vec, row), gsl_vector_get(pop_normfactor_vec, row));
@@ -977,10 +976,10 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels_nlte = get_nlevels_nlte(element, ion);
       const int index_gs = get_nlte_vector_index(element, ion, 0);
-      // const int ion_stage = get_ionstage(element, ion);
-      // printout("  [ion_stage %d]\n", ion_stage);
+      // const int ionstage = get_ionstage(element, ion);
+      // printout("  [ionstage %d]\n", ionstage);
       //
-      // printout("    For ion_stage %d, the ground state populations are %g (function) and %g (matrix result with
+      // printout("    For ionstage %d, the ground state populations are %g (function) and %g (matrix result with
       // normed pop %g, ltepopnormfactor %g)\n",get_ionstage(element,ion),
       //          get_groundlevelpop(modelgridindex, element, ion), gsl_vector_get(popvec, index_gs),
       //          gsl_vector_get(x, index_gs), gsl_vector_get(pop_norm_factor_vec, index_gs));
@@ -1089,7 +1088,7 @@ void nltepop_open_file(const int my_rank) {
   snprintf(filename, MAXFILENAMELENGTH, "nlte_%.4d.out", my_rank);
   assert_always(nlte_file == nullptr);
   nlte_file = fopen_required(filename, "w");
-  fprintf(nlte_file, "%8s %14s %2s %9s %5s %11s %11s %11s\n", "timestep", "modelgridindex", "Z", "ion_stage", "level",
+  fprintf(nlte_file, "%8s %14s %2s %9s %5s %11s %11s %11s\n", "timestep", "modelgridindex", "Z", "ionstage", "level",
           "n_LTE", "n_NLTE", "ion_popfrac");
 }
 
@@ -1116,7 +1115,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels_nlte = get_nlevels_nlte(element, ion);
       const int ion_first_nlte = globals::elements[element].ions[ion].first_nlte;
-      const int ion_stage = get_ionstage(element, ion);
+      const int ionstage = get_ionstage(element, ion);
 
       const int nsuperlevels = ion_has_superlevel(element, ion) ? 1 : 0;
 
@@ -1125,7 +1124,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
         double nnlevelnlte = NAN;
 
         // use "%8d %14d %2d %9d " for fixed width
-        fprintf(nlte_file, "%d %d %d %d ", timestep, modelgridindex, atomic_number, ion_stage);
+        fprintf(nlte_file, "%d %d %d %d ", timestep, modelgridindex, atomic_number, ionstage);
         if (level <= nlevels_nlte) {
           fprintf(nlte_file, "%d ", level);
 

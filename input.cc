@@ -1106,7 +1106,7 @@ static void read_atomicdata_files() {
           const int phixstargetlevels = get_phixsupperlevel(element, ion - 1, 0, nphixstargets - 1) + 1;
 
           if (nlevels_groundterm != phixstargetlevels) {
-            printout("WARNING: Z=%d ion_stage %d nlevels_groundterm %d phixstargetlevels(ion-1) %d.\n",
+            printout("WARNING: Z=%d ionstage %d nlevels_groundterm %d phixstargetlevels(ion-1) %d.\n",
                      get_atomicnumber(element), get_ionstage(element, ion), nlevels_groundterm, phixstargetlevels);
             // if (nlevels_groundterm < phixstargetlevels)
             // {
@@ -1607,7 +1607,7 @@ static void read_atomicdata() {
       }
 
       printout(
-          "[input]    ion_stage %d: %4d levels (%d in groundterm, %4d ionising) %7d lines %6d bf transitions "
+          "[input]    ionstage %d: %4d levels (%d in groundterm, %4d ionising) %7d lines %6d bf transitions "
           "(epsilon_ground: %7.2f eV)\n",
           get_ionstage(element, ion), get_nlevels(element, ion), get_nlevels_groundterm(element, ion),
           get_ionisinglevels(element, ion), ion_bbtransitions, ion_photoiontransitions, epsilon(element, ion, 0) / EV);
@@ -1663,7 +1663,7 @@ static void read_atomicdata() {
 
         assert_always(has_superlevel == ion_has_superlevel(element, ion));
 
-        printout("[input]  element %2d Z=%2d ion_stage %2d has %5d NLTE excited levels%s. Starting at %d\n", element,
+        printout("[input]  element %2d Z=%2d ionstage %2d has %5d NLTE excited levels%s. Starting at %d\n", element,
                  get_atomicnumber(element), get_ionstage(element, ion), fullnlteexcitedlevelcount,
                  has_superlevel ? " plus a superlevel" : "", globals::elements[element].ions[ion].first_nlte);
       }

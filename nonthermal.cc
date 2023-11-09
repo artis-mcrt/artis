@@ -38,10 +38,10 @@ namespace nonthermal {
 //   const double nntot = get_nnion_tot(modelgridindex);
 //   if (get_atomicnumber(element) == 8)
 //   {
-//     const int ion_stage = get_ionstage(element, ion);
-//     if (ion_stage == 1)
+//     const int ionstage = get_ionstage(element, ion);
+//     if (ionstage == 1)
 //       return 0.99 * nntot;
-//     else if (ion_stage == 2)
+//     else if (ionstage == 2)
 //       return 0.01 * nntot;
 //   }
 //   return 0.;
@@ -1201,7 +1201,7 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
             // For some reason in the Lotz data, this is no energy for the M5 shell before Ni. So if the complaint
             // is for 8 (corresponding to that shell) then just use the M4 value
             printout("Huh? I'm trying to use a binding energy when I have no data. element %d ion %d\n", element, ion);
-            printout("Z = %d, ion_stage = %d\n", get_atomicnumber(element), get_ionstage(element, ion));
+            printout("Z = %d, ionstage = %d\n", get_atomicnumber(element), get_ionstage(element, ion));
             abort();
           }
         }
@@ -1592,7 +1592,7 @@ auto nt_ionization_ratecoeff(const int modelgridindex, const int element, const 
       // probably because eff_ionpot = 0 because the solver hasn't been run yet, or no impact ionization cross sections
       // exist
       const double Y_nt_wfapprox = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
-      // printout("Warning: Spencer-Fano solver gives non-finite ionization rate (%g) for element %d ion_stage %d for
+      // printout("Warning: Spencer-Fano solver gives non-finite ionization rate (%g) for element %d ionstage %d for
       // cell %d. Using WF approx instead = %g\n",
       //          Y_nt, get_atomicnumber(element), get_ionstage(element, ion), modelgridindex, Y_nt_wfapprox);
       return Y_nt_wfapprox;
@@ -1601,7 +1601,7 @@ auto nt_ionization_ratecoeff(const int modelgridindex, const int element, const 
       const double Y_nt_wfapprox = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
       if (Y_nt_wfapprox > 0) {
         printout(
-            "Warning: Spencer-Fano solver gives negative or zero ionization rate (%g) for element Z=%d ion_stage %d "
+            "Warning: Spencer-Fano solver gives negative or zero ionization rate (%g) for element Z=%d ionstage %d "
             "cell %d. Using WF approx instead = %g\n",
             Y_nt, get_atomicnumber(element), get_ionstage(element, ion), modelgridindex, Y_nt_wfapprox);
       }
@@ -1886,7 +1886,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
 
       double frac_ionization_ion = 0.;
       double frac_excitation_ion = 0.;
-      printout("  Z=%d ion_stage %d:\n", Z, ionstage);
+      printout("  Z=%d ionstage %d:\n", Z, ionstage);
       // printout("    nnion: %g\n", nnion);
       printout("    nnion/nntot: %g\n", nnion / nntot);
 
@@ -2206,7 +2206,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
 
       assert_always(ionpot_ev >= SF_EMIN);
 
-      // printout("Z=%2d ion_stage %d n %d l %d ionpot %g eV\n",
+      // printout("Z=%2d ionstage %d n %d l %d ionpot %g eV\n",
       //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
 
       const int xsstartindex = get_xs_ionization_vector(vec_xs_ionization, collionrow);
@@ -2493,7 +2493,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
         const int ionstage = get_ionstage(element, ion);
         if (first_included_ion_of_element) {
-          printout("  including Z=%2d ion_stages: ", Z);
+          printout("  including Z=%2d ionstages: ", Z);
           for (int i = 1; i < get_ionstage(element, ion); i++) {
             printout("  ");
           }
@@ -2696,8 +2696,8 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
     return;
   }
 
-  // printout("nonthermal_MPI_Bcast cell %d before: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
-  //          modelgridindex, logged_element_z, logged_ion_stage,
+  // printout("nonthermal_MPI_Bcast cell %d before: ratecoeff(Z=%d ionstage %d): %g, eff_ionpot %g eV\n",
+  //          modelgridindex, logged_element_z, logged_ionstage,
   //          nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
   //          get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
 

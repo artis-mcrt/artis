@@ -133,7 +133,7 @@ static void setup_bin_boundaries() {
     //     const int phixstargetindex = globals::groundcont[i].phixstargetindex;
     //
     //     const int Z = get_atomicnumber(element);
-    //     const int ion_stage = get_ionstage(element, ion);
+    //     const int ionstage = get_ionstage(element, ion);
     //     const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
     //
     //     //printout("bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first,nu_upper_last);
@@ -142,8 +142,8 @@ static void setup_bin_boundaries() {
     //     if (binindex == 0 && ((nu_edge < nu_lower_first_initial) || (nu_edge > nu_upper_last_initial)))
     //     {
     //       printout("Missed bf edge at %12.5e Hz (%6.2f eV, %6.1f A), nu_lower_first %11.5e Hz, nu_upper_last %11.5e
-    //       Hz, Z=%d ion_stage %d level %d upperionlevel %d\n",
-    //                nu_edge, eV_edge, angstrom_edge, nu_lower_first_initial, nu_upper_last_initial, Z, ion_stage,
+    //       Hz, Z=%d ionstage %d level %d upperionlevel %d\n",
+    //                nu_edge, eV_edge, angstrom_edge, nu_lower_first_initial, nu_upper_last_initial, Z, ionstage,
     //                level, upperionlevel);
     //     }
     //
@@ -151,8 +151,8 @@ static void setup_bin_boundaries() {
     //     if ((nu_edge > prev_nu_upper) && (nu_edge < bin_nu_upper))
     //     {
     //       printout("Shifting bin %d nu_upper from %12.5e Hz to bf edge at %12.5e Hz (%6.2f eV, %6.1f A) for Z=%d
-    //       ion_stage %d level %d upperionlevel %d\n",
-    //                binindex, bin_nu_upper, nu_edge, eV_edge, angstrom_edge, Z, ion_stage, level, upperionlevel);
+    //       ionstage %d level %d upperionlevel %d\n",
+    //                binindex, bin_nu_upper, nu_edge, eV_edge, angstrom_edge, Z, ionstage, level, upperionlevel);
     //       radfieldbin_nu_upper[binindex] = nu_edge;
     //     }
     //   }
@@ -1201,7 +1201,7 @@ auto get_bfrate_estimator(const int element, const int lowerion, const int lower
       return prev_bfrate_normed[nonemptymgi * globals::nbfcontinua + allcontindex];
     }
 
-    printout("no bf rate for element Z=%d ion_stage %d lower %d phixstargetindex %d\n", get_atomicnumber(element),
+    printout("no bf rate for element Z=%d ionstage %d lower %d phixstargetindex %d\n", get_atomicnumber(element),
              get_ionstage(element, lowerion), lower, phixstargetindex);
     return -1.;
   }

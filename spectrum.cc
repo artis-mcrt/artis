@@ -62,7 +62,7 @@ static void printout_tracemission_stats() {
     if (globals::nlines > maxlinesprinted) {
       nlines_limited = maxlinesprinted;
     }
-    printout("%17s %4s %9s %5s %5s %8s %8s %4s %7s %7s %7s %7s\n", "energy", "Z", "ion_stage", "upper", "lower",
+    printout("%17s %4s %9s %5s %5s %8s %8s %4s %7s %7s %7s %7s\n", "energy", "Z", "ionstage", "upper", "lower",
              "coll_str", "A", "forb", "lambda", "<v_rad>", "B_lu", "B_ul");
     for (int i = 0; i < nlines_limited; i++) {
       double encontrib = NAN;
