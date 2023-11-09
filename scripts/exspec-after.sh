@@ -3,16 +3,11 @@
 # only compress the files if we successfully ran exspec
 if [ -f emission.out* ]; then
 
-  if command -v zstd > /dev/null; then
-    # zstd does decent compression at high speeds
-    cmdcompress="zstd -T0 -16 -v --rm -f"
-  elif command -v lz4 > /dev/null; then
-    # lz4 is extremely fast, but low compression ratios
-    cmdcompress="lz4 -v --best --rm -f"
-  else
-    # fall back to gzip
-    cmdcompress="gzip -v -f"
-  fi
+  # zstd does decent compression at high speeds
+  cmdcompress="zstd -T0 -16 -v --rm -f"
+
+  # fall back to gzip
+  # cmdcompress="gzip -v -f"
 
   # join 3D direction files, if they exist
   ./artis/scripts/mergeangleres.py
