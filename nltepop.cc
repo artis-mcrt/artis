@@ -1088,8 +1088,7 @@ void nltepop_open_file(const int my_rank) {
   snprintf(filename, MAXFILENAMELENGTH, "nlte_%.4d.out", my_rank);
   assert_always(nlte_file == nullptr);
   nlte_file = fopen_required(filename, "w");
-  fprintf(nlte_file, "%8s %14s %2s %9s %5s %11s %11s %11s\n", "timestep", "modelgridindex", "Z", "ionstage", "level",
-          "n_LTE", "n_NLTE", "ion_popfrac");
+  fprintf(nlte_file, "timestep modelgridindex Z ionstage level n_LTE n_NLTE ion_popfrac\n");
 }
 
 void nltepop_close_file() {
@@ -1123,7 +1122,6 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
         double nnlevellte = calculate_levelpop_lte(modelgridindex, element, ion, level);
         double nnlevelnlte = NAN;
 
-        // use "%8d %14d %2d %9d " for fixed width
         fprintf(nlte_file, "%d %d %d %d ", timestep, modelgridindex, atomic_number, ionstage);
         if (level <= nlevels_nlte) {
           fprintf(nlte_file, "%d ", level);
@@ -1156,7 +1154,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
         }
 
         const double ion_popfrac = nnlevelnlte / get_nnion(modelgridindex, element, ion);
-        fprintf(nlte_file, "%11.5e %11.5e %11.5e\n", nnlevellte, nnlevelnlte, ion_popfrac);
+        fprintf(nlte_file, "%.5e %.5e %.5e\n", nnlevellte, nnlevelnlte, ion_popfrac);
       }
     }
   }
