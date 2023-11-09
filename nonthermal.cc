@@ -453,8 +453,7 @@ void init(const int my_rank, const int ndo_nonempty) {
     char filename[MAXFILENAMELENGTH];
     snprintf(filename, MAXFILENAMELENGTH, "nonthermalspec_%.4d.out", my_rank);
     nonthermalfile = fopen_required(filename, "w");
-    fprintf(nonthermalfile, "%8s %15s %8s %11s %11s %11s\n", "timestep", "modelgridindex", "index", "energy_ev",
-            "source", "y");
+    fprintf(nonthermalfile, "timestep modelgridindex index energy_ev source y\n");
     fflush(nonthermalfile);
   }
 
@@ -637,8 +636,8 @@ static void nt_write_to_file(const int modelgridindex, const int timestep, const
 #endif
 
     for (int s = 0; s < SFPTS; s++) {
-      fprintf(nonthermalfile, "%8d %15d %8d %11.5e %11.5e %11.5e\n", timestep, modelgridindex, s,
-              gsl_vector_get(envec, s), gsl_vector_get(sourcevec, s), yscalefactor * get_y_sample(modelgridindex, s));
+      fprintf(nonthermalfile, "%d %d %d %.5e %.5e %.5e\n", timestep, modelgridindex, s, gsl_vector_get(envec, s),
+              gsl_vector_get(sourcevec, s), yscalefactor * get_y_sample(modelgridindex, s));
     }
     fflush(nonthermalfile);
 #ifdef _OPENMP
