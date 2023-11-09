@@ -306,8 +306,7 @@ void init(int my_rank, int ndo_nonempty)
       snprintf(filename, MAXFILENAMELENGTH, "radfield_%.4d.out", my_rank);
       assert_always(radfieldfile == nullptr);
       radfieldfile = fopen_required(filename, "w");
-      fprintf(radfieldfile, "%8s %15s %8s %11s %11s %9s %9s %9s %9s %9s %12s\n", "timestep", "modelgridindex",
-              "bin_num", "nu_lower", "nu_upper", "nuJ", "J", "J_nu_avg", "ncontrib", "T_R", "W");
+      fprintf(radfieldfile, "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg ncontrib T_R W\n");
       fflush(radfieldfile);
     }
 
@@ -602,8 +601,8 @@ void write_to_file(int modelgridindex, int timestep) {
       }
 
       if (!skipoutput) {
-        fprintf(radfieldfile, "%d %d %d %11.5e %11.5e %9.3e %9.3e %9.3e %d %9.1f %12.5e\n", timestep, modelgridindex,
-                binindex, nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, contribcount, T_R, W);
+        fprintf(radfieldfile, "%d %d %d %.5e %.5e %.3e %.3e %.3e %d %.1f %.5e\n", timestep, modelgridindex, binindex,
+                nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, contribcount, T_R, W);
       }
     }
     fflush(radfieldfile);
