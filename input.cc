@@ -10,19 +10,14 @@
 #include <fstream>
 #include <limits>
 #include <memory>
-#include <ranges>
 #include <sstream>
 #include <vector>
 
 #include "atomic.h"
 #include "decay.h"
-#include "exspec.h"
-#include "gammapkt.h"
 #include "grid.h"
 #include "kpkt.h"
-#include "nltepop.h"
 #include "ratecoeff.h"
-#include "rpkt.h"
 #include "sn3d.h"
 #include "vpkt.h"
 
@@ -1136,7 +1131,7 @@ static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcont
     index = -1;
     *index_in_groundlevelcontestimator = -1;
   } else {
-    int i;
+    int i = 0;
     int element = -1;
     int ion = -1;
     for (i = 1; i < globals::nbfcontinua_ground; i++) {
