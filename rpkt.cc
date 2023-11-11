@@ -7,13 +7,10 @@
 
 #include "atomic.h"
 #include "grid.h"
-#include "kpkt.h"
 #include "ltepop.h"
-#include "macroatom.h"
 #include "radfield.h"
 #include "sn3d.h"
 #include "stats.h"
-#include "update_grid.h"
 #include "vectors.h"
 #include "vpkt.h"
 

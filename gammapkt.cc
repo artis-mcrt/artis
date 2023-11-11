@@ -4,13 +4,11 @@
 #include <cmath>
 #include <cstring>
 #include <fstream>
-#include <limits>
 #include <memory>
 #include <vector>
 
 #include "decay.h"
 #include "grid.h"
-#include "nonthermal.h"
 #include "packet.h"
 #include "sn3d.h"
 #include "stats.h"

@@ -5,15 +5,12 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <cstring>
 
 #include "atomic.h"
 #include "grid.h"
 #include "ltepop.h"
 #include "rpkt.h"
 #include "sn3d.h"
-#include "stats.h"
-#include "update_grid.h"
 #include "vectors.h"
 
 struct stokeparams {
