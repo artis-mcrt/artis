@@ -8,7 +8,6 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include <ranges>
 #include <span>
 #include <sstream>
 #include <string>

@@ -2,7 +2,6 @@
 
 #include <gsl/gsl_integration.h>
 
-#include <algorithm>
 #include <cmath>
 #include <cstring>
 #define D_POSIX_SOURCE
@@ -13,7 +12,6 @@
 #include "artisoptions.h"
 #include "atomic.h"
 #include "grid.h"
-#include "input.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "md5.h"

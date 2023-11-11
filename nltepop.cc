@@ -17,7 +17,6 @@
 #include "nonthermal.h"
 #include "ratecoeff.h"
 #include "sn3d.h"
-#include "update_grid.h"
 
 static FILE *nlte_file = nullptr;
 
