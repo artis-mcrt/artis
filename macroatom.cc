@@ -413,7 +413,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
     // }
 
     // select transition according to probabilities
-    std::array<double, MA_ACTION_COUNT> cumulative_transitions;
+    std::array<double, MA_ACTION_COUNT> cumulative_transitions{};
     std::partial_sum(processrates.begin(), processrates.end(), cumulative_transitions.begin());
 
     const double randomrate = rng_uniform() * cumulative_transitions[MA_ACTION_COUNT - 1];
