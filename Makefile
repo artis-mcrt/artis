@@ -10,8 +10,8 @@ CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto=auto
 ifeq ($(shell uname -s),Darwin)
 # 	macOS
 
-# fixes gcc on macos
-#	LDFLAGS += -Wl,-ld_classic
+#   fixes linking on macOS with gcc
+	LDFLAGS += -Wl,-ld_classic
 	ifeq ($(shell uname -m),arm64)
 #	 	On Arm, -mcpu combines -march and -mtune
 		CXXFLAGS += -mcpu=native
@@ -93,7 +93,7 @@ else
 	CXXFLAGS += -O3
 endif
 
-CXXFLAGS += -Werror -Werror=undef -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -Wno-inline
+CXXFLAGS += -Werror -Werror=undef -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wunused-macros -Wno-inline
 
 ifeq ($(MPI),)
 	# MPI option not specified. set to true by default
