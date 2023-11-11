@@ -1,7 +1,7 @@
 #include "atomic.h"
 
+#include <algorithm>
 #include <cmath>
-#include <ranges>
 
 #include "artisoptions.h"
 #include "grid.h"
