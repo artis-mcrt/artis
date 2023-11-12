@@ -719,7 +719,7 @@ static void calculate_kappagrey() {
 static void allocate_composition_cooling()
 /// Initialise composition dependent cell data for the given cell
 {
-  const size_t npts_nonempty = get_nonempty_npts_model();  // add one for the combined empty cell at the end
+  const size_t npts_nonempty = get_nonempty_npts_model();
 
   auto *initmassfracstable_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
   assert_always(initmassfracstable_allcells != nullptr);
