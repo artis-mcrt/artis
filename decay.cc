@@ -522,7 +522,7 @@ static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const s
                            };
                          }
                        }
-                       printout("removing unused nuclide (Z=%d)%s-%d\n", nuc.z, get_elname(nuc.z), nuc.a);
+                       printout("removing unused nuclide (Z=%d)%s%d\n", nuc.z, get_elname(nuc.z), nuc.a);
                        return true;
                      }),
       nuclides.end());
@@ -653,7 +653,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
       nuclides.back().endecay_q[DECAYTYPE_BETAMINUS] = q_mev * MEV;
       nuclides.back().endecay_electron = e_elec_mev * MEV;
       nuclides.back().endecay_gamma = e_gamma_mev * MEV;
-      // printout("betaminus file: Adding (Z=%d)%s-%d endecay_electron %g endecay_gamma %g tau_s %g\n",
+      // printout("betaminus file: Adding (Z=%d)%s%d endecay_electron %g endecay_gamma %g tau_s %g\n",
       //          z, get_elname(z), a, e_elec_mev, e_gamma_mev, tau_sec);
       assert_always(e_elec_mev >= 0.);
     }
@@ -692,7 +692,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
         nuclides[alphanucindex].branchprobs[DECAYTYPE_ALPHA] = branch_alpha;
         nuclides[alphanucindex].endecay_q[DECAYTYPE_ALPHA] = Q_total_alphadec * MEV;
 
-        // printout("alphadecay file: Adding (Z=%d)%s-%d endecay_alpha %g endecay_gamma %g tau_s %g\n",
+        // printout("alphadecay file: Adding (Z=%d)%s%d endecay_alpha %g endecay_gamma %g tau_s %g\n",
         //          z, get_elname(z), a, e_alpha_mev, e_gamma_mev, tau_sec);
       }
     }
