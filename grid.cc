@@ -719,10 +719,13 @@ static void calculate_kappagrey() {
 static void allocate_composition_cooling()
 /// Initialise composition dependent cell data for the given cell
 {
-  const int npts_nonempty = get_nonempty_npts_model();  // add one for the combined empty cell at the end
+  const size_t npts_nonempty = get_nonempty_npts_model();  // add one for the combined empty cell at the end
 
   auto *initmassfracstable_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
+  assert_always(initmassfracstable_allcells != nullptr);
+
   auto *elem_meanweight_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
+  assert_always(elem_meanweight_allcells != nullptr);
 
   double *nltepops_allcells = nullptr;
   if (globals::total_nlte_levels > 0) {
