@@ -747,7 +747,7 @@ static void allocate_composition_cooling()
     assert_always(nltepops_allcells != nullptr);
   }
 
-  for (int nonemptymgi = 0; nonemptymgi < npts_nonempty; nonemptymgi++) {
+  for (size_t nonemptymgi = 0; nonemptymgi < npts_nonempty; nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
     modelgrid[modelgridindex].elements_uppermost_ion = static_cast<int *>(malloc(get_nelements() * sizeof(int)));
