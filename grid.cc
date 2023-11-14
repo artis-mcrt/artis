@@ -658,7 +658,7 @@ static void calculate_kappagrey() {
   /// Second pass through allows calculation of normalized chi_grey
   double check1 = 0.0;
   double check2 = 0.0;
-  for (size_t nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
     if (get_rho_tmin(mgi) > 0) {
       double kappa = 0.;
