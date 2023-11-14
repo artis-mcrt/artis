@@ -140,6 +140,7 @@ jobs:
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
+                  rm *.tmp
                   mkdir job1
                   ../../scripts/movefiles.sh job1
 
@@ -185,7 +186,6 @@ jobs:
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   touch requirements.txt
-                  rm output/packets*.*
                   find . -name "*_res_*.out" -exec zstd -v -T0 --rm -f {} \;
 
             - name: Upload output files
