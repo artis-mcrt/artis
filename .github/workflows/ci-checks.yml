@@ -5,9 +5,10 @@ on:
     push:
         branches-ignore:
             - classic*
-  # pull_request:
-  #     branches-ignore:
-  #         - classic*
+    workflow_dispatch:
+    # pull_request:
+    #     branches-ignore:
+    #         - classic*
 
 jobs:
     cppcheck:
@@ -106,9 +107,9 @@ jobs:
             - name: install gsl
               run: sudo apt install libgsl-dev
 
-      # - name: Set compiler environment variables (MPI off)
-      #   if: matrix.mpi == 'OFF'
-      #   run: echo "CXX=${{ matrix.compiler.cmd }}" >> $GITHUB_ENV
+            # - name: Set compiler environment variables (MPI off)
+            #   if: matrix.mpi == 'OFF'
+            #   run: echo "CXX=${{ matrix.compiler.cmd }}" >> $GITHUB_ENV
 
             - name: Set compiler environment variables (MPI on)
               if: matrix.mpi == 'ON'
