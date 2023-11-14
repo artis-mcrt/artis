@@ -1009,7 +1009,7 @@ static auto calculate_simtime_endecay_per_ejectamass(const int mgi, const int de
 static auto get_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex) -> double
 // get the decay energy released during the simulation time per unit mass [erg/g]
 {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+  const size_t nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
   const double chainendecay = decaypath_energy_per_mass[nonemptymgi * get_num_decaypaths() + decaypathindex];
   assert_testmodeonly(chainendecay >= 0.);
   assert_testmodeonly(std::isfinite(chainendecay));
