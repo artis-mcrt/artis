@@ -81,6 +81,8 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
     "23: kpktdiffusion_timescale n_kpktdiffusion_timesteps: kpkts diffuse x of a time step's length for the first y "
     "time steps"};
 
+static chphixstargets_t *chphixstargetsblock = nullptr;
+
 static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_inputtable, const int element,
                                   const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
                                   const double phixs_threshold_ev, size_t *mem_usage_phixs) {
@@ -1253,8 +1255,7 @@ static void setup_cellhistory() {
     }
     assert_always(chlevelblocksize > 0);
     globals::cellhistory[tid].ch_all_levels = static_cast<struct chlevels *>(malloc(chlevelblocksize));
-    chphixstargets_t *chphixstargetsblock =
-        chphixsblocksize > 0 ? static_cast<chphixstargets_t *>(malloc(chphixsblocksize)) : nullptr;
+    chphixstargetsblock = chphixsblocksize > 0 ? static_cast<chphixstargets_t *>(malloc(chphixsblocksize)) : nullptr;
     mem_usage_cellhistory += chlevelblocksize + chphixsblocksize;
 
     mem_usage_cellhistory += chtransblocksize * sizeof(double);
