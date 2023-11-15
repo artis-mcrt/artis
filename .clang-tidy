@@ -27,6 +27,7 @@ Checks: >
     -cppcoreguidelines-pro-type-vararg,
     -clang-diagnostic-error,
     -fuchsia-*,
+    -google-objc*,
     -google-readability-todo,
     -google-runtime-int,
     -hicpp-vararg,
