@@ -1828,12 +1828,10 @@ void do_ntlepton(struct packet *pkt_ptr) {
       zrand -= frac_ionization;
       // now zrand is between zero and frac_excitation
       // the selection algorithm is the same as for the ionization transitions
-      const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list.size();
-      for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
-        const double frac_deposition_exc =
-            nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition;
+      for (const auto &ntexcitation : nt_solution[modelgridindex].frac_excitations_list) {
+        const double frac_deposition_exc = ntexcitation.frac_deposition;
         if (zrand < frac_deposition_exc) {
-          const int lineindex = nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex;
+          const int lineindex = ntexcitation.lineindex;
           const int element = globals::linelist[lineindex].elementindex;
           const int ion = globals::linelist[lineindex].ionindex;
           // const int lower = linelist[lineindex].lowerlevelindex;
@@ -2059,7 +2057,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
     const auto T_e = grid::get_Te(modelgridindex);
     printout("  Top non-thermal excitation fractions (total excitations = %d):\n",
              nt_solution[modelgridindex].frac_excitations_list.size());
-    int ntransdisplayed = nt_solution[modelgridindex].frac_excitations_list.size();
+    auto ntransdisplayed = static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size());
     ntransdisplayed = (ntransdisplayed > 50) ? 50 : ntransdisplayed;
     for (excitationindex = 0; excitationindex < ntransdisplayed; excitationindex++) {
       const double frac_deposition = nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition;
@@ -2598,12 +2596,9 @@ void write_restart_data(FILE *gridsave_file) {
         // write NT excitations
         fprintf(gridsave_file, "%d\n", static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size()));
 
-        const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list.size();
-        for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
-          fprintf(gridsave_file, "%la %la %d\n",
-                  nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition,
-                  nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition,
-                  nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex);
+        for (const auto &excitation : nt_solution[modelgridindex].frac_excitations_list) {
+          fprintf(gridsave_file, "%la %la %d\n", excitation.frac_deposition, excitation.ratecoeffperdeposition,
+                  excitation.lineindex);
         }
 
         // write non-thermal spectrum
@@ -2730,15 +2725,16 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
               MPI_FLOAT, root, MPI_COMM_WORLD);
 
     // communicate NT excitations
-    const int frac_excitations_list_size_old = nt_solution[modelgridindex].frac_excitations_list.size();
-    int frac_excitations_list_size_new = nt_solution[modelgridindex].frac_excitations_list.size();
+    const int frac_excitations_list_size_old =
+        static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size());
+    int frac_excitations_list_size_new = frac_excitations_list_size_old;
     MPI_Bcast(&frac_excitations_list_size_new, 1, MPI_INT, root, MPI_COMM_WORLD);
 
     if (frac_excitations_list_size_new != frac_excitations_list_size_old) {
       nt_solution[modelgridindex].frac_excitations_list.resize(frac_excitations_list_size_new);
     }
 
-    const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list.size();
+    const int frac_excitations_list_size = static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size());
     for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
       MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
                 root, MPI_COMM_WORLD);
