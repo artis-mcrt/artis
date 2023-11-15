@@ -510,7 +510,6 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
                                                  struct transitions *transitions, int *lineindex,
                                                  std::vector<struct linelist_entry> &temp_linelist) {
   const int lineindex_initial = *lineindex;
-  const int tottransitions = transitiontable.size();
   int totupdowntrans = 0;
   // pass 0 to get transition counts of each level
   // pass 1 to allocate and fill transition arrays
@@ -556,9 +555,9 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
     }
 
     totupdowntrans = 0;
-    for (int ii = 0; ii < tottransitions; ii++) {
-      const int level = transitiontable[ii].upper;
-      const int targetlevel = transitiontable[ii].lower;
+    for (const auto &transition : transitiontable) {
+      const int level = transition.upper;
+      const int targetlevel = transition.lower;
       if (pass == 0) {
         assert_always(targetlevel >= 0);
         assert_always(level > targetlevel);
@@ -589,8 +588,8 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
         totupdowntrans += 2;
 
         if (pass == 1 && globals::rank_in_node == 0) {
-          const float A_ul = transitiontable[ii].A;
-          const float coll_str = transitiontable[ii].coll_str;
+          const float A_ul = transition.A;
+          const float coll_str = transition.coll_str;
 
           const auto g_ratio = stat_weight(element, ion, level) / stat_weight(element, ion, targetlevel);
           const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
@@ -617,14 +616,14 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
               .einstein_A = static_cast<float>(A_ul),
               .coll_str = coll_str,
               .osc_strength = f_ul,
-              .forbidden = transitiontable[ii].forbidden};
+              .forbidden = transition.forbidden};
           globals::elements[element].ions[ion].levels[targetlevel].uptrans[nloweruptrans - 1] = {
               .lineindex = -1,
               .targetlevelindex = level,
               .einstein_A = static_cast<float>(A_ul),
               .coll_str = coll_str,
               .osc_strength = f_ul,
-              .forbidden = transitiontable[ii].forbidden};
+              .forbidden = transition.forbidden};
         }
 
         /// This is not a metastable level.
@@ -635,8 +634,8 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
         // This is a new branch to deal with lines that have different types of transition. It should trip after a
         // transition is already known.
         const int linelistindex = transitions[level].to[level - targetlevel - 1];
-        const float A_ul = transitiontable[ii].A;
-        const float coll_str = transitiontable[ii].coll_str;
+        const float A_ul = transition.A;
+        const float coll_str = transition.coll_str;
 
         const auto g_ratio = stat_weight(element, ion, level) / stat_weight(element, ion, targetlevel);
         const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
