@@ -502,6 +502,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     pkt_ptr->em_time = pkt_ptr->prop_time;
     pkt_ptr->nscatterings = 0;
 
+    vpkt_call_estimators(pkt_ptr, TYPE_KPKT);
     return;
   }
 
@@ -541,6 +542,8 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
     pkt_ptr->em_time = pkt_ptr->prop_time;
     pkt_ptr->nscatterings = 0;
+
+    vpkt_call_estimators(pkt_ptr, TYPE_KPKT);
 
     return;
   }

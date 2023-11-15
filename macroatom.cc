@@ -221,6 +221,8 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
   vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
   pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
+
+  vpkt_call_estimators(pkt_ptr, TYPE_MA);
 }
 
 static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridindex, const int element, int *ion,
@@ -289,6 +291,8 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
   vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
   pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
+
+  vpkt_call_estimators(pkt_ptr, TYPE_MA);
 }
 
 static void do_macroatom_ionisation(const int modelgridindex, const int element, int *ion, int *level,

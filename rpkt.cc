@@ -218,9 +218,6 @@ static auto get_event(const int modelgridindex,
 }
 
 static void electron_scatter_rpkt(struct packet *pkt_ptr) {
-  // generate a virtual packet
-  vpkt_call_estimators(pkt_ptr, pkt_ptr->type);
-
   /// now make the packet a r-pkt and set further flags
   pkt_ptr->type = TYPE_RPKT;
   pkt_ptr->last_cross = BOUNDARY_NONE;  /// allow all further cell crossings
@@ -396,6 +393,9 @@ static void rpkt_event_continuum(struct packet *pkt_ptr,
     pkt_ptr->nscatterings += 1;
     pkt_ptr->last_event = 12;
     stats::increment(stats::COUNTER_ESCOUNTER);
+
+    // generate a virtual packet
+    vpkt_call_estimators(pkt_ptr, TYPE_RPKT);
 
     // pkt_ptr->nu_cmf = 3.7474058e+14;
     electron_scatter_rpkt(pkt_ptr);
@@ -757,7 +757,6 @@ void do_rpkt(struct packet *pkt_ptr, const double t2) {
 }
 
 void emit_rpkt(struct packet *pkt_ptr) {
-  const auto type_before_rpkt = pkt_ptr->type;
   /// now make the packet a r-pkt and set further flags
   pkt_ptr->type = TYPE_RPKT;
   pkt_ptr->last_cross = BOUNDARY_NONE;  /// allow all further cell crossings
@@ -801,8 +800,6 @@ void emit_rpkt(struct packet *pkt_ptr) {
   // printout("initialise pol state of packet %g, %g, %g, %g,
   // %g\n",pkt_ptr->stokes_qu[0],pkt_ptr->stokes_qu[1],pkt_ptr->pol_dir[0],pkt_ptr->pol_dir[1],pkt_ptr->pol_dir[2]);
   // printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
-
-  vpkt_call_estimators(pkt_ptr, type_before_rpkt);
 }
 
 static auto calculate_chi_ff(const int modelgridindex, const double nu) -> double
