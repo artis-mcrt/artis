@@ -1,7 +1,5 @@
 #include "vpkt.h"
 
-#include <math.h>
-#include <stdio.h>
 #include <sys/unistd.h>
 #include <unistd.h>
 
