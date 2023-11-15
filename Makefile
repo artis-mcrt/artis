@@ -88,6 +88,7 @@ else
 endif
 
 ifeq ($(OPTIMIZE),OFF)
+	BUILD_DIR := $(BUILD_DIR)_optimizeoff
 	CXXFLAGS += -O0
 else
 	ifeq ($(FASTMATH),ON)
@@ -137,34 +138,40 @@ common_files := $(filter-out sn3d.cc exspec.cc, $(wildcard *.cc))
 
 sn3d_files = sn3d.cc $(common_files)
 sn3d_objects = $(addprefix $(BUILD_DIR)/,$(sn3d_files:.cc=.o))
+sn3d_dep = $(sn3d_objects:%.o=%.d)
 
 exspec_files = exspec.cc $(common_files)
 exspec_objects = $(addprefix $(BUILD_DIR)/,$(exspec_files:.cc=.o))
+exspec_dep = $(exspec_objects:%.o=%.d)
 
 all: sn3d exspec
 
-sn3d: clean version.h $(sn3d_objects)
-	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
+$(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
+	@mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) -MD -MP -c $< -o $@
 
-sn3dwhole: version.h
+$(BUILD_DIR)/sn3d.o $(BUILD_DIR)/exspec.o: version.h artisoptions.h Makefile
+
+sn3d: $(sn3d_objects) artisoptions.h Makefile
+	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
+-include $(sn3d_dep)
+
+sn3dwhole: version.h artisoptions.h Makefile
 	$(CXX) $(CXXFLAGS) -g $(sn3d_files) $(LDFLAGS) -o sn3d
 
-$(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile version.h clean
-	@mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-exspec: clean version.h $(exspec_objects)
+exspec: $(exspec_objects)
 	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec
+-include $(exspec_dep)
 
 .PHONY: clean version.h TESTMODE TESTMODEON
 
-version.h: clean
-	echo "constexpr const char* GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";" > version.h
-	echo "constexpr const char* GIT_HASH = \"$(shell git rev-parse HEAD)\";" >> version.h
+version.h:
+	@echo "constexpr const char* GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";" > version.h
+	@echo "constexpr const char* GIT_HASH = \"$(shell git rev-parse HEAD)\";" >> version.h
 # requires git > 2.22
 # @echo "constexpr const char* GIT_BRANCH = \"$(shell git branch --show)\";" >> version.h
-	echo "constexpr const char* GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD )\";" >> version.h
-	echo "constexpr const char* GIT_STATUS = \"$(shell git status --short)\";" >> version.h
+	@echo "constexpr const char* GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD )\";" >> version.h
+	@echo "constexpr const char* GIT_STATUS = \"$(shell git status --short)\";" >> version.h
 
 clean:
 	rm -rf sn3d exspec build *.o *.d
