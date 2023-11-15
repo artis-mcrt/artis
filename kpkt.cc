@@ -414,10 +414,9 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
     /// Randomly select the occuring cooling process
     double coolingsum = 0.;
-    const double zrand = rng_uniform();
 
     assert_always(grid::modelgrid[modelgridindex].totalcooling > 0.);
-    const double rndcool_ion = zrand * grid::modelgrid[modelgridindex].totalcooling;
+    const double rndcool_ion = rng_uniform() * grid::modelgrid[modelgridindex].totalcooling;
 
     int element = -1;
     int ion = -1;
@@ -496,8 +495,8 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     assert_always(i <= ihigh);
 
     // printout("do_kpkt: selected process %d, coolingsum %g\n", i, coolingsum);
-
-    if (coolinglist[i].type == COOLINGTYPE_FF) {
+    const auto rndcoolingtype = coolinglist[i].type;
+    if (rndcoolingtype == COOLINGTYPE_FF) {
       /// The k-packet converts directly into a r-packet by free-free-emission.
       /// Need to select the r-packets frequency and a random direction in the
       /// co-moving frame.
@@ -522,7 +521,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       pkt_ptr->nscatterings = 0;
 
       vpkt_call_estimators(pkt_ptr, TYPE_KPKT);
-    } else if (coolinglist[i].type == COOLINGTYPE_FB) {
+    } else if (rndcoolingtype == COOLINGTYPE_FB) {
       /// The k-packet converts directly into a r-packet by free-bound-emission.
       /// Need to select the r-packets frequency and a random direction in the
       /// co-moving frame.
@@ -561,7 +560,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       pkt_ptr->nscatterings = 0;
 
       vpkt_call_estimators(pkt_ptr, TYPE_KPKT);
-    } else if (coolinglist[i].type == COOLINGTYPE_COLLEXC) {
+    } else if (rndcoolingtype == COOLINGTYPE_COLLEXC) {
       /// the k-packet activates a macro-atom due to collisional excitation
       // printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
       const float nne = grid::get_nne(modelgridindex);
@@ -625,7 +624,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       pkt_ptr->last_event = 8;
       pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
       pkt_ptr->trueemissionvelocity = -1;
-    } else if (coolinglist[i].type == COOLINGTYPE_COLLION) {
+    } else if (rndcoolingtype == COOLINGTYPE_COLLION) {
       /// the k-packet activates a macro-atom due to collisional ionisation
       // printout("[debug] do_kpkt: k-pkt -> collisional ionisation of MA\n");
       const int element = coolinglist[i].element;
@@ -648,12 +647,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
       pkt_ptr->trueemissionvelocity = -1;
     } else {
-      printout("[fatal] do_kpkt: coolinglist.type mismatch\n");
-      printout("[fatal] do_kpkt: zrand %g, grid::modelgrid[modelgridindex].totalcooling %g, coolingsum %g, i %d\n",
-               zrand, grid::modelgrid[modelgridindex].totalcooling, coolingsum, i);
-      printout("[fatal] do_kpkt: coolinglist[i].type %d\n", coolinglist[i].type);
-      printout("[fatal] do_kpkt: pkt_ptr->where %d, mgi %d\n", pkt_ptr->where, modelgridindex);
-      abort();
+      assert_testmodeonly(false);
     }
 
     pkt_ptr->interactions++;
