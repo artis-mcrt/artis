@@ -1,5 +1,6 @@
 #ifndef SN3D_H
 #define SN3D_H
+#pragma once
 
 #include <getopt.h>
 #include <gsl/gsl_integration.h>

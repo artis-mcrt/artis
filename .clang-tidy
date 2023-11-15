@@ -16,6 +16,7 @@ Checks: >
     -cert-err33-c,
     -cert-err34-c,
     -cert-err58-cpp,
+    -clang-diagnostic-unused-macros,
     -cppcoreguidelines-avoid-magic-numbers,
     -cppcoreguidelines-avoid-non-const-global-variables,
     -cppcoreguidelines-macro-usage,
@@ -34,13 +35,13 @@ Checks: >
     -hicpp-no-array-decay,
     -hicpp-no-malloc,
     -hicpp-signed-bitwise,
+    -llvm-header-guard,
     -misc-use-anonymous-namespace,
     -misc-no-recursion,
     -misc-non-private-member-variables-in-classes,
     -readability-identifier-length,
     -readability-function-cognitive-complexity,
     -readability-magic-numbers,
-    -*c++*-compat
 WarningsAsErrors: ''
 FormatStyle: file
 #ExtraArgs: [-std=c++20]
