@@ -6,8 +6,8 @@
 
 void do_rpkt(struct packet *pkt_ptr, double t2);
 void emit_rpkt(struct packet *pkt_ptr);
-int closest_transition(double nu_cmf, int next_trans);
-double calculate_chi_bf_gammacontr(int modelgridindex, double nu);
+auto closest_transition(double nu_cmf, int next_trans) -> int;
+auto calculate_chi_bf_gammacontr(int modelgridindex, double nu) -> double;
 void calculate_chi_rpkt_cont(double nu_cmf, struct rpkt_continuum_absorptioncoeffs *chi_rpkt_cont_thisthread,
                              int modelgridindex, bool usecellhistupdatephixslist);
 
