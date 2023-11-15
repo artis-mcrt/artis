@@ -415,7 +415,6 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       break;
     }
   }
-  // printout("kpkt selected Z=%d ionstage %d\n", get_atomicnumber(element), get_ionstage(element, ion));
 
   if (element >= get_nelements() || element < 0 || ion >= get_nions(element) || ion < 0) {
     printout("do_kpkt: problem selecting a cooling process ... abort\n");
@@ -434,16 +433,16 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     abort();
   }
 
-  // printout("element %d, ion %d, coolingsum %g\n",element,ion,coolingsum);
   const int ilow = get_coolinglistoffset(element, ion);
   const int ihigh = ilow + get_ncoolingterms_ion(element, ion) - 1;
-  // printout("element %d, ion %d, low %d, high %d\n",element,ion,low,high);
+
   if (globals::cellhistory[tid].cooling_contrib[ilow] < 0.) {
     // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d
     // oldcoolingsum %g\n",
     //          modelgridindex, element, ion, ilow, high, oldcoolingsum);
     const double C_ion =
         calculate_cooling_rates_ion<true>(modelgridindex, element, ion, ilow, tid, nullptr, nullptr, nullptr, nullptr);
+
     // we just summed up every individual cooling process. make sure it matches the stored total for the ion
     assert_always(C_ion == grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]);
   }
@@ -486,13 +485,13 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     // printout("[debug] do_kpkt: k-pkt -> free-free\n");
 
     /// Sample the packets comoving frame frequency according to paperII 5.4.3 eq.41
-    // zrand = rng_uniform();   /// delivers zrand in [0,1[
-    // zrand = 1. - zrand;             /// make sure that log gets a zrand in ]0,1]
+
     const double zrand = rng_uniform_pos();  /// delivers zrand in ]0,1[
     pkt_ptr->nu_cmf = -KB * T_e / H * log(zrand);
 
     assert_always(std::isfinite(pkt_ptr->nu_cmf));
-    /// and then emitt the packet randomly in the comoving frame
+
+    /// and then emit the packet randomly in the comoving frame
     emit_rpkt(pkt_ptr);
     pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
     stats::increment(stats::COUNTER_K_STAT_TO_R_FF);
