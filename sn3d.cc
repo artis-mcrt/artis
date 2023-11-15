@@ -423,7 +423,7 @@ static void remove_temp_packetsfile(const int timestep, const int my_rank) {
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   if (access(filename, F_OK) == 0) {
-    remove(filename);
+    std::remove(filename);
     printout("Deleted %s\n", filename);
   }
 }
@@ -433,7 +433,7 @@ static void remove_grid_restart_data(const int timestep) {
   snprintf(prevfilename, MAXFILENAMELENGTH, "gridsave_ts%d.tmp", timestep);
 
   if (access(prevfilename, F_OK) == 0) {
-    remove(prevfilename);
+    std::remove(prevfilename);
     printout("Deleted %s\n", prevfilename);
   }
 }
