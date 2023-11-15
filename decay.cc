@@ -133,7 +133,7 @@ double *decaypath_energy_per_mass = nullptr;
 MPI_Win win_decaypath_energy_per_mass = MPI_WIN_NULL;
 #endif
 
-auto get_num_nuclides() -> int { return nuclides.size(); }
+auto get_num_nuclides() -> int { return static_cast<int>(nuclides.size()); }
 
 auto get_elname(const int z) -> const char * {
   assert_testmodeonly(z <= Z_MAX);
@@ -384,7 +384,7 @@ static void extend_lastdecaypath()
 // follow decays at the ends of the current list of decaypaths,
 // to get decaypaths from all descendants
 {
-  const int startdecaypathindex = decaypaths.size() - 1;
+  const int startdecaypathindex = static_cast<int>(decaypaths.size() - 1);
 
   const int daughter_z = decaypaths[startdecaypathindex].final_daughter_z();
   const int daughter_a = decaypaths[startdecaypathindex].final_daughter_a();
@@ -693,7 +693,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
           alphanucindex = get_nucindex(z, a);
         } else {
           nuclides.push_back({.z = z, .a = a, .meanlife = tau_sec, .endecay_gamma = e_gamma_mev * MEV});
-          alphanucindex = nuclides.size() - 1;
+          alphanucindex = static_cast<int>(nuclides.size() - 1);
         }
         nuclides[alphanucindex].endecay_alpha = e_alpha_mev * MEV;
         nuclides[alphanucindex].branchprobs[DECAYTYPE_BETAMINUS] = branch_beta;
