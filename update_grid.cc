@@ -17,7 +17,9 @@
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#ifdef MPI_ON
 #include "mpi.h"
+#endif
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "radfield.h"

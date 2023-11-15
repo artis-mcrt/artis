@@ -30,7 +30,9 @@
 #include "grid.h"
 #include "gsl/gsl_interp.h"
 #include "kpkt.h"
+#ifdef MPI_ON
 #include "mpi.h"
+#endif
 #include "packet.h"
 #include "ratecoeff.h"
 #include "sn3d.h"

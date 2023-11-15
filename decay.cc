@@ -27,7 +27,9 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#ifdef MPI_ON
 #include "mpi.h"
+#endif
 #include "nonthermal.h"
 #include "packet.h"
 #include "sn3d.h"

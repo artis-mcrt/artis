@@ -20,7 +20,9 @@
 #include "ltepop.h"
 #include "macroatom.h"
 #include "md5.h"
+#ifdef MPI_ON
 #include "mpi.h"
+#endif
 #include "radfield.h"
 #include "sn3d.h"
 

@@ -24,7 +24,9 @@
 #include "gsl/gsl_permutation.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#ifdef MPI_ON
 #include "mpi.h"
+#endif
 #include "packet.h"
 #include "sn3d.h"
 #include "stats.h"

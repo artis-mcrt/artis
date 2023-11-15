@@ -19,7 +19,9 @@
 #include "gsl/gsl_integration.h"
 #include "input.h"
 #include "light_curve.h"
+#ifdef MPI_ON
 #include "mpi.h"
+#endif
 #include "packet.h"
 #include "sn3d.h"
 #include "spectrum.h"

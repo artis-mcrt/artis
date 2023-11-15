@@ -15,7 +15,9 @@
 #include "grid.h"
 #include "kpkt.h"
 #include "macroatom.h"
+#ifdef MPI_ON
 #include "mpi.h"
+#endif
 #include "nonthermal.h"
 #include "packet.h"
 #include "rpkt.h"

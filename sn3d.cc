@@ -37,7 +37,9 @@
 #include "gsl/gsl_integration.h"
 #include "input.h"
 #include "macroatom.h"
+#ifdef MPI_ON
 #include "mpi.h"
+#endif
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "packet.h"

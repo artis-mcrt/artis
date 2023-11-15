@@ -19,7 +19,9 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#ifdef MPI_ON
 #include "mpi.h"
+#endif
 #include "sn3d.h"
 #include "vectors.h"
 

@@ -20,7 +20,9 @@
 #include "globals.h"
 #include "grid.h"
 #include "gsl/gsl_math.h"
+#ifdef MPI_ON
 #include "mpi.h"
+#endif
 #include "packet.h"
 #include "sn3d.h"
 #include "vectors.h"
