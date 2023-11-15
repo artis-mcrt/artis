@@ -525,7 +525,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       /// The k-packet converts directly into a r-packet by free-bound-emission.
       /// Need to select the r-packets frequency and a random direction in the
       /// co-moving frame.
-      const int element = coolinglist[i].element;
+      assert_testmodeonly(coolinglist[i].element == element);
       const int lowerion = coolinglist[i].ion;
       const int lowerlevel = coolinglist[i].level;
       const int upper = coolinglist[i].upperlevel;
