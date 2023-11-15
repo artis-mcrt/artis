@@ -189,10 +189,10 @@ inline auto get_thread_num() -> int {
 }
 
 inline auto rng_uniform() -> float {
-  float zrand;
-  do {
-    zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
-  } while (zrand == 1.);
+  const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
+  if (zrand == 1.) {
+    return rng_uniform();
+  }
   return zrand;
 }
 
