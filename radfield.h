@@ -32,12 +32,12 @@ void do_MPI_Bcast(int modelgridindex, int root, int root_node_id);
 void write_restart_data(FILE *gridsave_file);
 void read_restart_data(FILE *gridsave_file);
 void normalise_bf_estimators(int modelgridindex, double estimator_normfactor_over_H);
-double get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex);
+auto get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex) -> double;
 void print_bfrate_contributions(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex,
                                 double nnlowerlevel, double nnlowerion);
 void reset_bfrate_contributions(int modelgridindex);
-int integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel, size_t limit, int key,
-              gsl_integration_workspace *workspace, double *result, double *abserr);
+auto integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel, size_t limit, int key,
+               gsl_integration_workspace *workspace, double *result, double *abserr) -> int;
 
 constexpr double dbb(double nu, auto T, auto W)
 // returns J_nu [ergs/s/sr/cm2/Hz] for a dilute black body with temperature T and dilution factor W
