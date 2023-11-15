@@ -23,9 +23,6 @@
 
 // Material for handing r-packet propagation.
 
-constexpr int RPKT_EVENTTYPE_BB = 550;
-constexpr int RPKT_EVENTTYPE_CONT = 551;
-
 auto closest_transition(const double nu_cmf, const int next_trans) -> int
 /// for the propagation through non empty cells
 // find the next transition lineindex redder than nu_cmf
@@ -61,7 +58,7 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
 
 static auto get_event(const int modelgridindex,
                       struct packet *pkt_ptr,  // pointer to packet object
-                      int *rpkt_eventtype,
+                      bool *event_is_boundbound,
                       const double tau_rnd,    // random optical depth until which the packet travels
                       const double abort_dist  // maximal travel distance before packet leaves cell or time step ends
                       ) -> double
@@ -176,7 +173,7 @@ static auto get_event(const int modelgridindex,
                                            dummypkt.prop_time * CLIGHT * dummypkt.e_cmf / dummypkt.nu_cmf);
           }
 
-          *rpkt_eventtype = RPKT_EVENTTYPE_BB;
+          *event_is_boundbound = true;
           /// the line and its parameters were already selected by closest_transition!
           // printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop
           // %d\n",edist,abort_dist,edist-abort_dist,endloop);
@@ -188,7 +185,7 @@ static auto get_event(const int modelgridindex,
       } else {
         /// continuum process occurs before reaching the line
 
-        *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
+        *event_is_boundbound = false;
 
         pkt_ptr->next_trans = dummypkt.next_trans - 1;
 
@@ -205,7 +202,7 @@ static auto get_event(const int modelgridindex,
       }
       /// continuum process occurs at edist
 
-      *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
+      *event_is_boundbound = false;
 
       pkt_ptr->next_trans = globals::nlines + 1;
 
@@ -678,7 +675,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
   /// Get distance to the next physical event (continuum or bound-bound)
   double edist = -1;
-  int rpkt_eventtype = -1;
+  bool event_is_boundbound = true;
   if (mgi == grid::get_npts_model()) {
     /// for empty cells no physical event occurs. The packets just propagate.
     edist = std::numeric_limits<double>::max();
@@ -692,7 +689,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     edist = (tau_next - tau_current) / kappa;
     pkt_ptr->next_trans = -1;
   } else {
-    edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, tau_next, fmin(tdist, sdist));
+    edist = get_event(mgi, pkt_ptr, &event_is_boundbound, tau_next, fmin(tdist, sdist));
   }
   assert_always(edist >= 0);
 
@@ -722,12 +719,10 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
     if (grid::modelgrid[mgi].thick == 1) {
       rpkt_event_thickcell(pkt_ptr);
-    } else if (rpkt_eventtype == RPKT_EVENTTYPE_BB) {
+    } else if (event_is_boundbound) {
       rpkt_event_boundbound(pkt_ptr, mgi);
-    } else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT) {
-      rpkt_event_continuum(pkt_ptr, globals::chi_rpkt_cont[tid], mgi);
     } else {
-      assert_always(false);
+      rpkt_event_continuum(pkt_ptr, globals::chi_rpkt_cont[tid], mgi);
     }
 
     return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
