@@ -153,6 +153,9 @@ $(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
 
 $(BUILD_DIR)/sn3d.o $(BUILD_DIR)/exspec.o: version.h artisoptions.h Makefile
 
+check: $(sn3d_files)
+	run-clang-tidy $(sn3d_files)
+
 sn3d: $(sn3d_objects) artisoptions.h Makefile
 	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
 -include $(sn3d_dep)

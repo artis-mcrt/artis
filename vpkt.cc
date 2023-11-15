@@ -651,7 +651,7 @@ void vpkt_remove_temp_file(const int nts, const int my_rank) {
 
   for (auto &filename : filenames) {
     if (access(filename, F_OK) == 0) {
-      remove(filename);
+      std::remove(filename);
       printout("Deleted %s\n", filename);
     }
   }
@@ -965,14 +965,14 @@ auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<doubl
   if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 > 0)) {
     i = acos(cos_stokes_rot_1);
   } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 > 0)) {
-    i = M_PI - acos(fabs(cos_stokes_rot_1));
+    i = PI - acos(fabs(cos_stokes_rot_1));
   } else if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 < 0)) {
-    i = 2 * M_PI - acos(cos_stokes_rot_1);
+    i = 2 * PI - acos(cos_stokes_rot_1);
   } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 < 0)) {
-    i = M_PI + acos(fabs(cos_stokes_rot_1));
+    i = PI + acos(fabs(cos_stokes_rot_1));
   }
   if (cos_stokes_rot_1 == 0) {
-    i = M_PI / 2.;
+    i = PI / 2.;
   }
   if (cos_stokes_rot_2 == 0) {
     i = 0.0;
@@ -1061,21 +1061,21 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
     if ((cos2rot_angle > 0) && (sin2rot_angle > 0)) {
       rot_angle = acos(Q0 / p) / 2.;
     } else if ((cos2rot_angle < 0) && (sin2rot_angle > 0)) {
-      rot_angle = (M_PI - acos(fabs(cos2rot_angle))) / 2.;
+      rot_angle = (PI - acos(fabs(cos2rot_angle))) / 2.;
     } else if ((cos2rot_angle < 0) && (sin2rot_angle < 0)) {
-      rot_angle = (M_PI + acos(fabs(cos2rot_angle))) / 2.;
+      rot_angle = (PI + acos(fabs(cos2rot_angle))) / 2.;
     } else if ((cos2rot_angle > 0) && (sin2rot_angle < 0)) {
-      rot_angle = (2. * M_PI - acos(fabs(cos2rot_angle))) / 2.;
+      rot_angle = (2. * PI - acos(fabs(cos2rot_angle))) / 2.;
     } else if (cos2rot_angle == 0) {
-      rot_angle = 0.25 * M_PI;
+      rot_angle = 0.25 * PI;
       if (U0 < 0) {
-        rot_angle = 0.75 * M_PI;
+        rot_angle = 0.75 * PI;
       }
     }
     if (sin2rot_angle == 0) {
       rot_angle = 0.0;
       if (Q0 < 0) {
-        rot_angle = 0.5 * M_PI;
+        rot_angle = 0.5 * PI;
       }
     }
   }
@@ -1105,14 +1105,14 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
   if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 < 0)) {
     theta_rot = acos(cosine_elec_ref1);
   } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 > 0)) {
-    theta_rot = M_PI + acos(fabs(cosine_elec_ref1));
+    theta_rot = PI + acos(fabs(cosine_elec_ref1));
   } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 < 0)) {
-    theta_rot = M_PI - acos(fabs(cosine_elec_ref1));
+    theta_rot = PI - acos(fabs(cosine_elec_ref1));
   } else if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 > 0)) {
-    theta_rot = 2 * M_PI - acos(cosine_elec_ref1);
+    theta_rot = 2 * PI - acos(cosine_elec_ref1);
   }
   if (cosine_elec_ref1 == 0) {
-    theta_rot = M_PI / 2.;
+    theta_rot = PI / 2.;
   }
   if (cosine_elec_ref2 == 0) {
     theta_rot = 0.0;
@@ -1121,7 +1121,7 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
     theta_rot = 0.0;
   }
   if (cosine_elec_ref1 < -1) {
-    theta_rot = M_PI;
+    theta_rot = PI;
   }
 
   // Compute Stokes Parameters in the CMF

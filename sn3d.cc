@@ -694,9 +694,9 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
       // final packets*.out have been written, so remove the temporary packets files
       // commented out because you might still want to resume the simulation
       // snprintf(filename, MAXFILENAMELENGTH, "packets%d_%d_odd.tmp", 0, my_rank);
-      // remove(filename);
+      // std::remove(filename);
       // snprintf(filename, MAXFILENAMELENGTH, "packets%d_%d_even.tmp", 0, my_rank);
-      // remove(filename);
+      // std::remove(filename);
     }
   }
   return !do_this_full_loop;
