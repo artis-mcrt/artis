@@ -355,10 +355,8 @@ static auto sample_planck(const double T) -> double
   const double B_peak = radfield::dbb(nu_peak, T, 1);
 
   while (true) {
-    const double zrand = rng_uniform();
-    const double zrand2 = rng_uniform();
-    const double nu = NU_MIN_R + zrand * (NU_MAX_R - NU_MIN_R);
-    if (zrand2 * B_peak <= radfield::dbb(nu, T, 1)) {
+    const double nu = NU_MIN_R + rng_uniform() * (NU_MAX_R - NU_MIN_R);
+    if (rng_uniform() * B_peak <= radfield::dbb(nu, T, 1)) {
       return nu;
     }
     // printout("[debug] sample_planck: planck_sampling %d\n", i);

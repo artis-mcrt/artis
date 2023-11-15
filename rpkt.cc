@@ -242,8 +242,8 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   if constexpr (DIPOLE) {
     // Assume dipole function (rejecton method, see Code & Whitney 1995)
     double p = 0.;
-    double x = 0.;
-    do {
+    double x = 1.;
+    while (x > p) {
       const double zrand = rng_uniform();
       const double zrand2 = rng_uniform();
       const double zrand3 = rng_uniform();
@@ -262,7 +262,7 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
 
       // generate a number between 0 and the maximum of the previous function (2)
       x = 2 * zrand3;
-    } while (x > p);
+    };
   } else {
     // Assume isotropic scattering
     const double zrand = rng_uniform();
