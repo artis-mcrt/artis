@@ -72,7 +72,7 @@ extern gsl_integration_workspace *gslworkspace;
 // #define printout(...) fprintf(output_file, __VA_ARGS__)
 
 template <typename... Args>
-static int printout(const char *format, Args... args) {
+static auto printout(const char *format, Args... args) -> int {
   if (globals::startofline[tid]) {
     const time_t now_time = time(nullptr);
     char s[32] = "";
@@ -83,7 +83,7 @@ static int printout(const char *format, Args... args) {
   return fprintf(output_file, format, args...);
 }
 
-static int printout(const char *format) {
+static auto printout(const char *format) -> int {
   if (globals::startofline[tid]) {
     const time_t now_time = time(nullptr);
     char s[32] = "";
@@ -94,8 +94,8 @@ static int printout(const char *format) {
   return fprintf(output_file, "%s", format);
 }
 
-static inline int get_bflutindex(const int tempindex, const int element, const int ion, const int level,
-                                 const int phixstargetindex) {
+static inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
+                                  const int phixstargetindex) -> int {
   const int contindex = -1 - globals::elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
 
   const int bflutindex = tempindex * globals::nbfcontinua + contindex;
@@ -121,7 +121,7 @@ static inline void gsl_error_handler_printout(const char *reason, const char *fi
   }
 }
 
-static FILE *fopen_required(const std::string &filename, const char *mode) {
+static auto fopen_required(const std::string &filename, const char *mode) -> FILE * {
   // look in the data folder first
   const std::string datafolderfilename = "data/" + filename;
   if (mode[0] == 'r' && std::filesystem::exists(datafolderfilename)) {
@@ -137,7 +137,7 @@ static FILE *fopen_required(const std::string &filename, const char *mode) {
   return file;
 }
 
-static std::fstream fstream_required(const std::string &filename, std::ios_base::openmode mode) {
+static auto fstream_required(const std::string &filename, std::ios_base::openmode mode) -> std::fstream {
   const std::string datafolderfilename = "data/" + filename;
   if (mode == std::ios::in && std::filesystem::exists(datafolderfilename)) {
     return fstream_required(datafolderfilename, mode);
@@ -150,7 +150,7 @@ static std::fstream fstream_required(const std::string &filename, std::ios_base:
   return file;
 }
 
-static int get_timestep(const double time) {
+static auto get_timestep(const double time) -> int {
   assert_always(time >= globals::tmin);
   assert_always(time < globals::tmax);
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
@@ -164,7 +164,7 @@ static int get_timestep(const double time) {
   return -1;
 }
 
-inline int get_max_threads(void) {
+inline auto get_max_threads() -> int {
 #if defined _OPENMP
   return omp_get_max_threads();
 #else
@@ -172,7 +172,7 @@ inline int get_max_threads(void) {
 #endif
 }
 
-inline int get_num_threads(void) {
+inline auto get_num_threads() -> int {
 #if defined _OPENMP
   return omp_get_num_threads();
 #else
@@ -180,7 +180,7 @@ inline int get_num_threads(void) {
 #endif
 }
 
-inline int get_thread_num(void) {
+inline auto get_thread_num() -> int {
 #if defined _OPENMP
   return omp_get_thread_num();
 #else
@@ -188,7 +188,7 @@ inline int get_thread_num(void) {
 #endif
 }
 
-inline float rng_uniform(void) {
+inline auto rng_uniform() -> float {
   float zrand;
   do {
     zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
@@ -196,7 +196,7 @@ inline float rng_uniform(void) {
   return zrand;
 }
 
-inline float rng_uniform_pos(void) {
+inline auto rng_uniform_pos() -> float {
   float zrand = 0.;
   do {
     zrand = rng_uniform();
@@ -209,30 +209,28 @@ inline void rng_init(const uint_fast64_t zseed) {
   stdrng.seed(zseed);
 }
 
-inline bool is_pid_running(pid_t pid) {
-  while (waitpid(-1, 0, WNOHANG) > 0) {
+inline auto is_pid_running(pid_t pid) -> bool {
+  while (waitpid(-1, nullptr, WNOHANG) > 0) {
     // Wait for defunct....
   }
 
-  if (0 == kill(pid, 0)) return true;  // Process exists
-
-  return false;
+  return (kill(pid, 0) == 0);
 }
 
-inline void check_already_running(void) {
-  pid_t artispid = getpid();
+inline void check_already_running() {
+  const pid_t artispid = getpid();
 
   if (std::filesystem::exists("artis.pid")) {
     auto pidfile = std::fstream("artis.pid", std::ios::in);
-    pid_t artispid_in;
+    pid_t artispid_in = 0;
     pidfile >> artispid_in;
     pidfile.close();
     if (is_pid_running(artispid_in)) {
-      fprintf(
-          stderr,
-          "\nERROR: artis or exspec is already running in this folder with existing pid %d. Refusing to start. (delete "
-          "artis.pid if you are sure this is incorrect)\n",
-          artispid_in);
+      fprintf(stderr,
+              "\nERROR: artis or exspec is already running in this folder with existing pid %d. Refusing to start. "
+              "(delete "
+              "artis.pid if you are sure this is incorrect)\n",
+              artispid_in);
       abort();
     }
   }
@@ -242,7 +240,7 @@ inline void check_already_running(void) {
   pidfile.close();
 }
 
-inline int get_ionestimindex(const int mgi, const int element, const int ion) {
+inline auto get_ionestimindex(const int mgi, const int element, const int ion) -> int {
   return mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
 }
 
