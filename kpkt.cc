@@ -378,13 +378,10 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
   // printout("[debug] do_kpkt: propagate k-pkt\n");
 
-  const auto T_e = grid::get_Te(modelgridindex);
-  double deltat = 0.;
-  if (nts < globals::n_kpktdiffusion_timesteps) {
-    deltat = globals::kpktdiffusion_timescale * globals::timesteps[nts].width;
-  }
-  // double deltat = 1. / (nne * 1.02e-12 * pow(T_e / 1e4, 0.843));
-  // printout("kpkt diffusion time simple %g, advanced %g\n", deltat, 1 / (nne * 1.02e-12 * pow(T_e / 1e4, 0.843)));
+  const double deltat = (nts < globals::n_kpktdiffusion_timesteps)
+                            ? globals::kpktdiffusion_timescale * globals::timesteps[nts].width
+                            : 0.;
+
   const double t_current = t1 + deltat;
 
   if (t_current > t2) {
@@ -397,12 +394,11 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
   vec_scale(pkt_ptr->pos, t_current / t1);
   pkt_ptr->prop_time = t_current;
 
-  /// Randomly select the occuring cooling process
-  double coolingsum = 0.;
-
   assert_always(grid::modelgrid[modelgridindex].totalcooling > 0.);
   const double rndcool_ion = rng_uniform() * grid::modelgrid[modelgridindex].totalcooling;
 
+  /// Randomly select the occuring cooling process
+  double coolingsum = 0.;
   int element = -1;
   int ion = -1;
   for (element = 0; element < get_nelements(); element++) {
@@ -481,6 +477,8 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
   // printout("do_kpkt: selected process %d, coolingsum %g\n", i, coolingsum);
   const auto rndcoolingtype = coolinglist[i].type;
+  const auto T_e = grid::get_Te(modelgridindex);
+
   if (rndcoolingtype == COOLINGTYPE_FF) {
     /// The k-packet converts directly into a r-packet by free-free-emission.
     /// Need to select the r-packets frequency and a random direction in the
