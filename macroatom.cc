@@ -257,7 +257,7 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
         "%g >= "
         "rate %g",
         __func__, get_atomicnumber(element), get_ionstage(element, *ion), *level, targetval, rad_recomb, rate);
-    abort();
+    std::abort();
   }
 
   /// set the new state
@@ -272,7 +272,7 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
 
   if (!std::isfinite(pkt_ptr->nu_cmf)) {
     printout("[fatal] rad recombination of MA: selected frequency not finite ... abort\n");
-    abort();
+    std::abort();
   }
   stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_FB);
   pkt_ptr->interactions += 1;
@@ -320,7 +320,7 @@ static void do_macroatom_ionisation(const int modelgridindex, const int element,
         "%s: From Z=%d ionstage %d level %d, could not select upper level to ionise to. zrand %g * internal_up_higher "
         "%g >= rate %g\n",
         __func__, get_atomicnumber(element), get_ionstage(element, *ion), *level, zrand, internal_up_higher, rate);
-    abort();
+    std::abort();
   }
 
   assert_always(upper >= 0);
@@ -573,7 +573,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
         if (lower >= nlevels) {
           printout("internal_down_lower  %g\n", processrates[MA_ACTION_INTERNALDOWNLOWER]);
           printout("abort at rate %g, targetrate %g\n", rate, targetrate);
-          abort();
+          std::abort();
         }
         if (get_ionstage(element, ion) == 0 && lower == 0) {
           printout("internal downward transition to ground level occured ... abort\n");
@@ -581,7 +581,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
           printout("Z %d, ionstage %d, energy %g\n", get_atomicnumber(element), get_ionstage(element, ion - 1),
                    globals::elements[element].ions[ion - 1].levels[lower].epsilon);
           printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
-          abort();
+          std::abort();
         }
         break;
       }
@@ -655,7 +655,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
 
       case MA_ACTION_COUNT: {
         printout("ERROR: Problem selecting MA_ACTION\n");
-        abort();
+        std::abort();
       }
     }
   }  /// endwhile

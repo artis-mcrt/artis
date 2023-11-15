@@ -653,7 +653,7 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
               "%d, globals::linelist[linelistindex].lowerlevelindex %d\n",
               temp_linelist[linelistindex].elementindex, temp_linelist[linelistindex].ionindex,
               temp_linelist[linelistindex].upperlevelindex, temp_linelist[linelistindex].lowerlevelindex);
-          abort();
+          std::abort();
         }
         const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
 
@@ -945,7 +945,7 @@ static void read_atomicdata_files() {
   }
 
   if (T_preset > 0) {
-    abort();
+    std::abort();
   }
 
   /// Set up the list of allowed upward transitions for each level
@@ -1694,7 +1694,7 @@ void input(int rank)
   if (globals::n_titer > 1) {
 #ifndef DO_TITER
     printout("[fatal] input: n_titer > 1, but DO_TITER not defined ... abort\n");
-    abort();
+    std::abort();
 #endif
   } else if (globals::n_titer == 1) {
 #ifdef DO_TITER
@@ -1702,7 +1702,7 @@ void input(int rank)
 #endif
   } else {
     printout("[fatal] input: no valid value for n_titer selected\n");
-    abort();
+    std::abort();
   }
 
   /// Read in parameters from input.txt

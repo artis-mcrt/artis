@@ -295,13 +295,13 @@ static void print_level_rates(const int modelgridindex, const int timestep, cons
       selected_level >
           (get_nlevels_nlte(element, selected_ion) + (ion_has_superlevel(element, selected_ion) ? 1 : 0))) {
     printout("print_level_rates: invalid element/ion/level arguments\n");
-    abort();
+    std::abort();
   }
 
   if (rate_matrix_rad_bb == rate_matrix_coll_bb) {
     printout(
         "print_level_rates: rate_matrix_rad_bb == rate_matrix_coll_bb. check individual_process_matricies is off\n");
-    abort();
+    std::abort();
   }
 
   const gsl_vector popvector = *popvec;
@@ -1201,7 +1201,7 @@ void nltepop_read_restart_data(FILE *restart_file) {
   assert_always(fscanf(restart_file, "%d\n", &code_check) == 1);
   if (code_check != 75618527) {
     printout("ERROR: Beginning of NLTE restart data not found!\n");
-    abort();
+    std::abort();
   }
 
   int total_nlte_levels_in = 0;
@@ -1209,7 +1209,7 @@ void nltepop_read_restart_data(FILE *restart_file) {
   if (total_nlte_levels_in != globals::total_nlte_levels) {
     printout("ERROR: Expected %d NLTE levels but found %d in restart file\n", globals::total_nlte_levels,
              total_nlte_levels_in);
-    abort();
+    std::abort();
   }
 
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
@@ -1218,7 +1218,7 @@ void nltepop_read_restart_data(FILE *restart_file) {
     assert_always(fscanf(restart_file, "%d %la\n", &mgi_in, &grid::modelgrid[modelgridindex].totalcooling) == 2);
     if (mgi_in != modelgridindex) {
       printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
-      abort();
+      std::abort();
     }
 
     for (int element = 0; element < get_nelements(); element++) {
@@ -1231,7 +1231,7 @@ void nltepop_read_restart_data(FILE *restart_file) {
                              &grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]) == 4);
         if (ion_in != ion) {
           printout("ERROR: expected data for ion %d but found ion %d\n", ion, ion_in);
-          abort();
+          std::abort();
         }
       }
     }

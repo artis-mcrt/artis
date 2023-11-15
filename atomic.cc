@@ -33,7 +33,7 @@ auto get_phixtargetindex(const int element, const int ion, const int level, cons
     }
   }
   printout("Could not find phixstargetindex\n");
-  abort();
+  std::abort();
   return -1;
 }
 

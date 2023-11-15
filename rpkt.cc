@@ -475,7 +475,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr,
     }
   } else {
     printout("ERROR: could not continuum process\n");
-    abort();
+    std::abort();
   }
 }
 
@@ -581,7 +581,7 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
                   "%g, distance_e_cmf_over_nu %g\n",
                   modelgridindex, element, ion, globals::phixslist[tid].groundcont_gamma_contr[i],
                   distance_e_cmf_over_nu);
-              abort();
+              std::abort();
             }
           }
 
@@ -637,7 +637,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   if (sdist > maxsdist) {
     printout("[fatal] do_rpkt: Unreasonably large sdist for packet %d. Rpkt. Abort. %g %g %g\n", pkt_ptr->number,
              globals::rmax, pkt_ptr->prop_time / globals::tmin, sdist);
-    abort();
+    std::abort();
   }
 
   if (sdist < 0) {
@@ -656,7 +656,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   if (((snext != -99) && (snext < 0)) || (snext >= grid::ngrid)) {
     printout("[fatal] r_pkt: Heading for inappropriate grid cell. Abort.\n");
     printout("[fatal] r_pkt: Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
-    abort();
+    std::abort();
   }
 
   if (sdist > globals::max_path_step) {
@@ -742,7 +742,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   printout("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist,
            tdist);
   printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
-  abort();
+  std::abort();
 }
 
 void do_rpkt(struct packet *pkt_ptr, const double t2) {
@@ -821,7 +821,7 @@ static auto calculate_chi_ff(const int modelgridindex, const double nu) -> doubl
 
   if (!std::isfinite(chi_ff)) {
     printout("ERRORL: chi_ff is non-infinite mgi %d nne %g nu %g T_e %g\n", modelgridindex, nne, nu, T_e);
-    abort();
+    std::abort();
   }
 
   return chi_ff;
@@ -920,7 +920,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
                    get_levelpop(modelgridindex, element, ion, level));
           printout("[fatal] sigma_bf %g, T_e %g, nu %g, nu_edge %g\n", sigma_bf, grid::get_Te(modelgridindex), nu,
                    nu_edge);
-          abort();
+          std::abort();
         }
 
         chi_bf_sum += chi_bf_contr;
@@ -1023,7 +1023,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
       chi_rpkt_cont_thisthread->bf = 0.;
       chi_rpkt_cont_thisthread->total = chi_rpkt_cont_thisthread->es;
     } else {
-      abort();
+      std::abort();
     }
   }
 }

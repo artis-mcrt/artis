@@ -430,7 +430,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
                  grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]);
       }
     }
-    abort();
+    std::abort();
   }
 
   const int ilow = get_coolinglistoffset(element, ion);
@@ -587,7 +587,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
           "contrib_low %g contrib %g (should match %g) upper %d nuptrans %d\n",
           modelgridindex, i, element, ion, level, rndcool_ion_process, contrib_low, contrib,
           globals::cellhistory[tid].cooling_contrib[i], upper, nuptrans);
-      abort();
+      std::abort();
     }
     assert_always(upper >= 0);
 

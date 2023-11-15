@@ -138,7 +138,7 @@ void packet_init(struct packet *pkt)
 
   if (globals::npkts > MPKTS) {
     printout("Too many packets. Abort.\n");
-    abort();
+    std::abort();
   }
 
   printout("Placing pellets...\n");
@@ -281,7 +281,7 @@ void read_packets(const char filename[], struct packet *pkt) {
           "ERROR: More data found beyond packet %d (expecting %d packets). Recompile exspec with the correct number "
           "of packets. Run (wc -l < packets00_0000.out) to count them.\n",
           packets_read, globals::npkts);
-      abort();
+      std::abort();
     }
 
     std::istringstream ssline(line);
@@ -339,7 +339,7 @@ void read_packets(const char filename[], struct packet *pkt) {
         "ERROR: Read failed after packet %d (expecting %d packets). Recompile exspec with the correct number of "
         "packets. Run (wc -l < packets00_0000.out) to count them.\n",
         packets_read, globals::npkts);
-    abort();
+    std::abort();
   }
 
   packets_file.close();

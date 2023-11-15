@@ -901,7 +901,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
               "get_corrphotoioncoeff_ana(%d,%d,%d,%d,%d)=%g/%g",
               element, ion, 0, 0, n, globals::gammaestimator[ionestimindex],
               get_corrphotoioncoeff_ana(element, ion, 0, 0, n));
-          abort();
+          std::abort();
         }
       }
 
@@ -946,7 +946,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
                 "[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / "
                 "get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",
                 element, ion, 0, 0, n, globals::bfheatingestimator[ionestimindex], bfheatingcoeff_ana);
-            abort();
+            std::abort();
           }
         }
       }

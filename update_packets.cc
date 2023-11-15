@@ -144,7 +144,7 @@ static void update_pellet(struct packet *pkt_ptr, const int nts, const double t2
     pkt_ptr->prop_time = globals::tmin;
   } else {
     printout("ERROR: Something gone wrong with decaying pellets. tdecay %g ts %g (ts + tw) %g\n", tdecay, ts, t2);
-    abort();
+    std::abort();
   }
 }
 
@@ -208,7 +208,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
 
     default:
       printout("packet_prop: Unknown packet type %d. Abort.\n", pkt_ptr->type);
-      abort();
+      std::abort();
   }
 }
 

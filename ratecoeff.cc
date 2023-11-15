@@ -263,7 +263,7 @@ static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
               } else {
                 printout(
                     "ERROR: USE_LUT_PHOTOION is on, but there are no corrphotoioncoeff values in ratecoeff file\n");
-                abort();
+                std::abort();
               }
             }
             if constexpr (USE_LUT_BFHEATING) {
@@ -274,7 +274,7 @@ static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
                 printout(
                     "ERROR: USE_LUT_BFHEATING is on, but there are no bfheating_coeff values in the ratecoeff "
                     "file\n");
-                abort();
+                std::abort();
               }
             }
           }

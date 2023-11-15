@@ -50,7 +50,7 @@ extern gsl_integration_workspace *gslworkspace;
       }                                                                                                                \
       (void)fprintf(stderr, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global, __FILE__, \
                     __LINE__, #e, __PRETTY_FUNCTION__);                                                                \
-      abort();                                                                                                         \
+      std::abort();                                                                                                    \
     }                                                                                                                  \
     assert(pass);                                                                                                      \
   }
@@ -132,7 +132,7 @@ static auto fopen_required(const std::string &filename, const char *mode) -> FIL
   FILE *file = std::fopen(filename.c_str(), mode);
   if (file == nullptr) {
     printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename.c_str(), mode);
-    abort();
+    std::abort();
   }
 
   return file;
@@ -146,7 +146,7 @@ static auto fstream_required(const std::string &filename, std::ios_base::openmod
   auto file = std::fstream(filename, mode);
   if (!file.is_open()) {
     printout("ERROR: Could not open file '%s'\n", filename.c_str());
-    abort();
+    std::abort();
   }
   return file;
 }
@@ -232,7 +232,7 @@ inline void check_already_running() {
               "(delete "
               "artis.pid if you are sure this is incorrect)\n",
               artispid_in);
-      abort();
+      std::abort();
     }
   }
 

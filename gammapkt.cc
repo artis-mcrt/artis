@@ -241,7 +241,7 @@ static void choose_gamma_ray(struct packet *pkt_ptr) {
   if (nselected < 0) {
     printout("Failure to choose line (packet type %d pellet_nucindex %d). Abort. zrand %g runtot %g\n", pkt_ptr->type,
              pkt_ptr->pellet_nucindex, zrand, runtot);
-    abort();
+    std::abort();
   }
 
   pkt_ptr->nu_cmf = gamma_spectra[nucindex].energy[nselected] / H;
@@ -403,7 +403,7 @@ static auto thomson_angle() -> double {
 
   if (fabs(mu) > 1) {
     printout("Error in Thomson. Abort.\n");
-    abort();
+    std::abort();
   }
 
   return mu;
@@ -443,7 +443,7 @@ static void compton_scatter(struct packet *pkt_ptr)
 
     if ((f < 1) || (f > (2 * xx + 1))) {
       printout("Compton f out of bounds. Abort.\n");
-      abort();
+      std::abort();
     }
 
     // Prob of keeping gamma ray is...
@@ -482,13 +482,13 @@ static void compton_scatter(struct packet *pkt_ptr)
       printout("new_dir %g %g %g\n", new_dir[0], new_dir[1], new_dir[2]);
       printout("cmf_dir %g %g %g\n", cmf_dir[0], cmf_dir[1], cmf_dir[2]);
       printout("cos_theta %g", cos_theta);
-      abort();
+      std::abort();
     }
 
     const double test2 = dot(new_dir, cmf_dir);
     if (fabs(test2 - cos_theta) > 1.e-8) {
       printout("Problem with angle - Compton. Abort.\n");
-      abort();
+      std::abort();
     }
 
     // Now convert back again.
@@ -693,7 +693,7 @@ void pair_prod(struct packet *pkt_ptr) {
 
   if (prob_gamma < 0) {
     printout("prob_gamma < 0. pair_prod. Abort. %g\n", prob_gamma);
-    abort();
+    std::abort();
   }
 
   const double zrand = rng_uniform();
@@ -757,7 +757,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   if (sdist > maxsdist) {
     printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", globals::rmax, pkt_ptr->prop_time / globals::tmin,
              sdist);
-    abort();
+    std::abort();
   }
 
   if (sdist < 0) {
@@ -768,7 +768,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   if (((snext < 0) && (snext != -99)) || (snext >= grid::ngrid)) {
     printout("Heading for inappropriate grid cell. Abort.\n");
     printout("Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
-    abort();
+    std::abort();
   }
 
   if (sdist > globals::max_path_step) {
@@ -799,7 +799,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
   if (edist < 0) {
     printout("Negative distance (edist). Abort. \n");
-    abort();
+    std::abort();
   }
 
   // Find how far it can travel during the time inverval.
@@ -808,7 +808,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
   if (tdist < 0) {
     printout("Negative distance (tdist). Abort. \n");
-    abort();
+    std::abort();
   }
 
   // printout("sdist, tdist, edist %g %g %g\n",sdist, tdist, edist);
@@ -871,11 +871,11 @@ void do_gamma(struct packet *pkt_ptr, double t2)
           grid::get_rho(grid::get_cell_modelgridindex(cellindex)), pkt_ptr->nu_cmf, pkt_ptr->dir[0], pkt_ptr->dir[0],
           pkt_ptr->dir[1], pkt_ptr->dir[2], pkt_ptr->pos[1], pkt_ptr->pos[2]);
 
-      abort();
+      std::abort();
     }
   } else {
     printout("Failed to identify event. Gamma (2). edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
-    abort();
+    std::abort();
   }
 }
 

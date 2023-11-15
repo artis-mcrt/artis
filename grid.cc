@@ -201,7 +201,7 @@ auto get_coordcellindexincrement(const int axis) -> int
 
     default:
       printout("invalid coordinate index %d", axis);
-      abort();
+      std::abort();
       return -1;
   }
 }
@@ -224,7 +224,7 @@ auto get_cellcoordpointnum(const int cellindex, const int axis) -> int
 
       default:
         printout("invalid coordinate index %d", axis);
-        abort();
+        std::abort();
         return -1;
     }
   }
@@ -648,7 +648,7 @@ static void calculate_kappagrey() {
         set_kappagrey(mgi, 0.);
       } else if (get_rho_tmin(mgi) < 0.) {
         printout("Error: negative density. Abort.\n");
-        abort();
+        std::abort();
       }
       opcase3_sum += get_kappagrey(mgi) * get_rho_tmin(mgi);
     }
@@ -705,7 +705,7 @@ static void calculate_kappagrey() {
         }
       } else {
         printout("Unknown opacity case. Abort.\n");
-        abort();
+        std::abort();
       }
 
       set_kappagrey(mgi, kappa);
@@ -713,7 +713,7 @@ static void calculate_kappagrey() {
       set_kappagrey(mgi, 0.);
     } else if (get_rho_tmin(mgi) < 0.) {
       printout("Error: negative density. Abort.\n");
-      abort();
+      std::abort();
     }
 
     check1 = check1 + (get_kappagrey(mgi) * get_rho_tmin(mgi));
@@ -766,7 +766,7 @@ static void allocate_composition_cooling()
 
     if (modelgrid[modelgridindex].composition == nullptr) {
       printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n", modelgridindex);
-      abort();
+      std::abort();
     }
 
     modelgrid[modelgridindex].initmassfracstable = &initmassfracstable_allcells[nonemptymgi * get_nelements()];
@@ -800,7 +800,7 @@ static void allocate_composition_cooling()
         printout(
             "[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",
             element, modelgridindex);
-        abort();
+        std::abort();
       }
 
       modelgrid[modelgridindex].composition[element].partfunct =
@@ -809,7 +809,7 @@ static void allocate_composition_cooling()
       if (modelgrid[modelgridindex].composition[element].partfunct == nullptr) {
         printout("[fatal] input: not enough memory to initialize partfunctlist for element %d in cell %d... abort\n",
                  element, modelgridindex);
-        abort();
+        std::abort();
       }
     }
 
@@ -817,7 +817,7 @@ static void allocate_composition_cooling()
 
     if (modelgrid[modelgridindex].cooling_contrib_ion == nullptr) {
       printout("[fatal] input: not enough memory to initialize coolinglist for cell %d... abort\n", modelgridindex);
-      abort();
+      std::abort();
     }
 
     modelgrid[modelgridindex].cooling_contrib_ion[0] =
@@ -896,7 +896,7 @@ static void allocate_nonemptymodelcells() {
     if (get_numassociatedcells(mgi) > 0) {
       if (get_rho_tmin(mgi) <= 0) {
         printout("Error: negative or zero density. Abort.\n");
-        abort();
+        std::abort();
       }
       nonemptymgi_of_mgi[mgi] = nonemptymgi;
       mgi_of_nonemptymgi[nonemptymgi] = mgi;
@@ -1305,7 +1305,7 @@ static void read_1d_model()
 
   if (mgi != get_npts_model()) {
     printout("ERROR in model.txt. Found only %d cells instead of %d expected.\n", mgi - 1, get_npts_model());
-    abort();
+    std::abort();
   }
 
   globals::vmax = vout_model[get_npts_model() - 1];
@@ -1366,7 +1366,7 @@ static void read_2d_model()
 
     if (rho_tmodel < 0) {
       printout("negative input density %g %d\n", rho_tmodel, mgi);
-      abort();
+      std::abort();
     }
 
     const bool keepcell = (rho_tmodel > 0);
@@ -1385,7 +1385,7 @@ static void read_2d_model()
 
   if (mgi != get_npts_model()) {
     printout("ERROR in model.txt. Found %d only cells instead of %d expected.\n", mgi - 1, get_npts_model());
-    abort();
+    std::abort();
   }
 
   printout("effectively used model grid cells: %d\n", nonemptymgi);
@@ -1476,7 +1476,7 @@ static void read_3d_model()
 
     if (rho_model < 0) {
       printout("negative input density %g %d\n", rho_model, mgi);
-      abort();
+      std::abort();
     }
 
     // in 3D cartesian, cellindex and modelgridindex are interchangeable
@@ -1499,7 +1499,7 @@ static void read_3d_model()
   }
   if (mgi != npts_model_in) {
     printout("ERROR in model.txt. Found %d cells instead of %d expected.\n", mgi, npts_model_in);
-    abort();
+    std::abort();
   }
 
   assert_always(posmatch_zyx ^ posmatch_xyz);  // xor because if both match then probably an infinity occurred
@@ -1547,7 +1547,7 @@ static void calc_modelinit_totmassradionuclides() {
       cellvolume = pow((2 * globals::vmax * globals::tmin), 3.) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
     } else {
       printout("Unknown model type %d in function %s\n", get_model_type(), __func__);
-      abort();
+      std::abort();
     }
 
     const double mass_in_shell = get_rho_tmin(mgi) * cellvolume;
@@ -1594,7 +1594,7 @@ void read_ejecta_model() {
 
     default: {
       printout("Unknown model type. Abort.\n");
-      abort();
+      std::abort();
     }
   }
 
@@ -2059,7 +2059,7 @@ void grid_init(int my_rank)
     strcpy(grid_type_name, "cylindrical");
   } else {
     printout("[fatal] grid_init: Error: Unknown grid type. Abort.");
-    abort();
+    std::abort();
   }
 
   printout("propagation grid: %d-dimensional %s\n", get_ngriddimensions(), grid_type_name);
@@ -2096,7 +2096,7 @@ void grid_init(int my_rank)
     map_2dmodelto3dgrid();
   } else {
     printout("[fatal] grid_init: Error: Unknown density type. Abort.");
-    abort();
+    std::abort();
   }
 
   allocate_nonemptymodelcells();

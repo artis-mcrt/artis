@@ -175,7 +175,7 @@ static void realloc_detailed_lines(const int new_size) {
   auto *newptr = static_cast<int *>(realloc(detailed_lineindicies, new_size * sizeof(int)));
   if (newptr == nullptr) {
     printout("ERROR: Not enough memory to reallocate detailed Jblue estimator line list\n");
-    abort();
+    std::abort();
   }
   assert_always(newptr != nullptr);
   detailed_lineindicies = newptr;
@@ -190,7 +190,7 @@ static void realloc_detailed_lines(const int new_size) {
 
       if (prev_Jb_lu_normed[modelgridindex] == nullptr || Jb_lu_raw[modelgridindex] == nullptr) {
         printout("ERROR: Not enough memory to reallocate detailed Jblue estimator list for cell %d.\n", modelgridindex);
-        abort();
+        std::abort();
       }
     }
   }
@@ -1047,7 +1047,7 @@ void fit_parameters(int modelgridindex, int timestep)
     if (J_normfactor[nonemptymgi] <= 0) {
       printout("radfield: FATAL J_normfactor = %g in cell %d at call to fit_parameters", J_normfactor[nonemptymgi],
                modelgridindex);
-      abort();
+      std::abort();
     }
 
     double J_bin_sum = 0.;
@@ -1424,7 +1424,7 @@ void read_restart_data(FILE *gridsave_file) {
   assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
   if (code_check != 30490824) {
     printout("ERROR: Beginning of radfield restart data not found! Found %d instead of 30490824\n", code_check);
-    abort();
+    std::abort();
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
@@ -1454,7 +1454,7 @@ void read_restart_data(FILE *gridsave_file) {
           bincount_in, nu_lower_first_initial_in, nu_upper_last_initial_in, T_R_min_in, T_R_max_in);
       printout("require %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg T_R_max %lg\n",
                RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial, T_R_min, T_R_max);
-      abort();
+      std::abort();
     }
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
@@ -1498,7 +1498,7 @@ void read_restart_data(FILE *gridsave_file) {
     if (detailed_linecount_in != detailed_linecount) {
       printout("ERROR: gridsave file specifies %d detailed lines but this simulation has %d.\n", detailed_linecount_in,
                detailed_linecount);
-      abort();
+      std::abort();
     }
 
     for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
@@ -1513,7 +1513,7 @@ void read_restart_data(FILE *gridsave_file) {
       assert_always(fscanf(gridsave_file, "%d %la\n", &mgi_in, &J_normfactor[nonemptymgi]) == 2);
       if (mgi_in != modelgridindex) {
         printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
-        abort();
+        std::abort();
       }
 
       if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
@@ -1545,7 +1545,7 @@ void read_restart_data(FILE *gridsave_file) {
   assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
   if (code_check != 42809403) {
     printout("ERROR: End of radfield restart data not found! Found %d instead of 42809403\n", code_check);
-    abort();
+    std::abort();
   }
 }
 

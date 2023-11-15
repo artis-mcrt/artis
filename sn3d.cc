@@ -776,7 +776,7 @@ auto main(int argc, char *argv[]) -> int {
       printout("walltimelimitseconds = %d\n", walltimelimitseconds);
     } else {
       fprintf(stderr, "Usage: %s [-w WALLTIMELIMITHOURS]\n", argv[0]);
-      abort();
+      std::abort();
     }
   }
 
@@ -834,7 +834,7 @@ auto main(int argc, char *argv[]) -> int {
   printout("time before tabulation of rate coefficients %ld\n", time(nullptr));
   ratecoefficients_init();
   printout("time after tabulation of rate coefficients %ld\n", time(nullptr));
-  //  abort();
+  //  std::abort();
 #ifdef MPI_ON
   printout("barrier after tabulation of rate coefficients: time before barrier %ld, ", time(nullptr));
   MPI_Barrier(MPI_COMM_WORLD);

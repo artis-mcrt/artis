@@ -399,7 +399,7 @@ static void extend_lastdecaypath()
       for (int i = 0; i < get_decaypathlength(startdecaypathindex); i++) {
         if (decaypaths[startdecaypathindex].z[i] == daughter_z && decaypaths[startdecaypathindex].a[i] == daughter_a) {
           printout("\nERROR: Loop found in nuclear decay chain.\n");
-          abort();
+          std::abort();
         }
       }
 

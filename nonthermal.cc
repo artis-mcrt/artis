@@ -161,7 +161,7 @@ static void read_binding_energies() {
   assert_always(fscanf(binding, "%d %d", &dum1, &dum2) == 2);  // dimensions of the table
   if ((dum1 != M_NT_SHELLS) || (dum2 != MAX_Z_BINDING)) {
     printout("Wrong size for the binding energy tables!\n");
-    abort();
+    std::abort();
   }
 
   for (int index1 = 0; index1 < dum2; index1++) {
@@ -222,7 +222,7 @@ static void check_auger_probabilities(int modelgridindex) {
   }
 
   if (problem_found) {
-    abort();
+    std::abort();
   }
 }
 
@@ -612,7 +612,7 @@ static auto get_y_sample(const int modelgridindex, const int index) -> double {
   }
   printout("non-thermal: attempted to get y function sample index %d in cell %d, but the y array pointer is null\n",
            index, modelgridindex);
-  abort();
+  std::abort();
   return -1;
 }
 
@@ -623,7 +623,7 @@ static void nt_write_to_file(const int modelgridindex, const int timestep, const
 #endif
     if (!nonthermal_initialized || nonthermalfile == nullptr) {
       printout("Call to nonthermal_write_to_file before nonthermal_init");
-      abort();
+      std::abort();
     }
 
     static long nonthermalfile_offset_iteration_zero = 0;
@@ -1092,7 +1092,7 @@ static auto get_nt_frac_ionization(const int modelgridindex) -> float {
   if (frac_ionization < 0 || !std::isfinite(frac_ionization)) {
     printout("ERROR: get_nt_frac_ionization called with no valid solution stored for cell %d. frac_ionization = %g\n",
              modelgridindex, frac_ionization);
-    abort();
+    std::abort();
   }
 
   return frac_ionization;
@@ -1108,7 +1108,7 @@ static auto get_nt_frac_excitation(const int modelgridindex) -> float {
   if (frac_excitation < 0 || !std::isfinite(frac_excitation)) {
     printout("ERROR: get_nt_frac_excitation called with no valid solution stored for cell %d. frac_excitation = %g\n",
              modelgridindex, frac_excitation);
-    abort();
+    std::abort();
   }
 
   return frac_excitation;
@@ -1160,7 +1160,7 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
           q[8]++;
         } else {
           printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-          abort();
+          std::abort();
         }
       } else if (ioncharge == 1) {
         if (q[9] < 1)  // N1 4s
@@ -1174,7 +1174,7 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
           q[8]++;
         } else {
           printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-          abort();
+          std::abort();
         }
       } else if (ioncharge > 1) {
         if (q[7] < 4)  // M4 3d[3/2]
@@ -1185,7 +1185,7 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
           q[8]++;
         } else {
           printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-          abort();
+          std::abort();
         }
       }
     }
@@ -1211,7 +1211,7 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
             // is for 8 (corresponding to that shell) then just use the M4 value
             printout("Huh? I'm trying to use a binding energy when I have no data. element %d ion %d\n", element, ion);
             printout("Z = %d, ionstage = %d\n", get_atomicnumber(element), get_ionstage(element, ion));
-            abort();
+            std::abort();
           }
         }
         if (use2 < use3) {
@@ -1482,7 +1482,7 @@ static auto nt_ionization_ratecoeff_sf(const int modelgridindex, const int eleme
 {
   if (grid::get_numassociatedcells(modelgridindex) <= 0) {
     printout("ERROR: nt_ionization_ratecoeff_sf called on empty cell %d\n", modelgridindex);
-    abort();
+    std::abort();
   }
 
   const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
@@ -1536,7 +1536,7 @@ auto nt_ionization_upperion_probability(const int modelgridindex, const int elem
             printout("  a %d prob %g\n", a,
                      nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a]);
           }
-          abort();
+          std::abort();
         }
       }
       return prob_remaining;
@@ -1629,7 +1629,7 @@ static auto calculate_nt_excitation_ratecoeff_perdeposition(const int modelgridi
 {
   if (nt_solution[modelgridindex].yfunc == nullptr) {
     printout("ERROR: Call to nt_excitation_ratecoeff with no y vector in memory.");
-    abort();
+    std::abort();
   }
 
   gsl_vector *xs_excitation_vec = gsl_vector_alloc(SFPTS);
@@ -1664,7 +1664,7 @@ auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const 
 
   if (grid::get_numassociatedcells(modelgridindex) <= 0) {
     printout("ERROR: nt_excitation_ratecoeff called on empty cell %d\n", modelgridindex);
-    abort();
+    std::abort();
   }
 
   // if the NT spectrum is stored, we can calculate any non-thermal excitation rate, even if
@@ -2624,7 +2624,7 @@ void read_restart_data(FILE *gridsave_file) {
   assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
   if (code_check != 24724518) {
     printout("ERROR: Beginning of non-thermal restart data not found! Found %d instead of 24724518\n", code_check);
-    abort();
+    std::abort();
   }
 
   int sfpts_in = 0;
@@ -2636,7 +2636,7 @@ void read_restart_data(FILE *gridsave_file) {
     printout("ERROR: gridsave file specifies %d Spencer-Fano samples, SF_EMIN %lg SF_EMAX %lg\n", sfpts_in, SF_EMIN_in,
              SF_EMAX_in);
     printout("ERROR: This simulation has %d Spencer-Fano samples, SF_EMIN %lg SF_EMAX %lg\n", SFPTS, SF_EMIN, SF_EMAX);
-    abort();
+    std::abort();
   }
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
@@ -2652,7 +2652,7 @@ void read_restart_data(FILE *gridsave_file) {
 
         if (mgi_in != modelgridindex) {
           printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
-          abort();
+          std::abort();
         }
 
         for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {

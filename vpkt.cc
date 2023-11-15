@@ -672,7 +672,7 @@ void read_parameterfile_vpkt() {
 
     if (fabs(nz_obs_vpkt[i]) > 1) {
       printout("Wrong observer direction\n");
-      abort();
+      std::abort();
     } else if (nz_obs_vpkt[i] == 1) {
       nz_obs_vpkt[i] = 0.9999;
     } else if (nz_obs_vpkt[i] == -1) {
