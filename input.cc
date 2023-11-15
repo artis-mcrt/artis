@@ -1,22 +1,37 @@
 #include "input.h"
 
 #include <gsl/gsl_spline.h>
+#include <stdlib.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <ios>
 #include <limits>
 #include <memory>
+#include <random>
 #include <sstream>
+#include <string>
+#include <string_view>
 #include <vector>
 
+#include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
 #include "decay.h"
+#include "globals.h"
 #include "grid.h"
+#include "gsl/gsl_interp.h"
 #include "kpkt.h"
+#include "mpi.h"
+#include "packet.h"
 #include "ratecoeff.h"
 #include "sn3d.h"
 #include "vpkt.h"

@@ -1,6 +1,16 @@
 #include "light_curve.h"
 
+#include <cerrno>
+#include <cmath>
+#include <cstdio>
+#include <fstream>
+#include <string>
+#include <system_error>
+#include <vector>
+
+#include "constants.h"
 #include "exspec.h"
+#include "globals.h"
 #include "sn3d.h"
 #include "vectors.h"
 

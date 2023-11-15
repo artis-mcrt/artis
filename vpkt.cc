@@ -1,14 +1,26 @@
 #include "vpkt.h"
 
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/unistd.h>
 #include <unistd.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
+#include <span>
+#include <vector>
 
+#include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
+#include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
+#include "packet.h"
 #include "rpkt.h"
 #include "sn3d.h"
 #include "vectors.h"
@@ -859,7 +871,7 @@ void vpkt_write_timestep(const int nts, const int my_rank, const int tid,
   }
 }
 
-void vpkt_init(const int nts, const int my_rank, const int tid, const bool continued_from_saved) {
+void vpkt_init(const int nts, const int my_rank, const int /*tid*/, const bool continued_from_saved) {
   if constexpr (!VPKT_ON) {
     return;
   }

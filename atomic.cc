@@ -1,9 +1,15 @@
 #include "atomic.h"
 
+#include <stdlib.h>
+
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <iterator>
 
 #include "artisoptions.h"
+#include "constants.h"
+#include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
 #include "sn3d.h"

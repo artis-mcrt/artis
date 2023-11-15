@@ -1,8 +1,14 @@
 #include "decay.h"
 
+#include <stdlib.h>
+
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cmath>
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -14,12 +20,16 @@
 #include <string_view>
 #include <vector>
 
+#include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
 #include "gammapkt.h"
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "mpi.h"
 #include "nonthermal.h"
+#include "packet.h"
 #include "sn3d.h"
 
 namespace decay {

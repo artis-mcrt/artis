@@ -12,16 +12,35 @@
 
 #include "sn3d.h"
 
-#include <filesystem>
+#include <getopt.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/unistd.h>
+#include <unistd.h>
 
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <filesystem>
+#include <memory>
+#include <random>
+#include <span>
+
+#include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
 #include "decay.h"
 #include "gammapkt.h"
 #include "globals.h"
 #include "grid.h"
+#include "gsl/gsl_integration.h"
 #include "input.h"
+#include "macroatom.h"
+#include "mpi.h"
 #include "nltepop.h"
 #include "nonthermal.h"
+#include "packet.h"
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "spectrum.h"

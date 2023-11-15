@@ -2,13 +2,20 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <ctime>
 #include <memory>
+#include <string>
 #include <vector>
 
+#include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
 #include "exspec.h"
+#include "globals.h"
 #include "light_curve.h"
+#include "mpi.h"
+#include "packet.h"
 #include "sn3d.h"
 #include "vectors.h"
 

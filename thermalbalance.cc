@@ -8,7 +8,10 @@
 
 #include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
+#include "globals.h"
 #include "grid.h"
+#include "gsl/gsl_math.h"
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"

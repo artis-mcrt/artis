@@ -1,17 +1,24 @@
 #include "kpkt.h"
 
-#include <gsl/gsl_integration.h>
+#include <stdlib.h>
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <cstdlib>
 
+#include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
+#include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "packet.h"
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
+#include "sn3d.h"
 #include "stats.h"
 #include "thermalbalance.h"
 #include "vectors.h"

@@ -2,12 +2,19 @@
 
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_roots.h>
+#include <stdlib.h>
 
+#include <algorithm>
 #include <cmath>
+#include <vector>
 
+#include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
 #include "decay.h"
+#include "globals.h"
 #include "grid.h"
+#include "gsl/gsl_math.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "ratecoeff.h"

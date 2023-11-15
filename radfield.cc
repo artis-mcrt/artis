@@ -4,13 +4,24 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_sf_debye.h>
+#include <stdlib.h>
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <ctime>
+#include <iterator>
+#include <vector>
 
+#include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
+#include "globals.h"
 #include "grid.h"
+#include "gsl/gsl_math.h"
+#include "mpi.h"
+#include "packet.h"
 #include "sn3d.h"
 #include "vectors.h"
 

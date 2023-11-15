@@ -1,14 +1,23 @@
 #include "update_grid.h"
 
-#include <cmath>
+#include <stdlib.h>
 
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <ctime>
+#include <memory>
+
+#include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
 #include "decay.h"
+#include "globals.h"
 #include "grid.h"
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "mpi.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "radfield.h"

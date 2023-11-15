@@ -1,12 +1,22 @@
 #include "stats.h"
 
-#include <atomic>
+#include <sys/_types/_u_int64_t.h>
 
+#include <array>
+#include <atomic>
+#include <cmath>
+#include <cstdlib>
+
+#include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
 #include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
+#include "mpi.h"
 #include "nonthermal.h"
+#include "packet.h"
+#include "sn3d.h"
 
 namespace stats {
 

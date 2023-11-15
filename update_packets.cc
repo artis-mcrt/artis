@@ -1,12 +1,21 @@
 #include "update_packets.h"
 
-#include <algorithm>
-#include <ranges>
+#include <stdlib.h>
 
+#include <algorithm>
+#include <ctime>
+#include <iterator>
+#include <span>
+
+#include "artisoptions.h"
+#include "constants.h"
 #include "decay.h"
 #include "gammapkt.h"
+#include "globals.h"
 #include "grid.h"
 #include "kpkt.h"
+#include "macroatom.h"
+#include "mpi.h"
 #include "nonthermal.h"
 #include "packet.h"
 #include "rpkt.h"

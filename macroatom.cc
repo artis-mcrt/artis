@@ -1,15 +1,23 @@
 #include "macroatom.h"
 
-#include <gsl/gsl_integration.h>
+#include <stdlib.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstddef>
+#include <cstdio>
+#include <iterator>
+#include <numeric>
 
 #include "artisoptions.h"
+#include "atomic.h"
+#include "constants.h"
 #include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
 #include "nonthermal.h"
+#include "packet.h"
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "rpkt.h"

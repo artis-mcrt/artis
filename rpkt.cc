@@ -1,13 +1,21 @@
 #include "rpkt.h"
 
+#include <stdlib.h>
+
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <iterator>
 #include <limits>
 #include <span>
 
+#include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
+#include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
+#include "packet.h"
 #include "radfield.h"
 #include "sn3d.h"
 #include "stats.h"

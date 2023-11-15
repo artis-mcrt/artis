@@ -1,15 +1,26 @@
 #include "exspec.h"
 
+#include <sys/unistd.h>
 #include <unistd.h>
 
 #include <cstdio>
+#include <cstdlib>
+#include <ctime>
 #include <filesystem>
 #include <memory>
+#include <random>
+#include <vector>
 
+#include "artisoptions.h"
+#include "constants.h"
 #include "decay.h"
+#include "globals.h"
 #include "grid.h"
+#include "gsl/gsl_integration.h"
 #include "input.h"
 #include "light_curve.h"
+#include "mpi.h"
+#include "packet.h"
 #include "sn3d.h"
 #include "spectrum.h"
 #include "version.h"

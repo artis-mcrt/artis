@@ -1,16 +1,25 @@
 #include "packet.h"
 
+#include <stdlib.h>
+
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <cstdio>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <sstream>
 #include <string>
 #include <vector>
 
+#include "artisoptions.h"
+#include "constants.h"
 #include "decay.h"
+#include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "mpi.h"
 #include "sn3d.h"
 #include "vectors.h"
 

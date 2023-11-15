@@ -1,24 +1,33 @@
 #include "nonthermal.h"
 
 #include <gsl/gsl_blas.h>
-#include <gsl/gsl_integration.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_matrix_double.h>
-#include <gsl/gsl_roots.h>
 #include <gsl/gsl_vector_double.h>
+#include <stdlib.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+#include <vector>
 
+#include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
 #include "decay.h"
+#include "globals.h"
 #include "grid.h"
-#include "kpkt.h"
+#include "gsl/gsl_cblas.h"
+#include "gsl/gsl_permutation.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "mpi.h"
+#include "packet.h"
 #include "sn3d.h"
 #include "stats.h"
-#include "update_grid.h"
 
 namespace nonthermal {
 

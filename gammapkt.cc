@@ -1,13 +1,22 @@
 #include "gammapkt.h"
 
+#include <stdlib.h>
+
 #include <algorithm>
+#include <array>
+#include <cctype>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <memory>
 #include <vector>
 
+#include "artisoptions.h"
+#include "constants.h"
 #include "decay.h"
+#include "globals.h"
 #include "grid.h"
 #include "packet.h"
 #include "sn3d.h"
@@ -325,7 +334,7 @@ static auto get_chi_compton_rf(const struct packet *pkt_ptr) -> double {
 
   // Use this to decide whether the Thompson limit is acceptable.
 
-  double sigma_cmf;
+  double sigma_cmf = NAN;
   if (xx < THOMSON_LIMIT) {
     sigma_cmf = SIGMA_T;
   } else {

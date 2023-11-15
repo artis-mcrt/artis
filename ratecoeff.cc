@@ -2,19 +2,25 @@
 
 #include <gsl/gsl_integration.h>
 
+#include <array>
 #include <cmath>
 #include <cstring>
 // #define D_POSIX_SOURCE
 #include <gsl/gsl_errno.h>
+#include <stdlib.h>
 
 #include <cstdio>
 
 #include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
+#include "globals.h"
 #include "grid.h"
+#include "gsl/gsl_math.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "md5.h"
+#include "mpi.h"
 #include "radfield.h"
 #include "sn3d.h"
 

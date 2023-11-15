@@ -1,5 +1,12 @@
 #include "globals.h"
 
+#include <atomic>
+#include <ctime>
+#include <memory>
+#include <vector>
+
+#include "artisoptions.h"
+
 #ifdef MPI_ON
 #include <mpi.h>
 #endif

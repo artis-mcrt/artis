@@ -1,16 +1,25 @@
 #include "grid.h"
 
+#include <stdlib.h>
+
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
+#include <limits>
 #include <memory>
 #include <span>
 #include <sstream>
 #include <string>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 #include "artisoptions.h"
@@ -19,6 +28,7 @@
 #include "decay.h"
 #include "globals.h"
 #include "input.h"
+#include "mpi.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "packet.h"
