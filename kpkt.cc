@@ -391,6 +391,8 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     vec_scale(pkt_ptr->pos, t2 / t1);
     pkt_ptr->prop_time = t2;
   } else {
+    pkt_ptr->interactions++;
+
     vec_scale(pkt_ptr->pos, t_current / t1);
     pkt_ptr->prop_time = t_current;
 
@@ -627,8 +629,6 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     } else {
       assert_testmodeonly(false);
     }
-
-    pkt_ptr->interactions++;
   }
 }
 
