@@ -2,10 +2,10 @@
 
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_roots.h>
-#include <stdlib.h>
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <vector>
 
 #include "artisoptions.h"

@@ -1,7 +1,5 @@
 #include "kpkt.h"
 
-#include <stdlib.h>
-
 #include <algorithm>
 #include <cmath>
 #include <cstddef>

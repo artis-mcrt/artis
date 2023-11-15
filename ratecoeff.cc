@@ -7,9 +7,9 @@
 #include <cstring>
 // #define D_POSIX_SOURCE
 #include <gsl/gsl_errno.h>
-#include <stdlib.h>
 
 #include <cstdio>
+#include <cstdlib>
 
 #include "artisoptions.h"
 #include "atomic.h"

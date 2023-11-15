@@ -4,7 +4,6 @@
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_vector_double.h>
-#include <stdlib.h>
 
 #include <algorithm>
 #include <array>

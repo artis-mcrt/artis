@@ -42,17 +42,17 @@ struct packet {
   enum cell_boundary last_cross = BOUNDARY_NONE;  // To avoid rounding errors on cell crossing.
   int interactions = 0;                           // number of interactions the packet undergone
   int nscatterings = 0;              // records number of electron scatterings a r-pkt undergone since it was emitted
-  int last_event;                    // debug: stores information about the packets history
+  int last_event = 0;                // debug: stores information about the packets history
   double pos[3] = {0};               // Position of the packet (x,y,z).
   double dir[3] = {0};               // Direction of propagation. (x,y,z). Always a unit vector.
-  double e_cmf;                      // The energy the packet carries in the co-moving frame.
-  double e_rf;                       // The energy the packet carries in the rest frame.
-  double nu_cmf;                     // The frequency in the co-moving frame.
-  double nu_rf;                      // The frequency in the rest frame.
-  int next_trans;                    // This keeps track of the next possible line interaction of a rpkt by storing
+  double e_cmf = 0.;                 // The energy the packet carries in the co-moving frame.
+  double e_rf = 0.;                  // The energy the packet carries in the rest frame.
+  double nu_cmf = 0.;                // The frequency in the co-moving frame.
+  double nu_rf = 0.;                 // The frequency in the rest frame.
+  int next_trans = -1;               // This keeps track of the next possible line interaction of a rpkt by storing
                                      // its linelist index (to overcome numerical problems in propagating the rpkts).
   int emissiontype = EMTYPE_NOTSET;  // records how the packet was emitted if it is a r-pkt
-  double em_pos[3];                  // Position of the last emission (x,y,z).
+  double em_pos[3] = {0.};           // Position of the last emission (x,y,z).
   float em_time = -1.;
   double prop_time = -1.;  // internal clock to track how far in time the packet has been propagated
   int absorptiontype;      // records linelistindex of the last absorption
@@ -63,7 +63,7 @@ struct packet {
                            // decay of a positron pellet (-10)
   int trueemissiontype = EMTYPE_NOTSET;  // emission type coming from a kpkt to rpkt (last thermal emission)
   float trueem_time = -1.;               // first thermal emission time [s]
-  double absorptionfreq;                 // records nu_rf of packet at last absorption
+  double absorptionfreq = 0.;            // records nu_rf of packet at last absorption
   double absorptiondir[3] = {0.};  // Direction of propagation (x,y,z) when a packet was last absorbed in a line. Always
                                    // a unit vector.
   double stokes[3] = {0.};         // I, Q and U Stokes parameters
@@ -79,7 +79,7 @@ struct packet {
   float trueemissionvelocity = -1;
   struct mastate mastate;
 
-  inline bool operator==(const packet &rhs) {
+  inline auto operator==(const packet &rhs) -> bool {
     return (number == rhs.number && type == rhs.type &&
             (em_pos[0] == rhs.em_pos[0] && em_pos[1] == rhs.em_pos[1] && em_pos[2] == rhs.em_pos[2]) &&
             nu_cmf == rhs.nu_cmf && where == rhs.where && prop_time == rhs.prop_time &&
@@ -92,6 +92,6 @@ void packet_init(struct packet *pkt);
 void write_packets(const char filename[], const struct packet *pkt);
 void read_packets(const char filename[], struct packet *pkt);
 void read_temp_packetsfile(int timestep, int my_rank, struct packet *pkt);
-bool verify_temp_packetsfile(int timestep, int my_rank, const struct packet *pkt);
+auto verify_temp_packetsfile(int timestep, int my_rank, const struct packet *pkt) -> bool;
 
 #endif  // PACKET_H

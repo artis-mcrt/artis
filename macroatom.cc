@@ -1,12 +1,11 @@
 #include "macroatom.h"
 
-#include <stdlib.h>
-
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
+#include <cstdlib>
 #include <iterator>
 #include <numeric>
 

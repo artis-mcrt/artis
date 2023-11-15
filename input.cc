@@ -1,7 +1,6 @@
 #include "input.h"
 
 #include <gsl/gsl_spline.h>
-#include <stdlib.h>
 
 #include <algorithm>
 #include <array>

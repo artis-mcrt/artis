@@ -1,11 +1,10 @@
 #include "packet.h"
 
-#include <stdlib.h>
-
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <iterator>

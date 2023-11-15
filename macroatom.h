@@ -35,23 +35,24 @@ void macroatom_close_file();
 
 void do_macroatom(struct packet *pkt_ptr, int timestep);
 
-double rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower, double epsilon_trans,
-                                  float A_ul, double upperstatweight, double t_current);
-double rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lower, int uptransindex,
-                                double epsilon_trans, int lineindex, double t_current);
-double rad_recombination_ratecoeff(float T_e, float nne, int element, int upperion, int upperionlevel,
-                                   int lowerionlevel, int modelgridindex);
-double stim_recombination_ratecoeff(float nne, int element, int upperion, int upper, int lower, int modelgridindex);
+auto rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower, double epsilon_trans,
+                                float A_ul, double upperstatweight, double t_current) -> double;
+auto rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lower, int uptransindex,
+                              double epsilon_trans, int lineindex, double t_current) -> double;
+auto rad_recombination_ratecoeff(float T_e, float nne, int element, int upperion, int upperionlevel, int lowerionlevel,
+                                 int modelgridindex) -> double;
+auto stim_recombination_ratecoeff(float nne, int element, int upperion, int upper, int lower, int modelgridindex)
+    -> double;
 
-double col_recombination_ratecoeff(int modelgridindex, int element, int upperion, int upper, int lower,
-                                   double epsilon_trans);
-double col_ionization_ratecoeff(float T_e, float nne, int element, int ion, int lower, int phixstargetindex,
-                                double epsilon_trans);
+auto col_recombination_ratecoeff(int modelgridindex, int element, int upperion, int upper, int lower,
+                                 double epsilon_trans) -> double;
+auto col_ionization_ratecoeff(float T_e, float nne, int element, int ion, int lower, int phixstargetindex,
+                              double epsilon_trans) -> double;
 
-double col_deexcitation_ratecoeff(float T_e, float nne, double epsilon_trans, int element, int ion, int upper,
-                                  const struct level_transition &downtransition);
+auto col_deexcitation_ratecoeff(float T_e, float nne, double epsilon_trans, int element, int ion, int upper,
+                                const struct level_transition &downtransition) -> double;
 
-double col_excitation_ratecoeff(float T_e, float nne, int element, int ion, int lower, int uptransindex,
-                                double epsilon_trans, double lowerstatweight);
+auto col_excitation_ratecoeff(float T_e, float nne, int element, int ion, int lower, int uptransindex,
+                              double epsilon_trans, double lowerstatweight) -> double;
 
 #endif  // MACROATOM_H
