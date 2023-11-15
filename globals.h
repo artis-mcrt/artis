@@ -159,17 +159,17 @@ struct rpkt_continuum_absorptioncoeffs {
 };
 
 template <bool separatestimrecomb>
-struct _chphixstargets {
+struct chphixstargets {
   double corrphotoioncoeff;
 };
 
 template <>
-struct _chphixstargets<true> {
+struct chphixstargets<true> {
   double corrphotoioncoeff;
   double separatestimrecomb;
 };
 
-using chphixstargets_t = struct _chphixstargets<SEPARATE_STIMRECOMB>;
+using chphixstargets_t = struct chphixstargets<SEPARATE_STIMRECOMB>;
 
 #include "macroatom.h"
 
