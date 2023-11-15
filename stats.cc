@@ -1,10 +1,9 @@
 #include "stats.h"
 
-#include <sys/_types/_u_int64_t.h>
-
 #include <array>
 #include <atomic>
 #include <cmath>
+#include <cstdint>  // IWYU pragma: keep
 #include <cstdlib>
 
 #include "artisoptions.h"
