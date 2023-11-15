@@ -503,7 +503,10 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     pkt_ptr->nscatterings = 0;
 
     vpkt_call_estimators(pkt_ptr, TYPE_KPKT);
-  } else if (rndcoolingtype == COOLINGTYPE_FB) {
+    return;
+  }
+
+  if (rndcoolingtype == COOLINGTYPE_FB) {
     /// The k-packet converts directly into a r-packet by free-bound-emission.
     /// Need to select the r-packets frequency and a random direction in the
     /// co-moving frame.
@@ -541,7 +544,11 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     pkt_ptr->nscatterings = 0;
 
     vpkt_call_estimators(pkt_ptr, TYPE_KPKT);
-  } else if (rndcoolingtype == COOLINGTYPE_COLLEXC) {
+
+    return;
+  }
+
+  if (rndcoolingtype == COOLINGTYPE_COLLEXC) {
     /// the k-packet activates a macro-atom due to collisional excitation
     // printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
     const float nne = grid::get_nne(modelgridindex);
@@ -601,7 +608,11 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     pkt_ptr->last_event = 8;
     pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
     pkt_ptr->trueemissionvelocity = -1;
-  } else if (rndcoolingtype == COOLINGTYPE_COLLION) {
+
+    return;
+  }
+
+  if (rndcoolingtype == COOLINGTYPE_COLLION) {
     /// the k-packet activates a macro-atom due to collisional ionisation
     // printout("[debug] do_kpkt: k-pkt -> collisional ionisation of MA\n");
 
@@ -628,58 +639,5 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     assert_testmodeonly(false);
   }
 }
-
-/*static int compare_coolinglistentry(const void *p1, const void *p2)
-/// Helper function to sort the coolinglist by the strength of the
-/// individual cooling contributions.
-{
-  ionscoolinglist_t *a1, *a2;
-  a1 = (ionscoolinglist_t *)(p1);
-  a2 = (ionscoolinglist_t *)(p2);
-  //printf("%d %d %d %d %g\n",a1->elementindex,a1->ionindex,a1->lowerlevelindex,a1->upperlevelindex,a1->nu);
-  //printf("%d %d %d %d %g\n",a2->elementindex,a2->ionindex,a2->lowerlevelindex,a2->upperlevelindex,a2->nu);
-  //printf("%g\n",a2->nu - a1->nu);
-  if (a1->contribution - a2->contribution < 0)
-    return 1;
-  else if (a1->contribution - a2->contribution > 0)
-    return -1;
-  else
-    return 0;
-}*/
-
-/*double get_bfcooling_direct(int element, int ion, int level, int cellnumber)
-/// Returns the rate for bfheating. This can be called during packet propagation
-/// or update_grid. Therefore we need to decide whether a cell history is
-/// known or not.
-{
-  double bfcooling;
-
-  gsl_integration_workspace *wsp;
-  gslintegration_paras intparas;
-  double bfcooling_integrand_gsl(double nu, void *paras);
-  gsl_function F_bfcooling;
-  F_bfcooling.function = &bfcooling_integrand_gsl;
-  double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
-  double error;
-  double nu_max_phixs;
-
-  float T_e = globals::cell[cellnumber].T_e;
-  float nne = globals::cell[cellnumber].nne;
-  double nnionlevel = get_groundlevelpop(cellnumber,element,ion+1);
-  //upper = coolinglist[i].upperlevel;
-  double nu_threshold = (epsilon(element,ion+1,0) - epsilon(element,ion,level)) / H;
-  nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
-
-  pkt_ptr->mastate.element = element;
-  pkt_ptr->mastate.ion = ion;
-  pkt_ptr->mastate.level = level;
-  intparas.T = T_e;
-  intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
-  F_bfcooling.params = &intparas;
-  gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, wsp, &bfcooling, &error);
-  bfcooling *= nnionlevel*nne*4*PI*calculate_sahafact(element,ion,level,upperionlevel,T_e,nu_threshold*H);
-
-  return bfcooling;
-}*/
 
 }  // namespace kpkt
