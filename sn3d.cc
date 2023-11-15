@@ -13,7 +13,6 @@
 #include "sn3d.h"
 
 #include <getopt.h>
-#include <stdio.h>
 #include <sys/unistd.h>
 #include <unistd.h>
 
