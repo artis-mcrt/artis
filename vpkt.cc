@@ -169,7 +169,7 @@ static void add_to_vpkt_grid(const struct packet &vpkt, std::span<const double, 
 }
 
 static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int obsbin,
-                           std::span<double, 3> obsdir, const enum packet_type realtype) {
+                           std::span<double, 3> obsdir, const enum packet_type type_before_rpkt) {
   int snext = 0;
   int mgi = 0;
 
@@ -209,7 +209,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   double I = NAN;
   double Q = NAN;
   double U = NAN;
-  if (realtype == TYPE_RPKT) {
+  if (type_before_rpkt == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
 
     double old_dir_cmf[3] = {NAN, NAN, NAN};
@@ -266,7 +266,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
     frame_transform(obs_cmf, &Q, &U, vel_rev, obsdir);
 
-  } else if (realtype == TYPE_KPKT || realtype == TYPE_MA) {
+  } else if (type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA) {
     // MACROATOM and KPKT: isotropic emission
     I = 1;
     Q = 0;
@@ -398,11 +398,11 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   }
 
   // increment the number of escaped virtual packet in the given timestep
-  if (realtype == TYPE_RPKT) {
+  if (type_before_rpkt == TYPE_RPKT) {
     safeincrement(nvpkt_esc1);
-  } else if (realtype == TYPE_KPKT) {
+  } else if (type_before_rpkt == TYPE_KPKT) {
     safeincrement(nvpkt_esc2);
-  } else if (realtype == TYPE_MA) {
+  } else if (type_before_rpkt == TYPE_MA) {
     safeincrement(nvpkt_esc3);
   }
 
@@ -889,7 +889,7 @@ void vpkt_init(const int nts, const int my_rank, const int /*tid*/, const bool c
   }
 }
 
-auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type realtype) -> void {
+auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type type_before_rpkt) -> void {
   if constexpr (!VPKT_ON) {
     return;
   }
@@ -933,7 +933,7 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type realtyp
         if (nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) {
           // frequency selection
 
-          rlc_emiss_vpkt(pkt_ptr, t_current, obsbin, obsdir, realtype);
+          rlc_emiss_vpkt(pkt_ptr, t_current, obsbin, obsdir, type_before_rpkt);
         }
       }
     }

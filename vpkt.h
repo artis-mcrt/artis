@@ -6,15 +6,15 @@
 #include "artisoptions.h"
 #include "packet.h"
 
-double rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<double, 3> ref1,
-                 std::span<double, 3> ref2);
+auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<double, 3> ref1, std::span<double, 3> ref2)
+    -> double;
 void meridian(std::span<const double, 3> n, std::span<double, 3> ref1, std::span<double, 3> ref2);
 void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v,
                      std::span<double, 3> n_cmf);
 
 void read_parameterfile_vpkt();
 void vpkt_init(int nts, int my_rank, int tid, bool continued_from_saved);
-void vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type);
+void vpkt_call_estimators(struct packet *pkt_ptr, enum packet_type type_before_rpkt);
 void vpkt_write_timestep(int nts, int my_rank, int tid, bool is_final);
 
 void vpkt_remove_temp_file(int nts, int my_rank);
