@@ -1,8 +1,7 @@
 #include "update_packets.h"
 
-#include <stdlib.h>
-
 #include <algorithm>
+#include <cstdlib>
 #include <ctime>
 #include <iterator>
 #include <span>
