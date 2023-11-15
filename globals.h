@@ -2,6 +2,7 @@
 #define GLOBALS_H
 
 #include <atomic>
+#include <cmath>
 #include <memory>
 #include <vector>
 
