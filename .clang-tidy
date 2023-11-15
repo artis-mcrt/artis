@@ -18,6 +18,7 @@ Checks: >
     -cert-err58-cpp,
     -cppcoreguidelines-avoid-magic-numbers,
     -cppcoreguidelines-avoid-non-const-global-variables,
+    -cppcoreguidelines-macro-usage,
     -cppcoreguidelines-no-malloc,
     -cppcoreguidelines-owning-memory,
     -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
