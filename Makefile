@@ -93,7 +93,7 @@ else
 	CXXFLAGS += -O3
 endif
 
-CXXFLAGS += -Werror -Werror=undef -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wunused-macros -Wno-inline
+CXXFLAGS += -Werror -Werror=undef -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wunused-macros -Wno-inline -Wsign-compare
 
 ifeq ($(MPI),)
 	# MPI option not specified. set to true by default
