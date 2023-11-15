@@ -71,8 +71,6 @@ extern gsl_integration_workspace *gslworkspace;
 
 // #define printout(...) fprintf(output_file, __VA_ARGS__)
 
-extern int tid;
-
 template <typename... Args>
 static int printout(const char *format, Args... args) {
   if (globals::startofline[tid]) {
