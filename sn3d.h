@@ -76,7 +76,7 @@ static auto printout(const char *format, Args... args) -> int {
   if (globals::startofline[tid]) {
     const time_t now_time = time(nullptr);
     char s[32] = "";
-    strftime(s, 32, "%FT%TZ", gmtime(&now_time));
+    strftime(s, 32, "%FT%TZ", gmtime(&now_time));  // NOLINT[concurrency-mt-unsafe]
     fprintf(output_file, "%s ", s);
   }
   globals::startofline[tid] = (format[strlen(format) - 1] == '\n');
@@ -87,7 +87,7 @@ static auto printout(const char *format) -> int {
   if (globals::startofline[tid]) {
     const time_t now_time = time(nullptr);
     char s[32] = "";
-    strftime(s, 32, "%FT%TZ", gmtime(&now_time));
+    strftime(s, 32, "%FT%TZ", gmtime(&now_time));  // NOLINT[concurrency-mt-unsafe]
     fprintf(output_file, "%s ", s);
   }
   globals::startofline[tid] = (format[strlen(format) - 1] == '\n');
