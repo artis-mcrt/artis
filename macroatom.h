@@ -27,7 +27,6 @@ enum ma_action {
 
 #include "atomic.h"
 #include "constants.h"
-#include "globals.h"
 #include "packet.h"
 
 void macroatom_open_file(int my_rank);

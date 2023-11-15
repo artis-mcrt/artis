@@ -4,6 +4,7 @@
 #include <span>
 
 #include "artisoptions.h"
+#include "constants.h"
 #include "packet.h"
 
 auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<double, 3> ref1, std::span<double, 3> ref2)
