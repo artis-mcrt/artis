@@ -141,9 +141,9 @@ struct linelist_entry {
 };
 
 struct gslintegration_paras {
-  const double nu_edge;
-  const float T;
-  const float *const photoion_xs;
+  double nu_edge;
+  float T;
+  float *photoion_xs;
 };
 
 struct rpkt_continuum_absorptioncoeffs {
