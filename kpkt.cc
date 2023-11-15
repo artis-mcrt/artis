@@ -627,7 +627,8 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     } else if (rndcoolingtype == COOLINGTYPE_COLLION) {
       /// the k-packet activates a macro-atom due to collisional ionisation
       // printout("[debug] do_kpkt: k-pkt -> collisional ionisation of MA\n");
-      const int element = coolinglist[i].element;
+
+      assert_testmodeonly(coolinglist[i].element == element);
       const int ion = coolinglist[i].ion + 1;
       const int upper = coolinglist[i].upperlevel;
       pkt_ptr->mastate.element = element;
