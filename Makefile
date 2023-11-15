@@ -87,10 +87,14 @@ else
 	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF
 endif
 
-ifeq ($(FASTMATH),ON)
-	CXXFLAGS += -Ofast -ffast-math -funsafe-math-optimizations -fno-finite-math-only
+ifeq ($(OPTIMIZE),OFF)
+	CXXFLAGS += -O0
 else
-	CXXFLAGS += -O3
+	ifeq ($(FASTMATH),ON)
+		CXXFLAGS += -Ofast -ffast-math -funsafe-math-optimizations -fno-finite-math-only
+	else
+		CXXFLAGS += -O3
+	endif
 endif
 
 CXXFLAGS += -Werror -Werror=undef -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wunused-macros -Wno-inline -Wsign-compare

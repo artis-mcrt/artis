@@ -53,11 +53,6 @@ repos:
       hooks:
           - id: make
             name: make
-            entry: make
+            entry: make OPTIMIZE=OFF
             language: system
-            types: [c++, makefile]
             pass_filenames: false
-    - repo: https://github.com/jumanjihouse/pre-commit-hook-yamlfmt
-      rev: 0.2.3 # or other specific tag
-      hooks:
-          - id: yamlfmt
