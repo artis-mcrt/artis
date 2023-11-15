@@ -55,7 +55,7 @@ CheckOptions:
     - key: cppcoreguidelines-init-variables.MathHeader
       value: <cmath>
     - key: cppcoreguidelines-narrowing-conversions.IgnoreConversionFromTypes
-      value: size_t;ptrdiff_t;size_type;difference_type;time_t;MPI_Aint;unsigned long
+      value: size_t;ptrdiff_t;size_t;difference_type;time_t;MPI_Aint
     - key: cppcoreguidelines-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
       value: 'false'
     - key: cppcoreguidelines-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion

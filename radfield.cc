@@ -334,7 +334,7 @@ void init(int my_rank, int ndo_nonempty)
       if (globals::rank_in_node == 0) {
         my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
       }
-      MPI_Aint size = my_rank_cells * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution);
+      MPI_Aint size = my_rank_cells * RADFIELDBINCOUNT * static_cast<MPI_Aint>(sizeof(struct radfieldbin_solution));
       int disp_unit = sizeof(struct radfieldbin_solution);
       MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &radfieldbin_solutions,
                               &win_radfieldbin_solutions);
@@ -365,7 +365,7 @@ void init(int my_rank, int ndo_nonempty)
       if (globals::rank_in_node == 0) {
         my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
       }
-      MPI_Aint size = my_rank_cells * globals::nbfcontinua * sizeof(float);
+      MPI_Aint size = my_rank_cells * globals::nbfcontinua * static_cast<MPI_Aint>(sizeof(float));
       int disp_unit = sizeof(float);
       MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed,
                               &win_prev_bfrate_normed);

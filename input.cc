@@ -528,7 +528,7 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
         my_rank_trans += totupdowntrans - (my_rank_trans * globals::node_nprocs);
       }
 
-      MPI_Aint size = my_rank_trans * sizeof(linelist_entry);
+      MPI_Aint size = my_rank_trans * static_cast<MPI_Aint>(sizeof(linelist_entry));
       int disp_unit = sizeof(linelist_entry);
       MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &alltransblock, &win);
 
@@ -993,7 +993,7 @@ static void read_atomicdata_files() {
     my_rank_lines += globals::nlines - (my_rank_lines * globals::node_nprocs);
   }
 
-  MPI_Aint size = my_rank_lines * sizeof(linelist_entry);
+  MPI_Aint size = my_rank_lines * static_cast<MPI_Aint>(sizeof(linelist_entry));
   int disp_unit = sizeof(linelist_entry);
   MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nonconstlinelist, &win);
 
@@ -1525,7 +1525,8 @@ static void setup_phixs_list() {
 #ifdef MPI_ON
     float *allphixsblock = nullptr;
     MPI_Win win_allphixsblock = MPI_WIN_NULL;
-    MPI_Aint size = (globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0;
+    MPI_Aint size =
+        (globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * static_cast<MPI_Aint>(sizeof(float)) : 0;
     int disp_unit = sizeof(linelist_entry);
 
     MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &allphixsblock, &win_allphixsblock);
