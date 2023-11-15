@@ -33,7 +33,6 @@ enum coolingtype {
 
 struct cellhistorycoolinglist {
   enum coolingtype type;
-  int element;
   int ion;
   int level;
   int upperlevel;
@@ -74,7 +73,6 @@ static auto calculate_cooling_rates_ion(const int modelgridindex, const int elem
       globals::cellhistory[tid].cooling_contrib[i] = C_ion;
 
       assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_FF);
-      assert_testmodeonly(coolinglist[i].element == element);
       assert_testmodeonly(coolinglist[i].ion == ion);
 
       // if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d,
@@ -111,7 +109,6 @@ static auto calculate_cooling_rates_ion(const int modelgridindex, const int elem
         globals::cellhistory[tid].cooling_contrib[i] = C_ion;
 
         assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_COLLEXC);
-        assert_testmodeonly(coolinglist[i].element == element);
         assert_testmodeonly(coolinglist[i].ion == ion);
 
         i++;
@@ -140,7 +137,6 @@ static auto calculate_cooling_rates_ion(const int modelgridindex, const int elem
           globals::cellhistory[tid].cooling_contrib[i] = C_ion;
 
           assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_COLLION);
-          assert_testmodeonly(coolinglist[i].element == element);
           assert_testmodeonly(coolinglist[i].ion == ion);
           assert_testmodeonly(coolinglist[i].level == level);
           assert_testmodeonly(coolinglist[i].upperlevel == upper);
@@ -168,7 +164,6 @@ static auto calculate_cooling_rates_ion(const int modelgridindex, const int elem
           globals::cellhistory[tid].cooling_contrib[i] = C_ion;
 
           assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_FB);
-          assert_testmodeonly(coolinglist[i].element == element);
           assert_testmodeonly(coolinglist[i].ion == ion);
           assert_testmodeonly(coolinglist[i].level == level);
           assert_testmodeonly(coolinglist[i].upperlevel == get_phixsupperlevel(element, ion, level, phixstargetindex));
@@ -285,7 +280,6 @@ void setup_coolinglist() {
       // printout("[debug] ioncharge %d, nncurrention %g, nne %g\n",ion,nncurrention,nne);
       if (ioncharge > 0) {
         coolinglist[i].type = COOLINGTYPE_FF;
-        coolinglist[i].element = element;
         coolinglist[i].ion = ion;
         coolinglist[i].level = -99;
         coolinglist[i].upperlevel = -99;
@@ -295,7 +289,6 @@ void setup_coolinglist() {
       for (int level = 0; level < nlevels_currention; level++) {
         if (get_nuptrans(element, ion, level) > 0) {
           coolinglist[i].type = COOLINGTYPE_COLLEXC;
-          coolinglist[i].element = element;
           coolinglist[i].ion = ion;
           coolinglist[i].level = level;
           // upper level is not valid because this is the contribution of all upper levels combined - have to
@@ -312,7 +305,6 @@ void setup_coolinglist() {
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
             coolinglist[i].type = COOLINGTYPE_COLLION;
-            coolinglist[i].element = element;
             coolinglist[i].ion = ion;
             coolinglist[i].level = level;
             coolinglist[i].upperlevel = upper;
@@ -327,7 +319,6 @@ void setup_coolinglist() {
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
             coolinglist[i].type = COOLINGTYPE_FB;
-            coolinglist[i].element = element;
             coolinglist[i].ion = ion;
             coolinglist[i].level = level;
             coolinglist[i].upperlevel = upper;
@@ -525,7 +516,6 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       /// The k-packet converts directly into a r-packet by free-bound-emission.
       /// Need to select the r-packets frequency and a random direction in the
       /// co-moving frame.
-      assert_testmodeonly(coolinglist[i].element == element);
       const int lowerion = coolinglist[i].ion;
       const int lowerlevel = coolinglist[i].level;
       const int upper = coolinglist[i].upperlevel;
@@ -570,7 +560,6 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       const double contrib_low = (i > ilow) ? globals::cellhistory[tid].cooling_contrib[i - 1] : 0.;
 
       double contrib = contrib_low;
-      assert_testmodeonly(coolinglist[i].element == element);
       assert_testmodeonly(coolinglist[i].ion == ion);
       const int level = coolinglist[i].level;
       const double epsilon_current = epsilon(element, ion, level);
@@ -605,7 +594,6 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       }
       assert_always(upper >= 0);
 
-      assert_testmodeonly(coolinglist[i].element == element);
       const int ion = coolinglist[i].ion;
       // const int upper = coolinglist[i].upperlevel;
       pkt_ptr->mastate.element = element;
@@ -628,7 +616,6 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       /// the k-packet activates a macro-atom due to collisional ionisation
       // printout("[debug] do_kpkt: k-pkt -> collisional ionisation of MA\n");
 
-      assert_testmodeonly(coolinglist[i].element == element);
       const int ion = coolinglist[i].ion + 1;
       const int upper = coolinglist[i].upperlevel;
       pkt_ptr->mastate.element = element;
