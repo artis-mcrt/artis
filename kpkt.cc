@@ -56,7 +56,7 @@ static auto calculate_cooling_rates_ion(const int modelgridindex, const int elem
   const auto T_e = grid::get_Te(modelgridindex);
 
   double C_ion = 0.;
-  int i = indexionstart;
+  int i = indexionstart;  // NOLINT(misc-const-correctness)
 
   const int nions = get_nions(element);
 
