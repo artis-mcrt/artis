@@ -1,7 +1,5 @@
 #include "grid.h"
 
-#include <stdlib.h>
-
 #include <algorithm>
 #include <cctype>
 #include <cmath>
