@@ -8,5 +8,6 @@
     },
     "[yaml]": {
         "editor.tabSize": 4
-    }
+    },
+    "sonarlint.pathToCompileCommands": "${workspaceFolder}/compile_commands.json"
 }
