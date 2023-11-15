@@ -664,7 +664,8 @@ static void calculate_kappagrey() {
       double kappa = 0.;
       if (globals::opacity_case == 0) {
         kappa = globals::GREY_OP;
-      } else if (globals::opacity_case == 1) {
+      } else if (globals::opacity_case == 1 || globals::opacity_case == 4) {
+        /// kappagrey used for initial grey approximation in case 4
         kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * globals::GREY_OP / ((0.9 * mfeg / mtot_input) + 0.1);
       } else if (globals::opacity_case == 2) {
         const double opcase2_normal = globals::GREY_OP * rho_sum / ((0.9 * fe_sum) + (0.1 * (ngrid - empty_cells)));
@@ -672,10 +673,6 @@ static void calculate_kappagrey() {
       } else if (globals::opacity_case == 3) {
         globals::opcase3_normal = globals::GREY_OP * rho_sum / opcase3_sum;
         kappa = get_kappagrey(mgi) * globals::opcase3_normal;
-      } else if (globals::opacity_case == 4) {
-        /// kappagrey used for initial grey approximation in this case
-        kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * globals::GREY_OP / ((0.9 * mfeg / mtot_input) + 0.1);
-        // kappa = SIGMA_T;
       } else if (globals::opacity_case == 5) {
         // electron-fraction-dependent opacities
         // values from table 1 of Tanaka et al. (2020).
@@ -1086,11 +1083,7 @@ static void parse_model_headerline(const std::string &line, std::vector<int> &zl
       assert_always((columnindex == 4 && get_model_type() == GRID_CARTESIAN3D) ||
                     (columnindex == 3 && get_model_type() == GRID_CYLINDRICAL2D));
       continue;
-    } else if (token == "X_Fegroup") {
-      colnames.push_back(token);
-      zlist.push_back(-1);
-      alist.push_back(-1);
-    } else if (token.starts_with("X_")) {
+    } else if (token.starts_with("X_") && token != "X_Fegroup") {
       colnames.push_back(token);
       const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
       const int a = decay::get_nucstring_a(token.substr(2));
