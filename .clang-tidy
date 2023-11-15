@@ -38,6 +38,7 @@ Checks: >
     -readability-identifier-length,
     -readability-function-cognitive-complexity,
     -readability-magic-numbers,
+    -*c++*-compat
 WarningsAsErrors: ''
 FormatStyle: file
 ExtraArgs: [-std=c++20]
