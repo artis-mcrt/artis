@@ -38,7 +38,7 @@ enum cell_boundary {
 
 struct packet {
   int where = -1;                                 // The propagation grid cell that the packet is in.
-  enum packet_type type;                          // type of packet (k-, r-, etc.)
+  enum packet_type type {};                       // type of packet (k-, r-, etc.)
   enum cell_boundary last_cross = BOUNDARY_NONE;  // To avoid rounding errors on cell crossing.
   int interactions = 0;                           // number of interactions the packet undergone
   int nscatterings = 0;              // records number of electron scatterings a r-pkt undergone since it was emitted
@@ -55,7 +55,7 @@ struct packet {
   double em_pos[3] = {0.};           // Position of the last emission (x,y,z).
   float em_time = -1.;
   double prop_time = -1.;  // internal clock to track how far in time the packet has been propagated
-  int absorptiontype;      // records linelistindex of the last absorption
+  int absorptiontype = 0;  // records linelistindex of the last absorption
                            // negative values give ff-abs (-1), bf-abs (-2), compton scattering of gammas (-3),
                            // photoelectric effect of gammas (-4), pair production of gammas (-5)
                            // decaying pellets of the 52Fe chain (-6) and pellets which decayed before the
@@ -67,17 +67,17 @@ struct packet {
   double absorptiondir[3] = {0.};  // Direction of propagation (x,y,z) when a packet was last absorbed in a line. Always
                                    // a unit vector.
   double stokes[3] = {0.};         // I, Q and U Stokes parameters
-  double pol_dir[3] = {0.};      // unit vector which defines the coordinate system against which Q and U are measured;
-                                 // should always be perpendicular to dir
-  double tdecay = -1.;           // Time at which pellet decays
-  enum packet_type escape_type;  // Flag to tell us in which form it escaped from the grid.
-  float escape_time = -1;        // time at which is passes out of the grid [s]
-  int number = -1;               // A unique number to identify the packet
-  bool originated_from_particlenotgamma;  // first-non-pellet packet type was gamma
-  int pellet_decaytype = -1;              // index into decay::decaytypes
-  int pellet_nucindex = -1;               // nuclide index of the decaying species
+  double pol_dir[3] = {0.};  // unit vector which defines the coordinate system against which Q and U are measured;
+                             // should always be perpendicular to dir
+  double tdecay = -1.;       // Time at which pellet decays
+  enum packet_type escape_type {};                // In which form when escaped from the grid.
+  float escape_time = -1;                         // time at which is passes out of the grid [s]
+  int number = -1;                                // A unique number to identify the packet
+  bool originated_from_particlenotgamma = false;  // first-non-pellet packet type was gamma
+  int pellet_decaytype = -1;                      // index into decay::decaytypes
+  int pellet_nucindex = -1;                       // nuclide index of the decaying species
   float trueemissionvelocity = -1;
-  struct mastate mastate;
+  struct mastate mastate {};
 
   inline auto operator==(const packet &rhs) -> bool {
     return (number == rhs.number && type == rhs.type &&
