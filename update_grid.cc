@@ -653,7 +653,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
   fflush(estimators_file);
 
-  const int write_estim_duration = time(nullptr) - sys_time_start_write_estimators;
+  const auto write_estim_duration = time(nullptr) - sys_time_start_write_estimators;
   if (write_estim_duration >= 1) {
     printout("writing estimators for timestep %d cell %d took %d seconds\n", timestep, mgi, write_estim_duration);
   }
