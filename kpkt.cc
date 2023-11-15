@@ -605,7 +605,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
       }
       assert_always(upper >= 0);
 
-      const int element = coolinglist[i].element;
+      assert_testmodeonly(coolinglist[i].element == element);
       const int ion = coolinglist[i].ion;
       // const int upper = coolinglist[i].upperlevel;
       pkt_ptr->mastate.element = element;
