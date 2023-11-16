@@ -814,16 +814,14 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   // printout("sdist, tdist, edist %g %g %g\n",sdist, tdist, edist);
 
   if ((sdist < tdist) && (sdist < edist)) {
-    pkt_ptr->prop_time += (sdist / 2.) / CLIGHT_PROP;
-    move_pkt(pkt_ptr, sdist / 2.);
+    move_pkt_withtime(pkt_ptr, sdist / 2.);
 
     // Move it into the new cell.
     if (chi_tot > 0) {
       rlc_emiss_gamma(pkt_ptr, sdist);
     }
 
-    pkt_ptr->prop_time += (sdist / 2.) / CLIGHT_PROP;
-    move_pkt(pkt_ptr, sdist / 2.);
+    move_pkt_withtime(pkt_ptr, sdist / 2.);
 
     if (snext != pkt_ptr->where) {
       grid::change_cell(pkt_ptr, snext);
