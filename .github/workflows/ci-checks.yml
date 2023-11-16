@@ -13,7 +13,6 @@ on:
 jobs:
     cppcheck:
         runs-on: macos-latest
-
         steps:
             - uses: actions/checkout@v4
 
@@ -35,7 +34,6 @@ jobs:
 
     clang-format:
         runs-on: ubuntu-22.04
-
         steps:
             - uses: actions/checkout@v4
 
@@ -44,11 +42,9 @@ jobs:
               with:
                   clang-format-version: '16'
                   check-path: .
+
     clang-tidy:
-        name: clang-tidy
-
-        runs-on: ubuntu-latest
-
+        runs-on: macos-latest
         steps:
             - uses: actions/checkout@v4
 
@@ -65,7 +61,6 @@ jobs:
             - name: Set up Python
               uses: actions/setup-python@v4
               with:
-                  python-version: '3.12'
                   cache: pip
 
             - name: Generate compile_commands.json
