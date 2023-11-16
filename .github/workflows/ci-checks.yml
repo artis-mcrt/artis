@@ -74,7 +74,7 @@ jobs:
               run: cat compile_commands.json
 
             - name: run-clang-tidy
-              run: run-clang-tidy -p . *.cc
+              run: run-clang-tidy
 
     compile:
         runs-on: ubuntu-22.04
