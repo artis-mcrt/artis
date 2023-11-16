@@ -59,7 +59,6 @@ jobs:
 
                   echo "CXX=clang-17" >> $GITHUB_ENV
                   echo "OMPI_CXX=clang-17" >> $GITHUB_ENV
-                  echo "PATH="$PATH:/usr/homebrew/opt/llvm/bin"" >> $GITHUB_ENV
 
                   echo "compiledb" > requirements.txt
 
@@ -80,7 +79,7 @@ jobs:
 
             - name: run-clang-tidy
               run: |
-                  export PATH="$PATH:/usr/homebrew/opt/llvm/bin"
+                  export PATH="/usr/local/opt/llvm/bin:$PATH"
                   run-clang-tidy
 
     compile:
