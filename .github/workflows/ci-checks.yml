@@ -56,7 +56,7 @@ jobs:
             - name: install llvm
               run: |
                   brew install llvm || true
-                  brew link llvm
+                  export PATH="/usr/local/opt/llvm/bin:$PATH"
 
                   echo "CXX=clang-17" >> $GITHUB_ENV
                   echo "OMPI_CXX=clang-17" >> $GITHUB_ENV
