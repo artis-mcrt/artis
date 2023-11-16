@@ -52,13 +52,26 @@ jobs:
               run: |
                   brew update
                   brew install openmpi gsl
+                  brew link openmpi
 
             - name: install llvm
               run: |
                   brew install llvm || true
+                  echo "/usr/local/opt/llvm/bin" >> $GITHUB_PATH
 
                   echo "CXX=clang-17" >> $GITHUB_ENV
                   echo "OMPI_CXX=clang-17" >> $GITHUB_ENV
+
+                  echo "CFLAGS=-I$HOMEBREW_PREFIX/include" >> $GITHUB_ENV
+                  echo "LDFLAGS=-L$HOMEBREW_PREFIX/lib" >> $GITHUB_ENV
+
+                  echo "LDFLAGS=-L/opt/homebrew/opt/libomp/lib" >> $GITHUB_ENV
+                  echo "CXXFLAGS=-I/opt/homebrew/opt/libomp/include" >> $GITHUB_ENV
+
+                  echo "LIBRARY_PATH=$HOMEBREW_PREFIX/lib" >> $GITHUB_ENV
+                  echo "LD_LIBRARY_PATH=$HOMEBREW_PREFIX/lib" >> $GITHUB_ENV
+
+                  echo "CPATH=$HOMEBREW_PREFIX/include" >> $GITHUB_ENV
 
                   echo "compiledb" > requirements.txt
 
@@ -79,7 +92,7 @@ jobs:
 
             - name: run-clang-tidy
               run: |
-                  export PATH="/usr/local/opt/llvm/bin:$PATH"
+                  clang-tidy --version
                   run-clang-tidy
 
     compile:
