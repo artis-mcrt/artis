@@ -62,16 +62,16 @@ jobs:
                   echo "CXX=clang-17" >> $GITHUB_ENV
                   echo "OMPI_CXX=clang-17" >> $GITHUB_ENV
 
-                  echo "CFLAGS=-I$HOMEBREW_PREFIX/include" >> $GITHUB_ENV
-                  echo "LDFLAGS=-L$HOMEBREW_PREFIX/lib" >> $GITHUB_ENV
+                  echo "CFLAGS=-I/usr/local/opt/include" >> $GITHUB_ENV
+                  echo "LDFLAGS=-L/usr/local/opt/lib" >> $GITHUB_ENV
 
-                  echo "LDFLAGS=-L/opt/homebrew/opt/libomp/lib" >> $GITHUB_ENV
-                  echo "CXXFLAGS=-I/opt/homebrew/opt/libomp/include" >> $GITHUB_ENV
+                  echo "LDFLAGS=-L/usr/local/opt/libomp/lib" >> $GITHUB_ENV
+                  echo "CXXFLAGS=-I/usr/local/opt/libomp/include" >> $GITHUB_ENV
 
-                  echo "LIBRARY_PATH=$HOMEBREW_PREFIX/lib" >> $GITHUB_ENV
-                  echo "LD_LIBRARY_PATH=$HOMEBREW_PREFIX/lib" >> $GITHUB_ENV
+                  echo "LIBRARY_PATH=/usr/local/opt/lib" >> $GITHUB_ENV
+                  echo "LD_LIBRARY_PATH=/usr/local/opt/lib" >> $GITHUB_ENV
 
-                  echo "CPATH=$HOMEBREW_PREFIX/include" >> $GITHUB_ENV
+                  echo "CPATH=/usr/local/opt/include" >> $GITHUB_ENV
 
                   echo "compiledb" > requirements.txt
 
