@@ -22,7 +22,16 @@ jobs:
                 # os: ['ubuntu-latest', 'self-hosted']
                 os: [ubuntu-22.04]
                 testmode: [OFF, ON]
-                testname: [classicmode_1d_3dgrid, classicmode_3d, kilonova_1d_1dgrid, kilonova_1d_3dgrid, kilonova_2d_2dgrid, kilonova_2d_3dgrid, nebularonezone_1d_3dgrid]
+                testname:
+                    [
+                        classicmode_1d_3dgrid,
+                        classicmode_3d,
+                        kilonova_1d_1dgrid,
+                        kilonova_1d_3dgrid,
+                        kilonova_2d_2dgrid,
+                        kilonova_2d_3dgrid,
+                        nebularonezone_1d_3dgrid,
+                    ]
                 exclude:
                     - os: self-hosted
                       testmode: ON
@@ -33,7 +42,7 @@ jobs:
         name: ${{ matrix.testname }}${{ matrix.testmode == 'ON' && ' testmode ON' || ''}}
 
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v4
               with:
                   fetch-depth: 0
 

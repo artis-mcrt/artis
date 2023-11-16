@@ -15,7 +15,7 @@ jobs:
         runs-on: macos-latest
 
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v4
 
             - name: install dependencies
               run: |
@@ -37,7 +37,7 @@ jobs:
         runs-on: ubuntu-22.04
 
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v4
 
             - name: Run clang-format style check
               uses: jidicula/clang-format-action@v4.11.0
@@ -52,15 +52,13 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: Install dependencies
+            - name: install dependencies
               run: |
-                  sudo apt update
-                  sudo apt install -y clang-15 --install-suggests
-                  sudo apt install -y llvm-15 --install-suggests
-                  echo "CXX=clang++-15" >> $GITHUB_ENV
-                  echo "OMPI_CXX=clang++-15" >> $GITHUB_ENV
-                  sudo apt install -y libgsl-dev
-                  sudo apt install -y openmpi-bin libopenmpi-dev
+                  brew update
+                  brew install llvm openmpi gsl
+
+                  echo "CXX=clang++-17" >> $GITHUB_ENV
+                  echo "OMPI_CXX=clang++-17" >> $GITHUB_ENV
 
                   echo "compiledb" > requirements.txt
 
@@ -74,15 +72,14 @@ jobs:
               run: |
                   pip install compiledb
                   cp artisoptions_nltenebular.h artisoptions.h
+
                   compiledb -n --full-path make sn3d exspec
 
             - name: cat compile_commands.json
-              run: |
-                  cat compile_commands.json
+              run: cat compile_commands.json
 
             - name: run-clang-tidy
-              run: |
-                  run-clang-tidy -p . *.cc
+              run: run-clang-tidy -p . *.cc
 
     compile:
         runs-on: ubuntu-22.04
@@ -111,7 +108,7 @@ jobs:
 
         name: ${{ matrix.compiler.name }}-${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v4
 
             - name: CPU type and core count
               id: cpu-count
