@@ -828,14 +828,13 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     }
   } else if ((tdist < sdist) && (tdist < edist)) {
     // Doesn't reach boundary.
-    pkt_ptr->prop_time += (tdist / 2.) / CLIGHT_PROP;
-    move_pkt(pkt_ptr, tdist / 2.);
+    move_pkt_withtime(pkt_ptr, tdist / 2.);
 
     if (chi_tot > 0) {
       rlc_emiss_gamma(pkt_ptr, tdist);
     }
-    pkt_ptr->prop_time = t2;
-    move_pkt(pkt_ptr, tdist / 2.);
+    move_pkt_withtime(pkt_ptr, tdist / 2.);
+    pkt_ptr->prop_time = t2;  // prevent roundoff error
   } else if ((edist < sdist) && (edist < tdist)) {
     pkt_ptr->prop_time += (edist / 2.) / CLIGHT_PROP;
     move_pkt(pkt_ptr, edist / 2.);
