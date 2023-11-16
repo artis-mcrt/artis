@@ -159,7 +159,7 @@ constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double,
   return doppler_nucmf_on_nurf(dir_rf, flow_velocity);
 }
 
-constexpr void move_pkt_withtime(struct packet *pkt_ptr, const double distance)
+constexpr void move_pkt_withtime(struct packet *pkt_ptr, const double distance, double *doppler_nucmf_on_nurf = nullptr)
 /// Subroutine to move a packet along a straight line (specified by current
 /// dir vector). The distance moved is in the rest frame.
 {
@@ -175,6 +175,9 @@ constexpr void move_pkt_withtime(struct packet *pkt_ptr, const double distance)
   /// During motion, rest frame energy and frequency are conserved.
   /// But need to update the co-moving ones.
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
+  if (doppler_nucmf_on_nurf != nullptr) {
+    *doppler_nucmf_on_nurf = dopplerfactor;
+  }
   pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
   pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
 
