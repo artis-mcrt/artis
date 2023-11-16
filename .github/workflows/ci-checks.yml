@@ -59,6 +59,7 @@ jobs:
 
                   echo "CXX=clang-17" >> $GITHUB_ENV
                   echo "OMPI_CXX=clang-17" >> $GITHUB_ENV
+                  echo "PATH="$PATH:/usr/homebrew/opt/llvm/bin"" >> $GITHUB_ENV
 
                   echo "compiledb" > requirements.txt
 
