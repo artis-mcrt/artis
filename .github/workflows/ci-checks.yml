@@ -51,7 +51,11 @@ jobs:
             - name: install dependencies
               run: |
                   brew update
-                  brew install llvm openmpi gsl
+                  brew install openmpi gsl
+
+            - name: install llvm
+              run: |
+                  brew install llvm
 
                   echo "CXX=clang-17" >> $GITHUB_ENV
                   echo "OMPI_CXX=clang-17" >> $GITHUB_ENV
