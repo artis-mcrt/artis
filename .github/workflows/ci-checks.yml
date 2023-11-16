@@ -55,10 +55,12 @@ jobs:
             - name: Install dependencies
               run: |
                   sudo apt update
-                  sudo apt install -y gcc-13 g++-13
                   sudo apt install -y libgsl-dev
                   sudo apt install -y openmpi-bin libopenmpi-dev
-                  echo "OMPI_CXX=g++-13" >> $GITHUB_ENV
+                  sudo apt install -y clang-15 --install-suggests
+                  sudo apt install -y llvm-15 --install-suggests
+                  echo "CXX=clang++-15" >> $GITHUB_ENV
+                  echo "OMPI_CXX=clang++-15" >> $GITHUB_ENV
                   echo "compiledb" > requirements.txt
 
             - name: Set up Python
