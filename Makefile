@@ -164,7 +164,7 @@ sn3d: $(sn3d_objects) artisoptions.h Makefile
 sn3dwhole: version.h artisoptions.h Makefile
 	$(CXX) $(CXXFLAGS) -g $(sn3d_files) $(LDFLAGS) -o sn3d
 
-exspec: $(exspec_objects)
+exspec: $(exspec_objects) artisoptions.h Makefile
 	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec
 -include $(exspec_dep)
 
