@@ -56,7 +56,6 @@ jobs:
             - name: install llvm
               run: |
                   brew install llvm || true
-                  export PATH="/usr/local/opt/llvm/bin:$PATH"
 
                   echo "CXX=clang-17" >> $GITHUB_ENV
                   echo "OMPI_CXX=clang-17" >> $GITHUB_ENV
@@ -79,7 +78,8 @@ jobs:
               run: cat compile_commands.json
 
             - name: run-clang-tidy
-              run: run-clang-tidy
+              run: |
+                  /usr/local/opt/llvm/bin/run-clang-tidy
 
     compile:
         runs-on: ubuntu-22.04
