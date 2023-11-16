@@ -73,7 +73,9 @@ jobs:
 
                   echo "CPATH=/usr/local/opt/include" >> $GITHUB_ENV
 
-                  echo 'LDFLAGS=-L/usr/local/opt/llvm/lib/c++ -Wl,-rpath,/usr/local/opt/llvm/lib/c++' >> $GITHUB_ENV
+                  #echo 'LDFLAGS=-L/usr/local/opt/llvm/lib/c++ -Wl,-rpath,/usr/local/opt/llvm/lib/c++' >> $GITHUB_ENV
+
+                  xcode-select -s /Applications/Xcode_15.0.1.app/Contents/Developer
 
                   echo "compiledb" > requirements.txt
 
