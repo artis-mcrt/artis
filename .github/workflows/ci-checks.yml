@@ -74,9 +74,13 @@ jobs:
                   pip install compiledb
                   compiledb -n --full-path make
 
+            - name: cat compile_commands.json
+              run: |
+                  cat compile_commands.json
+
             - name: run-clang-tidy
               run: |
-                  run-clang-tidy
+                  run-clang-tidy -p . *.cc
 
     compile:
         runs-on: ubuntu-22.04
