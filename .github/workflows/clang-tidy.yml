@@ -1,0 +1,51 @@
+---
+name: Compile and lint
+
+on:
+    push:
+        branches-ignore:
+            - classic*
+    workflow_dispatch:
+    # pull_request:
+    #     branches-ignore:
+    #         - classic*
+
+jobs:
+    clang-tidy:
+        name: clang-tidy-review
+
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install dependencies
+              run: |
+                  sudo apt update
+                  sudo apt install -y gcc-13 g++-13
+                  sudo apt install -y libgsl-dev
+                  sudo apt install -y openmpi-bin libopenmpi-dev
+                  echo "OMPI_CXX=g++-13" >> $GITHUB_ENV
+                  echo "compiledb" > requirements.txt
+
+            - name: Set up Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: '3.12'
+                  cache: pip
+
+            - name: Generate compile_commands.json
+              run: |
+                  pip install compiledb
+                  compiledb -n --full-path make
+
+            - uses: ZedThree/clang-tidy-review@v0.14.0
+              id: review
+
+            # Uploads an artefact containing clang_fixes.json
+            - uses: ZedThree/clang-tidy-review/upload@v0.14.0
+              id: upload-review
+
+            # If there are any comments, fail the check
+            - if: steps.review.outputs.total_comments > 0
+              run: exit 1
