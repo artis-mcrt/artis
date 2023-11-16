@@ -1,4 +1,5 @@
 CompileFlags:
-    # to make the compilation database, pip install compiledb, then run compiledb -n --full-path make
+    # to make the compilation database, pip install compiledb, then run:
+    # compiledb -n --full-path make
     CompilationDatabase: compile_commands.json
     Add: [-DMPI_ON=true]

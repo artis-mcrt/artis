@@ -45,11 +45,49 @@ jobs:
                   clang-format-version: '16'
                   check-path: .
 
+    clang-tidy:
+        name: clang-tidy-review
+
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: '3.12'
+                  cache: pip
+
+            - name: Install dependencies
+              run: |
+                  pip install compiledb
+                  sudo apt install libgsl-dev
+                  compiledb -n --full-path make
+
+            - uses: ZedThree/clang-tidy-review@v0.14.0
+              id: review
+
+            # Uploads an artefact containing clang_fixes.json
+            - uses: ZedThree/clang-tidy-review/upload@v0.14.0
+              id: upload-review
+
+            # If there are any comments, fail the check
+            - if: steps.review.outputs.total_comments > 0
+              run: exit 1
+
     compile:
         runs-on: ubuntu-22.04
         strategy:
             matrix:
-                compiler: [{name: gcc, ver: 11}, {name: gcc, ver: 12}, {name: gcc, ver: 13}, {name: clang, ver: 14}, {name: clang, ver: 15}]
+                compiler:
+                    [
+                        {name: gcc, ver: 11},
+                        {name: gcc, ver: 12},
+                        {name: gcc, ver: 13},
+                        {name: clang, ver: 14},
+                        {name: clang, ver: 15},
+                    ]
                 mpi: [ON, OFF]
                 openmp: [ON, OFF]
                 exclude:
