@@ -22,9 +22,7 @@
 #ifdef MPI_ON
 #include "mpi.h"
 #endif
-#include "packet.h"
 #include "sn3d.h"
-#include "vectors.h"
 
 namespace radfield {
 
@@ -699,7 +697,7 @@ void zero_estimators(int modelgridindex)
 }
 
 static void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                                const struct packet *const pkt_ptr) {
+                                const double doppler_nucmf_on_nurf) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
   assert_always(bfrate_raw != nullptr);
 
@@ -708,12 +706,10 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
   }
 
   const int nbfcontinua = globals::nbfcontinua;
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
-  // const double dopplerfactor = 1.;
 
   const int tid = get_thread_num();
   const double distance_e_cmf_over_nu =
-      distance_e_cmf / nu_cmf * dopplerfactor;  // TODO: Luke: why did I put a doppler factor here?
+      distance_e_cmf / nu_cmf * doppler_nucmf_on_nurf;  // TODO: Luke: why did I put a doppler factor here?
   for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++) {
     const double nu_edge = globals::allcont_nu_edge[allcontindex];
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
@@ -730,14 +726,14 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
 }
 
 void update_estimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
-                       const struct packet *const pkt_ptr) {
+                       const double doppler_nucmf_on_nurf) {
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
   safeadd(J[nonemptymgi], distance_e_cmf);
   safeadd(nuJ[nonemptymgi], distance_e_cmf * nu_cmf);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    update_bfestimators(nonemptymgi, distance_e_cmf, nu_cmf, pkt_ptr);
+    update_bfestimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf);
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {

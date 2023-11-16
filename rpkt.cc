@@ -546,21 +546,22 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
     return;
   }
   const double distance_e_cmf = distance * pkt_ptr->e_cmf;
-  const double nu = pkt_ptr->nu_cmf;
-  radfield::update_estimators(modelgridindex, distance_e_cmf, nu, pkt_ptr);
+  const double nu_cmf = pkt_ptr->nu_cmf;
+  const double doppler_nucmf_on_nurf = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
+
+  radfield::update_estimators(modelgridindex, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf);
 
   /// ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
   /// quick and dirty solution: store info in element=ion=0, and leave the others untouched (i.e. zero)
   safeadd(globals::ffheatingestimator[modelgridindex], distance_e_cmf * globals::chi_rpkt_cont[tid].ffheating);
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-    const double distance_e_cmf_over_nu = distance_e_cmf / nu;
     const int nelements = get_nelements();
     const int max_nions = get_max_nions();
 
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
       const double nu_edge = globals::groundcont[i].nu_edge;
-      if (nu > nu_edge) {
+      if (nu_cmf > nu_edge) {
         const int element = globals::groundcont[i].element;
         /// Cells with zero abundance for a specific element have zero contribution
         /// (set in calculate_chi_rpkt_cont and therefore do not contribute to
@@ -571,25 +572,26 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
 
           if constexpr (USE_LUT_PHOTOION) {
             safeadd(globals::gammaestimator[ionestimindex],
-                    globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf_over_nu);
+                    globals::phixslist[tid].groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
 
             if (!std::isfinite(globals::gammaestimator[ionestimindex])) {
               printout(
                   "[fatal] update_estimators: gamma estimator becomes non finite: mgi %d element %d ion %d gamma_contr "
                   "%g, distance_e_cmf_over_nu %g\n",
                   modelgridindex, element, ion, globals::phixslist[tid].groundcont_gamma_contr[i],
-                  distance_e_cmf_over_nu);
+                  distance_e_cmf / nu_cmf);
               std::abort();
             }
           }
 
           if constexpr (USE_LUT_BFHEATING) {
             safeadd(globals::bfheatingestimator[ionestimindex],
-                    globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu));
+                    globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
           }
         }
       } else {
-        break;  // because groundcont is sorted by nu_edge descending, nu < nu_edge for all remaining items
+        // because groundcont is sorted by nu_edge descending, nu < nu_edge for all remaining items
+        return;
       }
     }
   }
