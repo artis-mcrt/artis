@@ -814,7 +814,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   // printout("sdist, tdist, edist %g %g %g\n",sdist, tdist, edist);
 
   if ((sdist < tdist) && (sdist < edist)) {
-    pkt_ptr->prop_time += sdist / 2. / CLIGHT_PROP;
+    pkt_ptr->prop_time += (sdist / 2.) / CLIGHT_PROP;
     move_pkt(pkt_ptr, sdist / 2.);
 
     // Move it into the new cell.
@@ -822,7 +822,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
       rlc_emiss_gamma(pkt_ptr, sdist);
     }
 
-    pkt_ptr->prop_time += sdist / 2. / CLIGHT_PROP;
+    pkt_ptr->prop_time += (sdist / 2.) / CLIGHT_PROP;
     move_pkt(pkt_ptr, sdist / 2.);
 
     if (snext != pkt_ptr->where) {
@@ -830,7 +830,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     }
   } else if ((tdist < sdist) && (tdist < edist)) {
     // Doesn't reach boundary.
-    pkt_ptr->prop_time += tdist / 2. / CLIGHT_PROP;
+    pkt_ptr->prop_time += (tdist / 2.) / CLIGHT_PROP;
     move_pkt(pkt_ptr, tdist / 2.);
 
     if (chi_tot > 0) {
@@ -839,12 +839,12 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     pkt_ptr->prop_time = t2;
     move_pkt(pkt_ptr, tdist / 2.);
   } else if ((edist < sdist) && (edist < tdist)) {
-    pkt_ptr->prop_time += edist / 2. / CLIGHT_PROP;
+    pkt_ptr->prop_time += (edist / 2.) / CLIGHT_PROP;
     move_pkt(pkt_ptr, edist / 2.);
     if (chi_tot > 0) {
       rlc_emiss_gamma(pkt_ptr, edist);
     }
-    pkt_ptr->prop_time += edist / 2. / CLIGHT_PROP;
+    pkt_ptr->prop_time += (edist / 2.) / CLIGHT_PROP;
     move_pkt(pkt_ptr, edist / 2.);
 
     // event occurs. Choose which event and call the appropriate subroutine.
