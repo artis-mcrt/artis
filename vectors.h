@@ -159,12 +159,14 @@ constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double,
   return doppler_nucmf_on_nurf(dir_rf, flow_velocity);
 }
 
-constexpr void move_pkt(struct packet *pkt_ptr, const double distance)
+constexpr void move_pkt_withtime(struct packet *pkt_ptr, const double distance)
 /// Subroutine to move a packet along a straight line (specified by current
 /// dir vector). The distance moved is in the rest frame.
 {
-  /// First update pos.
   assert_always(distance >= 0);
+
+  const double nu_cmf_old = pkt_ptr->nu_cmf;
+  pkt_ptr->prop_time += distance / CLIGHT_PROP;
 
   pkt_ptr->pos[0] += (pkt_ptr->dir[0] * distance);
   pkt_ptr->pos[1] += (pkt_ptr->dir[1] * distance);
@@ -175,15 +177,6 @@ constexpr void move_pkt(struct packet *pkt_ptr, const double distance)
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
   pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
   pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
-}
-
-constexpr void move_pkt_withtime(struct packet *pkt_ptr, const double distance)
-/// Subroutine to move a packet along a straight line (specified by current
-/// dir vector). The distance moved is in the rest frame.
-{
-  const double nu_cmf_old = pkt_ptr->nu_cmf;
-  pkt_ptr->prop_time += distance / CLIGHT_PROP;
-  move_pkt(pkt_ptr, distance);
 
   // frequency should only over decrease due to packet movement
   // enforce this to overcome numerical error
