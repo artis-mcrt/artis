@@ -72,7 +72,7 @@ jobs:
                   pip install compiledb
                   compiledb -n --full-path make
 
-            - name: run clang-tidy
+            - name: run-clang-tidy
               run: |
                   run-clang-tidy
 
