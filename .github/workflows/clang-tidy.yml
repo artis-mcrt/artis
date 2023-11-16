@@ -1,17 +1,14 @@
 ---
-name: Run clang-tidy
+name: clang-tidy-review
 
 on:
-    push:
+    workflow_dispatch:
+    pull_request:
         branches-ignore:
             - classic*
-    workflow_dispatch:
-    # pull_request:
-    #     branches-ignore:
-    #         - classic*
 
 jobs:
-    clang-tidy:
+    clang-tidy-review:
         name: clang-tidy-review
 
         runs-on: ubuntu-latest

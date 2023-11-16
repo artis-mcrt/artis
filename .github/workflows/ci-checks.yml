@@ -44,6 +44,37 @@ jobs:
               with:
                   clang-format-version: '16'
                   check-path: .
+    clang-tidy:
+        name: clang-tidy
+
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install dependencies
+              run: |
+                  sudo apt update
+                  sudo apt install -y gcc-13 g++-13
+                  sudo apt install -y libgsl-dev
+                  sudo apt install -y openmpi-bin libopenmpi-dev
+                  echo "OMPI_CXX=g++-13" >> $GITHUB_ENV
+                  echo "compiledb" > requirements.txt
+
+            - name: Set up Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: '3.12'
+                  cache: pip
+
+            - name: Generate compile_commands.json
+              run: |
+                  pip install compiledb
+                  compiledb -n --full-path make
+
+            - name: run clang-tidy
+              run: |
+                  run-clang-tidy
 
     compile:
         runs-on: ubuntu-22.04
