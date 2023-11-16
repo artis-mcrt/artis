@@ -33,7 +33,7 @@ ifeq ($(shell uname -s),Darwin)
 	# add -lprofiler for gperftools
 	# LDFLAGS += $(LIB)
 	# LDFLAGS += -lprofiler
-	LDFLAGS += $(shell pkg-config --cflags ompi)
+	CXXFLAGS += $(shell pkg-config --cflags ompi)
 
 else ifeq ($(USER),localadmin_ccollins)
 	# CXX = c++
