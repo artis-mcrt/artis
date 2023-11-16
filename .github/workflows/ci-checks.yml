@@ -73,7 +73,7 @@ jobs:
 
                   echo "CPATH=/usr/local/opt/include" >> $GITHUB_ENV
 
-                  echo "-L/opt/homebrew/opt/llvm/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm/lib/c++"  >> $GITHUB_ENV
+                  echo 'LDFLAGS=-L/usr/local/opt/llvm/lib/c++ -Wl,-rpath,/usr/local/opt/llvm/lib/c++' >> $GITHUB_ENV
 
                   echo "compiledb" > requirements.txt
 
