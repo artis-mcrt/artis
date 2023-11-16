@@ -72,6 +72,7 @@ jobs:
             - name: Generate compile_commands.json
               run: |
                   pip install compiledb
+                  cp artisoptions_nltenebular.h artisoptions.h
                   compiledb --full-path make sn3d exspec
 
             - name: cat compile_commands.json
