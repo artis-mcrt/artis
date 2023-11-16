@@ -79,7 +79,8 @@ jobs:
 
             - name: run-clang-tidy
               run: |
-                  /usr/local/opt/llvm/bin/run-clang-tidy
+                  export PATH="$PATH:/usr/homebrew/opt/llvm/bin"
+                  run-clang-tidy
 
     compile:
         runs-on: ubuntu-22.04
