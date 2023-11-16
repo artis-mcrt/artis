@@ -72,7 +72,7 @@ jobs:
             - name: Generate compile_commands.json
               run: |
                   pip install compiledb
-                  compiledb -n --full-path make
+                  compiledb -n --full-path make sn3d exspec
 
             - name: cat compile_commands.json
               run: |
