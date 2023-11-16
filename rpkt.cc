@@ -732,8 +732,8 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     // reaches end of timestep before cell boundary or interaction
     move_pkt_withtime(pkt_ptr, tdist / 2.);
     update_estimators(pkt_ptr, tdist, mgi);
+    move_pkt_withtime(pkt_ptr, tdist / 2.);
     pkt_ptr->prop_time = t2;
-    move_pkt(pkt_ptr, tdist / 2.);
     pkt_ptr->last_event = pkt_ptr->last_event + 1000;
 
     return false;

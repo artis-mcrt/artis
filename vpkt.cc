@@ -379,8 +379,8 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     // printf("I'm changing cell. I'm going from nu_cmf = %.e ",dummy_ptr->nu_cmf);
 
     t_future += (sdist / CLIGHT_PROP);
+    move_pkt_withtime(&vpkt, sdist);
     vpkt.prop_time = t_future;
-    move_pkt(&vpkt, sdist);
 
     grid::change_cell(&vpkt, snext);
     end_packet = (vpkt.type == TYPE_ESCAPE);
