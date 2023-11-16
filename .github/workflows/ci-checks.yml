@@ -85,7 +85,7 @@ jobs:
                   pip install compiledb
                   cp artisoptions_nltenebular.h artisoptions.h
 
-                  python -m compiledb -n --full-path make sn3d exspec
+                  python -m compiledb -n --full-path make MPI=OFF sn3d exspec
 
             - name: cat compile_commands.json
               run: cat compile_commands.json
