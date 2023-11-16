@@ -843,7 +843,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     move_pkt_withtime(pkt_ptr, edist / 2.);
 
     // event occurs. Choose which event and call the appropriate subroutine.
-    zrand = rng_uniform();
+    const double zrand = rng_uniform();
     if (chi_compton > (zrand * chi_tot)) {
       // Compton scattering.
       compton_scatter(pkt_ptr);
