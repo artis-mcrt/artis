@@ -53,8 +53,8 @@ jobs:
                   brew update
                   brew install llvm openmpi gsl
 
-                  echo "CXX=clang++-17" >> $GITHUB_ENV
-                  echo "OMPI_CXX=clang++-17" >> $GITHUB_ENV
+                  echo "CXX=clang-17" >> $GITHUB_ENV
+                  echo "OMPI_CXX=clang-17" >> $GITHUB_ENV
 
                   echo "compiledb" > requirements.txt
 
