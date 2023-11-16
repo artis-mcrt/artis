@@ -55,7 +55,7 @@ jobs:
 
             - name: install llvm
               run: |
-                  brew install llvm
+                  brew install llvm 2> /dev/null
 
                   echo "CXX=clang-17" >> $GITHUB_ENV
                   echo "OMPI_CXX=clang-17" >> $GITHUB_ENV
