@@ -133,17 +133,10 @@ constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double,
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
 
-  const double ndotv = dot(dir_rf, vel_rf);
-  double dopplerfactorsq = 1.;
-
-  if (USE_RELATIVISTIC_DOPPLER_SHIFT) {
-    const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;
-    assert_testmodeonly(betasq >= 0.);  // v < c
-    assert_testmodeonly(betasq < 1.);   // v < c
-    dopplerfactorsq = std::pow(1. - (ndotv / CLIGHT), 2) / (1 - betasq);
-  } else {
-    dopplerfactorsq = 1. - 2 * (ndotv / CLIGHT);
-  }
+  const double ndotv_on_c = dot(dir_rf, vel_rf) / CLIGHT;
+  double dopplerfactorsq = USE_RELATIVISTIC_DOPPLER_SHIFT
+                               ? std::pow(1. - ndotv_on_c, 2) / (1 - (dot(vel_rf, vel_rf) / CLIGHTSQUARED))
+                               : (1. - 2 * ndotv_on_c);
 
   assert_testmodeonly(std::isfinite(dopplerfactorsq));
   assert_testmodeonly(dopplerfactorsq > 0);
