@@ -312,14 +312,14 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
   // printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 }
 
-constexpr auto sigma_compton_partial(const double x, const double f) -> double
+constexpr auto sigma_compton_partial(const double x, const double f_max) -> double
 // Routine to compute the partial cross section for Compton scattering.
 //   xx is the photon energy (in units of electron mass) and f
 //  is the energy loss factor up to which we wish to integrate.
 {
-  const double term1 = ((x * x) - (2 * x) - 2) * std::log(f) / x / x;
-  const double term2 = (((f * f) - 1) / (f * f)) / 2;
-  const double term3 = ((f - 1) / x) * ((1 / x) + (2 / f) + (1 / (x * f)));
+  const double term1 = ((x * x) - (2 * x) - 2) * std::log(f_max) / x / x;
+  const double term2 = (((f_max * f_max) - 1) / (f_max * f_max)) / 2;
+  const double term3 = ((f_max - 1) / x) * ((1 / x) + (2 / f_max) + (1 / (x * f_max)));
 
   return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
 }
