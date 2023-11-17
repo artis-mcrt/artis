@@ -1,6 +1,6 @@
+#pragma once
 #ifndef SN3D_H
 #define SN3D_H
-#pragma once
 
 #include <getopt.h>
 #include <gsl/gsl_integration.h>
@@ -17,6 +17,7 @@
 #include <random>
 
 #include "artisoptions.h"
+#include "atomic.h"
 #include "globals.h"
 
 // #define _OPENMP
@@ -242,7 +243,7 @@ inline void check_already_running() {
 }
 
 inline auto get_ionestimindex(const int mgi, const int element, const int ion) -> int {
-  return mgi * get_nelements() * get_max_nions() + element * get_max_nions() + ion;
+  return mgi * get_includedions() + get_uniqueionindex(element, ion);
 }
 
 #endif  // SN3D_H
