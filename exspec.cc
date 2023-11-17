@@ -241,7 +241,7 @@ auto main(int argc, char *argv[]) -> int {
         "mem_usage: loading %d packets from each of %d processes sequentially (total %d packets, %.1f MB memory)\n",
         globals::npkts, globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
         globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024.);
-    auto *pkts = static_cast<struct packet *>(malloc(globals::npkts * sizeof(struct packet)));
+    pkts = static_cast<struct packet *>(malloc(globals::npkts * sizeof(struct packet)));
     assert_always(pkts != nullptr);
   }
 
