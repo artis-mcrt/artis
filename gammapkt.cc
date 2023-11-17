@@ -442,8 +442,7 @@ static void compton_scatter(struct packet *pkt_ptr)
 
     const double prob_gamma = 1. / f;
 
-    const double zrand2 = rng_uniform();
-    stay_gamma = (zrand2 < prob_gamma);
+    stay_gamma = (rng_uniform() < prob_gamma);
   }
 
   if (stay_gamma) {
