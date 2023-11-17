@@ -1190,7 +1190,7 @@ static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcont
       element = globals::groundcont[index].element;
       ion = globals::groundcont[index].ion;
     }
-    *index_in_groundlevelcontestimator = element * get_max_nions() + ion;
+    *index_in_groundlevelcontestimator = get_ionestimindex(0, element, ion);
   }
 
   return index;
