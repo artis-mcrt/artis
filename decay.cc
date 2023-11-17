@@ -45,13 +45,13 @@ constexpr std::string_view elsymbols[Z_MAX + 1] = {
     "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Uut", "Fl", "Uup", "Lv", "Uus", "Uuo"};
 
 struct nuclide {
-  int z = -1;                    // atomic number
-  int a = -1;                    // mass number
-  double meanlife = -1;          // mean lifetime before decay [s]
-  double endecay_electron = 0.;  // average energy per beta- decay in kinetic energy of emitted electons [erg]
-  double endecay_positron = 0.;  // average energy per beta+ decay in kinetic energy of emitted positrons [erg]
-  double endecay_gamma = 0.;     // average energy per decay in gamma rays [erg]
-  double endecay_alpha = 0.;     // average energy per alpha decay in kinetic energy of alpha particles [erg]
+  int z{-1};                    // atomic number
+  int a{-1};                    // mass number
+  double meanlife{-1};          // mean lifetime before decay [s]
+  double endecay_electron{0.};  // average energy per beta- decay in kinetic energy of emitted electons [erg]
+  double endecay_positron{0.};  // average energy per beta+ decay in kinetic energy of emitted positrons [erg]
+  double endecay_gamma{0.};     // average energy per decay in gamma rays [erg]
+  double endecay_alpha{0.};     // average energy per alpha decay in kinetic energy of alpha particles [erg]
   std::array<double, decaytypes::DECAYTYPE_COUNT> endecay_q = {
       0.};  // Q-value (reactant minus product energy) for each decay type
   std::array<double, decaytypes::DECAYTYPE_COUNT> branchprobs = {0.};  // branch probability of each decay type
@@ -117,7 +117,8 @@ struct decaypath {
   std::vector<int> nucindex{};  // index into nuclides list
   std::vector<int> decaytypes{};
   std::vector<double> lambdas{};
-  double branchproduct{};  // product of all branching factors along the path set by calculate_decaypath_branchproduct()
+  double branchproduct{
+      0.};  // product of all branching factors along the path set by calculate_decaypath_branchproduct()
 
   [[nodiscard]] auto final_daughter_a() const -> int { return decay_daughter_a(z.back(), a.back(), decaytypes.back()); }
   [[nodiscard]] auto final_daughter_z() const -> int { return decay_daughter_z(z.back(), a.back(), decaytypes.back()); }
