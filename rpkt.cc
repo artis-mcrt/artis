@@ -554,9 +554,6 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   safeadd(globals::ffheatingestimator[modelgridindex], distance_e_cmf * globals::chi_rpkt_cont[tid].ffheating);
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-    const int nelements = get_nelements();
-    const int max_nions = get_max_nions();
-
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
       const double nu_edge = globals::groundcont[i].nu_edge;
       if (nu_cmf < nu_edge) {
@@ -569,7 +566,7 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
       /// the estimators
       if (grid::get_elem_abundance(modelgridindex, element) > 0) {
         const int ion = globals::groundcont[i].ion;
-        const int ionestimindex = modelgridindex * nelements * max_nions + element * max_nions + ion;
+        const int ionestimindex = get_ionestimindex(modelgridindex, element, ion);
 
         if constexpr (USE_LUT_PHOTOION) {
           safeadd(globals::gammaestimator[ionestimindex],
