@@ -427,9 +427,9 @@ static void rpkt_event_continuum(struct packet *pkt_ptr,
     const double chi_bf_rand = zrand2 * chi_bf_inrest;
 
     // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand
-    double *upperval = std::upper_bound(&globals::phixslist[tid].chi_bf_sum[0],
-                                        &globals::phixslist[tid].chi_bf_sum[globals::nbfcontinua - 1], chi_bf_rand);
-    const int allcontindex = std::distance(&globals::phixslist[tid].chi_bf_sum[0], upperval);
+    const auto &upperval = std::upper_bound(globals::phixslist[tid].chi_bf_sum,
+                                            &globals::phixslist[tid].chi_bf_sum[globals::nbfcontinua - 1], chi_bf_rand);
+    const int allcontindex = std::distance(globals::phixslist[tid].chi_bf_sum, upperval);
     assert_always(allcontindex < globals::nbfcontinua);
 
     const double nu_edge = globals::allcont[allcontindex].nu_edge;
