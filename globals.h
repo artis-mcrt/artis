@@ -112,6 +112,7 @@ struct ionlist_entry {
   int coolingoffset;
   int ncoolingterms;
   int uniqueionindex;
+  int uniquelevelindexstart;
   float *Alpha_sp;
   double ionpot;  /// Ionisation threshold to the next ionstage
   // int nbfcontinua;
@@ -119,16 +120,17 @@ struct ionlist_entry {
 };
 
 struct elementlist_entry {
-  ionlist_entry *ions;  /// Carries information for each ion: 0,1,...,nions-1
-  int nions;            /// Number of ions for the current element
-  int anumber;          /// Atomic number
+  ionlist_entry *ions = nullptr;  /// Carries information for each ion: 0,1,...,nions-1
+  int nions = 0;                  /// Number of ions for the current element
+  int anumber = -1;               /// Atomic number
   //  int uppermost_ion;                       /// Highest ionisation stage which has a decent population for a given
   //  cell
   /// Be aware that this must not be used outside of the update_grid routine
   /// and their daughters. Neither it will work with OpenMP threads.
-  float abundance;              ///
-  float initstablemeannucmass;  /// Atomic mass number in multiple of MH
-  bool has_nlte_levels;
+  int uniqueionindexstart = -1;      /// Index of the lowest ionisation stage of this element
+  float abundance = 0.;              ///
+  float initstablemeannucmass = 0.;  /// Atomic mass number in multiple of MH
+  bool has_nlte_levels = false;
 };
 
 struct linelist_entry {

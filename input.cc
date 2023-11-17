@@ -777,6 +777,7 @@ static void read_atomicdata_files() {
     globals::elements[element].nions = nions;
     globals::elements[element].abundance = abundance;  /// abundances are expected to be given by mass
     globals::elements[element].initstablemeannucmass = mass_amu * MH;
+    globals::elements[element].uniqueionindexstart = uniqueionindex;
 
     /// Initialize the elements ionlist
     globals::elements[element].ions = static_cast<ionlist_entry *>(calloc(nions, sizeof(ionlist_entry)));
@@ -873,6 +874,7 @@ static void read_atomicdata_files() {
       globals::elements[element].ions[ion].ionpot = ionpot * EV;
       globals::elements[element].ions[ion].nlevels_groundterm = -1;
       globals::elements[element].ions[ion].uniqueionindex = uniqueionindex;
+      globals::elements[element].ions[ion].uniquelevelindexstart = uniquelevelindex;
       globals::elements[element].ions[ion].first_nlte = -1;
 
       globals::elements[element].ions[ion].Alpha_sp = static_cast<float *>(calloc(TABLESIZE, sizeof(float)));

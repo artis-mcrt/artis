@@ -287,6 +287,8 @@ auto get_uniqueionindex(const int element, const int ion) -> int
   index += ion;
 
   assert_testmodeonly(index == globals::elements[element].ions[ion].uniqueionindex);
+  assert_testmodeonly(index == globals::elements[element].uniqueionindexstart + ion);
+
   assert_testmodeonly(index < get_includedions());
   return index;
 }
@@ -329,6 +331,7 @@ auto get_uniquelevelindex(const int element, const int ion, const int level) -> 
   index += level;
 
   assert_testmodeonly(index == globals::elements[element].ions[ion].levels[level].uniquelevelindex);
+  assert_testmodeonly(index == globals::elements[element].ions[ion].uniquelevelindexstart + level);
   return index;
 }
 
