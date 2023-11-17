@@ -873,7 +873,6 @@ static void read_atomicdata_files() {
       globals::elements[element].ions[ion].maxrecombininglevel = 0;
       globals::elements[element].ions[ion].ionpot = ionpot * EV;
       globals::elements[element].ions[ion].nlevels_groundterm = -1;
-      globals::elements[element].ions[ion].uniqueionindex = uniqueionindex;
       globals::elements[element].ions[ion].uniquelevelindexstart = uniquelevelindex;
       globals::elements[element].ions[ion].first_nlte = -1;
 
@@ -923,7 +922,6 @@ static void read_atomicdata_files() {
       transitiontable.clear();
 
       for (int level = 0; level < nlevelsmax; level++) {
-        globals::elements[element].ions[ion].levels[level].uniquelevelindex = uniquelevelindex;
         globals::elements[element].ions[ion].levels[level].nphixstargets = 0;
         globals::elements[element].ions[ion].levels[level].phixstargets = nullptr;
         globals::elements[element].ions[ion].levels[level].photoion_xs = nullptr;

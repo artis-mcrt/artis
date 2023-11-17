@@ -95,8 +95,6 @@ struct levellist_entry {
 
   int cont_index;  /// Index of the continuum associated to this level. Negative number.
   int closestgroundlevelcont;
-
-  int uniquelevelindex;
   bool metastable;  ///
 };
 
@@ -111,7 +109,6 @@ struct ionlist_entry {
   int nlevels_groundterm;
   int coolingoffset;
   int ncoolingterms;
-  int uniqueionindex;
   int uniquelevelindexstart;
   float *Alpha_sp;
   double ionpot;  /// Ionisation threshold to the next ionstage

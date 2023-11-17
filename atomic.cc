@@ -280,28 +280,21 @@ auto get_uniqueionindex(const int element, const int ion) -> int
 {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
-  int index = 0;
-  for (int e = 0; e < element; e++) {
-    index += get_nions(e);
-  }
-  index += ion;
 
-  assert_testmodeonly(index == globals::elements[element].ions[ion].uniqueionindex);
-  assert_testmodeonly(index == globals::elements[element].uniqueionindexstart + ion);
-
-  assert_testmodeonly(index < get_includedions());
-  return index;
+  return globals::elements[element].uniqueionindexstart + ion;
 }
 
 void get_ionfromuniqueionindex(const int allionsindex, int *element, int *ion) {
   assert_testmodeonly(allionsindex < get_includedions());
-  int allionsindex_thiselementfirstion = 0;
+
   for (int e = 0; e < get_nelements(); e++) {
-    if ((allionsindex - allionsindex_thiselementfirstion) >= get_nions(e)) {
-      allionsindex_thiselementfirstion += get_nions(e);  // skip this element
-    } else {
+    if (get_nions(e) == 0) {
+      continue;
+    }
+    const auto element_uniqueionindexstart = globals::elements[e].uniqueionindexstart;
+    if ((allionsindex - element_uniqueionindexstart) < get_nions(e)) {
       *element = e;
-      *ion = allionsindex - allionsindex_thiselementfirstion;
+      *ion = allionsindex - element_uniqueionindexstart;
       assert_testmodeonly(get_uniqueionindex(*element, *ion) == allionsindex);
       return;
     }
@@ -316,38 +309,23 @@ auto get_uniquelevelindex(const int element, const int ion, const int level) -> 
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
 
-  int index = 0;
-  for (int e = 0; e < element; e++) {
-    const int nions = get_nions(e);
-    for (int i = 0; i < nions; i++) {
-      index += get_nlevels(e, i);
-    }
-  }
-  // selected element, levels from lower ions
-  for (int i = 0; i < ion; i++) {
-    index += get_nlevels(element, i);
-  }
-  // lower levels in selected element/ion
-  index += level;
-
-  assert_testmodeonly(index == globals::elements[element].ions[ion].levels[level].uniquelevelindex);
-  assert_testmodeonly(index == globals::elements[element].ions[ion].uniquelevelindexstart + level);
-  return index;
+  return globals::elements[element].ions[ion].uniquelevelindexstart + level;
 }
 
 void get_levelfromuniquelevelindex(const int alllevelsindex, int *element, int *ion, int *level)
 // inverse of get_uniquelevelindex(). get the element/ion/level from a unique level index
 {
-  int allionsindex_thisionfirstlevel = 0;
   for (int e = 0; e < get_nelements(); e++) {
     const int nions = get_nions(e);
     for (int i = 0; i < nions; i++) {
-      if ((alllevelsindex - allionsindex_thisionfirstlevel) >= get_nlevels(e, i)) {
-        allionsindex_thisionfirstlevel += get_nlevels(e, i);  // skip this ion
-      } else {
+      if (get_nlevels(e, i) == 0) {
+        continue;
+      }
+      const auto ion_uniquelevelindexstart = globals::elements[e].ions[i].uniquelevelindexstart;
+      if ((alllevelsindex - ion_uniquelevelindexstart) < get_nlevels(e, i)) {
         *element = e;
         *ion = i;
-        *level = alllevelsindex - allionsindex_thisionfirstlevel;
+        *level = alllevelsindex - ion_uniquelevelindexstart;
         assert_testmodeonly(get_uniquelevelindex(*element, *ion, *level) == alllevelsindex);
         return;
       }
