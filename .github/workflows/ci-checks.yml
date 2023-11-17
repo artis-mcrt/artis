@@ -102,6 +102,8 @@ jobs:
 
     compile:
         runs-on: ubuntu-22.04
+        env:
+            CXX: g++
         strategy:
             matrix:
                 compiler:
