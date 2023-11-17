@@ -1609,22 +1609,22 @@ void read_ejecta_model() {
 
   if constexpr (USE_LUT_PHOTOION) {
     globals::corrphotoionrenorm =
-        static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
+        static_cast<double *>(malloc((get_npts_model() + 1) * get_includedions() * sizeof(double)));
     globals::gammaestimator =
-        static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
+        static_cast<double *>(malloc((get_npts_model() + 1) * get_includedions() * sizeof(double)));
 
 #ifdef DO_TITER
     globals::gammaestimator_save =
-        static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
+        static_cast<double *>(malloc((get_npts_model() + 1) * get_includedions() * sizeof(double)));
 #endif
   }
 
   if constexpr (USE_LUT_BFHEATING) {
     globals::bfheatingestimator =
-        static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
+        static_cast<double *>(malloc((get_npts_model() + 1) * get_includedions() * sizeof(double)));
 #ifdef DO_TITER
     globals::bfheatingestimator_save =
-        static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
+        static_cast<double *>(malloc((get_npts_model() + 1) * get_includedions() * sizeof(double)));
 #endif
   }
 
