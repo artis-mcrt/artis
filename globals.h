@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <cmath>
+#include <cstddef>
 #include <memory>
 #include <vector>
 
@@ -62,9 +63,9 @@ struct groundphixslist {
 };
 
 struct phixslist {
-  double *groundcont_gamma_contr = nullptr;  // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
-  double *chi_bf_sum = nullptr;
-  double *gamma_contr = nullptr;  // needed for DETAILED_BF_ESTIMATORS_ON
+  double *groundcont_gamma_contr{nullptr};  // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
+  double *chi_bf_sum{nullptr};
+  double *gamma_contr{nullptr};  // needed for DETAILED_BF_ESTIMATORS_ON
 };
 
 struct phixstarget_entry {
@@ -82,20 +83,20 @@ struct level_transition {
 };
 
 struct levellist_entry {
-  double epsilon;                      /// Excitation energy of this level relative to the neutral ground level.
-  struct level_transition *uptrans;    /// Allowed upward transitions from this level
-  struct level_transition *downtrans;  /// Allowed downward transitions from this level
-  int nuptrans;
-  int ndowntrans;
-  double phixs_threshold;                            /// Energy of first point in the photion_xs table
-  struct phixstarget_entry *phixstargets = nullptr;  /// pointer to table of target states and probabilities
-  float *photoion_xs = nullptr;  /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
-  int nphixstargets;             /// length of phixstargets array:
-  float stat_weight;             /// Statistical weight of this level.
+  double epsilon{-1};                         /// Excitation energy of this level relative to the neutral ground level.
+  struct level_transition *uptrans{nullptr};  /// Allowed upward transitions from this level
+  struct level_transition *downtrans{nullptr};  /// Allowed downward transitions from this level
+  int nuptrans{0};
+  int ndowntrans{0};
+  double phixs_threshold{0};                        /// Energy of first point in the photion_xs table
+  struct phixstarget_entry *phixstargets{nullptr};  /// pointer to table of target states and probabilities
+  float *photoion_xs{nullptr};  /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
+  int nphixstargets{0};         /// length of phixstargets array:
+  float stat_weight{0};         /// Statistical weight of this level.
 
-  int cont_index;  /// Index of the continuum associated to this level. Negative number.
-  int closestgroundlevelcont;
-  bool metastable;  ///
+  int cont_index{-1};  /// Index of the continuum associated to this level. Negative number.
+  int closestgroundlevelcont{-1};
+  bool metastable{};  ///
 };
 
 struct ionlist_entry {
@@ -117,17 +118,17 @@ struct ionlist_entry {
 };
 
 struct elementlist_entry {
-  ionlist_entry *ions = nullptr;  /// Carries information for each ion: 0,1,...,nions-1
-  int nions = 0;                  /// Number of ions for the current element
-  int anumber = -1;               /// Atomic number
+  ionlist_entry *ions{nullptr};  /// Carries information for each ion: 0,1,...,nions-1
+  int nions{0};                  /// Number of ions for the current element
+  int anumber{-1};               /// Atomic number
   //  int uppermost_ion;                       /// Highest ionisation stage which has a decent population for a given
   //  cell
   /// Be aware that this must not be used outside of the update_grid routine
   /// and their daughters. Neither it will work with OpenMP threads.
-  int uniqueionindexstart = -1;      /// Index of the lowest ionisation stage of this element
-  float abundance = 0.;              ///
-  float initstablemeannucmass = 0.;  /// Atomic mass number in multiple of MH
-  bool has_nlte_levels = false;
+  int uniqueionindexstart{-1};         /// Index of the lowest ionisation stage of this element
+  float abundance{0.};                 ///
+  float initstablemeannucmass = {0.};  /// Atomic mass number in multiple of MH
+  bool has_nlte_levels{false};
 };
 
 struct linelist_entry {
@@ -148,11 +149,11 @@ struct gslintegration_paras {
 
 struct rpkt_continuum_absorptioncoeffs {
   double nu = NAN;  // frequency at which opacity was calculated
-  double total = 0.;
-  double es = 0.;
-  double ff = 0.;
-  double bf = 0.;
-  double ffheating = 0.;
+  double total{0.};
+  double es{0.};
+  double ff{0.};
+  double bf{0.};
+  double ffheating{0.};
   // double bfheating;
   int modelgridindex = -1;
   bool recalculate_required = true;  // e.g. when cell or timestep has changed
