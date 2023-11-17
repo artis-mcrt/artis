@@ -519,19 +519,25 @@ static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const s
                          }
                        }
 
-                       // keep if it is connected by decays to one of the standard or custom input-specified nuclides
-                       for (const auto &decaypath : decaypaths) {
-                         if (decaypath.final_daughter_z() == nuc.z && decaypath.final_daughter_a() == nuc.a) {
-                           return false;
-                         }
-
+                       const bool in_any_decaypath = std::ranges::any_of(decaypaths, [&nuc](const auto &decaypath) {
                          for (size_t i = 0; i < decaypath.z.size(); i++) {
                            if (decaypath.z[i] == nuc.z && decaypath.a[i] == nuc.a) {
-                             // decay path starts with input nuc and nuc is in the decay path, so keep it
-                             return false;
+                             // nuc is in the decay path
+                             return true;
                            };
-                         }
+                         };
+                         if (decaypath.final_daughter_z() == nuc.z && decaypath.final_daughter_a() == nuc.a) {
+                           // nuc is the final daughter of a decay path
+                           return true;
+                         };
+
+                         return false;
+                       });
+
+                       if (in_any_decaypath) {
+                         return false;
                        }
+
                        printout("removing unused nuclide (Z=%d)%s%d\n", nuc.z, get_elname(nuc.z), nuc.a);
                        return true;
                      }),
