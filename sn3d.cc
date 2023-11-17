@@ -537,30 +537,29 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
 }
 
 static void zero_estimators() {
-  // printout("zero_estimators()");
-  for (int n = 0; n < grid::get_npts_model(); n++) {
-    if (grid::get_numassociatedcells(n) > 0) {
-      radfield::zero_estimators(n);
+  for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
+    if (grid::get_numassociatedcells(mgi) > 0) {
+      radfield::zero_estimators(mgi);
 
-      globals::ffheatingestimator[n] = 0.;
-      globals::colheatingestimator[n] = 0.;
+      globals::ffheatingestimator[mgi] = 0.;
+      globals::colheatingestimator[mgi] = 0.;
 
       if constexpr (TRACK_ION_STATS) {
-        stats::reset_ion_stats(n);
+        stats::reset_ion_stats(mgi);
       }
 
       for (int element = 0; element < get_nelements(); element++) {
-        for (int ion = 0; ion < get_max_nions(); ion++) {
+        for (int ion = 0; ion < get_nions(element); ion++) {
           if constexpr (USE_LUT_PHOTOION) {
-            globals::gammaestimator[get_ionestimindex(n, element, ion)] = 0.;
+            globals::gammaestimator[get_ionestimindex(mgi, element, ion)] = 0.;
           }
           if constexpr (USE_LUT_BFHEATING) {
-            globals::bfheatingestimator[get_ionestimindex(n, element, ion)] = 0.;
+            globals::bfheatingestimator[get_ionestimindex(mgi, element, ion)] = 0.;
           }
         }
       }
 
-      globals::rpkt_emiss[n] = 0.0;
+      globals::rpkt_emiss[mgi] = 0.0;
     }
   }
 }
