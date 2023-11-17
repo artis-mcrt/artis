@@ -412,8 +412,6 @@ static auto thomson_angle() -> double {
 static void compton_scatter(struct packet *pkt_ptr)
 // Routine to deal with physical Compton scattering event.
 {
-  double f = NAN;
-
   //  printout("Compton scattering.\n");
 
   const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
@@ -432,12 +430,12 @@ static void compton_scatter(struct packet *pkt_ptr)
   // sigma_partial/sigma_tot = zrand
 
   bool stay_gamma = false;
+  double f = NAN;
   if (xx < THOMSON_LIMIT) {
     f = 1.0;  // no energy loss
     stay_gamma = true;
   } else {
-    const double zrand = rng_uniform();
-    f = choose_f(xx, zrand);
+    f = choose_f(xx, rng_uniform());
 
     // Check that f lies between 1.0 and (2xx  + 1)
 
