@@ -7,9 +7,9 @@
 #include "constants.h"
 #include "packet.h"
 
-auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<double, 3> ref1, std::span<double, 3> ref2)
-    -> double;
-auto meridian(std::span<const double, 3> n, std::span<double, 3> ref1) -> std::array<double, 3>;
+[[nodiscard]] auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<double, 3> ref1,
+                             std::span<double, 3> ref2) -> double;
+[[nodiscard]] auto meridian(std::span<const double, 3> n, std::span<double, 3> ref1) -> std::array<double, 3>;
 void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v,
                      std::span<double, 3> n_cmf);
 

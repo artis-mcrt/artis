@@ -5,28 +5,32 @@ void ratecoefficients_init();
 
 void setup_photoion_luts();
 
-auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel, float T_e) -> double;
+[[nodiscard]] auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel, float T_e) -> double;
 
-auto interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T) -> double;
+[[nodiscard]] auto interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T)
+    -> double;
 
-auto get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, float T_e) -> double;
-auto get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetindex, int modelgridindex) -> double;
+[[nodiscard]] auto get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, float T_e) -> double;
+[[nodiscard]] auto get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetindex, int modelgridindex)
+    -> double;
 
-auto get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, float T_e) -> double;
+[[nodiscard]] auto get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, float T_e) -> double;
 
-auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex) -> double;
-auto get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex) -> double;
+[[nodiscard]] auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
+    -> double;
+[[nodiscard]] auto get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex)
+    -> double;
 
-auto iongamma_is_zero(int modelgridindex, int element, int ion) -> bool;
+[[nodiscard]] auto iongamma_is_zero(int modelgridindex, int element, int ion) -> bool;
 
-auto calculate_iongamma_per_gspop(int modelgridindex, int element, int ion) -> double;
-auto calculate_iongamma_per_ionpop(int modelgridindex, float T_e, int element, int lowerion, bool assume_lte,
-                                   bool collisional_not_radiative, bool printdebug, bool force_bfest,
-                                   bool force_bfintegral) -> double;
+[[nodiscard]] auto calculate_iongamma_per_gspop(int modelgridindex, int element, int ion) -> double;
+[[nodiscard]] auto calculate_iongamma_per_ionpop(int modelgridindex, float T_e, int element, int lowerion,
+                                                 bool assume_lte, bool collisional_not_radiative, bool printdebug,
+                                                 bool force_bfest, bool force_bfintegral) -> double;
 
-auto calculate_ionrecombcoeff(int modelgridindex, float T_e, int element, int upperion, bool assume_lte,
-                              bool collisional_not_radiative, bool printdebug, bool lower_superlevel_only,
-                              bool per_groundmultipletpop, bool stimonly) -> double;
+[[nodiscard]] auto calculate_ionrecombcoeff(int modelgridindex, float T_e, int element, int upperion, bool assume_lte,
+                                            bool collisional_not_radiative, bool printdebug, bool lower_superlevel_only,
+                                            bool per_groundmultipletpop, bool stimonly) -> double;
 
 // CUDA integration. might be worth revisting for SYCL support
 // template <double func_integrand(double, void *)>

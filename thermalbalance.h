@@ -15,7 +15,8 @@ struct heatingcoolingrates {
 
 void call_T_e_finder(int modelgridindex, int timestep, double t_current, double T_min, double T_max,
                      struct heatingcoolingrates *heatingcoolingrates);
-double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T, double W);
+[[nodiscard]] auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T, double W)
+    -> double;
 void calculate_bfheatingcoeffs(int modelgridindex);
 
 #endif  // THERMALBALANCE_H

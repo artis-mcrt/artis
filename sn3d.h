@@ -96,8 +96,8 @@ static auto printout(const char *format) -> int {
   return fprintf(output_file, "%s", format);
 }
 
-static inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
-                                  const int phixstargetindex) -> int {
+[[nodiscard]] static inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
+                                                const int phixstargetindex) -> int {
   const int contindex = -1 - globals::elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
 
   const int bflutindex = tempindex * globals::nbfcontinua + contindex;
@@ -152,7 +152,7 @@ static auto fstream_required(const std::string &filename, std::ios_base::openmod
   return file;
 }
 
-static auto get_timestep(const double time) -> int {
+[[nodiscard]] static auto get_timestep(const double time) -> int {
   assert_always(time >= globals::tmin);
   assert_always(time < globals::tmax);
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
@@ -166,7 +166,7 @@ static auto get_timestep(const double time) -> int {
   return -1;
 }
 
-inline auto get_max_threads() -> int {
+[[nodiscard]] inline auto get_max_threads() -> int {
 #if defined _OPENMP
   return omp_get_max_threads();
 #else
@@ -174,7 +174,7 @@ inline auto get_max_threads() -> int {
 #endif
 }
 
-inline auto get_num_threads() -> int {
+[[nodiscard]] inline auto get_num_threads() -> int {
 #if defined _OPENMP
   return omp_get_num_threads();
 #else
@@ -182,7 +182,7 @@ inline auto get_num_threads() -> int {
 #endif
 }
 
-inline auto get_thread_num() -> int {
+[[nodiscard]] inline auto get_thread_num() -> int {
 #if defined _OPENMP
   return omp_get_thread_num();
 #else
@@ -211,7 +211,7 @@ inline void rng_init(const uint_fast64_t zseed) {
   stdrng.seed(zseed);
 }
 
-inline auto is_pid_running(pid_t pid) -> bool {
+[[nodiscard]] inline auto is_pid_running(pid_t pid) -> bool {
   while (waitpid(-1, nullptr, WNOHANG) > 0) {
     // Wait for defunct....
   }
@@ -242,7 +242,7 @@ inline void check_already_running() {
   pidfile.close();
 }
 
-inline auto get_ionestimindex(const int mgi, const int element, const int ion) -> int {
+[[nodiscard]] inline auto get_ionestimindex(const int mgi, const int element, const int ion) -> int {
   return mgi * get_includedions() + get_uniqueionindex(element, ion);
 }
 

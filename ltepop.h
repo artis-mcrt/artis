@@ -7,12 +7,13 @@
 #include "atomic.h"
 #include "sn3d.h"
 
-auto get_groundlevelpop(int modelgridindex, int element, int ion) -> double;
-auto calculate_levelpop(int modelgridindex, int element, int ion, int level) -> double;
-auto calculate_levelpop_lte(int modelgridindex, int element, int ion, int level) -> double;
-auto get_levelpop(int modelgridindex, int element, int ion, int level) -> double;
-auto calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold) -> double;
-auto get_nnion(int modelgridindex, int element, int ion) -> double;
+[[nodiscard]] auto get_groundlevelpop(int modelgridindex, int element, int ion) -> double;
+[[nodiscard]] auto calculate_levelpop(int modelgridindex, int element, int ion, int level) -> double;
+[[nodiscard]] auto calculate_levelpop_lte(int modelgridindex, int element, int ion, int level) -> double;
+[[nodiscard]] auto get_levelpop(int modelgridindex, int element, int ion, int level) -> double;
+[[nodiscard]] auto calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold)
+    -> double;
+[[nodiscard]] auto get_nnion(int modelgridindex, int element, int ion) -> double;
 void calculate_ion_balance_nne(int modelgridindex);
 void calculate_cellpartfuncts(int modelgridindex, int element);
 [[nodiscard]] auto calculate_ionfractions(int element, int modelgridindex, double nne, bool use_phi_lte)

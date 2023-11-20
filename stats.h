@@ -89,7 +89,7 @@ void increment_ion_stats(int modelgridindex, int element, int ion, enum ionstatt
 
 void increment_ion_stats_contabsorption(const struct packet *pkt_ptr, int modelgridindex, int element, int ion);
 
-auto get_ion_stats(int modelgridindex, int element, int ion, enum ionstattypes ionstattype) -> double;
+[[nodiscard]] auto get_ion_stats(int modelgridindex, int element, int ion, enum ionstattypes ionstattype) -> double;
 
 void set_ion_stats(int modelgridindex, int element, int ion, enum ionstattypes ionstattype, double newvalue);
 
@@ -101,7 +101,7 @@ void increment(enum eventcounters);
 
 void pkt_action_counters_reset();
 
-auto get_counter(enum eventcounters i) -> int;
+[[nodiscard]] auto get_counter(enum eventcounters i) -> int;
 
 void pkt_action_counters_printout(const struct packet *pkt, int nts);
 

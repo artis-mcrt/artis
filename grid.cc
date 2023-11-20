@@ -2209,7 +2209,7 @@ constexpr static auto get_gridcoords_from_xyz(std::span<const double, 3> pos_xyz
   return posgridcoord;
 }
 
-auto get_cellindex_from_pos(std::span<const double, 3> pos, double time) -> int
+[[nodiscard]] auto get_cellindex_from_pos(std::span<const double, 3> pos, double time) -> int
 /// identify the cell index from an (x,y,z) position and a time.
 {
   auto posgridcoords = get_gridcoords_from_xyz(pos);

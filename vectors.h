@@ -11,7 +11,7 @@
 #include "packet.h"
 #include "sn3d.h"
 
-auto get_rand_isotropic_unitvec() -> std::array<double, 3>;
+[[nodiscard]] auto get_rand_isotropic_unitvec() -> std::array<double, 3>;
 
 [[nodiscard]] [[gnu::pure]] constexpr auto vec_len(std::span<const double> vec) -> double
 // return the the magnitude of a vector
@@ -46,7 +46,8 @@ constexpr void vec_norm(std::span<const double, 3> vec_in, std::span<double, 3> 
   return std::array<double, 3>{x[0] / t, x[1] / t, x[2] / t};
 }
 
-constexpr auto cross_prod(std::span<const double, 3> vec1, std::span<const double, 3> vec2) -> std::array<double, 3> {
+[[nodiscard]] constexpr auto cross_prod(std::span<const double, 3> vec1, std::span<const double, 3> vec2)
+    -> std::array<double, 3> {
   std::array<double, 3> vecout = {(vec1[1] * vec2[2]) - (vec2[1] * vec1[2]), (vec1[2] * vec2[0]) - (vec2[2] * vec1[0]),
                                   (vec1[0] * vec2[1]) - (vec2[0] * vec1[1])};
   return vecout;

@@ -938,8 +938,8 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type type_be
   }
 }
 
-auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<double, 3> ref1, std::span<double, 3> ref2)
-    -> double {
+[[nodiscard]] auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<double, 3> ref1,
+                             std::span<double, 3> ref2) -> double {
   // Rotation angle from the scattering plane
   // We need to rotate Stokes Parameters to (or from) the scattering plane from (or to)
   // the meridian frame such that Q=1 is in the scattering plane and along ref1
@@ -984,7 +984,7 @@ auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<doubl
 }
 
 // Routine to compute the meridian frame axes ref1 and ref2
-auto meridian(std::span<const double, 3> n, std::span<double, 3> ref1) -> std::array<double, 3> {
+[[nodiscard]] auto meridian(std::span<const double, 3> n, std::span<double, 3> ref1) -> std::array<double, 3> {
   // for ref_1 use (from triple product rule)
   const double n_xylen = sqrt(n[0] * n[0] + n[1] * n[1]);
   ref1[0] = -1. * n[0] * n[2] / n_xylen;
