@@ -994,7 +994,7 @@ std::array<double, 3> meridian(std::span<const double, 3> n, std::span<double, 3
   ref1[2] = (1 - (n[2] * n[2])) / n_xylen;
 
   // for ref_2 use vector product of n_cmf with ref1
-  std::array<double, 3> ref2 = cross_prod(ref1, n);
+  const std::array<double, 3> ref2 = cross_prod(ref1, n);
   return ref2;
 }
 
