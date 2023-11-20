@@ -19,16 +19,17 @@
   return std::sqrt(squaredlen);
 }
 
-constexpr void vec_norm(std::span<const double, 3> vec_in, std::span<double, 3> vec_out)
+[[nodiscard]] [[gnu::pure]] constexpr auto vec_norm(std::span<const double, 3> vec_in) -> std::array<double, 3>
 // normalizing a copy of vec_in and save it to vec_out
 {
   const double magnitude = vec_len(vec_in);
-
+  auto vec_out = std::array<double, 3>{};
   vec_out[0] = vec_in[0] / magnitude;
   vec_out[1] = vec_in[1] / magnitude;
   vec_out[2] = vec_in[2] / magnitude;
 
   assert_testmodeonly(fabs(vec_len(vec_out) - 1.) < 1.e-10);
+  return vec_out;
 }
 
 [[nodiscard]] [[gnu::pure]] constexpr auto dot(std::span<const double> x, std::span<const double> y) -> double
@@ -82,7 +83,7 @@ constexpr void vec_copy(std::span<double, 3> destination, std::span<const double
     dir2[d] = (dir1[d] - (vel[d] * fact2)) / fact1;
   }
 
-  vec_norm(dir2, dir2);
+  dir2 = vec_norm(dir2);
 
   return dir2;
 }

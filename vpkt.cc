@@ -945,7 +945,7 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type type_be
   // ref1_sc is the ref1 axis in the scattering plane ref1 = n1 x ( n1 x n2 )
   const double n1_dot_n2 = dot(n1, n2);
   auto ref1_sc = std::array<double, 3>{n1[0] * n1_dot_n2 - n2[0], n1[1] * n1_dot_n2 - n2[1], n1[2] * n1_dot_n2 - n2[2]};
-  vec_norm(ref1_sc, ref1_sc);
+  ref1_sc = vec_norm(ref1_sc);
 
   double cos_stokes_rot_1 = dot(ref1_sc, ref1);
   const double cos_stokes_rot_2 = dot(ref1_sc, ref2);
@@ -1020,10 +1020,11 @@ static void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> 
   // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
   //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
 
-  e_cmf[0] = e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]);
-  e_cmf[1] = e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]);
-  e_cmf[2] = e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2]);
-  vec_norm(e_cmf, e_cmf);
+  auto e_cmf_arr = std::array<double, 3>{e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]),
+                                         e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]),
+                                         e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2])};
+  e_cmf_arr = vec_norm(e_cmf_arr);
+  vec_copy(e_cmf, e_cmf_arr);
 
   // double b_cmf[3];
   // b_cmf[0] = b_par[0] + gamma_rel * (b_perp[0] - v_cr_e[0]);

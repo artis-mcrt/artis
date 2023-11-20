@@ -302,7 +302,7 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
     pkt_ptr->pol_dir = cross_prod(pkt_ptr->dir, std::array<double, 3>{0., 1., 0.});
   }
 
-  vec_norm(pkt_ptr->pol_dir, pkt_ptr->pol_dir);
+  pkt_ptr->pol_dir = vec_norm(pkt_ptr->pol_dir);
   // printout("initialise pol state of packet %g, %g, %g, %g,
   // %g\n",pkt_ptr->stokes_qu[0],pkt_ptr->stokes_qu[1],pkt_ptr->pol_dir[0],pkt_ptr->pol_dir[1],pkt_ptr->pol_dir[2]);
   // printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
