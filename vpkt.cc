@@ -214,8 +214,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
     // Need to rotate Stokes Parameters in the scattering plane
 
-    double obs_cmf[3];
-    angle_ab(vpkt.dir, vel_vec, obs_cmf);
+    auto obs_cmf = angle_ab(vpkt.dir, vel_vec);
 
     auto ref1_old = std::array<double, 3>{};
     auto ref2_old = meridian(old_dir_cmf, ref1_old);
@@ -1084,7 +1083,8 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
                                              cos(rot_angle) * ref1[2] - sin(rot_angle) * ref2[2]};
 
   // Aberration
-  angle_ab(n_rf, v, n_cmf);
+  auto n_cmf_arr = angle_ab(n_rf, v);
+  vec_copy(n_cmf, n_cmf_arr);
 
   auto elec_cmf = std::array<double, 3>{};
   // Lorentz transformation of E

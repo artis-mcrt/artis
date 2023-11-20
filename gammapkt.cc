@@ -275,7 +275,7 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
   const auto vel_vec = get_velocity(pkt_ptr->pos, -1. * pkt_ptr->tdecay);
   // negative time since we want the backwards transformation here
 
-  angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
+  pkt_ptr->dir = angle_ab(dir_cmf, vel_vec);
 
   // Now need to assign the frequency of the packet in the co-moving frame.
 
@@ -493,8 +493,7 @@ static void compton_scatter(struct packet *pkt_ptr)
 
     auto vel_vec = get_velocity(pkt_ptr->pos, pkt_ptr->prop_time);
 
-    double cmf_dir[3];
-    angle_ab(pkt_ptr->dir, vel_vec, cmf_dir);
+    auto cmf_dir = angle_ab(pkt_ptr->dir, vel_vec);
 
     // Now change the direction through the scattering angle.
 
@@ -522,8 +521,7 @@ static void compton_scatter(struct packet *pkt_ptr)
     // get_velocity(pkt_ptr->pos, vel_vec, (-1 * pkt_ptr->prop_time));
     vec_scale(vel_vec, -1.);
 
-    std::array<double, 3> final_dir{};
-    angle_ab(new_dir, vel_vec, final_dir);
+    auto final_dir = angle_ab(new_dir, vel_vec);
 
     vec_copy(pkt_ptr->dir, final_dir);
 
@@ -745,7 +743,7 @@ void pair_prod(struct packet *pkt_ptr) {
     const auto vel_vec = get_velocity(pkt_ptr->pos, -1. * pkt_ptr->prop_time);
     // negative time since we want the backwards transformation here
 
-    angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
+    pkt_ptr->dir = angle_ab(dir_cmf, vel_vec);
 
     const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
     pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;

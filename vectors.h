@@ -65,7 +65,8 @@ constexpr void vec_copy(std::span<double, 3> destination, std::span<const double
   destination[2] = source[2];
 }
 
-constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double, 3> vel, std::span<double, 3> dir2)
+[[nodiscard]] constexpr auto angle_ab(std::span<const double, 3> dir1, std::span<const double, 3> vel)
+    -> std::array<double, 3>
 // aberation of angles in special relativity
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1
@@ -78,11 +79,14 @@ constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double,
   const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
   const double fact2 = (gamma_rel - (gamma_rel * gamma_rel * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
 
+  std::array<double, 3> dir2{};
   for (int d = 0; d < 3; d++) {
     dir2[d] = (dir1[d] - (vel[d] * fact2)) / fact1;
   }
 
   vec_norm(dir2, dir2);
+
+  return dir2;
 }
 
 [[gnu::pure]] [[nodiscard]] constexpr auto doppler_nucmf_on_nurf(std::span<const double, 3> dir_rf,

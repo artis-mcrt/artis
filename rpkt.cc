@@ -752,7 +752,7 @@ void emit_rpkt(struct packet *pkt_ptr) {
   const auto vel_vec = get_velocity(pkt_ptr->pos, -1. * pkt_ptr->prop_time);
   /// negative time since we want the backwards transformation here
 
-  angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
+  pkt_ptr->dir = angle_ab(dir_cmf, vel_vec);
   // printout("[debug] pkt_ptr->dir in RF: %g %g %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 
   /// Finally we want to put in the rest frame energy and frequency. And record
