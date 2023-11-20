@@ -1693,28 +1693,8 @@ auto nt_excitation_ratecoeff(const int modelgridindex, const int element, const 
   return ratecoeffperdeposition * deposition_rate_density;
 }
 
-static void select_nt_ionization(int modelgridindex, int *element, int *lowerion)
-// select based on stored frac_deposition for each ion
-{
-  const double zrand = rng_uniform();
-  double frac_deposition_ion_sum = 0.;
-  // zrand is between zero and frac_ionization
-  // keep subtracting off deposition fractions of ionizations transitions until we hit the right one
-  // e.g. if zrand was less than frac_dep_trans1, then use the first transition
-  // e.g. if zrand was between frac_dep_trans1 and frac_dep_trans2 then use the second transition, etc
-  for (int allionindex = 0; allionindex < get_includedions(); allionindex++) {
-    frac_deposition_ion_sum += nt_solution[modelgridindex].fracdep_ionization_ion[allionindex];
-    if (frac_deposition_ion_sum >= zrand) {
-      get_ionfromuniqueionindex(allionindex, element, lowerion);
-
-      return;
-    }
-  }
-  assert_always(false);  // should not reach here
-}
-
 static auto ion_ntion_energyrate(int modelgridindex, int element, int lowerion) -> double {
-  // returns the energy rate [erg/s] going toward non-thermal ionisation of lowerion
+  // returns the energy rate [erg/cm3/s] going toward non-thermal ionisation of lowerion
   const double nnlowerion = get_nnion(modelgridindex, element, lowerion);
   double enrate = 0.;
   for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++) {
@@ -1746,10 +1726,28 @@ static auto get_ntion_energyrate(int modelgridindex) -> double {
   return ratetotal;
 }
 
-static void select_nt_ionization2(int modelgridindex, int *element, int *lowerion) {
+static void select_nt_ionization(int modelgridindex, int *element, int *lowerion) {
+  const double zrand = rng_uniform();
+
+  // // select based on stored frac_deposition for each ion
+  // double frac_deposition_ion_sum = 0.;
+  // // zrand is between zero and frac_ionization
+  // // keep subtracting off deposition fractions of ionizations transitions until we hit the right one
+  // // e.g. if zrand was less than frac_dep_trans1, then use the first transition
+  // // e.g. if zrand was between frac_dep_trans1 and frac_dep_trans2 then use the second transition, etc
+  // for (int allionindex = 0; allionindex < get_includedions(); allionindex++) {
+  //   frac_deposition_ion_sum += nt_solution[modelgridindex].fracdep_ionization_ion[allionindex];
+  //   if (frac_deposition_ion_sum >= zrand) {
+  //     get_ionfromuniqueionindex(allionindex, element, lowerion);
+
+  //     return;
+  //   }
+  // }
+  // assert_always(false);  // should not reach here
+
   const double ratetotal = get_ntion_energyrate(modelgridindex);
 
-  const double zrand = rng_uniform();
+  // select based on the calcuated energy going to ionisation for each ion
   double ratesum = 0.;
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
     const int nions = get_nions(ielement);
@@ -1788,8 +1786,7 @@ void do_ntlepton(struct packet *pkt_ptr) {
     if (zrand < frac_ionization) {
       int element = -1;
       int lowerion = -1;
-      // select_nt_ionization(modelgridindex, &element, &lowerion);
-      select_nt_ionization2(modelgridindex, &element, &lowerion);
+      select_nt_ionization(modelgridindex, &element, &lowerion);
       const int upperion = nt_random_upperion(modelgridindex, element, lowerion, true);
       // const int upperion = lowerion + 1;
 
