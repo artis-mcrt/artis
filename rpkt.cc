@@ -226,7 +226,7 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   double Qi = pkt_ptr->stokes[1];
   double Ui = pkt_ptr->stokes[2];
 
-  double old_dir_cmf[3];
+  auto old_dir_cmf = std::array<double, 3>{};
   frame_transform(pkt_ptr->dir, &Qi, &Ui, vel_vec, old_dir_cmf);
 
   // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos &
