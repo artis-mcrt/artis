@@ -295,9 +295,9 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
   pkt_ptr->last_cross = BOUNDARY_NONE;
 
   // initialise polarisation information
-  pkt_ptr->stokes[0] = 1.0;
-  pkt_ptr->stokes[1] = pkt_ptr->stokes[2] = 0.0;
-  ;
+  pkt_ptr->stokes[0] = 1.;
+  pkt_ptr->stokes[1] = 0.;
+  pkt_ptr->stokes[2] = 0.;
 
   pkt_ptr->pol_dir = cross_prod(pkt_ptr->dir, std::array<double, 3>{0., 0., 1.});
   if ((dot(pkt_ptr->pol_dir, pkt_ptr->pol_dir)) < 1.e-8) {
