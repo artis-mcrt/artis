@@ -301,8 +301,7 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
 
   pkt_ptr->pol_dir = cross_prod(pkt_ptr->dir, dummy_dir);
   if ((dot(pkt_ptr->pol_dir, pkt_ptr->pol_dir)) < 1.e-8) {
-    dummy_dir[0] = dummy_dir[2] = 0.0;
-    dummy_dir[1] = 1.0;
+    dummy_dir = {0., 1., 0.};
     pkt_ptr->pol_dir = cross_prod(pkt_ptr->dir, dummy_dir);
   }
 

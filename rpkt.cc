@@ -782,9 +782,8 @@ void emit_rpkt(struct packet *pkt_ptr) {
   std::array<double, 3> dummy_dir = {0., 0., 1.};
   pkt_ptr->pol_dir = cross_prod(pkt_ptr->dir, dummy_dir);
 
-  // Luke: WTF?
   if ((dot(pkt_ptr->pol_dir, pkt_ptr->pol_dir)) < 1.e-8) {
-    dummy_dir = {0., 0., 1.};
+    dummy_dir = {0., 1., 0.};
     pkt_ptr->pol_dir = cross_prod(pkt_ptr->dir, dummy_dir);
   }
 
