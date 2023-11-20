@@ -1726,7 +1726,7 @@ static auto get_ntion_energyrate(int modelgridindex) -> double {
   return ratetotal;
 }
 
-static void select_nt_ionization(int modelgridindex, int *element, int *lowerion) {
+static auto select_nt_ionization(int modelgridindex) -> std::tuple<int, int> {
   const double zrand = rng_uniform();
 
   // // select based on stored frac_deposition for each ion
@@ -1754,9 +1754,7 @@ static void select_nt_ionization(int modelgridindex, int *element, int *lowerion
     for (int ilowerion = 0; ilowerion < nions - 1; ilowerion++) {
       ratesum += ion_ntion_energyrate(modelgridindex, ielement, ilowerion);
       if (ratesum >= zrand * ratetotal) {
-        *element = ielement;
-        *lowerion = ilowerion;
-        return;
+        return {ielement, ilowerion};
       }
     }
   }
@@ -1784,9 +1782,7 @@ void do_ntlepton(struct packet *pkt_ptr) {
     // const double frac_ionization = 0.;
 
     if (zrand < frac_ionization) {
-      int element = -1;
-      int lowerion = -1;
-      select_nt_ionization(modelgridindex, &element, &lowerion);
+      const auto [element, lowerion] = select_nt_ionization(modelgridindex);
       const int upperion = nt_random_upperion(modelgridindex, element, lowerion, true);
       // const int upperion = lowerion + 1;
 
