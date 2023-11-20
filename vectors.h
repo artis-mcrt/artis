@@ -186,10 +186,6 @@ constexpr void move_pkt_withtime(struct packet *pkt_ptr, const double distance, 
   return pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / CLIGHT_PROP);
 }
 
-inline auto get_arrive_time_cmf(const struct packet *pkt_ptr) -> double {
-  return pkt_ptr->escape_time * std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
-}
-
 constexpr auto get_escapedirectionbin(std::span<const double, 3> dir_in, std::span<const double, 3> syn_dir) -> int {
   constexpr double xhat[3] = {1.0, 0.0, 0.0};
 

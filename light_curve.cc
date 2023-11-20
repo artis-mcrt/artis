@@ -61,13 +61,16 @@ void add_to_lc_res(const struct packet *pkt_ptr, int current_abin, std::vector<d
       safeadd(light_curve_lum[nt], pkt_ptr->e_rf / globals::timesteps[nt].width / globals::nprocs_exspec);
     }
 
+    const double inverse_gamma = std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
+
     /// Now do the cmf light curve.
     // t_arrive = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
-    const double arrive_time_cmf = get_arrive_time_cmf(pkt_ptr);
+    const double arrive_time_cmf = pkt_ptr->escape_time * inverse_gamma;
+
     if (arrive_time_cmf > globals::tmin && arrive_time_cmf < globals::tmax) {
       const int nt = get_timestep(arrive_time_cmf);
-      safeadd(light_curve_lumcmf[nt], pkt_ptr->e_cmf / globals::timesteps[nt].width / globals::nprocs_exspec /
-                                          sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED)));
+      safeadd(light_curve_lumcmf[nt],
+              pkt_ptr->e_cmf / globals::timesteps[nt].width / globals::nprocs_exspec / inverse_gamma);
     }
 
     return;
