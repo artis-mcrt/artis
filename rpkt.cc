@@ -58,10 +58,9 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
 
 static auto get_event(const int modelgridindex,
                       struct packet *pkt_ptr,  // pointer to packet object
-                      bool *event_is_boundbound,
                       const double tau_rnd,    // random optical depth until which the packet travels
                       const double abort_dist  // maximal travel distance before packet leaves cell or time step ends
-                      ) -> double
+                      ) -> std::tuple<double, bool>
 // returns edist, the distance to the next physical event (continuum or bound-bound)
 // BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
 {
@@ -113,7 +112,7 @@ static auto get_event(const int modelgridindex,
           // back up one line, because we didn't reach it before the boundary/timelimit
           pkt_ptr->next_trans = dummypkt.next_trans - 1;
 
-          return std::numeric_limits<double>::max();
+          return {std::numeric_limits<double>::max(), false};
         }
 
         const int element = globals::linelist[lineindex].elementindex;
@@ -173,23 +172,20 @@ static auto get_event(const int modelgridindex,
                                            dummypkt.prop_time * CLIGHT * dummypkt.e_cmf / dummypkt.nu_cmf);
           }
 
-          *event_is_boundbound = true;
           /// the line and its parameters were already selected by closest_transition!
           // printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop
           // %d\n",edist,abort_dist,edist-abort_dist,endloop);
 
           pkt_ptr->next_trans = dummypkt.next_trans;
 
-          return dist + ldist;
+          return {dist + ldist, true};
         }
       } else {
         /// continuum process occurs before reaching the line
 
-        *event_is_boundbound = false;
-
         pkt_ptr->next_trans = dummypkt.next_trans - 1;
 
-        return dist + (tau_rnd - tau) / chi_cont;
+        return {dist + (tau_rnd - tau) / chi_cont, false};
       }
     } else {
       /// no line interaction possible - check whether continuum process occurs in cell
@@ -198,15 +194,13 @@ static auto get_event(const int modelgridindex,
 
       if (tau_rnd - tau > tau_cont) {
         // no continuum event before abort_dist
-        return std::numeric_limits<double>::max();
+        return {std::numeric_limits<double>::max(), false};
       }
       /// continuum process occurs at edist
 
-      *event_is_boundbound = false;
-
       pkt_ptr->next_trans = globals::nlines + 1;
 
-      return dist + (tau_rnd - tau) / chi_cont;
+      return {dist + (tau_rnd - tau) / chi_cont, false};
     }
   }
 
@@ -665,11 +659,11 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
     const double kappa = grid::get_kappagrey(mgi) * grid::get_rho(mgi) *
                          doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
-    const double tau_current = 0.;
-    edist = (tau_next - tau_current) / kappa;
+
+    edist = tau_next / kappa;
     pkt_ptr->next_trans = -1;
   } else {
-    edist = get_event(mgi, pkt_ptr, &event_is_boundbound, tau_next, fmin(tdist, sdist));
+    std::tie(edist, event_is_boundbound) = get_event(mgi, pkt_ptr, tau_next, fmin(tdist, sdist));
   }
   assert_always(edist >= 0);
 
