@@ -946,7 +946,7 @@ auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<doubl
 
   // ref1_sc is the ref1 axis in the scattering plane ref1 = n1 x ( n1 x n2 )
   const double n1_dot_n2 = dot(n1, n2);
-  double ref1_sc[3] = {n1[0] * n1_dot_n2 - n2[0], n1[1] * n1_dot_n2 - n2[1], n1[2] * n1_dot_n2 - n2[2]};
+  auto ref1_sc = std::array<double, 3>{n1[0] * n1_dot_n2 - n2[0], n1[1] * n1_dot_n2 - n2[1], n1[2] * n1_dot_n2 - n2[2]};
   vec_norm(ref1_sc, ref1_sc);
 
   double cos_stokes_rot_1 = dot(ref1_sc, ref1);
@@ -1037,7 +1037,7 @@ static void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> 
 // Routine to transform the Stokes Parameters from RF to CMF
 void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v,
                      std::span<double, 3> n_cmf) {
-  double ref1[3] = {NAN, NAN, NAN};
+  auto ref1 = std::array<double, 3>{NAN, NAN, NAN};
 
   // Meridian frame in the RF
   auto ref2 = meridian(n_rf, ref1);
@@ -1079,14 +1079,14 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
 
   // Define electric field by linear combination of ref1 and ref2 (using the angle just computed)
 
-  const double elec_rf[3] = {cos(rot_angle) * ref1[0] - sin(rot_angle) * ref2[0],
-                             cos(rot_angle) * ref1[1] - sin(rot_angle) * ref2[1],
-                             cos(rot_angle) * ref1[2] - sin(rot_angle) * ref2[2]};
+  const auto elec_rf = std::array<double, 3>{cos(rot_angle) * ref1[0] - sin(rot_angle) * ref2[0],
+                                             cos(rot_angle) * ref1[1] - sin(rot_angle) * ref2[1],
+                                             cos(rot_angle) * ref1[2] - sin(rot_angle) * ref2[2]};
 
   // Aberration
   angle_ab(n_rf, v, n_cmf);
 
-  double elec_cmf[3] = {NAN, NAN, NAN};
+  auto elec_cmf = std::array<double, 3>{};
   // Lorentz transformation of E
   lorentz(elec_rf, n_rf, v, elec_cmf);
 

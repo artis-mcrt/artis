@@ -2191,11 +2191,28 @@ static auto get_poscoordpointnum(double pos, double time, int axis) -> int {
   }
 }
 
+constexpr static auto get_gridcoords_from_xyz(std::span<const double, 3> pos_xyz) -> std::array<double, 3> {
+  auto posgridcoord = std::array<double, 3>{};
+  if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
+    posgridcoord[0] = pos_xyz[0];
+    posgridcoord[1] = pos_xyz[1];
+    posgridcoord[2] = pos_xyz[2];
+  } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
+    posgridcoord[0] = std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2));
+    posgridcoord[1] = pos_xyz[2];
+    posgridcoord[2] = 0.;
+  } else if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
+    posgridcoord[0] = vec_len(pos_xyz);
+    posgridcoord[1] = 0.;
+    posgridcoord[2] = 0.;
+  }
+  return posgridcoord;
+}
+
 auto get_cellindex_from_pos(std::span<const double, 3> pos, double time) -> int
 /// identify the cell index from an (x,y,z) position and a time.
 {
-  double posgridcoords[3] = {NAN, NAN, NAN};
-  get_gridcoords_from_xyz(pos, posgridcoords);
+  auto posgridcoords = get_gridcoords_from_xyz(pos);
   int cellindex = 0;
   for (int d = 0; d < get_ngriddimensions(); d++) {
     cellindex += get_coordcellindexincrement(d) * get_poscoordpointnum(posgridcoords[d], time, d);
@@ -2240,8 +2257,8 @@ auto get_cellindex_from_pos(std::span<const double, 3> pos, double time) -> int
     double dist1 = (-b + sqrt(discriminant)) / 2 / a;
     double dist2 = (-b - sqrt(discriminant)) / 2 / a;
 
-    double posfinal1[3] = {0};
-    double posfinal2[3] = {0};
+    auto posfinal1 = std::array<double, 3>{0.};
+    auto posfinal2 = std::array<double, 3>{0.};
 
     for (size_t d = 0; d < pos.size(); d++) {
       posfinal1[d] = pos[d] + dist1 * dir[d];
@@ -2374,11 +2391,10 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
   // the following four vectors are in grid coordinates, so either x,y,z or r
   const int ndim = grid::get_ngriddimensions();
   assert_testmodeonly(ndim <= 3);
-  double pktposgridcoord[3] = {0};  // pos converted from xyz to propagation grid coordinates
-  double cellcoordmax[3] = {0};
-  double pktvelgridcoord[3] = {0};  // dir * CLIGHT_PROP converted from xyz to grid coordinates
+  auto cellcoordmax = std::array<double, 3>{0};
+  auto pktvelgridcoord = std::array<double, 3>{0};  // dir * CLIGHT_PROP converted from xyz to grid coordinates
 
-  get_gridcoords_from_xyz(pos, pktposgridcoord);
+  const auto pktposgridcoord = get_gridcoords_from_xyz(pos);
 
   for (int d = 0; d < ndim; d++) {
     cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
