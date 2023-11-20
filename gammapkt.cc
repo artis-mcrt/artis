@@ -523,7 +523,7 @@ static void compton_scatter(struct packet *pkt_ptr)
 
     auto final_dir = angle_ab(new_dir, vel_vec);
 
-    vec_copy(pkt_ptr->dir, final_dir);
+    pkt_ptr->dir = final_dir;
 
     assert_testmodeonly(std::fabs(vec_len(pkt_ptr->dir) - 1.) < 1e-10);
 

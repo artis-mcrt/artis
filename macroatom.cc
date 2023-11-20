@@ -218,7 +218,7 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
   // the r-pkt can only interact with lines redder than the current one
   pkt_ptr->next_trans = selecteddowntrans.lineindex + 1;
   pkt_ptr->emissiontype = selecteddowntrans.lineindex;
-  vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
+  pkt_ptr->em_pos = pkt_ptr->pos;
   pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
 
@@ -288,7 +288,7 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
 
   pkt_ptr->next_trans = 0;  /// continuum transition, no restrictions for further line interactions
   pkt_ptr->emissiontype = get_continuumindex(element, *ion, lower, upperionlevel);
-  vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
+  pkt_ptr->em_pos = pkt_ptr->pos;
   pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
 

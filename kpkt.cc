@@ -361,7 +361,7 @@ void do_kpkt_blackbody(struct packet *pkt_ptr)
   pkt_ptr->interactions++;
   pkt_ptr->last_event = 6;
   pkt_ptr->emissiontype = EMTYPE_FREEFREE;
-  vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
+  pkt_ptr->em_pos = pkt_ptr->pos;
   pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
 }
@@ -498,7 +498,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
     pkt_ptr->last_event = 6;
     pkt_ptr->emissiontype = EMTYPE_FREEFREE;
-    vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
+    pkt_ptr->em_pos = pkt_ptr->pos;
     pkt_ptr->em_time = pkt_ptr->prop_time;
     pkt_ptr->nscatterings = 0;
 
@@ -539,7 +539,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     pkt_ptr->last_event = 7;
     pkt_ptr->emissiontype = get_continuumindex(element, lowerion, lowerlevel, upper);
     pkt_ptr->trueemissiontype = pkt_ptr->emissiontype;
-    vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
+    pkt_ptr->em_pos = pkt_ptr->pos;
     pkt_ptr->em_time = pkt_ptr->prop_time;
     pkt_ptr->nscatterings = 0;
 

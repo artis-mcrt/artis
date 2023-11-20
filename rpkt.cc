@@ -380,7 +380,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr,
     /// Electron scattering does not modify the last emission flag
     // pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
     /// but it updates the last emission position
-    vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
+    pkt_ptr->em_pos = pkt_ptr->pos;
     pkt_ptr->em_time = pkt_ptr->prop_time;
 
     /// Set some flags
@@ -513,7 +513,7 @@ static void rpkt_event_thickcell(struct packet *pkt_ptr)
   /// Electron scattering does not modify the last emission flag
   // pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
   /// but it updates the last emission position
-  vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
+  pkt_ptr->em_pos = pkt_ptr->pos;
   pkt_ptr->em_time = pkt_ptr->prop_time;
 }
 

@@ -58,12 +58,6 @@ constexpr void vec_scale(std::span<double, 3> vec, const double scalefactor) {
   vec[2] *= scalefactor;
 }
 
-constexpr void vec_copy(std::span<double, 3> destination, std::span<const double, 3> source) {
-  destination[0] = source[0];
-  destination[1] = source[1];
-  destination[2] = source[2];
-}
-
 [[nodiscard]] constexpr auto angle_ab(std::span<const double, 3> dir1, std::span<const double, 3> vel)
     -> std::array<double, 3>
 // aberation of angles in special relativity
