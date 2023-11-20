@@ -204,7 +204,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   // ------------ SCATTERING EVENT: dipole function --------------------
 
   double ref1[3] = {NAN, NAN, NAN};
-  double ref2[3] = {NAN, NAN, NAN};
+  std::array<double, 3> ref2 = {NAN, NAN, NAN};
   double pn = NAN;
   double I = NAN;
   double Q = NAN;
@@ -220,7 +220,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     double obs_cmf[3];
     angle_ab(vpkt.dir, vel_vec, obs_cmf);
 
-    meridian(old_dir_cmf, ref1, ref2);
+    ref2 = meridian(old_dir_cmf, ref1);
 
     // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
     // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
@@ -248,7 +248,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
     // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame
 
-    meridian(obs_cmf, ref1, ref2);
+    ref2 = meridian(obs_cmf, ref1);
 
     // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
     // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
@@ -986,7 +986,7 @@ auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<doubl
 }
 
 // Routine to compute the meridian frame axes ref1 and ref2
-void meridian(std::span<const double, 3> n, std::span<double, 3> ref1, std::span<double, 3> ref2) {
+std::array<double, 3> meridian(std::span<const double, 3> n, std::span<double, 3> ref1) {
   // for ref_1 use (from triple product rule)
   const double n_xylen = sqrt(n[0] * n[0] + n[1] * n[1]);
   ref1[0] = -1. * n[0] * n[2] / n_xylen;
@@ -994,7 +994,8 @@ void meridian(std::span<const double, 3> n, std::span<double, 3> ref1, std::span
   ref1[2] = (1 - (n[2] * n[2])) / n_xylen;
 
   // for ref_2 use vector product of n_cmf with ref1
-  cross_prod(ref1, n, ref2);
+  std::array<double, 3> ref2 = cross_prod(ref1, n);
+  return ref2;
 }
 
 static void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, std::span<const double, 3> v,
@@ -1011,16 +1012,14 @@ static void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> 
 
   std::array<const double, 3> e_perp = {e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
 
-  std::array<double, 3> b_rf = {NAN, NAN, NAN};
-  cross_prod(n_rf, e_rf, b_rf);
+  const std::array<double, 3> b_rf = cross_prod(n_rf, e_rf);
 
   // const double b_par[3] = {dot(b_rf, beta) * beta[0] / (vsqr), dot(b_rf, beta) * beta[1] / (vsqr),
   //                          dot(b_rf, beta) * beta[2] / (vsqr)};
 
   // const double b_perp[3] = {b_rf[0] - b_par[0], b_rf[1] - b_par[1], b_rf[2] - b_par[2]};
 
-  std::array<double, 3> v_cr_b = {NAN, NAN, NAN};
-  cross_prod(beta, b_rf, v_cr_b);
+  const std::array<double, 3> v_cr_b = cross_prod(beta, b_rf);
 
   // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
   //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
@@ -1041,9 +1040,9 @@ static void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> 
 void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v,
                      std::span<double, 3> n_cmf) {
   double ref1[3] = {NAN, NAN, NAN};
-  double ref2[3] = {NAN, NAN, NAN};
+
   // Meridian frame in the RF
-  meridian(n_rf, ref1, ref2);
+  std::array<double, 3> ref2 = meridian(n_rf, ref1);
 
   const double Q0 = *Q;
   const double U0 = *U;
@@ -1094,7 +1093,7 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
   lorentz(elec_rf, n_rf, v, elec_cmf);
 
   // Meridian frame in the CMF
-  meridian(n_cmf, ref1, ref2);
+  ref2 = meridian(n_cmf, ref1);
 
   // Projection of E onto ref1 and ref2
   const double cosine_elec_ref1 = dot(elec_cmf, ref1);

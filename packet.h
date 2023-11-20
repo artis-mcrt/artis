@@ -1,6 +1,7 @@
 #ifndef PACKET_H
 #define PACKET_H
 
+#include <array>
 #include <compare>
 #include <cstdio>
 
@@ -67,12 +68,12 @@ struct packet {
   double absorptiondir[3] = {0.};  // Direction of propagation (x,y,z) when a packet was last absorbed in a line. Always
                                    // a unit vector.
   double stokes[3] = {0.};         // I, Q and U Stokes parameters
-  double pol_dir[3] = {0.};  // unit vector which defines the coordinate system against which Q and U are measured;
-                             // should always be perpendicular to dir
-  double tdecay{-1.};        // Time at which pellet decays
-  enum packet_type escape_type {};               // In which form when escaped from the grid.
-  float escape_time{-1};                         // time at which is passes out of the grid [s]
-  int number{-1};                                // A unique number to identify the packet
+  std::array<double, 3> pol_dir = {0.};  // unit vector which defines the coordinate system against which Q and U are
+                                         // measured; should always be perpendicular to dir
+  double tdecay{-1.};                    // Time at which pellet decays
+  enum packet_type escape_type {};       // In which form when escaped from the grid.
+  float escape_time{-1};                 // time at which is passes out of the grid [s]
+  int number{-1};                        // A unique number to identify the packet
   bool originated_from_particlenotgamma{false};  // first-non-pellet packet type was gamma
   int pellet_decaytype{-1};                      // index into decay::decaytypes
   int pellet_nucindex{-1};                       // nuclide index of the decaying species

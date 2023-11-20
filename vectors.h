@@ -48,11 +48,10 @@ constexpr void get_velocity(std::span<const double, 3> x, std::span<double, 3> y
   y[2] = x[2] / t;
 }
 
-constexpr void cross_prod(std::span<const double, 3> vec1, std::span<const double, 3> vec2,
-                          std::span<double, 3> vecout) {
-  vecout[0] = (vec1[1] * vec2[2]) - (vec2[1] * vec1[2]);
-  vecout[1] = (vec1[2] * vec2[0]) - (vec2[2] * vec1[0]);
-  vecout[2] = (vec1[0] * vec2[1]) - (vec2[0] * vec1[1]);
+constexpr std::array<double, 3> cross_prod(std::span<const double, 3> vec1, std::span<const double, 3> vec2) {
+  std::array<double, 3> vecout = {(vec1[1] * vec2[2]) - (vec2[1] * vec1[2]), (vec1[2] * vec2[0]) - (vec2[2] * vec1[0]),
+                                  (vec1[0] * vec2[1]) - (vec2[0] * vec1[1])};
+  return vecout;
 }
 
 constexpr void vec_scale(std::span<double, 3> vec, const double scalefactor) {
@@ -203,15 +202,12 @@ constexpr auto get_escapedirectionbin(std::span<const double, 3> dir_in, std::sp
   const int costhetabin = static_cast<int>((costheta + 1.0) * NPHIBINS / 2.0);
   assert_testmodeonly(costhetabin < NCOSTHETABINS);
 
-  std::array<double, 3> vec1 = {0};
-  cross_prod(dir, syn_dir, vec1);
+  const std::array<double, 3> vec1 = cross_prod(dir, syn_dir);
 
-  std::array<double, 3> vec2 = {0};
-  cross_prod(xhat, syn_dir, vec2);
+  const std::array<double, 3> vec2 = cross_prod(xhat, syn_dir);
   const double cosphi = dot(vec1, vec2) / vec_len(vec1) / vec_len(vec2);
 
-  std::array<double, 3> vec3 = {0};
-  cross_prod(vec2, syn_dir, vec3);
+  const std::array<double, 3> vec3 = cross_prod(vec2, syn_dir);
   const double testphi = dot(vec1, vec3);
 
   // with phi defined according to y = cos(theta) * sin(phi), the

@@ -294,8 +294,7 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   // Need to rotate Stokes Parameters in the scattering plane
 
   double ref1[3];
-  double ref2[3];
-  meridian(old_dir_cmf, ref1, ref2);
+  std::array<double, 3> ref2 = meridian(old_dir_cmf, ref1);
 
   // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
   // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
@@ -322,7 +321,7 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
 
   // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame (Clockwise rotation of PI-i2)
 
-  meridian(new_dir_cmf, ref1, ref2);
+  ref2 = meridian(new_dir_cmf, ref1);
 
   // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
   // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
@@ -781,11 +780,12 @@ void emit_rpkt(struct packet *pkt_ptr) {
   pkt_ptr->stokes[2] = 0.;
 
   std::array<double, 3> dummy_dir = {0., 0., 1.};
-  cross_prod(pkt_ptr->dir, dummy_dir, pkt_ptr->pol_dir);
+  pkt_ptr->pol_dir = cross_prod(pkt_ptr->dir, dummy_dir);
 
+  // Luke: WTF?
   if ((dot(pkt_ptr->pol_dir, pkt_ptr->pol_dir)) < 1.e-8) {
     dummy_dir = {0., 0., 1.};
-    cross_prod(pkt_ptr->dir, dummy_dir, pkt_ptr->pol_dir);
+    pkt_ptr->pol_dir = cross_prod(pkt_ptr->dir, dummy_dir);
   }
 
   vec_norm(pkt_ptr->pol_dir, pkt_ptr->pol_dir);

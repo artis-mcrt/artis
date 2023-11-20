@@ -299,11 +299,11 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
   pkt_ptr->stokes[1] = pkt_ptr->stokes[2] = 0.0;
   std::array<double, 3> dummy_dir = {0., 0., 1.};
 
-  cross_prod(pkt_ptr->dir, dummy_dir, pkt_ptr->pol_dir);
+  pkt_ptr->pol_dir = cross_prod(pkt_ptr->dir, dummy_dir);
   if ((dot(pkt_ptr->pol_dir, pkt_ptr->pol_dir)) < 1.e-8) {
     dummy_dir[0] = dummy_dir[2] = 0.0;
     dummy_dir[1] = 1.0;
-    cross_prod(pkt_ptr->dir, dummy_dir, pkt_ptr->pol_dir);
+    pkt_ptr->pol_dir = cross_prod(pkt_ptr->dir, dummy_dir);
   }
 
   vec_norm(pkt_ptr->pol_dir, pkt_ptr->pol_dir);

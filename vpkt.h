@@ -9,7 +9,7 @@
 
 auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<double, 3> ref1, std::span<double, 3> ref2)
     -> double;
-void meridian(std::span<const double, 3> n, std::span<double, 3> ref1, std::span<double, 3> ref2);
+std::array<double, 3> meridian(std::span<const double, 3> n, std::span<double, 3> ref1);
 void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v,
                      std::span<double, 3> n_cmf);
 
