@@ -11,8 +11,6 @@
 #include "packet.h"
 #include "sn3d.h"
 
-[[nodiscard]] auto get_rand_isotropic_unitvec() -> std::array<double, 3>;
-
 [[nodiscard]] [[gnu::pure]] constexpr auto vec_len(std::span<const double> vec) -> double
 // return the the magnitude of a vector
 {
@@ -218,6 +216,22 @@ constexpr auto move_pkt_withtime(struct packet *pkt_ptr, const double distance) 
   assert_always(na < MABINS);
 
   return na;
+}
+
+[[nodiscard]] inline auto get_rand_isotropic_unitvec() -> std::array<double, 3>
+// Assuming isotropic distribution, get a random direction vector
+{
+  const double zrand = rng_uniform();
+  const double zrand2 = rng_uniform();
+
+  const double mu = -1 + (2. * zrand);
+  const double phi = zrand2 * 2 * PI;
+  const double sintheta = std::sqrt(1. - (mu * mu));
+
+  std::array<double, 3> vecout = {sintheta * std::cos(phi), sintheta * std::sin(phi), mu};
+
+  assert_testmodeonly(std::fabs(vec_len(vecout) - 1.) < 1e-10);
+  return vecout;
 }
 
 #endif  // VECTORS_H
