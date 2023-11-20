@@ -994,9 +994,9 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type type_be
   return ref2;
 }
 
-static void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, std::span<const double, 3> v,
-                    std::span<double, 3> e_cmf) {
-  // Lorentz transformations from RF to CMF
+static auto lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, std::span<const double, 3> v)
+    -> std::array<double, 3> {
+  // Use Lorentz transformations to get e_cmf from e_rf
 
   const auto beta = std::array<const double, 3>{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
   const double vsqr = dot(beta, beta);
@@ -1020,17 +1020,11 @@ static void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> 
   // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
   //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
 
-  auto e_cmf_arr = std::array<double, 3>{e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]),
-                                         e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]),
-                                         e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2])};
-  e_cmf_arr = vec_norm(e_cmf_arr);
-  vec_copy(e_cmf, e_cmf_arr);
-
-  // double b_cmf[3];
-  // b_cmf[0] = b_par[0] + gamma_rel * (b_perp[0] - v_cr_e[0]);
-  // b_cmf[1] = b_par[1] + gamma_rel * (b_perp[1] - v_cr_e[1]);
-  // b_cmf[2] = b_par[2] + gamma_rel * (b_perp[2] - v_cr_e[2]);
-  // vec_norm(b_cmf, b_cmf);
+  auto e_cmf = std::array<double, 3>{e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]),
+                                     e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]),
+                                     e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2])};
+  e_cmf = vec_norm(e_cmf);
+  return e_cmf;
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
@@ -1086,9 +1080,8 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
   auto n_cmf_arr = angle_ab(n_rf, v);
   vec_copy(n_cmf, n_cmf_arr);
 
-  auto elec_cmf = std::array<double, 3>{};
   // Lorentz transformation of E
-  lorentz(elec_rf, n_rf, v, elec_cmf);
+  auto elec_cmf = lorentz(elec_rf, n_rf, v);
 
   // Meridian frame in the CMF
   ref2 = meridian(n_cmf, ref1);
