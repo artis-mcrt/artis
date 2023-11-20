@@ -61,9 +61,10 @@ static auto get_event(const int modelgridindex,
                       const double tau_rnd,    // random optical depth until which the packet travels
                       const double abort_dist  // maximal travel distance before packet leaves cell or time step ends
                       ) -> std::tuple<double, bool>
-// returns edist, the distance to the next physical event (continuum or bound-bound)
+// returns edist, the distance to the next physical event (continuum or bound-bound) and is_boundbound_event, a boolean
 // BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
 {
+  assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
   // printout("get_event()\n");
   /// initialize loop variables
 
