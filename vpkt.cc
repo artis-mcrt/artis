@@ -202,7 +202,6 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
   // ------------ SCATTERING EVENT: dipole function --------------------
 
-  double ref1[3] = {NAN, NAN, NAN};
   double pn = NAN;
   double I = NAN;
   double Q = NAN;
@@ -210,7 +209,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   if (type_before_rpkt == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
 
-    double old_dir_cmf[3] = {NAN, NAN, NAN};
+    auto old_dir_cmf = std::array<double, 3>{};
     frame_transform(pkt_ptr->dir, &Qi, &Ui, vel_vec, old_dir_cmf);
 
     // Need to rotate Stokes Parameters in the scattering plane
@@ -218,12 +217,13 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     double obs_cmf[3];
     angle_ab(vpkt.dir, vel_vec, obs_cmf);
 
-    auto ref2 = meridian(old_dir_cmf, ref1);
+    auto ref1_old = std::array<double, 3>{};
+    auto ref2_old = meridian(old_dir_cmf, ref1_old);
 
     // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
     // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
     // ref1_sc and ref2_sc in the scattering plane.
-    const double i1 = rot_angle(old_dir_cmf, obs_cmf, ref1, ref2);
+    const double i1 = rot_angle(old_dir_cmf, obs_cmf, ref1_old, ref2_old);
     const double cos2i1 = cos(2 * i1);
     const double sin2i1 = sin(2 * i1);
 
@@ -246,7 +246,8 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
     // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame
 
-    ref2 = meridian(obs_cmf, ref1);
+    auto ref1 = std::array<double, 3>{};
+    auto ref2 = meridian(obs_cmf, ref1);
 
     // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
     // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
