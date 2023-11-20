@@ -682,8 +682,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
   if ((sdist < tdist) && (sdist < edist)) {
     // Move it into the new cell.
-    double doppler_nucmf_on_nurf = 1.;
-    move_pkt_withtime(pkt_ptr, sdist / 2., &doppler_nucmf_on_nurf);
+    const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, sdist / 2.);
     update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, sdist, doppler_nucmf_on_nurf, mgi);
     move_pkt_withtime(pkt_ptr, sdist / 2.);
 
@@ -700,8 +699,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
   if ((edist < sdist) && (edist < tdist)) {
     // bound-bound or continuum event
-    double doppler_nucmf_on_nurf = 1.;
-    move_pkt_withtime(pkt_ptr, edist / 2., &doppler_nucmf_on_nurf);
+    const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, edist / 2.);
     update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, edist, doppler_nucmf_on_nurf, mgi);
     move_pkt_withtime(pkt_ptr, edist / 2.);
 
@@ -719,8 +717,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
   if ((tdist < sdist) && (tdist < edist)) {
     // reaches end of timestep before cell boundary or interaction
-    double doppler_nucmf_on_nurf = 1.;
-    move_pkt_withtime(pkt_ptr, tdist / 2., &doppler_nucmf_on_nurf);
+    const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, tdist / 2.);
     update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, tdist, doppler_nucmf_on_nurf, mgi);
     move_pkt_withtime(pkt_ptr, tdist / 2.);
     pkt_ptr->prop_time = t2;
