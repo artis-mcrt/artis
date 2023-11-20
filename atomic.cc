@@ -310,22 +310,19 @@ auto get_uniquelevelindex(const int element, const int ion, const int level) -> 
   return globals::elements[element].ions[ion].uniquelevelindexstart + level;
 }
 
-void get_levelfromuniquelevelindex(const int alllevelsindex, int *element, int *ion, int *level)
+auto get_levelfromuniquelevelindex(const int alllevelsindex) -> std::tuple<int, int, int>
 // inverse of get_uniquelevelindex(). get the element/ion/level from a unique level index
 {
-  for (int e = 0; e < get_nelements(); e++) {
-    const int nions = get_nions(e);
-    for (int i = 0; i < nions; i++) {
-      if (get_nlevels(e, i) == 0) {
+  for (int element = 0; element < get_nelements(); element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      if (get_nlevels(element, ion) == 0) {
         continue;
       }
-      const auto ion_uniquelevelindexstart = globals::elements[e].ions[i].uniquelevelindexstart;
-      if ((alllevelsindex - ion_uniquelevelindexstart) < get_nlevels(e, i)) {
-        *element = e;
-        *ion = i;
-        *level = alllevelsindex - ion_uniquelevelindexstart;
-        assert_testmodeonly(get_uniquelevelindex(*element, *ion, *level) == alllevelsindex);
-        return;
+      const int level = alllevelsindex - globals::elements[element].ions[ion].uniquelevelindexstart;
+      if (level < get_nlevels(element, ion)) {
+        assert_testmodeonly(get_uniquelevelindex(element, ion, level) == alllevelsindex);
+        return {element, ion, level};
       }
     }
   }

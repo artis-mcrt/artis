@@ -33,7 +33,7 @@ auto get_ionisinglevels(int element, int ion) -> int;
 auto get_uniqueionindex(int element, int ion) -> int;
 [[nodiscard]] auto get_ionfromuniqueionindex(int allionsindex) -> std::tuple<int, int>;
 auto get_uniquelevelindex(int element, int ion, int level) -> int;
-void get_levelfromuniquelevelindex(int alllevelsindex, int *element, int *ion, int *level);
+[[nodiscard]] auto get_levelfromuniquelevelindex(int alllevelsindex) -> std::tuple<int, int, int>;
 auto epsilon(int element, int ion, int level) -> double;
 auto stat_weight(int element, int ion, int level) -> double;
 auto get_maxrecombininglevel(int element, int ion) -> int;
