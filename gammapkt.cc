@@ -272,8 +272,7 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
   // frame - use aberation of angles. We want to convert from cmf to
   // rest so need -ve velocity.
 
-  double vel_vec[3];
-  get_velocity(pkt_ptr->pos, vel_vec, -1. * pkt_ptr->tdecay);
+  const auto vel_vec = get_velocity(pkt_ptr->pos, -1. * pkt_ptr->tdecay);
   // negative time since we want the backwards transformation here
 
   angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
@@ -451,8 +450,7 @@ static void compton_scatter(struct packet *pkt_ptr)
     // The packet has stored the direction in the rest frame.
     // Use aberation of angles to get this into the co-moving frame.
 
-    double vel_vec[3];
-    get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
+    auto vel_vec = get_velocity(pkt_ptr->pos, pkt_ptr->prop_time);
 
     double cmf_dir[3];
     angle_ab(pkt_ptr->dir, vel_vec, cmf_dir);
@@ -704,8 +702,7 @@ void pair_prod(struct packet *pkt_ptr) {
     // frame - use aberation of angles. We want to convert from cmf to
     // rest so need -ve velocity.
 
-    double vel_vec[3];
-    get_velocity(pkt_ptr->pos, vel_vec, -1. * pkt_ptr->prop_time);
+    const auto vel_vec = get_velocity(pkt_ptr->pos, -1. * pkt_ptr->prop_time);
     // negative time since we want the backwards transformation here
 
     angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);

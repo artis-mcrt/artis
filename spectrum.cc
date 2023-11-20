@@ -443,8 +443,7 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
                 (pkt_ptr->nu_rf <= traceemissabs_nuupper)) {
               traceemissionabsorption[at].energyabsorbed += deltaE_absorption;
 
-              double vel_vec[3];
-              get_velocity(pkt_ptr->em_pos, vel_vec, pkt_ptr->em_time);
+              const auto vel_vec = get_velocity(pkt_ptr->em_pos, pkt_ptr->em_time);
               traceemissionabsorption[at].absorption_weightedvelocity_sum += vec_len(vel_vec) * deltaE_absorption;
 
               traceabsorption_totalenergy += deltaE_absorption;

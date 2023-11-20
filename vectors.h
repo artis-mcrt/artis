@@ -40,12 +40,11 @@ constexpr void vec_norm(std::span<const double, 3> vec_in, std::span<double, 3> 
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
-constexpr void get_velocity(std::span<const double, 3> x, std::span<double, 3> y, const double t)
+[[nodiscard]] [[gnu::pure]] constexpr auto get_velocity(std::span<const double, 3> x, const double t)
+    -> std::array<double, 3>
 // Routine for getting velocity vector of the flow at a position with homologous expansion.
 {
-  y[0] = x[0] / t;
-  y[1] = x[1] / t;
-  y[2] = x[2] / t;
+  return std::array<double, 3>{x[0] / t, x[1] / t, x[2] / t};
 }
 
 constexpr std::array<double, 3> cross_prod(std::span<const double, 3> vec1, std::span<const double, 3> vec2) {
@@ -126,8 +125,7 @@ constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double,
 // returns: the ratio f = (nu_cmf / nu_rf) ^ 2
 {
   // velocity of the comoving frame relative to the rest frame
-  std::array<double, 3> vel_rf = {0, 0, 0};  // homologous flow velocity
-  get_velocity(pos_rf, vel_rf, prop_time);
+  const auto vel_rf = get_velocity(pos_rf, prop_time);
 
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
@@ -146,8 +144,7 @@ constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double,
 [[gnu::pure]] [[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(std::span<const double, 3> pos_rf,
                                                                         std::span<const double, 3> dir_rf,
                                                                         const double prop_time) -> double {
-  double flow_velocity[3] = {0, 0, 0};  // homologous flow velocity
-  get_velocity(pos_rf, flow_velocity, prop_time);
+  const auto flow_velocity = get_velocity(pos_rf, prop_time);
   return doppler_nucmf_on_nurf(dir_rf, flow_velocity);
 }
 

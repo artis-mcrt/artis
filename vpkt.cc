@@ -190,8 +190,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
   safeincrement(nvpkt);  // increment the number of virtual packet in the given timestep
 
-  double vel_vec[3] = {NAN, NAN, NAN};
-  get_velocity(pkt_ptr->pos, vel_vec, t_current);
+  const auto vel_vec = get_velocity(pkt_ptr->pos, t_current);
 
   // rf frequency and energy
   const double dopplerfactor = doppler_nucmf_on_nurf(vpkt.dir, vel_vec);
@@ -902,8 +901,7 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type type_be
 
   const double t_current = pkt_ptr->prop_time;
 
-  double vel_vec[3];
-  get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
+  const auto vel_vec = get_velocity(pkt_ptr->pos, pkt_ptr->prop_time);
 
   // this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each observer)
   if (pkt_ptr->next_trans == 0) {

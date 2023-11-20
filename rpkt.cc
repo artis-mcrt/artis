@@ -219,8 +219,7 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   pkt_ptr->type = TYPE_RPKT;
   pkt_ptr->last_cross = BOUNDARY_NONE;  /// allow all further cell crossings
 
-  double vel_vec[3];
-  get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
+  const auto vel_vec = get_velocity(pkt_ptr->pos, pkt_ptr->prop_time);
 
   // Transform Stokes Parameters from the RF to the CMF
 
@@ -747,11 +746,10 @@ void emit_rpkt(struct packet *pkt_ptr) {
 
   const auto dir_cmf = get_rand_isotropic_unitvec();
 
-  double vel_vec[3];
   /// This direction is in the cmf - we want to convert it to the rest
   /// frame - use aberation of angles. We want to convert from cmf to
   /// rest so need -ve velocity.
-  get_velocity(pkt_ptr->pos, vel_vec, -1. * pkt_ptr->prop_time);
+  const auto vel_vec = get_velocity(pkt_ptr->pos, -1. * pkt_ptr->prop_time);
   /// negative time since we want the backwards transformation here
 
   angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
