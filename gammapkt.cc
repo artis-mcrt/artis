@@ -522,7 +522,7 @@ static void compton_scatter(struct packet *pkt_ptr)
     // get_velocity(pkt_ptr->pos, vel_vec, (-1 * pkt_ptr->prop_time));
     vec_scale(vel_vec, -1.);
 
-    double final_dir[3];
+    std::array<double, 3> final_dir{};
     angle_ab(new_dir, vel_vec, final_dir);
 
     vec_copy(pkt_ptr->dir, final_dir);
