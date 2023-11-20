@@ -473,9 +473,9 @@ static void init_vspecpol() {
           exp(log(VSPEC_TIMEMIN) + ((n + 1) * (dlogt_vspec))) - vspecpol[n][ind_comb].lower_time;
 
       for (auto &flux : vspecpol[n][ind_comb].flux) {
-        flux.i = 0.0;
-        flux.q = 0.0;
-        flux.u = 0.0;
+        flux.i = 0.;
+        flux.q = 0.;
+        flux.u = 0.;
       }
     }
   }
@@ -975,7 +975,7 @@ auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<doubl
     i = PI / 2.;
   }
   if (cos_stokes_rot_2 == 0) {
-    i = 0.0;
+    i = 0.;
   }
 
   if (!std::isfinite(i)) {
@@ -1072,7 +1072,7 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
       }
     }
     if (sin2rot_angle == 0) {
-      rot_angle = 0.0;
+      rot_angle = 0.;
       if (Q0 < 0) {
         rot_angle = 0.5 * PI;
       }
@@ -1114,10 +1114,10 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
     theta_rot = PI / 2.;
   }
   if (cosine_elec_ref2 == 0) {
-    theta_rot = 0.0;
+    theta_rot = 0.;
   }
   if (cosine_elec_ref1 > 1) {
-    theta_rot = 0.0;
+    theta_rot = 0.;
   }
   if (cosine_elec_ref1 < -1) {
     theta_rot = PI;

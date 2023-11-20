@@ -424,7 +424,7 @@ static void compton_scatter(struct packet *pkt_ptr)
   bool stay_gamma = false;
   double f = NAN;
   if (xx < THOMSON_LIMIT) {
-    f = 1.0;  // no energy loss
+    f = 1.;  // no energy loss
     stay_gamma = true;
   } else {
     f = choose_f(xx, rng_uniform());
@@ -606,7 +606,7 @@ static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
 
   if (chi_rf < 0) {
     printout("Negative pair production sigma. Setting to zero. Abort? %g\n", chi_rf);
-    chi_rf = 0.0;
+    chi_rf = 0.;
   }
 
   return chi_rf;
@@ -730,7 +730,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   // optical depth for this path.
   double zrand = rng_uniform_pos();
   const double tau_next = -1. * log(zrand);
-  const double tau_current = 0.0;
+  const double tau_current = 0.;
 
   // Start by finding the distance to the crossing of the grid cell
   // boundaries. sdist is the boundary distance and snext is the
@@ -769,7 +769,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   // Compton scattering - need to determine the scattering co-efficient.
   // Routine returns the value in the rest frame.
 
-  double chi_compton = 0.0;
+  double chi_compton = 0.;
   if (globals::gamma_kappagrey < 0) {
     chi_compton = get_chi_compton_rf(pkt_ptr);
   }

@@ -105,7 +105,7 @@ static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoint
       upperlevel = 0;
     }
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex = upperlevel;
-    globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.0;
+    globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.;
   } else  // upperlevel < 0, indicating that a table of upper levels and their probabilities will follow
   {
     int in_nphixstargets = 0;
@@ -152,7 +152,7 @@ static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoint
 
       // send it to the ground state of the top ion
       globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex = 0;
-      globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.0;
+      globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.;
     }
   }
 
@@ -2193,7 +2193,7 @@ void time_init()
     globals::timesteps[n].qdot_alpha = 0.;
     globals::timesteps[n].qdot_total = 0.;
     globals::timesteps[n].gamma_emission = 0.;
-    globals::timesteps[n].cmf_lum = 0.0;
+    globals::timesteps[n].cmf_lum = 0.;
     globals::timesteps[n].pellet_decays = 0;
   }
 }

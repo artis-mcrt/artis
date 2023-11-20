@@ -561,13 +561,13 @@ void write_to_file(int modelgridindex, int timestep) {
     }
 
     for (int binindex = -1 - detailed_linecount; binindex < RADFIELDBINCOUNT; binindex++) {
-      double nu_lower = 0.0;
-      double nu_upper = 0.0;
-      double nuJ_out = 0.0;
-      double J_out = 0.0;
-      float T_R = 0.0;
-      float W = 0.0;
-      double J_nu_bar = 0.0;
+      double nu_lower = 0.;
+      double nu_upper = 0.;
+      double nuJ_out = 0.;
+      double J_out = 0.;
+      float T_R = 0.;
+      float W = 0.;
+      double J_nu_bar = 0.;
       int contribcount = 0;
 
       const bool skipoutput = false;
@@ -688,8 +688,8 @@ void zero_estimators(int modelgridindex)
     assert_always(radfieldbins != nullptr);
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
       const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
-      radfieldbins[mgibinindex].J_raw = 0.0;
-      radfieldbins[mgibinindex].nuJ_raw = 0.0;
+      radfieldbins[mgibinindex].J_raw = 0.;
+      radfieldbins[mgibinindex].nuJ_raw = 0.;
       radfieldbins[mgibinindex].contribcount = 0;
     }
   }
@@ -923,7 +923,7 @@ static auto delta_nu_bar(double T_R, void *paras) -> double
 }
 
 static auto find_T_R(int modelgridindex, int binindex) -> float {
-  double T_R = 0.0;
+  double T_R = 0.;
 
   gsl_T_R_solver_paras paras;
   paras.modelgridindex = modelgridindex;
@@ -1064,8 +1064,8 @@ void fit_parameters(int modelgridindex, int timestep)
       const double nu_lower = get_bin_nu_lower(binindex);
       const double nu_upper = get_bin_nu_upper(binindex);
       const double J_bin = get_bin_J(modelgridindex, binindex);
-      float T_R_bin = -1.0;
-      double W_bin = -1.0;
+      float T_R_bin = -1.;
+      double W_bin = -1.;
       const int contribcount = get_bin_contribcount(modelgridindex, binindex);
 
       if (contribcount > 0) {
@@ -1095,7 +1095,7 @@ void fit_parameters(int modelgridindex, int timestep)
             W_bin = J_bin / planck_integral_result;
             if (W_bin > 1e4) {
               printout("W still very high, W=%g. Zeroing bin...\n", W_bin);
-              T_R_bin = -99.0;
+              T_R_bin = -99.;
               W_bin = 0.;
             } else {
               printout("new W is %g. Continuing with this value\n", W_bin);

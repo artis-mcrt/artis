@@ -360,7 +360,7 @@ static auto calculate_partfunct(int element, int ion, int modelgridindex) -> dou
     // of groundlevelpop for this calculation doesn't matter, so long as it's not zero!
     pop_store = get_groundlevelpop(modelgridindex, element, ion);
     initial = true;
-    grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = 1.0;
+    grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = 1.;
   }
 
   double U = 1.;

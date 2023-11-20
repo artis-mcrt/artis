@@ -625,9 +625,9 @@ void set_elements_uppermost_ion(const int modelgridindex, const int element, con
 }
 
 static void calculate_kappagrey() {
-  double rho_sum = 0.0;
-  double fe_sum = 0.0;
-  double opcase3_sum = 0.0;
+  double rho_sum = 0.;
+  double fe_sum = 0.;
+  double opcase3_sum = 0.;
   const int empty_cells = 0;
 
   for (int n = 0; n < ngrid; n++) {
@@ -666,8 +666,8 @@ static void calculate_kappagrey() {
   }
 
   /// Second pass through allows calculation of normalized chi_grey
-  double check1 = 0.0;
-  double check2 = 0.0;
+  double check1 = 0.;
+  double check2 = 0.;
   for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
     if (get_rho_tmin(mgi) > 0) {
@@ -782,8 +782,8 @@ static void allocate_composition_cooling()
       assert_always(modelgrid[modelgridindex].nlte_pops != nullptr);
 
       for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
-        modelgrid[modelgridindex].nlte_pops[nlteindex] = -1.0;  /// flag to indicate that there is
-                                                                ///  currently no information on the nlte populations
+        modelgrid[modelgridindex].nlte_pops[nlteindex] = -1.;  /// flag to indicate that there is
+                                                               ///  currently no information on the nlte populations
       }
     } else {
       modelgrid[modelgridindex].nlte_pops = nullptr;

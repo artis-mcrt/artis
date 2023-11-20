@@ -111,7 +111,7 @@ void packet_init(struct packet *pkt)
   // Need to get a normalisation factor.
   auto en_cumulative = std::vector<double>(grid::ngrid);
 
-  double norm = 0.0;
+  double norm = 0.;
   for (int m = 0; m < grid::ngrid; m++) {
     const int mgi = grid::get_cell_modelgridindex(m);
     if (mgi < grid::get_npts_model())  // some grid cells are empty

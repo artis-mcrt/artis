@@ -88,14 +88,14 @@ static void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_v
   const gsl_matrix rate_matrix_var = *rate_matrix;
   const int nlte_dimension = rate_matrix_var.size1;
   for (int index = 0; index < nlte_dimension; index++) {
-    double row_max = 0.0;
+    double row_max = 0.;
     for (int column = 0; column < nlte_dimension; column++) {
       const double element_value = fabs(gsl_matrix_get(rate_matrix, index, column));
       if (element_value > row_max) {
         row_max = element_value;
       }
     }
-    double col_max = 0.0;
+    double col_max = 0.;
     for (int row = 1; row < nlte_dimension; row++)  // skip the normalisation row 0
     {
       const double element_value = fabs(gsl_matrix_get(rate_matrix, row, index));
@@ -400,11 +400,11 @@ static void nltepop_reset_element(const int modelgridindex, const int element) {
     const int nlte_start = globals::elements[element].ions[ion].first_nlte;
     const int nlevels_nlte = get_nlevels_nlte(element, ion);
     for (int level = 1; level < nlevels_nlte; level++) {
-      grid::modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] = -1.0;  // flag to indicate no useful data
+      grid::modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] = -1.;  // flag to indicate no useful data
     }
 
     if (ion_has_superlevel(element, ion)) {
-      grid::modelgrid[modelgridindex].nlte_pops[nlte_start + nlevels_nlte] = -1.0;
+      grid::modelgrid[modelgridindex].nlte_pops[nlte_start + nlevels_nlte] = -1.;
     }
   }
 }
@@ -881,7 +881,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
     auto s_renorm = std::vector<double>(nlevels);
     for (int level = 0; level <= nlevels_nlte; level++) {
-      s_renorm[level] = 1.0;
+      s_renorm[level] = 1.;
     }
 
     for (int level = (nlevels_nlte + 1); level < nlevels; level++) {
@@ -993,7 +993,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
       // store the NLTE level populations
       const int nlte_start = globals::elements[element].ions[ion].first_nlte;
-      // double solution_ion_pop = 0.0;
+      // double solution_ion_pop = 0.;
       for (int level = 1; level <= nlevels_nlte; level++) {
         const int index = get_nlte_vector_index(element, ion, level);
         grid::modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] =

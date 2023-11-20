@@ -559,7 +559,7 @@ static void zero_estimators() {
       }
     }
 
-    globals::rpkt_emiss[modelgridindex] = 0.0;
+    globals::rpkt_emiss[modelgridindex] = 0.;
   }
 }
 

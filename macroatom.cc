@@ -701,7 +701,7 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
   const double n_u = get_levelpop(modelgridindex, element, ion, upper);
   const double n_l = get_levelpop(modelgridindex, element, ion, lower);
 
-  double R = 0.0;
+  double R = 0.;
 
   // if ((n_u > 1.1 * MINPOP) && (n_l > 1.1 * MINPOP))
   {
@@ -715,7 +715,7 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
 
     if (tau_sobolev > 1e-100) {
       const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));
-      // const double beta = 1.0;
+      // const double beta = 1.;
       R = A_ul * beta;
     } else {
       // printout("[warning] rad_deexcitation: tau_sobolev %g <= 0, set beta=1\n",tau_sobolev);
@@ -723,7 +723,7 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
       // printout("[warning] rad_deexcitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
       // printout("[warning] rad_deexcitation: T_e %g, T_R %g, W %g in model cell
       // %d\n",grid::get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex),modelgridindex);
-      R = 0.0;
+      R = 0.;
       // printout("[fatal] rad_excitation: tau_sobolev <= 0 ... %g abort",tau_sobolev);
       // abort();
     }
@@ -747,7 +747,7 @@ auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const
 
   const double n_u = get_levelpop(modelgridindex, element, ion, upper);
   const double n_l = get_levelpop(modelgridindex, element, ion, lower);
-  double R = 0.0;
+  double R = 0.;
   // if ((n_u >= 1.1 * MINPOP) && (n_l >= 1.1 * MINPOP))
   {
     const double nu_trans = epsilon_trans / H;
@@ -809,7 +809,7 @@ auto rad_recombination_ratecoeff(const float T_e, const float nne, const int ele
   // if (upperionlevel > get_maxrecombininglevel(element, upperion))
   //   return 0.;
 
-  double R = 0.0;
+  double R = 0.;
   const int lowerion = upperion - 1;
   const int nphixstargets = get_nphixstargets(element, lowerion, lowerionlevel);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
@@ -832,7 +832,7 @@ auto rad_recombination_ratecoeff(const float T_e, const float nne, const int ele
 
 auto stim_recombination_ratecoeff(const float nne, const int element, const int upperion, const int upper,
                                   const int lower, const int modelgridindex) -> double {
-  double R = 0.0;
+  double R = 0.;
 
   if constexpr (SEPARATE_STIMRECOMB) {
     const int nphixstargets = get_nphixstargets(element, upperion - 1, lower);

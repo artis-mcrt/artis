@@ -553,7 +553,7 @@ static void precalculate_rate_coefficient_integrals() {
             // F_stimulated_recomb.params = &intparas;
 
             /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-            double alpha_sp = 0.0;
+            double alpha_sp = 0.;
             const gsl_function F_alpha_sp = {.function = &alpha_sp_integrand_gsl, .params = &intparas};
 
             status = gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY,
@@ -580,7 +580,7 @@ static void precalculate_rate_coefficient_integrals() {
             //   phixstargetprobability),sfac);
 
             if constexpr (USE_LUT_PHOTOION) {
-              double gammacorr = 0.0;
+              double gammacorr = 0.;
               const gsl_function F_gammacorr = {.function = &gammacorr_integrand_gsl, .params = &intparas};
 
               status = gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY,
@@ -598,7 +598,7 @@ static void precalculate_rate_coefficient_integrals() {
             }
 
             if constexpr (USE_LUT_BFHEATING) {
-              double this_bfheating_coeff = 0.0;
+              double this_bfheating_coeff = 0.;
               const gsl_function F_bfheating = {.function = &approx_bfheating_integrand_gsl, .params = &intparas};
 
               status = gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY,
@@ -616,7 +616,7 @@ static void precalculate_rate_coefficient_integrals() {
               globals::bfheating_coeff[bflutindex] = this_bfheating_coeff;
             }
 
-            double this_bfcooling_coeff = 0.0;
+            double this_bfcooling_coeff = 0.;
             const gsl_function F_bfcooling = {.function = &bfcooling_integrand_gsl, .params = &intparas};
 
             status = gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, RATECOEFF_INTEGRAL_ACCURACY,
@@ -731,7 +731,7 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
   double alpha = 0.;
   if (lowerion < get_nions(element) - 1) {
     // this gets divided and cancelled out in the radiative case anyway
-    const double nne = (modelgridindex >= 0) ? grid::get_nne(modelgridindex) : 1.0;
+    const double nne = (modelgridindex >= 0) ? grid::get_nne(modelgridindex) : 1.;
 
     double nnupperion = 0;
     // nnupperion = get_groundmultiplet_pop(modelgridindex, T_e, element, upperion, assume_lte);
@@ -752,7 +752,7 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
         const double T_exc = T_e;
         const double E_level = epsilon(element, lowerion + 1, upper);
         const double E_ground = epsilon(element, lowerion + 1, 0);
-        const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, lowerion + 1) : 1.0;
+        const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, lowerion + 1) : 1.;
 
         nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
                         exp(-(E_level - E_ground) / KB / T_exc));
@@ -774,7 +774,7 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
         const double T_exc = T_e;
         const double E_level = epsilon(element, lowerion + 1, upper);
         const double E_ground = epsilon(element, lowerion + 1, 0);
-        const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, lowerion + 1) : 1.0;
+        const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, lowerion + 1) : 1.;
 
         nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
                         exp(-(E_level - E_ground) / KB / T_exc));
@@ -1135,10 +1135,10 @@ static auto calculate_stimrecombcoeff_integral(int element, int lowerion, int le
   const double sf = calculate_sahafact(element, lowerion, level, upperionlevel, T_e, H * nu_threshold);
 
   const gsl_function F_stimrecomb = {.function = &integrand_stimrecombination_custom_radfield, .params = &intparas};
-  double error = 0.0;
+  double error = 0.;
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-  double stimrecombcoeff = 0.0;
+  double stimrecombcoeff = 0.;
 
   // const int status =
   gsl_integration_qag(&F_stimrecomb, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61,
@@ -1217,7 +1217,7 @@ static auto integrand_corrphotoioncoeff_custom_radfield(const double nu, void *c
   const int modelgridindex = params->modelgridindex;
 
 #if (SEPARATE_STIMRECOMB)
-  const double corrfactor = 1.0;
+  const double corrfactor = 1.;
 #else
   const float T_e = params->T_e;
   double corrfactor = 1. - params->departure_ratio * exp(-HOVERKB * nu / T_e);
@@ -1259,7 +1259,7 @@ static auto calculate_corrphotoioncoeff_integral(int element, int ion, int level
   const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
   const double sf = calculate_sahafact(element, ion, level, upperionlevel, T_e, H * nu_threshold);
   const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upperionlevel);
-  double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.0;  // put that to phixslist
+  double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.;  // put that to phixslist
   if (!std::isfinite(departure_ratio)) {
     departure_ratio = 0.;
   }
@@ -1273,11 +1273,11 @@ static auto calculate_corrphotoioncoeff_integral(int element, int ion, int level
   };
 
   const gsl_function F_gammacorr = {.function = &integrand_corrphotoioncoeff_custom_radfield, .params = &intparas};
-  double error = 0.0;
+  double error = 0.;
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
-  double gammacorr = 0.0;
+  double gammacorr = 0.;
   const int status = gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE,
                                          GSL_INTEG_GAUSS61, gslworkspace, &gammacorr, &error);
 
@@ -1380,7 +1380,7 @@ static auto get_nlevels_important(int modelgridindex, int element, int ion, bool
       const double T_exc = T_e;  // remember, other parts of the code in LTE mode use TJ, not T_e
       const double E_level = epsilon(element, ion, lower);
       const double E_ground = epsilon(element, ion, 0);
-      const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, ion) : 1.0;
+      const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, ion) : 1.;
 
       nnlowerlevel = (nnground * stat_weight(element, ion, lower) / stat_weight(element, ion, 0) *
                       exp(-(E_level - E_ground) / KB / T_exc));
@@ -1481,7 +1481,7 @@ auto calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, co
   assert_always(lowerion < get_nions(element) - 1);
   assert_always(!force_bfest || !force_bfintegral);
 
-  const float nne = (modelgridindex >= 0) ? grid::get_nne(modelgridindex) : 1.0;
+  const float nne = (modelgridindex >= 0) ? grid::get_nne(modelgridindex) : 1.;
 
   double nnlowerion = 0.;
   const int nlevels_important = get_nlevels_important(modelgridindex, element, lowerion, assume_lte, T_e, &nnlowerion);

@@ -123,7 +123,7 @@ auto photoionization_crosssection_fromtable(const float *const photoion_xs, cons
   const int i = floor(ireal);
 
   if (i < 0) {
-    sigma_bf = 0.0;
+    sigma_bf = 0.;
     // printout("[warning] photoionization_crosssection was called with nu=%g < nu_edge=%g\n",nu,nu_edge);
     // printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot
     // %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot); printout("[warning]

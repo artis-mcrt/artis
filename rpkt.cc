@@ -317,7 +317,7 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
 
   Qnew = Qnew / Inew;
   Unew = Unew / Inew;
-  const double I = 1.0;  // Inew / Inew
+  const double I = 1.;  // Inew / Inew
 
   // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame (Clockwise rotation of PI-i2)
 
@@ -672,7 +672,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
     const double kappa = grid::get_kappagrey(mgi) * grid::get_rho(mgi) *
                          doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
-    const double tau_current = 0.0;
+    const double tau_current = 0.;
     edist = (tau_next - tau_current) / kappa;
     pkt_ptr->next_trans = -1;
   } else {
@@ -955,7 +955,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
 
   const auto nne = grid::get_nne(modelgridindex);
 
-  double sigma = 0.0;
+  double sigma = 0.;
   /// free-free absorption
   const double chi_ff = calculate_chi_ff(modelgridindex, nu_cmf);
   double chi_bf = 0.;

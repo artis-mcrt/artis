@@ -475,7 +475,7 @@ void init(const int my_rank, const int ndo_nonempty) {
     // should make these negative?
     nt_solution[modelgridindex].frac_heating = 0.97;
     nt_solution[modelgridindex].frac_ionization = 0.03;
-    nt_solution[modelgridindex].frac_excitation = 0.0;
+    nt_solution[modelgridindex].frac_excitation = 0.;
 
     nt_solution[modelgridindex].nneperion_when_solved = -1.;
     nt_solution[modelgridindex].timestep_last_solved = -1;
@@ -934,7 +934,7 @@ static auto get_J(const int Z, const int ionstage, const double ionpot_ev) -> do
       return 24.2;
     }
     if (Z == 18) {  // Ar I
-      return 10.0;
+      return 10.;
     }
   }
 
@@ -1061,7 +1061,7 @@ static auto calculate_frac_heating(const int modelgridindex) -> float
 
   if (!std::isfinite(frac_heating) || frac_heating < 0 || frac_heating > 1.0) {
     printout("WARNING: calculate_frac_heating: invalid result of %g. Setting to 1.0 instead\n", frac_heating);
-    return 1.0;
+    return 1.;
   }
 
   return frac_heating;
@@ -1196,7 +1196,7 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
     // electron_binding[get_atomicnumber(element)-1][1],
     // electron_binding[get_atomicnumber(element)-1][2],electron_binding[get_atomicnumber(element)-1][3],electron_binding[get_atomicnumber(element)-1][4],electron_binding[get_atomicnumber(element)-1][5],electron_binding[get_atomicnumber(element)-1][6],electron_binding[get_atomicnumber(element)-1][7],electron_binding[get_atomicnumber(element)-1][8],electron_binding[get_atomicnumber(element)-1][9]);
 
-    total = 0.0;
+    total = 0.;
     for (int electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++) {
       const double electronsinshell = q[electron_loop];
       if ((electronsinshell) > 0) {
@@ -1224,7 +1224,7 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
     }
 
   } else {
-    total = 0.0;
+    total = 0.;
   }
 
   // printout("For element %d ion %d I got mean binding energy of %g (eV)\n", element, ion, 1./total/EV);
@@ -1240,7 +1240,7 @@ static auto get_oneoverw(const int element, const int ion, const int modelgridin
   // We are going to start by taking all the high energy limits and ignoring Lelec, so that the
   // denominator is extremely simplified. Need to get the mean Z value.
 
-  double Zbar = 0.0;  // mass-weighted average atomic number
+  double Zbar = 0.;  // mass-weighted average atomic number
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
     Zbar += grid::get_elem_abundance(modelgridindex, ielement) * get_atomicnumber(ielement);
   }
@@ -2104,7 +2104,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
   const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
   const double yscalefactor = deposition_rate_density_ev / E_init_ev;
 
-  double nne_nt_max = 0.0;
+  double nne_nt_max = 0.;
   for (int i = 0; i < SFPTS; i++) {
     const double endash = gsl_vector_get(envec, i);
     const double delta_endash = DELTA_E;
