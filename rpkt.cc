@@ -285,7 +285,7 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
 
   // Need to rotate Stokes Parameters in the scattering plane
 
-  double ref1[3];
+  std::array<double, 3> ref1{};
   auto ref2 = meridian(old_dir_cmf, ref1);
 
   // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
@@ -326,17 +326,12 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   double U = -Qnew * sin2i2 + Unew * cos2i2;
 
   // Transform Stokes Parameters from the CMF to the RF
-  double vel_rev[3];
-  vel_rev[0] = -vel_vec[0];
-  vel_rev[1] = -vel_vec[1];
-  vel_rev[2] = -vel_vec[2];
+  std::array<double, 3> vel_rev{-vel_vec[0], -vel_vec[1], -vel_vec[2]};
 
   // Update rest frame direction, frequency and energy
   frame_transform(new_dir_cmf, &Q, &U, vel_rev, pkt_ptr->dir);
 
-  pkt_ptr->stokes[0] = I;
-  pkt_ptr->stokes[1] = Q;
-  pkt_ptr->stokes[2] = U;
+  pkt_ptr->stokes = {I, Q, U};
 
   // Check unit vector
   assert_testmodeonly(fabs(vec_len(pkt_ptr->dir) - 1.) < 1.e-6);
