@@ -11,7 +11,6 @@
 #include "packet.h"
 #include "sn3d.h"
 
-void scatter_dir(std::span<const double, 3> dir_in, double cos_theta, std::span<double, 3> dir_out);
 auto get_rand_isotropic_unitvec() -> std::array<double, 3>;
 
 [[nodiscard]] [[gnu::pure]] constexpr auto vec_len(std::span<const double> vec) -> double

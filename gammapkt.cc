@@ -399,6 +399,47 @@ static auto thomson_angle() -> double {
   return mu;
 }
 
+[[nodiscard]] static auto scatter_dir(std::span<const double, 3> dir_in, const double cos_theta)
+    -> std::array<double, 3>
+// Routine for scattering a direction through angle theta.
+{
+  // begin with setting the direction in coordinates where original direction
+  // is parallel to z-hat.
+
+  const double zrand = rng_uniform();
+  const double phi = zrand * 2 * PI;
+
+  const double sin_theta_sq = 1. - (cos_theta * cos_theta);
+  const double sin_theta = std::sqrt(sin_theta_sq);
+  const double zprime = cos_theta;
+  const double xprime = sin_theta * cos(phi);
+  const double yprime = sin_theta * sin(phi);
+
+  // Now need to derotate the coordinates back to real x,y,z.
+  // Rotation matrix is determined by dir_in.
+
+  const double norm1 = 1. / std::sqrt((dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1]));
+  const double norm2 = 1. / vec_len(dir_in);
+
+  const double r11 = dir_in[1] * norm1;
+  const double r12 = -1 * dir_in[0] * norm1;
+  const double r13 = 0.;
+  const double r21 = dir_in[0] * dir_in[2] * norm1 * norm2;
+  const double r22 = dir_in[1] * dir_in[2] * norm1 * norm2;
+  const double r23 = -1 * norm2 / norm1;
+  const double r31 = dir_in[0] * norm2;
+  const double r32 = dir_in[1] * norm2;
+  const double r33 = dir_in[2] * norm2;
+
+  std::array<double, 3> dir_out{(r11 * xprime) + (r21 * yprime) + (r31 * zprime),
+                                (r12 * xprime) + (r22 * yprime) + (r32 * zprime),
+                                (r13 * xprime) + (r23 * yprime) + (r33 * zprime)};
+
+  assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
+
+  return dir_out;
+}
+
 static void compton_scatter(struct packet *pkt_ptr)
 // Routine to deal with physical Compton scattering event.
 {
@@ -459,8 +500,7 @@ static void compton_scatter(struct packet *pkt_ptr)
 
     const double cos_theta = (xx < THOMSON_LIMIT) ? thomson_angle() : 1. - ((f - 1) / xx);
 
-    double new_dir[3] = {NAN, NAN, NAN};
-    scatter_dir(cmf_dir, cos_theta, new_dir);
+    const auto new_dir = scatter_dir(cmf_dir, cos_theta);
 
     const double test = dot(new_dir, new_dir);
     if (fabs(1. - test) > 1.e-8) {
