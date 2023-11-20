@@ -21,3 +21,4 @@ artisoptions.h
 build
 compile_commands.json
 *.dSYM/
+.cache/
