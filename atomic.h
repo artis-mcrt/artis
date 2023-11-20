@@ -31,7 +31,7 @@ auto get_nlevels_nlte(int element, int ion) -> int;
 auto get_nlevels_groundterm(int element, int ion) -> int;
 auto get_ionisinglevels(int element, int ion) -> int;
 auto get_uniqueionindex(int element, int ion) -> int;
-void get_ionfromuniqueionindex(int allionsindex, int *element, int *ion);
+[[nodiscard]] auto get_ionfromuniqueionindex(int allionsindex) -> std::tuple<int, int>;
 auto get_uniquelevelindex(int element, int ion, int level) -> int;
 void get_levelfromuniquelevelindex(int alllevelsindex, int *element, int *ion, int *level);
 auto epsilon(int element, int ion, int level) -> double;

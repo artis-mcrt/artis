@@ -284,19 +284,17 @@ auto get_uniqueionindex(const int element, const int ion) -> int
   return globals::elements[element].uniqueionindexstart + ion;
 }
 
-void get_ionfromuniqueionindex(const int allionsindex, int *element, int *ion) {
+auto get_ionfromuniqueionindex(const int allionsindex) -> std::tuple<int, int> {
   assert_testmodeonly(allionsindex < get_includedions());
 
-  for (int e = 0; e < get_nelements(); e++) {
-    if (get_nions(e) == 0) {
+  for (int element = 0; element < get_nelements(); element++) {
+    if (get_nions(element) == 0) {
       continue;
     }
-    const auto element_uniqueionindexstart = globals::elements[e].uniqueionindexstart;
-    if ((allionsindex - element_uniqueionindexstart) < get_nions(e)) {
-      *element = e;
-      *ion = allionsindex - element_uniqueionindexstart;
-      assert_testmodeonly(get_uniqueionindex(*element, *ion) == allionsindex);
-      return;
+    const int ion = allionsindex - globals::elements[element].uniqueionindexstart;
+    if (ion < get_nions(element)) {
+      assert_testmodeonly(get_uniqueionindex(element, ion) == allionsindex);
+      return {element, ion};
     }
   }
   assert_always(false);  // allionsindex too high to be valid

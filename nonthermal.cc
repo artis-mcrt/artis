@@ -414,9 +414,7 @@ static void zero_all_effionpot(const int modelgridindex) {
       nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a] = 0.;
     }
 
-    int element = 0;
-    int ion = 0;
-    get_ionfromuniqueionindex(uniqueionindex, &element, &ion);
+    const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
     assert_always(fabs(get_auger_probability(modelgridindex, element, ion, 0) - 1.0) < 1e-3);
     assert_always(fabs(get_ion_auger_enfrac(modelgridindex, element, ion, 0) - 1.0) < 1e-3);
   }
