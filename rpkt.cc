@@ -338,9 +338,7 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   // Update rest frame direction, frequency and energy
   frame_transform(new_dir_cmf, &Q, &U, vel_rev, pkt_ptr->dir);
 
-  pkt_ptr->stokes[0] = I;
-  pkt_ptr->stokes[1] = Q;
-  pkt_ptr->stokes[2] = U;
+  pkt_ptr->stokes = {I, Q, U};
 
   // Check unit vector
   assert_testmodeonly(fabs(vec_len(pkt_ptr->dir) - 1.) < 1.e-6);
