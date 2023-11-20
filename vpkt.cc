@@ -1023,8 +1023,7 @@ static auto lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> 
   auto e_cmf = std::array<double, 3>{e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]),
                                      e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]),
                                      e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2])};
-  e_cmf = vec_norm(e_cmf);
-  return e_cmf;
+  return vec_norm(e_cmf);
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
