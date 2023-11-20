@@ -204,7 +204,6 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   // ------------ SCATTERING EVENT: dipole function --------------------
 
   double ref1[3] = {NAN, NAN, NAN};
-  std::array<double, 3> ref2 = {NAN, NAN, NAN};
   double pn = NAN;
   double I = NAN;
   double Q = NAN;
@@ -220,7 +219,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     double obs_cmf[3];
     angle_ab(vpkt.dir, vel_vec, obs_cmf);
 
-    ref2 = meridian(old_dir_cmf, ref1);
+    auto ref2 = meridian(old_dir_cmf, ref1);
 
     // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
     // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
@@ -994,7 +993,7 @@ std::array<double, 3> meridian(std::span<const double, 3> n, std::span<double, 3
   ref1[2] = (1 - (n[2] * n[2])) / n_xylen;
 
   // for ref_2 use vector product of n_cmf with ref1
-  const std::array<double, 3> ref2 = cross_prod(ref1, n);
+  const auto ref2 = cross_prod(ref1, n);
   return ref2;
 }
 
@@ -1002,24 +1001,24 @@ static void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> 
                     std::span<double, 3> e_cmf) {
   // Lorentz transformations from RF to CMF
 
-  std::array<const double, 3> beta = {v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
+  const auto beta = std::array<const double, 3>{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
   const double vsqr = dot(beta, beta);
 
   const double gamma_rel = 1. / (sqrt(1 - vsqr));
 
-  std::array<const double, 3> e_par = {dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
-                                       dot(e_rf, beta) * beta[2] / (vsqr)};
+  const auto e_par = std::array<const double, 3>{dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
+                                                 dot(e_rf, beta) * beta[2] / (vsqr)};
 
-  std::array<const double, 3> e_perp = {e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
+  const auto e_perp = std::array<const double, 3>{e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
 
-  const std::array<double, 3> b_rf = cross_prod(n_rf, e_rf);
+  const auto b_rf = cross_prod(n_rf, e_rf);
 
   // const double b_par[3] = {dot(b_rf, beta) * beta[0] / (vsqr), dot(b_rf, beta) * beta[1] / (vsqr),
   //                          dot(b_rf, beta) * beta[2] / (vsqr)};
 
   // const double b_perp[3] = {b_rf[0] - b_par[0], b_rf[1] - b_par[1], b_rf[2] - b_par[2]};
 
-  const std::array<double, 3> v_cr_b = cross_prod(beta, b_rf);
+  const auto v_cr_b = cross_prod(beta, b_rf);
 
   // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
   //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
@@ -1042,7 +1041,7 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
   double ref1[3] = {NAN, NAN, NAN};
 
   // Meridian frame in the RF
-  std::array<double, 3> ref2 = meridian(n_rf, ref1);
+  auto ref2 = meridian(n_rf, ref1);
 
   const double Q0 = *Q;
   const double U0 = *U;

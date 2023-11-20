@@ -44,7 +44,7 @@ void scatter_dir(std::span<const double, 3> dir_in, const double cos_theta, std:
   assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
 }
 
-void get_rand_isotropic_unitvec(std::span<double, 3> vecout)
+auto get_rand_isotropic_unitvec() -> std::array<double, 3>
 // Assuming isotropic distribution, get a random direction vector
 {
   // alternatively, use GSL's functions:
@@ -60,9 +60,8 @@ void get_rand_isotropic_unitvec(std::span<double, 3> vecout)
   const double phi = zrand2 * 2 * PI;
   const double sintheta = std::sqrt(1. - (mu * mu));
 
-  vecout[0] = sintheta * std::cos(phi);
-  vecout[1] = sintheta * std::sin(phi);
-  vecout[2] = mu;
+  std::array<double, 3> vecout = {sintheta * std::cos(phi), sintheta * std::sin(phi), mu};
 
   assert_testmodeonly(std::fabs(vec_len(vecout) - 1.) < 1e-10);
+  return vecout;
 }

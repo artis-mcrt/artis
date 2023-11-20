@@ -294,7 +294,7 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   // Need to rotate Stokes Parameters in the scattering plane
 
   double ref1[3];
-  std::array<double, 3> ref2 = meridian(old_dir_cmf, ref1);
+  auto ref2 = meridian(old_dir_cmf, ref1);
 
   // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
   // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
@@ -745,8 +745,7 @@ void emit_rpkt(struct packet *pkt_ptr) {
 
   /// Need to assign a new direction. Assume isotropic emission in the cmf
 
-  double dir_cmf[3];
-  get_rand_isotropic_unitvec(dir_cmf);
+  const auto dir_cmf = get_rand_isotropic_unitvec();
 
   double vel_vec[3];
   /// This direction is in the cmf - we want to convert it to the rest

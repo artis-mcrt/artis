@@ -42,18 +42,18 @@ struct packet {
   enum packet_type type {};                         // type of packet (k-, r-, etc.)
   enum cell_boundary last_cross { BOUNDARY_NONE };  // To avoid rounding errors on cell crossing.
   int interactions{0};                              // number of interactions the packet undergone
-  int nscatterings{0};              // records number of electron scatterings a r-pkt undergone since it was emitted
-  int last_event{0};                // debug: stores information about the packets history
-  double pos[3] = {0, 0, 0};        // Position of the packet (x,y,z).
-  double dir[3] = {0, 0, 0};        // Direction of propagation. (x,y,z). Always a unit vector.
-  double e_cmf{0.};                 // The energy the packet carries in the co-moving frame.
-  double e_rf{0.};                  // The energy the packet carries in the rest frame.
-  double nu_cmf{0.};                // The frequency in the co-moving frame.
-  double nu_rf{0.};                 // The frequency in the rest frame.
-  int next_trans{-1};               // This keeps track of the next possible line interaction of a rpkt by storing
-                                    // its linelist index (to overcome numerical problems in propagating the rpkts).
-  int emissiontype{EMTYPE_NOTSET};  // records how the packet was emitted if it is a r-pkt
-  double em_pos[3] = {0.};          // Position of the last emission (x,y,z).
+  int nscatterings{0};                // records number of electron scatterings a r-pkt undergone since it was emitted
+  int last_event{0};                  // debug: stores information about the packets history
+  std::array<double, 3> pos{};        // Position of the packet (x,y,z).
+  std::array<double, 3> dir{};        // Direction of propagation. (x,y,z). Always a unit vector.
+  double e_cmf{0.};                   // The energy the packet carries in the co-moving frame.
+  double e_rf{0.};                    // The energy the packet carries in the rest frame.
+  double nu_cmf{0.};                  // The frequency in the co-moving frame.
+  double nu_rf{0.};                   // The frequency in the rest frame.
+  int next_trans{-1};                 // This keeps track of the next possible line interaction of a rpkt by storing
+                                      // its linelist index (to overcome numerical problems in propagating the rpkts).
+  int emissiontype{EMTYPE_NOTSET};    // records how the packet was emitted if it is a r-pkt
+  std::array<double, 3> em_pos = {};  // Position of the last emission (x,y,z).
   float em_time{-1.};
   double prop_time{-1.};  // internal clock to track how far in time the packet has been propagated
   int absorptiontype{0};  // records linelistindex of the last absorption
@@ -62,18 +62,18 @@ struct packet {
                           // decaying pellets of the 52Fe chain (-6) and pellets which decayed before the
                           // onset of the simulation (-7)
                           // decay of a positron pellet (-10)
-  int trueemissiontype = EMTYPE_NOTSET;  // emission type coming from a kpkt to rpkt (last thermal emission)
-  float trueem_time{-1.};                // first thermal emission time [s]
-  double absorptionfreq{0.};             // records nu_rf of packet at last absorption
-  double absorptiondir[3] = {0.};  // Direction of propagation (x,y,z) when a packet was last absorbed in a line. Always
-                                   // a unit vector.
-  double stokes[3] = {0.};         // I, Q and U Stokes parameters
-  std::array<double, 3> pol_dir = {0.};  // unit vector which defines the coordinate system against which Q and U are
-                                         // measured; should always be perpendicular to dir
-  double tdecay{-1.};                    // Time at which pellet decays
-  enum packet_type escape_type {};       // In which form when escaped from the grid.
-  float escape_time{-1};                 // time at which is passes out of the grid [s]
-  int number{-1};                        // A unique number to identify the packet
+  int trueemissiontype = EMTYPE_NOTSET;   // emission type coming from a kpkt to rpkt (last thermal emission)
+  float trueem_time{-1.};                 // first thermal emission time [s]
+  double absorptionfreq{};                // records nu_rf of packet at last absorption
+  std::array<double, 3> absorptiondir{};  // Direction of propagation (x,y,z) when a packet was last absorbed in a line.
+                                          // Always a unit vector.
+  std::array<double, 3> stokes{};         // I, Q and U Stokes parameters
+  std::array<double, 3> pol_dir{};        // unit vector which defines the coordinate system against which Q and U are
+                                          // measured; should always be perpendicular to dir
+  double tdecay{-1.};                     // Time at which pellet decays
+  enum packet_type escape_type {};        // In which form when escaped from the grid.
+  float escape_time{-1};                  // time at which is passes out of the grid [s]
+  int number{-1};                         // A unique number to identify the packet
   bool originated_from_particlenotgamma{false};  // first-non-pellet packet type was gamma
   int pellet_decaytype{-1};                      // index into decay::decaytypes
   int pellet_nucindex{-1};                       // nuclide index of the decaying species

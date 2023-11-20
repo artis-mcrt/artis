@@ -12,7 +12,7 @@
 #include "sn3d.h"
 
 void scatter_dir(std::span<const double, 3> dir_in, double cos_theta, std::span<double, 3> dir_out);
-void get_rand_isotropic_unitvec(std::span<double, 3> vecout);
+auto get_rand_isotropic_unitvec() -> std::array<double, 3>;
 
 [[nodiscard]] [[gnu::pure]] constexpr auto vec_len(std::span<const double> vec) -> double
 // return the the magnitude of a vector
@@ -187,23 +187,23 @@ constexpr auto move_pkt_withtime(struct packet *pkt_ptr, const double distance) 
 }
 
 constexpr auto get_escapedirectionbin(std::span<const double, 3> dir_in, std::span<const double, 3> syn_dir) -> int {
-  constexpr std::array<double, 3> xhat = {1.0, 0.0, 0.0};
+  constexpr auto xhat = std::array<double, 3>{1.0, 0.0, 0.0};
 
   // sometimes dir vectors aren't accurately normalised
   const double dirmag = vec_len(dir_in);
-  std::array<const double, 3> dir = {dir_in[0] / dirmag, dir_in[1] / dirmag, dir_in[2] / dirmag};
+  const auto dir = std::array<const double, 3>{dir_in[0] / dirmag, dir_in[1] / dirmag, dir_in[2] / dirmag};
 
   /// Angle resolved case: need to work out the correct angle bin
   const double costheta = dot(dir, syn_dir);
   const int costhetabin = static_cast<int>((costheta + 1.0) * NPHIBINS / 2.0);
   assert_testmodeonly(costhetabin < NCOSTHETABINS);
 
-  const std::array<double, 3> vec1 = cross_prod(dir, syn_dir);
+  const auto vec1 = cross_prod(dir, syn_dir);
 
-  const std::array<double, 3> vec2 = cross_prod(xhat, syn_dir);
+  const auto vec2 = cross_prod(xhat, syn_dir);
   const double cosphi = dot(vec1, vec2) / vec_len(vec1) / vec_len(vec2);
 
-  const std::array<double, 3> vec3 = cross_prod(vec2, syn_dir);
+  const auto vec3 = cross_prod(vec2, syn_dir);
   const double testphi = dot(vec1, vec3);
 
   // with phi defined according to y = cos(theta) * sin(phi), the

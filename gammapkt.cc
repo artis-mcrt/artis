@@ -266,8 +266,7 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
   // Now let's give the gamma ray a direction.
   // Assuming isotropic emission in cmf
 
-  double dir_cmf[3];
-  get_rand_isotropic_unitvec(dir_cmf);
+  const auto dir_cmf = get_rand_isotropic_unitvec();
 
   // This direction is in the cmf - we want to convert it to the rest
   // frame - use aberation of angles. We want to convert from cmf to
@@ -699,8 +698,7 @@ void pair_prod(struct packet *pkt_ptr) {
 
     // Now let's give the gamma ray a direction.
 
-    double dir_cmf[3];
-    get_rand_isotropic_unitvec(dir_cmf);
+    const auto dir_cmf = get_rand_isotropic_unitvec();
 
     // This direction is in the cmf - we want to convert it to the rest
     // frame - use aberation of angles. We want to convert from cmf to
