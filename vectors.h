@@ -218,6 +218,7 @@ constexpr auto get_escapedirectionbin(std::span<const double, 3> dir_in, std::sp
   // phibins are in decreasing phi order (i.e. the upper side of bin zero 0 is 2pi)
   const int phibin = static_cast<int>((testphi >= 0 ? acos(cosphi) : acos(cosphi) + PI) / 2. / PI * NPHIBINS);
 
+  assert_testmodeonly(phibin >= 0);
   assert_testmodeonly(phibin < NPHIBINS);
   const int na = static_cast<int>((costhetabin * NPHIBINS) + phibin);
   assert_always(na < MABINS);
