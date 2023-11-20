@@ -46,7 +46,7 @@ constexpr void vec_norm(std::span<const double, 3> vec_in, std::span<double, 3> 
   return std::array<double, 3>{x[0] / t, x[1] / t, x[2] / t};
 }
 
-constexpr std::array<double, 3> cross_prod(std::span<const double, 3> vec1, std::span<const double, 3> vec2) {
+constexpr auto cross_prod(std::span<const double, 3> vec1, std::span<const double, 3> vec2) -> std::array<double, 3> {
   std::array<double, 3> vecout = {(vec1[1] * vec2[2]) - (vec2[1] * vec1[2]), (vec1[2] * vec2[0]) - (vec2[2] * vec1[0]),
                                   (vec1[0] * vec2[1]) - (vec2[0] * vec1[1])};
   return vecout;
@@ -182,7 +182,8 @@ constexpr auto move_pkt_withtime(struct packet *pkt_ptr, const double distance) 
   return pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / CLIGHT_PROP);
 }
 
-constexpr auto get_escapedirectionbin(std::span<const double, 3> dir_in, std::span<const double, 3> syn_dir) -> int {
+[[nodiscard]] constexpr auto get_escapedirectionbin(std::span<const double, 3> dir_in,
+                                                    std::span<const double, 3> syn_dir) -> int {
   constexpr auto xhat = std::array<double, 3>{1.0, 0.0, 0.0};
 
   // sometimes dir vectors aren't accurately normalised
