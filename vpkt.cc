@@ -208,8 +208,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   if (type_before_rpkt == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
 
-    auto old_dir_cmf = std::array<double, 3>{};
-    frame_transform(pkt_ptr->dir, &Qi, &Ui, vel_vec, old_dir_cmf);
+    auto old_dir_cmf = frame_transform(pkt_ptr->dir, &Qi, &Ui, vel_vec);
 
     // Need to rotate Stokes Parameters in the scattering plane
 
@@ -261,7 +260,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
     const double vel_rev[3] = {-vel_vec[0], -vel_vec[1], -vel_vec[2]};
 
-    frame_transform(obs_cmf, &Q, &U, vel_rev, obsdir);
+    frame_transform(obs_cmf, &Q, &U, vel_rev);
 
   } else if (type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA) {
     // MACROATOM and KPKT: isotropic emission
@@ -936,7 +935,7 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type type_be
   }
 }
 
-[[nodiscard]] auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<double, 3> ref1,
+[[nodiscard]] auto rot_angle(std::span<const double, 3> n1, std::span<const double, 3> n2, std::span<double, 3> ref1,
                              std::span<double, 3> ref2) -> double {
   // Rotation angle from the scattering plane
   // We need to rotate Stokes Parameters to (or from) the scattering plane from (or to)
@@ -1027,8 +1026,8 @@ static auto lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> 
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
-void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v,
-                     std::span<double, 3> n_cmf) {
+auto frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v)
+    -> std::array<double, 3> {
   auto ref1 = std::array<double, 3>{NAN, NAN, NAN};
 
   // Meridian frame in the RF
@@ -1076,8 +1075,7 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
                                              cos(rot_angle) * ref1[2] - sin(rot_angle) * ref2[2]};
 
   // Aberration
-  auto n_cmf_arr = angle_ab(n_rf, v);
-  vec_copy(n_cmf, n_cmf_arr);
+  auto n_cmf = angle_ab(n_rf, v);
 
   // Lorentz transformation of E
   auto elec_cmf = lorentz(elec_rf, n_rf, v);
@@ -1116,4 +1114,6 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
   // Compute Stokes Parameters in the CMF
   *Q = cos(2 * theta_rot) * p;
   *U = sin(2 * theta_rot) * p;
+
+  return n_cmf;
 }
