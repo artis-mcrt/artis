@@ -272,10 +272,11 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
   // frame - use aberation of angles. We want to convert from cmf to
   // rest so need -ve velocity.
 
-  const auto vel_vec = get_velocity(pkt_ptr->pos, -1. * pkt_ptr->tdecay);
+  double vel_vec[3];
+  get_velocity(pkt_ptr->pos, vel_vec, -1. * pkt_ptr->tdecay);
   // negative time since we want the backwards transformation here
 
-  pkt_ptr->dir = angle_ab(dir_cmf, vel_vec);
+  angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
 
   // Now need to assign the frequency of the packet in the co-moving frame.
 
@@ -302,7 +303,7 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
     pkt_ptr->pol_dir = cross_prod(pkt_ptr->dir, std::array<double, 3>{0., 1., 0.});
   }
 
-  pkt_ptr->pol_dir = vec_norm(pkt_ptr->pol_dir);
+  vec_norm(pkt_ptr->pol_dir, pkt_ptr->pol_dir);
   // printout("initialise pol state of packet %g, %g, %g, %g,
   // %g\n",pkt_ptr->stokes_qu[0],pkt_ptr->stokes_qu[1],pkt_ptr->pol_dir[0],pkt_ptr->pol_dir[1],pkt_ptr->pol_dir[2]);
   // printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
@@ -450,9 +451,11 @@ static void compton_scatter(struct packet *pkt_ptr)
     // The packet has stored the direction in the rest frame.
     // Use aberation of angles to get this into the co-moving frame.
 
-    auto vel_vec = get_velocity(pkt_ptr->pos, pkt_ptr->prop_time);
+    double vel_vec[3];
+    get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
 
-    const auto cmf_dir = angle_ab(pkt_ptr->dir, vel_vec);
+    double cmf_dir[3];
+    angle_ab(pkt_ptr->dir, vel_vec, cmf_dir);
 
     // Now change the direction through the scattering angle.
 
@@ -481,7 +484,8 @@ static void compton_scatter(struct packet *pkt_ptr)
     // get_velocity(pkt_ptr->pos, vel_vec, (-1 * pkt_ptr->prop_time));
     vec_scale(vel_vec, -1.);
 
-    const auto final_dir = angle_ab(new_dir, vel_vec);
+    double final_dir[3];
+    angle_ab(new_dir, vel_vec, final_dir);
 
     vec_copy(pkt_ptr->dir, final_dir);
 
@@ -700,10 +704,11 @@ void pair_prod(struct packet *pkt_ptr) {
     // frame - use aberation of angles. We want to convert from cmf to
     // rest so need -ve velocity.
 
-    const auto vel_vec = get_velocity(pkt_ptr->pos, -1. * pkt_ptr->prop_time);
+    double vel_vec[3];
+    get_velocity(pkt_ptr->pos, vel_vec, -1. * pkt_ptr->prop_time);
     // negative time since we want the backwards transformation here
 
-    pkt_ptr->dir = angle_ab(dir_cmf, vel_vec);
+    angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
 
     const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
     pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;

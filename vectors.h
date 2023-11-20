@@ -22,15 +22,16 @@ auto get_rand_isotropic_unitvec() -> std::array<double, 3>;
   return std::sqrt(squaredlen);
 }
 
-constexpr auto vec_norm(std::span<const double, 3> vec_in) -> std::array<double, 3>
+constexpr void vec_norm(std::span<const double, 3> vec_in, std::span<double, 3> vec_out)
 // normalizing a copy of vec_in and save it to vec_out
 {
   const double magnitude = vec_len(vec_in);
 
-  auto vec_out = std::array<double, 3>{vec_in[0] / magnitude, vec_in[1] / magnitude, vec_in[2] / magnitude};
+  vec_out[0] = vec_in[0] / magnitude;
+  vec_out[1] = vec_in[1] / magnitude;
+  vec_out[2] = vec_in[2] / magnitude;
 
   assert_testmodeonly(fabs(vec_len(vec_out) - 1.) < 1.e-10);
-  return vec_out;
 }
 
 [[nodiscard]] [[gnu::pure]] constexpr auto dot(std::span<const double> x, std::span<const double> y) -> double
@@ -39,15 +40,18 @@ constexpr auto vec_norm(std::span<const double, 3> vec_in) -> std::array<double,
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
-constexpr auto get_velocity(std::span<const double, 3> x, const double t) -> std::array<double, 3>
+constexpr void get_velocity(std::span<const double, 3> x, std::span<double, 3> y, const double t)
 // Routine for getting velocity vector of the flow at a position with homologous expansion.
 {
-  return std::array<double, 3>{x[0] / t, x[1] / t, x[2] / t};
+  y[0] = x[0] / t;
+  y[1] = x[1] / t;
+  y[2] = x[2] / t;
 }
 
 constexpr std::array<double, 3> cross_prod(std::span<const double, 3> vec1, std::span<const double, 3> vec2) {
-  return std::array<double, 3>{(vec1[1] * vec2[2]) - (vec2[1] * vec1[2]), (vec1[2] * vec2[0]) - (vec2[2] * vec1[0]),
-                               (vec1[0] * vec2[1]) - (vec2[0] * vec1[1])};
+  std::array<double, 3> vecout = {(vec1[1] * vec2[2]) - (vec2[1] * vec1[2]), (vec1[2] * vec2[0]) - (vec2[2] * vec1[0]),
+                                  (vec1[0] * vec2[1]) - (vec2[0] * vec1[1])};
+  return vecout;
 }
 
 constexpr void vec_scale(std::span<double, 3> vec, const double scalefactor) {
@@ -62,11 +66,11 @@ constexpr void vec_copy(std::span<double, 3> destination, std::span<const double
   destination[2] = source[2];
 }
 
-constexpr auto angle_ab(std::span<const double, 3> dir1, std::span<const double, 3> vel) -> std::array<double, 3>
+constexpr void angle_ab(std::span<const double, 3> dir1, std::span<const double, 3> vel, std::span<double, 3> dir2)
 // aberation of angles in special relativity
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1
-// returns direction vector in frame2
+//   dir2: direction vector in frame2
 {
   const double vsqr = dot(vel, vel) / CLIGHTSQUARED;
   const double gamma_rel = 1. / std::sqrt(1 - vsqr);
@@ -75,13 +79,11 @@ constexpr auto angle_ab(std::span<const double, 3> dir1, std::span<const double,
   const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
   const double fact2 = (gamma_rel - (gamma_rel * gamma_rel * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
 
-  auto dir2 = std::array<double, 3>{};
   for (int d = 0; d < 3; d++) {
     dir2[d] = (dir1[d] - (vel[d] * fact2)) / fact1;
   }
 
-  dir2 = vec_norm(dir2);
-  return dir2;
+  vec_norm(dir2, dir2);
 }
 
 [[gnu::pure]] [[nodiscard]] constexpr auto doppler_nucmf_on_nurf(std::span<const double, 3> dir_rf,
@@ -124,7 +126,8 @@ constexpr auto angle_ab(std::span<const double, 3> dir1, std::span<const double,
 // returns: the ratio f = (nu_cmf / nu_rf) ^ 2
 {
   // velocity of the comoving frame relative to the rest frame
-  const auto vel_rf = get_velocity(pos_rf, prop_time);
+  std::array<double, 3> vel_rf = {0, 0, 0};  // homologous flow velocity
+  get_velocity(pos_rf, vel_rf, prop_time);
 
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
@@ -143,7 +146,9 @@ constexpr auto angle_ab(std::span<const double, 3> dir1, std::span<const double,
 [[gnu::pure]] [[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(std::span<const double, 3> pos_rf,
                                                                         std::span<const double, 3> dir_rf,
                                                                         const double prop_time) -> double {
-  return doppler_nucmf_on_nurf(dir_rf, get_velocity(pos_rf, prop_time));
+  double flow_velocity[3] = {0, 0, 0};  // homologous flow velocity
+  get_velocity(pos_rf, flow_velocity, prop_time);
+  return doppler_nucmf_on_nurf(dir_rf, flow_velocity);
 }
 
 constexpr auto move_pkt_withtime(struct packet *pkt_ptr, const double distance) -> double

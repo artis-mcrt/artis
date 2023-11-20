@@ -9,7 +9,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <span>
-#include <tuple>
 #include <vector>
 
 #include "artisoptions.h"
@@ -191,7 +190,8 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
   safeincrement(nvpkt);  // increment the number of virtual packet in the given timestep
 
-  const auto vel_vec = get_velocity(pkt_ptr->pos, t_current);
+  double vel_vec[3] = {NAN, NAN, NAN};
+  get_velocity(pkt_ptr->pos, vel_vec, t_current);
 
   // rf frequency and energy
   const double dopplerfactor = doppler_nucmf_on_nurf(vpkt.dir, vel_vec);
@@ -203,6 +203,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
   // ------------ SCATTERING EVENT: dipole function --------------------
 
+  double ref1[3] = {NAN, NAN, NAN};
   double pn = NAN;
   double I = NAN;
   double Q = NAN;
@@ -210,19 +211,20 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   if (type_before_rpkt == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
 
-    auto old_dir_cmf = std::array<double, 3>{};
+    double old_dir_cmf[3] = {NAN, NAN, NAN};
     frame_transform(pkt_ptr->dir, &Qi, &Ui, vel_vec, old_dir_cmf);
 
     // Need to rotate Stokes Parameters in the scattering plane
 
-    auto obs_cmf = angle_ab(vpkt.dir, vel_vec);
+    double obs_cmf[3];
+    angle_ab(vpkt.dir, vel_vec, obs_cmf);
 
-    auto [ref1_old, ref2_old] = meridian(old_dir_cmf);
+    auto ref2 = meridian(old_dir_cmf, ref1);
 
     // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
     // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
     // ref1_sc and ref2_sc in the scattering plane.
-    const double i1 = rot_angle(old_dir_cmf, obs_cmf, ref1_old, ref2_old);
+    const double i1 = rot_angle(old_dir_cmf, obs_cmf, ref1, ref2);
     const double cos2i1 = cos(2 * i1);
     const double sin2i1 = sin(2 * i1);
 
@@ -245,7 +247,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
     // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame
 
-    auto [ref1, ref2] = meridian(obs_cmf);
+    ref2 = meridian(obs_cmf, ref1);
 
     // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
     // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
@@ -259,7 +261,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
     // Transform Stokes Parameters from the CMF to the RF
 
-    const auto vel_rev = std::array<double, 3>{-vel_vec[0], -vel_vec[1], -vel_vec[2]};
+    const double vel_rev[3] = {-vel_vec[0], -vel_vec[1], -vel_vec[2]};
 
     frame_transform(obs_cmf, &Q, &U, vel_rev, obsdir);
 
@@ -900,7 +902,8 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type type_be
 
   const double t_current = pkt_ptr->prop_time;
 
-  const auto vel_vec = get_velocity(pkt_ptr->pos, pkt_ptr->prop_time);
+  double vel_vec[3];
+  get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
 
   // this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each observer)
   if (pkt_ptr->next_trans == 0) {
@@ -944,8 +947,8 @@ auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<doubl
 
   // ref1_sc is the ref1 axis in the scattering plane ref1 = n1 x ( n1 x n2 )
   const double n1_dot_n2 = dot(n1, n2);
-  auto ref1_sc = std::array<double, 3>{n1[0] * n1_dot_n2 - n2[0], n1[1] * n1_dot_n2 - n2[1], n1[2] * n1_dot_n2 - n2[2]};
-  ref1_sc = vec_norm(ref1_sc);
+  double ref1_sc[3] = {n1[0] * n1_dot_n2 - n2[0], n1[1] * n1_dot_n2 - n2[1], n1[2] * n1_dot_n2 - n2[2]};
+  vec_norm(ref1_sc, ref1_sc);
 
   double cos_stokes_rot_1 = dot(ref1_sc, ref1);
   const double cos_stokes_rot_2 = dot(ref1_sc, ref2);
@@ -982,21 +985,20 @@ auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<doubl
 }
 
 // Routine to compute the meridian frame axes ref1 and ref2
-auto meridian(std::span<const double, 3> n) -> std::tuple<std::array<double, 3>, std::array<double, 3>> {
+std::array<double, 3> meridian(std::span<const double, 3> n, std::span<double, 3> ref1) {
   // for ref_1 use (from triple product rule)
   const double n_xylen = sqrt(n[0] * n[0] + n[1] * n[1]);
-  auto ref1 = std::array<double, 3>{};
   ref1[0] = -1. * n[0] * n[2] / n_xylen;
   ref1[1] = -1. * n[1] * n[2] / n_xylen;
   ref1[2] = (1 - (n[2] * n[2])) / n_xylen;
 
   // for ref_2 use vector product of n_cmf with ref1
   const auto ref2 = cross_prod(ref1, n);
-  return std::make_tuple(ref1, ref2);
+  return ref2;
 }
 
 static void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, std::span<const double, 3> v,
-                    std::array<double, 3> e_cmf) {
+                    std::span<double, 3> e_cmf) {
   // Lorentz transformations from RF to CMF
 
   const auto beta = std::array<const double, 3>{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
@@ -1024,7 +1026,7 @@ static void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> 
   e_cmf[0] = e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]);
   e_cmf[1] = e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]);
   e_cmf[2] = e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2]);
-  e_cmf = vec_norm(e_cmf);
+  vec_norm(e_cmf, e_cmf);
 
   // double b_cmf[3];
   // b_cmf[0] = b_par[0] + gamma_rel * (b_perp[0] - v_cr_e[0]);
@@ -1033,12 +1035,13 @@ static void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> 
   // vec_norm(b_cmf, b_cmf);
 }
 
+// Routine to transform the Stokes Parameters from RF to CMF
 void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v,
                      std::span<double, 3> n_cmf) {
-  // Routine to transform the Stokes Parameters from RF to CMF
+  double ref1[3] = {NAN, NAN, NAN};
 
   // Meridian frame in the RF
-  auto [ref1, ref2] = meridian(n_rf);
+  auto ref2 = meridian(n_rf, ref1);
 
   const double Q0 = *Q;
   const double U0 = *U;
@@ -1077,27 +1080,23 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
 
   // Define electric field by linear combination of ref1 and ref2 (using the angle just computed)
 
-  const auto elec_rf = std::array<double, 3>{cos(rot_angle) * ref1[0] - sin(rot_angle) * ref2[0],
-                                             cos(rot_angle) * ref1[1] - sin(rot_angle) * ref2[1],
-                                             cos(rot_angle) * ref1[2] - sin(rot_angle) * ref2[2]};
+  const double elec_rf[3] = {cos(rot_angle) * ref1[0] - sin(rot_angle) * ref2[0],
+                             cos(rot_angle) * ref1[1] - sin(rot_angle) * ref2[1],
+                             cos(rot_angle) * ref1[2] - sin(rot_angle) * ref2[2]};
 
   // Aberration
-  auto n_cmf_arr = angle_ab(n_rf, v);
-  // todo: replace output arg with return values
-  n_cmf[0] = n_cmf_arr[0];
-  n_cmf[1] = n_cmf_arr[1];
-  n_cmf[2] = n_cmf_arr[2];
+  angle_ab(n_rf, v, n_cmf);
 
-  auto elec_cmf = std::array<double, 3>{};
+  double elec_cmf[3] = {NAN, NAN, NAN};
   // Lorentz transformation of E
   lorentz(elec_rf, n_rf, v, elec_cmf);
 
   // Meridian frame in the CMF
-  auto [ref1_cmf, ref2_cmf] = meridian(n_cmf);
+  ref2 = meridian(n_cmf, ref1);
 
   // Projection of E onto ref1 and ref2
-  const double cosine_elec_ref1 = dot(elec_cmf, ref1_cmf);
-  const double cosine_elec_ref2 = dot(elec_cmf, ref2_cmf);
+  const double cosine_elec_ref1 = dot(elec_cmf, ref1);
+  const double cosine_elec_ref2 = dot(elec_cmf, ref2);
 
   // Compute the angle between ref1 and the electric field
   double theta_rot = 0.;
