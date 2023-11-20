@@ -240,13 +240,9 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
     double p = 0.;
     double x = 1.;
     while (x > p) {
-      const double zrand = rng_uniform();
-      const double zrand2 = rng_uniform();
-      const double zrand3 = rng_uniform();
-
-      M = 2 * zrand - 1;
+      M = 2 * rng_uniform() - 1;
       mu = pow(M, 2.);
-      phisc = 2 * PI * zrand2;
+      phisc = 2 * PI * rng_uniform();
 
       // NB: the rotational matrix R here is chosen in the clockwise direction ("+").
       // In Bulla+2015 equation (10) and (12) refer to the specific case shown in Fig.2 where the angle i2
@@ -257,20 +253,17 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
       p = (mu + 1) + (mu - 1) * (cos(2 * phisc) * Qi + sin(2 * phisc) * Ui);
 
       // generate a number between 0 and the maximum of the previous function (2)
-      x = 2 * zrand3;
+      x = 2 * rng_uniform();
     };
   } else {
     // Assume isotropic scattering
-    const double zrand = rng_uniform();
-    const double zrand2 = rng_uniform();
-
-    M = 2. * zrand - 1;
+    M = 2. * rng_uniform() - 1;
     mu = pow(M, 2.);
-    phisc = 2 * PI * zrand2;
+    phisc = 2 * PI * rng_uniform();
   }
 
   const double tsc = acos(M);
-  double new_dir_cmf[3];
+  std::array<double, 3> new_dir_cmf{};
 
   if (fabs(old_dir_cmf[2]) < 0.99999) {
     new_dir_cmf[0] = sin(tsc) / sqrt(1. - pow(old_dir_cmf[2], 2.)) *
@@ -763,9 +756,7 @@ void emit_rpkt(struct packet *pkt_ptr) {
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
   // Reset polarization information
-  pkt_ptr->stokes[0] = 1.;
-  pkt_ptr->stokes[1] = 0.;
-  pkt_ptr->stokes[2] = 0.;
+  pkt_ptr->stokes = {1., 0., 0.};
 
   pkt_ptr->pol_dir = cross_prod(pkt_ptr->dir, std::array<double, 3>{0., 0., 1.});
 
