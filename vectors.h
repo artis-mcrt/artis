@@ -214,12 +214,10 @@ constexpr auto get_escapedirectionbin(std::span<const double, 3> dir_in, std::sp
   cross_prod(vec2, syn_dir, vec3);
   const double testphi = dot(vec1, vec3);
 
-  int phibin = 0;
-  if (testphi >= 0) {
-    phibin = static_cast<int>(acos(cosphi) / 2. / PI * NPHIBINS);
-  } else {
-    phibin = static_cast<int>((acos(cosphi) + PI) / 2. / PI * NPHIBINS);
-  }
+  // with phi defined according to y = cos(theta) * sin(phi), the
+  // phibins are in decreasing phi order (i.e. the upper side of bin zero 0 is 2pi)
+  const int phibin = static_cast<int>((testphi >= 0 ? acos(cosphi) : acos(cosphi) + PI) / 2. / PI * NPHIBINS);
+
   assert_testmodeonly(phibin < NPHIBINS);
   const int na = static_cast<int>((costhetabin * NPHIBINS) + phibin);
   assert_always(na < MABINS);
