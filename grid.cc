@@ -1236,7 +1236,7 @@ static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<s
 
   allocate_initradiobund();
 
-  return std::make_tuple(colnames, nucindexlist, one_line_per_cell);
+  return {colnames, nucindexlist, one_line_per_cell};
 }
 
 static void read_1d_model()
@@ -2374,14 +2374,13 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
 }
 
 [[nodiscard]] auto boundary_distance(std::span<const double, 3> dir, std::span<const double, 3> pos,
-                                     const double tstart, int cellindex, int *snext, enum cell_boundary *pkt_last_cross)
-    -> double
+                                     const double tstart, int cellindex, enum cell_boundary *pkt_last_cross)
+    -> std::tuple<double, int>
 /// Basic routine to compute distance to a cell boundary.
 {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
     if (get_cell_r_inner(cellindex) > globals::vmax * globals::tmin) {
-      *snext = -99;
-      return 0.;
+      return {0., -99};
     }
   }
 
@@ -2463,14 +2462,13 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
           if ((grid::get_cellcoordpointnum(cellindex, d) == (grid::ncoordgrid[d] - 1) && cellindexstride > 0) ||
               (grid::get_cellcoordpointnum(cellindex, d) == 0 && cellindexstride < 0)) {
             printout("escaping packet\n");
-            *snext = -99;
-            return 0;
+            return {0., -99};
           }
-          *snext = cellindex + cellindexstride;
+          const int snext = cellindex + cellindexstride;
           *pkt_last_cross = invdirection;
-          printout("[warning] swapping packet cellindex from %d to %d and setting last_cross to %d\n", cellindex,
-                   *snext, *pkt_last_cross);
-          return 0;
+          printout("[warning] swapping packet cellindex from %d to %d and setting last_cross to %d\n", cellindex, snext,
+                   *pkt_last_cross);
+          return {0., snext};
         }
         printout("pretending last_cross is %d\n", direction);
         last_cross = direction;
@@ -2543,16 +2541,17 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
   // We now need to identify the shortest +ve distance - that's the one we want.
   enum cell_boundary choice = BOUNDARY_NONE;
   double distance = std::numeric_limits<double>::max();
+  int snext = 0;
   for (int d = 0; d < ndim; d++) {
     // upper d coordinate of the current cell
     if ((d_coordmaxboundary[d] > 0) && (d_coordmaxboundary[d] < distance) && (last_cross != negdirections[d])) {
       choice = posdirections[d];
       distance = d_coordmaxboundary[d];
       if (grid::get_cellcoordpointnum(cellindex, d) == (grid::ncoordgrid[d] - 1)) {
-        *snext = -99;
+        snext = -99;
       } else {
         *pkt_last_cross = choice;
-        *snext = cellindex + grid::get_coordcellindexincrement(d);
+        snext = cellindex + grid::get_coordcellindexincrement(d);
       }
     }
 
@@ -2561,10 +2560,10 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
       choice = negdirections[d];
       distance = d_coordminboundary[d];
       if (grid::get_cellcoordpointnum(cellindex, d) == 0) {
-        *snext = -99;
+        snext = -99;
       } else {
         *pkt_last_cross = choice;
-        *snext = cellindex - grid::get_coordcellindexincrement(d);
+        snext = cellindex - grid::get_coordcellindexincrement(d);
       }
     }
   }
@@ -2590,7 +2589,7 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
     assert_always(false);
   }
 
-  return distance;
+  return {distance, snext};
 }
 
 void change_cell(struct packet *pkt_ptr, int snext)

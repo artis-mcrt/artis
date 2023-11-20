@@ -132,7 +132,7 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] auto get_ndo_nonempty(int rank) -> int;
 [[nodiscard]] auto get_totmassradionuclide(int z, int a) -> double;
 [[nodiscard]] auto boundary_distance(std::span<const double, 3> dir, std::span<const double, 3> pos, double tstart,
-                                     int cellindex, int *snext, enum cell_boundary *pkt_last_cross) -> double;
+                                     int cellindex, enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>;
 void change_cell(struct packet *pkt_ptr, int snext);
 
 [[nodiscard]] static inline auto get_elem_abundance(int modelgridindex, int element) -> float

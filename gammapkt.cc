@@ -769,9 +769,8 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   // boundaries. sdist is the boundary distance and snext is the
   // grid cell into which we pass.
 
-  int snext = 0;
-  double sdist = grid::boundary_distance(pkt_ptr->dir, pkt_ptr->pos, pkt_ptr->prop_time, pkt_ptr->where, &snext,
-                                         &pkt_ptr->last_cross);
+  auto [sdist, snext] =
+      grid::boundary_distance(pkt_ptr->dir, pkt_ptr->pos, pkt_ptr->prop_time, pkt_ptr->where, &pkt_ptr->last_cross);
 
   const double maxsdist = (GRID_TYPE == GRID_CARTESIAN3D)
                               ? globals::rmax * pkt_ptr->prop_time / globals::tmin

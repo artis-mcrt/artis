@@ -170,7 +170,6 @@ static void add_to_vpkt_grid(const struct packet &vpkt, std::span<const double, 
 
 static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int obsbin,
                            std::span<double, 3> obsdir, const enum packet_type type_before_rpkt) {
-  int snext = 0;
   int mgi = 0;
 
   struct packet vpkt = *pkt_ptr;
@@ -279,8 +278,8 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
   while (!end_packet) {
     // distance to the next cell
-    const double sdist =
-        grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.where, &snext, &vpkt.last_cross);
+    const auto [sdist, snext] =
+        grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.where, &vpkt.last_cross);
     const double s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
 
     if (mgi == grid::get_npts_model()) {

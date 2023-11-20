@@ -601,9 +601,8 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   // Start by finding the distance to the crossing of the grid cell
   // boundaries. sdist is the boundary distance and snext is the
   // grid cell into which we pass.
-  int snext = 0;
-  double sdist = grid::boundary_distance(pkt_ptr->dir, pkt_ptr->pos, pkt_ptr->prop_time, pkt_ptr->where, &snext,
-                                         &pkt_ptr->last_cross);
+  auto [sdist, snext] =
+      grid::boundary_distance(pkt_ptr->dir, pkt_ptr->pos, pkt_ptr->prop_time, pkt_ptr->where, &pkt_ptr->last_cross);
 
   if (sdist == 0) {
     grid::change_cell(pkt_ptr, snext);
