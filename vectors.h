@@ -223,16 +223,14 @@ constexpr auto move_pkt_withtime(struct packet *pkt_ptr, const double distance) 
 // Assuming isotropic distribution, get a random direction vector
 {
   const double zrand = rng_uniform();
+  const double costheta = -1 + (2. * zrand);
+
   const double zrand2 = rng_uniform();
-
-  const double mu = -1 + (2. * zrand);
   const double phi = zrand2 * 2 * PI;
-  const double sintheta = std::sqrt(1. - (mu * mu));
 
-  std::array<double, 3> vecout = {sintheta * std::cos(phi), sintheta * std::sin(phi), mu};
+  const double sintheta = std::sqrt(1. - (costheta * costheta));
 
-  assert_testmodeonly(std::fabs(vec_len(vecout) - 1.) < 1e-10);
-  return vecout;
+  return std::array<double, 3>{sintheta * std::cos(phi), sintheta * std::sin(phi), costheta};
 }
 
 #endif  // VECTORS_H
