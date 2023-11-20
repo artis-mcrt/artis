@@ -608,7 +608,7 @@ static auto get_cellradialposmid(const int cellindex) -> double
   }
 
   // cubic grid requires taking the length of the 3D position vector
-  double dcen[3];
+  std::array<double, 3> dcen{};
   for (int axis = 0; axis < 3; axis++) {
     dcen[axis] = get_cellcoordmin(cellindex, axis) + (0.5 * wid_init(cellindex, axis));
   }
@@ -954,7 +954,7 @@ static void map_2dmodelto3dgrid()
     int mgi = get_npts_model();  // default to empty unless set
 
     // map to 3D Cartesian grid
-    double pos_mid[3];
+    std::array<double, 3> pos_mid{};
     for (int d = 0; d < 3; d++) {
       pos_mid[d] = (get_cellcoordmin(cellindex, d) + (0.5 * wid_init(cellindex, d)));
     }
@@ -1441,7 +1441,7 @@ static void read_3d_model()
   int nonemptymgi = 0;
   while (std::getline(fmodel, line)) {
     int cellnumberin = 0;
-    float cellpos_in[3];
+    std::array<float, 3> cellpos_in{};
     float rho_model = NAN;
     std::istringstream ssline(line);
 
@@ -1965,7 +1965,7 @@ static void setup_grid_cartesian_3d()
   coordlabel[0] = 'X';
   coordlabel[1] = 'Y';
   coordlabel[2] = 'Z';
-  int nxyz[3] = {0, 0, 0};
+  std::array<int, 3> nxyz = {0, 0, 0};
   for (int n = 0; n < ngrid; n++) {
     for (int axis = 0; axis < 3; axis++) {
       assert_always(nxyz[axis] == get_cellcoordpointnum(n, axis));
@@ -2418,9 +2418,8 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
     assert_always(false);
   }
 
-  enum cell_boundary const negdirections[3] = {COORD0_MIN, COORD1_MIN,
-                                               COORD2_MIN};  // 'X' might actually be radial coordinate
-  enum cell_boundary const posdirections[3] = {COORD0_MAX, COORD1_MAX, COORD2_MAX};
+  const auto negdirections = std::array<enum cell_boundary, 3>{COORD0_MIN, COORD1_MIN, COORD2_MIN};
+  const auto posdirections = std::array<enum cell_boundary, 3>{COORD0_MAX, COORD1_MAX, COORD2_MAX};
 
   // printout("checking inside cell boundary\n");
   for (int d = 0; d < ndim; d++) {
@@ -2487,8 +2486,10 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
   // globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 2), cellcoordmax[2] - (initpos[2] *
   // globals::tmin/tstart)); printout("dir [%g, %g, %g]\n", dir[0],dir[1],dir[2]);
 
-  double d_coordmaxboundary[3] = {-1};  // distance to reach the cell's upper boundary on each coordinate
-  double d_coordminboundary[3] = {-1};  // distance to reach the cell's lower boundary on each coordinate
+  auto d_coordmaxboundary =
+      std::array<double, 3>{-1};  // distance to reach the cell's upper boundary on each coordinate
+  auto d_coordminboundary =
+      std::array<double, 3>{-1};  // distance to reach the cell's lower boundary on each coordinate
   if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
     last_cross = BOUNDARY_NONE;  // handle this separately by setting d_inner and d_outer negative for invalid direction
     const double speed = vec_len(dir) * CLIGHT_PROP;  // just in case dir is not normalised
