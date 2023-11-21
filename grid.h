@@ -179,14 +179,13 @@ constexpr void calculate_binned_opacities(auto &expansionopacities, const int mo
 
     const auto bin_nu_lower = get_wavelengthbin_nu_lower(wlbin);
     while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= bin_nu_lower) {
-      assert_testmodeonly(globals::linelist[lineindex].nu < get_wavelengthbin_nu_upper(wlbin));
+      const float tau_line = get_tau_sobolev(modelgridindex, lineindex, t_mid);
       const auto linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
-      const auto tau_line = get_tau_sobolev(modelgridindex, lineindex, t_mid);
       bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
       lineindex++;
     }
 
-    const auto bin_kappa = 1. / (CLIGHT * t_mid * grid::get_rho(modelgridindex)) * bin_linesum;
+    const float bin_kappa = 1. / (CLIGHT * t_mid * grid::get_rho(modelgridindex)) * bin_linesum;
     assert_always(std::isfinite(bin_kappa));
     expansionopacities[wlbin] = bin_kappa;
     // printout("bin %d: lambda %g to %g kappa %g kappa_grey %g\n", wlbin, get_wavelengthbin_lambda_lower(wlbin),
