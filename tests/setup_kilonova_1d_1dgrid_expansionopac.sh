@@ -2,7 +2,7 @@
 
 set -x
 
-runfolder=kilonova_2d_2dgrid_expansionopac_testrun
+runfolder=kilonova_1d_1dgrid_expansionopac_testrun
 
 mkdir -p $runfolder
 
@@ -14,7 +14,7 @@ tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
 rsync -av kilonova_2d_3dgrid_inputfiles/ $runfolder/
 
 # for the checksum files
-rsync -av --ignore-times kilonova_2d_2dgrid_expansionopac_inputfiles/ $runfolder/
+rsync -av --ignore-times kilonova_1d_1dgrid_expansionopac_inputfiles/ $runfolder/
 
 cp ../data/* $runfolder/
 
@@ -26,11 +26,13 @@ xz -dv -T0 *.xz
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 80000;/g' artisoptions.h
 
-sed -i'' -e 's/constexpr int GRID_TYPE.*/constexpr int GRID_TYPE = GRID_CYLINDRICAL2D;/g' artisoptions.h
+sed -i'' -e 's/constexpr int GRID_TYPE.*/constexpr int GRID_TYPE = GRID_SPHERICAL1D;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr int TABLESIZE.*/constexpr int TABLESIZE = 20;/g' artisoptions.h
 sed -i'' -e 's/constexpr double MINTEMP.*/constexpr double MINTEMP = 1000.;/g' artisoptions.h
 sed -i'' -e 's/constexpr double MAXTEMP.*/constexpr double MAXTEMP = 20000.;/g' artisoptions.h
+
+sed -i'' -e 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr bool USE_BINNED_EXPANSIONOPACITIES.*/constexpr bool USE_BINNED_EXPANSIONOPACITIES = true;/g' artisoptions.h
 
