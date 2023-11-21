@@ -662,10 +662,10 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   } else if (grid::modelgrid[mgi].thick == 1) {
     /// In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
 
-    const double kappa = grid::get_kappagrey(mgi) * grid::get_rho(mgi) *
-                         doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
+    const double chi_grey = grid::get_kappagrey(mgi) * grid::get_rho(mgi) *
+                            doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
 
-    edist = tau_next / kappa;
+    edist = tau_next / chi_grey;
     pkt_ptr->next_trans = -1;
   } else {
     std::tie(edist, event_is_boundbound) = get_event(mgi, pkt_ptr, tau_next, fmin(tdist, sdist));
