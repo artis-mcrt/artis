@@ -137,7 +137,7 @@ constexpr bool KEEP_ALL_RESTART_FILES = false;
 
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
 
-constexpr bool USE_BINNED_EXPANSIONOPACITIES = true;
+constexpr bool USE_BINNED_EXPANSIONOPACITIES = false;
 
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H
