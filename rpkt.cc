@@ -56,6 +56,18 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
   return matchindex;
 }
 
+static auto get_nu_cmf_abort(struct packet *pkt_ptr, const double abort_dist) -> double {
+  // get the frequency change per distance travelled assuming linear change to the abort distance
+  struct packet dummypkt_abort = *pkt_ptr;
+  // this is done is two parts to get identical results to do_rpkt_step()
+  move_pkt_withtime(&dummypkt_abort, abort_dist / 2.);
+  move_pkt_withtime(&dummypkt_abort, abort_dist / 2.);
+  const double nu_cmf_abort = dummypkt_abort.nu_cmf;
+  assert_testmodeonly(nu_cmf_abort <= pkt_ptr->nu_cmf);
+  // for USE_RELATIVISTIC_DOPPLER_SHIFT, we will use a linear approximation for
+  // the frequency change from start to abort (cell boundary/timestep end)
+  return nu_cmf_abort;
+}
 static auto get_event(const int modelgridindex,
                       struct packet *pkt_ptr,  // pointer to packet object
                       const double tau_rnd,    // random optical depth until which the packet travels
@@ -68,15 +80,8 @@ static auto get_event(const int modelgridindex,
   // printout("get_event()\n");
   /// initialize loop variables
 
-  struct packet dummypkt_abort = *pkt_ptr;
-  // this is done is two parts to get identical results to do_rpkt_step()
-  move_pkt_withtime(&dummypkt_abort, abort_dist / 2.);
-  move_pkt_withtime(&dummypkt_abort, abort_dist / 2.);
-  const double nu_cmf_abort = dummypkt_abort.nu_cmf;
-  assert_testmodeonly(nu_cmf_abort <= pkt_ptr->nu_cmf);
-  // for USE_RELATIVISTIC_DOPPLER_SHIFT, we will use a linear approximation for
-  // the frequency change from start to abort (cell boundary/timestep end)
-  const double d_nu_on_d_l = (nu_cmf_abort - pkt_ptr->nu_cmf) / abort_dist;
+  const auto nu_cmf_abort = get_nu_cmf_abort(pkt_ptr, abort_dist);
+  const auto d_nu_on_d_l = (nu_cmf_abort - pkt_ptr->nu_cmf) / abort_dist;
 
   struct packet dummypkt = *pkt_ptr;
 
