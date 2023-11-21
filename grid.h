@@ -1,7 +1,9 @@
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
+#include <cassert>
 #include <cinttypes>
+#include <cmath>
 #include <span>
 
 #include "artisoptions.h"
@@ -186,10 +188,10 @@ constexpr void calculate_binned_opacities(auto &expansionopacities, const int mo
     }
 
     const auto bin_kappa = 1. / (CLIGHT * t_mid * grid::get_rho(modelgridindex)) * bin_linesum;
+    assert_always(std::isfinite(bin_kappa));
     expansionopacities[wlbin] = bin_kappa;
     // printout("bin %d: lambda %g to %g kappa %g kappa_grey %g\n", wlbin, get_wavelengthbin_lambda_lower(wlbin),
     //          get_wavelengthbin_lambda_upper(wlbin), bin_kappa, grid::modelgrid[modelgridindex].kappagrey);
-    expansionopacities[wlbin] = grid::modelgrid[modelgridindex].kappagrey;
   }
 }
 #endif  // GRIDINIT_H
