@@ -652,6 +652,8 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
   assert_always(tdist >= 0);
 
+  const double abort_dist = fmin(tdist, sdist);
+
   /// Get distance to the next physical event (continuum or bound-bound)
   double edist = -1;
   bool event_is_boundbound = true;
@@ -668,7 +670,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     edist = tau_next / chi_grey;
     pkt_ptr->next_trans = -1;
   } else {
-    std::tie(edist, event_is_boundbound) = get_event(mgi, pkt_ptr, tau_next, fmin(tdist, sdist));
+    std::tie(edist, event_is_boundbound) = get_event(mgi, pkt_ptr, tau_next, abort_dist);
   }
   assert_always(edist >= 0);
 
