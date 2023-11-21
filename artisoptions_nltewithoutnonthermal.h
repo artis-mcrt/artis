@@ -2,6 +2,8 @@
 #define ARTISOPTIONS_H
 // NOLINTBEGIN(modernize*,misc-unused-parameters)
 
+#include <cstdlib>
+
 #include "constants.h"
 
 constexpr int MPKTS = 10000;
