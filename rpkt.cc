@@ -93,7 +93,7 @@ static auto get_event_expansion_opacity(const int mgi, struct packet *pkt_ptr, c
       const auto edist = (tau_next - tau) / chi;
       if (edist < binedgedist) {
         // event occurs in this bin
-        return dist + edist;
+        return std::min(dist + edist, 0.);
       }
       tau += binedgedist * chi;
     }
