@@ -11,7 +11,7 @@ if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O https://theory.gsi.de/~lshing
 tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
 
 # same input files as the other test run
-rsync -av kilonova_2d_3dgrid_inputfiles/ $runfolder/
+rsync -av kilonova_1d_3dgrid_inputfiles/ $runfolder/
 
 # for the checksum files
 rsync -av --ignore-times kilonova_1d_1dgrid_expansionopac_inputfiles/ $runfolder/
