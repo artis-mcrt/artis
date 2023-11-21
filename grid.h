@@ -5,8 +5,11 @@
 #include <span>
 
 #include "artisoptions.h"
+#include "atomic.h"
 #include "constants.h"
+#include "globals.h"
 #include "packet.h"
+#include "sn3d.h"
 #include "vectors.h"
 
 namespace grid {
@@ -143,4 +146,50 @@ void change_cell(struct packet *pkt_ptr, int snext);
 
 }  // namespace grid
 
+// wavelength bins are ordered by ascending wavelength (descending frequency)
+
+constexpr auto get_wavelengthbin_lambda_lower(const size_t binindex) -> double {
+  return expopac_lambdamin + binindex * expopac_deltalambda;
+}
+
+constexpr auto get_wavelengthbin_lambda_upper(const size_t binindex) -> double {
+  return expopac_lambdamin + (binindex + 1) * expopac_deltalambda;
+}
+
+constexpr auto get_wavelengthbin_nu_upper(const size_t binindex) -> double {
+  return 1e8 * CLIGHT / get_wavelengthbin_lambda_lower(binindex);
+}
+
+constexpr auto get_wavelengthbin_nu_lower(const size_t binindex) -> double {
+  return 1e8 * CLIGHT / get_wavelengthbin_lambda_upper(binindex);
+}
+
+constexpr void calculate_binned_opacities(auto &expansionopacities, const int modelgridindex) {
+  const auto t_mid = globals::timesteps[globals::timestep].mid;
+
+  // find the first line with nu below the upper limit of the first bin
+  const auto *matchline =
+      std::lower_bound(&globals::linelist[0], &globals::linelist[globals::nlines], get_wavelengthbin_nu_upper(0),
+                       [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; });
+  int lineindex = std::distance(globals::linelist, matchline);
+
+  for (size_t wlbin = 0; wlbin < expansionopacities.size(); wlbin++) {
+    double bin_linesum = 0.;
+
+    const auto bin_nu_lower = get_wavelengthbin_nu_lower(wlbin);
+    while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= bin_nu_lower) {
+      assert_testmodeonly(globals::linelist[lineindex].nu < get_wavelengthbin_nu_upper(wlbin));
+      const auto linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
+      const auto tau_line = get_tau_sobolev(modelgridindex, lineindex, t_mid);
+      bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
+      lineindex++;
+    }
+
+    const auto bin_kappa = 1. / (CLIGHT * t_mid * grid::get_rho(modelgridindex)) * bin_linesum;
+    expansionopacities[wlbin] = bin_kappa;
+    // printout("bin %d: lambda %g to %g kappa %g kappa_grey %g\n", wlbin, get_wavelengthbin_lambda_lower(wlbin),
+    //          get_wavelengthbin_lambda_upper(wlbin), bin_kappa, grid::modelgrid[modelgridindex].kappagrey);
+    expansionopacities[wlbin] = grid::modelgrid[modelgridindex].kappagrey;
+  }
+}
 #endif  // GRIDINIT_H

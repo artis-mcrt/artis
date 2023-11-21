@@ -768,6 +768,8 @@ void cellcache_change_cell(const int modelgridindex) {
   if (modelgridindex >= 0) {
     const int nbfcont = globals::nbfcontinua;
     std::fill_n(globals::cellcache[tid].ch_allcont_departureratios, nbfcont, -1);
+
+    calculate_binned_opacities(globals::cellcache[tid].expansionopacities, modelgridindex);
   }
   // printout("nlevels_with_processrates %d\n", nlevels_with_processrates);
 

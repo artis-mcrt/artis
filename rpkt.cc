@@ -68,13 +68,67 @@ static auto get_nu_cmf_abort(struct packet *pkt_ptr, const double abort_dist) ->
   // the frequency change from start to abort (cell boundary/timestep end)
   return nu_cmf_abort;
 }
+
+static auto get_event_expansion_opacity(const int mgi, struct packet *pkt_ptr, const double tau_next,
+                                        const double abort_dist) -> double {
+  const auto nu_cmf_abort = get_nu_cmf_abort(pkt_ptr, abort_dist);
+  const auto d_nu_on_d_l = (nu_cmf_abort - pkt_ptr->nu_cmf) / abort_dist;
+
+  struct packet dummypkt = *pkt_ptr;
+  assert_always(globals::cellcache[tid].cellnumber == mgi);
+  double dist = 0.;
+  double tau = 0.;
+  auto binindex_start =
+      static_cast<size_t>(((1e8 * CLIGHT / dummypkt.nu_cmf) - expopac_lambdamin) / expopac_deltalambda);
+
+  for (size_t binindex = binindex_start; binindex < expopac_nbins; binindex++) {
+    const auto next_bin_edge_nu = (binindex < 0) ? get_wavelengthbin_nu_upper(0) : get_wavelengthbin_nu_lower(binindex);
+    const auto binedgedist = get_linedistance(dummypkt.prop_time, dummypkt.nu_cmf, next_bin_edge_nu, d_nu_on_d_l);
+    if (binindex >= 0) {
+      const auto kappa = globals::cellcache[tid].expansionopacities[binindex];
+      // const auto doppler = doppler_packet_nucmf_on_nurf(dummypkt.pos, dummypkt.dir, dummypkt.prop_time);
+      // const auto doppler = (pkt_ptr->nu_cmf + d_nu_on_d_l * dist) / pkt_ptr->nu_rf;
+      const auto doppler = 1.;
+      const double chi = kappa * grid::get_rho(mgi) * doppler;
+      const auto edist = (tau_next - tau) / chi;
+      if (edist < binedgedist) {
+        // event occurs in this bin
+        return dist + edist;
+      }
+      tau += binedgedist * chi;
+    }
+
+    dist += binedgedist;
+
+    if constexpr (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
+      move_pkt_withtime(&dummypkt, binedgedist);
+    } else {
+      // avoid move_pkt_withtime() to skip the standard Doppler shift calculation
+      // and use the linear approx instead
+      dummypkt.pos[0] += (dummypkt.dir[0] * binedgedist);
+      dummypkt.pos[1] += (dummypkt.dir[1] * binedgedist);
+      dummypkt.pos[2] += (dummypkt.dir[2] * binedgedist);
+      dummypkt.prop_time += binedgedist / CLIGHT_PROP;
+      dummypkt.nu_cmf = pkt_ptr->nu_cmf + d_nu_on_d_l * dist;  // should equal nu_trans;
+      assert_testmodeonly(dummypkt.nu_cmf <= pkt_ptr->nu_cmf);
+    }
+
+    if (dummypkt.nu_cmf <= nu_cmf_abort) {
+      // hit edge of cell or timestep limit
+      return std::numeric_limits<double>::max();
+    }
+  }
+  // no more bins, so no opacity below this frequency
+  return std::numeric_limits<double>::max();
+}
+
 static auto get_event(const int modelgridindex,
                       struct packet *pkt_ptr,  // pointer to packet object
                       const double tau_rnd,    // random optical depth until which the packet travels
                       const double abort_dist  // maximal travel distance before packet leaves cell or time step ends
                       ) -> std::tuple<double, bool>
-// returns edist, the distance to the next physical event (continuum or bound-bound) and is_boundbound_event, a boolean
-// BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
+// returns edist, the distance to the next physical event (continuum or bound-bound) and is_boundbound_event, a
+// boolean BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
 {
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
   // printout("get_event()\n");
@@ -669,6 +723,9 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
     edist = tau_next / chi_grey;
     pkt_ptr->next_trans = -1;
+  } else if (USE_BINNED_EXPANSIONOPACITIES) {
+    edist = get_event_expansion_opacity(mgi, pkt_ptr, tau_next, abort_dist);
+    pkt_ptr->next_trans = -1;
   } else {
     std::tie(edist, event_is_boundbound) = get_event(mgi, pkt_ptr, tau_next, abort_dist);
   }
@@ -698,7 +755,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     move_pkt_withtime(pkt_ptr, edist / 2.);
 
     // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
-    if (grid::modelgrid[mgi].thick == 1) {
+    if (grid::modelgrid[mgi].thick == 1 || USE_BINNED_EXPANSIONOPACITIES) {
       rpkt_event_thickcell(pkt_ptr);
     } else if (event_is_boundbound) {
       rpkt_event_boundbound(pkt_ptr, mgi);

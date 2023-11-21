@@ -6,7 +6,7 @@
 
 #include "constants.h"
 
-constexpr int MPKTS = 15000;
+constexpr int MPKTS = 52000;
 
 constexpr int GRID_TYPE = GRID_CARTESIAN3D;
 constexpr int CUBOID_NCOORDGRID_X = 50;
@@ -136,6 +136,8 @@ constexpr double TIMESTEP_TRANSITION_TIME = -1.;
 constexpr bool KEEP_ALL_RESTART_FILES = false;
 
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
+
+constexpr bool USE_BINNED_EXPANSIONOPACITIES = true;
 
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H

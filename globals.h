@@ -194,6 +194,7 @@ struct chelements {
 
 struct cellcache {
   double *cooling_contrib;  /// Cooling contributions by the different processes.
+  std::array<float, expopac_nbins> expansionopacities;
   struct chelements *chelements;
   struct chlevels *ch_all_levels;
   double *ch_allcont_departureratios;
