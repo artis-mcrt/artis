@@ -59,10 +59,9 @@ enum timestepsizemethods {
   TIMESTEP_SIZES_LOGARITHMIC_THEN_CONSTANT = 2,
   TIMESTEP_SIZES_CONSTANT_THEN_LOGARITHMIC = 3,
 };
-
-constexpr float expopac_lambdamin = 100.;
-constexpr float expopac_lambdamax = 30000.;
-constexpr float expopac_deltalambda = 100.;
+constexpr float expopac_lambdamin = 534.5;
+constexpr float expopac_lambdamax = 35000.;
+constexpr float expopac_deltalambda = 35.5;
 constexpr int expopac_nbins = static_cast<int>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
 
 #endif
