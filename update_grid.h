@@ -6,6 +6,6 @@
 
 void update_grid(FILE *estimators_file, int nts, int nts_prev, int my_rank, int nstart, int ndo, int titer,
                  time_t real_time_start);
-void cellhistory_reset(int modelgridindex);
+void cellcache_change_cell(int modelgridindex);
 
 #endif  // UPDATE_GRID_H

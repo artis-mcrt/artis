@@ -138,7 +138,7 @@ static auto get_bfheatingcoeff(int element, int ion, int level) -> double
 // depends only the radiation field
 // no dependence on T_e or populations
 {
-  return globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].bfheatingcoeff;
+  return globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].bfheatingcoeff;
 }
 
 void calculate_bfheatingcoeffs(int modelgridindex) {
@@ -178,11 +178,11 @@ void calculate_bfheatingcoeffs(int modelgridindex) {
             }
           }
         }
-        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].bfheatingcoeff = bfheatingcoeff;
+        globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].bfheatingcoeff = bfheatingcoeff;
       }
     }
   }
-  globals::cellhistory[tid].bfheating_mgi = modelgridindex;
+  globals::cellcache[tid].bfheating_mgi = modelgridindex;
 }
 
 static auto get_heating_ion_coll_deexc(const int modelgridindex, const int element, const int ion, const double T_e,
@@ -223,7 +223,7 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
   double bfheating = 0.;
   double ffheating = 0.;
 
-  assert_always(globals::cellhistory[tid].bfheating_mgi == modelgridindex);
+  assert_always(globals::cellcache[tid].bfheating_mgi == modelgridindex);
 
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);

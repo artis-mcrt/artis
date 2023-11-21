@@ -82,7 +82,7 @@ int nbfcontinua_ground = -1;  /// number of bf-continua
 int NPHIXSPOINTS = -1;
 double NPHIXSNUINCREMENT = -1;
 
-struct cellhistory *cellhistory = nullptr;
+struct cellcache *cellcache = nullptr;
 
 #ifdef MPI_ON
 MPI_Comm mpi_comm_node = MPI_COMM_NULL;

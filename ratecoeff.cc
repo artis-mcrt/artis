@@ -850,7 +850,7 @@ static void scale_level_phixs(const int element, const int ion, const int level,
 static void read_recombrate_file()
 // calibrate the recombination rates to tabulated values by scaling the photoionisation cross sections
 {
-  use_cellhist = false;
+  use_cellcache = false;
   FILE *recombrate_file = fopen("recombrates.txt", "r");
   if (recombrate_file == nullptr) {
     printout("No recombrates.txt file found. Skipping recombination rate scaling...\n");
@@ -1166,8 +1166,8 @@ auto get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetin
 {
   double stimrecombcoeff = -1.;
 #if (SEPARATE_STIMRECOMB)
-  if (use_cellhist) {
-    stimrecombcoeff = globals::cellhistory[tid]
+  if (use_cellcache) {
+    stimrecombcoeff = globals::cellcache[tid]
                           .chelements[element]
                           .chions[lowerion]
                           .chlevels[level]
@@ -1176,12 +1176,12 @@ auto get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetin
   }
 #endif
 
-  if (!use_cellhist || stimrecombcoeff < 0) {
+  if (!use_cellcache || stimrecombcoeff < 0) {
     stimrecombcoeff = calculate_stimrecombcoeff_integral(element, lowerion, level, phixstargetindex, modelgridindex);
 
 #if (SEPARATE_STIMRECOMB)
-    if (use_cellhist) {
-      globals::cellhistory[tid]
+    if (use_cellcache) {
+      globals::cellcache[tid]
           .chelements[element]
           .chions[lowerion]
           .chlevels[level]
@@ -1315,8 +1315,8 @@ auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex
     }
   }
 
-  if (use_cellhist) {
-    gammacorr = globals::cellhistory[tid]
+  if (use_cellcache) {
+    gammacorr = globals::cellcache[tid]
                     .chelements[element]
                     .chions[ion]
                     .chlevels[level]
@@ -1324,7 +1324,7 @@ auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex
                     .corrphotoioncoeff;
   }
 
-  if (!use_cellhist || gammacorr < 0) {
+  if (!use_cellcache || gammacorr < 0) {
     {
       if constexpr (!USE_LUT_PHOTOION) {
         gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
@@ -1341,8 +1341,8 @@ auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex
         }
       }
     }
-    if (use_cellhist) {
-      globals::cellhistory[tid]
+    if (use_cellcache) {
+      globals::cellcache[tid]
           .chelements[element]
           .chions[ion]
           .chlevels[level]
@@ -1526,10 +1526,10 @@ auto calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, co
         }
 
         if (force_bfintegral || printdebug) {
-          // use the cellhistory but not the detailed bf estimators
+          // use the cellcache but not the detailed bf estimators
           gamma_coeff_integral +=
               calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, modelgridindex);
-          // double gamma_coeff_integral_level_ch = globals::cellhistory[tid]
+          // double gamma_coeff_integral_level_ch = globals::cellcache[tid]
           //                                            .chelements[element]
           //                                            .chions[lowerion]
           //                                            .chlevels[lower]

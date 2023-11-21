@@ -848,7 +848,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
 
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
         if constexpr (!SEPARATE_STIMRECOMB) {
-          double departure_ratio = globals::cellhistory[tid].ch_allcont_departureratios[i];
+          double departure_ratio = globals::cellcache[tid].ch_allcont_departureratios[i];
           if (!usecellhistupdatephixslist || departure_ratio < 0) {
             const int upper = globals::allcont[i].upperlevel;
             const double nnupperionlevel = usecellhistupdatephixslist
@@ -857,7 +857,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
             const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
             departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
             if (usecellhistupdatephixslist) {
-              globals::cellhistory[tid].ch_allcont_departureratios[i] = departure_ratio;
+              globals::cellcache[tid].ch_allcont_departureratios[i] = departure_ratio;
             }
           }
 

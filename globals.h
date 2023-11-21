@@ -192,7 +192,7 @@ struct chelements {
   struct chions *chions;  /// Pointer to the elements ionlist.
 };
 
-struct cellhistory {
+struct cellcache {
   double *cooling_contrib;  /// Cooling contributions by the different processes.
   struct chelements *chelements;
   struct chlevels *ch_all_levels;
@@ -266,7 +266,7 @@ extern int nbfcontinua_ground;
 extern int NPHIXSPOINTS;
 extern double NPHIXSNUINCREMENT;
 
-extern struct cellhistory *cellhistory;
+extern struct cellcache *cellcache;
 
 #ifdef MPI_ON
 extern MPI_Comm mpi_comm_node;

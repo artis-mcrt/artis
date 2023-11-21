@@ -308,15 +308,15 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
     for (auto &pkt : packets) {
       if ((pkt.type != TYPE_ESCAPE && pkt.prop_time < ts_end)) {
         const int mgi = grid::get_cell_modelgridindex(pkt.where);
-        const bool cellhistory_reset_required =
-            (mgi != grid::get_npts_model() && globals::cellhistory[tid].cellnumber != mgi &&
+        const bool cellcache_change_cell_required =
+            (mgi != grid::get_npts_model() && globals::cellcache[tid].cellnumber != mgi &&
              grid::modelgrid[mgi].thick != 1);
 
-        if (cellhistory_reset_required) {
+        if (cellcache_change_cell_required) {
           do_cell_packet_updates(std::span{packetgroupstart, &pkt}, nts, ts_end);
 
           stats::increment(stats::COUNTER_UPDATECELL);
-          cellhistory_reset(mgi);
+          cellcache_change_cell(mgi);
           packetgroupstart = &pkt;
         }
       }
@@ -329,7 +329,7 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
 
     const int cellhistresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
     printout(
-        "  update_packets timestep %d pass %3d: finished at %ld packetsupdated %7d cellhistoryresets %7d (took "
+        "  update_packets timestep %d pass %3d: finished at %ld packetsupdated %7d cellcacheresets %7d (took "
         "%lds)\n",
         nts, passnumber, time(nullptr), count_pktupdates, cellhistresets, time(nullptr) - sys_time_start_pass);
 

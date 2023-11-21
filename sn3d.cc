@@ -52,7 +52,7 @@
 
 // threadprivate variables
 int tid;
-bool use_cellhist;
+bool use_cellcache;
 std::mt19937 stdrng(std::random_device{}());
 gsl_integration_workspace *gslworkspace = nullptr;
 FILE *output_file = nullptr;

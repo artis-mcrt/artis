@@ -31,14 +31,14 @@
 
 extern FILE *output_file;
 extern int tid;
-extern bool use_cellhist;
+extern bool use_cellcache;
 
 extern std::mt19937 stdrng;
 
 extern gsl_integration_workspace *gslworkspace;
 
 #ifdef _OPENMP
-#pragma omp threadprivate(tid, use_cellhist, stdrng, gslworkspace, output_file)
+#pragma omp threadprivate(tid, use_cellcache, stdrng, gslworkspace, output_file)
 #endif
 
 #define __artis_assert(e)                                                                                              \
