@@ -59,6 +59,7 @@ struct modelgrid_t {
 
   double totalcooling = -1;
   double **cooling_contrib_ion = nullptr;
+  std::array<float, expopac_nbins> expansionopacities{};
   uint_fast8_t thick = 0;
 };
 
@@ -166,6 +167,10 @@ constexpr auto get_wavelengthbin_nu_lower(const size_t binindex) -> double {
 }
 
 constexpr void calculate_binned_opacities(auto &expansionopacities, const int modelgridindex) {
+  const time_t sys_time_start_calc_kpkt_rates = time(nullptr);
+
+  printout("calculating binned expansion opacities for cell %d...", modelgridindex);
+
   const auto t_mid = globals::timesteps[globals::timestep].mid;
 
   // find the first line with nu below the upper limit of the first bin
@@ -191,5 +196,6 @@ constexpr void calculate_binned_opacities(auto &expansionopacities, const int mo
     // printout("bin %d: lambda %g to %g kappa %g kappa_grey %g\n", wlbin, get_wavelengthbin_lambda_lower(wlbin),
     //          get_wavelengthbin_lambda_upper(wlbin), bin_kappa, grid::modelgrid[modelgridindex].kappagrey);
   }
+  printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc_kpkt_rates);
 }
 #endif  // GRIDINIT_H

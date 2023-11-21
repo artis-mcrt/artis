@@ -59,6 +59,7 @@ enum timestepsizemethods {
   TIMESTEP_SIZES_LOGARITHMIC_THEN_CONSTANT = 2,
   TIMESTEP_SIZES_CONSTANT_THEN_LOGARITHMIC = 3,
 };
+
 constexpr float expopac_lambdamin = 534.5;
 constexpr float expopac_lambdamax = 35000.;
 constexpr float expopac_deltalambda = 35.5;

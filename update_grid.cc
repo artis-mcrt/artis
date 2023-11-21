@@ -768,10 +768,6 @@ void cellcache_change_cell(const int modelgridindex) {
   if (modelgridindex >= 0) {
     const int nbfcont = globals::nbfcontinua;
     std::fill_n(globals::cellcache[tid].ch_allcont_departureratios, nbfcont, -1);
-
-    if constexpr (USE_BINNED_EXPANSIONOPACITIES) {
-      calculate_binned_opacities(globals::cellcache[tid].expansionopacities, modelgridindex);
-    }
   }
   // printout("nlevels_with_processrates %d\n", nlevels_with_processrates);
 
@@ -1183,6 +1179,12 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       kpkt::calculate_cooling_rates(mgi, nullptr);
 
       printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc_kpkt_rates);
+    }
+
+    if (grid::modelgrid[mgi].thick != 1) {
+      if constexpr (USE_BINNED_EXPANSIONOPACITIES) {
+        calculate_binned_opacities(grid::modelgrid[mgi].expansionopacities, mgi);
+      }
     }
 
     const int update_grid_cell_seconds = time(nullptr) - sys_time_start_update_cell;

@@ -85,7 +85,7 @@ static auto get_event_expansion_opacity(const int mgi, struct packet *pkt_ptr, c
     const auto next_bin_edge_nu = (binindex < 0) ? get_wavelengthbin_nu_upper(0) : get_wavelengthbin_nu_lower(binindex);
     const auto binedgedist = get_linedistance(dummypkt.prop_time, dummypkt.nu_cmf, next_bin_edge_nu, d_nu_on_d_l);
     if (binindex >= 0) {
-      const auto kappa = globals::cellcache[tid].expansionopacities[binindex];
+      const auto kappa = grid::modelgrid[mgi].expansionopacities[binindex];
       // const auto doppler = doppler_packet_nucmf_on_nurf(dummypkt.pos, dummypkt.dir, dummypkt.prop_time);
       // const auto doppler = (pkt_ptr->nu_cmf + d_nu_on_d_l * dist) / pkt_ptr->nu_rf;
       const auto doppler = 1.;
