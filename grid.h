@@ -59,7 +59,7 @@ struct modelgrid_t {
 
   double totalcooling = -1;
   double **cooling_contrib_ion = nullptr;
-  std::array<float, expopac_nbins> expansionopacities{};
+  float *expansionopacities = nullptr;
   uint_fast8_t thick = 0;
 };
 
@@ -179,7 +179,7 @@ constexpr void calculate_binned_opacities(auto &expansionopacities, const int mo
                        [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; });
   int lineindex = std::distance(globals::linelist, matchline);
 
-  for (size_t wlbin = 0; wlbin < expansionopacities.size(); wlbin++) {
+  for (size_t wlbin = 0; wlbin < expopac_nbins; wlbin++) {
     double bin_linesum = 0.;
 
     const auto bin_nu_lower = get_wavelengthbin_nu_lower(wlbin);
