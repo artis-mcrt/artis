@@ -930,7 +930,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
   assert_testmodeonly(modelgridindex != grid::get_npts_model());
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
   if ((modelgridindex == chi_rpkt_cont_thisthread->modelgridindex) &&
-      (!chi_rpkt_cont_thisthread->recalculate_required) && (fabs(chi_rpkt_cont_thisthread->nu / nu_cmf - 1.0) < 1e-4)) {
+      (!chi_rpkt_cont_thisthread->recalculate_required)) {
     // calculated values are a match already
     return;
   }
