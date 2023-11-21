@@ -723,10 +723,18 @@ static void calculate_kappagrey() {
   printout("Grey normalisation check: %g\n", check1 / check2);
 }
 
-static void allocate_composition_cooling()
+static void allocate_nonemptycells_composition_cooling()
 /// Initialise composition dependent cell data for the given cell
 {
   const size_t npts_nonempty = get_nonempty_npts_model();
+
+#ifdef MPI_ON
+  int my_rank_nonemptycells = nonempty_npts_model / globals::node_nprocs;
+  // rank_in_node 0 gets any remainder
+  if (globals::rank_in_node == 0) {
+    my_rank_nonemptycells += nonempty_npts_model - (my_rank_nonemptycells * globals::node_nprocs);
+  }
+#endif
 
   auto *initmassfracstable_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
   assert_always(initmassfracstable_allcells != nullptr);
@@ -737,12 +745,7 @@ static void allocate_composition_cooling()
   double *nltepops_allcells = nullptr;
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
-    int my_rank_cells = nonempty_npts_model / globals::node_nprocs;
-    // rank_in_node 0 gets any remainder
-    if (globals::rank_in_node == 0) {
-      my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
-    }
-    MPI_Aint size = my_rank_cells * globals::total_nlte_levels * static_cast<MPI_Aint>(sizeof(double));
+    MPI_Aint size = my_rank_nonemptycells * globals::total_nlte_levels * static_cast<MPI_Aint>(sizeof(double));
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nltepops_allcells,
                                           &win_nltepops_allcells) == MPI_SUCCESS);
@@ -913,7 +916,7 @@ static void allocate_nonemptymodelcells() {
     }
   }
 
-  allocate_composition_cooling();
+  allocate_nonemptycells_composition_cooling();
 
 #ifdef MPI_ON
   // barrier to make sure node master has set abundance values to node shared memory
