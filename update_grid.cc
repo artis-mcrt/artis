@@ -669,14 +669,14 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
   }
 }
 
-void cellhistory_reset(const int modelgridindex, const bool new_timestep) {
+void cellhistory_reset(const int modelgridindex) {
   /// All entries of the cellhistory stack must be flagged as empty at the
   /// onset of the new timestep. Also, boundary crossing?
   /// Calculate the level populations for this cell, and flag the other entries
   /// as empty.
   /// Make known that globals::cellhistory[tid] contains information about the
   /// cell given by cellnumber. (-99 if invalid)
-  if ((modelgridindex == globals::cellhistory[tid].cellnumber) && !new_timestep) {
+  if (modelgridindex == globals::cellhistory[tid].cellnumber) {
     return;
   }
 
@@ -1258,7 +1258,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     /// Do not use values which are saved in the cellhistory within update_grid
     /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
     use_cellhist = false;
-    cellhistory_reset(-99, true);
+    cellhistory_reset(-99);
 
 /// Updating cell information
 #ifdef _OPENMP

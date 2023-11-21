@@ -316,7 +316,7 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
           do_cell_packet_updates(std::span{packetgroupstart, &pkt}, nts, ts_end);
 
           stats::increment(stats::COUNTER_UPDATECELL);
-          cellhistory_reset(mgi, false);
+          cellhistory_reset(mgi);
           packetgroupstart = &pkt;
         }
       }
