@@ -1,7 +1,6 @@
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
-#include <cassert>
 #include <cinttypes>
 #include <cmath>
 #include <span>
