@@ -5,7 +5,54 @@ BUILD_DIR = build/$(shell uname -m)
 
 CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto=auto
 
-# CXXFLAGS += -Wunreachable-code
+
+
+ifeq ($(MPI),)
+	# MPI option not specified. set to true by default
+	MPI := ON
+endif
+ifeq ($(MPI),ON)
+	CXX = mpicxx
+	CXXFLAGS += -DMPI_ON=true
+	BUILD_DIR := $(BUILD_DIR)_mpi
+else ifeq ($(MPI),OFF)
+else
+$(error bad value for MPI option. Should be ON or OFF)
+endif
+
+ifeq ($(TESTMODE),ON)
+else ifeq ($(TESTMODE),OFF)
+else ifeq ($(TESTMODE),)
+else
+$(error bad value for testmode option. Should be ON or OFF)
+endif
+
+COMPILER_VERSION := $(shell $(CXX) --version)
+
+ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
+  COMPILER_IS_CLANG := TRUE
+else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
+  COMPILER_IS_CLANG := FALSE
+else
+  $(warning Unknown compiler)
+  COMPILER_IS_CLANG := FALSE
+endif
+
+ifeq ($(OPENMP),ON)
+	ifeq ($(COMPILER_IS_CLANG),TRUE)
+		CXXFLAGS += -Xpreprocessor -fopenmp
+		LDFLAGS += -lomp
+	else
+		LDFLAGS += -fopenmp
+	endif
+
+	BUILD_DIR := $(BUILD_DIR)_openmp
+else ifeq ($(OPENMP),OFF)
+else ifeq ($(OPENMP),)
+else
+$(error bad value for openmp option. Should be ON or OFF)
+endif
+
 
 ifeq ($(shell uname -s),Darwin)
 # 	macOS
@@ -102,35 +149,6 @@ endif
 
 CXXFLAGS += -Werror -Werror=undef -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wunused-macros -Wno-inline -Wsign-compare
 
-ifeq ($(MPI),)
-	# MPI option not specified. set to true by default
-	MPI := ON
-endif
-ifeq ($(MPI),ON)
-	CXX = mpicxx
-	CXXFLAGS += -DMPI_ON=true
-	BUILD_DIR := $(BUILD_DIR)_mpi
-else ifeq ($(MPI),OFF)
-else
-$(error bad value for MPI option. Should be ON or OFF)
-endif
-
-ifeq ($(TESTMODE),ON)
-else ifeq ($(TESTMODE),OFF)
-else ifeq ($(TESTMODE),)
-else
-$(error bad value for testmode option. Should be ON or OFF)
-endif
-
-ifeq ($(OPENMP),ON)
-	CXXFLAGS += -Xpreprocessor -fopenmp
-	LDFLAGS += -lomp
-	BUILD_DIR := $(BUILD_DIR)_openmp
-else ifeq ($(OPENMP),OFF)
-else ifeq ($(OPENMP),)
-else
-$(error bad value for testmode option. Should be ON or OFF)
-endif
 
 ### use pg when you want to use gprof profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)
