@@ -121,8 +121,6 @@ jobs:
                       openmp: ON
                     - compiler: {name: gcc, ver: 12}
                       openmp: ON
-                    - compiler: {name: gcc, ver: 13}
-                      openmp: ON
                     - compiler: {name: clang, ver: 15}
                       openmp: ON
             fail-fast: false
