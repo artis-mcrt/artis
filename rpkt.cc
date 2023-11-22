@@ -124,6 +124,7 @@ static auto get_event_expansion_opacity(const int mgi, struct packet *pkt_ptr, c
 
 static auto get_event(const int modelgridindex,
                       struct packet *pkt_ptr,  // pointer to packet object
+                      struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
                       const double tau_rnd,    // random optical depth until which the packet travels
                       const double abort_dist  // maximal travel distance before packet leaves cell or time step ends
                       ) -> std::tuple<double, bool>
@@ -139,9 +140,9 @@ static auto get_event(const int modelgridindex,
 
   struct packet dummypkt = *pkt_ptr;
 
-  calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, &globals::chi_rpkt_cont[tid], modelgridindex, true);
+  calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, modelgridindex, true);
   const double chi_cont =
-      globals::chi_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
+      chi_rpkt_cont.total * doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
   double tau = 0.;   // optical depth along path
   double dist = 0.;  // position on path
   while (true) {
@@ -404,15 +405,15 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 }
 
-static void rpkt_event_continuum(struct packet *pkt_ptr,
-                                 struct rpkt_continuum_absorptioncoeffs chi_rpkt_cont_thisthread, int modelgridindex) {
+static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
+                                 int modelgridindex) {
   const double nu = pkt_ptr->nu_cmf;
 
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
-  const double chi_cont = chi_rpkt_cont_thisthread.total * dopplerfactor;
-  const double sigma = chi_rpkt_cont_thisthread.es * dopplerfactor;
-  const double chi_ff = chi_rpkt_cont_thisthread.ff * dopplerfactor;
-  const double chi_bf = chi_rpkt_cont_thisthread.bf * dopplerfactor;
+  const double chi_cont = chi_rpkt_cont.total * dopplerfactor;
+  const double chi_escatter = chi_rpkt_cont.es * dopplerfactor;
+  const double chi_ff = chi_rpkt_cont.ff * dopplerfactor;
+  const double chi_bf = chi_rpkt_cont.bf * dopplerfactor;
 
   /// continuum process happens. select due to its probabilities sigma/chi_cont, chi_ff/chi_cont,
   /// chi_bf/chi_cont
@@ -421,7 +422,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr,
   // printout("[debug] rpkt_event:   zrand*chi_cont %g, sigma %g, chi_ff %g, chi_bf %g\n", zrand * chi_cont,
   // sigma, chi_ff, chi_bf);
 
-  if (zrand * chi_cont < sigma) {
+  if (zrand * chi_cont < chi_escatter) {
     /// electron scattering occurs
     /// in this case the packet stays a R_PKT of same nu_cmf as before (coherent scattering)
     /// but with different direction
@@ -442,7 +443,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr,
     pkt_ptr->em_pos = pkt_ptr->pos;
     pkt_ptr->em_time = pkt_ptr->prop_time;
 
-  } else if (zrand * chi_cont < sigma + chi_ff) {
+  } else if (zrand * chi_cont < chi_escatter + chi_ff) {
     /// ff: transform to k-pkt
     // printout("[debug] rpkt_event:   free-free transition\n");
     stats::increment(stats::COUNTER_K_STAT_FROM_FF);
@@ -450,13 +451,13 @@ static void rpkt_event_continuum(struct packet *pkt_ptr,
     pkt_ptr->last_event = 5;
     pkt_ptr->type = TYPE_KPKT;
     pkt_ptr->absorptiontype = -1;
-  } else if (zrand * chi_cont < sigma + chi_ff + chi_bf) {
+  } else if (zrand * chi_cont < chi_escatter + chi_ff + chi_bf) {
     /// bf: transform to k-pkt or activate macroatom corresponding to probabilities
     // printout("[debug] rpkt_event:   bound-free transition\n");
 
     pkt_ptr->absorptiontype = -2;
 
-    const double chi_bf_inrest = chi_rpkt_cont_thisthread.bf;
+    const double chi_bf_inrest = chi_rpkt_cont.bf;
     assert_always(globals::phixslist[tid].chi_bf_sum[globals::nbfcontinua - 1] == chi_bf_inrest);
 
     /// Determine in which continuum the bf-absorption occurs
@@ -724,7 +725,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     edist = get_event_expansion_opacity(mgi, pkt_ptr, tau_next, abort_dist);
     pkt_ptr->next_trans = -1;
   } else {
-    std::tie(edist, event_is_boundbound) = get_event(mgi, pkt_ptr, tau_next, abort_dist);
+    std::tie(edist, event_is_boundbound) = get_event(mgi, pkt_ptr, globals::chi_rpkt_cont[tid], tau_next, abort_dist);
   }
   assert_always(edist >= 0);
 
@@ -986,12 +987,12 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
   return chi_bf_sum;
 }
 
-void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorptioncoeffs *chi_rpkt_cont_thisthread,
+void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
                              const int modelgridindex, const bool usecellhistupdatephixslist) {
   assert_testmodeonly(modelgridindex != grid::get_npts_model());
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
-  if ((modelgridindex == chi_rpkt_cont_thisthread->modelgridindex) &&
-      (!chi_rpkt_cont_thisthread->recalculate_required) && (fabs(chi_rpkt_cont_thisthread->nu / nu_cmf - 1.0) < 1e-4)) {
+  if ((modelgridindex == chi_rpkt_cont.modelgridindex) && (!chi_rpkt_cont.recalculate_required) &&
+      (fabs(chi_rpkt_cont.nu / nu_cmf - 1.0) < 1e-4)) {
     // calculated values are a match already
     return;
   }
@@ -1032,27 +1033,26 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
     chi_bf = 0.;
   }
 
-  chi_rpkt_cont_thisthread->nu = nu_cmf;
-  chi_rpkt_cont_thisthread->modelgridindex = modelgridindex;
-  chi_rpkt_cont_thisthread->recalculate_required = false;
-  chi_rpkt_cont_thisthread->total = sigma + chi_bf + chi_ff;
-  chi_rpkt_cont_thisthread->es = sigma;
-  chi_rpkt_cont_thisthread->ff = chi_ff;
-  chi_rpkt_cont_thisthread->bf = chi_bf;
-  chi_rpkt_cont_thisthread->ffheating = chi_ffheating;
+  chi_rpkt_cont.nu = nu_cmf;
+  chi_rpkt_cont.modelgridindex = modelgridindex;
+  chi_rpkt_cont.recalculate_required = false;
+  chi_rpkt_cont.total = sigma + chi_bf + chi_ff;
+  chi_rpkt_cont.es = sigma;
+  chi_rpkt_cont.ff = chi_ff;
+  chi_rpkt_cont.bf = chi_bf;
+  chi_rpkt_cont.ffheating = chi_ffheating;
   // chi_rpkt_cont_thisthread.bfheating = chi_bfheating;
 
-  if (!std::isfinite(chi_rpkt_cont_thisthread->total)) {
+  if (!std::isfinite(chi_rpkt_cont.total)) {
     printout("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort\n");
-    printout("[fatal] es %g, ff %g, bf %g\n", chi_rpkt_cont_thisthread->es, chi_rpkt_cont_thisthread->ff,
-             chi_rpkt_cont_thisthread->bf);
+    printout("[fatal] es %g, ff %g, bf %g\n", chi_rpkt_cont.es, chi_rpkt_cont.ff, chi_rpkt_cont.bf);
     printout("[fatal] nbfcontinua %d\n", globals::nbfcontinua);
     printout("[fatal] in cell %d with density %g\n", modelgridindex, grid::get_rho(modelgridindex));
     printout("[fatal] pkt_ptr->nu_cmf %g\n", nu_cmf);
-    if (std::isfinite(chi_rpkt_cont_thisthread->es)) {
-      chi_rpkt_cont_thisthread->ff = 0.;
-      chi_rpkt_cont_thisthread->bf = 0.;
-      chi_rpkt_cont_thisthread->total = chi_rpkt_cont_thisthread->es;
+    if (std::isfinite(chi_rpkt_cont.es)) {
+      chi_rpkt_cont.ff = 0.;
+      chi_rpkt_cont.bf = 0.;
+      chi_rpkt_cont.total = chi_rpkt_cont.es;
     } else {
       std::abort();
     }

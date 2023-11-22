@@ -8,8 +8,8 @@ void do_rpkt(struct packet *pkt_ptr, double t2);
 void emit_rpkt(struct packet *pkt_ptr);
 [[nodiscard]] auto closest_transition(double nu_cmf, int next_trans) -> int;
 [[nodiscard]] auto calculate_chi_bf_gammacontr(int modelgridindex, double nu) -> double;
-void calculate_chi_rpkt_cont(double nu_cmf, struct rpkt_continuum_absorptioncoeffs *chi_rpkt_cont_thisthread,
-                             int modelgridindex, bool usecellhistupdatephixslist);
+void calculate_chi_rpkt_cont(double nu_cmf, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, int modelgridindex,
+                             bool usecellhistupdatephixslist);
 
 [[nodiscard]] constexpr auto get_linedistance(const double prop_time, const double nu_cmf, const double nu_trans,
                                               const double d_nu_on_d_l) -> double {
