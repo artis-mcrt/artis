@@ -21,7 +21,61 @@
 #include "vectors.h"
 #include "vpkt.h"
 
-// Material for handing r-packet propagation.
+// wavelength bins are ordered by ascending wavelength (descending frequency)
+
+static constexpr auto get_expopac_bin_nu_upper(const size_t binindex) -> double {
+  const auto lambda_lower = expopac_lambdamin + binindex * expopac_deltalambda;
+  return 1e8 * CLIGHT / lambda_lower;
+}
+
+static constexpr auto get_expopac_bin_nu_lower(const size_t binindex) -> double {
+  const auto lambda_upper = expopac_lambdamin + (binindex + 1) * expopac_deltalambda;
+  return 1e8 * CLIGHT / lambda_upper;
+}
+
+void calculate_binned_opacities(const int modelgridindex) {
+  auto &expansionopacities = grid::modelgrid[modelgridindex].expansionopacities;
+  auto &kappa_planck_cumulative = grid::modelgrid[modelgridindex].expansionopacity_planck_cumulative;
+
+  const time_t sys_time_start_calc_kpkt_rates = time(nullptr);
+  const auto temperature = grid::get_TR(modelgridindex);
+
+  printout("calculating binned expansion opacities for cell %d...", modelgridindex);
+
+  const auto t_mid = globals::timesteps[globals::timestep].mid;
+
+  // find the first line with nu below the upper limit of the first bin
+  const auto *matchline =
+      std::lower_bound(&globals::linelist[0], &globals::linelist[globals::nlines], get_expopac_bin_nu_upper(0),
+                       [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; });
+  int lineindex = std::distance(globals::linelist, matchline);
+
+  for (size_t binindex = 0; binindex < expopac_nbins; binindex++) {
+    double bin_linesum = 0.;
+
+    const auto bin_nu_lower = get_expopac_bin_nu_lower(binindex);
+    const auto bin_nu_mid = (get_expopac_bin_nu_upper(binindex) + bin_nu_lower) / 2.;
+
+    while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= bin_nu_lower) {
+      const float tau_line = get_tau_sobolev(modelgridindex, lineindex, t_mid);
+      const auto linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
+      bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
+      lineindex++;
+    }
+
+    const float bin_kappa = 1. / (CLIGHT * t_mid * grid::get_rho(modelgridindex)) * bin_linesum;
+    assert_always(std::isfinite(bin_kappa));
+    expansionopacities[binindex] = bin_kappa;
+    // printout("bin %d: lambda %g to %g kappa %g kappa_grey %g\n", wlbin, get_wavelengthbin_lambda_lower(wlbin),
+    //          get_wavelengthbin_lambda_upper(wlbin), bin_kappa, grid::modelgrid[modelgridindex].kappagrey);
+
+    const auto planck_val = radfield::dbb(bin_nu_mid, temperature, 1);
+    kappa_planck_cumulative[binindex] =
+        ((binindex > 0) ? kappa_planck_cumulative[binindex - 1] : 0.) + bin_kappa * planck_val;
+  }
+
+  printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc_kpkt_rates);
+}
 
 auto closest_transition(const double nu_cmf, const int next_trans) -> int
 /// for the propagation through non empty cells
@@ -86,7 +140,7 @@ static auto get_event_expansion_opacity(const int modelgridindex, struct packet 
       static_cast<size_t>(((1e8 * CLIGHT / dummypkt.nu_cmf) - expopac_lambdamin) / expopac_deltalambda);
 
   for (size_t binindex = binindex_start; binindex < expopac_nbins; binindex++) {
-    const auto next_bin_edge_nu = (binindex < 0) ? get_wavelengthbin_nu_upper(0) : get_wavelengthbin_nu_lower(binindex);
+    const auto next_bin_edge_nu = (binindex < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex);
     const auto binedgedist = get_linedistance(dummypkt.prop_time, dummypkt.nu_cmf, next_bin_edge_nu, d_nu_on_d_l);
 
     const double chi_cont = chi_rpkt_cont.total * doppler;
@@ -567,27 +621,17 @@ static void rpkt_event_boundbound(struct packet *pkt_ptr, const int mgi) {
 static auto sample_planck_times_expansion_opacity(const int modelgridindex) -> double
 // returns a randomly chosen frequency with a distribution of Planck function times the expansion opacity
 {
-  const auto temperature = grid::get_TR(modelgridindex);
-  std::array<double, expopac_nbins> partintegrals{};
-  for (size_t binindex = 0; binindex < expopac_nbins; binindex++) {
-    const auto nu_upper = get_wavelengthbin_nu_upper(binindex);
-    const auto nu_lower = get_wavelengthbin_nu_lower(binindex);
-    const auto nu_mid = (nu_upper + nu_lower) / 2.;
-    const auto kappa = grid::modelgrid[modelgridindex].expansionopacities[binindex];
-    const auto planck_val = radfield::dbb(nu_mid, temperature, 1);
-    const auto bin_contrib = kappa * planck_val;
-    partintegrals[binindex] = ((binindex > 0) ? partintegrals[binindex - 1] : 0.) + bin_contrib;
-  }
-
-  const auto rnd_integral = rng_uniform() * partintegrals.back();
-  const auto *selected_partintegral = std::lower_bound(partintegrals.begin(), partintegrals.end(), rnd_integral);
-  const auto binindex = std::min(std::distance(partintegrals.cbegin(), selected_partintegral), expopac_nbins - 1);
+  auto &kappa_planck_cumulative = grid::modelgrid[modelgridindex].expansionopacity_planck_cumulative;
+  const auto rnd_integral = rng_uniform() * kappa_planck_cumulative[expopac_nbins - 1];
+  auto *selected_partintegral =
+      std::lower_bound(kappa_planck_cumulative, kappa_planck_cumulative + expopac_nbins, rnd_integral);
+  const auto binindex = std::min(std::distance(kappa_planck_cumulative, selected_partintegral), expopac_nbins - 1);
   // use a linear interpolation for the frequency within the bin
-  const auto bin_nu_lower = get_wavelengthbin_nu_lower(binindex);
-  const auto delta_nu = get_wavelengthbin_nu_upper(binindex) - bin_nu_lower;
-  const auto lower_partintegral = (binindex > 0) ? partintegrals[binindex - 1] : 0.;
-  const double nuoffset =
-      (rnd_integral - partintegrals[binindex]) / (partintegrals[binindex] - lower_partintegral) * delta_nu;
+  const auto bin_nu_lower = get_expopac_bin_nu_lower(binindex);
+  const auto delta_nu = get_expopac_bin_nu_upper(binindex) - bin_nu_lower;
+  const auto lower_partintegral = (binindex > 0) ? kappa_planck_cumulative[binindex - 1] : 0.;
+  const double nuoffset = (rnd_integral - kappa_planck_cumulative[binindex]) /
+                          (kappa_planck_cumulative[binindex] - lower_partintegral) * delta_nu;
 
   return bin_nu_lower + nuoffset;
 }

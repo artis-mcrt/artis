@@ -60,6 +60,7 @@ struct modelgrid_t {
   double totalcooling = -1;
   double **cooling_contrib_ion = nullptr;
   float *expansionopacities = nullptr;
+  float *expansionopacity_planck_cumulative = nullptr;
   uint_fast8_t thick = 0;
 };
 

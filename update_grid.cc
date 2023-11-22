@@ -1185,7 +1185,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
     if constexpr (USE_BINNED_EXPANSIONOPACITIES) {
       if (grid::modelgrid[mgi].thick != 1) {
-        calculate_binned_opacities(grid::modelgrid[mgi].expansionopacities, mgi);
+        calculate_binned_opacities(mgi);
       }
     }
 
