@@ -2,7 +2,7 @@
 
 set -x
 
-runfolder=kilonova_1d_1dgrid_expansionopac_testrun
+runfolder=kilonova_2d_2dgrid_expansionopac_testrun
 
 mkdir -p $runfolder
 
@@ -11,7 +11,7 @@ if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O https://theory.gsi.de/~lshing
 tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
 
 # same input files as the other test run
-rsync -av kilonova_1d_3dgrid_inputfiles/ $runfolder/
+rsync -av kilonova_2d_3dgrid_inputfiles/ $runfolder/
 
 # for the checksum files
 rsync -av --ignore-times kilonova_1d_1dgrid_expansionopac_inputfiles/ $runfolder/
@@ -26,7 +26,7 @@ xz -dv -T0 *.xz
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 80000;/g' artisoptions.h
 
-sed -i'' -e 's/constexpr int GRID_TYPE.*/constexpr int GRID_TYPE = GRID_SPHERICAL1D;/g' artisoptions.h
+sed -i'' -e 's/constexpr int GRID_TYPE.*/constexpr int GRID_TYPE = GRID_CYLINDRICAL2D;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr int TABLESIZE.*/constexpr int TABLESIZE = 20;/g' artisoptions.h
 sed -i'' -e 's/constexpr double MINTEMP.*/constexpr double MINTEMP = 1000.;/g' artisoptions.h
