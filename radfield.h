@@ -40,6 +40,7 @@ void reset_bfrate_contributions(int modelgridindex);
 [[nodiscard]] auto integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel,
                              size_t limit, int key, gsl_integration_workspace *workspace, double *result,
                              double *abserr) -> int;
+auto planck_integral_analytic(double T_R, double nu_lower, double nu_upper, bool times_nu) -> double;
 
 [[nodiscard]] constexpr auto dbb(double nu, auto T, auto W) -> double
 // returns J_nu [ergs/s/sr/cm2/Hz] for a dilute black body with temperature T and dilution factor W

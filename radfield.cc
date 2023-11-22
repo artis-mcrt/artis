@@ -93,14 +93,9 @@ static std::vector<double> nuJ;
 static std::vector<double> nuJ_reduced_save;
 #endif
 
-using enum_prefactor = enum {
-  ONE = 0,
-  TIMES_NU = 1,
-};
-
 using gsl_planck_integral_paras = struct {
   double T_R;
-  enum_prefactor prefactor;
+  bool times_nu;
 };
 
 using gsl_T_R_solver_paras = struct {
@@ -806,27 +801,27 @@ auto radfield(double nu, int modelgridindex) -> double
   return J_nu_fullspec;
 }
 
-constexpr auto gsl_integrand_planck(const double nu, void *paras) -> double {
-  const double T_R = (static_cast<gsl_planck_integral_paras *>(paras))->T_R;
-  const enum_prefactor prefactor = (static_cast<gsl_planck_integral_paras *>(paras))->prefactor;
+constexpr auto gsl_integrand_planck(const double nu, void *voidparas) -> double {
+  const auto *paras = static_cast<gsl_planck_integral_paras *>(voidparas);
+  const double T_R = paras->T_R;
 
   double integrand = TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / (std::expm1(HOVERKB * nu / T_R));
 
-  if (prefactor == TIMES_NU) {
+  if (paras->times_nu) {
     integrand *= nu;
   }
 
   return integrand;
 }
 
-static auto planck_integral(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor) -> double {
+static auto planck_integral(double T_R, double nu_lower, double nu_upper, const bool times_nu) -> double {
   double integral = 0.;
 
   double error = 0.;
   const double epsrel = 1e-10;
   const double epsabs = 0.;
 
-  gsl_planck_integral_paras intparas = {.T_R = T_R, .prefactor = prefactor};
+  gsl_planck_integral_paras intparas = {.T_R = T_R, .times_nu = times_nu};
 
   const gsl_function F_planck = {.function = &gsl_integrand_planck, .params = &intparas};
 
@@ -843,10 +838,11 @@ static auto planck_integral(double T_R, double nu_lower, double nu_upper, enum_p
   return integral;
 }
 
-static auto planck_integral_analytic(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor) -> double {
+auto planck_integral_analytic(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu)
+    -> double {
   double integral = 0.;
 
-  if (prefactor == TIMES_NU) {
+  if (times_nu) {
     const double debye_upper = gsl_sf_debye_4(HOVERKB * nu_upper / T_R) * pow(nu_upper, 4);
     const double debye_lower = gsl_sf_debye_4(HOVERKB * nu_lower / T_R) * pow(nu_lower, 4);
     integral = TWOHOVERCLIGHTSQUARED * (debye_upper - debye_lower) * T_R / HOVERKB / 4.;
@@ -890,8 +886,8 @@ static auto delta_nu_bar(double T_R, void *paras) -> double
 
   const double nu_bar_estimator = get_bin_nu_bar(modelgridindex, binindex);
 
-  const double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, TIMES_NU);
-  const double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, ONE);
+  const double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, true);
+  const double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, false);
   const double nu_bar_planck_T_R = nu_times_planck_numerical / planck_integral_numerical;
 
   // double nu_times_planck_integral = planck_integral_analytic(T_R, nu_lower, nu_upper, true);
@@ -1081,7 +1077,7 @@ void fit_parameters(int modelgridindex, int timestep)
             T_R_bin = T_e;
           }
 
-          double planck_integral_result = planck_integral(T_R_bin, nu_lower, nu_upper, ONE);
+          double planck_integral_result = planck_integral(T_R_bin, nu_lower, nu_upper, false);
           //          printout("planck_integral(T_R=%g, nu_lower=%g, nu_upper=%g) = %g\n", T_R_bin, nu_lower,
           //          nu_upper, planck_integral_result);
 
@@ -1091,7 +1087,7 @@ void fit_parameters(int modelgridindex, int timestep)
             //            printout("T_R_bin %g, nu_lower %g, nu_upper %g\n", T_R_bin, nu_lower, nu_upper);
             printout("W %g too high, trying setting T_R of bin %d to %g. J_bin %g planck_integral %g\n", W_bin,
                      binindex, T_R_max, J_bin, planck_integral_result);
-            planck_integral_result = planck_integral(T_R_max, nu_lower, nu_upper, ONE);
+            planck_integral_result = planck_integral(T_R_max, nu_lower, nu_upper, false);
             W_bin = J_bin / planck_integral_result;
             if (W_bin > 1e4) {
               printout("W still very high, W=%g. Zeroing bin...\n", W_bin);
