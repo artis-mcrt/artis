@@ -14,7 +14,7 @@ tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
 rsync -av kilonova_2d_3dgrid_inputfiles/ $runfolder/
 
 # for the checksum files
-rsync -av --ignore-times kilonova_1d_1dgrid_expansionopac_inputfiles/ $runfolder/
+rsync -av --ignore-times kilonova_2d_2dgrid_expansionopac_inputfiles/ $runfolder/
 
 cp ../data/* $runfolder/
 

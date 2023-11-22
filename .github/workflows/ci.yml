@@ -27,9 +27,9 @@ jobs:
                         classicmode_1d_3dgrid,
                         classicmode_3d,
                         kilonova_1d_1dgrid,
-                        kilonova_2d_2dgrid_expansionopac,
                         kilonova_1d_3dgrid,
                         kilonova_2d_2dgrid,
+                        kilonova_2d_2dgrid_expansionopac,
                         kilonova_2d_3dgrid,
                         nebularonezone_1d_3dgrid,
                     ]

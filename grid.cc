@@ -769,13 +769,13 @@ static void allocate_nonemptycells_composition_cooling()
                                           &expansionopacities_allcells,
                                           &win_expansionopacities_allcells) == MPI_SUCCESS);
     assert_always(MPI_Win_shared_query(win_expansionopacities_allcells, 0, &size, &disp_unit,
-
                                        &expansionopacities_allcells) == MPI_SUCCESS);
+
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
                                           &expopac_kappa_planck_cumul_allcells,
                                           &win_expopac_kappa_planck_cumul_allcells) == MPI_SUCCESS);
     assert_always(MPI_Win_shared_query(win_expansionopacities_allcells, 0, &size, &disp_unit,
-                                       &win_expopac_kappa_planck_cumul_allcells) == MPI_SUCCESS);
+                                       &expopac_kappa_planck_cumul_allcells) == MPI_SUCCESS);
 
 #else
     expansionopacities_allcells = static_cast<float *>(malloc(npts_nonempty * expopac_nbins * sizeof(float)));
