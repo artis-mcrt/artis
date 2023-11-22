@@ -423,7 +423,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr,
 
   if (zrand * chi_cont < sigma) {
     /// electron scattering occurs
-    /// in this case the packet stays a R_PKT of same nu_cmf than before (coherent scattering)
+    /// in this case the packet stays a R_PKT of same nu_cmf as before (coherent scattering)
     /// but with different direction
     // printout("[debug] rpkt_event:   electron scattering\n");
     pkt_ptr->interactions += 1;
@@ -436,15 +436,12 @@ static void rpkt_event_continuum(struct packet *pkt_ptr,
 
     // pkt_ptr->nu_cmf = 3.7474058e+14;
     electron_scatter_rpkt(pkt_ptr);
+
     /// Electron scattering does not modify the last emission flag
-    // pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
     /// but it updates the last emission position
     pkt_ptr->em_pos = pkt_ptr->pos;
     pkt_ptr->em_time = pkt_ptr->prop_time;
 
-    /// Set some flags
-    // pkt_ptr->next_trans = 0;   ///packet's comoving frame frequency is conserved during electron scattering
-    /// don't touch the value of next_trans to save transition history
   } else if (zrand * chi_cont < sigma + chi_ff) {
     /// ff: transform to k-pkt
     // printout("[debug] rpkt_event:   free-free transition\n");

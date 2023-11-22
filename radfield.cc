@@ -894,21 +894,21 @@ static auto delta_nu_bar(double T_R, void *paras) -> double
   const double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, ONE);
   const double nu_bar_planck_T_R = nu_times_planck_numerical / planck_integral_numerical;
 
-  /*double nu_times_planck_integral = planck_integral_analytic(T_R, nu_lower, nu_upper, TIMES_NU);
-  double planck_integral_result = planck_integral_analytic(T_R, nu_lower, nu_upper, ONE);
-  double nu_bar_planck = nu_times_planck_integral / planck_integral_result;
+  // double nu_times_planck_integral = planck_integral_analytic(T_R, nu_lower, nu_upper, true);
+  // double planck_integral_result = planck_integral_analytic(T_R, nu_lower, nu_upper, false);
+  // double nu_bar_planck = nu_times_planck_integral / planck_integral_result;
 
-  //printout("nu_bar %g nu_bar_planck(T=%g) %g\n",nu_bar,T_R,nu_bar_planck);
+  // // printout("nu_bar %g nu_bar_planck(T=%g) %g\n",nu_bar,T_R,nu_bar_planck);
 
-  if (!std::isfinite(nu_bar_planck))
-  {
-    double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, TIMES_NU);
-    double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, ONE);
-    double nu_bar_planck_numerical = nu_times_planck_numerical / planck_integral_numerical;
+  // if (!std::isfinite(nu_bar_planck)) {
+  //   double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, true);
+  //   double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, false);
+  //   double nu_bar_planck_numerical = nu_times_planck_numerical / planck_integral_numerical;
 
-    printout("planck_integral_analytic is %g. Replacing with numerical result of
-  %g.\n",nu_bar_planck,nu_bar_planck_numerical); nu_bar_planck = nu_bar_planck_numerical;
-  }*/
+  //   printout("planck_integral_analytic is %g. Replacing with numerical result of %g.\n", nu_bar_planck,
+  //            nu_bar_planck_numerical);
+  //   nu_bar_planck = nu_bar_planck_numerical;
+  // }
 
   const double delta_nu_bar = nu_bar_planck_T_R - nu_bar_estimator;
 
