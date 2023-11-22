@@ -394,7 +394,7 @@ void do_kpkt_blackbody(struct packet *pkt_ptr)
   // if (tid == 0) k_stat_to_r_bb++;
   stats::increment(stats::COUNTER_K_STAT_TO_R_BB);
   pkt_ptr->interactions++;
-  pkt_ptr->last_event = 6;
+  pkt_ptr->last_event = LASTEVENT_KPKT_TO_RPKT_FFBB;
   pkt_ptr->emissiontype = EMTYPE_FREEFREE;
   pkt_ptr->em_pos = pkt_ptr->pos;
   pkt_ptr->em_time = pkt_ptr->prop_time;
@@ -530,7 +530,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
     stats::increment(stats::COUNTER_K_STAT_TO_R_FF);
 
-    pkt_ptr->last_event = 6;
+    pkt_ptr->last_event = LASTEVENT_KPKT_TO_RPKT_FFBB;
     pkt_ptr->emissiontype = EMTYPE_FREEFREE;
     pkt_ptr->em_pos = pkt_ptr->pos;
     pkt_ptr->em_time = pkt_ptr->prop_time;
@@ -570,7 +570,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
     pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
     stats::increment(stats::COUNTER_K_STAT_TO_R_FB);
-    pkt_ptr->last_event = 7;
+    pkt_ptr->last_event = LASTEVENT_KPKT_TO_RPKT_FB;
     pkt_ptr->emissiontype = get_continuumindex(element, lowerion, lowerlevel, upper);
     pkt_ptr->trueemissiontype = pkt_ptr->emissiontype;
     pkt_ptr->em_pos = pkt_ptr->pos;

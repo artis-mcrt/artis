@@ -439,7 +439,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
     // printout("[debug] rpkt_event:   electron scattering\n");
     pkt_ptr->interactions += 1;
     pkt_ptr->nscatterings += 1;
-    pkt_ptr->last_event = 12;
+    pkt_ptr->last_event = LASTEVENT_ELECTRONSCATTERING;
     stats::increment(stats::COUNTER_ESCOUNTER);
 
     // generate a virtual packet
@@ -601,7 +601,7 @@ static void rpkt_event_thickcell(struct packet *pkt_ptr)
   // printout("[debug] rpkt_event_thickcell:   electron scattering\n");
   pkt_ptr->interactions += 1;
   pkt_ptr->nscatterings += 1;
-  pkt_ptr->last_event = 12;
+  pkt_ptr->last_event = LASTEVENT_ELECTRONSCATTERING;
   stats::increment(stats::COUNTER_ESCOUNTER);
 
   emit_rpkt(pkt_ptr);
