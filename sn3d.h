@@ -105,16 +105,12 @@ static auto printout(const char *format) -> int {
   return bflutindex;
 }
 
-#ifdef OPENMP_MT_ON
 inline void safeadd(auto &var, auto val) {
 #pragma omp atomic update
   var += val;
 }
-#else
-constexpr void safeadd(auto &var, auto val) { __atomic_fetch_add(&var, val, __ATOMIC_RELAXED); }
-#endif
 
-#define safeincrement(var) safeadd(var, 1)
+#define safeincrement(var) safeadd((var), 1)
 
 // #define DO_TITER
 
