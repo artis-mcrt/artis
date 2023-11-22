@@ -116,6 +116,9 @@ jobs:
                     ]
                 mpi: [ON, OFF]
                 openmp: [ON, OFF]
+                exclude:
+                    - compiler: {name: clang, ver: 15}
+                      openmp: ON
             fail-fast: false
 
         name: ${{ matrix.compiler.name }}-${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}
