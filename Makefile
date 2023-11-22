@@ -5,8 +5,6 @@ BUILD_DIR = build/$(shell uname -m)
 
 CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto=auto
 
-
-
 ifeq ($(MPI),)
 	# MPI option not specified. set to true by default
 	MPI := ON
@@ -42,7 +40,7 @@ ifeq ($(COMPILER_IS_CLANG),TRUE)
 	CXXFLAGS += -Xpreprocessor -fopenmp
 	LDFLAGS += -lomp
 else
-	LDFLAGS += -fopenmp
+	CXXFLAGS += -fopenmp
 endif
 
 ifeq ($(OPENMP),ON)
