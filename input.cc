@@ -1204,7 +1204,7 @@ static void setup_cellcache() {
   globals::cellcache = static_cast<struct cellcache *>(malloc(get_max_threads() * sizeof(struct cellcache)));
   assert_always(globals::cellcache != nullptr);
 
-#ifdef _OPENMP
+#ifdef OPENMP_MT_ON
 #pragma omp parallel
   {
 #endif
@@ -1317,7 +1317,7 @@ static void setup_cellcache() {
     mem_usage_cellcache += globals::nbfcontinua * sizeof(double);
 
     printout("[info] mem_usage: cellcache for thread %d occupies %.3f MB\n", tid, mem_usage_cellcache / 1024. / 1024.);
-#ifdef _OPENMP
+#ifdef OPENMP_MT_ON
   }
 #endif
 }
@@ -1385,7 +1385,7 @@ static void setup_phixs_list() {
   /// a serial loop which intializes the phixslist data structure for all threads in a loop. I'm still
   /// not sure why this causes a problem at all and on BlueGene architectures in particular. However,
   /// it seems to fix the problem.
-  // #ifdef _OPENMP
+  // #ifdef OPENMP_MT_ON
   //   #pragma omp parallel private(i,element,ion,level,nions,nlevels,epsilon_upper,E_threshold,nu_edge)
   //   {
   // #endif
@@ -1764,7 +1764,7 @@ void read_parameterfile(int rank)
     printout("randomly-generated random number seed is %lu\n", pre_zseed);
   }
 
-#ifdef _OPENMP
+#ifdef OPENMP_MT_ON
 #pragma omp parallel
   {
 #endif
@@ -1778,7 +1778,7 @@ void read_parameterfile(int rank)
     for (int n = 0; n < 100; n++) {
       rng_uniform();
     }
-#ifdef _OPENMP
+#ifdef OPENMP_MT_ON
   }
 #endif
 

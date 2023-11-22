@@ -1258,7 +1258,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   // printout("timestep %d, titer %d\n", nts, titer);
   // printout("deltat %g\n", deltat);
 
-#ifdef _OPENMP
+#ifdef OPENMP_MT_ON
 #pragma omp parallel
 #endif
   {
@@ -1268,7 +1268,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     cellcache_change_cell(-99);
 
 /// Updating cell information
-#ifdef _OPENMP
+#ifdef OPENMP_MT_ON
 #pragma omp for schedule(dynamic)
 #endif
 
@@ -1285,7 +1285,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
         // maybe want to add omp ordered here if the modelgrid cells should be output in order
         // use_cellcache = true;
         // cellcache_change_cell(mgi, true);
-#ifdef _OPENMP
+#ifdef OPENMP_MT_ON
 #pragma omp critical(estimators_file)
 #endif
         { write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates); }
@@ -1306,7 +1306,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   }  /// end OpenMP parallel section
 
   // alterative way to write out estimators. this keeps the modelgrid cells in order but
-  // heatingrates are not valid. #ifdef _OPENMP for (int n = nstart; n < nstart+nblock; n++)
+  // heatingrates are not valid. #ifdef OPENMP_MT_ON for (int n = nstart; n < nstart+nblock; n++)
   // {
   //   write_to_estimators_file(n,nts);
   // }

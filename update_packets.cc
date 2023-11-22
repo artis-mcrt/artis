@@ -302,7 +302,7 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
     const int updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
     auto *packetgroupstart = packets.data();
 
-#ifdef _OPENMP
+#ifdef OPENMP_MT_ON
 #pragma omp parallel for schedule(dynamic)
 #endif
     for (auto &pkt : packets) {

@@ -38,14 +38,15 @@ else
   COMPILER_IS_CLANG := FALSE
 endif
 
-ifeq ($(OPENMP),ON)
-	ifeq ($(COMPILER_IS_CLANG),TRUE)
-		CXXFLAGS += -Xpreprocessor -fopenmp
-		LDFLAGS += -lomp
-	else
-		LDFLAGS += -fopenmp
-	endif
+ifeq ($(COMPILER_IS_CLANG),TRUE)
+	CXXFLAGS += -Xpreprocessor -fopenmp
+	LDFLAGS += -lomp
+else
+	LDFLAGS += -fopenmp
+endif
 
+ifeq ($(OPENMP),ON)
+	CXXFLAGS += -DOPENMP_MT_ON=true
 	BUILD_DIR := $(BUILD_DIR)_openmp
 else ifeq ($(OPENMP),OFF)
 else ifeq ($(OPENMP),)

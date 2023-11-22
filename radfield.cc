@@ -545,7 +545,7 @@ static inline auto select_bin(double nu) -> int {
 void write_to_file(int modelgridindex, int timestep) {
   assert_always(MULTIBIN_RADFIELD_MODEL_ON);
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-#ifdef _OPENMP
+#ifdef OPENMP_MT_ON
 #pragma omp critical(out_file)
   {
 #endif
@@ -608,7 +608,7 @@ void write_to_file(int modelgridindex, int timestep) {
       }
     }
     fflush(radfieldfile);
-#ifdef _OPENMP
+#ifdef OPENMP_MT_ON
   }
 #endif
 }
