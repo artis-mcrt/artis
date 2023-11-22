@@ -36,22 +36,23 @@ else
   COMPILER_IS_CLANG := FALSE
 endif
 
-ifeq ($(COMPILER_IS_CLANG),TRUE)
-	CXXFLAGS += -Xpreprocessor -fopenmp
-	ifeq ($(shell uname -s),Darwin)
-	LDFLAGS += -lomp
-	endif
-else
-	CXXFLAGS += -fopenmp
-endif
 
 ifeq ($(OPENMP),ON)
-	CXXFLAGS += -DOPENMP_MT_ON=true
-	BUILD_DIR := $(BUILD_DIR)_openmp
+  CXXFLAGS += -DOPENMP_MT_ON=true
+  BUILD_DIR := $(BUILD_DIR)_openmp
+
+  ifeq ($(COMPILER_IS_CLANG),TRUE)
+    CXXFLAGS += -Xpreprocessor -fopenmp
+    ifeq ($(shell uname -s),Darwin)
+      LDFLAGS += -lomp
+    endif
+  else
+    CXXFLAGS += -fopenmp
+  endif
 else ifeq ($(OPENMP),OFF)
 else ifeq ($(OPENMP),)
 else
-$(error bad value for openmp option. Should be ON or OFF)
+  $(error bad value for openmp option. Should be ON or OFF)
 endif
 
 
