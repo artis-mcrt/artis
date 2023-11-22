@@ -917,7 +917,7 @@ void emit_rpkt(struct packet *pkt_ptr) {
   // printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 }
 
-static auto calculate_chi_ff(const int modelgridindex, const double nu) -> double
+static auto calculate_chi_freefree(const int modelgridindex, const double nu) -> double
 // calculate the free-free absorption coefficient [cm^-1]
 // = kappa(free-free) * nne
 {
@@ -928,7 +928,6 @@ static auto calculate_chi_ff(const int modelgridindex, const double nu) -> doubl
   const auto T_e = grid::get_Te(modelgridindex);
 
   double chi_ff = 0.;
-  // chi_ffheating = 0.;
   const int nelements = get_nelements();
   for (int element = 0; element < nelements; element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
@@ -1089,7 +1088,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
 
   double sigma = 0.;
   /// free-free absorption
-  const double chi_ff = calculate_chi_ff(modelgridindex, nu_cmf);
+  const double chi_ff = calculate_chi_freefree(modelgridindex, nu_cmf);
   double chi_bf = 0.;
   double chi_ffheating = 0.;
 
