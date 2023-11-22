@@ -1,6 +1,7 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+#include <cstddef>
 #include <numbers>
 
 /// fundamental constants
@@ -63,6 +64,6 @@ enum timestepsizemethods {
 constexpr float expopac_lambdamin = 534.5;
 constexpr float expopac_lambdamax = 35000.;
 constexpr float expopac_deltalambda = 35.5;
-constexpr int expopac_nbins = static_cast<int>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
+constexpr ptrdiff_t expopac_nbins = static_cast<size_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
 
 #endif

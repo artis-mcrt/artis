@@ -131,6 +131,7 @@ static auto get_event(const int modelgridindex,
 // returns edist, the distance to the next physical event (continuum or bound-bound) and is_boundbound_event, a
 // boolean BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
 {
+  assert_always(!USE_BINNED_EXPANSIONOPACITIES);
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
   // printout("get_event()\n");
   /// initialize loop variables
@@ -554,7 +555,35 @@ static void rpkt_event_boundbound(struct packet *pkt_ptr, const int mgi) {
   }
 }
 
-static void rpkt_event_thickcell(struct packet *pkt_ptr)
+static auto sample_planck_times_expansion_opacity(const int modelgridindex) -> double
+// returns a randomly chosen frequency with a distribution of Planck function times the expansion opacity
+{
+  const auto temperature = grid::get_TR(modelgridindex);
+  std::array<double, expopac_nbins> partintegrals{};
+  for (size_t binindex = 0; binindex < expopac_nbins; binindex++) {
+    const auto nu_upper = get_wavelengthbin_nu_upper(binindex);
+    const auto nu_lower = get_wavelengthbin_nu_lower(binindex);
+    const auto nu_mid = (nu_upper + nu_lower) / 2.;
+    const auto kappa = grid::modelgrid[modelgridindex].expansionopacities[binindex];
+    const auto planck_val = radfield::dbb(nu_mid, temperature, 1);
+    const auto bin_contrib = kappa * planck_val;
+    partintegrals[binindex] = ((binindex > 0) ? partintegrals[binindex - 1] : 0.) + bin_contrib;
+  }
+
+  const auto rnd_integral = rng_uniform() * partintegrals.back();
+  const auto *selected_partintegral = std::lower_bound(partintegrals.begin(), partintegrals.end(), rnd_integral);
+  const auto binindex = std::min(std::distance(partintegrals.cbegin(), selected_partintegral), expopac_nbins - 1);
+  // use a linear interpolation for the frequency within the bin
+  const auto bin_nu_lower = get_wavelengthbin_nu_lower(binindex);
+  const auto delta_nu = get_wavelengthbin_nu_upper(binindex) - bin_nu_lower;
+  const auto lower_partintegral = (binindex > 0) ? partintegrals[binindex - 1] : 0.;
+  const double nuoffset =
+      (rnd_integral - partintegrals[binindex]) / (partintegrals[binindex] - lower_partintegral) * delta_nu;
+
+  return bin_nu_lower + nuoffset;
+}
+
+static void rpkt_event_thickcell(struct packet *pkt_ptr, const int mgi)
 /// Event handling for optically thick cells. Those cells are treated in a grey
 /// approximation with electron scattering only.
 /// The packet stays an R_PKT of same nu_cmf than before (coherent scattering)
@@ -754,7 +783,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
     // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
     if (grid::modelgrid[mgi].thick == 1 || USE_BINNED_EXPANSIONOPACITIES) {
-      rpkt_event_thickcell(pkt_ptr);
+      rpkt_event_thickcell(pkt_ptr, mgi);
     } else if (event_is_boundbound) {
       rpkt_event_boundbound(pkt_ptr, mgi);
     } else {
