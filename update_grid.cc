@@ -23,6 +23,7 @@
 #include "nonthermal.h"
 #include "radfield.h"
 #include "ratecoeff.h"
+#include "rpkt.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "thermalbalance.h"
@@ -1036,14 +1037,14 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       /// be treated in LTE at restart.
       if (grid::modelgrid[mgi].thick != 1 && grid::get_W(mgi) == 1) {
         printout(
-            "force modelgrid cell %d to grey/LTE for update grid since existing W == 1. (will not have gamma "
+            "force modelgrid cell %d to grey/LTE thick = 1 for update grid since existing W == 1. (will not have gamma "
             "estimators)\n",
             mgi);
         grid::modelgrid[mgi].thick = 1;
       }
 
       printout("lte_iteration %d\n", globals::lte_iteration);
-      printout("mgi %d modelgrid.thick: %d (for this grid update only)\n", mgi, grid::modelgrid[mgi].thick);
+      printout("mgi %d modelgrid.thick: %d (during grid update)\n", mgi, grid::modelgrid[mgi].thick);
 
       for (int element = 0; element < get_nelements(); element++) {
         calculate_cellpartfuncts(mgi, element);
@@ -1163,6 +1164,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     } else if (globals::simulation_continued_from_saved && nts == globals::timestep_initial) {
       // cooling rates were read from the gridsave file for this timestep
       // make sure they are valid
+      printout("cooling rates read from gridsave file for timestep %d cell %d...", nts, mgi);
       assert_always(grid::modelgrid[mgi].totalcooling >= 0.);
       const int element = 0;
       const int ion = 0;
@@ -1172,7 +1174,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       /// and ion contributions inside update grid and communicate between MPI tasks
       const time_t sys_time_start_calc_kpkt_rates = time(nullptr);
 
-      printout("calculate_cooling_rates for timestep %d cell %d...", nts, mgi);
+      printout("calculating cooling_rates for timestep %d cell %d...", nts, mgi);
 
       // don't pass pointer to heatingcoolingrates because current populations and rates weren't
       // used to determine T_e
@@ -1181,8 +1183,8 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc_kpkt_rates);
     }
 
-    if (grid::modelgrid[mgi].thick != 1) {
-      if constexpr (USE_BINNED_EXPANSIONOPACITIES) {
+    if constexpr (USE_BINNED_EXPANSIONOPACITIES) {
+      if (grid::modelgrid[mgi].thick != 1) {
         calculate_binned_opacities(grid::modelgrid[mgi].expansionopacities, mgi);
       }
     }
@@ -1318,7 +1320,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     }
   }
 
-  globals::max_path_step = fmin(globals::max_path_step, globals::rmax / 10.);
+  globals::max_path_step = std::min(globals::max_path_step, globals::rmax / 10.);
   printout("max_path_step %g\n", globals::max_path_step);
 
   const time_t time_update_grid_end_thisrank = time(nullptr);

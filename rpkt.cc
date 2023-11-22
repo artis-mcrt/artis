@@ -704,7 +704,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 
   assert_always(tdist >= 0);
 
-  const double abort_dist = fmin(tdist, sdist);
+  const double abort_dist = std::min(tdist, sdist);
 
   /// Get distance to the next physical event (continuum or bound-bound)
   double edist = -1;

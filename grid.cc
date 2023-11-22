@@ -2329,7 +2329,7 @@ constexpr static auto get_gridcoords_from_xyz(std::span<const double, 3> pos_xyz
     if (dist1 < 0) {
       return dist2;
     }
-    return fmin(dist1, dist2);
+    return std::min(dist1, dist2);
 
   }  // exactly one intersection
 
