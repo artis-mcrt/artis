@@ -69,13 +69,17 @@ static auto get_nu_cmf_abort(struct packet *pkt_ptr, const double abort_dist) ->
   return nu_cmf_abort;
 }
 
-static auto get_event_expansion_opacity(const int mgi, struct packet *pkt_ptr, const double tau_next,
-                                        const double abort_dist) -> double {
+static auto get_event_expansion_opacity(const int modelgridindex, struct packet *pkt_ptr,
+                                        struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const double tau_rnd,
+                                        const double abort_dist) -> std::tuple<double, bool> {
+  calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, modelgridindex, true);
+  const auto doppler = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
+
   const auto nu_cmf_abort = get_nu_cmf_abort(pkt_ptr, abort_dist);
   const auto d_nu_on_d_l = (nu_cmf_abort - pkt_ptr->nu_cmf) / abort_dist;
 
   struct packet dummypkt = *pkt_ptr;
-  assert_always(globals::cellcache[tid].cellnumber == mgi);
+  assert_always(globals::cellcache[tid].cellnumber == modelgridindex);
   double dist = 0.;
   double tau = 0.;
   auto binindex_start =
@@ -84,20 +88,25 @@ static auto get_event_expansion_opacity(const int mgi, struct packet *pkt_ptr, c
   for (size_t binindex = binindex_start; binindex < expopac_nbins; binindex++) {
     const auto next_bin_edge_nu = (binindex < 0) ? get_wavelengthbin_nu_upper(0) : get_wavelengthbin_nu_lower(binindex);
     const auto binedgedist = get_linedistance(dummypkt.prop_time, dummypkt.nu_cmf, next_bin_edge_nu, d_nu_on_d_l);
+
+    const double chi_cont = chi_rpkt_cont.total * doppler;
+    double chi_bb_expansionopac = 0.;
     if (binindex >= 0) {
-      const auto kappa = grid::modelgrid[mgi].expansionopacities[binindex];
+      const auto kappa = grid::modelgrid[modelgridindex].expansionopacities[binindex];
       // const auto doppler = doppler_packet_nucmf_on_nurf(dummypkt.pos, dummypkt.dir, dummypkt.prop_time);
       // const auto doppler = (pkt_ptr->nu_cmf + d_nu_on_d_l * dist) / pkt_ptr->nu_rf;
-      const auto doppler = 1.;
-      const double chi = kappa * grid::get_rho(mgi) * doppler;
-      const auto edist = (tau_next - tau) / chi;
-      if (edist < binedgedist) {
-        // event occurs in this bin
-        return std::max(dist + edist, 0.);
-      }
-      tau += binedgedist * chi;
+      chi_bb_expansionopac = kappa * grid::get_rho(modelgridindex) * doppler;
+    }
+    double chi_tot = chi_cont + chi_bb_expansionopac;
+
+    if (chi_tot * binedgedist > tau_rnd - tau) {
+      // event occurs
+      const auto edist = std::max(dist + (tau_rnd - tau) / chi_tot, 0.);
+      const bool event_is_boundbound = rng_uniform() <= chi_bb_expansionopac / chi_tot;
+      return {edist, event_is_boundbound};
     }
 
+    tau += chi_tot * binedgedist;
     dist += binedgedist;
 
     if constexpr (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
@@ -115,11 +124,11 @@ static auto get_event_expansion_opacity(const int mgi, struct packet *pkt_ptr, c
 
     if (dummypkt.nu_cmf <= nu_cmf_abort) {
       // hit edge of cell or timestep limit
-      return std::numeric_limits<double>::max();
+      return {std::numeric_limits<double>::max(), false};
     }
   }
   // no more bins, so no opacity below this frequency
-  return std::numeric_limits<double>::max();
+  return {std::numeric_limits<double>::max(), false};
 }
 
 static auto get_event(const int modelgridindex,
@@ -583,7 +592,7 @@ static auto sample_planck_times_expansion_opacity(const int modelgridindex) -> d
   return bin_nu_lower + nuoffset;
 }
 
-static void rpkt_event_thickcell(struct packet *pkt_ptr, const int mgi)
+static void rpkt_event_thickcell(struct packet *pkt_ptr)
 /// Event handling for optically thick cells. Those cells are treated in a grey
 /// approximation with electron scattering only.
 /// The packet stays an R_PKT of same nu_cmf than before (coherent scattering)
@@ -751,7 +760,8 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     edist = tau_next / chi_grey;
     pkt_ptr->next_trans = -1;
   } else if (USE_BINNED_EXPANSIONOPACITIES) {
-    edist = get_event_expansion_opacity(mgi, pkt_ptr, tau_next, abort_dist);
+    std::tie(edist, event_is_boundbound) =
+        get_event_expansion_opacity(mgi, pkt_ptr, globals::chi_rpkt_cont[tid], tau_next, abort_dist);
     pkt_ptr->next_trans = -1;
   } else {
     std::tie(edist, event_is_boundbound) = get_event(mgi, pkt_ptr, globals::chi_rpkt_cont[tid], tau_next, abort_dist);
@@ -782,10 +792,15 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     move_pkt_withtime(pkt_ptr, edist / 2.);
 
     // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
-    if (grid::modelgrid[mgi].thick == 1 || USE_BINNED_EXPANSIONOPACITIES) {
-      rpkt_event_thickcell(pkt_ptr, mgi);
+    if (grid::modelgrid[mgi].thick == 1) {
+      rpkt_event_thickcell(pkt_ptr);
     } else if (event_is_boundbound) {
-      rpkt_event_boundbound(pkt_ptr, mgi);
+      if (USE_BINNED_EXPANSIONOPACITIES) {
+        pkt_ptr->nu_cmf = sample_planck_times_expansion_opacity(mgi);
+        rpkt_event_thickcell(pkt_ptr);
+      } else {
+        rpkt_event_boundbound(pkt_ptr, mgi);
+      }
     } else {
       rpkt_event_continuum(pkt_ptr, globals::chi_rpkt_cont[tid], mgi);
     }
