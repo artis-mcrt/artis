@@ -43,9 +43,7 @@ ifeq ($(OPENMP),ON)
 
   ifeq ($(COMPILER_IS_CLANG),TRUE)
     CXXFLAGS += -Xpreprocessor -fopenmp
-    ifeq ($(shell uname -s),Darwin)
-      LDFLAGS += -lomp
-    endif
+    LDFLAGS += -lomp
   else
     CXXFLAGS += -fopenmp
   endif
