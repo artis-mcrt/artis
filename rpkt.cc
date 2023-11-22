@@ -621,7 +621,7 @@ static void rpkt_event_boundbound(struct packet *pkt_ptr, const int mgi) {
 static auto sample_planck_times_expansion_opacity(const int modelgridindex) -> double
 // returns a randomly chosen frequency with a distribution of Planck function times the expansion opacity
 {
-  auto &kappa_planck_cumulative = grid::modelgrid[modelgridindex].expansionopacity_planck_cumulative;
+  const auto &kappa_planck_cumulative = grid::modelgrid[modelgridindex].expansionopacity_planck_cumulative;
   const auto rnd_integral = rng_uniform() * kappa_planck_cumulative[expopac_nbins - 1];
   auto *selected_partintegral =
       std::lower_bound(kappa_planck_cumulative, kappa_planck_cumulative + expopac_nbins, rnd_integral);
