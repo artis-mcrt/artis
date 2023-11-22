@@ -106,9 +106,12 @@ static auto printout(const char *format) -> int {
 }
 
 #ifdef _OPENMP
-#define safeadd(var, val) _Pragma("omp atomic update") var += val
+inline void safeadd(auto &var, auto val) {
+#pragma omp atomic update
+  var += val;
+}
 #else
-#define safeadd(var, val) var = (var) + val
+constexpr void safeadd(auto &var, auto val) { __atomic_fetch_add(&var, val, __ATOMIC_RELAXED); }
 #endif
 
 #define safeincrement(var) safeadd(var, 1)
