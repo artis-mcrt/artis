@@ -873,6 +873,19 @@ void emit_rpkt(struct packet *pkt_ptr) {
   // printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 }
 
+static auto get_ionchargesquaredens(const int modelgridindex) -> double {
+  double ionchargesquaredens = 0.;
+  const int nelements = get_nelements();
+  for (int element = 0; element < nelements; element++) {
+    for (int ion = 0; ion < get_nions(element); ion++) {
+      const double nnion = get_nnion(modelgridindex, element, ion);
+      const int ioncharge = get_ionstage(element, ion) - 1;
+      ionchargesquaredens += ioncharge * ioncharge * nnion;
+    }
+  }
+  return ionchargesquaredens;
+}
+
 static auto calculate_chi_freefree(const int modelgridindex, const double nu) -> double
 // calculate the free-free absorption coefficient [cm^-1]
 // = kappa(free-free) * nne
@@ -883,16 +896,8 @@ static auto calculate_chi_freefree(const int modelgridindex, const double nu) ->
   const auto nne = grid::get_nne(modelgridindex);
   const auto T_e = grid::get_Te(modelgridindex);
 
-  double chi_ff = 0.;
-  const int nelements = get_nelements();
-  for (int element = 0; element < nelements; element++) {
-    for (int ion = 0; ion < get_nions(element); ion++) {
-      const double nnion = get_nnion(modelgridindex, element, ion);
-      const int ioncharge = get_ionstage(element, ion) - 1;
-      chi_ff += ioncharge * ioncharge * g_ff * nnion;
-    }
-  }
-  chi_ff *= 3.69255e8 / sqrt(T_e) * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
+  const double chi_ff = get_ionchargesquaredens(modelgridindex) * g_ff * 3.69255e8 / sqrt(T_e) * pow(nu, -3) * nne *
+                        (1 - exp(-HOVERKB * nu / T_e));
 
   if (!std::isfinite(chi_ff)) {
     printout("ERRORL: chi_ff is non-infinite mgi %d nne %g nu %g T_e %g\n", modelgridindex, nne, nu, T_e);
@@ -1133,12 +1138,14 @@ void calculate_binned_opacities(const int modelgridindex) {
       lineindex++;
     }
 
-    const float bin_kappa_bb = 1. / (CLIGHT * t_mid * grid::get_rho(modelgridindex)) * bin_linesum;
+    const float bin_kappa_bb = 1. / (CLIGHT * t_mid * rho) * bin_linesum;
     assert_always(std::isfinite(bin_kappa_bb));
 
     expansionopacities[binindex] = bin_kappa_bb;
-    calculate_chi_rpkt_cont(bin_nu_mid, globals::chi_rpkt_cont[tid], modelgridindex, false);
-    const auto kappa_cont = globals::chi_rpkt_cont[tid].total / rho;
+
+    // calculate_chi_rpkt_cont(bin_nu_mid, globals::chi_rpkt_cont[tid], modelgridindex, false);
+    // const auto kappa_cont = globals::chi_rpkt_cont[tid].total / rho;
+    const double kappa_cont = 0.;
 
     const double bin_kappa = bin_kappa_bb + kappa_cont;
     const auto B_planck = radfield::dbb(bin_nu_mid, temperature, 1);
