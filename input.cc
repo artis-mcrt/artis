@@ -1200,7 +1200,7 @@ static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcont
 }
 
 static void setup_cellcache() {
-  constexpr int num_cellcache_slots = 1;
+  const int num_cellcache_slots = get_max_threads();
   globals::cellcache = static_cast<struct cellcache *>(malloc(num_cellcache_slots * sizeof(struct cellcache)));
   assert_always(globals::cellcache != nullptr);
 

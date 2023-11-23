@@ -873,14 +873,6 @@ void emit_rpkt(struct packet *pkt_ptr) {
   // printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 }
 
-static auto get_ionchargesquaredens(const int modelgridindex) -> double {
-  if (use_cellcache) {
-    assert_always(globals::cellcache[cellcacheslotid].ionchargesquaredens >= 0.);
-    return globals::cellcache[cellcacheslotid].ionchargesquaredens;
-  }
-  return grid::calculate_ionchargesquaredens(modelgridindex);
-}
-
 static auto calculate_chi_freefree(const int modelgridindex, const double nu) -> double
 // calculate the free-free absorption coefficient [cm^-1]
 // = kappa(free-free) * nne
@@ -891,8 +883,16 @@ static auto calculate_chi_freefree(const int modelgridindex, const double nu) ->
   const auto nne = grid::get_nne(modelgridindex);
   const auto T_e = grid::get_Te(modelgridindex);
 
-  const double chi_ff = get_ionchargesquaredens(modelgridindex) * g_ff * 3.69255e8 / sqrt(T_e) * pow(nu, -3) * nne *
-                        (1 - exp(-HOVERKB * nu / T_e));
+  double chi_ff = 0.;
+  const int nelements = get_nelements();
+  for (int element = 0; element < nelements; element++) {
+    for (int ion = 0; ion < get_nions(element); ion++) {
+      const double nnion = get_nnion(modelgridindex, element, ion);
+      const int ioncharge = get_ionstage(element, ion) - 1;
+      chi_ff += ioncharge * ioncharge * g_ff * nnion;
+    }
+  }
+  chi_ff *= 3.69255e8 / sqrt(T_e) * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
 
   if (!std::isfinite(chi_ff)) {
     printout("ERRORL: chi_ff is non-infinite mgi %d nne %g nu %g T_e %g\n", modelgridindex, nne, nu, T_e);
@@ -1105,7 +1105,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
 void calculate_binned_opacities(const int modelgridindex) {
   auto &expansionopacities = grid::modelgrid[modelgridindex].expansionopacities;
   auto &kappa_planck_cumulative = grid::modelgrid[modelgridindex].expansionopacity_planck_cumulative;
-  const auto rho = grid::get_rho(modelgridindex);
+
   const time_t sys_time_start_calc_kpkt_rates = time(nullptr);
   const auto temperature = grid::get_TR(modelgridindex);
 
@@ -1123,8 +1123,7 @@ void calculate_binned_opacities(const int modelgridindex) {
     double bin_linesum = 0.;
 
     const auto bin_nu_lower = get_expopac_bin_nu_lower(binindex);
-    const auto bin_nu_upper = get_expopac_bin_nu_upper(binindex);
-    const auto bin_nu_mid = (bin_nu_upper + bin_nu_lower) / 2.;
+    const auto bin_nu_mid = (get_expopac_bin_nu_upper(binindex) + bin_nu_lower) / 2.;
 
     while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= bin_nu_lower) {
       const float tau_line = get_tau_sobolev(modelgridindex, lineindex, t_mid);
@@ -1133,21 +1132,15 @@ void calculate_binned_opacities(const int modelgridindex) {
       lineindex++;
     }
 
-    const float bin_kappa_bb = 1. / (CLIGHT * t_mid * rho) * bin_linesum;
-    assert_always(std::isfinite(bin_kappa_bb));
+    const float bin_kappa = 1. / (CLIGHT * t_mid * grid::get_rho(modelgridindex)) * bin_linesum;
+    assert_always(std::isfinite(bin_kappa));
+    expansionopacities[binindex] = bin_kappa;
+    // printout("bin %d: lambda %g to %g kappa %g kappa_grey %g\n", wlbin, get_wavelengthbin_lambda_lower(wlbin),
+    //          get_wavelengthbin_lambda_upper(wlbin), bin_kappa, grid::modelgrid[modelgridindex].kappagrey);
 
-    expansionopacities[binindex] = bin_kappa_bb;
-
-    // calculate_chi_rpkt_cont(bin_nu_mid, globals::chi_rpkt_cont[tid], modelgridindex, false);
-    // const auto kappa_cont = globals::chi_rpkt_cont[tid].total / rho;
-    const double kappa_cont = 0.;
-
-    const double bin_kappa = bin_kappa_bb + kappa_cont;
-    const auto B_planck = radfield::dbb(bin_nu_mid, temperature, 1);
-    const auto bin_delta_nu = bin_nu_upper - bin_nu_lower;
-
+    const auto planck_val = radfield::dbb(bin_nu_mid, temperature, 1);
     kappa_planck_cumulative[binindex] =
-        ((binindex > 0) ? kappa_planck_cumulative[binindex - 1] : 0.) + bin_kappa * B_planck * bin_delta_nu;
+        ((binindex > 0) ? kappa_planck_cumulative[binindex - 1] : 0.) + bin_kappa * planck_val;
   }
 
   printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc_kpkt_rates);

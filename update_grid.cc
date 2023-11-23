@@ -688,10 +688,6 @@ void cellcache_change_cell(const int modelgridindex) {
 
   globals::cellcache[cellcacheslotid].cellnumber = modelgridindex;
 
-  if (modelgridindex >= 0) {
-    globals::cellcache[cellcacheslotid].ionchargesquaredens = grid::calculate_ionchargesquaredens(modelgridindex);
-  }
-
   //  int nlevels_with_processrates = 0;
   // const double T_e = modelgridindex >= 0 ? grid ::get_Te(modelgridindex) : 0.;
   const int nelements = get_nelements();

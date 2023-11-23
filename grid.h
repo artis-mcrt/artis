@@ -148,19 +148,6 @@ void change_cell(struct packet *pkt_ptr, int snext);
   return modelgrid[modelgridindex].composition[element].abundance;
 }
 
-inline auto calculate_ionchargesquaredens(const int modelgridindex) -> double {
-  double ionchargesquaredens = 0.;
-  const int nelements = get_nelements();
-  for (int element = 0; element < nelements; element++) {
-    for (int ion = 0; ion < get_nions(element); ion++) {
-      const double nnion = get_nnion(modelgridindex, element, ion);
-      const int ioncharge = get_ionstage(element, ion) - 1;
-      ionchargesquaredens += ioncharge * ioncharge * nnion;
-    }
-  }
-  return ionchargesquaredens;
-}
-
 }  // namespace grid
 
 #endif  // GRIDINIT_H
