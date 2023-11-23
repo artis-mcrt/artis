@@ -1036,7 +1036,7 @@ static void read_atomicdata_files() {
 
   time_t const time_start_establish_linelist_connections = time(nullptr);
 #ifdef OPENMP_MT_ON
-#pragma omp loop
+#pragma omp parallel for schedule(dynamic)
 #endif
   for (lineindex = 0; lineindex < globals::nlines; lineindex++) {
     const auto &line = globals::linelist[lineindex];
