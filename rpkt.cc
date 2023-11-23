@@ -1132,15 +1132,18 @@ void calculate_binned_opacities(const int modelgridindex) {
       lineindex++;
     }
 
-    const float bin_kappa = 1. / (CLIGHT * t_mid * grid::get_rho(modelgridindex)) * bin_linesum;
-    assert_always(std::isfinite(bin_kappa));
-    expansionopacities[binindex] = bin_kappa;
+    const float bin_kappa_bb = 1. / (CLIGHT * t_mid * grid::get_rho(modelgridindex)) * bin_linesum;
+    assert_always(std::isfinite(bin_kappa_bb));
+    expansionopacities[binindex] = bin_kappa_bb;
     // printout("bin %d: lambda %g to %g kappa %g kappa_grey %g\n", wlbin, get_wavelengthbin_lambda_lower(wlbin),
     //          get_wavelengthbin_lambda_upper(wlbin), bin_kappa, grid::modelgrid[modelgridindex].kappagrey);
 
+    // calculate_chi_rpkt_cont(bin_nu_mid, globals::chi_rpkt_cont[tid], modelgridindex, false);
+    // const auto bin_kappa_cont = globals::chi_rpkt_cont[tid].total / rho;
+
     const auto planck_val = radfield::dbb(bin_nu_mid, temperature, 1);
     kappa_planck_cumulative[binindex] =
-        ((binindex > 0) ? kappa_planck_cumulative[binindex - 1] : 0.) + bin_kappa * planck_val;
+        ((binindex > 0) ? kappa_planck_cumulative[binindex - 1] : 0.) + bin_kappa_bb * planck_val;
   }
 
   printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc_kpkt_rates);
