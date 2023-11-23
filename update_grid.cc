@@ -694,7 +694,9 @@ void cellcache_change_cell(const int modelgridindex) {
   for (int element = 0; element < nelements; element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      globals::cellcache[tid].cooling_contrib[kpkt::get_coolinglistoffset(element, ion)] = COOLING_UNDEFINED;
+      globals::cellcache[tid]
+          .cooling_contrib[kpkt::get_coolinglistoffset(element, ion) + kpkt::get_ncoolingterms_ion(element, ion) - 1] =
+          COOLING_UNDEFINED;
 
       if (modelgridindex >= 0) {
         const int nlevels = get_nlevels(element, ion);

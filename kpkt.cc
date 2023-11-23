@@ -39,10 +39,6 @@ struct cellcachecoolinglist {
 
 static struct cellcachecoolinglist *coolinglist;
 
-static auto get_ncoolingterms_ion(int element, int ion) -> int {
-  return globals::elements[element].ions[ion].ncoolingterms;
-}
-
 template <bool update_cooling_contrib_list>
 static auto calculate_cooling_rates_ion(const int modelgridindex, const int element, const int ion,
                                         const int indexionstart, const int tid, double *C_ff, double *C_fb,
@@ -471,7 +467,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
   const int ilow = get_coolinglistoffset(element, ion);
   const int ihigh = ilow + get_ncoolingterms_ion(element, ion) - 1;
 
-  if (globals::cellcache[tid].cooling_contrib[ilow] < 0.) {
+  if (globals::cellcache[tid].cooling_contrib[ihigh] < 0.) {
     // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d
     // oldcoolingsum %g\n",
     //          modelgridindex, element, ion, ilow, high, oldcoolingsum);

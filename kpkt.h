@@ -14,8 +14,12 @@ void calculate_cooling_rates(int modelgridindex, struct heatingcoolingrates *hea
 void do_kpkt_blackbody(struct packet *pkt_ptr);
 void do_kpkt(struct packet *pkt_ptr, double t2, int nts);
 
-[[nodiscard]] static inline auto get_coolinglistoffset(int element, int ion) -> int {
+[[nodiscard]] inline auto get_coolinglistoffset(int element, int ion) -> int {
   return globals::elements[element].ions[ion].coolingoffset;
+}
+
+[[nodiscard]] inline auto get_ncoolingterms_ion(int element, int ion) -> int {
+  return globals::elements[element].ions[ion].ncoolingterms;
 }
 
 }  // namespace kpkt
