@@ -9,7 +9,6 @@
 #include "atomic.h"
 #include "constants.h"
 #include "globals.h"
-#include "ltepop.h"
 #include "packet.h"
 #include "sn3d.h"
 #include "vectors.h"

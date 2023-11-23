@@ -266,7 +266,7 @@ static void do_cell_packet_updates(std::span<packet> packets, const int nts, con
     }
   };
 #ifdef OPENMP_MT_ON
-#pragma omp parallel for schedule(dynamic)
+#pragma omp for schedule(dynamic)
   for (auto &pkt : packets) {
     update_packet(pkt);
   }
@@ -314,7 +314,7 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
       if ((pkt.type != TYPE_ESCAPE && pkt.prop_time < ts_end)) {
         const int mgi = grid::get_cell_modelgridindex(pkt.where);
         const bool cellcache_change_cell_required =
-            (mgi != grid::get_npts_model() && globals::cellcache[cellcacheslotid].cellnumber != mgi &&
+            (mgi != grid::get_npts_model() && globals::cellcache[tid].cellnumber != mgi &&
              grid::modelgrid[mgi].thick != 1);
 
         if (cellcache_change_cell_required) {

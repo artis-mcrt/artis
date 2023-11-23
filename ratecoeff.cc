@@ -1167,7 +1167,7 @@ auto get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetin
   double stimrecombcoeff = -1.;
 #if (SEPARATE_STIMRECOMB)
   if (use_cellcache) {
-    stimrecombcoeff = globals::cellcache[cellcacheslotid]
+    stimrecombcoeff = globals::cellcache[tid]
                           .chelements[element]
                           .chions[lowerion]
                           .chlevels[level]
@@ -1181,7 +1181,7 @@ auto get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetin
 
 #if (SEPARATE_STIMRECOMB)
     if (use_cellcache) {
-      globals::cellcache[cellcacheslotid]
+      globals::cellcache[tid]
           .chelements[element]
           .chions[lowerion]
           .chlevels[level]
@@ -1316,7 +1316,7 @@ auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex
   }
 
   if (use_cellcache) {
-    gammacorr = globals::cellcache[cellcacheslotid]
+    gammacorr = globals::cellcache[tid]
                     .chelements[element]
                     .chions[ion]
                     .chlevels[level]
@@ -1342,7 +1342,7 @@ auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex
       }
     }
     if (use_cellcache) {
-      globals::cellcache[cellcacheslotid]
+      globals::cellcache[tid]
           .chelements[element]
           .chions[ion]
           .chlevels[level]
@@ -1529,7 +1529,7 @@ auto calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, co
           // use the cellcache but not the detailed bf estimators
           gamma_coeff_integral +=
               calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, modelgridindex);
-          // double gamma_coeff_integral_level_ch = globals::cellcache[cellcacheslotid]
+          // double gamma_coeff_integral_level_ch = globals::cellcache[tid]
           //                                            .chelements[element]
           //                                            .chions[lowerion]
           //                                            .chlevels[lower]

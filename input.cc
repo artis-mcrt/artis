@@ -1213,16 +1213,14 @@ static void setup_cellcache() {
 
     printout("[info] input: initializing cellcache for thread %d ...\n", tid);
 
-    globals::cellcache[cellcacheslotid].cellnumber = -99;
+    globals::cellcache[tid].cellnumber = -99;
 
     mem_usage_cellcache += globals::ncoolingterms * sizeof(double);
-    globals::cellcache[cellcacheslotid].cooling_contrib =
-        static_cast<double *>(calloc(globals::ncoolingterms, sizeof(double)));
+    globals::cellcache[tid].cooling_contrib = static_cast<double *>(calloc(globals::ncoolingterms, sizeof(double)));
 
     for (int element = 0; element < get_nelements(); element++) {
       for (int ion = 0; ion < get_nions(element); ion++) {
-        globals::cellcache[cellcacheslotid].cooling_contrib[kpkt::get_coolinglistoffset(element, ion)] =
-            COOLING_UNDEFINED;
+        globals::cellcache[tid].cooling_contrib[kpkt::get_coolinglistoffset(element, ion)] = COOLING_UNDEFINED;
       }
     }
 
@@ -1230,10 +1228,10 @@ static void setup_cellcache() {
              globals::ncoolingterms * sizeof(double) / 1024. / 1024.);
 
     mem_usage_cellcache += get_nelements() * sizeof(struct chelements);
-    globals::cellcache[cellcacheslotid].chelements =
+    globals::cellcache[tid].chelements =
         static_cast<struct chelements *>(malloc(get_nelements() * sizeof(struct chelements)));
 
-    assert_always(globals::cellcache[cellcacheslotid].chelements != nullptr);
+    assert_always(globals::cellcache[tid].chelements != nullptr);
 
     size_t chlevelblocksize = 0;
     size_t chphixsblocksize = 0;
@@ -1255,7 +1253,7 @@ static void setup_cellcache() {
       }
     }
     assert_always(chlevelblocksize > 0);
-    globals::cellcache[cellcacheslotid].ch_all_levels = static_cast<struct chlevels *>(malloc(chlevelblocksize));
+    globals::cellcache[tid].ch_all_levels = static_cast<struct chlevels *>(malloc(chlevelblocksize));
     chphixstargetsblock = chphixsblocksize > 0 ? static_cast<chphixstargets_t *>(malloc(chphixsblocksize)) : nullptr;
     mem_usage_cellcache += chlevelblocksize + chphixsblocksize;
 
@@ -1269,29 +1267,27 @@ static void setup_cellcache() {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       mem_usage_cellcache += nions * sizeof(struct chions);
-      globals::cellcache[cellcacheslotid].chelements[element].chions =
+      globals::cellcache[tid].chelements[element].chions =
           static_cast<struct chions *>(malloc(nions * sizeof(struct chions)));
-      assert_always(globals::cellcache[cellcacheslotid].chelements[element].chions != nullptr);
+      assert_always(globals::cellcache[tid].chelements[element].chions != nullptr);
 
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
-        globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels =
-            &globals::cellcache[cellcacheslotid].ch_all_levels[alllevelindex];
+        globals::cellcache[tid].chelements[element].chions[ion].chlevels =
+            &globals::cellcache[tid].ch_all_levels[alllevelindex];
 
         assert_always(alllevelindex == get_uniquelevelindex(element, ion, 0));
         alllevelindex += nlevels;
 
         for (int level = 0; level < nlevels; level++) {
-          struct chlevels *chlevel =
-              &globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level];
+          struct chlevels *chlevel = &globals::cellcache[tid].chelements[element].chions[ion].chlevels[level];
           const int nphixstargets = get_nphixstargets(element, ion, level);
           chlevel->chphixstargets = chphixsblocksize > 0 ? &chphixstargetsblock[allphixstargetindex] : nullptr;
           allphixstargetindex += nphixstargets;
         }
 
         for (int level = 0; level < nlevels; level++) {
-          struct chlevels *chlevel =
-              &globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level];
+          struct chlevels *chlevel = &globals::cellcache[tid].chelements[element].chions[ion].chlevels[level];
           const int ndowntrans = get_ndowntrans(element, ion, level);
 
           chlevel->sum_epstrans_rad_deexc = &chtransblock[chtransindex];
@@ -1299,16 +1295,14 @@ static void setup_cellcache() {
         }
 
         for (int level = 0; level < nlevels; level++) {
-          struct chlevels *chlevel =
-              &globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level];
+          struct chlevels *chlevel = &globals::cellcache[tid].chelements[element].chions[ion].chlevels[level];
           const int ndowntrans = get_ndowntrans(element, ion, level);
           chlevel->sum_internal_down_same = &chtransblock[chtransindex];
           chtransindex += ndowntrans;
         }
 
         for (int level = 0; level < nlevels; level++) {
-          struct chlevels *chlevel =
-              &globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level];
+          struct chlevels *chlevel = &globals::cellcache[tid].chelements[element].chions[ion].chlevels[level];
           const int nuptrans = get_nuptrans(element, ion, level);
           chlevel->sum_internal_up_same = &chtransblock[chtransindex];
           chtransindex += nuptrans;
@@ -1318,7 +1312,7 @@ static void setup_cellcache() {
     assert_always(chtransindex == chtransblocksize);
 
     assert_always(globals::nbfcontinua >= 0);
-    globals::cellcache[cellcacheslotid].ch_allcont_departureratios =
+    globals::cellcache[tid].ch_allcont_departureratios =
         static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
     mem_usage_cellcache += globals::nbfcontinua * sizeof(double);
 
