@@ -7,6 +7,21 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#ifdef STDPAR_ON
+#include <execution>
+// #ifndef __cpp_lib_execution
+// #include <oneapi/dpl/algorithm>
+// #include <oneapi/dpl/execution>
+// #endif
+
+#ifndef __cpp_lib_execution
+#error stdlib no execution policy support. Compile with gcc and make sure Intel TBB is installed
+#endif
+#define EXEC_PAR_UNSEQ std::execution::par_unseq,
+#else
+#define EXEC_PAR_UNSEQ
+#endif
+
 #include <cassert>
 #include <csignal>
 #include <cstdio>

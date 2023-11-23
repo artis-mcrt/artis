@@ -959,7 +959,7 @@ static void read_atomicdata_files() {
 
   if (globals::rank_in_node == 0) {
     // sort the lineline in descending frequency
-    std::sort(temp_linelist.begin(), temp_linelist.end(),
+    std::sort(EXEC_PAR_UNSEQ temp_linelist.begin(), temp_linelist.end(),
               [](const auto &a, const auto &b) { return static_cast<bool>(a.nu > b.nu); });
 
     for (int i = 0; i < globals::nlines - 1; i++) {
@@ -1035,6 +1035,9 @@ static void read_atomicdata_files() {
   printout("establishing connection between transitions and sorted linelist...\n");
 
   time_t const time_start_establish_linelist_connections = time(nullptr);
+#ifdef OPENMP_MT_ON
+#pragma omp loop
+#endif
   for (lineindex = 0; lineindex < globals::nlines; lineindex++) {
     const auto &line = globals::linelist[lineindex];
     const int element = line.elementindex;

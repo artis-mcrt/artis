@@ -254,7 +254,10 @@ static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, cons
 }
 
 static void do_cell_packet_updates(std::span<packet> packets, const int nts, const double ts_end) {
-  std::ranges::for_each(packets, [ts_end, nts](auto &pkt) {
+#ifdef OPENMP_MT_ON
+#pragma omp loop
+#endif
+  std::for_each(EXEC_PAR_UNSEQ packets.begin(), packets.end(), [ts_end, nts](auto &pkt) {
     const int mgi = grid::get_cell_modelgridindex(pkt.where);
     int newmgi = mgi;
     while (pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE) {
@@ -291,7 +294,7 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
 
     // printout("sorting packets...");
 
-    std::sort(std::begin(packets), std::end(packets), std_compare_packets_bymodelgriddensity);
+    std::sort(EXEC_PAR_UNSEQ std::begin(packets), std::end(packets), std_compare_packets_bymodelgriddensity);
 
     // printout("took %lds\n", time(nullptr) - sys_time_start_pass);
 

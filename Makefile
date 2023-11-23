@@ -53,6 +53,25 @@ else
   $(error bad value for openmp option. Should be ON or OFF)
 endif
 
+ifeq ($(STDPAR),ON)
+  ifeq ($(OPENMP),ON)
+    $(error cannot combine OPENMP and STDPAR)
+  endif
+
+  CXXFLAGS += -DSTDPAR_ON=true
+  BUILD_DIR := $(BUILD_DIR)_stdpar
+
+  ifeq ($(COMPILER_IS_CLANG),TRUE)
+  else
+    # CXXFLAGS += -Xlinker -debug_snapshot
+    LDFLAGS += -ltbb
+  endif
+else ifeq ($(STDPAR),OFF)
+else ifeq ($(STDPAR),)
+else
+  $(error bad value for STDPAR option. Should be ON or OFF)
+endif
+
 
 ifeq ($(shell uname -s),Darwin)
 # 	macOS
