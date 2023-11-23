@@ -76,8 +76,11 @@ endif
 ifeq ($(shell uname -s),Darwin)
 # 	macOS
 
-#   fixes linking on macOS with gcc
-	LDFLAGS += -Wl,-ld_classic
+    ifeq ($(COMPILER_IS_CLANG),FALSE)
+    #   fixes linking on macOS with gcc
+	  LDFLAGS += -Wl,-ld_classic
+    endif
+
 	ifeq ($(shell uname -m),arm64)
 #	 	On Arm, -mcpu combines -march and -mtune
 		CXXFLAGS += -mcpu=native
