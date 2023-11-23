@@ -82,7 +82,7 @@ static constexpr auto get_expopac_bin_nu_lower(const size_t binindex) -> double 
 static auto get_event_expansion_opacity(const int modelgridindex, struct packet *pkt_ptr,
                                         struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const double tau_rnd,
                                         const double abort_dist) -> std::tuple<double, bool> {
-  calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, modelgridindex, true);
+  // calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, modelgridindex, true);
   const auto doppler = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
 
   const auto nu_cmf_abort = get_nu_cmf_abort(pkt_ptr, abort_dist);
@@ -99,7 +99,8 @@ static auto get_event_expansion_opacity(const int modelgridindex, struct packet 
     const auto next_bin_edge_nu = (binindex < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex);
     const auto binedgedist = get_linedistance(dummypkt.prop_time, dummypkt.nu_cmf, next_bin_edge_nu, d_nu_on_d_l);
 
-    const double chi_cont = chi_rpkt_cont.total * doppler;
+    // const double chi_cont = chi_rpkt_cont.total * doppler;
+    const auto chi_cont = 0.;
     double chi_bb_expansionopac = 0.;
     if (binindex >= 0) {
       const auto kappa = grid::modelgrid[modelgridindex].expansionopacities[binindex];
@@ -574,7 +575,7 @@ static void rpkt_event_boundbound(struct packet *pkt_ptr, const int mgi) {
   }
 }
 
-static auto sample_planck_times_expansion_opacity(const int modelgridindex) -> double
+auto sample_planck_times_expansion_opacity(const int modelgridindex) -> double
 // returns a randomly chosen frequency with a distribution of Planck function times the expansion opacity
 {
   const auto &kappa_planck_cumulative = grid::modelgrid[modelgridindex].expansionopacity_planck_cumulative;
@@ -667,7 +668,8 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   }
 }
 
-static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
+static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const double t2)
+    -> bool
 // Routine for moving an r-packet. Similar to do_gamma in objective.
 // return value - true if no mgi change, no pkttype change and not reached end of timestep, false otherwise
 {
@@ -761,10 +763,10 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     pkt_ptr->next_trans = -1;
   } else if (USE_BINNED_EXPANSIONOPACITIES) {
     std::tie(edist, event_is_boundbound) =
-        get_event_expansion_opacity(mgi, pkt_ptr, globals::chi_rpkt_cont[tid], tau_next, abort_dist);
+        get_event_expansion_opacity(mgi, pkt_ptr, chi_rpkt_cont, tau_next, abort_dist);
     pkt_ptr->next_trans = -1;
   } else {
-    std::tie(edist, event_is_boundbound) = get_event(mgi, pkt_ptr, globals::chi_rpkt_cont[tid], tau_next, abort_dist);
+    std::tie(edist, event_is_boundbound) = get_event(mgi, pkt_ptr, chi_rpkt_cont, tau_next, abort_dist);
   }
   assert_always(edist >= 0);
 
@@ -825,8 +827,8 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   std::abort();
 }
 
-void do_rpkt(struct packet *pkt_ptr, const double t2) {
-  while (do_rpkt_step(pkt_ptr, t2)) {
+void do_rpkt(struct packet *pkt_ptr, const double t2, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont) {
+  while (do_rpkt_step(pkt_ptr, chi_rpkt_cont, t2)) {
     ;
   }
 }
@@ -1103,11 +1105,11 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
 }
 
 void calculate_binned_opacities(const int modelgridindex) {
-  auto &expansionopacities = grid::modelgrid[modelgridindex].expansionopacities;
+  auto &kappa_bb_bins = grid::modelgrid[modelgridindex].expansionopacities;
   auto &kappa_planck_cumulative = grid::modelgrid[modelgridindex].expansionopacity_planck_cumulative;
   const auto rho = grid::get_rho(modelgridindex);
 
-  const time_t sys_time_start_calc_kpkt_rates = time(nullptr);
+  const time_t sys_time_start_calc = time(nullptr);
   const auto temperature = grid::get_TR(modelgridindex);
 
   printout("calculating binned expansion opacities for cell %d...", modelgridindex);
@@ -1123,10 +1125,14 @@ void calculate_binned_opacities(const int modelgridindex) {
   for (size_t binindex = 0; binindex < expopac_nbins; binindex++) {
     double bin_linesum = 0.;
 
-    const auto bin_nu_lower = get_expopac_bin_nu_lower(binindex);
-    const auto bin_nu_mid = (get_expopac_bin_nu_upper(binindex) + bin_nu_lower) / 2.;
+    const auto nu_upper = get_expopac_bin_nu_upper(binindex);
 
-    while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= bin_nu_lower) {
+    const auto nu_lower = get_expopac_bin_nu_lower(binindex);
+    const auto nu_mid = (nu_upper + nu_lower) / 2.;
+
+    const auto delta_nu = nu_upper - nu_lower;
+
+    while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= nu_lower) {
       const float tau_line = get_tau_sobolev(modelgridindex, lineindex, t_mid);
       const auto linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
       bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
@@ -1135,17 +1141,19 @@ void calculate_binned_opacities(const int modelgridindex) {
 
     const float bin_kappa_bb = 1. / (CLIGHT * t_mid * rho) * bin_linesum;
     assert_always(std::isfinite(bin_kappa_bb));
-    expansionopacities[binindex] = bin_kappa_bb;
-    // printout("bin %d: lambda %g to %g kappa %g kappa_grey %g\n", wlbin, get_wavelengthbin_lambda_lower(wlbin),
-    //          get_wavelengthbin_lambda_upper(wlbin), bin_kappa, grid::modelgrid[modelgridindex].kappagrey);
+    kappa_bb_bins[binindex] = bin_kappa_bb;
 
-    calculate_chi_rpkt_cont(bin_nu_mid, globals::chi_rpkt_cont[tid], modelgridindex, false);
-    const auto bin_kappa_cont = globals::chi_rpkt_cont[tid].total / rho;
+    // calculate_chi_rpkt_cont(nu_mid, globals::chi_rpkt_cont[tid], modelgridindex, false);
+    // const auto bin_kappa_cont = globals::chi_rpkt_cont[tid].total / rho;
+    const auto bin_kappa_cont = 0.;
 
-    const auto planck_val = radfield::dbb(bin_nu_mid, temperature, 1);
-    kappa_planck_cumulative[binindex] =
-        ((binindex > 0) ? kappa_planck_cumulative[binindex - 1] : 0.) + (bin_kappa_bb + bin_kappa_cont) * planck_val;
+    const auto planck_val = radfield::dbb(nu_mid, temperature, 1);
+    kappa_planck_cumulative[binindex] = ((binindex > 0) ? kappa_planck_cumulative[binindex - 1] : 0.) +
+                                        (bin_kappa_bb + bin_kappa_cont) * planck_val * delta_nu;
+
+    // printout("bin %d: lambda %g to %g kappabb %g kappa_cont %g kappa_grey %g kappa_planck_cumulative %g\n", binindex,
+    //          1e8 / CLIGHT * nu_upper, 1e8 * CLIGHT / nu_lower, bin_kappa_bb, bin_kappa_cont,
+    //          grid::modelgrid[modelgridindex].kappagrey, kappa_planck_cumulative[binindex]);
   }
-
-  printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc_kpkt_rates);
+  printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc);
 }

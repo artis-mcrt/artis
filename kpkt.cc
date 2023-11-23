@@ -378,9 +378,13 @@ void do_kpkt_blackbody(struct packet *pkt_ptr)
 {
   const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
 
-  pkt_ptr->nu_cmf = sample_planck_montecarlo(grid::get_Te(modelgridindex));
-  // TODO: is this alternative method faster or more accurate or neither?
-  // pkt_ptr->nu_cmf = sample_planck_analytic(grid::get_Te(modelgridindex));
+  if (USE_BINNED_EXPANSIONOPACITIES && grid::modelgrid[modelgridindex].thick != 1) {
+    pkt_ptr->nu_cmf = sample_planck_times_expansion_opacity(modelgridindex);
+  } else {
+    pkt_ptr->nu_cmf = sample_planck_montecarlo(grid::get_Te(modelgridindex));
+    // TODO: is this alternative method faster or more accurate or neither?
+    // pkt_ptr->nu_cmf = sample_planck_analytic(grid::get_Te(modelgridindex));
+  }
 
   assert_always(std::isfinite(pkt_ptr->nu_cmf));
   /// and then emit the packet randomly in the comoving frame

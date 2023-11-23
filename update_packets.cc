@@ -169,7 +169,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
     }
 
     case TYPE_RPKT: {
-      do_rpkt(pkt_ptr, t2);
+      do_rpkt(pkt_ptr, t2, globals::chi_rpkt_cont[tid]);
 
       if (pkt_ptr->type == TYPE_ESCAPE) {
         safeadd(globals::timesteps[nts].cmf_lum, pkt_ptr->e_cmf);
@@ -193,7 +193,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
     }
 
     case TYPE_KPKT: {
-      if (grid::modelgrid[grid::get_cell_modelgridindex(pkt_ptr->where)].thick == 1) {
+      if (grid::modelgrid[grid::get_cell_modelgridindex(pkt_ptr->where)].thick == 1 || USE_BINNED_EXPANSIONOPACITIES) {
         kpkt::do_kpkt_blackbody(pkt_ptr);
       } else {
         kpkt::do_kpkt(pkt_ptr, t2, nts);
