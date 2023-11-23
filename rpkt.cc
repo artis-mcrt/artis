@@ -21,62 +21,6 @@
 #include "vectors.h"
 #include "vpkt.h"
 
-// wavelength bins are ordered by ascending wavelength (descending frequency)
-
-static constexpr auto get_expopac_bin_nu_upper(const size_t binindex) -> double {
-  const auto lambda_lower = expopac_lambdamin + binindex * expopac_deltalambda;
-  return 1e8 * CLIGHT / lambda_lower;
-}
-
-static constexpr auto get_expopac_bin_nu_lower(const size_t binindex) -> double {
-  const auto lambda_upper = expopac_lambdamin + (binindex + 1) * expopac_deltalambda;
-  return 1e8 * CLIGHT / lambda_upper;
-}
-
-void calculate_binned_opacities(const int modelgridindex) {
-  auto &expansionopacities = grid::modelgrid[modelgridindex].expansionopacities;
-  auto &kappa_planck_cumulative = grid::modelgrid[modelgridindex].expansionopacity_planck_cumulative;
-
-  const time_t sys_time_start_calc_kpkt_rates = time(nullptr);
-  const auto temperature = grid::get_TR(modelgridindex);
-
-  printout("calculating binned expansion opacities for cell %d...", modelgridindex);
-
-  const auto t_mid = globals::timesteps[globals::timestep].mid;
-
-  // find the first line with nu below the upper limit of the first bin
-  const auto *matchline =
-      std::lower_bound(&globals::linelist[0], &globals::linelist[globals::nlines], get_expopac_bin_nu_upper(0),
-                       [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; });
-  int lineindex = std::distance(globals::linelist, matchline);
-
-  for (size_t binindex = 0; binindex < expopac_nbins; binindex++) {
-    double bin_linesum = 0.;
-
-    const auto bin_nu_lower = get_expopac_bin_nu_lower(binindex);
-    const auto bin_nu_mid = (get_expopac_bin_nu_upper(binindex) + bin_nu_lower) / 2.;
-
-    while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= bin_nu_lower) {
-      const float tau_line = get_tau_sobolev(modelgridindex, lineindex, t_mid);
-      const auto linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
-      bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
-      lineindex++;
-    }
-
-    const float bin_kappa = 1. / (CLIGHT * t_mid * grid::get_rho(modelgridindex)) * bin_linesum;
-    assert_always(std::isfinite(bin_kappa));
-    expansionopacities[binindex] = bin_kappa;
-    // printout("bin %d: lambda %g to %g kappa %g kappa_grey %g\n", wlbin, get_wavelengthbin_lambda_lower(wlbin),
-    //          get_wavelengthbin_lambda_upper(wlbin), bin_kappa, grid::modelgrid[modelgridindex].kappagrey);
-
-    const auto planck_val = radfield::dbb(bin_nu_mid, temperature, 1);
-    kappa_planck_cumulative[binindex] =
-        ((binindex > 0) ? kappa_planck_cumulative[binindex - 1] : 0.) + bin_kappa * planck_val;
-  }
-
-  printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc_kpkt_rates);
-}
-
 auto closest_transition(const double nu_cmf, const int next_trans) -> int
 /// for the propagation through non empty cells
 // find the next transition lineindex redder than nu_cmf
@@ -121,6 +65,18 @@ static auto get_nu_cmf_abort(struct packet *pkt_ptr, const double abort_dist) ->
   // for USE_RELATIVISTIC_DOPPLER_SHIFT, we will use a linear approximation for
   // the frequency change from start to abort (cell boundary/timestep end)
   return nu_cmf_abort;
+}
+
+// wavelength bins are ordered by ascending wavelength (descending frequency)
+
+static constexpr auto get_expopac_bin_nu_upper(const size_t binindex) -> double {
+  const auto lambda_lower = expopac_lambdamin + binindex * expopac_deltalambda;
+  return 1e8 * CLIGHT / lambda_lower;
+}
+
+static constexpr auto get_expopac_bin_nu_lower(const size_t binindex) -> double {
+  const auto lambda_upper = expopac_lambdamin + (binindex + 1) * expopac_deltalambda;
+  return 1e8 * CLIGHT / lambda_upper;
 }
 
 static auto get_event_expansion_opacity(const int modelgridindex, struct packet *pkt_ptr,
@@ -1144,4 +1100,50 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
       std::abort();
     }
   }
+}
+
+void calculate_binned_opacities(const int modelgridindex) {
+  auto &expansionopacities = grid::modelgrid[modelgridindex].expansionopacities;
+  auto &kappa_planck_cumulative = grid::modelgrid[modelgridindex].expansionopacity_planck_cumulative;
+
+  const time_t sys_time_start_calc_kpkt_rates = time(nullptr);
+  const auto temperature = grid::get_TR(modelgridindex);
+
+  printout("calculating binned expansion opacities for cell %d...", modelgridindex);
+
+  const auto t_mid = globals::timesteps[globals::timestep].mid;
+
+  // find the first line with nu below the upper limit of the first bin
+  const auto *matchline =
+      std::lower_bound(&globals::linelist[0], &globals::linelist[globals::nlines], get_expopac_bin_nu_upper(0),
+                       [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; });
+  int lineindex = std::distance(globals::linelist, matchline);
+
+  for (size_t binindex = 0; binindex < expopac_nbins; binindex++) {
+    double bin_linesum = 0.;
+
+    const auto bin_nu_lower = get_expopac_bin_nu_lower(binindex);
+    const auto bin_nu_upper = get_expopac_bin_nu_upper(binindex);
+    const auto bin_nu_mid = (bin_nu_upper + bin_nu_lower) / 2.;
+
+    while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= bin_nu_lower) {
+      const float tau_line = get_tau_sobolev(modelgridindex, lineindex, t_mid);
+      const auto linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
+      bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
+      lineindex++;
+    }
+
+    const float bin_kappa_bb = 1. / (CLIGHT * t_mid * grid::get_rho(modelgridindex)) * bin_linesum;
+    assert_always(std::isfinite(bin_kappa_bb));
+    expansionopacities[binindex] = bin_kappa_bb;
+    calculate_chi_rpkt_cont(bin_nu_mid, globals::chi_rpkt_cont[tid], modelgridindex, false);
+    const double bin_kappa = bin_kappa_bb + globals::chi_rpkt_cont[tid].total;
+    const auto B_planck = radfield::dbb(bin_nu_mid, temperature, 1);
+    const auto bin_delta_nu = bin_nu_upper - bin_nu_lower;
+
+    kappa_planck_cumulative[binindex] =
+        ((binindex > 0) ? kappa_planck_cumulative[binindex - 1] : 0.) + bin_kappa * B_planck * bin_delta_nu;
+  }
+
+  printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc_kpkt_rates);
 }
