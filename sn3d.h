@@ -35,7 +35,6 @@
 #include "atomic.h"
 #include "globals.h"
 
-// #define OPENMP_MT_ON
 #ifdef OPENMP_MT_ON
 #include <omp.h>
 #endif
@@ -225,7 +224,7 @@ inline auto rng_uniform_pos() -> float {
   return zrand;
 }
 
-inline void rng_init(const uint_fast64_t zseed) {
+inline void rng_init(const uint64_t zseed) {
   printout("rng is a std::mt19937 generator\n");
   stdrng.seed(zseed);
 }

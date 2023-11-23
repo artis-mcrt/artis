@@ -1105,7 +1105,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
 void calculate_binned_opacities(const int modelgridindex) {
   auto &expansionopacities = grid::modelgrid[modelgridindex].expansionopacities;
   auto &kappa_planck_cumulative = grid::modelgrid[modelgridindex].expansionopacity_planck_cumulative;
-
+  const auto rho = grid::get_rho(modelgridindex);
   const time_t sys_time_start_calc_kpkt_rates = time(nullptr);
   const auto temperature = grid::get_TR(modelgridindex);
 
@@ -1135,9 +1135,12 @@ void calculate_binned_opacities(const int modelgridindex) {
 
     const float bin_kappa_bb = 1. / (CLIGHT * t_mid * grid::get_rho(modelgridindex)) * bin_linesum;
     assert_always(std::isfinite(bin_kappa_bb));
+
     expansionopacities[binindex] = bin_kappa_bb;
     calculate_chi_rpkt_cont(bin_nu_mid, globals::chi_rpkt_cont[tid], modelgridindex, false);
-    const double bin_kappa = bin_kappa_bb + globals::chi_rpkt_cont[tid].total;
+    const auto kappa_cont = globals::chi_rpkt_cont[tid].total / rho;
+
+    const double bin_kappa = bin_kappa_bb + kappa_cont;
     const auto B_planck = radfield::dbb(bin_nu_mid, temperature, 1);
     const auto bin_delta_nu = bin_nu_upper - bin_nu_lower;
 

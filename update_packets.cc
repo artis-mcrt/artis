@@ -254,10 +254,7 @@ static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, cons
 }
 
 static void do_cell_packet_updates(std::span<packet> packets, const int nts, const double ts_end) {
-#ifdef OPENMP_MT_ON
-#pragma omp loop
-#endif
-  std::for_each(EXEC_PAR_UNSEQ packets.begin(), packets.end(), [ts_end, nts](auto &pkt) {
+  auto update_packet = [ts_end, nts](auto &pkt) {
     const int mgi = grid::get_cell_modelgridindex(pkt.where);
     int newmgi = mgi;
     while (pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE) {
@@ -267,7 +264,15 @@ static void do_cell_packet_updates(std::span<packet> packets, const int nts, con
         break;
       }
     }
-  });
+  };
+#ifdef OPENMP_MT_ON
+#pragma omp for schedule(dynamic)
+  for (auto &pkt : packets) {
+    update_packet(pkt);
+  }
+#else
+  std::for_each(EXEC_PAR_UNSEQ packets.begin(), packets.end(), update_packet);
+#endif
 }
 
 void update_packets(const int my_rank, const int nts, std::span<struct packet> packets)
@@ -305,9 +310,6 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
     const int updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
     auto *packetgroupstart = packets.data();
 
-#ifdef OPENMP_MT_ON
-#pragma omp parallel for schedule(dynamic)
-#endif
     for (auto &pkt : packets) {
       if ((pkt.type != TYPE_ESCAPE && pkt.prop_time < ts_end)) {
         const int mgi = grid::get_cell_modelgridindex(pkt.where);
