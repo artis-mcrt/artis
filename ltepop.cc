@@ -331,8 +331,8 @@ auto get_levelpop(int modelgridindex, int element, int ion, int level) -> double
 {
   double nn = 0.;
   if (use_cellcache) {
-    assert_testmodeonly(modelgridindex == globals::cellcache[tid].cellnumber);
-    nn = globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].population;
+    assert_testmodeonly(modelgridindex == globals::cellcache[cellcacheslotid].cellnumber);
+    nn = globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].population;
   } else {
     nn = calculate_levelpop(modelgridindex, element, ion, level);
   }
@@ -475,16 +475,6 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
   }
   uppermost_ion = ion;
   return uppermost_ion;
-}
-
-static void set_calculated_nne(const int modelgridindex) {
-  double nne = 0.;  // free electron density
-
-  for (int element = 0; element < get_nelements(); element++) {
-    nne += get_element_nne_contrib(modelgridindex, element);
-  }
-
-  grid::set_nne(modelgridindex, std::max(MINPOP, nne));
 }
 
 void set_groundlevelpops(const int modelgridindex, const int element, const float nne, const bool force_lte) {
@@ -645,5 +635,9 @@ auto calculate_ion_balance_nne(const int modelgridindex) -> void
     }
   }
 
-  set_calculated_nne(modelgridindex);
+  double nne = 0.;  // free electron density
+  for (int element = 0; element < get_nelements(); element++) {
+    nne += get_element_nne_contrib(modelgridindex, element);
+  }
+  grid::set_nne(modelgridindex, std::max(MINPOP, nne));
 }

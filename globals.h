@@ -197,6 +197,7 @@ struct cellcache {
   struct chelements *chelements;
   struct chlevels *ch_all_levels;
   double *ch_allcont_departureratios;
+  double ionchargesquaredens;
   int cellnumber;  /// Identifies the cell the data is valid for.
   int bfheating_mgi;
 };

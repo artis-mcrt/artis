@@ -89,7 +89,7 @@ static auto get_event_expansion_opacity(const int modelgridindex, struct packet 
   const auto d_nu_on_d_l = (nu_cmf_abort - pkt_ptr->nu_cmf) / abort_dist;
 
   struct packet dummypkt = *pkt_ptr;
-  assert_always(globals::cellcache[tid].cellnumber == modelgridindex);
+  assert_always(globals::cellcache[cellcacheslotid].cellnumber == modelgridindex);
   double dist = 0.;
   double tau = 0.;
   auto binindex_start =
@@ -874,16 +874,11 @@ void emit_rpkt(struct packet *pkt_ptr) {
 }
 
 static auto get_ionchargesquaredens(const int modelgridindex) -> double {
-  double ionchargesquaredens = 0.;
-  const int nelements = get_nelements();
-  for (int element = 0; element < nelements; element++) {
-    for (int ion = 0; ion < get_nions(element); ion++) {
-      const double nnion = get_nnion(modelgridindex, element, ion);
-      const int ioncharge = get_ionstage(element, ion) - 1;
-      ionchargesquaredens += ioncharge * ioncharge * nnion;
-    }
+  if (use_cellcache) {
+    assert_always(globals::cellcache[cellcacheslotid].ionchargesquaredens >= 0.);
+    return globals::cellcache[cellcacheslotid].ionchargesquaredens;
   }
-  return ionchargesquaredens;
+  return grid::calculate_ionchargesquaredens(modelgridindex);
 }
 
 static auto calculate_chi_freefree(const int modelgridindex, const double nu) -> double
@@ -958,7 +953,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
 
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
         if constexpr (!SEPARATE_STIMRECOMB) {
-          double departure_ratio = globals::cellcache[tid].ch_allcont_departureratios[i];
+          double departure_ratio = globals::cellcache[cellcacheslotid].ch_allcont_departureratios[i];
           if (!usecellhistupdatephixslist || departure_ratio < 0) {
             const int upper = globals::allcont[i].upperlevel;
             const double nnupperionlevel = usecellhistupdatephixslist
@@ -967,7 +962,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
             const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
             departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
             if (usecellhistupdatephixslist) {
-              globals::cellcache[tid].ch_allcont_departureratios[i] = departure_ratio;
+              globals::cellcache[cellcacheslotid].ch_allcont_departureratios[i] = departure_ratio;
             }
           }
 
