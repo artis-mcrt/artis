@@ -44,22 +44,24 @@ auto get_continuumindex(const int element, const int ion, const int level, const
   return get_continuumindex_phixstargetindex(element, ion, level, phixstargetindex);
 }
 
-auto get_tau_sobolev(const int modelgridindex, const int lineindex, const double t_current) -> double {
+auto get_tau_sobolev(const int modelgridindex, const int lineindex, const double t_current, bool sub_updown) -> double {
   const int element = globals::linelist[lineindex].elementindex;
   const int ion = globals::linelist[lineindex].ionindex;
   const int lower = globals::linelist[lineindex].lowerlevelindex;
   const int upper = globals::linelist[lineindex].upperlevelindex;
 
   const double n_l = get_levelpop(modelgridindex, element, ion, lower);
-  const double n_u = get_levelpop(modelgridindex, element, ion, upper);
 
   const double nu_trans = (epsilon(element, ion, upper) - epsilon(element, ion, lower)) / H;
   const double A_ul = einstein_spontaneous_emission(lineindex);
   const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
   const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
-  const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
-  return tau_sobolev;
+  if (sub_updown) {
+    const double n_u = get_levelpop(modelgridindex, element, ion, upper);
+    return (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
+  }
+  return B_lu * n_l * HCLIGHTOVERFOURPI * t_current;
 }
 
 auto get_nnion_tot(int modelgridindex) -> double

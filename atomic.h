@@ -12,7 +12,7 @@ extern std::array<bool, 3> phixs_file_version_exists;  // first value in this ar
 auto get_continuumindex_phixstargetindex(int element, int ion, int level, int phixstargetindex) -> int;
 auto get_continuumindex(int element, int ion, int level, int upperionlevel) -> int;
 auto get_phixtargetindex(int element, int ion, int level, int upperionlevel) -> int;
-auto get_tau_sobolev(int modelgridindex, int lineindex, double t_current) -> double;
+auto get_tau_sobolev(int modelgridindex, int lineindex, double t_current, bool sub_updown) -> double;
 auto get_nnion_tot(int modelgridindex) -> double;
 auto is_nlte(int element, int ion, int level) -> bool;
 auto level_isinsuperlevel(int element, int ion, int level) -> bool;

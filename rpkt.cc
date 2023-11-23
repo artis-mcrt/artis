@@ -1133,7 +1133,7 @@ void calculate_binned_opacities(const int modelgridindex) {
     const auto delta_nu = nu_upper - nu_lower;
 
     while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= nu_lower) {
-      const float tau_line = get_tau_sobolev(modelgridindex, lineindex, t_mid);
+      const float tau_line = get_tau_sobolev(modelgridindex, lineindex, t_mid, false);
       const auto linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
       bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
       lineindex++;
