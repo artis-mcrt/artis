@@ -688,7 +688,9 @@ void cellcache_change_cell(const int modelgridindex) {
 
   globals::cellcache[cellcacheslotid].cellnumber = modelgridindex;
 
-  globals::cellcache[cellcacheslotid].ionchargesquaredens = grid::calculate_ionchargesquaredens(modelgridindex);
+  if (modelgridindex >= 0) {
+    globals::cellcache[cellcacheslotid].ionchargesquaredens = grid::calculate_ionchargesquaredens(modelgridindex);
+  }
 
   //  int nlevels_with_processrates = 0;
   // const double T_e = modelgridindex >= 0 ? grid ::get_Te(modelgridindex) : 0.;
@@ -1235,6 +1237,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 
   // printout("timestep %d, titer %d\n", nts, titer);
   // printout("deltat %g\n", deltat);
+  use_cellcache = false;
+  cellcache_change_cell(-99);
 
 #ifdef OPENMP_MT_ON
 #pragma omp parallel
@@ -1242,8 +1246,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   {
     /// Do not use values which are saved in the cellcache within update_grid
     /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
-    use_cellcache = false;
-    cellcache_change_cell(-99);
 
 /// Updating cell information
 #ifdef OPENMP_MT_ON
