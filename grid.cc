@@ -1085,11 +1085,7 @@ static void parse_model_headerline(const std::string &line, std::vector<int> &zl
       assert_always((columnindex == 4 && get_model_type() == GRID_CARTESIAN3D) ||
                     (columnindex == 3 && get_model_type() == GRID_CYLINDRICAL2D));
       continue;
-    } else if (token == "X_Fegroup") {
-      colnames.push_back(token);
-      zlist.push_back(-1);
-      alist.push_back(-1);
-    } else if (token.starts_with("X_")) {
+    } else if (token.starts_with("X_") && token != "X_Fegroup") {
       colnames.push_back(token);
       const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
       const int a = decay::get_nucstring_a(token.substr(2));
