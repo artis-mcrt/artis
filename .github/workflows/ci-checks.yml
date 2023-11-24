@@ -19,7 +19,7 @@ jobs:
             - name: install dependencies
               run: |
                   brew update
-                  brew install gsl openmpi cppcheck
+                  brew install gsl openmpi cppcheck || true
                   cp artisoptions_nltenebular.h artisoptions.h
 
             - name: run cppcheck and check for errors
