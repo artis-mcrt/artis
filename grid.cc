@@ -1646,7 +1646,7 @@ void read_ejecta_model() {
 
   bool do_malloc = true;
 #ifdef MPI_ON
-  if (NODE_SHARE_ION_ESTIMATORS && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
+  if constexpr (NODE_SHARE_ION_ESTIMATORS && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
     do_malloc = false;
     auto my_rank_cells = (npts_model + 1) / globals::node_nprocs;
     // rank_in_node 0 gets any remainder

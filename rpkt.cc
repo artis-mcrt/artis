@@ -568,8 +568,8 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
           const int ionestimindex = get_ionestimindex(modelgridindex, element, ion);
 
           if constexpr (USE_LUT_PHOTOION) {
-            const double increment = globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf_over_nu;
-            if (NODE_SHARE_ION_ESTIMATORS) {
+            if constexpr (NODE_SHARE_ION_ESTIMATORS) {
+              const double increment = globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf_over_nu;
 #ifdef MPI_ON
               MPI_Fetch_and_op(&increment, globals::gammaestimator, MPI_DOUBLE, 0, ionestimindex, MPI_SUM,
                                globals::gammaestimator_mpiwin);
@@ -577,10 +577,11 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
               safeadd(globals::gammaestimator[ionestimindex], increment);
 #endif
             } else {
-              safeadd(globals::gammaestimator[ionestimindex], increment);
+              safeadd(globals::gammaestimator[ionestimindex],
+                      globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf_over_nu);
             }
 
-            if (!std::isfinite(increment)) {
+            if (!std::isfinite(globals::gammaestimator[ionestimindex])) {
               printout(
                   "[fatal] update_estimators: gamma estimator becomes non finite: mgi %d element %d ion %d gamma_contr "
                   "%g, distance_e_cmf_over_nu %g\n",
@@ -591,9 +592,9 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
           }
 
           if constexpr (USE_LUT_BFHEATING) {
-            const double increment =
-                globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu);
-            if (NODE_SHARE_ION_ESTIMATORS) {
+            if constexpr (NODE_SHARE_ION_ESTIMATORS) {
+              const double increment =
+                  globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu);
 #ifdef MPI_ON
               MPI_Fetch_and_op(&increment, globals::bfheatingestimator, MPI_DOUBLE, 0, ionestimindex, MPI_SUM,
                                globals::bfheatingestimator_mpiwin);
@@ -601,7 +602,8 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
               safeadd(globals::bfheatingestimator[ionestimindex], increment);
 #endif
             } else {
-              safeadd(globals::bfheatingestimator[ionestimindex], increment);
+              safeadd(globals::bfheatingestimator[ionestimindex],
+                      globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu));
             }
           }
         }
