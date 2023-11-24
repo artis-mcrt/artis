@@ -1102,7 +1102,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 #endif
 
         if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-          if (!NODE_SHARE_ION_ESTIMATORS && globals::rank_in_node == 0) {
+          if (!NODE_SHARE_ION_ESTIMATORS || globals::rank_in_node == 0) {
             update_gamma_corrphotoionrenorm_bfheating_estimators(mgi, estimator_normfactor);
           }
         }
