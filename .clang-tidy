@@ -1,4 +1,5 @@
 ---
+InheritParentConfig: true
 Checks: >
     *,
     -*static-assert*,
@@ -15,23 +16,28 @@ Checks: >
     -cert-err33-c,
     -cert-err34-c,
     -cert-err58-cpp,
+    -clang-analyzer-deadcode.DeadStores,
+    -clang-diagnostic-unused-macros,
     -cppcoreguidelines-avoid-magic-numbers,
     -cppcoreguidelines-avoid-non-const-global-variables,
+    -cppcoreguidelines-macro-usage,
     -cppcoreguidelines-no-malloc,
     -cppcoreguidelines-owning-memory,
     -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
     -cppcoreguidelines-pro-bounds-constant-array-index,
     -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+    -cppcoreguidelines-pro-type-cstyle-cast,
     -cppcoreguidelines-pro-type-reinterpret-cast,
     -cppcoreguidelines-pro-type-vararg,
-    -clang-diagnostic-error,
     -fuchsia-*,
+    -google-objc*,
     -google-readability-todo,
     -google-runtime-int,
     -hicpp-vararg,
     -hicpp-no-array-decay,
     -hicpp-no-malloc,
     -hicpp-signed-bitwise,
+    -llvm-header-guard,
     -misc-use-anonymous-namespace,
     -misc-no-recursion,
     -misc-non-private-member-variables-in-classes,
@@ -49,8 +55,10 @@ CheckOptions:
     - key: cppcoreguidelines-init-variables.MathHeader
       value: <cmath>
     - key: cppcoreguidelines-narrowing-conversions.IgnoreConversionFromTypes
-      value: size_t;ptrdiff_t;size_type;difference_type;time_t;MPI_Aint;unsigned long
+      value: size_t;ptrdiff_t;size_t;difference_type;time_t;MPI_Aint
     - key: cppcoreguidelines-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
       value: 'false'
     - key: cppcoreguidelines-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
       value: 'false'
+    - key: cppcoreguidelines-pro-type-member-init.IgnoreArrays
+      value: 'true'
