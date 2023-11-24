@@ -106,7 +106,7 @@ static inline auto get_bflutindex(const int tempindex, const int element, const 
 #ifdef _OPENMP
 #define safeadd(var, val) _Pragma("omp atomic update") var += val
 #else
-#define safeadd(var, val) var = var + val
+#define safeadd(var, val) var = (var) + val
 #endif
 
 #define safeincrement(var) safeadd(var, 1)
