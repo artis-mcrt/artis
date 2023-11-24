@@ -3,12 +3,83 @@
 # place in architecture folder, e.g. build/arm64
 BUILD_DIR = build/$(shell uname -m)
 
-CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto=auto
+CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto=auto -Wno-error=unknown-pragmas
 
-# CXXFLAGS += -Wunreachable-code
+ifeq ($(MPI),)
+	# MPI option not specified. set to true by default
+	MPI := ON
+endif
+ifeq ($(MPI),ON)
+	CXX = mpicxx
+	CXXFLAGS += -DMPI_ON=true
+	BUILD_DIR := $(BUILD_DIR)_mpi
+else ifeq ($(MPI),OFF)
+else
+$(error bad value for MPI option. Should be ON or OFF)
+endif
+
+ifeq ($(TESTMODE),ON)
+else ifeq ($(TESTMODE),OFF)
+else ifeq ($(TESTMODE),)
+else
+$(error bad value for testmode option. Should be ON or OFF)
+endif
+
+COMPILER_VERSION := $(shell $(CXX) --version)
+
+ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
+  COMPILER_IS_CLANG := TRUE
+else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
+  COMPILER_IS_CLANG := FALSE
+else
+  $(warning Unknown compiler)
+  COMPILER_IS_CLANG := FALSE
+endif
+
+
+ifeq ($(OPENMP),ON)
+  CXXFLAGS += -DOPENMP_MT_ON=true
+  BUILD_DIR := $(BUILD_DIR)_openmp
+
+  ifeq ($(COMPILER_IS_CLANG),TRUE)
+    CXXFLAGS += -Xpreprocessor -fopenmp
+    LDFLAGS += -lomp
+  else
+    CXXFLAGS += -fopenmp
+  endif
+else ifeq ($(OPENMP),OFF)
+else ifeq ($(OPENMP),)
+else
+  $(error bad value for openmp option. Should be ON or OFF)
+endif
+
+ifeq ($(STDPAR),ON)
+  ifeq ($(OPENMP),ON)
+    $(error cannot combine OPENMP and STDPAR)
+  endif
+
+  CXXFLAGS += -DSTDPAR_ON=true
+  BUILD_DIR := $(BUILD_DIR)_stdpar
+
+  ifeq ($(COMPILER_IS_CLANG),TRUE)
+  else
+    # CXXFLAGS += -Xlinker -debug_snapshot
+    LDFLAGS += -ltbb
+  endif
+else ifeq ($(STDPAR),OFF)
+else ifeq ($(STDPAR),)
+else
+  $(error bad value for STDPAR option. Should be ON or OFF)
+endif
+
 
 ifeq ($(shell uname -s),Darwin)
 # 	macOS
+
+    ifeq ($(COMPILER_IS_CLANG),FALSE)
+    #   fixes linking on macOS with gcc
+	  LDFLAGS += -Wl,-ld_classic
+    endif
 
 	ifeq ($(shell uname -m),arm64)
 #	 	On Arm, -mcpu combines -march and -mtune
@@ -31,6 +102,7 @@ ifeq ($(shell uname -s),Darwin)
 	# add -lprofiler for gperftools
 	# LDFLAGS += $(LIB)
 	# LDFLAGS += -lprofiler
+	CXXFLAGS += $(shell pkg-config --cflags ompi)
 
 else ifeq ($(USER),localadmin_ccollins)
 	# CXX = c++
@@ -75,47 +147,30 @@ CXXFLAGS += $(shell pkg-config --cflags gsl)
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true -O3 -DLIBCXX_ENABLE_DEBUG_MODE
+	CXXFLAGS += -DTESTMODE=true -DLIBCXX_ENABLE_DEBUG_MODE
 	# makes GitHub actions classic test run forever?
-	# CXXFLAGS += -D_GLIBCXX_DEBUG
-	CXXFLAGS += -fsanitize=address,undefined -fno-omit-frame-pointer -fno-common
+	# CXXFLAGS += -D_GLIBCXX_DEBUG=1
+	CXXFLAGS += -fsanitize=address,undefined -fno-omit-frame-pointer
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
 	# skip array range checking for better performance and use optimizations
-	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF -O3
+	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF
 endif
 
-CXXFLAGS += -Werror -Werror=undef -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -Wno-inline
-
-ifeq ($(MPI),)
-	# MPI option not specified. set to true by default
-	MPI := ON
-endif
-ifeq ($(MPI),ON)
-	CXX = mpicxx
-	CXXFLAGS += -DMPI_ON=true
-	BUILD_DIR := $(BUILD_DIR)_mpi
-else ifeq ($(MPI),OFF)
+ifeq ($(OPTIMIZE),OFF)
+	BUILD_DIR := $(BUILD_DIR)_optimizeoff
+	CXXFLAGS += -O0
 else
-$(error bad value for MPI option. Should be ON or OFF)
+	ifeq ($(FASTMATH),ON)
+		BUILD_DIR := $(BUILD_DIR)_fastmath
+		CXXFLAGS += -Ofast -ffast-math -funsafe-math-optimizations -fno-finite-math-only
+	else
+		CXXFLAGS += -O3
+	endif
 endif
 
-ifeq ($(TESTMODE),ON)
-else ifeq ($(TESTMODE),OFF)
-else ifeq ($(TESTMODE),)
-else
-$(error bad value for testmode option. Should be ON or OFF)
-endif
+CXXFLAGS += -Werror -Werror=undef -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wunused-macros -Wno-inline -Wsign-compare
 
-ifeq ($(OPENMP),ON)
-	CXXFLAGS += -Xpreprocessor -fopenmp
-	LDFLAGS += -lomp
-	BUILD_DIR := $(BUILD_DIR)_openmp
-else ifeq ($(OPENMP),OFF)
-else ifeq ($(OPENMP),)
-else
-$(error bad value for testmode option. Should be ON or OFF)
-endif
 
 ### use pg when you want to use gprof profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)
@@ -133,21 +188,23 @@ exspec_dep = $(exspec_objects:%.o=%.d)
 
 all: sn3d exspec
 
-sn3d: $(sn3d_objects)
-	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
-#	$(LINK.cpp) $(filter %.o,$^) -o $@
--include $(sn3d_dep)
-
-sn3dwhole: version.h
-	$(CXX) $(CXXFLAGS) -g $(sn3d_files) $(LDFLAGS) -o sn3d
-
 $(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -MD -MP -c $< -o $@
 
 $(BUILD_DIR)/sn3d.o $(BUILD_DIR)/exspec.o: version.h artisoptions.h Makefile
 
-exspec: $(exspec_objects)
+check: $(sn3d_files)
+	run-clang-tidy $(sn3d_files)
+
+sn3d: $(sn3d_objects) artisoptions.h Makefile
+	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
+-include $(sn3d_dep)
+
+sn3dwhole: version.h artisoptions.h Makefile
+	$(CXX) $(CXXFLAGS) -g $(sn3d_files) $(LDFLAGS) -o sn3d
+
+exspec: $(exspec_objects) artisoptions.h Makefile
 	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec
 -include $(exspec_dep)
 
@@ -162,4 +219,4 @@ version.h:
 	@echo "constexpr const char* GIT_STATUS = \"$(shell git status --short)\";" >> version.h
 
 clean:
-	rm -rf sn3d exspec build version.h *.o *.d
+	rm -rf sn3d exspec build *.o *.d
