@@ -212,14 +212,19 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
         }
 
         if constexpr (USE_LUT_PHOTOION) {
-          MPI_Comm ionestimcomm = NODE_SHARE_ION_ESTIMATORS ? globals::mpi_comm_internode : MPI_COMM_WORLD;
-          int usedroot = NODE_SHARE_ION_ESTIMATORS ? root_node_id : root;
           assert_always(globals::corrphotoionrenorm != nullptr);
-          MPI_Bcast(&globals::corrphotoionrenorm[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE,
-                    usedroot, ionestimcomm);
           assert_always(globals::gammaestimator != nullptr);
-          MPI_Bcast(&globals::gammaestimator[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE,
-                    usedroot, ionestimcomm);
+          if constexpr (!NODE_SHARE_ION_ESTIMATORS) {
+            MPI_Bcast(&globals::corrphotoionrenorm[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE,
+                      root, MPI_COMM_WORLD);
+            MPI_Bcast(&globals::gammaestimator[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE,
+                      root, MPI_COMM_WORLD);
+          } else if (globals::rank_in_node == 0) {
+            MPI_Bcast(&globals::corrphotoionrenorm[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE,
+                      root_node_id, globals::mpi_comm_internode);
+            MPI_Bcast(&globals::gammaestimator[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE,
+                      root_node_id, globals::mpi_comm_internode);
+          }
         }
 
         assert_always(grid::modelgrid[modelgridindex].elem_meanweight != nullptr);
