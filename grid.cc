@@ -739,12 +739,12 @@ static void allocate_composition_cooling()
   double *nltepops_allcells = nullptr;
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
-    int my_rank_cells = nonempty_npts_model / globals::node_nprocs;
+    size_t my_rank_cells_nonempty = nonempty_npts_model / globals::node_nprocs;
     // rank_in_node 0 gets any remainder
     if (globals::rank_in_node == 0) {
-      my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
+      my_rank_cells_nonempty += nonempty_npts_model - (my_rank_cells_nonempty * globals::node_nprocs);
     }
-    MPI_Aint size = my_rank_cells * globals::total_nlte_levels * sizeof(double);
+    MPI_Aint size = my_rank_cells_nonempty * globals::total_nlte_levels * sizeof(double);
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nltepops_allcells,
                                           &win_nltepops_allcells) == MPI_SUCCESS);
