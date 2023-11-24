@@ -212,11 +212,11 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
 
         if constexpr (USE_LUT_PHOTOION) {
           assert_always(globals::corrphotoionrenorm != nullptr);
-          MPI_Bcast(&globals::corrphotoionrenorm[get_ionestimindex(modelgridindex, 0, 0)],
-                    get_nelements() * get_max_nions(), MPI_DOUBLE, root, MPI_COMM_WORLD);
+          MPI_Bcast(&globals::corrphotoionrenorm[get_ionestimindex(modelgridindex, 0, 0)], get_includedions(),
+                    MPI_DOUBLE, root, MPI_COMM_WORLD);
           assert_always(globals::gammaestimator != nullptr);
-          MPI_Bcast(&globals::gammaestimator[get_ionestimindex(modelgridindex, 0, 0)],
-                    get_nelements() * get_max_nions(), MPI_DOUBLE, root, MPI_COMM_WORLD);
+          MPI_Bcast(&globals::gammaestimator[get_ionestimindex(modelgridindex, 0, 0)], get_includedions(), MPI_DOUBLE,
+                    root, MPI_COMM_WORLD);
         }
       }
     }
@@ -320,7 +320,7 @@ static void mpi_reduce_estimators(int nts) {
                 MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
 
-  const int arraylen = grid::get_npts_model() * get_nelements() * get_max_nions();
+  const int arraylen = grid::get_npts_model() * get_includedions();
   if constexpr (USE_LUT_PHOTOION) {
     MPI_Barrier(MPI_COMM_WORLD);
     assert_always(globals::gammaestimator != nullptr);
@@ -518,31 +518,29 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
 }
 
 static void zero_estimators() {
-  // printout("zero_estimators()");
-  for (int n = 0; n < grid::get_npts_model(); n++) {
-    if (grid::get_numassociatedcells(n) > 0) {
-      radfield::zero_estimators(n);
+  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+    radfield::zero_estimators(modelgridindex);
 
-      globals::ffheatingestimator[n] = 0.;
-      globals::colheatingestimator[n] = 0.;
+    globals::ffheatingestimator[modelgridindex] = 0.;
+    globals::colheatingestimator[modelgridindex] = 0.;
 
-      if constexpr (TRACK_ION_STATS) {
-        stats::reset_ion_stats(n);
-      }
+    if constexpr (TRACK_ION_STATS) {
+      stats::reset_ion_stats(modelgridindex);
+    }
 
-      for (int element = 0; element < get_nelements(); element++) {
-        for (int ion = 0; ion < get_max_nions(); ion++) {
-          if constexpr (USE_LUT_PHOTOION) {
-            globals::gammaestimator[get_ionestimindex(n, element, ion)] = 0.;
-          }
-          if constexpr (USE_LUT_BFHEATING) {
-            globals::bfheatingestimator[get_ionestimindex(n, element, ion)] = 0.;
-          }
+    for (int element = 0; element < get_nelements(); element++) {
+      for (int ion = 0; ion < get_nions(element); ion++) {
+        if constexpr (USE_LUT_PHOTOION) {
+          globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
+        }
+        if constexpr (USE_LUT_BFHEATING) {
+          globals::bfheatingestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
         }
       }
-
-      globals::rpkt_emiss[n] = 0.0;
     }
+
+    globals::rpkt_emiss[modelgridindex] = 0.;
   }
 }
 

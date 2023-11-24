@@ -497,7 +497,7 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
                                                  struct transitions *transitions, int *lineindex,
                                                  std::vector<struct linelist_entry> &temp_linelist) {
   const int lineindex_initial = *lineindex;
-  const int tottransitions = transitiontable.size();
+  const auto tottransitions = transitiontable.size();
   int totupdowntrans = 0;
   // pass 0 to get transition counts of each level
   // pass 1 to allocate and fill transition arrays
@@ -1179,7 +1179,7 @@ static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcont
       element = globals::groundcont[index].element;
       ion = globals::groundcont[index].ion;
     }
-    *index_in_groundlevelcontestimator = element * get_max_nions() + ion;
+    *index_in_groundlevelcontestimator = get_ionestimindex(0, element, ion);
   }
 
   return index;

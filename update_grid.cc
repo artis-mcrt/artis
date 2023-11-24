@@ -1208,7 +1208,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     /// unless they have been read from file
     if ((!globals::simulation_continued_from_saved) || (nts - globals::timestep_initial != 0) || (titer != 0)) {
       printout("nts %d, titer %d: reset corr photoionrenorm\n", nts, titer);
-      for (int i = 0; i < grid::get_npts_model() * get_nelements() * get_max_nions(); i++) {
+      for (int i = 0; i < grid::get_npts_model() * get_includedions(); i++) {
         globals::corrphotoionrenorm[i] = 0.;
       }
       printout("after nts %d, titer %d: reset corr photoionrenorm\n", nts, titer);
