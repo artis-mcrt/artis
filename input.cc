@@ -10,19 +10,14 @@
 #include <fstream>
 #include <limits>
 #include <memory>
-#include <ranges>
 #include <sstream>
 #include <vector>
 
 #include "atomic.h"
 #include "decay.h"
-#include "exspec.h"
-#include "gammapkt.h"
 #include "grid.h"
 #include "kpkt.h"
-#include "nltepop.h"
 #include "ratecoeff.h"
-#include "rpkt.h"
 #include "sn3d.h"
 #include "vpkt.h"
 
@@ -511,7 +506,7 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
       MPI_Barrier(MPI_COMM_WORLD);
       MPI_Win win = MPI_WIN_NULL;
 
-      int my_rank_trans = totupdowntrans / globals::node_nprocs;
+      size_t my_rank_trans = totupdowntrans / globals::node_nprocs;
       // rank_in_node 0 gets any remainder
       if (globals::rank_in_node == 0) {
         my_rank_trans += totupdowntrans - (my_rank_trans * globals::node_nprocs);
@@ -977,7 +972,7 @@ static void read_atomicdata_files() {
 #ifdef MPI_ON
   MPI_Win win = MPI_WIN_NULL;
 
-  int my_rank_lines = globals::nlines / globals::node_nprocs;
+  size_t my_rank_lines = globals::nlines / globals::node_nprocs;
   // rank_in_node 0 gets any remainder
   if (globals::rank_in_node == 0) {
     my_rank_lines += globals::nlines - (my_rank_lines * globals::node_nprocs);
@@ -1137,7 +1132,7 @@ static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcont
     index = -1;
     *index_in_groundlevelcontestimator = -1;
   } else {
-    int i;
+    int i = 1;
     int element = -1;
     int ion = -1;
     for (i = 1; i < globals::nbfcontinua_ground; i++) {
@@ -1459,7 +1454,7 @@ static void setup_phixs_list() {
       static_cast<struct fullphixslist *>(malloc(globals::nbfcontinua * sizeof(struct fullphixslist)));
   printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
            globals::nbfcontinua * (sizeof(fullphixslist)) / 1024. / 1024.);
-  int nbftables = 0;
+  size_t nbftables = 0;
   int allcontindex = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
@@ -1515,7 +1510,8 @@ static void setup_phixs_list() {
 #ifdef MPI_ON
     float *allphixsblock = nullptr;
     MPI_Win win_allphixsblock = MPI_WIN_NULL;
-    MPI_Aint size = (globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0;
+    auto size =
+        static_cast<MPI_Aint>((globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0);
     int disp_unit = sizeof(linelist_entry);
 
     MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &allphixsblock, &win_allphixsblock);
