@@ -223,8 +223,10 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
         }
 
         assert_always(grid::modelgrid[modelgridindex].elem_meanweight != nullptr);
-        MPI_Bcast(&grid::modelgrid[modelgridindex].elem_meanweight, get_nelements(), MPI_FLOAT, root_node_id,
-                  globals::mpi_comm_internode);
+        if (globals::rank_in_node == 0) {
+          MPI_Bcast(&grid::modelgrid[modelgridindex].elem_meanweight, get_nelements(), MPI_FLOAT, root_node_id,
+                    globals::mpi_comm_internode);
+        }
       }
     }
 
