@@ -747,21 +747,21 @@ static void allocate_composition_cooling()
   float *initmassfracstable_allcells = nullptr;
   float *elem_meanweight_allcells = nullptr;
 
-  // #ifdef MPI_ON
-  //   MPI_Aint size = my_rank_cells_nonempty * get_nelements() * sizeof(float);
-  //   int disp_unit = sizeof(float);
-  //   MPI_Win mpiwin = MPI_WIN_NULL;
-  //   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-  //                                         &initmassfracstable_allcells, &mpiwin) == MPI_SUCCESS);
-  //   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &initmassfracstable_allcells) == MPI_SUCCESS);
-  //   mpiwin = MPI_WIN_NULL;
-  //   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-  //                                         &elem_meanweight_allcells, &mpiwin) == MPI_SUCCESS);
-  //   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &elem_meanweight_allcells) == MPI_SUCCESS);
-  // #else
+#ifdef MPI_ON
+  MPI_Aint size = my_rank_cells_nonempty * get_nelements() * sizeof(float);
+  int disp_unit = sizeof(float);
+  MPI_Win mpiwin = MPI_WIN_NULL;
+  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                        &initmassfracstable_allcells, &mpiwin) == MPI_SUCCESS);
+  assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &initmassfracstable_allcells) == MPI_SUCCESS);
+  mpiwin = MPI_WIN_NULL;
+  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                        &elem_meanweight_allcells, &mpiwin) == MPI_SUCCESS);
+  assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &elem_meanweight_allcells) == MPI_SUCCESS);
+#else
   initmassfracstable_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
   elem_meanweight_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
-  // #endif
+#endif
 
   double *nltepops_allcells = nullptr;
   if (globals::total_nlte_levels > 0) {
