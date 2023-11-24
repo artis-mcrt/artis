@@ -9,16 +9,16 @@ namespace nonthermal {
 void init(int my_rank, int ndo_nonempty);
 void close_file();
 void solve_spencerfano(int modelgridindex, int timestep, int iteration);
-double nt_ionization_ratecoeff(int modelgridindex, int element, int ion);
-double nt_ionization_upperion_probability(int modelgridindex, int element, int lowerion, int upperion,
-                                          bool energyweighted);
-int nt_ionisation_maxupperion(int element, int lowerion);
-int nt_random_upperion(int modelgridindex, int element, int lowerion, bool energyweighted);
+auto nt_ionization_ratecoeff(int modelgridindex, int element, int ion) -> double;
+auto nt_ionization_upperion_probability(int modelgridindex, int element, int lowerion, int upperion,
+                                        bool energyweighted) -> double;
+auto nt_ionisation_maxupperion(int element, int lowerion) -> int;
+auto nt_random_upperion(int modelgridindex, int element, int lowerion, bool energyweighted) -> int;
 void calculate_deposition_rate_density(int modelgridindex, int timestep);
-double get_deposition_rate_density(int modelgridindex);
-float get_nt_frac_heating(int modelgridindex);
-double nt_excitation_ratecoeff(int modelgridindex, int element, int ion, int lowerlevel, int uptransindex,
-                               double epsilon_trans, int lineindex);
+auto get_deposition_rate_density(int modelgridindex) -> double;
+auto get_nt_frac_heating(int modelgridindex) -> float;
+auto nt_excitation_ratecoeff(int modelgridindex, int element, int ion, int lowerlevel, int uptransindex,
+                             double epsilon_trans, int lineindex) -> double;
 void do_ntlepton(struct packet *pkt_ptr);
 void write_restart_data(FILE *gridsave_file);
 void read_restart_data(FILE *gridsave_file);

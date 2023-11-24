@@ -79,7 +79,7 @@ struct packet {
   float trueemissionvelocity = -1;
   struct mastate mastate;
 
-  inline bool operator==(const packet &rhs) {
+  inline auto operator==(const packet &rhs) -> bool {
     return (number == rhs.number && type == rhs.type &&
             (em_pos[0] == rhs.em_pos[0] && em_pos[1] == rhs.em_pos[1] && em_pos[2] == rhs.em_pos[2]) &&
             nu_cmf == rhs.nu_cmf && where == rhs.where && prop_time == rhs.prop_time &&
@@ -92,6 +92,6 @@ void packet_init(struct packet *pkt);
 void write_packets(char filename[], const struct packet *pkt);
 void read_packets(const char filename[], struct packet *pkt);
 void read_temp_packetsfile(int timestep, int my_rank, struct packet *pkt);
-bool verify_temp_packetsfile(int timestep, int my_rank, const struct packet *pkt);
+auto verify_temp_packetsfile(int timestep, int my_rank, const struct packet *pkt) -> bool;
 
 #endif  // PACKET_H
