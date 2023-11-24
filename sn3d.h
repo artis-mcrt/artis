@@ -76,7 +76,7 @@ static auto printout(const char *format, Args... args) -> int {
   if (globals::startofline[tid]) {
     const time_t now_time = time(nullptr);
     char s[32] = "";
-    strftime(s, 32, "%FT%TZ", gmtime(&now_time));
+    strftime(s, 32, "%FT%TZ", gmtime(&now_time));  // NOLINT[concurrency-mt-unsafe]
     fprintf(output_file, "%s ", s);
   }
   globals::startofline[tid] = (format[strlen(format) - 1] == '\n');
@@ -87,7 +87,7 @@ static auto printout(const char *format) -> int {
   if (globals::startofline[tid]) {
     const time_t now_time = time(nullptr);
     char s[32] = "";
-    strftime(s, 32, "%FT%TZ", gmtime(&now_time));
+    strftime(s, 32, "%FT%TZ", gmtime(&now_time));  // NOLINT[concurrency-mt-unsafe]
     fprintf(output_file, "%s ", s);
   }
   globals::startofline[tid] = (format[strlen(format) - 1] == '\n');
@@ -210,13 +210,11 @@ inline void rng_init(const uint_fast64_t zseed) {
 }
 
 inline auto is_pid_running(pid_t pid) -> bool {
-  while (waitpid(-1, 0, WNOHANG) > 0) {
+  while (waitpid(-1, nullptr, WNOHANG) > 0) {
     // Wait for defunct....
   }
 
-  if (0 == kill(pid, 0)) return true;  // Process exists
-
-  return false;
+  return (0 == kill(pid, 0));
 }
 
 inline void check_already_running(void) {
@@ -224,7 +222,7 @@ inline void check_already_running(void) {
 
   if (std::filesystem::exists("artis.pid")) {
     auto pidfile = std::fstream("artis.pid", std::ios::in);
-    pid_t artispid_in;
+    pid_t artispid_in = 0;
     pidfile >> artispid_in;
     pidfile.close();
     if (is_pid_running(artispid_in)) {
