@@ -3,7 +3,7 @@
 
 void ratecoefficients_init();
 
-void setup_photoion_luts(void);
+void setup_photoion_luts();
 
 auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel, float T_e) -> double;
 

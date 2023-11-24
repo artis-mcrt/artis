@@ -164,7 +164,7 @@ static auto get_timestep(const double time) -> int {
   return -1;
 }
 
-inline auto get_max_threads(void) -> int {
+inline auto get_max_threads() -> int {
 #if defined _OPENMP
   return omp_get_max_threads();
 #else
@@ -172,7 +172,7 @@ inline auto get_max_threads(void) -> int {
 #endif
 }
 
-inline auto get_num_threads(void) -> int {
+inline auto get_num_threads() -> int {
 #if defined _OPENMP
   return omp_get_num_threads();
 #else
@@ -180,7 +180,7 @@ inline auto get_num_threads(void) -> int {
 #endif
 }
 
-inline auto get_thread_num(void) -> int {
+inline auto get_thread_num() -> int {
 #if defined _OPENMP
   return omp_get_thread_num();
 #else
@@ -188,7 +188,7 @@ inline auto get_thread_num(void) -> int {
 #endif
 }
 
-inline auto rng_uniform(void) -> float {
+inline auto rng_uniform() -> float {
   float zrand;
   do {
     zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
@@ -196,7 +196,7 @@ inline auto rng_uniform(void) -> float {
   return zrand;
 }
 
-inline auto rng_uniform_pos(void) -> float {
+inline auto rng_uniform_pos() -> float {
   float zrand = 0.;
   do {
     zrand = rng_uniform();
@@ -217,7 +217,7 @@ inline auto is_pid_running(pid_t pid) -> bool {
   return (0 == kill(pid, 0));
 }
 
-inline void check_already_running(void) {
+inline void check_already_running() {
   pid_t artispid = getpid();
 
   if (std::filesystem::exists("artis.pid")) {

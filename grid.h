@@ -58,7 +58,7 @@ struct modelgrid_t {
   uint_fast8_t thick = 0;
 };
 
-constexpr auto get_ngriddimensions(void) -> int {
+constexpr auto get_ngriddimensions() -> int {
   switch (GRID_TYPE) {
     case GRID_SPHERICAL1D:
       return 1;
