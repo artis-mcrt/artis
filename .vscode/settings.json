@@ -1,0 +1,13 @@
+{
+    "[cpp]": {
+        "editor.tabSize": 2,
+        "editor.codeActionsOnSave": {
+            "source.fixAll": true
+        },
+        "editor.formatOnSave": true
+    },
+    "[yaml]": {
+        "editor.tabSize": 4
+    },
+    "sonarlint.pathToCompileCommands": "${workspaceFolder}/compile_commands.json"
+}

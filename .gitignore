@@ -13,7 +13,7 @@ browse.VC.db
 sn3d.dSYM
 .tags*
 .tags_swap
-.vscode
+.vscode/c_cpp_properties.json
 build
 .DS_Store
 artisoptions.h
@@ -21,4 +21,5 @@ artisoptions.h
 build
 compile_commands.json
 *.dSYM/
-.cache/
+.cache
+*.log
