@@ -570,8 +570,12 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
           if constexpr (USE_LUT_PHOTOION) {
             const double increment = globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf_over_nu;
             if (NODE_SHARE_ION_ESTIMATORS) {
+#ifdef MPI_ON
               MPI_Fetch_and_op(&increment, globals::gammaestimator, MPI_DOUBLE, 0, ionestimindex, MPI_SUM,
                                globals::gammaestimator_mpiwin);
+#else
+              safeadd(globals::gammaestimator[ionestimindex], increment);
+#endif
             } else {
               safeadd(globals::gammaestimator[ionestimindex], increment);
             }
@@ -590,8 +594,12 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
             const double increment =
                 globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu);
             if (NODE_SHARE_ION_ESTIMATORS) {
+#ifdef MPI_ON
               MPI_Fetch_and_op(&increment, globals::bfheatingestimator, MPI_DOUBLE, 0, ionestimindex, MPI_SUM,
                                globals::bfheatingestimator_mpiwin);
+#else
+              safeadd(globals::bfheatingestimator[ionestimindex], increment);
+#endif
             } else {
               safeadd(globals::bfheatingestimator[ionestimindex], increment);
             }
