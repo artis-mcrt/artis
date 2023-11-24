@@ -66,8 +66,9 @@ constexpr auto get_ngriddimensions() -> int {
       return 2;
     case GRID_CARTESIAN3D:
       return 3;
+    default:
+      assert_always(false);
   }
-  assert_always(false);
 }
 
 extern struct modelgrid_t *modelgrid;
