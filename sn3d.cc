@@ -14,12 +14,14 @@
 
 #include <filesystem>
 
+#include "artisoptions.h"
 #include "atomic.h"
 #include "decay.h"
 #include "gammapkt.h"
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "mpi.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "radfield.h"
@@ -324,14 +326,15 @@ static void mpi_reduce_estimators(int nts) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   const int arraylen = grid::get_npts_model() * get_includedions();
+  MPI_Comm ionestimcomm = NODE_SHARE_ION_ESTIMATORS ? globals::mpi_comm_node : MPI_COMM_WORLD;
   if constexpr (USE_LUT_PHOTOION) {
     MPI_Barrier(MPI_COMM_WORLD);
     assert_always(globals::gammaestimator != nullptr);
-    MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, ionestimcomm);
   }
   if constexpr (USE_LUT_BFHEATING) {
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, arraylen, MPI_DOUBLE, MPI_SUM, ionestimcomm);
   }
 
   if constexpr (RECORD_LINESTAT) {
@@ -921,6 +924,7 @@ auto main(int argc, char *argv[]) -> int {
     for (int titer = 0; titer < globals::n_titer; titer++) {
       terminate_early = do_timestep(nts, titer, my_rank, nstart, ndo, packets, walltimelimitseconds);
 #ifdef DO_TITER
+      static_assert(!NODE_SHARE_ION_ESTIMATORS);
       /// No iterations over the zeroth timestep, set titer > n_titer
       if (nts == 0) titer = globals::n_titer + 1;
 #endif

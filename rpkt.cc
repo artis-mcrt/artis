@@ -5,7 +5,9 @@
 #include <limits>
 #include <span>
 
+#include "artisoptions.h"
 #include "atomic.h"
+#include "globals.h"
 #include "grid.h"
 #include "kpkt.h"
 #include "ltepop.h"
@@ -569,10 +571,15 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
           const int ionestimindex = get_ionestimindex(modelgridindex, element, ion);
 
           if constexpr (USE_LUT_PHOTOION) {
-            safeadd(globals::gammaestimator[ionestimindex],
-                    globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf_over_nu);
+            const double increment = globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf_over_nu;
+            if (NODE_SHARE_ION_ESTIMATORS) {
+              MPI_Fetch_and_op(&increment, globals::gammaestimator, MPI_DOUBLE, 0, ionestimindex, MPI_SUM,
+                               globals::gammaestimator_mpiwin);
+            } else {
+              safeadd(globals::gammaestimator[ionestimindex], increment);
+            }
 
-            if (!std::isfinite(globals::gammaestimator[ionestimindex])) {
+            if (!std::isfinite(increment)) {
               printout(
                   "[fatal] update_estimators: gamma estimator becomes non finite: mgi %d element %d ion %d gamma_contr "
                   "%g, distance_e_cmf_over_nu %g\n",
@@ -583,8 +590,14 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
           }
 
           if constexpr (USE_LUT_BFHEATING) {
-            safeadd(globals::bfheatingestimator[ionestimindex],
-                    globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu));
+            const double increment =
+                globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu);
+            if (NODE_SHARE_ION_ESTIMATORS) {
+              MPI_Fetch_and_op(&increment, globals::bfheatingestimator, MPI_DOUBLE, 0, ionestimindex, MPI_SUM,
+                               globals::bfheatingestimator_mpiwin);
+            } else {
+              safeadd(globals::bfheatingestimator[ionestimindex], increment);
+            }
           }
         }
       } else {

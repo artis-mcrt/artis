@@ -20,6 +20,7 @@
 #include "decay.h"
 #include "globals.h"
 #include "input.h"
+#include "mpi.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "packet.h"
@@ -733,17 +734,36 @@ static void allocate_composition_cooling()
 {
   const int npts_nonempty = get_nonempty_npts_model();  // add one for the combined empty cell at the end
 
-  auto *initmassfracstable_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
-  auto *elem_meanweight_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
+#ifdef MPI_ON
+  size_t my_rank_cells_nonempty = nonempty_npts_model / globals::node_nprocs;
+  // rank_in_node 0 gets any remainder
+  if (globals::rank_in_node == 0) {
+    my_rank_cells_nonempty += nonempty_npts_model - (my_rank_cells_nonempty * globals::node_nprocs);
+  }
+#endif
+
+  float *initmassfracstable_allcells = nullptr;
+  float *elem_meanweight_allcells = nullptr;
+
+#ifdef MPI_ON
+  MPI_Aint size = my_rank_cells_nonempty * get_nelements() * sizeof(float);
+  int disp_unit = sizeof(float);
+  MPI_Win mpiwin = MPI_WIN_NULL;
+  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                        &initmassfracstable_allcells, &mpiwin) == MPI_SUCCESS);
+  assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &initmassfracstable_allcells) == MPI_SUCCESS);
+
+  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                        &elem_meanweight_allcells, &mpiwin) == MPI_SUCCESS);
+  assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &elem_meanweight_allcells) == MPI_SUCCESS);
+#else
+  initmassfracstable_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
+  elem_meanweight_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
+#endif
 
   double *nltepops_allcells = nullptr;
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
-    size_t my_rank_cells_nonempty = nonempty_npts_model / globals::node_nprocs;
-    // rank_in_node 0 gets any remainder
-    if (globals::rank_in_node == 0) {
-      my_rank_cells_nonempty += nonempty_npts_model - (my_rank_cells_nonempty * globals::node_nprocs);
-    }
     MPI_Aint size = my_rank_cells_nonempty * globals::total_nlte_levels * sizeof(double);
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nltepops_allcells,
@@ -1622,22 +1642,56 @@ void read_ejecta_model() {
 
   globals::rpkt_emiss = static_cast<double *>(calloc((get_npts_model() + 1), sizeof(double)));
 
-  size_t ionestimsize = (get_npts_model() + 1) * get_includedions() * sizeof(double);
+  bool do_malloc = true;
+#ifdef MPI_ON
+  if (NODE_SHARE_ION_ESTIMATORS) {
+    do_malloc = false;
+    auto my_rank_cells = (npts_model + 1) / globals::node_nprocs;
+    // rank_in_node 0 gets any remainder
+    if (globals::rank_in_node == 0) {
+      my_rank_cells += (npts_model + 1) - (my_rank_cells * globals::node_nprocs);
+    }
 
-  if constexpr (USE_LUT_PHOTOION) {
-    globals::corrphotoionrenorm = static_cast<double *>(malloc(ionestimsize));
-    globals::gammaestimator = static_cast<double *>(malloc(ionestimsize));
+    MPI_Aint size = my_rank_cells * get_includedions() * sizeof(double);
 
-#ifdef DO_TITER
-    globals::gammaestimator_save = static_cast<double *>(malloc(ionestimsize));
-#endif
+    int disp_unit = sizeof(double);
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                          &globals::corrphotoionrenorm,
+                                          &globals::corrphotoionrenorm_mpiwin) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(globals::corrphotoionrenorm_mpiwin, 0, &size, &disp_unit,
+                                       &globals::corrphotoionrenorm) == MPI_SUCCESS);
+
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                          &globals::gammaestimator, &globals::gammaestimator_mpiwin) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(globals::gammaestimator_mpiwin, 0, &size, &disp_unit,
+                                       &globals::gammaestimator) == MPI_SUCCESS);
+
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                          &globals::bfheatingestimator,
+                                          &globals::bfheatingestimator_mpiwin) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(globals::bfheatingestimator_mpiwin, 0, &size, &disp_unit,
+                                       &globals::bfheatingestimator) == MPI_SUCCESS);
   }
-
-  if constexpr (USE_LUT_BFHEATING) {
-    globals::bfheatingestimator = static_cast<double *>(malloc(ionestimsize));
-#ifdef DO_TITER
-    globals::bfheatingestimator_save = static_cast<double *>(malloc(ionestimsize));
 #endif
+
+  if (do_malloc) {
+    size_t ionestimsize = (get_npts_model() + 1) * get_includedions() * sizeof(double);
+
+    if constexpr (USE_LUT_PHOTOION) {
+      globals::corrphotoionrenorm = static_cast<double *>(malloc(ionestimsize));
+      globals::gammaestimator = static_cast<double *>(malloc(ionestimsize));
+
+#ifdef DO_TITER
+      globals::gammaestimator_save = static_cast<double *>(malloc(ionestimsize));
+#endif
+    }
+
+    if constexpr (USE_LUT_BFHEATING) {
+      globals::bfheatingestimator = static_cast<double *>(malloc(ionestimsize));
+#ifdef DO_TITER
+      globals::bfheatingestimator_save = static_cast<double *>(malloc(ionestimsize));
+#endif
+    }
   }
 
   globals::ffheatingestimator = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));

@@ -141,5 +141,7 @@ constexpr bool KEEP_ALL_RESTART_FILES = false;
 
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = true;
 
+constexpr bool NODE_SHARE_ION_ESTIMATORS = false;
+
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H

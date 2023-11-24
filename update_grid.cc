@@ -2,9 +2,11 @@
 
 #include <cmath>
 
+#include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
 #include "decay.h"
+#include "globals.h"
 #include "grid.h"
 #include "kpkt.h"
 #include "ltepop.h"
@@ -1100,7 +1102,9 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 #endif
 
         if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-          update_gamma_corrphotoionrenorm_bfheating_estimators(mgi, estimator_normfactor);
+          if (!NODE_SHARE_ION_ESTIMATORS && globals::rank_in_node == 0) {
+            update_gamma_corrphotoionrenorm_bfheating_estimators(mgi, estimator_normfactor);
+          }
         }
 
         // Get radiation field parameters (T_J, T_R, W, and bins if enabled) out of the
