@@ -543,7 +543,7 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
     }
 
     totupdowntrans = 0;
-    for (int ii = 0; ii < tottransitions; ii++) {
+    for (size_t ii = 0; ii < tottransitions; ii++) {
       const int level = transitiontable[ii].upper;
       const int targetlevel = transitiontable[ii].lower;
       if (pass == 0) {
