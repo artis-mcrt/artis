@@ -21,7 +21,6 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
-#include "mpi.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "radfield.h"
@@ -753,7 +752,7 @@ auto main(int argc, char *argv[]) -> int {
 #endif
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "w:")) != -1) {
+  while ((opt = getopt(argc, argv, "w:")) != -1) {  // NOLINT(concurrency-mt-unsafe)
     if (opt == 'w') {
       printout("Command line argument specifies wall time hours '%s', setting ", optarg);
       const float walltimehours = strtof(optarg, nullptr);
