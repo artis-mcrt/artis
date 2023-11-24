@@ -553,8 +553,8 @@ static void zero_estimators() {
       stats::reset_ion_stats(modelgridindex);
     }
 
+    MPI_Barrier(globals::mpi_comm_node);
     if (!NODE_SHARE_ION_ESTIMATORS || (globals::rank_in_node == 0)) {
-      MPI_Barrier(globals::mpi_comm_node);
       for (int element = 0; element < get_nelements(); element++) {
         for (int ion = 0; ion < get_nions(element); ion++) {
           if constexpr (USE_LUT_PHOTOION) {
@@ -565,8 +565,8 @@ static void zero_estimators() {
           }
         }
       }
-      MPI_Barrier(globals::mpi_comm_node);
     }
+    MPI_Barrier(globals::mpi_comm_node);
 
     globals::rpkt_emiss[modelgridindex] = 0.;
   }
