@@ -221,7 +221,8 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
         }
 
         assert_always(grid::modelgrid[modelgridindex].elem_meanweight != nullptr);
-        MPI_Bcast(&grid::modelgrid[modelgridindex].elem_meanweight, get_nelements(), MPI_FLOAT, root, MPI_COMM_WORLD);
+        MPI_Bcast(&grid::modelgrid[modelgridindex].elem_meanweight, get_nelements(), MPI_FLOAT, root,
+                  NODE_SHARE_ION_ESTIMATORS ? globals::mpi_comm_node : MPI_COMM_WORLD);
       }
     }
 
