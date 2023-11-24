@@ -222,7 +222,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
 
         assert_always(grid::modelgrid[modelgridindex].elem_meanweight != nullptr);
         MPI_Bcast(&grid::modelgrid[modelgridindex].elem_meanweight, get_nelements(), MPI_FLOAT, root,
-                  NODE_SHARE_ION_ESTIMATORS ? globals::mpi_comm_node : MPI_COMM_WORLD);
+                  globals::mpi_comm_internode);
       }
     }
 
@@ -326,7 +326,7 @@ static void mpi_reduce_estimators(int nts) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   const int arraylen = grid::get_npts_model() * get_includedions();
-  MPI_Comm ionestimcomm = NODE_SHARE_ION_ESTIMATORS ? globals::mpi_comm_node : MPI_COMM_WORLD;
+  MPI_Comm ionestimcomm = NODE_SHARE_ION_ESTIMATORS ? globals::mpi_comm_internode : MPI_COMM_WORLD;
   if constexpr (USE_LUT_PHOTOION) {
     MPI_Barrier(MPI_COMM_WORLD);
     assert_always(globals::gammaestimator != nullptr);
