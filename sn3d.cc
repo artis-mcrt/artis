@@ -347,6 +347,7 @@ static void mpi_reduce_estimators(int nts) {
   }
   if constexpr (USE_LUT_BFHEATING) {
     MPI_Barrier(MPI_COMM_WORLD);
+    assert_always(globals::bfheatingestimator != nullptr);
     MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
 
