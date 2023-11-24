@@ -1654,23 +1654,24 @@ void read_ejecta_model() {
       my_rank_cells += (npts_model + 1) - (my_rank_cells * globals::node_nprocs);
     }
 
-    MPI_Aint size = my_rank_cells * get_includedions() * sizeof(double);
-
     int disp_unit = sizeof(double);
 
     if constexpr (USE_LUT_PHOTOION) {
+      MPI_Aint size = my_rank_cells * get_includedions() * sizeof(double);
       assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
                                             &globals::corrphotoionrenorm,
                                             &globals::corrphotoionrenorm_mpiwin) == MPI_SUCCESS);
       assert_always(MPI_Win_shared_query(globals::corrphotoionrenorm_mpiwin, 0, &size, &disp_unit,
                                          &globals::corrphotoionrenorm) == MPI_SUCCESS);
 
+      size = my_rank_cells * get_includedions() * sizeof(double);
       assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
                                             &globals::gammaestimator, &globals::gammaestimator_mpiwin) == MPI_SUCCESS);
       assert_always(MPI_Win_shared_query(globals::gammaestimator_mpiwin, 0, &size, &disp_unit,
                                          &globals::gammaestimator) == MPI_SUCCESS);
     }
     if constexpr (USE_LUT_BFHEATING) {
+      MPI_Aint size = my_rank_cells * get_includedions() * sizeof(double);
       assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
                                             &globals::bfheatingestimator,
                                             &globals::bfheatingestimator_mpiwin) == MPI_SUCCESS);
