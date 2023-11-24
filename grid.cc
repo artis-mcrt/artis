@@ -754,7 +754,7 @@ static void allocate_composition_cooling()
   //   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
   //                                         &initmassfracstable_allcells, &mpiwin) == MPI_SUCCESS);
   //   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &initmassfracstable_allcells) == MPI_SUCCESS);
-
+  //   mpiwin = MPI_WIN_NULL;
   //   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
   //                                         &elem_meanweight_allcells, &mpiwin) == MPI_SUCCESS);
   //   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &elem_meanweight_allcells) == MPI_SUCCESS);
