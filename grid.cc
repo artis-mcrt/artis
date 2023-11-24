@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <span>
 #include <sstream>
@@ -306,6 +307,12 @@ void set_nnetot(int modelgridindex, float x) {
 }
 
 static void set_ffegrp(int modelgridindex, float x) {
+  if (!(x >= 0.)) {
+    printout("WARNING: Fe-group mass fraction %g is negative in cell %d\n", x, modelgridindex);
+    assert_always(x > -1e-6);
+    x = 0.;
+  }
+
   assert_always(x >= 0);
   assert_always(x <= 1.001);
   modelgrid[modelgridindex].ffegrp = x;
@@ -459,10 +466,17 @@ auto get_modelinitradioabund(const int modelgridindex, const int nucindex) -> fl
   return modelgrid[modelgridindex].initradioabund[nucindex];
 }
 
-static void set_modelinitradioabund(const int modelgridindex, const int nucindex, const float abund) {
+static void set_modelinitradioabund(const int modelgridindex, const int nucindex, float abund) {
   // set the mass fraction of a nuclide in a model grid cell at t=t_model by nuclide index
   // initradioabund array is in node shared memory
   assert_always(nucindex >= 0);
+  if (!(abund >= 0.)) {
+    printout("WARNING: nuclear mass fraction for nucindex %d = %g is negative in cell %d\n", abund, nucindex,
+             modelgridindex);
+    assert_always(abund > -1e-6);
+    abund = 0.;
+  }
+
   assert_always(abund >= 0.);
   assert_always(abund <= 1.);
 
@@ -560,8 +574,8 @@ static void set_elem_stable_abund_from_total(const int mgi, const int element, c
   double massfracstable = elemabundance - isofracsum;
 
   if (massfracstable < 0.) {
-    if ((isofracsum / elemabundance - 1.) > 1e-4)  //  allow some roundoff error
-    {
+    //  allow some roundoff error before we complain
+    if ((isofracsum - elemabundance - 1.) > 1e-4 && std::abs(isofracsum - elemabundance) > 1e-6) {
       printout("WARNING: cell %d Z=%d element abundance is less than the sum of its radioisotope abundances \n", mgi,
                atomic_number);
       printout("  massfrac(Z) %g massfrac_radioisotopes(Z) %g\n", elemabundance, isofracsum);
@@ -1012,14 +1026,20 @@ static void abundances_read() {
     // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
     double normfactor = 0.;
     float abundances_in[150] = {0.};
+    double abund_in = 0.;
     for (int anumber = 1; anumber <= 150; anumber++) {
       abundances_in[anumber - 1] = 0.;
-      if (!(ssline >> abundances_in[anumber - 1])) {
-        assert_always(anumber > 1);  // at least one element (hydrogen) should have been specified
+      if (!(ssline >> abund_in)) {
+        // at least one element (hydrogen) should have been specified for nonempty cells
+        assert_always(anumber > 1 || get_numassociatedcells(mgi) == 0);
         break;
       }
 
-      assert_always(abundances_in[anumber - 1] >= 0.);
+      if (abund_in < 0. || abund_in < std::numeric_limits<float>::min()) {
+        assert_always(abund_in > -1e-6);
+        abund_in = 0.;
+      }
+      abundances_in[anumber - 1] = static_cast<float>(abund_in);
       normfactor += abundances_in[anumber - 1];
     }
 
@@ -1130,7 +1150,6 @@ static void read_model_radioabundances(std::fstream &fmodel, std::istringstream 
     assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
 
     if (nucindexlist[i] >= 0) {
-      assert_testmodeonly(valuein >= 0.);
       assert_testmodeonly(valuein <= 1.);
       set_modelinitradioabund(mgi, nucindexlist[i], valuein);
     } else if (colnames[i] == "X_Fegroup") {
@@ -1452,8 +1471,10 @@ static void read_3d_model()
     for (int axis = 0; axis < 3; axis++) {
       const double cellwidth = 2 * xmax_tmodel / ncoordgrid[axis];
       const double cellpos_expected = -xmax_tmodel + cellwidth * get_cellcoordpointnum(mgi, axis);
-      // printout("n %d coord %d expected %g found %g rmax %g get_cellcoordpointnum(n, axis) %d ncoordgrid %d\n",
-      // n, axis, cellpos_expected, cellpos_in[axis], xmax_tmodel, get_cellcoordpointnum(n, axis), ncoordgrid[axis]);
+      //   printout("mgi %d coord %d expected %g found %g or %g rmax %g get_cellcoordpointnum(mgi, axis) %d ncoordgrid
+      //   %d\n",
+      //            mgi, axis, cellpos_expected, cellpos_in[axis], cellpos_in[2 - axis], xmax_tmodel,
+      //            get_cellcoordpointnum(mgi, axis), ncoordgrid[axis]);
       if (fabs(cellpos_expected - cellpos_in[axis]) > 0.5 * cellwidth) {
         posmatch_xyz = false;
       }
@@ -1490,12 +1511,18 @@ static void read_3d_model()
     abort();
   }
 
-  assert_always(posmatch_zyx ^ posmatch_xyz);  // xor because if both match then probably an infinity occurred
+  //   assert_always(posmatch_zyx ^ posmatch_xyz);  // xor because if both match then probably an infinity occurred
   if (posmatch_xyz) {
     printout("Cell positions in model.txt are consistent with calculated values when x-y-z column order is used.\n");
   }
   if (posmatch_zyx) {
     printout("Cell positions in model.txt are consistent with calculated values when z-y-x column order is used.\n");
+  }
+
+  if (!posmatch_xyz && !posmatch_zyx) {
+    printout(
+        "WARNING: Cell positions in model.txt are not consistent with calculated values in either x-y-z or z-y-x "
+        "order.\n");
   }
 
   printout("min_den %g [g/cm3]\n", min_den);
@@ -1788,7 +1815,11 @@ static void assign_initial_temperatures()
   /// according to the local energy density resulting from the 56Ni decay.
   /// The dilution factor is W=1 in LTE.
 
+  printout("Assigning initial temperatures...\n");
+
   const double tstart = globals::timesteps[0].mid;
+  int cells_below_mintemp = 0;
+  int cells_above_maxtemp = 0;
 
   for (int nonempymgi = 0; nonempymgi < get_nonempty_npts_model(); nonempymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonempymgi);
@@ -1802,11 +1833,13 @@ static void assign_initial_temperatures()
         pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.);
 
     if (T_initial < MINTEMP) {
-      printout("mgi %d: T_initial of %g is below MINTEMP %g K, setting to MINTEMP.\n", mgi, T_initial, MINTEMP);
+      //   printout("mgi %d: T_initial of %g is below MINTEMP %g K, setting to MINTEMP.\n", mgi, T_initial, MINTEMP);
       T_initial = MINTEMP;
+      cells_below_mintemp++;
     } else if (T_initial > MAXTEMP) {
-      printout("mgi %d: T_initial of %g is above MAXTEMP %g K, setting to MAXTEMP.\n", mgi, T_initial, MAXTEMP);
+      //   printout("mgi %d: T_initial of %g is above MAXTEMP %g K, setting to MAXTEMP.\n", mgi, T_initial, MAXTEMP);
       T_initial = MAXTEMP;
+      cells_above_maxtemp++;
     } else if (!std::isfinite(T_initial)) {
       printout("mgi %d: T_initial of %g is infinite!\n", mgi, T_initial);
     }
@@ -1819,6 +1852,8 @@ static void assign_initial_temperatures()
     set_W(mgi, 1.);
     modelgrid[mgi].thick = 0;
   }
+  printout("  cells below MINTEMP %g: %d\n", MINTEMP, cells_below_mintemp);
+  printout("  cells above MAXTEMP %g: %d\n", MAXTEMP, cells_above_maxtemp);
 }
 
 static void setup_nstart_ndo() {
