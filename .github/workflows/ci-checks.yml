@@ -55,7 +55,7 @@ jobs:
             - name: install dependencies
               run: |
                   brew update
-                  brew install openmpi gsl
+                  brew install openmpi gsl || true
                   brew link openmpi
 
             - name: install llvm
