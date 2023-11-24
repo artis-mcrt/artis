@@ -8,7 +8,6 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include <ranges>
 #include <span>
 #include <sstream>
 #include <string>
@@ -662,7 +661,8 @@ static void calculate_kappagrey() {
       double kappa = 0.;
       if (globals::opacity_case == 0) {
         kappa = globals::GREY_OP;
-      } else if (globals::opacity_case == 1) {
+      } else if (globals::opacity_case == 1 || globals::opacity_case == 4) {
+        /// kappagrey used for initial grey approximation in case 4
         kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * globals::GREY_OP / ((0.9 * mfeg / mtot_input) + 0.1);
       } else if (globals::opacity_case == 2) {
         const double opcase2_normal = globals::GREY_OP * rho_sum / ((0.9 * fe_sum) + (0.1 * (ngrid - empty_cells)));
@@ -670,10 +670,6 @@ static void calculate_kappagrey() {
       } else if (globals::opacity_case == 3) {
         globals::opcase3_normal = globals::GREY_OP * rho_sum / opcase3_sum;
         kappa = get_kappagrey(mgi) * globals::opcase3_normal;
-      } else if (globals::opacity_case == 4) {
-        /// kappagrey used for initial grey approximation in this case
-        kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * globals::GREY_OP / ((0.9 * mfeg / mtot_input) + 0.1);
-        // kappa = SIGMA_T;
       } else if (globals::opacity_case == 5) {
         // electron-fraction-dependent opacities
         // values from table 1 of Tanaka et al. (2020).
