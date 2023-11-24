@@ -1622,6 +1622,8 @@ void read_ejecta_model() {
 
   globals::rpkt_emiss = static_cast<double *>(calloc((get_npts_model() + 1), sizeof(double)));
 
+  size_t ionestimsize = (get_npts_model() + 1) * get_includedions() * sizeof(double);
+
   if constexpr (USE_LUT_PHOTOION) {
     globals::corrphotoionrenorm = static_cast<double *>(malloc(ionestimsize));
     globals::gammaestimator = static_cast<double *>(malloc(ionestimsize));
