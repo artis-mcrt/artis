@@ -20,7 +20,9 @@
 #include "decay.h"
 #include "globals.h"
 #include "input.h"
+#ifdef MPI_ON
 #include "mpi.h"
+#endif
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "packet.h"
