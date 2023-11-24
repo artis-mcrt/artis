@@ -212,16 +212,18 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
         }
 
         if constexpr (USE_LUT_PHOTOION) {
+          MPI_Comm ionestimcomm = NODE_SHARE_ION_ESTIMATORS ? globals::mpi_comm_internode : MPI_COMM_WORLD;
+          int usedroot = NODE_SHARE_ION_ESTIMATORS ? root_node_id : root;
           assert_always(globals::corrphotoionrenorm != nullptr);
           MPI_Bcast(&globals::corrphotoionrenorm[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE,
-                    root, MPI_COMM_WORLD);
+                    usedroot, ionestimcomm);
           assert_always(globals::gammaestimator != nullptr);
-          MPI_Bcast(&globals::gammaestimator[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE, root,
-                    MPI_COMM_WORLD);
+          MPI_Bcast(&globals::gammaestimator[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE,
+                    usedroot, ionestimcomm);
         }
 
         assert_always(grid::modelgrid[modelgridindex].elem_meanweight != nullptr);
-        MPI_Bcast(&grid::modelgrid[modelgridindex].elem_meanweight, get_nelements(), MPI_FLOAT, root,
+        MPI_Bcast(&grid::modelgrid[modelgridindex].elem_meanweight, get_nelements(), MPI_FLOAT, root_node_id,
                   globals::mpi_comm_internode);
       }
     }
@@ -535,13 +537,15 @@ static void zero_estimators() {
       stats::reset_ion_stats(modelgridindex);
     }
 
-    for (int element = 0; element < get_nelements(); element++) {
-      for (int ion = 0; ion < get_nions(element); ion++) {
-        if constexpr (USE_LUT_PHOTOION) {
-          globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
-        }
-        if constexpr (USE_LUT_BFHEATING) {
-          globals::bfheatingestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
+    if (!NODE_SHARE_ION_ESTIMATORS || (globals::rank_in_node == 0)) {
+      for (int element = 0; element < get_nelements(); element++) {
+        for (int ion = 0; ion < get_nions(element); ion++) {
+          if constexpr (USE_LUT_PHOTOION) {
+            globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
+          }
+          if constexpr (USE_LUT_BFHEATING) {
+            globals::bfheatingestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
+          }
         }
       }
     }
