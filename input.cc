@@ -1523,7 +1523,7 @@ static void setup_phixs_list() {
 #endif
 
     assert_always(allphixsblock != nullptr);
-    int nbftableschanged = 0;
+    size_t nbftableschanged = 0;
     for (int i = 0; i < globals::nbfcontinua; i++) {
       globals::allcont_nu_edge[i] = nonconstallcont[i].nu_edge;
 
