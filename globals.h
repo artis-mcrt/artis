@@ -142,9 +142,9 @@ struct linelist_entry {
 };
 
 struct gslintegration_paras {
-  const double nu_edge;
-  const float T;
-  const float *const photoion_xs;
+  double nu_edge;
+  float T;
+  float *photoion_xs;
 };
 
 struct rpkt_continuum_absorptioncoeffs {
@@ -160,17 +160,17 @@ struct rpkt_continuum_absorptioncoeffs {
 };
 
 template <bool separatestimrecomb>
-struct _chphixstargets {
+struct chphixstargets {
   double corrphotoioncoeff;
 };
 
 template <>
-struct _chphixstargets<true> {
+struct chphixstargets<true> {
   double corrphotoioncoeff;
   double separatestimrecomb;
 };
 
-using chphixstargets_t = struct _chphixstargets<SEPARATE_STIMRECOMB>;
+using chphixstargets_t = struct chphixstargets<SEPARATE_STIMRECOMB>;
 
 #include "macroatom.h"
 

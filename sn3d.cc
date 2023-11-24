@@ -264,12 +264,14 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
                    MPI_COMM_WORLD);
 
           for (int element = 0; element < get_nelements(); element++) {
-            MPI_Pack(grid::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT,
-                     mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-            MPI_Pack(grid::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT,
-                     mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-            MPI_Pack(grid::modelgrid[mgi].cooling_contrib_ion[element], get_nions(element), MPI_DOUBLE, mpi_grid_buffer,
-                     mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+            if (get_nions(element) > 0) {
+              MPI_Pack(grid::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT,
+                       mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+              MPI_Pack(grid::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT,
+                       mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+              MPI_Pack(grid::modelgrid[mgi].cooling_contrib_ion[element], get_nions(element), MPI_DOUBLE,
+                       mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+            }
           }
         }
       }
@@ -311,14 +313,17 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
                    MPI_COMM_WORLD);
 
         for (int element = 0; element < get_nelements(); element++) {
-          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                     grid::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT,
-                     MPI_COMM_WORLD);
-          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                     grid::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT,
-                     MPI_COMM_WORLD);
-          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                     grid::modelgrid[mgi].cooling_contrib_ion[element], get_nions(element), MPI_DOUBLE, MPI_COMM_WORLD);
+          if (get_nions(element) > 0) {
+            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                       grid::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT,
+                       MPI_COMM_WORLD);
+            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                       grid::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT,
+                       MPI_COMM_WORLD);
+            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                       grid::modelgrid[mgi].cooling_contrib_ion[element], get_nions(element), MPI_DOUBLE,
+                       MPI_COMM_WORLD);
+          }
         }
       }
     }
