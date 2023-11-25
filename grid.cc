@@ -65,6 +65,7 @@ double *totmassradionuclide = nullptr;  /// total mass of each radionuclide in t
 #ifdef MPI_ON
 MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
 MPI_Win win_initradioabund_allcells = MPI_WIN_NULL;
+MPI_Win win_corrphotoionrenorm = MPI_WIN_NULL;
 #endif
 
 float *initradioabund_allcells = nullptr;
@@ -1668,10 +1669,9 @@ void read_ejecta_model() {
     MPI_Aint size = my_rank_cells * get_includedions() * sizeof(double);
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &globals::corrphotoionrenorm,
-                                          &globals::corrphotoionrenorm_mpiwin) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(globals::corrphotoionrenorm_mpiwin, 0, &size, &disp_unit,
-                                       &globals::corrphotoionrenorm) == MPI_SUCCESS);
+                                          &globals::corrphotoionrenorm, &win_corrphotoionrenorm) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(win_corrphotoionrenorm, 0, &size, &disp_unit, &globals::corrphotoionrenorm) ==
+                  MPI_SUCCESS);
   }
 #else
   if constexpr (USE_LUT_PHOTOION) {

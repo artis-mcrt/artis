@@ -19,10 +19,6 @@ double *gammaestimator = nullptr;
 // for USE_LUT_BFHEATING = true
 double *bfheatingestimator = nullptr;
 
-#ifdef MPI_ON
-MPI_Win corrphotoionrenorm_mpiwin = MPI_WIN_NULL;
-#endif
-
 double *ffheatingestimator = nullptr;
 double *colheatingestimator = nullptr;
 #ifdef DO_TITER
