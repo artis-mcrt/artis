@@ -543,7 +543,9 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
 }
 
 static void zero_estimators() {
+#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
+#endif
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     radfield::zero_estimators(modelgridindex);
@@ -570,7 +572,9 @@ static void zero_estimators() {
 
     globals::rpkt_emiss[modelgridindex] = 0.;
   }
+#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
+#endif
 }
 
 static auto do_timestep(const int nts, const int titer, const int my_rank, const int nstart, const int ndo,
@@ -626,7 +630,9 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
   // and also the photoion and stimrecomb estimators
   zero_estimators();
 
-  // MPI_Barrier(MPI_COMM_WORLD);
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
   if ((nts < globals::timestep_finish) && do_this_full_loop) {
     /// Now process the packets.
 
