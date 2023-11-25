@@ -222,7 +222,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
           if constexpr (!NODE_SHARE_ION_ESTIMATORS) {
             MPI_Bcast(&globals::gammaestimator[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE,
                       root, MPI_COMM_WORLD);
-          } else if (globals::rank_in_node == 0) {
+          } else {
             MPI_Bcast(&globals::gammaestimator[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE,
                       root_node_id, globals::mpi_comm_internode);
           }
