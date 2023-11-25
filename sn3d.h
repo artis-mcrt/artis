@@ -107,11 +107,10 @@ inline void safeadd(auto &var, auto val) {
 #ifdef _OPENMP
 #pragma omp atomic update
 #endif
-
-  // var += val;
+  var += val;
 
   // this works on clang but not gcc for doubles.
-  __atomic_fetch_add(&var, val, __ATOMIC_RELAXED);
+  // __atomic_fetch_add(&var, val, __ATOMIC_RELAXED);
 }
 
 #define safeincrement(var) safeadd((var), 1)

@@ -584,6 +584,8 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
             safeadd(globals::gammaestimator[ionestimindex],
                     globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf_over_nu);
             // }
+            const double increment = globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf_over_nu;
+            __atomic_fetch_add(&globals::gammaestimator[ionestimindex], increment, __ATOMIC_RELAXED);
 
             if (!std::isfinite(globals::gammaestimator[ionestimindex])) {
               printout(
