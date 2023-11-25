@@ -523,11 +523,14 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
       MPI_Barrier(MPI_COMM_WORLD);
       MPI_Win win = MPI_WIN_NULL;
 
-      int my_rank_trans = totupdowntrans / globals::node_nprocs;
-      // rank_in_node 0 gets any remainder
-      if (globals::rank_in_node == 0) {
-        my_rank_trans += totupdowntrans - (my_rank_trans * globals::node_nprocs);
-      }
+      const int my_rank_trans = [=]() {
+        int my_rank_trans = totupdowntrans / globals::node_nprocs;
+        // rank_in_node 0 gets any remainder
+        if (globals::rank_in_node == 0) {
+          my_rank_trans += totupdowntrans - (my_rank_trans * globals::node_nprocs);
+        }
+        return my_rank_trans;
+      }();
 
       MPI_Aint size = my_rank_trans * static_cast<MPI_Aint>(sizeof(linelist_entry));
       int disp_unit = sizeof(linelist_entry);
