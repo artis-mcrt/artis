@@ -1668,11 +1668,11 @@ void read_ejecta_model() {
     if constexpr (USE_LUT_PHOTOION) {
       MPI_Aint size = my_rank_cells * get_includedions() * sizeof(double);
       int disp_unit = sizeof(double);
-      assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                            &globals::corrphotoionrenorm,
-                                            &globals::corrphotoionrenorm_mpiwin) == MPI_SUCCESS);
-      assert_always(MPI_Win_shared_query(globals::corrphotoionrenorm_mpiwin, 0, &size, &disp_unit,
-                                         &globals::corrphotoionrenorm) == MPI_SUCCESS);
+      // assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+      //                                       &globals::corrphotoionrenorm,
+      //                                       &globals::corrphotoionrenorm_mpiwin) == MPI_SUCCESS);
+      // assert_always(MPI_Win_shared_query(globals::corrphotoionrenorm_mpiwin, 0, &size, &disp_unit,
+      //                                    &globals::corrphotoionrenorm) == MPI_SUCCESS);
 
       size = my_rank_cells * get_includedions() * sizeof(double);
       disp_unit = sizeof(double);
@@ -1698,7 +1698,7 @@ void read_ejecta_model() {
   size_t ionestimsize = (get_npts_model() + 1) * get_includedions() * sizeof(double);
   if (do_malloc) {
     if constexpr (USE_LUT_PHOTOION) {
-      globals::corrphotoionrenorm = static_cast<double *>(malloc(ionestimsize));
+      // globals::corrphotoionrenorm = static_cast<double *>(malloc(ionestimsize));
       globals::gammaestimator = static_cast<double *>(malloc(ionestimsize));
 
 #ifdef DO_TITER
@@ -1707,6 +1707,9 @@ void read_ejecta_model() {
     }
   }
 
+  if constexpr (USE_LUT_PHOTOION) {
+    globals::corrphotoionrenorm = static_cast<double *>(malloc(ionestimsize));
+  }
   if constexpr (USE_LUT_BFHEATING) {
     globals::bfheatingestimator = static_cast<double *>(malloc(ionestimsize));
 #ifdef DO_TITER
