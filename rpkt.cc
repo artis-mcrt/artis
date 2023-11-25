@@ -534,13 +534,11 @@ static void rpkt_event_thickcell(struct packet *pkt_ptr)
   pkt_ptr->em_time = pkt_ptr->prop_time;
 }
 
-static void update_estimators(const struct packet *pkt_ptr, const double distance)
+static void update_estimators(const struct packet *pkt_ptr, const double distance, const int modelgridindex)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.
 {
-  const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
-
   /// Update only non-empty cells
   if (modelgridindex == grid::get_npts_model()) {
     return;
@@ -692,7 +690,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   if ((sdist < tdist) && (sdist < edist)) {
     // Move it into the new cell.
     move_pkt_withtime(pkt_ptr, sdist / 2.);
-    update_estimators(pkt_ptr, sdist);
+    update_estimators(pkt_ptr, sdist, mgi);
     move_pkt_withtime(pkt_ptr, sdist / 2.);
 
     if (snext != pkt_ptr->where) {
@@ -709,7 +707,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   if ((edist < sdist) && (edist < tdist)) {
     // bound-bound or continuum event
     move_pkt_withtime(pkt_ptr, edist / 2.);
-    update_estimators(pkt_ptr, edist);
+    update_estimators(pkt_ptr, edist, mgi);
     move_pkt_withtime(pkt_ptr, edist / 2.);
 
     // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
@@ -729,7 +727,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   if ((tdist < sdist) && (tdist < edist)) {
     // reaches end of timestep before cell boundary or interaction
     move_pkt_withtime(pkt_ptr, tdist / 2.);
-    update_estimators(pkt_ptr, tdist);
+    update_estimators(pkt_ptr, tdist, mgi);
     pkt_ptr->prop_time = t2;
     move_pkt(pkt_ptr, tdist / 2.);
     pkt_ptr->last_event = pkt_ptr->last_event + 1000;
