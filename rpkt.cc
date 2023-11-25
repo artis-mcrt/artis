@@ -574,6 +574,9 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
             // #ifdef MPI_ON
             //               MPI_Accumulate(&increment, 1, MPI_DOUBLE, 0, ionestimindex, 1, MPI_DOUBLE, MPI_SUM,
             //                              globals::gammaestimator_mpiwin);
+            //               MPI_Fetch_and_op(&increment, globals::gammaestimator, MPI_DOUBLE, 0, ionestimindex,
+            //               MPI_SUM,
+            //                                globals::gammaestimator_mpiwin);
             // #else
             //               safeadd(globals::gammaestimator[ionestimindex], increment);
             // #endif
