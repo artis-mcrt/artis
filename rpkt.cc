@@ -568,24 +568,8 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
           const int ionestimindex = get_ionestimindex(modelgridindex, element, ion);
 
           if constexpr (USE_LUT_PHOTOION) {
-            //             if constexpr (NODE_SHARE_ION_ESTIMATORS) {
-            //               const double increment = globals::phixslist[tid].groundcont_gamma_contr[i] *
-            //               distance_e_cmf_over_nu;
-            // #ifdef MPI_ON
-            //               MPI_Accumulate(&increment, 1, MPI_DOUBLE, 0, ionestimindex, 1, MPI_DOUBLE, MPI_SUM,
-            //                              globals::gammaestimator_mpiwin);
-            //               MPI_Fetch_and_op(&increment, globals::gammaestimator, MPI_DOUBLE, 0, ionestimindex,
-            //               MPI_SUM,
-            //                                globals::gammaestimator_mpiwin);
-            // #else
-            //               safeadd(globals::gammaestimator[ionestimindex], increment);
-            // #endif
-            //             } else {
             safeadd(globals::gammaestimator[ionestimindex],
                     globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf_over_nu);
-            // }
-            // const double increment = globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf_over_nu;
-            // __atomic_fetch_add(&globals::gammaestimator[ionestimindex], increment, __ATOMIC_RELAXED);
 
             if (!std::isfinite(globals::gammaestimator[ionestimindex])) {
               printout(
@@ -598,24 +582,8 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
           }
 
           if constexpr (USE_LUT_BFHEATING) {
-            //             if constexpr (NODE_SHARE_ION_ESTIMATORS) {
-            //               const double increment =
-            //                   globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge /
-            //                   nu);
-            // #ifdef MPI_ON
-            //               // MPI_Accumulate(&increment, 1, MPI_DOUBLE, 0, ionestimindex, 1, MPI_DOUBLE, MPI_SUM,
-            //               //                globals::bfheatingestimator_mpiwin);
-            //               MPI_Fetch_and_op(&increment, &globals::bfheatingestimator[ionestimindex], MPI_DOUBLE, 0, 0,
-            //               MPI_SUM,
-            //                                globals::bfheatingestimator_mpiwin);
-
-            // #else
-            //               safeadd(globals::bfheatingestimator[ionestimindex], increment);
-            // #endif
-            //             } else {
             safeadd(globals::bfheatingestimator[ionestimindex],
                     globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu));
-            // }
           }
         }
       } else {
