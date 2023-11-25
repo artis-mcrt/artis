@@ -342,30 +342,22 @@ static void mpi_reduce_estimators(int nts) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   const int arraylen = grid::get_npts_model() * get_includedions();
-  // MPI_Comm ionestimcomm = NODE_SHARE_ION_ESTIMATORS ? globals::mpi_comm_internode : MPI_COMM_WORLD;
-  // if constexpr (USE_LUT_PHOTOION) {
-  //   MPI_Barrier(MPI_COMM_WORLD);
-  //   assert_always(globals::gammaestimator != nullptr);
-  //   if (!NODE_SHARE_ION_ESTIMATORS || (globals::rank_in_node == 0)) {
-  //     MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, ionestimcomm);
-  //   }
-  // }
-  // if constexpr (USE_LUT_BFHEATING) {
-  //   MPI_Barrier(MPI_COMM_WORLD);
-  //   if (!NODE_SHARE_ION_ESTIMATORS || (globals::rank_in_node == 0)) {
-  //     MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, arraylen, MPI_DOUBLE, MPI_SUM, ionestimcomm);
-  //   }
-  // }
+  MPI_Comm ionestimcomm = NODE_SHARE_ION_ESTIMATORS ? globals::mpi_comm_internode : MPI_COMM_WORLD;
 
   if constexpr (USE_LUT_PHOTOION) {
     MPI_Barrier(MPI_COMM_WORLD);
     assert_always(globals::gammaestimator != nullptr);
-    MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    if (!NODE_SHARE_ION_ESTIMATORS || (globals::rank_in_node == 0)) {
+      MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, ionestimcomm);
+    }
   }
+
   if constexpr (USE_LUT_BFHEATING) {
     MPI_Barrier(MPI_COMM_WORLD);
     assert_always(globals::bfheatingestimator != nullptr);
-    MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    if (!NODE_SHARE_ION_ESTIMATORS || (globals::rank_in_node == 0)) {
+      MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, arraylen, MPI_DOUBLE, MPI_SUM, ionestimcomm);
+    }
   }
 
   if constexpr (RECORD_LINESTAT) {
