@@ -219,9 +219,15 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
           }
 
           assert_always(globals::gammaestimator != nullptr);
-          // TODO: why does internode comm not work here?
-          MPI_Bcast(&globals::gammaestimator[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE, root,
-                    MPI_COMM_WORLD);
+          if constexpr (NODE_SHARE_ION_ESTIMATORS) {
+            if (globals::rank_in_node == 0) {
+              MPI_Bcast(&globals::gammaestimator[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE,
+                        root_node_id, globals::mpi_comm_internode);
+            }
+          } else {
+            MPI_Bcast(&globals::gammaestimator[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE,
+                      root, MPI_COMM_WORLD);
+          }
         }
 
         assert_always(grid::modelgrid[modelgridindex].elem_meanweight != nullptr);
@@ -342,10 +348,9 @@ static void mpi_reduce_estimators(int nts) {
   if constexpr (USE_LUT_PHOTOION) {
     MPI_Barrier(MPI_COMM_WORLD);
     assert_always(globals::gammaestimator != nullptr);
-    // if (!NODE_SHARE_ION_ESTIMATORS || (globals::rank_in_node == 0)) {
-    //   MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, ionestimcomm);
-    // }
-    MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    if (!NODE_SHARE_ION_ESTIMATORS || (globals::rank_in_node == 0)) {
+      MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, ionestimcomm);
+    }
   }
 
   if constexpr (USE_LUT_BFHEATING) {
@@ -559,11 +564,11 @@ static void zero_estimators() {
 
     for (int element = 0; element < get_nelements(); element++) {
       for (int ion = 0; ion < get_nions(element); ion++) {
-        if constexpr (USE_LUT_PHOTOION) {
-          globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
-        }
-        if constexpr (USE_LUT_BFHEATING) {
-          if (!NODE_SHARE_ION_ESTIMATORS || (globals::rank_in_node == 0)) {
+        if (!NODE_SHARE_ION_ESTIMATORS || (globals::rank_in_node == 0)) {
+          if constexpr (USE_LUT_PHOTOION) {
+            globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
+          }
+          if constexpr (USE_LUT_BFHEATING) {
             globals::bfheatingestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
           }
         }
