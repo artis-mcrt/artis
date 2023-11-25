@@ -18,8 +18,8 @@
 #include "artisoptions.h"
 #include "globals.h"
 
-// #define _OPENMP
-#ifdef _OPENMP
+// #define OPENMP_MT_ON
+#ifdef OPENMP_MT_ON
 #include <omp.h>
 #endif
 
@@ -35,7 +35,7 @@ extern std::mt19937 stdrng;
 
 extern gsl_integration_workspace *gslworkspace;
 
-#ifdef _OPENMP
+#ifdef OPENMP_MT_ON
 #pragma omp threadprivate(tid, use_cellhist, stdrng, gslworkspace, output_file)
 #endif
 
@@ -103,7 +103,7 @@ static inline auto get_bflutindex(const int tempindex, const int element, const 
   return bflutindex;
 }
 
-#ifdef _OPENMP
+#ifdef OPENMP_MT_ON
 #define safeadd(var, val) _Pragma("omp atomic update") var += val
 #else
 #define safeadd(var, val) var = (var) + val
@@ -165,7 +165,7 @@ static auto get_timestep(const double time) -> int {
 }
 
 inline auto get_max_threads() -> int {
-#if defined _OPENMP
+#if defined OPENMP_MT_ON
   return omp_get_max_threads();
 #else
   return 1;
@@ -173,7 +173,7 @@ inline auto get_max_threads() -> int {
 }
 
 inline auto get_num_threads() -> int {
-#if defined _OPENMP
+#if defined OPENMP_MT_ON
   return omp_get_num_threads();
 #else
   return 1;
@@ -181,7 +181,7 @@ inline auto get_num_threads() -> int {
 }
 
 inline auto get_thread_num() -> int {
-#if defined _OPENMP
+#if defined OPENMP_MT_ON
   return omp_get_thread_num();
 #else
   return 0;

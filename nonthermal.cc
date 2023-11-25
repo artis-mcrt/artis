@@ -606,7 +606,7 @@ static auto get_y_sample(const int modelgridindex, const int index) -> double {
 }
 
 static void nt_write_to_file(const int modelgridindex, const int timestep, const int iteration) {
-#ifdef _OPENMP
+#ifdef OPENMP_MT_ON
 #pragma omp critical(nonthermal_out_file)
   {
 #endif
@@ -616,7 +616,7 @@ static void nt_write_to_file(const int modelgridindex, const int timestep, const
     }
 
     static long nonthermalfile_offset_iteration_zero = 0;
-#ifdef _OPENMP
+#ifdef OPENMP_MT_ON
 #pragma omp threadprivate(nonthermalfile_offset_iteration_zero)
 #endif
     {
@@ -639,7 +639,7 @@ static void nt_write_to_file(const int modelgridindex, const int timestep, const
               gsl_vector_get(envec, s), gsl_vector_get(sourcevec, s), yscalefactor * get_y_sample(modelgridindex, s));
     }
     fflush(nonthermalfile);
-#ifdef _OPENMP
+#ifdef OPENMP_MT_ON
   }
 #endif
 }

@@ -476,7 +476,7 @@ static void precalculate_rate_coefficient_integrals() {
   /// Calculate the rate coefficients for each level of each ion of each element
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element) - 1;
-#ifdef _OPENMP
+#ifdef OPENMP_MT_ON
 #pragma omp parallel for
 #endif
     for (int ion = 0; ion < nions; ion++) {
