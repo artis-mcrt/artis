@@ -1657,7 +1657,7 @@ void read_ejecta_model() {
 
   size_t ionestimsize = (get_npts_model() + 1) * get_includedions() * sizeof(double);
 
-  bool do_malloc = true;
+  // bool do_malloc = true;
 #ifdef MPI_ON
   auto my_rank_cells = (npts_model + 1) / globals::node_nprocs;
   // rank_in_node 0 gets any remainder
