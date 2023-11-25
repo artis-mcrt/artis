@@ -16,7 +16,6 @@
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "sn3d.h"
-#include "update_grid.h"
 
 struct Te_solution_paras {
   double t_current;

@@ -348,12 +348,12 @@ static void mpi_reduce_estimators(int nts) {
       MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, ionestimcomm);
     }
   }
-  if constexpr (USE_LUT_BFHEATING) {
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (!NODE_SHARE_ION_ESTIMATORS || (globals::rank_in_node == 0)) {
-      MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, arraylen, MPI_DOUBLE, MPI_SUM, ionestimcomm);
-    }
-  }
+  // if constexpr (USE_LUT_BFHEATING) {
+  //   MPI_Barrier(MPI_COMM_WORLD);
+  //   if (!NODE_SHARE_ION_ESTIMATORS || (globals::rank_in_node == 0)) {
+  //     MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, arraylen, MPI_DOUBLE, MPI_SUM, ionestimcomm);
+  //   }
+  // }
 
   if constexpr (RECORD_LINESTAT) {
     MPI_Barrier(MPI_COMM_WORLD);

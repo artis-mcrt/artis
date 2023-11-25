@@ -1682,22 +1682,21 @@ void read_ejecta_model() {
                                          &globals::gammaestimator) == MPI_SUCCESS);
       MPI_Barrier(globals::mpi_comm_node);
     }
-    if constexpr (USE_LUT_BFHEATING) {
-      MPI_Aint size = my_rank_cells * get_includedions() * sizeof(double);
-      int disp_unit = sizeof(double);
-      assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                            &globals::bfheatingestimator,
-                                            &globals::bfheatingestimator_mpiwin) == MPI_SUCCESS);
-      assert_always(MPI_Win_shared_query(globals::bfheatingestimator_mpiwin, 0, &size, &disp_unit,
-                                         &globals::bfheatingestimator) == MPI_SUCCESS);
-      MPI_Barrier(globals::mpi_comm_node);
-    }
+    // if constexpr (USE_LUT_BFHEATING) {
+    //   MPI_Aint size = my_rank_cells * get_includedions() * sizeof(double);
+    //   int disp_unit = sizeof(double);
+    //   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+    //                                         &globals::bfheatingestimator,
+    //                                         &globals::bfheatingestimator_mpiwin) == MPI_SUCCESS);
+    //   assert_always(MPI_Win_shared_query(globals::bfheatingestimator_mpiwin, 0, &size, &disp_unit,
+    //                                      &globals::bfheatingestimator) == MPI_SUCCESS);
+    //   MPI_Barrier(globals::mpi_comm_node);
+    // }
   }
 #endif
 
+  size_t ionestimsize = (get_npts_model() + 1) * get_includedions() * sizeof(double);
   if (do_malloc) {
-    size_t ionestimsize = (get_npts_model() + 1) * get_includedions() * sizeof(double);
-
     if constexpr (USE_LUT_PHOTOION) {
       globals::corrphotoionrenorm = static_cast<double *>(malloc(ionestimsize));
       globals::gammaestimator = static_cast<double *>(malloc(ionestimsize));
@@ -1706,13 +1705,13 @@ void read_ejecta_model() {
       globals::gammaestimator_save = static_cast<double *>(malloc(ionestimsize));
 #endif
     }
+  }
 
-    if constexpr (USE_LUT_BFHEATING) {
-      globals::bfheatingestimator = static_cast<double *>(malloc(ionestimsize));
+  if constexpr (USE_LUT_BFHEATING) {
+    globals::bfheatingestimator = static_cast<double *>(malloc(ionestimsize));
 #ifdef DO_TITER
-      globals::bfheatingestimator_save = static_cast<double *>(malloc(ionestimsize));
+    globals::bfheatingestimator_save = static_cast<double *>(malloc(ionestimsize));
 #endif
-    }
   }
 
   globals::ffheatingestimator = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
