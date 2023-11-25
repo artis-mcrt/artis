@@ -21,8 +21,6 @@ double *bfheatingestimator = nullptr;
 
 #ifdef MPI_ON
 MPI_Win corrphotoionrenorm_mpiwin = MPI_WIN_NULL;
-MPI_Win gammaestimator_mpiwin = MPI_WIN_NULL;
-MPI_Win bfheatingestimator_mpiwin = MPI_WIN_NULL;
 #endif
 
 double *ffheatingestimator = nullptr;

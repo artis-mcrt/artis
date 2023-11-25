@@ -216,12 +216,6 @@ extern double *gammaestimator;
 // for USE_LUT_BFHEATING = true
 extern double *bfheatingestimator;
 
-#ifdef MPI_ON
-extern MPI_Win corrphotoionrenorm_mpiwin;
-extern MPI_Win gammaestimator_mpiwin;
-extern MPI_Win bfheatingestimator_mpiwin;
-#endif
-
 extern double *ffheatingestimator;
 extern double *colheatingestimator;
 #ifdef DO_TITER
