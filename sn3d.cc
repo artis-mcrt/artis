@@ -219,13 +219,8 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
           }
 
           assert_always(globals::gammaestimator != nullptr);
-          if constexpr (!NODE_SHARE_ION_ESTIMATORS) {
-            MPI_Bcast(&globals::gammaestimator[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE,
-                      root, MPI_COMM_WORLD);
-          } else {
-            MPI_Bcast(&globals::gammaestimator[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE,
-                      root_node_id, globals::mpi_comm_internode);
-          }
+          MPI_Bcast(&globals::gammaestimator[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE, root,
+                    MPI_COMM_WORLD);
         }
 
         assert_always(grid::modelgrid[modelgridindex].elem_meanweight != nullptr);
