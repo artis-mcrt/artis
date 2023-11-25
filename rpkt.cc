@@ -596,24 +596,22 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
           }
 
           if constexpr (USE_LUT_BFHEATING) {
-            //             if constexpr (NODE_SHARE_ION_ESTIMATORS) {
-            //               const double increment =
-            //                   globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge /
-            //                   nu);
-            // #ifdef MPI_ON
-            //               // MPI_Accumulate(&increment, 1, MPI_DOUBLE, 0, ionestimindex, 1, MPI_DOUBLE, MPI_SUM,
-            //               //                globals::bfheatingestimator_mpiwin);
-            //               MPI_Fetch_and_op(&increment, globals::bfheatingestimator, MPI_DOUBLE, 0, ionestimindex,
-            //               MPI_SUM,
-            //                                globals::bfheatingestimator_mpiwin);
+            if constexpr (NODE_SHARE_ION_ESTIMATORS) {
+              const double increment =
+                  globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu);
+#ifdef MPI_ON
+              // MPI_Accumulate(&increment, 1, MPI_DOUBLE, 0, ionestimindex, 1, MPI_DOUBLE, MPI_SUM,
+              //                globals::bfheatingestimator_mpiwin);
+              MPI_Fetch_and_op(&increment, &globals::bfheatingestimator[ionestimindex], MPI_DOUBLE, 0, 0, MPI_SUM,
+                               globals::bfheatingestimator_mpiwin);
 
-            // #else
-            //               safeadd(globals::bfheatingestimator[ionestimindex], increment);
-            // #endif
-            //             } else {
-            safeadd(globals::bfheatingestimator[ionestimindex],
-                    globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu));
-            // }
+#else
+              safeadd(globals::bfheatingestimator[ionestimindex], increment);
+#endif
+            } else {
+              safeadd(globals::bfheatingestimator[ionestimindex],
+                      globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu));
+            }
           }
         }
       } else {

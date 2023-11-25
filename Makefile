@@ -36,17 +36,16 @@ else
   COMPILER_IS_CLANG := FALSE
 endif
 
-# always use OpenMP for omp atomic support, even if not using OpenMP for parallelization
-ifeq ($(COMPILER_IS_CLANG),TRUE)
-CXXFLAGS += -Xpreprocessor -fopenmp
-LDFLAGS += -lomp
-else
-CXXFLAGS += -fopenmp
-endif
-
 ifeq ($(OPENMP),ON)
   CXXFLAGS += -DOPENMP_MT_ON=true
   BUILD_DIR := $(BUILD_DIR)_openmp
+
+	ifeq ($(COMPILER_IS_CLANG),TRUE)
+    CXXFLAGS += -Xpreprocessor -fopenmp
+    LDFLAGS += -lomp
+	else
+    CXXFLAGS += -fopenmp
+	endif
 
 else ifeq ($(OPENMP),OFF)
 else ifeq ($(OPENMP),)
