@@ -568,18 +568,20 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
           const int ionestimindex = get_ionestimindex(modelgridindex, element, ion);
 
           if constexpr (USE_LUT_PHOTOION) {
-            if constexpr (NODE_SHARE_ION_ESTIMATORS) {
-              const double increment = globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf_over_nu;
-#ifdef MPI_ON
-              MPI_Fetch_and_op(&increment, globals::gammaestimator, MPI_DOUBLE, 0, ionestimindex, MPI_SUM,
-                               globals::gammaestimator_mpiwin);
-#else
-              safeadd(globals::gammaestimator[ionestimindex], increment);
-#endif
-            } else {
-              safeadd(globals::gammaestimator[ionestimindex],
-                      globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf_over_nu);
-            }
+            //             if constexpr (NODE_SHARE_ION_ESTIMATORS) {
+            //               const double increment = globals::phixslist[tid].groundcont_gamma_contr[i] *
+            //               distance_e_cmf_over_nu;
+            // #ifdef MPI_ON
+            //               MPI_Fetch_and_op(&increment, globals::gammaestimator, MPI_DOUBLE, 0, ionestimindex,
+            //               MPI_SUM,
+            //                                globals::gammaestimator_mpiwin);
+            // #else
+            //               safeadd(globals::gammaestimator[ionestimindex], increment);
+            // #endif
+            //             } else {
+            safeadd(globals::gammaestimator[ionestimindex],
+                    globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf_over_nu);
+            // }
 
             if (!std::isfinite(globals::gammaestimator[ionestimindex])) {
               printout(
