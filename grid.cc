@@ -1657,7 +1657,6 @@ void read_ejecta_model() {
 
   size_t ionestimsize = (get_npts_model() + 1) * get_includedions() * sizeof(double);
 
-  // bool do_malloc = true;
 #ifdef MPI_ON
   auto my_rank_cells = (npts_model + 1) / globals::node_nprocs;
   // rank_in_node 0 gets any remainder
@@ -1674,52 +1673,52 @@ void read_ejecta_model() {
     assert_always(MPI_Win_shared_query(globals::corrphotoionrenorm_mpiwin, 0, &size, &disp_unit,
                                        &globals::corrphotoionrenorm) == MPI_SUCCESS);
   }
-
-  // if constexpr (NODE_SHARE_ION_ESTIMATORS) {
-  //   do_malloc = false;
-
-  //       // size = my_rank_cells * get_includedions() * sizeof(double);
-  //       // disp_unit = sizeof(double);
-  //       // assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-  //       //                                       &globals::gammaestimator, &globals::gammaestimator_mpiwin) ==
-  //       //                                       MPI_SUCCESS);
-  //       // assert_always(MPI_Win_shared_query(globals::gammaestimator_mpiwin, 0, &size, &disp_unit,
-  //       //                                    &globals::gammaestimator) == MPI_SUCCESS);
-  //       // MPI_Barrier(globals::mpi_comm_node);
-  //     }
-  //     // if constexpr (USE_LUT_BFHEATING) {
-  //     //   MPI_Aint size = my_rank_cells * get_includedions() * sizeof(double);
-  //     //   int disp_unit = sizeof(double);
-  //     //   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-  //     //                                         &globals::bfheatingestimator,
-  //     //                                         &globals::bfheatingestimator_mpiwin) == MPI_SUCCESS);
-  //     //   assert_always(MPI_Win_shared_query(globals::bfheatingestimator_mpiwin, 0, &size, &disp_unit,
-  //     //                                      &globals::bfheatingestimator) == MPI_SUCCESS);
-  //     //   MPI_Barrier(globals::mpi_comm_node);
-  //     // }
-  // }
 #else
   if constexpr (USE_LUT_PHOTOION) {
     globals::corrphotoionrenorm = static_cast<double *>(malloc(ionestimsize));
   }
 #endif
 
-  // if (do_malloc) {
-  //   if constexpr (USE_LUT_PHOTOION) {
-  //   }
-  // }
+  bool do_malloc = true;
+#ifdef MPI_ON
+  if constexpr (NODE_SHARE_ION_ESTIMATORS) {
+    do_malloc = false;
+
+    // size = my_rank_cells * get_includedions() * sizeof(double);
+    // disp_unit = sizeof(double);
+    // assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+    //                                       &globals::gammaestimator, &globals::gammaestimator_mpiwin) ==
+    //                                       MPI_SUCCESS);
+    // assert_always(MPI_Win_shared_query(globals::gammaestimator_mpiwin, 0, &size, &disp_unit,
+    //                                    &globals::gammaestimator) == MPI_SUCCESS);
+
+    if constexpr (USE_LUT_BFHEATING) {
+      auto size = static_cast<MPI_Aint>(
+          globals::rank_in_node == 0 ? (npts_model + 1) * get_includedions() * sizeof(double) : 0);
+      int disp_unit = sizeof(double);
+      assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                            &globals::bfheatingestimator,
+                                            &globals::bfheatingestimator_mpiwin) == MPI_SUCCESS);
+      assert_always(MPI_Win_shared_query(globals::bfheatingestimator_mpiwin, 0, &size, &disp_unit,
+                                         &globals::bfheatingestimator) == MPI_SUCCESS);
+    }
+  }
+#endif
+
+  if (do_malloc) {
+    if constexpr (USE_LUT_BFHEATING) {
+      globals::bfheatingestimator = static_cast<double *>(malloc(ionestimsize));
+#ifdef DO_TITER
+      globals::bfheatingestimator_save = static_cast<double *>(malloc(ionestimsize));
+#endif
+    }
+  }
 
   if constexpr (USE_LUT_PHOTOION) {
     globals::gammaestimator = static_cast<double *>(malloc(ionestimsize));
 
 #ifdef DO_TITER
     globals::gammaestimator_save = static_cast<double *>(malloc(ionestimsize));
-#endif
-  }
-  if constexpr (USE_LUT_BFHEATING) {
-    globals::bfheatingestimator = static_cast<double *>(malloc(ionestimsize));
-#ifdef DO_TITER
-    globals::bfheatingestimator_save = static_cast<double *>(malloc(ionestimsize));
 #endif
   }
 
