@@ -103,13 +103,17 @@ static inline auto get_bflutindex(const int tempindex, const int element, const 
   return bflutindex;
 }
 
-#ifdef OPENMP_MT_ON
-#define safeadd(var, val) _Pragma("omp atomic update") var += val
-#else
-#define safeadd(var, val) var = (var) + val
+inline void safeadd(auto &var, auto val) {
+#ifdef _OPENMP
+#pragma omp atomic update
 #endif
+  var += val;
 
-#define safeincrement(var) safeadd(var, 1)
+  // this works on clang but not gcc for doubles.
+  // __atomic_fetch_add(&var, val, __ATOMIC_RELAXED);
+}
+
+#define safeincrement(var) safeadd((var), 1)
 
 // #define DO_TITER
 
