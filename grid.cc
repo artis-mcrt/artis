@@ -1684,15 +1684,16 @@ void read_ejecta_model() {
   if constexpr (NODE_SHARE_ION_ESTIMATORS) {
     do_malloc = false;
 
-    if constexpr (USE_LUT_PHOTOION) {
-      auto size = static_cast<MPI_Aint>(
-          globals::rank_in_node == 0 ? (npts_model + 1) * get_includedions() * sizeof(double) : 0);
-      int disp_unit = sizeof(double);
-      assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                            &globals::gammaestimator, &globals::gammaestimator_mpiwin) == MPI_SUCCESS);
-      assert_always(MPI_Win_shared_query(globals::gammaestimator_mpiwin, 0, &size, &disp_unit,
-                                         &globals::gammaestimator) == MPI_SUCCESS);
-    }
+    // if constexpr (USE_LUT_PHOTOION) {
+    //   auto size = static_cast<MPI_Aint>(
+    //       globals::rank_in_node == 0 ? (npts_model + 1) * get_includedions() * sizeof(double) : 0);
+    //   int disp_unit = sizeof(double);
+    //   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+    //                                         &globals::gammaestimator, &globals::gammaestimator_mpiwin) ==
+    //                                         MPI_SUCCESS);
+    //   assert_always(MPI_Win_shared_query(globals::gammaestimator_mpiwin, 0, &size, &disp_unit,
+    //                                      &globals::gammaestimator) == MPI_SUCCESS);
+    // }
 
     if constexpr (USE_LUT_BFHEATING) {
       auto size = static_cast<MPI_Aint>(
@@ -1714,14 +1715,14 @@ void read_ejecta_model() {
       globals::bfheatingestimator_save = static_cast<double *>(malloc(ionestimsize));
 #endif
     }
+  }
 
-    if constexpr (USE_LUT_PHOTOION) {
-      globals::gammaestimator = static_cast<double *>(malloc(ionestimsize));
+  if constexpr (USE_LUT_PHOTOION) {
+    globals::gammaestimator = static_cast<double *>(malloc(ionestimsize));
 
 #ifdef DO_TITER
-      globals::gammaestimator_save = static_cast<double *>(malloc(ionestimsize));
+    globals::gammaestimator_save = static_cast<double *>(malloc(ionestimsize));
 #endif
-    }
   }
 
   globals::ffheatingestimator = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));

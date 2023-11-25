@@ -342,9 +342,10 @@ static void mpi_reduce_estimators(int nts) {
   if constexpr (USE_LUT_PHOTOION) {
     MPI_Barrier(MPI_COMM_WORLD);
     assert_always(globals::gammaestimator != nullptr);
-    if (!NODE_SHARE_ION_ESTIMATORS || (globals::rank_in_node == 0)) {
-      MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, ionestimcomm);
-    }
+    // if (!NODE_SHARE_ION_ESTIMATORS || (globals::rank_in_node == 0)) {
+    //   MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, ionestimcomm);
+    // }
+    MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
 
   if constexpr (USE_LUT_BFHEATING) {
@@ -542,6 +543,7 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
 }
 
 static void zero_estimators() {
+  MPI_Barrier(MPI_COMM_WORLD);
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     radfield::zero_estimators(modelgridindex);
@@ -553,23 +555,22 @@ static void zero_estimators() {
       stats::reset_ion_stats(modelgridindex);
     }
 
-    MPI_Barrier(globals::mpi_comm_node);
-    if (!NODE_SHARE_ION_ESTIMATORS || (globals::rank_in_node == 0)) {
-      for (int element = 0; element < get_nelements(); element++) {
-        for (int ion = 0; ion < get_nions(element); ion++) {
-          if constexpr (USE_LUT_PHOTOION) {
-            globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
-          }
-          if constexpr (USE_LUT_BFHEATING) {
+    for (int element = 0; element < get_nelements(); element++) {
+      for (int ion = 0; ion < get_nions(element); ion++) {
+        if constexpr (USE_LUT_PHOTOION) {
+          globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
+        }
+        if constexpr (USE_LUT_BFHEATING) {
+          if (!NODE_SHARE_ION_ESTIMATORS || (globals::rank_in_node == 0)) {
             globals::bfheatingestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
           }
         }
       }
     }
-    MPI_Barrier(globals::mpi_comm_node);
 
     globals::rpkt_emiss[modelgridindex] = 0.;
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 static auto do_timestep(const int nts, const int titer, const int my_rank, const int nstart, const int ndo,
