@@ -493,7 +493,7 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
                                                  std::vector<struct linelist_entry> &temp_linelist) {
   const int lineindex_initial = *lineindex;
   const auto tottransitions = transitiontable.size();
-  int totupdowntrans = 0;
+  size_t totupdowntrans = 0;
   // pass 0 to get transition counts of each level
   // pass 1 to allocate and fill transition arrays
   for (int pass = 0; pass < 2; pass++) {
