@@ -241,7 +241,8 @@ inline void check_already_running() {
 }
 
 [[nodiscard]] inline auto get_ionestimindex(const int mgi, const int element, const int ion) -> int {
-  assert_testmodeonly(ion < get_nions(element) - 1);
+  assert_testmodeonly(ion >= 0);
+  assert_testmodeonly(ion < get_nions(element));
   return mgi * get_includedions() + get_uniqueionindex(element, ion);
 }
 #endif  // SN3D_H
