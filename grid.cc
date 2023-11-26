@@ -1777,12 +1777,14 @@ static void read_grid_restart_data(const int timestep) {
     globals::rpkt_emiss[mgi] = rpkt_emiss;
 
     if constexpr (USE_LUT_PHOTOION) {
-      for (int element = 0; element < get_nelements(); element++) {
-        const int nions = get_nions(element);
-        for (int ion = 0; ion < nions; ion++) {
-          const int estimindex = get_ionestimindex(mgi, element, ion);
-          assert_always(fscanf(gridsave_file, " %la %la", &globals::corrphotoionrenorm[estimindex],
-                               &globals::gammaestimator[estimindex]) == 2);
+      if (get_numassociatedcells(mgi) > 0) {
+        for (int element = 0; element < get_nelements(); element++) {
+          const int nions = get_nions(element);
+          for (int ion = 0; ion < nions; ion++) {
+            const int estimindex = get_ionestimindex(mgi, element, ion);
+            assert_always(fscanf(gridsave_file, " %la %la", &globals::corrphotoionrenorm[estimindex],
+                                 &globals::gammaestimator[estimindex]) == 2);
+          }
         }
       }
     }
@@ -1829,15 +1831,15 @@ void write_grid_restart_data(const int timestep) {
       assert_always(globals::rpkt_emiss[mgi] >= 0.);
       fprintf(gridsave_file, "%d %a %a %a %a %d %la %a %a", mgi, get_TR(mgi), get_Te(mgi), get_W(mgi), get_TJ(mgi),
               modelgrid[mgi].thick, globals::rpkt_emiss[mgi], modelgrid[mgi].nne, modelgrid[mgi].nnetot);
-    }
 
-    if constexpr (USE_LUT_PHOTOION) {
-      for (int element = 0; element < get_nelements(); element++) {
-        const int nions = get_nions(element);
-        for (int ion = 0; ion < nions; ion++) {
-          const int estimindex = get_ionestimindex(mgi, element, ion);
-          fprintf(gridsave_file, " %la %la", (nonemptycell ? globals::corrphotoionrenorm[estimindex] : 0.),
-                  (nonemptycell ? globals::gammaestimator[estimindex] : 0.));
+      if constexpr (USE_LUT_PHOTOION) {
+        for (int element = 0; element < get_nelements(); element++) {
+          const int nions = get_nions(element);
+          for (int ion = 0; ion < nions; ion++) {
+            const int estimindex = get_ionestimindex(mgi, element, ion);
+            fprintf(gridsave_file, " %la %la", (nonemptycell ? globals::corrphotoionrenorm[estimindex] : 0.),
+                    (nonemptycell ? globals::gammaestimator[estimindex] : 0.));
+          }
         }
       }
     }
