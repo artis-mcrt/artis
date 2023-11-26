@@ -1187,6 +1187,11 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     grid::set_TJ(mgi, 0.);
     grid::set_Te(mgi, 0.);
     grid::set_W(mgi, 0.);
+
+    if constexpr (USE_LUT_PHOTOION) {
+      zero_gammaestimator(mgi);
+      set_all_corrphotoionrenorm(mgi, 0.);
+    }
   }
 }
 
