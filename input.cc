@@ -18,7 +18,6 @@
 #include "grid.h"
 #include "kpkt.h"
 #include "ratecoeff.h"
-#include "rpkt.h"
 #include "sn3d.h"
 #include "vpkt.h"
 
@@ -1175,7 +1174,7 @@ static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcont
       element = globals::groundcont[index].element;
       ion = globals::groundcont[index].ion;
     }
-    *index_in_groundlevelcontestimator = get_ionestimindex(0, element, ion);
+    *index_in_groundlevelcontestimator = get_uniqueionindex(element, ion);
   }
 
   return index;
