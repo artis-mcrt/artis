@@ -193,18 +193,18 @@ inline auto get_thread_num() -> int {
 }
 
 inline auto rng_uniform() -> float {
-  float zrand;
-  do {
-    zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
-  } while (zrand == 1.);
+  const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
+  if (zrand == 1.) {
+    return rng_uniform();
+  }
   return zrand;
 }
 
 inline auto rng_uniform_pos() -> float {
-  float zrand = 0.;
-  do {
-    zrand = rng_uniform();
-  } while (zrand <= 0.);
+  const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
+  if (zrand <= 0.) {
+    return rng_uniform_pos();
+  }
   return zrand;
 }
 
