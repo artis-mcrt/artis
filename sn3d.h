@@ -17,7 +17,6 @@
 
 #include "artisoptions.h"
 #include "globals.h"
-#include "grid.h"
 
 // #define OPENMP_MT_ON
 #ifdef OPENMP_MT_ON
@@ -248,7 +247,6 @@ inline void check_already_running() {
 [[nodiscard]] inline auto get_ionestimindex(const int mgi, const int element, const int ion) -> int {
   assert_testmodeonly(ion >= 0);
   assert_testmodeonly(ion < get_nions(element));
-  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
-  return nonemptymgi * get_includedions() + get_uniqueionindex(element, ion);
+  return mgi * get_includedions() + get_uniqueionindex(element, ion);
 }
 #endif  // SN3D_H
