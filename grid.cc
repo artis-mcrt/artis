@@ -1657,14 +1657,14 @@ void read_ejecta_model() {
 
   globals::rpkt_emiss = static_cast<double *>(calloc((get_npts_model() + 1), sizeof(double)));
 
-  size_t ionestimsize = (nonempty_npts_model + 1) * get_includedions() * sizeof(double);
+  size_t ionestimsize = (npts_model + 1) * get_includedions() * sizeof(double);
 
 #ifdef MPI_ON
   if constexpr (USE_LUT_PHOTOION) {
-    auto my_rank_cells = (nonempty_npts_model + 1) / globals::node_nprocs;
+    auto my_rank_cells = (npts_model + 1) / globals::node_nprocs;
     // rank_in_node 0 gets any remainder
     if (globals::rank_in_node == 0) {
-      my_rank_cells += (nonempty_npts_model + 1) - (my_rank_cells * globals::node_nprocs);
+      my_rank_cells += (npts_model + 1) - (my_rank_cells * globals::node_nprocs);
     }
 
     MPI_Aint size = my_rank_cells * get_includedions() * sizeof(double);
