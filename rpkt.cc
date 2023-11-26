@@ -578,6 +578,7 @@ static void rpkt_event_boundbound(struct packet *pkt_ptr, const int mgi) {
 auto sample_planck_times_expansion_opacity(const int modelgridindex) -> double
 // returns a randomly chosen frequency with a distribution of Planck function times the expansion opacity
 {
+  assert_testmodeonly(EXPANSION_OPAC_SAMPLE_KAPPAPLANCK);
   const auto &kappa_planck_cumulative = grid::modelgrid[modelgridindex].expansionopacity_planck_cumulative;
   const auto rnd_integral = rng_uniform() * kappa_planck_cumulative[expopac_nbins - 1];
   auto *selected_partintegral =
@@ -1108,7 +1109,6 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
 
 void calculate_binned_opacities(const int modelgridindex) {
   auto &kappa_bb_bins = grid::modelgrid[modelgridindex].expansionopacities;
-  auto &kappa_planck_cumulative = grid::modelgrid[modelgridindex].expansionopacity_planck_cumulative;
   const auto rho = grid::get_rho(modelgridindex);
 
   const time_t sys_time_start_calc = time(nullptr);
@@ -1149,9 +1149,13 @@ void calculate_binned_opacities(const int modelgridindex) {
     // const auto bin_kappa_cont = globals::chi_rpkt_cont[tid].total / rho;
     const auto bin_kappa_cont = 0.;
 
-    const auto planck_val = radfield::dbb(nu_mid, temperature, 1);
-    kappa_planck_cumulative[binindex] = ((binindex > 0) ? kappa_planck_cumulative[binindex - 1] : 0.) +
-                                        (bin_kappa_bb + bin_kappa_cont) * planck_val * delta_nu;
+    if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
+      const auto planck_val = radfield::dbb(nu_mid, temperature, 1);
+      const auto lower_val =
+          ((binindex > 0) ? grid::modelgrid[modelgridindex].expansionopacity_planck_cumulative[binindex - 1] : 0.);
+      grid::modelgrid[modelgridindex].expansionopacity_planck_cumulative[binindex] =
+          lower_val + (bin_kappa_bb + bin_kappa_cont) * planck_val * delta_nu;
+    }
 
     // printout("bin %d: lambda %g to %g kappabb %g kappa_cont %g kappa_grey %g kappa_planck_cumulative %g\n", binindex,
     //          1e8 / CLIGHT * nu_upper, 1e8 * CLIGHT / nu_lower, bin_kappa_bb, bin_kappa_cont,
