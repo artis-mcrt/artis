@@ -16,7 +16,6 @@
 #include "macroatom.h"
 #include "md5.h"
 #include "radfield.h"
-#include "rpkt.h"
 #include "sn3d.h"
 
 // typedef struct gslintegration_ffheatingparas

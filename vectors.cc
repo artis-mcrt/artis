@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include "artisoptions.h"
 #include "sn3d.h"
 
 void scatter_dir(std::span<const double, 3> dir_in, const double cos_theta, std::span<double, 3> dir_out)

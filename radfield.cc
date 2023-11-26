@@ -8,9 +8,12 @@
 #include <algorithm>
 #include <cmath>
 #include <ctime>
+#include <ranges>
 
 #include "atomic.h"
 #include "grid.h"
+#include "ltepop.h"
+#include "rpkt.h"
 #include "sn3d.h"
 #include "vectors.h"
 

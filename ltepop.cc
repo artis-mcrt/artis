@@ -4,15 +4,17 @@
 #include <gsl/gsl_roots.h>
 
 #include <cmath>
+#include <memory>
 
 #include "atomic.h"
 #include "decay.h"
 #include "grid.h"
+#include "macroatom.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "ratecoeff.h"
-#include "rpkt.h"
 #include "sn3d.h"
+#include "update_grid.h"
 
 struct nne_solution_paras {
   int modelgridindex;
