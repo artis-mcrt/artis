@@ -139,7 +139,6 @@ static auto get_bfheatingcoeff(int element, int ion, int level) -> double
 }
 
 void calculate_bfheatingcoeffs(int modelgridindex) {
-  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(modelgridindex, element) <= minelfrac && !USE_LUT_BFHEATING) {
@@ -172,7 +171,7 @@ void calculate_bfheatingcoeffs(int modelgridindex) {
                 globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
             if (index_in_groundlevelcontestimator >= 0) {
               bfheatingcoeff *=
-                  globals::bfheatingestimator[nonemptymgi * get_includedions() + index_in_groundlevelcontestimator];
+                  globals::bfheatingestimator[modelgridindex * get_includedions() + index_in_groundlevelcontestimator];
             }
           }
         }
