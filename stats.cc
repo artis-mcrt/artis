@@ -1,7 +1,6 @@
 #include "stats.h"
 
 #include <atomic>
-#include <vector>
 
 #include "atomic.h"
 #include "globals.h"

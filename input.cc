@@ -18,6 +18,7 @@
 #include "grid.h"
 #include "kpkt.h"
 #include "ratecoeff.h"
+#include "rpkt.h"
 #include "sn3d.h"
 #include "vpkt.h"
 
