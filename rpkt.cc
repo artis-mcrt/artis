@@ -151,7 +151,7 @@ static auto get_event(const int modelgridindex,
 // returns edist, the distance to the next physical event (continuum or bound-bound) and is_boundbound_event, a
 // boolean BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
 {
-  assert_always(!USE_BINNED_EXPANSIONOPACITIES);
+  assert_always(!EXPANSIONOPACITIES_ON);
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
   // printout("get_event()\n");
   /// initialize loop variables
@@ -761,7 +761,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
 
     edist = tau_next / chi_grey;
     pkt_ptr->next_trans = -1;
-  } else if (USE_BINNED_EXPANSIONOPACITIES) {
+  } else if (EXPANSIONOPACITIES_ON) {
     std::tie(edist, event_is_boundbound) =
         get_event_expansion_opacity(mgi, pkt_ptr, chi_rpkt_cont, tau_next, abort_dist);
     pkt_ptr->next_trans = -1;
@@ -797,8 +797,10 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
     if (grid::modelgrid[mgi].thick == 1) {
       rpkt_event_thickcell(pkt_ptr);
     } else if (event_is_boundbound) {
-      if (USE_BINNED_EXPANSIONOPACITIES) {
-        pkt_ptr->nu_cmf = sample_planck_times_expansion_opacity(mgi);
+      if constexpr (EXPANSIONOPACITIES_ON) {
+        if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
+          pkt_ptr->nu_cmf = sample_planck_times_expansion_opacity(mgi);
+        }
         rpkt_event_thickcell(pkt_ptr);
       } else {
         rpkt_event_boundbound(pkt_ptr, mgi);

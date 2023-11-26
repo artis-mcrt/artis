@@ -1186,7 +1186,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc_kpkt_rates);
     }
 
-    if constexpr (USE_BINNED_EXPANSIONOPACITIES) {
+    if constexpr (EXPANSIONOPACITIES_ON) {
       if (grid::modelgrid[mgi].thick != 1) {
         calculate_binned_opacities(mgi);
       }
