@@ -43,7 +43,7 @@ static time_t real_time_start = -1;
 static time_t time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
 static FILE *estimators_file = nullptr;
 
-int mpi_grid_buffer_size = 0;
+size_t mpi_grid_buffer_size = 0;
 char *mpi_grid_buffer = nullptr;
 
 static void initialise_linestat_file() {
@@ -190,7 +190,7 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
 
 #ifdef MPI_ON
 static void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const int nstart, const int ndo,
-                                            char *mpi_grid_buffer, const int mpi_grid_buffer_size) {
+                                            char *mpi_grid_buffer, const size_t mpi_grid_buffer_size) {
   int position = 0;
   for (int root = 0; root < nprocs; root++) {
     MPI_Barrier(MPI_COMM_WORLD);
@@ -273,7 +273,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
       }
       printout("[info] mem_usage: MPI_BUFFER: used %d of %d bytes allocated to mpi_grid_buffer\n", position,
                mpi_grid_buffer_size);
-      assert_always(position <= mpi_grid_buffer_size);
+      assert_always(static_cast<size_t>(position) <= mpi_grid_buffer_size);
     }
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
@@ -903,7 +903,7 @@ auto main(int argc, char *argv[]) -> int {
 
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-  const int maxndo = grid::get_maxndo();
+  const size_t maxndo = grid::get_maxndo();
   /// Initialise the exchange buffer
   /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
   /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
