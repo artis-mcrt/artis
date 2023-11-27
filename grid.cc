@@ -20,6 +20,7 @@
 #include "decay.h"
 #include "globals.h"
 #include "input.h"
+#include "rpkt.h"
 #ifdef MPI_ON
 #include "mpi.h"
 #endif

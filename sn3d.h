@@ -15,9 +15,6 @@
 #include <iostream>
 #include <random>
 
-#include "artisoptions.h"
-#include "globals.h"
-
 // #define OPENMP_MT_ON
 #ifdef OPENMP_MT_ON
 #include <omp.h>
@@ -68,6 +65,9 @@ extern gsl_integration_workspace *gslworkspace;
     __builtin_unreachable();   \
   }
 #endif
+
+#include "artisoptions.h"
+#include "globals.h"
 
 // #define printout(...) fprintf(output_file, __VA_ARGS__)
 
@@ -244,9 +244,4 @@ inline void check_already_running() {
   pidfile.close();
 }
 
-[[nodiscard]] inline auto get_ionestimindex(const int mgi, const int element, const int ion) -> int {
-  assert_testmodeonly(ion >= 0);
-  assert_testmodeonly(ion < get_nions(element));
-  return mgi * get_includedions() + get_uniqueionindex(element, ion);
-}
 #endif  // SN3D_H

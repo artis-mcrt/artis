@@ -25,6 +25,7 @@
 #include "nonthermal.h"
 #include "radfield.h"
 #include "ratecoeff.h"
+#include "rpkt.h"
 #include "spectrum.h"
 #include "stats.h"
 #include "update_grid.h"

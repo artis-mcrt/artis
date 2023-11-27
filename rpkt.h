@@ -3,6 +3,8 @@
 
 #include "artisoptions.h"
 #include "constants.h"
+#include "grid.h"
+#include "sn3d.h"
 
 void do_rpkt(struct packet *pkt_ptr, double t2);
 void emit_rpkt(struct packet *pkt_ptr);
@@ -29,5 +31,13 @@ constexpr auto get_linedistance(const double prop_time, const double nu_cmf, con
   }
 
   return CLIGHT * prop_time * (nu_cmf / nu_trans - 1);
+}
+
+[[nodiscard]] inline auto get_ionestimindex(const int mgi, const int element, const int ion) -> int {
+  assert_testmodeonly(ion >= 0);
+  assert_testmodeonly(ion < get_nions(element));
+  assert_always(grid::get_numassociatedcells(mgi) > 0);
+  // const int nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+  return mgi * get_includedions() + get_uniqueionindex(element, ion);
 }
 #endif  // RPKT_H

@@ -15,6 +15,7 @@
 #include "nonthermal.h"
 #include "radfield.h"
 #include "ratecoeff.h"
+#include "rpkt.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "thermalbalance.h"
