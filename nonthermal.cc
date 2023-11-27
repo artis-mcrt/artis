@@ -1809,7 +1809,7 @@ void do_ntlepton(struct packet *pkt_ptr) {
       // now zrand is between zero and frac_excitation
       // the selection algorithm is the same as for the ionization transitions
       const auto frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list.size();
-      for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
+      for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
         const double frac_deposition_exc =
             nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition;
         if (zrand < frac_deposition_exc) {
@@ -2579,7 +2579,7 @@ void write_restart_data(FILE *gridsave_file) {
       fprintf(gridsave_file, "%d\n", static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size()));
 
       const auto frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list.size();
-      for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
+      for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
         fprintf(gridsave_file, "%la %la %d\n",
                 nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition,
                 nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition,
