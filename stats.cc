@@ -1,20 +1,22 @@
 #include "stats.h"
 
 #include <atomic>
-#include <vector>
 
 #include "atomic.h"
 #include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
 #include "nonthermal.h"
+#include "sn3d.h"
 
 namespace stats {
 
 static double *ionstats = nullptr;
-static std::array<std::atomic<int>, COUNTER_COUNT> eventstats;
+static std::vector<std::array<int, COUNTER_COUNT>> eventstats;
 
 void init() {
+  eventstats.resize(get_max_threads(), {0});
+
   if constexpr (TRACK_ION_STATS) {
     ionstats =
         static_cast<double *>(malloc(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT * sizeof(double)));
@@ -158,12 +160,12 @@ void normalise_ion_estimators(const int mgi, const double deltat, const double d
 void increment(enum eventcounters i) {
   assert_testmodeonly(i >= 0);
   assert_testmodeonly(i < COUNTER_COUNT);
-  eventstats[i]++;
+  eventstats[tid][i]++;
 }
 
 void pkt_action_counters_reset() {
   for (int i = 0; i < COUNTER_COUNT; i++) {
-    eventstats[i] = 0;
+    eventstats[tid][i] = 0;
   }
 
   nonthermal::nt_reset_stats();
@@ -172,7 +174,11 @@ void pkt_action_counters_reset() {
 
 auto get_counter(enum eventcounters i) -> int {
   assert_always(i < COUNTER_COUNT);
-  return eventstats[i];
+  int count = 0;
+  for (int t = 0; t < get_num_threads(); t++) {
+    count += eventstats[t][i];
+  }
+  return count;
 }
 
 void pkt_action_counters_printout(const struct packet *const pkt, const int nts) {
