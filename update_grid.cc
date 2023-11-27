@@ -1272,7 +1272,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 #endif
         { write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates); }
 
-      } else {
+      } else if (grid::get_numassociatedcells(mgi) > 0) {
         /// else, only reset gammaestimator to zero. This allows us to do a global MPI
         /// communication after update_grid to synchronize gammaestimator
         /// and write a contiguous restart file with grid properties
