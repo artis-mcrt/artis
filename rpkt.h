@@ -33,11 +33,15 @@ constexpr auto get_linedistance(const double prop_time, const double nu_cmf, con
   return CLIGHT * prop_time * (nu_cmf / nu_trans - 1);
 }
 
-[[nodiscard]] inline auto get_ionestimindex(const int mgi, const int element, const int ion) -> int {
+[[nodiscard]] inline auto get_ionestimindex_nonemptymgi(const int nonemptymgi, const int element, const int ion)
+    -> int {
   assert_testmodeonly(ion >= 0);
   assert_testmodeonly(ion < get_nions(element));
-  assert_always(grid::get_numassociatedcells(mgi) > 0);
-  // const int nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
-  return mgi * get_includedions() + get_uniqueionindex(element, ion);
+  return nonemptymgi * get_includedions() + get_uniqueionindex(element, ion);
 }
+
+[[nodiscard]] inline auto get_ionestimindex(const int mgi, const int element, const int ion) -> int {
+  return get_ionestimindex_nonemptymgi(grid::get_modelcell_nonemptymgi(mgi), element, ion);
+}
+
 #endif  // RPKT_H

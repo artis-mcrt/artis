@@ -553,6 +553,7 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     const double distance_e_cmf_over_nu = distance_e_cmf / nu;
+    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
       const double nu_edge = globals::groundcont[i].nu_edge;
@@ -563,7 +564,7 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
         /// the estimators
         if (grid::get_elem_abundance(modelgridindex, element) > 0) {
           const int ion = globals::groundcont[i].ion;
-          const int ionestimindex = get_ionestimindex(modelgridindex, element, ion);
+          const int ionestimindex = get_ionestimindex_nonemptymgi(nonemptymgi, element, ion);
 
           if constexpr (USE_LUT_PHOTOION) {
             safeadd(globals::gammaestimator[ionestimindex],

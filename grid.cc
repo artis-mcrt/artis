@@ -952,6 +952,53 @@ static void allocate_nonemptymodelcells() {
 
   allocate_composition_cooling();
 
+  globals::rpkt_emiss = static_cast<double *>(calloc((get_npts_model() + 1), sizeof(double)));
+
+  size_t ionestimsize = get_nonempty_npts_model() * get_includedions() * sizeof(double);
+
+#ifdef MPI_ON
+  if constexpr (USE_LUT_PHOTOION) {
+    auto my_rank_cells = get_nonempty_npts_model() / globals::node_nprocs;
+    // rank_in_node 0 gets any remainder
+    if (globals::rank_in_node == 0) {
+      my_rank_cells += get_nonempty_npts_model() - (my_rank_cells * globals::node_nprocs);
+    }
+
+    MPI_Aint size = my_rank_cells * get_includedions() * sizeof(double);
+    int disp_unit = sizeof(double);
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                          &globals::corrphotoionrenorm, &win_corrphotoionrenorm) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(win_corrphotoionrenorm, 0, &size, &disp_unit, &globals::corrphotoionrenorm) ==
+                  MPI_SUCCESS);
+  }
+#else
+  if constexpr (USE_LUT_PHOTOION) {
+    globals::corrphotoionrenorm = static_cast<double *>(malloc(ionestimsize));
+  }
+#endif
+
+  if constexpr (USE_LUT_BFHEATING) {
+    globals::bfheatingestimator = static_cast<double *>(malloc(ionestimsize));
+#ifdef DO_TITER
+    globals::bfheatingestimator_save = static_cast<double *>(malloc(ionestimsize));
+#endif
+  }
+
+  if constexpr (USE_LUT_PHOTOION) {
+    globals::gammaestimator = static_cast<double *>(malloc(ionestimsize));
+
+#ifdef DO_TITER
+    globals::gammaestimator_save = static_cast<double *>(malloc(ionestimsize));
+#endif
+  }
+
+  globals::ffheatingestimator = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
+  globals::colheatingestimator = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
+#ifdef DO_TITER
+  globals::ffheatingestimator_save = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
+  globals::colheatingestimator_save = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
+#endif
+
 #ifdef MPI_ON
   // barrier to make sure node master has set abundance values to node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
@@ -1654,53 +1701,6 @@ void read_ejecta_model() {
   assert_always(globals::vmax < CLIGHT);
   printout("tmin %g [s] = %.2f [d]\n", globals::tmin, globals::tmin / 86400.);
   printout("rmax %g [cm] (at t=tmin)\n", globals::rmax);
-
-  globals::rpkt_emiss = static_cast<double *>(calloc((get_npts_model() + 1), sizeof(double)));
-
-  size_t ionestimsize = get_npts_model() * get_includedions() * sizeof(double);
-
-#ifdef MPI_ON
-  if constexpr (USE_LUT_PHOTOION) {
-    auto my_rank_cells = get_npts_model() / globals::node_nprocs;
-    // rank_in_node 0 gets any remainder
-    if (globals::rank_in_node == 0) {
-      my_rank_cells += get_npts_model() - (my_rank_cells * globals::node_nprocs);
-    }
-
-    MPI_Aint size = my_rank_cells * get_includedions() * sizeof(double);
-    int disp_unit = sizeof(double);
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &globals::corrphotoionrenorm, &win_corrphotoionrenorm) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(win_corrphotoionrenorm, 0, &size, &disp_unit, &globals::corrphotoionrenorm) ==
-                  MPI_SUCCESS);
-  }
-#else
-  if constexpr (USE_LUT_PHOTOION) {
-    globals::corrphotoionrenorm = static_cast<double *>(malloc(ionestimsize));
-  }
-#endif
-
-  if constexpr (USE_LUT_BFHEATING) {
-    globals::bfheatingestimator = static_cast<double *>(malloc(ionestimsize));
-#ifdef DO_TITER
-    globals::bfheatingestimator_save = static_cast<double *>(malloc(ionestimsize));
-#endif
-  }
-
-  if constexpr (USE_LUT_PHOTOION) {
-    globals::gammaestimator = static_cast<double *>(malloc(ionestimsize));
-
-#ifdef DO_TITER
-    globals::gammaestimator_save = static_cast<double *>(malloc(ionestimsize));
-#endif
-  }
-
-  globals::ffheatingestimator = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
-  globals::colheatingestimator = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
-#ifdef DO_TITER
-  globals::ffheatingestimator_save = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
-  globals::colheatingestimator_save = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
-#endif
 
   calc_modelinit_totmassradionuclides();
 

@@ -206,6 +206,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
       if (grid::get_numassociatedcells(modelgridindex) < 1) {
         continue;
       }
+
       radfield::do_MPI_Bcast(modelgridindex, root, root_node_id);
 
       nonthermal::nt_MPI_Bcast(modelgridindex, root);
@@ -215,14 +216,15 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
       }
 
       if constexpr (USE_LUT_PHOTOION) {
+        const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         assert_always(globals::corrphotoionrenorm != nullptr);
         if (globals::rank_in_node == 0) {
-          MPI_Bcast(&globals::corrphotoionrenorm[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE,
+          MPI_Bcast(&globals::corrphotoionrenorm[nonemptymgi * get_includedions()], get_includedions(), MPI_DOUBLE,
                     root_node_id, globals::mpi_comm_internode);
         }
 
         assert_always(globals::gammaestimator != nullptr);
-        MPI_Bcast(&globals::gammaestimator[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE, root,
+        MPI_Bcast(&globals::gammaestimator[nonemptymgi * get_includedions()], get_includedions(), MPI_DOUBLE, root,
                   MPI_COMM_WORLD);
       }
 
@@ -337,7 +339,7 @@ static void mpi_reduce_estimators(int nts) {
                 MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
 
-  const int arraylen = grid::get_npts_model() * get_includedions();
+  const int arraylen = grid::get_nonempty_npts_model() * get_includedions();
 
   if constexpr (USE_LUT_PHOTOION) {
     MPI_Barrier(MPI_COMM_WORLD);
