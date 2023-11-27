@@ -555,7 +555,7 @@ static void zero_estimators() {
     }
 
     for (int element = 0; element < get_nelements(); element++) {
-      for (int ion = 0; ion < get_nions(element); ion++) {
+      for (int ion = 0; ion < (get_nions(element) - 1); ion++) {
         if constexpr (USE_LUT_PHOTOION) {
           globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
         }

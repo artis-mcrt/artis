@@ -627,13 +627,13 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
       if (USE_LUT_PHOTOION && globals::nbfcontinua > 0) {
         fprintf(estimators_file, "corrphotoionrenorm Z=%2d", get_atomicnumber(element));
-        for (int ion = 0; ion < nions; ion++) {
+        for (int ion = 0; ion < nions - 1; ion++) {
           fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
                   globals::corrphotoionrenorm[get_ionestimindex(mgi, element, ion)]);
         }
         fprintf(estimators_file, "\n");
         fprintf(estimators_file, "gammaestimator     Z=%2d", get_atomicnumber(element));
-        for (int ion = 0; ion < nions; ion++) {
+        for (int ion = 0; ion < nions - 1; ion++) {
           fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
                   globals::gammaestimator[get_ionestimindex(mgi, element, ion)]);
         }
@@ -964,8 +964,7 @@ static void titer_average_estimators(const int n) {
 static void zero_gammaestimator(const int modelgridindex) {
   assert_always(USE_LUT_PHOTOION);
   for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
+    for (int ion = 0; ion < (get_nions(element) - 1); ion++) {
       globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
     }
   }
@@ -974,8 +973,7 @@ static void zero_gammaestimator(const int modelgridindex) {
 static void set_all_corrphotoionrenorm(const int modelgridindex, const double value) {
   assert_always(USE_LUT_PHOTOION);
   for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
+    for (int ion = 0; ion < (get_nions(element) - 1); ion++) {
       globals::corrphotoionrenorm[get_ionestimindex(modelgridindex, element, ion)] = value;
     }
   }
