@@ -125,6 +125,7 @@ struct elementlist_entry {
   //  cell
   /// Be aware that this must not be used outside of the update_grid routine
   /// and their daughters. Neither it will work with OpenMP threads.
+  int uniqueionindexstart{-1};  /// Index of the lowest ionisation stage of this element
   float abundance;              ///
   float initstablemeannucmass;  /// Atomic mass number in multiple of MH
   bool has_nlte_levels;
@@ -141,9 +142,9 @@ struct linelist_entry {
 };
 
 struct gslintegration_paras {
-  const double nu_edge;
-  const float T;
-  const float *const photoion_xs;
+  double nu_edge;
+  float T;
+  float *photoion_xs;
 };
 
 struct rpkt_continuum_absorptioncoeffs {
@@ -159,17 +160,17 @@ struct rpkt_continuum_absorptioncoeffs {
 };
 
 template <bool separatestimrecomb>
-struct _chphixstargets {
+struct chphixstargets {
   double corrphotoioncoeff;
 };
 
 template <>
-struct _chphixstargets<true> {
+struct chphixstargets<true> {
   double corrphotoioncoeff;
   double separatestimrecomb;
 };
 
-using chphixstargets_t = struct _chphixstargets<SEPARATE_STIMRECOMB>;
+using chphixstargets_t = struct chphixstargets<SEPARATE_STIMRECOMB>;
 
 #include "macroatom.h"
 

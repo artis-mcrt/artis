@@ -2,10 +2,9 @@
 
 #include <gsl/gsl_integration.h>
 
-#include <algorithm>
 #include <cmath>
 #include <cstring>
-#define D_POSIX_SOURCE
+// #define D_POSIX_SOURCE
 #include <gsl/gsl_errno.h>
 
 #include <cstdio>
@@ -13,11 +12,11 @@
 #include "artisoptions.h"
 #include "atomic.h"
 #include "grid.h"
-#include "input.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "md5.h"
 #include "radfield.h"
+#include "rpkt.h"
 #include "sn3d.h"
 
 // typedef struct gslintegration_ffheatingparas
@@ -1322,13 +1321,14 @@ auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex
       } else {
         const double W = grid::get_W(modelgridindex);
         const double T_R = grid::get_TR(modelgridindex);
+        const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
         gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
         const int index_in_groundlevelcontestimator =
             globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
         if (index_in_groundlevelcontestimator >= 0) {
           gammacorr *=
-              globals::corrphotoionrenorm[get_ionestimindex(modelgridindex, 0, 0) + index_in_groundlevelcontestimator];
+              globals::corrphotoionrenorm[nonemptymgi * get_includedions() + index_in_groundlevelcontestimator];
         }
       }
     }

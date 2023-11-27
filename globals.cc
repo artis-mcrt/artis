@@ -1,6 +1,5 @@
 #include "globals.h"
 
-#include "sn3d.h"
 #ifdef MPI_ON
 #include <mpi.h>
 #endif

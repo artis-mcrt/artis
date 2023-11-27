@@ -5,15 +5,14 @@
 #include <limits>
 #include <span>
 
+#include "artisoptions.h"
 #include "atomic.h"
+#include "globals.h"
 #include "grid.h"
-#include "kpkt.h"
 #include "ltepop.h"
-#include "macroatom.h"
 #include "radfield.h"
 #include "sn3d.h"
 #include "stats.h"
-#include "update_grid.h"
 #include "vectors.h"
 #include "vpkt.h"
 
@@ -535,13 +534,11 @@ static void rpkt_event_thickcell(struct packet *pkt_ptr)
   pkt_ptr->em_time = pkt_ptr->prop_time;
 }
 
-static void update_estimators(const struct packet *pkt_ptr, const double distance)
+static void update_estimators(const struct packet *pkt_ptr, const double distance, const int modelgridindex)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.
 {
-  const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
-
   /// Update only non-empty cells
   if (modelgridindex == grid::get_npts_model()) {
     return;
@@ -556,8 +553,7 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     const double distance_e_cmf_over_nu = distance_e_cmf / nu;
-    const int nelements = get_nelements();
-    const int max_nions = get_max_nions();
+    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
       const double nu_edge = globals::groundcont[i].nu_edge;
@@ -568,7 +564,7 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
         /// the estimators
         if (grid::get_elem_abundance(modelgridindex, element) > 0) {
           const int ion = globals::groundcont[i].ion;
-          const int ionestimindex = modelgridindex * nelements * max_nions + element * max_nions + ion;
+          const int ionestimindex = get_ionestimindex_nonemptymgi(nonemptymgi, element, ion);
 
           if constexpr (USE_LUT_PHOTOION) {
             safeadd(globals::gammaestimator[ionestimindex],
@@ -695,7 +691,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   if ((sdist < tdist) && (sdist < edist)) {
     // Move it into the new cell.
     move_pkt_withtime(pkt_ptr, sdist / 2.);
-    update_estimators(pkt_ptr, sdist);
+    update_estimators(pkt_ptr, sdist, mgi);
     move_pkt_withtime(pkt_ptr, sdist / 2.);
 
     if (snext != pkt_ptr->where) {
@@ -712,7 +708,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   if ((edist < sdist) && (edist < tdist)) {
     // bound-bound or continuum event
     move_pkt_withtime(pkt_ptr, edist / 2.);
-    update_estimators(pkt_ptr, edist);
+    update_estimators(pkt_ptr, edist, mgi);
     move_pkt_withtime(pkt_ptr, edist / 2.);
 
     // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
@@ -732,7 +728,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   if ((tdist < sdist) && (tdist < edist)) {
     // reaches end of timestep before cell boundary or interaction
     move_pkt_withtime(pkt_ptr, tdist / 2.);
-    update_estimators(pkt_ptr, tdist);
+    update_estimators(pkt_ptr, tdist, mgi);
     pkt_ptr->prop_time = t2;
     move_pkt(pkt_ptr, tdist / 2.);
     pkt_ptr->last_event = pkt_ptr->last_event + 1000;

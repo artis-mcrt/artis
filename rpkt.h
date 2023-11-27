@@ -3,11 +3,13 @@
 
 #include "artisoptions.h"
 #include "constants.h"
+#include "grid.h"
+#include "sn3d.h"
 
 void do_rpkt(struct packet *pkt_ptr, double t2);
 void emit_rpkt(struct packet *pkt_ptr);
-int closest_transition(double nu_cmf, int next_trans);
-double calculate_chi_bf_gammacontr(int modelgridindex, double nu);
+auto closest_transition(double nu_cmf, int next_trans) -> int;
+auto calculate_chi_bf_gammacontr(int modelgridindex, double nu) -> double;
 void calculate_chi_rpkt_cont(double nu_cmf, struct rpkt_continuum_absorptioncoeffs *chi_rpkt_cont_thisthread,
                              int modelgridindex, bool usecellhistupdatephixslist);
 
@@ -30,4 +32,16 @@ constexpr auto get_linedistance(const double prop_time, const double nu_cmf, con
 
   return CLIGHT * prop_time * (nu_cmf / nu_trans - 1);
 }
+
+[[nodiscard]] inline auto get_ionestimindex_nonemptymgi(const int nonemptymgi, const int element, const int ion)
+    -> int {
+  assert_testmodeonly(ion >= 0);
+  assert_testmodeonly(ion < get_nions(element) - 1);
+  return nonemptymgi * get_includedions() + get_uniqueionindex(element, ion);
+}
+
+[[nodiscard]] inline auto get_ionestimindex(const int mgi, const int element, const int ion) -> int {
+  return get_ionestimindex_nonemptymgi(grid::get_modelcell_nonemptymgi(mgi), element, ion);
+}
+
 #endif  // RPKT_H
