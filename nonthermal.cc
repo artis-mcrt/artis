@@ -2716,7 +2716,7 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
     }
 
     const auto frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list.size();
-    for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
+    for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
       MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
                 root, MPI_COMM_WORLD);
       MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,
