@@ -325,13 +325,7 @@ static auto get_chi_compton_rf(const struct packet *pkt_ptr) -> double {
 
   // Use this to decide whether the Thompson limit is acceptable.
 
-  double sigma_cmf;
-  if (xx < THOMSON_LIMIT) {
-    sigma_cmf = SIGMA_T;
-  } else {
-    const double fmax = (1 + (2 * xx));
-    sigma_cmf = sigma_compton_partial(xx, fmax);
-  }
+  const double sigma_cmf = (xx < THOMSON_LIMIT) ? SIGMA_T : sigma_compton_partial(xx, 1 + (2 * xx));
 
   // Now need to multiply by the electron number density.
   const double chi_cmf = sigma_cmf * grid::get_nnetot(grid::get_cell_modelgridindex(pkt_ptr->where));
