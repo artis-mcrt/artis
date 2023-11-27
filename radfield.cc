@@ -395,28 +395,28 @@ void init(int my_rank, int ndo_nonempty)
 /// Initialise estimator arrays which hold the last time steps values (used to damp out
 /// fluctuations over timestep iterations if DO_TITER is defined) to -1.
 void initialise_prev_titer_photoionestimators() {
-  for (int n = 0; n < grid::get_npts_model(); n++) {
 #ifdef DO_TITER
-    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-    J_reduced_save[nonemptymgi] = -1.;
-#endif
-#ifdef DO_TITER
-    nuJ_reduced_save[n] = -1.;
+  for (int nonemptymgi = 0; n < grid::get_npts_model(); n++) {
     globals::ffheatingestimator_save[n] = -1.;
     globals::colheatingestimator_save[n] = -1.;
-#endif
-    for (int element = 0; element < get_nelements(); element++) {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions - 1; ion++) {
-#ifdef DO_TITER
-        globals::gammaestimator_save[get_ionestimindex(n, element, ion)] = -1.;
-        if constexpr (USE_LUT_BFHEATING) {
-          globals::bfheatingestimator_save[get_ionestimindex(n, element, ion)] = -1.;
+    if (grid::get_numassociatedcells(modelgridindex) > 0) {
+      const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+      J_reduced_save[nonemptymgi] = -1.;
+      nuJ_reduced_save[nonemptymgi] = -1.;
+      for (int element = 0; element < get_nelements(); element++) {
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions - 1; ion++) {
+          if constexpr (USE_LUT_PHOTOION) {
+            globals::gammaestimator_save[get_ionestimindex(n, element, ion)] = -1.;
+          }
+          if constexpr (USE_LUT_BFHEATING) {
+            globals::bfheatingestimator_save[get_ionestimindex(n, element, ion)] = -1.;
+          }
         }
-#endif
       }
     }
   }
+#endif
 }
 
 auto get_Jblueindex(const int lineindex) -> int
