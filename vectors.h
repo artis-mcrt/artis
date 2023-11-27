@@ -190,7 +190,7 @@ constexpr void move_pkt_withtime(struct packet *pkt_ptr, const double distance)
   pkt_ptr->nu_cmf = std::min(pkt_ptr->nu_cmf, nu_cmf_old);
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr double get_arrive_time(const struct packet *const pkt_ptr)
+[[nodiscard]] [[gnu::pure]] constexpr auto get_arrive_time(const struct packet *const pkt_ptr) -> double
 /// We know that a packet escaped at "escape_time". However, we have
 /// to allow for travel time. Use the formula in Leon's paper. The extra
 /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
@@ -198,7 +198,7 @@ constexpr void move_pkt_withtime(struct packet *pkt_ptr, const double distance)
   return pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / CLIGHT_PROP);
 }
 
-inline double get_arrive_time_cmf(const struct packet *pkt_ptr) {
+inline auto get_arrive_time_cmf(const struct packet *pkt_ptr) -> double {
   return pkt_ptr->escape_time * std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
 }
 

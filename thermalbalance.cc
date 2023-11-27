@@ -16,7 +16,6 @@
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "sn3d.h"
-#include "update_grid.h"
 
 struct Te_solution_paras {
   double t_current;
@@ -140,6 +139,7 @@ static auto get_bfheatingcoeff(int element, int ion, int level) -> double
 }
 
 void calculate_bfheatingcoeffs(int modelgridindex) {
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_abundance(modelgridindex, element) <= minelfrac && !USE_LUT_BFHEATING) {
@@ -171,8 +171,8 @@ void calculate_bfheatingcoeffs(int modelgridindex) {
             const int index_in_groundlevelcontestimator =
                 globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
             if (index_in_groundlevelcontestimator >= 0) {
-              bfheatingcoeff *= globals::bfheatingestimator[modelgridindex * get_nelements() * get_max_nions() +
-                                                            index_in_groundlevelcontestimator];
+              bfheatingcoeff *=
+                  globals::bfheatingestimator[nonemptymgi * get_includedions() + index_in_groundlevelcontestimator];
             }
           }
         }
@@ -281,11 +281,6 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
     //         }
     //         */
     //       }
-
-    /// Bound-free heating (from estimators)
-    /// ------------------------------------
-    // if (ion < nions-1) bfheating +=
-    // globals::bfheatingestimator[cellnumber*get_nelements()*get_max_nions()+element*get_max_nions()+ion];
 
     /// Bound-free heating (renormalised analytical calculation)
     /// --------------------------------------------------------

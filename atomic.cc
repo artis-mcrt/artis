@@ -1,17 +1,24 @@
 #include "atomic.h"
 
+#include <algorithm>
 #include <cmath>
-#include <ranges>
 
 #include "artisoptions.h"
 #include "grid.h"
 #include "ltepop.h"
 #include "sn3d.h"
 
-double last_phixs_nuovernuedge =
-    -1;                // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
-int maxnions = 0;      // highest number of ions for any element
-int includedions = 0;  // number of ions of any element
+// last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
+double last_phixs_nuovernuedge = -1;
+
+// highest number of ions for any element
+int maxnions = 0;
+
+// number of ions of any element
+int includedions = 0;
+
+// number of ions of any element excluding the highest ionisation stage of each element
+int includedions_excludehighest = 0;
 std::array<bool, 3> phixs_file_version_exists;
 
 auto get_continuumindex_phixstargetindex(const int element, const int ion, const int level, const int phixstargetindex)
@@ -155,7 +162,7 @@ auto photoionization_crosssection_fromtable(const float *const photoion_xs, cons
 
 void set_nelements(const int nelements_in) { globals::elements.resize(nelements_in); }
 
-auto get_nelements() -> int { return globals::elements.size(); }
+auto get_nelements() -> int { return static_cast<int>(globals::elements.size()); }
 
 auto get_atomicnumber(const int element) -> int
 /// Returns the atomic number associated with a given elementindex.
@@ -184,9 +191,11 @@ auto get_elementindex(const int Z) -> int
 
 void update_includedions_maxnions() {
   includedions = 0;
+  includedions_excludehighest = 0;
   maxnions = 0;
   for (int element = 0; element < get_nelements(); element++) {
     includedions += get_nions(element);
+    includedions_excludehighest += get_nions(element) > 0 ? get_nions(element) - 1 : 0;
     maxnions = std::max(maxnions, get_nions(element));
   }
 }
@@ -195,6 +204,12 @@ auto get_includedions() -> int
 // returns the number of ions of all elements combined
 {
   return includedions;
+}
+
+auto get_includedions_excludehighest() -> int
+// returns the number of ions of all elements combined
+{
+  return includedions_excludehighest;
 }
 
 void update_max_nions(const int nions)
@@ -275,28 +290,21 @@ auto get_uniqueionindex(const int element, const int ion) -> int
 {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
-  int index = 0;
-  for (int e = 0; e < element; e++) {
-    index += get_nions(e);
-  }
-  index += ion;
 
-  assert_testmodeonly(index == globals::elements[element].ions[ion].uniqueionindex);
-  assert_testmodeonly(index < get_includedions());
-  return index;
+  return globals::elements[element].uniqueionindexstart + ion;
 }
 
-void get_ionfromuniqueionindex(const int allionsindex, int *element, int *ion) {
+auto get_ionfromuniqueionindex(const int allionsindex) -> std::tuple<int, int> {
   assert_testmodeonly(allionsindex < get_includedions());
-  int allionsindex_thiselementfirstion = 0;
-  for (int e = 0; e < get_nelements(); e++) {
-    if ((allionsindex - allionsindex_thiselementfirstion) >= get_nions(e)) {
-      allionsindex_thiselementfirstion += get_nions(e);  // skip this element
-    } else {
-      *element = e;
-      *ion = allionsindex - allionsindex_thiselementfirstion;
-      assert_testmodeonly(get_uniqueionindex(*element, *ion) == allionsindex);
-      return;
+
+  for (int element = 0; element < get_nelements(); element++) {
+    if (get_nions(element) == 0) {
+      continue;
+    }
+    const int ion = allionsindex - globals::elements[element].uniqueionindexstart;
+    if (ion < get_nions(element)) {
+      assert_testmodeonly(get_uniqueionindex(element, ion) == allionsindex);
+      return {element, ion};
     }
   }
   assert_always(false);  // allionsindex too high to be valid

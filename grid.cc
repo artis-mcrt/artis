@@ -7,8 +7,8 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <memory>
-#include <ranges>
 #include <span>
 #include <sstream>
 #include <string>
@@ -20,6 +20,10 @@
 #include "decay.h"
 #include "globals.h"
 #include "input.h"
+#include "rpkt.h"
+#ifdef MPI_ON
+#include "mpi.h"
+#endif
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "packet.h"
@@ -62,6 +66,7 @@ double *totmassradionuclide = nullptr;  /// total mass of each radionuclide in t
 #ifdef MPI_ON
 MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
 MPI_Win win_initradioabund_allcells = MPI_WIN_NULL;
+MPI_Win win_corrphotoionrenorm = MPI_WIN_NULL;
 #endif
 
 float *initradioabund_allcells = nullptr;
@@ -307,6 +312,12 @@ void set_nnetot(int modelgridindex, float x) {
 }
 
 static void set_ffegrp(int modelgridindex, float x) {
+  if (!(x >= 0.)) {
+    printout("WARNING: Fe-group mass fraction %g is negative in cell %d\n", x, modelgridindex);
+    assert_always(x > -1e-6);
+    x = 0.;
+  }
+
   assert_always(x >= 0);
   assert_always(x <= 1.001);
   modelgrid[modelgridindex].ffegrp = x;
@@ -460,10 +471,17 @@ auto get_modelinitradioabund(const int modelgridindex, const int nucindex) -> fl
   return modelgrid[modelgridindex].initradioabund[nucindex];
 }
 
-static void set_modelinitradioabund(const int modelgridindex, const int nucindex, const float abund) {
+static void set_modelinitradioabund(const int modelgridindex, const int nucindex, float abund) {
   // set the mass fraction of a nuclide in a model grid cell at t=t_model by nuclide index
   // initradioabund array is in node shared memory
   assert_always(nucindex >= 0);
+  if (!(abund >= 0.)) {
+    printout("WARNING: nuclear mass fraction for nucindex %d = %g is negative in cell %d\n", abund, nucindex,
+             modelgridindex);
+    assert_always(abund > -1e-6);
+    abund = 0.;
+  }
+
   assert_always(abund >= 0.);
   assert_always(abund <= 1.);
 
@@ -561,8 +579,8 @@ static void set_elem_stable_abund_from_total(const int mgi, const int element, c
   double massfracstable = elemabundance - isofracsum;
 
   if (massfracstable < 0.) {
-    if ((isofracsum / elemabundance - 1.) > 1e-4)  //  allow some roundoff error
-    {
+    //  allow some roundoff error before we complain
+    if ((isofracsum - elemabundance - 1.) > 1e-4 && std::abs(isofracsum - elemabundance) > 1e-6) {
       printout("WARNING: cell %d Z=%d element abundance is less than the sum of its radioisotope abundances \n", mgi,
                atomic_number);
       printout("  massfrac(Z) %g massfrac_radioisotopes(Z) %g\n", elemabundance, isofracsum);
@@ -662,7 +680,8 @@ static void calculate_kappagrey() {
       double kappa = 0.;
       if (globals::opacity_case == 0) {
         kappa = globals::GREY_OP;
-      } else if (globals::opacity_case == 1) {
+      } else if (globals::opacity_case == 1 || globals::opacity_case == 4) {
+        /// kappagrey used for initial grey approximation in case 4
         kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * globals::GREY_OP / ((0.9 * mfeg / mtot_input) + 0.1);
       } else if (globals::opacity_case == 2) {
         const double opcase2_normal = globals::GREY_OP * rho_sum / ((0.9 * fe_sum) + (0.1 * (ngrid - empty_cells)));
@@ -670,10 +689,6 @@ static void calculate_kappagrey() {
       } else if (globals::opacity_case == 3) {
         globals::opcase3_normal = globals::GREY_OP * rho_sum / opcase3_sum;
         kappa = get_kappagrey(mgi) * globals::opcase3_normal;
-      } else if (globals::opacity_case == 4) {
-        /// kappagrey used for initial grey approximation in this case
-        kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * globals::GREY_OP / ((0.9 * mfeg / mtot_input) + 0.1);
-        // kappa = SIGMA_T;
       } else if (globals::opacity_case == 5) {
         // electron-fraction-dependent opacities
         // values from table 1 of Tanaka et al. (2020).
@@ -723,22 +738,52 @@ static void allocate_composition_cooling()
 {
   const int npts_nonempty = get_nonempty_npts_model();  // add one for the combined empty cell at the end
 
-  auto *initmassfracstable_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
-  auto *elem_meanweight_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
+#ifdef MPI_ON
+  size_t my_rank_cells_nonempty = nonempty_npts_model / globals::node_nprocs;
+  // rank_in_node 0 gets any remainder
+  if (globals::rank_in_node == 0) {
+    my_rank_cells_nonempty += nonempty_npts_model - (my_rank_cells_nonempty * globals::node_nprocs);
+  }
+#endif
+
+  float *initmassfracstable_allcells = nullptr;
+  float *elem_meanweight_allcells = nullptr;
+
+#ifdef MPI_ON
+  {
+    MPI_Aint size = my_rank_cells_nonempty * get_nelements() * sizeof(float);
+    int disp_unit = sizeof(float);
+    MPI_Win mpiwin = MPI_WIN_NULL;
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                          &initmassfracstable_allcells, &mpiwin) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &initmassfracstable_allcells) == MPI_SUCCESS);
+  }
+
+  {
+    MPI_Aint size = my_rank_cells_nonempty * get_nelements() * sizeof(float);
+    int disp_unit = sizeof(float);
+    MPI_Win mpiwin = MPI_WIN_NULL;
+
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                          &elem_meanweight_allcells, &mpiwin) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, &elem_meanweight_allcells) == MPI_SUCCESS);
+    MPI_Barrier(globals::mpi_comm_node);
+  }
+#else
+  initmassfracstable_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
+  elem_meanweight_allcells = static_cast<float *>(malloc(npts_nonempty * get_nelements() * sizeof(float)));
+#endif
 
   double *nltepops_allcells = nullptr;
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
-    int my_rank_cells = nonempty_npts_model / globals::node_nprocs;
-    // rank_in_node 0 gets any remainder
-    if (globals::rank_in_node == 0) {
-      my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
-    }
-    MPI_Aint size = my_rank_cells * globals::total_nlte_levels * sizeof(double);
+    MPI_Aint size = my_rank_cells_nonempty * globals::total_nlte_levels * sizeof(double);
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nltepops_allcells,
                                           &win_nltepops_allcells) == MPI_SUCCESS);
     assert_always(MPI_Win_shared_query(win_nltepops_allcells, 0, &size, &disp_unit, &nltepops_allcells) == MPI_SUCCESS);
+
+    MPI_Barrier(globals::mpi_comm_node);
 #else
     nltepops_allcells = static_cast<double *>(malloc(npts_nonempty * globals::total_nlte_levels * sizeof(double)));
 #endif
@@ -907,6 +952,53 @@ static void allocate_nonemptymodelcells() {
 
   allocate_composition_cooling();
 
+  globals::rpkt_emiss = static_cast<double *>(calloc((get_npts_model() + 1), sizeof(double)));
+
+  size_t ionestimsize = get_nonempty_npts_model() * get_includedions() * sizeof(double);
+
+#ifdef MPI_ON
+  if constexpr (USE_LUT_PHOTOION) {
+    auto my_rank_cells = get_nonempty_npts_model() / globals::node_nprocs;
+    // rank_in_node 0 gets any remainder
+    if (globals::rank_in_node == 0) {
+      my_rank_cells += get_nonempty_npts_model() - (my_rank_cells * globals::node_nprocs);
+    }
+
+    auto size = static_cast<MPI_Aint>(my_rank_cells * get_includedions() * sizeof(double));
+    int disp_unit = sizeof(double);
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                          &globals::corrphotoionrenorm, &win_corrphotoionrenorm) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(win_corrphotoionrenorm, 0, &size, &disp_unit, &globals::corrphotoionrenorm) ==
+                  MPI_SUCCESS);
+  }
+#else
+  if constexpr (USE_LUT_PHOTOION) {
+    globals::corrphotoionrenorm = static_cast<double *>(malloc(ionestimsize));
+  }
+#endif
+
+  if constexpr (USE_LUT_BFHEATING) {
+    globals::bfheatingestimator = static_cast<double *>(malloc(ionestimsize));
+#ifdef DO_TITER
+    globals::bfheatingestimator_save = static_cast<double *>(malloc(ionestimsize));
+#endif
+  }
+
+  if constexpr (USE_LUT_PHOTOION) {
+    globals::gammaestimator = static_cast<double *>(malloc(ionestimsize));
+
+#ifdef DO_TITER
+    globals::gammaestimator_save = static_cast<double *>(malloc(ionestimsize));
+#endif
+  }
+
+  globals::ffheatingestimator = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
+  globals::colheatingestimator = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
+#ifdef DO_TITER
+  globals::ffheatingestimator_save = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
+  globals::colheatingestimator_save = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
+#endif
+
 #ifdef MPI_ON
   // barrier to make sure node master has set abundance values to node shared memory
   MPI_Barrier(MPI_COMM_WORLD);
@@ -1016,14 +1108,20 @@ static void abundances_read() {
     // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
     double normfactor = 0.;
     float abundances_in[150] = {0.};
+    double abund_in = 0.;
     for (int anumber = 1; anumber <= 150; anumber++) {
       abundances_in[anumber - 1] = 0.;
-      if (!(ssline >> abundances_in[anumber - 1])) {
-        assert_always(anumber > 1);  // at least one element (hydrogen) should have been specified
+      if (!(ssline >> abund_in)) {
+        // at least one element (hydrogen) should have been specified for nonempty cells
+        assert_always(anumber > 1 || get_numassociatedcells(mgi) == 0);
         break;
       }
 
-      assert_always(abundances_in[anumber - 1] >= 0.);
+      if (abund_in < 0. || abund_in < std::numeric_limits<float>::min()) {
+        assert_always(abund_in > -1e-6);
+        abund_in = 0.;
+      }
+      abundances_in[anumber - 1] = static_cast<float>(abund_in);
       normfactor += abundances_in[anumber - 1];
     }
 
@@ -1085,11 +1183,7 @@ static void parse_model_headerline(const std::string &line, std::vector<int> &zl
       assert_always((columnindex == 4 && get_model_type() == GRID_CARTESIAN3D) ||
                     (columnindex == 3 && get_model_type() == GRID_CYLINDRICAL2D));
       continue;
-    } else if (token == "X_Fegroup") {
-      colnames.push_back(token);
-      zlist.push_back(-1);
-      alist.push_back(-1);
-    } else if (token.starts_with("X_")) {
+    } else if (token.starts_with("X_") && token != "X_Fegroup") {
       colnames.push_back(token);
       const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
       const int a = decay::get_nucstring_a(token.substr(2));
@@ -1138,7 +1232,6 @@ static void read_model_radioabundances(std::fstream &fmodel, std::istringstream 
     assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
 
     if (nucindexlist[i] >= 0) {
-      assert_testmodeonly(valuein >= 0.);
       assert_testmodeonly(valuein <= 1.);
       set_modelinitradioabund(mgi, nucindexlist[i], valuein);
     } else if (colnames[i] == "X_Fegroup") {
@@ -1460,8 +1553,10 @@ static void read_3d_model()
     for (int axis = 0; axis < 3; axis++) {
       const double cellwidth = 2 * xmax_tmodel / ncoordgrid[axis];
       const double cellpos_expected = -xmax_tmodel + cellwidth * get_cellcoordpointnum(mgi, axis);
-      // printout("n %d coord %d expected %g found %g rmax %g get_cellcoordpointnum(n, axis) %d ncoordgrid %d\n",
-      // n, axis, cellpos_expected, cellpos_in[axis], xmax_tmodel, get_cellcoordpointnum(n, axis), ncoordgrid[axis]);
+      //   printout("mgi %d coord %d expected %g found %g or %g rmax %g get_cellcoordpointnum(mgi, axis) %d ncoordgrid
+      //   %d\n",
+      //            mgi, axis, cellpos_expected, cellpos_in[axis], cellpos_in[2 - axis], xmax_tmodel,
+      //            get_cellcoordpointnum(mgi, axis), ncoordgrid[axis]);
       if (fabs(cellpos_expected - cellpos_in[axis]) > 0.5 * cellwidth) {
         posmatch_xyz = false;
       }
@@ -1498,12 +1593,18 @@ static void read_3d_model()
     abort();
   }
 
-  assert_always(posmatch_zyx ^ posmatch_xyz);  // xor because if both match then probably an infinity occurred
+  //   assert_always(posmatch_zyx ^ posmatch_xyz);  // xor because if both match then probably an infinity occurred
   if (posmatch_xyz) {
     printout("Cell positions in model.txt are consistent with calculated values when x-y-z column order is used.\n");
   }
   if (posmatch_zyx) {
     printout("Cell positions in model.txt are consistent with calculated values when z-y-x column order is used.\n");
+  }
+
+  if (!posmatch_xyz && !posmatch_zyx) {
+    printout(
+        "WARNING: Cell positions in model.txt are not consistent with calculated values in either x-y-z or z-y-x "
+        "order.\n");
   }
 
   printout("min_den %g [g/cm3]\n", min_den);
@@ -1601,36 +1702,6 @@ void read_ejecta_model() {
   printout("tmin %g [s] = %.2f [d]\n", globals::tmin, globals::tmin / 86400.);
   printout("rmax %g [cm] (at t=tmin)\n", globals::rmax);
 
-  globals::rpkt_emiss = static_cast<double *>(calloc((get_npts_model() + 1), sizeof(double)));
-
-  if constexpr (USE_LUT_PHOTOION) {
-    globals::corrphotoionrenorm =
-        static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
-    globals::gammaestimator =
-        static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
-
-#ifdef DO_TITER
-    globals::gammaestimator_save =
-        static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
-#endif
-  }
-
-  if constexpr (USE_LUT_BFHEATING) {
-    globals::bfheatingestimator =
-        static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
-#ifdef DO_TITER
-    globals::bfheatingestimator_save =
-        static_cast<double *>(malloc((get_npts_model() + 1) * get_nelements() * get_max_nions() * sizeof(double)));
-#endif
-  }
-
-  globals::ffheatingestimator = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
-  globals::colheatingestimator = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
-#ifdef DO_TITER
-  globals::ffheatingestimator_save = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
-  globals::colheatingestimator_save = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
-#endif
-
   calc_modelinit_totmassradionuclides();
 
   read_possible_yefile();
@@ -1673,7 +1744,8 @@ static void read_grid_restart_data(const int timestep) {
   assert_always(fscanf(gridsave_file, "%d ", &timestep_in) == 1);
   assert_always(timestep_in == timestep);
 
-  for (int mgi = 0; mgi < get_npts_model(); mgi++) {
+  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     int mgi_in = -1;
     float T_R = 0.;
     float T_e = 0.;
@@ -1682,15 +1754,13 @@ static void read_grid_restart_data(const int timestep) {
     int thick = 0;
     double rpkt_emiss = 0.;
 
-    if (get_numassociatedcells(mgi) > 0) {
-      assert_always(fscanf(gridsave_file, "%d %a %a %a %a %d %la %a %a", &mgi_in, &T_R, &T_e, &W, &T_J, &thick,
-                           &rpkt_emiss, &modelgrid[mgi].nne, &modelgrid[mgi].nnetot) == 9);
+    assert_always(fscanf(gridsave_file, "%d %a %a %a %a %d %la %a %a", &mgi_in, &T_R, &T_e, &W, &T_J, &thick,
+                         &rpkt_emiss, &modelgrid[mgi].nne, &modelgrid[mgi].nnetot) == 9);
 
-      if (mgi_in != mgi) {
-        printout("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort\n");
-        printout("[fatal] read_grid_restart_data: read cellnumber %d, expected cellnumber %d\n", mgi_in, mgi);
-        assert_always(mgi_in == mgi);
-      }
+    if (mgi_in != mgi) {
+      printout("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort\n");
+      printout("[fatal] read_grid_restart_data: read cellnumber %d, expected cellnumber %d\n", mgi_in, mgi);
+      assert_always(mgi_in == mgi);
     }
 
     assert_always(T_R >= 0.);
@@ -1708,8 +1778,7 @@ static void read_grid_restart_data(const int timestep) {
 
     if constexpr (USE_LUT_PHOTOION) {
       for (int element = 0; element < get_nelements(); element++) {
-        const int nions = get_nions(element);
-        for (int ion = 0; ion < nions; ion++) {
+        for (int ion = 0; ion < (get_nions(element) - 1); ion++) {
           const int estimindex = get_ionestimindex(mgi, element, ion);
           assert_always(fscanf(gridsave_file, " %la %la", &globals::corrphotoionrenorm[estimindex],
                                &globals::gammaestimator[estimindex]) == 2);
@@ -1752,22 +1821,19 @@ void write_grid_restart_data(const int timestep) {
 
   fprintf(gridsave_file, "%d ", timestep);
 
-  for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-    const bool nonemptycell = (get_numassociatedcells(mgi) > 0);
+  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
-    if (nonemptycell) {
-      assert_always(globals::rpkt_emiss[mgi] >= 0.);
-      fprintf(gridsave_file, "%d %a %a %a %a %d %la %a %a", mgi, get_TR(mgi), get_Te(mgi), get_W(mgi), get_TJ(mgi),
-              modelgrid[mgi].thick, globals::rpkt_emiss[mgi], modelgrid[mgi].nne, modelgrid[mgi].nnetot);
-    }
+    assert_always(globals::rpkt_emiss[mgi] >= 0.);
+    fprintf(gridsave_file, "%d %a %a %a %a %d %la %a %a", mgi, get_TR(mgi), get_Te(mgi), get_W(mgi), get_TJ(mgi),
+            modelgrid[mgi].thick, globals::rpkt_emiss[mgi], modelgrid[mgi].nne, modelgrid[mgi].nnetot);
 
     if constexpr (USE_LUT_PHOTOION) {
       for (int element = 0; element < get_nelements(); element++) {
-        const int nions = get_nions(element);
-        for (int ion = 0; ion < nions; ion++) {
+        for (int ion = 0; ion < (get_nions(element) - 1); ion++) {
           const int estimindex = get_ionestimindex(mgi, element, ion);
-          fprintf(gridsave_file, " %la %la", (nonemptycell ? globals::corrphotoionrenorm[estimindex] : 0.),
-                  (nonemptycell ? globals::gammaestimator[estimindex] : 0.));
+          fprintf(gridsave_file, " %la %la", globals::corrphotoionrenorm[estimindex],
+                  globals::gammaestimator[estimindex]);
         }
       }
     }
@@ -1796,7 +1862,11 @@ static void assign_initial_temperatures()
   /// according to the local energy density resulting from the 56Ni decay.
   /// The dilution factor is W=1 in LTE.
 
+  printout("Assigning initial temperatures...\n");
+
   const double tstart = globals::timesteps[0].mid;
+  int cells_below_mintemp = 0;
+  int cells_above_maxtemp = 0;
 
   for (int nonempymgi = 0; nonempymgi < get_nonempty_npts_model(); nonempymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonempymgi);
@@ -1810,11 +1880,13 @@ static void assign_initial_temperatures()
         pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.);
 
     if (T_initial < MINTEMP) {
-      printout("mgi %d: T_initial of %g is below MINTEMP %g K, setting to MINTEMP.\n", mgi, T_initial, MINTEMP);
+      //   printout("mgi %d: T_initial of %g is below MINTEMP %g K, setting to MINTEMP.\n", mgi, T_initial, MINTEMP);
       T_initial = MINTEMP;
+      cells_below_mintemp++;
     } else if (T_initial > MAXTEMP) {
-      printout("mgi %d: T_initial of %g is above MAXTEMP %g K, setting to MAXTEMP.\n", mgi, T_initial, MAXTEMP);
+      //   printout("mgi %d: T_initial of %g is above MAXTEMP %g K, setting to MAXTEMP.\n", mgi, T_initial, MAXTEMP);
       T_initial = MAXTEMP;
+      cells_above_maxtemp++;
     } else if (!std::isfinite(T_initial)) {
       printout("mgi %d: T_initial of %g is infinite!\n", mgi, T_initial);
     }
@@ -1827,6 +1899,8 @@ static void assign_initial_temperatures()
     set_W(mgi, 1.);
     modelgrid[mgi].thick = 0;
   }
+  printout("  cells below MINTEMP %g: %d\n", MINTEMP, cells_below_mintemp);
+  printout("  cells above MAXTEMP %g: %d\n", MAXTEMP, cells_above_maxtemp);
 }
 
 static void setup_nstart_ndo() {
@@ -2124,22 +2198,20 @@ void grid_init(int my_rank)
       }
 
       double totmassradionuclide_actual = 0.;
-      for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-        if (get_numassociatedcells(mgi) > 0) {
-          totmassradionuclide_actual +=
-              get_modelinitradioabund(mgi, nucindex) * get_rho_tmin(mgi) * get_modelcell_assocvolume_tmin(mgi);
-        }
+      for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+        const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+        totmassradionuclide_actual +=
+            get_modelinitradioabund(mgi, nucindex) * get_rho_tmin(mgi) * get_modelcell_assocvolume_tmin(mgi);
       }
 
       if (totmassradionuclide_actual > 0.) {
         const double ratio = totmassradionuclide[nucindex] / totmassradionuclide_actual;
         // printout("nuclide %d ratio %g\n", nucindex, ratio);
-        for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-          if (get_numassociatedcells(mgi) > 0) {
-            const double prev_abund = get_modelinitradioabund(mgi, nucindex);
-            const double new_abund = prev_abund * ratio;
-            set_modelinitradioabund(mgi, nucindex, new_abund);
-          }
+        for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+          const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+          const double prev_abund = get_modelinitradioabund(mgi, nucindex);
+          const double new_abund = prev_abund * ratio;
+          set_modelinitradioabund(mgi, nucindex, new_abund);
         }
       }
     }
