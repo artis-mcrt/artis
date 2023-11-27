@@ -1,7 +1,6 @@
 #include "atomic.h"
 
 #include <cmath>
-#include <ranges>
 
 #include "artisoptions.h"
 #include "grid.h"
@@ -162,7 +161,7 @@ auto photoionization_crosssection_fromtable(const float *const photoion_xs, cons
 
 void set_nelements(const int nelements_in) { globals::elements.resize(nelements_in); }
 
-auto get_nelements() -> int { return globals::elements.size(); }
+auto get_nelements() -> int { return static_cast<int>(globals::elements.size()); }
 
 auto get_atomicnumber(const int element) -> int
 /// Returns the atomic number associated with a given elementindex.
