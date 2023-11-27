@@ -35,7 +35,7 @@
 #include "atomic.h"
 #include "globals.h"
 
-#ifdef OPENMP_MT_ON
+#ifdef _OPENMP
 #include <omp.h>
 #endif
 
@@ -51,7 +51,7 @@ extern std::mt19937 stdrng;
 
 extern gsl_integration_workspace *gslworkspace;
 
-#ifdef OPENMP_MT_ON
+#ifdef _OPENMP
 #pragma omp threadprivate(tid, use_cellcache, stdrng, gslworkspace, output_file)
 #endif
 
@@ -119,14 +119,24 @@ static auto printout(const char *format) -> int {
   return bflutindex;
 }
 
-inline void safeadd(auto &var, auto val) {
+template <typename T>
+inline void safeadd(T &var, T val) {
 #ifdef _OPENMP
 #pragma omp atomic update
-#endif
   var += val;
-
+#else
+#ifdef STDPAR_ON
+#ifdef __cpp_lib_atomic_ref
+  static_assert(std::atomic<T>::is_always_lock_free);
+  std::atomic_ref<T>(var).fetch_add(val, std::memory_order_relaxed);
+#else
   // this works on clang but not gcc for doubles.
-  // __atomic_fetch_add(&var, val, __ATOMIC_RELAXED);
+  __atomic_fetch_add(&var, val, __ATOMIC_RELAXED);
+#endif
+#else
+  var += val;
+#endif
+#endif
 }
 
 #define safeincrement(var) safeadd((var), 1)
@@ -185,7 +195,7 @@ static auto fstream_required(const std::string &filename, std::ios_base::openmod
 }
 
 [[nodiscard]] inline auto get_max_threads() -> int {
-#if defined OPENMP_MT_ON
+#if defined _OPENMP
   return omp_get_max_threads();
 #else
   return 1;
@@ -193,7 +203,7 @@ static auto fstream_required(const std::string &filename, std::ios_base::openmod
 }
 
 [[nodiscard]] inline auto get_num_threads() -> int {
-#if defined OPENMP_MT_ON
+#if defined _OPENMP
   return omp_get_num_threads();
 #else
   return 1;
@@ -201,7 +211,7 @@ static auto fstream_required(const std::string &filename, std::ios_base::openmod
 }
 
 [[nodiscard]] inline auto get_thread_num() -> int {
-#if defined OPENMP_MT_ON
+#if defined _OPENMP
   return omp_get_thread_num();
 #else
   return 0;

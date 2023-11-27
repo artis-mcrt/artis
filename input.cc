@@ -1038,7 +1038,7 @@ static void read_atomicdata_files() {
   printout("establishing connection between transitions and sorted linelist...\n");
 
   time_t const time_start_establish_linelist_connections = time(nullptr);
-#ifdef OPENMP_MT_ON
+#ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
   for (lineindex = 0; lineindex < globals::nlines; lineindex++) {
@@ -1207,7 +1207,7 @@ static void setup_cellcache() {
   globals::cellcache = static_cast<struct cellcache *>(malloc(num_cellcache_slots * sizeof(struct cellcache)));
   assert_always(globals::cellcache != nullptr);
 
-#ifdef OPENMP_MT_ON
+#ifdef _OPENMP
 #pragma omp parallel
   {
 #endif
@@ -1320,7 +1320,7 @@ static void setup_cellcache() {
     mem_usage_cellcache += globals::nbfcontinua * sizeof(double);
 
     printout("[info] mem_usage: cellcache for thread %d occupies %.3f MB\n", tid, mem_usage_cellcache / 1024. / 1024.);
-#ifdef OPENMP_MT_ON
+#ifdef _OPENMP
   }
 #endif
 }
@@ -1388,7 +1388,7 @@ static void setup_phixs_list() {
   /// a serial loop which intializes the phixslist data structure for all threads in a loop. I'm still
   /// not sure why this causes a problem at all and on BlueGene architectures in particular. However,
   /// it seems to fix the problem.
-  // #ifdef OPENMP_MT_ON
+  // #ifdef _OPENMP
   //   #pragma omp parallel private(i,element,ion,level,nions,nlevels,epsilon_upper,E_threshold,nu_edge)
   //   {
   // #endif
@@ -1757,7 +1757,7 @@ void read_parameterfile(int rank)
   int64_t zseed_input = -1;
   std::istringstream(line) >> zseed_input;
 
-#ifdef OPENMP_MT_ON
+#ifdef _OPENMP
 #pragma omp parallel
   {
 #endif
@@ -1780,7 +1780,7 @@ void read_parameterfile(int rank)
     for (int n = 0; n < 100; n++) {
       rng_uniform();
     }
-#ifdef OPENMP_MT_ON
+#ifdef _OPENMP
   }
 #endif
 

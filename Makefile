@@ -38,7 +38,6 @@ endif
 
 
 ifeq ($(OPENMP),ON)
-  CXXFLAGS += -DOPENMP_MT_ON=true
   BUILD_DIR := $(BUILD_DIR)_openmp
 
   ifeq ($(COMPILER_IS_CLANG),TRUE)
