@@ -103,14 +103,20 @@ static inline auto get_bflutindex(const int tempindex, const int element, const 
   return bflutindex;
 }
 
-inline void safeadd(auto &var, auto val) {
+template <typename T>
+inline void safeadd(T &var, T val) {
+#ifdef __cpp_lib_atomic_ref
+  static_assert(std::atomic<T>::is_always_lock_free);
+  std::atomic_ref<T>(var).fetch_add(val, std::memory_order_relaxed);
+#else
 #ifdef _OPENMP
 #pragma omp atomic update
-#endif
   var += val;
-
+#else
   // this works on clang but not gcc for doubles.
-  // __atomic_fetch_add(&var, val, __ATOMIC_RELAXED);
+  __atomic_fetch_add(&var, val, __ATOMIC_RELAXED);
+#endif
+#endif
 }
 
 #define safeincrement(var) safeadd((var), 1)
