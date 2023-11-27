@@ -1822,22 +1822,20 @@ void write_grid_restart_data(const int timestep) {
 
   fprintf(gridsave_file, "%d ", timestep);
 
-  for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-    const bool nonemptycell = (get_numassociatedcells(mgi) > 0);
+  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
-    if (nonemptycell) {
-      assert_always(globals::rpkt_emiss[mgi] >= 0.);
-      fprintf(gridsave_file, "%d %a %a %a %a %d %la %a %a", mgi, get_TR(mgi), get_Te(mgi), get_W(mgi), get_TJ(mgi),
-              modelgrid[mgi].thick, globals::rpkt_emiss[mgi], modelgrid[mgi].nne, modelgrid[mgi].nnetot);
+    assert_always(globals::rpkt_emiss[mgi] >= 0.);
+    fprintf(gridsave_file, "%d %a %a %a %a %d %la %a %a", mgi, get_TR(mgi), get_Te(mgi), get_W(mgi), get_TJ(mgi),
+            modelgrid[mgi].thick, globals::rpkt_emiss[mgi], modelgrid[mgi].nne, modelgrid[mgi].nnetot);
 
-      if constexpr (USE_LUT_PHOTOION) {
-        for (int element = 0; element < get_nelements(); element++) {
-          const int nions = get_nions(element);
-          for (int ion = 0; ion < nions; ion++) {
-            const int estimindex = get_ionestimindex(mgi, element, ion);
-            fprintf(gridsave_file, " %la %la", (nonemptycell ? globals::corrphotoionrenorm[estimindex] : 0.),
-                    (nonemptycell ? globals::gammaestimator[estimindex] : 0.));
-          }
+    if constexpr (USE_LUT_PHOTOION) {
+      for (int element = 0; element < get_nelements(); element++) {
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions; ion++) {
+          const int estimindex = get_ionestimindex(mgi, element, ion);
+          fprintf(gridsave_file, " %la %la", globals::corrphotoionrenorm[estimindex],
+                  globals::gammaestimator[estimindex]);
         }
       }
     }
