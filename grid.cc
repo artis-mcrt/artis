@@ -2199,22 +2199,20 @@ void grid_init(int my_rank)
       }
 
       double totmassradionuclide_actual = 0.;
-      for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-        if (get_numassociatedcells(mgi) > 0) {
-          totmassradionuclide_actual +=
-              get_modelinitradioabund(mgi, nucindex) * get_rho_tmin(mgi) * get_modelcell_assocvolume_tmin(mgi);
-        }
+      for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+        const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+        totmassradionuclide_actual +=
+            get_modelinitradioabund(mgi, nucindex) * get_rho_tmin(mgi) * get_modelcell_assocvolume_tmin(mgi);
       }
 
       if (totmassradionuclide_actual > 0.) {
         const double ratio = totmassradionuclide[nucindex] / totmassradionuclide_actual;
         // printout("nuclide %d ratio %g\n", nucindex, ratio);
-        for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-          if (get_numassociatedcells(mgi) > 0) {
-            const double prev_abund = get_modelinitradioabund(mgi, nucindex);
-            const double new_abund = prev_abund * ratio;
-            set_modelinitradioabund(mgi, nucindex, new_abund);
-          }
+        for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+          const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+          const double prev_abund = get_modelinitradioabund(mgi, nucindex);
+          const double new_abund = prev_abund * ratio;
+          set_modelinitradioabund(mgi, nucindex, new_abund);
         }
       }
     }
