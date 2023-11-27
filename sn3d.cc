@@ -203,32 +203,33 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
     MPI_Bcast(&root_node_id, 1, MPI_INT, root, MPI_COMM_WORLD);
 
     for (int modelgridindex = root_nstart; modelgridindex < (root_nstart + root_ndo); modelgridindex++) {
+      if (grid::get_numassociatedcells(modelgridindex) < 1) {
+        continue;
+      }
       radfield::do_MPI_Bcast(modelgridindex, root, root_node_id);
 
-      if (grid::get_numassociatedcells(modelgridindex) > 0) {
-        nonthermal::nt_MPI_Bcast(modelgridindex, root);
-        if (globals::total_nlte_levels > 0 && globals::rank_in_node == 0) {
-          MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, root_node_id,
-                    globals::mpi_comm_internode);
-        }
+      nonthermal::nt_MPI_Bcast(modelgridindex, root);
+      if (globals::total_nlte_levels > 0 && globals::rank_in_node == 0) {
+        MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, root_node_id,
+                  globals::mpi_comm_internode);
+      }
 
-        if constexpr (USE_LUT_PHOTOION) {
-          assert_always(globals::corrphotoionrenorm != nullptr);
-          if (globals::rank_in_node == 0) {
-            MPI_Bcast(&globals::corrphotoionrenorm[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE,
-                      root_node_id, globals::mpi_comm_internode);
-          }
-
-          assert_always(globals::gammaestimator != nullptr);
-          MPI_Bcast(&globals::gammaestimator[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE, root,
-                    MPI_COMM_WORLD);
-        }
-
-        assert_always(grid::modelgrid[modelgridindex].elem_meanweight != nullptr);
+      if constexpr (USE_LUT_PHOTOION) {
+        assert_always(globals::corrphotoionrenorm != nullptr);
         if (globals::rank_in_node == 0) {
-          MPI_Bcast(grid::modelgrid[modelgridindex].elem_meanweight, get_nelements(), MPI_FLOAT, root_node_id,
-                    globals::mpi_comm_internode);
+          MPI_Bcast(&globals::corrphotoionrenorm[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE,
+                    root_node_id, globals::mpi_comm_internode);
         }
+
+        assert_always(globals::gammaestimator != nullptr);
+        MPI_Bcast(&globals::gammaestimator[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE, root,
+                  MPI_COMM_WORLD);
+      }
+
+      assert_always(grid::modelgrid[modelgridindex].elem_meanweight != nullptr);
+      if (globals::rank_in_node == 0) {
+        MPI_Bcast(grid::modelgrid[modelgridindex].elem_meanweight, get_nelements(), MPI_FLOAT, root_node_id,
+                  globals::mpi_comm_internode);
       }
     }
 
