@@ -1,5 +1,6 @@
 #include "atomic.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include "artisoptions.h"
