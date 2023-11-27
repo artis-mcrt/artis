@@ -627,15 +627,15 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
       if (USE_LUT_PHOTOION && globals::nbfcontinua > 0) {
         fprintf(estimators_file, "corrphotoionrenorm Z=%2d", get_atomicnumber(element));
-        for (int ion = 0; ion < nions; ion++) {
+        for (int ion = 0; ion < nions - 1; ion++) {
           fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                  (ion < nions - 1) ? globals::corrphotoionrenorm[get_ionestimindex(mgi, element, ion)] : 1.);
+                  globals::corrphotoionrenorm[get_ionestimindex(mgi, element, ion)]);
         }
         fprintf(estimators_file, "\n");
         fprintf(estimators_file, "gammaestimator     Z=%2d", get_atomicnumber(element));
-        for (int ion = 0; ion < nions; ion++) {
+        for (int ion = 0; ion < nions - 1; ion++) {
           fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                  (ion < nions - 1) ? globals::gammaestimator[get_ionestimindex(mgi, element, ion)] : 0.);
+                  globals::gammaestimator[get_ionestimindex(mgi, element, ion)]);
         }
         fprintf(estimators_file, "\n");
       }
