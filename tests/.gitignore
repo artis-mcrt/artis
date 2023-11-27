@@ -5,7 +5,6 @@ adata.txt
 bflist.dat
 *.tmp
 ratecoeff.dat
-phixsdata_v2.txt
 transitiondata.txt
 *.tar.*
 atomic_data_logs
@@ -19,3 +18,4 @@ binding_energies.txt
 *_testrun
 atomicdata_*
 *.pdf
+checksums.zip
