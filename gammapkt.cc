@@ -4,13 +4,11 @@
 #include <cmath>
 #include <cstring>
 #include <fstream>
-#include <limits>
 #include <memory>
 #include <vector>
 
 #include "decay.h"
 #include "grid.h"
-#include "nonthermal.h"
 #include "packet.h"
 #include "sn3d.h"
 #include "stats.h"
@@ -202,17 +200,17 @@ void init_gamma_linelist() {
 void normalise_grey(int nts) {
   const double dt = globals::timesteps[nts].width;
   globals::timesteps[nts].gamma_dep_pathint = 0.;
-  for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
-    if (grid::get_numassociatedcells(mgi) > 0) {
-      const double dV = grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts].mid / globals::tmin, 3);
+  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
-      globals::timesteps[nts].gamma_dep_pathint += globals::rpkt_emiss[mgi] / globals::nprocs;
+    const double dV = grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts].mid / globals::tmin, 3);
 
-      globals::rpkt_emiss[mgi] = globals::rpkt_emiss[mgi] * ONEOVER4PI / dV / dt / globals::nprocs;
+    globals::timesteps[nts].gamma_dep_pathint += globals::rpkt_emiss[mgi] / globals::nprocs;
 
-      assert_testmodeonly(globals::rpkt_emiss[mgi] >= 0.);
-      assert_testmodeonly(isfinite(globals::rpkt_emiss[mgi]));
-    }
+    globals::rpkt_emiss[mgi] = globals::rpkt_emiss[mgi] * ONEOVER4PI / dV / dt / globals::nprocs;
+
+    assert_testmodeonly(globals::rpkt_emiss[mgi] >= 0.);
+    assert_testmodeonly(isfinite(globals::rpkt_emiss[mgi]));
   }
 }
 
