@@ -1743,46 +1743,45 @@ static void read_grid_restart_data(const int timestep) {
   assert_always(fscanf(gridsave_file, "%d ", &timestep_in) == 1);
   assert_always(timestep_in == timestep);
 
-  for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-    if (get_numassociatedcells(mgi) > 0) {
-      int mgi_in = -1;
-      float T_R = 0.;
-      float T_e = 0.;
-      float W = 0.;
-      float T_J = 0.;
-      int thick = 0;
-      double rpkt_emiss = 0.;
+  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+    int mgi_in = -1;
+    float T_R = 0.;
+    float T_e = 0.;
+    float W = 0.;
+    float T_J = 0.;
+    int thick = 0;
+    double rpkt_emiss = 0.;
 
-      assert_always(fscanf(gridsave_file, "%d %a %a %a %a %d %la %a %a", &mgi_in, &T_R, &T_e, &W, &T_J, &thick,
-                           &rpkt_emiss, &modelgrid[mgi].nne, &modelgrid[mgi].nnetot) == 9);
+    assert_always(fscanf(gridsave_file, "%d %a %a %a %a %d %la %a %a", &mgi_in, &T_R, &T_e, &W, &T_J, &thick,
+                         &rpkt_emiss, &modelgrid[mgi].nne, &modelgrid[mgi].nnetot) == 9);
 
-      if (mgi_in != mgi) {
-        printout("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort\n");
-        printout("[fatal] read_grid_restart_data: read cellnumber %d, expected cellnumber %d\n", mgi_in, mgi);
-        assert_always(mgi_in == mgi);
-      }
+    if (mgi_in != mgi) {
+      printout("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort\n");
+      printout("[fatal] read_grid_restart_data: read cellnumber %d, expected cellnumber %d\n", mgi_in, mgi);
+      assert_always(mgi_in == mgi);
+    }
 
-      assert_always(T_R >= 0.);
-      assert_always(T_e >= 0.);
-      assert_always(W >= 0.);
-      assert_always(T_J >= 0.);
-      assert_always(rpkt_emiss >= 0.);
+    assert_always(T_R >= 0.);
+    assert_always(T_e >= 0.);
+    assert_always(W >= 0.);
+    assert_always(T_J >= 0.);
+    assert_always(rpkt_emiss >= 0.);
 
-      set_TR(mgi, T_R);
-      set_Te(mgi, T_e);
-      set_W(mgi, W);
-      set_TJ(mgi, T_J);
-      modelgrid[mgi].thick = thick;
-      globals::rpkt_emiss[mgi] = rpkt_emiss;
+    set_TR(mgi, T_R);
+    set_Te(mgi, T_e);
+    set_W(mgi, W);
+    set_TJ(mgi, T_J);
+    modelgrid[mgi].thick = thick;
+    globals::rpkt_emiss[mgi] = rpkt_emiss;
 
-      if constexpr (USE_LUT_PHOTOION) {
-        for (int element = 0; element < get_nelements(); element++) {
-          const int nions = get_nions(element);
-          for (int ion = 0; ion < nions; ion++) {
-            const int estimindex = get_ionestimindex(mgi, element, ion);
-            assert_always(fscanf(gridsave_file, " %la %la", &globals::corrphotoionrenorm[estimindex],
-                                 &globals::gammaestimator[estimindex]) == 2);
-          }
+    if constexpr (USE_LUT_PHOTOION) {
+      for (int element = 0; element < get_nelements(); element++) {
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions; ion++) {
+          const int estimindex = get_ionestimindex(mgi, element, ion);
+          assert_always(fscanf(gridsave_file, " %la %la", &globals::corrphotoionrenorm[estimindex],
+                               &globals::gammaestimator[estimindex]) == 2);
         }
       }
     }
