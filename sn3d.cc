@@ -743,7 +743,7 @@ auto main(int argc, char *argv[]) -> int {
 
   const int my_rank = globals::rank_global;
 
-#ifdef OPENMP_MT_ON
+#ifdef _OPENMP
   /// Explicitly turn off dynamic threads because we use the threadprivate directive!!!
   omp_set_dynamic(0);
 
@@ -760,12 +760,6 @@ auto main(int argc, char *argv[]) -> int {
     globals::startofline[tid] = true;
 
 #ifdef _OPENMP
-    printout("OpenMP is available in this build\n");
-#else
-    printout("OpenMP is not available in this build\n");
-#endif
-
-#ifdef OPENMP_MT_ON
     printout("OpenMP parallelisation is active with %d threads (max %d)\n", get_num_threads(), get_max_threads());
 #else
     printout("OpenMP parallelisation is not enabled in this build (this is normal)\n");
@@ -1001,12 +995,12 @@ auto main(int argc, char *argv[]) -> int {
   radfield::close_file();
   nonthermal::close_file();
 
-#ifdef OPENMP_MT_ON
+#ifdef _OPENMP
 #pragma omp parallel
 #endif
   { fclose(output_file); }
 
-#ifdef OPENMP_MT_ON
+#ifdef _OPENMP
   omp_set_dynamic(0);
 #pragma omp parallel
 #endif
