@@ -18,6 +18,7 @@
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "ratecoeff.h"
+#include "rpkt.h"
 #include "sn3d.h"
 
 struct nne_solution_paras {

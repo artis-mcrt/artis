@@ -85,6 +85,9 @@ extern gsl_integration_workspace *gslworkspace;
   }
 #endif
 
+#include "artisoptions.h"
+#include "globals.h"
+
 // #define printout(...) fprintf(output_file, __VA_ARGS__)
 
 template <typename... Args>
@@ -92,7 +95,8 @@ static auto printout(const char *format, Args... args) -> int {
   if (globals::startofline[tid]) {
     const time_t now_time = time(nullptr);
     char s[32] = "";
-    strftime(s, 32, "%FT%TZ", gmtime(&now_time));  // NOLINT[concurrency-mt-unsafe]
+    struct tm buf {};
+    strftime(s, 32, "%FT%TZ", gmtime_r(&now_time, &buf));
     fprintf(output_file, "%s ", s);
   }
   globals::startofline[tid] = (format[strlen(format) - 1] == '\n');
@@ -103,7 +107,8 @@ static auto printout(const char *format) -> int {
   if (globals::startofline[tid]) {
     const time_t now_time = time(nullptr);
     char s[32] = "";
-    strftime(s, 32, "%FT%TZ", gmtime(&now_time));  // NOLINT[concurrency-mt-unsafe]
+    struct tm buf {};
+    strftime(s, 32, "%FT%TZ", gmtime_r(&now_time, &buf));
     fprintf(output_file, "%s ", s);
   }
   globals::startofline[tid] = (format[strlen(format) - 1] == '\n');
@@ -268,10 +273,6 @@ inline void check_already_running() {
   auto pidfile = std::fstream("artis.pid", std::ofstream::out | std::ofstream::trunc);
   pidfile << artispid;
   pidfile.close();
-}
-
-[[nodiscard]] inline auto get_ionestimindex(const int mgi, const int element, const int ion) -> int {
-  return mgi * get_includedions() + get_uniqueionindex(element, ion);
 }
 
 #endif  // SN3D_H

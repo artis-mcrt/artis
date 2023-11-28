@@ -18,6 +18,7 @@ void calculate_chi_rpkt_cont(double nu_cmf, struct rpkt_continuum_absorptioncoef
                              bool usecellhistupdatephixslist);
 auto sample_planck_times_expansion_opacity(int modelgridindex) -> double;
 void allocate_expansionopacities();
+void calculate_binned_opacities(int modelgridindex);
 
 [[nodiscard]] constexpr auto get_linedistance(const double prop_time, const double nu_cmf, const double nu_trans,
                                               const double d_nu_on_d_l) -> double {
@@ -39,6 +40,15 @@ void allocate_expansionopacities();
   return CLIGHT * prop_time * (nu_cmf / nu_trans - 1);
 }
 
-void calculate_binned_opacities(int modelgridindex);
+[[nodiscard]] inline auto get_ionestimindex_nonemptymgi(const int nonemptymgi, const int element, const int ion)
+    -> int {
+  assert_testmodeonly(ion >= 0);
+  assert_testmodeonly(ion < get_nions(element) - 1);
+  return nonemptymgi * get_includedions() + get_uniqueionindex(element, ion);
+}
+
+[[nodiscard]] inline auto get_ionestimindex(const int mgi, const int element, const int ion) -> int {
+  return get_ionestimindex_nonemptymgi(grid::get_modelcell_nonemptymgi(mgi), element, ion);
+}
 
 #endif  // RPKT_H

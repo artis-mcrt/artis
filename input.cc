@@ -510,7 +510,7 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
                                                  struct transitions *transitions, int *lineindex,
                                                  std::vector<struct linelist_entry> &temp_linelist) {
   const int lineindex_initial = *lineindex;
-  int totupdowntrans = 0;
+  size_t totupdowntrans = 0;
   // pass 0 to get transition counts of each level
   // pass 1 to allocate and fill transition arrays
   for (int pass = 0; pass < 2; pass++) {
@@ -991,7 +991,7 @@ static void read_atomicdata_files() {
 #ifdef MPI_ON
   MPI_Win win = MPI_WIN_NULL;
 
-  int my_rank_lines = globals::nlines / globals::node_nprocs;
+  size_t my_rank_lines = globals::nlines / globals::node_nprocs;
   // rank_in_node 0 gets any remainder
   if (globals::rank_in_node == 0) {
     my_rank_lines += globals::nlines - (my_rank_lines * globals::node_nprocs);
@@ -1154,7 +1154,7 @@ static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcont
     index = -1;
     *index_in_groundlevelcontestimator = -1;
   } else {
-    int i = 0;
+    int i = 1;
     int element = -1;
     int ion = -1;
     for (i = 1; i < globals::nbfcontinua_ground; i++) {
@@ -1196,7 +1196,7 @@ static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcont
       element = globals::groundcont[index].element;
       ion = globals::groundcont[index].ion;
     }
-    *index_in_groundlevelcontestimator = get_ionestimindex(0, element, ion);
+    *index_in_groundlevelcontestimator = get_uniqueionindex(element, ion);
   }
 
   return index;
@@ -1471,7 +1471,7 @@ static void setup_phixs_list() {
       static_cast<struct fullphixslist *>(malloc(globals::nbfcontinua * sizeof(struct fullphixslist)));
   printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
            globals::nbfcontinua * (sizeof(fullphixslist)) / 1024. / 1024.);
-  int nbftables = 0;
+  size_t nbftables = 0;
   int allcontindex = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
@@ -1527,8 +1527,8 @@ static void setup_phixs_list() {
 #ifdef MPI_ON
     float *allphixsblock = nullptr;
     MPI_Win win_allphixsblock = MPI_WIN_NULL;
-    MPI_Aint size =
-        (globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * static_cast<MPI_Aint>(sizeof(float)) : 0;
+    auto size =
+        static_cast<MPI_Aint>((globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0);
     int disp_unit = sizeof(linelist_entry);
 
     MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &allphixsblock, &win_allphixsblock);
@@ -1540,7 +1540,7 @@ static void setup_phixs_list() {
 #endif
 
     assert_always(allphixsblock != nullptr);
-    int nbftableschanged = 0;
+    size_t nbftableschanged = 0;
     for (int i = 0; i < globals::nbfcontinua; i++) {
       globals::allcont_nu_edge[i] = nonconstallcont[i].nu_edge;
 

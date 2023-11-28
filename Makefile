@@ -36,7 +36,6 @@ else
   COMPILER_IS_CLANG := FALSE
 endif
 
-
 ifeq ($(OPENMP),ON)
   BUILD_DIR := $(BUILD_DIR)_openmp
 
@@ -149,10 +148,17 @@ ifeq ($(TESTMODE),ON)
 	CXXFLAGS += -DTESTMODE=true -DLIBCXX_ENABLE_DEBUG_MODE
 	# makes GitHub actions classic test run forever?
 	# CXXFLAGS += -D_GLIBCXX_DEBUG=1
-	CXXFLAGS += -fsanitize=address,undefined -fno-omit-frame-pointer
+	CXXFLAGS +=  -fno-omit-frame-pointer
+
+	ifeq ($(COMPILER_IS_CLANG),TRUE)
+	CXXFLAGS += -fsanitize=address,undefined,integer
+	else
+	CXXFLAGS += -fsanitize=address,undefined
+	endif
+
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
-	# skip array range checking for better performance and use optimizations
+	# skip GSL range checking for better performance
 	CXXFLAGS += -DTESTMODE=false -DGSL_RANGE_CHECK_OFF
 endif
 

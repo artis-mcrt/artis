@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <cstdlib>
 #include <ctime>
 #include <memory>
 
@@ -16,6 +15,7 @@
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "rpkt.h"
 #ifdef MPI_ON
 #include "mpi.h"
 #endif
@@ -23,7 +23,6 @@
 #include "nonthermal.h"
 #include "radfield.h"
 #include "ratecoeff.h"
-#include "rpkt.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "thermalbalance.h"
@@ -635,13 +634,13 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
       if (USE_LUT_PHOTOION && globals::nbfcontinua > 0) {
         fprintf(estimators_file, "corrphotoionrenorm Z=%2d", get_atomicnumber(element));
-        for (int ion = 0; ion < nions; ion++) {
+        for (int ion = 0; ion < nions - 1; ion++) {
           fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
                   globals::corrphotoionrenorm[get_ionestimindex(mgi, element, ion)]);
         }
         fprintf(estimators_file, "\n");
         fprintf(estimators_file, "gammaestimator     Z=%2d", get_atomicnumber(element));
-        for (int ion = 0; ion < nions; ion++) {
+        for (int ion = 0; ion < nions - 1; ion++) {
           fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
                   globals::gammaestimator[get_ionestimindex(mgi, element, ion)]);
         }
@@ -973,8 +972,7 @@ static void titer_average_estimators(const int n) {
 static void zero_gammaestimator(const int modelgridindex) {
   assert_always(USE_LUT_PHOTOION);
   for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
+    for (int ion = 0; ion < (get_nions(element) - 1); ion++) {
       globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
     }
   }
@@ -983,8 +981,7 @@ static void zero_gammaestimator(const int modelgridindex) {
 static void set_all_corrphotoionrenorm(const int modelgridindex, const double value) {
   assert_always(USE_LUT_PHOTOION);
   for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
+    for (int ion = 0; ion < (get_nions(element) - 1); ion++) {
       globals::corrphotoionrenorm[get_ionestimindex(modelgridindex, element, ion)] = value;
     }
   }
@@ -1203,11 +1200,6 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     grid::set_TJ(mgi, 0.);
     grid::set_Te(mgi, 0.);
     grid::set_W(mgi, 0.);
-
-    if constexpr (USE_LUT_PHOTOION) {
-      zero_gammaestimator(mgi);
-      set_all_corrphotoionrenorm(mgi, 0.);
-    }
   }
 }
 
@@ -1227,9 +1219,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     /// unless they have been read from file
     if ((!globals::simulation_continued_from_saved) || (nts - globals::timestep_initial != 0) || (titer != 0)) {
       printout("nts %d, titer %d: reset corr photoionrenorm\n", nts, titer);
-      for (int i = 0; i < grid::get_npts_model() * get_includedions(); i++) {
-        globals::corrphotoionrenorm[i] = 0.;
-      }
+      std::fill_n(globals::corrphotoionrenorm, grid::get_nonempty_npts_model() * get_includedions(), 0.);
       printout("after nts %d, titer %d: reset corr photoionrenorm\n", nts, titer);
     }
   }
@@ -1293,7 +1283,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 #endif
         { write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates); }
 
-      } else {
+      } else if (grid::get_numassociatedcells(mgi) > 0) {
         /// else, only reset gammaestimator to zero. This allows us to do a global MPI
         /// communication after update_grid to synchronize gammaestimator
         /// and write a contiguous restart file with grid properties
