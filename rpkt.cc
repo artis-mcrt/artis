@@ -545,7 +545,8 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
   }
   const double distance_e_cmf = distance * pkt_ptr->e_cmf;
   const double nu = pkt_ptr->nu_cmf;
-  radfield::update_estimators(modelgridindex, distance_e_cmf, nu, pkt_ptr);
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  radfield::update_estimators(nonemptymgi, distance_e_cmf, nu, pkt_ptr);
 
   /// ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
   /// quick and dirty solution: store info in element=ion=0, and leave the others untouched (i.e. zero)
@@ -553,7 +554,6 @@ static void update_estimators(const struct packet *pkt_ptr, const double distanc
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     const double distance_e_cmf_over_nu = distance_e_cmf / nu;
-    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
       const double nu_edge = globals::groundcont[i].nu_edge;
