@@ -1226,6 +1226,10 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   /// Do not use values which are saved in the cellcache within update_grid
   use_cellcache = false;
   cellcache_change_cell(-99);
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
   {
 /// Updating cell information
 #ifdef _OPENMP
