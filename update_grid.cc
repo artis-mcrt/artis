@@ -726,43 +726,12 @@ void cellcache_change_cell(const int modelgridindex) {
               .stimrecombcoeff = -99.;
 #endif
         }
-        /// This is the only flag needed for all of the following MA stuff!
-        // if
-        // (globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC]
-        // >= 0)
-        //   nlevels_with_processrates++;
 
-        globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC] = -99.;
-
-        // globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].rad_deexc =
-        // -99.;
-        // globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].rad_recomb =
-        // -99.;
-        // globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].col_recomb =
-        // -99.;
-        // globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].internal_down_same
-        // = -99.;
-        // globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].internal_up_same
-        // = -99.;
-        // globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].internal_down_lower
-        // = -99.;
-        // globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher
-        // = -99.;
-        //
-        // ndowntrans = get_ndowntrans(element, ion, level);
-        // nuptrans = get_nuptrans(element, ion, level);
-        // for (i = 0; i < ndowntrans; i++)
-        // {
-        //   globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].sum_epstrans_rad_deexc[i]
-        //   = -99.;
-        //   globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i]
-        //   = -99.;
-        // }
-        // for (i = 0; i < nuptrans; i++)
-        // {
-        //   globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].sum_internal_up_same[i]
-        //   = -99.;
-        // }
+        globals::cellcache[tid]
+            .chelements[element]
+            .chions[ion]
+            .chlevels[level]
+            .processrates[MA_ACTION_INTERNALUPHIGHER] = -99.;
       }
     }
   }

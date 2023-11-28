@@ -122,7 +122,7 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
 
   /// Transitions to higher ionisation stages
   processrates[MA_ACTION_INTERNALUPHIGHERNT] = 0.;
-  processrates[MA_ACTION_INTERNALUPHIGHER] = 0.;
+  double rate_up_higher = 0.;
   const int ionisinglevels = get_ionisinglevels(element, ion);
   if (ion < get_nions(element) - 1 && level < ionisinglevels) {
     if (NT_ON) {
@@ -138,9 +138,10 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
       const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
       const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
-      processrates[MA_ACTION_INTERNALUPHIGHER] += (R + C) * epsilon_current;
+      rate_up_higher += (R + C) * epsilon_current;
     }
   }
+  processrates[MA_ACTION_INTERNALUPHIGHER] = rate_up_higher;
 }
 
 static auto do_macroatom_internal_down_same(int element, int ion, int level) -> int {
@@ -402,7 +403,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
     auto &chlevel = globals::cellcache[tid].chelements[element].chions[ion].chlevels[level];
     auto &processrates = chlevel.processrates;
     /// If there are no precalculated rates available then calculate them
-    if (processrates[MA_ACTION_COLDEEXC] < 0) {
+    if (processrates[MA_ACTION_INTERNALUPHIGHER] < 0) {
       calculate_macroatom_transitionrates(modelgridindex, element, ion, level, t_mid, chlevel);
     }
 
