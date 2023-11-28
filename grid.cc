@@ -26,6 +26,7 @@
 #include "decay.h"
 #include "globals.h"
 #include "input.h"
+#include "rpkt.h"
 #ifdef MPI_ON
 #include "mpi.h"
 #endif
@@ -71,13 +72,9 @@ double *totmassradionuclide = nullptr;  /// total mass of each radionuclide in t
 #ifdef MPI_ON
 MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
 MPI_Win win_initradioabund_allcells = MPI_WIN_NULL;
-MPI_Win win_expansionopacities_allcells = MPI_WIN_NULL;
-MPI_Win win_expopac_kappa_planck_cumul_allcells = MPI_WIN_NULL;
 #endif
 
 float *initradioabund_allcells = nullptr;
-float *expansionopacities_allcells = nullptr;
-float *expopac_kappa_planck_cumul_allcells = nullptr;
 
 std::vector<int> ranks_nstart;
 std::vector<int> ranks_ndo;
@@ -761,32 +758,6 @@ static void allocate_nonemptycells_composition_cooling()
     assert_always(nltepops_allcells != nullptr);
   }
 
-  if constexpr (EXPANSIONOPACITIES_ON) {
-#ifdef MPI_ON
-    MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(float));
-    int disp_unit = sizeof(float);
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &expansionopacities_allcells,
-                                          &win_expansionopacities_allcells) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(win_expansionopacities_allcells, 0, &size, &disp_unit,
-                                       &expansionopacities_allcells) == MPI_SUCCESS);
-
-    if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
-      assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                            &expopac_kappa_planck_cumul_allcells,
-                                            &win_expopac_kappa_planck_cumul_allcells) == MPI_SUCCESS);
-      assert_always(MPI_Win_shared_query(win_expansionopacities_allcells, 0, &size, &disp_unit,
-                                         &expopac_kappa_planck_cumul_allcells) == MPI_SUCCESS);
-    }
-
-#else
-    expansionopacities_allcells = static_cast<float *>(malloc(npts_nonempty * expopac_nbins * sizeof(float)));
-    if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
-      expopac_kappa_planck_cumul_allcells = static_cast<float *>(malloc(npts_nonempty * expopac_nbins * sizeof(float)));
-    }
-#endif
-  }
-
   for (size_t nonemptymgi = 0; nonemptymgi < npts_nonempty; nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
@@ -871,14 +842,6 @@ static void allocate_nonemptycells_composition_cooling()
 
       allionindex += get_nions(element);
     }
-
-    if constexpr (EXPANSIONOPACITIES_ON) {
-      modelgrid[modelgridindex].expansionopacities = &expansionopacities_allcells[nonemptymgi * expopac_nbins];
-      if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
-        modelgrid[modelgridindex].expansionopacity_planck_cumulative =
-            &expopac_kappa_planck_cumul_allcells[nonemptymgi * expopac_nbins];
-      }
-    }
   }
 }
 
@@ -955,6 +918,9 @@ static void allocate_nonemptymodelcells() {
   }
 
   allocate_nonemptycells_composition_cooling();
+  if constexpr (EXPANSIONOPACITIES_ON) {
+    allocate_expansionopacities();
+  }
 
 #ifdef MPI_ON
   // barrier to make sure node master has set abundance values to node shared memory

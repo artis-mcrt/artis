@@ -17,6 +17,7 @@ void emit_rpkt(struct packet *pkt_ptr);
 void calculate_chi_rpkt_cont(double nu_cmf, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, int modelgridindex,
                              bool usecellhistupdatephixslist);
 auto sample_planck_times_expansion_opacity(int modelgridindex) -> double;
+void allocate_expansionopacities();
 
 [[nodiscard]] constexpr auto get_linedistance(const double prop_time, const double nu_cmf, const double nu_trans,
                                               const double d_nu_on_d_l) -> double {

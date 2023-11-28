@@ -720,10 +720,8 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
   }
 }
 
-void update_estimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
+void update_estimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
                        const double doppler_nucmf_on_nurf) {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-
   safeadd(J[nonemptymgi], distance_e_cmf);
   safeadd(nuJ[nonemptymgi], distance_e_cmf * nu_cmf);
 
