@@ -1,20 +1,13 @@
 #include "gammapkt.h"
 
 #include <algorithm>
-#include <array>
-#include <cctype>
 #include <cmath>
-#include <cstdio>
-#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <memory>
 #include <vector>
 
-#include "artisoptions.h"
-#include "constants.h"
 #include "decay.h"
-#include "globals.h"
 #include "grid.h"
 #include "packet.h"
 #include "sn3d.h"
@@ -241,7 +234,7 @@ static void choose_gamma_ray(struct packet *pkt_ptr) {
   if (nselected < 0) {
     printout("Failure to choose line (packet type %d pellet_nucindex %d). Abort. zrand %g runtot %g\n", pkt_ptr->type,
              pkt_ptr->pellet_nucindex, zrand, runtot);
-    std::abort();
+    abort();
   }
 
   pkt_ptr->nu_cmf = gamma_spectra[nucindex].energy[nselected] / H;
@@ -266,16 +259,18 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
   // Now let's give the gamma ray a direction.
   // Assuming isotropic emission in cmf
 
-  const auto dir_cmf = get_rand_isotropic_unitvec();
+  double dir_cmf[3];
+  get_rand_isotropic_unitvec(dir_cmf);
 
   // This direction is in the cmf - we want to convert it to the rest
   // frame - use aberation of angles. We want to convert from cmf to
   // rest so need -ve velocity.
 
-  const auto vel_vec = get_velocity(pkt_ptr->pos, -1. * pkt_ptr->tdecay);
+  double vel_vec[3];
+  get_velocity(pkt_ptr->pos, vel_vec, -1. * pkt_ptr->tdecay);
   // negative time since we want the backwards transformation here
 
-  pkt_ptr->dir = angle_ab(dir_cmf, vel_vec);
+  angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
 
   // Now need to assign the frequency of the packet in the co-moving frame.
 
@@ -293,29 +288,31 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
   pkt_ptr->last_cross = BOUNDARY_NONE;
 
   // initialise polarisation information
-  pkt_ptr->stokes[0] = 1.;
-  pkt_ptr->stokes[1] = 0.;
-  pkt_ptr->stokes[2] = 0.;
+  pkt_ptr->stokes[0] = 1.0;
+  pkt_ptr->stokes[1] = pkt_ptr->stokes[2] = 0.0;
+  std::array<double, 3> dummy_dir = {0., 0., 1.};
 
-  pkt_ptr->pol_dir = cross_prod(pkt_ptr->dir, std::array<double, 3>{0., 0., 1.});
+  cross_prod(pkt_ptr->dir, dummy_dir, pkt_ptr->pol_dir);
   if ((dot(pkt_ptr->pol_dir, pkt_ptr->pol_dir)) < 1.e-8) {
-    pkt_ptr->pol_dir = cross_prod(pkt_ptr->dir, std::array<double, 3>{0., 1., 0.});
+    dummy_dir[0] = dummy_dir[2] = 0.0;
+    dummy_dir[1] = 1.0;
+    cross_prod(pkt_ptr->dir, dummy_dir, pkt_ptr->pol_dir);
   }
 
-  pkt_ptr->pol_dir = vec_norm(pkt_ptr->pol_dir);
+  vec_norm(pkt_ptr->pol_dir, pkt_ptr->pol_dir);
   // printout("initialise pol state of packet %g, %g, %g, %g,
   // %g\n",pkt_ptr->stokes_qu[0],pkt_ptr->stokes_qu[1],pkt_ptr->pol_dir[0],pkt_ptr->pol_dir[1],pkt_ptr->pol_dir[2]);
   // printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 }
 
-constexpr auto sigma_compton_partial(const double x, const double f_max) -> double
+constexpr auto sigma_compton_partial(const double x, const double f) -> double
 // Routine to compute the partial cross section for Compton scattering.
 //   xx is the photon energy (in units of electron mass) and f
 //  is the energy loss factor up to which we wish to integrate.
 {
-  const double term1 = ((x * x) - (2 * x) - 2) * std::log(f_max) / x / x;
-  const double term2 = (((f_max * f_max) - 1) / (f_max * f_max)) / 2;
-  const double term3 = ((f_max - 1) / x) * ((1 / x) + (2 / f_max) + (1 / (x * f_max)));
+  const double term1 = ((x * x) - (2 * x) - 2) * std::log(f) / x / x;
+  const double term2 = (((f * f) - 1) / (f * f)) / 2;
+  const double term3 = ((f - 1) / x) * ((1 / x) + (2 / f) + (1 / (x * f)));
 
   return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
 }
@@ -393,56 +390,17 @@ static auto thomson_angle() -> double {
 
   if (fabs(mu) > 1) {
     printout("Error in Thomson. Abort.\n");
-    std::abort();
+    abort();
   }
 
   return mu;
 }
 
-[[nodiscard]] static auto scatter_dir(std::span<const double, 3> dir_in, const double cos_theta)
-    -> std::array<double, 3>
-// Routine for scattering a direction through angle theta.
-{
-  // begin with setting the direction in coordinates where original direction
-  // is parallel to z-hat.
-
-  const double zrand = rng_uniform();
-  const double phi = zrand * 2 * PI;
-
-  const double sin_theta_sq = 1. - (cos_theta * cos_theta);
-  const double sin_theta = std::sqrt(sin_theta_sq);
-  const double zprime = cos_theta;
-  const double xprime = sin_theta * cos(phi);
-  const double yprime = sin_theta * sin(phi);
-
-  // Now need to derotate the coordinates back to real x,y,z.
-  // Rotation matrix is determined by dir_in.
-
-  const double norm1 = 1. / std::sqrt((dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1]));
-  const double norm2 = 1. / vec_len(dir_in);
-
-  const double r11 = dir_in[1] * norm1;
-  const double r12 = -1 * dir_in[0] * norm1;
-  const double r13 = 0.;
-  const double r21 = dir_in[0] * dir_in[2] * norm1 * norm2;
-  const double r22 = dir_in[1] * dir_in[2] * norm1 * norm2;
-  const double r23 = -1 * norm2 / norm1;
-  const double r31 = dir_in[0] * norm2;
-  const double r32 = dir_in[1] * norm2;
-  const double r33 = dir_in[2] * norm2;
-
-  std::array<double, 3> dir_out{(r11 * xprime) + (r21 * yprime) + (r31 * zprime),
-                                (r12 * xprime) + (r22 * yprime) + (r32 * zprime),
-                                (r13 * xprime) + (r23 * yprime) + (r33 * zprime)};
-
-  assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
-
-  return dir_out;
-}
-
 static void compton_scatter(struct packet *pkt_ptr)
 // Routine to deal with physical Compton scattering event.
 {
+  double f = NAN;
+
   //  printout("Compton scattering.\n");
 
   const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
@@ -461,25 +419,26 @@ static void compton_scatter(struct packet *pkt_ptr)
   // sigma_partial/sigma_tot = zrand
 
   bool stay_gamma = false;
-  double f = NAN;
   if (xx < THOMSON_LIMIT) {
-    f = 1.;  // no energy loss
+    f = 1.0;  // no energy loss
     stay_gamma = true;
   } else {
-    f = choose_f(xx, rng_uniform());
+    const double zrand = rng_uniform();
+    f = choose_f(xx, zrand);
 
     // Check that f lies between 1.0 and (2xx  + 1)
 
     if ((f < 1) || (f > (2 * xx + 1))) {
       printout("Compton f out of bounds. Abort.\n");
-      std::abort();
+      abort();
     }
 
     // Prob of keeping gamma ray is...
 
     const double prob_gamma = 1. / f;
 
-    stay_gamma = (rng_uniform() < prob_gamma);
+    const double zrand2 = rng_uniform();
+    stay_gamma = (zrand2 < prob_gamma);
   }
 
   if (stay_gamma) {
@@ -491,15 +450,18 @@ static void compton_scatter(struct packet *pkt_ptr)
     // The packet has stored the direction in the rest frame.
     // Use aberation of angles to get this into the co-moving frame.
 
-    auto vel_vec = get_velocity(pkt_ptr->pos, pkt_ptr->prop_time);
+    double vel_vec[3];
+    get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
 
-    auto cmf_dir = angle_ab(pkt_ptr->dir, vel_vec);
+    double cmf_dir[3];
+    angle_ab(pkt_ptr->dir, vel_vec, cmf_dir);
 
     // Now change the direction through the scattering angle.
 
     const double cos_theta = (xx < THOMSON_LIMIT) ? thomson_angle() : 1. - ((f - 1) / xx);
 
-    const auto new_dir = scatter_dir(cmf_dir, cos_theta);
+    double new_dir[3] = {NAN, NAN, NAN};
+    scatter_dir(cmf_dir, cos_theta, new_dir);
 
     const double test = dot(new_dir, new_dir);
     if (fabs(1. - test) > 1.e-8) {
@@ -507,13 +469,13 @@ static void compton_scatter(struct packet *pkt_ptr)
       printout("new_dir %g %g %g\n", new_dir[0], new_dir[1], new_dir[2]);
       printout("cmf_dir %g %g %g\n", cmf_dir[0], cmf_dir[1], cmf_dir[2]);
       printout("cos_theta %g", cos_theta);
-      std::abort();
+      abort();
     }
 
     const double test2 = dot(new_dir, cmf_dir);
     if (fabs(test2 - cos_theta) > 1.e-8) {
       printout("Problem with angle - Compton. Abort.\n");
-      std::abort();
+      abort();
     }
 
     // Now convert back again.
@@ -521,9 +483,10 @@ static void compton_scatter(struct packet *pkt_ptr)
     // get_velocity(pkt_ptr->pos, vel_vec, (-1 * pkt_ptr->prop_time));
     vec_scale(vel_vec, -1.);
 
-    auto final_dir = angle_ab(new_dir, vel_vec);
+    double final_dir[3];
+    angle_ab(new_dir, vel_vec, final_dir);
 
-    pkt_ptr->dir = final_dir;
+    vec_copy(pkt_ptr->dir, final_dir);
 
     assert_testmodeonly(std::fabs(vec_len(pkt_ptr->dir) - 1.) < 1e-10);
 
@@ -641,7 +604,7 @@ static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
 
   if (chi_rf < 0) {
     printout("Negative pair production sigma. Setting to zero. Abort? %g\n", chi_rf);
-    chi_rf = 0.;
+    chi_rf = 0.0;
   }
 
   return chi_rf;
@@ -717,7 +680,7 @@ void pair_prod(struct packet *pkt_ptr) {
 
   if (prob_gamma < 0) {
     printout("prob_gamma < 0. pair_prod. Abort. %g\n", prob_gamma);
-    std::abort();
+    abort();
   }
 
   const double zrand = rng_uniform();
@@ -734,16 +697,18 @@ void pair_prod(struct packet *pkt_ptr) {
 
     // Now let's give the gamma ray a direction.
 
-    const auto dir_cmf = get_rand_isotropic_unitvec();
+    double dir_cmf[3];
+    get_rand_isotropic_unitvec(dir_cmf);
 
     // This direction is in the cmf - we want to convert it to the rest
     // frame - use aberation of angles. We want to convert from cmf to
     // rest so need -ve velocity.
 
-    const auto vel_vec = get_velocity(pkt_ptr->pos, -1. * pkt_ptr->prop_time);
+    double vel_vec[3];
+    get_velocity(pkt_ptr->pos, vel_vec, -1. * pkt_ptr->prop_time);
     // negative time since we want the backwards transformation here
 
-    pkt_ptr->dir = angle_ab(dir_cmf, vel_vec);
+    angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
 
     const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
     pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
@@ -763,14 +728,15 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   // optical depth for this path.
   double zrand = rng_uniform_pos();
   const double tau_next = -1. * log(zrand);
-  const double tau_current = 0.;
+  const double tau_current = 0.0;
 
   // Start by finding the distance to the crossing of the grid cell
   // boundaries. sdist is the boundary distance and snext is the
   // grid cell into which we pass.
 
-  auto [sdist, snext] =
-      grid::boundary_distance(pkt_ptr->dir, pkt_ptr->pos, pkt_ptr->prop_time, pkt_ptr->where, &pkt_ptr->last_cross);
+  int snext = 0;
+  double sdist = grid::boundary_distance(pkt_ptr->dir, pkt_ptr->pos, pkt_ptr->prop_time, pkt_ptr->where, &snext,
+                                         &pkt_ptr->last_cross);
 
   const double maxsdist = (GRID_TYPE == GRID_CARTESIAN3D)
                               ? globals::rmax * pkt_ptr->prop_time / globals::tmin
@@ -778,7 +744,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   if (sdist > maxsdist) {
     printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", globals::rmax, pkt_ptr->prop_time / globals::tmin,
              sdist);
-    std::abort();
+    abort();
   }
 
   if (sdist < 0) {
@@ -789,7 +755,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   if (((snext < 0) && (snext != -99)) || (snext >= grid::ngrid)) {
     printout("Heading for inappropriate grid cell. Abort.\n");
     printout("Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
-    std::abort();
+    abort();
   }
 
   if (sdist > globals::max_path_step) {
@@ -801,7 +767,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   // Compton scattering - need to determine the scattering co-efficient.
   // Routine returns the value in the rest frame.
 
-  double chi_compton = 0.;
+  double chi_compton = 0.0;
   if (globals::gamma_kappagrey < 0) {
     chi_compton = get_chi_compton_rf(pkt_ptr);
   }
@@ -820,7 +786,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
   if (edist < 0) {
     printout("Negative distance (edist). Abort. \n");
-    std::abort();
+    abort();
   }
 
   // Find how far it can travel during the time inverval.
@@ -829,42 +795,47 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
   if (tdist < 0) {
     printout("Negative distance (tdist). Abort. \n");
-    std::abort();
+    abort();
   }
 
   // printout("sdist, tdist, edist %g %g %g\n",sdist, tdist, edist);
 
   if ((sdist < tdist) && (sdist < edist)) {
-    move_pkt_withtime(pkt_ptr, sdist / 2.);
+    pkt_ptr->prop_time += sdist / 2. / CLIGHT_PROP;
+    move_pkt(pkt_ptr, sdist / 2.);
 
     // Move it into the new cell.
     if (chi_tot > 0) {
       rlc_emiss_gamma(pkt_ptr, sdist);
     }
 
-    move_pkt_withtime(pkt_ptr, sdist / 2.);
+    pkt_ptr->prop_time += sdist / 2. / CLIGHT_PROP;
+    move_pkt(pkt_ptr, sdist / 2.);
 
     if (snext != pkt_ptr->where) {
       grid::change_cell(pkt_ptr, snext);
     }
   } else if ((tdist < sdist) && (tdist < edist)) {
     // Doesn't reach boundary.
-    move_pkt_withtime(pkt_ptr, tdist / 2.);
+    pkt_ptr->prop_time += tdist / 2. / CLIGHT_PROP;
+    move_pkt(pkt_ptr, tdist / 2.);
 
     if (chi_tot > 0) {
       rlc_emiss_gamma(pkt_ptr, tdist);
     }
-    move_pkt_withtime(pkt_ptr, tdist / 2.);
-    pkt_ptr->prop_time = t2;  // prevent roundoff error
+    pkt_ptr->prop_time = t2;
+    move_pkt(pkt_ptr, tdist / 2.);
   } else if ((edist < sdist) && (edist < tdist)) {
-    move_pkt_withtime(pkt_ptr, edist / 2.);
+    pkt_ptr->prop_time += edist / 2. / CLIGHT_PROP;
+    move_pkt(pkt_ptr, edist / 2.);
     if (chi_tot > 0) {
       rlc_emiss_gamma(pkt_ptr, edist);
     }
-    move_pkt_withtime(pkt_ptr, edist / 2.);
+    pkt_ptr->prop_time += edist / 2. / CLIGHT_PROP;
+    move_pkt(pkt_ptr, edist / 2.);
 
     // event occurs. Choose which event and call the appropriate subroutine.
-    const double zrand = rng_uniform();
+    zrand = rng_uniform();
     if (chi_compton > (zrand * chi_tot)) {
       // Compton scattering.
       compton_scatter(pkt_ptr);
@@ -887,11 +858,11 @@ void do_gamma(struct packet *pkt_ptr, double t2)
           grid::get_rho(grid::get_cell_modelgridindex(cellindex)), pkt_ptr->nu_cmf, pkt_ptr->dir[0], pkt_ptr->dir[0],
           pkt_ptr->dir[1], pkt_ptr->dir[2], pkt_ptr->pos[1], pkt_ptr->pos[2]);
 
-      std::abort();
+      abort();
     }
   } else {
     printout("Failed to identify event. Gamma (2). edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
-    std::abort();
+    abort();
   }
 }
 

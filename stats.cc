@@ -1,19 +1,11 @@
 #include "stats.h"
 
-#include <array>
 #include <atomic>
-#include <cmath>
-#include <cstdlib>
 
-#include "artisoptions.h"
 #include "atomic.h"
-#include "constants.h"
 #include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "nonthermal.h"
 #include "sn3d.h"
 
@@ -190,7 +182,7 @@ auto get_counter(enum eventcounters i) -> int {
 }
 
 void pkt_action_counters_printout(const struct packet *const pkt, const int nts) {
-  unsigned long allpktinteractions = 0;
+  u_int64_t allpktinteractions = 0;
   for (int i = 0; i < globals::npkts; i++) {
     assert_always(pkt[i].interactions >= 0);
     allpktinteractions += pkt[i].interactions;

@@ -145,9 +145,5 @@ constexpr bool KEEP_ALL_RESTART_FILES = false;
 
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
 
-constexpr bool EXPANSIONOPACITIES_ON = false;
-
-constexpr bool EXPANSION_OPAC_SAMPLE_KAPPAPLANCK = false;
-
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H

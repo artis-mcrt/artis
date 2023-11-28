@@ -7,22 +7,12 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
-#include <cstdlib>
 #include <ctime>
-#include <iterator>
-#include <vector>
 
-#include "artisoptions.h"
 #include "atomic.h"
-#include "constants.h"
-#include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_math.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "sn3d.h"
+#include "vectors.h"
 
 namespace radfield {
 
@@ -93,9 +83,14 @@ static std::vector<double> nuJ;
 static std::vector<double> nuJ_reduced_save;
 #endif
 
+using enum_prefactor = enum {
+  ONE = 0,
+  TIMES_NU = 1,
+};
+
 using gsl_planck_integral_paras = struct {
   double T_R;
-  bool times_nu;
+  enum_prefactor prefactor;
 };
 
 using gsl_T_R_solver_paras = struct {
@@ -135,7 +130,7 @@ static void setup_bin_boundaries() {
     //     const int phixstargetindex = globals::groundcont[i].phixstargetindex;
     //
     //     const int Z = get_atomicnumber(element);
-    //     const int ionstage = get_ionstage(element, ion);
+    //     const int ion_stage = get_ionstage(element, ion);
     //     const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
     //
     //     //printout("bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first,nu_upper_last);
@@ -144,8 +139,8 @@ static void setup_bin_boundaries() {
     //     if (binindex == 0 && ((nu_edge < nu_lower_first_initial) || (nu_edge > nu_upper_last_initial)))
     //     {
     //       printout("Missed bf edge at %12.5e Hz (%6.2f eV, %6.1f A), nu_lower_first %11.5e Hz, nu_upper_last %11.5e
-    //       Hz, Z=%d ionstage %d level %d upperionlevel %d\n",
-    //                nu_edge, eV_edge, angstrom_edge, nu_lower_first_initial, nu_upper_last_initial, Z, ionstage,
+    //       Hz, Z=%d ion_stage %d level %d upperionlevel %d\n",
+    //                nu_edge, eV_edge, angstrom_edge, nu_lower_first_initial, nu_upper_last_initial, Z, ion_stage,
     //                level, upperionlevel);
     //     }
     //
@@ -153,8 +148,8 @@ static void setup_bin_boundaries() {
     //     if ((nu_edge > prev_nu_upper) && (nu_edge < bin_nu_upper))
     //     {
     //       printout("Shifting bin %d nu_upper from %12.5e Hz to bf edge at %12.5e Hz (%6.2f eV, %6.1f A) for Z=%d
-    //       ionstage %d level %d upperionlevel %d\n",
-    //                binindex, bin_nu_upper, nu_edge, eV_edge, angstrom_edge, Z, ionstage, level, upperionlevel);
+    //       ion_stage %d level %d upperionlevel %d\n",
+    //                binindex, bin_nu_upper, nu_edge, eV_edge, angstrom_edge, Z, ion_stage, level, upperionlevel);
     //       radfieldbin_nu_upper[binindex] = nu_edge;
     //     }
     //   }
@@ -168,7 +163,7 @@ static void realloc_detailed_lines(const int new_size) {
   auto *newptr = static_cast<int *>(realloc(detailed_lineindicies, new_size * sizeof(int)));
   if (newptr == nullptr) {
     printout("ERROR: Not enough memory to reallocate detailed Jblue estimator line list\n");
-    std::abort();
+    abort();
   }
   assert_always(newptr != nullptr);
   detailed_lineindicies = newptr;
@@ -183,7 +178,7 @@ static void realloc_detailed_lines(const int new_size) {
 
       if (prev_Jb_lu_normed[modelgridindex] == nullptr || Jb_lu_raw[modelgridindex] == nullptr) {
         printout("ERROR: Not enough memory to reallocate detailed Jblue estimator list for cell %d.\n", modelgridindex);
-        std::abort();
+        abort();
       }
     }
   }
@@ -308,7 +303,8 @@ void init(int my_rank, int ndo_nonempty)
       snprintf(filename, MAXFILENAMELENGTH, "radfield_%.4d.out", my_rank);
       assert_always(radfieldfile == nullptr);
       radfieldfile = fopen_required(filename, "w");
-      fprintf(radfieldfile, "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg ncontrib T_R W\n");
+      fprintf(radfieldfile, "%8s %15s %8s %11s %11s %9s %9s %9s %9s %9s %12s\n", "timestep", "modelgridindex",
+              "bin_num", "nu_lower", "nu_upper", "nuJ", "J", "J_nu_avg", "ncontrib", "T_R", "W");
       fflush(radfieldfile);
     }
 
@@ -556,13 +552,13 @@ void write_to_file(int modelgridindex, int timestep) {
     }
 
     for (int binindex = -1 - detailed_linecount; binindex < RADFIELDBINCOUNT; binindex++) {
-      double nu_lower = 0.;
-      double nu_upper = 0.;
-      double nuJ_out = 0.;
-      double J_out = 0.;
-      float T_R = 0.;
-      float W = 0.;
-      double J_nu_bar = 0.;
+      double nu_lower = 0.0;
+      double nu_upper = 0.0;
+      double nuJ_out = 0.0;
+      double J_out = 0.0;
+      float T_R = 0.0;
+      float W = 0.0;
+      double J_nu_bar = 0.0;
       int contribcount = 0;
 
       const bool skipoutput = false;
@@ -603,8 +599,8 @@ void write_to_file(int modelgridindex, int timestep) {
       }
 
       if (!skipoutput) {
-        fprintf(radfieldfile, "%d %d %d %.5e %.5e %.3e %.3e %.3e %d %.1f %.5e\n", timestep, modelgridindex, binindex,
-                nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, contribcount, T_R, W);
+        fprintf(radfieldfile, "%d %d %d %11.5e %11.5e %9.3e %9.3e %9.3e %d %9.1f %12.5e\n", timestep, modelgridindex,
+                binindex, nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, contribcount, T_R, W);
       }
     }
     fflush(radfieldfile);
@@ -683,8 +679,8 @@ void zero_estimators(int modelgridindex)
     assert_always(radfieldbins != nullptr);
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
       const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
-      radfieldbins[mgibinindex].J_raw = 0.;
-      radfieldbins[mgibinindex].nuJ_raw = 0.;
+      radfieldbins[mgibinindex].J_raw = 0.0;
+      radfieldbins[mgibinindex].nuJ_raw = 0.0;
       radfieldbins[mgibinindex].contribcount = 0;
     }
   }
@@ -692,7 +688,7 @@ void zero_estimators(int modelgridindex)
 }
 
 static void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                                const double doppler_nucmf_on_nurf) {
+                                const struct packet *const pkt_ptr) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
   assert_always(bfrate_raw != nullptr);
 
@@ -701,10 +697,12 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
   }
 
   const int nbfcontinua = globals::nbfcontinua;
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
+  // const double dopplerfactor = 1.;
 
   const int tid = get_thread_num();
   const double distance_e_cmf_over_nu =
-      distance_e_cmf / nu_cmf * doppler_nucmf_on_nurf;  // TODO: Luke: why did I put a doppler factor here?
+      distance_e_cmf / nu_cmf * dopplerfactor;  // TODO: Luke: why did I put a doppler factor here?
   for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++) {
     const double nu_edge = globals::allcont_nu_edge[allcontindex];
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
@@ -721,12 +719,12 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
 }
 
 void update_estimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                       const double doppler_nucmf_on_nurf) {
+                       const struct packet *const pkt_ptr) {
   safeadd(J[nonemptymgi], distance_e_cmf);
   safeadd(nuJ[nonemptymgi], distance_e_cmf * nu_cmf);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    update_bfestimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf);
+    update_bfestimators(nonemptymgi, distance_e_cmf, nu_cmf, pkt_ptr);
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
@@ -799,27 +797,27 @@ auto radfield(double nu, int modelgridindex) -> double
   return J_nu_fullspec;
 }
 
-constexpr auto gsl_integrand_planck(const double nu, void *voidparas) -> double {
-  const auto *paras = static_cast<gsl_planck_integral_paras *>(voidparas);
-  const double T_R = paras->T_R;
+constexpr auto gsl_integrand_planck(const double nu, void *paras) -> double {
+  const double T_R = (static_cast<gsl_planck_integral_paras *>(paras))->T_R;
+  const enum_prefactor prefactor = (static_cast<gsl_planck_integral_paras *>(paras))->prefactor;
 
   double integrand = TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / (std::expm1(HOVERKB * nu / T_R));
 
-  if (paras->times_nu) {
+  if (prefactor == TIMES_NU) {
     integrand *= nu;
   }
 
   return integrand;
 }
 
-static auto planck_integral(double T_R, double nu_lower, double nu_upper, const bool times_nu) -> double {
+static auto planck_integral(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor) -> double {
   double integral = 0.;
 
   double error = 0.;
   const double epsrel = 1e-10;
   const double epsabs = 0.;
 
-  gsl_planck_integral_paras intparas = {.T_R = T_R, .times_nu = times_nu};
+  gsl_planck_integral_paras intparas = {.T_R = T_R, .prefactor = prefactor};
 
   const gsl_function F_planck = {.function = &gsl_integrand_planck, .params = &intparas};
 
@@ -836,13 +834,10 @@ static auto planck_integral(double T_R, double nu_lower, double nu_upper, const 
   return integral;
 }
 
-auto planck_integral_analytic(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu)
-    -> double {
-  // return the integral of nu^3 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
-  // or if times_nu is true, the integral of nu^4 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
+static auto planck_integral_analytic(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor) -> double {
   double integral = 0.;
 
-  if (times_nu) {
+  if (prefactor == TIMES_NU) {
     const double debye_upper = gsl_sf_debye_4(HOVERKB * nu_upper / T_R) * pow(nu_upper, 4);
     const double debye_lower = gsl_sf_debye_4(HOVERKB * nu_lower / T_R) * pow(nu_lower, 4);
     integral = TWOHOVERCLIGHTSQUARED * (debye_upper - debye_lower) * T_R / HOVERKB / 4.;
@@ -886,25 +881,25 @@ static auto delta_nu_bar(double T_R, void *paras) -> double
 
   const double nu_bar_estimator = get_bin_nu_bar(modelgridindex, binindex);
 
-  const double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, true);
-  const double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, false);
+  const double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, TIMES_NU);
+  const double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, ONE);
   const double nu_bar_planck_T_R = nu_times_planck_numerical / planck_integral_numerical;
 
-  // double nu_times_planck_integral = planck_integral_analytic(T_R, nu_lower, nu_upper, true);
-  // double planck_integral_result = planck_integral_analytic(T_R, nu_lower, nu_upper, false);
-  // double nu_bar_planck = nu_times_planck_integral / planck_integral_result;
+  /*double nu_times_planck_integral = planck_integral_analytic(T_R, nu_lower, nu_upper, TIMES_NU);
+  double planck_integral_result = planck_integral_analytic(T_R, nu_lower, nu_upper, ONE);
+  double nu_bar_planck = nu_times_planck_integral / planck_integral_result;
 
-  // // printout("nu_bar %g nu_bar_planck(T=%g) %g\n",nu_bar,T_R,nu_bar_planck);
+  //printout("nu_bar %g nu_bar_planck(T=%g) %g\n",nu_bar,T_R,nu_bar_planck);
 
-  // if (!std::isfinite(nu_bar_planck)) {
-  //   double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, true);
-  //   double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, false);
-  //   double nu_bar_planck_numerical = nu_times_planck_numerical / planck_integral_numerical;
+  if (!std::isfinite(nu_bar_planck))
+  {
+    double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, TIMES_NU);
+    double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, ONE);
+    double nu_bar_planck_numerical = nu_times_planck_numerical / planck_integral_numerical;
 
-  //   printout("planck_integral_analytic is %g. Replacing with numerical result of %g.\n", nu_bar_planck,
-  //            nu_bar_planck_numerical);
-  //   nu_bar_planck = nu_bar_planck_numerical;
-  // }
+    printout("planck_integral_analytic is %g. Replacing with numerical result of
+  %g.\n",nu_bar_planck,nu_bar_planck_numerical); nu_bar_planck = nu_bar_planck_numerical;
+  }*/
 
   const double delta_nu_bar = nu_bar_planck_T_R - nu_bar_estimator;
 
@@ -919,7 +914,7 @@ static auto delta_nu_bar(double T_R, void *paras) -> double
 }
 
 static auto find_T_R(int modelgridindex, int binindex) -> float {
-  double T_R = 0.;
+  double T_R = 0.0;
 
   gsl_T_R_solver_paras paras;
   paras.modelgridindex = modelgridindex;
@@ -1039,7 +1034,7 @@ void fit_parameters(int modelgridindex, int timestep)
     if (J_normfactor[nonemptymgi] <= 0) {
       printout("radfield: FATAL J_normfactor = %g in cell %d at call to fit_parameters", J_normfactor[nonemptymgi],
                modelgridindex);
-      std::abort();
+      abort();
     }
 
     double J_bin_sum = 0.;
@@ -1060,8 +1055,8 @@ void fit_parameters(int modelgridindex, int timestep)
       const double nu_lower = get_bin_nu_lower(binindex);
       const double nu_upper = get_bin_nu_upper(binindex);
       const double J_bin = get_bin_J(modelgridindex, binindex);
-      float T_R_bin = -1.;
-      double W_bin = -1.;
+      float T_R_bin = -1.0;
+      double W_bin = -1.0;
       const int contribcount = get_bin_contribcount(modelgridindex, binindex);
 
       if (contribcount > 0) {
@@ -1077,7 +1072,7 @@ void fit_parameters(int modelgridindex, int timestep)
             T_R_bin = T_e;
           }
 
-          double planck_integral_result = planck_integral(T_R_bin, nu_lower, nu_upper, false);
+          double planck_integral_result = planck_integral(T_R_bin, nu_lower, nu_upper, ONE);
           //          printout("planck_integral(T_R=%g, nu_lower=%g, nu_upper=%g) = %g\n", T_R_bin, nu_lower,
           //          nu_upper, planck_integral_result);
 
@@ -1087,11 +1082,11 @@ void fit_parameters(int modelgridindex, int timestep)
             //            printout("T_R_bin %g, nu_lower %g, nu_upper %g\n", T_R_bin, nu_lower, nu_upper);
             printout("W %g too high, trying setting T_R of bin %d to %g. J_bin %g planck_integral %g\n", W_bin,
                      binindex, T_R_max, J_bin, planck_integral_result);
-            planck_integral_result = planck_integral(T_R_max, nu_lower, nu_upper, false);
+            planck_integral_result = planck_integral(T_R_max, nu_lower, nu_upper, ONE);
             W_bin = J_bin / planck_integral_result;
             if (W_bin > 1e4) {
               printout("W still very high, W=%g. Zeroing bin...\n", W_bin);
-              T_R_bin = -99.;
+              T_R_bin = -99.0;
               W_bin = 0.;
             } else {
               printout("new W is %g. Continuing with this value\n", W_bin);
@@ -1201,7 +1196,7 @@ auto get_bfrate_estimator(const int element, const int lowerion, const int lower
       return prev_bfrate_normed[nonemptymgi * globals::nbfcontinua + allcontindex];
     }
 
-    printout("no bf rate for element Z=%d ionstage %d lower %d phixstargetindex %d\n", get_atomicnumber(element),
+    printout("no bf rate for element Z=%d ion_stage %d lower %d phixstargetindex %d\n", get_atomicnumber(element),
              get_ionstage(element, lowerion), lower, phixstargetindex);
     return -1.;
   }
@@ -1416,7 +1411,7 @@ void read_restart_data(FILE *gridsave_file) {
   assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
   if (code_check != 30490824) {
     printout("ERROR: Beginning of radfield restart data not found! Found %d instead of 30490824\n", code_check);
-    std::abort();
+    abort();
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
@@ -1446,7 +1441,7 @@ void read_restart_data(FILE *gridsave_file) {
           bincount_in, nu_lower_first_initial_in, nu_upper_last_initial_in, T_R_min_in, T_R_max_in);
       printout("require %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg T_R_max %lg\n",
                RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial, T_R_min, T_R_max);
-      std::abort();
+      abort();
     }
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
@@ -1490,7 +1485,7 @@ void read_restart_data(FILE *gridsave_file) {
     if (detailed_linecount_in != detailed_linecount) {
       printout("ERROR: gridsave file specifies %d detailed lines but this simulation has %d.\n", detailed_linecount_in,
                detailed_linecount);
-      std::abort();
+      abort();
     }
 
     for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
@@ -1505,7 +1500,7 @@ void read_restart_data(FILE *gridsave_file) {
       assert_always(fscanf(gridsave_file, "%d %la\n", &mgi_in, &J_normfactor[nonemptymgi]) == 2);
       if (mgi_in != modelgridindex) {
         printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
-        std::abort();
+        abort();
       }
 
       if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
@@ -1537,7 +1532,7 @@ void read_restart_data(FILE *gridsave_file) {
   assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
   if (code_check != 42809403) {
     printout("ERROR: End of radfield restart data not found! Found %d instead of 42809403\n", code_check);
-    std::abort();
+    abort();
   }
 }
 

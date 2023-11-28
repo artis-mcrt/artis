@@ -12,7 +12,7 @@ extern std::array<bool, 3> phixs_file_version_exists;  // first value in this ar
 auto get_continuumindex_phixstargetindex(int element, int ion, int level, int phixstargetindex) -> int;
 auto get_continuumindex(int element, int ion, int level, int upperionlevel) -> int;
 auto get_phixtargetindex(int element, int ion, int level, int upperionlevel) -> int;
-auto get_tau_sobolev(int modelgridindex, int lineindex, double t_current, bool sub_updown) -> double;
+auto get_tau_sobolev(int modelgridindex, int lineindex, double t_current) -> double;
 auto get_nnion_tot(int modelgridindex) -> double;
 auto is_nlte(int element, int ion, int level) -> bool;
 auto level_isinsuperlevel(int element, int ion, int level) -> bool;
@@ -33,7 +33,7 @@ auto get_ionisinglevels(int element, int ion) -> int;
 auto get_uniqueionindex(int element, int ion) -> int;
 [[nodiscard]] auto get_ionfromuniqueionindex(int allionsindex) -> std::tuple<int, int>;
 auto get_uniquelevelindex(int element, int ion, int level) -> int;
-[[nodiscard]] auto get_levelfromuniquelevelindex(int alllevelsindex) -> std::tuple<int, int, int>;
+void get_levelfromuniquelevelindex(int alllevelsindex, int *element, int *ion, int *level);
 auto epsilon(int element, int ion, int level) -> double;
 auto stat_weight(int element, int ion, int level) -> double;
 auto get_maxrecombininglevel(int element, int ion) -> int;

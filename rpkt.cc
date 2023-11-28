@@ -1,69 +1,25 @@
 #include "rpkt.h"
 
 #include <algorithm>
-#include <array>
 #include <cmath>
-#include <cstdlib>
-#include <iterator>
 #include <limits>
 #include <span>
 
 #include "artisoptions.h"
 #include "atomic.h"
-#include "constants.h"
 #include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
-#include "packet.h"
 #include "radfield.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"
 #include "vpkt.h"
 
-// kappa in cm^2/g for each bin of each non-empty cell
-static float *expansionopacities = nullptr;
+// Material for handing r-packet propagation.
 
-// kappa times Planck function for each bin of each non-empty cell
-static float *expansionopacity_planck_cumulative = nullptr;
-#ifdef MPI_ON
-MPI_Win win_expansionopacities = MPI_WIN_NULL;
-MPI_Win win_expansionopacity_planck_cumulative = MPI_WIN_NULL;
-#endif
-
-void allocate_expansionopacities() {
-  if constexpr (!EXPANSIONOPACITIES_ON) {
-    return;
-  }
-
-  const auto npts_nonempty = grid::get_nonempty_npts_model();
-#ifdef MPI_ON
-  int my_rank_nonemptycells = npts_nonempty / globals::node_nprocs;
-  // rank_in_node 0 gets any remainder
-  if (globals::rank_in_node == 0) {
-    my_rank_nonemptycells += npts_nonempty - (my_rank_nonemptycells * globals::node_nprocs);
-  }
-  MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(float));
-  int disp_unit = sizeof(float);
-  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &expansionopacities,
-                                        &win_expansionopacities) == MPI_SUCCESS);
-  assert_always(MPI_Win_shared_query(win_expansionopacities, 0, &size, &disp_unit, &expansionopacities) == MPI_SUCCESS);
-
-  if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
-    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &expansionopacity_planck_cumulative,
-                                          &win_expansionopacity_planck_cumulative) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(win_expansionopacities, 0, &size, &disp_unit,
-                                       &expansionopacity_planck_cumulative) == MPI_SUCCESS);
-  }
-
-#else
-  expansionopacities = static_cast<float *>(malloc(npts_nonempty * expopac_nbins * sizeof(float)));
-  if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
-    expansionopacity_planck_cumulative = static_cast<float *>(malloc(npts_nonempty * expopac_nbins * sizeof(float)));
-  }
-#endif
-}
+constexpr int RPKT_EVENTTYPE_BB = 550;
+constexpr int RPKT_EVENTTYPE_CONT = 551;
 
 auto closest_transition(const double nu_cmf, const int next_trans) -> int
 /// for the propagation through non empty cells
@@ -98,8 +54,18 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
   return matchindex;
 }
 
-static auto get_nu_cmf_abort(struct packet *pkt_ptr, const double abort_dist) -> double {
-  // get the frequency change per distance travelled assuming linear change to the abort distance
+static auto get_event(const int modelgridindex,
+                      struct packet *pkt_ptr,  // pointer to packet object
+                      int *rpkt_eventtype,
+                      const double tau_rnd,    // random optical depth until which the packet travels
+                      const double abort_dist  // maximal travel distance before packet leaves cell or time step ends
+                      ) -> double
+// returns edist, the distance to the next physical event (continuum or bound-bound)
+// BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
+{
+  // printout("get_event()\n");
+  /// initialize loop variables
+
   struct packet dummypkt_abort = *pkt_ptr;
   // this is done is two parts to get identical results to do_rpkt_step()
   move_pkt_withtime(&dummypkt_abort, abort_dist / 2.);
@@ -108,106 +74,13 @@ static auto get_nu_cmf_abort(struct packet *pkt_ptr, const double abort_dist) ->
   assert_testmodeonly(nu_cmf_abort <= pkt_ptr->nu_cmf);
   // for USE_RELATIVISTIC_DOPPLER_SHIFT, we will use a linear approximation for
   // the frequency change from start to abort (cell boundary/timestep end)
-  return nu_cmf_abort;
-}
-
-// wavelength bins are ordered by ascending wavelength (descending frequency)
-
-static constexpr auto get_expopac_bin_nu_upper(const size_t binindex) -> double {
-  const auto lambda_lower = expopac_lambdamin + binindex * expopac_deltalambda;
-  return 1e8 * CLIGHT / lambda_lower;
-}
-
-static constexpr auto get_expopac_bin_nu_lower(const size_t binindex) -> double {
-  const auto lambda_upper = expopac_lambdamin + (binindex + 1) * expopac_deltalambda;
-  return 1e8 * CLIGHT / lambda_upper;
-}
-
-static auto get_event_expansion_opacity(const int modelgridindex, const int nonemptymgi, struct packet *pkt_ptr,
-                                        struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const double tau_rnd,
-                                        const double abort_dist) -> std::tuple<double, bool> {
-  // calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, modelgridindex, true);
-  const auto doppler = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
-
-  const auto nu_cmf_abort = get_nu_cmf_abort(pkt_ptr, abort_dist);
-  const auto d_nu_on_d_l = (nu_cmf_abort - pkt_ptr->nu_cmf) / abort_dist;
-
-  struct packet dummypkt = *pkt_ptr;
-  assert_always(globals::cellcache[tid].cellnumber == modelgridindex);
-  double dist = 0.;
-  double tau = 0.;
-  auto binindex_start =
-      static_cast<size_t>(((1e8 * CLIGHT / dummypkt.nu_cmf) - expopac_lambdamin) / expopac_deltalambda);
-
-  for (size_t binindex = binindex_start; binindex < expopac_nbins; binindex++) {
-    const auto next_bin_edge_nu = (binindex < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex);
-    const auto binedgedist = get_linedistance(dummypkt.prop_time, dummypkt.nu_cmf, next_bin_edge_nu, d_nu_on_d_l);
-
-    // const double chi_cont = chi_rpkt_cont.total * doppler;
-    const auto chi_cont = 0.;
-    double chi_bb_expansionopac = 0.;
-    if (binindex >= 0) {
-      const auto kappa = expansionopacities[nonemptymgi * expopac_nbins + binindex];
-      // const auto doppler = doppler_packet_nucmf_on_nurf(dummypkt.pos, dummypkt.dir, dummypkt.prop_time);
-      // const auto doppler = (pkt_ptr->nu_cmf + d_nu_on_d_l * dist) / pkt_ptr->nu_rf;
-      chi_bb_expansionopac = kappa * grid::get_rho(modelgridindex) * doppler;
-    }
-    double chi_tot = chi_cont + chi_bb_expansionopac;
-
-    if (chi_tot * binedgedist > tau_rnd - tau) {
-      // event occurs
-      const auto edist = std::max(dist + (tau_rnd - tau) / chi_tot, 0.);
-      const bool event_is_boundbound = rng_uniform() <= chi_bb_expansionopac / chi_tot;
-      return {edist, event_is_boundbound};
-    }
-
-    tau += chi_tot * binedgedist;
-    dist += binedgedist;
-
-    if constexpr (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
-      move_pkt_withtime(&dummypkt, binedgedist);
-    } else {
-      // avoid move_pkt_withtime() to skip the standard Doppler shift calculation
-      // and use the linear approx instead
-      dummypkt.pos[0] += (dummypkt.dir[0] * binedgedist);
-      dummypkt.pos[1] += (dummypkt.dir[1] * binedgedist);
-      dummypkt.pos[2] += (dummypkt.dir[2] * binedgedist);
-      dummypkt.prop_time += binedgedist / CLIGHT_PROP;
-      dummypkt.nu_cmf = pkt_ptr->nu_cmf + d_nu_on_d_l * dist;  // should equal nu_trans;
-      assert_testmodeonly(dummypkt.nu_cmf <= pkt_ptr->nu_cmf);
-    }
-
-    if (dummypkt.nu_cmf <= nu_cmf_abort) {
-      // hit edge of cell or timestep limit
-      return {std::numeric_limits<double>::max(), false};
-    }
-  }
-  // no more bins, so no opacity below this frequency
-  return {std::numeric_limits<double>::max(), false};
-}
-
-static auto get_event(const int modelgridindex,
-                      struct packet *pkt_ptr,  // pointer to packet object
-                      struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
-                      const double tau_rnd,    // random optical depth until which the packet travels
-                      const double abort_dist  // maximal travel distance before packet leaves cell or time step ends
-                      ) -> std::tuple<double, bool>
-// returns edist, the distance to the next physical event (continuum or bound-bound) and is_boundbound_event, a
-// boolean BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
-{
-  assert_always(!EXPANSIONOPACITIES_ON);
-  assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
-  // printout("get_event()\n");
-  /// initialize loop variables
-
-  const auto nu_cmf_abort = get_nu_cmf_abort(pkt_ptr, abort_dist);
-  const auto d_nu_on_d_l = (nu_cmf_abort - pkt_ptr->nu_cmf) / abort_dist;
+  const double d_nu_on_d_l = (nu_cmf_abort - pkt_ptr->nu_cmf) / abort_dist;
 
   struct packet dummypkt = *pkt_ptr;
 
-  calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, modelgridindex, true);
+  calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, &globals::chi_rpkt_cont[tid], modelgridindex, true);
   const double chi_cont =
-      chi_rpkt_cont.total * doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
+      globals::chi_rpkt_cont[tid].total * doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
   double tau = 0.;   // optical depth along path
   double dist = 0.;  // position on path
   while (true) {
@@ -238,7 +111,7 @@ static auto get_event(const int modelgridindex,
           // back up one line, because we didn't reach it before the boundary/timelimit
           pkt_ptr->next_trans = dummypkt.next_trans - 1;
 
-          return {std::numeric_limits<double>::max(), false};
+          return std::numeric_limits<double>::max();
         }
 
         const int element = globals::linelist[lineindex].elementindex;
@@ -298,20 +171,23 @@ static auto get_event(const int modelgridindex,
                                            dummypkt.prop_time * CLIGHT * dummypkt.e_cmf / dummypkt.nu_cmf);
           }
 
+          *rpkt_eventtype = RPKT_EVENTTYPE_BB;
           /// the line and its parameters were already selected by closest_transition!
           // printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop
           // %d\n",edist,abort_dist,edist-abort_dist,endloop);
 
           pkt_ptr->next_trans = dummypkt.next_trans;
 
-          return {dist + ldist, true};
+          return dist + ldist;
         }
       } else {
         /// continuum process occurs before reaching the line
 
+        *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
+
         pkt_ptr->next_trans = dummypkt.next_trans - 1;
 
-        return {dist + (tau_rnd - tau) / chi_cont, false};
+        return dist + (tau_rnd - tau) / chi_cont;
       }
     } else {
       /// no line interaction possible - check whether continuum process occurs in cell
@@ -320,13 +196,15 @@ static auto get_event(const int modelgridindex,
 
       if (tau_rnd - tau > tau_cont) {
         // no continuum event before abort_dist
-        return {std::numeric_limits<double>::max(), false};
+        return std::numeric_limits<double>::max();
       }
       /// continuum process occurs at edist
 
+      *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
+
       pkt_ptr->next_trans = globals::nlines + 1;
 
-      return {dist + (tau_rnd - tau) / chi_cont, false};
+      return dist + (tau_rnd - tau) / chi_cont;
     }
   }
 
@@ -339,14 +217,16 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   pkt_ptr->type = TYPE_RPKT;
   pkt_ptr->last_cross = BOUNDARY_NONE;  /// allow all further cell crossings
 
-  const auto vel_vec = get_velocity(pkt_ptr->pos, pkt_ptr->prop_time);
+  double vel_vec[3];
+  get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
 
   // Transform Stokes Parameters from the RF to the CMF
 
   double Qi = pkt_ptr->stokes[1];
   double Ui = pkt_ptr->stokes[2];
 
-  auto old_dir_cmf = frame_transform(pkt_ptr->dir, &Qi, &Ui, vel_vec);
+  double old_dir_cmf[3];
+  frame_transform(pkt_ptr->dir, &Qi, &Ui, vel_vec, old_dir_cmf);
 
   // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos &
   // Whitlock 2008)
@@ -357,8 +237,8 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   if constexpr (DIPOLE) {
     // Assume dipole function (rejecton method, see Code & Whitney 1995)
     double p = 0.;
-    double x = 1.;
-    while (x > p) {
+    double x = 0.;
+    do {
       const double zrand = rng_uniform();
       const double zrand2 = rng_uniform();
       const double zrand3 = rng_uniform();
@@ -377,7 +257,7 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
 
       // generate a number between 0 and the maximum of the previous function (2)
       x = 2 * zrand3;
-    };
+    } while (x > p);
   } else {
     // Assume isotropic scattering
     const double zrand = rng_uniform();
@@ -411,8 +291,9 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
 
   // Need to rotate Stokes Parameters in the scattering plane
 
-  std::array<double, 3> ref1{};
-  auto ref2 = meridian(old_dir_cmf, ref1);
+  double ref1[3];
+  double ref2[3];
+  meridian(old_dir_cmf, ref1, ref2);
 
   // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
   // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
@@ -435,11 +316,11 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
 
   Qnew = Qnew / Inew;
   Unew = Unew / Inew;
-  const double I = 1.;  // Inew / Inew
+  const double I = 1.0;  // Inew / Inew
 
   // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame (Clockwise rotation of PI-i2)
 
-  ref2 = meridian(new_dir_cmf, ref1);
+  meridian(new_dir_cmf, ref1, ref2);
 
   // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
   // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
@@ -452,12 +333,23 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   double U = -Qnew * sin2i2 + Unew * cos2i2;
 
   // Transform Stokes Parameters from the CMF to the RF
-  std::array<double, 3> vel_rev{-vel_vec[0], -vel_vec[1], -vel_vec[2]};
+  double vel_rev[3];
+  vel_rev[0] = -vel_vec[0];
+  vel_rev[1] = -vel_vec[1];
+  vel_rev[2] = -vel_vec[2];
+
+  double dummy_dir[3] = {NAN, NAN, NAN};
+  frame_transform(new_dir_cmf, &Q, &U, vel_rev, dummy_dir);
+
+  pkt_ptr->stokes[0] = I;
+  pkt_ptr->stokes[1] = Q;
+  pkt_ptr->stokes[2] = U;
 
   // Update rest frame direction, frequency and energy
-  pkt_ptr->dir = frame_transform(new_dir_cmf, &Q, &U, vel_rev);
 
-  pkt_ptr->stokes = {I, Q, U};
+  pkt_ptr->dir[0] = dummy_dir[0];
+  pkt_ptr->dir[1] = dummy_dir[1];
+  pkt_ptr->dir[2] = dummy_dir[2];
 
   // Check unit vector
   assert_testmodeonly(fabs(vec_len(pkt_ptr->dir) - 1.) < 1.e-6);
@@ -470,15 +362,15 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 }
 
-static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
-                                 int modelgridindex) {
+static void rpkt_event_continuum(struct packet *pkt_ptr,
+                                 struct rpkt_continuum_absorptioncoeffs chi_rpkt_cont_thisthread, int modelgridindex) {
   const double nu = pkt_ptr->nu_cmf;
 
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
-  const double chi_cont = chi_rpkt_cont.total * dopplerfactor;
-  const double chi_escatter = chi_rpkt_cont.es * dopplerfactor;
-  const double chi_ff = chi_rpkt_cont.ff * dopplerfactor;
-  const double chi_bf = chi_rpkt_cont.bf * dopplerfactor;
+  const double chi_cont = chi_rpkt_cont_thisthread.total * dopplerfactor;
+  const double sigma = chi_rpkt_cont_thisthread.es * dopplerfactor;
+  const double chi_ff = chi_rpkt_cont_thisthread.ff * dopplerfactor;
+  const double chi_bf = chi_rpkt_cont_thisthread.bf * dopplerfactor;
 
   /// continuum process happens. select due to its probabilities sigma/chi_cont, chi_ff/chi_cont,
   /// chi_bf/chi_cont
@@ -487,14 +379,14 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
   // printout("[debug] rpkt_event:   zrand*chi_cont %g, sigma %g, chi_ff %g, chi_bf %g\n", zrand * chi_cont,
   // sigma, chi_ff, chi_bf);
 
-  if (zrand * chi_cont < chi_escatter) {
+  if (zrand * chi_cont < sigma) {
     /// electron scattering occurs
-    /// in this case the packet stays a R_PKT of same nu_cmf as before (coherent scattering)
+    /// in this case the packet stays a R_PKT of same nu_cmf than before (coherent scattering)
     /// but with different direction
     // printout("[debug] rpkt_event:   electron scattering\n");
     pkt_ptr->interactions += 1;
     pkt_ptr->nscatterings += 1;
-    pkt_ptr->last_event = LASTEVENT_ELECTRONSCATTERING;
+    pkt_ptr->last_event = 12;
     stats::increment(stats::COUNTER_ESCOUNTER);
 
     // generate a virtual packet
@@ -502,13 +394,16 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
 
     // pkt_ptr->nu_cmf = 3.7474058e+14;
     electron_scatter_rpkt(pkt_ptr);
-
     /// Electron scattering does not modify the last emission flag
+    // pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
     /// but it updates the last emission position
-    pkt_ptr->em_pos = pkt_ptr->pos;
+    vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
     pkt_ptr->em_time = pkt_ptr->prop_time;
 
-  } else if (zrand * chi_cont < chi_escatter + chi_ff) {
+    /// Set some flags
+    // pkt_ptr->next_trans = 0;   ///packet's comoving frame frequency is conserved during electron scattering
+    /// don't touch the value of next_trans to save transition history
+  } else if (zrand * chi_cont < sigma + chi_ff) {
     /// ff: transform to k-pkt
     // printout("[debug] rpkt_event:   free-free transition\n");
     stats::increment(stats::COUNTER_K_STAT_FROM_FF);
@@ -516,13 +411,13 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
     pkt_ptr->last_event = 5;
     pkt_ptr->type = TYPE_KPKT;
     pkt_ptr->absorptiontype = -1;
-  } else if (zrand * chi_cont < chi_escatter + chi_ff + chi_bf) {
+  } else if (zrand * chi_cont < sigma + chi_ff + chi_bf) {
     /// bf: transform to k-pkt or activate macroatom corresponding to probabilities
     // printout("[debug] rpkt_event:   bound-free transition\n");
 
     pkt_ptr->absorptiontype = -2;
 
-    const double chi_bf_inrest = chi_rpkt_cont.bf;
+    const double chi_bf_inrest = chi_rpkt_cont_thisthread.bf;
     assert_always(globals::phixslist[tid].chi_bf_sum[globals::nbfcontinua - 1] == chi_bf_inrest);
 
     /// Determine in which continuum the bf-absorption occurs
@@ -530,9 +425,9 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
     const double chi_bf_rand = zrand2 * chi_bf_inrest;
 
     // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand
-    const auto &upperval = std::upper_bound(globals::phixslist[tid].chi_bf_sum,
-                                            &globals::phixslist[tid].chi_bf_sum[globals::nbfcontinua - 1], chi_bf_rand);
-    const int allcontindex = std::distance(globals::phixslist[tid].chi_bf_sum, upperval);
+    double *upperval = std::upper_bound(&globals::phixslist[tid].chi_bf_sum[0],
+                                        &globals::phixslist[tid].chi_bf_sum[globals::nbfcontinua - 1], chi_bf_rand);
+    const int allcontindex = std::distance(&globals::phixslist[tid].chi_bf_sum[0], upperval);
     assert_always(allcontindex < globals::nbfcontinua);
 
     const double nu_edge = globals::allcont[allcontindex].nu_edge;
@@ -578,7 +473,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
     }
   } else {
     printout("ERROR: could not continuum process\n");
-    std::abort();
+    abort();
   }
 }
 
@@ -619,27 +514,6 @@ static void rpkt_event_boundbound(struct packet *pkt_ptr, const int mgi) {
   }
 }
 
-auto sample_planck_times_expansion_opacity(const int modelgridindex) -> double
-// returns a randomly chosen frequency with a distribution of Planck function times the expansion opacity
-{
-  assert_testmodeonly(EXPANSION_OPAC_SAMPLE_KAPPAPLANCK);
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  const auto *kappa_planck_bins = &expansionopacity_planck_cumulative[nonemptymgi * expopac_nbins];
-
-  const auto rnd_integral = rng_uniform() * kappa_planck_bins[expopac_nbins - 1];
-  const auto *selected_partintegral =
-      std::lower_bound(kappa_planck_bins, kappa_planck_bins + expopac_nbins, rnd_integral);
-  const auto binindex = std::min(std::distance(kappa_planck_bins, selected_partintegral), expopac_nbins - 1);
-  // use a linear interpolation for the frequency within the bin
-  const auto bin_nu_lower = get_expopac_bin_nu_lower(binindex);
-  const auto delta_nu = get_expopac_bin_nu_upper(binindex) - bin_nu_lower;
-  const auto lower_partintegral = (binindex > 0) ? kappa_planck_bins[binindex - 1] : 0.;
-  const double nuoffset =
-      (rnd_integral - kappa_planck_bins[binindex]) / (kappa_planck_bins[binindex] - lower_partintegral) * delta_nu;
-
-  return bin_nu_lower + nuoffset;
-}
-
 static void rpkt_event_thickcell(struct packet *pkt_ptr)
 /// Event handling for optically thick cells. Those cells are treated in a grey
 /// approximation with electron scattering only.
@@ -649,19 +523,18 @@ static void rpkt_event_thickcell(struct packet *pkt_ptr)
   // printout("[debug] rpkt_event_thickcell:   electron scattering\n");
   pkt_ptr->interactions += 1;
   pkt_ptr->nscatterings += 1;
-  pkt_ptr->last_event = LASTEVENT_ELECTRONSCATTERING;
+  pkt_ptr->last_event = 12;
   stats::increment(stats::COUNTER_ESCOUNTER);
 
   emit_rpkt(pkt_ptr);
   /// Electron scattering does not modify the last emission flag
   // pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
   /// but it updates the last emission position
-  pkt_ptr->em_pos = pkt_ptr->pos;
+  vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
   pkt_ptr->em_time = pkt_ptr->prop_time;
 }
 
-static void update_estimators(const double e_cmf, const double nu_cmf, const double distance,
-                              const double doppler_nucmf_on_nurf, const int modelgridindex, const int nonemptymgi)
+static void update_estimators(const struct packet *pkt_ptr, const double distance, const int modelgridindex)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.
@@ -670,59 +543,62 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   if (modelgridindex == grid::get_npts_model()) {
     return;
   }
-  const double distance_e_cmf = distance * e_cmf;
-
-  radfield::update_estimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf);
+  const double distance_e_cmf = distance * pkt_ptr->e_cmf;
+  const double nu = pkt_ptr->nu_cmf;
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  radfield::update_estimators(nonemptymgi, distance_e_cmf, nu, pkt_ptr);
 
   /// ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
+  /// quick and dirty solution: store info in element=ion=0, and leave the others untouched (i.e. zero)
   safeadd(globals::ffheatingestimator[modelgridindex], distance_e_cmf * globals::chi_rpkt_cont[tid].ffheating);
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
+    const double distance_e_cmf_over_nu = distance_e_cmf / nu;
+
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
       const double nu_edge = globals::groundcont[i].nu_edge;
-      if (nu_cmf <= nu_edge) {
-        // because groundcont is sorted by nu_edge descending, nu < nu_edge for all remaining items
-        return;
-      }
-      const int element = globals::groundcont[i].element;
-      /// Cells with zero abundance for a specific element have zero contribution
-      /// (set in calculate_chi_rpkt_cont and therefore do not contribute to
-      /// the estimators
-      if (grid::get_elem_abundance(modelgridindex, element) > 0) {
-        const int ion = globals::groundcont[i].ion;
-        const int ionestimindex = get_ionestimindex_nonemptymgi(nonemptymgi, element, ion);
+      if (nu > nu_edge) {
+        const int element = globals::groundcont[i].element;
+        /// Cells with zero abundance for a specific element have zero contribution
+        /// (set in calculate_chi_rpkt_cont and therefore do not contribute to
+        /// the estimators
+        if (grid::get_elem_abundance(modelgridindex, element) > 0) {
+          const int ion = globals::groundcont[i].ion;
+          const int ionestimindex = get_ionestimindex_nonemptymgi(nonemptymgi, element, ion);
 
-        if constexpr (USE_LUT_PHOTOION) {
-          safeadd(globals::gammaestimator[ionestimindex],
-                  globals::phixslist[tid].groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
+          if constexpr (USE_LUT_PHOTOION) {
+            safeadd(globals::gammaestimator[ionestimindex],
+                    globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf_over_nu);
 
-          if (!std::isfinite(globals::gammaestimator[ionestimindex])) {
-            printout(
-                "[fatal] update_estimators: gamma estimator becomes non finite: mgi %d element %d ion %d gamma_contr "
-                "%g, distance_e_cmf_over_nu %g\n",
-                modelgridindex, element, ion, globals::phixslist[tid].groundcont_gamma_contr[i],
-                distance_e_cmf / nu_cmf);
-            std::abort();
+            if (!std::isfinite(globals::gammaestimator[ionestimindex])) {
+              printout(
+                  "[fatal] update_estimators: gamma estimator becomes non finite: mgi %d element %d ion %d gamma_contr "
+                  "%g, distance_e_cmf_over_nu %g\n",
+                  modelgridindex, element, ion, globals::phixslist[tid].groundcont_gamma_contr[i],
+                  distance_e_cmf_over_nu);
+              abort();
+            }
+          }
+
+          if constexpr (USE_LUT_BFHEATING) {
+            safeadd(globals::bfheatingestimator[ionestimindex],
+                    globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu));
           }
         }
-
-        if constexpr (USE_LUT_BFHEATING) {
-          safeadd(globals::bfheatingestimator[ionestimindex],
-                  globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
-        }
+      } else {
+        break;  // because groundcont is sorted by nu_edge descending, nu < nu_edge for all remaining items
       }
     }
   }
 }
 
-static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const double t2)
-    -> bool
+static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 // Routine for moving an r-packet. Similar to do_gamma in objective.
 // return value - true if no mgi change, no pkttype change and not reached end of timestep, false otherwise
 {
   const int cellindex = pkt_ptr->where;
-  const int mgi = grid::get_cell_modelgridindex(cellindex);
-  const int nonemptymgi = (mgi != grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
+  int mgi = grid::get_cell_modelgridindex(cellindex);
+  const int oldmgi = mgi;
 
   // if (pkt_ptr->next_trans > 0) {
   //   printout("[debug] do_rpkt: init: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d)
@@ -739,15 +615,16 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
   // Start by finding the distance to the crossing of the grid cell
   // boundaries. sdist is the boundary distance and snext is the
   // grid cell into which we pass.
-  auto [sdist, snext] =
-      grid::boundary_distance(pkt_ptr->dir, pkt_ptr->pos, pkt_ptr->prop_time, pkt_ptr->where, &pkt_ptr->last_cross);
+  int snext = 0;
+  double sdist = grid::boundary_distance(pkt_ptr->dir, pkt_ptr->pos, pkt_ptr->prop_time, pkt_ptr->where, &snext,
+                                         &pkt_ptr->last_cross);
 
   if (sdist == 0) {
     grid::change_cell(pkt_ptr, snext);
     const int cellindexnew = pkt_ptr->where;
-    const int newmgi = grid::get_cell_modelgridindex(cellindexnew);
+    mgi = grid::get_cell_modelgridindex(cellindexnew);
 
-    return (pkt_ptr->type == TYPE_RPKT && (newmgi == grid::get_npts_model() || newmgi == mgi));
+    return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
   }
   const double maxsdist = (GRID_TYPE == GRID_CARTESIAN3D)
                               ? globals::rmax * pkt_ptr->prop_time / globals::tmin
@@ -755,7 +632,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
   if (sdist > maxsdist) {
     printout("[fatal] do_rpkt: Unreasonably large sdist for packet %d. Rpkt. Abort. %g %g %g\n", pkt_ptr->number,
              globals::rmax, pkt_ptr->prop_time / globals::tmin, sdist);
-    std::abort();
+    abort();
   }
 
   if (sdist < 0) {
@@ -774,7 +651,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
   if (((snext != -99) && (snext < 0)) || (snext >= grid::ngrid)) {
     printout("[fatal] r_pkt: Heading for inappropriate grid cell. Abort.\n");
     printout("[fatal] r_pkt: Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
-    std::abort();
+    abort();
   }
 
   if (sdist > globals::max_path_step) {
@@ -791,11 +668,9 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
 
   assert_always(tdist >= 0);
 
-  const double abort_dist = std::min(tdist, sdist);
-
   /// Get distance to the next physical event (continuum or bound-bound)
   double edist = -1;
-  bool event_is_boundbound = true;
+  int rpkt_eventtype = -1;
   if (mgi == grid::get_npts_model()) {
     /// for empty cells no physical event occurs. The packets just propagate.
     edist = std::numeric_limits<double>::max();
@@ -803,69 +678,59 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
   } else if (grid::modelgrid[mgi].thick == 1) {
     /// In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
 
-    const double chi_grey = grid::get_kappagrey(mgi) * grid::get_rho(mgi) *
-                            doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
-
-    edist = tau_next / chi_grey;
-    pkt_ptr->next_trans = -1;
-  } else if (EXPANSIONOPACITIES_ON) {
-    std::tie(edist, event_is_boundbound) =
-        get_event_expansion_opacity(mgi, nonemptymgi, pkt_ptr, chi_rpkt_cont, tau_next, abort_dist);
+    const double kappa = grid::get_kappagrey(mgi) * grid::get_rho(mgi) *
+                         doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
+    const double tau_current = 0.0;
+    edist = (tau_next - tau_current) / kappa;
     pkt_ptr->next_trans = -1;
   } else {
-    std::tie(edist, event_is_boundbound) = get_event(mgi, pkt_ptr, chi_rpkt_cont, tau_next, abort_dist);
+    edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, tau_next, fmin(tdist, sdist));
   }
   assert_always(edist >= 0);
 
   if ((sdist < tdist) && (sdist < edist)) {
     // Move it into the new cell.
-    const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, sdist / 2.);
-    update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, sdist, doppler_nucmf_on_nurf, mgi, nonemptymgi);
+    move_pkt_withtime(pkt_ptr, sdist / 2.);
+    update_estimators(pkt_ptr, sdist, mgi);
     move_pkt_withtime(pkt_ptr, sdist / 2.);
 
-    int newmgi = mgi;
     if (snext != pkt_ptr->where) {
       grid::change_cell(pkt_ptr, snext);
       const int cellindexnew = pkt_ptr->where;
-      newmgi = grid::get_cell_modelgridindex(cellindexnew);
+      mgi = grid::get_cell_modelgridindex(cellindexnew);
     }
 
     pkt_ptr->last_event = pkt_ptr->last_event + 100;
 
-    return (pkt_ptr->type == TYPE_RPKT && (newmgi == grid::get_npts_model() || newmgi == mgi));
+    return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
   }
 
   if ((edist < sdist) && (edist < tdist)) {
     // bound-bound or continuum event
-    const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, edist / 2.);
-    update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, edist, doppler_nucmf_on_nurf, mgi, nonemptymgi);
+    move_pkt_withtime(pkt_ptr, edist / 2.);
+    update_estimators(pkt_ptr, edist, mgi);
     move_pkt_withtime(pkt_ptr, edist / 2.);
 
     // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
     if (grid::modelgrid[mgi].thick == 1) {
       rpkt_event_thickcell(pkt_ptr);
-    } else if (event_is_boundbound) {
-      if constexpr (EXPANSIONOPACITIES_ON) {
-        if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
-          pkt_ptr->nu_cmf = sample_planck_times_expansion_opacity(mgi);
-        }
-        rpkt_event_thickcell(pkt_ptr);
-      } else {
-        rpkt_event_boundbound(pkt_ptr, mgi);
-      }
-    } else {
+    } else if (rpkt_eventtype == RPKT_EVENTTYPE_BB) {
+      rpkt_event_boundbound(pkt_ptr, mgi);
+    } else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT) {
       rpkt_event_continuum(pkt_ptr, globals::chi_rpkt_cont[tid], mgi);
+    } else {
+      assert_always(false);
     }
 
-    return (pkt_ptr->type == TYPE_RPKT);
+    return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
   }
 
   if ((tdist < sdist) && (tdist < edist)) {
     // reaches end of timestep before cell boundary or interaction
-    const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, tdist / 2.);
-    update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, tdist, doppler_nucmf_on_nurf, mgi, nonemptymgi);
     move_pkt_withtime(pkt_ptr, tdist / 2.);
+    update_estimators(pkt_ptr, tdist, mgi);
     pkt_ptr->prop_time = t2;
+    move_pkt(pkt_ptr, tdist / 2.);
     pkt_ptr->last_event = pkt_ptr->last_event + 1000;
 
     return false;
@@ -874,11 +739,11 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
   printout("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist,
            tdist);
   printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
-  std::abort();
+  abort();
 }
 
-void do_rpkt(struct packet *pkt_ptr, const double t2, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont) {
-  while (do_rpkt_step(pkt_ptr, chi_rpkt_cont, t2)) {
+void do_rpkt(struct packet *pkt_ptr, const double t2) {
+  while (do_rpkt_step(pkt_ptr, t2)) {
     ;
   }
 }
@@ -890,15 +755,17 @@ void emit_rpkt(struct packet *pkt_ptr) {
 
   /// Need to assign a new direction. Assume isotropic emission in the cmf
 
-  const auto dir_cmf = get_rand_isotropic_unitvec();
+  double dir_cmf[3];
+  get_rand_isotropic_unitvec(dir_cmf);
 
+  double vel_vec[3];
   /// This direction is in the cmf - we want to convert it to the rest
   /// frame - use aberation of angles. We want to convert from cmf to
   /// rest so need -ve velocity.
-  const auto vel_vec = get_velocity(pkt_ptr->pos, -1. * pkt_ptr->prop_time);
+  get_velocity(pkt_ptr->pos, vel_vec, -1. * pkt_ptr->prop_time);
   /// negative time since we want the backwards transformation here
 
-  pkt_ptr->dir = angle_ab(dir_cmf, vel_vec);
+  angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
   // printout("[debug] pkt_ptr->dir in RF: %g %g %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 
   /// Finally we want to put in the rest frame energy and frequency. And record
@@ -913,19 +780,21 @@ void emit_rpkt(struct packet *pkt_ptr) {
   pkt_ptr->stokes[1] = 0.;
   pkt_ptr->stokes[2] = 0.;
 
-  pkt_ptr->pol_dir = cross_prod(pkt_ptr->dir, std::array<double, 3>{0., 0., 1.});
+  std::array<double, 3> dummy_dir = {0., 0., 1.};
+  cross_prod(pkt_ptr->dir, dummy_dir, pkt_ptr->pol_dir);
 
   if ((dot(pkt_ptr->pol_dir, pkt_ptr->pol_dir)) < 1.e-8) {
-    pkt_ptr->pol_dir = cross_prod(pkt_ptr->dir, std::array<double, 3>{0., 1., 0.});
+    dummy_dir = {0., 0., 1.};
+    cross_prod(pkt_ptr->dir, dummy_dir, pkt_ptr->pol_dir);
   }
 
-  pkt_ptr->pol_dir = vec_norm(pkt_ptr->pol_dir);
+  vec_norm(pkt_ptr->pol_dir, pkt_ptr->pol_dir);
   // printout("initialise pol state of packet %g, %g, %g, %g,
   // %g\n",pkt_ptr->stokes_qu[0],pkt_ptr->stokes_qu[1],pkt_ptr->pol_dir[0],pkt_ptr->pol_dir[1],pkt_ptr->pol_dir[2]);
   // printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 }
 
-static auto calculate_chi_freefree(const int modelgridindex, const double nu) -> double
+static auto calculate_chi_ff(const int modelgridindex, const double nu) -> double
 // calculate the free-free absorption coefficient [cm^-1]
 // = kappa(free-free) * nne
 {
@@ -936,6 +805,7 @@ static auto calculate_chi_freefree(const int modelgridindex, const double nu) ->
   const auto T_e = grid::get_Te(modelgridindex);
 
   double chi_ff = 0.;
+  // chi_ffheating = 0.;
   const int nelements = get_nelements();
   for (int element = 0; element < nelements; element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
@@ -948,7 +818,7 @@ static auto calculate_chi_freefree(const int modelgridindex, const double nu) ->
 
   if (!std::isfinite(chi_ff)) {
     printout("ERRORL: chi_ff is non-infinite mgi %d nne %g nu %g T_e %g\n", modelgridindex, nne, nu, T_e);
-    std::abort();
+    abort();
   }
 
   return chi_ff;
@@ -1005,7 +875,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
 
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
         if constexpr (!SEPARATE_STIMRECOMB) {
-          double departure_ratio = globals::cellcache[tid].ch_allcont_departureratios[i];
+          double departure_ratio = globals::cellhistory[tid].ch_allcont_departureratios[i];
           if (!usecellhistupdatephixslist || departure_ratio < 0) {
             const int upper = globals::allcont[i].upperlevel;
             const double nnupperionlevel = usecellhistupdatephixslist
@@ -1014,7 +884,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
             const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
             departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
             if (usecellhistupdatephixslist) {
-              globals::cellcache[tid].ch_allcont_departureratios[i] = departure_ratio;
+              globals::cellhistory[tid].ch_allcont_departureratios[i] = departure_ratio;
             }
           }
 
@@ -1047,7 +917,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
                    get_levelpop(modelgridindex, element, ion, level));
           printout("[fatal] sigma_bf %g, T_e %g, nu %g, nu_edge %g\n", sigma_bf, grid::get_Te(modelgridindex), nu,
                    nu_edge);
-          std::abort();
+          abort();
         }
 
         chi_bf_sum += chi_bf_contr;
@@ -1082,21 +952,20 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
   return chi_bf_sum;
 }
 
-void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
+void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorptioncoeffs *chi_rpkt_cont_thisthread,
                              const int modelgridindex, const bool usecellhistupdatephixslist) {
   assert_testmodeonly(modelgridindex != grid::get_npts_model());
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
-  if ((modelgridindex == chi_rpkt_cont.modelgridindex) && (!chi_rpkt_cont.recalculate_required) &&
-      (fabs(chi_rpkt_cont.nu / nu_cmf - 1.0) < 1e-4)) {
+  if ((modelgridindex == chi_rpkt_cont_thisthread->modelgridindex) &&
+      (!chi_rpkt_cont_thisthread->recalculate_required) && (fabs(chi_rpkt_cont_thisthread->nu / nu_cmf - 1.0) < 1e-4)) {
     // calculated values are a match already
     return;
   }
 
   const auto nne = grid::get_nne(modelgridindex);
 
-  double sigma = 0.;
-  /// free-free absorption
-  const double chi_ff = calculate_chi_freefree(modelgridindex, nu_cmf);
+  double sigma = 0.0;
+  double chi_ff = 0.;
   double chi_bf = 0.;
   double chi_ffheating = 0.;
 
@@ -1109,12 +978,19 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
     // sigma_cmf = 0. * nne;
     // sigma *= 0.1;
 
+    /// Second contribution: free-free absorption
+    chi_ff = calculate_chi_ff(modelgridindex, nu_cmf);
     chi_ffheating = chi_ff;
 
     /// Third contribution: bound-free absorption
     chi_bf = usecellhistupdatephixslist ? calculate_chi_bf_gammacontr<true>(modelgridindex, nu_cmf)
                                         : calculate_chi_bf_gammacontr<false>(modelgridindex, nu_cmf);
 
+    // const double pkt_lambda = 1e8 * CLIGHT / nu_cmf;
+    // if (pkt_lambda < 4000)
+    // {
+    //   printout("lambda %7.1f chi_bf %g \n", pkt_lambda, chi_bf);
+    // }
   } else {
     /// in the other cases chi_grey is an mass absorption coefficient
     /// therefore use the mass density
@@ -1124,89 +1000,37 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
     sigma = 0.;
     // chi_ff = 0.9*sigma;
     // sigma *= 0.1;
+    // chi_bf = 0.;
+
+    // Second contribution: free-free absorption
+    chi_ff = 1e5 * calculate_chi_ff(modelgridindex, nu_cmf);
 
     chi_bf = 0.;
   }
 
-  chi_rpkt_cont.nu = nu_cmf;
-  chi_rpkt_cont.modelgridindex = modelgridindex;
-  chi_rpkt_cont.recalculate_required = false;
-  chi_rpkt_cont.total = sigma + chi_bf + chi_ff;
-  chi_rpkt_cont.es = sigma;
-  chi_rpkt_cont.ff = chi_ff;
-  chi_rpkt_cont.bf = chi_bf;
-  chi_rpkt_cont.ffheating = chi_ffheating;
+  chi_rpkt_cont_thisthread->nu = nu_cmf;
+  chi_rpkt_cont_thisthread->modelgridindex = modelgridindex;
+  chi_rpkt_cont_thisthread->recalculate_required = false;
+  chi_rpkt_cont_thisthread->total = sigma + chi_bf + chi_ff;
+  chi_rpkt_cont_thisthread->es = sigma;
+  chi_rpkt_cont_thisthread->ff = chi_ff;
+  chi_rpkt_cont_thisthread->bf = chi_bf;
+  chi_rpkt_cont_thisthread->ffheating = chi_ffheating;
   // chi_rpkt_cont_thisthread.bfheating = chi_bfheating;
 
-  if (!std::isfinite(chi_rpkt_cont.total)) {
+  if (!std::isfinite(chi_rpkt_cont_thisthread->total)) {
     printout("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort\n");
-    printout("[fatal] es %g, ff %g, bf %g\n", chi_rpkt_cont.es, chi_rpkt_cont.ff, chi_rpkt_cont.bf);
+    printout("[fatal] es %g, ff %g, bf %g\n", chi_rpkt_cont_thisthread->es, chi_rpkt_cont_thisthread->ff,
+             chi_rpkt_cont_thisthread->bf);
     printout("[fatal] nbfcontinua %d\n", globals::nbfcontinua);
     printout("[fatal] in cell %d with density %g\n", modelgridindex, grid::get_rho(modelgridindex));
     printout("[fatal] pkt_ptr->nu_cmf %g\n", nu_cmf);
-    if (std::isfinite(chi_rpkt_cont.es)) {
-      chi_rpkt_cont.ff = 0.;
-      chi_rpkt_cont.bf = 0.;
-      chi_rpkt_cont.total = chi_rpkt_cont.es;
+    if (std::isfinite(chi_rpkt_cont_thisthread->es)) {
+      chi_rpkt_cont_thisthread->ff = 0.;
+      chi_rpkt_cont_thisthread->bf = 0.;
+      chi_rpkt_cont_thisthread->total = chi_rpkt_cont_thisthread->es;
     } else {
-      std::abort();
+      abort();
     }
   }
-}
-
-void calculate_binned_opacities(const int modelgridindex) {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  auto *kappa_bb_bins = &expansionopacities[nonemptymgi * expopac_nbins];
-  const auto rho = grid::get_rho(modelgridindex);
-
-  const time_t sys_time_start_calc = time(nullptr);
-  const auto temperature = grid::get_TR(modelgridindex);
-
-  printout("calculating binned expansion opacities for cell %d...", modelgridindex);
-
-  const auto t_mid = globals::timesteps[globals::timestep].mid;
-
-  // find the first line with nu below the upper limit of the first bin
-  const auto *matchline =
-      std::lower_bound(&globals::linelist[0], &globals::linelist[globals::nlines], get_expopac_bin_nu_upper(0),
-                       [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; });
-  int lineindex = std::distance(globals::linelist, matchline);
-
-  for (size_t binindex = 0; binindex < expopac_nbins; binindex++) {
-    double bin_linesum = 0.;
-
-    const auto nu_upper = get_expopac_bin_nu_upper(binindex);
-
-    const auto nu_lower = get_expopac_bin_nu_lower(binindex);
-    const auto nu_mid = (nu_upper + nu_lower) / 2.;
-
-    const auto delta_nu = nu_upper - nu_lower;
-
-    while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= nu_lower) {
-      const float tau_line = get_tau_sobolev(modelgridindex, lineindex, t_mid, false);
-      const auto linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
-      bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
-      lineindex++;
-    }
-
-    const float bin_kappa_bb = 1. / (CLIGHT * t_mid * rho) * bin_linesum;
-    assert_always(std::isfinite(bin_kappa_bb));
-    kappa_bb_bins[binindex] = bin_kappa_bb;
-
-    // calculate_chi_rpkt_cont(nu_mid, globals::chi_rpkt_cont[tid], modelgridindex, false);
-    // const auto bin_kappa_cont = globals::chi_rpkt_cont[tid].total / rho;
-    const auto bin_kappa_cont = 0.;
-
-    if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
-      const auto planck_val = radfield::dbb(nu_mid, temperature, 1);
-      auto *kappa_planck_bins = &expansionopacity_planck_cumulative[nonemptymgi * expopac_nbins];
-      const auto lower_val = ((binindex > 0) ? kappa_planck_bins[binindex - 1] : 0.);
-      kappa_planck_bins[binindex] = lower_val + (bin_kappa_bb + bin_kappa_cont) * planck_val * delta_nu;
-    }
-
-    // printout("bin %d: lambda %g to %g kappabb %g kappa_cont %g kappa_grey %g kappa_planck_cumulative %g\n", binindex,
-    //          1e8 / CLIGHT * nu_upper, 1e8 * CLIGHT / nu_lower, bin_kappa_bb, bin_kappa_cont,
-    //          grid::modelgrid[modelgridindex].kappagrey, kappa_planck_cumulative[binindex]);
-  }
-  printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc);
 }

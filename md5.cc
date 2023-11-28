@@ -12,9 +12,10 @@
 /*************************** HEADER FILES ***************************/
 #include "md5.h"
 
+#include <memory.h>
+
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 
 #include "sn3d.h"
 

@@ -1,10 +1,6 @@
 #include "update_grid.h"
 
-#include <algorithm>
 #include <cmath>
-#include <cstdio>
-#include <ctime>
-#include <memory>
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -15,14 +11,11 @@
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
-#include "rpkt.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "radfield.h"
 #include "ratecoeff.h"
+#include "rpkt.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "thermalbalance.h"
@@ -663,20 +656,20 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
   fflush(estimators_file);
 
-  const auto write_estim_duration = time(nullptr) - sys_time_start_write_estimators;
+  const int write_estim_duration = time(nullptr) - sys_time_start_write_estimators;
   if (write_estim_duration >= 1) {
     printout("writing estimators for timestep %d cell %d took %d seconds\n", timestep, mgi, write_estim_duration);
   }
 }
 
-void cellcache_change_cell(const int modelgridindex) {
-  /// All entries of the cellcache stack must be flagged as empty at the
+void cellhistory_reset(const int modelgridindex, const bool new_timestep) {
+  /// All entries of the cellhistory stack must be flagged as empty at the
   /// onset of the new timestep. Also, boundary crossing?
   /// Calculate the level populations for this cell, and flag the other entries
   /// as empty.
-  /// Make known that globals::cellcache[tid] contains information about the
+  /// Make known that globals::cellhistory[tid] contains information about the
   /// cell given by cellnumber. (-99 if invalid)
-  if (modelgridindex == globals::cellcache[tid].cellnumber) {
+  if ((modelgridindex == globals::cellhistory[tid].cellnumber) && !new_timestep) {
     return;
   }
 
@@ -685,7 +678,7 @@ void cellcache_change_cell(const int modelgridindex) {
   // force rpkt opacities to be recalculated next time they are accessed
   globals::chi_rpkt_cont[tid].recalculate_required = true;
 
-  globals::cellcache[tid].cellnumber = modelgridindex;
+  globals::cellhistory[tid].cellnumber = modelgridindex;
 
   //  int nlevels_with_processrates = 0;
   // const double T_e = modelgridindex >= 0 ? grid ::get_Te(modelgridindex) : 0.;
@@ -693,14 +686,12 @@ void cellcache_change_cell(const int modelgridindex) {
   for (int element = 0; element < nelements; element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      globals::cellcache[tid]
-          .cooling_contrib[kpkt::get_coolinglistoffset(element, ion) + kpkt::get_ncoolingterms_ion(element, ion) - 1] =
-          COOLING_UNDEFINED;
+      globals::cellhistory[tid].cooling_contrib[kpkt::get_coolinglistoffset(element, ion)] = COOLING_UNDEFINED;
 
       if (modelgridindex >= 0) {
         const int nlevels = get_nlevels(element, ion);
         for (int level = 0; level < nlevels; level++) {
-          globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].population =
+          globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].population =
               calculate_levelpop(modelgridindex, element, ion, level);
         }
       }
@@ -710,7 +701,7 @@ void cellcache_change_cell(const int modelgridindex) {
       const int nlevels = get_nlevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
-          globals::cellcache[tid]
+          globals::cellhistory[tid]
               .chelements[element]
               .chions[ion]
               .chlevels[level]
@@ -718,7 +709,7 @@ void cellcache_change_cell(const int modelgridindex) {
               .corrphotoioncoeff = -99.;
 
 #if (SEPARATE_STIMRECOMB)
-          globals::cellcache[tid]
+          globals::cellhistory[tid]
               .chelements[element]
               .chions[ion]
               .chlevels[level]
@@ -728,39 +719,40 @@ void cellcache_change_cell(const int modelgridindex) {
         }
         /// This is the only flag needed for all of the following MA stuff!
         // if
-        // (globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC]
+        // (globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC]
         // >= 0)
         //   nlevels_with_processrates++;
 
-        globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC] = -99.;
+        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC] =
+            -99.;
 
-        // globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].rad_deexc =
+        // globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_deexc =
         // -99.;
-        // globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].rad_recomb =
+        // globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_recomb =
         // -99.;
-        // globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].col_recomb =
+        // globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_recomb =
         // -99.;
-        // globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].internal_down_same
+        // globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_same
         // = -99.;
-        // globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].internal_up_same
+        // globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_same
         // = -99.;
-        // globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].internal_down_lower
+        // globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_lower
         // = -99.;
-        // globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher
+        // globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher
         // = -99.;
         //
         // ndowntrans = get_ndowntrans(element, ion, level);
         // nuptrans = get_nuptrans(element, ion, level);
         // for (i = 0; i < ndowntrans; i++)
         // {
-        //   globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].sum_epstrans_rad_deexc[i]
+        //   globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].sum_epstrans_rad_deexc[i]
         //   = -99.;
-        //   globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i]
+        //   globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i]
         //   = -99.;
         // }
         // for (i = 0; i < nuptrans; i++)
         // {
-        //   globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].sum_internal_up_same[i]
+        //   globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].sum_internal_up_same[i]
         //   = -99.;
         // }
       }
@@ -769,12 +761,12 @@ void cellcache_change_cell(const int modelgridindex) {
 
   if (modelgridindex >= 0) {
     const int nbfcont = globals::nbfcontinua;
-    std::fill_n(globals::cellcache[tid].ch_allcont_departureratios, nbfcont, -1);
+    std::fill_n(globals::cellhistory[tid].ch_allcont_departureratios, nbfcont, -1);
   }
   // printout("nlevels_with_processrates %d\n", nlevels_with_processrates);
 
-  // globals::cellcache[tid].totalcooling = COOLING_UNDEFINED;
-  // globals::cellcache[tid].phixsflag = PHIXS_UNDEFINED;
+  // globals::cellhistory[tid].totalcooling = COOLING_UNDEFINED;
+  // globals::cellhistory[tid].phixsflag = PHIXS_UNDEFINED;
 }
 
 static void solve_Te_nltepops(const int n, const int nts, const int titer,
@@ -902,7 +894,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, 
               "get_corrphotoioncoeff_ana(%d,%d,%d,%d,%d)=%g/%g",
               element, ion, 0, 0, mgi, globals::gammaestimator[ionestimindex],
               get_corrphotoioncoeff_ana(element, ion, 0, 0, mgi));
-          std::abort();
+          abort();
         }
       }
 
@@ -948,7 +940,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, 
                 "[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / "
                 "get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",
                 element, ion, 0, 0, mgi, globals::bfheatingestimator[ionestimindex], bfheatingcoeff_ana);
-            std::abort();
+            abort();
           }
         }
       }
@@ -1037,14 +1029,14 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       /// be treated in LTE at restart.
       if (grid::modelgrid[mgi].thick != 1 && grid::get_W(mgi) == 1) {
         printout(
-            "force modelgrid cell %d to grey/LTE thick = 1 for update grid since existing W == 1. (will not have gamma "
+            "force modelgrid cell %d to grey/LTE for update grid since existing W == 1. (will not have gamma "
             "estimators)\n",
             mgi);
         grid::modelgrid[mgi].thick = 1;
       }
 
       printout("lte_iteration %d\n", globals::lte_iteration);
-      printout("mgi %d modelgrid.thick: %d (during grid update)\n", mgi, grid::modelgrid[mgi].thick);
+      printout("mgi %d modelgrid.thick: %d (for this grid update only)\n", mgi, grid::modelgrid[mgi].thick);
 
       for (int element = 0; element < get_nelements(); element++) {
         calculate_cellpartfuncts(mgi, element);
@@ -1164,7 +1156,6 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     } else if (globals::simulation_continued_from_saved && nts == globals::timestep_initial) {
       // cooling rates were read from the gridsave file for this timestep
       // make sure they are valid
-      printout("cooling rates read from gridsave file for timestep %d cell %d...", nts, mgi);
       assert_always(grid::modelgrid[mgi].totalcooling >= 0.);
       const int element = 0;
       const int ion = 0;
@@ -1174,19 +1165,13 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       /// and ion contributions inside update grid and communicate between MPI tasks
       const time_t sys_time_start_calc_kpkt_rates = time(nullptr);
 
-      printout("calculating cooling_rates for timestep %d cell %d...", nts, mgi);
+      printout("calculate_cooling_rates for timestep %d cell %d...", nts, mgi);
 
       // don't pass pointer to heatingcoolingrates because current populations and rates weren't
       // used to determine T_e
       kpkt::calculate_cooling_rates(mgi, nullptr);
 
       printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc_kpkt_rates);
-    }
-
-    if constexpr (EXPANSIONOPACITIES_ON) {
-      if (grid::modelgrid[mgi].thick != 1) {
-        calculate_binned_opacities(mgi);
-      }
     }
 
     const int update_grid_cell_seconds = time(nullptr) - sys_time_start_update_cell;
@@ -1250,15 +1235,15 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 
   // printout("timestep %d, titer %d\n", nts, titer);
   // printout("deltat %g\n", deltat);
-  use_cellcache = false;
-  cellcache_change_cell(-99);
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
   {
-    /// Do not use values which are saved in the cellcache within update_grid
+    /// Do not use values which are saved in the cellhistory within update_grid
     /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
+    use_cellhist = false;
+    cellhistory_reset(-99, true);
 
 /// Updating cell information
 #ifdef _OPENMP
@@ -1269,15 +1254,15 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       /// Check if this task should work on the current model grid cell.
       /// If yes, update the cell and write out the estimators
       if (mgi >= nstart && mgi < nstart + ndo) {
-        // use_cellcache = false;
-        // cellcache_change_cell(-99, true);
+        // use_cellhist = false;
+        // cellhistory_reset(-99, true);
 
         struct heatingcoolingrates heatingcoolingrates = {};
         update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates);
 
         // maybe want to add omp ordered here if the modelgrid cells should be output in order
-        // use_cellcache = true;
-        // cellcache_change_cell(mgi, true);
+        // use_cellhist = true;
+        // cellhistory_reset(mgi, true);
 #ifdef _OPENMP
 #pragma omp critical(estimators_file)
 #endif
@@ -1294,8 +1279,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     }  /// end parallel for loop over all modelgrid cells
 
     /// Now after all the relevant taks of update_grid have been finished activate
-    /// the use of the cellcache for all OpenMP tasks, in what follows (update_packets)
-    use_cellcache = true;
+    /// the use of the cellhistory for all OpenMP tasks, in what follows (update_packets)
+    use_cellhist = true;
   }  /// end OpenMP parallel section
 
   // alterative way to write out estimators. this keeps the modelgrid cells in order but
@@ -1313,7 +1298,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     }
   }
 
-  globals::max_path_step = std::min(globals::max_path_step, globals::rmax / 10.);
+  globals::max_path_step = fmin(globals::max_path_step, globals::rmax / 10.);
   printout("max_path_step %g\n", globals::max_path_step);
 
   const time_t time_update_grid_end_thisrank = time(nullptr);

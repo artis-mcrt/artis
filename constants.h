@@ -1,8 +1,7 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
-#include <cstddef>
-#include <numbers>
+#include <cmath>
 
 /// fundamental constants
 constexpr double CLIGHT = 2.99792458e+10;  /// Speed of light [cm/s]
@@ -14,10 +13,10 @@ constexpr double LSUN = 3.826e+33;         /// Solar luminosity [erg/s]
 constexpr double MH = 1.67352e-24;         /// Mass of hydrogen atom [g]
 constexpr double ME = 9.1093897e-28;       /// Mass of free electron [g]
 constexpr double QE = 4.80325E-10;         /// elementary charge in cgs units [statcoulomb]
-constexpr double PI = std::numbers::pi;
+constexpr double PI = M_PI;
 constexpr double EV = 1.6021772e-12;         /// eV to ergs [eV/erg]
 constexpr double MEV = 1.6021772e-6;         /// MeV to ergs [MeV/erg]
-constexpr double DAY = 86400.;               /// day to seconds [s/day]
+constexpr double DAY = 86400.0;              /// day to seconds [s/day]
 constexpr double SIGMA_T = 6.6524e-25;       /// Thomson cross-section
 constexpr double THOMSON_LIMIT = 1e-2;       /// Limit below which e-scattering is Thomson
 constexpr double PARSEC = 3.0857e+18;        /// pc to cm [cm/pc]
@@ -60,10 +59,5 @@ enum timestepsizemethods {
   TIMESTEP_SIZES_LOGARITHMIC_THEN_CONSTANT = 2,
   TIMESTEP_SIZES_CONSTANT_THEN_LOGARITHMIC = 3,
 };
-
-constexpr float expopac_lambdamin = 534.5;
-constexpr float expopac_lambdamax = 35000.;
-constexpr float expopac_deltalambda = 35.5;
-constexpr ptrdiff_t expopac_nbins = static_cast<size_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
 
 #endif

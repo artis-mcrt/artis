@@ -1,28 +1,15 @@
 #include "exspec.h"
 
-#include <sys/unistd.h>
 #include <unistd.h>
 
 #include <cstdio>
-#include <cstdlib>
-#include <ctime>
 #include <filesystem>
 #include <memory>
-#include <random>
-#include <vector>
 
-#include "artisoptions.h"
-#include "constants.h"
 #include "decay.h"
-#include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_integration.h"
 #include "input.h"
 #include "light_curve.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
-#include "packet.h"
 #include "sn3d.h"
 #include "spectrum.h"
 #include "version.h"
@@ -30,7 +17,7 @@
 // threadprivate variables
 FILE *output_file = nullptr;
 int tid = 0;
-bool use_cellcache = false;
+bool use_cellhist = false;
 std::mt19937 stdrng(std::random_device{}());
 gsl_integration_workspace *gslworkspace = nullptr;
 

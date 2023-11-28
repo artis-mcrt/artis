@@ -3,18 +3,11 @@
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_roots.h>
 
-#include <algorithm>
 #include <cmath>
-#include <cstdlib>
-#include <vector>
 
-#include "artisoptions.h"
 #include "atomic.h"
-#include "constants.h"
 #include "decay.h"
-#include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_math.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "ratecoeff.h"
@@ -87,7 +80,7 @@ static auto phi_ion_equilib(const int element, const int ion, const int modelgri
                                  grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(24, 48)) == 0. &&
                                  grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(28, 56)) == 0.))) {
     printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n", element, ion);
-    std::abort();
+    abort();
   }
 
   const double Alpha_sp = interpolate_ions_spontrecombcoeff(element, ion, T_e);
@@ -113,7 +106,7 @@ static auto phi_ion_equilib(const int element, const int ion, const int modelgri
              stat_weight(element, ion + 1, 0));
     printout("[fatal] phi: gamma_nt %g Col_rec %g grid::get_nne(modelgridindex) %g\n", gamma_nt, Col_rec,
              grid::get_nne(modelgridindex));
-    std::abort();
+    abort();
   }
 
   return phi;
@@ -274,7 +267,7 @@ static auto calculate_levelpop_nominpop(int modelgridindex, int element, int ion
           printout("element %d ion %d level %d\n", element, ion, level);
           printout("nn %g nltepop_over_rho %g rho %g\n", nn, nltepop_over_rho, grid::get_rho(modelgridindex));
           printout("ground level %g\n", get_groundlevelpop(modelgridindex, element, ion));
-          std::abort();
+          abort();
         }
         *skipminpop = true;
         return nn;
@@ -300,7 +293,7 @@ static auto calculate_levelpop_nominpop(int modelgridindex, int element, int ion
           printout("nn %g superlevelpop_over_rho %g rho %g\n", nn, superlevelpop_over_rho,
                    grid::get_rho(modelgridindex));
           printout("ground level %g\n", get_groundlevelpop(modelgridindex, element, ion));
-          std::abort();
+          abort();
         }
         *skipminpop = true;
         return nn;
@@ -331,9 +324,9 @@ auto get_levelpop(int modelgridindex, int element, int ion, int level) -> double
 /// Calculates the population of a level from either LTE or NLTE information
 {
   double nn = 0.;
-  if (use_cellcache) {
-    assert_testmodeonly(modelgridindex == globals::cellcache[tid].cellnumber);
-    nn = globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].population;
+  if (use_cellhist) {
+    assert_testmodeonly(modelgridindex == globals::cellhistory[tid].cellnumber);
+    nn = globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].population;
   } else {
     nn = calculate_levelpop(modelgridindex, element, ion, level);
   }
@@ -361,7 +354,7 @@ static auto calculate_partfunct(int element, int ion, int modelgridindex) -> dou
     // of groundlevelpop for this calculation doesn't matter, so long as it's not zero!
     pop_store = get_groundlevelpop(modelgridindex, element, ion);
     initial = true;
-    grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = 1.;
+    grid::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = 1.0;
   }
 
   double U = 1.;
@@ -380,7 +373,7 @@ static auto calculate_partfunct(int element, int ion, int modelgridindex) -> dou
     printout("modelgridindex %d\n", modelgridindex);
     printout("nlevels %d\n", nlevels);
     printout("sw %g\n", stat_weight(element, ion, 0));
-    std::abort();
+    abort();
   }
 
   if (initial) {
@@ -419,7 +412,7 @@ auto calculate_sahafact(int element, int ion, int level, int upperionlevel, doub
         "[fatal] calculate_sahafact: Negative Saha factor. sfac %g element %d ion %d level %d upperionlevel %d "
         "g_lower %g g_upper %g T %g E_threshold %g exppart %g\n",
         sf, element, ion, level, upperionlevel, g_lower, g_upper, T, E_threshold, exp(E_threshold / KB / T));
-    std::abort();
+    abort();
   }
   return sf;
 }

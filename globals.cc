@@ -1,19 +1,12 @@
 #include "globals.h"
 
-#include <atomic>
-#include <ctime>
-#include <memory>
-#include <vector>
-
-#include "artisoptions.h"
-
 #ifdef MPI_ON
 #include <mpi.h>
 #endif
 
 namespace globals {
 
-std::array<double, 3> syn_dir{};  // vector pointing from origin to observer
+double syn_dir[3];  // vector pointing from origin to observer
 
 std::unique_ptr<struct time[]> timesteps = nullptr;
 
@@ -82,7 +75,7 @@ int nbfcontinua_ground = -1;  /// number of bf-continua
 int NPHIXSPOINTS = -1;
 double NPHIXSNUINCREMENT = -1;
 
-struct cellcache *cellcache = nullptr;
+struct cellhistory *cellhistory = nullptr;
 
 #ifdef MPI_ON
 MPI_Comm mpi_comm_node = MPI_COMM_NULL;

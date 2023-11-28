@@ -5,7 +5,7 @@
 
 namespace stats {
 // number of ion stats counters that should be divided by the ion populations
-constexpr int nstatcounters_ratecoeff = 18;
+#define nstatcounters_ratecoeff 18
 
 // one counter per ion per cell
 enum ionstattypes {
@@ -89,7 +89,7 @@ void increment_ion_stats(int modelgridindex, int element, int ion, enum ionstatt
 
 void increment_ion_stats_contabsorption(const struct packet *pkt_ptr, int modelgridindex, int element, int ion);
 
-[[nodiscard]] auto get_ion_stats(int modelgridindex, int element, int ion, enum ionstattypes ionstattype) -> double;
+auto get_ion_stats(int modelgridindex, int element, int ion, enum ionstattypes ionstattype) -> double;
 
 void set_ion_stats(int modelgridindex, int element, int ion, enum ionstattypes ionstattype, double newvalue);
 
@@ -101,7 +101,7 @@ void increment(enum eventcounters);
 
 void pkt_action_counters_reset();
 
-[[nodiscard]] auto get_counter(enum eventcounters i) -> int;
+auto get_counter(enum eventcounters i) -> int;
 
 void pkt_action_counters_printout(const struct packet *pkt, int nts);
 
