@@ -43,6 +43,7 @@
 #include "packet.h"
 #include "radfield.h"
 #include "ratecoeff.h"
+#include "rpkt.h"
 #include "spectrum.h"
 #include "stats.h"
 #include "update_grid.h"
@@ -61,7 +62,7 @@ static time_t real_time_start = -1;
 static time_t time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
 static FILE *estimators_file = nullptr;
 
-int mpi_grid_buffer_size = 0;
+size_t mpi_grid_buffer_size = 0;
 char *mpi_grid_buffer = nullptr;
 
 static void initialise_linestat_file() {
@@ -208,7 +209,7 @@ static void write_deposition_file(const int nts, const int my_rank, const int ns
 
 #ifdef MPI_ON
 static void mpi_communicate_grid_properties(const int my_rank, const int nprocs, const int nstart, const int ndo,
-                                            char *mpi_grid_buffer, const int mpi_grid_buffer_size) {
+                                            char *mpi_grid_buffer, const size_t mpi_grid_buffer_size) {
   int position = 0;
   for (int root = 0; root < nprocs; root++) {
     MPI_Barrier(MPI_COMM_WORLD);
@@ -220,23 +221,35 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
     MPI_Bcast(&root_node_id, 1, MPI_INT, root, MPI_COMM_WORLD);
 
     for (int modelgridindex = root_nstart; modelgridindex < (root_nstart + root_ndo); modelgridindex++) {
+      if (grid::get_numassociatedcells(modelgridindex) < 1) {
+        continue;
+      }
+
       radfield::do_MPI_Bcast(modelgridindex, root, root_node_id);
 
-      if (grid::get_numassociatedcells(modelgridindex) > 0) {
-        nonthermal::nt_MPI_Bcast(modelgridindex, root);
-        if (globals::total_nlte_levels > 0 && globals::rank_in_node == 0) {
-          MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, root_node_id,
-                    globals::mpi_comm_internode);
+      nonthermal::nt_MPI_Bcast(modelgridindex, root);
+      if (globals::total_nlte_levels > 0 && globals::rank_in_node == 0) {
+        MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, root_node_id,
+                  globals::mpi_comm_internode);
+      }
+
+      if constexpr (USE_LUT_PHOTOION) {
+        const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+        assert_always(globals::corrphotoionrenorm != nullptr);
+        if (globals::rank_in_node == 0) {
+          MPI_Bcast(&globals::corrphotoionrenorm[nonemptymgi * get_includedions()], get_includedions(), MPI_DOUBLE,
+                    root_node_id, globals::mpi_comm_internode);
         }
 
-        if constexpr (USE_LUT_PHOTOION) {
-          assert_always(globals::corrphotoionrenorm != nullptr);
-          MPI_Bcast(&globals::corrphotoionrenorm[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE,
-                    root, MPI_COMM_WORLD);
-          assert_always(globals::gammaestimator != nullptr);
-          MPI_Bcast(&globals::gammaestimator[modelgridindex * get_includedions()], get_includedions(), MPI_DOUBLE, root,
-                    MPI_COMM_WORLD);
-        }
+        assert_always(globals::gammaestimator != nullptr);
+        MPI_Bcast(&globals::gammaestimator[nonemptymgi * get_includedions()], get_includedions(), MPI_DOUBLE, root,
+                  MPI_COMM_WORLD);
+      }
+
+      assert_always(grid::modelgrid[modelgridindex].elem_meanweight != nullptr);
+      if (globals::rank_in_node == 0) {
+        MPI_Bcast(grid::modelgrid[modelgridindex].elem_meanweight, get_nelements(), MPI_FLOAT, root_node_id,
+                  globals::mpi_comm_internode);
       }
     }
 
@@ -269,18 +282,20 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
                    MPI_COMM_WORLD);
 
           for (int element = 0; element < get_nelements(); element++) {
-            MPI_Pack(grid::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT,
-                     mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-            MPI_Pack(grid::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT,
-                     mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-            MPI_Pack(grid::modelgrid[mgi].cooling_contrib_ion[element], get_nions(element), MPI_DOUBLE, mpi_grid_buffer,
-                     mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+            if (get_nions(element) > 0) {
+              MPI_Pack(grid::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT,
+                       mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+              MPI_Pack(grid::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT,
+                       mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+              MPI_Pack(grid::modelgrid[mgi].cooling_contrib_ion[element], get_nions(element), MPI_DOUBLE,
+                       mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+            }
           }
         }
       }
       printout("[info] mem_usage: MPI_BUFFER: used %d of %d bytes allocated to mpi_grid_buffer\n", position,
                mpi_grid_buffer_size);
-      assert_always(position <= mpi_grid_buffer_size);
+      assert_always(static_cast<size_t>(position) <= mpi_grid_buffer_size);
     }
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
@@ -316,14 +331,17 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
                    MPI_COMM_WORLD);
 
         for (int element = 0; element < get_nelements(); element++) {
-          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                     grid::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT,
-                     MPI_COMM_WORLD);
-          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                     grid::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT,
-                     MPI_COMM_WORLD);
-          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
-                     grid::modelgrid[mgi].cooling_contrib_ion[element], get_nions(element), MPI_DOUBLE, MPI_COMM_WORLD);
+          if (get_nions(element) > 0) {
+            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                       grid::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT,
+                       MPI_COMM_WORLD);
+            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                       grid::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT,
+                       MPI_COMM_WORLD);
+            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position,
+                       grid::modelgrid[mgi].cooling_contrib_ion[element], get_nions(element), MPI_DOUBLE,
+                       MPI_COMM_WORLD);
+          }
         }
       }
     }
@@ -339,14 +357,17 @@ static void mpi_reduce_estimators(int nts) {
                 MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
 
-  const int arraylen = grid::get_npts_model() * get_includedions();
+  const int arraylen = grid::get_nonempty_npts_model() * get_includedions();
+
   if constexpr (USE_LUT_PHOTOION) {
     MPI_Barrier(MPI_COMM_WORLD);
     assert_always(globals::gammaestimator != nullptr);
     MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
+
   if constexpr (USE_LUT_BFHEATING) {
     MPI_Barrier(MPI_COMM_WORLD);
+    assert_always(globals::bfheatingestimator != nullptr);
     MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
 
@@ -537,6 +558,9 @@ static void save_grid_and_packets(const int nts, const int my_rank, struct packe
 }
 
 static void zero_estimators() {
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     radfield::zero_estimators(modelgridindex);
@@ -549,7 +573,7 @@ static void zero_estimators() {
     }
 
     for (int element = 0; element < get_nelements(); element++) {
-      for (int ion = 0; ion < get_nions(element); ion++) {
+      for (int ion = 0; ion < (get_nions(element) - 1); ion++) {
         if constexpr (USE_LUT_PHOTOION) {
           globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
         }
@@ -561,6 +585,9 @@ static void zero_estimators() {
 
     globals::rpkt_emiss[modelgridindex] = 0.;
   }
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 }
 
 static auto do_timestep(const int nts, const int titer, const int my_rank, const int nstart, const int ndo,
@@ -616,7 +643,9 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
   // and also the photoion and stimrecomb estimators
   zero_estimators();
 
-  // MPI_Barrier(MPI_COMM_WORLD);
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
   if ((nts < globals::timestep_finish) && do_this_full_loop) {
     /// Now process the packets.
 
@@ -749,9 +778,9 @@ auto main(int argc, char *argv[]) -> int {
     globals::startofline[tid] = true;
 
 #ifdef _OPENMP
-    printout("OpenMP parallelisation active with %d threads (max %d)\n", get_num_threads(), get_max_threads());
+    printout("OpenMP parallelisation is active with %d threads (max %d)\n", get_num_threads(), get_max_threads());
 #else
-    printout("OpenMP is not enabled in this build (this is normal)\n");
+    printout("OpenMP parallelisation is not enabled in this build (this is normal)\n");
 #endif
 
     gslworkspace = gsl_integration_workspace_alloc(GSLWSIZE);
@@ -890,7 +919,7 @@ auto main(int argc, char *argv[]) -> int {
 
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
-  const int maxndo = grid::get_maxndo();
+  const size_t maxndo = grid::get_maxndo();
   /// Initialise the exchange buffer
   /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
   /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype

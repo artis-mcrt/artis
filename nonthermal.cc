@@ -2048,8 +2048,8 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
     const auto T_e = grid::get_Te(modelgridindex);
     printout("  Top non-thermal excitation fractions (total excitations = %d):\n",
              nt_solution[modelgridindex].frac_excitations_list.size());
-    auto ntransdisplayed = static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size());
-    ntransdisplayed = (ntransdisplayed > 50) ? 50 : ntransdisplayed;
+    int ntransdisplayed = std::min(50, static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size()));
+
     for (excitationindex = 0; excitationindex < ntransdisplayed; excitationindex++) {
       const double frac_deposition = nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition;
       if (frac_deposition > 0.) {
@@ -2561,42 +2561,41 @@ void write_restart_data(FILE *gridsave_file) {
   fprintf(gridsave_file, "%d\n", 24724518);  // special number marking the beginning of NT data
   fprintf(gridsave_file, "%d %la %la\n", SFPTS, SF_EMIN, SF_EMAX);
 
-  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-    if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      fprintf(gridsave_file, "%d %d %la ", modelgridindex, deposition_rate_density_timestep[modelgridindex],
-              deposition_rate_density[modelgridindex]);
+  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+    fprintf(gridsave_file, "%d %d %la ", modelgridindex, deposition_rate_density_timestep[modelgridindex],
+            deposition_rate_density[modelgridindex]);
 
-      if (NT_ON && NT_SOLVE_SPENCERFANO) {
-        check_auger_probabilities(modelgridindex);
+    if (NT_ON && NT_SOLVE_SPENCERFANO) {
+      check_auger_probabilities(modelgridindex);
 
-        fprintf(gridsave_file, "%a %a %a %a\n", nt_solution[modelgridindex].nneperion_when_solved,
-                nt_solution[modelgridindex].frac_heating, nt_solution[modelgridindex].frac_ionization,
-                nt_solution[modelgridindex].frac_excitation);
+      fprintf(gridsave_file, "%a %a %a %a\n", nt_solution[modelgridindex].nneperion_when_solved,
+              nt_solution[modelgridindex].frac_heating, nt_solution[modelgridindex].frac_ionization,
+              nt_solution[modelgridindex].frac_excitation);
 
-        for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
-          fprintf(gridsave_file, "%la ", nt_solution[modelgridindex].fracdep_ionization_ion[uniqueionindex]);
-          fprintf(gridsave_file, "%a ", nt_solution[modelgridindex].eff_ionpot[uniqueionindex]);
+      for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
+        fprintf(gridsave_file, "%la ", nt_solution[modelgridindex].fracdep_ionization_ion[uniqueionindex]);
+        fprintf(gridsave_file, "%a ", nt_solution[modelgridindex].eff_ionpot[uniqueionindex]);
 
-          for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-            fprintf(gridsave_file, "%a %a ",
-                    nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a],
-                    nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a]);
-          }
+        for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
+          fprintf(gridsave_file, "%a %a ",
+                  nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a],
+                  nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a]);
         }
+      }
 
-        // write NT excitations
-        fprintf(gridsave_file, "%d\n", static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size()));
+      // write NT excitations
+      fprintf(gridsave_file, "%d\n", static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size()));
 
-        for (const auto &excitation : nt_solution[modelgridindex].frac_excitations_list) {
-          fprintf(gridsave_file, "%la %la %d\n", excitation.frac_deposition, excitation.ratecoeffperdeposition,
-                  excitation.lineindex);
-        }
+      for (const auto &excitation : nt_solution[modelgridindex].frac_excitations_list) {
+        fprintf(gridsave_file, "%la %la %d\n", excitation.frac_deposition, excitation.ratecoeffperdeposition,
+                excitation.lineindex);
+      }
 
-        // write non-thermal spectrum
-        if (STORE_NT_SPECTRUM) {
-          for (int s = 0; s < SFPTS; s++) {
-            fprintf(gridsave_file, "%la\n", nt_solution[modelgridindex].yfunc[s]);
-          }
+      // write non-thermal spectrum
+      if (STORE_NT_SPECTRUM) {
+        for (int s = 0; s < SFPTS; s++) {
+          fprintf(gridsave_file, "%la\n", nt_solution[modelgridindex].yfunc[s]);
         }
       }
     }
@@ -2625,60 +2624,58 @@ void read_restart_data(FILE *gridsave_file) {
     std::abort();
   }
 
-  for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
-    if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      int mgi_in = 0;
-      assert_always(fscanf(gridsave_file, "%d %d %la ", &mgi_in, &deposition_rate_density_timestep[modelgridindex],
-                           &deposition_rate_density[modelgridindex]) == 3);
+  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
-      if (NT_ON && NT_SOLVE_SPENCERFANO) {
-        assert_always(fscanf(gridsave_file, "%a %a %a %a\n", &nt_solution[modelgridindex].nneperion_when_solved,
-                             &nt_solution[modelgridindex].frac_heating, &nt_solution[modelgridindex].frac_ionization,
-                             &nt_solution[modelgridindex].frac_excitation) == 4);
+    int mgi_in = 0;
+    assert_always(fscanf(gridsave_file, "%d %d %la ", &mgi_in, &deposition_rate_density_timestep[modelgridindex],
+                         &deposition_rate_density[modelgridindex]) == 3);
 
-        if (mgi_in != modelgridindex) {
-          printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
-          std::abort();
-        }
+    if (NT_ON && NT_SOLVE_SPENCERFANO) {
+      assert_always(fscanf(gridsave_file, "%a %a %a %a\n", &nt_solution[modelgridindex].nneperion_when_solved,
+                           &nt_solution[modelgridindex].frac_heating, &nt_solution[modelgridindex].frac_ionization,
+                           &nt_solution[modelgridindex].frac_excitation) == 4);
 
-        for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
+      if (mgi_in != modelgridindex) {
+        printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
+        abort();
+      }
+
+      for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
+        assert_always(
+            fscanf(gridsave_file, "%la ", &nt_solution[modelgridindex].fracdep_ionization_ion[uniqueionindex]) == 1);
+        assert_always(fscanf(gridsave_file, "%a ", &nt_solution[modelgridindex].eff_ionpot[uniqueionindex]) == 1);
+
+        for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
           assert_always(
-              fscanf(gridsave_file, "%la ", &nt_solution[modelgridindex].fracdep_ionization_ion[uniqueionindex]) == 1);
-          assert_always(fscanf(gridsave_file, "%a ", &nt_solution[modelgridindex].eff_ionpot[uniqueionindex]) == 1);
-
-          for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-            assert_always(
-                fscanf(gridsave_file, "%a %a ",
-                       &nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a],
-                       &nt_solution[modelgridindex]
-                            .ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a]) == 2);
-          }
+              fscanf(gridsave_file, "%a %a ",
+                     &nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a],
+                     &nt_solution[modelgridindex]
+                          .ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a]) == 2);
         }
+      }
 
-        check_auger_probabilities(modelgridindex);
+      check_auger_probabilities(modelgridindex);
 
-        // read NT excitations
-        int frac_excitations_list_size_in = 0;
-        assert_always(fscanf(gridsave_file, "%d\n", &frac_excitations_list_size_in) == 1);
+      // read NT excitations
+      int frac_excitations_list_size_in = 0;
+      assert_always(fscanf(gridsave_file, "%d\n", &frac_excitations_list_size_in) == 1);
 
-        if (static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size()) !=
-            frac_excitations_list_size_in) {
-          nt_solution[modelgridindex].frac_excitations_list.resize(frac_excitations_list_size_in);
-        }
+      if (static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size()) != frac_excitations_list_size_in) {
+        nt_solution[modelgridindex].frac_excitations_list.resize(frac_excitations_list_size_in);
+      }
 
-        for (int excitationindex = 0; excitationindex < frac_excitations_list_size_in; excitationindex++) {
-          assert_always(
-              fscanf(gridsave_file, "%la %la %d\n",
-                     &nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition,
-                     &nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition,
-                     &nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex) == 3);
-        }
+      for (int excitationindex = 0; excitationindex < frac_excitations_list_size_in; excitationindex++) {
+        assert_always(fscanf(gridsave_file, "%la %la %d\n",
+                             &nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition,
+                             &nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition,
+                             &nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex) == 3);
+      }
 
-        // read non-thermal spectrum
-        if (STORE_NT_SPECTRUM) {
-          for (int s = 0; s < SFPTS; s++) {
-            assert_always(fscanf(gridsave_file, "%la\n", &nt_solution[modelgridindex].yfunc[s]) == 1);
-          }
+      // read non-thermal spectrum
+      if (STORE_NT_SPECTRUM) {
+        for (int s = 0; s < SFPTS; s++) {
+          assert_always(fscanf(gridsave_file, "%la\n", &nt_solution[modelgridindex].yfunc[s]) == 1);
         }
       }
     }
@@ -2716,17 +2713,16 @@ void nt_MPI_Bcast(const int modelgridindex, const int root) {
               MPI_FLOAT, root, MPI_COMM_WORLD);
 
     // communicate NT excitations
-    const int frac_excitations_list_size_old =
-        static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size());
-    int frac_excitations_list_size_new = frac_excitations_list_size_old;
+    const auto frac_excitations_list_size_old = nt_solution[modelgridindex].frac_excitations_list.size();
+    auto frac_excitations_list_size_new = nt_solution[modelgridindex].frac_excitations_list.size();
     MPI_Bcast(&frac_excitations_list_size_new, 1, MPI_INT, root, MPI_COMM_WORLD);
 
     if (frac_excitations_list_size_new != frac_excitations_list_size_old) {
       nt_solution[modelgridindex].frac_excitations_list.resize(frac_excitations_list_size_new);
     }
 
-    const int frac_excitations_list_size = static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size());
-    for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
+    const auto frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list.size();
+    for (size_t excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++) {
       MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE,
                 root, MPI_COMM_WORLD);
       MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1,

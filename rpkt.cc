@@ -523,7 +523,7 @@ static void rpkt_event_thickcell(struct packet *pkt_ptr)
 }
 
 static void update_estimators(const double e_cmf, const double nu_cmf, const double distance,
-                              const double doppler_nucmf_on_nurf, const int modelgridindex)
+                              const double doppler_nucmf_on_nurf, const int modelgridindex, const int nonemptymgi)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.
@@ -534,7 +534,7 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   }
   const double distance_e_cmf = distance * e_cmf;
 
-  radfield::update_estimators(modelgridindex, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf);
+  radfield::update_estimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf);
 
   /// ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
   safeadd(globals::ffheatingestimator[modelgridindex], distance_e_cmf * globals::chi_rpkt_cont[tid].ffheating);
@@ -542,35 +542,33 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
       const double nu_edge = globals::groundcont[i].nu_edge;
-      if (nu_cmf < nu_edge) {
-        // because groundcont is sorted by nu_edge descending, nu < nu_edge for all remaining items
-        return;
-      }
-      const int element = globals::groundcont[i].element;
-      /// Cells with zero abundance for a specific element have zero contribution
-      /// (set in calculate_chi_rpkt_cont and therefore do not contribute to
-      /// the estimators
-      if (grid::get_elem_abundance(modelgridindex, element) > 0) {
-        const int ion = globals::groundcont[i].ion;
-        const int ionestimindex = get_ionestimindex(modelgridindex, element, ion);
+      if (nu_cmf > nu_edge) {
+        const int element = globals::groundcont[i].element;
+        /// Cells with zero abundance for a specific element have zero contribution
+        /// (set in calculate_chi_rpkt_cont and therefore do not contribute to
+        /// the estimators
+        if (grid::get_elem_abundance(modelgridindex, element) > 0) {
+          const int ion = globals::groundcont[i].ion;
+          const int ionestimindex = get_ionestimindex_nonemptymgi(nonemptymgi, element, ion);
 
-        if constexpr (USE_LUT_PHOTOION) {
-          safeadd(globals::gammaestimator[ionestimindex],
-                  globals::phixslist[tid].groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
+          if constexpr (USE_LUT_PHOTOION) {
+            safeadd(globals::gammaestimator[ionestimindex],
+                    globals::phixslist[tid].groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
 
-          if (!std::isfinite(globals::gammaestimator[ionestimindex])) {
-            printout(
-                "[fatal] update_estimators: gamma estimator becomes non finite: mgi %d element %d ion %d gamma_contr "
-                "%g, distance_e_cmf_over_nu %g\n",
-                modelgridindex, element, ion, globals::phixslist[tid].groundcont_gamma_contr[i],
-                distance_e_cmf / nu_cmf);
-            std::abort();
+            if (!std::isfinite(globals::gammaestimator[ionestimindex])) {
+              printout(
+                  "[fatal] update_estimators: gamma estimator becomes non finite: mgi %d element %d ion %d gamma_contr "
+                  "%g, distance_e_cmf_over_nu %g\n",
+                  modelgridindex, element, ion, globals::phixslist[tid].groundcont_gamma_contr[i],
+                  distance_e_cmf / nu_cmf);
+              std::abort();
+            }
           }
-        }
 
-        if constexpr (USE_LUT_BFHEATING) {
-          safeadd(globals::bfheatingestimator[ionestimindex],
-                  globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
+          if constexpr (USE_LUT_BFHEATING) {
+            safeadd(globals::bfheatingestimator[ionestimindex],
+                    globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
+          }
         }
       }
     }
@@ -582,7 +580,8 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 // return value - true if no mgi change, no pkttype change and not reached end of timestep, false otherwise
 {
   const int cellindex = pkt_ptr->where;
-  int mgi = grid::get_cell_modelgridindex(cellindex);
+  const int mgi = grid::get_cell_modelgridindex(cellindex);
+  const int nonemptymgi = (mgi != grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
   const int oldmgi = mgi;
 
   // if (pkt_ptr->next_trans > 0) {
@@ -606,9 +605,9 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   if (sdist == 0) {
     grid::change_cell(pkt_ptr, snext);
     const int cellindexnew = pkt_ptr->where;
-    mgi = grid::get_cell_modelgridindex(cellindexnew);
+    const int newmgi = grid::get_cell_modelgridindex(cellindexnew);
 
-    return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
+    return (pkt_ptr->type == TYPE_RPKT && (newmgi == grid::get_npts_model() || newmgi == oldmgi));
   }
   const double maxsdist = (GRID_TYPE == GRID_CARTESIAN3D)
                               ? globals::rmax * pkt_ptr->prop_time / globals::tmin
@@ -677,24 +676,25 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   if ((sdist < tdist) && (sdist < edist)) {
     // Move it into the new cell.
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, sdist / 2.);
-    update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, sdist, doppler_nucmf_on_nurf, mgi);
+    update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, sdist, doppler_nucmf_on_nurf, mgi, nonemptymgi);
     move_pkt_withtime(pkt_ptr, sdist / 2.);
 
+    int newmgi = mgi;
     if (snext != pkt_ptr->where) {
       grid::change_cell(pkt_ptr, snext);
       const int cellindexnew = pkt_ptr->where;
-      mgi = grid::get_cell_modelgridindex(cellindexnew);
+      newmgi = grid::get_cell_modelgridindex(cellindexnew);
     }
 
     pkt_ptr->last_event = pkt_ptr->last_event + 100;
 
-    return (pkt_ptr->type == TYPE_RPKT && (mgi == grid::get_npts_model() || mgi == oldmgi));
+    return (pkt_ptr->type == TYPE_RPKT && (newmgi == grid::get_npts_model() || newmgi == oldmgi));
   }
 
   if ((edist < sdist) && (edist < tdist)) {
     // bound-bound or continuum event
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, edist / 2.);
-    update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, edist, doppler_nucmf_on_nurf, mgi);
+    update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, edist, doppler_nucmf_on_nurf, mgi, nonemptymgi);
     move_pkt_withtime(pkt_ptr, edist / 2.);
 
     // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
@@ -712,7 +712,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   if ((tdist < sdist) && (tdist < edist)) {
     // reaches end of timestep before cell boundary or interaction
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, tdist / 2.);
-    update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, tdist, doppler_nucmf_on_nurf, mgi);
+    update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, tdist, doppler_nucmf_on_nurf, mgi, nonemptymgi);
     move_pkt_withtime(pkt_ptr, tdist / 2.);
     pkt_ptr->prop_time = t2;
     pkt_ptr->last_event = pkt_ptr->last_event + 1000;

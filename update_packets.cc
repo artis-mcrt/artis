@@ -303,7 +303,7 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
     auto *packetgroupstart = packets.data();
 
 #ifdef _OPENMP
-#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(nonmonotonic : dynamic)
 #endif
     for (auto &pkt : packets) {
       if ((pkt.type != TYPE_ESCAPE && pkt.prop_time < ts_end)) {

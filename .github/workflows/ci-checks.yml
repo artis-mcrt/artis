@@ -19,7 +19,7 @@ jobs:
             - name: install dependencies
               run: |
                   brew update
-                  brew install gsl openmpi cppcheck
+                  brew install gsl openmpi cppcheck || true
                   cp artisoptions_nltenebular.h artisoptions.h
 
             - name: run cppcheck and check for errors
@@ -55,7 +55,7 @@ jobs:
             - name: install dependencies
               run: |
                   brew update
-                  brew install openmpi gsl
+                  brew install openmpi gsl || true
                   brew link openmpi
 
             - name: install llvm
@@ -117,12 +117,6 @@ jobs:
                 mpi: [ON, OFF]
                 openmp: [ON, OFF]
                 exclude:
-                    - compiler: {name: gcc, ver: 11}
-                      openmp: ON
-                    - compiler: {name: gcc, ver: 12}
-                      openmp: ON
-                    - compiler: {name: gcc, ver: 13}
-                      openmp: ON
                     - compiler: {name: clang, ver: 15}
                       openmp: ON
             fail-fast: false

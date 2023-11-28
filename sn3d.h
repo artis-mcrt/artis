@@ -71,6 +71,9 @@ extern gsl_integration_workspace *gslworkspace;
   }
 #endif
 
+#include "artisoptions.h"
+#include "globals.h"
+
 // #define printout(...) fprintf(output_file, __VA_ARGS__)
 
 template <typename... Args>
@@ -78,7 +81,8 @@ static auto printout(const char *format, Args... args) -> int {
   if (globals::startofline[tid]) {
     const time_t now_time = time(nullptr);
     char s[32] = "";
-    strftime(s, 32, "%FT%TZ", gmtime(&now_time));  // NOLINT[concurrency-mt-unsafe]
+    struct tm buf {};
+    strftime(s, 32, "%FT%TZ", gmtime_r(&now_time, &buf));
     fprintf(output_file, "%s ", s);
   }
   globals::startofline[tid] = (format[strlen(format) - 1] == '\n');
@@ -89,7 +93,8 @@ static auto printout(const char *format) -> int {
   if (globals::startofline[tid]) {
     const time_t now_time = time(nullptr);
     char s[32] = "";
-    strftime(s, 32, "%FT%TZ", gmtime(&now_time));  // NOLINT[concurrency-mt-unsafe]
+    struct tm buf {};
+    strftime(s, 32, "%FT%TZ", gmtime_r(&now_time, &buf));
     fprintf(output_file, "%s ", s);
   }
   globals::startofline[tid] = (format[strlen(format) - 1] == '\n');
@@ -105,13 +110,27 @@ static auto printout(const char *format) -> int {
   return bflutindex;
 }
 
+template <typename T>
+inline void safeadd(T &var, T val) {
 #ifdef _OPENMP
-#define safeadd(var, val) _Pragma("omp atomic update") var += val
+#pragma omp atomic update
+  var += val;
 #else
-#define safeadd(var, val) var = (var) + val
+#ifdef STDPAR_ON
+#ifdef __cpp_lib_atomic_ref
+  static_assert(std::atomic<T>::is_always_lock_free);
+  std::atomic_ref<T>(var).fetch_add(val, std::memory_order_relaxed);
+#else
+  // this works on clang but not gcc for doubles.
+  __atomic_fetch_add(&var, val, __ATOMIC_RELAXED);
 #endif
+#else
+  var += val;
+#endif
+#endif
+}
 
-#define safeincrement(var) safeadd(var, 1)
+#define safeincrement(var) safeadd((var), 1)
 
 // #define DO_TITER
 
@@ -240,10 +259,6 @@ inline void check_already_running() {
   auto pidfile = std::fstream("artis.pid", std::ofstream::out | std::ofstream::trunc);
   pidfile << artispid;
   pidfile.close();
-}
-
-[[nodiscard]] inline auto get_ionestimindex(const int mgi, const int element, const int ion) -> int {
-  return mgi * get_includedions() + get_uniqueionindex(element, ion);
 }
 
 #endif  // SN3D_H

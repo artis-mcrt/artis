@@ -17,5 +17,5 @@ c4e4e8d00846618f3931dc01cf52615f  modelgridrankassignments.out
 35ce3462e5b9493bde385b8bad9ea954  vpkt_grid_1-0.out
 2ed5cc4ea567b624eb8a4cb9137a2e01  vspecpol_0-0.out
 01fd53e3ca382c4e2b0f5b588edbd9e5  vspecpol_1-0.out
-2c67a882e73f240ecfeffa05f04d8c5f  job0/estimators_0000.out
-33ea538a70082b2a2ae43ae71569fc3e  job0/estimators_0001.out
+3779b9203782f26c2568c7e9caaa17c1  job0/estimators_0000.out
+bee1cab6351770f62701c9fe3f9b7c33  job0/estimators_0001.out
