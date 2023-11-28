@@ -323,7 +323,7 @@ void init(int my_rank, int ndo_nonempty)
       if (globals::rank_in_node == 0) {
         my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
       }
-      MPI_Aint size = my_rank_cells * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution);
+      auto size = static_cast<MPI_Aint>(my_rank_cells * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution));
       int disp_unit = sizeof(struct radfieldbin_solution);
       MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &radfieldbin_solutions,
                               &win_radfieldbin_solutions);
@@ -354,7 +354,7 @@ void init(int my_rank, int ndo_nonempty)
       if (globals::rank_in_node == 0) {
         my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
       }
-      MPI_Aint size = my_rank_cells * globals::nbfcontinua * sizeof(float);
+      auto size = static_cast<MPI_Aint>(my_rank_cells * globals::nbfcontinua * sizeof(float));
       int disp_unit = sizeof(float);
       MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &prev_bfrate_normed,
                               &win_prev_bfrate_normed);
@@ -718,10 +718,8 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
   }
 }
 
-void update_estimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
+void update_estimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
                        const struct packet *const pkt_ptr) {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-
   safeadd(J[nonemptymgi], distance_e_cmf);
   safeadd(nuJ[nonemptymgi], distance_e_cmf * nu_cmf);
 

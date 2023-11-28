@@ -274,7 +274,7 @@ void update_packets(const int my_rank, const int nts, struct packet *packets)
     const int updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
 
 #ifdef _OPENMP
-#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(nonmonotonic : dynamic)
 #endif
     for (int n = 0; n < globals::npkts; n++) {
       struct packet *pkt_ptr = &packets[n];
