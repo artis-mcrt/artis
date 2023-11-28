@@ -314,19 +314,14 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
       if ((pkt.type != TYPE_ESCAPE && pkt.prop_time < ts_end)) {
         const int mgi = grid::get_cell_modelgridindex(pkt.where);
         const bool cellcache_change_cell_required =
-            (mgi != grid::get_npts_model() && globals::cellcache[tid].cellnumber != mgi &&
+            (mgi != grid::get_npts_model() && globals::cellcache[slotid].cellnumber != mgi &&
              grid::modelgrid[mgi].thick != 1);
 
         if (cellcache_change_cell_required) {
           do_cell_packet_updates(std::span{packetgroupstart, &pkt}, nts, ts_end);
 
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-          {
-            stats::increment(stats::COUNTER_UPDATECELL);
-            cellcache_change_cell(mgi);
-          }
+          stats::increment(stats::COUNTER_UPDATECELL);
+          cellcache_change_cell(mgi);
           packetgroupstart = &pkt;
         }
       }
