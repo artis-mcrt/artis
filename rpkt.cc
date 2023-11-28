@@ -808,7 +808,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
 
     edist = tau_next / chi_grey;
     pkt_ptr->next_trans = -1;
-  } else if (EXPANSIONOPACITIES_ON) {
+  } else if constexpr (EXPANSIONOPACITIES_ON) {
     std::tie(edist, event_is_boundbound) =
         get_event_expansion_opacity(mgi, nonemptymgi, pkt_ptr, chi_rpkt_cont, tau_next, abort_dist);
     pkt_ptr->next_trans = -1;
@@ -989,7 +989,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
     if ((DETAILED_BF_ESTIMATORS_ON && grid::get_elem_abundance(modelgridindex, element) > 0) ||
         (!DETAILED_BF_ESTIMATORS_ON && ((get_nnion(modelgridindex, element, ion) / nnetot > 1.e-6) || (level == 0)))) {
       const double nu_edge = globals::allcont[i].nu_edge;
-      if (nu < nu_edge) {
+      if (nu < nu_edge) [[unlikely]] {
         break;
       }
       const double nnlevel = usecellhistupdatephixslist ? get_levelpop(modelgridindex, element, ion, level)
