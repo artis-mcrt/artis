@@ -35,13 +35,13 @@ void allocate_expansionopacities() {
   if constexpr (!EXPANSIONOPACITIES_ON) {
     return;
   }
-  const auto nonempty_npts_model = grid::get_nonempty_npts_model();
 
+  const auto npts_nonempty = grid::get_nonempty_npts_model();
 #ifdef MPI_ON
-  int my_rank_nonemptycells = nonempty_npts_model / globals::node_nprocs;
+  int my_rank_nonemptycells = npts_nonempty / globals::node_nprocs;
   // rank_in_node 0 gets any remainder
   if (globals::rank_in_node == 0) {
-    my_rank_nonemptycells += nonempty_npts_model - (my_rank_nonemptycells * globals::node_nprocs);
+    my_rank_nonemptycells += npts_nonempty - (my_rank_nonemptycells * globals::node_nprocs);
   }
   MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(float));
   int disp_unit = sizeof(float);
