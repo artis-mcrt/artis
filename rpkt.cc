@@ -722,7 +722,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
 {
   const int cellindex = pkt_ptr->where;
   const int mgi = grid::get_cell_modelgridindex(cellindex);
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+  const int nonemptymgi = (mgi != grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
 
   const int oldmgi = mgi;
 
