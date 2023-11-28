@@ -41,7 +41,7 @@ static struct cellcachecoolinglist *coolinglist;
 
 template <bool update_cooling_contrib_list>
 static auto calculate_cooling_rates_ion(const int modelgridindex, const int element, const int ion,
-                                        const int indexionstart, const int slotid, double *C_ff, double *C_fb,
+                                        const int indexionstart, const int tid, double *C_ff, double *C_fb,
                                         double *C_exc, double *C_ionization) -> double
 // calculate the cooling contribution list of individual levels/processes for an ion
 // oldcoolingsum is the sum of lower ion (of same element or all ions of lower elements) cooling contributions
@@ -65,13 +65,13 @@ static auto calculate_cooling_rates_ion(const int modelgridindex, const int elem
     C_ion += C_ff_ion;
 
     if constexpr (update_cooling_contrib_list) {
-      globals::cellcache[slotid].cooling_contrib[i] = C_ion;
+      globals::cellcache[tid].cooling_contrib[i] = C_ion;
 
       assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_FF);
 
       // if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d,
       // coolingtype %d, i %d, low
-      // %d\n",contrib,oldcoolingsum,C,element,ion,-99,globals::cellcache[slotid].coolinglist[i].type,i,low);
+      // %d\n",contrib,oldcoolingsum,C,element,ion,-99,globals::cellcache[tid].coolinglist[i].type,i,low);
       i++;
     } else {
       *C_ff += C_ff_ion;
@@ -100,7 +100,7 @@ static auto calculate_cooling_rates_ion(const int modelgridindex, const int elem
         }
       }
       if constexpr (update_cooling_contrib_list) {
-        globals::cellcache[slotid].cooling_contrib[i] = C_ion;
+        globals::cellcache[tid].cooling_contrib[i] = C_ion;
 
         assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_COLLEXC);
 
@@ -127,7 +127,7 @@ static auto calculate_cooling_rates_ion(const int modelgridindex, const int elem
 
         C_ion += C;
         if constexpr (update_cooling_contrib_list) {
-          globals::cellcache[slotid].cooling_contrib[i] = C_ion;
+          globals::cellcache[tid].cooling_contrib[i] = C_ion;
 
           assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_COLLION);
           assert_testmodeonly(coolinglist[i].level == level);
@@ -153,7 +153,7 @@ static auto calculate_cooling_rates_ion(const int modelgridindex, const int elem
         C_ion += C;
 
         if constexpr (update_cooling_contrib_list) {
-          globals::cellcache[slotid].cooling_contrib[i] = C_ion;
+          globals::cellcache[tid].cooling_contrib[i] = C_ion;
 
           assert_testmodeonly(coolinglist[i].type == COOLINGTYPE_FB);
           assert_testmodeonly(coolinglist[i].level == level);
@@ -186,7 +186,7 @@ void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrate
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      const double C_ion = calculate_cooling_rates_ion<false>(modelgridindex, element, ion, -1, slotid, &C_ff_all,
+      const double C_ion = calculate_cooling_rates_ion<false>(modelgridindex, element, ion, -1, tid, &C_ff_all,
                                                               &C_fb_all, &C_exc_all, &C_ionization_all);
       grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] = C_ion;
     }
@@ -404,6 +404,7 @@ void do_kpkt_blackbody(struct packet *pkt_ptr)
 void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 /// handle a k-packet (kinetic energy of the free electrons)
 {
+  const int tid = get_thread_num();
   const double t1 = pkt_ptr->prop_time;
   const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
 
@@ -470,12 +471,12 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
   const int ilow = get_coolinglistoffset(element, ion);
   const int ihigh = ilow + get_ncoolingterms_ion(element, ion) - 1;
 
-  if (globals::cellcache[slotid].cooling_contrib[ihigh] < 0.) {
+  if (globals::cellcache[tid].cooling_contrib[ihigh] < 0.) {
     // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d
     // oldcoolingsum %g\n",
     //          modelgridindex, element, ion, ilow, high, oldcoolingsum);
-    const double C_ion = calculate_cooling_rates_ion<true>(modelgridindex, element, ion, ilow, slotid, nullptr, nullptr,
-                                                           nullptr, nullptr);
+    const double C_ion =
+        calculate_cooling_rates_ion<true>(modelgridindex, element, ion, ilow, tid, nullptr, nullptr, nullptr, nullptr);
 
     // we just summed up every individual cooling process. make sure it matches the stored total for the ion
     assert_always(C_ion == grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]);
@@ -484,12 +485,12 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
   // with the ion selected, we now select a level and transition type
 
   const double zrand2 = rng_uniform();
-  const double rndcool_ion_process = zrand2 * globals::cellcache[slotid].cooling_contrib[ihigh];
+  const double rndcool_ion_process = zrand2 * globals::cellcache[tid].cooling_contrib[ihigh];
 
   auto *const selectedvalue =
-      std::upper_bound(&globals::cellcache[slotid].cooling_contrib[ilow],
-                       &globals::cellcache[slotid].cooling_contrib[ihigh + 1], rndcool_ion_process);
-  const ptrdiff_t i = selectedvalue - globals::cellcache[slotid].cooling_contrib;
+      std::upper_bound(&globals::cellcache[tid].cooling_contrib[ilow],
+                       &globals::cellcache[tid].cooling_contrib[ihigh + 1], rndcool_ion_process);
+  const ptrdiff_t i = selectedvalue - globals::cellcache[tid].cooling_contrib;
 
   if (i > ihigh) {
     printout("do_kpkt: error occured while selecting a cooling channel: low %d, high %d, i %d, rndcool %g\n", ilow,
@@ -497,13 +498,12 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     printout("element %d, ion %d, offset %d, terms %d, coolingsum %g\n", element, ion,
              get_coolinglistoffset(element, ion), get_ncoolingterms_ion(element, ion), coolingsum);
 
-    printout("lower %g, %g, %g\n", globals::cellcache[slotid].cooling_contrib[get_coolinglistoffset(element, ion) - 1],
-             globals::cellcache[slotid].cooling_contrib[get_coolinglistoffset(element, ion)],
-             globals::cellcache[slotid].cooling_contrib[get_coolinglistoffset(element, ion) + 1]);
+    printout("lower %g, %g, %g\n", globals::cellcache[tid].cooling_contrib[get_coolinglistoffset(element, ion) - 1],
+             globals::cellcache[tid].cooling_contrib[get_coolinglistoffset(element, ion)],
+             globals::cellcache[tid].cooling_contrib[get_coolinglistoffset(element, ion) + 1]);
     const int finalpos = get_coolinglistoffset(element, ion) + get_ncoolingterms_ion(element, ion) - 1;
-    printout("upper %g, %g, %g\n", globals::cellcache[slotid].cooling_contrib[finalpos - 1],
-             globals::cellcache[slotid].cooling_contrib[finalpos],
-             globals::cellcache[slotid].cooling_contrib[finalpos + 1]);
+    printout("upper %g, %g, %g\n", globals::cellcache[tid].cooling_contrib[finalpos - 1],
+             globals::cellcache[tid].cooling_contrib[finalpos], globals::cellcache[tid].cooling_contrib[finalpos + 1]);
   }
 
   assert_always(i <= ihigh);
@@ -589,7 +589,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
     // if the previous entry belongs to the same ion, then pick up the cumulative sum from
     // the previous entry, otherwise start from zero
-    const double contrib_low = (i > ilow) ? globals::cellcache[slotid].cooling_contrib[i - 1] : 0.;
+    const double contrib_low = (i > ilow) ? globals::cellcache[tid].cooling_contrib[i - 1] : 0.;
 
     double contrib = contrib_low;
     const int level = coolinglist[i].level;
@@ -620,7 +620,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
           "%g "
           "contrib_low %g contrib %g (should match %g) upper %d nuptrans %d\n",
           modelgridindex, i, element, ion, level, rndcool_ion_process, contrib_low, contrib,
-          globals::cellcache[slotid].cooling_contrib[i], upper, nuptrans);
+          globals::cellcache[tid].cooling_contrib[i], upper, nuptrans);
       std::abort();
     }
     assert_always(upper >= 0);

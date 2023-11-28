@@ -674,21 +674,18 @@ void cellcache_change_cell(const int modelgridindex) {
   /// onset of the new timestep. Also, boundary crossing?
   /// Calculate the level populations for this cell, and flag the other entries
   /// as empty.
-  /// Make known that globals::cellcache[slotid] contains information about the
+  /// Make known that globals::cellcache[tid] contains information about the
   /// cell given by cellnumber. (-99 if invalid)
-  if (modelgridindex == globals::cellcache[slotid].cellnumber) {
+  if (modelgridindex == globals::cellcache[tid].cellnumber) {
     return;
   }
 
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-  {
-    // force rpkt opacities to be recalculated next time they are accessed
-    globals::chi_rpkt_cont[tid].recalculate_required = true;
-  }
+  const int tid = get_thread_num();
 
-  globals::cellcache[slotid].cellnumber = modelgridindex;
+  // force rpkt opacities to be recalculated next time they are accessed
+  globals::chi_rpkt_cont[tid].recalculate_required = true;
+
+  globals::cellcache[tid].cellnumber = modelgridindex;
 
   //  int nlevels_with_processrates = 0;
   // const double T_e = modelgridindex >= 0 ? grid ::get_Te(modelgridindex) : 0.;
@@ -696,14 +693,14 @@ void cellcache_change_cell(const int modelgridindex) {
   for (int element = 0; element < nelements; element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      globals::cellcache[slotid]
+      globals::cellcache[tid]
           .cooling_contrib[kpkt::get_coolinglistoffset(element, ion) + kpkt::get_ncoolingterms_ion(element, ion) - 1] =
           COOLING_UNDEFINED;
 
       if (modelgridindex >= 0) {
         const int nlevels = get_nlevels(element, ion);
         for (int level = 0; level < nlevels; level++) {
-          globals::cellcache[slotid].chelements[element].chions[ion].chlevels[level].population =
+          globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].population =
               calculate_levelpop(modelgridindex, element, ion, level);
         }
       }
@@ -713,7 +710,7 @@ void cellcache_change_cell(const int modelgridindex) {
       const int nlevels = get_nlevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
-          globals::cellcache[slotid]
+          globals::cellcache[tid]
               .chelements[element]
               .chions[ion]
               .chlevels[level]
@@ -721,7 +718,7 @@ void cellcache_change_cell(const int modelgridindex) {
               .corrphotoioncoeff = -99.;
 
 #if (SEPARATE_STIMRECOMB)
-          globals::cellcache[slotid]
+          globals::cellcache[tid]
               .chelements[element]
               .chions[ion]
               .chlevels[level]
@@ -730,7 +727,7 @@ void cellcache_change_cell(const int modelgridindex) {
 #endif
         }
 
-        globals::cellcache[slotid]
+        globals::cellcache[tid]
             .chelements[element]
             .chions[ion]
             .chlevels[level]
@@ -741,12 +738,12 @@ void cellcache_change_cell(const int modelgridindex) {
 
   if (modelgridindex >= 0) {
     const int nbfcont = globals::nbfcontinua;
-    std::fill_n(globals::cellcache[slotid].ch_allcont_departureratios, nbfcont, -1);
+    std::fill_n(globals::cellcache[tid].ch_allcont_departureratios, nbfcont, -1);
   }
   // printout("nlevels_with_processrates %d\n", nlevels_with_processrates);
 
-  // globals::cellcache[slotid].totalcooling = COOLING_UNDEFINED;
-  // globals::cellcache[slotid].phixsflag = PHIXS_UNDEFINED;
+  // globals::cellcache[tid].totalcooling = COOLING_UNDEFINED;
+  // globals::cellcache[tid].phixsflag = PHIXS_UNDEFINED;
 }
 
 static void solve_Te_nltepops(const int n, const int nts, const int titer,
@@ -1223,10 +1220,15 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   // printout("timestep %d, titer %d\n", nts, titer);
   // printout("deltat %g\n", deltat);
 
-  /// Do not use values which are saved in the cellcache within update_grid
-  use_cellcache = false;
-  cellcache_change_cell(-99);
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
   {
+    /// Do not use values which are saved in the cellcache within update_grid
+    /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
+    use_cellcache = false;
+    cellcache_change_cell(-99);
+
 /// Updating cell information
 #ifdef _OPENMP
 #pragma omp for schedule(dynamic)

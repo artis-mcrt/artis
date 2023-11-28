@@ -66,7 +66,4 @@ constexpr float expopac_lambdamax = 35000.;
 constexpr float expopac_deltalambda = 35.5;
 constexpr ptrdiff_t expopac_nbins = static_cast<size_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
 
-// cell cache slots
-constexpr int slotid = 0;
-
 #endif
