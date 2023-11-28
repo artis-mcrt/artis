@@ -667,7 +667,7 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
 /// packets which do not contribute to the radiation field.
 {
   /// Update only non-empty cells
-  if (modelgridindex == grid::get_npts_model()) {
+  if (nonemptymgi < 0) {
     return;
   }
   const double distance_e_cmf = distance * e_cmf;
@@ -817,7 +817,9 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
   }
   assert_always(edist >= 0);
 
-  if ((edist < sdist) && (edist < tdist)) {
+  const auto min_dist = std::min({sdist, abort_dist});
+
+  if (edist == min_dist) {
     // bound-bound or continuum event
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, edist / 2.);
     update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, edist, doppler_nucmf_on_nurf, mgi, nonemptymgi);
@@ -842,7 +844,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
     return (pkt_ptr->type == TYPE_RPKT);
   }
 
-  if ((sdist < tdist) && (sdist < edist)) {
+  if (sdist == min_dist) {
     // Move it into the new cell.
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, sdist / 2.);
     update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, sdist, doppler_nucmf_on_nurf, mgi, nonemptymgi);
@@ -860,7 +862,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
     return (pkt_ptr->type == TYPE_RPKT && (newmgi == grid::get_npts_model() || newmgi == mgi));
   }
 
-  if ((tdist < sdist) && (tdist < edist)) {
+  if (tdist == min_dist) {
     // reaches end of timestep before cell boundary or interaction
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, tdist / 2.);
     update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, tdist, doppler_nucmf_on_nurf, mgi, nonemptymgi);
