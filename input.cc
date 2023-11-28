@@ -1223,7 +1223,8 @@ static void setup_cellcache() {
 
     for (int element = 0; element < get_nelements(); element++) {
       for (int ion = 0; ion < get_nions(element); ion++) {
-        globals::cellcache[tid].cooling_contrib[kpkt::get_coolinglistoffset(element, ion)] = COOLING_UNDEFINED;
+        globals::cellcache[tid].cooling_contrib[kpkt::get_coolinglistoffset(element, ion) +
+                                                kpkt::get_ncoolingterms_ion(element, ion) - 1] = COOLING_UNDEFINED;
       }
     }
 
