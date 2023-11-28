@@ -80,7 +80,7 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
     return -1;
   }
 
-  if (next_trans > 0) {
+  if (next_trans > 0) [[likely]] {
     /// if left = pkt_ptr->next_trans > 0 we know the next line we should interact with, independent of the packets
     /// current nu_cmf which might be smaller than globals::linelist[left].nu due to propagation errors
     return next_trans;
@@ -91,7 +91,7 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
       std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf,
                        [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; });
   const int matchindex = std::distance(globals::linelist, matchline);
-  if (matchindex >= globals::nlines) {
+  if (matchindex >= globals::nlines) [[unlikely]] {
     return -1;
   }
 
@@ -217,7 +217,7 @@ static auto get_event(const int modelgridindex,
     /// create therefore new variables in packet, which contain next_lowerlevel, ...
     const int lineindex = closest_transition(dummypkt.nu_cmf,
                                              dummypkt.next_trans);  /// returns negative value if nu_cmf > nu_trans
-    if (lineindex >= 0) {
+    if (lineindex >= 0) [[likely]] {
       /// line interaction is possible (nu_cmf > nu_trans)
 
       const double nu_trans = globals::linelist[lineindex].nu;
@@ -231,10 +231,10 @@ static auto get_event(const int modelgridindex,
 
       const double tau_cont = chi_cont * ldist;
 
-      if (tau_rnd - tau > tau_cont) {
+      if (tau_rnd - tau > tau_cont) [[likely]] {
         // got past the continuum optical depth so propagate to the line, and check interaction
 
-        if (nu_trans < nu_cmf_abort) {
+        if (nu_trans < nu_cmf_abort) [[unlikely]] {
           // back up one line, because we didn't reach it before the boundary/timelimit
           pkt_ptr->next_trans = dummypkt.next_trans - 1;
 
@@ -257,7 +257,7 @@ static auto get_event(const int modelgridindex,
         // printout("[debug] get_event:     tau_line %g\n", tau_line);
         // printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
 
-        if (tau_rnd - tau > tau_cont + tau_line) {
+        if (tau_rnd - tau > tau_cont + tau_line) [[likely]] {
           // total optical depth still below tau_rnd: propagate to the line and continue
 
           // printout(
@@ -283,7 +283,7 @@ static auto get_event(const int modelgridindex,
           radfield::update_lineestimator(modelgridindex, lineindex,
                                          dummypkt.prop_time * CLIGHT * dummypkt.e_cmf / dummypkt.nu_cmf);
 
-        } else {
+        } else [[unlikely]] {
           /// bound-bound process occurs
           // printout("[debug] get_event: tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
 
@@ -306,14 +306,14 @@ static auto get_event(const int modelgridindex,
 
           return {dist + ldist, true};
         }
-      } else {
+      } else [[unlikely]] {
         /// continuum process occurs before reaching the line
 
         pkt_ptr->next_trans = dummypkt.next_trans - 1;
 
         return {dist + (tau_rnd - tau) / chi_cont, false};
       }
-    } else {
+    } else [[unlikely]] {
       /// no line interaction possible - check whether continuum process occurs in cell
 
       const double tau_cont = chi_cont * (abort_dist - dist);
@@ -800,7 +800,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
     /// for empty cells no physical event occurs. The packets just propagate.
     edist = std::numeric_limits<double>::max();
     pkt_ptr->next_trans = -1;  // skip over lines and search for line list position on the next non-empty cell
-  } else if (grid::modelgrid[mgi].thick == 1) {
+  } else if (grid::modelgrid[mgi].thick == 1) [[unlikely]] {
     /// In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
 
     const double chi_grey = grid::get_kappagrey(mgi) * grid::get_rho(mgi) *
@@ -817,7 +817,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
   }
   assert_always(edist >= 0);
 
-  if ((edist < sdist) && (edist < tdist)) {
+  if ((edist < sdist) && (edist < tdist)) [[likely]] {
     // bound-bound or continuum event
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, edist / 2.);
     update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, edist, doppler_nucmf_on_nurf, mgi, nonemptymgi);
@@ -860,7 +860,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
     return (pkt_ptr->type == TYPE_RPKT && (newmgi == grid::get_npts_model() || newmgi == mgi));
   }
 
-  if ((tdist < sdist) && (tdist < edist)) {
+  if ((tdist < sdist) && (tdist < edist)) [[unlikely]] {
     // reaches end of timestep before cell boundary or interaction
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, tdist / 2.);
     update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, tdist, doppler_nucmf_on_nurf, mgi, nonemptymgi);
@@ -987,7 +987,8 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
     /// the involved atomic species
 
     if ((DETAILED_BF_ESTIMATORS_ON && grid::get_elem_abundance(modelgridindex, element) > 0) ||
-        (!DETAILED_BF_ESTIMATORS_ON && ((get_nnion(modelgridindex, element, ion) / nnetot > 1.e-6) || (level == 0)))) {
+        (!DETAILED_BF_ESTIMATORS_ON && ((get_nnion(modelgridindex, element, ion) / nnetot > 1.e-6) || (level == 0))))
+        [[likely]] {
       const double nu_edge = globals::allcont[i].nu_edge;
       if (nu < nu_edge) [[unlikely]] {
         break;
