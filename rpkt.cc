@@ -680,7 +680,7 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
       const double nu_edge = globals::groundcont[i].nu_edge;
-      if (nu_cmf <= nu_edge) {
+      if (nu_cmf <= nu_edge) [[unlikely]] {
         // because groundcont is sorted by nu_edge descending, nu < nu_edge for all remaining items
         return;
       }
@@ -688,7 +688,7 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
       /// Cells with zero abundance for a specific element have zero contribution
       /// (set in calculate_chi_rpkt_cont and therefore do not contribute to
       /// the estimators
-      if (grid::get_elem_abundance(modelgridindex, element) > 0) {
+      if (grid::get_elem_abundance(modelgridindex, element) > 0) [[likely]] {
         const int ion = globals::groundcont[i].ion;
         const int ionestimindex = get_ionestimindex_nonemptymgi(nonemptymgi, element, ion);
 
