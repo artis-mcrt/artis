@@ -128,13 +128,12 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
   assert_always(std::isfinite(processrates[MA_ACTION_INTERNALUPSAME]));
 
   /// Transitions to higher ionisation stages
-  processrates[MA_ACTION_INTERNALUPHIGHERNT] = 0.;
+  double sum_up_highernt = 0.;
   double sum_up_higher = 0.;
   const int ionisinglevels = get_ionisinglevels(element, ion);
   if (ion < get_nions(element) - 1 && level < ionisinglevels) {
     if (NT_ON) {
-      processrates[MA_ACTION_INTERNALUPHIGHERNT] =
-          nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion) * epsilon_current;
+      sum_up_highernt = nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion) * epsilon_current;
     }
 
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
@@ -148,6 +147,7 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
       sum_up_higher += (R + C) * epsilon_current;
     }
   }
+  processrates[MA_ACTION_INTERNALUPHIGHERNT] = sum_up_highernt;
   processrates[MA_ACTION_INTERNALUPHIGHER] = sum_up_higher;
 }
 
