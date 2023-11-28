@@ -266,7 +266,7 @@ static void do_cell_packet_updates(std::span<packet> packets, const int nts, con
     }
   };
 #ifdef _OPENMP
-#pragma omp for schedule(nonmonotonic : dynamic)
+#pragma omp parallel for schedule(nonmonotonic : dynamic)
   for (auto &pkt : packets) {
     update_packet(pkt);
   }
