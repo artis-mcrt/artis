@@ -320,11 +320,13 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
         if (cellcache_change_cell_required) {
           do_cell_packet_updates(std::span{packetgroupstart, &pkt}, nts, ts_end);
 
-          stats::increment(stats::COUNTER_UPDATECELL);
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
-          { cellcache_change_cell(mgi); }
+          {
+            stats::increment(stats::COUNTER_UPDATECELL);
+            cellcache_change_cell(mgi);
+          }
           packetgroupstart = &pkt;
         }
       }
