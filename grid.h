@@ -2,11 +2,15 @@
 #define GRIDINIT_H
 
 #include <cinttypes>
+#include <cmath>
 #include <span>
 
 #include "artisoptions.h"
+#include "atomic.h"
 #include "constants.h"
+#include "globals.h"
 #include "packet.h"
+#include "sn3d.h"
 #include "vectors.h"
 
 namespace grid {

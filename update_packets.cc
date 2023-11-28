@@ -169,7 +169,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
     }
 
     case TYPE_RPKT: {
-      do_rpkt(pkt_ptr, t2);
+      do_rpkt(pkt_ptr, t2, globals::chi_rpkt_cont[tid]);
 
       if (pkt_ptr->type == TYPE_ESCAPE) {
         safeadd(globals::timesteps[nts].cmf_lum, pkt_ptr->e_cmf);
@@ -193,7 +193,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
     }
 
     case TYPE_KPKT: {
-      if (grid::modelgrid[grid::get_cell_modelgridindex(pkt_ptr->where)].thick == 1) {
+      if (grid::modelgrid[grid::get_cell_modelgridindex(pkt_ptr->where)].thick == 1 || EXPANSIONOPACITIES_ON) {
         kpkt::do_kpkt_blackbody(pkt_ptr);
       } else {
         kpkt::do_kpkt(pkt_ptr, t2, nts);
@@ -254,7 +254,7 @@ static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, cons
 }
 
 static void do_cell_packet_updates(std::span<packet> packets, const int nts, const double ts_end) {
-  std::ranges::for_each(packets, [ts_end, nts](auto &pkt) {
+  auto update_packet = [ts_end, nts](auto &pkt) {
     const int mgi = grid::get_cell_modelgridindex(pkt.where);
     int newmgi = mgi;
     while (pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE) {
@@ -264,7 +264,15 @@ static void do_cell_packet_updates(std::span<packet> packets, const int nts, con
         break;
       }
     }
-  });
+  };
+#ifdef _OPENMP
+#pragma omp for schedule(nonmonotonic : dynamic)
+  for (auto &pkt : packets) {
+    update_packet(pkt);
+  }
+#else
+  std::for_each(EXEC_PAR_UNSEQ packets.begin(), packets.end(), update_packet);
+#endif
 }
 
 void update_packets(const int my_rank, const int nts, std::span<struct packet> packets)
@@ -291,7 +299,7 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
 
     // printout("sorting packets...");
 
-    std::sort(std::begin(packets), std::end(packets), std_compare_packets_bymodelgriddensity);
+    std::sort(EXEC_PAR_UNSEQ std::begin(packets), std::end(packets), std_compare_packets_bymodelgriddensity);
 
     // printout("took %lds\n", time(nullptr) - sys_time_start_pass);
 
@@ -302,9 +310,6 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
     const int updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
     auto *packetgroupstart = packets.data();
 
-#ifdef _OPENMP
-#pragma omp parallel for schedule(nonmonotonic : dynamic)
-#endif
     for (auto &pkt : packets) {
       if ((pkt.type != TYPE_ESCAPE && pkt.prop_time < ts_end)) {
         const int mgi = grid::get_cell_modelgridindex(pkt.where);

@@ -786,6 +786,10 @@ auto main(int argc, char *argv[]) -> int {
     gslworkspace = gsl_integration_workspace_alloc(GSLWSIZE);
   }
 
+#ifdef STDPAR_ON
+  printout("C++ standard parallelism (stdpar) is enabled\n");
+#endif
+
   printout("time at start %ld\n", real_time_start);
 
 #ifdef WALLTIMELIMITSECONDS

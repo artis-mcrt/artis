@@ -20,7 +20,7 @@
 }
 
 [[nodiscard]] [[gnu::pure]] constexpr auto vec_norm(std::span<const double, 3> vec_in) -> std::array<double, 3>
-// normalizing a copy of vec_in and save it to vec_out
+// get a normalized copy of vec_in
 {
   const double magnitude = vec_len(vec_in);
   auto vec_out = std::array<double, 3>{};

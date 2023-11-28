@@ -989,7 +989,7 @@ static auto N_e(const int modelgridindex, const double energy) -> double
         if (collionrow.Z == Z && collionrow.nelec == Z - ionstage + 1) {
           const double ionpot_ev = collionrow.ionpot_ev;
           const double J = get_J(Z, ionstage, ionpot_ev);
-          const double lambda = fmin(SF_EMAX - energy_ev, energy_ev + ionpot_ev);
+          const double lambda = std::min(SF_EMAX - energy_ev, energy_ev + ionpot_ev);
 
           const int integral1startindex = get_energyindex_ev_lteq(ionpot_ev);
           const int integral1stopindex = get_energyindex_ev_lteq(lambda);

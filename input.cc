@@ -523,11 +523,14 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
       MPI_Barrier(MPI_COMM_WORLD);
       MPI_Win win = MPI_WIN_NULL;
 
-      size_t my_rank_trans = totupdowntrans / globals::node_nprocs;
-      // rank_in_node 0 gets any remainder
-      if (globals::rank_in_node == 0) {
-        my_rank_trans += totupdowntrans - (my_rank_trans * globals::node_nprocs);
-      }
+      const int my_rank_trans = [=]() {
+        int my_rank_trans = totupdowntrans / globals::node_nprocs;
+        // rank_in_node 0 gets any remainder
+        if (globals::rank_in_node == 0) {
+          my_rank_trans += totupdowntrans - (my_rank_trans * globals::node_nprocs);
+        }
+        return my_rank_trans;
+      }();
 
       MPI_Aint size = my_rank_trans * static_cast<MPI_Aint>(sizeof(linelist_entry));
       int disp_unit = sizeof(linelist_entry);
@@ -959,7 +962,7 @@ static void read_atomicdata_files() {
 
   if (globals::rank_in_node == 0) {
     // sort the lineline in descending frequency
-    std::sort(temp_linelist.begin(), temp_linelist.end(),
+    std::sort(EXEC_PAR_UNSEQ temp_linelist.begin(), temp_linelist.end(),
               [](const auto &a, const auto &b) { return static_cast<bool>(a.nu > b.nu); });
 
     for (int i = 0; i < globals::nlines - 1; i++) {
@@ -1035,6 +1038,9 @@ static void read_atomicdata_files() {
   printout("establishing connection between transitions and sorted linelist...\n");
 
   time_t const time_start_establish_linelist_connections = time(nullptr);
+#ifdef _OPENMP
+#pragma omp parallel for schedule(dynamic)
+#endif
   for (lineindex = 0; lineindex < globals::nlines; lineindex++) {
     const auto &line = globals::linelist[lineindex];
     const int element = line.elementindex;
@@ -1197,11 +1203,8 @@ static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcont
 }
 
 static void setup_cellcache() {
-  /// SET UP THE CELL HISTORY
-  ///======================================================
-  /// Stack which holds information about population and other cell specific data
-  /// ===> move to update_packets
-  globals::cellcache = static_cast<struct cellcache *>(malloc(get_max_threads() * sizeof(struct cellcache)));
+  const int num_cellcache_slots = get_max_threads();
+  globals::cellcache = static_cast<struct cellcache *>(malloc(num_cellcache_slots * sizeof(struct cellcache)));
   assert_always(globals::cellcache != nullptr);
 
 #ifdef _OPENMP
@@ -1745,33 +1748,32 @@ auto get_noncommentline(std::fstream &input, std::string &line) -> bool
 void read_parameterfile(int rank)
 /// Subroutine to read in input parameters from input.txt.
 {
-  uint_least64_t pre_zseed = 0;
-
   auto file = fstream_required("input.txt", std::ios::in);
 
   std::string line;
 
   assert_always(get_noncommentline(file, line));
 
-  uint_fast64_t zseed_input = 0;
+  int64_t zseed_input = -1;
   std::istringstream(line) >> zseed_input;
-
-  if (zseed_input > 0) {
-    pre_zseed = zseed_input;  // random number seed
-    printout("using input.txt specified random number seed of %lu\n", pre_zseed);
-  } else {
-    pre_zseed = std::random_device{}();
-    printout("randomly-generated random number seed is %lu\n", pre_zseed);
-  }
 
 #ifdef _OPENMP
 #pragma omp parallel
   {
 #endif
+    uint64_t pre_zseed{};
+    if (zseed_input > 0) {
+      pre_zseed = static_cast<uint64_t>(zseed_input);  // random number seed
+      printout("using input.txt specified random number seed of %lu\n", pre_zseed);
+    } else {
+      pre_zseed = std::random_device{}();
+      printout("randomly-generated random number seed is %lu\n", pre_zseed);
+    }
+
     /// For MPI parallelisation, the random seed is changed based on the rank of the process
     /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
     /// to the thread-ID tid.
-    const auto zseed = pre_zseed + 13 * (rank * get_num_threads() + tid);
+    const uint64_t zseed = pre_zseed + static_cast<uint64_t>(13 * (rank * get_num_threads() + tid));
     printout("rank %d: thread %d has zseed %lu\n", rank, tid, zseed);
     rng_init(zseed);
     /// call it a few times

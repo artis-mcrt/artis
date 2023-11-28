@@ -89,6 +89,14 @@ struct packet {
   }
 };
 
+enum last_event_type {
+  LASTEVENT_KPKT_TO_RPKT_FFBB = 6,
+  LASTEVENT_KPKT_TO_RPKT_FB = 7,
+  LASTEVENT_KPKT_TO_MA_COLLEXC = 8,
+  LASTEVENT_KPKT_TO_MA_COLLION = 9,
+  LASTEVENT_ELECTRONSCATTERING = 12,
+};
+
 void packet_init(struct packet *pkt);
 void write_packets(const char filename[], const struct packet *pkt);
 void read_packets(const char filename[], struct packet *pkt);

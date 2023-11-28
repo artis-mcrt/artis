@@ -39,10 +39,6 @@ struct cellcachecoolinglist {
 
 static struct cellcachecoolinglist *coolinglist;
 
-static auto get_ncoolingterms_ion(int element, int ion) -> int {
-  return globals::elements[element].ions[ion].ncoolingterms;
-}
-
 template <bool update_cooling_contrib_list>
 static auto calculate_cooling_rates_ion(const int modelgridindex, const int element, const int ion,
                                         const int indexionstart, const int tid, double *C_ff, double *C_fb,
@@ -325,9 +321,41 @@ void setup_coolinglist() {
   printout("[info] read_atomicdata: number of coolingterms %d\n", globals::ncoolingterms);
 }
 
-static auto sample_planck(const double T) -> double
-/// returns a randomly chosen frequency according to the Planck
-/// distribution of temperature T
+static auto sample_planck_analytic(const double T) -> double
+// return a randomly chosen frequency according to the Planck distribution of temperature T using an analytic method.
+// More testing of this function is needed.
+{
+  const double nu_peak = 5.879e10 * T;
+  if (nu_peak > NU_MAX_R || nu_peak < NU_MIN_R) {
+    printout("[warning] sample_planck: intensity peaks outside frequency range\n");
+  }
+
+  constexpr ptrdiff_t nubins = 500;
+  const auto delta_nu = (NU_MAX_R - NU_MIN_R) / (nubins - 1);
+  const auto integral_total = radfield::planck_integral_analytic(T, NU_MIN_R, NU_MAX_R, false);
+
+  const double rand_partintegral = rng_uniform() * integral_total;
+  double prev_partintegral = 0.;
+  double part_integral = 0.;
+  double bin_nu_lower = NU_MIN_R;
+  for (ptrdiff_t i = 1; i < nubins; i++) {
+    bin_nu_lower = NU_MIN_R + (i - 1) * delta_nu;
+    const double nu_upper = NU_MIN_R + i * delta_nu;
+    prev_partintegral = part_integral;
+    part_integral = radfield::planck_integral_analytic(T, NU_MIN_R, nu_upper, false);
+    if (rand_partintegral >= part_integral) {
+      break;
+    }
+  }
+
+  // use a linear interpolation for the frequency within the bin
+  const double nuoffset = (rand_partintegral - prev_partintegral) / (part_integral - prev_partintegral) * delta_nu;
+
+  return bin_nu_lower + nuoffset;
+}
+
+static auto sample_planck_montecarlo(const double T) -> double
+// return a randomly chosen frequency according to the Planck distribution of temperature T using a Monte Carlo method
 {
   const double nu_peak = 5.879e10 * T;
   if (nu_peak > NU_MAX_R || nu_peak < NU_MIN_R) {
@@ -350,16 +378,23 @@ void do_kpkt_blackbody(struct packet *pkt_ptr)
 {
   const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
 
-  pkt_ptr->nu_cmf = sample_planck(grid::get_Te(modelgridindex));
+  if (EXPANSIONOPACITIES_ON && EXPANSION_OPAC_SAMPLE_KAPPAPLANCK && grid::modelgrid[modelgridindex].thick != 1) {
+    pkt_ptr->nu_cmf = sample_planck_times_expansion_opacity(modelgridindex);
+  } else {
+    pkt_ptr->nu_cmf = sample_planck_montecarlo(grid::get_Te(modelgridindex));
+    // TODO: is this alternative method faster or more accurate or neither?
+    // pkt_ptr->nu_cmf = sample_planck_analytic(grid::get_Te(modelgridindex));
+  }
+
   assert_always(std::isfinite(pkt_ptr->nu_cmf));
-  /// and then emitt the packet randomly in the comoving frame
+  /// and then emit the packet randomly in the comoving frame
   emit_rpkt(pkt_ptr);
   // printout("[debug] calculate_chi_rpkt after kpkt to rpkt by ff\n");
   pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
   // if (tid == 0) k_stat_to_r_bb++;
   stats::increment(stats::COUNTER_K_STAT_TO_R_BB);
   pkt_ptr->interactions++;
-  pkt_ptr->last_event = 6;
+  pkt_ptr->last_event = LASTEVENT_KPKT_TO_RPKT_FFBB;
   pkt_ptr->emissiontype = EMTYPE_FREEFREE;
   pkt_ptr->em_pos = pkt_ptr->pos;
   pkt_ptr->em_time = pkt_ptr->prop_time;
@@ -436,7 +471,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
   const int ilow = get_coolinglistoffset(element, ion);
   const int ihigh = ilow + get_ncoolingterms_ion(element, ion) - 1;
 
-  if (globals::cellcache[tid].cooling_contrib[ilow] < 0.) {
+  if (globals::cellcache[tid].cooling_contrib[ihigh] < 0.) {
     // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d
     // oldcoolingsum %g\n",
     //          modelgridindex, element, ion, ilow, high, oldcoolingsum);
@@ -495,7 +530,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
     stats::increment(stats::COUNTER_K_STAT_TO_R_FF);
 
-    pkt_ptr->last_event = 6;
+    pkt_ptr->last_event = LASTEVENT_KPKT_TO_RPKT_FFBB;
     pkt_ptr->emissiontype = EMTYPE_FREEFREE;
     pkt_ptr->em_pos = pkt_ptr->pos;
     pkt_ptr->em_time = pkt_ptr->prop_time;
@@ -535,7 +570,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
     pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
     stats::increment(stats::COUNTER_K_STAT_TO_R_FB);
-    pkt_ptr->last_event = 7;
+    pkt_ptr->last_event = LASTEVENT_KPKT_TO_RPKT_FB;
     pkt_ptr->emissiontype = get_continuumindex(element, lowerion, lowerlevel, upper);
     pkt_ptr->trueemissiontype = pkt_ptr->emissiontype;
     pkt_ptr->em_pos = pkt_ptr->pos;

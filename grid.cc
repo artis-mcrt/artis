@@ -769,7 +769,7 @@ static void allocate_nonemptycells_composition_cooling()
   }
 
   {
-    MPI_Aint size = my_rank_cells_nonempty * get_nelements() * sizeof(float);
+    auto size = static_cast<MPI_Aint>(my_rank_cells_nonempty * get_nelements() * sizeof(float));
     int disp_unit = sizeof(float);
     MPI_Win mpiwin = MPI_WIN_NULL;
 
@@ -786,7 +786,7 @@ static void allocate_nonemptycells_composition_cooling()
   double *nltepops_allcells = nullptr;
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
-    MPI_Aint size = my_rank_cells_nonempty * globals::total_nlte_levels * sizeof(double);
+    auto size = static_cast<MPI_Aint>(my_rank_nonemptycells * globals::total_nlte_levels * sizeof(double));
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nltepops_allcells,
                                           &win_nltepops_allcells) == MPI_SUCCESS);
@@ -960,6 +960,10 @@ static void allocate_nonemptymodelcells() {
   }
 
   allocate_nonemptycells_composition_cooling();
+
+  if constexpr (EXPANSIONOPACITIES_ON) {
+    allocate_expansionopacities();
+  }
 
   globals::rpkt_emiss = static_cast<double *>(calloc((get_npts_model() + 1), sizeof(double)));
 
@@ -2388,7 +2392,7 @@ constexpr static auto get_gridcoords_from_xyz(std::span<const double, 3> pos_xyz
     if (dist1 < 0) {
       return dist2;
     }
-    return fmin(dist1, dist2);
+    return std::min(dist1, dist2);
 
   }  // exactly one intersection
 

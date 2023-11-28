@@ -7,6 +7,21 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#ifdef STDPAR_ON
+#include <execution>
+// #ifndef __cpp_lib_execution
+// #include <oneapi/dpl/algorithm>
+// #include <oneapi/dpl/execution>
+// #endif
+
+#ifndef __cpp_lib_execution
+#error stdlib no execution policy support. Compile with gcc and make sure Intel TBB is installed
+#endif
+#define EXEC_PAR_UNSEQ std::execution::par_unseq,
+#else
+#define EXEC_PAR_UNSEQ
+#endif
+
 #include <cassert>
 #include <csignal>
 #include <cstdio>
@@ -20,7 +35,6 @@
 #include "atomic.h"
 #include "globals.h"
 
-// #define _OPENMP
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -225,7 +239,7 @@ inline auto rng_uniform_pos() -> float {
   return zrand;
 }
 
-inline void rng_init(const uint_fast64_t zseed) {
+inline void rng_init(const uint64_t zseed) {
   printout("rng is a std::mt19937 generator\n");
   stdrng.seed(zseed);
 }
