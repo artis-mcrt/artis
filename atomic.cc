@@ -1,9 +1,14 @@
 #include "atomic.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstdlib>
+#include <iterator>
 
 #include "artisoptions.h"
+#include "constants.h"
+#include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
 #include "sn3d.h"
@@ -35,7 +40,7 @@ auto get_phixtargetindex(const int element, const int ion, const int level, cons
     }
   }
   printout("Could not find phixstargetindex\n");
-  abort();
+  std::abort();
   return -1;
 }
 
@@ -46,22 +51,24 @@ auto get_continuumindex(const int element, const int ion, const int level, const
   return get_continuumindex_phixstargetindex(element, ion, level, phixstargetindex);
 }
 
-auto get_tau_sobolev(const int modelgridindex, const int lineindex, const double t_current) -> double {
+auto get_tau_sobolev(const int modelgridindex, const int lineindex, const double t_current, bool sub_updown) -> double {
   const int element = globals::linelist[lineindex].elementindex;
   const int ion = globals::linelist[lineindex].ionindex;
   const int lower = globals::linelist[lineindex].lowerlevelindex;
   const int upper = globals::linelist[lineindex].upperlevelindex;
 
   const double n_l = get_levelpop(modelgridindex, element, ion, lower);
-  const double n_u = get_levelpop(modelgridindex, element, ion, upper);
 
   const double nu_trans = (epsilon(element, ion, upper) - epsilon(element, ion, lower)) / H;
   const double A_ul = einstein_spontaneous_emission(lineindex);
   const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
   const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
-  const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
-  return tau_sobolev;
+  if (sub_updown) {
+    const double n_u = get_levelpop(modelgridindex, element, ion, upper);
+    return (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
+  }
+  return B_lu * n_l * HCLIGHTOVERFOURPI * t_current;
 }
 
 auto get_nnion_tot(int modelgridindex) -> double
@@ -125,7 +132,7 @@ auto photoionization_crosssection_fromtable(const float *const photoion_xs, cons
   const int i = floor(ireal);
 
   if (i < 0) {
-    sigma_bf = 0.0;
+    sigma_bf = 0.;
     // printout("[warning] photoionization_crosssection was called with nu=%g < nu_edge=%g\n",nu,nu_edge);
     // printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot
     // %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot); printout("[warning]
@@ -317,39 +324,22 @@ auto get_uniquelevelindex(const int element, const int ion, const int level) -> 
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
 
-  int index = 0;
-  for (int e = 0; e < element; e++) {
-    const int nions = get_nions(e);
-    for (int i = 0; i < nions; i++) {
-      index += get_nlevels(e, i);
-    }
-  }
-  // selected element, levels from lower ions
-  for (int i = 0; i < ion; i++) {
-    index += get_nlevels(element, i);
-  }
-  // lower levels in selected element/ion
-  index += level;
-
-  assert_testmodeonly(index == globals::elements[element].ions[ion].levels[level].uniquelevelindex);
-  return index;
+  return globals::elements[element].ions[ion].uniquelevelindexstart + level;
 }
 
-void get_levelfromuniquelevelindex(const int alllevelsindex, int *element, int *ion, int *level)
+auto get_levelfromuniquelevelindex(const int alllevelsindex) -> std::tuple<int, int, int>
 // inverse of get_uniquelevelindex(). get the element/ion/level from a unique level index
 {
-  int allionsindex_thisionfirstlevel = 0;
-  for (int e = 0; e < get_nelements(); e++) {
-    const int nions = get_nions(e);
-    for (int i = 0; i < nions; i++) {
-      if ((alllevelsindex - allionsindex_thisionfirstlevel) >= get_nlevels(e, i)) {
-        allionsindex_thisionfirstlevel += get_nlevels(e, i);  // skip this ion
-      } else {
-        *element = e;
-        *ion = i;
-        *level = alllevelsindex - allionsindex_thisionfirstlevel;
-        assert_testmodeonly(get_uniquelevelindex(*element, *ion, *level) == alllevelsindex);
-        return;
+  for (int element = 0; element < get_nelements(); element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      if (get_nlevels(element, ion) == 0) {
+        continue;
+      }
+      const int level = alllevelsindex - globals::elements[element].ions[ion].uniquelevelindexstart;
+      if (level < get_nlevels(element, ion)) {
+        assert_testmodeonly(get_uniquelevelindex(element, ion, level) == alllevelsindex);
+        return {element, ion, level};
       }
     }
   }

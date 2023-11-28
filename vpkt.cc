@@ -1,19 +1,25 @@
 #include "vpkt.h"
 
+#include <sys/unistd.h>
 #include <unistd.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
-#include <cstring>
+#include <cstdlib>
+#include <span>
+#include <vector>
 
+#include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
+#include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
+#include "packet.h"
 #include "rpkt.h"
 #include "sn3d.h"
-#include "stats.h"
-#include "update_grid.h"
 #include "vectors.h"
 
 struct stokeparams {
@@ -48,8 +54,9 @@ std::vector<double> VSPEC_NUMAX_input;
 double cell_is_optically_thick_vpkt;
 double tau_max_vpkt;
 
-std::vector<int> exclude;  // vector of opacity contribution setups
-                           //-1: no line opacity; -2: no bf opacity; -3: no ff opacity; -4: no es opacity,
+std::vector<int> exclude;  // vector of opacity contribution setups:
+                           // 0: full opacity
+                           // -1: no line opacity; -2: no bf opacity; -3: no ff opacity; -4: no es opacity,
                            // +ve: exclude element with atomic number's contribution to bound-bound opacity
 std::vector<double> tau_vpkt;
 
@@ -162,8 +169,7 @@ static void add_to_vpkt_grid(const struct packet &vpkt, std::span<const double, 
 }
 
 static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int obsbin,
-                           std::span<double, 3> obsdir, const enum packet_type realtype) {
-  int snext = 0;
+                           std::span<double, 3> obsdir, const enum packet_type type_before_rpkt) {
   int mgi = 0;
 
   struct packet vpkt = *pkt_ptr;
@@ -183,8 +189,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
   safeincrement(nvpkt);  // increment the number of virtual packet in the given timestep
 
-  double vel_vec[3] = {NAN, NAN, NAN};
-  get_velocity(pkt_ptr->pos, vel_vec, t_current);
+  const auto vel_vec = get_velocity(pkt_ptr->pos, t_current);
 
   // rf frequency and energy
   const double dopplerfactor = doppler_nucmf_on_nurf(vpkt.dir, vel_vec);
@@ -196,29 +201,26 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
   // ------------ SCATTERING EVENT: dipole function --------------------
 
-  double ref1[3] = {NAN, NAN, NAN};
-  double ref2[3] = {NAN, NAN, NAN};
   double pn = NAN;
   double I = NAN;
   double Q = NAN;
   double U = NAN;
-  if (realtype == TYPE_RPKT) {
+  if (type_before_rpkt == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
 
-    double old_dir_cmf[3] = {NAN, NAN, NAN};
-    frame_transform(pkt_ptr->dir, &Qi, &Ui, vel_vec, old_dir_cmf);
+    auto old_dir_cmf = frame_transform(pkt_ptr->dir, &Qi, &Ui, vel_vec);
 
     // Need to rotate Stokes Parameters in the scattering plane
 
-    double obs_cmf[3];
-    angle_ab(vpkt.dir, vel_vec, obs_cmf);
+    auto obs_cmf = angle_ab(vpkt.dir, vel_vec);
 
-    meridian(old_dir_cmf, ref1, ref2);
+    auto ref1_old = std::array<double, 3>{};
+    auto ref2_old = meridian(old_dir_cmf, ref1_old);
 
     // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
     // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
     // ref1_sc and ref2_sc in the scattering plane.
-    const double i1 = rot_angle(old_dir_cmf, obs_cmf, ref1, ref2);
+    const double i1 = rot_angle(old_dir_cmf, obs_cmf, ref1_old, ref2_old);
     const double cos2i1 = cos(2 * i1);
     const double sin2i1 = sin(2 * i1);
 
@@ -241,7 +243,8 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
     // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame
 
-    meridian(obs_cmf, ref1, ref2);
+    auto ref1 = std::array<double, 3>{};
+    auto ref2 = meridian(obs_cmf, ref1);
 
     // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
     // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
@@ -257,9 +260,9 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
     const double vel_rev[3] = {-vel_vec[0], -vel_vec[1], -vel_vec[2]};
 
-    frame_transform(obs_cmf, &Q, &U, vel_rev, obsdir);
+    frame_transform(obs_cmf, &Q, &U, vel_rev);
 
-  } else if (realtype == TYPE_KPKT || realtype == TYPE_MA) {
+  } else if (type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA) {
     // MACROATOM and KPKT: isotropic emission
     I = 1;
     Q = 0;
@@ -274,14 +277,14 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
   while (!end_packet) {
     // distance to the next cell
-    const double sdist =
-        grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.where, &snext, &vpkt.last_cross);
+    const auto [sdist, snext] =
+        grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.where, &vpkt.last_cross);
     const double s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
 
     if (mgi == grid::get_npts_model()) {
       vpkt.next_trans = -1;
     } else {
-      calculate_chi_rpkt_cont(vpkt.nu_cmf, &chi_vpkt_cont, mgi, false);
+      calculate_chi_rpkt_cont(vpkt.nu_cmf, chi_vpkt_cont, mgi, false);
 
       const double chi_cont = chi_vpkt_cont.total;
 
@@ -372,8 +375,8 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     // printf("I'm changing cell. I'm going from nu_cmf = %.e ",dummy_ptr->nu_cmf);
 
     t_future += (sdist / CLIGHT_PROP);
+    move_pkt_withtime(&vpkt, sdist);
     vpkt.prop_time = t_future;
-    move_pkt(&vpkt, sdist);
 
     grid::change_cell(&vpkt, snext);
     end_packet = (vpkt.type == TYPE_ESCAPE);
@@ -391,11 +394,11 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   }
 
   // increment the number of escaped virtual packet in the given timestep
-  if (realtype == TYPE_RPKT) {
+  if (type_before_rpkt == TYPE_RPKT) {
     safeincrement(nvpkt_esc1);
-  } else if (realtype == TYPE_KPKT) {
+  } else if (type_before_rpkt == TYPE_KPKT) {
     safeincrement(nvpkt_esc2);
-  } else if (realtype == TYPE_MA) {
+  } else if (type_before_rpkt == TYPE_MA) {
     safeincrement(nvpkt_esc3);
   }
 
@@ -466,9 +469,9 @@ static void init_vspecpol() {
           exp(log(VSPEC_TIMEMIN) + ((n + 1) * (dlogt_vspec))) - vspecpol[n][ind_comb].lower_time;
 
       for (auto &flux : vspecpol[n][ind_comb].flux) {
-        flux.i = 0.0;
-        flux.q = 0.0;
-        flux.u = 0.0;
+        flux.i = 0.;
+        flux.q = 0.;
+        flux.u = 0.;
       }
     }
   }
@@ -644,7 +647,7 @@ void vpkt_remove_temp_file(const int nts, const int my_rank) {
 
   for (auto &filename : filenames) {
     if (access(filename, F_OK) == 0) {
-      remove(filename);
+      std::remove(filename);
       printout("Deleted %s\n", filename);
     }
   }
@@ -665,7 +668,7 @@ void read_parameterfile_vpkt() {
 
     if (fabs(nz_obs_vpkt[i]) > 1) {
       printout("Wrong observer direction\n");
-      abort();
+      std::abort();
     } else if (nz_obs_vpkt[i] == 1) {
       nz_obs_vpkt[i] = 0.9999;
     } else if (nz_obs_vpkt[i] == -1) {
@@ -861,7 +864,7 @@ void vpkt_write_timestep(const int nts, const int my_rank, const int tid,
   }
 }
 
-void vpkt_init(const int nts, const int my_rank, const int tid, const bool continued_from_saved) {
+void vpkt_init(const int nts, const int my_rank, const int /*tid*/, const bool continued_from_saved) {
   if constexpr (!VPKT_ON) {
     return;
   }
@@ -882,7 +885,7 @@ void vpkt_init(const int nts, const int my_rank, const int tid, const bool conti
   }
 }
 
-auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type realtype) -> void {
+auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type type_before_rpkt) -> void {
   if constexpr (!VPKT_ON) {
     return;
   }
@@ -896,8 +899,7 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type realtyp
 
   const double t_current = pkt_ptr->prop_time;
 
-  double vel_vec[3];
-  get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
+  const auto vel_vec = get_velocity(pkt_ptr->pos, pkt_ptr->prop_time);
 
   // this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each observer)
   if (pkt_ptr->next_trans == 0) {
@@ -926,23 +928,23 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type realtyp
         if (nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) {
           // frequency selection
 
-          rlc_emiss_vpkt(pkt_ptr, t_current, obsbin, obsdir, realtype);
+          rlc_emiss_vpkt(pkt_ptr, t_current, obsbin, obsdir, type_before_rpkt);
         }
       }
     }
   }
 }
 
-auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<double, 3> ref1, std::span<double, 3> ref2)
-    -> double {
+[[nodiscard]] auto rot_angle(std::span<const double, 3> n1, std::span<const double, 3> n2, std::span<double, 3> ref1,
+                             std::span<double, 3> ref2) -> double {
   // Rotation angle from the scattering plane
   // We need to rotate Stokes Parameters to (or from) the scattering plane from (or to)
   // the meridian frame such that Q=1 is in the scattering plane and along ref1
 
   // ref1_sc is the ref1 axis in the scattering plane ref1 = n1 x ( n1 x n2 )
   const double n1_dot_n2 = dot(n1, n2);
-  double ref1_sc[3] = {n1[0] * n1_dot_n2 - n2[0], n1[1] * n1_dot_n2 - n2[1], n1[2] * n1_dot_n2 - n2[2]};
-  vec_norm(ref1_sc, ref1_sc);
+  auto ref1_sc = std::array<double, 3>{n1[0] * n1_dot_n2 - n2[0], n1[1] * n1_dot_n2 - n2[1], n1[2] * n1_dot_n2 - n2[2]};
+  ref1_sc = vec_norm(ref1_sc);
 
   double cos_stokes_rot_1 = dot(ref1_sc, ref1);
   const double cos_stokes_rot_2 = dot(ref1_sc, ref2);
@@ -958,17 +960,17 @@ auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<doubl
   if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 > 0)) {
     i = acos(cos_stokes_rot_1);
   } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 > 0)) {
-    i = M_PI - acos(fabs(cos_stokes_rot_1));
+    i = PI - acos(fabs(cos_stokes_rot_1));
   } else if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 < 0)) {
-    i = 2 * M_PI - acos(cos_stokes_rot_1);
+    i = 2 * PI - acos(cos_stokes_rot_1);
   } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 < 0)) {
-    i = M_PI + acos(fabs(cos_stokes_rot_1));
+    i = PI + acos(fabs(cos_stokes_rot_1));
   }
   if (cos_stokes_rot_1 == 0) {
-    i = M_PI / 2.;
+    i = PI / 2.;
   }
   if (cos_stokes_rot_2 == 0) {
-    i = 0.0;
+    i = 0.;
   }
 
   if (!std::isfinite(i)) {
@@ -979,7 +981,7 @@ auto rot_angle(std::span<double, 3> n1, std::span<double, 3> n2, std::span<doubl
 }
 
 // Routine to compute the meridian frame axes ref1 and ref2
-void meridian(std::span<const double, 3> n, std::span<double, 3> ref1, std::span<double, 3> ref2) {
+[[nodiscard]] auto meridian(std::span<const double, 3> n, std::span<double, 3> ref1) -> std::array<double, 3> {
   // for ref_1 use (from triple product rule)
   const double n_xylen = sqrt(n[0] * n[0] + n[1] * n[1]);
   ref1[0] = -1. * n[0] * n[2] / n_xylen;
@@ -987,56 +989,49 @@ void meridian(std::span<const double, 3> n, std::span<double, 3> ref1, std::span
   ref1[2] = (1 - (n[2] * n[2])) / n_xylen;
 
   // for ref_2 use vector product of n_cmf with ref1
-  cross_prod(ref1, n, ref2);
+  const auto ref2 = cross_prod(ref1, n);
+  return ref2;
 }
 
-static void lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, std::span<const double, 3> v,
-                    std::span<double, 3> e_cmf) {
-  // Lorentz transformations from RF to CMF
+static auto lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, std::span<const double, 3> v)
+    -> std::array<double, 3> {
+  // Use Lorentz transformations to get e_cmf from e_rf
 
-  std::array<const double, 3> beta = {v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
+  const auto beta = std::array<const double, 3>{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
   const double vsqr = dot(beta, beta);
 
   const double gamma_rel = 1. / (sqrt(1 - vsqr));
 
-  std::array<const double, 3> e_par = {dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
-                                       dot(e_rf, beta) * beta[2] / (vsqr)};
+  const auto e_par = std::array<const double, 3>{dot(e_rf, beta) * beta[0] / (vsqr), dot(e_rf, beta) * beta[1] / (vsqr),
+                                                 dot(e_rf, beta) * beta[2] / (vsqr)};
 
-  std::array<const double, 3> e_perp = {e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
+  const auto e_perp = std::array<const double, 3>{e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
 
-  std::array<double, 3> b_rf = {NAN, NAN, NAN};
-  cross_prod(n_rf, e_rf, b_rf);
+  const auto b_rf = cross_prod(n_rf, e_rf);
 
   // const double b_par[3] = {dot(b_rf, beta) * beta[0] / (vsqr), dot(b_rf, beta) * beta[1] / (vsqr),
   //                          dot(b_rf, beta) * beta[2] / (vsqr)};
 
   // const double b_perp[3] = {b_rf[0] - b_par[0], b_rf[1] - b_par[1], b_rf[2] - b_par[2]};
 
-  std::array<double, 3> v_cr_b = {NAN, NAN, NAN};
-  cross_prod(beta, b_rf, v_cr_b);
+  const auto v_cr_b = cross_prod(beta, b_rf);
 
   // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
   //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
 
-  e_cmf[0] = e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]);
-  e_cmf[1] = e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]);
-  e_cmf[2] = e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2]);
-  vec_norm(e_cmf, e_cmf);
-
-  // double b_cmf[3];
-  // b_cmf[0] = b_par[0] + gamma_rel * (b_perp[0] - v_cr_e[0]);
-  // b_cmf[1] = b_par[1] + gamma_rel * (b_perp[1] - v_cr_e[1]);
-  // b_cmf[2] = b_par[2] + gamma_rel * (b_perp[2] - v_cr_e[2]);
-  // vec_norm(b_cmf, b_cmf);
+  auto e_cmf = std::array<double, 3>{e_par[0] + gamma_rel * (e_perp[0] + v_cr_b[0]),
+                                     e_par[1] + gamma_rel * (e_perp[1] + v_cr_b[1]),
+                                     e_par[2] + gamma_rel * (e_perp[2] + v_cr_b[2])};
+  return vec_norm(e_cmf);
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
-void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v,
-                     std::span<double, 3> n_cmf) {
-  double ref1[3] = {NAN, NAN, NAN};
-  double ref2[3] = {NAN, NAN, NAN};
+auto frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v)
+    -> std::array<double, 3> {
+  auto ref1 = std::array<double, 3>{NAN, NAN, NAN};
+
   // Meridian frame in the RF
-  meridian(n_rf, ref1, ref2);
+  auto ref2 = meridian(n_rf, ref1);
 
   const double Q0 = *Q;
   const double U0 = *U;
@@ -1054,40 +1049,39 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
     if ((cos2rot_angle > 0) && (sin2rot_angle > 0)) {
       rot_angle = acos(Q0 / p) / 2.;
     } else if ((cos2rot_angle < 0) && (sin2rot_angle > 0)) {
-      rot_angle = (M_PI - acos(fabs(cos2rot_angle))) / 2.;
+      rot_angle = (PI - acos(fabs(cos2rot_angle))) / 2.;
     } else if ((cos2rot_angle < 0) && (sin2rot_angle < 0)) {
-      rot_angle = (M_PI + acos(fabs(cos2rot_angle))) / 2.;
+      rot_angle = (PI + acos(fabs(cos2rot_angle))) / 2.;
     } else if ((cos2rot_angle > 0) && (sin2rot_angle < 0)) {
-      rot_angle = (2. * M_PI - acos(fabs(cos2rot_angle))) / 2.;
+      rot_angle = (2. * PI - acos(fabs(cos2rot_angle))) / 2.;
     } else if (cos2rot_angle == 0) {
-      rot_angle = 0.25 * M_PI;
+      rot_angle = 0.25 * PI;
       if (U0 < 0) {
-        rot_angle = 0.75 * M_PI;
+        rot_angle = 0.75 * PI;
       }
     }
     if (sin2rot_angle == 0) {
-      rot_angle = 0.0;
+      rot_angle = 0.;
       if (Q0 < 0) {
-        rot_angle = 0.5 * M_PI;
+        rot_angle = 0.5 * PI;
       }
     }
   }
 
   // Define electric field by linear combination of ref1 and ref2 (using the angle just computed)
 
-  const double elec_rf[3] = {cos(rot_angle) * ref1[0] - sin(rot_angle) * ref2[0],
-                             cos(rot_angle) * ref1[1] - sin(rot_angle) * ref2[1],
-                             cos(rot_angle) * ref1[2] - sin(rot_angle) * ref2[2]};
+  const auto elec_rf = std::array<double, 3>{cos(rot_angle) * ref1[0] - sin(rot_angle) * ref2[0],
+                                             cos(rot_angle) * ref1[1] - sin(rot_angle) * ref2[1],
+                                             cos(rot_angle) * ref1[2] - sin(rot_angle) * ref2[2]};
 
   // Aberration
-  angle_ab(n_rf, v, n_cmf);
+  auto n_cmf = angle_ab(n_rf, v);
 
-  double elec_cmf[3] = {NAN, NAN, NAN};
   // Lorentz transformation of E
-  lorentz(elec_rf, n_rf, v, elec_cmf);
+  auto elec_cmf = lorentz(elec_rf, n_rf, v);
 
   // Meridian frame in the CMF
-  meridian(n_cmf, ref1, ref2);
+  ref2 = meridian(n_cmf, ref1);
 
   // Projection of E onto ref1 and ref2
   const double cosine_elec_ref1 = dot(elec_cmf, ref1);
@@ -1098,26 +1092,28 @@ void frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std:
   if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 < 0)) {
     theta_rot = acos(cosine_elec_ref1);
   } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 > 0)) {
-    theta_rot = M_PI + acos(fabs(cosine_elec_ref1));
+    theta_rot = PI + acos(fabs(cosine_elec_ref1));
   } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 < 0)) {
-    theta_rot = M_PI - acos(fabs(cosine_elec_ref1));
+    theta_rot = PI - acos(fabs(cosine_elec_ref1));
   } else if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 > 0)) {
-    theta_rot = 2 * M_PI - acos(cosine_elec_ref1);
+    theta_rot = 2 * PI - acos(cosine_elec_ref1);
   }
   if (cosine_elec_ref1 == 0) {
-    theta_rot = M_PI / 2.;
+    theta_rot = PI / 2.;
   }
   if (cosine_elec_ref2 == 0) {
-    theta_rot = 0.0;
+    theta_rot = 0.;
   }
   if (cosine_elec_ref1 > 1) {
-    theta_rot = 0.0;
+    theta_rot = 0.;
   }
   if (cosine_elec_ref1 < -1) {
-    theta_rot = M_PI;
+    theta_rot = PI;
   }
 
   // Compute Stokes Parameters in the CMF
   *Q = cos(2 * theta_rot) * p;
   *U = sin(2 * theta_rot) * p;
+
+  return n_cmf;
 }

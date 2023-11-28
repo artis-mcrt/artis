@@ -12,17 +12,35 @@
 
 #include "sn3d.h"
 
+#include <getopt.h>
+#include <sys/unistd.h>
+#include <unistd.h>
+
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
 #include <filesystem>
+#include <memory>
+#include <random>
+#include <span>
 
 #include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
 #include "decay.h"
 #include "gammapkt.h"
 #include "globals.h"
 #include "grid.h"
+#include "gsl/gsl_integration.h"
 #include "input.h"
+#include "macroatom.h"
+#ifdef MPI_ON
+#include "mpi.h"
+#endif
 #include "nltepop.h"
 #include "nonthermal.h"
+#include "packet.h"
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
@@ -35,7 +53,7 @@
 
 // threadprivate variables
 int tid;
-bool use_cellhist;
+bool use_cellcache;
 std::mt19937 stdrng(std::random_device{}());
 gsl_integration_workspace *gslworkspace = nullptr;
 FILE *output_file = nullptr;
@@ -426,7 +444,7 @@ static void remove_temp_packetsfile(const int timestep, const int my_rank) {
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   if (access(filename, F_OK) == 0) {
-    remove(filename);
+    std::remove(filename);
     printout("Deleted %s\n", filename);
   }
 }
@@ -436,7 +454,7 @@ static void remove_grid_restart_data(const int timestep) {
   snprintf(prevfilename, MAXFILENAMELENGTH, "gridsave_ts%d.tmp", timestep);
 
   if (access(prevfilename, F_OK) == 0) {
-    remove(prevfilename);
+    std::remove(prevfilename);
     printout("Deleted %s\n", prevfilename);
   }
 }
@@ -631,7 +649,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
   if ((nts < globals::timestep_finish) && do_this_full_loop) {
     /// Now process the packets.
 
-    update_packets(my_rank, nts, packets);
+    update_packets(my_rank, nts, std::span{packets, static_cast<size_t>(globals::npkts)});
 
 #ifdef MPI_ON
     // All the processes have their own versions of the estimators for this time step now.
@@ -703,9 +721,9 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
       // final packets*.out have been written, so remove the temporary packets files
       // commented out because you might still want to resume the simulation
       // snprintf(filename, MAXFILENAMELENGTH, "packets%d_%d_odd.tmp", 0, my_rank);
-      // remove(filename);
+      // std::remove(filename);
       // snprintf(filename, MAXFILENAMELENGTH, "packets%d_%d_even.tmp", 0, my_rank);
-      // remove(filename);
+      // std::remove(filename);
     }
   }
   return !do_this_full_loop;
@@ -768,6 +786,10 @@ auto main(int argc, char *argv[]) -> int {
     gslworkspace = gsl_integration_workspace_alloc(GSLWSIZE);
   }
 
+#ifdef STDPAR_ON
+  printout("C++ standard parallelism (stdpar) is enabled\n");
+#endif
+
   printout("time at start %ld\n", real_time_start);
 
 #ifdef WALLTIMELIMITSECONDS
@@ -785,7 +807,7 @@ auto main(int argc, char *argv[]) -> int {
       printout("walltimelimitseconds = %d\n", walltimelimitseconds);
     } else {
       fprintf(stderr, "Usage: %s [-w WALLTIMELIMITHOURS]\n", argv[0]);
-      abort();
+      std::abort();
     }
   }
 
@@ -843,7 +865,7 @@ auto main(int argc, char *argv[]) -> int {
   printout("time before tabulation of rate coefficients %ld\n", time(nullptr));
   ratecoefficients_init();
   printout("time after tabulation of rate coefficients %ld\n", time(nullptr));
-  //  abort();
+  //  std::abort();
 #ifdef MPI_ON
   printout("barrier after tabulation of rate coefficients: time before barrier %ld, ", time(nullptr));
   MPI_Barrier(MPI_COMM_WORLD);

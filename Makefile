@@ -45,7 +45,6 @@ ifeq ($(OPENMP),ON)
   else
     CXXFLAGS += -fopenmp
   endif
-
 else ifeq ($(OPENMP),OFF)
 else ifeq ($(OPENMP),)
 else

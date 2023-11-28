@@ -2,13 +2,22 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <ctime>
 #include <memory>
+#include <string>
 #include <vector>
 
+#include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
 #include "exspec.h"
+#include "globals.h"
 #include "light_curve.h"
+#ifdef MPI_ON
+#include "mpi.h"
+#endif
+#include "packet.h"
 #include "sn3d.h"
 #include "vectors.h"
 
@@ -62,7 +71,7 @@ static void printout_tracemission_stats() {
     if (globals::nlines > maxlinesprinted) {
       nlines_limited = maxlinesprinted;
     }
-    printout("%17s %4s %9s %5s %5s %8s %8s %4s %7s %7s %7s %7s\n", "energy", "Z", "ion_stage", "upper", "lower",
+    printout("%17s %4s %9s %5s %5s %8s %8s %4s %7s %7s %7s %7s\n", "energy", "Z", "ionstage", "upper", "lower",
              "coll_str", "A", "forb", "lambda", "<v_rad>", "B_lu", "B_ul");
     for (int i = 0; i < nlines_limited; i++) {
       double encontrib = NAN;
@@ -434,8 +443,7 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
                 (pkt_ptr->nu_rf <= traceemissabs_nuupper)) {
               traceemissionabsorption[at].energyabsorbed += deltaE_absorption;
 
-              double vel_vec[3];
-              get_velocity(pkt_ptr->em_pos, vel_vec, pkt_ptr->em_time);
+              const auto vel_vec = get_velocity(pkt_ptr->em_pos, pkt_ptr->em_time);
               traceemissionabsorption[at].absorption_weightedvelocity_sum += vec_len(vel_vec) * deltaE_absorption;
 
               traceabsorption_totalenergy += deltaE_absorption;

@@ -134,7 +134,7 @@ constexpr double SF_EMAX;
 constexpr double SF_EMIN;
 
 // trigger a Spencer-Fano solution at least once every n timesteps
-// 0 can only use solutions from previous NLTE iterations on the current timestep
+// 0 can only re-use solutions from previous NLTE iterations of the current timestep
 // <=-1 will always solve the SF equation for every iteration of every timestep
 constexpr int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS;
 

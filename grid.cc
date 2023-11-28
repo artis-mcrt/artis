@@ -1,18 +1,20 @@
 #include "grid.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
-#include <filesystem>
+#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <limits>
-#include <memory>
 #include <span>
 #include <sstream>
 #include <string>
-#include <vector>
+#include <tuple>
+#include <utility>
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -181,7 +183,8 @@ static auto get_cell_r_inner(const int cellindex) -> double {
 }
 
 auto get_coordcellindexincrement(const int axis) -> int
-// how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r direction)
+// how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r
+// direction)
 {
   // assert_testmodeonly(axis < get_ngriddimensions());
 
@@ -197,7 +200,7 @@ auto get_coordcellindexincrement(const int axis) -> int
 
     default:
       printout("invalid coordinate index %d", axis);
-      abort();
+      std::abort();
       return -1;
   }
 }
@@ -220,7 +223,7 @@ auto get_cellcoordpointnum(const int cellindex, const int axis) -> int
 
       default:
         printout("invalid coordinate index %d", axis);
-        abort();
+        std::abort();
         return -1;
     }
   }
@@ -616,7 +619,7 @@ static auto get_cellradialposmid(const int cellindex) -> double
   }
 
   // cubic grid requires taking the length of the 3D position vector
-  double dcen[3];
+  std::array<double, 3> dcen{};
   for (int axis = 0; axis < 3; axis++) {
     dcen[axis] = get_cellcoordmin(cellindex, axis) + (0.5 * wid_init(cellindex, axis));
   }
@@ -633,9 +636,9 @@ void set_elements_uppermost_ion(const int modelgridindex, const int element, con
 }
 
 static void calculate_kappagrey() {
-  double rho_sum = 0.0;
-  double fe_sum = 0.0;
-  double opcase3_sum = 0.0;
+  double rho_sum = 0.;
+  double fe_sum = 0.;
+  double opcase3_sum = 0.;
   const int empty_cells = 0;
 
   for (int n = 0; n < ngrid; n++) {
@@ -656,26 +659,28 @@ static void calculate_kappagrey() {
         set_kappagrey(mgi, 0.);
       } else if (get_rho_tmin(mgi) < 0.) {
         printout("Error: negative density. Abort.\n");
-        abort();
+        std::abort();
       }
       opcase3_sum += get_kappagrey(mgi) * get_rho_tmin(mgi);
     }
   }
 
-  FILE *grid_file = nullptr;
   if (globals::rank_global == 0) {
-    grid_file = fopen_required("grid.out", "w");
+    FILE *grid_file = fopen_required("grid.out", "w");
+    for (int n = 0; n < ngrid; n++) {
+      const int mgi = get_cell_modelgridindex(n);
+      if (mgi != get_npts_model()) {
+        fprintf(grid_file, "%d %d\n", n, mgi);  /// write only non-empty cells to grid file
+      }
+    }
+    fclose(grid_file);
   }
 
   /// Second pass through allows calculation of normalized chi_grey
-  double check1 = 0.0;
-  double check2 = 0.0;
-  for (int n = 0; n < ngrid; n++) {
-    const int mgi = get_cell_modelgridindex(n);
-    if (globals::rank_global == 0 && mgi != get_npts_model()) {
-      fprintf(grid_file, "%d %d\n", n, mgi);  /// write only non-empty cells to grid file
-    }
-
+  double check1 = 0.;
+  double check2 = 0.;
+  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+    const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
     if (get_rho_tmin(mgi) > 0) {
       double kappa = 0.;
       if (globals::opacity_case == 0) {
@@ -711,7 +716,7 @@ static void calculate_kappagrey() {
         }
       } else {
         printout("Unknown opacity case. Abort.\n");
-        abort();
+        std::abort();
       }
 
       set_kappagrey(mgi, kappa);
@@ -719,24 +724,28 @@ static void calculate_kappagrey() {
       set_kappagrey(mgi, 0.);
     } else if (get_rho_tmin(mgi) < 0.) {
       printout("Error: negative density. Abort.\n");
-      abort();
+      std::abort();
     }
 
     check1 = check1 + (get_kappagrey(mgi) * get_rho_tmin(mgi));
     check2 = check2 + get_rho_tmin(mgi);
   }
 
-  if (globals::rank_global == 0) {
-    fclose(grid_file);
-  }
-
   printout("Grey normalisation check: %g\n", check1 / check2);
 }
 
-static void allocate_composition_cooling()
+static void allocate_nonemptycells_composition_cooling()
 /// Initialise composition dependent cell data for the given cell
 {
-  const int npts_nonempty = get_nonempty_npts_model();  // add one for the combined empty cell at the end
+  const size_t npts_nonempty = get_nonempty_npts_model();
+
+#ifdef MPI_ON
+  int my_rank_nonemptycells = nonempty_npts_model / globals::node_nprocs;
+  // rank_in_node 0 gets any remainder
+  if (globals::rank_in_node == 0) {
+    my_rank_nonemptycells += nonempty_npts_model - (my_rank_nonemptycells * globals::node_nprocs);
+  }
+#endif
 
 #ifdef MPI_ON
   size_t my_rank_cells_nonempty = nonempty_npts_model / globals::node_nprocs;
@@ -760,7 +769,7 @@ static void allocate_composition_cooling()
   }
 
   {
-    MPI_Aint size = my_rank_cells_nonempty * get_nelements() * sizeof(float);
+    auto size = static_cast<MPI_Aint>(my_rank_cells_nonempty * get_nelements() * sizeof(float));
     int disp_unit = sizeof(float);
     MPI_Win mpiwin = MPI_WIN_NULL;
 
@@ -777,7 +786,7 @@ static void allocate_composition_cooling()
   double *nltepops_allcells = nullptr;
   if (globals::total_nlte_levels > 0) {
 #ifdef MPI_ON
-    MPI_Aint size = my_rank_cells_nonempty * globals::total_nlte_levels * sizeof(double);
+    auto size = static_cast<MPI_Aint>(my_rank_nonemptycells * globals::total_nlte_levels * sizeof(double));
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nltepops_allcells,
                                           &win_nltepops_allcells) == MPI_SUCCESS);
@@ -791,7 +800,7 @@ static void allocate_composition_cooling()
     assert_always(nltepops_allcells != nullptr);
   }
 
-  for (int nonemptymgi = 0; nonemptymgi < npts_nonempty; nonemptymgi++) {
+  for (size_t nonemptymgi = 0; nonemptymgi < npts_nonempty; nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
     modelgrid[modelgridindex].elements_uppermost_ion = static_cast<int *>(malloc(get_nelements() * sizeof(int)));
@@ -803,7 +812,7 @@ static void allocate_composition_cooling()
 
     if (modelgrid[modelgridindex].composition == nullptr) {
       printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n", modelgridindex);
-      abort();
+      std::abort();
     }
 
     modelgrid[modelgridindex].initmassfracstable = &initmassfracstable_allcells[nonemptymgi * get_nelements()];
@@ -819,8 +828,8 @@ static void allocate_composition_cooling()
       assert_always(modelgrid[modelgridindex].nlte_pops != nullptr);
 
       for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
-        modelgrid[modelgridindex].nlte_pops[nlteindex] = -1.0;  /// flag to indicate that there is
-                                                                ///  currently no information on the nlte populations
+        modelgrid[modelgridindex].nlte_pops[nlteindex] = -1.;  /// flag to indicate that there is
+                                                               ///  currently no information on the nlte populations
       }
     } else {
       modelgrid[modelgridindex].nlte_pops = nullptr;
@@ -837,7 +846,7 @@ static void allocate_composition_cooling()
         printout(
             "[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",
             element, modelgridindex);
-        abort();
+        std::abort();
       }
 
       modelgrid[modelgridindex].composition[element].partfunct =
@@ -846,7 +855,7 @@ static void allocate_composition_cooling()
       if (modelgrid[modelgridindex].composition[element].partfunct == nullptr) {
         printout("[fatal] input: not enough memory to initialize partfunctlist for element %d in cell %d... abort\n",
                  element, modelgridindex);
-        abort();
+        std::abort();
       }
     }
 
@@ -854,7 +863,7 @@ static void allocate_composition_cooling()
 
     if (modelgrid[modelgridindex].cooling_contrib_ion == nullptr) {
       printout("[fatal] input: not enough memory to initialize coolinglist for cell %d... abort\n", modelgridindex);
-      abort();
+      std::abort();
     }
 
     modelgrid[modelgridindex].cooling_contrib_ion[0] =
@@ -933,7 +942,7 @@ static void allocate_nonemptymodelcells() {
     if (get_numassociatedcells(mgi) > 0) {
       if (get_rho_tmin(mgi) <= 0) {
         printout("Error: negative or zero density. Abort.\n");
-        abort();
+        std::abort();
       }
       nonemptymgi_of_mgi[mgi] = nonemptymgi;
       mgi_of_nonemptymgi[nonemptymgi] = mgi;
@@ -950,7 +959,11 @@ static void allocate_nonemptymodelcells() {
     }
   }
 
-  allocate_composition_cooling();
+  allocate_nonemptycells_composition_cooling();
+
+  if constexpr (EXPANSIONOPACITIES_ON) {
+    allocate_expansionopacities();
+  }
 
   globals::rpkt_emiss = static_cast<double *>(calloc((get_npts_model() + 1), sizeof(double)));
 
@@ -1038,7 +1051,7 @@ static void map_2dmodelto3dgrid()
     int mgi = get_npts_model();  // default to empty unless set
 
     // map to 3D Cartesian grid
-    double pos_mid[3];
+    std::array<double, 3> pos_mid{};
     for (int d = 0; d < 3; d++) {
       pos_mid[d] = (get_cellcoordmin(cellindex, d) + (0.5 * wid_init(cellindex, d)));
     }
@@ -1325,7 +1338,7 @@ static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<s
 
   allocate_initradiobund();
 
-  return std::make_tuple(colnames, nucindexlist, one_line_per_cell);
+  return {colnames, nucindexlist, one_line_per_cell};
 }
 
 static void read_1d_model()
@@ -1394,7 +1407,7 @@ static void read_1d_model()
 
   if (mgi != get_npts_model()) {
     printout("ERROR in model.txt. Found only %d cells instead of %d expected.\n", mgi - 1, get_npts_model());
-    abort();
+    std::abort();
   }
 
   globals::vmax = vout_model[get_npts_model() - 1];
@@ -1455,7 +1468,7 @@ static void read_2d_model()
 
     if (rho_tmodel < 0) {
       printout("negative input density %g %d\n", rho_tmodel, mgi);
-      abort();
+      std::abort();
     }
 
     const bool keepcell = (rho_tmodel > 0);
@@ -1474,10 +1487,10 @@ static void read_2d_model()
 
   if (mgi != get_npts_model()) {
     printout("ERROR in model.txt. Found %d only cells instead of %d expected.\n", mgi - 1, get_npts_model());
-    abort();
+    std::abort();
   }
 
-  printout("Effectively used model grid cells: %d\n", nonemptymgi);
+  printout("effectively used model grid cells: %d\n", nonemptymgi);
 }
 
 static void read_3d_model()
@@ -1530,7 +1543,7 @@ static void read_3d_model()
   int nonemptymgi = 0;
   while (std::getline(fmodel, line)) {
     int cellnumberin = 0;
-    float cellpos_in[3];
+    std::array<float, 3> cellpos_in{};
     float rho_model = NAN;
     std::istringstream ssline(line);
 
@@ -1567,7 +1580,7 @@ static void read_3d_model()
 
     if (rho_model < 0) {
       printout("negative input density %g %d\n", rho_model, mgi);
-      abort();
+      std::abort();
     }
 
     // in 3D cartesian, cellindex and modelgridindex are interchangeable
@@ -1590,7 +1603,7 @@ static void read_3d_model()
   }
   if (mgi != npts_model_in) {
     printout("ERROR in model.txt. Found %d cells instead of %d expected.\n", mgi, npts_model_in);
-    abort();
+    std::abort();
   }
 
   //   assert_always(posmatch_zyx ^ posmatch_xyz);  // xor because if both match then probably an infinity occurred
@@ -1608,7 +1621,7 @@ static void read_3d_model()
   }
 
   printout("min_den %g [g/cm3]\n", min_den);
-  printout("Effectively used model grid cells: %d\n", nonemptymgi);
+  printout("effectively used model grid cells: %d\n", nonemptymgi);
 }
 
 static void calc_modelinit_totmassradionuclides() {
@@ -1644,7 +1657,7 @@ static void calc_modelinit_totmassradionuclides() {
       cellvolume = pow((2 * globals::vmax * globals::tmin), 3.) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
     } else {
       printout("Unknown model type %d in function %s\n", get_model_type(), __func__);
-      abort();
+      std::abort();
     }
 
     const double mass_in_shell = get_rho_tmin(mgi) * cellvolume;
@@ -1691,7 +1704,7 @@ void read_ejecta_model() {
 
     default: {
       printout("Unknown model type. Abort.\n");
-      abort();
+      std::abort();
     }
   }
 
@@ -2035,7 +2048,7 @@ static void setup_grid_cartesian_3d()
   coordlabel[0] = 'X';
   coordlabel[1] = 'Y';
   coordlabel[2] = 'Z';
-  int nxyz[3] = {0, 0, 0};
+  std::array<int, 3> nxyz = {0, 0, 0};
   for (int n = 0; n < ngrid; n++) {
     for (int axis = 0; axis < 3; axis++) {
       assert_always(nxyz[axis] == get_cellcoordpointnum(n, axis));
@@ -2129,7 +2142,7 @@ void grid_init(int my_rank)
     strcpy(grid_type_name, "cylindrical");
   } else {
     printout("[fatal] grid_init: Error: Unknown grid type. Abort.");
-    abort();
+    std::abort();
   }
 
   printout("propagation grid: %d-dimensional %s\n", get_ngriddimensions(), grid_type_name);
@@ -2166,7 +2179,7 @@ void grid_init(int my_rank)
     map_2dmodelto3dgrid();
   } else {
     printout("[fatal] grid_init: Error: Unknown density type. Abort.");
-    abort();
+    std::abort();
   }
 
   allocate_nonemptymodelcells();
@@ -2259,11 +2272,28 @@ static auto get_poscoordpointnum(double pos, double time, int axis) -> int {
   }
 }
 
-auto get_cellindex_from_pos(std::span<const double, 3> pos, double time) -> int
+constexpr static auto get_gridcoords_from_xyz(std::span<const double, 3> pos_xyz) -> std::array<double, 3> {
+  auto posgridcoord = std::array<double, 3>{};
+  if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
+    posgridcoord[0] = pos_xyz[0];
+    posgridcoord[1] = pos_xyz[1];
+    posgridcoord[2] = pos_xyz[2];
+  } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
+    posgridcoord[0] = std::sqrt(std::pow(pos_xyz[0], 2) + std::pow(pos_xyz[1], 2));
+    posgridcoord[1] = pos_xyz[2];
+    posgridcoord[2] = 0.;
+  } else if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
+    posgridcoord[0] = vec_len(pos_xyz);
+    posgridcoord[1] = 0.;
+    posgridcoord[2] = 0.;
+  }
+  return posgridcoord;
+}
+
+[[nodiscard]] auto get_cellindex_from_pos(std::span<const double, 3> pos, double time) -> int
 /// identify the cell index from an (x,y,z) position and a time.
 {
-  double posgridcoords[3] = {NAN, NAN, NAN};
-  get_gridcoords_from_xyz(pos, posgridcoords);
+  auto posgridcoords = get_gridcoords_from_xyz(pos);
   int cellindex = 0;
   for (int d = 0; d < get_ngriddimensions(); d++) {
     cellindex += get_coordcellindexincrement(d) * get_poscoordpointnum(posgridcoords[d], time, d);
@@ -2308,8 +2338,8 @@ auto get_cellindex_from_pos(std::span<const double, 3> pos, double time) -> int
     double dist1 = (-b + sqrt(discriminant)) / 2 / a;
     double dist2 = (-b - sqrt(discriminant)) / 2 / a;
 
-    double posfinal1[3] = {0};
-    double posfinal2[3] = {0};
+    auto posfinal1 = std::array<double, 3>{0.};
+    auto posfinal2 = std::array<double, 3>{0.};
 
     for (size_t d = 0; d < pos.size(); d++) {
       posfinal1[d] = pos[d] + dist1 * dir[d];
@@ -2362,7 +2392,7 @@ auto get_cellindex_from_pos(std::span<const double, 3> pos, double time) -> int
     if (dist1 < 0) {
       return dist2;
     }
-    return fmin(dist1, dist2);
+    return std::min(dist1, dist2);
 
   }  // exactly one intersection
 
@@ -2425,14 +2455,13 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
 }
 
 [[nodiscard]] auto boundary_distance(std::span<const double, 3> dir, std::span<const double, 3> pos,
-                                     const double tstart, int cellindex, int *snext, enum cell_boundary *pkt_last_cross)
-    -> double
+                                     const double tstart, int cellindex, enum cell_boundary *pkt_last_cross)
+    -> std::tuple<double, int>
 /// Basic routine to compute distance to a cell boundary.
 {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
     if (get_cell_r_inner(cellindex) > globals::vmax * globals::tmin) {
-      *snext = -99;
-      return 0.;
+      return {0., -99};
     }
   }
 
@@ -2442,11 +2471,10 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
   // the following four vectors are in grid coordinates, so either x,y,z or r
   const int ndim = grid::get_ngriddimensions();
   assert_testmodeonly(ndim <= 3);
-  double pktposgridcoord[3] = {0};  // pos converted from xyz to propagation grid coordinates
-  double cellcoordmax[3] = {0};
-  double pktvelgridcoord[3] = {0};  // dir * CLIGHT_PROP converted from xyz to grid coordinates
+  auto cellcoordmax = std::array<double, 3>{0};
+  auto pktvelgridcoord = std::array<double, 3>{0};  // dir * CLIGHT_PROP converted from xyz to grid coordinates
 
-  get_gridcoords_from_xyz(pos, pktposgridcoord);
+  const auto pktposgridcoord = get_gridcoords_from_xyz(pos);
 
   for (int d = 0; d < ndim; d++) {
     cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
@@ -2470,9 +2498,8 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
     assert_always(false);
   }
 
-  enum cell_boundary const negdirections[3] = {COORD0_MIN, COORD1_MIN,
-                                               COORD2_MIN};  // 'X' might actually be radial coordinate
-  enum cell_boundary const posdirections[3] = {COORD0_MAX, COORD1_MAX, COORD2_MAX};
+  const auto negdirections = std::array<enum cell_boundary, 3>{COORD0_MIN, COORD1_MIN, COORD2_MIN};
+  const auto posdirections = std::array<enum cell_boundary, 3>{COORD0_MAX, COORD1_MAX, COORD2_MAX};
 
   // printout("checking inside cell boundary\n");
   for (int d = 0; d < ndim; d++) {
@@ -2516,14 +2543,13 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
           if ((grid::get_cellcoordpointnum(cellindex, d) == (grid::ncoordgrid[d] - 1) && cellindexstride > 0) ||
               (grid::get_cellcoordpointnum(cellindex, d) == 0 && cellindexstride < 0)) {
             printout("escaping packet\n");
-            *snext = -99;
-            return 0;
+            return {0., -99};
           }
-          *snext = cellindex + cellindexstride;
+          const int snext = cellindex + cellindexstride;
           *pkt_last_cross = invdirection;
-          printout("[warning] swapping packet cellindex from %d to %d and setting last_cross to %d\n", cellindex,
-                   *snext, *pkt_last_cross);
-          return 0;
+          printout("[warning] swapping packet cellindex from %d to %d and setting last_cross to %d\n", cellindex, snext,
+                   *pkt_last_cross);
+          return {0., snext};
         }
         printout("pretending last_cross is %d\n", direction);
         last_cross = direction;
@@ -2539,8 +2565,10 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
   // globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 2), cellcoordmax[2] - (initpos[2] *
   // globals::tmin/tstart)); printout("dir [%g, %g, %g]\n", dir[0],dir[1],dir[2]);
 
-  double d_coordmaxboundary[3] = {-1};  // distance to reach the cell's upper boundary on each coordinate
-  double d_coordminboundary[3] = {-1};  // distance to reach the cell's lower boundary on each coordinate
+  auto d_coordmaxboundary =
+      std::array<double, 3>{-1};  // distance to reach the cell's upper boundary on each coordinate
+  auto d_coordminboundary =
+      std::array<double, 3>{-1};  // distance to reach the cell's lower boundary on each coordinate
   if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
     last_cross = BOUNDARY_NONE;  // handle this separately by setting d_inner and d_outer negative for invalid direction
     const double speed = vec_len(dir) * CLIGHT_PROP;  // just in case dir is not normalised
@@ -2594,16 +2622,17 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
   // We now need to identify the shortest +ve distance - that's the one we want.
   enum cell_boundary choice = BOUNDARY_NONE;
   double distance = std::numeric_limits<double>::max();
+  int snext = 0;
   for (int d = 0; d < ndim; d++) {
     // upper d coordinate of the current cell
     if ((d_coordmaxboundary[d] > 0) && (d_coordmaxboundary[d] < distance) && (last_cross != negdirections[d])) {
       choice = posdirections[d];
       distance = d_coordmaxboundary[d];
       if (grid::get_cellcoordpointnum(cellindex, d) == (grid::ncoordgrid[d] - 1)) {
-        *snext = -99;
+        snext = -99;
       } else {
         *pkt_last_cross = choice;
-        *snext = cellindex + grid::get_coordcellindexincrement(d);
+        snext = cellindex + grid::get_coordcellindexincrement(d);
       }
     }
 
@@ -2612,10 +2641,10 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
       choice = negdirections[d];
       distance = d_coordminboundary[d];
       if (grid::get_cellcoordpointnum(cellindex, d) == 0) {
-        *snext = -99;
+        snext = -99;
       } else {
         *pkt_last_cross = choice;
-        *snext = cellindex - grid::get_coordcellindexincrement(d);
+        snext = cellindex - grid::get_coordcellindexincrement(d);
       }
     }
   }
@@ -2641,7 +2670,7 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
     assert_always(false);
   }
 
-  return distance;
+  return {distance, snext};
 }
 
 void change_cell(struct packet *pkt_ptr, int snext)

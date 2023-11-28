@@ -14,7 +14,7 @@ void init(int my_rank, int ndo_nonempty);
 void initialise_prev_titer_photoionestimators();
 void write_to_file(int modelgridindex, int timestep);
 void close_file();
-void update_estimators(int nonemptymgi, double distance_e_cmf, double nu_cmf, const struct packet *pkt_ptr);
+void update_estimators(int nonemptymgi, double distance_e_cmf, double nu_cmf, double doppler_nucmf_on_nurf);
 void update_lineestimator(int modelgridindex, int lineindex, double increment);
 [[nodiscard]] auto radfield(double nu, int modelgridindex) -> double;
 void fit_parameters(int modelgridindex, int timestep);
@@ -32,12 +32,15 @@ void do_MPI_Bcast(int modelgridindex, int root, int root_node_id);
 void write_restart_data(FILE *gridsave_file);
 void read_restart_data(FILE *gridsave_file);
 void normalise_bf_estimators(int modelgridindex, double estimator_normfactor_over_H);
-auto get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex) -> double;
+[[nodiscard]] auto get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex)
+    -> double;
 void print_bfrate_contributions(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex,
                                 double nnlowerlevel, double nnlowerion);
 void reset_bfrate_contributions(int modelgridindex);
-auto integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel, size_t limit, int key,
-               gsl_integration_workspace *workspace, double *result, double *abserr) -> int;
+[[nodiscard]] auto integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel,
+                             size_t limit, int key, gsl_integration_workspace *workspace, double *result,
+                             double *abserr) -> int;
+auto planck_integral_analytic(double T_R, double nu_lower, double nu_upper, bool times_nu) -> double;
 
 [[nodiscard]] constexpr auto dbb(double nu, auto T, auto W) -> double
 // returns J_nu [ergs/s/sr/cm2/Hz] for a dilute black body with temperature T and dilution factor W

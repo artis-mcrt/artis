@@ -1,15 +1,22 @@
 #include "macroatom.h"
 
-#include <gsl/gsl_integration.h>
-
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+#include <iterator>
+#include <numeric>
 
 #include "artisoptions.h"
+#include "atomic.h"
+#include "constants.h"
 #include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
 #include "nonthermal.h"
+#include "packet.h"
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
@@ -136,17 +143,16 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
   }
 }
 
-static auto do_macroatom_internal_down_same(int element, int ion, int level, double total_internal_down_same) -> int {
+static auto do_macroatom_internal_down_same(int element, int ion, int level) -> int {
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
   // printout("[debug] do_ma:   internal downward jump within current ionstage\n");
 
-  /// Randomly select the occuring transition
-  const double zrand = rng_uniform();
-  const double targetval = zrand * total_internal_down_same;
-
   const double *sum_internal_down_same =
-      globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].sum_internal_down_same;
+      globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].sum_internal_down_same;
+
+  /// Randomly select the occuring transition
+  const double targetval = rng_uniform() * sum_internal_down_same[ndowntrans - 1];
 
   // first sum_internal_down_same[i] such that sum_internal_down_same[i] > targetval
   const double *const upperval =
@@ -160,38 +166,33 @@ static auto do_macroatom_internal_down_same(int element, int ion, int level, dou
 }
 
 static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int element, const int ion, const int level,
-                                         const double rad_deexc, const int activatingline) {
+                                         const int activatingline) {
   /// radiative deexcitation of MA: emitt rpkt
   /// randomly select which line transitions occurs
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
-  double *sum_epstrans_rad_deexc =
-      globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].sum_epstrans_rad_deexc;
+  const auto *sum_epstrans_rad_deexc =
+      globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].sum_epstrans_rad_deexc;
 
-  const double zrand = rng_uniform();
-  const double targetval = zrand * rad_deexc;
+  const double targetval = rng_uniform() * sum_epstrans_rad_deexc[ndowntrans - 1];
 
   // first sum_epstrans_rad_deexc[i] such that sum_epstrans_rad_deexc[i] > targetval
-  const double *const upperval =
-      std::upper_bound(&sum_epstrans_rad_deexc[0], &sum_epstrans_rad_deexc[ndowntrans], targetval);
-  const ptrdiff_t downtransindex = upperval - &sum_epstrans_rad_deexc[0];
+  const auto *upperval = std::upper_bound(sum_epstrans_rad_deexc, sum_epstrans_rad_deexc + ndowntrans, targetval);
+  auto downtransindex = std::distance(sum_epstrans_rad_deexc, upperval);
 
   assert_always(downtransindex < ndowntrans);
-  auto linelistindex = globals::elements[element].ions[ion].levels[level].downtrans[downtransindex].lineindex;
 
-  if (linelistindex == activatingline) {
+  const auto &selecteddowntrans = globals::elements[element].ions[ion].levels[level].downtrans[downtransindex];
+
+  if (selecteddowntrans.lineindex == activatingline) {
     stats::increment(stats::COUNTER_RESONANCESCATTERINGS);
   }
 
   if constexpr (RECORD_LINESTAT) {
-    safeincrement(globals::ecounter[linelistindex]);
+    safeincrement(globals::ecounter[selecteddowntrans.lineindex]);
   }
 
-  const int lower = globals::elements[element].ions[ion].levels[level].downtrans[downtransindex].targetlevelindex;
-
-  // printout("[debug] do_ma:   jump to level %d\n", lower);
-
-  const double epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, lower);
+  const double epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, selecteddowntrans.targetlevelindex);
 
   double oldnucmf = NAN;
   if (pkt_ptr->last_event == 1) {
@@ -215,9 +216,9 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
   emit_rpkt(pkt_ptr);
 
   // the r-pkt can only interact with lines redder than the current one
-  pkt_ptr->next_trans = linelistindex + 1;
-  pkt_ptr->emissiontype = linelistindex;
-  vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
+  pkt_ptr->next_trans = selecteddowntrans.lineindex + 1;
+  pkt_ptr->emissiontype = selecteddowntrans.lineindex;
+  pkt_ptr->em_pos = pkt_ptr->pos;
   pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
 
@@ -232,7 +233,7 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
   const int upperion = *ion;
   const int upperionlevel = *level;
   /// Randomly select a continuum
-  const double zrand = rng_uniform();
+  const double targetval = rng_uniform() * rad_recomb;
   double rate = 0;
   const int nlevels = get_ionisinglevels(element, upperion - 1);
   int lower = 0;
@@ -246,16 +247,17 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
     // upperion - 1, lower))); printout("[debug] do_ma:   rate to level %d of ion %d = %g\n", lower, upperion - 1,
     // rate); printout("[debug] do_ma:   zrand*rad_recomb = %g\n", zrand * rad_recomb);
 
-    if (zrand * rad_recomb < rate) {
+    if (targetval < rate) {
       break;
     }
   }
-  if (zrand * rad_recomb >= rate) {
+  if (targetval >= rate) {
     printout(
-        "%s: From Z=%d ionstage %d level %d, could not select lower level to recombine to. zrand %g * rad_recomb %g >= "
+        "%s: From Z=%d ionstage %d level %d, could not select lower level to recombine to. targetval %g * rad_recomb "
+        "%g >= "
         "rate %g",
-        __func__, get_atomicnumber(element), get_ionstage(element, *ion), *level, zrand, rad_recomb, rate);
-    abort();
+        __func__, get_atomicnumber(element), get_ionstage(element, *ion), *level, targetval, rad_recomb, rate);
+    std::abort();
   }
 
   /// set the new state
@@ -270,7 +272,7 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
 
   if (!std::isfinite(pkt_ptr->nu_cmf)) {
     printout("[fatal] rad recombination of MA: selected frequency not finite ... abort\n");
-    abort();
+    std::abort();
   }
   stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_FB);
   pkt_ptr->interactions += 1;
@@ -286,7 +288,7 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
 
   pkt_ptr->next_trans = 0;  /// continuum transition, no restrictions for further line interactions
   pkt_ptr->emissiontype = get_continuumindex(element, *ion, lower, upperionlevel);
-  vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
+  pkt_ptr->em_pos = pkt_ptr->pos;
   pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
 
@@ -318,7 +320,7 @@ static void do_macroatom_ionisation(const int modelgridindex, const int element,
         "%s: From Z=%d ionstage %d level %d, could not select upper level to ionise to. zrand %g * internal_up_higher "
         "%g >= rate %g\n",
         __func__, get_atomicnumber(element), get_ionstage(element, *ion), *level, zrand, internal_up_higher, rate);
-    abort();
+    std::abort();
   }
 
   assert_always(upper >= 0);
@@ -395,9 +397,9 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
     // const int ndowntrans = get_ndowntrans(element, ion, level);
     const int nuptrans = get_nuptrans(element, ion, level);
 
-    assert_testmodeonly(globals::cellhistory[tid].cellnumber == modelgridindex);
+    assert_testmodeonly(globals::cellcache[tid].cellnumber == modelgridindex);
 
-    auto &chlevel = globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
+    auto &chlevel = globals::cellcache[tid].chelements[element].chions[ion].chlevels[level];
     auto &processrates = chlevel.processrates;
     /// If there are no precalculated rates available then calculate them
     if (processrates[MA_ACTION_COLDEEXC] < 0) {
@@ -407,43 +409,36 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
     // for debugging the transition rates:
     // {
     //   printout("macroatom element %d ion %d level %d\n", element, ion, level);
-    //
-    // const char *actionlabel[MA_ACTION_COUNT] = {
-    //   "MA_ACTION_RADDEEXC", "MA_ACTION_COLDEEXC", "MA_ACTION_RADRECOMB",
-    //   "MA_ACTION_COLRECOMB", "MA_ACTION_INTERNALDOWNSAME", "MA_ACTION_INTERNALDOWNLOWER",
-    //   "MA_ACTION_INTERNALUPSAME", "MA_ACTION_INTERNALUPHIGHER", "MA_ACTION_INTERNALUPHIGHERNT"};
 
-    //   for (enum ma_action action = 0; action < MA_ACTION_COUNT; action++)
+    //   const char *actionlabel[MA_ACTION_COUNT] = {
+    //       "MA_ACTION_RADDEEXC",       "MA_ACTION_COLDEEXC",         "MA_ACTION_RADRECOMB",
+    //       "MA_ACTION_COLRECOMB",      "MA_ACTION_INTERNALDOWNSAME", "MA_ACTION_INTERNALDOWNLOWER",
+    //       "MA_ACTION_INTERNALUPSAME", "MA_ACTION_INTERNALUPHIGHER", "MA_ACTION_INTERNALUPHIGHERNT"};
+
+    //   for (int action = 0; action < MA_ACTION_COUNT; action++)
     //     printout("actions: %30s %g\n", actionlabel[action], processrates[action]);
     // }
 
     // select transition according to probabilities
-    double total_transitions = 0.;
-    for (int action = 0; action < MA_ACTION_COUNT; action++) {
-      total_transitions += processrates[action];
-    }
-    assert_always(total_transitions > 0);
+    std::array<double, MA_ACTION_COUNT> cumulative_transitions{};
+    std::partial_sum(processrates.begin(), processrates.end(), cumulative_transitions.begin());
 
-    enum ma_action selected_action = MA_ACTION_COUNT;
-    double zrand = rng_uniform();
-    const double randomrate = zrand * total_transitions;
-    double rate = 0.;
-    for (int action = 0; action < MA_ACTION_COUNT; action++) {
-      rate += processrates[action];
-      if (rate > randomrate) {
-        selected_action = static_cast<enum ma_action>(action);
-        break;
-      }
-    }
+    const double randomrate = rng_uniform() * cumulative_transitions[MA_ACTION_COUNT - 1];
 
-    assert_always(rate > randomrate);
+    // first cumulative_transitions[i] such that cumulative_transitions[i] > randomrate
+    const auto *upperval = std::upper_bound(cumulative_transitions.begin(), cumulative_transitions.end(), randomrate);
+    const auto selected_action =
+        static_cast<const enum ma_action>(std::distance(cumulative_transitions.cbegin(), upperval));
+
+    assert_always(selected_action < MA_ACTION_COUNT);
+    assert_always(cumulative_transitions[selected_action] > randomrate);
 
     switch (selected_action) {
       case MA_ACTION_RADDEEXC: {
         // printout("[debug] do_ma:   radiative deexcitation\n");
         // printout("[debug] do_ma:   jumps = %d\n", jumps);
 
-        do_macroatom_raddeexcitation(pkt_ptr, element, ion, level, processrates[MA_ACTION_RADDEEXC], activatingline);
+        do_macroatom_raddeexcitation(pkt_ptr, element, ion, level, activatingline);
 
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC,
@@ -491,7 +486,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
       case MA_ACTION_INTERNALDOWNSAME: {
         pkt_ptr->interactions += 1;
         jumps++;
-        level = do_macroatom_internal_down_same(element, ion, level, processrates[MA_ACTION_INTERNALDOWNSAME]);
+        level = do_macroatom_internal_down_same(element, ion, level);
 
         break;
       }
@@ -542,9 +537,9 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
         stats::increment(stats::COUNTER_MA_STAT_INTERNALDOWNLOWER);
 
         /// Randomly select the occuring transition
-        zrand = rng_uniform();
+        const double targetrate = rng_uniform() * processrates[MA_ACTION_INTERNALDOWNLOWER];
         // zrand = 1. - 1e-14;
-        rate = 0.;
+        double rate = 0.;
         // nlevels = get_nlevels(element,ion-1);
 
         const int nlevels = get_ionisinglevels(element, ion - 1);
@@ -556,7 +551,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
           const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, modelgridindex);
           const double C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
           rate += (R + C) * epsilon_target;
-          if (zrand * processrates[MA_ACTION_INTERNALDOWNLOWER] < rate) {
+          if (targetrate < rate) {
             break;
           }
         }
@@ -577,8 +572,8 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
 
         if (lower >= nlevels) {
           printout("internal_down_lower  %g\n", processrates[MA_ACTION_INTERNALDOWNLOWER]);
-          printout("abort at rate %g, zrand %g\n", rate, zrand);
-          abort();
+          printout("abort at rate %g, targetrate %g\n", rate, targetrate);
+          std::abort();
         }
         if (get_ionstage(element, ion) == 0 && lower == 0) {
           printout("internal downward transition to ground level occured ... abort\n");
@@ -586,7 +581,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
           printout("Z %d, ionstage %d, energy %g\n", get_atomicnumber(element), get_ionstage(element, ion - 1),
                    globals::elements[element].ions[ion - 1].levels[lower].epsilon);
           printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
-          abort();
+          std::abort();
         }
         break;
       }
@@ -597,11 +592,10 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
         jumps++;
 
         /// randomly select the occuring transition
-        zrand = rng_uniform();
         const double *sum_internal_up_same =
-            globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].sum_internal_up_same;
+            globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].sum_internal_up_same;
 
-        const double targetval = zrand * processrates[MA_ACTION_INTERNALUPSAME];
+        const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALUPSAME];
 
         // first sum_internal_up_same[i] such that sum_internal_up_same[i] > targetval
         const double *const upperval =
@@ -661,7 +655,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
 
       case MA_ACTION_COUNT: {
         printout("ERROR: Problem selecting MA_ACTION\n");
-        abort();
+        std::abort();
       }
     }
   }  /// endwhile
@@ -707,7 +701,7 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
   const double n_u = get_levelpop(modelgridindex, element, ion, upper);
   const double n_l = get_levelpop(modelgridindex, element, ion, lower);
 
-  double R = 0.0;
+  double R = 0.;
 
   // if ((n_u > 1.1 * MINPOP) && (n_l > 1.1 * MINPOP))
   {
@@ -721,7 +715,7 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
 
     if (tau_sobolev > 1e-100) {
       const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));
-      // const double beta = 1.0;
+      // const double beta = 1.;
       R = A_ul * beta;
     } else {
       // printout("[warning] rad_deexcitation: tau_sobolev %g <= 0, set beta=1\n",tau_sobolev);
@@ -729,7 +723,7 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
       // printout("[warning] rad_deexcitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
       // printout("[warning] rad_deexcitation: T_e %g, T_R %g, W %g in model cell
       // %d\n",grid::get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex),modelgridindex);
-      R = 0.0;
+      R = 0.;
       // printout("[fatal] rad_excitation: tau_sobolev <= 0 ... %g abort",tau_sobolev);
       // abort();
     }
@@ -753,7 +747,7 @@ auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const
 
   const double n_u = get_levelpop(modelgridindex, element, ion, upper);
   const double n_l = get_levelpop(modelgridindex, element, ion, lower);
-  double R = 0.0;
+  double R = 0.;
   // if ((n_u >= 1.1 * MINPOP) && (n_l >= 1.1 * MINPOP))
   {
     const double nu_trans = epsilon_trans / H;
@@ -815,7 +809,7 @@ auto rad_recombination_ratecoeff(const float T_e, const float nne, const int ele
   // if (upperionlevel > get_maxrecombininglevel(element, upperion))
   //   return 0.;
 
-  double R = 0.0;
+  double R = 0.;
   const int lowerion = upperion - 1;
   const int nphixstargets = get_nphixstargets(element, lowerion, lowerionlevel);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
@@ -838,7 +832,7 @@ auto rad_recombination_ratecoeff(const float T_e, const float nne, const int ele
 
 auto stim_recombination_ratecoeff(const float nne, const int element, const int upperion, const int upper,
                                   const int lower, const int modelgridindex) -> double {
-  double R = 0.0;
+  double R = 0.;
 
   if constexpr (SEPARATE_STIMRECOMB) {
     const int nphixstargets = get_nphixstargets(element, upperion - 1, lower);

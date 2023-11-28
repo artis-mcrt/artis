@@ -2,16 +2,25 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include <memory>
+#include <iterator>
 #include <sstream>
 #include <string>
 #include <vector>
 
+#include "artisoptions.h"
+#include "constants.h"
 #include "decay.h"
+#include "globals.h"
 #include "grid.h"
 #include "input.h"
+#ifdef MPI_ON
+#include "mpi.h"
+#endif
 #include "sn3d.h"
 #include "vectors.h"
 
@@ -35,7 +44,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     // assert_always(radius >= r_inner);
     // assert_always(radius <= r_outer);
 
-    get_rand_isotropic_unitvec(pkt_ptr->pos);
+    pkt_ptr->pos = get_rand_isotropic_unitvec();
     vec_scale(pkt_ptr->pos, radius);
 
   } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
@@ -71,7 +80,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   // might as well give it a correct value since this code is fast and runs only once
 
   // pellet packet is moving with the homologous flow, so dir is proportional to pos
-  vec_norm(pkt_ptr->pos, pkt_ptr->dir);  // assign dir = pos / vec_len(pos)
+  pkt_ptr->dir = vec_norm(pkt_ptr->pos);  // assign dir = pos / vec_len(pos)
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
@@ -102,7 +111,7 @@ void packet_init(struct packet *pkt)
   // Need to get a normalisation factor.
   auto en_cumulative = std::vector<double>(grid::ngrid);
 
-  double norm = 0.0;
+  double norm = 0.;
   for (int m = 0; m < grid::ngrid; m++) {
     const int mgi = grid::get_cell_modelgridindex(m);
     if (mgi < grid::get_npts_model())  // some grid cells are empty
@@ -129,7 +138,7 @@ void packet_init(struct packet *pkt)
 
   if (globals::npkts > MPKTS) {
     printout("Too many packets. Abort.\n");
-    abort();
+    std::abort();
   }
 
   printout("Placing pellets...\n");
@@ -163,7 +172,7 @@ void packet_init(struct packet *pkt)
   printout("total energy that will be freed during simulation time: %g erg\n", e_cmf_total);
 }
 
-void write_packets(char filename[], const struct packet *const pkt) {
+void write_packets(const char filename[], const struct packet *const pkt) {
   // write packets text file
   FILE *packets_file = fopen_required(filename, "w");
   fprintf(packets_file,
@@ -272,7 +281,7 @@ void read_packets(const char filename[], struct packet *pkt) {
           "ERROR: More data found beyond packet %d (expecting %d packets). Recompile exspec with the correct number "
           "of packets. Run (wc -l < packets00_0000.out) to count them.\n",
           packets_read, globals::npkts);
-      abort();
+      std::abort();
     }
 
     std::istringstream ssline(line);
@@ -330,7 +339,7 @@ void read_packets(const char filename[], struct packet *pkt) {
         "ERROR: Read failed after packet %d (expecting %d packets). Recompile exspec with the correct number of "
         "packets. Run (wc -l < packets00_0000.out) to count them.\n",
         packets_read, globals::npkts);
-    abort();
+    std::abort();
   }
 
   packets_file.close();

@@ -2,7 +2,11 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cmath>
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -14,12 +18,18 @@
 #include <string_view>
 #include <vector>
 
+#include "artisoptions.h"
 #include "atomic.h"
+#include "constants.h"
 #include "gammapkt.h"
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#ifdef MPI_ON
+#include "mpi.h"
+#endif
 #include "nonthermal.h"
+#include "packet.h"
 #include "sn3d.h"
 
 namespace decay {
@@ -35,13 +45,13 @@ constexpr std::string_view elsymbols[Z_MAX + 1] = {
     "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Uut", "Fl", "Uup", "Lv", "Uus", "Uuo"};
 
 struct nuclide {
-  int z = -1;                    // atomic number
-  int a = -1;                    // mass number
-  double meanlife = -1;          // mean lifetime before decay [s]
-  double endecay_electron = 0.;  // average energy per beta- decay in kinetic energy of emitted electons [erg]
-  double endecay_positron = 0.;  // average energy per beta+ decay in kinetic energy of emitted positrons [erg]
-  double endecay_gamma = 0.;     // average energy per decay in gamma rays [erg]
-  double endecay_alpha = 0.;     // average energy per alpha decay in kinetic energy of alpha particles [erg]
+  int z{-1};                    // atomic number
+  int a{-1};                    // mass number
+  double meanlife{-1};          // mean lifetime before decay [s]
+  double endecay_electron{0.};  // average energy per beta- decay in kinetic energy of emitted electons [erg]
+  double endecay_positron{0.};  // average energy per beta+ decay in kinetic energy of emitted positrons [erg]
+  double endecay_gamma{0.};     // average energy per decay in gamma rays [erg]
+  double endecay_alpha{0.};     // average energy per alpha decay in kinetic energy of alpha particles [erg]
   std::array<double, decaytypes::DECAYTYPE_COUNT> endecay_q = {
       0.};  // Q-value (reactant minus product energy) for each decay type
   std::array<double, decaytypes::DECAYTYPE_COUNT> branchprobs = {0.};  // branch probability of each decay type
@@ -107,7 +117,8 @@ struct decaypath {
   std::vector<int> nucindex{};  // index into nuclides list
   std::vector<int> decaytypes{};
   std::vector<double> lambdas{};
-  double branchproduct{};  // product of all branching factors along the path set by calculate_decaypath_branchproduct()
+  double branchproduct{
+      0.};  // product of all branching factors along the path set by calculate_decaypath_branchproduct()
 
   [[nodiscard]] auto final_daughter_a() const -> int { return decay_daughter_a(z.back(), a.back(), decaytypes.back()); }
   [[nodiscard]] auto final_daughter_z() const -> int { return decay_daughter_z(z.back(), a.back(), decaytypes.back()); }
@@ -123,7 +134,7 @@ double *decaypath_energy_per_mass = nullptr;
 MPI_Win win_decaypath_energy_per_mass = MPI_WIN_NULL;
 #endif
 
-auto get_num_nuclides() -> int { return nuclides.size(); }
+auto get_num_nuclides() -> int { return static_cast<int>(nuclides.size()); }
 
 auto get_elname(const int z) -> const char * {
   assert_testmodeonly(z <= Z_MAX);
@@ -374,7 +385,7 @@ static void extend_lastdecaypath()
 // follow decays at the ends of the current list of decaypaths,
 // to get decaypaths from all descendants
 {
-  const int startdecaypathindex = decaypaths.size() - 1;
+  const int startdecaypathindex = static_cast<int>(decaypaths.size() - 1);
 
   const int daughter_z = decaypaths[startdecaypathindex].final_daughter_z();
   const int daughter_a = decaypaths[startdecaypathindex].final_daughter_a();
@@ -389,17 +400,16 @@ static void extend_lastdecaypath()
       for (int i = 0; i < get_decaypathlength(startdecaypathindex); i++) {
         if (decaypaths[startdecaypathindex].z[i] == daughter_z && decaypaths[startdecaypathindex].a[i] == daughter_a) {
           printout("\nERROR: Loop found in nuclear decay chain.\n");
-          abort();
+          std::abort();
         }
       }
 
       decaypaths.push_back(decaypaths[startdecaypathindex]);
-      const int lastindex = decaypaths.size() - 1;
 
-      decaypaths[lastindex].z.push_back(daughter_z);
-      decaypaths[lastindex].a.push_back(daughter_a);
-      decaypaths[lastindex].nucindex.push_back(daughter_nucindex);
-      decaypaths[lastindex].decaytypes.push_back(dectypeindex2);
+      decaypaths.back().z.push_back(daughter_z);
+      decaypaths.back().a.push_back(daughter_a);
+      decaypaths.back().nucindex.push_back(daughter_nucindex);
+      decaypaths.back().decaytypes.push_back(dectypeindex2);
 
       extend_lastdecaypath();
     }
@@ -509,20 +519,26 @@ static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const s
                          }
                        }
 
-                       // keep if it is connected by decays to one of the standard or custom input-specified nuclides
-                       for (const auto &decaypath : decaypaths) {
-                         if (decaypath.final_daughter_z() == nuc.z && decaypath.final_daughter_a() == nuc.a) {
-                           return false;
-                         }
-
+                       const bool in_any_decaypath = std::ranges::any_of(decaypaths, [&nuc](const auto &decaypath) {
                          for (size_t i = 0; i < decaypath.z.size(); i++) {
                            if (decaypath.z[i] == nuc.z && decaypath.a[i] == nuc.a) {
-                             // decay path starts with input nuc and nuc is in the decay path, so keep it
-                             return false;
+                             // nuc is in the decay path
+                             return true;
                            };
-                         }
+                         };
+                         if (decaypath.final_daughter_z() == nuc.z && decaypath.final_daughter_a() == nuc.a) {
+                           // nuc is the final daughter of a decay path
+                           return true;
+                         };
+
+                         return false;
+                       });
+
+                       if (in_any_decaypath) {
+                         return false;
                        }
-                       printout("removing unused nuclide (Z=%d)%s-%d\n", nuc.z, get_elname(nuc.z), nuc.a);
+
+                       printout("removing unused nuclide (Z=%d)%s%d\n", nuc.z, get_elname(nuc.z), nuc.a);
                        return true;
                      }),
       nuclides.end());
@@ -653,7 +669,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
       nuclides.back().endecay_q[DECAYTYPE_BETAMINUS] = q_mev * MEV;
       nuclides.back().endecay_electron = e_elec_mev * MEV;
       nuclides.back().endecay_gamma = e_gamma_mev * MEV;
-      // printout("betaminus file: Adding (Z=%d)%s-%d endecay_electron %g endecay_gamma %g tau_s %g\n",
+      // printout("betaminus file: Adding (Z=%d)%s%d endecay_electron %g endecay_gamma %g tau_s %g\n",
       //          z, get_elname(z), a, e_elec_mev, e_gamma_mev, tau_sec);
       assert_always(e_elec_mev >= 0.);
     }
@@ -684,7 +700,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
           alphanucindex = get_nucindex(z, a);
         } else {
           nuclides.push_back({.z = z, .a = a, .meanlife = tau_sec, .endecay_gamma = e_gamma_mev * MEV});
-          alphanucindex = nuclides.size() - 1;
+          alphanucindex = static_cast<int>(nuclides.size() - 1);
         }
         nuclides[alphanucindex].endecay_alpha = e_alpha_mev * MEV;
         nuclides[alphanucindex].branchprobs[DECAYTYPE_BETAMINUS] = branch_beta;
@@ -692,7 +708,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
         nuclides[alphanucindex].branchprobs[DECAYTYPE_ALPHA] = branch_alpha;
         nuclides[alphanucindex].endecay_q[DECAYTYPE_ALPHA] = Q_total_alphadec * MEV;
 
-        // printout("alphadecay file: Adding (Z=%d)%s-%d endecay_alpha %g endecay_gamma %g tau_s %g\n",
+        // printout("alphadecay file: Adding (Z=%d)%s%d endecay_alpha %g endecay_gamma %g tau_s %g\n",
         //          z, get_elname(z), a, e_alpha_mev, e_gamma_mev, tau_sec);
       }
     }
@@ -1009,7 +1025,7 @@ static auto calculate_simtime_endecay_per_ejectamass(const int mgi, const int de
 static auto get_simtime_endecay_per_ejectamass(const int mgi, const int decaypathindex) -> double
 // get the decay energy released during the simulation time per unit mass [erg/g]
 {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+  const size_t nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
   const double chainendecay = decaypath_energy_per_mass[nonemptymgi * get_num_decaypaths() + decaypathindex];
   assert_testmodeonly(chainendecay >= 0.);
   assert_testmodeonly(std::isfinite(chainendecay));
@@ -1070,7 +1086,7 @@ void setup_decaypath_energy_per_mass() {
       "shared)...",
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
 #ifdef MPI_ON
-  int my_rank_cells = nonempty_npts_model / globals::node_nprocs;
+  size_t my_rank_cells = nonempty_npts_model / globals::node_nprocs;
   // rank_in_node 0 gets any remainder
   if (globals::rank_in_node == 0) {
     my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
@@ -1093,11 +1109,11 @@ void setup_decaypath_energy_per_mass() {
 #endif
 
   printout("Calculating decaypath_energy_per_mass for all cells...");
-  const int num_decaypaths = get_num_decaypaths();
+  const size_t num_decaypaths = get_num_decaypaths();
   for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
     if (nonemptymgi % globals::node_nprocs == globals::rank_in_node) {
       const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-      for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
+      for (size_t decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
         decaypath_energy_per_mass[nonemptymgi * num_decaypaths + decaypathindex] =
             calculate_simtime_endecay_per_ejectamass(mgi, decaypathindex);
       }
