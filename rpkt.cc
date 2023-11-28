@@ -667,7 +667,7 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
 /// packets which do not contribute to the radiation field.
 {
   /// Update only non-empty cells
-  if (modelgridindex == grid::get_npts_model()) {
+  if (nonemptymgi < 0) {
     return;
   }
   const double distance_e_cmf = distance * e_cmf;
