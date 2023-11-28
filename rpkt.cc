@@ -680,33 +680,35 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
       const double nu_edge = globals::groundcont[i].nu_edge;
-      if (nu_cmf > nu_edge) {
-        const int element = globals::groundcont[i].element;
-        /// Cells with zero abundance for a specific element have zero contribution
-        /// (set in calculate_chi_rpkt_cont and therefore do not contribute to
-        /// the estimators
-        if (grid::get_elem_abundance(modelgridindex, element) > 0) {
-          const int ion = globals::groundcont[i].ion;
-          const int ionestimindex = get_ionestimindex_nonemptymgi(nonemptymgi, element, ion);
+      if (nu_cmf <= nu_edge) {
+        // because groundcont is sorted by nu_edge descending, nu < nu_edge for all remaining items
+        return;
+      }
+      const int element = globals::groundcont[i].element;
+      /// Cells with zero abundance for a specific element have zero contribution
+      /// (set in calculate_chi_rpkt_cont and therefore do not contribute to
+      /// the estimators
+      if (grid::get_elem_abundance(modelgridindex, element) > 0) {
+        const int ion = globals::groundcont[i].ion;
+        const int ionestimindex = get_ionestimindex_nonemptymgi(nonemptymgi, element, ion);
 
-          if constexpr (USE_LUT_PHOTOION) {
-            safeadd(globals::gammaestimator[ionestimindex],
-                    globals::phixslist[tid].groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
+        if constexpr (USE_LUT_PHOTOION) {
+          safeadd(globals::gammaestimator[ionestimindex],
+                  globals::phixslist[tid].groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
 
-            if (!std::isfinite(globals::gammaestimator[ionestimindex])) {
-              printout(
-                  "[fatal] update_estimators: gamma estimator becomes non finite: mgi %d element %d ion %d gamma_contr "
-                  "%g, distance_e_cmf_over_nu %g\n",
-                  modelgridindex, element, ion, globals::phixslist[tid].groundcont_gamma_contr[i],
-                  distance_e_cmf / nu_cmf);
-              std::abort();
-            }
+          if (!std::isfinite(globals::gammaestimator[ionestimindex])) {
+            printout(
+                "[fatal] update_estimators: gamma estimator becomes non finite: mgi %d element %d ion %d gamma_contr "
+                "%g, distance_e_cmf_over_nu %g\n",
+                modelgridindex, element, ion, globals::phixslist[tid].groundcont_gamma_contr[i],
+                distance_e_cmf / nu_cmf);
+            std::abort();
           }
+        }
 
-          if constexpr (USE_LUT_BFHEATING) {
-            safeadd(globals::bfheatingestimator[ionestimindex],
-                    globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
-          }
+        if constexpr (USE_LUT_BFHEATING) {
+          safeadd(globals::bfheatingestimator[ionestimindex],
+                  globals::phixslist[tid].groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
         }
       }
     }
