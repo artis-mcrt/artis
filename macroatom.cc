@@ -43,9 +43,9 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
 
   /// Downward transitions within the current ionisation stage:
   /// radiative/collisional deexcitation and internal downward jumps
-  processrates[MA_ACTION_RADDEEXC] = 0.;
-  processrates[MA_ACTION_COLDEEXC] = 0.;
-  processrates[MA_ACTION_INTERNALDOWNSAME] = 0.;
+  double sum_internal_down_same = 0.;
+  double sum_raddeexc = 0.;
+  double sum_coldeexc = 0.;
   const int ndowntrans = get_ndowntrans(element, ion, level);
   for (int i = 0; i < ndowntrans; i++) {
     const auto &downtransition = levelref.downtrans[i];
@@ -63,22 +63,25 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
     const double sum_epstrans_rad_deexc = R * epsilon_trans;
     const double individ_col_deexc = C * epsilon_trans;
 
-    processrates[MA_ACTION_RADDEEXC] += sum_epstrans_rad_deexc;
-    processrates[MA_ACTION_COLDEEXC] += individ_col_deexc;
-    processrates[MA_ACTION_INTERNALDOWNSAME] += individ_internal_down_same;
+    sum_raddeexc += sum_epstrans_rad_deexc;
+    sum_coldeexc += individ_col_deexc;
+    sum_internal_down_same += individ_internal_down_same;
 
-    chlevel.sum_epstrans_rad_deexc[i] = processrates[MA_ACTION_RADDEEXC];
-    chlevel.sum_internal_down_same[i] = processrates[MA_ACTION_INTERNALDOWNSAME];
+    chlevel.sum_epstrans_rad_deexc[i] = sum_raddeexc;
+    chlevel.sum_internal_down_same[i] = sum_internal_down_same;
 
     // printout("checking downtrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,lower,R,C,epsilon_trans);
   }
+  processrates[MA_ACTION_RADDEEXC] = sum_raddeexc;
+  processrates[MA_ACTION_COLDEEXC] = sum_coldeexc;
+  processrates[MA_ACTION_INTERNALDOWNSAME] = sum_internal_down_same;
 
   /// Downward transitions to lower ionisation stages:
   /// radiative/collisional recombination and internal downward jumps
-  processrates[MA_ACTION_RADRECOMB] = 0.;
-  processrates[MA_ACTION_COLRECOMB] = 0.;
-  processrates[MA_ACTION_INTERNALDOWNLOWER] = 0.;
   // checks only if there is a lower ion, doesn't make sure that Z(ion)=Z(ion-1)+1
+  double sum_internal_down_lower = 0.;
+  double sum_radrecomb = 0.;
+  double sum_colrecomb = 0.;
   if (ion > 0 && level <= get_maxrecombininglevel(element, ion)) {
     // nlevels = get_nlevels(element,ion-1);
     const int nlevels = get_ionisinglevels(element, ion - 1);
@@ -90,16 +93,19 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
       const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, modelgridindex);
       const double C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
 
-      processrates[MA_ACTION_INTERNALDOWNLOWER] += (R + C) * epsilon_target;
+      sum_internal_down_lower += (R + C) * epsilon_target;
 
-      processrates[MA_ACTION_RADRECOMB] += R * epsilon_trans;
-      processrates[MA_ACTION_COLRECOMB] += C * epsilon_trans;
+      sum_radrecomb += R * epsilon_trans;
+      sum_colrecomb += C * epsilon_trans;
     }
   }
+  processrates[MA_ACTION_INTERNALDOWNLOWER] = sum_internal_down_lower;
+  processrates[MA_ACTION_RADRECOMB] = sum_radrecomb;
+  processrates[MA_ACTION_COLRECOMB] = sum_colrecomb;
 
   /// Calculate sum for upward internal transitions
   /// transitions within the current ionisation stage
-  processrates[MA_ACTION_INTERNALUPSAME] = 0.;
+  double sum_internal_up_same = 0.;
   const int nuptrans = get_nuptrans(element, ion, level);
   for (int i = 0; i < nuptrans; i++) {
     const auto &uptransition = globals::elements[element].ions[ion].levels[level].uptrans[i];
@@ -114,15 +120,16 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
 
     const double individ_internal_up_same = (R + C + NT) * epsilon_current;
 
-    processrates[MA_ACTION_INTERNALUPSAME] += individ_internal_up_same;
-    chlevel.sum_internal_up_same[i] = processrates[MA_ACTION_INTERNALUPSAME];
+    sum_internal_up_same += individ_internal_up_same;
+    chlevel.sum_internal_up_same[i] = sum_internal_up_same;
   }
+  processrates[MA_ACTION_INTERNALUPSAME] = sum_internal_up_same;
 
   assert_always(std::isfinite(processrates[MA_ACTION_INTERNALUPSAME]));
 
   /// Transitions to higher ionisation stages
   processrates[MA_ACTION_INTERNALUPHIGHERNT] = 0.;
-  double rate_up_higher = 0.;
+  double sum_up_higher = 0.;
   const int ionisinglevels = get_ionisinglevels(element, ion);
   if (ion < get_nions(element) - 1 && level < ionisinglevels) {
     if (NT_ON) {
@@ -138,10 +145,10 @@ static void calculate_macroatom_transitionrates(const int modelgridindex, const 
       const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
       const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
-      rate_up_higher += (R + C) * epsilon_current;
+      sum_up_higher += (R + C) * epsilon_current;
     }
   }
-  processrates[MA_ACTION_INTERNALUPHIGHER] = rate_up_higher;
+  processrates[MA_ACTION_INTERNALUPHIGHER] = sum_up_higher;
 }
 
 static auto do_macroatom_internal_down_same(int element, int ion, int level) -> int {
