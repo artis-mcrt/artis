@@ -1221,13 +1221,6 @@ static void setup_cellcache() {
     mem_usage_cellcache += globals::ncoolingterms * sizeof(double);
     globals::cellcache[tid].cooling_contrib = static_cast<double *>(calloc(globals::ncoolingterms, sizeof(double)));
 
-    for (int element = 0; element < get_nelements(); element++) {
-      for (int ion = 0; ion < get_nions(element); ion++) {
-        globals::cellcache[tid].cooling_contrib[kpkt::get_coolinglistoffset(element, ion) +
-                                                kpkt::get_ncoolingterms_ion(element, ion) - 1] = COOLING_UNDEFINED;
-      }
-    }
-
     printout("[info] mem_usage: cellcache coolinglist contribs for thread %d occupies %.3f MB\n", tid,
              globals::ncoolingterms * sizeof(double) / 1024. / 1024.);
 
