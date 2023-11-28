@@ -817,24 +817,6 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
   }
   assert_always(edist >= 0);
 
-  if ((sdist < tdist) && (sdist < edist)) {
-    // Move it into the new cell.
-    const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, sdist / 2.);
-    update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, sdist, doppler_nucmf_on_nurf, mgi, nonemptymgi);
-    move_pkt_withtime(pkt_ptr, sdist / 2.);
-
-    int newmgi = mgi;
-    if (snext != pkt_ptr->where) {
-      grid::change_cell(pkt_ptr, snext);
-      const int cellindexnew = pkt_ptr->where;
-      newmgi = grid::get_cell_modelgridindex(cellindexnew);
-    }
-
-    pkt_ptr->last_event = pkt_ptr->last_event + 100;
-
-    return (pkt_ptr->type == TYPE_RPKT && (newmgi == grid::get_npts_model() || newmgi == mgi));
-  }
-
   if ((edist < sdist) && (edist < tdist)) {
     // bound-bound or continuum event
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, edist / 2.);
@@ -858,6 +840,24 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
     }
 
     return (pkt_ptr->type == TYPE_RPKT);
+  }
+
+  if ((sdist < tdist) && (sdist < edist)) {
+    // Move it into the new cell.
+    const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, sdist / 2.);
+    update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, sdist, doppler_nucmf_on_nurf, mgi, nonemptymgi);
+    move_pkt_withtime(pkt_ptr, sdist / 2.);
+
+    int newmgi = mgi;
+    if (snext != pkt_ptr->where) {
+      grid::change_cell(pkt_ptr, snext);
+      const int cellindexnew = pkt_ptr->where;
+      newmgi = grid::get_cell_modelgridindex(cellindexnew);
+    }
+
+    pkt_ptr->last_event = pkt_ptr->last_event + 100;
+
+    return (pkt_ptr->type == TYPE_RPKT && (newmgi == grid::get_npts_model() || newmgi == mgi));
   }
 
   if ((tdist < sdist) && (tdist < edist)) {
