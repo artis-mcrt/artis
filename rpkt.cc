@@ -667,9 +667,7 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
 /// packets which do not contribute to the radiation field.
 {
   /// Update only non-empty cells
-  if (nonemptymgi < 0) {
-    return;
-  }
+  assert_testmodeonly(nonemptymgi >= 0);
   const double distance_e_cmf = distance * e_cmf;
 
   radfield::update_estimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf);
@@ -845,7 +843,9 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
   if ((sdist < tdist) && (sdist < edist)) {
     // Move it into the new cell.
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, sdist / 2.);
-    update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, sdist, doppler_nucmf_on_nurf, mgi, nonemptymgi);
+    if (nonemptymgi >= 0) {
+      update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, sdist, doppler_nucmf_on_nurf, mgi, nonemptymgi);
+    }
     move_pkt_withtime(pkt_ptr, sdist / 2.);
 
     int newmgi = mgi;
@@ -863,7 +863,9 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
   if ((tdist < sdist) && (tdist < edist)) [[unlikely]] {
     // reaches end of timestep before cell boundary or interaction
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, tdist / 2.);
-    update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, tdist, doppler_nucmf_on_nurf, mgi, nonemptymgi);
+    if (nonemptymgi >= 0) {
+      update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, tdist, doppler_nucmf_on_nurf, mgi, nonemptymgi);
+    }
     move_pkt_withtime(pkt_ptr, tdist / 2.);
     pkt_ptr->prop_time = t2;
     pkt_ptr->last_event = pkt_ptr->last_event + 1000;
