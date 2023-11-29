@@ -1223,15 +1223,13 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   cellcache_change_cell(-99);
 
   globals::threads_bfheatingcoeffs.resize(get_max_threads());
+  /// Do not use values which are saved in the cellcache within update_grid
+  use_cellcache = false;
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
   {
-    /// Do not use values which are saved in the cellcache within update_grid
-    /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
-    use_cellcache = false;
-
     globals::threads_bfheatingcoeffs[tid].reserve(get_includedlevels());
 
 /// Updating cell information
@@ -1243,16 +1241,11 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       /// Check if this task should work on the current model grid cell.
       /// If yes, update the cell and write out the estimators
       if (mgi >= nstart && mgi < nstart + ndo) {
-        // use_cellcache = false;
-        // cellcache_change_cell(-99, true);
-
         struct heatingcoolingrates heatingcoolingrates = {};
         update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates,
                          globals::threads_bfheatingcoeffs[tid]);
 
         // maybe want to add omp ordered here if the modelgrid cells should be output in order
-        // use_cellcache = true;
-        // cellcache_change_cell(mgi, true);
 #ifdef _OPENMP
 #pragma omp critical(estimators_file)
 #endif
@@ -1268,10 +1261,11 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       }
     }  /// end parallel for loop over all modelgrid cells
 
-    /// Now after all the relevant taks of update_grid have been finished activate
-    /// the use of the cellcache for all OpenMP tasks, in what follows (update_packets)
-    use_cellcache = true;
   }  /// end OpenMP parallel section
+
+  /// Now after all the relevant taks of update_grid have been finished activate
+  /// the use of the cellcache for all OpenMP tasks, in what follows (update_packets)
+  use_cellcache = true;
 
   // alterative way to write out estimators. this keeps the modelgrid cells in order but
   // heatingrates are not valid. #ifdef _OPENMP for (int n = nstart; n < nstart+nblock; n++)
