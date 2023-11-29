@@ -1003,9 +1003,9 @@ auto main(int argc, char *argv[]) -> int {
 #endif
 
   const time_t real_time_end = time(nullptr);
-  printout("sn3d finished at %ld (this job wallclock hours %.2f * %d CPUs = %.1f CPU hours)\n", real_time_end,
-           (real_time_end - real_time_start) / 3600., globals::nprocs,
-           (real_time_end - real_time_start) / 3600. * globals::nprocs);
+  printout("sn3d finished at %ld (this job wallclock hours %.2f * %d processes * %d threads = %.1f core hours)\n",
+           real_time_end, (real_time_end - real_time_start) / 3600., globals::nprocs, get_max_threads(),
+           (real_time_end - real_time_start) / 3600. * globals::nprocs * get_max_threads());
 
   if (estimators_file != nullptr) {
     fclose(estimators_file);
