@@ -61,6 +61,7 @@ struct groundphixslist {
   int element;
   int ion;
   int level;
+  int phixstargetindex;
 };
 
 struct phixslist {
