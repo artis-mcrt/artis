@@ -794,7 +794,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
   /// Get distance to the next physical event (continuum or bound-bound)
   double edist = -1;
   bool event_is_boundbound = true;
-  if (mgi == grid::get_npts_model()) {
+  if (nonemptymgi < 0) {
     /// for empty cells no physical event occurs. The packets just propagate.
     edist = std::numeric_limits<double>::max();
     pkt_ptr->next_trans = -1;  // skip over lines and search for line list position on the next non-empty cell
