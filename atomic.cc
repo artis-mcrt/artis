@@ -25,8 +25,6 @@ int includedions = 0;
 // total number of levels of any element
 int includedlevels = 0;
 
-// number of ions of any element excluding the highest ionisation stage of each element
-int includedions_excludehighest = 0;
 std::array<bool, 3> phixs_file_version_exists;
 
 auto get_continuumindex_phixstargetindex(const int element, const int ion, const int level, const int phixstargetindex)
@@ -201,12 +199,10 @@ auto get_elementindex(const int Z) -> int
 
 void update_includedionslevels_maxnions() {
   includedions = 0;
-  includedions_excludehighest = 0;
   includedlevels = 0;
   maxnions = 0;
   for (int element = 0; element < get_nelements(); element++) {
     includedions += get_nions(element);
-    includedions_excludehighest += get_nions(element) > 0 ? get_nions(element) - 1 : 0;
     maxnions = std::max(maxnions, get_nions(element));
     for (int ion = 0; ion < get_nions(element); ion++) {
       includedlevels += get_nlevels(element, ion);
@@ -224,12 +220,6 @@ auto get_includedlevels() -> int
 // returns the number of ions of all elements combined
 {
   return includedlevels;
-}
-
-auto get_includedions_excludehighest() -> int
-// returns the number of ions of all elements combined
-{
-  return includedions_excludehighest;
 }
 
 void update_max_nions(const int nions)
