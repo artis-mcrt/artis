@@ -222,10 +222,7 @@ static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, cons
   if (!esc1 && esc2) {
     return true;
   }
-  if (esc1 && !esc2) {
-    return false;
-  }
-  if (esc1 && esc2) {
+  if (esc1) {
     return false;
   }
 
