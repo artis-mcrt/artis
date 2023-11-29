@@ -234,10 +234,10 @@ static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, cons
   bool pktdone1 = (p1.prop_time >= ts_end);
   bool pktdone2 = (p2.prop_time >= ts_end);
 
-  if (pktdone1 && !pktdone2) {
+  if (!pktdone1 && pktdone2) {
     return true;
   }
-  if (!pktdone1 && pktdone2) {
+  if (pktdone1 && !pktdone2) {
     return false;
   }
   if (pktdone1 && pktdone2) {
