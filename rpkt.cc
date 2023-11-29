@@ -857,7 +857,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
 
     pkt_ptr->last_event = pkt_ptr->last_event + 100;
 
-    return (pkt_ptr->type == TYPE_RPKT && (newmgi == grid::get_npts_model() || newmgi == mgi));
+    return (newmgi == grid::get_npts_model() || newmgi == mgi);
   }
 
   if ((tdist < sdist) && (tdist < edist)) [[unlikely]] {
