@@ -404,13 +404,18 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
     // const int ndowntrans = get_ndowntrans(element, ion, level);
     const int nuptrans = get_nuptrans(element, ion, level);
 
-    assert_testmodeonly(globals::cellcache[cellcacheslotid].cellnumber == modelgridindex);
     auto &chlevel = globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level];
-    /// If there are no precalculated rates available then calculate them
-    if (chlevel.processrates[MA_ACTION_INTERNALUPHIGHER] < 0) {
+
+    {
       const auto lock =
           std::lock_guard<std::mutex>(globals::mutex_cellcachemacroatom[get_uniquelevelindex(element, ion, level)]);
-      calculate_macroatom_transitionrates(modelgridindex, element, ion, level, t_mid, chlevel);
+
+      assert_testmodeonly(globals::cellcache[cellcacheslotid].cellnumber == modelgridindex);
+
+      /// If there are no precalculated rates available then calculate them
+      if (chlevel.processrates[MA_ACTION_INTERNALUPHIGHER] < 0) {
+        calculate_macroatom_transitionrates(modelgridindex, element, ion, level, t_mid, chlevel);
+      }
     }
 
     const auto &processrates = chlevel.processrates;
