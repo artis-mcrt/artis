@@ -46,6 +46,7 @@
 extern FILE *output_file;
 extern int tid;
 extern bool use_cellcache;
+constexpr int cellcacheslotid = 0;
 
 extern std::mt19937 stdrng;
 

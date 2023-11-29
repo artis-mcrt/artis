@@ -150,11 +150,7 @@ ifeq ($(TESTMODE),ON)
 	# CXXFLAGS += -D_GLIBCXX_DEBUG=1
 	CXXFLAGS +=  -fno-omit-frame-pointer
 
-	ifeq ($(COMPILER_IS_CLANG),TRUE)
-	CXXFLAGS += -fsanitize=address,undefined,integer
-	else
 	CXXFLAGS += -fsanitize=address,undefined
-	endif
 
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else

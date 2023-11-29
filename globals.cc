@@ -84,6 +84,10 @@ double NPHIXSNUINCREMENT = -1;
 
 struct cellcache *cellcache = nullptr;
 
+std::vector<std::vector<double>> threads_bfheatingcoeffs;
+
+std::deque<std::mutex> mutex_cellcachemacroatom;
+
 #ifdef MPI_ON
 MPI_Comm mpi_comm_node = MPI_COMM_NULL;
 MPI_Comm mpi_comm_internode = MPI_COMM_NULL;

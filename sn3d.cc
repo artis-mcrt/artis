@@ -52,8 +52,8 @@
 #include "vpkt.h"
 
 // threadprivate variables
-int tid;
-bool use_cellcache;
+int tid = 0;
+bool use_cellcache = false;
 std::mt19937 stdrng(std::random_device{}());
 gsl_integration_workspace *gslworkspace = nullptr;
 FILE *output_file = nullptr;

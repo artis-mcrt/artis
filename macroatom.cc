@@ -157,7 +157,7 @@ static auto do_macroatom_internal_down_same(int element, int ion, int level) -> 
   // printout("[debug] do_ma:   internal downward jump within current ionstage\n");
 
   const double *sum_internal_down_same =
-      globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].sum_internal_down_same;
+      globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].sum_internal_down_same;
 
   /// Randomly select the occuring transition
   const double targetval = rng_uniform() * sum_internal_down_same[ndowntrans - 1];
@@ -180,7 +180,7 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
   const int ndowntrans = get_ndowntrans(element, ion, level);
 
   const auto *sum_epstrans_rad_deexc =
-      globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].sum_epstrans_rad_deexc;
+      globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].sum_epstrans_rad_deexc;
 
   const double targetval = rng_uniform() * sum_epstrans_rad_deexc[ndowntrans - 1];
 
@@ -350,7 +350,6 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
   // pkt_ptr->interactions++;
   // return;
 
-  const int tid = get_thread_num();
   const double t_mid = globals::timesteps[timestep].mid;
 
   // printout("[debug] do MA\n");
@@ -405,14 +404,16 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
     // const int ndowntrans = get_ndowntrans(element, ion, level);
     const int nuptrans = get_nuptrans(element, ion, level);
 
-    assert_testmodeonly(globals::cellcache[tid].cellnumber == modelgridindex);
-
-    auto &chlevel = globals::cellcache[tid].chelements[element].chions[ion].chlevels[level];
-    auto &processrates = chlevel.processrates;
+    assert_testmodeonly(globals::cellcache[cellcacheslotid].cellnumber == modelgridindex);
+    auto &chlevel = globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level];
     /// If there are no precalculated rates available then calculate them
-    if (processrates[MA_ACTION_INTERNALUPHIGHER] < 0) {
+    if (chlevel.processrates[MA_ACTION_INTERNALUPHIGHER] < 0) {
+      const auto lock =
+          std::lock_guard<std::mutex>(globals::mutex_cellcachemacroatom[get_uniquelevelindex(element, ion, level)]);
       calculate_macroatom_transitionrates(modelgridindex, element, ion, level, t_mid, chlevel);
     }
+
+    const auto &processrates = chlevel.processrates;
 
     // for debugging the transition rates:
     // {
@@ -601,7 +602,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
 
         /// randomly select the occuring transition
         const double *sum_internal_up_same =
-            globals::cellcache[tid].chelements[element].chions[ion].chlevels[level].sum_internal_up_same;
+            globals::cellcache[cellcacheslotid].chelements[element].chions[ion].chlevels[level].sum_internal_up_same;
 
         const double targetval = rng_uniform() * processrates[MA_ACTION_INTERNALUPSAME];
 

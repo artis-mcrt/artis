@@ -4,7 +4,9 @@
 #include <atomic>
 #include <cmath>
 #include <cstddef>
+#include <deque>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 #ifdef MPI_ON
@@ -177,7 +179,6 @@ using chphixstargets_t = struct chphixstargets<SEPARATE_STIMRECOMB>;
 struct chlevels {
   std::array<double, MA_ACTION_COUNT> processrates;
   chphixstargets_t *chphixstargets;
-  double bfheatingcoeff;
   double population;
   double *sum_epstrans_rad_deexc;
   double *sum_internal_down_same;
@@ -198,7 +199,6 @@ struct cellcache {
   struct chlevels *ch_all_levels;
   double *ch_allcont_departureratios;
   int cellnumber;  /// Identifies the cell the data is valid for.
-  int bfheating_mgi;
 };
 
 namespace globals {
@@ -268,6 +268,8 @@ extern double NPHIXSNUINCREMENT;
 
 extern struct cellcache *cellcache;
 
+extern std::vector<std::vector<double>> threads_bfheatingcoeffs;
+
 #ifdef MPI_ON
 extern MPI_Comm mpi_comm_node;
 extern MPI_Comm mpi_comm_internode;
@@ -310,6 +312,8 @@ extern int n_titer;
 extern bool lte_iteration;
 extern int n_kpktdiffusion_timesteps;
 extern float kpktdiffusion_timescale;
+
+extern std::deque<std::mutex> mutex_cellcachemacroatom;
 
 void setup_mpi_vars();
 
