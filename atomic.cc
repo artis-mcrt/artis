@@ -455,15 +455,9 @@ auto get_phixs_threshold(const int element, const int ion, const int level, cons
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, level));
-  // const double phixs_threshold_stored = globals::elements[element].ions[ion].levels[level].phixs_threshold;
-  // if (phixs_threshold_stored > 0.)
-  //   return phixs_threshold_stored;
-  // else
-  {
-    const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-    const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
-    return E_threshold;
-  }
+  const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+  const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
+  return E_threshold;
 }
 
 auto get_phixsprobability(const int element, const int ion, const int level, const int phixstargetindex) -> double
