@@ -644,8 +644,11 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       fprintf(estimators_file, "corrphotoionrenorm Z=%2d", get_atomicnumber(element));
       for (int ion = 0; ion < nions - 1; ion++) {
         const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
+        if (groundcontindex < 0) {
+          continue;
+        }
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                (groundcontindex >= 0) ? globals::corrphotoionrenorm[get_ionestimindex(mgi, element, ion)] : 1.);
+                globals::corrphotoionrenorm[get_ionestimindex(mgi, element, ion)]);
       }
       fprintf(estimators_file, "\n");
       fprintf(estimators_file, "gammaestimator     Z=%2d", get_atomicnumber(element));
@@ -653,7 +656,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
         if (groundcontindex >= 0) {
           fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion),
-                  (groundcontindex >= 0) ? globals::gammaestimator[get_ionestimindex(mgi, element, ion)] : 0.);
+                  globals::gammaestimator[get_ionestimindex(mgi, element, ion)]);
         }
       }
       fprintf(estimators_file, "\n");
@@ -854,11 +857,17 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer,
 
 static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, const double estimator_normfactor) {
   assert_always(USE_LUT_PHOTOION || USE_LUT_BFHEATING);
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
   if constexpr (USE_LUT_PHOTOION) {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++) {
-        const int ionestimindex = get_ionestimindex(mgi, element, ion);
+        const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
+        if (groundcontindex < 0) {
+          continue;
+        }
+        const int ionestimindex = nonemptymgi * globals::nbfcontinua_ground + groundcontindex;
+
         globals::gammaestimator[ionestimindex] *= estimator_normfactor / H;
 #ifdef DO_TITER
         if (globals::gammaestimator_save[ionestimindex] >= 0) {
@@ -895,7 +904,11 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, 
         /// Reuse the gammaestimator array as temporary storage of the Gamma values during
         /// the remaining part of the update_grid phase. Afterwards it is reset to record
         /// the next timesteps gamma estimators.
-        const int ionestimindex = get_ionestimindex(mgi, element, ion);
+        const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
+        if (groundcontindex < 0) {
+          continue;
+        }
+        const int ionestimindex = nonemptymgi * globals::nbfcontinua_ground + groundcontindex;
 
         if constexpr (USE_LUT_PHOTOION) {
           globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(mgi, element, ion);
