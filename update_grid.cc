@@ -952,8 +952,8 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
                              std::vector<double> &bfheatingcoeffs)
 // n is the modelgrid index
 {
-  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
-  if (nonemptymgi < 0) {
+  const int assoc_cells = grid::get_numassociatedcells(mgi);
+  if (assoc_cells < 1) {
     /// For modelgrid cells that are not represented in the simulation grid,
     /// Set grid properties to zero
     grid::set_TR(mgi, 0.);
@@ -963,7 +963,8 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     return;
   }
 
-  const int assoc_cells = grid::get_numassociatedcells(mgi);
+  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+
   const double deltaV =
       grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
   const time_t sys_time_start_update_cell = time(nullptr);
