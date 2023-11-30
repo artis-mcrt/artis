@@ -65,7 +65,7 @@ jobs:
 
             # cache this for classic options because the super low integration tolerance makes generation of the file very slow
             - name: Cache ratecoeff.dat
-              if: matrix.testname == 'classicmode_1d_3dgrid' || matrix.testname == 'classicmode_3d'
+              if: ${{ startsWith(matrix.testname, 'classicmode') }}
               uses: actions/cache@v3
               with:
                   path: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
