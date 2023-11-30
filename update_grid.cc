@@ -1179,7 +1179,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     /// unless they have been read from file
     if ((!globals::simulation_continued_from_saved) || (nts - globals::timestep_initial != 0) || (titer != 0)) {
       printout("nts %d, titer %d: reset corr photoionrenorm\n", nts, titer);
-      std::fill_n(globals::corrphotoionrenorm, grid::get_nonempty_npts_model() * globals::nbfcontinua, 0.);
+      std::fill_n(globals::corrphotoionrenorm, grid::get_nonempty_npts_model() * globals::nbfcontinua_ground, 0.);
       printout("after nts %d, titer %d: reset corr photoionrenorm\n", nts, titer);
     }
   }
