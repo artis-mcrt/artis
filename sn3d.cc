@@ -237,12 +237,12 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
         const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         assert_always(globals::corrphotoionrenorm != nullptr);
         if (globals::rank_in_node == 0) {
-          MPI_Bcast(&globals::corrphotoionrenorm[nonemptymgi * get_includedions()], get_includedions(), MPI_DOUBLE,
+          MPI_Bcast(&globals::corrphotoionrenorm[nonemptymgi * globals::nbfcontinua], globals::nbfcontinua, MPI_DOUBLE,
                     root_node_id, globals::mpi_comm_internode);
         }
 
         assert_always(globals::gammaestimator != nullptr);
-        MPI_Bcast(&globals::gammaestimator[nonemptymgi * get_includedions()], get_includedions(), MPI_DOUBLE, root,
+        MPI_Bcast(&globals::gammaestimator[nonemptymgi * globals::nbfcontinua], globals::nbfcontinua, MPI_DOUBLE, root,
                   MPI_COMM_WORLD);
       }
 

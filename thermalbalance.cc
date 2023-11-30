@@ -172,7 +172,7 @@ void calculate_bfheatingcoeffs(int modelgridindex, std::vector<double> &bfheatin
                 globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
             if (index_in_groundlevelcontestimator >= 0) {
               bfheatingcoeff *=
-                  globals::bfheatingestimator[nonemptymgi * get_includedions() + index_in_groundlevelcontestimator];
+                  globals::bfheatingestimator[nonemptymgi * globals::nbfcontinua + index_in_groundlevelcontestimator];
             }
           }
         }

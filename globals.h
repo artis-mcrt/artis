@@ -60,7 +60,6 @@ struct groundphixslist {
   double nu_edge;
   int element;
   int ion;
-  int level;
   int phixstargetindex;
 };
 
@@ -90,7 +89,6 @@ struct levellist_entry {
   struct level_transition *downtrans{nullptr};  /// Allowed downward transitions from this level
   int nuptrans{0};
   int ndowntrans{0};
-  double phixs_threshold{0};                        /// Energy of first point in the photion_xs table
   struct phixstarget_entry *phixstargets{nullptr};  /// pointer to table of target states and probabilities
   float *photoion_xs{nullptr};  /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
   int nphixstargets{0};         /// length of phixstargets array:
@@ -113,6 +111,7 @@ struct ionlist_entry {
   int coolingoffset;
   int ncoolingterms;
   int uniquelevelindexstart;
+  int groundcontindex;
   float *Alpha_sp;
   double ionpot;  /// Ionisation threshold to the next ionstage
   // int nbfcontinua;

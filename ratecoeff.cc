@@ -1339,7 +1339,7 @@ auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex
             globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
         if (index_in_groundlevelcontestimator >= 0) {
           gammacorr *=
-              globals::corrphotoionrenorm[nonemptymgi * get_includedions() + index_in_groundlevelcontestimator];
+              globals::corrphotoionrenorm[nonemptymgi * globals::nbfcontinua + index_in_groundlevelcontestimator];
         }
       }
     }

@@ -85,7 +85,7 @@ static chphixstargets_t *chphixstargetsblock = nullptr;
 
 static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_inputtable, const int element,
                                   const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
-                                  const double phixs_threshold_ev, size_t *mem_usage_phixs) {
+                                  size_t *mem_usage_phixs) {
   if (upperlevel_in >= 0)  // file gives photoionisation to a single target state only
   {
     int upperlevel = upperlevel_in - groundstate_index_in;
@@ -176,17 +176,6 @@ static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoint
   globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs =
       static_cast<float *>(calloc(globals::NPHIXSPOINTS, sizeof(float)));
   assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].photoion_xs != nullptr);
-
-  if (phixs_threshold_ev > 0) {
-    globals::elements[element].ions[lowerion].levels[lowerlevel].phixs_threshold = phixs_threshold_ev * EV;
-  } else {
-    if (get_nphixstargets(element, lowerion, lowerlevel) > 0) {
-      const int lowestupperlevel = get_phixsupperlevel(element, lowerion, lowerlevel, 0);
-      const double calced_phixs_threshold =
-          (epsilon(element, upperion, lowestupperlevel) - epsilon(element, lowerion, lowerlevel));
-      globals::elements[element].ions[lowerion].levels[lowerlevel].phixs_threshold = calced_phixs_threshold;
-    }
-  }
 
   if (phixs_file_version == 1) {
     assert_always(get_nphixstargets(element, lowerion, lowerlevel) == 1);
@@ -284,7 +273,7 @@ static void read_phixs_data(const int phixs_file_version) {
   int upperlevel_in = -1;
   int lowerionstage = -1;
   int lowerlevel_in = -1;
-  double phixs_threshold_ev = -1;
+  double phixs_threshold_ev = -1;  // currently just ignored, and epilson is used instead
   while (true) {
     int nphixspoints_inputtable = 0;
     std::string phixsline;
@@ -321,7 +310,7 @@ static void read_phixs_data(const int phixs_file_version) {
       /// store only photoionization crosssections for ions that are part of the current model atom
       if (lowerion >= 0 && upperion < get_nions(element) && lowerlevel < get_nlevels(element, lowerion)) {
         read_phixs_data_table(phixsfile, nphixspoints_inputtable, element, lowerion, lowerlevel, upperion,
-                              upperlevel_in, phixs_threshold_ev, &mem_usage_phixs);
+                              upperlevel_in, &mem_usage_phixs);
 
         skip_this_phixs_table = false;
       }
@@ -1142,8 +1131,7 @@ static void read_atomicdata_files() {
   update_includedionslevels_maxnions();
 }
 
-static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimator, int el, int in, int ll)
-    -> int
+static auto search_groundphixslist(double nu_edge, int el, int in, int ll) -> int
 /// Return the closest ground level continuum index to the given edge
 /// frequency. If the given edge frequency is redder than the reddest
 /// continuum return -1.
@@ -1154,7 +1142,6 @@ static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcont
 
   if (nu_edge < globals::groundcont[0].nu_edge) {
     index = -1;
-    *index_in_groundlevelcontestimator = -1;
   } else {
     int i = 1;
     int element = -1;
@@ -1167,8 +1154,7 @@ static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcont
     if (i == globals::nbfcontinua_ground) {
       element = globals::groundcont[i - 1].element;
       ion = globals::groundcont[i - 1].ion;
-      const int level = globals::groundcont[i - 1].level;
-      if (element == el && ion == in && level == ll) {
+      if (element == el && ion == in && ll == 0) {
         index = i - 1;
       } else {
         printout(
@@ -1176,9 +1162,9 @@ static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcont
             "bluest ground-level continuum\n",
             el, in, ll, nu_edge);
         printout(
-            "[fatal] search_groundphixslist: bluest ground level continuum is element %d, ion %d, level %d at "
+            "[fatal] search_groundphixslist: bluest ground level continuum is element %d, ion %d at "
             "nu_edge %g\n",
-            element, ion, level, globals::groundcont[i - 1].nu_edge);
+            element, ion, globals::groundcont[i - 1].nu_edge);
         printout("[fatal] search_groundphixslist: i %d, nbfcontinua_ground %d\n", i, globals::nbfcontinua_ground);
         printout(
             "[fatal] This shouldn't happen, is hoewever possible if there are multiple levels in the adata file at "
@@ -1198,7 +1184,6 @@ static auto search_groundphixslist(double nu_edge, int *index_in_groundlevelcont
       element = globals::groundcont[index].element;
       ion = globals::groundcont[index].ion;
     }
-    *index_in_groundlevelcontestimator = get_uniqueionindex(element, ion);
   }
 
   return index;
@@ -1444,11 +1429,10 @@ static void setup_phixs_list() {
           const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
           const double nu_edge = E_threshold / H;
           assert_always(groundcontindex < globals::nbfcontinua_ground);
-          globals::groundcont[groundcontindex].element = element;
-          globals::groundcont[groundcontindex].ion = ion;
-          globals::groundcont[groundcontindex].level = level;
-          globals::groundcont[groundcontindex].nu_edge = nu_edge;
-          globals::groundcont[groundcontindex].phixstargetindex = phixstargetindex;
+
+          globals::groundcont[groundcontindex] = {
+              .nu_edge = nu_edge, .element = element, .ion = ion, .phixstargetindex = phixstargetindex};
+
           groundcontindex++;
         }
       }
@@ -1473,6 +1457,16 @@ static void setup_phixs_list() {
 
         if (nphixstargets > 0) {
           nbftables++;
+
+          globals::elements[element].ions[ion].groundcontindex = std::distance(
+              globals::groundcont, std::find_if(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground,
+                                                [=](const auto &groundcont) {
+                                                  return (groundcont.element == element) && (groundcont.ion == ion) &&
+                                                         (groundcont.phixstargetindex == 0);
+                                                }));
+          assert_always(globals::elements[element].ions[ion].groundcontindex < globals::nbfcontinua_ground);
+        } else {
+          globals::elements[element].ions[ion].groundcontindex = -1;
         }
 
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
@@ -1491,12 +1485,10 @@ static void setup_phixs_list() {
           nonconstallcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
           if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-            int index_in_groundlevelcontestimator = 0;
-            nonconstallcont[allcontindex].index_in_groundphixslist =
-                search_groundphixslist(nu_edge, &index_in_groundlevelcontestimator, element, ion, level);
+            const auto groundcontindex = search_groundphixslist(nu_edge, element, ion, level);
+            nonconstallcont[allcontindex].index_in_groundphixslist = groundcontindex;
 
-            globals::elements[element].ions[ion].levels[level].closestgroundlevelcont =
-                index_in_groundlevelcontestimator;
+            globals::elements[element].ions[ion].levels[level].closestgroundlevelcont = groundcontindex;
           }
           allcontindex++;
         }
