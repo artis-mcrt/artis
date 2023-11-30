@@ -246,7 +246,7 @@ static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoint
   // nbfcontinua++;
   // printout("[debug] element %d, ion %d, level %d: phixs exists %g\n",element,lowerion,lowerlevel,phixs*1e-18);
   globals::nbfcontinua += get_nphixstargets(element, lowerion, lowerlevel);
-  if (lowerlevel < get_nlevels_groundterm(element, lowerion)) {
+  if (lowerlevel == 0) {
     globals::nbfcontinua_ground += get_nphixstargets(element, lowerion, lowerlevel);
   }
 }
@@ -1436,22 +1436,20 @@ static void setup_phixs_list() {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++) {
-        const int nlevels_groundterm = get_nlevels_groundterm(element, ion);
-        for (int level = 0; level < nlevels_groundterm; level++) {
-          const int nphixstargets = get_nphixstargets(element, ion, level);
-          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-            // const int upperlevel = get_phixsupperlevel(element, ion,level, 0);
-            // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
-            const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
-            const double nu_edge = E_threshold / H;
-            assert_always(groundcontindex < globals::nbfcontinua_ground);
-            globals::groundcont[groundcontindex].element = element;
-            globals::groundcont[groundcontindex].ion = ion;
-            globals::groundcont[groundcontindex].level = level;
-            globals::groundcont[groundcontindex].nu_edge = nu_edge;
-            globals::groundcont[groundcontindex].phixstargetindex = phixstargetindex;
-            groundcontindex++;
-          }
+        const int level = 0;
+        const int nphixstargets = get_nphixstargets(element, ion, level);
+        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+          // const int upperlevel = get_phixsupperlevel(element, ion,level, 0);
+          // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
+          const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
+          const double nu_edge = E_threshold / H;
+          assert_always(groundcontindex < globals::nbfcontinua_ground);
+          globals::groundcont[groundcontindex].element = element;
+          globals::groundcont[groundcontindex].ion = ion;
+          globals::groundcont[groundcontindex].level = level;
+          globals::groundcont[groundcontindex].nu_edge = nu_edge;
+          globals::groundcont[groundcontindex].phixstargetindex = phixstargetindex;
+          groundcontindex++;
         }
       }
     }
