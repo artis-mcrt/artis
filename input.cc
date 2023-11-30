@@ -1451,22 +1451,21 @@ static void setup_phixs_list() {
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions - 1; ion++) {
+      globals::elements[element].ions[ion].groundcontindex = std::distance(
+          globals::groundcont, std::find_if(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground,
+                                            [=](const auto &groundcont) {
+                                              return (groundcont.element == element) && (groundcont.ion == ion) &&
+                                                     (groundcont.phixstargetindex == 0);
+                                            }));
+      if (globals::elements[element].ions[ion].groundcontindex >= globals::nbfcontinua_ground) {
+        globals::elements[element].ions[ion].groundcontindex = -1;
+      }
       const int nlevels = get_ionisinglevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
         const int nphixstargets = get_nphixstargets(element, ion, level);
 
         if (nphixstargets > 0) {
           nbftables++;
-
-          globals::elements[element].ions[ion].groundcontindex = std::distance(
-              globals::groundcont, std::find_if(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground,
-                                                [=](const auto &groundcont) {
-                                                  return (groundcont.element == element) && (groundcont.ion == ion) &&
-                                                         (groundcont.phixstargetindex == 0);
-                                                }));
-          assert_always(globals::elements[element].ions[ion].groundcontindex < globals::nbfcontinua_ground);
-        } else {
-          globals::elements[element].ions[ion].groundcontindex = -1;
         }
 
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
