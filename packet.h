@@ -38,24 +38,25 @@ enum cell_boundary {
 };
 
 struct packet {
-  int where{-1};                                    // The propagation grid cell that the packet is in.
-  enum packet_type type {};                         // type of packet (k-, r-, etc.)
+  enum packet_type type {};  // type of packet (k-, r-, etc.)
+  double prop_time{-1.};     // internal clock to track how far in time the packet has been propagated
+  int where{-1};             // The propagation grid cell that the packet is in.
   enum cell_boundary last_cross { BOUNDARY_NONE };  // To avoid rounding errors on cell crossing.
   int interactions{0};                              // number of interactions the packet undergone
-  int nscatterings{0};                // records number of electron scatterings a r-pkt undergone since it was emitted
-  int last_event{0};                  // debug: stores information about the packets history
-  std::array<double, 3> pos{};        // Position of the packet (x,y,z).
-  std::array<double, 3> dir{};        // Direction of propagation. (x,y,z). Always a unit vector.
-  double e_cmf{0.};                   // The energy the packet carries in the co-moving frame.
-  double e_rf{0.};                    // The energy the packet carries in the rest frame.
-  double nu_cmf{0.};                  // The frequency in the co-moving frame.
-  double nu_rf{0.};                   // The frequency in the rest frame.
-  int next_trans{-1};                 // This keeps track of the next possible line interaction of a rpkt by storing
-                                      // its linelist index (to overcome numerical problems in propagating the rpkts).
-  int emissiontype{EMTYPE_NOTSET};    // records how the packet was emitted if it is a r-pkt
+  int nscatterings{0};              // records number of electron scatterings a r-pkt undergone since it was emitted
+  int last_event{0};                // debug: stores information about the packets history
+  std::array<double, 3> pos{};      // Position of the packet (x,y,z).
+  std::array<double, 3> dir{};      // Direction of propagation. (x,y,z). Always a unit vector.
+  double e_cmf{0.};                 // The energy the packet carries in the co-moving frame.
+  double e_rf{0.};                  // The energy the packet carries in the rest frame.
+  double nu_cmf{0.};                // The frequency in the co-moving frame.
+  double nu_rf{0.};                 // The frequency in the rest frame.
+  int next_trans{-1};               // This keeps track of the next possible line interaction of a rpkt by storing
+                                    // its linelist index (to overcome numerical problems in propagating the rpkts).
+  int emissiontype{EMTYPE_NOTSET};  // records how the packet was emitted if it is a r-pkt
+  struct mastate mastate {};
   std::array<double, 3> em_pos = {};  // Position of the last emission (x,y,z).
   float em_time{-1.};
-  double prop_time{-1.};  // internal clock to track how far in time the packet has been propagated
   int absorptiontype{0};  // records linelistindex of the last absorption
                           // negative values give ff-abs (-1), bf-abs (-2), compton scattering of gammas (-3),
                           // photoelectric effect of gammas (-4), pair production of gammas (-5)
@@ -78,7 +79,6 @@ struct packet {
   int pellet_decaytype{-1};                      // index into decay::decaytypes
   int pellet_nucindex{-1};                       // nuclide index of the decaying species
   float trueemissionvelocity{-1};
-  struct mastate mastate {};
 
   inline auto operator==(const packet &rhs) -> bool {
     return (number == rhs.number && type == rhs.type &&
