@@ -939,20 +939,8 @@ static void titer_average_estimators(const int n) {
 
 static void zero_gammaestimator(const int modelgridindex) {
   assert_always(USE_LUT_PHOTOION);
-  for (int element = 0; element < get_nelements(); element++) {
-    for (int ion = 0; ion < (get_nions(element) - 1); ion++) {
-      globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
-    }
-  }
-}
-
-static void set_all_corrphotoionrenorm(const int modelgridindex, const double value) {
-  assert_always(USE_LUT_PHOTOION);
-  for (int element = 0; element < get_nelements(); element++) {
-    for (int ion = 0; ion < (get_nions(element) - 1); ion++) {
-      globals::corrphotoionrenorm[get_ionestimindex(modelgridindex, element, ion)] = value;
-    }
-  }
+  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  std::fill_n(&globals::gammaestimator[nonemptymgi * globals::nbfcontinua_ground], globals::nbfcontinua_ground, 0.);
 }
 
 static void update_grid_cell(const int mgi, const int nts, const int nts_prev, const int titer, const double tratmid,
@@ -962,6 +950,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 {
   const int assoc_cells = grid::get_numassociatedcells(mgi);
   if (assoc_cells > 0) {
+    const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
     const double deltaV =
         grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
     const time_t sys_time_start_update_cell = time(nullptr);
@@ -998,7 +987,8 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
       if (USE_LUT_PHOTOION && !globals::simulation_continued_from_saved) {
         /// Determine renormalisation factor for corrected photoionization cross-sections
-        set_all_corrphotoionrenorm(mgi, 1.);
+        std::fill_n(&globals::corrphotoionrenorm[nonemptymgi * globals::nbfcontinua_ground],
+                    globals::nbfcontinua_ground, 1.);
       }
 
       /// W == 1 indicates that this modelgrid cell was treated grey in the
@@ -1056,7 +1046,8 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         grid::set_W(mgi, 1);
 
         if constexpr (USE_LUT_PHOTOION) {
-          set_all_corrphotoionrenorm(mgi, 1.);
+          std::fill_n(&globals::corrphotoionrenorm[nonemptymgi * globals::nbfcontinua_ground],
+                      globals::nbfcontinua_ground, 1.);
         }
 
         for (int element = 0; element < get_nelements(); element++) {

@@ -1790,12 +1790,10 @@ static void read_grid_restart_data(const int timestep) {
     globals::rpkt_emiss[mgi] = rpkt_emiss;
 
     if constexpr (USE_LUT_PHOTOION) {
-      for (int element = 0; element < get_nelements(); element++) {
-        for (int ion = 0; ion < (get_nions(element) - 1); ion++) {
-          const int estimindex = get_ionestimindex(mgi, element, ion);
-          assert_always(fscanf(gridsave_file, " %la %la", &globals::corrphotoionrenorm[estimindex],
-                               &globals::gammaestimator[estimindex]) == 2);
-        }
+      for (int i = 0; i < globals::nbfcontinua_ground; i++) {
+        const int estimindex = nonemptymgi * globals::nbfcontinua_ground + i;
+        assert_always(fscanf(gridsave_file, " %la %la", &globals::corrphotoionrenorm[estimindex],
+                             &globals::gammaestimator[estimindex]) == 2);
       }
     }
   }
@@ -1842,12 +1840,10 @@ void write_grid_restart_data(const int timestep) {
             modelgrid[mgi].thick, globals::rpkt_emiss[mgi], modelgrid[mgi].nne, modelgrid[mgi].nnetot);
 
     if constexpr (USE_LUT_PHOTOION) {
-      for (int element = 0; element < get_nelements(); element++) {
-        for (int ion = 0; ion < (get_nions(element) - 1); ion++) {
-          const int estimindex = get_ionestimindex(mgi, element, ion);
-          fprintf(gridsave_file, " %la %la", globals::corrphotoionrenorm[estimindex],
-                  globals::gammaestimator[estimindex]);
-        }
+      for (int i = 0; i < globals::nbfcontinua_ground; i++) {
+        const int estimindex = nonemptymgi * globals::nbfcontinua_ground + i;
+        fprintf(gridsave_file, " %la %la", globals::corrphotoionrenorm[estimindex],
+                globals::gammaestimator[estimindex]);
       }
     }
     fprintf(gridsave_file, "\n");
