@@ -74,7 +74,7 @@ jobs:
                       tests/${{ matrix.testname }}_testrun/ratecoeff.dat-
 
             - name: Cache test atomic data
-              if: ${{ !startsWith(matrix.testname, 'classicmode_1d') }}
+              if: ${{ !startsWith(matrix.testname, 'classicmode') }}
               uses: actions/cache@v3
               id: cache-testatomicdata
               with:
@@ -82,7 +82,7 @@ jobs:
                   key: tests/atomicdata_feconi.tar.xz
 
             - name: Cache test atomic data classic
-              if: ${{ startsWith(matrix.testname, 'classicmode_1d') }}
+              if: ${{ startsWith(matrix.testname, 'classicmode') }}
               uses: actions/cache@v3
               id: cache-testatomicdata-classic
               with:
