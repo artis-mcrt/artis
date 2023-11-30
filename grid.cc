@@ -967,7 +967,7 @@ static void allocate_nonemptymodelcells() {
 
   globals::rpkt_emiss = static_cast<double *>(calloc((get_npts_model() + 1), sizeof(double)));
 
-  size_t ionestimsize = get_nonempty_npts_model() * globals::nbfcontinua * sizeof(double);
+  size_t ionestimsize = get_nonempty_npts_model() * globals::nbfcontinua_ground * sizeof(double);
 
 #ifdef MPI_ON
   if constexpr (USE_LUT_PHOTOION) {
@@ -977,7 +977,7 @@ static void allocate_nonemptymodelcells() {
       my_rank_cells += get_nonempty_npts_model() - (my_rank_cells * globals::node_nprocs);
     }
 
-    auto size = static_cast<MPI_Aint>(my_rank_cells * globals::nbfcontinua * sizeof(double));
+    auto size = static_cast<MPI_Aint>(my_rank_cells * globals::nbfcontinua_ground * sizeof(double));
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
                                           &globals::corrphotoionrenorm, &win_corrphotoionrenorm) == MPI_SUCCESS);

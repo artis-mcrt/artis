@@ -44,7 +44,7 @@ void calculate_binned_opacities(int modelgridindex);
     -> int {
   assert_testmodeonly(ion >= 0);
   assert_testmodeonly(ion < get_nions(element) - 1);
-  return nonemptymgi * globals::nbfcontinua + globals::elements[element].ions[ion].groundcontindex;
+  return nonemptymgi * globals::nbfcontinua_ground + globals::elements[element].ions[ion].groundcontindex;
 }
 
 [[nodiscard]] inline auto get_ionestimindex(const int mgi, const int element, const int ion) -> int {

@@ -43,7 +43,6 @@
 #include "packet.h"
 #include "radfield.h"
 #include "ratecoeff.h"
-#include "rpkt.h"
 #include "spectrum.h"
 #include "stats.h"
 #include "update_grid.h"
@@ -237,13 +236,13 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
         const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
         assert_always(globals::corrphotoionrenorm != nullptr);
         if (globals::rank_in_node == 0) {
-          MPI_Bcast(&globals::corrphotoionrenorm[nonemptymgi * globals::nbfcontinua], globals::nbfcontinua, MPI_DOUBLE,
-                    root_node_id, globals::mpi_comm_internode);
+          MPI_Bcast(&globals::corrphotoionrenorm[nonemptymgi * globals::nbfcontinua_ground],
+                    globals::nbfcontinua_ground, MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
         }
 
         assert_always(globals::gammaestimator != nullptr);
-        MPI_Bcast(&globals::gammaestimator[nonemptymgi * globals::nbfcontinua], globals::nbfcontinua, MPI_DOUBLE, root,
-                  MPI_COMM_WORLD);
+        MPI_Bcast(&globals::gammaestimator[nonemptymgi * globals::nbfcontinua_ground], globals::nbfcontinua_ground,
+                  MPI_DOUBLE, root, MPI_COMM_WORLD);
       }
 
       assert_always(grid::modelgrid[modelgridindex].elem_meanweight != nullptr);
@@ -572,19 +571,17 @@ static void zero_estimators() {
       stats::reset_ion_stats(modelgridindex);
     }
 
-    for (int element = 0; element < get_nelements(); element++) {
-      for (int ion = 0; ion < (get_nions(element) - 1); ion++) {
-        if constexpr (USE_LUT_PHOTOION) {
-          globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
-        }
-        if constexpr (USE_LUT_BFHEATING) {
-          globals::bfheatingestimator[get_ionestimindex(modelgridindex, element, ion)] = 0.;
-        }
-      }
-    }
-
     globals::rpkt_emiss[modelgridindex] = 0.;
   }
+
+  if constexpr (USE_LUT_PHOTOION) {
+    std::fill_n(globals::gammaestimator, grid::get_nonempty_npts_model() * globals::nbfcontinua_ground, 0.);
+  }
+
+  if constexpr (USE_LUT_BFHEATING) {
+    std::fill_n(globals::bfheatingestimator, grid::get_nonempty_npts_model() * globals::nbfcontinua_ground, 0.);
+  }
+
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
