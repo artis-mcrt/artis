@@ -356,7 +356,7 @@ static void mpi_reduce_estimators(int nts) {
                 MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
 
-  const int arraylen = grid::get_nonempty_npts_model() * get_includedions();
+  const int arraylen = grid::get_nonempty_npts_model() * globals::nbfcontinua_ground;
 
   if constexpr (USE_LUT_PHOTOION) {
     MPI_Barrier(MPI_COMM_WORLD);
