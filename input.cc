@@ -866,6 +866,7 @@ static void read_atomicdata_files() {
       globals::elements[element].ions[ion].ionpot = ionpot * EV;
       globals::elements[element].ions[ion].nlevels_groundterm = -1;
       globals::elements[element].ions[ion].uniquelevelindexstart = uniquelevelindex;
+      globals::elements[element].ions[ion].groundcontindex = -1;
       globals::elements[element].ions[ion].first_nlte = -1;
 
       globals::elements[element].ions[ion].Alpha_sp = static_cast<float *>(calloc(TABLESIZE, sizeof(float)));
@@ -1414,9 +1415,7 @@ static void setup_phixs_list() {
     globals::groundcont =
         static_cast<struct groundphixslist *>(malloc(globals::nbfcontinua_ground * sizeof(struct groundphixslist)));
     assert_always(globals::groundcont != nullptr);
-  }
 
-  if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     int groundcontindex = 0;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
@@ -1451,14 +1450,16 @@ static void setup_phixs_list() {
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions - 1; ion++) {
-      globals::elements[element].ions[ion].groundcontindex = std::distance(
-          globals::groundcont, std::find_if(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground,
-                                            [=](const auto &groundcont) {
-                                              return (groundcont.element == element) && (groundcont.ion == ion) &&
-                                                     (groundcont.phixstargetindex == 0);
-                                            }));
-      if (globals::elements[element].ions[ion].groundcontindex >= globals::nbfcontinua_ground) {
-        globals::elements[element].ions[ion].groundcontindex = -1;
+      if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
+        globals::elements[element].ions[ion].groundcontindex = std::distance(
+            globals::groundcont, std::find_if(globals::groundcont, globals::groundcont + globals::nbfcontinua_ground,
+                                              [=](const auto &groundcont) {
+                                                return (groundcont.element == element) && (groundcont.ion == ion) &&
+                                                       (groundcont.phixstargetindex == 0);
+                                              }));
+        if (globals::elements[element].ions[ion].groundcontindex >= globals::nbfcontinua_ground) {
+          globals::elements[element].ions[ion].groundcontindex = -1;
+        }
       }
       const int nlevels = get_ionisinglevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
