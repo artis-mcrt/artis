@@ -167,6 +167,7 @@ else
 		CXXFLAGS += -Ofast -ffast-math -funsafe-math-optimizations -fno-finite-math-only
 	else
 		CXXFLAGS += -O3
+		# for icpx use -fno-fast-math -fp-model strict
 	endif
 endif
 
