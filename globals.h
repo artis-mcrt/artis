@@ -60,7 +60,6 @@ struct groundphixslist {
   double nu_edge;
   int element;
   int ion;
-  int phixstargetindex;
 };
 
 struct phixslist {

@@ -1018,7 +1018,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
         if constexpr (usecellhistupdatephixslist && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
           if (level == 0) {
             const int gphixsindex = globals::allcont[i].index_in_groundphixslist;
-            globals::phixslist[tid].groundcont_gamma_contr[gphixsindex] += sigma_contr;
+            globals::phixslist[tid].groundcont_gamma_contr[gphixsindex] = sigma_contr;
           }
         }
 
