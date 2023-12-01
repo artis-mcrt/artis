@@ -266,14 +266,12 @@ static void do_cell_packet_updates(std::span<packet> packets, const int nts, con
   auto update_packet = [ts_end, nts](auto &pkt) {
     const int mgi = grid::get_cell_modelgridindex(pkt.where);
     int newmgi = mgi;
-    while (pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE) {
+    while (pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE && (newmgi == mgi || newmgi == grid::get_npts_model())) {
       do_packet(&pkt, ts_end, nts);
       newmgi = grid::get_cell_modelgridindex(pkt.where);
-      if (newmgi != mgi && newmgi != grid::get_npts_model()) {
-        break;
-      }
     }
   };
+
 #ifdef _OPENMP
 #pragma omp parallel for schedule(nonmonotonic : dynamic)
   for (auto &pkt : packets) {
