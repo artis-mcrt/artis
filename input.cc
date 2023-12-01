@@ -1484,7 +1484,7 @@ static void setup_phixs_list() {
           nonconstallcont[allcontindex].probability = get_phixsprobability(element, ion, level, phixstargetindex);
           nonconstallcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-          if (is_nlte(element, ion, level)) {
+          if (get_atomicnumber(element)>=0) {
 
             nonconstallcont[allcontindex].has_bf_estimator=true;
             bound_free_levels_counter+=1;
