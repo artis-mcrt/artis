@@ -412,7 +412,9 @@ static void add_to_spec(const struct packet *const pkt_ptr, const int current_ab
         }
       }
 
-      const int nnu_abs = static_cast<int>((log(pkt_ptr->absorptionfreq) - log(nu_min)) / dlognu);
+      const int nnu_abs = (pkt_ptr->absorptionfreq > 0 && std::isfinite(pkt_ptr->absorptionfreq))
+                              ? static_cast<int>((log(pkt_ptr->absorptionfreq) - log(nu_min)) / dlognu)
+                              : -1;
       if (nnu_abs >= 0 && nnu_abs < MNUBINS) {
         const int ioncount = get_nelements() * get_max_nions();
         const double deltaE_absorption = pkt_ptr->e_rf / globals::timesteps[nt].width / spectra.delta_freq[nnu_abs] /
