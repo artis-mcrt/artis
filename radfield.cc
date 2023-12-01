@@ -713,6 +713,10 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
     }
     
     assert_always(detailed_counter < nbfcontinua);
+    printout("detailed_counter %d\n",detailed_counter);
+    printout("globals::BFGlobalVariable %d\n",globals::BFGlobalVariable);
+    printout("grid::get_nonempty_npts_model() %d\n",grid::get_nonempty_npts_model());
+    printout("nonemptymgi %d\n",nonemptymgi);
     assert_always(nonemptymgi * globals::BFGlobalVariable + detailed_counter < grid::get_nonempty_npts_model() * globals::BFGlobalVariable)
 
     const double nu_edge = globals::allcont_nu_edge[allcontindex];
