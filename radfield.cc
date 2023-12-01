@@ -705,14 +705,8 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
       distance_e_cmf / nu_cmf * dopplerfactor;  // TODO: Luke: why did I put a doppler factor here?
   int detailed_counter = 0;
   for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++) {
-    if (allcontindex==0) {
-      detailed_counter = 0;
-    }
-    if (allcontindex!=0 && globals::allcont[allcontindex].has_bf_estimator == true) {
-      detailed_counter+=1;
-    }
     
-    assert_always(detailed_counter < nbfcontinua);
+    assert_always(detailed_counter < globals::BFGlobalVariable);
     if(nonemptymgi * globals::BFGlobalVariable + detailed_counter >= grid::get_nonempty_npts_model() * globals::BFGlobalVariable){
         printout("detailed_counter %d\n",detailed_counter);
    		printout("globals::BFGlobalVariable %d\n",globals::BFGlobalVariable);
@@ -734,6 +728,11 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
       // list is sorted by nu_edge, so all remaining will have nu_cmf < nu_edge
       break;
     }
+    
+    if (globals::allcont[allcontindex].has_bf_estimator == true) {
+      detailed_counter+=1;
+    }
+    
   }
 }
 
