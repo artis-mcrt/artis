@@ -346,7 +346,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
           const auto n_u = calculate_levelpop(mgi, element, ion, upper);
           const auto n_l = calculate_levelpop(mgi, element, ion, lower);
-          const double tau_line = std::max(0., (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * tline);
+          const double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_line;
 
           // Check on the element to exclude
           // NB: ldist before need to be computed anyway (I want to move the packets to the
