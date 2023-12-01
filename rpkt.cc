@@ -702,22 +702,14 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
 
 static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const double t2)
     -> bool
-// Routine for moving an r-packet. Similar to do_gamma in objective.
-// return value - true if no mgi change, no pkttype change and not reached end of timestep, false otherwise
+// Update an r-packet and return true if no mgi change (or it goes into an empty cell) and no pkttype change and not
+// reached end of timestep, otherwise false
 {
   const int cellindex = pkt_ptr->where;
   const int mgi = grid::get_cell_modelgridindex(cellindex);
   const int nonemptymgi = (mgi != grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
 
-  // if (pkt_ptr->next_trans > 0) {
-  //   printout("[debug] do_rpkt: init: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d)
-  //   %g, nu(pkt_ptr->next_trans-1=%d) %g, pkt_ptr->where %d\n", pkt_ptr->nu_cmf, pkt_ptr->next_trans,
-  //   globals::linelist[pkt_ptr->next_trans].nu, pkt_ptr->next_trans-1, globals::linelist[pkt_ptr->next_trans-1].nu,
-  //   pkt_ptr->where );
-  // }
-
-  // Assign optical depth to next physical event. And start counter of
-  // optical depth for this path.
+  // Assign optical depth to next physical event
   const double zrand = rng_uniform_pos();
   const double tau_next = -1. * log(zrand);
 
