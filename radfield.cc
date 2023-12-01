@@ -711,6 +711,8 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
     if (allcontindex!=0 && globals::allcont[allcontindex].has_bf_estimator == true) {
       detailed_counter+=1;
     }
+    
+    assert_always(detailed_counter < nbfcontinua);
 
     const double nu_edge = globals::allcont_nu_edge[allcontindex];
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
