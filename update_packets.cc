@@ -325,7 +325,9 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
              grid::modelgrid[mgi].thick != 1);
 
         if (cellcache_change_cell_required) {
-          do_cell_packet_updates(std::span{packetgroupstart, &pkt}, nts, ts_end);
+          if (packetgroupstart != &pkt) {
+            do_cell_packet_updates(std::span{packetgroupstart, &pkt}, nts, ts_end);
+          }
 
 #ifdef _OPENMP
 #pragma omp critical(cellchange)
