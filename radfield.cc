@@ -705,21 +705,28 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
       distance_e_cmf / nu_cmf * dopplerfactor;  // TODO: Luke: why did I put a doppler factor here?
   int detailed_counter = 0;
   for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++) {
-    
-    assert_always(detailed_counter < globals::BFGlobalVariable);
-    if(nonemptymgi * globals::BFGlobalVariable + detailed_counter >= grid::get_nonempty_npts_model() * globals::BFGlobalVariable){
-        printout("detailed_counter %d\n",detailed_counter);
-   		printout("globals::BFGlobalVariable %d\n",globals::BFGlobalVariable);
-    	printout("grid::get_nonempty_npts_model() %d\n",grid::get_nonempty_npts_model());
-    	printout("nonemptymgi %d\n",nonemptymgi);
-    }
-    assert_always(nonemptymgi * globals::BFGlobalVariable + detailed_counter < grid::get_nonempty_npts_model() * globals::BFGlobalVariable)
-
     const double nu_edge = globals::allcont_nu_edge[allcontindex];
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
     if (nu_cmf >= nu_edge && nu_cmf <= nu_max_phixs) {
+
       if (globals::allcont[allcontindex].has_bf_estimator == true) {
+
+        if(detailed_counter == globals::BFGlobalVariable){
+          printout("detailed_counter %d\n",detailed_counter);
+          printout("globals::BFGlobalVariable \n",globals::BFGlobalVariable);
+          printout("allcontindex %d\n",allcontindex);
+        }
+        assert_always(detailed_counter < globals::BFGlobalVariable);
+        
+        if(nonemptymgi * globals::BFGlobalVariable + detailed_counter >= grid::get_nonempty_npts_model() * globals::BFGlobalVariable){
+          printout("detailed_counter %d\n",detailed_counter);
+          printout("globals::BFGlobalVariable %d\n",globals::BFGlobalVariable);
+          printout("grid::get_nonempty_npts_model() %d\n",grid::get_nonempty_npts_model());
+          printout("nonemptymgi %d\n",nonemptymgi);
+        }
+        assert_always(nonemptymgi * globals::BFGlobalVariable + detailed_counter < grid::get_nonempty_npts_model() * globals::BFGlobalVariable)
+
         safeadd(bfrate_raw[nonemptymgi * globals::BFGlobalVariable + detailed_counter],
                 globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
       }
