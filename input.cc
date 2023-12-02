@@ -1147,7 +1147,7 @@ static auto search_groundphixslist(double nu_edge, int el, int in, int ll) -> in
     int i = 1;
     int element = -1;
     int ion = -1;
-    for (i = 0; i < globals::nbfcontinua_ground; i++) {
+    for (i = 1; i < globals::nbfcontinua_ground; i++) {
       if (nu_edge < globals::groundcont[i].nu_edge) {
         break;
       }
@@ -1467,8 +1467,7 @@ static void setup_phixs_list() {
         }
 
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-          const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
-          const double nu_edge = E_threshold / H;
+          const double nu_edge = get_phixs_threshold(element, ion, level, phixstargetindex) / H;
 
           assert_always(allcontindex < globals::nbfcontinua);
           nonconstallcont[allcontindex].nu_edge = nu_edge;
