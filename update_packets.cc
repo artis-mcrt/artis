@@ -326,7 +326,7 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
 
         if (cellcache_change_cell_required) {
           if (packetgroupstart != &pkt) {
-            do_cell_packet_updates(std::span{packetgroupstart, &pkt}, nts, ts_end);
+            do_cell_packet_updates(std::span(packetgroupstart, std::distance(packetgroupstart, &pkt)), nts, ts_end);
           }
 
 #ifdef _OPENMP
@@ -341,7 +341,8 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
       }
     }
     if (packetgroupstart != &packets[globals::npkts]) {
-      do_cell_packet_updates(std::span{packetgroupstart, &packets[globals::npkts]}, nts, ts_end);
+      do_cell_packet_updates(std::span(packetgroupstart, std::distance(packetgroupstart, &packets[globals::npkts])),
+                             nts, ts_end);
     }
 
     timestepcomplete = std::ranges::all_of(
