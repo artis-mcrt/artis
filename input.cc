@@ -1479,7 +1479,8 @@ static void setup_phixs_list() {
           nonconstallcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
           if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-            const auto groundcontindex = search_groundphixslist(nu_edge, element, ion, level);
+            const double nu_edge_target0 = get_phixs_threshold(element, ion, level, 0) / H;
+            const auto groundcontindex = search_groundphixslist(nu_edge_target0, element, ion, level);
             nonconstallcont[allcontindex].index_in_groundphixslist = groundcontindex;
 
             globals::elements[element].ions[ion].levels[level].closestgroundlevelcont = groundcontindex;
