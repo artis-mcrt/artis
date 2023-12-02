@@ -1147,7 +1147,7 @@ static auto search_groundphixslist(double nu_edge, int el, int in, int ll) -> in
     int i = 1;
     int element = -1;
     int ion = -1;
-    for (i = 1; i < globals::nbfcontinua_ground; i++) {
+    for (i = 0; i < globals::nbfcontinua_ground; i++) {
       if (nu_edge < globals::groundcont[i].nu_edge) {
         break;
       }

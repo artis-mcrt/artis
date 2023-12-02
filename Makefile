@@ -145,7 +145,9 @@ CXXFLAGS += $(shell pkg-config --cflags gsl)
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true -D_GLIBCXX_DEBUG=0 -D_LIBCPP_DEBUG=0 -D_GLIBCXX_DEBUG_BACKTRACE=1
+	CXXFLAGS += -DTESTMODE=true -D_LIBCPP_DEBUG=0
+	# some issue with spans
+	# CXXFLAGS += -D_GLIBCXX_DEBUG=0 -D_GLIBCXX_DEBUG_BACKTRACE=1
 	CXXFLAGS +=  -fno-omit-frame-pointer
 
 	CXXFLAGS += -fsanitize=address,undefined
