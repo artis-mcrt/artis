@@ -145,7 +145,7 @@ CXXFLAGS += $(shell pkg-config --cflags gsl)
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
 
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true -DLIBCXX_ENABLE_DEBUG_MODE
+	CXXFLAGS += -DTESTMODE=true -D_GLIBCXX_DEBUG=0 -DGLIBCXX_DEBUG=0
 	# makes GitHub actions classic test run forever?
 	# CXXFLAGS += -D_GLIBCXX_DEBUG=1
 	CXXFLAGS +=  -fno-omit-frame-pointer
