@@ -19,6 +19,7 @@ void calculate_chi_rpkt_cont(double nu_cmf, struct rpkt_continuum_absorptioncoef
 auto sample_planck_times_expansion_opacity(int modelgridindex) -> double;
 void allocate_expansionopacities();
 void calculate_binned_opacities(int modelgridindex);
+void MPI_Bcast_binned_opacities(int modelgridindex, int root_node_id);
 
 [[nodiscard]] constexpr auto get_linedistance(const double prop_time, const double nu_cmf, const double nu_trans,
                                               const double d_nu_on_d_l) -> double {

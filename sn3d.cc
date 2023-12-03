@@ -35,6 +35,7 @@
 #include "gsl/gsl_integration.h"
 #include "input.h"
 #include "macroatom.h"
+#include "rpkt.h"
 #ifdef MPI_ON
 #include "mpi.h"
 #endif
@@ -227,6 +228,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
       radfield::do_MPI_Bcast(modelgridindex, root, root_node_id);
 
       nonthermal::nt_MPI_Bcast(modelgridindex, root);
+
       if (globals::total_nlte_levels > 0 && globals::rank_in_node == 0) {
         MPI_Bcast(grid::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, root_node_id,
                   globals::mpi_comm_internode);
@@ -250,6 +252,8 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
         MPI_Bcast(grid::modelgrid[modelgridindex].elem_meanweight, get_nelements(), MPI_FLOAT, root_node_id,
                   globals::mpi_comm_internode);
       }
+
+      MPI_Bcast_binned_opacities(modelgridindex, root_node_id);
     }
 
     if (root == my_rank) {
