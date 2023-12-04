@@ -203,11 +203,11 @@ static auto get_event_expansion_opacity(const int modelgridindex, const int none
 }
 
 static auto get_event(const int modelgridindex,
-                      struct packet *pkt_ptr,  // pointer to packet object
+                      struct packet &pkt_ptr,  // pointer to packet object
                       const struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
                       const double tau_rnd,    // random optical depth until which the packet travels
                       const double abort_dist  // maximal travel distance before packet leaves cell or time step ends
-                      ) -> std::tuple<double, bool>
+                      ) -> std::tuple<double, int, bool>
 // returns edist, the distance to the next physical event (continuum or bound-bound) and is_boundbound_event, a
 // boolean BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
 {
@@ -216,12 +216,17 @@ static auto get_event(const int modelgridindex,
   // printout("get_event()\n");
   /// initialize loop variables
 
-  const auto nu_cmf_abort = get_nu_cmf_abort(*pkt_ptr, abort_dist);
-  const auto d_nu_on_d_l = (nu_cmf_abort - pkt_ptr->nu_cmf) / abort_dist;
+  const auto nu_cmf_abort = get_nu_cmf_abort(pkt_ptr, abort_dist);
+  const auto d_nu_on_d_l = (nu_cmf_abort - pkt_ptr.nu_cmf) / abort_dist;
 
-  struct packet dummypkt = *pkt_ptr;
-  const double chi_cont =
-      chi_rpkt_cont.total * doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
+  auto pos = pkt_ptr.pos;
+  auto nu_rf = pkt_ptr.nu_rf;
+  auto nu_cmf = pkt_ptr.nu_cmf;
+  auto e_rf = pkt_ptr.e_rf;
+  auto e_cmf = pkt_ptr.e_cmf;
+  auto prop_time = pkt_ptr.prop_time;
+  int next_trans = pkt_ptr.next_trans;
+  const double chi_cont = chi_rpkt_cont.total * doppler_packet_nucmf_on_nurf(pos, pkt_ptr.dir, prop_time);
   double tau = 0.;   // optical depth along path
   double dist = 0.;  // position on path
   while (true) {
@@ -229,8 +234,8 @@ static auto get_event(const int modelgridindex,
     /// first select the closest transition in frequency
     /// we need its frequency nu_trans, the element/ion and the corresponding levels
     /// create therefore new variables in packet, which contain next_lowerlevel, ...
-    const int lineindex = closest_transition(dummypkt.nu_cmf,
-                                             dummypkt.next_trans);  /// returns negative value if nu_cmf > nu_trans
+    const int lineindex = closest_transition(nu_cmf,
+                                             next_trans);  /// returns negative value if nu_cmf > nu_trans
     if (lineindex >= 0) [[likely]] {
       /// line interaction is possible (nu_cmf > nu_trans)
 
@@ -239,9 +244,9 @@ static auto get_event(const int modelgridindex,
       // helper variable to overcome numerical problems after line scattering
       // further scattering events should be located at lower frequencies to prevent
       // multiple scattering events of one packet in a single line
-      dummypkt.next_trans = lineindex + 1;
+      next_trans = lineindex + 1;
 
-      const double ldist = get_linedistance(dummypkt.prop_time, dummypkt.nu_cmf, nu_trans, d_nu_on_d_l);
+      const double ldist = get_linedistance(prop_time, nu_cmf, nu_trans, d_nu_on_d_l);
 
       const double tau_cont = chi_cont * ldist;
 
@@ -250,9 +255,8 @@ static auto get_event(const int modelgridindex,
 
         if (nu_trans < nu_cmf_abort) [[unlikely]] {
           // back up one line, because we didn't reach it before the boundary/timelimit
-          pkt_ptr->next_trans = dummypkt.next_trans - 1;
 
-          return {std::numeric_limits<double>::max(), false};
+          return {std::numeric_limits<double>::max(), next_trans - 1, false};
         }
 
         const int element = globals::linelist[lineindex].elementindex;
@@ -266,7 +270,7 @@ static auto get_event(const int modelgridindex,
         const double n_u = get_levelpop(modelgridindex, element, ion, upper);
         const double n_l = get_levelpop(modelgridindex, element, ion, lower);
 
-        const double tau_line = std::max(0., (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * dummypkt.prop_time);
+        const double tau_line = std::max(0., (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * prop_time);
 
         // printout("[debug] get_event:     tau_line %g\n", tau_line);
         // printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
@@ -282,50 +286,44 @@ static auto get_event(const int modelgridindex,
           tau += tau_cont + tau_line;
 
           if constexpr (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
-            move_pkt_withtime(&dummypkt, ldist);
+            move_pkt_withtime(pos, pkt_ptr.dir, prop_time, nu_rf, nu_cmf, e_rf, e_cmf, ldist);
           } else {
             // avoid move_pkt_withtime() to skip the standard Doppler shift calculation
             // and use the linear approx instead
-            dummypkt.pos[0] += (dummypkt.dir[0] * ldist);
-            dummypkt.pos[1] += (dummypkt.dir[1] * ldist);
-            dummypkt.pos[2] += (dummypkt.dir[2] * ldist);
-            dummypkt.prop_time += ldist / CLIGHT_PROP;
-            dummypkt.nu_cmf = pkt_ptr->nu_cmf + d_nu_on_d_l * dist;  // should equal nu_trans;
-            assert_testmodeonly(dummypkt.nu_cmf <= pkt_ptr->nu_cmf);
+            pos[0] += (pkt_ptr.dir[0] * ldist);
+            pos[1] += (pkt_ptr.dir[1] * ldist);
+            pos[2] += (pkt_ptr.dir[2] * ldist);
+            prop_time += ldist / CLIGHT_PROP;
+            nu_cmf = pkt_ptr.nu_cmf + d_nu_on_d_l * dist;  // should equal nu_trans;
+            assert_testmodeonly(nu_cmf <= pkt_ptr.nu_cmf);
           }
 
-          radfield::update_lineestimator(modelgridindex, lineindex,
-                                         dummypkt.prop_time * CLIGHT * dummypkt.e_cmf / dummypkt.nu_cmf);
+          radfield::update_lineestimator(modelgridindex, lineindex, prop_time * CLIGHT * e_cmf / nu_cmf);
 
         } else [[unlikely]] {
           /// bound-bound process occurs
           // printout("[debug] get_event: tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
 
-          pkt_ptr->mastate.element = element;
-          pkt_ptr->mastate.ion = ion;
-          pkt_ptr->mastate.level = upper;  /// if the MA will be activated it must be in the transitions upper level
-          pkt_ptr->mastate.activatingline = lineindex;
+          pkt_ptr.mastate.element = element;
+          pkt_ptr.mastate.ion = ion;
+          pkt_ptr.mastate.level = upper;  /// if the MA will be activated it must be in the transitions upper level
+          pkt_ptr.mastate.activatingline = lineindex;
 
           if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-            move_pkt_withtime(&dummypkt, ldist);
-            radfield::update_lineestimator(modelgridindex, lineindex,
-                                           dummypkt.prop_time * CLIGHT * dummypkt.e_cmf / dummypkt.nu_cmf);
+            move_pkt_withtime(pos, pkt_ptr.dir, prop_time, nu_rf, nu_cmf, e_rf, e_cmf, ldist);
+            radfield::update_lineestimator(modelgridindex, lineindex, prop_time * CLIGHT * e_cmf / nu_cmf);
           }
 
           /// the line and its parameters were already selected by closest_transition!
           // printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop
           // %d\n",edist,abort_dist,edist-abort_dist,endloop);
 
-          pkt_ptr->next_trans = dummypkt.next_trans;
-
-          return {dist + ldist, true};
+          return {dist + ldist, next_trans, true};
         }
       } else [[unlikely]] {
         /// continuum process occurs before reaching the line
 
-        pkt_ptr->next_trans = dummypkt.next_trans - 1;
-
-        return {dist + (tau_rnd - tau) / chi_cont, false};
+        return {dist + (tau_rnd - tau) / chi_cont, next_trans - 1, false};
       }
     } else [[unlikely]] {
       /// no line interaction possible - check whether continuum process occurs in cell
@@ -334,13 +332,11 @@ static auto get_event(const int modelgridindex,
 
       if (tau_rnd - tau > tau_cont) {
         // no continuum event before abort_dist
-        return {std::numeric_limits<double>::max(), false};
+        return {std::numeric_limits<double>::max(), next_trans, false};
       }
       /// continuum process occurs at edist
 
-      pkt_ptr->next_trans = globals::nlines + 1;
-
-      return {dist + (tau_rnd - tau) / chi_cont, false};
+      return {dist + (tau_rnd - tau) / chi_cont, globals::nlines + 1, false};
     }
   }
 
@@ -803,7 +799,8 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
   } else {
     calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, mgi, true);
 
-    std::tie(edist, event_is_boundbound) = get_event(mgi, pkt_ptr, chi_rpkt_cont, tau_next, abort_dist);
+    std::tie(edist, pkt_ptr->next_trans, event_is_boundbound) =
+        get_event(mgi, *pkt_ptr, chi_rpkt_cont, tau_next, abort_dist);
   }
   assert_always(edist >= 0);
 
