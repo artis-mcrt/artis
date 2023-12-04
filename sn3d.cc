@@ -54,7 +54,7 @@
 // threadprivate variables
 #ifdef _OPENMP
 int tid = 0;
-int cellcacheslotid = 0;
+// int cellcacheslotid = 0;
 #endif
 bool use_cellcache = false;
 std::mt19937 stdrng(std::random_device{}());
@@ -776,7 +776,7 @@ auto main(int argc, char *argv[]) -> int {
     /// Get the current threads ID, copy it to a threadprivate variable
     tid = get_thread_num();
     // cellcacheslotid = tid;
-    cellcacheslotid = 0;
+    // cellcacheslotid = 0;
 #endif
     /// and initialise the threads outputfile
     snprintf(filename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, tid);
