@@ -29,8 +29,10 @@
 
 // threadprivate variables
 FILE *output_file = nullptr;
+#ifdef _OPENMP
 int tid = 0;
 bool use_cellcache = false;
+#endif
 std::mt19937 stdrng(std::random_device{}());
 gsl_integration_workspace *gslworkspace = nullptr;
 

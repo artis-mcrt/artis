@@ -44,8 +44,13 @@
 #endif
 
 extern FILE *output_file;
+#ifdef _OPENMP
 extern int tid;
 extern int cellcacheslotid;
+#else
+constexpr int tid = 0;
+constexpr int cellcacheslotid = 0;
+#endif
 extern bool use_cellcache;
 
 extern std::mt19937 stdrng;

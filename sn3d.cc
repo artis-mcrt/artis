@@ -52,8 +52,10 @@
 #include "vpkt.h"
 
 // threadprivate variables
+#ifdef _OPENMP
 int tid = 0;
 int cellcacheslotid = 0;
+#endif
 bool use_cellcache = false;
 std::mt19937 stdrng(std::random_device{}());
 gsl_integration_workspace *gslworkspace = nullptr;
@@ -770,10 +772,12 @@ auto main(int argc, char *argv[]) -> int {
 #pragma omp parallel private(filename)
 #endif
   {
+#ifdef _OPENMP
     /// Get the current threads ID, copy it to a threadprivate variable
     tid = get_thread_num();
     // cellcacheslotid = tid;
     cellcacheslotid = 0;
+#endif
     /// and initialise the threads outputfile
     snprintf(filename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, tid);
     output_file = fopen_required(filename, "w");
