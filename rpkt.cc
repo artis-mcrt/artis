@@ -491,12 +491,11 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
 
   /// continuum process happens. select due to its probabilities sigma/chi_cont, chi_ff/chi_cont,
   /// chi_bf/chi_cont
-  const double zrand = rng_uniform();
   // printout("[debug] rpkt_event:   r-pkt undergoes a continuum transition\n");
   // printout("[debug] rpkt_event:   zrand*chi_cont %g, sigma %g, chi_ff %g, chi_bf %g\n", zrand * chi_cont,
   // sigma, chi_ff, chi_bf);
 
-  const auto chi_rnd = zrand * chi_cont;
+  const auto chi_rnd = rng_uniform() * chi_cont;
 
   if (chi_rnd < chi_escatter) {
     /// electron scattering occurs
