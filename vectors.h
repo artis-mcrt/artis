@@ -145,7 +145,7 @@ constexpr void vec_scale(std::span<double, 3> vec, const double scalefactor) {
 }
 
 constexpr auto move_pkt_withtime(std::span<double, 3> pos_rf, std::span<const double, 3> dir_rf, double &prop_time,
-                                 const double nu_rf, double nu_cmf, const double e_rf, double e_cmf,
+                                 const double nu_rf, double nu_cmf, const double e_rf, double &e_cmf,
                                  const double distance) -> double
 /// Subroutine to move a packet along a straight line (specified by current
 /// dir vector). The distance moved is in the rest frame.
