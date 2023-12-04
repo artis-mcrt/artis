@@ -226,6 +226,7 @@ static auto get_event(const int modelgridindex,
   auto e_cmf = pkt_ptr.e_cmf;
   auto prop_time = pkt_ptr.prop_time;
   int next_trans = pkt_ptr.next_trans;
+
   const double chi_cont = chi_rpkt_cont.total * doppler_packet_nucmf_on_nurf(pos, pkt_ptr.dir, prop_time);
   double tau = 0.;   // optical depth along path
   double dist = 0.;  // position on path
@@ -234,9 +235,9 @@ static auto get_event(const int modelgridindex,
     /// first select the closest transition in frequency
     /// we need its frequency nu_trans, the element/ion and the corresponding levels
     /// create therefore new variables in packet, which contain next_lowerlevel, ...
-    const int lineindex = closest_transition(nu_cmf,
-                                             next_trans);  /// returns negative value if nu_cmf > nu_trans
-    if (lineindex >= 0) [[likely]] {
+
+    /// returns negative value if nu_cmf > nu_trans
+    if (const int lineindex = closest_transition(nu_cmf, next_trans); lineindex >= 0) [[likely]] {
       /// line interaction is possible (nu_cmf > nu_trans)
 
       const double nu_trans = globals::linelist[lineindex].nu;
