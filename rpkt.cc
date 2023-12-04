@@ -103,24 +103,24 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
   return matchindex;
 }
 
-static auto get_nu_cmf_abort(struct packet *pkt_ptr, const double abort_dist) -> double {
+static auto get_nu_cmf_abort(const struct packet &pkt_ptr, const double abort_dist) -> double {
   // get the frequency change per distance travelled assuming linear change to the abort distance
   // this is done is two parts to get identical results to do_rpkt_step()
   const auto half_abort_dist = abort_dist / 2.;
-  const auto prop_time = pkt_ptr->prop_time + half_abort_dist / CLIGHT_PROP + half_abort_dist / CLIGHT_PROP;
+  const auto prop_time = pkt_ptr.prop_time + half_abort_dist / CLIGHT_PROP + half_abort_dist / CLIGHT_PROP;
 
   std::array<const double, 3> pos = {
-      pkt_ptr->pos[0] + (pkt_ptr->dir[0] * half_abort_dist) + (pkt_ptr->dir[0] * half_abort_dist),
-      pkt_ptr->pos[1] + (pkt_ptr->dir[1] * half_abort_dist) + (pkt_ptr->dir[1] * half_abort_dist),
-      pkt_ptr->pos[2] + (pkt_ptr->dir[2] * half_abort_dist) + (pkt_ptr->dir[2] * half_abort_dist)};
+      pkt_ptr.pos[0] + (pkt_ptr.dir[0] * half_abort_dist) + (pkt_ptr.dir[0] * half_abort_dist),
+      pkt_ptr.pos[1] + (pkt_ptr.dir[1] * half_abort_dist) + (pkt_ptr.dir[1] * half_abort_dist),
+      pkt_ptr.pos[2] + (pkt_ptr.dir[2] * half_abort_dist) + (pkt_ptr.dir[2] * half_abort_dist)};
 
   /// During motion, rest frame energy and frequency are conserved.
   /// But need to update the co-moving ones.
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pos, pkt_ptr->dir, prop_time);
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pos, pkt_ptr.dir, prop_time);
 
-  const double nu_cmf_abort = pkt_ptr->nu_rf * dopplerfactor;
+  const double nu_cmf_abort = pkt_ptr.nu_rf * dopplerfactor;
 
-  assert_testmodeonly(nu_cmf_abort <= pkt_ptr->nu_cmf);
+  assert_testmodeonly(nu_cmf_abort <= pkt_ptr.nu_cmf);
   return nu_cmf_abort;
 }
 
@@ -142,7 +142,7 @@ static auto get_event_expansion_opacity(const int modelgridindex, const int none
   // calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, modelgridindex, true);
   const auto doppler = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
 
-  const auto nu_cmf_abort = get_nu_cmf_abort(pkt_ptr, abort_dist);
+  const auto nu_cmf_abort = get_nu_cmf_abort(*pkt_ptr, abort_dist);
 
   // for USE_RELATIVISTIC_DOPPLER_SHIFT, we will use a linear approximation for
   // the frequency change from start to abort (cell boundary/timestep end)
@@ -216,7 +216,7 @@ static auto get_event(const int modelgridindex,
   // printout("get_event()\n");
   /// initialize loop variables
 
-  const auto nu_cmf_abort = get_nu_cmf_abort(pkt_ptr, abort_dist);
+  const auto nu_cmf_abort = get_nu_cmf_abort(*pkt_ptr, abort_dist);
   const auto d_nu_on_d_l = (nu_cmf_abort - pkt_ptr->nu_cmf) / abort_dist;
 
   struct packet dummypkt = *pkt_ptr;
