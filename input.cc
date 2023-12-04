@@ -1193,7 +1193,8 @@ static auto search_groundphixslist(double nu_edge, int el, int in, int ll) -> in
 static void setup_cellcache() {
   globals::mutex_cellcachemacroatom.resize(get_includedlevels());
 
-  const int num_cellcache_slots = get_max_threads();
+  // const int num_cellcache_slots = get_max_threads();
+  const int num_cellcache_slots = 1;
   globals::cellcache = static_cast<struct cellcache *>(malloc(num_cellcache_slots * sizeof(struct cellcache)));
   assert_always(globals::cellcache != nullptr);
 

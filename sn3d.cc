@@ -772,7 +772,8 @@ auto main(int argc, char *argv[]) -> int {
   {
     /// Get the current threads ID, copy it to a threadprivate variable
     tid = get_thread_num();
-    cellcacheslotid = tid;
+    // cellcacheslotid = tid;
+    cellcacheslotid = 0;
     /// and initialise the threads outputfile
     snprintf(filename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, tid);
     output_file = fopen_required(filename, "w");
