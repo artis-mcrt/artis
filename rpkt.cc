@@ -107,18 +107,14 @@ static auto get_nu_cmf_abort(const struct packet &pkt_ptr, const double abort_di
   // get the frequency change per distance travelled assuming linear change to the abort distance
   // this is done is two parts to get identical results to do_rpkt_step()
   const auto half_abort_dist = abort_dist / 2.;
-  const auto prop_time = pkt_ptr.prop_time + half_abort_dist / CLIGHT_PROP + half_abort_dist / CLIGHT_PROP;
+  const auto abort_time = pkt_ptr.prop_time + half_abort_dist / CLIGHT_PROP + half_abort_dist / CLIGHT_PROP;
 
-  std::array<const double, 3> pos = {
+  std::array<const double, 3> abort_pos = {
       pkt_ptr.pos[0] + (pkt_ptr.dir[0] * half_abort_dist) + (pkt_ptr.dir[0] * half_abort_dist),
       pkt_ptr.pos[1] + (pkt_ptr.dir[1] * half_abort_dist) + (pkt_ptr.dir[1] * half_abort_dist),
       pkt_ptr.pos[2] + (pkt_ptr.dir[2] * half_abort_dist) + (pkt_ptr.dir[2] * half_abort_dist)};
 
-  /// During motion, rest frame energy and frequency are conserved.
-  /// But need to update the co-moving ones.
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pos, pkt_ptr.dir, prop_time);
-
-  const double nu_cmf_abort = pkt_ptr.nu_rf * dopplerfactor;
+  const double nu_cmf_abort = pkt_ptr.nu_rf * doppler_packet_nucmf_on_nurf(abort_pos, pkt_ptr.dir, abort_time);
 
   assert_testmodeonly(nu_cmf_abort <= pkt_ptr.nu_cmf);
   return nu_cmf_abort;
