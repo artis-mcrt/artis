@@ -45,15 +45,15 @@
 
 extern FILE *output_file;
 extern int tid;
+extern int cellcacheslotid;
 extern bool use_cellcache;
-constexpr int cellcacheslotid = 0;
 
 extern std::mt19937 stdrng;
 
 extern gsl_integration_workspace *gslworkspace;
 
 #ifdef _OPENMP
-#pragma omp threadprivate(tid, stdrng, gslworkspace, output_file)
+#pragma omp threadprivate(tid, cellcacheslotid, stdrng, gslworkspace, output_file)
 #endif
 
 #define __artis_assert(e)                                                                                              \

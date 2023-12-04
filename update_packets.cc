@@ -1,22 +1,12 @@
 #include "update_packets.h"
 
 #include <algorithm>
-#include <cstdlib>
-#include <ctime>
-#include <iterator>
-#include <span>
 
 #include "artisoptions.h"
-#include "constants.h"
 #include "decay.h"
 #include "gammapkt.h"
-#include "globals.h"
 #include "grid.h"
 #include "kpkt.h"
-#include "macroatom.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "nonthermal.h"
 #include "packet.h"
 #include "rpkt.h"
@@ -144,6 +134,7 @@ static void update_pellet(struct packet *pkt_ptr, const int nts, const double t2
     pkt_ptr->prop_time = globals::tmin;
   } else {
     printout("ERROR: Something gone wrong with decaying pellets. tdecay %g ts %g (ts + tw) %g\n", tdecay, ts, t2);
+    assert_testmodeonly(false);
     std::abort();
   }
 }
@@ -206,9 +197,11 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
       break;
     }
 
-    default:
+    default: {
       printout("packet_prop: Unknown packet type %d. Abort.\n", pkt_ptr->type);
+      assert_testmodeonly(false);
       std::abort();
+    }
   }
 }
 
@@ -225,18 +218,6 @@ static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, cons
   if (esc1) {
     return false;
   }
-
-  // const auto ts_end = globals::timesteps[globals::timestep].start + globals::timesteps[globals::timestep].width;
-
-  // const bool pktdone1 = (p1.prop_time >= ts_end);
-  // const bool pktdone2 = (p2.prop_time >= ts_end);
-
-  // if (!pktdone1 && pktdone2) {
-  //   return true;
-  // }
-  // if (pktdone1) {
-  //   return false;
-  // }
 
   // for both non-escaped packets, order by descending cell density
   const int mgi1 = grid::get_cell_modelgridindex(p1.where);
@@ -262,26 +243,6 @@ static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, cons
   return false;
 }
 
-static void do_cell_packet_updates(std::span<packet> packets, const int nts, const double ts_end) {
-  auto update_packet = [ts_end, nts](auto &pkt) {
-    const int mgi = grid::get_cell_modelgridindex(pkt.where);
-    int newmgi = mgi;
-    while (pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE && (newmgi == mgi || newmgi == grid::get_npts_model())) {
-      do_packet(&pkt, ts_end, nts);
-      newmgi = grid::get_cell_modelgridindex(pkt.where);
-    }
-  };
-
-#ifdef _OPENMP
-#pragma omp parallel for schedule(nonmonotonic : dynamic)
-  for (auto &pkt : packets) {
-    update_packet(pkt);
-  }
-#else
-  std::for_each(EXEC_PAR_UNSEQ packets.begin(), packets.end(), update_packet);
-#endif
-}
-
 void update_packets(const int my_rank, const int nts, std::span<struct packet> packets)
 // Subroutine to move and update packets during the current timestep (nts)
 {
@@ -289,46 +250,47 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
   // processed for one or more timesteps. Those that are pellets will just be sitting in the
   // matter. Those that are photons (or one sort or another) will already have a position and
   // a direction.
+
   const double ts = globals::timesteps[nts].start;
   const double tw = globals::timesteps[nts].width;
-  const double ts_end = ts + tw;
-
-  for (auto &pkt : packets) {
-    pkt.interactions = 0;
-  }
 
   const time_t time_update_packets_start = time(nullptr);
   printout("timestep %d: start update_packets at time %ld\n", nts, time_update_packets_start);
   bool timestepcomplete = false;
   int passnumber = 0;
   while (!timestepcomplete) {
+    timestepcomplete = true;  // will be set false if any packets did not finish propagating in this pass
+
     const time_t sys_time_start_pass = time(nullptr);
 
     // printout("sorting packets...");
 
-    std::sort(EXEC_PAR_UNSEQ std::begin(packets), std::end(packets), std_compare_packets_bymodelgriddensity);
+    std::sort(packets.begin(), packets.end(), std_compare_packets_bymodelgriddensity);
 
     // printout("took %lds\n", time(nullptr) - sys_time_start_pass);
 
     printout("  update_packets timestep %d pass %3d: started at %ld\n", nts, passnumber, sys_time_start_pass);
 
-    const int count_pktupdates = static_cast<int>(std::ranges::count_if(
-        packets, [ts_end](const auto &pkt) { return pkt.prop_time < ts_end && pkt.type != TYPE_ESCAPE; }));
+    int count_pktupdates = 0;
     const int updatecellcounter_beforepass = stats::get_counter(stats::COUNTER_UPDATECELL);
-    auto *packetgroupstart = packets.data();
 
-    for (auto &pkt : packets) {
-      if ((pkt.type != TYPE_ESCAPE && pkt.prop_time < ts_end)) {
-        const int mgi = grid::get_cell_modelgridindex(pkt.where);
-        const bool cellcache_change_cell_required =
-            (mgi != grid::get_npts_model() && globals::cellcache[cellcacheslotid].cellnumber != mgi &&
-             grid::modelgrid[mgi].thick != 1);
+#ifdef _OPENMP
+#pragma omp parallel for schedule(nonmonotonic : dynamic)
+#endif
+    for (int n = 0; n < globals::npkts; n++) {
+      struct packet *pkt_ptr = &packets[n];
 
-        if (cellcache_change_cell_required) {
-          if (packetgroupstart != &pkt) {
-            do_cell_packet_updates(std::span(packetgroupstart, std::distance(packetgroupstart, &pkt)), nts, ts_end);
-          }
+      if (passnumber == 0) {
+        pkt_ptr->interactions = 0;
+      }
 
+      if (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < (ts + tw)) {
+        const int cellindex = pkt_ptr->where;
+        const int mgi = grid::get_cell_modelgridindex(cellindex);
+        /// for non empty cells update the global available level populations and cooling terms
+        /// Reset cellhistory if packet starts up in another than the last active cell
+        if (mgi != grid::get_npts_model() && globals::cellcache[cellcacheslotid].cellnumber != mgi &&
+            grid::modelgrid[mgi].thick != 1) {
 #ifdef _OPENMP
 #pragma omp critical(cellchange)
 #endif
@@ -336,23 +298,29 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
             stats::increment(stats::COUNTER_UPDATECELL);
             cellcache_change_cell(mgi);
           }
-          packetgroupstart = &pkt;
+        }
+
+        // enum packet_type oldtype = pkt_ptr->type;
+        int newmgi = mgi;
+        bool workedonpacket = false;
+        while ((newmgi == mgi || newmgi == grid::get_npts_model()) && pkt_ptr->prop_time < (ts + tw) &&
+               pkt_ptr->type != TYPE_ESCAPE) {
+          workedonpacket = true;
+          do_packet(pkt_ptr, ts + tw, nts);
+          const int newcellnum = pkt_ptr->where;
+          newmgi = grid::get_cell_modelgridindex(newcellnum);
+        }
+        count_pktupdates += workedonpacket ? 1 : 0;
+
+        if (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < (ts + tw)) {
+          timestepcomplete = false;
         }
       }
     }
-    if (packetgroupstart != &packets[globals::npkts]) {
-      do_cell_packet_updates(std::span(packetgroupstart, std::distance(packetgroupstart, &packets[globals::npkts])),
-                             nts, ts_end);
-    }
-
-    timestepcomplete = std::ranges::all_of(
-        packets, [ts_end](const auto &pkt) { return pkt.prop_time >= ts_end || pkt.type == TYPE_ESCAPE; });
-
-    const int cellhistresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
+    const int cellcacheresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
     printout(
-        "  update_packets timestep %d pass %3d: finished at %ld packetsupdated %7d cellcacheresets %7d (took "
-        "%lds)\n",
-        nts, passnumber, time(nullptr), count_pktupdates, cellhistresets, time(nullptr) - sys_time_start_pass);
+        "  update_packets timestep %d pass %3d: finished at %ld packetsupdated %7d cellcacheresets %7d (took %lds)\n",
+        nts, passnumber, time(nullptr), count_pktupdates, cellcacheresets, time(nullptr) - sys_time_start_pass);
 
     passnumber++;
   }

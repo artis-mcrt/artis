@@ -53,6 +53,7 @@
 
 // threadprivate variables
 int tid = 0;
+int cellcacheslotid = 0;
 bool use_cellcache = false;
 std::mt19937 stdrng(std::random_device{}());
 gsl_integration_workspace *gslworkspace = nullptr;
@@ -771,6 +772,7 @@ auto main(int argc, char *argv[]) -> int {
   {
     /// Get the current threads ID, copy it to a threadprivate variable
     tid = get_thread_num();
+    cellcacheslotid = tid;
     /// and initialise the threads outputfile
     snprintf(filename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, tid);
     output_file = fopen_required(filename, "w");
