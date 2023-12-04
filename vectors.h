@@ -141,8 +141,7 @@ constexpr void vec_scale(std::span<double, 3> vec, const double scalefactor) {
 [[gnu::pure]] [[nodiscard]] constexpr auto doppler_packet_nucmf_on_nurf(std::span<const double, 3> pos_rf,
                                                                         std::span<const double, 3> dir_rf,
                                                                         const double prop_time) -> double {
-  const auto flow_velocity = get_velocity(pos_rf, prop_time);
-  return doppler_nucmf_on_nurf(dir_rf, flow_velocity);
+  return doppler_nucmf_on_nurf(dir_rf, get_velocity(pos_rf, prop_time));
 }
 
 constexpr auto move_pkt_withtime(struct packet *pkt_ptr, const double distance) -> double
