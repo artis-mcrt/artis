@@ -586,7 +586,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
       pkt_ptr->type = TYPE_KPKT;
     }
   } else {
-    assert_testmodeonly(false);
+    assert_always(false);
   }
 }
 
