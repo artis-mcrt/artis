@@ -144,31 +144,38 @@ constexpr void vec_scale(std::span<double, 3> vec, const double scalefactor) {
   return doppler_nucmf_on_nurf(dir_rf, get_velocity(pos_rf, prop_time));
 }
 
-constexpr auto move_pkt_withtime(struct packet *pkt_ptr, const double distance) -> double
+constexpr auto move_pkt_withtime(std::span<double, 3> pos_rf, std::span<const double, 3> dir_rf, double &prop_time,
+                                 const double nu_rf, double nu_cmf, const double e_rf, double e_cmf,
+                                 const double distance) -> double
 /// Subroutine to move a packet along a straight line (specified by current
 /// dir vector). The distance moved is in the rest frame.
 {
   assert_always(distance >= 0);
 
-  const double nu_cmf_old = pkt_ptr->nu_cmf;
-  pkt_ptr->prop_time += distance / CLIGHT_PROP;
+  const double nu_cmf_old = nu_cmf;
+  prop_time += distance / CLIGHT_PROP;
 
-  pkt_ptr->pos[0] += (pkt_ptr->dir[0] * distance);
-  pkt_ptr->pos[1] += (pkt_ptr->dir[1] * distance);
-  pkt_ptr->pos[2] += (pkt_ptr->dir[2] * distance);
+  pos_rf[0] += (dir_rf[0] * distance);
+  pos_rf[1] += (dir_rf[1] * distance);
+  pos_rf[2] += (dir_rf[2] * distance);
 
   /// During motion, rest frame energy and frequency are conserved.
   /// But need to update the co-moving ones.
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pos_rf, dir_rf, prop_time);
 
-  pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
-  pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
+  nu_cmf = nu_rf * dopplerfactor;
+  e_cmf = e_rf * dopplerfactor;
 
   // frequency should only over decrease due to packet movement
   // enforce this to overcome numerical error
-  pkt_ptr->nu_cmf = std::min(pkt_ptr->nu_cmf, nu_cmf_old);
+  nu_cmf = std::min(nu_cmf, nu_cmf_old);
 
   return dopplerfactor;
+}
+
+constexpr auto move_pkt_withtime(struct packet *pkt_ptr, const double distance) -> double {
+  return move_pkt_withtime(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time, pkt_ptr->nu_rf, pkt_ptr->nu_cmf,
+                           pkt_ptr->e_rf, pkt_ptr->e_cmf, distance);
 }
 
 [[nodiscard]] [[gnu::pure]] constexpr auto get_arrive_time(const struct packet *const pkt_ptr) -> double
