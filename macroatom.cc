@@ -342,6 +342,8 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
 /// Material for handling activated macro atoms.
 {
   const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
+  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  assert_testmodeonly(nonemptymgi >= 0);
   const auto T_e = grid::get_Te(modelgridindex);
 
   // EXPERIMENT: disable macroatom and emit according to blackbody
@@ -493,7 +495,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
 
         pkt_ptr->type = TYPE_KPKT;
         end_packet = true;
-        safeadd(globals::colheatingestimator[modelgridindex], pkt_ptr->e_cmf);
+        safeadd(globals::colheatingestimator[nonemptymgi], pkt_ptr->e_cmf);
         break;
       }
 
@@ -539,7 +541,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
 
         pkt_ptr->type = TYPE_KPKT;
         end_packet = true;
-        safeadd(globals::colheatingestimator[modelgridindex], pkt_ptr->e_cmf);
+        safeadd(globals::colheatingestimator[nonemptymgi], pkt_ptr->e_cmf);
         break;
       }
 
