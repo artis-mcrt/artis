@@ -250,8 +250,6 @@ extern double *bfheating_coeff;
 
 extern struct rpkt_continuum_absorptioncoeffs *chi_rpkt_cont;
 
-extern int ncoolingterms;
-
 extern double *allcont_nu_edge;
 extern const struct fullphixslist *allcont;
 

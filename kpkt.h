@@ -9,6 +9,7 @@ constexpr double COOLING_UNDEFINED = -99;
 
 namespace kpkt {
 
+auto get_ncoolingterms() -> int;
 void setup_coolinglist();
 void calculate_cooling_rates(int modelgridindex, struct heatingcoolingrates *heatingcoolingrates);
 void do_kpkt_blackbody(struct packet *pkt_ptr);

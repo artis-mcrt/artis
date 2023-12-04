@@ -65,9 +65,6 @@ double *bfheating_coeff = nullptr;
 
 struct rpkt_continuum_absorptioncoeffs *chi_rpkt_cont = nullptr;
 
-/// Coolinglist
-int ncoolingterms;
-
 /// PHIXSLIST
 
 double *allcont_nu_edge = nullptr;

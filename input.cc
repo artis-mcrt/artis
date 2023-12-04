@@ -1206,11 +1206,12 @@ static void setup_cellcache() {
 
     globals::cellcache[itid].cellnumber = -99;
 
-    mem_usage_cellcache += globals::ncoolingterms * sizeof(double);
-    globals::cellcache[itid].cooling_contrib = static_cast<double *>(calloc(globals::ncoolingterms, sizeof(double)));
+    const auto ncoolingterms = kpkt::get_ncoolingterms();
+    mem_usage_cellcache += ncoolingterms * sizeof(double);
+    globals::cellcache[itid].cooling_contrib = static_cast<double *>(calloc(ncoolingterms, sizeof(double)));
 
     printout("[info] mem_usage: cellcache coolinglist contribs for thread %d occupies %.3f MB\n", itid,
-             globals::ncoolingterms * sizeof(double) / 1024. / 1024.);
+             ncoolingterms * sizeof(double) / 1024. / 1024.);
 
     mem_usage_cellcache += get_nelements() * sizeof(struct chelements);
     globals::cellcache[itid].chelements =

@@ -37,7 +37,11 @@ struct cellcachecoolinglist {
   int upperlevel;
 };
 
+int ncoolingterms;
+
 static struct cellcachecoolinglist *coolinglist;
+
+auto get_ncoolingterms() -> int { return ncoolingterms; }
 
 template <bool update_cooling_contrib_list>
 static auto calculate_cooling_rates_ion(const int modelgridindex, const int element, const int ion,
@@ -209,12 +213,12 @@ void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrate
 }
 
 static void set_ncoolingterms() {
-  globals::ncoolingterms = 0;
+  ncoolingterms = 0;
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
       int ionterms = 0;
-      globals::elements[element].ions[ion].coolingoffset = globals::ncoolingterms;
+      globals::elements[element].ions[ion].coolingoffset = ncoolingterms;
 
       /// Ionised ions add one ff-cooling term
       if (get_ionstage(element, ion) > 1) {
@@ -234,7 +238,7 @@ static void set_ncoolingterms() {
         }
       }
       globals::elements[element].ions[ion].ncoolingterms = ionterms;
-      globals::ncoolingterms += ionterms;
+      ncoolingterms += ionterms;
     }
   }
 }
@@ -249,9 +253,8 @@ void setup_coolinglist() {
   /// \sum_{elements,ions}get_nlevels(element,ion) and free-free which is \sum_{elements} get_nions(element)-1
 
   set_ncoolingterms();
-  const size_t mem_usage_coolinglist = globals::ncoolingterms * sizeof(struct cellcachecoolinglist);
-  coolinglist =
-      static_cast<struct cellcachecoolinglist *>(malloc(globals::ncoolingterms * sizeof(struct cellcachecoolinglist)));
+  const size_t mem_usage_coolinglist = ncoolingterms * sizeof(struct cellcachecoolinglist);
+  coolinglist = static_cast<struct cellcachecoolinglist *>(malloc(ncoolingterms * sizeof(struct cellcachecoolinglist)));
   printout("[info] mem_usage: coolinglist occupies %.3f MB\n", mem_usage_coolinglist / 1024. / 1024.);
 
   int i = 0;  // cooling list index
@@ -314,8 +317,8 @@ void setup_coolinglist() {
     }
   }
 
-  assert_always(globals::ncoolingterms == i);  // if this doesn't match, we miscalculated the number of cooling terms
-  printout("[info] read_atomicdata: number of coolingterms %d\n", globals::ncoolingterms);
+  assert_always(ncoolingterms == i);  // if this doesn't match, we miscalculated the number of cooling terms
+  printout("[info] read_atomicdata: number of coolingterms %d\n", ncoolingterms);
 }
 
 static auto sample_planck_analytic(const double T) -> double
