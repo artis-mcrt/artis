@@ -496,7 +496,9 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
   // printout("[debug] rpkt_event:   zrand*chi_cont %g, sigma %g, chi_ff %g, chi_bf %g\n", zrand * chi_cont,
   // sigma, chi_ff, chi_bf);
 
-  if (zrand * chi_cont < chi_escatter) {
+  const auto chi_rnd = zrand * chi_cont;
+
+  if (chi_rnd < chi_escatter) {
     /// electron scattering occurs
     /// in this case the packet stays a R_PKT of same nu_cmf as before (coherent scattering)
     /// but with different direction
@@ -517,7 +519,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
     pkt_ptr->em_pos = pkt_ptr->pos;
     pkt_ptr->em_time = pkt_ptr->prop_time;
 
-  } else if (zrand * chi_cont < chi_escatter + chi_ff) {
+  } else if (chi_rnd < chi_escatter + chi_ff) {
     /// ff: transform to k-pkt
     // printout("[debug] rpkt_event:   free-free transition\n");
     stats::increment(stats::COUNTER_K_STAT_FROM_FF);
@@ -525,7 +527,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
     pkt_ptr->last_event = 5;
     pkt_ptr->type = TYPE_KPKT;
     pkt_ptr->absorptiontype = -1;
-  } else if (zrand * chi_cont < chi_escatter + chi_ff + chi_bf) {
+  } else if (chi_rnd < chi_escatter + chi_ff + chi_bf) {
     /// bf: transform to k-pkt or activate macroatom corresponding to probabilities
     // printout("[debug] rpkt_event:   bound-free transition\n");
 
