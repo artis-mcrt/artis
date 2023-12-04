@@ -29,6 +29,8 @@
 #include "thermalbalance.h"
 #include "vpkt.h"
 
+static std::vector<std::vector<double>> threads_bfheatingcoeffs;
+
 static void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer,
                                      const struct heatingcoolingrates *heatingcoolingrates) {
   // return; disable for better performance (if estimators files are not needed)
@@ -1236,7 +1238,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 
   cellcache_change_cell(-99);
 
-  globals::threads_bfheatingcoeffs.resize(get_max_threads());
+  threads_bfheatingcoeffs.resize(get_max_threads());
   /// Do not use values which are saved in the cellcache within update_grid
   use_cellcache = false;
 
@@ -1244,7 +1246,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 #pragma omp parallel
 #endif
   {
-    globals::threads_bfheatingcoeffs[tid].reserve(get_includedlevels());
+    threads_bfheatingcoeffs[tid].reserve(get_includedlevels());
 
 /// Updating cell information
 #ifdef _OPENMP
@@ -1257,7 +1259,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       if (mgi >= nstart && mgi < nstart + ndo) {
         struct heatingcoolingrates heatingcoolingrates = {};
         update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates,
-                         globals::threads_bfheatingcoeffs[tid]);
+                         threads_bfheatingcoeffs[tid]);
 
         // maybe want to add omp ordered here if the modelgrid cells should be output in order
 #ifdef _OPENMP

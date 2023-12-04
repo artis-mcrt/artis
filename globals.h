@@ -264,8 +264,6 @@ extern double NPHIXSNUINCREMENT;
 
 extern struct cellcache *cellcache;
 
-extern std::vector<std::vector<double>> threads_bfheatingcoeffs;
-
 #ifdef MPI_ON
 extern MPI_Comm mpi_comm_node;
 extern MPI_Comm mpi_comm_internode;
