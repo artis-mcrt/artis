@@ -131,7 +131,7 @@ static constexpr auto get_expopac_bin_nu_lower(const size_t binindex) -> double 
   return 1e8 * CLIGHT / lambda_upper;
 }
 
-static auto get_event_expansion_opacity(const int modelgridindex, const int nonemptymgi, struct packet &pkt_ptr,
+static auto get_event_expansion_opacity(const int modelgridindex, const int nonemptymgi, const struct packet &pkt_ptr,
                                         struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const double tau_rnd,
                                         const double abort_dist) -> std::tuple<double, bool> {
   // calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, modelgridindex, true);
@@ -143,16 +143,20 @@ static auto get_event_expansion_opacity(const int modelgridindex, const int none
   // the frequency change from start to abort (cell boundary/timestep end)
   const auto d_nu_on_d_l = (nu_cmf_abort - pkt_ptr.nu_cmf) / abort_dist;
 
-  struct packet dummypkt = pkt_ptr;
+  auto pos = pkt_ptr.pos;
+  auto nu_rf = pkt_ptr.nu_rf;
+  auto nu_cmf = pkt_ptr.nu_cmf;
+  auto e_rf = pkt_ptr.e_rf;
+  auto e_cmf = pkt_ptr.e_cmf;
+  auto prop_time = pkt_ptr.prop_time;
   assert_always(globals::cellcache[cellcacheslotid].cellnumber == modelgridindex);
   double dist = 0.;
   double tau = 0.;
-  auto binindex_start =
-      static_cast<size_t>(((1e8 * CLIGHT / dummypkt.nu_cmf) - expopac_lambdamin) / expopac_deltalambda);
+  auto binindex_start = static_cast<size_t>(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda);
 
   for (size_t binindex = binindex_start; binindex < expopac_nbins; binindex++) {
     const auto next_bin_edge_nu = (binindex < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex);
-    const auto binedgedist = get_linedistance(dummypkt.prop_time, dummypkt.nu_cmf, next_bin_edge_nu, d_nu_on_d_l);
+    const auto binedgedist = get_linedistance(prop_time, nu_cmf, next_bin_edge_nu, d_nu_on_d_l);
 
     // const double chi_cont = chi_rpkt_cont.total * doppler;
     const auto chi_cont = 0.;
@@ -176,19 +180,20 @@ static auto get_event_expansion_opacity(const int modelgridindex, const int none
     dist += binedgedist;
 
     if constexpr (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
-      move_pkt_withtime(&dummypkt, binedgedist);
+      move_pkt_withtime(pos, pkt_ptr.dir, prop_time, nu_rf, nu_cmf, e_rf, e_cmf, binedgedist);
     } else {
       // avoid move_pkt_withtime() to skip the standard Doppler shift calculation
       // and use the linear approx instead
-      dummypkt.pos[0] += (dummypkt.dir[0] * binedgedist);
-      dummypkt.pos[1] += (dummypkt.dir[1] * binedgedist);
-      dummypkt.pos[2] += (dummypkt.dir[2] * binedgedist);
-      dummypkt.prop_time += binedgedist / CLIGHT_PROP;
-      dummypkt.nu_cmf = pkt_ptr.nu_cmf + d_nu_on_d_l * dist;  // should equal nu_trans;
-      assert_testmodeonly(dummypkt.nu_cmf <= pkt_ptr.nu_cmf);
+
+      pos[0] += (pkt_ptr.dir[0] * binedgedist);
+      pos[1] += (pkt_ptr.dir[1] * binedgedist);
+      pos[2] += (pkt_ptr.dir[2] * binedgedist);
+      prop_time += binedgedist / CLIGHT_PROP;
+      nu_cmf = pkt_ptr.nu_cmf + d_nu_on_d_l * dist;  // should equal nu_trans;
+      assert_testmodeonly(nu_cmf <= pkt_ptr.nu_cmf);
     }
 
-    if (dummypkt.nu_cmf <= nu_cmf_abort) {
+    if (nu_cmf <= nu_cmf_abort) {
       // hit edge of cell or timestep limit
       return {std::numeric_limits<double>::max(), false};
     }
@@ -245,7 +250,7 @@ static auto get_event(const int modelgridindex,
 
       const double tau_cont = chi_cont * ldist;
 
-      if (tau_rnd - tau > tau_cont) [[likely]] {
+      if (tau_rnd - tau > tau_cont) {
         // got past the continuum optical depth so propagate to the line, and check interaction
 
         if (nu_trans < nu_cmf_abort) [[unlikely]] {
@@ -270,7 +275,7 @@ static auto get_event(const int modelgridindex,
         // printout("[debug] get_event:     tau_line %g\n", tau_line);
         // printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
 
-        if (tau_rnd - tau > tau_cont + tau_line) [[likely]] {
+        if (tau_rnd - tau > tau_cont + tau_line) {
           // total optical depth still below tau_rnd: propagate to the line and continue
 
           // printout(
@@ -295,7 +300,7 @@ static auto get_event(const int modelgridindex,
 
           radfield::update_lineestimator(modelgridindex, lineindex, prop_time * CLIGHT * e_cmf / nu_cmf);
 
-        } else [[unlikely]] {
+        } else {
           /// bound-bound process occurs
           // printout("[debug] get_event: tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
 
@@ -315,7 +320,7 @@ static auto get_event(const int modelgridindex,
 
           return {dist + ldist, next_trans, true};
         }
-      } else [[unlikely]] {
+      } else {
         /// continuum process occurs before reaching the line
 
         return {dist + (tau_rnd - tau) / chi_cont, next_trans - 1, false};
