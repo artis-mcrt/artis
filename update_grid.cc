@@ -944,15 +944,17 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int mgi, 
 }
 
 #ifdef DO_TITER
-static void titer_average_estimators(const int n) {
-  if (globals::ffheatingestimator_save[n] >= 0) {
-    globals::ffheatingestimator[n] = (globals::ffheatingestimator[n] + globals::ffheatingestimator_save[n]) / 2;
+static void titer_average_estimators(const int nonemptymgi) {
+  if (globals::ffheatingestimator_save[nonemptymgi] >= 0) {
+    globals::ffheatingestimator[nonemptymgi] =
+        (globals::ffheatingestimator[nonemptymgi] + globals::ffheatingestimator_save[nonemptymgi]) / 2;
   }
-  globals::ffheatingestimator_save[n] = globals::ffheatingestimator[n];
-  if (globals::colheatingestimator_save[n] >= 0) {
-    globals::colheatingestimator[n] = (globals::colheatingestimator[n] + globals::colheatingestimator_save[n]) / 2;
+  globals::ffheatingestimator_save[nonemptymgi] = globals::ffheatingestimator[nonemptymgi];
+  if (globals::colheatingestimator_save[nonemptymgi] >= 0) {
+    globals::colheatingestimator[nonemptymgi] =
+        (globals::colheatingestimator[nonemptymgi] + globals::colheatingestimator_save[nonemptymgi]) / 2;
   }
-  globals::colheatingestimator_save[n] = globals::colheatingestimator[n];
+  globals::colheatingestimator_save[nonemptymgi] = globals::colheatingestimator[nonemptymgi];
 }
 #endif
 
@@ -1089,8 +1091,8 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
       radfield::normalise_nuJ(mgi, estimator_normfactor_over4pi);
 
-      globals::ffheatingestimator[mgi] *= estimator_normfactor;
-      globals::colheatingestimator[mgi] *= estimator_normfactor;
+      globals::ffheatingestimator[nonemptymgi] *= estimator_normfactor;
+      globals::colheatingestimator[nonemptymgi] *= estimator_normfactor;
 
 #ifdef DO_TITER
       radfield::titer_nuJ(mgi);

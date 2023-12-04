@@ -354,25 +354,25 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
 }
 
 static void mpi_reduce_estimators(int nts) {
+  const int nonempty_npts_model = grid::get_nonempty_npts_model();
   radfield::reduce_estimators();
   MPI_Barrier(MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, globals::ffheatingestimator, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, globals::colheatingestimator, grid::get_npts_model(), MPI_DOUBLE, MPI_SUM,
-                MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, globals::ffheatingestimator, nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, globals::colheatingestimator, nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
-
-  const int arraylen = grid::get_nonempty_npts_model() * globals::nbfcontinua_ground;
 
   if constexpr (USE_LUT_PHOTOION) {
     MPI_Barrier(MPI_COMM_WORLD);
     assert_always(globals::gammaestimator != nullptr);
-    MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, globals::gammaestimator, nonempty_npts_model * globals::nbfcontinua_ground, MPI_DOUBLE,
+                  MPI_SUM, MPI_COMM_WORLD);
   }
 
   if constexpr (USE_LUT_BFHEATING) {
     MPI_Barrier(MPI_COMM_WORLD);
     assert_always(globals::bfheatingestimator != nullptr);
-    MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, arraylen, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, globals::bfheatingestimator, nonempty_npts_model * globals::nbfcontinua_ground,
+                  MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
 
   if constexpr (RECORD_LINESTAT) {
@@ -569,8 +569,8 @@ static void zero_estimators() {
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     radfield::zero_estimators(modelgridindex);
 
-    globals::ffheatingestimator[modelgridindex] = 0.;
-    globals::colheatingestimator[modelgridindex] = 0.;
+    globals::ffheatingestimator[nonemptymgi] = 0.;
+    globals::colheatingestimator[nonemptymgi] = 0.;
 
     if constexpr (TRACK_ION_STATS) {
       stats::reset_ion_stats(modelgridindex);

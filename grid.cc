@@ -1005,11 +1005,11 @@ static void allocate_nonemptymodelcells() {
 #endif
   }
 
-  globals::ffheatingestimator = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
-  globals::colheatingestimator = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
+  globals::ffheatingestimator = static_cast<double *>(malloc(get_nonempty_npts_model() * sizeof(double)));
+  globals::colheatingestimator = static_cast<double *>(malloc(get_nonempty_npts_model() * sizeof(double)));
 #ifdef DO_TITER
-  globals::ffheatingestimator_save = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
-  globals::colheatingestimator_save = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
+  globals::ffheatingestimator_save = static_cast<double *>(malloc(get_nonempty_npts_model() * sizeof(double)));
+  globals::colheatingestimator_save = static_cast<double *>(malloc(get_nonempty_npts_model() * sizeof(double)));
 #endif
 
 #ifdef MPI_ON

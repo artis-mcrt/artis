@@ -300,7 +300,9 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
   /// Free-free heating
   /// -----------------
   /// From estimators
-  ffheating = globals::ffheatingestimator[modelgridindex];
+
+  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+  ffheating = globals::ffheatingestimator[nonemptymgi];
 
   /// Analytical calculation using T, and populations
   /// This is always taken as an additional process to the other importantheatingterms
@@ -325,7 +327,7 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
     heatingcoolingrates->heating_collisional = C_deexc;
   } else {
     /// Collisional heating (from estimators)
-    heatingcoolingrates->heating_collisional = globals::colheatingestimator[modelgridindex];  // C_deexc + C_recomb;
+    heatingcoolingrates->heating_collisional = globals::colheatingestimator[nonemptymgi];  // C_deexc + C_recomb;
   }
 
   heatingcoolingrates->heating_bf = bfheating;
