@@ -105,11 +105,21 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
 
 static auto get_nu_cmf_abort(struct packet *pkt_ptr, const double abort_dist) -> double {
   // get the frequency change per distance travelled assuming linear change to the abort distance
-  struct packet dummypkt_abort = *pkt_ptr;
   // this is done is two parts to get identical results to do_rpkt_step()
-  move_pkt_withtime(&dummypkt_abort, abort_dist / 2.);
-  move_pkt_withtime(&dummypkt_abort, abort_dist / 2.);
-  const double nu_cmf_abort = dummypkt_abort.nu_cmf;
+  const auto half_abort_dist = abort_dist / 2.;
+  const auto prop_time = pkt_ptr->prop_time + half_abort_dist / CLIGHT_PROP + half_abort_dist / CLIGHT_PROP;
+
+  std::array<const double, 3> pos = {
+      pkt_ptr->pos[0] + (pkt_ptr->dir[0] * half_abort_dist) + (pkt_ptr->dir[0] * half_abort_dist),
+      pkt_ptr->pos[1] + (pkt_ptr->dir[1] * half_abort_dist) + (pkt_ptr->dir[1] * half_abort_dist),
+      pkt_ptr->pos[2] + (pkt_ptr->dir[2] * half_abort_dist) + (pkt_ptr->dir[2] * half_abort_dist)};
+
+  /// During motion, rest frame energy and frequency are conserved.
+  /// But need to update the co-moving ones.
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pos, pkt_ptr->dir, prop_time);
+
+  const double nu_cmf_abort = pkt_ptr->nu_rf * dopplerfactor;
+
   assert_testmodeonly(nu_cmf_abort <= pkt_ptr->nu_cmf);
   // for USE_RELATIVISTIC_DOPPLER_SHIFT, we will use a linear approximation for
   // the frequency change from start to abort (cell boundary/timestep end)
