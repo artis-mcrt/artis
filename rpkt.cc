@@ -940,12 +940,12 @@ static auto calculate_chi_freefree(const int modelgridindex, const double nu) ->
   return chi_ff;
 }
 
-template <bool usecellhistupdatephixslist>
+template <bool USECELLHISTANDUPDATEPHIXSLIST>
 auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> double
 // bound-free opacity
 {
   double chi_bf_sum = 0.;
-  if constexpr (usecellhistupdatephixslist && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
+  if constexpr (USECELLHISTANDUPDATEPHIXSLIST && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
     std::fill_n(globals::phixslist[tid].groundcont_gamma_contr, globals::nbfcontinua_ground, 0.);
   }
 
@@ -979,8 +979,8 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
       if (nu < nu_edge) [[unlikely]] {
         break;
       }
-      const double nnlevel = usecellhistupdatephixslist ? get_levelpop(modelgridindex, element, ion, level)
-                                                        : calculate_levelpop(modelgridindex, element, ion, level);
+      const double nnlevel = USECELLHISTANDUPDATEPHIXSLIST ? get_levelpop(modelgridindex, element, ion, level)
+                                                           : calculate_levelpop(modelgridindex, element, ion, level);
       const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
       if (nu <= nu_max_phixs && nnlevel > 0) {
@@ -991,14 +991,14 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
         if constexpr (!SEPARATE_STIMRECOMB) {
           double departure_ratio = globals::cellcache[cellcacheslotid].ch_allcont_departureratios[i];
-          if (!usecellhistupdatephixslist || departure_ratio < 0) {
+          if (!USECELLHISTANDUPDATEPHIXSLIST || departure_ratio < 0) {
             const int upper = globals::allcont[i].upperlevel;
-            const double nnupperionlevel = usecellhistupdatephixslist
+            const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
                                                ? get_levelpop(modelgridindex, element, ion + 1, upper)
                                                : calculate_levelpop(modelgridindex, element, ion + 1, upper);
             const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
             departure_ratio = nnupperionlevel / nnlevel * nne * sf;  // put that to phixslist
-            if (usecellhistupdatephixslist) {
+            if (USECELLHISTANDUPDATEPHIXSLIST) {
               globals::cellcache[cellcacheslotid].ch_allcont_departureratios[i] = departure_ratio;
             }
           }
@@ -1009,19 +1009,19 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
 
         const double sigma_contr = sigma_bf * probability * corrfactor;
 
-        if constexpr (usecellhistupdatephixslist && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
+        if constexpr (USECELLHISTANDUPDATEPHIXSLIST && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
           if (level == 0 && globals::allcont[i].phixstargetindex == 0) {
             const int gphixsindex = globals::allcont[i].index_in_groundphixslist;
             globals::phixslist[tid].groundcont_gamma_contr[gphixsindex] = sigma_contr;
           }
         }
 
-        if constexpr (usecellhistupdatephixslist && DETAILED_BF_ESTIMATORS_ON) {
+        if constexpr (USECELLHISTANDUPDATEPHIXSLIST && DETAILED_BF_ESTIMATORS_ON) {
           globals::phixslist[tid].gamma_contr[i] = sigma_contr;
         }
 
         const double chi_bf_contr = nnlevel * sigma_contr;
-        if (usecellhistupdatephixslist && !std::isfinite(chi_bf_contr)) {
+        if (USECELLHISTANDUPDATEPHIXSLIST && !std::isfinite(chi_bf_contr)) {
           printout("[fatal] calculate_chi_rpkt_cont: non-finite contribution to chi_bf_contr %g ... abort\n",
                    chi_bf_contr);
           printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n", i, element, ion, level);
@@ -1036,17 +1036,17 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
         }
 
         chi_bf_sum += chi_bf_contr;
-        if constexpr (usecellhistupdatephixslist) {
+        if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
           globals::phixslist[tid].chi_bf_sum[i] = chi_bf_sum;
         }
-      } else if constexpr (usecellhistupdatephixslist) {
+      } else if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
         // ignore this particular process
         globals::phixslist[tid].chi_bf_sum[i] = chi_bf_sum;
         if constexpr (DETAILED_BF_ESTIMATORS_ON) {
           globals::phixslist[tid].gamma_contr[i] = 0.;
         }
       }
-    } else if constexpr (usecellhistupdatephixslist) {
+    } else if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
       // no element present or not an important level
       globals::phixslist[tid].chi_bf_sum[i] = chi_bf_sum;
       if constexpr (DETAILED_BF_ESTIMATORS_ON) {
@@ -1055,7 +1055,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
     }
   }
 
-  if constexpr (usecellhistupdatephixslist) {
+  if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
     for (; i < globals::nbfcontinua; i++) {
       globals::phixslist[tid].chi_bf_sum[i] = chi_bf_sum;
       if constexpr (DETAILED_BF_ESTIMATORS_ON) {
