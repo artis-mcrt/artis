@@ -1133,6 +1133,8 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
     }
   }
 }
+
+#ifdef MPI_ON
 void MPI_Bcast_binned_opacities(const int modelgridindex, const int root_node_id) {
   if constexpr (EXPANSIONOPACITIES_ON) {
     if (grid::modelgrid[modelgridindex].thick != 1 && globals::rank_in_node == 0) {
@@ -1143,6 +1145,7 @@ void MPI_Bcast_binned_opacities(const int modelgridindex, const int root_node_id
     }
   }
 }
+#endif
 
 void calculate_binned_opacities(const int modelgridindex) {
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
