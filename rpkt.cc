@@ -455,10 +455,8 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   double U = -Qnew * sin2i2 + Unew * cos2i2;
 
   // Transform Stokes Parameters from the CMF to the RF
-  std::array<double, 3> vel_rev{-vel_vec[0], -vel_vec[1], -vel_vec[2]};
-
   // Update rest frame direction, frequency and energy
-  pkt_ptr->dir = frame_transform(new_dir_cmf, &Q, &U, vel_rev);
+  pkt_ptr->dir = frame_transform(new_dir_cmf, &Q, &U, std::array<double, 3>{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
 
   pkt_ptr->stokes = {I, Q, U};
 
