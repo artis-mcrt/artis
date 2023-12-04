@@ -103,20 +103,19 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
   return matchindex;
 }
 
-static auto get_nu_cmf_abort(const struct packet &pkt_ptr, const double abort_dist) -> double {
+static auto get_nu_cmf_abort(std::span<const double, 3> pos, std::span<const double, 3> dir, const double prop_time,
+                             const double nu_rf, const double abort_dist) -> double {
   // get the frequency change per distance travelled assuming linear change to the abort distance
   // this is done is two parts to get identical results to do_rpkt_step()
   const auto half_abort_dist = abort_dist / 2.;
-  const auto abort_time = pkt_ptr.prop_time + half_abort_dist / CLIGHT_PROP + half_abort_dist / CLIGHT_PROP;
+  const auto abort_time = prop_time + half_abort_dist / CLIGHT_PROP + half_abort_dist / CLIGHT_PROP;
 
-  std::array<const double, 3> abort_pos = {
-      pkt_ptr.pos[0] + (pkt_ptr.dir[0] * half_abort_dist) + (pkt_ptr.dir[0] * half_abort_dist),
-      pkt_ptr.pos[1] + (pkt_ptr.dir[1] * half_abort_dist) + (pkt_ptr.dir[1] * half_abort_dist),
-      pkt_ptr.pos[2] + (pkt_ptr.dir[2] * half_abort_dist) + (pkt_ptr.dir[2] * half_abort_dist)};
+  std::array<const double, 3> abort_pos = {pos[0] + (dir[0] * half_abort_dist) + (dir[0] * half_abort_dist),
+                                           pos[1] + (dir[1] * half_abort_dist) + (dir[1] * half_abort_dist),
+                                           pos[2] + (dir[2] * half_abort_dist) + (dir[2] * half_abort_dist)};
 
-  const double nu_cmf_abort = pkt_ptr.nu_rf * doppler_packet_nucmf_on_nurf(abort_pos, pkt_ptr.dir, abort_time);
+  const double nu_cmf_abort = nu_rf * doppler_packet_nucmf_on_nurf(abort_pos, dir, abort_time);
 
-  assert_testmodeonly(nu_cmf_abort <= pkt_ptr.nu_cmf);
   return nu_cmf_abort;
 }
 
@@ -132,19 +131,19 @@ static constexpr auto get_expopac_bin_nu_lower(const size_t binindex) -> double 
   return 1e8 * CLIGHT / lambda_upper;
 }
 
-static auto get_event_expansion_opacity(const int modelgridindex, const int nonemptymgi, struct packet *pkt_ptr,
+static auto get_event_expansion_opacity(const int modelgridindex, const int nonemptymgi, struct packet &pkt_ptr,
                                         struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const double tau_rnd,
                                         const double abort_dist) -> std::tuple<double, bool> {
   // calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, modelgridindex, true);
-  const auto doppler = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
+  const auto doppler = doppler_packet_nucmf_on_nurf(pkt_ptr.pos, pkt_ptr.dir, pkt_ptr.prop_time);
 
-  const auto nu_cmf_abort = get_nu_cmf_abort(*pkt_ptr, abort_dist);
+  const auto nu_cmf_abort = get_nu_cmf_abort(pkt_ptr.pos, pkt_ptr.dir, pkt_ptr.prop_time, pkt_ptr.nu_rf, abort_dist);
 
   // for USE_RELATIVISTIC_DOPPLER_SHIFT, we will use a linear approximation for
   // the frequency change from start to abort (cell boundary/timestep end)
-  const auto d_nu_on_d_l = (nu_cmf_abort - pkt_ptr->nu_cmf) / abort_dist;
+  const auto d_nu_on_d_l = (nu_cmf_abort - pkt_ptr.nu_cmf) / abort_dist;
 
-  struct packet dummypkt = *pkt_ptr;
+  struct packet dummypkt = pkt_ptr;
   assert_always(globals::cellcache[cellcacheslotid].cellnumber == modelgridindex);
   double dist = 0.;
   double tau = 0.;
@@ -185,8 +184,8 @@ static auto get_event_expansion_opacity(const int modelgridindex, const int none
       dummypkt.pos[1] += (dummypkt.dir[1] * binedgedist);
       dummypkt.pos[2] += (dummypkt.dir[2] * binedgedist);
       dummypkt.prop_time += binedgedist / CLIGHT_PROP;
-      dummypkt.nu_cmf = pkt_ptr->nu_cmf + d_nu_on_d_l * dist;  // should equal nu_trans;
-      assert_testmodeonly(dummypkt.nu_cmf <= pkt_ptr->nu_cmf);
+      dummypkt.nu_cmf = pkt_ptr.nu_cmf + d_nu_on_d_l * dist;  // should equal nu_trans;
+      assert_testmodeonly(dummypkt.nu_cmf <= pkt_ptr.nu_cmf);
     }
 
     if (dummypkt.nu_cmf <= nu_cmf_abort) {
@@ -212,7 +211,7 @@ static auto get_event(const int modelgridindex,
   // printout("get_event()\n");
   /// initialize loop variables
 
-  const auto nu_cmf_abort = get_nu_cmf_abort(pkt_ptr, abort_dist);
+  const auto nu_cmf_abort = get_nu_cmf_abort(pkt_ptr.pos, pkt_ptr.dir, pkt_ptr.prop_time, pkt_ptr.nu_rf, abort_dist);
   const auto d_nu_on_d_l = (nu_cmf_abort - pkt_ptr.nu_cmf) / abort_dist;
 
   auto pos = pkt_ptr.pos;
@@ -790,7 +789,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
     pkt_ptr->next_trans = -1;
   } else if constexpr (EXPANSIONOPACITIES_ON) {
     std::tie(edist, event_is_boundbound) =
-        get_event_expansion_opacity(mgi, nonemptymgi, pkt_ptr, chi_rpkt_cont, tau_next, abort_dist);
+        get_event_expansion_opacity(mgi, nonemptymgi, *pkt_ptr, chi_rpkt_cont, tau_next, abort_dist);
     pkt_ptr->next_trans = -1;
   } else {
     calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, mgi, true);
