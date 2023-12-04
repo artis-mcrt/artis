@@ -203,8 +203,8 @@ static auto get_event_expansion_opacity(const int modelgridindex, const int none
 }
 
 static auto get_event(const int modelgridindex,
-                      struct packet &pkt_ptr,  // pointer to packet object
-                      const struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
+                      const struct packet &pkt_ptr,  // pointer to packet object
+                      const struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, struct mastate &mastate,
                       const double tau_rnd,    // random optical depth until which the packet travels
                       const double abort_dist  // maximal travel distance before packet leaves cell or time step ends
                       ) -> std::tuple<double, int, bool>
@@ -304,10 +304,10 @@ static auto get_event(const int modelgridindex,
           /// bound-bound process occurs
           // printout("[debug] get_event: tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
 
-          pkt_ptr.mastate.element = element;
-          pkt_ptr.mastate.ion = ion;
-          pkt_ptr.mastate.level = upper;  /// if the MA will be activated it must be in the transitions upper level
-          pkt_ptr.mastate.activatingline = lineindex;
+          mastate.element = element;
+          mastate.ion = ion;
+          mastate.level = upper;  /// if the MA will be activated it must be in the transitions upper level
+          mastate.activatingline = lineindex;
 
           if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
             move_pkt_withtime(pos, pkt_ptr.dir, prop_time, nu_rf, nu_cmf, e_rf, e_cmf, ldist);
@@ -800,7 +800,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
     calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, mgi, true);
 
     std::tie(edist, pkt_ptr->next_trans, event_is_boundbound) =
-        get_event(mgi, *pkt_ptr, chi_rpkt_cont, tau_next, abort_dist);
+        get_event(mgi, *pkt_ptr, chi_rpkt_cont, pkt_ptr->mastate, tau_next, abort_dist);
   }
   assert_always(edist >= 0);
 
