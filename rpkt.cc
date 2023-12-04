@@ -121,8 +121,6 @@ static auto get_nu_cmf_abort(struct packet *pkt_ptr, const double abort_dist) ->
   const double nu_cmf_abort = pkt_ptr->nu_rf * dopplerfactor;
 
   assert_testmodeonly(nu_cmf_abort <= pkt_ptr->nu_cmf);
-  // for USE_RELATIVISTIC_DOPPLER_SHIFT, we will use a linear approximation for
-  // the frequency change from start to abort (cell boundary/timestep end)
   return nu_cmf_abort;
 }
 
@@ -145,6 +143,9 @@ static auto get_event_expansion_opacity(const int modelgridindex, const int none
   const auto doppler = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
 
   const auto nu_cmf_abort = get_nu_cmf_abort(pkt_ptr, abort_dist);
+
+  // for USE_RELATIVISTIC_DOPPLER_SHIFT, we will use a linear approximation for
+  // the frequency change from start to abort (cell boundary/timestep end)
   const auto d_nu_on_d_l = (nu_cmf_abort - pkt_ptr->nu_cmf) / abort_dist;
 
   struct packet dummypkt = *pkt_ptr;
