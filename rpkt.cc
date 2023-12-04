@@ -193,7 +193,7 @@ static auto get_event_expansion_opacity(const int modelgridindex, const int none
 
 static auto get_event(const int modelgridindex,
                       struct packet *pkt_ptr,  // pointer to packet object
-                      struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
+                      const struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
                       const double tau_rnd,    // random optical depth until which the packet travels
                       const double abort_dist  // maximal travel distance before packet leaves cell or time step ends
                       ) -> std::tuple<double, bool>
@@ -209,8 +209,6 @@ static auto get_event(const int modelgridindex,
   const auto d_nu_on_d_l = (nu_cmf_abort - pkt_ptr->nu_cmf) / abort_dist;
 
   struct packet dummypkt = *pkt_ptr;
-
-  calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, modelgridindex, true);
   const double chi_cont =
       chi_rpkt_cont.total * doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
   double tau = 0.;   // optical depth along path
@@ -795,6 +793,8 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
         get_event_expansion_opacity(mgi, nonemptymgi, pkt_ptr, chi_rpkt_cont, tau_next, abort_dist);
     pkt_ptr->next_trans = -1;
   } else {
+    calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, mgi, true);
+
     std::tie(edist, event_is_boundbound) = get_event(mgi, pkt_ptr, chi_rpkt_cont, tau_next, abort_dist);
   }
   assert_always(edist >= 0);
