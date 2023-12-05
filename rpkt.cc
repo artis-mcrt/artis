@@ -380,11 +380,10 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
     double x = 1.;
     while (x > p) {
       const double zrand = rng_uniform();
-      const double zrand2 = rng_uniform();
 
       M = 2 * zrand - 1;
       mu = pow(M, 2.);
-      phisc = 2 * PI * zrand2;
+      phisc = 2 * PI * rng_uniform();
 
       // NB: the rotational matrix R here is chosen in the clockwise direction ("+").
       // In Bulla+2015 equation (10) and (12) refer to the specific case shown in Fig.2 where the angle i2
@@ -539,8 +538,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
     assert_always(chi_bf_sum[globals::nbfcontinua - 1] == chi_bf_inrest);
 
     /// Determine in which continuum the bf-absorption occurs
-    const double zrand2 = rng_uniform();
-    const double chi_bf_rand = zrand2 * chi_bf_inrest;
+    const double chi_bf_rand = rng_uniform() * chi_bf_inrest;
 
     // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand
     const auto &upperval = std::upper_bound(chi_bf_sum, &chi_bf_sum[globals::nbfcontinua - 1], chi_bf_rand);
@@ -561,8 +559,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
     }
 
     /// and decide whether we go to ionisation energy
-    const double zrand3 = rng_uniform();
-    if (zrand3 < nu_edge / nu) {
+    if (rng_uniform() < nu_edge / nu) {
       stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_BF);
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 3;
