@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iterator>
+#include <mutex>
 #include <numeric>
 
 #include "artisoptions.h"

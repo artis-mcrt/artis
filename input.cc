@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <fstream>
 #include <ios>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <random>
@@ -1027,7 +1028,7 @@ static void read_atomicdata_files() {
 
   printout("establishing connection between transitions and sorted linelist...\n");
 
-  time_t const time_start_establish_linelist_connections = time(nullptr);
+  auto const time_start_establish_linelist_connections = std::time(nullptr);
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
@@ -1058,7 +1059,7 @@ static void read_atomicdata_files() {
     uptrans->lineindex = lineindex;
   }
 
-  printout("  took %ds\n", time(nullptr) - time_start_establish_linelist_connections);
+  printout("  took %ds\n", std::time(nullptr) - time_start_establish_linelist_connections);
 
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
@@ -1693,7 +1694,7 @@ void input(int rank)
   read_atomicdata();
 
 #ifdef MPI_ON
-  const time_t time_before_barrier = time(nullptr);
+  const auto time_before_barrier = std::time(nullptr);
   printout("barrier after read_atomicdata(): time before barrier %d, ", static_cast<int>(time_before_barrier));
   MPI_Barrier(MPI_COMM_WORLD);
   printout("time after barrier %d (waited %d seconds)\n", static_cast<int>(time(nullptr)),

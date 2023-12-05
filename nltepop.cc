@@ -827,7 +827,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     return;
   }
 
-  const time_t sys_time_start_nltesolver = time(nullptr);
+  const auto sys_time_start_nltesolver = std::time(nullptr);
 
   const double t_mid = globals::timesteps[timestep].mid;
   const int nions = get_nions(element);
@@ -1074,7 +1074,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_matrix_free(rate_matrix);
   gsl_vector_free(balance_vector);
   gsl_vector_free(pop_norm_factor_vec);
-  const int duration_nltesolver = time(nullptr) - sys_time_start_nltesolver;
+  const int duration_nltesolver = std::time(nullptr) - sys_time_start_nltesolver;
   if (duration_nltesolver > 2) {
     printout("NLTE population solver call for Z=%d took %d seconds\n", get_atomicnumber(element), duration_nltesolver);
   }

@@ -300,18 +300,18 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
     pkt.interactions = 0;
   }
 
-  const time_t time_update_packets_start = time(nullptr);
+  const auto time_update_packets_start = std::time(nullptr);
   printout("timestep %d: start update_packets at time %ld\n", nts, time_update_packets_start);
   bool timestepcomplete = false;
   int passnumber = 0;
   while (!timestepcomplete) {
-    const time_t sys_time_start_pass = time(nullptr);
+    const auto sys_time_start_pass = std::time(nullptr);
 
     // printout("sorting packets...");
 
     std::sort(EXEC_PAR_UNSEQ std::begin(packets), std::end(packets), std_compare_packets_bymodelgriddensity);
 
-    // printout("took %lds\n", time(nullptr) - sys_time_start_pass);
+    // printout("took %lds\n", std::time(nullptr) - sys_time_start_pass);
 
     printout("  update_packets timestep %d pass %3d: started at %ld\n", nts, passnumber, sys_time_start_pass);
 
@@ -354,14 +354,15 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
     const int cellcacheresets = stats::get_counter(stats::COUNTER_UPDATECELL) - updatecellcounter_beforepass;
     printout(
         "  update_packets timestep %d pass %3d: finished at %ld packetsupdated %7d cellcacheresets %7d (took %lds)\n",
-        nts, passnumber, time(nullptr), count_pktupdates, cellcacheresets, time(nullptr) - sys_time_start_pass);
+        nts, passnumber, std::time(nullptr), count_pktupdates, cellcacheresets,
+        std::time(nullptr) - sys_time_start_pass);
 
     passnumber++;
   }
 
   stats::pkt_action_counters_printout(packets.data(), nts);
 
-  const time_t time_update_packets_end_thisrank = time(nullptr);
+  const auto time_update_packets_end_thisrank = std::time(nullptr);
   printout("timestep %d: end of update_packets for this rank at time %ld\n", nts, time_update_packets_end_thisrank);
 
 #ifdef MPI_ON
@@ -369,6 +370,6 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
 #endif
   printout(
       "timestep %d: time after update packets for all processes %ld (rank %d took %lds, waited %lds, total %lds)\n",
-      nts, time(nullptr), my_rank, time_update_packets_end_thisrank - time_update_packets_start,
-      time(nullptr) - time_update_packets_end_thisrank, time(nullptr) - time_update_packets_start);
+      nts, std::time(nullptr), my_rank, time_update_packets_end_thisrank - time_update_packets_start,
+      std::time(nullptr) - time_update_packets_end_thisrank, std::time(nullptr) - time_update_packets_start);
 }

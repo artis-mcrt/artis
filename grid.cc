@@ -1,6 +1,7 @@
 #include "grid.h"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cmath>
 #include <cstdio>
@@ -9,12 +10,14 @@
 #include <ctime>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <limits>
 #include <span>
 #include <sstream>
 #include <string>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -967,7 +970,7 @@ static void allocate_nonemptymodelcells() {
 
   globals::rpkt_emiss = static_cast<double *>(calloc((get_npts_model() + 1), sizeof(double)));
 
-  size_t ionestimsize = get_nonempty_npts_model() * globals::nbfcontinua_ground * sizeof(double);
+  auto ionestimsize = get_nonempty_npts_model() * globals::nbfcontinua_ground * sizeof(double);
 
 #ifdef MPI_ON
   if constexpr (USE_LUT_PHOTOION) {
@@ -1809,7 +1812,7 @@ void write_grid_restart_data(const int timestep) {
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "gridsave_ts%d.tmp", timestep);
 
-  const time_t sys_time_start_write_restart = time(nullptr);
+  const auto sys_time_start_write_restart = std::time(nullptr);
   printout("Write grid restart data to %s...", filename);
 
   FILE *gridsave_file = fopen_required(filename, "w");
@@ -1854,7 +1857,7 @@ void write_grid_restart_data(const int timestep) {
   nonthermal::write_restart_data(gridsave_file);
   nltepop_write_restart_data(gridsave_file);
   fclose(gridsave_file);
-  printout("done in %ld seconds.\n", time(nullptr) - sys_time_start_write_restart);
+  printout("done in %ld seconds.\n", std::time(nullptr) - sys_time_start_write_restart);
 }
 
 static void assign_initial_temperatures()

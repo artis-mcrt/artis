@@ -2048,7 +2048,8 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
     const auto T_e = grid::get_Te(modelgridindex);
     printout("  Top non-thermal excitation fractions (total excitations = %d):\n",
              nt_solution[modelgridindex].frac_excitations_list.size());
-    int ntransdisplayed = std::min(50, static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size()));
+    const int ntransdisplayed =
+        std::min(50, static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size()));
 
     for (excitationindex = 0; excitationindex < ntransdisplayed; excitationindex++) {
       const double frac_deposition = nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition;
@@ -2638,7 +2639,7 @@ void read_restart_data(FILE *gridsave_file) {
 
       if (mgi_in != modelgridindex) {
         printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
-        abort();
+        std::abort();
       }
 
       for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {

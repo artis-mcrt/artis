@@ -4,10 +4,15 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <cstdlib>
+#include <ctime>
 #include <iterator>
 #include <limits>
 #include <span>
+#include <tuple>
+
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -25,7 +30,8 @@
 constexpr float expopac_lambdamin = 534.5;
 constexpr float expopac_lambdamax = 35000.;
 constexpr float expopac_deltalambda = 35.5;
-constexpr auto expopac_nbins = static_cast<ptrdiff_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
+constexpr auto expopac_nbins =
+    static_cast<std::ptrdiff_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
 
 // kappa in cm^2/g for each bin of each non-empty cell
 static float *expansionopacities = nullptr;
@@ -132,9 +138,10 @@ static constexpr auto get_expopac_bin_nu_lower(const size_t binindex) -> double 
   return 1e8 * CLIGHT / lambda_upper;
 }
 
-static auto get_event_expansion_opacity(const int modelgridindex, const int nonemptymgi, const struct packet &pkt_ptr,
-                                        struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const double tau_rnd,
-                                        const double abort_dist) -> std::tuple<double, bool> {
+static auto get_event_expansion_opacity(
+    const int modelgridindex, const int nonemptymgi, const struct packet &pkt_ptr,
+    struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,  // NOLINT(misc-unused-parameters)
+    const double tau_rnd, const double abort_dist) -> std::tuple<double, bool> {
   // calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, modelgridindex, true);
   const auto doppler = doppler_packet_nucmf_on_nurf(pkt_ptr.pos, pkt_ptr.dir, pkt_ptr.prop_time);
 
@@ -168,7 +175,8 @@ static auto get_event_expansion_opacity(const int modelgridindex, const int none
       // const auto doppler = (pkt_ptr->nu_cmf + d_nu_on_d_l * dist) / pkt_ptr->nu_rf;
       chi_bb_expansionopac = kappa * grid::get_rho(modelgridindex) * doppler;
     }
-    double chi_tot = chi_cont + chi_bb_expansionopac;
+
+    const double chi_tot = chi_cont + chi_bb_expansionopac;
 
     if (chi_tot * binedgedist > tau_rnd - tau) {
       // event occurs
@@ -1164,7 +1172,7 @@ void calculate_binned_opacities(const int modelgridindex) {
   auto *kappa_bb_bins = &expansionopacities[nonemptymgi * expopac_nbins];
   const auto rho = grid::get_rho(modelgridindex);
 
-  const time_t sys_time_start_calc = time(nullptr);
+  const auto sys_time_start_calc = std::time(nullptr);
   const auto temperature = grid::get_TR(modelgridindex);
 
   printout("calculating binned expansion opacities for cell %d...", modelgridindex);
@@ -1213,5 +1221,5 @@ void calculate_binned_opacities(const int modelgridindex) {
     //          1e8 / CLIGHT * nu_upper, 1e8 * CLIGHT / nu_lower, bin_kappa_bb, bin_kappa_cont,
     //          grid::modelgrid[modelgridindex].kappagrey, kappa_planck_cumulative[binindex]);
   }
-  printout("took %ld seconds\n", time(nullptr) - sys_time_start_calc);
+  printout("took %ld seconds\n", std::time(nullptr) - sys_time_start_calc);
 }

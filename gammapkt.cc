@@ -9,6 +9,7 @@
 #include <cstring>
 #include <fstream>
 #include <memory>
+#include <span>
 #include <vector>
 
 #include "artisoptions.h"
@@ -761,7 +762,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 {
   // Assign optical depth to next physical event. And start counter of
   // optical depth for this path.
-  double zrand = rng_uniform_pos();
+  const double zrand = rng_uniform_pos();
   const double tau_next = -1. * log(zrand);
   const double tau_current = 0.;
 

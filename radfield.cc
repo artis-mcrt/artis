@@ -1265,7 +1265,7 @@ void reduce_estimators()
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    const time_t sys_time_start_reduction = time(nullptr);
+    const auto sys_time_start_reduction = std::time(nullptr);
     printout("Reducing binned radiation field estimators");
     assert_always(radfieldbins != nullptr);
 
@@ -1277,12 +1277,12 @@ void reduce_estimators()
         MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[mgibinindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
       }
     }
-    const int duration_reduction = time(nullptr) - sys_time_start_reduction;
+    const int duration_reduction = std::time(nullptr) - sys_time_start_reduction;
     printout(" (took %d s)\n", duration_reduction);
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-    const time_t sys_time_start_reduction = time(nullptr);
+    const auto sys_time_start_reduction = std::time(nullptr);
     printout("Reducing detailed line estimators");
 
     for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
@@ -1295,7 +1295,7 @@ void reduce_estimators()
         }
       }
     }
-    const int duration_reduction = time(nullptr) - sys_time_start_reduction;
+    const int duration_reduction = std::time(nullptr) - sys_time_start_reduction;
     printout(" (took %d s)\n", duration_reduction);
   }
   MPI_Barrier(MPI_COMM_WORLD);
