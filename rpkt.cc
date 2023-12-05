@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdlib>
 #include <iterator>
 #include <limits>
@@ -24,7 +25,7 @@
 constexpr float expopac_lambdamin = 534.5;
 constexpr float expopac_lambdamax = 35000.;
 constexpr float expopac_deltalambda = 35.5;
-constexpr ptrdiff_t expopac_nbins = static_cast<size_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
+constexpr auto expopac_nbins = static_cast<ptrdiff_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
 
 // kappa in cm^2/g for each bin of each non-empty cell
 static float *expansionopacities = nullptr;
