@@ -480,7 +480,7 @@ static inline auto get_bin_T_R(int modelgridindex, int binindex) -> float {
   return radfieldbin_solutions[mgibinindex].T_R;
 }
 
-static inline auto select_bin(double nu) -> int {
+static constexpr auto select_bin(const double nu) -> int {
   // find the left-closed bin [nu_lower, nu_upper) that nu belongs to
 
   if (nu < get_bin_nu_lower(0)) {
