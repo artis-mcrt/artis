@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstdlib>
+#include <vector>
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -11,6 +12,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
+#include "packet.h"
 #ifdef MPI_ON
 #include "mpi.h"
 #endif

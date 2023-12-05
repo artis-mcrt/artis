@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iterator>
+#include <tuple>
 
 #include "artisoptions.h"
 #include "constants.h"

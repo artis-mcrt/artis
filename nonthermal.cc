@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <tuple>
 #include <vector>
 
 #include "artisoptions.h"
