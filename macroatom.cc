@@ -203,7 +203,7 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
 
   const double epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, selecteddowntrans.targetlevelindex);
 
-  double oldnucmf = NAN;
+  double oldnucmf{NAN};
   if (pkt_ptr->last_event == 1) {
     oldnucmf = pkt_ptr->nu_cmf;
   }
@@ -885,7 +885,7 @@ auto col_recombination_ratecoeff(const int modelgridindex, const int element, co
 
       /// Seaton approximation: Mihalas (1978), eq.5-79, p.134
       /// select gaunt factor according to ionic charge
-      double g = NAN;
+      double g{NAN};
       if (ionstage - 1 == 1) {
         g = 0.1;
       } else if (ionstage - 1 == 2) {
@@ -918,7 +918,7 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
 
   /// Seaton approximation: Mihalas (1978), eq.5-79, p.134
   /// select gaunt factor according to ionic charge
-  double g = NAN;
+  double g{NAN};
   const int ionstage = get_ionstage(element, ion);
   if (ionstage == 1) {
     g = 0.1;

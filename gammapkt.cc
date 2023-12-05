@@ -462,7 +462,7 @@ static void compton_scatter(struct packet *pkt_ptr)
   // sigma_partial/sigma_tot = zrand
 
   bool stay_gamma = false;
-  double f = NAN;
+  double f{NAN};
   if (xx < THOMSON_LIMIT) {
     f = 1.;  // no energy loss
     stay_gamma = true;
@@ -546,7 +546,7 @@ static void compton_scatter(struct packet *pkt_ptr)
 static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
   // calculate the absorption coefficient [cm^-1] for photo electric effect scattering in the observer reference frame
 
-  double chi_cmf = NAN;
+  double chi_cmf{NAN};
   // Start by working out the x-section in the co-moving frame.
 
   const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
@@ -601,8 +601,8 @@ static auto sigma_pair_prod_rf(const struct packet *pkt_ptr) -> double {
   }
 
   // double sigma_cmf_cno;
-  double sigma_cmf_si = NAN;
-  double sigma_cmf_fe = NAN;
+  double sigma_cmf_si{NAN};
+  double sigma_cmf_fe{NAN};
   const double f_fe = grid::get_ffegrp(mgi);
 
   // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Hubbell (1969)

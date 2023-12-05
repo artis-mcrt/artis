@@ -124,7 +124,7 @@ static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoint
 
       double probability_sum = 0.;
       for (int i = 0; i < in_nphixstargets; i++) {
-        double phixstargetprobability = NAN;
+        double phixstargetprobability{NAN};
         assert_always(phixsfile >> upperlevel_in >> phixstargetprobability);
         const int upperlevel = upperlevel_in - groundstate_index_in;
         assert_always(upperlevel >= 0);
@@ -147,7 +147,7 @@ static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoint
       assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != nullptr);
 
       for (int i = 0; i < in_nphixstargets; i++) {
-        double phixstargetprobability = NAN;
+        double phixstargetprobability{NAN};
         assert_always(phixsfile >> upperlevel_in >> phixstargetprobability);
       }
 
@@ -222,7 +222,7 @@ static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoint
     free(phixstable);
   } else {
     for (int i = 0; i < globals::NPHIXSPOINTS; i++) {
-      float phixs = NAN;
+      float phixs{NAN};
       assert_always(phixsfile >> phixs);
       assert_always(phixs >= 0);
 
@@ -325,7 +325,7 @@ static void read_phixs_data(const int phixs_file_version) {
         int nphixstargets = 0;
         assert_always(phixsfile >> nphixstargets);
         for (int i = 0; i < nphixstargets; i++) {
-          double phixstargetprobability = NAN;
+          double phixstargetprobability{NAN};
           assert_always(phixsfile >> upperlevel_in >> phixstargetprobability);
         }
       }
@@ -356,8 +356,8 @@ static void read_ion_levels(std::fstream &adata, const int element, const int io
   int transitionblockindex = 0;
   for (int level = 0; level < nlevels; level++) {
     int levelindex_in = 0;
-    double levelenergy = NAN;
-    double statweight = NAN;
+    double levelenergy{NAN};
+    double statweight{NAN};
     int ntransitions = 0;
     std::string line;
     assert_always(get_noncommentline(adata, line));
@@ -753,8 +753,8 @@ static void read_atomicdata_files() {
     int lowermost_ionstage = 0;
     int uppermost_ionstage = 0;
     int nlevelsmax_readin = 0;
-    double abundance = NAN;
-    double mass_amu = NAN;
+    double abundance{NAN};
+    double mass_amu{NAN};
     assert_always(compositiondata >> Z >> nions >> lowermost_ionstage >> uppermost_ionstage >> nlevelsmax_readin >>
                   abundance >> mass_amu);
     printout("readin compositiondata: next element Z %d, nions %d, lowermost %d, uppermost %d, nlevelsmax %d\n", Z,
@@ -800,8 +800,8 @@ static void read_atomicdata_files() {
           energyoffset += ionpot;
         }
         for (int i = 0; i < nlevels; i++) {
-          double levelenergy = NAN;
-          double statweight = NAN;
+          double levelenergy{NAN};
+          double statweight{NAN};
           int levelindex = 0;
           int ntransitions = 0;
           std::string line;
@@ -1853,7 +1853,7 @@ void read_parameterfile(int rank)
 
   /// Wavelength (in Angstroms) at which the parameterisation of the radiation field
   /// switches from the nebular approximation to LTE.
-  float dum2 = NAN;
+  float dum2{NAN};
   assert_always(get_noncommentline(file, line));
   std::istringstream(line) >> dum2;  // free parameter for calculation of rho_crit
   globals::nu_rfcut = CLIGHT / (dum2 * 1e-8);

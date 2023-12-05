@@ -145,8 +145,8 @@ struct nt_solution_struct {
 
   std::vector<struct nt_excitation_struct> frac_excitations_list;
 
-  int timestep_last_solved = -1;      // the quantities above were calculated for this timestep
-  float nneperion_when_solved = NAN;  // the nne when the solver was last run
+  int timestep_last_solved = -1;     // the quantities above were calculated for this timestep
+  float nneperion_when_solved{NAN};  // the nne when the solver was last run
 };
 
 static struct nt_solution_struct *nt_solution;
@@ -1115,7 +1115,7 @@ static auto get_nt_frac_excitation(const int modelgridindex) -> float {
 
 static auto get_mean_binding_energy(const int element, const int ion) -> double {
   int q[M_NT_SHELLS];
-  double total = NAN;
+  double total{NAN};
 
   const int ioncharge = get_ionstage(element, ion) - 1;
   const int nbound = get_atomicnumber(element) - ioncharge;  // number of bound electrons
@@ -2466,7 +2466,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
     *gsl_matrix_ptr(sfmatrix, i, i) += electron_loss_rate(en * EV, nne) / EV;
 
-    double source_integral_to_SF_EMAX = NAN;
+    double source_integral_to_SF_EMAX{NAN};
     if (i < SFPTS - 1) {
       gsl_vector_const_view source_e_to_SF_EMAX = gsl_vector_const_subvector(sourcevec, i + 1, SFPTS - i - 1);
       source_integral_to_SF_EMAX = gsl_blas_dasum(&source_e_to_SF_EMAX.vector) * DELTA_E;
@@ -2615,8 +2615,8 @@ void read_restart_data(FILE *gridsave_file) {
   }
 
   int sfpts_in = 0;
-  double SF_EMIN_in = NAN;
-  double SF_EMAX_in = NAN;
+  double SF_EMIN_in{NAN};
+  double SF_EMAX_in{NAN};
   assert_always(fscanf(gridsave_file, "%d %la %la\n", &sfpts_in, &SF_EMIN_in, &SF_EMAX_in) == 3);
 
   if (sfpts_in != SFPTS || SF_EMIN_in != SF_EMIN || SF_EMAX_in != SF_EMAX) {

@@ -1258,7 +1258,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       /// Check if this task should work on the current model grid cell.
       /// If yes, update the cell and write out the estimators
       if (mgi >= nstart && mgi < nstart + ndo) {
-        struct heatingcoolingrates heatingcoolingrates = {};
+        struct heatingcoolingrates heatingcoolingrates {};
         update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates,
                          threads_bfheatingcoeffs[tid]);
 

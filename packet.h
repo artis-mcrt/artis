@@ -55,7 +55,7 @@ struct packet {
                                     // its linelist index (to overcome numerical problems in propagating the rpkts).
   int emissiontype{EMTYPE_NOTSET};  // records how the packet was emitted if it is a r-pkt
   struct mastate mastate {};
-  std::array<double, 3> em_pos = {};  // Position of the last emission (x,y,z).
+  std::array<double, 3> em_pos{NAN};  // Position of the last emission (x,y,z).
   float em_time{-1.};
   int absorptiontype{0};  // records linelistindex of the last absorption
                           // negative values give ff-abs (-1), bf-abs (-2), compton scattering of gammas (-3),

@@ -248,10 +248,10 @@ static auto read_ratecoeff_dat(FILE *ratecoeff_file) -> bool
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
           /// Loop over the temperature grid
           for (int iter = 0; iter < TABLESIZE; iter++) {
-            double in_alpha_sp = NAN;
-            double in_bfcooling_coeff = NAN;
-            double in_corrphotoioncoeff = NAN;
-            double in_bfheating_coeff = NAN;
+            double in_alpha_sp{NAN};
+            double in_bfcooling_coeff{NAN};
+            double in_corrphotoioncoeff{NAN};
+            double in_bfheating_coeff{NAN};
             assert_always(fscanf(ratecoeff_file, "%la %la %la %la\n", &in_alpha_sp, &in_bfcooling_coeff,
                                  &in_corrphotoioncoeff, &in_bfheating_coeff) == 4);
 
@@ -528,7 +528,7 @@ static void precalculate_rate_coefficient_integrals() {
           // Loop over the temperature grid
           for (int iter = 0; iter < TABLESIZE; iter++) {
             const int bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
-            double error = NAN;
+            double error{NAN};
             int status = 0;
             const float T_e = MINTEMP * exp(iter * T_step_log);
 
@@ -661,7 +661,7 @@ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel
   const double zrand = 1. - rng_uniform();  // Make sure that 0 < zrand <= 1
 
   const double deltanu = (nu_max_phixs - nu_threshold) / npieces;
-  double error = NAN;
+  double error{NAN};
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
@@ -699,7 +699,7 @@ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel
 auto get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, float T_e) -> double
 /// Returns the rate coefficient for spontaneous recombination.
 {
-  double Alpha_sp = NAN;
+  double Alpha_sp{NAN};
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
   assert_always(lowerindex >= 0);
   if (lowerindex < TABLESIZE - 1) {
@@ -748,7 +748,7 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
     }
 
     for (int upper = 0; upper < upper_nlevels; upper++) {
-      double nnupperlevel = NAN;
+      double nnupperlevel{NAN};
       if (assume_lte) {
         const double T_exc = T_e;
         const double E_level = epsilon(element, lowerion + 1, upper);
@@ -770,7 +770,7 @@ auto calculate_ionrecombcoeff(const int modelgridindex, const float T_e, const i
     double nnupperlevel_so_far = 0.;
     const int maxrecombininglevel = get_maxrecombininglevel(element, lowerion + 1);
     for (int upper = 0; upper <= maxrecombininglevel; upper++) {
-      double nnupperlevel = NAN;
+      double nnupperlevel{NAN};
       if (assume_lte) {
         const double T_exc = T_e;
         const double E_level = epsilon(element, lowerion + 1, upper);
@@ -1377,7 +1377,7 @@ static auto get_nlevels_important(int modelgridindex, int element, int ion, bool
   for (int lower = 0;
        (nnlevelsum / nnion_real < IONGAMMA_POPFRAC_LEVELS_INCLUDED) && (lower < get_ionisinglevels(element, ion));
        lower++) {
-    double nnlowerlevel = NAN;
+    double nnlowerlevel{NAN};
     if (assume_lte) {
       const double T_exc = T_e;  // remember, other parts of the code in LTE mode use TJ, not T_e
       const double E_level = epsilon(element, ion, lower);
@@ -1495,7 +1495,7 @@ auto calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, co
   double gamma_ion = 0.;
   double gamma_ion_used = 0.;
   for (int lower = 0; lower < nlevels_important; lower++) {
-    double nnlowerlevel = NAN;
+    double nnlowerlevel{NAN};
     if (assume_lte) {
       const double T_exc = T_e;
       const double E_level = epsilon(element, lowerion, lower);

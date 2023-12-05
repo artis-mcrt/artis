@@ -255,7 +255,7 @@ static auto calculate_levelpop_nominpop(int modelgridindex, int element, int ion
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
 
-  double nn = NAN;
+  double nn{NAN};
 
   if (level == 0) {
     nn = get_groundlevelpop(modelgridindex, element, ion);
@@ -351,7 +351,7 @@ static auto calculate_partfunct(int element, int ion, int modelgridindex) -> dou
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
-  double pop_store = NAN;
+  double pop_store{NAN};
   // double E_level, E_ground, test;
 
   bool initial = false;
@@ -507,7 +507,7 @@ void set_groundlevelpops(const int modelgridindex, const int element, const floa
 
   /// Use ion fractions to calculate the groundlevel populations
   for (int ion = 0; ion < nions; ion++) {
-    double nnion = NAN;
+    double nnion{NAN};
     if (ion <= uppermost_ion) {
       if (nnelement > 0) {
         nnion = std::max(MINPOP, nnelement * ionfractions[ion]);
@@ -538,7 +538,7 @@ static void set_groundlevelpops_neutral(const int modelgridindex) {
     const int nions = get_nions(element);
     /// Assign the species population to the neutral ion and set higher ions to MINPOP
     for (int ion = 0; ion < nions; ion++) {
-      double nnion = NAN;
+      double nnion{NAN};
       if (ion == 0) {
         nnion = nnelement;
       } else if (nnelement > 0.) {

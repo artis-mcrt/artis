@@ -1127,7 +1127,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep) {
 
       for (int level = 0; level <= nlevels_nlte + nsuperlevels; level++) {
         double nnlevellte = calculate_levelpop_lte(modelgridindex, element, ion, level);
-        double nnlevelnlte = NAN;
+        double nnlevelnlte{NAN};
 
         fprintf(nlte_file, "%d %d %d %d ", timestep, modelgridindex, atomic_number, ionstage);
         if (level <= nlevels_nlte) {

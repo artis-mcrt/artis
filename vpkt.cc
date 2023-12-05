@@ -30,8 +30,8 @@ struct stokeparams {
 
 struct vspecpol {
   struct stokeparams flux[VMNUBINS];
-  float lower_time = NAN;
-  float delta_t = NAN;
+  float lower_time{NAN};
+  float delta_t{NAN};
 };
 
 struct vspecpol **vspecpol = nullptr;
@@ -64,8 +64,8 @@ std::vector<double> tau_vpkt;
 
 struct vgrid {
   std::vector<std::vector<double>> flux;
-  double yvel = NAN;
-  double zvel = NAN;
+  double yvel{NAN};
+  double zvel{NAN};
 };
 
 struct vgrid vgrid_i[VGRID_NY][VGRID_NZ];
@@ -79,8 +79,8 @@ std::vector<double> nu_grid_min;
 std::vector<double> nu_grid_max;
 bool vgrid_on;
 
-double dlogt_vspec = NAN;
-double dlognu_vspec = NAN;
+double dlogt_vspec{NAN};
+double dlognu_vspec{NAN};
 
 // number of virtual packets in a given timestep
 int nvpkt;
@@ -122,8 +122,8 @@ static void add_to_vspecpol(const struct packet &vpkt, const int obsbin, const i
 // Routine to add a packet to the outcoming spectrum.
 static void add_to_vpkt_grid(const struct packet &vpkt, std::span<const double, 3> vel, const int wlbin,
                              const int obsbin, std::span<const double, 3> obs) {
-  double vref1 = NAN;
-  double vref2 = NAN;
+  double vref1{NAN};
+  double vref2{NAN};
 
   // obs is the observer orientation
 
@@ -201,10 +201,10 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
   // ------------ SCATTERING EVENT: dipole function --------------------
 
-  double pn = NAN;
-  double I = NAN;
-  double Q = NAN;
-  double U = NAN;
+  double pn{NAN};
+  double I{NAN};
+  double Q{NAN};
+  double U{NAN};
   if (type_before_rpkt == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
 
@@ -273,7 +273,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   // compute the optical depth to boundary
 
   mgi = grid::get_cell_modelgridindex(vpkt.where);
-  struct rpkt_continuum_absorptioncoeffs chi_vpkt_cont = {};
+  struct rpkt_continuum_absorptioncoeffs chi_vpkt_cont {};
 
   while (!end_packet) {
     // distance to the next cell
@@ -520,9 +520,9 @@ static void read_vspecpol(int my_rank, int nts) {
 
   FILE *vspecpol_file = fopen_required(filename, "r");
 
-  float a = NAN;
-  float b = NAN;
-  float c = NAN;
+  float a{NAN};
+  float b{NAN};
+  float c{NAN};
 
   for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
     // Initialise I,Q,U fluxes from temporary files
@@ -799,8 +799,8 @@ void read_parameterfile_vpkt() {
   printout("vpkt.txt: velocity grid map %s\n", (vgrid_on) ? "ENABLED" : "DISABLED");
 
   if (vgrid_on) {
-    double tmin_grid_in_days = NAN;
-    double tmax_grid_in_days = NAN;
+    double tmin_grid_in_days{NAN};
+    double tmax_grid_in_days{NAN};
     // Specify time range for velocity grid map
     assert_always(fscanf(input_file, "%lg %lg \n", &tmin_grid_in_days, &tmax_grid_in_days) == 2);
     tmin_grid = tmin_grid_in_days * DAY;

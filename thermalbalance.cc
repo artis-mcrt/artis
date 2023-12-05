@@ -399,7 +399,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
     thermalmax = thermalmin = -1;
   }
 
-  double T_e = NAN;
+  double T_e{NAN};
   /// Check whether the thermal balance equation has a root in [T_min,T_max]
   if (thermalmin * thermalmax < 0) {
     /// If it has, then solve for the root T_e

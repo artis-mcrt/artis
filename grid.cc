@@ -1363,7 +1363,7 @@ static void read_1d_model()
   vout_model = static_cast<double *>(malloc((get_npts_model() + 1) * sizeof(double)));
 
   // Now read the time (in days) at which the model is specified.
-  double t_model_days = NAN;
+  double t_model_days{NAN};
   assert_always(get_noncommentline(fmodel, line));
   std::istringstream(line) >> t_model_days;
   t_model = t_model_days * DAY;
@@ -1379,8 +1379,8 @@ static void read_1d_model()
 
   int mgi = 0;
   while (std::getline(fmodel, line)) {
-    double vout_kmps = NAN;
-    double log_rho = NAN;
+    double vout_kmps{NAN};
+    double log_rho{NAN};
     int cellnumberin = 0;
     std::istringstream ssline(line);
 
@@ -1432,7 +1432,7 @@ static void read_2d_model()
   set_npts_model(ncoord_model[0] * ncoord_model[1]);
 
   // Now read the time (in days) at which the model is specified.
-  double t_model_days = NAN;
+  double t_model_days{NAN};
   assert_always(get_noncommentline(fmodel, line));
   std::istringstream(line) >> t_model_days;
   t_model = t_model_days * DAY;
@@ -1452,9 +1452,9 @@ static void read_2d_model()
   int nonemptymgi = 0;
   while (std::getline(fmodel, line)) {
     int cellnumberin = 0;
-    float cell_r_in = NAN;
-    float cell_z_in = NAN;
-    double rho_tmodel = NAN;
+    float cell_r_in{NAN};
+    float cell_z_in{NAN};
+    double rho_tmodel{NAN};
     std::istringstream ssline(line);
     assert_always(ssline >> cellnumberin >> cell_r_in >> cell_z_in >> rho_tmodel);
 
@@ -1520,7 +1520,7 @@ static void read_3d_model()
   ncoordgrid[2] = ncoord_model[2];
   ngrid = npts_model_in;
 
-  double t_model_days = NAN;
+  double t_model_days{NAN};
   assert_always(get_noncommentline(fmodel, line));
   std::istringstream(line) >> t_model_days;
   t_model = t_model_days * DAY;
@@ -1548,7 +1548,7 @@ static void read_3d_model()
   while (std::getline(fmodel, line)) {
     int cellnumberin = 0;
     std::array<float, 3> cellpos_in{};
-    float rho_model = NAN;
+    float rho_model{NAN};
     std::istringstream ssline(line);
 
     assert_always(ssline >> cellnumberin >> cellpos_in[0] >> cellpos_in[1] >> cellpos_in[2] >> rho_model);
