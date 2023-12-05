@@ -222,31 +222,22 @@ void normalise_grey(int nts) {
   }
 }
 
-static void choose_gamma_ray(struct packet *pkt_ptr) {
+static auto choose_gamma_ray(const int nucindex) -> double {
   // Routine to choose which gamma ray line it'll be.
 
-  const int nucindex = pkt_ptr->pellet_nucindex;
   const double E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
 
   const double zrand = rng_uniform();
-  int nselected = -1;
   double runtot = 0.;
   for (int n = 0; n < gamma_spectra[nucindex].nlines; n++) {
     runtot += gamma_spectra[nucindex].probability[n] * gamma_spectra[nucindex].energy[n] / E_gamma;
     if (zrand <= runtot) {
-      nselected = n;
-      break;
+      return gamma_spectra[nucindex].energy[n] / H;
     }
   }
 
-  if (nselected < 0) {
-    printout("Failure to choose line (packet type %d pellet_nucindex %d). Abort. zrand %g runtot %g\n", pkt_ptr->type,
-             pkt_ptr->pellet_nucindex, zrand, runtot);
-    std::abort();
-  }
-
-  pkt_ptr->nu_cmf = gamma_spectra[nucindex].energy[nselected] / H;
-  // printout("%s PELLET %g\n", gammaspec->filename, gammaspec->energy[nselected]);
+  printout("Failure to choose line (pellet_nucindex %d). Abort. zrand %g runtot %g\n", nucindex, zrand, runtot);
+  assert_always(false);
 }
 
 void pellet_gamma_decay(struct packet *pkt_ptr) {
@@ -280,7 +271,7 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
 
   // Now need to assign the frequency of the packet in the co-moving frame.
 
-  choose_gamma_ray(pkt_ptr);
+  pkt_ptr->nu_cmf = choose_gamma_ray(pkt_ptr->pellet_nucindex);
 
   // Finally we want to put in the rest frame energy and frequency. And record
   // that it's now a gamma ray.
