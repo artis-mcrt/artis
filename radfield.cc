@@ -48,17 +48,16 @@ struct radfieldbin {
   int contribcount;
 };
 
+constexpr double radfieldbins_delta_nu =
+    (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
+
 // array of upper frequency boundaries of bins
 static std::array<double, RADFIELDBINCOUNT> radfieldbin_nu_upper = [] {
   {
     auto nu_uppers = std::array<double, RADFIELDBINCOUNT>{};
 
-    // choose between equally spaced in energy/frequency or wavelength (before bf edges shift boundaries around)
-    constexpr double delta_nu =
-        (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
-
     for (int binindex = 0; binindex < RADFIELDBINCOUNT - 1; binindex++) {
-      nu_uppers[binindex] = nu_lower_first_initial + (binindex + 1) * delta_nu;
+      nu_uppers[binindex] = nu_lower_first_initial + (binindex + 1) * radfieldbins_delta_nu;
     }
     nu_uppers[RADFIELDBINCOUNT - 1] = nu_upper_superbin;  // very top end super bin
     return nu_uppers;
@@ -482,17 +481,34 @@ static inline auto get_bin_T_R(int modelgridindex, int binindex) -> float {
 }
 
 static inline auto select_bin(double nu) -> int {
+  // find the left-closed bin [nu_lower, nu_upper) that nu belongs to
+
   if (nu < get_bin_nu_lower(0)) {
     return -2;  // out of range, nu lower than lowest bin's lower boundary
   }
-
-  // find the lowest frequency bin with radfieldbin_nu_upper > nu
-  const auto *bin = std::upper_bound(radfieldbin_nu_upper.cbegin(), radfieldbin_nu_upper.cend(), nu);
-  const int binindex = std::distance(radfieldbin_nu_upper.cbegin(), bin);
-  if (binindex >= RADFIELDBINCOUNT) {
+  if (nu >= get_bin_nu_upper(RADFIELDBINCOUNT - 1)) {
     // out of range, nu higher than highest bin's upper boundary
     return -1;
   }
+  if (nu >= get_bin_nu_upper(RADFIELDBINCOUNT - 2)) {
+    // in the superbin
+    return RADFIELDBINCOUNT - 2;
+  }
+
+  const int binindex = static_cast<int>((nu - nu_lower_first_initial) / radfieldbins_delta_nu);
+
+  if (nu == get_bin_nu_upper(binindex)) {
+    // exactly on the upper boundary of a bin, subtract 1 to ensure we get the left-closed bin
+    return binindex - 1;
+  }
+
+  // // find the lowest frequency bin with radfieldbin_nu_upper > nu
+  // const auto *bin = std::upper_bound(radfieldbin_nu_upper.cbegin(), radfieldbin_nu_upper.cend(), nu);
+  // const int binindex = std::distance(radfieldbin_nu_upper.cbegin(), bin);
+  // if (binindex >= RADFIELDBINCOUNT) {
+  //   // out of range, nu higher than highest bin's upper boundary
+  //   return -1;
+  // }
 
   return binindex;
 }
