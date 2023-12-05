@@ -2,6 +2,7 @@
 #define PACKET_H
 
 #include <array>
+#include <cmath>
 #include <compare>
 #include <cstdio>
 
