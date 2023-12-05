@@ -381,7 +381,6 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
     while (x > p) {
       const double zrand = rng_uniform();
       const double zrand2 = rng_uniform();
-      const double zrand3 = rng_uniform();
 
       M = 2 * zrand - 1;
       mu = pow(M, 2.);
@@ -396,7 +395,7 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
       p = (mu + 1) + (mu - 1) * (cos(2 * phisc) * Qi + sin(2 * phisc) * Ui);
 
       // generate a number between 0 and the maximum of the previous function (2)
-      x = 2 * zrand3;
+      x = 2 * rng_uniform();
     };
   } else {
     // Assume isotropic scattering
