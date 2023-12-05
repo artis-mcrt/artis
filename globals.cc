@@ -3,7 +3,9 @@
 #include <array>
 #include <atomic>
 #include <ctime>
+#include <deque>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 #include "artisoptions.h"
