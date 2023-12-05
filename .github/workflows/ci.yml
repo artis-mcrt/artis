@@ -103,7 +103,7 @@ jobs:
               run: |
                   mpicxx --version
                   mpicxx --showme:version
-                  make TESTMODE=${{ matrix.testmode }} MPI=ON -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+                  make TESTMODE=${{ matrix.testmode }} MPI=ON FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
                   cp sn3d tests/${{ matrix.testname }}_testrun/
                   cp exspec tests/${{ matrix.testname }}_testrun/
 

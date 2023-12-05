@@ -162,12 +162,15 @@ ifeq ($(OPTIMIZE),OFF)
 	BUILD_DIR := $(BUILD_DIR)_optimizeoff
 	CXXFLAGS += -O0
 else
-	ifeq ($(FASTMATH),ON)
-		BUILD_DIR := $(BUILD_DIR)_fastmath
-		CXXFLAGS += -Ofast -ffast-math -funsafe-math-optimizations -fno-finite-math-only
+	ifeq ($(TESTMODE),ON)
+		CXXFLAGS += -Og
 	else
-		CXXFLAGS += -O3
-		# for icpx use -fno-fast-math -fp-model strict
+		ifeq ($(FASTMATH),OFF)
+			CXXFLAGS += -O3
+			BUILD_DIR := $(BUILD_DIR)_nofastmath
+		else
+			CXXFLAGS += -Ofast -ffast-math -funsafe-math-optimizations -fno-finite-math-only
+		endif
 	endif
 endif
 
