@@ -52,7 +52,7 @@ constexpr double radfieldbins_delta_nu =
     (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
 
 // array of upper frequency boundaries of bins
-static std::array<double, RADFIELDBINCOUNT> radfieldbin_nu_upper = [] {
+static constexpr std::array<double, RADFIELDBINCOUNT> radfieldbin_nu_upper = [] {
   {
     auto nu_uppers = std::array<double, RADFIELDBINCOUNT>{};
 
@@ -490,9 +490,9 @@ static inline auto select_bin(double nu) -> int {
     // out of range, nu higher than highest bin's upper boundary
     return -1;
   }
-  if (nu >= get_bin_nu_upper(RADFIELDBINCOUNT - 2)) {
-    // in the superbin
-    return RADFIELDBINCOUNT - 2;
+  if (nu >= get_bin_nu_lower(RADFIELDBINCOUNT - 1)) {
+    // in the superbin. separate case because the delta_nu is different to the other bins
+    return RADFIELDBINCOUNT - 1;
   }
 
   const int binindex = static_cast<int>((nu - nu_lower_first_initial) / radfieldbins_delta_nu);
