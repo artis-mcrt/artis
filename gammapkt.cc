@@ -665,11 +665,6 @@ static void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist) {
   // The intention is that rpkt_emiss will contain the emissivity of r-packets
   // in the co-moving frame (which is going to be isotropic).
 
-  // This is only done to order v/c for now.
-
-  // Called with a packet that is about to travel a
-  // distance dist in the lab frame.
-
   if (!(dist > 0)) {
     return;
   }
