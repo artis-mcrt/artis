@@ -461,7 +461,7 @@ static inline auto get_bin_nu_bar(int modelgridindex, int binindex) -> double
 
 static inline auto get_bin_nu_lower(int binindex) -> double {
   if (binindex > 0) {
-    return radfieldbin_nu_upper[binindex - 1];
+    return get_bin_nu_upper(binindex - 1);
   }
   return nu_lower_first_initial;
 }
@@ -1310,7 +1310,7 @@ void write_restart_data(FILE *gridsave_file) {
             T_R_min, T_R_max);
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      fprintf(gridsave_file, "%d %la\n", binindex, radfieldbin_nu_upper[binindex]);
+      fprintf(gridsave_file, "%d %la\n", binindex, get_bin_nu_upper(binindex));
     }
   }
 
@@ -1406,8 +1406,10 @@ void read_restart_data(FILE *gridsave_file) {
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
       int binindex_in = 0;
-      assert_always(fscanf(gridsave_file, "%d %la\n", &binindex_in, &radfieldbin_nu_upper[binindex]) == 2);
+      double nu_upper_in = NAN;
+      assert_always(fscanf(gridsave_file, "%d %la\n", &binindex_in, &nu_upper_in) == 2);
       assert_always(binindex_in == binindex);
+      assert_always(nu_upper_in == get_bin_nu_upper(binindex));
     }
   }
 
