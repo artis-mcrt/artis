@@ -34,6 +34,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   pkt_ptr->prop_time = globals::tmin;
   // pkt_ptr->last_cross = BOUNDARY_NONE;
   pkt_ptr->originated_from_particlenotgamma = false;
+  pkt_ptr->interactions = 0;
 
   if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
     const double zrand = rng_uniform();
@@ -112,8 +113,7 @@ void packet_init(struct packet *pkt)
 
   double norm = 0.;
   for (int m = 0; m < grid::ngrid; m++) {
-    const int mgi = grid::get_cell_modelgridindex(m);
-    if (mgi < grid::get_npts_model())  // some grid cells are empty
+    if (const int mgi = grid::get_cell_modelgridindex(m); mgi < grid::get_npts_model())  // some grid cells are empty
     {
       double q = decay::get_modelcell_simtime_endecay_per_mass(mgi);
       if constexpr (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) {
@@ -156,7 +156,6 @@ void packet_init(struct packet *pkt)
 
   double e_cmf_total = 0.;
   for (int n = 0; n < globals::npkts; n++) {
-    pkt[n].interactions = 0;
     e_cmf_total += pkt[n].e_cmf;
   }
   const double e_ratio = etot / e_cmf_total;
