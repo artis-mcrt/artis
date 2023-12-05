@@ -121,7 +121,14 @@ using gsl_T_R_solver_paras = struct {
 
 static FILE *radfieldfile = nullptr;
 
-static inline auto get_bin_nu_upper(int binindex) -> double { return radfieldbin_nu_upper[binindex]; }
+static constexpr auto get_bin_nu_upper(int binindex) -> double { return radfieldbin_nu_upper[binindex]; }
+
+static constexpr auto get_bin_nu_lower(int binindex) -> double {
+  if (binindex > 0) {
+    return get_bin_nu_upper(binindex - 1);
+  }
+  return nu_lower_first_initial;
+}
 
 static void realloc_detailed_lines(const int new_size) {
   auto *newptr = static_cast<int *>(realloc(detailed_lineindicies, new_size * sizeof(int)));
@@ -457,13 +464,6 @@ static inline auto get_bin_nu_bar(int modelgridindex, int binindex) -> double
   const double nuJ_sum = get_bin_nuJ(modelgridindex, binindex);
   const double J_sum = get_bin_J(modelgridindex, binindex);
   return nuJ_sum / J_sum;
-}
-
-static inline auto get_bin_nu_lower(int binindex) -> double {
-  if (binindex > 0) {
-    return get_bin_nu_upper(binindex - 1);
-  }
-  return nu_lower_first_initial;
 }
 
 static inline auto get_bin_contribcount(int modelgridindex, int binindex) -> int {
