@@ -401,11 +401,10 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   } else {
     // Assume isotropic scattering
     const double zrand = rng_uniform();
-    const double zrand2 = rng_uniform();
 
     M = 2. * zrand - 1;
     mu = pow(M, 2.);
-    phisc = 2 * PI * zrand2;
+    phisc = 2 * PI * rng_uniform();
   }
 
   const double tsc = acos(M);
