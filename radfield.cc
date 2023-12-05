@@ -658,11 +658,7 @@ void zero_estimators(int modelgridindex)
 static void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
                                 const double doppler_nucmf_on_nurf) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
-  assert_always(bfrate_raw != nullptr);
-
-  if (distance_e_cmf == 0) {
-    return;
-  }
+  assert_testmodeonly(bfrate_raw != nullptr);
 
   const int nbfcontinua = globals::nbfcontinua;
 
@@ -686,6 +682,10 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
 
 void update_estimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
                        const double doppler_nucmf_on_nurf) {
+  if (distance_e_cmf == 0) {
+    return;
+  }
+
   safeadd(J[nonemptymgi], distance_e_cmf);
   safeadd(nuJ[nonemptymgi], distance_e_cmf * nu_cmf);
 
@@ -702,13 +702,6 @@ void update_estimators(const int nonemptymgi, const double distance_e_cmf, const
       safeadd(radfieldbins[mgibinindex].nuJ_raw, distance_e_cmf * nu_cmf);
       safeincrement(radfieldbins[mgibinindex].contribcount);
     }
-    // else
-    // {
-    //   printout("WARNING: radfield::update_estimators dropping packet contribution for nu_cmf %g\n",
-    //            nu_cmf);
-    //   printout("           modelgridindex %d binindex %d nu_lower_first %g nu_upper_last %g \n",
-    //            modelgridindex, binindex, nu_lower_first, get_bin_nu_upper(modelgridindex,RADFIELDBINCOUNT - 1));
-    // }
   }
 }
 
