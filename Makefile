@@ -162,16 +162,16 @@ ifeq ($(OPTIMIZE),OFF)
 	BUILD_DIR := $(BUILD_DIR)_optimizeoff
 	CXXFLAGS += -O0
 else
-	ifeq ($(TESTMODE),ON)
-		CXXFLAGS += -Og
-	else
+	# ifeq ($(TESTMODE),ON)
+	# 	CXXFLAGS += -Og
+	# else
 		ifeq ($(FASTMATH),OFF)
 			CXXFLAGS += -O3
 			BUILD_DIR := $(BUILD_DIR)_nofastmath
 		else
 			CXXFLAGS += -Ofast -ffast-math -funsafe-math-optimizations -fno-finite-math-only
 		endif
-	endif
+	# endif
 endif
 
 CXXFLAGS += -Werror -Werror=undef -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wunused-macros -Wno-inline -Wsign-compare
