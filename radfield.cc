@@ -28,18 +28,11 @@ namespace radfield {
 
 static std::vector<double> J_normfactor;
 
-// typedef enum
-// {
-//   FIT_DILUTE_BLACKBODY = 0,
-//   FIT_CONSTANT = 1,
-// } enum_bin_fit_type;
-
 struct radfieldbin_solution {
   // these two parameters are used in the current timestep, but were calculated
   // from the values of J and nuJ in the previous timestep
   float W;    // dilution (scaling) factor
   float T_R;  // radiation temperature
-  // enum_bin_fit_type fit_type;
 };
 
 struct radfieldbin {
@@ -1036,8 +1029,6 @@ void fit_parameters(int modelgridindex, int timestep)
       const int contribcount = get_bin_contribcount(modelgridindex, binindex);
 
       if (contribcount > 0) {
-        // // enum_bin_fit_type bin_fit_type = radfieldbin_solutions[modelgridindex][binindex].fit_type;
-        // if (bin_fit_type == FIT_DILUTE_BLACKBODY)
         {
           T_R_bin = find_T_R(modelgridindex, binindex);
 
@@ -1070,26 +1061,11 @@ void fit_parameters(int modelgridindex, int timestep)
             }
           }
         }
-        // else if (bin_fit_type == FIT_CONSTANT)
-        // {
-        //   T_R_bin = -1.;
-        //   W_bin = J_bin / (nu_upper - nu_lower);
-        // }
-        // else
-        // {
-        //   printout("fit_parameters: unknown fit type %d for bin %d\n", bin_fit_type, binindex);
-        //   T_R_bin = -1.;
-        //   W_bin = -1.;
-        // }
       } else {
         T_R_bin = 0.;
         W_bin = 0.;
       }
-      // else
-      // {
-      //   T_R_bin = -1;
-      //   W_bin = -1;
-      // }
+
       const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
       radfieldbin_solutions[mgibinindex].T_R = T_R_bin;
       radfieldbin_solutions[mgibinindex].W = W_bin;
@@ -1365,7 +1341,6 @@ void write_restart_data(FILE *gridsave_file) {
           fprintf(gridsave_file, "%la %la %a %a %d\n", radfieldbins[mgibinindex].J_raw,
                   radfieldbins[mgibinindex].nuJ_raw, radfieldbin_solutions[mgibinindex].W,
                   radfieldbin_solutions[mgibinindex].T_R, radfieldbins[mgibinindex].contribcount);
-          // radfieldbins[mgibinindex].fit_type
         }
       }
 
