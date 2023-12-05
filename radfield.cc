@@ -48,7 +48,23 @@ struct radfieldbin {
   int contribcount;
 };
 
-static double radfieldbin_nu_upper[RADFIELDBINCOUNT];  // array of upper frequency boundaries of bins
+// array of upper frequency boundaries of bins
+static std::array<double, RADFIELDBINCOUNT> radfieldbin_nu_upper = [] {
+  {
+    auto nu_uppers = std::array<double, RADFIELDBINCOUNT>{};
+
+    // choose between equally spaced in energy/frequency or wavelength (before bf edges shift boundaries around)
+    constexpr double delta_nu =
+        (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
+
+    for (int binindex = 0; binindex < RADFIELDBINCOUNT - 1; binindex++) {
+      nu_uppers[binindex] = nu_lower_first_initial + (binindex + 1) * delta_nu;
+    }
+    nu_uppers[RADFIELDBINCOUNT - 1] = nu_upper_superbin;  // very top end super bin
+    return nu_uppers;
+  }
+}();
+
 static struct radfieldbin *radfieldbins = nullptr;
 static struct radfieldbin_solution *radfieldbin_solutions = nullptr;
 
@@ -106,23 +122,6 @@ using gsl_T_R_solver_paras = struct {
 static FILE *radfieldfile = nullptr;
 
 static inline auto get_bin_nu_upper(int binindex) -> double { return radfieldbin_nu_upper[binindex]; }
-
-static void setup_bin_boundaries() {
-  // double prev_nu_upper = nu_lower_first_initial;
-
-  // choose between equally spaced in energy/frequency or wavelength (before bf edges shift boundaries around)
-  constexpr double delta_nu =
-      (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
-  // const double lambda_lower_first_initial = 1e8 * CLIGHT / nu_lower_first_initial;
-  // const double lambda_upper_last_initial = 1e8 * CLIGHT / nu_upper_last_initial;
-  // const double delta_lambda = (lambda_upper_last_initial - lambda_lower_first_initial) / RADFIELDBINCOUNT;
-
-  for (int binindex = 0; binindex < RADFIELDBINCOUNT - 1; binindex++) {
-    // radfieldbin_nu_upper[binindex] = 1e8 * CLIGHT / (lambda_lower_first_initial + (binindex + 1) * delta_lambda);
-    radfieldbin_nu_upper[binindex] = nu_lower_first_initial + (binindex + 1) * delta_nu;
-  }
-  radfieldbin_nu_upper[RADFIELDBINCOUNT - 1] = nu_upper_superbin;  // very top end super bin
-}
 
 static void realloc_detailed_lines(const int new_size) {
   auto *newptr = static_cast<int *>(realloc(detailed_lineindicies, new_size * sizeof(int)));
@@ -271,8 +270,6 @@ void init(int my_rank, int ndo_nonempty)
       fprintf(radfieldfile, "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg ncontrib T_R W\n");
       fflush(radfieldfile);
     }
-
-    setup_bin_boundaries();
 
     const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin);
     radfieldbins =
@@ -490,8 +487,8 @@ static inline auto select_bin(double nu) -> int {
   }
 
   // find the lowest frequency bin with radfieldbin_nu_upper > nu
-  auto *bin = std::upper_bound(&radfieldbin_nu_upper[0], &radfieldbin_nu_upper[RADFIELDBINCOUNT], nu);
-  const int binindex = std::distance(&radfieldbin_nu_upper[0], bin);
+  const auto *bin = std::upper_bound(radfieldbin_nu_upper.cbegin(), radfieldbin_nu_upper.cend(), nu);
+  const int binindex = std::distance(radfieldbin_nu_upper.cbegin(), bin);
   if (binindex >= RADFIELDBINCOUNT) {
     // out of range, nu higher than highest bin's upper boundary
     return -1;
