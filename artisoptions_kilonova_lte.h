@@ -20,7 +20,7 @@ constexpr bool LEVEL_IS_NLTE(int element_z, int ionstage, int level) { return fa
 
 constexpr bool LTEPOP_EXCITATION_USE_TJ = true;
 
-constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return false; }
+constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return true; }
 
 constexpr bool single_level_top_ion = false;
 
