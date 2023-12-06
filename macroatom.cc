@@ -928,7 +928,6 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
   const double upperstatweight = stat_weight(element, ion, upper);
   const double lowerstatweight = stat_weight(element, ion, lower);
   const double coll_str_thisline = downtransition.coll_str;
-  double C = 0.;
   if (coll_str_thisline < 0) {
     const bool forbidden = downtransition.forbidden;
     if (!forbidden)  // alternative: (coll_strength > -1.5) i.e. to catch -1
@@ -957,24 +956,19 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
 
       const double g_ratio = lowerstatweight / upperstatweight;
 
-      C = C_0 * 14.51039491 * nne * std::sqrt(T_e) * trans_osc_strength * std::pow(H_ionpot / epsilon_trans, 2) *
-          eoverkt * g_ratio * gauntfac;
-    } else  // alterative: (coll_strength > -3.5) to catch -2 or -3
-    {
-      // forbidden transitions: magnetic dipole, electric quadropole...
-      // could be Axelrod? or Maurer
-      C = nne * 8.629e-6 * 0.01 * lowerstatweight / std::sqrt(T_e);
+      return C_0 * 14.51039491 * nne * std::sqrt(T_e) * trans_osc_strength * std::pow(H_ionpot / epsilon_trans, 2) *
+             eoverkt * g_ratio * gauntfac;
     }
-  } else  // positive values are treated as effective collision strengths
-  {
-    // from Osterbrock and Ferland, p51
-    // statweight_target is LOWER LEVEL stat weight
-    C = nne * 8.629e-6 * coll_str_thisline / upperstatweight / std::sqrt(T_e);
-    // test test
-    // C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
+
+    // forbidden transitions: magnetic dipole, electric quadropole...
+    // could be Axelrod? or Maurer
+    return nne * 8.629e-6 * 0.01 * lowerstatweight / std::sqrt(T_e);
   }
 
-  return C;
+  // positive coll_str_thisline is treated as effective collision strength
+
+  // from Osterbrock and Ferland, p51
+  return nne * 8.629e-6 * coll_str_thisline / upperstatweight / std::sqrt(T_e);
 }
 
 auto col_excitation_ratecoeff(const float T_e, const float nne, int element, int ion, int lower, int uptransindex,
