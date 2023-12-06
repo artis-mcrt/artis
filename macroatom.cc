@@ -311,7 +311,7 @@ static void do_macroatom_ionisation(const int modelgridindex, const int element,
 
   int upper = -1;
   /// Randomly select the occuring transition
-  const double zrand = rng_uniform();
+  const double targetrate = rng_uniform() * internal_up_higher;
   double rate = 0.;
   for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, *ion, *level); phixstargetindex++) {
     upper = get_phixsupperlevel(element, *ion, *level, phixstargetindex);
@@ -320,15 +320,15 @@ static void do_macroatom_ionisation(const int modelgridindex, const int element,
     const double R = get_corrphotoioncoeff(element, *ion, *level, phixstargetindex, modelgridindex);
     const double C = col_ionization_ratecoeff(T_e, nne, element, *ion, *level, phixstargetindex, epsilon_trans);
     rate += (R + C) * epsilon_current;
-    if (zrand * internal_up_higher < rate) {
+    if (targetrate < rate) {
       break;
     }
   }
-  if (zrand * internal_up_higher >= rate) {
+  if (targetrate >= rate) {
     printout(
-        "%s: From Z=%d ionstage %d level %d, could not select upper level to ionise to. zrand %g * internal_up_higher "
-        "%g >= rate %g\n",
-        __func__, get_atomicnumber(element), get_ionstage(element, *ion), *level, zrand, internal_up_higher, rate);
+        "%s: From Z=%d ionstage %d level %d, could not select upper level to ionise to. internal_up_higher "
+        "%g >= targetrate %g\n",
+        __func__, get_atomicnumber(element), get_ionstage(element, *ion), *level, internal_up_higher, targetrate);
     std::abort();
   }
 
