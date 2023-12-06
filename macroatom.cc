@@ -764,56 +764,35 @@ auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const
 
   const double n_u = get_levelpop(modelgridindex, element, ion, upper);
   const double n_l = get_levelpop(modelgridindex, element, ion, lower);
-  double R = 0.;
-  // if ((n_u >= 1.1 * MINPOP) && (n_l >= 1.1 * MINPOP))
-  {
-    const double nu_trans = epsilon_trans / H;
-    const double A_ul = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].einstein_A;
-    const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
-    const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
+  const double nu_trans = epsilon_trans / H;
+  const double A_ul = globals::elements[element].ions[ion].levels[lower].uptrans[uptransindex].einstein_A;
+  const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * A_ul;
+  const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
-    const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
+  const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
-    if (tau_sobolev > 1e-100) {
-      const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));
+  if (tau_sobolev > 1e-100) {
+    const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));
 
-      const double R_over_J_nu = n_l > 0. ? (B_lu - B_ul * n_u / n_l) * beta : B_lu * beta;
+    const double R_over_J_nu = n_l > 0. ? (B_lu - B_ul * n_u / n_l) * beta : B_lu * beta;
 
-      R = R_over_J_nu * radfield::radfield(nu_trans, modelgridindex);
-
-      if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-        if (!globals::lte_iteration) {
-          // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
-          const int jblueindex = radfield::get_Jblueindex(lineindex);
-          if (jblueindex >= 0) {
-            const double Jb_lu = radfield::get_Jb_lu(modelgridindex, jblueindex);
-            const double R_Jb = R_over_J_nu * Jb_lu;
-            // const int contribcount = radfield_get_Jb_lu_contribcount(modelgridindex, jblueindex);
-            // const double R_radfield = R_over_J_nu * radfield::radfield(nu_trans, modelgridindex);
-            // const double linelambda = 1e8 * CLIGHT / nu_trans;
-            // printout("Using detailed rad excitation lambda %5.1f contribcont %d R(Jblue) %g R(radfield) %g R_Jb/R
-            // %g\n",
-            //          linelambda, contribcount, R_Jb, R_radfield, R_Jb / R_radfield);
-            // printout("  (for transition Z=%02d ionstage %d lower %d upper %d)\n",
-            //          get_atomicnumber(element), get_ionstage(element, ion), lower, upper);
-            R = R_Jb;
-          }
+    if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
+      if (!globals::lte_iteration) {
+        // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
+        if (const int jblueindex = radfield::get_Jblueindex(lineindex); jblueindex >= 0) {
+          return R_over_J_nu * radfield::get_Jb_lu(modelgridindex, jblueindex);
         }
       }
-    } else {
-      // printout("[warning] rad_excitation: tau_sobolev %g <= 0, set beta=1\n",tau_sobolev);
-      // printout("[warning] rad_excitation: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
-      // printout("[warning] rad_excitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
-      // printout("[warning] rad_excitation: T_e %g, T_R %g, W
-      // %g\n",grid::get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex));
-      R = 0.;
     }
+
+    const double R = R_over_J_nu * radfield::radfield(nu_trans, modelgridindex);
 
     assert_testmodeonly(R >= 0.);
     assert_testmodeonly(std::isfinite(R));
+    return R;
   }
 
-  return R;
+  return 0.;
 }
 
 auto rad_recombination_ratecoeff(const float T_e, const float nne, const int element, const int upperion,
