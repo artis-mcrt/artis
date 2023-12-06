@@ -44,19 +44,6 @@ struct radfieldbin {
 constexpr double radfieldbins_delta_nu =
     (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
 
-// array of upper frequency boundaries of bins
-static constexpr std::array<double, RADFIELDBINCOUNT> radfieldbin_nu_upper = []() {
-  {
-    auto nu_uppers = std::array<double, RADFIELDBINCOUNT>{};
-
-    for (int binindex = 0; binindex < RADFIELDBINCOUNT - 1; binindex++) {
-      nu_uppers[binindex] = nu_lower_first_initial + (binindex + 1) * radfieldbins_delta_nu;
-    }
-    nu_uppers[RADFIELDBINCOUNT - 1] = nu_upper_superbin;  // very top end super bin
-    return nu_uppers;
-  }
-}();
-
 static struct radfieldbin *radfieldbins = nullptr;
 static struct radfieldbin_solution *radfieldbin_solutions = nullptr;
 
@@ -113,7 +100,13 @@ using gsl_T_R_solver_paras = struct {
 
 static FILE *radfieldfile = nullptr;
 
-static constexpr auto get_bin_nu_upper(int binindex) -> double { return radfieldbin_nu_upper[binindex]; }
+static constexpr auto get_bin_nu_upper(int binindex) -> double {
+  assert_testmodeonly(binindex < RADFIELDBINCOUNT);
+  if (binindex == RADFIELDBINCOUNT - 1) {
+    return nu_upper_superbin;
+  }
+  return nu_lower_first_initial + (binindex + 1) * radfieldbins_delta_nu;
+}
 
 static constexpr auto get_bin_nu_lower(int binindex) -> double {
   if (binindex > 0) {
