@@ -41,10 +41,9 @@ static void do_nonthermal_predeposit(struct packet *pkt_ptr, const int nts, cons
     // endot(E) * delta_t = endot(E) * delta_E / endot(E) = delta_E (delta_t is the time spent in the bin range)
     // so all final energies are equally likely.
     // Choose random en_absorb [0, particle_en]
-    const double zrand = rng_uniform();
 
     const double particle_en = H * pkt_ptr->nu_cmf;
-    const double en_absorb = zrand * particle_en;
+    const double en_absorb = rng_uniform() * particle_en;
 
     // for endot independent of energy, the next line is trival (for E dependent endot, an integral would be needed)
     const double t_absorb = ts + en_absorb / endot;
