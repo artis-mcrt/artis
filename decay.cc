@@ -1444,8 +1444,7 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
   const auto engamma = nucdecayenergygamma(nucindex);
   const auto enparticle = nucdecayenergyparticle(nucindex, decaytype);
 
-  const double zrand = rng_uniform();
-  pkt_ptr->originated_from_particlenotgamma = (zrand >= engamma / (engamma + enparticle));
+  pkt_ptr->originated_from_particlenotgamma = (rng_uniform() >= engamma / (engamma + enparticle));
   pkt_ptr->nu_cmf = enparticle / H;  // will be overwritten for gamma rays, but affects the thermalisation of particles
 }
 
