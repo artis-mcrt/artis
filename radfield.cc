@@ -491,17 +491,9 @@ static constexpr auto select_bin(const double nu) -> int {
   const int binindex = static_cast<int>((nu - nu_lower_first_initial) / radfieldbins_delta_nu);
 
   if (nu == get_bin_nu_upper(binindex)) {
-    // exactly on the upper boundary of a bin, subtract 1 to ensure we get the left-closed bin
-    return binindex - 1;
+    // exactly on the upper boundary of the bin, so add 1 to ensure we get the left-closed bin
+    return binindex + 1;
   }
-
-  // // find the lowest frequency bin with radfieldbin_nu_upper > nu
-  // const auto *bin = std::upper_bound(radfieldbin_nu_upper.cbegin(), radfieldbin_nu_upper.cend(), nu);
-  // const int binindex = std::distance(radfieldbin_nu_upper.cbegin(), bin);
-  // if (binindex >= RADFIELDBINCOUNT) {
-  //   // out of range, nu higher than highest bin's upper boundary
-  //   return -1;
-  // }
 
   return binindex;
 }
