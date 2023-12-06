@@ -222,11 +222,9 @@ constexpr auto move_pkt_withtime(struct packet *pkt_ptr, const double distance) 
 [[nodiscard]] inline auto get_rand_isotropic_unitvec() -> std::array<double, 3>
 // Assuming isotropic distribution, get a random direction vector
 {
-  const double zrand = rng_uniform();
-  const double costheta = -1 + (2. * zrand);
+  const double costheta = -1 + (2. * rng_uniform());
 
-  const double zrand2 = rng_uniform();
-  const double phi = zrand2 * 2 * PI;
+  const double phi = rng_uniform() * 2 * PI;
 
   const double sintheta = std::sqrt(1. - (costheta * costheta));
 
