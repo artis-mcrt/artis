@@ -373,13 +373,6 @@ void initialise_prev_titer_photoionestimators() {
 auto get_Jblueindex(const int lineindex) -> int
 // returns -1 if the line does not have a Jblue estimator
 {
-  // slow linear search
-  // for (int i = 0; i < detailed_linecount; i++)
-  // {
-  //   if (detailed_lineindicies[i] == lineindex)
-  //     return i;
-  // }
-
   if constexpr (!DETAILED_LINE_ESTIMATORS_ON) {
     return -1;
   }
@@ -544,11 +537,6 @@ void write_to_file(int modelgridindex, int timestep) {
         W = -1.;
         J_nu_bar = prev_Jb_lu_normed[modelgridindex][jblueindex].value,
         contribcount = prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount;
-
-        // if (J_nu_bar <= 0.)
-        // {
-        //   skipoutput = true;
-        // }
       }
 
       if (!skipoutput) {
@@ -699,10 +687,6 @@ void update_lineestimator(const int modelgridindex, const int lineindex, const d
   if (jblueindex >= 0) {
     Jb_lu_raw[modelgridindex][jblueindex].value += increment;
     Jb_lu_raw[modelgridindex][jblueindex].contribcount += 1;
-    // const int lineindex = detailed_lineindicies[jblueindex];
-    // printout(" increment cell %d lineindex %d Jb_lu_raw %g prev_Jb_lu_normed %g radfield(nu_trans) %g\n",
-    //       modelgridindex, lineindex, Jb_lu_raw[modelgridindex][jblueindex],
-    //       prev_Jb_lu_normed[modelgridindex][jblueindex].value, radfield(linelist[lineindex].nu, modelgridindex));
   }
 }
 
@@ -719,17 +703,6 @@ auto radfield(double nu, int modelgridindex) -> double
           const double J_nu = dbb(nu, bin->T_R, bin->W);
           return J_nu;
         }
-      } else {  // binindex < 0
-        // if (nu > get_bin_nu_upper(RADFIELDBINCOUNT - 1))
-        // {
-        //   // undiluted LTE blueward of the bins
-        //   const double J_nu_LTE = dbb(nu, grid::get_Te(modelgridindex), 1.0);
-        //   return J_nu_LTE;
-        // }
-        // else
-        //   return 0; // no radfield redwards of the bins
-        // printout("WARNING: Radfield modelgridindex %d binindex %d nu %g nu_lower_first %g nu_upper_last %g \n",
-        //         modelgridindex, binindex, nu, nu_lower_first, nu_upper_last);
       }
       return 0.;
     }
@@ -1048,24 +1021,6 @@ void fit_parameters(int modelgridindex, int timestep)
       radfieldbin_solutions[mgibinindex].T_R = T_R_bin;
       radfieldbin_solutions[mgibinindex].W = W_bin;
     }
-
-    // double prev_nu_upper = nu_lower_first_initial;
-    // for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
-    // {
-    //   const double J_bin = get_bin_J(modelgridindex,binindex);
-    //   const double T_R_bin = get_bin_T_R(modelgridindex,binindex);
-    //   const double W_bin = get_bin_W(modelgridindex,binindex);
-    //   const int contribcount = get_bin_contribcount(modelgridindex, binindex);
-    //   const double bin_nu_upper = get_bin_nu_upper(binindex);
-    //   const double nubar = get_bin_nu_bar(modelgridindex, binindex);
-    //
-    //   printout("bin %4d (lambda %7.1f Å to %7.1f Å): contribcount %5d J %7.1e T_R %8.1f W %12.5e lambdabar %7.1f
-    //   Å\n",
-    //          binindex, 1e8 * CLIGHT / prev_nu_upper, 1e8 * CLIGHT / bin_nu_upper, contribcount, J_bin, T_R_bin,
-    //          W_bin, 1e8 * CLIGHT / nubar);
-    //
-    //  prev_nu_upper = get_bin_nu_upper(binindex);
-    // }
 
     write_to_file(modelgridindex, timestep);
   }
@@ -1496,11 +1451,6 @@ inline auto integrate(const gsl_function *f, double nu_a, double nu_b, double ep
 
       pts[npts++] = nu_b;
     }
-    // for (int e = 0; e < npts; e++)
-    // {
-    //   printout("radfield::integrate singular point number %d at nu %g, (nu_a %g, nu_b %g), low %g high %g\n",
-    //            e, pts[e], nu_a, nu_b, radfield(pts[e] * 0.9999, 0), radfield(pts[e] * 1.0001, 0));
-    // }
     const int status = gsl_integration_qagp(f, pts, npts, epsabs, epsrel, limit, workspace, result, abserr);
     free(pts);
     return status;
