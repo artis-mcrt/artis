@@ -478,13 +478,12 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
                                                            nullptr, nullptr, nullptr);
 
     // we just summed up every individual cooling process. make sure it matches the stored total for the ion
-    assert_always(C_ion == grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]);
+    assert_testmodeonly(C_ion == grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]);
   }
 
   // with the ion selected, we now select a level and transition type
 
-  const double zrand2 = rng_uniform();
-  const double rndcool_ion_process = zrand2 * globals::cellcache[cellcacheslotid].cooling_contrib[ihigh];
+  const double rndcool_ion_process = rng_uniform() * globals::cellcache[cellcacheslotid].cooling_contrib[ihigh];
 
   auto *const selectedvalue =
       std::upper_bound(&globals::cellcache[cellcacheslotid].cooling_contrib[ilow],
