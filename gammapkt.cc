@@ -396,8 +396,7 @@ static auto thomson_angle() -> double {
   // begin with setting the direction in coordinates where original direction
   // is parallel to z-hat.
 
-  const double zrand = rng_uniform();
-  const double phi = zrand * 2 * PI;
+  const double phi = rng_uniform() * 2 * PI;
 
   const double sin_theta_sq = 1. - (cos_theta * cos_theta);
   const double sin_theta = std::sqrt(sin_theta_sq);
