@@ -697,10 +697,10 @@ auto radfield(double nu, int modelgridindex) -> double
     if (globals::timestep >= FIRST_NLTE_RADFIELD_TIMESTEP) {
       const int binindex = select_bin(nu);
       if (binindex >= 0) {
-        const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
-        const struct radfieldbin_solution *const bin = &radfieldbin_solutions[mgibinindex];
-        if (bin->W >= 0.) {
-          const double J_nu = dbb(nu, bin->T_R, bin->W);
+        const auto &bin =
+            radfieldbin_solutions[grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex];
+        if (bin.W >= 0.) {
+          const double J_nu = dbb(nu, bin.T_R, bin.W);
           return J_nu;
         }
       }
