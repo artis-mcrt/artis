@@ -846,22 +846,23 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     move_pkt_withtime(pkt_ptr, edist / 2.);
 
     // event occurs. Choose which event and call the appropriate subroutine.
-    const double zrand = rng_uniform();
-    if (chi_compton > (zrand * chi_tot)) {
+    const double chi_rnd = rng_uniform() * chi_tot;
+    if (chi_compton > chi_rnd) {
       // Compton scattering.
       compton_scatter(pkt_ptr);
-    } else if ((chi_compton + chi_photo_electric) > (zrand * chi_tot)) {
+    } else if ((chi_compton + chi_photo_electric) > chi_rnd) {
       // Photo electric effect - makes it a k-packet for sure.
       pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -4;
       // pkt_ptr->type = TYPE_PRE_KPKT;
       stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
-    } else if ((chi_compton + chi_photo_electric + chi_pair_prod) > (zrand * chi_tot)) {
+    } else if ((chi_compton + chi_photo_electric + chi_pair_prod) > chi_rnd) {
       // It's a pair production
       pair_prod(pkt_ptr);
     } else {
-      printout("Failed to identify event. Gamma (1). chi_compton %g chi_photo_electric %g chi_tot %g zrand %g Abort.\n",
-               chi_compton, chi_photo_electric, chi_tot, zrand);
+      printout(
+          "Failed to identify event. Gamma (1). chi_compton %g chi_photo_electric %g chi_tot %g chi_rnd %g Abort.\n",
+          chi_compton, chi_photo_electric, chi_tot, chi_rnd);
       const int cellindex = pkt_ptr->where;
       printout(
           " globals::cell[pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g "
