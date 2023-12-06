@@ -372,9 +372,7 @@ static auto choose_f(const double xx, const double zrand) -> double
 static auto thomson_angle() -> double {
   // For Thomson scattering we can get the new angle from a random number very easily.
 
-  const double zrand = rng_uniform();
-
-  const double B_coeff = (8. * zrand) - 4.;
+  const double B_coeff = (8. * rng_uniform()) - 4.;
 
   double t_coeff = sqrt((B_coeff * B_coeff) + 4);
   t_coeff = t_coeff - B_coeff;
