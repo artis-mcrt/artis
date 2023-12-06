@@ -45,7 +45,7 @@ constexpr double radfieldbins_delta_nu =
     (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
 
 // array of upper frequency boundaries of bins
-static constexpr std::array<double, RADFIELDBINCOUNT> radfieldbin_nu_upper = [] {
+static constexpr std::array<double, RADFIELDBINCOUNT> radfieldbin_nu_upper = []() {
   {
     auto nu_uppers = std::array<double, RADFIELDBINCOUNT>{};
 
