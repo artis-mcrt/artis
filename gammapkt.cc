@@ -705,9 +705,7 @@ void pair_prod(struct packet *pkt_ptr) {
     std::abort();
   }
 
-  const double zrand = rng_uniform();
-
-  if (zrand > prob_gamma) {
+  if (rng_uniform() > prob_gamma) {
     // Convert it to an e-minus packet - actually it could be positron EK too, but this works
     // for consistency with compton_scatter.
     pkt_ptr->type = TYPE_NTLEPTON;
