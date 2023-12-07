@@ -747,9 +747,6 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   const double tau_next = -1. * log(zrand);
   const double tau_current = 0.;
 
-  int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
-  int nonemptymgi = (mgi < grid::get_nonempty_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
-
   // Start by finding the distance to the crossing of the grid cell
   // boundaries. sdist is the boundary distance and snext is the
   // grid cell into which we pass.
@@ -823,6 +820,8 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     move_pkt_withtime(pkt_ptr, sdist / 2.);
 
     // Move it into the new cell.
+    const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+    const int nonemptymgi = (mgi < grid::get_nonempty_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
     if (chi_tot > 0 && nonemptymgi >= 0) {
       update_gamma_dep(pkt_ptr, sdist, mgi, nonemptymgi);
     }
@@ -831,12 +830,12 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
     if (snext != pkt_ptr->where) {
       grid::change_cell(pkt_ptr, snext);
-      mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
-      nonemptymgi = (mgi < grid::get_nonempty_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
     }
   } else if ((tdist < sdist) && (tdist < edist)) {
     // Doesn't reach boundary.
     move_pkt_withtime(pkt_ptr, tdist / 2.);
+    const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+    const int nonemptymgi = (mgi < grid::get_nonempty_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
 
     if (chi_tot > 0 && nonemptymgi >= 0) {
       update_gamma_dep(pkt_ptr, tdist, mgi, nonemptymgi);
@@ -845,6 +844,8 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     pkt_ptr->prop_time = t2;  // prevent roundoff error
   } else if ((edist < sdist) && (edist < tdist)) {
     move_pkt_withtime(pkt_ptr, edist / 2.);
+    const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+    const int nonemptymgi = (mgi < grid::get_nonempty_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
     if (chi_tot > 0 && nonemptymgi >= 0) {
       update_gamma_dep(pkt_ptr, edist, mgi, nonemptymgi);
     }
