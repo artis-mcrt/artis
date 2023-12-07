@@ -653,7 +653,7 @@ constexpr auto meanf_sigma(const double x) -> double
   return tot;
 }
 
-static void update_gamma_dep(const struct packet *pkt_ptr, const double dist, const double chi_photo_electric) {
+static void update_gamma_dep(const struct packet *pkt_ptr, const double dist) {
   // Subroutine to record the heating rate in a cell due to gamma rays.
   // By heating rate I mean, for now, really the rate at which the code is making
   // k-packets in that cell which will then convert into r-packets. This is (going
@@ -670,7 +670,7 @@ static void update_gamma_dep(const struct packet *pkt_ptr, const double dist, co
 
   const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
   const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
-  double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + chi_photo_electric +
+  double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + get_chi_photo_electric_rf(pkt_ptr) +
                          (sigma_pair_prod_rf(pkt_ptr) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
   heating_cont = heating_cont * pkt_ptr->e_rf * dist * doppler_sq;
 
@@ -821,7 +821,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
     // Move it into the new cell.
     if (chi_tot > 0) {
-      update_gamma_dep(pkt_ptr, sdist, chi_photo_electric);
+      update_gamma_dep(pkt_ptr, sdist);
     }
 
     move_pkt_withtime(pkt_ptr, sdist / 2.);
@@ -834,14 +834,14 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     move_pkt_withtime(pkt_ptr, tdist / 2.);
 
     if (chi_tot > 0) {
-      update_gamma_dep(pkt_ptr, tdist, chi_photo_electric);
+      update_gamma_dep(pkt_ptr, tdist);
     }
     move_pkt_withtime(pkt_ptr, tdist / 2.);
     pkt_ptr->prop_time = t2;  // prevent roundoff error
   } else if ((edist < sdist) && (edist < tdist)) {
     move_pkt_withtime(pkt_ptr, edist / 2.);
     if (chi_tot > 0) {
-      update_gamma_dep(pkt_ptr, edist, chi_photo_electric);
+      update_gamma_dep(pkt_ptr, edist);
     }
     move_pkt_withtime(pkt_ptr, edist / 2.);
 
