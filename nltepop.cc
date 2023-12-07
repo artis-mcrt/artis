@@ -60,17 +60,13 @@ static void get_ion_level_of_nlte_vector_index(const int index, const int elemen
   }
 }
 
-static void eliminate_nlte_matrix_rowcol(const int index, const int gs_index, gsl_matrix *rate_matrix,
-                                         gsl_vector *balance_vector) {
-  const gsl_matrix rate_matrix_var = *rate_matrix;
-
-  const int colcount = rate_matrix_var.size2;
-  for (int column = 0; column < colcount; column++) {
+static void eliminate_nlte_matrix_rowcol(const int index, const int gs_index, const int nlte_dimension,
+                                         gsl_matrix *rate_matrix, gsl_vector *balance_vector) {
+  for (int column = 0; column < nlte_dimension; column++) {
     gsl_matrix_set(rate_matrix, index, column, 0.0);
   }
 
-  const int rowcount = rate_matrix_var.size1;
-  for (int row = 1; row < rowcount; row++) {
+  for (int row = 1; row < nlte_dimension; row++) {
     gsl_matrix_set(rate_matrix, row, index, 0.0);
   }
 
@@ -79,14 +75,12 @@ static void eliminate_nlte_matrix_rowcol(const int index, const int gs_index, gs
   gsl_vector_set(balance_vector, index, 0.0);
 }
 
-static void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_vector *balance_vector,
-                               const gsl_vector * /*pop_norm_factor_vec*/)
+static void filter_nlte_matrix(const int element, const int nlte_dimension, gsl_matrix *rate_matrix,
+                               gsl_vector *balance_vector, const gsl_vector * /*pop_norm_factor_vec*/)
 // find rows and columns that barely interaction with other levels, and effectively
 // removing them by zeroing their interactions and setting their departure
 // coeff to 1.0
 {
-  const gsl_matrix rate_matrix_var = *rate_matrix;
-  const int nlte_dimension = rate_matrix_var.size1;
   for (int index = 0; index < nlte_dimension; index++) {
     double row_max = 0.;
     for (int column = 0; column < nlte_dimension; column++) {
@@ -117,7 +111,7 @@ static void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_v
         // printout("(Eliminating this ground state)");
       } else {
         const int gs_index = get_nlte_vector_index(element, ion, 0);
-        eliminate_nlte_matrix_rowcol(index, gs_index, rate_matrix, balance_vector);
+        eliminate_nlte_matrix_rowcol(index, gs_index, nlte_dimension, rate_matrix, balance_vector);
         // printout("(forcing LTE population)");
       }
     }
@@ -125,9 +119,9 @@ static void filter_nlte_matrix(const int element, gsl_matrix *rate_matrix, gsl_v
   }
 }
 
-static auto get_total_rate(const int index_selected, const gsl_matrix *rate_matrix, const gsl_vector *popvec,
-                           const bool into_level, const bool only_levels_below, const bool only_levels_above)
-    -> double {
+static auto get_total_rate(const int index_selected, const int nlte_dimension, const gsl_matrix *rate_matrix,
+                           const gsl_vector *popvec, const bool into_level, const bool only_levels_below,
+                           const bool only_levels_above) -> double {
   double total_rate = 0.;
   assert_always(!only_levels_below || !only_levels_above);
 
@@ -146,7 +140,7 @@ static auto get_total_rate(const int index_selected, const gsl_matrix *rate_matr
 
     if (!only_levels_below)  // add levels above
     {
-      for (unsigned int index = index_selected + 1; index < rate_matrix->size1; index++) {
+      for (int index = index_selected + 1; index < nlte_dimension; index++) {
         total_rate += gsl_vector_get(rates_vec, index) * gsl_vector_get(popvec, index);
       }
     }
@@ -166,7 +160,7 @@ static auto get_total_rate(const int index_selected, const gsl_matrix *rate_matr
 
     if (!only_levels_below)  // add levels above
     {
-      for (unsigned int index = index_selected + 1; index < rate_matrix->size2; index++) {
+      for (int index = index_selected + 1; index < nlte_dimension; index++) {
         total_rate += gsl_vector_get(rates_vec, index);
       }
     }
@@ -177,20 +171,21 @@ static auto get_total_rate(const int index_selected, const gsl_matrix *rate_matr
   return total_rate;
 }
 
-static auto get_total_rate_in(const int index_to, const gsl_matrix *rate_matrix, const gsl_vector *popvec) -> double {
-  return get_total_rate(index_to, rate_matrix, popvec, true, false, false);
+static auto get_total_rate_in(const int index_to, const int nlte_dimension, const gsl_matrix *rate_matrix,
+                              const gsl_vector *popvec) -> double {
+  return get_total_rate(index_to, nlte_dimension, rate_matrix, popvec, true, false, false);
 }
 
-static auto get_total_rate_out(const int index_from, const gsl_matrix *rate_matrix, const gsl_vector *popvec)
-    -> double {
-  return get_total_rate(index_from, rate_matrix, popvec, false, false, false);
+static auto get_total_rate_out(const int index_from, const int nlte_dimension, const gsl_matrix *rate_matrix,
+                               const gsl_vector *popvec) -> double {
+  return get_total_rate(index_from, nlte_dimension, rate_matrix, popvec, false, false, false);
 }
 
 static void print_level_rates_summary(const int element, const int selected_ion, const int selected_level,
-                                      const gsl_vector *popvec, const gsl_matrix *rate_matrix_rad_bb,
-                                      const gsl_matrix *rate_matrix_coll_bb, const gsl_matrix *rate_matrix_ntcoll_bb,
-                                      const gsl_matrix *rate_matrix_rad_bf, const gsl_matrix *rate_matrix_coll_bf,
-                                      const gsl_matrix *rate_matrix_ntcoll_bf) {
+                                      const int nlte_dimension, const gsl_vector *popvec,
+                                      const gsl_matrix *rate_matrix_rad_bb, const gsl_matrix *rate_matrix_coll_bb,
+                                      const gsl_matrix *rate_matrix_ntcoll_bb, const gsl_matrix *rate_matrix_rad_bf,
+                                      const gsl_matrix *rate_matrix_coll_bf, const gsl_matrix *rate_matrix_ntcoll_bf) {
   const int selected_index = get_nlte_vector_index(element, selected_ion, selected_level);
 
   for (int i = 0; i <= 3; i++) {
@@ -211,18 +206,18 @@ static void print_level_rates_summary(const int element, const int selected_ion,
     const bool only_levels_below = (i % 2) != 0;
     const bool only_levels_above = !only_levels_below;
 
-    const double rad_bb_total =
-        get_total_rate(selected_index, rate_matrix_rad_bb, popvec, into_level, only_levels_below, only_levels_above);
-    const double coll_bb_total =
-        get_total_rate(selected_index, rate_matrix_coll_bb, popvec, into_level, only_levels_below, only_levels_above);
-    const double ntcoll_bb_total =
-        get_total_rate(selected_index, rate_matrix_ntcoll_bb, popvec, into_level, only_levels_below, only_levels_above);
-    const double rad_bf_total =
-        get_total_rate(selected_index, rate_matrix_rad_bf, popvec, into_level, only_levels_below, only_levels_above);
-    const double coll_bf_total =
-        get_total_rate(selected_index, rate_matrix_coll_bf, popvec, into_level, only_levels_below, only_levels_above);
-    const double ntcoll_bf_total =
-        get_total_rate(selected_index, rate_matrix_ntcoll_bf, popvec, into_level, only_levels_below, only_levels_above);
+    const double rad_bb_total = get_total_rate(selected_index, nlte_dimension, rate_matrix_rad_bb, popvec, into_level,
+                                               only_levels_below, only_levels_above);
+    const double coll_bb_total = get_total_rate(selected_index, nlte_dimension, rate_matrix_coll_bb, popvec, into_level,
+                                                only_levels_below, only_levels_above);
+    const double ntcoll_bb_total = get_total_rate(selected_index, nlte_dimension, rate_matrix_ntcoll_bb, popvec,
+                                                  into_level, only_levels_below, only_levels_above);
+    const double rad_bf_total = get_total_rate(selected_index, nlte_dimension, rate_matrix_rad_bf, popvec, into_level,
+                                               only_levels_below, only_levels_above);
+    const double coll_bf_total = get_total_rate(selected_index, nlte_dimension, rate_matrix_coll_bf, popvec, into_level,
+                                                only_levels_below, only_levels_above);
+    const double ntcoll_bf_total = get_total_rate(selected_index, nlte_dimension, rate_matrix_ntcoll_bf, popvec,
+                                                  into_level, only_levels_below, only_levels_above);
 
     if (into_level) {
       // into this level
@@ -246,7 +241,7 @@ static void print_level_rates_summary(const int element, const int selected_ion,
 }
 
 static void print_element_rates_summary(const int element, const int modelgridindex, const int timestep,
-                                        const int nlte_iter, const gsl_vector *popvec,
+                                        const int nlte_dimension, const int nlte_iter, const gsl_vector *popvec,
                                         const gsl_matrix *rate_matrix_rad_bb, const gsl_matrix *rate_matrix_coll_bb,
                                         const gsl_matrix *rate_matrix_ntcoll_bb, const gsl_matrix *rate_matrix_rad_bf,
                                         const gsl_matrix *rate_matrix_coll_bf,
@@ -271,15 +266,16 @@ static void print_element_rates_summary(const int element, const int modelgridin
             "bf_ntcol\n");
       }
 
-      print_level_rates_summary(element, ion, level, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb,
+      print_level_rates_summary(element, ion, level, nlte_dimension, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb,
                                 rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
 
     if (ion_has_superlevel(element, ion) && max_printed_levels < (nlevels_nlte + 1)) {
       const int level_superlevel = nlevels_nlte + 1;
 
-      print_level_rates_summary(element, ion, level_superlevel, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb,
-                                rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates_summary(element, ion, level_superlevel, nlte_dimension, popvec, rate_matrix_rad_bb,
+                                rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf,
+                                rate_matrix_ntcoll_bf);
     }
   }
 }
@@ -316,12 +312,12 @@ static void print_level_rates(const int modelgridindex, const int timestep, cons
       timestep, modelgridindex, grid::get_Te(modelgridindex), grid::get_nne(modelgridindex), atomic_number,
       selected_ionstage, selected_level);
 
-  const double rad_bb_in_total = get_total_rate_in(selected_index, rate_matrix_rad_bb, popvec);
-  const double coll_bb_in_total = get_total_rate_in(selected_index, rate_matrix_coll_bb, popvec);
-  const double ntcoll_bb_in_total = get_total_rate_in(selected_index, rate_matrix_ntcoll_bb, popvec);
-  const double rad_bf_in_total = get_total_rate_in(selected_index, rate_matrix_rad_bf, popvec);
-  const double coll_bf_in_total = get_total_rate_in(selected_index, rate_matrix_coll_bf, popvec);
-  const double ntcoll_bf_in_total = get_total_rate_in(selected_index, rate_matrix_ntcoll_bf, popvec);
+  const double rad_bb_in_total = get_total_rate_in(selected_index, nlte_dimension, rate_matrix_rad_bb, popvec);
+  const double coll_bb_in_total = get_total_rate_in(selected_index, nlte_dimension, rate_matrix_coll_bb, popvec);
+  const double ntcoll_bb_in_total = get_total_rate_in(selected_index, nlte_dimension, rate_matrix_ntcoll_bb, popvec);
+  const double rad_bf_in_total = get_total_rate_in(selected_index, nlte_dimension, rate_matrix_rad_bf, popvec);
+  const double coll_bf_in_total = get_total_rate_in(selected_index, nlte_dimension, rate_matrix_coll_bf, popvec);
+  const double ntcoll_bf_in_total = get_total_rate_in(selected_index, nlte_dimension, rate_matrix_ntcoll_bf, popvec);
   const double total_rate_in =
       rad_bb_in_total + coll_bb_in_total + rad_bf_in_total + coll_bf_in_total + ntcoll_bf_in_total;
   printout(
@@ -329,12 +325,12 @@ static void print_level_rates(const int modelgridindex, const int timestep, cons
       "coll_bf_in  %8.2e ntcoll_bf_in  %8.2e\n",
       rad_bb_in_total, coll_bb_in_total, ntcoll_bb_in_total, rad_bf_in_total, coll_bf_in_total, ntcoll_bf_in_total);
 
-  const double rad_bb_out_total = get_total_rate_out(selected_index, rate_matrix_rad_bb, popvec);
-  const double coll_bb_out_total = get_total_rate_out(selected_index, rate_matrix_coll_bb, popvec);
-  const double ntcoll_bb_out_total = get_total_rate_out(selected_index, rate_matrix_ntcoll_bb, popvec);
-  const double rad_bf_out_total = get_total_rate_out(selected_index, rate_matrix_rad_bf, popvec);
-  const double coll_bf_out_total = get_total_rate_out(selected_index, rate_matrix_coll_bf, popvec);
-  const double ntcoll_bf_out_total = get_total_rate_out(selected_index, rate_matrix_ntcoll_bf, popvec);
+  const double rad_bb_out_total = get_total_rate_out(selected_index, nlte_dimension, rate_matrix_rad_bb, popvec);
+  const double coll_bb_out_total = get_total_rate_out(selected_index, nlte_dimension, rate_matrix_coll_bb, popvec);
+  const double ntcoll_bb_out_total = get_total_rate_out(selected_index, nlte_dimension, rate_matrix_ntcoll_bb, popvec);
+  const double rad_bf_out_total = get_total_rate_out(selected_index, nlte_dimension, rate_matrix_rad_bf, popvec);
+  const double coll_bf_out_total = get_total_rate_out(selected_index, nlte_dimension, rate_matrix_coll_bf, popvec);
+  const double ntcoll_bf_out_total = get_total_rate_out(selected_index, nlte_dimension, rate_matrix_ntcoll_bf, popvec);
   const double total_rate_out =
       rad_bb_out_total + coll_bb_out_total + rad_bf_out_total + coll_bf_out_total + ntcoll_bf_out_total;
   printout(
@@ -636,8 +632,8 @@ static void nltepop_matrix_normalise(const int modelgridindex, const int element
                                      gsl_vector *pop_norm_factor_vec) {
   const size_t nlte_dimension = pop_norm_factor_vec->size;
   assert_always(pop_norm_factor_vec->size == nlte_dimension);
-  assert_always(rate_matrix->size1 == nlte_dimension);
-  assert_always(rate_matrix->size2 == nlte_dimension);
+  assert_always(rate_matrix->size1 >= nlte_dimension);
+  assert_always(rate_matrix->size2 >= nlte_dimension);
 
   // TODO: consider replacing normalisation by LTE populations with
   // GSL's gsl_linalg_balance_matrix(gsl_matrix * A, gsl_vector * D) function instead
@@ -970,7 +966,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   // eliminate barely-interacting levels from the NLTE matrix by removing
   // their interactions and setting their normalised populations (probably departure coeff) to 1.0
-  // filter_nlte_matrix(element, rate_matrix, balance_vector, pop_norm_factor_vec);
+  // filter_nlte_matrix(element, nlte_dimension, rate_matrix, balance_vector, pop_norm_factor_vec);
 
   gsl_vector *popvec = gsl_vector_alloc(nlte_dimension);  // the true population densities
 
@@ -1039,9 +1035,9 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     if (individual_process_matricies && (timestep % 5 == 0) &&
         (nlte_iter == 0))  // output NLTE stats every nth timestep for the first NLTE iteration only
     {
-      print_element_rates_summary(element, modelgridindex, timestep, nlte_iter, popvec, rate_matrix_rad_bb,
-                                  rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf,
-                                  rate_matrix_ntcoll_bf);
+      print_element_rates_summary(element, modelgridindex, timestep, nlte_dimension, nlte_iter, popvec,
+                                  rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf,
+                                  rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
 
     const bool print_detailed_level_stats = false;
