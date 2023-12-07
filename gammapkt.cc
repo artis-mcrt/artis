@@ -213,12 +213,13 @@ void normalise(int nts) {
 
     const double dV = grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts].mid / globals::tmin, 3);
 
-    globals::timesteps[nts].gamma_dep_pathint += globals::gamma_dep_estimator[mgi] / globals::nprocs;
+    globals::timesteps[nts].gamma_dep_pathint += globals::gamma_dep_estimator[nonemptymgi] / globals::nprocs;
 
-    globals::gamma_dep_estimator[mgi] = globals::gamma_dep_estimator[mgi] * ONEOVER4PI / dV / dt / globals::nprocs;
+    globals::gamma_dep_estimator[nonemptymgi] =
+        globals::gamma_dep_estimator[nonemptymgi] * ONEOVER4PI / dV / dt / globals::nprocs;
 
-    assert_testmodeonly(globals::gamma_dep_estimator[mgi] >= 0.);
-    assert_testmodeonly(isfinite(globals::gamma_dep_estimator[mgi]));
+    assert_testmodeonly(globals::gamma_dep_estimator[nonemptymgi] >= 0.);
+    assert_testmodeonly(isfinite(globals::gamma_dep_estimator[nonemptymgi]));
   }
 }
 
@@ -653,7 +654,7 @@ constexpr auto meanf_sigma(const double x) -> double
   return tot;
 }
 
-static void update_gamma_dep(const struct packet *pkt_ptr, const double dist) {
+static void update_gamma_dep(const struct packet *pkt_ptr, const double dist, const int mgi, const int nonemptymgi) {
   // Subroutine to record the heating rate in a cell due to gamma rays.
   // By heating rate I mean, for now, really the rate at which the code is making
   // k-packets in that cell which will then convert into r-packets. This is (going
@@ -668,7 +669,6 @@ static void update_gamma_dep(const struct packet *pkt_ptr, const double dist) {
 
   const double doppler_sq = doppler_squared_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
 
-  const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
   const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
   double heating_cont = ((meanf_sigma(xx) * grid::get_nnetot(mgi)) + get_chi_photo_electric_rf(pkt_ptr) +
                          (sigma_pair_prod_rf(pkt_ptr) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
@@ -685,7 +685,7 @@ static void update_gamma_dep(const struct packet *pkt_ptr, const double dist) {
   //  This will all be done later
   assert_testmodeonly(heating_cont >= 0.);
   assert_testmodeonly(isfinite(heating_cont));
-  safeadd(globals::gamma_dep_estimator[mgi], heating_cont);
+  safeadd(globals::gamma_dep_estimator[nonemptymgi], heating_cont);
 }
 
 void pair_prod(struct packet *pkt_ptr) {
@@ -746,6 +746,9 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   const double zrand = rng_uniform_pos();
   const double tau_next = -1. * log(zrand);
   const double tau_current = 0.;
+
+  int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+  int nonemptymgi = (mgi < grid::get_nonempty_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
 
   // Start by finding the distance to the crossing of the grid cell
   // boundaries. sdist is the boundary distance and snext is the
@@ -820,28 +823,30 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     move_pkt_withtime(pkt_ptr, sdist / 2.);
 
     // Move it into the new cell.
-    if (chi_tot > 0) {
-      update_gamma_dep(pkt_ptr, sdist);
+    if (chi_tot > 0 && nonemptymgi >= 0) {
+      update_gamma_dep(pkt_ptr, sdist, mgi, nonemptymgi);
     }
 
     move_pkt_withtime(pkt_ptr, sdist / 2.);
 
     if (snext != pkt_ptr->where) {
       grid::change_cell(pkt_ptr, snext);
+      mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+      nonemptymgi = (mgi < grid::get_nonempty_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
     }
   } else if ((tdist < sdist) && (tdist < edist)) {
     // Doesn't reach boundary.
     move_pkt_withtime(pkt_ptr, tdist / 2.);
 
-    if (chi_tot > 0) {
-      update_gamma_dep(pkt_ptr, tdist);
+    if (chi_tot > 0 && nonemptymgi >= 0) {
+      update_gamma_dep(pkt_ptr, tdist, mgi, nonemptymgi);
     }
     move_pkt_withtime(pkt_ptr, tdist / 2.);
     pkt_ptr->prop_time = t2;  // prevent roundoff error
   } else if ((edist < sdist) && (edist < tdist)) {
     move_pkt_withtime(pkt_ptr, edist / 2.);
-    if (chi_tot > 0) {
-      update_gamma_dep(pkt_ptr, edist);
+    if (chi_tot > 0 && nonemptymgi >= 0) {
+      update_gamma_dep(pkt_ptr, edist, mgi, nonemptymgi);
     }
     move_pkt_withtime(pkt_ptr, edist / 2.);
 
