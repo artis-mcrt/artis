@@ -444,15 +444,6 @@ static auto get_element_nlte_dimension(const int element) -> int {
   return nlte_dimension;
 }
 
-static auto get_max_nlte_dimension() -> int {
-  int max_nlte_dimension = 0;
-  for (int element = 0; element < get_nelements(); element++) {
-    max_nlte_dimension = std::max(max_nlte_dimension, get_element_nlte_dimension(element));
-  }
-
-  return max_nlte_dimension;
-}
-
 static void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, const int ion,
                                           const double t_mid, const std::vector<double> &s_renorm,
                                           gsl_matrix *rate_matrix_rad_bb, gsl_matrix *rate_matrix_coll_bb,
@@ -849,11 +840,10 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   auto superlevel_partfunc = std::vector<double>(nions) = get_element_superlevelpartfuncs(modelgridindex, element);
   const int nlte_dimension = get_element_nlte_dimension(element);
-  const auto max_nlte_dimension = get_max_nlte_dimension();
 
   // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
-  gsl_matrix *rate_matrix = gsl_matrix_calloc(max_nlte_dimension, max_nlte_dimension);
+  gsl_matrix *rate_matrix = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
   gsl_matrix *rate_matrix_rad_bb = nullptr;
   gsl_matrix *rate_matrix_coll_bb = nullptr;
   gsl_matrix *rate_matrix_ntcoll_bb = nullptr;
@@ -861,12 +851,12 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_matrix *rate_matrix_coll_bf = nullptr;
   gsl_matrix *rate_matrix_ntcoll_bf = nullptr;
   if (individual_process_matricies) {
-    rate_matrix_rad_bb = gsl_matrix_calloc(max_nlte_dimension, max_nlte_dimension);
-    rate_matrix_coll_bb = gsl_matrix_calloc(max_nlte_dimension, max_nlte_dimension);
-    rate_matrix_ntcoll_bb = gsl_matrix_calloc(max_nlte_dimension, max_nlte_dimension);
-    rate_matrix_rad_bf = gsl_matrix_calloc(max_nlte_dimension, max_nlte_dimension);
-    rate_matrix_coll_bf = gsl_matrix_calloc(max_nlte_dimension, max_nlte_dimension);
-    rate_matrix_ntcoll_bf = gsl_matrix_calloc(max_nlte_dimension, max_nlte_dimension);
+    rate_matrix_rad_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+    rate_matrix_coll_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+    rate_matrix_ntcoll_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+    rate_matrix_rad_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+    rate_matrix_coll_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+    rate_matrix_ntcoll_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
   } else {
     // alias the single matrix accounting for all processes
     rate_matrix_rad_bb = rate_matrix;
