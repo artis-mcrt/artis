@@ -205,7 +205,7 @@ void init_gamma_linelist() {
   fclose(line_list);
 }
 
-void normalise_grey(int nts) {
+void normalise(int nts) {
   const double dt = globals::timesteps[nts].width;
   globals::timesteps[nts].gamma_dep_pathint = 0.;
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {

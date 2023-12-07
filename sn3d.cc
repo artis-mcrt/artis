@@ -670,7 +670,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
     // The estimators have been summed across all proceses and distributed.
     // They will now be normalised independently on all processes
 
-    gammapkt::normalise_grey(nts);
+    gammapkt::normalise(nts);
 
     write_deposition_file(nts, my_rank, nstart, ndo);
 
