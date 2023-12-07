@@ -83,7 +83,7 @@ static auto phi_ion_equilib(const int element, const int ion, const int modelgri
   // Gamma is the photoionization rate per ground level pop
   const double Gamma_ion = Gamma * stat_weight(element, ion, 0) / partfunc_ion;
 
-  if (Gamma == 0. && (!NT_ON || (globals::rpkt_emiss[modelgridindex] == 0. &&
+  if (Gamma == 0. && (!NT_ON || (globals::gamma_dep_estimator[modelgridindex] == 0. &&
                                  grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(24, 48)) == 0. &&
                                  grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(28, 56)) == 0.))) {
     printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n", element, ion);
@@ -449,7 +449,7 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
     int ion = -1;
     for (ion = 0; ion < nions - 1; ion++) {
       if (iongamma_is_zero(modelgridindex, element, ion) &&
-          (!NT_ON || ((globals::rpkt_emiss[modelgridindex] == 0.) &&
+          (!NT_ON || ((globals::gamma_dep_estimator[modelgridindex] == 0.) &&
                       (grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(24, 48)) == 0.) &&
                       (grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(28, 56)) == 0.)))) {
         break;

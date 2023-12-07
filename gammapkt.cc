@@ -213,12 +213,12 @@ void normalise_grey(int nts) {
 
     const double dV = grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts].mid / globals::tmin, 3);
 
-    globals::timesteps[nts].gamma_dep_pathint += globals::rpkt_emiss[mgi] / globals::nprocs;
+    globals::timesteps[nts].gamma_dep_pathint += globals::gamma_dep_estimator[mgi] / globals::nprocs;
 
-    globals::rpkt_emiss[mgi] = globals::rpkt_emiss[mgi] * ONEOVER4PI / dV / dt / globals::nprocs;
+    globals::gamma_dep_estimator[mgi] = globals::gamma_dep_estimator[mgi] * ONEOVER4PI / dV / dt / globals::nprocs;
 
-    assert_testmodeonly(globals::rpkt_emiss[mgi] >= 0.);
-    assert_testmodeonly(isfinite(globals::rpkt_emiss[mgi]));
+    assert_testmodeonly(globals::gamma_dep_estimator[mgi] >= 0.);
+    assert_testmodeonly(isfinite(globals::gamma_dep_estimator[mgi]));
   }
 }
 
@@ -653,13 +653,13 @@ constexpr auto meanf_sigma(const double x) -> double
   return tot;
 }
 
-static void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist, const double chi_photo_electric) {
+static void update_gamma_dep(const struct packet *pkt_ptr, const double dist, const double chi_photo_electric) {
   // Subroutine to record the heating rate in a cell due to gamma rays.
   // By heating rate I mean, for now, really the rate at which the code is making
   // k-packets in that cell which will then convert into r-packets. This is (going
   // to be) used for the new light_curve syn-style calculation.
 
-  // The intention is that rpkt_emiss will contain the emissivity of r-packets
+  // The intention is that gamma_dep_estimator will contain the emissivity of r-packets
   // in the co-moving frame (which is going to be isotropic).
 
   if (!(dist > 0)) {
@@ -685,7 +685,7 @@ static void rlc_emiss_gamma(const struct packet *pkt_ptr, const double dist, con
   //  This will all be done later
   assert_testmodeonly(heating_cont >= 0.);
   assert_testmodeonly(isfinite(heating_cont));
-  safeadd(globals::rpkt_emiss[mgi], heating_cont);
+  safeadd(globals::gamma_dep_estimator[mgi], heating_cont);
 }
 
 void pair_prod(struct packet *pkt_ptr) {
@@ -821,7 +821,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
     // Move it into the new cell.
     if (chi_tot > 0) {
-      rlc_emiss_gamma(pkt_ptr, sdist, chi_photo_electric);
+      update_gamma_dep(pkt_ptr, sdist, chi_photo_electric);
     }
 
     move_pkt_withtime(pkt_ptr, sdist / 2.);
@@ -834,14 +834,14 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     move_pkt_withtime(pkt_ptr, tdist / 2.);
 
     if (chi_tot > 0) {
-      rlc_emiss_gamma(pkt_ptr, tdist, chi_photo_electric);
+      update_gamma_dep(pkt_ptr, tdist, chi_photo_electric);
     }
     move_pkt_withtime(pkt_ptr, tdist / 2.);
     pkt_ptr->prop_time = t2;  // prevent roundoff error
   } else if ((edist < sdist) && (edist < tdist)) {
     move_pkt_withtime(pkt_ptr, edist / 2.);
     if (chi_tot > 0) {
-      rlc_emiss_gamma(pkt_ptr, edist, chi_photo_electric);
+      update_gamma_dep(pkt_ptr, edist, chi_photo_electric);
     }
     move_pkt_withtime(pkt_ptr, edist / 2.);
 

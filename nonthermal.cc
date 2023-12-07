@@ -564,7 +564,7 @@ void init(const int my_rank, const int ndo_nonempty) {
 void calculate_deposition_rate_density(const int modelgridindex, const int timestep)
 // should be in erg / s / cm^3
 {
-  const double gamma_deposition = globals::rpkt_emiss[modelgridindex] * FOURPI;
+  const double gamma_deposition = globals::gamma_dep_estimator[modelgridindex] * FOURPI;
 
   const double tmid = globals::timesteps[timestep].mid;
   const double rho = grid::get_rho(modelgridindex);

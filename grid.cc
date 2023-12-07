@@ -957,7 +957,7 @@ static void allocate_nonemptymodelcells() {
     allocate_expansionopacities();
   }
 
-  globals::rpkt_emiss = static_cast<double *>(calloc((get_npts_model() + 1), sizeof(double)));
+  globals::gamma_dep_estimator = static_cast<double *>(calloc((get_npts_model() + 1), sizeof(double)));
 
   auto ionestimsize = get_nonempty_npts_model() * globals::nbfcontinua_ground * sizeof(double);
 
@@ -1757,10 +1757,10 @@ static void read_grid_restart_data(const int timestep) {
     float W = 0.;
     float T_J = 0.;
     int thick = 0;
-    double rpkt_emiss = 0.;
+    double gamma_dep_estimator = 0.;
 
     assert_always(fscanf(gridsave_file, "%d %a %a %a %a %d %la %a %a", &mgi_in, &T_R, &T_e, &W, &T_J, &thick,
-                         &rpkt_emiss, &modelgrid[mgi].nne, &modelgrid[mgi].nnetot) == 9);
+                         &gamma_dep_estimator, &modelgrid[mgi].nne, &modelgrid[mgi].nnetot) == 9);
 
     if (mgi_in != mgi) {
       printout("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort\n");
@@ -1772,14 +1772,14 @@ static void read_grid_restart_data(const int timestep) {
     assert_always(T_e >= 0.);
     assert_always(W >= 0.);
     assert_always(T_J >= 0.);
-    assert_always(rpkt_emiss >= 0.);
+    assert_always(gamma_dep_estimator >= 0.);
 
     set_TR(mgi, T_R);
     set_Te(mgi, T_e);
     set_W(mgi, W);
     set_TJ(mgi, T_J);
     modelgrid[mgi].thick = thick;
-    globals::rpkt_emiss[mgi] = rpkt_emiss;
+    globals::gamma_dep_estimator[mgi] = gamma_dep_estimator;
 
     if constexpr (USE_LUT_PHOTOION) {
       for (int i = 0; i < globals::nbfcontinua_ground; i++) {
@@ -1827,9 +1827,9 @@ void write_grid_restart_data(const int timestep) {
   for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
-    assert_always(globals::rpkt_emiss[mgi] >= 0.);
+    assert_always(globals::gamma_dep_estimator[mgi] >= 0.);
     fprintf(gridsave_file, "%d %a %a %a %a %d %la %a %a", mgi, get_TR(mgi), get_Te(mgi), get_W(mgi), get_TJ(mgi),
-            modelgrid[mgi].thick, globals::rpkt_emiss[mgi], modelgrid[mgi].nne, modelgrid[mgi].nnetot);
+            modelgrid[mgi].thick, globals::gamma_dep_estimator[mgi], modelgrid[mgi].nne, modelgrid[mgi].nnetot);
 
     if constexpr (USE_LUT_PHOTOION) {
       for (int i = 0; i < globals::nbfcontinua_ground; i++) {
