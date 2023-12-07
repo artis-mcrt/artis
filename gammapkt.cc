@@ -208,7 +208,7 @@ void init_gamma_linelist() {
 void normalise(int nts) {
   const double dt = globals::timesteps[nts].width;
   globals::timesteps[nts].gamma_dep_pathint = 0.;
-  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+  for (int nonemptymgi = 0; nonemptymgi < grid::get_npts_model(); nonemptymgi++) {
     const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
     const double dV = grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts].mid / globals::tmin, 3);
@@ -821,7 +821,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
     // Move it into the new cell.
     const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
-    const int nonemptymgi = (mgi < grid::get_nonempty_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
+    const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
     if (chi_tot > 0 && nonemptymgi >= 0) {
       update_gamma_dep(pkt_ptr, sdist, mgi, nonemptymgi);
     }
@@ -835,7 +835,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
     // Doesn't reach boundary.
     move_pkt_withtime(pkt_ptr, tdist / 2.);
     const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
-    const int nonemptymgi = (mgi < grid::get_nonempty_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
+    const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
 
     if (chi_tot > 0 && nonemptymgi >= 0) {
       update_gamma_dep(pkt_ptr, tdist, mgi, nonemptymgi);
@@ -845,7 +845,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
   } else if ((edist < sdist) && (edist < tdist)) {
     move_pkt_withtime(pkt_ptr, edist / 2.);
     const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
-    const int nonemptymgi = (mgi < grid::get_nonempty_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
+    const int nonemptymgi = (mgi < grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
     if (chi_tot > 0 && nonemptymgi >= 0) {
       update_gamma_dep(pkt_ptr, edist, mgi, nonemptymgi);
     }
