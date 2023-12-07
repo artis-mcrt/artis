@@ -1199,10 +1199,10 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
     for (int electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++) {
       const double electronsinshell = q[electron_loop];
       if ((electronsinshell) > 0) {
-        double use2 = electron_binding[get_atomicnumber(element) - 1][electron_loop];
-        const double use3 = globals::elements[element].ions[ion].ionpot;
-        if (use2 <= 0) {
-          use2 = electron_binding[get_atomicnumber(element) - 1][electron_loop - 1];
+        double enbinding = electron_binding[get_atomicnumber(element) - 1][electron_loop];
+        const double ionpot = globals::elements[element].ions[ion].ionpot;
+        if (enbinding <= 0) {
+          enbinding = electron_binding[get_atomicnumber(element) - 1][electron_loop - 1];
           //  to get total += electronsinshell/electron_binding[get_atomicnumber(element)-1][electron_loop-1];
           //  set use3 = 0.
           if (electron_loop != 8) {
@@ -1213,11 +1213,7 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
             std::abort();
           }
         }
-        if (use2 < use3) {
-          total += electronsinshell / use3;
-        } else {
-          total += electronsinshell / use2;
-        }
+        total += electronsinshell / std::min(ionpot, enbinding);
       }
       // printout("total %g\n", total);
     }
