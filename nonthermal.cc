@@ -1215,7 +1215,7 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
           std::abort();
         }
       }
-      total += electronsinshell / std::min(ionpot, enbinding);
+      total += electronsinshell / std::max(ionpot, enbinding);
 
       // printout("total %g\n", total);
     }
