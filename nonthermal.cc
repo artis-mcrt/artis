@@ -1197,7 +1197,7 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
 
     total = 0.;
     for (int electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++) {
-      const double electronsinshell = q[electron_loop];
+      const int electronsinshell = q[electron_loop];
       if ((electronsinshell) > 0) {
         double enbinding = electron_binding[get_atomicnumber(element) - 1][electron_loop];
         const double ionpot = globals::elements[element].ions[ion].ionpot;
