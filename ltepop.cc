@@ -160,19 +160,18 @@ static auto phi_ion_equilib(const int element, const int ion, const int modelgri
 
 static auto get_element_nne_contrib(const int modelgridindex, const int element)
     -> double {  // calculate number density of the current element (abundances are given by mass)
-  const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
   // Use ionization fractions to calculate the free electron contributions
-  if (nnelement > 0) {
-    double nne = 0.;
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      const auto nnion = get_nnion(modelgridindex, element, ion);
-      const int ioncharge = get_ionstage(element, ion) - 1;
-      nne += ioncharge * nnion;
-    }
-    return nne;
+  if (grid::get_elem_numberdens(modelgridindex, element) <= 0.) {
+    return 0.;
   }
-  return 0.;
+  double nne = 0.;
+  const int nions = get_nions(element);
+  for (int ion = 0; ion < nions; ion++) {
+    const auto nnion = get_nnion(modelgridindex, element, ion);
+    const int ioncharge = get_ionstage(element, ion) - 1;
+    nne += ioncharge * nnion;
+  }
+  return nne;
 }
 
 static auto nne_solution_f(double nne_assumed, void *voidparas) -> double
