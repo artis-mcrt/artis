@@ -892,18 +892,6 @@ static void allocate_nonemptycells_composition_cooling()
 }
 
 static void allocate_nonemptymodelcells() {
-  /// This is the placeholder for empty cells. Temperatures must be positive
-  /// as long as ff opacities are calculated.
-  set_rho_tmin(get_npts_model(), 0.);
-  set_rho(get_npts_model(), 0.);
-  set_nne(get_npts_model(), 0.);
-  set_nnetot(get_npts_model(), 0.);
-  set_ffegrp(get_npts_model(), 0.);
-
-  set_Te(get_npts_model(), MINTEMP);
-  set_TJ(get_npts_model(), MINTEMP);
-  set_TR(get_npts_model(), MINTEMP);
-
   // Determine the number of simulation cells associated with the model cells
   for (int mgi = 0; mgi < (get_npts_model() + 1); mgi++) {
     mg_associated_cells[mgi] = 0;
