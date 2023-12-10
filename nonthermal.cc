@@ -81,7 +81,7 @@ constexpr int M_NT_SHELLS = 10;
 // maximum number of elements for which binding energy tables are to be used
 constexpr int MAX_Z_BINDING = 30;
 
-static std::array<std::array<double, M_NT_SHELLS>, MAX_Z_BINDING> electron_binding;
+static double electron_binding[MAX_Z_BINDING][M_NT_SHELLS];
 
 struct collionrow {
   int Z;
@@ -1115,110 +1115,117 @@ static auto get_nt_frac_excitation(const int modelgridindex) -> float {
 }
 
 static auto get_mean_binding_energy(const int element, const int ion) -> double {
+  int q[M_NT_SHELLS];
+  double total{NAN};
+
   const int ioncharge = get_ionstage(element, ion) - 1;
   const int nbound = get_atomicnumber(element) - ioncharge;  // number of bound electrons
 
-  if (nbound <= 0) {
-    return 0.;
-  }
+  if (nbound > 0) {
+    for (int &i : q) {
+      i = 0;
+    }
 
-  std::array<int, M_NT_SHELLS> q{};
-  std::fill(q.begin(), q.end(), 0);
-
-  for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
-    if (q[0] < 2)  // K 1s
-    {
-      q[0]++;
-    } else if (q[1] < 2)  // L1 2s
-    {
-      q[1]++;
-    } else if (q[2] < 2)  // L2 2p[1/2]
-    {
-      q[2]++;
-    } else if (q[3] < 4)  // L3 2p[3/2]
-    {
-      q[3]++;
-    } else if (q[4] < 2)  // M1 3s
-    {
-      q[4]++;
-    } else if (q[5] < 2)  // M2 3p[1/2]
-    {
-      q[5]++;
-    } else if (q[6] < 4)  // M3 3p[3/2]
-    {
-      q[6]++;
-    } else if (ioncharge == 0) {
-      if (q[9] < 2)  // N1 4s
+    for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
+      if (q[0] < 2)  // K 1s
       {
-        q[9]++;
-      } else if (q[7] < 4)  // M4 3d[3/2]
+        q[0]++;
+      } else if (q[1] < 2)  // L1 2s
       {
-        q[7]++;
-      } else if (q[8] < 6)  // M5 3d[5/2]
+        q[1]++;
+      } else if (q[2] < 2)  // L2 2p[1/2]
       {
-        q[8]++;
-      } else {
-        printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-        std::abort();
-      }
-    } else if (ioncharge == 1) {
-      if (q[9] < 1)  // N1 4s
+        q[2]++;
+      } else if (q[3] < 4)  // L3 2p[3/2]
       {
-        q[9]++;
-      } else if (q[7] < 4)  // M4 3d[3/2]
+        q[3]++;
+      } else if (q[4] < 2)  // M1 3s
       {
-        q[7]++;
-      } else if (q[8] < 6)  // M5 3d[5/2]
+        q[4]++;
+      } else if (q[5] < 2)  // M2 3p[1/2]
       {
-        q[8]++;
-      } else {
-        printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-        std::abort();
-      }
-    } else if (ioncharge > 1) {
-      if (q[7] < 4)  // M4 3d[3/2]
+        q[5]++;
+      } else if (q[6] < 4)  // M3 3p[3/2]
       {
-        q[7]++;
-      } else if (q[8] < 6)  // M5 3d[5/2]
-      {
-        q[8]++;
-      } else {
-        printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-        std::abort();
+        q[6]++;
+      } else if (ioncharge == 0) {
+        if (q[9] < 2)  // N1 4s
+        {
+          q[9]++;
+        } else if (q[7] < 4)  // M4 3d[3/2]
+        {
+          q[7]++;
+        } else if (q[8] < 6)  // M5 3d[5/2]
+        {
+          q[8]++;
+        } else {
+          printout("Going beyond the 4s shell in NT calculation. Abort!\n");
+          std::abort();
+        }
+      } else if (ioncharge == 1) {
+        if (q[9] < 1)  // N1 4s
+        {
+          q[9]++;
+        } else if (q[7] < 4)  // M4 3d[3/2]
+        {
+          q[7]++;
+        } else if (q[8] < 6)  // M5 3d[5/2]
+        {
+          q[8]++;
+        } else {
+          printout("Going beyond the 4s shell in NT calculation. Abort!\n");
+          std::abort();
+        }
+      } else if (ioncharge > 1) {
+        if (q[7] < 4)  // M4 3d[3/2]
+        {
+          q[7]++;
+        } else if (q[8] < 6)  // M5 3d[5/2]
+        {
+          q[8]++;
+        } else {
+          printout("Going beyond the 4s shell in NT calculation. Abort!\n");
+          std::abort();
+        }
       }
     }
-  }
 
-  //      printout("For element %d ion %d I got q's of: %d %d %d %d %d %d %d %d %d %d\n", element, ion, q[0], q[1],
-  //      q[2], q[3], q[4], q[5], q[6], q[7], q[8], q[9]);
-  // printout("%g %g %g %g %g %g %g %g %g %g\n", electron_binding[get_atomicnumber(element)-1][0],
-  // electron_binding[get_atomicnumber(element)-1][1],
-  // electron_binding[get_atomicnumber(element)-1][2],electron_binding[get_atomicnumber(element)-1][3],electron_binding[get_atomicnumber(element)-1][4],electron_binding[get_atomicnumber(element)-1][5],electron_binding[get_atomicnumber(element)-1][6],electron_binding[get_atomicnumber(element)-1][7],electron_binding[get_atomicnumber(element)-1][8],electron_binding[get_atomicnumber(element)-1][9]);
+    //      printout("For element %d ion %d I got q's of: %d %d %d %d %d %d %d %d %d %d\n", element, ion, q[0], q[1],
+    //      q[2], q[3], q[4], q[5], q[6], q[7], q[8], q[9]);
+    // printout("%g %g %g %g %g %g %g %g %g %g\n", electron_binding[get_atomicnumber(element)-1][0],
+    // electron_binding[get_atomicnumber(element)-1][1],
+    // electron_binding[get_atomicnumber(element)-1][2],electron_binding[get_atomicnumber(element)-1][3],electron_binding[get_atomicnumber(element)-1][4],electron_binding[get_atomicnumber(element)-1][5],electron_binding[get_atomicnumber(element)-1][6],electron_binding[get_atomicnumber(element)-1][7],electron_binding[get_atomicnumber(element)-1][8],electron_binding[get_atomicnumber(element)-1][9]);
 
-  double total = 0.;
-  for (int electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++) {
-    const int electronsinshell = q[electron_loop];
-    if (electronsinshell <= 0) {
-      continue;
-    }
-    double enbinding = electron_binding[get_atomicnumber(element) - 1][electron_loop];
-    const double ionpot = globals::elements[element].ions[ion].ionpot;
-    if (enbinding <= 0) {
-      enbinding = electron_binding[get_atomicnumber(element) - 1][electron_loop - 1];
-      //  to get total += electronsinshell/electron_binding[get_atomicnumber(element)-1][electron_loop-1];
-      //  set use3 = 0.
-      if (electron_loop != 8) {
-        // For some reason in the Lotz data, this is no energy for the M5 shell before Ni. So if the complaint
-        // is for 8 (corresponding to that shell) then just use the M4 value
-        printout("Huh? I'm trying to use a binding energy when I have no data. element %d ion %d\n", element, ion);
-        printout("Z = %d, ionstage = %d\n", get_atomicnumber(element), get_ionstage(element, ion));
-        std::abort();
+    total = 0.;
+    for (int electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++) {
+      const int electronsinshell = q[electron_loop];
+      if (electronsinshell <= 0) {
+        continue;
       }
-    }
-    total += electronsinshell / std::max(ionpot, enbinding);
+      double enbinding = electron_binding[get_atomicnumber(element) - 1][electron_loop];
+      const double ionpot = globals::elements[element].ions[ion].ionpot;
+      if (enbinding <= 0) {
+        enbinding = electron_binding[get_atomicnumber(element) - 1][electron_loop - 1];
+        //  to get total += electronsinshell/electron_binding[get_atomicnumber(element)-1][electron_loop-1];
+        //  set use3 = 0.
+        if (electron_loop != 8) {
+          // For some reason in the Lotz data, this is no energy for the M5 shell before Ni. So if the complaint
+          // is for 8 (corresponding to that shell) then just use the M4 value
+          printout("Huh? I'm trying to use a binding energy when I have no data. element %d ion %d\n", element, ion);
+          printout("Z = %d, ionstage = %d\n", get_atomicnumber(element), get_ionstage(element, ion));
+          std::abort();
+        }
+      }
+      total += electronsinshell / std::max(ionpot, enbinding);
 
-    // printout("total %g\n", total);
+      // printout("total %g\n", total);
+    }
+
+  } else {
+    total = 0.;
   }
+
+  // printout("For element %d ion %d I got mean binding energy of %g (eV)\n", element, ion, 1./total/EV);
 
   return total;
 }
@@ -1350,14 +1357,16 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
   // (eta_ion / ionpot_ion) = (eta_shell_a / ionpot_shell_a) + (eta_shell_b / ionpot_shell_b) + ...
   // where eta is the fraction of the deposition energy going into ionization of the ion or shell
 
-  std::array<double, NT_MAX_AUGER_ELECTRONS + 1> eta_nauger_ionize_over_ionpot_sum{};
-  std::array<double, NT_MAX_AUGER_ELECTRONS + 1> eta_nauger_ionize_sum{};
+  double eta_nauger_ionize_over_ionpot_sum[NT_MAX_AUGER_ELECTRONS + 1];
+  double eta_nauger_ionize_sum[NT_MAX_AUGER_ELECTRONS + 1];
 
-  std::fill_n(&nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1)],
-              NT_MAX_AUGER_ELECTRONS + 1, 0.);
+  for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
+    eta_nauger_ionize_over_ionpot_sum[a] = 0.;
+    nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a] = 0.;
 
-  std::fill_n(&nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1)],
-              NT_MAX_AUGER_ELECTRONS + 1, 0.);
+    eta_nauger_ionize_sum[a] = 0.;
+    nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a] = 0.;
+  }
 
   double eta_over_ionpot_sum = 0.;
   double eta_sum = 0.;
@@ -1382,7 +1391,7 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
 
       eta_over_ionpot_sum += eta_over_ionpot;
 
-      for (size_t a = 0; a < eta_nauger_ionize_sum.size(); a++) {
+      for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
         eta_nauger_ionize_over_ionpot_sum[a] += eta_over_ionpot * collionrow.prob_num_auger[a];
         eta_nauger_ionize_sum[a] += frac_ionization_shell * collionrow.prob_num_auger[a];
       }
@@ -1394,6 +1403,8 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
     if (ion < nions - 1)  // don't try to ionise the top ion
     {
       for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
+        // printout("test2 Z=%d ion %d a %d probability %g\n", get_atomicnumber(element), get_ionstage(element, ion), a,
+        // eta_nauger_ionize_over_ionpot_sum[a] / eta_over_ionpot_sum);
         if (ion + 1 + a < nions)  // not too many Auger electrons to exceed the top ion of this element
         {
           nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a] =
@@ -1401,8 +1412,8 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
           nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a] =
               eta_nauger_ionize_sum[a] / eta_sum;
         } else {
-          // the following ensures that multiple ionisations can't send you to an ion stage that is not in
-          // the model could send it to the top one with a = nions - 1 - ion - 1
+          // the following ensures that multiple ionisations can't send you to an ion stage that is not in the model
+          // could send it to the top one with a = nions - 1 - ion - 1
 
           nt_solution[modelgridindex]
               .prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + nions - 1 - ion - 1] +=
@@ -1411,11 +1422,26 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
               .ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + nions - 1 - ion - 1] +=
               eta_nauger_ionize_sum[a] / eta_sum;
 
+          // printout("test2b going to Z=%d ion %d a %d with new probability %g\n", get_atomicnumber(element),
+          // get_ionstage(element, ion), nions - 1 - ion - 1,
+          // nt_solution[modelgridindex].prob_num_auger[element][ion][nions - 1 - ion - 1]);
+
           nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a] = 0;
           nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a] = 0.;
         }
       }
     }
+
+    // the following ensures that multiple ionisations can't send you to an ion stage that is not in the model
+    // for (int a = NT_MAX_AUGER_ELECTRONS; a > 0; a--)
+    // {
+    //   if ((ion + a + 1) >= nions)
+    //   {
+    //     nt_solution[modelgridindex].prob_num_auger[element][ion][a - 1] +=
+    //     nt_solution[modelgridindex].prob_num_auger[element][ion][a];
+    //     nt_solution[modelgridindex].prob_num_auger[element][ion][a] = 0.;
+    //   }
+    // }
   } else {
     const int a = 0;
     nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a] = 1.;
@@ -1430,10 +1456,8 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
     nt_solution[modelgridindex].eff_ionpot[get_uniqueionindex(element, ion)] = eff_ionpot;
   } else {
     printout(
-        "WARNING! No matching subshells in NT impact ionisation cross section data for Z=%d ionstage %d.\n "
-        "-> "
-        "Defaulting to work function approximation and ionisation energy is not accounted for in "
-        "Spencer-Fano "
+        "WARNING! No matching subshells in NT impact ionisation cross section data for Z=%d ionstage %d.\n -> "
+        "Defaulting to work function approximation and ionisation energy is not accounted for in Spencer-Fano "
         "solution.\n",
         get_atomicnumber(element), get_ionstage(element, ion));
 
