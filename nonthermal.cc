@@ -1404,7 +1404,7 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
               eta_nauger_ionize_sum[a] / eta_sum;
         } else {
           // the following ensures that multiple ionisations can't send you to an ion stage that is not in
-          // the model could send it to the top one with a = nions - 1 - ion - 1
+          // the model. Send it to the highest ion stage instead
           const int a_replace = topion - ion - 1;
 
           nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a_replace] +=
@@ -1432,10 +1432,8 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
   } else {
     printout(
         "WARNING! No matching subshells in NT impact ionisation cross section data for Z=%d ionstage %d.\n "
-        "-> "
-        "Defaulting to work function approximation and ionisation energy is not accounted for in "
-        "Spencer-Fano "
-        "solution.\n",
+        "-> Defaulting to work function approximation and ionisation energy is not accounted for in "
+        "Spencer-Fano solution.\n",
         get_atomicnumber(element), get_ionstage(element, ion));
 
     nt_solution[modelgridindex].eff_ionpot[get_uniqueionindex(element, ion)] =
