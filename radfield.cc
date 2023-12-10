@@ -638,15 +638,16 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
   const int tid = get_thread_num();
   const double distance_e_cmf_over_nu =
       distance_e_cmf / nu_cmf * doppler_nucmf_on_nurf;  // TODO: Luke: why did I put a doppler factor here?
-  const int allcontmin =
-      static_cast<int>(std::lower_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + nbfcontinua, nu_cmf,
-                                        [](const double nu_edge, const double nu_cmf) {
-                                          return nu_edge * last_phixs_nuovernuedge < nu_cmf;
-                                        }) -
-                       globals::allcont_nu_edge);
 
   const int allcontmax =
       static_cast<int>(std::upper_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + nbfcontinua, nu_cmf) -
+                       globals::allcont_nu_edge);
+
+  const int allcontmin =
+      static_cast<int>(std::lower_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + allcontmax, nu_cmf,
+                                        [](const double nu_edge, const double nu_cmf) {
+                                          return nu_edge * last_phixs_nuovernuedge < nu_cmf;
+                                        }) -
                        globals::allcont_nu_edge);
 
   for (int allcontindex = allcontmin; allcontindex < allcontmax; allcontindex++) {
