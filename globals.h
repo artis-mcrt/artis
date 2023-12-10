@@ -66,7 +66,6 @@ struct phixslist {
   double *groundcont_gamma_contr{nullptr};  // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
   double *chi_bf_sum{nullptr};
   double *gamma_contr{nullptr};  // needed for DETAILED_BF_ESTIMATORS_ON
-  int allcontmax{-1};
 };
 
 struct phixstarget_entry {

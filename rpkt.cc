@@ -974,9 +974,6 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
   const int allcontmax =
       static_cast<int>(std::upper_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + nbfcontinua, nu) -
                        globals::allcont_nu_edge);
-  if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-    globals::phixslist[tid].allcontmax = allcontmax;
-  }
 
   for (i = 0; i < allcontmax; i++) {
     const int element = globals::allcont[i].element;
