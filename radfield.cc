@@ -645,7 +645,7 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
     const double nu_edge = globals::allcont_nu_edge[allcontindex];
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
-    if (nu_cmf >= nu_edge && nu_cmf <= nu_max_phixs) {
+    if (nu_cmf <= nu_max_phixs) {
       safeadd(bfrate_raw[nonemptymgi * nbfcontinua + allcontindex],
               globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
     }
