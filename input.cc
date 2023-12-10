@@ -1377,6 +1377,7 @@ static void setup_phixs_list() {
   for (int itid = 0; itid < get_max_threads(); itid++) {
     /// Number of ground level bf-continua equals the total number of included ions minus the number
     /// of included elements, because the uppermost ionisation stages can't ionise.
+    globals::phixslist[itid].allcontmax = globals::nbfcontinua;
     if ((USE_LUT_PHOTOION || USE_LUT_BFHEATING) && globals::nbfcontinua_ground > 0) {
       globals::phixslist[itid].groundcont_gamma_contr =
           static_cast<double *>(malloc(globals::nbfcontinua_ground * sizeof(double)));
