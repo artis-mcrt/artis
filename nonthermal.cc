@@ -1391,10 +1391,12 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
 
   if (NT_MAX_AUGER_ELECTRONS > 0 && matching_nlsubshell_count > 0) {
     const int nions = get_nions(element);
-    if (ion < nions - 1)  // don't try to ionise the top ion
+    const int topion = nions - 1;
+    if (ion < topion)  // don't try to ionise the top ion
     {
       for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-        if (ion + 1 + a < nions)  // not too many Auger electrons to exceed the top ion of this element
+        const int upperion = ion + 1 + a;
+        if (upperion <= topion)  // not too many Auger electrons to exceed the top ion of this element
         {
           nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a] =
               eta_nauger_ionize_over_ionpot_sum[a] / eta_over_ionpot_sum;
@@ -1403,12 +1405,11 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
         } else {
           // the following ensures that multiple ionisations can't send you to an ion stage that is not in
           // the model could send it to the top one with a = nions - 1 - ion - 1
+          const int a_replace = topion - ion - 1;
 
-          nt_solution[modelgridindex]
-              .prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + nions - 1 - ion - 1] +=
+          nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a_replace] +=
               eta_nauger_ionize_over_ionpot_sum[a] / eta_over_ionpot_sum;
-          nt_solution[modelgridindex]
-              .ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + nions - 1 - ion - 1] +=
+          nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a_replace] +=
               eta_nauger_ionize_sum[a] / eta_sum;
 
           nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a] = 0;
