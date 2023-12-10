@@ -1153,6 +1153,11 @@ void MPI_Bcast_binned_opacities(const int modelgridindex, const int root_node_id
       assert_always(nonemptymgi >= 0);
       MPI_Bcast(&expansionopacities[nonemptymgi * expopac_nbins], expopac_nbins, MPI_FLOAT, root_node_id,
                 globals::mpi_comm_internode);
+
+      if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
+        MPI_Bcast(&expansionopacity_planck_cumulative[nonemptymgi * expopac_nbins], expopac_nbins, MPI_FLOAT,
+                  root_node_id, globals::mpi_comm_internode);
+      }
     }
   }
 }
