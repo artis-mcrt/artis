@@ -971,7 +971,11 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
   //                       &globals::allcont_nu_edge[0];
   int i = 0;
   const int nbfcontinua = globals::nbfcontinua;
-  for (i = 0; i < nbfcontinua; i++) {
+  const int allcontmax =
+      static_cast<int>(std::upper_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + nbfcontinua, nu) -
+                       globals::allcont_nu_edge);
+
+  for (i = 0; i < allcontmax; i++) {
     const int element = globals::allcont[i].element;
     const int ion = globals::allcont[i].ion;
     const int level = globals::allcont[i].level;
