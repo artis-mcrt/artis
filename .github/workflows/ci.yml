@@ -61,6 +61,7 @@ jobs:
               id: cpu-count
               run: |
                   g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
+                  python3 -c 'import multiprocessing; print("CPU count: {multiprocessing.cpu_count()}")'
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
             # cache this for classic options because the super low integration tolerance makes generation of the file very slow
