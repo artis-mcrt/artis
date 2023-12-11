@@ -971,18 +971,18 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
   //                       &globals::allcont_nu_edge[0];
   int i = 0;
   const int nbfcontinua = globals::nbfcontinua;
-  const int allcontmax =
+  const int allcontend =
       static_cast<int>(std::upper_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + nbfcontinua, nu) -
                        globals::allcont_nu_edge);
   const int allcontmin =
-      static_cast<int>(std::lower_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + allcontmax, nu,
+      static_cast<int>(std::lower_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + allcontend, nu,
                                         [](const double nu_edge, const double nu_cmf) {
                                           return nu_edge * last_phixs_nuovernuedge < nu_cmf;
                                         }) -
                        globals::allcont_nu_edge);
 
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-    globals::phixslist[tid].allcontmax = allcontmax;
+    globals::phixslist[tid].allcontend = allcontend;
   }
 
   for (i = 0; i < allcontmin; i++) {
@@ -992,7 +992,7 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
     }
   }
 
-  for (i = allcontmin; i < allcontmax; i++) {
+  for (i = allcontmin; i < allcontend; i++) {
     const int element = globals::allcont[i].element;
     const int ion = globals::allcont[i].ion;
     const int level = globals::allcont[i].level;

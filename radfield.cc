@@ -639,19 +639,19 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
   const double distance_e_cmf_over_nu =
       distance_e_cmf / nu_cmf * doppler_nucmf_on_nurf;  // TODO: Luke: why did I put a doppler factor here?
 
-  const int allcontmax =
+  const int allcontend =
       static_cast<int>(std::upper_bound(globals::allcont_nu_edge,
-                                        globals::allcont_nu_edge + globals::phixslist[tid].allcontmax, nu_cmf) -
+                                        globals::allcont_nu_edge + globals::phixslist[tid].allcontend, nu_cmf) -
                        globals::allcont_nu_edge);
 
   const int allcontmin =
-      static_cast<int>(std::lower_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + allcontmax, nu_cmf,
+      static_cast<int>(std::lower_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + allcontend, nu_cmf,
                                         [](const double nu_edge, const double nu_cmf) {
                                           return nu_edge * last_phixs_nuovernuedge < nu_cmf;
                                         }) -
                        globals::allcont_nu_edge);
 
-  for (int allcontindex = allcontmin; allcontindex < allcontmax; allcontindex++) {
+  for (int allcontindex = allcontmin; allcontindex < allcontend; allcontindex++) {
     safeadd(bfrate_raw[nonemptymgi * nbfcontinua + allcontindex],
             globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
   }
