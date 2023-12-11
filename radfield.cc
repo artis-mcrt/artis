@@ -641,7 +641,8 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
 
   // const int allcontmax = globals::phixslist[tid].allcontmax;
   const int allcontmax =
-      static_cast<int>(std::upper_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + nbfcontinua, nu_cmf) -
+      static_cast<int>(std::upper_bound(globals::allcont_nu_edge,
+                                        globals::allcont_nu_edge + globals::phixslist[tid].allcontmax, nu_cmf) -
                        globals::allcont_nu_edge);
 
   const int allcontmin =
