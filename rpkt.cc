@@ -988,13 +988,6 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
     globals::phixslist[tid].allcontend = allcontend;
   }
 
-  for (i = 0; i < allcontbegin; i++) {
-    globals::phixslist[tid].chi_bf_sum[i] = chi_bf_sum;
-    if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-      globals::phixslist[tid].gamma_contr[i] = 0.;
-    }
-  }
-
   for (i = allcontbegin; i < allcontend; i++) {
     const int element = globals::allcont[i].element;
     const int ion = globals::allcont[i].ion;
@@ -1074,15 +1067,6 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
       }
     } else if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
       // no element present or not an important level
-      globals::phixslist[tid].chi_bf_sum[i] = chi_bf_sum;
-      if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-        globals::phixslist[tid].gamma_contr[i] = 0.;
-      }
-    }
-  }
-
-  if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-    for (; i < globals::nbfcontinua; i++) {
       globals::phixslist[tid].chi_bf_sum[i] = chi_bf_sum;
       if constexpr (DETAILED_BF_ESTIMATORS_ON) {
         globals::phixslist[tid].gamma_contr[i] = 0.;
