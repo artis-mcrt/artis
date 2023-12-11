@@ -974,11 +974,25 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
   const int allcontmax =
       static_cast<int>(std::upper_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + nbfcontinua, nu) -
                        globals::allcont_nu_edge);
+  const int allcontmin =
+      static_cast<int>(std::lower_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + allcontmax, nu,
+                                        [](const double nu_edge, const double nu_cmf) {
+                                          return nu_edge * last_phixs_nuovernuedge < nu_cmf;
+                                        }) -
+                       globals::allcont_nu_edge);
+
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
     globals::phixslist[tid].allcontmax = allcontmax;
   }
 
-  for (i = 0; i < allcontmax; i++) {
+  for (i = 0; i < allcontmin; i++) {
+    globals::phixslist[tid].chi_bf_sum[i] = chi_bf_sum;
+    if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+      globals::phixslist[tid].gamma_contr[i] = 0.;
+    }
+  }
+
+  for (i = allcontmin; i < allcontmax; i++) {
     const int element = globals::allcont[i].element;
     const int ion = globals::allcont[i].ion;
     const int level = globals::allcont[i].level;
