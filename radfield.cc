@@ -639,6 +639,8 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
   const double distance_e_cmf_over_nu =
       distance_e_cmf / nu_cmf * doppler_nucmf_on_nurf;  // TODO: Luke: why did I put a doppler factor here?
 
+  // I think the nu_cmf slightly differs from when the phixslist was calculated
+  // so the nu condition on this nu_cmf can truncate the phixslist
   const int allcontend =
       static_cast<int>(std::upper_bound(globals::allcont_nu_edge,
                                         &globals::allcont_nu_edge[globals::phixslist[tid].allcontend], nu_cmf) -
