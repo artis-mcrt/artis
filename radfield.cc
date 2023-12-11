@@ -641,12 +641,12 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
 
   const int allcontend =
       static_cast<int>(std::upper_bound(globals::allcont_nu_edge,
-                                        globals::allcont_nu_edge + globals::phixslist[tid].allcontend, nu_cmf) -
+                                        &globals::allcont_nu_edge[globals::phixslist[tid].allcontend], nu_cmf) -
                        globals::allcont_nu_edge);
 
   const int allcontbegin =
-      static_cast<int>(std::lower_bound(globals::allcont_nu_edge + globals::phixslist[tid].allcontbegin,
-                                        globals::allcont_nu_edge + allcontend, nu_cmf,
+      static_cast<int>(std::lower_bound(&globals::allcont_nu_edge[globals::phixslist[tid].allcontbegin],
+                                        &globals::allcont_nu_edge[allcontend], nu_cmf,
                                         [](const double nu_edge, const double nu_cmf) {
                                           return nu_edge * last_phixs_nuovernuedge < nu_cmf;
                                         }) -
