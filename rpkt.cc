@@ -1002,12 +1002,11 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu) -> d
     if ((DETAILED_BF_ESTIMATORS_ON && grid::get_elem_abundance(modelgridindex, element) > 0) ||
         (!DETAILED_BF_ESTIMATORS_ON && ((get_nnion(modelgridindex, element, ion) / nnetot > 1.e-6) || (level == 0))))
         [[likely]] {
-      const double nu_edge = globals::allcont[i].nu_edge;
       const double nnlevel = USECELLHISTANDUPDATEPHIXSLIST ? get_levelpop(modelgridindex, element, ion, level)
                                                            : calculate_levelpop(modelgridindex, element, ion, level);
-      const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
-      if (nu <= nu_max_phixs && nnlevel > 0) {
+      if (nnlevel > 0) {
+        const double nu_edge = globals::allcont[i].nu_edge;
         const double sigma_bf = photoionization_crosssection_fromtable(globals::allcont[i].photoion_xs, nu_edge, nu);
 
         const double probability = globals::allcont[i].probability;
