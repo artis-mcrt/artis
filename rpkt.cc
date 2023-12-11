@@ -482,7 +482,7 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
 }
 
 static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
-                                 const double *const chi_bf_sum, const int modelgridindex) {
+                                 const struct phixslist &phixslist, const int modelgridindex) {
   const double nu = pkt_ptr->nu_cmf;
 
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
@@ -535,15 +535,17 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
     pkt_ptr->absorptiontype = -2;
 
     const double chi_bf_inrest = chi_rpkt_cont.bf;
-    assert_always(chi_bf_sum[globals::nbfcontinua - 1] == chi_bf_inrest);
+    auto *const chi_bf_sum = phixslist.chi_bf_sum;
+    assert_always(chi_bf_sum[phixslist.allcontend - 1] == chi_bf_inrest);
 
     /// Determine in which continuum the bf-absorption occurs
     const double chi_bf_rand = rng_uniform() * chi_bf_inrest;
 
     // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand
-    const auto &upperval = std::upper_bound(chi_bf_sum, &chi_bf_sum[globals::nbfcontinua - 1], chi_bf_rand);
+    const auto &upperval =
+        std::upper_bound(&chi_bf_sum[phixslist.allcontbegin], &chi_bf_sum[phixslist.allcontend - 1], chi_bf_rand);
     const int allcontindex = std::distance(chi_bf_sum, upperval);
-    assert_always(allcontindex < globals::nbfcontinua);
+    assert_always(allcontindex < phixslist.allcontend);
 
     const double nu_edge = globals::allcont[allcontindex].nu_edge;
     const int element = globals::allcont[allcontindex].element;
@@ -824,7 +826,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
         rpkt_event_boundbound(pkt_ptr, mgi);
       }
     } else {
-      rpkt_event_continuum(pkt_ptr, globals::chi_rpkt_cont[tid], globals::phixslist[tid].chi_bf_sum, mgi);
+      rpkt_event_continuum(pkt_ptr, globals::chi_rpkt_cont[tid], globals::phixslist[tid], mgi);
     }
 
     return (pkt_ptr->type == TYPE_RPKT);
