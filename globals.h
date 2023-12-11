@@ -67,6 +67,7 @@ struct phixslist {
   double *chi_bf_sum{nullptr};
   double *gamma_contr{nullptr};  // needed for DETAILED_BF_ESTIMATORS_ON
   int allcontend{-1};
+  int allcontbegin{-1};
 };
 
 struct phixstarget_entry {

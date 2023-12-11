@@ -644,14 +644,15 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
                                         globals::allcont_nu_edge + globals::phixslist[tid].allcontend, nu_cmf) -
                        globals::allcont_nu_edge);
 
-  const int allcontmin =
-      static_cast<int>(std::lower_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + allcontend, nu_cmf,
+  const int allcontbegin =
+      static_cast<int>(std::lower_bound(globals::allcont_nu_edge + globals::phixslist[tid].allcontbegin,
+                                        globals::allcont_nu_edge + allcontend, nu_cmf,
                                         [](const double nu_edge, const double nu_cmf) {
                                           return nu_edge * last_phixs_nuovernuedge < nu_cmf;
                                         }) -
                        globals::allcont_nu_edge);
 
-  for (int allcontindex = allcontmin; allcontindex < allcontend; allcontindex++) {
+  for (int allcontindex = allcontbegin; allcontindex < allcontend; allcontindex++) {
     safeadd(bfrate_raw[nonemptymgi * nbfcontinua + allcontindex],
             globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
   }
