@@ -798,7 +798,7 @@ void do_gamma(struct packet *pkt_ptr, double t2)
 
   // So distance before physical event is...
 
-  const double edist = (tau_next - tau_current) / chi_tot;
+  const double edist = chi_tot > 0. ? (tau_next - tau_current) / chi_tot : std::numeric_limits<double>::max();
 
   if (edist < 0) {
     printout("Negative distance (edist). Abort. \n");
