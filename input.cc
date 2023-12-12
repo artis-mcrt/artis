@@ -1731,7 +1731,7 @@ auto get_noncommentline(std::fstream &input, std::string &line) -> bool
 void read_parameterfile(int rank)
 /// Subroutine to read in input parameters from input.txt.
 {
-  uint64_t pre_zseed = 0;
+  int64_t pre_zseed = 0;
 
   auto file = fstream_required("input.txt", std::ios::in);
 
@@ -1739,7 +1739,7 @@ void read_parameterfile(int rank)
 
   assert_always(get_noncommentline(file, line));
 
-  uint64_t zseed_input = 0;
+  int64_t zseed_input = 0;
   std::istringstream(line) >> zseed_input;
 
   if (zseed_input > 0) {
