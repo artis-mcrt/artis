@@ -957,7 +957,7 @@ static void allocate_nonemptymodelcells() {
     allocate_expansionopacities();
   }
 
-  globals::dep_estimator_gamma = static_cast<double *>(calloc(get_nonempty_npts_model(), sizeof(double)));
+  globals::dep_estimator_gamma.resize(get_nonempty_npts_model(), 0.);
 
   auto ionestimsize = get_nonempty_npts_model() * globals::nbfcontinua_ground * sizeof(double);
 

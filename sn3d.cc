@@ -386,8 +386,9 @@ static void mpi_reduce_estimators(int nts) {
     MPI_Allreduce(MPI_IN_PLACE, globals::acounter, globals::nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   }
 
-  assert_always(globals::dep_estimator_gamma != nullptr);
-  MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_gamma, nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  assert_always(static_cast<int>(globals::dep_estimator_gamma.size()) == nonempty_npts_model);
+  MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_gamma.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM,
+                MPI_COMM_WORLD);
 
   MPI_Barrier(MPI_COMM_WORLD);
 
