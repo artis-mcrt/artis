@@ -26,6 +26,7 @@
 #include "vectors.h"
 
 static void do_nonthermal_predeposit(struct packet *pkt_ptr, const int nts, const double t2) {
+  double en_deposited = pkt_ptr->e_cmf;
   if constexpr (!INSTANT_PARTICLE_DEPOSITION) {
     const double ts = pkt_ptr->prop_time;
     const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
@@ -43,10 +44,8 @@ static void do_nonthermal_predeposit(struct packet *pkt_ptr, const int nts, cons
     // Choose random en_absorb [0, particle_en]
 
     const double particle_en = H * pkt_ptr->nu_cmf;
-    const double en_absorb = rng_uniform() * particle_en;
 
     // for endot independent of energy, the next line is trival (for E dependent endot, an integral would be needed)
-    const double t_absorb = ts + en_absorb / endot;
 
     // const double deltat_zeroen = particle_en / endot;
     // const double t_sim_zeroen = ts + deltat_zeroen;
@@ -56,31 +55,39 @@ static void do_nonthermal_predeposit(struct packet *pkt_ptr, const int nts, cons
     //          ts / 86400,
     //          deltat_zeroen / 86400, t_sim_zeroen / 86400, t2 / 86400, t_absorb / 86400);
 
-    if (t_absorb > t2) {
+    if (const double t_enzero = ts + particle_en / endot; t_enzero > t2) {
+      en_deposited = pkt_ptr->e_cmf * (t2 - ts) / (particle_en / endot);
+    } else {
+      en_deposited = pkt_ptr->e_cmf * (t_enzero - ts) / (particle_en / endot);
+    }
+
+    const double rnd_en_absorb = rng_uniform() * particle_en;
+    const double rnd_t_absorb = ts + rnd_en_absorb / endot;
+    if (rnd_t_absorb > t2) {
       // absorption happens beyond the end of the current timestep,
       // so reduce the particle energy for the end of this timestep
       pkt_ptr->nu_cmf = (particle_en - endot * (t2 - ts)) / H;
       vec_scale(pkt_ptr->pos, t2 / ts);
       pkt_ptr->prop_time = t2;
-      return;
+    } else {
+      // absorption happens part way through this timestep
+      vec_scale(pkt_ptr->pos, rnd_t_absorb / ts);
+      pkt_ptr->prop_time = rnd_t_absorb;
+
+      pkt_ptr->type = TYPE_NTLEPTON;
     }
-
-    // absorption happen part way through this timestep
-    vec_scale(pkt_ptr->pos, t_absorb / ts);
-    pkt_ptr->prop_time = t_absorb;
+  } else {
+    // absorption happens
+    pkt_ptr->type = TYPE_NTLEPTON;
   }
-
-  // absorption happens
 
   if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA) {
-    safeadd(globals::timesteps[nts].alpha_dep, pkt_ptr->e_cmf);
+    safeadd(globals::timesteps[nts].alpha_dep, en_deposited);
   } else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_BETAMINUS) {
-    safeadd(globals::timesteps[nts].electron_dep, pkt_ptr->e_cmf);
+    safeadd(globals::timesteps[nts].electron_dep, en_deposited);
   } else if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_BETAPLUS) {
-    safeadd(globals::timesteps[nts].positron_dep, pkt_ptr->e_cmf);
+    safeadd(globals::timesteps[nts].positron_dep, en_deposited);
   }
-
-  pkt_ptr->type = TYPE_NTLEPTON;
 }
 
 static void update_pellet(struct packet *pkt_ptr, const int nts, const double t2) {
