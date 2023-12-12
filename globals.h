@@ -208,7 +208,7 @@ extern std::array<double, 3> syn_dir;  // vector pointing from origin to observe
 
 extern std::unique_ptr<struct time[]> timesteps;
 
-extern double *gamma_dep_estimator;
+extern double *dep_estimator_gamma;
 
 // for USE_LUT_PHOTOION = true
 extern double *corrphotoionrenorm;

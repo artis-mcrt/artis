@@ -20,7 +20,7 @@ std::array<double, 3> syn_dir{};  // vector pointing from origin to observer
 
 std::unique_ptr<struct time[]> timesteps = nullptr;
 
-double *gamma_dep_estimator = nullptr;  /// Volume estimator for the rpkt emissivity
+double *dep_estimator_gamma = nullptr;  /// Volume estimator for the rpkt emissivity
 
 // for USE_LUT_PHOTOION = true
 double *corrphotoionrenorm = nullptr;

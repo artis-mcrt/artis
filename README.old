@@ -128,7 +128,7 @@ code until 2012-07-30:
    for (level == 0) and (ion == 0) to (level == 0) and
    (get_ionstage(element,ion) == 0). This allows us to use model
    atoms which have an ionized species as the lower boundary.
- - [FIXED] gamma_dep_estimator and compton_emiss were not properly
+ - [FIXED] dep_estimator_gamma and compton_emiss were not properly
    renormalised in non-MPI runs
 
 2010-04-01, v111_omp

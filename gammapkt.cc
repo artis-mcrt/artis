@@ -213,13 +213,13 @@ void normalise(int nts) {
 
     const double dV = grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts].mid / globals::tmin, 3);
 
-    globals::timesteps[nts].gamma_dep_pathint += globals::gamma_dep_estimator[nonemptymgi] / globals::nprocs;
+    globals::timesteps[nts].gamma_dep_pathint += globals::dep_estimator_gamma[nonemptymgi] / globals::nprocs;
 
-    globals::gamma_dep_estimator[nonemptymgi] =
-        globals::gamma_dep_estimator[nonemptymgi] * ONEOVER4PI / dV / dt / globals::nprocs;
+    globals::dep_estimator_gamma[nonemptymgi] =
+        globals::dep_estimator_gamma[nonemptymgi] * ONEOVER4PI / dV / dt / globals::nprocs;
 
-    assert_testmodeonly(globals::gamma_dep_estimator[nonemptymgi] >= 0.);
-    assert_testmodeonly(isfinite(globals::gamma_dep_estimator[nonemptymgi]));
+    assert_testmodeonly(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
+    assert_testmodeonly(isfinite(globals::dep_estimator_gamma[nonemptymgi]));
   }
 }
 
@@ -660,7 +660,7 @@ static void update_gamma_dep(const struct packet *pkt_ptr, const double dist, co
   // k-packets in that cell which will then convert into r-packets. This is (going
   // to be) used for the new light_curve syn-style calculation.
 
-  // The intention is that gamma_dep_estimator will contain the emissivity of r-packets
+  // The intention is that dep_estimator_gamma will contain the emissivity of r-packets
   // in the co-moving frame (which is going to be isotropic).
 
   if (!(dist > 0)) {
@@ -685,7 +685,7 @@ static void update_gamma_dep(const struct packet *pkt_ptr, const double dist, co
   //  This will all be done later
   assert_testmodeonly(heating_cont >= 0.);
   assert_testmodeonly(isfinite(heating_cont));
-  safeadd(globals::gamma_dep_estimator[nonemptymgi], heating_cont);
+  safeadd(globals::dep_estimator_gamma[nonemptymgi], heating_cont);
 }
 
 void pair_prod(struct packet *pkt_ptr) {

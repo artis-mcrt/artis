@@ -386,8 +386,8 @@ static void mpi_reduce_estimators(int nts) {
     MPI_Allreduce(MPI_IN_PLACE, globals::acounter, globals::nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   }
 
-  assert_always(globals::gamma_dep_estimator != nullptr);
-  MPI_Allreduce(MPI_IN_PLACE, globals::gamma_dep_estimator, nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  assert_always(globals::dep_estimator_gamma != nullptr);
+  MPI_Allreduce(MPI_IN_PLACE, globals::dep_estimator_gamma, nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -580,7 +580,7 @@ static void zero_estimators() {
       stats::reset_ion_stats(modelgridindex);
     }
 
-    globals::gamma_dep_estimator[nonemptymgi] = 0.;
+    globals::dep_estimator_gamma[nonemptymgi] = 0.;
   }
 
   if constexpr (USE_LUT_PHOTOION) {
