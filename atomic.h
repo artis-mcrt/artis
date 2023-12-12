@@ -1,3 +1,4 @@
+#pragma once
 #ifndef ATOMIC_H
 #define ATOMIC_H
 
