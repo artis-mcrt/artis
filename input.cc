@@ -1064,6 +1064,9 @@ static void read_atomicdata_files() {
   }
 
   printout("  took %ds\n", std::time(nullptr) - time_start_establish_linelist_connections);
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
