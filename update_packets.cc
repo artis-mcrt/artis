@@ -27,14 +27,28 @@
 
 static void do_nonthermal_predeposit(struct packet *pkt_ptr, const int nts, const double t2) {
   double en_deposited = pkt_ptr->e_cmf;
-  if constexpr (!INSTANT_PARTICLE_DEPOSITION) {
-    const double ts = pkt_ptr->prop_time;
-    const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
-    const double rho = grid::get_rho(mgi);
+
+  if constexpr (INSTANT_PARTICLE_DEPOSITION) {
+    // absorption happens
+    pkt_ptr->type = TYPE_NTLEPTON;
+  } else {
+    const double rho = grid::get_rho(grid::get_cell_modelgridindex(pkt_ptr->where));
 
     // endot is energy loss rate (positive) in [erg/s]
     // endot [erg/s] from Barnes et al. (2016). see their figure 6.
     const double endot = (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
+
+    const double ts = pkt_ptr->prop_time;
+    const double particle_en = H * pkt_ptr->nu_cmf;  // energy of the particles in the packet
+
+    // for endot independent of energy, the next line is trival (for E dependent endot, an integral would be needed)
+
+    const double t_enzero = ts + particle_en / endot;  // time at which zero energy is reached
+    if (t_enzero > t2) {
+      en_deposited = pkt_ptr->e_cmf * (t2 - ts) / (particle_en / endot);
+    } else {
+      en_deposited = pkt_ptr->e_cmf * (t_enzero - ts) / (particle_en / endot);
+    }
 
     // A discrete absorption event should occur somewhere along the
     // continuous track from initial kinetic energy to zero KE.
@@ -43,42 +57,22 @@ static void do_nonthermal_predeposit(struct packet *pkt_ptr, const int nts, cons
     // so all final energies are equally likely.
     // Choose random en_absorb [0, particle_en]
 
-    const double particle_en = H * pkt_ptr->nu_cmf;
-
-    // for endot independent of energy, the next line is trival (for E dependent endot, an integral would be needed)
-
-    // const double deltat_zeroen = particle_en / endot;
-    // const double t_sim_zeroen = ts + deltat_zeroen;
-    // printout("%s packet: nts %d energy_mev %g ts %g deltat_zeroen %g t_sim_zeroen %g t2 %g t_absorb %g\n",
-    //          pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA ? "alpha" : "beta", nts,
-    //          particle_en / MEV,
-    //          ts / 86400,
-    //          deltat_zeroen / 86400, t_sim_zeroen / 86400, t2 / 86400, t_absorb / 86400);
-
-    if (const double t_enzero = ts + particle_en / endot; t_enzero > t2) {
-      en_deposited = pkt_ptr->e_cmf * (t2 - ts) / (particle_en / endot);
-    } else {
-      en_deposited = pkt_ptr->e_cmf * (t_enzero - ts) / (particle_en / endot);
-    }
-
     const double rnd_en_absorb = rng_uniform() * particle_en;
-    const double rnd_t_absorb = ts + rnd_en_absorb / endot;
-    if (rnd_t_absorb > t2) {
+    const double t_absorb = ts + rnd_en_absorb / endot;
+
+    if (t_absorb > t2) {
       // absorption happens beyond the end of the current timestep,
-      // so reduce the particle energy for the end of this timestep
+      // so reduce the particle energy up to the end of this timestep
       pkt_ptr->nu_cmf = (particle_en - endot * (t2 - ts)) / H;
       vec_scale(pkt_ptr->pos, t2 / ts);
       pkt_ptr->prop_time = t2;
     } else {
       // absorption happens part way through this timestep
-      vec_scale(pkt_ptr->pos, rnd_t_absorb / ts);
-      pkt_ptr->prop_time = rnd_t_absorb;
+      vec_scale(pkt_ptr->pos, t_absorb / ts);
+      pkt_ptr->prop_time = t_absorb;
 
       pkt_ptr->type = TYPE_NTLEPTON;
     }
-  } else {
-    // absorption happens
-    pkt_ptr->type = TYPE_NTLEPTON;
   }
 
   if (pkt_ptr->pellet_decaytype == decay::DECAYTYPE_ALPHA) {
