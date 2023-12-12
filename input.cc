@@ -1731,34 +1731,32 @@ auto get_noncommentline(std::fstream &input, std::string &line) -> bool
 void read_parameterfile(int rank)
 /// Subroutine to read in input parameters from input.txt.
 {
-  int64_t pre_zseed = 0;
-
   auto file = fstream_required("input.txt", std::ios::in);
 
   std::string line;
 
   assert_always(get_noncommentline(file, line));
 
-  int64_t zseed_input = 0;
+  int64_t zseed_input = -1;
   std::istringstream(line) >> zseed_input;
-
-  if (zseed_input > 0) {
-    pre_zseed = zseed_input;  // random number seed
-    printout("using input.txt specified random number seed of %ld\n", pre_zseed);
-  } else {
-    pre_zseed = std::random_device{}();
-    printout("randomly-generated random number seed is %ld\n", pre_zseed);
-  }
 
 #ifdef _OPENMP
 #pragma omp parallel
   {
 #endif
+    uint64_t pre_zseed{};
+    if (zseed_input > 0) {
+      pre_zseed = static_cast<uint64_t>(zseed_input);  // random number seed
+      printout("using input.txt specified random number seed of %lu\n", pre_zseed);
+    } else {
+      pre_zseed = std::random_device{}();
+      printout("randomly-generated random number seed is %lu\n", pre_zseed);
+    }
     /// For MPI parallelisation, the random seed is changed based on the rank of the process
     /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
     /// to the thread-ID tid.
-    const auto zseed = pre_zseed + 13 * (rank * get_num_threads() + tid);
-    printout("rank %d: thread %d has zseed %ld\n", rank, tid, zseed);
+    const uint64_t zseed = pre_zseed + static_cast<uint64_t>(13 * (rank * get_num_threads() + tid));
+    printout("rank %d: thread %d has zseed %lu\n", rank, tid, zseed);
     rng_init(zseed);
     /// call it a few times
     for (int n = 0; n < 100; n++) {
