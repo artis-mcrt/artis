@@ -1033,6 +1033,10 @@ static void read_atomicdata_files() {
 #pragma omp parallel for schedule(dynamic)
 #endif
   for (lineindex = 0; lineindex < globals::nlines; lineindex++) {
+    if (lineindex % globals::node_nprocs != globals::rank_in_node) {
+      continue;
+    }
+
     const auto &line = globals::linelist[lineindex];
     const int element = line.elementindex;
     const int ion = line.ionindex;
