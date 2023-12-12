@@ -60,15 +60,16 @@ static void do_nonthermal_predeposit(struct packet *pkt_ptr, const int nts, cons
     const double rnd_en_absorb = rng_uniform() * particle_en;
     const double t_absorb = ts + rnd_en_absorb / endot;
 
-    if (t_absorb <= t2) {
-      pkt_ptr->type = TYPE_NTLEPTON;
-    }
-
     // if absorption happens beyond the end of the current timestep,
     // just reduce the particle energy up to the end of this timestep
     const auto t_new = std::min(t_absorb, t2);
 
-    pkt_ptr->nu_cmf = (particle_en - endot * (t_new - ts)) / H;
+    if (t_absorb <= t2) {
+      pkt_ptr->type = TYPE_NTLEPTON;
+    } else {
+      pkt_ptr->nu_cmf = (particle_en - endot * (t_new - ts)) / H;
+    }
+
     vec_scale(pkt_ptr->pos, t_new / ts);
     pkt_ptr->prop_time = t_new;
   }
