@@ -1,3 +1,4 @@
+#pragma once
 #ifndef UPDATE_PACKETS_H
 #define UPDATE_PACKETS_H
 

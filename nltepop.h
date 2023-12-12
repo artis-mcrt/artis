@@ -1,3 +1,4 @@
+#pragma once
 #ifndef NLTEPOP_H
 #define NLTEPOP_H
 

@@ -1,3 +1,4 @@
+#pragma once
 #ifndef LIGHT_CURVE_H
 #define LIGHT_CURVE_H
 

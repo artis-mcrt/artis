@@ -1,3 +1,4 @@
+#pragma once
 #ifndef RATECOEFF_H
 #define RATECOEFF_H
 

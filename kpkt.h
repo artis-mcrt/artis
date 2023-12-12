@@ -1,3 +1,4 @@
+#pragma once
 #ifndef KPKT_H
 #define KPKT_H
 

@@ -1,3 +1,4 @@
+#pragma once
 #ifndef RADFIELD_H
 #define RADFIELD_H
 

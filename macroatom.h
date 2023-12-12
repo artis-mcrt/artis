@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MACROATOM_H
 #define MACROATOM_H
 

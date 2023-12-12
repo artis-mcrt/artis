@@ -1,3 +1,4 @@
+#pragma once
 #ifndef UPDATE_GRID_H
 #define UPDATE_GRID_H
 

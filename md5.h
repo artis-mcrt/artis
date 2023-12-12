@@ -6,6 +6,7 @@
  * Details:    Defines the API for the corresponding MD5 implementation.
  *********************************************************************/
 
+#pragma once
 #ifndef MD5_H
 #define MD5_H
 

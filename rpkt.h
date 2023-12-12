@@ -1,3 +1,4 @@
+#pragma once
 #ifndef RPKT_H
 #define RPKT_H
 

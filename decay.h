@@ -1,3 +1,4 @@
+#pragma once
 #ifndef DECAY_H
 #define DECAY_H
 

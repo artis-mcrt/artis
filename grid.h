@@ -1,3 +1,4 @@
+#pragma once
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 

@@ -1,3 +1,4 @@
+#pragma once
 #ifndef SPECTRUM_H
 #define SPECTRUM_H
 
