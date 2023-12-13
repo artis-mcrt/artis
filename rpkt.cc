@@ -62,6 +62,8 @@ void allocate_expansionopacities() {
   assert_always(MPI_Win_shared_query(win_expansionopacities, 0, &size, &disp_unit, &expansionopacities) == MPI_SUCCESS);
 
   if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
+    MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(float));
+    int disp_unit = sizeof(float);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
                                           &expansionopacity_planck_cumulative,
                                           &win_expansionopacity_planck_cumulative) == MPI_SUCCESS);
@@ -629,11 +631,10 @@ static void rpkt_event_boundbound(struct packet *pkt_ptr, const int mgi) {
   }
 }
 
-auto sample_planck_times_expansion_opacity(const int modelgridindex) -> double
+auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double
 // returns a randomly chosen frequency with a distribution of Planck function times the expansion opacity
 {
   assert_testmodeonly(EXPANSION_OPAC_SAMPLE_KAPPAPLANCK);
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   const auto *kappa_planck_bins = &expansionopacity_planck_cumulative[nonemptymgi * expopac_nbins];
 
   const auto rnd_integral = rng_uniform() * kappa_planck_bins[expopac_nbins - 1];
@@ -643,11 +644,10 @@ auto sample_planck_times_expansion_opacity(const int modelgridindex) -> double
   // use a linear interpolation for the frequency within the bin
   const auto bin_nu_lower = get_expopac_bin_nu_lower(binindex);
   const auto delta_nu = get_expopac_bin_nu_upper(binindex) - bin_nu_lower;
-  const auto lower_partintegral = (binindex > 0) ? kappa_planck_bins[binindex - 1] : 0.;
-  const double nuoffset =
-      (rnd_integral - kappa_planck_bins[binindex]) / (kappa_planck_bins[binindex] - lower_partintegral) * delta_nu;
+  const double nuoffset = rng_uniform() * delta_nu;
+  const double nu = bin_nu_lower + nuoffset;
 
-  return bin_nu_lower + nuoffset;
+  return nu;
 }
 
 static void rpkt_event_thickcell(struct packet *pkt_ptr)
@@ -819,7 +819,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
     } else if (event_is_boundbound) {
       if constexpr (EXPANSIONOPACITIES_ON) {
         if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
-          pkt_ptr->nu_cmf = sample_planck_times_expansion_opacity(mgi);
+          pkt_ptr->nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
         }
         rpkt_event_thickcell(pkt_ptr);
       } else {
