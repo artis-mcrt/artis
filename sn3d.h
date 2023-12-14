@@ -281,4 +281,13 @@ inline void check_already_running() {
   pidfile.close();
 }
 
+constexpr auto get_range_chunk(int size, int nchunks, int nchunk) -> std::tuple<int, int> {
+  const int minchunksize = size / nchunks;  // integer division, minimum non-empty cells per process
+  const int n_remainder = size % nchunks;
+  const auto nstart =
+      (minchunksize + 1) * std::min(n_remainder, nchunk - 1) + minchunksize * std::max(0, nchunk - n_remainder);
+  const auto nsize = (nchunk < n_remainder) ? minchunksize + 1 : minchunksize;
+  return {nstart, nsize};
+}
+
 #endif  // SN3D_H
