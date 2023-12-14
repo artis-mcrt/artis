@@ -1908,7 +1908,7 @@ static void setup_nstart_ndo() {
   const int nprocesses = globals::nprocs;
   const int npts_nonempty = get_nonempty_npts_model();
   const int min_nonempty_perproc = npts_nonempty / nprocesses;  // integer division, minimum non-empty cells per process
-  const int n_leftover = npts_nonempty - nprocesses * min_nonempty_perproc;
+  const int n_remainder = npts_nonempty % nprocesses;
   maxndo = 0;
 
   ranks_nstart = std::vector<int>(nprocesses);
@@ -1938,7 +1938,7 @@ static void setup_nstart_ndo() {
 
     int rank = 0;
     for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-      const int target_nonempty_thisrank = (rank < n_leftover) ? min_nonempty_perproc + 1 : min_nonempty_perproc;
+      const int target_nonempty_thisrank = (rank < n_remainder) ? min_nonempty_perproc + 1 : min_nonempty_perproc;
       if ((rank < (nprocesses - 1)) && (ranks_ndo_nonempty[rank] >= target_nonempty_thisrank)) {
         // current rank has enough non-empty cells, so start assigning cells to the next rank
         rank++;
