@@ -856,7 +856,7 @@ static void read_atomicdata_files() {
       globals::elements[element].ions[ion].ionstage = ionstage;
       globals::elements[element].ions[ion].nlevels = nlevelsmax;
       globals::elements[element].ions[ion].ionisinglevels = 0;
-      globals::elements[element].ions[ion].maxrecombininglevel = 0;
+      globals::elements[element].ions[ion].maxrecombininglevel = -1;
       globals::elements[element].ions[ion].ionpot = ionpot * EV;
       globals::elements[element].ions[ion].nlevels_groundterm = -1;
       globals::elements[element].ions[ion].uniquelevelindexstart = uniquelevelindex;
