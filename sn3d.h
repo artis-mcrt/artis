@@ -229,7 +229,7 @@ static auto fstream_required(const std::string &filename, std::ios_base::openmod
 #endif
 }
 
-inline float rng_uniform(void) {
+inline auto rng_uniform(void) -> float {
   float zrand;
   do {
     zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
@@ -237,7 +237,7 @@ inline float rng_uniform(void) {
   return zrand;
 }
 
-inline float rng_uniform_pos(void) {
+inline auto rng_uniform_pos(void) -> float {
   float zrand = 0.;
   do {
     zrand = rng_uniform();
