@@ -18,6 +18,7 @@ Checks: >
     -cert-err58-cpp,
     -clang-analyzer-deadcode.DeadStores,
     -clang-diagnostic-unused-macros,
+    -cppcoreguidelines-avoid-do-while,
     -cppcoreguidelines-avoid-magic-numbers,
     -cppcoreguidelines-avoid-non-const-global-variables,
     -cppcoreguidelines-macro-usage,
