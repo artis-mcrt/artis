@@ -229,19 +229,19 @@ static auto fstream_required(const std::string &filename, std::ios_base::openmod
 #endif
 }
 
-inline auto rng_uniform() -> float {
-  const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
-  if (zrand == 1.) {
-    return rng_uniform();
-  }
+inline float rng_uniform(void) {
+  float zrand;
+  do {
+    zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
+  } while (zrand == 1.);
   return zrand;
 }
 
-inline auto rng_uniform_pos() -> float {
-  const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
-  if (zrand <= 0.) {
-    return rng_uniform_pos();
-  }
+inline float rng_uniform_pos(void) {
+  float zrand = 0.;
+  do {
+    zrand = rng_uniform();
+  } while (zrand <= 0.);
   return zrand;
 }
 
