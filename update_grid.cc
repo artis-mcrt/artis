@@ -698,7 +698,9 @@ void cellcache_change_cell(const int modelgridindex) {
 
   globals::cellcache[cellcacheslotid].cellnumber = modelgridindex;
 
-  globals::cellcache[cellcacheslotid].chi_ff_nnionpart = calculate_chi_ff_nnionpart(modelgridindex);
+  if (modelgridindex >= 0) {
+    globals::cellcache[cellcacheslotid].chi_ff_nnionpart = calculate_chi_ff_nnionpart(modelgridindex);
+  }
 
   //  int nlevels_with_processrates = 0;
   // const double T_e = modelgridindex >= 0 ? grid ::get_Te(modelgridindex) : 0.;
