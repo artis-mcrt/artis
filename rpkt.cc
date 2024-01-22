@@ -942,8 +942,9 @@ static auto calculate_chi_freefree(const int modelgridindex, const double nu) ->
   const auto nne = grid::get_nne(modelgridindex);
   const auto T_e = grid::get_Te(modelgridindex);
 
-  const double chi_ff_nnionpart =
-      use_cellcache ? globals::cellcache[cellcacheslotid].chi_ff_nnionpart : calculate_chi_ff_nnionpart(modelgridindex);
+  const double chi_ff_nnionpart = use_cellcache && globals::cellcache[cellcacheslotid].cellnumber == modelgridindex
+                                      ? globals::cellcache[cellcacheslotid].chi_ff_nnionpart
+                                      : calculate_chi_ff_nnionpart(modelgridindex);
   const double chi_ff = chi_ff_nnionpart * 3.69255e8 / sqrt(T_e) * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
 
   if (!std::isfinite(chi_ff)) {
