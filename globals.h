@@ -195,11 +195,12 @@ struct chelements {
 };
 
 struct cellcache {
-  double *cooling_contrib;  /// Cooling contributions by the different processes.
-  struct chelements *chelements;
-  struct chlevels *ch_all_levels;
-  double *ch_allcont_departureratios;
-  int cellnumber;  /// Identifies the cell the data is valid for.
+  double *cooling_contrib = nullptr;  /// Cooling contributions by the different processes.
+  struct chelements *chelements = nullptr;
+  struct chlevels *ch_all_levels = nullptr;
+  double *ch_allcont_departureratios = nullptr;
+  double chi_ff_nnionpart{-1};
+  int cellnumber{-1};  /// Identifies the cell the data is valid for.
 };
 
 namespace globals {

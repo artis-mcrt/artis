@@ -919,26 +919,32 @@ void emit_rpkt(struct packet *pkt_ptr) {
   // printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 }
 
-static auto calculate_chi_freefree(const int modelgridindex, const double nu) -> double
-// calculate the free-free absorption coefficient [cm^-1]
-// = kappa(free-free) * nne
-{
-  assert_always(nu > 0.);
+auto calculate_chi_ff_nnionpart(const int modelgridindex) -> double {
   const double g_ff = 1;
-
-  const auto nne = grid::get_nne(modelgridindex);
-  const auto T_e = grid::get_Te(modelgridindex);
-
-  double chi_ff = 0.;
+  double chi_ff_nnionpart = 0.;
   const int nelements = get_nelements();
   for (int element = 0; element < nelements; element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
       const double nnion = get_nnion(modelgridindex, element, ion);
       const int ioncharge = get_ionstage(element, ion) - 1;
-      chi_ff += ioncharge * ioncharge * g_ff * nnion;
+      chi_ff_nnionpart += ioncharge * ioncharge * g_ff * nnion;
     }
   }
-  chi_ff *= 3.69255e8 / sqrt(T_e) * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
+  return chi_ff_nnionpart;
+}
+
+static auto calculate_chi_freefree(const int modelgridindex, const double nu) -> double
+// calculate the free-free absorption coefficient [cm^-1]
+// = kappa(free-free) * nne
+{
+  assert_always(nu > 0.);
+
+  const auto nne = grid::get_nne(modelgridindex);
+  const auto T_e = grid::get_Te(modelgridindex);
+
+  const double chi_ff_nnionpart =
+      use_cellcache ? globals::cellcache[cellcacheslotid].chi_ff_nnionpart : calculate_chi_ff_nnionpart(modelgridindex);
+  const double chi_ff = chi_ff_nnionpart * 3.69255e8 / sqrt(T_e) * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
 
   if (!std::isfinite(chi_ff)) {
     printout("ERRORL: chi_ff is non-infinite mgi %d nne %g nu %g T_e %g\n", modelgridindex, nne, nu, T_e);
@@ -1208,7 +1214,8 @@ void calculate_binned_opacities(const int modelgridindex) {
 
     // calculate_chi_rpkt_cont(nu_mid, globals::chi_rpkt_cont[tid], modelgridindex, false);
     // const auto bin_kappa_cont = globals::chi_rpkt_cont[tid].total / rho;
-    const auto bin_kappa_cont = 0.;
+    // const auto bin_kappa_cont = 0.;
+    const auto bin_kappa_cont = calculate_chi_freefree(modelgridindex, nu_mid) / rho;
 
     if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
       const auto planck_val = radfield::dbb(nu_mid, temperature, 1);
