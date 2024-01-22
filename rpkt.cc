@@ -1095,7 +1095,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
   double chi_bf = 0.;
   double chi_ffheating = 0.;
 
-  if (globals::opacity_case == 4) {
+  if (globals::opacity_case >= 4) {
     /// First contribution: Thomson scattering on free electrons
     sigma = SIGMA_T * nne;
     // reduced e/s for debugging
