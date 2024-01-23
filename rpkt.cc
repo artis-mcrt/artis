@@ -209,7 +209,7 @@ static auto get_event_expansion_opacity(
       return {std::numeric_limits<double>::max(), false};
     }
   }
-  // no more bins, so no opacity below this frequency
+  // no more bins, so no opacity and no chance of further interaction below this frequency
   return {std::numeric_limits<double>::max(), false};
 }
 
