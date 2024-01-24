@@ -5,6 +5,7 @@
 cd $SLURM_SUBMIT_DIR
 
 #spack load gsl%gcc target=$(spack arch -t)
+eval `spack load --sh gsl@2.7.1%gcc@10.2.0 arch=linux-debian10-x86_64`
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
