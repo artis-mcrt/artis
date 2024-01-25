@@ -7,7 +7,6 @@
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
-#include <memory>
 #include <random>
 #include <vector>
 
@@ -174,7 +173,7 @@ auto main(int argc, char *argv[]) -> int {
 
   globals::setup_mpi_vars();
 
-  globals::startofline = std::make_unique<bool[]>(get_max_threads());
+  globals::startofline.resize(get_max_threads());
   if (globals::rank_global == 0) {
     check_already_running();
   }

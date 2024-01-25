@@ -44,7 +44,7 @@ int *acounter = nullptr;
 int nprocs_exspec = 1;
 bool do_emission_res = true;
 
-std::unique_ptr<bool[]> startofline;
+std::vector<bool> startofline;
 
 double gamma_kappagrey;  // set to -ve for proper treatment. If possitive, then
                          // gamma_rays are treated as grey with this opacity.
