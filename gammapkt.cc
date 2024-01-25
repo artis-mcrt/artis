@@ -26,8 +26,8 @@ namespace gammapkt {
 // Code for handing gamma rays - creation and propagation
 
 struct gamma_spec {
-  std::unique_ptr<double[]> energy = nullptr;  // in erg
-  std::unique_ptr<double[]> probability = nullptr;
+  std::vector<double> energy;  // in erg
+  std::vector<double> probability;
   int nlines = 0;
 };
 
@@ -67,8 +67,8 @@ static void read_gamma_spectrum(const int nucindex, const char filename[50])
 
   gamma_spectra[nucindex].nlines = nlines;
 
-  gamma_spectra[nucindex].energy = std::make_unique<double[]>(nlines);
-  gamma_spectra[nucindex].probability = std::make_unique<double[]>(nlines);
+  gamma_spectra[nucindex].energy.resize(nlines, 0.);
+  gamma_spectra[nucindex].probability.resize(nlines, 0.);
 
   double E_gamma_avg = 0.;
   for (int n = 0; n < nlines; n++) {
@@ -90,8 +90,8 @@ static void set_trivial_gamma_spectrum(const int nucindex) {
   // printout("Setting trivial gamma spectrum for z %d a %d engamma %g\n", z, a, decay::nucdecayenergygamma(z, a));
   const int nlines = 1;
   gamma_spectra[nucindex].nlines = nlines;
-  gamma_spectra[nucindex].energy = std::make_unique<double[]>(nlines);
-  gamma_spectra[nucindex].probability = std::make_unique<double[]>(nlines);
+  gamma_spectra[nucindex].energy.resize(nlines, 0.);
+  gamma_spectra[nucindex].probability.resize(nlines, 0.);
   gamma_spectra[nucindex].energy[0] = decay::nucdecayenergygamma(nucindex);
   gamma_spectra[nucindex].probability[0] = 1.;
 }
@@ -113,8 +113,8 @@ static void read_decaydata() {
 
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     gamma_spectra[nucindex].nlines = 0;
-    gamma_spectra[nucindex].energy = nullptr;
-    gamma_spectra[nucindex].probability = nullptr;
+    gamma_spectra[nucindex].energy.clear();
+    gamma_spectra[nucindex].probability.clear();
     const int z = decay::get_nuc_z(nucindex);
     const int a = decay::get_nuc_a(nucindex);
     if (z < 1) {
