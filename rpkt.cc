@@ -37,10 +37,12 @@ constexpr auto expopac_nbins =
 static float *expansionopacities = nullptr;
 
 // kappa times Planck function for each bin of each non-empty cell
-static float *expansionopacity_planck_cumulative = nullptr;
+static double *expansionopacity_times_planck = nullptr;
+static double *max_expopac_times_planck = nullptr;
 #ifdef MPI_ON
 MPI_Win win_expansionopacities = MPI_WIN_NULL;
-MPI_Win win_expansionopacity_planck_cumulative = MPI_WIN_NULL;
+MPI_Win win_expansionopacity_times_planck = MPI_WIN_NULL;
+MPI_Win win_max_expopac_times_planck = MPI_WIN_NULL;
 #endif
 
 void allocate_expansionopacities() {
@@ -62,19 +64,27 @@ void allocate_expansionopacities() {
   assert_always(MPI_Win_shared_query(win_expansionopacities, 0, &size, &disp_unit, &expansionopacities) == MPI_SUCCESS);
 
   if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
-    MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(float));
-    int disp_unit = sizeof(float);
+    MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(double));
+    int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &expansionopacity_planck_cumulative,
-                                          &win_expansionopacity_planck_cumulative) == MPI_SUCCESS);
-    assert_always(MPI_Win_shared_query(win_expansionopacities, 0, &size, &disp_unit,
-                                       &expansionopacity_planck_cumulative) == MPI_SUCCESS);
+                                          &expansionopacity_times_planck,
+                                          &win_expansionopacity_times_planck) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(win_expansionopacity_times_planck, 0, &size, &disp_unit,
+                                       &expansionopacity_times_planck) == MPI_SUCCESS);
+
+    size = my_rank_nonemptycells * static_cast<MPI_Aint>(sizeof(double));
+    disp_unit = sizeof(double);
+    assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                          &max_expopac_times_planck, &win_max_expopac_times_planck) == MPI_SUCCESS);
+    assert_always(MPI_Win_shared_query(win_max_expopac_times_planck, 0, &size, &disp_unit, &max_expopac_times_planck) ==
+                  MPI_SUCCESS);
   }
 
 #else
   expansionopacities = static_cast<float *>(malloc(npts_nonempty * expopac_nbins * sizeof(float)));
   if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
-    expansionopacity_planck_cumulative = static_cast<float *>(malloc(npts_nonempty * expopac_nbins * sizeof(float)));
+    expansionopacity_times_planck = static_cast<double *>(malloc(npts_nonempty * expopac_nbins * sizeof(double)));
+    max_expopac_times_planck = static_cast<double *>(malloc(npts_nonempty * sizeof(double)));
   }
 #endif
 }
@@ -144,7 +154,7 @@ static auto get_event_expansion_opacity(
     const int modelgridindex, const int nonemptymgi, const struct packet &pkt_ptr,
     struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,  // NOLINT(misc-unused-parameters)
     const double tau_rnd, const double abort_dist) -> std::tuple<double, bool> {
-  // calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, modelgridindex, true);
+  calculate_chi_rpkt_cont(pkt_ptr.nu_cmf, chi_rpkt_cont, modelgridindex, true);
   const auto doppler = doppler_packet_nucmf_on_nurf(pkt_ptr.pos, pkt_ptr.dir, pkt_ptr.prop_time);
 
   const auto nu_cmf_abort = get_nu_cmf_abort(pkt_ptr.pos, pkt_ptr.dir, pkt_ptr.prop_time, pkt_ptr.nu_rf, abort_dist);
@@ -171,8 +181,8 @@ static auto get_event_expansion_opacity(
     const auto next_bin_edge_nu = (binindex < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex);
     const auto binedgedist = get_linedistance(prop_time, nu_cmf, next_bin_edge_nu, d_nu_on_d_l);
 
-    // const double chi_cont = chi_rpkt_cont.total * doppler;
-    const auto chi_cont = 0.;
+    const double chi_cont = (chi_rpkt_cont.es + chi_rpkt_cont.ff) * doppler;
+    // const auto chi_cont = 0.;
     double chi_bb_expansionopac = 0.;
     if (binindex >= 0) {
       const auto kappa = expansionopacities[nonemptymgi * expopac_nbins + binindex];
@@ -638,19 +648,34 @@ auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double
 // returns a randomly chosen frequency with a distribution of Planck function times the expansion opacity
 {
   assert_testmodeonly(EXPANSION_OPAC_SAMPLE_KAPPAPLANCK);
-  const auto *kappa_planck_bins = &expansionopacity_planck_cumulative[nonemptymgi * expopac_nbins];
+  // const auto *kappa_planck_bins = &expansionopacity_planck_cumulative[nonemptymgi * expopac_nbins];
 
-  const auto rnd_integral = rng_uniform() * kappa_planck_bins[expopac_nbins - 1];
-  const auto *selected_partintegral =
-      std::lower_bound(kappa_planck_bins, kappa_planck_bins + expopac_nbins, rnd_integral);
-  const auto binindex = std::min(std::distance(kappa_planck_bins, selected_partintegral), expopac_nbins - 1);
-  // use a linear interpolation for the frequency within the bin
-  const auto bin_nu_lower = get_expopac_bin_nu_lower(binindex);
-  const auto delta_nu = get_expopac_bin_nu_upper(binindex) - bin_nu_lower;
-  const double nuoffset = rng_uniform() * delta_nu;
-  const double nu = bin_nu_lower + nuoffset;
+  // const auto rnd_integral = rng_uniform() * kappa_planck_bins[expopac_nbins - 1];
+  // const auto *selected_partintegral =
+  //     std::lower_bound(kappa_planck_bins, kappa_planck_bins + expopac_nbins, rnd_integral);
+  // const auto binindex = std::min(std::distance(kappa_planck_bins, selected_partintegral), expopac_nbins - 1);
+  // assert_always(kappa_planck_bins[expopac_nbins - 1] >= kappa_planck_bins[binindex]);
+  // // use a linear interpolation for the frequency within the bin
+  // const auto bin_nu_lower = get_expopac_bin_nu_lower(binindex);
+  // const auto delta_nu = get_expopac_bin_nu_upper(binindex) - bin_nu_lower;
+  // const double nuoffset = rng_uniform() * delta_nu;
+  // const double nu = bin_nu_lower + nuoffset;
+  const auto *kappa_planck_bins = &expansionopacity_times_planck[nonemptymgi * expopac_nbins];
 
-  return nu;
+  const auto nu_max = get_expopac_bin_nu_upper(0);
+  const auto nu_min = get_expopac_bin_nu_lower(expopac_nbins - 1);
+  assert_always(nu_max > nu_min);
+  while (true) {
+    const double nu = nu_min + rng_uniform() * (nu_max - nu_min);
+    auto binindex = static_cast<ptrdiff_t>(((1e8 * CLIGHT / nu) - expopac_lambdamin) / expopac_deltalambda);
+
+    if (binindex >= 0 && binindex < expopac_nbins) {
+      if (rng_uniform() * max_expopac_times_planck[nonemptymgi] <= kappa_planck_bins[binindex]) {
+        // printout("[debug] sample_planck: bin %d lambda %g\n", binindex, (1e8 * CLIGHT / nu));
+        return nu;
+      }
+    }
+  }
 }
 
 static void rpkt_event_thickcell(struct packet *pkt_ptr)
@@ -1169,8 +1194,9 @@ void MPI_Bcast_binned_opacities(const int modelgridindex, const int root_node_id
                 globals::mpi_comm_internode);
 
       if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
-        MPI_Bcast(&expansionopacity_planck_cumulative[nonemptymgi * expopac_nbins], expopac_nbins, MPI_FLOAT,
-                  root_node_id, globals::mpi_comm_internode);
+        MPI_Bcast(&expansionopacity_times_planck[nonemptymgi * expopac_nbins], expopac_nbins, MPI_DOUBLE, root_node_id,
+                  globals::mpi_comm_internode);
+        MPI_Bcast(&max_expopac_times_planck[nonemptymgi], 1, MPI_DOUBLE, root_node_id, globals::mpi_comm_internode);
       }
     }
   }
@@ -1195,6 +1221,7 @@ void calculate_binned_opacities(const int modelgridindex) {
                        [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; });
   int lineindex = std::distance(globals::linelist, matchline);
 
+  max_expopac_times_planck[nonemptymgi] = 0.;
   for (size_t binindex = 0; binindex < expopac_nbins; binindex++) {
     double bin_linesum = 0.;
 
@@ -1203,7 +1230,7 @@ void calculate_binned_opacities(const int modelgridindex) {
     const auto nu_lower = get_expopac_bin_nu_lower(binindex);
     const auto nu_mid = (nu_upper + nu_lower) / 2.;
 
-    const auto delta_nu = nu_upper - nu_lower;
+    // const auto delta_nu = nu_upper - nu_lower;
 
     while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= nu_lower) {
       const float tau_line = get_tau_sobolev(modelgridindex, lineindex, t_mid, false);
@@ -1223,12 +1250,17 @@ void calculate_binned_opacities(const int modelgridindex) {
 
     if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
       const auto planck_val = radfield::dbb(nu_mid, temperature, 1);
-      auto *kappa_planck_bins = &expansionopacity_planck_cumulative[nonemptymgi * expopac_nbins];
-      const auto lower_val = ((binindex > 0) ? kappa_planck_bins[binindex - 1] : 0.);
-      kappa_planck_bins[binindex] = lower_val + (bin_kappa_bb + bin_kappa_cont) * planck_val * delta_nu;
+      auto *kappa_planck_bins = &expansionopacity_times_planck[nonemptymgi * expopac_nbins];
+      const auto kappa_planck = (bin_kappa_bb + bin_kappa_cont) * planck_val;
+
+      if (kappa_planck > max_expopac_times_planck[nonemptymgi]) {
+        max_expopac_times_planck[nonemptymgi] = kappa_planck;
+      }
+      kappa_planck_bins[binindex] = kappa_planck;
     }
 
-    // printout("bin %d: lambda %g to %g kappabb %g kappa_cont %g kappa_grey %g kappa_planck_cumulative %g\n", binindex,
+    // printout("bin %d: lambda %g to %g kappabb %g kappa_cont %g kappa_grey %g kappa_planck_cumulative %g\n",
+    // binindex,
     //          1e8 / CLIGHT * nu_upper, 1e8 * CLIGHT / nu_lower, bin_kappa_bb, bin_kappa_cont,
     //          grid::modelgrid[modelgridindex].kappagrey, kappa_planck_cumulative[binindex]);
   }
