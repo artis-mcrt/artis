@@ -13,7 +13,6 @@
 #include <iostream>
 #include <iterator>
 #include <limits>
-#include <ranges>
 #include <span>
 #include <sstream>
 #include <string>
