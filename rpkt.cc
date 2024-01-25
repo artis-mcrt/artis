@@ -162,7 +162,10 @@ static auto get_event_expansion_opacity(
   assert_always(globals::cellcache[cellcacheslotid].cellnumber == modelgridindex);
   double dist = 0.;
   double tau = 0.;
-  auto binindex_start = static_cast<size_t>(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda);
+  auto binindex_start = static_cast<ptrdiff_t>(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda);
+  if (binindex_start < 0) {
+    binindex_start = 0;
+  }
 
   for (size_t binindex = binindex_start; binindex < expopac_nbins; binindex++) {
     const auto next_bin_edge_nu = (binindex < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex);
