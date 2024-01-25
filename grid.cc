@@ -13,6 +13,7 @@
 #include <iostream>
 #include <iterator>
 #include <limits>
+#include <ranges>
 #include <span>
 #include <sstream>
 #include <string>
@@ -1631,7 +1632,7 @@ static void calc_modelinit_totmassradionuclides() {
   const double dcoord_rcyl = globals::vmax * t_model / ncoord_model[0];    // dr for input model
   const double dcoord_z = 2. * globals::vmax * t_model / ncoord_model[1];  // dz for input model
 
-  for (int mgi = 0; mgi < get_npts_model(); mgi++) {
+  for (auto mgi : std::views::iota(0, get_npts_model())) {
     if (get_rho_tmin(mgi) <= 0.) {
       continue;
     }
