@@ -25,13 +25,12 @@
 namespace gammapkt {
 // Code for handing gamma rays - creation and propagation
 
-struct gamma_spec {
-  std::vector<double> energy;  // in erg
-  std::vector<double> probability;
-  int nlines = 0;
+struct gamma_line {
+  double energy{};  // in erg
+  double probability{};
 };
 
-static struct gamma_spec *gamma_spectra;
+static std::vector<std::vector<struct gamma_line>> gamma_spectra;
 
 struct gammaline {
   int nucindex;       // is it a Ni56, Co56, a fake line, etc
@@ -65,18 +64,15 @@ static void read_gamma_spectrum(const int nucindex, const char filename[50])
   int nlines = 0;
   assert_always(fscanf(filein, "%d", &nlines) == 1);
 
-  gamma_spectra[nucindex].nlines = nlines;
-
-  gamma_spectra[nucindex].energy.resize(nlines, 0.);
-  gamma_spectra[nucindex].probability.resize(nlines, 0.);
+  gamma_spectra[nucindex].resize(nlines);
 
   double E_gamma_avg = 0.;
   for (int n = 0; n < nlines; n++) {
     double en_mev = 0.;
     double prob = 0.;
     assert_always(fscanf(filein, "%lg %lg", &en_mev, &prob) == 2);
-    gamma_spectra[nucindex].energy[n] = en_mev * MEV;
-    gamma_spectra[nucindex].probability[n] = prob;
+    gamma_spectra[nucindex][n].energy = en_mev * MEV;
+    gamma_spectra[nucindex][n].probability = prob;
     E_gamma_avg += en_mev * MEV * prob;
   }
   fclose(filein);
@@ -89,11 +85,9 @@ static void read_gamma_spectrum(const int nucindex, const char filename[50])
 static void set_trivial_gamma_spectrum(const int nucindex) {
   // printout("Setting trivial gamma spectrum for z %d a %d engamma %g\n", z, a, decay::nucdecayenergygamma(z, a));
   const int nlines = 1;
-  gamma_spectra[nucindex].nlines = nlines;
-  gamma_spectra[nucindex].energy.resize(nlines, 0.);
-  gamma_spectra[nucindex].probability.resize(nlines, 0.);
-  gamma_spectra[nucindex].energy[0] = decay::nucdecayenergygamma(nucindex);
-  gamma_spectra[nucindex].probability[0] = 1.;
+  gamma_spectra[nucindex].resize(nlines);
+  gamma_spectra[nucindex][0].energy = decay::nucdecayenergygamma(nucindex);
+  gamma_spectra[nucindex][0].probability = 1.;
 }
 
 static void read_decaydata() {
@@ -109,12 +103,10 @@ static void read_decaydata() {
     std::rename("co_lines.txt", "co56_lines.txt");
   }
 
-  gamma_spectra = static_cast<struct gamma_spec *>(calloc(decay::get_num_nuclides(), sizeof(struct gamma_spec)));
+  gamma_spectra.resize(decay::get_num_nuclides());
 
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-    gamma_spectra[nucindex].nlines = 0;
-    gamma_spectra[nucindex].energy.clear();
-    gamma_spectra[nucindex].probability.clear();
+    gamma_spectra[nucindex].clear();
     const int z = decay::get_nuc_z(nucindex);
     const int a = decay::get_nuc_a(nucindex);
     if (z < 1) {
@@ -172,9 +164,9 @@ void init_gamma_linelist() {
 
   // Now do the sorting.
 
-  int total_lines = 0;
+  ptrdiff_t total_lines = 0;
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-    total_lines += gamma_spectra[nucindex].nlines;
+    total_lines += std::ssize(gamma_spectra[nucindex]);
   }
   printout("total gamma-ray lines %d\n", total_lines);
 
@@ -182,9 +174,9 @@ void init_gamma_linelist() {
   allnuc_gamma_line_list.reserve(total_lines);
 
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-    for (int j = 0; j < gamma_spectra[nucindex].nlines; j++) {
+    for (ptrdiff_t j = 0; j < std::ssize(gamma_spectra[nucindex]); j++) {
       allnuc_gamma_line_list.push_back(
-          {.nucindex = nucindex, .nucgammaindex = j, .energy = gamma_spectra[nucindex].energy[j]});
+          {.nucindex = nucindex, .nucgammaindex = static_cast<int>(j), .energy = gamma_spectra[nucindex][j].energy});
     }
   }
   allnuc_gamma_line_list.shrink_to_fit();
@@ -194,13 +186,13 @@ void init_gamma_linelist() {
   FILE *const line_list = fopen_required("gammalinelist.out", "w");
 
   fprintf(line_list, "#index nucindex Z A nucgammmaindex en_gamma_mev gammaline_probability\n");
-  for (int i = 0; i < total_lines; i++) {
+  for (ptrdiff_t i = 0; i < total_lines; i++) {
     const int nucindex = allnuc_gamma_line_list[i].nucindex;
     const int index = allnuc_gamma_line_list[i].nucgammaindex;
-    fprintf(line_list, "%d %d %d %d %d %g %g \n", i, allnuc_gamma_line_list[i].nucindex,
+    fprintf(line_list, "%d %d %d %d %d %g %g \n", static_cast<int>(i), allnuc_gamma_line_list[i].nucindex,
             decay::get_nuc_z(allnuc_gamma_line_list[i].nucindex), decay::get_nuc_a(allnuc_gamma_line_list[i].nucindex),
-            allnuc_gamma_line_list[i].nucgammaindex, gamma_spectra[nucindex].energy[index] / MEV,
-            gamma_spectra[nucindex].probability[index]);
+            allnuc_gamma_line_list[i].nucgammaindex, gamma_spectra[nucindex][index].energy / MEV,
+            gamma_spectra[nucindex][index].probability);
   }
   fclose(line_list);
 }
@@ -230,10 +222,10 @@ static auto choose_gamma_ray(const int nucindex) -> double {
 
   const double zrand = rng_uniform();
   double runtot = 0.;
-  for (int n = 0; n < gamma_spectra[nucindex].nlines; n++) {
-    runtot += gamma_spectra[nucindex].probability[n] * gamma_spectra[nucindex].energy[n] / E_gamma;
+  for (ptrdiff_t n = 0; n < std::ssize(gamma_spectra[nucindex]); n++) {
+    runtot += gamma_spectra[nucindex][n].probability * gamma_spectra[nucindex][n].energy / E_gamma;
     if (zrand <= runtot) {
-      return gamma_spectra[nucindex].energy[n] / H;
+      return gamma_spectra[nucindex][n].energy / H;
     }
   }
 
@@ -250,7 +242,7 @@ void pellet_gamma_decay(struct packet *pkt_ptr) {
   // is moving with the matter.
 
   // if no gamma spectra is known, then covert straight to kpkts (e.g., Fe52, Mn52)
-  if (gamma_spectra[pkt_ptr->pellet_nucindex].nlines == 0) {
+  if (gamma_spectra[pkt_ptr->pellet_nucindex].empty()) {
     pkt_ptr->type = TYPE_KPKT;
     pkt_ptr->absorptiontype = -6;
     return;
