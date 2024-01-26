@@ -293,10 +293,10 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
           const double chi_cont_nobf = chi_cont - chi_vpkt_cont.bf;
           tau_vpkt[ind] += chi_cont_nobf * s_cont;
         } else if (exclude[ind] == -3) {
-          const double chi_cont_noff = chi_cont - chi_vpkt_cont.ff;
+          const double chi_cont_noff = chi_cont - chi_vpkt_cont.ffheat;
           tau_vpkt[ind] += chi_cont_noff * s_cont;
         } else if (exclude[ind] == -4) {
-          const double chi_cont_noes = chi_cont - chi_vpkt_cont.es;
+          const double chi_cont_noes = chi_cont - chi_vpkt_cont.ffescat;
           tau_vpkt[ind] += chi_cont_noes * s_cont;
         } else {
           tau_vpkt[ind] += chi_cont * s_cont;

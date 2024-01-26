@@ -153,8 +153,8 @@ struct gslintegration_paras {
 struct rpkt_continuum_absorptioncoeffs {
   double nu{NAN};  // frequency at which opacity was calculated
   double total{0.};
-  double es{0.};
-  double ff{0.};
+  double ffescat{0.};
+  double ffheat{0.};
   double bf{0.};
   double ffheating{0.};
   // double bfheating;

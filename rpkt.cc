@@ -181,7 +181,7 @@ static auto get_event_expansion_opacity(
     const auto next_bin_edge_nu = (binindex < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex);
     const auto binedgedist = get_linedistance(prop_time, nu_cmf, next_bin_edge_nu, d_nu_on_d_l);
 
-    const double chi_cont = (chi_rpkt_cont.es + chi_rpkt_cont.ff) * doppler;
+    const double chi_cont = (chi_rpkt_cont.ffescat + chi_rpkt_cont.ffheat) * doppler;
     // const auto chi_cont = 0.;
     double chi_bb_expansionopac = 0.;
     if (binindex >= 0) {
@@ -502,8 +502,8 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
 
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
   const double chi_cont = chi_rpkt_cont.total * dopplerfactor;
-  const double chi_escatter = chi_rpkt_cont.es * dopplerfactor;
-  const double chi_ff = chi_rpkt_cont.ff * dopplerfactor;
+  const double chi_escatter = chi_rpkt_cont.ffescat * dopplerfactor;
+  const double chi_ff = chi_rpkt_cont.ffheat * dopplerfactor;
   const double chi_bf = chi_rpkt_cont.bf * dopplerfactor;
 
   /// continuum process happens. select due to its probabilities sigma/chi_cont, chi_ff/chi_cont,
@@ -648,19 +648,6 @@ auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double
 // returns a randomly chosen frequency with a distribution of Planck function times the expansion opacity
 {
   assert_testmodeonly(EXPANSION_OPAC_SAMPLE_KAPPAPLANCK);
-  // const auto *kappa_planck_bins = &expansionopacity_planck_cumulative[nonemptymgi * expopac_nbins];
-
-  // const auto rnd_integral = rng_uniform() * kappa_planck_bins[expopac_nbins - 1];
-  // const auto *selected_partintegral =
-  //     std::lower_bound(kappa_planck_bins, kappa_planck_bins + expopac_nbins, rnd_integral);
-  // const auto binindex = std::min(std::distance(kappa_planck_bins, selected_partintegral), expopac_nbins - 1);
-  // assert_always(kappa_planck_bins[expopac_nbins - 1] >= kappa_planck_bins[binindex]);
-  // // use a linear interpolation for the frequency within the bin
-  // const auto bin_nu_lower = get_expopac_bin_nu_lower(binindex);
-  // const auto delta_nu = get_expopac_bin_nu_upper(binindex) - bin_nu_lower;
-  // const double nuoffset = rng_uniform() * delta_nu;
-  // const double nu = bin_nu_lower + nuoffset;
-  const auto *kappa_planck_bins = &expansionopacity_times_planck[nonemptymgi * expopac_nbins];
 
   const auto nu_max = get_expopac_bin_nu_upper(0);
   const auto nu_min = get_expopac_bin_nu_lower(expopac_nbins - 1);
@@ -670,8 +657,8 @@ auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double
     auto binindex = static_cast<ptrdiff_t>(((1e8 * CLIGHT / nu) - expopac_lambdamin) / expopac_deltalambda);
 
     if (binindex >= 0 && binindex < expopac_nbins) {
-      if (rng_uniform() * max_expopac_times_planck[nonemptymgi] <= kappa_planck_bins[binindex]) {
-        // printout("[debug] sample_planck: bin %d lambda %g\n", binindex, (1e8 * CLIGHT / nu));
+      const auto kappa_planck = expansionopacity_times_planck[nonemptymgi * expopac_nbins + binindex];
+      if (rng_uniform() * max_expopac_times_planck[nonemptymgi] <= kappa_planck) {
         return nu;
       }
     }
@@ -947,7 +934,7 @@ void emit_rpkt(struct packet *pkt_ptr) {
   // printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 }
 
-auto calculate_chi_ff_nnionpart(const int modelgridindex) -> double {
+static auto calculate_chi_ffheat_nnionpart(const int modelgridindex) -> double {
   const double g_ff = 1;
   double chi_ff_nnionpart = 0.;
   const int nelements = get_nelements();
@@ -961,8 +948,20 @@ auto calculate_chi_ff_nnionpart(const int modelgridindex) -> double {
   return chi_ff_nnionpart;
 }
 
-static auto calculate_chi_freefree(const int modelgridindex, const double nu) -> double
-// calculate the free-free absorption coefficient [cm^-1]
+static auto get_chi_ff_nnionpart(const int modelgridindex) -> double {
+  if (!use_cellcache || globals::cellcache[cellcacheslotid].cellnumber != modelgridindex) {
+    return calculate_chi_ffheat_nnionpart(modelgridindex);
+  }
+
+  if (globals::cellcache[cellcacheslotid].chi_ff_nnionpart < 0.) {
+    globals::cellcache[cellcacheslotid].chi_ff_nnionpart = calculate_chi_ffheat_nnionpart(modelgridindex);
+  }
+
+  return globals::cellcache[cellcacheslotid].chi_ff_nnionpart;
+}
+
+static auto calculate_chi_ffheating(const int modelgridindex, const double nu) -> double
+// calculate the free-free absorption (to kpkt heating) coefficient [cm^-1]
 // = kappa(free-free) * nne
 {
   assert_always(nu > 0.);
@@ -970,10 +969,8 @@ static auto calculate_chi_freefree(const int modelgridindex, const double nu) ->
   const auto nne = grid::get_nne(modelgridindex);
   const auto T_e = grid::get_Te(modelgridindex);
 
-  const double chi_ff_nnionpart = use_cellcache && globals::cellcache[cellcacheslotid].cellnumber == modelgridindex
-                                      ? globals::cellcache[cellcacheslotid].chi_ff_nnionpart
-                                      : calculate_chi_ff_nnionpart(modelgridindex);
-  const double chi_ff = chi_ff_nnionpart * 3.69255e8 / sqrt(T_e) * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
+  const double chi_ff =
+      get_chi_ff_nnionpart(modelgridindex) * 3.69255e8 / sqrt(T_e) * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
 
   if (!std::isfinite(chi_ff)) {
     printout("ERRORL: chi_ff is non-infinite mgi %d nne %g nu %g T_e %g\n", modelgridindex, nne, nu, T_e);
@@ -1124,20 +1121,15 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
 
   const auto nne = grid::get_nne(modelgridindex);
 
-  double sigma = 0.;
+  double chi_escat = 0.;
   /// free-free absorption
-  const double chi_ff = calculate_chi_freefree(modelgridindex, nu_cmf);
+  const double chi_ff = calculate_chi_ffheating(modelgridindex, nu_cmf);
   double chi_bf = 0.;
   double chi_ffheating = 0.;
 
   if (globals::opacity_case >= 4) {
     /// First contribution: Thomson scattering on free electrons
-    sigma = SIGMA_T * nne;
-    // reduced e/s for debugging
-    // sigma = 1e-30*sigma;
-    // switched off e/s for debugging
-    // sigma_cmf = 0. * nne;
-    // sigma *= 0.1;
+    chi_escat = SIGMA_T * nne;
 
     chi_ffheating = chi_ff;
 
@@ -1151,7 +1143,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
     // sigma = globals::cell[pkt_ptr->where].chi_grey * globals::cell[pkt_ptr->where].rho;
     // sigma = SIGMA_T * nne;
 
-    sigma = 0.;
+    chi_escat = 0.;
     // chi_ff = 0.9*sigma;
     // sigma *= 0.1;
 
@@ -1161,23 +1153,23 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
   chi_rpkt_cont.nu = nu_cmf;
   chi_rpkt_cont.modelgridindex = modelgridindex;
   chi_rpkt_cont.recalculate_required = false;
-  chi_rpkt_cont.total = sigma + chi_bf + chi_ff;
-  chi_rpkt_cont.es = sigma;
-  chi_rpkt_cont.ff = chi_ff;
+  chi_rpkt_cont.total = chi_escat + chi_bf + chi_ff;
+  chi_rpkt_cont.ffescat = chi_escat;
+  chi_rpkt_cont.ffheat = chi_ff;
   chi_rpkt_cont.bf = chi_bf;
   chi_rpkt_cont.ffheating = chi_ffheating;
   // chi_rpkt_cont_thisthread.bfheating = chi_bfheating;
 
   if (!std::isfinite(chi_rpkt_cont.total)) {
     printout("[fatal] calculate_chi_rpkt_cont: resulted in non-finite chi_rpkt_cont.total ... abort\n");
-    printout("[fatal] es %g, ff %g, bf %g\n", chi_rpkt_cont.es, chi_rpkt_cont.ff, chi_rpkt_cont.bf);
+    printout("[fatal] es %g, ff %g, bf %g\n", chi_rpkt_cont.ffescat, chi_rpkt_cont.ffheat, chi_rpkt_cont.bf);
     printout("[fatal] nbfcontinua %d\n", globals::nbfcontinua);
     printout("[fatal] in cell %d with density %g\n", modelgridindex, grid::get_rho(modelgridindex));
     printout("[fatal] pkt_ptr->nu_cmf %g\n", nu_cmf);
-    if (std::isfinite(chi_rpkt_cont.es)) {
-      chi_rpkt_cont.ff = 0.;
+    if (std::isfinite(chi_rpkt_cont.ffescat)) {
+      chi_rpkt_cont.ffheat = 0.;
       chi_rpkt_cont.bf = 0.;
-      chi_rpkt_cont.total = chi_rpkt_cont.es;
+      chi_rpkt_cont.total = chi_rpkt_cont.ffescat;
     } else {
       std::abort();
     }
@@ -1232,8 +1224,6 @@ void calculate_binned_opacities(const int modelgridindex) {
     const auto nu_lower = get_expopac_bin_nu_lower(binindex);
     const auto nu_mid = (nu_upper + nu_lower) / 2.;
 
-    // const auto delta_nu = nu_upper - nu_lower;
-
     while (lineindex < globals::nlines && globals::linelist[lineindex].nu >= nu_lower) {
       const float tau_line = get_tau_sobolev(modelgridindex, lineindex, t_mid, false);
       const auto linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
@@ -1245,20 +1235,20 @@ void calculate_binned_opacities(const int modelgridindex) {
     assert_always(std::isfinite(bin_kappa_bb));
     kappa_bb_bins[binindex] = bin_kappa_bb;
 
-    // calculate_chi_rpkt_cont(nu_mid, globals::chi_rpkt_cont[tid], modelgridindex, false);
-    // const auto bin_kappa_cont = globals::chi_rpkt_cont[tid].total / rho;
-    // const auto bin_kappa_cont = 0.;
-    const auto bin_kappa_cont = calculate_chi_freefree(modelgridindex, nu_mid) / rho;
-
     if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
+      // calculate_chi_rpkt_cont(nu_mid, globals::chi_rpkt_cont[tid], modelgridindex, false);
+      // const auto bin_kappa_cont = globals::chi_rpkt_cont[tid].total / rho;
+      // const auto bin_kappa_cont = 0.;
+      const auto bin_kappa_cont = calculate_chi_ffheating(modelgridindex, nu_mid) / rho;
+
       const auto planck_val = radfield::dbb(nu_mid, temperature, 1);
-      auto *kappa_planck_bins = &expansionopacity_times_planck[nonemptymgi * expopac_nbins];
       const auto kappa_planck = (bin_kappa_bb + bin_kappa_cont) * planck_val;
 
       if (kappa_planck > max_expopac_times_planck[nonemptymgi]) {
         max_expopac_times_planck[nonemptymgi] = kappa_planck;
       }
-      kappa_planck_bins[binindex] = kappa_planck;
+
+      expansionopacity_times_planck[nonemptymgi * expopac_nbins + binindex] = kappa_planck;
     }
 
     // printout("bin %d: lambda %g to %g kappabb %g kappa_cont %g kappa_grey %g kappa_planck_cumulative %g\n",
