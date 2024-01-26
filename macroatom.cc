@@ -444,8 +444,7 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
 
     // first cumulative_transitions[i] such that cumulative_transitions[i] > randomrate
     const auto *upperval = std::upper_bound(cumulative_transitions.begin(), cumulative_transitions.end(), randomrate);
-    const auto selected_action =
-        static_cast<const enum ma_action>(std::distance(cumulative_transitions.cbegin(), upperval));
+    const auto selected_action = static_cast<enum ma_action>(std::distance(cumulative_transitions.cbegin(), upperval));
 
     assert_always(selected_action < MA_ACTION_COUNT);
     assert_always(cumulative_transitions[selected_action] > randomrate);
