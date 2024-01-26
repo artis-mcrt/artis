@@ -149,7 +149,7 @@ static auto phi_ion_equilib(const int element, const int ion, const int modelgri
   for (int ion = 0; ion <= uppermost_ion; ion++) {
     ionfractions[ion] = ionfractions[ion] / normfactor;
 
-    if (!std::isfinite(ionfractions[ion]) && modelgridindex != grid::get_npts_model()) {
+    if ((normfactor == 0. || !std::isfinite(ionfractions[ion])) && modelgridindex != grid::get_npts_model()) {
       printout("[warning] ionfract set to zero for ionstage %d of Z=%d in cell %d with T_e %g, T_R %g\n",
                get_ionstage(element, ion), get_atomicnumber(element), modelgridindex, grid::get_Te(modelgridindex),
                grid::get_TR(modelgridindex));
