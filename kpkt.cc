@@ -379,7 +379,8 @@ void do_kpkt_blackbody(struct packet *pkt_ptr)
   const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
 
   if (EXPANSIONOPACITIES_ON && EXPANSION_OPAC_SAMPLE_KAPPAPLANCK && grid::modelgrid[modelgridindex].thick != 1) {
-    pkt_ptr->nu_cmf = sample_planck_times_expansion_opacity(modelgridindex);
+    const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
+    pkt_ptr->nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
   } else {
     pkt_ptr->nu_cmf = sample_planck_montecarlo(grid::get_Te(modelgridindex));
     // TODO: is this alternative method faster or more accurate or neither?
