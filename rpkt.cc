@@ -177,7 +177,7 @@ static auto get_event_expansion_opacity(
     binindex_start = 0;
   }
 
-  for (size_t binindex = binindex_start; binindex < expopac_nbins; binindex++) {
+  for (ptrdiff_t binindex = binindex_start; binindex < expopac_nbins; binindex++) {
     const auto next_bin_edge_nu = (binindex < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex);
     const auto binedgedist = get_linedistance(prop_time, nu_cmf, next_bin_edge_nu, d_nu_on_d_l);
 
