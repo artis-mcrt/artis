@@ -301,9 +301,9 @@ static auto get_num_decaypaths() -> int { return static_cast<int>(decaypaths.siz
 static auto get_decaypathlength(const decaypath &dpath) -> int { return static_cast<int>(dpath.z.size()); }
 static auto get_decaypathlength(int decaypathindex) -> int { return get_decaypathlength(decaypaths[decaypathindex]); }
 
-static auto calculate_decaypath_branchproduct(const decaypath &decaypath) -> double
-// return the product of all branching factors in the decay path
-{
+static auto calculate_decaypath_branchproduct(const decaypath &decaypath) -> double {
+  // return the product of all branching factors in the decay path
+
   double branchprod = 1.;
   for (int i = 0; i < get_decaypathlength(decaypath); i++) {
     branchprod = branchprod * get_nuc_decaybranchprob(decaypath.nucindex[i], decaypath.decaytypes[i]);
@@ -311,15 +311,9 @@ static auto calculate_decaypath_branchproduct(const decaypath &decaypath) -> dou
   return branchprod;
 }
 
-static auto calculate_decaypath_branchproduct(int decaypathindex) -> double
-// return the product of all branching factors in the decay path
-{
-  return calculate_decaypath_branchproduct(decaypaths[decaypathindex]);
-}
+static auto get_decaypath_lastnucdecayenergy(const decaypath &dpath) -> double {
+  // a decaypath's energy is the decay energy of the last nuclide and decaytype in the chain
 
-static auto get_decaypath_lastnucdecayenergy(const decaypath &dpath) -> double
-// a decaypath's energy is the decay energy of the last nuclide and decaytype in the chain
-{
   const int nucindex_end = dpath.nucindex.back();
   const int decaytype_end = dpath.decaytypes.back();
   return nucdecayenergy(nucindex_end, decaytype_end);
