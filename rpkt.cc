@@ -1197,7 +1197,6 @@ void MPI_Bcast_binned_opacities(const int modelgridindex, const int root_node_id
 
 void calculate_binned_opacities(const int modelgridindex) {
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  auto *kappa_bb_bins = &expansionopacities[nonemptymgi * expopac_nbins];
   const auto rho = grid::get_rho(modelgridindex);
 
   const auto sys_time_start_calc = std::time(nullptr);
@@ -1216,6 +1215,7 @@ void calculate_binned_opacities(const int modelgridindex) {
   if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
     max_expopac_times_planck[nonemptymgi] = 0.;
   }
+
   for (size_t binindex = 0; binindex < expopac_nbins; binindex++) {
     double bin_linesum = 0.;
 
@@ -1233,7 +1233,7 @@ void calculate_binned_opacities(const int modelgridindex) {
 
     const float bin_kappa_bb = 1. / (CLIGHT * t_mid * rho) * bin_linesum;
     assert_always(std::isfinite(bin_kappa_bb));
-    kappa_bb_bins[binindex] = bin_kappa_bb;
+    expansionopacities[nonemptymgi * expopac_nbins + binindex] = bin_kappa_bb;
 
     if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
       // calculate_chi_rpkt_cont(nu_mid, globals::chi_rpkt_cont[tid], modelgridindex, false);
