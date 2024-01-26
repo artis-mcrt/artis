@@ -1049,6 +1049,7 @@ static auto calculate_frac_heating(const int modelgridindex) -> float
   double N_e_contrib = 0.;
   // third term (integral from zero to SF_EMIN)
   const int nsteps = static_cast<int>(ceil(SF_EMIN / DELTA_E) * 10);
+  assert_always(nsteps > 0);
   const double delta_endash = SF_EMIN / nsteps;
   for (int j = 0; j < nsteps; j++) {
     const double endash = SF_EMIN * j / nsteps;
