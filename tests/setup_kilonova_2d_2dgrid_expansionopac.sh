@@ -35,6 +35,7 @@ sed -i'' -e 's/constexpr double MAXTEMP.*/constexpr double MAXTEMP = 20000.;/g' 
 sed -i'' -e 's/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC.*/constexpr bool WRITE_PARTIAL_EMISSIONABSORPTIONSPEC = true;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr bool EXPANSIONOPACITIES_ON.*/constexpr bool EXPANSIONOPACITIES_ON = true;/g' artisoptions.h
+sed -i'' -e 's/constexpr bool EXPANSION_OPAC_SAMPLE_KAPPAPLANCK.*/constexpr bool EXPANSION_OPAC_SAMPLE_KAPPAPLANCK = true;/g' artisoptions.h
 
 cd -
 
