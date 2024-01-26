@@ -3,7 +3,7 @@
 # place in architecture folder, e.g. build/arm64
 BUILD_DIR = build/$(shell uname -m)
 
-CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto=auto -Wno-error=unknown-pragmas
+CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto=auto -Wunknown-pragmas
 
 ifeq ($(MPI),)
 	# MPI option not specified. set to true by default
