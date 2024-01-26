@@ -3,7 +3,7 @@
 # place in architecture folder, e.g. build/arm64
 BUILD_DIR = build/$(shell uname -m)
 
-CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto=auto -Wunknown-pragmas
+CXXFLAGS += -std=c++20 -fstrict-aliasing
 
 ifeq ($(MPI),)
 	# MPI option not specified. set to true by default
@@ -29,11 +29,21 @@ COMPILER_VERSION := $(shell $(CXX) --version)
 
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
   COMPILER_IS_CLANG := TRUE
+  COMPILER_IS_NVCPP := FALSE
 else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
   COMPILER_IS_CLANG := FALSE
+  COMPILER_IS_NVCPP := FALSE
+else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
+  COMPILER_IS_CLANG := FALSE
+  COMPILER_IS_NVCPP := TRUE
 else
   $(warning Unknown compiler)
   COMPILER_IS_CLANG := FALSE
+  COMPILER_IS_NVCPP := FALSE
+endif
+
+ifeq ($(COMPILER_IS_NVCPP),FALSE)
+	CXXFLAGS += -ftree-vectorize -flto=auto -Wunknown-pragmas -Wunused-macros
 endif
 
 ifeq ($(OPENMP),ON)
@@ -179,7 +189,7 @@ else
 	# endif
 endif
 
-CXXFLAGS += -Werror -Werror=undef -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wunused-macros -Wno-inline -Wsign-compare
+CXXFLAGS += -Werror -Werror=undef -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wno-inline -Wsign-compare
 
 
 ### use pg when you want to use gprof profiler
