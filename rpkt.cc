@@ -1221,7 +1221,9 @@ void calculate_binned_opacities(const int modelgridindex) {
                        [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; });
   int lineindex = std::distance(globals::linelist, matchline);
 
-  max_expopac_times_planck[nonemptymgi] = 0.;
+  if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
+    max_expopac_times_planck[nonemptymgi] = 0.;
+  }
   for (size_t binindex = 0; binindex < expopac_nbins; binindex++) {
     double bin_linesum = 0.;
 
