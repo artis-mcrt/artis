@@ -67,7 +67,7 @@ jobs:
             # cache this for classic options because the super low integration tolerance makes generation of the file very slow
             - name: Cache ratecoeff.dat
               if: ${{ startsWith(matrix.testname, 'classicmode') }}
-              uses: actions/cache@v3
+              uses: actions/cache@v4
               with:
                   path: tests/${{ matrix.testname }}_testrun/ratecoeff.dat
                   key: tests/${{ matrix.testname }}_testrun/ratecoeff.dat-${{ github.sha }}
@@ -76,7 +76,7 @@ jobs:
 
             - name: Cache test atomic data
               if: ${{ !startsWith(matrix.testname, 'classicmode') }}
-              uses: actions/cache@v3
+              uses: actions/cache@v4
               id: cache-testatomicdata
               with:
                   path: tests/atomicdata_feconi.tar.xz
@@ -84,7 +84,7 @@ jobs:
 
             - name: Cache test atomic data classic
               if: ${{ startsWith(matrix.testname, 'classicmode') }}
-              uses: actions/cache@v3
+              uses: actions/cache@v4
               id: cache-testatomicdata-classic
               with:
                   path: tests/atomicdata_classic.tar.xz
@@ -200,14 +200,14 @@ jobs:
                   find . -name "*_res_*.out" -exec zstd -v -T0 --rm -f {} \;
 
             - name: Upload output files
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
               with:
                   name: test-${{ matrix.testname }}-output
                   path: tests/${{ matrix.testname }}_testrun
 
             - name: Upload checksum files
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
               with:
                   name: ${{ matrix.testname }}_inputfiles
@@ -215,7 +215,7 @@ jobs:
 
             - name: Set up Python
               if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
-              uses: actions/setup-python@v4
+              uses: actions/setup-python@v5
               with:
                   python-version: '3.11'
                   cache: pip
@@ -249,7 +249,7 @@ jobs:
 
             - name: Upload plot files
               if: always() && matrix.os != 'selfhosted' && matrix.testmode == 'OFF'
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                   name: test-${{ matrix.testname }}-output-pdf
                   path: tests/*.pdf
@@ -287,7 +287,7 @@ jobs:
               run: find .
 
             - name: Upload bundled checksum files
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                   name: checksums
                   path: '*_inputfiles/results_md5*.txt'
