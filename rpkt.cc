@@ -74,8 +74,7 @@ void allocate_expansionopacities() {
 #else
   expansionopacities = static_cast<float *>(malloc(npts_nonempty * expopac_nbins * sizeof(float)));
   if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
-    expansionopacity_times_planck = static_cast<double *>(malloc(npts_nonempty * expopac_nbins * sizeof(double)));
-    max_expopac_times_planck = static_cast<double *>(malloc(npts_nonempty * sizeof(double)));
+    expansionopacity_planck_cumulative = static_cast<double *>(malloc(npts_nonempty * expopac_nbins * sizeof(double)));
   }
 #endif
 }
