@@ -954,7 +954,9 @@ static auto calculate_chi_ffheat_nnionpart(const int modelgridindex) -> double {
       chi_ff_nnionpart += ioncharge * ioncharge * g_ff * nnion;
     }
   }
-  return chi_ff_nnionpart;
+  const auto T_e = grid::get_Te(modelgridindex);
+
+  return chi_ff_nnionpart * 3.69255e8 / sqrt(T_e);
 }
 
 static auto get_chi_ff_nnionpart(const int modelgridindex) -> double {
@@ -977,14 +979,9 @@ static auto calculate_chi_ffheating(const int modelgridindex, const double nu) -
 
   const auto nne = grid::get_nne(modelgridindex);
   const auto T_e = grid::get_Te(modelgridindex);
+  const double chi_ff = get_chi_ff_nnionpart(modelgridindex) * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
 
-  const double chi_ff =
-      get_chi_ff_nnionpart(modelgridindex) * 3.69255e8 / sqrt(T_e) * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
-
-  if (!std::isfinite(chi_ff)) {
-    printout("ERRORL: chi_ff is non-infinite mgi %d nne %g nu %g T_e %g\n", modelgridindex, nne, nu, T_e);
-    std::abort();
-  }
+  assert_testmodeonly(std::isfinite(chi_ff));
 
   return chi_ff;
 }
