@@ -646,10 +646,9 @@ auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double
   const auto *selected_partintegral =
       std::upper_bound(kappa_planck_bins, kappa_planck_bins + expopac_nbins, rnd_integral);
   const auto binindex = std::min(std::distance(kappa_planck_bins, selected_partintegral), expopac_nbins - 1);
-  assert_always(binindex >= 0);
-  assert_always(binindex < expopac_nbins);
+  assert_testmodeonly(binindex >= 0);
+  assert_testmodeonly(binindex < expopac_nbins);
 
-  assert_always(kappa_planck_bins[expopac_nbins - 1] >= kappa_planck_bins[binindex]);
   // use a linear interpolation for the frequency within the bin
   const auto bin_nu_lower = get_expopac_bin_nu_lower(binindex);
   const auto delta_nu = get_expopac_bin_nu_upper(binindex) - bin_nu_lower;
