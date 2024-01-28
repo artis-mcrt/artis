@@ -651,10 +651,7 @@ auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double
   // use a linear interpolation for the frequency within the bin
   const auto bin_nu_lower = get_expopac_bin_nu_lower(binindex);
   const auto delta_nu = get_expopac_bin_nu_upper(binindex) - bin_nu_lower;
-  // const double nuoffset = rng_uniform() * delta_nu;
-  const auto lower_partintegral = (binindex > 0) ? kappa_planck_bins[binindex - 1] : 0.;
-  const double nuoffset =
-      (rnd_integral - lower_partintegral) / (kappa_planck_bins[binindex] - lower_partintegral) * delta_nu;
+  const double nuoffset = rng_uniform() * delta_nu;
   const double nu = bin_nu_lower + nuoffset;
   return nu;
 
