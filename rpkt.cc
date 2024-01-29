@@ -34,10 +34,10 @@ constexpr auto expopac_nbins =
     static_cast<std::ptrdiff_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
 
 // kappa in cm^2/g for each bin of each non-empty cell
-static std::span<float, std::dynamic_extent> expansionopacities;
+static std::span<float> expansionopacities{};
 
 // kappa times Planck function for each bin of each non-empty cell
-static double *expansionopacity_planck_cumulative = nullptr;
+static std::span<double> expansionopacity_planck_cumulative{};
 #ifdef MPI_ON
 MPI_Win win_expansionopacities = MPI_WIN_NULL;
 MPI_Win win_expansionopacity_planck_cumulative = MPI_WIN_NULL;
@@ -50,6 +50,7 @@ void allocate_expansionopacities() {
 
   const auto npts_nonempty = grid::get_nonempty_npts_model();
   float *expansionopacities_data = nullptr;
+  double *expansionopacity_planck_cumulative_data = nullptr;
 #ifdef MPI_ON
   int my_rank_nonemptycells = npts_nonempty / globals::node_nprocs;
   // rank_in_node 0 gets any remainder
@@ -67,19 +68,23 @@ void allocate_expansionopacities() {
     MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(double));
     int disp_unit = sizeof(double);
     assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                          &expansionopacity_planck_cumulative,
+                                          &expansionopacity_planck_cumulative_data,
                                           &win_expansionopacity_planck_cumulative) == MPI_SUCCESS);
     assert_always(MPI_Win_shared_query(win_expansionopacity_planck_cumulative, 0, &size, &disp_unit,
-                                       &expansionopacity_planck_cumulative) == MPI_SUCCESS);
+                                       &expansionopacity_planck_cumulative_data) == MPI_SUCCESS);
   }
 
 #else
   expansionopacities_data = static_cast<float *>(malloc(npts_nonempty * expopac_nbins * sizeof(float)));
   if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
-    expansionopacity_planck_cumulative = static_cast<double *>(malloc(npts_nonempty * expopac_nbins * sizeof(double)));
+    expansionopacity_planck_cumulative_data =
+        static_cast<double *>(malloc(npts_nonempty * expopac_nbins * sizeof(double)));
   }
 #endif
   expansionopacities = std::span{expansionopacities_data, static_cast<size_t>(npts_nonempty * expopac_nbins)};
+  expansionopacity_planck_cumulative = std::span{
+      expansionopacity_planck_cumulative_data,
+      static_cast<size_t>(expansionopacity_planck_cumulative_data == nullptr ? 0 : npts_nonempty * expopac_nbins)};
 }
 
 auto closest_transition(const double nu_cmf, const int next_trans) -> int
