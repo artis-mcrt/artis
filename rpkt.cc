@@ -34,7 +34,7 @@ constexpr auto expopac_nbins =
     static_cast<std::ptrdiff_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
 
 // kappa in cm^2/g for each bin of each non-empty cell
-static float *expansionopacities = nullptr;
+static std::span<float, std::dynamic_extent> expansionopacities;
 
 // kappa times Planck function for each bin of each non-empty cell
 static double *expansionopacity_planck_cumulative = nullptr;
@@ -57,9 +57,12 @@ void allocate_expansionopacities() {
   }
   MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(float));
   int disp_unit = sizeof(float);
-  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &expansionopacities,
-                                        &win_expansionopacities) == MPI_SUCCESS);
-  assert_always(MPI_Win_shared_query(win_expansionopacities, 0, &size, &disp_unit, &expansionopacities) == MPI_SUCCESS);
+  float *expansionopacities_data = nullptr;
+  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
+                                        &expansionopacities_data, &win_expansionopacities) == MPI_SUCCESS);
+  assert_always(MPI_Win_shared_query(win_expansionopacities, 0, &size, &disp_unit, &expansionopacities_data) ==
+                MPI_SUCCESS);
+  expansionopacities = std::span{expansionopacities_data, static_cast<size_t>(npts_nonempty)};
 
   if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
     MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(double));
