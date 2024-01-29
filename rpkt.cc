@@ -49,6 +49,7 @@ void allocate_expansionopacities() {
   }
 
   const auto npts_nonempty = grid::get_nonempty_npts_model();
+  float *expansionopacities_data = nullptr;
 #ifdef MPI_ON
   int my_rank_nonemptycells = npts_nonempty / globals::node_nprocs;
   // rank_in_node 0 gets any remainder
@@ -57,12 +58,10 @@ void allocate_expansionopacities() {
   }
   MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(float));
   int disp_unit = sizeof(float);
-  float *expansionopacities_data = nullptr;
   assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
                                         &expansionopacities_data, &win_expansionopacities) == MPI_SUCCESS);
   assert_always(MPI_Win_shared_query(win_expansionopacities, 0, &size, &disp_unit, &expansionopacities_data) ==
                 MPI_SUCCESS);
-  expansionopacities = std::span{expansionopacities_data, static_cast<size_t>(npts_nonempty)};
 
   if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
     MPI_Aint size = my_rank_nonemptycells * expopac_nbins * static_cast<MPI_Aint>(sizeof(double));
@@ -75,11 +74,12 @@ void allocate_expansionopacities() {
   }
 
 #else
-  expansionopacities = static_cast<float *>(malloc(npts_nonempty * expopac_nbins * sizeof(float)));
+  expansionopacities_data = static_cast<float *>(malloc(npts_nonempty * expopac_nbins * sizeof(float)));
   if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
     expansionopacity_planck_cumulative = static_cast<double *>(malloc(npts_nonempty * expopac_nbins * sizeof(double)));
   }
 #endif
+  expansionopacities = std::span{expansionopacities_data, static_cast<size_t>(npts_nonempty * expopac_nbins)};
 }
 
 auto closest_transition(const double nu_cmf, const int next_trans) -> int
