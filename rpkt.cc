@@ -179,7 +179,7 @@ static auto get_event_expansion_opacity(
     const auto next_bin_edge_nu = (binindex < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex);
     const auto binedgedist = get_linedistance(prop_time, nu_cmf, next_bin_edge_nu, d_nu_on_d_l);
 
-    const double chi_cont = (chi_rpkt_cont.ffescat + chi_rpkt_cont.ffheat) * doppler;
+    const double chi_cont = chi_rpkt_cont.total * doppler;
     // const auto chi_cont = 0.;
     double chi_bb_expansionopac = 0.;
     if (binindex >= 0) {
