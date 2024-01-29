@@ -13,7 +13,7 @@ void time_init();
 void write_timestep_file();
 auto get_noncommentline(std::fstream &input, std::string &line) -> bool;
 
-[[nodiscard]] static inline auto lineiscommentonly(const std::string &line) -> bool
+[[nodiscard]] static inline auto lineiscommentonly(const std::string_view &line) -> bool
 // return true for whitepace-only lines, and lines that are exclusively whitepace up to a '#' character
 {
   for (char const i : line) {
