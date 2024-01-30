@@ -198,9 +198,9 @@ jobs:
             - name: Compile classic mode
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
-                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} -j${{ steps.cpu-count.outputs.count}} OPTIMIZE=OFF sn3d exspec
+                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
-                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} -j${{ steps.cpu-count.outputs.count}} OPTIMIZE=OFF sn3d exspec
+                  make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec

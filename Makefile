@@ -184,7 +184,11 @@ else
 			CXXFLAGS += -O3
 			BUILD_DIR := $(BUILD_DIR)_nofastmath
 		else
-			CXXFLAGS += -Ofast -ffast-math -funsafe-math-optimizations -fno-finite-math-only
+			CXXFLAGS += -Ofast
+
+			ifeq ($(COMPILER_IS_NVCPP),OFF)
+				CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only
+			endif
 		endif
 	# endif
 endif
