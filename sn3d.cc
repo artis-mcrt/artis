@@ -25,6 +25,7 @@
 #include <memory>
 #include <random>
 #include <span>
+#include <vector>
 
 #include "artisoptions.h"
 #include "atomic.h"
