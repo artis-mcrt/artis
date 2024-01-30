@@ -113,6 +113,7 @@ jobs:
                         {name: gcc, ver: 13},
                         {name: clang, ver: 14},
                         {name: clang, ver: 15},
+                        {name: nvc++, ver: '23.11'},
                     ]
                 mpi: [ON, OFF]
                 openmp: [ON, OFF]
@@ -151,6 +152,18 @@ jobs:
               run: |
                   sudo apt install -y clang-${{ matrix.compiler.ver }} --install-suggests
                   echo "CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
+
+            - name: Install nvc++ ${{ matrix.compiler.ver }}
+              if: matrix.compiler.name == 'nvc++'
+              uses: fortran-lang/setup-fortran@v1
+              with:
+                  compiler: ${{ matrix.compiler.name }}
+                  version: ${{ matrix.compiler.ver }}
+
+            - name: Set CXX=nvc++
+              if: matrix.compiler.name == 'nvc++'
+              run: |
+                  echo "CXX=nvc++" >> $GITHUB_ENV
 
             - name: install openmpi
               if: matrix.mpi == 'ON'
