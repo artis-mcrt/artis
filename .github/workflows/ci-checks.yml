@@ -157,7 +157,7 @@ jobs:
               if: matrix.compiler.name == 'nvc++'
               uses: fortran-lang/setup-fortran@v1.3
               with:
-                  compiler: ${{ matrix.compiler.name }}
+                  compiler: nvidia-hpc
                   version: ${{ matrix.compiler.ver }}
 
             - name: Set CXX=nvc++
