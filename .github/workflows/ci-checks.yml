@@ -155,7 +155,7 @@ jobs:
 
             - name: Install nvc++ ${{ matrix.compiler.ver }}
               if: matrix.compiler.name == 'nvc++'
-              uses: fortran-lang/setup-fortran@v1
+              uses: fortran-lang/setup-fortran@v1.3
               with:
                   compiler: ${{ matrix.compiler.name }}
                   version: ${{ matrix.compiler.ver }}
