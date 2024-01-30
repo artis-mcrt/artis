@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -348,12 +349,12 @@ static void read_phixs_data(const int phixs_file_version) {
 static void read_ion_levels(std::fstream &adata, const int element, const int ion, const int nions, const int nlevels,
                             int nlevelsmax, const double energyoffset, const double ionpot,
                             struct transitions *transitions) {
-  const int nlevels_used = std::min(nlevels, nlevelsmax);
+  const ptrdiff_t nlevels_used = std::min(nlevels, nlevelsmax);
   // each level contains 0..level elements. seriess sum of 1 + 2 + 3 + 4 + ... + nlevels_used is used here
-  const int transitblocksize = nlevels_used * (nlevels_used + 1) / 2;
+  const ptrdiff_t transitblocksize = nlevels_used * (nlevels_used + 1) / 2;
   transitions[0].to = static_cast<int *>(malloc(transitblocksize * sizeof(int)));
 
-  int transitionblockindex = 0;
+  ptrdiff_t transitionblockindex = 0;
   for (int level = 0; level < nlevels; level++) {
     int levelindex_in = 0;
     double levelenergy{NAN};
@@ -371,10 +372,8 @@ static void read_ion_levels(std::fstream &adata, const int element, const int io
       // if (level == 0 && ion == 0) energyoffset = levelenergy;
       globals::elements[element].ions[ion].levels[level].stat_weight = statweight;
       assert_always(statweight > 0.);
-      /// Moved to the section with ionising levels below
-      // globals::elements[element].ions[ion].levels[level].cont_index = cont_index;
-      // cont_index--;
-      /// Initialise the metastable flag to true. Set it to false if a downward transition exists.
+
+      // set the metastable flag to true until we find a a downward transition
       globals::elements[element].ions[ion].levels[level].metastable = true;
       // globals::elements[element].ions[ion].levels[level].main_qn = mainqn;
 
@@ -394,10 +393,8 @@ static void read_ion_levels(std::fstream &adata, const int element, const int io
       transitionblockindex += level;
       assert_always((transitionblockindex + level) < transitblocksize);
 
-      /// initialize number of downward transitions to zero
       set_ndowntrans(element, ion, level, 0);
 
-      /// initialize number of upward transitions to zero
       set_nuptrans(element, ion, level, 0);
     } else {
       // globals::elements[element].ions[ion].levels[nlevelsmax - 1].stat_weight += statweight;
