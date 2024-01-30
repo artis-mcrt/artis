@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdlib>
 #include <ctime>
 #include <iterator>
 #include <limits>
@@ -460,8 +461,8 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   mu = dot(old_dir_cmf, new_dir_cmf);
 
   const double Inew = 0.75 * ((mu * mu + 1.0) + Qold * (mu * mu - 1.0));
-  double Qnew = (0.75 * ((mu * mu - 1.0) + Qold * (mu * mu + 1.0))) / Inew;
-  double Unew = (1.5 * mu * Uold) / Inew;
+  const double Qnew = (0.75 * ((mu * mu - 1.0) + Qold * (mu * mu + 1.0))) / Inew;
+  const double Unew = (1.5 * mu * Uold) / Inew;
 
   // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame (Clockwise rotation of PI-i2)
 
