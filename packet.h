@@ -27,8 +27,6 @@ struct mastate {
   int ion;             /// in ionstage ion (this is an ion index)
   int level;           /// and level=level (this is a level index)
   int activatingline;  /// Linelistindex of the activating line for bb activated MAs, -99 else.
-
-  auto operator<=>(const mastate &) const = default;
 };
 
 enum cell_boundary {
@@ -84,7 +82,13 @@ struct packet {
   int pellet_nucindex{-1};                       // nuclide index of the decaying species
   float trueemissionvelocity{-1};
 
-  auto operator<=>(const packet &) const = default;
+  inline auto operator==(const packet &rhs) -> bool {
+    return (number == rhs.number && type == rhs.type &&
+            (em_pos[0] == rhs.em_pos[0] && em_pos[1] == rhs.em_pos[1] && em_pos[2] == rhs.em_pos[2]) &&
+            nu_cmf == rhs.nu_cmf && where == rhs.where && prop_time == rhs.prop_time &&
+            mastate.activatingline == rhs.mastate.activatingline && tdecay == rhs.tdecay &&
+            pellet_nucindex == rhs.pellet_nucindex);
+  }
 };
 
 enum last_event_type {
