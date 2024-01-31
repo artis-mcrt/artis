@@ -127,8 +127,10 @@ else
 	else ifneq (,$(findstring login-q,$(HOSTNAME)))
 		# Cambridge icelake nodes
 		CXXFLAGS += -march=icelake-server
-	else
+	else ifneq (,$(findstring lxbk,$(HOSTNAME)))
+		# virgo has some AMD nodes and some Intel. Just use the zen3 ones to compile and run?
 		CXXFLAGS += -march=native
+	else
 	endif
 
 endif
