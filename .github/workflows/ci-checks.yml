@@ -153,10 +153,19 @@ jobs:
                   sudo apt install -y clang-${{ matrix.compiler.ver }} --install-suggests
                   echo "CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
 
+            - name: Install gcc13 for nvc++
+              if: matrix.compiler.name == 'nvc++'
+              uses: fortran-lang/setup-fortran@adec3afacab7018f30d4e2cadae1cb42530aeaf5
+              id: setup-fortran-gcc
+              continue-on-error: true
+              with:
+                  compiler: gcc
+                  version: 13
+
             - name: Install nvc++
               if: matrix.compiler.name == 'nvc++'
               uses: fortran-lang/setup-fortran@adec3afacab7018f30d4e2cadae1cb42530aeaf5
-              id: setup-fortran
+              id: setup-fortran-nvcpp
               continue-on-error: true
               with:
                   compiler: nvidia-hpc
