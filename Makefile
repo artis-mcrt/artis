@@ -130,7 +130,11 @@ else
 	else ifneq (,$(findstring lxbk,$(HOSTNAME)))
 		# virgo has some AMD nodes and some Intel. Just use the zen3 ones to compile and run?
 		CXXFLAGS += -march=native
+	else ifeq ($(TESTMODE),ON)
+		# for GitHub actions, testmode runs are not checksummed
+		CXXFLAGS += -march=native
 	else
+		# for GitHub actions, checksums must match with different assigned CPUs, so avoid -march=native (use lowest common denominator)
 	endif
 
 endif
