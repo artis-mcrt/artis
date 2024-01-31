@@ -133,12 +133,11 @@ else
 	# g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
 	ifneq (,$(findstring juwels,$(HOSTNAME)))
 		CXXFLAGS += -march=skylake-avx512
-	else ifneq (,$(findstring lxbk,$(HOSTNAME)))
-		# virgo has some AMD nodes (znver1 arch) and some Intel
-		CXXFLAGS += -march=cascadelake
 	else ifneq (,$(findstring login-q,$(HOSTNAME)))
 		# Cambridge icelake nodes
 		CXXFLAGS += -march=icelake-server
+	else
+		CXXFLAGS += -march=native
 	endif
 
 endif
