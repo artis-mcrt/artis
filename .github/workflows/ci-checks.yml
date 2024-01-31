@@ -143,9 +143,11 @@ jobs:
 
             - name: Install gcc
               if: matrix.compiler.name == 'gcc'
-              run: |
-                  sudo apt install -y gcc-${{ matrix.compiler.ver }} g++-${{ matrix.compiler.ver }}
-                  echo "CXX=g++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
+              uses: fortran-lang/setup-fortran@adec3afacab7018f30d4e2cadae1cb42530aeaf5
+              continue-on-error: true
+              with:
+                  compiler: gcc
+                  version: g++-${{ matrix.compiler.ver }}
 
             - name: Install clang
               if: matrix.compiler.name == 'clang'
@@ -153,29 +155,13 @@ jobs:
                   sudo apt install -y clang-${{ matrix.compiler.ver }} --install-suggests
                   echo "CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
 
-            - name: Install gcc for nvc++
-              if: matrix.compiler.name == 'nvc++'
-              uses: fortran-lang/setup-fortran@adec3afacab7018f30d4e2cadae1cb42530aeaf5
-              id: setup-fortran-gcc
-              continue-on-error: true
-              with:
-                  compiler: gcc
-                  version: 12
-
             - name: Install nvc++
               if: matrix.compiler.name == 'nvc++'
               uses: fortran-lang/setup-fortran@adec3afacab7018f30d4e2cadae1cb42530aeaf5
-              id: setup-fortran-nvcpp
               continue-on-error: true
               with:
                   compiler: nvidia-hpc
                   version: ${{ matrix.compiler.ver }}
-
-            - name: Setup nvc++
-              if: matrix.compiler.name == 'nvc++'
-              run: |
-                  sudo apt install -y gcc-13 g++-13
-                  echo "CXX=nvc++" >> $GITHUB_ENV
 
             - name: install openmpi
               if: matrix.mpi == 'ON'
