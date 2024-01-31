@@ -112,15 +112,6 @@ ifeq ($(shell uname -s),Darwin)
 	# LDFLAGS += -lprofiler
 	CXXFLAGS += $(shell pkg-config --cflags ompi)
 
-else ifeq ($(USER),localadmin_ccollins)
-	# CXX = c++
-	LDFLAGS= -lgsl -lgslcblas -lm -I/home/localadmin_ccollins/gsl/include
-	INCLUDE = /home/localadmin_ccollins/gsl/include
-	LIB = /home/localadmin_ccollins/gsl/lib
-	CXXFLAGS += -g -I$(INCLUDE)
-	LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
-	CXXFLAGS += -std=c++17 -Wstrict-aliasing -fstrict-aliasing #-fopenmp=libomp
-
 else
 	# sometimes the login nodes have slighty different CPUs
 	# to the job nodes. Try to find the lowest common denominator here
