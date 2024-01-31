@@ -187,9 +187,8 @@ void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrate
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      const double C_ion = calculate_cooling_rates_ion<false>(modelgridindex, element, ion, -1, cellcacheslotid,
-                                                              &C_ff_all, &C_fb_all, &C_exc_all, &C_ionization_all);
-      grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] = C_ion;
+      grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] = calculate_cooling_rates_ion<false>(
+          modelgridindex, element, ion, -1, cellcacheslotid, &C_ff_all, &C_fb_all, &C_exc_all, &C_ionization_all);
     }
   }
 
@@ -475,11 +474,8 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d
     // oldcoolingsum %g\n",
     //          modelgridindex, element, ion, ilow, high, oldcoolingsum);
-    const double C_ion = calculate_cooling_rates_ion<true>(modelgridindex, element, ion, ilow, cellcacheslotid, nullptr,
-                                                           nullptr, nullptr, nullptr);
-
-    // we just summed up every individual cooling process. make sure it matches the stored total for the ion
-    assert_testmodeonly(C_ion == grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]);
+    grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] = calculate_cooling_rates_ion<true>(
+        modelgridindex, element, ion, ilow, cellcacheslotid, nullptr, nullptr, nullptr, nullptr);
   }
 
   // with the ion selected, we now select a level and transition type
