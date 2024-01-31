@@ -162,9 +162,10 @@ jobs:
                   compiler: nvidia-hpc
                   version: ${{ matrix.compiler.ver }}
 
-            - name: Set CXX=nvc++
+            - name: Setup nvc++
               if: matrix.compiler.name == 'nvc++'
               run: |
+                  sudo apt install -y gcc-13 g++-13
                   echo "CXX=nvc++" >> $GITHUB_ENV
 
             - name: install openmpi
