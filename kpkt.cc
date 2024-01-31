@@ -474,8 +474,8 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d
     // oldcoolingsum %g\n",
     //          modelgridindex, element, ion, ilow, high, oldcoolingsum);
-    grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion] = calculate_cooling_rates_ion<true>(
-        modelgridindex, element, ion, ilow, cellcacheslotid, nullptr, nullptr, nullptr, nullptr);
+    calculate_cooling_rates_ion<true>(modelgridindex, element, ion, ilow, cellcacheslotid, nullptr, nullptr, nullptr,
+                                      nullptr);
   }
 
   // with the ion selected, we now select a level and transition type
