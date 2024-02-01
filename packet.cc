@@ -49,7 +49,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     vec_scale(pkt_ptr->pos, radius);
 
   } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
-    const double zrand = rng_uniform();
+    const double zrand = rng_uniform_pos();
     const double rcyl_inner = grid::get_cellcoordmin(cellindex, 0);
     const double rcyl_outer = grid::get_cellcoordmax(cellindex, 0);
     // use equal area probability distribution to select radius
