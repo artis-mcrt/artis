@@ -139,7 +139,15 @@ jobs:
               continue-on-error: true
               with:
                   compiler: gcc
-                  version: g++-${{ matrix.compiler.ver }}
+                  version: ${{ matrix.compiler.ver }}
+
+            - name: Install gcc for nvc++
+              if: matrix.compiler.name == 'nvc++'
+              uses: fortran-lang/setup-fortran@adec3afacab7018f30d4e2cadae1cb42530aeaf5
+              continue-on-error: true
+              with:
+                  compiler: gcc
+                  version: 13
 
             - name: Install nvc++
               if: matrix.compiler.name == 'nvc++'
