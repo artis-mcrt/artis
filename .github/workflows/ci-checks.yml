@@ -106,7 +106,14 @@ jobs:
             CXX: g++
         strategy:
             matrix:
-                compiler: [{name: gcc, ver: 11}, {name: gcc, ver: 12}, {name: gcc, ver: 13}, {name: nvc++, ver: '24.1'}]
+                compiler:
+                    [
+                        {name: gcc, ver: 11},
+                        {name: gcc, ver: 12},
+                        {name: gcc, ver: 13},
+                        {name: gcc, ver: 14},
+                        {name: nvc++, ver: '24.1'},
+                    ]
                 mpi: [ON, OFF]
                 openmp: [ON, OFF]
                 exclude:
@@ -147,7 +154,7 @@ jobs:
               continue-on-error: true
               with:
                   compiler: gcc
-                  version: 13
+                  version: 14
 
             - name: Install nvc++
               if: matrix.compiler.name == 'nvc++'
