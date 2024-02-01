@@ -133,6 +133,14 @@ jobs:
                   # echo "count=$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')" >> $GITHUB_OUTPUT
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
+            - name: apt update
+              run: |
+                  sudo add-apt-repository main
+                  sudo add-apt-repository universe
+                  sudo add-apt-repository restricted
+                  sudo add-apt-repository multiverse
+                  sudo apt-get update
+
             - name: Install gcc
               if: matrix.compiler.name == 'gcc'
               uses: fortran-lang/setup-fortran@adec3afacab7018f30d4e2cadae1cb42530aeaf5
@@ -144,11 +152,6 @@ jobs:
             - name: Install clang
               if: matrix.compiler.name == 'clang'
               run: |
-                  sudo add-apt-repository main
-                  sudo add-apt-repository universe
-                  sudo add-apt-repository restricted
-                  sudo add-apt-repository multiverse
-                  sudo apt-get update
                   sudo apt install -y clang-${{ matrix.compiler.ver }} --install-suggests
                   echo "CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
 
@@ -242,14 +245,13 @@ jobs:
 
             - name: install OpenMP
               if: matrix.openmp == 'ON'
-              run: |
-                  brew install libomp || true
+              run: brew install libomp || true
 
             - name: install OpenMPI
               if: matrix.mpi == 'ON'
               run: |
                   brew install openmpi || true
-                  brew link openmpi
+
                   echo "OMPI_CXX=$CXX" >> $GITHUB_ENV
                   echo "CXX=mpicxx" >> $GITHUB_ENV
                   mpicxx --showme:version
