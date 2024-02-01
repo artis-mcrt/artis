@@ -113,7 +113,7 @@ jobs:
                         {name: gcc, ver: 13},
                         {name: clang, ver: 14},
                         {name: clang, ver: 15},
-                        {name: nvc++, ver: '23.11'},
+                        {name: nvc++, ver: '24.1'},
                     ]
                 mpi: [ON, OFF]
                 openmp: [ON, OFF]
