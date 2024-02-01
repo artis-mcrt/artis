@@ -244,7 +244,7 @@ jobs:
               if: matrix.openmp == 'ON'
               run: |
                   brew install libomp || true
-                  brew link libomp
+                  brew link --force libomp
 
                   echo "LDFLAGS=-L/usr/local/opt/libomp/lib" >> $GITHUB_ENV
                   echo "CXXFLAGS=-I/usr/local/opt/libomp/include" >> $GITHUB_ENV
