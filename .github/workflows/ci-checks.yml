@@ -106,15 +106,7 @@ jobs:
             CXX: g++
         strategy:
             matrix:
-                compiler:
-                    [
-                        {name: gcc, ver: 11},
-                        {name: gcc, ver: 12},
-                        {name: gcc, ver: 13},
-                        {name: clang, ver: 14},
-                        {name: clang, ver: 15},
-                        {name: nvc++, ver: '24.1'},
-                    ]
+                compiler: [{name: gcc, ver: 11}, {name: gcc, ver: 12}, {name: gcc, ver: 13}, {name: nvc++, ver: '24.1'}]
                 mpi: [ON, OFF]
                 openmp: [ON, OFF]
                 exclude:
@@ -148,12 +140,6 @@ jobs:
               with:
                   compiler: gcc
                   version: g++-${{ matrix.compiler.ver }}
-
-            - name: Install clang
-              if: matrix.compiler.name == 'clang'
-              run: |
-                  sudo apt install -y clang-${{ matrix.compiler.ver }} --install-suggests
-                  echo "CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
 
             - name: Install nvc++
               if: matrix.compiler.name == 'nvc++'

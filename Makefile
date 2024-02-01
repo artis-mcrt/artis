@@ -3,7 +3,7 @@
 # place in architecture folder, e.g. build/arm64
 BUILD_DIR = build/$(shell uname -m)
 
-CXXFLAGS += -std=c++20 -fstrict-aliasing
+CXXFLAGS += -std=c++23 -fstrict-aliasing
 
 ifeq ($(MPI),)
 	# MPI option not specified. set to true by default
