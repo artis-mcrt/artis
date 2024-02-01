@@ -235,9 +235,6 @@ jobs:
                   echo "LDFLAGS=-L/usr/local/opt/llvm/lib" >> $GITHUB_ENV
                   echo "CPPFLAGS=-I/usr/local/opt/llvm/include" >> $GITHUB_ENV
 
-                  echo "LDFLAGS=-L/usr/local/opt/libomp/lib" >> $GITHUB_ENV
-                  echo "CXXFLAGS=-I/usr/local/opt/libomp/include" >> $GITHUB_ENV
-
                   echo "LIBRARY_PATH=/usr/local/opt/lib" >> $GITHUB_ENV
                   echo "LD_LIBRARY_PATH=/usr/local/opt/lib" >> $GITHUB_ENV
 
@@ -245,7 +242,12 @@ jobs:
 
             - name: install OpenMP
               if: matrix.openmp == 'ON'
-              run: brew install libomp || true
+              run: |
+                  brew install libomp || true
+                  brew link libomp
+
+                  echo "LDFLAGS=-L/usr/local/opt/libomp/lib" >> $GITHUB_ENV
+                  echo "CXXFLAGS=-I/usr/local/opt/libomp/include" >> $GITHUB_ENV
 
             - name: install OpenMPI
               if: matrix.mpi == 'ON'
