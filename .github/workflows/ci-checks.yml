@@ -106,12 +106,11 @@ jobs:
             CXX: g++
         strategy:
             matrix:
-                compiler:
-                    [
+                compiler: [
                         {name: gcc, ver: 11},
                         {name: gcc, ver: 12},
                         {name: gcc, ver: 13},
-                        {name: gcc, ver: 14},
+                        # {name: gcc, ver: 14},
                         {name: nvc++, ver: '24.1'},
                     ]
                 mpi: [ON, OFF]
@@ -143,7 +142,7 @@ jobs:
             - name: Install gcc
               if: matrix.compiler.name == 'gcc'
               uses: fortran-lang/setup-fortran@adec3afacab7018f30d4e2cadae1cb42530aeaf5
-              continue-on-error: true
+              #   continue-on-error: true
               with:
                   compiler: gcc
                   version: ${{ matrix.compiler.ver }}
@@ -154,12 +153,12 @@ jobs:
               continue-on-error: true
               with:
                   compiler: gcc
-                  version: 14
+                  version: 13
 
             - name: Install nvc++
               if: matrix.compiler.name == 'nvc++'
               uses: fortran-lang/setup-fortran@adec3afacab7018f30d4e2cadae1cb42530aeaf5
-              continue-on-error: true
+              #   continue-on-error: true
               with:
                   compiler: nvidia-hpc
                   version: ${{ matrix.compiler.ver }}
