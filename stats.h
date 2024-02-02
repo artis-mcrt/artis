@@ -2,6 +2,8 @@
 #ifndef STATS_H
 #define STATS_H
 
+#include <span>
+
 #include "packet.h"
 
 namespace stats {
@@ -104,7 +106,7 @@ void pkt_action_counters_reset();
 
 [[nodiscard]] auto get_counter(enum eventcounters i) -> int;
 
-void pkt_action_counters_printout(const struct packet *pkt, int nts);
+void pkt_action_counters_printout(std::span<const struct packet> packets, int nts);
 
 void reduce_estimators();
 }  // namespace stats

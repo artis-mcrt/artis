@@ -3,6 +3,7 @@
 #include <array>
 #include <atomic>
 #include <cmath>
+#include <cstddef>
 #include <cstdlib>
 #include <vector>
 
@@ -191,11 +192,11 @@ auto get_counter(enum eventcounters i) -> int {
   return count;
 }
 
-void pkt_action_counters_printout(const struct packet *const pkt, const int nts) {
-  unsigned long allpktinteractions = 0;
-  for (int i = 0; i < globals::npkts; i++) {
-    assert_always(pkt[i].interactions >= 0);
-    allpktinteractions += pkt[i].interactions;
+void pkt_action_counters_printout(std::span<const struct packet> packets, const int nts) {
+  ptrdiff_t allpktinteractions = 0;
+  for (const auto &pkt : packets) {
+    assert_always(pkt.interactions >= 0);
+    allpktinteractions += pkt.interactions;
   }
   const double meaninteractions = static_cast<double>(allpktinteractions) / globals::npkts;
   printout("mean number of interactions per packet = %g\n", meaninteractions);
