@@ -342,7 +342,7 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
         }
       }
     }
-    const size_t packets_remaining = std::distance(packetgroupstart, packets.data() + packets.size());
+    const auto packets_remaining = std::distance(packetgroupstart, packets.data() + packets.size());
     if (packets_remaining > 0) {
       do_cell_packet_updates(std::span(packetgroupstart, packets_remaining), nts, ts_end);
     }
@@ -359,7 +359,7 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
     passnumber++;
   }
 
-  stats::pkt_action_counters_printout(packets, nts);
+  stats::pkt_action_counters_printout(packets.data(), nts);
 
   const auto time_update_packets_end_thisrank = std::time(nullptr);
   printout("timestep %d: end of update_packets for this rank at time %ld\n", nts, time_update_packets_end_thisrank);
