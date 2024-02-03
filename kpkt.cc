@@ -469,22 +469,25 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
   const int ilow = get_coolinglistoffset(element, ion);
   const int ihigh = ilow + get_ncoolingterms_ion(element, ion) - 1;
+  double C_ion_procsum = globals::cellcache[cellcacheslotid].cooling_contrib[ihigh];
 
-  if (globals::cellcache[cellcacheslotid].cooling_contrib[ihigh] < 0.) {
+  if (C_ion_procsum < 0.) {
     // printout("calculate kpkt rates on demand modelgridindex %d element %d ion %d ilow %d ihigh %d
     // oldcoolingsum %g\n",
     //          modelgridindex, element, ion, ilow, high, oldcoolingsum);
-    calculate_cooling_rates_ion<true>(modelgridindex, element, ion, ilow, cellcacheslotid, nullptr, nullptr, nullptr,
-                                      nullptr);
+    C_ion_procsum = calculate_cooling_rates_ion<true>(modelgridindex, element, ion, ilow, cellcacheslotid, nullptr,
+                                                      nullptr, nullptr, nullptr);
+    assert_testmodeonly(
+        (C_ion_procsum - grid::modelgrid[modelgridindex].cooling_contrib_ion[element][ion]) / C_ion_procsum < 1e-3);
   }
 
   // with the ion selected, we now select a level and transition type
 
-  const double rndcool_ion_process = rng_uniform() * globals::cellcache[cellcacheslotid].cooling_contrib[ihigh];
+  const double rndcool_ion_process = rng_uniform() * C_ion_procsum;
 
   auto *const selectedvalue =
-      std::upper_bound(&globals::cellcache[cellcacheslotid].cooling_contrib[ilow],
-                       &globals::cellcache[cellcacheslotid].cooling_contrib[ihigh + 1], rndcool_ion_process);
+      std::upper_bound(globals::cellcache[cellcacheslotid].cooling_contrib + ilow,
+                       globals::cellcache[cellcacheslotid].cooling_contrib + ihigh + 1, rndcool_ion_process);
   const ptrdiff_t i = selectedvalue - globals::cellcache[cellcacheslotid].cooling_contrib;
 
   if (i > ihigh) {
