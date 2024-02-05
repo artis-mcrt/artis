@@ -495,9 +495,9 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 }
 
-static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
-                                 const struct phixslist &phixslist, struct mastate &pktmastate,
-                                 const int modelgridindex) {
+static void rpkt_event_continuum(struct packet *pkt_ptr, struct mastate &pktmastate,
+                                 const struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
+                                 const struct phixslist &phixslist, const int modelgridindex) {
   const double nu = pkt_ptr->nu_cmf;
 
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
@@ -834,7 +834,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
     calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, mgi, true);
 
     std::tie(edist, pkt_ptr->next_trans, event_is_boundbound) =
-        get_event(mgi, *pkt_ptr, chi_rpkt_cont, pkt_ptr->mastate, tau_next, abort_dist);
+        get_event(mgi, *pkt_ptr, chi_rpkt_cont, pktmastate, tau_next, abort_dist);
   }
   assert_always(edist >= 0);
 
@@ -874,10 +874,10 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
         }
         rpkt_event_thickcell(pkt_ptr);
       } else {
-        rpkt_event_boundbound(pkt_ptr, pkt_ptr->mastate, mgi);
+        rpkt_event_boundbound(pkt_ptr, pktmastate, mgi);
       }
     } else {
-      rpkt_event_continuum(pkt_ptr, globals::chi_rpkt_cont[tid], globals::phixslist[tid], pkt_ptr->mastate, mgi);
+      rpkt_event_continuum(pkt_ptr, pktmastate, globals::chi_rpkt_cont[tid], globals::phixslist[tid], mgi);
     }
 
     return (pkt_ptr->type == TYPE_RPKT);
