@@ -213,6 +213,9 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
       std::abort();
     }
   }
+  if (pkt_ptr->type == TYPE_MA) {
+    do_macroatom(pkt_ptr, pktmastate, nts);
+  }
 }
 
 static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, const struct packet &p2) -> bool {
