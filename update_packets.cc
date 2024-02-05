@@ -196,7 +196,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
       if (grid::modelgrid[grid::get_cell_modelgridindex(pkt_ptr->where)].thick == 1 || EXPANSIONOPACITIES_ON) {
         kpkt::do_kpkt_blackbody(pkt_ptr);
       } else {
-        kpkt::do_kpkt(pkt_ptr, t2, nts);
+        kpkt::do_kpkt(pkt_ptr, pkt_ptr->mastate, t2, nts);
       }
       break;
     }
