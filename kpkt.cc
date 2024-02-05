@@ -625,8 +625,6 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     }
     assert_always(upper >= 0);
 
-    const struct mastate pktmastate = {element, ion, upper, -99};
-
     if constexpr (TRACK_ION_STATS) {
       stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLEXC, pkt_ptr->e_cmf);
     }
@@ -639,7 +637,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
     pkt_ptr->trueemissionvelocity = -1;
 
-    do_macroatom(pkt_ptr, pktmastate);
+    do_macroatom(pkt_ptr, {element, ion, upper, -99});
     return;
   }
 
@@ -649,7 +647,6 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
     const int upperion = ion + 1;
     const int upper = coolinglist[i].upperlevel;
-    const struct mastate pktmastate = {element, upperion, upper, -99};
 
     if constexpr (TRACK_ION_STATS) {
       stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_MACROATOM_ENERGYIN_COLLION,
@@ -664,7 +661,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
     pkt_ptr->trueemissionvelocity = -1;
 
-    do_macroatom(pkt_ptr, pktmastate);
+    do_macroatom(pkt_ptr, {element, upperion, upper, -99});
   } else {
     assert_testmodeonly(false);
   }
