@@ -1735,7 +1735,7 @@ static auto select_nt_ionization(int modelgridindex) -> std::tuple<int, int> {
   assert_always(false);
 }
 
-void do_ntlepton(struct packet *pkt_ptr) {
+void do_ntlepton(struct packet *pkt_ptr, struct mastate &pktmastate) {
   safeadd(nt_energy_deposited, pkt_ptr->e_cmf);
 
   const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
@@ -1760,10 +1760,10 @@ void do_ntlepton(struct packet *pkt_ptr) {
       const int upperion = nt_random_upperion(modelgridindex, element, lowerion, true);
       // const int upperion = lowerion + 1;
 
-      pkt_ptr->mastate.element = element;
-      pkt_ptr->mastate.ion = upperion;
-      pkt_ptr->mastate.level = 0;
-      pkt_ptr->mastate.activatingline = -99;
+      pktmastate.element = element;
+      pktmastate.ion = upperion;
+      pktmastate.level = 0;
+      pktmastate.activatingline = -99;
       pkt_ptr->type = TYPE_MA;
       stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLION);
       pkt_ptr->interactions += 1;
@@ -1804,10 +1804,10 @@ void do_ntlepton(struct packet *pkt_ptr) {
           // const int lower = linelist[lineindex].lowerlevelindex;
           const int upper = globals::linelist[lineindex].upperlevelindex;
 
-          pkt_ptr->mastate.element = element;
-          pkt_ptr->mastate.ion = ion;
-          pkt_ptr->mastate.level = upper;
-          pkt_ptr->mastate.activatingline = -99;
+          pktmastate.element = element;
+          pktmastate.ion = ion;
+          pktmastate.level = upper;
+          pktmastate.activatingline = -99;
           pkt_ptr->type = TYPE_MA;
           stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC);
           pkt_ptr->interactions += 1;

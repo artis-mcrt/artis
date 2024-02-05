@@ -152,6 +152,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
 // update a packet no further than time t2
 {
   const int pkt_type = pkt_ptr->type;
+  struct mastate pktmastate {};
 
   switch (pkt_type) {
     case TYPE_RADIOACTIVE_PELLET: {
@@ -169,7 +170,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
     }
 
     case TYPE_RPKT: {
-      do_rpkt(pkt_ptr, t2, pkt_ptr->mastate, globals::chi_rpkt_cont[tid]);
+      do_rpkt(pkt_ptr, t2, pktmastate, globals::chi_rpkt_cont[tid]);
 
       if (pkt_ptr->type == TYPE_ESCAPE) {
         safeadd(globals::timesteps[nts].cmf_lum, pkt_ptr->e_cmf);
@@ -183,7 +184,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
     }
 
     case TYPE_NTLEPTON: {
-      nonthermal::do_ntlepton(pkt_ptr);
+      nonthermal::do_ntlepton(pkt_ptr, pktmastate);
       break;
     }
 
@@ -196,13 +197,13 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
       if (grid::modelgrid[grid::get_cell_modelgridindex(pkt_ptr->where)].thick == 1 || EXPANSIONOPACITIES_ON) {
         kpkt::do_kpkt_blackbody(pkt_ptr);
       } else {
-        kpkt::do_kpkt(pkt_ptr, pkt_ptr->mastate, t2, nts);
+        kpkt::do_kpkt(pkt_ptr, pktmastate, t2, nts);
       }
       break;
     }
 
     case TYPE_MA: {
-      do_macroatom(pkt_ptr, pkt_ptr->mastate, nts);
+      do_macroatom(pkt_ptr, pktmastate, nts);
       break;
     }
 
