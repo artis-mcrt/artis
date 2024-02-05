@@ -33,7 +33,7 @@ enum ma_action {
 void macroatom_open_file(int my_rank);
 void macroatom_close_file();
 
-void do_macroatom(struct packet *pkt_ptr, int timestep);
+void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate, int timestep);
 
 [[nodiscard]] auto rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower,
                                               double epsilon_trans, float A_ul, double upperstatweight,

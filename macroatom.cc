@@ -339,7 +339,7 @@ static void do_macroatom_ionisation(const int modelgridindex, const int element,
   *level = upper;
 }
 
-void do_macroatom(struct packet *pkt_ptr, const int timestep)
+void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate, const int timestep)
 /// Material for handling activated macro atoms.
 {
   const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
@@ -367,11 +367,11 @@ void do_macroatom(struct packet *pkt_ptr, const int timestep)
   /// not sure whether this reduces the number of calculations, as number of grid cells
   /// is much larger than number of pellets (next question: connection to number of
   /// photons)
-  const int element = pkt_ptr->mastate.element;
-  int ion = pkt_ptr->mastate.ion;
-  int level = pkt_ptr->mastate.level;
+  const int element = pktmastate.element;
+  int ion = pktmastate.ion;
+  int level = pktmastate.level;
 
-  const int activatingline = pkt_ptr->mastate.activatingline;
+  const int activatingline = pktmastate.activatingline;
   if (pkt_ptr->absorptiontype > 0 && activatingline > 0 && activatingline != pkt_ptr->absorptiontype) {
     printout("error: mismatched absorptiontype %d != activatingline = %d pkt last_event %d emissiontype %d\n",
              pkt_ptr->absorptiontype, activatingline, pkt_ptr->last_event, pkt_ptr->emissiontype);

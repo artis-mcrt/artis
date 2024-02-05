@@ -202,7 +202,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
     }
 
     case TYPE_MA: {
-      do_macroatom(pkt_ptr, nts);
+      do_macroatom(pkt_ptr, pkt_ptr->mastate, nts);
       break;
     }
 
