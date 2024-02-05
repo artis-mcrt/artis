@@ -1760,7 +1760,6 @@ void do_ntlepton(struct packet *pkt_ptr) {
       const int upperion = nt_random_upperion(modelgridindex, element, lowerion, true);
       // const int upperion = lowerion + 1;
 
-      const struct mastate pktmastate = {element, upperion, 0, -99};
       pkt_ptr->type = TYPE_MA;
       stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLION);
       pkt_ptr->interactions += 1;
@@ -1782,7 +1781,7 @@ void do_ntlepton(struct packet *pkt_ptr) {
       // printout("NTLEPTON packet in cell %d selected ionization of Z=%d ionstage %d to %d\n",
       //          modelgridindex, get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element,
       //          upperion));
-      do_macroatom(pkt_ptr, pktmastate);
+      do_macroatom(pkt_ptr, {element, upperion, 0, -99});
 
       return;
     }
@@ -1802,7 +1801,6 @@ void do_ntlepton(struct packet *pkt_ptr) {
           // const int lower = linelist[lineindex].lowerlevelindex;
           const int upper = globals::linelist[lineindex].upperlevelindex;
 
-          const struct mastate pktmastate = {element, ion, upper, -99};
           pkt_ptr->type = TYPE_MA;
           stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC);
           pkt_ptr->interactions += 1;
@@ -1814,7 +1812,7 @@ void do_ntlepton(struct packet *pkt_ptr) {
 
           // printout("NTLEPTON packet selected in cell %d excitation of Z=%d ionstage %d level %d upperlevel %d\n",
           //          modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), lower, upper);
-          do_macroatom(pkt_ptr, pktmastate);
+          do_macroatom(pkt_ptr, {element, ion, upper, -99});
           return;
         }
         zrand -= frac_deposition_exc;
