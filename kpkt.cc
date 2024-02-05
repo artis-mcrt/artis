@@ -401,7 +401,7 @@ void do_kpkt_blackbody(struct packet *pkt_ptr)
   pkt_ptr->nscatterings = 0;
 }
 
-void do_kpkt(struct packet *pkt_ptr, struct mastate &pktmastate, double t2, int nts)
+void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 /// handle a k-packet (kinetic energy of the free electrons)
 {
   const double t1 = pkt_ptr->prop_time;
@@ -625,11 +625,7 @@ void do_kpkt(struct packet *pkt_ptr, struct mastate &pktmastate, double t2, int 
     }
     assert_always(upper >= 0);
 
-    // const int upper = coolinglist[i].upperlevel;
-    pktmastate.element = element;
-    pktmastate.ion = ion;
-    pktmastate.level = upper;
-    pktmastate.activatingline = -99;
+    const struct mastate pktmastate = {element, ion, upper, -99};
 
     if constexpr (TRACK_ION_STATS) {
       stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLEXC, pkt_ptr->e_cmf);
@@ -643,6 +639,7 @@ void do_kpkt(struct packet *pkt_ptr, struct mastate &pktmastate, double t2, int 
     pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
     pkt_ptr->trueemissionvelocity = -1;
 
+    do_macroatom(pkt_ptr, pktmastate, nts);
     return;
   }
 
@@ -652,10 +649,7 @@ void do_kpkt(struct packet *pkt_ptr, struct mastate &pktmastate, double t2, int 
 
     const int upperion = ion + 1;
     const int upper = coolinglist[i].upperlevel;
-    pktmastate.element = element;
-    pktmastate.ion = upperion;
-    pktmastate.level = upper;
-    pktmastate.activatingline = -99;
+    const struct mastate pktmastate = {element, upperion, upper, -99};
 
     if constexpr (TRACK_ION_STATS) {
       stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_MACROATOM_ENERGYIN_COLLION,
@@ -669,6 +663,8 @@ void do_kpkt(struct packet *pkt_ptr, struct mastate &pktmastate, double t2, int 
     pkt_ptr->last_event = 9;
     pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
     pkt_ptr->trueemissionvelocity = -1;
+
+    do_macroatom(pkt_ptr, pktmastate, nts);
   } else {
     assert_testmodeonly(false);
   }
