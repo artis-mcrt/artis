@@ -169,7 +169,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
     }
 
     case TYPE_RPKT: {
-      do_rpkt(pkt_ptr, t2, globals::chi_rpkt_cont[tid]);
+      do_rpkt(pkt_ptr, t2, pkt_ptr->mastate, globals::chi_rpkt_cont[tid]);
 
       if (pkt_ptr->type == TYPE_ESCAPE) {
         safeadd(globals::timesteps[nts].cmf_lum, pkt_ptr->e_cmf);
