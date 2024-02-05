@@ -184,7 +184,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
     }
 
     case TYPE_NTLEPTON: {
-      nonthermal::do_ntlepton(pkt_ptr, nts);
+      nonthermal::do_ntlepton(pkt_ptr);
       break;
     }
 
@@ -203,7 +203,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
     }
 
     case TYPE_MA: {
-      do_macroatom(pkt_ptr, pktmastate, nts);
+      do_macroatom(pkt_ptr, pktmastate);
       break;
     }
 
@@ -214,7 +214,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
     }
   }
   if (pkt_ptr->type == TYPE_MA) {
-    do_macroatom(pkt_ptr, pktmastate, nts);
+    do_macroatom(pkt_ptr, pktmastate);
   }
 }
 

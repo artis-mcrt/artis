@@ -339,7 +339,7 @@ static void do_macroatom_ionisation(const int modelgridindex, const int element,
   *level = upper;
 }
 
-void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate, const int timestep)
+void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
 /// Material for handling activated macro atoms.
 {
   const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
@@ -353,7 +353,7 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate, cons
   // pkt_ptr->interactions++;
   // return;
 
-  const double t_mid = globals::timesteps[timestep].mid;
+  const double t_mid = globals::timesteps[globals::timestep].mid;
 
   // printout("[debug] do MA\n");
 
@@ -468,9 +468,10 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate, cons
         }
 
         if constexpr (LOG_MACROATOM) {
-          fprintf(macroatom_file, "%8d %14d %2d %12d %12d %9d %9d %9d %11.5e %11.5e %11.5e %11.5e %9d\n", timestep,
-                  modelgridindex, get_atomicnumber(element), get_ionstage(element, ion_in), get_ionstage(element, ion),
-                  level_in, level, activatingline, nu_cmf_in, pkt_ptr->nu_cmf, nu_rf_in, pkt_ptr->nu_rf, jumps);
+          fprintf(macroatom_file, "%8d %14d %2d %12d %12d %9d %9d %9d %11.5e %11.5e %11.5e %11.5e %9d\n",
+                  globals::timestep, modelgridindex, get_atomicnumber(element), get_ionstage(element, ion_in),
+                  get_ionstage(element, ion), level_in, level, activatingline, nu_cmf_in, pkt_ptr->nu_cmf, nu_rf_in,
+                  pkt_ptr->nu_rf, jumps);
         }
 
         end_packet = true;

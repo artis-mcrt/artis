@@ -639,7 +639,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
     pkt_ptr->trueemissionvelocity = -1;
 
-    do_macroatom(pkt_ptr, pktmastate, nts);
+    do_macroatom(pkt_ptr, pktmastate);
     return;
   }
 
@@ -664,7 +664,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
     pkt_ptr->trueemissionvelocity = -1;
 
-    do_macroatom(pkt_ptr, pktmastate, nts);
+    do_macroatom(pkt_ptr, pktmastate);
   } else {
     assert_testmodeonly(false);
   }

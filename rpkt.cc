@@ -11,6 +11,8 @@
 #include <span>
 #include <tuple>
 
+#include "macroatom.h"
+
 #ifdef MPI_ON
 #include <mpi.h>
 #endif
@@ -495,8 +497,7 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 }
 
-static void rpkt_event_continuum(struct packet *pkt_ptr, struct mastate &pktmastate,
-                                 const struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
+static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
                                  const struct phixslist &phixslist, const int modelgridindex) {
   const double nu = pkt_ptr->nu_cmf;
 
@@ -587,11 +588,9 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, struct mastate &pktmast
       }
 
       pkt_ptr->type = TYPE_MA;
-      pktmastate.element = element;
-      pktmastate.ion = ion + 1;
       const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-      pktmastate.level = upper;
-      pktmastate.activatingline = -99;
+
+      do_macroatom(pkt_ptr, {element, ion + 1, upper, -99});
     }
     /// or to the thermal pool
     else {
@@ -877,7 +876,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
         rpkt_event_boundbound(pkt_ptr, pktmastate, mgi);
       }
     } else {
-      rpkt_event_continuum(pkt_ptr, pktmastate, globals::chi_rpkt_cont[tid], globals::phixslist[tid], mgi);
+      rpkt_event_continuum(pkt_ptr, globals::chi_rpkt_cont[tid], globals::phixslist[tid], mgi);
     }
 
     return (pkt_ptr->type == TYPE_RPKT);

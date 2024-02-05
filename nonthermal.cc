@@ -1735,7 +1735,7 @@ static auto select_nt_ionization(int modelgridindex) -> std::tuple<int, int> {
   assert_always(false);
 }
 
-void do_ntlepton(struct packet *pkt_ptr, const int nts) {
+void do_ntlepton(struct packet *pkt_ptr) {
   safeadd(nt_energy_deposited, pkt_ptr->e_cmf);
 
   const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
@@ -1782,7 +1782,7 @@ void do_ntlepton(struct packet *pkt_ptr, const int nts) {
       // printout("NTLEPTON packet in cell %d selected ionization of Z=%d ionstage %d to %d\n",
       //          modelgridindex, get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element,
       //          upperion));
-      do_macroatom(pkt_ptr, pktmastate, nts);
+      do_macroatom(pkt_ptr, pktmastate);
 
       return;
     }
@@ -1814,7 +1814,7 @@ void do_ntlepton(struct packet *pkt_ptr, const int nts) {
 
           // printout("NTLEPTON packet selected in cell %d excitation of Z=%d ionstage %d level %d upperlevel %d\n",
           //          modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), lower, upper);
-          do_macroatom(pkt_ptr, pktmastate, nts);
+          do_macroatom(pkt_ptr, pktmastate);
           return;
         }
         zrand -= frac_deposition_exc;
