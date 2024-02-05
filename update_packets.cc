@@ -237,11 +237,14 @@ static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, cons
   // for both non-escaped packets, order by descending cell density
   const int mgi1 = grid::get_cell_modelgridindex(p1.where);
   const int mgi2 = grid::get_cell_modelgridindex(p2.where);
-  if (grid::get_rho(mgi1) > grid::get_rho(mgi2)) {
+  const auto rho1 = mgi1 < grid::get_npts_model() ? grid::get_rho(mgi1) : 0.0;
+  const auto rho2 = mgi2 < grid::get_npts_model() ? grid::get_rho(mgi2) : 0.0;
+
+  if (rho1 > rho2) {
     return true;
   }
 
-  if (grid::get_rho(mgi1) == grid::get_rho(mgi2) && (mgi1 < mgi2)) {
+  if (rho1 == rho2 && (mgi1 < mgi2)) {
     return true;
   }
 
