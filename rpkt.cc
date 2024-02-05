@@ -641,6 +641,8 @@ static void rpkt_event_boundbound(struct packet *pkt_ptr, struct mastate &pktmas
   if constexpr (RECORD_LINESTAT) {
     safeincrement(globals::acounter[pkt_ptr->next_trans - 1]);
   }
+
+  do_macroatom(pkt_ptr, pktmastate);
 }
 
 auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double
