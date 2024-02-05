@@ -903,8 +903,8 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
   std::abort();
 }
 
-void do_rpkt(struct packet *pkt_ptr, const double t2, struct mastate &pktmastate,
-             struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont) {
+void do_rpkt(struct packet *pkt_ptr, const double t2, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont) {
+  struct mastate pktmastate {};
   while (do_rpkt_step(pkt_ptr, chi_rpkt_cont, pktmastate, t2)) {
     ;
   }
