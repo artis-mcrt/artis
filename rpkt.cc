@@ -496,7 +496,8 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
 }
 
 static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
-                                 const struct phixslist &phixslist, const int modelgridindex) {
+                                 const struct phixslist &phixslist, struct mastate &pktmastate,
+                                 const int modelgridindex) {
   const double nu = pkt_ptr->nu_cmf;
 
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
@@ -586,11 +587,11 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
       }
 
       pkt_ptr->type = TYPE_MA;
-      pkt_ptr->mastate.element = element;
-      pkt_ptr->mastate.ion = ion + 1;
+      pktmastate.element = element;
+      pktmastate.ion = ion + 1;
       const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-      pkt_ptr->mastate.level = upper;
-      pkt_ptr->mastate.activatingline = -99;
+      pktmastate.level = upper;
+      pktmastate.activatingline = -99;
     }
     /// or to the thermal pool
     else {
@@ -606,7 +607,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
   }
 }
 
-static void rpkt_event_boundbound(struct packet *pkt_ptr, const int mgi) {
+static void rpkt_event_boundbound(struct packet *pkt_ptr, struct mastate &pktmastate, const int mgi) {
   /// bound-bound transition occured
   /// activate macro-atom in corresponding upper-level. Actually all the information
   /// about the macro atoms state has already been set by closest_transition, so
@@ -617,7 +618,7 @@ static void rpkt_event_boundbound(struct packet *pkt_ptr, const int mgi) {
   pkt_ptr->interactions += 1;
   pkt_ptr->last_event = 1;
 
-  pkt_ptr->absorptiontype = pkt_ptr->mastate.activatingline;
+  pkt_ptr->absorptiontype = pktmastate.activatingline;
   pkt_ptr->absorptionfreq = pkt_ptr->nu_rf;  // pkt_ptr->nu_cmf;
   pkt_ptr->absorptiondir[0] = pkt_ptr->dir[0];
   pkt_ptr->absorptiondir[1] = pkt_ptr->dir[1];
@@ -625,8 +626,8 @@ static void rpkt_event_boundbound(struct packet *pkt_ptr, const int mgi) {
   pkt_ptr->type = TYPE_MA;
 
   if constexpr (TRACK_ION_STATS) {
-    const int element = pkt_ptr->mastate.element;
-    const int ion = pkt_ptr->mastate.ion;
+    const int element = pktmastate.element;
+    const int ion = pktmastate.ion;
     stats::increment_ion_stats(mgi, element, ion, stats::ION_MACROATOM_ENERGYIN_RADEXC, pkt_ptr->e_cmf);
 
     const int et = pkt_ptr->emissiontype;
@@ -873,10 +874,10 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
         }
         rpkt_event_thickcell(pkt_ptr);
       } else {
-        rpkt_event_boundbound(pkt_ptr, mgi);
+        rpkt_event_boundbound(pkt_ptr, pkt_ptr->mastate, mgi);
       }
     } else {
-      rpkt_event_continuum(pkt_ptr, globals::chi_rpkt_cont[tid], globals::phixslist[tid], mgi);
+      rpkt_event_continuum(pkt_ptr, globals::chi_rpkt_cont[tid], globals::phixslist[tid], pkt_ptr->mastate, mgi);
     }
 
     return (pkt_ptr->type == TYPE_RPKT);
