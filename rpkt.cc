@@ -44,7 +44,7 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
   // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
   // lower_bound matches the first element where the comparison function is false
   const auto *matchline =
-      std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf,
+      std::lower_bound(globals::linelist, globals::linelist + globals::nlines, nu_cmf,
                        [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; });
   const int matchindex = std::distance(globals::linelist, matchline);
   if (matchindex >= globals::nlines) {
