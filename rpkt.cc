@@ -363,7 +363,8 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
 }
 
 static void rpkt_event_continuum(struct packet *pkt_ptr,
-                                 struct rpkt_continuum_absorptioncoeffs chi_rpkt_cont_thisthread, int modelgridindex) {
+                                 const struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont_thisthread,
+                                 int modelgridindex) {
   const double nu = pkt_ptr->nu_cmf;
 
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
