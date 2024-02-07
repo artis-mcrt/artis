@@ -61,21 +61,21 @@ jobs:
             - name: install llvm
               run: |
                   brew install llvm || true
-                  echo "/usr/local/opt/llvm/bin" >> $GITHUB_PATH
+                  echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
 
                   echo "CXX=clang++" >> $GITHUB_ENV
                   echo "OMPI_CXX=clang++" >> $GITHUB_ENV
 
-                  echo "LDFLAGS=-L/usr/local/opt/llvm/lib" >> $GITHUB_ENV
-                  echo "CPPFLAGS=-I/usr/local/opt/llvm/include" >> $GITHUB_ENV
+                  echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib" >> $GITHUB_ENV
+                  echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV
 
-                  echo "LDFLAGS=-L/usr/local/opt/libomp/lib" >> $GITHUB_ENV
-                  echo "CXXFLAGS=-I/usr/local/opt/libomp/include" >> $GITHUB_ENV
+                  echo "LDFLAGS=-L/opt/homebrew/opt/libomp/lib" >> $GITHUB_ENV
+                  echo "CXXFLAGS=-I/opt/homebrew/opt/libomp/include" >> $GITHUB_ENV
 
-                  echo "LIBRARY_PATH=/usr/local/opt/lib" >> $GITHUB_ENV
-                  echo "LD_LIBRARY_PATH=/usr/local/opt/lib" >> $GITHUB_ENV
+                  echo "LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
+                  echo "LD_LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
 
-                  echo "CPATH=/usr/local/opt/include" >> $GITHUB_ENV
+                  echo "CPATH=/opt/homebrew/opt/include" >> $GITHUB_ENV
 
                   echo "compiledb" > requirements.txt
 
@@ -226,18 +226,18 @@ jobs:
             - name: install llvm
               run: |
                   brew install llvm@17 || true
-                  echo "/usr/local/opt/llvm/bin" >> $GITHUB_PATH
+                  echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
 
                   echo "CXX=clang++" >> $GITHUB_ENV
                   echo "OMPI_CXX=clang++" >> $GITHUB_ENV
 
-                  #echo "LDFLAGS=-L/usr/local/opt/llvm/lib" >> $GITHUB_ENV
-                  #echo "CPPFLAGS=-I/usr/local/opt/llvm/include" >> $GITHUB_ENV
+                  #echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib" >> $GITHUB_ENV
+                  #echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV
 
-                  #echo "LIBRARY_PATH=/usr/local/opt/lib" >> $GITHUB_ENV
-                  #echo "LD_LIBRARY_PATH=/usr/local/opt/lib" >> $GITHUB_ENV
+                  #echo "LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
+                  #echo "LD_LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
 
-                  #echo "CPATH=/usr/local/opt/include" >> $GITHUB_ENV
+                  #echo "CPATH=/opt/homebrew/opt/include" >> $GITHUB_ENV
 
             - name: install OpenMP
               if: matrix.openmp == 'ON'
@@ -245,8 +245,8 @@ jobs:
                   brew install libomp || true
                   brew link --force libomp
 
-                  #echo "LDFLAGS=-L/usr/local/opt/libomp/lib" >> $GITHUB_ENV
-                  #echo "CXXFLAGS=-I/usr/local/opt/libomp/include" >> $GITHUB_ENV
+                  #echo "LDFLAGS=-L/opt/homebrew/opt/libomp/lib" >> $GITHUB_ENV
+                  #echo "CXXFLAGS=-I/opt/homebrew/opt/libomp/include" >> $GITHUB_ENV
 
             - name: install OpenMPI
               if: matrix.mpi == 'ON'
