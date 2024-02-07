@@ -231,9 +231,6 @@ jobs:
                   echo "CXX=clang++" >> $GITHUB_ENV
                   echo "OMPI_CXX=clang++" >> $GITHUB_ENV
 
-                  #echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib" >> $GITHUB_ENV
-                  #echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV
-
             - name: install OpenMP
               if: matrix.openmp == 'ON'
               run: |
