@@ -234,11 +234,6 @@ jobs:
                   #echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib" >> $GITHUB_ENV
                   #echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV
 
-                  #echo "LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
-                  #echo "LD_LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
-
-                  #echo "CPATH=/opt/homebrew/opt/include" >> $GITHUB_ENV
-
             - name: install OpenMP
               if: matrix.openmp == 'ON'
               run: |
