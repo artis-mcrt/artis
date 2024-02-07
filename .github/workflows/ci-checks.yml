@@ -12,7 +12,7 @@ on:
 
 jobs:
     cppcheck:
-        runs-on: macos-13
+        runs-on: macos-14
         steps:
             - uses: actions/checkout@v4
 
@@ -44,7 +44,7 @@ jobs:
                   check-path: .
 
     clang-tidy:
-        runs-on: macos-13
+        runs-on: macos-14
         steps:
             - uses: actions/checkout@v4
 
@@ -208,10 +208,9 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: CPU type and core count
+            - name: CPU core count
               id: cpu-count
               run: |
-                  g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
                   # echo "count=$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')" >> $GITHUB_OUTPUT
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
@@ -232,11 +231,11 @@ jobs:
                   echo "CXX=clang++" >> $GITHUB_ENV
                   echo "OMPI_CXX=clang++" >> $GITHUB_ENV
 
-                  echo "LDFLAGS=-L/usr/local/opt/llvm/lib" >> $GITHUB_ENV
-                  echo "CPPFLAGS=-I/usr/local/opt/llvm/include" >> $GITHUB_ENV
+                  #echo "LDFLAGS=-L/usr/local/opt/llvm/lib" >> $GITHUB_ENV
+                  #echo "CPPFLAGS=-I/usr/local/opt/llvm/include" >> $GITHUB_ENV
 
-                  echo "LIBRARY_PATH=/usr/local/opt/lib" >> $GITHUB_ENV
-                  echo "LD_LIBRARY_PATH=/usr/local/opt/lib" >> $GITHUB_ENV
+                  #echo "LIBRARY_PATH=/usr/local/opt/lib" >> $GITHUB_ENV
+                  #echo "LD_LIBRARY_PATH=/usr/local/opt/lib" >> $GITHUB_ENV
 
                   echo "CPATH=/usr/local/opt/include" >> $GITHUB_ENV
 
@@ -246,8 +245,8 @@ jobs:
                   brew install libomp || true
                   brew link --force libomp
 
-                  echo "LDFLAGS=-L/usr/local/opt/libomp/lib" >> $GITHUB_ENV
-                  echo "CXXFLAGS=-I/usr/local/opt/libomp/include" >> $GITHUB_ENV
+                  #echo "LDFLAGS=-L/usr/local/opt/libomp/lib" >> $GITHUB_ENV
+                  #echo "CXXFLAGS=-I/usr/local/opt/libomp/include" >> $GITHUB_ENV
 
             - name: install OpenMPI
               if: matrix.mpi == 'ON'
