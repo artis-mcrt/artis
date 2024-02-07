@@ -194,7 +194,7 @@ jobs:
                   make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
     mac-llvm:
-        runs-on: macos-13
+        runs-on: macos-14
         env:
             CXX: clang++
         strategy:
