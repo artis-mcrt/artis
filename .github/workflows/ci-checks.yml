@@ -237,7 +237,7 @@ jobs:
                   #echo "LIBRARY_PATH=/usr/local/opt/lib" >> $GITHUB_ENV
                   #echo "LD_LIBRARY_PATH=/usr/local/opt/lib" >> $GITHUB_ENV
 
-                  echo "CPATH=/usr/local/opt/include" >> $GITHUB_ENV
+                  #echo "CPATH=/usr/local/opt/include" >> $GITHUB_ENV
 
             - name: install OpenMP
               if: matrix.openmp == 'ON'
