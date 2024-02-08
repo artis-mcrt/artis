@@ -1254,7 +1254,12 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
     isomassfrac_on_nucmass_sum += stable_init_massfrac / globals::elements[element].initstablemeannucmass;
 
     grid::set_elem_abundance(modelgridindex, element, isomassfracsum);
-    grid::set_element_meanweight(modelgridindex, element, isomassfracsum / isomassfrac_on_nucmass_sum);
+    if (isomassfrac_on_nucmass_sum > 0.) {
+      grid::set_element_meanweight(modelgridindex, element, isomassfracsum / isomassfrac_on_nucmass_sum);
+    } else {
+      // avoid a divide by zero
+      grid::set_element_meanweight(modelgridindex, element, globals::elements[element].initstablemeannucmass);
+    }
   }
 
   // total number of electrons in grid cell which are possible targets for compton scattering of gamma rays

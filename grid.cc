@@ -516,6 +516,7 @@ auto get_element_meanweight(const int mgi, const int element) -> float
 void set_element_meanweight(const int mgi, const int element, float meanweight)
 // weight is in grams
 {
+  assert_always(meanweight > 0.);
   modelgrid[mgi].elem_meanweight[element] = meanweight;
 }
 
