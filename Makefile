@@ -122,19 +122,15 @@ else
 
 	# to get the current CPU architecture, run this:
 	# g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
-	ifneq (,$(findstring juwels,$(HOSTNAME)))
-		CXXFLAGS += -march=skylake-avx512
-	else ifneq (,$(findstring login-q,$(HOSTNAME)))
-		# Cambridge icelake nodes
-		CXXFLAGS += -march=icelake-server
-	else ifneq (,$(shell hostname | grep lxbk))
-		# virgo has some AMD nodes and some Intel. Just use the zen3 ones to compile and run?
-		CXXFLAGS += -march=native
-	else ifeq ($(TESTMODE),ON)
-		# for GitHub actions, testmode runs are not checksummed
+	ifneq (,$(shell hostname -A | grep gsi.de))
+		# virgo has some AMD nodes and some Intel.
+		# As of Feb 2024, the login nodes are zen3, and we select the same arch for jobs
 		CXXFLAGS += -march=native
 	else
 		# for GitHub actions, checksums must match with different assigned CPUs, so avoid -march=native (use lowest common denominator)
+		# update: all zenver3 now?
+
+		CXXFLAGS += -march=native
 	endif
 
 endif
