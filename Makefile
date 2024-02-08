@@ -180,6 +180,8 @@ else
 
 			ifeq ($(COMPILER_IS_NVCPP),OFF)
 				CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only
+			else
+				CXXFLAGS += -fast
 			endif
 		endif
 	# endif
