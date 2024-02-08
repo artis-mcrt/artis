@@ -178,7 +178,7 @@ else
 		else
 			CXXFLAGS += -Ofast
 
-			ifeq ($(COMPILER_IS_NVCPP),OFF)
+			ifeq ($(COMPILER_IS_NVCPP),FALSE)
 				CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only
 			else
 				CXXFLAGS += -fast
