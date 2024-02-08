@@ -308,14 +308,22 @@ auto get_W(int modelgridindex) -> float {
 
 static void set_rho_tmin(int modelgridindex, float x) { modelgrid[modelgridindex].rhoinit = x; }
 
-void set_rho(int modelgridindex, float x) { modelgrid[modelgridindex].rho = x; }
+void set_rho(int modelgridindex, float rho) {
+  assert_always(rho >= 0.);
+  assert_always(std::isfinite(rho));
+  modelgrid[modelgridindex].rho = rho;
+}
 
-void set_nne(int modelgridindex, float nne) { modelgrid[modelgridindex].nne = nne; }
+void set_nne(int modelgridindex, float nne) {
+  assert_always(nne >= 0.);
+  assert_always(std::isfinite(nne));
+  modelgrid[modelgridindex].nne = nne;
+}
 
-void set_nnetot(int modelgridindex, float x) {
-  assert_always(x >= 0.);
-  assert_always(std::isfinite(x));
-  modelgrid[modelgridindex].nnetot = x;
+void set_nnetot(int modelgridindex, float nnetot) {
+  assert_always(nnetot >= 0.);
+  assert_always(std::isfinite(nnetot));
+  modelgrid[modelgridindex].nnetot = nnetot;
 }
 
 static void set_ffegrp(int modelgridindex, float x) {
