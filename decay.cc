@@ -1205,9 +1205,9 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 
   for (int element = get_nelements() - 1; element >= 0; element--) {
     const int atomic_number = get_atomicnumber(element);
-    std::set<int> a_isotopes;
-    // for the current element,
-    // the mass fraction sum of radioactive isotopes, and stable nuclei coming from other decays
+    std::set<int> a_isotopes;  // track which isotopes have been added to the sum to avoid double counting
+
+    // the mass fraction sum of radioactive isotopes, and stable nuclei coming from other decays for the current element
     double isomassfracsum = 0.;
     double isomassfrac_on_nucmass_sum = 0.;
     for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
@@ -1257,7 +1257,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
     grid::set_element_meanweight(modelgridindex, element, isomassfracsum / isomassfrac_on_nucmass_sum);
   }
 
-  // total number of electrons in grid cell which are possible  targets for compton scattering of gamma rays
+  // total number of electrons in grid cell which are possible targets for compton scattering of gamma rays
   double nnetot = 0.;
   for (int element = 0; element < get_nelements(); element++) {
     const double nnelement = grid::get_elem_numberdens(modelgridindex, element);
