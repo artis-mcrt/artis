@@ -39,10 +39,13 @@ endif
 $(info detected compiler is $(COMPILER_NAME))
 
 ifeq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -std=c++20 -fstrict-aliasing
+	CXXFLAGS += -std=c++20
 else
-	CXXFLAGS += -std=c++23 -fstrict-aliasing -ftree-vectorize -flto=auto -Wunknown-pragmas -Wunused-macros
+	CXXFLAGS += -std=c++23 -ftree-vectorize -flto=auto -Wunknown-pragmas -Wunused-macros
 endif
+
+
+CXXFLAGS += -fstrict-aliasing -ftrivial-auto-var-init=zero
 
 
 ifeq ($(OPENMP),ON)
