@@ -41,11 +41,11 @@ $(info detected compiler is $(COMPILER_NAME))
 ifeq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -std=c++20
 else
-	CXXFLAGS += -std=c++23 -ftree-vectorize -flto=auto -Wunknown-pragmas -Wunused-macros
+	CXXFLAGS += -std=c++23 -ftree-vectorize -flto=auto -Wunknown-pragmas -Wunused-macros -ftrivial-auto-var-init=zero -MD -MP
 endif
 
 
-CXXFLAGS += -fstrict-aliasing -ftrivial-auto-var-init=zero
+CXXFLAGS += -fstrict-aliasing
 
 
 ifeq ($(OPENMP),ON)
@@ -212,7 +212,7 @@ all: sn3d exspec
 
 $(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
 	@mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) -MD -MP -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/sn3d.o $(BUILD_DIR)/exspec.o: version.h artisoptions.h Makefile
 
