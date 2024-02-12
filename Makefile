@@ -89,11 +89,6 @@ endif
 ifeq ($(shell uname -s),Darwin)
 # 	macOS
 
-    ifeq ($(COMPILER_NAME),CLANG)
-    #   fixes linking on macOS with gcc
-	  LDFLAGS += -Wl,-ld_classic
-    endif
-
 	ifeq ($(shell uname -m),arm64)
 #	 	On Arm, -mcpu combines -march and -mtune
 		CXXFLAGS += -mcpu=native
@@ -108,9 +103,6 @@ ifeq ($(shell uname -s),Darwin)
 #	CXXFLAGS += -Rpass-analysis=loop-vectorize
 
 	# CXXFLAGS += -fopenmp-simd
-
-	# enable OpenMP for Clang
-	# CXXFLAGS += -Xpreprocessor -fopenmp -lomp
 
 	# add -lprofiler for gperftools
 	# LDFLAGS += $(LIB)
