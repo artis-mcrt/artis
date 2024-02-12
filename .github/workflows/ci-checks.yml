@@ -166,9 +166,13 @@ jobs:
                   compiler: nvidia-hpc
                   version: ${{ matrix.compiler.ver }}
 
-            - name: install gsl and tbb
+            - name: install gsl
               run: |
                   sudo apt install libgsl-dev
+
+            - name: install tbb
+              if: matrix.compiler.name == 'gcc' && matrix.stdpar == 'ON'
+              run: |
                   sudo apt install libtbb-dev
 
             - name: install openmpi
