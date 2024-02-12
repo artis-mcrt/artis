@@ -119,6 +119,8 @@ jobs:
                 exclude:
                     - openmp: ON
                       stdpar: ON
+                    - compiler: {name: nvc++, ver: '24.1'}
+                      stdpar: ON
             fail-fast: false
 
         name: ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}${{ matrix.stdpar == 'ON' && ' stdpar' || ''}}
