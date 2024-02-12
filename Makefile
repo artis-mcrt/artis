@@ -41,7 +41,7 @@ $(info detected compiler is $(COMPILER_NAME))
 ifeq ($(COMPILER_NAME),NVCXX)
 	CXXFLAGS += -std=c++20 -fstrict-aliasing
 else
-	CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto=auto -Wunknown-pragmas -Wunused-macros
+	CXXFLAGS += -std=c++23 -fstrict-aliasing -ftree-vectorize -flto=auto -Wunknown-pragmas -Wunused-macros
 endif
 
 
