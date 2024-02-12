@@ -261,6 +261,7 @@ static auto calculate_levelpop_nominpop(int modelgridindex, int element, int ion
     nn = get_groundlevelpop(modelgridindex, element, ion);
   } else if (elem_has_nlte_levels(element)) {
     if (is_nlte(element, ion, level)) {
+      // first_nlte refers to the first excited state (level=1)
       const double nltepop_over_rho =
           grid::modelgrid[modelgridindex].nlte_pops[globals::elements[element].ions[ion].first_nlte + level - 1];
       if (nltepop_over_rho < -0.9) {
