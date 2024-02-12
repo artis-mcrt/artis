@@ -3,8 +3,6 @@
 # place in architecture folder, e.g. build/arm64
 BUILD_DIR = build/$(shell uname -m)
 
-CXXFLAGS += -std=c++20 -fstrict-aliasing
-
 ifeq ($(MPI),)
 	# MPI option not specified. set to true by default
 	MPI := ON
@@ -15,7 +13,7 @@ ifeq ($(MPI),ON)
 	BUILD_DIR := $(BUILD_DIR)_mpi
 else ifeq ($(MPI),OFF)
 else
-$(error bad value for MPI option. Should be ON or OFF)
+	$(error bad value for MPI option. Should be ON or OFF)
 endif
 
 ifeq ($(TESTMODE),ON)
@@ -28,28 +26,29 @@ endif
 COMPILER_VERSION := $(shell $(CXX) --version)
 
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
-  COMPILER_IS_CLANG := TRUE
-  COMPILER_IS_NVCPP := FALSE
+  COMPILER_NAME := CLANG
 else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
-  COMPILER_IS_CLANG := FALSE
-  COMPILER_IS_NVCPP := FALSE
+  COMPILER_NAME := GCC
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
-  COMPILER_IS_CLANG := FALSE
-  COMPILER_IS_NVCPP := TRUE
+  COMPILER_NAME := NVCXX
 else
   $(warning Unknown compiler)
-  COMPILER_IS_CLANG := FALSE
-  COMPILER_IS_NVCPP := FALSE
+  COMPILER_NAME := unknown
 endif
 
-ifeq ($(COMPILER_IS_NVCPP),FALSE)
-	CXXFLAGS += -ftree-vectorize -flto=auto -Wunknown-pragmas -Wunused-macros
+$(info detected compiler is $(COMPILER_NAME))
+
+ifeq ($(COMPILER_NAME),NVCXX)
+	CXXFLAGS += -std=c++20 -fstrict-aliasing
+else
+	CXXFLAGS += -std=c++20 -fstrict-aliasing -ftree-vectorize -flto=auto -Wunknown-pragmas -Wunused-macros
 endif
+
 
 ifeq ($(OPENMP),ON)
   BUILD_DIR := $(BUILD_DIR)_openmp
 
-  ifeq ($(COMPILER_IS_CLANG),TRUE)
+  ifeq ($(COMPILER_NAME),CLANG)
     CXXFLAGS += -Xpreprocessor -fopenmp
     LDFLAGS += -lomp
   else
@@ -69,10 +68,12 @@ ifeq ($(STDPAR),ON)
   CXXFLAGS += -DSTDPAR_ON=true
   BUILD_DIR := $(BUILD_DIR)_stdpar
 
-  ifeq ($(COMPILER_IS_CLANG),TRUE)
-  else
-    # CXXFLAGS += -Xlinker -debug_snapshot
+  ifeq ($(COMPILER_NAME),NVCXX)
+	CXXFLAGS += -stdpar=gpu
+  else ifeq ($(COMPILER_NAME),GCC)
     LDFLAGS += -ltbb
+  else ifeq ($(COMPILER_NAME),CLANG)
+    LDFLAGS += -Xlinker -debug_snapshot
   endif
 else ifeq ($(STDPAR),OFF)
 else ifeq ($(STDPAR),)
@@ -84,7 +85,7 @@ endif
 ifeq ($(shell uname -s),Darwin)
 # 	macOS
 
-    ifeq ($(COMPILER_IS_CLANG),FALSE)
+    ifeq ($(COMPILER_NAME),CLANG)
     #   fixes linking on macOS with gcc
 	  LDFLAGS += -Wl,-ld_classic
     endif
@@ -178,10 +179,10 @@ else
 		else
 			CXXFLAGS += -Ofast
 
-			ifeq ($(COMPILER_IS_NVCPP),FALSE)
-				CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only
-			else
+			ifeq ($(COMPILER_NAME),NVCXX)
 				CXXFLAGS += -fast
+			else
+				CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only
 			endif
 		endif
 	# endif
