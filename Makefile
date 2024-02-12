@@ -77,7 +77,8 @@ ifeq ($(STDPAR),ON)
   else ifeq ($(COMPILER_NAME),GCC)
     LDFLAGS += -ltbb
   else ifeq ($(COMPILER_NAME),CLANG)
-    LDFLAGS += -Xlinker -debug_snapshot
+    LDFLAGS += -ltbb
+	# LDFLAGS += -Xlinker -debug_snapshot
   endif
 else ifeq ($(STDPAR),OFF)
 else ifeq ($(STDPAR),)
@@ -85,6 +86,10 @@ else
   $(error bad value for STDPAR option. Should be ON or OFF)
 endif
 
+ifneq ($(STDPAR),ON)
+	# triggers errors for the onedpl headers
+	CXXFLAGS += -Wundef
+endif
 
 ifeq ($(shell uname -s),Darwin)
 # 	macOS
@@ -189,7 +194,7 @@ else
 	# endif
 endif
 
-CXXFLAGS += -Werror -Werror=undef -Winline -Wall -Wpedantic -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wno-inline -Wsign-compare
+CXXFLAGS += -Werror -Winline -Wall -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wno-unused-function -Wno-inline -Wsign-compare
 
 
 ### use pg when you want to use gprof profiler

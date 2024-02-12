@@ -210,6 +210,10 @@ jobs:
             matrix:
                 mpi: [ON, OFF]
                 openmp: [ON, OFF]
+                stdpar: [ON, OFF]
+                exclude:
+                    - openmp: ON
+                      stdpar: ON
             fail-fast: false
 
         name: macOS clang 17 ${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}
@@ -257,6 +261,11 @@ jobs:
                   echo "OMPI_CXX=$CXX" >> $GITHUB_ENV
                   echo "CXX=mpicxx" >> $GITHUB_ENV
                   mpicxx --showme:version
+
+            - name: install onedpl
+              if: matrix.stdpar == 'ON'
+              run: |
+                  brew install onedpl
 
             - name: Show compiler version and CPU type
               run: |
