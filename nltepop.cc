@@ -399,7 +399,7 @@ static void nltepop_reset_element(const int modelgridindex, const int element) {
   const int nions = get_nions(element);
   for (int ion = 0; ion < nions; ion++) {
     const int nlte_start = globals::elements[element].ions[ion].first_nlte;
-    std::fill_n(grid::modelgrid[modelgridindex].nlte_pops + nlte_start,
+    std::fill_n(&grid::modelgrid[modelgridindex].nlte_pops[nlte_start],
                 get_nlevels_nlte(element, ion) + (ion_has_superlevel(element, ion) ? 1 : 0), -1.);
   }
 }
