@@ -266,6 +266,7 @@ jobs:
               if: matrix.stdpar == 'ON'
               run: |
                   brew install onedpl
+                  echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
 
             - name: Show compiler version and CPU type
               run: |
