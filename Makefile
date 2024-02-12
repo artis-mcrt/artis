@@ -30,7 +30,7 @@ ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
   COMPILER_NAME := GCC
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
-  COMPILER_NAME := NVCXX
+  COMPILER_NAME := NVHPC
 else
   $(warning Unknown compiler)
   COMPILER_NAME := unknown
@@ -38,7 +38,7 @@ endif
 
 $(info detected compiler is $(COMPILER_NAME))
 
-ifeq ($(COMPILER_NAME),NVCXX)
+ifeq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -std=c++20 -fstrict-aliasing
 else
 	CXXFLAGS += -std=c++23 -fstrict-aliasing -ftree-vectorize -flto=auto -Wunknown-pragmas -Wunused-macros
@@ -68,7 +68,7 @@ ifeq ($(STDPAR),ON)
   CXXFLAGS += -DSTDPAR_ON=true
   BUILD_DIR := $(BUILD_DIR)_stdpar
 
-  ifeq ($(COMPILER_NAME),NVCXX)
+  ifeq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -stdpar=gpu
   else ifeq ($(COMPILER_NAME),GCC)
     LDFLAGS += -ltbb
@@ -179,7 +179,7 @@ else
 		else
 			CXXFLAGS += -Ofast
 
-			ifeq ($(COMPILER_NAME),NVCXX)
+			ifeq ($(COMPILER_NAME),NVHPC)
 				CXXFLAGS += -fast
 			else
 				CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only
