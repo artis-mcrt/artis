@@ -121,7 +121,7 @@ jobs:
                       stdpar: ON
             fail-fast: false
 
-        name: ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}
+        name: ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}${{ matrix.mpi == 'ON' && ' MPI' || ''}}${{ matrix.openmp == 'ON' && ' OpenMP' || ''}}${{ matrix.stdpar == 'ON' && ' stdpar' || ''}}
         steps:
             - uses: actions/checkout@v4
 
@@ -164,8 +164,10 @@ jobs:
                   compiler: nvidia-hpc
                   version: ${{ matrix.compiler.ver }}
 
-            - name: install gsl
-              run: sudo apt install libgsl-dev
+            - name: install gsl and tbb
+              run: |
+                  sudo apt install libgsl-dev
+                  sudo apt install libtbb-dev
 
             - name: install openmpi
               if: matrix.mpi == 'ON'
