@@ -108,7 +108,7 @@ void packet_init(struct packet *pkt)
 
   decay::setup_decaypath_energy_per_mass();
 
-  // Need to get a normalisation factor.
+  // Need to get a normalisation factor
   auto en_cumulative = std::vector<double>(grid::ngrid);
 
   double norm = 0.;

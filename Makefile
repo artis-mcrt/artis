@@ -41,7 +41,8 @@ $(info detected compiler is $(COMPILER_NAME))
 ifeq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -std=c++20
 else
-	CXXFLAGS += -std=c++23 -ftree-vectorize -flto=auto -Wunknown-pragmas -Wunused-macros -ftrivial-auto-var-init=zero -MD -MP
+	CXXFLAGS += -std=c++23 -ftree-vectorize -flto=auto -Wunknown-pragmas -Wunused-macros -MD -MP
+	# add -ftrivial-auto-var-init=zero when we drop gcc 11 support
 endif
 
 
@@ -72,7 +73,7 @@ ifeq ($(STDPAR),ON)
   BUILD_DIR := $(BUILD_DIR)_stdpar
 
   ifeq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -stdpar=gpu
+	CXXFLAGS += -stdpar=gpu -⁠gpu=unified
   else ifeq ($(COMPILER_NAME),GCC)
     LDFLAGS += -ltbb
   else ifeq ($(COMPILER_NAME),CLANG)
