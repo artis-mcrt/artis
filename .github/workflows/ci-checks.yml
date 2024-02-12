@@ -262,10 +262,10 @@ jobs:
                   echo "CXX=mpicxx" >> $GITHUB_ENV
                   mpicxx --showme:version
 
-            - name: install onedpl
+            - name: install onedpl and tbb
               if: matrix.stdpar == 'ON'
               run: |
-                  brew install onedpl
+                  brew install onedpl tbb
                   echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
 
             - name: Show compiler version and CPU type
