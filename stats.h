@@ -2,6 +2,8 @@
 #ifndef STATS_H
 #define STATS_H
 
+#include <cstdint>
+
 #include "packet.h"
 
 namespace stats {
