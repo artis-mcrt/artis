@@ -105,7 +105,7 @@ void increment(enum eventcounters);
 
 void pkt_action_counters_reset();
 
-[[nodiscard]] auto get_counter(enum eventcounters i) -> uint64_t;
+[[nodiscard]] auto get_counter(enum eventcounters i) -> int64_t;
 
 void pkt_action_counters_printout(int nts);
 
