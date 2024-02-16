@@ -218,7 +218,7 @@ static void do_macroatom_raddeexcitation(struct packet *pkt_ptr, const int eleme
   }
 
   stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_BB);
-  pkt_ptr->interactions += 1;
+  stats::increment(stats::COUNTER_INTERACTIONS);
   pkt_ptr->last_event = 0;
 
   // emit the rpkt in a random direction
@@ -284,7 +284,7 @@ static void do_macroatom_radrecomb(struct packet *pkt_ptr, const int modelgridin
     std::abort();
   }
   stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_FB);
-  pkt_ptr->interactions += 1;
+  stats::increment(stats::COUNTER_INTERACTIONS);
   pkt_ptr->last_event = 2;
 
   /// Finally emit the packet into a randomly chosen direction, update the continuum opacity and set some flags
@@ -346,12 +346,6 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
   const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   assert_testmodeonly(nonemptymgi >= 0);
   const auto T_e = grid::get_Te(modelgridindex);
-
-  // EXPERIMENT: disable macroatom and emit according to blackbody
-  // kpkt::do_kpkt_blackbody(pkt_ptr);
-  // stats::increment(stats::COUNTER_RESONANCESCATTERINGS);
-  // pkt_ptr->interactions++;
-  // return;
 
   const double t_mid = globals::timesteps[globals::timestep].mid;
 
@@ -484,7 +478,7 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
         // printout("[debug] do_ma: jumps = %d\n", jumps);
 
         stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLDEEXC);
-        pkt_ptr->interactions += 1;
+        stats::increment(stats::COUNTER_INTERACTIONS);
         pkt_ptr->last_event = 10;
 
         if constexpr (TRACK_ION_STATS) {
@@ -501,7 +495,7 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
       }
 
       case MA_ACTION_INTERNALDOWNSAME: {
-        pkt_ptr->interactions += 1;
+        stats::increment(stats::COUNTER_INTERACTIONS);
         jumps++;
         level = do_macroatom_internal_down_same(element, ion, level);
 
@@ -530,7 +524,7 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
         // printout("[debug] do_ma:   collisonal recombination\n");
         // printout("[debug] do_ma: jumps = %d\n",jumps);
         stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLRECOMB);
-        pkt_ptr->interactions += 1;
+        stats::increment(stats::COUNTER_INTERACTIONS);
         pkt_ptr->last_event = 11;
 
         if constexpr (TRACK_ION_STATS) {
@@ -548,7 +542,7 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
 
       case MA_ACTION_INTERNALDOWNLOWER: {
         // printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
-        pkt_ptr->interactions += 1;
+        stats::increment(stats::COUNTER_INTERACTIONS);
         jumps++;
 
         stats::increment(stats::COUNTER_MA_STAT_INTERNALDOWNLOWER);
@@ -605,7 +599,7 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
 
       case MA_ACTION_INTERNALUPSAME: {
         // printout("[debug] do_ma:   internal upward jump within current ionstage\n");
-        pkt_ptr->interactions += 1;
+        stats::increment(stats::COUNTER_INTERACTIONS);
         jumps++;
 
         /// randomly select the occuring transition
@@ -628,7 +622,7 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
 
       case MA_ACTION_INTERNALUPHIGHER: {
         // printout("[debug] do_ma:   internal upward jump to next ionstage\n");
-        pkt_ptr->interactions += 1;
+        stats::increment(stats::COUNTER_INTERACTIONS);
         jumps++;
 
         stats::increment(stats::COUNTER_MA_STAT_INTERNALUPHIGHER);
@@ -650,7 +644,7 @@ void do_macroatom(struct packet *pkt_ptr, const struct mastate &pktmastate)
       }
 
       case MA_ACTION_INTERNALUPHIGHERNT: {
-        pkt_ptr->interactions += 1;
+        stats::increment(stats::COUNTER_INTERACTIONS);
         // ion += 1;
         if constexpr (TRACK_ION_STATS) {
           stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL,

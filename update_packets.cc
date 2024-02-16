@@ -292,10 +292,6 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
   const double tw = globals::timesteps[nts].width;
   const double ts_end = ts + tw;
 
-  for (auto &pkt : packets) {
-    pkt.interactions = 0;
-  }
-
   const auto time_update_packets_start = std::time(nullptr);
   printout("timestep %d: start update_packets at time %ld\n", nts, time_update_packets_start);
   bool timestepcomplete = false;
@@ -356,7 +352,7 @@ void update_packets(const int my_rank, const int nts, std::span<struct packet> p
     passnumber++;
   }
 
-  stats::pkt_action_counters_printout(packets.data(), nts);
+  stats::pkt_action_counters_printout(nts);
 
   const auto time_update_packets_end_thisrank = std::time(nullptr);
   printout("timestep %d: end of update_packets for this rank at time %ld\n", nts, time_update_packets_end_thisrank);

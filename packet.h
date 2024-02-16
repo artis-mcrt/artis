@@ -44,7 +44,6 @@ struct packet {
   double prop_time{-1.};     // internal clock to track how far in time the packet has been propagated
   int where{-1};             // The propagation grid cell that the packet is in.
   enum cell_boundary last_cross { BOUNDARY_NONE };  // To avoid rounding errors on cell crossing.
-  int interactions{0};                              // number of interactions the packet undergone
   int nscatterings{0};                // records number of electron scatterings a r-pkt undergone since it was emitted
   int last_event{0};                  // debug: stores information about the packets history
   std::array<double, 3> pos{};        // Position of the packet (x,y,z).

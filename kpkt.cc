@@ -393,7 +393,7 @@ void do_kpkt_blackbody(struct packet *pkt_ptr)
   pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
   // if (tid == 0) k_stat_to_r_bb++;
   stats::increment(stats::COUNTER_K_STAT_TO_R_BB);
-  pkt_ptr->interactions++;
+  stats::increment(stats::COUNTER_INTERACTIONS);
   pkt_ptr->last_event = LASTEVENT_KPKT_TO_RPKT_FFBB;
   pkt_ptr->emissiontype = EMTYPE_FREEFREE;
   pkt_ptr->em_pos = pkt_ptr->pos;
@@ -423,7 +423,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     pkt_ptr->prop_time = t2;
     return;
   }
-  pkt_ptr->interactions++;
+  stats::increment(stats::COUNTER_INTERACTIONS);
 
   vec_scale(pkt_ptr->pos, t_current / t1);
   pkt_ptr->prop_time = t_current;

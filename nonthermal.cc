@@ -1762,7 +1762,7 @@ void do_ntlepton(struct packet *pkt_ptr) {
 
       pkt_ptr->type = TYPE_MA;
       stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLION);
-      pkt_ptr->interactions += 1;
+      stats::increment(stats::COUNTER_INTERACTIONS);
       pkt_ptr->last_event = 20;
       pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
       pkt_ptr->trueemissionvelocity = -1;
@@ -1803,7 +1803,7 @@ void do_ntlepton(struct packet *pkt_ptr) {
 
           pkt_ptr->type = TYPE_MA;
           stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC);
-          pkt_ptr->interactions += 1;
+          stats::increment(stats::COUNTER_INTERACTIONS);
           pkt_ptr->last_event = 21;
           pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
           pkt_ptr->trueemissionvelocity = -1;

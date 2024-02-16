@@ -71,15 +71,16 @@ enum eventcounters {
   COUNTER_NT_STAT_TO_EXCITATION = 23,
   COUNTER_NT_STAT_TO_KPKT = 24,
   COUNTER_K_STAT_FROM_EARLIERDECAY = 25,
-  COUNTER_ESCOUNTER = 26,
-  COUNTER_RESONANCESCATTERINGS = 27,
-  COUNTER_CELLCROSSINGS = 28,
-  COUNTER_UPSCATTER = 29,
-  COUNTER_DOWNSCATTER = 30,
-  COUNTER_UPDATECELL = 31,
-  COUNTER_COOLINGRATECALCCOUNTER = 32,
-  COUNTER_NESC = 33,
-  COUNTER_COUNT = 34,
+  COUNTER_INTERACTIONS = 26,
+  COUNTER_ESCOUNTER = 27,
+  COUNTER_RESONANCESCATTERINGS = 28,
+  COUNTER_CELLCROSSINGS = 29,
+  COUNTER_UPSCATTER = 30,
+  COUNTER_DOWNSCATTER = 31,
+  COUNTER_UPDATECELL = 32,
+  COUNTER_COOLINGRATECALCCOUNTER = 33,
+  COUNTER_NESC = 34,
+  COUNTER_COUNT = 35,
 };
 
 void init();
@@ -104,7 +105,7 @@ void pkt_action_counters_reset();
 
 [[nodiscard]] auto get_counter(enum eventcounters i) -> int;
 
-void pkt_action_counters_printout(const struct packet *pkt, int nts);
+void pkt_action_counters_printout(int nts);
 
 void reduce_estimators();
 }  // namespace stats

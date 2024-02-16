@@ -191,13 +191,8 @@ auto get_counter(enum eventcounters i) -> int {
   return count;
 }
 
-void pkt_action_counters_printout(const struct packet *const pkt, const int nts) {
-  unsigned long allpktinteractions = 0;
-  for (int i = 0; i < globals::npkts; i++) {
-    assert_always(pkt[i].interactions >= 0);
-    allpktinteractions += pkt[i].interactions;
-  }
-  const double meaninteractions = static_cast<double>(allpktinteractions) / globals::npkts;
+void pkt_action_counters_printout(const int nts) {
+  const double meaninteractions = static_cast<double>(get_counter(COUNTER_INTERACTIONS)) / globals::npkts;
   printout("mean number of interactions per packet = %g\n", meaninteractions);
 
   const double deltat = globals::timesteps[nts].width;

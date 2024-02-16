@@ -34,7 +34,6 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   pkt_ptr->prop_time = globals::tmin;
   // pkt_ptr->last_cross = BOUNDARY_NONE;
   pkt_ptr->originated_from_particlenotgamma = false;
-  pkt_ptr->interactions = 0;
 
   if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
     const double zrand = rng_uniform();
@@ -302,8 +301,7 @@ void read_packets(const char filename[], struct packet *pkt) {
     ssline >> escape_type >> pkt[i].escape_time;
     pkt[i].escape_type = static_cast<enum packet_type>(escape_type);
 
-    ssline >> pkt[i].next_trans >> pkt[i].interactions >> pkt[i].last_event;
-    assert_always(pkt[i].interactions >= 0);
+    ssline >> pkt[i].next_trans >> pkt[i].last_event;
 
     ssline >> pkt[i].emissiontype >> pkt[i].trueemissiontype;
 

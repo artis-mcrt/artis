@@ -520,7 +520,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
     /// in this case the packet stays a R_PKT of same nu_cmf as before (coherent scattering)
     /// but with different direction
     // printout("[debug] rpkt_event:   electron scattering\n");
-    pkt_ptr->interactions += 1;
+    stats::increment(stats::COUNTER_INTERACTIONS);
     pkt_ptr->nscatterings += 1;
     pkt_ptr->last_event = LASTEVENT_ELECTRONSCATTERING;
     stats::increment(stats::COUNTER_ESCOUNTER);
@@ -540,7 +540,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
     /// ff: transform to k-pkt
     // printout("[debug] rpkt_event:   free-free transition\n");
     stats::increment(stats::COUNTER_K_STAT_FROM_FF);
-    pkt_ptr->interactions += 1;
+    stats::increment(stats::COUNTER_INTERACTIONS);
     pkt_ptr->last_event = 5;
     pkt_ptr->type = TYPE_KPKT;
     pkt_ptr->absorptiontype = -1;
@@ -579,7 +579,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
     /// and decide whether we go to ionisation energy
     if (rng_uniform() < nu_edge / nu) {
       stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_BF);
-      pkt_ptr->interactions += 1;
+      stats::increment(stats::COUNTER_INTERACTIONS);
       pkt_ptr->last_event = 3;
 
       if constexpr (TRACK_ION_STATS) {
@@ -597,7 +597,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
       /// transform to k-pkt
       // printout("[debug] rpkt_event:   bound-free: transform to k-pkt\n");
       stats::increment(stats::COUNTER_K_STAT_FROM_BF);
-      pkt_ptr->interactions += 1;
+      stats::increment(stats::COUNTER_INTERACTIONS);
       pkt_ptr->last_event = 4;
       pkt_ptr->type = TYPE_KPKT;
     }
@@ -614,7 +614,7 @@ static void rpkt_event_boundbound(struct packet *pkt_ptr, struct mastate &pktmas
   // printout("[debug] rpkt_event: bound-bound activation of macroatom\n");
   // if (tid == 0) ma_stat_activation_bb++;
   stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_BB);
-  pkt_ptr->interactions += 1;
+  stats::increment(stats::COUNTER_INTERACTIONS);
   pkt_ptr->last_event = 1;
 
   pkt_ptr->absorptiontype = pktmastate.activatingline;
@@ -689,7 +689,7 @@ static void rpkt_event_thickcell(struct packet *pkt_ptr)
 /// but with different direction.
 {
   // printout("[debug] rpkt_event_thickcell:   electron scattering\n");
-  pkt_ptr->interactions += 1;
+  stats::increment(stats::COUNTER_INTERACTIONS);
   pkt_ptr->nscatterings += 1;
   pkt_ptr->last_event = LASTEVENT_ELECTRONSCATTERING;
   stats::increment(stats::COUNTER_ESCOUNTER);
