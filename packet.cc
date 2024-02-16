@@ -174,7 +174,7 @@ void write_packets(const char filename[], const struct packet *const pkt) {
   FILE *packets_file = fopen_required(filename, "w");
   fprintf(packets_file,
           "#number where type_id posx posy posz dirx diry dirz last_cross tdecay e_cmf e_rf nu_cmf nu_rf "
-          "escape_type_id escape_time next_trans interactions last_event emissiontype trueemissiontype "
+          "escape_type_id escape_time next_trans last_event emissiontype trueemissiontype "
           "em_posx em_posy em_posz absorption_type absorption_freq nscatterings em_time absorptiondirx absorptiondiry "
           "absorptiondirz stokes1 stokes2 stokes3 pol_dirx pol_diry pol_dirz originated_from_positron "
           "true_emission_velocity trueem_time pellet_nucindex\n");
@@ -193,7 +193,6 @@ void write_packets(const char filename[], const struct packet *const pkt) {
     fprintf(packets_file, "%d ", pkt[i].escape_type);
     fprintf(packets_file, "%g ", pkt[i].escape_time);
     fprintf(packets_file, "%d ", pkt[i].next_trans);
-    fprintf(packets_file, "%d ", pkt[i].interactions);
     fprintf(packets_file, "%d ", pkt[i].last_event);
     fprintf(packets_file, "%d ", pkt[i].emissiontype);
     fprintf(packets_file, "%d ", pkt[i].trueemissiontype);
