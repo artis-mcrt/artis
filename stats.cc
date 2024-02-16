@@ -22,7 +22,7 @@
 namespace stats {
 
 static double *ionstats = nullptr;
-static std::vector<std::array<int, COUNTER_COUNT>> eventstats;
+static std::vector<std::array<uint64_t, COUNTER_COUNT>> eventstats;
 
 void init() {
   eventstats.resize(get_max_threads(), {0});
@@ -182,9 +182,9 @@ void pkt_action_counters_reset() {
   globals::nesc = 0;
 }
 
-auto get_counter(enum eventcounters i) -> int {
+auto get_counter(enum eventcounters i) -> uint64_t {
   assert_always(i < COUNTER_COUNT);
-  int count = 0;
+  uint64_t count = 0;
   for (int t = 0; t < get_num_threads(); t++) {
     count += eventstats[t][i];
   }
