@@ -578,9 +578,6 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
           const float f_ul = g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
           assert_always(std::isfinite(f_ul));
 
-          // printout("lineindex %d, element %d, ion %d, lower %d, upper %d, nu
-          // %g\n",*lineindex,element,ion,level-i-1,level,nu_trans);
-
           temp_linelist.push_back({
               .nu = nu_trans,
               .einstein_A = A_ul,
