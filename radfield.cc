@@ -720,7 +720,6 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
     if (nu_cmf >= nu_edge && nu_cmf <= nu_max_phixs) {
 
       if (globals::allcont[allcontindex].has_bf_estimator == true) {
-
         if(detailed_counter == globals::BFCounter){
           printout("detailed_counter %d\n",detailed_counter);
           printout("globals::BFCounter \n",globals::BFCounter);
