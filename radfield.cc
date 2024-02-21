@@ -642,6 +642,15 @@ void close_file() {
   }
 }
 
+
+auto is_bfest(const int element, const int ion, const int level) -> bool
+// Returns true if (element,ion,level) is to be treated with a bf estimator.
+{
+  return LEVEL_HAS_BFEST(get_atomicnumber(element), get_ionstage(element, ion),
+                         level);  // defined in artisoptions.h
+}
+
+
 void zero_estimators(int modelgridindex)
 // set up the new bins and clear the estimators in preparation
 // for a timestep
