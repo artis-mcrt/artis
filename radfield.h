@@ -10,7 +10,6 @@
 namespace radfield {
 
 void zero_estimators(int modelgridindex);
-auto is_bfest(int element, int ion, int level) -> bool;
 void init(int my_rank, int ndo_nonempty);
 void initialise_prev_titer_photoionestimators();
 void write_to_file(int modelgridindex, int timestep);
