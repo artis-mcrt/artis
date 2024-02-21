@@ -86,10 +86,9 @@ constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) {
     }
     return (level <= 80);
   } else {
-    return true; // Always treat (element, ion, level) with bf estimator
+    return true;  // Always treat (element, ion, level) with bf estimator
   }
 }
-
 
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 13;
 
