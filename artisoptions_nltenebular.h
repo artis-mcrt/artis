@@ -35,7 +35,6 @@ constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {
   return ((Z == 26 || Z == 28) && ionstage >= 1) ? 80 : 0;
 }
 
-
 constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
 constexpr bool DIRECT_COL_HEAT = true;
@@ -91,7 +90,7 @@ constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) {
     }
     return (level <= 80);
   } else {
-    return true; // Always treat (element, ion, level) with bf estimator
+    return true;
   }
 }
 
