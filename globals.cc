@@ -12,7 +12,7 @@ std::unique_ptr<struct time[]> timesteps = nullptr;
 
 double *rpkt_emiss = nullptr;  /// Volume estimator for the rpkt emissivity
 
-int BFGlobalVariable = 10000;
+int BFCounter;
 
 // for USE_LUT_PHOTOION = true
 double *corrphotoionrenorm = nullptr;

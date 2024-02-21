@@ -15,6 +15,7 @@ auto get_phixtargetindex(int element, int ion, int level, int upperionlevel) -> 
 auto get_tau_sobolev(int modelgridindex, int lineindex, double t_current) -> double;
 auto get_nnion_tot(int modelgridindex) -> double;
 auto is_nlte(int element, int ion, int level) -> bool;
+auto is_bfest(int element, int ion, int level) -> bool;
 auto level_isinsuperlevel(int element, int ion, int level) -> bool;
 auto photoionization_crosssection_fromtable(const float *photoion_xs, double nu_edge, double nu) -> double;
 void set_nelements(int nelements_in);

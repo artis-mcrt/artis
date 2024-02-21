@@ -84,6 +84,14 @@ auto is_nlte(const int element, const int ion, const int level) -> bool
                        level);  // defined in artisoptions.h
 }
 
+
+auto is_bfest(const int element, const int ion, const int level) -> bool
+// Returns true if (element,ion,level) is to be treated with a bf estimator.
+{
+  return LEVEL_HAS_BFEST(get_atomicnumber(element), get_ionstage(element, ion),
+                       level);  // defined in artisoptions.h
+}
+
 auto level_isinsuperlevel(const int element, const int ion, const int level) -> bool
 // ion has NLTE levels, but this one is not NLTE => is in the superlevel
 {

@@ -6,7 +6,7 @@
 
 #include "constants.h"
 
-constexpr int MPKTS = 1000000;
+constexpr int MPKTS = 750000;
 
 constexpr int GRID_TYPE = GRID_CARTESIAN3D;
 constexpr int CUBOID_NCOORDGRID_X = 50;
@@ -34,6 +34,7 @@ constexpr bool single_ground_level = false;
 constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {
   return ((Z == 26 || Z == 28) && ionstage >= 1) ? 80 : 0;
 }
+
 
 constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
@@ -81,6 +82,18 @@ constexpr double T_R_max = 250000;
 constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 constexpr bool DETAILED_BF_ESTIMATORS_ON = true;
+
+constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) {
+  bool custom_bf_estimator = false;
+  if (custom_bf_estimator == true) {
+    if (element_z == 26 && ionstage == 2) {
+      return (level <= 197);
+    }
+    return (level <= 80);
+  } else {
+    return true; // Always treat (element, ion, level) with bf estimator
+  }
+}
 
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 13;
 

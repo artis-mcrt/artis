@@ -1484,7 +1484,7 @@ static void setup_phixs_list() {
           nonconstallcont[allcontindex].probability = get_phixsprobability(element, ion, level, phixstargetindex);
           nonconstallcont[allcontindex].upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-          if (get_atomicnumber(element)>=0) {
+          if (is_bfest(element,ion,level)) {
 
             nonconstallcont[allcontindex].has_bf_estimator=true;
             bound_free_levels_counter+=1;
@@ -1510,11 +1510,11 @@ static void setup_phixs_list() {
     }
   }
   int total_bound_free=nonbound_free_levels_counter+bound_free_levels_counter;
-  printout("Bf estimator flag passed through:    \t%d\n",total_bound_free);
-  printout("Bf estimator flag activated for:     \t%d\n",bound_free_levels_counter);
-  printout("Bf estimator flag not activated for: \t%d\n",nonbound_free_levels_counter);
-  globals::BFGlobalVariable=bound_free_levels_counter;
-  printout("Have set the BFGlobalVariable to:\t%d\n",bound_free_levels_counter);
+  printout("[info] Bf estimator flag passed through:    \t%d\n",total_bound_free);
+  printout("[info] Bf estimator flag activated for:     \t%d\n",bound_free_levels_counter);
+  printout("[info] Bf estimator flag not activated for: \t%d\n",nonbound_free_levels_counter);
+  globals::BFCounter=bound_free_levels_counter;
+  printout("[info] Set the BFCounter to:\t%d\n",bound_free_levels_counter);
 
   assert_always(allcontindex == globals::nbfcontinua);
   assert_always(globals::nbfcontinua >= 0);  // was initialised as -1 before startup
