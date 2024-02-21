@@ -727,7 +727,7 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
           printout("allcontindex %d\n",allcontindex);
         }
         assert_always(detailed_counter < globals::BFCounter);
-        
+
         if(nonemptymgi * globals::BFCounter + detailed_counter >= grid::get_nonempty_npts_model() * globals::BFCounter){
           printout("detailed_counter %d\n",detailed_counter);
           printout("globals::BFCounter %d\n",globals::BFCounter);
@@ -736,19 +736,19 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
         }
         assert_always(nonemptymgi * globals::BFCounter + detailed_counter < grid::get_nonempty_npts_model() * globals::BFCounter)
 
-        safeadd(bfrate_raw[nonemptymgi * globals::BFCounter + detailed_counter],
-                globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
+            safeadd(bfrate_raw[nonemptymgi * globals::BFCounter + detailed_counter],
+                    globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
       }
 
     } else if (nu_cmf < nu_edge) {
       // list is sorted by nu_edge, so all remaining will have nu_cmf < nu_edge
       break;
     }
-    
+
     if (globals::allcont[allcontindex].has_bf_estimator == true) {
       detailed_counter+=1;
     }
-    
+
   }
 }
 
