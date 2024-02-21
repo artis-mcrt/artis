@@ -11,6 +11,7 @@ void update_parameterfile(int nts);
 void time_init();
 void write_timestep_file();
 auto get_noncommentline(std::fstream &input, std::string &line) -> bool;
+auto is_bfest(int element, int ion, int level) -> bool;
 
 static inline auto lineiscommentonly(const std::string &line) -> bool
 // return true for whitepace-only lines, and lines that are exclusively whitepace up to a '#' character

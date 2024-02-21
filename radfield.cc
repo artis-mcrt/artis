@@ -643,14 +643,6 @@ void close_file() {
 }
 
 
-auto is_bfest(const int element, const int ion, const int level) -> bool
-// Returns true if (element,ion,level) is to be treated with a bf estimator.
-{
-  return LEVEL_HAS_BFEST(get_atomicnumber(element), get_ionstage(element, ion),
-                         level);  // defined in artisoptions.h
-}
-
-
 void zero_estimators(int modelgridindex)
 // set up the new bins and clear the estimators in preparation
 // for a timestep
@@ -720,14 +712,13 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
     if (nu_cmf >= nu_edge && nu_cmf <= nu_max_phixs) {
 
       if (globals::allcont[allcontindex].has_bf_estimator == true) {
-
         if(detailed_counter == globals::BFCounter){
           printout("detailed_counter %d\n",detailed_counter);
           printout("globals::BFCounter \n",globals::BFCounter);
           printout("allcontindex %d\n",allcontindex);
         }
         assert_always(detailed_counter < globals::BFCounter);
-        
+
         if(nonemptymgi * globals::BFCounter + detailed_counter >= grid::get_nonempty_npts_model() * globals::BFCounter){
           printout("detailed_counter %d\n",detailed_counter);
           printout("globals::BFCounter %d\n",globals::BFCounter);
@@ -736,19 +727,19 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
         }
         assert_always(nonemptymgi * globals::BFCounter + detailed_counter < grid::get_nonempty_npts_model() * globals::BFCounter)
 
-        safeadd(bfrate_raw[nonemptymgi * globals::BFCounter + detailed_counter],
-                globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
+            safeadd(bfrate_raw[nonemptymgi * globals::BFCounter + detailed_counter],
+                    globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
       }
 
     } else if (nu_cmf < nu_edge) {
       // list is sorted by nu_edge, so all remaining will have nu_cmf < nu_edge
       break;
     }
-    
+
     if (globals::allcont[allcontindex].has_bf_estimator == true) {
       detailed_counter+=1;
     }
-    
+
   }
 }
 
