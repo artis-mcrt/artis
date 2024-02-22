@@ -10,9 +10,11 @@
 #include <fstream>
 #include <limits>
 #include <span>
+#include <string> 
 #include <vector>
 
 #include "artisoptions.h"
+#include "atomic.h"
 #include "constants.h"
 #include "decay.h"
 #include "globals.h"
@@ -31,6 +33,13 @@ struct gamma_line {
 };
 
 static std::vector<std::vector<struct gamma_line>> gamma_spectra;
+
+struct el_photoion_data {
+  std::vector<double> energy; // energy in MeV
+  std::vector<double> sigma_xcom; // cross section in barns/atom
+};
+const int numb_xcom_elements = 100;
+static struct el_photoion_data photoion_data[numb_xcom_elements];
 
 struct gammaline {
   int nucindex;       // is it a Ni56, Co56, a fake line, etc
@@ -158,6 +167,11 @@ static void read_decaydata() {
   }
 }
 
+void init_gamma_data() {
+  init_gamma_linelist();
+  init_photoion_data();
+}
+
 // construct an energy ordered gamma ray line list.
 void init_gamma_linelist() {
   read_decaydata();
@@ -195,6 +209,29 @@ void init_gamma_linelist() {
             gamma_spectra[nucindex][index].probability);
   }
   fclose(line_list);
+}
+
+void init_photoion_data() {
+  // read the file
+  printout("reading XCOM photoionization data...\n");
+  // reserve memory
+  for(int Z = 0; Z < numb_xcom_elements; Z++) {
+    photoion_data[Z].energy.reserve(100);
+    photoion_data[Z].sigma_xcom.reserve(100);
+  }
+  std::ifstream data_fs("xcom_photoion_data.txt");
+  std::string line_str;
+  // now read the file a second time to store the data
+  while(getline(data_fs,line_str)) {
+    if(line_str[0] != '#') {
+      int Z;
+      double E, sigma;
+      if(3 == std::sscanf(line_str.c_str(), "%d %lg %lg", &Z, &E, &sigma)) {
+        photoion_data[Z-1].energy.push_back(E);
+        photoion_data[Z-1].sigma_xcom.push_back(sigma);
+      }
+    } 
+  }
 }
 
 void normalise(int nts) {
@@ -534,28 +571,63 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
   const double rho = grid::get_rho(mgi);
 
   if (globals::gamma_kappagrey < 0) {
+    chi_cmf = 0.;
     // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Veigele (1973)
 
     // 2.41326e19 Hz = 100 keV / H
-    const double hnu_over_100kev = pkt_ptr->nu_cmf / 2.41326e+19;
+    //const double hnu_over_100kev = pkt_ptr->nu_cmf / 2.41326e+19;
+    // for interpolation compute frequency in MeV
+    const double hnu_over_1MeV = pkt_ptr->nu_cmf / 2.41326e+20;
+    const double log10_hnu_over_1MeV = log10(hnu_over_1MeV);
 
     // double sigma_cmf_cno = 0.0448e-24 * pow(hnu_over_100kev, -3.2);
-
-    const double sigma_cmf_si = 1.16e-24 * pow(hnu_over_100kev, -3.13);
-
-    const double sigma_cmf_fe = 25.7e-24 * pow(hnu_over_100kev, -3.0);
-
-    // Now need to multiply by the particle number density.
-
-    const double chi_cmf_si = sigma_cmf_si * (rho / MH / 28);
-    // Assumes Z = 14. So mass = 28.
-
-    const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
-    // Assumes Z = 28. So mass = 56.
-
-    const double f_fe = grid::get_ffegrp(mgi);
-
-    chi_cmf = (chi_cmf_fe * f_fe) + (chi_cmf_si * (1. - f_fe));
+    const int numb_elements = get_nelements();
+    for(int i = 0; i < numb_elements; i++) {
+        // determine charge number:
+        int Z = get_atomicnumber(i);
+        double n_i = grid::get_elem_numberdens(mgi,i);// number density in the current cell
+        if(n_i == 0) { continue; }
+        // get indices of lower and upper boundary
+        int E_gtr_idx = -2; //
+        int numb_energies = photoion_data[Z-1].energy.size();
+        for(int j = 0; j < numb_energies; j++) {
+          if(photoion_data[Z-1].energy[j] > hnu_over_1MeV) {
+            E_gtr_idx = j;
+            break;
+          }
+        }
+        if(E_gtr_idx == -1) { // packet energy smaller than all tabulated values
+          chi_cmf += photoion_data[i].sigma_xcom[0] * n_i;
+          continue;
+        } else if(E_gtr_idx == -2) { // packet energy greater than all tabulated values
+          chi_cmf += photoion_data[i].sigma_xcom[numb_energies-1] * n_i;
+          continue;
+        }
+        int E_smaller_idx = E_gtr_idx - 1;
+        double log10_E = log10_hnu_over_1MeV;
+        double log10_E_gtr = log10(photoion_data[Z-1].energy[E_gtr_idx]);
+        double log10_E_smaller = log10(photoion_data[Z-1].energy[E_smaller_idx]);
+        double log10_sigma_lower = log10(photoion_data[Z-1].sigma_xcom[E_smaller_idx]);
+        double log10_sigma_gtr = log10(photoion_data[Z-1].sigma_xcom[E_gtr_idx]);
+        // interpolate or extrapolate, both linear in log10-log10 space
+        double log10_intpol = log10_E_smaller + (log10_sigma_gtr-log10_sigma_lower) / (log10_E_gtr-log10_E_smaller) * (log10_E-log10_E_smaller);
+        double sigma_intpol = pow(10.,log10_intpol) * 1.0e-24; // now in cm^2
+        double chi_cmf_contrib = sigma_intpol * n_i;
+        /*
+        if(chi_cmf_contrib > 1.0e-10) {
+          std::cout << std::endl;
+          std::cout << "Z: " << Z << std::endl;
+          std::cout << "hnu_over_1MeV: " << hnu_over_1MeV << std::endl;
+          std::cout << "log10_E: " << log10_E << std::endl;
+          std::cout << "log10_E_gtr: " << log10_E_gtr << std::endl;
+          std::cout << "log10_E_smaller: " << log10_E_smaller << std::endl;
+          std::cout << "log10_sigma_lower: " << log10_sigma_lower << std::endl;
+          std::cout << "log10_sigma_gtr: " << log10_sigma_gtr << std::endl;
+          std::cout << "log10_intpol: " << log10_intpol << std::endl;
+        }
+        */
+        chi_cmf += chi_cmf_contrib;
+    }
   } else {
     chi_cmf = globals::gamma_kappagrey * rho;
   }

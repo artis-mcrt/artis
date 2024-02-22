@@ -731,7 +731,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
   printout("Number of decay paths: %d (max length %d)\n", get_num_decaypaths(), maxdecaypathlength);
 
   /// Read in data for gamma ray lines and make a list of them in energy order.
-  gammapkt::init_gamma_linelist();
+  gammapkt::init_gamma_data();
 
   // TODO: generalise this to all included nuclides
   printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n",

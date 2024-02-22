@@ -5,7 +5,9 @@
 #include "packet.h"
 
 namespace gammapkt {
+void init_gamma_data();
 void init_gamma_linelist();
+void init_photoion_data();
 void pellet_gamma_decay(struct packet *pkt_ptr);
 void do_gamma(struct packet *pkt_ptr, double t2);
 void normalise(int nts);
