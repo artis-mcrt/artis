@@ -234,6 +234,7 @@ jobs:
               working-directory: tests/
               run: |
                   at plotlightcurves ${{ matrix.testname }}_testrun
+                  at plotlightcurves --frompackets ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum nebularonezone
               if: always() && matrix.testname == 'nebularonezone' && matrix.testmode == 'OFF'
