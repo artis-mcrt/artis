@@ -156,7 +156,6 @@ static double *deposition_rate_density;
 static int *deposition_rate_density_timestep;
 
 static void read_binding_energies() {
-//  FILE *binding = fopen_required("binding_energies.txt", "r");
   auto binding_energies_file = fstream_required("bindingenergies_Lotz_tab1and2.txt", std::ios::in);
 
   int nshells = 0; //number of shell in binding energy file
@@ -189,7 +188,9 @@ static void read_binding_energies() {
     nelement_bindingenergy++;
   }
 }
-/// Old version -- new file version should contain same as old file but should keep functionality to use old file: TODO
+/// Old version -- new file version should contain same as old file but should keep functionality to use old file:
+/// Old version doesn't have Z column TODO
+
 //static void read_binding_energies() {
 //  FILE *binding = fopen_required("binding_energies.txt", "r");
 //
