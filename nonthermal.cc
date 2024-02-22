@@ -77,10 +77,10 @@ static constexpr double MINDEPRATE = 0.;
 static constexpr double A_naught_squared = 2.800285203e-17;
 
 // specifies max number of shells for which data is known for computing mean binding energies
-static constexpr int M_NT_SHELLS = 10;
+static constexpr int M_NT_SHELLS = 28;
 
 // maximum number of elements for which binding energy tables are to be used
-static constexpr int MAX_Z_BINDING = 30;
+static constexpr int MAX_Z_BINDING = 108;
 
 static std::array<std::array<double, M_NT_SHELLS>, MAX_Z_BINDING> electron_binding;
 
@@ -156,28 +156,63 @@ static double *deposition_rate_density;
 static int *deposition_rate_density_timestep;
 
 static void read_binding_energies() {
-  FILE *binding = fopen_required("binding_energies.txt", "r");
+//  FILE *binding = fopen_required("binding_energies.txt", "r");
+  auto binding_energies_file = fstream_required("bindingenergies_Lotz_tab1and2.txt", std::ios::in);
 
-  int dum1 = 0;
-  int dum2 = 0;
-  assert_always(fscanf(binding, "%d %d", &dum1, &dum2) == 2);  // dimensions of the table
-  if ((dum1 != M_NT_SHELLS) || (dum2 != MAX_Z_BINDING)) {
+  int nshells = 0; //number of shell in binding energy file
+  int n_z_binding = 0; //number of elements in binding energy file
+
+  std::string line;
+  assert_always(get_noncommentline(binding_energies_file, line));
+  std::istringstream(line) >> nshells >> n_z_binding;
+  printout("Reading binding energies file with %d elements and %d shells\n", n_z_binding, nshells);
+
+  if ((nshells != M_NT_SHELLS) || (n_z_binding != MAX_Z_BINDING)) {
     printout("Wrong size for the binding energy tables!\n");
     std::abort();
   }
 
-  for (int index1 = 0; index1 < dum2; index1++) {
-    float dum[10];
-    assert_always(fscanf(binding, "%g %g %g %g %g %g %g %g %g %g", &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5],
-                         &dum[6], &dum[7], &dum[8], &dum[9]) == 10);
+  int nelement_bindingenergy = 0;
+  while (get_noncommentline(binding_energies_file, line)) {
+    float bindingenergy;
+    int z_element;
+    std::istringstream ssline(line);
 
-    for (int index2 = 0; index2 < 10; index2++) {
-      electron_binding[index1][index2] = dum[index2] * EV;
+    assert_always(ssline >> z_element);
+    printout("Reading binding energy Z=%d\n", z_element);
+
+    for (int shell = 0; shell < nshells; shell++){
+      assert_always(ssline >> bindingenergy);
+//      printout("Binding energy of %g in shell %d element number %d Z=%d\n", bindingenergy, shell, nelement_bindingenergy, z_element);
+      electron_binding[nelement_bindingenergy][shell] = bindingenergy * EV;
     }
+    nelement_bindingenergy++;
   }
-
-  fclose(binding);
 }
+/// Old version -- new file version should contain same as old file but should keep functionality to use old file: TODO
+//static void read_binding_energies() {
+//  FILE *binding = fopen_required("binding_energies.txt", "r");
+//
+//  int dum1 = 0;
+//  int dum2 = 0;
+//  assert_always(fscanf(binding, "%d %d", &dum1, &dum2) == 2);  // dimensions of the table
+//  if ((dum1 != M_NT_SHELLS) || (dum2 != MAX_Z_BINDING)) {
+//    printout("Wrong size for the binding energy tables!\n");
+//    abort();
+//  }
+//
+//  for (int index1 = 0; index1 < dum2; index1++) {
+//    float dum[10];
+//    assert_always(fscanf(binding, "%g %g %g %g %g %g %g %g %g %g", &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5],
+//                         &dum[6], &dum[7], &dum[8], &dum[9]) == 10);
+//
+//    for (int index2 = 0; index2 < 10; index2++) {
+//      electron_binding[index1][index2] = dum[index2] * EV;
+//    }
+//  }
+//
+//  fclose(binding);
+//}
 
 static auto get_auger_probability(int modelgridindex, int element, int ion, int naugerelec) -> double {
   assert_always(naugerelec <= NT_MAX_AUGER_ELECTRONS);
