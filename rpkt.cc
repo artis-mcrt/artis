@@ -44,7 +44,7 @@ auto closest_transition(const double nu_cmf, const int next_trans) -> int
   // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
   // lower_bound matches the first element where the comparison function is false
   const auto *matchline =
-      std::lower_bound(&globals::linelist[next_trans], &globals::linelist[globals::nlines], nu_cmf,
+      std::lower_bound(globals::linelist, globals::linelist + globals::nlines, nu_cmf,
                        [](const auto &line, const double nu_cmf) -> bool { return line.nu > nu_cmf; });
   const int matchindex = std::distance(globals::linelist, matchline);
   if (matchindex >= globals::nlines) {
@@ -363,7 +363,8 @@ static void electron_scatter_rpkt(struct packet *pkt_ptr) {
 }
 
 static void rpkt_event_continuum(struct packet *pkt_ptr,
-                                 struct rpkt_continuum_absorptioncoeffs chi_rpkt_cont_thisthread, int modelgridindex) {
+                                 const struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont_thisthread,
+                                 int modelgridindex) {
   const double nu = pkt_ptr->nu_cmf;
 
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
