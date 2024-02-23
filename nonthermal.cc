@@ -83,6 +83,9 @@ static constexpr int M_NT_SHELLS = 28;
 static constexpr int MAX_Z_BINDING = 108;
 
 static std::array<std::array<double, M_NT_SHELLS>, MAX_Z_BINDING> electron_binding;
+//static double electron_binding[MAX_Z_BINDING][M_NT_SHELLS];
+static int shells_q[MAX_Z_BINDING][M_NT_SHELLS];
+
 
 struct collionrow {
   int Z;
@@ -155,6 +158,40 @@ static nt_solution_struct *nt_solution;
 static double *deposition_rate_density;
 static int *deposition_rate_density_timestep;
 
+static void read_shell_configs() {
+  auto shells_file = fstream_required("shells.txt", std::ios::in);
+
+  int nshells = 0; //number of shell in binding energy file
+  int n_z_binding = 0; //number of elements in file
+
+  std::string line;
+  assert_always(get_noncommentline(shells_file, line));
+  std::istringstream(line) >> nshells >> n_z_binding;
+  printout("Reading shells.txt with %d elements and %d shells\n", n_z_binding, nshells);
+
+  if ((nshells != M_NT_SHELLS) || (n_z_binding != MAX_Z_BINDING)) {
+    printout("Wrong size for the binding energy tables!\n");
+    abort();
+  }
+
+  int elementcounter = 0;
+  while (get_noncommentline(shells_file, line)) {
+    int q;
+    int z_element;
+    std::istringstream ssline(line);
+
+    assert_always(ssline >> z_element);
+    printout("Reading shells Z=%d\n", z_element);
+
+    for (int shell = 0; shell < nshells; shell++){
+      assert_always(ssline >> q);
+      printout("q of %d in shell %d element number %d Z=%d\n", q, shell, elementcounter, z_element);
+      shells_q[elementcounter][shell] = q;
+    }
+    elementcounter++;
+  }
+}
+
 static void read_binding_energies() {
   auto binding_energies_file = fstream_required("bindingenergies_Lotz_tab1and2.txt", std::ios::in);
 
@@ -171,7 +208,7 @@ static void read_binding_energies() {
     std::abort();
   }
 
-  int nelement_bindingenergy = 0;
+  int elementcounter = 0;
   while (get_noncommentline(binding_energies_file, line)) {
     float bindingenergy;
     int z_element;
@@ -182,11 +219,12 @@ static void read_binding_energies() {
 
     for (int shell = 0; shell < nshells; shell++){
       assert_always(ssline >> bindingenergy);
-//      printout("Binding energy of %g in shell %d element number %d Z=%d\n", bindingenergy, shell, nelement_bindingenergy, z_element);
-      electron_binding[nelement_bindingenergy][shell] = bindingenergy * EV;
+//      printout("Binding energy of %g in shell %d element number %d Z=%d\n", bindingenergy, shell, elementcounter, z_element);
+      electron_binding[elementcounter][shell] = bindingenergy * EV;
     }
-    nelement_bindingenergy++;
+    elementcounter++;
   }
+  read_shell_configs();
 }
 /// Old version -- new file version should contain same as old file but should keep functionality to use old file:
 /// Old version doesn't have Z column TODO
@@ -1233,7 +1271,8 @@ static auto get_mean_binding_energy(const int element, const int ion) -> double 
 
   double total = 0.;
   for (int electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++) {
-    const int electronsinshell = q[electron_loop];
+//    const int electronsinshell = q[electron_loop];
+    const double electronsinshell = shells_q[get_atomicnumber(element)-1][electron_loop];
     if (electronsinshell <= 0) {
       continue;
     }
