@@ -393,7 +393,7 @@ static void nltepop_reset_element(const int modelgridindex, const int element) {
   for (int ion = 0; ion < nions; ion++) {
     const int nlte_start = globals::elements[element].ions[ion].first_nlte;
     const int nlevels_nlte = get_nlevels_nlte(element, ion);
-    for (int level = 1; level < nlevels_nlte; level++) {
+    for (int level = 1; level <= nlevels_nlte; level++) {
       grid::modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] = -1.0;  // flag to indicate no useful data
     }
 
