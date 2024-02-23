@@ -69,6 +69,7 @@ constexpr int M_NT_SHELLS = 28;
 constexpr int MAX_Z_BINDING = 108;
 
 static double electron_binding[MAX_Z_BINDING][M_NT_SHELLS];
+static int shells_q[MAX_Z_BINDING][M_NT_SHELLS];
 
 struct collionrow {
   int Z;
@@ -141,6 +142,40 @@ static struct nt_solution_struct *nt_solution;
 static double *deposition_rate_density;
 static int *deposition_rate_density_timestep;
 
+static void read_shell_configs() {
+  auto shells_file = fstream_required("shells.txt", std::ios::in);
+
+  int nshells = 0; //number of shell in binding energy file
+  int n_z_binding = 0; //number of elements in file
+
+  std::string line;
+  assert_always(get_noncommentline(shells_file, line));
+  std::istringstream(line) >> nshells >> n_z_binding;
+  printout("Reading shells.txt with %d elements and %d shells\n", n_z_binding, nshells);
+
+  if ((nshells != M_NT_SHELLS) || (n_z_binding != MAX_Z_BINDING)) {
+    printout("Wrong size for the binding energy tables!\n");
+    abort();
+  }
+
+  int elementcounter = 0;
+  while (get_noncommentline(shells_file, line)) {
+    int q;
+    int z_element;
+    std::istringstream ssline(line);
+
+    assert_always(ssline >> z_element);
+    printout("Reading shells Z=%d\n", z_element);
+
+    for (int shell = 0; shell < nshells; shell++){
+      assert_always(ssline >> q);
+      printout("q of %d in shell %d element number %d Z=%d\n", q, shell, elementcounter, z_element);
+      shells_q[elementcounter][shell] = q;
+    }
+    elementcounter++;
+  }
+}
+
 static void read_binding_energies() {
   auto binding_energies_file = fstream_required("bindingenergies_Lotz_tab1and2.txt", std::ios::in);
 
@@ -157,7 +192,7 @@ static void read_binding_energies() {
     abort();
   }
 
-  int nelement_bindingenergy = 0;
+  int elementcounter = 0;
   while (get_noncommentline(binding_energies_file, line)) {
     float bindingenergy;
     int z_element;
@@ -168,11 +203,12 @@ static void read_binding_energies() {
 
     for (int shell = 0; shell < nshells; shell++){
       assert_always(ssline >> bindingenergy);
-//      printout("Binding energy of %g in shell %d element number %d Z=%d\n", bindingenergy, shell, nelement_bindingenergy, z_element);
-      electron_binding[nelement_bindingenergy][shell] = bindingenergy * EV;
+//      printout("Binding energy of %g in shell %d element number %d Z=%d\n", bindingenergy, shell, elementcounter, z_element);
+      electron_binding[elementcounter][shell] = bindingenergy * EV;
     }
-    nelement_bindingenergy++;
+    elementcounter++;
   }
+  read_shell_configs();
 }
 /// Old version -- new file version should contain same as old file but should keep functionality to use old file:
 /// Old version doesn't have Z column TODO
@@ -1138,90 +1174,90 @@ static auto get_nt_frac_excitation(const int modelgridindex) -> float {
 }
 
 static auto get_mean_binding_energy(const int element, const int ion) -> double {
-  int q[M_NT_SHELLS];
+//  int q[M_NT_SHELLS];
   double total = NAN;
 
   const int ioncharge = get_ionstage(element, ion) - 1;
   const int nbound = get_atomicnumber(element) - ioncharge;  // number of bound electrons
 
   if (nbound > 0) {
-    for (int &i : q) {
-      i = 0;
-    }
+//    for (int &i : q) {
+//      i = 0;
+//    }
 
-    for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
-      if (q[0] < 2)  // K 1s
-      {
-        q[0]++;
-      } else if (q[1] < 2)  // L1 2s
-      {
-        q[1]++;
-      } else if (q[2] < 2)  // L2 2p[1/2]
-      {
-        q[2]++;
-      } else if (q[3] < 4)  // L3 2p[3/2]
-      {
-        q[3]++;
-      } else if (q[4] < 2)  // M1 3s
-      {
-        q[4]++;
-      } else if (q[5] < 2)  // M2 3p[1/2]
-      {
-        q[5]++;
-      } else if (q[6] < 4)  // M3 3p[3/2]
-      {
-        q[6]++;
-      } else if (ioncharge == 0) {
-        if (q[9] < 2)  // N1 4s
-        {
-          q[9]++;
-        } else if (q[7] < 4)  // M4 3d[3/2]
-        {
-          q[7]++;
-        } else if (q[8] < 6)  // M5 3d[5/2]
-        {
-          q[8]++;
-        } else {
-          printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-          abort();
-        }
-      } else if (ioncharge == 1) {
-        if (q[9] < 1)  // N1 4s
-        {
-          q[9]++;
-        } else if (q[7] < 4)  // M4 3d[3/2]
-        {
-          q[7]++;
-        } else if (q[8] < 6)  // M5 3d[5/2]
-        {
-          q[8]++;
-        } else {
-          printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-          abort();
-        }
-      } else if (ioncharge > 1) {
-        if (q[7] < 4)  // M4 3d[3/2]
-        {
-          q[7]++;
-        } else if (q[8] < 6)  // M5 3d[5/2]
-        {
-          q[8]++;
-        } else {
-          printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-          abort();
-        }
-      }
-    }
+//    for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
+//      if (q[0] < 2)  // K 1s
+//      {
+//        q[0]++;
+//      } else if (q[1] < 2)  // L1 2s
+//      {
+//        q[1]++;
+//      } else if (q[2] < 2)  // L2 2p[1/2]
+//      {
+//        q[2]++;
+//      } else if (q[3] < 4)  // L3 2p[3/2]
+//      {
+//        q[3]++;
+//      } else if (q[4] < 2)  // M1 3s
+//      {
+//        q[4]++;
+//      } else if (q[5] < 2)  // M2 3p[1/2]
+//      {
+//        q[5]++;
+//      } else if (q[6] < 4)  // M3 3p[3/2]
+//      {
+//        q[6]++;
+//      } else if (ioncharge == 0) {
+//        if (q[9] < 2)  // N1 4s
+//        {
+//          q[9]++;
+//        } else if (q[7] < 4)  // M4 3d[3/2]
+//        {
+//          q[7]++;
+//        } else if (q[8] < 6)  // M5 3d[5/2]
+//        {
+//          q[8]++;
+//        } else {
+//          printout("Going beyond the 4s shell in NT calculation. Abort!\n");
+//          abort();
+//        }
+//      } else if (ioncharge == 1) {
+//        if (q[9] < 1)  // N1 4s
+//        {
+//          q[9]++;
+//        } else if (q[7] < 4)  // M4 3d[3/2]
+//        {
+//          q[7]++;
+//        } else if (q[8] < 6)  // M5 3d[5/2]
+//        {
+//          q[8]++;
+//        } else {
+//          printout("Going beyond the 4s shell in NT calculation. Abort!\n");
+//          abort();
+//        }
+//      } else if (ioncharge > 1) {
+//        if (q[7] < 4)  // M4 3d[3/2]
+//        {
+//          q[7]++;
+//        } else if (q[8] < 6)  // M5 3d[5/2]
+//        {
+//          q[8]++;
+//        } else {
+//          printout("Going beyond the 4s shell in NT calculation. Abort!\n");
+//          abort();
+//        }
+//      }
+//    }
 
-    //      printout("For element %d ion %d I got q's of: %d %d %d %d %d %d %d %d %d %d\n", element, ion, q[0], q[1],
-    //      q[2], q[3], q[4], q[5], q[6], q[7], q[8], q[9]);
-    // printout("%g %g %g %g %g %g %g %g %g %g\n", electron_binding[get_atomicnumber(element)-1][0],
-    // electron_binding[get_atomicnumber(element)-1][1],
-    // electron_binding[get_atomicnumber(element)-1][2],electron_binding[get_atomicnumber(element)-1][3],electron_binding[get_atomicnumber(element)-1][4],electron_binding[get_atomicnumber(element)-1][5],electron_binding[get_atomicnumber(element)-1][6],electron_binding[get_atomicnumber(element)-1][7],electron_binding[get_atomicnumber(element)-1][8],electron_binding[get_atomicnumber(element)-1][9]);
+//     printout("For element %d ion %d I got q's of: %d %d %d %d %d %d %d %d %d %d\n", element, ion, shells_q[get_atomicnumber(element)-1][0], shells_q[get_atomicnumber(element)-1][1],
+//              shells_q[get_atomicnumber(element)-1][2], shells_q[get_atomicnumber(element)-1][3], shells_q[get_atomicnumber(element)-1][4], shells_q[get_atomicnumber(element)-1][5], shells_q[get_atomicnumber(element)-1][6], shells_q[get_atomicnumber(element)-1][7], shells_q[get_atomicnumber(element)-1][8], shells_q[get_atomicnumber(element)-1][9]);
+//     printout("%g %g %g %g %g %g %g %g %g %g\n", electron_binding[get_atomicnumber(element)-1][0],
+//     electron_binding[get_atomicnumber(element)-1][1],
+//     electron_binding[get_atomicnumber(element)-1][2],electron_binding[get_atomicnumber(element)-1][3],electron_binding[get_atomicnumber(element)-1][4],electron_binding[get_atomicnumber(element)-1][5],electron_binding[get_atomicnumber(element)-1][6],electron_binding[get_atomicnumber(element)-1][7],electron_binding[get_atomicnumber(element)-1][8],electron_binding[get_atomicnumber(element)-1][9]);
 
     total = 0.0;
     for (int electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++) {
-      const double electronsinshell = q[electron_loop];
+      const double electronsinshell = shells_q[get_atomicnumber(element)-1][electron_loop];
       if ((electronsinshell) > 0) {
         double use2 = electron_binding[get_atomicnumber(element) - 1][electron_loop];
         const double use3 = globals::elements[element].ions[ion].ionpot;
