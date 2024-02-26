@@ -592,7 +592,7 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
       }
       // get indices of lower and upper boundary
       int E_gtr_idx = -2;  //
-      unsigned int numb_energies = photoion_data[Z - 1].energies.size();
+      int numb_energies = photoion_data[Z - 1].energies.size();
       for (int j = 0; j < numb_energies; j++) {
         if (photoion_data[Z - 1].energies[j] > hnu_over_1MeV) {
           E_gtr_idx = j;
