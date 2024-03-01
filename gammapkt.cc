@@ -27,7 +27,7 @@
 namespace gammapkt {
 // Code for handing gamma rays - creation and propagation
 
-constexpr bool USE_XCOM_GAMMAPHOTOION = false;
+constexpr bool USE_XCOM_GAMMAPHOTOION = true;
 
 struct gamma_line {
   double energy{};  // in erg
