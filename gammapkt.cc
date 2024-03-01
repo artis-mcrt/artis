@@ -636,7 +636,10 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
           chi_cmf += photoion_data[Z - 1][numb_energies - 1].sigma_xcom * n_i;
           continue;
         }
+        assert_always(E_gtr_idx > 0);
+        assert_always(E_gtr_idx < numb_energies);
         int E_smaller_idx = E_gtr_idx - 1;
+        assert_always(E_smaller_idx >= 0);
         double log10_E = log10_hnu_over_1MeV;
         double log10_E_gtr = log10(photoion_data[Z - 1][E_gtr_idx].energy);
         double log10_E_smaller = log10(photoion_data[Z - 1][E_smaller_idx].energy);
