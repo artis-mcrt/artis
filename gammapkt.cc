@@ -572,6 +572,12 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
   // Start by working out the x-section in the co-moving frame.
 
   const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+
+  if (mgi >= grid::get_npts_model()) {
+    // empty cell
+    return 0.;
+  }
+
   const double rho = grid::get_rho(mgi);
 
   if (globals::gamma_kappagrey < 0) {
@@ -602,9 +608,6 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
     } else {
       const double hnu_over_1MeV = pkt_ptr->nu_cmf / 2.41326e+20;
       const double log10_hnu_over_1MeV = log10(hnu_over_1MeV);
-      assert_testmodeonly(mgi >= 0);
-      assert_testmodeonly(mgi < grid::get_npts_model());
-      assert_testmodeonly(grid::get_numassociatedcells(mgi) > 0);
       for (int i = 0; i < get_nelements(); i++) {
         // determine charge number:
         int Z = get_atomicnumber(i);
