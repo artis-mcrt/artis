@@ -213,7 +213,7 @@ void init_photoion_data() {
   for (int Z = 0; Z < numb_xcom_elements; Z++) {
     photoion_data[Z].reserve(100);
   }
-  const std::string filepath{"xcom_photoion_data.txt"};
+  const std::string filepath{"data/xcom_photoion_data.txt"};
   assert_always(std::filesystem::exists(filepath));
 
   std::ifstream data_fs(filepath);
