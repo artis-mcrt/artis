@@ -602,8 +602,10 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
     } else {
       const double hnu_over_1MeV = pkt_ptr->nu_cmf / 2.41326e+20;
       const double log10_hnu_over_1MeV = log10(hnu_over_1MeV);
-      const int numb_elements = get_nelements();
-      for (int i = 0; i < numb_elements; i++) {
+      assert_testmodeonly(mgi >= 0);
+      assert_testmodeonly(mgi < grid::get_npts_model());
+      assert_testmodeonly(grid::get_numassociatedcells(mgi) > 0);
+      for (int i = 0; i < get_nelements(); i++) {
         // determine charge number:
         int Z = get_atomicnumber(i);
         auto numb_energies = std::ssize(photoion_data[Z - 1]);
