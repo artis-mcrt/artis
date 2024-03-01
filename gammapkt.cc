@@ -35,11 +35,11 @@ struct gamma_line {
 static std::vector<std::vector<struct gamma_line>> gamma_spectra;
 
 struct el_photoion_data {
-  std::vector<double> energies;    // energy in MeV
-  std::vector<double> sigma_xcom;  // cross section in barns/atom
+  double energy;      // energy in MeV
+  double sigma_xcom;  // cross section in barns/atom
 };
-const int numb_xcom_elements = 100;
-static struct el_photoion_data photoion_data[numb_xcom_elements];
+constexpr int numb_xcom_elements = 100;
+std::array<std::vector<struct el_photoion_data>, numb_xcom_elements> photoion_data;
 
 struct gammaline {
   int nucindex;       // is it a Ni56, Co56, a fake line, etc
@@ -167,11 +167,6 @@ static void read_decaydata() {
   }
 }
 
-void init_gamma_data() {
-  init_gamma_linelist();
-  init_photoion_data();
-}
-
 // construct an energy ordered gamma ray line list.
 void init_gamma_linelist() {
   read_decaydata();
@@ -216,8 +211,7 @@ void init_photoion_data() {
   printout("reading XCOM photoionization data...\n");
   // reserve memory
   for (int Z = 0; Z < numb_xcom_elements; Z++) {
-    photoion_data[Z].energies.reserve(100);
-    photoion_data[Z].sigma_xcom.reserve(100);
+    photoion_data[Z].reserve(100);
   }
   std::ifstream data_fs("xcom_photoion_data.txt");
   std::string line_str;
@@ -228,11 +222,17 @@ void init_photoion_data() {
       double E = 0;
       double sigma = 0;
       if (3 == std::sscanf(line_str.c_str(), "%d %lg %lg", &Z, &E, &sigma)) {
-        photoion_data[Z - 1].energies.push_back(E);
-        photoion_data[Z - 1].sigma_xcom.push_back(sigma);
+        assert_always(Z > 0);
+        assert_always(Z <= numb_xcom_elements);
+        photoion_data[Z - 1].push_back({.energy = E, .sigma_xcom = sigma});
       }
     }
   }
+}
+
+void init_gamma_data() {
+  init_gamma_linelist();
+  init_photoion_data();
 }
 
 void normalise(int nts) {
@@ -592,27 +592,27 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
       }
       // get indices of lower and upper boundary
       int E_gtr_idx = -2;  //
-      int numb_energies = photoion_data[Z - 1].energies.size();
+      auto numb_energies = std::ssize(photoion_data[Z - 1]);
       for (int j = 0; j < numb_energies; j++) {
-        if (photoion_data[Z - 1].energies[j] > hnu_over_1MeV) {
+        if (photoion_data[Z - 1][j].energy > hnu_over_1MeV) {
           E_gtr_idx = j;
           break;
         }
       }
       if (E_gtr_idx == -1) {  // packet energy smaller than all tabulated values
-        chi_cmf += photoion_data[i].sigma_xcom[0] * n_i;
+        chi_cmf += photoion_data[i][0].sigma_xcom * n_i;
         continue;
       }
       if (E_gtr_idx == -2) {  // packet energy greater than all tabulated values
-        chi_cmf += photoion_data[i].sigma_xcom[numb_energies - 1] * n_i;
+        chi_cmf += photoion_data[i][numb_energies - 1].sigma_xcom * n_i;
         continue;
       }
       int E_smaller_idx = E_gtr_idx - 1;
       double log10_E = log10_hnu_over_1MeV;
-      double log10_E_gtr = log10(photoion_data[Z - 1].energies[E_gtr_idx]);
-      double log10_E_smaller = log10(photoion_data[Z - 1].energies[E_smaller_idx]);
-      double log10_sigma_lower = log10(photoion_data[Z - 1].sigma_xcom[E_smaller_idx]);
-      double log10_sigma_gtr = log10(photoion_data[Z - 1].sigma_xcom[E_gtr_idx]);
+      double log10_E_gtr = log10(photoion_data[Z - 1][E_gtr_idx].energy);
+      double log10_E_smaller = log10(photoion_data[Z - 1][E_smaller_idx].energy);
+      double log10_sigma_lower = log10(photoion_data[Z - 1][E_smaller_idx].sigma_xcom);
+      double log10_sigma_gtr = log10(photoion_data[Z - 1][E_gtr_idx].sigma_xcom);
       // interpolate or extrapolate, both linear in log10-log10 space
       double log10_intpol = log10_E_smaller + (log10_sigma_gtr - log10_sigma_lower) / (log10_E_gtr - log10_E_smaller) *
                                                   (log10_E - log10_E_smaller);
