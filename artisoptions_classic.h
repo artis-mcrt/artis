@@ -143,5 +143,7 @@ constexpr bool EXPANSIONOPACITIES_ON = false;
 
 constexpr bool EXPANSION_OPAC_SAMPLE_KAPPAPLANCK = false;
 
+constexpr bool USE_XCOM_GAMMAPHOTOION = false;
+
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H
