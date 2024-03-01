@@ -605,14 +605,17 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
       for (int i = 0; i < numb_elements; i++) {
         // determine charge number:
         int Z = get_atomicnumber(i);
+        auto numb_energies = std::ssize(photoion_data[Z - 1]);
+        if (numb_energies == 0) {
+          continue;
+        }
         double n_i = grid::get_elem_numberdens(mgi, i);  // number density in the current cell
         if (n_i == 0) {
           continue;
         }
         // get indices of lower and upper boundary
         int E_gtr_idx = -2;  //
-        auto numb_energies = std::ssize(photoion_data[Z - 1]);
-        assert_always(numb_energies > 0);
+
         for (int j = 0; j < numb_energies; j++) {
           if (photoion_data[Z - 1][j].energy > hnu_over_1MeV) {
             E_gtr_idx = j;
