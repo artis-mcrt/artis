@@ -96,24 +96,7 @@ extern gsl_integration_workspace *gslworkspace;
 
 // #define printout(...) fprintf(output_file, __VA_ARGS__)
 
-template <typename... Args>
-static auto printout(const char *const format, Args... args) {
-  char s[1024] = "";
-  if (globals::startofline[tid]) {
-    const time_t now_time = time(nullptr);
-    struct tm buf {};
-    strftime(s, 32, "%FT%TZ", gmtime_r(&now_time, &buf));
-    output_file << s << " ";
-  }
-  globals::startofline[tid] = (format[strlen(format) - 1] == '\n');
-  snprintf(s, 1024, format, args...);
-  output_file << s;
-  if (globals::startofline[tid]) {
-    output_file.flush();
-  }
-}
-
-static auto printout(const char *const format) {
+static auto printout(const char *const str) {
   if (globals::startofline[tid]) {
     const time_t now_time = time(nullptr);
     char s[32] = "";
@@ -121,11 +104,16 @@ static auto printout(const char *const format) {
     strftime(s, 32, "%FT%TZ", gmtime_r(&now_time, &buf));
     output_file << s << " ";
   }
-  globals::startofline[tid] = (format[strlen(format) - 1] == '\n');
-  output_file << format;
-  if (globals::startofline[tid]) {
-    output_file.flush();
-  }
+  globals::startofline[tid] = (str[strlen(str) - 1] == '\n');
+  output_file << str;
+  output_file.flush();
+}
+
+template <typename... Args>
+static auto printout(const char *const format, Args... args) {
+  char s[1024] = "";
+  snprintf(s, 1024, format, args...);
+  printout(s);
 }
 
 [[nodiscard]] static inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
