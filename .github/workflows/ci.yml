@@ -234,19 +234,19 @@ jobs:
                   at plotlightcurves --frompackets ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum nebularonezone
-              if: always() && startsWith(matrix.testname, 'nebularonezone')
+              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'nebularonezone')
               working-directory: tests/
               run: |
                   at plotspectra -ts 8 ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum classicmode
-              if: always() && startsWith(matrix.testname, 'classicmode')
+              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'classicmode_1d')
               working-directory: tests/
               run: |
                   at plotspectra --frompackets -t 18-22 ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum kilonova
-              if: always() && startsWith(matrix.testname, 'kilonova')
+              if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'kilonova')
               working-directory: tests/
               run: |
                   at plotspectra -t 2 ${{ matrix.testname }}_testrun
