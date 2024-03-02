@@ -224,11 +224,8 @@ jobs:
             - name: Install artistools
               if: always() && matrix.testmode == 'OFF'
               run: |
-                  python3 -m pip install --upgrade pip
-                  python3 -m pip install artistools
-
-                  # upgrade all installed packages to their latest versions
-                  # python3 -m pip list freeze --outdated | tail -n +3 | cut -w -f1 | xargs -n1 python3 -m pip install --upgrade
+                  python3 -m pip install --upgrade pip uv
+                  uv pip install --system artistools
 
             - name: Plot light curve
               if: always() && matrix.testmode == 'OFF'
