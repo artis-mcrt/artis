@@ -785,8 +785,8 @@ auto main(int argc, char *argv[]) -> int {
     /// and initialise the threads outputfile
     snprintf(filename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, tid);
     output_file = fopen_required(filename, "w");
-    /// Makes sure that the output_file is written line-by-line
-    setvbuf(output_file, nullptr, _IOLBF, 1);
+    /// Make sure that the output_file is written line-by-line
+    setlinebuf(output_file);
     globals::startofline[tid] = true;
 
 #ifdef _OPENMP
