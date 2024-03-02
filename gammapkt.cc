@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <limits>
 #include <span>
@@ -101,13 +102,13 @@ static void set_trivial_gamma_spectrum(const int nucindex) {
 
 static void read_decaydata() {
   // migrate from old filename
-  if (!std::ifstream("ni56_lines.txt") && std::ifstream("ni_lines.txt")) {
+  if (!std::filesystem::exists("ni56_lines.txt") && std::filesystem::exists("ni_lines.txt")) {
     printout("Moving ni_lines.txt to ni56_lines.txt\n");
     std::rename("ni_lines.txt", "ni56_lines.txt");
   }
 
   // migrate from old filename
-  if (!std::ifstream("co56_lines.txt") && std::ifstream("co_lines.txt")) {
+  if (!std::filesystem::exists("co56_lines.txt") && std::filesystem::exists("co_lines.txt")) {
     printout("Moving co_lines.txt to co56_lines.txt\n");
     std::rename("co_lines.txt", "co56_lines.txt");
   }
