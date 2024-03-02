@@ -174,7 +174,7 @@ endif
 
 ifeq ($(OPTIMIZE),OFF)
 	BUILD_DIR := $(BUILD_DIR)_optimizeoff
-	CXXFLAGS += -O0 -DOPTIMIZEOFF
+	CXXFLAGS += -O0
 else
 	# ifeq ($(TESTMODE),ON)
 	# 	CXXFLAGS += -Og

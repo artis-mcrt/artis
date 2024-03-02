@@ -56,8 +56,6 @@ static auto calculate_cooling_rates_ion(const int modelgridindex, const int elem
   double C_ion = 0.;
   int i = indexionstart;  // NOLINT(misc-const-correctness)
 
-  const int nions = get_nions(element);
-
   const int nionisinglevels = get_ionisinglevels(element, ion);
   const double nncurrention = get_nnion(modelgridindex, element, ion);
 
@@ -110,7 +108,7 @@ static auto calculate_cooling_rates_ion(const int modelgridindex, const int elem
     }
   }
 
-  if (ion < nions - 1) {
+  if (ion < (get_nions(element) - 1)) {
     const double nnupperion = get_nnion(modelgridindex, element, ion + 1);
 
     // ionization to higher ionization stage
