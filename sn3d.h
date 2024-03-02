@@ -96,7 +96,7 @@ extern gsl_integration_workspace *gslworkspace;
 // #define printout(...) fprintf(output_file, __VA_ARGS__)
 
 template <typename... Args>
-static auto printout(const char *format, Args... args) -> int {
+static auto printout(const char *format, Args... args) {
   if (globals::startofline[tid]) {
     const time_t now_time = time(nullptr);
     char s[32] = "";
@@ -108,7 +108,7 @@ static auto printout(const char *format, Args... args) -> int {
   return fprintf(output_file, format, args...);
 }
 
-static auto printout(const char *format) -> int {
+static auto printout(const char *format) {
   if (globals::startofline[tid]) {
     const time_t now_time = time(nullptr);
     char s[32] = "";
