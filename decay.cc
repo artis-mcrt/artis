@@ -552,7 +552,7 @@ auto get_nucstring_z(const std::string &strnuc) -> int
   elcode.erase(std::remove_if(elcode.begin(), elcode.end(), &isdigit), elcode.end());
 
   for (int z = 0; z <= Z_MAX; z++) {
-    if (strcmp(elcode.c_str(), get_elname(z)) == 0)  // first to letters match el symbol
+    if (elcode == std::string_view(get_elname(z)))  // first to letters match el symbol
     {
       return z;
     }
