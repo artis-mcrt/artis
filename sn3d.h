@@ -239,11 +239,12 @@ inline auto rng_uniform(void) -> float {
 }
 
 inline auto rng_uniform_pos(void) -> float {
-  float zrand{};
-  do {
-    zrand = rng_uniform();
-  } while (zrand <= 0.);
-  return zrand;
+  while (true) {
+    const auto zrand = rng_uniform();
+    if (zrand > 0) {
+      return zrand;
+    }
+  }
 }
 
 inline void rng_init(const uint64_t zseed) {
