@@ -20,14 +20,11 @@
   return std::sqrt(squaredlen);
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto vec_norm(std::span<const double, 3> vec_in) -> std::array<double, 3>
+[[nodiscard]] [[gnu::pure]] constexpr auto vec_norm(std::span<const double, 3> vec_in)
 // get a normalized copy of vec_in
 {
   const double magnitude = vec_len(vec_in);
-  auto vec_out = std::array<double, 3>{};
-  vec_out[0] = vec_in[0] / magnitude;
-  vec_out[1] = vec_in[1] / magnitude;
-  vec_out[2] = vec_in[2] / magnitude;
+  const auto vec_out = std::array<double, 3>{vec_in[0] / magnitude, vec_in[1] / magnitude, vec_in[2] / magnitude};
 
   assert_testmodeonly(fabs(vec_len(vec_out) - 1.) < 1.e-10);
   return vec_out;
