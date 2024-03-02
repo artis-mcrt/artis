@@ -125,6 +125,7 @@ static auto printout(const char *const format) {
   const int contindex = -1 - globals::elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
 
   const int bflutindex = tempindex * globals::nbfcontinua + contindex;
+  assert_testmodeonly(bflutindex >= 0);
   assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
   return bflutindex;
 }
