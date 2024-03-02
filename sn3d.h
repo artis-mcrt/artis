@@ -84,6 +84,8 @@ extern gsl_integration_workspace *gslworkspace;
 
 #if defined TESTMODE && TESTMODE
 #define assert_testmodeonly(e) __artis_assert(e)
+#elifdef OPTIMIZEOFF
+#define assert_testmodeonly(e) ((void)0)
 #else
 #define assert_testmodeonly(e) \
   if (!(e)) {                  \

@@ -785,6 +785,7 @@ auto main(int argc, char *argv[]) -> int {
     /// initialise the thread and rank specific output file
     snprintf(filename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, tid);
     output_file = std::ofstream(filename);
+    assert_always(output_file.is_open());
     // Make sure that the output_file is written line-by-line
     globals::startofline[tid] = true;
 

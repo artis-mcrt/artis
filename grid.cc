@@ -2368,15 +2368,16 @@ constexpr static auto get_gridcoords_from_xyz(std::span<const double, 3> pos_xyz
       }
     }
 
+#if (TESTMODE)
     if (dist1 >= 0) {
       const double shellradiusfinal1 = shellradiuststart / tstart * (tstart + dist1 / speed);
       assert_testmodeonly(fabs(vec_len(posfinal1) / shellradiusfinal1 - 1.) < 1e-3);
     }
-
     if (dist2 >= 0) {
       const double shellradiusfinal2 = shellradiuststart / tstart * (tstart + dist2 / speed);
       assert_testmodeonly(fabs(vec_len(posfinal2) / shellradiusfinal2 - 1.) < 1e-3);
     }
+#endif
 
     // negative d means in the reverse direction along the ray
     // ignore negative d values, and if two are positive then return the smaller one
