@@ -42,7 +42,7 @@
 #include <mpi.h>
 #endif
 
-extern FILE *output_file;
+extern std::ofstream output_file;
 #ifdef _OPENMP
 extern int tid;
 // extern int cellcacheslotid;
@@ -64,12 +64,13 @@ extern gsl_integration_workspace *gslworkspace;
   {                                                                                                                    \
     const bool pass = static_cast<bool>(e);                                                                            \
     if (!pass) {                                                                                                       \
-      if (output_file != nullptr) {                                                                                    \
-        (void)fprintf(output_file, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global,    \
-                      __FILE__, __LINE__, #e, __PRETTY_FUNCTION__);                                                    \
+      if (output_file) {                                                                                               \
+        output_file << "\n[rank " << globals::rank_global << "] " << __FILE__ << ":" << __LINE__                       \
+                    << ": failed assertion `" << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                \
+        output_file.flush();                                                                                           \
       }                                                                                                                \
-      (void)fprintf(stderr, "[rank %d] %s:%d: failed assertion `%s' in function %s\n", globals::rank_global, __FILE__, \
-                    __LINE__, #e, __PRETTY_FUNCTION__);                                                                \
+      std::cerr << "\n[rank " << globals::rank_global << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `" \
+                << #e << "` in function " << __PRETTY_FUNCTION__ << "\n";                                              \
       std::abort();                                                                                                    \
     }                                                                                                                  \
     assert(pass);                                                                                                      \
@@ -97,15 +98,19 @@ extern gsl_integration_workspace *gslworkspace;
 
 template <typename... Args>
 static auto printout(const char *const format, Args... args) {
+  char s[1024] = "";
   if (globals::startofline[tid]) {
     const time_t now_time = time(nullptr);
-    char s[32] = "";
     struct tm buf {};
     strftime(s, 32, "%FT%TZ", gmtime_r(&now_time, &buf));
-    fprintf(output_file, "%s ", s);
+    output_file << s << " ";
   }
   globals::startofline[tid] = (format[strlen(format) - 1] == '\n');
-  return fprintf(output_file, format, args...);
+  snprintf(s, 1024, format, args...);
+  output_file << s;
+  if (globals::startofline[tid]) {
+    output_file.flush();
+  }
 }
 
 static auto printout(const char *const format) {
@@ -114,10 +119,13 @@ static auto printout(const char *const format) {
     char s[32] = "";
     struct tm buf {};
     strftime(s, 32, "%FT%TZ", gmtime_r(&now_time, &buf));
-    fprintf(output_file, "%s ", s);
+    output_file << s << " ";
   }
   globals::startofline[tid] = (format[strlen(format) - 1] == '\n');
-  return fprintf(output_file, "%s", format);
+  output_file << format;
+  if (globals::startofline[tid]) {
+    output_file.flush();
+  }
 }
 
 [[nodiscard]] static inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,

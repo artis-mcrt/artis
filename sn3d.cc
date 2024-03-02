@@ -61,7 +61,7 @@ int tid = 0;
 bool use_cellcache = false;
 std::mt19937 stdrng(std::random_device{}());
 gsl_integration_workspace *gslworkspace = nullptr;
-FILE *output_file = nullptr;
+std::ofstream output_file;
 static FILE *linestat_file = nullptr;
 static auto real_time_start = -1;
 static auto time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
@@ -784,9 +784,8 @@ auto main(int argc, char *argv[]) -> int {
 #endif
     /// initialise the thread and rank specific output file
     snprintf(filename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, tid);
-    output_file = fopen_required(filename, "w");
+    output_file = std::ofstream(filename);
     // Make sure that the output_file is written line-by-line
-    setlinebuf(output_file);
     globals::startofline[tid] = true;
 
 #ifdef _OPENMP
@@ -1032,7 +1031,11 @@ auto main(int argc, char *argv[]) -> int {
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
-  { fclose(output_file); }
+  {
+    if (output_file) {
+      output_file.close();
+    }
+  }
 
 #ifdef _OPENMP
   omp_set_dynamic(0);

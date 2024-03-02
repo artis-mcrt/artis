@@ -27,7 +27,7 @@
 #include "version.h"
 
 // threadprivate variables
-FILE *output_file = nullptr;
+std::ofstream output_file;
 #ifdef _OPENMP
 int tid = 0;
 #endif
@@ -186,10 +186,8 @@ auto main(int argc, char *argv[]) -> int {
   char filename[MAXFILENAMELENGTH];
   if (globals::rank_global == 0) {
     snprintf(filename, MAXFILENAMELENGTH, "exspec.txt");
-    output_file = fopen_required(filename, "w");
-    setvbuf(output_file, nullptr, _IOLBF, 1);
-  } else {
-    output_file = nullptr;
+    output_file = std::ofstream(filename);
+    assert_always(output_file.is_open());
   }
 
   printout("git branch %s\n", GIT_BRANCH);
@@ -268,8 +266,8 @@ auto main(int argc, char *argv[]) -> int {
   decay::cleanup();
   printout("exspec finished at %ld (tstart + %ld seconds)\n", std::time(nullptr), std::time(nullptr) - sys_time_start);
 
-  if (output_file != nullptr) {
-    fclose(output_file);
+  if (output_file) {
+    output_file.close();
   }
 
 #ifdef MPI_ON
