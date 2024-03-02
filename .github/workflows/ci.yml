@@ -246,7 +246,7 @@ jobs:
               run: |
                   at plotspectra --frompackets -t 18-22 ${{ matrix.testname }}_testrun
 
-            - name: Plot spectrum classicmode_1d
+            - name: Plot spectrum classicmode_3d
               if: always() && matrix.testmode == 'OFF' && startsWith(matrix.testname, 'classicmode_3d')
               working-directory: tests/
               run: |
