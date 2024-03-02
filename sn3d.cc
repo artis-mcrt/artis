@@ -786,7 +786,7 @@ auto main(int argc, char *argv[]) -> int {
     snprintf(filename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, tid);
     output_file = fopen_required(filename, "w");
     // Make sure that the output_file is written line-by-line
-    assert_always(setlinebuf(output_file) == 0);
+    setlinebuf(output_file);
     globals::startofline[tid] = true;
 
 #ifdef _OPENMP
