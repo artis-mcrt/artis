@@ -770,23 +770,23 @@ auto main(int argc, char *argv[]) -> int {
   const int my_rank = globals::rank_global;
 
 #ifdef _OPENMP
-  /// Explicitly turn off dynamic threads because we use the threadprivate directive!!!
+  // Explicitly turn off dynamic threads because we use the threadprivate directive!!!
   omp_set_dynamic(0);
 
 #pragma omp parallel private(filename)
 #endif
   {
 #ifdef _OPENMP
-    /// Get the current threads ID, copy it to a threadprivate variable
+    // copy thread id to a threadprivate variable
     tid = get_thread_num();
     // cellcacheslotid = tid;
     // cellcacheslotid = 0;
 #endif
-    /// and initialise the threads outputfile
+    /// initialise the thread and rank specific output file
     snprintf(filename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, tid);
     output_file = fopen_required(filename, "w");
-    /// Make sure that the output_file is written line-by-line
-    setlinebuf(output_file);
+    // Make sure that the output_file is written line-by-line
+    assert_always(setlinebuf(output_file) == 0);
     globals::startofline[tid] = true;
 
 #ifdef _OPENMP
