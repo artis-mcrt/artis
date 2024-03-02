@@ -16,4 +16,4 @@ ee4f0b2582331d708a34c84a142b88f9  spec.out
 3af8502252935c2687816472a08cbe1a  job0/estimators_0000.out
 5014e7828f79e5a47bc28430a2c07589  job0/nlte_0000.out
 098fc87f14a17287756a3a4f2cadc922  job0/nonthermalspec_0000.out
-3bfb5acd6d0f18ec923ef5e5faa0c844  job0/radfield_0000.out
+84de7bae881c3a0a13a51d549129f107  job0/radfield_0000.out
