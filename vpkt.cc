@@ -402,7 +402,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     safeincrement(nvpkt_esc3);
   }
 
-  const double t_arrive = t_current - (dot(pkt_ptr->pos, vpkt.dir) / CLIGHT_PROP);
+  const double t_arrive = vpkt.prop_time - (dot(vpkt.pos, vpkt.dir) / CLIGHT_PROP);
   // -------------- final stokes vector ---------------
 
   for (int ind = 0; ind < Nspectra; ind++) {
@@ -421,7 +421,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
     // bin on fly and produce file with spectrum
 
-    add_to_vspecpol(vpkt, obsbin, ind, t_arrive);
+    add_to_vspecpol(vpkt, obsbin, ind, get_arrive_time(&vpkt));
   }
 
   // vpkt grid
