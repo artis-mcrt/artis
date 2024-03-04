@@ -624,7 +624,7 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
           continue;
         }
         // get indices of lower and upper boundary
-        int E_gtr_idx = -2;  //
+        int E_gtr_idx = -1;  //
 
         for (int j = 0; j < numb_energies; j++) {
           if (photoion_data[Z - 1][j].energy > hnu_over_1MeV) {
@@ -632,11 +632,11 @@ static auto get_chi_photo_electric_rf(const struct packet *pkt_ptr) -> double {
             break;
           }
         }
-        if (E_gtr_idx == -1) {  // packet energy smaller than all tabulated values
+        if (E_gtr_idx == 0) {  // packet energy smaller than all tabulated values
           chi_cmf += photoion_data[Z - 1][0].sigma_xcom * n_i;
           continue;
         }
-        if (E_gtr_idx == -2) {  // packet energy greater than all tabulated values
+        if (E_gtr_idx == -1) {  // packet energy greater than all tabulated values
           chi_cmf += photoion_data[Z - 1][numb_energies - 1].sigma_xcom * n_i;
           continue;
         }
