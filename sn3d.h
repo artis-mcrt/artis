@@ -27,7 +27,6 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
-#include <format>
 #include <fstream>
 #include <iostream>
 #include <random>
@@ -196,7 +195,7 @@ static auto fstream_required(const std::string &filename, std::ios_base::openmod
   }
   auto file = std::fstream(filename, mode);
   if (!file.is_open()) {
-    printout(std::format("ERROR: Could not open file '{}'\n", filename));
+    printout("ERROR: Could not open file '%s'\n", filename.c_str());
     std::abort();
   }
   return file;
