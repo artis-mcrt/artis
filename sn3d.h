@@ -1,4 +1,5 @@
 #pragma once
+#include <string_view>
 #ifndef SN3D_H
 #define SN3D_H
 
@@ -26,6 +27,7 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <iostream>
 #include <random>
@@ -96,7 +98,20 @@ extern gsl_integration_workspace *gslworkspace;
 
 // #define printout(...) fprintf(output_file, __VA_ARGS__)
 
-static auto printout(const char *const str) {
+static void printout(const std::string_view str) {
+  if (globals::startofline[tid]) {
+    const time_t now_time = time(nullptr);
+    char s[32] = "";
+    struct tm buf {};
+    strftime(s, 32, "%FT%TZ", gmtime_r(&now_time, &buf));
+    output_file << s << " ";
+  }
+  globals::startofline[tid] = (str.back() == '\n');
+  output_file << str;
+  output_file.flush();
+}
+
+static void printout(const char *const str) {
   if (globals::startofline[tid]) {
     const time_t now_time = time(nullptr);
     char s[32] = "";
@@ -110,7 +125,7 @@ static auto printout(const char *const str) {
 }
 
 template <typename... Args>
-static auto printout(const char *const format, Args... args) {
+static void printout(const char *const format, Args... args) {
   char s[1024] = "";
   snprintf(s, 1024, format, args...);
   printout(s);
@@ -175,13 +190,13 @@ static auto fopen_required(const std::string &filename, const char *mode) -> FIL
 }
 
 static auto fstream_required(const std::string &filename, std::ios_base::openmode mode) -> std::fstream {
-  const std::string datafolderfilename = "data/" + filename;
+  const auto datafolderfilename = "data/" + std::string(filename);
   if (mode == std::ios::in && std::filesystem::exists(datafolderfilename)) {
     return fstream_required(datafolderfilename, mode);
   }
   auto file = std::fstream(filename, mode);
   if (!file.is_open()) {
-    printout("ERROR: Could not open file '%s'\n", filename.c_str());
+    printout(std::format("ERROR: Could not open file '{}'\n", filename));
     std::abort();
   }
   return file;
