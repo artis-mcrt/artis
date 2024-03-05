@@ -95,40 +95,21 @@ extern gsl_integration_workspace *gslworkspace;
 #include "artisoptions.h"
 #include "globals.h"
 
-// #define printout(...) fprintf(output_file, __VA_ARGS__)
-
-static void printout(const std::string_view str) {
-  if (globals::startofline[tid]) {
-    const time_t now_time = time(nullptr);
-    char s[32] = "";
-    struct tm buf {};
-    strftime(s, 32, "%FT%TZ", gmtime_r(&now_time, &buf));
-    output_file << s << " ";
+#define printout(...)                                           \
+  {                                                             \
+    if (globals::startofline[tid]) {                            \
+      const time_t now_time = time(nullptr);                    \
+      char s[32] = "";                                          \
+      struct tm buf {};                                         \
+      strftime(s, 32, "%FT%TZ", gmtime_r(&now_time, &buf));     \
+      output_file << s << " ";                                  \
+    }                                                           \
+    char str[1024] = "";                                        \
+    snprintf(str, 1024, __VA_ARGS__);                           \
+    globals::startofline[tid] = (str[strlen(str) - 1] == '\n'); \
+    output_file << str;                                         \
+    output_file.flush();                                        \
   }
-  globals::startofline[tid] = (str.back() == '\n');
-  output_file << str;
-  output_file.flush();
-}
-
-static void printout(const char *const str) {
-  if (globals::startofline[tid]) {
-    const time_t now_time = time(nullptr);
-    char s[32] = "";
-    struct tm buf {};
-    strftime(s, 32, "%FT%TZ", gmtime_r(&now_time, &buf));
-    output_file << s << " ";
-  }
-  globals::startofline[tid] = (str[strlen(str) - 1] == '\n');
-  output_file << str;
-  output_file.flush();
-}
-
-template <typename... Args>
-static void printout(const char *const format, Args... args) {
-  char s[1024] = "";
-  snprintf(s, 1024, format, args...);
-  printout(s);
-}
 
 [[nodiscard]] static inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
                                                 const int phixstargetindex) -> int {
