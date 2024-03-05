@@ -1,6 +1,32 @@
 #include "ratecoeff.h"
 
 #include <gsl/gsl_integration.h>
+
+#include <array>
+#include <cmath>
+#include <cstring>
+// #define D_POSIX_SOURCE
+#include <gsl/gsl_errno.h>
+
+#include <cstdio>
+#include <cstdlib>
+
+#include "artisoptions.h"
+#include "atomic.h"
+#include "constants.h"
+#include "globals.h"
+#include "grid.h"
+#include "gsl/gsl_math.h"
+#include "ltepop.h"
+#include "macroatom.h"
+#include "md5.h"
+#ifdef MPI_ON
+#include "mpi.h"
+#endif
+#include "radfield.h"
+#include "rpkt.h"
+#include "sn3d.h"
+
 #ifdef STDPAR_ON
 
 // future: use a template for the integrand function to avoid function pointers
@@ -70,31 +96,6 @@ int my_integrator(const gsl_function *f, double a, double b, double epsabs, doub
 #else
 #define integrator(...) gsl_integration_qag(__VA_ARGS__)
 #endif
-
-#include <array>
-#include <cmath>
-#include <cstring>
-// #define D_POSIX_SOURCE
-#include <gsl/gsl_errno.h>
-
-#include <cstdio>
-#include <cstdlib>
-
-#include "artisoptions.h"
-#include "atomic.h"
-#include "constants.h"
-#include "globals.h"
-#include "grid.h"
-#include "gsl/gsl_math.h"
-#include "ltepop.h"
-#include "macroatom.h"
-#include "md5.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
-#include "radfield.h"
-#include "rpkt.h"
-#include "sn3d.h"
 
 // typedef struct gslintegration_ffheatingparas
 // {
