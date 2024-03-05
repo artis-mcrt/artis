@@ -489,7 +489,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
   const ptrdiff_t i = selectedvalue - globals::cellcache[cellcacheslotid].cooling_contrib;
 
   if (i > ihigh) {
-    printout("do_kpkt: error occured while selecting a cooling channel: low %d, high %d, i %d, rndcool %g\n", ilow,
+    printout("do_kpkt: error occured while selecting a cooling channel: low %d, high %d, i %td, rndcool %g\n", ilow,
              ihigh, i, rndcool_ion_process);
     printout("element %d, ion %d, offset %d, terms %d, coolingsum %g\n", element, ion,
              get_coolinglistoffset(element, ion), get_ncoolingterms_ion(element, ion), coolingsum);
@@ -614,7 +614,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
     if (upper < 0) {
       printout(
-          "WARNING: Could not select an upper level. modelgridindex %d i %d element %d ion %d level %d rndcool "
+          "WARNING: Could not select an upper level. modelgridindex %d i %td element %d ion %d level %d rndcool "
           "%g "
           "contrib_low %g contrib %g (should match %g) upper %d nuptrans %d\n",
           modelgridindex, i, element, ion, level, rndcool_ion_process, contrib_low, contrib,

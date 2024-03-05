@@ -1050,7 +1050,7 @@ static void read_atomicdata_files() {
     uptrans->lineindex = lineindex;
   }
 
-  printout("  took %ds\n", std::time(nullptr) - time_start_establish_linelist_connections);
+  printout("  took %lds\n", std::time(nullptr) - time_start_establish_linelist_connections);
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -1735,17 +1735,17 @@ void read_parameterfile(int rank)
     uint64_t pre_zseed{};
     if (zseed_input > 0) {
       pre_zseed = static_cast<uint64_t>(zseed_input);  // random number seed
-      printout("using input.txt specified random number seed of %lu\n", pre_zseed);
+      printout("using input.txt specified random number seed of %llu\n", pre_zseed);
     } else {
       pre_zseed = std::random_device{}();
-      printout("randomly-generated random number seed is %lu\n", pre_zseed);
+      printout("randomly-generated random number seed is %llu\n", pre_zseed);
     }
 
     /// For MPI parallelisation, the random seed is changed based on the rank of the process
     /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
     /// to the thread-ID tid.
     const uint64_t zseed = pre_zseed + static_cast<uint64_t>(13 * (rank * get_num_threads() + tid));
-    printout("rank %d: thread %d has zseed %lu\n", rank, tid, zseed);
+    printout("rank %d: thread %d has zseed %llu\n", rank, tid, zseed);
     rng_init(zseed);
     /// call it a few times
     for (int n = 0; n < 100; n++) {

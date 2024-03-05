@@ -1022,7 +1022,7 @@ static void allocate_nonemptymodelcells() {
   printout("[info] mem_usage: the modelgrid array occupies %.3f MB\n",
            (get_npts_model() + 1) * sizeof(modelgrid[0]) / 1024. / 1024.);
 
-  printout("There are %d modelgrid cells with associated propagation cells\n", nonempty_npts_model);
+  printout("There are %zu modelgrid cells with associated propagation cells\n", nonempty_npts_model);
 
   printout(
       "[info] mem_usage: NLTE populations for all allocated cells occupy a total of %.3f MB (node shared memory)\n",

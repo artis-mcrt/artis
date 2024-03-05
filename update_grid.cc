@@ -678,7 +678,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
   const auto write_estim_duration = std::time(nullptr) - sys_time_start_write_estimators;
   if (write_estim_duration >= 1) {
-    printout("writing estimators for timestep %d cell %d took %d seconds\n", timestep, mgi, write_estim_duration);
+    printout("writing estimators for timestep %d cell %d took %ld seconds\n", timestep, mgi, write_estim_duration);
   }
 }
 
@@ -1038,7 +1038,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       grid::modelgrid[mgi].thick = 1;
     }
 
-    printout("lte_iteration %d\n", globals::lte_iteration);
+    printout("lte_iteration %d\n", globals::lte_iteration ? 1 : 0);
     printout("mgi %d modelgrid.thick: %d (during grid update)\n", mgi, grid::modelgrid[mgi].thick);
 
     for (int element = 0; element < get_nelements(); element++) {
@@ -1187,7 +1187,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
   const int update_grid_cell_seconds = std::time(nullptr) - sys_time_start_update_cell;
   if (update_grid_cell_seconds > 0) {
-    printout("update_grid_cell for cell %d timestep %d took %ld seconds\n", mgi, nts, update_grid_cell_seconds);
+    printout("update_grid_cell for cell %d timestep %d took %d seconds\n", mgi, nts, update_grid_cell_seconds);
   }
 }
 
