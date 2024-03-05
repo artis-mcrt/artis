@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 #ifndef STATS_H
 #define STATS_H
 
@@ -105,7 +106,7 @@ void increment(enum eventcounters);
 
 void pkt_action_counters_reset();
 
-[[nodiscard]] auto get_counter(enum eventcounters i) -> int64_t;
+[[nodiscard]] auto get_counter(enum eventcounters i) -> ptrdiff_t;
 
 void pkt_action_counters_printout(int nts);
 
