@@ -95,24 +95,23 @@ extern gsl_integration_workspace *gslworkspace;
 #include "artisoptions.h"
 #include "globals.h"
 
-static void print_line_start() {
+static void print_line_start(char *linebuf) {
   if (globals::startofline[tid]) {
     const time_t now_time = time(nullptr);
-    char s[32] = "";
-    struct tm buf {};
-    strftime(s, 32, "%FT%TZ", gmtime_r(&now_time, &buf));
-    output_file << s << " ";
+    struct tm timebuf {};
+    strftime(linebuf, 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
+    output_file << linebuf << " ";
   }
 }
 
-#define printout(...)                                           \
-  {                                                             \
-    print_line_start();                                         \
-    char str[1024] = "";                                        \
-    snprintf(str, 1024, __VA_ARGS__);                           \
-    globals::startofline[tid] = (str[strlen(str) - 1] == '\n'); \
-    output_file << str;                                         \
-    output_file.flush();                                        \
+#define printout(...)                                                   \
+  {                                                                     \
+    char linebuf[1024] = "";                                            \
+    print_line_start(linebuf);                                          \
+    snprintf(linebuf, 1024, __VA_ARGS__);                               \
+    globals::startofline[tid] = (linebuf[strlen(linebuf) - 1] == '\n'); \
+    output_file << linebuf;                                             \
+    output_file.flush();                                                \
   }
 
 [[nodiscard]] static inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
