@@ -878,7 +878,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
         rpkt_event_boundbound(pkt_ptr, pktmastate, mgi);
       }
     } else {
-      rpkt_event_continuum(pkt_ptr, globals::chi_rpkt_cont[tid], globals::phixslist[tid], mgi);
+      rpkt_event_continuum(pkt_ptr, chi_rpkt_cont, globals::phixslist[tid], mgi);
     }
 
     return (pkt_ptr->type == TYPE_RPKT);
