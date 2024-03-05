@@ -76,7 +76,7 @@ const struct fullphixslist *allcont = nullptr;
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
 struct groundphixslist *groundcont = nullptr;
 
-struct phixslist *phixslist = nullptr;
+std::vector<struct phixslist> phixslist_allthreads;
 int nbfcontinua = -1;
 int nbfcontinua_ground = -1;  /// number of bf-continua
 int NPHIXSPOINTS = -1;

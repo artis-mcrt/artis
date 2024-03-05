@@ -629,39 +629,35 @@ void zero_estimators(int modelgridindex)
 }
 
 static void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                                const double doppler_nucmf_on_nurf) {
+                                const double doppler_nucmf_on_nurf, const struct phixslist &phixslist) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
   assert_testmodeonly(bfrate_raw != nullptr);
 
   const int nbfcontinua = globals::nbfcontinua;
 
-  const int tid = get_thread_num();
   const double distance_e_cmf_over_nu =
       distance_e_cmf / nu_cmf * doppler_nucmf_on_nurf;  // TODO: Luke: why did I put a doppler factor here?
 
   // I think the nu_cmf slightly differs from when the phixslist was calculated
   // so the nu condition on this nu_cmf can truncate the phixslist
-  const int allcontend =
-      static_cast<int>(std::upper_bound(globals::allcont_nu_edge,
-                                        &globals::allcont_nu_edge[globals::phixslist[tid].allcontend], nu_cmf) -
-                       globals::allcont_nu_edge);
+  const int allcontend = static_cast<int>(
+      std::upper_bound(globals::allcont_nu_edge, &globals::allcont_nu_edge[phixslist.allcontend], nu_cmf) -
+      globals::allcont_nu_edge);
 
-  const int allcontbegin =
-      static_cast<int>(std::lower_bound(&globals::allcont_nu_edge[globals::phixslist[tid].allcontbegin],
-                                        &globals::allcont_nu_edge[allcontend], nu_cmf,
-                                        [](const double nu_edge, const double nu_cmf) {
-                                          return nu_edge * last_phixs_nuovernuedge < nu_cmf;
-                                        }) -
-                       globals::allcont_nu_edge);
+  const int allcontbegin = static_cast<int>(
+      std::lower_bound(
+          &globals::allcont_nu_edge[phixslist.allcontbegin], &globals::allcont_nu_edge[allcontend], nu_cmf,
+          [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }) -
+      globals::allcont_nu_edge);
 
   for (int allcontindex = allcontbegin; allcontindex < allcontend; allcontindex++) {
     safeadd(bfrate_raw[nonemptymgi * nbfcontinua + allcontindex],
-            globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
+            phixslist.gamma_contr[allcontindex] * distance_e_cmf_over_nu);
   }
 }
 
 void update_estimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                       const double doppler_nucmf_on_nurf) {
+                       const double doppler_nucmf_on_nurf, const struct phixslist &phixslist) {
   if (distance_e_cmf == 0) {
     return;
   }
@@ -670,7 +666,7 @@ void update_estimators(const int nonemptymgi, const double distance_e_cmf, const
   safeadd(nuJ[nonemptymgi], distance_e_cmf * nu_cmf);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    update_bfestimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf);
+    update_bfestimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf, phixslist);
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {

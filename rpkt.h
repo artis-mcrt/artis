@@ -11,12 +11,13 @@
 #include "radfield.h"
 #include "sn3d.h"
 
-void do_rpkt(struct packet *pkt_ptr, double t2, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont);
+void do_rpkt(struct packet *pkt_ptr, double t2, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
+             struct phixslist &phixslist);
 void emit_rpkt(struct packet *pkt_ptr);
 [[nodiscard]] auto closest_transition(double nu_cmf, int next_trans) -> int;
 [[nodiscard]] auto calculate_chi_bf_gammacontr(int modelgridindex, double nu) -> double;
-void calculate_chi_rpkt_cont(double nu_cmf, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, int modelgridindex,
-                             bool usecellhistupdatephixslist);
+void calculate_chi_rpkt_cont(double nu_cmf, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
+                             struct phixslist &phixslist, int modelgridindex, bool usecellhistupdatephixslist);
 auto sample_planck_times_expansion_opacity(int nonemptymgi) -> double;
 void allocate_expansionopacities();
 void calculate_binned_opacities(int modelgridindex);

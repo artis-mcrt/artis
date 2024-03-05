@@ -64,9 +64,9 @@ struct groundphixslist {
 };
 
 struct phixslist {
-  double *groundcont_gamma_contr{nullptr};  // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
-  double *chi_bf_sum{nullptr};
-  double *gamma_contr{nullptr};  // needed for DETAILED_BF_ESTIMATORS_ON
+  std::vector<double> groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
+  std::vector<double> chi_bf_sum;
+  std::vector<double> gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
   int allcontend{-1};
   int allcontbegin{0};
 };
@@ -260,7 +260,7 @@ extern const struct fullphixslist *allcont;
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
 extern struct groundphixslist *groundcont;
 
-extern struct phixslist *phixslist;
+extern std::vector<struct phixslist> phixslist_allthreads;
 extern int nbfcontinua;
 extern int nbfcontinua_ground;
 extern int NPHIXSPOINTS;

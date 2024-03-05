@@ -284,7 +284,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     if (mgi == grid::get_npts_model()) {
       vpkt.next_trans = -1;
     } else {
-      calculate_chi_rpkt_cont(vpkt.nu_cmf, chi_vpkt_cont, mgi, false);
+      calculate_chi_rpkt_cont(vpkt.nu_cmf, chi_vpkt_cont, globals::phixslist_allthreads[tid], mgi, false);
 
       const double chi_cont = chi_vpkt_cont.total;
 

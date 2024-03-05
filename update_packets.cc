@@ -151,6 +151,8 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
 // update a packet no further than time t2
 {
   const int pkt_type = pkt_ptr->type;
+  // struct phixslist phixslist {};
+  // struct rpkt_continuum_absorptioncoeffs chi_rpkt_cont {};
 
   switch (pkt_type) {
     case TYPE_RADIOACTIVE_PELLET: {
@@ -168,7 +170,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
     }
 
     case TYPE_RPKT: {
-      do_rpkt(pkt_ptr, t2, globals::chi_rpkt_cont[tid]);
+      do_rpkt(pkt_ptr, t2, globals::chi_rpkt_cont[tid], globals::phixslist_allthreads[tid]);
 
       if (pkt_ptr->type == TYPE_ESCAPE) {
         safeadd(globals::timesteps[nts].cmf_lum, pkt_ptr->e_cmf);

@@ -15,7 +15,8 @@ void init(int my_rank, int ndo_nonempty);
 void initialise_prev_titer_photoionestimators();
 void write_to_file(int modelgridindex, int timestep);
 void close_file();
-void update_estimators(int nonemptymgi, double distance_e_cmf, double nu_cmf, double doppler_nucmf_on_nurf);
+void update_estimators(int nonemptymgi, double distance_e_cmf, double nu_cmf, double doppler_nucmf_on_nurf,
+                       const struct phixslist &phixslist);
 void update_lineestimator(int modelgridindex, int lineindex, double increment);
 [[nodiscard]] auto radfield(double nu, int modelgridindex) -> double;
 void fit_parameters(int modelgridindex, int timestep);
