@@ -301,7 +301,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int nprocs,
           }
         }
       }
-      printout("[info] mem_usage: MPI_BUFFER: used %d of %zu bytes allocated to mpi_grid_buffer\n", position,
+      printout("[info] mem_usage: MPI_BUFFER: used %d of %d bytes allocated to mpi_grid_buffer\n", position,
                mpi_grid_buffer_size);
       assert_always(static_cast<size_t>(position) <= mpi_grid_buffer_size);
     }
@@ -802,7 +802,7 @@ auto main(int argc, char *argv[]) -> int {
   printout("C++ standard parallelism (stdpar) is enabled\n");
 #endif
 
-  printout("time at start %d\n", real_time_start);
+  printout("time at start %ld\n", real_time_start);
 
 #ifdef WALLTIMELIMITSECONDS
   int walltimelimitseconds = WALLTIMELIMITSECONDS;
@@ -940,7 +940,7 @@ auto main(int argc, char *argv[]) -> int {
   /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
   /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
   mpi_grid_buffer_size = 4 * ((12 + 4 * get_includedions()) * (maxndo) + 1);
-  printout("reserve mpi_grid_buffer_size %zu space for MPI communication buffer\n", mpi_grid_buffer_size);
+  printout("reserve mpi_grid_buffer_size %d space for MPI communication buffer\n", mpi_grid_buffer_size);
   mpi_grid_buffer = static_cast<char *>(malloc(mpi_grid_buffer_size * sizeof(char)));
   assert_always(mpi_grid_buffer != nullptr);
   MPI_Barrier(MPI_COMM_WORLD);

@@ -169,7 +169,7 @@ void init_gamma_linelist() {
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     total_lines += std::ssize(gamma_spectra[nucindex]);
   }
-  printout("total gamma-ray lines %td\n", total_lines);
+  printout("total gamma-ray lines %d\n", total_lines);
 
   allnuc_gamma_line_list = std::vector<struct gammaline>();
   allnuc_gamma_line_list.reserve(total_lines);

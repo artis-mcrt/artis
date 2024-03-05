@@ -202,48 +202,46 @@ void pkt_action_counters_printout(const int nts) {
   }
 
   /// Printout packet statistics
-  printout("timestep %d: ma_stat_activation_collexc = %lld\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_COLLEXC));
-  printout("timestep %d: ma_stat_activation_collion = %lld\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_COLLION));
-  printout("timestep %d: ma_stat_activation_ntcollexc = %lld\n", nts,
-           get_counter(COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC));
-  printout("timestep %d: ma_stat_activation_ntcollion = %lld\n", nts,
-           get_counter(COUNTER_MA_STAT_ACTIVATION_NTCOLLION));
-  printout("timestep %d: ma_stat_activation_bb = %lld\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_BB));
-  printout("timestep %d: ma_stat_activation_bf = %lld\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_BF));
-  printout("timestep %d: ma_stat_activation_fb = %lld\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_FB));
-  printout("timestep %d: ma_stat_deactivation_colldeexc = %lld\n", nts,
+  printout("timestep %d: ma_stat_activation_collexc = %d\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_COLLEXC));
+  printout("timestep %d: ma_stat_activation_collion = %d\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_COLLION));
+  printout("timestep %d: ma_stat_activation_ntcollexc = %d\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC));
+  printout("timestep %d: ma_stat_activation_ntcollion = %d\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_NTCOLLION));
+  printout("timestep %d: ma_stat_activation_bb = %d\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_BB));
+  printout("timestep %d: ma_stat_activation_bf = %d\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_BF));
+  printout("timestep %d: ma_stat_activation_fb = %d\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_FB));
+  printout("timestep %d: ma_stat_deactivation_colldeexc = %d\n", nts,
            get_counter(COUNTER_MA_STAT_DEACTIVATION_COLLDEEXC));
-  printout("timestep %d: ma_stat_deactivation_collrecomb = %lld\n", nts,
+  printout("timestep %d: ma_stat_deactivation_collrecomb = %d\n", nts,
            get_counter(COUNTER_MA_STAT_DEACTIVATION_COLLRECOMB));
-  printout("timestep %d: ma_stat_deactivation_bb = %lld\n", nts, get_counter(COUNTER_MA_STAT_DEACTIVATION_BB));
-  printout("timestep %d: ma_stat_deactivation_fb = %lld\n", nts, get_counter(COUNTER_MA_STAT_DEACTIVATION_FB));
-  printout("timestep %d: ma_stat_internaluphigher = %lld\n", nts, get_counter(COUNTER_MA_STAT_INTERNALUPHIGHER));
-  printout("timestep %d: ma_stat_internaluphighernt = %lld\n", nts, get_counter(COUNTER_MA_STAT_INTERNALUPHIGHERNT));
-  printout("timestep %d: ma_stat_internaldownlower = %lld\n", nts, get_counter(COUNTER_MA_STAT_INTERNALDOWNLOWER));
+  printout("timestep %d: ma_stat_deactivation_bb = %d\n", nts, get_counter(COUNTER_MA_STAT_DEACTIVATION_BB));
+  printout("timestep %d: ma_stat_deactivation_fb = %d\n", nts, get_counter(COUNTER_MA_STAT_DEACTIVATION_FB));
+  printout("timestep %d: ma_stat_internaluphigher = %d\n", nts, get_counter(COUNTER_MA_STAT_INTERNALUPHIGHER));
+  printout("timestep %d: ma_stat_internaluphighernt = %d\n", nts, get_counter(COUNTER_MA_STAT_INTERNALUPHIGHERNT));
+  printout("timestep %d: ma_stat_internaldownlower = %d\n", nts, get_counter(COUNTER_MA_STAT_INTERNALDOWNLOWER));
 
-  printout("timestep %d: k_stat_to_ma_collexc = %lld\n", nts, get_counter(COUNTER_K_STAT_TO_MA_COLLEXC));
-  printout("timestep %d: k_stat_to_ma_collion = %lld\n", nts, get_counter(COUNTER_K_STAT_TO_MA_COLLION));
-  printout("timestep %d: k_stat_to_r_ff = %lld\n", nts, get_counter(COUNTER_K_STAT_TO_R_FF));
-  printout("timestep %d: k_stat_to_r_fb = %lld\n", nts, get_counter(COUNTER_K_STAT_TO_R_FB));
-  printout("timestep %d: k_stat_to_r_bb = %lld\n", nts, get_counter(COUNTER_K_STAT_TO_R_BB));
-  printout("timestep %d: k_stat_from_ff = %lld\n", nts, get_counter(COUNTER_K_STAT_FROM_FF));
-  printout("timestep %d: k_stat_from_bf = %lld\n", nts, get_counter(COUNTER_K_STAT_FROM_BF));
-  printout("timestep %d: k_stat_from_earlierdecay = %lld\n", nts, get_counter(COUNTER_K_STAT_FROM_EARLIERDECAY));
+  printout("timestep %d: k_stat_to_ma_collexc = %d\n", nts, get_counter(COUNTER_K_STAT_TO_MA_COLLEXC));
+  printout("timestep %d: k_stat_to_ma_collion = %d\n", nts, get_counter(COUNTER_K_STAT_TO_MA_COLLION));
+  printout("timestep %d: k_stat_to_r_ff = %d\n", nts, get_counter(COUNTER_K_STAT_TO_R_FF));
+  printout("timestep %d: k_stat_to_r_fb = %d\n", nts, get_counter(COUNTER_K_STAT_TO_R_FB));
+  printout("timestep %d: k_stat_to_r_bb = %d\n", nts, get_counter(COUNTER_K_STAT_TO_R_BB));
+  printout("timestep %d: k_stat_from_ff = %d\n", nts, get_counter(COUNTER_K_STAT_FROM_FF));
+  printout("timestep %d: k_stat_from_bf = %d\n", nts, get_counter(COUNTER_K_STAT_FROM_BF));
+  printout("timestep %d: k_stat_from_earlierdecay = %d\n", nts, get_counter(COUNTER_K_STAT_FROM_EARLIERDECAY));
 
-  printout("timestep %d: nt_stat_from_gamma = %lld\n", nts, get_counter(COUNTER_NT_STAT_FROM_GAMMA));
-  printout("timestep %d: nt_stat_to_ionization = %lld\n", nts, get_counter(COUNTER_NT_STAT_TO_IONIZATION));
-  printout("timestep %d: nt_stat_to_excitation = %lld\n", nts, get_counter(COUNTER_NT_STAT_TO_EXCITATION));
-  printout("timestep %d: nt_stat_to_kpkt = %lld\n", nts, get_counter(COUNTER_NT_STAT_TO_KPKT));
+  printout("timestep %d: nt_stat_from_gamma = %d\n", nts, get_counter(COUNTER_NT_STAT_FROM_GAMMA));
+  printout("timestep %d: nt_stat_to_ionization = %d\n", nts, get_counter(COUNTER_NT_STAT_TO_IONIZATION));
+  printout("timestep %d: nt_stat_to_excitation = %d\n", nts, get_counter(COUNTER_NT_STAT_TO_EXCITATION));
+  printout("timestep %d: nt_stat_to_kpkt = %d\n", nts, get_counter(COUNTER_NT_STAT_TO_KPKT));
   nonthermal::nt_print_stats(modelvolume, deltat);
 
-  printout("timestep %d: escounter = %lld\n", nts, get_counter(COUNTER_ESCOUNTER));
-  printout("timestep %d: cellcrossing  = %lld\n", nts, get_counter(COUNTER_CELLCROSSINGS));
-  printout("timestep %d: updatecellcounter  = %lld\n", nts, get_counter(COUNTER_UPDATECELL));
-  printout("timestep %d: coolingratecalccounter = %lld\n", nts, get_counter(COUNTER_COOLINGRATECALCCOUNTER));
-  printout("timestep %d: resonancescatterings  = %lld\n", nts, get_counter(COUNTER_RESONANCESCATTERINGS));
+  printout("timestep %d: escounter = %d\n", nts, get_counter(COUNTER_ESCOUNTER));
+  printout("timestep %d: cellcrossing  = %d\n", nts, get_counter(COUNTER_CELLCROSSINGS));
+  printout("timestep %d: updatecellcounter  = %d\n", nts, get_counter(COUNTER_UPDATECELL));
+  printout("timestep %d: coolingratecalccounter = %d\n", nts, get_counter(COUNTER_COOLINGRATECALCCOUNTER));
+  printout("timestep %d: resonancescatterings  = %d\n", nts, get_counter(COUNTER_RESONANCESCATTERINGS));
 
-  printout("timestep %d: upscatterings  = %lld\n", nts, get_counter(COUNTER_UPSCATTER));
-  printout("timestep %d: downscatterings  = %lld\n", nts, get_counter(COUNTER_DOWNSCATTER));
+  printout("timestep %d: upscatterings  = %d\n", nts, get_counter(COUNTER_UPSCATTER));
+  printout("timestep %d: downscatterings  = %d\n", nts, get_counter(COUNTER_DOWNSCATTER));
 }
 
 void reduce_estimators() {

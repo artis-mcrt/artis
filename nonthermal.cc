@@ -392,7 +392,7 @@ static void read_collion_data() {
     // printout("ci row: %2d %2d %1d %1d %lg %lg %lg %lg %lg\n", collionrow.Z, collionrow.nelec, collionrow.n,
     //          collionrow.l, collionrow.ionpot_ev, collionrow.A, collionrow.B, collionrow.C, collionrow.D);
   }
-  printout("Stored %zu of %d input shell cross sections\n", colliondata.size(), colliondatacount);
+  printout("Stored %d of %d input shell cross sections\n", colliondata.size(), colliondatacount);
 
   fclose(cifile);
 
@@ -2005,7 +2005,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
 
     if (nt_solution[modelgridindex].frac_excitations_list.size() > MAX_NT_EXCITATIONS_STORED) {
       // truncate the sorted list to save memory
-      printout("  Truncating non-thermal excitation list from %zu to %d transitions.\n",
+      printout("  Truncating non-thermal excitation list from %d to %d transitions.\n",
                nt_solution[modelgridindex].frac_excitations_list.size(), MAX_NT_EXCITATIONS_STORED);
       nt_solution[modelgridindex].frac_excitations_list.resize(MAX_NT_EXCITATIONS_STORED);
     }
@@ -2015,7 +2015,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
                  sizeof(nt_solution[modelgridindex].frac_excitations_list[0]) / 1024. / 1024.);
 
     const auto T_e = grid::get_Te(modelgridindex);
-    printout("  Top non-thermal excitation fractions (total excitations = %zu):\n",
+    printout("  Top non-thermal excitation fractions (total excitations = %d):\n",
              nt_solution[modelgridindex].frac_excitations_list.size());
     const int ntransdisplayed =
         std::min(50, static_cast<int>(nt_solution[modelgridindex].frac_excitations_list.size()));
