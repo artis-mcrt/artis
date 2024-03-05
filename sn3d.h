@@ -170,7 +170,7 @@ static auto fopen_required(const std::string &filename, const char *mode) -> FIL
 }
 
 static auto fstream_required(const std::string &filename, std::ios_base::openmode mode) -> std::fstream {
-  const auto datafolderfilename = "data/" + std::string(filename);
+  const std::string datafolderfilename = "data/" + filename;
   if (mode == std::ios::in && std::filesystem::exists(datafolderfilename)) {
     return fstream_required(datafolderfilename, mode);
   }
