@@ -491,7 +491,7 @@ static void set_modelinitradioabund(const int modelgridindex, const int nucindex
   // initradioabund array is in node shared memory
   assert_always(nucindex >= 0);
   if (!(abund >= 0.)) {
-    printout("WARNING: nuclear mass fraction for nucindex %d = %g is negative in cell %d\n", abund, nucindex,
+    printout("WARNING: nuclear mass fraction for nucindex %d = %g is negative in cell %d\n", nucindex, abund,
              modelgridindex);
     assert_always(abund > -1e-6);
     abund = 0.;
