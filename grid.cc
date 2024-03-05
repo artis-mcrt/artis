@@ -1293,16 +1293,16 @@ static auto read_model_columns(std::fstream &fmodel) -> std::tuple<std::vector<s
     // add a default header for unlabelled columns
     switch (model_type) {
       case GRID_SPHERICAL1D:
-        headerline = "#inputcellid vel_r_max_kmps logrho";
+        headerline = std::string("#inputcellid vel_r_max_kmps logrho");
         break;
       case GRID_CYLINDRICAL2D:
-        headerline = "#inputcellid pos_rcyl_mid pos_z_mid rho";
+        headerline = std::string("#inputcellid pos_rcyl_mid pos_z_mid rho");
         break;
       case GRID_CARTESIAN3D:
-        headerline = "#inputcellid pos_x_min pos_y_min pos_z_min rho";
+        headerline = std::string("#inputcellid pos_x_min pos_y_min pos_z_min rho");
         break;
     }
-    headerline += " X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48";
+    headerline += std::string(" X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48");
   }
 
   int colcount = get_token_count(line);
