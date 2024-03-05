@@ -372,7 +372,6 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
     // virtual packet is still at the starting position
     // move it to cell boundary and go to next cell
-    // printf("I'm changing cell. I'm going from nu_cmf = %.e ",dummy_ptr->nu_cmf);
 
     t_future += (sdist / CLIGHT_PROP);
     move_pkt_withtime(&vpkt, sdist);
@@ -382,10 +381,6 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     end_packet = (vpkt.type == TYPE_ESCAPE);
 
     mgi = grid::get_cell_modelgridindex(vpkt.where);
-    // break if you reach an empty cell
-    if (mgi == grid::get_npts_model()) {
-      break;
-    }
 
     // kill vpkt with pass through a thick cell
     if (grid::modelgrid[mgi].thick != 0) {
