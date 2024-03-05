@@ -703,6 +703,7 @@ static void rpkt_event_thickcell(struct packet *pkt_ptr)
 
 static void update_estimators(const double e_cmf, const double nu_cmf, const double distance,
                               const double doppler_nucmf_on_nurf, const int nonemptymgi,
+                              const struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
                               const struct phixslist &phixslist)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
@@ -715,7 +716,7 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   radfield::update_estimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf, phixslist);
 
   /// ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
-  safeadd(globals::ffheatingestimator[nonemptymgi], distance_e_cmf * globals::chi_rpkt_cont[tid].ffheating);
+  safeadd(globals::ffheatingestimator[nonemptymgi], distance_e_cmf * chi_rpkt_cont.ffheating);
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
@@ -843,7 +844,8 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
     // Move it into the new cell.
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, sdist / 2.);
     if (nonemptymgi >= 0) {
-      update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, sdist, doppler_nucmf_on_nurf, nonemptymgi, phixslist);
+      update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, sdist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont,
+                        phixslist);
     }
     move_pkt_withtime(pkt_ptr, sdist / 2.);
 
@@ -862,7 +864,8 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
   if ((edist <= sdist) && (edist <= tdist)) [[likely]] {
     // bound-bound or continuum event
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, edist / 2.);
-    update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, edist, doppler_nucmf_on_nurf, nonemptymgi, phixslist);
+    update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, edist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont,
+                      phixslist);
     move_pkt_withtime(pkt_ptr, edist / 2.);
 
     // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
@@ -888,7 +891,8 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
     // reaches end of timestep before cell boundary or interaction
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, tdist / 2.);
     if (nonemptymgi >= 0) {
-      update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, tdist, doppler_nucmf_on_nurf, nonemptymgi, phixslist);
+      update_estimators(pkt_ptr->e_cmf, pkt_ptr->nu_cmf, tdist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont,
+                        phixslist);
     }
     move_pkt_withtime(pkt_ptr, tdist / 2.);
     pkt_ptr->prop_time = t2;
