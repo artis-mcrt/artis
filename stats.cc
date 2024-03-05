@@ -210,9 +210,9 @@ void pkt_action_counters_printout(const int nts) {
   printout("timestep %d: ma_stat_activation_bb = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_BB));
   printout("timestep %d: ma_stat_activation_bf = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_BF));
   printout("timestep %d: ma_stat_activation_fb = %td\n", nts, get_counter(COUNTER_MA_STAT_ACTIVATION_FB));
-  printout("timestep %d: ma_stat_deactivation_colldeexc = %ld\n", nts,
+  printout("timestep %d: ma_stat_deactivation_colldeexc = %td\n", nts,
            get_counter(COUNTER_MA_STAT_DEACTIVATION_COLLDEEXC));
-  printout("timestep %d: ma_stat_deactivation_collrecomb = %ld\n", nts,
+  printout("timestep %d: ma_stat_deactivation_collrecomb = %td\n", nts,
            get_counter(COUNTER_MA_STAT_DEACTIVATION_COLLRECOMB));
   printout("timestep %d: ma_stat_deactivation_bb = %td\n", nts, get_counter(COUNTER_MA_STAT_DEACTIVATION_BB));
   printout("timestep %d: ma_stat_deactivation_fb = %td\n", nts, get_counter(COUNTER_MA_STAT_DEACTIVATION_FB));
