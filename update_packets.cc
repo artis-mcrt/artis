@@ -150,11 +150,10 @@ static void update_pellet(struct packet *pkt_ptr, const int nts, const double t2
 static void do_packet(struct packet *const pkt_ptr, const double t2, const int nts)
 // update a packet no further than time t2
 {
-  const int pkt_type = pkt_ptr->type;
   // struct phixslist phixslist {};
   // struct rpkt_continuum_absorptioncoeffs chi_rpkt_cont {};
 
-  switch (pkt_type) {
+  switch (pkt_ptr->type) {
     case TYPE_RADIOACTIVE_PELLET: {
       update_pellet(pkt_ptr, nts, t2);
       break;
