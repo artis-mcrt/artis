@@ -744,13 +744,15 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
 }
 
 static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
-                         struct phixslist &phixslist, struct mastate &pktmastate, const double t2) -> bool
+                         struct phixslist &phixslist, const double t2) -> bool
 // Update an r-packet and return true if no mgi change (or it goes into an empty cell) and no pkttype change and not
 // reached end of timestep, otherwise false
 {
   const int cellindex = pkt_ptr->where;
   const int mgi = grid::get_cell_modelgridindex(cellindex);
   const int nonemptymgi = (mgi != grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
+
+  thread_local struct mastate pktmastate {};
 
   // Assign optical depth to next physical event
   const double zrand = rng_uniform_pos();
@@ -909,8 +911,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
 
 void do_rpkt(struct packet *pkt_ptr, const double t2, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
              struct phixslist &phixslist) {
-  thread_local struct mastate pktmastate {};
-  while (do_rpkt_step(pkt_ptr, chi_rpkt_cont, phixslist, pktmastate, t2)) {
+  while (do_rpkt_step(pkt_ptr, chi_rpkt_cont, phixslist, t2)) {
     ;
   }
 }
