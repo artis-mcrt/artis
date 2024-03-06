@@ -909,7 +909,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
 
 void do_rpkt(struct packet *pkt_ptr, const double t2, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
              struct phixslist &phixslist) {
-  struct mastate pktmastate {};
+  static thread_local struct mastate pktmastate {};
   while (do_rpkt_step(pkt_ptr, chi_rpkt_cont, phixslist, pktmastate, t2)) {
     ;
   }
