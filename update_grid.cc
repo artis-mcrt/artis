@@ -691,13 +691,7 @@ void cellcache_change_cell(const int modelgridindex) {
     return;
   }
 
-  // force rpkt opacities to be recalculated next time they are accessed
-  for (int itid = 0; itid < get_max_threads(); itid++) {
-    globals::chi_rpkt_cont[itid].recalculate_required = true;
-  }
-
   globals::cellcache[cellcacheslotid].cellnumber = modelgridindex;
-
   globals::cellcache[cellcacheslotid].chi_ff_nnionpart = -1.;
 
   //  int nlevels_with_processrates = 0;

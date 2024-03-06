@@ -159,7 +159,7 @@ struct rpkt_continuum_absorptioncoeffs {
   double ffheating{0.};
   // double bfheating;
   int modelgridindex = -1;
-  bool recalculate_required = true;  // e.g. when cell or timestep has changed
+  int timestep = -1;  // e.g. when cell or timestep has changed
 };
 
 template <bool separatestimrecomb>
@@ -252,15 +252,12 @@ extern struct bflist_t *bflist;
 // for USE_LUT_BFHEATING = true
 extern double *bfheating_coeff;
 
-extern struct rpkt_continuum_absorptioncoeffs *chi_rpkt_cont;
-
 extern double *allcont_nu_edge;
 extern const struct fullphixslist *allcont;
 
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
 extern struct groundphixslist *groundcont;
 
-extern std::vector<struct phixslist> phixslist_allthreads;
 extern int nbfcontinua;
 extern int nbfcontinua_ground;
 extern int NPHIXSPOINTS;

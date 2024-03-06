@@ -155,7 +155,7 @@ static auto get_event_expansion_opacity(
     const int modelgridindex, const int nonemptymgi, const struct packet &pkt_ptr,
     struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,  // NOLINT(misc-unused-parameters)
     struct phixslist &phixslist, const double tau_rnd, const double abort_dist) -> std::tuple<double, bool> {
-  calculate_chi_rpkt_cont(pkt_ptr.nu_cmf, chi_rpkt_cont, phixslist, modelgridindex, true);
+  calculate_chi_rpkt_cont(pkt_ptr.nu_cmf, chi_rpkt_cont, &phixslist, modelgridindex, true);
   const auto doppler = doppler_packet_nucmf_on_nurf(pkt_ptr.pos, pkt_ptr.dir, pkt_ptr.prop_time);
 
   const auto nu_cmf_abort = get_nu_cmf_abort(pkt_ptr.pos, pkt_ptr.dir, pkt_ptr.prop_time, pkt_ptr.nu_rf, abort_dist);
@@ -835,7 +835,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
         get_event_expansion_opacity(mgi, nonemptymgi, *pkt_ptr, chi_rpkt_cont, phixslist, tau_next, abort_dist);
     pkt_ptr->next_trans = -1;
   } else {
-    calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, phixslist, mgi, true);
+    calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, &phixslist, mgi, true);
 
     std::tie(edist, pkt_ptr->next_trans, event_is_boundbound) =
         get_event(mgi, *pkt_ptr, chi_rpkt_cont, pktmastate, tau_next, abort_dist);
@@ -1002,12 +1002,12 @@ static auto calculate_chi_ffheating(const int modelgridindex, const double nu) -
 }
 
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
-auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, struct phixslist &phixslist) -> double
+auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, struct phixslist *phixslist) -> double
 // bound-free opacity
 {
   double chi_bf_sum = 0.;
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
-    std::ranges::fill(phixslist.gamma_contr, 0.);
+    std::ranges::fill(phixslist->gamma_contr, 0.);
   }
 
   const auto T_e = grid::get_Te(modelgridindex);
@@ -1037,8 +1037,8 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, stru
                        globals::allcont_nu_edge);
 
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-    phixslist.allcontbegin = allcontbegin;
-    phixslist.allcontend = allcontend;
+    phixslist->allcontbegin = allcontbegin;
+    phixslist->allcontend = allcontend;
   }
 
   for (i = allcontbegin; i < allcontend; i++) {
@@ -1084,12 +1084,12 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, stru
         if constexpr (USECELLHISTANDUPDATEPHIXSLIST && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
           if (level == 0 && globals::allcont[i].phixstargetindex == 0) {
             const int gphixsindex = globals::allcont[i].index_in_groundphixslist;
-            phixslist.groundcont_gamma_contr[gphixsindex] = sigma_contr;
+            phixslist->groundcont_gamma_contr[gphixsindex] = sigma_contr;
           }
         }
 
         if constexpr (USECELLHISTANDUPDATEPHIXSLIST && DETAILED_BF_ESTIMATORS_ON) {
-          phixslist.gamma_contr[i] = sigma_contr;
+          phixslist->gamma_contr[i] = sigma_contr;
         }
 
         const double chi_bf_contr = nnlevel * sigma_contr;
@@ -1109,20 +1109,20 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, stru
 
         chi_bf_sum += chi_bf_contr;
         if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-          phixslist.chi_bf_sum[i] = chi_bf_sum;
+          phixslist->chi_bf_sum[i] = chi_bf_sum;
         }
       } else if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
         // ignore this particular process
-        phixslist.chi_bf_sum[i] = chi_bf_sum;
+        phixslist->chi_bf_sum[i] = chi_bf_sum;
         if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-          phixslist.gamma_contr[i] = 0.;
+          phixslist->gamma_contr[i] = 0.;
         }
       }
     } else if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
       // no element present or not an important level
-      phixslist.chi_bf_sum[i] = chi_bf_sum;
+      phixslist->chi_bf_sum[i] = chi_bf_sum;
       if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-        phixslist.gamma_contr[i] = 0.;
+        phixslist->gamma_contr[i] = 0.;
       }
     }
   }
@@ -1131,11 +1131,11 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, stru
 }
 
 void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
-                             struct phixslist &phixslist, const int modelgridindex,
+                             struct phixslist *phixslist, const int modelgridindex,
                              const bool usecellhistupdatephixslist) {
   assert_testmodeonly(modelgridindex != grid::get_npts_model());
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
-  if ((modelgridindex == chi_rpkt_cont.modelgridindex) && (!chi_rpkt_cont.recalculate_required) &&
+  if ((modelgridindex == chi_rpkt_cont.modelgridindex) && (globals::timestep == chi_rpkt_cont.timestep) &&
       (fabs(chi_rpkt_cont.nu / nu_cmf - 1.0) < 1e-4)) {
     // calculated values are a match already
     return;
@@ -1157,7 +1157,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
 
     /// Third contribution: bound-free absorption
     chi_bf = usecellhistupdatephixslist ? calculate_chi_bf_gammacontr<true>(modelgridindex, nu_cmf, phixslist)
-                                        : calculate_chi_bf_gammacontr<false>(modelgridindex, nu_cmf, phixslist);
+                                        : calculate_chi_bf_gammacontr<false>(modelgridindex, nu_cmf, nullptr);
 
   } else {
     /// in the other cases chi_grey is an mass absorption coefficient
@@ -1174,7 +1174,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
 
   chi_rpkt_cont.nu = nu_cmf;
   chi_rpkt_cont.modelgridindex = modelgridindex;
-  chi_rpkt_cont.recalculate_required = false;
+  chi_rpkt_cont.timestep = globals::timestep;
   chi_rpkt_cont.total = chi_escat + chi_bf + chi_ff;
   chi_rpkt_cont.ffescat = chi_escat;
   chi_rpkt_cont.ffheat = chi_ff;

@@ -1356,38 +1356,6 @@ static void setup_phixs_list() {
   printout("[info] read_atomicdata: number of bfcontinua %d\n", globals::nbfcontinua);
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n", globals::nbfcontinua_ground);
 
-  globals::phixslist_allthreads.resize(get_max_threads());
-
-  /// MK: 2012-01-19
-  /// To fix the OpenMP problem on BlueGene machines this parallel section was removed and replaced by
-  /// a serial loop which intializes the phixslist data structure for all threads in a loop. I'm still
-  /// not sure why this causes a problem at all and on BlueGene architectures in particular. However,
-  /// it seems to fix the problem.
-  // #ifdef _OPENMP
-  //   #pragma omp parallel private(i,element,ion,level,nions,nlevels,epsilon_upper,E_threshold,nu_edge)
-  //   {
-  // #endif
-  for (int itid = 0; itid < get_max_threads(); itid++) {
-    /// Number of ground level bf-continua equals the total number of included ions minus the number
-    /// of included elements, because the uppermost ionisation stages can't ionise.
-    globals::phixslist_allthreads[itid].allcontbegin = 0;
-    globals::phixslist_allthreads[itid].allcontend = globals::nbfcontinua;
-    if ((USE_LUT_PHOTOION || USE_LUT_BFHEATING) && globals::nbfcontinua_ground > 0) {
-      globals::phixslist_allthreads[itid].groundcont_gamma_contr.resize(globals::nbfcontinua_ground, 0.);
-    }
-
-    if (globals::nbfcontinua > 0) {
-      globals::phixslist_allthreads[itid].chi_bf_sum.resize(globals::nbfcontinua, 0.);
-
-      if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-        globals::phixslist_allthreads[itid].gamma_contr.resize(globals::nbfcontinua, 0.);
-      }
-    }
-
-    printout("[info] mem_usage: phixslist[tid].chi_bf_contr for thread %d occupies %.3f MB\n", itid,
-             globals::nbfcontinua * sizeof(double) / 1024. / 1024.);
-  }
-
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     globals::groundcont =
         static_cast<struct groundphixslist *>(malloc(globals::nbfcontinua_ground * sizeof(struct groundphixslist)));

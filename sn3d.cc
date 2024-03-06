@@ -851,10 +851,6 @@ auto main(int argc, char *argv[]) -> int {
   printout("MPI is disabled in this build\n");
 #endif
 
-  globals::chi_rpkt_cont = static_cast<struct rpkt_continuum_absorptioncoeffs *>(
-      calloc(get_max_threads(), sizeof(struct rpkt_continuum_absorptioncoeffs)));
-  assert_always(globals::chi_rpkt_cont != nullptr);
-
   input(my_rank);
   if (globals::simulation_continued_from_saved) {
     assert_always(globals::nprocs_exspec == globals::nprocs);

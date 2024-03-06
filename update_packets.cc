@@ -150,8 +150,14 @@ static void update_pellet(struct packet *pkt_ptr, const int nts, const double t2
 static void do_packet(struct packet *const pkt_ptr, const double t2, const int nts)
 // update a packet no further than time t2
 {
-  // struct phixslist phixslist {};
-  // struct rpkt_continuum_absorptioncoeffs chi_rpkt_cont {};
+  static thread_local struct phixslist phixslist {
+    .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
+    .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
+    .gamma_contr = std::vector<double>(DETAILED_BF_ESTIMATORS_ON ? globals::nbfcontinua : 0, 0.),
+    .allcontend = globals::nbfcontinua, .allcontbegin = 0
+  };
+
+  static thread_local struct rpkt_continuum_absorptioncoeffs chi_rpkt_cont {};
 
   switch (pkt_ptr->type) {
     case TYPE_RADIOACTIVE_PELLET: {
@@ -169,7 +175,7 @@ static void do_packet(struct packet *const pkt_ptr, const double t2, const int n
     }
 
     case TYPE_RPKT: {
-      do_rpkt(pkt_ptr, t2, globals::chi_rpkt_cont[tid], globals::phixslist_allthreads[tid]);
+      do_rpkt(pkt_ptr, t2, chi_rpkt_cont, phixslist);
 
       if (pkt_ptr->type == TYPE_ESCAPE) {
         safeadd(globals::timesteps[nts].cmf_lum, pkt_ptr->e_cmf);
