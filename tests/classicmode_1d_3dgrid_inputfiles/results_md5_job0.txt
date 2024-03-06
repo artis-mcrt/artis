@@ -17,5 +17,5 @@ ce606d2e27cd481300a46b6891270d87  spec.out
 8c6015355c7f9a767f4b4f095dd70fcc  vpkt_grid_1-0.out
 6b2dd9f6430ff9f4c9962d302b46cd8d  vspecpol_0-0.out
 40738fff524f70c663d4ef6e44251710  vspecpol_1-0.out
-b9517a0457d9f67ff033c27771746f17  job0/estimators_0000.out
-c62708984329e6e6f78746463bdb3372  job0/estimators_0001.out
+bc97c82b26ab0914acb55a62fbc7cd16  job0/estimators_0000.out
+9d1536c08b50cfaf5e68a9a339f627b2  job0/estimators_0001.out
