@@ -11,8 +11,7 @@
 #include "radfield.h"
 #include "sn3d.h"
 
-void do_rpkt(struct packet *pkt_ptr, double t2, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
-             struct phixslist &phixslist);
+void do_rpkt(struct packet *pkt_ptr, double t2);
 void emit_rpkt(struct packet *pkt_ptr);
 [[nodiscard]] auto closest_transition(double nu_cmf, int next_trans) -> int;
 [[nodiscard]] auto calculate_chi_bf_gammacontr(int modelgridindex, double nu) -> double;

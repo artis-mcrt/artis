@@ -743,8 +743,7 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   }
 }
 
-static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
-                         struct phixslist &phixslist, const double t2) -> bool
+static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
 // Update an r-packet and return true if no mgi change (or it goes into an empty cell) and no pkttype change and not
 // reached end of timestep, otherwise false
 {
@@ -753,6 +752,14 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
   const int nonemptymgi = (mgi != grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
 
   thread_local struct mastate pktmastate {};
+  static thread_local struct phixslist phixslist {
+    .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
+    .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
+    .gamma_contr = std::vector<double>(DETAILED_BF_ESTIMATORS_ON ? globals::nbfcontinua : 0, 0.),
+    .allcontend = globals::nbfcontinua, .allcontbegin = 0
+  };
+
+  static thread_local struct rpkt_continuum_absorptioncoeffs chi_rpkt_cont {};
 
   // Assign optical depth to next physical event
   const double zrand = rng_uniform_pos();
@@ -909,9 +916,8 @@ static auto do_rpkt_step(struct packet *pkt_ptr, struct rpkt_continuum_absorptio
   std::abort();
 }
 
-void do_rpkt(struct packet *pkt_ptr, const double t2, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
-             struct phixslist &phixslist) {
-  while (do_rpkt_step(pkt_ptr, chi_rpkt_cont, phixslist, t2)) {
+void do_rpkt(struct packet *pkt_ptr, const double t2) {
+  while (do_rpkt_step(pkt_ptr, t2)) {
     ;
   }
 }
