@@ -754,8 +754,8 @@ static auto planck_integral(double T_R, double nu_lower, double nu_upper, const 
   return integral;
 }
 
-auto planck_integral_analytic(const double T_R, const double nu_lower, const double nu_upper,
-                              const bool times_nu) -> double {
+auto planck_integral_analytic(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu)
+    -> double {
   // return the integral of nu^3 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
   // or if times_nu is true, the integral of nu^4 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
   double integral = 0.;
