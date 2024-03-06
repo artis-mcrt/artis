@@ -641,12 +641,12 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
   // I think the nu_cmf slightly differs from when the phixslist was calculated
   // so the nu condition on this nu_cmf can truncate the phixslist
   const int allcontend = static_cast<int>(
-      std::upper_bound(globals::allcont_nu_edge, &globals::allcont_nu_edge[phixslist.allcontend], nu_cmf) -
+      std::upper_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + phixslist.allcontend, nu_cmf) -
       globals::allcont_nu_edge);
 
   const int allcontbegin = static_cast<int>(
       std::lower_bound(
-          &globals::allcont_nu_edge[phixslist.allcontbegin], &globals::allcont_nu_edge[allcontend], nu_cmf,
+          globals::allcont_nu_edge + phixslist.allcontbegin, globals::allcont_nu_edge + allcontend, nu_cmf,
           [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }) -
       globals::allcont_nu_edge);
 
@@ -754,8 +754,8 @@ static auto planck_integral(double T_R, double nu_lower, double nu_upper, const 
   return integral;
 }
 
-auto planck_integral_analytic(const double T_R, const double nu_lower, const double nu_upper, const bool times_nu)
-    -> double {
+auto planck_integral_analytic(const double T_R, const double nu_lower, const double nu_upper,
+                              const bool times_nu) -> double {
   // return the integral of nu^3 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
   // or if times_nu is true, the integral of nu^4 / (exp(h nu / k T) - 1) from nu_lower to nu_upper
   double integral = 0.;
