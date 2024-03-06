@@ -273,7 +273,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   // compute the optical depth to boundary
 
   mgi = grid::get_cell_modelgridindex(vpkt.where);
-  struct rpkt_continuum_absorptioncoeffs chi_vpkt_cont {};
+  thread_local static struct rpkt_continuum_absorptioncoeffs chi_vpkt_cont {};
 
   while (!end_packet) {
     // distance to the next cell
