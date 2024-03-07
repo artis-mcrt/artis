@@ -12,7 +12,7 @@ namespace kpkt {
 
 auto get_ncoolingterms() -> int;
 void setup_coolinglist();
-void set_kpktdiffusion(float kpktdiffusion_timescale, int n_kpktdiffusion_timesteps);
+void set_kpktdiffusion(float kpktdiffusion_timescale_in, int n_kpktdiffusion_timesteps_in);
 void calculate_cooling_rates(int modelgridindex, struct heatingcoolingrates *heatingcoolingrates);
 void do_kpkt_blackbody(struct packet *pkt_ptr);
 void do_kpkt(struct packet *pkt_ptr, double t2, int nts);
