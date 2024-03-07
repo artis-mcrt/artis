@@ -1104,19 +1104,6 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, stru
         }
 
         const double chi_bf_contr = nnlevel * sigma_contr;
-        if (USECELLHISTANDUPDATEPHIXSLIST && !std::isfinite(chi_bf_contr)) {
-          printout("[fatal] calculate_chi_rpkt_cont: non-finite contribution to chi_bf_contr %g ... abort\n",
-                   chi_bf_contr);
-          printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n", i, element, ion, level);
-          printout("[fatal] Z=%d ionstage %d\n", get_atomicnumber(element), get_ionstage(element, ion));
-          printout("[fatal] globals::cell[%d].composition[%d].abundance = %g\n", modelgridindex, element,
-                   grid::get_elem_abundance(modelgridindex, element));
-          printout("[fatal] nne %g, nnlevel %g, (or %g)\n", grid::get_nne(modelgridindex), nnlevel,
-                   get_levelpop(modelgridindex, element, ion, level));
-          printout("[fatal] sigma_bf %g, T_e %g, nu %g, nu_edge %g\n", sigma_bf, grid::get_Te(modelgridindex), nu,
-                   nu_edge);
-          std::abort();
-        }
 
         chi_bf_sum += chi_bf_contr;
         if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
@@ -1137,6 +1124,8 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, stru
       }
     }
   }
+
+  assert_always(std::isfinite(chi_bf_sum));
 
   return chi_bf_sum;
 }
