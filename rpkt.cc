@@ -155,8 +155,8 @@ static constexpr auto get_expopac_bin_nu_lower(const size_t binindex) -> double 
 static auto get_event_expansion_opacity(
     const int modelgridindex, const int nonemptymgi, const struct packet &pkt_ptr,
     struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,  // NOLINT(misc-unused-parameters)
-    struct phixslist &phixslist, const double tau_rnd, const double abort_dist) -> std::tuple<double, bool> {
-  calculate_chi_rpkt_cont(pkt_ptr.nu_cmf, chi_rpkt_cont, &phixslist, modelgridindex, true);
+    struct phixslist *phixslist, const double tau_rnd, const double abort_dist) -> std::tuple<double, bool> {
+  calculate_chi_rpkt_cont(pkt_ptr.nu_cmf, chi_rpkt_cont, phixslist, modelgridindex, true);
   const auto doppler = doppler_packet_nucmf_on_nurf(pkt_ptr.pos, pkt_ptr.dir, pkt_ptr.prop_time);
 
   const auto nu_cmf_abort = get_nu_cmf_abort(pkt_ptr.pos, pkt_ptr.dir, pkt_ptr.prop_time, pkt_ptr.nu_rf, abort_dist);
@@ -760,7 +760,9 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     .allcontend = globals::nbfcontinua, .allcontbegin = 0
   };
 
-  static thread_local struct rpkt_continuum_absorptioncoeffs chi_rpkt_cont {};
+  static thread_local struct rpkt_continuum_absorptioncoeffs chi_rpkt_cont {
+    .nu = NAN, .total = NAN, .ffescat = NAN, .ffheat = NAN, .bf = NAN, .modelgridindex = -1, .timestep = -1
+  };
 
   // Assign optical depth to next physical event
   const double zrand = rng_uniform_pos();
@@ -840,7 +842,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     pkt_ptr->next_trans = -1;
   } else if constexpr (EXPANSIONOPACITIES_ON) {
     std::tie(edist, event_is_boundbound) =
-        get_event_expansion_opacity(mgi, nonemptymgi, *pkt_ptr, chi_rpkt_cont, phixslist, tau_next, abort_dist);
+        get_event_expansion_opacity(mgi, nonemptymgi, *pkt_ptr, chi_rpkt_cont, &phixslist, tau_next, abort_dist);
     pkt_ptr->next_trans = -1;
   } else {
     calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, &phixslist, mgi, true);
