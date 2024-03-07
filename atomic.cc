@@ -18,13 +18,13 @@
 double last_phixs_nuovernuedge = -1;
 
 // highest number of ions for any element
-int maxnions = 0;
+static int maxnions = 0;
 
 // number of ions of any element
-int includedions = 0;
+static int includedions = 0;
 
 // total number of levels of any element
-int includedlevels = 0;
+static int includedlevels = 0;
 
 std::array<bool, 3> phixs_file_version_exists;
 

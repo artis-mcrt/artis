@@ -34,7 +34,7 @@
 
 namespace decay {
 
-constexpr int Z_MAX = 118;
+static constexpr int Z_MAX = 118;
 constexpr std::string_view elsymbols[Z_MAX + 1] = {
     "n",  "H",  "He", "Li", "Be", "B",  "C",  "N",  "O",  "F",  "Ne", "Na",  "Mg", "Al",  "Si", "P",   "S",
     "Cl", "Ar", "K",  "Ca", "Sc", "Ti", "V",  "Cr", "Mn", "Fe", "Co", "Ni",  "Cu", "Zn",  "Ga", "Ge",  "As",
@@ -57,7 +57,7 @@ struct nuclide {
   std::array<double, decaytypes::DECAYTYPE_COUNT> branchprobs = {0.};  // branch probability of each decay type
 };
 
-std::vector<struct nuclide> nuclides;
+static std::vector<struct nuclide> nuclides;
 
 constexpr auto decay_daughter_z(const int z_parent, const int /*a_parent*/, const int decaytype) -> int
 // check if (z_parent, a_parent) is a parent of (z, a)

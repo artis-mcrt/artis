@@ -67,8 +67,10 @@ static auto real_time_start = -1;
 static auto time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
 static FILE *estimators_file = nullptr;
 
-size_t mpi_grid_buffer_size = 0;
-char *mpi_grid_buffer = nullptr;
+#ifdef MPI_ON
+static size_t mpi_grid_buffer_size = 0;
+static char *mpi_grid_buffer = nullptr;
+#endif
 
 static void initialise_linestat_file() {
   if (globals::simulation_continued_from_saved && !RECORD_LINESTAT) {
