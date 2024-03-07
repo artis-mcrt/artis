@@ -752,7 +752,7 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
   const int mgi = grid::get_cell_modelgridindex(cellindex);
   const int nonemptymgi = (mgi != grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
 
-  thread_local struct mastate pktmastate {};
+  static thread_local struct mastate pktmastate {};
   static thread_local struct phixslist phixslist {
     .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
     .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
