@@ -29,7 +29,7 @@ void init_nuclides(const std::vector<int> &zlist, const std::vector<int> &alist)
 [[nodiscard]] auto get_nucstring_z(const std::string &strnuc) -> int;
 [[nodiscard]] auto get_nucstring_a(const std::string &strnuc) -> int;
 [[nodiscard]] auto get_num_nuclides() -> int;
-[[nodiscard]] auto get_elname(int z) -> const char *;
+[[nodiscard]] auto get_elname(int z) -> std::string;
 [[nodiscard]] auto get_nuc_z(int nucindex) -> int;
 [[nodiscard]] auto get_nuc_a(int nucindex) -> int;
 [[nodiscard]] auto get_nucindex(int z, int a) -> int;

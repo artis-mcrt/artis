@@ -6,7 +6,6 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <limits>
@@ -114,22 +113,17 @@ static void read_decaydata() {
       continue;
     }
 
-    const char *elname = decay::get_elname(z);
-    const size_t elnamelen = strlen(elname);  // excluding the NULL terminator
-    assert_always(elnamelen < 7);
-    char elnamelower[8];
-    for (size_t i = 0; i < elnamelen; i++) {
-      elnamelower[i] = static_cast<char>(tolower(elname[i]));
-    }
-    elnamelower[elnamelen] = '\0';
+    auto strelname = decay::get_elname(z);
+    std::transform(strelname.begin(), strelname.end(), strelname.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
 
     // look in the current folder
     char filename[MAXFILENAMELENGTH];
-    snprintf(filename, MAXFILENAMELENGTH, "%s%d_lines.txt", elnamelower, a);
+    snprintf(filename, MAXFILENAMELENGTH, "%s%d_lines.txt", strelname.c_str(), a);
 
     // look in the 'data' subfolder
     char filename2[MAXFILENAMELENGTH];
-    snprintf(filename2, MAXFILENAMELENGTH, "data/%s%d_lines.txt", elnamelower, a);
+    snprintf(filename2, MAXFILENAMELENGTH, "data/%s%d_lines.txt", strelname.c_str(), a);
 
     if (std::ifstream(filename)) {
       read_gamma_spectrum(nucindex, filename);

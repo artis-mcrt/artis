@@ -35,7 +35,7 @@
 namespace decay {
 
 static constexpr int Z_MAX = 118;
-static constexpr std::string_view elsymbols[Z_MAX + 1] = {
+static constexpr std::array<const std::string_view, Z_MAX + 1> elsymbols{
     "n",  "H",  "He", "Li", "Be", "B",  "C",  "N",  "O",  "F",  "Ne", "Na",  "Mg", "Al",  "Si", "P",   "S",
     "Cl", "Ar", "K",  "Ca", "Sc", "Ti", "V",  "Cr", "Mn", "Fe", "Co", "Ni",  "Cu", "Zn",  "Ga", "Ge",  "As",
     "Se", "Br", "Kr", "Rb", "Sr", "Y",  "Zr", "Nb", "Mo", "Tc", "Ru", "Rh",  "Pd", "Ag",  "Cd", "In",  "Sn",
@@ -136,9 +136,9 @@ MPI_Win win_decaypath_energy_per_mass = MPI_WIN_NULL;
 
 auto get_num_nuclides() -> int { return static_cast<int>(nuclides.size()); }
 
-auto get_elname(const int z) -> const char * {
+auto get_elname(const int z) -> std::string {
   assert_testmodeonly(z <= Z_MAX);
-  return &elsymbols[z].front();
+  return std::string(elsymbols[z]);
 }
 
 auto get_nuc_z(int nucindex) -> int {
@@ -196,7 +196,7 @@ static auto get_meanlife(int nucindex) -> double {
   return nuclides[nucindex].meanlife;
 }
 
-static void printout_nuclidename(const int z, const int a) { printout("(Z=%d)%s%d", z, get_elname(z), a); }
+static void printout_nuclidename(const int z, const int a) { printout("(Z=%d)%s%d", z, get_elname(z).c_str(), a); }
 
 static void printout_nuclidemeanlife(const int z, const int a) {
   const int nucindex = get_nucindex_or_neg_one(z, a);
@@ -532,7 +532,7 @@ static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const s
                          return false;
                        }
 
-                       printout("removing unused nuclide (Z=%d)%s%d\n", nuc.z, get_elname(nuc.z), nuc.a);
+                       printout("removing unused nuclide (Z=%d)%s%d\n", nuc.z, get_elname(nuc.z).c_str(), nuc.a);
                        return true;
                      }),
       nuclides.end());
@@ -552,7 +552,7 @@ auto get_nucstring_z(const std::string &strnuc) -> int
   elcode.erase(std::remove_if(elcode.begin(), elcode.end(), &isdigit), elcode.end());
 
   for (int z = 0; z <= Z_MAX; z++) {
-    if (elcode == std::string_view(get_elname(z))) {
+    if (elcode == get_elname(z)) {
       return z;
     }
   }
@@ -1321,7 +1321,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
         if (massfrac > 0) {
           const double numberdens = massfrac / nucmass(atomic_number, nuc_a) * rho;
 
-          fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number), nuc_a, numberdens);
+          fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number).c_str(), nuc_a, numberdens);
         }
       }
     } else {  // not the element that we want, but check if a decay produces it
@@ -1337,7 +1337,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
             // stable
             const double massfrac = get_nuc_massfrac(modelgridindex, atomic_number, nuc_a, t_current);
             const double numberdens = massfrac / nucmass(nuc_z, nuc_a) * rho;
-            fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number), nuc_a, numberdens);
+            fprintf(estimators_file, "  %s%d: %9.3e", get_elname(atomic_number).c_str(), nuc_a, numberdens);
           }
         }
       }
@@ -1349,7 +1349,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
   if (otherstablemassfrac > 0) {
     const double meannucmass = globals::elements[element].initstablemeannucmass;
     const double otherstable_numberdens = otherstablemassfrac / meannucmass * grid::get_rho(modelgridindex);
-    fprintf(estimators_file, "  %s_otherstable: %9.3e", get_elname(atomic_number), otherstable_numberdens);
+    fprintf(estimators_file, "  %s_otherstable: %9.3e", get_elname(atomic_number).c_str(), otherstable_numberdens);
   }
   fprintf(estimators_file, "\n");
 }

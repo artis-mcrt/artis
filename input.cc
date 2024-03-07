@@ -1528,7 +1528,7 @@ static void read_atomicdata() {
   printout("----------------------------------\n");
   for (int element = 0; element < get_nelements(); element++) {
     printout("[input]  element %d (Z=%2d %s)\n", element, get_atomicnumber(element),
-             decay::get_elname(get_atomicnumber(element)));
+             decay::get_elname(get_atomicnumber(element)).c_str());
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
       int ion_photoiontransitions = 0;
