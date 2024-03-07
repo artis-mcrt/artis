@@ -131,7 +131,7 @@ jobs:
               id: cpu-count
               run: |
                   g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
-                  # echo "count=$(python3 -c 'import psutil; print(int(psutil.cpu_count(logical=False)))')" >> $GITHUB_OUTPUT
+                  python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
             - name: apt update
@@ -188,7 +188,7 @@ jobs:
               run: |
                   sudo apt-get install -y libomp5-14 libomp-dev
 
-            - name: Show compiler version and CPU type
+            - name: Show compiler version
               run: |
                   ${{ env.CXX }} --version
 
