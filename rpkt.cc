@@ -10,6 +10,7 @@
 #include <limits>
 #include <span>
 #include <tuple>
+#include <vector>
 
 #include "macroatom.h"
 

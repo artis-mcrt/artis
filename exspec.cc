@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
+#include <fstream>
 #include <random>
 #include <vector>
 

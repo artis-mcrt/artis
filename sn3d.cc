@@ -22,6 +22,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <random>
 #include <span>
@@ -37,9 +38,9 @@
 #include "gsl/gsl_integration.h"
 #include "input.h"
 #include "macroatom.h"
-#include "rpkt.h"
 #ifdef MPI_ON
 #include "mpi.h"
+#include "rpkt.h"
 #endif
 #include "nltepop.h"
 #include "nonthermal.h"
