@@ -305,8 +305,6 @@ extern double cell_is_optically_thick;
 extern int num_grey_timesteps;
 extern int n_titer;
 extern bool lte_iteration;
-extern int n_kpktdiffusion_timesteps;
-extern float kpktdiffusion_timescale;
 
 extern std::deque<std::mutex> mutex_cellcachemacroatom;
 

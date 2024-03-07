@@ -41,6 +41,9 @@ static int ncoolingterms;
 
 static struct cellcachecoolinglist *coolinglist;
 
+static int n_kpktdiffusion_timesteps{0};
+static float kpktdiffusion_timescale{0.};
+
 auto get_ncoolingterms() -> int { return ncoolingterms; }
 
 template <bool update_cooling_contrib_list>
@@ -207,6 +210,11 @@ void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrate
     heatingcoolingrates->cooling_fb = C_fb_all;
     heatingcoolingrates->cooling_ff = C_ff_all;
   }
+}
+
+void set_kpktdiffusion(float kpktdiffusion_timescale, int n_kpktdiffusion_timesteps) {
+  printout("input: kpkts diffuse %g of a time step's length for the first %d time steps\n", kpktdiffusion_timescale,
+           n_kpktdiffusion_timesteps);
 }
 
 static void set_ncoolingterms() {
@@ -410,9 +418,8 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
   // printout("[debug] do_kpkt: propagate k-pkt\n");
 
-  const double deltat = (nts < globals::n_kpktdiffusion_timesteps)
-                            ? globals::kpktdiffusion_timescale * globals::timesteps[nts].width
-                            : 0.;
+  const double deltat =
+      (nts < n_kpktdiffusion_timesteps) ? kpktdiffusion_timescale * globals::timesteps[nts].width : 0.;
 
   const double t_current = t1 + deltat;
 

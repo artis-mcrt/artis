@@ -1864,9 +1864,10 @@ void read_parameterfile(int rank)
   /// kpkts live. Parameter two (an int) gives the number of time steps for which we
   /// want to use this approximation
   assert_always(get_noncommentline(file, line));
-  std::istringstream(line) >> globals::kpktdiffusion_timescale >> globals::n_kpktdiffusion_timesteps;
-  printout("input: kpkts diffuse %g of a time step's length for the first %d time steps\n",
-           globals::kpktdiffusion_timescale, globals::n_kpktdiffusion_timesteps);
+  int n_kpktdiffusion_timesteps{0};
+  float kpktdiffusion_timescale{0.};
+  std::istringstream(line) >> kpktdiffusion_timescale >> n_kpktdiffusion_timesteps;
+  kpkt::set_kpktdiffusion(kpktdiffusion_timescale, n_kpktdiffusion_timesteps);
 
   file.close();
 

@@ -124,8 +124,6 @@ double cell_is_optically_thick;
 int num_grey_timesteps;
 int n_titer;
 bool lte_iteration;
-int n_kpktdiffusion_timesteps;
-float kpktdiffusion_timescale;
 
 void setup_mpi_vars() {
 #ifdef MPI_ON
