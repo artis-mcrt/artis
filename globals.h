@@ -158,8 +158,8 @@ struct rpkt_continuum_absorptioncoeffs {
   double bf{0.};
   double ffheating{0.};
   // double bfheating;
-  int modelgridindex = -1;
-  int timestep = -1;  // e.g. when cell or timestep has changed
+  int modelgridindex{-1};
+  int timestep{-1};
 };
 
 template <bool separatestimrecomb>
