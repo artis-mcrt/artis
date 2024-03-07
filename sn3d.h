@@ -98,7 +98,7 @@ extern gsl_integration_workspace *gslworkspace;
 static void print_line_start(char *linebuf) {
   if (globals::startofline[tid]) {
     const time_t now_time = time(nullptr);
-    struct tm timebuf {};
+    static thread_local struct tm timebuf {};
     strftime(linebuf, 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
     output_file << linebuf << " ";
   }
@@ -106,7 +106,7 @@ static void print_line_start(char *linebuf) {
 
 #define printout(...)                                                   \
   {                                                                     \
-    char linebuf[1024] = "";                                            \
+    static thread_local char linebuf[1024] = "";                        \
     print_line_start(linebuf);                                          \
     snprintf(linebuf, 1024, __VA_ARGS__);                               \
     globals::startofline[tid] = (linebuf[strlen(linebuf) - 1] == '\n'); \
