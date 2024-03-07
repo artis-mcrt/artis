@@ -144,7 +144,7 @@ jobs:
 
             - name: Install gcc
               if: matrix.compiler.name == 'gcc'
-              uses: fortran-lang/setup-fortran@adec3afacab7018f30d4e2cadae1cb42530aeaf5
+              uses: fortran-lang/setup-fortran@v1
               #   continue-on-error: true
               with:
                   compiler: gcc
@@ -152,7 +152,7 @@ jobs:
 
             - name: Install gcc for nvc++
               if: matrix.compiler.name == 'nvc++'
-              uses: fortran-lang/setup-fortran@adec3afacab7018f30d4e2cadae1cb42530aeaf5
+              uses: fortran-lang/setup-fortran@v1
               continue-on-error: true
               with:
                   compiler: gcc
@@ -160,7 +160,7 @@ jobs:
 
             - name: Install nvc++
               if: matrix.compiler.name == 'nvc++'
-              uses: fortran-lang/setup-fortran@adec3afacab7018f30d4e2cadae1cb42530aeaf5
+              uses: fortran-lang/setup-fortran@v1
               #   continue-on-error: true
               with:
                   compiler: nvidia-hpc
