@@ -1012,6 +1012,8 @@ template <bool USECELLHISTANDUPDATEPHIXSLIST>
 auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, struct phixslist *phixslist) -> double
 // bound-free opacity
 {
+  assert_always(!USECELLHISTANDUPDATEPHIXSLIST || phixslist != nullptr);
+
   double chi_bf_sum = 0.;
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
     std::fill_n(phixslist->groundcont_gamma_contr.begin(), globals::nbfcontinua_ground, 0.);
