@@ -67,19 +67,19 @@ constexpr bool STORE_NT_SPECTRUM = false;  // if this is on, the non-thermal ene
                                            // many more transitions to store than there are NT spectrum samples
 
 // minimum number fraction of the total population to include in SF solution
-constexpr double minionfraction = 1.e-8;
+static constexpr double minionfraction = 1.e-8;
 
 // minimum deposition rate density (eV/s/cm^3) to solve SF equation
-constexpr double MINDEPRATE = 0.;
+static constexpr double MINDEPRATE = 0.;
 
 // Bohr radius squared in cm^2
-constexpr double A_naught_squared = 2.800285203e-17;
+static constexpr double A_naught_squared = 2.800285203e-17;
 
 // specifies max number of shells for which data is known for computing mean binding energies
-constexpr int M_NT_SHELLS = 10;
+static constexpr int M_NT_SHELLS = 10;
 
 // maximum number of elements for which binding energy tables are to be used
-constexpr int MAX_Z_BINDING = 30;
+static constexpr int MAX_Z_BINDING = 30;
 
 static std::array<std::array<double, M_NT_SHELLS>, MAX_Z_BINDING> electron_binding;
 
@@ -112,10 +112,10 @@ static gsl_vector *sourcevec;  // samples of the source function (energy distrib
 static double E_init_ev =
     0;  // the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV
 
-constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
+static constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 
 // Monte Carlo result - compare to analytical expectation
-double nt_energy_deposited;
+static double nt_energy_deposited;
 
 struct nt_excitation_struct {
   double frac_deposition;  // the fraction of the non-thermal deposition energy going to the excitation transition

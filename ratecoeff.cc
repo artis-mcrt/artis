@@ -128,7 +128,7 @@ using gsl_integral_paras_gammacorr = struct {
 
 static char adatafile_hash[33];
 static char compositionfile_hash[33];
-std::array<char[33], 3> phixsfile_hash;
+static std::array<char[33], 3> phixsfile_hash;
 
 void setup_photoion_luts() {
   size_t mem_usage_photoionluts = 2 * TABLESIZE * globals::nbfcontinua * sizeof(double);

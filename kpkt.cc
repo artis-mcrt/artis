@@ -37,7 +37,7 @@ struct cellcachecoolinglist {
   int upperlevel;
 };
 
-int ncoolingterms;
+static int ncoolingterms;
 
 static struct cellcachecoolinglist *coolinglist;
 

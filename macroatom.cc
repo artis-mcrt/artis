@@ -27,7 +27,7 @@
 #include "vpkt.h"
 
 // save to the macroatom_*.out file
-constexpr bool LOG_MACROATOM = false;
+static constexpr bool LOG_MACROATOM = false;
 
 static FILE *macroatom_file = nullptr;
 

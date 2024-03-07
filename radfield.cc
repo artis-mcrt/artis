@@ -41,15 +41,15 @@ struct radfieldbin {
   int contribcount;
 };
 
-constexpr double radfieldbins_delta_nu =
+static constexpr double radfieldbins_delta_nu =
     (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
 
 static struct radfieldbin *radfieldbins = nullptr;
 static struct radfieldbin_solution *radfieldbin_solutions = nullptr;
 
 #ifdef MPI_ON
-MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
-MPI_Win win_prev_bfrate_normed = MPI_WIN_NULL;
+static MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
+static MPI_Win win_prev_bfrate_normed = MPI_WIN_NULL;
 #endif
 
 // ** Detailed lines - Jblue_lu estimators for selected lines
@@ -60,7 +60,7 @@ struct Jb_lu_estimator {
 };
 
 // reallocate the detailed line arrays in units of BLOCKSIZEJBLUE
-constexpr int BLOCKSIZEJBLUE = 128;
+static constexpr int BLOCKSIZEJBLUE = 128;
 static int detailed_linecount = 0;
 
 // array of indicies into the linelist[] array for selected lines

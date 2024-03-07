@@ -21,14 +21,14 @@
 #include "sn3d.h"
 #include "vectors.h"
 
-bool TRACE_EMISSION_ABSORPTION_REGION_ON = false;
+static bool TRACE_EMISSION_ABSORPTION_REGION_ON = false;
 
-constexpr double traceemissabs_lambdamin = 1000.;  // in Angstroms
-constexpr double traceemissabs_lambdamax = 25000.;
-constexpr double traceemissabs_nulower = (1.e8 * CLIGHT / traceemissabs_lambdamax);
-constexpr double traceemissabs_nuupper = (1.e8 * CLIGHT / traceemissabs_lambdamin);
-constexpr double traceemissabs_timemin = (320. * DAY);
-constexpr double traceemissabs_timemax = (340. * DAY);
+static constexpr double traceemissabs_lambdamin = 1000.;  // in Angstroms
+static constexpr double traceemissabs_lambdamax = 25000.;
+static constexpr double traceemissabs_nulower = (1.e8 * CLIGHT / traceemissabs_lambdamax);
+static constexpr double traceemissabs_nuupper = (1.e8 * CLIGHT / traceemissabs_lambdamin);
+static constexpr double traceemissabs_timemin = (320. * DAY);
+static constexpr double traceemissabs_timemax = (340. * DAY);
 
 using emissionabsorptioncontrib = struct emissionabsorptioncontrib {
   double energyemitted;
@@ -39,10 +39,10 @@ using emissionabsorptioncontrib = struct emissionabsorptioncontrib {
 };
 
 static std::vector<struct emissionabsorptioncontrib> traceemissionabsorption;
-double traceemission_totalenergy = 0.;
-double traceabsorption_totalenergy = 0.;
+static double traceemission_totalenergy = 0.;
+static double traceabsorption_totalenergy = 0.;
 
-struct spec rpkt_spectra;
+static struct spec rpkt_spectra;
 
 static void printout_tracemission_stats() {
   const int maxlinesprinted = 500;

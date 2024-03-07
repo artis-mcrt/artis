@@ -30,7 +30,7 @@
 static FILE *nlte_file = nullptr;
 
 // can save memory by using a combined rate matrix at the cost of diagnostic information
-constexpr bool individual_process_matricies = true;
+static constexpr bool individual_process_matricies = true;
 
 static inline auto get_nlte_vector_index(const int element, const int ion, const int level) -> int
 // this is the index for the NLTE solver that is handling all ions of a single element

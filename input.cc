@@ -39,8 +39,8 @@
 #include "sn3d.h"
 #include "vpkt.h"
 
-const int groundstate_index_in = 1;  // starting level index in the input files
-int phixs_file_version = -1;
+static const int groundstate_index_in = 1;  // starting level index in the input files
+static int phixs_file_version = -1;
 
 struct transitions {
   int *to;

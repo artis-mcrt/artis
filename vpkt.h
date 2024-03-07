@@ -21,20 +21,20 @@ void vpkt_write_timestep(int nts, int my_rank, int tid, bool is_final);
 
 void vpkt_remove_temp_file(int nts, int my_rank);
 
-constexpr int VGRID_NY = 50;
-constexpr int VGRID_NZ = 50;
+static constexpr int VGRID_NY = 50;
+static constexpr int VGRID_NZ = 50;
 
 // FREQUENCY
 // dlognu = (log(numax) - log(numin)) / VMNUBINS ~ 3.9e-4 (10'000 over 1e14-5e15 Hz)
-constexpr double VSPEC_NUMIN = CLIGHT / 10000 * 1e8;
-constexpr double VSPEC_NUMAX = CLIGHT / 3500 * 1e8;
-constexpr int VMNUBINS = 2500;
+static constexpr double VSPEC_NUMIN = CLIGHT / 10000 * 1e8;
+static constexpr double VSPEC_NUMAX = CLIGHT / 3500 * 1e8;
+static constexpr int VMNUBINS = 2500;
 
 // TIME
 // dlogt = (log(globals::tmin) - log(globals::tmax)) / VMTBINS ~ 3.69e-2 (111 over 2-120 d)
-constexpr double VSPEC_TIMEMIN = 10 * DAY;
-constexpr double VSPEC_TIMEMAX = 30 * DAY;
-constexpr int VMTBINS = 30;
+static constexpr double VSPEC_TIMEMIN = 10 * DAY;
+static constexpr double VSPEC_TIMEMAX = 30 * DAY;
+static constexpr int VMTBINS = 30;
 
 extern int nvpkt;
 extern int nvpkt_esc1;  // electron scattering event
