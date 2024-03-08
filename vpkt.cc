@@ -168,11 +168,11 @@ static void add_to_vpkt_grid(const struct packet &vpkt, std::span<const double, 
   }
 }
 
-static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_current, const int obsbin,
+static void rlc_emiss_vpkt(const struct packet &pkt_ptr, const double t_current, const int obsbin,
                            std::span<double, 3> obsdir, const enum packet_type type_before_rpkt) {
   int mgi = 0;
 
-  struct packet vpkt = *pkt_ptr;
+  struct packet vpkt = pkt_ptr;
 
   bool end_packet = false;
   double ldist = 0;
@@ -189,7 +189,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
 
   safeincrement(nvpkt);  // increment the number of virtual packet in the given timestep
 
-  const auto vel_vec = get_velocity(pkt_ptr->pos, t_current);
+  const auto vel_vec = get_velocity(pkt_ptr.pos, t_current);
 
   // rf frequency and energy
   const double dopplerfactor = doppler_nucmf_on_nurf(vpkt.dir, vel_vec);
@@ -208,7 +208,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
   if (type_before_rpkt == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
 
-    auto old_dir_cmf = frame_transform(pkt_ptr->dir, &Qi, &Ui, vel_vec);
+    auto old_dir_cmf = frame_transform(pkt_ptr.dir, &Qi, &Ui, vel_vec);
 
     // Need to rotate Stokes Parameters in the scattering plane
 
@@ -309,7 +309,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
       }
 
       struct packet dummypkt_abort = vpkt;
-      move_pkt_withtime(&dummypkt_abort, sdist);
+      move_pkt_withtime(dummypkt_abort, sdist);
       const double nu_cmf_abort = dummypkt_abort.nu_cmf;
       assert_testmodeonly(nu_cmf_abort <= vpkt.nu_cmf);
       const double d_nu_on_d_l = (nu_cmf_abort - vpkt.nu_cmf) / sdist;
@@ -374,10 +374,10 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     // move it to cell boundary and go to next cell
 
     t_future += (sdist / CLIGHT_PROP);
-    move_pkt_withtime(&vpkt, sdist);
+    move_pkt_withtime(vpkt, sdist);
     vpkt.prop_time = t_future;
 
-    grid::change_cell(&vpkt, snext);
+    grid::change_cell(vpkt, snext);
     end_packet = (vpkt.type == TYPE_ESCAPE);
 
     mgi = grid::get_cell_modelgridindex(vpkt.where);
@@ -397,7 +397,7 @@ static void rlc_emiss_vpkt(const struct packet *const pkt_ptr, const double t_cu
     safeincrement(nvpkt_esc3);
   }
 
-  const double t_arrive = get_arrive_time(&vpkt);
+  const double t_arrive = get_arrive_time(vpkt);
   // -------------- final stokes vector ---------------
 
   for (int ind = 0; ind < Nspectra; ind++) {
@@ -880,27 +880,27 @@ void vpkt_init(const int nts, const int my_rank, const int /*tid*/, const bool c
   }
 }
 
-auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type type_before_rpkt) -> void {
+auto vpkt_call_estimators(struct packet &pkt_ptr, const enum packet_type type_before_rpkt) -> void {
   if constexpr (!VPKT_ON) {
     return;
   }
 
   // Cut on vpkts
-  const int mgi = grid::get_cell_modelgridindex(pkt_ptr->where);
+  const int mgi = grid::get_cell_modelgridindex(pkt_ptr.where);
 
   if (grid::modelgrid[mgi].thick != 0) {
     return;
   }
 
-  const double t_current = pkt_ptr->prop_time;
+  const double t_current = pkt_ptr.prop_time;
 
-  const auto vel_vec = get_velocity(pkt_ptr->pos, pkt_ptr->prop_time);
+  const auto vel_vec = get_velocity(pkt_ptr.pos, pkt_ptr.prop_time);
 
   // this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each observer)
-  if (pkt_ptr->next_trans == 0) {
-    const int lineindex = closest_transition(pkt_ptr->nu_cmf, pkt_ptr->next_trans);  /// returns negative
+  if (pkt_ptr.next_trans == 0) {
+    const int lineindex = closest_transition(pkt_ptr.nu_cmf, pkt_ptr.next_trans);  /// returns negative
     if (lineindex < 0) {
-      pkt_ptr->next_trans = lineindex + 1;
+      pkt_ptr.next_trans = lineindex + 1;
     }
   }
 
@@ -910,12 +910,12 @@ auto vpkt_call_estimators(struct packet *pkt_ptr, const enum packet_type type_be
     double obsdir[3] = {sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * cos(phiobs[obsbin]),
                         sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * sin(phiobs[obsbin]), nz_obs_vpkt[obsbin]};
 
-    const double t_arrive = t_current - (dot(pkt_ptr->pos, obsdir) / CLIGHT_PROP);
+    const double t_arrive = t_current - (dot(pkt_ptr.pos, obsdir) / CLIGHT_PROP);
 
     if (t_arrive >= VSPEC_TIMEMIN_input && t_arrive <= VSPEC_TIMEMAX_input) {
       // time selection
 
-      const double nu_rf = pkt_ptr->nu_cmf / doppler_nucmf_on_nurf(obsdir, vel_vec);
+      const double nu_rf = pkt_ptr.nu_cmf / doppler_nucmf_on_nurf(obsdir, vel_vec);
 
       for (int i = 0; i < Nrange; i++) {
         // Loop over frequency ranges

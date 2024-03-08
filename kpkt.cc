@@ -380,40 +380,40 @@ static auto sample_planck_montecarlo(const double T) -> double
   }
 }
 
-void do_kpkt_blackbody(struct packet *pkt_ptr)
+void do_kpkt_blackbody(struct packet &pkt_ptr)
 /// handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
 {
-  const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
+  const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr.where);
 
   if (EXPANSIONOPACITIES_ON && EXPANSION_OPAC_SAMPLE_KAPPAPLANCK && grid::modelgrid[modelgridindex].thick != 1) {
     const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-    pkt_ptr->nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
+    pkt_ptr.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
   } else {
-    pkt_ptr->nu_cmf = sample_planck_montecarlo(grid::get_Te(modelgridindex));
+    pkt_ptr.nu_cmf = sample_planck_montecarlo(grid::get_Te(modelgridindex));
     // TODO: is this alternative method faster or more accurate or neither?
-    // pkt_ptr->nu_cmf = sample_planck_analytic(grid::get_Te(modelgridindex));
+    // pkt_ptr.nu_cmf = sample_planck_analytic(grid::get_Te(modelgridindex));
   }
 
-  assert_always(std::isfinite(pkt_ptr->nu_cmf));
+  assert_always(std::isfinite(pkt_ptr.nu_cmf));
   /// and then emit the packet randomly in the comoving frame
   emit_rpkt(pkt_ptr);
   // printout("[debug] calculate_chi_rpkt after kpkt to rpkt by ff\n");
-  pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
+  pkt_ptr.next_trans = 0;  /// FLAG: transition history here not important, cont. process
   // if (tid == 0) k_stat_to_r_bb++;
   stats::increment(stats::COUNTER_K_STAT_TO_R_BB);
   stats::increment(stats::COUNTER_INTERACTIONS);
-  pkt_ptr->last_event = LASTEVENT_KPKT_TO_RPKT_FFBB;
-  pkt_ptr->emissiontype = EMTYPE_FREEFREE;
-  pkt_ptr->em_pos = pkt_ptr->pos;
-  pkt_ptr->em_time = pkt_ptr->prop_time;
-  pkt_ptr->nscatterings = 0;
+  pkt_ptr.last_event = LASTEVENT_KPKT_TO_RPKT_FFBB;
+  pkt_ptr.emissiontype = EMTYPE_FREEFREE;
+  pkt_ptr.em_pos = pkt_ptr.pos;
+  pkt_ptr.em_time = pkt_ptr.prop_time;
+  pkt_ptr.nscatterings = 0;
 }
 
-void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
+void do_kpkt(struct packet &pkt_ptr, double t2, int nts)
 /// handle a k-packet (kinetic energy of the free electrons)
 {
-  const double t1 = pkt_ptr->prop_time;
-  const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr->where);
+  const double t1 = pkt_ptr.prop_time;
+  const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr.where);
 
   /// don't calculate cooling rates after each cell crossings any longer
   /// but only if we really get a kpkt and they hadn't been calculated already
@@ -426,14 +426,14 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
   const double t_current = t1 + deltat;
 
   if (t_current > t2) {
-    vec_scale(pkt_ptr->pos, t2 / t1);
-    pkt_ptr->prop_time = t2;
+    vec_scale(pkt_ptr.pos, t2 / t1);
+    pkt_ptr.prop_time = t2;
     return;
   }
   stats::increment(stats::COUNTER_INTERACTIONS);
 
-  vec_scale(pkt_ptr->pos, t_current / t1);
-  pkt_ptr->prop_time = t_current;
+  vec_scale(pkt_ptr.pos, t_current / t1);
+  pkt_ptr.prop_time = t_current;
 
   assert_always(grid::modelgrid[modelgridindex].totalcooling > 0.);
   const double rndcool_ion = rng_uniform() * grid::modelgrid[modelgridindex].totalcooling;
@@ -462,7 +462,7 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     printout("do_kpkt: modelgridindex %d element %d ion %d\n", modelgridindex, element, ion);
     printout("do_kpkt: totalcooling %g, coolingsum %g, rndcool_ion %g\n", grid::modelgrid[modelgridindex].totalcooling,
              coolingsum, rndcool_ion);
-    printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n", modelgridindex, pkt_ptr->where,
+    printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n", modelgridindex, pkt_ptr.where,
              grid::get_nne(modelgridindex));
     for (element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
@@ -528,20 +528,20 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     /// Sample the packets comoving frame frequency according to paperII 5.4.3 eq.41
 
     const double zrand = rng_uniform_pos();  /// delivers zrand in ]0,1[
-    pkt_ptr->nu_cmf = -KB * T_e / H * log(zrand);
+    pkt_ptr.nu_cmf = -KB * T_e / H * log(zrand);
 
-    assert_always(std::isfinite(pkt_ptr->nu_cmf));
+    assert_always(std::isfinite(pkt_ptr.nu_cmf));
 
     /// and then emit the packet randomly in the comoving frame
     emit_rpkt(pkt_ptr);
-    pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
+    pkt_ptr.next_trans = 0;  /// FLAG: transition history here not important, cont. process
     stats::increment(stats::COUNTER_K_STAT_TO_R_FF);
 
-    pkt_ptr->last_event = LASTEVENT_KPKT_TO_RPKT_FFBB;
-    pkt_ptr->emissiontype = EMTYPE_FREEFREE;
-    pkt_ptr->em_pos = pkt_ptr->pos;
-    pkt_ptr->em_time = pkt_ptr->prop_time;
-    pkt_ptr->nscatterings = 0;
+    pkt_ptr.last_event = LASTEVENT_KPKT_TO_RPKT_FFBB;
+    pkt_ptr.emissiontype = EMTYPE_FREEFREE;
+    pkt_ptr.em_pos = pkt_ptr.pos;
+    pkt_ptr.em_time = pkt_ptr.prop_time;
+    pkt_ptr.nscatterings = 0;
 
     vpkt_call_estimators(pkt_ptr, TYPE_KPKT);
     return;
@@ -561,10 +561,10 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     // Sample the packets comoving frame frequency according to paperII 4.2.2
     // const double zrand = rng_uniform();
     // if (zrand < 0.5) {
-    pkt_ptr->nu_cmf = select_continuum_nu(element, lowerion, lowerlevel, upper, T_e);
+    pkt_ptr.nu_cmf = select_continuum_nu(element, lowerion, lowerlevel, upper, T_e);
     // } else {
     //   // Emit like a BB
-    //   pkt_ptr->nu_cmf = sample_planck(T_e);
+    //   pkt_ptr.nu_cmf = sample_planck(T_e);
     // }
 
     // and then emitt the packet randomly in the comoving frame
@@ -572,17 +572,17 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
     if constexpr (TRACK_ION_STATS) {
       stats::increment_ion_stats(modelgridindex, element, lowerion + 1, stats::ION_RADRECOMB_KPKT,
-                                 pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
+                                 pkt_ptr.e_cmf / H / pkt_ptr.nu_cmf);
     }
 
-    pkt_ptr->next_trans = 0;  /// FLAG: transition history here not important, cont. process
+    pkt_ptr.next_trans = 0;  /// FLAG: transition history here not important, cont. process
     stats::increment(stats::COUNTER_K_STAT_TO_R_FB);
-    pkt_ptr->last_event = LASTEVENT_KPKT_TO_RPKT_FB;
-    pkt_ptr->emissiontype = get_continuumindex(element, lowerion, lowerlevel, upper);
-    pkt_ptr->trueemissiontype = pkt_ptr->emissiontype;
-    pkt_ptr->em_pos = pkt_ptr->pos;
-    pkt_ptr->em_time = pkt_ptr->prop_time;
-    pkt_ptr->nscatterings = 0;
+    pkt_ptr.last_event = LASTEVENT_KPKT_TO_RPKT_FB;
+    pkt_ptr.emissiontype = get_continuumindex(element, lowerion, lowerlevel, upper);
+    pkt_ptr.trueemissiontype = pkt_ptr.emissiontype;
+    pkt_ptr.em_pos = pkt_ptr.pos;
+    pkt_ptr.em_time = pkt_ptr.prop_time;
+    pkt_ptr.nscatterings = 0;
 
     vpkt_call_estimators(pkt_ptr, TYPE_KPKT);
 
@@ -633,16 +633,16 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
     assert_always(upper >= 0);
 
     if constexpr (TRACK_ION_STATS) {
-      stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLEXC, pkt_ptr->e_cmf);
+      stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_COLLEXC, pkt_ptr.e_cmf);
     }
 
-    pkt_ptr->type = TYPE_MA;
+    pkt_ptr.type = TYPE_MA;
     stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_COLLEXC);
     stats::increment(stats::COUNTER_K_STAT_TO_MA_COLLEXC);
 
-    pkt_ptr->last_event = 8;
-    pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
-    pkt_ptr->trueemissionvelocity = -1;
+    pkt_ptr.last_event = 8;
+    pkt_ptr.trueemissiontype = EMTYPE_NOTSET;
+    pkt_ptr.trueemissionvelocity = -1;
 
     do_macroatom(pkt_ptr, {element, ion, upper, -99});
     return;
@@ -657,16 +657,16 @@ void do_kpkt(struct packet *pkt_ptr, double t2, int nts)
 
     if constexpr (TRACK_ION_STATS) {
       stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_MACROATOM_ENERGYIN_COLLION,
-                                 pkt_ptr->e_cmf);
+                                 pkt_ptr.e_cmf);
     }
 
-    pkt_ptr->type = TYPE_MA;
+    pkt_ptr.type = TYPE_MA;
     stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_COLLION);
     stats::increment(stats::COUNTER_K_STAT_TO_MA_COLLION);
 
-    pkt_ptr->last_event = 9;
-    pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
-    pkt_ptr->trueemissionvelocity = -1;
+    pkt_ptr.last_event = 9;
+    pkt_ptr.trueemissiontype = EMTYPE_NOTSET;
+    pkt_ptr.trueemissionvelocity = -1;
 
     do_macroatom(pkt_ptr, {element, upperion, upper, -99});
   } else {

@@ -1354,7 +1354,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
   fprintf(estimators_file, "\n");
 }
 
-void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt_ptr) {
+void setup_radioactive_pellet(const double e0, const int mgi, struct packet &pkt_ptr) {
   const int num_decaypaths = get_num_decaypaths();
 
   // decay channels include all radioactive decay paths, and possibly also an initial cell energy channel
@@ -1394,13 +1394,13 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
     assert_always(USE_MODEL_INITIAL_ENERGY);
     assert_always(INITIAL_PACKETS_ON);
 
-    pkt_ptr->prop_time = globals::tmin;
-    pkt_ptr->tdecay = globals::tmin;
-    pkt_ptr->type = TYPE_RADIOACTIVE_PELLET;
-    pkt_ptr->e_cmf = e0;
-    pkt_ptr->nu_cmf = e0 / H;
-    pkt_ptr->pellet_nucindex = -1;
-    pkt_ptr->pellet_decaytype = -1;
+    pkt_ptr.prop_time = globals::tmin;
+    pkt_ptr.tdecay = globals::tmin;
+    pkt_ptr.type = TYPE_RADIOACTIVE_PELLET;
+    pkt_ptr.e_cmf = e0;
+    pkt_ptr.nu_cmf = e0 / H;
+    pkt_ptr.pellet_nucindex = -1;
+    pkt_ptr.pellet_decaytype = -1;
     return;
   }
 
@@ -1410,14 +1410,14 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
   const double tdecaymin = !INITIAL_PACKETS_ON ? globals::tmin : grid::get_t_model();
 
   if constexpr (UNIFORM_PELLET_ENERGIES) {
-    pkt_ptr->tdecay = sample_decaytime(decaypathindex, tdecaymin, globals::tmax);
-    pkt_ptr->e_cmf = e0;
+    pkt_ptr.tdecay = sample_decaytime(decaypathindex, tdecaymin, globals::tmax);
+    pkt_ptr.e_cmf = e0;
   } else {
     // use uniform decay time distribution and scale the packet energies instead.
     // keeping the pellet decay rate constant will give better statistics at late times
     // when very little energy and few packets are released
     const double zrand = rng_uniform();
-    pkt_ptr->tdecay = zrand * tdecaymin + (1. - zrand) * globals::tmax;
+    pkt_ptr.tdecay = zrand * tdecaymin + (1. - zrand) * globals::tmax;
 
     // we need to scale the packet energy up or down according to decay rate at the randomly selected time.
     // e0 is the average energy per packet for this cell and decaypath, so we scale this up or down
@@ -1425,9 +1425,9 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
     const double avgpower = get_simtime_endecay_per_ejectamass(mgi, decaypathindex) / (globals::tmax - tdecaymin);
     assert_always(avgpower > 0.);
     assert_always(std::isfinite(avgpower));
-    pkt_ptr->e_cmf = e0 * get_decaypath_power_per_ejectamass(decaypathindex, mgi, pkt_ptr->tdecay) / avgpower;
-    assert_always(pkt_ptr->e_cmf >= 0);
-    assert_always(std::isfinite(pkt_ptr->e_cmf));
+    pkt_ptr.e_cmf = e0 * get_decaypath_power_per_ejectamass(decaypathindex, mgi, pkt_ptr.tdecay) / avgpower;
+    assert_always(pkt_ptr.e_cmf >= 0);
+    assert_always(std::isfinite(pkt_ptr.e_cmf));
   }
 
   // final decaying nuclide at the end of the chain
@@ -1435,15 +1435,15 @@ void setup_radioactive_pellet(const double e0, const int mgi, struct packet *pkt
   const int nucindex = decaypaths[decaypathindex].nucindex[pathlength - 1];
   const int decaytype = decaypaths[decaypathindex].decaytypes[pathlength - 1];
 
-  pkt_ptr->type = TYPE_RADIOACTIVE_PELLET;
-  pkt_ptr->pellet_nucindex = nucindex;
-  pkt_ptr->pellet_decaytype = decaytype;
+  pkt_ptr.type = TYPE_RADIOACTIVE_PELLET;
+  pkt_ptr.pellet_nucindex = nucindex;
+  pkt_ptr.pellet_decaytype = decaytype;
 
   const auto engamma = nucdecayenergygamma(nucindex);
   const auto enparticle = nucdecayenergyparticle(nucindex, decaytype);
 
-  pkt_ptr->originated_from_particlenotgamma = (rng_uniform() >= engamma / (engamma + enparticle));
-  pkt_ptr->nu_cmf = enparticle / H;  // will be overwritten for gamma rays, but affects the thermalisation of particles
+  pkt_ptr.originated_from_particlenotgamma = (rng_uniform() >= engamma / (engamma + enparticle));
+  pkt_ptr.nu_cmf = enparticle / H;  // will be overwritten for gamma rays, but affects the thermalisation of particles
 }
 
 void cleanup() { free_decaypath_energy_per_mass(); }

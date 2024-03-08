@@ -92,14 +92,14 @@ static void do_angle_bin(const int a, packet *pkts, bool load_allrank_packets, s
         nesc_tot++;
         if (pkts_start[ii].escape_type == TYPE_RPKT) {
           nesc_rpkt++;
-          add_to_lc_res(&pkts_start[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-          add_to_spec_res(&pkts_start[ii], a, rpkt_spectra, POL_ON ? &stokes_i : nullptr, POL_ON ? &stokes_q : nullptr,
+          add_to_lc_res(pkts_start[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+          add_to_spec_res(pkts_start[ii], a, rpkt_spectra, POL_ON ? &stokes_i : nullptr, POL_ON ? &stokes_q : nullptr,
                           POL_ON ? &stokes_u : nullptr);
         } else if (pkts_start[ii].escape_type == TYPE_GAMMA) {
           nesc_gamma++;
           if (a == -1) {
-            add_to_lc_res(&pkts_start[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-            add_to_spec_res(&pkts_start[ii], a, gamma_spectra, nullptr, nullptr, nullptr);
+            add_to_lc_res(pkts_start[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+            add_to_spec_res(pkts_start[ii], a, gamma_spectra, nullptr, nullptr, nullptr);
           }
         }
       }

@@ -24,16 +24,16 @@
 #include "sn3d.h"
 #include "vectors.h"
 
-static void place_pellet(const double e0, const int cellindex, const int pktnumber, struct packet *pkt_ptr)
+static void place_pellet(const double e0, const int cellindex, const int pktnumber, struct packet &pkt_ptr)
 /// This subroutine places pellet n with energy e0 in cell m
 {
   /// First choose a position for the pellet. In the cell.
   /// n is the index of the packet. m is the index for the grid cell.
-  pkt_ptr->where = cellindex;
-  pkt_ptr->number = pktnumber;  /// record the packets number for debugging
-  pkt_ptr->prop_time = globals::tmin;
-  // pkt_ptr->last_cross = BOUNDARY_NONE;
-  pkt_ptr->originated_from_particlenotgamma = false;
+  pkt_ptr.where = cellindex;
+  pkt_ptr.number = pktnumber;  /// record the packets number for debugging
+  pkt_ptr.prop_time = globals::tmin;
+  // pkt_ptr.last_cross = BOUNDARY_NONE;
+  pkt_ptr.originated_from_particlenotgamma = false;
 
   if constexpr (GRID_TYPE == GRID_SPHERICAL1D) {
     const double zrand = rng_uniform();
@@ -44,8 +44,8 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     // assert_always(radius >= r_inner);
     // assert_always(radius <= r_outer);
 
-    pkt_ptr->pos = get_rand_isotropic_unitvec();
-    vec_scale(pkt_ptr->pos, radius);
+    pkt_ptr.pos = get_rand_isotropic_unitvec();
+    vec_scale(pkt_ptr.pos, radius);
 
   } else if constexpr (GRID_TYPE == GRID_CYLINDRICAL2D) {
     const double zrand = rng_uniform_pos();
@@ -54,14 +54,14 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     // use equal area probability distribution to select radius
     const double rcyl_rand = std::sqrt(zrand * std::pow(rcyl_inner, 2) + (1. - zrand) * std::pow(rcyl_outer, 2));
     const double theta_rand = rng_uniform() * 2 * PI;
-    pkt_ptr->pos[0] = std::cos(theta_rand) * rcyl_rand;
-    pkt_ptr->pos[1] = std::sin(theta_rand) * rcyl_rand;
+    pkt_ptr.pos[0] = std::cos(theta_rand) * rcyl_rand;
+    pkt_ptr.pos[1] = std::sin(theta_rand) * rcyl_rand;
 
-    pkt_ptr->pos[2] = grid::get_cellcoordmin(cellindex, 1) + (rng_uniform_pos() * grid::wid_init(cellindex, 1));
+    pkt_ptr.pos[2] = grid::get_cellcoordmin(cellindex, 1) + (rng_uniform_pos() * grid::wid_init(cellindex, 1));
 
   } else if constexpr (GRID_TYPE == GRID_CARTESIAN3D) {
     for (int axis = 0; axis < 3; axis++) {
-      pkt_ptr->pos[axis] =
+      pkt_ptr.pos[axis] =
           grid::get_cellcoordmin(cellindex, axis) + (rng_uniform_pos() * grid::wid_init(cellindex, axis));
     }
   } else {
@@ -69,7 +69,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   }
 
   // ensure that the random position was inside the cell we selected
-  assert_always(grid::get_cellindex_from_pos(pkt_ptr->pos, pkt_ptr->prop_time) == cellindex);
+  assert_always(grid::get_cellindex_from_pos(pkt_ptr.pos, pkt_ptr.prop_time) == cellindex);
 
   const int mgi = grid::get_cell_modelgridindex(cellindex);
 
@@ -79,11 +79,11 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   // might as well give it a correct value since this code is fast and runs only once
 
   // pellet packet is moving with the homologous flow, so dir is proportional to pos
-  pkt_ptr->dir = vec_norm(pkt_ptr->pos);  // assign dir = pos / vec_len(pos)
-  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr->pos, pkt_ptr->dir, pkt_ptr->prop_time);
-  pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
+  pkt_ptr.dir = vec_norm(pkt_ptr.pos);  // assign dir = pos / vec_len(pos)
+  const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr.pos, pkt_ptr.dir, pkt_ptr.prop_time);
+  pkt_ptr.e_rf = pkt_ptr.e_cmf / dopplerfactor;
 
-  pkt_ptr->trueemissiontype = EMTYPE_NOTSET;
+  pkt_ptr.trueemissiontype = EMTYPE_NOTSET;
 }
 
 void packet_init(struct packet *pkt)
@@ -148,7 +148,7 @@ void packet_init(struct packet *pkt)
     assert_always(upperval != en_cumulative.end());
     const ptrdiff_t cellindex = std::distance(en_cumulative.cbegin(), upperval);
 
-    place_pellet(e0, cellindex, n, &pkt[n]);
+    place_pellet(e0, cellindex, n, pkt[n]);
   }
 
   decay::free_decaypath_energy_per_mass();  // will no longer be needed after packets are set up
@@ -212,7 +212,7 @@ void write_packets(const char filename[], const struct packet *const pkt) {
   fclose(packets_file);
 }
 
-void read_temp_packetsfile(const int timestep, const int my_rank, struct packet *const pkt) {
+void read_temp_packetsfile(const int timestep, const int my_rank, struct packet *pkt) {
   // read packets binary file
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);

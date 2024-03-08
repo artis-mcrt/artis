@@ -423,7 +423,7 @@ static void mpi_reduce_estimators(int nts) {
 }
 #endif
 
-static void write_temp_packetsfile(const int timestep, const int my_rank, const struct packet *const pkt) {
+static void write_temp_packetsfile(const int timestep, const int my_rank, const struct packet *pkt) {
   // write packets binary file (and retry if the write fails)
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
