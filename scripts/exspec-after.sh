@@ -10,7 +10,7 @@ if [ -f emission.out* ]; then
   # cmdcompress="gzip -v -f"
 
   # join 3D direction files, if they exist
-  ./artis/scripts/mergeangleres.py
+  python3 ./artis/scripts/mergeangleres.py
 
   mkdir -p packets
   mv packets*.out* packets/ || true
