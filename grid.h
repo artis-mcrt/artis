@@ -52,11 +52,11 @@ struct modelgrid_t {
                           /// estimatorsfile so there is no need to communicate it via MPI so far!
   int *elements_uppermost_ion = nullptr;  /// Highest ionisation stage which has a decent population for a particular
                                           /// element in a given cell.
-  compositionlist_entry *composition = nullptr;  /// Pointer to an array which contains the time dependent abundances
-                                                 /// of all included elements and all the groundlevel
-                                                 /// populations and partition functions for their ions
-  double *nlte_pops = nullptr;                   /// Pointer to an array that contains the nlte-level
-                                                 /// populations for this cell
+  struct compositionlist_entry *composition = nullptr;  /// Pointer to an array which contains the time dependent
+                                                        /// abundances of all included elements and all the groundlevel
+                                                        /// populations and partition functions for their ions
+  double *nlte_pops = nullptr;  /// Pointer to an array that contains the nlte-level
+                                /// populations for this cell
 
   double totalcooling = -1;
   double **cooling_contrib_ion = nullptr;
