@@ -362,7 +362,7 @@ auto get_npts_model() -> int
 auto get_nonempty_npts_model() -> int
 // number of model grid cells
 {
-  assert_always(nonempty_npts_model > 0);
+  assert_testmodeonly(nonempty_npts_model > 0);
   return nonempty_npts_model;
 }
 
