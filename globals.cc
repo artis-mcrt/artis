@@ -68,7 +68,7 @@ double *bfheating_coeff = nullptr;
 
 /// PHIXSLIST
 
-double *allcont_nu_edge = nullptr;
+std::vector<double> allcont_nu_edge;
 const struct fullphixslist *allcont = nullptr;
 
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false

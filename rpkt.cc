@@ -1038,14 +1038,14 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, stru
   int i = 0;
   const int nbfcontinua = globals::nbfcontinua;
   const int allcontend =
-      static_cast<int>(std::upper_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + nbfcontinua, nu) -
-                       globals::allcont_nu_edge);
-  const int allcontbegin =
-      static_cast<int>(std::lower_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + allcontend, nu,
-                                        [](const double nu_edge, const double nu_cmf) {
-                                          return nu_edge * last_phixs_nuovernuedge < nu_cmf;
-                                        }) -
-                       globals::allcont_nu_edge);
+      std::distance(globals::allcont_nu_edge.begin(),
+                    std::upper_bound(globals::allcont_nu_edge.begin(), globals::allcont_nu_edge.end(), nu));
+
+  const int allcontbegin = std::distance(
+      globals::allcont_nu_edge.begin(),
+      std::lower_bound(
+          globals::allcont_nu_edge.begin(), globals::allcont_nu_edge.begin() + allcontend, nu,
+          [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }));
 
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
     phixslist->allcontbegin = allcontbegin;

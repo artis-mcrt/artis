@@ -252,7 +252,7 @@ extern struct bflist_t *bflist;
 // for USE_LUT_BFHEATING = true
 extern double *bfheating_coeff;
 
-extern double *allcont_nu_edge;
+extern std::vector<double> allcont_nu_edge;
 extern const struct fullphixslist *allcont;
 
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false

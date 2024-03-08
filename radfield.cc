@@ -640,15 +640,17 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
 
   // I think the nu_cmf slightly differs from when the phixslist was calculated
   // so the nu condition on this nu_cmf can truncate the phixslist
-  const int allcontend = static_cast<int>(
-      std::upper_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + phixslist.allcontend, nu_cmf) -
-      globals::allcont_nu_edge);
+  const int allcontend =
+      static_cast<int>(std::upper_bound(globals::allcont_nu_edge.data(),
+                                        globals::allcont_nu_edge.data() + phixslist.allcontend, nu_cmf) -
+                       globals::allcont_nu_edge.data());
 
-  const int allcontbegin = static_cast<int>(
-      std::lower_bound(
-          globals::allcont_nu_edge + phixslist.allcontbegin, globals::allcont_nu_edge + allcontend, nu_cmf,
-          [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }) -
-      globals::allcont_nu_edge);
+  const int allcontbegin = static_cast<int>(std::lower_bound(globals::allcont_nu_edge.data() + phixslist.allcontbegin,
+                                                             globals::allcont_nu_edge.data() + allcontend, nu_cmf,
+                                                             [](const double nu_edge, const double nu_cmf) {
+                                                               return nu_edge * last_phixs_nuovernuedge < nu_cmf;
+                                                             }) -
+                                            globals::allcont_nu_edge.data());
 
   for (int allcontindex = allcontbegin; allcontindex < allcontend; allcontindex++) {
     safeadd(bfrate_raw[nonemptymgi * nbfcontinua + allcontindex],
