@@ -996,7 +996,7 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
 
   double chi_bf_sum = 0.;
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
-    std::fill_n(phixslist->groundcont_gamma_contr.begin(), globals::nbfcontinua_ground, 0.);
+    std::ranges::fill(phixslist->groundcont_gamma_contr, 0.);
   }
 
   const auto T_e = grid::get_Te(modelgridindex);
