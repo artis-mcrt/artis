@@ -95,23 +95,30 @@ extern gsl_integration_workspace *gslworkspace;
 #include "artisoptions.h"
 #include "globals.h"
 
-static void print_line_start(char *linebuf) {
-  if (globals::startofline[tid]) {
+#ifdef _OPENMP
+#pragma omp threadprivate(outputlinebuf, outputstartofline)
+#endif
+
+// make these thread_local if we want separate log files for STDPAR threads
+inline char outputlinebuf[1024] = "";
+inline bool outputstartofline = true;
+
+static void print_line_start() {
+  if (outputstartofline) {
     const time_t now_time = time(nullptr);
     static thread_local struct tm timebuf {};
-    strftime(linebuf, 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
-    output_file << linebuf << " ";
+    strftime(outputlinebuf, 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
+    output_file << outputlinebuf << " ";
   }
 }
 
-#define printout(...)                                                   \
-  {                                                                     \
-    static thread_local char linebuf[1024] = "";                        \
-    print_line_start(linebuf);                                          \
-    snprintf(linebuf, 1024, __VA_ARGS__);                               \
-    globals::startofline[tid] = (linebuf[strlen(linebuf) - 1] == '\n'); \
-    output_file << linebuf;                                             \
-    output_file.flush();                                                \
+#define printout(...)                                                       \
+  {                                                                         \
+    print_line_start();                                                     \
+    snprintf(outputlinebuf, 1024, __VA_ARGS__);                             \
+    outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n'); \
+    output_file << outputlinebuf;                                           \
+    output_file.flush();                                                    \
   }
 
 [[nodiscard]] static inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
