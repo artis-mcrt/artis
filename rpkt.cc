@@ -237,7 +237,7 @@ static auto get_event(const int modelgridindex,
 // returns edist, the distance to the next physical event (continuum or bound-bound) and is_boundbound_event, a
 // boolean BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
 {
-  assert_always(!EXPANSIONOPACITIES_ON);
+  assert_testmodeonly(!EXPANSIONOPACITIES_ON);
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
   // printout("get_event()\n");
   /// initialize loop variables
@@ -665,21 +665,6 @@ auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double
   const double nuoffset = rng_uniform() * delta_nu;
   const double nu = bin_nu_lower + nuoffset;
   return nu;
-
-  // const auto nu_max = get_expopac_bin_nu_upper(0);
-  // const auto nu_min = get_expopac_bin_nu_lower(expopac_nbins - 1);
-  // assert_always(nu_max > nu_min);
-  // while (true) {
-  //   const double nu = nu_min + rng_uniform() * (nu_max - nu_min);
-  //   auto binindex = static_cast<ptrdiff_t>(((1e8 * CLIGHT / nu) - expopac_lambdamin) / expopac_deltalambda);
-
-  //   if (binindex >= 0 && binindex < expopac_nbins) {
-  //     const auto kappa_planck = expansionopacity_times_planck[nonemptymgi * expopac_nbins + binindex];
-  //     if (rng_uniform() * max_expopac_times_planck[nonemptymgi] <= kappa_planck) {
-  //       return nu;
-  //     }
-  //   }
-  // }
 }
 
 static void rpkt_event_thickcell(struct packet *pkt_ptr)
