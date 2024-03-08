@@ -1042,12 +1042,13 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, stru
           globals::allcont_nu_edge.data(), globals::allcont_nu_edge.data() + allcontend, nu,
           [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }));
 
+  assert_testmodeonly(allcontbegin >= 0);
+  assert_testmodeonly(allcontend <= nbfcontinua);
+  assert_testmodeonly(allcontbegin <= allcontend);
+
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
     phixslist->allcontbegin = allcontbegin;
     phixslist->allcontend = allcontend;
-    assert_always(allcontbegin >= 0);
-    assert_always(allcontend <= nbfcontinua);
-    assert_always(allcontbegin <= allcontend);
   }
 
   for (i = allcontbegin; i < allcontend; i++) {
