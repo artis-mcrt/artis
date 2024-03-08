@@ -14,8 +14,6 @@
 #include "sn3d.h"
 #include "vectors.h"
 
-namespace grid {
-
 struct compositionlist_entry {
   float abundance;        /// Abundance of the element (by mass!).
   float *groundlevelpop;  /// Pointer to an array of floats which contains the groundlevel populations
@@ -24,6 +22,7 @@ struct compositionlist_entry {
                           /// of all included ionisation stages for the element.
 };
 
+namespace grid {
 struct gridcell {
   double pos_min[3];  // Initial co-ordinates of inner most corner of cell.
   int modelgridindex;
@@ -55,8 +54,8 @@ struct modelgrid_t {
   struct compositionlist_entry *composition = nullptr;  /// Pointer to an array which contains the time dependent
                                                         /// abundances of all included elements and all the groundlevel
                                                         /// populations and partition functions for their ions
-  double *nlte_pops = nullptr;  /// Pointer to an array that contains the nlte-level
-                                /// populations for this cell
+  double *nlte_pops = nullptr;                          /// Pointer to an array that contains the nlte-level
+                                                        /// populations for this cell
 
   double totalcooling = -1;
   double **cooling_contrib_ion = nullptr;
