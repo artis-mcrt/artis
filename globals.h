@@ -2,6 +2,7 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#include <array>
 #include <atomic>
 #include <cmath>
 #include <cstddef>
