@@ -16,7 +16,6 @@
 #include "grid.h"
 #include "kpkt.h"
 #include "ltepop.h"
-#include "macroatom.h"
 #include "rpkt.h"
 #ifdef MPI_ON
 #include "mpi.h"

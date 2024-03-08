@@ -543,8 +543,7 @@ void do_kpkt(Packet &pkt_ptr, double t2, int nts)
     pkt_ptr.em_time = pkt_ptr.prop_time;
     pkt_ptr.nscatterings = 0;
 
-    vpkt_call_estimators(pkt_ptr, TYPE_KPKT);
-    return;
+    return vpkt_call_estimators(pkt_ptr, TYPE_KPKT);
   }
 
   if (rndcoolingtype == COOLINGTYPE_FB) {
@@ -644,8 +643,7 @@ void do_kpkt(Packet &pkt_ptr, double t2, int nts)
     pkt_ptr.trueemissiontype = EMTYPE_NOTSET;
     pkt_ptr.trueemissionvelocity = -1;
 
-    do_macroatom(pkt_ptr, {element, ion, upper, -99});
-    return;
+    return do_macroatom(pkt_ptr, {element, ion, upper, -99});
   }
 
   if (rndcoolingtype == COOLINGTYPE_COLLION) {

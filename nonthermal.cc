@@ -1780,9 +1780,7 @@ void do_ntlepton(Packet &pkt_ptr) {
       // printout("NTLEPTON packet in cell %d selected ionization of Z=%d ionstage %d to %d\n",
       //          modelgridindex, get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element,
       //          upperion));
-      do_macroatom(pkt_ptr, {element, upperion, 0, -99});
-
-      return;
+      return do_macroatom(pkt_ptr, {element, upperion, 0, -99});
     }
 
     // const double frac_excitation = NT_EXCITATION_ON ? get_nt_frac_excitation(modelgridindex) : 0;
@@ -1811,8 +1809,8 @@ void do_ntlepton(Packet &pkt_ptr) {
 
           // printout("NTLEPTON packet selected in cell %d excitation of Z=%d ionstage %d level %d upperlevel %d\n",
           //          modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), lower, upper);
-          do_macroatom(pkt_ptr, {element, ion, upper, -99});
-          return;
+
+          return do_macroatom(pkt_ptr, {element, ion, upper, -99});
         }
         zrand -= frac_deposition_exc;
       }
