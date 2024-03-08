@@ -355,7 +355,7 @@ void set_model_type(enum gridtypes model_type_value) { model_type = model_type_v
 auto get_npts_model() -> int
 // number of model grid cells
 {
-  assert_always(npts_model > 0);
+  assert_testmodeonly(npts_model > 0);
   return npts_model;
 }
 
