@@ -42,11 +42,11 @@
 static const int groundstate_index_in = 1;  // starting level index in the input files
 static int phixs_file_version = -1;
 
-struct transitions {
+struct Transitions {
   int *to;
 };
 
-struct transitiontable_entry {
+struct Transition {
   int lower;
   int upper;
   float A;
@@ -94,11 +94,11 @@ static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoint
     assert_always(upperlevel >= 0);
     assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets == 0);
     globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
-    *mem_usage_phixs += sizeof(struct ModelCellElement);
+    *mem_usage_phixs += sizeof(ModelCellElement);
 
     assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets == nullptr);
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
-        static_cast<struct PhotoionTarget *>(calloc(1, sizeof(struct PhotoionTarget)));
+        static_cast<PhotoionTarget *>(calloc(1, sizeof(PhotoionTarget)));
     assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != nullptr);
 
     if (single_level_top_ion &&
@@ -120,7 +120,7 @@ static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoint
       *mem_usage_phixs += in_nphixstargets * sizeof(PhotoionTarget);
 
       globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
-          static_cast<struct PhotoionTarget *>(calloc(in_nphixstargets, sizeof(struct PhotoionTarget)));
+          static_cast<PhotoionTarget *>(calloc(in_nphixstargets, sizeof(PhotoionTarget)));
       assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != nullptr);
 
       double probability_sum = 0.;
@@ -144,7 +144,7 @@ static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoint
       globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
       *mem_usage_phixs += sizeof(PhotoionTarget);
       globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
-          static_cast<struct PhotoionTarget *>(calloc(1, sizeof(struct PhotoionTarget)));
+          static_cast<PhotoionTarget *>(calloc(1, sizeof(PhotoionTarget)));
       assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != nullptr);
 
       for (int i = 0; i < in_nphixstargets; i++) {
@@ -347,8 +347,7 @@ static void read_phixs_data(const int phixs_file_version) {
 }
 
 static void read_ion_levels(std::fstream &adata, const int element, const int ion, const int nions, const int nlevels,
-                            int nlevelsmax, const double energyoffset, const double ionpot,
-                            struct transitions *transitions) {
+                            int nlevelsmax, const double energyoffset, const double ionpot, Transitions *transitions) {
   const ptrdiff_t nlevels_used = std::min(nlevels, nlevelsmax);
   // each level contains 0..level elements. seriess sum of 1 + 2 + 3 + 4 + ... + nlevels_used is used here
   const ptrdiff_t transitblocksize = nlevels_used * (nlevels_used + 1) / 2;
@@ -403,8 +402,7 @@ static void read_ion_levels(std::fstream &adata, const int element, const int io
 }
 
 static void read_ion_transitions(std::fstream &ftransitiondata, const int tottransitions_in_file, int *tottransitions,
-                                 std::vector<struct transitiontable_entry> &transitiontable,
-                                 const int nlevels_requiretransitions,
+                                 std::vector<Transition> &transitiontable, const int nlevels_requiretransitions,
                                  const int nlevels_requiretransitions_upperlevels) {
   transitiontable.reserve(*tottransitions);
   transitiontable.clear();
@@ -493,9 +491,9 @@ static void read_ion_transitions(std::fstream &ftransitiondata, const int tottra
 }
 
 static void add_transitions_to_unsorted_linelist(const int element, const int ion, const int nlevelsmax,
-                                                 const std::vector<struct transitiontable_entry> &transitiontable,
-                                                 struct transitions *transitions, int *lineindex,
-                                                 std::vector<struct TransitionLine> &temp_linelist) {
+                                                 const std::vector<Transition> &transitiontable,
+                                                 Transitions *transitions, int *lineindex,
+                                                 std::vector<TransitionLine> &temp_linelist) {
   const int lineindex_initial = *lineindex;
   size_t totupdowntrans = 0;
   // pass 0 to get transition counts of each level
@@ -504,7 +502,7 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
     *lineindex = lineindex_initial;
     if (pass == 1) {
       int alltransindex = 0;
-      struct LevelTransition *alltransblock = nullptr;
+      LevelTransition *alltransblock = nullptr;
 
 #ifdef MPI_ON
       MPI_Barrier(MPI_COMM_WORLD);
@@ -512,13 +510,13 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
 
       auto [_, my_rank_trans] = get_range_chunk(totupdowntrans, globals::node_nprocs, globals::rank_in_node);
 
-      auto size = static_cast<MPI_Aint>(my_rank_trans * sizeof(struct TransitionLine));
-      int disp_unit = sizeof(struct TransitionLine);
+      auto size = static_cast<MPI_Aint>(my_rank_trans * sizeof(TransitionLine));
+      int disp_unit = sizeof(TransitionLine);
       MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &alltransblock, &win);
 
       MPI_Win_shared_query(win, 0, &size, &disp_unit, &alltransblock);
 #else
-      alltransblock = static_cast<struct LevelTransition *>(malloc(totupdowntrans * sizeof(struct LevelTransition)));
+      alltransblock = static_cast<LevelTransition *>(malloc(totupdowntrans * sizeof(LevelTransition)));
 #endif
 
       for (int level = 0; level < nlevelsmax; level++) {
@@ -714,9 +712,9 @@ static void read_atomicdata_files() {
   set_nelements(nelements_in);
 
   /// Initialize the linelist
-  std::vector<struct TransitionLine> temp_linelist;
+  std::vector<TransitionLine> temp_linelist;
 
-  std::vector<struct transitiontable_entry> transitiontable;
+  std::vector<Transition> transitiontable;
 
   /// temperature to determine relevant ionstages
   int T_preset = 0;
@@ -760,7 +758,7 @@ static void read_atomicdata_files() {
     globals::elements[element].uniqueionindexstart = uniqueionindex;
 
     /// Initialize the elements ionlist
-    globals::elements[element].ions = static_cast<struct Ion *>(calloc(nions, sizeof(struct Ion)));
+    globals::elements[element].ions = static_cast<Ion *>(calloc(nions, sizeof(Ion)));
     assert_always(globals::elements[element].ions != nullptr);
 
     /// now read in data for all ions of the current element. before doing so initialize
@@ -860,11 +858,10 @@ static void read_atomicdata_files() {
       globals::elements[element].ions[ion].Alpha_sp = static_cast<float *>(calloc(TABLESIZE, sizeof(float)));
       assert_always(globals::elements[element].ions[ion].Alpha_sp != nullptr);
 
-      globals::elements[element].ions[ion].levels =
-          static_cast<struct EnergyLevel *>(calloc(nlevelsmax, sizeof(struct EnergyLevel)));
+      globals::elements[element].ions[ion].levels = static_cast<EnergyLevel *>(calloc(nlevelsmax, sizeof(EnergyLevel)));
       assert_always(globals::elements[element].ions[ion].levels != nullptr);
 
-      auto *transitions = static_cast<struct transitions *>(calloc(nlevelsmax, sizeof(struct transitions)));
+      auto *transitions = static_cast<Transitions *>(calloc(nlevelsmax, sizeof(Transitions)));
       assert_always(transitions != nullptr);
 
       read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, transitions);
@@ -935,8 +932,8 @@ static void read_atomicdata_files() {
   printout("total downtrans %d\n", totaldowntrans);
 
   printout("[info] mem_usage: transition lists occupy %.3f MB (this rank) and %.3f MB (shared on node)\n",
-           2 * uniquelevelindex * sizeof(struct LevelTransition *) / 1024. / 1024.,
-           (totaluptrans + totaldowntrans) * sizeof(struct LevelTransition) / 1024. / 1024.);
+           2 * uniquelevelindex * sizeof(LevelTransition *) / 1024. / 1024.,
+           (totaluptrans + totaldowntrans) * sizeof(LevelTransition) / 1024. / 1024.);
 
   if (globals::rank_in_node == 0) {
     // sort the lineline in descending frequency
@@ -965,7 +962,7 @@ static void read_atomicdata_files() {
   }
 
   // create a linelist shared on node and then copy data across, freeing the local copy
-  struct TransitionLine *nonconstlinelist = nullptr;
+  TransitionLine *nonconstlinelist = nullptr;
 #ifdef MPI_ON
   MPI_Win win = MPI_WIN_NULL;
 
@@ -975,18 +972,17 @@ static void read_atomicdata_files() {
     my_rank_lines += globals::nlines - (my_rank_lines * globals::node_nprocs);
   }
 
-  MPI_Aint size = my_rank_lines * static_cast<MPI_Aint>(sizeof(struct TransitionLine));
-  int disp_unit = sizeof(struct TransitionLine);
+  MPI_Aint size = my_rank_lines * static_cast<MPI_Aint>(sizeof(TransitionLine));
+  int disp_unit = sizeof(TransitionLine);
   MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nonconstlinelist, &win);
 
   MPI_Win_shared_query(win, 0, &size, &disp_unit, &nonconstlinelist);
 #else
-  nonconstlinelist = static_cast<struct TransitionLine *>(malloc(globals::nlines * sizeof(struct TransitionLine)));
+  nonconstlinelist = static_cast<TransitionLine *>(malloc(globals::nlines * sizeof(TransitionLine)));
 #endif
 
   if (globals::rank_in_node == 0) {
-    memcpy(static_cast<void *>(nonconstlinelist), temp_linelist.data(),
-           globals::nlines * sizeof(struct TransitionLine));
+    memcpy(static_cast<void *>(nonconstlinelist), temp_linelist.data(), globals::nlines * sizeof(TransitionLine));
     temp_linelist.clear();
   }
 
@@ -996,7 +992,7 @@ static void read_atomicdata_files() {
   globals::linelist = nonconstlinelist;
   nonconstlinelist = nullptr;
   printout("[info] mem_usage: linelist occupies %.3f MB (node shared memory)\n",
-           globals::nlines * sizeof(struct TransitionLine) / 1024. / 1024);
+           globals::nlines * sizeof(TransitionLine) / 1024. / 1024);
 
   /// Save sorted linelist into a file
   // if (rank_global == 0)
@@ -1191,12 +1187,12 @@ static void setup_cellcache() {
 
   // const int num_cellcache_slots = get_max_threads();
   const int num_cellcache_slots = 1;
-  globals::cellcache = static_cast<struct CellCache *>(malloc(num_cellcache_slots * sizeof(struct CellCache)));
+  globals::cellcache = static_cast<CellCache *>(malloc(num_cellcache_slots * sizeof(CellCache)));
   assert_always(globals::cellcache != nullptr);
 
   for (int itid = 0; itid < num_cellcache_slots; itid++) {
     size_t mem_usage_cellcache = 0;
-    mem_usage_cellcache += sizeof(struct CellCache);
+    mem_usage_cellcache += sizeof(CellCache);
 
     printout("[info] input: initializing cellcache for thread %d ...\n", itid);
 
@@ -1209,9 +1205,9 @@ static void setup_cellcache() {
     printout("[info] mem_usage: cellcache coolinglist contribs for thread %d occupies %.3f MB\n", itid,
              ncoolingterms * sizeof(double) / 1024. / 1024.);
 
-    mem_usage_cellcache += get_nelements() * sizeof(struct CellCacheElements);
+    mem_usage_cellcache += get_nelements() * sizeof(CellCacheElements);
     globals::cellcache[itid].chelements =
-        static_cast<struct CellCacheElements *>(malloc(get_nelements() * sizeof(struct CellCacheElements)));
+        static_cast<CellCacheElements *>(malloc(get_nelements() * sizeof(CellCacheElements)));
 
     assert_always(globals::cellcache[itid].chelements != nullptr);
 
@@ -1222,7 +1218,7 @@ static void setup_cellcache() {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
-        chlevelblocksize += nlevels * sizeof(struct CellCacheLevels);
+        chlevelblocksize += nlevels * sizeof(CellCacheLevels);
 
         for (int level = 0; level < nlevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
@@ -1235,7 +1231,7 @@ static void setup_cellcache() {
       }
     }
     assert_always(chlevelblocksize > 0);
-    globals::cellcache[itid].ch_all_levels = static_cast<struct CellCacheLevels *>(malloc(chlevelblocksize));
+    globals::cellcache[itid].ch_all_levels = static_cast<CellCacheLevels *>(malloc(chlevelblocksize));
     chphixstargetsblock =
         chphixsblocksize > 0 ? static_cast<CellCachePhixsTargets *>(malloc(chphixsblocksize)) : nullptr;
     mem_usage_cellcache += chlevelblocksize + chphixsblocksize;
@@ -1249,9 +1245,9 @@ static void setup_cellcache() {
     int chtransindex = 0;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
-      mem_usage_cellcache += nions * sizeof(struct CellCacheIons);
+      mem_usage_cellcache += nions * sizeof(CellCacheIons);
       globals::cellcache[itid].chelements[element].chions =
-          static_cast<struct CellCacheIons *>(malloc(nions * sizeof(struct CellCacheIons)));
+          static_cast<CellCacheIons *>(malloc(nions * sizeof(CellCacheIons)));
       assert_always(globals::cellcache[itid].chelements[element].chions != nullptr);
 
       for (int ion = 0; ion < nions; ion++) {
@@ -1263,14 +1259,14 @@ static void setup_cellcache() {
         alllevelindex += nlevels;
 
         for (int level = 0; level < nlevels; level++) {
-          struct CellCacheLevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
+          CellCacheLevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
           const int nphixstargets = get_nphixstargets(element, ion, level);
           chlevel->chphixstargets = chphixsblocksize > 0 ? &chphixstargetsblock[allphixstargetindex] : nullptr;
           allphixstargetindex += nphixstargets;
         }
 
         for (int level = 0; level < nlevels; level++) {
-          struct CellCacheLevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
+          CellCacheLevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
           const int ndowntrans = get_ndowntrans(element, ion, level);
 
           chlevel->sum_epstrans_rad_deexc = &chtransblock[chtransindex];
@@ -1278,14 +1274,14 @@ static void setup_cellcache() {
         }
 
         for (int level = 0; level < nlevels; level++) {
-          struct CellCacheLevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
+          CellCacheLevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
           const int ndowntrans = get_ndowntrans(element, ion, level);
           chlevel->sum_internal_down_same = &chtransblock[chtransindex];
           chtransindex += ndowntrans;
         }
 
         for (int level = 0; level < nlevels; level++) {
-          struct CellCacheLevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
+          CellCacheLevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
           const int nuptrans = get_nuptrans(element, ion, level);
           chlevel->sum_internal_up_same = &chtransblock[chtransindex];
           chtransindex += nuptrans;
@@ -1355,8 +1351,7 @@ static void setup_phixs_list() {
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n", globals::nbfcontinua_ground);
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-    globals::groundcont =
-        static_cast<struct GroundPhotoion *>(malloc(globals::nbfcontinua_ground * sizeof(struct GroundPhotoion)));
+    globals::groundcont = static_cast<GroundPhotoion *>(malloc(globals::nbfcontinua_ground * sizeof(GroundPhotoion)));
     assert_always(globals::groundcont != nullptr);
 
     int groundcontindex = 0;
@@ -1382,10 +1377,10 @@ static void setup_phixs_list() {
               [](const auto &a, const auto &b) { return static_cast<bool>(a.nu_edge < b.nu_edge); });
   }
 
-  auto *nonconstallcont = static_cast<struct FullPhotoionTransition *>(
-      malloc(globals::nbfcontinua * sizeof(struct FullPhotoionTransition)));
+  auto *nonconstallcont =
+      static_cast<FullPhotoionTransition *>(malloc(globals::nbfcontinua * sizeof(FullPhotoionTransition)));
   printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
-           globals::nbfcontinua * (sizeof(struct FullPhotoionTransition)) / 1024. / 1024.);
+           globals::nbfcontinua * (sizeof(FullPhotoionTransition)) / 1024. / 1024.);
   size_t nbftables = 0;
   int allcontindex = 0;
   for (int element = 0; element < get_nelements(); element++) {
@@ -1450,7 +1445,7 @@ static void setup_phixs_list() {
     MPI_Win win_allphixsblock = MPI_WIN_NULL;
     auto size =
         static_cast<MPI_Aint>((globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0);
-    int disp_unit = sizeof(struct TransitionLine);
+    int disp_unit = sizeof(TransitionLine);
 
     MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &allphixsblock, &win_allphixsblock);
     MPI_Win_shared_query(win_allphixsblock, MPI_PROC_NULL, &size, &disp_unit, &allphixsblock);
@@ -1964,7 +1959,7 @@ void time_init()
   /// t=globals::tmin is the start of the calculation. t=globals::tmax is the end of the calculation.
   /// globals::ntimesteps is the number of time steps
 
-  globals::timesteps = std::make_unique<struct TimeStep[]>(globals::ntimesteps + 1);
+  globals::timesteps = std::make_unique<TimeStep[]>(globals::ntimesteps + 1);
 
   /// Now set the individual time steps
   switch (TIMESTEP_SIZE_METHOD) {

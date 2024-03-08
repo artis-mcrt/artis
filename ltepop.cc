@@ -179,7 +179,7 @@ static auto nne_solution_f(double nne_assumed, void *voidparas) -> double
 // assume a value for nne and then calculate the resulting nne
 // the difference between the assumed and calculated nne is returned
 {
-  const auto *paras = reinterpret_cast<struct nne_solution_paras *>(voidparas);
+  const auto *paras = reinterpret_cast<nne_solution_paras *>(voidparas);
   const int modelgridindex = paras->modelgridindex;
   const bool force_lte = paras->force_lte;
 
@@ -559,7 +559,7 @@ static void set_groundlevelpops_neutral(const int modelgridindex) {
 static auto find_converged_nne(const int modelgridindex, double nne_hi, const bool force_lte) -> float {
   /// Search solution for nne in [nne_lo,nne_hi]
 
-  struct nne_solution_paras paras = {.modelgridindex = modelgridindex, .force_lte = force_lte};
+  nne_solution_paras paras = {.modelgridindex = modelgridindex, .force_lte = force_lte};
   gsl_function f = {.function = &nne_solution_f, .params = &paras};
 
   double nne_lo = 0.;  // MINPOP;

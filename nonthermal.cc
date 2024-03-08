@@ -101,7 +101,7 @@ struct collionrow {
   float n_auger_elec_avg;
 };
 
-static std::vector<struct collionrow> colliondata;
+static std::vector<collionrow> colliondata;
 
 static FILE *nonthermalfile = nullptr;
 static bool nonthermal_initialized = false;
@@ -143,7 +143,7 @@ struct nt_solution_struct {
                                          // elements sum to 1.0 for a given ion
   float *ionenfrac_num_auger = nullptr;  // like above, but energy weighted. elements sum to 1.0 for an ion
 
-  std::vector<struct nt_excitation_struct> frac_excitations_list;
+  std::vector<nt_excitation_struct> frac_excitations_list;
 
   int timestep_last_solved = -1;     // the quantities above were calculated for this timestep
   float nneperion_when_solved{NAN};  // the nne when the solver was last run
@@ -367,7 +367,7 @@ static void read_collion_data() {
   assert_always(colliondatacount > 0);
 
   for (int i = 0; i < colliondatacount; i++) {
-    struct collionrow collionrow {};
+    collionrow collionrow{};
     assert_always(fscanf(cifile, "%2d %2d %1d %1d %lg %lg %lg %lg %lg", &collionrow.Z, &collionrow.nelec, &collionrow.n,
                          &collionrow.l, &collionrow.ionpot_ev, &collionrow.A, &collionrow.B, &collionrow.C,
                          &collionrow.D) == 9);
@@ -466,8 +466,7 @@ void init(const int my_rank, const int ndo_nonempty) {
     fflush(nonthermalfile);
   }
 
-  nt_solution =
-      static_cast<struct nt_solution_struct *>(calloc(grid::get_npts_model(), sizeof(struct nt_solution_struct)));
+  nt_solution = static_cast<nt_solution_struct *>(calloc(grid::get_npts_model(), sizeof(nt_solution_struct)));
 
   size_t mem_usage_yfunc = 0;
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
@@ -861,7 +860,7 @@ static auto get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const 
   return -1;
 }
 
-constexpr auto xs_impactionization(const double energy_ev, const struct collionrow &colliondata) -> double
+constexpr auto xs_impactionization(const double energy_ev, const collionrow &colliondata) -> double
 // impact ionization cross section in cm^2
 // energy and ionization_potential should be in eV
 // fitting forumula of Younger 1981
@@ -881,7 +880,7 @@ constexpr auto xs_impactionization(const double energy_ev, const struct collionr
   return 1e-14 * (A * (1 - 1 / u) + B * pow((1 - 1 / u), 2) + C * log(u) + D * log(u) / u) / (u * pow(ionpot_ev, 2));
 }
 
-static auto get_xs_ionization_vector(gsl_vector *const xs_vec, const struct collionrow &colliondata) -> int
+static auto get_xs_ionization_vector(gsl_vector *const xs_vec, const collionrow &colliondata) -> int
 // xs_vec will be set with impact ionization cross sections for E > ionpot_ev (and zeros below this energy)
 {
   const double ionpot_ev = colliondata.ionpot_ev;
@@ -1247,7 +1246,7 @@ static auto get_oneoverw(const int element, const int ion, const int modelgridin
 }
 
 static auto calculate_nt_frac_ionization_shell(const int modelgridindex, const int element, const int ion,
-                                               const struct collionrow &collionrow) -> double
+                                               const collionrow &collionrow) -> double
 // the fraction of deposition energy that goes into ionising electrons in this particular shell
 {
   const double nnion = get_nnion(modelgridindex, element, ion);  // hopefully ions per cm^3?
@@ -1735,7 +1734,7 @@ static auto select_nt_ionization(int modelgridindex) -> std::tuple<int, int> {
   assert_always(false);
 }
 
-void do_ntlepton(struct Packet &pkt_ptr) {
+void do_ntlepton(Packet &pkt_ptr) {
   safeadd(nt_energy_deposited, pkt_ptr.e_cmf);
 
   const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr.where);
@@ -2024,7 +2023,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
       const double frac_deposition = nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition;
       if (frac_deposition > 0.) {
         const int lineindex = nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex;
-        const struct TransitionLine *line = &globals::linelist[lineindex];
+        const TransitionLine *line = &globals::linelist[lineindex];
         const int element = line->elementindex;
         const int ion = line->ionindex;
         const int lower = line->lowerlevelindex;

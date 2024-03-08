@@ -171,12 +171,12 @@ constexpr auto move_pkt_withtime(std::span<double, 3> pos_rf, std::span<const do
   return dopplerfactor;
 }
 
-constexpr auto move_pkt_withtime(struct Packet &pkt_ptr, const double distance) -> double {
+constexpr auto move_pkt_withtime(Packet &pkt_ptr, const double distance) -> double {
   return move_pkt_withtime(pkt_ptr.pos, pkt_ptr.dir, pkt_ptr.prop_time, pkt_ptr.nu_rf, pkt_ptr.nu_cmf, pkt_ptr.e_rf,
                            pkt_ptr.e_cmf, distance);
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto get_arrive_time(const struct Packet &pkt_ptr) -> double
+[[nodiscard]] [[gnu::pure]] constexpr auto get_arrive_time(const Packet &pkt_ptr) -> double
 /// We know that a packet escaped at "escape_time". However, we have
 /// to allow for travel time. Use the formula in Leon's paper. The extra
 /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).

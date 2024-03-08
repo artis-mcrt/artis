@@ -78,12 +78,12 @@ struct LevelTransition {
 };
 
 struct EnergyLevel {
-  double epsilon{-1};                          /// Excitation energy of this level relative to the neutral ground level.
-  struct LevelTransition *uptrans{nullptr};    /// Allowed upward transitions from this level
-  struct LevelTransition *downtrans{nullptr};  /// Allowed downward transitions from this level
+  double epsilon{-1};                   /// Excitation energy of this level relative to the neutral ground level.
+  LevelTransition *uptrans{nullptr};    /// Allowed upward transitions from this level
+  LevelTransition *downtrans{nullptr};  /// Allowed downward transitions from this level
   int nuptrans{0};
   int ndowntrans{0};
-  struct PhotoionTarget *phixstargets{nullptr};  /// pointer to table of target states and probabilities
+  PhotoionTarget *phixstargets{nullptr};  /// pointer to table of target states and probabilities
   float *photoion_xs{nullptr};  /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
   int nphixstargets{0};         /// length of phixstargets array:
   float stat_weight{0};         /// Statistical weight of this level.
@@ -94,13 +94,13 @@ struct EnergyLevel {
 };
 
 struct Ion {
-  struct EnergyLevel *levels;  /// Carries information for each level: 0,1,...,nlevels-1
-  int ionstage;                /// Which ionisation stage: XI=0, XII=1, XIII=2, ...
-  int nlevels;                 /// Number of levels for this ionisation stage
-  int nlevels_nlte;            /// number of nlte levels for this ion
-  int first_nlte;              /// index into nlte_pops array of a grid cell
-  int ionisinglevels;          /// Number of levels which have a bf-continuum
-  int maxrecombininglevel;     /// level index of the highest level with a non-zero recombination rate
+  EnergyLevel *levels;      /// Carries information for each level: 0,1,...,nlevels-1
+  int ionstage;             /// Which ionisation stage: XI=0, XII=1, XIII=2, ...
+  int nlevels;              /// Number of levels for this ionisation stage
+  int nlevels_nlte;         /// number of nlte levels for this ion
+  int first_nlte;           /// index into nlte_pops array of a grid cell
+  int ionisinglevels;       /// Number of levels which have a bf-continuum
+  int maxrecombininglevel;  /// level index of the highest level with a non-zero recombination rate
   int nlevels_groundterm;
   int coolingoffset;
   int ncoolingterms;
@@ -153,7 +153,7 @@ struct chphixstargets<true> {
   double separatestimrecomb;
 };
 
-using CellCachePhixsTargets = struct chphixstargets<SEPARATE_STIMRECOMB>;
+using CellCachePhixsTargets = chphixstargets<SEPARATE_STIMRECOMB>;
 
 #include "macroatom.h"
 
@@ -167,17 +167,17 @@ struct CellCacheLevels {
 };
 
 struct CellCacheIons {
-  struct CellCacheLevels *chlevels;  /// Pointer to the ions levellist.
+  CellCacheLevels *chlevels;  /// Pointer to the ions levellist.
 };
 
 struct CellCacheElements {
-  struct CellCacheIons *chions;  /// Pointer to the elements ionlist.
+  CellCacheIons *chions;  /// Pointer to the elements ionlist.
 };
 
 struct CellCache {
   double *cooling_contrib = nullptr;  /// Cooling contributions by the different processes.
-  struct CellCacheElements *chelements = nullptr;
-  struct CellCacheLevels *ch_all_levels = nullptr;
+  CellCacheElements *chelements = nullptr;
+  CellCacheLevels *ch_all_levels = nullptr;
   double *ch_allcont_departureratios = nullptr;
   double chi_ff_nnionpart{-1};
   int cellnumber{-1};  /// Identifies the cell the data is valid for.
@@ -187,7 +187,7 @@ namespace globals {
 
 extern std::array<double, 3> syn_dir;  // vector pointing from origin to observer
 
-extern std::unique_ptr<struct TimeStep[]> timesteps;
+extern std::unique_ptr<TimeStep[]> timesteps;
 
 extern std::vector<double> dep_estimator_gamma;
 
@@ -224,26 +224,26 @@ extern double max_path_step;
 extern int opacity_case;
 
 extern int nlines;
-extern std::vector<struct Element> elements;
+extern std::vector<Element> elements;
 
-extern const struct TransitionLine *linelist;
-extern std::vector<struct BFListEntry> bflist;
+extern const TransitionLine *linelist;
+extern std::vector<BFListEntry> bflist;
 
 // for USE_LUT_BFHEATING = true
 extern double *bfheating_coeff;
 
 extern std::vector<double> allcont_nu_edge;
-extern const struct FullPhotoionTransition *allcont;
+extern const FullPhotoionTransition *allcont;
 
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
-extern struct GroundPhotoion *groundcont;
+extern GroundPhotoion *groundcont;
 
 extern int nbfcontinua;
 extern int nbfcontinua_ground;
 extern int NPHIXSPOINTS;
 extern double NPHIXSNUINCREMENT;
 
-extern struct CellCache *cellcache;
+extern CellCache *cellcache;
 
 #ifdef MPI_ON
 extern MPI_Comm mpi_comm_node;

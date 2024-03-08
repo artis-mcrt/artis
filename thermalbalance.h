@@ -16,7 +16,7 @@ struct heatingcoolingrates {
 };
 
 void call_T_e_finder(int modelgridindex, int timestep, double t_current, double T_min, double T_max,
-                     struct heatingcoolingrates *heatingcoolingrates, const std::vector<double> &bfheatingcoeffs);
+                     heatingcoolingrates *heatingcoolingrates, const std::vector<double> &bfheatingcoeffs);
 [[nodiscard]] auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, double T_R, double W)
     -> double;
 void calculate_bfheatingcoeffs(int modelgridindex, std::vector<double> &bfheatingcoeffs);

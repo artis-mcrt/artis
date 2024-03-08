@@ -39,7 +39,7 @@ struct CellCachecoolinglist {
 
 static int ncoolingterms;
 
-static struct CellCachecoolinglist *coolinglist;
+static CellCachecoolinglist *coolinglist;
 
 static int n_kpktdiffusion_timesteps{0};
 static float kpktdiffusion_timescale{0.};
@@ -177,7 +177,7 @@ static auto calculate_cooling_rates_ion(const int modelgridindex, const int elem
   return C_ion;
 }
 
-void calculate_cooling_rates(const int modelgridindex, struct heatingcoolingrates *heatingcoolingrates)
+void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates *heatingcoolingrates)
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
 {
@@ -260,8 +260,8 @@ void setup_coolinglist() {
   /// \sum_{elements,ions}get_nlevels(element,ion) and free-free which is \sum_{elements} get_nions(element)-1
 
   set_ncoolingterms();
-  const size_t mem_usage_coolinglist = ncoolingterms * sizeof(struct CellCachecoolinglist);
-  coolinglist = static_cast<struct CellCachecoolinglist *>(malloc(ncoolingterms * sizeof(struct CellCachecoolinglist)));
+  const size_t mem_usage_coolinglist = ncoolingterms * sizeof(CellCachecoolinglist);
+  coolinglist = static_cast<CellCachecoolinglist *>(malloc(ncoolingterms * sizeof(CellCachecoolinglist)));
   printout("[info] mem_usage: coolinglist occupies %.3f MB\n", mem_usage_coolinglist / 1024. / 1024.);
 
   int i = 0;  // cooling list index
@@ -380,7 +380,7 @@ static auto sample_planck_montecarlo(const double T) -> double
   }
 }
 
-void do_kpkt_blackbody(struct Packet &pkt_ptr)
+void do_kpkt_blackbody(Packet &pkt_ptr)
 /// handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
 {
   const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr.where);
@@ -409,7 +409,7 @@ void do_kpkt_blackbody(struct Packet &pkt_ptr)
   pkt_ptr.nscatterings = 0;
 }
 
-void do_kpkt(struct Packet &pkt_ptr, double t2, int nts)
+void do_kpkt(Packet &pkt_ptr, double t2, int nts)
 /// handle a k-packet (kinetic energy of the free electrons)
 {
   const double t1 = pkt_ptr.prop_time;

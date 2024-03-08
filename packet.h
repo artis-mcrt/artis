@@ -96,10 +96,10 @@ enum last_event_type {
   LASTEVENT_ELECTRONSCATTERING = 12,
 };
 
-void packet_init(struct Packet *pkt);
-void write_packets(const char filename[], const struct Packet *pkt);
-void read_packets(const char filename[], struct Packet *pkt);
-void read_temp_packetsfile(int timestep, int my_rank, struct Packet *pkt);
-[[nodiscard]] auto verify_temp_packetsfile(int timestep, int my_rank, const struct Packet *pkt) -> bool;
+void packet_init(Packet *pkt);
+void write_packets(const char filename[], const Packet *pkt);
+void read_packets(const char filename[], Packet *pkt);
+void read_temp_packetsfile(int timestep, int my_rank, Packet *pkt);
+[[nodiscard]] auto verify_temp_packetsfile(int timestep, int my_rank, const Packet *pkt) -> bool;
 
 #endif  // PACKET_H

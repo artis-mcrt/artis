@@ -24,7 +24,7 @@
 #include "sn3d.h"
 #include "vectors.h"
 
-static void place_pellet(const double e0, const int cellindex, const int pktnumber, struct Packet &pkt_ptr)
+static void place_pellet(const double e0, const int cellindex, const int pktnumber, Packet &pkt_ptr)
 /// This subroutine places pellet n with energy e0 in cell m
 {
   /// First choose a position for the pellet. In the cell.
@@ -86,7 +86,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   pkt_ptr.trueemissiontype = EMTYPE_NOTSET;
 }
 
-void packet_init(struct Packet *pkt)
+void packet_init(Packet *pkt)
 /// Subroutine that initialises the packets if we start a new simulation.
 {
 #ifdef MPI_ON
@@ -168,7 +168,7 @@ void packet_init(struct Packet *pkt)
   printout("total energy that will be freed during simulation time: %g erg\n", e_cmf_total);
 }
 
-void write_packets(const char filename[], const struct Packet *const pkt) {
+void write_packets(const char filename[], const Packet *const pkt) {
   // write packets text file
   FILE *packets_file = fopen_required(filename, "w");
   fprintf(packets_file,
@@ -212,20 +212,20 @@ void write_packets(const char filename[], const struct Packet *const pkt) {
   fclose(packets_file);
 }
 
-void read_temp_packetsfile(const int timestep, const int my_rank, struct Packet *pkt) {
+void read_temp_packetsfile(const int timestep, const int my_rank, Packet *pkt) {
   // read packets binary file
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
   printout("Reading %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");
-  assert_always(std::fread(pkt, sizeof(struct Packet), globals::npkts, packets_file) == (size_t)globals::npkts);
+  assert_always(std::fread(pkt, sizeof(Packet), globals::npkts, packets_file) == (size_t)globals::npkts);
   // read_packets(packets_file);
   fclose(packets_file);
   printout("done\n");
 }
 
-auto verify_temp_packetsfile(const int timestep, const int my_rank, const struct Packet *const pkt) -> bool {
+auto verify_temp_packetsfile(const int timestep, const int my_rank, const Packet *const pkt) -> bool {
   // return true if verification is good, otherwise return false
 
   // read packets binary file
@@ -234,10 +234,10 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, const struct
 
   printout("Verifying file %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");
-  struct Packet pkt_in;
+  Packet pkt_in;
   bool readback_passed = true;
   for (int n = 0; n < globals::npkts; n++) {
-    assert_always(std::fread(&pkt_in, sizeof(struct Packet), 1, packets_file) == 1);
+    assert_always(std::fread(&pkt_in, sizeof(Packet), 1, packets_file) == 1);
     if (pkt_in != pkt[n]) {
       printout("failed on packet %d\n", n);
       printout(" compare number %d %d\n", pkt_in.number, pkt[n].number);
@@ -255,7 +255,7 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, const struct
   return readback_passed;
 }
 
-void read_packets(const char filename[], struct Packet *pkt) {
+void read_packets(const char filename[], Packet *pkt) {
   // read packets*.out text format file
   std::ifstream packets_file(filename);
   assert_always(packets_file.is_open());

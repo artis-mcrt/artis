@@ -152,11 +152,11 @@ static void realloc_detailed_lines(const int new_size) {
 
   for (int modelgridindex = 0; modelgridindex < grid::get_npts_model(); modelgridindex++) {
     if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      prev_Jb_lu_normed[modelgridindex] = static_cast<struct Jb_lu_estimator *>(
-          realloc(prev_Jb_lu_normed[modelgridindex], new_size * sizeof(struct Jb_lu_estimator)));
+      prev_Jb_lu_normed[modelgridindex] = static_cast<Jb_lu_estimator *>(
+          realloc(prev_Jb_lu_normed[modelgridindex], new_size * sizeof(Jb_lu_estimator)));
 
-      Jb_lu_raw[modelgridindex] = static_cast<struct Jb_lu_estimator *>(
-          realloc(Jb_lu_raw[modelgridindex], new_size * sizeof(struct Jb_lu_estimator)));
+      Jb_lu_raw[modelgridindex] =
+          static_cast<Jb_lu_estimator *>(realloc(Jb_lu_raw[modelgridindex], new_size * sizeof(Jb_lu_estimator)));
 
       if (prev_Jb_lu_normed[modelgridindex] == nullptr || Jb_lu_raw[modelgridindex] == nullptr) {
         printout("ERROR: Not enough memory to reallocate detailed Jblue estimator list for cell %d.\n", modelgridindex);
@@ -209,10 +209,8 @@ void init(int my_rank, int ndo_nonempty)
   nuJ.resize(nonempty_npts_model + 1);
 #endif
 
-  prev_Jb_lu_normed =
-      static_cast<struct Jb_lu_estimator **>(malloc((grid::get_npts_model() + 1) * sizeof(struct Jb_lu_estimator *)));
-  Jb_lu_raw =
-      static_cast<struct Jb_lu_estimator **>(malloc((grid::get_npts_model() + 1) * sizeof(struct Jb_lu_estimator *)));
+  prev_Jb_lu_normed = static_cast<Jb_lu_estimator **>(malloc((grid::get_npts_model() + 1) * sizeof(Jb_lu_estimator *)));
+  Jb_lu_raw = static_cast<Jb_lu_estimator **>(malloc((grid::get_npts_model() + 1) * sizeof(Jb_lu_estimator *)));
 
   detailed_linecount = 0;
 
@@ -289,11 +287,10 @@ void init(int my_rank, int ndo_nonempty)
       fflush(radfieldfile);
     }
 
-    const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct RadFieldBin);
-    radfieldbins =
-        static_cast<struct RadFieldBin *>(malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct RadFieldBin)));
+    const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBin);
+    radfieldbins = static_cast<RadFieldBin *>(malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBin)));
 
-    const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct RadFieldBinSolution);
+    const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution);
 
 #ifdef MPI_ON
     {
@@ -302,8 +299,8 @@ void init(int my_rank, int ndo_nonempty)
       if (globals::rank_in_node == 0) {
         my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
       }
-      auto size = static_cast<MPI_Aint>(my_rank_cells * RADFIELDBINCOUNT * sizeof(struct RadFieldBinSolution));
-      int disp_unit = sizeof(struct RadFieldBinSolution);
+      auto size = static_cast<MPI_Aint>(my_rank_cells * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution));
+      int disp_unit = sizeof(RadFieldBinSolution);
       MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &radfieldbin_solutions,
                               &win_radfieldbin_solutions);
 
@@ -311,8 +308,8 @@ void init(int my_rank, int ndo_nonempty)
     }
 #else
     {
-      radfieldbin_solutions = static_cast<struct radfieldbin_solution *>(
-          malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution)));
+      radfieldbin_solutions = static_cast<radfieldbin_solution *>(
+          malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(radfieldbin_solution)));
     }
 #endif
 
@@ -627,7 +624,7 @@ void zero_estimators(int modelgridindex)
 }
 
 static void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                                const double doppler_nucmf_on_nurf, const struct Phixslist &phixslist) {
+                                const double doppler_nucmf_on_nurf, const Phixslist &phixslist) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
 
   const int nbfcontinua = globals::nbfcontinua;
@@ -656,7 +653,7 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
 }
 
 void update_estimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                       const double doppler_nucmf_on_nurf, const struct Phixslist &phixslist) {
+                       const double doppler_nucmf_on_nurf, const Phixslist &phixslist) {
   if (distance_e_cmf == 0) {
     return;
   }
@@ -717,7 +714,7 @@ auto radfield(double nu, int modelgridindex) -> double
 }
 
 constexpr auto gsl_integrand_planck(const double nu, void *voidparas) -> double {
-  const auto *paras = static_cast<struct gsl_planck_integral_paras *>(voidparas);
+  const auto *paras = static_cast<gsl_planck_integral_paras *>(voidparas);
   const double T_R = paras->T_R;
 
   double integrand = TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / (std::expm1(HOVERKB * nu / T_R));
@@ -736,7 +733,7 @@ static auto planck_integral(double T_R, double nu_lower, double nu_upper, const 
   const double epsrel = 1e-10;
   const double epsabs = 0.;
 
-  struct gsl_planck_integral_paras intparas = {.T_R = T_R, .times_nu = times_nu};
+  gsl_planck_integral_paras intparas = {.T_R = T_R, .times_nu = times_nu};
 
   const gsl_function F_planck = {.function = &gsl_integrand_planck, .params = &intparas};
 
@@ -795,8 +792,8 @@ static auto delta_nu_bar(double T_R, void *paras) -> double
 // difference between the average nu and the average nu of a Planck function
 // at temperature T_R, in the frequency range corresponding to a bin
 {
-  const int modelgridindex = (static_cast<struct gsl_T_R_solver_paras *>(paras))->modelgridindex;
-  const int binindex = (static_cast<struct gsl_T_R_solver_paras *>(paras))->binindex;
+  const int modelgridindex = (static_cast<gsl_T_R_solver_paras *>(paras))->modelgridindex;
+  const int binindex = (static_cast<gsl_T_R_solver_paras *>(paras))->binindex;
 
   const double nu_lower = get_bin_nu_lower(binindex);
   const double nu_upper = get_bin_nu_upper(binindex);
@@ -838,7 +835,7 @@ static auto delta_nu_bar(double T_R, void *paras) -> double
 static auto find_T_R(int modelgridindex, int binindex) -> float {
   double T_R = 0.;
 
-  struct gsl_T_R_solver_paras paras {};
+  gsl_T_R_solver_paras paras{};
   paras.modelgridindex = modelgridindex;
   paras.binindex = binindex;
 

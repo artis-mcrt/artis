@@ -33,7 +33,7 @@
 static std::vector<std::vector<double>> threads_bfheatingcoeffs;
 
 static void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer,
-                                     const struct heatingcoolingrates *heatingcoolingrates) {
+                                     const heatingcoolingrates *heatingcoolingrates) {
   // return; disable for better performance (if estimators files are not needed)
 
   if (grid::get_numassociatedcells(mgi) < 1) {
@@ -736,8 +736,8 @@ void cellcache_change_cell(const int modelgridindex) {
   // printout("nlevels_with_processrates %d\n", nlevels_with_processrates);
 }
 
-static void solve_Te_nltepops(const int n, const int nts, const int titer,
-                              struct heatingcoolingrates *heatingcoolingrates, std::vector<double> &bfheatingcoeffs)
+static void solve_Te_nltepops(const int n, const int nts, const int titer, heatingcoolingrates *heatingcoolingrates,
+                              std::vector<double> &bfheatingcoeffs)
 // n is the modelgridindex (TODO: rename to mgi)
 // nts is the timestep number
 {
@@ -947,7 +947,7 @@ static void zero_gammaestimator(const int modelgridindex) {
 }
 
 static void update_grid_cell(const int mgi, const int nts, const int nts_prev, const int titer, const double tratmid,
-                             const double deltat, struct heatingcoolingrates *heatingcoolingrates,
+                             const double deltat, heatingcoolingrates *heatingcoolingrates,
                              std::vector<double> &bfheatingcoeffs)
 // n is the modelgrid index
 {
@@ -1237,7 +1237,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       /// Check if this task should work on the current model grid cell.
       /// If yes, update the cell and write out the estimators
       if (mgi >= nstart && mgi < nstart + ndo) {
-        struct heatingcoolingrates heatingcoolingrates {};
+        heatingcoolingrates heatingcoolingrates{};
         update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates,
                          threads_bfheatingcoeffs[tid]);
 

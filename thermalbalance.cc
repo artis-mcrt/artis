@@ -24,7 +24,7 @@
 struct Te_solution_paras {
   double t_current;
   int modelgridindex;
-  struct heatingcoolingrates *heatingcoolingrates;
+  heatingcoolingrates *heatingcoolingrates;
   const std::vector<double> *bfheatingcoeffs;
 };
 
@@ -62,8 +62,7 @@ auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetinde
 static auto integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas) -> double
 /// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
 {
-  const struct gsl_integral_paras_bfheating *const params =
-      static_cast<struct gsl_integral_paras_bfheating *>(voidparas);
+  const gsl_integral_paras_bfheating *const params = static_cast<gsl_integral_paras_bfheating *>(voidparas);
 
   const int modelgridindex = params->modelgridindex;
   const double nu_edge = params->nu_edge;
@@ -98,7 +97,7 @@ static auto calculate_bfheatingcoeff(int element, int ion, int level, int phixst
   // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
   // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
 
-  struct gsl_integral_paras_bfheating intparas = {
+  gsl_integral_paras_bfheating intparas = {
       .nu_edge = nu_threshold,
       .modelgridindex = modelgridindex,
       .T_R = grid::get_TR(modelgridindex),
@@ -210,7 +209,7 @@ static auto get_heating_ion_coll_deexc(const int modelgridindex, const int eleme
 }
 
 static void calculate_heating_rates(const int modelgridindex, const double T_e, const double nne,
-                                    struct heatingcoolingrates *heatingcoolingrates,
+                                    heatingcoolingrates *heatingcoolingrates,
                                     const std::vector<double> &bfheatingcoeffs)
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the heatingrates data structure.
@@ -337,7 +336,7 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
 static auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> double
 /// Thermal balance equation on which we have to iterate to get T_e
 {
-  const struct Te_solution_paras *const params = static_cast<struct Te_solution_paras *>(paras);
+  const Te_solution_paras *const params = static_cast<Te_solution_paras *>(paras);
 
   const int modelgridindex = params->modelgridindex;
   const double t_current = params->t_current;
@@ -375,15 +374,15 @@ static auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> doub
 }
 
 void call_T_e_finder(const int modelgridindex, const int timestep, const double t_current, const double T_min,
-                     const double T_max, struct heatingcoolingrates *heatingcoolingrates,
+                     const double T_max, heatingcoolingrates *heatingcoolingrates,
                      const std::vector<double> &bfheatingcoeffs) {
   const double T_e_old = grid::get_Te(modelgridindex);
   printout("Finding T_e in cell %d at timestep %d...", modelgridindex, timestep);
 
-  struct Te_solution_paras paras = {.t_current = t_current,
-                                    .modelgridindex = modelgridindex,
-                                    .heatingcoolingrates = heatingcoolingrates,
-                                    .bfheatingcoeffs = &bfheatingcoeffs};
+  Te_solution_paras paras = {.t_current = t_current,
+                             .modelgridindex = modelgridindex,
+                             .heatingcoolingrates = heatingcoolingrates,
+                             .bfheatingcoeffs = &bfheatingcoeffs};
 
   gsl_function find_T_e_f = {.function = &T_e_eqn_heating_minus_cooling, .params = &paras};
 

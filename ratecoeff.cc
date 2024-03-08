@@ -405,7 +405,7 @@ static auto alpha_sp_integrand_gsl(const double nu, void *const voidparas) -> do
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
-  const struct GSLIntegrationParas *const params = static_cast<struct GSLIntegrationParas *>(voidparas);
+  const GSLIntegrationParas *const params = static_cast<GSLIntegrationParas *>(voidparas);
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
   const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu, 2) * exp(-HOVERKB * nu / params->T);
@@ -420,7 +420,7 @@ static auto alpha_sp_E_integrand_gsl(const double nu, void *const voidparas) -> 
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
-  const struct GSLIntegrationParas *const params = static_cast<struct GSLIntegrationParas *>(voidparas);
+  const GSLIntegrationParas *const params = static_cast<GSLIntegrationParas *>(voidparas);
 
   const float T = params->T;
   const double nu_edge = params->nu_edge;
@@ -438,7 +438,7 @@ static auto gammacorr_integrand_gsl(const double nu, void *const voidparas) -> d
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
-  const struct GSLIntegrationParas *const params = static_cast<struct GSLIntegrationParas *>(voidparas);
+  const GSLIntegrationParas *const params = static_cast<GSLIntegrationParas *>(voidparas);
 
   const float T = params->T;
   const double nu_edge = params->nu_edge;
@@ -457,7 +457,7 @@ static auto approx_bfheating_integrand_gsl(const double nu, void *const voidpara
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-  const struct GSLIntegrationParas *const params = static_cast<struct GSLIntegrationParas *>(voidparas);
+  const GSLIntegrationParas *const params = static_cast<GSLIntegrationParas *>(voidparas);
 
   const float T = params->T;
   const double nu_edge = params->nu_edge;
@@ -486,7 +486,7 @@ static auto bfcooling_integrand_gsl(const double nu, void *const voidparas) -> d
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-  const struct GSLIntegrationParas *const params = static_cast<struct GSLIntegrationParas *>(voidparas);
+  const GSLIntegrationParas *const params = static_cast<GSLIntegrationParas *>(voidparas);
 
   const float T = params->T;
   const double nu_edge = params->nu_edge;
@@ -607,7 +607,7 @@ static void precalculate_rate_coefficient_integrals() {
 
             assert_always(globals::elements[element].ions[ion].levels[level].photoion_xs != nullptr);
             // the threshold of the first target gives nu of the first phixstable point
-            struct GSLIntegrationParas intparas = {
+            GSLIntegrationParas intparas = {
                 .nu_edge = nu_threshold,
                 .T = T_e,
                 .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs};
@@ -722,10 +722,9 @@ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel
 
   const int npieces = globals::NPHIXSPOINTS;
 
-  struct GSLIntegrationParas intparas = {
-      .nu_edge = nu_threshold,
-      .T = T_e,
-      .photoion_xs = globals::elements[element].ions[lowerion].levels[lower].photoion_xs};
+  GSLIntegrationParas intparas = {.nu_edge = nu_threshold,
+                                  .T = T_e,
+                                  .photoion_xs = globals::elements[element].ions[lowerion].levels[lower].photoion_xs};
 
   const gsl_function F_alpha_sp = {.function = &alpha_sp_E_integrand_gsl, .params = &intparas};
 
@@ -936,7 +935,7 @@ static void read_recombrate_file()
 
   printout("Calibrating recombination rates for a temperature of %.1f K\n", Te_estimate);
 
-  struct rrc_row {
+  struct RRCRow {
     double log_Te;
     double rrc_low_n;
     double rrc_total;
@@ -949,12 +948,12 @@ static void read_recombrate_file()
   while (fscanf(recombrate_file, "%d %d %d\n", &atomicnumber, &upperionstage, &tablerows) > 0) {
     // printout("%d %d %d\n", atomicnumber, upperionstage, tablerows);
 
-    struct rrc_row T_highestbelow = {0, 0, 0};
-    struct rrc_row T_lowestabove = {0, 0, 0};
+    RRCRow T_highestbelow = {0, 0, 0};
+    RRCRow T_lowestabove = {0, 0, 0};
     T_highestbelow.log_Te = -1;
     T_lowestabove.log_Te = -1;
     for (int i = 0; i < tablerows; i++) {
-      struct rrc_row row {};
+      RRCRow row{};
       assert_always(fscanf(recombrate_file, "%lg %lg %lg\n", &row.log_Te, &row.rrc_low_n, &row.rrc_total) == 3);
       if (row.log_Te < log_Te_estimate && row.log_Te > T_highestbelow.log_Te) {
         T_highestbelow.log_Te = row.log_Te;

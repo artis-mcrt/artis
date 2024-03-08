@@ -57,7 +57,7 @@ struct Nuclide {
   std::array<double, decaytypes::DECAYTYPE_COUNT> branchprobs = {0.};  // branch probability of each decay type
 };
 
-static std::vector<struct Nuclide> nuclides;
+static std::vector<Nuclide> nuclides;
 
 constexpr auto decay_daughter_z(const int z_parent, const int /*a_parent*/, const int decaytype) -> int
 // check if (z_parent, a_parent) is a parent of (z, a)
@@ -124,7 +124,7 @@ struct DecayPath {
   [[nodiscard]] auto final_daughter_z() const -> int { return decay_daughter_z(z.back(), a.back(), decaytypes.back()); }
 };
 
-std::vector<struct DecayPath> decaypaths;
+std::vector<DecayPath> decaypaths;
 
 // decaypath_energy_per_mass points to an array of length npts_model * num_decaypaths
 // the index [mgi * num_decaypaths + i] will hold the decay energy per mass [erg/g] released by chain i in cell mgi
@@ -410,7 +410,7 @@ static void extend_lastdecaypath()
   }
 }
 
-static auto operator<(const struct DecayPath &d1, const struct DecayPath &d2) -> bool
+static auto operator<(const DecayPath &d1, const DecayPath &d2) -> bool
 // true if d1 < d2
 // chains are sorted by mass number, then atomic number, then length
 {
@@ -436,7 +436,7 @@ static auto operator<(const struct DecayPath &d1, const struct DecayPath &d2) ->
 }
 
 static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vector<int> &custom_alist,
-                            std::vector<struct Nuclide> &standard_nuclides) {
+                            std::vector<Nuclide> &standard_nuclides) {
   decaypaths.clear();
   for (int startnucindex = 0; startnucindex < get_num_nuclides(); startnucindex++) {
     const int z = get_nuc_z(startnucindex);
@@ -495,7 +495,7 @@ static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vec
 }
 
 static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> &custom_alist,
-                                   std::vector<struct Nuclide> &standard_nuclides) {
+                                   std::vector<Nuclide> &standard_nuclides) {
   // remove nuclides that are not a standard or custom input-specified nuclide, or connected to these by decays
   nuclides.erase(
       std::remove_if(nuclides.begin(), nuclides.end(),
@@ -1354,7 +1354,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
   fprintf(estimators_file, "\n");
 }
 
-void setup_radioactive_pellet(const double e0, const int mgi, struct Packet &pkt_ptr) {
+void setup_radioactive_pellet(const double e0, const int mgi, Packet &pkt_ptr) {
   const int num_decaypaths = get_num_decaypaths();
 
   // decay channels include all radioactive decay paths, and possibly also an initial cell energy channel

@@ -32,7 +32,7 @@ static constexpr bool LOG_MACROATOM = false;
 static FILE *macroatom_file = nullptr;
 
 static void calculate_macroatom_transitionrates(const int modelgridindex, const int element, const int ion,
-                                                const int level, const double t_mid, struct CellCacheLevels &chlevel) {
+                                                const int level, const double t_mid, CellCacheLevels &chlevel) {
   // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
   auto &processrates = chlevel.processrates;
   const auto T_e = grid::get_Te(modelgridindex);
@@ -174,7 +174,7 @@ static auto do_macroatom_internal_down_same(int element, int ion, int level) -> 
   return lower;
 }
 
-static void do_macroatom_raddeexcitation(struct Packet &pkt_ptr, const int element, const int ion, const int level,
+static void do_macroatom_raddeexcitation(Packet &pkt_ptr, const int element, const int ion, const int level,
                                          const int activatingline) {
   /// radiative deexcitation of MA: emitt rpkt
   /// randomly select which line transitions occurs
@@ -234,8 +234,8 @@ static void do_macroatom_raddeexcitation(struct Packet &pkt_ptr, const int eleme
   vpkt_call_estimators(pkt_ptr, TYPE_MA);
 }
 
-static void do_macroatom_radrecomb(struct Packet &pkt_ptr, const int modelgridindex, const int element, int *ion,
-                                   int *level, const double rad_recomb) {
+static void do_macroatom_radrecomb(Packet &pkt_ptr, const int modelgridindex, const int element, int *ion, int *level,
+                                   const double rad_recomb) {
   const auto T_e = grid::get_Te(modelgridindex);
   const auto nne = grid::get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, *ion, *level);
@@ -339,7 +339,7 @@ static void do_macroatom_ionisation(const int modelgridindex, const int element,
   *level = upper;
 }
 
-void do_macroatom(struct Packet &pkt_ptr, const struct MacroAtomState &pktmastate)
+void do_macroatom(Packet &pkt_ptr, const MacroAtomState &pktmastate)
 /// Material for handling activated macro atoms.
 {
   const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr.where);
@@ -912,7 +912,7 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
 }
 
 auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans, int element, int ion,
-                                int upper, const struct LevelTransition &downtransition) -> double
+                                int upper, const LevelTransition &downtransition) -> double
 // multiply by upper level population to get a rate per second
 {
   const int lower = downtransition.targetlevelindex;

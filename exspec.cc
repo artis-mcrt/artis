@@ -36,9 +36,8 @@ bool use_cellcache = false;
 std::mt19937 stdrng(std::random_device{}());
 gsl_integration_workspace *gslworkspace = nullptr;
 
-static void do_angle_bin(const int a, struct Packet *pkts, bool load_allrank_packets, struct Spectra &rpkt_spectra,
-                         struct Spectra &stokes_i, struct Spectra &stokes_q, struct Spectra &stokes_u,
-                         struct Spectra &gamma_spectra) {
+static void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra &rpkt_spectra, Spectra &stokes_i,
+                         Spectra &stokes_q, Spectra &stokes_u, Spectra &gamma_spectra) {
   std::vector<double> rpkt_light_curve_lum(globals::ntimesteps, 0.);
   std::vector<double> rpkt_light_curve_lumcmf(globals::ntimesteps, 0.);
   std::vector<double> gamma_light_curve_lum(globals::ntimesteps, 0.);
@@ -58,7 +57,7 @@ static void do_angle_bin(const int a, struct Packet *pkts, bool load_allrank_pac
   init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
 
   for (int p = 0; p < globals::nprocs_exspec; p++) {
-    struct Packet *pkts_start = load_allrank_packets ? &pkts[p * globals::npkts] : pkts;
+    Packet *pkts_start = load_allrank_packets ? &pkts[p * globals::npkts] : pkts;
 
     if (a == -1 || !load_allrank_packets) {
       char pktfilename[MAXFILENAMELENGTH];
@@ -229,31 +228,31 @@ auto main(int argc, char *argv[]) -> int {
   // nprocs_exspec is the number of rank output files to process with expec
   // however, we might be running exspec with 1 or just a few ranks
 
-  auto *pkts = static_cast<struct Packet *>(malloc(globals::nprocs_exspec * globals::npkts * sizeof(struct Packet)));
+  auto *pkts = static_cast<Packet *>(malloc(globals::nprocs_exspec * globals::npkts * sizeof(Packet)));
   const bool load_allrank_packets = (pkts != nullptr);
   if (load_allrank_packets) {
     printout("mem_usage: loading %d packets from each %d processes simultaneously (total %d packets, %.1f MB memory)\n",
              globals::npkts, globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
-             globals::nprocs_exspec * globals::npkts * sizeof(struct Packet) / 1024. / 1024.);
+             globals::nprocs_exspec * globals::npkts * sizeof(Packet) / 1024. / 1024.);
   } else {
     printout("mem_usage: malloc failed to allocate memory for all packets\n");
     printout(
         "mem_usage: loading %d packets from each of %d processes sequentially (total %d packets, %.1f MB memory)\n",
         globals::npkts, globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
-        globals::nprocs_exspec * globals::npkts * sizeof(struct Packet) / 1024. / 1024.);
-    pkts = static_cast<struct Packet *>(malloc(globals::npkts * sizeof(struct Packet)));
+        globals::nprocs_exspec * globals::npkts * sizeof(Packet) / 1024. / 1024.);
+    pkts = static_cast<Packet *>(malloc(globals::npkts * sizeof(Packet)));
     assert_always(pkts != nullptr);
   }
 
   init_spectrum_trace();  // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
 
-  struct Spectra rpkt_spectra;
+  Spectra rpkt_spectra;
 
-  struct Spectra stokes_i;
-  struct Spectra stokes_q;
-  struct Spectra stokes_u;
+  Spectra stokes_i;
+  Spectra stokes_q;
+  Spectra stokes_u;
 
-  struct Spectra gamma_spectra;
+  Spectra gamma_spectra;
 
   time_init();
 

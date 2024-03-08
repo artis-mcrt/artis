@@ -17,7 +17,7 @@ namespace globals {
 
 std::array<double, 3> syn_dir{};  // vector pointing from origin to observer
 
-std::unique_ptr<struct TimeStep[]> timesteps = nullptr;
+std::unique_ptr<TimeStep[]> timesteps = nullptr;
 
 std::vector<double> dep_estimator_gamma{};  /// Volume estimator for the rpkt emissivity
 
@@ -58,9 +58,9 @@ int opacity_case;  // 0 normally, 1 for Fe-grp dependence.
 /// ATOMIC DATA
 
 int nlines = -1;
-std::vector<struct Element> elements;
-const struct TransitionLine *linelist = nullptr;
-std::vector<struct BFListEntry> bflist;
+std::vector<Element> elements;
+const TransitionLine *linelist = nullptr;
+std::vector<BFListEntry> bflist;
 
 // for USE_LUT_BFHEATING = true
 double *bfheating_coeff = nullptr;
@@ -68,17 +68,17 @@ double *bfheating_coeff = nullptr;
 /// PHIXSLIST
 
 std::vector<double> allcont_nu_edge;
-const struct FullPhotoionTransition *allcont = nullptr;
+const FullPhotoionTransition *allcont = nullptr;
 
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
-struct GroundPhotoion *groundcont = nullptr;
+GroundPhotoion *groundcont = nullptr;
 
 int nbfcontinua = -1;
 int nbfcontinua_ground = -1;  /// number of bf-continua
 int NPHIXSPOINTS = -1;
 double NPHIXSNUINCREMENT = -1;
 
-struct CellCache *cellcache = nullptr;
+CellCache *cellcache = nullptr;
 
 std::deque<std::mutex> mutex_cellcachemacroatom;
 
