@@ -412,23 +412,6 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
     // }
     // fprintf(estimators_file, "\n");
 
-    // if (timestep % 20 == 0)
-    // {
-    //   fprintf(estimators_file, "chi_bf(nuedge)   Z=%2d", get_atomicnumber(element));
-    //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-    //     fprintf(estimators_file, "              ");
-    //   for (int ion = 0; ion < nions - 1; ion++)
-    //   {
-    //     double nu_edge = (epsilon(element, ion + 1, 0) - epsilon(element, ion, 0)) / H;
-    //     double chi_bf = calculate_chi_bf_gammacontr(mgi, nu_edge, false);
-    //
-    //     fprintf(estimators_file, "  %d: %9.3e",
-    //             get_ionstage(element, ion),
-    //             chi_bf);
-    //   }
-    //   fprintf(estimators_file, "\n");
-    // }
-
     // {
     //   fprintf(estimators_file, "gamma_R            Z=%2d", get_atomicnumber(element));
     //   for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)

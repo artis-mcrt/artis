@@ -996,7 +996,8 @@ static auto calculate_chi_ffheating(const int modelgridindex, const double nu) -
 }
 
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
-auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, struct phixslist *phixslist) -> double
+static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, struct phixslist *phixslist)
+    -> double
 // bound-free opacity
 {
   assert_always(!USECELLHISTANDUPDATEPHIXSLIST || phixslist != nullptr);
