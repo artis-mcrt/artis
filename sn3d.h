@@ -95,14 +95,13 @@ extern gsl_integration_workspace *gslworkspace;
 #include "artisoptions.h"
 #include "globals.h"
 
-#ifdef _OPENMP
-#pragma omp threadprivate(outputlinebuf, outputstartofline)
-#endif
-
 // make these thread_local if we want separate log files for STDPAR threads
 inline char outputlinebuf[1024] = "";
 inline bool outputstartofline = true;
 
+#ifdef _OPENMP
+#pragma omp threadprivate(outputlinebuf, outputstartofline)
+#endif
 static void print_line_start() {
   if (outputstartofline) {
     const time_t now_time = time(nullptr);
