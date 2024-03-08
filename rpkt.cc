@@ -821,6 +821,9 @@ static auto do_rpkt_step(Packet &pkt_ptr, const double t2) -> bool
 
     edist = tau_next / chi_grey;
     pkt_ptr.next_trans = -1;
+    if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
+      std::ranges::fill(phixslist.groundcont_gamma_contr, 0.);
+    }
   } else if constexpr (EXPANSIONOPACITIES_ON) {
     std::tie(edist, event_is_boundbound) =
         get_event_expansion_opacity(mgi, nonemptymgi, pkt_ptr, chi_rpkt_cont, phixslist, tau_next, abort_dist);
