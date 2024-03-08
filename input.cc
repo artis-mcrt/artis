@@ -1301,17 +1301,13 @@ static void setup_cellcache() {
   }
 }
 
-static void write_bflist_file(int includedphotoiontransitions) {
-  if (includedphotoiontransitions > 0) {
-    globals::bflist = static_cast<struct bflist_t *>(malloc(includedphotoiontransitions * sizeof(struct bflist_t)));
-  } else {
-    globals::bflist = nullptr;
-  }
+static void write_bflist_file() {
+  globals::bflist.resize(globals::nbfcontinua);
 
   FILE *bflist_file = nullptr;
   if (globals::rank_global == 0) {
     bflist_file = fopen_required("bflist.out", "w");
-    fprintf(bflist_file, "%d\n", includedphotoiontransitions);
+    fprintf(bflist_file, "%d\n", globals::nbfcontinua);
   }
   int i = 0;
   for (int element = 0; element < get_nelements(); element++) {
@@ -1343,7 +1339,7 @@ static void write_bflist_file(int includedphotoiontransitions) {
       }
     }
   }
-  assert_always(i == includedphotoiontransitions);
+  assert_always(i == globals::nbfcontinua);
   if (globals::rank_global == 0) {
     fclose(bflist_file);
   }
@@ -1555,7 +1551,7 @@ static void read_atomicdata() {
   printout("[input]  in total %d ions, %d levels (%d ionising), %d lines, %d photoionisation transitions\n",
            get_includedions(), get_includedlevels(), includedionisinglevels, globals::nlines, globals::nbfcontinua);
 
-  write_bflist_file(globals::nbfcontinua);
+  write_bflist_file();
 
   setup_phixs_list();
 

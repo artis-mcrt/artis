@@ -61,7 +61,7 @@ int opacity_case;  // 0 normally, 1 for Fe-grp dependence.
 int nlines = -1;
 std::vector<struct elementlist_entry> elements;
 const struct linelist_entry *linelist = nullptr;
-struct bflist_t *bflist = nullptr;
+std::vector<struct bflist_t> bflist;
 
 // for USE_LUT_BFHEATING = true
 double *bfheating_coeff = nullptr;

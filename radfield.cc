@@ -19,6 +19,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "gsl/gsl_math.h"
+#include "rpkt.h"
 #ifdef MPI_ON
 #include "mpi.h"
 #endif

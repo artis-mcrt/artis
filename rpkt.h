@@ -3,12 +3,30 @@
 #define RPKT_H
 
 #include <ctime>
+#include <vector>
+
+struct rpkt_continuum_absorptioncoeffs {
+  double nu{NAN};  // frequency at which opacity was calculated
+  double total{0.};
+  double ffescat{0.};
+  double ffheat{0.};
+  double bf{0.};
+  double ffheating{0.};
+  // double bfheating;
+  int modelgridindex{-1};
+  int timestep{-1};
+};
+
+struct phixslist {
+  std::vector<double> groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
+  std::vector<double> chi_bf_sum;
+  std::vector<double> gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
+  int allcontend{-1};
+  int allcontbegin{0};
+};
 
 #include "artisoptions.h"
-#include "constants.h"
-#include "globals.h"
 #include "grid.h"
-#include "radfield.h"
 #include "sn3d.h"
 
 void do_rpkt(struct packet *pkt_ptr, double t2);

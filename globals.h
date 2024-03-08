@@ -63,14 +63,6 @@ struct groundphixslist {
   int ion;
 };
 
-struct phixslist {
-  std::vector<double> groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
-  std::vector<double> chi_bf_sum;
-  std::vector<double> gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
-  int allcontend{-1};
-  int allcontbegin{0};
-};
-
 struct phixstarget_entry {
   double probability;  // fraction of phixs cross section leading to this final level
   int levelindex;      // index of upper ion level after photoionisation
@@ -148,18 +140,6 @@ struct gslintegration_paras {
   double nu_edge;
   float T;
   float *photoion_xs;
-};
-
-struct rpkt_continuum_absorptioncoeffs {
-  double nu{NAN};  // frequency at which opacity was calculated
-  double total{0.};
-  double ffescat{0.};
-  double ffheat{0.};
-  double bf{0.};
-  double ffheating{0.};
-  // double bfheating;
-  int modelgridindex{-1};
-  int timestep{-1};
 };
 
 template <bool separatestimrecomb>
@@ -247,7 +227,7 @@ extern int nlines;
 extern std::vector<struct elementlist_entry> elements;
 
 extern const struct linelist_entry *linelist;
-extern struct bflist_t *bflist;
+extern std::vector<struct bflist_t> bflist;
 
 // for USE_LUT_BFHEATING = true
 extern double *bfheating_coeff;
