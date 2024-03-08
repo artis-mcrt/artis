@@ -155,8 +155,8 @@ static constexpr auto get_expopac_bin_nu_lower(const size_t binindex) -> double 
 static auto get_event_expansion_opacity(
     const int modelgridindex, const int nonemptymgi, const struct packet &pkt_ptr,
     struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,  // NOLINT(misc-unused-parameters)
-    struct phixslist *phixslist, const double tau_rnd, const double abort_dist) -> std::tuple<double, bool> {
-  calculate_chi_rpkt_cont(pkt_ptr.nu_cmf, chi_rpkt_cont, phixslist, modelgridindex, true);
+    struct phixslist &phixslist, const double tau_rnd, const double abort_dist) -> std::tuple<double, bool> {
+  calculate_chi_rpkt_cont(pkt_ptr.nu_cmf, chi_rpkt_cont, &phixslist, modelgridindex);
   const auto doppler = doppler_packet_nucmf_on_nurf(pkt_ptr.pos, pkt_ptr.dir, pkt_ptr.prop_time);
 
   const auto nu_cmf_abort = get_nu_cmf_abort(pkt_ptr.pos, pkt_ptr.dir, pkt_ptr.prop_time, pkt_ptr.nu_rf, abort_dist);
@@ -707,13 +707,10 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
       const double nu_edge = globals::groundcont[i].nu_edge;
-      if (nu_cmf <= nu_edge) [[unlikely]] {
+      if (nu_cmf <= nu_edge) {
         // because groundcont is sorted by nu_edge descending, nu < nu_edge for all remaining items
         return;
       }
-      /// Cells with zero abundance for a specific element have zero contribution
-      /// (set in calculate_chi_rpkt_cont and therefore do not contribute to
-      /// the estimators
       const int ionestimindex = nonemptymgi * globals::nbfcontinua_ground + i;
 
       if constexpr (USE_LUT_PHOTOION) {
@@ -827,10 +824,10 @@ static auto do_rpkt_step(struct packet *pkt_ptr, const double t2) -> bool
     pkt_ptr->next_trans = -1;
   } else if constexpr (EXPANSIONOPACITIES_ON) {
     std::tie(edist, event_is_boundbound) =
-        get_event_expansion_opacity(mgi, nonemptymgi, *pkt_ptr, chi_rpkt_cont, &phixslist, tau_next, abort_dist);
+        get_event_expansion_opacity(mgi, nonemptymgi, *pkt_ptr, chi_rpkt_cont, phixslist, tau_next, abort_dist);
     pkt_ptr->next_trans = -1;
   } else {
-    calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, &phixslist, mgi, true);
+    calculate_chi_rpkt_cont(pkt_ptr->nu_cmf, chi_rpkt_cont, &phixslist, mgi);
 
     std::tie(edist, pkt_ptr->next_trans, event_is_boundbound) =
         get_event(mgi, *pkt_ptr, chi_rpkt_cont, pktmastate, tau_next, abort_dist);
@@ -1116,8 +1113,7 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
 }
 
 void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
-                             struct phixslist *phixslist, const int modelgridindex,
-                             const bool usecellhistupdatephixslist) {
+                             struct phixslist *phixslist, const int modelgridindex) {
   assert_testmodeonly(modelgridindex != grid::get_npts_model());
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
   if ((modelgridindex == chi_rpkt_cont.modelgridindex) && (globals::timestep == chi_rpkt_cont.timestep) &&
@@ -1141,8 +1137,8 @@ void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorpti
     chi_ffheating = chi_ff;
 
     /// Third contribution: bound-free absorption
-    chi_bf = usecellhistupdatephixslist ? calculate_chi_bf_gammacontr<true>(modelgridindex, nu_cmf, phixslist)
-                                        : calculate_chi_bf_gammacontr<false>(modelgridindex, nu_cmf, nullptr);
+    chi_bf = (phixslist != nullptr) ? calculate_chi_bf_gammacontr<true>(modelgridindex, nu_cmf, phixslist)
+                                    : calculate_chi_bf_gammacontr<false>(modelgridindex, nu_cmf, phixslist);
 
   } else {
     /// in the other cases chi_grey is an mass absorption coefficient
