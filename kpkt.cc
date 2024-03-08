@@ -177,7 +177,7 @@ static auto calculate_cooling_rates_ion(const int modelgridindex, const int elem
   return C_ion;
 }
 
-void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates *heatingcoolingrates)
+void calculate_cooling_rates(const int modelgridindex, HeatingCoolingRates *heatingcoolingrates)
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
 {

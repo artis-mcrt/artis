@@ -24,7 +24,7 @@
 struct Te_solution_paras {
   double t_current;
   int modelgridindex;
-  heatingcoolingrates *heatingcoolingrates;
+  HeatingCoolingRates *heatingcoolingrates;
   const std::vector<double> *bfheatingcoeffs;
 };
 
@@ -209,7 +209,7 @@ static auto get_heating_ion_coll_deexc(const int modelgridindex, const int eleme
 }
 
 static void calculate_heating_rates(const int modelgridindex, const double T_e, const double nne,
-                                    heatingcoolingrates *heatingcoolingrates,
+                                    HeatingCoolingRates *heatingcoolingrates,
                                     const std::vector<double> &bfheatingcoeffs)
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the heatingrates data structure.
@@ -374,7 +374,7 @@ static auto T_e_eqn_heating_minus_cooling(const double T_e, void *paras) -> doub
 }
 
 void call_T_e_finder(const int modelgridindex, const int timestep, const double t_current, const double T_min,
-                     const double T_max, heatingcoolingrates *heatingcoolingrates,
+                     const double T_max, HeatingCoolingRates *heatingcoolingrates,
                      const std::vector<double> &bfheatingcoeffs) {
   const double T_e_old = grid::get_Te(modelgridindex);
   printout("Finding T_e in cell %d at timestep %d...", modelgridindex, timestep);

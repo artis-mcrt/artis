@@ -308,8 +308,8 @@ void init(int my_rank, int ndo_nonempty)
     }
 #else
     {
-      radfieldbin_solutions = static_cast<radfieldbin_solution *>(
-          malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(radfieldbin_solution)));
+      radfieldbin_solutions = static_cast<RadFieldBinSolution *>(
+          malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution)));
     }
 #endif
 
