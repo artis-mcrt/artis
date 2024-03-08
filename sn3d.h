@@ -98,14 +98,15 @@ extern gsl_integration_workspace *gslworkspace;
 // make these thread_local if we want separate log files for STDPAR threads
 inline char outputlinebuf[1024] = "";
 inline bool outputstartofline = true;
+inline struct tm timebuf {};
 
 #ifdef _OPENMP
-#pragma omp threadprivate(outputlinebuf, outputstartofline)
+#pragma omp threadprivate(outputlinebuf, outputstartofline, timebuf)
 #endif
-static void print_line_start() {
+
+static inline void print_line_start() {
   if (outputstartofline) {
     const time_t now_time = time(nullptr);
-    static thread_local struct tm timebuf {};
     strftime(outputlinebuf, 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
     output_file << outputlinebuf << " ";
   }
