@@ -558,7 +558,7 @@ static void rpkt_event_continuum(Packet &pkt_ptr, const Rpkt_continuum_absorptio
     const double chi_bf_rand = rng_uniform() * chi_bf_inrest;
 
     // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand
-    const auto *upperval = std::upper_bound(phixslist.chi_bf_sum.data() + phixslist.allcontbegin,
+    const auto &upperval = std::upper_bound(phixslist.chi_bf_sum.data() + phixslist.allcontbegin,
                                             phixslist.chi_bf_sum.data() + phixslist.allcontend - 1, chi_bf_rand);
     const int allcontindex = std::distance(phixslist.chi_bf_sum.data(), upperval);
     assert_always(allcontindex < phixslist.allcontend);
