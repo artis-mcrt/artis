@@ -1050,6 +1050,9 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, stru
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
     phixslist->allcontbegin = allcontbegin;
     phixslist->allcontend = allcontend;
+    assert_always(allcontbegin >= 0);
+    assert_always(allcontend <= nbfcontinua);
+    assert_always(allcontbegin <= allcontend);
   }
 
   for (i = allcontbegin; i < allcontend; i++) {
