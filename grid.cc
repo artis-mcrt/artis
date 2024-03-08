@@ -47,8 +47,8 @@ int ngrid;
 char coordlabel[3];
 
 static enum gridtypes model_type = GRID_SPHERICAL1D;
-static size_t npts_model = 0;           // number of model grid cells
-static size_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
+size_t npts_model = 0;           // number of model grid cells
+size_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
 static double t_model = -1.;  // time at which densities in input model are correct.
 static double *vout_model = nullptr;
@@ -372,8 +372,8 @@ static void set_npts_model(int new_npts_model) {
   assert_always(modelgrid == nullptr);
   modelgrid = static_cast<struct modelgrid_t *>(calloc(npts_model + 1, sizeof(struct modelgrid_t)));
   assert_always(modelgrid != nullptr);
-  mg_associated_cells.resize(npts_model + 1);
-  nonemptymgi_of_mgi.resize(npts_model + 1);
+  mg_associated_cells.resize(npts_model + 1, 0);
+  nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 }
 
 static void allocate_initradiobund() {
