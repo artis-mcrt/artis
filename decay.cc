@@ -44,7 +44,7 @@ static constexpr std::array<const std::string_view, 119> elsymbols{
     "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Uut", "Fl", "Uup", "Lv", "Uus", "Uuo"};
 static constexpr int Z_MAX = elsymbols.size() - 1;
 
-struct nuclide {
+struct Nuclide {
   int z{-1};                    // atomic number
   int a{-1};                    // mass number
   double meanlife{-1};          // mean lifetime before decay [s]
@@ -57,7 +57,7 @@ struct nuclide {
   std::array<double, decaytypes::DECAYTYPE_COUNT> branchprobs = {0.};  // branch probability of each decay type
 };
 
-static std::vector<struct nuclide> nuclides;
+static std::vector<struct Nuclide> nuclides;
 
 constexpr auto decay_daughter_z(const int z_parent, const int /*a_parent*/, const int decaytype) -> int
 // check if (z_parent, a_parent) is a parent of (z, a)
@@ -111,7 +111,7 @@ constexpr auto decay_daughter_a(const int /*z_parent*/, const int a_parent, cons
 // a decay path follows the contribution from an initial nuclear abundance
 // to another (daughter of last nuclide in decaypath) via decays
 // every different path within the network is considered, e.g. 56Ni -> 56Co -> 56Fe is separate to 56Ni -> 56Co
-struct decaypath {
+struct DecayPath {
   std::vector<int> z{};         // atomic number
   std::vector<int> a{};         // mass number
   std::vector<int> nucindex{};  // index into nuclides list
@@ -124,7 +124,7 @@ struct decaypath {
   [[nodiscard]] auto final_daughter_z() const -> int { return decay_daughter_z(z.back(), a.back(), decaytypes.back()); }
 };
 
-std::vector<struct decaypath> decaypaths;
+std::vector<struct DecayPath> decaypaths;
 
 // decaypath_energy_per_mass points to an array of length npts_model * num_decaypaths
 // the index [mgi * num_decaypaths + i] will hold the decay energy per mass [erg/g] released by chain i in cell mgi
@@ -298,10 +298,10 @@ static auto nucdecayenergyqval(int nucindex, int decaytype) -> double {
 
 static auto get_num_decaypaths() -> int { return static_cast<int>(decaypaths.size()); }
 
-static auto get_decaypathlength(const decaypath &dpath) -> int { return static_cast<int>(dpath.z.size()); }
+static auto get_decaypathlength(const DecayPath &dpath) -> int { return static_cast<int>(dpath.z.size()); }
 static auto get_decaypathlength(int decaypathindex) -> int { return get_decaypathlength(decaypaths[decaypathindex]); }
 
-static auto calculate_decaypath_branchproduct(const decaypath &decaypath) -> double {
+static auto calculate_decaypath_branchproduct(const DecayPath &decaypath) -> double {
   // return the product of all branching factors in the decay path
 
   double branchprod = 1.;
@@ -311,7 +311,7 @@ static auto calculate_decaypath_branchproduct(const decaypath &decaypath) -> dou
   return branchprod;
 }
 
-static auto get_decaypath_lastnucdecayenergy(const decaypath &dpath) -> double {
+static auto get_decaypath_lastnucdecayenergy(const DecayPath &dpath) -> double {
   // a decaypath's energy is the decay energy of the last nuclide and decaytype in the chain
 
   const int nucindex_end = dpath.nucindex.back();
@@ -410,7 +410,7 @@ static void extend_lastdecaypath()
   }
 }
 
-static auto operator<(const struct decaypath &d1, const struct decaypath &d2) -> bool
+static auto operator<(const struct DecayPath &d1, const struct DecayPath &d2) -> bool
 // true if d1 < d2
 // chains are sorted by mass number, then atomic number, then length
 {
@@ -436,7 +436,7 @@ static auto operator<(const struct decaypath &d1, const struct decaypath &d2) ->
 }
 
 static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vector<int> &custom_alist,
-                            std::vector<struct nuclide> &standard_nuclides) {
+                            std::vector<struct Nuclide> &standard_nuclides) {
   decaypaths.clear();
   for (int startnucindex = 0; startnucindex < get_num_nuclides(); startnucindex++) {
     const int z = get_nuc_z(startnucindex);
@@ -495,7 +495,7 @@ static void find_decaypaths(const std::vector<int> &custom_zlist, const std::vec
 }
 
 static void filter_unused_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> &custom_alist,
-                                   std::vector<struct nuclide> &standard_nuclides) {
+                                   std::vector<struct Nuclide> &standard_nuclides) {
   // remove nuclides that are not a standard or custom input-specified nuclide, or connected to these by decays
   nuclides.erase(
       std::remove_if(nuclides.begin(), nuclides.end(),

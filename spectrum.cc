@@ -42,7 +42,7 @@ static std::vector<struct emissionabsorptioncontrib> traceemissionabsorption;
 static double traceemission_totalenergy = 0.;
 static double traceabsorption_totalenergy = 0.;
 
-static struct spec rpkt_spectra;
+static struct Spectra rpkt_spectra;
 
 static void printout_tracemission_stats() {
   const int maxlinesprinted = 500;
@@ -139,7 +139,7 @@ static auto get_proccount() -> int
 
 void write_spectrum(const std::string &spec_filename, const std::string &emission_filename,
                     const std::string &trueemission_filename, const std::string &absorption_filename,
-                    const struct spec &spectra, int numtimesteps) {
+                    const struct Spectra &spectra, int numtimesteps) {
   FILE *spec_file = fopen_required(spec_filename, "w");
 
   FILE *emission_file = nullptr;
@@ -209,8 +209,8 @@ void write_spectrum(const std::string &spec_filename, const std::string &emissio
 }
 
 void write_specpol(const std::string &specpol_filename, const std::string &emission_filename,
-                   const std::string &absorption_filename, const struct spec *stokes_i, const struct spec *stokes_q,
-                   const struct spec *stokes_u) {
+                   const std::string &absorption_filename, const struct Spectra *stokes_i,
+                   const struct Spectra *stokes_q, const struct Spectra *stokes_u) {
   FILE *specpol_file = fopen_required(specpol_filename, "w");
   FILE *emissionpol_file = nullptr;
   FILE *absorptionpol_file = nullptr;
@@ -338,8 +338,8 @@ static auto columnindex_from_emissiontype(const int et) -> int {
   return get_nelements() * get_max_nions() + element * get_max_nions() + ion;
 }
 
-static void add_to_spec(const struct Packet &pkt_ptr, const int current_abin, struct spec &spectra,
-                        const struct spec *stokes_i, const struct spec *stokes_q, const struct spec *stokes_u)
+static void add_to_spec(const struct Packet &pkt_ptr, const int current_abin, struct Spectra &spectra,
+                        const struct Spectra *stokes_i, const struct Spectra *stokes_q, const struct Spectra *stokes_u)
 // Routine to add a packet to the outgoing spectrum.
 {
   // Need to (1) decide which time bin to put it in and (2) which frequency bin.
@@ -472,7 +472,7 @@ void init_spectrum_trace() {
   }
 }
 
-void init_spectra(struct spec &spectra, const double nu_min, const double nu_max, const bool do_emission_res) {
+void init_spectra(struct Spectra &spectra, const double nu_min, const double nu_max, const bool do_emission_res) {
   // start by setting up the time and frequency bins.
   // it is all done interms of a logarithmic spacing in both t and nu - get the
   // step sizes first.
@@ -500,8 +500,8 @@ void init_spectra(struct spec &spectra, const double nu_min, const double nu_max
   spectra.fluxalltimesteps.resize(globals::ntimesteps * MNUBINS);
   std::ranges::fill(spectra.fluxalltimesteps, 0.0);
 
-  mem_usage += globals::ntimesteps * sizeof(struct spec);
-  mem_usage += globals::ntimesteps * sizeof(struct timestepspec);
+  mem_usage += globals::ntimesteps * sizeof(struct Spectra);
+  mem_usage += globals::ntimesteps * sizeof(struct TimeStepstepspec);
   mem_usage += globals::ntimesteps * MNUBINS * sizeof(double);
 
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
@@ -550,8 +550,8 @@ void init_spectra(struct spec &spectra, const double nu_min, const double nu_max
   }
 }
 
-void add_to_spec_res(const struct Packet &pkt_ptr, int current_abin, struct spec &spectra, const struct spec *stokes_i,
-                     const struct spec *stokes_q, const struct spec *stokes_u)
+void add_to_spec_res(const struct Packet &pkt_ptr, int current_abin, struct Spectra &spectra,
+                     const struct Spectra *stokes_i, const struct Spectra *stokes_q, const struct Spectra *stokes_u)
 // Routine to add a packet to the outgoing spectrum.
 {
   // Need to (1) decide which time bin to put it in and (2) which frequency bin.
@@ -567,7 +567,7 @@ void add_to_spec_res(const struct Packet &pkt_ptr, int current_abin, struct spec
 }
 
 #ifdef MPI_ON
-static void mpi_reduce_spectra(int my_rank, struct spec &spectra, int numtimesteps) {
+static void mpi_reduce_spectra(int my_rank, struct Spectra &spectra, int numtimesteps) {
   for (int n = 0; n < numtimesteps; n++) {
     MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : spectra.timesteps[n].flux, spectra.timesteps[n].flux, MNUBINS, MPI_DOUBLE,
                MPI_SUM, 0, MPI_COMM_WORLD);

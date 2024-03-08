@@ -339,7 +339,7 @@ static void do_macroatom_ionisation(const int modelgridindex, const int element,
   *level = upper;
 }
 
-void do_macroatom(struct Packet &pkt_ptr, const struct mastate &pktmastate)
+void do_macroatom(struct Packet &pkt_ptr, const struct MacroAtomState &pktmastate)
 /// Material for handling activated macro atoms.
 {
   const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr.where);
@@ -912,7 +912,7 @@ auto col_ionization_ratecoeff(const float T_e, const float nne, const int elemen
 }
 
 auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans, int element, int ion,
-                                int upper, const struct level_transition &downtransition) -> double
+                                int upper, const struct LevelTransition &downtransition) -> double
 // multiply by upper level population to get a rate per second
 {
   const int lower = downtransition.targetlevelindex;

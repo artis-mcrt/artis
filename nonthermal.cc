@@ -2024,7 +2024,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
       const double frac_deposition = nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition;
       if (frac_deposition > 0.) {
         const int lineindex = nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex;
-        const struct linelist_entry *line = &globals::linelist[lineindex];
+        const struct TransitionLine *line = &globals::linelist[lineindex];
         const int element = line->elementindex;
         const int ion = line->ionindex;
         const int lower = line->lowerlevelindex;

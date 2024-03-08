@@ -230,7 +230,7 @@ static auto get_event_expansion_opacity(
 
 static auto get_event(const int modelgridindex,
                       const struct Packet &pkt_ptr,  // pointer to packet object
-                      const struct Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, struct mastate &mastate,
+                      const struct Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, struct MacroAtomState &mastate,
                       const double tau_rnd,    // random optical depth until which the packet travels
                       const double abort_dist  // maximal travel distance before packet leaves cell or time step ends
                       ) -> std::tuple<double, int, bool>
@@ -606,7 +606,7 @@ static void rpkt_event_continuum(struct Packet &pkt_ptr, const struct Rpkt_conti
   }
 }
 
-static void rpkt_event_boundbound(struct Packet &pkt_ptr, struct mastate &pktmastate, const int mgi) {
+static void rpkt_event_boundbound(struct Packet &pkt_ptr, struct MacroAtomState &pktmastate, const int mgi) {
   /// bound-bound transition occured
   /// activate macro-atom in corresponding upper-level. Actually all the information
   /// about the macro atoms state has already been set by closest_transition, so
@@ -734,7 +734,7 @@ static auto do_rpkt_step(struct Packet &pkt_ptr, const double t2) -> bool
   const int mgi = grid::get_cell_modelgridindex(cellindex);
   const int nonemptymgi = (mgi != grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
 
-  static thread_local struct mastate pktmastate {};
+  static thread_local struct MacroAtomState pktmastate {};
   static thread_local struct Phixslist phixslist {
     .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
     .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),

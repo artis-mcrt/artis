@@ -29,14 +29,14 @@ namespace radfield {
 
 static std::vector<double> J_normfactor;
 
-struct radfieldbin_solution {
+struct RadFieldBinSolution {
   // these two parameters are used in the current timestep, but were calculated
   // from the values of J and nuJ in the previous timestep
   float W;    // dilution (scaling) factor
   float T_R;  // radiation temperature
 };
 
-struct radfieldbin {
+struct RadFieldBin {
   double J_raw;  // value needs to be multipled by J_normfactor to get the true value
   double nuJ_raw;
   int contribcount;
@@ -45,8 +45,8 @@ struct radfieldbin {
 static constexpr double radfieldbins_delta_nu =
     (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1);  // - 1 for the top super bin
 
-static struct radfieldbin *radfieldbins = nullptr;
-static struct radfieldbin_solution *radfieldbin_solutions = nullptr;
+static struct RadFieldBin *radfieldbins = nullptr;
+static struct RadFieldBinSolution *radfieldbin_solutions = nullptr;
 
 #ifdef MPI_ON
 static MPI_Win win_radfieldbin_solutions = MPI_WIN_NULL;
@@ -89,12 +89,12 @@ static std::vector<double> nuJ;
 static std::vector<double> nuJ_reduced_save;
 #endif
 
-using gsl_planck_integral_paras = struct {
+struct gsl_planck_integral_paras {
   double T_R;
   bool times_nu;
 };
 
-using gsl_T_R_solver_paras = struct {
+struct gsl_T_R_solver_paras {
   int modelgridindex;
   int binindex;
 };
@@ -289,11 +289,11 @@ void init(int my_rank, int ndo_nonempty)
       fflush(radfieldfile);
     }
 
-    const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin);
+    const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct RadFieldBin);
     radfieldbins =
-        static_cast<struct radfieldbin *>(malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin)));
+        static_cast<struct RadFieldBin *>(malloc(nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct RadFieldBin)));
 
-    const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution);
+    const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(struct RadFieldBinSolution);
 
 #ifdef MPI_ON
     {
@@ -302,8 +302,8 @@ void init(int my_rank, int ndo_nonempty)
       if (globals::rank_in_node == 0) {
         my_rank_cells += nonempty_npts_model - (my_rank_cells * globals::node_nprocs);
       }
-      auto size = static_cast<MPI_Aint>(my_rank_cells * RADFIELDBINCOUNT * sizeof(struct radfieldbin_solution));
-      int disp_unit = sizeof(struct radfieldbin_solution);
+      auto size = static_cast<MPI_Aint>(my_rank_cells * RADFIELDBINCOUNT * sizeof(struct RadFieldBinSolution));
+      int disp_unit = sizeof(struct RadFieldBinSolution);
       MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &radfieldbin_solutions,
                               &win_radfieldbin_solutions);
 
@@ -717,7 +717,7 @@ auto radfield(double nu, int modelgridindex) -> double
 }
 
 constexpr auto gsl_integrand_planck(const double nu, void *voidparas) -> double {
-  const auto *paras = static_cast<gsl_planck_integral_paras *>(voidparas);
+  const auto *paras = static_cast<struct gsl_planck_integral_paras *>(voidparas);
   const double T_R = paras->T_R;
 
   double integrand = TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / (std::expm1(HOVERKB * nu / T_R));
@@ -736,7 +736,7 @@ static auto planck_integral(double T_R, double nu_lower, double nu_upper, const 
   const double epsrel = 1e-10;
   const double epsabs = 0.;
 
-  gsl_planck_integral_paras intparas = {.T_R = T_R, .times_nu = times_nu};
+  struct gsl_planck_integral_paras intparas = {.T_R = T_R, .times_nu = times_nu};
 
   const gsl_function F_planck = {.function = &gsl_integrand_planck, .params = &intparas};
 
@@ -795,8 +795,8 @@ static auto delta_nu_bar(double T_R, void *paras) -> double
 // difference between the average nu and the average nu of a Planck function
 // at temperature T_R, in the frequency range corresponding to a bin
 {
-  const int modelgridindex = (static_cast<gsl_T_R_solver_paras *>(paras))->modelgridindex;
-  const int binindex = (static_cast<gsl_T_R_solver_paras *>(paras))->binindex;
+  const int modelgridindex = (static_cast<struct gsl_T_R_solver_paras *>(paras))->modelgridindex;
+  const int binindex = (static_cast<struct gsl_T_R_solver_paras *>(paras))->binindex;
 
   const double nu_lower = get_bin_nu_lower(binindex);
   const double nu_upper = get_bin_nu_upper(binindex);
@@ -838,7 +838,7 @@ static auto delta_nu_bar(double T_R, void *paras) -> double
 static auto find_T_R(int modelgridindex, int binindex) -> float {
   double T_R = 0.;
 
-  gsl_T_R_solver_paras paras;
+  struct gsl_T_R_solver_paras paras {};
   paras.modelgridindex = modelgridindex;
   paras.binindex = binindex;
 

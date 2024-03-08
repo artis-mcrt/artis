@@ -16,7 +16,7 @@
 
 #include "artisoptions.h"
 
-struct time {
+struct TimeStep {
   double start;                    // time at start of this timestep. [s]
   double width;                    // Width of timestep. [s]
   double mid;                      // Mid time in step - computed logarithmically. [s]
@@ -38,14 +38,14 @@ struct time {
   std::atomic<int> pellet_decays;  // Number of pellets that decay in this time step.
 };
 
-struct bflist_t {
+struct BFListEntry {
   int elementindex;
   int ionindex;
   int levelindex;
   int phixstargetindex;
 };
 
-struct fullphixslist {
+struct FullPhotoionTransition {
   double nu_edge;
   int element;
   int ion;
@@ -57,18 +57,18 @@ struct fullphixslist {
   int index_in_groundphixslist;
 };
 
-struct groundphixslist {
+struct GroundPhotoion {
   double nu_edge;
   int element;
   int ion;
 };
 
-struct phixstarget_entry {
+struct PhotoionTarget {
   double probability;  // fraction of phixs cross section leading to this final level
   int levelindex;      // index of upper ion level after photoionisation
 };
 
-struct level_transition {
+struct LevelTransition {
   int lineindex;
   int targetlevelindex;
   float einstein_A;
@@ -77,13 +77,13 @@ struct level_transition {
   bool forbidden;
 };
 
-struct levellist_entry {
-  double epsilon{-1};                         /// Excitation energy of this level relative to the neutral ground level.
-  struct level_transition *uptrans{nullptr};  /// Allowed upward transitions from this level
-  struct level_transition *downtrans{nullptr};  /// Allowed downward transitions from this level
+struct EnergyLevel {
+  double epsilon{-1};                          /// Excitation energy of this level relative to the neutral ground level.
+  struct LevelTransition *uptrans{nullptr};    /// Allowed upward transitions from this level
+  struct LevelTransition *downtrans{nullptr};  /// Allowed downward transitions from this level
   int nuptrans{0};
   int ndowntrans{0};
-  struct phixstarget_entry *phixstargets{nullptr};  /// pointer to table of target states and probabilities
+  struct PhotoionTarget *phixstargets{nullptr};  /// pointer to table of target states and probabilities
   float *photoion_xs{nullptr};  /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
   int nphixstargets{0};         /// length of phixstargets array:
   float stat_weight{0};         /// Statistical weight of this level.
@@ -93,14 +93,14 @@ struct levellist_entry {
   bool metastable{};  ///
 };
 
-struct ionlist_entry {
-  struct levellist_entry *levels;  /// Carries information for each level: 0,1,...,nlevels-1
-  int ionstage;                    /// Which ionisation stage: XI=0, XII=1, XIII=2, ...
-  int nlevels;                     /// Number of levels for this ionisation stage
-  int nlevels_nlte;                /// number of nlte levels for this ion
-  int first_nlte;                  /// index into nlte_pops array of a grid cell
-  int ionisinglevels;              /// Number of levels which have a bf-continuum
-  int maxrecombininglevel;         /// level index of the highest level with a non-zero recombination rate
+struct Ion {
+  struct EnergyLevel *levels;  /// Carries information for each level: 0,1,...,nlevels-1
+  int ionstage;                /// Which ionisation stage: XI=0, XII=1, XIII=2, ...
+  int nlevels;                 /// Number of levels for this ionisation stage
+  int nlevels_nlte;            /// number of nlte levels for this ion
+  int first_nlte;              /// index into nlte_pops array of a grid cell
+  int ionisinglevels;          /// Number of levels which have a bf-continuum
+  int maxrecombininglevel;     /// level index of the highest level with a non-zero recombination rate
   int nlevels_groundterm;
   int coolingoffset;
   int ncoolingterms;
@@ -112,10 +112,10 @@ struct ionlist_entry {
   // ionsphixslist *phixslist;
 };
 
-struct elementlist_entry {
-  ionlist_entry *ions{nullptr};  /// Carries information for each ion: 0,1,...,nions-1
-  int nions{0};                  /// Number of ions for the current element
-  int anumber{-1};               /// Atomic number
+struct Element {
+  Ion *ions{nullptr};  /// Carries information for each ion: 0,1,...,nions-1
+  int nions{0};        /// Number of ions for the current element
+  int anumber{-1};     /// Atomic number
   //  int uppermost_ion;                       /// Highest ionisation stage which has a decent population for a given
   //  cell
   /// Be aware that this must not be used outside of the update_grid routine
@@ -126,7 +126,7 @@ struct elementlist_entry {
   bool has_nlte_levels{false};
 };
 
-struct linelist_entry {
+struct TransitionLine {
   double nu;  /// Frequency of the line transition
   float einstein_A;
   int elementindex;     /// It's a transition of element (not its atomic number,
@@ -136,7 +136,7 @@ struct linelist_entry {
   int lowerlevelindex;  /// and lower levels
 };
 
-struct gslintegration_paras {
+struct GSLIntegrationParas {
   double nu_edge;
   float T;
   float *photoion_xs;
@@ -187,7 +187,7 @@ namespace globals {
 
 extern std::array<double, 3> syn_dir;  // vector pointing from origin to observer
 
-extern std::unique_ptr<struct time[]> timesteps;
+extern std::unique_ptr<struct TimeStep[]> timesteps;
 
 extern std::vector<double> dep_estimator_gamma;
 
@@ -224,19 +224,19 @@ extern double max_path_step;
 extern int opacity_case;
 
 extern int nlines;
-extern std::vector<struct elementlist_entry> elements;
+extern std::vector<struct Element> elements;
 
-extern const struct linelist_entry *linelist;
-extern std::vector<struct bflist_t> bflist;
+extern const struct TransitionLine *linelist;
+extern std::vector<struct BFListEntry> bflist;
 
 // for USE_LUT_BFHEATING = true
 extern double *bfheating_coeff;
 
 extern std::vector<double> allcont_nu_edge;
-extern const struct fullphixslist *allcont;
+extern const struct FullPhotoionTransition *allcont;
 
 // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
-extern struct groundphixslist *groundcont;
+extern struct GroundPhotoion *groundcont;
 
 extern int nbfcontinua;
 extern int nbfcontinua_ground;

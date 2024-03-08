@@ -36,9 +36,9 @@ bool use_cellcache = false;
 std::mt19937 stdrng(std::random_device{}());
 gsl_integration_workspace *gslworkspace = nullptr;
 
-static void do_angle_bin(const int a, struct Packet *pkts, bool load_allrank_packets, struct spec &rpkt_spectra,
-                         struct spec &stokes_i, struct spec &stokes_q, struct spec &stokes_u,
-                         struct spec &gamma_spectra) {
+static void do_angle_bin(const int a, struct Packet *pkts, bool load_allrank_packets, struct Spectra &rpkt_spectra,
+                         struct Spectra &stokes_i, struct Spectra &stokes_q, struct Spectra &stokes_u,
+                         struct Spectra &gamma_spectra) {
   std::vector<double> rpkt_light_curve_lum(globals::ntimesteps, 0.);
   std::vector<double> rpkt_light_curve_lumcmf(globals::ntimesteps, 0.);
   std::vector<double> gamma_light_curve_lum(globals::ntimesteps, 0.);
@@ -247,13 +247,13 @@ auto main(int argc, char *argv[]) -> int {
 
   init_spectrum_trace();  // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
 
-  struct spec rpkt_spectra;
+  struct Spectra rpkt_spectra;
 
-  struct spec stokes_i;
-  struct spec stokes_q;
-  struct spec stokes_u;
+  struct Spectra stokes_i;
+  struct Spectra stokes_q;
+  struct Spectra stokes_u;
 
-  struct spec gamma_spectra;
+  struct Spectra gamma_spectra;
 
   time_init();
 

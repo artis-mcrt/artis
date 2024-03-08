@@ -22,7 +22,7 @@ enum packet_type {
 constexpr int EMTYPE_NOTSET = -9999000;
 constexpr int EMTYPE_FREEFREE = -9999999;
 
-struct mastate {
+struct MacroAtomState {
   int element;         /// macro atom of type element (this is an element index)
   int ion;             /// in ionstage ion (this is an ion index)
   int level;           /// and level=level (this is a level index)

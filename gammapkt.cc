@@ -26,12 +26,12 @@
 namespace gammapkt {
 // Code for handing gamma rays - creation and propagation
 
-struct gamma_line {
+struct GammaLine {
   double energy{};  // in erg
   double probability{};
 };
 
-static std::vector<std::vector<struct gamma_line>> gamma_spectra;
+static std::vector<std::vector<struct GammaLine>> gamma_spectra;
 
 struct gammaline {
   int nucindex;       // is it a Ni56, Co56, a fake line, etc

@@ -187,7 +187,7 @@ auto get_elementindex(const int Z) -> int
 /// a negative value is returned to flag this event.
 {
   const auto elem =
-      std::ranges::find_if(globals::elements, [Z](const elementlist_entry &element) { return element.anumber == Z; });
+      std::ranges::find_if(globals::elements, [Z](const struct Element &element) { return element.anumber == Z; });
   if (elem != globals::elements.end()) {
     return std::distance(globals::elements.begin(), elem);
   }

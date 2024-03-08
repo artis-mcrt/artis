@@ -40,7 +40,7 @@
 
 namespace grid {
 
-struct modelgrid_t *modelgrid = nullptr;
+struct ModelGridCell *modelgrid = nullptr;
 
 static char coordlabel[3];
 
@@ -62,7 +62,12 @@ static double mfeg;  /// Total mass of Fe group elements in ejecta
 
 static int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usually 1 or 0)
 
-struct gridcell *cell = nullptr;
+struct PropGridCell {
+  double pos_min[3];  // Initial co-ordinates of inner most corner of cell.
+  int modelgridindex;
+};
+
+struct PropGridCell *cell = nullptr;
 
 static std::vector<int> mg_associated_cells;
 static std::vector<int> nonemptymgi_of_mgi;
@@ -371,7 +376,7 @@ static void set_npts_model(int new_npts_model) {
   npts_model = new_npts_model;
 
   assert_always(modelgrid == nullptr);
-  modelgrid = static_cast<struct modelgrid_t *>(calloc(npts_model + 1, sizeof(struct modelgrid_t)));
+  modelgrid = static_cast<struct ModelGridCell *>(calloc(npts_model + 1, sizeof(struct ModelGridCell)));
   assert_always(modelgrid != nullptr);
   mg_associated_cells.resize(npts_model + 1, 0);
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
@@ -823,7 +828,7 @@ static void allocate_nonemptycells_composition_cooling()
     assert_always(modelgrid[modelgridindex].elements_uppermost_ion != nullptr);
 
     modelgrid[modelgridindex].composition =
-        static_cast<struct compositionlist_entry *>(malloc(get_nelements() * sizeof(struct compositionlist_entry)));
+        static_cast<struct ModelCellElement *>(malloc(get_nelements() * sizeof(struct ModelCellElement)));
 
     if (modelgrid[modelgridindex].composition == nullptr) {
       printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n", modelgridindex);
@@ -2042,7 +2047,7 @@ static void setup_grid_cartesian_3d()
   assert_always(ncoordgrid[0] == ncoordgrid[2]);
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  cell = static_cast<struct gridcell *>(malloc(ngrid * sizeof(struct gridcell)));
+  cell = static_cast<struct PropGridCell *>(malloc(ngrid * sizeof(struct PropGridCell)));
 
   coordlabel[0] = 'X';
   coordlabel[1] = 'Y';
@@ -2080,7 +2085,7 @@ static void setup_grid_spherical1d() {
   ncoordgrid[2] = 1;
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  cell = static_cast<struct gridcell *>(malloc(ngrid * sizeof(struct gridcell)));
+  cell = static_cast<struct PropGridCell *>(malloc(ngrid * sizeof(struct PropGridCell)));
 
   // direct mapping, cellindex and modelgridindex are the same
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {
@@ -2108,7 +2113,7 @@ static void setup_grid_cylindrical_2d() {
   ncoordgrid[2] = ncoord_model[2];
 
   ngrid = ncoordgrid[0] * ncoordgrid[1];
-  cell = static_cast<struct gridcell *>(malloc(ngrid * sizeof(struct gridcell)));
+  cell = static_cast<struct PropGridCell *>(malloc(ngrid * sizeof(struct PropGridCell)));
 
   // direct mapping, cellindex and modelgridindex are the same
   for (int cellindex = 0; cellindex < get_npts_model(); cellindex++) {

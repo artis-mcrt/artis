@@ -94,11 +94,11 @@ static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoint
     assert_always(upperlevel >= 0);
     assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets == 0);
     globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
-    *mem_usage_phixs += sizeof(phixstarget_entry);
+    *mem_usage_phixs += sizeof(struct ModelCellElement);
 
     assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets == nullptr);
     globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
-        static_cast<phixstarget_entry *>(calloc(1, sizeof(phixstarget_entry)));
+        static_cast<struct PhotoionTarget *>(calloc(1, sizeof(struct PhotoionTarget)));
     assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != nullptr);
 
     if (single_level_top_ion &&
@@ -117,10 +117,10 @@ static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoint
     if (!single_level_top_ion || upperion < get_nions(element) - 1)  // in case the top ion has nlevelsmax = 1
     {
       globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = in_nphixstargets;
-      *mem_usage_phixs += in_nphixstargets * sizeof(phixstarget_entry);
+      *mem_usage_phixs += in_nphixstargets * sizeof(PhotoionTarget);
 
       globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
-          static_cast<phixstarget_entry *>(calloc(in_nphixstargets, sizeof(phixstarget_entry)));
+          static_cast<struct PhotoionTarget *>(calloc(in_nphixstargets, sizeof(struct PhotoionTarget)));
       assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != nullptr);
 
       double probability_sum = 0.;
@@ -142,9 +142,9 @@ static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoint
     } else  // file has table of target states and probabilities but our top ion is limited to one level
     {
       globals::elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
-      *mem_usage_phixs += sizeof(phixstarget_entry);
+      *mem_usage_phixs += sizeof(PhotoionTarget);
       globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets =
-          static_cast<phixstarget_entry *>(calloc(1, sizeof(phixstarget_entry)));
+          static_cast<struct PhotoionTarget *>(calloc(1, sizeof(struct PhotoionTarget)));
       assert_always(globals::elements[element].ions[lowerion].levels[lowerlevel].phixstargets != nullptr);
 
       for (int i = 0; i < in_nphixstargets; i++) {
@@ -495,7 +495,7 @@ static void read_ion_transitions(std::fstream &ftransitiondata, const int tottra
 static void add_transitions_to_unsorted_linelist(const int element, const int ion, const int nlevelsmax,
                                                  const std::vector<struct transitiontable_entry> &transitiontable,
                                                  struct transitions *transitions, int *lineindex,
-                                                 std::vector<struct linelist_entry> &temp_linelist) {
+                                                 std::vector<struct TransitionLine> &temp_linelist) {
   const int lineindex_initial = *lineindex;
   size_t totupdowntrans = 0;
   // pass 0 to get transition counts of each level
@@ -504,7 +504,7 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
     *lineindex = lineindex_initial;
     if (pass == 1) {
       int alltransindex = 0;
-      struct level_transition *alltransblock = nullptr;
+      struct LevelTransition *alltransblock = nullptr;
 
 #ifdef MPI_ON
       MPI_Barrier(MPI_COMM_WORLD);
@@ -512,13 +512,13 @@ static void add_transitions_to_unsorted_linelist(const int element, const int io
 
       auto [_, my_rank_trans] = get_range_chunk(totupdowntrans, globals::node_nprocs, globals::rank_in_node);
 
-      auto size = static_cast<MPI_Aint>(my_rank_trans * sizeof(linelist_entry));
-      int disp_unit = sizeof(linelist_entry);
+      auto size = static_cast<MPI_Aint>(my_rank_trans * sizeof(struct TransitionLine));
+      int disp_unit = sizeof(struct TransitionLine);
       MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &alltransblock, &win);
 
       MPI_Win_shared_query(win, 0, &size, &disp_unit, &alltransblock);
 #else
-      alltransblock = static_cast<struct level_transition *>(malloc(totupdowntrans * sizeof(struct level_transition)));
+      alltransblock = static_cast<struct LevelTransition *>(malloc(totupdowntrans * sizeof(struct LevelTransition)));
 #endif
 
       for (int level = 0; level < nlevelsmax; level++) {
@@ -714,7 +714,7 @@ static void read_atomicdata_files() {
   set_nelements(nelements_in);
 
   /// Initialize the linelist
-  std::vector<struct linelist_entry> temp_linelist;
+  std::vector<struct TransitionLine> temp_linelist;
 
   std::vector<struct transitiontable_entry> transitiontable;
 
@@ -760,7 +760,7 @@ static void read_atomicdata_files() {
     globals::elements[element].uniqueionindexstart = uniqueionindex;
 
     /// Initialize the elements ionlist
-    globals::elements[element].ions = static_cast<ionlist_entry *>(calloc(nions, sizeof(ionlist_entry)));
+    globals::elements[element].ions = static_cast<struct Ion *>(calloc(nions, sizeof(struct Ion)));
     assert_always(globals::elements[element].ions != nullptr);
 
     /// now read in data for all ions of the current element. before doing so initialize
@@ -861,7 +861,7 @@ static void read_atomicdata_files() {
       assert_always(globals::elements[element].ions[ion].Alpha_sp != nullptr);
 
       globals::elements[element].ions[ion].levels =
-          static_cast<struct levellist_entry *>(calloc(nlevelsmax, sizeof(struct levellist_entry)));
+          static_cast<struct EnergyLevel *>(calloc(nlevelsmax, sizeof(struct EnergyLevel)));
       assert_always(globals::elements[element].ions[ion].levels != nullptr);
 
       auto *transitions = static_cast<struct transitions *>(calloc(nlevelsmax, sizeof(struct transitions)));
@@ -935,8 +935,8 @@ static void read_atomicdata_files() {
   printout("total downtrans %d\n", totaldowntrans);
 
   printout("[info] mem_usage: transition lists occupy %.3f MB (this rank) and %.3f MB (shared on node)\n",
-           2 * uniquelevelindex * sizeof(struct level_transition *) / 1024. / 1024.,
-           (totaluptrans + totaldowntrans) * sizeof(struct level_transition) / 1024. / 1024.);
+           2 * uniquelevelindex * sizeof(struct LevelTransition *) / 1024. / 1024.,
+           (totaluptrans + totaldowntrans) * sizeof(struct LevelTransition) / 1024. / 1024.);
 
   if (globals::rank_in_node == 0) {
     // sort the lineline in descending frequency
@@ -965,7 +965,7 @@ static void read_atomicdata_files() {
   }
 
   // create a linelist shared on node and then copy data across, freeing the local copy
-  struct linelist_entry *nonconstlinelist = nullptr;
+  struct TransitionLine *nonconstlinelist = nullptr;
 #ifdef MPI_ON
   MPI_Win win = MPI_WIN_NULL;
 
@@ -975,17 +975,18 @@ static void read_atomicdata_files() {
     my_rank_lines += globals::nlines - (my_rank_lines * globals::node_nprocs);
   }
 
-  MPI_Aint size = my_rank_lines * static_cast<MPI_Aint>(sizeof(linelist_entry));
-  int disp_unit = sizeof(linelist_entry);
+  MPI_Aint size = my_rank_lines * static_cast<MPI_Aint>(sizeof(struct TransitionLine));
+  int disp_unit = sizeof(struct TransitionLine);
   MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &nonconstlinelist, &win);
 
   MPI_Win_shared_query(win, 0, &size, &disp_unit, &nonconstlinelist);
 #else
-  nonconstlinelist = static_cast<struct linelist_entry *>(malloc(globals::nlines * sizeof(linelist_entry)));
+  nonconstlinelist = static_cast<struct TransitionLine *>(malloc(globals::nlines * sizeof(struct TransitionLine)));
 #endif
 
   if (globals::rank_in_node == 0) {
-    memcpy(static_cast<void *>(nonconstlinelist), temp_linelist.data(), globals::nlines * sizeof(linelist_entry));
+    memcpy(static_cast<void *>(nonconstlinelist), temp_linelist.data(),
+           globals::nlines * sizeof(struct TransitionLine));
     temp_linelist.clear();
   }
 
@@ -995,7 +996,7 @@ static void read_atomicdata_files() {
   globals::linelist = nonconstlinelist;
   nonconstlinelist = nullptr;
   printout("[info] mem_usage: linelist occupies %.3f MB (node shared memory)\n",
-           globals::nlines * sizeof(struct linelist_entry) / 1024. / 1024);
+           globals::nlines * sizeof(struct TransitionLine) / 1024. / 1024);
 
   /// Save sorted linelist into a file
   // if (rank_global == 0)
@@ -1355,7 +1356,7 @@ static void setup_phixs_list() {
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     globals::groundcont =
-        static_cast<struct groundphixslist *>(malloc(globals::nbfcontinua_ground * sizeof(struct groundphixslist)));
+        static_cast<struct GroundPhotoion *>(malloc(globals::nbfcontinua_ground * sizeof(struct GroundPhotoion)));
     assert_always(globals::groundcont != nullptr);
 
     int groundcontindex = 0;
@@ -1381,10 +1382,10 @@ static void setup_phixs_list() {
               [](const auto &a, const auto &b) { return static_cast<bool>(a.nu_edge < b.nu_edge); });
   }
 
-  auto *nonconstallcont =
-      static_cast<struct fullphixslist *>(malloc(globals::nbfcontinua * sizeof(struct fullphixslist)));
+  auto *nonconstallcont = static_cast<struct FullPhotoionTransition *>(
+      malloc(globals::nbfcontinua * sizeof(struct FullPhotoionTransition)));
   printout("[info] mem_usage: photoionisation list occupies %.3f MB\n",
-           globals::nbfcontinua * (sizeof(fullphixslist)) / 1024. / 1024.);
+           globals::nbfcontinua * (sizeof(struct FullPhotoionTransition)) / 1024. / 1024.);
   size_t nbftables = 0;
   int allcontindex = 0;
   for (int element = 0; element < get_nelements(); element++) {
@@ -1449,7 +1450,7 @@ static void setup_phixs_list() {
     MPI_Win win_allphixsblock = MPI_WIN_NULL;
     auto size =
         static_cast<MPI_Aint>((globals::rank_in_node == 0) ? nbftables * globals::NPHIXSPOINTS * sizeof(float) : 0);
-    int disp_unit = sizeof(linelist_entry);
+    int disp_unit = sizeof(struct TransitionLine);
 
     MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node, &allphixsblock, &win_allphixsblock);
     MPI_Win_shared_query(win_allphixsblock, MPI_PROC_NULL, &size, &disp_unit, &allphixsblock);
@@ -1963,7 +1964,7 @@ void time_init()
   /// t=globals::tmin is the start of the calculation. t=globals::tmax is the end of the calculation.
   /// globals::ntimesteps is the number of time steps
 
-  globals::timesteps = std::make_unique<struct time[]>(globals::ntimesteps + 1);
+  globals::timesteps = std::make_unique<struct TimeStep[]>(globals::ntimesteps + 1);
 
   /// Now set the individual time steps
   switch (TIMESTEP_SIZE_METHOD) {
