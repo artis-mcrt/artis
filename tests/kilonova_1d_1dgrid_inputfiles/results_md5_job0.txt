@@ -13,5 +13,5 @@ f5b097e63480ea2b54bb88459f72b19a  modelgridrankassignments.out
 e763c71053277f450be602d76c2530d6  packets00_0001.out
 8269008eb999358088439c0330a996fd  spec.out
 a351f1711fecd60c023d0ba7332092db  timesteps.out
-1562cb1d6e35294fef43933942689fee  job0/estimators_0000.out
-b6fdebf56f3b91161ef78489a3a6df56  job0/estimators_0001.out
+fa8eda973b70017c5865986a79773981  job0/estimators_0000.out
+25de4842029f00f80dc44c5a450dffb4  job0/estimators_0001.out
