@@ -42,13 +42,14 @@ namespace grid {
 
 struct modelgrid_t *modelgrid = nullptr;
 
-int ncoordgrid[3];  /// propagation grid dimensions
+static char coordlabel[3];
+
+static int ncoordgrid[3];  /// propagation grid dimensions
 int ngrid;
-char coordlabel[3];
 
 static enum gridtypes model_type = GRID_SPHERICAL1D;
-size_t npts_model = 0;           // number of model grid cells
-size_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
+static size_t npts_model = 0;           // number of model grid cells
+static size_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
 static double t_model = -1.;  // time at which densities in input model are correct.
 static double *vout_model = nullptr;

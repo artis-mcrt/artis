@@ -78,9 +78,7 @@ constexpr auto get_ngriddimensions() -> int {
 
 extern struct modelgrid_t *modelgrid;
 
-extern int ncoordgrid[3];
 extern int ngrid;
-extern char coordlabel[3];
 
 [[nodiscard]] auto get_elements_uppermost_ion(int modelgridindex, int element) -> int;
 void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);
