@@ -653,13 +653,17 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
 }
 
 void update_estimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                       const double doppler_nucmf_on_nurf, const Phixslist &phixslist) {
+                       const double doppler_nucmf_on_nurf, const Phixslist &phixslist, const bool thickcell) {
   if (distance_e_cmf == 0) {
     return;
   }
 
   safeadd(J[nonemptymgi], distance_e_cmf);
   safeadd(nuJ[nonemptymgi], distance_e_cmf * nu_cmf);
+
+  if (thickcell) {
+    return;
+  }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     update_bfestimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf, phixslist);

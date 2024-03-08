@@ -689,7 +689,8 @@ static void rpkt_event_thickcell(Packet &pkt_ptr)
 
 static void update_estimators(const double e_cmf, const double nu_cmf, const double distance,
                               const double doppler_nucmf_on_nurf, const int nonemptymgi,
-                              const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const Phixslist &phixslist)
+                              const Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, const Phixslist &phixslist,
+                              const bool thickcell)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.
@@ -698,7 +699,11 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   assert_testmodeonly(nonemptymgi >= 0);
   const double distance_e_cmf = distance * e_cmf;
 
-  radfield::update_estimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf, phixslist);
+  radfield::update_estimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf, phixslist, thickcell);
+
+  if (thickcell) {
+    return;
+  }
 
   /// ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
   safeadd(globals::ffheatingestimator[nonemptymgi], distance_e_cmf * chi_rpkt_cont.ffheating);
@@ -809,11 +814,12 @@ static auto do_rpkt_step(Packet &pkt_ptr, const double t2) -> bool
   /// Get distance to the next physical event (continuum or bound-bound)
   double edist = -1;
   bool event_is_boundbound = true;
+  const bool thickcell = grid::modelgrid[mgi].thick == 1;
   if (nonemptymgi < 0) {
     /// for empty cells no physical event occurs. The packets just propagate.
     edist = std::numeric_limits<double>::max();
     pkt_ptr.next_trans = -1;  // skip over lines and search for line list position on the next non-empty cell
-  } else if (grid::modelgrid[mgi].thick == 1) [[unlikely]] {
+  } else if (thickcell) [[unlikely]] {
     /// In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
 
     const double chi_grey = grid::get_kappagrey(mgi) * grid::get_rho(mgi) *
@@ -821,9 +827,6 @@ static auto do_rpkt_step(Packet &pkt_ptr, const double t2) -> bool
 
     edist = tau_next / chi_grey;
     pkt_ptr.next_trans = -1;
-    if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
-      std::ranges::fill(phixslist.groundcont_gamma_contr, 0.);
-    }
   } else if constexpr (EXPANSIONOPACITIES_ON) {
     std::tie(edist, event_is_boundbound) =
         get_event_expansion_opacity(mgi, nonemptymgi, pkt_ptr, chi_rpkt_cont, phixslist, tau_next, abort_dist);
@@ -841,7 +844,7 @@ static auto do_rpkt_step(Packet &pkt_ptr, const double t2) -> bool
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, sdist / 2.);
     if (nonemptymgi >= 0) {
       update_estimators(pkt_ptr.e_cmf, pkt_ptr.nu_cmf, sdist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont,
-                        phixslist);
+                        phixslist, thickcell);
     }
     move_pkt_withtime(pkt_ptr, sdist / 2.);
 
@@ -861,11 +864,11 @@ static auto do_rpkt_step(Packet &pkt_ptr, const double t2) -> bool
     // bound-bound or continuum event
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, edist / 2.);
     update_estimators(pkt_ptr.e_cmf, pkt_ptr.nu_cmf, edist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont,
-                      phixslist);
+                      phixslist, thickcell);
     move_pkt_withtime(pkt_ptr, edist / 2.);
 
     // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
-    if (grid::modelgrid[mgi].thick == 1) {
+    if (thickcell) {
       rpkt_event_thickcell(pkt_ptr);
     } else if (event_is_boundbound) {
       if constexpr (EXPANSIONOPACITIES_ON) {
@@ -888,7 +891,7 @@ static auto do_rpkt_step(Packet &pkt_ptr, const double t2) -> bool
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt_ptr, tdist / 2.);
     if (nonemptymgi >= 0) {
       update_estimators(pkt_ptr.e_cmf, pkt_ptr.nu_cmf, tdist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont,
-                        phixslist);
+                        phixslist, thickcell);
     }
     move_pkt_withtime(pkt_ptr, tdist / 2.);
     pkt_ptr.prop_time = t2;
