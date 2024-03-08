@@ -558,7 +558,7 @@ static void rpkt_event_continuum(struct packet *pkt_ptr, const struct rpkt_conti
     const double chi_bf_rand = rng_uniform() * chi_bf_inrest;
 
     // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand
-    const auto &upperval = std::upper_bound(phixslist.chi_bf_sum.data() + phixslist.allcontbegin,
+    const auto *upperval = std::upper_bound(phixslist.chi_bf_sum.data() + phixslist.allcontbegin,
                                             phixslist.chi_bf_sum.data() + phixslist.allcontend - 1, chi_bf_rand);
     const int allcontindex = std::distance(phixslist.chi_bf_sum.data(), upperval);
     assert_always(allcontindex < phixslist.allcontend);
@@ -1030,11 +1030,6 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, stru
   /// is possible, so set their kappas to zero
   // break the list into nu >= nu_edge and the remainder (nu < nu_edge)
 
-  // first element i such that nu < nu_edge[i]
-  // const int lastindex = std::upper_bound(globals::allcont_nu_edge, globals::allcont_nu_edge + globals::nbfcontinua,
-  // nu,
-  //                                        [](const double &nu, const double &nu_edge) { return nu < nu_edge; }) -
-  //                       &globals::allcont_nu_edge[0];
   int i = 0;
   const int nbfcontinua = globals::nbfcontinua;
   const int allcontend =
@@ -1042,9 +1037,9 @@ auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, stru
                     std::upper_bound(globals::allcont_nu_edge.begin(), globals::allcont_nu_edge.end(), nu));
 
   const int allcontbegin = std::distance(
-      globals::allcont_nu_edge.begin(),
+      globals::allcont_nu_edge.data(),
       std::lower_bound(
-          globals::allcont_nu_edge.begin(), globals::allcont_nu_edge.begin() + allcontend, nu,
+          globals::allcont_nu_edge.data(), globals::allcont_nu_edge.data() + allcontend, nu,
           [](const double nu_edge, const double nu_cmf) { return nu_edge * last_phixs_nuovernuedge < nu_cmf; }));
 
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {

@@ -72,7 +72,7 @@ static struct Jb_lu_estimator **Jb_lu_raw = nullptr;          // unnormalised es
 // ** end detailed lines
 
 static float *prev_bfrate_normed = nullptr;  // values from the previous timestep
-static double *bfrate_raw = nullptr;         // unnormalised estimators for the current timestep
+static std::vector<double> bfrate_raw;       // unnormalised estimators for the current timestep
 
 // expensive debugging mode to track the contributions to each bound-free rate estimator
 
@@ -346,7 +346,7 @@ void init(int my_rank, int ndo_nonempty)
     printout("[info] mem_usage: detailed bf estimators for non-empty cells occupy %.3f MB (node shared memory)\n",
              nonempty_npts_model * globals::nbfcontinua * sizeof(float) / 1024. / 1024.);
 
-    bfrate_raw = static_cast<double *>(malloc(nonempty_npts_model * globals::nbfcontinua * sizeof(double)));
+    bfrate_raw.resize(nonempty_npts_model * globals::nbfcontinua);
 
     printout("[info] mem_usage: detailed bf estimator acculumators for non-empty cells occupy %.3f MB\n",
              nonempty_npts_model * globals::nbfcontinua * sizeof(double) / 1024. / 1024.);
@@ -570,7 +570,6 @@ void close_file() {
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    free(bfrate_raw);
 #ifdef MPI_ON
     if (win_radfieldbin_solutions != MPI_WIN_NULL) {
       MPI_Win_free(&win_prev_bfrate_normed);
@@ -594,11 +593,9 @@ void zero_estimators(int modelgridindex)
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    assert_always(bfrate_raw != nullptr);
-    if (grid::get_numassociatedcells(modelgridindex) > 0) {
-      for (int i = 0; i < globals::nbfcontinua; i++) {
-        bfrate_raw[nonemptymgi * globals::nbfcontinua + i] = 0.;
-      }
+    assert_always(!bfrate_raw.empty());
+    for (int i = 0; i < globals::nbfcontinua; i++) {
+      bfrate_raw[nonemptymgi * globals::nbfcontinua + i] = 0.;
     }
   }
 
@@ -631,7 +628,6 @@ void zero_estimators(int modelgridindex)
 static void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
                                 const double doppler_nucmf_on_nurf, const struct phixslist &phixslist) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
-  assert_testmodeonly(bfrate_raw != nullptr);
 
   const int nbfcontinua = globals::nbfcontinua;
 
@@ -641,16 +637,16 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
   // I think the nu_cmf slightly differs from when the phixslist was calculated
   // so the nu condition on this nu_cmf can truncate the phixslist
   const int allcontend =
-      static_cast<int>(std::upper_bound(globals::allcont_nu_edge.data(),
-                                        globals::allcont_nu_edge.data() + phixslist.allcontend, nu_cmf) -
-                       globals::allcont_nu_edge.data());
+      std::distance(globals::allcont_nu_edge.data(),
+                    std::upper_bound(globals::allcont_nu_edge.data(),
+                                     globals::allcont_nu_edge.data() + phixslist.allcontend, nu_cmf));
 
-  const int allcontbegin = static_cast<int>(std::lower_bound(globals::allcont_nu_edge.data() + phixslist.allcontbegin,
-                                                             globals::allcont_nu_edge.data() + allcontend, nu_cmf,
-                                                             [](const double nu_edge, const double nu_cmf) {
-                                                               return nu_edge * last_phixs_nuovernuedge < nu_cmf;
-                                                             }) -
-                                            globals::allcont_nu_edge.data());
+  const int allcontbegin = std::distance(globals::allcont_nu_edge.data(),
+                                         std::lower_bound(globals::allcont_nu_edge.data() + phixslist.allcontbegin,
+                                                          globals::allcont_nu_edge.data() + allcontend, nu_cmf,
+                                                          [](const double nu_edge, const double nu_cmf) {
+                                                            return nu_edge * last_phixs_nuovernuedge < nu_cmf;
+                                                          }));
 
   for (int allcontindex = allcontbegin; allcontindex < allcontend; allcontindex++) {
     safeadd(bfrate_raw[nonemptymgi * nbfcontinua + allcontindex],
@@ -1147,7 +1143,7 @@ void reduce_estimators()
   MPI_Allreduce(MPI_IN_PLACE, nuJ.data(), nonempty_npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    MPI_Allreduce(MPI_IN_PLACE, bfrate_raw, nonempty_npts_model * globals::nbfcontinua, MPI_DOUBLE, MPI_SUM,
+    MPI_Allreduce(MPI_IN_PLACE, bfrate_raw.data(), nonempty_npts_model * globals::nbfcontinua, MPI_DOUBLE, MPI_SUM,
                   MPI_COMM_WORLD);
   }
 
