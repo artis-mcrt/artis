@@ -944,18 +944,18 @@ static void read_atomicdata_files() {
       const double nu = temp_linelist[i].nu;
       const double nu_next = temp_linelist[i + 1].nu;
       if (fabs(nu_next - nu) < (1.e-10 * nu)) {
-        auto *a1 = &temp_linelist[i];
-        auto *a2 = &temp_linelist[i + 1];
+        const auto &a1 = temp_linelist[i];
+        const auto &a2 = temp_linelist[i + 1];
 
-        if ((a1->elementindex == a2->elementindex) && (a1->ionindex == a2->ionindex) &&
-            (a1->lowerlevelindex == a2->lowerlevelindex) && (a1->upperlevelindex == a2->upperlevelindex)) {
-          printout("Duplicate transition line? %s\n", a1->nu == a2->nu ? "nu match exact" : "close to nu match");
-          printout("a: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_atomicnumber(a1->elementindex),
-                   get_ionstage(a1->elementindex, a1->ionindex), a1->lowerlevelindex, a1->upperlevelindex, a1->nu,
-                   1e8 * CLIGHT / a1->nu);
-          printout("b: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_atomicnumber(a2->elementindex),
-                   get_ionstage(a2->elementindex, a2->ionindex), a2->lowerlevelindex, a2->upperlevelindex, a2->nu,
-                   1e8 * CLIGHT / a2->nu);
+        if ((a1.elementindex == a2.elementindex) && (a1.ionindex == a2.ionindex) &&
+            (a1.lowerlevelindex == a2.lowerlevelindex) && (a1.upperlevelindex == a2.upperlevelindex)) {
+          printout("Duplicate transition line? %s\n", a1.nu == a2.nu ? "nu match exact" : "close to nu match");
+          printout("a: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_atomicnumber(a1.elementindex),
+                   get_ionstage(a1.elementindex, a1.ionindex), a1.lowerlevelindex, a1.upperlevelindex, a1.nu,
+                   1e8 * CLIGHT / a1.nu);
+          printout("b: Z=%d ionstage %d lower %d upper %d nu %g lambda %g\n", get_atomicnumber(a2.elementindex),
+                   get_ionstage(a2.elementindex, a2.ionindex), a2.lowerlevelindex, a2.upperlevelindex, a2.nu,
+                   1e8 * CLIGHT / a2.nu);
         }
       }
     }

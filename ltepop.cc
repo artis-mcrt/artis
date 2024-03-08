@@ -446,19 +446,17 @@ static auto find_uppermost_ion(const int modelgridindex, const int element, cons
   const bool use_lte = force_lte || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
   int uppermost_ion = 0;
 
-  if (force_lte) {
-    uppermost_ion = nions - 1;
-  } else {
-    int ion = -1;
-    for (ion = 0; ion < nions - 1; ion++) {
+  uppermost_ion = nions - 1;
+  if (!force_lte) {
+    for (int ion = 0; ion < nions - 1; ion++) {
       if (iongamma_is_zero(modelgridindex, element, ion) &&
           (!NT_ON || ((globals::dep_estimator_gamma[nonemptymgi] == 0.) &&
                       (grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(24, 48)) == 0.) &&
                       (grid::get_modelinitradioabund(modelgridindex, decay::get_nucindex(28, 56)) == 0.)))) {
+        uppermost_ion = ion;
         break;
       }
     }
-    uppermost_ion = ion;
   }
 
   double factor = 1.;
