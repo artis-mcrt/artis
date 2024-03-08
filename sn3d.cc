@@ -423,7 +423,7 @@ static void mpi_reduce_estimators(int nts) {
 }
 #endif
 
-static void write_temp_packetsfile(const int timestep, const int my_rank, const struct packet *pkt) {
+static void write_temp_packetsfile(const int timestep, const int my_rank, const struct Packet *pkt) {
   // write packets binary file (and retry if the write fails)
   char filename[MAXFILENAMELENGTH];
   snprintf(filename, MAXFILENAMELENGTH, "packets_%.4d_ts%d.tmp", my_rank, timestep);
@@ -436,7 +436,7 @@ static void write_temp_packetsfile(const int timestep, const int my_rank, const 
       printout("ERROR: Could not open file '%s' for mode 'wb'. \n", filename);
       write_success = false;
     } else {
-      write_success = (std::fwrite(pkt, sizeof(struct packet), globals::npkts, packets_file) ==
+      write_success = (std::fwrite(pkt, sizeof(struct Packet), globals::npkts, packets_file) ==
                        static_cast<size_t>(globals::npkts));
       if (!write_success) {
         printout("fwrite() FAILED! will retry...\n");
@@ -505,7 +505,7 @@ static auto walltime_sufficient_to_continue(const int nts, const int nts_prev, c
   return do_this_full_loop;
 }
 
-static void save_grid_and_packets(const int nts, const int my_rank, struct packet *packets) {
+static void save_grid_and_packets(const int nts, const int my_rank, struct Packet *packets) {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -602,7 +602,7 @@ static void zero_estimators() {
 }
 
 static auto do_timestep(const int nts, const int titer, const int my_rank, const int nstart, const int ndo,
-                        struct packet *packets, const int walltimelimitseconds) -> bool {
+                        struct Packet *packets, const int walltimelimitseconds) -> bool {
   bool do_this_full_loop = true;
 
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
@@ -826,7 +826,7 @@ auto main(int argc, char *argv[]) -> int {
     }
   }
 
-  auto *const packets = static_cast<struct packet *>(calloc(MPKTS, sizeof(struct packet)));
+  auto *const packets = static_cast<struct Packet *>(calloc(MPKTS, sizeof(struct Packet)));
 
   assert_always(packets != nullptr);
 
@@ -906,7 +906,7 @@ auto main(int argc, char *argv[]) -> int {
   printout("Simulation propagates %g packets per process (total %g with nprocs %d)\n", 1. * globals::npkts,
            1. * globals::npkts * globals::nprocs, globals::nprocs);
 
-  printout("[info] mem_usage: packets occupy %.3f MB\n", MPKTS * sizeof(struct packet) / 1024. / 1024.);
+  printout("[info] mem_usage: packets occupy %.3f MB\n", MPKTS * sizeof(struct Packet) / 1024. / 1024.);
 
   if (!globals::simulation_continued_from_saved) {
     std::remove("deposition.out");

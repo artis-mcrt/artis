@@ -79,7 +79,7 @@ int nbfcontinua_ground = -1;  /// number of bf-continua
 int NPHIXSPOINTS = -1;
 double NPHIXSNUINCREMENT = -1;
 
-struct cellcache *cellcache = nullptr;
+struct CellCache *cellcache = nullptr;
 
 std::deque<std::mutex> mutex_cellcachemacroatom;
 

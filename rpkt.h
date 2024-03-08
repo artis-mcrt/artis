@@ -5,7 +5,7 @@
 #include <ctime>
 #include <vector>
 
-struct rpkt_continuum_absorptioncoeffs {
+struct Rpkt_continuum_absorptioncoeffs {
   double nu{-1.};  // frequency at which opacity was calculated
   double total{0.};
   double ffescat{0.};
@@ -17,7 +17,7 @@ struct rpkt_continuum_absorptioncoeffs {
   int timestep{-1};
 };
 
-struct phixslist {
+struct Phixslist {
   std::vector<double> groundcont_gamma_contr;  // for either USE_LUT_PHOTOION = true or !USE_LUT_BFHEATING = false
   std::vector<double> chi_bf_sum;
   std::vector<double> gamma_contr;  // needed for DETAILED_BF_ESTIMATORS_ON
@@ -29,11 +29,11 @@ struct phixslist {
 #include "grid.h"
 #include "sn3d.h"
 
-void do_rpkt(struct packet &pkt_ptr, double t2);
-void emit_rpkt(struct packet &pkt_ptr);
+void do_rpkt(struct Packet &pkt_ptr, double t2);
+void emit_rpkt(struct Packet &pkt_ptr);
 [[nodiscard]] auto closest_transition(double nu_cmf, int next_trans) -> int;
-void calculate_chi_rpkt_cont(double nu_cmf, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
-                             struct phixslist *phixslist, int modelgridindex);
+void calculate_chi_rpkt_cont(double nu_cmf, struct Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
+                             struct Phixslist *phixslist, int modelgridindex);
 auto sample_planck_times_expansion_opacity(int nonemptymgi) -> double;
 void allocate_expansionopacities();
 void calculate_binned_opacities(int modelgridindex);

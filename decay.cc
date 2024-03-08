@@ -1354,7 +1354,7 @@ void fprint_nuc_abundances(FILE *estimators_file, const int modelgridindex, cons
   fprintf(estimators_file, "\n");
 }
 
-void setup_radioactive_pellet(const double e0, const int mgi, struct packet &pkt_ptr) {
+void setup_radioactive_pellet(const double e0, const int mgi, struct Packet &pkt_ptr) {
   const int num_decaypaths = get_num_decaypaths();
 
   // decay channels include all radioactive decay paths, and possibly also an initial cell energy channel

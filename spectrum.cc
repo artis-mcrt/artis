@@ -338,7 +338,7 @@ static auto columnindex_from_emissiontype(const int et) -> int {
   return get_nelements() * get_max_nions() + element * get_max_nions() + ion;
 }
 
-static void add_to_spec(const struct packet &pkt_ptr, const int current_abin, struct spec &spectra,
+static void add_to_spec(const struct Packet &pkt_ptr, const int current_abin, struct spec &spectra,
                         const struct spec *stokes_i, const struct spec *stokes_q, const struct spec *stokes_u)
 // Routine to add a packet to the outgoing spectrum.
 {
@@ -550,7 +550,7 @@ void init_spectra(struct spec &spectra, const double nu_min, const double nu_max
   }
 }
 
-void add_to_spec_res(const struct packet &pkt_ptr, int current_abin, struct spec &spectra, const struct spec *stokes_i,
+void add_to_spec_res(const struct Packet &pkt_ptr, int current_abin, struct spec &spectra, const struct spec *stokes_i,
                      const struct spec *stokes_q, const struct spec *stokes_u)
 // Routine to add a packet to the outgoing spectrum.
 {
@@ -585,7 +585,7 @@ static void mpi_reduce_spectra(int my_rank, struct spec &spectra, int numtimeste
 }
 #endif
 
-void write_partial_lightcurve_spectra(int my_rank, int nts, struct packet *pkts) {
+void write_partial_lightcurve_spectra(int my_rank, int nts, struct Packet *pkts) {
   const auto time_func_start = std::time(nullptr);
 
   std::vector<double> rpkt_light_curve_lum(globals::ntimesteps, 0.);

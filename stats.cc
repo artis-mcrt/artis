@@ -58,7 +58,7 @@ void increment_ion_stats(const int modelgridindex, const int element, const int 
       increment);
 }
 
-void increment_ion_stats_contabsorption(const struct packet &pkt_ptr, const int modelgridindex, const int element,
+void increment_ion_stats_contabsorption(const struct Packet &pkt_ptr, const int modelgridindex, const int element,
                                         const int ion) {
   const double n_photons_absorbed = pkt_ptr.e_cmf / H / pkt_ptr.nu_cmf;
 

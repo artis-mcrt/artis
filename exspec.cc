@@ -36,7 +36,7 @@ bool use_cellcache = false;
 std::mt19937 stdrng(std::random_device{}());
 gsl_integration_workspace *gslworkspace = nullptr;
 
-static void do_angle_bin(const int a, packet *pkts, bool load_allrank_packets, struct spec &rpkt_spectra,
+static void do_angle_bin(const int a, struct Packet *pkts, bool load_allrank_packets, struct spec &rpkt_spectra,
                          struct spec &stokes_i, struct spec &stokes_q, struct spec &stokes_u,
                          struct spec &gamma_spectra) {
   std::vector<double> rpkt_light_curve_lum(globals::ntimesteps, 0.);
@@ -58,7 +58,7 @@ static void do_angle_bin(const int a, packet *pkts, bool load_allrank_packets, s
   init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
 
   for (int p = 0; p < globals::nprocs_exspec; p++) {
-    struct packet *pkts_start = load_allrank_packets ? &pkts[p * globals::npkts] : pkts;
+    struct Packet *pkts_start = load_allrank_packets ? &pkts[p * globals::npkts] : pkts;
 
     if (a == -1 || !load_allrank_packets) {
       char pktfilename[MAXFILENAMELENGTH];
@@ -229,19 +229,19 @@ auto main(int argc, char *argv[]) -> int {
   // nprocs_exspec is the number of rank output files to process with expec
   // however, we might be running exspec with 1 or just a few ranks
 
-  auto *pkts = static_cast<struct packet *>(malloc(globals::nprocs_exspec * globals::npkts * sizeof(struct packet)));
+  auto *pkts = static_cast<struct Packet *>(malloc(globals::nprocs_exspec * globals::npkts * sizeof(struct Packet)));
   const bool load_allrank_packets = (pkts != nullptr);
   if (load_allrank_packets) {
     printout("mem_usage: loading %d packets from each %d processes simultaneously (total %d packets, %.1f MB memory)\n",
              globals::npkts, globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
-             globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024.);
+             globals::nprocs_exspec * globals::npkts * sizeof(struct Packet) / 1024. / 1024.);
   } else {
     printout("mem_usage: malloc failed to allocate memory for all packets\n");
     printout(
         "mem_usage: loading %d packets from each of %d processes sequentially (total %d packets, %.1f MB memory)\n",
         globals::npkts, globals::nprocs_exspec, globals::nprocs_exspec * globals::npkts,
-        globals::nprocs_exspec * globals::npkts * sizeof(struct packet) / 1024. / 1024.);
-    pkts = static_cast<struct packet *>(malloc(globals::npkts * sizeof(struct packet)));
+        globals::nprocs_exspec * globals::npkts * sizeof(struct Packet) / 1024. / 1024.);
+    pkts = static_cast<struct Packet *>(malloc(globals::npkts * sizeof(struct Packet)));
     assert_always(pkts != nullptr);
   }
 

@@ -6,6 +6,6 @@
 
 #include "packet.h"
 
-void update_packets(int my_rank, int nts, std::span<struct packet> packets);
+void update_packets(int my_rank, int nts, std::span<struct Packet> packets);
 
 #endif  // UPDATE_PACKETS_H

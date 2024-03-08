@@ -153,9 +153,9 @@ static constexpr auto get_expopac_bin_nu_lower(const size_t binindex) -> double 
 }
 
 static auto get_event_expansion_opacity(
-    const int modelgridindex, const int nonemptymgi, const struct packet &pkt_ptr,
-    struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,  // NOLINT(misc-unused-parameters)
-    struct phixslist &phixslist, const double tau_rnd, const double abort_dist) -> std::tuple<double, bool> {
+    const int modelgridindex, const int nonemptymgi, const struct Packet &pkt_ptr,
+    struct Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,  // NOLINT(misc-unused-parameters)
+    struct Phixslist &phixslist, const double tau_rnd, const double abort_dist) -> std::tuple<double, bool> {
   calculate_chi_rpkt_cont(pkt_ptr.nu_cmf, chi_rpkt_cont, &phixslist, modelgridindex);
   const auto doppler = doppler_packet_nucmf_on_nurf(pkt_ptr.pos, pkt_ptr.dir, pkt_ptr.prop_time);
 
@@ -229,8 +229,8 @@ static auto get_event_expansion_opacity(
 }
 
 static auto get_event(const int modelgridindex,
-                      const struct packet &pkt_ptr,  // pointer to packet object
-                      const struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, struct mastate &mastate,
+                      const struct Packet &pkt_ptr,  // pointer to packet object
+                      const struct Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, struct mastate &mastate,
                       const double tau_rnd,    // random optical depth until which the packet travels
                       const double abort_dist  // maximal travel distance before packet leaves cell or time step ends
                       ) -> std::tuple<double, int, bool>
@@ -371,7 +371,7 @@ static auto get_event(const int modelgridindex,
   assert_always(false);
 }
 
-static void electron_scatter_rpkt(struct packet &pkt_ptr) {
+static void electron_scatter_rpkt(struct Packet &pkt_ptr) {
   /// now make the packet a r-pkt and set further flags
   pkt_ptr.type = TYPE_RPKT;
   pkt_ptr.last_cross = BOUNDARY_NONE;  /// allow all further cell crossings
@@ -498,8 +498,8 @@ static void electron_scatter_rpkt(struct packet &pkt_ptr) {
   pkt_ptr.e_rf = pkt_ptr.e_cmf / dopplerfactor;
 }
 
-static void rpkt_event_continuum(struct packet &pkt_ptr, const struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
-                                 const struct phixslist &phixslist, const int modelgridindex) {
+static void rpkt_event_continuum(struct Packet &pkt_ptr, const struct Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
+                                 const struct Phixslist &phixslist, const int modelgridindex) {
   const double nu = pkt_ptr.nu_cmf;
 
   const double dopplerfactor = doppler_packet_nucmf_on_nurf(pkt_ptr.pos, pkt_ptr.dir, pkt_ptr.prop_time);
@@ -606,7 +606,7 @@ static void rpkt_event_continuum(struct packet &pkt_ptr, const struct rpkt_conti
   }
 }
 
-static void rpkt_event_boundbound(struct packet &pkt_ptr, struct mastate &pktmastate, const int mgi) {
+static void rpkt_event_boundbound(struct Packet &pkt_ptr, struct mastate &pktmastate, const int mgi) {
   /// bound-bound transition occured
   /// activate macro-atom in corresponding upper-level. Actually all the information
   /// about the macro atoms state has already been set by closest_transition, so
@@ -667,7 +667,7 @@ auto sample_planck_times_expansion_opacity(const int nonemptymgi) -> double
   return nu;
 }
 
-static void rpkt_event_thickcell(struct packet &pkt_ptr)
+static void rpkt_event_thickcell(struct Packet &pkt_ptr)
 /// Event handling for optically thick cells. Those cells are treated in a grey
 /// approximation with electron scattering only.
 /// The packet stays an R_PKT of same nu_cmf than before (coherent scattering)
@@ -689,8 +689,8 @@ static void rpkt_event_thickcell(struct packet &pkt_ptr)
 
 static void update_estimators(const double e_cmf, const double nu_cmf, const double distance,
                               const double doppler_nucmf_on_nurf, const int nonemptymgi,
-                              const struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
-                              const struct phixslist &phixslist)
+                              const struct Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
+                              const struct Phixslist &phixslist)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.
@@ -726,7 +726,7 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   }
 }
 
-static auto do_rpkt_step(struct packet &pkt_ptr, const double t2) -> bool
+static auto do_rpkt_step(struct Packet &pkt_ptr, const double t2) -> bool
 // Update an r-packet and return true if no mgi change (or it goes into an empty cell) and no pkttype change and not
 // reached end of timestep, otherwise false
 {
@@ -735,14 +735,14 @@ static auto do_rpkt_step(struct packet &pkt_ptr, const double t2) -> bool
   const int nonemptymgi = (mgi != grid::get_npts_model()) ? grid::get_modelcell_nonemptymgi(mgi) : -1;
 
   static thread_local struct mastate pktmastate {};
-  static thread_local struct phixslist phixslist {
+  static thread_local struct Phixslist phixslist {
     .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
     .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
     .gamma_contr = std::vector<double>(DETAILED_BF_ESTIMATORS_ON ? globals::nbfcontinua : 0, 0.),
     .allcontend = globals::nbfcontinua, .allcontbegin = 0
   };
 
-  static thread_local struct rpkt_continuum_absorptioncoeffs chi_rpkt_cont {
+  static thread_local struct Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {
     .nu = NAN, .total = NAN, .ffescat = NAN, .ffheat = NAN, .bf = NAN, .modelgridindex = -1, .timestep = -1
   };
 
@@ -901,13 +901,13 @@ static auto do_rpkt_step(struct packet &pkt_ptr, const double t2) -> bool
   std::abort();
 }
 
-void do_rpkt(struct packet &pkt_ptr, const double t2) {
+void do_rpkt(struct Packet &pkt_ptr, const double t2) {
   while (do_rpkt_step(pkt_ptr, t2)) {
     ;
   }
 }
 
-void emit_rpkt(struct packet &pkt_ptr) {
+void emit_rpkt(struct Packet &pkt_ptr) {
   /// now make the packet a r-pkt and set further flags
   pkt_ptr.type = TYPE_RPKT;
   pkt_ptr.last_cross = BOUNDARY_NONE;  /// allow all further cell crossings
@@ -990,7 +990,7 @@ static auto calculate_chi_ffheating(const int modelgridindex, const double nu) -
 }
 
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
-static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, struct phixslist *phixslist)
+static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double nu, struct Phixslist *phixslist)
     -> double
 // bound-free opacity
 {
@@ -1109,8 +1109,8 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
   return chi_bf_sum;
 }
 
-void calculate_chi_rpkt_cont(const double nu_cmf, struct rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
-                             struct phixslist *phixslist, const int modelgridindex) {
+void calculate_chi_rpkt_cont(const double nu_cmf, struct Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont,
+                             struct Phixslist *phixslist, const int modelgridindex) {
   assert_testmodeonly(modelgridindex != grid::get_npts_model());
   assert_testmodeonly(grid::modelgrid[modelgridindex].thick != 1);
   if ((modelgridindex == chi_rpkt_cont.modelgridindex) && (globals::timestep == chi_rpkt_cont.timestep) &&

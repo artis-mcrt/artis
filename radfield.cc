@@ -627,7 +627,7 @@ void zero_estimators(int modelgridindex)
 }
 
 static void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                                const double doppler_nucmf_on_nurf, const struct phixslist &phixslist) {
+                                const double doppler_nucmf_on_nurf, const struct Phixslist &phixslist) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
 
   const int nbfcontinua = globals::nbfcontinua;
@@ -656,7 +656,7 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
 }
 
 void update_estimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                       const double doppler_nucmf_on_nurf, const struct phixslist &phixslist) {
+                       const double doppler_nucmf_on_nurf, const struct Phixslist &phixslist) {
   if (distance_e_cmf == 0) {
     return;
   }

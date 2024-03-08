@@ -83,7 +83,7 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
     "23: kpktdiffusion_timescale n_kpktdiffusion_timesteps: kpkts diffuse x of a time step's length for the first y "
     "time steps"};
 
-static chphixstargets_t *chphixstargetsblock = nullptr;
+static CellCachePhixsTargets *chphixstargetsblock = nullptr;
 
 static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoints_inputtable, const int element,
                                   const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
@@ -1190,12 +1190,12 @@ static void setup_cellcache() {
 
   // const int num_cellcache_slots = get_max_threads();
   const int num_cellcache_slots = 1;
-  globals::cellcache = static_cast<struct cellcache *>(malloc(num_cellcache_slots * sizeof(struct cellcache)));
+  globals::cellcache = static_cast<struct CellCache *>(malloc(num_cellcache_slots * sizeof(struct CellCache)));
   assert_always(globals::cellcache != nullptr);
 
   for (int itid = 0; itid < num_cellcache_slots; itid++) {
     size_t mem_usage_cellcache = 0;
-    mem_usage_cellcache += sizeof(struct cellcache);
+    mem_usage_cellcache += sizeof(struct CellCache);
 
     printout("[info] input: initializing cellcache for thread %d ...\n", itid);
 
@@ -1208,9 +1208,9 @@ static void setup_cellcache() {
     printout("[info] mem_usage: cellcache coolinglist contribs for thread %d occupies %.3f MB\n", itid,
              ncoolingterms * sizeof(double) / 1024. / 1024.);
 
-    mem_usage_cellcache += get_nelements() * sizeof(struct chelements);
+    mem_usage_cellcache += get_nelements() * sizeof(struct CellCacheElements);
     globals::cellcache[itid].chelements =
-        static_cast<struct chelements *>(malloc(get_nelements() * sizeof(struct chelements)));
+        static_cast<struct CellCacheElements *>(malloc(get_nelements() * sizeof(struct CellCacheElements)));
 
     assert_always(globals::cellcache[itid].chelements != nullptr);
 
@@ -1221,11 +1221,11 @@ static void setup_cellcache() {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
-        chlevelblocksize += nlevels * sizeof(struct chlevels);
+        chlevelblocksize += nlevels * sizeof(struct CellCacheLevels);
 
         for (int level = 0; level < nlevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
-          chphixsblocksize += nphixstargets * sizeof(chphixstargets_t);
+          chphixsblocksize += nphixstargets * sizeof(CellCachePhixsTargets);
 
           const int ndowntrans = get_ndowntrans(element, ion, level);
           const int nuptrans = get_nuptrans(element, ion, level);
@@ -1234,8 +1234,9 @@ static void setup_cellcache() {
       }
     }
     assert_always(chlevelblocksize > 0);
-    globals::cellcache[itid].ch_all_levels = static_cast<struct chlevels *>(malloc(chlevelblocksize));
-    chphixstargetsblock = chphixsblocksize > 0 ? static_cast<chphixstargets_t *>(malloc(chphixsblocksize)) : nullptr;
+    globals::cellcache[itid].ch_all_levels = static_cast<struct CellCacheLevels *>(malloc(chlevelblocksize));
+    chphixstargetsblock =
+        chphixsblocksize > 0 ? static_cast<CellCachePhixsTargets *>(malloc(chphixsblocksize)) : nullptr;
     mem_usage_cellcache += chlevelblocksize + chphixsblocksize;
 
     mem_usage_cellcache += chtransblocksize * sizeof(double);
@@ -1247,9 +1248,9 @@ static void setup_cellcache() {
     int chtransindex = 0;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
-      mem_usage_cellcache += nions * sizeof(struct chions);
+      mem_usage_cellcache += nions * sizeof(struct CellCacheIons);
       globals::cellcache[itid].chelements[element].chions =
-          static_cast<struct chions *>(malloc(nions * sizeof(struct chions)));
+          static_cast<struct CellCacheIons *>(malloc(nions * sizeof(struct CellCacheIons)));
       assert_always(globals::cellcache[itid].chelements[element].chions != nullptr);
 
       for (int ion = 0; ion < nions; ion++) {
@@ -1261,14 +1262,14 @@ static void setup_cellcache() {
         alllevelindex += nlevels;
 
         for (int level = 0; level < nlevels; level++) {
-          struct chlevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
+          struct CellCacheLevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
           const int nphixstargets = get_nphixstargets(element, ion, level);
           chlevel->chphixstargets = chphixsblocksize > 0 ? &chphixstargetsblock[allphixstargetindex] : nullptr;
           allphixstargetindex += nphixstargets;
         }
 
         for (int level = 0; level < nlevels; level++) {
-          struct chlevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
+          struct CellCacheLevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
           const int ndowntrans = get_ndowntrans(element, ion, level);
 
           chlevel->sum_epstrans_rad_deexc = &chtransblock[chtransindex];
@@ -1276,14 +1277,14 @@ static void setup_cellcache() {
         }
 
         for (int level = 0; level < nlevels; level++) {
-          struct chlevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
+          struct CellCacheLevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
           const int ndowntrans = get_ndowntrans(element, ion, level);
           chlevel->sum_internal_down_same = &chtransblock[chtransindex];
           chtransindex += ndowntrans;
         }
 
         for (int level = 0; level < nlevels; level++) {
-          struct chlevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
+          struct CellCacheLevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
           const int nuptrans = get_nuptrans(element, ion, level);
           chlevel->sum_internal_up_same = &chtransblock[chtransindex];
           chtransindex += nuptrans;

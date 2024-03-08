@@ -229,7 +229,7 @@ static auto choose_gamma_ray(const int nucindex) -> double {
   assert_always(false);
 }
 
-void pellet_gamma_decay(struct packet &pkt_ptr) {
+void pellet_gamma_decay(struct Packet &pkt_ptr) {
   // Subroutine to convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
 
   // pkt_ptr is a pointer to the packet that is decaying.
@@ -301,7 +301,7 @@ constexpr auto sigma_compton_partial(const double x, const double f_max) -> doub
   return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
 }
 
-static auto get_chi_compton_rf(const struct packet &pkt_ptr) -> double {
+static auto get_chi_compton_rf(const struct Packet &pkt_ptr) -> double {
   // calculate the absorption coefficient [cm^-1] for Compton scattering in the observer reference frame
   // Start by working out the compton x-section in the co-moving frame.
 
@@ -418,7 +418,7 @@ static auto thomson_angle() -> double {
   return dir_out;
 }
 
-static void compton_scatter(struct packet &pkt_ptr)
+static void compton_scatter(struct Packet &pkt_ptr)
 // Routine to deal with physical Compton scattering event.
 {
   //  printout("Compton scattering.\n");
@@ -520,7 +520,7 @@ static void compton_scatter(struct packet &pkt_ptr)
   }
 }
 
-static auto get_chi_photo_electric_rf(const struct packet &pkt_ptr) -> double {
+static auto get_chi_photo_electric_rf(const struct Packet &pkt_ptr) -> double {
   // calculate the absorption coefficient [cm^-1] for photo electric effect scattering in the observer reference frame
 
   double chi_cmf{NAN};
@@ -562,7 +562,7 @@ static auto get_chi_photo_electric_rf(const struct packet &pkt_ptr) -> double {
   return chi_rf;
 }
 
-static auto sigma_pair_prod_rf(const struct packet &pkt_ptr) -> double {
+static auto sigma_pair_prod_rf(const struct Packet &pkt_ptr) -> double {
   // calculate the absorption coefficient [cm^-1] for pair production in the observer reference frame
 
   const int mgi = grid::get_cell_modelgridindex(pkt_ptr.where);
@@ -642,7 +642,7 @@ constexpr auto meanf_sigma(const double x) -> double
   return tot;
 }
 
-static void update_gamma_dep(const struct packet &pkt_ptr, const double dist, const int mgi, const int nonemptymgi) {
+static void update_gamma_dep(const struct Packet &pkt_ptr, const double dist, const int mgi, const int nonemptymgi) {
   // Subroutine to record the heating rate in a cell due to gamma rays.
   // By heating rate I mean, for now, really the rate at which the code is making
   // k-packets in that cell which will then convert into r-packets. This is (going
@@ -676,7 +676,7 @@ static void update_gamma_dep(const struct packet &pkt_ptr, const double dist, co
   safeadd(globals::dep_estimator_gamma[nonemptymgi], heating_cont);
 }
 
-void pair_prod(struct packet &pkt_ptr) {
+void pair_prod(struct Packet &pkt_ptr) {
   // Routine to deal with pair production.
 
   //  In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
@@ -724,7 +724,7 @@ void pair_prod(struct packet &pkt_ptr) {
   }
 }
 
-void do_gamma(struct packet &pkt_ptr, double t2)
+void do_gamma(struct Packet &pkt_ptr, double t2)
 // Now routine for moving a gamma packet. Idea is that we have as input
 // a gamma packet with known properties at time t1 and we want to follow it
 // until time t2.

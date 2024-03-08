@@ -60,7 +60,7 @@ std::vector<int> exclude;  // vector of opacity contribution setups:
                            // +ve: exclude element with atomic number's contribution to bound-bound opacity
 std::vector<double> tau_vpkt;
 
-// --------- Vstruct packet GRID -----------
+// --------- Vstruct Packet GRID -----------
 
 struct vgrid {
   std::vector<std::vector<double>> flux;
@@ -99,7 +99,7 @@ static auto all_taus_past_taumax(std::vector<double> &tau, const double tau_max)
 }
 
 // Routine to add a packet to the outcoming spectrum.
-static void add_to_vspecpol(const struct packet &vpkt, const int obsbin, const int ind, const double t_arrive) {
+static void add_to_vspecpol(const struct Packet &vpkt, const int obsbin, const int ind, const double t_arrive) {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
 
   const int ind_comb = Nspectra * obsbin + ind;
@@ -120,7 +120,7 @@ static void add_to_vspecpol(const struct packet &vpkt, const int obsbin, const i
 }
 
 // Routine to add a packet to the outcoming spectrum.
-static void add_to_vpkt_grid(const struct packet &vpkt, std::span<const double, 3> vel, const int wlbin,
+static void add_to_vpkt_grid(const struct Packet &vpkt, std::span<const double, 3> vel, const int wlbin,
                              const int obsbin, std::span<const double, 3> obs) {
   double vref1{NAN};
   double vref2{NAN};
@@ -168,11 +168,11 @@ static void add_to_vpkt_grid(const struct packet &vpkt, std::span<const double, 
   }
 }
 
-static void rlc_emiss_vpkt(const struct packet &pkt_ptr, const double t_current, const int obsbin,
+static void rlc_emiss_vpkt(const struct Packet &pkt_ptr, const double t_current, const int obsbin,
                            std::span<double, 3> obsdir, const enum packet_type type_before_rpkt) {
   int mgi = 0;
 
-  struct packet vpkt = pkt_ptr;
+  struct Packet vpkt = pkt_ptr;
 
   bool end_packet = false;
   double ldist = 0;
@@ -273,7 +273,7 @@ static void rlc_emiss_vpkt(const struct packet &pkt_ptr, const double t_current,
   // compute the optical depth to boundary
 
   mgi = grid::get_cell_modelgridindex(vpkt.where);
-  thread_local static struct rpkt_continuum_absorptioncoeffs chi_vpkt_cont {};
+  thread_local static struct Rpkt_continuum_absorptioncoeffs chi_vpkt_cont {};
 
   while (!end_packet) {
     // distance to the next cell
@@ -308,7 +308,7 @@ static void rlc_emiss_vpkt(const struct packet &pkt_ptr, const double t_current,
         return;
       }
 
-      struct packet dummypkt_abort = vpkt;
+      struct Packet dummypkt_abort = vpkt;
       move_pkt_withtime(dummypkt_abort, sdist);
       const double nu_cmf_abort = dummypkt_abort.nu_cmf;
       assert_testmodeonly(nu_cmf_abort <= vpkt.nu_cmf);
@@ -880,7 +880,7 @@ void vpkt_init(const int nts, const int my_rank, const int /*tid*/, const bool c
   }
 }
 
-auto vpkt_call_estimators(struct packet &pkt_ptr, const enum packet_type type_before_rpkt) -> void {
+auto vpkt_call_estimators(struct Packet &pkt_ptr, const enum packet_type type_before_rpkt) -> void {
   if constexpr (!VPKT_ON) {
     return;
   }

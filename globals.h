@@ -153,31 +153,31 @@ struct chphixstargets<true> {
   double separatestimrecomb;
 };
 
-using chphixstargets_t = struct chphixstargets<SEPARATE_STIMRECOMB>;
+using CellCachePhixsTargets = struct chphixstargets<SEPARATE_STIMRECOMB>;
 
 #include "macroatom.h"
 
-struct chlevels {
+struct CellCacheLevels {
   std::array<double, MA_ACTION_COUNT> processrates;
-  chphixstargets_t *chphixstargets;
+  CellCachePhixsTargets *chphixstargets;
   double population;
   double *sum_epstrans_rad_deexc;
   double *sum_internal_down_same;
   double *sum_internal_up_same;
 };
 
-struct chions {
-  struct chlevels *chlevels;  /// Pointer to the ions levellist.
+struct CellCacheIons {
+  struct CellCacheLevels *chlevels;  /// Pointer to the ions levellist.
 };
 
-struct chelements {
-  struct chions *chions;  /// Pointer to the elements ionlist.
+struct CellCacheElements {
+  struct CellCacheIons *chions;  /// Pointer to the elements ionlist.
 };
 
-struct cellcache {
+struct CellCache {
   double *cooling_contrib = nullptr;  /// Cooling contributions by the different processes.
-  struct chelements *chelements = nullptr;
-  struct chlevels *ch_all_levels = nullptr;
+  struct CellCacheElements *chelements = nullptr;
+  struct CellCacheLevels *ch_all_levels = nullptr;
   double *ch_allcont_departureratios = nullptr;
   double chi_ff_nnionpart{-1};
   int cellnumber{-1};  /// Identifies the cell the data is valid for.
@@ -243,7 +243,7 @@ extern int nbfcontinua_ground;
 extern int NPHIXSPOINTS;
 extern double NPHIXSNUINCREMENT;
 
-extern struct cellcache *cellcache;
+extern struct CellCache *cellcache;
 
 #ifdef MPI_ON
 extern MPI_Comm mpi_comm_node;

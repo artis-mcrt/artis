@@ -24,7 +24,7 @@
 #include "update_grid.h"
 #include "vectors.h"
 
-static void do_nonthermal_predeposit(struct packet &pkt_ptr, const int nts, const double t2) {
+static void do_nonthermal_predeposit(struct Packet &pkt_ptr, const int nts, const double t2) {
   double en_deposited = pkt_ptr.e_cmf;
 
   if constexpr (INSTANT_PARTICLE_DEPOSITION) {
@@ -82,7 +82,7 @@ static void do_nonthermal_predeposit(struct packet &pkt_ptr, const int nts, cons
   }
 }
 
-static void update_pellet(struct packet &pkt_ptr, const int nts, const double t2) {
+static void update_pellet(struct Packet &pkt_ptr, const int nts, const double t2) {
   // Handle inactive pellets. Need to do two things (a) check if it
   // decays in this time step and if it does handle that. (b) if it doesn't decay in
   // this time step then just move the packet along with the matter for the
@@ -147,7 +147,7 @@ static void update_pellet(struct packet &pkt_ptr, const int nts, const double t2
   }
 }
 
-static void do_packet(struct packet &pkt_ptr, const double t2, const int nts)
+static void do_packet(struct Packet &pkt_ptr, const double t2, const int nts)
 // update a packet no further than time t2
 {
   switch (pkt_ptr.type) {
@@ -206,7 +206,7 @@ static void do_packet(struct packet &pkt_ptr, const double t2, const int nts)
   }
 }
 
-static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, const struct packet &p2) -> bool {
+static auto std_compare_packets_bymodelgriddensity(const struct Packet &p1, const struct Packet &p2) -> bool {
   // return true if packet p1 goes before p2
 
   // move escaped packets to the end of the list for better performance
@@ -259,7 +259,7 @@ static auto std_compare_packets_bymodelgriddensity(const struct packet &p1, cons
   return false;
 }
 
-static void do_cell_packet_updates(std::span<packet> packets, const int nts, const double ts_end) {
+static void do_cell_packet_updates(std::span<struct Packet> packets, const int nts, const double ts_end) {
   auto update_packet = [ts_end, nts](auto &pkt) {
     const int mgi = grid::get_cell_modelgridindex(pkt.where);
     int newmgi = mgi;
@@ -279,7 +279,7 @@ static void do_cell_packet_updates(std::span<packet> packets, const int nts, con
 #endif
 }
 
-void update_packets(const int my_rank, const int nts, std::span<struct packet> packets)
+void update_packets(const int my_rank, const int nts, std::span<struct Packet> packets)
 // Subroutine to move and update packets during the current timestep (nts)
 {
   // At the start, the packets have all either just been initialised or have already been

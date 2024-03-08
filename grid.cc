@@ -2673,7 +2673,7 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
   return {distance, snext};
 }
 
-void change_cell(struct packet &pkt_ptr, int snext)
+void change_cell(struct Packet &pkt_ptr, int snext)
 /// Routine to take a packet across a boundary.
 {
   // const int cellindex = pkt_ptr.where;
