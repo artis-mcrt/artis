@@ -6,7 +6,7 @@
 #include <vector>
 
 struct rpkt_continuum_absorptioncoeffs {
-  double nu{NAN};  // frequency at which opacity was calculated
+  double nu{-1.};  // frequency at which opacity was calculated
   double total{0.};
   double ffescat{0.};
   double ffheat{0.};
