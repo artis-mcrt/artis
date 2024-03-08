@@ -37,7 +37,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
   // return; disable for better performance (if estimators files are not needed)
 
   if (grid::get_numassociatedcells(mgi) < 1) {
-    // modelgrid cells which are not represented in the simulation grid
+    // modelgrid cells that are not represented in the simulation grid
     fprintf(estimators_file, "timestep %d modelgridindex %d EMPTYCELL\n\n", timestep, mgi);
     fflush(estimators_file);
     return;
@@ -626,7 +626,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
     }
 
-    if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
+    if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0 && grid::modelgrid[mgi].thick != 1) {
       fprintf(estimators_file, "corrphotoionrenorm Z=%2d", get_atomicnumber(element));
       for (int ion = 0; ion < nions - 1; ion++) {
         const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
