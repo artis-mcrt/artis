@@ -743,8 +743,8 @@ static auto do_rpkt_step(Packet &pkt_ptr, const double t2) -> bool
   static thread_local struct Phixslist phixslist {
     .groundcont_gamma_contr = std::vector<double>(globals::nbfcontinua_ground, 0.),
     .chi_bf_sum = std::vector<double>(globals::nbfcontinua, 0.),
-    .gamma_contr = std::vector<double>(DETAILED_BF_ESTIMATORS_ON ? globals::nbfcontinua : 0, 0.),
-    .allcontend = globals::nbfcontinua, .allcontbegin = 0
+    .gamma_contr = std::vector<double>(DETAILED_BF_ESTIMATORS_ON ? globals::nbfcontinua : 0, 0.), .allcontend = 1,
+    .allcontbegin = 0
   };
 
   static thread_local struct Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {
