@@ -760,7 +760,6 @@ auto main(int argc, char *argv[]) -> int {
 
   globals::setup_mpi_vars();
 
-  globals::startofline = std::vector<bool>(get_max_threads());
   if (globals::rank_global == 0) {
     check_already_running();
   }
@@ -789,8 +788,6 @@ auto main(int argc, char *argv[]) -> int {
     snprintf(filename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, tid);
     output_file = std::ofstream(filename);
     assert_always(output_file.is_open());
-    // Make sure that the output_file is written line-by-line
-    globals::startofline[tid] = true;
 
 #ifdef _OPENMP
     printout("OpenMP parallelisation is active with %d threads (max %d)\n", get_num_threads(), get_max_threads());

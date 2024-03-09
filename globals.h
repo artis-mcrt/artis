@@ -234,8 +234,6 @@ extern int *acounter;
 extern int nprocs_exspec;
 extern bool do_emission_res;
 
-extern std::vector<bool> startofline;
-
 extern double gamma_kappagrey;
 
 constexpr double GREY_OP = 0.1;

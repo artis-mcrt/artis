@@ -173,7 +173,6 @@ auto main(int argc, char *argv[]) -> int {
 
   globals::setup_mpi_vars();
 
-  globals::startofline = std::vector<bool>(get_max_threads());
   if (globals::rank_global == 0) {
     check_already_running();
   }
