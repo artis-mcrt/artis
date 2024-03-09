@@ -625,7 +625,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
     }
 
-    if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0 && grid::modelgrid[mgi].thick != 1) {
+    if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
       fprintf(estimators_file, "corrphotoionrenorm Z=%2d", get_atomicnumber(element));
       for (int ion = 0; ion < nions - 1; ion++) {
         const int groundcontindex = globals::elements[element].ions[ion].groundcontindex;
@@ -729,8 +729,7 @@ void cellcache_change_cell(const int modelgridindex) {
   }
 
   if (modelgridindex >= 0) {
-    const int nbfcont = globals::nbfcontinua;
-    std::fill_n(globals::cellcache[cellcacheslotid].ch_allcont_departureratios, nbfcont, -1);
+    std::fill_n(globals::cellcache[cellcacheslotid].ch_allcont_departureratios, globals::nbfcontinua, -1);
   }
   // printout("nlevels_with_processrates %d\n", nlevels_with_processrates);
 }

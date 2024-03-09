@@ -702,6 +702,7 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   radfield::update_estimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf, phixslist, thickcell);
 
   if (thickcell) {
+    // chi_rpkt_cont and phixslist are not known for thick cells
     return;
   }
 
