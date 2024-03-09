@@ -57,10 +57,6 @@ extern std::mt19937 stdrng;
 
 extern gsl_integration_workspace *gslworkspace;
 
-#ifdef _OPENMP
-#pragma omp threadprivate(tid, cellcacheslotid, stdrng, gslworkspace, output_file)
-#endif
-
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
     const bool pass = static_cast<bool>(e);                                                                            \
@@ -92,16 +88,14 @@ extern gsl_integration_workspace *gslworkspace;
   }
 #endif
 
-#include "artisoptions.h"
-#include "globals.h"
-
 // make these thread_local if we want separate log files for STDPAR threads
 inline char outputlinebuf[1024] = "";
 inline bool outputstartofline = true;
 inline struct tm timebuf {};
 
 #ifdef _OPENMP
-#pragma omp threadprivate(outputlinebuf, outputstartofline, timebuf)
+#pragma omp threadprivate(tid, cellcacheslotid, stdrng, gslworkspace, output_file, outputlinebuf, outputstartofline, \
+                              timebuf)
 #endif
 
 static inline void print_line_start() {
@@ -120,6 +114,8 @@ static inline void print_line_start() {
     output_file << outputlinebuf;                                           \
     output_file.flush();                                                    \
   }
+
+#include "globals.h"
 
 [[nodiscard]] static inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
                                                 const int phixstargetindex) -> int {
