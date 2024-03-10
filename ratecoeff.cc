@@ -1417,16 +1417,17 @@ auto get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex
   return gammacorr;
 }
 
-static auto get_nlevels_important(int modelgridindex, int element, int ion, bool assume_lte, float T_e,
-                                  double *nnlevelsum_out) -> int
+static auto get_nlevels_important(const int modelgridindex, const int element, const int ion, const bool assume_lte,
+                                  const float T_e) -> std::tuple<int, double>
 // get the number of levels that make up a fraction of the ion population
 // of at least IONGAMMA_POPFRAC_LEVELS_INCLUDED
 {
-  if (IONGAMMA_POPFRAC_LEVELS_INCLUDED >= 1.) {
-    return get_nlevels(element, ion);
-  }
   // get the stored ion population for comparison with the cumulative sum of level pops
   const double nnion_real = get_nnion(modelgridindex, element, ion);
+
+  if (IONGAMMA_POPFRAC_LEVELS_INCLUDED >= 1.) {
+    return {get_nlevels(element, ion), nnion_real};
+  }
 
   double nnlevelsum = 0.;
   int nlevels_important = get_ionisinglevels(element, ion);  // levels needed to get majority of ion pop
@@ -1453,11 +1454,8 @@ static auto get_nlevels_important(int modelgridindex, int element, int ion, bool
     nnlevelsum += nnlowerlevel;
     nlevels_important = lower + 1;
   }
-  *nnlevelsum_out = nnlevelsum;
   assert_always(nlevels_important <= get_nlevels(element, ion));
-  // printout("mgi %d element %d ion %d nlevels_important %d popfrac %g\n", modelgridindex, element, ion,
-  // nlevels_important, nnlevelsum / nnion_real);
-  return nlevels_important;
+  return {nlevels_important, nnlevelsum};
 }
 
 auto iongamma_is_zero(const int modelgridindex, const int element, const int ion) -> bool {
@@ -1509,8 +1507,7 @@ auto calculate_iongamma_per_gspop(const int modelgridindex, const int element, c
   const auto T_e = grid::get_Te(modelgridindex);
   const float nne = grid::get_nne(modelgridindex);
 
-  // double nnlowerion = 0.;
-  // const int nlevels_important = get_nlevels_important(modelgridindex, element, ion, false, T_e, &nnlowerion);
+  // const auto [nlevels_important, _] = get_nlevels_important(modelgridindex, element, ion, false, T_e);
   const int nlevels_important = get_nlevels(element, ion);
 
   double Col_ion = 0.;
@@ -1523,7 +1520,6 @@ auto calculate_iongamma_per_gspop(const int modelgridindex, const int element, c
       Gamma += nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
 
       const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
-      // printout("%g %g %g\n", get_levelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
 
       Col_ion += nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
     }
@@ -1546,8 +1542,8 @@ auto calculate_iongamma_per_ionpop(const int modelgridindex, const float T_e, co
 
   const float nne = (modelgridindex >= 0) ? grid::get_nne(modelgridindex) : 1.;
 
-  double nnlowerion = 0.;
-  const int nlevels_important = get_nlevels_important(modelgridindex, element, lowerion, assume_lte, T_e, &nnlowerion);
+  const auto [nlevels_important, nnlowerion] =
+      get_nlevels_important(modelgridindex, element, lowerion, assume_lte, T_e);
 
   if (nnlowerion <= 0.) {
     return 0.;
