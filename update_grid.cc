@@ -1182,14 +1182,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   // printout("[debug] update_grid: starting update for timestep %d...\n",m);
   const double tratmid = globals::timesteps[nts].mid / globals::tmin;
 
-  /// Thread private substitution of max_path_step. Its minimum is
-  /// assigned to max_path_step after the parallel update_grid finished.
-  auto mps = std::make_unique<double[]>(get_max_threads());
-
-  for (int i = 0; i < get_max_threads(); i++) {
-    mps[i] = 1.e35;
-  }
-
   /// Calculate the critical opacity at which opacity_case 3 switches from a
   /// regime proportional to the density to a regime independent of the density
   /// This is done by solving for tau_sobolev == 1
@@ -1246,15 +1238,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   // }
   // #endif
 
-  /// Assign the minimum of thread private mps to the global variable max_path_step
-  globals::max_path_step = mps[0];
-  for (int i = 1; i < get_max_threads(); i++) {
-    if (mps[i] < globals::max_path_step) {
-      globals::max_path_step = mps[i];
-    }
-  }
-
-  globals::max_path_step = std::min(globals::max_path_step, globals::rmax / 10.);
+  globals::max_path_step = std::min(1.e35, globals::rmax / 10.);
   printout("max_path_step %g\n", globals::max_path_step);
 
   const auto time_update_grid_end_thisrank = std::time(nullptr);
