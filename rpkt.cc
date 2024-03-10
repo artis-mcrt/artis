@@ -1018,8 +1018,8 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
   int i = 0;
   const int nbfcontinua = globals::nbfcontinua;
   const int allcontend =
-      std::distance(globals::allcont_nu_edge.begin(),
-                    std::upper_bound(globals::allcont_nu_edge.begin(), globals::allcont_nu_edge.end(), nu));
+      std::distance(globals::allcont_nu_edge.cbegin(),
+                    std::upper_bound(globals::allcont_nu_edge.cbegin(), globals::allcont_nu_edge.cend(), nu));
 
   const int allcontbegin = std::distance(
       globals::allcont_nu_edge.data(),
