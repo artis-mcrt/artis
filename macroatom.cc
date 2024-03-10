@@ -437,9 +437,9 @@ void do_macroatom(Packet &pkt_ptr, const MacroAtomState &pktmastate)
     const double randomrate = rng_uniform() * cumulative_transitions[MA_ACTION_COUNT - 1];
 
     // first cumulative_transitions[i] such that cumulative_transitions[i] > randomrate
-    const auto selected_action = static_cast<enum ma_action>(
+    const auto selected_action =
         std::distance(cumulative_transitions.cbegin(),
-                      std::upper_bound(cumulative_transitions.cbegin(), cumulative_transitions.cend(), randomrate)));
+                      std::upper_bound(cumulative_transitions.cbegin(), cumulative_transitions.cend(), randomrate));
 
     assert_always(selected_action < MA_ACTION_COUNT);
     assert_always(cumulative_transitions[selected_action] > randomrate);
@@ -666,6 +666,9 @@ void do_macroatom(Packet &pkt_ptr, const MacroAtomState &pktmastate)
         printout("ERROR: Problem selecting MA_ACTION\n");
         std::abort();
       }
+
+      default:
+        assert_testmodeonly(false);
     }
   }  /// endwhile
 
