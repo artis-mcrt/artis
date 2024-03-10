@@ -938,12 +938,6 @@ static void titer_average_estimators(const int nonemptymgi) {
 }
 #endif
 
-static void zero_gammaestimator(const int modelgridindex) {
-  assert_always(USE_LUT_PHOTOION);
-  const auto nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  std::fill_n(&globals::gammaestimator[nonemptymgi * globals::nbfcontinua_ground], globals::nbfcontinua_ground, 0.);
-}
-
 static void update_grid_cell(const int mgi, const int nts, const int nts_prev, const int titer, const double tratmid,
                              const double deltat, HeatingCoolingRates *heatingcoolingrates,
                              std::vector<double> &bfheatingcoeffs)
@@ -1250,7 +1244,9 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
         /// communication after update_grid to synchronize gammaestimator
         /// and write a contiguous restart file with grid properties
         if constexpr (USE_LUT_PHOTOION) {
-          zero_gammaestimator(mgi);
+          const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
+          std::fill_n(&globals::gammaestimator[nonemptymgi * globals::nbfcontinua_ground], globals::nbfcontinua_ground,
+                      0.);
         }
       }
     }  /// end parallel for loop over all modelgrid cells
