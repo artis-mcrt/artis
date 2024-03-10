@@ -389,7 +389,6 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
   double thermalmin = T_e_eqn_heating_minus_cooling(T_min, find_T_e_f.params);
   double thermalmax = T_e_eqn_heating_minus_cooling(T_max, find_T_e_f.params);
 
-  // printout("(heating - cooling) at T_min: %g, at T_max: %g\n", thermalmin, thermalmax);
   if (!std::isfinite(thermalmin) || !std::isfinite(thermalmax)) {
     printout(
         "[abort request] call_T_e_finder: non-finite results in modelcell %d (T_R=%g, W=%g). T_e forced to be "
