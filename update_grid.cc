@@ -1238,16 +1238,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 #pragma omp critical(estimators_file)
 #endif
         { write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates); }
-
-      } else if (grid::get_numassociatedcells(mgi) > 0) {
-        /// else, only reset gammaestimator to zero. This allows us to do a global MPI
-        /// communication after update_grid to synchronize gammaestimator
-        /// and write a contiguous restart file with grid properties
-        if constexpr (USE_LUT_PHOTOION) {
-          const auto nonemptymgi = grid::get_modelcell_nonemptymgi(mgi);
-          std::fill_n(&globals::gammaestimator[nonemptymgi * globals::nbfcontinua_ground], globals::nbfcontinua_ground,
-                      0.);
-        }
       }
     }  /// end parallel for loop over all modelgrid cells
 
