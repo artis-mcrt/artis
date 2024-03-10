@@ -821,7 +821,7 @@ auto main(int argc, char *argv[]) -> int {
     }
   }
 
-  auto packets = std::vector<Packet>(MPKTS);
+  std::array<Packet, MPKTS> packets;
 
   printout("git branch %s\n", GIT_BRANCH);
 
