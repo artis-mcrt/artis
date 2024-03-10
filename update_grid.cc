@@ -1225,20 +1225,17 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 #pragma omp for schedule(dynamic)
 #endif
 
-    for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
+    for (int mgi = nstart; mgi < nstart + ndo; mgi++) {
       /// Check if this task should work on the current model grid cell.
       /// If yes, update the cell and write out the estimators
-      if (mgi >= nstart && mgi < nstart + ndo) {
-        HeatingCoolingRates heatingcoolingrates{};
-        update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates,
-                         threads_bfheatingcoeffs[tid]);
+      HeatingCoolingRates heatingcoolingrates{};
+      update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates, threads_bfheatingcoeffs[tid]);
 
-        // maybe want to add omp ordered here if the modelgrid cells should be output in order
+      // maybe want to add omp ordered here if the modelgrid cells should be output in order
 #ifdef _OPENMP
 #pragma omp critical(estimators_file)
 #endif
-        { write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates); }
-      }
+      { write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates); }
     }  /// end parallel for loop over all modelgrid cells
 
   }  /// end OpenMP parallel section
