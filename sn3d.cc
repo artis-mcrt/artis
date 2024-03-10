@@ -578,15 +578,14 @@ static void zero_estimators() {
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     radfield::zero_estimators(modelgridindex);
 
-    globals::ffheatingestimator[nonemptymgi] = 0.;
-    globals::colheatingestimator[nonemptymgi] = 0.;
-
     if constexpr (TRACK_ION_STATS) {
       stats::reset_ion_stats(modelgridindex);
     }
-
-    globals::dep_estimator_gamma[nonemptymgi] = 0.;
   }
+
+  std::fill_n(globals::ffheatingestimator, grid::get_nonempty_npts_model(), 0.);
+  std::fill_n(globals::colheatingestimator, grid::get_nonempty_npts_model(), 0.);
+  std::ranges::fill(globals::dep_estimator_gamma, 0.);
 
   if constexpr (USE_LUT_PHOTOION) {
     std::fill_n(globals::gammaestimator, grid::get_nonempty_npts_model() * globals::nbfcontinua_ground, 0.);
