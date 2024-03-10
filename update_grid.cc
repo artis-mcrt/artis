@@ -674,8 +674,6 @@ void cellcache_change_cell(const int modelgridindex) {
   globals::cellcache[cellcacheslotid].cellnumber = modelgridindex;
   globals::cellcache[cellcacheslotid].chi_ff_nnionpart = -1.;
 
-  //  int nlevels_with_processrates = 0;
-  // const double T_e = modelgridindex >= 0 ? grid ::get_Te(modelgridindex) : 0.;
   const int nelements = get_nelements();
   for (int element = 0; element < nelements; element++) {
     const int nions = get_nions(element);
@@ -729,7 +727,6 @@ void cellcache_change_cell(const int modelgridindex) {
   if (modelgridindex >= 0) {
     std::fill_n(globals::cellcache[cellcacheslotid].ch_allcont_departureratios, globals::nbfcontinua, -1);
   }
-  // printout("nlevels_with_processrates %d\n", nlevels_with_processrates);
 }
 
 static void solve_Te_nltepops(const int n, const int nts, const int titer, HeatingCoolingRates *heatingcoolingrates)
@@ -938,9 +935,7 @@ static void titer_average_estimators(const int nonemptymgi) {
 #endif
 
 static void update_grid_cell(const int mgi, const int nts, const int nts_prev, const int titer, const double tratmid,
-                             const double deltat, HeatingCoolingRates *heatingcoolingrates)
-// n is the modelgrid index
-{
+                             const double deltat, HeatingCoolingRates *heatingcoolingrates) {
   const int assoc_cells = grid::get_numassociatedcells(mgi);
   if (assoc_cells < 1) {
     /// For modelgrid cells that are not represented in the simulation grid,
