@@ -29,8 +29,6 @@
 #include "thermalbalance.h"
 #include "vpkt.h"
 
-static std::vector<std::vector<double>> threads_bfheatingcoeffs;
-
 static void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer,
                                      const HeatingCoolingRates *heatingcoolingrates) {
   // return; disable for better performance (if estimators files are not needed)
@@ -734,8 +732,7 @@ void cellcache_change_cell(const int modelgridindex) {
   // printout("nlevels_with_processrates %d\n", nlevels_with_processrates);
 }
 
-static void solve_Te_nltepops(const int n, const int nts, const int titer, HeatingCoolingRates *heatingcoolingrates,
-                              std::vector<double> &bfheatingcoeffs)
+static void solve_Te_nltepops(const int n, const int nts, const int titer, HeatingCoolingRates *heatingcoolingrates)
 // n is the modelgridindex (TODO: rename to mgi)
 // nts is the timestep number
 {
@@ -743,6 +740,8 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, Heati
   // they only depend on the radiation field, which is fixed during the iterations below
   printout("calculate_bfheatingcoeffs for timestep %d cell %d...", nts, n);
   const auto sys_time_start_calculate_bfheatingcoeffs = std::time(nullptr);
+  thread_local static auto bfheatingcoeffs = std::vector<double>(get_includedlevels());
+
   calculate_bfheatingcoeffs(n, bfheatingcoeffs);
   printout("took %ld seconds\n", std::time(nullptr) - sys_time_start_calculate_bfheatingcoeffs);
 
@@ -939,8 +938,7 @@ static void titer_average_estimators(const int nonemptymgi) {
 #endif
 
 static void update_grid_cell(const int mgi, const int nts, const int nts_prev, const int titer, const double tratmid,
-                             const double deltat, HeatingCoolingRates *heatingcoolingrates,
-                             std::vector<double> &bfheatingcoeffs)
+                             const double deltat, HeatingCoolingRates *heatingcoolingrates)
 // n is the modelgrid index
 {
   const int assoc_cells = grid::get_numassociatedcells(mgi);
@@ -1085,7 +1083,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         radfield::normalise_bf_estimators(mgi, estimator_normfactor / H);
       }
 
-      solve_Te_nltepops(mgi, nts, titer, heatingcoolingrates, bfheatingcoeffs);
+      solve_Te_nltepops(mgi, nts, titer, heatingcoolingrates);
     }
     printout("Temperature/NLTE solution for cell %d timestep %d took %ld seconds\n", mgi, nts,
              std::time(nullptr) - sys_time_start_temperature_corrections);
@@ -1210,7 +1208,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 
   cellcache_change_cell(-99);
 
-  threads_bfheatingcoeffs.resize(get_max_threads());
   /// Do not use values which are saved in the cellcache within update_grid
   use_cellcache = false;
 
@@ -1218,8 +1215,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 #pragma omp parallel
 #endif
   {
-    threads_bfheatingcoeffs[tid].reserve(get_includedlevels());
-
 /// Updating cell information
 #ifdef _OPENMP
 #pragma omp for schedule(dynamic)
@@ -1229,7 +1224,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       /// Check if this task should work on the current model grid cell.
       /// If yes, update the cell and write out the estimators
       HeatingCoolingRates heatingcoolingrates{};
-      update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates, threads_bfheatingcoeffs[tid]);
+      update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, &heatingcoolingrates);
 
       // maybe want to add omp ordered here if the modelgrid cells should be output in order
 #ifdef _OPENMP
