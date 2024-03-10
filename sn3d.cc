@@ -821,7 +821,9 @@ auto main(int argc, char *argv[]) -> int {
     }
   }
 
-  std::array<Packet, MPKTS> packets;
+  auto *const packets = static_cast<Packet *>(calloc(MPKTS, sizeof(Packet)));
+
+  assert_always(packets != nullptr);
 
   printout("git branch %s\n", GIT_BRANCH);
 
@@ -906,7 +908,7 @@ auto main(int argc, char *argv[]) -> int {
     /// Next we want to initialise the packets.
     /// Create a bunch of npkts packets
     /// and write them to a binary file for later readin.
-    packet_init(packets.data());
+    packet_init(packets);
     zero_estimators();
   }
 
@@ -972,7 +974,7 @@ auto main(int argc, char *argv[]) -> int {
     assert_always(globals::num_lte_timesteps > 0);  // The first time step must solve the ionisation balance in LTE
 
     for (int titer = 0; titer < globals::n_titer; titer++) {
-      terminate_early = do_timestep(nts, titer, my_rank, nstart, ndo, packets.data(), walltimelimitseconds);
+      terminate_early = do_timestep(nts, titer, my_rank, nstart, ndo, packets, walltimelimitseconds);
 #ifdef DO_TITER
       /// No iterations over the zeroth timestep, set titer > n_titer
       if (nts == 0) titer = globals::n_titer + 1;
@@ -1036,6 +1038,7 @@ auto main(int argc, char *argv[]) -> int {
 #endif
   { gsl_integration_workspace_free(gslworkspace); }
 
+  free(packets);
   if constexpr (TRACK_ION_STATS) {
     stats::cleanup();
   }
