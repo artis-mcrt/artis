@@ -821,7 +821,7 @@ auto main(int argc, char *argv[]) -> int {
     }
   }
 
-  auto *const packets = static_cast<Packet *>(calloc(MPKTS, sizeof(Packet)));
+  auto *const packets = static_cast<Packet *>(malloc(MPKTS * sizeof(Packet)));
 
   assert_always(packets != nullptr);
 
