@@ -237,7 +237,6 @@ exspec: $(exspec_objects) artisoptions.h Makefile
 
 version.h:
 	@echo "constexpr const char* GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";" > version.h
-	@echo "constexpr const char* GIT_HASH = \"$(shell git rev-parse HEAD)\";" >> version.h
 # requires git > 2.22
 # @echo "constexpr const char* GIT_BRANCH = \"$(shell git branch --show)\";" >> version.h
 	@echo "constexpr const char* GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD )\";" >> version.h
