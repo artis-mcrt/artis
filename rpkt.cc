@@ -1053,8 +1053,6 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
         const double nu_edge = globals::allcont[i].nu_edge;
         const double sigma_bf = photoionization_crosssection_fromtable(globals::allcont[i].photoion_xs, nu_edge, nu);
 
-        const double probability = globals::allcont[i].probability;
-
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
         if constexpr (!SEPARATE_STIMRECOMB) {
           double departure_ratio = globals::cellcache[cellcacheslotid].ch_allcont_departureratios[i];
@@ -1074,12 +1072,11 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
           corrfactor = std::max(0., 1 - stimfactor);  // photoionisation minus stimulated recombination
         }
 
-        const double sigma_contr = sigma_bf * probability * corrfactor;
+        const double sigma_contr = sigma_bf * globals::allcont[i].probability * corrfactor;
 
         if constexpr (USECELLHISTANDUPDATEPHIXSLIST && (USE_LUT_PHOTOION || USE_LUT_BFHEATING)) {
           if (level == 0 && globals::allcont[i].phixstargetindex == 0) {
-            const int gphixsindex = globals::allcont[i].index_in_groundphixslist;
-            phixslist->groundcont_gamma_contr[gphixsindex] = sigma_contr;
+            phixslist->groundcont_gamma_contr[globals::allcont[i].index_in_groundphixslist] = sigma_contr;
           }
         }
 
@@ -1087,9 +1084,7 @@ static auto calculate_chi_bf_gammacontr(const int modelgridindex, const double n
           phixslist->gamma_contr[i] = sigma_contr;
         }
 
-        const double chi_bf_contr = nnlevel * sigma_contr;
-
-        chi_bf_sum += chi_bf_contr;
+        chi_bf_sum += nnlevel * sigma_contr;
         if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
           phixslist->chi_bf_sum[i] = chi_bf_sum;
         }
