@@ -55,6 +55,10 @@ CheckOptions:
       value: google
     - key: cppcoreguidelines-init-variables.MathHeader
       value: <cmath>
+    - key: modernize-use-std-print.PrintfLikeFunctions # replace printout macro with a function when we want to autofix to use std::format gcc >=13
+      value: printf; absl::PrintF; printout
+    - key: modernize-use-std-print.FprintfLikeFunctions
+      value: fprintf; absl::FPrintF
     - key: cppcoreguidelines-narrowing-conversions.IgnoreConversionFromTypes
       value: size_t;ptrdiff_t;size_t;difference_type;time_t;MPI_Aint
     - key: cppcoreguidelines-narrowing-conversions.WarnOnFloatingPointNarrowingConversion

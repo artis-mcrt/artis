@@ -5,6 +5,7 @@
 #include <array>
 #include <cmath>
 #include <cstring>
+#include <tuple>
 // #define D_POSIX_SOURCE
 #include <gsl/gsl_errno.h>
 

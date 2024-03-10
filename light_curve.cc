@@ -11,6 +11,7 @@
 #include "constants.h"
 #include "exspec.h"
 #include "globals.h"
+#include "packet.h"
 #include "sn3d.h"
 #include "vectors.h"
 
