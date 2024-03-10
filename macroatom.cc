@@ -657,8 +657,6 @@ void do_macroatom(Packet &pkt_ptr, const MacroAtomState &pktmastate)
           stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL,
                                      pkt_ptr.e_cmf);
         }
-        // printout("Macroatom non-thermal ionisation to Z=%d ionstage %d level %d\n", get_atomicnumber(element), ion,
-        // level);
         break;
       }
 
@@ -670,15 +668,13 @@ void do_macroatom(Packet &pkt_ptr, const MacroAtomState &pktmastate)
       default:
         assert_testmodeonly(false);
     }
-  }  /// endwhile
+  }
 
   if (pkt_ptr.trueemissiontype == EMTYPE_NOTSET) {
     pkt_ptr.trueemissiontype = pkt_ptr.emissiontype;
     pkt_ptr.trueemissionvelocity = vec_len(pkt_ptr.em_pos) / pkt_ptr.em_time;
     pkt_ptr.trueem_time = pkt_ptr.em_time;
   }
-
-  /// procedure ends only after a change to r or k packets has taken place
 }
 
 /// Calculation of radiative rates ///////////////////////////////////////////////////////
