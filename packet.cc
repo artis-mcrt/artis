@@ -28,7 +28,6 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
 /// This subroutine places pellet n with energy e0 in cell m
 {
   /// First choose a position for the pellet. In the cell.
-  /// n is the index of the packet. m is the index for the grid cell.
   pkt_ptr.where = cellindex;
   pkt_ptr.number = pktnumber;  /// record the packets number for debugging
   pkt_ptr.prop_time = globals::tmin;

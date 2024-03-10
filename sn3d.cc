@@ -867,10 +867,8 @@ auto main(int argc, char *argv[]) -> int {
   /// T_R and W. W is easily factored out. For stimulated recombination we must assume
   /// T_e = T_R for this precalculation.
 
-  printout("time before tabulation of rate coefficients %ld\n", std::time(nullptr));
   ratecoefficients_init();
-  printout("time after tabulation of rate coefficients %ld\n", std::time(nullptr));
-  //  std::abort();
+
 #ifdef MPI_ON
   printout("barrier after tabulation of rate coefficients: time before barrier %ld, ", std::time(nullptr));
   MPI_Barrier(MPI_COMM_WORLD);

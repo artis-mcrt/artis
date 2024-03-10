@@ -1088,6 +1088,7 @@ void ratecoefficients_init()
 /// W is easily factored out. For stimulated recombination we must assume
 /// T_e = T_R for this precalculation.
 {
+  printout("time before tabulation of rate coefficients %ld\n", std::time(nullptr));
   /// Determine the temperture grids gridsize
   T_step_log = (log(MAXTEMP) - log(MINTEMP)) / (TABLESIZE - 1.);
 
@@ -1135,6 +1136,8 @@ void ratecoefficients_init()
   read_recombrate_file();
 
   precalculate_ion_alpha_sp();
+
+  printout("time after tabulation of rate coefficients %ld\n", std::time(nullptr));
 }
 
 auto interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T) -> double {
