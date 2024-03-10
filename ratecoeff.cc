@@ -1182,11 +1182,6 @@ static auto integrand_stimrecombination_custom_radfield(const double nu, void *v
 
 static auto calculate_stimrecombcoeff_integral(int element, int lowerion, int level, int phixstargetindex,
                                                int modelgridindex) -> double {
-  // if (nnlevel <= 1.1 * MINPOP)
-  // {
-  //   return 0.;
-  // }
-
   const double epsrel = 1e-3;
   const double epsabs = 0.;
 
@@ -1322,10 +1317,6 @@ static auto calculate_corrphotoioncoeff_integral(int element, int ion, int level
 #else
   // stimulated recombination is negative photoionisation
   const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
-  // if (nnlevel <= 1.1 * MINPOP)
-  // {
-  //   return 0.;
-  // }
   const double nne = grid::get_nne(modelgridindex);
   const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
   const double sf = calculate_sahafact(element, ion, level, upperionlevel, T_e, H * nu_threshold);
