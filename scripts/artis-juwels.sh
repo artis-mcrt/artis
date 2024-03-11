@@ -2,7 +2,6 @@
 #SBATCH --ntasks=960
 ##SBATCH --ntasks=1920
 #SBATCH --ntasks-per-node=48
-#SBATCH --hint=nomultithread
 #SBATCH --time=24:00:00
 #SBATCH --partition=batch
 ##SBATCH --partition=mem192
@@ -15,13 +14,15 @@ module load Stages/2024 GCC ParaStationMPI GSL
 
 module list
 
+export SLURM_HINT=nomultithread
+
 cd $SLURM_SUBMIT_DIR
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): before srun sn3d. hours left: $hoursleft"
-time srun --cpus-per-task=1 --threads-per-core=1 -- ./sn3d -w $hoursleft > out.txt
+time srun --cpus-per-task=1 --threads-per-core=1 --cpu-bind=rank_ldom --hint=nomultithread -- ./sn3d -w $hoursleft > out.txt
 hoursleftafter=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
 hourselapsed=$(python3 -c "print($hoursleft - $hoursleftafter)")
