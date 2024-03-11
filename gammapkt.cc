@@ -848,7 +848,6 @@ void do_gamma(Packet &pkt_ptr, double t2)
       // Photo electric effect - makes it a k-packet for sure.
       pkt_ptr.type = TYPE_NTLEPTON;
       pkt_ptr.absorptiontype = -4;
-      // pkt_ptr.type = TYPE_PRE_KPKT;
       stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
     } else if ((chi_compton + chi_photo_electric + chi_pair_prod) > chi_rnd) {
       // It's a pair production
