@@ -2,6 +2,8 @@
 #SBATCH --ntasks=960
 ##SBATCH --ntasks=1920
 #SBATCH --ntasks-per-node=48
+#SBATCH --hint=nomultithread
+#SBATCH --threads-per-core=1
 #SBATCH --time=24:00:00
 #SBATCH --partition=batch
 ##SBATCH --partition=mem192
