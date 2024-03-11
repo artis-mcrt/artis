@@ -10,6 +10,8 @@ constexpr double COOLING_UNDEFINED = -99;
 
 namespace kpkt {
 
+extern int ncoolingterms;
+
 auto get_ncoolingterms() -> int;
 void setup_coolinglist();
 void set_kpktdiffusion(float kpktdiffusion_timescale_in, int n_kpktdiffusion_timesteps_in);

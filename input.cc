@@ -1198,7 +1198,7 @@ static void setup_cellcache() {
 
     globals::cellcache[itid].cellnumber = -99;
 
-    const auto ncoolingterms = kpkt::get_ncoolingterms();
+    const auto ncoolingterms = kpkt::ncoolingterms;
     mem_usage_cellcache += ncoolingterms * sizeof(double);
     globals::cellcache[itid].cooling_contrib = static_cast<double *>(calloc(ncoolingterms, sizeof(double)));
 

@@ -37,14 +37,12 @@ struct CellCachecoolinglist {
   int upperlevel;
 };
 
-static int ncoolingterms;
+int ncoolingterms{0};
 
 static CellCachecoolinglist *coolinglist;
 
 static int n_kpktdiffusion_timesteps{0};
 static float kpktdiffusion_timescale{0.};
-
-auto get_ncoolingterms() -> int { return ncoolingterms; }
 
 template <bool update_cooling_contrib_list>
 static auto calculate_cooling_rates_ion(const int modelgridindex, const int element, const int ion,
