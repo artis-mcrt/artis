@@ -1,6 +1,7 @@
 #!/bin/bash -x
 #SBATCH --ntasks=960
-#SBATCH --nodes=20
+##SBATCH --nodes=20
+#SBATCH --tasks-per-node=48
 #SBATCH --exclusive
 #SBATCH --time=24:00:00
 #SBATCH --partition=batch
@@ -22,7 +23,7 @@ echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut
 
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): before srun sn3d. hours left: $hoursleft"
-time srun --mpi=pspmix --tasks-per-node=48 --threads-per-core=1 -- ./sn3d -w $hoursleft > out.txt
+time srun --mpi=pspmix --threads-per-core=1 -- ./sn3d -w $hoursleft > out.txt
 hoursleftafter=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
 hourselapsed=$(python3 -c "print($hoursleft - $hoursleftafter)")
