@@ -179,16 +179,16 @@ void write_packets(const char filename[], const Packet *const pkt) {
   for (int i = 0; i < globals::npkts; i++) {
     fprintf(packets_file, "%d ", pkt[i].number);
     fprintf(packets_file, "%d ", pkt[i].where);
-    fprintf(packets_file, "%d ", pkt[i].type);
+    fprintf(packets_file, "%d ", static_cast<int>(pkt[i].type));
     fprintf(packets_file, "%lg %lg %lg ", pkt[i].pos[0], pkt[i].pos[1], pkt[i].pos[2]);
     fprintf(packets_file, "%lg %lg %lg ", pkt[i].dir[0], pkt[i].dir[1], pkt[i].dir[2]);
-    fprintf(packets_file, "%d ", pkt[i].last_cross);
+    fprintf(packets_file, "%d ", static_cast<int>(pkt[i].last_cross));
     fprintf(packets_file, "%g ", pkt[i].tdecay);
     fprintf(packets_file, "%g ", pkt[i].e_cmf);
     fprintf(packets_file, "%g ", pkt[i].e_rf);
     fprintf(packets_file, "%g ", pkt[i].nu_cmf);
     fprintf(packets_file, "%g ", pkt[i].nu_rf);
-    fprintf(packets_file, "%d ", pkt[i].escape_type);
+    fprintf(packets_file, "%d ", static_cast<int>(pkt[i].escape_type));
     fprintf(packets_file, "%g ", pkt[i].escape_time);
     fprintf(packets_file, "%d ", pkt[i].next_trans);
     fprintf(packets_file, "%d ", pkt[i].last_event);

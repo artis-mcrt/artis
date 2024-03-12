@@ -7,7 +7,7 @@
 #include <compare>
 #include <cstdio>
 
-enum packet_type {
+enum packet_type : int {
   TYPE_ESCAPE = 32,
   TYPE_RADIOACTIVE_PELLET = 100,
   TYPE_GAMMA = 10,
@@ -29,7 +29,7 @@ struct MacroAtomState {
   int activatingline;  /// Linelistindex of the activating line for bb activated MAs, -99 else.
 };
 
-enum cell_boundary {
+enum cell_boundary : int {
   COORD0_MIN = 101,
   COORD0_MAX = 102,
   COORD1_MIN = 103,
