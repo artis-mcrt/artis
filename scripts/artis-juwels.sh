@@ -1,7 +1,7 @@
 #!/bin/bash -x
 #SBATCH --ntasks=960
-#SBATCH --tasks-per-node=48
-#SBATCH --exclusive
+##SBATCH --ntasks=1920
+#SBATCH --ntasks-per-node=48
 #SBATCH --time=24:00:00
 #SBATCH --partition=batch
 ##SBATCH --partition=mem192
@@ -10,9 +10,7 @@
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=luke.shingles@gmail.com
 
-module load ParaStationMPI
-module load GSL
-module load UCX-settings/RC
+module load Stages/2024 GCC ParaStationMPI GSL
 
 module list
 
@@ -22,7 +20,7 @@ echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut
 
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): before srun sn3d. hours left: $hoursleft"
-time srun --mpi=pspmix --threads-per-core=1 -- ./sn3d -w $hoursleft > out.txt
+time srun --hint=nomultithread -- ./sn3d -w $hoursleft > out.txt
 hoursleftafter=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
 hourselapsed=$(python3 -c "print($hoursleft - $hoursleftafter)")
