@@ -1,6 +1,5 @@
 #!/bin/bash -x
 #SBATCH --ntasks=960
-##SBATCH --nodes=20
 #SBATCH --tasks-per-node=48
 #SBATCH --exclusive
 #SBATCH --time=24:00:00
