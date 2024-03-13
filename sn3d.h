@@ -226,7 +226,7 @@ static auto fstream_required(const std::string &filename, std::ios_base::openmod
 #endif
 }
 
-inline auto rng_uniform(void) -> float {
+inline auto rng_uniform() -> float {
   while (true) {
     const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
     if (zrand != 1.) {
@@ -235,7 +235,7 @@ inline auto rng_uniform(void) -> float {
   }
 }
 
-inline auto rng_uniform_pos(void) -> float {
+inline auto rng_uniform_pos() -> float {
   while (true) {
     const auto zrand = rng_uniform();
     if (zrand > 0) {
@@ -244,7 +244,7 @@ inline auto rng_uniform_pos(void) -> float {
   }
 }
 
-inline void rng_init(const uint64_t zseed) {
+inline void rng_init(const long long int zseed) {
   printout("rng is a std::mt19937 generator\n");
   stdrng.seed(zseed);
 }

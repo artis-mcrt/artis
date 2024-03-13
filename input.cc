@@ -6,7 +6,6 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -1664,27 +1663,32 @@ void read_parameterfile(int rank)
 
   assert_always(get_noncommentline(file, line));
 
-  int64_t zseed_input = -1;
+  long long int zseed_input = -1;
   std::istringstream(line) >> zseed_input;
+
+  long long int pre_zseed{};
+  if (zseed_input > 0) {
+    pre_zseed = static_cast<long long int>(zseed_input);  // random number seed
+    printout("using input.txt specified random number seed of %lld\n", pre_zseed);
+  } else {
+    pre_zseed = std::random_device{}();
+#ifdef MPI_ON
+    // broadcast randomly-generated seed from rank 0 to all ranks
+    MPI_Bcast(&pre_zseed, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+#endif
+    printout("randomly-generated random number seed is %lld\n", pre_zseed);
+  }
 
 #ifdef _OPENMP
 #pragma omp parallel
   {
 #endif
-    long unsigned int pre_zseed{};
-    if (zseed_input > 0) {
-      pre_zseed = static_cast<long unsigned int>(zseed_input);  // random number seed
-      printout("using input.txt specified random number seed of %lu\n", pre_zseed);
-    } else {
-      pre_zseed = std::random_device{}();
-      printout("randomly-generated random number seed is %lu\n", pre_zseed);
-    }
 
     /// For MPI parallelisation, the random seed is changed based on the rank of the process
     /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
     /// to the thread-ID tid.
-    const long unsigned int zseed = pre_zseed + static_cast<uint64_t>(13 * (rank * get_num_threads() + tid));
-    printout("rank %d: thread %d has zseed %lu\n", rank, tid, zseed);
+    const long long int zseed = pre_zseed + static_cast<long long int>(13 * (rank * get_num_threads() + tid));
+    printout("rank %d: thread %d has zseed %lld\n", rank, tid, zseed);
     rng_init(zseed);
     /// call it a few times
     for (int n = 0; n < 100; n++) {
