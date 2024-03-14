@@ -24,7 +24,6 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
-#include <random>
 #include <span>
 
 #include "artisoptions.h"
@@ -54,7 +53,8 @@
 #include "vpkt.h"
 
 bool use_cellcache = false;
-std::mt19937 stdrng(std::random_device{}());
+long long int rngseed{std::random_device{}()};
+
 gsl_integration_workspace *gslworkspace = nullptr;
 std::ofstream output_file;
 static FILE *linestat_file = nullptr;

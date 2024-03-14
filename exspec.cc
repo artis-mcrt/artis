@@ -30,7 +30,7 @@
 // threadprivate variables
 std::ofstream output_file;
 bool use_cellcache = false;
-std::mt19937 stdrng(std::random_device{}());
+long long int rngseed = std::random_device{}();
 gsl_integration_workspace *gslworkspace = nullptr;
 
 static void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra &rpkt_spectra, Spectra &stokes_i,

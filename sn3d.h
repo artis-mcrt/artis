@@ -47,7 +47,7 @@ extern std::ofstream output_file;
 inline constexpr int cellcacheslotid = 0;
 extern bool use_cellcache;
 
-extern std::mt19937 stdrng;
+extern long long int rngseed;
 
 extern gsl_integration_workspace *gslworkspace;
 
@@ -212,6 +212,7 @@ static auto fstream_required(const std::string &filename, std::ios_base::openmod
 }
 
 inline auto rng_uniform() -> float {
+  thread_local std::mt19937 stdrng(rngseed);
   while (true) {
     const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
     if (zrand != 1.) {

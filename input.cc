@@ -1692,10 +1692,10 @@ void read_parameterfile(int rank)
     const long long int zseed = pre_zseed + static_cast<long long int>(13 * (rank * get_max_threads() + tid));
     printout("rank %d: thread %d has zseed %lld\n", rank, tid, zseed);
     printout("rng is a std::mt19937 generator\n");
-    stdrng.seed(zseed);
+    rngseed = zseed;
     /// call it a few times
     for (int n = 0; n < 100; n++) {
-      rng_uniform();
+      printout("%d rnd %g\n", n, rng_uniform());
     }
 #ifdef _OPENMP
   }
