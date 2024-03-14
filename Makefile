@@ -16,7 +16,7 @@ ifeq ($(MPI),ON)
 	CXX := mpicxx
 	CXXFLAGS += -DMPI_ON=true
 	BUILD_DIR := $(BUILD_DIR)_mpi
-$(info $(shell mpicxx --showme:version))
+$(info $(shell mpicxx --showme:version 2> /dev/null))
 else ifeq ($(MPI),OFF)
 else
 	$(error bad value for MPI option. Should be ON or OFF)
