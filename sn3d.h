@@ -229,11 +229,6 @@ inline auto rng_uniform_pos() -> float {
   }
 }
 
-inline void rng_init(const long long int zseed) {
-  printout("rng is a std::mt19937 generator\n");
-  stdrng.seed(zseed);
-}
-
 [[nodiscard]] inline auto is_pid_running(pid_t pid) -> bool {
   while (waitpid(-1, nullptr, WNOHANG) > 0) {
     // Wait for defunct....
