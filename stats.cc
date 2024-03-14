@@ -23,11 +23,10 @@
 namespace stats {
 
 static double *ionstats = nullptr;
-static std::vector<std::array<ptrdiff_t, COUNTER_COUNT>> eventstats;
+static std::array<std::atomic<ptrdiff_t>, COUNTER_COUNT> eventstats;
 
 void init() {
-  eventstats.resize(get_max_threads(), {0});
-
+  assert(eventstats[0].is_lock_free());
   if constexpr (TRACK_ION_STATS) {
     ionstats =
         static_cast<double *>(malloc(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT * sizeof(double)));
@@ -171,12 +170,12 @@ void normalise_ion_estimators(const int mgi, const double deltat, const double d
 void increment(enum eventcounters i) {
   assert_testmodeonly(i >= 0);
   assert_testmodeonly(i < COUNTER_COUNT);
-  eventstats[tid][i]++;
+  eventstats[i]++;
 }
 
 void pkt_action_counters_reset() {
   for (int i = 0; i < COUNTER_COUNT; i++) {
-    eventstats[tid][i] = 0;
+    eventstats[i] = 0;
   }
 
   nonthermal::nt_reset_stats();
@@ -184,12 +183,9 @@ void pkt_action_counters_reset() {
 }
 
 auto get_counter(enum eventcounters i) -> ptrdiff_t {
-  assert_always(i < COUNTER_COUNT);
-  ptrdiff_t count = 0;
-  for (int t = 0; t < get_num_threads(); t++) {
-    count += eventstats[t][i];
-  }
-  return count;
+  assert_testmodeonly(i >= 0);
+  assert_testmodeonly(i < COUNTER_COUNT);
+  return eventstats[i];
 }
 
 void pkt_action_counters_printout(const int nts) {
