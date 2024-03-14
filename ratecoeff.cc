@@ -468,16 +468,6 @@ static auto approx_bfheating_integrand_gsl(const double nu, void *const voidpara
   /// Precalculation for T_e=T_R and W=1
   const double x = sigma_bf * (1 - nu_edge / nu) * radfield::dbb(nu, T, 1) * (1 - exp(-HOVERKB * nu / T));
 
-  /// Precalculation for a (T_R,T_e)-grid, but still W is assumed to be 1.
-  /// The radfield part can be corrected later because of its linear dependence.
-  /// But not the W in the stimulated correction term!
-  /*double T_e  = ((gslintegration_paras *) paras)->T;
-  double T_R  = ((gslintegration_paras *) paras)->T2;
-  double E_threshold = nu_edge*H;
-  double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
-  double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
-  x = sigma_bf*(1-nu_edge/nu)*radfield::dbb(nu,T_R,1) * (1 - sqrt(T_e/T_R) * sf_Te/sf_TR * exp(-H*nu/KB/T_e));*/
-
   return x;
 }
 
@@ -497,60 +487,6 @@ static auto bfcooling_integrand_gsl(const double nu, void *const voidparas) -> d
   // return sigma_bf * (1-nu_edge/nu) * TWOHOVERCLIGHTSQUARED * pow(nu,3) * exp(-HOVERKB*nu/T);
   return sigma_bf * (nu - nu_edge) * TWOHOVERCLIGHTSQUARED * nu * nu * exp(-HOVERKB * nu / T);
 }
-
-/*static double bfcooling_integrand_gsl_2(double nu, void *paras)
-/// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
-/// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
-/// formula. The radiation fields dependence on W is taken into account by multiplying
-/// the resulting expression with the correct W later on.
-{
-  double T  = ((gslintegration_paras *) paras)->T;
-  double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
-
-  /// Information about the current level is passed via the global variable
-  /// mastate[tid] and its child values element, ion, level
-  /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
-  double sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge,nu);
-
-  return sigma_bf*(1/nu_edge-1/nu) * TWOOVERCLIGHTSQUARED*pow(nu,3) * exp(-HOVERKB*nu/T);
-}*/
-
-/*static double stimulated_bfcooling_integrand_gsl(double nu, void *paras)
-/// Integrand to precalculate the bound-free heating ratecoefficient in an approximate way
-/// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
-/// formula. The radiation fields dependence on W is taken into account by multiplying
-/// the resulting expression with the correct W later on.
-{
-  double T  = ((gslintegration_paras *) paras)->T;
-  double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
-
-  /// Information about the current level is passed via the global variable
-  /// mastate[tid] and its child values element, ion, level
-  /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
-  double sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge,nu);
-
-  return sigma_bf * (1-nu_edge/nu) * radfield::dbb(nu, T, 1) * exp(-HOVERKB*nu/T);
-}*/
-
-/*static double stimulated_recomb_integrand_gsl(double nu, void *paras)
-/// Integrand to calculate the rate coefficient for spontaneous recombination
-/// using gsl integrators.
-{
-  double T = ((gslintegration_paras *) paras)->T;
-  double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
-
-  //double nu_edge = (epsilon(element,ion+1,0)-epsilon(element,ion,level))/H;
-  /// Information about the current level is passed via the global variable
-  /// mastate[tid] and its child values element, ion, level
-  /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
-  double sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge,nu);
-  double x = sigma_bf / H / nu * radfield::dbb(nu,T,1) * exp(-HOVERKB*nu/T);
-  ///in formula this looks like
-  ///x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
-
-  ///set contributions from Lyman continuum artificially to zero to overcome it's large opacity
-  return x;
-}*/
 
 static void precalculate_rate_coefficient_integrals() {
   // target fractional accuracy of the integrator //=1e-5 took 8 hours with Fe I to V!
