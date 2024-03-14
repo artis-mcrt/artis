@@ -1993,7 +1993,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
 
   if constexpr (NT_EXCITATION_ON && (MAX_NT_EXCITATIONS_STORED > 0)) {
     // sort by descending frac_deposition
-    std::sort(nt_solution[modelgridindex].frac_excitations_list.begin(),
+    std::sort(EXEC_PAR_UNSEQ nt_solution[modelgridindex].frac_excitations_list.begin(),
               nt_solution[modelgridindex].frac_excitations_list.end(),
               [](const auto &a, const auto &b) { return static_cast<bool>(a.frac_deposition > b.frac_deposition); });
 
@@ -2052,7 +2052,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep, co
     }
 
     // sort the excitation list by ascending lineindex for fast lookup with a binary search
-    std::sort(nt_solution[modelgridindex].frac_excitations_list.begin(),
+    std::sort(EXEC_PAR_UNSEQ nt_solution[modelgridindex].frac_excitations_list.begin(),
               nt_solution[modelgridindex].frac_excitations_list.end(),
               [](const auto &a, const auto &b) { return static_cast<bool>(a.lineindex < b.lineindex); });
 
