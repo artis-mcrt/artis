@@ -587,15 +587,13 @@ void zero_estimators()
 // set up the new bins and clear the estimators in preparation
 // for a timestep
 {
+  std::ranges::fill(J_normfactor, -1.0);
+  std::ranges::fill(J, 0.0);
+  std::ranges::fill(nuJ, 0.0);
+  std::ranges::fill(bfrate_raw, 0.0);
+
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-
-    if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-      assert_always(!bfrate_raw.empty());
-      for (int i = 0; i < globals::nbfcontinua; i++) {
-        bfrate_raw[nonemptymgi * globals::nbfcontinua + i] = 0.;
-      }
-    }
 
     if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
       assert_always(Jb_lu_raw != nullptr);
@@ -605,9 +603,6 @@ void zero_estimators()
         Jb_lu_raw[modelgridindex][i].contribcount = 0.;
       }
     }
-
-    J[nonemptymgi] = 0.;  // this is required even if FORCE_LTE is on
-    nuJ[nonemptymgi] = 0.;
 
     if (MULTIBIN_RADFIELD_MODEL_ON) {
       // printout("radfield: zeroing estimators in %d bins in cell %d\n",RADFIELDBINCOUNT,modelgridindex);
@@ -620,7 +615,6 @@ void zero_estimators()
         radfieldbins[mgibinindex].contribcount = 0;
       }
     }
-    J_normfactor[nonemptymgi] = -1.0;
   }
 }
 
