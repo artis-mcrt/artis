@@ -47,19 +47,26 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - name: install dependencies
-              if: matrix.os != 'selfhosted'
-              run: |
-                  git status
-                  sudo apt update
-                  sudo apt install -y gcc-13 g++-13
-                  sudo apt install -y libgsl-dev
-                  sudo apt install -y openmpi-bin libopenmpi-dev
-                  echo "OMPI_CXX=g++-13" >> $GITHUB_ENV
+            - name: Install gcc
+              uses: fortran-lang/setup-fortran@v1
+              with:
+                  compiler: gcc
+                  version: 13
+
+            # - name: install dependencies
+            #   if: matrix.os != 'selfhosted'
+            #   run: |
+            #       git status
+            #       sudo apt update
+            #       sudo apt install -y gcc-13 g++-13
+            #       sudo apt install -y libgsl-dev
+            #       sudo apt install -y openmpi-bin libopenmpi-dev
+            #       echo "OMPI_CXX=g++-13" >> $GITHUB_ENV
 
             - name: CPU type and core count
               id: cpu-count
               run: |
+                  echo "OMPI_CXX=g++-13" >> $GITHUB_ENV
                   g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
                   python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
