@@ -47,6 +47,14 @@ jobs:
               with:
                   fetch-depth: 0
 
+            - name: apt update
+              run: |
+                  sudo add-apt-repository main
+                  sudo add-apt-repository universe
+                  sudo add-apt-repository restricted
+                  sudo add-apt-repository multiverse
+                  sudo apt-get update
+
             - name: Install gcc
               uses: fortran-lang/setup-fortran@v1
               with:
