@@ -13,9 +13,12 @@ ifeq ($(MPI),)
 endif
 
 ifeq ($(MPI),ON)
-	CXX := OMPI_CXX=$(CXX) mpicxx
+	OMPI_CXX := $(CXX)
+	MPICH_CXX := $(CXX)
+	CXX := mpicxx
 	CXXFLAGS += -DMPI_ON=true
 	BUILD_DIR := $(BUILD_DIR)_mpi
+$(info $(shell mpicxx --showme:version))
 else ifeq ($(MPI),OFF)
 else
 	$(error bad value for MPI option. Should be ON or OFF)
@@ -28,8 +31,9 @@ else
 $(error bad value for testmode option. Should be ON or OFF)
 endif
 
-COMPILER_VERSION := $(shell $(CXX) --version)
 
+COMPILER_VERSION := $(shell $(CXX) --version)
+$(info $(COMPILER_VERSION))
 ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
   COMPILER_NAME := CLANG
 else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
