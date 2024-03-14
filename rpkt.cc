@@ -1235,9 +1235,11 @@ void calculate_binned_opacities(const int modelgridindex) {
     expansionopacities[nonemptymgi * expopac_nbins + binindex] = bin_kappa_bb;
 
     if constexpr (EXPANSION_OPAC_SAMPLE_KAPPAPLANCK) {
-      // calculate_chi_rpkt_cont(nu_mid, globals::chi_rpkt_cont[tid], globals::phixslist[tid], modelgridindex, false);
-      // const auto bin_kappa_cont = globals::chi_rpkt_cont[tid].total / rho;
-      // const auto bin_kappa_cont = 0.;
+      // static thread_local struct Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {
+      //   .nu = NAN, .total = NAN, .ffescat = NAN, .ffheat = NAN, .bf = NAN, .modelgridindex = -1, .timestep = -1
+      // };
+      // calculate_chi_rpkt_cont(nu_mid, chi_rpkt_cont, nullptr, modelgridindex);
+      // const auto bin_kappa_cont = chi_rpkt_cont.total / rho;
       const auto bin_kappa_cont = calculate_chi_ffheating(modelgridindex, nu_mid) / rho;
 
       const auto planck_val = radfield::dbb(nu_mid, temperature, 1);
