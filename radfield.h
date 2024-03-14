@@ -20,7 +20,7 @@ void update_estimators(int nonemptymgi, double distance_e_cmf, double nu_cmf, do
 void update_lineestimator(int modelgridindex, int lineindex, double increment);
 [[nodiscard]] auto radfield(double nu, int modelgridindex) -> double;
 void fit_parameters(int modelgridindex, int timestep);
-void set_J_normfactor(int modelgridindex, double normfactor);
+void set_J_normfactor(int nonemptymgi, double normfactor);
 void normalise_J(int modelgridindex, double estimator_normfactor_over4pi);
 void normalise_nuJ(int modelgridindex, double estimator_normfactor_over4pi);
 [[nodiscard]] auto get_T_J_from_J(int modelgridindex) -> double;

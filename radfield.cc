@@ -620,7 +620,7 @@ void zero_estimators(int modelgridindex)
       radfieldbins[mgibinindex].contribcount = 0;
     }
   }
-  set_J_normfactor(modelgridindex, -1.0);
+  set_J_normfactor(nonemptymgi, -1.0);
 }
 
 static void update_bfestimators(const int nonemptymgi, const double distance_e_cmf, const double nu_cmf,
@@ -1029,10 +1029,7 @@ void fit_parameters(int modelgridindex, int timestep)
   }
 }
 
-void set_J_normfactor(int modelgridindex, double normfactor) {
-  const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
-  J_normfactor[nonemptymgi] = normfactor;
-}
+void set_J_normfactor(int nonemptymgi, double normfactor) { J_normfactor[nonemptymgi] = normfactor; }
 
 void normalise_J(const int modelgridindex, const double estimator_normfactor_over4pi) {
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);

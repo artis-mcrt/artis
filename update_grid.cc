@@ -1021,9 +1021,8 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     const auto sys_time_start_temperature_corrections = std::time(nullptr);
 
     radfield::normalise_J(mgi, estimator_normfactor_over4pi);  // this applies normalisation to the fullspec J
-    radfield::set_J_normfactor(mgi,
-                               estimator_normfactor_over4pi);  // this stores the factor that will be applied
-                                                               // later for the J bins but not fullspec J
+    // this stores the factor that will be applied later for the J bins but not fullspec J
+    radfield::set_J_normfactor(nonemptymgi, estimator_normfactor_over4pi);
 
 #ifdef DO_TITER
     radfield::titer_J(mgi);
