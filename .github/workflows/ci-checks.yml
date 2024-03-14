@@ -63,9 +63,6 @@ jobs:
                   brew install llvm || true
                   echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
 
-                  echo "CXX=clang++" >> $GITHUB_ENV
-                  echo "OMPI_CXX=clang++" >> $GITHUB_ENV
-
                   echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib" >> $GITHUB_ENV
                   echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV
 
@@ -171,18 +168,11 @@ jobs:
               if: matrix.mpi == 'ON'
               run: |
                   sudo apt install -y openmpi-bin libopenmpi-dev
-                  echo "OMPI_CXX=$CXX" >> $GITHUB_ENV
-                  echo "CXX=mpicxx" >> $GITHUB_ENV
-                  mpicxx --showme:version
 
             - name: install OpenMP
               if: matrix.openmp == 'ON'
               run: |
                   sudo apt-get install -y libomp5-14 libomp-dev
-
-            - name: Show compiler version
-              run: |
-                  ${{ env.CXX }} --version
 
             - name: Compile classic mode
               run: |
@@ -235,9 +225,6 @@ jobs:
                   brew install llvm@17 || true
                   echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
 
-                  echo "CXX=clang++" >> $GITHUB_ENV
-                  echo "OMPI_CXX=clang++" >> $GITHUB_ENV
-
             - name: install OpenMP
               if: matrix.openmp == 'ON'
               run: |
@@ -252,10 +239,6 @@ jobs:
               run: |
                   brew install openmpi || true
 
-                  echo "OMPI_CXX=$CXX" >> $GITHUB_ENV
-                  echo "CXX=mpicxx" >> $GITHUB_ENV
-                  mpicxx --showme:version
-
             - name: install onedpl and tbb
               if: matrix.stdpar == 'ON'
               run: |
@@ -264,10 +247,6 @@ jobs:
                   echo "LIBRARY_PATH=$HOMEBREW_PREFIX/lib:$LIBRARY_PATH" >> $GITHUB_ENV
                   echo "LD_LIBRARY_PATH=$HOMEBREW_PREFIX/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
                   echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
-
-            - name: Show compiler version and CPU type
-              run: |
-                  ${{ env.CXX }} --version
 
             - name: Compile classic mode
               run: |
