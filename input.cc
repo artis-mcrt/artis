@@ -1693,9 +1693,10 @@ void read_parameterfile(int rank)
     printout("rank %d: thread %d has zseed %lld\n", rank, tid, zseed);
     printout("rng is a std::mt19937 generator\n");
     rngseed = zseed;
-    /// call it a few times
+
+    // call it a few times
     for (int n = 0; n < 100; n++) {
-      printout("%d rnd %g\n", n, rng_uniform());
+      rng_uniform();
     }
 #ifdef _OPENMP
   }
