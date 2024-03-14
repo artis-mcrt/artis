@@ -540,11 +540,10 @@ static void nltepop_matrix_add_ionisation(const int modelgridindex, const int el
   const int maxrecombininglevel = get_maxrecombininglevel(element, ion + 1);
 
   for (int level = 0; level < nionisinglevels; level++) {
-    const int level_index = get_nlte_vector_index(element, ion, level);
+    const int lower_index = get_nlte_vector_index(element, ion, level);
 
     // thermal collisional ionization, photoionisation and recombination processes
     const double epsilon_current = epsilon(element, ion, level);
-    const int lower_index = level_index;
 
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++) {
       const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
