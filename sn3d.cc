@@ -777,7 +777,7 @@ auto main(int argc, char *argv[]) -> int {
     assert_always(output_file.is_open());
 
 #ifdef _OPENMP
-    printout("OpenMP parallelisation is active with %d threads (max %d)\n", get_num_threads(), get_max_threads());
+    printout("OpenMP parallelisation is active with %d threads (max %d)\n", omp_get_num_threads(), get_max_threads());
 #else
     printout("OpenMP parallelisation is not enabled in this build (this is normal)\n");
 #endif

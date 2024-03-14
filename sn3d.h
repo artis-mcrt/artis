@@ -203,14 +203,6 @@ static auto fstream_required(const std::string &filename, std::ios_base::openmod
 #endif
 }
 
-[[nodiscard]] inline auto get_num_threads() -> int {
-#if defined _OPENMP
-  return omp_get_num_threads();
-#else
-  return 1;
-#endif
-}
-
 [[nodiscard]] inline auto get_thread_num() -> int {
 #if defined _OPENMP
   return omp_get_thread_num();
