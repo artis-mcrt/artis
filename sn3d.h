@@ -88,7 +88,8 @@ inline bool outputstartofline = true;
 inline struct tm timebuf {};
 
 #ifdef _OPENMP
-#pragma omp threadprivate(cellcacheslotid, rngseed, gslworkspace, output_file, outputlinebuf, outputstartofline, timebuf)
+#pragma omp threadprivate(cellcacheslotid, rngseed, gslworkspace, output_file, outputlinebuf, outputstartofline, \
+                              timebuf)
 #endif
 
 static inline void print_line_start() {
