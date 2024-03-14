@@ -134,14 +134,6 @@ jobs:
                   python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
-            - name: apt update
-              run: |
-                  sudo add-apt-repository main
-                  sudo add-apt-repository universe
-                  sudo add-apt-repository restricted
-                  sudo add-apt-repository multiverse
-                  sudo apt-get update
-
             - name: Install gcc
               if: matrix.compiler.name == 'gcc'
               uses: fortran-lang/setup-fortran@v1
