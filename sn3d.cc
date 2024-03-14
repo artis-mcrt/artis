@@ -568,11 +568,10 @@ static void zero_estimators() {
 #ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
-  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    radfield::zero_estimators(modelgridindex);
-
-    if constexpr (TRACK_ION_STATS) {
+  radfield::zero_estimators();
+  if constexpr (TRACK_ION_STATS) {
+    for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+      const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
       stats::reset_ion_stats(modelgridindex);
     }
   }
