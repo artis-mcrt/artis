@@ -187,11 +187,13 @@ jobs:
             - name: Compile classic mode
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
                   make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} ${{ matrix.stdpar == 'ON' && ' STDPAR=ON' || ''}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
             - name: Compile nebular mode
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
                   make MPI=${{matrix.mpi}} OPENMP=${{matrix.openmp}} ${{ matrix.stdpar == 'ON' && ' STDPAR=ON' || ''}} -j${{ steps.cpu-count.outputs.count}} sn3d exspec
 
     mac-llvm:

@@ -4,9 +4,14 @@
 BUILD_DIR = build/$(shell uname -m)
 
 ifeq ($(MPI),)
-	# MPI option not specified. set to true by default
-	MPI := ON
+	# MPI option not specified. set to true if mpicxx exists
+	ifneq (, $(shell command -v mpicxx 2> /dev/null))
+		MPI := ON
+	else
+		MPI := OFF
+	endif
 endif
+
 ifeq ($(MPI),ON)
 	CXX = mpicxx
 	CXXFLAGS += -DMPI_ON=true
@@ -164,7 +169,8 @@ ifeq ($(TESTMODE),ON)
 	# CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE
 	CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG
 
-	CXXFLAGS += -fsanitize=address,undefined
+	# TODO: re-enable -fsanitize=address when GitHub actions stops failing on it
+	CXXFLAGS += -fsanitize=undefined
 
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
