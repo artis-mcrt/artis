@@ -614,7 +614,7 @@ void zero_estimators(int modelgridindex)
 
     assert_always(radfieldbins != nullptr);
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      const int mgibinindex = grid::get_modelcell_nonemptymgi(modelgridindex) * RADFIELDBINCOUNT + binindex;
+      const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
       radfieldbins[mgibinindex].J_raw = 0.;
       radfieldbins[mgibinindex].nuJ_raw = 0.;
       radfieldbins[mgibinindex].contribcount = 0;
