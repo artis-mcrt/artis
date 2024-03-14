@@ -1189,26 +1189,26 @@ static void setup_cellcache() {
   globals::cellcache = static_cast<CellCache *>(malloc(num_cellcache_slots * sizeof(CellCache)));
   assert_always(globals::cellcache != nullptr);
 
-  for (int itid = 0; itid < num_cellcache_slots; itid++) {
+  for (int cellcachenum = 0; cellcachenum < num_cellcache_slots; cellcachenum++) {
     size_t mem_usage_cellcache = 0;
     mem_usage_cellcache += sizeof(CellCache);
 
-    printout("[info] input: initializing cellcache for thread %d ...\n", itid);
+    printout("[info] input: initializing cellcache for thread %d ...\n", cellcachenum);
 
-    globals::cellcache[itid].cellnumber = -99;
+    globals::cellcache[cellcachenum].cellnumber = -99;
 
     const auto ncoolingterms = kpkt::ncoolingterms;
     mem_usage_cellcache += ncoolingterms * sizeof(double);
-    globals::cellcache[itid].cooling_contrib = static_cast<double *>(calloc(ncoolingterms, sizeof(double)));
+    globals::cellcache[cellcachenum].cooling_contrib = static_cast<double *>(calloc(ncoolingterms, sizeof(double)));
 
-    printout("[info] mem_usage: cellcache coolinglist contribs for thread %d occupies %.3f MB\n", itid,
+    printout("[info] mem_usage: cellcache coolinglist contribs for thread %d occupies %.3f MB\n", cellcachenum,
              ncoolingterms * sizeof(double) / 1024. / 1024.);
 
     mem_usage_cellcache += get_nelements() * sizeof(CellCacheElements);
-    globals::cellcache[itid].chelements =
+    globals::cellcache[cellcachenum].chelements =
         static_cast<CellCacheElements *>(malloc(get_nelements() * sizeof(CellCacheElements)));
 
-    assert_always(globals::cellcache[itid].chelements != nullptr);
+    assert_always(globals::cellcache[cellcachenum].chelements != nullptr);
 
     size_t chlevelblocksize = 0;
     size_t chphixsblocksize = 0;
@@ -1230,7 +1230,7 @@ static void setup_cellcache() {
       }
     }
     assert_always(chlevelblocksize > 0);
-    globals::cellcache[itid].ch_all_levels = static_cast<CellCacheLevels *>(malloc(chlevelblocksize));
+    globals::cellcache[cellcachenum].ch_all_levels = static_cast<CellCacheLevels *>(malloc(chlevelblocksize));
     chphixstargetsblock =
         chphixsblocksize > 0 ? static_cast<CellCachePhixsTargets *>(malloc(chphixsblocksize)) : nullptr;
     mem_usage_cellcache += chlevelblocksize + chphixsblocksize;
@@ -1245,27 +1245,27 @@ static void setup_cellcache() {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       mem_usage_cellcache += nions * sizeof(CellCacheIons);
-      globals::cellcache[itid].chelements[element].chions =
+      globals::cellcache[cellcachenum].chelements[element].chions =
           static_cast<CellCacheIons *>(malloc(nions * sizeof(CellCacheIons)));
-      assert_always(globals::cellcache[itid].chelements[element].chions != nullptr);
+      assert_always(globals::cellcache[cellcachenum].chelements[element].chions != nullptr);
 
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
-        globals::cellcache[itid].chelements[element].chions[ion].chlevels =
-            &globals::cellcache[itid].ch_all_levels[alllevelindex];
+        globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels =
+            &globals::cellcache[cellcachenum].ch_all_levels[alllevelindex];
 
         assert_always(alllevelindex == get_uniquelevelindex(element, ion, 0));
         alllevelindex += nlevels;
 
         for (int level = 0; level < nlevels; level++) {
-          CellCacheLevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
+          CellCacheLevels *chlevel = &globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level];
           const int nphixstargets = get_nphixstargets(element, ion, level);
           chlevel->chphixstargets = chphixsblocksize > 0 ? &chphixstargetsblock[allphixstargetindex] : nullptr;
           allphixstargetindex += nphixstargets;
         }
 
         for (int level = 0; level < nlevels; level++) {
-          CellCacheLevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
+          CellCacheLevels *chlevel = &globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level];
           const int ndowntrans = get_ndowntrans(element, ion, level);
 
           chlevel->sum_epstrans_rad_deexc = &chtransblock[chtransindex];
@@ -1273,14 +1273,14 @@ static void setup_cellcache() {
         }
 
         for (int level = 0; level < nlevels; level++) {
-          CellCacheLevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
+          CellCacheLevels *chlevel = &globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level];
           const int ndowntrans = get_ndowntrans(element, ion, level);
           chlevel->sum_internal_down_same = &chtransblock[chtransindex];
           chtransindex += ndowntrans;
         }
 
         for (int level = 0; level < nlevels; level++) {
-          CellCacheLevels *chlevel = &globals::cellcache[itid].chelements[element].chions[ion].chlevels[level];
+          CellCacheLevels *chlevel = &globals::cellcache[cellcachenum].chelements[element].chions[ion].chlevels[level];
           const int nuptrans = get_nuptrans(element, ion, level);
           chlevel->sum_internal_up_same = &chtransblock[chtransindex];
           chtransindex += nuptrans;
@@ -1290,11 +1290,12 @@ static void setup_cellcache() {
     assert_always(chtransindex == chtransblocksize);
 
     assert_always(globals::nbfcontinua >= 0);
-    globals::cellcache[itid].ch_allcont_departureratios =
+    globals::cellcache[cellcachenum].ch_allcont_departureratios =
         static_cast<double *>(malloc(globals::nbfcontinua * sizeof(double)));
     mem_usage_cellcache += globals::nbfcontinua * sizeof(double);
 
-    printout("[info] mem_usage: cellcache for thread %d occupies %.3f MB\n", itid, mem_usage_cellcache / 1024. / 1024.);
+    printout("[info] mem_usage: cellcache for thread %d occupies %.3f MB\n", cellcachenum,
+             mem_usage_cellcache / 1024. / 1024.);
   }
 }
 
