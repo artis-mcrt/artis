@@ -1745,7 +1745,7 @@ static void read_grid_restart_data(const int timestep) {
 
   int nthreads_in = -1;
   assert_always(fscanf(gridsave_file, "%d ", &nthreads_in) == 1);
-  assert_always(nthreads_in == get_num_threads());
+  assert_always(nthreads_in == get_max_threads());
 
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
     int pellet_decays = 0.;
@@ -1824,7 +1824,7 @@ void write_grid_restart_data(const int timestep) {
 
   fprintf(gridsave_file, "%d ", globals::ntimesteps);
   fprintf(gridsave_file, "%d ", globals::nprocs);
-  fprintf(gridsave_file, "%d ", get_num_threads());
+  fprintf(gridsave_file, "%d ", get_max_threads());
 
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
     fprintf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
