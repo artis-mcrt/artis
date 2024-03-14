@@ -13,7 +13,7 @@ ifeq ($(MPI),)
 endif
 
 ifeq ($(MPI),ON)
-	CXX = mpicxx
+	CXX := OMPI_CXX=$(CXX) mpicxx
 	CXXFLAGS += -DMPI_ON=true
 	BUILD_DIR := $(BUILD_DIR)_mpi
 else ifeq ($(MPI),OFF)
