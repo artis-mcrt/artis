@@ -53,11 +53,6 @@
 #include "version.h"
 #include "vpkt.h"
 
-// threadprivate variables
-#ifdef _OPENMP
-int tid = 0;
-// int cellcacheslotid = 0;
-#endif
 bool use_cellcache = false;
 std::mt19937 stdrng(std::random_device{}());
 gsl_integration_workspace *gslworkspace = nullptr;
@@ -517,7 +512,7 @@ static void save_grid_and_packets(const int nts, const int my_rank, Packet *pack
     // save packet state at start of current timestep (before propagation)
     write_temp_packetsfile(nts, my_rank, packets);
 
-    vpkt_write_timestep(nts, my_rank, tid, false);
+    vpkt_write_timestep(nts, my_rank, false);
 
     const auto time_write_packets_file_finished = std::time(nullptr);
 
@@ -723,7 +718,7 @@ static auto do_timestep(const int nts, const int titer, const int my_rank, const
       // snprintf(filename, MAXFILENAMELENGTH, "packets%.2d_%.4d.out", middle_iteration, my_rank);
       write_packets(filename, packets);
 
-      vpkt_write_timestep(nts, my_rank, tid, true);
+      vpkt_write_timestep(nts, my_rank, true);
 
       printout("time after write final packets file %ld\n", std::time(nullptr));
 
@@ -776,14 +771,8 @@ auto main(int argc, char *argv[]) -> int {
 #pragma omp parallel private(filename)
 #endif
   {
-#ifdef _OPENMP
-    // copy thread id to a threadprivate variable
-    tid = get_thread_num();
-    // cellcacheslotid = tid;
-    // cellcacheslotid = 0;
-#endif
     /// initialise the thread and rank specific output file
-    snprintf(filename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, tid);
+    snprintf(filename, MAXFILENAMELENGTH, "output_%d-%d.txt", my_rank, get_thread_num());
     output_file = std::ofstream(filename);
     assert_always(output_file.is_open());
 
@@ -950,7 +939,7 @@ auto main(int argc, char *argv[]) -> int {
   }
 
   // initialise or read in virtual packet spectra
-  vpkt_init(nts, my_rank, tid, globals::simulation_continued_from_saved);
+  vpkt_init(nts, my_rank, globals::simulation_continued_from_saved);
 
   while (nts < globals::timestep_finish && !terminate_early) {
     globals::timestep = nts;

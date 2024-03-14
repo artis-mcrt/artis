@@ -44,12 +44,6 @@
 #endif
 
 extern std::ofstream output_file;
-#ifdef _OPENMP
-extern int tid;
-// extern int cellcacheslotid;
-#else
-inline constexpr int tid = 0;
-#endif
 inline constexpr int cellcacheslotid = 0;
 extern bool use_cellcache;
 
@@ -94,8 +88,7 @@ inline bool outputstartofline = true;
 inline struct tm timebuf {};
 
 #ifdef _OPENMP
-#pragma omp threadprivate(tid, cellcacheslotid, stdrng, gslworkspace, output_file, outputlinebuf, outputstartofline, \
-                              timebuf)
+#pragma omp threadprivate(cellcacheslotid, stdrng, gslworkspace, output_file, outputlinebuf, outputstartofline, timebuf)
 #endif
 
 static inline void print_line_start() {

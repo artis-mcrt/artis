@@ -826,16 +826,16 @@ void read_parameterfile_vpkt() {
   fclose(input_file);
 }
 
-void vpkt_write_timestep(const int nts, const int my_rank, const int tid,
-                         const bool is_final) {  // write specpol of the virtual packets
+void vpkt_write_timestep(const int nts, const int my_rank, const bool is_final) {
   if constexpr (!VPKT_ON) {
     return;
   }
 
+  // write specpol of the virtual packets
   char filename[MAXFILENAMELENGTH];
 
   if (is_final) {
-    snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d-%d.out", my_rank, tid);
+    snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d-%d.out", my_rank, 0);
   } else {
     snprintf(filename, MAXFILENAMELENGTH, "vspecpol_%d_%d_ts%d.tmp", 0, my_rank, nts);
   }
@@ -847,7 +847,7 @@ void vpkt_write_timestep(const int nts, const int my_rank, const int tid,
 
   if (vgrid_on) {
     if (is_final) {
-      snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d-%d.out", my_rank, tid);
+      snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d-%d.out", my_rank, 0);
     } else {
       snprintf(filename, MAXFILENAMELENGTH, "vpkt_grid_%d_%d_ts%d.tmp", 0, my_rank, nts);
     }
@@ -859,7 +859,7 @@ void vpkt_write_timestep(const int nts, const int my_rank, const int tid,
   }
 }
 
-void vpkt_init(const int nts, const int my_rank, const int /*tid*/, const bool continued_from_saved) {
+void vpkt_init(const int nts, const int my_rank, const bool continued_from_saved) {
   if constexpr (!VPKT_ON) {
     return;
   }
