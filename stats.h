@@ -12,7 +12,7 @@ namespace stats {
 constexpr int nstatcounters_ratecoeff = 18;
 
 // one counter per ion per cell
-enum ionstattypes : int {
+enum ionstattypes {
   ION_RADRECOMB_MACROATOM = 0,
   ION_RADRECOMB_KPKT = 1,
   ION_RADRECOMB_ABSORBED = 2,
@@ -47,7 +47,7 @@ enum ionstattypes : int {
 };
 
 // global statistics (all cells combined)
-enum eventcounters : int {
+enum eventcounters {
   COUNTER_MA_STAT_ACTIVATION_COLLEXC = 0,
   COUNTER_MA_STAT_ACTIVATION_COLLION = 1,
   COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC = 2,
