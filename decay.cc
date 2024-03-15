@@ -112,11 +112,11 @@ constexpr auto decay_daughter_a(const int /*z_parent*/, const int a_parent, cons
 // to another (daughter of last nuclide in decaypath) via decays
 // every different path within the network is considered, e.g. 56Ni -> 56Co -> 56Fe is separate to 56Ni -> 56Co
 struct DecayPath {
-  std::vector<int> z{};         // atomic number
-  std::vector<int> a{};         // mass number
-  std::vector<int> nucindex{};  // index into nuclides list
-  std::vector<int> decaytypes{};
-  std::vector<double> lambdas{};
+  std::vector<int> z;         // atomic number
+  std::vector<int> a;         // mass number
+  std::vector<int> nucindex;  // index into nuclides list
+  std::vector<int> decaytypes;
+  std::vector<double> lambdas;
   double branchproduct{
       0.};  // product of all branching factors along the path set by calculate_decaypath_branchproduct()
 
