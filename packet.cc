@@ -141,7 +141,7 @@ void packet_init(Packet *pkt)
 
   printout("Placing pellets...\n");
   auto allpkts = std::ranges::iota_view{0, globals::npkts};
-  std::for_each(EXEC_PAR_UNSEQ allpkts.begin(), allpkts.end(), [&, norm, e0](const int n) {
+  std::for_each(allpkts.begin(), allpkts.end(), [&, norm, e0](const int n) {
     const double targetval = rng_uniform() * norm;
 
     // first en_cumulative[i] such that en_cumulative[i] > targetval
