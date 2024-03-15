@@ -275,7 +275,7 @@ static void do_cell_packet_updates(std::span<Packet> packets, const int nts, con
     update_packet(packets[i]);
   }
 #else
-  std::for_each(EXEC_PAR_UNSEQ packets.begin(), packets.end(), update_packet);
+  std::for_each(EXEC_PAR packets.begin(), packets.end(), update_packet);
 #endif
 }
 

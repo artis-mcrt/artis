@@ -11,6 +11,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 
 #include "artisoptions.h"
 #include "atomic.h"

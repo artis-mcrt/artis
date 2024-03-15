@@ -1664,12 +1664,10 @@ void read_parameterfile(int rank)
 
   assert_always(get_noncommentline(file, line));
 
-  long long int zseed_input = -1;
-  std::istringstream(line) >> zseed_input;
+  long long int pre_zseed = -1;
+  std::istringstream(line) >> pre_zseed;
 
-  long long int pre_zseed{};
-  if (zseed_input > 0) {
-    pre_zseed = static_cast<long long int>(zseed_input);  // random number seed
+  if (pre_zseed > 0) {
     printout("using input.txt specified random number seed of %lld\n", pre_zseed);
   } else {
     pre_zseed = std::random_device{}();
