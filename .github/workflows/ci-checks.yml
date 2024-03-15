@@ -116,7 +116,7 @@ jobs:
                 exclude:
                     - openmp: ON
                       stdpar: ON
-                    - compiler: {name: nvc++, ver: '24.1'}
+                    - compiler: {name: nvc++, ver: '24.3'}
                       stdpar: ON
             fail-fast: false
 
