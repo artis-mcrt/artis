@@ -27,7 +27,7 @@ repos:
       rev: v1.3.5
       hooks:
           - id: clang-format
-            args: [--version=17, -i]
+            args: [--version=18, -i]
           #   - id: clang-tidy
           #     args: [-extra-arg=-std=c++20]
           # - id: oclint
