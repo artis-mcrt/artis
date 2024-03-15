@@ -2557,7 +2557,7 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
     }
   }
 
-  // printout("pkt_ptr.number %d\n", pkt_ptr.number);
+  // printout("pkt.number %d\n", pkt.number);
   // printout("delta1x %g delta2x %g\n",  (initpos[0] * globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 0),
   // cellcoordmax[0] - (initpos[0] * globals::tmin/tstart)); printout("delta1y %g delta2y %g\n",  (initpos[1] *
   // globals::tmin/tstart)-grid::get_cellcoordmin(cellindex, 1), cellcoordmax[1] - (initpos[1] *
@@ -2673,23 +2673,23 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
   return {distance, snext};
 }
 
-void change_cell(Packet &pkt_ptr, int snext)
+void change_cell(Packet &pkt, int snext)
 /// Routine to take a packet across a boundary.
 {
-  // const int cellindex = pkt_ptr.where;
+  // const int cellindex = pkt.where;
   // printout("[debug] cellnumber %d nne %g\n", cellindex, grid::get_nne(grid::get_cell_modelgridindex(cellindex)));
   // printout("[debug] snext %d\n", snext);
 
   if (snext == -99) {
     // Then the packet is exiting the grid. We need to record
     // where and at what time it leaves the grid.
-    pkt_ptr.escape_type = pkt_ptr.type;
-    pkt_ptr.escape_time = pkt_ptr.prop_time;
-    pkt_ptr.type = TYPE_ESCAPE;
+    pkt.escape_type = pkt.type;
+    pkt.escape_time = pkt.prop_time;
+    pkt.type = TYPE_ESCAPE;
     globals::nesc++;
   } else {
     // Just need to update "where".
-    pkt_ptr.where = snext;
+    pkt.where = snext;
 
     stats::increment(stats::COUNTER_CELLCROSSINGS);
   }

@@ -16,7 +16,7 @@ auto frame_transform(std::span<const double, 3> n_rf, double *Q, double *U,
 
 void read_parameterfile_vpkt();
 void vpkt_init(int nts, int my_rank, bool continued_from_saved);
-void vpkt_call_estimators(Packet &pkt_ptr, enum packet_type type_before_rpkt);
+void vpkt_call_estimators(Packet &pkt, enum packet_type type_before_rpkt);
 void vpkt_write_timestep(int nts, int my_rank, bool is_final);
 
 void vpkt_remove_temp_file(int nts, int my_rank);

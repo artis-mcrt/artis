@@ -168,11 +168,11 @@ static void add_to_vpkt_grid(const Packet &vpkt, std::span<const double, 3> vel,
   }
 }
 
-static void rlc_emiss_vpkt(const Packet &pkt_ptr, const double t_current, const int obsbin, std::span<double, 3> obsdir,
+static void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int obsbin, std::span<double, 3> obsdir,
                            const enum packet_type type_before_rpkt) {
   int mgi = 0;
 
-  Packet vpkt = pkt_ptr;
+  Packet vpkt = pkt;
 
   bool end_packet = false;
   double ldist = 0;
@@ -189,7 +189,7 @@ static void rlc_emiss_vpkt(const Packet &pkt_ptr, const double t_current, const 
 
   safeincrement(nvpkt);  // increment the number of virtual packet in the given timestep
 
-  const auto vel_vec = get_velocity(pkt_ptr.pos, t_current);
+  const auto vel_vec = get_velocity(pkt.pos, t_current);
 
   // rf frequency and energy
   const double dopplerfactor = doppler_nucmf_on_nurf(vpkt.dir, vel_vec);
@@ -208,7 +208,7 @@ static void rlc_emiss_vpkt(const Packet &pkt_ptr, const double t_current, const 
   if (type_before_rpkt == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
 
-    auto old_dir_cmf = frame_transform(pkt_ptr.dir, &Qi, &Ui, vel_vec);
+    auto old_dir_cmf = frame_transform(pkt.dir, &Qi, &Ui, vel_vec);
 
     // Need to rotate Stokes Parameters in the scattering plane
 
@@ -880,27 +880,27 @@ void vpkt_init(const int nts, const int my_rank, const bool continued_from_saved
   }
 }
 
-auto vpkt_call_estimators(Packet &pkt_ptr, const enum packet_type type_before_rpkt) -> void {
+auto vpkt_call_estimators(Packet &pkt, const enum packet_type type_before_rpkt) -> void {
   if constexpr (!VPKT_ON) {
     return;
   }
 
   // Cut on vpkts
-  const int mgi = grid::get_cell_modelgridindex(pkt_ptr.where);
+  const int mgi = grid::get_cell_modelgridindex(pkt.where);
 
   if (grid::modelgrid[mgi].thick != 0) {
     return;
   }
 
-  const double t_current = pkt_ptr.prop_time;
+  const double t_current = pkt.prop_time;
 
-  const auto vel_vec = get_velocity(pkt_ptr.pos, pkt_ptr.prop_time);
+  const auto vel_vec = get_velocity(pkt.pos, pkt.prop_time);
 
   // this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each observer)
-  if (pkt_ptr.next_trans == 0) {
-    const int lineindex = closest_transition(pkt_ptr.nu_cmf, pkt_ptr.next_trans);  /// returns negative
+  if (pkt.next_trans == 0) {
+    const int lineindex = closest_transition(pkt.nu_cmf, pkt.next_trans);  /// returns negative
     if (lineindex < 0) {
-      pkt_ptr.next_trans = lineindex + 1;
+      pkt.next_trans = lineindex + 1;
     }
   }
 
@@ -910,12 +910,12 @@ auto vpkt_call_estimators(Packet &pkt_ptr, const enum packet_type type_before_rp
     double obsdir[3] = {sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * cos(phiobs[obsbin]),
                         sqrt(1 - nz_obs_vpkt[obsbin] * nz_obs_vpkt[obsbin]) * sin(phiobs[obsbin]), nz_obs_vpkt[obsbin]};
 
-    const double t_arrive = t_current - (dot(pkt_ptr.pos, obsdir) / CLIGHT_PROP);
+    const double t_arrive = t_current - (dot(pkt.pos, obsdir) / CLIGHT_PROP);
 
     if (t_arrive >= VSPEC_TIMEMIN_input && t_arrive <= VSPEC_TIMEMAX_input) {
       // time selection
 
-      const double nu_rf = pkt_ptr.nu_cmf / doppler_nucmf_on_nurf(obsdir, vel_vec);
+      const double nu_rf = pkt.nu_cmf / doppler_nucmf_on_nurf(obsdir, vel_vec);
 
       for (int i = 0; i < Nrange; i++) {
         // Loop over frequency ranges
@@ -923,7 +923,7 @@ auto vpkt_call_estimators(Packet &pkt_ptr, const enum packet_type type_before_rp
         if (nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) {
           // frequency selection
 
-          rlc_emiss_vpkt(pkt_ptr, t_current, obsbin, obsdir, type_before_rpkt);
+          rlc_emiss_vpkt(pkt, t_current, obsbin, obsdir, type_before_rpkt);
         }
       }
     }

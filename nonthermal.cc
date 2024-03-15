@@ -1734,10 +1734,10 @@ static auto select_nt_ionization(int modelgridindex) -> std::tuple<int, int> {
   assert_always(false);
 }
 
-void do_ntlepton(Packet &pkt_ptr) {
-  safeadd(nt_energy_deposited, pkt_ptr.e_cmf);
+void do_ntlepton(Packet &pkt) {
+  safeadd(nt_energy_deposited, pkt.e_cmf);
 
-  const int modelgridindex = grid::get_cell_modelgridindex(pkt_ptr.where);
+  const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
 
   // macroatom should not be activated in thick cells
   if (NT_ON && NT_SOLVE_SPENCERFANO && grid::modelgrid[modelgridindex].thick != 1) {
@@ -1759,12 +1759,12 @@ void do_ntlepton(Packet &pkt_ptr) {
       const int upperion = nt_random_upperion(modelgridindex, element, lowerion, true);
       // const int upperion = lowerion + 1;
 
-      pkt_ptr.type = TYPE_MA;
+      pkt.type = TYPE_MA;
       stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLION);
       stats::increment(stats::COUNTER_INTERACTIONS);
-      pkt_ptr.last_event = 20;
-      pkt_ptr.trueemissiontype = EMTYPE_NOTSET;
-      pkt_ptr.trueemissionvelocity = -1;
+      pkt.last_event = 20;
+      pkt.trueemissiontype = EMTYPE_NOTSET;
+      pkt.trueemissionvelocity = -1;
 
       stats::increment(stats::COUNTER_NT_STAT_TO_IONIZATION);
 
@@ -1772,15 +1772,15 @@ void do_ntlepton(Packet &pkt_ptr) {
         assert_always(upperion < get_nions(element));
         assert_always(lowerion >= 0);
         const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);
-        stats::increment_ion_stats(modelgridindex, element, lowerion, stats::ION_NTION, pkt_ptr.e_cmf / epsilon_trans);
+        stats::increment_ion_stats(modelgridindex, element, lowerion, stats::ION_NTION, pkt.e_cmf / epsilon_trans);
         stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_MACROATOM_ENERGYIN_NTCOLLION,
-                                   pkt_ptr.e_cmf);
+                                   pkt.e_cmf);
       }
 
       // printout("NTLEPTON packet in cell %d selected ionization of Z=%d ionstage %d to %d\n",
       //          modelgridindex, get_atomicnumber(element), get_ionstage(element, lowerion), get_ionstage(element,
       //          upperion));
-      do_macroatom(pkt_ptr, {element, upperion, 0, -99});
+      do_macroatom(pkt, {element, upperion, 0, -99});
       return;
     }
 
@@ -1799,19 +1799,19 @@ void do_ntlepton(Packet &pkt_ptr) {
           // const int lower = linelist[lineindex].lowerlevelindex;
           const int upper = globals::linelist[lineindex].upperlevelindex;
 
-          pkt_ptr.type = TYPE_MA;
+          pkt.type = TYPE_MA;
           stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC);
           stats::increment(stats::COUNTER_INTERACTIONS);
-          pkt_ptr.last_event = 21;
-          pkt_ptr.trueemissiontype = EMTYPE_NOTSET;
-          pkt_ptr.trueemissionvelocity = -1;
+          pkt.last_event = 21;
+          pkt.trueemissiontype = EMTYPE_NOTSET;
+          pkt.trueemissionvelocity = -1;
 
           stats::increment(stats::COUNTER_NT_STAT_TO_EXCITATION);
 
           // printout("NTLEPTON packet selected in cell %d excitation of Z=%d ionstage %d level %d upperlevel %d\n",
           //          modelgridindex, get_atomicnumber(element), get_ionstage(element, ion), lower, upper);
 
-          do_macroatom(pkt_ptr, {element, ion, upper, -99});
+          do_macroatom(pkt, {element, ion, upper, -99});
           return;
         }
         zrand -= frac_deposition_exc;
@@ -1821,8 +1821,8 @@ void do_ntlepton(Packet &pkt_ptr) {
     }
   }
 
-  pkt_ptr.last_event = 22;
-  pkt_ptr.type = TYPE_KPKT;
+  pkt.last_event = 22;
+  pkt.type = TYPE_KPKT;
   stats::increment(stats::COUNTER_NT_STAT_TO_KPKT);
 }
 

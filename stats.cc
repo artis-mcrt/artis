@@ -57,13 +57,12 @@ void increment_ion_stats(const int modelgridindex, const int element, const int 
       increment);
 }
 
-void increment_ion_stats_contabsorption(const Packet &pkt_ptr, const int modelgridindex, const int element,
-                                        const int ion) {
-  const double n_photons_absorbed = pkt_ptr.e_cmf / H / pkt_ptr.nu_cmf;
+void increment_ion_stats_contabsorption(const Packet &pkt, const int modelgridindex, const int element, const int ion) {
+  const double n_photons_absorbed = pkt.e_cmf / H / pkt.nu_cmf;
 
   stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION, n_photons_absorbed);
 
-  const int et = pkt_ptr.emissiontype;
+  const int et = pkt.emissiontype;
   if (et >= 0)  // r-packet is from bound-bound emission
   {
     stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_PHOTOION_FROMBOUNDBOUND, n_photons_absorbed);

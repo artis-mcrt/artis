@@ -238,7 +238,7 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
     //           for (lower = 0; lower < nlevels_lowerion; lower++)
     //           {
     //             epsilon_trans = epsilon_current - epsilon(element,ion-1,lower);
-    //             C = col_recombination(pkt_ptr,lower,epsilon_trans)*epsilon_trans;
+    //             C = col_recombination(pkt,lower,epsilon_trans)*epsilon_trans;
     //             C_recomb += C;
     //           }
     //         }

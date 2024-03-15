@@ -338,7 +338,7 @@ static auto columnindex_from_emissiontype(const int et) -> int {
   return get_nelements() * get_max_nions() + element * get_max_nions() + ion;
 }
 
-static void add_to_spec(const Packet &pkt_ptr, const int current_abin, Spectra &spectra, const Spectra *stokes_i,
+static void add_to_spec(const Packet &pkt, const int current_abin, Spectra &spectra, const Spectra *stokes_i,
                         const Spectra *stokes_q, const Spectra *stokes_u)
 // Routine to add a packet to the outgoing spectrum.
 {
@@ -349,62 +349,62 @@ static void add_to_spec(const Packet &pkt_ptr, const int current_abin, Spectra &
 
   const double nu_min = spectra.nu_min;
   const double nu_max = spectra.nu_max;
-  const double t_arrive = get_arrive_time(pkt_ptr);
-  if (t_arrive > globals::tmin && t_arrive < globals::tmax && pkt_ptr.nu_rf > nu_min && pkt_ptr.nu_rf < nu_max) {
+  const double t_arrive = get_arrive_time(pkt);
+  if (t_arrive > globals::tmin && t_arrive < globals::tmax && pkt.nu_rf > nu_min && pkt.nu_rf < nu_max) {
     const int nt = get_timestep(t_arrive);
     const double dlognu = (log(nu_max) - log(nu_min)) / MNUBINS;
 
-    const int nnu = static_cast<int>((log(pkt_ptr.nu_rf) - log(nu_min)) / dlognu);
+    const int nnu = static_cast<int>((log(pkt.nu_rf) - log(nu_min)) / dlognu);
     assert_always(nnu < MNUBINS);
 
-    const double deltaE = pkt_ptr.e_rf / globals::timesteps[nt].width / spectra.delta_freq[nnu] / 4.e12 / PI / PARSEC /
+    const double deltaE = pkt.e_rf / globals::timesteps[nt].width / spectra.delta_freq[nnu] / 4.e12 / PI / PARSEC /
                           PARSEC / globals::nprocs_exspec * anglefactor;
 
     spectra.timesteps[nt].flux[nnu] += deltaE;
 
     if (stokes_i != nullptr) {
-      stokes_i->timesteps[nt].flux[nnu] += pkt_ptr.stokes[0] * deltaE;
+      stokes_i->timesteps[nt].flux[nnu] += pkt.stokes[0] * deltaE;
     }
     if (stokes_q != nullptr) {
-      stokes_q->timesteps[nt].flux[nnu] += pkt_ptr.stokes[1] * deltaE;
+      stokes_q->timesteps[nt].flux[nnu] += pkt.stokes[1] * deltaE;
     }
     if (stokes_u != nullptr) {
-      stokes_u->timesteps[nt].flux[nnu] += pkt_ptr.stokes[2] * deltaE;
+      stokes_u->timesteps[nt].flux[nnu] += pkt.stokes[2] * deltaE;
     }
 
     if (spectra.do_emission_res) {
       const int proccount = get_proccount();
 
-      const int truenproc = columnindex_from_emissiontype(pkt_ptr.trueemissiontype);
+      const int truenproc = columnindex_from_emissiontype(pkt.trueemissiontype);
       assert_always(truenproc < proccount);
       if (truenproc >= 0) {
         spectra.timesteps[nt].trueemission[nnu * proccount + truenproc] += deltaE;
       }
 
-      const int nproc = columnindex_from_emissiontype(pkt_ptr.emissiontype);
+      const int nproc = columnindex_from_emissiontype(pkt.emissiontype);
       assert_always(nproc < proccount);
       if (nproc >= 0) {  // -1 means not set
         spectra.timesteps[nt].emission[nnu * proccount + nproc] += deltaE;
 
         if (stokes_i != nullptr && stokes_i->do_emission_res) {
-          stokes_i->timesteps[nt].emission[nnu * proccount + nproc] += pkt_ptr.stokes[0] * deltaE;
+          stokes_i->timesteps[nt].emission[nnu * proccount + nproc] += pkt.stokes[0] * deltaE;
         }
         if (stokes_q != nullptr && stokes_q->do_emission_res) {
-          stokes_q->timesteps[nt].emission[nnu * proccount + nproc] += pkt_ptr.stokes[1] * deltaE;
+          stokes_q->timesteps[nt].emission[nnu * proccount + nproc] += pkt.stokes[1] * deltaE;
         }
         if (stokes_u != nullptr && stokes_u->do_emission_res) {
-          stokes_u->timesteps[nt].emission[nnu * proccount + nproc] += pkt_ptr.stokes[2] * deltaE;
+          stokes_u->timesteps[nt].emission[nnu * proccount + nproc] += pkt.stokes[2] * deltaE;
         }
       }
 
       if (TRACE_EMISSION_ABSORPTION_REGION_ON && (current_abin == -1)) {
-        const int et = pkt_ptr.trueemissiontype;
+        const int et = pkt.trueemissiontype;
         if (et >= 0) {
           if (t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax) {
-            if (pkt_ptr.nu_rf >= traceemissabs_nulower && pkt_ptr.nu_rf <= traceemissabs_nuupper) {
+            if (pkt.nu_rf >= traceemissabs_nulower && pkt.nu_rf <= traceemissabs_nuupper) {
               traceemissionabsorption[et].energyemitted += deltaE;
 
-              traceemissionabsorption[et].emission_weightedvelocity_sum += pkt_ptr.trueemissionvelocity * deltaE;
+              traceemissionabsorption[et].emission_weightedvelocity_sum += pkt.trueemissionvelocity * deltaE;
 
               traceemission_totalenergy += deltaE;
             }
@@ -412,14 +412,14 @@ static void add_to_spec(const Packet &pkt_ptr, const int current_abin, Spectra &
         }
       }
 
-      const int nnu_abs = (pkt_ptr.absorptionfreq > 0 && std::isfinite(pkt_ptr.absorptionfreq))
-                              ? static_cast<int>((log(pkt_ptr.absorptionfreq) - log(nu_min)) / dlognu)
+      const int nnu_abs = (pkt.absorptionfreq > 0 && std::isfinite(pkt.absorptionfreq))
+                              ? static_cast<int>((log(pkt.absorptionfreq) - log(nu_min)) / dlognu)
                               : -1;
       if (nnu_abs >= 0 && nnu_abs < MNUBINS) {
         const int ioncount = get_nelements() * get_max_nions();
-        const double deltaE_absorption = pkt_ptr.e_rf / globals::timesteps[nt].width / spectra.delta_freq[nnu_abs] /
-                                         4.e12 / PI / PARSEC / PARSEC / globals::nprocs_exspec * anglefactor;
-        const int at = pkt_ptr.absorptiontype;
+        const double deltaE_absorption = pkt.e_rf / globals::timesteps[nt].width / spectra.delta_freq[nnu_abs] / 4.e12 /
+                                         PI / PARSEC / PARSEC / globals::nprocs_exspec * anglefactor;
+        const int at = pkt.absorptiontype;
         if (at >= 0) {
           /// bb-emission
           const int element = globals::linelist[at].elementindex;
@@ -428,24 +428,23 @@ static void add_to_spec(const Packet &pkt_ptr, const int current_abin, Spectra &
 
           if (stokes_i != nullptr && stokes_i->do_emission_res) {
             stokes_i->timesteps[nt].absorption[nnu_abs * ioncount + element * get_max_nions() + ion] +=
-                pkt_ptr.stokes[0] * deltaE_absorption;
+                pkt.stokes[0] * deltaE_absorption;
           }
           if (stokes_q != nullptr && stokes_q->do_emission_res) {
             stokes_q->timesteps[nt].absorption[nnu_abs * ioncount + element * get_max_nions() + ion] +=
-                pkt_ptr.stokes[1] * deltaE_absorption;
+                pkt.stokes[1] * deltaE_absorption;
           }
           if (stokes_u != nullptr && stokes_u->do_emission_res) {
             stokes_u->timesteps[nt].absorption[nnu_abs * ioncount + element * get_max_nions() + ion] +=
-                pkt_ptr.stokes[2] * deltaE_absorption;
+                pkt.stokes[2] * deltaE_absorption;
           }
 
           if (TRACE_EMISSION_ABSORPTION_REGION_ON && t_arrive >= traceemissabs_timemin &&
               t_arrive <= traceemissabs_timemax) {
-            if ((current_abin == -1) && (pkt_ptr.nu_rf >= traceemissabs_nulower) &&
-                (pkt_ptr.nu_rf <= traceemissabs_nuupper)) {
+            if ((current_abin == -1) && (pkt.nu_rf >= traceemissabs_nulower) && (pkt.nu_rf <= traceemissabs_nuupper)) {
               traceemissionabsorption[at].energyabsorbed += deltaE_absorption;
 
-              const auto vel_vec = get_velocity(pkt_ptr.em_pos, pkt_ptr.em_time);
+              const auto vel_vec = get_velocity(pkt.em_pos, pkt.em_time);
               traceemissionabsorption[at].absorption_weightedvelocity_sum += vec_len(vel_vec) * deltaE_absorption;
 
               traceabsorption_totalenergy += deltaE_absorption;
@@ -550,7 +549,7 @@ void init_spectra(Spectra &spectra, const double nu_min, const double nu_max, co
   }
 }
 
-void add_to_spec_res(const Packet &pkt_ptr, int current_abin, Spectra &spectra, const Spectra *stokes_i,
+void add_to_spec_res(const Packet &pkt, int current_abin, Spectra &spectra, const Spectra *stokes_i,
                      const Spectra *stokes_q, const Spectra *stokes_u)
 // Routine to add a packet to the outgoing spectrum.
 {
@@ -560,9 +559,9 @@ void add_to_spec_res(const Packet &pkt_ptr, int current_abin, Spectra &spectra, 
   // for travel time. Use the formula in Leon's paper.
   // The extra distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
 
-  if (current_abin == -1 || get_escapedirectionbin(pkt_ptr.dir, globals::syn_dir) == current_abin) {
+  if (current_abin == -1 || get_escapedirectionbin(pkt.dir, globals::syn_dir) == current_abin) {
     // either angle average spectrum or packet matches the selected angle bin
-    add_to_spec(pkt_ptr, current_abin, spectra, stokes_i, stokes_q, stokes_u);
+    add_to_spec(pkt, current_abin, spectra, stokes_i, stokes_q, stokes_u);
   }
 }
 

@@ -12,7 +12,7 @@
 void macroatom_open_file(int my_rank);
 void macroatom_close_file();
 
-void do_macroatom(Packet &pkt_ptr, const MacroAtomState &pktmastate);
+void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate);
 
 [[nodiscard]] auto rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower,
                                               double epsilon_trans, float A_ul, double upperstatweight,

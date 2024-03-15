@@ -171,17 +171,16 @@ constexpr auto move_pkt_withtime(std::span<double, 3> pos_rf, std::span<const do
   return dopplerfactor;
 }
 
-constexpr auto move_pkt_withtime(Packet &pkt_ptr, const double distance) -> double {
-  return move_pkt_withtime(pkt_ptr.pos, pkt_ptr.dir, pkt_ptr.prop_time, pkt_ptr.nu_rf, pkt_ptr.nu_cmf, pkt_ptr.e_rf,
-                           pkt_ptr.e_cmf, distance);
+constexpr auto move_pkt_withtime(Packet &pkt, const double distance) -> double {
+  return move_pkt_withtime(pkt.pos, pkt.dir, pkt.prop_time, pkt.nu_rf, pkt.nu_cmf, pkt.e_rf, pkt.e_cmf, distance);
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto get_arrive_time(const Packet &pkt_ptr) -> double
+[[nodiscard]] [[gnu::pure]] constexpr auto get_arrive_time(const Packet &pkt) -> double
 /// We know that a packet escaped at "escape_time". However, we have
 /// to allow for travel time. Use the formula in Leon's paper. The extra
 /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
 {
-  return pkt_ptr.escape_time - (dot(pkt_ptr.pos, pkt_ptr.dir) / CLIGHT_PROP);
+  return pkt.escape_time - (dot(pkt.pos, pkt.dir) / CLIGHT_PROP);
 }
 
 [[nodiscard]] constexpr auto get_escapedirectionbin(std::span<const double, 3> dir_in,

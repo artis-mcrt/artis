@@ -29,8 +29,8 @@ struct Phixslist {
 #include "grid.h"
 #include "sn3d.h"
 
-void do_rpkt(Packet &pkt_ptr, double t2);
-void emit_rpkt(Packet &pkt_ptr);
+void do_rpkt(Packet &pkt, double t2);
+void emit_rpkt(Packet &pkt);
 [[nodiscard]] auto closest_transition(double nu_cmf, int next_trans) -> int;
 void calculate_chi_rpkt_cont(double nu_cmf, Rpkt_continuum_absorptioncoeffs &chi_rpkt_cont, Phixslist *phixslist,
                              int modelgridindex);
