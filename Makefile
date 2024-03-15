@@ -84,6 +84,7 @@ ifeq ($(STDPAR),ON)
   else ifeq ($(COMPILER_NAME),GCC)
     LDFLAGS += -ltbb
   else ifeq ($(COMPILER_NAME),CLANG)
+	# CXXFLAGS += -fexperimental-library
     LDFLAGS += -ltbb
 	# LDFLAGS += -Xlinker -debug_snapshot
   endif
