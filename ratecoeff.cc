@@ -1399,14 +1399,15 @@ static auto get_nlevels_important(const int modelgridindex, const int element, c
   return {nlevels_important, nnlevelsum};
 }
 
-auto iongamma_is_zero(const int modelgridindex, const int element, const int ion) -> bool {
+auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -> bool {
   const int nions = get_nions(element);
   if (ion >= nions - 1) {
     return true;
   }
+  const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   if constexpr (USE_LUT_PHOTOION) {
-    return (globals::gammaestimator[get_ionestimindex(modelgridindex, element, ion)] == 0);
+    return (globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] == 0);
   }
 
   const auto T_e = grid::get_Te(modelgridindex);

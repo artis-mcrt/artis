@@ -22,7 +22,7 @@ void setup_photoion_luts();
 [[nodiscard]] auto get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex,
                                              int modelgridindex) -> double;
 
-[[nodiscard]] auto iongamma_is_zero(int modelgridindex, int element, int ion) -> bool;
+[[nodiscard]] auto iongamma_is_zero(int nonemptymgi, int element, int ion) -> bool;
 
 [[nodiscard]] auto calculate_iongamma_per_gspop(int modelgridindex, int element, int ion) -> double;
 [[nodiscard]] auto calculate_iongamma_per_ionpop(int modelgridindex, float T_e, int element, int lowerion,

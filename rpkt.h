@@ -68,8 +68,4 @@ void MPI_Bcast_binned_opacities(int modelgridindex, int root_node_id);
   return nonemptymgi * globals::nbfcontinua_ground + groundcontindex;
 }
 
-[[nodiscard]] inline auto get_ionestimindex(const int mgi, const int element, const int ion) -> int {
-  return get_ionestimindex_nonemptymgi(grid::get_modelcell_nonemptymgi(mgi), element, ion);
-}
-
 #endif  // RPKT_H
