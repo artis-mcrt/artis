@@ -160,7 +160,7 @@ static void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, S
   }
 }
 
-auto main(int argc, char *argv[]) -> int {
+auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
   const auto sys_time_start = std::time(nullptr);
 
 #ifdef MPI_ON
@@ -169,14 +169,7 @@ auto main(int argc, char *argv[]) -> int {
 
   globals::setup_mpi_vars();
 
-  if (globals::rank_global == 0) {
-    check_already_running();
-  }
-
-  // make sure rank 0 checked for a pid file before we proceed
-#ifdef MPI_ON
-  MPI_Barrier(MPI_COMM_WORLD);
-#endif
+  check_already_running();
 
   char filename[MAXFILENAMELENGTH];
   if (globals::rank_global == 0) {

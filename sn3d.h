@@ -242,26 +242,32 @@ inline auto rng_uniform_pos() -> float {
 }
 
 inline void check_already_running() {
-  const pid_t artispid = getpid();
+  if (globals::rank_global == 0) {
+    const pid_t artispid = getpid();
 
-  if (std::filesystem::exists("artis.pid")) {
-    auto pidfile = std::fstream("artis.pid", std::ios::in);
-    pid_t artispid_in = 0;
-    pidfile >> artispid_in;
-    pidfile.close();
-    if (is_pid_running(artispid_in)) {
-      fprintf(stderr,
-              "\nERROR: artis or exspec is already running in this folder with existing pid %d. Refusing to start. "
-              "(delete "
-              "artis.pid if you are sure this is incorrect)\n",
-              artispid_in);
-      std::abort();
+    if (std::filesystem::exists("artis.pid")) {
+      auto pidfile = std::fstream("artis.pid", std::ios::in);
+      pid_t artispid_in = 0;
+      pidfile >> artispid_in;
+      pidfile.close();
+      if (is_pid_running(artispid_in)) {
+        fprintf(stderr,
+                "\nERROR: artis or exspec is already running in this folder with existing pid %d. Refusing to start. "
+                "(delete artis.pid if you are sure this is incorrect)\n",
+                artispid_in);
+        std::abort();
+      }
     }
+
+    auto pidfile = std::fstream("artis.pid", std::ofstream::out | std::ofstream::trunc);
+    pidfile << artispid;
+    pidfile.close();
   }
 
-  auto pidfile = std::fstream("artis.pid", std::ofstream::out | std::ofstream::trunc);
-  pidfile << artispid;
-  pidfile.close();
+// make sure rank 0 checked for a pid file before we proceed
+#ifdef MPI_ON
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 }
 
 constexpr auto get_range_chunk(int size, int nchunks, int nchunk) -> std::tuple<int, int> {
