@@ -59,7 +59,9 @@ CXXFLAGS += -fstrict-aliasing
 ifeq ($(OPENMP),ON)
   BUILD_DIR := $(BUILD_DIR)_openmp
 
-  ifeq ($(COMPILER_NAME),CLANG)
+  ifeq ($(COMPILER_NAME),NVHPC)
+    CXXFLAGS += -mp=gpu
+  else ifeq ($(COMPILER_NAME),CLANG)
     CXXFLAGS += -Xpreprocessor -fopenmp
     LDFLAGS += -lomp
   else
