@@ -687,7 +687,7 @@ void init_nuclides(const std::vector<int> &custom_zlist, const std::vector<int> 
 
       const bool keeprow = ((branch_alpha > 0. || branch_beta > 0.) && halflife > 0.);
       if (keeprow) {
-        const double tau_sec = halflife / log(2);
+        const double tau_sec = halflife / std::numbers::ln2;
         int alphanucindex = -1;
         if (nuc_exists(z, a)) {
           alphanucindex = get_nucindex(z, a);
