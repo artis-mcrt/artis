@@ -746,8 +746,8 @@ auto rad_deexcitation_ratecoeff(const int modelgridindex, const int element, con
 }
 
 auto rad_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower,
-                              const int uptransindex, const double epsilon_trans, int lineindex, const double t_current)
-    -> double
+                              const int uptransindex, const double epsilon_trans, int lineindex,
+                              const double t_current) -> double
 /// radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
 {

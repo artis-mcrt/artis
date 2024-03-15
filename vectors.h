@@ -36,15 +36,15 @@
   return std::inner_product(x.begin(), x.end(), y.begin(), 0.);
 }
 
-[[nodiscard]] [[gnu::pure]] constexpr auto get_velocity(std::span<const double, 3> x, const double t)
-    -> std::array<double, 3>
+[[nodiscard]] [[gnu::pure]] constexpr auto get_velocity(std::span<const double, 3> x,
+                                                        const double t) -> std::array<double, 3>
 // Routine for getting velocity vector of the flow at a position with homologous expansion.
 {
   return std::array<double, 3>{x[0] / t, x[1] / t, x[2] / t};
 }
 
-[[nodiscard]] constexpr auto cross_prod(std::span<const double, 3> vec1, std::span<const double, 3> vec2)
-    -> std::array<double, 3> {
+[[nodiscard]] constexpr auto cross_prod(std::span<const double, 3> vec1,
+                                        std::span<const double, 3> vec2) -> std::array<double, 3> {
   std::array<double, 3> vecout = {(vec1[1] * vec2[2]) - (vec2[1] * vec1[2]), (vec1[2] * vec2[0]) - (vec2[2] * vec1[0]),
                                   (vec1[0] * vec2[1]) - (vec2[0] * vec1[1])};
   return vecout;
@@ -56,8 +56,8 @@ constexpr void vec_scale(std::span<double, 3> vec, const double scalefactor) {
   vec[2] *= scalefactor;
 }
 
-[[nodiscard]] constexpr auto angle_ab(std::span<const double, 3> dir1, std::span<const double, 3> vel)
-    -> std::array<double, 3>
+[[nodiscard]] constexpr auto angle_ab(std::span<const double, 3> dir1,
+                                      std::span<const double, 3> vel) -> std::array<double, 3>
 // aberation of angles in special relativity
 //   dir1: direction unit vector in frame1
 //   vel: velocity of frame2 relative to frame1

@@ -988,8 +988,8 @@ auto vpkt_call_estimators(Packet &pkt_ptr, const enum packet_type type_before_rp
   return ref2;
 }
 
-static auto lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf, std::span<const double, 3> v)
-    -> std::array<double, 3> {
+static auto lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> n_rf,
+                    std::span<const double, 3> v) -> std::array<double, 3> {
   // Use Lorentz transformations to get e_cmf from e_rf
 
   const auto beta = std::array<const double, 3>{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
@@ -1021,8 +1021,8 @@ static auto lorentz(std::span<const double, 3> e_rf, std::span<const double, 3> 
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
-auto frame_transform(std::span<const double, 3> n_rf, double *Q, double *U, std::span<const double, 3> v)
-    -> std::array<double, 3> {
+auto frame_transform(std::span<const double, 3> n_rf, double *Q, double *U,
+                     std::span<const double, 3> v) -> std::array<double, 3> {
   auto ref1 = std::array<double, 3>{NAN, NAN, NAN};
 
   // Meridian frame in the RF

@@ -248,8 +248,8 @@ auto calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
           exp(-E_aboveground / KB / T_exc));
 }
 
-static auto calculate_levelpop_nominpop(int modelgridindex, int element, int ion, int level, bool *skipminpop)
-    -> double {
+static auto calculate_levelpop_nominpop(int modelgridindex, int element, int ion, int level,
+                                        bool *skipminpop) -> double {
   assert_testmodeonly(modelgridindex < grid::get_npts_model());
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
@@ -432,8 +432,8 @@ auto get_nnion(int modelgridindex, int element, int ion) -> double
          grid::modelgrid[modelgridindex].composition[element].partfunct[ion] / stat_weight(element, ion, 0);
 }
 
-static auto find_uppermost_ion(const int modelgridindex, const int element, const double nne_hi, const bool force_lte)
-    -> int {
+static auto find_uppermost_ion(const int modelgridindex, const int element, const double nne_hi,
+                               const bool force_lte) -> int {
   const int nions = get_nions(element);
   if (nions == 0) {
     return -1;

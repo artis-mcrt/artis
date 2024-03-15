@@ -78,8 +78,8 @@ static auto integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas)
   return sigma_bf * (1 - nu_edge / nu) * radfield::radfield(nu, modelgridindex) * (1 - exp(-HOVERKB * nu / T_R));
 }
 
-static auto calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
-    -> double {
+static auto calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex,
+                                     int modelgridindex) -> double {
   double error = 0.;
   const double epsrel = 1e-3;
   const double epsrelwarning = 1e-1;
