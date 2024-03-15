@@ -541,10 +541,9 @@ void do_kpkt(Packet &pkt_ptr, double t2, int nts)
     pkt_ptr.em_time = pkt_ptr.prop_time;
     pkt_ptr.nscatterings = 0;
 
-    return vpkt_call_estimators(pkt_ptr, TYPE_KPKT);
-  }
+    vpkt_call_estimators(pkt_ptr, TYPE_KPKT);
 
-  if (rndcoolingtype == COOLINGTYPE_FB) {
+  } else if (rndcoolingtype == COOLINGTYPE_FB) {
     /// The k-packet converts directly into a r-packet by free-bound-emission.
     /// Need to select the r-packets frequency and a random direction in the
     /// co-moving frame.
@@ -582,11 +581,7 @@ void do_kpkt(Packet &pkt_ptr, double t2, int nts)
     pkt_ptr.nscatterings = 0;
 
     vpkt_call_estimators(pkt_ptr, TYPE_KPKT);
-
-    return;
-  }
-
-  if (rndcoolingtype == COOLINGTYPE_COLLEXC) {
+  } else if (rndcoolingtype == COOLINGTYPE_COLLEXC) {
     /// the k-packet activates a macro-atom due to collisional excitation
     // printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
     const float nne = grid::get_nne(modelgridindex);
@@ -641,10 +636,8 @@ void do_kpkt(Packet &pkt_ptr, double t2, int nts)
     pkt_ptr.trueemissiontype = EMTYPE_NOTSET;
     pkt_ptr.trueemissionvelocity = -1;
 
-    return do_macroatom(pkt_ptr, {element, ion, upper, -99});
-  }
-
-  if (rndcoolingtype == COOLINGTYPE_COLLION) {
+    do_macroatom(pkt_ptr, {element, ion, upper, -99});
+  } else if (rndcoolingtype == COOLINGTYPE_COLLION) {
     /// the k-packet activates a macro-atom due to collisional ionisation
     // printout("[debug] do_kpkt: k-pkt -> collisional ionisation of MA\n");
 
