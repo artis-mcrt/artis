@@ -23,10 +23,10 @@
 namespace stats {
 
 static double *ionstats = nullptr;
-static std::array<std::atomic<ptrdiff_t>, COUNTER_COUNT> eventstats;
+static std::array<std::atomic<ptrdiff_t>, COUNTER_COUNT> eventstats{};
 
 void init() {
-  assert(eventstats[0].is_lock_free());
+  assert_always(eventstats[0].is_lock_free());
   if constexpr (TRACK_ION_STATS) {
     ionstats =
         static_cast<double *>(malloc(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT * sizeof(double)));
