@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <ranges>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -139,7 +140,9 @@ void packet_init(Packet *pkt)
   }
 
   printout("Placing pellets...\n");
-  for (int n = 0; n < globals::npkts; n++) {
+  // auto allpkts = std::ranges::iota_view{0, globals::npkts};
+  auto allpkts = std::views::iota(0, globals::npkts);
+  std::ranges::for_each(allpkts, [&, norm, e0](const int n) {
     const double targetval = rng_uniform() * norm;
 
     // first en_cumulative[i] such that en_cumulative[i] > targetval
@@ -148,7 +151,7 @@ void packet_init(Packet *pkt)
     const ptrdiff_t cellindex = std::distance(en_cumulative.cbegin(), upperval);
 
     place_pellet(e0, cellindex, n, pkt[n]);
-  }
+  });
 
   decay::free_decaypath_energy_per_mass();  // will no longer be needed after packets are set up
 
