@@ -733,7 +733,6 @@ void cellcache_change_cell(const int modelgridindex) {
 
 static void solve_Te_nltepops(const int mgi, const int nonemptymgi, const int nts, const int titer,
                               HeatingCoolingRates *heatingcoolingrates)
-// n is the modelgridindex (TODO: rename to mgi)
 // nts is the timestep number
 {
   // bfheating coefficients are needed for the T_e solver, but
