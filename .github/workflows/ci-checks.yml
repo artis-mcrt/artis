@@ -155,6 +155,12 @@ jobs:
                   compiler: nvidia-hpc
                   version: ${{ matrix.compiler.ver }}
 
+            - name: Set nvc++ as compiler
+              if: matrix.compiler.name == 'nvc++'
+              run: |
+                  echo "CXX=nvc++" >> $GITHUB_ENV
+                  echo "OMPI_CXX=nvc++" >> $GITHUB_ENV
+
             - name: install gsl
               run: |
                   sudo apt install libgsl-dev
