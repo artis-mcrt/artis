@@ -27,7 +27,6 @@
 #include "spectrum.h"
 #include "version.h"
 
-// threadprivate variables
 std::ofstream output_file;
 bool use_cellcache = false;
 long long int rngseed = std::random_device{}();
