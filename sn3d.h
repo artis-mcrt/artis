@@ -18,8 +18,10 @@
 #endif
 
 #define EXEC_PAR_UNSEQ std::execution::par_unseq,
+#define EXEC_PAR std::execution::par,
 #else
 #define EXEC_PAR_UNSEQ
+#define EXEC_PAR
 #endif
 
 #include <cassert>
