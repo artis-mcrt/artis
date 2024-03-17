@@ -1,5 +1,4 @@
 #pragma once
-#include <string_view>
 #ifndef SN3D_H
 #define SN3D_H
 
@@ -32,10 +31,7 @@
 #include <fstream>
 #include <iostream>
 #include <random>
-
-#include "artisoptions.h"
-#include "atomic.h"
-#include "globals.h"
+#include <string_view>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -52,6 +48,32 @@ extern bool use_cellcache;
 extern long long int rngseed;
 
 extern gsl_integration_workspace *gslworkspace;
+// make these thread_local if we want separate log files for STDPAR threads
+inline char outputlinebuf[1024] = "";
+inline bool outputstartofline = true;
+inline struct tm timebuf {};
+
+#ifdef _OPENMP
+#pragma omp threadprivate(cellcacheslotid, rngseed, gslworkspace, output_file, outputlinebuf, outputstartofline, \
+                              timebuf)
+#endif
+
+inline void print_line_start() {
+  if (outputstartofline) {
+    const time_t now_time = time(nullptr);
+    strftime(outputlinebuf, 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
+    output_file << outputlinebuf << " ";
+  }
+}
+
+#define printout(...)                                                       \
+  {                                                                         \
+    print_line_start();                                                     \
+    snprintf(outputlinebuf, 1024, __VA_ARGS__);                             \
+    outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n'); \
+    output_file << outputlinebuf;                                           \
+    output_file.flush();                                                    \
+  }
 
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
@@ -84,45 +106,6 @@ extern gsl_integration_workspace *gslworkspace;
   }
 #endif
 
-// make these thread_local if we want separate log files for STDPAR threads
-inline char outputlinebuf[1024] = "";
-inline bool outputstartofline = true;
-inline struct tm timebuf {};
-
-#ifdef _OPENMP
-#pragma omp threadprivate(cellcacheslotid, rngseed, gslworkspace, output_file, outputlinebuf, outputstartofline, \
-                              timebuf)
-#endif
-
-inline void print_line_start() {
-  if (outputstartofline) {
-    const time_t now_time = time(nullptr);
-    strftime(outputlinebuf, 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
-    output_file << outputlinebuf << " ";
-  }
-}
-
-#define printout(...)                                                       \
-  {                                                                         \
-    print_line_start();                                                     \
-    snprintf(outputlinebuf, 1024, __VA_ARGS__);                             \
-    outputstartofline = (outputlinebuf[strlen(outputlinebuf) - 1] == '\n'); \
-    output_file << outputlinebuf;                                           \
-    output_file.flush();                                                    \
-  }
-
-#include "globals.h"
-
-[[nodiscard]] inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
-                                         const int phixstargetindex) -> int {
-  const int contindex = -1 - globals::elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
-
-  const int bflutindex = tempindex * globals::nbfcontinua + contindex;
-  assert_testmodeonly(bflutindex >= 0);
-  assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
-  return bflutindex;
-}
-
 template <typename T>
 inline void safeadd(T &var, T val) {
 #ifdef _OPENMP
@@ -144,8 +127,6 @@ inline void safeadd(T &var, T val) {
 }
 
 #define safeincrement(var) safeadd((var), 1)
-
-// #define DO_TITER
 
 inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno) {
   if (gsl_errno != 18)  // roundoff error
@@ -183,7 +164,17 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
   }
   return file;
 }
+#include "globals.h"
 
+[[nodiscard]] inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
+                                         const int phixstargetindex) -> int {
+  const int contindex = -1 - globals::elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
+
+  const int bflutindex = tempindex * globals::nbfcontinua + contindex;
+  assert_testmodeonly(bflutindex >= 0);
+  assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
+  return bflutindex;
+}
 [[nodiscard]] inline auto get_timestep(const double time) -> int {
   assert_always(time >= globals::tmin);
   assert_always(time < globals::tmax);
