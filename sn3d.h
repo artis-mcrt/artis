@@ -41,13 +41,14 @@
 #include <mpi.h>
 #endif
 
-extern std::ofstream output_file;
 inline constexpr int cellcacheslotid = 0;
-extern bool use_cellcache;
+inline bool use_cellcache = false;
 
 extern long long int rngseed;
 
-extern gsl_integration_workspace *gslworkspace;
+extern std::ofstream output_file;
+
+inline gsl_integration_workspace *gslworkspace = nullptr;
 // make these thread_local if we want separate log files for STDPAR threads
 inline char outputlinebuf[1024] = "";
 inline bool outputstartofline = true;
