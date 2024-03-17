@@ -270,7 +270,7 @@ static void do_cell_packet_updates(std::span<Packet> packets, const int nts, con
   };
 
 #if defined(STDPAR_ON) || !defined(_OPENMP)
-  std::for_each(EXEC_PAR packets.begin(), packets.end(), update_packet);
+  std::for_each(EXEC_PAR_UNSEQ packets.begin(), packets.end(), update_packet);
 #else
 #pragma omp parallel for schedule(nonmonotonic : dynamic)
   for (ptrdiff_t i = 0; i < std::ssize(packets); i++) {
