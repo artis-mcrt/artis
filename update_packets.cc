@@ -299,7 +299,7 @@ void update_packets(const int my_rank, const int nts, std::span<Packet> packets)
 
     // printout("sorting packets...");
 
-    std::sort(EXEC_PAR_UNSEQ std::begin(packets), std::end(packets), std_compare_packets_bymodelgriddensity);
+    std::sort(std::begin(packets), std::end(packets), std_compare_packets_bymodelgriddensity);
 
     // printout("took %lds\n", std::time(nullptr) - sys_time_start_pass);
 
