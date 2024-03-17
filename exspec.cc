@@ -8,7 +8,6 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
-#include <random>
 #include <vector>
 
 #include "artisoptions.h"
@@ -16,7 +15,6 @@
 #include "decay.h"
 #include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_integration.h"
 #include "input.h"
 #include "light_curve.h"
 #ifdef MPI_ON
@@ -26,11 +24,6 @@
 #include "sn3d.h"
 #include "spectrum.h"
 #include "version.h"
-
-std::ofstream output_file;
-bool use_cellcache = false;
-long long int rngseed = std::random_device{}();
-gsl_integration_workspace *gslworkspace = nullptr;
 
 static void do_angle_bin(const int a, Packet *pkts, bool load_allrank_packets, Spectra &rpkt_spectra, Spectra &stokes_i,
                          Spectra &stokes_q, Spectra &stokes_u, Spectra &gamma_spectra) {
