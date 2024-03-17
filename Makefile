@@ -60,7 +60,7 @@ ifeq ($(OPENMP),ON)
   BUILD_DIR := $(BUILD_DIR)_openmp
 
   ifeq ($(COMPILER_NAME),NVHPC)
-    CXXFLAGS += -mp=gpu
+    CXXFLAGS += -mp=gpu -gpu=unified
   else ifeq ($(COMPILER_NAME),CLANG)
     CXXFLAGS += -Xpreprocessor -fopenmp
     LDFLAGS += -lomp
@@ -82,7 +82,7 @@ ifeq ($(STDPAR),ON)
   BUILD_DIR := $(BUILD_DIR)_stdpar
 
   ifeq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -stdpar=gpu -⁠gpu=unified
+	CXXFLAGS += -stdpar=gpu -gpu=unified
   else ifeq ($(COMPILER_NAME),GCC)
     LDFLAGS += -ltbb
   else ifeq ($(COMPILER_NAME),CLANG)
