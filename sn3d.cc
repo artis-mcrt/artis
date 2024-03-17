@@ -52,6 +52,11 @@
 #include "version.h"
 #include "vpkt.h"
 
+bool use_cellcache = false;
+long long int rngseed{std::random_device{}()};
+
+gsl_integration_workspace *gslworkspace = nullptr;
+std::ofstream output_file;
 static FILE *linestat_file = nullptr;
 static auto real_time_start = -1;
 static auto time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop

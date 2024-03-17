@@ -45,13 +45,13 @@
 #include <mpi.h>
 #endif
 
-inline std::ofstream output_file;
+extern std::ofstream output_file;
 inline constexpr int cellcacheslotid = 0;
-inline bool use_cellcache = false;
+extern bool use_cellcache;
 
-inline long long int rngseed{std::random_device{}()};
+extern long long int rngseed;
 
-inline gsl_integration_workspace *gslworkspace = nullptr;
+extern gsl_integration_workspace *gslworkspace;
 
 #define __artis_assert(e)                                                                                              \
   {                                                                                                                    \
