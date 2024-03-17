@@ -94,7 +94,7 @@ inline struct tm timebuf {};
                               timebuf)
 #endif
 
-static inline void print_line_start() {
+inline void print_line_start() {
   if (outputstartofline) {
     const time_t now_time = time(nullptr);
     strftime(outputlinebuf, 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
@@ -113,8 +113,8 @@ static inline void print_line_start() {
 
 #include "globals.h"
 
-[[nodiscard]] static inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
-                                                const int phixstargetindex) -> int {
+[[nodiscard]] inline auto get_bflutindex(const int tempindex, const int element, const int ion, const int level,
+                                         const int phixstargetindex) -> int {
   const int contindex = -1 - globals::elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
 
   const int bflutindex = tempindex * globals::nbfcontinua + contindex;
@@ -147,7 +147,7 @@ inline void safeadd(T &var, T val) {
 
 // #define DO_TITER
 
-static inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno) {
+inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno) {
   if (gsl_errno != 18)  // roundoff error
   {
     printout("WARNING: gsl (%s:%d): %s (Error code %d)\n", file, line, reason, gsl_errno);
@@ -155,7 +155,7 @@ static inline void gsl_error_handler_printout(const char *reason, const char *fi
   }
 }
 
-static auto fopen_required(const std::string &filename, const char *mode) -> FILE * {
+[[nodiscard]] inline auto fopen_required(const std::string &filename, const char *mode) -> FILE * {
   // look in the data folder first
   const std::string datafolderfilename = "data/" + filename;
   if (mode[0] == 'r' && std::filesystem::exists(datafolderfilename)) {
@@ -171,7 +171,7 @@ static auto fopen_required(const std::string &filename, const char *mode) -> FIL
   return file;
 }
 
-static auto fstream_required(const std::string &filename, std::ios_base::openmode mode) -> std::fstream {
+[[nodiscard]] inline auto fstream_required(const std::string &filename, std::ios_base::openmode mode) -> std::fstream {
   const std::string datafolderfilename = "data/" + filename;
   if (mode == std::ios::in && std::filesystem::exists(datafolderfilename)) {
     return fstream_required(datafolderfilename, mode);
@@ -184,7 +184,7 @@ static auto fstream_required(const std::string &filename, std::ios_base::openmod
   return file;
 }
 
-[[nodiscard]] static auto get_timestep(const double time) -> int {
+[[nodiscard]] inline auto get_timestep(const double time) -> int {
   assert_always(time >= globals::tmin);
   assert_always(time < globals::tmax);
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
