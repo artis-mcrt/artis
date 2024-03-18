@@ -272,7 +272,11 @@ static void do_cell_packet_updates(std::span<Packet> packets, const int nts, con
 #if defined(STDPAR_ON) || !defined(_OPENMP)
   std::for_each(EXEC_PAR packets.begin(), packets.end(), update_packet);
 #else
+#ifdef GPU_ON
+#pragma omp target teams distribute parallel for
+#else
 #pragma omp parallel for schedule(nonmonotonic : dynamic)
+#endif
   for (ptrdiff_t i = 0; i < std::ssize(packets); i++) {
     update_packet(packets[i]);
   }
