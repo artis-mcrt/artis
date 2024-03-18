@@ -55,8 +55,12 @@ inline bool outputstartofline = true;
 inline struct tm timebuf {};
 
 #ifdef _OPENMP
+#ifdef GPU_ON
+#pragma omp requires unified_shared_memory
+#else
 #pragma omp threadprivate(cellcacheslotid, rngseed, gslworkspace, output_file, outputlinebuf, outputstartofline, \
                               timebuf)
+#endif
 #endif
 
 inline void print_line_start() {
