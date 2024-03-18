@@ -755,7 +755,7 @@ auto main(int argc, char *argv[]) -> int {
 
   const int my_rank = globals::rank_global;
 
-#ifdef _OPENMP
+#if defined(_OPENMP) && !defined(GPU_ON)
   // Explicitly turn off dynamic threads because we use the threadprivate directive!!!
   omp_set_dynamic(0);
 
@@ -778,6 +778,10 @@ auto main(int argc, char *argv[]) -> int {
 
 #ifdef STDPAR_ON
   printout("C++ standard parallelism (stdpar) is enabled\n");
+#endif
+
+#ifdef GPU_ON
+  printout("GPU_ON is enabled\n");
 #endif
 
   printout("time at start %d\n", real_time_start);
