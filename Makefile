@@ -19,7 +19,7 @@ ifeq ($(MPI),ON)
 $(info $(shell mpicxx --showme:version 2> /dev/null))
 else ifeq ($(MPI),OFF)
 else
-	$(error bad value for MPI option. Should be ON or OFF)
+$(error bad value for MPI option. Should be ON or OFF)
 endif
 
 ifeq ($(TESTMODE),ON)
@@ -47,6 +47,7 @@ $(info detected compiler is $(COMPILER_NAME))
 
 ifeq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -std=c++20
+	GPU := ON
 else
 	CXXFLAGS += -std=c++20 -ftree-vectorize -flto=auto -Wunknown-pragmas -Wunused-macros -Werror -MD -MP
 	# add -ftrivial-auto-var-init=zero when we drop gcc 11 support
@@ -56,7 +57,19 @@ endif
 CXXFLAGS += -fstrict-aliasing
 
 
+ifeq ($(GPU),ON)
+	CXXFLAGS += -DGPU_ON=true
+	BUILD_DIR := $(BUILD_DIR)_gpu
+else ifeq ($(GPU),OFF)
+else ifeq ($(GPU),)
+else
+$(error bad value for GPU option. Should be ON or OFF)
+endif
+
 ifeq ($(OPENMP),ON)
+  ifeq ($(STDPAR),ON)
+    $(error cannot combine OPENMP and STDPAR)
+  endif
   BUILD_DIR := $(BUILD_DIR)_openmp
 
   ifeq ($(COMPILER_NAME),NVHPC)
@@ -70,14 +83,10 @@ ifeq ($(OPENMP),ON)
 else ifeq ($(OPENMP),OFF)
 else ifeq ($(OPENMP),)
 else
-  $(error bad value for openmp option. Should be ON or OFF)
+  $(error bad value for OPENMP option. Should be ON or OFF)
 endif
 
 ifeq ($(STDPAR),ON)
-  ifeq ($(OPENMP),ON)
-    $(error cannot combine OPENMP and STDPAR)
-  endif
-
   CXXFLAGS += -DSTDPAR_ON=true
   BUILD_DIR := $(BUILD_DIR)_stdpar
 
