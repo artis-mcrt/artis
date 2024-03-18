@@ -1680,9 +1680,8 @@ void read_parameterfile(int rank)
 
 #ifdef _OPENMP
 #pragma omp parallel
-  {
 #endif
-
+  {
     /// For MPI parallelisation, the random seed is changed based on the rank of the process
     /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
     /// to the thread-ID tid.
@@ -1695,9 +1694,7 @@ void read_parameterfile(int rank)
     for (int n = 0; n < 100; n++) {
       rng_uniform();
     }
-#ifdef _OPENMP
   }
-#endif
 
   assert_always(get_noncommentline(file, line));
   std::istringstream(line) >> globals::ntimesteps;  // number of time steps
