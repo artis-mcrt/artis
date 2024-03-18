@@ -49,7 +49,6 @@ extern std::mt19937 stdrng;
 extern std::ofstream output_file;
 
 inline gsl_integration_workspace *gslworkspace = nullptr;
-// make these thread_local if we want separate log files for STDPAR threads
 inline char outputlinebuf[1024] = "";
 inline bool outputstartofline = true;
 inline struct tm timebuf {};
@@ -58,8 +57,7 @@ inline struct tm timebuf {};
 #ifdef GPU_ON
 // #pragma omp requires unified_shared_memory
 #else
-#pragma omp threadprivate(cellcacheslotid, stdrng, gslworkspace, output_file, outputlinebuf, outputstartofline, \
-                              timebuf)
+#pragma omp threadprivate(cellcacheslotid, stdrng, gslworkspace, output_file, outputlinebuf, outputstartofline, timebuf)
 #endif
 #endif
 
