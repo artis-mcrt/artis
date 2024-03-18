@@ -145,10 +145,6 @@ jobs:
                   compiler: gcc
                   version: 13
 
-            - name: Install CUDA toolkit
-              if: matrix.compiler.name == 'nvc++'
-              uses: Jimver/cuda-toolkit@v0.2.14
-
             - name: Install nvc++
               if: matrix.compiler.name == 'nvc++'
               uses: fortran-lang/setup-fortran@v1
