@@ -44,7 +44,7 @@
 inline constexpr int cellcacheslotid = 0;
 inline bool use_cellcache = false;
 
-extern long long int rngseed;
+extern std::mt19937 stdrng;
 
 extern std::ofstream output_file;
 
@@ -211,7 +211,6 @@ inline void gsl_error_handler_printout(const char *reason, const char *file, int
 }
 
 inline auto rng_uniform() -> float {
-  thread_local std::mt19937 stdrng(rngseed);
   while (true) {
     const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(stdrng);
     if (zrand != 1.) {

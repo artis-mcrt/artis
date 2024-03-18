@@ -52,7 +52,7 @@
 #include "version.h"
 #include "vpkt.h"
 
-long long int rngseed{std::random_device{}()};
+std::mt19937 stdrng{std::random_device{}()};
 
 std::ofstream output_file;
 

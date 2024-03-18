@@ -1686,7 +1686,8 @@ void read_parameterfile(int rank)
     /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
     /// to the thread-ID tid.
     const auto tid = get_thread_num();
-    rngseed = pre_zseed + static_cast<long long int>(13 * (rank * get_max_threads() + tid));
+    auto rngseed = pre_zseed + static_cast<long long int>(13 * (rank * get_max_threads() + tid));
+    stdrng.seed(rngseed);
     printout("rank %d: thread %d has rngseed %lld\n", rank, tid, rngseed);
     printout("rng is a std::mt19937 generator\n");
 
