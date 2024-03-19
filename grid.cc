@@ -2454,7 +2454,7 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
 }
 
 [[nodiscard]] auto boundary_distance(std::span<const double, 3> dir, std::span<const double, 3> pos,
-                                     const double tstart, int cellindex,
+                                     const double tstart, const int cellindex,
                                      enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>
 /// Basic routine to compute distance to a cell boundary.
 {
