@@ -47,7 +47,6 @@ $(info detected compiler is $(COMPILER_NAME))
 
 ifeq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -std=c++20
-	GPU := ON
 else
 	CXXFLAGS += -std=c++20 -ftree-vectorize -flto=auto -Wunknown-pragmas -Wunused-macros -Werror -MD -MP
 	# add -ftrivial-auto-var-init=zero when we drop gcc 11 support
@@ -73,7 +72,7 @@ ifeq ($(OPENMP),ON)
   BUILD_DIR := $(BUILD_DIR)_openmp
 
   ifeq ($(COMPILER_NAME),NVHPC)
-    CXXFLAGS += -mp=gpu -gpu=unified -gpu=cc80
+    CXXFLAGS += -mp=gpu -gpu=unified
   else ifeq ($(COMPILER_NAME),CLANG)
     CXXFLAGS += -Xpreprocessor -fopenmp
     LDFLAGS += -lomp
