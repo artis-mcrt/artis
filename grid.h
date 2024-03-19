@@ -75,6 +75,8 @@ extern ModelGridCell *modelgrid;
 
 extern int ngrid;
 
+extern double mtot_input;
+
 [[nodiscard]] auto get_elements_uppermost_ion(int modelgridindex, int element) -> int;
 void set_elements_uppermost_ion(int modelgridindex, int element, int newvalue);
 [[nodiscard]] auto wid_init(int cellindex, int axis) -> double;

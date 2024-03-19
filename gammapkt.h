@@ -7,7 +7,7 @@
 namespace gammapkt {
 void init_gamma_linelist();
 void pellet_gamma_decay(Packet &pkt);
-void do_gamma(Packet &pkt, double t2);
+void treat_gamma_packet(Packet &pkt, double t2);
 void normalise(int nts);
 
 }  // namespace gammapkt

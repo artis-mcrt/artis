@@ -57,7 +57,7 @@ static int ncoord_model[3];  // the model.txt input grid dimensions
 
 static double min_den;  // minimum model density
 
-static double mtot_input;
+double mtot_input;
 static double mfeg;  /// Total mass of Fe group elements in ejecta
 
 static int first_cellindex = -1;  // auto-dermine first cell index in model.txt (usually 1 or 0)
@@ -2455,8 +2455,8 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
 }
 
 [[nodiscard]] auto boundary_distance(std::span<const double, 3> dir, std::span<const double, 3> pos,
-                                     const double tstart, int cellindex,
-                                     enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>
+                                     const double tstart, int cellindex, enum cell_boundary *pkt_last_cross)
+    -> std::tuple<double, int>
 /// Basic routine to compute distance to a cell boundary.
 {
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {

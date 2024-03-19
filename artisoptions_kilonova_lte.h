@@ -142,5 +142,8 @@ constexpr bool EXPANSIONOPACITIES_ON = false;
 
 constexpr bool EXPANSION_OPAC_SAMPLE_KAPPAPLANCK = false;
 
+constexpr int GAMMA_THERMALIZATION_SCHEME =
+    1;  // 0: standard gamma transport, 1: classical Barnes formulae, 2: Barnes formulae position-dependent
+
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H
