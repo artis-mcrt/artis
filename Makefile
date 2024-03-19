@@ -55,10 +55,13 @@ endif
 
 CXXFLAGS += -fstrict-aliasing
 
-# profile-guided optimisation with clang
-# CXXFLAGS += -fprofile-instr-generate=sn3d.profraw
-# llvm-profdata merge -output=sn3d.profdata sn3d.profraw
-# CXXFLAGS += -fprofile-instr-use=sn3d.profdata
+# profile-guided optimisation
+# generate profile:
+# CXXFLAGS += -fprofile-generate="profdataraw"
+# for clang, run this to convert the raw data to profdata
+# llvm-profdata merge -output=profdata profdataraw/*
+# compile with PGO:
+# CXXFLAGS += -fprofile-use="profdataraw"
 
 ifeq ($(GPU),ON)
 	CXXFLAGS += -DGPU_ON=true
