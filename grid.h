@@ -15,6 +15,8 @@
 #include "stats.h"
 #include "vectors.h"
 
+namespace grid {
+
 struct ModelCellElement {
   float abundance;        /// Abundance of the element (by mass!).
   float *groundlevelpop;  /// Pointer to an array of floats which contains the groundlevel populations
@@ -22,9 +24,6 @@ struct ModelCellElement {
   float *partfunct;       /// Pointer to an array of floats which contains the partition functions
                           /// of all included ionisation stages for the element.
 };
-
-namespace grid {
-
 struct ModelGridCell {
   float Te = -1.;
   float TR = -1.;
