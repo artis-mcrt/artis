@@ -99,18 +99,6 @@ int my_integrator(const gsl_function *f, double a, double b, double epsabs, doub
 #define integrator(...) gsl_integration_qag(__VA_ARGS__)
 #endif
 
-// typedef struct gslintegration_ffheatingparas
-// {
-//   double T_e;
-//   int cellnumber;
-// } gslintegration_ffheatingparas;
-
-// typedef struct gslintegration_bfheatingparas
-// {
-//   double nu_edge;
-//   int cellnumber;
-// } gslintegration_bfheatingparas;
-
 double T_step_log;
 
 static double *spontrecombcoeffs = nullptr;
@@ -500,12 +488,9 @@ static void precalculate_rate_coefficient_integrals() {
 #pragma omp parallel for
 #endif
     for (int ion = 0; ion < nions; ion++) {
-      // nlevels = get_nlevels(element,ion);
       const int atomic_number = get_atomicnumber(element);
       const int ionstage = get_ionstage(element, ion);
       const int nlevels = get_ionisinglevels(element, ion);
-      /// That's only an option for pure LTE
-      // if (TAKE_N_BFCONTINUA < nlevels) nlevels = TAKE_N_BFCONTINUA;
       printout("Performing rate integrals for Z = %d, ionstage %d...\n", atomic_number, ionstage);
 
       gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
