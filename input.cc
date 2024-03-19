@@ -162,8 +162,7 @@ static void read_phixs_data_table(std::fstream &phixsfile, const int nphixspoint
   /// belong to the topmost ion included.
   /// Rate coefficients are only available for ionising levels.
   //  also need (levelenergy < ionpot && ...)?
-  if (lowerion < get_nions(element) - 1)  /// thats only an option for pure LTE && level < TAKE_N_BFCONTINUA)
-  {
+  if (lowerion < get_nions(element) - 1) {
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lowerlevel);
          phixstargetindex++) {
       const int upperlevel = get_phixsupperlevel(element, lowerion, lowerlevel, phixstargetindex);
@@ -379,8 +378,7 @@ static void read_ion_levels(std::fstream &adata, const int element, const int io
       /// is below the ionization potential and the level doesn't
       /// belong to the topmost ion included.
       /// Rate coefficients are only available for ionising levels.
-      if (levelenergy < ionpot && ion < nions - 1)  /// thats only an option for pure LTE && level < TAKE_N_BFCONTINUA)
-      {
+      if (levelenergy < ionpot && ion < nions - 1) {
         globals::elements[element].ions[ion].ionisinglevels++;
       }
 
