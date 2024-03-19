@@ -911,6 +911,7 @@ void barnes_thermalization(Packet &pkt, bool local)
   } else {
     // let packet escape, i.e. make it inactive
     pkt.type = TYPE_ESCAPE;
+    grid::change_cell(pkt, -99);
   }
 }
 
