@@ -12,6 +12,7 @@
 #include "globals.h"
 #include "packet.h"
 #include "sn3d.h"
+#include "stats.h"
 #include "vectors.h"
 
 struct ModelCellElement {
@@ -131,12 +132,29 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] auto get_totmassradionuclide(int z, int a) -> double;
 [[nodiscard]] auto boundary_distance(std::span<const double, 3> dir, std::span<const double, 3> pos, double tstart,
                                      int cellindex, enum cell_boundary *pkt_last_cross) -> std::tuple<double, int>;
-void change_cell(Packet &pkt, int snext);
 
 [[nodiscard]] static inline auto get_elem_abundance(int modelgridindex, int element) -> float
 // mass fraction of an element (all isotopes combined)
 {
   return modelgrid[modelgridindex].composition[element].abundance;
+}
+
+inline void change_cell(Packet &pkt, const int snext)
+/// Routine to take a packet across a boundary.
+{
+  if (snext >= 0) {
+    // Just need to update "where".
+    pkt.where = snext;
+  } else {
+    // Then the packet is exiting the grid. We need to record
+    // where and at what time it leaves the grid.
+    pkt.escape_type = pkt.type;
+    pkt.escape_time = pkt.prop_time;
+    pkt.type = TYPE_ESCAPE;
+    globals::nesc++;
+
+    stats::increment(stats::COUNTER_CELLCROSSINGS);
+  }
 }
 
 }  // namespace grid

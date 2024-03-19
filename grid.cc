@@ -35,7 +35,6 @@
 #include "packet.h"
 #include "radfield.h"
 #include "sn3d.h"
-#include "stats.h"
 #include "vectors.h"
 
 namespace grid {
@@ -2671,28 +2670,6 @@ static auto get_coordboundary_distances_cylindrical2d(std::span<const double, 3>
   }
 
   return {distance, snext};
-}
-
-void change_cell(Packet &pkt, int snext)
-/// Routine to take a packet across a boundary.
-{
-  // const int cellindex = pkt.where;
-  // printout("[debug] cellnumber %d nne %g\n", cellindex, grid::get_nne(grid::get_cell_modelgridindex(cellindex)));
-  // printout("[debug] snext %d\n", snext);
-
-  if (snext == -99) {
-    // Then the packet is exiting the grid. We need to record
-    // where and at what time it leaves the grid.
-    pkt.escape_type = pkt.type;
-    pkt.escape_time = pkt.prop_time;
-    pkt.type = TYPE_ESCAPE;
-    globals::nesc++;
-  } else {
-    // Just need to update "where".
-    pkt.where = snext;
-
-    stats::increment(stats::COUNTER_CELLCROSSINGS);
-  }
 }
 
 }  // namespace grid
