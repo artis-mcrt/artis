@@ -23,7 +23,6 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
-#include <memory>
 #include <span>
 
 #include "artisoptions.h"

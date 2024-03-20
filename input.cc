@@ -15,7 +15,6 @@
 #include <ios>
 #include <iterator>
 #include <limits>
-#include <memory>
 #include <random>
 #include <sstream>
 #include <string>
@@ -1960,7 +1959,7 @@ void time_init()
   /// t=globals::tmin is the start of the calculation. t=globals::tmax is the end of the calculation.
   /// globals::ntimesteps is the number of time steps
 
-  globals::timesteps = std::make_unique<TimeStep[]>(globals::ntimesteps + 1);
+  globals::timesteps.resize(globals::ntimesteps + 1);
 
   /// Now set the individual time steps
   switch (TIMESTEP_SIZE_METHOD) {

@@ -208,7 +208,7 @@ namespace globals {
 
 extern std::array<double, 3> syn_dir;  // vector pointing from origin to observer
 
-extern std::unique_ptr<TimeStep[]> timesteps;
+extern std::vector<TimeStep> timesteps;
 
 extern std::vector<double> dep_estimator_gamma;
 

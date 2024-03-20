@@ -2,7 +2,6 @@
 
 #include <array>
 #include <deque>
-#include <memory>
 #include <mutex>
 #include <vector>
 
@@ -16,7 +15,7 @@ namespace globals {
 
 std::array<double, 3> syn_dir{};  // vector pointing from origin to observer
 
-std::unique_ptr<TimeStep[]> timesteps = nullptr;
+std::vector<TimeStep> timesteps;
 
 std::vector<double> dep_estimator_gamma{};  /// Volume estimator for the rpkt emissivity
 
