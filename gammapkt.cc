@@ -673,7 +673,7 @@ static void update_gamma_dep(const Packet &pkt, const double dist, const int mgi
   //  This will all be done later
   assert_testmodeonly(heating_cont >= 0.);
   assert_testmodeonly(isfinite(heating_cont));
-  safeadd(globals::dep_estimator_gamma[nonemptymgi], heating_cont);
+  atomicadd(globals::dep_estimator_gamma[nonemptymgi], heating_cont);
 }
 
 void pair_prod(Packet &pkt) {

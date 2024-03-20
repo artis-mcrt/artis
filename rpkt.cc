@@ -638,7 +638,7 @@ static void rpkt_event_boundbound(Packet &pkt, MacroAtomState &pktmastate, const
   }
 
   if constexpr (RECORD_LINESTAT) {
-    safeincrement(globals::acounter[pkt.next_trans - 1]);
+    atomicadd(globals::acounter[pkt.next_trans - 1], 1);
   }
 
   do_macroatom(pkt, pktmastate);
@@ -706,7 +706,7 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
   }
 
   /// ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
-  safeadd(globals::ffheatingestimator[nonemptymgi], distance_e_cmf * chi_rpkt_cont.ffheating);
+  atomicadd(globals::ffheatingestimator[nonemptymgi], distance_e_cmf * chi_rpkt_cont.ffheating);
 
   if constexpr (USE_LUT_PHOTOION || USE_LUT_BFHEATING) {
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
@@ -718,13 +718,13 @@ static void update_estimators(const double e_cmf, const double nu_cmf, const dou
       const int ionestimindex = nonemptymgi * globals::nbfcontinua_ground + i;
 
       if constexpr (USE_LUT_PHOTOION) {
-        safeadd(globals::gammaestimator[ionestimindex],
-                phixslist.groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
+        atomicadd(globals::gammaestimator[ionestimindex],
+                  phixslist.groundcont_gamma_contr[i] * (distance_e_cmf / nu_cmf));
       }
 
       if constexpr (USE_LUT_BFHEATING) {
-        safeadd(globals::bfheatingestimator[ionestimindex],
-                phixslist.groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
+        atomicadd(globals::bfheatingestimator[ionestimindex],
+                  phixslist.groundcont_gamma_contr[i] * distance_e_cmf * (1. - nu_edge / nu_cmf));
       }
     }
   }

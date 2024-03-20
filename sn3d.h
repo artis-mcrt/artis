@@ -110,7 +110,7 @@ inline void print_line_start() {
 #endif
 
 template <typename T>
-inline void safeadd(T &var, T val) {
+inline void atomicadd(T &var, T val) {
 #ifdef _OPENMP
 #pragma omp atomic update
   var += val;
@@ -128,8 +128,6 @@ inline void safeadd(T &var, T val) {
 #endif
 #endif
 }
-
-#define safeincrement(var) safeadd((var), 1)
 
 inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno) {
   if (gsl_errno != 18)  // roundoff error

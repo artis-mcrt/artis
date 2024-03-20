@@ -59,7 +59,7 @@ void add_to_lc_res(const Packet &pkt, int current_abin, std::vector<double> &lig
     const double arrive_time = get_arrive_time(pkt);
     if (arrive_time > globals::tmin && arrive_time < globals::tmax) {
       const int nt = get_timestep(arrive_time);
-      safeadd(light_curve_lum[nt], pkt.e_rf / globals::timesteps[nt].width / globals::nprocs_exspec);
+      atomicadd(light_curve_lum[nt], pkt.e_rf / globals::timesteps[nt].width / globals::nprocs_exspec);
     }
 
     const double inverse_gamma = std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
@@ -70,8 +70,8 @@ void add_to_lc_res(const Packet &pkt, int current_abin, std::vector<double> &lig
 
     if (arrive_time_cmf > globals::tmin && arrive_time_cmf < globals::tmax) {
       const int nt = get_timestep(arrive_time_cmf);
-      safeadd(light_curve_lumcmf[nt],
-              pkt.e_cmf / globals::timesteps[nt].width / globals::nprocs_exspec / inverse_gamma);
+      atomicadd(light_curve_lumcmf[nt],
+                pkt.e_cmf / globals::timesteps[nt].width / globals::nprocs_exspec / inverse_gamma);
     }
 
     return;
@@ -81,7 +81,7 @@ void add_to_lc_res(const Packet &pkt, int current_abin, std::vector<double> &lig
     const double t_arrive = get_arrive_time(pkt);
     if (t_arrive > globals::tmin && t_arrive < globals::tmax) {
       const int nt = get_timestep(t_arrive);
-      safeadd(light_curve_lum[nt], pkt.e_rf / globals::timesteps[nt].width * MABINS / globals::nprocs_exspec);
+      atomicadd(light_curve_lum[nt], pkt.e_rf / globals::timesteps[nt].width * MABINS / globals::nprocs_exspec);
     }
   }
 }

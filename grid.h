@@ -150,7 +150,7 @@ inline void change_cell(Packet &pkt, const int snext)
     pkt.escape_type = pkt.type;
     pkt.escape_time = pkt.prop_time;
     pkt.type = TYPE_ESCAPE;
-    safeadd(globals::nesc, 1);
+    atomicadd(globals::nesc, 1);
 
     stats::increment(stats::COUNTER_CELLCROSSINGS);
   }

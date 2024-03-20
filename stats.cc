@@ -50,7 +50,7 @@ void increment_ion_stats(const int modelgridindex, const int element, const int 
   assert_testmodeonly(ionstattype < ION_STAT_COUNT);
 
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  safeadd(
+  atomicadd(
       ionstats[modelgridindex * get_includedions() * ION_STAT_COUNT + uniqueionindex * ION_STAT_COUNT + ionstattype],
       increment);
 }
@@ -167,7 +167,7 @@ void normalise_ion_estimators(const int mgi, const double deltat, const double d
 void increment(enum eventcounters i) {
   assert_testmodeonly(i >= 0);
   assert_testmodeonly(i < COUNTER_COUNT);
-  safeadd(eventstats[i], static_cast<ptrdiff_t>(1));
+  atomicadd(eventstats[i], static_cast<ptrdiff_t>(1));
 }
 
 void pkt_action_counters_reset() {

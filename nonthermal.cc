@@ -1735,7 +1735,7 @@ static auto select_nt_ionization(int modelgridindex) -> std::tuple<int, int> {
 }
 
 void do_ntlepton(Packet &pkt) {
-  safeadd(nt_energy_deposited, pkt.e_cmf);
+  atomicadd(nt_energy_deposited, pkt.e_cmf);
 
   const int modelgridindex = grid::get_cell_modelgridindex(pkt.where);
 

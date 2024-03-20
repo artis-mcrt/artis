@@ -198,7 +198,7 @@ static void do_macroatom_raddeexcitation(Packet &pkt, const int element, const i
   }
 
   if constexpr (RECORD_LINESTAT) {
-    safeincrement(globals::ecounter[selecteddowntrans.lineindex]);
+    atomicadd(globals::ecounter[selecteddowntrans.lineindex], 1);
   }
 
   const double epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, selecteddowntrans.targetlevelindex);
@@ -487,7 +487,7 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
 
         pkt.type = TYPE_KPKT;
         end_packet = true;
-        safeadd(globals::colheatingestimator[nonemptymgi], pkt.e_cmf);
+        atomicadd(globals::colheatingestimator[nonemptymgi], pkt.e_cmf);
         break;
       }
 
@@ -532,7 +532,7 @@ void do_macroatom(Packet &pkt, const MacroAtomState &pktmastate)
 
         pkt.type = TYPE_KPKT;
         end_packet = true;
-        safeadd(globals::colheatingestimator[nonemptymgi], pkt.e_cmf);
+        atomicadd(globals::colheatingestimator[nonemptymgi], pkt.e_cmf);
         break;
       }
 

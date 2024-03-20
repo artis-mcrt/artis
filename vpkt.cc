@@ -112,9 +112,9 @@ static void add_to_vspecpol(const Packet &vpkt, const int obsbin, const int ind,
       const double pktcontrib = vpkt.e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI /
                                 PARSEC / PARSEC / globals::nprocs * 4 * PI;
 
-      safeadd(vspecpol[nt][ind_comb].flux[nnu].i, vpkt.stokes[0] * pktcontrib);
-      safeadd(vspecpol[nt][ind_comb].flux[nnu].q, vpkt.stokes[1] * pktcontrib);
-      safeadd(vspecpol[nt][ind_comb].flux[nnu].u, vpkt.stokes[2] * pktcontrib);
+      atomicadd(vspecpol[nt][ind_comb].flux[nnu].i, vpkt.stokes[0] * pktcontrib);
+      atomicadd(vspecpol[nt][ind_comb].flux[nnu].q, vpkt.stokes[1] * pktcontrib);
+      atomicadd(vspecpol[nt][ind_comb].flux[nnu].u, vpkt.stokes[2] * pktcontrib);
     }
   }
 }
@@ -162,9 +162,9 @@ static void add_to_vpkt_grid(const Packet &vpkt, std::span<const double, 3> vel,
 
   // Add contribution
   if (vpkt.nu_rf > nu_grid_min[wlbin] && vpkt.nu_rf < nu_grid_max[wlbin]) {
-    safeadd(vgrid_i[ny][nz].flux[wlbin][obsbin], vpkt.stokes[0] * vpkt.e_rf);
-    safeadd(vgrid_q[ny][nz].flux[wlbin][obsbin], vpkt.stokes[1] * vpkt.e_rf);
-    safeadd(vgrid_u[ny][nz].flux[wlbin][obsbin], vpkt.stokes[2] * vpkt.e_rf);
+    atomicadd(vgrid_i[ny][nz].flux[wlbin][obsbin], vpkt.stokes[0] * vpkt.e_rf);
+    atomicadd(vgrid_q[ny][nz].flux[wlbin][obsbin], vpkt.stokes[1] * vpkt.e_rf);
+    atomicadd(vgrid_u[ny][nz].flux[wlbin][obsbin], vpkt.stokes[2] * vpkt.e_rf);
   }
 }
 
@@ -187,7 +187,7 @@ static void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int 
   vpkt.dir[2] = obsdir[2];
   vpkt.last_cross = BOUNDARY_NONE;
 
-  safeincrement(nvpkt);  // increment the number of virtual packet in the given timestep
+  atomicadd(nvpkt, 1);  // increment the number of virtual packet in the given timestep
 
   const auto vel_vec = get_velocity(pkt.pos, t_current);
 
@@ -390,11 +390,11 @@ static void rlc_emiss_vpkt(const Packet &pkt, const double t_current, const int 
 
   // increment the number of escaped virtual packet in the given timestep
   if (type_before_rpkt == TYPE_RPKT) {
-    safeincrement(nvpkt_esc1);
+    atomicadd(nvpkt_esc1, 1);
   } else if (type_before_rpkt == TYPE_KPKT) {
-    safeincrement(nvpkt_esc2);
+    atomicadd(nvpkt_esc2, 1);
   } else if (type_before_rpkt == TYPE_MA) {
-    safeincrement(nvpkt_esc3);
+    atomicadd(nvpkt_esc3, 1);
   }
 
   const double t_arrive = get_arrive_time(vpkt);

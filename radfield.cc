@@ -642,8 +642,8 @@ static void update_bfestimators(const int nonemptymgi, const double distance_e_c
                                                           }));
 
   for (int allcontindex = allcontbegin; allcontindex < allcontend; allcontindex++) {
-    safeadd(bfrate_raw[nonemptymgi * nbfcontinua + allcontindex],
-            phixslist.gamma_contr[allcontindex] * distance_e_cmf_over_nu);
+    atomicadd(bfrate_raw[nonemptymgi * nbfcontinua + allcontindex],
+              phixslist.gamma_contr[allcontindex] * distance_e_cmf_over_nu);
   }
 }
 
@@ -653,8 +653,8 @@ void update_estimators(const int nonemptymgi, const double distance_e_cmf, const
     return;
   }
 
-  safeadd(J[nonemptymgi], distance_e_cmf);
-  safeadd(nuJ[nonemptymgi], distance_e_cmf * nu_cmf);
+  atomicadd(J[nonemptymgi], distance_e_cmf);
+  atomicadd(nuJ[nonemptymgi], distance_e_cmf * nu_cmf);
 
   if (thickcell) {
     return;
@@ -669,9 +669,9 @@ void update_estimators(const int nonemptymgi, const double distance_e_cmf, const
 
     if (binindex >= 0) {
       const int mgibinindex = nonemptymgi * RADFIELDBINCOUNT + binindex;
-      safeadd(radfieldbins[mgibinindex].J_raw, distance_e_cmf);
-      safeadd(radfieldbins[mgibinindex].nuJ_raw, distance_e_cmf * nu_cmf);
-      safeincrement(radfieldbins[mgibinindex].contribcount);
+      atomicadd(radfieldbins[mgibinindex].J_raw, distance_e_cmf);
+      atomicadd(radfieldbins[mgibinindex].nuJ_raw, distance_e_cmf * nu_cmf);
+      atomicadd(radfieldbins[mgibinindex].contribcount, 1);
     }
   }
 }
