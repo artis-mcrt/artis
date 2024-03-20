@@ -19,14 +19,14 @@ ifeq ($(MPI),ON)
 $(info $(shell mpicxx --showme:version 2> /dev/null))
 else ifeq ($(MPI),OFF)
 else
-$(error bad value for MPI option. Should be ON or OFF)
+  $(error bad value for MPI option. Should be ON or OFF)
 endif
 
 ifeq ($(TESTMODE),ON)
 else ifeq ($(TESTMODE),OFF)
 else ifeq ($(TESTMODE),)
 else
-$(error bad value for testmode option. Should be ON or OFF)
+  $(error bad value for testmode option. Should be ON or OFF)
 endif
 
 
@@ -69,7 +69,7 @@ ifeq ($(GPU),ON)
 else ifeq ($(GPU),OFF)
 else ifeq ($(GPU),)
 else
-$(error bad value for GPU option. Should be ON or OFF)
+    $(error bad value for GPU option. Should be ON or OFF)
 endif
 
 ifeq ($(OPENMP),ON)
@@ -78,33 +78,54 @@ ifeq ($(OPENMP),ON)
   endif
   BUILD_DIR := $(BUILD_DIR)_openmp
 
-  ifeq ($(COMPILER_NAME),NVHPC)
-    CXXFLAGS += -mp=gpu -gpu=unified
-  else ifeq ($(COMPILER_NAME),CLANG)
-    CXXFLAGS += -Xpreprocessor -fopenmp
-    LDFLAGS += -lomp
+  ifeq ($(GPU),ON)
+	ifeq ($(COMPILER_NAME),NVHPC)
+	  CXXFLAGS += -mp=gpu -gpu=unified -gpu=sm_80
+	else ifeq ($(COMPILER_NAME),CLANG)
+		CXXFLAGS += -Xpreprocessor -fopenmp
+		LDFLAGS += -lomp
+	else ifeq ($(COMPILER_NAME),GCC)
+		CXXFLAGS += -fopenmp-targets=nvptx64 --target-arch=sm_80
+	endif
   else
-    CXXFLAGS += -fopenmp
+	ifeq ($(COMPILER_NAME),NVHPC)
+		CXXFLAGS += -mp=multicore
+	else ifeq ($(COMPILER_NAME),CLANG)
+		CXXFLAGS += -Xpreprocessor -fopenmp
+		LDFLAGS += -lomp
+	else
+		CXXFLAGS += -fopenmp
+	endif
   endif
+
 else ifeq ($(OPENMP),OFF)
 else ifeq ($(OPENMP),)
 else
-  $(error bad value for OPENMP option. Should be ON or OFF)
+    $(error bad value for OPENMP option. Should be ON or OFF)
 endif
 
 ifeq ($(STDPAR),ON)
   CXXFLAGS += -DSTDPAR_ON=true
   BUILD_DIR := $(BUILD_DIR)_stdpar
 
-  ifeq ($(COMPILER_NAME),NVHPC)
-	CXXFLAGS += -stdpar=gpu -gpu=unified
-  else ifeq ($(COMPILER_NAME),GCC)
-    LDFLAGS += -ltbb
-  else ifeq ($(COMPILER_NAME),CLANG)
-	# CXXFLAGS += -fexperimental-library
-    LDFLAGS += -ltbb
-	# LDFLAGS += -Xlinker -debug_snapshot
+  ifeq ($(GPU),ON)
+    ifeq ($(COMPILER_NAME),NVHPC)
+		CXXFLAGS += -stdpar=gpu -gpu=unified
+	else
+		$(error STDPAR and GPU requires NVHPC compiler)
+	endif
+  else
+	ifeq ($(COMPILER_NAME),NVHPC)
+		CXXFLAGS += -stdpar=multicore
+	else ifeq ($(COMPILER_NAME),GCC)
+		LDFLAGS += -ltbb
+	else ifeq ($(COMPILER_NAME),CLANG)
+		# CXXFLAGS += -fexperimental-library
+		LDFLAGS += -ltbb
+		# LDFLAGS += -Xlinker -debug_snapshot
+	endif
   endif
+
 else ifeq ($(STDPAR),OFF)
 else ifeq ($(STDPAR),)
 else
