@@ -99,7 +99,7 @@ static void update_pellet(Packet &pkt, const int nts, const double t2) {
     // That's all that needs to be done for the inactive pellet.
   } else if (tdecay > ts) {
     // The packet decays in the current timestep.
-    globals::timesteps[nts].pellet_decays++;
+    safeadd(globals::timesteps[nts].pellet_decays, 1);
 
     pkt.prop_time = tdecay;
     vec_scale(pkt.pos, tdecay / ts);

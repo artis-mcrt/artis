@@ -1,7 +1,6 @@
 #include "stats.h"
 
 #include <array>
-#include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
@@ -23,10 +22,9 @@
 namespace stats {
 
 static double *ionstats = nullptr;
-static std::array<std::atomic<ptrdiff_t>, COUNTER_COUNT> eventstats{};
+static std::array<ptrdiff_t, COUNTER_COUNT> eventstats{};
 
 void init() {
-  assert_always(eventstats[0].is_lock_free());
   if constexpr (TRACK_ION_STATS) {
     ionstats =
         static_cast<double *>(malloc(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT * sizeof(double)));
@@ -169,7 +167,7 @@ void normalise_ion_estimators(const int mgi, const double deltat, const double d
 void increment(enum eventcounters i) {
   assert_testmodeonly(i >= 0);
   assert_testmodeonly(i < COUNTER_COUNT);
-  eventstats[i]++;
+  safeadd(eventstats[i], static_cast<ptrdiff_t>(1));
 }
 
 void pkt_action_counters_reset() {

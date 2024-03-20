@@ -1,7 +1,6 @@
 #include "globals.h"
 
 #include <array>
-#include <atomic>
 #include <deque>
 #include <memory>
 #include <mutex>
@@ -95,7 +94,7 @@ int node_count = -1;  // number of MPI nodes
 int node_id = -1;     // unique number for each node
 
 constexpr int npkts = MPKTS;
-std::atomic<int> nesc = 0;  // number of packets that escape during current timestep
+int nesc = 0;  // number of packets that escape during current timestep
 
 double vmax;
 double rmax;        /// Total mass and outer velocity/radius

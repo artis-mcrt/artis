@@ -1829,7 +1829,7 @@ void write_grid_restart_data(const int timestep) {
             globals::timesteps[nts].alpha_emission, globals::timesteps[nts].eps_alpha_ana_power,
             globals::timesteps[nts].qdot_betaminus, globals::timesteps[nts].qdot_alpha,
             globals::timesteps[nts].qdot_total, globals::timesteps[nts].gamma_emission, globals::timesteps[nts].cmf_lum,
-            globals::timesteps[nts].pellet_decays.load());
+            globals::timesteps[nts].pellet_decays);
   }
 
   fprintf(gridsave_file, "%d ", timestep);
