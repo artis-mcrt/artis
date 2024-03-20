@@ -231,7 +231,6 @@ void pkt_action_counters_printout(const int nts) {
   printout("timestep %d: escounter = %td\n", nts, get_counter(COUNTER_ESCOUNTER));
   printout("timestep %d: cellcrossing  = %td\n", nts, get_counter(COUNTER_CELLCROSSINGS));
   printout("timestep %d: updatecellcounter  = %td\n", nts, get_counter(COUNTER_UPDATECELL));
-  printout("timestep %d: coolingratecalccounter = %td\n", nts, get_counter(COUNTER_COOLINGRATECALCCOUNTER));
   printout("timestep %d: resonancescatterings  = %td\n", nts, get_counter(COUNTER_RESONANCESCATTERINGS));
 
   printout("timestep %d: upscatterings  = %td\n", nts, get_counter(COUNTER_UPSCATTER));
