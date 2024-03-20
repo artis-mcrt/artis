@@ -121,7 +121,7 @@ ifeq ($(shell uname -s),Darwin)
 
 	ifeq ($(COMPILER_NAME),GCC)
 #		fixes linking on macOS with gcc
-		LDFLAGS += -Wl,-ld_classic
+		LDFLAGS += -Xlinker -ld_classic
 	endif
 
 	ifeq ($(shell uname -m),arm64)
