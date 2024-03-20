@@ -143,10 +143,10 @@ void packet_init(Packet *pkt)
   std::for_each(allpkts.begin(), allpkts.end(), [&, norm, e0](const int n) {
     const double targetval = rng_uniform() * norm;
 
-    // first en_cumulative[i] such that en_cumulative[i] > targetval
-    auto upperval = std::upper_bound(en_cumulative.cbegin(), en_cumulative.cend(), targetval);
-    assert_always(upperval != en_cumulative.end());
-    const ptrdiff_t cellindex = std::distance(en_cumulative.cbegin(), upperval);
+    // first i such that en_cumulative[i] > targetval
+    const int cellindex = std::distance(en_cumulative.cbegin(),
+                                        std::upper_bound(en_cumulative.cbegin(), en_cumulative.cend(), targetval));
+    assert_always(cellindex < grid::ngrid);
 
     place_pellet(e0, cellindex, n, pkt[n]);
   });
