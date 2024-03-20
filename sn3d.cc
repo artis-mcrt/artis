@@ -100,7 +100,6 @@ static void initialise_linestat_file() {
   fprintf(linestat_file, "\n");
 
   fflush(linestat_file);
-  // setvbuf(linestat_file,nullptr, _IOLBF, 1); // flush after every line makes it slow!
 }
 
 static void write_deposition_file(const int nts, const int my_rank, const int nstart, const int ndo) {
