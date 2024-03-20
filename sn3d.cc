@@ -757,7 +757,6 @@ auto main(int argc, char *argv[]) -> int {
 #if defined(_OPENMP) && !defined(GPU_ON)
   // Explicitly turn off dynamic threads because we use the threadprivate directive!!!
   omp_set_dynamic(0);
-
 #pragma omp parallel private(filename)
 #endif
   {
@@ -1002,7 +1001,7 @@ auto main(int argc, char *argv[]) -> int {
   radfield::close_file();
   nonthermal::close_file();
 
-#ifdef _OPENMP
+#if defined(_OPENMP) && !defined(GPU_ON)
 #pragma omp parallel
 #endif
   {
