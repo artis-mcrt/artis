@@ -1002,19 +1002,17 @@ auto main(int argc, char *argv[]) -> int {
   nonthermal::close_file();
 
 #if defined(_OPENMP) && !defined(GPU_ON)
+  omp_set_dynamic(0);
 #pragma omp parallel
 #endif
   {
     if (output_file) {
       output_file.close();
     }
+    if (gslworkspace != nullptr) {
+      gsl_integration_workspace_free(gslworkspace);
+    }
   }
-
-#ifdef _OPENMP
-  omp_set_dynamic(0);
-#pragma omp parallel
-#endif
-  { gsl_integration_workspace_free(gslworkspace); }
 
   free(packets);
   if constexpr (TRACK_ION_STATS) {

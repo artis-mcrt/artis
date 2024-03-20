@@ -1675,7 +1675,7 @@ void read_parameterfile(int rank)
     printout("randomly-generated random number seed is %lld\n", pre_zseed);
   }
 
-#ifdef _OPENMP
+#if defined(_OPENMP) && !defined(GPU_ON)
 #pragma omp parallel
 #endif
   {
