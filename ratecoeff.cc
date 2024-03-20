@@ -487,9 +487,6 @@ static void precalculate_rate_coefficient_integrals() {
           const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
           const double phixstargetprobability = get_phixsprobability(element, ion, level, phixstargetindex);
 
-          // printout("element %d, ion %d, level %d, upperlevel %d, epsilon %g, continuum %g, nlevels
-          // %d\n",element,ion,level,upperlevel,epsilon(element,ion,level),epsilon(element,ion+1,upperlevel),nlevels);
-
           // const double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
           const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
           const double nu_threshold = E_threshold / H;
@@ -503,25 +500,13 @@ static void precalculate_rate_coefficient_integrals() {
             const float T_e = MINTEMP * exp(iter * T_step_log);
 
             const double sfac = calculate_sahafact(element, ion, level, upperlevel, T_e, E_threshold);
-            // printout("%d %g\n",iter,T_e);
 
             assert_always(globals::elements[element].ions[ion].levels[level].photoion_xs != nullptr);
             // the threshold of the first target gives nu of the first phixstable point
-            GSLIntegrationParas intparas = {
+            const GSLIntegrationParas intparas = {
                 .nu_edge = nu_threshold,
                 .T = T_e,
                 .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs};
-
-            // gsl_function F_gamma;
-            // F_gamma.function = &gamma_integrand_gsl;
-            // F_gamma.params = &intparas;
-            // gsl_function F_alpha_sp_E;
-            // F_alpha_sp_E.function = &alpha_sp_E_integrand_gsl;
-            // F_alpha_sp_E.params = &intparas;
-            // F_stimulated_bfcooling.function = &stimulated_bfcooling_integrand_gsl;
-            // F_stimulated_bfcooling.params = &intparas;
-            // F_stimulated_recomb.function = &stimulated_recomb_integrand_gsl;
-            // F_stimulated_recomb.params = &intparas;
 
             /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
             double alpha_sp = 0.;
@@ -615,9 +600,10 @@ auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel
 
   const int npieces = globals::NPHIXSPOINTS;
 
-  GSLIntegrationParas intparas = {.nu_edge = nu_threshold,
-                                  .T = T_e,
-                                  .photoion_xs = globals::elements[element].ions[lowerion].levels[lower].photoion_xs};
+  const GSLIntegrationParas intparas = {
+      .nu_edge = nu_threshold,
+      .T = T_e,
+      .photoion_xs = globals::elements[element].ions[lowerion].levels[lower].photoion_xs};
 
   const double zrand = 1. - rng_uniform();  // Make sure that 0 < zrand <= 1
 
