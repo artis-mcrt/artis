@@ -10,7 +10,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
-#include <memory>
 #include <vector>
 
 #include "artisoptions.h"
