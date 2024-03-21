@@ -23,6 +23,7 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
+#include "ratecoeff.h"
 #include "rpkt.h"
 #include "sn3d.h"
 
@@ -733,13 +734,12 @@ static auto planck_integral(double T_R, double nu_lower, double nu_upper, const 
   const double epsrel = 1e-10;
   const double epsabs = 0.;
 
-  gsl_planck_integral_paras intparas = {.T_R = T_R, .times_nu = times_nu};
-
-  const gsl_function F_planck = {.function = &gsl_integrand_planck, .params = &intparas};
+  const gsl_planck_integral_paras intparas = {.T_R = T_R, .times_nu = times_nu};
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-  const int status = gsl_integration_qag(&F_planck, nu_lower, nu_upper, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61,
-                                         gslworkspace.get(), &integral, &error);
+
+  const int status = integrator<gsl_integrand_planck>(intparas, nu_lower, nu_upper, epsabs, epsrel, GSL_INTEG_GAUSS61,
+                                                      &integral, &error);
   if (status != 0) {
     printout("planck_integral integrator status %d, GSL_FAILURE= %d. Integral value %g, setting to zero.\n", status,
              GSL_FAILURE, integral);
