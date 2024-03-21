@@ -25,10 +25,10 @@
 namespace kpkt {
 
 enum coolingtype {
-  COOLINGTYPE_FF = 880,
-  COOLINGTYPE_FB = 881,
-  COOLINGTYPE_COLLEXC = 882,
-  COOLINGTYPE_COLLION = 883,
+  COOLINGTYPE_FF = 0,
+  COOLINGTYPE_FB = 1,
+  COOLINGTYPE_COLLEXC = 2,
+  COOLINGTYPE_COLLION = 3,
 };
 
 struct CellCachecoolinglist {
