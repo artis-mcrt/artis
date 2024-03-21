@@ -97,7 +97,7 @@ static auto calculate_bfheatingcoeff(int element, int ion, int level, int phixst
   // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
   // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
 
-  gsl_integral_paras_bfheating intparas = {
+  const gsl_integral_paras_bfheating intparas = {
       .nu_edge = nu_threshold,
       .modelgridindex = modelgridindex,
       .T_R = grid::get_TR(modelgridindex),
@@ -106,18 +106,11 @@ static auto calculate_bfheatingcoeff(int element, int ion, int level, int phixst
   // intparas.Te_TR_factor = sqrt(T_e/T_R) * sf_Te / sf_TR;
 
   double bfheating = 0.;
-  const gsl_function F_bfheating = {.function = &integrand_bfheatingcoeff_custom_radfield, .params = &intparas};
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
-  const int status = gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE,
-                                         GSL_INTEG_GAUSS61, gslworkspace.get(), &bfheating, &error);
-  // const int status = gsl_integration_qags(
-  //   &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
-  //   GSLWSIZE, workspace_bfheating, &bfheating, &error);
-  // const int status = radfield_integrate(
-  //   &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
-  //    GSLWSIZE, GSL_INTEG_GAUSS61, workspace_bfheating, &bfheating, &error);
+  const int status = integrator<integrand_bfheatingcoeff_custom_radfield>(
+      intparas, nu_threshold, nu_max_phixs, epsabs, epsrel, GSL_INTEG_GAUSS61, &bfheating, &error);
 
   if (status != 0 && (status != 18 || (error / bfheating) > epsrelwarning)) {
     printout(
@@ -248,31 +241,10 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
     }
   }
 
-  /// Free-free heating
-  /// -----------------
-  /// From estimators
+  /// Free-free heating (from estimators)
 
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
   ffheating = globals::ffheatingestimator[nonemptymgi];
-
-  /// Analytical calculation using T, and populations
-  /// This is always taken as an additional process to the other importantheatingterms
-  /// because its not done per ion but overall ions.
-  /*
-  gsl_function F_ffheating;
-  F_ffheating.function = &ffheating_integrand_gsl;
-
-  gslintegration_ffheatingparas intparas;
-  intparas.T_e = T_e;
-  intparas.cellnumber = cellnumber;
-  F_ffheating.params = &intparas;
-
-  /// Discuss about the upper frequency limit (here 1e16 Hz) which we should choose
-  gsl_integration_qag(&F_ffheating, 0, 1e16, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wspace, &ffheating, &error);
-  /// or this integrator
-  //gsl_integration_qng(&F_ffheating, 0, 1e16, 0, intaccuracy, &ffheating, &error, &neval);
-  ffheating *= FOURPI;
-  */
 
   if constexpr (DIRECT_COL_HEAT) {
     heatingcoolingrates->heating_collisional = C_deexc;
