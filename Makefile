@@ -53,6 +53,7 @@ else
 endif
 
 
+CXXFLAGS += -fstrict-aliasing
 
 # profile-guided optimisation
 # generate profile:
