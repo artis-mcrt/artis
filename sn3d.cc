@@ -1001,6 +1001,8 @@ auto main(int argc, char *argv[]) -> int {
   radfield::close_file();
   nonthermal::close_file();
 
+  free(packets);
+
   decay::cleanup();
 
 #ifdef MPI_ON
