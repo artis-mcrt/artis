@@ -62,7 +62,7 @@ auto get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetinde
 static auto integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas) -> double
 /// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
 {
-  const gsl_integral_paras_bfheating *const params = static_cast<gsl_integral_paras_bfheating *>(voidparas);
+  const auto *const params = static_cast<const gsl_integral_paras_bfheating *>(voidparas);
 
   const int modelgridindex = params->modelgridindex;
   const double nu_edge = params->nu_edge;
