@@ -930,12 +930,12 @@ auto col_deexcitation_ratecoeff(const float T_e, const float nne, const double e
       // test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
       /// crude approximation to the already crude Van-Regemorter formula
 
-      // double test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
+      // double test = 0.276 * exp(fac1) * (-EULERGAMMA - log(fac1));
       // double Gamma = (g_bar > test) ? g_bar : test;
 
       // optimisation
       const double gauntfac =
-          (eoverkt > 0.33421) ? g_bar : 0.276 * std::exp(eoverkt) * (-0.5772156649 - std::log(eoverkt));
+          (eoverkt > 0.33421) ? g_bar : 0.276 * std::exp(eoverkt) * (-EULERGAMMA - std::log(eoverkt));
 
       const double g_ratio = lowerstatweight / upperstatweight;
 
@@ -982,7 +982,7 @@ auto col_excitation_ratecoeff(const float T_e, const float nne, int element, int
       /// crude approximation to the already crude Van-Regemorter formula
       const double exp_eoverkt = exp(eoverkt);
 
-      const double test = 0.276 * exp_eoverkt * (-0.5772156649 - std::log(eoverkt));
+      const double test = 0.276 * exp_eoverkt * (-EULERGAMMA - std::log(eoverkt));
       const double Gamma = g_bar > test ? g_bar : test;
       C = C_0 * nne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow(H_ionpot / epsilon_trans, 2) * eoverkt /
           exp_eoverkt * Gamma;
