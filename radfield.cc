@@ -716,7 +716,7 @@ auto radfield(double nu, int modelgridindex) -> double
 
 constexpr auto gsl_integrand_planck(const double nu, void *voidparas) -> double {
   const auto *paras = static_cast<gsl_planck_integral_paras *>(voidparas);
-  const double T_R = paras->T_R;
+  const auto T_R = paras->T_R;
 
   double integrand = TWOHOVERCLIGHTSQUARED * std::pow(nu, 3) / (std::expm1(HOVERKB * nu / T_R));
 
