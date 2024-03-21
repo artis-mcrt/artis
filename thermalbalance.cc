@@ -227,57 +227,9 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
         C_deexc += get_heating_ion_coll_deexc(modelgridindex, element, ion, T_e, nne);
       }
     }
-    //
-    //         /// Collisional heating: recombination to lower ionization stage
-    //         /// ------------------------------------------------------------
-    //         /// For the moment we deal only with ionisations to the next ions groundlevel.
-    //         /// For speed issues (reduced number of calls to epsilon) this is checked here
-    //         /// instead of the more general way to check in col_recomb!
-    //         if (ion > 0 && level == 0) /// Check whether lower ionisation stage available
-    //         {
-    //           for (lower = 0; lower < nlevels_lowerion; lower++)
-    //           {
-    //             epsilon_trans = epsilon_current - epsilon(element,ion-1,lower);
-    //             C = col_recombination(pkt,lower,epsilon_trans)*epsilon_trans;
-    //             C_recomb += C;
-    //           }
-    //         }
-    //
-    //
-    //         /*
-    //         /// Bound-free heating (analytical calculation)
-    //         /// -------------------------------------------
-    //         /// We allow bound free-transitions only if there is a higher ionisation stage
-    //         /// left in the model atom to match the bound-free absorption in the rpkt routine.
-    //         /// There this condition is needed as we can only ionise to existing ionisation
-    //         /// stage even if there would be further ionisation stages in nature which
-    //         /// are not included in the model atom.
-    //         if (ion < nions-1)
-    //         {
-    //           epsilon_trans = epsilon(element,ion+1,0) - epsilon_current;
-    //           /// NB: W comes from the fact, that the W coming from the radiation field was factored
-    //           /// out in the precalculation of the bf-heating coefficient (this is justified by the
-    //           /// linear dependence on W).
-    //           /// The rate coefficient is calculated under the assumption T_e=T_R because its direct
-    //           /// T_e dependence is very weak. This means we have to pass T_R as the temperature
-    //           /// even if we are iterating here on T_e. (Otherwise we would allow a large temperature
-    //           /// range for T_R which changes the coefficient strongly).
-    //           //C = interpolate_bfheatingcoeff(element,ion,level,T_R)*W*nnlevel;
-    //           C = nnlevel * (W*interpolate_bfheatingcoeff_below(element,ion,level,T_R));// +
-    //           W_D*interpolate_bfheatingcoeff_above(element,ion,level,T_D));
-    //
-    //           /// Exact calculation of the bf-heating coefficients using integrators.
-    //           /// This makes things SLOW!!!
-    //           //bfheatingparas.nu_edge = epsilon_trans/H;
-    //           //F_bfheating.params = &bfheatingparas;
-    //           /// Discuss about the upper frequency limit (here 1e16 Hz) which we should choose
-    //           //gsl_integration_qag(&F_bfheating, bfheatingparas.nu_edge, 10*bfheatingparas.nu_edge, 0, intaccuracy,
-    //           1024, 6, wspace, &bfhelper, &error);
-    //           //C = bfhelper * FOURPI * nnlevel;
-    //           bfheating += C;
-    //         }
-    //         */
-    //       }
+
+    /// Collisional heating: recombination to lower ionization stage (not included)
+    /// ------------------------------------------------------------
 
     /// Bound-free heating (renormalised analytical calculation)
     /// --------------------------------------------------------
