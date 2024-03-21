@@ -775,7 +775,8 @@ auto main(int argc, char *argv[]) -> int {
   }
 
 #ifdef STDPAR_ON
-  printout("C++ standard parallelism (stdpar) is enabled\n");
+  printout("C++ standard parallelism (stdpar) is enabled with %d hardware threads\n",
+           std::thread::hardware_concurrency());
 #endif
 
 #ifdef GPU_ON
