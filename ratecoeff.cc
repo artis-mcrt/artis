@@ -325,7 +325,7 @@ static auto alpha_sp_integrand_gsl(const double nu, void *const voidparas) -> do
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
-  const GSLIntegrationParas *const params = static_cast<GSLIntegrationParas *>(voidparas);
+  const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
   const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu, 2) * exp(-HOVERKB * nu / params->T);
@@ -340,7 +340,7 @@ static auto alpha_sp_E_integrand_gsl(const double nu, void *const voidparas) -> 
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
-  const GSLIntegrationParas *const params = static_cast<GSLIntegrationParas *>(voidparas);
+  const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
 
   const float T = params->T;
   const double nu_edge = params->nu_edge;
@@ -358,7 +358,7 @@ static auto gammacorr_integrand_gsl(const double nu, void *const voidparas) -> d
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
-  const GSLIntegrationParas *const params = static_cast<GSLIntegrationParas *>(voidparas);
+  const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
 
   const float T = params->T;
   const double nu_edge = params->nu_edge;
@@ -377,7 +377,7 @@ static auto approx_bfheating_integrand_gsl(const double nu, void *const voidpara
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-  const GSLIntegrationParas *const params = static_cast<GSLIntegrationParas *>(voidparas);
+  const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
 
   const float T = params->T;
   const double nu_edge = params->nu_edge;
@@ -396,7 +396,7 @@ static auto bfcooling_integrand_gsl(const double nu, void *const voidparas) -> d
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-  const GSLIntegrationParas *const params = static_cast<GSLIntegrationParas *>(voidparas);
+  const auto *const params = static_cast<const GSLIntegrationParas *>(voidparas);
 
   const float T = params->T;
   const double nu_edge = params->nu_edge;
