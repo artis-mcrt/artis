@@ -6,6 +6,7 @@
 #include <numbers>
 
 // fundamental constants
+
 inline constexpr double CLIGHT = 2.99792458e+10;  // Speed of light [cm/s]
 inline constexpr double CLIGHT_PROP = CLIGHT;     // Speed of light for ray travel. Physically = CLIGHT but
                                                   // can be changed for testing.
@@ -27,7 +28,10 @@ inline constexpr double STEBO = 5.670400e-5;   // Stefan-Boltzmann constant [erg
                                                // (data from NIST http://physics.nist.gov/cgi-bin/cuu/Value?eqsigma)
 inline constexpr double SAHACONST = 2.0706659e-16;  // Saha constant
 
+inline constexpr double EULERGAMMA = std::numbers::egamma;
+
 // numerical constants
+
 inline constexpr double CLIGHTSQUARED = 8.9875518e+20;  // Speed of light squared [cm^2/s^2]
 inline constexpr double TWOOVERCLIGHTSQUARED = 2.2253001e-21;
 inline constexpr double TWOHOVERCLIGHTSQUARED = 1.4745007e-47;

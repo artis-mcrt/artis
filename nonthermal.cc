@@ -759,8 +759,7 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
     return boostfactor * nne * 2 * PI * pow(QE, 4) / energy * log(2 * energy / zetae);
   }
   const double v = sqrt(2 * energy / ME);
-  const double eulergamma = 0.577215664901532;
-  return boostfactor * nne * 2 * PI * pow(QE, 4) / energy * log(ME * pow(v, 3) / (eulergamma * pow(QE, 2) * omegap));
+  return boostfactor * nne * 2 * PI * pow(QE, 4) / energy * log(ME * pow(v, 3) / (EULERGAMMA * pow(QE, 2) * omegap));
 }
 
 constexpr auto xs_excitation(const int element, const int ion, const int lower, const int uptransindex,
