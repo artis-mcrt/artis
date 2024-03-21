@@ -63,7 +63,7 @@ inline struct tm timebuf {};
 #ifdef GPU_ON
 #pragma omp requires unified_shared_memory
 #else
-#pragma omp threadprivate(cellcacheslotid, stdrng, output_file, outputlinebuf, outputstartofline, timebuf)
+#pragma omp threadprivate(stdrng, output_file, outputlinebuf, outputstartofline, timebuf)
 #endif
 
 #endif
