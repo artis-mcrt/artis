@@ -1240,7 +1240,7 @@ static auto get_oneoverw(const int element, const int ion, const int modelgridin
 
   const double Aconst = 1.33e-14 * EV * EV;
   const double binding = get_mean_binding_energy(element, ion);
-  const double oneoverW = Aconst * binding / Zbar / (2 * 3.14159 * pow(QE, 4));
+  const double oneoverW = Aconst * binding / Zbar / (2 * PI * pow(QE, 4));
   // printout("For element %d ion %d I got W of %g (eV)\n", element, ion, 1./oneoverW/EV);
 
   return oneoverW;
