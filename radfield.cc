@@ -1418,40 +1418,4 @@ void read_restart_data(FILE *gridsave_file) {
   }
 }
 
-// not in use, but could potential improve speed and accuracy of integrating
-// across the binned radiation field which is discontinuous at the bin boundaries
-inline auto integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel, size_t limit,
-                      int key, gsl_integration_workspace *workspace, double *result, double *abserr) -> int {
-  if (MULTIBIN_RADFIELD_MODEL_ON && (globals::timestep >= FIRST_NLTE_RADFIELD_TIMESTEP)) {
-    auto *pts = static_cast<double *>(malloc((RADFIELDBINCOUNT + 3) * sizeof(double)));
-    int binindex_a = select_bin(nu_a);
-    const int binindex_b = select_bin(nu_b);
-    int npts = 0;
-    pts[npts++] = nu_a;
-    if (binindex_a == binindex_b)  // both higher, both lower, or match the same bin
-    {
-      // region doesn't contain any bins
-      pts[npts++] = nu_b;
-    } else {
-      if (binindex_a < 0)  // a is below the first bin
-      {
-        binindex_a = 0;
-        pts[npts++] = get_bin_nu_lower(0);
-      }
-
-      const int maxbinplusone = (binindex_b < 0) ? RADFIELDBINCOUNT : binindex_b;
-
-      for (int binindex = binindex_a; binindex < maxbinplusone; binindex++) {
-        pts[npts++] = get_bin_nu_upper(binindex);
-      }
-
-      pts[npts++] = nu_b;
-    }
-    const int status = gsl_integration_qagp(f, pts, npts, epsabs, epsrel, limit, workspace, result, abserr);
-    free(pts);
-    return status;
-  }
-  return gsl_integration_qag(f, nu_a, nu_b, epsabs, epsrel, limit, key, workspace, result, abserr);
-}
-
 }  // namespace radfield
