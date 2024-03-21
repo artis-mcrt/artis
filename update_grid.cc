@@ -132,7 +132,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
     assume_lte = false;
 
-    if constexpr (TRACK_ION_STATS && TRACK_ION_MASTATS) {
+    if constexpr (TRACK_ION_STATS) {
       fprintf(estimators_file, "MA_IN_RADEXC       Z=%2d", get_atomicnumber(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
         fprintf(estimators_file, "              ");

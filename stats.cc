@@ -22,27 +22,17 @@
 
 namespace stats {
 
-static double *ionstats = nullptr;
+static std::vector<double> ionstats;
 static std::array<ptrdiff_t, COUNTER_COUNT> eventstats{};
 
 void init() {
   if constexpr (TRACK_ION_STATS) {
-    ionstats =
-        static_cast<double *>(malloc(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT * sizeof(double)));
-  }
-}
-
-void cleanup() {
-  if constexpr (TRACK_ION_STATS) {
-    free(ionstats);
+    ionstats.resize(grid::get_npts_model() * get_includedions() * ION_STAT_COUNT, 0.);
   }
 }
 
 void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstattypes ionstattype,
                          const double increment) {
-  if constexpr (!TRACK_ION_MASTATS) {
-    return;
-  }
   if (ionstattype >= 18) {
     return;
   }
@@ -240,8 +230,9 @@ void pkt_action_counters_printout(const int nts) {
 
 void reduce_estimators() {
 #ifdef MPI_ON
-  MPI_Allreduce(MPI_IN_PLACE, stats::ionstats, grid::get_npts_model() * get_includedions() * stats::ION_STAT_COUNT,
-                MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, stats::ionstats.data(),
+                grid::get_npts_model() * get_includedions() * stats::ION_STAT_COUNT, MPI_DOUBLE, MPI_SUM,
+                MPI_COMM_WORLD);
 #endif
 }
 }  // namespace stats

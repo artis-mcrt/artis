@@ -1001,11 +1001,6 @@ auto main(int argc, char *argv[]) -> int {
   radfield::close_file();
   nonthermal::close_file();
 
-  free(packets);
-  if constexpr (TRACK_ION_STATS) {
-    stats::cleanup();
-  }
-
   decay::cleanup();
 
 #ifdef MPI_ON
