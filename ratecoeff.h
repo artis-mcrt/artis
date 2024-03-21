@@ -2,6 +2,8 @@
 #ifndef RATECOEFF_H
 #define RATECOEFF_H
 
+#include "sn3d.h"
+
 void ratecoefficients_init();
 
 void setup_photoion_luts();
@@ -70,7 +72,6 @@ constexpr auto simpson_integrator(auto &params, double a, double b, int sampleco
 #include <gsl/gsl_math.h>
 
 #include "constants.h"
-#include "sn3d.h"
 #endif
 
 template <double func_integrand(double, void *)>
