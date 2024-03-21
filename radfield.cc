@@ -792,8 +792,9 @@ static auto delta_nu_bar(double T_R, void *paras) -> double
 // difference between the average nu and the average nu of a Planck function
 // at temperature T_R, in the frequency range corresponding to a bin
 {
-  const int modelgridindex = (static_cast<gsl_T_R_solver_paras *>(paras))->modelgridindex;
-  const int binindex = (static_cast<gsl_T_R_solver_paras *>(paras))->binindex;
+  const auto *params = static_cast<const gsl_T_R_solver_paras *>(paras);
+  const int modelgridindex = params->modelgridindex;
+  const int binindex = params->binindex;
 
   const double nu_lower = get_bin_nu_lower(binindex);
   const double nu_upper = get_bin_nu_upper(binindex);
@@ -857,9 +858,7 @@ static auto find_T_R(int modelgridindex, int binindex) -> float {
     const double epsabs = 0.;
     const int maxit = 100;
 
-    gsl_function find_T_R_f;
-    find_T_R_f.function = &delta_nu_bar;
-    find_T_R_f.params = &paras;
+    gsl_function find_T_R_f = {.function = &delta_nu_bar, .params = &paras};
 
     /// one dimensional gsl root solver, bracketing type
     gsl_root_fsolver *T_R_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
@@ -899,7 +898,7 @@ static auto find_T_R(int modelgridindex, int binindex) -> float {
   }
 
   return T_R;
-}
+}  // namespace radfield
 
 static void set_params_fullspec(const int modelgridindex, const int timestep) {
   const int nonemptymgi = grid::get_modelcell_nonemptymgi(modelgridindex);
