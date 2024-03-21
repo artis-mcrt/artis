@@ -1431,11 +1431,11 @@ static void calculate_eff_ionpot_auger_rates(const int modelgridindex, const int
     }
     nt_solution[modelgridindex].eff_ionpot[get_uniqueionindex(element, ion)] = eff_ionpot;
   } else {
+    printout("WARNING! No matching subshells in NT impact ionisation cross section data for Z=%d ionstage %d.\n",
+             get_atomicnumber(element), get_ionstage(element, ion));
     printout(
-        "WARNING! No matching subshells in NT impact ionisation cross section data for Z=%d ionstage %d.\n "
-        "-> Defaulting to work function approximation and ionisation energy is not accounted for in "
-        "Spencer-Fano solution.\n",
-        get_atomicnumber(element), get_ionstage(element, ion));
+        "-> Defaulting to work function approximation and ionisation energy is not accounted for in Spencer-Fano "
+        "solution.\n");
 
     nt_solution[modelgridindex].eff_ionpot[get_uniqueionindex(element, ion)] =
         1. / get_oneoverw(element, ion, modelgridindex);
