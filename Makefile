@@ -53,7 +53,6 @@ else
 endif
 
 
-CXXFLAGS += -fstrict-aliasing
 
 # profile-guided optimisation
 # generate profile:
@@ -64,7 +63,7 @@ CXXFLAGS += -fstrict-aliasing
 # CXXFLAGS += -fprofile-use="profdataraw"
 
 ifeq ($(GPU),ON)
-	CXXFLAGS += -DGPU_ON=true
+	CXXFLAGS += -DGPU_ON=true -DUSE_SIMPSON_INTEGRATOR=true
 	BUILD_DIR := $(BUILD_DIR)_gpu
 else ifeq ($(GPU),OFF)
 else ifeq ($(GPU),)

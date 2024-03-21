@@ -48,15 +48,23 @@ inline bool use_cellcache = false;
 
 extern std::mt19937 stdrng;
 
-inline thread_local auto gslworkspace =
-    std::unique_ptr<gsl_integration_workspace, void (*)(gsl_integration_workspace *)>{
-        gsl_integration_workspace_alloc(GSLWSIZE), gsl_integration_workspace_free};
-
 extern std::ofstream output_file;
 
 inline char outputlinebuf[1024] = "";
 inline bool outputstartofline = true;
 inline struct tm timebuf {};
+
+// if not set, force Simpson integrator on GPU mode (since gsl doesn't work there!)
+#ifndef USE_SIMPSON_INTEGRATOR
+#define USE_SIMPSON_INTEGRATOR false
+#endif
+
+inline void nop(gsl_integration_workspace *w) {};
+
+inline thread_local auto gslworkspace =
+    std::unique_ptr<gsl_integration_workspace, void (*)(gsl_integration_workspace *)>{
+        USE_SIMPSON_INTEGRATOR ? nullptr : gsl_integration_workspace_alloc(GSLWSIZE),
+        USE_SIMPSON_INTEGRATOR ? nop : gsl_integration_workspace_free};
 
 #ifdef _OPENMP
 

@@ -2,7 +2,15 @@
 #ifndef RATECOEFF_H
 #define RATECOEFF_H
 
+#include <algorithm>
+
 #include "sn3d.h"
+#if !USE_SIMPSON_INTEGRATOR
+#include <gsl/gsl_integration.h>
+#include <gsl/gsl_math.h>
+
+#include "constants.h"
+#endif
 
 void ratecoefficients_init();
 
@@ -37,7 +45,6 @@ void setup_photoion_luts();
 
 extern double T_step_log;
 
-#if defined(STDPAR_ON) && defined(GPU_ON)
 template <double func_integrand(double, void *)>
 constexpr auto simpson_integrator(auto &params, double a, double b, int samplecount) -> double {
   assert_always(samplecount % 2 == 1);
@@ -67,25 +74,21 @@ constexpr auto simpson_integrator(auto &params, double a, double b, int sampleco
 
   return integral;
 }
-#else
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_math.h>
-
-#include "constants.h"
-#endif
 
 template <double func_integrand(double, void *)>
 auto integrator(auto params, double a, double b, double epsabs, double epsrel, int key, double *result,
                 double *abserr) {
-#if defined(STDPAR_ON) && defined(GPU_ON)
-  const int samplecount = globals::NPHIXSPOINTS * 16 + 1;  // need an odd number for Simpson rule
-  *result = simpson_integrator<func_integrand>(params, a, b, samplecount);
-  *abserr = 0.;
-  return 0;
-#else
-  const gsl_function F = {.function = (func_integrand), .params = &(params)};
-  return gsl_integration_qag(&F, a, b, epsabs, epsrel, GSLWSIZE, key, gslworkspace.get(), result, abserr);
-#endif
+  if constexpr (USE_SIMPSON_INTEGRATOR) {
+    // need an odd number for Simpson rule
+    int samplecount = std::max(1, static_cast<int>((b / a) / globals::NPHIXSNUINCREMENT)) * 32 + 1;
+
+    *result = simpson_integrator<func_integrand>(params, a, b, samplecount);
+    *abserr = 0.;
+    return 0;
+  } else {
+    const gsl_function F = {.function = (func_integrand), .params = &(params)};
+    return gsl_integration_qag(&F, a, b, epsabs, epsrel, GSLWSIZE, key, gslworkspace.get(), result, abserr);
+  }
 }
 
 #endif  // RATECOEFF_H
