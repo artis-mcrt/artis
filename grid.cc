@@ -1,5 +1,9 @@
 #include "grid.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -26,14 +30,11 @@
 #include "decay.h"
 #include "globals.h"
 #include "input.h"
-#include "rpkt.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "packet.h"
 #include "radfield.h"
+#include "rpkt.h"
 #include "sn3d.h"
 #include "vectors.h"
 

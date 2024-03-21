@@ -1,6 +1,7 @@
 #include "ltepop.h"
 
 #include <gsl/gsl_errno.h>
+#include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
 
 #include <algorithm>
@@ -14,7 +15,6 @@
 #include "decay.h"
 #include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_math.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "ratecoeff.h"

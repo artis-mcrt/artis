@@ -1,8 +1,11 @@
 #include "nltepop.h"
 
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_cblas.h>
+#include <gsl/gsl_errno.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_matrix_double.h>
+#include <gsl/gsl_permutation.h>
 #include <gsl/gsl_vector_double.h>
 
 #include <algorithm>
@@ -17,9 +20,6 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_cblas.h"
-#include "gsl/gsl_errno.h"
-#include "gsl/gsl_permutation.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"

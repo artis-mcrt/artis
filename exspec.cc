@@ -8,6 +8,9 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
 #include <random>
 #include <vector>
 
@@ -18,9 +21,6 @@
 #include "grid.h"
 #include "input.h"
 #include "light_curve.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "packet.h"
 #include "sn3d.h"
 #include "spectrum.h"
@@ -249,10 +249,6 @@ auto main(int argc, char *argv[]) -> int {  // NOLINT(misc-unused-parameters)
   free(pkts);
   decay::cleanup();
   printout("exspec finished at %ld (tstart + %ld seconds)\n", std::time(nullptr), std::time(nullptr) - sys_time_start);
-
-  if (output_file) {
-    output_file.close();
-  }
 
 #ifdef MPI_ON
   MPI_Finalize();

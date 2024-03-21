@@ -1,5 +1,10 @@
 #include "input.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
+#include <gsl/gsl_interp.h>
 #include <gsl/gsl_spline.h>
 
 #include <algorithm>
@@ -27,11 +32,7 @@
 #include "decay.h"
 #include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_interp.h"
 #include "kpkt.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "packet.h"
 #include "ratecoeff.h"
 #include "sn3d.h"

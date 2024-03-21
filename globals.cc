@@ -1,15 +1,15 @@
 #include "globals.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <array>
 #include <deque>
 #include <mutex>
 #include <vector>
 
 #include "artisoptions.h"
-
-#ifdef MPI_ON
-#include <mpi.h>
-#endif
 
 namespace globals {
 

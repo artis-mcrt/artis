@@ -2,6 +2,7 @@
 
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_integration.h>
+#include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
 
 #include <cmath>
@@ -12,7 +13,6 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_math.h"
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
@@ -111,7 +111,7 @@ static auto calculate_bfheatingcoeff(int element, int ion, int level, int phixst
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
   const int status = gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE,
-                                         GSL_INTEG_GAUSS61, gslworkspace, &bfheating, &error);
+                                         GSL_INTEG_GAUSS61, gslworkspace.get(), &bfheating, &error);
   // const int status = gsl_integration_qags(
   //   &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
   //   GSLWSIZE, workspace_bfheating, &bfheating, &error);

@@ -1,5 +1,9 @@
 #include "spectrum.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -13,9 +17,6 @@
 #include "exspec.h"
 #include "globals.h"
 #include "light_curve.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "packet.h"
 #include "sn3d.h"
 #include "vectors.h"

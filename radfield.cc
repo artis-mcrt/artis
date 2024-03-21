@@ -1,7 +1,12 @@
 #include "radfield.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_integration.h>
+#include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_sf_debye.h>
 
@@ -18,11 +23,7 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_math.h"
 #include "rpkt.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "sn3d.h"
 
 namespace radfield {
@@ -738,7 +739,7 @@ static auto planck_integral(double T_R, double nu_lower, double nu_upper, const 
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
   const int status = gsl_integration_qag(&F_planck, nu_lower, nu_upper, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61,
-                                         gslworkspace, &integral, &error);
+                                         gslworkspace.get(), &integral, &error);
   if (status != 0) {
     printout("planck_integral integrator status %d, GSL_FAILURE= %d. Integral value %g, setting to zero.\n", status,
              GSL_FAILURE, integral);

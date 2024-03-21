@@ -1,5 +1,9 @@
 #include "ratecoeff.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <gsl/gsl_integration.h>
 
 #include <array>
@@ -18,63 +22,12 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_math.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "md5.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "radfield.h"
 #include "rpkt.h"
 #include "sn3d.h"
-
-#ifdef STDPAR_ON
-template <double func_integrand(double, void *)>
-int simpson_integrator(auto &params, double a, double b, double *result, double *abserr) {
-  const int samplecount = globals::NPHIXSPOINTS * 16 + 1;  // need an odd number for Simpson rule
-  assert_always(samplecount % 2 == 1);
-
-  const double deltax = (b - a) / samplecount;
-  double integral = 0.;
-
-  for (int i = 0; i < samplecount; i++) {
-    // Simpson's rule integral (will later be divided by 3)
-    // n must be odd
-    // integral = (xn - x0) / 3 * {f(x_0) + 4 * f(x_1) + 2 * f(x_2) + ... + 4 * f(x_1) + f(x_n-1)}
-    // weights e.g., 1,4,2,4,2,4,1
-    double weight{1.};
-    if (i == 0 || i == (samplecount - 1)) {
-      weight = 1.;
-    } else if (i % 2 == 0) {
-      weight = 2.;
-    } else {
-      weight = 4.;
-    }
-
-    const double x = a + deltax * i;
-
-    integral += weight * func_integrand(x, &params) * deltax;
-  }
-  integral /= 3.;
-
-  *result = integral;
-  *abserr = 0.;
-  return 0;
-}
-#endif
-
-template <double func_integrand(double, void *)>
-auto integrator(auto params, double a, double b, double epsabs, double epsrel, int key, double *result,
-                double *abserr) {
-#ifdef STDPAR_ON
-  simpson_integrator<func_integrand>(params, a, b, result, abserr);
-  return 0;
-#else
-  const gsl_function F = {.function = (func_integrand), .params = &(params)};
-  return gsl_integration_qag(&F, a, b, epsabs, epsrel, GSLWSIZE, key, gslworkspace, result, abserr);
-#endif
-}
 
 double T_step_log;
 
@@ -1070,7 +1023,7 @@ static auto calculate_stimrecombcoeff_integral(int element, int lowerion, int le
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
   const auto T_e = grid::get_Te(modelgridindex);
-  gsl_integral_paras_gammacorr intparas = {
+  const auto intparas = gsl_integral_paras_gammacorr{
       .nu_edge = nu_threshold,
       .photoion_xs = globals::elements[element].ions[lowerion].levels[level].photoion_xs,
       .T_e = T_e,
@@ -1205,7 +1158,7 @@ static auto calculate_corrphotoioncoeff_integral(int element, int ion, int level
     departure_ratio = 0.;
   }
 #endif
-  gsl_integral_paras_gammacorr intparas = {
+  const auto intparas = gsl_integral_paras_gammacorr{
       .nu_edge = nu_threshold,
       .departure_ratio = departure_ratio,
       .photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs,

@@ -2,6 +2,10 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -10,10 +14,6 @@
 #include <memory>
 #include <mutex>
 #include <vector>
-
-#ifdef MPI_ON
-#include <mpi.h>
-#endif
 
 #include "artisoptions.h"
 

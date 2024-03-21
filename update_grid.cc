@@ -1,5 +1,9 @@
 #include "update_grid.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -15,14 +19,11 @@
 #include "grid.h"
 #include "kpkt.h"
 #include "ltepop.h"
-#include "rpkt.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "radfield.h"
 #include "ratecoeff.h"
+#include "rpkt.h"
 #include "sn3d.h"
 #include "stats.h"
 #include "thermalbalance.h"

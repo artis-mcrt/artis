@@ -1,5 +1,9 @@
 #include "decay.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -10,6 +14,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <numbers>
 #include <numeric>
 #include <set>
@@ -25,9 +30,6 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "nonthermal.h"
 #include "packet.h"
 #include "sn3d.h"

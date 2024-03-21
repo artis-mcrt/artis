@@ -12,6 +12,10 @@
 
 #include "sn3d.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <getopt.h>
 #include <sys/unistd.h>
 #include <unistd.h>
@@ -33,11 +37,9 @@
 #include "gammapkt.h"
 #include "globals.h"
 #include "grid.h"
-#include "gsl/gsl_integration.h"
 #include "input.h"
 #include "macroatom.h"
 #ifdef MPI_ON
-#include "mpi.h"
 #include "rpkt.h"
 #endif
 #include "nltepop.h"
@@ -770,8 +772,6 @@ auto main(int argc, char *argv[]) -> int {
 #else
     printout("OpenMP parallelisation is not enabled in this build (this is normal)\n");
 #endif
-
-    gslworkspace = gsl_integration_workspace_alloc(GSLWSIZE);
   }
 
 #ifdef STDPAR_ON
@@ -1000,19 +1000,6 @@ auto main(int argc, char *argv[]) -> int {
 
   radfield::close_file();
   nonthermal::close_file();
-
-#if defined(_OPENMP) && !defined(GPU_ON)
-  omp_set_dynamic(0);
-#pragma omp parallel
-#endif
-  {
-    if (output_file) {
-      output_file.close();
-    }
-    if (gslworkspace != nullptr) {
-      gsl_integration_workspace_free(gslworkspace);
-    }
-  }
 
   free(packets);
   if constexpr (TRACK_ION_STATS) {

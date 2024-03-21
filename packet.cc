@@ -1,5 +1,9 @@
 #include "packet.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -19,9 +23,6 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "sn3d.h"
 #include "vectors.h"
 
@@ -335,6 +336,4 @@ void read_packets(const char filename[], Packet *pkt) {
         packets_read, globals::npkts);
     std::abort();
   }
-
-  packets_file.close();
 }

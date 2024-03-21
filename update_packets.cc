@@ -1,5 +1,9 @@
 #include "update_packets.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <algorithm>
 #include <cstdlib>
 #include <ctime>
@@ -13,9 +17,6 @@
 #include "globals.h"
 #include "grid.h"
 #include "kpkt.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "nonthermal.h"
 #include "packet.h"
 #include "rpkt.h"

@@ -1,5 +1,9 @@
 #include "rpkt.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -12,18 +16,13 @@
 #include <tuple>
 #include <vector>
 
-#include "macroatom.h"
-
-#ifdef MPI_ON
-#include <mpi.h>
-#endif
-
 #include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
+#include "macroatom.h"
 #include "packet.h"
 #include "radfield.h"
 #include "sn3d.h"

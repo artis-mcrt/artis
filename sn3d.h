@@ -23,6 +23,14 @@
 #define EXEC_PAR
 #endif
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <cassert>
 #include <csignal>
 #include <cstdio>
@@ -33,32 +41,31 @@
 #include <random>
 #include <string_view>
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-
-#ifdef MPI_ON
-#include <mpi.h>
-#endif
+#include "constants.h"
 
 inline constexpr int cellcacheslotid = 0;
 inline bool use_cellcache = false;
 
 extern std::mt19937 stdrng;
 
+inline thread_local auto gslworkspace =
+    std::unique_ptr<gsl_integration_workspace, void (*)(gsl_integration_workspace *)>{
+        gsl_integration_workspace_alloc(GSLWSIZE), gsl_integration_workspace_free};
+
 extern std::ofstream output_file;
 
-inline gsl_integration_workspace *gslworkspace = nullptr;
 inline char outputlinebuf[1024] = "";
 inline bool outputstartofline = true;
 inline struct tm timebuf {};
 
 #ifdef _OPENMP
+
 #ifdef GPU_ON
 #pragma omp requires unified_shared_memory
 #else
-#pragma omp threadprivate(cellcacheslotid, stdrng, gslworkspace, output_file, outputlinebuf, outputstartofline, timebuf)
+#pragma omp threadprivate(cellcacheslotid, stdrng, output_file, outputlinebuf, outputstartofline, timebuf)
 #endif
+
 #endif
 
 inline void print_line_start() {

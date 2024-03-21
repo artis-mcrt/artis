@@ -1,5 +1,9 @@
 #include "stats.h"
 
+#ifdef MPI_ON
+#include <mpi.h>
+#endif
+
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -12,11 +16,8 @@
 #include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
-#include "packet.h"
-#ifdef MPI_ON
-#include "mpi.h"
-#endif
 #include "nonthermal.h"
+#include "packet.h"
 #include "sn3d.h"
 
 namespace stats {
