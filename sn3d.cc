@@ -29,6 +29,9 @@
 #include <fstream>
 #include <random>
 #include <span>
+#ifdef STDPAR_ON
+#include <thread>
+#endif
 
 #include "artisoptions.h"
 #include "atomic.h"
