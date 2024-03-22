@@ -145,6 +145,12 @@ jobs:
                   compiler: gcc
                   version: 13
 
+            - name: Install cuda-toolkit
+              if: matrix.compiler.name == 'nvc++'
+              run: |
+                  sudo apt-get -y install cuda-toolkit
+                  echo "/usr/local/cuda-12.4/bin" >> $GITHUB_PATH
+
             - name: Install nvc++
               if: matrix.compiler.name == 'nvc++'
               uses: fortran-lang/setup-fortran@v1
