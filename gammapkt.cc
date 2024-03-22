@@ -609,17 +609,17 @@ static auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
       const double log10_hnu_over_1MeV = log10(hnu_over_1MeV);
       for (int i = 0; i < get_nelements(); i++) {
         // determine charge number:
-        int Z = get_atomicnumber(i);
+        const int Z = get_atomicnumber(i);
         auto numb_energies = std::ssize(photoion_data[Z - 1]);
         if (numb_energies == 0) {
           continue;
         }
-        double n_i = grid::get_elem_numberdens(mgi, i);  // number density in the current cell
+        const double n_i = grid::get_elem_numberdens(mgi, i);  // number density in the current cell
         if (n_i == 0) {
           continue;
         }
         // get indices of lower and upper boundary
-        int E_gtr_idx = -1;  //
+        int E_gtr_idx = -1;
 
         for (int j = 0; j < numb_energies; j++) {
           if (photoion_data[Z - 1][j].energy > hnu_over_1MeV) {
@@ -637,18 +637,18 @@ static auto get_chi_photo_electric_rf(const Packet &pkt) -> double {
         }
         assert_always(E_gtr_idx > 0);
         assert_always(E_gtr_idx < numb_energies);
-        int E_smaller_idx = E_gtr_idx - 1;
+        const int E_smaller_idx = E_gtr_idx - 1;
         assert_always(E_smaller_idx >= 0);
-        double log10_E = log10_hnu_over_1MeV;
-        double log10_E_gtr = log10(photoion_data[Z - 1][E_gtr_idx].energy);
-        double log10_E_smaller = log10(photoion_data[Z - 1][E_smaller_idx].energy);
-        double log10_sigma_lower = log10(photoion_data[Z - 1][E_smaller_idx].sigma_xcom);
-        double log10_sigma_gtr = log10(photoion_data[Z - 1][E_gtr_idx].sigma_xcom);
+        const double log10_E = log10_hnu_over_1MeV;
+        const double log10_E_gtr = log10(photoion_data[Z - 1][E_gtr_idx].energy);
+        const double log10_E_smaller = log10(photoion_data[Z - 1][E_smaller_idx].energy);
+        const double log10_sigma_lower = log10(photoion_data[Z - 1][E_smaller_idx].sigma_xcom);
+        const double log10_sigma_gtr = log10(photoion_data[Z - 1][E_gtr_idx].sigma_xcom);
         // interpolate or extrapolate, both linear in log10-log10 space
-        double log10_intpol = log10_E_smaller + (log10_sigma_gtr - log10_sigma_lower) /
-                                                    (log10_E_gtr - log10_E_smaller) * (log10_E - log10_E_smaller);
-        double sigma_intpol = pow(10., log10_intpol) * 1.0e-24;  // now in cm^2
-        double chi_cmf_contrib = sigma_intpol * n_i;
+        const double log10_intpol = log10_E_smaller + (log10_sigma_gtr - log10_sigma_lower) /
+                                                          (log10_E_gtr - log10_E_smaller) * (log10_E - log10_E_smaller);
+        const double sigma_intpol = pow(10., log10_intpol) * 1.0e-24;  // now in cm^2
+        const double chi_cmf_contrib = sigma_intpol * n_i;
         chi_cmf += chi_cmf_contrib;
       }
     }
