@@ -191,8 +191,7 @@ ifeq ($(TESTMODE),ON)
 	# CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE
 	CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG
 
-	# TODO: re-enable -fsanitize=address when GitHub actions stops failing on it
-	CXXFLAGS += -fsanitize=undefined
+	CXXFLAGS += -fsanitize=undefined,address
 
 	BUILD_DIR := $(BUILD_DIR)_testmode
 else
